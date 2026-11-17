@@ -164,14 +164,14 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   (or tc_calc: true); THIRD-PARTY.md; tests/test_tc_pin.py. LuaJIT is built
   only when MSVC / MinGW is on PATH, else "source-only" (this machine has
   neither: TC-BRIDGE needs a compiler or a later pinned binary).
-- [ ] TC-BRIDGE (build) Fresh stdio JSON bridge (our own Lua, no code from
+- [x] TC-BRIDGE (build) Fresh stdio JSON bridge (our own Lua, no code from -- done 2026-11-17 (loop; refute 0/3 PASS)
   pob-mcp / pob2-mcp) driving the unmodified pinned PoB checkout via
   luajit.exe, plus a Python client in server/al: load build XML, set an item
   from item text, return outputs; timeout kill; core runs without it.
   After TC-PIN. ACCEPT: outputs on a fixture build match PoB GUI within 0.1
   percent; tests skip cleanly when the component is absent.
   ZERO-CLICK: the bridge starts on first need and restarts itself on a crash.
-- [ ] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the
+- [x] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the -- done 2026-11-17 (loop; refute 0/3 PASS)
   clipboard item vs the equipped one, and per-mod weights from PoB deltas
   (offence and EHP) feeding TC-UPGRADE in place of hand weights. After
   TC-BRIDGE, TC-EVAL. ACCEPT: delta tests on fixtures; falls back to stat
@@ -181,6 +181,12 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   against the new tag, then move the pin in one commit, or hold it and
   record why. ACCEPT: pin moved or a dated hold note in decision 0004.
   ZERO-CLICK: a loop check spots the new tag and runs the tests unattended.
+  HOLD 2026-11-17 (AREA-RES, research 0017): no PoB-PoE2 release after
+  v0.23.1 (2026-07-28); dev is 109 commits ahead (0.5.5 rune / runemastered
+  data, trader fix for Forbidden Rites, HeadlessWrapper "Restore headless
+  global cache cleanup" 2026-08-26, .build export PR #2432). Pin stays.
+  For AREA-MATH: at the next tag (likely by PoE2 1.0, 2026-12-11) test the
+  bridge for cache state leaking across build loads before moving the pin.
 - [ ] TC-OAUTH-REG (review) OPERATOR act: apply to GGG for an AshLight
   public OAuth client (PKCE, loopback redirect in port block 8960-8979,
   scopes account:profile and account:characters) once GGG reopens
@@ -191,6 +197,66 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   credential store, refresh handled, into the build model. BLOCKED on
   TC-OAUTH-REG. ACCEPT: mocked-flow tests; no POESESSID; no undocumented
   endpoint. ZERO-CLICK: one sign-in ever; silent refresh after that.
+
+## Research-filed features (AREA-RES 2026-11-17, research 0020)
+
+Ranked in research 0020; floor checks there. Rulings by adjudicator
+recorded in research 0018 section 3.
+
+- [ ] UTIL-MAPRUN (build) Map run tracker from Client.txt only: a new
+  instance from `Generating level <N> area "<id>" with seed <N>` with an
+  endgame area id starts a map, hideout / town `[SCENE]` pauses it, a new
+  seed ends it; dashboard shows maps run, time per map, maps per hour,
+  area level, deaths per map, session totals; overlay status slot one
+  line. First verify the endgame area-id prefix on a live map (fixture,
+  like LIVE-1). ACCEPT: fixture tests for enter / portal back / new map /
+  death; numbers on the dashboard; design-reviewer pass. ZERO-CLICK: runs
+  from the log tail, no start / stop button.
+- [ ] PRICE-UNIQUE (build) Unique prices on the item-check press from
+  poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
+  types, research 0019): match name + baseType (+ corrupted), show value,
+  listing count ("few listings" when low) and 7-day trend; one request
+  per type per hour with If-None-Match, only with web_data on (0013).
+  ACCEPT: parser tests on a trimmed real body; no request when off.
+  ZERO-CLICK: the same hotkey press; overviews refresh on the hourly gate.
+- [ ] PRICE-STACKABLES (build) Price stackables on the item-check press via
+  more exchange overview types (Ritual/Omens, Essences, Runes, SoulCores,
+  Breach, Delirium, Fragments, UncutGems, LineageSupportGems; research
+  0019), names from the top-level `items` array (0013). After
+  PRICE-UNIQUE (both edit ninja.py). ACCEPT: per-type parser tests; one
+  request per type per hour. ZERO-CLICK: same press, hourly refresh.
+- [ ] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
+  Acts 5-6 id prefixes to acts.py, Duelist / Shadow class names, league
+  rollover check in ninja.py and the price card league label, refresh the
+  repoe-fork snapshot; after launch review the debug sink of the first 1.0
+  log for new system lines. ACCEPT: tests with 1.0-shaped fixture lines;
+  rollover test. ZERO-CLICK: data and parser only, nothing for the user.
+- [ ] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
+  Planner `*.build` JSON (Version 1, research 0018 section 3) offered as a
+  dashboard "Save .build" download on the player's click; NEVER written
+  into the game's BuildPlanner folder (adjudicator ruling 2026-11-17).
+  First research the passive id mapping (GGG string ids like
+  `strength89` vs PoB / GGG export numeric ids). ACCEPT: schema test
+  against the documented fields; mapping source recorded; no write path
+  to the BuildPlanner folder (test). ZERO-CLICK: the file is ready as soon
+  as a build is loaded; one click to save is the user's placement act.
+- [ ] AUDIT-BUILDFILE (review) Record the `.build` ruling (user-saved
+  only, never written into the game folder; reverses if GGG explicitly
+  permits tool writes there or the operator rules a click write
+  acceptable) as a decision when TC-BUILDFILE lands, and add a test-backed
+  check that no code path writes under the BuildPlanner folder. ACCEPT:
+  decision file + test. ZERO-CLICK: review row.
+- [ ] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
+  poe.ninja overviews (`sparkline.totalChange`), no extra requests. After
+  PRICE-STACKABLES. ACCEPT: panel test, design-reviewer pass.
+  ZERO-CLICK: refreshes with the hourly gate.
+- [ ] TC-CURX (build) Hourly exchange history from GGG's documented public
+  Currency Exchange API (`web.poecdn.com/api/currency-exchange/poe2/<hour>`,
+  research 0018). BLOCKED: TC-OAUTH-REG (adjudicator ruling 2026-11-17:
+  standalone executables must use a public OAuth client; reverses if GGG
+  exempts scope-less endpoints in writing). ACCEPT: when unblocked, OAuth
+  UA, immutable-hour cache, parser tests. ZERO-CLICK: background fetch on
+  the hourly boundary once enabled.
 
 ## Game settings advisor (operator order 2026-11-16)
 
@@ -309,6 +375,62 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [x] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001). Done 2026-11-17: 0 hits on both wikis
   (research 0009).
+## Audit 2026-11-17 (docs/audit/2026-11-17-audit.md)
+
+Low findings filed by AREA-AUDIT; the medium ones were fixed in the audit
+merge. Each row names the finding ids it closes.
+
+- [ ] AUDIT-TC-CODE-REAL (review) Re-open the real-code check (finding C1):
+  TC-CODE-REAL was flipped done with only a skip-when-absent harness
+  (tests/test_tc_code_real.py skips; tests/fixtures/pob2_real holds a README
+  only). ACCEPT: one real PoB2 export decodes, parses and round-trips
+  through the harness (no skip), owner consent recorded if kept as a
+  fixture. BLOCKED: operator act (supply one real PoB2 code).
+  ZERO-CLICK: the harness runs by itself once the file exists.
+- [ ] AUDIT-HTTP-HARDEN (build) Findings S1-S4: HEAD /events streams a body
+  forever (http.py do_HEAD -> do_GET -> _sse); Handler has no socket
+  timeout (an idle connection holds a thread); ?token= is accepted on every
+  /api route (restrict it to /events, the only EventSource route);
+  POST /api/consent "path" accepts any file or UNC path (refuse UNC and
+  names other than Client.txt / a folder holding it). ACCEPT: one test per
+  item. ZERO-CLICK: code row.
+- [ ] AUDIT-EXE-PATH (build) Finding S5: gfx.py runs bare "powershell.exe"
+  and tc_pin.py bare "cmd.exe" / "mingw32-make" (Windows CreateProcess also
+  searches the current directory); use the System32 absolute path for the
+  Windows tools, and TC-BRIDGE must hash-check luajit.exe before every
+  exec (tc_pin.ensure_luajit trusts any existing luajit.exe). ACCEPT:
+  tests on the argv. ZERO-CLICK: code row.
+- [ ] AUDIT-ELECTRON (build) Findings S6-S7: devTools follow
+  !app.isPackaged, and the overlay is never packaged, so they are always
+  on (gate on an AL_DEV env instead); add
+  session.setPermissionCheckHandler(() => false) next to the request
+  handler. ACCEPT: a main.js source test for both. ZERO-CLICK: code row.
+- [ ] AUDIT-SNAPSHOT-OPTIN (review) Finding T1: scripts/build.ps1 runs the
+  game-data snapshot by default (opt-out, decision 0009) while CLAUDE.md
+  Settled says nothing hits the network while web_data is off (decision
+  0013). Adjudicate one rule (build step honours web_data, or 0013 states
+  the build-time exception) and record it. ACCEPT: decision amended and
+  build.ps1 / README match. ZERO-CLICK: ruling row.
+- [ ] AUDIT-TREE-URL (build) Finding S8: web/tc.js safeUrl lets a pasted
+  build's tree URL be any https host as an "Open the tree" link. Allow
+  only known tree hosts (pathofexile.com, poe2db.tw, poeplanner-style
+  hosts after a check) or show the host name in the link text. ACCEPT:
+  app test with an off-list host. ZERO-CLICK: code row.
+- [ ] AUDIT-HYGIENE (build) Findings H2-H6: tests/test_ascii_lf.py checks
+  a suffix list (skips .log, .vbs, .sh, .xml, .svg, LICENSE) - check every
+  non-binary tracked file; server/al/paths.py SIDECAR_SUBDIRS lacks
+  Scratch and ClaudeHistory and all_runtime_paths() omits worktree_dir()
+  and the overlay profile; tests/test_sidecar_paths.py SCANNED skips
+  tools/; AL-NEXT-SESSION.txt spells the sidecar with a drive letter (use
+  <sidecar>); decision 0002 should name pytest as the one allowed test
+  dependency. ACCEPT: tests for the first three. ZERO-CLICK: code row.
+- [ ] AUDIT-LOOP-COMMIT-MSG (build) Finding C2: loop merge commits carry the
+  row text cut mid-sentence plus refute / verifier lines, so an ACCEPT that
+  says "root cause named in the commit" (FLAKY-EVAL-API, 5e7b30e) is not
+  met by the commit. Carry the lane's result line (root cause / what was
+  done) in the commit body. ACCEPT: tools/loop_merge.py test on the
+  message. ZERO-CLICK: code row.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).

@@ -198,6 +198,36 @@ def _stat_rows(comp):
     return rows
 
 
+CALC_NOTICE_TEXT = {
+    # TC-DELTA (decision 0022): why the card shows stat-weight points, not
+    # Path of Building DPS / EHP
+    "off": ("Scored with your stat weights. To see DPS and EHP, turn on the "
+            "optional Path of Building calc in AshLight's settings file."),
+    "failed": ("Scored with your stat weights. DPS and EHP are not shown because "
+               "Path of Building could not be reached. Try the check again."),
+}
+
+
+def _pct_text(change):
+    p = (change or {}).get("pct")
+    return "unknown" if p is None else _signed(p) + "%"
+
+
+def _calc_text(card, best):
+    """(dashboard sentence, overlay line or None) for the calc source."""
+    calc = card.get("calc") or {}
+    if calc.get("source") == "pob" and isinstance(best.get("dps"), dict) \
+            and isinstance(best.get("ehp"), dict):
+        dps, ehp = best["dps"], best["ehp"]
+        slot = _text(best.get("slot"), "its slot")
+        line = f"DPS {_pct_text(dps)}, EHP {_pct_text(ehp)}"
+        return (f"Path of Building: DPS {_pct_text(dps)} (from {_num_text(dps.get('old'))} "
+                f"to {_num_text(dps.get('new'))}), EHP {_pct_text(ehp)} (from "
+                f"{_num_text(ehp.get('old'))} to {_num_text(ehp.get('new'))}), with this "
+                f"item in {slot}.", line)
+    return CALC_NOTICE_TEXT.get(calc.get("notice"), ""), None
+
+
 def eval_card_text(card):
     """The words for one item check (TC-EVAL-UI): `head`, `item` and `line`
     for the 3-line overlay card, `sentence` for the dashboard, and per
@@ -209,7 +239,8 @@ def eval_card_text(card):
     name = _text(item.get("name") or item.get("base"), "Unnamed item")
     if card.get("unidentified"):
         name += " (unidentified)"
-    out = {"head": "", "item": name, "line": "", "sentence": "", "comparisons": []}
+    out = {"head": "", "item": name, "line": "", "sentence": "", "comparisons": [],
+           "calc": ""}
     if not card.get("ok"):
         head, line, sentence = EVAL_ERROR_TEXT.get(
             card.get("error"), ("Can't check this item", "See the dashboard",
@@ -230,6 +261,9 @@ def eval_card_text(card):
         out["line"] = "Mods hidden - identify it first"
     else:
         out["line"] = counted[0] if counted else "No counted stat changes"
+    out["calc"], calc_line = _calc_text(card, best)
+    if calc_line and not card.get("unidentified"):
+        out["line"] = calc_line
     out["sentence"] = _compare_sentence(best) if best else f"{verdict}."
     out["comparisons"] = [{"slot": c.get("slot"), "sentence": _compare_sentence(c),
                            "stats": _stat_rows(c)} for c in comps]

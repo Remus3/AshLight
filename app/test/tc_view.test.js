@@ -103,9 +103,24 @@ test("eval view uses the core's words; empty is null", () => {
   assert.equal(m.comparisons.length, 1);
   assert.equal(m.unweighted,
     "Not counted (no weight yet): +N to Example. Add a weight under Stat weights to count them.");
+  assert.equal(m.calc, "");
   const err = v.evalView({ ok: false, error: "no build loaded", text: { sentence: "No build loaded yet." } });
   assert.equal(err.word, "Not checked");
   assert.deepEqual(err.comparisons, []);
+});
+
+test("eval view: TC-DELTA calc line and the PoB uncounted wording", () => {
+  const off = v.evalView({ id: 1, ok: true, verdict: "upgrade", at: 0,
+    calc: { source: "weights", notice: "off" },
+    text: { sentence: "s", item: "i", comparisons: [], calc: "Scored with your stat weights." } });
+  assert.equal(off.calc, "Scored with your stat weights.");
+  const pob = v.evalView({ id: 2, ok: true, verdict: "downgrade", at: 0,
+    calc: { source: "pob", notice: null }, unweighted: ["Cannot be Example Frozen"],
+    text: { sentence: "s", item: "i", comparisons: [],
+            calc: "Path of Building: DPS -36% (from 100 to 64), EHP +12.7% (from 4720 to 5320), with this item in Gloves." } });
+  assert.match(pob.calc, /^Path of Building: DPS -36%/);
+  assert.equal(pob.unweighted, "Not counted (the mod has no number): Cannot be Example Frozen.");
+  assert.equal(v.evalView({ id: 3, ok: true, at: 0, text: { calc: 5 } }).calc, "");
 });
 
 test("weights: rows sorted; the PUT document drops blanks", () => {
