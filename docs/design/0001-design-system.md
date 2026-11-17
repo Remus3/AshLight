@@ -283,6 +283,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | Trade request arrives | trade card (who, what, price, where) | trade list with dismiss |
 | Died | deaths count changes; no flash, no pop-up | death in recent events |
 | AFK / DND | status word on the HUD line | flag under Session |
+| Under-levelled for the zone (UTIL-UNDERLEVEL) | status word `N lv under` (gap at or above the setting, default 3) | line under the Level tile naming zone level and player level |
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
 | In a map (UTIL-MAPS, UTIL-MAPRUN-OVL) | row-1 timer is the time in this map (kept across hideout trips) instead of this zone instance; no new line or word; map deaths stay on the dashboard | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
@@ -424,7 +425,8 @@ Generation rules:
      chosen by `overlay_card` (decision 0016)
    - open trade count (UX-REVIEW F1, `format.js tradeCount`): HUD status
      slot `1 trade` / `<n> trades` while a card hides the trade card;
-     slot order: connection, Client.txt state, trade count, AFK / DND
+     slot order: connection, Client.txt state, trade count, under-level
+     word (UTIL-UNDERLEVEL `N lv under`, at most 11 characters), AFK / DND
    - new trade request (UX-REVIEW F6, `web/trades.js`): dashboard polite
      live region `New trade request from <from>.` (no name: `New trade
      request.`; several at once: `<n> new trade requests.`), only when the

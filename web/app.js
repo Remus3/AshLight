@@ -1002,6 +1002,10 @@
     var zn = s.zone_note && typeof s.zone_note.text === "string" ? s.zone_note.text : "";
     $("zone-note-box").hidden = !zn;
     if ($("zone-note").textContent !== zn) { $("zone-note").textContent = zn; }
+    // UTIL-UNDERLEVEL / UTIL-RUN-HISTORY: the core's sentences, by themselves
+    if (window.ALHistory) { window.ALHistory.paint(document, s); }
+    // UTIL-PRICE-WATCH: moved prices of the items the player checked
+    if (window.ALPriceWatch) { window.ALPriceWatch.paint(document, s); }
     tick();
   }
 
@@ -1097,6 +1101,25 @@
     $("gfx").addEventListener("toggle", openGfx);
     $("webdata-form").addEventListener("change", saveWebData);
     $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
+    // UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO: the player's clicks
+    if (window.ALHistory) { window.ALHistory.wire(document, api); }
+    if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
+    if (window.ALSettingsIO) {
+      window.ALSettingsIO.wire(document, {
+        fetch: function (url, opts) { return fetch(url, opts); },
+        token: token,
+        save: function (blob, name) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        }
+      });
+    }
     setInterval(pollRates, RATES_POLL_MS);
     // The two timers advance once a second; nothing else moves.
     ticker = setInterval(tick, 1000);

@@ -18,7 +18,7 @@
   /* TEST-LIVE-EXIT: the HUD status word for an idle log (<= 15 chars). */
   var IDLE_WORD = "log quiet 20m";
 
-  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "log", "status", "trades",
+  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "under", "log", "status", "trades",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
                 "evalHead", "evalItem", "evalLine", "evalVerdict"];
 
@@ -114,7 +114,7 @@
     if (!snap) {
       /* DS-HUD-EMPTY: before the first snapshot the HUD reads "AshLight"
          and the status word; no lone separator. */
-      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
+      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
                log: "", status: status || "connecting",
                tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
@@ -128,7 +128,7 @@
     var idle = !!(tl && tl.consented && tl.idle);
     var elapsed = timerSeconds(snap, nowS);
     if (tl && !tl.consented) {
-      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
+      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
                log: "not reading - see dashboard", status: status || "live",
                tradeFrom: card.from, tradeItem: card.item, tradeWhere: card.where,
                tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
@@ -147,6 +147,9 @@
       sep: "|",
       /* DS-HUD-AFK: the log's AFK / DND state (design 0001 7.2). */
       away: snap.afk ? "AFK" : (snap.dnd ? "DND" : ""),
+      /* UTIL-UNDERLEVEL: the core's word ("4 lv under", <= 15 chars),
+         only while the player is the set gap under the zone level. */
+      under: underWord(snap),
       /* UX-COPY: a known file that is quiet is not missing. Telegraphic so
          it fits after "Lv 100 | 99 deaths" in the 258 px plate (design
          review F1: "waiting for Client.txt" clipped). */
@@ -158,10 +161,16 @@
 
   /* The word in the HUD status slot: a connection problem first, then the
      Client.txt state, then the open trade count while a card hides the
-     trade card, then AFK / DND, else nothing. */
+     trade card, then the under-level word, then AFK / DND, else nothing. */
   function statusText(model) {
     if (model.status !== "live") { return model.status; }
-    return model.log || model.trades || model.away || "";
+    return model.log || model.trades || model.under || model.away || "";
+  }
+
+  function underWord(snap) {
+    var u = snap && snap.underlevel;
+    var w = u && typeof u.word === "string" ? u.word : "";
+    return w.length <= 15 ? w : "";
   }
 
   function shouldRender(prev, next) {

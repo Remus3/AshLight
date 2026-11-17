@@ -17,6 +17,9 @@
 <script src="/web/search.js" defer></script>
 <script src="/web/health.js" defer></script>
 <script src="/web/filtermerge.js" defer></script>
+<script src="/web/history.js" defer></script>
+<script src="/web/pricewatch.js" defer></script>
+<script src="/web/settingsio.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -62,6 +65,8 @@
       <p id="who" class="sub">character unknown</p>
       <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
       <p id="pace" class="sub" hidden></p>
+      <!-- UTIL-UNDERLEVEL: not a live region; the overlay word carries it. -->
+      <p id="underlevel" class="sub underlevel" hidden></p>
     </div>
     <div class="stat">
       <h2 class="label">Deaths this session</h2>
@@ -210,6 +215,26 @@
     <p id="deaths-worst" hidden></p>
   </section>
 
+  <section id="historybox" class="card history" hidden aria-labelledby="history-title">
+    <h2 id="history-title">Run history</h2>
+    <p id="history-on" class="muted"></p>
+    <p id="history-empty" class="muted" hidden></p>
+    <table id="history-table" class="acts-table" hidden>
+      <thead><tr><th scope="col">Act</th><th scope="col">Your best</th>
+        <th scope="col">This run</th></tr></thead>
+      <tbody id="history-rows"></tbody>
+    </table>
+    <h3 id="history-deaths-title" class="sub-h">Most deaths across runs</h3>
+    <p id="history-deaths-empty" class="muted" hidden></p>
+    <ol id="history-deaths" class="event-list" hidden></ol>
+    <div class="history-controls">
+      <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
+        Keep run history on this computer</label>
+      <button id="history-clear" type="button">Clear run history</button>
+    </div>
+    <p id="history-said" class="muted"></p>
+  </section>
+
   <section class="card events" aria-labelledby="events-title">
     <h2 id="events-title">Recent</h2>
     <ol id="events" class="event-list"></ol>
@@ -330,6 +355,16 @@
       <span id="rates-attrib"></span></p>
   </section>
 
+  <section id="watchbox" class="card watch" aria-labelledby="watch-title">
+    <h2 id="watch-title">Price watch</h2>
+    <p id="watch-text" class="muted"></p>
+    <ul id="watch-moved" class="rates-list watch-list" hidden></ul>
+    <button id="watch-clear" type="button" hidden>Clear watched items</button>
+    <p id="watch-said" class="muted"></p>
+    <p class="muted small">Uses the poe.ninja prices AshLight already has. It asks the web
+      nothing new.</p>
+  </section>
+
   <section class="card layout" aria-labelledby="layout-title">
     <h2 id="layout-title">Overlay position and size</h2>
     <!-- UX-DASH-LAYOUT: set once, so folded; the hotkey hint stays visible -->
@@ -356,6 +391,18 @@
     <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
     <p class="muted">Show or hide the overlay any time with Alt+Shift+A, and check an item
       with Alt+Shift+E (unless you set other keys in AshLight's settings file).</p>
+  </section>
+
+  <section id="settingsbox" class="card settings-io" aria-labelledby="settings-title">
+    <h2 id="settings-title">Move settings to another computer</h2>
+    <p class="muted">Download AshLight's settings, then import the file on the other
+      computer. The file never holds your contact, a password or file paths.</p>
+    <div class="settings-controls">
+      <button id="settings-export" type="button">Download settings</button>
+      <label for="settings-import-file">Import a settings file</label>
+      <input id="settings-import-file" type="file" accept=".json,application/json">
+    </div>
+    <p id="settings-said" class="muted"></p>
   </section>
 
   <section class="card gfx" aria-labelledby="gfx-title">

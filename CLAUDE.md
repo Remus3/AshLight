@@ -514,3 +514,11 @@ them. Pause: `ops/loop/control/HALT`.
   dropped with a note, never guessed (decision 0034). Reverses if: GGG
   explicitly permits tools to write there, the operator rules a
   click-triggered write acceptable, or a file made this way fails in game.
+- Run history (closed act splits, deaths per zone; 20 runs) and price watch
+  (20 priced presses) are bounded files under ops/runtime; LIVE-RESUME is
+  untouched (0008 not reversed); price watch re-reads only the cached book,
+  only on its refresh, only while web_data is on; settings export / import
+  is an allow-list (never contact, token, cookie or paths) and an import
+  never turns web_data on (decision 0036). Reverses if: the operator rules
+  local history files unwanted, GGG restricts derived local records, or
+  decision 0013 changes.

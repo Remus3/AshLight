@@ -727,7 +727,7 @@ LAN access stays off), not a row.
   searchstr.join (250 cap); `next_look` in GET /api/build, "Look for
   next" rows with Copy on click only; the dashboard re-reads the build
   after a PoB-scored item check (new weights, no click).
-- [ ] UTIL-UNDERLEVEL (build) Under-level warning: area level from the
+- [x] UTIL-UNDERLEVEL (build) Under-level warning: area level from the
   `Generating level N area` line minus the player level from level-up
   lines; at or above a setting (default 3 levels under) show "N levels
   under this zone" in the act card and the overlay status word (research
@@ -736,8 +736,11 @@ LAN access stays off), not a row.
   / state tests incl. unknown player level (no warning), towns and
   hideouts skipped; overlay 2-line rule kept (design-reviewer).
   ZERO-CLICK: appears and clears by itself on zone entry and level-up.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] UTIL-RUN-HISTORY (build) Personal-best act splits and deaths by zone
+  DONE 2026-11-17 (AREA-UTIL b9): server/al/underlevel.py (log area level,
+  world_areas fallback, setting "underlevel_gap"), Level tile line, overlay
+  word "N lv under" after the trade count; tests/test_util_underlevel.py,
+  app/test/underlevel.test.js.
+- [x] UTIL-RUN-HISTORY (build) Personal-best act splits and deaths by zone
   across runs: on a finished campaign act / run, append a small summary
   (act splits, deaths per zone, character class) to a local history file
   resolved by server/al/paths.py (gitignored ops/runtime or the AL
@@ -747,9 +750,11 @@ LAN access stays off), not a row.
   that in a new decision), visible "history on" indicator and a clear /
   off setting. ACCEPT: fold tests on synthetic runs, file bound (cap on
   runs kept), clear works, test_sidecar_paths green. ZERO-CLICK: recorded
-  and shown by itself; only clearing is a click.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] UTIL-PRICE-WATCH (build) Price watch: the item-check press remembers
+  and shown by itself; only clearing is a click. DONE 2026-11-17
+  (AREA-UTIL b9, decision 0036): server/al/runhistory.py, ops/runtime
+  run_history.json (20 runs), Run history card, POST /api/run-history;
+  tests/test_util_run_history.py.
+- [x] UTIL-PRICE-WATCH (build) Price watch: the item-check press remembers
   the last 20 priced items (name, price, time) locally; each hourly price
   book refresh (decision 0026) flags those whose price moved past a
   threshold (default 25 percent) in a dashboard list. floor-ok with
@@ -758,9 +763,10 @@ LAN access stays off), not a row.
   nothing fetched or flagged while web_data is off (decision 0013), list
   clearable. ACCEPT: tests with a fake price book (rise, fall, under
   threshold, item gone, web_data off). ZERO-CLICK: filled by the existing
-  press and refreshed by itself.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] UX-SETTINGS-IO (build) Settings export / import: "Download settings"
+  press and refreshed by itself. DONE 2026-11-17 (AREA-UTIL b9, decision
+  0036): server/al/pricewatch.py, Price watch card, POST /api/price-watch;
+  tests/test_util_price_watch.py.
+- [x] UX-SETTINGS-IO (build) Settings export / import: "Download settings"
   on the player's click saves AshLight's own settings as a JSON file
   (decision 0031 / 0034 download pattern); "Import" reads a file the
   player picks in a browser file input. floor-ok with condition (ruling
@@ -768,8 +774,10 @@ LAN access stays off), not a row.
   unknown keys rejected; web_data never switched on without the player's
   confirm. ACCEPT: round-trip test, secret-exclusion test, bad-file tests;
   design-reviewer pass. ZERO-CLICK: nothing to do in play; one click each
-  way only when moving PCs.
-  BLOCKED: session lane building (2026-11-17)
+  way only when moving PCs. DONE 2026-11-17 (AREA-UTIL b9, decision 0036):
+  server/al/settingsio.py, GET /api/settings-export, POST
+  /api/settings-import, web/settingsio.js; unknown keys are not applied
+  and are listed back; tests/test_ux_settings_io.py, app/test/util9.test.js.
 
 ## Game settings advisor (operator order 2026-11-16)
 

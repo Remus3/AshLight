@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 from . import (VERSION, acts, layout, logfile, ninja, parser, paths, price, pricebook,
-               resume, webfetch)
+               pricewatch, resume, runhistory, settingsio, underlevel, webfetch)
 from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
@@ -149,6 +149,14 @@ class Core:
         self.price = price.PriceChecker(league=self.trade_league,
                                         card=self.state.set_price,
                                         lookup=self.rates.lookup)
+        # UTIL-RUN-HISTORY (decision 0036): finished act splits and deaths
+        # per zone across runs, one bounded file under the runtime dir.
+        self.history = runhistory.RunHistory(self.runtime / runhistory.FILE_NAME)
+        self._history_key = None
+        # UTIL-PRICE-WATCH: the last priced presses, one bounded runtime
+        # file; re-read from the cache on a price book refresh only.
+        self.watch = pricewatch.PriceWatch(self.runtime / pricewatch.FILE_NAME)
+        self._watch_key = None
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
@@ -158,8 +166,130 @@ class Core:
         price check is an offline trade-search link (decision 0017)."""
         at = self.state.now()
         result = self.last_eval.run(text, slot, at=at)
-        self.price.request(text, at=at)
+        doc = self.price.request(text, at=at)
+        self._watch_press(text, doc, at)
         return result
+
+    def _watch_press(self, text, doc, at):
+        """UTIL-PRICE-WATCH: remember what this press already priced (the
+        cached poe.ninja value on its card); nothing more is read."""
+        ninja = doc.get("ninja") if isinstance(doc, dict) else None
+        if not ninja or not isinstance(doc.get("item"), dict):
+            return False
+        flags = getattr(item_mod.parse(text), "flags", None) or {}
+        item = dict(doc["item"], corrupted=bool(flags.get("corrupted")
+                                                or flags.get("twice_corrupted")))
+        try:
+            with self._lock:
+                saved = self.watch.record(item, ninja, at)
+        except OSError:
+            return False
+        if saved:
+            self._watch_key = None  # republish on the next tick
+        return saved
+
+    def _write_config(self, update):
+        """Merge `update` into the local config and persist it, keeping
+        every other key (the contact included; never written here)."""
+        with self._lock:
+            cfg = self._config()
+            cfg.update(update)
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.config_path.with_name(self.config_path.name + ".tmp")
+            with open(tmp, "w", encoding="ascii", newline="\n") as fh:
+                fh.write(json.dumps(cfg, indent=2, ensure_ascii=True) + "\n")
+            tmp.replace(self.config_path)
+            return cfg
+
+    # -- UX-SETTINGS-IO (ruling E)
+    def export_settings(self):
+        """AshLight's own settings for the download (allow-list only: no
+        contact, token, cookie or path)."""
+        return settingsio.export_doc(self._config(), VERSION)
+
+    def import_settings(self, doc):
+        """Merge an imported settings file's allowed keys into the local
+        config; web data is never switched on here. Returns the report;
+        raises settingsio.SettingsError with nothing applied."""
+        update, report = settingsio.parse_import(doc, self._config())
+        if update:
+            self._write_config(update)
+            self.state.set_overlay_layout(layout.load(self.config_path))
+        return report
+
+    # -- UTIL-RUN-HISTORY
+    def history_enabled(self):
+        return runhistory.enabled_setting(self._config().get(runhistory.CONFIG_KEY))
+
+    def tick_history(self):
+        """From the core's loop: save the current run when an act split
+        closed or the run finished (and history is on), then publish the
+        history view. No request. True when the file was written."""
+        rec = self.state.run_record()
+        on = self.history_enabled()
+        wrote = False
+        key = None
+        if rec is not None:
+            key = (rec["started_at"], rec["closed"], rec["finished"])
+        if on and rec is not None and rec["closed"] and key != self._history_key:
+            try:
+                with self._lock:
+                    wrote = self.history.record(rec)
+                self._history_key = key
+            except OSError:
+                pass  # the view still shows; the next tick tries again
+        self.state.set_run_history(self.history.view(rec, enabled=on))
+        return wrote
+
+    def set_history(self, enabled=None, clear=False):
+        """The dashboard switch and clear button."""
+        if enabled is not None:
+            self._write_config({runhistory.CONFIG_KEY: bool(enabled)})
+        if clear:
+            # the current run is cleared too: it is saved again only when
+            # its next act split closes
+            rec = self.state.run_record()
+            with self._lock:
+                self.history.clear()
+                self._history_key = ((rec["started_at"], rec["closed"], rec["finished"])
+                                     if rec else None)
+        self.tick_history()
+        return self.state.snapshot()["run_history"]
+
+    # -- UTIL-PRICE-WATCH
+    def watch_pct(self):
+        return pricewatch.pct_setting(self._config().get(pricewatch.CONFIG_KEY))
+
+    def tick_watch(self):
+        """From the core's loop: while web data is on, re-read the watched
+        items from the cached price book once per book refresh (no
+        request), then publish the view. True when a price changed."""
+        on = self.web_data_enabled()
+        book = getattr(self.rates, "book", None)
+        stamps = []
+        if book is not None:
+            stamps = sorted(t.get("checked_at") for t in (book.doc.get("types") or {}).values()
+                            if isinstance(t, dict)
+                            and isinstance(t.get("checked_at"), (int, float)))
+        key = (on, tuple(stamps), self.rates.doc.get("checked_at"), len(self.watch.items))
+        changed = False
+        if key != self._watch_key:
+            if on:
+                try:
+                    with self._lock:
+                        changed = self.watch.refresh(self.rates.lookup)
+                except OSError:
+                    pass
+            self._watch_key = key
+        self.state.set_price_watch(self.watch.view(on, self.watch_pct()))
+        return changed
+
+    def clear_watch(self):
+        with self._lock:
+            self.watch.clear()
+        self._watch_key = None
+        self.tick_watch()
+        return self.state.snapshot()["price_watch"]
 
     # -- web data opt-in (decision 0013)
     def _config(self):
@@ -425,6 +555,8 @@ class Core:
         on or off and a price book refresh reach SSE clients at once. No
         request (one local config stat per tick; read only on change)."""
         self.state.expire_trades(now)
+        # UTIL-UNDERLEVEL: the threshold setting (read only on change)
+        self.state.set_underlevel_gap(self._config().get(underlevel.CONFIG_KEY))
         try:
             calc_on = self.tc_calc_enabled()
         except Exception:  # noqa: BLE001 - a bad config reads as off

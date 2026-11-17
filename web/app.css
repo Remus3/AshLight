@@ -409,3 +409,9 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* UTIL-UNDERLEVEL / UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO */
+.underlevel { padding-left: 8px; border-left: 4px solid var(--fk-status-warn); overflow-wrap: anywhere; }
+.history-controls, .settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.history .slower { color: var(--fk-status-warn); }
+.watch-list li { overflow-wrap: anywhere; }

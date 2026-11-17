@@ -192,6 +192,14 @@ def main(argv=None):
                 core.tick_sources()  # TEST-FULLSTACK-SSE-IDLE: calc / prices
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_sources failed")
+            try:
+                core.tick_history()  # UTIL-RUN-HISTORY: save closed acts
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_history failed")
+            try:
+                core.tick_watch()  # UTIL-PRICE-WATCH: moves on book refresh
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_watch failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:
