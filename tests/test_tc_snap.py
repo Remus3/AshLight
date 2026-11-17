@@ -150,7 +150,8 @@ def test_real_source_names_mocked_fetch(tmp_path):
     # DATA-SRC-URLS / DATA-TREE-SRC acceptance: the real URLs through a mock.
     bodies = {u: b'{"nodes": {}}' for u in snapshot.SOURCES.values() if u}
     fake = Fake(bodies)
-    out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000)
+    # UA-CONTACT: the GGG tree source needs a contact (a neutral test token)
+    out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000, contact="test-contact")
     assert out == {k: "fetched" for k in snapshot.SOURCES}
     assert sorted(u for u, _ in fake.calls) == sorted(bodies)
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
@@ -160,6 +161,7 @@ def test_real_source_names_mocked_fetch(tmp_path):
     assert "tree export" in snapshot.ATTRIBUTION
     for _, headers in fake.calls:
         assert headers["User-Agent"].startswith(f"AshLight/{VERSION} ")
+        assert "test-contact" in headers["User-Agent"]
 
 
 def test_core_never_imports_snapshot():
