@@ -30,8 +30,8 @@
     <h2 id="consent-title">Allow AshLight to read Client.txt?</h2>
     <p>AshLight reads the game's log file, read only, while it runs:</p>
     <p class="path"><code id="consent-path">Client.txt (not found yet)</code></p>
-    <p>From it AshLight shows your current zone and time in it, character level,
-      deaths this session, whispers and trade requests. Nothing leaves this
+    <p>AshLight shows your zone, time in the zone, level, deaths, whispers
+      and trade requests. Nothing leaves this
       computer, and AshLight never touches the game or sends it any input.
       You can stop it at any time with "Stop reading Client.txt" at the
       bottom of this page.</p>
@@ -108,7 +108,7 @@
     </div>
     <details id="weights" class="weights">
       <summary>Stat weights</summary>
-      <p class="muted">Points per point of each stat. The verdict adds them up for the new
+      <p class="muted">How much each point of a stat is worth. The verdict adds them up for the new
         item and for yours. Changes save at once and the last item is checked again. Set 0
         to ignore a stat. N stands for the number on the item.</p>
       <form id="weights-form" class="weights-form">
@@ -121,7 +121,7 @@
             <input id="weights-new-value" type="number" step="any" inputmode="decimal"></label>
         </fieldset>
         <fieldset class="weights-band">
-          <legend>Sidegrade band (no clear winner within)</legend>
+          <legend>Sidegrade range (counts as about the same)</legend>
           <label>Points <input id="weights-abs" type="number" min="0" step="any"></label>
           <label>Percent of your item's score <input id="weights-pct" type="number" min="0" step="any"></label>
         </fieldset>

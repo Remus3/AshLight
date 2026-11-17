@@ -74,9 +74,10 @@ Overlay (CSS px at zoom 1.0; the window zoom is the layout `scale`):
 | Role | Size | Weight |
 |---|---|---|
 | zone line | 16px | 600 |
+| zone timer (full text colour, never clipped) | 16px | 600 |
 | HUD numbers | 15px | 600 |
 | trade card | 14px | 600 |
-| secondary (timer, where, more, status) | 13px | 600 |
+| secondary (where, more, status) | 13px | 600 |
 
 Overlay rule: rendered text never under 12px **after** zoom, so the
 smallest overlay size times the minimum `scale` must be >= 12px. With the
@@ -230,6 +231,7 @@ Event semantics (dashboard list and overlay card):
 
 - trade request: `status-warn` edge + `TRADE` tag. Warn means "needs you
   soon", not "error".
+- trade accepted / cancelled: muted `TRADE` tag, no edge.
 - whisper: `accent` edge + `FROM` / `TO` tag.
 - death: `status-bad` tag `DEATH`; never a full red row (a death is news,
   not an alarm).
@@ -247,6 +249,9 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
   no interaction.
 - Everything updates by itself: SSE pushes state; timers tick locally; the
   overlay moves when the layout file changes.
+- The dashboard session and zone clocks are essential real-time content
+  (WCAG 2.2.2 exemption), so they have no pause control. They stop while
+  the feed is down (web/app.js tick).
 - Hotkey-first: any action a player needs mid-game is a global hotkey
   (today: Alt+Shift+A shows / hides the overlay; Alt+Shift+E checks the
   item the player copied with Ctrl+C in game). Clipboard or screen reads

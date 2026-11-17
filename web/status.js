@@ -45,8 +45,9 @@
       case "whisper_out": return "to";
       case "death": return "death";
       case "level_up": return "level";
-      case "scene_changed": case "area_entered": return "zone";
-      case "tailer_started": case "tailer_reset": return "log";
+      case "scene_changed": case "area_entered": case "area_generated": return "zone";
+      case "trade_accepted": case "trade_cancelled": return "trade";
+      case "tailer_started": case "tailer_reset": case "session_connect": return "log";
       case "afk_changed": case "dnd_changed": return "status";
       case "player_joined_area": case "player_left_area": return "party";
       default: return "info";

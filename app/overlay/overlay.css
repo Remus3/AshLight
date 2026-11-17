@@ -49,7 +49,12 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
 
 .row { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zone { font-size: 16px; }
-.timer { color: var(--fk-text-muted); margin-left: 4px; }
+/* A long zone name clips itself, so the zone timer always stays visible. */
+.row.zone { display: flex; align-items: baseline; }
+.zone #zone { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Full text colour (12.5:1 on the plate): the timer is live content. */
+.timer { flex: none; color: var(--fk-text); margin-left: 8px; }
+.timer:empty { display: none; }
 .sep { color: var(--fk-text-muted); }
 .status { color: var(--fk-status-warn); margin-left: 6px; font-size: 13px; }
 /* The slot shows a connection word, or AFK / DND while live; empty hides. */
