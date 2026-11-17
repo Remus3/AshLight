@@ -67,6 +67,8 @@
       ? duration(now - snap.session_started_at) : "--:--";
     // HUD-ACT: the open act split counts up with the zone timer.
     if (window.ALActs) { window.ALActs.paint(document, snap.acts, now, false); }
+    // UTIL-MAPS: the open map's time counts up while the player is in it.
+    if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
   }
 
   function renderEvents(rows) {
@@ -753,6 +755,10 @@
     $("who").textContent = s.character
       ? s.character + (s["class"] ? " (" + s["class"] + ")" : "")
       : "character unknown";
+    // UTIL-PACE: the core's pace sentence, shown once there is one.
+    var paceText = (s.pace && s.pace.text) || "";
+    $("pace").textContent = paceText;
+    $("pace").hidden = !paceText;
     $("deaths").textContent = String(s.deaths);
     $("levelups").textContent = s.level_ups + (s.level_ups === 1 ? " level-up" : " level-ups");
     $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
@@ -766,6 +772,7 @@
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
     if (window.ALActs) { window.ALActs.paint(document, s.acts || null, serverNow(), true); }
+    if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
     tick();
   }
 
