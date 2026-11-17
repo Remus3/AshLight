@@ -428,9 +428,12 @@ them. Pause: `ops/loop/control/HALT`.
   reverses for repoe-fork, or live cruel / interlude ids break the prefixes.
 - The card names the item a swap replaces (better slot first, one-hand
   weapons in either hand of a dual wielder); nonsense PoB outputs fall back
-  to the weights with a "looks wrong" notice; filter value tiers from the
-  cached poe.ninja prices, Show only, never Hide (decision 0032). Reverses
-  if: a legit 0-DPS swap state should show, off-hand bases lose their
+  to the weights with a "looks wrong" notice, except a weapon PoB says the
+  main skill can't use (PoB's own disableReason via the bridge, never an
+  own skill table), which is a worded downgrade; filter value tiers from
+  the cached poe.ninja prices, Show only, never Hide (decision 0032 and its
+  amendment). Reverses if: a legit 0-DPS swap state should show, PoB
+  renames its weapon disableReason texts, off-hand bases lose their
   words, or the tier thresholds misfire in play.
 - Game exit shows as an idle "game may be closed" state from Client.txt
   staleness (20 min, mtime-seeded at start), never an OS process-list

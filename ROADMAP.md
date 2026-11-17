@@ -395,6 +395,14 @@ weights derived from PoB outputs stay with TC-DELTA.
   press. DONE 2026-11-17 (AREA-MATH b4, decision 0032):
   delta.CalcImplausible, calc notice "implausible";
   tests/test_math_dps_sanity.py.
+- [x] MATH-WEAPON-TYPE (build) A weapon the main skill cannot use (PoB's
+  own disableReason, read through the bridge) reads "Your main skill
+  can't use this weapon type" as a downgrade, not -100 % and not the
+  "don't add up" fallback. ZERO-CLICK: automatic on the press. DONE
+  2026-11-17 (AREA-MATH b5, decision 0032 amendment): bridge "main_skill",
+  calcwire.WEAPON_REASONS, delta.CalcWeaponUnusable, calc notice
+  "weapon_type"; tests/test_math_weapon_type.py (live leg skips without
+  the calc component); design-reviewer pass.
 
 ## Research-filed features (AREA-RES 2026-11-17, research 0020)
 

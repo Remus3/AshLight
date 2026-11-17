@@ -198,9 +198,34 @@ def _equipped_name(comp):
     return _text(eq.get("name") or eq.get("base"), "an unnamed item")
 
 
+# MATH-WEAPON-TYPE (decision 0032 amendment): Path of Building says the
+# build's main skill cannot use the checked weapon type in that slot
+WEAPON_TYPE_HEAD = "Downgrade - wrong weapon type"
+WEAPON_TYPE_LINE = "Main skill can't use this weapon"
+
+
+def _weapon_skill(comp):
+    """(unusable?, PoB's main skill name or None) for one compared slot."""
+    w = comp.get("weapon_unusable")
+    if not isinstance(w, dict):
+        return False, None
+    return True, _text(w.get("skill"), "") or None
+
+
+def _weapon_type_calc(best):
+    skill = _weapon_skill(best)[1] or "that skill"
+    slot = _text(best.get("slot"), "that slot")
+    return ("Your main skill can't use this weapon type, so this item is a downgrade "
+            f"for this build. Path of Building counts no damage from {skill} with it "
+            f"in {slot}.")
+
+
 def _compare_sentence(comp):
     verdict = VERDICT_WORD.get(_key(comp.get("verdict")), "Checked")
     slot = _text(comp.get("slot"), "that slot")
+    if _weapon_skill(comp)[0]:
+        where = slot if comp.get("empty") else f"{slot} ({_equipped_name(comp)})"
+        return f"Downgrade: your main skill can't use this weapon type in {where}."
     delta = comp.get("score_delta") or 0
     if comp.get("empty"):
         return f"{verdict}: your build has nothing in {slot} ({_signed_points(delta)})."
@@ -284,6 +309,8 @@ def _comp_calc(comp, pob):
 def _calc_text(card, best, n_slots=1):
     """(dashboard sentence, overlay line or None) for the calc source."""
     calc = _dict(card.get("calc"))
+    if calc.get("notice") == "weapon_type" and _weapon_skill(best)[0]:
+        return _weapon_type_calc(best), WEAPON_TYPE_LINE
     if calc.get("source") == "pob" and _has_pob(best):
         dps, ehp = best["dps"], best["ehp"]
         line = f"DPS {_pct_text(dps)}, EHP {_pct_text(ehp)}"
@@ -387,6 +414,8 @@ def eval_card_text(card):
     out["calc"], calc_line = _calc_text(card, best, len(comps))
     if calc_line and not card.get("unidentified"):
         out["line"] = calc_line
+    if _dict(card.get("calc")).get("notice") == "weapon_type" and _weapon_skill(best)[0]:
+        out["head"] = WEAPON_TYPE_HEAD
     out["sentence"] = _compare_sentence(best) if best else f"{verdict}."
     pob = _dict(card.get("calc")).get("source") == "pob"
     out["comparisons"] = [{"slot": c.get("slot"), "sentence": _compare_sentence(c),
