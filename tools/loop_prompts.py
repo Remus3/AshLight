@@ -56,7 +56,9 @@ def plan_prompt(item):
     return (f"You are an AshLight (AL) build lane in a detached git worktree. Read "
             f"CLAUDE.md first. Task: ROADMAP.md row {item['id']} - {brief} "
             f"(an optional longer brief: docs/plans/{item['id']}-*.md). Meet its ACCEPT "
-            "line - TDD, stdlib only for Python. "
+            "line - TDD, stdlib only for Python. End your final reply with one line "
+            "`RESULT: <what you did; for a bug, the root cause and the fix>` - it goes "
+            "into the commit body (AUDIT-LOOP-COMMIT-MSG). "
             + NO_ROADMAP + GATES.format(task=f"p{item['id']}-build"))
 
 

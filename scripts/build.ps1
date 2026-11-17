@@ -10,6 +10,7 @@
 [CmdletBinding()]
 param(
     [switch]$Force,
+    [switch]$Snapshot,
     [switch]$NoSnapshot
 )
 
@@ -44,17 +45,35 @@ function Write-AlLog([string]$Message) {
     Write-Host $Message
 }
 
-# TC-SNAP (decision 0009): refresh the game-data snapshot in the sidecar
-# Cache. Opt-out with -NoSnapshot or env AL_NO_SNAPSHOT=1. The tool skips
-# files checked in the last 24 h; offline or a failing source never fails
-# the build.
+# TC-SNAP (decision 0009, AUDIT-SNAPSHOT-OPTIN): refresh the game-data
+# snapshot in the sidecar Cache ONLY when the user turned web data on
+# (config/local.json "web_data": true, decision 0013) or the build is forced
+# with -Snapshot / env AL_SNAPSHOT=1. -NoSnapshot / AL_NO_SNAPSHOT=1 always
+# skip and win. The tool skips files checked in the last 24 h; offline or a
+# failing source never fails the build.
+function Test-AlWebData {
+    $cfgFile = Join-Path $Repo 'config\local.json'
+    if (-not (Test-Path $cfgFile)) { return $false }
+    try {
+        $cfg = Get-Content -Path $cfgFile -Raw | ConvertFrom-Json
+        return ($cfg.PSObject.Properties.Name -contains 'web_data') -and
+            ($cfg.web_data -is [bool]) -and ($cfg.web_data -eq $true)
+    } catch {
+        return $false
+    }
+}
+$forceSnap = $Snapshot -or ($env:AL_SNAPSHOT -and $env:AL_SNAPSHOT -ne '0')
 if ($NoSnapshot -or ($env:AL_NO_SNAPSHOT -and $env:AL_NO_SNAPSHOT -ne '0')) {
-    Write-AlLog 'build: game-data snapshot skipped (opt-out)'
+    Write-AlLog 'build: game-data snapshot skipped (NoSnapshot)'
+} elseif (-not ($forceSnap -or (Test-AlWebData))) {
+    Write-AlLog 'build: game-data snapshot skipped (web_data off; -Snapshot or AL_SNAPSHOT=1 forces it)'
 } else {
     $snapLog = Join-Path $paths.logs 'build-snapshot.log'
+    $snapArgs = @('-m', 'server.al.theorycraft.snapshot')
+    if ($forceSnap) { $snapArgs += '--opt-in' }
     Push-Location $Repo
     try {
-        & $py -m server.al.theorycraft.snapshot *> $snapLog
+        & $py @snapArgs *> $snapLog
         Write-AlLog "build: game-data snapshot rc $LASTEXITCODE (log $snapLog)"
     } catch {
         Write-AlLog 'build: game-data snapshot failed (ignored)'

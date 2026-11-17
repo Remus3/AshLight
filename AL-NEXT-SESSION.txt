@@ -49,7 +49,7 @@ Carried forward (not acted on yet):
   DESIGN-GATE, LIVE-1 / OVL-BUDGET / OVL-FPS (BLOCKED: operator acts a, b),
   WT-SIDECAR (partial, operator act f), OPERATOR GitHub remote (act d).
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT) at
-  kit v32; MAIN roster code AL, ports 8960-8979, sidecar E:\Sidecars\AL.
+  kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE: reap applied: 0 removed, 3 kept, 0 listed (base main) - kept lane-0,
   lane-1, lane-2 (fleet_lanes lane worktrees under the sidecar). The
   session-2 worktree agent-aa7b5bb6af01db38e was reaped this session (REAP).
@@ -82,7 +82,7 @@ LOOP-ARM (scheduled task read back, first tick rc 0); FLAKY-EVAL-API
 (9181d6f, by the loop). Earlier sessions: see git log.
 In flight (do not stop; the loop owns them):
 - lane-0 build HUD-ACT-RESUME: progress/lane-0.json done 08:21; worktree
-  E:\Sidecars\AL\Worktree\lane-0 holds staged uncommitted
+  <sidecar>\Worktree\lane-0 holds staged uncommitted
   docs/decisions/0021-act-splits-resume.md, server/al/acts.py, core.py,
   resume.py, state.py (design-reviewer needed), tests/test_hud_act_resume.py.
   NOTE: lane-0 and lane-2 both took decision number 0021 - renumber one on
@@ -93,7 +93,7 @@ In flight (do not stop; the loop owns them):
   trips fleet_test_guard (false error at teardown of a random test); re-run
   the suite when it happens (seen once at this /done, re-run green).
 - lane-2 data TC-CODE-REAL: progress/lane-2.json done 08:20 (rc 0, $0.82);
-  worktree E:\Sidecars\AL\Worktree\lane-2 holds staged uncommitted
+  worktree <sidecar>\Worktree\lane-2 holds staged uncommitted
   docs/decisions/0021-tc-code-real.md, tests/fixtures/pob2_real/README.md,
   tests/test_tc_code_real.py - merge or let the loop pick it up.
 - loop: progress/loop.json fire 8 done 08:18; next tick every 15 min.

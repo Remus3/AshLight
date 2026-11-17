@@ -64,8 +64,8 @@ def test_token_required(srv):
         assert r.status == 401, path
         r, _ = req(srv, "GET", path, auth())
         assert r.status == 200, path
-    r, _ = req(srv, "GET", f"/api/health?token={TOKEN}")
-    assert r.status == 200
+    r, _ = req(srv, "GET", f"/api/health?token={TOKEN}")  # S3: /events only
+    assert r.status == 401
     r, _ = req(srv, "GET", "/events")
     assert r.status == 401
 

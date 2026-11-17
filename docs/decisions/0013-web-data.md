@@ -89,3 +89,29 @@ policy changes, or the operator rules web data must be per feature.
 Amended by 0017 (2026-11-17): item 5 (trade2 calls): the app no longer
 calls trade2; trade is a search link the user opens. See
 docs/decisions/0017-trade-no-app-calls-and-floor-wording.md.
+
+## Amendment 2026-11-17 (AUDIT-SNAPSHOT-OPTIN, audit finding T1)
+
+Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
+- Decision: this decision now also covers the build-time game-data
+  snapshot: it follows the single
+  `web_data` opt-in of decision 0013 (default off). `scripts/build.ps1`
+  runs it only when config/local.json holds `"web_data": true` (strict
+  bool, as the core reads it) or the build is forced with `-Snapshot` /
+  env `AL_SNAPSHOT=1` (passed on as `snapshot --opt-in`); `-NoSnapshot` /
+  `AL_NO_SNAPSHOT=1` still skip and win. `snapshot.main` checks the same
+  setting itself, so a direct run also makes no request while it is off.
+  Once web data is on, every build refreshes the snapshot by itself
+  (the 24 h gate keeps a re-run a no-op).
+- Alternatives: (b) keep the opt-out and write a build-time exception into
+  0013 - rejected: users read "nothing hits the network while off"
+  literally and a fresh build would still contact two hosts; (c) a second
+  `snapshot` setting - rejected: two consent switches contradict 0013's
+  one opt-in.
+- Why: one consent switch, the promise kept literally, zero-click after
+  the opt-in; the app already treats the snapshot as optional (zone levels,
+  tree names and the data credit read a missing cache as absent).
+- Reverses if: a core feature turns out to need snapshot data and cannot
+  degrade, the operator rules that a build-time fetch is not "web data",
+  or first-run use shows users missing the data and not finding the switch.
+- Tests: tests/test_audit_snapshot_optin.py.

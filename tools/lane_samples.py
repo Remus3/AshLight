@@ -31,6 +31,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from loop_base import _NO_WINDOW, ascii_text, atomic_write, iso, read_json, read_jsonl  # noqa: E402
 
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from server.al import exepin  # noqa: E402
+
 CODE = "AL"
 ONE_IN = 20
 FIRST_N = 20  # samples measured before the cap is set
@@ -128,7 +132,8 @@ def _samples(d):
 def recycle(path):
     """Send one file to the Recycle Bin (FLEET item 9). True when it left."""
     env = dict(os.environ, AL_RECYCLE_PATH=str(path))
-    subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", _RECYCLE_PS],
+    ps = str(exepin.system_tool("WindowsPowerShell", "v1.0", "powershell.exe"))  # AUDIT-EXE-PATH
+    subprocess.run([ps, "-NoProfile", "-NonInteractive", "-Command", _RECYCLE_PS],
                    env=env, creationflags=_NO_WINDOW, capture_output=True, timeout=60, check=False)
     return not Path(path).exists()
 

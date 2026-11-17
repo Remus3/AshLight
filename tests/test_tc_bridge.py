@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import tc_pin  # noqa: E402
 
+from server.al import exepin  # noqa: E402
 from server.al.theorycraft import bridge  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures" / "tc_bridge"
@@ -184,6 +185,7 @@ def test_present_component_builds_luajit_command(tmp_path):
     comp = bridge.component_paths(environ=env)
     comp["luajit"].parent.mkdir(parents=True)
     comp["luajit"].write_bytes(b"")
+    exepin.record(comp["luajit"])  # AUDIT-EXE-PATH: setup records the hash
     comp["pob_src"].mkdir(parents=True)
     (comp["pob_src"] / "HeadlessWrapper.lua").write_text("", encoding="ascii")
     assert bridge.available(environ=env) is True
@@ -202,6 +204,7 @@ def test_shared_bridge_is_lazy_and_reused(tmp_path, monkeypatch):
     comp = bridge.component_paths(environ=env)
     comp["luajit"].parent.mkdir(parents=True)
     comp["luajit"].write_bytes(b"")
+    exepin.record(comp["luajit"])  # AUDIT-EXE-PATH: setup records the hash
     comp["pob_src"].mkdir(parents=True)
     (comp["pob_src"] / "HeadlessWrapper.lua").write_text("", encoding="ascii")
     first = bridge.shared(environ=env)
