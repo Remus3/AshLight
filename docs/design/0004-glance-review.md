@@ -285,6 +285,59 @@ user32. Desktop only; the game was not running.
   pixels unchanged, the far corners identical to the desktop). This
   closes the open note in U19 for the real window; no fix needed.
 
+## Live pass, batch 6 (2026-11-17)
+
+Method as batch 5: a test core on a spare port fed by
+`tools/synth_client.py` (an act 1 session, so the zone tip shows), a
+pasted build, one waystone item check; headless Chrome over CDP at 320 /
+768 / 1440 px, dark, light and forced colours; the real overlay from the
+branch at the top-left of the primary monitor, GDI copies of the screen.
+Tests: `tests/test_ux_b6.py`.
+
+- U22 UX-B5-CARDS [S2; fixed] (a) Search strings sat in one-line
+  read-only inputs: the waystone string (about 250 characters) was 1483
+  px wide in a 231 px box at 320 px, so most of it could not be read; the
+  light theme also painted them as white form fields. Each string is now
+  a wrapping text block (`overflow-wrap: anywhere`, 237 = 237 px); only
+  the Copy button takes focus. (b) Copy feedback had no spoken form. The
+  page already holds its 12 live regions (U16), so none was added: the
+  clicked button's own name gains the outcome (`... (copied)`), which
+  most screen readers read on that click (best effort: some stay silent
+  on a name change; a reliable path needs one of the 12 slots freed),
+  and only the last clicked row shows its word. The
+  fallback now selects the text itself and says so ("The text is
+  selected: press Ctrl+C"). The filter button does the same. (c) The
+  loot filter words now say what it is (an add-on for your own filter),
+  where it goes (browser downloads, then you move it to the folder the
+  game's own filter button opens, research 0022; the folder is not named
+  in source, `tests/test_audit_buildfile.py`) and that AshLight writes
+  nothing into game folders. Holds: the waystone verdict on the item card
+  (`Risky` pill plus a sentence naming at most 3 mods), the Zone tip line
+  in Act times, no horizontal scroll at any width.
+- U23 UX-ONBOARD-COPY [S3; fixed] The ToS-floor promises were spread over
+  the consent card and the web data card. A folded "What AshLight does
+  and never does" in the footer now says them in plain words: reads
+  Client.txt after you allow it, the clipboard once per item check
+  press, writes it only on a Copy click, poe.ninja and pasted build
+  links only with web data on, this computer only; never sends input to
+  the game, never reads or changes its memory or network traffic, never
+  changes a game file or writes into game folders, never asks for an
+  account, password or cookie. The GGG disclaimer line stays first in
+  the footer. No live region. design-reviewer on batch 6: PASS WITH
+  FINDINGS S1=0 S2=1 S3=3 S4=1, all fixed (the never-list no longer
+  denies reading Client.txt; Copy write listed; short sentences;
+  "Sent", not "Saved"; best-effort wording for the button-name cue).
+- U24 UX-OVERLAY-WAYSTONE [S3; fixed] Real overlay, desktop only: the
+  card reads `Risky for this build` / `Trade link ready` / `Extra fire
+  dmg +3 more`, three lines, no wrap, inside 34 characters. Two defects:
+  the card kept the grey edge while the dashboard pill is warn (now the
+  warn edge, Highlight in forced colours; the word still leads); and
+  with no build loaded and web data on, the price card replaced the
+  waystone verdict, which needs no build (the verdict now keeps the
+  card). Budget: 2 processes, 179.9 MB peak working set over 20 s
+  (smoke gate 215 MB); click-through and non-focus hold. Overlay and
+  core closed by the PIDs started.
+
 ## Kept by decision
 
 - K1 (SC 2.2.2): the zone and session timers keep updating with no pause

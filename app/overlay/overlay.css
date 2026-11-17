@@ -110,6 +110,9 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   max-width: 258px;
 }
 .evalcard[data-verdict="upgrade"] { border-left-color: var(--fk-status-ok); }
+/* UX-OVERLAY-WAYSTONE: a risky waystone, warn like its dashboard pill;
+   the head word "Risky" carries the meaning */
+.evalcard[data-verdict="risky"] { border-left-color: var(--fk-status-warn); }
 .evalcard .line { color: var(--fk-text-muted); font-size: 13px; }
 
 /* The disclaimer is the overlay's "About"; screen readers get it, the HUD
@@ -150,4 +153,5 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   .hud, .trade, .evalcard { forced-color-adjust: auto; }
   :root { --al-plate: Canvas; }
   .trade, .evalcard[data-verdict="upgrade"] { border-left-color: Highlight; }
+  .evalcard[data-verdict="risky"] { border-left-color: Highlight; }
 }

@@ -764,6 +764,34 @@ design docs in docs/design/, both made by a separate agent.
   DONE 2026-11-17 (area-ux b5, 0004 U21): `--force-high-contrast` on
   the real window: plates repaint to Canvas, outside stays transparent;
   no fix needed.
+- [x] UX-B5-CARDS (review) Glance pass over the util batch 5 / 6
+  surfaces: waystone verdict on the item card and overlay, Search
+  strings card (Copy feedback without live-region spam, keyboard
+  reachable, long strings wrap at 320 px), Zone tip in Act times, the
+  ashlight.filter download (what it does; AshLight writes nothing into
+  game folders). ACCEPT: 320 / 768 / 1440 px, dark / light / forced
+  colours, defects fixed. ZERO-CLICK: nothing to set; every surface
+  fills itself from the log, the pasted build and the hotkey press.
+  DONE 2026-11-17 (area-ux b6, 0004 U22): search strings wrap (were
+  clipped one-line inputs), Copy / filter feedback on the button's own
+  name (no 13th live region), filter words say download-then-move and
+  that nothing is written to game folders.
+- [x] UX-ONBOARD-COPY (build) One short "What AshLight does / never
+  does" explainer reachable from the dashboard footer: reads Client.txt
+  after opt-in, clipboard only on your hotkey press, never sends input to
+  the game, never touches the game process; the GGG disclaimer intact.
+  ACCEPT: in the footer at every width, under the 12 live-region cap,
+  tested. ZERO-CLICK: always on the page, folded; nothing to set.
+  DONE 2026-11-17 (area-ux b6, 0004 U23): footer fold, disclaimer first,
+  no live region; tests/test_ux_b6.py.
+- [x] UX-OVERLAY-WAYSTONE (review) The real overlay shows the waystone
+  verdict legibly in its 3-line card (34 characters a line, no wrap) on
+  the desktop, budget kept (2 processes, smoke <= 215 MB). ACCEPT:
+  desktop screenshot read back, numbers recorded. ZERO-CLICK: the card
+  shows by itself on the item-check press and leaves after 20 s.
+  DONE 2026-11-17 (area-ux b6, 0004 U24): card read back on the desktop
+  in 3 lines; risky waystone now takes the warn edge, and keeps the card
+  over the price card with no build loaded; 2 processes, 179.9 MB peak.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.

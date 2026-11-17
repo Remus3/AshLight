@@ -500,8 +500,9 @@ Generation rules:
   text from busy scenes). In high-contrast mode (`prefers-contrast:
   more`) the plate has no alpha of its own; the window opacity still
   applies (audit 0004 U3). In Windows forced colours the plate is opaque
-  Canvas, text and edges take the system theme (the trade and upgrade
-  edges use Highlight), the page root opts out so the window stays
+  Canvas, text and edges take the system theme (the trade, upgrade and
+  risky-waystone edges use Highlight; elsewhere the risky waystone edge
+  is status-warn, audit 0004 U24), the page root opts out so the window stays
   transparent, and contrast is the theme's own, not measured here; the
   window opacity slider still multiplies (audit 0004 U8).
 - Opacity: the effective opacity must keep every overlay text pair >= 4.5:1
