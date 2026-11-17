@@ -28,9 +28,14 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   REMAINS: in-map run read from the game's own FPS display, overlay off vs
   idle vs updating, Windowed Fullscreen. ACCEPT: average FPS loss under 1
   percent, 1 percent lows unchanged within noise; numbers in decision 0002.
-- [ ] OVL-TRADE-CANCEL (build) Decide whether ": Trade cancelled." (new
+- [x] OVL-TRADE-CANCEL (build) Decide whether ": Trade cancelled." (new
   event trade_cancelled) should clear or mark an open trade card (design
-  review 2026-11-16). ACCEPT: behaviour decided and tested.
+  review 2026-11-16). ACCEPT: behaviour decided and tested. DONE
+  2026-11-17: decision 0019 - accepted / cancelled drop one open card (by
+  counterparty name if a line carries one, else the oldest); with
+  UX-REVIEW F1 (HUD status slot says "1 trade" / "N trades" while a card
+  holds the slot) and F6 (dashboard polite "New trade request from <name>."
+  only when the set of ids grows). ZERO-CLICK: the card clears itself.
 - [ ] HUD-ACT (build) Leveling helpers: act / zone level table from an
   attributed build-time data snapshot (license checked first, research 0005);
   zone timer splits per act. ACCEPT: split table on the dashboard.
@@ -198,6 +203,14 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   each [{"hooks": [{"type": "command", "command": "python
   \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""}]}], then checks one
   isolated spawn lands under the sidecar Worktree dir.
+- [ ] LEAK-WT (build) The commit hook's leak sweep reports DEGRADED in agent
+  worktrees: config/local.json and config/leak_needles.json are gitignored
+  and absent there. Fix: tools/leak_sweep.py resolves the main checkout via
+  `git rev-parse --git-common-dir` and reads its needle config when the
+  worktree has none, so the sweep runs ARMED in worktrees. ACCEPT: a commit
+  in a linked worktree prints ARMED with the main checkout's needle count; a
+  test on a tmp repo + linked worktree covers it. ZERO-CLICK: the hook finds
+  the config itself on every worktree commit; no copy step.
 - [x] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001). Done 2026-11-17: 0 hits on both wikis
   (research 0009).

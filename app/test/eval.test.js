@@ -41,9 +41,12 @@ test("the card shows until expires_at, then the trade card comes back", () => {
   const off = gate.hudModel(snap, 1020, "live");
   assert.equal(off.evalHead, "");
   assert.equal(off.tradeFrom, "Trade: Quietfox");
+  // UX-REVIEW F1: the "1 trade" count in the status slot goes with the card
+  assert.equal(on.trades, "1 trade");
+  assert.equal(off.trades, "");
   assert.deepEqual(gate.changedFields(on, off).sort(),
     ["evalHead", "evalItem", "evalLine", "evalVerdict", "tradeFrom", "tradeItem",
-     "tradeWhere"].sort());
+     "tradeWhere", "trades"].sort());
 });
 
 test("the card also shows before the Client.txt opt-in", () => {

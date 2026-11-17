@@ -350,6 +350,13 @@ Generation rules:
      `Price check failed`; dashboard `<n> listed in <league>. The cheapest
      is <a>; the middle of the <k> cheapest is <b>.`; the one card is
      chosen by `overlay_card` (decision 0016)
+   - open trade count (UX-REVIEW F1, `format.js tradeCount`): HUD status
+     slot `1 trade` / `<n> trades` while a card hides the trade card;
+     slot order: connection, Client.txt state, trade count, AFK / DND
+   - new trade request (UX-REVIEW F6, `web/trades.js`): dashboard polite
+     live region `New trade request from <from>.` (no name: `New trade
+     request.`; several at once: `<n> new trade requests.`), only when the
+     set of open trade ids grows
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.

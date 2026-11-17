@@ -152,10 +152,21 @@ def test_read_displays(tmp_path):
 
 # ---------------------------------------------------------------- trade cards
 
-def _replayed(tmp_path):
+def _replayed(tmp_path, closes=False):
+    # The three whisper cards as they arrive. The fixture's "Trade accepted."
+    # closes the oldest (decision 0019); closes=True keeps that line.
     core = Core(runtime=tmp_path / "rt", tail=False)
-    core.replay(FIXTURE.read_text(encoding="ascii").splitlines())
+    lines = FIXTURE.read_text(encoding="ascii").splitlines()
+    if not closes:
+        lines = [ln for ln in lines if not ln.endswith(": Trade accepted.")]
+    core.replay(lines)
     return core
+
+
+def test_fixture_trade_accepted_closes_the_oldest_card(tmp_path):
+    core = _replayed(tmp_path, closes=True)
+    cards = core.state.snapshot()["trade_requests"]
+    assert [c["from"] for c in cards] == ["Quietfox", "Coinmonger"]
 
 
 def test_fixture_whispers_become_trade_cards(tmp_path):

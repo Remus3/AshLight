@@ -414,3 +414,7 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
   vendored (decision 0018). Reverses if: GitHub archives stop being
   byte-stable, either license leaves MIT / permissive, or LuaJIT ships
   hashed release binaries.
+- A trade accepted / cancelled line closes ONE open trade card: the named
+  counterparty's, else the oldest (decision 0019). Reverses if: a PoE2 log
+  line names the counterparty (then match by name only), or the oldest-card
+  guess drops the wrong request in normal play.

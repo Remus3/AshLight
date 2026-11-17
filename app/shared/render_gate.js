@@ -15,7 +15,7 @@
 }(typeof self !== "undefined" ? self : this, function (fmt) {
   "use strict";
 
-  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "log", "status",
+  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "log", "status", "trades",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
                 "evalHead", "evalItem", "evalLine", "evalVerdict"];
 
@@ -52,6 +52,10 @@
     model.evalItem = card.line2;
     model.evalLine = card.line3;
     model.evalVerdict = card.verdict;
+    /* UX-REVIEW F1: while the card holds the slot, open trade requests
+       still show as a count in the status slot, never invisible. */
+    var n = (snap && snap.trade_requests) ? snap.trade_requests.length : 0;
+    model.trades = card.head ? fmt.tradeCount(n) : "";
     if (card.head) {
       model.tradeFrom = model.tradeItem = model.tradeWhere = model.tradeMore = "";
     }
@@ -118,10 +122,11 @@
   }
 
   /* The word in the HUD status slot: a connection problem first, then the
-     Client.txt state, then AFK / DND, else nothing. */
+     Client.txt state, then the open trade count while a card hides the
+     trade card, then AFK / DND, else nothing. */
   function statusText(model) {
     if (model.status !== "live") { return model.status; }
-    return model.log || model.away || "";
+    return model.log || model.trades || model.away || "";
   }
 
   function shouldRender(prev, next) {

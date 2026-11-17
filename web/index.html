@@ -10,6 +10,7 @@
 <script src="/web/status.js" defer></script>
 <script src="/web/tc.js" defer></script>
 <script src="/web/prices.js" defer></script>
+<script src="/web/trades.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -69,11 +70,12 @@
     <h2 id="trades-title">Trade requests <span class="muted">(shown on the overlay)</span></h2>
     <p class="muted">Requests clear after 10 minutes.</p>
     <ol id="trade-list" class="trade-list"></ol>
-    <p id="trade-status" class="muted" role="status" aria-live="polite"></p>
     <div class="actions">
       <button id="trade-clear" type="button" class="secondary">Dismiss all</button>
     </div>
   </section>
+  <!-- F6: outside #trades so the live region exists before the first request -->
+  <p id="trade-status" class="muted trade-status" role="status" aria-live="polite"></p>
 
   <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
     <h2 id="eval-title">Item check</h2>
