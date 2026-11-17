@@ -13,7 +13,7 @@ keeps them per value (item.Mod.ranges). From those:
   between them.
 
 Pure arithmetic on numbers the item text states, weighted by the weights
-the item check already uses (hand or PoB-measured, decision 0022); it
+the item check already uses (hand or PoB-measured, decision 0024); it
 models no game mechanic and computes no damage or EHP (decision 0004).
 """
 

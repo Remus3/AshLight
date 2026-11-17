@@ -98,7 +98,7 @@
     var tl = snap.tailer;
     if (tl && !tl.consented) {
       return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
-               log: "not reading", status: status || "live",
+               log: "not reading - see dashboard", status: status || "live",
                tradeFrom: card.from, tradeItem: card.item, tradeWhere: card.where,
                tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
                anchor: anchorOf(snap) };
@@ -116,7 +116,10 @@
       sep: "|",
       /* DS-HUD-AFK: the log's AFK / DND state (design 0001 7.2). */
       away: snap.afk ? "AFK" : (snap.dnd ? "DND" : ""),
-      log: (tl && !tl.reading) ? "no Client.txt" : "",
+      /* UX-COPY: a known file that is quiet is not missing. Telegraphic so
+         it fits after "Lv 100 | 99 deaths" in the 258 px plate (design
+         review F1: "waiting for Client.txt" clipped). */
+      log: (tl && !tl.reading) ? (tl.path ? "waiting for log" : "no Client.txt") : "",
       status: status || "live"
     };
   }

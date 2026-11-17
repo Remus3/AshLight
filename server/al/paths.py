@@ -20,7 +20,9 @@ from pathlib import Path
 CODE = "AL"
 SIDECAR_ENV = "AL_SIDECAR_ROOT"
 RUNTIME_ENV = "AL_RUNTIME_DIR"  # tests only: a tmp runtime dir for a test core
-SIDECAR_SUBDIRS = ("Temp", "Build", "Logs", "Cache")
+# Every sidecar folder CLAUDE.md "Sidecar" lists except Worktree (made by the
+# worktree hook, see worktree_dir) - AUDIT-HYGIENE H4.
+SIDECAR_SUBDIRS = ("Scratch", "Temp", "Build", "Logs", "Cache", "ClaudeHistory")
 
 _KIT_DEFAULT = None
 
@@ -130,6 +132,9 @@ def all_runtime_paths(environ=None):
     out["luajit_build"] = out["build"] / "luajit"  # LuaJIT source tree + luajit.exe
     out["tc_stamp"] = out["build"] / "tc-pins-stamp.json"
     out["tc_bridge_log"] = out["logs"] / "tc-bridge.log"  # TC-BRIDGE stderr
+    out["worktree"] = worktree_dir(environ)  # AUDIT-HYGIENE H4
+    # the overlay's Electron profile (app/main.js, AL_SIDECAR_ROOT set by run.ps1)
+    out["overlay_profile"] = out["cache"] / "overlay-profile"
     return out
 
 

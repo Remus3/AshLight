@@ -1,4 +1,4 @@
-"""TC-DELTA: PoB-backed evaluation (decision 0022).
+"""TC-DELTA: PoB-backed evaluation (decision 0024).
 
 The calc component (TC-BRIDGE: pinned LuaJIT + unmodified PoB-PoE2) is a
 callable `calc(build, swaps) -> {"dps", "ehp"}`; these tests drive the

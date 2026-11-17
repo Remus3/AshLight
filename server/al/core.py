@@ -98,7 +98,7 @@ class Core:
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.
         # TC-UPGRADE: the item check card carries an offline upgrade-search link
         # for the checked slot, in the configured league (decision 0017).
-        # TC-DELTA (decision 0022): the optional PoB calc callable; None while
+        # TC-DELTA (decision 0024): the optional PoB calc callable; None while
         # the component is off (TC-BRIDGE sets it), and the item check then
         # scores with the stat weights and says so on the card.
         # MATH-VALUE: the card's `value` reads the cached rates at run time
@@ -206,6 +206,9 @@ class Core:
         return bool(self.consent_record().get("consented"))
 
     def record_consent(self, consented, path=None):
+        if path and not logfile.consent_path_ok(path):
+            # AUDIT-HTTP-HARDEN S4: checked before any file system access.
+            raise ValueError("path must be a local Client.txt or the folder holding it")
         if path:
             self._configured_log = path
             self.locate_log()
@@ -263,6 +266,8 @@ class Core:
         recovered = [k for k in ("zone", "character", "class", "level", "area_id")
                      if fields.get(k) is not None]
         recovered += [k for k in ("deaths", "level_ups") if fields.get(k)]
+        if self.state.snapshot()["acts"]["splits"] and fields.get("act_areas"):
+            recovered.append("acts")
         self.state.set_tailer(resume={
             "bytes": result["bytes_scanned"], "hit_marker": result["hit_marker"],
             "ms": round((time.perf_counter() - t0) * 1000.0, 1),

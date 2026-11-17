@@ -12,7 +12,7 @@ const BUILD = {
     stats: { Life: 2410, EnergyShield: 1830.5, TotalDPS: 123456.78, FireResist: 75,
              Spirit: "not-a-number", SomethingElse: 3 },
     tree: { title: "Endgame", tree_version: "0_3", node_count: 6,
-            url: "https://example.org/tree/endgame", jewels: { 40: 3 } },
+            url: "https://www.pathofexile.com/passive-skill-tree/endgame", jewels: { 40: 3 } },
     gear: { "Gloves": { rarity: "RARE", name: "Doom Grip", base: "Example Gloves", text: "Rarity: RARE\nDoom Grip" },
             "Weapon 1": { rarity: "UNIQUE", name: "Example Unique", base: "Example Quarterstaff", text: "" } },
     skills: [{ enabled: true, slot: "Weapon 1", label: "Main",
@@ -59,7 +59,7 @@ test("build view: skills, gems and tree summary", () => {
   assert.deepEqual(m.skills[0].gems[0].links.map((l) => l.label), ["poe2db"]);
   assert.equal(m.skills[1].enabled, false);
   assert.equal(m.tree.line, "Endgame: 6 points allocated (tree 0_3)");
-  assert.equal(m.tree.url, "https://example.org/tree/endgame");
+  assert.equal(m.tree.url, "https://www.pathofexile.com/passive-skill-tree/endgame");
 });
 
 test("build view: empty and hostile values", () => {

@@ -1,6 +1,6 @@
 """MATH-WEIGHTS: stat weights from Path of Building outputs, kept per build.
 
-TC-DELTA (decision 0022) probes each stat key through the PoB calc (one
+TC-DELTA (decision 0024) probes each stat key through the PoB calc (one
 full PoB calculation per key, up to delta.MAX_PROBES per slot) on every
 item check. Those weights depend only on the build, the slot, the carrier
 item in that slot and the DPS / EHP blend, so this cache keeps them:

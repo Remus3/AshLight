@@ -7,8 +7,16 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-TEXT_SUFFIXES = {".py", ".md", ".txt", ".json", ".js", ".css", ".html", ".yml", ".yaml",
-                 ".ini", ".toml", ".cfg", ".ps1", ""}
+# AUDIT-HYGIENE H2: every non-binary file is checked (no suffix allowlist);
+# a file is binary by a known binary suffix or a NUL byte in its content.
+BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".bmp", ".zip",
+                   ".gz", ".7z", ".exe", ".dll", ".pyc", ".woff", ".woff2", ".ttf",
+                   ".otf", ".pdf", ".node"}
+
+
+def checked(files):
+    """The files the ASCII / LF check reads: all but known binaries."""
+    return [p for p in files if p.suffix.lower() not in BINARY_SUFFIXES]
 
 
 def _tracked(run=subprocess.run):
@@ -50,13 +58,12 @@ def test_git_failure_is_not_a_pass():
 def test_bare_cr_and_ps1_are_checked():
     assert _problems("a.ps1", b"x\ry\n") == ["a.ps1: crlf"]
     assert _problems("a.py", b"ok\n") == []
-    assert ".ps1" in TEXT_SUFFIXES
+    assert checked([Path("a.ps1")]) == [Path("a.ps1")]
 
 
 @pytest.mark.git  # plan 097: git ls-files (read-only); run it by name
 def test_tracked_text_is_ascii_lf():
-    files = [p for p in _tracked() if p.suffix in TEXT_SUFFIXES and p.is_file()
-             and p.name not in {"LICENSE"} and "fleet_kit" not in p.parts]
+    files = [p for p in checked(_tracked()) if p.is_file() and "fleet_kit" not in p.parts]
     bad = []
     for p in files:
         data = p.read_bytes()

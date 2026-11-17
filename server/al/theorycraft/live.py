@@ -88,7 +88,7 @@ class LastEval:
         # TC-UPGRADE: a callable read at run time (the configured league or
         # None -> Standard); nothing is fetched
         self.league = league
-        # TC-DELTA (decision 0022): a provider read at run time, returning
+        # TC-DELTA (decision 0024): a provider read at run time, returning
         # the PoB calc callable (theorycraft.delta) or None while the
         # optional component is off; TC-BRIDGE supplies it
         self.calc = calc

@@ -150,7 +150,7 @@ def _keys(new_stats, old_stats):
 
 
 def _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache=None):
-    """TC-DELTA (decision 0022): replace the hand-weight comparisons with
+    """TC-DELTA (decision 0024): replace the hand-weight comparisons with
     PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError.
     MATH-WEIGHTS: with a pobweights cache only unmeasured keys are probed."""
     probe = cache.mod_weights if cache is not None else delta_mod.mod_weights
