@@ -10,6 +10,7 @@ import logging
 import threading
 from pathlib import Path
 
+from .. import jsonfile
 from . import buildfile, codec, health, model, paste, searchstr, skillsplit
 
 log = logging.getLogger("al.theorycraft")
@@ -17,14 +18,6 @@ log = logging.getLogger("al.theorycraft")
 
 def default_path(runtime_dir):
     return Path(runtime_dir) / "build" / "last-code.txt"
-
-
-def _write(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(text)
-    tmp.replace(path)
 
 
 class BuildStore:
@@ -72,7 +65,7 @@ class BuildStore:
         build = paste.parse(text)
         code = build.to_code() if paste.detect(text) != "code" else "".join(text.split())
         with self._lock:
-            _write(self.path, code + "\n")
+            jsonfile.write_text(self.path, code + "\n")
             self.build = build
             self.load_error = None
         for fn in list(self._listeners):

@@ -12,10 +12,10 @@ is always None. Values are PoB's own; nothing is recomputed (decision
 """
 
 import logging
-import math
 import threading
 import time
 
+from .. import num
 from . import pobweights
 
 log = logging.getLogger("al.theorycraft")
@@ -30,7 +30,7 @@ def clean(raw):
     for k, v in raw.items():
         if not isinstance(k, str):
             continue
-        if isinstance(v, bool) or (isinstance(v, (int, float)) and math.isfinite(v)):
+        if isinstance(v, bool) or num.finite(v) is not None:
             out[k] = v
     return out
 

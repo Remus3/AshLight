@@ -12,6 +12,7 @@ each skill's share of the summed PoB values, and the order.
 import math
 import re
 
+from .. import num
 from . import model
 
 SOURCE = "PoB"
@@ -30,9 +31,7 @@ def _finite(v):
             v = float(v.strip())
         except ValueError:
             return None
-    if not isinstance(v, (int, float)) or not math.isfinite(v):
-        return None
-    return float(v)
+    return num.finite(v)
 
 
 # PoB writes a skill used more than once as "<count>x <name>" (Build.lua,

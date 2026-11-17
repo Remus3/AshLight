@@ -903,6 +903,7 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   real-shaped waystone text (several reward mods summed, none, corrupted,
   unidentified); design-reviewer pass. ZERO-CLICK: computed on the
   press the player already makes; no other click.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-CAMPAIGN-CHECKS (build) Campaign level checks: from the player
   level (Client.txt) and the loaded PoB build, show (a) a higher life /
   mana flask base available at this level (base drop levels from the
@@ -919,6 +920,7 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   not shown, unknown level -> nothing, no build -> nothing, boss zone
   line), test_sidecar_paths green, design-reviewer pass. ZERO-CLICK:
   appears and clears by itself on level-up and zone entry.
+  BLOCKED: session lane building (2026-11-17)
 
 ## Game settings advisor (operator order 2026-11-16)
 

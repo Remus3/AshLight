@@ -19,6 +19,7 @@ import re
 import threading
 from pathlib import Path
 
+from .. import jsonfile
 from . import item as item_mod
 
 log = logging.getLogger("al.theorycraft")
@@ -181,14 +182,6 @@ def default_path(runtime_dir):
     return Path(runtime_dir) / "theorycraft" / "weights.json"
 
 
-def _write(path, doc):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(json.dumps(doc, indent=1, sort_keys=True, ensure_ascii=True) + "\n")
-    tmp.replace(path)
-
-
 class WeightsStore:
     """The weights file: read on make, defaults written when missing."""
 
@@ -204,7 +197,7 @@ class WeightsStore:
         except FileNotFoundError:
             doc = defaults()
             try:
-                _write(self.path, doc)
+                jsonfile.write_json(self.path, doc, sort_keys=True)
             except OSError as e:
                 log.warning("default weights not written: %s", e)
             return doc
@@ -226,7 +219,7 @@ class WeightsStore:
         """Validate, persist and use a new document. Raises WeightsError."""
         clean = validate(doc)
         with self._lock:
-            _write(self.path, clean)
+            jsonfile.write_json(self.path, clean, sort_keys=True)
             self.doc = clean
             self.load_error = None
         return self.get()

@@ -17,11 +17,7 @@ counters the state already keeps; the core saves the last MAX_SAVED cards
 under the runtime dir (ops/runtime, gitignored) and nowhere else.
 """
 
-import json
-import os
-from pathlib import Path
-
-from . import paths
+from . import jsonfile, paths
 from .runs import clock_text
 
 IDLE_S = 1200.0  # 20 minutes with no game activity ends the stretch
@@ -165,29 +161,17 @@ def summary_file():
 def save(path, card, keep=MAX_SAVED):
     """Append `card` to the saved list (newest last, at most `keep`).
     Atomic replace; an unreadable file starts a new list."""
-    path = Path(path)
-    rows = []
-    try:
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(doc, dict) and isinstance(doc.get("summaries"), list):
-            rows = [r for r in doc["summaries"] if isinstance(r, dict)]
-    except (OSError, ValueError):
-        rows = []
+    doc = jsonfile.read_json(path, kind=dict, default={})
+    rows = doc.get("summaries")
+    rows = [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
     rows.append(card)
     rows = rows[-keep:]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps({"summaries": rows}, indent=1) + "\n", encoding="utf-8",
-                   newline="\n")
-    os.replace(tmp, path)
+    jsonfile.write_json(path, {"summaries": rows})
 
 
 def load_last(path):
     """The newest saved card, or None."""
-    try:
-        doc = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+    doc = jsonfile.read_json(path)
     rows = doc.get("summaries") if isinstance(doc, dict) else None
     if not isinstance(rows, list) or not rows or not isinstance(rows[-1], dict):
         return None

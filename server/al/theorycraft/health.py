@@ -29,9 +29,9 @@ the calc's output table, so those rows show only with the calc on
 (`calc_out`). No own uptime or "enough" verdict.
 """
 
-import math
 import re
 
+from .. import num
 from . import item as item_parser
 from . import searchstr, waystone
 from . import weights as weights_mod
@@ -162,8 +162,7 @@ def _calc(calc_out):
     if not isinstance(calc_out, dict):
         return {}
     return {k: v for k, v in calc_out.items()
-            if isinstance(k, str) and (isinstance(v, bool) or (
-                _num(v) is not None and math.isfinite(v)))}
+            if isinstance(k, str) and (isinstance(v, bool) or num.finite(v) is not None)}
 
 
 def more_warnings(stats, calc):
@@ -213,7 +212,7 @@ def defence(stats, calc_on):
         if calc_only and not calc_on:
             continue
         v = _num(stats.get(sid))
-        if v is not None and math.isfinite(v):
+        if v is not None and num.finite(v) is not None:
             out.append({"id": sid, "label": label, "value": v, "unit": unit,
                         "digits": digits})
     return out
