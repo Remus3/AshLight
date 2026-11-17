@@ -210,6 +210,36 @@ design docs in docs/design/, both made by a separate agent.
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
+## Testing and hardening (AREA-TEST, session 4)
+
+- [x] TEST-FLAKE (build) A live lane / loop tick writing
+  ops/loop/control/loop_items/*.json mid-suite tripped fleet_test_guard with
+  a false error at a random teardown. ACCEPT: root cause named; the tick's
+  own state files ignored via the kit's extra_ignore (no kit edit), stop
+  sentinels still watched; regression test. DONE 2026-11-17: the kit IGNORE
+  list has no AL loop-state paths; tests/conftest.py LOOP_TICK_STATE passes
+  loop_items/*, loop_inbox_watch, loop_orders, backoff, gate_verdicts,
+  push_worker, push_last, ledger_rotate as extra_ignore;
+  tests/test_guard_loop_state.py pins it to tools/loop_base.py. ZERO-CLICK:
+  test-only, no user step.
+- [ ] TEST-E2E (build) Synthetic end-to-end harness: replay a generated
+  Client.txt session (zones, level-ups, deaths, whispers, trades, rotation /
+  truncation, partial lines, non-ASCII names, a file near the 32 MB resume
+  cap) into a running core and assert snapshot / SSE output; fix what it
+  breaks. ACCEPT: stdlib harness test green, defects fixed with tests.
+  ZERO-CLICK: runs inside pytest, no user step. BLOCKED: claimed by the
+  interactive AREA-TEST lane (not an operator act; cleared on merge).
+- [ ] TEST-HTTP (build) HTTP / SSE surface robustness: token, Host / Origin,
+  oversized and malformed requests, many and slow SSE clients, core restart
+  under the keepalive supervisor. ACCEPT: tests green, defects fixed.
+  ZERO-CLICK: runs inside pytest, no user step. BLOCKED: claimed by the
+  interactive AREA-TEST lane (not an operator act; cleared on merge).
+- [ ] TEST-OVL (build) Overlay smoke and budgets: tests/test_budgets.py and
+  the overlay smoke test assert something real and pass. ACCEPT: each
+  budget test fails when its budget is broken. ZERO-CLICK: runs inside
+  pytest / npm test, no user step. BLOCKED: claimed by the interactive
+  AREA-TEST lane (not an operator act; cleared on merge).
+
 ## Ops
 
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
