@@ -8,9 +8,10 @@ import datetime as _dt
 import json
 import os
 import threading
+import time
 from pathlib import Path
 
-from . import VERSION, layout, logfile, parser, paths
+from . import VERSION, layout, logfile, parser, paths, resume
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import store as build_store
@@ -128,6 +129,24 @@ class Core:
         ev.setdefault("source", "tailer")
         self.bus.publish(ev)
 
+    def _resume(self, path, end):
+        """LIVE-RESUME: recover zone, character, class, level and deaths
+        from the bytes before the tailer's start offset (decision 0008)."""
+        t0 = time.perf_counter()
+        fixed = self.state.character if self.state.character_fixed else None
+        result = resume.scan(path, end=end, character=fixed)
+        if result is None:
+            return
+        fields = resume.state_fields(result)
+        self.state.restore(fields)
+        recovered = [k for k in ("zone", "character", "class", "level", "area_id")
+                     if fields.get(k) is not None]
+        recovered += [k for k in ("deaths", "level_ups") if fields.get(k)]
+        self.state.set_tailer(resume={
+            "bytes": result["bytes_scanned"], "hit_marker": result["hit_marker"],
+            "ms": round((time.perf_counter() - t0) * 1000.0, 1),
+            "recovered": recovered})
+
     def start_tailing(self):
         """Start the tailer when enabled, consented and the file is known."""
         with self._lock:
@@ -139,7 +158,8 @@ class Core:
                 return False
             self.tailer = logfile.Tailer(self.log_path, self.feed_line, self._on_status,
                                          poll_s=self.poll_s,
-                                         start_at_end=self.start_at_end)
+                                         start_at_end=self.start_at_end,
+                                         on_resume=self._resume)
             self.tailer.start()
             return True
 
