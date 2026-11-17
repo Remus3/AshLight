@@ -305,6 +305,42 @@ design docs in docs/design/, both made by a separate agent.
   sessionSub() - "Starts when you allow reading Client.txt" until the
   opt-in; app/test/dashboard.test.js. ZERO-CLICK: the line clears itself
   once reading starts.
+- [x] UX-FIRSTRUN (review) Walk the first-run path cold (no consent, no
+  config, web data off, no Path of Building calc) on the dashboard and the
+  overlay. ACCEPT: every card's empty / explain state says what appears and
+  what the player does, the opt-in indicator is visible, the path to a live
+  feed is one click; friction found is fixed and test-guarded. ZERO-CLICK:
+  after the one ToS-required opt-in click nothing else is needed; empty
+  states clear themselves when data arrives.
+  DONE 2026-11-17 (area-ux, glance review 0004 U10): overlay says
+  `not reading - see dashboard`; deaths tile `-` before the opt-in; the
+  build-step note only inside an act; consent card shows the real path
+  spelling. Node and pytest guards.
+- [x] UX-DPI (review) Overlay and dashboard at 100 / 125 / 150 / 200
+  percent scaling and 1080p / 1440p / 4K (emulated device scale factor);
+  overlay card positions against the PoE2 HUD regions; text legibility at
+  glance distance. ACCEPT: screenshots per scale, defects fixed and
+  test-guarded. ZERO-CLICK: the overlay follows the OS scale by itself; no
+  per-monitor setting to touch.
+  DONE 2026-11-17 (area-ux, 0004 U11): no clipping or scroll at any
+  scale; layout.js autoScale grows the HUD on monitors taller than 1440
+  DIPs (4K at 100 / 125 percent); top-right default kept by adjudicator
+  ruling, design 0001 section 10 corrected (it covers the corner map).
+- [x] UX-COPY (review) Sweep every user-facing string (web/, app/overlay/,
+  event text in server/al/state.py) against design 0001 sections 8-9.
+  ACCEPT: inconsistent or unclear strings fixed with exact-output tests.
+  ZERO-CLICK: copy only, no user step.
+  DONE 2026-11-17 (area-ux, 0004 U12): server connect line no longer
+  listed in Recent; overlay `waiting for log` for a quiet file;
+  three dashboard labels reworded.
+- [x] UX-PERF (review) Dashboard paint / JS cost with a busy synthetic
+  session (hundreds of events): long tasks, DOM growth, SSE handler cost.
+  ACCEPT: measured numbers recorded, regressions fixed, overlay budgets
+  (tests/test_budgets.py) green. ZERO-CLICK: no user step; the dashboard
+  stays light by itself in a long session.
+  DONE 2026-11-17 (area-ux, 0004 U13): 600 events in 13 s, handler
+  max 1.1 ms, 0 long tasks, DOM and heap flat after GC; recent list
+  skips unchanged rebuilds.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.

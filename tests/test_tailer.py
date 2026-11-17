@@ -2,6 +2,7 @@
 UTF-8 replacement, libraryfolders discovery. All under tmp_path."""
 
 import os
+from pathlib import Path
 
 from server.al import logfile
 
@@ -154,3 +155,9 @@ def test_libraryfolders_discovery(tmp_path):
     assert logfile.discover_client_log(None, steam_roots=[steam]) == log
     assert logfile.discover_client_log(str(log), steam_roots=[]) == log
     assert logfile.discover_client_log(None, steam_roots=[tmp_path / "none"]) is None
+    # UX-FIRSTRUN: a Steam root spelled in another case (the registry keeps
+    # it lower case) still gives the file's real spelling on the consent card.
+    if os.name == "nt":
+        lower = Path(str(steam).lower())
+        found = logfile.discover_client_log(None, steam_roots=[lower])
+        assert str(found) == str(log.resolve())

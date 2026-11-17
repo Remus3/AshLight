@@ -143,14 +143,24 @@ test("UI-REVIEW-2: the HUD says when Client.txt is not being read", () => {
   assert.equal(off.level, "");
   assert.equal(off.deaths, "");
   assert.equal(off.sep, "");
-  assert.equal(off.log, "not reading");
-  assert.equal(gate.statusText(off), "not reading");
+  // UX-FIRSTRUN: the word says where the one opt-in click is.
+  assert.equal(off.log, "not reading - see dashboard");
+  assert.equal(gate.statusText(off), "not reading - see dashboard");
   // Opted in but the file is missing or quiet: keep what is known, say so.
   const wait = gate.hudModel({ ...snap, tailer: { consented: true, reading: false, path: null } },
                              1000, "live");
   assert.equal(wait.level, "Lv 3");
   assert.equal(wait.log, "no Client.txt");
   assert.equal(gate.statusText(wait), "no Client.txt");
+  // UX-COPY: the file is known but quiet - waiting, not missing.
+  const quiet = gate.hudModel({ ...snap, tailer: { consented: true, reading: false, path: "logs/Client.txt" } },
+                              1000, "live");
+  assert.equal(gate.statusText(quiet), "waiting for log");
+  // Design review F2: a status word shown next to the numbers stays within
+  // the 15 characters that fit after "Lv 100 | 99 deaths" at 13 px.
+  const words = [quiet, wait].map((m) => gate.statusText(m))
+    .concat(["offline", "connecting", "9 trades", "AFK", "DND"]);
+  words.forEach((w) => assert.ok(w.length <= 15, w));
   // Reading, or an older core without the tailer field: nothing extra.
   const ok = gate.hudModel({ ...snap, tailer: { consented: true, reading: true, path: "x" } }, 1000, "live");
   assert.equal(ok.log, "");

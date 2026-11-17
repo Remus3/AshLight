@@ -111,7 +111,12 @@ def discover_client_log(configured=None, steam_roots=None):
     for lib in steam_libraries(steam_roots):
         cand = lib / LOG_REL
         if cand.is_file():
-            return cand
+            # UX-FIRSTRUN: the registry may hold a lower-case Steam path;
+            # the consent card shows the file's real spelling.
+            try:
+                return cand.resolve()
+            except OSError:
+                return cand
     return None
 
 
