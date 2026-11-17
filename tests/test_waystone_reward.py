@@ -44,10 +44,11 @@ def test_several_reward_properties_are_summed_in_order():
     assert res["corrupted"]
 
 
-def test_reward_mod_lines_add_to_the_property_total():
+def test_reward_mod_line_never_doubles_the_property_total():
+    # AREA-AUDIT P7-2: the "(augmented)" property already sums every source
     text = WAYSTONE.replace("Monsters take 22% reduced Extra Damage from Critical Hits",
                             "10% increased Rarity of Items found in this Area")
-    assert rew(text) == {"rarity": 48, "pack": 12}
+    assert rew(text) == {"rarity": 38, "pack": 12}
 
 
 def test_no_rewards_and_unidentified():

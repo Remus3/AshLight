@@ -17,7 +17,8 @@ UTIL-CAMPAIGN-CHECKS.
    translation, so the game prints the summed values as properties under
    the tier line ("Item Rarity: +38% (augmented)"); the rule reads those
    property lines and also any plain "N% increased <reward>" mod line,
-   summed per kind. The dashboard says "Rewards: ..." under the risk
+   summed per kind; a property is already the game's sum, so a mod line
+   counts only for a kind with no property (AREA-AUDIT P7-2). The dashboard says "Rewards: ..." under the risk
    sentence; the overlay card's item line becomes the compact reward line
    (as a price line replaces it, design 0001 section 10), never a third
    line. An unidentified waystone says to identify it. No tablet rules.

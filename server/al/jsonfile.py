@@ -24,7 +24,7 @@ def read_json(path, max_bytes=None, encoding="utf-8", kind=None, default=None):
         if max_bytes is not None and p.stat().st_size > max_bytes:
             return default
         doc = json.loads(p.read_text(encoding=encoding))
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):  # AREA-AUDIT P7-3: deep nesting
         return default
     if kind is not None and not isinstance(doc, kind):
         return default

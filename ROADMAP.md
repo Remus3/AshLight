@@ -1741,6 +1741,22 @@ merge. Each row names the finding ids it closes.
   before the first check (tests/test_tc_drift.py status_text tests), both
   runbook Verify lines say so.
 
+- [ ] AUDIT-P7-LOW (build) AREA-AUDIT pass 7 lows P7-4 to P7-8
+  (docs/audit/2026-11-17-audit.md "Pass 7"): P7-4 core._outputs_ready
+  reads state.build_info outside the state lock and writes it back, so a
+  build loaded in that window can be overwritten by the old build's info
+  (bump calc_rev inside SessionState under its lock); P7-5 the health card
+  says "once the optional calc is on" while the calc IS on and its first
+  background answer is pending (calc_on is "table ready", not "switch
+  on"; pass the switch state separately); P7-6 campaign.FlaskCache's
+  re-read on change never runs, the core calls get() once at start (call
+  it on the tick, or drop the claim); P7-7 campaign.build_facts reads any
+  "movement speed" text as speed, so boots with only "reduced Movement
+  Speed" count as fast (match "increased"); P7-8 jsonfile.read_json has no
+  default size cap (layout config, displays.json, summaries, ninja caches
+  read uncapped; add a generous default such as 32 MB). ACCEPT: a fix and
+  one regression test each. ZERO-CLICK: code row, the loop works it.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
