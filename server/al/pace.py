@@ -31,13 +31,17 @@ class Pace:
     def on_level(self, level, at):
         if not isinstance(level, int) or at is None:
             return False
+        step = 1
         if self.ups and level <= self.ups[-1][0]:
             # A lower or equal level is another character: start over.
             self.ups.clear()
             self.gained = 0
             self.reset_at = at
+        elif self.ups:
+            # AUDIT pass 2 (P2-P1): a skipped level (3 -> 5) is two levels
+            step = level - self.ups[-1][0]
         self.ups.append((level, at))
-        self.gained += 1
+        self.gained += step
         return True
 
     def view(self, now, session_started_at):

@@ -69,3 +69,73 @@ def test_luajit_builds_static_so_its_hash_covers_the_vm():
     assert msvc[-2:] == ["msvcbuild.bat", "static"]
     both = {"mingw32-make": "m", "gcc": "g"}
     assert tc_pin.build_plan(both.get) == ["m", "BUILDMODE=static"]
+
+
+# --- correctness sweep (pass 2) ---------------------------------------------
+
+def test_tiny_note_price_never_puts_infinity_in_the_snapshot():
+    """P2-V1 (medium): a seller's "~price 0.<309 zeros>1 divine" gave
+    score_per_primary inf; json.dumps wrote Infinity and the snapshot / SSE
+    frame was no longer valid JSON for the dashboard and overlay."""
+    import json
+    from server.al.theorycraft import value
+    snap = {"primary": "divine", "rates": {"divine": {"value": 1.0},
+                                           "exalted": {"value": 1e-300}}}
+    for note in ("~price 0." + "0" * 309 + "1 divine",
+                 "~b/o 0." + "0" * 20 + "1 exalted"):
+        doc = value.value_of(note, 100.0, snap)
+        json.dumps(doc, allow_nan=False)  # raises on inf / nan
+    assert value.per_unit(1e308, 1e-308) is None
+    assert value.convert(1e9, "divine", "exalted", snap) is None
+
+
+def test_resolve_range_never_raises_on_long_decimals():
+    """P2-I1: quantize past the 28-digit context raised InvalidOperation,
+    so the item check published no card."""
+    from server.al.theorycraft import item
+    assert item.resolve_range("1." + "0" * 40, "2") is not None
+    text = ("Item Class: Body Armours\nRarity: Rare\nX\nY\n--------\n"
+            "+(1." + "0" * 40 + "-2) to maximum Life\n")
+    item.parse(text)
+
+
+def test_flask_property_line_is_linear_time():
+    """P2-I2: _FLASK_PROP_RE backtracked quadratically on a long line."""
+    import time
+    from server.al.theorycraft import item
+    text = ("Item Class: Life Flasks\nRarity: Normal\nLife Flask\n--------\n"
+            "Recovers" + " " * 60000 + "x\n")
+    t0 = time.perf_counter()
+    item.parse(text)
+    assert time.perf_counter() - t0 < 0.5
+    ok = item.parse("Item Class: Life Flasks\nRarity: Normal\nLife Flask\n"
+                    "--------\nRecovers 120 Life over 3 Seconds\n")
+    assert ok.properties.get("Recovers") == "120 Life over 3 Seconds"
+
+
+def test_pace_counts_skipped_levels():
+    """P2-P1: a skipped level (3 -> 5) counted as one level gained."""
+    from server.al.pace import Pace
+    p = Pace()
+    for level, at in ((3, 600.0), (5, 900.0), (6, 1200.0)):
+        p.on_level(level, at)
+    v = p.view(1200.0, 0.0)
+    assert p.gained == 4
+    assert abs(v["per_hour"] - 12.0) < 1e-9
+
+
+def test_tailer_drops_overlong_terminated_lines(tmp_path):
+    """P2-L1: MAX_PARTIAL capped only unterminated lines; a terminated line
+    up to MAX_READ still reached the parser regexes (quadratic on some)."""
+    from server.al import logfile
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    got = []
+    t = logfile.Tailer(log, got.append, start_at_end=False)
+    t.poll_once()
+    with open(log, "ab") as fh:
+        fh.write(b"a (" * (logfile.MAX_PARTIAL // 3 + 10) + b"\n")
+        fh.write(b"2026/11/17 10:00:00 1 2 [INFO Client 3] : Hero is now level 5\n")
+    t.poll_once()
+    assert len(got) == 1 and got[0].endswith("level 5")
+    assert t.dropped_lines == 1
