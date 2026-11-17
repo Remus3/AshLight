@@ -40,6 +40,9 @@ its code (license notes: 0006).
 - 0013 Web endpoint verification - live poe.ninja overview shape, pobb.in and
   pastebin raw paths, rate and terms checks (DATA-NINJA-VERIFY, TC-URL-VERIFY)
   ([0013-web-endpoint-verify.md](0013-web-endpoint-verify.md))
+- 0014 GGG PoE2 tree export shape - real data.json keys vs the treedata.py
+  reader; two mismatches (DATA-TREE-SHAPE, DATA-TREE-FIX)
+  ([0014-tree-export-shape.md](0014-tree-export-shape.md))
 
 ## Open research (feeds ROADMAP)
 
