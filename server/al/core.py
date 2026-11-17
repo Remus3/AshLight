@@ -12,7 +12,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import (VERSION, acts, layout, logfile, ninja, parser, paths, price, pricebook,
+from . import (VERSION, acts, campaign, layout, logfile, ninja, parser, paths, price, pricebook,
                pricewatch, resume, runhistory, settingsio, tradestats, underlevel,
                webfetch)
 from . import summary as summary_mod
@@ -111,6 +111,10 @@ class Core:
         bases_path = (basetypes.default_path() if runtime is None
                       else self.runtime / "gamedata" / basetypes.FILE_NAME)
         self.base_names = basetypes.NamesCache(bases_path)
+        # UTIL-CAMPAIGN-CHECKS (ruling H): flask base drop levels from the same
+        # cached base list; read only, no fetch, nothing tracked.
+        self.flask_table = campaign.FlaskCache(bases_path)
+        self.state.set_campaign(flasks=self.flask_table.get())
         item_mod.set_base_names(self.base_names.get)
         # TC-UPGRADE-STATS (decision 0037): trade stat ids from the cached
         # repoe-fork snapshot, used only in the offline upgrade link and
@@ -645,6 +649,8 @@ class Core:
         self.state.expire_trades(now)
         # UTIL-UNDERLEVEL: the threshold setting (read only on change)
         self.state.set_underlevel_gap(self._config().get(underlevel.CONFIG_KEY))
+        # UTIL-CAMPAIGN-CHECKS: the boots level setting (read only on change)
+        self.state.set_campaign(boots_level=self._config().get(campaign.CONFIG_KEY))
         try:
             calc_on = self.tc_calc_enabled()
         except Exception:  # noqa: BLE001 - a bad config reads as off

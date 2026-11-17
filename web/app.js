@@ -631,6 +631,9 @@
     // MATH-POTENTIAL-UI: the core's worst / now / best roll scores
     $("eval-rolls").hidden = !(v && v.rolls);
     $("eval-rolls").textContent = v ? v.rolls : "";
+    // UTIL-WAYSTONE-REWARD: the core's reward totals for a waystone
+    $("eval-rewards").hidden = !(v && v.rewards);
+    $("eval-rewards").textContent = v ? v.rewards : "";
     $("eval-when").textContent = v ? v.when : "";
     // MATH-VALUE-UI: the item's Note price against its points, from the
     // rates the core already has; nothing when the item has no note price

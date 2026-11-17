@@ -376,6 +376,8 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .search-said { margin-left: 10px; }
 /* UX-ZONE-NOTES: the note for the zone the player is in */
 .zone-note { margin: 0 0 8px; overflow-wrap: anywhere; }
+/* UTIL-CAMPAIGN-CHECKS: short hints under the zone tip */
+.campaign-hints { margin: 0 0 8px; padding-left: 20px; overflow-wrap: anywhere; }
 .paste { display: block; margin: 16px 0 4px; font-weight: 600; }
 .paste-box { width: 100%; resize: vertical; font-size: 0.9rem; }
 

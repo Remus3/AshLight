@@ -209,6 +209,8 @@
       /* TC-DELTA: Path of Building DPS / EHP, or why the stat weights scored it */
       calc: typeof t.calc === "string" ? t.calc : "",
       rolls: ev.ok ? rollsText(ev.potential) : "",
+      /* UTIL-WAYSTONE-REWARD: the core's reward sentence, waystones only */
+      rewards: ws && typeof t.rewards === "string" ? t.rewards : "",
       unweighted: !unweighted.length ? ""
         : pob ? "Not counted (the mod has no number): " + labels + "."
         : cached ? "Not counted (Path of Building has not measured these for this build yet): " +

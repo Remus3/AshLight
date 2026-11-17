@@ -41,6 +41,14 @@
     return u && typeof u.text === "string" ? u.text : "";
   }
 
+  /* UTIL-CAMPAIGN-CHECKS: the core's hint sentences (at most a few). */
+  function campaignHints(snap) {
+    var c = snap && snap.campaign;
+    var rows = c && Array.isArray(c.hints) ? c.hints : [];
+    return rows.map(function (h) { return h && typeof h.text === "string" ? h.text : ""; })
+      .filter(function (t) { return t; }).slice(0, 3);
+  }
+
   /* Display rows of the best-times table. */
   function bestRows(h) {
     return ((h && h.best) || []).map(function (b) {
@@ -72,6 +80,16 @@
       var t = underlevelText(snap);
       setText(ul, t);
       ul.hidden = !t;
+    }
+    var ch = doc.getElementById("campaign-hints");
+    if (ch) {
+      var hints = campaignHints(snap);
+      var key = hints.join("\n");
+      if (ch.getAttribute("data-key") !== key) {
+        ch.setAttribute("data-key", key);
+        ch.replaceChildren.apply(ch, hints.map(function (t) { return cell(doc, "li", t); }));
+      }
+      ch.hidden = !hints.length;
     }
     var box = doc.getElementById("historybox");
     if (!box) { return; }
@@ -136,6 +154,7 @@
   }
 
   return { duration: duration, deltaText: deltaText, underlevelText: underlevelText,
+    campaignHints: campaignHints,
     bestRows: bestRows, deathRows: deathRows, paint: paint, wire: wire,
     CLEARED: CLEARED, FAILED: FAILED };
 }));

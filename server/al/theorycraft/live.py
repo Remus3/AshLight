@@ -15,6 +15,7 @@
 
 import threading
 
+from .. import campaign as campaign_mod
 from .. import upgrade as upgrade_mod
 from . import evaluate as tc_evaluate
 from . import item as item_parser
@@ -152,6 +153,13 @@ class LastEval:
         return self.run(last[0], last[1], keep_time=True)
 
 
+def _campaign_facts(state, build):
+    """UTIL-CAMPAIGN-CHECKS: the loaded build's gear / resist facts."""
+    setter = getattr(state, "set_campaign", None)
+    if callable(setter):
+        setter(facts=campaign_mod.build_facts(build))
+
+
 def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids=None):
     """Wire the live views into a core: build summary now and on every load,
     and a LastEval that re-runs on a build change. Returns the LastEval."""
@@ -162,8 +170,10 @@ def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids
     def on_build(build):
         rev[0] += 1
         state.set_build_info(build_info(build, rev[0]))
+        _campaign_facts(state, build)
         last.rerun()
 
     builds.add_listener(on_build)
     state.set_build_info(build_info(builds.build, 0))
+    _campaign_facts(state, builds.build)
     return last

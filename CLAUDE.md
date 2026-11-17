@@ -543,3 +543,9 @@ them. Pause: `ops/loop/control/HALT`.
   login line naming the character is found, party play misfiles splits
   in normal use, relogs without a game restart misfile runs, or names
   must not be stored.
+- Waystone rewards from the item text's reward properties on the same
+  press; campaign hints (boss resist, flask base, boots speed) only from
+  Client.txt, the PoB build and the cached base_items snapshot, boss
+  elements AshLight-authored (decision 0039). Reverses if: GGG changes
+  the reward property names, ruling H is withdrawn, or live play shows
+  a boss element wrong.

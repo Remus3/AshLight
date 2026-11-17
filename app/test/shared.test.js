@@ -47,7 +47,8 @@ const snap = {
 test("hudModel builds the visible strings", () => {
   const m = gate.hudModel(snap, 1000 + 125, "live");
   assert.deepEqual(m, { zone: "Clearfell", timer: "2m", level: "Lv 3",
-                        deaths: "1 death", sep: "|", away: "", under: "", log: "", status: "live",
+                        deaths: "1 death", sep: "|", away: "", under: "", campaign: "", log: "",
+                        status: "live",
                         tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "",
                         anchor: "top", evalHead: "", evalItem: "", evalLine: "",
                         evalVerdict: "", trades: "" });
