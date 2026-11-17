@@ -117,7 +117,9 @@ def test_build_view_names_nodes_only_with_tree(tree):
     plain = b.to_dict()["tree"]
     assert "named_nodes" not in plain
     named = b.to_dict(tree)["tree"]
-    assert {k: v for k, v in named.items() if k != "named_nodes"} == plain
+    assert {k: v for k, v in named.items()
+            if k not in ("named_nodes", "tree_match")} == plain
+    assert named["tree_match"] == {"known": 5, "total": 6, "ok": True}
     by_id = {r["id"]: r for r in named["named_nodes"]}
     assert by_id[30]["name"] == "Test Notable" and by_id[60]["name"] is None
 

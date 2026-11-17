@@ -46,14 +46,13 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 
 ## Lane: data
 
-- [ ] DATA-TREE-IDS (data) DATA-TREE-FIX item (5), carried open: PoB2 spec
-  node ids (model.py tree nodes -> TreeData.resolve) are looked up as GGG
-  export skill ids without a check that the two id spaces match. Confirm on
-  a real PoB2 v0.23.1 export plus the cached tree export whether they are
-  the same ids; if not, add the mapping. ACCEPT: a test on real-shaped
-  synthetic data proves resolve() maps PoB2 node ids to the right export
-  nodes (or documents they are identical, with the source). ZERO-CLICK:
-  code row; needs the sidecar tree cache (web_data) or a PoB2 export.
+- [x] DATA-TREE-IDS (data) DONE 2026-11-17: PoB2 spec node ids and GGG
+  export skill ids are the SAME id space (research 0015: PoB2 PassiveSpec /
+  PassiveTree / passivetree_ggg source, plus all 4914 PoB2 0_5 tree ids
+  found in the GGG export with matching names). resolve() stays 1:1;
+  TreeData.id_match guards it (build view drops named_nodes when under
+  half the spec ids exist, adds tree_match). Tests:
+  tests/test_tc_tree_ids.py. ZERO-CLICK: code row, no user step.
 
 ## Lane: review
 

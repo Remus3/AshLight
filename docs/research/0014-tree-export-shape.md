@@ -63,7 +63,8 @@ and bracket markup of the form [Key|Shown].
 - Stats markup and embedded newlines: not an assumption failure, but a
   consumer that shows or matches stats must strip bracket markup.
 - PoB2 spec node ids equal export skill ids: NOT verifiable from this file
-  alone (no PoB2 data was read); left open in DATA-TREE-FIX.
+  alone (no PoB2 data was read); left open in DATA-TREE-FIX. Settled in
+  research 0015: identical id space.
 
 Fixture (skilltree_synthetic.json) mirrors the wrong assumptions for
 ascendancyName and int classStartIndex, so the tests pass while the real

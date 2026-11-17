@@ -91,13 +91,18 @@ class TreeSpec:
 
     def to_dict(self, tree=None):
         """`tree`: optional treedata.TreeData; when given, `named_nodes`
-        resolves the node ids to names (DATA-TREE-SRC). Without it the dict
-        is unchanged."""
+        resolves the node ids to names (DATA-TREE-SRC) and `tree_match`
+        reports {known, total, ok}; when the ids mostly miss the tree
+        (DATA-TREE-IDS guard) `named_nodes` is left out. Without a tree the
+        dict is unchanged."""
         out = {"title": self.title, "tree_version": self.tree_version,
                "nodes": list(self.nodes), "node_count": len(self.nodes),
                "url": self.url, "jewels": {str(k): v for k, v in self.jewels.items()}}
         if tree is not None:
-            out["named_nodes"] = tree.resolve(self.nodes)
+            match = tree.id_match(self.nodes)
+            out["tree_match"] = match
+            if match["ok"]:
+                out["named_nodes"] = tree.resolve(self.nodes)
         return out
 
 

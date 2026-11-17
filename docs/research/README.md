@@ -43,6 +43,9 @@ its code (license notes: 0006).
 - 0014 GGG PoE2 tree export shape - real data.json keys vs the treedata.py
   reader; two mismatches (DATA-TREE-SHAPE, DATA-TREE-FIX)
   ([0014-tree-export-shape.md](0014-tree-export-shape.md))
+- 0015 PoB2 spec node ids vs GGG tree export skill ids - identical id space
+  (PoB2 source plus a 4914-node cross-check); id_match guard (DATA-TREE-IDS)
+  ([0015-pob2-tree-node-ids.md](0015-pob2-tree-node-ids.md))
 
 ## Open research (feeds ROADMAP)
 
