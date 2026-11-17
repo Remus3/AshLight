@@ -11,6 +11,9 @@ import time
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
+TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
+TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
+                "league", "stash_tab", "left", "top")
 
 # Event types shown in the dashboard's recent list.
 LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
@@ -83,6 +86,9 @@ class SessionState:
         self.events_seen = 0
         self.recent_whispers = collections.deque(maxlen=RECENT_WHISPERS)
         self.recent_events = collections.deque(maxlen=RECENT_EVENTS)
+        self.trade_requests = collections.deque(maxlen=TRADE_REQUESTS)
+        self.overlay_layout = None
+        self._trade_ids = 0
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -94,6 +100,38 @@ class SessionState:
             if changed:
                 self.version += 1
             return changed
+
+    def set_overlay_layout(self, layout):
+        with self._lock:
+            if layout != self.overlay_layout:
+                self.overlay_layout = dict(layout)
+                self.version += 1
+
+    def dismiss_trade(self, trade_id=None):
+        """Drop one open trade card by id, or all of them (trade_id None).
+        Returns how many were dismissed. Dashboard only: nothing goes to the
+        game."""
+        with self._lock:
+            before = len(self.trade_requests)
+            if trade_id is None:
+                self.trade_requests.clear()
+            else:
+                kept = [r for r in self.trade_requests if r["id"] != trade_id]
+                self.trade_requests.clear()
+                self.trade_requests.extend(kept)
+            n = before - len(self.trade_requests)
+            if n:
+                self.version += 1
+            return n
+
+    def _trade_row(self, ev, now):
+        self._trade_ids += 1
+        row = {"id": self._trade_ids, "at": now, "from": ev.get("from")}
+        trade = ev.get("trade") or {}
+        for k in TRADE_FIELDS:
+            if k in trade:
+                row[k] = trade[k]
+        return row
 
     def _is_me(self, name):
         return self.character is None or name == self.character
@@ -137,6 +175,8 @@ class SessionState:
                     changed = True
             elif t in ("whisper_in", "whisper_out"):
                 self.recent_whispers.append(self._row(ev, now))
+                if t == "whisper_in" and ev.get("trade"):
+                    self.trade_requests.append(self._trade_row(ev, now))
                 changed = True
             elif t == "afk_changed":
                 self.afk = bool(ev.get("on"))
@@ -192,5 +232,7 @@ class SessionState:
                 "events_seen": self.events_seen,
                 "recent_whispers": list(self.recent_whispers),
                 "recent_events": list(self.recent_events),
+                "trade_requests": [dict(r) for r in self.trade_requests],
+                "overlay_layout": dict(self.overlay_layout) if self.overlay_layout else None,
                 "tailer": dict(self.tailer),
             }

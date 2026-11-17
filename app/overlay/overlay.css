@@ -22,6 +22,13 @@ html, body {
   cursor: default;
 }
 
+/* The window is sized for the HUD plus one trade card (layout.js BASE).
+   Bottom corners stack from the bottom edge so the HUD hugs the corner. */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; gap: 6px; }
+body[data-anchor="bottom"] { flex-direction: column-reverse; }
+[hidden] { display: none !important; }
+
 .hud {
   margin: 0;
   padding: 6px 10px;
@@ -42,6 +49,23 @@ html, body {
 .sep { color: var(--fk-text-muted); }
 .status { color: var(--fk-status-warn); margin-left: 6px; font-size: 13px; }
 .hud[data-status="live"] .status { display: none; }
+
+/* Trade whisper card (HUD-WHISPER). The cue is quiet and static: a steady
+   accent edge, no flash, no motion, no sound. Dismissed on the dashboard. */
+.trade {
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--fk-border);
+  border-left: 3px solid var(--fk-status-warn);
+  border-radius: 6px;
+  background: rgba(15, 18, 22, 0.8);
+  color: var(--fk-text);
+  font: 600 14px/1.3 system-ui, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px #000;
+  max-width: 258px;
+}
+.trade .where, .trade .more { color: var(--fk-text-muted); font-size: 13px; }
 
 /* The disclaimer is the overlay's "About"; screen readers get it, the HUD
    stays one small box. */

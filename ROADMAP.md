@@ -10,20 +10,24 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   the game running; confirm or correct every UNVERIFIED pattern in
   docs/research/0002-client-log.md; add the real (anonymized) lines as
   fixtures. ACCEPT: every event type seen live has a fixture and a passing test.
-- [ ] OVL-BUDGET (build) Measure the overlay idle and active (RSS of all
+  BLOCKED (2026-11-16, adjudicated): operator physical act - PoE2 is installed
+  but has never been launched (no logs/Client.txt). Unblocks when the operator
+  plays once (or names the log path); then replace the HUD-WHISPER fixture
+  whispers with real anonymized lines. The loop skips BLOCKED rows.
+- [ ] OVL-BUDGET (build) BLOCKED with LIVE-1 (needs the game running). Measure the overlay idle and active (RSS of all
   Electron processes, CPU over 60 s) with the game running in Windowed
   Fullscreen; add the numbers to decision 0002. ACCEPT: within budget or a
   ruling on Tauri / native.
-- [ ] OVL-FPS (build) PresentMon capture: game alone vs game + overlay idle vs
+- [ ] OVL-FPS (build) BLOCKED with LIVE-1 (needs the game running). PresentMon capture: game alone vs game + overlay idle vs
   overlay updating. ACCEPT: average FPS loss under 1 percent, 1 percent lows
   unchanged within noise; numbers in decision 0002.
-- [ ] OVL-POS (build) Overlay layout editor on the dashboard (corner, scale,
+- [x] OVL-POS (build) Overlay layout editor on the dashboard (corner, scale,
   opacity), DPI-aware, multi-monitor; stored in config/local.json. ACCEPT:
   position survives restart; tests for the layout math.
 - [ ] HUD-ACT (build) Leveling helpers: act / zone level table from an
   attributed build-time data snapshot (license checked first, research 0005);
   zone timer splits per act. ACCEPT: split table on the dashboard.
-- [ ] HUD-WHISPER (build) Trade whisper card on the overlay (item, price,
+- [x] HUD-WHISPER (build) Trade whisper card on the overlay (item, price,
   stash position) with a quiet, non-flashing cue; dismissed from the
   dashboard. ACCEPT: fixture whisper renders; no input sent to the game.
 - [ ] PRICE-1 (build) Price check: AshLight hotkey reads the clipboard ONCE

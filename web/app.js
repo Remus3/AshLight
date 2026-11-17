@@ -98,6 +98,134 @@
     $("events-empty").hidden = rows.length > 0;
   }
 
+  function tradeLine(t) {
+    var item = t.item || "item";
+    var price;
+    if (t.kind === "exchange") {
+      item = t.want_amount + " " + item;
+      price = "for " + t.price_amount + " " + (t.price_currency || "");
+    } else if (t.price_amount !== null && t.price_amount !== undefined) {
+      price = t.price_amount + " " + (t.price_currency || "");
+    } else {
+      price = "no price";
+    }
+    var where = t.stash_tab !== undefined && t.stash_tab !== null
+      ? "tab " + t.stash_tab + ", left " + t.left + ", top " + t.top : "";
+    return { what: (t.from || "?") + " wants " + item + " - " + price, where: where };
+  }
+
+  var renderedTrades = "";
+
+  function renderTrades(rows) {
+    var key = JSON.stringify(rows.map(function (r) { return r.id; }));
+    if (key === renderedTrades) { return; }
+    renderedTrades = key;
+    var frag = document.createDocumentFragment();
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var t = rows[i];
+      var line = tradeLine(t);
+      var li = document.createElement("li");
+      var tm = document.createElement("span");
+      tm.className = "time mono";
+      tm.textContent = clock(t.at);
+      var what = document.createElement("span");
+      what.className = "what";
+      what.textContent = line.what;
+      var where = document.createElement("span");
+      where.className = "where";
+      where.textContent = line.where;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "secondary";
+      btn.textContent = "Dismiss";
+      btn.setAttribute("aria-label", "Dismiss trade request from " + (t.from || "unknown"));
+      btn.addEventListener("click", dismissTrade.bind(null, t.id));
+      li.appendChild(tm);
+      li.appendChild(what);
+      li.appendChild(where);
+      li.appendChild(btn);
+      frag.appendChild(li);
+    }
+    $("trade-list").replaceChildren(frag);
+    $("trades").hidden = rows.length === 0;
+  }
+
+  /* Dashboard-only: dismissing never sends anything to the game. */
+  function dismissTrade(id) {
+    api("POST", "/api/trade-dismiss", id === null ? { all: true } : { id: id })
+      .then(function (res) { render(res.state); })
+      .catch(function () { /* the next state push retries the view */ });
+  }
+
+  /* OVL-POS: overlay layout editor. Saved to config/local.json by the core;
+     the overlay follows the file. */
+  var layoutBusy = false;
+
+  function option(value, text) {
+    var o = document.createElement("option");
+    o.value = value;
+    o.textContent = text;
+    return o;
+  }
+
+  function fillLayout(doc) {
+    var l = doc.layout;
+    var corner = $("layout-corner");
+    if (!corner.options.length) {
+      doc.corners.forEach(function (c) { corner.appendChild(option(c, c.replace("-", " "))); });
+    }
+    var disp = $("layout-display");
+    disp.replaceChildren(option("primary", "Primary"));
+    (doc.displays || []).forEach(function (d) {
+      disp.appendChild(option(String(d.index), "Monitor " + (d.index + 1) +
+        (d.primary ? " (primary)" : "") +
+        (d.width ? " - " + d.width + "x" + d.height : "") +
+        (d.scale_factor && d.scale_factor !== 1
+          ? " @" + Math.round(d.scale_factor * 100) + "%" : "")));
+    });
+    var known = (doc.displays || []).some(function (d) { return d.index === l.display; });
+    if (l.display !== "primary" && !known) {
+      disp.appendChild(option(String(l.display),
+        "Monitor " + (l.display + 1) + " (not connected - primary used)"));
+    }
+    disp.value = String(l.display);
+    corner.value = l.corner;
+    $("layout-scale").value = String(l.scale);
+    $("layout-opacity").value = String(l.opacity);
+    $("layout-margin").value = String(l.margin);
+    $("layout-scale-out").textContent = Math.round(l.scale * 100) + "%";
+    $("layout-opacity-out").textContent = Math.round(l.opacity * 100) + "%";
+  }
+
+  function readLayoutForm() {
+    var d = $("layout-display").value;
+    return {
+      display: d === "primary" ? "primary" : parseInt(d, 10),
+      corner: $("layout-corner").value,
+      scale: parseFloat($("layout-scale").value),
+      opacity: parseFloat($("layout-opacity").value),
+      margin: parseInt($("layout-margin").value, 10) || 0
+    };
+  }
+
+  function saveLayout() {
+    if (layoutBusy) { return; }
+    layoutBusy = true;
+    $("layout-status").textContent = "Saving...";
+    api("POST", "/api/overlay-layout", readLayoutForm()).then(function (doc) {
+      fillLayout(doc);
+      $("layout-status").textContent = "Saved. The overlay moves within a second.";
+    }).catch(function (e) {
+      $("layout-status").textContent = "Not saved: " + e.message;
+    }).then(function () { layoutBusy = false; });
+  }
+
+  function loadLayout() {
+    api("GET", "/api/overlay-layout").then(fillLayout).catch(function () {
+      $("layout-status").textContent = "Layout unavailable (core stopped?)";
+    });
+  }
+
   function render(s) {
     snap = s;
     offset = Date.now() / 1000 - s.now;
@@ -129,6 +257,7 @@
       setPill($("reading"), "idle", "[-]", "not reading Client.txt");
     }
     renderEvents(s.recent_events || []);
+    renderTrades(s.trade_requests || []);
     tick();
   }
 
@@ -160,6 +289,7 @@
       setPill($("link"), "failed", "[x]", "no token - open the link AshLight printed");
       return;
     }
+    loadLayout();
     api("GET", "/api/state").then(render).catch(function () {
       setPill($("link"), "failed", "[x]", "token rejected or core stopped");
     });
@@ -176,6 +306,14 @@
     $("consent-yes").addEventListener("click", function () { consent(true); });
     $("consent-no").addEventListener("click", function () { consent(false); });
     document.addEventListener("visibilitychange", tick);
+    $("trade-clear").addEventListener("click", function () { dismissTrade(null); });
+    $("layout-form").addEventListener("change", saveLayout);
+    $("layout-form").addEventListener("submit", function (e) { e.preventDefault(); });
+    ["layout-scale", "layout-opacity"].forEach(function (id) {
+      $(id).addEventListener("input", function () {
+        $(id + "-out").textContent = Math.round(parseFloat($(id).value) * 100) + "%";
+      });
+    });
     // The two timers advance once a second; nothing else moves.
     ticker = setInterval(tick, 1000);
     connect();

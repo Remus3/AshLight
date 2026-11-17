@@ -20,7 +20,12 @@
       var changed = S.changedFields(shown, model);
       for (var i = 0; i < changed.length; i++) {
         var f = changed[i];
-        if (f === "status") {
+        if (f === "anchor") {
+          document.body.setAttribute("data-anchor", model.anchor);
+        } else if (f === "tradeItem") {
+          nodes.tradeItem.textContent = model.tradeItem;
+          nodes.trade.hidden = !model.tradeItem;
+        } else if (f === "status") {
           nodes.hud.setAttribute("data-status", model.status);
           nodes.status.textContent = model.status === "live" ? "" : model.status;
         } else {
@@ -64,7 +69,8 @@
   }
 
   function start() {
-    ["hud", "zone", "timer", "level", "deaths", "status"].forEach(function (id) {
+    ["hud", "zone", "timer", "level", "deaths", "status", "trade", "tradeFrom",
+     "tradeItem", "tradeWhere", "tradeMore"].forEach(function (id) {
       nodes[id] = document.getElementById(id);
     });
     connect();

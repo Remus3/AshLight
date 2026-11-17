@@ -61,10 +61,39 @@
     </div>
   </section>
 
+  <section id="trades" class="card trades" hidden aria-labelledby="trades-title">
+    <h2 id="trades-title">Trade requests <span class="muted">(shown on the overlay)</span></h2>
+    <ol id="trade-list" class="trade-list"></ol>
+    <div class="actions">
+      <button id="trade-clear" type="button" class="secondary">Dismiss all</button>
+    </div>
+  </section>
+
   <section class="card events" aria-labelledby="events-title">
     <h2 id="events-title">Recent</h2>
     <ol id="events" class="event-list"></ol>
     <p id="events-empty" class="muted">No events yet.</p>
+  </section>
+  <section class="card layout" aria-labelledby="layout-title">
+    <h2 id="layout-title">Overlay position</h2>
+    <form id="layout-form" class="layout-form">
+      <label>Monitor
+        <select id="layout-display" name="display"><option value="primary">Primary</option></select>
+      </label>
+      <label>Corner
+        <select id="layout-corner" name="corner"></select>
+      </label>
+      <label>Size <span id="layout-scale-out" class="mono"></span>
+        <input id="layout-scale" name="scale" type="range" min="0.75" max="2" step="0.05">
+      </label>
+      <label>Opacity <span id="layout-opacity-out" class="mono"></span>
+        <input id="layout-opacity" name="opacity" type="range" min="0.3" max="1" step="0.05">
+      </label>
+      <label>Edge gap (px)
+        <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
+      </label>
+    </form>
+    <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
   </section>
 </main>
 

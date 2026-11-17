@@ -50,7 +50,39 @@
     return inHideout ? z + " (HO)" : z;
   }
 
+  function amount(n) {
+    return (n === null || n === undefined) ? "" : String(n);
+  }
+
+  /* The trade whisper card (HUD-WHISPER): three short lines from one
+     trade request row of the core snapshot. */
+  function tradeCard(req, maxLen) {
+    if (!req) { return { from: "", item: "", where: "" }; }
+    var max = maxLen || 34;
+    function clipText(s) {
+      s = s ? String(s) : "";
+      return s.length > max ? s.slice(0, max - 3) + "..." : s;
+    }
+    var item = req.item || "item";
+    var price = "";
+    if (req.kind === "exchange") {
+      item = amount(req.want_amount) + " " + item;
+      price = "for " + amount(req.price_amount) + " " + (req.price_currency || "");
+    } else if (req.price_amount !== null && req.price_amount !== undefined) {
+      price = amount(req.price_amount) + " " + (req.price_currency || "");
+    } else {
+      price = "no price";
+    }
+    var where = price.trim();
+    if (req.stash_tab !== undefined && req.stash_tab !== null) {
+      where += " | tab " + req.stash_tab + " L" + req.left + " T" + req.top;
+    }
+    return { from: clipText("Trade: " + (req.from || "?")), item: clipText(item),
+             where: clipText(where) };
+  }
+
   return {
+    tradeCard: tradeCard,
     minutes: minutes,
     msUntilNextChange: msUntilNextChange,
     levelText: levelText,

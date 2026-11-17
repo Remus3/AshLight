@@ -153,6 +153,45 @@ button.link {
 .event-list li.trade .kind { color: var(--fk-status-warn); }
 .event-list li.death .kind { color: var(--fk-status-bad); }
 
+.trades { border-color: var(--fk-status-warn); }
+.trade-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.trade-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px;
+  border-top: 1px solid var(--fk-border);
+  border-left: 4px solid var(--fk-status-warn);
+  min-width: 0;
+}
+.trade-list li:first-child { border-top: none; }
+.trade-list .what { flex: 1 1 14em; min-width: 0; overflow-wrap: anywhere; }
+.trade-list .where { color: var(--fk-text-muted); }
+button.secondary {
+  color: var(--fk-text);
+  background: var(--fk-surface);
+  border-color: var(--fk-border);
+  padding: 4px 10px;
+}
+
+.layout-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 16px;
+}
+.layout-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.layout-form select, .layout-form input[type="number"] {
+  font: inherit;
+  color: var(--fk-text);
+  background: var(--fk-surface);
+  border: 1px solid var(--fk-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.layout-form input[type="range"] { width: 100%; accent-color: var(--fk-accent); }
+.layout-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
+
 .foot {
   padding: 12px 16px;
   border-top: 1px solid var(--fk-border);

@@ -21,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, ports
+from . import DISCLAIMER, NAME, VERSION, layout, ports
 
 log = logging.getLogger("al.http")
 
@@ -178,6 +178,8 @@ class Handler(BaseHTTPRequestHandler):
                                     "disclaimer": DISCLAIMER}, extra)
         if path == "/api/state":
             return self._json(200, core.state.snapshot(), extra)
+        if path == "/api/overlay-layout":
+            return self._json(200, self._layout_doc(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -199,6 +201,10 @@ class Handler(BaseHTTPRequestHandler):
                                     "policy": "docs/decisions/0003-read-policy.md"})
         if path == "/api/consent":
             return self._consent()
+        if path == "/api/overlay-layout":
+            return self._set_layout()
+        if path == "/api/trade-dismiss":
+            return self._trade_dismiss()
         return self._send(404, "not found\n")
 
     def do_PUT(self):
@@ -209,21 +215,66 @@ class Handler(BaseHTTPRequestHandler):
     do_OPTIONS = do_PUT
 
     # -- endpoints
-    def _consent(self):
+    def _read_json(self):
+        """The JSON object body, or None after sending the error reply."""
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         if ctype != "application/json":
-            return self._json(415, {"error": "application/json required"})
+            self._json(415, {"error": "application/json required"})
+            return None
         try:
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             length = -1
         if length < 0 or length > MAX_BODY:
-            return self._json(413, {"error": "body too large"})
+            self._json(413, {"error": "body too large"})
+            return None
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
-            return self._json(400, {"error": "bad json"})
-        if not isinstance(body, dict) or not isinstance(body.get("consent"), bool):
+            self._json(400, {"error": "bad json"})
+            return None
+        if not isinstance(body, dict):
+            self._json(400, {"error": "json object required"})
+            return None
+        return body
+
+    def _layout_doc(self):
+        core = self.server.core
+        return {"layout": core.overlay_layout(), "displays": core.displays(),
+                "corners": list(layout.CORNERS),
+                "limits": {"scale": [layout.SCALE_MIN, layout.SCALE_MAX],
+                           "opacity": [layout.OPACITY_MIN, layout.OPACITY_MAX],
+                           "margin": [0, layout.MARGIN_MAX]}}
+
+    def _set_layout(self):
+        body = self._read_json()
+        if body is None:
+            return None
+        try:
+            self.server.core.set_overlay_layout(body)
+        except layout.LayoutError as e:
+            return self._json(400, {"error": str(e)})
+        return self._json(200, self._layout_doc())
+
+    def _trade_dismiss(self):
+        """Dismiss a trade card on the dashboard. Display state only: it
+        sends nothing to the game (CLAUDE.md ToS floor)."""
+        body = self._read_json()
+        if body is None:
+            return None
+        if body.get("all") is True:
+            n = self.server.core.state.dismiss_trade(None)
+        elif isinstance(body.get("id"), int) and not isinstance(body.get("id"), bool):
+            n = self.server.core.state.dismiss_trade(body["id"])
+        else:
+            return self._json(400, {"error": "id (integer) or all: true required"})
+        return self._json(200, {"dismissed": n, "state": self.server.core.state.snapshot()})
+
+    def _consent(self):
+        body = self._read_json()
+        if body is None:
+            return None
+        if not isinstance(body.get("consent"), bool):
             return self._json(400, {"error": "consent: true|false required"})
         path = body.get("path")
         if path is not None and not isinstance(path, str):

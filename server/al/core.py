@@ -10,7 +10,7 @@ import os
 import threading
 from pathlib import Path
 
-from . import VERSION, logfile, parser, paths
+from . import VERSION, layout, logfile, parser, paths
 from .bus import EventBus
 from .state import SessionState
 
@@ -36,9 +36,16 @@ def write_private(path, text):
 
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
-                 character=None, start_at_end=True):
+                 character=None, start_at_end=True, config_path=None):
         self.runtime = Path(runtime) if runtime else paths.runtime_dir()
         self.consent_path = self.runtime / "consent.json"
+        # A test core (runtime given) never reads or writes the real config.
+        if config_path is not None:
+            self.config_path = Path(config_path)
+        elif runtime is None:
+            self.config_path = paths.local_config_file()
+        else:
+            self.config_path = self.runtime / "local.json"
         cfg = paths.load_local_config() if runtime is None else {}
         self.poll_s = float(poll_s or cfg.get("poll_ms", 250) / 1000.0)
         self.tail_enabled = tail
@@ -52,6 +59,7 @@ class Core:
         self._lock = threading.Lock()
         self.locate_log()
         self.state.set_tailer(consented=self.consented())
+        self.state.set_overlay_layout(layout.load(self.config_path))
 
     # -- Client.txt location
     def locate_log(self):
@@ -86,6 +94,25 @@ class Core:
         else:
             self.stop_tailing()
         return rec
+
+    # -- overlay layout (OVL-POS)
+    def overlay_layout(self):
+        return layout.load(self.config_path)
+
+    def set_overlay_layout(self, changes):
+        """Merge changes into the stored layout, persist, publish. Raises
+        layout.LayoutError on a bad field."""
+        if not isinstance(changes, dict):
+            raise layout.LayoutError("layout must be an object")
+        merged = dict(self.overlay_layout())
+        merged.update(changes)
+        with self._lock:
+            saved = layout.save(self.config_path, merged)
+        self.state.set_overlay_layout(saved)
+        return saved
+
+    def displays(self):
+        return layout.read_displays(self.runtime)
 
     # -- tailing
     def feed_line(self, line):

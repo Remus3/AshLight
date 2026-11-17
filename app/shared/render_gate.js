@@ -15,16 +15,30 @@
 }(typeof self !== "undefined" ? self : this, function (fmt) {
   "use strict";
 
-  var FIELDS = ["zone", "timer", "level", "deaths", "status"];
+  var FIELDS = ["zone", "timer", "level", "deaths", "status",
+                "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor"];
+
+  function anchorOf(snap) {
+    var c = snap && snap.overlay_layout && snap.overlay_layout.corner;
+    return (typeof c === "string" && c.indexOf("bottom") === 0) ? "bottom" : "top";
+  }
 
   /* The visible HUD strings for a state snapshot.
      nowS: the server clock in seconds (client clock minus offset). */
   function hudModel(snap, nowS, status) {
     if (!snap) {
-      return { zone: "", timer: "", level: "", deaths: "", status: status || "waiting" };
+      return { zone: "", timer: "", level: "", deaths: "", status: status || "waiting",
+               tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
     var elapsed = snap.zone_entered_at ? nowS - snap.zone_entered_at : null;
+    var open = snap.trade_requests || [];
+    var card = fmt.tradeCard(open.length ? open[open.length - 1] : null);
     return {
+      tradeFrom: card.from,
+      tradeItem: card.item,
+      tradeWhere: card.where,
+      tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
+      anchor: anchorOf(snap),
       zone: fmt.zoneText(snap.zone, snap.in_hideout),
       timer: fmt.minutes(elapsed),
       level: fmt.levelText(snap.level),

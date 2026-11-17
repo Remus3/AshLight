@@ -9,11 +9,16 @@
 <script src="../shared/render_gate.js" defer></script>
 <script src="overlay.js" defer></script>
 </head>
-<body>
+<body data-anchor="top">
 <div id="hud" class="hud" data-status="waiting">
   <p class="row zone"><span id="zone">AshLight</span> <span id="timer" class="timer"></span></p>
   <p class="row nums"><span id="level"></span> <span class="sep" aria-hidden="true">|</span> <span id="deaths"></span>
     <span id="status" class="status"></span></p>
+</div>
+<div id="trade" class="trade" hidden>
+  <p class="row"><span id="tradeFrom"></span> <span id="tradeMore" class="more"></span></p>
+  <p id="tradeItem" class="row item"></p>
+  <p id="tradeWhere" class="row where"></p>
 </div>
 <p class="about">This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
 </body>

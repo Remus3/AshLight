@@ -10,15 +10,16 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, screen, session } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const L = require("./shared/layout.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
+const DISPLAYS_FILE = path.join(REPO, "ops", "runtime", "displays.json");
 const PORTS_PY = path.join(REPO, "server", "al", "ports.py");
 const LOCAL_CONFIG = path.join(REPO, "config", "local.json");
 const OVERLAY_HTML = path.join(__dirname, "overlay", "index.html");
 const DEFAULT_TOGGLE = "Alt+Shift+A";
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
-const HUD = { width: 280, height: 92, margin: 16 };
 
 let win = null;
 let logStream = null;
@@ -84,15 +85,58 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(start);
 }
 
-function placeWindow() {
-  const area = screen.getPrimaryDisplay().workArea;
-  return { x: area.x + area.width - HUD.width - HUD.margin, y: area.y + HUD.margin };
+/* OVL-POS: the layout is config/local.json "overlay" (edited from the
+   dashboard); the math is app/shared/layout.js. */
+function currentLayout() {
+  return L.normalizeLayout(readJson(LOCAL_CONFIG).overlay);
+}
+
+function layoutBounds(layout) {
+  return L.computeBounds(layout, screen.getAllDisplays(), screen.getPrimaryDisplay().id);
+}
+
+let appliedLayout = "";
+
+function applyLayout(force) {
+  if (!win) { return; }
+  const layout = currentLayout();
+  const b = layoutBounds(layout);
+  const key = JSON.stringify([layout, b]);
+  if (!force && key === appliedLayout) { return; }
+  appliedLayout = key;
+  const rect = { x: b.x, y: b.y, width: b.width, height: b.height };
+  // Twice on purpose: moving a window onto a monitor with another DPI
+  // re-scales it on arrival, so the second call lands the exact size.
+  win.setBounds(rect);
+  win.setBounds(rect);
+  win.setOpacity(layout.opacity);
+  win.webContents.setZoomFactor(layout.scale);
+  log("layout " + layout.corner + " display " + layout.display + " scale " + layout.scale +
+      " at " + b.x + "," + b.y + " " + b.width + "x" + b.height + " sf " + b.scaleFactor);
+}
+
+/* The monitor list for the dashboard's layout editor (read by the core). */
+function writeDisplays() {
+  const doc = { updated: new Date().toISOString(),
+                displays: L.describeDisplays(screen.getAllDisplays(), screen.getPrimaryDisplay().id) };
+  try {
+    fs.mkdirSync(path.dirname(DISPLAYS_FILE), { recursive: true });
+    fs.writeFileSync(DISPLAYS_FILE + ".tmp", JSON.stringify(doc, null, 1) + "\n", "ascii");
+    fs.renameSync(DISPLAYS_FILE + ".tmp", DISPLAYS_FILE);
+  } catch (e) {
+    log("displays.json not written: " + e.message);
+  }
+}
+
+function onDisplaysChanged() {
+  writeDisplays();
+  applyLayout(true);
 }
 
 function createWindow() {
-  const pos = placeWindow();
+  const b = layoutBounds(currentLayout());
   win = new BrowserWindow({
-    x: pos.x, y: pos.y, width: HUD.width, height: HUD.height,
+    x: b.x, y: b.y, width: b.width, height: b.height,
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
@@ -124,6 +168,7 @@ function createWindow() {
   win.webContents.on("console-message", (e) => {
     log("renderer: " + (e.message || ""));
   });
+  win.webContents.on("did-finish-load", () => applyLayout(true));
   win.once("ready-to-show", () => win.showInactive());
   win.loadFile(OVERLAY_HTML);
 }
@@ -146,7 +191,13 @@ function start() {
     e.returnValue = ok ? { token: readToken(), port: port } : {};
   });
 
+  writeDisplays();
   createWindow();
+  screen.on("display-added", onDisplaysChanged);
+  screen.on("display-removed", onDisplaysChanged);
+  screen.on("display-metrics-changed", onDisplaysChanged);
+  // The dashboard saves the layout into config/local.json; follow it.
+  fs.watchFile(LOCAL_CONFIG, { interval: 1000, persistent: false }, () => applyLayout(false));
 
   // The core writes a fresh token on every start: reload when it changes.
   let lastToken = readToken();
@@ -170,6 +221,7 @@ function start() {
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
   fs.unwatchFile(TOKEN_FILE);
+  fs.unwatchFile(LOCAL_CONFIG);
 });
 
 app.on("window-all-closed", () => app.quit());
