@@ -23,7 +23,7 @@ live animation or transition, no `innerHTML` use, no user string ending in
 
 ### S1 - blocker
 
-- F1 [S1, O5 / C1, OPEN] `server/al/layout.py:21`, `app/shared/layout.js:28`,
+- F1 [S1, O5 / C1, FIXED by DS-OPACITY] `server/al/layout.py:21`, `app/shared/layout.js:28`,
   `web/index.html:90`. The overlay opacity slider goes down to 0.3. Window
   opacity fades text and plate together, so over a white scene text drops
   to about 1.8:1 and text-muted / status-warn to about 1.5:1; at 0.85
@@ -39,11 +39,11 @@ live animation or transition, no `innerHTML` use, no user string ending in
 
 ### S2 - major
 
-- F4 [S2, O3, OPEN] `server/al/layout.py:20`, `app/shared/layout.js:28`,
+- F4 [S2, O3, FIXED by DS-SCALE] `server/al/layout.py:20`, `app/shared/layout.js:28`,
   `web/index.html:87`. Minimum scale 0.75 renders the 13px secondary
   overlay text at 9.75px. Fix: scale floor 0.95 (12.35px). ROADMAP row
   DS-SCALE.
-- F5 [S2, P4 / P1 / P5, OPEN] `server/al/state.py:25` (`summarize`, lines
+- F5 [S2, P4 / P1 / P5, FIXED by DS-NLM] `server/al/state.py:25` (`summarize`, lines
   29-64). Templates do not follow 0001 section 9 ("AFK on", "is now
   level", "Zone: X"); missing fields print "None" ("None died"); line 33
   shows the internal area id; the fallback prints the raw event type; no
@@ -61,12 +61,12 @@ live animation or transition, no `innerHTML` use, no user string ending in
   console.warn).
 - F7 [S2, P2, FIXED] `app/overlay/overlay.js:49`. Overlay status "core not
   running" -> "AshLight offline".
-- F8 [S2, N5, OPEN] `server/al/state.py:14` / `:89`. Trade cards leave only
+- F8 [S2, N5, FIXED by DS-TRADE-EXPIRE] `server/al/state.py:14` / `:89`. Trade cards leave only
   by eviction (5 max) or a dashboard click, so a stale request sits on the
   overlay forever. Fix: expire a request 10 minutes after `at` in the
   snapshot, say "Requests clear after 10 minutes." under the Trade
   requests heading, keep Dismiss. ROADMAP row DS-TRADE-EXPIRE.
-- F9 [S2, N4, OPEN] `app/shared/render_gate.js:28`. The HUD never shows
+- F9 [S2, N4, FIXED by DS-HUD-AFK] `app/shared/render_gate.js:28`. The HUD never shows
   AFK / DND although 0001 section 7.2 asks for it. Fix: put "AFK" / "DND"
   in the status slot when live, add a shared.test.js case. ROADMAP row
   DS-HUD-AFK.
@@ -85,14 +85,14 @@ live animation or transition, no `innerHTML` use, no user string ending in
   the game once".
 - F14 [S3, type scale, FIXED] `web/app.css:143`. Event kind tags 0.8rem
   (12.8px) -> 0.8125rem (13px floor).
-- F15 [S3, P8 / P5, OPEN] `app/shared/render_gate.js:30`. Before the first
+- F15 [S3, P8 / P5, FIXED by DS-HUD-EMPTY] `app/shared/render_gate.js:30`. Before the first
   snapshot the model blanks zone / level / deaths, so the "AshLight"
   placeholder disappears and a lone "|" shows. Fix: null-snapshot model
   `zone: "AshLight", level: "", deaths: ""` and hide `.sep` when a side is
   empty. ROADMAP row DS-HUD-EMPTY.
 - F16 [S3, P5, FIXED] `app/shared/format.js:38`. Unknown level "Lv -" ->
   "Lv unknown" (test updated in `app/test/shared.test.js`).
-- F17 [S3, O4, OPEN] `app/shared/format.js:50` and `:78`. The " (HO)"
+- F17 [S3, O4, FIXED by DS-HUD-CLIP] `app/shared/format.js:50` and `:78`. The " (HO)"
   suffix is added after the 28-char clip (line can reach 33 chars); stash
   text "tab N L3 T5" is not glanceable. Fix: clip to `max - 5` in a
   hideout; write `tab Sale (3,7)`. ROADMAP row DS-HUD-CLIP.
@@ -138,3 +138,26 @@ P3 and P8 pass; C1 / O5 (F1), O3 (F4), P1 / P4 / P5 (F5), N4 (F9) and N5
 - DS-REVIEW-HOOK (process): run the `design-reviewer` agent on every
   change to `web/`, `app/overlay/`, `app/shared/` or `summarize` before
   commit (lane prompt or pre-commit reminder).
+
+## Follow-up: DS-* rows (2026-11-16)
+
+All seven open findings fixed by the DS-OPACITY, DS-SCALE, DS-HUD-EMPTY,
+DS-HUD-CLIP, DS-NLM, DS-HUD-AFK and DS-TRADE-EXPIRE rows (one branch, see
+`git log --grep DS-`). Second design-reviewer pass on that change: PASS,
+S1=0 S2=0 S3=2 S4=2.
+
+- R1 [S3, P1] exchange trades read "Coin wants 10 Chaos Orb - for 1 Divine
+  Orb". Kept: "for" is what the overlay card (`format.js` tradeCard) and the
+  dashboard trade list already print, and without it "10 Chaos Orb - 1
+  Divine Orb" does not say which side is paid. Reverses if: a later pass
+  changes all three sites together.
+- R2 [S3, N5] an expired card clears on the next SSE heartbeat (15 s), so it
+  can stay up to 15 s past 10 minutes. Accepted: the stated rule stays
+  true to the minute the dashboard shows.
+- R3 [S4] layout.py line-continuation style: fixed.
+- R4 [S4] this doc and ROADMAP updated (this section).
+
+Decision: lenient layout load now clamps an out-of-range number to its
+bound instead of resetting it to the default (alternatives: reset, or a
+one-off migration). Why: keeps the user's nearest choice and matches the
+`layout.js` mirror. Reverses if: the section 5.2 floors change.

@@ -37,7 +37,8 @@ def _number(value, name, lo, hi, clamp=False):
     """A rounded number in [lo, hi]. clamp=True (lenient load) pulls an
     out-of-range number to the nearest bound, so a layout saved before a
     floor was raised clamps itself; strict input raises instead."""
-    if isinstance(value, bool) or not isinstance(value, (int, float))             or value != value:  # wrong type or NaN
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or value != value):  # wrong type or NaN
         raise LayoutError(f"{name} must be a number")
     if not lo <= value <= hi:
         if not clamp:
