@@ -1,4 +1,4 @@
-# 0011 - PoE2 graphics options and PC specs (GFX-ADVISOR input)
+# 0012 - PoE2 graphics options and PC specs (GFX-ADVISOR input)
 
 Date: 2026-11-17. Feeds ROADMAP GFX-ADVISOR (`server/al/gfx.py`). Read by a
 web-research agent; every line says whether the fact was confirmed on the

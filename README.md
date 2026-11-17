@@ -53,15 +53,20 @@ overlay can sit on top of the game.
 Optional per-computer settings live in `config/local.json` (not tracked):
 `client_log` (path to Client.txt or the game folder), `character` (the name to
 track), `poll_ms` (log poll interval, default 250), `overlay_toggle` (the
-overlay shortcut).
+overlay shortcut), `web_data` (the web-data opt-in, default `false`) and
+`league` (optional league for currency rates).
 
 ## Privacy and consent
 
 - The first time, the dashboard asks before reading `Client.txt` and names the
   file and what is derived from it. Your answer is stored locally.
-- Nothing leaves your computer. The server binds `127.0.0.1` only; every API
-  call needs the per-start token; the Host and Origin headers are checked; the
-  dashboard runs under a strict Content Security Policy.
+- Nothing leaves your computer unless you turn on web data (off by default).
+  With it on, AshLight fetches currency rates from poe.ninja at most once an
+  hour, a build share link (pobb.in, pastebin) once when you paste it, and
+  price checks you ask for; every request names AshLight and its version and
+  carries no cookie or account id. The server binds `127.0.0.1` only; every
+  API call needs the per-start token; the Host and Origin headers are
+  checked; the dashboard runs under a strict Content Security Policy.
 - The log can hold chat text. AshLight keeps only a short in-memory list of
   recent whispers and events and writes none of it to disk.
 

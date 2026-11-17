@@ -54,12 +54,50 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   through one rate-limited queue that parses X-Rate-Limit headers
   dynamically; opt-in setting. ACCEPT: parser tests on fixtures; limiter
   tests; no request without the opt-in.
+  PARTIAL 2026-11-17 (data lane, decision 0013): server/al/trade.py - shared
+  RateLimiter (X-Rate-Limit-Policy / -Rules / -<rule> / -State, Retry-After
+  with 60 s fallback, headroom 1, kinds sharing a policy share state), one
+  serial TradeClient queue behind the web_data opt-in (re-checked before
+  send), search / fetch URL builders, build_query(ParsedItem, stat_ids).
+  tests/test_trade_limiter.py (mocked). REMAINS: the per-press clipboard
+  read + hotkey (decision 0003), the trade2 /data/stats stat-id table
+  (cached) for build_query, search -> fetch flow and price summary, an API
+  endpoint, league choice, "waiting N s" surfaced in state, live header
+  values recorded in research 0004.
+  ZERO-CLICK: once opted in, the one hotkey press queues the check; the
+  limiter paces it with no click.
+- [ ] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
+  prices, "waiting N s" from the limiter, poe.ninja rates for conversion).
+  After PRICE-1. ACCEPT: fixture result renders at desktop and phone width;
+  design-reviewer pass. ZERO-CLICK: appears after the hotkey press, no
+  button.
 
 ## Lane: data
 
-- [ ] DATA-NINJA (data) poe.ninja PoE2 currency rates with ETag caching under
+- [x] DATA-NINJA (data) poe.ninja PoE2 currency rates with ETag caching under
   the AL sidecar Cache, refresh at most hourly, attribution in the UI.
   ACCEPT: offline-cached rates shown; one request per hour max.
+  DONE (core) 2026-11-17 (decision 0013): server/al/ninja.py RatesClient,
+  documented endpoints only (research 0005), If-None-Match, last attempt
+  persisted in <sidecar>\Cache\ninja\rates.json (one request per hour per
+  endpoint, leagues once a day or skipped via "league" in local config),
+  offline -> cached rates with age_s / stale; ATTRIBUTION exposed. Web
+  opt-in "web_data" (default off) in the local config, GET / POST
+  /api/web-data; GET /api/rates (token, Host, Origin) never blocks, starts a
+  due refresh in the background. tests/test_data_ninja.py (mocked).
+  ZERO-CLICK: rates refresh themselves hourly once opted in.
+- [ ] DATA-NINJA-UI (build) Rates panel on the dashboard from GET /api/rates
+  (top currencies in the primary unit, age, stale marker) with the
+  ATTRIBUTION / "Prices: poe.ninja" credit, and the one web-data toggle
+  backed by GET / POST /api/web-data (off by default, says what it enables).
+  After DATA-NINJA. ACCEPT: fixture rates render at desktop and phone
+  width; credit visible; design-reviewer pass. ZERO-CLICK: the panel polls
+  /api/rates on its own; no refresh button.
+- [ ] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
+  overview response fields (lines[].id / primaryValue, core.items names,
+  core.primary) against server/al/ninja.parse_overview and record them in
+  research 0005; add a dated, anonymised fixture. ACCEPT: parser test on
+  the real shape. ZERO-CLICK: doc + fixture row, run by a lane.
 - [x] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
   and poe2db / poe2wiki (CC BY-NC-SA) before any snapshot is bundled; record
   in docs/decisions. ACCEPT: decision file with the ruling.
@@ -68,17 +106,36 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   the user's sidecar Cache only; GGG tree export disabled until confirmed;
   poe2db / wiki link-out only. Web fetch was refused this session, so the
   ruling is conservative and rests on research 0005 (DATA-LICENSE-VERIFY).
-- [ ] DATA-LICENSE-VERIFY (data) With web access, read the repoe-fork
+- [x] DATA-LICENSE-VERIFY (data) With web access, read the repoe-fork
   LICENSE.md, the repoe-fork.github.io/poe2 page and file names, poe2db's
   disclaimer and the wiki copyright page; cite URL + date in decision 0009.
   ACCEPT: every UNVERIFIED line in 0009 resolved or the source removed.
   ZERO-CLICK: doc-only row, run by the data lane.
+  DONE 2026-11-17 (decision 0009, research 0011): repoe-fork MIT confirmed;
+  bundle-nothing stands; two fetch URLs found dead (see DATA-SRC-URLS); GGG
+  PoE2 tree export exists (see DATA-TREE-SRC).
+- [ ] DATA-SRC-URLS (data) Fix SOURCES in server/al/theorycraft/snapshot.py:
+  `stats` -> repoe-fork poe2 `stats_by_file.json`, `stat_translations` ->
+  `stat_translations/stat_descriptions.json` (old URLs return 404;
+  decision 0009 item 4). Update tests and consumers. ACCEPT: mocked-fetch
+  test uses the real file names. ZERO-CLICK: next build.ps1 run.
 - [ ] DATA-TREE-SRC (data) Confirm whether GGG publishes a PoE2 passive
   tree export (repo, data-file URL, terms); if so enable
   `SOURCES["skilltree"]` in server/al/theorycraft/snapshot.py and add its
-  host to ALLOWED_HOSTS. After DATA-LICENSE-VERIFY. ACCEPT: source enabled
+  host to ALLOWED_HOSTS. Repo exists (grindinggear/poe2-skilltree-export,
+  data.json, no license file; decision 0009 item 3 amended: fetch-only). ACCEPT: source enabled
   with a mocked-fetch test, or recorded as absent. ZERO-CLICK: the next
   build.ps1 run fetches it.
+- [ ] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
+  User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
+  optional contact value read only from gitignored config/local.json (never
+  a tracked file; no email in any tracked file, leak sweep), appended to
+  the webfetch / ninja / trade / snapshot User-Agent; with no contact
+  configured, poe.ninja, trade2 and GGG fetches stay off even when
+  web_data is on (state says why). Queued by the lane supervisor
+  2026-11-17 from the coordinator's review of the round-3 data lane.
+  ACCEPT: tests with and without a contact (mocked fetch); leak sweep
+  clean. ZERO-CLICK: setting the contact once enables the fetches.
 
 ## Lane: review
 
@@ -124,17 +181,29 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   owner allows. After TC-CODE. ACCEPT: decode + parse + byte-exact round
   trip of the real code. ZERO-CLICK: a test that skips when the fixture is
   absent.
-- [ ] TC-URL (build) Fetch a user-pasted share URL (pobb.in, pastebin) once
+- [x] TC-URL (build) Fetch a user-pasted share URL (pobb.in, pastebin) once
   per paste: host allowlist, truthful User-Agent, size cap, no redirects off
   the allowlist (SSRF guard). After TC-CODE. ACCEPT: mocked-fetch tests; no
   other host reachable. ZERO-CLICK: the pasted URL loads like a code.
+  DONE 2026-11-17 (decision 0013): server/al/theorycraft/shareurl.py takes
+  only the paste id and rebuilds pobb.in/pob/<id> or pastebin.com/raw/<id>;
+  server/al/webfetch.py (https, exact allowlist, no userinfo / port / IP
+  literal, manual redirects re-checked, max 3, 2 MB cap, 10 s timeout,
+  User-Agent required, cookies refused); POST /api/build-code fetches a
+  detected URL once when web_data is on (422 off / not allowed, 502 fetch
+  failure), the text goes through paste detection into the build store.
+  tests/test_tc_url.py (SSRF cases, mocked).
+- [ ] TC-URL-VERIFY (review) With web access, confirm the raw-download
+  paths pobb.in/pob/<id> and pastebin.com/raw/<id> (and whether pobb.in
+  redirects) and record them in research 0010. ACCEPT: paths cited with an
+  access date or shareurl.RAW_TEMPLATES fixed. ZERO-CLICK: doc row.
 - [x] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture
   build renders at desktop and phone width; no GGG art bundled.
   ZERO-CLICK: the view follows the loaded build and the live character's
   level / zone from Client.txt with no refresh button.
-  DONE 2026-11-17 (decision 0011): dashboard Build card (web/tc.js
+  DONE 2026-11-17 (decision 0014): dashboard Build card (web/tc.js
   buildView); the state carries a build rev, so the view refetches by
   itself; paste box loads on paste; copy button plus a selectable code box
   (ruling F4); poe2db / wiki links for gems and uniques.
@@ -193,7 +262,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   fixture result renders at desktop and phone width; overlay card in the
   RAM / FPS budget; no second clipboard read. ZERO-CLICK: the hotkey press
   posts the read text to /api/eval and the card appears; no evaluate button.
-  DONE 2026-11-17 (decision 0011): Alt+Shift+E (config eval_hotkey) in
+  DONE 2026-11-17 (decision 0014): Alt+Shift+E (config eval_hotkey) in
   app/eval_hotkey.js, one clipboard read per press (ruling F1, ahead of
   PRICE-1, which reuses the press); live.py publishes the card in the state
   and re-scores on a weights or build change; words in state.py
@@ -255,7 +324,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   the game's folders opened; the panel says "apply in game".
   ZERO-CLICK: hardware read on first start and on change, panel ready with
   no button; nothing runs while the game is focused.
-  DONE 2026-11-17 (decision 0011, research 0011): server/al/gfx.py, one
+  DONE 2026-11-17 (decision 0014, research 0012): server/al/gfx.py, one
   hidden powershell.exe CIM query + the display-adapter registry key
   (VRAM), pure parse / recommend; GET /api/gfx; collapsed dashboard panel
   read on its first open (ruling F3: a dashboard click, so the game is not
@@ -398,9 +467,15 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   al_loop lane_worker passes lane_checklist(rec). The kit spawn only closes
   the row (close_progress keeps the checklist), so no kit change.
   tests/test_al_lane.py, tests/test_al_loop.py.
-- [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
+- [x] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
+  DONE 2026-11-17 (opt-in, operator enables with `scripts\autostart.ps1
+  -Enable`; decision 0011): current-user task "AshLight Autostart" at
+  logon +30 s, Limited, wscript + scripts/autostart_launch.vbs runs
+  run.ps1 -NoBrowser -Autostart hidden; opt-in in gitignored
+  ops/runtime/autostart.json, run.ps1 -Autostart is a no-op without it;
+  -Disable / -Status / -DryRun; tests/test_autostart.py (dry-run only).
 - [ ] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates
   worktrees under the repo's .claude/worktrees/, but the Sidecar rule puts
   them under the AL sidecar Worktree folder. Finding: .claude/worktrees/ IS
@@ -414,6 +489,14 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   fleet_gitlock). ACCEPT: a fresh isolated agent's worktree resolves under
   the sidecar Worktree dir; tests/test_sidecar_paths.py still green.
   ZERO-CLICK: the hook fires on every isolated spawn; no manual move.
+  PARTIAL 2026-11-17: hook ready; activation = operator act. Decision
+  0012: tools/wt_sidecar_hook.py (WorktreeCreate + WorktreeRemove) makes
+  the worktree at server/al/paths.py worktree_dir()/<name>, tested on a
+  tmp repo (tests/test_wt_sidecar_hook.py). Operator adds to
+  .claude/settings.json "hooks": "WorktreeCreate" and "WorktreeRemove",
+  each [{"hooks": [{"type": "command", "command": "python
+  \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""}]}], then checks one
+  isolated spawn lands under the sidecar Worktree dir.
 - [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish

@@ -11,10 +11,11 @@ import threading
 import time
 from pathlib import Path
 
-from . import VERSION, layout, logfile, parser, paths, resume
+from . import VERSION, layout, logfile, ninja, parser, paths, resume, trade
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import live as tc_live
+from .theorycraft import shareurl
 from .theorycraft import store as build_store
 from .theorycraft import weights as weights_mod
 
@@ -40,7 +41,7 @@ def write_private(path, text):
 
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
-                 character=None, start_at_end=True, config_path=None):
+                 character=None, start_at_end=True, config_path=None, web_fetch=None):
         self.runtime = Path(runtime) if runtime else paths.runtime_dir()
         self.consent_path = self.runtime / "consent.json"
         # A test core (runtime given) never reads or writes the real config.
@@ -70,6 +71,54 @@ class Core:
         self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.
         self.last_eval = tc_live.attach(self.builds, self.weights, self.state)
+        # Web data (decision 0013): one default-off opt-in, "web_data" in the
+        # local config; every outbound request goes through server/al/webfetch.py
+        # with an injectable transport (tests pass web_fetch, never the network).
+        self.web_fetch = web_fetch
+        rates_dir = (ninja.cache_dir() if runtime is None
+                     else self.runtime / "cache" / "ninja")
+        self.rates = ninja.RatesClient(rates_dir, enabled=self.web_data_enabled,
+                                       league=self.configured_league, fetch=web_fetch)
+        self.trade = trade.TradeClient(enabled=self.web_data_enabled, fetch=web_fetch)
+
+    # -- web data opt-in (decision 0013)
+    def _config(self):
+        try:
+            cfg = json.loads(self.config_path.read_text(encoding="utf-8"))
+            return cfg if isinstance(cfg, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def web_data_enabled(self):
+        """True only when the user turned web data on (default off)."""
+        return self._config().get("web_data") is True
+
+    def configured_league(self):
+        value = self._config().get("league")
+        return value if isinstance(value, str) and value.strip() else None
+
+    def set_web_data(self, enabled):
+        """Persist the opt-in in the local config, keeping every other key."""
+        with self._lock:
+            cfg = self._config()
+            cfg["web_data"] = bool(enabled)
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.config_path.with_name(self.config_path.name + ".tmp")
+            with open(tmp, "w", encoding="ascii", newline="\n") as fh:
+                fh.write(json.dumps(cfg, indent=2, ensure_ascii=True) + "\n")
+            tmp.replace(self.config_path)
+        if enabled:
+            self.rates.refresh_async()
+        return bool(enabled)
+
+    def load_share_url(self, url):
+        """TC-URL: fetch a pasted share URL once (opt-in, allowlist, size cap,
+        no redirect off the allowlist) and load the fetched build text like
+        a paste. Raises webfetch.FetchError (WebDataOff / UrlNotAllowed
+        included), codec.CodeError or model.BuildError."""
+        text = shareurl.fetch_build_text(url, enabled=self.web_data_enabled,
+                                         fetch=self.web_fetch)
+        return self.builds.load_code(text)
 
     # -- Client.txt location
     def locate_log(self):

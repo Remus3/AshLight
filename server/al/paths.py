@@ -75,6 +75,13 @@ def sidecar_dir(name, environ=None):
     return sidecar_root(environ) / name
 
 
+def worktree_dir(environ=None):
+    """<sidecar>/Worktree: git worktrees made for this tree (lanes, and the
+    WT-SIDECAR WorktreeCreate hook, tools/wt_sidecar_hook.py). Not in
+    SIDECAR_SUBDIRS: ensure_dirs() never creates it; the hook does."""
+    return sidecar_root(environ) / "Worktree"
+
+
 def token_file():
     return runtime_dir() / "token"
 
@@ -109,6 +116,7 @@ def all_runtime_paths(environ=None):
     out["keepalive_log"] = out["logs"] / "keepalive.log"
     out["npm_cache"] = out["cache"] / "npm"
     out["electron_cache"] = out["cache"] / "electron"
+    out["ninja_cache"] = out["cache"] / "ninja"  # DATA-NINJA rates.json
     out["build_stamp"] = out["build"] / "build-stamp.json"
     return out
 

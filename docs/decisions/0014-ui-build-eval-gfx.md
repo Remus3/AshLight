@@ -1,4 +1,4 @@
-# 0011 - Build view, item check UI and graphics advisor (TC-VIEW, TC-EVAL-UI, GFX-ADVISOR)
+# 0014 - Build view, item check UI and graphics advisor (TC-VIEW, TC-EVAL-UI, GFX-ADVISOR)
 
 Date: 2026-11-17. Trigger: ROADMAP rows TC-VIEW, TC-EVAL-UI, GFX-ADVISOR.
 Forks F1-F4 ruled by an adjudicator agent the same day (headless, operator
@@ -31,7 +31,7 @@ away); rulings recorded below.
   `powershell.exe` CIM query (Win32_Processor, Win32_ComputerSystem,
   Win32_VideoController) plus the display-adapter class registry key for
   VRAM; pure `parse` and `recommend` on fixture profiles
-  (`tests/test_gfx.py`). Setting names and specs: research 0011. RECOMMEND
+  (`tests/test_gfx.py`). Setting names and specs: research 0012. RECOMMEND
   ONLY: the module opens no file at all (a test walks its AST), and the
   panel says to apply the settings in game.
 

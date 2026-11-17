@@ -13,7 +13,7 @@ the player opens the panel - a click on the dashboard, so the game is not
 the focused window then - and is kept for the life of the core. Nothing is
 written to disk; no serial number, host name or user name is read.
 
-Setting names and the official specs: docs/research/0011-poe2-graphics.md.
+Setting names and the official specs: docs/research/0012-poe2-graphics.md.
 """
 
 import json
@@ -26,7 +26,7 @@ import time
 QUERY_TIMEOUT_S = 25
 GB = 1024 ** 3
 
-# Steam store page, PoE2 minimum specs (research 0011).
+# Steam store page, PoE2 minimum specs (research 0012).
 MIN_RAM_GB = 8
 MIN_VRAM_GB = 3
 MIN_THREADS = 4

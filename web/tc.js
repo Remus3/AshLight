@@ -124,9 +124,20 @@
       return { ok: true, text: "Loaded: " + (b.class_name || "a build") +
                (b.level ? ", level " + b.level : "") + "." };
     }
+    if (status === 422 && body && body.web_data === false) {
+      return { ok: false, text: "Build links need web data, which is off. Turn it on in " +
+               "AshLight's settings file, or paste the build code instead." };
+    }
     if (status === 422) {
-      return { ok: false, text: "Links can't be opened yet. In Path of Building, copy the " +
-               "build code itself and paste that." };
+      var hosts = body && Array.isArray(body.hosts) && body.hosts.length
+        ? body.hosts.filter(function (h) { return typeof h === "string"; }).join(" and ")
+        : "pobb.in and pastebin";
+      return { ok: false, text: "AshLight can't open that link. It opens links from " + hosts +
+               " only. Or paste the build code instead." };
+    }
+    if (status === 502) {
+      return { ok: false, text: "The build link isn't loading. Check your connection and " +
+               "paste it again, or paste the build code." };
     }
     if (status === 413) {
       return { ok: false, text: "That is too long for a build code. Copy just the code and " +

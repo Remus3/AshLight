@@ -79,9 +79,14 @@ test("paste answers are plain and say what to do", () => {
   assert.deepEqual(v.pasteResult(200, { loaded: true, build: { class_name: "Monk", level: 87 } }),
     { ok: true, text: "Loaded: Monk, level 87." });
   assert.match(v.pasteResult(400, { error: "bad base64" }).text, /Your last build stays loaded\.$/);
-  assert.match(v.pasteResult(422, {}).text, /^Links can't be opened yet\./);
+  assert.match(v.pasteResult(422, {}).text, /^AshLight can't open that link\./);
+  assert.equal(v.pasteResult(422, { hosts: ["pobb.in", "pastebin.com"] }).text,
+    "AshLight can't open that link. It opens links from pobb.in and pastebin.com only. Or paste the build code instead.");
+  assert.equal(v.pasteResult(422, { web_data: false }).text,
+    "Build links need web data, which is off. Turn it on in AshLight's settings file, or paste the build code instead.");
+  assert.match(v.pasteResult(502, {}).text, /^The build link isn't loading\./);
   assert.equal(v.pasteResult(500, null).text, "Not loaded. Try again.");
-  for (const s of [400, 413, 422, 500]) {
+  for (const s of [400, 413, 422, 500, 502]) {
     assert.ok(!/HTTP|token|core|!/.test(v.pasteResult(s, {}).text));
   }
 });
