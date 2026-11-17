@@ -33,12 +33,18 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   character / level / counts and pauses an open map clock; sanitized
   fixture tests/fixtures/client_live_restart.txt. ZERO-CLICK: automatic on
   the next log line.
-- [ ] TEST-LIVE-EXIT (build) Killing the game (by PID, 2026-11-17) wrote no
+- [x] TEST-LIVE-EXIT (build) Killing the game (by PID, 2026-11-17) wrote no
   log line; the dashboard kept the old zone and its timer running. ACCEPT: a
   verified clean-quit log line (operator quits normally once) mapped to an
   idle state with a fixture test, or an adjudicator ruling on whether a
   game-process presence check (no memory read) fits decision 0003.
-  ZERO-CLICK: idle shows by itself when the game ends.
+  ZERO-CLICK: idle shows by itself when the game ends. DONE 2026-11-17
+  (decision 0029, adjudicator: log staleness only, no process check): 20
+  min with no line (mtime-seeded at start) sets `tailer.idle`; zone kept
+  and tagged "frozen - log quiet", zone / act / map clocks frozen at the last line,
+  the session summary card closes (reason idle); the next line clears it.
+  tests/test_live_exit.py, app dashboard / shared tests. A verified quit
+  line (firm "closed") stays a refinement once the operator quits once.
 - [ ] TEST-LIVE-CLICKS (build) The live check lane had no desktop-control
   tool, so Login and character select were not clicked (no input synthesized
   from PowerShell). ACCEPT: one live run reaching the hideout / town with

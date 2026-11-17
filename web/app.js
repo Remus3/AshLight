@@ -61,12 +61,15 @@
   function tick() {
     if (!snap || document.hidden || !linkLive) { return; }
     var now = serverNow();
-    $("zone-time").textContent = snap.zone_entered_at ? duration(now - snap.zone_entered_at) : "--:--";
+    // TEST-LIVE-EXIT: an idle log stops the zone and act clocks at its
+    // last line (the game may be closed; decision 0029).
+    var until = D.clockUntil(snap.tailer, now);
+    $("zone-time").textContent = snap.zone_entered_at ? duration(until - snap.zone_entered_at) : "--:--";
     // Before the Client.txt opt-in there is no play session to time.
     $("session").textContent = snap.tailer && snap.tailer.consented
       ? duration(now - snap.session_started_at) : "--:--";
     // HUD-ACT: the open act split counts up with the zone timer.
-    if (window.ALActs) { window.ALActs.paint(document, snap.acts, now, false); }
+    if (window.ALActs) { window.ALActs.paint(document, snap.acts, until, false); }
     // UTIL-MAPS: the open map's time counts up while the player is in it.
     if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
   }
@@ -796,6 +799,7 @@
 
     $("zone").textContent = s.zone || "No zone yet";
     $("hideout").hidden = !s.in_hideout;
+    $("zone-stale").hidden = !(s.zone && s.tailer && s.tailer.consented && s.tailer.idle);
     $("level").textContent = s.level === null ? "-" : String(s.level);
     $("who").textContent = s.character
       ? s.character + (s["class"] ? " (" + s["class"] + ")" : "")
@@ -819,7 +823,7 @@
     showReading();
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
-    if (window.ALActs) { window.ALActs.paint(document, s.acts || null, serverNow(), true); }
+    if (window.ALActs) { window.ALActs.paint(document, s.acts || null, D.clockUntil(s.tailer, serverNow()), true); }
     if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
     // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
     if (window.ALSummary) { window.ALSummary.paint(document, s); }

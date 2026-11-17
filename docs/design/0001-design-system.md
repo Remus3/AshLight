@@ -232,6 +232,7 @@ Kit state vocabulary (tokens.json `states`) mapped to AshLight meanings:
 | dashboard feed live | done | [+] | status-ok | live |
 | connecting / reconnecting | pending | [ ] | status-idle | reconnecting |
 | opted in but file missing / quiet | blocked | [#] | status-warn | waiting for Client.txt |
+| opted in, no log line for 20 min (TEST-LIVE-EXIT, decision 0029) | blocked | [#] | status-warn | quiet for 20 min - game closed or AFK? (HUD: log quiet 20m) |
 | not opted in | idle | [-] | status-idle | not reading Client.txt |
 | cannot reach AshLight | failed | [x] | status-bad | can't reach AshLight |
 

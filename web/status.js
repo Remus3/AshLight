@@ -14,6 +14,17 @@
 
   function pill(state, glyph, word) { return { state: state, glyph: glyph, word: word }; }
 
+  var IDLE_WORD = "quiet for 20 min - game closed or AFK?";
+
+  /* TEST-LIVE-EXIT: the time the zone, act and map clocks count to. While
+     the log is idle they stop at its last line instead of running on. */
+  function clockUntil(tailer, now) {
+    if (tailer && tailer.idle && typeof tailer.last_line_at === "number") {
+      return Math.min(now, tailer.last_line_at);
+    }
+    return now;
+  }
+
   /* The connection pill. event: "notoken" | "open" | "error". everLive:
      the feed was live at least once on this page. A failure before that
      says what to do; one after it is a reconnect. */
@@ -30,6 +41,9 @@
      it says so instead of repeating the last (possibly stale) state. */
   function readingView(tailer, live) {
     if (!live || !tailer) { return pill("pending", "[ ]", "Client.txt status unknown"); }
+    /* TEST-LIVE-EXIT (decision 0029): no line for 20 minutes - the game
+       may be closed, or the player is away. Never "closed": a guess. */
+    if (tailer.consented && tailer.idle) { return pill("blocked", "[#]", IDLE_WORD); }
     if (tailer.reading) { return pill("running", "[>]", "reading Client.txt"); }
     if (tailer.consented) {
       return pill("blocked", "[#]", tailer.path ? "waiting for Client.txt"
@@ -118,6 +132,7 @@
   }
 
   return { linkView: linkView, readingView: readingView, kindOf: kindOf,
+           IDLE_WORD: IDLE_WORD, clockUntil: clockUntil,
            emptyText: emptyText, eventsKey: eventsKey, sessionSub: sessionSub, countsView: countsView, tradeLine: tradeLine, cornerLabel: cornerLabel,
            dataCreditText: dataCreditText };
 }));
