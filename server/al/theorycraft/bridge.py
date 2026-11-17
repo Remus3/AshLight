@@ -41,6 +41,10 @@ DEFAULT_START_TIMEOUT = 120.0
 # (one entry per distinct text when no slot is named) and at most this many,
 # so item checks over a long session cannot grow it without bound.
 MAX_REPLAY_ITEMS = 32
+# AUDIT-BRIDGE-LOW (P2-B5): the reader takes at most this many bytes per
+# stdout line from PoB; a longer line is dropped whole (never buffered), so
+# a runaway print cannot grow the client's memory without bound.
+MAX_LINE_BYTES = 1 << 20
 _EOF = object()
 
 
@@ -185,7 +189,17 @@ class Bridge:
     @staticmethod
     def _reader(proc, lines):
         try:
-            for raw in proc.stdout:
+            skipping = False
+            while True:
+                raw = proc.stdout.readline(MAX_LINE_BYTES + 1)
+                if not raw:
+                    break
+                if skipping:  # the tail of an overlong line
+                    skipping = not raw.endswith(b"\n")
+                    continue
+                if len(raw) > MAX_LINE_BYTES and not raw.endswith(b"\n"):
+                    skipping = True
+                    continue
                 text = raw.decode("utf-8", "replace").rstrip("\r\n")
                 if not text.startswith(FRAME_PREFIX):
                     continue  # PoB's own prints
@@ -209,7 +223,12 @@ class Bridge:
             except queue.Empty:
                 continue
             if msg is _EOF:
-                code = self._proc.wait(5) if self._proc else None
+                # AUDIT-BRIDGE-LOW (P2-B4): a process that closed stdout but
+                # does not exit must still surface as a BridgeError.
+                try:
+                    code = self._proc.wait(5) if self._proc else None
+                except subprocess.TimeoutExpired:
+                    code = "still running after EOF"
                 self._stop(kill=True)
                 raise _Crashed(f"bridge exited (code {code})")
             if isinstance(msg, dict) and msg.get("id") == rid:

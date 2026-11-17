@@ -709,19 +709,25 @@ merge. Each row names the finding ids it closes.
   seed 7), hideout, gen(MapX, seed 7) gives count 1 and one clock; 10k
   distinct-zone deaths keep by_zone <= MAX_DEATHS.
   ZERO-CLICK: code row.
-- [ ] AUDIT-BRIDGE-LOW (build) Pass 2 lows P2-B3..B5: exepin's .sha256 sits
+- [x] AUDIT-BRIDGE-LOW (build) Pass 2 lows P2-B3..B5: exepin's .sha256 sits
   beside luajit.exe in the user-writable sidecar, so it guards against a
   stale or foreign exe, not tampering (say so in decision 0022 or keep the
   record in the repo runtime); Bridge._read calls proc.wait(5) after EOF
   without catching TimeoutExpired (escapes as a non-BridgeError); the
   reader thread reads unbounded stdout lines from PoB. ACCEPT: one test
   each. ZERO-CLICK: code row.
-- [ ] AUDIT-SETTLED-LIST (review) Pass 2 low P2-D2: CLAUDE.md "Settled"
+  DONE 2026-11-17 (area-audit batch 4): threat model in decision 0022
+  amendment, EOF wait caught, reader lines capped at 1 MiB;
+  tests/test_audit_batch4.py.
+- [x] AUDIT-SETTLED-LIST (review) Pass 2 low P2-D2: CLAUDE.md "Settled"
   has no entries for decisions 0021-0024 (tc-code-real, tc-bridge,
   act-splits-resume, tc-delta); a lane draft "0022-trade-stat-ids-source"
   would collide again (tests/test_audit_pass2.py now fails on any duplicate
   number). ACCEPT: Settled lines with "Reverses if" for each.
   ZERO-CLICK: doc row.
+  DONE 2026-11-17 (area-audit batch 4): Settled lines for 0021, 0022,
+  0024, 0025 and the 0009 / 0013 amendment; 0023-tc-drift renumbered
+  0025; test_audit_batch4 fails on any decision missing from Settled.
 
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
