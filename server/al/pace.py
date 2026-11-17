@@ -11,6 +11,10 @@ import collections
 
 LAST_LEVELS = 5
 MIN_HOUR_S = 600.0  # levels an hour shows after 10 minutes of session
+# TEST-FUZZ (FUZZ-6): the log parser takes any digit run as a level; a
+# forged or garbled huge one overflowed float maths and broke every
+# snapshot. PoE2 caps at 100; anything past this is not a level.
+MAX_LEVEL = 1000
 
 
 def _clock(s):
@@ -29,7 +33,7 @@ class Pace:
         self.reset_at = None
 
     def on_level(self, level, at):
-        if not isinstance(level, int) or at is None:
+        if not isinstance(level, int) or not 0 < level <= MAX_LEVEL or at is None:
             return False
         step = 1
         if self.ups and level <= self.ups[-1][0]:

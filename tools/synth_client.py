@@ -131,6 +131,36 @@ def standard_session(seed=1, character="Cinderwisp", klass="Sorceress"):
     return s
 
 
+def play(s, minutes, rng=None):
+    """TEST-SOAK: append about `minutes` of simulated play to Session s, in
+    five-minute rounds of game time (zone change, engine noise, chat, and by
+    chance a level-up (capped at 100), a death, a whisper, a trade request
+    and its outcome, a party member, a game restart marker). Returns the
+    number of lines added. Deterministic from the session's seed."""
+    rng = rng or s.rng
+    start = len(s.lines)
+    for _ in range(max(1, int(minutes // 5))):
+        s.zone_change(*rng.choice(ZONES))
+        s.noise(rng.randrange(1, 6))
+        s.chat(rng.choice("#$%&"), f"Player{rng.randrange(1000)}", "wts some stuff")
+        if s.level < 100 and rng.random() < 0.3:
+            s.level_up()
+        if rng.random() < 0.15:
+            s.death()
+        if rng.random() < 0.3:
+            s.whisper(f"Friend{rng.randrange(50)}", "\u00e7a va ? " * rng.randrange(1, 4))
+        if rng.random() < 0.25:
+            s.trade_whisper(f"Buyer{rng.randrange(500)}", "Grim Bane Ruby Ring",
+                            rng.randrange(1, 50), "exalted")
+            s.raw(rng.choice([": Trade accepted.", ": Trade cancelled."]), step=20)
+        if rng.random() < 0.1:
+            s.raw(f": Ally{rng.randrange(9)} has joined the area.")
+        if rng.random() < 0.02:
+            s.marker()
+        s.raw("[WINDOW] Gained focus", step=300 - 10)  # the rest of the round
+    return len(s.lines) - start
+
+
 def pad_noise(size, line=None):
     """Bytes of engine noise lines totalling at least size bytes."""
     one = ((line or "2026/11/16 20:00:01 1100 1a2b3c4d [INFO Client 4242] " + NOISE)

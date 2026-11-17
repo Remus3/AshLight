@@ -545,6 +545,73 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   test covered only the tailer at 2 percent). ZERO-CLICK: static part runs
   in every suite; the live part is one env var.
 
+- [x] TEST-FUZZ (build) Stdlib seeded property / fuzz tests (bounded time)
+  for the Client.txt line parser, the item-text parser, the PoB2 share-code
+  codec, the build / character JSON / poe.ninja parsers and the price /
+  snapshot builders: random bytes in mixed encodings, truncations,
+  mutations, extreme numbers, wrong-typed card fields. ACCEPT: fuzz tests
+  green; every crash fixed with a regression test. DONE 2026-11-17:
+  tests/test_fuzz.py (AL_FUZZ_S / AL_FUZZ_SEED for a longer hunt; per-call
+  time bound catches regex blow-ups). Defects fixed: (1) FUZZ-1 the trade
+  whisper regexes backtracked cubically (10 KB whisper 4 s on the tailer
+  thread, a 64 KB line hours) and guild / chat / level-up quadratically -
+  parser.MAX_LINE_CHARS 8192 (longer lines ignored), MAX_TRADE_TEXT 1024
+  (longer whispers stay plain whispers); (2) FUZZ-2 item._TAG_RE's leading
+  \s* made re.search quadratic (60 000 spaces 7 s on a hotkey press);
+  (3) FUZZ-3 wrong-typed card fields (number for item, dict for error,
+  non-list listings, huge ints) raised in eval / price / trade card text,
+  price_until and set_price, so one bad card broke every /api/state;
+  (4) FUZZ-4 ninja._num raised OverflowError on a huge JSON int.
+  ZERO-CLICK: runs inside pytest; the fixes need no user step.
+- [x] TEST-SOAK (build) Time-compressed soak harness: the core runs many
+  simulated hours of synthetic Client.txt (tools/synth_client.py) with SSE
+  clients reconnecting; assert bounded memory (tracemalloc), bounded event
+  history, no thread / handle growth. Short variant in every suite, long
+  variant opt-in (AL_SOAK=1). ACCEPT: both variants green; defects fixed.
+  DONE 2026-11-17: synth_client.play() (five-minute rounds of game time);
+  tests/test_soak.py: 48 simulated hours in every suite (~4 s), AL_SOAK=1
+  500 hours (19 s, second half may not outgrow the first); heap growth
+  measured ~0.7 MB flat (budget 2.5 MB), handles and threads back to the
+  baseline, ring / recent lists / trade cards at their caps; a planted
+  ~700 B/event leak fails it. Defect fixed: (1) SOAK-1 a closed SSE client
+  kept its slot, bus subscription and thread until two writes failed (two
+  15 s heartbeats on a quiet log), so reloading the dashboard filled
+  MAX_SSE_CLIENTS and the overlay got "busy" for 30 s - http.py
+  _client_gone() peeks the socket every loop wake (<= 1 s). ZERO-CLICK:
+  runs inside pytest; the long run is one env var.
+- [x] TEST-SUPERVISOR (build) Keepalive supervisor kill / hang / restart and
+  stop.request paths (decision 0005), plus scripts/run.ps1 / stop.ps1
+  idempotency checks; PowerShell validated with powershell.exe 5.1
+  ParseFile. ACCEPT: tests green; defects fixed. DONE 2026-11-17:
+  tests/test_supervisor.py (18 tests: pid reuse, stop during backoff,
+  unterminable hung core never duplicated, start grace timeout, launch
+  failure give-up, restart window expiry, clean exit, second supervisor,
+  every scripts/*.ps1 through 5.1 ParseFile, run.ps1 gating, stop.ps1 run
+  twice on a tmp runtime). Defects fixed: (1) SUP-1 a dead core's pid
+  reused by another process read as a live hung core - the supervisor
+  tried to terminate it (any python.exe died) and, refused, never
+  relaunched the core; keepalive now compares the heartbeat's recorded
+  creation time; (2) SUP-2 stop.ps1 force-stopped any python process
+  holding a leftover core.alive pid; it now asks server.al.procs status
+  (image + creation time) and leaves a reused pid alone (rc 0, the core is
+  not running). ZERO-CLICK: runs inside pytest, no user step.
+- [x] TEST-COVER (build) Line coverage with stdlib trace; the untested
+  modules listed in a docs file; tests added for the worst gaps. ACCEPT:
+  coverage file committed; worst gaps covered. DONE 2026-11-17:
+  tools/cover.py (sys.settrace + threading.settrace limited to server/ and
+  tools/, co_lines denominator, runs the whole suite through the suite
+  gate) writes docs/audit/test-coverage.md. First run 87.5% (server/
+  90.2%); tests/test_cover_gaps.py (21 tests: entry helpers, procs CLI and
+  forced stop, keepalive launcher / logger / CLI give-up, real webfetch
+  transport on loopback) and tests/test_cover_tool.py lift it to 89.1%
+  (server/ 93.1%; procs 63 -> 91, keepalive 70 -> 88, webfetch 80 -> 92).
+  Left low on purpose: modules run only in a child process (the report
+  names them). The tighter fuzz contract found (5) FUZZ-5 a lone surrogate
+  in pasted character JSON escaped model.parse as UnicodeEncodeError, not
+  BuildError (/api/build-code got no 400) - fixed in model._root.
+  ZERO-CLICK: one command (tools/cover.py) writes the report, no user
+  step.
+
 ## Utility (lane area-util, 2026-11-17)
 
 - [x] UTIL-MAPS (build) Map run tracker from Client.txt (area generation +

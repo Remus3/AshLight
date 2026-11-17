@@ -31,6 +31,7 @@ a new league (PoE2 1.0, 2026-12-11) is picked up the same day.
 
 import json
 import logging
+import math
 import threading
 import time
 import urllib.parse
@@ -70,7 +71,11 @@ def _utc(ts):
 def _num(v):
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return None
-    return float(v) if v == v and abs(v) != float("inf") else None
+    try:
+        f = float(v)  # FUZZ-4: a huge JSON int raised OverflowError
+    except OverflowError:
+        return None
+    return f if math.isfinite(f) else None
 
 
 def parse_leagues(body):

@@ -59,6 +59,14 @@ TRADE_UNPRICED = re.compile(
 TRADE_EXCHANGE = re.compile(
     r"^Hi, I'd like to buy your ([\d.]+) (.+?) for my ([\d.]+) (.+?) in (.+?)\.\s*(.*)$")
 
+# FUZZ-1 (TEST-FUZZ): the whisper / chat / level-up patterns backtrack
+# quadratically and the trade templates cubically on crafted text (a 10 KB
+# whisper took 4 s on the tailer thread). No real Client.txt line AshLight
+# reads is near these sizes (chat messages are short), so longer lines are
+# ignored and longer whisper bodies are never matched as trade templates.
+MAX_LINE_CHARS = 8192
+MAX_TRADE_TEXT = 1024
+
 HIDEOUT_WORD = "hideout"  # substring match on the scene name - UNVERIFIED
 
 # Scenes that are not zones (LIVE-1, live PoE2 log 2026-11-16): "(unknown)"
@@ -81,6 +89,8 @@ def _num(text):
 
 def parse_trade(text):
     """Trade fields from a whisper body, or None when it is not a buy template."""
+    if len(text) > MAX_TRADE_TEXT:
+        return None
     m = TRADE_PRICED.match(text)
     if m:
         return {"kind": "item", "item": m.group(1), "price_amount": _num(m.group(2)),
@@ -200,6 +210,8 @@ def parse_line(line, keep_raw=False):
     Every event carries ts_local (ISO 8601, no zone), counter, level, pid and
     source; the bus adds seq and recv_ts.
     """
+    if len(line) > MAX_LINE_CHARS + 2:  # FUZZ-1
+        return None
     m = PREFIX.match(line.rstrip("\r\n"))
     if not m:
         return None

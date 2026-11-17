@@ -6,6 +6,7 @@ bounded.
 """
 
 import collections
+import math
 import threading
 import time
 
@@ -65,6 +66,21 @@ def _text(value, default):
     return value if value.strip() else default
 
 
+# FUZZ-3 (TEST-FUZZ): card fields are read through these so a wrong-typed
+# field (a number for a dict, a dict for a key, a non-list) reads as
+# missing instead of raising and breaking every snapshot.
+def _dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _dicts(value):
+    return [v for v in value if isinstance(v, dict)] if isinstance(value, (list, tuple)) else []
+
+
+def _key(value):
+    return value if isinstance(value, str) else None
+
+
 def _amount(value):
     if isinstance(value, float) and value.is_integer():
         value = int(value)
@@ -105,6 +121,7 @@ def trade_card_text(row):
     """UI-REVIEW-2: the sentence and stash position for one open trade card
     row, so the dashboard prints the section 9 template and never builds
     trade wording itself."""
+    row = _dict(row)
     sender = _text(row.get("from"), UNKNOWN_PLAYER)
     return {"text": _trade_text(sender, row), "where": _trade_where(row)}
 
@@ -130,7 +147,7 @@ def _num_text(n):
     """A number as short display text: at most 1 decimal, no trailing .0."""
     try:
         n = round(float(n), 1)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return "0"
     if n == 0:
         n = 0.0  # no "-0"
@@ -151,7 +168,7 @@ def _signed_points(n):
 def _points(n):
     try:
         t = _num_text(abs(float(n or 0)))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         t = "0"
     return f"{t} point" + ("" if t == "1" else "s")
 
@@ -163,7 +180,7 @@ def stat_delta_text(key, delta):
     key = _text(key, "an unknown stat")
     try:
         d = float(delta or 0)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         d = 0.0
     if "#" not in key:
         return ("Gains: " if d >= 0 else "Loses: ") + key
@@ -175,12 +192,12 @@ def stat_delta_text(key, delta):
 
 
 def _equipped_name(comp):
-    eq = comp.get("equipped") or {}
+    eq = _dict(comp.get("equipped"))
     return _text(eq.get("name") or eq.get("base"), "an unnamed item")
 
 
 def _compare_sentence(comp):
-    verdict = VERDICT_WORD.get(comp.get("verdict"), "Checked")
+    verdict = VERDICT_WORD.get(_key(comp.get("verdict")), "Checked")
     slot = _text(comp.get("slot"), "that slot")
     delta = comp.get("score_delta") or 0
     if comp.get("empty"):
@@ -195,7 +212,7 @@ def _compare_sentence(comp):
 
 def _stat_rows(comp):
     rows = []
-    for s in comp.get("stats") or []:
+    for s in _dicts(comp.get("stats")):
         rows.append({"text": stat_delta_text(s.get("key"), s.get("delta")),
                      "points": _signed_points(s.get("score_delta"))
                      if s.get("weighted") else "not counted"})
@@ -225,13 +242,13 @@ CALC_CACHED_TEXT = {
 
 
 def _pct_text(change):
-    p = (change or {}).get("pct")
+    p = _dict(change).get("pct")
     return "unknown" if p is None else _signed(p) + "%"
 
 
 def _calc_text(card, best):
     """(dashboard sentence, overlay line or None) for the calc source."""
-    calc = card.get("calc") or {}
+    calc = _dict(card.get("calc"))
     if calc.get("source") == "pob" and isinstance(best.get("dps"), dict) \
             and isinstance(best.get("ehp"), dict):
         dps, ehp = best["dps"], best["ehp"]
@@ -242,8 +259,8 @@ def _calc_text(card, best):
                 f"{_num_text(ehp.get('old'))} to {_num_text(ehp.get('new'))}), with this "
                 f"item in {slot}.", line)
     if calc.get("source") == "pob_cached":
-        return CALC_CACHED_TEXT.get(calc.get("notice"), CALC_CACHED_TEXT["off"]), None
-    return CALC_NOTICE_TEXT.get(calc.get("notice"), ""), None
+        return CALC_CACHED_TEXT.get(_key(calc.get("notice")), CALC_CACHED_TEXT["off"]), None
+    return CALC_NOTICE_TEXT.get(_key(calc.get("notice")), ""), None
 
 
 def eval_card_text(card):
@@ -252,8 +269,8 @@ def eval_card_text(card):
     compared slot a sentence and its stat rows. Missing values read
     honestly; every template has an exact-output test
     (tests/test_eval_text.py)."""
-    card = card or {}
-    item = card.get("item") or {}
+    card = _dict(card)
+    item = _dict(card.get("item"))
     name = _text(item.get("name") or item.get("base"), "Unnamed item")
     if card.get("unidentified"):
         name += " (unidentified)"
@@ -261,20 +278,20 @@ def eval_card_text(card):
            "calc": ""}
     if not card.get("ok"):
         head, line, sentence = EVAL_ERROR_TEXT.get(
-            card.get("error"), ("Can't check this item", "See the dashboard",
+            _key(card.get("error")), ("Can't check this item", "See the dashboard",
                                 "AshLight could not check this item."))
         out.update(head=head, line=line, sentence=sentence)
         return out
-    comps = card.get("comparisons") or []
+    comps = _dicts(card.get("comparisons"))
     best = next((c for c in comps if c.get("slot") == card.get("slot")),
                 comps[0] if comps else {})
-    verdict = VERDICT_WORD.get(card.get("verdict"), "Checked")
+    verdict = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
     slot = _text(card.get("slot"), "its slot")
     delta = _signed(card.get("score_delta") or 0)
     out["head"] = (f"{verdict} {delta} - {slot} empty" if best.get("empty")
                    else f"{verdict} {delta} vs {slot}")
     counted = [stat_delta_text(s.get("key"), s.get("delta"))
-               for s in best.get("stats") or [] if s.get("weighted")]
+               for s in _dicts(best.get("stats")) if s.get("weighted")]
     if card.get("unidentified"):
         out["line"] = "Mods hidden - identify it first"
     else:
@@ -332,7 +349,9 @@ def _price_amount(value):
     """A listed amount: digits, at most 2 decimals, no trailing zeros."""
     try:
         n = round(float(value), 2)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not math.isfinite(n):
         return None
     if n == 0:
         n = 0.0
@@ -408,19 +427,19 @@ def price_card_text(card):
     `detail` for the overlay card, `sentence` and `rows` (one per listing)
     for the dashboard. Missing values read honestly; every template has an
     exact-output test (tests/test_price_text.py)."""
-    card = card if isinstance(card, dict) else {}
-    item = card.get("item") or {}
+    card = _dict(card)
+    item = _dict(card.get("item"))
     name = _text(item.get("name") or item.get("base"), "Unnamed item")
-    listings = [r for r in (card.get("listings") or []) if isinstance(r, dict)]
+    listings = _dicts(card.get("listings"))
     rows = [_listing_text(r) for r in listings[:PRICE_LISTINGS]]
     out = {"head": f"Price: {name}", "item": name, "line": "", "detail": "",
            "sentence": "", "rows": rows}
-    status = card.get("status")
+    status = _key(card.get("status"))
     league = _text(card.get("league"), "this league")
     if status == "waiting":
         try:
             secs = max(1, int(-(-float(card.get("wait_s") or 0) // 1)))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             secs = 1
         out.update(line=f"Prices in about {secs} s", detail="Waiting for the trade site",
                    sentence=f"Waiting about {secs} s for the trade site, then AshLight "
@@ -457,7 +476,8 @@ def price_card_text(card):
     elif status == "off":
         key = "contact not set" if card.get("error") == "contact not set" else "off"
     else:
-        key = card.get("error") if card.get("error") in PRICE_TEXT else "error"
+        err = _key(card.get("error"))
+        key = err if err in PRICE_TEXT else "error"
         if key in ("link", "searching", "off", "none", "contact not set"):
             key = "error"
     line, detail, sentence = PRICE_TEXT[key]
@@ -465,8 +485,15 @@ def price_card_text(card):
     return out
 
 
+def _is_time(value):
+    """A usable epoch time: a real number within any plausible range (a
+    huge int would overflow float arithmetic, FUZZ-3)."""
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and abs(value) < 1e15)
+
+
 def _fresh(part, life_s, now):
-    return (isinstance(part, dict) and isinstance(part.get("at"), (int, float))
+    return (isinstance(part, dict) and _is_time(part.get("at"))
             and now < part["at"] + life_s)
 
 
@@ -476,12 +503,13 @@ def price_until(price):
     site's limit still shows for the full time (design 0001 N5)."""
     at = price["at"]
     upd = price.get("updated_at")
-    last = upd if isinstance(upd, (int, float)) and upd > at else at
+    last = upd if _is_time(upd) and upd > at else at
     wait = price.get("wait_s") if price.get("status") == "waiting" else 0
-    if not isinstance(wait, (int, float)) or isinstance(wait, bool) or wait < 0:
+    if not isinstance(wait, (int, float)) or isinstance(wait, bool) or not wait >= 0:
         wait = 0
-    # a long wait keeps the card until the result can arrive (review N4)
-    return last + min(float(wait), 600.0) + PRICE_CARD_S
+    # a long wait keeps the card until the result can arrive (review N4);
+    # min() before float(): a huge int would overflow (FUZZ-3)
+    return last + float(min(wait, 600)) + PRICE_CARD_S
 
 
 def overlay_card(ev, price, now):
@@ -493,7 +521,7 @@ def overlay_card(ev, price, now):
     - from different presses: the newest one;
     - only one fresh: that one."""
     ev_ok = _fresh(ev, EVAL_CARD_S, now)
-    pr_ok = (isinstance(price, dict) and isinstance(price.get("at"), (int, float))
+    pr_ok = (isinstance(price, dict) and _is_time(price.get("at"))
              and now < price_until(price))
     if not ev_ok and not pr_ok:
         return None
@@ -662,8 +690,7 @@ class SessionState:
         press stamps the eval too); keep_time keeps the previous card's time
         for a status update of the same check (searching -> done)."""
         card = dict(card) if isinstance(card, dict) else {}
-        card["listings"] = [dict(r) for r in (card.get("listings") or [])
-                            if isinstance(r, dict)][:PRICE_LISTINGS]
+        card["listings"] = [dict(r) for r in _dicts(card.get("listings"))][:PRICE_LISTINGS]
         with self._lock:
             if at is None:
                 at = self._clock()

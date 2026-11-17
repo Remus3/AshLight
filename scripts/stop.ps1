@@ -60,6 +60,20 @@ function Get-AlCorePid {
     }
 }
 
+function Get-AlOwnCorePid {
+    # server\al\procs.py core_pid: the core.alive pid only when its image is
+    # python* and its creation time matches the recorded one; else 0.
+    Push-Location $Repo
+    try {
+        $st = ((& $py -m server.al.procs status) -join "`n") | ConvertFrom-Json
+        return [int]$st.core.pid
+    } catch {
+        return 0
+    } finally {
+        Pop-Location
+    }
+}
+
 Set-Content -LiteralPath $request -Value 'stop' -Encoding ASCII
 $corePid = Get-AlCorePid
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
@@ -73,9 +87,10 @@ if (-not (Test-Path -LiteralPath $alive)) {
     $proc = if ($corePid -gt 0) { Get-Process -Id $corePid -ErrorAction SilentlyContinue } else { $null }
     if ($null -eq $proc) {
         Write-AlLog 'stop: no core running (stale core.alive left in place)'
-    } elseif ($proc.ProcessName -notlike 'python*') {
-        Write-AlLog "stop: pid $corePid is not a python process; not touching it"
-        $rc = 1
+    } elseif ((Get-AlOwnCorePid) -ne $corePid) {
+        # SUP-2: the core died and another process got its pid (any image,
+        # python included); the recorded creation time does not match.
+        Write-AlLog "stop: pid $corePid is not the AshLight core (its pid was reused); not touching it"
     } else {
         Stop-Process -Id $corePid -Force
         Write-AlLog "stop: core pid $corePid did not exit in $TimeoutSec s; stopped it (keepalive will not restart it)"
