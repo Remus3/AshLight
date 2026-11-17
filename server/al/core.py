@@ -50,6 +50,11 @@ def write_private(path, text):
 LOCATE_RETRY_S = 5.0
 
 
+class ConfigUnreadable(OSError):
+    """AREA-AUDIT P5-1: config/local.json exists but is not a JSON object;
+    nothing is written over it."""
+
+
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
                  character=None, start_at_end=True, config_path=None, web_fetch=None):
@@ -188,11 +193,30 @@ class Core:
             self._watch_key = None  # republish on the next tick
         return saved
 
+    def _read_config_strict(self):
+        """The local config for a write: {} when the file is missing,
+        else its object. AREA-AUDIT P5-1: a file the user broke by hand
+        (bad JSON, not an object) raises ConfigUnreadable instead of
+        reading as {}, so a write never wipes the contact and paths
+        (the layout.save rule)."""
+        try:
+            text = self.config_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return {}
+        try:
+            cfg = json.loads(text)
+        except ValueError as e:
+            raise ConfigUnreadable("config/local.json is unreadable") from e
+        if not isinstance(cfg, dict):
+            raise ConfigUnreadable("config/local.json is not a JSON object")
+        return cfg
+
     def _write_config(self, update):
         """Merge `update` into the local config and persist it, keeping
-        every other key (the contact included; never written here)."""
+        every other key (the contact included; never written here).
+        Raises ConfigUnreadable (an OSError) on a hand-broken file."""
         with self._lock:
-            cfg = self._config()
+            cfg = self._read_config_strict()
             cfg.update(update)
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             tmp = self.config_path.with_name(self.config_path.name + ".tmp")
@@ -351,15 +375,9 @@ class Core:
 
     def set_web_data(self, enabled):
         """Persist the opt-in in the local config, keeping every other key
-        (the contact included; it is never written here)."""
-        with self._lock:
-            cfg = self._config()
-            cfg["web_data"] = bool(enabled)
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.config_path.with_name(self.config_path.name + ".tmp")
-            with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-                fh.write(json.dumps(cfg, indent=2, ensure_ascii=True) + "\n")
-            tmp.replace(self.config_path)
+        (the contact included; it is never written here). AREA-AUDIT
+        P5-1: raises ConfigUnreadable on a hand-broken file."""
+        self._write_config({"web_data": bool(enabled)})
         if enabled:
             self.rates.refresh_async()
         return bool(enabled)
