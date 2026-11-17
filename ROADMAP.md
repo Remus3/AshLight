@@ -61,13 +61,27 @@ Every row carries the minimal-interaction constraint (CLAUDE.md, decision
 0004): no click the app can safely make for the user, state updates itself,
 and the row's own dev / test steps run unattended. ZERO-CLICK states how.
 
-- [ ] TC-CODE (build) PoB2 share-code codec in server/al: URL-safe base64 +
+- [x] TC-CODE (build) PoB2 share-code codec in server/al: URL-safe base64 +
   zlib decode / encode (stdlib) to build XML, plus a typed build model
   (class, ascendancy, level, tree nodes, gear, skills, PoB's saved stats);
   paste-a-code API behind the token. ACCEPT: round-trip tests on fixture
   codes exported from PoB2 v0.23.1 (deflate framing confirmed); no network.
   ZERO-CLICK: a copied PoB code or share URL is taken on the AshLight
   hotkey press; the last build reloads on start.
+  DONE 2026-11-16 (decision 0006): server/al/theorycraft/ codec, model,
+  store; POST /api/build-code, GET /api/build; reload on start. Synthetic
+  fixtures (adjudicator F1); share URLs recognized, not fetched (TC-URL);
+  hotkey hook is codec.looks_like_build_code for the PRICE-1 clipboard read.
+- [ ] TC-CODE-REAL (review) Confirm the codec on a real PoB2 v0.23.1 export
+  (framing, root element, PlayerStat names) once a PoB2 install or an
+  operator-supplied code is available; add it as a fixture only if its
+  owner allows. After TC-CODE. ACCEPT: decode + parse + byte-exact round
+  trip of the real code. ZERO-CLICK: a test that skips when the fixture is
+  absent.
+- [ ] TC-URL (build) Fetch a user-pasted share URL (pobb.in, pastebin) once
+  per paste: host allowlist, truthful User-Agent, size cap, no redirects off
+  the allowlist (SSRF guard). After TC-CODE. ACCEPT: mocked-fetch tests; no
+  other host reachable. ZERO-CLICK: the pasted URL loads like a code.
 - [ ] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture
