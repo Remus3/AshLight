@@ -8,10 +8,18 @@
   or the lockfile changed (hash stamp in the sidecar Build dir).
   Every path comes from `python -m server.al.paths` (the one resolver).
   Node is optional: without it the core and the dashboard still work.
+
+  TC-PIN (decision 0004 item 3, decision 0017): the optional theorycraft
+  calc component (Path of Building PoE2 source + LuaJIT) is OFF by default.
+  Opt in with -TcCalc or "tc_calc": true in config/local.json; then
+  tools/tc_pin.py fetches the hash-pinned archives (config/tc_pins.json)
+  into the sidecar Cache / Build dirs, verifies SHA-256, refuses on a
+  mismatch (setup fails) and is a no-op on a re-run.
 #>
 [CmdletBinding()]
 param(
-    [switch]$Force
+    [switch]$Force,
+    [switch]$TcCalc
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,6 +77,23 @@ if ((Test-Path $example) -and -not (Test-Path $local)) {
 } else {
     Write-AlLog 'setup: no config example yet (skipped)'
 }
+
+# Optional calc component (TC-PIN). Off unless -TcCalc or tc_calc: true.
+# tools/tc_pin.py decides the opt-in, does the work and prints one line per
+# step on stdout; exit 2 = refused (pin or hash mismatch), 1 = failed.
+$tcArgs = @((Join-Path $Repo 'tools\tc_pin.py'), 'setup')
+if ($TcCalc) { $tcArgs += '--opt-in' }
+$env:TEMP = $paths.temp
+$env:TMP = $paths.temp
+Push-Location $Repo
+try {
+    & $py @tcArgs | ForEach-Object { Write-AlLog ("setup: tc: " + $_) }
+    $tcRc = $LASTEXITCODE
+} finally {
+    Pop-Location
+}
+if ($tcRc -eq 2) { throw 'setup: calc component REFUSED (pin or hash mismatch); see setup.log' }
+if ($tcRc -ne 0) { throw "setup: calc component step failed (rc $tcRc); see setup.log" }
 
 # Overlay packages (optional).
 $node = Get-Command node -ErrorAction SilentlyContinue

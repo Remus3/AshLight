@@ -90,13 +90,19 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   shared, not duplicated; no request without the opt-in.
   ZERO-CLICK: once opted in, the same hotkey press that evaluates the item
   queues the search; results appear when the limiter allows, no extra click.
-- [ ] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
+- [x] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
   archive sha256; LuaJIT version, sha256; no absolute paths); setup.ps1
   step fetches the PoB source archive to the sidecar Cache and builds or
   accepts LuaJIT into Build, hash-verified, off by default; THIRD-PARTY
   notices with PoB's MIT and component notices. ACCEPT: hash mismatch
   refuses; re-run is a no-op; test_sidecar_paths covers the new paths.
   ZERO-CLICK: one opt-in toggle; setup.ps1 does the rest unattended.
+  DONE 2026-11-17 (decision 0017): config/tc_pins.json pins PoB-PoE2
+  v0.23.1 (7d6f530c) and LuaJIT 2.1.1794386141 (63c8f1a9), both archive
+  SHA-256 verified over two downloads; tools/tc_pin.py + setup.ps1 -TcCalc
+  (or tc_calc: true); THIRD-PARTY.md; tests/test_tc_pin.py. LuaJIT is built
+  only when MSVC / MinGW is on PATH, else "source-only" (this machine has
+  neither: TC-BRIDGE needs a compiler or a later pinned binary).
 - [ ] TC-BRIDGE (build) Fresh stdio JSON bridge (our own Lua, no code from
   pob-mcp / pob2-mcp) driving the unmodified pinned PoB checkout via
   luajit.exe, plus a Python client in server/al: load build XML, set an item

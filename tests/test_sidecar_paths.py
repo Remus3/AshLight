@@ -80,3 +80,30 @@ def test_no_literal_drive_path_in_app_files():
             if pat.search(line):
                 bad.append(f"{p.relative_to(ROOT)}:{i}")
     assert not bad, bad
+
+
+TC_PATHS = {"pob2_cache": ("Cache", "pob2"), "luajit_cache": ("Cache", "luajit"),
+            "luajit_build": ("Build", "luajit"), "tc_stamp": ("Build", "tc-pins-stamp.json")}
+
+
+def test_tc_pin_paths_live_in_the_sidecar(tmp_path, monkeypatch):
+    """TC-PIN: the calc component's cache, build and stamp paths resolve under
+    the AL sidecar (Cache / Build), never in the repo or elsewhere."""
+    monkeypatch.setenv(paths.SIDECAR_ENV, str(tmp_path / "AL"))
+    got = paths.all_runtime_paths()
+    for name, (sub, leaf) in TC_PATHS.items():
+        assert got[name] == (tmp_path / "AL" / sub / leaf).resolve(), name
+        assert _inside(got[name], tmp_path / "AL"), name
+    # the pin file itself is tracked config inside the repo, not runtime state
+    assert paths.tc_pins_file() == ROOT / "config" / "tc_pins.json"
+    assert paths.tc_pins_file().is_file()
+
+
+def test_tc_pin_layout_stays_in_the_sidecar(tmp_path, monkeypatch):
+    import sys
+    sys.path.insert(0, str(ROOT / "tools"))
+    import tc_pin
+    monkeypatch.setenv(paths.SIDECAR_ENV, str(tmp_path / "AL"))
+    lay = tc_pin.layout(tc_pin.load_pins())
+    for key, p in lay.items():
+        assert _inside(p, tmp_path / "AL"), (key, str(p))

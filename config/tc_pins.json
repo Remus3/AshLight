@@ -1,0 +1,31 @@
+{
+  "_doc": "TC-PIN (decision 0004 item 3, decision 0017). Hash pins for the OPTIONAL theorycraft calc component: an unmodified Path of Building PoE2 source archive and a LuaJIT source archive, fetched by scripts/setup.ps1 (tools/tc_pin.py) into the AL sidecar only when the user opts in (setup.ps1 -TcCalc or config/local.json \"tc_calc\": true). Every value was read from the public GitHub API / archives on the verified date; the archive sha256 was computed from two independent downloads. A missing or malformed value makes setup refuse; never guess one. The pin moves only by a commit with the bridge tests green. No absolute paths here.",
+  "schema": 1,
+  "pob2": {
+    "name": "Path of Building Community (PoE2)",
+    "repo": "PathOfBuildingCommunity/PathOfBuilding-PoE2",
+    "tag": "v0.23.1",
+    "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41",
+    "archive_url": "https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2/archive/7d6f530cbdab20389ff8bc6ba97a37ac27f74e41.zip",
+    "archive_sha256": "67de3bbfe2bdbf43db3e138445e1dce56a58eb4302bac03605b4681ad46b5b9e",
+    "archive_size": 390011097,
+    "top_dir": "PathOfBuilding-PoE2-7d6f530cbdab20389ff8bc6ba97a37ac27f74e41",
+    "license": "MIT",
+    "license_file": "LICENSE.md",
+    "verified": "2026-11-17"
+  },
+  "luajit": {
+    "name": "LuaJIT",
+    "repo": "LuaJIT/LuaJIT",
+    "branch": "v2.1",
+    "version": "2.1.1794386141",
+    "commit": "63c8f1a9b479ba5518cf6a170ff7729178bc3cfd",
+    "archive_url": "https://github.com/LuaJIT/LuaJIT/archive/63c8f1a9b479ba5518cf6a170ff7729178bc3cfd.zip",
+    "archive_sha256": "9d1f1e5e4c7b91d7a047fb22a6bb0c1b074f6d29e011c7940c5b4000e7391bc1",
+    "archive_size": 1246780,
+    "top_dir": "LuaJIT-63c8f1a9b479ba5518cf6a170ff7729178bc3cfd",
+    "license": "MIT",
+    "license_file": "COPYRIGHT",
+    "verified": "2026-11-17"
+  }
+}
