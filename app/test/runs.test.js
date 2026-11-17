@@ -30,9 +30,9 @@ test("liveTime counts up only while the player is in the map", () => {
 
 test("mapRows: open map first, then finished maps", () => {
   assert.deepEqual(r.mapRows(MAPS, 1000, 1005), [
-    { name: "Savannah", level: "66", time: "5:05", deaths: "0 deaths",
+    { name: "Savannah", level: "66", time: "5:05", deaths: "0",
       note: "now", current: true },
-    { name: "Crypt", level: "65", time: "6:30", deaths: "1 death",
+    { name: "Crypt", level: "65", time: "6:30", deaths: "1",
       note: "", current: false }
   ]);
   const out = Object.assign({}, MAPS, {
@@ -55,4 +55,14 @@ test("deathLines prints the core's sentences in order", () => {
     "Died in Savannah (area level 66) at level 72."
   ]);
   assert.deepEqual(r.deathLines(null), []);
+});
+
+test("recapFoot joins the worst zone and the deaths before reading (UX-NEW-CARDS)", () => {
+  assert.equal(r.recapFoot(null), "");
+  assert.equal(r.recapFoot({ worst_text: "", earlier_text: "" }), "");
+  assert.equal(r.recapFoot({ worst_text: "Most deaths: Crypt (2).", earlier_text: "" }),
+    "Most deaths: Crypt (2).");
+  assert.equal(r.recapFoot({ worst_text: "Most deaths: Crypt (2).",
+    earlier_text: "1 death came before AshLight started reading." }),
+    "Most deaths: Crypt (2). 1 death came before AshLight started reading.");
 });

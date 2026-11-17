@@ -113,6 +113,22 @@ function layoutBounds(layout) {
 }
 
 let appliedLayout = "";
+let opacityChain = Promise.resolve(null);
+
+/* UX-REAL-OVERLAY: the opacity is page CSS, never BrowserWindow.setOpacity.
+   On the real desktop (software compositing, transparent window) the
+   window-level alpha left the whole overlay invisible: nothing reached the
+   screen. Page opacity multiplies text and plate together, the same maths
+   as design 0001 section 5.2. Chained so a quick second change never
+   leaves an old rule behind. */
+function applyOpacity(value) {
+  const css = L.opacityCss(value);
+  const wc = win.webContents;
+  opacityChain = opacityChain
+    .then((old) => (old ? wc.removeInsertedCSS(old).catch(() => null) : null))
+    .then(() => wc.insertCSS(css, { cssOrigin: "author" }))
+    .catch((e) => { log("opacity not applied: " + e.message); return null; });
+}
 
 function applyLayout(force) {
   if (!win) { return; }
@@ -126,7 +142,7 @@ function applyLayout(force) {
   // re-scales it on arrival, so the second call lands the exact size.
   win.setBounds(rect);
   win.setBounds(rect);
-  win.setOpacity(layout.opacity);
+  applyOpacity(layout.opacity);
   win.webContents.setZoomFactor(b.zoom); // the user scale times UX-DPI autoScale
   log("layout " + layout.corner + " display " + layout.display + " scale " + layout.scale +
       " zoom " + b.zoom +

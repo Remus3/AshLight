@@ -48,10 +48,38 @@
     return pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
 
+  /* UX-A11Y: write only a changed string. The pills sit in polite live
+     regions and are re-set on every state push; rewriting the same words
+     would let a screen reader say them again each time. */
+  function setText(node, text) {
+    if (node.textContent !== text) { node.textContent = text; }
+  }
+
   function setPill(el, state, glyph, word) {
-    el.setAttribute("data-state", state);
-    el.querySelector(".glyph").textContent = glyph;
-    el.querySelector(".word").textContent = word;
+    if (el.getAttribute("data-state") !== state) { el.setAttribute("data-state", state); }
+    setText(el.querySelector(".glyph"), glyph);
+    setText(el.querySelector(".word"), word);
+  }
+
+  /* UX-A11Y: before the opt-in the deaths tile shows "-" and screen readers
+     hear "Not counted yet" (hidden text: aria-label is not allowed on a
+     paragraph, so it was not reliably read). */
+  function setDeaths(node, text) {
+    if (node.getAttribute("data-count") === text) { return; }
+    node.setAttribute("data-count", text);
+    node.textContent = "";
+    if (text === "-") {
+      var dash = document.createElement("span");
+      dash.setAttribute("aria-hidden", "true");
+      dash.textContent = "-";
+      var said = document.createElement("span");
+      said.className = "sr-only";
+      said.textContent = "Not counted yet";
+      node.appendChild(dash);
+      node.appendChild(said);
+    } else {
+      node.textContent = text;
+    }
   }
 
   function serverNow() { return Date.now() / 1000 - offset; }
@@ -802,9 +830,8 @@
     $("pace").textContent = paceText;
     $("pace").hidden = !paceText;
     var counts = D.countsView(s.deaths, s.level_ups, !!(s.tailer && s.tailer.consented));
-    $("deaths").textContent = counts.deaths;
-    if (counts.deaths === "-") { $("deaths").setAttribute("aria-label", "Not counted yet"); }
-    else { $("deaths").removeAttribute("aria-label"); }
+    setDeaths($("deaths"), counts.deaths);
+
     $("levelups").textContent = counts.levelups;
     $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
 

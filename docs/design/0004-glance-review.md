@@ -141,6 +141,65 @@ design-reviewer on batch 2: PASS WITH FINDINGS S1=0 S2=0 S3=2 S4=2, all
 fixed (quiet-file word shortened and width-tested, deaths dash has an
 aria-label, combined zoom capped at 2.5).
 
+## Live pass, batch 3 (2026-11-17)
+
+Method: a core on a spare port in the AshLight block (own runtime and
+sidecar dirs) fed by `tools/synth_client.py`; the real Electron 45
+overlay from `app/` on this machine's two monitors (2560 x 1440 at 100
+percent, 1770 x 1230 at 125 percent); desktop pictures through the OS
+compositor (Electron `desktopCapturer`, a separate scratch process),
+window flags and hit tests through user32, the About text through UI
+Automation; dashboard in headless Chrome over CDP.
+
+- U14 UX-REAL-OVERLAY [S1; fixed] The overlay drew NOTHING on the real
+  desktop: the window existed (visible, topmost, 280 x 176 at the right
+  corner) but no pixel reached the screen, for the operator's running
+  overlay too. A probe of four windows isolated it: a transparent,
+  software-composited window (acceleration off, decision 0002) with
+  `BrowserWindow.setOpacity` (0.9, the layout default) is invisible; the
+  same window without it shows. Earlier passes used `capturePage`, which
+  reads the page, not the screen, so they never saw it. Fix: the opacity
+  is page CSS (`layout.js opacityCss`, `insertCSS` in main.js), which
+  multiplies text and plate the same way (section 5.2 maths unchanged);
+  a node test fails if main.js calls `setOpacity` again. After the fix,
+  read back on the desktop: HUD and trade card visible, scene visible
+  around the plates (transparent); `WS_EX_TRANSPARENT | LAYERED |
+  NOACTIVATE | TOPMOST`, no window alpha; a hit test at the plate's
+  centre returns the window below (click-through); the foreground window
+  never changed (non-focusable); top-right of the 125 percent monitor at
+  16 DIP margin = 20 px, window 350 x 220 px = 280 x 176 DIP at 120 dpi
+  (Windows scaling applied by itself); top-left of the primary at 16,16
+  after a live layout change; UI Automation reads the GGG disclaimer
+  ("This product isn't affiliated with or endorsed by Grinding Gear
+  Games in any way."). Overlay closed by the PID started.
+- U15 UX-NEW-CARDS [S2; fixed] (a) Maps at 320 px: the time ran into the
+  deaths words ("0:110 deaths"); the Deaths column is now a bare count
+  and every number column has a 12 px gap. (b) After a core restart the
+  tiles said "2 deaths" while the Death recap said "No deaths this
+  session" (LIVE-RESUME restores the count, not the details): the recap
+  now says how many deaths came before AshLight started reading. (c)
+  Session read 7:20 next to a 35:10 zone timer and a 47:30 act split:
+  it now counts from the game's log opening, like the resumed deaths,
+  and shows `--:--` (not `0:00`) until the feed is live; the pace keeps
+  the core start as its hour base (it counts live level-ups only). (d)
+  The act resume note wrapped the act name over four lines at 320 px:
+  rows say `(partial)` and one sentence under the table says why. (e)
+  Pace shortened to fit two lines under the Level tile. Forced colours
+  and light theme: every card keeps its words; no horizontal scroll at
+  320 / 768 / 1440 px.
+- U16 UX-A11Y [S3; fixed] `tests/test_a11y.py` (stdlib, in the suite):
+  landmarks once each, one h1 and no skipped heading level, sections
+  named by their own heading, polite announcements only, nothing a timer
+  or push rewrites inside a live region, no positive tabindex, every
+  control named, focus ring on every focusable kind, every text colour a
+  measured token. Found and fixed: the live pills were rewritten with the
+  same words on every state push (a screen reader may repeat them):
+  written only on change now, measured live: 0 live-region mutations
+  over 3 pushes; the deaths dash used `aria-label` on a paragraph, which
+  ARIA forbids there: hidden text "Not counted yet" instead. Focus order
+  (live, Tab order = DOM order): Stat weights, Paste a build, web data,
+  monitor, corner, size, opacity, gap, graphics, stop reading.
+
 ## Kept by decision
 
 - K1 (SC 2.2.2): the zone and session timers keep updating with no pause

@@ -153,3 +153,26 @@ test("hudModel shows the newest open trade and repaints only on change", () => {
   const c = gate.hudModel({ ...snap, overlay_layout: { corner: "bottom-left" } }, 10, "live");
   assert.deepEqual(gate.changedFields(a, c), ["anchor"]);
 });
+
+/* UX-REAL-OVERLAY: on the real desktop a transparent, software-composited
+   window with BrowserWindow.setOpacity drew nothing at all. The opacity is
+   page CSS instead. */
+test("opacityCss clamps to the layout limits", () => {
+  assert.equal(L.opacityCss(0.9), "html { opacity: 0.9 !important; }");
+  assert.equal(L.opacityCss(1), "html { opacity: 1 !important; }");
+  assert.equal(L.opacityCss(0.2), "html { opacity: 0.9 !important; }");
+  assert.equal(L.opacityCss("x"), "html { opacity: " + L.LAYOUT_DEFAULT.opacity + " !important; }");
+});
+
+test("main.js never uses the window-level opacity", () => {
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "main.js"), "utf8");
+  assert.ok(!/\.setOpacity\s*\(/.test(src), "BrowserWindow.setOpacity hides the overlay");
+  assert.ok(/insertCSS\(/.test(src) && /opacityCss\(/.test(src));
+});
+
+test("overlay.css paints at the default opacity before main.js applies the layout", () => {
+  const css = require("fs").readFileSync(require("path").join(__dirname, "..", "overlay", "overlay.css"), "utf8");
+  const m = /\nhtml \{ opacity: ([0-9.]+); \}/.exec(css);
+  assert.ok(m, "html opacity rule");
+  assert.equal(Number(m[1]), L.LAYOUT_DEFAULT.opacity);
+});

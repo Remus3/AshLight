@@ -36,7 +36,7 @@ test("duration matches the zone timer form", () => {
 
 test("splitRows: closed and open splits, exact", () => {
   assert.deepEqual(a.splitRows(ACTS, 4900), [
-    { label: "Act 1", note: "partial: counted from the first zone AshLight saw", time: "20:00", total: "20:00", current: false },
+    { label: "Act 1", note: "partial", time: "20:00", total: "20:00", current: false },
     { label: "Act 2", note: "", time: "1:00:00", total: "1:20:00", current: true }
   ]);
   assert.deepEqual(a.splitRows(null, 1), []);
@@ -82,7 +82,7 @@ function fakeDoc(ids) {
 }
 
 test("paint: one note per row, live tick, first-run heading hidden", () => {
-  const doc = fakeDoc(["acts-rows", "acts-table", "acts-empty", "zones-title", "zones-rows",
+  const doc = fakeDoc(["acts-rows", "acts-table", "acts-empty", "acts-note", "zones-title", "zones-rows",
     "zones-table", "zones-empty", "zones-source"]);
   const live = Object.assign({}, ACTS, { splits: [
     { key: "G3", label: "Act 3", started_at: 0, ended_at: null, current: true, partial: true }] });
@@ -90,7 +90,9 @@ test("paint: one note per row, live tick, first-run heading hidden", () => {
   const rows = doc.els["acts-rows"].children;
   assert.equal(rows.length, 1);
   assert.equal(rows[0].children[0].textContent,
-    "Act 3 (now, partial: counted from the first zone AshLight saw)");
+    "Act 3 (now, partial)");
+  assert.equal(doc.els["acts-note"].textContent, "Partial: counted from the first zone AshLight saw.");
+  assert.equal(doc.els["acts-note"].hidden, false);
   assert.equal(rows[0].children[1].textContent, "1:05");
   a.paint(doc, live, 130, false);
   assert.equal(rows[0].children[1].textContent, "2:10");
@@ -109,4 +111,10 @@ test("paint: one note per row, live tick, first-run heading hidden", () => {
   assert.equal(doc.els["zones-title"].hidden, true);
   assert.equal(doc.els["zones-empty"].textContent, ACTS.no_levels_text);
   assert.equal(doc.els["zones-source"].hidden, true);
+});
+
+test("partialNote: one sentence only when a row is partial (UX-NEW-CARDS)", () => {
+  assert.equal(a.partialNote(null), "");
+  assert.equal(a.partialNote(Object.assign({}, ACTS, { splits: [{ partial: false }] })), "");
+  assert.equal(a.partialNote(ACTS), "Partial: counted from the first zone AshLight saw.");
 });

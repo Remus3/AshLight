@@ -611,6 +611,10 @@ class SessionState:
         self._clock = clock
         self.version = 0
         self.session_started_at = clock()
+        # The pace counts only level-ups seen live, so its hourly base stays
+        # the core start even when LIVE-RESUME moves the Session tile back
+        # to the log opening (UX-NEW-CARDS).
+        self.pace_started_at = self.session_started_at
         # "" (the shipped config default) means "learn it from the log".
         self.character = character or None
         self.character_fixed = bool(character)
@@ -856,7 +860,8 @@ class SessionState:
     _RESTORE = {"zone": "zone", "in_hideout": "in_hideout", "area_id": "area_id",
                 "area_level": "area_level", "zone_entered_at": "zone_entered_at",
                 "class": "char_class", "level": "level", "deaths": "deaths",
-                "level_ups": "level_ups", "afk": "afk", "dnd": "dnd"}
+                "level_ups": "level_ups", "afk": "afk", "dnd": "dnd",
+                "session_started_at": "session_started_at"}
 
     def restore(self, fields):
         """LIVE-RESUME: set state fields recovered from the end of Client.txt
@@ -938,6 +943,6 @@ class SessionState:
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
                 "maps": self.maps.view(now),
-                "death_recap": self.death_log.view(),
-                "pace": self.pace.view(now, self.session_started_at),
+                "death_recap": self.death_log.view(self.deaths),
+                "pace": self.pace.view(now, self.pace_started_at),
             }

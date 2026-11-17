@@ -136,7 +136,7 @@ def test_map_history_is_capped():
 
 def test_death_recap_exact():
     d = runs.DeathLog()
-    assert d.view() == {"recent": [], "worst_text": "",
+    assert d.view() == {"recent": [], "worst_text": "", "earlier_text": "",
                         "empty_text": runs.DEATHS_EMPTY_TEXT}
     d.add(at=100.0, zone="Crypt", area_level=65, level=72, zone_s=192.0)
     d.add(at=200.0, zone="Savannah", area_level=66, level=72, zone_s=None)
@@ -217,3 +217,27 @@ def test_replayed_client_lines_exact():
     assert snap["maps"]["current"]["time_s"] == 60.0
     assert [r["text"] for r in snap["death_recap"]["recent"]] == [
         "Died in Crypt (area level 65) at level 72, 3:12 into the zone."]
+
+
+def test_death_recap_names_deaths_from_before_reading():
+    """UX-NEW-CARDS: LIVE-RESUME restores the death count, not the details;
+    the recap says so instead of "No deaths this session"."""
+    d = runs.DeathLog()
+    v = d.view(2)
+    assert v["empty_text"] == ("2 deaths came before AshLight started reading, so "
+                               "their zones aren't known. New deaths show here "
+                               "with their zone and level.")
+    assert v["earlier_text"] == ""
+    assert d.view(1)["empty_text"].startswith("1 death came before")
+    assert d.view(0)["empty_text"] == runs.DEATHS_EMPTY_TEXT
+    d.add(100.0, "Crypt", 65, 70, 30.0)
+    v = d.view(3)
+    assert v["earlier_text"] == "2 deaths came before AshLight started reading."
+    assert v["empty_text"].startswith("2 deaths came before")
+    assert d.view(1)["earlier_text"] == ""
+
+
+def test_snapshot_recap_counts_restored_deaths():
+    st = SessionState(clock=Clock())
+    st.restore({"deaths": 2, "character": "Ash"})
+    assert st.snapshot()["death_recap"]["empty_text"].startswith("2 deaths came before")

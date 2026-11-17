@@ -487,6 +487,39 @@ design docs in docs/design/, both made by a separate agent.
   DONE 2026-11-17 (area-ux, 0004 U13): 600 events in 13 s, handler
   max 1.1 ms, 0 long tasks, DOM and heap flat after GC; recent list
   skips unchanged rebuilds.
+- [x] UX-REAL-OVERLAY (review) Run the real Electron overlay on this
+  machine's physical display(s) against a test core fed by
+  tools/synth_client.py; real desktop screenshots (OS screen capture of the
+  desktop, never the game) to verify transparency, click-through and
+  non-focusable window flags, corner position, scaling at the monitor's
+  real DPI, and the About disclaimer; close it by the PID started.
+  ACCEPT: screenshots and measured flags recorded in glance review 0004,
+  defects fixed and test-guarded. ZERO-CLICK: the overlay places, scales
+  and stays click-through by itself; no setting to touch.
+  DONE 2026-11-17 (area-ux, 0004 U14): S1 found - the overlay drew
+  nothing on the real desktop (BrowserWindow.setOpacity on the
+  transparent software-composited window); opacity is page CSS now,
+  node-guarded. Read back on both monitors: visible, transparent,
+  click-through (hit test), never focused, 280 x 176 DIP at 125 percent,
+  disclaimer read by UI Automation.
+- [x] UX-NEW-CARDS (review) Polish the cards that landed today (Maps,
+  Death recap, Pace line, act resume note) for glanceability, empty and
+  loading states, 320 px, forced colours and consistent timers. ACCEPT:
+  headless Chrome screenshots, defects fixed with node / pytest guards.
+  ZERO-CLICK: the cards fill and clear themselves from the log.
+  DONE 2026-11-17 (area-ux, 0004 U15): Maps deaths column a count with
+  gaps at 320 px; recap names deaths from before reading; Session counts
+  from the log opening (`--:--` until live); `(partial)` plus one note;
+  shorter pace line. Node and pytest guards.
+- [x] UX-A11Y (review) A stdlib / node check of the dashboard for
+  landmarks, heading order, aria-live politeness for pushed updates (not
+  chatty), focus order and contrast tokens; fix findings. ACCEPT: the
+  check runs in the suite (no new npm dependency), findings fixed.
+  ZERO-CLICK: a test, no user step; screen readers hear only meaningful
+  changes by themselves.
+  DONE 2026-11-17 (area-ux, 0004 U16): tests/test_a11y.py; pills written
+  only on change (0 live mutations over 3 pushes), deaths dash hidden
+  text instead of a forbidden aria-label.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
