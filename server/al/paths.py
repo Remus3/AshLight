@@ -129,6 +129,7 @@ def all_runtime_paths(environ=None):
     out["luajit_cache"] = out["cache"] / "luajit"  # LuaJIT source archive
     out["luajit_build"] = out["build"] / "luajit"  # LuaJIT source tree + luajit.exe
     out["tc_stamp"] = out["build"] / "tc-pins-stamp.json"
+    out["tc_bridge_log"] = out["logs"] / "tc-bridge.log"  # TC-BRIDGE stderr
     return out
 
 

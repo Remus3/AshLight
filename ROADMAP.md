@@ -164,7 +164,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   (or tc_calc: true); THIRD-PARTY.md; tests/test_tc_pin.py. LuaJIT is built
   only when MSVC / MinGW is on PATH, else "source-only" (this machine has
   neither: TC-BRIDGE needs a compiler or a later pinned binary).
-- [ ] TC-BRIDGE (build) Fresh stdio JSON bridge (our own Lua, no code from
+- [x] TC-BRIDGE (build) Fresh stdio JSON bridge (our own Lua, no code from -- done 2026-11-17 (loop; refute 0/3 PASS)
   pob-mcp / pob2-mcp) driving the unmodified pinned PoB checkout via
   luajit.exe, plus a Python client in server/al: load build XML, set an item
   from item text, return outputs; timeout kill; core runs without it.
