@@ -131,6 +131,38 @@ Emberglance found no product of those names (accessed 2026-11-16).
 Cinderpane was dropped: aalpern/cinderpane is a 25-star UI library
 (https://github.com/aalpern/cinderpane) (accessed 2026-11-16).
 
+## 5. Candidate "Herald" (operator query, 2026-11-16)
+
+Verdict: REJECT.
+- GGG vocabulary in both games. poe2wiki title search `intitle:herald`: 9 hits
+  incl. Herald (page), Herald of Ice / Thunder / Ash / Blood / Plague, Deadly
+  Herald; poewiki (PoE1): 39 hits incl. Herald (ascendancy class), Herald of
+  Thunder / Ash / Ice / Agony / Purity, Kitava's Herald, many "Herald Effect"
+  cosmetics
+  (https://www.poe2wiki.net/api.php?action=query&list=search&srsearch=intitle:herald&format=json,
+  https://www.poewiki.net/api.php?action=query&list=search&srsearch=intitle:herald&format=json)
+  (accessed 2026-11-16). PoE2 has a Herald gem tag
+  (https://www.poe2wiki.net/wiki/Herald_(gem_tag), https://poe2db.tw/Herald_Skills)
+  (accessed 2026-11-16). Same spirit as decision 0001's reversal condition (a
+  GGG proper noun): a game-mechanic term reads as official vocabulary and
+  would collide in every wiki / build search.
+- Registries all taken: npm `herald`, PyPI `herald`, crates.io `herald` each
+  return HTTP 200 (https://registry.npmjs.org/herald,
+  https://pypi.org/pypi/herald/json, https://crates.io/api/v1/crates/herald)
+  (accessed 2026-11-16).
+- GitHub: 2820 repos with "herald" in the name; top: Herald-OS (656 stars),
+  maily_herald (572), heralding (400), nagios-herald (319)
+  (https://api.github.com/search/repositories?q=herald+in:name&sort=stars)
+  (accessed 2026-11-16). A PoE-flavoured repo `cptleo92/poe-herald` already
+  exists (0 stars) (https://api.github.com/search/repositories?q=herald+path+of+exile)
+  (accessed 2026-11-16).
+- Steam: 10 store hits for "herald" incl. "Herald of Havoc" and "Herald of
+  Moira" (https://store.steampowered.com/api/storesearch/?term=herald&cc=us&l=en)
+  (accessed 2026-11-16).
+- Not checked: domains, trademarks (UNVERIFIED; moot given the rejection).
+- Does not meet the AshLight reversal test and is worse on every axis checked;
+  AshLight stays.
+
 ## Bottom line
 
 KEEP AshLight. The reversal condition is NOT met:
