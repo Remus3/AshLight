@@ -840,6 +840,66 @@ LAN access stays off), not a row.
   who levels or dies before the player's first name line is taken as the
   player.
 
+## Research-filed features, batch 4 (AREA-RES 2026-11-17, research 0031)
+
+Ranked in research 0031; floor rulings G / H / I (adjudicator 2026-11-17)
+in its section 5. UTIL-CRAFT-SLOTS and UTIL-ATLAS-PROGRESS are listed
+there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
+
+- [ ] MATH-SKILL-SPLIT (build) Skill and ailment DPS split: parse the
+  build XML's `<FullDPSSkill stat value skillPart source>` elements (PoB
+  writes one per contributing skill in every saved build) into one row per
+  skill (name, count, DPS, share of the summed total) and, when non-zero,
+  PoB's BleedDPS / IgniteDPS / PoisonDPS / ImpaleDPS / TotalDotDPS; card
+  labelled "from PoB" (research 0031 sections 2, 4.1). floor-ok: PoB's own
+  outputs from the user-pasted build, no recompute (decision 0004). Data:
+  PoB build XML (works with the calc off), bridge outputs when on.
+  ACCEPT: parser tests on real-shaped XML (one skill, several with count,
+  none -> card hidden, non-finite value dropped); `skill_split` in GET
+  /api/build; design-reviewer pass. ZERO-CLICK: rebuilt by itself when a
+  build loads or the calc snapshot changes.
+- [ ] MATH-DEF-BREAKDOWN (build) Defence breakdown and PoB's remaining
+  warnings: add to MATH-BUILD-HEALTH PoB's other warnFunc conditions
+  (unreserved Life <= 0, unreserved Mana < 0, accuracy below Life with
+  Precise Technique, DoT DPS at or above PoB's DotDpsCap) and a compact
+  defence list of PoB values: per-ailment AvoidChance, StunThreshold /
+  StunAvoidChance, FlaskChargeGen / Life / Mana flask charge gen,
+  CharmEffect, ManaPerSecondCost vs ManaRegenRecovery and NetManaRegen
+  (research 0031 sections 2, 4.2). No own uptime or "enough" verdict.
+  floor-ok: comparisons of PoB outputs to PoB's own warn conditions
+  (research 0028 ruling A). Data: PoB outputs (CalcDefence values need
+  the calc on; hidden when off, labelled "from PoB"). ACCEPT: tests on
+  real-shaped stat sets (each new warning, missing stat shows nothing,
+  calc off hides calc-only rows); design-reviewer pass. ZERO-CLICK:
+  rebuilt by itself with the build health card.
+- [ ] UTIL-WAYSTONE-REWARD (build) Waystone reward summary on the same
+  item-check press: sum the reward mods on waystone text (item quantity,
+  item rarity, pack size, rare / magic monsters, waystone drop chance;
+  unidentified noted) into one line next to the UTIL-WAYSTONE risk line
+  ("Rewards: +38% quantity, +25% rare monsters"); overlay keeps its
+  2-line rule (research 0031 sections 1, 4.3). No tablet slot rules
+  (UNVERIFIED after 0.5). floor-ok: the per-press clipboard text only, no
+  new read (decision 0003). Data: hotkey item text. ACCEPT: rule tests on
+  real-shaped waystone text (several reward mods summed, none, corrupted,
+  unidentified); design-reviewer pass. ZERO-CLICK: computed on the
+  press the player already makes; no other click.
+- [ ] UTIL-CAMPAIGN-CHECKS (build) Campaign level checks: from the player
+  level (Client.txt) and the loaded PoB build, show (a) a higher life /
+  mana flask base available at this level (base drop levels from the
+  build-time repoe-fork base_items snapshot vs the build's equipped
+  flasks), (b) boots without movement speed past a level setting, (c) on
+  entering a known act-boss zone, the build's resist for that boss's main
+  element (AshLight-authored one-liner, restated fact) in the act card /
+  overlay status word (research 0031 sections 1, 3, 4.4). floor-ok with
+  condition (ruling H): opted-in Client.txt, PoB build text and the
+  snapshot only; snapshot fetched at build time into the sidecar cache
+  with attribution in theorycraft/datacredit.py (decision 0009), none of
+  its data in tracked files; no copied guide text; no screen or memory
+  read. ACCEPT: tests with a synthetic snapshot (flask upgrade shown /
+  not shown, unknown level -> nothing, no build -> nothing, boss zone
+  line), test_sidecar_paths green, design-reviewer pass. ZERO-CLICK:
+  appears and clears by itself on level-up and zone entry.
+
 ## Game settings advisor (operator order 2026-11-16)
 
 ## Design and UX audit (operator order 2026-11-16)
