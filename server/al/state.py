@@ -70,6 +70,26 @@ def _trade_text(sender, tr):
     return f"{sender} wants {item} - {price}"
 
 
+def _trade_where(tr):
+    """Stash position as the overlay writes it: "tab Sale (3,7)", "tab
+    Sale" without a position, "" without a tab."""
+    tab = tr.get("stash_tab")
+    if tab is None or not str(tab).strip():
+        return ""
+    where = f"tab {tab}"
+    if tr.get("left") is not None and tr.get("top") is not None:
+        where += f" ({tr['left']},{tr['top']})"
+    return where
+
+
+def trade_card_text(row):
+    """UI-REVIEW-2: the sentence and stash position for one open trade card
+    row, so the dashboard prints the section 9 template and never builds
+    trade wording itself."""
+    sender = _text(row.get("from"), UNKNOWN_PLAYER)
+    return {"text": _trade_text(sender, row), "where": _trade_where(row)}
+
+
 def summarize(ev):
     """One natural sentence for an event (design 0001 section 9). This is
     the only place event wording is made; every template has an exact-output
@@ -331,7 +351,8 @@ class SessionState:
                 "events_seen": self.events_seen,
                 "recent_whispers": list(self.recent_whispers),
                 "recent_events": list(self.recent_events),
-                "trade_requests": [dict(r) for r in self.trade_requests],
+                "trade_requests": [dict(r, **trade_card_text(r))
+                                   for r in self.trade_requests],
                 "overlay_layout": dict(self.overlay_layout) if self.overlay_layout else None,
                 "tailer": dict(self.tailer),
             }

@@ -1,7 +1,10 @@
 #!/bin/sh
-# AL pre-commit: leak sweep over staged added lines. 2 = HALT, 3 = FAULT.
+# AL pre-commit: design-review reminder (warn only), then the leak sweep
+# over staged added lines. 2 = HALT, 3 = FAULT.
 ROOT="$(git rev-parse --show-toplevel)"
 PY="${PYTHON:-py}"
 command -v "$PY" >/dev/null 2>&1 || PY=python
 command -v "$PY" >/dev/null 2>&1 || { echo "[leak-sweep] FAULT - no python" >&2; exit 3; }
+# DS-REVIEW-HOOK: warn-only design-review reminder (never blocks).
+"$PY" "$ROOT/tools/design_gate.py" || true
 exec "$PY" "$ROOT/tools/leak_sweep.py" --staged

@@ -196,6 +196,8 @@ design docs in docs/design/, both made by a separate agent.
   every row that touches web/ or app/ (review lane after build). After
   DESIGN-AUDIT. ACCEPT: lane prompt or loop rule names the step; one row
   reviewed through it. ZERO-CLICK: runs in the loop, no manual trigger.
+  Partly done: the lane prompt names the step (DS-REVIEW-HOOK); "one row
+  reviewed through it" waits for LOOP-ARM (the loop is not armed).
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
@@ -225,10 +227,20 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [x] DS-HUD-CLIP (build, S3) Clip the zone before adding "(HO)"; glanceable
   stash position text. ACCEPT: render test with a long zone name.
   ZERO-CLICK: purely display; no input.
-- [ ] DS-REVIEW-HOOK (process) Run the design-reviewer agent on every change
+- [x] DS-REVIEW-HOOK (process) Run the design-reviewer agent on every change
   to web/, app/overlay/, app/shared/ or summarize before commit (lane prompt
   or pre-commit reminder). Folds into DESIGN-GATE. ACCEPT: rule named in the
   lane prompt or loop. ZERO-CLICK: runs in the loop, no manual trigger.
+  Done (UI-REVIEW-2, adjudicator ruling in docs/design/0003-second-audit.md):
+  DESIGN_RULE in tools/loop_prompts.py GATES + verify_prompt, warn-only
+  tools/design_gate.py in .githooks/pre-commit, ledger
+  docs/design/reviews.log; tests/test_design_gate.py.
+- [x] UI-REVIEW-2 (review) Second UI/UX audit: live dashboard (desktop and
+  phone, light and dark, offline, first run) and the overlay rendered with
+  synthetic state, merged with the design-reviewer agent into
+  docs/design/0003-second-audit.md. ACCEPT: every S1 / S2 fixed, reviewer
+  re-run reports S1=0 S2=0. Done: before S2=4 S3=8 S4=7, after 0 open.
+  ZERO-CLICK: no click added; the hotkey is now named on the dashboard.
 ## Ops
 
 - [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,

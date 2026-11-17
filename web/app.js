@@ -6,6 +6,7 @@
 (function () {
   "use strict";
 
+  var D = window.ALDash; // web/status.js: pure view helpers
   var KEY = "al.token";
   var token = readToken();
   var snap = null;
@@ -13,6 +14,8 @@
   var renderedVersion = -1;
   var es = null;
   var ticker = null;
+  var linkLive = false; // the state feed is live right now
+  var everLive = false; // ... and was live at least once on this page
 
   function $(id) { return document.getElementById(id); }
 
@@ -53,21 +56,15 @@
 
   function serverNow() { return Date.now() / 1000 - offset; }
 
+  /* While the feed is down the timers stop, so a stale page never looks
+     like it is still counting (UI-REVIEW-2). */
   function tick() {
-    if (!snap || document.hidden) { return; }
+    if (!snap || document.hidden || !linkLive) { return; }
     var now = serverNow();
     $("zone-time").textContent = snap.zone_entered_at ? duration(now - snap.zone_entered_at) : "--:--";
-    $("session").textContent = duration(now - snap.session_started_at);
-  }
-
-  function kindOf(row) {
-    if (row.trade) { return "trade"; }
-    if (row.type === "whisper_in") { return "from"; }
-    if (row.type === "whisper_out") { return "to"; }
-    if (row.type === "death") { return "death"; }
-    if (row.type === "level_up") { return "level"; }
-    if (row.type === "scene_changed" || row.type === "area_entered") { return "zone"; }
-    return "info";
+    // Before the Client.txt opt-in there is no play session to time.
+    $("session").textContent = snap.tailer && snap.tailer.consented
+      ? duration(now - snap.session_started_at) : "--:--";
   }
 
   function renderEvents(rows) {
@@ -76,7 +73,7 @@
     for (var i = rows.length - 1; i >= 0; i--) {
       var row = rows[i];
       var li = document.createElement("li");
-      var k = kindOf(row);
+      var k = D.kindOf(row);
       if (row.whisper) { li.className = "whisper"; }
       if (row.trade) { li.className += " trade"; }
       if (row.type === "death") { li.className = "death"; }
@@ -98,22 +95,6 @@
     $("events-empty").hidden = rows.length > 0;
   }
 
-  function tradeLine(t) {
-    var item = t.item || "item";
-    var price;
-    if (t.kind === "exchange") {
-      item = t.want_amount + " " + item;
-      price = "for " + t.price_amount + " " + (t.price_currency || "");
-    } else if (t.price_amount !== null && t.price_amount !== undefined) {
-      price = t.price_amount + " " + (t.price_currency || "");
-    } else {
-      price = "no price set";
-    }
-    var where = t.stash_tab !== undefined && t.stash_tab !== null
-      ? "tab " + t.stash_tab + ", left " + t.left + ", top " + t.top : "";
-    return { what: (t.from || "unknown player") + " wants " + item + " - " + price, where: where };
-  }
-
   var renderedTrades = "";
 
   function renderTrades(rows) {
@@ -123,7 +104,7 @@
     var frag = document.createDocumentFragment();
     for (var i = rows.length - 1; i >= 0; i--) {
       var t = rows[i];
-      var line = tradeLine(t);
+      var line = D.tradeLine(t);
       var li = document.createElement("li");
       var tm = document.createElement("span");
       tm.className = "time mono";
@@ -138,7 +119,7 @@
       btn.type = "button";
       btn.className = "secondary";
       btn.textContent = "Dismiss";
-      btn.setAttribute("aria-label", "Dismiss trade request from " + (t.from || "unknown"));
+      btn.setAttribute("aria-label", "Dismiss trade request from " + (t.from || "unknown player"));
       btn.addEventListener("click", dismissTrade.bind(null, t.id));
       li.appendChild(tm);
       li.appendChild(what);
@@ -152,9 +133,13 @@
 
   /* Dashboard-only: dismissing never sends anything to the game. */
   function dismissTrade(id) {
+    $("trade-status").textContent = "";
     api("POST", "/api/trade-dismiss", id === null ? { all: true } : { id: id })
       .then(function (res) { render(res.state); })
-      .catch(function () { /* the next state push retries the view */ });
+      .catch(function (e) {
+        $("trade-status").textContent = "Not dismissed. Try again.";
+        console.warn("dismiss failed: " + e.message);
+      });
   }
 
   /* OVL-POS: overlay layout editor. Saved to config/local.json by the core;
@@ -172,7 +157,7 @@
     var l = doc.layout;
     var corner = $("layout-corner");
     if (!corner.options.length) {
-      doc.corners.forEach(function (c) { corner.appendChild(option(c, c.replace("-", " "))); });
+      doc.corners.forEach(function (c) { corner.appendChild(option(c, D.cornerLabel(c))); });
     }
     var disp = $("layout-display");
     disp.replaceChildren(option("primary", "Primary"));
@@ -233,7 +218,7 @@
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
 
-    $("zone").textContent = s.zone || "-";
+    $("zone").textContent = s.zone || "No zone yet";
     $("hideout").hidden = !s.in_hideout;
     $("level").textContent = s.level === null ? "-" : String(s.level);
     $("who").textContent = s.character
@@ -250,16 +235,24 @@
     $("consent").hidden = !!tl.consented;
     $("consent-no").hidden = !tl.consented;
     $("consent-path").textContent = tl.path || "Client.txt (not found yet - start the game once)";
-    if (tl.reading) {
-      setPill($("reading"), "running", "[>]", "reading Client.txt");
-    } else if (tl.consented) {
-      setPill($("reading"), "blocked", "[#]", tl.path ? "waiting for Client.txt" : "Client.txt not found - start the game once");
-    } else {
-      setPill($("reading"), "idle", "[-]", "not reading Client.txt");
-    }
+    $("events-empty").textContent = D.emptyText(!!tl.consented);
+    showReading();
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
     tick();
+  }
+
+  function showPill(id, p) { setPill($(id), p.state, p.glyph, p.word); }
+
+  function showReading() {
+    showPill("reading", D.readingView(snap ? snap.tailer : null, linkLive));
+  }
+
+  function setLink(event) {
+    linkLive = event === "open";
+    if (linkLive) { everLive = true; }
+    showPill("link", D.linkView(event, everLive));
+    showReading();
   }
 
   function api(method, path, body) {
@@ -275,30 +268,29 @@
   }
 
   function consent(yes) {
-    var err = $("consent-error");
-    err.hidden = true;
+    var err = $("consent-error"); // a polite live region; empty hides nothing
+    err.textContent = "";
     api("POST", "/api/consent", { consent: yes }).then(function (res) {
       render(res.state);
     }).catch(function (e) {
       err.textContent = "Your choice was not saved. Try again.";
       console.warn("consent failed: " + e.message);
-      err.hidden = false;
     });
   }
 
   function connect() {
     if (!token) {
-      setPill($("link"), "failed", "[x]", "open AshLight from the link it showed at start");
+      setLink("notoken");
       return;
     }
     loadLayout();
     api("GET", "/api/state").then(render).catch(function () {
-      setPill($("link"), "failed", "[x]", "can't reach AshLight - restart it");
+      if (!linkLive) { setLink("error"); }
     });
     if (es) { es.close(); }
     es = new EventSource("/events?token=" + encodeURIComponent(token));
-    es.addEventListener("open", function () { setPill($("link"), "done", "[+]", "live"); });
-    es.addEventListener("error", function () { setPill($("link"), "pending", "[ ]", "reconnecting"); });
+    es.addEventListener("open", function () { setLink("open"); tick(); });
+    es.addEventListener("error", function () { setLink("error"); });
     es.addEventListener("state", function (m) {
       try { render(JSON.parse(m.data)); } catch (e) { /* ignore a bad frame */ }
     });

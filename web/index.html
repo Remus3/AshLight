@@ -7,14 +7,15 @@
 <title>AshLight</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/web/app.css">
+<script src="/web/status.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
 <header class="bar">
   <h1 class="brand">AshLight</h1>
-  <p id="reading" class="pill" data-state="idle" role="status" aria-live="polite">
-    <span class="glyph" aria-hidden="true">[-]</span>
-    <span class="word">not reading Client.txt</span>
+  <p id="reading" class="pill" data-state="pending" role="status" aria-live="polite">
+    <span class="glyph" aria-hidden="true">[ ]</span>
+    <span class="word">Client.txt status unknown</span>
   </p>
   <p id="link" class="pill" data-state="pending" role="status">
     <span class="glyph" aria-hidden="true">[ ]</span>
@@ -30,17 +31,18 @@
     <p>From it AshLight shows your current zone and time in it, character level,
       deaths this session, whispers and trade requests. Nothing leaves this
       computer, and AshLight never touches the game or sends it any input.
-      You can stop it at any time.</p>
+      You can stop it at any time with "Stop reading Client.txt" at the
+      bottom of this page.</p>
     <div class="actions">
       <button id="consent-yes" type="button">Allow reading Client.txt</button>
     </div>
-    <p id="consent-error" class="error" hidden></p>
+    <p id="consent-error" class="error" role="status" aria-live="polite"></p>
   </section>
 
   <section class="stats" aria-label="Session at a glance">
     <div class="stat stat-zone">
       <h2 class="label">Zone</h2>
-      <p id="zone" class="value">-</p>
+      <p id="zone" class="value">No zone yet</p>
       <p class="sub"><span id="zone-time" class="mono">--:--</span>
         <span id="hideout" class="tag" hidden>hideout</span></p>
     </div>
@@ -65,6 +67,7 @@
     <h2 id="trades-title">Trade requests <span class="muted">(shown on the overlay)</span></h2>
     <p class="muted">Requests clear after 10 minutes.</p>
     <ol id="trade-list" class="trade-list"></ol>
+    <p id="trade-status" class="muted" role="status" aria-live="polite"></p>
     <div class="actions">
       <button id="trade-clear" type="button" class="secondary">Dismiss all</button>
     </div>
@@ -95,6 +98,8 @@
       </label>
     </form>
     <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
+    <p class="muted">Show or hide the overlay any time with Alt+Shift+A (unless you set
+      another key in AshLight's settings file).</p>
   </section>
 </main>
 
