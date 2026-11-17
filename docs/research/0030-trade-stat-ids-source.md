@@ -96,6 +96,12 @@ tradestats.norm strips markup so the keys map once upstream attaches the
 rows. The trade number could be derived from the stat ids by hash, but
 that is a guess outside the file and decision 0037 item 3 bars it.
 
+Follow-up 2026-11-17 (MATH-TRADESTAT-POB, decision 0037 amendment): the
+pinned PoB-PoE2 checkout's src/Data/TradeSiteStats.lua (commit 7d6f530c,
+read from the sidecar copy 2026-11-17) holds 1846 distinct explicit
+templates; with it as a fallback coverage is 39 of 39, and all 238 keys
+both sources hold carry the same id (0 conflicts).
+
 ## Sources
 
 - https://www.pathofexile.com/developer/docs/reference (accessed 2026-11-17)
