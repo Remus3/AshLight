@@ -44,7 +44,23 @@ no second read and no input to the game.
 REVERSES IF: the lane ships a different, already merged contract (then the
 UI adapts and this entry is amended), or the overlay is allowed to fetch.
 
-STATUS: stub-built. In this branch nothing calls `set_price` yet; the UI
+AMENDMENT 2026-11-17 (PRICE-1-WIRE): wired as ruled. DECISION: the PRICE-1
+server keeps this contract unchanged; `price.card_of()` maps its decision
+0015 doc to the card (queued / searching -> searching, waiting -> waiting
+with wait_s, done -> done with count = search total (or the listing count)
+and listings in fetch order, cheapest first because the search sorts by
+price ascending, off -> off, skipped -> error "not an item", a missing
+league -> error "no league", other failures -> error free text) and calls
+`set_price(card, at=<press>)`, then `keep_time=True` with the same `at`.
+The press time is taken once in `Core.eval_press` and also stamps the item
+check, so `|price.at - eval.at|` is 0 for one press. GET /api/price, which
+PRICE-1 had added, is removed (amendment in decision 0015).
+ALTERNATIVES: keep GET /api/price beside the state field; change the card
+to the 0015 doc. WHY: no caller, SSE-only overlay, the UI was already
+built and tested on this card. REVERSES IF: as decision 0015's amendment.
+
+STATUS: wired 2026-11-17 (PRICE-1-WIRE, amendment above). Was stub-built:
+in that branch nothing called `set_price`; the UI
 was built and checked against fixture cards of this exact shape (tests and
 a stand-in server). The hotkey text on the dashboard names the item check
 key (Alt+Shift+E, decision 0014 F1); if PRICE-1 lands on another key,

@@ -89,12 +89,24 @@ class Core:
                                        contact=self.contact)
         self.trade = trade.TradeClient(enabled=self.web_data_enabled, fetch=web_fetch,
                                        contact=self.contact)
-        # PRICE-1: one price check per item-hotkey press (POST /api/eval).
+        # PRICE-1 / PRICE-1-WIRE: one price check per item-hotkey press (POST
+        # /api/eval); the checker turns its decision 0015 doc into the
+        # decision 0016 card and publishes it with the press time.
         trade_dir = (price.cache_dir() if runtime is None
                      else self.runtime / "cache" / "trade")
         self.price = price.PriceChecker(self.trade, trade_dir, enabled=self.web_data_enabled,
                                         contact=self.contact, league=self.configured_league,
-                                        publish=self.state.set_price)
+                                        card=self.state.set_price)
+
+    def eval_press(self, text, slot=None):
+        """One item-hotkey press (POST /api/eval): the item check and at most
+        one price check, both stamped with the same press time so the
+        overlay merges them (decision 0016 Fork 2). The text is the app's one
+        clipboard read for this press; nothing here reads the clipboard."""
+        at = self.state.now()
+        result = self.last_eval.run(text, slot, at=at)
+        self.price.request(text, at=at)
+        return result
 
     # -- web data opt-in (decision 0013)
     def _config(self):

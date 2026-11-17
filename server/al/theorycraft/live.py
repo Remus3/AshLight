@@ -76,11 +76,13 @@ class LastEval:
         self._input = None
         self._lock = threading.Lock()
 
-    def run(self, text, slot=None, keep_time=False):
+    def run(self, text, slot=None, keep_time=False, at=None):
+        """`at`: the press time (PRICE-1-WIRE shares it with the price
+        check of the same press); None stamps now."""
         result = tc_evaluate.evaluate(text, self.builds.build, self.weights.get(), slot=slot)
         with self._lock:
             self._input = (text, slot)
-        self.state.set_eval(compact(result), keep_time=keep_time)
+        self.state.set_eval(compact(result), keep_time=keep_time, at=at)
         return result
 
     def rerun(self):

@@ -78,18 +78,20 @@ def parse_leagues(body):
 
 def parse_overview(body):
     """{"primary", "rates": {id: {"value", "name"?}}} from an exchange
-    overview. Defensive: unknown fields are ignored, bad lines skipped."""
+    overview. Defensive: unknown fields are ignored, bad lines skipped.
+    DATA-NINJA-NAMES: line names come from the TOP-LEVEL `items` array (id,
+    name, category, detailsId; research 0013, the real response), and
+    `core.items` (only the reference currencies there) fills any gap."""
     doc = json.loads(body)
     if not isinstance(doc, dict) or not isinstance(doc.get("lines"), list):
         raise ValueError("overview has no lines")
     core = doc.get("core") if isinstance(doc.get("core"), dict) else {}
     names = {}
-    items = core.get("items")
-    if isinstance(items, list):
-        for it in items:
+    for items in (doc.get("items"), core.get("items")):  # first wins
+        for it in items[:MAX_LINES] if isinstance(items, list) else []:
             if isinstance(it, dict) and isinstance(it.get("id"), str):
                 name = it.get("name") or it.get("text")
-                if isinstance(name, str):
+                if isinstance(name, str) and name and it["id"] not in names:
                     names[it["id"]] = name[:120]
     rates = {}
     for line in doc["lines"][:MAX_LINES]:

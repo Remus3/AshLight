@@ -22,13 +22,24 @@ TOKEN = "n" * 48
 
 LEAGUES = json.dumps([{"id": "Example League", "name": "Example League"},
                       {"id": "Standard", "name": "Standard"}]).encode()
+# The real overview shape (research 0013, 2026-11-17, trimmed): line names in
+# the TOP-LEVEL `items`; `core.items` holds only the reference currencies
+# (here the primary, divine, whose name comes from that fallback).
 OVERVIEW = json.dumps({
-    "core": {"primary": "exalted", "secondary": "chaos",
-             "items": [{"id": "divine", "name": "Divine Orb"},
-                       {"id": "chaos", "name": "Chaos Orb"}]},
-    "lines": [{"id": "divine", "primaryValue": 250.5, "volumePrimaryValue": 1000},
-              {"id": "chaos", "primaryValue": 0.1},
-              {"id": "broken", "primaryValue": "x"}, "junk"]}).encode()
+    "core": {"items": [{"id": "divine", "name": "Divine Orb", "category": "Currency",
+                        "detailsId": "divine-orb"}],
+             "rates": {"exalted": 531.0, "chaos": 7.43},
+             "primary": "divine", "secondary": "chaos"},
+    "lines": [{"id": "exalted", "primaryValue": 0.001883, "volumePrimaryValue": 29.5,
+               "maxVolumeCurrency": "divine", "maxVolumeRate": 531.0,
+               "sparkline": {"totalChange": 3.06, "data": [0.66, 0.58, 1.99]}},
+              {"id": "chaos", "primaryValue": 0.1346},
+              {"id": "divine", "primaryValue": 1},
+              {"id": "broken", "primaryValue": "x"}, "junk"],
+    "items": [{"id": "exalted", "name": "Exalted Orb", "category": "Currency",
+               "detailsId": "exalted-orb"},
+              {"id": "chaos", "name": "Chaos Orb", "category": "Currency",
+               "detailsId": "chaos-orb"}]}).encode()
 
 
 class FakeNet:
@@ -66,6 +77,27 @@ def _client(tmp_path, net, clock, on=True, league=None, contact=CONTACT):
                           league=lambda: league, fetch=net, clock=clock,
                           contact=lambda: contact)
     return c, state
+
+
+def test_parse_overview_names_from_top_level_items():
+    out = ninja.parse_overview(OVERVIEW)
+    assert out["primary"] == "divine"
+    assert all("name" in v for v in out["rates"].values())
+    assert out["rates"]["divine"]["value"] == 1.0
+    # top-level items win over core.items for the same id; bad entries skipped
+    body = json.dumps({
+        "core": {"items": [{"id": "a", "name": "Core A"}, {"id": "b", "name": "Core B"}]},
+        "lines": [{"id": "a", "primaryValue": 2}, {"id": "b", "primaryValue": 3},
+                  {"id": "c", "primaryValue": 4}],
+        "items": [{"id": "a", "name": "Top A"}, {"id": "c", "name": ""}, "x",
+                  {"name": "no id"}]}).encode()
+    rates = ninja.parse_overview(body)["rates"]
+    assert rates["a"]["name"] == "Top A" and rates["b"]["name"] == "Core B"
+    assert "name" not in rates["c"]
+    # the older guess (names only in core.items) still parses
+    old = json.dumps({"core": {"items": [{"id": "a", "name": "A"}]},
+                      "lines": [{"id": "a", "primaryValue": 1}]}).encode()
+    assert ninja.parse_overview(old)["rates"]["a"]["name"] == "A"
 
 
 def test_no_request_without_contact(tmp_path):
@@ -110,9 +142,13 @@ def test_fetch_parse_attribution_and_user_agent(tmp_path):
         assert "Cookie" not in h
     snap = c.snapshot()
     assert snap["blocked"] is None and snap["contact_set"] is True
-    assert snap["league"] == "Example League" and snap["primary"] == "exalted"
-    assert snap["rates"]["divine"] == {"value": 250.5, "volume": 1000.0, "name": "Divine Orb"}
-    assert set(snap["rates"]) == {"divine", "chaos"}
+    assert snap["league"] == "Example League" and snap["primary"] == "divine"
+    assert snap["rates"]["exalted"] == {"value": 0.001883, "volume": 29.5,
+                                        "name": "Exalted Orb"}
+    assert set(snap["rates"]) == {"exalted", "chaos", "divine"}
+    # DATA-NINJA-NAMES: every line is named (top-level items, core.items fallback)
+    assert {k: v["name"] for k, v in snap["rates"].items()} == {
+        "exalted": "Exalted Orb", "chaos": "Chaos Orb", "divine": "Divine Orb"}
     assert snap["age_s"] == 0 and snap["stale"] is False
     assert "poe.ninja" in snap["attribution"] and "Grinding Gear Games" in snap["attribution"]
     assert ninja.ATTRIBUTION == snap["attribution"]
@@ -132,7 +168,7 @@ def test_at_most_one_request_per_hour_and_survives_restart(tmp_path):
     assert c2.refresh() == "fresh"
     assert c2.refresh_async() is False
     assert len(net.calls) == n
-    assert c2.snapshot()["rates"]["chaos"]["value"] == 0.1
+    assert c2.snapshot()["rates"]["chaos"]["value"] == 0.1346
 
 
 def test_etag_conditional_request_after_an_hour(tmp_path):
@@ -145,7 +181,7 @@ def test_etag_conditional_request_after_an_hour(tmp_path):
     assert last[2]["If-None-Match"] == '"v1"'
     assert sum(1 for _, u, _ in net.calls if u.endswith(ninja.LEAGUES_PATH)) == 1
     snap = c.snapshot()
-    assert snap["age_s"] == 0 and snap["rates"]["divine"]["value"] == 250.5
+    assert snap["age_s"] == 0 and snap["rates"]["exalted"]["value"] == 0.001883
 
 
 def test_offline_returns_cached_rates_with_age(tmp_path):
@@ -157,7 +193,7 @@ def test_offline_returns_cached_rates_with_age(tmp_path):
     out = c.refresh()
     assert out.startswith("error: ")
     snap = c.snapshot()
-    assert snap["rates"]["divine"]["value"] == 250.5
+    assert snap["rates"]["exalted"]["value"] == 0.001883
     assert snap["age_s"] == 3 * 3600 and snap["stale"] is True
     assert "offline" in snap["last_error"]
     # the failed attempt counts: no retry within the hour
@@ -255,7 +291,7 @@ def test_rates_endpoint_off_then_opt_in(api):
         if doc["rates"] and not doc["refreshing"]:
             break
         time.sleep(0.05)
-    assert doc["rates"]["divine"]["value"] == 250.5
+    assert doc["rates"]["exalted"]["value"] == 0.001883
     n = len(net.calls)
     for _ in range(3):
         _req(srv, "GET", "/api/rates")

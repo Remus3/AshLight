@@ -74,7 +74,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   the first 10 -> summary (currency, min / median of the cheapest 5,
   listing count, total); same text within 30 s reuses the result; live
   "waiting N s" from the limiter; neutral state field `price` and
-  token-gated GET /api/price. Off (zero requests) without web_data or a
+  token-gated GET /api/price (removed by PRICE-1-WIRE). Off (zero requests) without web_data or a
   contact (UA-CONTACT). tests/test_price_check.py (mocked). UI remains in
   PRICE-1-UI; live header values in research 0004 remain UNVERIFIED.
 - [x] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
@@ -93,7 +93,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   app/test/price.test.js, prices.test.js, stand-in server screenshots).
   Dashboard: Price section in the Item check card with "about N <primary>"
   per listing (web/prices.js). REMAINS for PRICE-1: call set_price.
-- [ ] PRICE-1-WIRE (build) (next build lane, first) Reconcile the PRICE-1
+- [x] PRICE-1-WIRE (build) (next build lane, first) Reconcile the PRICE-1
   server (decision 0015) with the PRICE-1-UI contract (decision 0016).
   Same hotkey (Alt+Shift+E, the one /api/eval read), but the method and
   endpoint differ: price.PriceChecker publishes its own doc (id, status
@@ -111,6 +111,16 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   merge of 544c614 kept the 0016 set_price signature (the 0015 one was a
   duplicate). ACCEPT: an end-to-end mocked check renders the card text
   with name and prices; tests. ZERO-CLICK: no operator step.
+  DONE 2026-11-17 (amendments in decisions 0015 / 0016): price.card_of()
+  maps the 0015 doc to the 0016 card; PriceChecker(card=state.set_price)
+  publishes the first update of a press with at=<press>, later ones
+  keep_time=True; Core.eval_press stamps the item check and the price
+  check with one server-clock time (a reused result is re-stamped with the
+  new press). GET /api/price removed (no caller, SSE-only overlay); the
+  0015 doc stays in PriceChecker.latest(). tests/test_price_check.py:
+  status mapping, press time, end-to-end with the contact set at run time
+  (card text and overlay card carry the name and prices), opt-in off / no
+  contact still zero requests.
 
 ## Lane: data
 
@@ -149,7 +159,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   DONE 2026-11-17 (research 0013, not 0005): paths, ETag 304, ids and values
   verified; item names are in a top-level `items`, not core.items (row
   DATA-NINJA-NAMES). The trimmed real shape is in research 0013.
-- [ ] DATA-NINJA-NAMES (data) server/al/ninja.parse_overview reads names
+- [x] DATA-NINJA-NAMES (data) server/al/ninja.parse_overview reads names
   from core.items, which holds only the 3 reference currencies; the real
   response (research 0013, 2026-11-17) has every line's name in the
   top-level `items` array (id, name, category, detailsId). Read names from
@@ -157,6 +167,12 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   OVERVIEW to the real shape (top-level items, primary "divine"). ACCEPT:
   a test on the trimmed shape in research 0013 names every line.
   ZERO-CLICK: next /api/rates refresh.
+  DONE 2026-11-17: names from top-level `items` first, `core.items` fills
+  gaps (first wins); tests/test_data_ninja.py OVERVIEW is the research 0013
+  trimmed shape (primary "divine", top-level items, core.rates,
+  sparkline) and every line is named; a parse test covers precedence and
+  the older core-only shape. Cached rates.json from before keep their old
+  names until the next hourly refresh.
 - [x] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
   and poe2db / poe2wiki (CC BY-NC-SA) before any snapshot is bundled; record
   in docs/decisions. ACCEPT: decision file with the ruling.
@@ -307,7 +323,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   DONE 2026-11-17 (research 0013): pobb.in /pob/<id> and /<id>/raw both 200
   text/plain, no redirect; pastebin /raw/<id> route exists (404 page for a
   missing id), 200 body untested. Row TC-URL-POBBIN-RAW filed.
-- [ ] TC-URL-POBBIN-RAW (theorycraft) shareurl.RAW_TEMPLATES uses
+- [x] TC-URL-POBBIN-RAW (theorycraft) shareurl.RAW_TEMPLATES uses
   pobb.in/pob/<id>, the PoB import route; pobb.in's README documents
   /<id>/raw and /u/<name>/<id>/raw as the public third-party routes
   (research 0013, 2026-11-17). Switch the pobb.in template to
@@ -315,6 +331,13 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   (rebuilt as /u/<name>/<id>/raw, name charset [A-Za-z0-9_-]); update the
   module docstring and decision 0013 item 4. ACCEPT: tests/test_tc_url.py
   covers both forms and the SSRF cases. ZERO-CLICK: pasting a pobb.in link.
+  DONE 2026-11-17: RAW_TEMPLATES pobb.in -> https://pobb.in/{id}/raw,
+  POBB_USER_TEMPLATE https://pobb.in/u/{name}/{id}/raw; pasted /<id>,
+  /<id>/raw, /pob/<id>, /u/<name>/<id>[/raw] accepted, name and id
+  [A-Za-z0-9_-]{1,64} and not raw / pob / u; docstring and decision 0013
+  item 4 updated. tests/test_tc_url.py: both forms, 17 new refusal cases
+  (bad names, extra segments, encoded slash / traversal, userinfo, port),
+  a user link through POST /api/build-code. /u/ raw route not fetched live.
 - [x] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture

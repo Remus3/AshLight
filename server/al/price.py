@@ -26,6 +26,16 @@ DEDUPE_S reuses the last result (no second search). A press arriving while
 an older check has not searched yet supersedes it, so a press never causes
 more than one search.
 
+PRICE-1-WIRE: the checker keeps its own result doc (decision 0015: id,
+status incl. queued / skipped, reason, wait_s, league, summary, error) and
+pushes every change through `card_of()` (a pure adapter) into the card
+contract of decision 0016 Fork 1 (status searching | waiting | done | off |
+error, wait_s, item, league, count, listings, error) via the `card`
+callable (the core passes `SessionState.set_price`): the first publish of a
+press with at=<press time>, later updates of the same check with the same
+`at` and keep_time=True, so the overlay merges it with the item check of
+that press.
+
 The summary is UNVERIFIED against live trade2 responses (research 0004:
 the fetch result shape listing.price {amount, currency} follows the trade
 site and community tools).
@@ -143,6 +153,46 @@ def summarize(doc, total=None):
     return out
 
 
+def card_of(doc):
+    """The decision 0016 card for a decision 0015 result doc (pure).
+    queued / searching -> searching; waiting -> waiting with wait_s; done
+    -> done with count and the listings (cheapest first: the search sorts
+    by price ascending, so the fetch order is kept); off (web data off /
+    contact not set) -> off; skipped -> error "not an item"; a missing
+    league -> error "no league"; any other failure -> error, free text."""
+    doc = doc if isinstance(doc, dict) else {}
+    raw = doc.get("item") if isinstance(doc.get("item"), dict) else {}
+    item = {"name": raw.get("name"), "base": raw.get("base"), "rarity": raw.get("rarity")}
+    status = doc.get("status")
+    card = {"status": "error", "wait_s": None, "item": item, "league": doc.get("league"),
+            "count": None, "listings": [], "error": None}
+    if status in ("queued", "searching"):
+        card["status"] = "searching"
+    elif status == "waiting":
+        w = doc.get("wait_s")
+        ok = isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0
+        card.update(status="waiting", wait_s=int(math.ceil(w)) if ok else 1)
+    elif status == "done":
+        summary = doc.get("summary") if isinstance(doc.get("summary"), dict) else {}
+        listings = [{"amount": p["amount"], "currency": p["currency"]}
+                    for p in (summary.get("prices") or [])
+                    if isinstance(p, dict) and "amount" in p and "currency" in p]
+        listings = listings[:MAX_PRICES]
+        total = summary.get("total")
+        count = (total if isinstance(total, int) and not isinstance(total, bool)
+                 and total >= len(listings) else len(listings))
+        card.update(status="done", count=count, listings=listings)
+    elif status == "off":
+        card["status"] = "off"
+    elif status == "skipped":
+        card["error"] = "not an item"
+    else:
+        err = doc.get("error") or doc.get("reason")
+        text = err if isinstance(err, str) and err else "price check failed"
+        card["error"] = "no league" if "league" in text.lower() else text[:200]
+    return card
+
+
 def _write_atomic(path, doc):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
@@ -157,13 +207,15 @@ class _Superseded(Exception):
 
 class PriceChecker:
     """One per core. client: the shared trade.TradeClient. enabled /
-    contact / league: callables read at call time. publish(doc): pushes the
-    latest result into the core state. spawn(fn, *args): runs a check
-    (default: a daemon thread; tests may run it inline)."""
+    contact / league: callables read at call time. publish(doc): receives
+    every new or changed decision 0015 doc (internal; tests). card(card,
+    at=, keep_time=): receives the decision 0016 card of the same change
+    (the core passes SessionState.set_price). spawn(fn, *args): runs a
+    check (default: a daemon thread; tests may run it inline)."""
 
     def __init__(self, client, directory=None, enabled=lambda: False,
                  contact=lambda: None, league=lambda: None, publish=None,
-                 clock=time.time, spawn=None, poll_s=POLL_S):
+                 clock=time.time, spawn=None, poll_s=POLL_S, card=None):
         self.client = client
         self.directory = Path(directory) if directory is not None else cache_dir()
         self.path = self.directory / CACHE_NAME
@@ -171,11 +223,15 @@ class PriceChecker:
         self.contact = contact
         self.league = league
         self.publish = publish or (lambda doc: None)
+        self.card = card or (lambda card, at=None, keep_time=False: None)
         self.clock = clock
         self.spawn = spawn or self._thread
         self.poll_s = poll_s
         self._lock = threading.Lock()
         self._run_lock = threading.Lock()
+        # one publish at a time, in doc order: a stale check's late update
+        # can never overwrite the card of a newer press
+        self._pub_lock = threading.RLock()
         self._gen = 0
         self._last_key = None
         self._last_at = None
@@ -209,27 +265,35 @@ class PriceChecker:
     def blocked_reason(self):
         return webfetch.blocked_reason(self.enabled, self.contact)
 
+    def _emit(self, doc, keep_time):
+        self.publish(doc)
+        self.card(card_of(doc), at=doc["at"], keep_time=keep_time)
+
     def _set(self, gen, **fields):
         """Update the doc of check `gen` (ignored once a newer one exists)."""
-        with self._lock:
-            if self.doc is None or self.doc.get("id") != gen:
-                return False
-            if all(self.doc.get(k) == v for k, v in fields.items()):
-                return True  # unchanged: no state bump, no push
-            self.doc = dict(self.doc, **fields)
-            doc = dict(self.doc)
-        self.publish(doc)
+        with self._pub_lock:
+            with self._lock:
+                if self.doc is None or self.doc.get("id") != gen:
+                    return False
+                if all(self.doc.get(k) == v for k, v in fields.items()):
+                    return True  # unchanged: no state bump, no push
+                self.doc = dict(self.doc, **fields)
+                doc = dict(self.doc)
+            self._emit(doc, keep_time=True)
         return True
 
-    def _new_doc(self, status, **fields):
-        with self._lock:
-            self._gen += 1
-            self.doc = dict({"id": self._gen, "status": status, "reason": None,
-                             "item": None, "league": None, "wait_s": 0,
-                             "summary": None, "error": None, "at": self.clock()},
-                            **fields)
-            doc = dict(self.doc)
-        self.publish(doc)
+    def _new_doc(self, status, at=None, **fields):
+        """A new check (or a press that makes none). `at`: the press time."""
+        with self._pub_lock:
+            with self._lock:
+                self._gen += 1
+                self.doc = dict({"id": self._gen, "status": status, "reason": None,
+                                 "item": None, "league": None, "wait_s": 0,
+                                 "summary": None, "error": None,
+                                 "at": self.clock() if at is None else float(at)},
+                                **fields)
+                doc = dict(self.doc)
+            self._emit(doc, keep_time=False)
         return doc
 
     def latest(self):
@@ -248,30 +312,43 @@ class PriceChecker:
         return {"price": doc, "limiter_wait_s": wait, "blocked": self.blocked_reason()}
 
     # -- the press
-    def request(self, text):
-        """Queue at most one price check for one hotkey press. Returns the
-        published doc. Never raises for a bad item or a missing opt-in."""
+    def request(self, text, at=None):
+        """Queue at most one price check for one hotkey press. `at` is the
+        press time (the server clock at the POST /api/eval, the same value
+        that stamps the item check); default now. Returns the published
+        doc. Never raises for a bad item or a missing opt-in."""
         if not isinstance(text, str):
             return None
+        press = self.clock() if at is None else float(at)
+        parsed = item_mod.parse(text)
+        item = ({"name": parsed.name, "base": parsed.base, "rarity": parsed.rarity}
+                if parsed.is_item else None)
         reason = self.blocked_reason()
         if reason is not None:
-            return self._new_doc("off", reason=reason)
+            return self._new_doc("off", at=press, reason=reason, item=item)
         key = hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()
         now = self.clock()
-        with self._lock:
-            if (self._last_key == key and self.doc is not None
-                    and self._last_at is not None and 0 <= now - self._last_at < DEDUPE_S
-                    and self.doc["status"] not in ("off", "skipped")):
-                return dict(self.doc, reused=True)
-        parsed = item_mod.parse(text)
+        with self._pub_lock:
+            with self._lock:
+                reuse = (self._last_key == key and self.doc is not None
+                         and self._last_at is not None
+                         and 0 <= now - self._last_at < DEDUPE_S
+                         and self.doc["status"] not in ("off", "skipped"))
+                if reuse:
+                    # the same result re-stamped with this press, so the
+                    # overlay groups it with this press's item check
+                    self.doc = dict(self.doc, at=press)
+                    doc = dict(self.doc)
+            if reuse:
+                self._emit(doc, keep_time=False)
+                return dict(doc, reused=True)
         if not parsed.is_item:
-            return self._new_doc("skipped", reason="not an item")
+            return self._new_doc("skipped", at=press, reason="not an item")
         try:
             trade.build_query(parsed)
         except ValueError as e:
-            return self._new_doc("skipped", reason=str(e))
-        doc = self._new_doc("queued", item={"name": parsed.name, "base": parsed.base,
-                                            "rarity": parsed.rarity})
+            return self._new_doc("skipped", at=press, reason=str(e), item=item)
+        doc = self._new_doc("queued", at=press, item=item)
         with self._lock:
             self._last_key, self._last_at = key, now
         self.spawn(self._run, doc["id"], parsed)

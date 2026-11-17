@@ -56,3 +56,28 @@ research 0004 / 0011.
 
 GGG or poe.ninja drop the contact ask, a share host starts asking for one,
 or the operator rules price checks need their own hotkey.
+
+## Amendment 2026-11-17 (PRICE-1-WIRE): GET /api/price removed
+
+DECISION: the price check reaches the UI only through the state field
+`price` (the decision 0016 Fork 1 card, pushed over SSE); the route
+`GET /api/price` is deleted. The checker keeps its own result doc (this
+decision's item 3 fields, incl. queued / skipped and the reason) in memory
+as `PriceChecker.doc` / `latest()`, and `price.card_of()` turns each change
+into the card. One press stamps one time: `Core.eval_press` takes the
+server clock once and passes it to the item check (`set_eval(at=)`) and to
+`PriceChecker.request(text, at=)`; the first publish of a press calls
+`set_price(card, at=<press>)`, later updates `keep_time=True` with the same
+`at`, and a reused result (same text within 30 s) is re-published with the
+new press time. The "blocked" reason stays visible in `GET /api/web-data`,
+`GET /api/rates` and the card's `off` status.
+ALTERNATIVES: keep GET /api/price as a debug / dashboard read (rejected:
+no caller in web/ or app/, the overlay is SSE-only and cannot use it, and
+every extra token-gated route is attack surface and test surface for no
+user); keep it but return the card (rejected: duplicates /api/state).
+WHY: decision 0016 ruled no endpoint of the price lane's own; one path to
+the UI keeps the overlay and dashboard in step and the token / Origin
+surface unchanged.
+REVERSES IF: a caller needs the live limiter wait or the internal doc
+outside the state (then a GET returning `latest()` returns with the same
+guards), or the overlay is allowed to fetch.

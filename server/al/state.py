@@ -490,14 +490,21 @@ class SessionState:
                 self.overlay_layout = dict(layout)
                 self.version += 1
 
-    def set_eval(self, card, keep_time=False):
+    def now(self):
+        """The state clock (server time, s); PRICE-1-WIRE stamps one press
+        with it so the item check and the price check share `at`."""
+        return self._clock()
+
+    def set_eval(self, card, keep_time=False, at=None):
         """TC-EVAL-UI: publish the last item check (a live.compact() card).
         keep_time keeps the previous card's time (a re-score after a
-        weights or build change), so the overlay does not show it again."""
+        weights or build change), so the overlay does not show it again.
+        `at`: the press time when the caller already took it."""
         with self._lock:
-            at = self._clock()
-            if keep_time and self.eval is not None:
-                at = self.eval["at"]
+            if at is None:
+                at = self._clock()
+                if keep_time and self.eval is not None:
+                    at = self.eval["at"]
             self._eval_ids += 1
             self.eval = dict(card, id=self._eval_ids, at=at)
             self.version += 1

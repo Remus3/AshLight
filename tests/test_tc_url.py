@@ -44,10 +44,15 @@ def _on():
 # -- URL rewriting / SSRF guard -----------------------------------------------
 
 @pytest.mark.parametrize("pasted, raw", [
-    ("https://pobb.in/AbCd-12_x", "https://pobb.in/pob/AbCd-12_x"),
-    ("  https://pobb.in/AbCd/  ", "https://pobb.in/pob/AbCd"),
-    ("https://pobb.in/pob/AbCd", "https://pobb.in/pob/AbCd"),
-    ("https://POBB.IN/AbCd?x=1#frag", "https://pobb.in/pob/AbCd"),
+    ("https://pobb.in/AbCd-12_x", "https://pobb.in/AbCd-12_x/raw"),
+    ("  https://pobb.in/AbCd/  ", "https://pobb.in/AbCd/raw"),
+    ("https://pobb.in/AbCd/raw", "https://pobb.in/AbCd/raw"),
+    ("https://pobb.in/pob/AbCd", "https://pobb.in/AbCd/raw"),
+    ("https://POBB.IN/AbCd?x=1#frag", "https://pobb.in/AbCd/raw"),
+    # TC-URL-POBBIN-RAW: user links (research 0013)
+    ("https://pobb.in/u/some_user-1/AbCd", "https://pobb.in/u/some_user-1/AbCd/raw"),
+    ("https://pobb.in/u/Name/AbCd/raw", "https://pobb.in/u/Name/AbCd/raw"),
+    ("https://pobb.in/u/Name/AbCd/?x=1#f", "https://pobb.in/u/Name/AbCd/raw"),
     ("https://pastebin.com/Zx81Qq", "https://pastebin.com/raw/Zx81Qq"),
     ("https://pastebin.com/raw/Zx81Qq", "https://pastebin.com/raw/Zx81Qq"),
 ])
@@ -76,6 +81,23 @@ def test_raw_url(pasted, raw):
     "https://pobb.in/" + "a" * 65,              # id too long
     "www.pobb.in/AbCd",                         # no scheme
     "https://pobb.in./AbCd",                    # trailing dot
+    "https://pobb.in/raw",                      # reserved word, no id
+    "https://pobb.in/pob/raw",                  # reserved word as id
+    "https://pobb.in/AbCd/raw/raw",             # extra segment
+    "https://pobb.in/AbCd/x",                   # unknown second segment
+    "https://pobb.in/u/AbCd",                   # user link without an id
+    "https://pobb.in/u/Name/AbCd/x",            # user link, unknown tail
+    "https://pobb.in/u/Name/AbCd/raw/raw",      # user link, extra segment
+    "https://pobb.in/u/na.me/AbCd",             # name outside [A-Za-z0-9_-]
+    "https://pobb.in/u/na%2Fme/AbCd",           # encoded slash in the name
+    "https://pobb.in/u/" + "n" * 65 + "/AbCd",  # name too long
+    "https://pobb.in/u/Name/" + "a" * 65,       # id too long
+    "https://pobb.in/u/raw/AbCd",               # reserved word as name
+    "https://pobb.in/u/Name/u",                 # reserved word as id
+    "https://pobb.in/u/..%2f..%2fetc/AbCd",     # encoded traversal in the name
+    "https://pobb.in" + AT + "evil.example/u/Name/AbCd",  # userinfo, user link
+    "https://pobb.in:8080/u/Name/AbCd",         # port, user link
+    "https://pastebin.com/u/Name/AbCd",         # user form only on pobb.in
 ])
 def test_raw_url_refuses(pasted):
     with pytest.raises(webfetch.UrlNotAllowed):
@@ -83,7 +105,7 @@ def test_raw_url_refuses(pasted):
 
 
 def test_fetch_sends_truthful_user_agent_once():
-    net = FakeNet({"https://pobb.in/pob/AbCd": (200, {}, (CODE + "\n").encode())})
+    net = FakeNet({"https://pobb.in/AbCd/raw": (200, {}, (CODE + "\n").encode())})
     text = shareurl.fetch_build_text("https://pobb.in/AbCd", _on, fetch=net)
     assert text == CODE
     assert len(net.calls) == 1
@@ -112,14 +134,14 @@ def test_redirect_within_allowlist_is_followed():
     "https://127.0.0.1/x", "https://pobb.in" + AT + "evil.example/", "https://pobb.in:8443/x",
 ])
 def test_redirect_off_allowlist_is_refused(location):
-    net = FakeNet({"https://pobb.in/pob/AbCd": (302, {"Location": location}, b"")})
+    net = FakeNet({"https://pobb.in/AbCd/raw": (302, {"Location": location}, b"")})
     with pytest.raises(webfetch.UrlNotAllowed):
         shareurl.fetch_build_text("https://pobb.in/AbCd", _on, fetch=net)
     assert len(net.calls) == 1  # the off-list target was never requested
 
 
 def test_redirect_loop_is_bounded():
-    net = FakeNet({"https://pobb.in/pob/AbCd": (302, {"Location": "/pob/AbCd"}, b"")})
+    net = FakeNet({"https://pobb.in/AbCd/raw": (302, {"Location": "/AbCd/raw"}, b"")})
     with pytest.raises(webfetch.FetchError, match="too many redirects"):
         shareurl.fetch_build_text("https://pobb.in/AbCd", _on, fetch=net)
     assert len(net.calls) == webfetch.MAX_REDIRECTS + 1
@@ -127,7 +149,7 @@ def test_redirect_loop_is_bounded():
 
 def test_oversize_body_is_refused():
     big = b"A" * (shareurl.MAX_BYTES + 1)
-    net = FakeNet({"https://pobb.in/pob/AbCd": (200, {}, big)})
+    net = FakeNet({"https://pobb.in/AbCd/raw": (200, {}, big)})
     with pytest.raises(webfetch.FetchError, match="too large"):
         shareurl.fetch_build_text("https://pobb.in/AbCd", _on, fetch=net)
 
@@ -140,7 +162,7 @@ def test_oversize_body_is_refused():
     (200, b"\xff\xfe\x00", codec.CodeError),
 ])
 def test_bad_responses(status, body, exc):
-    net = FakeNet({"https://pobb.in/pob/AbCd": (status, {}, body)})
+    net = FakeNet({"https://pobb.in/AbCd/raw": (status, {}, body)})
     with pytest.raises(exc):
         shareurl.fetch_build_text("https://pobb.in/AbCd", _on, fetch=net)
     assert len(net.calls) == 1
@@ -149,7 +171,7 @@ def test_bad_responses(status, body, exc):
 def test_real_transport_never_follows_redirects():
     import urllib.request
     h = webfetch._NoRedirect()
-    req = urllib.request.Request("https://pobb.in/pob/AbCd")
+    req = urllib.request.Request("https://pobb.in/AbCd/raw")
     assert h.redirect_request(req, None, 302, "Found", {}, "https://evil.example/") is None
 
 
@@ -171,9 +193,10 @@ def api(tmp_path):
     log = tmp_path / "Client.txt"
     log.write_bytes(b"")
     net = FakeNet({
-        "https://pobb.in/pob/Good1": (200, {}, CODE.encode()),
-        "https://pobb.in/pob/Bad1": (200, {}, b"not a build"),
-        "https://pobb.in/pob/Away": (302, {"Location": "https://evil.example/"}, b""),
+        "https://pobb.in/Good1/raw": (200, {}, CODE.encode()),
+        "https://pobb.in/u/some_user/Good2/raw": (200, {}, CODE.encode()),
+        "https://pobb.in/Bad1/raw": (200, {}, b"not a build"),
+        "https://pobb.in/Away/raw": (302, {"Location": "https://evil.example/"}, b""),
         "https://pastebin.com/raw/Down": (503, {}, b""),
     })
     started = []
@@ -211,6 +234,10 @@ def test_api_share_url_flow(api):
     assert status == 502 and doc["kind"] == "url"
     status, doc = _req(srv, {"code": "https://pobb.in/Bad1"})
     assert status == 400
+    # TC-URL-POBBIN-RAW: a pobb.in user link is fetched from its /raw route
+    status, doc = _req(srv, {"code": "https://pobb.in/u/some_user/Good2"})
+    assert status == 200 and doc["build"]["class_name"] == "Monk", doc
+    assert net.calls[-1][1] == "https://pobb.in/u/some_user/Good2/raw"
     assert not any("evil.example" in u for _, u, _ in net.calls)
     # the fetched build persisted as its code: a restart reloads with no fetch
     n = len(net.calls)

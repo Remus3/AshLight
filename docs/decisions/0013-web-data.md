@@ -39,7 +39,11 @@ needed: every fork below follows from CLAUDE.md, decisions 0003 / 0004 /
 4. TC-URL (`server/al/theorycraft/shareurl.py`). Share links from pobb.in
    and pastebin.com only. The pasted URL is never fetched as given: after
    the URL checks, only the paste id is taken and the download URL is
-   rebuilt from a fixed template (pobb.in/pob/<id>, pastebin.com/raw/<id>).
+   rebuilt from a fixed template (pastebin.com/raw/<id>; pobb.in/<id>/raw,
+   and pobb.in/u/<name>/<id>/raw for a user link, the name in
+   [A-Za-z0-9_-] like the id - the public third-party routes in pobb.in's
+   README, research 0013; TC-URL-POBBIN-RAW 2026-11-17 replaced the PoB
+   import route pobb.in/pob/<id>, which is still accepted when pasted).
    One fetch per paste, no retry; the body (capped at the codec's 2 MB) must
    be a build code or character JSON (never another link) and is loaded
    through the normal paste path, so the build persists as its code and
@@ -65,9 +69,11 @@ needed: every fork below follows from CLAUDE.md, decisions 0003 / 0004 /
 ## Open (UNVERIFIED)
 
 - pastebin raw 200 body shape (route confirmed, research 0013); pobb.in
-  /pob/<id> verified but the documented route is /<id>/raw (TC-URL-POBBIN-RAW).
+  /<id>/raw verified live, /u/<name>/<id>/raw documented but not fetched
+  live (research 0013).
 - poe.ninja names live in a top-level `items`, not core.items (verified
-  2026-11-17, research 0013; row DATA-NINJA-NAMES).
+  2026-11-17, research 0013); parse_overview reads them since
+  DATA-NINJA-NAMES.
 - trade2 filter names (misc_filters / corrupted) and real limit values
   (research 0004).
 - poe.ninja asks for a contact in the User-Agent; AshLight sends name,

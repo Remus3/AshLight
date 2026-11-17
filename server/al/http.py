@@ -220,10 +220,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, doc, extra)
         if path == "/api/web-data":
             return self._json(200, self._web_data_doc(), extra)
-        if path == "/api/price":
-            # PRICE-1: the latest price check and the live limiter wait;
-            # never starts a request (only the hotkey's POST /api/eval does).
-            return self._json(200, core.price.latest(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -436,12 +432,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "slot must be a short string"})
         # TC-EVAL-UI: the result is also published in the state (dashboard
         # and overlay card) and re-scored when the weights or build change.
-        result = self.server.core.last_eval.run(text, slot or None)
         # PRICE-1: the same press queues at most one price check (no second
         # clipboard read, no second app call); off without the web-data
         # opt-in and a contact, and the same text within a short window
-        # reuses the last result. The result arrives in the state.
-        self.server.core.price.request(text)
+        # reuses the last result. The result arrives in the state (`price`,
+        # the decision 0016 card) with the same press time as the eval.
+        result = self.server.core.eval_press(text, slot or None)
         return self._json(200, result)
 
     def _put_weights(self):
