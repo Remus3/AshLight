@@ -14,7 +14,9 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   templates (then replace the HUD-WHISPER fixture whispers with anonymised
   real-shaped ones), party / guild chat, AFK / DND, joined / left, Trade
   accepted, hideout scene names, cruel `C_G<n>_` / interlude `P<n>_` area
-  id prefixes (acts.act_of, decision 0020). ACCEPT: every event type seen live has a
+  id prefixes (acts.act_of, decision 0020), the endgame `Map` area-id
+  prefix on a real map (acts.is_endgame; moved from UTIL-MAPRUN, batch 8).
+  ACCEPT: every event type seen live has a
   fixture and a passing test. Needs the operator to play past the whisper
   level, die once, and receive one trade whisper. BLOCKED: operator act
   (in-game play, hand-off OPERATOR act (b)); the loop skips it until then.
@@ -409,7 +411,7 @@ weights derived from PoB outputs stay with TC-DELTA.
 Ranked in research 0020; floor checks there. Rulings by adjudicator
 recorded in research 0018 section 3.
 
-- [ ] UTIL-MAPRUN (build) Map run tracker from Client.txt only: a new
+- [x] UTIL-MAPRUN (build) Map run tracker from Client.txt only: a new
   instance from `Generating level <N> area "<id>" with seed <N>` with an
   endgame area id starts a map, hideout / town `[SCENE]` pauses it, a new
   seed ends it; dashboard shows maps run, time per map, maps per hour,
@@ -418,6 +420,25 @@ recorded in research 0018 section 3.
   like LIVE-1). ACCEPT: fixture tests for enter / portal back / new map /
   death; numbers on the dashboard; design-reviewer pass. ZERO-CLICK: runs
   from the log tail, no start / stop button.
+  CLOSED 2026-11-17 (area-util batch 8): duplicate of UTIL-MAPS
+  (server/al/runs.py; re-entry by seed AUDIT-MAP-SEED, resume
+  UTIL-MAPS-RESUME). Every acceptance point checked in
+  tests/test_util_maprun.py (enter, town pause, portal back, new map,
+  deaths per map, area level, totals); the one missing point, maps per
+  hour, added as MapRuns rate_text in the Maps card summary (adjudicator
+  ruling 2026-11-17: option A); the overlay line filed as UTIL-MAPRUN-OVL.
+  The live `Map` area-id prefix check moved into LIVE-1. SUPERSEDED: the
+  headless loop's lane-2 draft (commit 19bb3af "plan-util-maprun", WIP,
+  gates failed, decision draft 0023-map-run-tracker, kept at ref
+  refs/fleet-lanes/lane-2-1794932281) must NOT be merged: it adds a second
+  tracker (server/al/maprun.py) beside runs.py and its decision number
+  0023 is taken (0023-act-splits-resume).
+- [ ] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
+  (name, time in map), split from UTIL-MAPRUN (adjudicator 2026-11-17).
+  Needs a design section 10 review (one card slot) and the decision 0002
+  overlay budgets (tests/test_budgets.py). ACCEPT: overlay line from the
+  snapshot `maps.current`, hidden outside maps, budget tests green,
+  design-reviewer pass. ZERO-CLICK: shows and hides by itself from the log.
 - [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
@@ -1024,6 +1045,27 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   per-build probe work (base outputs + MATH-WEIGHTS mod weights), not the
   bridge. Further cuts would need a cross-core probe cache, which would make
   the tests depend on each other: not done. ZERO-CLICK: test-only.
+  PRE-VERIFIED 2026-11-17 (UTIL-1.0-FIXTURES, area-util batch 8) on a
+  synthetic 1.0-shaped log (tests/fixtures/client_10_shapes.txt, every
+  1.0 id marked GUESS; tests/test_util_10_fixtures.py): G5_ / G6_ splits
+  with log-line times, an unknown-prefix return-to-Oriath id opens no act
+  (the Act 6 split keeps counting), core start inside an unknown zone
+  claims no act, Act 5 / 6 get no zone note (no crash), a pre-1.0 zone
+  table says "Zone levels for Act 5 aren't downloaded yet ..." instead
+  of "while you are in a campaign act" (FIXED, acts.py
+  act_levels_text), maps / deaths / pace / session summary and an unknown
+  ascendancy and league system line fold cleanly; price league rollover in
+  tests/test_util_10_ready.py. STILL NEEDS THE REAL LAUNCH: items (1)-(8)
+  above, chiefly the real Act 5 / 6 / Oriath / endgame map id prefixes,
+  1.0 system line shapes, ascendancy names, zone notes for Acts 5-6 (our
+  own words, after the area names are known) and the snapshot refresh.
+- [x] UTIL-1.0-FIXTURES (build) Sanitized synthetic 1.0-shaped Client.txt
+  fixture (Act 5 / 6 G5_ / G6_ ids, return-to-Oriath id, unknown
+  ascendancy, league lines; GUESS-marked) and whole-pipeline tests (acts,
+  zone notes, maps, deaths, pace, summary, resume). ACCEPT: no crash, no
+  wrong act, sensible text where data predates 1.0. ZERO-CLICK: test-only.
+  DONE 2026-11-17 (area-util batch 8): see UTIL-1.0-POST PRE-VERIFIED;
+  one defect fixed (pre-1.0 zone table message in Acts 5-6).
 
 ## Utility (lane area-util, 2026-11-17)
 

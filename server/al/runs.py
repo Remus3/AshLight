@@ -36,6 +36,10 @@ MAX_MAPS = 200
 RECENT_MAPS = 5
 RECENT_DEATHS = 5
 MAX_DEATHS = 500
+# Maps per hour (UTIL-MAPRUN, adjudicator 2026-11-17) shows once there is
+# enough to average: 2 finished maps and 10 minutes since the first map.
+RATE_MIN_DONE = 2
+RATE_MIN_S = 600
 
 MAPS_EMPTY_TEXT = ("No maps yet. Map times start by themselves when you "
                    "open a map.")
@@ -77,6 +81,7 @@ class MapRuns:
         self.done = 0
         self.done_s = 0.0
         self.deaths = 0
+        self.first_at = None
 
     def _time(self, m, now):
         t = m["in_s"]
@@ -105,6 +110,8 @@ class MapRuns:
                 return False  # same instance: a re-entry (AUDIT-MAP-SEED)
             self._close(at)
             self.count += 1
+            if self.first_at is None:
+                self.first_at = at
             self.cur = {"area_id": area_id, "area_level": area_level,
                         "seed": seed, "scene": None, "in_s": 0.0,
                         "entered_at": None, "deaths": 0}
@@ -153,6 +160,17 @@ class MapRuns:
                 "area_level": m["area_level"], "time_s": self._time(m, now),
                 "deaths": m["deaths"]}
 
+    def per_hour(self, now):
+        """Finished maps per wall-clock hour since the first map opened
+        (hideout and loading time included, as a farming rate is), or
+        None until RATE_MIN_DONE maps and RATE_MIN_S seconds."""
+        if self.first_at is None or self.done < RATE_MIN_DONE:
+            return None
+        span = now - self.first_at
+        if span < RATE_MIN_S:
+            return None
+        return self.done * 3600.0 / span
+
     def view(self, now):
         """The `maps` part of the state snapshot."""
         cur = None
@@ -163,6 +181,9 @@ class MapRuns:
         avg = self.done_s / self.done if self.done else None
         avg_text = (f"Average map: {clock_text(avg)} over "
                     f"{_plural(self.done, 'finished map')}." if self.done else "")
+        rate = self.per_hour(now)
+        rate_text = (f"{rate:.1f} maps per hour since the first map."
+                     if rate is not None else "")
         if not self.count:
             deaths_text = ""
         elif self.deaths:
@@ -171,6 +192,7 @@ class MapRuns:
             deaths_text = "No deaths in maps."
         return {"count": self.count, "done": self.done, "current": cur,
                 "recent": recent, "avg_s": avg, "avg_text": avg_text,
+                "per_hour": rate, "rate_text": rate_text,
                 "deaths_text": deaths_text, "empty_text": MAPS_EMPTY_TEXT}
 
 

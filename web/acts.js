@@ -74,7 +74,8 @@
   }
 
   /* The zone level part's message when there is no table to show: the
-     data is missing on this computer, or the player is not in an act. */
+     data is missing on this computer, lacks the player's act, or the
+     player is not in an act. */
   function zonesEmpty(acts) {
     if (!acts) { return ""; }
     // UX-FIRSTRUN: outside a campaign act the missing download does not
@@ -82,7 +83,9 @@
     if (!acts.levels && acts.current) { return acts.no_levels_text || ""; }
     if (!acts.levels) { return acts.no_zones_text || ""; }
     if (!acts.zones || acts.zones.length === 0) {
-      return acts.no_zones_text || "";
+      // UTIL-1.0-FIXTURES: in an act the downloaded table lacks (Acts 5-6
+      // before the data refresh) the core says so instead.
+      return acts.act_levels_text || acts.no_zones_text || "";
     }
     return "";
   }
