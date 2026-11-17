@@ -868,6 +868,11 @@ class SessionState:
         # another player joined or left the area since that game start.
         self._start_window = False
         self._party_since_start = False
+        # AREA-AUDIT P8-1: the session's map runs stay across a character
+        # switch, so the map ladder saves only the maps opened since the
+        # current character's game start (None: every session map).
+        self._game_start_at = None
+        self._ladder_from = None
         # The time of the first campaign zone generated since the last name
         # line: a brand-new character's run starts there, not at its first
         # level-up (decision 0038).
@@ -1094,7 +1099,12 @@ class SessionState:
         """UTIL-MAP-LADDER: (character, this session's map rows) for the
         core's saved ladder."""
         with self._lock:
-            return self.character, self.maps.ladder_rows(self._clock())
+            rows = self.maps.ladder_rows(self._clock())
+            since = self._ladder_from
+            if since is not None:  # AREA-AUDIT P8-1: not a parked character's
+                rows = [r for r in rows if isinstance(r.get("opened_at"), (int, float))
+                        and r["opened_at"] >= since]
+            return self.character, rows
 
     def set_map_ladder(self, view):
         """UTIL-MAP-LADDER: the all-sessions ladder view, or None."""
@@ -1219,6 +1229,8 @@ class SessionState:
         for f in CHAR_FIELDS:
             setattr(self, f, loaded[f])
         self.character = name
+        # AREA-AUDIT P8-1: maps of this game run are the new character's
+        self._ladder_from = self._game_start_at if self._game_start_at is not None else now
         while len(self._parked) > MAX_CHARACTERS - 1:
             self._parked.popitem(last=False)
 
@@ -1343,6 +1355,7 @@ class SessionState:
                 changed = True
             self._others.clear()
             self._start_window = True
+            self._game_start_at = now
             self._party_since_start = False
             if (self.zone is not None or self.area_id is not None
                     or self.area_level is not None or self.in_hideout

@@ -1905,6 +1905,23 @@ merge. Each row names the finding ids it closes.
   as fast only for a positive "N% increased Movement Speed"; P7-8
   jsonfile.DEFAULT_MAX_BYTES = 32 MB applies when max_bytes is None.
 
+- [ ] AUDIT-P8-LOW (build) AREA-AUDIT pass 8 lows P8-3 to P8-8
+  (docs/audit/2026-11-17-audit.md "Pass 8"): P8-3 app/main.js corePort
+  takes env AL_PORT / config "port" without the 8960-8979 check (and only
+  an int config value), so an overlay started outside run.ps1 can call a
+  port the core never binds (apply ports.resolve's rule, test it in node);
+  P8-4 the core's --port flag outside the block still binds (refuse it, 0
+  for tests only); P8-5 tick_ladder re-dedupes all session maps against
+  the saved ones twice per 0.5 s tick (about 10 ms at 200 + 500 maps;
+  dedupe on map close or by an index); P8-6 the dashboard console / CSP
+  test never paints the Checks rows, a hint or ladder_all (call
+  tick_diag, show a hint); P8-7 diag.redact masks a character / contact
+  value inside the fixed report text ("Price book" -> "<character>
+  book"; whole words or free-text fields only); P8-8 the "This session"
+  ladder and Maps card mix characters after a switch and a map open
+  across the game restart is saved under neither. ACCEPT: a fix and one
+  regression test each. ZERO-CLICK: code row, the loop works it.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).

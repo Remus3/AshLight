@@ -149,9 +149,10 @@ def test_live_regions_are_few_and_named():
     live = [n for n in nodes() if is_live(n)]
     for n in live:
         assert n.attrs.get("id"), n.attrs  # each is written by id, nowhere else
-    # pills, consent error, trade, item check, price, weights, build (2),
-    # web data, layout, graphics, session summary: a new one is a deliberate change here
-    assert len(live) <= 13, [n.attrs.get("id") for n in live]
+    # pills (2), consent error, trade, item check, price, weights, build (2),
+    # web data, layout, graphics. The cap is 12 (design 0004, U16; AREA-AUDIT
+    # P8-2): a new one replaces one of these, never adds a thirteenth.
+    assert len(live) <= 12, [n.attrs.get("id") for n in live]
 
 
 def test_no_positive_tabindex():
