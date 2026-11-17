@@ -58,6 +58,45 @@ def slots_for_class(item_class):
     return ()
 
 
+# MATH-COMPARE (decision 0032): the off-hand base words of PoE2 (shields,
+# bucklers, foci, quivers carry one of these in their base name); an
+# equipped Weapon 2 whose class or base has none of them is a weapon, so the
+# player dual wields and a checked one-hand weapon fits either hand
+_OFF_HAND_WORDS = ("shield", "buckler", "focus", "quiver")
+
+
+def _is_one_hand(item_class):
+    c = (item_class or "").strip().lower()
+    singular = c[:-1] if c.endswith("s") else c
+    return c in _ONE_HAND or singular in _ONE_HAND
+
+
+def _holds_weapon(item):
+    """True when an equipped item (model.Item) is a weapon, not an off-hand."""
+    if item is None:
+        return False
+    parsed = item_parser.parse(item.text or "")
+    if parsed.item_class:
+        return _is_one_hand(parsed.item_class)
+    # a magic item's line is its full name ("... Buckler of the Fox"), so
+    # any word of the line counts, not only the last
+    words = str(item.base or parsed.base or "").lower().split()
+    return bool(words) and not any(w.strip(",'") in _OFF_HAND_WORDS for w in words)
+
+
+def slots_for_build(item, build):
+    """The gear slots to compare a checked item against: slots_for_class,
+    plus Weapon 2 for a one-hand weapon when the build dual wields (its
+    Weapon 2 holds a weapon, not a shield, focus or quiver). `item`: item
+    text or a parsed item."""
+    parsed = item_parser.parse(item) if isinstance(item, str) else item
+    slots = slots_for_class(parsed.item_class)
+    if (slots == ("Weapon 1",) and _is_one_hand(parsed.item_class) and build is not None
+            and _holds_weapon(build.equipped("Weapon 2"))):
+        return ("Weapon 1", "Weapon 2")
+    return slots
+
+
 def _weights_of(weights):
     """(stat weights mapping, sidegrade band) from a document or a mapping."""
     if weights is None:
@@ -255,7 +294,7 @@ def _evaluate(item_text, build, weights, slot, calc, blend, cache):
     if slot:
         slots = (slot,)
     else:
-        slots = slots_for_class(parsed.item_class)
+        slots = slots_for_build(parsed, build)
     out["slots"] = list(slots)
     if not slots:
         out["error"] = "no gear slot for this item class"
@@ -273,6 +312,11 @@ def _evaluate(item_text, build, weights, slot, calc, blend, cache):
             # _pob updates `out` only after every calc call succeeded
             _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache)
             return out, parsed
+        except delta_mod.CalcImplausible:
+            # MATH-DPS-SANITY (decision 0032): numbers that make no sense
+            # for the card are not shown; the weights score it
+            out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
+                           "notice": delta_mod.NOTICE_IMPLAUSIBLE}
         except delta_mod.CalcError:
             out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
                            "notice": delta_mod.NOTICE_FAILED}

@@ -228,6 +228,11 @@ CALC_NOTICE_TEXT = {
             "optional Path of Building calc in AshLight's settings file."),
     "failed": ("Scored with your stat weights. DPS and EHP are not shown because "
                "Path of Building could not be reached. Try the check again."),
+    # MATH-DPS-SANITY (decision 0032): PoB answered numbers that make no
+    # sense (negative, NaN, an attack build at 0 DPS after the swap)
+    "implausible": ("Scored with your stat weights. DPS and EHP are not shown because "
+                    "Path of Building's numbers for this item don't add up. Try the "
+                    "check again."),
 }
 
 
@@ -240,6 +245,9 @@ CALC_CACHED_TEXT = {
     "failed": ("Scored with the stat weights Path of Building measured for this "
                "build earlier. DPS and EHP are not shown because Path of Building "
                "could not be reached. Try the check again."),
+    "implausible": ("Scored with the stat weights Path of Building measured for this "
+                    "build earlier. DPS and EHP are not shown because its numbers for "
+                    "this item don't add up. Try the check again."),
 }
 
 
@@ -248,18 +256,41 @@ def _pct_text(change):
     return "unknown" if p is None else _signed(p) + "%"
 
 
-def _calc_text(card, best):
+def _has_pob(comp):
+    return isinstance(comp.get("dps"), dict) and isinstance(comp.get("ehp"), dict)
+
+
+def _swap_where(best, n_slots):
+    """MATH-COMPARE (decision 0032): where the swap goes and what it
+    replaces, e.g. "this item in Gloves replaces Old Grip"."""
+    slot = _text(best.get("slot"), "")
+    if best.get("empty"):
+        where = (f"this item goes in the empty {slot} slot" if slot
+                 else "this item goes in the empty slot")
+    else:
+        where = f"this item in {slot or 'that slot'} replaces {_equipped_name(best)}"
+    if n_slots > 1:
+        where += f" (the better of the {n_slots} slots it fits)"
+    return where
+
+
+def _comp_calc(comp, pob):
+    """MATH-COMPARE: one compared slot's own PoB line; "" without PoB."""
+    if not pob or not _has_pob(comp):
+        return ""
+    return f"Path of Building: DPS {_pct_text(comp['dps'])}, EHP {_pct_text(comp['ehp'])}."
+
+
+def _calc_text(card, best, n_slots=1):
     """(dashboard sentence, overlay line or None) for the calc source."""
     calc = _dict(card.get("calc"))
-    if calc.get("source") == "pob" and isinstance(best.get("dps"), dict) \
-            and isinstance(best.get("ehp"), dict):
+    if calc.get("source") == "pob" and _has_pob(best):
         dps, ehp = best["dps"], best["ehp"]
-        slot = _text(best.get("slot"), "its slot")
         line = f"DPS {_pct_text(dps)}, EHP {_pct_text(ehp)}"
-        return (f"Path of Building: DPS {_pct_text(dps)} (from {_num_text(dps.get('old'))} "
-                f"to {_num_text(dps.get('new'))}), EHP {_pct_text(ehp)} (from "
-                f"{_num_text(ehp.get('old'))} to {_num_text(ehp.get('new'))}), with this "
-                f"item in {slot}.", line)
+        return (f"Path of Building: {_swap_where(best, n_slots)}. "
+                f"DPS {_pct_text(dps)} (from {_num_text(dps.get('old'))} "
+                f"to {_num_text(dps.get('new'))}). EHP {_pct_text(ehp)} (from "
+                f"{_num_text(ehp.get('old'))} to {_num_text(ehp.get('new'))}).", line)
     if calc.get("source") == "pob_cached":
         return CALC_CACHED_TEXT.get(_key(calc.get("notice")), CALC_CACHED_TEXT["off"]), None
     return CALC_NOTICE_TEXT.get(_key(calc.get("notice")), ""), None
@@ -353,12 +384,14 @@ def eval_card_text(card):
         out["line"] = "Mods hidden - identify it first"
     else:
         out["line"] = counted[0] if counted else "No counted stat changes"
-    out["calc"], calc_line = _calc_text(card, best)
+    out["calc"], calc_line = _calc_text(card, best, len(comps))
     if calc_line and not card.get("unidentified"):
         out["line"] = calc_line
     out["sentence"] = _compare_sentence(best) if best else f"{verdict}."
+    pob = _dict(card.get("calc")).get("source") == "pob"
     out["comparisons"] = [{"slot": c.get("slot"), "sentence": _compare_sentence(c),
-                           "stats": _stat_rows(c)} for c in comps]
+                           "calc": _comp_calc(c, pob), "stats": _stat_rows(c)}
+                          for c in comps]
     return out
 
 

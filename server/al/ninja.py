@@ -59,6 +59,9 @@ STALE_AFTER_S = 2 * 3600
 MAX_BYTES = 4 * 1024 * 1024
 MAX_LINES = 2000
 CACHE_NAME = "rates.json"
+# UTIL-FILTER-2 (decision 0032): thin markets never set a filter tier
+FILTER_MIN_LISTINGS = 10  # = pricebook.FEW_LISTINGS
+FILTER_MIN_VOLUME = 1.0  # = pricebook.MOVERS_MIN_VOLUME
 
 
 def cache_dir(environ=None):
@@ -379,3 +382,64 @@ class RatesClient:
         if self.book is None:
             return None
         return self.book.lookup(item, league=league)
+
+    def filter_prices(self):
+        """UTIL-FILTER-2 (decision 0032): cached prices for the loot filter's
+        value tiers, in Divine Orbs: {"uniques": [{base, value}] (the
+        cheapest well-listed unique of each base), "stackables": [{name,
+        value}] (currency rates plus the book's exchange kinds)}. None while
+        web data is off, without a league or without a Divine Orb rate.
+        Reads the cache only, never a request."""
+        enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
+        league = self.doc.get("league")
+        rates = self.doc.get("rates") or {}
+        primary = self.doc.get("primary")
+        if not enabled or not league or not isinstance(rates, dict):
+            return None
+        did = next((k for k, e in rates.items() if isinstance(e, dict)
+                    and (e.get("name") == "Divine Orb" or k == "divine")), None)
+        div = (rates.get(did) or {}).get("value") if did else None
+        if not (isinstance(div, (int, float)) and div > 0):
+            div = 1.0 if did is not None and did == primary else None
+        if div is None:
+            return None
+
+        def in_div(value, unit_id):
+            if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+                return None
+            if unit_id in (None, primary):
+                return round(value / div, 6)
+            rate = (rates.get(unit_id) or {}).get("value")
+            if isinstance(rate, (int, float)) and rate > 0:
+                return round(value * rate / div, 6)
+            return None
+
+        stack = {}
+        for e in rates.values():
+            if not isinstance(e, dict) or not isinstance(e.get("name"), str):
+                continue
+            vol = e.get("volume")
+            if isinstance(vol, (int, float)) and vol < FILTER_MIN_VOLUME:
+                continue
+            v = in_div(e.get("value"), primary)
+            if v is not None:
+                stack.setdefault(e["name"], v)
+        uniques = {}
+        if self.book is not None:
+            for _n, t, e in self.book._entries(league, ("unique", "exchange")):
+                v = in_div(e.get("value"), t.get("primary"))
+                if v is None or not isinstance(e.get("name"), str):
+                    continue
+                if t.get("kind") == "exchange":
+                    vol = e.get("volume")
+                    if not isinstance(vol, (int, float)) or vol >= FILTER_MIN_VOLUME:
+                        stack.setdefault(e["name"], v)
+                    continue
+                listings = e.get("listings")
+                base = e.get("base")
+                if not isinstance(listings, int) or listings < FILTER_MIN_LISTINGS \
+                        or not isinstance(base, str) or not base:
+                    continue  # a thin market's price is noise
+                uniques[base] = min(v, uniques.get(base, v))
+        return {"uniques": [{"base": b, "value": v} for b, v in sorted(uniques.items())],
+                "stackables": [{"name": n, "value": v} for n, v in sorted(stack.items())]}
