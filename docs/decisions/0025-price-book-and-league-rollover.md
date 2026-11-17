@@ -1,4 +1,4 @@
-# 0024 - Price book: unique and stackable poe.ninja prices, movers, league rollover
+# 0025 - Price book: unique and stackable poe.ninja prices, movers, league rollover
 
 Date: 2026-11-17. Trigger: ROADMAP rows PRICE-UNIQUE, PRICE-STACKABLES,
 UTIL-MOVERS, UTIL-1.0-READY (lane area-util batch 2). Inputs: decisions
@@ -7,7 +7,7 @@ item-check hotkey, contact from config/local.json, card contract), 0017
 (prices from poe.ninja only, trade only as a link), research 0019 (poe.ninja
 PoE2 contract) and 0018 (PoE2 1.0 on 2026-12-11). Number check: main and
 every local branch held 0001-0022 (two 0022 files, a renumber in flight)
-and 0023 was reported taken, so this is 0024.
+and 0023 was reported taken; 0024 went to the tc-delta renumber, so this is 0025.
 
 ## Decision
 

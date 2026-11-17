@@ -304,7 +304,15 @@ recorded in research 0018 section 3.
   rollover check in ninja.py and the price card league label, refresh the
   repoe-fork snapshot; after launch review the debug sink of the first 1.0
   log for new system lines. ACCEPT: tests with 1.0-shaped fixture lines;
-  rollover test. ZERO-CLICK: data and parser only, nothing for the user. DONE 2026-11-17 (pre-launch part): G5_/G6_ read as Act 5/6, unknown ids and class names change nothing (tests/test_util_10_ready.py, 1.0-shaped lines); charjson.BASE_CLASSES adds Duelist / Shadow; ninja league re-read every 6 h and within the hour after a 404 / empty overview; trade links and the price card label follow the cached poe.ninja league while web data is on (Core.trade_league, decision 0024). OPEN after launch: refresh the repoe-fork snapshot for Act 5/6 zone levels and review the first 1.0 log's debug sink (filed as UTIL-1.0-POST).
+  rollover test. ZERO-CLICK: data and parser only, nothing for the user.
+  DONE 2026-11-17 (pre-launch part): G5_/G6_ read as Act 5/6, unknown ids
+  and class names change nothing (tests/test_util_10_ready.py, 1.0-shaped
+  lines); charjson.BASE_CLASSES adds Duelist / Shadow; ninja league re-
+  read every 6 h and within the hour after a 404 / empty overview; trade
+  links and the price card label follow the cached poe.ninja league while
+  web data is on (Core.trade_league, decision 0025). OPEN after launch:
+  refresh the repoe-fork snapshot for Act 5/6 zone levels and review the
+  first 1.0 log's debug sink (filed as UTIL-1.0-POST).
 - [ ] UTIL-1.0-POST (build) After PoE2 1.0 launches (2026-12-11): refresh
   the repoe-fork world_areas snapshot (build step) so Acts 5-6 get zone
   levels, add the 1.0 ascendancy names to charjson.ASCENDANCY_CLASS, and
