@@ -380,9 +380,15 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   al_loop lane_worker passes lane_checklist(rec). The kit spawn only closes
   the row (close_progress keeps the checklist), so no kit change.
   tests/test_al_lane.py, tests/test_al_loop.py.
-- [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
+- [x] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
+  DONE 2026-11-17 (opt-in, operator enables with `scripts\autostart.ps1
+  -Enable`; decision 0011): current-user task "AshLight Autostart" at
+  logon +30 s, Limited, wscript + scripts/autostart_launch.vbs runs
+  run.ps1 -NoBrowser -Autostart hidden; opt-in in gitignored
+  ops/runtime/autostart.json, run.ps1 -Autostart is a no-op without it;
+  -Disable / -Status / -DryRun; tests/test_autostart.py (dry-run only).
 - [ ] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates
   worktrees under the repo's .claude/worktrees/, but the Sidecar rule puts
   them under the AL sidecar Worktree folder. Finding: .claude/worktrees/ IS
@@ -396,6 +402,14 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   fleet_gitlock). ACCEPT: a fresh isolated agent's worktree resolves under
   the sidecar Worktree dir; tests/test_sidecar_paths.py still green.
   ZERO-CLICK: the hook fires on every isolated spawn; no manual move.
+  PARTIAL 2026-11-17: hook ready; activation = operator act. Decision
+  0012: tools/wt_sidecar_hook.py (WorktreeCreate + WorktreeRemove) makes
+  the worktree at server/al/paths.py worktree_dir()/<name>, tested on a
+  tmp repo (tests/test_wt_sidecar_hook.py). Operator adds to
+  .claude/settings.json "hooks": "WorktreeCreate" and "WorktreeRemove",
+  each [{"hooks": [{"type": "command", "command": "python
+  \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""}]}], then checks one
+  isolated spawn lands under the sidecar Worktree dir.
 - [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish

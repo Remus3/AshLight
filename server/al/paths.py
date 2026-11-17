@@ -75,6 +75,13 @@ def sidecar_dir(name, environ=None):
     return sidecar_root(environ) / name
 
 
+def worktree_dir(environ=None):
+    """<sidecar>/Worktree: git worktrees made for this tree (lanes, and the
+    WT-SIDECAR WorktreeCreate hook, tools/wt_sidecar_hook.py). Not in
+    SIDECAR_SUBDIRS: ensure_dirs() never creates it; the hook does."""
+    return sidecar_root(environ) / "Worktree"
+
+
 def token_file():
     return runtime_dir() / "token"
 
