@@ -82,6 +82,10 @@ its code (license notes: 0006).
 - 0027 The game's `.build` file: GGG's documented Build object, passive
   ids = GGG tree export `id` (all 6 example ids found), PoB PR #2432 ideas
   only ([0027-build-file-passive-ids.md](0027-build-file-passive-ids.md))
+- 0028 Next wave (Nov 2026): build health from PoB PlayerStat, look-for-
+  next per slot, under-level warning, run history, price watch, settings
+  export; phone / LAN is an operator decision
+  ([0028-next-wave-2026-11.md](0028-next-wave-2026-11.md))
 
 ## Open research (feeds ROADMAP)
 
