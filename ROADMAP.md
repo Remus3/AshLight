@@ -13,7 +13,8 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   tests/fixtures/client_live_shapes.txt. REMAINS: death, whispers and trade
   templates (then replace the HUD-WHISPER fixture whispers with anonymised
   real-shaped ones), party / guild chat, AFK / DND, joined / left, Trade
-  accepted, hideout scene names. ACCEPT: every event type seen live has a
+  accepted, hideout scene names, cruel `C_G<n>_` / interlude `P<n>_` area
+  id prefixes (acts.act_of, decision 0023). ACCEPT: every event type seen live has a
   fixture and a passing test. Needs the operator to play past the whisper
   level, die once, and receive one trade whisper. BLOCKED: operator act
   (in-game play, hand-off OPERATOR act (b)); the loop skips it until then.
@@ -51,13 +52,14 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   core only reads the cache. Tests: tests/test_hud_act.py,
   app/test/acts.test.js. ZERO-CLICK: splits and the zone table update by
   themselves on every zone change.
-- [ ] HUD-ACT-RESUME (build) Act splits survive a core restart: LIVE-RESUME
+- [x] HUD-ACT-RESUME (build) Act splits survive a core restart: LIVE-RESUME
   (decision 0008) also returns the current run's area-generation ids with
   their line timestamps, so the splits rebuild from Client.txt instead of
-  starting empty and partial. Also confirm the cruel `C_G<n>_` / interlude
-  `P<n>_` id prefixes from a live log (LIVE-1) and fix acts.act_of if they
-  differ. ACCEPT: restart mid-act keeps earlier act times; exact tests.
-  ZERO-CLICK: rebuilt at core start.
+  starting empty and partial. ACCEPT: restart mid-act keeps earlier act
+  times; exact tests. ZERO-CLICK: rebuilt at core start. DONE 2026-11-17
+  (area-util): lane WIP 19d548d redone on main, decision renumbered 0023,
+  tests/test_hud_act_resume.py (9). The cruel `C_G<n>_` / interlude `P<n>_`
+  prefix check moved into LIVE-1: the live Client.txt holds Act 1 ids only.
 - [x] PRICE-1-COPY (build) Design review of PRICE-1-WIRE (reviews.log
   2026-11-17, S3 x3) on price.card_of: F1 any error text containing
   "league" maps to "no league" (match only trade.search_url's exact
@@ -425,6 +427,33 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   whole-core idle budget (tailer + HTTP + 2 SSE streams < 1 percent; the old
   test covered only the tailer at 2 percent). ZERO-CLICK: static part runs
   in every suite; the live part is one env var.
+
+## Utility (lane area-util, 2026-11-17)
+
+- [x] UTIL-MAPS (build) Map run tracker from Client.txt (area generation +
+  scene): maps run, the open map's time in map (hideout trips and loading
+  paused), deaths per map, last 5 finished maps, average map time.
+  server/al/runs.py MapRuns, snapshot `maps`, dashboard Maps card
+  (web/runs.js). ACCEPT: exact tests on replayed lines
+  (tests/test_util_runs.py, app/test/runs.test.js). ZERO-CLICK: maps open,
+  time and close by themselves from the log; no button. DONE 2026-11-17.
+- [x] UTIL-DEATHS (build) Death recap: each of the player's deaths with
+  zone, area level, character level and time in the zone before it, newest
+  first, plus the zone with the most deaths. server/al/runs.py DeathLog,
+  snapshot `death_recap`, dashboard Death recap card. ACCEPT: exact
+  sentence tests. ZERO-CLICK: filled by itself on every death line.
+  DONE 2026-11-17.
+- [x] UTIL-PACE (build) Level pace from level-up lines (Client.txt carries
+  no XP): average time per level over the last 5 levels and levels per
+  hour this session (after 10 minutes); one line on the Level stat tile,
+  sentence built in the core (server/al/pace.py, snapshot `pace`). ACCEPT:
+  exact tests on replayed level-up lines (tests/test_util_pace.py).
+  ZERO-CLICK: updates on every level-up by itself. DONE 2026-11-17.
+- [ ] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
+  start from the current game run in Client.txt, as HUD-ACT-RESUME does for
+  act splits (decision 0023 pattern, no persisted state). ACCEPT: restart
+  mid-map keeps the map's time and the session's deaths; exact tests.
+  ZERO-CLICK: rebuilt at core start.
 
 ## Ops
 
