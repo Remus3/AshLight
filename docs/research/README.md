@@ -82,6 +82,10 @@ its code (license notes: 0006).
 - 0027 The game's `.build` file: GGG's documented Build object, passive
   ids = GGG tree export `id` (all 6 example ids found), PoB PR #2432 ideas
   only ([0027-build-file-passive-ids.md](0027-build-file-passive-ids.md))
+- 0028 Policy wording watch - overlay / macro wording diffed against the
+  0001 quotes per changelog entry and at 1.0; baseline UNCHANGED
+  2026-11-17, 1.0 re-read pending
+  ([0028-policy-wording-watch.md](0028-policy-wording-watch.md))
 
 ## Open research (feeds ROADMAP)
 
