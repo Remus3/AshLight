@@ -126,6 +126,9 @@ class Core:
                                         calc=lambda: (self.tc_calc if self.tc_calc is not None
                                                       else self.tc_provider()),
                                         rates=lambda: self.rates.snapshot())
+        # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
+        # weights PoB measured for this build (never another build's)
+        self.builds.weights_for = self.last_eval.pob_weights.fallback
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
         # local config; every outbound request goes through server/al/webfetch.py
         # with an injectable transport (tests pass web_fetch, never the network).

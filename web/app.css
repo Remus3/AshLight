@@ -352,6 +352,14 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
   Consolas, monospace; font-size: 0.85rem; overflow-wrap: anywhere;
   border: 1px solid var(--fk-border); border-radius: 4px; }
 .filter-line { overflow-wrap: anywhere; }
+/* MATH-BUILD-HEALTH: one row per PoB warning; the leading word carries the
+   severity, the colour only repeats it */
+.health-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.health-row { padding: 4px 0; overflow-wrap: anywhere; }
+.health-row[data-severity="high"] .health-word { color: var(--fk-status-warn); font-weight: 700; }
+.health-row[data-severity="medium"] .health-word { color: var(--fk-text); }
+.health-row[data-severity="low"] .health-word { color: var(--fk-text-muted); }
+#next-wrap { margin-top: 12px; }
 .search-said { margin-left: 10px; }
 /* UX-ZONE-NOTES: the note for the zone the player is in */
 .zone-note { margin: 0 0 8px; overflow-wrap: anywhere; }

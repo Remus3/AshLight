@@ -10,7 +10,7 @@ import logging
 import threading
 from pathlib import Path
 
-from . import buildfile, codec, model, paste, searchstr
+from . import buildfile, codec, health, model, paste, searchstr
 
 log = logging.getLogger("al.theorycraft")
 
@@ -33,6 +33,10 @@ class BuildStore:
         cache file exists the snapshot names the tree nodes."""
         self.path = Path(path)
         self.tree = tree
+        # MATH-NEXT-LOOK: callable(build, slot) -> {stat key: weight} that
+        # PoB measured for this build (core sets the MATH-WEIGHTS cache's
+        # fallback); None uses the health gaps only
+        self.weights_for = None
         self.build = None
         self.load_error = None
         self._lock = threading.Lock()
@@ -96,9 +100,24 @@ class BuildStore:
                 "code": b.to_code() if b else None, "load_error": self.load_error,
                 # UTIL-SEARCHSTR (decision 0030): copied only on a click
                 "search_strings": searchstr.strings(b),
+                # MATH-BUILD-HEALTH / MATH-NEXT-LOOK: PoB's own numbers only
+                # (decision 0004); rebuilt on every read, so a new build or a
+                # new PoB weight shows with no click
+                "health": _safe(health.health, b, fallback=health.health(None)),
+                "next_look": _safe(health.next_look, b, self.weights_for,
+                                   fallback={"slots": [], "pob_weights": False}),
                 # TC-BUILDFILE (decision 0034): what the .build download
                 # holds; the text itself comes from GET /api/buildfile
                 "build_file": build_file_summary(b, tree_data)}
+
+
+def _safe(fn, *args, fallback=None):
+    """fn(*args), or `fallback` when it fails (it must never break the view)."""
+    try:
+        return fn(*args)
+    except Exception:
+        log.exception("%s failed", getattr(fn, "__name__", "view"))
+        return fallback
 
 
 def build_file(b, tree_data):

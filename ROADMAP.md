@@ -680,7 +680,7 @@ Ranked in research 0028; floor rulings (adjudicator 2026-11-17) in its
 section 6. Phone view over the LAN is an OPERATOR decision (CLAUDE.md:
 LAN access stays off), not a row.
 
-- [ ] MATH-BUILD-HEALTH (build) Build health card from the loaded build's
+- [x] MATH-BUILD-HEALTH (build) Build health card from the loaded build's
   PoB-exported PlayerStat values only: each element resist below the 75
   cap (chaos shown as a number), ReqStr / ReqDex / ReqInt above Str / Dex
   / Int (PoB's own warning condition), SpiritUnreserved below 0, weakest
@@ -691,7 +691,14 @@ LAN access stays off), not a row.
   A). ACCEPT: tests on real-shaped PlayerStat sets (capped, uncapped,
   missing stat, negative spirit); design-reviewer pass. ZERO-CLICK:
   rebuilds by itself whenever a build loads or the snapshot changes.
-- [ ] MATH-NEXT-LOOK (build) "Look for next" per gear slot: order the
+  DONE 2026-11-17 (AREA-MATH b7): server/al/theorycraft/health.py
+  health() (warnings high: unmet attribute / negative spirit, medium:
+  resist below 75, low: weakest element; plain values), `health` in GET
+  /api/build, web/health.js "Build health" card (severity word, no live
+  region); works with the calc off (build XML stats). Tests
+  tests/test_math_build_health.py incl. a live leg on the reference build
+  (cold 71 / lightning 73 flagged), app/test/health.test.js.
+- [x] MATH-NEXT-LOOK (build) "Look for next" per gear slot: order the
   MATH-BUILD-HEALTH gaps and the MATH-WEIGHTS stat ranking into one line
   per slot ("Ring: cold resistance, then life") and pass the top terms to
   the UTIL-SEARCHSTR builder. After MATH-BUILD-HEALTH. floor-ok: ordering
@@ -699,6 +706,13 @@ LAN access stays off), not a row.
   (decision 0014). ACCEPT: ordering tests (gap first, then weight), slot
   coverage from the build XML's equipped items, string length cap kept.
   ZERO-CLICK: lines rebuild by themselves when the build loads.
+  DONE 2026-11-17 (AREA-MATH b7): health.next_look() per equipped gear
+  slot (flasks / charms skipped; resist / attribute gaps on armour and
+  jewellery slots only), then the PoB-measured weights (pobweights
+  fallback, wired in core) missing on the equipped item, at most 3 terms,
+  searchstr.join (250 cap); `next_look` in GET /api/build, "Look for
+  next" rows with Copy on click only; the dashboard re-reads the build
+  after a PoB-scored item check (new weights, no click).
 - [ ] UTIL-UNDERLEVEL (build) Under-level warning: area level from the
   `Generating level N area` line minus the player level from level-up
   lines; at or above a setting (default 3 levels under) show "N levels
