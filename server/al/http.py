@@ -27,6 +27,7 @@ from urllib.parse import parse_qs, urlsplit
 from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
+from .theorycraft import lootfilter
 from .theorycraft import model as build_model
 from .theorycraft import paste as build_paste
 from .theorycraft import shareurl
@@ -243,6 +244,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, self._layout_doc(), extra)
         if path == "/api/build":
             return self._json(200, core.builds.snapshot(), extra)
+        if path == "/api/filter":
+            # UTIL-FILTER (decision 0031): a download the player saves; the
+            # core writes no file anywhere
+            hdr = dict(extra, **{"Content-Disposition":
+                                 f'attachment; filename="{lootfilter.FILE_NAME}"'})
+            return self._send(200, lootfilter.generate(core.builds.build),
+                              "text/plain; charset=utf-8", hdr)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)
         if path == "/api/gfx":
