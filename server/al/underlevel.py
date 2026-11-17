@@ -80,6 +80,7 @@ def view(level, area_level, area_id, zone, in_hideout, table=None,
     unit = "level" if gap == 1 else "levels"
     word = f"{gap} lv under"
     return {"gap": gap, "zone_level": zone_level, "level": level,
-            "text": f"{gap} {unit} under this zone (zone level {zone_level}, "
-                    f"you are level {level}).",
+            # UX-B9-CARDS: the player level is the big value right above
+            # this line, so the sentence names only the zone level
+            "text": f"{gap} {unit} under this zone (zone level {zone_level}).",
             "word": word[:WORD_MAX], "source": source}

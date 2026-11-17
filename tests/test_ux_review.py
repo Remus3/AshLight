@@ -317,7 +317,7 @@ def test_dashboard_card_order_glance_first():
     settings. DOM order is the visual and Tab order (no CSS order)."""
     order, _ = _main_order()
     want = ["consent", "stats", "summarybox", "trades", "evalbox", "actsbox", "mapsbox",
-            "deathsbox", "events", "buildbox", "pricesbox", "layout", "gfx"]
+            "deathsbox", "events", "buildbox", "pricesbox", "toolsbox"]
     seen = [x for x in order if x in want]
     assert seen == want, seen
     css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
@@ -331,12 +331,13 @@ def test_price_and_points_follows_price():
 
 
 def test_overlay_settings_fold_but_hotkey_hint_stays_open():
-    """U18: set-once overlay settings fold away; the hotkey hint and the save
-    status do not."""
+    """U18, amended by U26 (UX-DASH-DENSITY): set-once overlay settings fold
+    away inside the Tools group; the hotkey hint stays outside the fold. The
+    save status sits next to the form, so it is shown whenever a save can
+    happen (the form is only usable with the fold open; review F1)."""
     _, main = _main_order()
-    card = main[main.index('id="layout-title"'):main.index('id="gfx-title"')]
-    fold = card[card.index("<details"):card.index("</details>")]
-    assert 'id="layout-form"' in fold
-    after = card[card.index("</details>"):]
-    # the save status stays outside the fold, so a save is always heard (review F1)
-    assert 'id="layout-status"' in after and "Alt+Shift+A" in after
+    tools = main[main.index('id="toolsbox"'):]
+    fold = tools[tools.index('<details id="tools-more">'):]
+    assert 'id="layout-form"' in fold and 'id="layout-status"' in fold
+    assert fold.index('id="layout-form"') < fold.index('id="layout-status"')
+    assert "Alt+Shift+A" in tools[:tools.index('<details id="tools-more">')]

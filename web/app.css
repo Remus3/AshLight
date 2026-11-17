@@ -415,3 +415,9 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .history-controls, .settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
 .history .slower { color: var(--fk-status-warn); }
 .watch-list li { overflow-wrap: anywhere; }
+/* UX-DASH-DENSITY: set-once tools in one folded group; .build and the loot
+   filter add-on folded in their own cards. Separators only, no motion. */
+.tools .tool { border-top: 1px solid var(--fk-border); margin-top: 12px; padding-top: 4px; }
+.tools .tool:first-of-type { border-top: none; }
+.tool-fold { margin-top: 12px; border-top: 1px solid var(--fk-border); padding-top: 4px; }
+.tool-fold > summary, .tools > details > summary { color: var(--fk-text); font-weight: 600; }

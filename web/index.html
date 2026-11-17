@@ -230,7 +230,7 @@
     <div class="history-controls">
       <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
         Keep run history on this computer</label>
-      <button id="history-clear" type="button">Clear run history</button>
+      <button id="history-clear" type="button" class="secondary">Clear run history</button>
     </div>
     <p id="history-said" class="muted"></p>
   </section>
@@ -263,7 +263,9 @@
         <button id="build-copy" type="button" class="secondary">Copy code for Path of Building</button>
       </div>
       <textarea id="build-code-out" class="code-out" readonly rows="2" aria-label="Build code for Path of Building"></textarea>
-      <h3 class="sub-h">Build file for the game</h3>
+      <!-- UX-DASH-DENSITY: a rarely used tool, folded beside the build it saves -->
+      <details id="buildfile-more" class="tool-fold">
+      <summary>Build file for the game</summary>
       <p class="muted">The game can load this build as a guide. The button saves a .build
         file to your browser's downloads. Move it yourself to the game's planner
         folder in your Documents. AshLight writes nothing into your game folders.</p>
@@ -273,6 +275,7 @@
       </div>
       <p id="buildfile-summary" class="muted"></p>
       <ul id="buildfile-notes" class="muted small" hidden></ul>
+      </details>
     </div>
     <p id="build-copy-status" class="muted" role="status" aria-live="polite"></p>
     <label class="paste" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
@@ -304,7 +307,9 @@
     <p class="muted">Made from your build. Copy one, then paste it into the stash or vendor
       search box in game. AshLight copies only when you click Copy.</p>
     <ul id="search-list" class="search-list"></ul>
-    <h3 class="sub-h">Loot filter add-on</h3>
+    <!-- UX-DASH-DENSITY: a rarely used tool, folded beside the strings it is made from -->
+    <details id="filter-more" class="tool-fold">
+    <summary>Loot filter add-on</summary>
     <p class="muted">A small add-on for your own loot filter. It shows rare drops of the item
       bases your build wears in larger text. The button sends ashlight.filter to your
       browser's downloads. Move it yourself to the folder the game's own filter button
@@ -324,6 +329,7 @@
       <input id="filter-merge-file" type="file" accept=".filter,text/plain">
       <span id="filter-merge-said" class="muted"></span>
     </div>
+    </details>
   </section>
 
   <section id="pricesbox" class="card prices" aria-labelledby="prices-title">
@@ -359,66 +365,71 @@
     <h2 id="watch-title">Price watch</h2>
     <p id="watch-text" class="muted"></p>
     <ul id="watch-moved" class="rates-list watch-list" hidden></ul>
-    <button id="watch-clear" type="button" hidden>Clear watched items</button>
+    <button id="watch-clear" type="button" class="secondary" hidden>Clear watched items</button>
     <p id="watch-said" class="muted"></p>
     <p class="muted small">Uses the poe.ninja prices AshLight already has. It asks the web
       nothing new.</p>
   </section>
 
-  <section class="card layout" aria-labelledby="layout-title">
-    <h2 id="layout-title">Overlay position and size</h2>
-    <!-- UX-DASH-LAYOUT: set once, so folded; the hotkey hint stays visible -->
-    <details id="layout-more">
-    <summary>Change position, size and opacity</summary>
-    <form id="layout-form" class="layout-form">
-      <label>Monitor
-        <select id="layout-display" name="display"><option value="primary">Primary</option></select>
-      </label>
-      <label>Corner
-        <select id="layout-corner" name="corner"></select>
-      </label>
-      <label>Size <span id="layout-scale-out" class="mono"></span>
-        <input id="layout-scale" name="scale" type="range" min="0.95" max="2" step="0.05">
-      </label>
-      <label>Opacity <span id="layout-opacity-out" class="mono"></span>
-        <input id="layout-opacity" name="opacity" type="range" min="0.9" max="1" step="0.05">
-      </label>
-      <label>Gap from the screen edge (px)
-        <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
-      </label>
-    </form>
-    </details>
-    <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
+  <!-- UX-DASH-DENSITY: set-once tools folded into one group at the end; the
+       hotkey hint stays visible. The .build file and the loot filter add-on stay
+       folded in the Build and Search strings cards, next to what they are made from. -->
+  <section id="toolsbox" class="card tools" aria-labelledby="tools-title">
+    <h2 id="tools-title">Tools</h2>
     <p class="muted">Show or hide the overlay any time with Alt+Shift+A, and check an item
       with Alt+Shift+E (unless you set other keys in AshLight's settings file).</p>
-  </section>
-
-  <section id="settingsbox" class="card settings-io" aria-labelledby="settings-title">
-    <h2 id="settings-title">Move settings to another computer</h2>
-    <p class="muted">Download AshLight's settings, then import the file on the other
-      computer. The file never holds your contact, a password or file paths.</p>
-    <div class="settings-controls">
-      <button id="settings-export" type="button">Download settings</button>
-      <label for="settings-import-file">Import a settings file</label>
-      <input id="settings-import-file" type="file" accept=".json,application/json">
+    <details id="tools-more">
+    <summary>Overlay position, settings transfer and graphics</summary>
+    <div class="tool layout" role="group" aria-labelledby="layout-title">
+      <h3 id="layout-title" class="sub-h">Overlay position and size</h3>
+      <form id="layout-form" class="layout-form">
+        <label>Monitor
+          <select id="layout-display" name="display"><option value="primary">Primary</option></select>
+        </label>
+        <label>Corner
+          <select id="layout-corner" name="corner"></select>
+        </label>
+        <label>Size <span id="layout-scale-out" class="mono"></span>
+          <input id="layout-scale" name="scale" type="range" min="0.95" max="2" step="0.05">
+        </label>
+        <label>Opacity <span id="layout-opacity-out" class="mono"></span>
+          <input id="layout-opacity" name="opacity" type="range" min="0.9" max="1" step="0.05">
+        </label>
+        <label>Gap from the screen edge (px)
+          <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
+        </label>
+      </form>
+      <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
     </div>
-    <p id="settings-said" class="muted"></p>
-  </section>
 
-  <section class="card gfx" aria-labelledby="gfx-title">
-    <h2 id="gfx-title">Graphics settings for this computer</h2>
-    <details id="gfx">
-      <summary>Show suggested settings</summary>
-      <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only
-        suggests them: apply them in game under Options, Graphics. AshLight never reads or
-        changes the game's files.</p>
-      <p id="gfx-status" class="muted" role="status" aria-live="polite"></p>
-      <div id="gfx-body" hidden>
-        <dl id="gfx-hw" class="kv"></dl>
-        <p id="gfx-tier"></p>
-        <ul id="gfx-warn" class="gfx-warn"></ul>
-        <ul id="gfx-list" class="gfx-list"></ul>
+    <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">
+      <h3 id="settings-title" class="sub-h">Move settings to another computer</h3>
+      <p class="muted">Download AshLight's settings, then import the file on the other
+        computer. The file never holds your contact, a password or file paths.</p>
+      <div class="settings-controls">
+        <button id="settings-export" type="button">Download settings</button>
+        <label for="settings-import-file">Import a settings file</label>
+        <input id="settings-import-file" type="file" accept=".json,application/json">
       </div>
+      <p id="settings-said" class="muted"></p>
+    </div>
+
+    <div class="tool gfx" role="group" aria-labelledby="gfx-title">
+      <h3 id="gfx-title" class="sub-h">Graphics settings for this computer</h3>
+      <details id="gfx">
+        <summary>Show suggested settings</summary>
+        <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only
+          suggests them: apply them in game under Options, Graphics. AshLight never reads or
+          changes the game's files.</p>
+        <p id="gfx-status" class="muted" role="status" aria-live="polite"></p>
+        <div id="gfx-body" hidden>
+          <dl id="gfx-hw" class="kv"></dl>
+          <p id="gfx-tier"></p>
+          <ul id="gfx-warn" class="gfx-warn"></ul>
+          <ul id="gfx-list" class="gfx-list"></ul>
+        </div>
+      </details>
+    </div>
     </details>
   </section>
 </main>

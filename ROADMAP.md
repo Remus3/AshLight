@@ -974,6 +974,34 @@ design docs in docs/design/, both made by a separate agent.
   DONE 2026-11-17 (area-ux b6, 0004 U24): card read back on the desktop
   in 3 lines; risky waystone now takes the warn edge, and keeps the card
   over the price card with no build loaded; 2 processes, 179.9 MB peak.
+- [x] UX-B9-CARDS (review) Glance pass over Build health, Look for
+  next, Run history, Price watch, Settings import / export, the .build
+  save, the filter-merge picker, the under-level line and overlay word,
+  and map time on HUD line 1. ACCEPT: 320 / 768 / 1440 px, dark / light /
+  forced colours, empty / loading / error states, defects fixed.
+  ZERO-CLICK: nothing to set; every card fills itself from the log, the
+  pasted build and the hotkey press. DONE 2026-11-17 (area-ux b8, 0004
+  U25): Clear run history / Clear watched items no longer primary;
+  Price watch says what it needs when off and empty (was a blank card);
+  under-level sentence no longer repeats the level tile; Look for next
+  hint drops "build calc"; tests/test_ux_b8.py.
+- [x] UX-DASH-DENSITY (review) About 16 cards: re-check hierarchy and the
+  first screen; fold rarely used tools into a Tools group; keep keyboard
+  order and the 12-region cap; no new deps. ACCEPT: glance cards first,
+  set-once tools folded, DOM order = Tab order, live regions unchanged.
+  ZERO-CLICK: nothing to set; the folds are closed by default and the
+  play cards need no click. DONE 2026-11-17 (area-ux b8, 0004 U26):
+  overlay position, settings move and graphics in one folded Tools card
+  at the end (hotkey hint outside the fold); .build file and loot filter
+  add-on folded in their own cards; page 7930 -> 6858 px at 320, 5352 ->
+  4703 px at 1440; 11 live regions.
+- [x] UX-OVERLAY-REAL3 (review) Real desktop check of the overlay with
+  the under-level word and map time (screenshots, not the game).
+  ACCEPT: 2 processes, smoke <= 215 MB, 2-line rule, status word <= 15
+  characters. ZERO-CLICK: the HUD fills from the log; nothing to press.
+  DONE 2026-11-17 (area-ux b8, 0004 U27): `Sun Temple 14m` / `Lv 4 | 1
+  death 11 lv under`, 2 lines; 2 processes, 184.1 MB peak; click-through
+  and non-focus hold.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.

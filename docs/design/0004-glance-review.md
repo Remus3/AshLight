@@ -338,6 +338,59 @@ Tests: `tests/test_ux_b6.py`.
   (smoke gate 215 MB); click-through and non-focus hold. Overlay and
   core closed by the PIDs started.
 
+## Live pass, batch 8 (2026-11-17)
+
+Method as batch 6: a test core on a spare port fed by
+`tools/synth_client.py` (act 1, one death, then two maps with a hideout
+trip, area level 15 at player level 4, so the under-level line and the
+map timer show), the eval fixture build pasted; headless Chrome over CDP
+at 320 / 768 / 1440 px, dark, light and forced colours, folds closed and
+open; the real overlay from the branch at the top-right of the primary
+monitor, GDI copies of the screen. Tests: `tests/test_ux_b8.py`.
+
+- U25 UX-B9-CARDS [S3; fixed] (a) Clear run history and Clear watched
+  items were the filled primary button, the strongest style on their
+  cards, for an action that throws data away; both are now secondary.
+  (b) Price watch with web data off and nothing watched sent no text, so
+  the card showed only its footnote; it now says it is paused while web data
+  is off and that items priced with the item check hotkey are watched by
+  themselves. (c) The under-level sentence repeated the player level the
+  tile shows right above it and wrapped to 6 lines at 320 px; it now
+  names only the zone level (`11 levels under this zone (zone level
+  15).`, 4 lines). (d) The Look for next hint said "build calc"; it now
+  names the optional Path of Building calc and that it is off unless set
+  up. Holds: Build health empty state, Run history empty state and
+  deaths list, Settings export / import, the .build save, the
+  filter-merge picker (labelled native file inputs), the overlay word
+  `11 lv under` (11 characters, cap 15), no horizontal scroll at any
+  width, forced colours keep every boundary. Filed, not fixed (S4): with
+  a build that has no saved stats, the Build card and Build health both
+  say so (two sentences, one cause).
+- U26 UX-DASH-DENSITY [S3; fixed] 15 cards with a build loaded; the
+  first screen at 1440 x 900 is Zone, Level / Deaths / Session, Item
+  check and Act times, which is what play needs, so the order stays.
+  Overlay position, moving settings and graphics settings now sit in one
+  Tools card at the end, folded behind one summary; the hotkey hint stays
+  outside the fold; the inner overlay-position fold was dropped (no fold
+  inside a fold). The .build file and the loot filter add-on fold inside
+  the Build and Search strings cards, beside what they are made from, so
+  they hide with them when no build is loaded. Page height 7930 -> 6858
+  px at 320 px, 5352 -> 4703 px at 1440 px. DOM order is Tab order (no
+  CSS order, no positive tabindex); 11 live regions (cap 12), none added.
+- U27 UX-OVERLAY-REAL3 [pass] Real overlay, desktop only: `Sun Temple
+  14m` / `Lv 4 | 1 death 11 lv under`, 2 lines, no wrap; row 1 carries
+  the map time. 2 processes, 184.1 MB peak working set over 20 s (smoke
+  gate 215 MB); a hit-test at the plate lands on the window behind
+  (click-through) and the overlay never takes focus. At the 0.9 opacity
+  floor, text of a busy window behind shows faintly through the plate
+  next to the status word (K2 covers the word's contrast; no change).
+  Overlay and core closed by the PIDs started.
+
+design-reviewer on batch 8: PASS WITH FINDINGS S1=0 S2=0 S3=2 S4=2, all
+fixed (Price watch says "paused", the Look for next hint in two short
+sentences, the Tools summary reworded, a separator above each in-card
+fold).
+
 ## Kept by decision
 
 - K1 (SC 2.2.2): the zone and session timers keep updating with no pause
