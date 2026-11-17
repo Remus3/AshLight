@@ -116,6 +116,8 @@ class ALServer(ThreadingHTTPServer):
 class Handler(BaseHTTPRequestHandler):
     server_version = f"{NAME}/{VERSION}"
     sys_version = ""
+    # AUDIT-HTTP-HARDEN S2: a socket timeout, so an idle or stalled local
+    # connection frees its thread.
     timeout = REQUEST_TIMEOUT_S  # TEST-HTTP (StreamRequestHandler applies it)
 
     # -- logging: never log the query string (it may carry the token).
