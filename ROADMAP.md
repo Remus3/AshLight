@@ -121,6 +121,15 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   status mapping, press time, end-to-end with the contact set at run time
   (card text and overlay card carry the name and prices), opt-in off / no
   contact still zero requests.
+- [ ] PRICE-1-COPY (build) Design review of PRICE-1-WIRE (reviews.log
+  2026-11-17, S3 x3) on price.card_of: F1 any error text containing
+  "league" maps to "no league" (match only trade.search_url's exact
+  "league required"; others -> free-text error); F2 `off` covers both web
+  data off and contact not set but the card says "Web data is off" (carry
+  the reason, add a state.py PRICE_TEXT entry for contact not set, design
+  review); F3 every skipped doc maps to "not an item" incl. build_query's
+  "item has no base type" (map only reason "not an item"). ACCEPT: tests
+  per mapping; design-reviewer pass. ZERO-CLICK: code row.
 
 ## Lane: data
 
