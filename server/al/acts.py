@@ -12,6 +12,10 @@ Act from an area id (`Generating level N area "<id>"`):
   section 7, 2026-11-16).
 - `C_G<n>_...` -> Cruel Act n, `P<n>_...` -> Interlude n. INFERRED from
   the id scheme of the community export, not yet seen live (LIVE-1).
+- UTIL-1.0-READY: PoE2 1.0 (2026-12-11, research 0018) adds Acts 5 and 6;
+  `G5_...` / `G6_...` read as Act 5 / Act 6 by the same rule (any act
+  number up to 99), and their zone levels come with the next repoe-fork
+  snapshot (build step). Not yet seen live.
 - `Map...` -> an endgame map: closes the open split (the campaign is over).
 - Anything else (hideouts, towns of unknown shape, unknown ids) changes
   nothing: the open split keeps running, as a speedrun timer would.

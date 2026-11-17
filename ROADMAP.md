@@ -280,25 +280,46 @@ recorded in research 0018 section 3.
   like LIVE-1). ACCEPT: fixture tests for enter / portal back / new map /
   death; numbers on the dashboard; design-reviewer pass. ZERO-CLICK: runs
   from the log tail, no start / stop button.
-- [ ] PRICE-UNIQUE (build) Unique prices on the item-check press from
+- [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
   listing count ("few listings" when low) and 7-day trend; one request
   per type per hour with If-None-Match, only with web_data on (0013).
   ACCEPT: parser tests on a trimmed real body; no request when off.
   ZERO-CLICK: the same hotkey press; overviews refresh on the hourly gate.
-- [ ] PRICE-STACKABLES (build) Price stackables on the item-check press via
+  DONE 2026-11-17: server/al/pricebook.py PriceBook (driven by
+  RatesClient.refresh: same opt-in, contact, UA, league; per-type hourly
+  gate + ETag, cache book.json), RatesClient.lookup on the press (cache
+  only), card `ninja` part + state.ninja_text; tests/test_price_book.py.
+- [x] PRICE-STACKABLES (build) Price stackables on the item-check press via
   more exchange overview types (Ritual/Omens, Essences, Runes, SoulCores,
   Breach, Delirium, Fragments, UncutGems, LineageSupportGems; research
   0019), names from the top-level `items` array (0013). After
   PRICE-UNIQUE (both edit ninja.py). ACCEPT: per-type parser tests; one
   request per type per hour. ZERO-CLICK: same press, hourly refresh.
-- [ ] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
+  DONE 2026-11-17: 13 exchange types (research 0019 list) in the price
+  book; Currency itself from rates.json by name; one failing type never
+  stops the rest; tests/test_price_book.py.
+- [x] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
   Acts 5-6 id prefixes to acts.py, Duelist / Shadow class names, league
   rollover check in ninja.py and the price card league label, refresh the
   repoe-fork snapshot; after launch review the debug sink of the first 1.0
   log for new system lines. ACCEPT: tests with 1.0-shaped fixture lines;
   rollover test. ZERO-CLICK: data and parser only, nothing for the user.
+  DONE 2026-11-17 (pre-launch part): G5_/G6_ read as Act 5/6, unknown ids
+  and class names change nothing (tests/test_util_10_ready.py, 1.0-shaped
+  lines); charjson.BASE_CLASSES adds Duelist / Shadow; ninja league re-
+  read every 6 h and within the hour after a 404 / empty overview; trade
+  links and the price card label follow the cached poe.ninja league while
+  web data is on (Core.trade_league, decision 0026). OPEN after launch:
+  refresh the repoe-fork snapshot for Act 5/6 zone levels and review the
+  first 1.0 log's debug sink (filed as UTIL-1.0-POST).
+- [ ] UTIL-1.0-POST (build) After PoE2 1.0 launches (2026-12-11): refresh
+  the repoe-fork world_areas snapshot (build step) so Acts 5-6 get zone
+  levels, add the 1.0 ascendancy names to charjson.ASCENDANCY_CLASS, and
+  review the first 1.0 Client.txt debug sink for new system lines.
+  BLOCKED: PoE2 1.0 not released yet. ACCEPT: fixture lines from the real
+  1.0 log; zone table has G5 / G6 rows. ZERO-CLICK: data and parser only.
 - [ ] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
   Planner `*.build` JSON (Version 1, research 0018 section 3) offered as a
   dashboard "Save .build" download on the player's click; NEVER written
@@ -317,10 +338,14 @@ recorded in research 0018 section 3.
   PARTIAL 2026-11-17 (AREA-AUDIT b2): the no-write check landed
   (tests/test_audit_buildfile.py: no source names the BuildPlanner or My
   Games folder). REMAINS: the decision file when TC-BUILDFILE lands.
-- [ ] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
+- [x] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
   poe.ninja overviews (`sparkline.totalChange`), no extra requests. After
   PRICE-STACKABLES. ACCEPT: panel test, design-reviewer pass.
-  ZERO-CLICK: refreshes with the hourly gate.
+  ZERO-CLICK: refreshes with the hourly gate. DONE 2026-11-17:
+  PriceBook.movers (5 risers / 5 fallers, thin markets out), `movers` in
+  /api/rates (empty while web data is off), dashboard Price movers card
+  (web/prices.js moversView); tests/test_price_book.py,
+  app/test/prices.test.js.
 - [ ] TC-CURX (build) Hourly exchange history from GGG's documented public
   Currency Exchange API (`web.poecdn.com/api/currency-exchange/poe2/<hour>`,
   research 0018). BLOCKED: TC-OAUTH-REG (adjudicator ruling 2026-11-17:
@@ -491,11 +516,15 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   sentence built in the core (server/al/pace.py, snapshot `pace`). ACCEPT:
   exact tests on replayed level-up lines (tests/test_util_pace.py).
   ZERO-CLICK: updates on every level-up by itself. DONE 2026-11-17.
-- [ ] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
+- [x] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
   start from the current game run in Client.txt, as HUD-ACT-RESUME does for
   act splits (decision 0023 pattern, no persisted state). ACCEPT: restart
   mid-map keeps the map's time and the session's deaths; exact tests.
-  ZERO-CLICK: rebuilt at core start.
+  ZERO-CLICK: rebuilt at core start. DONE 2026-11-17: resume.scan returns
+  `run_events` (scenes, area generations, deaths, level-ups of the current
+  run, at most 20000), runs.replay folds them like SessionState.apply;
+  tests/test_util_maps_resume.py (core restart mid-map keeps 5:00 and the
+  death).
 
 ## Ops
 

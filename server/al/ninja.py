@@ -17,6 +17,16 @@ and a User-Agent contact is configured (UA-CONTACT: poe.ninja's API docs ask
 for one; `snapshot()["blocked"]` says "contact not set");
 offline or opted out, `snapshot()` returns the cached rates with their age.
 Cache: <sidecar>\\Cache\\ninja\\rates.json (server/al/paths.py).
+
+PRICE-UNIQUE / PRICE-STACKABLES / UTIL-MOVERS: an optional PriceBook
+(pricebook.py) refreshes the unique and stackable overviews inside the same
+refresh (same opt-in, contact, User-Agent, league, one request at a time),
+each type on its own hourly gate and ETag; snapshot() adds the movers.
+
+UTIL-1.0-READY (league rollover, research 0019): the auto league is
+re-read at most every LEAGUE_INTERVAL_S (6 h), and at once (still at most
+hourly) when the current league's overview answers 404 or has no lines, so
+a new league (PoE2 1.0, 2026-12-11) is picked up the same day.
 """
 
 import json
@@ -42,7 +52,7 @@ OVERVIEW_TYPE = "Currency"
 UA_PURPOSE = "currency rates from poe.ninja"
 USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; requests add the contact
 MIN_INTERVAL_S = 3600  # PoE2 data refreshes about hourly (research 0005)
-LEAGUE_INTERVAL_S = 24 * 3600
+LEAGUE_INTERVAL_S = 6 * 3600
 STALE_AFTER_S = 2 * 3600
 MAX_BYTES = 4 * 1024 * 1024
 MAX_LINES = 2000
@@ -131,7 +141,7 @@ class RatesClient:
     """
 
     def __init__(self, directory=None, enabled=lambda: False, league=lambda: None,
-                 fetch=None, clock=time.time, contact=lambda: None):
+                 fetch=None, clock=time.time, contact=lambda: None, book=None):
         self.directory = Path(directory) if directory is not None else cache_dir()
         self.path = self.directory / CACHE_NAME
         self.enabled = enabled
@@ -143,6 +153,7 @@ class RatesClient:
         self._lock = threading.Lock()
         self._busy = False
         self.doc = self._load()
+        self.book = book  # pricebook.PriceBook or None
 
     def _load(self):
         try:
@@ -166,6 +177,11 @@ class RatesClient:
         now = self.clock() if now is None else now
         return self._due("overview_attempt_at", MIN_INTERVAL_S, now)
 
+    def any_due(self, now=None):
+        """The currency overview or any price book type is due."""
+        now = self.clock() if now is None else now
+        return self.due(now) or (self.book is not None and self.book.due(now))
+
     def _get(self, url, etag=None):
         headers = {"User-Agent": self._ua, "Accept": "application/json"}
         if etag:
@@ -178,7 +194,9 @@ class RatesClient:
         if isinstance(configured, str) and configured.strip():
             return configured.strip()
         cached = self.doc.get("league_auto")
-        if cached and not self._due("league_attempt_at", LEAGUE_INTERVAL_S, now):
+        # a rollover hint (404 / empty overview) shortens the wait to an hour
+        wait = MIN_INTERVAL_S if self.doc.get("league_stale") else LEAGUE_INTERVAL_S
+        if cached and not self._due("league_attempt_at", wait, now):
             return cached
         if cached is None and not self._due("league_attempt_at", MIN_INTERVAL_S, now):
             raise webfetch.FetchError("league lookup waits for its interval")
@@ -189,6 +207,7 @@ class RatesClient:
             if status != 200:
                 raise webfetch.FetchError(f"leagues HTTP {status}")
             self.doc["league_auto"] = parse_leagues(body)
+            self.doc["league_stale"] = False
         except (ValueError, webfetch.FetchError) as e:
             if cached:
                 return cached
@@ -220,22 +239,52 @@ class RatesClient:
             return "off: " + webfetch.REASON_CONTACT
         self._ua = webfetch.user_agent(UA_PURPOSE, contact)
         now = self.clock()
-        if not force and not self.due(now):
+        rates_due = force or self.due(now)
+        book_due = self.book is not None and (force or self.book.due(now))
+        if not rates_due and not book_due:
             return "fresh"
         try:
             league = self._league_id(now)
+        except (ValueError, webfetch.FetchError) as e:
+            self.doc["last_error"] = str(e)[:200]
+            self._save()
+            return f"error: {e}"
+        outcome = "fresh"
+        if rates_due:
+            outcome = self._refresh_rates(league, now)
+        if book_due:
+            self.book.refresh(lambda url, etag: self._get(url, etag), BASE, league,
+                              now, force=force)
+        return outcome
+
+    def _rollover(self, league):
+        """The auto league's overview is gone or empty: re-read the
+        leagues list on the next refresh (the hourly gate still applies)."""
+        configured = self.league() if callable(self.league) else self.league
+        if isinstance(configured, str) and configured.strip():
+            return
+        if self.doc.get("league_auto") == league:
+            self.doc["league_stale"] = True
+
+    def _refresh_rates(self, league, now):
+        try:
             query = urllib.parse.urlencode({"league": league, "type": OVERVIEW_TYPE})
             url = f"{BASE}{OVERVIEW_PATH}?{query}"
             same = self.doc.get("url") == url
             self.doc["overview_attempt_at"] = now
             self._save()
             status, rh, body = self._get(url, self.doc.get("etag") if same else None)
+            if status == 404:
+                self._rollover(league)
+                raise webfetch.FetchError("HTTP 404")
             if status == 304 and same and self.doc.get("rates") is not None:
                 self.doc["checked_at"] = now
                 self.doc["last_error"] = None
                 outcome = "unchanged"
             elif status == 200:
                 parsed = parse_overview(body)
+                if not parsed["rates"]:
+                    self._rollover(league)
                 self.doc.update({"url": url, "league": league, "primary": parsed["primary"],
                                  "rates": parsed["rates"], "fetched_at": now,
                                  "checked_at": now, "last_error": None,
@@ -254,7 +303,7 @@ class RatesClient:
         returns True when a thread was started. Never blocks a request."""
         if webfetch.blocked_reason(self.enabled, self.contact) is not None:
             return False
-        if self._busy or not self.due():
+        if self._busy or not self.any_due():
             return False
         threading.Thread(target=self.refresh, name="al-ninja", daemon=True).start()
         return True
@@ -283,4 +332,44 @@ class RatesClient:
                 "age_s": int(age) if age is not None else None,
                 "stale": age is None or age > STALE_AFTER_S,
                 "next_refresh_in_s": next_in if blocked is None else None,
-                "refreshing": self._busy, "last_error": doc.get("last_error")}
+                "refreshing": self._busy, "last_error": doc.get("last_error"),
+                "movers": self.movers()}
+
+    def movers(self):
+        """UTIL-MOVERS: the cached price book's biggest 7-day risers and
+        fallers of the current league; empty while web data is off (the
+        cache is not shown then) or without a book. Never a request."""
+        empty = {"up": [], "down": []}
+        enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
+        if self.book is None or not enabled or not self.doc.get("league"):
+            return empty
+        return self.book.movers(league=self.doc.get("league"))
+
+    def lookup(self, item):
+        """PRICE-UNIQUE / PRICE-STACKABLES: the cached poe.ninja price for a
+        parsed item, or None; currency from the rates, the rest from the
+        book, current league only. Web data off -> None. Never a request:
+        the press reads the cache only."""
+        enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
+        league = self.doc.get("league")
+        if not enabled or not league:
+            return None
+        get = (item.get if isinstance(item, dict)
+               else lambda k, d=None: getattr(item, k, d))
+        base = " ".join(str(get("base") or "").split()).lower()
+        if base and str(get("rarity") or "").upper() == "CURRENCY":
+            rates = self.doc.get("rates") or {}
+            for entry in rates.values():
+                name = entry.get("name") if isinstance(entry, dict) else None
+                if isinstance(name, str) and name.lower() == base:
+                    primary = self.doc.get("primary")
+                    unit = (rates.get(primary) or {}).get("name") or primary
+                    return {"kind": "stackable", "type": OVERVIEW_TYPE, "name": name,
+                            "value": entry.get("value"), "unit": unit,
+                            "primary": primary, "listings": None, "few": False,
+                            "volume": entry.get("volume"), "change": None,
+                            "league": league,
+                            "checked_at": self.doc.get("checked_at")}
+        if self.book is None:
+            return None
+        return self.book.lookup(item, league=league)

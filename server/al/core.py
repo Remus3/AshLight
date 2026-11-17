@@ -11,7 +11,8 @@ import threading
 import time
 from pathlib import Path
 
-from . import VERSION, acts, layout, logfile, ninja, parser, paths, price, resume, webfetch
+from . import (VERSION, acts, layout, logfile, ninja, parser, paths, price, pricebook,
+               resume, webfetch)
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import live as tc_live
@@ -97,7 +98,7 @@ class Core:
         # (self.rates is made below; a lambda defers the lookup).
         self.tc_calc = None
         self.last_eval = tc_live.attach(self.builds, self.weights, self.state,
-                                        league=self.configured_league,
+                                        league=self.trade_league,
                                         calc=lambda: self.tc_calc,
                                         rates=lambda: self.rates.snapshot())
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
@@ -107,15 +108,19 @@ class Core:
         rates_dir = (ninja.cache_dir() if runtime is None
                      else self.runtime / "cache" / "ninja")
         # UA-CONTACT: poe.ninja also needs the "contact" key.
+        # PRICE-UNIQUE / PRICE-STACKABLES: the unique and stackable overviews
+        # share the rates' refresh, gate, opt-in and contact (pricebook.py).
         self.rates = ninja.RatesClient(rates_dir, enabled=self.web_data_enabled,
                                        league=self.configured_league, fetch=web_fetch,
-                                       contact=self.contact)
+                                       contact=self.contact,
+                                       book=pricebook.PriceBook(rates_dir))
         # PRICE-TRADE-LINK (decision 0017): one offline trade-search link per
         # item-hotkey press (POST /api/eval), published as the decision 0016
         # card with the press time. No trade-site request is ever made and
         # the core never opens the link.
-        self.price = price.PriceChecker(league=self.configured_league,
-                                        card=self.state.set_price)
+        self.price = price.PriceChecker(league=self.trade_league,
+                                        card=self.state.set_price,
+                                        lookup=self.rates.lookup)
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
@@ -153,6 +158,20 @@ class Core:
     def configured_league(self):
         value = self._config().get("league")
         return value if isinstance(value, str) and value.strip() else None
+
+    def trade_league(self):
+        """UTIL-1.0-READY: the league for the offline trade links and the
+        price card label: the configured one, else the current league read
+        from poe.ninja's cached leagues list while web data is on (so a new
+        league, e.g. PoE2 1.0's, is followed without a setting), else None
+        (trade.py then uses Standard). Never a request."""
+        configured = self.configured_league()
+        if configured:
+            return configured
+        if not self.web_data_enabled():
+            return None
+        league = self.rates.doc.get("league")
+        return league.strip() if isinstance(league, str) and league.strip() else None
 
     def set_web_data(self, enabled):
         """Persist the opt-in in the local config, keeping every other key
@@ -258,8 +277,11 @@ class Core:
         recovered = [k for k in ("zone", "character", "class", "level", "area_id")
                      if fields.get(k) is not None]
         recovered += [k for k in ("deaths", "level_ups") if fields.get(k)]
-        if self.state.snapshot()["acts"]["splits"] and fields.get("act_areas"):
+        snap = self.state.snapshot()
+        if snap["acts"]["splits"] and fields.get("act_areas"):
             recovered.append("acts")
+        if fields.get("run_events") and snap["maps"]["count"]:
+            recovered.append("maps")
         self.state.set_tailer(resume={
             "bytes": result["bytes_scanned"], "hit_marker": result["hit_marker"],
             "ms": round((time.perf_counter() - t0) * 1000.0, 1),

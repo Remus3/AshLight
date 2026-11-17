@@ -454,6 +454,13 @@ them. Pause: `ops/loop/control/HALT`.
   after a green trial, committed by a session (decision 0025). Reverses if:
   GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
   releases or ships a headless API, or the loop gains safe auto-commit.
+- Price book: unique and stackable poe.ninja overviews ride the rates
+  refresh (same opt-in, contact, UA, league; per-type hourly gate + ETag),
+  the press reads the cache only, movers from the same cache, auto league
+  re-read every 6 h or after a 404, trade links follow the cached league
+  while web data is on (decision 0026). Reverses if: poe.ninja asks for
+  less polling or blocks it, decision 0013 goes per-feature, or the
+  overview shapes break every release.
 - LuaJIT for the optional calc builds with a system compiler, else a
   hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
   Cache on -TcCalc only, PATH set only in the build subprocess, never

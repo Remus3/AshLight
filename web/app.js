@@ -634,8 +634,33 @@
       frag.appendChild(li);
     });
     $("rates-list").replaceChildren(frag);
+    renderMovers();
     $("rates-credit").textContent = v.credit;
     $("rates-attrib").textContent = v.attribution;
+  }
+
+  /* UTIL-MOVERS: rising and falling prices from the same /api/rates doc. */
+  function moverList(id, rows) {
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r) {
+      var li = el("li");
+      li.appendChild(el("span", "rate-name", r.name));
+      li.appendChild(el("span", "rate-value mono", r.change));
+      if (r.value) { li.appendChild(el("span", "rate-per muted", "(" + r.value + ")")); }
+      frag.appendChild(li);
+    });
+    $(id).replaceChildren(frag);
+    $(id).hidden = !rows.length;
+    $(id + "-h").hidden = !rows.length;
+  }
+
+  function renderMovers() {
+    var m = P.moversView(ratesDoc);
+    $("movers").hidden = !m.show;
+    $("movers-empty").hidden = !m.empty;
+    $("movers-empty").textContent = m.empty;
+    moverList("movers-up", m.up);
+    moverList("movers-down", m.down);
   }
 
   function loadRates() {
