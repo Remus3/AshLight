@@ -288,3 +288,55 @@ def test_overlay_forced_colours_card_edges_use_highlight():
     rules = dict(_rules(_media(_css(OVERLAY_CSS), "forced-colors: active")))
     edge = rules.get('.trade, .evalcard[data-verdict="upgrade"]', "")
     assert re.search(r"border-left-color\s*:\s*Highlight", edge)
+
+
+# -- UX-NEWEST / UX-DASH-LAYOUT (glance review 0004 U17, U18)
+
+def _main_order():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    main = html[html.index("<main>"):html.index("</main>")]
+    ids = re.findall(r'<section(?: id="([a-z-]+)")?(?: class="([a-z -]+)")?', main)
+    return [i or c.split()[-1] for i, c in ids], main
+
+
+def test_last_session_card_sits_right_under_the_tiles():
+    """U17: the Last session card has no live region, so it is noticed by its
+    place: directly after the glance tiles, before every other card."""
+    order, _ = _main_order()
+    assert order.index("stats") + 1 == order.index("summarybox"), order
+
+
+def test_last_session_card_has_a_steady_edge():
+    """U17: a steady accent edge, never motion (design 0001 principle 3)."""
+    css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
+    assert re.search(r"\.card\.session\s*\{[^}]*border-left\s*:\s*4px solid var\(--fk-accent\)", css)
+
+
+def test_dashboard_card_order_glance_first():
+    """U18: glance first, then the run in progress, then reference and
+    settings. DOM order is the visual and Tab order (no CSS order)."""
+    order, _ = _main_order()
+    want = ["consent", "stats", "summarybox", "trades", "evalbox", "actsbox", "mapsbox",
+            "deathsbox", "events", "buildbox", "pricesbox", "layout", "gfx"]
+    seen = [x for x in order if x in want]
+    assert seen == want, seen
+    css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
+    assert not re.search(r"(^|[;{\s])order\s*:", css), "CSS order breaks Tab order"
+
+
+def test_price_and_points_follows_price():
+    """U17: the item's own price against its points reads next to Price."""
+    _, main = _main_order()
+    assert main.index('id="pricebox"') < main.index('id="valuebox"') < main.index('id="weights"')
+
+
+def test_overlay_settings_fold_but_hotkey_hint_stays_open():
+    """U18: set-once overlay settings fold away; the hotkey hint and the save
+    status do not."""
+    _, main = _main_order()
+    card = main[main.index('id="layout-title"'):main.index('id="gfx-title"')]
+    fold = card[card.index("<details"):card.index("</details>")]
+    assert 'id="layout-form"' in fold
+    after = card[card.index("</details>"):]
+    # the save status stays outside the fold, so a save is always heard (review F1)
+    assert 'id="layout-status"' in after and "Alt+Shift+A" in after

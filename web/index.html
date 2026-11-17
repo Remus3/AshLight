@@ -72,6 +72,16 @@
     </div>
   </section>
 
+  <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
+       the game closes; hidden until the first card. Not a live region
+       (polite regions are capped), so it sits right under the tiles where
+       the eye lands first (UX-NEWEST N1; design 0001 N6 exemption) -->
+  <section id="summarybox" class="card session" hidden aria-labelledby="summary-title">
+    <h2 id="summary-title">Last session</h2>
+    <ul id="summary-lines" class="event-list"></ul>
+    <p id="summary-ended" class="muted"></p>
+  </section>
+
   <section id="trades" class="card trades" hidden aria-labelledby="trades-title">
     <h2 id="trades-title">Trade requests <span class="muted">(shown on the overlay)</span></h2>
     <p class="muted">Requests clear after 10 minutes.</p>
@@ -101,15 +111,6 @@
     <p id="eval-unweighted" class="muted" hidden></p>
     <!-- MATH-POTENTIAL-UI: score now vs the worst / best rolls -->
     <p id="eval-rolls" class="muted" hidden></p>
-    <!-- MATH-VALUE-UI: the item's own listed price against its points;
-         outside the live region, the verdict above already announces -->
-    <div id="valuebox" class="price-box" hidden>
-      <h3 class="sub-h">Price and points</h3>
-      <p id="value-sentence"></p>
-      <p id="value-per" hidden></p>
-      <p id="value-stale" class="muted" hidden></p>
-      <p id="value-credit" class="muted" hidden></p>
-    </div>
     <p id="eval-when" class="muted"></p>
     <!-- TC-UPGRADE: outside the live region on purpose; the verdict above
          already announces the check, this is a static link (review UP-5) -->
@@ -133,6 +134,16 @@
       </div>
       <ol id="price-list" class="price-list" aria-label="Cheapest listings"></ol>
       <p id="price-when" class="muted"></p>
+    </div>
+    <!-- MATH-VALUE-UI: the item's own listed price against its points;
+         outside the live region, the verdict above already announces;
+         after Price so the price words sit together (UX-NEWEST N2) -->
+    <div id="valuebox" class="price-box" hidden>
+      <h3 class="sub-h">Price and points</h3>
+      <p id="value-sentence"></p>
+      <p id="value-per" hidden></p>
+      <p id="value-stale" class="muted" hidden></p>
+      <p id="value-credit" class="muted" hidden></p>
     </div>
     <details id="weights" class="weights">
       <summary>Stat weights</summary>
@@ -192,14 +203,6 @@
     <p id="deaths-empty" class="muted"></p>
     <ol id="deaths-list" class="event-list" hidden></ol>
     <p id="deaths-worst" hidden></p>
-  </section>
-
-  <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
-       the game closes; hidden until the first card -->
-  <section id="summarybox" class="card session" hidden aria-labelledby="summary-title">
-    <h2 id="summary-title">Last session</h2>
-    <ul id="summary-lines" class="event-list"></ul>
-    <p id="summary-ended" class="muted"></p>
   </section>
 
   <section class="card events" aria-labelledby="events-title">
@@ -270,6 +273,9 @@
 
   <section class="card layout" aria-labelledby="layout-title">
     <h2 id="layout-title">Overlay position and size</h2>
+    <!-- UX-DASH-LAYOUT: set once, so folded; the hotkey hint stays visible -->
+    <details id="layout-more">
+    <summary>Change position, size and opacity</summary>
     <form id="layout-form" class="layout-form">
       <label>Monitor
         <select id="layout-display" name="display"><option value="primary">Primary</option></select>
@@ -287,6 +293,7 @@
         <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
       </label>
     </form>
+    </details>
     <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
     <p class="muted">Show or hide the overlay any time with Alt+Shift+A, and check an item
       with Alt+Shift+E (unless you set other keys in AshLight's settings file).</p>
