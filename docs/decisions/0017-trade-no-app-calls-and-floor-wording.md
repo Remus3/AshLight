@@ -62,3 +62,19 @@ caller's allowlist says (`is_trade_url`); no allowlist holds a
 pathofexile.com host. Tests: tests/test_trade_link.py,
 tests/test_price_check.py. Card contract: decision 0016 amendment
 PRICE-TRADE-LINK.
+
+Item 3 built 2026-11-17 (TC-UPGRADE, link builder). `server/al/upgrade.py
+link(result, league)` takes the item check's best slot (the hotkey press,
+decision 0014) and builds `trade.upgrade_link`: rare items of the base the
+build wears in that slot, else the checked item's base when the slot is
+empty; status online, base type and rarity only, no name, no stat filters.
+Both links go through one URL builder, `trade.link_for` (no duplicate);
+`trade.complexity` counts 4 per stat filter against the site's cap of 200
+(research 0010 section 4), so a later TC-UPGRADE-STATS stat group cannot
+exceed it. No build loaded, not an item or no gear slot: no link. The eval
+card carries `upgrade` {slot, base, source, rarity, league, url} or null,
+so a build or weights change rebuilds it with no click; the dashboard Item
+check card shows it as a click-through link (web/prices.js upgradeView, the
+same trade2 URL check as the price link); the overlay is unchanged. Tests:
+tests/test_tc_upgrade.py (exact query and URL, round trip, no network call
+on a press), app/test/prices.test.js.

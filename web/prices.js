@@ -221,6 +221,30 @@
     };
   }
 
+  /* TC-UPGRADE (decision 0017 item 3): the item check's `upgrade` doc (slot,
+     base, source equipped | item, url) -> the upgrade-search link view, or
+     null when there is no valid trade2 search URL. Same link rules as the
+     price link: the core builds it offline, the player's click opens it. */
+  function upgradeView(up) {
+    if (!up || typeof up !== "object") { return null; }
+    var href = tradeLink(up.url);
+    var base = typeof up.base === "string" ? up.base.trim() : "";
+    var slot = typeof up.slot === "string" ? up.slot.trim() : "";
+    if (!href || !base || !slot) { return null; }
+    var where = up.source === "item"
+      ? "Your build has nothing in " + slot + ", so this uses the checked item's base, " +
+        base + ". "
+      : "Your build wears " + base + " in " + slot + ", so this finds rare items of that base. ";
+    return {
+      href: href,
+      sentence: where + "It matches base type and rarity only, not stats.",
+      // the slot keeps it apart from the price link on the same card (UP-3)
+      text: "Search the official trade site for rare " + base + " (" + slot + ")",
+      label: "Search the official trade site for rare " + base + " (" + slot +
+             ") (opens in a new tab)"
+    };
+  }
+
   /* The trade link needs no web data (it is built offline), so the empty
      state reads the same either way. */
   function priceEmpty() {
@@ -231,5 +255,5 @@
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
            ratesView: ratesView, convert: convert, aboutText: aboutText,
            tradeAbout: tradeAbout, priceView: priceView, priceEmpty: priceEmpty,
-           tradeLink: tradeLink };
+           tradeLink: tradeLink, upgradeView: upgradeView };
 }));

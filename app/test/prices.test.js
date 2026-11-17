@@ -176,3 +176,37 @@ test("trade link: shown only for a trade2 search URL, opens in the browser", () 
   assert.equal(p.tradeLink("x"), "");
   assert.equal(p.tradeLink(LINK), LINK);
 });
+
+/* TC-UPGRADE (decision 0017 item 3): the item check's upgrade-search link. */
+const UP_URL = "https://www.pathofexile.com/trade2/search/poe2/Standard?q=%7B%22query%22%3A%7B%7D%7D";
+
+test("upgrade view: the worn base, link text and label", () => {
+  const v = p.upgradeView({ slot: "Gloves", base: "Example Gloves", source: "equipped",
+                            rarity: "rare", league: "Standard", url: UP_URL });
+  assert.deepEqual(v, {
+    href: UP_URL,
+    sentence: "Your build wears Example Gloves in Gloves, so this finds rare items of " +
+              "that base. It matches base type and rarity only, not stats.",
+    text: "Search the official trade site for rare Example Gloves (Gloves)",
+    label: "Search the official trade site for rare Example Gloves (Gloves) (opens in a new tab)"
+  });
+});
+
+test("upgrade view: an empty slot uses the checked item's base", () => {
+  const v = p.upgradeView({ slot: "Ring 1", base: "Example Ring", source: "item", url: UP_URL });
+  assert.equal(v.sentence, "Your build has nothing in Ring 1, so this uses the checked " +
+    "item's base, Example Ring. It matches base type and rarity only, not stats.");
+  assert.equal(v.text, "Search the official trade site for rare Example Ring (Ring 1)");
+  assert.ok(v.label.startsWith(v.text)); // visible text inside the label (SC 2.5.3)
+});
+
+test("upgrade view: no view without a valid trade2 search URL, base or slot", () => {
+  const ok = { slot: "Gloves", base: "Example Gloves", source: "equipped", url: UP_URL };
+  assert.equal(p.upgradeView(null), null);
+  assert.equal(p.upgradeView("x"), null);
+  for (const bad of ["https://example.org/?q=1", "javascript:alert(1)", UP_URL + "&x=1", 5]) {
+    assert.equal(p.upgradeView(Object.assign({}, ok, { url: bad })), null, String(bad));
+  }
+  assert.equal(p.upgradeView(Object.assign({}, ok, { base: " " })), null);
+  assert.equal(p.upgradeView(Object.assign({}, ok, { slot: null })), null);
+});

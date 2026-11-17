@@ -278,6 +278,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
 | In a campaign act (HUD-ACT) | no change | Act times card (below Item check): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
+| Item check from the same press | none on the overlay | Upgrade search sub-section under the item check (TC-UPGRADE) |
 
 Progressive disclosure (source 9): the overlay holds the 2-line HUD plus at
 most one trade card ("+N more" for the rest). Everything else (history,
@@ -369,6 +370,12 @@ Generation rules:
      Run AshLight's build step (scripts/build.ps1) to get them.`; source
      line `Zone levels: RePoE fork export, downloaded when AshLight was
      built. Game data (c) Grinding Gear Games.` (decision 0020)
+   - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
+     only, `Your build wears <base> in <slot>, so this finds rare items of
+     that base.` (empty slot: `Your build has nothing in <slot>, so this
+     uses the checked item's base, <base>.`) then `It matches base type and
+     rarity only, not stats.`; link `Search the official trade site for
+     rare <base> (<slot>)`
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
