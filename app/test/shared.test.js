@@ -41,8 +41,9 @@ const snap = {
 test("hudModel builds the visible strings", () => {
   const m = gate.hudModel(snap, 1000 + 125, "live");
   assert.deepEqual(m, { zone: "Clearfell", timer: "2m", level: "Lv 3",
-                        deaths: "1 death", status: "live", tradeFrom: "",
-                        tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" });
+                        deaths: "1 death", sep: "|", away: "", status: "live",
+                        tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "",
+                        anchor: "top" });
   const empty = gate.hudModel(null, 0);
   assert.equal(empty.status, "waiting");
 });
@@ -64,4 +65,64 @@ test("shouldRender: only when a visible string changes", () => {
   // Connection status is visible too.
   const e = gate.hudModel({ ...snap, deaths: 2 }, 1061, "offline");
   assert.deepEqual(gate.changedFields(d, e), ["status"]);
+});
+
+test("DS-HUD-EMPTY: before the first snapshot there is no lone separator", () => {
+  const m = gate.hudModel(null, 0);
+  assert.equal(m.zone, "AshLight");
+  assert.equal(m.timer, "");
+  assert.equal(m.level, "");
+  assert.equal(m.deaths, "");
+  assert.equal(m.sep, "");
+  assert.equal(m.away, "");
+  assert.equal(m.status, "waiting");
+  // The first snapshot fills the line and brings the separator back.
+  const f = gate.hudModel(snap, 1000, "live");
+  assert.deepEqual(gate.changedFields(m, f).sort(),
+                   ["deaths", "level", "sep", "status", "timer", "zone"]);
+  assert.equal(f.sep, "|");
+});
+
+test("DS-HUD-CLIP: the (HO) tag fits inside the 28-char zone limit", () => {
+  const long = "The Grand Hideout of the Very Long Name";
+  const z = fmt.zoneText(long, true);
+  assert.equal(z.length, 28);
+  assert.equal(z, "The Grand Hideout of... (HO)");
+  assert.ok(z.endsWith("... (HO)"));
+  assert.equal(fmt.zoneText(long, false).length, 28);
+  // A short hideout name is not clipped.
+  assert.equal(fmt.zoneText("Felled Hideout", true), "Felled Hideout (HO)");
+  // Exactly at the limit with the tag: no clip.
+  assert.equal(fmt.zoneText("A".repeat(23), true), "A".repeat(23) + " (HO)");
+  assert.equal(fmt.zoneText("A".repeat(24), true), "A".repeat(20) + "... (HO)");
+  const m = gate.hudModel({ ...snap, zone: long, in_hideout: true }, 1000, "live");
+  assert.ok(m.zone.length <= 28);
+});
+
+test("DS-HUD-CLIP: stash position reads as tab name and (left,top)", () => {
+  const c = fmt.tradeCard({ from: "Q", item: "Belt", price_amount: 5,
+                            price_currency: "exalted", stash_tab: "Sale", left: 3, top: 7 });
+  assert.equal(c.where, "5 exalted | tab Sale (3,7)");
+  const noPos = fmt.tradeCard({ from: "Q", item: "Belt", price_amount: 5,
+                                price_currency: "exalted", stash_tab: "Sale" });
+  assert.equal(noPos.where, "5 exalted | tab Sale");
+});
+
+test("DS-HUD-AFK: AFK / DND show in the status slot while live", () => {
+  const live = gate.hudModel(snap, 1000, "live");
+  assert.equal(live.away, "");
+  const afk = gate.hudModel({ ...snap, afk: true }, 1000, "live");
+  assert.equal(afk.away, "AFK");
+  assert.deepEqual(gate.changedFields(live, afk), ["away"]);
+  const dnd = gate.hudModel({ ...snap, dnd: true }, 1000, "live");
+  assert.equal(dnd.away, "DND");
+  const both = gate.hudModel({ ...snap, afk: true, dnd: true }, 1000, "live");
+  assert.equal(both.away, "AFK");
+  // The away flag is in the render gate, so turning it off repaints once.
+  assert.equal(gate.shouldRender(afk, live), true);
+  assert.ok(gate.FIELDS.indexOf("away") >= 0);
+  // A connection problem outranks AFK in the slot.
+  assert.equal(gate.statusText(afk), "AFK");
+  assert.equal(gate.statusText({ ...afk, status: "offline" }), "offline");
+  assert.equal(gate.statusText(live), "");
 });

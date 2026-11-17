@@ -25,9 +25,9 @@
         } else if (f === "tradeItem") {
           nodes.tradeItem.textContent = model.tradeItem;
           nodes.trade.hidden = !model.tradeItem;
-        } else if (f === "status") {
+        } else if (f === "status" || f === "away") {
           nodes.hud.setAttribute("data-status", model.status);
-          nodes.status.textContent = model.status === "live" ? "" : model.status;
+          nodes.status.textContent = S.statusText(model);
         } else {
           nodes[f].textContent = model[f];
         }
@@ -69,7 +69,7 @@
   }
 
   function start() {
-    ["hud", "zone", "timer", "level", "deaths", "status", "trade", "tradeFrom",
+    ["hud", "zone", "timer", "level", "deaths", "sep", "status", "trade", "tradeFrom",
      "tradeItem", "tradeWhere", "tradeMore"].forEach(function (id) {
       nodes[id] = document.getElementById(id);
     });

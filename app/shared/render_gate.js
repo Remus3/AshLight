@@ -15,7 +15,7 @@
 }(typeof self !== "undefined" ? self : this, function (fmt) {
   "use strict";
 
-  var FIELDS = ["zone", "timer", "level", "deaths", "status",
+  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "status",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor"];
 
   function anchorOf(snap) {
@@ -27,7 +27,10 @@
      nowS: the server clock in seconds (client clock minus offset). */
   function hudModel(snap, nowS, status) {
     if (!snap) {
-      return { zone: "", timer: "", level: "", deaths: "", status: status || "waiting",
+      /* DS-HUD-EMPTY: before the first snapshot the HUD reads "AshLight"
+         and the status word; no lone separator. */
+      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
+               status: status || "waiting",
                tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
     var elapsed = snap.zone_entered_at ? nowS - snap.zone_entered_at : null;
@@ -43,8 +46,18 @@
       timer: fmt.minutes(elapsed),
       level: fmt.levelText(snap.level),
       deaths: fmt.deathsText(snap.deaths),
+      sep: "|",
+      /* DS-HUD-AFK: the log's AFK / DND state (design 0001 7.2). */
+      away: snap.afk ? "AFK" : (snap.dnd ? "DND" : ""),
       status: status || "live"
     };
+  }
+
+  /* The word in the HUD status slot: a connection problem first, then
+     AFK / DND, else nothing. */
+  function statusText(model) {
+    if (model.status !== "live") { return model.status; }
+    return model.away || "";
   }
 
   function shouldRender(prev, next) {
@@ -65,5 +78,5 @@
   }
 
   return { FIELDS: FIELDS, hudModel: hudModel, shouldRender: shouldRender,
-           changedFields: changedFields };
+           changedFields: changedFields, statusText: statusText };
 }));

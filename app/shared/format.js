@@ -43,11 +43,14 @@
     return n === 1 ? "1 death" : n + " deaths";
   }
 
+  /* DS-HUD-CLIP: in a hideout the " (HO)" tag (5 chars) is reserved
+     before clipping, so the whole line stays within maxLen. */
   function zoneText(zone, inHideout, maxLen) {
     var z = zone ? String(zone) : "No zone yet";
-    var max = maxLen || 28;
+    var tag = inHideout ? " (HO)" : "";
+    var max = (maxLen || 28) - tag.length;
     if (z.length > max) { z = z.slice(0, max - 3) + "..."; }
-    return inHideout ? z + " (HO)" : z;
+    return z + tag;
   }
 
   function amount(n) {
@@ -74,8 +77,13 @@
       price = "no price set";
     }
     var where = price.trim();
+    /* DS-HUD-CLIP: "tab Sale (3,7)" - tab name, then (left,top). */
     if (req.stash_tab !== undefined && req.stash_tab !== null) {
-      where += " | tab " + req.stash_tab + " L" + req.left + " T" + req.top;
+      where += " | tab " + req.stash_tab;
+      if (req.left !== undefined && req.left !== null &&
+          req.top !== undefined && req.top !== null) {
+        where += " (" + req.left + "," + req.top + ")";
+      }
     }
     return { from: clipText("Trade: " + (req.from || "unknown player")), item: clipText(item),
              where: clipText(where) };
