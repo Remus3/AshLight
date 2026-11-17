@@ -26,6 +26,12 @@ test("level, deaths and zone text", () => {
   assert.equal(fmt.levelText(12), "Lv 12");
   assert.equal(fmt.deathsText(0), "0 deaths");
   assert.equal(fmt.deathsText(1), "1 death");
+  // UX-REVIEW F1: the open trade count for the HUD status slot
+  assert.equal(fmt.tradeCount(0), "");
+  assert.equal(fmt.tradeCount(1), "1 trade");
+  assert.equal(fmt.tradeCount(2), "2 trades");
+  assert.equal(fmt.tradeCount(12), "12 trades");
+  assert.equal(fmt.tradeCount(undefined), "");
   assert.equal(fmt.zoneText(null, false), "No zone yet");
   assert.equal(fmt.zoneText("Felled Hideout", true), "Felled Hideout (HO)");
   const long = fmt.zoneText("A".repeat(40), false, 10);
@@ -44,7 +50,7 @@ test("hudModel builds the visible strings", () => {
                         deaths: "1 death", sep: "|", away: "", log: "", status: "live",
                         tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "",
                         anchor: "top", evalHead: "", evalItem: "", evalLine: "",
-                        evalVerdict: "" });
+                        evalVerdict: "", trades: "" });
   const empty = gate.hudModel(null, 0);
   assert.equal(empty.status, "connecting");
 });
@@ -160,4 +166,47 @@ test("UI-REVIEW-2: no zone yet means no timer dashes", () => {
   const m = gate.hudModel({ ...snap, zone: null, zone_entered_at: null }, 1000, "live");
   assert.equal(m.zone, "No zone yet");
   assert.equal(m.timer, "");
+});
+
+/* UX-REVIEW F1 (2026-11-17): while a card holds the one slot, open trade
+   requests still show as a count in the HUD status slot. */
+const tradeRow = (id, from) => ({ id: id, from: from, kind: "item", item: "Ring",
+                                  text: from + " wants Ring - 1 exalted", where: "" });
+const slotCard = { kind: "price", head: "Price: Doom Grip", line2: "Prices in 8 s",
+                   line3: "", verdict: "note", expires_at: 1020 };
+
+test("F1: trade count shows in the status slot while a card holds the slot", () => {
+  const one = gate.hudModel({ ...snap, card: slotCard, trade_requests: [tradeRow(1, "A")] },
+                            1000, "live");
+  assert.equal(one.tradeItem, "");
+  assert.equal(one.trades, "1 trade");
+  assert.equal(gate.statusText(one), "1 trade");
+  const three = gate.hudModel({ ...snap, card: slotCard,
+                                trade_requests: [tradeRow(1, "A"), tradeRow(2, "B"), tradeRow(3, "C")] },
+                              1000, "live");
+  assert.equal(three.trades, "3 trades");
+  assert.equal(gate.statusText(three), "3 trades");
+  assert.ok(gate.FIELDS.indexOf("trades") >= 0);
+});
+
+test("F1: no count when the trade card itself shows or nothing is open", () => {
+  const own = gate.hudModel({ ...snap, trade_requests: [tradeRow(1, "A")] }, 1000, "live");
+  assert.equal(own.trades, "");
+  assert.equal(gate.statusText(own), "");
+  const none = gate.hudModel({ ...snap, card: slotCard, trade_requests: [] }, 1000, "live");
+  assert.equal(none.trades, "");
+  // The card has left: the trade card is back and the count goes.
+  const after = gate.hudModel({ ...snap, card: slotCard, trade_requests: [tradeRow(1, "A")] },
+                              1020, "live");
+  assert.equal(after.trades, "");
+  assert.equal(after.tradeItem, "Ring");
+});
+
+test("F1: slot order is connection, log, trades, then AFK", () => {
+  const base = { ...snap, card: slotCard, trade_requests: [tradeRow(1, "A")] };
+  const afk = gate.hudModel({ ...base, afk: true }, 1000, "live");
+  assert.equal(gate.statusText(afk), "1 trade");
+  const log = gate.hudModel({ ...base, tailer: { consented: true, reading: false } }, 1000, "live");
+  assert.equal(gate.statusText(log), "no Client.txt");
+  assert.equal(gate.statusText({ ...afk, status: "offline" }), "offline");
 });

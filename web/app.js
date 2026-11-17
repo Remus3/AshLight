@@ -96,11 +96,16 @@
   }
 
   var renderedTrades = "";
+  var TR = window.ALTrades; // web/trades.js: pure trade list helpers
+  var shownTradeIds = null; // null until the first paint (F6)
 
   function renderTrades(rows) {
-    var key = JSON.stringify(rows.map(function (r) { return r.id; }));
+    var ids = TR.tradeIds(rows);
+    var key = JSON.stringify(ids);
     if (key === renderedTrades) { return; }
     renderedTrades = key;
+    var prevIds = shownTradeIds;
+    shownTradeIds = ids;
     var frag = document.createDocumentFragment();
     for (var i = rows.length - 1; i >= 0; i--) {
       var t = rows[i];
@@ -137,6 +142,8 @@
     }
     $("trade-list").replaceChildren(frag);
     $("trades").hidden = rows.length === 0;
+    /* UX-REVIEW F6: a new request is said once in the polite region. */
+    TR.showStatus($("trade-status"), prevIds, rows);
   }
 
   /* Dashboard-only: dismissing never sends anything to the game. */

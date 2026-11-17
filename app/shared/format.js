@@ -43,6 +43,14 @@
     return n === 1 ? "1 death" : n + " deaths";
   }
 
+  /* UX-REVIEW F1: open trade requests as a count for the HUD status slot
+     while a card hides the trade card; empty when none are open. */
+  function tradeCount(n) {
+    var c = Number(n) || 0;
+    if (c <= 0) { return ""; }
+    return c === 1 ? "1 trade" : c + " trades";
+  }
+
   /* DS-HUD-CLIP: in a hideout the " (HO)" tag (5 chars) is reserved
      before clipping, so the whole line stays within maxLen. */
   function zoneText(zone, inHideout, maxLen) {
@@ -124,6 +132,7 @@
     msUntilNextChange: msUntilNextChange,
     levelText: levelText,
     deathsText: deathsText,
+    tradeCount: tradeCount,
     zoneText: zoneText
   };
 }));

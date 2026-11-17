@@ -63,6 +63,12 @@ main {
   background: var(--fk-surface-2);
   padding: 16px;
 }
+/* F6: the trade live region sits in the main grid; while empty it takes
+   no space but stays in the accessibility tree (not display: none). */
+.trade-status { margin: 0; }
+.trade-status:empty { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
 .card h2 { font-size: 1rem; margin: 0 0 8px; }
 
 .consent { border-color: var(--fk-accent); }

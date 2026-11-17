@@ -569,6 +569,19 @@ class SessionState:
             self.trade_requests.extend(kept)
             self.version += 1
 
+    def _close_trade(self, name=None):
+        """OVL-TRADE-CANCEL (decision 0019): a finished trade ("Trade
+        accepted." / "Trade cancelled.") closes one open card: the one from
+        `name` when a line names the counterparty, else the oldest. Caller
+        holds the lock. Returns True when a card went."""
+        if not self.trade_requests:
+            return False
+        rows = list(self.trade_requests)
+        drop = next((r for r in rows if name and r.get("from") == name), rows[0])
+        self.trade_requests.clear()
+        self.trade_requests.extend(r for r in rows if r is not drop)
+        return True
+
     def _trade_row(self, ev, now):
         self._trade_ids += 1
         row = {"id": self._trade_ids, "at": now, "from": ev.get("from")}
@@ -630,6 +643,10 @@ class SessionState:
                     self._expire_trades(now)
                     self.trade_requests.append(self._trade_row(ev, now))
                 changed = True
+            elif t in ("trade_accepted", "trade_cancelled"):
+                self._expire_trades(now)
+                if self._close_trade(ev.get("name")):
+                    changed = True
             elif t == "afk_changed":
                 self.afk = bool(ev.get("on"))
                 changed = True
