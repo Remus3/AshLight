@@ -33,6 +33,10 @@ SHOWN = 10
 # Dashboard copy (design 0001 section 9); the page prints these as given.
 OFF_TEXT = ("Price watch is paused while web data is off. Turn on web data to "
             "see price moves of the items you checked.")
+# UX-B9-CARDS: off with nothing watched still says how the card fills
+OFF_EMPTY_TEXT = ("Price watch is paused while web data is off. With web data on, "
+                  "items you price with the item check hotkey are watched here by "
+                  "themselves.")
 EMPTY_TEXT = ("No items watched yet. Items you price with the item check "
               "hotkey are watched here by themselves.")
 QUIET_TEXT = "Watching {n}. No price moved by {pct}% or more since you checked."
@@ -163,7 +167,7 @@ class PriceWatch:
         n = len(self.items)
         if not enabled:
             return {"on": False, "count": n, "moved": [], "pct": pct,
-                    "text": OFF_TEXT if n else ""}
+                    "text": OFF_TEXT if n else OFF_EMPTY_TEXT}
         moved = []
         for r in reversed(self.items):
             if r["now_value"] is None or r["now_unit"] != r["unit"]:

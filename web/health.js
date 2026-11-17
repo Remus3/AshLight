@@ -23,8 +23,9 @@
   var ALL_CLEAR = "No resistance, attribute or Spirit problems in Path of Building's numbers.";
   var NO_STATS = "This build has no Path of Building numbers. Open it in Path of Building, " +
     "then copy its code again.";
-  var NO_WEIGHTS = "Check items with the AshLight hotkey while the build calc is " +
-    "on to rank more stats for each slot.";
+  // UX-B9-CARDS: name the optional calc, not "build calc"
+  var NO_WEIGHTS = "More stats show here for each slot once you check items. This " +
+    "needs the optional Path of Building calc, which is off by default.";
   var COPIED = "Copied - paste it into the search box in game";
   var FALLBACK = "Can't copy here. The text is selected: press Ctrl+C.";
   var FALLBACK_SAID = "can't copy here, the text is selected, press Ctrl+C";

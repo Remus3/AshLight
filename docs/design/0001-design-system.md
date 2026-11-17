@@ -283,7 +283,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | Trade request arrives | trade card (who, what, price, where) | trade list with dismiss |
 | Died | deaths count changes; no flash, no pop-up | death in recent events |
 | AFK / DND | status word on the HUD line | flag under Session |
-| Under-levelled for the zone (UTIL-UNDERLEVEL) | status word `N lv under` (gap at or above the setting, default 3) | line under the Level tile naming zone level and player level |
+| Under-levelled for the zone (UTIL-UNDERLEVEL) | status word `N lv under` (gap at or above the setting, default 3) | line under the Level tile naming the zone level (the tile already shows the player level; UX-B9-CARDS) |
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
 | In a map (UTIL-MAPS, UTIL-MAPRUN-OVL) | row-1 timer is the time in this map (kept across hideout trips) instead of this zone instance; no new line or word; map deaths stay on the dashboard | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
@@ -296,6 +296,15 @@ Progressive disclosure (source 9): the overlay holds the 2-line HUD plus at
 most one trade card ("+N more" for the rest). Everything else (history,
 stash coordinates in full, settings) lives on the dashboard. Never add a
 third HUD line to fit a feature; add a dashboard card instead.
+
+Dashboard density (UX-DASH-DENSITY, glance review 0004 U26): play cards
+come first and stay open. Set-once tools (overlay position, moving
+settings, graphics settings) live in one folded Tools card at the end of
+the page, with the hotkey hint outside the fold. A tool made from one
+card's content (the .build file from the Build card, the loot filter
+add-on from the Search strings card) folds inside that card instead, so it
+stays beside what it is made from and hides with it. A destructive action
+(Clear ...) is a secondary button, never the filled primary style.
 
 ## 8. Voice and tone (prose and readability)
 

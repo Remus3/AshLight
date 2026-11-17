@@ -23,7 +23,7 @@ def scene(name, at=101.0, hideout=False):
 def test_view_gap_exact():
     v = underlevel.view(10, 14, "G2_3", "The Mud Burrow", False)
     assert v == {"gap": 4, "zone_level": 14, "level": 10,
-                 "text": "4 levels under this zone (zone level 14, you are level 10).",
+                 "text": "4 levels under this zone (zone level 14).",
                  "word": "4 lv under", "source": "log"}
     assert len(v["word"]) <= underlevel.WORD_MAX
 
