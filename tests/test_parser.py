@@ -200,11 +200,7 @@ def test_live_trade_cancelled():
 def test_live_npc_dialogue_and_engine_lines_ignored():
     assert _one("Riverside Miller: Grind you down!") is None
     assert _one("[WINDOW] Gained focus") is None
-    # UTIL-SESSION-SUMMARY: the run marker is the only non-prefixed line
-    # parsed (a new game run; the previous game closed)
-    assert parser.parse_line("2026/11/16 21:00:00 ***** LOG FILE OPENING *****") == {
-        "type": "game_started", "ts_local": "2026-11-16T21:00:00", "source": "client_log"}
-    assert parser.parse_line("2026/11/16 21:00:00 ***** LOG FILE OPENING ***** x") is None
+    assert parser.parse_line("2026/11/16 21:00:00 ***** LOG FILE OPENING *****") is None
 
 
 def test_live_fixture_event_types():

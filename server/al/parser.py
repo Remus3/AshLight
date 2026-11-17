@@ -14,10 +14,6 @@ import re
 PREFIX = re.compile(
     r"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) (\d+) ([0-9a-fA-F]+) "
     r"\[(\w+) Client (\d+)\] ?(.*)$")
-# "<date> <time> ***** LOG FILE OPENING *****" - a new game run starts
-# (the resume scan's run marker, research 0002).
-GAME_STARTED = re.compile(
-    r"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) \*\*\*\*\* LOG FILE OPENING \*\*\*\*\*\s*$")
 
 # [SCENE] Set Source [<name>] - confirmed in PoE2 logs.
 # "Load Source" is UNVERIFIED (search snippet only).
@@ -218,13 +214,6 @@ def parse_line(line, keep_raw=False):
         return None
     m = PREFIX.match(line.rstrip("\r\n"))
     if not m:
-        # UTIL-SESSION-SUMMARY: the game writes this when it starts, so the
-        # previous game run has ended.
-        g = GAME_STARTED.match(line.rstrip("\r\n"))
-        if g:
-            return {"type": "game_started",
-                    "ts_local": f"{g.group(1)}-{g.group(2)}-{g.group(3)}T{g.group(4)}",
-                    "source": "client_log"}
         return None
     ev = parse_body(m.group(9))
     if ev is None:

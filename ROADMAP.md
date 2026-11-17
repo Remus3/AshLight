@@ -299,14 +299,11 @@ weights derived from PoB outputs stay with TC-DELTA.
   worst / best / pct; tests/test_math_potential.py. Equipped-vs-checked
   compare with PoB deltas was already TC-DELTA's per-slot comparisons
   (dps / ehp on each compared slot), so no separate MATH-COMPARE row.
-- [x] MATH-POTENTIAL-UI (build) Show the item check card's `potential` on
+- [ ] MATH-POTENTIAL-UI (build) Show the item check card's `potential` on
   the dashboard: "Rolls: 51% of the way from the worst to the best rolls
   (score 58, best 84)" or similar; nothing when null. After
   MATH-POTENTIAL. ACCEPT: web test on a synthetic card; design-reviewer
   pass. ZERO-CLICK: appears with the item check of the same press.
-  DONE 2026-11-17 (area-util batch 3): web/tc.js rollsText (evalView
-  `rolls`), #eval-rolls on the item check card; hidden for a failed check,
-  junk numbers or no spread; app/test/tc_view.test.js.
 - [x] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
   verdict-band properties (antisymmetry of the delta, band monotone in the
   old score, rounding stable at 4 places, NaN / inf / huge values from a
@@ -399,29 +396,6 @@ recorded in research 0018 section 3.
   /api/rates (empty while web data is off), dashboard Price movers card
   (web/prices.js moversView); tests/test_price_book.py,
   app/test/prices.test.js.
-- [x] UTIL-SESSION-SUMMARY (build) End-of-session summary card: time
-  played, levels and hourly pace, maps, deaths, top price movers.
-  ACCEPT: replay tests, design-reviewer pass. ZERO-CLICK: a play stretch
-  closes by itself after 20 minutes with no game activity or when
-  Client.txt starts a new game run (the previous game closed; no exit line
-  is known). DONE 2026-11-17 (area-util batch 3): server/al/summary.py
-  (Tracker, build, save / load_last), SessionState stretch +
-  check_session_end, parser `game_started` for the run marker,
-  Core.tick_summary from the main loop, last 20 cards in
-  ops/runtime/session_summaries.json (reloaded at start), dashboard
-  "Last session" card (web/summary.js); tests/test_util_session_summary.py,
-  app/test/summary.test.js.
-- [x] UTIL-OVERLAY-MAP (build) Compact overlay HUD line for the open map:
-  time in it and its deaths, under the overlay budgets. ZERO-CLICK: would
-  show by itself while a map is open. NOT DONE BY DESIGN (adjudicator
-  ruling 2026-11-17, area-util batch 3): design 0001 sections 7.2 and 10
-  forbid a third HUD line ("2 HUD lines + one 3-line card"); map time and
-  deaths this map stay on the dashboard Maps card. Alternatives: a
-  conditional muted third line "This map 12m, 1 death" with 7.2 / 10
-  amended (fits the 280x176 window with ~34 px spare, budgets passed), or
-  folding it into row 2 (clips at the 258 px plate). Reverses if: the
-  operator or MAIN allows a conditional third HUD line; the prototype is
-  kept as util-overlay-map.patch in the AL sidecar Scratch folder.
 - [ ] TC-CURX (build) Hourly exchange history from GGG's documented public
   Currency Exchange API (`web.poecdn.com/api/currency-exchange/poe2/<hour>`,
   research 0018). BLOCKED: TC-OAUTH-REG (adjudicator ruling 2026-11-17:
@@ -903,7 +877,7 @@ merge. Each row names the finding ids it closes.
   ZERO-CLICK: the calc switches on by itself when the component exists.
   CLOSED 2026-11-17: done by the AREA-MATH b2 AUDIT-TC-WIRE row above
   (calcwire.py, tests/test_tc_wire.py); this pass-2 copy is the same item.
-- [x] AUDIT-MAP-SEED (build) Pass 2 findings P2-M1 (medium), P2-M2, P2-M3
+- [ ] AUDIT-MAP-SEED (build) Pass 2 findings P2-M1 (medium), P2-M2, P2-M3
   (low); server/al/runs.py was mid-change in UTIL-MAPS-RESUME, so not fixed
   in pass 2. M1: MapRuns.on_generated opens a new map on every Map*
   generation and ignores the seed, so a portal back into the same instance
@@ -917,11 +891,6 @@ merge. Each row names the finding ids it closes.
   seed 7), hideout, gen(MapX, seed 7) gives count 1 and one clock; 10k
   distinct-zone deaths keep by_zone <= MAX_DEATHS.
   ZERO-CLICK: code row.
-  DONE 2026-11-17 (area-util batch 3): MapRuns keeps the seed; same id +
-  seed as the open map is a re-entry (no seed keeps the old rule); seed
-  carried through resume run_events; DeathLog.by_zone() derives from the
-  capped rows; the recap's empty line names restored deaths instead of
-  "No deaths this session". tests/test_audit_map_seed.py.
 - [x] AUDIT-BRIDGE-LOW (build) Pass 2 lows P2-B3..B5: exepin's .sha256 sits
   beside luajit.exe in the user-writable sidecar, so it guards against a
   stale or foreign exe, not tampering (say so in decision 0022 or keep the

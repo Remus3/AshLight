@@ -13,7 +13,6 @@ import time
 from . import acts as acts_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
-from . import summary as summary_mod
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -651,11 +650,7 @@ class SessionState:
         self.death_log = runs_mod.DeathLog()
         # UTIL-PACE: levelling pace from the player's level-ups (pace.py).
         self.pace = pace_mod.Pace()
-        # UTIL-SESSION-SUMMARY: the open play stretch and its last card.
-        self.stretch = summary_mod.Tracker()
-        self.session_summary = None
-        self._summary_ids = 0
-        self.tailer ={"consented": False, "reading": False, "path": None,
+        self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
     # -- updates
@@ -784,12 +779,6 @@ class SessionState:
             self.events_seen += 1
             changed = False
             listed = t in LISTED
-            active = t in summary_mod.ACTIVITY
-            if active:
-                self.stretch.begin(self._counters())
-            if t == "game_started":
-                # UTIL-SESSION-SUMMARY: a new game run; the last one closed
-                changed = self._close_stretch("game_closed")
             if t == "scene_changed":
                 # Null and transient scenes (LIVE-1) keep the zone and its
                 # timer and are not listed; only a real zone change is.
@@ -806,8 +795,7 @@ class SessionState:
                 self.area_id = ev.get("area_id")
                 self.area_level = ev.get("area_level")
                 self.acts.fold(self.area_id, now, self.level)
-                self.maps.on_generated(self.area_id, now, self.area_level,
-                                       ev.get("seed"))
+                self.maps.on_generated(self.area_id, now, self.area_level)
                 changed = True
             elif t == "area_entered":
                 if ev.get("name") != self.zone:
@@ -865,53 +853,9 @@ class SessionState:
             if listed:
                 self.recent_events.append(self._row(ev, now))
                 changed = True
-            if active:
-                self.stretch.touch(now, self._counters())
             if changed:
                 self.version += 1
             return changed
-
-    # -- UTIL-SESSION-SUMMARY
-    def _counters(self):
-        return {"level": self.level, "level_ups": self.level_ups,
-                "deaths": self.deaths, "maps": self.maps.count}
-
-    def _close_stretch(self, reason, movers=None):
-        """Close the open play stretch into the summary card. Caller holds
-        the lock. True when a card was made."""
-        card = self.stretch.close(reason, movers)
-        if card is None:
-            return False
-        self._summary_ids += 1
-        self.session_summary = dict(card, id=self._summary_ids)
-        return True
-
-    def session_end_due(self, now=None):
-        """True when the open stretch has been idle for IDLE_S (cheap; the
-        core reads the movers only then)."""
-        with self._lock:
-            return self.stretch.due(self._clock() if now is None else now)
-
-    def check_session_end(self, now=None, movers=None):
-        """From the core's main loop: close the stretch after IDLE_S with no
-        game activity. Returns the new card, or None."""
-        with self._lock:
-            now = self._clock() if now is None else now
-            if not self.stretch.due(now):
-                return None
-            if not self._close_stretch("idle", movers):
-                return None
-            self.version += 1
-            return dict(self.session_summary)
-
-    def set_session_summary(self, card):
-        """A saved card loaded at core start (shown until a new one)."""
-        with self._lock:
-            if isinstance(card, dict) and self.session_summary is None:
-                self.session_summary = dict(card)
-                self._summary_ids = max(self._summary_ids,
-                                        card.get("id") if isinstance(card.get("id"), int) else 0)
-                self.version += 1
 
     _RESTORE = {"zone": "zone", "in_hideout": "in_hideout", "area_id": "area_id",
                 "area_level": "area_level", "zone_entered_at": "zone_entered_at",
@@ -1001,6 +945,4 @@ class SessionState:
                 "maps": self.maps.view(now),
                 "death_recap": self.death_log.view(self.deaths),
                 "pace": self.pace.view(now, self.pace_started_at),
-                "session_summary": (dict(self.session_summary)
-                                    if self.session_summary else None),
             }
