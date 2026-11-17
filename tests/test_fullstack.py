@@ -543,9 +543,34 @@ def test_fullstack_session_through_http_and_sse(env, monkeypatch):
     assert time.monotonic() - t_start < fleet_test_guard.budget(20.0)
 
 
-def test_fullstack_web_data_off_sends_nothing(env):
+def _guard_sockets(monkeypatch):
+    """AREA-AUDIT P4-3: record every connect to a non-loopback address and
+    every name lookup other than the loopback, below any transport seam, so
+    a code path that bypassed the injected fetch would still be seen."""
+    seen = []
+    real_connect, real_gai = socket.socket.connect, socket.getaddrinfo
+
+    def connect(self, address):
+        host = address[0] if isinstance(address, tuple) else address
+        if host not in ("127.0.0.1", "::1", "localhost"):
+            seen.append(("connect", host))
+        return real_connect(self, address)
+
+    def getaddrinfo(host, *a, **k):
+        if host not in ("127.0.0.1", "::1", "localhost", None):
+            seen.append(("lookup", host))
+        return real_gai(host, *a, **k)
+
+    monkeypatch.setattr(socket.socket, "connect", connect)
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+    return seen
+
+
+def test_fullstack_web_data_off_sends_nothing(env, monkeypatch):
     """Web data OFF across every feature that could reach the network:
-    the mock and the transport see nothing."""
+    the mock and the transport see nothing, and no socket leaves the
+    loopback (P4-3)."""
+    seen = _guard_sockets(monkeypatch)
     st = Stack(env["rt"], env["log"], env["cfg"], env["fetch"])
     env["made"].append(st)
     st.req("POST", "/api/consent", {"consent": True})
@@ -561,9 +586,19 @@ def test_fullstack_web_data_off_sends_nothing(env):
     assert st.req("POST", "/api/build-code",
                   {"code": codec.encode(fx.EVAL_BUILD_XML)})[0] == 200
     st.core.tick_summary(now=time.time() + summary.IDLE_S + 5)
+    st.core.tick_sources()
+    st.core.tick_calc()
+    conn = http.client.HTTPConnection("127.0.0.1", st.port, timeout=10)
+    conn.request("GET", "/api/filter", headers={"Host": f"127.0.0.1:{st.port}",
+                                                "X-AL-Token": TOKEN})
+    r = conn.getresponse()
+    body = r.read().decode("ascii")
+    conn.close()
+    assert r.status == 200 and "Value tiers" not in body  # no prices while off
     assert st.req("GET", "/api/web-data")[1]["web_data"] is False
     time.sleep(0.1)
     assert env["fetch"].calls == [] and env["mock"].requests == []
+    assert seen == []
 
 
 def test_synth_marker_has_the_live_shape():

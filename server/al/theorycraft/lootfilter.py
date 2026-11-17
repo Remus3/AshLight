@@ -86,8 +86,9 @@ def known(names, base_names):
 def tiers(prices, base_names=None):
     """{"unique_top", "unique_pick", "stack_top", "stack_pick": [names]}
     from filter_prices() (values in Divine Orbs); empty lists for None.
-    `base_names` checks unique bases (gear) only: stackables are not in the
-    gear base list."""
+    `base_names` (the cached base_items list) checks every tier: it holds
+    stackables too (currency, omens, soul cores; AREA-AUDIT P4-2), and a
+    BaseType the game does not know makes the whole filter fail to load."""
     out = {k: [] for k in TIER_KEYS}
     if not isinstance(prices, dict):
         return out
@@ -104,7 +105,7 @@ def tiers(prices, base_names=None):
                    else f"{kind}_pick" if value >= PICK_DIVINE else None)
             if key and name not in out[key]:
                 out[key].append(name)
-    for k in ("unique_top", "unique_pick"):
+    for k in TIER_KEYS:
         out[k] = known(out[k], base_names)[0]
     for k in TIER_KEYS:
         out[k] = sorted(out[k])[:MAX_TIER_NAMES]

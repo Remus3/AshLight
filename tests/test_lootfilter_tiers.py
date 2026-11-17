@@ -76,11 +76,12 @@ def test_generated_filter_with_tiers_follows_the_grammar_and_never_hides(tmp_pat
 
 def test_tiers_without_a_build_and_unique_bases_checked_against_the_base_list(tmp_path):
     p = _prices(tmp_path)
-    text = lootfilter.generate(None, {"silk robe": "Silk Robe"}, prices=p)
+    names = {"silk robe": "Silk Robe", "divine orb": "Divine Orb"}
+    text = lootfilter.generate(None, names, prices=p)
     check_grammar(text)
     assert '    BaseType == "Silk Robe"\n' in text and "Runemastered" not in text
-    # stackables are not gear bases; the base list does not filter them
-    assert '"Divine Orb"' in text
+    # the base list holds stackables too and checks them (AREA-AUDIT P4-2)
+    assert '"Divine Orb"' in text and "Greater Essence of Ruin" not in text
     assert "# No build loaded" in text
 
 
