@@ -181,6 +181,12 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   against the new tag, then move the pin in one commit, or hold it and
   record why. ACCEPT: pin moved or a dated hold note in decision 0004.
   ZERO-CLICK: a loop check spots the new tag and runs the tests unattended.
+  HOLD 2026-11-17 (AREA-RES, research 0017): no PoB-PoE2 release after
+  v0.23.1 (2026-07-28); dev is 109 commits ahead (0.5.5 rune / runemastered
+  data, trader fix for Forbidden Rites, HeadlessWrapper "Restore headless
+  global cache cleanup" 2026-08-26, .build export PR #2432). Pin stays.
+  For AREA-MATH: at the next tag (likely by PoE2 1.0, 2026-12-11) test the
+  bridge for cache state leaking across build loads before moving the pin.
 - [ ] TC-OAUTH-REG (review) OPERATOR act: apply to GGG for an AshLight
   public OAuth client (PKCE, loopback redirect in port block 8960-8979,
   scopes account:profile and account:characters) once GGG reopens
@@ -191,6 +197,66 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   credential store, refresh handled, into the build model. BLOCKED on
   TC-OAUTH-REG. ACCEPT: mocked-flow tests; no POESESSID; no undocumented
   endpoint. ZERO-CLICK: one sign-in ever; silent refresh after that.
+
+## Research-filed features (AREA-RES 2026-11-17, research 0020)
+
+Ranked in research 0020; floor checks there. Rulings by adjudicator
+recorded in research 0018 section 3.
+
+- [ ] UTIL-MAPRUN (build) Map run tracker from Client.txt only: a new
+  instance from `Generating level <N> area "<id>" with seed <N>` with an
+  endgame area id starts a map, hideout / town `[SCENE]` pauses it, a new
+  seed ends it; dashboard shows maps run, time per map, maps per hour,
+  area level, deaths per map, session totals; overlay status slot one
+  line. First verify the endgame area-id prefix on a live map (fixture,
+  like LIVE-1). ACCEPT: fixture tests for enter / portal back / new map /
+  death; numbers on the dashboard; design-reviewer pass. ZERO-CLICK: runs
+  from the log tail, no start / stop button.
+- [ ] PRICE-UNIQUE (build) Unique prices on the item-check press from
+  poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
+  types, research 0019): match name + baseType (+ corrupted), show value,
+  listing count ("few listings" when low) and 7-day trend; one request
+  per type per hour with If-None-Match, only with web_data on (0013).
+  ACCEPT: parser tests on a trimmed real body; no request when off.
+  ZERO-CLICK: the same hotkey press; overviews refresh on the hourly gate.
+- [ ] PRICE-STACKABLES (build) Price stackables on the item-check press via
+  more exchange overview types (Ritual/Omens, Essences, Runes, SoulCores,
+  Breach, Delirium, Fragments, UncutGems, LineageSupportGems; research
+  0019), names from the top-level `items` array (0013). After
+  PRICE-UNIQUE (both edit ninja.py). ACCEPT: per-type parser tests; one
+  request per type per hour. ZERO-CLICK: same press, hourly refresh.
+- [ ] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
+  Acts 5-6 id prefixes to acts.py, Duelist / Shadow class names, league
+  rollover check in ninja.py and the price card league label, refresh the
+  repoe-fork snapshot; after launch review the debug sink of the first 1.0
+  log for new system lines. ACCEPT: tests with 1.0-shaped fixture lines;
+  rollover test. ZERO-CLICK: data and parser only, nothing for the user.
+- [ ] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
+  Planner `*.build` JSON (Version 1, research 0018 section 3) offered as a
+  dashboard "Save .build" download on the player's click; NEVER written
+  into the game's BuildPlanner folder (adjudicator ruling 2026-11-17).
+  First research the passive id mapping (GGG string ids like
+  `strength89` vs PoB / GGG export numeric ids). ACCEPT: schema test
+  against the documented fields; mapping source recorded; no write path
+  to the BuildPlanner folder (test). ZERO-CLICK: the file is ready as soon
+  as a build is loaded; one click to save is the user's placement act.
+- [ ] AUDIT-BUILDFILE (review) Record the `.build` ruling (user-saved
+  only, never written into the game folder; reverses if GGG explicitly
+  permits tool writes there or the operator rules a click write
+  acceptable) as a decision when TC-BUILDFILE lands, and add a test-backed
+  check that no code path writes under the BuildPlanner folder. ACCEPT:
+  decision file + test. ZERO-CLICK: review row.
+- [ ] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
+  poe.ninja overviews (`sparkline.totalChange`), no extra requests. After
+  PRICE-STACKABLES. ACCEPT: panel test, design-reviewer pass.
+  ZERO-CLICK: refreshes with the hourly gate.
+- [ ] TC-CURX (build) Hourly exchange history from GGG's documented public
+  Currency Exchange API (`web.poecdn.com/api/currency-exchange/poe2/<hour>`,
+  research 0018). BLOCKED: TC-OAUTH-REG (adjudicator ruling 2026-11-17:
+  standalone executables must use a public OAuth client; reverses if GGG
+  exempts scope-less endpoints in writing). ACCEPT: when unblocked, OAuth
+  UA, immutable-hour cache, parser tests. ZERO-CLICK: background fetch on
+  the hourly boundary once enabled.
 
 ## Game settings advisor (operator order 2026-11-16)
 

@@ -49,6 +49,19 @@ its code (license notes: 0006).
 - 0016 trade2 search link form - `?q=<JSON>` built by community tools,
   rarity filter path, undocumented by GGG (PRICE-TRADE-LINK)
   ([0016-trade2-search-link.md](0016-trade2-search-link.md))
+- 0017 PoB-PoE2 drift check Nov 2026 - no release after v0.23.1, dev 109
+  ahead, HeadlessWrapper and .build export deltas; pin HOLD (TC-DRIFT)
+  ([0017-pob2-drift-2026-11.md](0017-pob2-drift-2026-11.md))
+- 0018 PoE2 state Nov 2026 - patch 0.5.5f, 1.0 on 2026-12-11, Client.txt
+  deltas (none new), policy unchanged, GGG public Currency Exchange and
+  .build format with adjudicator rulings
+  ([0018-poe2-state-2026-11.md](0018-poe2-state-2026-11.md))
+- 0019 poe.ninja PoE2 contract - documented economy routes, unique and
+  exchange types, cache / UA / no-SLA terms, excluded builds endpoints
+  ([0019-poe-ninja-poe2-contract.md](0019-poe-ninja-poe2-contract.md))
+- 0020 Feature opportunities Nov 2026 - ten features ranked, floor
+  yes / no with reasons, filed rows
+  ([0020-feature-opportunities-2026-11.md](0020-feature-opportunities-2026-11.md))
 
 ## Open research (feeds ROADMAP)
 
