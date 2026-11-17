@@ -65,6 +65,13 @@ EMPTY_TEXT = ("No act times yet. They start by themselves when you enter a "
 NO_LEVELS_TEXT = ("Zone levels aren't downloaded yet. Turn on web data, then run "
                   "AshLight's build step (scripts/build.ps1).")
 NO_ZONES_TEXT = "Zone levels show here while you are in a campaign act."
+# UTIL-1.0-FIXTURES: the player is in an act the downloaded table has no
+# rows for (Acts 5-6 before the repoe-fork snapshot is refreshed, research
+# 0021); NO_ZONES_TEXT would wrongly say they are not in an act.
+ACT_NO_LEVELS_TEXT = ("Zone levels for {act} aren't downloaded yet. They "
+                      "show here once the game data has them: after a game "
+                      "update, run AshLight's build step again "
+                      "(scripts/build.ps1).")
 PARTIAL_TEXT = "partial: counted from the first zone AshLight saw"
 
 
@@ -237,6 +244,9 @@ def view(splits, table, area_id, zone, now):
     if here is None and (splits.finished or is_endgame(area_id)):
         key = None  # endgame: no campaign zone table (design review HA-2)
     zones, zones_act = [], None
+    act_levels_text = ""
+    if key is not None and table and not table.get(key) and label_of(key):
+        act_levels_text = ACT_NO_LEVELS_TEXT.format(act=label_of(key))
     if key is not None and table.get(key):
         zones_act = label_of(key)
         zones =[{"name": z["name"], "level": z["level"], "town": z["town"],
@@ -247,4 +257,5 @@ def view(splits, table, area_id, zone, now):
             "source": ATTRIBUTION if table else None,
             "empty_text": EMPTY_TEXT, "no_levels_text": NO_LEVELS_TEXT,
             "no_zones_text": NO_ZONES_TEXT,
+            "act_levels_text": act_levels_text,
             "partial_text": PARTIAL_TEXT}

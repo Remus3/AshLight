@@ -58,6 +58,12 @@ test("zoneRows, zonesTitle and zonesEmpty, exact", () => {
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { zones: [] })),
     "Zone levels show here while you are in a campaign act.");
   assert.equal(a.zonesEmpty(null), "");
+  // UTIL-1.0-FIXTURES: in an act the downloaded table lacks
+  // same text as server/al/acts.py ACT_NO_LEVELS_TEXT (tests/test_util_10_fixtures.py)
+  const lacks = "Zone levels for Act 5 aren't downloaded yet. They show here once the " +
+    "game data has them: after a game update, run AshLight's build step again " +
+    "(scripts/build.ps1).";
+  assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { zones: [], act_levels_text: lacks })), lacks);
 });
 
 /* A minimal DOM stand-in: enough for paint() (getElementById, createElement,

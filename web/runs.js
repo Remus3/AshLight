@@ -74,6 +74,14 @@
     return out;
   }
 
+  /* The line under the Maps table: average, maps per hour (UTIL-MAPRUN),
+     deaths in maps; each sentence from the core, empty ones skipped. */
+  function mapsSummary(maps) {
+    if (!maps) { return ""; }
+    return [maps.avg_text, maps.rate_text, maps.deaths_text]
+      .filter(function (t) { return !!t; }).join(" ");
+  }
+
   function cell(doc, tag, text, cls) {
     var c = doc.createElement(tag);
     if (cls) { c.className = cls; }
@@ -96,8 +104,7 @@
     var empty = doc.getElementById("maps-empty");
     empty.hidden = rows.length > 0;
     empty.textContent = (maps && maps.empty_text) || "";
-    var summary = [maps && maps.avg_text, maps && maps.deaths_text]
-      .filter(function (t) { return !!t; }).join(" ");
+    var summary = mapsSummary(maps);
     var sum = doc.getElementById("maps-summary");
     sum.textContent = summary;
     sum.hidden = !summary;
@@ -160,6 +167,6 @@
   }
 
   return { duration: duration, levelText: levelText, clock: clock,
-    liveTime: liveTime, mapRows: mapRows,
+    liveTime: liveTime, mapRows: mapRows, mapsSummary: mapsSummary,
     deathLines: deathLines, recapFoot: recapFoot, paint: paint };
 }));
