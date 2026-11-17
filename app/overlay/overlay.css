@@ -126,3 +126,20 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
     --al-plate: #0f1216;
   }
 }
+
+/* Windows forced colours / high contrast (UX-U8). The page root opts out
+   and stays transparent: an Electron probe under forced-colors emulation
+   kept the window transparent, but a plain Chromium page paints its
+   viewport Canvas in this mode, and an opaque block over the game must
+   never happen, so the root never depends on that. The plates opt back
+   in, so their text and borders take the player's system colours; the
+   plate is opaque Canvas so that text keeps the system contrast over any
+   scene. The trade and upgrade edges use Highlight, a system colour the
+   mode keeps, so the card cue survives; the words still carry the
+   meaning (design 0001 principle 6, C4). */
+@media (forced-colors: active) {
+  html, body { forced-color-adjust: none; background: transparent; }
+  .hud, .trade, .evalcard { forced-color-adjust: auto; }
+  :root { --al-plate: Canvas; }
+  .trade, .evalcard[data-verdict="upgrade"] { border-left-color: Highlight; }
+}

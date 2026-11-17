@@ -81,6 +81,16 @@ instead of waiting for the next review.
 - U8 [S4, R4; filed] Windows forced-colours mode on the transparent overlay
   window is not verified: forced colours may repaint the plate or the
   transparent page background. Filed with U7 for the next live pass.
+  Done 2026-11-17 (ROADMAP UX-U8): the overlay page in an Electron 45
+  transparent window (capturePage keeps alpha) under forced-colors
+  emulation stays transparent outside the plates. Headless Chrome, by
+  contrast, paints the viewport Canvas in this mode, so the root now opts
+  out of forcing (`forced-color-adjust: none`, background transparent)
+  and never depends on the Electron behaviour; the plates opt back in.
+  Defects fixed: the trade warn edge and the upgrade green edge both fell
+  to plain CanvasText (now Highlight, a kept system colour), and the plate
+  became 92 percent Canvas (now opaque Canvas). Tests guard all three. A
+  real OS high-contrast theme switch was not exercised (emulation only).
 
 ## Kept by decision
 
