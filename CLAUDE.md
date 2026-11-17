@@ -426,6 +426,12 @@ them. Pause: `ops/loop/control/HALT`.
   build-time repoe-fork world_areas snapshot, credit text only in
   theorycraft/datacredit.py (decision 0020). Reverses if: decision 0009
   reverses for repoe-fork, or live cruel / interlude ids break the prefixes.
+- Trade stat ids for the upgrade search URL come only from the
+  `trade_stats` field of the cached repoe-fork stat_translations snapshot
+  (web_data on), used only to build the `?q=` link; no trade endpoint call,
+  no bundled table, a missing id means no filter (decision 0037). Reverses
+  if: GGG bars third-party use of the ids, repoe-fork drops the field or
+  its license forbids this use, or the operator rules otherwise.
 - The card names the item a swap replaces (better slot first, one-hand
   weapons in either hand of a dual wielder); nonsense PoB outputs fall back
   to the weights with a "looks wrong" notice, except a weapon PoB says the

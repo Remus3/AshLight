@@ -13,7 +13,8 @@ import time
 from pathlib import Path
 
 from . import (VERSION, acts, layout, logfile, ninja, parser, paths, price, pricebook,
-               pricewatch, resume, runhistory, settingsio, underlevel, webfetch)
+               pricewatch, resume, runhistory, settingsio, tradestats, underlevel,
+               webfetch)
 from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
@@ -111,6 +112,12 @@ class Core:
                       else self.runtime / "gamedata" / basetypes.FILE_NAME)
         self.base_names = basetypes.NamesCache(bases_path)
         item_mod.set_base_names(self.base_names.get)
+        # TC-UPGRADE-STATS (decision 0037): trade stat ids from the cached
+        # repoe-fork snapshot, used only in the offline upgrade link and
+        # only while web data is on; read only, no fetch, no trade call.
+        ids_path = (tradestats.default_path() if runtime is None
+                    else self.runtime / "gamedata" / tradestats.FILE_NAME)
+        self.trade_ids = tradestats.IndexCache(ids_path)
         # TC-EVAL: editable stat weights, defaults written on first start.
         self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.
@@ -131,7 +138,9 @@ class Core:
                                         league=self.trade_league,
                                         calc=lambda: (self.tc_calc if self.tc_calc is not None
                                                       else self.tc_provider()),
-                                        rates=lambda: self.rates.snapshot())
+                                        rates=lambda: self.rates.snapshot(),
+                                        trade_ids=lambda: (self.trade_ids.get()
+                                                           if self.web_data_enabled() else {}))
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
         # weights PoB measured for this build (never another build's)
         self.builds.weights_for = self.last_eval.pob_weights.fallback

@@ -20,8 +20,9 @@ from server.al.theorycraft import datacredit, snapshot
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "s" * 48
 CREDIT = ("Game data (c) Grinding Gear Games. Item, mod and stat data comes from the "
-          "RePoE fork community export (repoe-fork). Passive tree data comes from "
-          "Grinding Gear Games' public skill tree export. AshLight downloaded both to "
+          "RePoE fork community export (repoe-fork). Trade search stat ids are "
+          "Grinding Gear Games' trade site data, passed on by repoe-fork. Passive tree data comes from "
+          "Grinding Gear Games' public skill tree export. AshLight downloaded all of it to "
           "this computer when it was built.")
 
 

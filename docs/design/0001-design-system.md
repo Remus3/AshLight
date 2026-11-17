@@ -93,6 +93,14 @@ current 0.75 floor.
   aim for 32px tall buttons.
 - The layout must work at 320px width (dashboard on a phone or a narrow
   second screen) with no horizontal scroll.
+- Narrow side window (UX-NARROW, under 520px width): main and card padding
+  12px, main gap 12px; web/narrow.js puts the live play cards first and
+  moves the tool cards into one closed fold at the end (nodes move, so Tab
+  order = screen order). The status lines inside that fold speak after a
+  click inside it (paste, copy, a setting, a save), so the fold is open
+  then; the only others are page-load lines (a setting's current state, or
+  "Can't load ... Is AshLight running?", which the header connection pill
+  also shows), read when the player opens the fold.
 
 ## 5. Colour
 
