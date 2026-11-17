@@ -380,10 +380,22 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   holding a leftover core.alive pid; it now asks server.al.procs status
   (image + creation time) and leaves a reused pid alone (rc 0, the core is
   not running). ZERO-CLICK: runs inside pytest, no user step.
-- [ ] TEST-COVER (build) Line coverage with stdlib trace; the untested
-  modules listed in docs/research (a file); tests added for the worst gaps.
-  ACCEPT: coverage file committed; worst gaps covered. ZERO-CLICK: one
-  command (tools/cover.py) writes the report, no user step.
+- [x] TEST-COVER (build) Line coverage with stdlib trace; the untested
+  modules listed in a docs file; tests added for the worst gaps. ACCEPT:
+  coverage file committed; worst gaps covered. DONE 2026-11-17:
+  tools/cover.py (sys.settrace + threading.settrace limited to server/ and
+  tools/, co_lines denominator, runs the whole suite through the suite
+  gate) writes docs/audit/test-coverage.md. First run 87.5% (server/
+  90.2%); tests/test_cover_gaps.py (21 tests: entry helpers, procs CLI and
+  forced stop, keepalive launcher / logger / CLI give-up, real webfetch
+  transport on loopback) and tests/test_cover_tool.py lift it to 89.1%
+  (server/ 93.1%; procs 63 -> 91, keepalive 70 -> 88, webfetch 80 -> 92).
+  Left low on purpose: modules run only in a child process (the report
+  names them). The tighter fuzz contract found (5) FUZZ-5 a lone surrogate
+  in pasted character JSON escaped model.parse as UnicodeEncodeError, not
+  BuildError (/api/build-code got no 400) - fixed in model._root.
+  ZERO-CLICK: one command (tools/cover.py) writes the report, no user
+  step.
 
 ## Ops
 

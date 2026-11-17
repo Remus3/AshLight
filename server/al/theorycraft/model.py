@@ -191,6 +191,11 @@ def _root(xml):
         raise BuildError("DTDs are not allowed in build XML")
     try:
         root = ET.fromstring(xml.encode(codec.ENCODING, codec.ERRORS))
+    except UnicodeEncodeError as e:
+        # FUZZ-5: a lone surrogate (e.g. a "\udfff" escape in pasted
+        # character JSON) is not text; it escaped as a non-BuildError and
+        # POST /api/build-code got no 400.
+        raise BuildError("bad build XML: not valid text") from e
     except ET.ParseError as e:
         raise BuildError(f"bad build XML: {e}") from e
     if root.tag not in ROOTS:

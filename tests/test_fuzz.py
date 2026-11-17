@@ -84,7 +84,7 @@ NINJA_OVERVIEW = ('{"lines":[{"id":"divine","primaryValue":12.5,"volumePrimaryVa
 NINJA_LEAGUES = '[{"id":"Standard","name":"Standard"}]'
 
 ALPHABET = ("abcXYZ:;()[]{}<>@#$%&\"' 0123456789.-+_/=\\\t\r\n\x00\x7f"
-            "éëサ—﻿𐏿")
+            "\u00e9\u00eb\u30b5\u2014\ufeff\ud800\udfff")
 TOKENS = ["9" * 400, "-1", "1e308", "-1e308", "nan", "inf", "-0", ": ", "@From ",
           "--------", "(implicit)", "{ ", " }", "(10-20)", "Rarity: ", "Item Class: ",
           " listed for ", " in ", "(stash tab \"", "\"; position: left ", ", top ",
@@ -150,7 +150,7 @@ def _value(rng, depth=0):
         return rng.choice(["", " ", "x", "link", "done", "waiting", "off", "error",
                            "upgrade", "downgrade", "sidegrade", "pob", "no build loaded",
                            "not an item", "+# to maximum Life", "Adds # to # Fire",
-                           "#% increased Speed", "サ" * 3, "a" * 3000,
+                           "#% increased Speed", "\u30b5" * 3, "a" * 3000,
                            "https://www.pathofexile.com/trade2/search/poe2/Standard?q=%7B%7D"])
     if r < 0.62 and depth < 3:
         return [_value(rng, depth + 1) for _ in range(rng.randint(0, 4))]
@@ -257,8 +257,12 @@ def test_fuzz_share_code_codec_raises_only_code_error():
 
 
 def test_fuzz_share_code_round_trip_is_exact():
+    # the codec's claim: any UTF-8 text plus surrogate escapes (bytes that
+    # are not UTF-8, U+DC80-U+DCFF) round-trips exactly
+    alphabet = ALPHABET.replace(chr(0xD800), chr(0xDC80)).replace(chr(0xDFFF), chr(0xDCFF))
+
     def gen(rng):
-        body = "".join(rng.choice(ALPHABET) for _ in range(rng.randint(0, 200)))
+        body = "".join(rng.choice(alphabet) for _ in range(rng.randint(0, 200)))
         return "<PathOfBuilding2>" + body
 
     def target(xml):
@@ -269,14 +273,16 @@ def test_fuzz_share_code_round_trip_is_exact():
 
 def test_fuzz_build_xml_and_code_raise_only_value_errors():
     good = codec.encode(POB_XML)
-    _run("model.parse", model.parse, lambda r: _input(r, POB_XML), allowed=(ValueError,))
+    # documented contract: codec.CodeError or BuildError, nothing else
+    _run("model.parse", model.parse, lambda r: _input(r, POB_XML),
+         allowed=(model.BuildError,))
     _run("model.from_code", model.from_code, lambda r: _input(r, good),
-         allowed=(ValueError,))
+         allowed=(codec.CodeError, model.BuildError))
 
 
 def test_fuzz_character_json_raises_only_value_errors():
     _run("charjson", charjson.from_json, lambda r: _input(r, CHAR_JSON),
-         allowed=(ValueError,))
+         allowed=(model.BuildError,))
 
 
 def test_fuzz_ninja_parsers_yield_finite_rates():
@@ -402,3 +408,13 @@ def test_malformed_card_fields_read_honestly(card):
 
 def test_non_dict_trade_row_reads_honestly():
     assert state.trade_card_text(None)["text"].endswith("wants an item - no price set")
+
+
+def test_lone_surrogate_in_character_json_is_a_build_error():
+    # FUZZ-5: a "\udfff" JSON escape in a pasted character object raised
+    # UnicodeEncodeError past the BuildError contract (/api/build-code 400).
+    text = CHAR_JSON.replace('"Sorceress"', '"Sorc' + chr(92) + 'udfffress"')
+    with pytest.raises(model.BuildError):
+        charjson.from_json(text)
+    with pytest.raises(model.BuildError):
+        model.parse("<PathOfBuilding2>" + chr(0xD800) + "</PathOfBuilding2>")
