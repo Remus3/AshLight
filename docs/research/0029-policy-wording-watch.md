@@ -1,4 +1,4 @@
-# 0028 - Policy wording watch (overlay / macro rules)
+# 0029 - Policy wording watch (overlay / macro rules)
 
 ROADMAP row POLICY-WORDING-WATCH. Not legal advice. This file is the
 standing log for one recurring check: after GGG's 1.0 notes (2026-12-11)
