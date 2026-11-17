@@ -12,6 +12,15 @@ The text uses GGG's documented filter syntax only (Show blocks with
 conditions and actions, `#` comments). It highlights the item bases the
 build wears, so a better roll of the same base stands out on the ground.
 Nothing from another filter is copied.
+
+Checked against GGG's filter reference (pathofexile.com/item-filter/about,
+read 2026-11-17, research 0025; PoE2 uses the same grammar): SetFontSize
+1-45, colours 0-255 per channel, PlayEffect / MinimapIcon colour and shape
+words, `Import "<file>" Optional`. A Show block without `Continue` stops
+matching for the items it catches, so the Import goes near the top. When
+the build-time base list is cached (decision 0009) a base name the game
+data does not know is left out: such a BaseType value would make the
+player's filter fail to load.
 """
 
 import re
@@ -43,16 +52,38 @@ def bases(build):
     return out[:MAX_BASES]
 
 
-def generate(build):
+def known(names, base_names):
+    """(kept, dropped): the names found in `base_names` ({lower: name},
+    basetypes.NamesCache) in the game's spelling; all kept when no list."""
+    if not isinstance(base_names, dict) or not base_names:
+        return list(names), []
+    kept, dropped = [], []
+    for n in names:
+        real = base_names.get(n.lower())
+        if isinstance(real, str) and _clean(real) == real:
+            if real not in kept:
+                kept.append(real)
+        else:
+            dropped.append(n)
+    return kept, dropped
+
+
+def generate(build, base_names=None):
     """The filter text (ASCII, LF). With no build or no bases it is a valid
-    filter made of comments only, so an Import of it changes nothing."""
+    filter made of comments only, so an Import of it changes nothing.
+    `base_names` (optional, the cached snapshot base list) drops names the
+    game data does not know."""
     lines = ["# ashlight.filter - made by AshLight from your loaded build.",
              "# " + NOTICE,
              "# Save this file in your item filter folder, then add this line",
              "# near the top of your own filter:",
              "#   " + IMPORT_LINE,
              ""]
-    names = bases(build) if build is not None else []
+    names, dropped = known(bases(build) if build is not None else [], base_names)
+    if dropped:
+        n = len(dropped)
+        lines.append(f"# Left out {n} item base{'s' if n != 1 else ''} that the game data "
+                     "does not list.")
     if not names:
         lines += ["# No build loaded, or no gear in it.",
                   "# Load a build in AshLight, then download this again."]

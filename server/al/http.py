@@ -249,7 +249,9 @@ class Handler(BaseHTTPRequestHandler):
             # core writes no file anywhere
             hdr = dict(extra, **{"Content-Disposition":
                                  f'attachment; filename="{lootfilter.FILE_NAME}"'})
-            return self._send(200, lootfilter.generate(core.builds.build),
+            names = getattr(core, "base_names", None)
+            names = names.get() if names is not None else None
+            return self._send(200, lootfilter.generate(core.builds.build, names),
                               "text/plain; charset=utf-8", hdr)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)

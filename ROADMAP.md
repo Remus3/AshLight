@@ -520,7 +520,14 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   extra button. DONE 2026-11-17 (area-util b5): theorycraft/waystone.py
   rule table (12 rules on PoB resist / life / ES numbers), eval.waystone
   on the card, decision 0030; tests/test_waystone.py. Real waystone text
-  not yet checked live.
+  not yet checked live. VERIFIED 2026-11-17 (area-util b6, research 0025
+  section 3) against the repoe-fork waystone mod pool in the sidecar
+  snapshot: 5 rules matched no waystone mod (no regen, ES recharge, curse,
+  reflect, projectiles) and were removed, monster_crit no longer flags
+  "Monsters take reduced Extra Damage from Critical Hits", added
+  penetration / bleed / ailments / speed; 11 rules, each matching real
+  mods, fixtures in real wording. LIVE-WAYSTONE: one real Ctrl+C waystone
+  text through the press (properties block, rolled-value shape).
 - [x] UTIL-SEARCHSTR (build) Search-string builder on the dashboard: a
   stash / vendor search string (<= 250 chars, limit to verify in game)
   from the loaded build (wanted bases, resistances, life / ES) and from
@@ -533,7 +540,12 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   (resists, life / ES, movement, gear bases, waystone NOT string from the
   UTIL-WAYSTONE rules), `search_strings` in GET /api/build, web/search.js
   card with Copy on click only (no live region); decision 0030. The 250
-  limit and the regex syntax are still to verify in game.
+  limit and the regex syntax are still to verify in game. VERIFIED
+  2026-11-17 (area-util b6, research 0025 section 1): 250 is GGG's limit
+  since 0.5.0 (patch notes); `"a|b"` / `"!a|b"` matches the community-
+  documented regex syntax; worst-case waystone string (no build) 249
+  chars, no term dropped (test). LIVE-SEARCHSTR: confirm in game that a
+  leading `!` negates the whole OR group.
 - [x] UX-ZONE-NOTES (build) Zone notes while levelling: on each campaign
   `[SCENE]` / area line show one short AshLight-authored note (objective,
   quest reward to take) in the overlay status slot and the dashboard act
@@ -547,7 +559,13 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   Cruel), server/al/zonenotes.py, snapshot `zone_note`, "Zone note:" line
   in the Act times card; decision 0030. Not done: the overlay word (the
   2-line HUD rule, design 0001 7.2 / 10, has no free slot); notes not yet
-  checked in play.
+  checked in play. VERIFIED 2026-11-17 (area-util b6, research 0025
+  section 3): with the world_areas snapshot fetched, every Act 1-4 and
+  Interlude id resolves (test runs, no longer skipped); 3 Act 2 names
+  fixed ("The Ardura Caravan", "The Dreadnought's Wake", "Dreadnought");
+  a new test ties every zone-keyed note to a snapshot area name. No Cruel
+  ids in the snapshot (act default kept). LIVE-ZONE-NOTES: check that the
+  [SCENE] names equal the snapshot names in play.
 - [x] UTIL-FILTER (build) Loot filter snippet: generate an AshLight-original
   `ashlight.filter` (price tiers from the cached poe.ninja overviews,
   bases / gems of the loaded PoB build) offered as a dashboard download;
@@ -564,7 +582,13 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   2026-11-17 (area-util b5), base highlight part: theorycraft/
   lootfilter.py, GET /api/filter (attachment, no file written), dashboard
   "Download ashlight.filter" button, decision 0031, grammar and no-write
-  tests. Price tiers and the merge moved to UTIL-FILTER-2.
+  tests. Price tiers and the merge moved to UTIL-FILTER-2. VERIFIED
+  2026-11-17 (area-util b6, research 0025 section 2): every keyword and
+  range is in GGG's filter reference (PoE2 shares the grammar); no Class
+  condition is used; with the snapshot base list cached, base names the
+  game data does not know are left out (an unknown BaseType breaks the
+  filter). LIVE-FILTER: load the downloaded file through the Import line
+  in game once.
 - [ ] UTIL-FILTER-2 (build) Loot filter, part 2: price-tier blocks from
   the cached poe.ninja overviews in ashlight.filter, and the optional merge
   into a filter the player hands over via the browser file input (upload

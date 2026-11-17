@@ -14,10 +14,11 @@ prints (decision 0030); no third-party mod list is copied. Each rule:
 - `when`: "always", {"res": <element>|"$1", "below": N} (risky while the
   build's resistance is under N, or unknown), {"defence": "es"|"life"}
   (risky when that pool is at least half of life + energy shield, or
-  unknown);
+  unknown; no current rule uses it);
 - `label`: words for the dashboard sentence ("{el}" is the element,
   "{res}" the build's value); `short`: the overlay card word;
-- `avoid`: the search-box term that finds the mod (UTIL-SEARCHSTR).
+- `avoid`: the search-box term (or tuple of terms) that finds the mod
+  (UTIL-SEARCHSTR); a plain lower-case substring of the mod line.
 A build stat that is missing reads as unknown, and unknown is risky: the
 card would rather say too much than hide a danger.
 """
@@ -29,54 +30,59 @@ from . import item as item_parser
 RES_CAP = 75
 RES_STAT = {"fire": "FireResist", "cold": "ColdResist",
             "lightning": "LightningResist", "chaos": "ChaosResist"}
-GROUND = {"burning": "fire", "ignited": "fire", "chilled": "cold",
-          "shocked": "lightning", "shocking": "lightning"}
+GROUND = {"ignited": "fire", "chilled": "cold", "shocked": "lightning"}
 MAX_MODS = 24
 MAX_LINE = 200
 
+# AREA-UTIL b6: every pattern below was checked against the waystone mod
+# pool (area-domain prefixes / suffixes with map_key spawn weights) of the
+# repoe-fork mods snapshot fetched 2026-11-17 (decision 0009 build-time
+# cache, never bundled). Rules whose wording no waystone mod carries (no
+# regeneration, curses, reflect, extra projectiles, energy shield
+# recharge) were removed; penetration, bleeding, ailments and speed were
+# added. tests/test_waystone.py holds one real-shaped line per rule.
 RULES = (
     {"id": "extra_element", "short": "Extra {el} dmg",
      "match": r"(?:as extra|extra damage as) (fire|cold|lightning|chaos)\b",
      "when": {"res": "$1", "below": RES_CAP},
      "label": "extra {el} damage ({el} resistance {res})", "avoid": "extra {el}"},
     {"id": "ground", "short": "{El} ground",
-     "match": r"patches of (burning|ignited|chilled|shocked|shocking) ground",
+     "match": r"patches of (ignited|chilled|shocked) ground",
      "when": {"res": "$1", "below": RES_CAP}, "elements": GROUND,
      "label": "{el} ground ({el} resistance {res})", "avoid": "{word} ground"},
-    {"id": "no_regen", "short": "No regen",
-     "match": r"cannot (?:regenerate|recover)",
-     "when": "always", "label": "no regeneration", "avoid": "cannot rege"},
-    {"id": "less_recovery", "short": "Less recovery",
-     "match": r"(?:less|reduced) recovery|(?:less|reduced) life regeneration",
-     "when": {"defence": "life"}, "label": "less life recovery", "avoid": "recovery rate"},
-    {"id": "es_recharge", "short": "Slow ES recharge",
-     "match": r"(?:less|reduced) energy shield recharge",
-     "when": {"defence": "es"}, "label": "slower energy shield recharge",
-     "avoid": "shield recharge"},
     {"id": "max_res", "short": "Lower max res",
-     "match": r"-\d+% to (?:all )?maximum (?:player |elemental )?resistances?"
-              r"|maximum player resistances",
-     "when": "always", "label": "lower maximum resistances", "avoid": "maximum player res"},
+     "match": r"maximum player resistances|-\d+% to (?:all )?maximum resistances",
+     "when": "always", "label": "lower maximum resistances", "avoid": "maximum player"},
+    {"id": "penetration", "short": "Res penetration",
+     "match": r"monsters?\b.*penetrates? .*elemental resistances",
+     "when": "always", "label": "monsters penetrate elemental resistances",
+     "avoid": "penetrates"},
+    {"id": "less_recovery", "short": "Less recovery",
+     "match": r"(?:less|reduced) recovery rate of life",
+     "when": "always", "label": "less life and energy shield recovery",
+     "avoid": "rate of life"},
     {"id": "monster_crit", "short": "Monster crits",
-     "match": r"monsters?\b.*critical (?:hit|strike|damage)",
-     "when": "always", "label": "monster critical hits", "avoid": "critical"},
-    {"id": "curse", "short": "Cursed",
-     "match": r"cursed with ([a-z ]+)",
-     "when": "always", "label": "cursed with {el}", "avoid": "cursed with"},
-    {"id": "reflect", "short": "Reflect",
-     "match": r"\breflect",
-     "when": "always", "label": "reflected damage", "avoid": "reflect"},
+     "match": r"monsters? have .*critical (?:hit chance|damage bonus)",
+     "when": "always", "label": "monster critical hits",
+     "avoid": ("critical hit chance", "critical damage bonus")},
+    {"id": "speed", "short": "Fast monsters",
+     "match": r"monsters? have .*increased attack, cast and movement speed",
+     "when": "always", "label": "faster monsters", "avoid": "cast and movement"},
     {"id": "poison", "short": "Poison",
-     "match": r"monsters?\b.*poison",
+     "match": r"monsters? have .*chance to poison",
      "when": {"res": "chaos", "below": 0},
-     "label": "monster poison (chaos resistance {res})", "avoid": "poison"},
-    {"id": "projectiles", "short": "Extra projectiles",
-     "match": r"monsters?\b.*additional projectiles?",
-     "when": "always", "label": "extra monster projectiles", "avoid": "additional proj"},
+     "label": "monster poison (chaos resistance {res})", "avoid": "to poison"},
+    {"id": "bleed", "short": "Bleeding",
+     "match": r"monsters? have .*chance to inflict bleeding",
+     "when": "always", "label": "monster bleeding", "avoid": "bleeding"},
+    {"id": "ailments", "short": "Strong ailments",
+     "match": r"monsters? have .*increased elemental ailment application",
+     "when": "always", "label": "stronger monster elemental ailments",
+     "avoid": "ailment application"},
     {"id": "flasks", "short": "Weak flasks",
-     "match": r"(?:less|reduced) (?:flask|charm) (?:effect|charges|recovery)"
-              r"|(?:flask|charm) charges? (?:gained|used)",
-     "when": "always", "label": "weaker flasks", "avoid": "flask"},
+     "match": r"(?:less|reduced) flask charges|(?:less|reduced) (?:flask|charm) "
+              r"(?:effect|recovery)",
+     "when": "always", "label": "fewer flask charges", "avoid": "flask charges"},
 )
 _COMPILED = tuple((r, re.compile(r["match"])) for r in RULES)
 _TAG_RE = re.compile(r"\s*\((?:%s)\)$" % "|".join(item_parser.MOD_TAGS), re.I)
@@ -160,7 +166,9 @@ def _check_rule(rule, m, stats):
         share = _share(stats, when["defence"])
         risky = share is None or share >= 0.5
     label = rule["label"].format(el=el, res=_fmt_res(res))
-    avoid = rule["avoid"].format(el=el, word=word)
+    avoid = rule["avoid"]
+    avoid = tuple(a.format(el=el, word=word)
+                  for a in ((avoid,) if isinstance(avoid, str) else avoid))
     short = rule["short"].format(el=el, El=el.capitalize())
     return risky, label, avoid, short
 
@@ -214,8 +222,9 @@ def avoid_terms(build):
             words = list(GROUND)
         for w in words:
             hit, _label, avoid, _short = _check_rule(rule, _Fake(w), stats)
-            if hit and avoid not in terms:
-                terms.append(avoid)
+            for a in (avoid if hit else ()):
+                if a not in terms:
+                    terms.append(a)
     return terms
 
 

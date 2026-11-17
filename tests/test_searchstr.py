@@ -87,3 +87,15 @@ def test_unknown_stats_ask_for_everything():
                                     'chaos res"')
     assert s["defence"]["text"] == '"maximum life|maximum energy shield"'
     assert len(s["waystone"]["text"]) <= searchstr.MAX_LEN
+
+
+def test_worst_case_waystone_string_keeps_every_term_within_the_limit():
+    # AREA-UTIL b6: the limit is 250 since PoE2 0.5.0 (research 0025). With
+    # no build numbers every waystone rule is risky; all terms must still fit.
+    s = by_id(_build({}))
+    assert searchstr.MAX_LEN == 250
+    w = s["waystone"]
+    assert len(w["text"]) <= 250 and w["dropped"] == 0
+    assert w["text"].startswith('"!') and w["text"].count('"') == 2
+    for t in w["text"][2:-1].split("|"):
+        assert t == searchstr.clean(t) and t
