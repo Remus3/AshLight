@@ -177,10 +177,14 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   TC-BRIDGE, TC-EVAL. ACCEPT: delta tests on fixtures; falls back to stat
   weights with a visible notice when the component is off.
   ZERO-CLICK: deltas recompute on item or build change, no Calculate button.
-- [ ] TC-DRIFT (review) On each PoB-PoE2 release: run the bridge tests
+- [x] TC-DRIFT (review) On each PoB-PoE2 release: run the bridge tests
   against the new tag, then move the pin in one commit, or hold it and
   record why. ACCEPT: pin moved or a dated hold note in decision 0004.
   ZERO-CLICK: a loop check spots the new tag and runs the tests unattended.
+  DONE 2026-11-17 (area-math): HOLD, pin current; latest release v0.23.1
+  (7d6f530c) and LuaJIT v2.1 head 63c8f1a9 both equal config/tc_pins.json,
+  read back from the GitHub API; dated note in decision 0004 "Pin log".
+  Re-open on the next PoB-PoE2 v0.* release.
   HOLD 2026-11-17 (AREA-RES, research 0017): no PoB-PoE2 release after
   v0.23.1 (2026-07-28); dev is 109 commits ahead (0.5.5 rune / runemastered
   data, trader fix for Forbidden Rites, HeadlessWrapper "Restore headless
@@ -197,6 +201,65 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   credential store, refresh handled, into the build model. BLOCKED on
   TC-OAUTH-REG. ACCEPT: mocked-flow tests; no POESESSID; no undocumented
   endpoint. ZERO-CLICK: one sign-in ever; silent refresh after that.
+
+### Math (non-engine; area-math lane, 2026-11-17)
+
+Legitimate math around PoB interop, never an own damage / EHP calc engine
+(decision 0004): parsing, normalisation, value and codec robustness. Stat
+weights derived from PoB outputs stay with TC-DELTA.
+
+- [x] MATH-ITEM (build) Item-mod parsing and stat-key normalisation
+  robustness: fixtures over many item classes (weapon, normal / magic /
+  rare / unique, flask, charm, shield, focus, quiver, gem, waystone,
+  socketable, unidentified, corrupted, quality, rune sockets, CRLF + BOM),
+  signed roll ranges "(-20--10)", PoB bare ranges "+(40-60)" read at
+  {range:r} (default midpoint, half away from zero to the endpoints'
+  places), flask / charm property lines kept out of mods, flavour / help
+  text (full stop) never a mod, hybrid-line sign from the first governing
+  word. ACCEPT: tests/test_math_item.py incl. stdlib property tests (random
+  text, fixture mutations, idempotent keys) green.
+  ZERO-CLICK: parsing runs on the existing hotkey press; tests unattended.
+  DONE 2026-11-17: server/al/theorycraft/item.py (strip_rolls,
+  resolve_range), weights.stat_key; known limit: a magic item's base keeps
+  its affix words (no base list without a data snapshot).
+- [x] MATH-CODEC-FUZZ (build) Property / fuzz tests for the PoB2 share-code
+  codec: random XML round trips byte-exact under every framing, URL-safe
+  and padded / unpadded / whitespace-wrapped codes, truncation and bit
+  flips raise CodeError only (never another exception), deflate-bomb cap.
+  ACCEPT: stdlib-only tests with fixed seeds; any defect found fixed.
+  ZERO-CLICK: tests run unattended in the suite.
+  DONE 2026-11-17: tests/test_math_codec_fuzz.py (19 tests, ~4k cases);
+  no codec defect found, codec.py unchanged.
+- [x] MATH-VALUE (build) Price-per-stat value math on poe.ninja rates:
+  parse the item's own Note price ("~price 5 exalted", "~b/o 1/2 divine"),
+  convert any currency to the primary via the cached rates (cross rates,
+  missing / zero rate -> no value, never a guess; stale rates carry the
+  snapshot's stale flag), and score per primary
+  unit for the evaluated item. ACCEPT: pure-function tests on synthetic
+  rates; no network; decision 0013 (web data off -> cached or nothing).
+  ZERO-CLICK: computed on the same hotkey press from cached rates.
+  DONE 2026-11-17: server/al/theorycraft/value.py (parse_note_price,
+  to_primary, convert, per_unit, value_of; 6 significant figures); the item
+  check card (LastEval) carries `value` from core's cached rates snapshot,
+  no request; tests/test_math_value.py incl. cross-rate round-trip and
+  transitivity properties. Dashboard display is MATH-VALUE-UI.
+- [ ] MATH-VALUE-UI (build) Show the item check card's `value` on the
+  dashboard Item check card: "Listed 4 Exalted Orb = 0.008 Divine Orb,
+  2,500 score per Divine Orb", the rates' stale state and the poe.ninja
+  credit; nothing when `value` is null. After MATH-VALUE. ACCEPT: web test
+  on a synthetic card; design-reviewer pass.
+  ZERO-CLICK: appears with the item check of the same hotkey press.
+- [x] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
+  verdict-band properties (antisymmetry of the delta, band monotone in the
+  old score, rounding stable at 4 places, NaN / inf / huge values from a
+  weights file or item never crash or flip a verdict), ring best-slot pick
+  ties deterministic. ACCEPT: stdlib property tests; defects fixed.
+  ZERO-CLICK: tests run unattended in the suite.
+  DONE 2026-11-17: defect fixed - a huge roll ("+999...9 to maximum Life")
+  made the score inf and the eval JSON invalid (Infinity); now a value past
+  1e9 or non-finite is no value (weights.MAX_VALUE, item._number), score
+  skips non-finite terms, verdict on non-finite input is sidegrade, _clean
+  maps non-finite to 0. tests/test_math_num.py.
 
 ## Research-filed features (AREA-RES 2026-11-17, research 0020)
 
