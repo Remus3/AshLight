@@ -43,7 +43,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   review); F3 every skipped doc maps to "not an item" incl. build_query's
   "item has no base type" (map only reason "not an item"). ACCEPT: tests
   per mapping; design-reviewer pass. ZERO-CLICK: code row.
-- [ ] PRICE-TRADE-LINK (build) Decision 0017: remove every reachable app
+- [x] PRICE-TRADE-LINK (build) Decision 0017: remove every reachable app
   HTTP path to trade2 (/data/stats, /data/leagues, /search, /fetch); keep
   build_query offline, producing
   https://www.pathofexile.com/trade2/search/poe2/<league>?q=<json>; price
@@ -55,6 +55,8 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   trade2 request; URL round-trip test; design-reviewer pass.
   ZERO-CLICK: the item-check press builds the link with the price card; the
   user clicks it only if they want the trade site.
+  DONE 2026-11-17: trade network code deleted, webfetch refuses trade URLs,
+  offline search_link (research 0016), card status "link" (0016 amendment).
 
 ## Lane: data
 

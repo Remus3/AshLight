@@ -46,11 +46,13 @@ its code (license notes: 0006).
 - 0015 PoB2 spec node ids vs GGG tree export skill ids - identical id space
   (PoB2 source plus a 4914-node cross-check); id_match guard (DATA-TREE-IDS)
   ([0015-pob2-tree-node-ids.md](0015-pob2-tree-node-ids.md))
+- 0016 trade2 search link form - `?q=<JSON>` built by community tools,
+  rarity filter path, undocumented by GGG (PRICE-TRADE-LINK)
+  ([0016-trade2-search-link.md](0016-trade2-search-link.md))
 
 ## Open research (feeds ROADMAP)
 
 - Verify the PoE2 lines marked UNVERIFIED in 0002 against a live log (LIVE-1).
-- Live trade2 rate-limit values (0004) from a real response's headers.
 - Whether PoE2 "Fullscreen" is exclusive (0007); test the overlay in each mode.
 - poe2db proper-noun check and a direct USPTO / EUIPO search for "Ashlight"
   before publishing (poe2wiki / poewiki done in 0009: 0 hits).

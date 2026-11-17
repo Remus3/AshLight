@@ -253,6 +253,9 @@ textarea, .weights-form input {
    glyph (kit pill); colour only repeats it. Prices are never red. */
 .price-box { margin-top: 12px; }
 .price-box .pill { font-weight: 600; }
+/* PRICE-TRADE-LINK (decision 0017): the trade search link, opened by a click */
+.price-link { margin: 4px 0 0; overflow-wrap: anywhere; }
+.price-link a { display: inline-block; min-height: 24px; padding: 2px 0; }
 .price-list, .rates-list { list-style: none; margin: 0; padding: 0; }
 .price-list li, .rates-list li {
   display: flex;

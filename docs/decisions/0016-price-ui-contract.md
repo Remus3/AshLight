@@ -143,3 +143,25 @@ in trade.py / webfetch.py change (the constants in price.py follow them).
 Amended by 0017 (2026-11-17): Fork 1: the card gains status "link" with a
 `url`; the dashboard shows a click-through link, the overlay a short
 notice. See docs/decisions/0017-trade-no-app-calls-and-floor-wording.md.
+
+AMENDMENT 2026-11-17 (PRICE-TRADE-LINK, built). DECISION: Fork 1's card is
+now `status` link | error (searching / waiting / done / off stay in the
+enum and keep their words in `state.py` for older readers, but the core no
+longer produces them), plus a new field `url`: the trade2 search URL
+`https://www.pathofexile.com/trade2/search/poe2/<league>?q=<url-encoded
+JSON>` while `link`, else null (research 0016). `price.card_of()` emits
+`link` only when `trade.is_search_link(url)` holds; `wait_s`, `count` stay
+null and `listings` empty. `league` is config/local.json "league", else
+"Standard"; nothing is fetched. The press builds the link offline, so the
+web-data opt-in and the contact no longer gate the price card (`off` and
+`contact not set` are not produced); `error` is `not an item` | `no base
+type` | free text. Words (`state.py PRICE_TEXT["link"]`): overlay line
+"Trade link ready", empty detail; the merged card carries that line; the
+dashboard sentence names the league, and `web/prices.js` shows the URL as
+a link (target _blank, rel noopener noreferrer, shown only when it matches
+the trade2 search shape) with the badge "link ready". The core never opens
+the URL. The dashboard's web-data copy no longer lists trade prices.
+ALTERNATIVES: a new card kind beside `price`; keep `done` with the link in
+it. WHY: one card slot and one contract field; `done` implied prices the
+app no longer has. REVERSES IF: decision 0017 reverses (then `url` stays
+null and the enum is unchanged).

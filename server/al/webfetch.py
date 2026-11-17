@@ -1,4 +1,4 @@
-"""The one outbound web path of the AshLight core (DATA-NINJA, TC-URL, PRICE-1).
+"""The one outbound web path of the AshLight core (DATA-NINJA, TC-URL).
 
 Rules (CLAUDE.md "Game ToS floor", decision 0013):
 - nothing is requested unless the user's web-data opt-in is on (the caller
@@ -11,7 +11,9 @@ Rules (CLAUDE.md "Game ToS floor", decision 0013):
   MAX_REDIRECTS times, so no redirect can leave the allowlist (SSRF guard);
 - a truthful User-Agent naming AshLight and its version on every request;
   never a cookie (no POESESSID, no cookie jar);
-- a response size cap and a short timeout on every request.
+- a response size cap and a short timeout on every request;
+- never the official trade site or its API, whatever a caller's allowlist
+  says (decision 0017, `is_trade_url`).
 
 `http_request` is the real transport; every client takes an injectable
 `fetch(method, url, headers, body)` -> (status, headers dict, body bytes) so
@@ -91,7 +93,7 @@ def user_agent(purpose, contact=None):
 
 
 def blocked_reason(enabled, contact):
-    """Why a contact-requiring fetch (poe.ninja, trade2, GGG) may not run now:
+    """Why a contact-requiring fetch (poe.ninja, GGG) may not run now:
     REASON_OFF, REASON_CONTACT, or None when it may."""
     if not (enabled() if callable(enabled) else enabled):
         return REASON_OFF
@@ -131,9 +133,22 @@ def check_url(url, allowed_hosts):
         raise UrlNotAllowed("IP-literal hosts are not fetched")
     except ValueError:
         pass
+    if is_trade_url(parts):
+        raise UrlNotAllowed("the trade site is never called by the app (decision 0017)")
     if host not in {h.lower() for h in allowed_hosts}:
         raise UrlNotAllowed(f"host not allowed: {host or '(none)'}")
     return parts
+
+
+def is_trade_url(parts):
+    """True for any path of the official trade site or its API (decision
+    0017: the app calls no trade endpoint; a link the user opens in their
+    own browser is built by server/al/trade.py, never requested here)."""
+    host = (parts.hostname or "").lower().rstrip(".")
+    if host != "pathofexile.com" and not host.endswith(".pathofexile.com"):
+        return False
+    path = urllib.parse.unquote(parts.path or "").lower()
+    return path.startswith(("/trade", "/api/trade"))
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):

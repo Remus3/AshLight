@@ -647,6 +647,19 @@
     }
     $("price-list").replaceChildren(frag);
     $("price-when").textContent = v ? v.when : "";
+    // PRICE-TRADE-LINK (decision 0017): the player's click opens the trade
+    // search in their browser; AshLight never opens or fetches it
+    var box = $("price-link");
+    box.replaceChildren();
+    box.hidden = !(v && v.link);
+    if (v && v.link) {
+      var a = el("a", "out", v.link.text);
+      a.href = v.link.href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.setAttribute("aria-label", v.link.label);
+      box.appendChild(a);
+    }
   }
 
   /* ---- GFX-ADVISOR: read on the first open of the panel (a click on the

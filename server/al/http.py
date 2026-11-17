@@ -360,12 +360,13 @@ class Handler(BaseHTTPRequestHandler):
     def _web_data_doc(self):
         core = self.server.core
         return {"web_data": core.web_data_enabled(),
-                "uses": ["poe.ninja currency rates", "build share links you paste",
-                         "price checks you ask for"],
-                # UA-CONTACT: rates and price checks also need the contact
-                # (config/local.json "contact"); the value is never echoed.
+                # decision 0017: the trade link is built offline, so it is
+                # no web-data use; the app calls no trade-site endpoint
+                "uses": ["poe.ninja currency rates", "build share links you paste"],
+                # UA-CONTACT: rates also need the contact (config/local.json
+                # "contact"); the value is never echoed.
                 "contact_set": core.contact() is not None,
-                "needs_contact": ["poe.ninja currency rates", "price checks you ask for"],
+                "needs_contact": ["poe.ninja currency rates"],
                 "blocked": core.web_blocked_reason(),
                 "policy": "docs/decisions/0013-web-data.md"}
 
@@ -432,11 +433,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "slot must be a short string"})
         # TC-EVAL-UI: the result is also published in the state (dashboard
         # and overlay card) and re-scored when the weights or build change.
-        # PRICE-1: the same press queues at most one price check (no second
-        # clipboard read, no second app call); off without the web-data
-        # opt-in and a contact, and the same text within a short window
-        # reuses the last result. The result arrives in the state (`price`,
-        # the decision 0016 card) with the same press time as the eval.
+        # PRICE-TRADE-LINK (decision 0017): the same press builds one
+        # offline trade-search link (no second clipboard read, no request to
+        # the trade site; the core never opens it). It arrives in the state
+        # (`price`, the decision 0016 card, status "link" with `url`) with
+        # the same press time as the eval.
         result = self.server.core.eval_press(text, slot or None)
         return self._json(200, result)
 
