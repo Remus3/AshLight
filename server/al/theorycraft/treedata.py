@@ -21,9 +21,17 @@ Shape, checked against the real PoE2 file in research 0014
   accepted).
 Legacy keys `ascendancyName` (a name) and `classesStart` (class names) are
 still accepted. The pseudo node `root` has no skill and a non-numeric key,
-so it is skipped. PoB2 spec node ids are looked up as export `skill` ids;
-that they match is NOT verified (no PoB2 data read; ROADMAP DATA-TREE-FIX).
-Unknown fields are ignored; a malformed node is skipped, never an error.
+so it is skipped. Unknown fields are ignored; a malformed node is skipped,
+never an error.
+
+Id space (DATA-TREE-IDS, research 0015): a PoB2 build's Spec `nodes`
+attribute holds PoB2 tree node ids, and PoB2 sets each node's id from its
+`skill` field; PoB2's own GGG converter keeps the export's `skill` ids
+unchanged, and PoB2's 0_5 tree ids were all found in the GGG export with the
+same names. So spec node ids ARE export `skill` ids and `resolve` maps them
+1:1 with no table. `id_match` is the guard: a spec whose ids mostly miss the
+loaded tree (a different id space, or a far-off tree version) reads as not
+ok, and the build view then shows no names rather than wrong ones.
 """
 
 import json
@@ -36,6 +44,11 @@ from .. import paths
 
 FILE_NAME = "skilltree.json"
 MAX_BYTES = 256 * 1024 * 1024
+# Share of a spec's ids that must exist in the tree for its names to be
+# trusted (DATA-TREE-IDS). Same id space across one tree version measured
+# 99.5 percent; ids from an unrelated space hit about 8 percent by chance
+# (about 5k nodes over a 16-bit id range), so 0.5 separates the two.
+MIN_ID_MATCH = 0.5
 
 _MARKUP = re.compile(r"\[([^\[\]|]*)\|([^\[\]]*)\]|\[([^\[\]|]*)\]")
 
@@ -111,9 +124,20 @@ class TreeData:
                 out.setdefault(cls, n.id)
         return out
 
+    def id_match(self, node_ids):
+        """{known, total, ok}: how many of the given ids exist in this tree.
+        ok is False when fewer than MIN_ID_MATCH of them do (the ids are not
+        export skill ids of this tree); an empty list is ok."""
+        ids = [n for n in (_id(r) for r in node_ids or ()) if n is not None]
+        known = sum(1 for n in ids if n in self.nodes)
+        return {"known": known, "total": len(ids),
+                "ok": not ids or known >= MIN_ID_MATCH * len(ids)}
+
     def resolve(self, node_ids):
         """[{id, name, ascendancy, notable, keystone}] for the given ids;
-        an id missing from the tree reads with name None."""
+        an id missing from the tree reads with name None. PoB2 spec node ids
+        are export `skill` ids (module docstring), so no mapping applies;
+        check `id_match` before trusting the names."""
         out = []
         for raw in node_ids or ():
             nid = _id(raw)
