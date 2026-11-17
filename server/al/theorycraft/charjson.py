@@ -28,6 +28,13 @@ from . import model
 
 MAX_JSON_CHARS = 2 * 1024 * 1024
 
+# PoE2 base classes (game facts, names only). UTIL-1.0-READY: Duelist and
+# Shadow join at PoE2 1.0 (2026-12-11, research 0018); their ascendancy
+# names are not published yet, so an unknown class name passes through as
+# the class name unchanged, never an error.
+BASE_CLASSES = ("Warrior", "Ranger", "Huntress", "Mercenary", "Sorceress", "Witch",
+                "Monk", "Druid", "Duelist", "Shadow")
+
 # PoE2 ascendancy -> base class (game facts, names only).
 ASCENDANCY_CLASS = {
     "Titan": "Warrior", "Warbringer": "Warrior", "Smith of Kitava": "Warrior",

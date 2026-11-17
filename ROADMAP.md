@@ -297,12 +297,18 @@ recorded in research 0018 section 3.
   DONE 2026-11-17: 13 exchange types (research 0019 list) in the price
   book; Currency itself from rates.json by name; one failing type never
   stops the rest; tests/test_price_book.py.
-- [ ] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
+- [x] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
   Acts 5-6 id prefixes to acts.py, Duelist / Shadow class names, league
   rollover check in ninja.py and the price card league label, refresh the
   repoe-fork snapshot; after launch review the debug sink of the first 1.0
   log for new system lines. ACCEPT: tests with 1.0-shaped fixture lines;
-  rollover test. ZERO-CLICK: data and parser only, nothing for the user.
+  rollover test. ZERO-CLICK: data and parser only, nothing for the user. DONE 2026-11-17 (pre-launch part): G5_/G6_ read as Act 5/6, unknown ids and class names change nothing (tests/test_util_10_ready.py, 1.0-shaped lines); charjson.BASE_CLASSES adds Duelist / Shadow; ninja league re-read every 6 h and within the hour after a 404 / empty overview; trade links and the price card label follow the cached poe.ninja league while web data is on (Core.trade_league, decision 0024). OPEN after launch: refresh the repoe-fork snapshot for Act 5/6 zone levels and review the first 1.0 log's debug sink (filed as UTIL-1.0-POST).
+- [ ] UTIL-1.0-POST (build) After PoE2 1.0 launches (2026-12-11): refresh
+  the repoe-fork world_areas snapshot (build step) so Acts 5-6 get zone
+  levels, add the 1.0 ascendancy names to charjson.ASCENDANCY_CLASS, and
+  review the first 1.0 Client.txt debug sink for new system lines.
+  BLOCKED: PoE2 1.0 not released yet. ACCEPT: fixture lines from the real
+  1.0 log; zone table has G5 / G6 rows. ZERO-CLICK: data and parser only.
 - [ ] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
   Planner `*.build` JSON (Version 1, research 0018 section 3) offered as a
   dashboard "Save .build" download on the player's click; NEVER written

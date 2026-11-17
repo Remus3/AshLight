@@ -98,7 +98,7 @@ class Core:
         # (self.rates is made below; a lambda defers the lookup).
         self.tc_calc = None
         self.last_eval = tc_live.attach(self.builds, self.weights, self.state,
-                                        league=self.configured_league,
+                                        league=self.trade_league,
                                         calc=lambda: self.tc_calc,
                                         rates=lambda: self.rates.snapshot())
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
@@ -118,7 +118,7 @@ class Core:
         # item-hotkey press (POST /api/eval), published as the decision 0016
         # card with the press time. No trade-site request is ever made and
         # the core never opens the link.
-        self.price = price.PriceChecker(league=self.configured_league,
+        self.price = price.PriceChecker(league=self.trade_league,
                                         card=self.state.set_price,
                                         lookup=self.rates.lookup)
 
@@ -158,6 +158,20 @@ class Core:
     def configured_league(self):
         value = self._config().get("league")
         return value if isinstance(value, str) and value.strip() else None
+
+    def trade_league(self):
+        """UTIL-1.0-READY: the league for the offline trade links and the
+        price card label: the configured one, else the current league read
+        from poe.ninja's cached leagues list while web data is on (so a new
+        league, e.g. PoE2 1.0's, is followed without a setting), else None
+        (trade.py then uses Standard). Never a request."""
+        configured = self.configured_league()
+        if configured:
+            return configured
+        if not self.web_data_enabled():
+            return None
+        league = self.rates.doc.get("league")
+        return league.strip() if isinstance(league, str) and league.strip() else None
 
     def set_web_data(self, enabled):
         """Persist the opt-in in the local config, keeping every other key
