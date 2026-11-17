@@ -294,6 +294,7 @@ end
 -- ------------------------------------------------------------ commands --
 
 local handlers = {}
+local GC_CEILING_KB = 384 * 1024 -- MATH-PERF: Lua heap size that forces a full GC
 
 handlers["ping"] = function()
   return { pong = true }
@@ -318,6 +319,12 @@ handlers["load_build"] = function(req)
   if type(build.calcsTab.BuildOutput) == "function" then
     build.calcsTab:BuildOutput()
   end
+  -- MATH-PERF (decision 0028): every load leaves the old build as garbage
+  -- (~20 MB for a real level 90 build) and LuaJIT's default GC pause let
+  -- the heap reach ~600 MB (working set ~900 MB, never returned to the OS)
+  -- over one item check's reloads. A full collect only when the heap is
+  -- past the ceiling keeps the working set near 500 MB at no median cost.
+  if collectgarbage("count") > GC_CEILING_KB then collectgarbage("collect") end
   return { loaded = true }
 end
 

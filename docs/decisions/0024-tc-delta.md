@@ -75,6 +75,14 @@ positive per-mod weights of the compared stats}.
   exists for setup and a slow first press should be a choice. Reverses if:
   the operator rules the calc on whenever installed.
 
+- R7 (2026-11-17, MATH-PERF) Budget on the real bridge (decision 0028):
+  first item check within 60 s (measured 12.4 s), warm check 30 s (3.6
+  to 5.5 s), repeat check 10 s (1.3 s), bridge cold start 30 s (1.2 s),
+  build load / reload 5 s (0.4 / 0.3 s), luajit.exe peak working set
+  768 MB (511 MB with the bridge.lua GC ceiling). Enforced by
+  tests/test_math_perf.py and tests/test_math_e2e_live.py. Reverses if:
+  a re-measure after a pin move or on the target machine says otherwise.
+
 ## Reverses if
 
-See R1-R5.
+See R1-R5 and R7.

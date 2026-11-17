@@ -54,7 +54,8 @@ RETRY_S = 3 * 3600
 RATE_DEFAULT_S = 3600
 TRIAL_STALE_S = 6 * 3600
 TRIAL_MAX_LAUNCHES = 3
-TRIAL_TESTS = ("tests/test_tc_bridge.py", "tests/test_tc_delta.py")
+TRIAL_TESTS = ("tests/test_tc_bridge.py", "tests/test_tc_delta.py",
+               "tests/test_tc_pob_drift_guard.py")  # MATH-POB-DRIFT-GUARD
 TRIAL_TIMEOUT_S = 3600
 MAX_ARCHIVE = 2 * 1024 ** 3
 API_MAX_BYTES = 256 * 1024
