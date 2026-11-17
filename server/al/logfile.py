@@ -335,6 +335,11 @@ class Tailer:
                 raw = raw[:-1]
             if not raw:
                 continue
+            if len(raw) > MAX_PARTIAL:
+                # AUDIT pass 2 (P2-L1): an overlong line is dropped even when
+                # terminated, so no parser regex ever sees one.
+                self.dropped_lines += 1
+                continue
             self.on_line(raw.decode("utf-8", errors="replace"))
             n += 1
         self.lines += n

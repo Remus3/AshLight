@@ -47,9 +47,13 @@ _BARE_RANGE_RE = re.compile(r"(?<![\d)])\((" + _NUM + r")-(" + _NUM + r")\)")
 _POB_RANGE_RE = re.compile(r"\{range:\s*([0-9]*\.?[0-9]+)\s*\}", re.I)
 DEFAULT_RANGE = 0.5
 # flask / charm property lines that carry numbers but are not mods
-_FLASK_PROP_RE = re.compile(r"^(Recovers|Consumes|Currently has|Lasts)\s+(.*\d.*)$")
+# AUDIT pass 2 (P2-I2): no ".*\d.*" (quadratic backtracking on a long line);
+# the digit is checked in code.
+_FLASK_PROP_RE = re.compile(r"^(Recovers|Consumes|Currently has|Lasts) +(\S.*)$")
 _NUM_RE = re.compile(_NUM)
-_TAG_RE = re.compile(r"\s*\((" + "|".join(re.escape(t) for t in MOD_TAGS) + r")\)\s*$", re.I)
+# AUDIT pass 2 (P2-I2): no leading \s* (quadratic under search() on a long
+# blank run); callers rstrip the text before the tag.
+_TAG_RE = re.compile(r"\((" + "|".join(re.escape(t) for t in MOD_TAGS) + r")\)\s*$", re.I)
 _POB_PREFIX_RE = re.compile(r"^(?:\{[^{}]*\})+")
 _ADV_HEADER_RE = re.compile(r"^\{\s(.*)\s\}$")
 _PROP_RE = re.compile(r"^([A-Z][A-Za-z0-9 '()/-]{0,40}):\s*(.*)$")
@@ -73,7 +77,10 @@ def resolve_range(lo, hi, at=DEFAULT_RANGE):
     if not (a.is_finite() and b.is_finite() and f.is_finite()):
         return lo
     places = max(_places(lo), _places(hi))
-    v = (a + (b - a) * f).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+    try:  # AUDIT pass 2 (P2-I1): past the 28-digit context quantize raises
+        v = (a + (b - a) * f).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, ArithmeticError):
+        return lo
     if v == 0:
         v = abs(v)
     return format(v, "f")
@@ -279,6 +286,8 @@ def _body(item, lines, state):
         if line.endswith(".") and header is None and not _has_tag(line):
             continue  # flavour, help or description text: mods carry no full stop
         flask = _FLASK_PROP_RE.match(line)
+        if flask and not any(c.isdigit() for c in flask.group(2)):
+            flask = None
         if flask and any(k in (item.item_class or "").lower() for k in ("flask", "charm")):
             item.properties[flask.group(1)] = flask.group(2).strip()
             continue
