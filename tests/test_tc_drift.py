@@ -1,6 +1,6 @@
 """TC-DRIFT: tools/tc_drift.py spots a new PoB-PoE2 release, trials the
 bridge tests against it unattended, and moves the pin only on a green trial
-(decision 0004 item 3, decision 0018, decision 0023). No network: every
+(decision 0004 item 3, decision 0018, decision 0025). No network: every
 request goes through an injected fake transport."""
 
 import json

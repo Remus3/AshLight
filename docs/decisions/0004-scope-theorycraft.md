@@ -105,7 +105,7 @@ small, keeps the core dependency-free, adds no contact with the game, and
 puts the effort into what no existing tool does: the build next to the live
 session and one-press "is this an upgrade for me".
 
-## Pin log (TC-DRIFT, decision 0023)
+## Pin log (TC-DRIFT, decision 0025)
 
 One dated line per drift check that changed nothing or moved the pin;
 `python tools/tc_drift.py note` prints the next line.
