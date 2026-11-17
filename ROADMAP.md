@@ -60,8 +60,10 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [ ] UX-REVIEW (review) Glanceability review of dashboard and overlay
   (contrast, type scale, motion, phone width) against research 0008.
   ACCEPT: findings fixed or filed.
-- [ ] RES-POLICY (review) Re-read GGG's developer docs and ToU each patch
+- [x] RES-POLICY (review) Re-read GGG's developer docs and ToU each patch
   cycle; update research 0001 and the CLAUDE.md floor if anything changed.
+  Done 2026-11-17: policy unchanged; 3 floor wording proposals in research
+  0001 for MAIN / operator.
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
 
@@ -168,8 +170,9 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   each [{"hooks": [{"type": "command", "command": "python
   \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""}]}], then checks one
   isolated spawn lands under the sidecar Worktree dir.
-- [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
-  proper noun (decision 0001).
+- [x] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
+  proper noun (decision 0001). Done 2026-11-17: 0 hits on both wikis
+  (research 0009).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
