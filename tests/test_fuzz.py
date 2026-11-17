@@ -25,6 +25,7 @@ import random
 import time
 from pathlib import Path
 
+import fleet_test_guard  # tests/conftest.py puts ops/fleet_kit on sys.path
 import pytest
 
 from server.al import ninja, parser, price, state
@@ -181,7 +182,7 @@ def _run(name, target, gen, allowed=()):
             pytest.fail(f"{name} raised {type(e).__name__}: {e} (seed {SEED}, call {n}); "
                         f"input: {arg!r:.500}")
         took = time.perf_counter() - t0
-        assert took < CALL_S, (f"{name} took {took:.2f} s (seed {SEED}, call {n}); "
+        assert took < fleet_test_guard.budget(CALL_S), (f"{name} took {took:.2f} s (seed {SEED}, call {n}); "
                                f"input: {arg!r:.300}")
     return n
 
@@ -328,6 +329,11 @@ def test_fuzz_published_cards_never_break_the_snapshot():
 
 # --------------------------------------------- regressions (fuzz findings)
 
+# TEST-FLAKE-SSE: wall-clock bounds scale with the suite gate's load factor;
+# the regressions they guard took 4-7 s, so 0.5 s still catches them.
+FAST_S = fleet_test_guard.budget(0.5)
+
+
 def _timed(fn, *args):
     t0 = time.perf_counter()
     fn(*args)
@@ -349,9 +355,9 @@ def test_crafted_long_line_parses_fast(body):
     # FUZZ-1: the trade-whisper regexes backtracked cubically (a 10 KB
     # whisper took 4 s, a 64 KB line - the tailer's cap - hours) and the
     # guild / chat / level-up ones quadratically, all on the tailer thread.
-    assert _timed(parser.parse_line, PREFIX + body) < 0.25
+    assert _timed(parser.parse_line, PREFIX + body) < FAST_S
     longest = (PREFIX + body)[:parser.MAX_LINE_CHARS]  # just under the cap
-    assert _timed(parser.parse_line, longest) < 0.25
+    assert _timed(parser.parse_line, longest) < FAST_S
 
 
 def test_real_trade_whisper_still_parses():
@@ -371,7 +377,7 @@ def test_item_mod_tag_after_long_whitespace_is_fast():
     # FUZZ-2: _TAG_RE's leading \s* made re.search quadratic on a run of
     # spaces (60 000 spaces took 7 s on the press handler).
     text = "Item Class: Rings\nRarity: Rare\nA\nB\n--------\nx" + " " * 60000 + "y (implicit)\n"
-    assert _timed(item.parse, text) < 0.25
+    assert _timed(item.parse, text) < FAST_S
     mods = item.parse("Item Class: Rings\nRarity: Rare\nA\nB\n--------\n"
                       "+12% to Fire Resistance   (implicit)\n").mods
     assert mods[0].text == "+12% to Fire Resistance" and mods[0].section == "implicit"
