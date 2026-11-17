@@ -80,6 +80,22 @@ snapshot already fetched under decisions 0009 / 0013. Used only to build
 the offline `?q=` link (decision 0017); no new fetch host, no trade call,
 no bundled table. Ruling, conditions and reversal: decision 0037.
 
+## 6. Coverage of the cached copy (MATH-TRADESTAT-COVER)
+
+Read 2026-11-17 from the sidecar cache copy of
+stat_descriptions.json (Last-Modified 2026-11-14). Of 10759 entries,
+292 carry `trade_stats` (277 explicit rows, 1 pseudo). Of entries with
+markup ("[Tag|Text]") in the English string, 3 carry trade_stats and 5361
+do not, so repoe-fork's trade-text matcher evidently skips marked-up
+strings. All 28 default weight keys without an id (resistances,
+attributes, armour / evasion / energy shield, spirit, increased physical /
+spell / elemental damage, attack speed, crit, accuracy, skill levels,
+recoup as life) have their template in the file with trade_stats null,
+and no implicit, pseudo or local twin holds one. Coverage stays 11 of 39;
+tradestats.norm strips markup so the keys map once upstream attaches the
+rows. The trade number could be derived from the stat ids by hash, but
+that is a guess outside the file and decision 0037 item 3 bars it.
+
 ## Sources
 
 - https://www.pathofexile.com/developer/docs/reference (accessed 2026-11-17)

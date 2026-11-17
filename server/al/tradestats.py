@@ -10,6 +10,17 @@ table, and never guesses an id: a stat without an id gets no filter.
 Read only, no network, no clipboard, nothing sent to the game.
 `load_index(path)` maps a normalised mod text (the weights key form,
 "+# to maximum Life") to its explicit trade id ("explicit.stat_3299347043").
+
+MATH-TRADESTAT-COVER: the match is exact on the normalised template text.
+Only about 290 of the ~10800 entries in the cached file carry
+`trade_stats`; repoe-fork attaches none to an entry whose English string
+holds game markup ("{0}% to [Resistances|Fire Resistance]",
+"{0} to [Strength|Strength]", "{0}% increased [Armour|Armour]"), which is
+every resistance, attribute, armour / evasion / energy shield and most
+damage mod. Those keys therefore have no id in the file and stay
+unfiltered: the trade number is never derived from the stat name (that
+would be a guess, decision 0037 item 3). `coverage(index, keys)` reports
+which keys map.
 """
 
 import json
@@ -26,14 +37,19 @@ MAX_TEXT = 200
 KIND = "explicit"
 _ID_RE = re.compile(r"^explicit\.stat_[0-9]{1,10}$")
 _SPACE_RE = re.compile(r"\s+")
+# game markup "[Tag|Shown text]" / "[Shown]" -> the shown text, so a
+# marked-up template still compares exactly with its plain twin
+_MARKUP_RE = re.compile(r"\[(?:[^\[\]|]*\|)?([^\[\]|]*)\]")
 
 
 def norm(text):
-    """The match form of a mod text: no "+" signs, single spaces, lower
-    case ("+#% to Fire Resistance" -> "#% to fire resistance"); None for a
-    non-string or an over-long text."""
+    """The match form of a mod text: markup shown text only, no "+" signs,
+    single spaces, lower case ("+#% to Fire Resistance" and
+    "#% to [Resistances|Fire Resistance]" -> "#% to fire resistance");
+    None for a non-string or an over-long text."""
     if not isinstance(text, str) or len(text) > MAX_TEXT:
         return None
+    text = _MARKUP_RE.sub(r"\1", text)
     out = _SPACE_RE.sub(" ", text.replace("+", "")).strip().lower()
     return out or None
 
@@ -78,6 +94,19 @@ def lookup(index, key):
         return None
     tid = index.get(k)
     return tid if isinstance(tid, str) and _ID_RE.match(tid) else None
+
+
+def coverage(index, keys):
+    """{"mapped": {key: id}, "unmapped": [key]} for weights keys against an
+    index, in the keys' order; a diagnostic, it never guesses."""
+    mapped, unmapped = {}, []
+    for key in keys if isinstance(keys, (list, tuple, dict)) else ():
+        tid = lookup(index, key)
+        if tid is None:
+            unmapped.append(key)
+        else:
+            mapped[key] = tid
+    return {"mapped": mapped, "unmapped": unmapped}
 
 
 def default_path(environ=None):
