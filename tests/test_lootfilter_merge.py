@@ -123,7 +123,7 @@ def test_tabs_and_form_feed_free_text_pass():
 @pytest.mark.parametrize("name, out", [
     ("NeverSink.filter", "NeverSink-ashlight.filter"),
     ("my filter.FILTER", "my filter-ashlight.filter"),
-    ("top\sub\a.filter", "a-ashlight.filter"),
+    ("top\\sub\\a.filter", "a-ashlight.filter"),
     ("../../etc/passwd", "passwd-ashlight.filter"),
     ('ev"il\r\n.filter', "evil-ashlight.filter"),
     ("Zo\u00e9.filter", "Zo-ashlight.filter"),
