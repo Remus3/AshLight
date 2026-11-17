@@ -86,6 +86,11 @@ its code (license notes: 0006).
   next per slot, under-level warning, run history, price watch, settings
   export; phone / LAN is an operator decision
   ([0028-next-wave-2026-11.md](0028-next-wave-2026-11.md))
+- 0028b Policy wording watch (same number as the entry above, filename
+  kept distinct) - overlay / macro wording diffed against the 0001 quotes
+  per changelog entry and at 1.0; baseline UNCHANGED 2026-11-17, 1.0
+  re-read pending
+  ([0028-policy-wording-watch.md](0028-policy-wording-watch.md))
 
 ## Open research (feeds ROADMAP)
 
