@@ -7,10 +7,14 @@ Prints the dashboard URL with the per-start token in the fragment
 """
 
 import argparse
+import faulthandler
+import json
 import logging
+import os
 import signal
 import sys
 import threading
+import time
 from pathlib import Path
 
 from . import DISCLAIMER, NAME, VERSION, paths, ports
@@ -41,16 +45,55 @@ def setup_logging(quiet):
                                             encoding="utf-8"))
     except OSError:
         pass
+    for h in handlers:
+        stream = getattr(h, "stream", None)
+        if stream is not None:
+            try:
+                faulthandler.enable(file=stream)  # native crash -> core.log
+            except (OSError, ValueError, AttributeError):
+                pass
+            break
     if not quiet and sys.stderr is not None:
         handlers.append(logging.StreamHandler())
     logging.basicConfig(level=logging.INFO, handlers=handlers or [logging.NullHandler()],
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 
+HEARTBEAT_S = 30.0
+
+
+def install_crash_logging(log):
+    """Log any unhandled exception (main or worker thread) to core.log.
+    pythonw has no stderr, so without this a crash leaves no trace."""
+    def _sys_hook(exc_type, exc, tb):
+        log.critical("unhandled exception; core exiting", exc_info=(exc_type, exc, tb))
+
+    def _thread_hook(hook_args):
+        if hook_args.exc_type is SystemExit:
+            return
+        name = hook_args.thread.name if hook_args.thread is not None else "?"
+        log.error("unhandled exception in thread %s", name,
+                  exc_info=(hook_args.exc_type, hook_args.exc_value,
+                            hook_args.exc_traceback))
+
+    sys.excepthook = _sys_hook
+    threading.excepthook = _thread_hook
+
+
+def write_heartbeat(path, pid, port, now=None):
+    """Refresh <runtime>/core.alive so the time of a silent kill is bounded."""
+    data = {"pid": int(pid), "port": int(port),
+            "updated": float(time.time() if now is None else now)}
+    tmp = Path(str(path) + ".tmp")
+    tmp.write_text(json.dumps(data) + "\n", encoding="ascii")
+    os.replace(tmp, path)
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     setup_logging(args.quiet)
     log = logging.getLogger("al")
+    install_crash_logging(log)
     if args.port and not ports.in_block(args.port):
         log.warning("port %s is outside the assigned block", args.port)
 
@@ -97,9 +140,16 @@ def main(argv=None):
     t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.5},
                          name="al-http", daemon=True)
     t.start()
+    heartbeat = paths.runtime_dir() / "core.alive"
+    next_beat = 0.0
     try:
         while not stop.wait(0.5):
-            pass
+            if time.monotonic() >= next_beat:
+                next_beat = time.monotonic() + HEARTBEAT_S
+                try:
+                    write_heartbeat(heartbeat, os.getpid(), server.port)
+                except OSError:
+                    pass
     except KeyboardInterrupt:
         pass
     log.info("shutting down")
@@ -108,6 +158,10 @@ def main(argv=None):
     try:
         if token_file.read_text(encoding="ascii").strip() == token:
             token_file.unlink()
+    except OSError:
+        pass
+    try:
+        heartbeat.unlink()  # a leftover core.alive means the core did not exit cleanly
     except OSError:
         pass
     return 0

@@ -24,6 +24,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
 $Repo = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'al_detach.ps1')
 
 function Get-AlPython {
     foreach ($name in @('python', 'py')) {
@@ -76,16 +77,15 @@ $env:AL_SIDECAR_ROOT = $paths.sidecar
 if (Test-AlHealth) {
     Write-AlLog "run: core already running on 127.0.0.1:$port (no-op)"
 } else {
+    # Detached via WMI (scripts\al_detach.ps1): the core must outlive this
+    # script and whatever shell started it. --quiet: core.log is the record.
     $pyw = Get-Command pythonw -ErrorAction SilentlyContinue
-    if ($pyw) {
-        Start-Process -FilePath $pyw.Source -ArgumentList @('-m', 'server.al', '--quiet') `
-            -WorkingDirectory $Repo -WindowStyle Hidden | Out-Null
-    } else {
-        Start-Process -FilePath $py -ArgumentList @('-m', 'server.al') `
-            -WorkingDirectory $Repo -WindowStyle Hidden `
-            -RedirectStandardOutput (Join-Path $paths.logs 'core.out.log') `
-            -RedirectStandardError (Join-Path $paths.logs 'core.err.log') | Out-Null
-    }
+    $exe = if ($pyw) { $pyw.Source } else { $py }
+    $corePid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al', '--quiet') `
+        -WorkingDirectory $Repo -Environment @{
+            TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar
+        }
+    Write-AlLog "run: core launched detached (pid $corePid)"
     $deadline = (Get-Date).AddSeconds(15)
     while (-not (Test-AlHealth)) {
         if ((Get-Date) -gt $deadline) {
@@ -103,8 +103,8 @@ if ($Overlay) {
     $electron = Join-Path $Repo 'app\node_modules\electron\dist\electron.exe'
     if (Test-Path $electron) {
         # Electron's single-instance lock makes a second start a no-op.
-        Start-Process -FilePath $electron -ArgumentList @('"' + (Join-Path $Repo 'app') + '"') `
-            -WorkingDirectory (Join-Path $Repo 'app') | Out-Null
+        $null = Start-AlDetached -FilePath $electron -ArgumentList @('"' + (Join-Path $Repo 'app') + '"') `
+            -WorkingDirectory (Join-Path $Repo 'app')
         Write-AlLog 'run: overlay started (toggle Alt+Shift+A)'
     } else {
         Write-AlLog 'run: overlay not installed - run scripts\setup.ps1 with Node 20+'

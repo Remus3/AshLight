@@ -201,6 +201,17 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a
   trivial row. ACCEPT: task read back; first tick's progress file done.
+- [x] CORE-DETACH (build) run.ps1 starts the core and overlay via WMI
+  Win32_Process.Create (scripts/al_detach.ps1), outside the caller's tree and
+  job; core.log records unhandled exceptions and native faults;
+  ops/runtime/core.alive heartbeat (30 s, removed on clean exit) bounds the
+  time of a silent kill. Cause of the 2026-11-16 21:57-22:12 death not
+  proven: no crash event, no log line, Start-Process children survived probe
+  sub-agent exits.
+- [ ] CORE-KEEPALIVE (build) Restart the core without the operator when it is
+  not answering /api/health (logon scheduled task or watchdog via the kit's
+  task helper, hidden, Start-AlDetached, consent and tail state kept).
+  ACCEPT: core killed by hand is back within 2 min with no input. ZERO-CLICK.
 - [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
