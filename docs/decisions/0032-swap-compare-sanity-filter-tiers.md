@@ -87,7 +87,9 @@ build. MATH-WEAPON-TYPE:
   `weapon_unusable` flag {"skill", "reason"}. A bridge without the
   command, an error from it or any other reason reads as no flag.
 - delta raises CalcWeaponUnusable (a CalcError, NOT CalcImplausible) when
-  the swap carries the flag and the base does not, before the 0 DPS guard.
+  the swap carries the flag, before the 0 DPS guard. Only the swap's flag
+  counts: calcwire asks main_skill only after a weapon swap, so the base
+  never carries one (AREA-AUDIT P4-5 dropped an always-true base test).
 - evaluate: that slot is a "downgrade" comparison with weapon_unusable
   {"skill"}, scored with the hand weights, no dps / ehp and no probes; a
   slot the skill can use always wins the headline. When the headline slot

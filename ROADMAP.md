@@ -1288,14 +1288,20 @@ merge. Each row names the finding ids it closes.
   0024, 0025 and the 0009 / 0013 amendment; 0023-tc-drift renumbered
   0025; test_audit_batch4 fails on any decision missing from Settled.
 
-- [ ] AUDIT-P4-LOW (build) AREA-AUDIT pass 4 lows P4-4..P4-6
+- [x] AUDIT-P4-LOW (build) AREA-AUDIT pass 4 lows P4-4..P4-6
   (docs/audit/2026-11-17-audit.md "Pass 4"): core.tick_sources reads
   local.json every 0.5 s loop tick (use an mtime check); delta._swap_sane's
   "base has no weapon_unusable" test can never be false (base outputs never
   ask main_skill; fix the code or the 0032 amendment wording); the
   UX-OVL-RAM 2-process / 215 MB budget is only in the opt-in live smoke.
   ACCEPT: a fix or a recorded ruling and one test each. ZERO-CLICK: code
-  row, the loop works it.
+  row, the loop works it. DONE 2026-11-17 (audit batch 8): Core._config
+  stats the file and re-reads only on an mtime / size change
+  (test_p4_4_*); _swap_sane counts only the swap's flag, 0032 amendment
+  reworded (test_p4_5_*); always-on static RAM guard: one BrowserWindow,
+  no worker / child / utility process / webview / iframe / popup, one
+  enable-features switch, in-process switches before ready
+  (test_p4_6_ram_budget_static_guard); live measurement stays opt-in.
 - [x] AUDIT-P3-LOW (build) AREA-AUDIT pass 3 lows P3-4..P3-10
   (docs/audit/2026-11-17-audit.md "Pass 3"): map clock stays paused after
   idle clears on a non-scene line; ninja.py rollover docstring says "at

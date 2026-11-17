@@ -102,6 +102,20 @@ def test_item_delta_raises_weapon_unusable_with_the_skill_name():
                          _build(), "Weapon 1", ONE_HAND)
 
 
+def test_p4_5_the_swapped_items_flag_decides_alone():
+    """AREA-AUDIT P4-5: calcwire asks PoB's main_skill only after a weapon
+    swap, so the base never carries weapon_unusable and _swap_sane no longer
+    tests the base for it. A swap PoB flags raises CalcWeaponUnusable
+    whatever the base holds; a base flag alone never does."""
+    flagged = {"dps": 0, "ehp": 900, "weapon_unusable": UNUSABLE}
+    for base in ({"dps": 500, "ehp": 1000},
+                 {"dps": 500, "ehp": 1000, "weapon_unusable": UNUSABLE}):
+        with pytest.raises(delta.CalcWeaponUnusable):
+            delta._swap_sane(base, flagged)
+    delta._swap_sane({"dps": 500, "ehp": 1000, "weapon_unusable": UNUSABLE},
+                     {"dps": 450, "ehp": 1000})
+
+
 def _unusable_calc(slots=("Weapon 1", "Weapon 2")):
     def calc(build, swaps):
         if any(s in slots for s in swaps):

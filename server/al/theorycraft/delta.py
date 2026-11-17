@@ -97,10 +97,12 @@ def _swap_sane(base, new):
     """An attack build (DPS above 0) never drops to exactly 0 DPS from one
     item swap in a sane calc: that means a skill PoB lost track of (e.g. a
     weapon type the main skill cannot use), not a number to show. When PoB
-    itself names that cause (calcwire's weapon_unusable flag, absent on the
-    base) the swap raises CalcWeaponUnusable instead."""
+    itself names that cause (calcwire's weapon_unusable flag on the swap)
+    the swap raises CalcWeaponUnusable instead. Only the swap's flag counts:
+    calcwire asks main_skill only after a weapon swap, never for the base
+    (AREA-AUDIT P4-5)."""
     unusable = new.get(WEAPON_UNUSABLE)
-    if unusable and not base.get(WEAPON_UNUSABLE):
+    if unusable:
         raise CalcWeaponUnusable(unusable.get("skill"))
     if base["dps"] > 0 and new["dps"] == 0:
         raise CalcImplausible("calc gives 0 DPS after the swap")

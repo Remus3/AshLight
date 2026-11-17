@@ -54,6 +54,53 @@ def test_window_flags_behind_the_budgets():
         assert needle in code, needle
 
 
+def _overlay_sources():
+    """Every overlay source the Electron app loads (app/ minus tests and
+    node_modules): .js, .html."""
+    app = ROOT / "app"
+    out = {}
+    for p in sorted(app.rglob("*")):
+        rel = p.relative_to(app).as_posix()
+        if (p.suffix in (".js", ".html") and p.is_file()
+                and not rel.startswith(("node_modules/", "test/"))):
+            out[rel] = p.read_text(encoding="utf-8")
+    return out
+
+
+def test_p4_6_ram_budget_static_guard():
+    """AREA-AUDIT P4-6: the UX-OVL-RAM budget (at most 2 processes: browser +
+    one renderer) is measured only by the opt-in live smoke below; this
+    always-on guard fails on the code changes that would add a process: a
+    second window or view, a worker, a child / utility process, a webview or
+    iframe, a second enable-features switch (it would replace
+    NetworkServiceInProcess2), or the in-process switches set after ready."""
+    src = _overlay_sources()
+    assert "main.js" in src and "overlay/index.html" in src
+    code = {k: (_code(v) if k.endswith(".js") else re.sub(r"<!--.*?-->", "", v, flags=re.S))
+            for k, v in src.items()}
+    windows = sum(len(re.findall(r"\bnew\s+BrowserWindow\s*\(", c)) for c in code.values())
+    assert windows == 1, "one overlay window only (one renderer process)"
+    banned = (r"child_process", r"\butilityProcess\b", r"\bnew\s+(Shared)?Worker\s*\(",
+              r"\bBrowserView\b", r"\bWebContentsView\b", r"webviewTag\s*:\s*true",
+              r"<\s*webview\b", r"<\s*iframe\b", r"\bwindow\.open\s*\(",
+              r"serviceWorker\.register", r"nodeIntegrationInWorker\s*:\s*true",
+              r"\bprocess\.fork\b")
+    for name, c in code.items():
+        for pat in banned:
+            assert not re.search(pat, c), (name, pat)
+    main = code["main.js"]
+    # popups stay denied (a popup is a new window and renderer)
+    assert 'setWindowOpenHandler(() => ({ action: "deny" }))' in main
+    assert len(re.findall(r'appendSwitch\(\s*"enable-features"', main)) == 1
+    assert "disable-features" not in main
+    ready = main.index("app.whenReady()")
+    for switch in ('appendSwitch("in-process-gpu")',
+                   'appendSwitch("enable-features", "NetworkServiceInProcess2")',
+                   "app.disableHardwareAcceleration()"):
+        assert main.index(switch) < ready, switch
+    assert MAX_PROCS == 2 and RAM_BUDGET == 215 * 1024 * 1024
+
+
 def test_overlay_sends_no_input_and_reads_no_clipboard_on_its_own():
     """ToS floor: nothing is ever sent to the game; no clipboard watcher."""
     code = _code(MAIN_JS) + _code(OVL_JS)
