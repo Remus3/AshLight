@@ -90,7 +90,7 @@ class Core:
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.
         # TC-UPGRADE: the item check card carries an offline upgrade-search link
         # for the checked slot, in the configured league (decision 0017).
-        # TC-DELTA (decision 0022): the optional PoB calc callable; None while
+        # TC-DELTA (decision 0024): the optional PoB calc callable; None while
         # the component is off (TC-BRIDGE sets it), and the item check then
         # scores with the stat weights and says so on the card.
         # MATH-VALUE: the card's `value` reads the cached rates at run time

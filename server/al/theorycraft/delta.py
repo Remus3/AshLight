@@ -1,4 +1,4 @@
-"""TC-DELTA: PoB-backed item deltas and per-mod weights (decision 0022).
+"""TC-DELTA: PoB-backed item deltas and per-mod weights (decision 0024).
 
 The calc component (TC-BRIDGE: the pinned, unmodified PoB-PoE2 checkout run
 by the pinned LuaJIT, decision 0018) is seen here only as a callable

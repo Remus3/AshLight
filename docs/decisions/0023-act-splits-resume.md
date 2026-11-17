@@ -4,7 +4,7 @@ Date: 2026-11-17. Trigger: ROADMAP row HUD-ACT-RESUME ("act splits survive
 a core restart ... also confirm the cruel `C_G<n>_` / interlude `P<n>_` id
 prefixes from a live log (LIVE-1)"). Inputs: decision 0008 (LIVE-RESUME),
 decision 0020 (HUD-ACT). Amends decision 0020 item 1 ("a core restart
-starts an empty run"). Number check: main held 0001-0022 at merge time (0021 tc-code-real, 0022 tc-delta / tc-bridge), so this is 0023;
+starts an empty run"). Number check: main held 0001-0022 at merge time (0021 tc-code-real, 0022 tc-bridge; tc-delta later renumbered 0024), so this is 0023;
 renumbered from the lane draft 0021 (then 0022).
 
 ## Decision
