@@ -44,3 +44,12 @@ test("main.js validates both hotkeys before globalShortcut.register", () => {
     assert.ok(["toggleKey", "evalKey"].includes(m[1].trim()), m[1]);
   }
 });
+
+test("FOLLOWUP11: Windows system combinations are refused and all in the table", () => {
+  for (const input of ["Alt+Shift+Tab", "Shift+Alt+Tab", "Ctrl+Alt+Tab", "Alt+Shift+Escape",
+    "Ctrl+Shift+Esc", "Ctrl+Alt+Delete", "Ctrl+Alt+End", "Win+Tab", "Win+D"]) {
+    assert.strictEqual(Hotkey.safeAccelerator(input), null, input);
+    assert.ok(CASES.bad.includes(input), input);
+  }
+  for (const k of Hotkey.GAME_KEYS) { assert.ok(CASES.bad.includes(k), k); }
+});

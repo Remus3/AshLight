@@ -1,5 +1,5 @@
 {
- "comment": "AREA-AUDIT P5-3: one case table for server/al/hotkeys.py and app/hotkey.js. ok maps an input to its canonical accelerator; bad lists inputs both sides refuse.",
+ "comment": "AREA-AUDIT P5-3: one case table for server/al/hotkeys.py and app/hotkey.js. ok maps an input to its canonical accelerator; bad lists inputs both sides refuse; it holds every blocked combination (FOLLOWUP11: Windows task switcher Alt+Shift+Tab / Ctrl+Alt+Tab, window cycling Alt+Shift+Escape, Remote Desktop Ctrl+Alt+End; the Win key is never a modifier).",
  "ok": {
   "Alt+Shift+A": "Alt+Shift+A",
   "Alt+Shift+E": "Alt+Shift+E",
@@ -17,6 +17,9 @@
   "Ctrl+C", "Ctrl+Alt+C", "Ctrl+V", "Ctrl+X", "Ctrl+A", "Ctrl+F", "Ctrl+Enter",
   "Alt+F4", "Alt+Tab", "Alt+Enter", "Alt+Escape", "Ctrl+Shift+Escape",
   "Ctrl+Alt+Delete",
+  "Alt+Shift+Tab", "Shift+Alt+Tab", "Ctrl+Alt+Tab", "Alt+Ctrl+Tab", "Alt+Shift+Escape",
+  "Alt+Shift+Esc", "Ctrl+Shift+Esc", "Ctrl+Alt+End", "Ctrl+Escape", "Ctrl+Esc", "Alt+Space", "Ctrl+Z",
+  "Win+Tab", "Win+D", "Meta+Tab", "Super+Tab", "Ctrl+Win+D", "Alt+Win+K",
   "Ctrl", "Ctrl+Alt", "Alt+Alt+K", "Ctrl+K+L", "K+Ctrl", "Super+K", "Ctrl++",
   "Ctrl+Banana", "Ctrl+F25", "Alt+Shift+A\n", "Alt+Shift+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
  ]

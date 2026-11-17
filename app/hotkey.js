@@ -6,7 +6,9 @@
    included. So an AshLight hotkey always holds Ctrl or Alt (Shift alone
    only with an F key: Shift + a letter types in the game's chat), and
    never a combination the game or Windows uses (item copy Ctrl+C /
-   Ctrl+Alt+C, paste, stash search, chat send, Alt+F4, Alt+Tab ...).
+   Ctrl+Alt+C, paste, stash search, chat send, Alt+F4, Alt+Tab,
+   Alt+Shift+Tab, Ctrl+Alt+Tab, Task Manager Ctrl+Shift+Esc, Ctrl+Alt+Delete
+   ...). The Win key is never a modifier: Windows owns it.
    Pure: node --test covers it without Electron. */
 
 const MAX_CHARS = 40;
@@ -18,7 +20,8 @@ const NAMED = ["Space", "Tab", "Enter", "Backspace", "Delete", "Insert", "Home",
 const ALIAS = { return: "Enter", esc: "Escape" };
 const GAME_KEYS = new Set(["Ctrl+C", "Ctrl+Alt+C", "Ctrl+V", "Ctrl+X", "Ctrl+A", "Ctrl+Z",
   "Ctrl+F", "Ctrl+Enter", "Ctrl+Escape", "Ctrl+Shift+Escape", "Ctrl+Alt+Delete",
-  "Alt+F4", "Alt+Tab", "Alt+Enter", "Alt+Escape", "Alt+Space"]);
+  "Alt+F4", "Alt+Tab", "Alt+Enter", "Alt+Escape", "Alt+Space",
+  "Alt+Shift+Tab", "Ctrl+Alt+Tab", "Alt+Shift+Escape", "Ctrl+Alt+End"]);
 
 function keyName(token) {
   const low = token.toLowerCase();
