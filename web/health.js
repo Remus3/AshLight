@@ -88,7 +88,9 @@
     }).map(function (r) {
       return { label: r.label, text: fmtDigits(r.value, r.digits) + str(r.unit) };
     });
-    var hint = h.calc_on === false && (rows.length || h.has_stats) ? NO_CALC : "";
+    // AREA-AUDIT P7-5: no "once the calc is on" while it is on and pending
+    var hint = h.calc_on === false && h.calc_pending !== true &&
+      (rows.length || h.has_stats) ? NO_CALC : "";
     return { rows: rows, hint: hint };
   }
 

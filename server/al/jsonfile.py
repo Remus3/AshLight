@@ -14,14 +14,20 @@ import json
 import os
 from pathlib import Path
 
+# AREA-AUDIT P7-8: read_json's cap when the caller names none (config,
+# displays.json, summaries, poe.ninja caches); a bigger file reads as default
+DEFAULT_MAX_BYTES = 32 * 1024 * 1024
 
 def read_json(path, max_bytes=None, encoding="utf-8", kind=None, default=None):
     """The parsed JSON of `path`, or `default` when the file is missing,
-    unreadable, larger than `max_bytes`, not valid JSON in `encoding`, or
-    (with `kind`, a type or tuple of types) not an instance of `kind`."""
+    unreadable, larger than `max_bytes` (None: DEFAULT_MAX_BYTES, AREA-AUDIT
+    P7-8; a caller that needs more passes it), not valid JSON in
+    `encoding`, or (with `kind`, a type or tuple of types) not an instance
+    of `kind`."""
+    cap = DEFAULT_MAX_BYTES if max_bytes is None else max_bytes
     try:
         p = Path(path)
-        if max_bytes is not None and p.stat().st_size > max_bytes:
+        if p.stat().st_size > cap:
             return default
         doc = json.loads(p.read_text(encoding=encoding))
     except (OSError, ValueError, RecursionError):  # AREA-AUDIT P7-3: deep nesting

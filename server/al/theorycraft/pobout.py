@@ -60,6 +60,11 @@ class OutputsCache:
         raw = getattr(calc, "raw", None)
         return raw if callable(raw) else None
 
+    def active(self):
+        """AREA-AUDIT P7-5: whether the calc is on and can give outputs
+        (the switch), whether or not a table is ready yet."""
+        return self._raw() is not None
+
     def get(self, build):
         """PoB's outputs for `build` when ready, else None (and a fetch is
         started when the calc is on)."""

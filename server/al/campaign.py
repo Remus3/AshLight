@@ -103,6 +103,15 @@ class FlaskCache:
             return self._table
 
 
+# AREA-AUDIT P7-7: only a positive "N% increased Movement Speed" counts;
+# "reduced" (or a zero / negative value) is not speed.
+_SPEED = re.compile(r"(?<![\w.+-])\+?(\d+(?:\.\d+)?)% increased movement speed\b")
+
+
+def _has_speed(text):
+    return any(float(m.group(1)) > 0 for m in _SPEED.finditer(text.lower()))
+
+
 def build_facts(build):
     """What the hints need from a loaded PoB build, or None without one:
     {"flasks": [base, ...], "boots": None | {"speed": bool}, "res": {el: n}}."""
@@ -125,7 +134,7 @@ def build_facts(build):
     boots = item("Boots")
     boots_fact = None
     if boots is not None and isinstance(getattr(boots, "text", None), str):
-        boots_fact = {"speed": "movement speed" in boots.text.lower()}
+        boots_fact = {"speed": _has_speed(boots.text)}
     stats = getattr(build, "stats", None)
     stats = stats if isinstance(stats, dict) else {}
     res = {el: _num(stats.get(key)) for el, key in RES_STAT.items()}
