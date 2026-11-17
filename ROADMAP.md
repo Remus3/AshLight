@@ -171,7 +171,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   After TC-PIN. ACCEPT: outputs on a fixture build match PoB GUI within 0.1
   percent; tests skip cleanly when the component is absent.
   ZERO-CLICK: the bridge starts on first need and restarts itself on a crash.
-- [ ] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the
+- [x] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the -- done 2026-11-17 (loop; refute 0/3 PASS)
   clipboard item vs the equipped one, and per-mod weights from PoB deltas
   (offence and EHP) feeding TC-UPGRADE in place of hand weights. After
   TC-BRIDGE, TC-EVAL. ACCEPT: delta tests on fixtures; falls back to stat

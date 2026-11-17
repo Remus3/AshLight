@@ -160,15 +160,20 @@
     var word = { upgrade: "Upgrade", sidegrade: "Sidegrade", downgrade: "Downgrade" }[verdict] ||
                "Not checked";
     var unweighted = (ev.unweighted || []).filter(function (k) { return typeof k === "string"; });
+    var labels = unweighted.map(function (k) { return k.replace(/#/g, "N"); }).join("; ");
+    /* TC-DELTA: with Path of Building scoring, only mods with no number
+       stay uncounted, and a hand weight would not change that */
+    var pob = !!(ev.calc && ev.calc.source === "pob");
     return {
       verdict: verdict, state: VERDICT_STATE[verdict] || "pending", word: word,
       sentence: t.sentence || "", item: t.item || "",
       when: typeof ev.at === "number" && clock ? "Checked at " + clock(ev.at) : "",
       comparisons: ev.ok ? (t.comparisons || []) : [],
-      unweighted: unweighted.length
-        ? "Not counted (no weight yet): " +
-          unweighted.map(function (k) { return k.replace(/#/g, "N"); }).join("; ") + ". Add a weight under Stat weights to count them."
-        : ""
+      /* TC-DELTA: Path of Building DPS / EHP, or why the stat weights scored it */
+      calc: typeof t.calc === "string" ? t.calc : "",
+      unweighted: !unweighted.length ? ""
+        : pob ? "Not counted (the mod has no number): " + labels + "."
+        : "Not counted (no weight yet): " + labels + ". Add a weight under Stat weights to count them."
     };
   }
 

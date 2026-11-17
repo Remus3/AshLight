@@ -84,8 +84,13 @@ class Core:
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.
         # TC-UPGRADE: the item check card carries an offline upgrade-search link
         # for the checked slot, in the configured league (decision 0017).
+        # TC-DELTA (decision 0022): the optional PoB calc callable; None while
+        # the component is off (TC-BRIDGE sets it), and the item check then
+        # scores with the stat weights and says so on the card.
+        self.tc_calc = None
         self.last_eval = tc_live.attach(self.builds, self.weights, self.state,
-                                        league=self.configured_league)
+                                        league=self.configured_league,
+                                        calc=lambda: self.tc_calc)
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
         # local config; every outbound request goes through server/al/webfetch.py
         # with an injectable transport (tests pass web_fetch, never the network).

@@ -354,6 +354,17 @@ Generation rules:
      (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
      the same as your <slot> (<name>), <+n> points.`; errors `No build
      loaded`, `Not an item`, `Can't compare this` with the next step
+   - item check scoring source (TC-DELTA, decision 0022, `_calc_text`):
+     when Path of Building scored the item the overlay third line is `DPS
+     <+pct>%, EHP <+pct>%` (a 0 base reads `unknown`) and the dashboard adds
+     `Path of Building: DPS <+pct>% (from <old> to <new>), EHP <+pct>% (from
+     <old> to <new>), with this item in <slot>.`; otherwise the dashboard
+     adds `Scored with your stat weights. To see DPS and EHP, turn on the
+     optional Path of Building calc in AshLight's settings file.` (off) or
+     `Scored with your stat weights. DPS and EHP are not shown because Path
+     of Building could not be reached. Try the check again.` (failed); with
+     PoB scoring, uncounted mods read `Not counted (the mod has no number):
+     <mods>.`
    - price check (PRICE-1-UI, `price_card_text`): overlay `Price: <item>`,
      `<n> listed, ~<middle>` / `Lowest <amount> <currency>`, `Searching
      prices...`, `Prices in about <n> s`, `Web data is off`, `No listings found`,
