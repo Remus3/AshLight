@@ -10,6 +10,7 @@ import threading
 import time
 
 from . import acts as acts_mod
+from . import pace as pace_mod
 from . import runs as runs_mod
 
 RECENT_EVENTS = 30
@@ -536,6 +537,8 @@ class SessionState:
         # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
         self.maps = runs_mod.MapRuns()
         self.death_log = runs_mod.DeathLog()
+        # UTIL-PACE: levelling pace from the player's level-ups (pace.py).
+        self.pace = pace_mod.Pace()
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -700,6 +703,7 @@ class SessionState:
                     self.char_class = ev.get("class")
                     self.level = ev.get("level")
                     self.level_ups += 1
+                    self.pace.on_level(self.level, now)
                     changed = True
             elif t == "death":
                 if self._is_me(ev.get("character")):
@@ -823,4 +827,5 @@ class SessionState:
                                       self.zone, now),
                 "maps": self.maps.view(now),
                 "death_recap": self.death_log.view(),
+                "pace": self.pace.view(now, self.session_started_at),
             }

@@ -397,6 +397,12 @@ Generation rules:
      `(paused)`; summary `Average map: <m:ss> over <n> finished map(s).`
      then `<n> death(s) in maps.` or `No deaths in maps.`; empty `No maps
      yet. Map times start by themselves when you open a map.`
+   - level pace (UTIL-PACE, `server/al/pace.py`): dashboard only, one
+     line under the Level tile, hidden while empty, key word first:
+     `Pace: about <m:ss> per level over the last <n> levels, <x.x> levels
+     an hour this session.` (one level: `about <m:ss> for the last level`;
+     `1.0 level an hour`; the hourly part needs 2+ level-ups and 10
+     minutes; m:ss matches the dashboard timers)
    - death recap (UTIL-DEATHS, same files): dashboard only; one line per
      death, newest first, `HH:MM` local time then `Died in <zone> (area
      level <n>) at level <n>, <m:ss> into the zone.` (parts without data

@@ -293,11 +293,12 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   snapshot `death_recap`, dashboard Death recap card. ACCEPT: exact
   sentence tests. ZERO-CLICK: filled by itself on every death line.
   DONE 2026-11-17.
-- [ ] UTIL-PACE (build) Level pace from level-up lines (Client.txt carries
-  no XP): time at the current level, average minutes per level over the
-  last 5 levels, levels per hour this session; one line on the Level stat
-  tile, sentence built in the core. ACCEPT: exact tests on replayed
-  level-up lines. ZERO-CLICK: updates on every level-up by itself.
+- [x] UTIL-PACE (build) Level pace from level-up lines (Client.txt carries
+  no XP): average time per level over the last 5 levels and levels per
+  hour this session (after 10 minutes); one line on the Level stat tile,
+  sentence built in the core (server/al/pace.py, snapshot `pace`). ACCEPT:
+  exact tests on replayed level-up lines (tests/test_util_pace.py).
+  ZERO-CLICK: updates on every level-up by itself. DONE 2026-11-17.
 - [ ] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
   start from the current game run in Client.txt, as HUD-ACT-RESUME does for
   act splits (decision 0023 pattern, no persisted state). ACCEPT: restart

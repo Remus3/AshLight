@@ -755,6 +755,10 @@
     $("who").textContent = s.character
       ? s.character + (s["class"] ? " (" + s["class"] + ")" : "")
       : "character unknown";
+    // UTIL-PACE: the core's pace sentence, shown once there is one.
+    var paceText = (s.pace && s.pace.text) || "";
+    $("pace").textContent = paceText;
+    $("pace").hidden = !paceText;
     $("deaths").textContent = String(s.deaths);
     $("levelups").textContent = s.level_ups + (s.level_ups === 1 ? " level-up" : " level-ups");
     var flags = [];
