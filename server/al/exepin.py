@@ -8,6 +8,9 @@ name, so AshLight never runs one:
 - a locally built executable with no published hash (luajit.exe) runs only
   when it matches the SHA-256 recorded right after the build (record /
   verified), checked before every exec.
+  The record sits beside the exe in the user-writable sidecar, so it
+  stops a stale or foreign exe, not a same-user tamper (decision 0022,
+  amendment P2-B3).
 Stdlib only.
 """
 

@@ -429,3 +429,35 @@ them. Pause: `ops/loop/control/HALT`.
 - HUD-ACT-RESUME: act splits rebuild at core start from the current game
   run's area generations in Client.txt, no persisted state (decision 0023).
   Reverses if: decision 0008 reverses or GGG drops the area generation line.
+- The build-time game-data snapshot follows the one web_data opt-in, default
+  OFF; build.ps1 fetches only when web_data is true or -Snapshot is passed
+  (decisions 0009 and 0013, amendments 2026-11-17). Reverses if: a core
+  feature needs snapshot data and cannot degrade, the operator rules a
+  build-time fetch is not "web data", or users miss the data and the switch.
+- TC-CODE-REAL: real PoB2 exports checked by fixture, XML round trip byte
+  exact, the code string only compared (xfail on a zlib mismatch)
+  (decision 0021). Reverses if: a real code fails a check, or a feature
+  needs the exact pasted string.
+- TC-BRIDGE: own stdio JSON bridge (bridge.lua via PoB's unmodified
+  HeadlessWrapper, `ALB1 <json>` replies), core imports nothing from it
+  (decision 0022; amendment 2026-11-17: the luajit.exe hash record stops a
+  stale or foreign exe, not a same-user tamper). Reverses if: PoB reshapes HeadlessWrapper every release
+  or ships an official headless API, the live 0.1 percent test fails
+  without patching PoB, or the stdout prefix framing proves unreliable.
+- TC-DELTA: PoB-backed DPS / EHP deltas and per-mod weights, fixed 50/50
+  blend and 1 percent sidegrade band, stat weights when the calc is off
+  (decision 0024). Reverses if: TC-BRIDGE needs another calc contract, a
+  user asks for an offence / defence lean, TC-UPGRADE-STATS finds a stat id
+  source, or uncached probes make a press feel slow.
+- TC-DRIFT: one read-only GitHub releases check per 24 h from the loop tick,
+  a detached trial per new tag, the pin moves only via `tc_drift.py apply`
+  after a green trial, committed by a session (decision 0025). Reverses if:
+  GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
+  releases or ships a headless API, or the loop gains safe auto-commit.
+- Price book: unique and stackable poe.ninja overviews ride the rates
+  refresh (same opt-in, contact, UA, league; per-type hourly gate + ETag),
+  the press reads the cache only, movers from the same cache, auto league
+  re-read every 6 h or after a 404, trade links follow the cached league
+  while web data is on (decision 0026). Reverses if: poe.ninja asks for
+  less polling or blocks it, decision 0013 goes per-feature, or the
+  overview shapes break every release.

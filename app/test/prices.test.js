@@ -28,7 +28,7 @@ test("web-data words: off says nothing is asked; on says what is fetched", () =>
     status: "Web data is off. AshLight asks nothing from the internet." });
   assert.deepEqual(p.webDataView({ web_data: true }), {
     on: true,
-    status: "Web data is on. Currency values come from poe.ninja about once an hour." });
+    status: "Web data is on. Prices come from poe.ninja about once an hour." });
   assert.equal(p.webDataView(null).on, false);
   assert.equal(p.savedText(true), "Saved. Web data is on. Currency values arrive within a minute.");
   assert.equal(p.savedText(false), "Saved. Web data is off. AshLight asks nothing from the internet now.");
@@ -209,4 +209,36 @@ test("upgrade view: no view without a valid trade2 search URL, base or slot", ()
   }
   assert.equal(p.upgradeView(Object.assign({}, ok, { base: " " })), null);
   assert.equal(p.upgradeView(Object.assign({}, ok, { slot: null })), null);
+});
+
+/* UTIL-MOVERS: the week's biggest price changes from the cached overviews. */
+test("price movers: words not colour, hidden while web data is off", () => {
+  const doc = {
+    web_data: true,
+    movers: {
+      up: [{ name: "Greater Essence of Ruin", type: "Essences", value: 0.35,
+             unit: "Divine Orb", change: 61 }],
+      down: [{ name: "Hollow Crown", type: "UniqueArmours", value: 1234.5,
+               unit: "Divine Orb", change: -25.5 }]
+    }
+  };
+  const v = p.moversView(doc);
+  assert.equal(v.show, true);
+  assert.equal(v.empty, "");
+  assert.deepEqual(v.up, [{ name: "Greater Essence of Ruin", change: "up 61%",
+                            value: "0.35 Divine Orb" }]);
+  assert.deepEqual(v.down, [{ name: "Hollow Crown", change: "down 25.5%",
+                              value: "1,235 Divine Orb" }]);
+  assert.equal(p.moversView({ web_data: false, movers: doc.movers }).show, false);
+  assert.equal(p.moversView(null).show, false);
+  const none = p.moversView({ web_data: true, movers: { up: [], down: [] } });
+  assert.equal(none.empty,
+    "No price changes to show yet. They appear after the next hourly price update.");
+  const odd = p.moversView({ web_data: true, movers: { up: [{ change: 5 }], down: "x" } });
+  assert.deepEqual(odd.up, [{ name: "Unnamed item", change: "up 5%", value: "" }]);
+  assert.deepEqual(odd.down, []);
+  const flat = p.moversView({ web_data: true, movers: { up: [{ name: "A", change: 0.2 }],
+                                                        down: [{ name: "B", change: "x" }] } });
+  assert.equal(flat.up[0].change, "no change");
+  assert.equal(flat.down[0].change, "no change");
 });

@@ -1,6 +1,6 @@
 """TC-DRIFT: watch Path of Building PoE2 releases against the pin.
 
-Decision 0004 item 3, decision 0018, decision 0023. Python stdlib only.
+Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
 
 - `check`: one read-only GET of the GitHub releases API (api.github.com only,
   truthful User-Agent, no cookie, no token) compares the newest PoB-PoE2

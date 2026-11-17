@@ -1,8 +1,12 @@
-# 0023 - TC-DRIFT: unattended PoB-PoE2 release check and pin trial
+# 0025 - TC-DRIFT: unattended PoB-PoE2 release check and pin trial
 
 Date: 2026-11-17. Row: ROADMAP TC-DRIFT. Input: research 0017, decisions
 0004 (item 3), 0018 (pin), 0022 (bridge). Ruled by the build lane itself
 (FLEET item 1).
+
+Renumbered from 0023 to 0025 on 2026-11-17 (AREA-AUDIT batch 4): 0023 is
+act-splits-resume and 0024 tc-delta on main; the lane drafted it against an
+older main. tests/test_audit_pass2.py fails on any duplicate number.
 
 ## Decision
 
