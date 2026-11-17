@@ -258,6 +258,33 @@ on the primary monitor; no horizontal scroll anywhere.
 design-reviewer on batch 4: PASS WITH FINDINGS S1=0 S2=0 S3=1 S4=2, all
 fixed (overlay save status kept outside the fold; two comment notes).
 
+## Live pass, batch 5 (2026-11-17)
+
+Method as batch 4: a test core on a spare port, the real overlay from the
+branch at the top-left of the primary monitor (worktree's gitignored
+config/local.json), GDI copies of the screen (`CAPTUREBLT`) with the
+overlay up and after it closed, window flags and a hit test through
+user32. Desktop only; the game was not running.
+
+- U20 UX-OVL-RAM [S2; fixed] The overlay had no RAM headroom: 3
+  processes, working set 245 to 252 MB summed (over the 250 MB budget in
+  an SSE burst). The network service now runs in the browser process
+  (decision 0002, measured 2026-11-17): 2 processes, 179 to 186 MB,
+  private 96 to 102 MB. Read back after the change: HUD plate visible,
+  the scene around it unchanged (about 70 percent of the window's pixels
+  identical with and without the overlay), `TOPMOST TRANSPARENT LAYERED
+  NOACTIVATE`, no window alpha (the U14 page-CSS opacity holds), a hit
+  test at the plate returns the window below (click-through), the
+  foreground window never changed (non-focusable). Overlay and core
+  closed by the PIDs started.
+- U21 UX-OVL-FORCED [-; holds] The real transparent window under
+  Chromium's `--force-high-contrast` (forced colours inside the overlay
+  only; the Windows theme was not changed): the plate repaints to the
+  system Canvas (light theme here: 233,233,234) with CanvasText, and the
+  area outside the plates stays transparent (about 70 percent of
+  pixels unchanged, the far corners identical to the desktop). This
+  closes the open note in U19 for the real window; no fix needed.
+
 ## Kept by decision
 
 - K1 (SC 2.2.2): the zone and session timers keep updating with no pause

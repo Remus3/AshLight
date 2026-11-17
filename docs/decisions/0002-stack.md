@@ -113,7 +113,7 @@ launch, over a 10 s window:
   measured run added `--disable-gpu-sandbox` on the command line. The shipped
   app sets no such switch; re-measure from a normal desktop launch
   (ROADMAP OVL-BUDGET), and add a dedicated RAM trim pass if the summed
-  working set stays near 250 MB.
+  working set stays near 250 MB (done: UX-OVL-RAM, below).
 
 ## Measured 2026-11-16 (OVL-BUDGET, game running)
 
@@ -155,3 +155,44 @@ working set 142.6 MB, idle CPU 0.000 percent of one core over 7 s, rc 0.
 Whole-core idle (tailer + HTTP + 2 SSE streams, tests/test_budgets.py):
 0.000 percent of one core over 3 s. In-map FPS (OVL-FPS) still needs the
 operator's play session.
+
+## Measured 2026-11-17 (UX-OVL-RAM, RAM trim)
+
+Real overlay from app/ against a test core on a spare port in the block
+(own runtime and sidecar dirs, scratch Client.txt fed by
+`tools/synth_client.py`); per-process working set and private bytes read
+with `GetProcessMemoryInfo` over the started overlay's own process tree
+every 2 s: 60 s idle, then 30 s with 150 log events (one SSE push each,
+5 per second).
+
+- Before: 3 processes (browser, renderer, network-service utility).
+  Working set summed 245.4 to 248.0 MB idle, up to 252.2 MB in the burst
+  (over the 250 MB budget); private 107.9 to 113.1 MB. The utility
+  process alone: 67 MB working set, 12 MB private (mostly shared
+  electron.exe image pages counted again).
+- Change: `app.commandLine.appendSwitch("enable-features",
+  "NetworkServiceInProcess2")` in app/main.js (the feature name carries
+  the "2"; the unsuffixed name is ignored, measured). The network
+  service, used only for the 127.0.0.1 SSE feed, runs in the browser
+  process; the renderer sandbox, acceleration off and in-process GPU are
+  unchanged.
+- After: 2 processes. Working set summed 179.1 to 181.4 MB idle, up to
+  185.7 MB in the burst; private 95.9 to 102.0 MB. Headroom 64 MB at the
+  186 MB burst peak (26 percent of 250; 69 MB idle); target of 20
+  percent met.
+- Tried and dropped (no gain beyond 3 MB run-to-run noise):
+  `--js-flags` (max-semi-space-size=1, max-old-space-size=64, jitless,
+  lite-mode), `--disable-software-rasterizer`, `--disable-features` for
+  spare renderer, Translate, MediaRouter, BackForwardCache,
+  OptimizationHints, and background networking / component update. The
+  renderer page was already lean: three small scripts, system fonts, no
+  images, and only the latest snapshot kept (no event history).
+- Smoke test: `tests/test_overlay_smoke.py` now samples the started
+  overlay's process tree (the old profile match missed the browser
+  process) and asserts at most 2 processes and a summed working set
+  under 215 MB (about 15 percent over the 186 MB peak); this budget's
+  250 MB stays the decision's ceiling. Live smoke: 2 processes, peak
+  181.3 MB.
+- Reverses if: the in-process network service crashes the overlay, or
+  Electron drops the feature (then the utility process comes back and
+  the smoke test fails on the process count).
