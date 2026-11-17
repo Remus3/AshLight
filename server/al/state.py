@@ -308,6 +308,8 @@ class SessionState:
         self.eval = None
         self._eval_ids = 0
         self.build_info = None
+        # PRICE-1: the latest price check (server/al/price.py doc), data only.
+        self.price = None
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -343,6 +345,13 @@ class SessionState:
         with self._lock:
             if info != self.build_info:
                 self.build_info = dict(info) if info else None
+                self.version += 1
+
+    def set_price(self, doc):
+        """PRICE-1: the latest price check (price.PriceChecker doc)."""
+        with self._lock:
+            if doc != self.price:
+                self.price = dict(doc) if doc else None
                 self.version += 1
 
     def dismiss_trade(self, trade_id=None):
@@ -517,4 +526,5 @@ class SessionState:
                               expires_at=self.eval["at"] + EVAL_CARD_S)
                          if self.eval else None),
                 "build": dict(self.build_info) if self.build_info else None,
+                "price": dict(self.price) if self.price else None,
             }

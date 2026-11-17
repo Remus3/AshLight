@@ -49,7 +49,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [x] HUD-WHISPER (build) Trade whisper card on the overlay (item, price,
   stash position) with a quiet, non-flashing cue; dismissed from the
   dashboard. ACCEPT: fixture whisper renders; no input sent to the game.
-- [ ] PRICE-1 (build) Price check: AshLight hotkey reads the clipboard ONCE
+- [x] PRICE-1 (build) Price check: AshLight hotkey reads the clipboard ONCE
   (decision 0003), parses the item (research 0003), queries the trade2 API
   through one rate-limited queue that parses X-Rate-Limit headers
   dynamically; opt-in setting. ACCEPT: parser tests on fixtures; limiter
@@ -66,6 +66,17 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   values recorded in research 0004.
   ZERO-CLICK: once opted in, the one hotkey press queues the check; the
   limiter paces it with no click.
+  DONE 2026-11-17 (build lane, decision 0015): server/al/price.py - the
+  item hotkey's existing POST /api/eval (one clipboard read per press,
+  app/eval_hotkey.js) queues at most ONE check: trade2 /data/stats table
+  cached daily under <sidecar>\Cache\trade, league from config else
+  /data/leagues (daily) else Standard, build_query -> search -> fetch of
+  the first 10 -> summary (currency, min / median of the cheapest 5,
+  listing count, total); same text within 30 s reuses the result; live
+  "waiting N s" from the limiter; neutral state field `price` and
+  token-gated GET /api/price. Off (zero requests) without web_data or a
+  contact (UA-CONTACT). tests/test_price_check.py (mocked). UI remains in
+  PRICE-1-UI; live header values in research 0004 remain UNVERIFIED.
 - [ ] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
   prices, "waiting N s" from the limiter, poe.ninja rates for conversion).
   After PRICE-1. ACCEPT: fixture result renders at desktop and phone width;
@@ -126,7 +137,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   data.json, no license file; decision 0009 item 3 amended: fetch-only). ACCEPT: source enabled
   with a mocked-fetch test, or recorded as absent. ZERO-CLICK: the next
   build.ps1 run fetches it.
-- [ ] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
+- [x] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
   User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
   optional contact value read only from gitignored config/local.json (never
   a tracked file; no email in any tracked file, leak sweep), appended to
@@ -136,6 +147,15 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   2026-11-17 from the coordinator's review of the round-3 data lane.
   ACCEPT: tests with and without a contact (mocked fetch); leak sweep
   clean. ZERO-CLICK: setting the contact once enables the fetches.
+  DONE 2026-11-17 (build lane, decision 0015): "contact" read only from
+  gitignored config/local.json (example file: empty value);
+  webfetch.user_agent appends "(contact: <value>)" (cleaned: printable
+  ASCII, no parentheses / backslash, max 120); ninja, trade and the
+  snapshot (snapshot.user_agent, GGG sources via needs_contact) send
+  nothing without it; "blocked": "contact not set" in /api/rates,
+  /api/web-data, /api/price and the state price field; the value is never
+  echoed. pobb.in / pastebin share links unchanged. Tests:
+  test_price_check.py, test_data_ninja.py, test_trade_limiter.py.
 
 ## Lane: review
 

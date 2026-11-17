@@ -27,14 +27,30 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .. import NAME, VERSION, paths
+from .. import NAME, VERSION, paths, webfetch
 
 ATTRIBUTION = ("Game data (c) Grinding Gear Games. Item, mod and stat data from the "
                "RePoE fork community export (repoe-fork), downloaded to this computer "
                "at build time. This product isn't affiliated with or endorsed by "
                "Grinding Gear Games in any way.")
-USER_AGENT = (f"{NAME}/{VERSION} (local Path of Exile 2 companion; build-time "
-              "game-data snapshot)")
+UA_PURPOSE = "build-time game-data snapshot"
+USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; run() adds the contact
+# UA-CONTACT: GGG asks for a contact in the User-Agent (research 0011), so a
+# GGG source (the skill tree export) is fetched only with a contact set in
+# config/local.json; without one it reports "off: contact not set".
+CONTACT_SOURCES = ("skilltree",)
+CONTACT_HOSTS = ("www.pathofexile.com", "pathofexile.com")
+
+
+def user_agent(contact=None):
+    """The snapshot User-Agent, "(contact: <value>)" appended when set."""
+    return webfetch.user_agent(UA_PURPOSE, contact)
+
+
+def needs_contact(name, url):
+    parts = urllib.parse.urlsplit(url or "")
+    return (name in CONTACT_SOURCES or (parts.hostname or "").lower() in CONTACT_HOSTS
+            or "/grindinggear/" in parts.path.lower())
 OPT_OUT_ENV = "AL_NO_SNAPSHOT"
 MIN_AGE_S = 24 * 3600
 MAX_BYTES = 256 * 1024 * 1024
@@ -126,10 +142,14 @@ def load_manifest(directory):
         return {}
 
 
-def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None):
+def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
+        contact=None):
     """Refresh every enabled source. Returns {name: outcome} where outcome is
     'fetched', 'unchanged', 'fresh' (skipped, checked < MIN_AGE_S ago),
-    'disabled' or 'error: ...'. Writes the manifest when anything changed."""
+    'disabled', 'off: contact not set' (a GGG source without a contact) or
+    'error: ...'. Writes the manifest when anything changed."""
+    contact = webfetch.clean_contact(contact)
+    ua = user_agent(contact)
     directory = Path(directory) if directory is not None else cache_dir()
     sources = SOURCES if sources is None else sources
     now = time.time() if now is None else now
@@ -140,6 +160,9 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None):
         if not url:
             out[name] = "disabled"
             continue
+        if contact is None and needs_contact(name, url):
+            out[name] = "off: " + webfetch.REASON_CONTACT
+            continue
         entry = files.get(name) if isinstance(files.get(name), dict) else {}
         target = directory / f"{name}.json"
         have = target.is_file() and entry.get("url") == url and entry.get("sha256")
@@ -148,7 +171,7 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None):
             if checked is not None and 0 <= now - checked < MIN_AGE_S:
                 out[name] = "fresh"
                 continue
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        headers = {"User-Agent": ua, "Accept": "application/json"}
         if have and not force:
             if entry.get("etag"):
                 headers["If-None-Match"] = entry["etag"]
@@ -190,8 +213,12 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None):
     return out
 
 
-def main(argv=None, environ=None, fetch=http_fetch):
+def main(argv=None, environ=None, fetch=http_fetch, contact=None):
+    """contact: None = read "contact" from gitignored config/local.json."""
     env = os.environ if environ is None else environ
+    if contact is None:
+        cfg = paths.load_local_config()
+        contact = cfg.get(webfetch.CONTACT_KEY) if isinstance(cfg, dict) else None
     ap = argparse.ArgumentParser(prog="snapshot", description=f"{NAME} game-data snapshot")
     ap.add_argument("--force", action="store_true", help="re-download every file")
     ap.add_argument("--strict", action="store_true", help="exit 1 when a source fails")
@@ -201,7 +228,7 @@ def main(argv=None, environ=None, fetch=http_fetch):
         print(f"snapshot: skipped ({OPT_OUT_ENV} set)")
         return 0
     directory = Path(args.dir) if args.dir else cache_dir(env)
-    result = run(directory, fetch=fetch, force=args.force)
+    result = run(directory, fetch=fetch, force=args.force, contact=contact)
     for name in sorted(result):
         print(f"snapshot: {name}: {result[name]}")
     failed = any(v.startswith("error") for v in result.values())

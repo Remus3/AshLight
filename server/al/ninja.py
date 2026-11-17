@@ -12,7 +12,9 @@ truthful User-Agent, one request at a time. The last-attempt time is
 persisted with the cache, so a restart never refetches early; a failed
 attempt counts as a request.
 
-Nothing is requested unless the web-data opt-in is on (webfetch.WebDataOff);
+Nothing is requested unless the web-data opt-in is on (webfetch.WebDataOff)
+and a User-Agent contact is configured (UA-CONTACT: poe.ninja's API docs ask
+for one; `snapshot()["blocked"]` says "contact not set");
 offline or opted out, `snapshot()` returns the cached rates with their age.
 Cache: <sidecar>\\Cache\\ninja\\rates.json (server/al/paths.py).
 """
@@ -37,7 +39,8 @@ ALLOWED_HOSTS = ("poe.ninja",)
 LEAGUES_PATH = "/poe2/api/economy/leagues"
 OVERVIEW_PATH = "/poe2/api/economy/exchange/current/overview"
 OVERVIEW_TYPE = "Currency"
-USER_AGENT = webfetch.user_agent("currency rates from poe.ninja")
+UA_PURPOSE = "currency rates from poe.ninja"
+USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; requests add the contact
 MIN_INTERVAL_S = 3600  # PoE2 data refreshes about hourly (research 0005)
 LEAGUE_INTERVAL_S = 24 * 3600
 STALE_AFTER_S = 2 * 3600
@@ -121,13 +124,17 @@ class RatesClient:
     enabled: callable -> bool, the web-data opt-in (read on every call).
     league: callable -> str or None, a user-configured league (no lookup).
     fetch: injectable transport fetch(method, url, headers, body).
+    contact: callable -> str or None, the User-Agent contact (UA-CONTACT);
+    poe.ninja asks for one, so without it nothing is requested.
     """
 
     def __init__(self, directory=None, enabled=lambda: False, league=lambda: None,
-                 fetch=None, clock=time.time):
+                 fetch=None, clock=time.time, contact=lambda: None):
         self.directory = Path(directory) if directory is not None else cache_dir()
         self.path = self.directory / CACHE_NAME
         self.enabled = enabled
+        self.contact = contact
+        self._ua = USER_AGENT
         self.league = league
         self.fetch = fetch
         self.clock = clock
@@ -158,7 +165,7 @@ class RatesClient:
         return self._due("overview_attempt_at", MIN_INTERVAL_S, now)
 
     def _get(self, url, etag=None):
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        headers = {"User-Agent": self._ua, "Accept": "application/json"}
         if etag:
             headers["If-None-Match"] = etag
         return webfetch.request("GET", url, headers, ALLOWED_HOSTS, fetch=self.fetch,
@@ -188,8 +195,9 @@ class RatesClient:
 
     def refresh(self, force=False):
         """One refresh when due (or force=True ignores only the interval, never
-        the opt-in). Returns 'off', 'fresh' (not due), 'unchanged' (304),
-        'fetched' or 'error: ...'. Never raises for network trouble."""
+        the opt-in or the contact). Returns 'off', 'off: contact not set',
+        'fresh' (not due), 'unchanged' (304), 'fetched' or 'error: ...'.
+        Never raises for network trouble."""
         with self._lock:
             if self._busy:
                 return "busy"
@@ -205,6 +213,10 @@ class RatesClient:
             webfetch.require_opt_in(self.enabled)
         except webfetch.WebDataOff:
             return "off"
+        contact = webfetch.contact_value(self.contact)
+        if contact is None:
+            return "off: " + webfetch.REASON_CONTACT
+        self._ua = webfetch.user_agent(UA_PURPOSE, contact)
         now = self.clock()
         if not force and not self.due(now):
             return "fresh"
@@ -238,9 +250,7 @@ class RatesClient:
     def refresh_async(self):
         """Start a background refresh when the opt-in is on and one is due;
         returns True when a thread was started. Never blocks a request."""
-        try:
-            webfetch.require_opt_in(self.enabled)
-        except webfetch.WebDataOff:
+        if webfetch.blocked_reason(self.enabled, self.contact) is not None:
             return False
         if self._busy or not self.due():
             return False
@@ -259,7 +269,10 @@ class RatesClient:
         if isinstance(attempt, (int, float)):
             next_in = max(0, int(attempt + MIN_INTERVAL_S - now))
         enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
+        blocked = webfetch.blocked_reason(enabled, self.contact)
         return {"web_data": enabled, "source": "poe.ninja",
+                "contact_set": webfetch.contact_value(self.contact) is not None,
+                "blocked": blocked,
                 "attribution": ATTRIBUTION, "credit": SHORT_CREDIT,
                 "league": doc.get("league"), "primary": doc.get("primary"),
                 "rates": doc.get("rates") or {},
@@ -267,5 +280,5 @@ class RatesClient:
                 "checked_at": _utc(checked) if isinstance(checked, (int, float)) else None,
                 "age_s": int(age) if age is not None else None,
                 "stale": age is None or age > STALE_AFTER_S,
-                "next_refresh_in_s": next_in if enabled else None,
+                "next_refresh_in_s": next_in if blocked is None else None,
                 "refreshing": self._busy, "last_error": doc.get("last_error")}

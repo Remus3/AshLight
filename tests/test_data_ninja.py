@@ -57,11 +57,32 @@ class Clock:
         return self.t
 
 
-def _client(tmp_path, net, clock, on=True, league=None):
+CONTACT = "test-contact"
+
+
+def _client(tmp_path, net, clock, on=True, league=None, contact=CONTACT):
     state = {"on": on}
     c = ninja.RatesClient(tmp_path / "ninja", enabled=lambda: state["on"],
-                          league=lambda: league, fetch=net, clock=clock)
+                          league=lambda: league, fetch=net, clock=clock,
+                          contact=lambda: contact)
     return c, state
+
+
+def test_no_request_without_contact(tmp_path):
+    net, clock = FakeNet(), Clock()
+    c, _ = _client(tmp_path, net, clock, contact=None)
+    assert c.refresh() == "off: contact not set"
+    assert c.refresh(force=True) == "off: contact not set"
+    assert c.refresh_async() is False
+    assert net.calls == []
+    snap = c.snapshot()
+    assert snap["web_data"] is True and snap["contact_set"] is False
+    assert snap["blocked"] == "contact not set" and snap["next_refresh_in_s"] is None
+    # a bad value (line break, parenthesis) counts as not set
+    for bad in ("x\r\nInjected: 1", "a(b)", " ", 7):
+        c2, _ = _client(tmp_path, net, clock, contact=bad)
+        assert c2.refresh() == "off: contact not set"
+    assert net.calls == []
 
 
 def test_no_request_without_opt_in(tmp_path):
@@ -85,8 +106,10 @@ def test_fetch_parse_attribution_and_user_agent(tmp_path):
                        "?league=Example+League&type=Currency")
     for _, _, h in net.calls:
         assert h["User-Agent"].startswith(f"{NAME}/{VERSION} ")
+        assert h["User-Agent"].endswith(f"(contact: {CONTACT})")
         assert "Cookie" not in h
     snap = c.snapshot()
+    assert snap["blocked"] is None and snap["contact_set"] is True
     assert snap["league"] == "Example League" and snap["primary"] == "exalted"
     assert snap["rates"]["divine"] == {"value": 250.5, "volume": 1000.0, "name": "Divine Orb"}
     assert set(snap["rates"]) == {"divine", "chaos"}
@@ -187,7 +210,10 @@ def api(tmp_path):
     log = tmp_path / "Client.txt"
     log.write_bytes(b"")
     net = FakeNet()
-    core = Core(runtime=tmp_path / "rt", log_path=str(log), poll_s=0.05, web_fetch=net)
+    rt = tmp_path / "rt"
+    rt.mkdir()
+    (rt / "local.json").write_text(json.dumps({"contact": CONTACT}), encoding="ascii")
+    core = Core(runtime=rt, log_path=str(log), poll_s=0.05, web_fetch=net)
     server = serve(core, TOKEN, port=0, web_root=ROOT / "web",
                    tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
     threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
@@ -220,8 +246,9 @@ def test_rates_endpoint_off_then_opt_in(api):
     assert _req(srv, "POST", "/api/web-data", {"enabled": "yes"})[0] == 400
     status, doc = _req(srv, "POST", "/api/web-data", {"enabled": True})
     assert status == 200 and doc["web_data"] is True
+    assert doc["contact_set"] is True and doc["blocked"] is None
     cfg = json.loads(core.config_path.read_text(encoding="utf-8"))
-    assert cfg["web_data"] is True
+    assert cfg["web_data"] is True and cfg["contact"] == CONTACT
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         doc = _req(srv, "GET", "/api/rates")[1]

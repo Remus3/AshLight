@@ -1,0 +1,58 @@
+# 0015 - Price check per press and the User-Agent contact (PRICE-1, UA-CONTACT)
+
+Date: 2026-11-17. Trigger: ROADMAP rows PRICE-1 (server side) and
+UA-CONTACT, worked by the build lane (round 4). No adjudicator was needed:
+every fork below follows from CLAUDE.md, decisions 0003 / 0013 / 0014 and
+research 0004 / 0011.
+
+## Decision
+
+1. Contact (UA-CONTACT). An optional `"contact"` key read ONLY from the
+   gitignored `config/local.json` (a test core: its runtime `local.json`);
+   `config/local.example.json` documents it with an empty value and no
+   example address. `webfetch.user_agent(purpose, contact)` appends
+   `(contact: <value>)`; the value must be printable ASCII without
+   parentheses or backslash, at most 120 characters, else it counts as
+   unset (no header injection, no broken comment). The value is never
+   echoed by the API (`GET /api/web-data` says only `contact_set`).
+2. Gate. poe.ninja (`ninja.RatesClient`), trade2 (`trade.TradeClient`,
+   checked at submit and again right before sending) and GGG sources of
+   the build-time snapshot (`snapshot.needs_contact`: the skill tree
+   source, pathofexile.com, grindinggear paths) send nothing without a
+   contact, even with web_data on. The reason is exposed as `"blocked":
+   "contact not set"` (or "web data off") in `GET /api/rates`, `GET
+   /api/web-data`, `GET /api/price` and the state's `price` field. pobb.in
+   and pastebin share links keep working without one (research 0011 lists
+   the contact ask only for GGG and poe.ninja) and do not send it.
+   Alternatives: send name / version only (decision 0013 open item; rejected:
+   both GGG and poe.ninja docs ask for a contact); a contact in a tracked
+   file (rejected: CLAUDE.md hygiene, leak sweep).
+3. Price check (PRICE-1, `server/al/price.py`). The app's one clipboard read
+   per press of the item hotkey already posts the text to POST /api/eval
+   (decision 0014); the server queues at most ONE price check for that same
+   POST - no second read, no second app call. Flow through the shared
+   TradeClient / RateLimiter: the trade2 stat-id table (`/data/stats`,
+   cached in `<sidecar>\Cache\trade\trade_data.json`, at most one attempt a
+   day, persisted, a failed attempt counts), the league (config "league",
+   else the first softcore poe2 league of `/data/leagues`, daily, else
+   Standard), `build_query`, one search, one fetch of the first 10 ids, a
+   summary (main currency, min / median of the cheapest 5, listing count,
+   search total). Same text within 30 s reuses the last result; a newer
+   press supersedes an older check that has not searched yet, so a press
+   never causes more than one search. "waiting N s" comes live from the
+   limiter. The result is a neutral data field `price` in the state (no new
+   event text) and `GET /api/price` (token, Host, Origin as every endpoint;
+   a GET never starts a check). The card is PRICE-1-UI.
+   Alternatives: a separate price hotkey and clipboard read (rejected:
+   decision 0003 / ruling F1, one read per press); the league from
+   poe.ninja's cache (rejected: its ids are not proven to equal trade2's).
+
+## Open (UNVERIFIED)
+
+- trade2 `/data/stats`, `/data/leagues` and `/fetch` response shapes and the
+  league list order (research 0004); parsers are defensive.
+
+## Reverses if
+
+GGG or poe.ninja drop the contact ask, a share host starts asking for one,
+or the operator rules price checks need their own hotkey.
