@@ -800,6 +800,20 @@ class SessionState:
                     self.zone_entered_at = now
                     self.maps.on_scene(self.zone, now, self.in_hideout)
                     changed = True
+            elif t == "log_opened":
+                # TEST-LIVE-RESTART: a new game run. The player is at the
+                # login screen, so the old run's zone, area, zone timer and
+                # AFK / DND are void. Character, level and counts stay.
+                if self.maps.pause(now):
+                    changed = True
+                if (self.zone is not None or self.area_id is not None
+                        or self.area_level is not None or self.in_hideout
+                        or self.zone_entered_at is not None
+                        or self.afk or self.dnd):
+                    self.zone = self.area_id = self.area_level = None
+                    self.zone_entered_at = None
+                    self.in_hideout = self.afk = self.dnd = False
+                    changed = True
             elif t == "level_up":
                 # The first level-up names the character unless one was
                 # configured; other players' level-ups are listed, not counted.

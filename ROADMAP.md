@@ -18,6 +18,33 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   fixture and a passing test. Needs the operator to play past the whisper
   level, die once, and receive one trade whisper. BLOCKED: operator act
   (in-game play, hand-off OPERATOR act (b)); the loop skips it until then.
+  LIVE CHECK 2026-11-17 (AREA-TEST batch 3, game 0.5.5g launched from Steam
+  while the core ran, login screen only): consent + tailing VERIFIED live,
+  new lines picked up, "(unknown)" scene kept as transient VERIFIED, opening
+  marker shape VERIFIED with no prefix. WRONG: the live marker was ignored,
+  so the old run's zone / area / zone timer stayed (fixed: TEST-LIVE-RESTART).
+  NOT REACHED: login, character select, zone / level / act in a fresh run
+  (TEST-LIVE-CLICKS); game exit / idle state (TEST-LIVE-EXIT). Overlay
+  drew nothing on the desktop capture (known setOpacity bug, UX-REAL-OVERLAY
+  merge pending).
+- [x] TEST-LIVE-RESTART (build) A game start while the core runs must void
+  the previous run's zone. ACCEPT: the opening marker parses to
+  `log_opened`; it clears zone, area, zone timer, hideout, AFK / DND, keeps
+  character / level / counts and pauses an open map clock; sanitized
+  fixture tests/fixtures/client_live_restart.txt. ZERO-CLICK: automatic on
+  the next log line.
+- [ ] TEST-LIVE-EXIT (build) Killing the game (by PID, 2026-11-17) wrote no
+  log line; the dashboard kept the old zone and its timer running. ACCEPT: a
+  verified clean-quit log line (operator quits normally once) mapped to an
+  idle state with a fixture test, or an adjudicator ruling on whether a
+  game-process presence check (no memory read) fits decision 0003.
+  ZERO-CLICK: idle shows by itself when the game ends.
+- [ ] TEST-LIVE-CLICKS (build) The live check lane had no desktop-control
+  tool, so Login and character select were not clicked (no input synthesized
+  from PowerShell). ACCEPT: one live run reaching the hideout / town with
+  zone, character, level, act and session timer read back from /api/state.
+  BLOCKED: operator act (log in once while the core runs) or a desktop-tool
+  grant to the lane. ZERO-CLICK: the read-back is scripted.
 - [ ] OVL-BUDGET (build) PARTIAL 2026-11-16 (decision 0002 "Measured
   2026-11-16 (OVL-BUDGET, game running)"): idle with the game open at
   character select 3 processes, about 204 MB working set, 0.000 percent CPU,

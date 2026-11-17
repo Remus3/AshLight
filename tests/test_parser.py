@@ -200,7 +200,6 @@ def test_live_trade_cancelled():
 def test_live_npc_dialogue_and_engine_lines_ignored():
     assert _one("Riverside Miller: Grind you down!") is None
     assert _one("[WINDOW] Gained focus") is None
-    assert parser.parse_line("2026/11/16 21:00:00 ***** LOG FILE OPENING *****") is None
 
 
 def test_live_fixture_event_types():
@@ -216,3 +215,28 @@ def test_live_fixture_event_types():
     areas = [(e["area_level"], e["area_id"]) for e in evs if e["type"] == "area_generated"]
     assert areas == [(1, "G1_1"), (15, "G1_town")]
     assert "area_entered" not in types  # PoE2 does not log "You have entered"
+
+
+# --- TEST-LIVE-RESTART (live check 2026-11-17): a game start writes the
+# opening marker with no [LEVEL Client pid] prefix; it is the run boundary.
+RESTART = Path(__file__).parent / "fixtures" / "client_live_restart.txt"
+
+
+def test_live_marker_is_log_opened_event():
+    ev = parser.parse_line("2026/11/17 10:00:03 ***** LOG FILE OPENING *****")
+    assert ev["type"] == "log_opened"
+    assert ev["ts_local"] == "2026-11-17T10:00:03"
+    assert ev["source"] == "client_log" and "pid" not in ev
+
+
+def test_live_restart_fixture_is_ascii_lf():
+    data = RESTART.read_bytes()
+    data.decode("ascii")
+    assert b"\r" not in data
+
+
+def test_live_restart_fixture_events():
+    evs = parser.parse_lines(RESTART.read_text(encoding="ascii").splitlines())
+    types = [e["type"] for e in evs]
+    assert types.count("log_opened") == 2
+    assert types[-2:] == ["log_opened", "scene_changed"]

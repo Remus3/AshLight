@@ -15,6 +15,12 @@ PREFIX = re.compile(
     r"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) (\d+) ([0-9a-fA-F]+) "
     r"\[(\w+) Client (\d+)\] ?(.*)$")
 
+# Run boundary: "<date> <time> ***** LOG FILE OPENING *****" is written once
+# per game start, with no [LEVEL Client pid] prefix (live PoE2 log,
+# TEST-LIVE-RESTART 2026-11-17). It becomes a "log_opened" event.
+MARKER_LINE = re.compile(
+    r"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) \*{5} LOG FILE OPENING \*{5}\s*$")
+
 # [SCENE] Set Source [<name>] - confirmed in PoE2 logs.
 # "Load Source" is UNVERIFIED (search snippet only).
 SCENE = re.compile(r"^\[SCENE\] (?:Set|Load) Source \[(.*)\]\s*$")
@@ -214,7 +220,15 @@ def parse_line(line, keep_raw=False):
         return None
     m = PREFIX.match(line.rstrip("\r\n"))
     if not m:
-        return None
+        mk = MARKER_LINE.match(line.rstrip("\r\n"))
+        if not mk:
+            return None
+        ev = {"type": "log_opened",
+              "ts_local": f"{mk.group(1)}-{mk.group(2)}-{mk.group(3)}T{mk.group(4)}",
+              "source": "client_log"}
+        if keep_raw:
+            ev["raw"] = line
+        return ev
     ev = parse_body(m.group(9))
     if ev is None:
         return None
