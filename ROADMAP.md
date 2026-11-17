@@ -666,6 +666,40 @@ design docs in docs/design/, both made by a separate agent.
   only on change (0 live mutations over 3 pushes), deaths dash hidden
   text instead of a forbidden aria-label.
 
+- [x] UX-NEWEST (review) Glance pass over today's newest surfaces: the
+  Last session card (silent, no live region: it must be noticed by its
+  place), the idle "log quiet" state (dashboard pill, zone tag, overlay
+  word), price movers, the item card "Price and points" and "Rolls"
+  lines, and the Path of Building calc off / failed notices, at 320 /
+  768 / 1440 px in dark, light and forced colours. ACCEPT: headless
+  Chrome screenshots, defects fixed and test-guarded. ZERO-CLICK: every
+  surface fills and clears itself from the log and the price cache; the
+  card shows where the eye lands with no click and no announcement.
+  DONE 2026-11-17 (area-ux b4, 0004 U17): Last session card moved from
+  under Death recap (y 1964 at 1440 px, 2908 at 320) to right under the
+  tiles (y 363 / 519, above the fold) with a steady accent edge; Price
+  and points moved next to Price. Guards in tests/test_ux_review.py.
+- [x] UX-DASH-LAYOUT (review) With about 12 cards, order the dashboard by
+  what a player needs at a glance, fold rarely used settings, keep Tab
+  order = visual order. No new deps. ACCEPT: order recorded with the
+  reason, DOM order guarded by a test. ZERO-CLICK: the order is fixed in
+  the page; folded settings need a click only when the player wants to
+  change them.
+  DONE 2026-11-17 (area-ux b4, 0004 U18): tiles, Last session, trades,
+  item check, Act times, Maps, Death recap, Recent, Build, Prices,
+  overlay settings (folded), graphics (folded). DOM order only, no CSS
+  order, so Tab order follows. Guard in tests/test_ux_review.py.
+- [x] UX-OVERLAY-REAL2 (review) Re-verify the real overlay on the desktop
+  after today's merges (visible, click-through, non-focusable, position,
+  idle word) and measure RAM / CPU against decision 0002. ACCEPT:
+  numbers in 0004. ZERO-CLICK: nothing to set; the overlay places and
+  stays click-through by itself.
+  DONE 2026-11-17 (area-ux b4, 0004 U19): visible on the desktop (GDI
+  screen copy), TOPMOST TRANSPARENT LAYERED NOACTIVATE, hit test passes
+  through, foreground unchanged, top-left 16,16 280 x 176; idle word
+  `log quiet 20m` fits; 3 processes, working set 248 MB summed (budget
+  250, no margin, as in OVL-BUDGET), private 109 MB, CPU 0 ms in 60 s.
+
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 

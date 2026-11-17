@@ -172,6 +172,10 @@ button.link {
 .event-list li.death .kind { color: var(--fk-status-bad); }
 
 .trades { border-color: var(--fk-status-warn); }
+/* UX-NEWEST N1: the Last session card is silent (no live region), so it
+   shows by position (under the tiles) and a steady accent edge, no motion;
+   the edge is decorative, the heading carries the meaning */
+.card.session { border-left: 4px solid var(--fk-accent); }
 .trade-list { list-style: none; margin: 0 0 8px; padding: 0; }
 .trade-list li {
   display: flex;

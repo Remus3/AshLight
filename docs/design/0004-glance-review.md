@@ -200,6 +200,64 @@ Automation; dashboard in headless Chrome over CDP.
   (live, Tab order = DOM order): Stat weights, Paste a build, web data,
   monitor, corner, size, opacity, gap, graphics, stop reading.
 
+## Live pass, batch 4 (2026-11-17)
+
+Method: a core on a spare port in the AshLight block (own runtime and
+sidecar dirs) fed by `tools/synth_client.py`, a pasted build and one
+item check; states the core reaches only after 20 quiet minutes or a
+price fetch (idle, Last session card, web data on with movers, a rated
+item price, a roll spread, the calc failed / off notices) were injected
+into the page's snapshot and `/api/rates` reply by a scratch script, so
+every word is the page's own rendering. Headless Chrome over CDP at 320 /
+768 / 1440 px, dark, light and forced colours; the real Electron overlay
+on the primary monitor; no horizontal scroll anywhere.
+
+- U17 UX-NEWEST [S2; fixed] (a) The Last session card is deliberately
+  not a live region (polite regions are capped at 12, U16), so it must
+  be seen by its place, but it sat under Death recap: y 1964 px at 1440
+  and 2908 px at 320, two to three screens down, where a player who
+  comes back after the game closed never looks. It now sits right under
+  the tiles (y 363 / 519, in the first screen at both widths) with a
+  steady 4 px accent edge (no motion; forced colours keep the edge as
+  CanvasText and the card keeps its words). It shows only after a
+  stretch ends, so during play it takes no room. (b) "Price and points"
+  sat between the rolls line and "Checked at", apart from the Price
+  section: it now follows Price, so the price words read together.
+  Holds: the idle state reads the same on all three surfaces (pill
+  `quiet for 20 min - game closed or AFK?`, zone tag `frozen - log
+  quiet`, overlay `log quiet 20m` in 13 px warn, within the 15-character
+  cap); the movers block says up / down in words, so forced colours lose
+  nothing; Rolls and both calc notices wrap cleanly at 320 px.
+- U18 UX-DASH-LAYOUT [S3; fixed] Order by what a player needs at a
+  glance: the four tiles; Last session (only after a stretch ends);
+  trade requests (time-limited, shown on the overlay too); Item check
+  (the hotkey's answer); Act times, Maps and Death recap (the run in
+  progress); Recent; then reference and settings: Build, Prices and web
+  data, overlay position (folded now: set once, the hotkey hint stays
+  open, and so does its save / load status line, review F1), graphics
+  (already folded). Only the DOM order changed, no CSS
+  `order`, so Tab order stays the visual order (U16). The web data
+  opt-in and its explanation stay open: the explanation is the consent
+  text (decision 0013).
+- U19 UX-OVERLAY-REAL2 [-; holds] Real overlay from this branch against
+  the test core, top-left of the primary monitor (2560 x 1440, 96 dpi):
+  visible in a GDI copy of the screen (`CAPTUREBLT`), window 16,16 280 x
+  176, `TOPMOST TRANSPARENT LAYERED NOACTIVATE`, no window alpha; a hit
+  test at the plate returns the browser below (click-through); the
+  foreground window never changed (non-focusable). Idle word `log quiet
+  20m` checked on the overlay page with an idle snapshot (the real core
+  turns idle only after 20 quiet minutes). Budgets (decision 0002): 3
+  processes (browser, renderer, utility; no GPU process), working set
+  summed 247.9 to 248.0 MB over 60 s (budget 250; no margin, as measured
+  in OVL-BUDGET), private 109.1 MB, CPU 0 ms over 60 s (under the 15.6
+  ms timer tick; budget 1 percent). Overlay and core closed by the PIDs
+  started. Open: headless Chrome paints the forced-colours overlay page
+  black outside the plates; the real transparent window was verified in
+  U8 and is unaffected.
+
+design-reviewer on batch 4: PASS WITH FINDINGS S1=0 S2=0 S3=1 S4=2, all
+fixed (overlay save status kept outside the fold; two comment notes).
+
 ## Kept by decision
 
 - K1 (SC 2.2.2): the zone and session timers keep updating with no pause
