@@ -66,11 +66,22 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   values recorded in research 0004.
   ZERO-CLICK: once opted in, the one hotkey press queues the check; the
   limiter paces it with no click.
-- [ ] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
+- [x] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
   prices, "waiting N s" from the limiter, poe.ninja rates for conversion).
   After PRICE-1. ACCEPT: fixture result renders at desktop and phone width;
   design-reviewer pass. ZERO-CLICK: appears after the hotkey press, no
   button.
+  DONE 2026-11-17 (decision 0015), STUB-BUILT: no PRICE-1 result contract
+  existed, so the adjudicator ruled one (0015 fork 1): the lane calls
+  state.SessionState.set_price(card, at=<press time>) and adds no endpoint;
+  snapshot `price` (status searching|waiting|done|off|error, wait_s, item,
+  league, count, listings <= 10, error) with text from state.py
+  price_card_text, and `card` from overlay_card (merged with the item check
+  of the same press, or price-only). Nothing calls set_price in this branch
+  yet; UI checked against fixture cards (tests/test_price_text.py,
+  app/test/price.test.js, prices.test.js, stand-in server screenshots).
+  Dashboard: Price section in the Item check card with "about N <primary>"
+  per listing (web/prices.js). REMAINS for PRICE-1: call set_price.
 
 ## Lane: data
 
@@ -86,13 +97,21 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   /api/web-data; GET /api/rates (token, Host, Origin) never blocks, starts a
   due refresh in the background. tests/test_data_ninja.py (mocked).
   ZERO-CLICK: rates refresh themselves hourly once opted in.
-- [ ] DATA-NINJA-UI (build) Rates panel on the dashboard from GET /api/rates
+- [x] DATA-NINJA-UI (build) Rates panel on the dashboard from GET /api/rates
   (top currencies in the primary unit, age, stale marker) with the
   ATTRIBUTION / "Prices: poe.ninja" credit, and the one web-data toggle
   backed by GET / POST /api/web-data (off by default, says what it enables).
   After DATA-NINJA. ACCEPT: fixture rates render at desktop and phone
   width; credit visible; design-reviewer pass. ZERO-CLICK: the panel polls
   /api/rates on its own; no refresh button.
+  DONE 2026-11-17 (decision 0015 fork 3): "Prices and web data" card -
+  web-data checkbox (never pre-ticked, saves on change, says what it
+  fetches), top 8 currencies by volume in the primary unit, kit-state pill
+  (updated / old / not updating - web data is off / can't reach), league,
+  "Prices: poe.ninja" credit + attribution; local poll every 5 min while
+  visible; trade rows show "about N <primary>" (rate age as tooltip). The
+  build-link 422 text now points at this card. web/prices.js,
+  app/test/prices.test.js.
 - [ ] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
   overview response fields (lines[].id / primaryValue, core.items names,
   core.primary) against server/al/ninja.parse_overview and record them in

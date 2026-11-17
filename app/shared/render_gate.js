@@ -23,18 +23,34 @@
      core's expires_at (state.py EVAL_CARD_S), then leaves by itself. While
      it shows it takes the one card slot (design 0001 section 10: at most
      one card), so the trade card waits; trades stay on the dashboard. */
-  function evalFresh(snap, nowS) {
-    var ev = snap && snap.eval;
-    return !!(ev && typeof ev.expires_at === "number" && nowS < ev.expires_at &&
-              ev.text && ev.text.head);
+  /* PRICE-1-UI (decision 0015): a core that sends "card" has already
+     chosen the one card (item check, price check, or both from one press);
+     it shows until its expires_at. An older core without the field keeps
+     the item check path. */
+  function slotPart(snap) {
+    if (!snap) { return null; }
+    if (Object.prototype.hasOwnProperty.call(snap, "card")) {
+      var c = snap.card;
+      return c && c.head ? { expires: c.expires_at, text: fmt.cardText(c) } : null;
+    }
+    var ev = snap.eval;
+    if (!ev || !ev.text || !ev.text.head) { return null; }
+    var e = fmt.evalCard(ev);
+    return { expires: ev.expires_at,
+             text: { head: e.head, line2: e.item, line3: e.line, verdict: e.verdict } };
+  }
+
+  function freshSlot(snap, nowS) {
+    var p = slotPart(snap);
+    return (p && typeof p.expires === "number" && nowS < p.expires) ? p : null;
   }
 
   function withEval(model, snap, nowS) {
-    var card = evalFresh(snap, nowS) ? fmt.evalCard(snap.eval)
-                                     : { head: "", item: "", line: "", verdict: "" };
+    var p = freshSlot(snap, nowS);
+    var card = p ? p.text : { head: "", line2: "", line3: "", verdict: "" };
     model.evalHead = card.head;
-    model.evalItem = card.item;
-    model.evalLine = card.line;
+    model.evalItem = card.line2;
+    model.evalLine = card.line3;
     model.evalVerdict = card.verdict;
     if (card.head) {
       model.tradeFrom = model.tradeItem = model.tradeWhere = model.tradeMore = "";
@@ -42,10 +58,11 @@
     return model;
   }
 
-  /* Milliseconds until the item check card leaves, or null. */
+  /* Milliseconds until the card in the slot leaves, or null. */
   function msUntilEvalExpires(snap, nowS) {
-    if (!evalFresh(snap, nowS)) { return null; }
-    return Math.max(250, Math.ceil((snap.eval.expires_at - nowS) * 1000));
+    var p = freshSlot(snap, nowS);
+    if (!p) { return null; }
+    return Math.max(250, Math.ceil((p.expires - nowS) * 1000));
   }
 
   function hudModel(snap, nowS, status) {

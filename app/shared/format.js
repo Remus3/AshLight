@@ -106,7 +106,18 @@
              verdict: ev.ok ? String(ev.verdict || "") : "note" };
   }
 
+  /* PRICE-1-UI (decision 0015): the one card the core chose (state.py
+     overlay_card: item check, price check, or both from one press). The
+     words come from the core; this only clips them to the line limit. */
+  function cardText(card, maxLen) {
+    var max = maxLen || 34;
+    if (!card || !card.head) { return { head: "", line2: "", line3: "", verdict: "" }; }
+    return { head: clip(card.head, max), line2: clip(card.line2, max),
+             line3: clip(card.line3, max), verdict: String(card.verdict || "") };
+  }
+
   return {
+    cardText: cardText,
     evalCard: evalCard,
     tradeCard: tradeCard,
     minutes: minutes,

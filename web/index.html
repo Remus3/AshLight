@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="/web/app.css">
 <script src="/web/status.js" defer></script>
 <script src="/web/tc.js" defer></script>
+<script src="/web/prices.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -90,6 +91,21 @@
     <div id="eval-comps" class="eval-comps"></div>
     <p id="eval-unweighted" class="muted" hidden></p>
     <p id="eval-when" class="muted"></p>
+    <div id="pricebox" class="price-box">
+      <h3 class="sub-h">Price</h3>
+      <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
+        <p id="price-empty" class="muted">Prices need web data, which is off. Turn it on under
+          Prices and web data.</p>
+        <div id="price-body" hidden>
+          <p class="eval-head"><span id="price-badge" class="pill" data-state="pending"><span
+            class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
+            <span id="price-item" class="eval-item"></span></p>
+          <p id="price-sentence"></p>
+        </div>
+      </div>
+      <ol id="price-list" class="price-list" aria-label="Cheapest listings"></ol>
+      <p id="price-when" class="muted"></p>
+    </div>
     <details id="weights" class="weights">
       <summary>Stat weights</summary>
       <p class="muted">Points per point of each stat. The verdict adds them up for the new
@@ -149,6 +165,26 @@
       placeholder="Path of Building code"></textarea>
     <p id="build-status" class="muted" role="status" aria-live="polite"></p>
     <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
+  </section>
+
+  <section id="pricesbox" class="card prices" aria-labelledby="prices-title">
+    <h2 id="prices-title">Prices and web data</h2>
+    <form id="webdata-form" class="webdata-form">
+      <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
+        Use web data</label>
+    </form>
+    <p class="muted">Off unless you turn it on. When on, AshLight asks for three things only.
+      It fetches currency values from poe.ninja about once an hour. It opens a build link you
+      paste, once. It asks the official trade site for prices when you check an item. It sends
+      no account, password or cookie, and never touches the game.</p>
+    <p id="webdata-status" class="muted" role="status" aria-live="polite"></p>
+    <h3 class="sub-h">Currency values</h3>
+    <p id="rates-pill" class="pill" data-state="pending"><span class="glyph"
+      aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></p>
+    <p id="rates-unit" class="muted" hidden></p>
+    <ul id="rates-list" class="rates-list"></ul>
+    <p class="muted small"><span id="rates-credit">Prices: poe.ninja</span>.
+      <span id="rates-attrib"></span></p>
   </section>
 
   <section class="card layout" aria-labelledby="layout-title">

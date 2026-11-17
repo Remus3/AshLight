@@ -115,6 +115,7 @@
       var where = document.createElement("span");
       where.className = "where";
       where.textContent = line.where;
+      var worth = P.tradeAbout(t, ratesDoc); // DATA-NINJA-UI: "about N <primary>"
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "secondary";
@@ -124,6 +125,13 @@
       li.appendChild(tm);
       li.appendChild(what);
       li.appendChild(where);
+      if (worth.text) {
+        var ab = document.createElement("span");
+        ab.className = "about";
+        ab.textContent = worth.text;
+        ab.title = worth.title;
+        li.appendChild(ab);
+      }
       li.appendChild(btn);
       frag.appendChild(li);
     }
@@ -532,6 +540,115 @@
       });
   }
 
+  /* ---- DATA-NINJA-UI / PRICE-1-UI (decision 0015): the one web-data
+     opt-in, poe.ninja currency values and the last price check. Rates are
+     polled from the local core every few minutes (the core itself asks
+     poe.ninja at most once an hour); no refresh button. */
+  var P = window.ALPrices; // web/prices.js: pure view helpers
+  var RATES_POLL_MS = 5 * 60 * 1000;
+  var ratesDoc = null;
+  var webOn = false;
+  var webBusy = false;
+  var ratesAgain = null;
+  var priceShown = null;
+
+  function fillWebData(doc) {
+    var v = P.webDataView(doc);
+    webOn = v.on;
+    $("webdata-on").checked = v.on;
+    return v;
+  }
+
+  function loadWebData() {
+    api("GET", "/api/web-data").then(function (doc) {
+      $("webdata-status").textContent = fillWebData(doc).status;
+      renderPrice(snap ? snap.price : null, true);
+    }).catch(function () {
+      $("webdata-status").textContent = "Can't load the web data setting. Is AshLight running?";
+    });
+  }
+
+  function saveWebData() {
+    if (webBusy) { return; }
+    var want = $("webdata-on").checked;
+    webBusy = true;
+    $("webdata-status").textContent = "Saving...";
+    api("POST", "/api/web-data", { enabled: want }).then(function (doc) {
+      fillWebData(doc);
+      $("webdata-status").textContent = P.savedText(webOn);
+      renderPrice(snap ? snap.price : null, true);
+      loadRates();
+    }).catch(function () {
+      $("webdata-on").checked = webOn; // back to what is really saved
+      $("webdata-status").textContent = "Not saved. Try again.";
+    }).then(function () { webBusy = false; });
+  }
+
+  function renderRates() {
+    var v = P.ratesView(ratesDoc);
+    setPill($("rates-pill"), v.pill.state, v.pill.glyph, v.pill.word);
+    $("rates-unit").hidden = !v.rows.length;
+    $("rates-unit").textContent = v.rows.length
+      ? "In " + v.primary + (v.league ? ", league " + v.league : "") + "." : "";
+    var frag = document.createDocumentFragment();
+    v.rows.forEach(function (r) {
+      var li = el("li");
+      li.appendChild(el("span", "rate-name", r.name));
+      li.appendChild(el("span", "rate-value mono", r.value));
+      if (r.per) { li.appendChild(el("span", "rate-per muted", "(" + r.per + ")")); }
+      frag.appendChild(li);
+    });
+    $("rates-list").replaceChildren(frag);
+    $("rates-credit").textContent = v.credit;
+    $("rates-attrib").textContent = v.attribution;
+  }
+
+  function loadRates() {
+    if (ratesAgain) { clearTimeout(ratesAgain); ratesAgain = null; }
+    api("GET", "/api/rates").then(function (doc) {
+      ratesDoc = doc;
+      if (typeof doc.web_data === "boolean" && !webBusy && doc.web_data !== webOn) {
+        fillWebData({ web_data: doc.web_data });
+      }
+      renderRates();
+      renderedTrades = ""; // conversions may have changed
+      if (snap) { renderTrades(snap.trade_requests || []); }
+      renderPrice(snap ? snap.price : null, true);
+      // a refresh the core just started finishes in a few seconds
+      if (doc.refreshing) { ratesAgain = setTimeout(loadRates, 3000); }
+    }).catch(function () {
+      setPill($("rates-pill"), "failed", "[x]", "can't load currency values - is AshLight running?");
+    });
+  }
+
+  function pollRates() {
+    if (!document.hidden && linkLive) { loadRates(); }
+  }
+
+  function renderPrice(pr, force) {
+    var v = P.priceView(pr, ratesDoc, clock);
+    var key = v ? v.key : null;
+    if (key === priceShown && !force) { return; }
+    priceShown = key;
+    $("price-empty").hidden = !!v;
+    $("price-body").hidden = !v;
+    $("price-empty").textContent = P.priceEmpty(webOn);
+    var frag = document.createDocumentFragment();
+    if (v) {
+      setPill($("price-badge"), v.badge.state, v.badge.glyph, v.badge.word);
+      $("price-item").textContent = v.item;
+      $("price-sentence").textContent = v.sentence;
+      v.rows.forEach(function (r) {
+        var li = el("li");
+        li.appendChild(el("span", "mono", r.text));
+        if (r.about) { li.appendChild(el("span", "muted", r.about)); }
+        frag.appendChild(li);
+      });
+    }
+    $("price-list").replaceChildren(frag);
+    $("price-when").textContent = v ? v.when : "";
+  }
+
   /* ---- GFX-ADVISOR: read on the first open of the panel (a click on the
      dashboard, so the game is not focused then); kept for the session. */
   var gfxLoaded = false;
@@ -589,6 +706,7 @@
       renderBuildYou();
     }
     renderEval(s.eval || null);
+    renderPrice(s.price || null, false);
 
     $("zone").textContent = s.zone || "No zone yet";
     $("hideout").hidden = !s.in_hideout;
@@ -657,6 +775,8 @@
     }
     loadLayout();
     loadWeights();
+    loadWebData();
+    loadRates();
     api("GET", "/api/state").then(render).catch(function () {
       if (!linkLive) { setLink("error"); }
     });
@@ -687,6 +807,9 @@
     $("weights-form").addEventListener("change", saveWeights);
     $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
     $("gfx").addEventListener("toggle", openGfx);
+    $("webdata-form").addEventListener("change", saveWebData);
+    $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
+    setInterval(pollRates, RATES_POLL_MS);
     // The two timers advance once a second; nothing else moves.
     ticker = setInterval(tick, 1000);
     connect();
