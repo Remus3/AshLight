@@ -28,6 +28,15 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   REMAINS: in-map run read from the game's own FPS display, overlay off vs
   idle vs updating, Windowed Fullscreen. ACCEPT: average FPS loss under 1
   percent, 1 percent lows unchanged within noise; numbers in decision 0002.
+- [ ] LIVE-RESUME (build) Found in LIVE-1 (2026-11-16): a core restart
+  starts at the end of Client.txt, so zone, level and character stay empty
+  until the next level-up or zone change. Replay the last N KB on start
+  (research 0002 section 2) into state only, without re-listing old events.
+  ACCEPT: after a restart mid-session /api/state shows the last zone,
+  level and character from the log.
+- [ ] OVL-TRADE-CANCEL (build) Decide whether ": Trade cancelled." (new
+  event trade_cancelled) should clear or mark an open trade card (design
+  review 2026-11-16). ACCEPT: behaviour decided and tested.
 - [x] OVL-POS (build) Overlay layout editor on the dashboard (corner, scale,
   opacity), DPI-aware, multi-monitor; stored in config/local.json. ACCEPT:
   position survives restart; tests for the layout math.
