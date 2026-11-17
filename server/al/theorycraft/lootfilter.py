@@ -21,6 +21,17 @@ matching for the items it catches, so the Import goes near the top. When
 the build-time base list is cached (decision 0009) a base name the game
 data does not know is left out: such a BaseType value would make the
 player's filter fail to load.
+
+UTIL-FILTER-2 (decision 0032): value tiers for uniques and stackables from
+the cached poe.ninja prices (ninja.RatesClient.filter_prices: no new
+request, web data on only), in Divine Orbs. Conservative: a unique base is
+tiered by the CHEAPEST well-listed unique on it (the filter cannot tell
+uniques of one base apart), thin markets are left out, and a name the
+filter grammar cannot carry as it is is left out rather than changed.
+Tiers: top (TOP_DIVINE and up: big text, red beam, star icon), worth
+picking up (PICK_DIVINE and up: larger text, white beam), and everything
+else gets no block at all, so the player's own filter decides. AshLight
+never writes a Hide block.
 """
 
 import re
@@ -29,6 +40,10 @@ FILE_NAME = "ashlight.filter"
 IMPORT_LINE = f'Import "{FILE_NAME}" Optional'
 MAX_BASES = 40
 _SAFE = re.compile(r"[^A-Za-z0-9 ',-]")
+MAX_TIER_NAMES = 200
+TOP_DIVINE = 1.0  # worth a Divine Orb or more
+PICK_DIVINE = 0.05  # a twentieth of a Divine Orb or more
+TIER_KEYS = ("unique_top", "unique_pick", "stack_top", "stack_pick")
 NOTICE = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way."
 
 
@@ -68,17 +83,76 @@ def known(names, base_names):
     return kept, dropped
 
 
-def generate(build, base_names=None):
-    """The filter text (ASCII, LF). With no build or no bases it is a valid
-    filter made of comments only, so an Import of it changes nothing.
-    `base_names` (optional, the cached snapshot base list) drops names the
-    game data does not know."""
+def tiers(prices, base_names=None):
+    """{"unique_top", "unique_pick", "stack_top", "stack_pick": [names]}
+    from filter_prices() (values in Divine Orbs); empty lists for None.
+    `base_names` checks unique bases (gear) only: stackables are not in the
+    gear base list."""
+    out = {k: [] for k in TIER_KEYS}
+    if not isinstance(prices, dict):
+        return out
+    for kind, field in (("unique", "base"), ("stack", "name")):
+        rows = prices.get("uniques" if kind == "unique" else "stackables")
+        for row in rows if isinstance(rows, list) else ():
+            if not isinstance(row, dict):
+                continue
+            name, value = row.get(field), row.get("value")
+            if not isinstance(name, str) or _clean(name) != name or not name \
+                    or isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            key = (f"{kind}_top" if value >= TOP_DIVINE
+                   else f"{kind}_pick" if value >= PICK_DIVINE else None)
+            if key and name not in out[key]:
+                out[key].append(name)
+    for k in ("unique_top", "unique_pick"):
+        out[k] = known(out[k], base_names)[0]
+    for k in TIER_KEYS:
+        out[k] = sorted(out[k])[:MAX_TIER_NAMES]
+    return out
+
+
+def _quoted(names):
+    return " ".join(f'"{n}"' for n in names)
+
+
+def _tier_lines(t):
+    if not any(t.values()):
+        return []
+    lines = [f"# Value tiers from poe.ninja prices: {TOP_DIVINE:g} Divine Orb or more, and",
+             f"# {PICK_DIVINE:g} Divine Orb or more. Nothing is hidden: cheaper items keep",
+             "# the look your own filter gives them."]
+    blocks = (("stack_top", None, 45, "255 60 60", "Red", "0 Red Star"),
+              ("unique_top", "Unique", 45, "255 60 60", "Red", "0 Red Star"),
+              ("stack_pick", None, 40, "255 255 255", "White", "1 White Circle"),
+              ("unique_pick", "Unique", 40, "255 255 255", "White", "1 White Circle"))
+    for key, rarity, size, colour, effect, icon in blocks:
+        if not t[key]:
+            continue
+        lines.append("Show")
+        if rarity:
+            lines.append("    Rarity " + rarity)
+        lines += ["    BaseType == " + _quoted(t[key]),
+                  f"    SetFontSize {size}",
+                  "    SetBorderColor " + colour,
+                  "    PlayEffect " + effect,
+                  "    MinimapIcon " + icon,
+                  ""]
+    return lines
+
+
+def generate(build, base_names=None, prices=None):
+    """The filter text (ASCII, LF). With no build, no bases and no prices it
+    is a valid filter made of comments only, so an Import of it changes
+    nothing. `base_names` (optional, the cached snapshot base list) drops
+    names the game data does not know. `prices` (optional,
+    ninja.RatesClient.filter_prices) adds the value tiers first."""
     lines = ["# ashlight.filter - made by AshLight from your loaded build.",
              "# " + NOTICE,
              "# Save this file in your item filter folder, then add this line",
              "# near the top of your own filter:",
              "#   " + IMPORT_LINE,
              ""]
+    lines += _tier_lines(tiers(prices, base_names))
     names, dropped = known(bases(build) if build is not None else [], base_names)
     if dropped:
         n = len(dropped)

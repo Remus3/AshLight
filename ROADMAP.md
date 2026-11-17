@@ -379,6 +379,22 @@ weights derived from PoB outputs stay with TC-DELTA.
   static shape rows read from the checkout, a meta-test that every PoB
   method bridge.lua calls is guarded, a live launch + output-key check;
   each failure names file, shape and the fix.
+- [x] MATH-COMPARE (build) Equipped vs checked item on the card: which
+  equipped item the swap replaces and PoB's DPS / EHP delta of it; for
+  rings and a one-hand weapon of a dual wielder the better slot is the
+  headline and the other slot keeps its own PoB line. ZERO-CLICK: same
+  hotkey press. DONE 2026-11-17 (AREA-MATH b4, decision 0032):
+  evaluate.slots_for_build (Weapon 2 when it holds a weapon, not a
+  shield / buckler / focus / quiver), state.eval_card_text names the
+  replaced item and adds comparisons[].calc, web/app.js shows it;
+  tests/test_math_compare.py; design-reviewer pass.
+- [x] MATH-DPS-SANITY (build) PoB outputs that make no sense for the card
+  (NaN, negative DPS / EHP, zero EHP, an attack build at 0 DPS after a
+  swap) never show as a number: "Path of Building's numbers for this
+  item don't add up", scored with the weights. ZERO-CLICK: automatic on the
+  press. DONE 2026-11-17 (AREA-MATH b4, decision 0032):
+  delta.CalcImplausible, calc notice "implausible";
+  tests/test_math_dps_sanity.py.
 
 ## Research-filed features (AREA-RES 2026-11-17, research 0020)
 
@@ -596,6 +612,11 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   download) (decision 0031). ACCEPT: grammar tests, no stored path, no
   game-folder write. ZERO-CLICK: tiers refresh with the hourly price
   refresh; the save is the player's click.
+  PRICE TIERS DONE 2026-11-17 (AREA-MATH b4, decision 0032):
+  ninja.RatesClient.filter_prices (cache only, web data on), lootfilter
+  tiers (top >= 1 Divine Orb, worth picking >= 0.05; unique base by its
+  cheapest well-listed unique; never Hide); GET /api/filter passes them;
+  tests/test_lootfilter_tiers.py. Remaining: the optional merge.
 
 ## Game settings advisor (operator order 2026-11-16)
 

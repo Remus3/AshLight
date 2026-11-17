@@ -31,6 +31,7 @@ from . import weights as weights_mod
 OUTPUTS = ("dps", "ehp")
 SOURCE_POB, SOURCE_WEIGHTS = "pob", "weights"
 NOTICE_OFF, NOTICE_FAILED = "off", "failed"
+NOTICE_IMPLAUSIBLE = "implausible"  # MATH-DPS-SANITY (decision 0032)
 DEFAULT_BLEND = {"dps": 0.5, "ehp": 0.5}
 PROBE_VALUE = 10
 MAX_PROBES = 24
@@ -40,6 +41,13 @@ UPGRADE, SIDEGRADE, DOWNGRADE = "upgrade", "sidegrade", "downgrade"
 
 class CalcError(RuntimeError):
     """The calc component did not give a usable answer."""
+
+
+class CalcImplausible(CalcError):
+    """MATH-DPS-SANITY (decision 0032): the calc answered numbers that make
+    no sense for the card (negative DPS or EHP, zero EHP, an attack build
+    at 0 DPS after a swap). The card falls back to the weights and says the
+    result looks wrong instead of showing a misleading number."""
 
 
 def _number(value, name):
@@ -59,7 +67,20 @@ def outputs(calc, build, swaps=None):
         raise CalcError(f"calc raised {type(e).__name__}") from e
     if not isinstance(raw, dict):
         raise CalcError("calc answer is not an object")
-    return {k: _number(raw.get(k), k) for k in OUTPUTS}
+    out = {k: _number(raw.get(k), k) for k in OUTPUTS}
+    if out["dps"] < 0:
+        raise CalcImplausible("calc output dps is negative")
+    if out["ehp"] <= 0:
+        raise CalcImplausible("calc output ehp is not positive")
+    return out
+
+
+def _swap_sane(base, new):
+    """An attack build (DPS above 0) never drops to exactly 0 DPS from one
+    item swap in a sane calc: that means a skill PoB lost track of (e.g. a
+    weapon type the main skill cannot use), not a number to show."""
+    if base["dps"] > 0 and new["dps"] == 0:
+        raise CalcImplausible("calc gives 0 DPS after the swap")
 
 
 def _clean(n):
@@ -111,6 +132,7 @@ def item_delta(calc, build, slot, item_text, blend=None, base=None):
     if base is None:
         base = outputs(calc, build)
     new = outputs(calc, build, {slot: item_text})
+    _swap_sane(base, new)
     out = {k: change(base[k], new[k]) for k in OUTPUTS}
     out["score_delta"] = round(combined({k: out[k]["pct"] for k in OUTPUTS}, blend), 4)
     return out
@@ -146,6 +168,7 @@ def mod_weights(calc, build, slot, carrier, keys, blend=None):
             break
         probed += 1
         got = outputs(calc, build, {slot: with_line(carrier, line)})
+        _swap_sane(base, got)
         per = {k: (_pct(base[k], got[k]) or 0.0) / value for k in OUTPUTS}
         weights[key] = round(combined(per, blend), 6)
         detail[key] = {k: round(per[k], 6) for k in OUTPUTS}

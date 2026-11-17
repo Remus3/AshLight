@@ -369,8 +369,15 @@ Generation rules:
    - item check scoring source (TC-DELTA, decision 0024, `_calc_text`):
      when Path of Building scored the item the overlay third line is `DPS
      <+pct>%, EHP <+pct>%` (a 0 base reads `unknown`) and the dashboard adds
-     `Path of Building: DPS <+pct>% (from <old> to <new>), EHP <+pct>% (from
-     <old> to <new>), with this item in <slot>.`; otherwise the dashboard
+     `Path of Building: this item in <slot> replaces <name>. DPS <+pct>%
+     (from <old> to <new>). EHP <+pct>% (from <old> to <new>).` (`this item
+     goes in the empty <slot> slot.` for an empty slot; `(the better of the
+     <n> slots it fits)` after the slot when it fits several; MATH-COMPARE,
+     decision 0032) and each other compared slot shows `Path of Building:
+     DPS <+pct>%, EHP <+pct>%.` under its sentence; when PoB's numbers make
+     no sense (MATH-DPS-SANITY) it adds `Scored with your stat weights. DPS
+     and EHP are not shown because Path of Building's numbers for this item
+     don't add up. Try the check again.` (implausible); otherwise the dashboard
      adds `Scored with your stat weights. To see DPS and EHP, turn on the
      optional Path of Building calc in AshLight's settings file.` (off) or
      `Scored with your stat weights. DPS and EHP are not shown because Path
@@ -382,8 +389,10 @@ Generation rules:
      same build, the dashboard adds `Scored with the stat weights Path of
      Building measured for this build earlier. DPS and EHP are not shown
      because the Path of Building calc is off.` (off) or `... because Path
-     of Building could not be reached. Try the check again.` (failed);
-     uncounted mods read `Not counted (Path of Building has not measured
+     of Building could not be reached. Try the check again.` (failed) or
+     `... because its numbers for this item don't add up. Try the check
+     again.` (implausible); uncounted mods read `Not counted (Path of
+     Building has not measured
      these for this build yet): <mods>.`
    - price and points (MATH-VALUE-UI, web/prices.js `valueView`): `Asking
      price: <n> <currency>, about <n> <primary>.` (`Buyout price: ...` for

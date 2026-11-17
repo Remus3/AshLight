@@ -505,6 +505,9 @@
         box.appendChild(el("h3", "sub-h", c.slot || "Slot"));
         // the headline already says the best slot's sentence
         if (c.slot !== ev.slot) { box.appendChild(el("p", "", c.sentence)); }
+        // MATH-COMPARE: the other slot's own Path of Building DPS / EHP
+        // (the headline calc line already gives the better slot's)
+        if (c.slot !== ev.slot && c.calc) { box.appendChild(el("p", "", c.calc)); }
         if (c.stats && c.stats.length) {
           var ul = el("ul", "eval-stats");
           c.stats.forEach(function (s) {

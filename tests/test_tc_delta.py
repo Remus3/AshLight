@@ -273,8 +273,9 @@ def test_card_text_pob_and_notices():
     st = _State()
     live.LastEval(_Builds(_build()), _Weights(), st, calc=lambda: FakeCalc()).run(RARE_GLOVES)
     t = eval_card_text(st.eval)
-    assert t["calc"] == "Path of Building: DPS -36% (from 100 to 64), EHP +12.7% " \
-                        "(from 4720 to 5320), with this item in Gloves."
+    # MATH-COMPARE (decision 0032): the card names the item the swap replaces
+    assert t["calc"] == "Path of Building: this item in Gloves replaces Old Grip. " \
+                        "DPS -36% (from 100 to 64). EHP +12.7% (from 4720 to 5320)."
     assert t["line"] == "DPS -36%, EHP +12.7%"
     zero = dict(st.eval, comparisons=[dict(st.eval["comparisons"][0],
                                            dps={"old": 0, "new": 64, "pct": None})])
