@@ -123,6 +123,15 @@ class MapRuns:
             return True
         return False
 
+    def pause(self, at):
+        """The game restarted (log_opened): stop the open map's clock."""
+        m = self.cur
+        if m is None or m["entered_at"] is None:
+            return False
+        m["in_s"] = self._time(m, at)
+        m["entered_at"] = None
+        return True
+
     def on_death(self, at):
         m = self.cur
         if m is None or m["entered_at"] is None:
