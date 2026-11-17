@@ -14,6 +14,7 @@
 <script src="/web/acts.js" defer></script>
 <script src="/web/runs.js" defer></script>
 <script src="/web/summary.js" defer></script>
+<script src="/web/search.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -171,6 +172,8 @@
 
   <section id="actsbox" class="card acts" aria-labelledby="acts-title">
     <h2 id="acts-title">Act times</h2>
+    <p id="zone-note-box" class="zone-note" hidden><strong>Zone tip:</strong>
+      <span id="zone-note"></span></p>
     <p id="acts-empty" class="muted"></p>
     <table id="acts-table" class="acts-table" hidden>
       <thead><tr><th scope="col">Act</th><th scope="col">Time in act</th>
@@ -240,6 +243,22 @@
       placeholder="Path of Building code"></textarea>
     <p id="build-status" class="muted" role="status" aria-live="polite"></p>
     <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
+  </section>
+
+  <section id="searchbox" class="card search" hidden aria-labelledby="search-title">
+    <h2 id="search-title">Search strings</h2>
+    <p class="muted">Made from your build. Copy one, then paste it into the stash or vendor
+      search box in game. AshLight copies only when you click Copy.</p>
+    <ul id="search-list" class="search-list"></ul>
+    <h3 class="sub-h">Loot filter add-on</h3>
+    <p class="muted">Shows rare drops of the item bases you wear larger. Save the file in
+      your item filter folder. Then add this line near the top of your own filter:</p>
+    <p><code>Import "ashlight.filter" Optional</code></p>
+    <p class="muted">AshLight never changes your game files.</p>
+    <div class="actions">
+      <button id="filter-download" type="button" class="secondary">Download ashlight.filter</button>
+      <span id="filter-said" class="muted"></span>
+    </div>
   </section>
 
   <section id="pricesbox" class="card prices" aria-labelledby="prices-title">

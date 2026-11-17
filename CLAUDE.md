@@ -483,3 +483,12 @@ them. Pause: `ops/loop/control/HALT`.
   bridge.lua GC ceiling (384 MB Lua heap) and a PoB API drift guard test
   (decision 0028). Reverses if: a pin move or the target machine breaches
   the budgets, or the GC ceiling costs more than it saves.
+- Waystone risk check on the item-check press from an own rule table and
+  the build's PoB numbers; search strings (<= 250 chars) copied only on
+  the player's click; own zone notes with an act default (decision 0030).
+  Reverses if: GGG's tool rules change, the search limit differs, or a
+  note proves copied.
+- The ashlight.filter snippet is only a download on the player's click
+  (GET /api/filter); AshLight never writes it into a game folder
+  (decision 0031). Reverses if: GGG forbids filter tools or allows a
+  filter-folder write in writing, or the operator orders the write.

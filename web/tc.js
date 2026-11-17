@@ -160,7 +160,8 @@
     return { ok: false, text: "Not loaded. Try again." };
   }
 
-  var VERDICT_STATE = { upgrade: "done", sidegrade: "idle", downgrade: "idle" };
+  var VERDICT_STATE = { upgrade: "done", sidegrade: "idle", downgrade: "idle",
+                        risky: "blocked", waystone: "idle" };
 
   /* MATH-POTENTIAL-UI: the item's score now against its score at the worst
      and best rolls of its ranged mods; "" when there is no spread to tell. */
@@ -190,6 +191,16 @@
     /* MATH-WEIGHTS: weights Path of Building measured earlier for this
        build; a stat it has not measured yet is not counted */
     var cached = !!(ev.calc && ev.calc.source === "pob_cached");
+    /* UTIL-WAYSTONE: a waystone has no slot to compare; the core's text
+       says which mods are risky for the loaded build */
+    var ws = ev.waystone && typeof ev.waystone === "object" ? ev.waystone : null;
+    if (ws) {
+      var risky = Array.isArray(ws.risky) && ws.risky.length > 0;
+      /* "waystone" (nothing risky) keeps the default pill style on purpose */
+      verdict = risky ? "risky" : "waystone";
+      word = ws.unidentified ? "Unidentified" : (risky ? "Risky" : "No risky mods");
+      unweighted = [];
+    }
     return {
       verdict: verdict, state: VERDICT_STATE[verdict] || "pending", word: word,
       sentence: t.sentence || "", item: t.item || "",

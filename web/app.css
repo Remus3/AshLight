@@ -265,6 +265,8 @@ textarea, .weights-form input {
   border-radius: 999px;
 }
 .verdict[data-verdict="upgrade"] { color: var(--fk-status-ok); border-color: var(--fk-status-ok); }
+/* UTIL-WAYSTONE: a waystone with mods risky for the loaded build */
+.verdict[data-verdict="risky"] { color: var(--fk-status-warn); border-color: var(--fk-status-warn); }
 .eval-item { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
 .eval-comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px 16px; }
 .eval-comp .sub-h { margin-top: 8px; }
@@ -339,6 +341,15 @@ textarea, .weights-form input {
 li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(--fk-text-muted); }
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
 .code-out { width: 100%; margin-top: 8px; font-size: 0.85rem; }
+/* UTIL-SEARCHSTR: one row per search string, Copy on the player's click */
+.search-list { list-style: none; margin: 0; padding: 0; }
+.search-row { padding: 8px 0; border-top: 1px solid var(--fk-border); min-width: 0; }
+.search-row:first-child { border-top: none; }
+.search-row p { margin: 0 0 6px; }
+.search-text { width: 100%; margin: 0 0 6px; font-size: 0.85rem; }
+.search-said { margin-left: 10px; }
+/* UX-ZONE-NOTES: the note for the zone the player is in */
+.zone-note { margin: 0 0 8px; overflow-wrap: anywhere; }
 .paste { display: block; margin: 16px 0 4px; font-weight: 600; }
 .paste-box { width: 100%; resize: vertical; font-size: 0.9rem; }
 

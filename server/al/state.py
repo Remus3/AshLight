@@ -14,6 +14,7 @@ from . import acts as acts_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
+from . import zonenotes
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -264,6 +265,57 @@ def _calc_text(card, best):
     return CALC_NOTICE_TEXT.get(_key(calc.get("notice")), ""), None
 
 
+CARD_LINE = 34  # design 0001 section 9 rule 6: overlay card line length
+
+
+def _short_list(words, width=CARD_LINE):
+    """Words joined by ", " within `width`; the rest as " +N more"."""
+    shown = []
+    for i, w in enumerate(words):
+        rest = len(words) - i - 1
+        tail = f" +{rest} more" if rest else ""
+        cand = ", ".join(shown + [w])
+        if len(cand + tail) > width and shown:
+            return ", ".join(shown) + f" +{len(words) - len(shown)} more"
+        shown.append(w)
+    text = ", ".join(shown)
+    return text if len(text) <= width else text[:width - 3] + "..."
+
+
+WAYSTONE_LISTED = 3  # design 0001 rule 1: the sentence names at most 3 mods
+
+
+def waystone_text(ws):
+    """UTIL-WAYSTONE (decision 0030): `head`, `line` and `sentence` for a
+    waystone check. Exact tests in tests/test_waystone.py."""
+    ws = _dict(ws)
+    tier = ws.get("tier")
+    what = (f"Tier {tier} waystone" if isinstance(tier, int) and not isinstance(tier, bool)
+            else "Waystone")
+    if ws.get("unidentified"):
+        return {"head": "Waystone unidentified", "line": "Identify it to check its mods",
+                "sentence": f"{what}. Identify it to see its mods, then press the hotkey "
+                            "again."}
+    risky = _dicts(ws.get("risky"))
+    labels = [_text(r.get("label"), "") for r in risky if _text(r.get("label"), "")]
+    shorts = [_text(r.get("short"), "") for r in risky if _text(r.get("short"), "")]
+    loaded = bool(ws.get("build_loaded"))
+    if not labels:
+        if loaded:
+            return {"head": "No risky mods found", "line": what,
+                    "sentence": f"{what}. None of its mods look risky for this build."}
+        return {"head": "No risky mods found", "line": "No build loaded",
+                "sentence": f"{what}. None of its mods look risky. Load a build to check "
+                            "them against your resistances too."}
+    head = "Risky for this build" if loaded else "Risky waystone"
+    sentence = (f"{what}. Risky for this build: " if loaded
+                else f"{what}. Risky mods (no build loaded, so resistances are unknown): ")
+    listed = ", ".join(labels[:WAYSTONE_LISTED])
+    if len(labels) > WAYSTONE_LISTED:
+        listed += f", and {len(labels) - WAYSTONE_LISTED} more"
+    return {"head": head, "line": _short_list(shorts), "sentence": sentence + listed + "."}
+
+
 def eval_card_text(card):
     """The words for one item check (TC-EVAL-UI): `head`, `item` and `line`
     for the 3-line overlay card, `sentence` for the dashboard, and per
@@ -277,6 +329,10 @@ def eval_card_text(card):
         name += " (unidentified)"
     out = {"head": "", "item": name, "line": "", "sentence": "", "comparisons": [],
            "calc": ""}
+    ws = _dict(card.get("waystone"))
+    if ws:
+        out.update(waystone_text(ws))
+        return out
     if not card.get("ok"):
         head, line, sentence = EVAL_ERROR_TEXT.get(
             _key(card.get("error")), ("Can't check this item", "See the dashboard",
@@ -907,6 +963,14 @@ class SessionState:
             return changed
 
     # -- UTIL-SESSION-SUMMARY
+    def _zone_note(self):
+        """UX-ZONE-NOTES: {"text", "source", "zone"} for the campaign zone
+        the player is in, else None. Caller holds the lock."""
+        if self.in_hideout:
+            return None
+        note = zonenotes.note_for(self.area_id, self.zone)
+        return dict(note, zone=self.zone) if note else None
+
     def _counters(self):
         return {"level": self.level, "level_ups": self.level_ups,
                 "deaths": self.deaths, "maps": self.maps.count}
@@ -1080,6 +1144,8 @@ class SessionState:
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
                 "maps": self.maps.view(now),
+                # UX-ZONE-NOTES (decision 0030): our own note for this zone
+                "zone_note": self._zone_note(),
                 "death_recap": self.death_log.view(self.deaths),
                 "pace": self.pace.view(now, self.pace_started_at),
                 "session_summary": (dict(self.session_summary)
