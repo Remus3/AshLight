@@ -14,6 +14,7 @@ const http = require("http");
 const path = require("path");
 const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
+const About = require("./about.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -26,6 +27,7 @@ const DEFAULT_EVAL_KEY = "Alt+Shift+E";
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
 
 let win = null;
+let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let logStream = null;
 
 function log(msg) {
@@ -185,6 +187,22 @@ function createWindow() {
   win.loadFile(OVERLAY_HTML);
 }
 
+/* TC-SNAP-UI: the game-data credit in the About panel and (through
+   al:config) the page's About. */
+function setCredit(c) {
+  dataCredit = c;
+  app.setAboutPanelOptions({ applicationName: "AshLight overlay",
+                             credits: About.aboutText(DISCLAIMER, dataCredit) });
+}
+
+/* On a core restart: re-read the credit, then reload the page (the token
+   changed, so the page reloads anyway; one reload, not two). */
+function refreshAboutAndReload(getVersion) {
+  getVersion().then((doc) => setCredit(About.creditOf(doc)), (e) => {
+    log("about: version not read: " + e.message);
+  }).then(() => { if (win) { win.webContents.reload(); } });
+}
+
 function toggle() {
   if (!win) { return; }
   if (win.isVisible()) { win.hide(); } else { win.showInactive(); }
@@ -200,11 +218,17 @@ function start() {
     const url = (e.senderFrame && e.senderFrame.url) || "";
     const ok = url.startsWith("file:") && decodeURIComponent(url).replace(/\\/g, "/")
       .endsWith("/overlay/index.html");
-    e.returnValue = ok ? { token: readToken(), port: port } : {};
+    e.returnValue = ok ? { token: readToken(), port: port, credit: dataCredit } : {};
   });
 
   writeDisplays();
-  createWindow();
+  // TC-SNAP-UI: the credit is read before the page loads (at most
+  // About.START_WAIT_MS), so the window never reloads just to show it.
+  const getVersion = About.makeGetVersion(http, port, readToken);
+  About.firstCredit(getVersion, About.START_WAIT_MS).then((c) => {
+    setCredit(c);
+    createWindow();
+  });
   screen.on("display-added", onDisplaysChanged);
   screen.on("display-removed", onDisplaysChanged);
   screen.on("display-metrics-changed", onDisplaysChanged);
@@ -217,7 +241,7 @@ function start() {
     const t = readToken();
     if (t !== lastToken) {
       lastToken = t;
-      if (win) { win.webContents.reload(); }
+      refreshAboutAndReload(getVersion);
     }
   });
 

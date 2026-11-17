@@ -28,12 +28,9 @@ import urllib.request
 from pathlib import Path
 
 from .. import NAME, VERSION, paths, webfetch
+from . import datacredit
 
-ATTRIBUTION = ("Game data (c) Grinding Gear Games. Item, mod and stat data from the "
-               "RePoE fork community export (repoe-fork); passive tree data from "
-               "Grinding Gear Games' public skill tree export; downloaded to this "
-               "computer at build time. This product isn't affiliated with or endorsed by "
-               "Grinding Gear Games in any way.")
+ATTRIBUTION = datacredit.ATTRIBUTION  # one source: theorycraft/datacredit.py
 UA_PURPOSE = "build-time game-data snapshot"
 USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; run() adds the contact
 # UA-CONTACT: GGG asks for a contact in the User-Agent (research 0011), so a
@@ -60,7 +57,7 @@ ALLOWED_HOSTS = ("repoe-fork.github.io", "raw.githubusercontent.com")
 # raw.githubusercontent.com serves every public repo: only GGG's own export
 # repository is allowed there (decision 0009 item 3 as amended).
 HOST_PATH_PREFIX = {"raw.githubusercontent.com": "/grindinggear/poe2-skilltree-export/"}
-MANIFEST = "manifest.json"
+MANIFEST = datacredit.MANIFEST
 REPOE_POE2 = "https://repoe-fork.github.io/poe2/"
 GGG_TREE_POE2 = ("https://raw.githubusercontent.com/grindinggear/"
                  "poe2-skilltree-export/main/data.json")
@@ -83,7 +80,7 @@ class FetchError(Exception):
 
 
 def cache_dir(environ=None):
-    return paths.sidecar_dir("Cache", environ) / "gamedata"
+    return datacredit.cache_dir(environ)
 
 
 def _utc(ts=None):

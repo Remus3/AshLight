@@ -6,7 +6,7 @@
   "use strict";
 
   var S = window.ALShared;
-  var cfg = window.al || { token: "", port: 0 };
+  var cfg = window.al || { token: "", port: 0, credit: "" };
   var snap = null;
   var offset = 0;
   var shown = null;
@@ -84,6 +84,10 @@
      "evalLine"].forEach(function (id) {
       nodes[id] = document.getElementById(id);
     });
+    // TC-SNAP-UI: the game-data credit joins the About only with snapshot data.
+    var about = document.getElementById("aboutData");
+    about.textContent = cfg.credit || "";
+    about.hidden = !cfg.credit;
     connect();
   }
 

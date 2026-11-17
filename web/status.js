@@ -76,6 +76,15 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  /* TC-SNAP-UI: the game-data credit line from GET /api/version. The core
+     sends data_credit only while the snapshot cache exists (decision 0009);
+     no credit means no line, never a placeholder. */
+  function dataCreditText(doc) {
+    var c = doc && doc.data_credit;
+    return (c && typeof c.credit === "string") ? c.credit : "";
+  }
+
   return { linkView: linkView, readingView: readingView, kindOf: kindOf,
-           emptyText: emptyText, tradeLine: tradeLine, cornerLabel: cornerLabel };
+           emptyText: emptyText, tradeLine: tradeLine, cornerLabel: cornerLabel,
+           dataCreditText: dataCreditText };
 }));
