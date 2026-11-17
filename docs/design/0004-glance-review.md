@@ -69,9 +69,28 @@ instead of waiting for the next review.
   view) at 320 px in a real browser. This headless lane has no browser;
   the static test above is the guard. Filed for the next interactive
   design pass (hand-off / ROADMAP by the loop), no code change expected.
+  Done 2026-11-17 (ROADMAP UX-U7): headless Chrome over a core fed a
+  replayed Client.txt fixture plus a pasted build and one item check, at
+  320 / 768 / 1440 px in dark, light and forced colours. No horizontal
+  scroll at any width (scrollWidth = clientWidth). One defect: a long
+  unbroken character name under the level ran past its tile into the
+  deaths tile at 320 px; fixed with `overflow-wrap: anywhere` on
+  `.stat .sub` and a test. Forced colours drop the status hues, but every
+  badge (Upgrade, link ready, live, TRADE / DEATH tags) carries its word,
+  so no meaning is lost (R2 holds).
 - U8 [S4, R4; filed] Windows forced-colours mode on the transparent overlay
   window is not verified: forced colours may repaint the plate or the
   transparent page background. Filed with U7 for the next live pass.
+  Done 2026-11-17 (ROADMAP UX-U8): the overlay page in an Electron 45
+  transparent window (capturePage keeps alpha) under forced-colors
+  emulation stays transparent outside the plates. Headless Chrome, by
+  contrast, paints the viewport Canvas in this mode, so the root now opts
+  out of forcing (`forced-color-adjust: none`, background transparent)
+  and never depends on the Electron behaviour; the plates opt back in.
+  Defects fixed: the trade warn edge and the upgrade green edge both fell
+  to plain CanvasText (now Highlight, a kept system colour), and the plate
+  became 92 percent Canvas (now opaque Canvas). Tests guard all three. A
+  real OS high-contrast theme switch was not exercised (emulation only).
 
 ## Kept by decision
 
