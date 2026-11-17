@@ -409,3 +409,8 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
   user opens in their own browser (decision 0017). Reverses if: GGG
   documents trade endpoints or permits third-party use in writing, the
   operator rules otherwise, or the ?q= URL form proves unstable.
+- Optional calc component: PoB-PoE2 and LuaJIT hash-pinned in
+  config/tc_pins.json, fetched by setup.ps1 -TcCalc only on opt-in, never
+  vendored (decision 0018). Reverses if: GitHub archives stop being
+  byte-stable, either license leaves MIT / permissive, or LuaJIT ships
+  hashed release binaries.

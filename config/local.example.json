@@ -18,5 +18,7 @@
   "_doc_web": "web_data: the one web-data opt-in (decision 0013), default false; while false nothing is requested from the web (poe.ninja rates, pasted share links, price checks). Also set by POST /api/web-data. league: optional league id for poe.ninja rates and price checks; blank = the current league from the site's league list. contact: how GGG / poe.ninja can reach you, appended to the User-Agent as (contact: <value>) because both ask for one; set it HERE only (this file is gitignored), never in a tracked file. Blank = poe.ninja rates, price checks and GGG data fetches stay off even with web_data on (pasted share links still work).",
   "web_data": false,
   "league": "",
-  "contact": ""
+  "contact": "",
+  "_doc_tc": "tc_calc: opt-in for the optional theorycraft calc component (TC-PIN, decision 0018), default false. When true, scripts/setup.ps1 fetches the hash-pinned Path of Building PoE2 source and LuaJIT (config/tc_pins.json) into the sidecar and verifies them; same as setup.ps1 -TcCalc. Read by setup only, never by the running core.",
+  "tc_calc": false
 }

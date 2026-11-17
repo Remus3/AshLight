@@ -95,6 +95,12 @@ def weights_file():
     return runtime_dir() / "theorycraft" / "weights.json"
 
 
+def tc_pins_file():
+    """TC-PIN: the TRACKED hash pins of the optional calc component
+    (decision 0004 item 3); read by tools/tc_pin.py, never written at runtime."""
+    return repo_root() / "config" / "tc_pins.json"
+
+
 def local_config_file():
     """Per-host config (gitignored). Read only by the core."""
     return repo_root() / "config" / "local.json"
@@ -118,6 +124,11 @@ def all_runtime_paths(environ=None):
     out["electron_cache"] = out["cache"] / "electron"
     out["ninja_cache"] = out["cache"] / "ninja"  # DATA-NINJA rates.json
     out["build_stamp"] = out["build"] / "build-stamp.json"
+    # TC-PIN (decision 0004 item 3): optional calc component, opt-in setup step.
+    out["pob2_cache"] = out["cache"] / "pob2"  # PoB-PoE2 archive + source checkout
+    out["luajit_cache"] = out["cache"] / "luajit"  # LuaJIT source archive
+    out["luajit_build"] = out["build"] / "luajit"  # LuaJIT source tree + luajit.exe
+    out["tc_stamp"] = out["build"] / "tc-pins-stamp.json"
     return out
 
 
