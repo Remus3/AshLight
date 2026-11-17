@@ -723,6 +723,23 @@ design docs in docs/design/, both made by a separate agent.
   through, foreground unchanged, top-left 16,16 280 x 176; idle word
   `log quiet 20m` fits; 3 processes, working set 248 MB summed (budget
   250, no margin, as in OVL-BUDGET), private 109 MB, CPU 0 ms in 60 s.
+- [x] UX-OVL-RAM (build) Give the overlay RAM headroom under the 250 MB
+  budget (248 MB measured, 3 processes). ACCEPT: >= 20 percent headroom
+  without losing transparency, click-through, non-focus, always-on-top
+  or the U14 opacity fix; numbers in decision 0002; smoke budget
+  tightened with margin. ZERO-CLICK: nothing to set; the switch ships
+  in app/main.js.
+  DONE 2026-11-17 (area-ux b5, 0004 U20): network service in the
+  browser process; 2 processes, 179 to 186 MB summed (was 245 to 252),
+  private 96 to 102 MB; desktop read-back passes; smoke asserts <= 2
+  processes and < 215 MB. 20 percent met against the 250 MB ceiling;
+  the smoke gate is 215 MB to absorb run-to-run noise.
+- [x] UX-OVL-FORCED (review) Re-test forced colours in the real
+  transparent overlay window. ACCEPT: the area outside the plates stays
+  transparent, or a fix. ZERO-CLICK: nothing to set.
+  DONE 2026-11-17 (area-ux b5, 0004 U21): `--force-high-contrast` on
+  the real window: plates repaint to Canvas, outside stays transparent;
+  no fix needed.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
