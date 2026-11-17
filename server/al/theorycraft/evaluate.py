@@ -9,9 +9,10 @@ normalised mods. The verdict is upgrade / sidegrade / downgrade with the
 per-stat delta; a ring (or a charm) is compared against every slot of its
 kind and the headline is the best swap. No game data snapshot is needed
 (TC-SNAP data is optional and unused here); base defences and weapon DPS
-are not compared until TC-DELTA.
+are compared only through the optional PoB calc (TC-DELTA, `calc=`).
 """
 
+from . import delta as delta_mod
 from . import item as item_parser
 from . import weights as weights_mod
 
@@ -131,9 +132,50 @@ def _compare(slot, new_stats, new_score, old_item, table, side):
             "verdict": verdict(delta, old_score, side), "stats": rows}
 
 
-def evaluate(item_text, build, weights=None, slot=None):
+def _keys(new_stats, old_stats):
+    keys = {}
+    for k in list(new_stats) + list(old_stats):
+        keys.setdefault(k.lower(), k)
+    return list(keys.values())
+
+
+def _pob(out, item_text, build, slots, new_stats, calc, blend, side):
+    """TC-DELTA (decision 0022): replace the hand-weight comparisons with
+    PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError."""
+    base = delta_mod.outputs(calc, build)
+    comps, per_slot = [], {}
+    for s in slots:
+        old_item = build.equipped(s)
+        old_parsed = item_parser.parse(old_item.text) if old_item is not None else None
+        old_stats = stats_of(old_parsed) if old_parsed is not None else {}
+        d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=base)
+        carrier = old_item.text if old_item is not None else item_text
+        mw = delta_mod.mod_weights(calc, build, s, carrier, _keys(new_stats, old_stats),
+                                   blend=blend)
+        table = weights_mod.lookup(mw["weights"])
+        c = _compare(s, new_stats, score(new_stats, table), old_item, table, side)
+        c.update(score_delta=_clean(d["score_delta"]),
+                 verdict=delta_mod.verdict(d["score_delta"]), dps=d["dps"], ehp=d["ehp"])
+        comps.append(c)
+        per_slot[s] = (mw, table)
+    best = max(comps, key=lambda c: c["score_delta"])
+    mw, table = per_slot[best["slot"]]
+    out.update(ok=True, comparisons=comps, slot=best["slot"], verdict=best["verdict"],
+               score_delta=best["score_delta"], score=_clean(score(new_stats, table)),
+               unweighted=sorted(k for k in new_stats if k.lower() not in table),
+               calc={"source": delta_mod.SOURCE_POB, "notice": None},
+               mod_weights={"source": "pob", "slot": best["slot"],
+                            "weights": dict(mw["weights"]), "detail": dict(mw["detail"])})
+
+
+def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None):
     """Evaluate item text against a Build (or None). Never raises on input
-    content; problems come back as `error` / `warnings`."""
+    content; problems come back as `error` / `warnings`.
+
+    `calc` (TC-DELTA): the optional PoB calc callable (theorycraft.delta);
+    None means the component is off. With it the verdict comes from PoB's
+    DPS / EHP deltas; without it, or when it fails, the stat weights score
+    the item and `calc.notice` says why ("off" / "failed")."""
     stat_weights, side = _weights_of(weights)
     table = weights_mod.lookup(stat_weights)
     parsed = item_parser.parse(item_text)
@@ -144,7 +186,10 @@ def evaluate(item_text, build, weights=None, slot=None):
                     "name": parsed.name, "base": parsed.base,
                     "item_level": parsed.item_level, "flags": dict(parsed.flags),
                     "mods": [m.to_dict() for m in parsed.mods]},
-           "warnings": list(parsed.warnings)}
+           "warnings": list(parsed.warnings),
+           "calc": {"source": delta_mod.SOURCE_WEIGHTS,
+                    "notice": delta_mod.NOTICE_OFF if calc is None else None},
+           "mod_weights": {"source": "hand", "weights": dict(stat_weights)}}
     if not parsed.is_item:
         out["error"] = "not an item"
         return out
@@ -169,4 +214,11 @@ def evaluate(item_text, build, weights=None, slot=None):
     best = max(comps, key=lambda c: c["score_delta"])
     out.update(ok=True, comparisons=comps, slot=best["slot"], verdict=best["verdict"],
                score_delta=best["score_delta"])
+    if calc is not None:
+        try:
+            # _pob updates `out` only after every calc call succeeded
+            _pob(out, item_text, build, slots, new_stats, calc, blend, side)
+        except delta_mod.CalcError:
+            out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
+                           "notice": delta_mod.NOTICE_FAILED}
     return out

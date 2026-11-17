@@ -45,7 +45,8 @@ def compact(result):
     comps = []
     for c in (r.get("comparisons") or [])[:MAX_COMPARISONS]:
         stats = [s for s in (c.get("stats") or []) if s.get("delta")]
-        comps.append({"slot": c.get("slot"), "empty": bool(c.get("empty")),
+        extra = {k: c[k] for k in ("dps", "ehp") if isinstance(c.get(k), dict)}
+        comps.append({**extra, "slot": c.get("slot"), "empty": bool(c.get("empty")),
                       "equipped": _named(c.get("equipped")),
                       "equipped_score": c.get("equipped_score"),
                       "score_delta": c.get("score_delta"), "verdict": c.get("verdict"),
@@ -55,7 +56,9 @@ def compact(result):
                                  "weighted": bool(s.get("weighted"))}
                                 for s in stats[:MAX_STATS]]})
     flags = item.get("flags") or {}
+    calc = r.get("calc") if isinstance(r.get("calc"), dict) else {}
     return {"ok": bool(r.get("ok")), "error": r.get("error"), "verdict": r.get("verdict"),
+            "calc": {"source": calc.get("source", "weights"), "notice": calc.get("notice")},
             "slot": r.get("slot"), "score": r.get("score"),
             "score_delta": r.get("score_delta"),
             "build_loaded": bool(r.get("build_loaded")),
@@ -70,13 +73,17 @@ class LastEval:
     """The last evaluated item, kept so a weights or build change re-scores
     it at once. One per core."""
 
-    def __init__(self, builds, weights, state, league=None):
+    def __init__(self, builds, weights, state, league=None, calc=None):
         self.builds = builds
         self.weights = weights
         self.state = state
         # TC-UPGRADE: a callable read at run time (the configured league or
         # None -> Standard); nothing is fetched
         self.league = league
+        # TC-DELTA (decision 0022): a provider read at run time, returning
+        # the PoB calc callable (theorycraft.delta) or None while the
+        # optional component is off; TC-BRIDGE supplies it
+        self.calc = calc
         self._input = None
         self._lock = threading.Lock()
 
@@ -84,7 +91,9 @@ class LastEval:
         """`at`: the press time (PRICE-1-WIRE shares it with the price
         check of the same press); None stamps now. The card gains
         `upgrade`: the offline upgrade-search link doc, or None (TC-UPGRADE)."""
-        result = tc_evaluate.evaluate(text, self.builds.build, self.weights.get(), slot=slot)
+        calc = self.calc() if callable(self.calc) else None
+        result = tc_evaluate.evaluate(text, self.builds.build, self.weights.get(), slot=slot,
+                                      calc=calc)
         with self._lock:
             self._input = (text, slot)
         league = self.league() if callable(self.league) else self.league
@@ -102,10 +111,10 @@ class LastEval:
         return self.run(last[0], last[1], keep_time=True)
 
 
-def attach(builds, weights, state, league=None):
+def attach(builds, weights, state, league=None, calc=None):
     """Wire the live views into a core: build summary now and on every load,
     and a LastEval that re-runs on a build change. Returns the LastEval."""
-    last = LastEval(builds, weights, state, league=league)
+    last = LastEval(builds, weights, state, league=league, calc=calc)
     rev = [0]
 
     def on_build(build):

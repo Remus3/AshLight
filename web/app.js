@@ -424,6 +424,8 @@
       w.setAttribute("data-verdict", v.verdict);
       $("eval-item").textContent = v.item;
       $("eval-sentence").textContent = v.sentence;
+      $("eval-calc").textContent = v.calc;
+      $("eval-calc").hidden = !v.calc;
       v.comparisons.forEach(function (c) {
         var box = el("div", "eval-comp");
         box.appendChild(el("h3", "sub-h", c.slot || "Slot"));
