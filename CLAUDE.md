@@ -449,3 +449,8 @@ them. Pause: `ops/loop/control/HALT`.
   (decision 0024). Reverses if: TC-BRIDGE needs another calc contract, a
   user asks for an offence / defence lean, TC-UPGRADE-STATS finds a stat id
   source, or uncached probes make a press feel slow.
+- TC-DRIFT: one read-only GitHub releases check per 24 h from the loop tick,
+  a detached trial per new tag, the pin moves only via `tc_drift.py apply`
+  after a green trial, committed by a session (decision 0025). Reverses if:
+  GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
+  releases or ships a headless API, or the loop gains safe auto-commit.
