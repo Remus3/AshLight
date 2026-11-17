@@ -212,6 +212,32 @@ design docs in docs/design/, both made by a separate agent.
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
+## Utility (lane area-util, 2026-11-17)
+
+- [x] UTIL-MAPS (build) Map run tracker from Client.txt (area generation +
+  scene): maps run, the open map's time in map (hideout trips and loading
+  paused), deaths per map, last 5 finished maps, average map time.
+  server/al/runs.py MapRuns, snapshot `maps`, dashboard Maps card
+  (web/runs.js). ACCEPT: exact tests on replayed lines
+  (tests/test_util_runs.py, app/test/runs.test.js). ZERO-CLICK: maps open,
+  time and close by themselves from the log; no button. DONE 2026-11-17.
+- [x] UTIL-DEATHS (build) Death recap: each of the player's deaths with
+  zone, area level, character level and time in the zone before it, newest
+  first, plus the zone with the most deaths. server/al/runs.py DeathLog,
+  snapshot `death_recap`, dashboard Death recap card. ACCEPT: exact
+  sentence tests. ZERO-CLICK: filled by itself on every death line.
+  DONE 2026-11-17.
+- [ ] UTIL-PACE (build) Level pace from level-up lines (Client.txt carries
+  no XP): time at the current level, average minutes per level over the
+  last 5 levels, levels per hour this session; one line on the Level stat
+  tile, sentence built in the core. ACCEPT: exact tests on replayed
+  level-up lines. ZERO-CLICK: updates on every level-up by itself.
+- [ ] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
+  start from the current game run in Client.txt, as HUD-ACT-RESUME does for
+  act splits (decision 0022 pattern, no persisted state). ACCEPT: restart
+  mid-map keeps the map's time and the session's deaths; exact tests.
+  ZERO-CLICK: rebuilt at core start.
+
 ## Ops
 
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,

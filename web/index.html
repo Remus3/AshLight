@@ -12,6 +12,7 @@
 <script src="/web/prices.js" defer></script>
 <script src="/web/trades.js" defer></script>
 <script src="/web/acts.js" defer></script>
+<script src="/web/runs.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -156,6 +157,24 @@
       <tbody id="zones-rows"></tbody>
     </table>
     <p id="zones-source" class="muted small" hidden></p>
+  </section>
+
+  <section id="mapsbox" class="card acts maps" aria-labelledby="maps-title">
+    <h2 id="maps-title">Maps</h2>
+    <p id="maps-empty" class="muted"></p>
+    <p id="maps-summary" hidden></p>
+    <table id="maps-table" class="acts-table" hidden>
+      <thead><tr><th scope="col">Map</th><th scope="col">Level</th>
+        <th scope="col">Time in map</th><th scope="col">Deaths</th></tr></thead>
+      <tbody id="maps-rows"></tbody>
+    </table>
+  </section>
+
+  <section id="deathsbox" class="card deaths" aria-labelledby="deaths-title">
+    <h2 id="deaths-title">Death recap</h2>
+    <p id="deaths-empty" class="muted"></p>
+    <ol id="deaths-list" class="event-list" hidden></ol>
+    <p id="deaths-worst" hidden></p>
   </section>
 
   <section class="card events" aria-labelledby="events-title">

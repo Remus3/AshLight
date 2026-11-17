@@ -10,6 +10,7 @@ import threading
 import time
 
 from . import acts as acts_mod
+from . import runs as runs_mod
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -498,6 +499,9 @@ class SessionState:
         # HUD-ACT: per-act splits; zone level table from the game-data cache.
         self.acts = acts_mod.ActSplits()
         self.zone_table = {}
+        # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
+        self.maps = runs_mod.MapRuns()
+        self.death_log = runs_mod.DeathLog()
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -637,18 +641,21 @@ class SessionState:
                     self.zone = ev.get("scene")
                     self.in_hideout = bool(ev.get("is_hideout"))
                     self.zone_entered_at = now
+                    self.maps.on_scene(self.zone, now, self.in_hideout)
                     listed = True
                     changed = True
             elif t == "area_generated":
                 self.area_id = ev.get("area_id")
                 self.area_level = ev.get("area_level")
                 self.acts.fold(self.area_id, now, self.level)
+                self.maps.on_generated(self.area_id, now, self.area_level)
                 changed = True
             elif t == "area_entered":
                 if ev.get("name") != self.zone:
                     self.zone = ev.get("name")
                     self.in_hideout = "hideout" in (self.zone or "").lower()
                     self.zone_entered_at = now
+                    self.maps.on_scene(self.zone, now, self.in_hideout)
                     changed = True
             elif t == "level_up":
                 # The first level-up names the character unless one was
@@ -663,6 +670,12 @@ class SessionState:
             elif t == "death":
                 if self._is_me(ev.get("character")):
                     self.deaths += 1
+                    self.death_log.add(
+                        at=now, zone=self.zone, area_level=self.area_level,
+                        level=self.level,
+                        zone_s=(max(0.0, now - self.zone_entered_at)
+                                if self.zone_entered_at else None))
+                    self.maps.on_death(now)
                     changed = True
             elif t in ("whisper_in", "whisper_out"):
                 self.recent_whispers.append(self._row(ev, now))
@@ -774,4 +787,6 @@ class SessionState:
                 "build": dict(self.build_info) if self.build_info else None,
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
+                "maps": self.maps.view(now),
+                "death_recap": self.death_log.view(),
             }

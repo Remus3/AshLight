@@ -67,6 +67,8 @@
       ? duration(now - snap.session_started_at) : "--:--";
     // HUD-ACT: the open act split counts up with the zone timer.
     if (window.ALActs) { window.ALActs.paint(document, snap.acts, now, false); }
+    // UTIL-MAPS: the open map's time counts up while the player is in it.
+    if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
   }
 
   function renderEvents(rows) {
@@ -767,6 +769,7 @@
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
     if (window.ALActs) { window.ALActs.paint(document, s.acts || null, serverNow(), true); }
+    if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
     tick();
   }
 

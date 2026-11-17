@@ -268,6 +268,27 @@ def scan_pre_push(ref_lines, needles_rx, cwd=ROOT):
     return findings, scanned
 
 
+def scan_message(text, needles_rx):
+    """AUDIT-LEAK-MSG: a commit message as git hands it to commit-msg; its
+    '#' comment lines (git's own template text) are not part of the commit."""
+    body = "\n".join(ln for ln in text.splitlines() if not ln.startswith("#"))
+    return scan_text(body, "commit-message", needles_rx)
+
+
+def scan_history(needles_rx, cwd=ROOT):
+    """AUDIT-LEAK-MSG: every commit reachable from any ref - its added lines,
+    file paths and message (author / committer headers are not scanned; the
+    operator identity is fleet_identity's job). Returns (findings, commits)."""
+    commits = _git("rev-list", "--all", cwd=cwd).split()
+    findings = []
+    for c in commits:
+        diff = _git("show", "--format=", "--no-color", "-p", "--root", c, cwd=cwd)
+        findings += scan_diff(diff, needles_rx)
+        findings += scan_text(_git("log", "-1", "--format=%B", c, cwd=cwd),
+                              "commit-message", needles_rx)
+    return findings, len(commits)
+
+
 def report(findings, mode, n_needles, source=""):
     tail = f" config={source}" if source else ""
     print(f"[leak-sweep] {mode} needles={n_needles}{tail}", file=sys.stderr)
@@ -289,6 +310,8 @@ def main(argv=None):
     g.add_argument("--staged", action="store_true")
     g.add_argument("--pre-push", nargs="*", metavar="ARG")
     g.add_argument("--explain", type=int)
+    g.add_argument("--message", metavar="FILE", help="commit-msg hook: sweep the message")
+    g.add_argument("--history", action="store_true", help="every commit and message")
     args = ap.parse_args(argv)
     config, source = resolve_config()
     if os.environ.get("AL_LEAK_NEEDLES"):
@@ -312,6 +335,18 @@ def main(argv=None):
                 return 3
         elif args.staged:
             findings = scan_diff(_git("diff", "--cached", "--no-color"), rx)
+        elif args.message is not None:
+            try:
+                text = Path(args.message).read_text(encoding="utf-8", errors="replace")
+            except OSError as exc:
+                print(f"[leak-sweep] FAULT message: {exc.__class__.__name__}", file=sys.stderr)
+                return 3
+            findings = scan_message(text, rx)
+        elif args.history:
+            findings, n = scan_history(rx)
+            if n == 0:
+                print("[leak-sweep] FAULT: zero commits scanned", file=sys.stderr)
+                return 3
         else:
             refs = [ln for ln in sys.stdin.read().splitlines() if ln.strip()]
             findings, scanned = scan_pre_push(refs, rx)
