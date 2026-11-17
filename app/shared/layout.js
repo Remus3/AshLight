@@ -132,7 +132,17 @@
     return normalize(layout).corner.indexOf("bottom") === 0 ? "bottom" : "top";
   }
 
+  /* UX-REAL-OVERLAY: the overlay opacity as page CSS (main.js insertCSS).
+     BrowserWindow.setOpacity left the transparent software-composited
+     window invisible on the real desktop, so the window alpha is never
+     used. The value is clamped to LIMITS like every other field. */
+  function opacityCss(value) {
+    var v = num(value, "opacity");
+    return "html { opacity: " + (Math.round(v * 100) / 100) + " !important; }";
+  }
+
   return { CORNERS: CORNERS, LAYOUT_DEFAULT: DEFAULT, LAYOUT_LIMITS: LIMITS, BASE: BASE,
+           opacityCss: opacityCss,
            normalizeLayout: normalize, orderDisplays: orderDisplays,
            pickDisplay: pickDisplay, autoScale: autoScale, computeBounds: computeBounds,
            describeDisplays: describeDisplays, anchor: anchor };

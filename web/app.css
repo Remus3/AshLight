@@ -16,6 +16,9 @@ body {
 }
 
 .mono { font-variant-numeric: tabular-nums; }
+/* UX-A11Y: text for screen readers only (the deaths tile dash). */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .muted { color: var(--fk-text-muted); }
 [hidden] { display: none !important; }
 
@@ -217,6 +220,9 @@ button.secondary {
   color: var(--fk-text-muted); }
 .acts-table tbody th { font-weight: 600; overflow-wrap: anywhere; }
 .acts-table td.mono { text-align: right; white-space: nowrap; padding-right: 0; }
+/* UX-NEW-CARDS: a gap before every number column, so two right-aligned
+   numbers never touch at 320 px (seen as "0:110" in the Maps card). */
+.acts-table td.mono, .acts-table thead th:not(:first-child) { padding-left: 12px; }
 .acts-table thead th:not(:first-child) { text-align: right; padding-right: 0; }
 /* Current row: weight on the row header only, so the number columns never
    change width on an act change (design review HA-8). */

@@ -38,7 +38,9 @@
     return pad2(new Date(ts * 1000));
   }
 
-  function deathsWord(n) { return n === 1 ? "1 death" : n + " deaths"; }
+  /* The Deaths column holds the bare count under its header, so the
+     narrow table never runs the time into the next cell (UX-NEW-CARDS). */
+  function deathsCount(n) { return String(Number.isInteger(n) ? n : 0); }
 
   /* The open map's time: the snapshot's time plus the seconds since it
      was taken, but only while the player is in the map. */
@@ -60,13 +62,13 @@
     if (cur) {
       out.push({ name: cur.name, level: levelText(cur.area_level),
         time: duration(liveTime(cur, snapNow, now)),
-        deaths: deathsWord(cur.deaths || 0),
+        deaths: deathsCount(cur.deaths),
         note: cur.inside ? "now" : "paused",
         current: true });
     }
     (maps.recent || []).forEach(function (m) {
       out.push({ name: m.name, level: levelText(m.area_level),
-        time: duration(m.time_s), deaths: deathsWord(m.deaths || 0),
+        time: duration(m.time_s), deaths: deathsCount(m.deaths),
         note: "", current: false });
     });
     return out;
@@ -119,6 +121,14 @@
     return ((recap && recap.recent) || []).map(function (r) { return r.text; });
   }
 
+  /* The line under the list: the worst zone, then how many deaths came
+     before AshLight started reading (UX-NEW-CARDS). */
+  function recapFoot(recap) {
+    if (!recap) { return ""; }
+    return [recap.worst_text, recap.earlier_text]
+      .filter(function (t) { return !!t; }).join(" ");
+  }
+
   function paintDeaths(doc, recap) {
     var list = doc.getElementById("deaths-list");
     if (!list) { return; }
@@ -136,8 +146,9 @@
     empty.textContent = (recap && recap.empty_text) || "";
     empty.hidden = lines.length > 0;
     var worst = doc.getElementById("deaths-worst");
-    worst.textContent = (recap && recap.worst_text) || "";
-    worst.hidden = !(recap && recap.worst_text);
+    var foot = recapFoot(recap);
+    worst.textContent = foot;
+    worst.hidden = !foot;
   }
 
   /* full: a new snapshot (rebuild both cards); otherwise the 1 s tick
@@ -150,5 +161,5 @@
 
   return { duration: duration, levelText: levelText, clock: clock,
     liveTime: liveTime, mapRows: mapRows,
-    deathLines: deathLines, paint: paint };
+    deathLines: deathLines, recapFoot: recapFoot, paint: paint };
 }));

@@ -322,6 +322,7 @@ Good / bad examples:
 | Layout unavailable (core stopped?) | Can't load the overlay settings. Is AshLight running? | plain words, a question the user can answer |
 | No events yet. | Nothing yet. Zones, level-ups, deaths and whispers show up here as you play. | says what and when |
 | --:-- (blank line under it) | Starts when you allow reading Client.txt | an empty timer says when it starts (UX-U9) |
+| Session 0:00 before the first update | Session --:-- until the feed is live; then it counts from the game's log opening, like the resumed deaths | a timer never reads shorter than the zone or act timer next to it (UX-NEW-CARDS) |
 | Client.txt waiting | waiting for Client.txt | subject-verb order |
 | core not running (overlay) | AshLight offline | the user knows "AshLight", not "core" |
 | AFK on / AFK off | You're AFK / You're back | natural sentence |
@@ -391,8 +392,9 @@ Generation rules:
    - act times (HUD-ACT, `server/al/acts.py`, `web/acts.js`): dashboard
      only; rows `Act <n>` / `Cruel Act <n>` / `Interlude <n>` with `Time in
      act` and `Run total` (m:ss or h:mm:ss); one note per row in one pair of
-     parentheses: `(now)`, `(partial: counted from the first zone AshLight saw)`,
-     joined with ", "; zone heading `Zone levels in <act>`, zone notes `(you
+     parentheses: `(now)`, `(partial)`, joined with ", ", and under the
+     table, when a row is partial, `Partial: counted from the first zone
+     AshLight saw.` (UX-NEW-CARDS); zone heading `Zone levels in <act>`, zone notes `(you
      are here)` / `(town)`; empty `No act times yet. They start by
      themselves when you enter a campaign zone.`, `Zone levels show here
      while you are in a campaign act.`, `Zone levels aren't downloaded yet.
@@ -401,22 +403,29 @@ Generation rules:
      built. Game data (c) Grinding Gear Games.` (decision 0020)
    - map runs (UTIL-MAPS, `server/al/runs.py`, `web/runs.js`): dashboard
      only; rows `<map>` with `Level` (missing: `unknown`), `Time in map`
-     (m:ss or h:mm:ss) and `<n> death(s)`; open row note `(now)` or
+     (m:ss or h:mm:ss) and `Deaths` as a bare count (UX-NEW-CARDS: the
+     words ran into the time at 320 px); open row note `(now)` or
      `(paused)`; summary `Average map: <m:ss> over <n> finished map(s).`
      then `<n> death(s) in maps.` or `No deaths in maps.`; empty `No maps
      yet. Map times start by themselves when you open a map.`
    - level pace (UTIL-PACE, `server/al/pace.py`): dashboard only, one
      line under the Level tile, hidden while empty, key word first:
-     `Pace: about <m:ss> per level over the last <n> levels, <x.x> levels
-     an hour this session.` (one level: `about <m:ss> for the last level`;
-     `1.0 level an hour`; the hourly part needs 2+ level-ups and 10
-     minutes; m:ss matches the dashboard timers)
+     `Pace: about <m:ss> a level over the last <n>, <x.x> levels an
+     hour.` (one level: `about <m:ss> for the last level`; `1.0 level an
+     hour`; the hourly part needs 2+ level-ups seen live and 10 minutes
+     since AshLight started; m:ss matches the dashboard timers; shortened
+     for 320 px, UX-NEW-CARDS)
    - death recap (UTIL-DEATHS, same files): dashboard only; one line per
      death, newest first, `HH:MM` local time then `Died in <zone> (area
      level <n>) at level <n>, <m:ss> into the zone.` (parts without data
      are left out; no zone: `Died at level <n>.`); `Most deaths: <zone>
      (<n>).` from 2 deaths in one zone; empty `No deaths this session.
-     Each one shows here with its zone and level.`
+     Each one shows here with its zone and level.`; deaths counted
+     before AshLight started reading (LIVE-RESUME restores the count,
+     not the details): empty `<n> death(s) came before AshLight started
+     reading, so their zones aren't known. New deaths show here with
+     their zone and level.`, else `<n> death(s) came before AshLight
+     started reading.` after the worst-zone line (UX-NEW-CARDS)
    - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
      only, `Your build wears <base> in <slot>, so this finds rare items of
      that base.` (empty slot: `Your build has nothing in <slot>, so this

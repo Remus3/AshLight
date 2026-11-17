@@ -236,3 +236,29 @@ def test_core_start_at_beginning_does_not_double_count(tmp_path):
         assert "resume" not in s["tailer"]
     finally:
         core.close()
+
+
+def test_session_starts_at_the_log_opening(tmp_path):
+    """UX-NEW-CARDS: the Session tile counts from the run's LOG FILE OPENING
+    line, so it never reads shorter than the resumed zone or act timer."""
+    p = _write(tmp_path / "Client.txt", [
+        OPEN,
+        L(": Quillfeather (Mercenary) is now level 7", ts="2026/11/16 20:30:00"),
+        L("[SCENE] Set Source [Clearfell]", ts="2026/11/16 20:40:00")])
+    r = resume.scan(p)
+    assert r["run_ts_local"] == "2026-11-16T20:00:00"
+    now = time.mktime(time.strptime("2026-11-16T21:00:00", "%Y-%m-%dT%H:%M:%S"))
+    f = resume.state_fields(r, now=now)
+    assert f["session_started_at"] == now - 3600
+    st = SessionState(clock=lambda: now)
+    st.restore(f)
+    snap = st.snapshot()
+    assert snap["session_s"] >= snap["zone_s"]
+    assert round(snap["session_s"]) == 3600
+
+
+def test_no_marker_keeps_the_core_start(tmp_path):
+    p = _write(tmp_path / "Client.txt", [L("[SCENE] Set Source [Clearfell]")])
+    r = resume.scan(p)
+    assert r["run_ts_local"] is None
+    assert "session_started_at" not in resume.state_fields(r)

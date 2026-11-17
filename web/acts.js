@@ -37,12 +37,23 @@
       var label = s.label || "Act";
       return {
         label: label,
-        note: s.partial && acts.partial_text ? acts.partial_text : "",
+        note: s.partial ? "partial" : "",
         time: duration(end - s.started_at),
         total: duration(end - start),
         current: !!s.current
       };
     });
+  }
+
+  /* UX-NEW-CARDS: a partial row says only "(partial)"; the reason is one
+     sentence under the table, so a narrow card never wraps the act name
+     over four lines. "" when no row is partial. */
+  function partialNote(acts) {
+    var splits = (acts && acts.splits) || [];
+    var any = splits.some(function (s) { return !!s.partial; });
+    var t = (acts && acts.partial_text) || "";
+    if (!any || !t) { return ""; }
+    return t.charAt(0).toUpperCase() + t.slice(1) + ".";
   }
 
   /* One display row per zone of the current act: name, level, and a note
@@ -119,6 +130,11 @@
       tr.appendChild(cell(doc, "td", r.total, "mono"));
       tbody.appendChild(tr);
     });
+    var pnote = doc.getElementById("acts-note");
+    if (pnote) {
+      pnote.textContent = partialNote(acts);
+      pnote.hidden = !pnote.textContent;
+    }
 
     var title = doc.getElementById("zones-title");
     title.textContent = zonesTitle(acts);
@@ -148,5 +164,5 @@
   }
 
   return { duration: duration, splitRows: splitRows, zoneRows: zoneRows,
-    zonesTitle: zonesTitle, zonesEmpty: zonesEmpty, paint: paint };
+    zonesTitle: zonesTitle, zonesEmpty: zonesEmpty, partialNote: partialNote, paint: paint };
 }));

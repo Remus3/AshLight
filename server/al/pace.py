@@ -62,11 +62,12 @@ class Pace:
             if gained == 1:
                 parts.append(f"about {_clock(per)} for the last level")
             else:
-                parts.append(f"about {_clock(per)} per level over the last "
-                             f"{gained} levels")
+                # UX-NEW-CARDS: short enough for two lines under the Level
+                # tile at 320 px; the hourly part counts this session.
+                parts.append(f"about {_clock(per)} a level over the last "
+                             f"{gained}")
         if per_hour is not None:
             rate = f"{per_hour:.1f}"
-            parts.append(f"{rate} level{'' if rate == '1.0' else 's'} an hour "
-                         "this session")
+            parts.append(f"{rate} level{'' if rate == '1.0' else 's'} an hour")
         text = ("Pace: " + ", ".join(parts) + ".") if parts else ""
         return {"per_level_s": per, "per_hour": per_hour, "text": text}

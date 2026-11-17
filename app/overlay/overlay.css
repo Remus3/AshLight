@@ -22,6 +22,11 @@
 
 * { animation: none !important; transition: none !important; }
 
+/* UX-REAL-OVERLAY: the layout default opacity (layout.js LIMITS floor 0.9)
+   from the first paint, so a reload never flashes at full opacity before
+   main.js inserts the player's value (design review N1). */
+html { opacity: 0.9; }
+
 html, body {
   margin: 0;
   background: transparent;

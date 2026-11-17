@@ -60,12 +60,12 @@
     </div>
     <div class="stat">
       <h2 class="label">Deaths this session</h2>
-      <p id="deaths" class="value mono" aria-label="Not counted yet">-</p>
+      <p id="deaths" class="value mono" data-count="-"><span aria-hidden="true">-</span><span class="sr-only">Not counted yet</span></p>
       <p id="levelups" class="sub">Counts once reading starts</p>
     </div>
     <div class="stat">
       <h2 class="label">Session</h2>
-      <p id="session" class="value mono">0:00</p>
+      <p id="session" class="value mono">--:--</p>
       <p id="flags" class="sub">&nbsp;</p>
     </div>
   </section>
@@ -153,6 +153,7 @@
         <th scope="col">Run total</th></tr></thead>
       <tbody id="acts-rows"></tbody>
     </table>
+    <p id="acts-note" class="muted small" hidden></p>
     <h3 id="zones-title" class="sub-h">Zone levels</h3>
     <p id="zones-empty" class="muted"></p>
     <table id="zones-table" class="acts-table zones-table" hidden>

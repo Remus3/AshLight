@@ -35,6 +35,7 @@ from . import acts, logfile, parser
 CHUNK = 1024 * 1024
 DEFAULT_MAX_BYTES = 32 * 1024 * 1024
 MARKER = b"***** LOG FILE OPENING *****"
+_MARKER_TS = re.compile(rb"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) ")
 _KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |: )|\*\*\*\*\* LOG FILE OPENING")
 # Once zone and area are known only system lines, area generations (act
 # splits) and the marker matter.
@@ -108,7 +109,8 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     out = {"zone": None, "in_hideout": False, "zone_ts_local": None,
            "area_id": None, "area_level": None, "character": None,
            "class": None, "level": None, "deaths": 0, "level_ups": 0,
-           "afk": None, "dnd": None, "hit_marker": False, "bytes_scanned": 0,
+           "afk": None, "dnd": None, "hit_marker": False, "run_ts_local": None,
+           "bytes_scanned": 0,
            "end": end}
     in_run = True
     deaths = []
@@ -134,6 +136,7 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                     if in_run:
                         in_run = False
                         out["hit_marker"] = True
+                        out["run_ts_local"] = _marker_ts(raw)
                     if out["character"] is not None:
                         done = True
                         break
@@ -217,6 +220,15 @@ def _act_areas(seq, me, level_now):
     return out
 
 
+def _marker_ts(raw):
+    """The local ISO time of a LOG FILE OPENING line, or None."""
+    m = _MARKER_TS.match(raw)
+    if not m:
+        return None
+    y, mo, d, hms = (g.decode("ascii") for g in m.groups())
+    return f"{y}-{mo}-{d}T{hms}"
+
+
 def local_ts_to_epoch(ts_local, now=None):
     """Epoch seconds for a line's local ISO time, never in the future; None
     when it does not parse."""
@@ -239,6 +251,12 @@ def state_fields(result, now=None):
                                      "level_ups", "afk", "dnd")}
     if result["zone"] is not None:
         fields["zone_entered_at"] = local_ts_to_epoch(result["zone_ts_local"], now)
+    # UX-NEW-CARDS: the Session tile counts from the game's log opening, the
+    # same run the resumed deaths, level-ups and act splits come from, so
+    # it never reads shorter than the zone or act timer next to it.
+    started = local_ts_to_epoch(result.get("run_ts_local"), now)
+    if started is not None:
+        fields["session_started_at"] = started
     areas = []
     for a in result.get("act_areas") or ():
         at = local_ts_to_epoch(a["ts_local"], now)

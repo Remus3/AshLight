@@ -175,21 +175,34 @@ class DeathLog:
     def __init__(self):
         self.rows = collections.deque(maxlen=MAX_DEATHS)
         self.by_zone = collections.Counter()
+        self.count = 0
 
     def add(self, at, zone, area_level, level, zone_s):
         self.rows.append({"at": at, "zone": zone, "area_level": area_level,
                           "level": level,
                           "text": death_text(zone, area_level, level, zone_s)})
+        self.count += 1
         if zone:
             self.by_zone[zone] += 1
 
-    def view(self):
-        """The `death_recap` part of the state snapshot."""
+    def view(self, total=None):
+        """The `death_recap` part of the state snapshot. total: the session's
+        death count; deaths it has beyond the ones seen here came before
+        AshLight started reading (LIVE-RESUME restores the count, not the
+        details), so the card says so instead of "No deaths" (UX-NEW-CARDS)."""
         recent = [dict(r) for r in reversed(self.rows)][:RECENT_DEATHS]
         worst = ""
         if self.by_zone:
             zone, n = self.by_zone.most_common(1)[0]
             if n >= 2:
                 worst = f"Most deaths: {zone} ({n})."
-        return {"recent": recent, "worst_text": worst,
-                "empty_text": DEATHS_EMPTY_TEXT}
+        earlier = max(0, total - self.count) if isinstance(total, int) else 0
+        empty = DEATHS_EMPTY_TEXT
+        earlier_text = ""
+        if earlier:
+            before = f"{_plural(earlier, 'death')} came before AshLight started reading"
+            empty = (f"{before}, so their zones aren't known. New deaths show "
+                     "here with their zone and level.")
+            earlier_text = f"{before}." if recent else ""
+        return {"recent": recent, "worst_text": worst, "earlier_text": earlier_text,
+                "empty_text": empty}
