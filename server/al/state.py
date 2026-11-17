@@ -24,7 +24,9 @@ EVAL_CARD_S = 20
 # SAME_PRESS_S of each other came from one press and share one card.
 PRICE_CARD_S = 20
 SAME_PRESS_S = 2.0
-PRICE_STATUSES = ("searching", "waiting", "done", "off", "error")
+# "link" (decision 0017) is the only success status the core produces now;
+# searching / waiting / done / off are kept for the 0016 contract's readers
+PRICE_STATUSES = ("link", "searching", "waiting", "done", "off", "error")
 PRICE_LISTINGS = 10
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
@@ -238,6 +240,11 @@ def eval_card_text(card):
 # place price wording is made.
 PRICE_TEXT = {
     # status / error: (overlay price line, overlay detail line, dashboard sentence)
+    # PRICE-TRADE-LINK (decision 0017): the overlay says only that the link
+    # is ready; the dashboard shows the link itself
+    "link": ("Trade link ready", "",
+             "A trade site search for this item in {league} is ready. Click the link to "
+             "see who sells it."),
     "searching": ("Searching prices...", "On the official trade site",
                   "Searching the official trade site for this item..."),
     "off": ("Web data is off", "Switch it on in the dashboard",
@@ -251,12 +258,14 @@ PRICE_TEXT = {
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),
     "no base type": ("Can't price this item", "Try a different item",
-                     "The trade site can't search this item. Try a different one."),
+                     "AshLight can't make a trade search for this item. Try a different "
+                     "one."),
     "no league": ("League unknown", "Try again in a minute",
                   "AshLight doesn't know which league to search yet. Try again in a "
                   "minute."),
-    "error": ("Price check failed", "Try again in a minute",
-              "The trade site didn't answer. Press the hotkey again in a minute."),
+    "error": ("Price check failed", "Press the hotkey again",
+              "AshLight couldn't make a trade search for this item. Press the hotkey "
+              "again."),
     "none": ("No listings found", "Nobody sells this now",
              "Nobody lists this item in {league} right now, so AshLight can't price it."),
 }
@@ -322,13 +331,17 @@ def price_card_text(card):
             out["sentence"] = (f"{count} listed in {league}. The cheapest is {low}; the "
                                f"middle of the {len(rows)} cheapest is {mid}.")
         return out
+    if status == "link":
+        line, detail, sentence = PRICE_TEXT["link"]
+        out.update(line=line, detail=detail, sentence=sentence.format(league=league))
+        return out
     if status == "searching":
         key = status
     elif status == "off":
         key = "contact not set" if card.get("error") == "contact not set" else "off"
     else:
         key = card.get("error") if card.get("error") in PRICE_TEXT else "error"
-        if key in ("searching", "off", "none", "contact not set"):
+        if key in ("link", "searching", "off", "none", "contact not set"):
             key = "error"
     line, detail, sentence = PRICE_TEXT[key]
     out.update(line=line, detail=detail, sentence=sentence)

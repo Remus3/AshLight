@@ -28,8 +28,7 @@ test("web-data words: off says nothing is asked; on says what is fetched", () =>
     status: "Web data is off. AshLight asks nothing from the internet." });
   assert.deepEqual(p.webDataView({ web_data: true }), {
     on: true,
-    status: "Web data is on. Currency values come from poe.ninja about once an hour. " +
-            "The trade site is asked only when you check an item." });
+    status: "Web data is on. Currency values come from poe.ninja about once an hour." });
   assert.equal(p.webDataView(null).on, false);
   assert.equal(p.savedText(true), "Saved. Web data is on. Currency values arrive within a minute.");
   assert.equal(p.savedText(false), "Saved. Web data is off. AshLight asks nothing from the internet now.");
@@ -145,10 +144,35 @@ test("price section: core words, conversions per listing, state word", () => {
   assert.equal(p.priceView({ id: 1 }, RATES, null), null); // no text from the core
 });
 
-test("price empty state says what will appear, and why not when off", () => {
-  assert.equal(p.priceEmpty(false),
-    "Prices need web data, which is off. Turn it on under Prices and web data.");
-  assert.equal(p.priceEmpty(true),
-    "Nothing priced yet. Check an item with Alt+Shift+E and its prices from the official " +
-    "trade site show here.");
+test("price empty state says what will appear, web data on or off", () => {
+  // PRICE-TRADE-LINK: the trade link is built offline, so web data does not gate it
+  const want = "Nothing checked yet. After you check an item with Alt+Shift+E, a link to " +
+    "search for it on the official trade site shows here.";
+  assert.equal(p.priceEmpty(false), want);
+  assert.equal(p.priceEmpty(true), want);
+});
+
+const LINK = "https://www.pathofexile.com/trade2/search/poe2/Dawn?q=%7B%22query%22%3A%7B%7D%7D";
+
+test("trade link: shown only for a trade2 search URL, opens in the browser", () => {
+  const card = { id: 7, status: "link", url: LINK, at: 1, listings: [],
+    text: { item: "Doom Grip", sentence: "A trade site search for this item in Dawn is ready.",
+            rows: [] } };
+  const v = p.priceView(card, RATES, null);
+  assert.deepEqual(v.badge, { state: "done", glyph: "[+]", word: "link ready" });
+  assert.deepEqual(v.link, { href: LINK, text: "Search the official trade site for Doom Grip",
+    label: "Search the official trade site for Doom Grip (opens in a new tab)" });
+  assert.deepEqual(v.rows, []);
+  for (const bad of [undefined, null, "", "http://www.pathofexile.com/trade2/search/poe2/D?q=1",
+    "https://evil.example/trade2/search/poe2/D?q=1", "javascript:alert(1)",
+    // split so the no-trade-endpoint scan (tests/test_trade_link.py) stays strict
+    "https://www.pathofexile.com/api" + "/trade2/search/poe2/D", "https://www.pathofexile.com.evil/trade2/search/poe2/D?q=1",
+    "https://www.pathofexile.com/trade2/search/poe2/D?q=1 x"]) {
+    const w = p.priceView(Object.assign({}, card, { url: bad }), RATES, null);
+    assert.equal(w.link, null, String(bad));
+  }
+  const plain = p.priceView(Object.assign({}, card, { status: "error", error: "x" }), RATES, null);
+  assert.equal(plain.link, null);
+  assert.equal(p.tradeLink("x"), "");
+  assert.equal(p.tradeLink(LINK), LINK);
 });

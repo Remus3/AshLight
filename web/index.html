@@ -96,13 +96,14 @@
     <div id="pricebox" class="price-box">
       <h3 class="sub-h">Price</h3>
       <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
-        <p id="price-empty" class="muted">Prices need web data, which is off. Turn it on under
-          Prices and web data.</p>
+        <p id="price-empty" class="muted">Nothing checked yet. After you check an item with
+          Alt+Shift+E, a link to search for it on the official trade site shows here.</p>
         <div id="price-body" hidden>
           <p class="eval-head"><span id="price-badge" class="pill" data-state="pending"><span
             class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
             <span id="price-item" class="eval-item"></span></p>
           <p id="price-sentence"></p>
+          <p id="price-link" class="price-link" hidden></p>
         </div>
       </div>
       <ol id="price-list" class="price-list" aria-label="Cheapest listings"></ol>
@@ -175,10 +176,11 @@
       <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
         Use web data</label>
     </form>
-    <p class="muted">Off unless you turn it on. When on, AshLight asks for three things only.
+    <p class="muted">Off unless you turn it on. When on, AshLight asks for two things only.
       It fetches currency values from poe.ninja about once an hour. It opens a build link you
-      paste, once. It asks the official trade site for prices when you check an item. It sends
-      no account, password or cookie, and never touches the game.</p>
+      paste, once. It never asks the trade site anything; the trade link after an item check
+      opens only when you click it. It sends no account, password or cookie, and never touches
+      the game.</p>
     <p id="webdata-status" class="muted" role="status" aria-live="polite"></p>
     <h3 class="sub-h">Currency values</h3>
     <p id="rates-pill" class="pill" data-state="pending"><span class="glyph"

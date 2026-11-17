@@ -47,3 +47,18 @@ GGG documents trade endpoints or permits third-party use in writing, the
 operator rules otherwise, or the ?q= URL form proves unstable (then show
 poe.ninja only). Amends 0013 item 5, 0015 item 3 and Settled entries
 "Price check shares the item-check hotkey ..." (the trade2 queue part).
+
+## Status
+
+Item 2 built 2026-11-17 (PRICE-TRADE-LINK). `trade.TradeClient`, `Job`,
+`RateLimiter`, `search_url` / `fetch_url` and price.py's stat-table,
+league-list, search and fetch path are deleted, not just unwired: the
+limiter parsed trade2 headers only and has no other caller (poe.ninja has
+its own pacing), so keeping it would be dead code. `trade.build_query` /
+`search_link` build the URL offline (research 0016: name, base type,
+rarity; no rarity filter for uniques). `webfetch.check_url` refuses every
+pathofexile.com `/trade...` or `/api/trade...` URL and redirect whatever a
+caller's allowlist says (`is_trade_url`); no allowlist holds a
+pathofexile.com host. Tests: tests/test_trade_link.py,
+tests/test_price_check.py. Card contract: decision 0016 amendment
+PRICE-TRADE-LINK.

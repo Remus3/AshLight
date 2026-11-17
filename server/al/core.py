@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import VERSION, layout, logfile, ninja, parser, paths, price, resume, trade, webfetch
+from . import VERSION, layout, logfile, ninja, parser, paths, price, resume, webfetch
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import live as tc_live
@@ -83,26 +83,23 @@ class Core:
         self.web_fetch = web_fetch
         rates_dir = (ninja.cache_dir() if runtime is None
                      else self.runtime / "cache" / "ninja")
-        # UA-CONTACT: poe.ninja and trade2 also need the "contact" key.
+        # UA-CONTACT: poe.ninja also needs the "contact" key.
         self.rates = ninja.RatesClient(rates_dir, enabled=self.web_data_enabled,
                                        league=self.configured_league, fetch=web_fetch,
                                        contact=self.contact)
-        self.trade = trade.TradeClient(enabled=self.web_data_enabled, fetch=web_fetch,
-                                       contact=self.contact)
-        # PRICE-1 / PRICE-1-WIRE: one price check per item-hotkey press (POST
-        # /api/eval); the checker turns its decision 0015 doc into the
-        # decision 0016 card and publishes it with the press time.
-        trade_dir = (price.cache_dir() if runtime is None
-                     else self.runtime / "cache" / "trade")
-        self.price = price.PriceChecker(self.trade, trade_dir, enabled=self.web_data_enabled,
-                                        contact=self.contact, league=self.configured_league,
+        # PRICE-TRADE-LINK (decision 0017): one offline trade-search link per
+        # item-hotkey press (POST /api/eval), published as the decision 0016
+        # card with the press time. No trade-site request is ever made and
+        # the core never opens the link.
+        self.price = price.PriceChecker(league=self.configured_league,
                                         card=self.state.set_price)
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
         one price check, both stamped with the same press time so the
         overlay merges them (decision 0016 Fork 2). The text is the app's one
-        clipboard read for this press; nothing here reads the clipboard."""
+        clipboard read for this press; nothing here reads the clipboard. The
+        price check is an offline trade-search link (decision 0017)."""
         at = self.state.now()
         result = self.last_eval.run(text, slot, at=at)
         self.price.request(text, at=at)
@@ -126,7 +123,7 @@ class Core:
         return webfetch.clean_contact(self._config().get(webfetch.CONTACT_KEY))
 
     def web_blocked_reason(self):
-        """Why poe.ninja / trade2 fetches are off now ("web data off",
+        """Why poe.ninja fetches are off now ("web data off",
         "contact not set") or None."""
         return webfetch.blocked_reason(self.web_data_enabled, self.contact)
 

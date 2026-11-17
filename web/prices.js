@@ -52,8 +52,7 @@
   function webDataView(doc) {
     var on = !!(doc && doc.web_data === true);
     return { on: on, status: on
-      ? "Web data is on. Currency values come from poe.ninja about once an hour. " +
-        "The trade site is asked only when you check an item."
+      ? "Web data is on. Currency values come from poe.ninja about once an hour."
       : "Web data is off. AshLight asks nothing from the internet." };
   }
 
@@ -171,6 +170,8 @@
 
   /* ---- PRICE-1-UI: the snapshot's price (decision 0016 contract). */
   var PRICE_BADGE = {
+    // PRICE-TRADE-LINK (decision 0017): the trade search link is ready
+    link: pill("done", "[+]", "link ready"),
     searching: pill("running", "[>]", "searching"),
     waiting: pill("pending", "[ ]", "waiting"),
     done: pill("done", "[+]", "priced"),
@@ -184,9 +185,20 @@
     retry: pill("blocked", "[#]", "can't price")
   };
 
+  /* PRICE-TRADE-LINK (decision 0017): the card's url only when it is a
+     trade2 search page on the official site (the core builds it offline and
+     never opens it; the player's click opens it in their browser), else "". */
+  var TRADE_SEARCH = /^https:\/\/www\.pathofexile\.com\/trade2\/search\/poe2\/[^\s?#\/]+\?q=[^\s&#]+$/;
+
+  function tradeLink(u) {
+    return (typeof u === "string" && u.length <= 4096 && TRADE_SEARCH.test(u)) ? u : "";
+  }
+
   function priceView(price, rates, clock) {
     if (!price || !price.text) { return null; }
     var t = price.text;
+    var href = price.status === "link" ? tradeLink(price.url) : "";
+    var name = t.item || "this item";
     var listings = Array.isArray(price.listings) ? price.listings : [];
     var rows = (t.rows || []).map(function (text, i) {
       var l = listings[i] || {};
@@ -202,18 +214,22 @@
           ? PRICE_BADGE.contact
           : (PRICE_BADGE[price.status] || PRICE_BADGE.error),
       item: t.item || "", sentence: t.sentence || "", rows: rows,
+      link: href ? { href: href, text: "Search the official trade site for " + name,
+                     label: "Search the official trade site for " + name +
+                            " (opens in a new tab)" } : null,
       when: typeof price.at === "number" && clock ? "Checked at " + clock(price.at) : ""
     };
   }
 
-  function priceEmpty(webOn) {
-    return webOn
-      ? "Nothing priced yet. Check an item with Alt+Shift+E and its prices from the " +
-        "official trade site show here."
-      : "Prices need web data, which is off. Turn it on under Prices and web data.";
+  /* The trade link needs no web data (it is built offline), so the empty
+     state reads the same either way. */
+  function priceEmpty() {
+    return "Nothing checked yet. After you check an item with Alt+Shift+E, a link to " +
+      "search for it on the official trade site shows here.";
   }
 
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
            ratesView: ratesView, convert: convert, aboutText: aboutText,
-           tradeAbout: tradeAbout, priceView: priceView, priceEmpty: priceEmpty };
+           tradeAbout: tradeAbout, priceView: priceView, priceEmpty: priceEmpty,
+           tradeLink: tradeLink };
 }));

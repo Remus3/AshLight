@@ -71,9 +71,10 @@ def test_off_and_errors_say_what_to_do():
     assert league["sentence"] == ("AshLight doesn't know which league to search yet. Try "
                                   "again in a minute.")
     other = price_card_text(price("error", error="trade HTTP 503"))
-    assert (other["line"], other["detail"]) == ("Price check failed", "Try again in a minute")
-    assert other["sentence"] == ("The trade site didn't answer. Press the hotkey again in a "
-                                 "minute.")
+    # PRICE-TRADE-LINK: nothing asks the trade site, so nothing blames it
+    assert (other["line"], other["detail"]) == ("Price check failed", "Press the hotkey again")
+    assert other["sentence"] == ("AshLight couldn't make a trade search for this item. Press "
+                                 "the hotkey again.")
     assert "503" not in str(other) and "HTTP" not in str(other)
 
 
@@ -95,8 +96,36 @@ def test_no_base_type_says_try_another_item():
     # blame the trade site or ask for a retry of the same item
     t = price_card_text(price("error", error="no base type"))
     assert (t["line"], t["detail"]) == ("Can't price this item", "Try a different item")
-    assert t["sentence"] == "The trade site can't search this item. Try a different one."
+    assert t["sentence"] == ("AshLight can't make a trade search for this item. Try a "
+                             "different one.")
     assert PRICE_TEXT["no base type"] == (t["line"], t["detail"], t["sentence"])
+
+
+LINK = "https://www.pathofexile.com/trade2/search/poe2/Dawn?q=%7B%7D"
+
+
+def test_link_ready():
+    # PRICE-TRADE-LINK (decision 0017): the overlay says only that the link
+    # is ready; the dashboard sentence names the league and the browser
+    t = price_card_text(price("link", url=LINK, count=None))
+    assert t["head"] == "Price: Doom Grip"
+    assert (t["line"], t["detail"]) == ("Trade link ready", "")
+    assert t["sentence"] == ("A trade site search for this item in Dawn is ready. Click the "
+                             "link to see who sells it.")
+    assert t["rows"] == []
+    assert PRICE_TEXT["link"][:2] == ("Trade link ready", "")
+    nolg = price_card_text(price("link", url=LINK, league=None))
+    assert "in this league is ready" in nolg["sentence"]
+
+
+def test_link_merges_with_the_item_check():
+    ev = dict(ev_card(), at=100.0)
+    pr = dict(price("link", url=LINK), at=100.0)
+    card = overlay_card(ev, pr, 101.0)
+    assert card["kind"] == "merged" and card["line2"] == "Trade link ready"
+    only = overlay_card(None, pr, 101.0)
+    assert only["kind"] == "price" and only["line2"] == "Trade link ready"
+    assert only["line3"] == ""
 
 
 def test_missing_values_read_honestly():
@@ -112,7 +141,7 @@ def test_missing_values_read_honestly():
 def test_overlay_lines_fit_the_card():
     for c in (price(count=5, listings=FIVE), price("searching"), price("waiting", wait_s=99),
               price("off"), price("error", error="x"), price("error", error="no league"),
-              price(count=0)):
+              price(count=0), price("link", url=LINK)):
         t = price_card_text(c)
         assert len(t["line"]) <= 34 and len(t["detail"]) <= 34, t
 
