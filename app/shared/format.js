@@ -35,7 +35,7 @@
   }
 
   function levelText(level) {
-    return (level === null || level === undefined) ? "Lv -" : "Lv " + level;
+    return (level === null || level === undefined) ? "Lv unknown" : "Lv " + level;
   }
 
   function deathsText(deaths) {
@@ -71,13 +71,13 @@
     } else if (req.price_amount !== null && req.price_amount !== undefined) {
       price = amount(req.price_amount) + " " + (req.price_currency || "");
     } else {
-      price = "no price";
+      price = "no price set";
     }
     var where = price.trim();
     if (req.stash_tab !== undefined && req.stash_tab !== null) {
       where += " | tab " + req.stash_tab + " L" + req.left + " T" + req.top;
     }
-    return { from: clipText("Trade: " + (req.from || "?")), item: clipText(item),
+    return { from: clipText("Trade: " + (req.from || "unknown player")), item: clipText(item),
              where: clipText(where) };
   }
 

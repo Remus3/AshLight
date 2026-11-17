@@ -107,11 +107,11 @@
     } else if (t.price_amount !== null && t.price_amount !== undefined) {
       price = t.price_amount + " " + (t.price_currency || "");
     } else {
-      price = "no price";
+      price = "no price set";
     }
     var where = t.stash_tab !== undefined && t.stash_tab !== null
       ? "tab " + t.stash_tab + ", left " + t.left + ", top " + t.top : "";
-    return { what: (t.from || "?") + " wants " + item + " - " + price, where: where };
+    return { what: (t.from || "unknown player") + " wants " + item + " - " + price, where: where };
   }
 
   var renderedTrades = "";
@@ -216,13 +216,14 @@
       fillLayout(doc);
       $("layout-status").textContent = "Saved. The overlay moves within a second.";
     }).catch(function (e) {
-      $("layout-status").textContent = "Not saved: " + e.message;
+      $("layout-status").textContent = "Not saved. Try again.";
+      console.warn("layout save failed: " + e.message);
     }).then(function () { layoutBusy = false; });
   }
 
   function loadLayout() {
     api("GET", "/api/overlay-layout").then(fillLayout).catch(function () {
-      $("layout-status").textContent = "Layout unavailable (core stopped?)";
+      $("layout-status").textContent = "Can't load the overlay settings. Is AshLight running?";
     });
   }
 
@@ -252,7 +253,7 @@
     if (tl.reading) {
       setPill($("reading"), "running", "[>]", "reading Client.txt");
     } else if (tl.consented) {
-      setPill($("reading"), "blocked", "[#]", tl.path ? "Client.txt waiting" : "Client.txt not found");
+      setPill($("reading"), "blocked", "[#]", tl.path ? "waiting for Client.txt" : "Client.txt not found - start the game once");
     } else {
       setPill($("reading"), "idle", "[-]", "not reading Client.txt");
     }
@@ -279,19 +280,20 @@
     api("POST", "/api/consent", { consent: yes }).then(function (res) {
       render(res.state);
     }).catch(function (e) {
-      err.textContent = "Could not record your choice: " + e.message;
+      err.textContent = "Your choice was not saved. Try again.";
+      console.warn("consent failed: " + e.message);
       err.hidden = false;
     });
   }
 
   function connect() {
     if (!token) {
-      setPill($("link"), "failed", "[x]", "no token - open the link AshLight printed");
+      setPill($("link"), "failed", "[x]", "open AshLight from the link it showed at start");
       return;
     }
     loadLayout();
     api("GET", "/api/state").then(render).catch(function () {
-      setPill($("link"), "failed", "[x]", "token rejected or core stopped");
+      setPill($("link"), "failed", "[x]", "can't reach AshLight - restart it");
     });
     if (es) { es.close(); }
     es = new EventSource("/events?token=" + encodeURIComponent(token));

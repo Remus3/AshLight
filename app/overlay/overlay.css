@@ -10,6 +10,10 @@
   --fk-border: #323840;
   --fk-status-bad: #f0605a;
   --fk-status-warn: #d19a2a;
+  /* HUD plate (design system 0001 section 10): 92 percent so every text
+     colour above keeps 4.5:1 even over a pure white game scene. */
+  --al-plate: rgba(15, 18, 22, 0.92);
+  --al-shadow: #000;
 }
 
 * { animation: none !important; transition: none !important; }
@@ -34,12 +38,11 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   padding: 6px 10px;
   border: 1px solid var(--fk-border);
   border-radius: 6px;
-  /* Surface at ~80 percent so the game shows through a little. */
-  background: rgba(15, 18, 22, 0.8);
+  background: var(--al-plate);
   color: var(--fk-text);
   font: 600 15px/1.3 system-ui, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 1px #000;
+  text-shadow: 0 1px 1px var(--al-shadow);
   max-width: 258px;
 }
 
@@ -58,11 +61,11 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   border: 1px solid var(--fk-border);
   border-left: 3px solid var(--fk-status-warn);
   border-radius: 6px;
-  background: rgba(15, 18, 22, 0.8);
+  background: var(--al-plate);
   color: var(--fk-text);
   font: 600 14px/1.3 system-ui, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 1px #000;
+  text-shadow: 0 1px 1px var(--al-shadow);
   max-width: 258px;
 }
 .trade .where, .trade .more { color: var(--fk-text-muted); font-size: 13px; }

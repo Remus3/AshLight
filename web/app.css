@@ -84,7 +84,8 @@ button.link {
   border: none;
   color: var(--fk-accent);
   text-decoration: underline;
-  padding: 0 0 0 8px;
+  padding: 4px 0 4px 8px;
+  min-height: 24px;
 }
 
 .stats {
@@ -139,7 +140,7 @@ button.link {
 .event-list .time { color: var(--fk-text-muted); flex: none; }
 .event-list .kind {
   flex: none;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   min-width: 4.5em;
   text-transform: uppercase;
@@ -171,7 +172,7 @@ button.link {
 button.secondary {
   color: var(--fk-text);
   background: var(--fk-surface);
-  border-color: var(--fk-border);
+  border-color: var(--fk-text-muted); /* control boundary, 0001 5.1 */
   padding: 4px 10px;
 }
 
@@ -185,7 +186,7 @@ button.secondary {
   font: inherit;
   color: var(--fk-text);
   background: var(--fk-surface);
-  border: 1px solid var(--fk-border);
+  border: 1px solid var(--fk-text-muted); /* control boundary, 0001 5.1 */
   border-radius: 6px;
   padding: 6px 8px;
 }

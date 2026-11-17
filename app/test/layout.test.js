@@ -101,7 +101,7 @@ test("tradeCard: item, unpriced and exchange", () => {
     from: "Trade: Tradewind", item: "Grim Bane Ruby Ring",
     where: "5 exalted | tab Sale L3 T7" });
   const unpriced = fmt.tradeCard({ ...ITEM, price_amount: null, price_currency: null });
-  assert.equal(unpriced.where, "no price | tab Sale L3 T7");
+  assert.equal(unpriced.where, "no price set | tab Sale L3 T7");
   const ex = fmt.tradeCard({ id: 2, from: "Coin", kind: "exchange", item: "Chaos Orb",
                              want_amount: 10, price_amount: 1, price_currency: "Divine Orb" });
   assert.equal(ex.item, "10 Chaos Orb");

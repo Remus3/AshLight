@@ -22,7 +22,7 @@ test("msUntilNextChange lands on the next minute boundary", () => {
 });
 
 test("level, deaths and zone text", () => {
-  assert.equal(fmt.levelText(null), "Lv -");
+  assert.equal(fmt.levelText(null), "Lv unknown");
   assert.equal(fmt.levelText(12), "Lv 12");
   assert.equal(fmt.deathsText(0), "0 deaths");
   assert.equal(fmt.deathsText(1), "1 death");

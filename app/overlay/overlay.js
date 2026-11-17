@@ -46,7 +46,7 @@
 
   function connect() {
     if (!cfg.token || !cfg.port) {
-      status = "core not running";
+      status = "AshLight offline";
       paint();
       return; // main reloads this page when the core writes a token
     }
