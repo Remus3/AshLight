@@ -277,19 +277,26 @@ recorded in research 0018 section 3.
   like LIVE-1). ACCEPT: fixture tests for enter / portal back / new map /
   death; numbers on the dashboard; design-reviewer pass. ZERO-CLICK: runs
   from the log tail, no start / stop button.
-- [ ] PRICE-UNIQUE (build) Unique prices on the item-check press from
+- [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
   listing count ("few listings" when low) and 7-day trend; one request
   per type per hour with If-None-Match, only with web_data on (0013).
   ACCEPT: parser tests on a trimmed real body; no request when off.
   ZERO-CLICK: the same hotkey press; overviews refresh on the hourly gate.
-- [ ] PRICE-STACKABLES (build) Price stackables on the item-check press via
+  DONE 2026-11-17: server/al/pricebook.py PriceBook (driven by
+  RatesClient.refresh: same opt-in, contact, UA, league; per-type hourly
+  gate + ETag, cache book.json), RatesClient.lookup on the press (cache
+  only), card `ninja` part + state.ninja_text; tests/test_price_book.py.
+- [x] PRICE-STACKABLES (build) Price stackables on the item-check press via
   more exchange overview types (Ritual/Omens, Essences, Runes, SoulCores,
   Breach, Delirium, Fragments, UncutGems, LineageSupportGems; research
   0019), names from the top-level `items` array (0013). After
   PRICE-UNIQUE (both edit ninja.py). ACCEPT: per-type parser tests; one
   request per type per hour. ZERO-CLICK: same press, hourly refresh.
+  DONE 2026-11-17: 13 exchange types (research 0019 list) in the price
+  book; Currency itself from rates.json by name; one failing type never
+  stops the rest; tests/test_price_book.py.
 - [ ] UTIL-1.0-READY (build) PoE2 1.0 (2026-12-11, research 0018): add
   Acts 5-6 id prefixes to acts.py, Duelist / Shadow class names, league
   rollover check in ninja.py and the price card league label, refresh the

@@ -20,6 +20,11 @@ skipped, reason, item, league, url, at) and pushes it through `card_of()`
 item, league, error; wait_s / count / listings stay empty) via the `card`
 callable (the core passes `SessionState.set_price`) with at=<press time>,
 so the overlay merges it with the item check of that press.
+
+PRICE-UNIQUE / PRICE-STACKABLES: the same press also reads the cached
+poe.ninja price (`lookup`, the core passes RatesClient.lookup: cache only,
+never a request; None while web data is off) and the card carries it as
+`ninja` {kind, name, value, unit, listings, few, change, league}.
 """
 
 import threading
@@ -47,7 +52,8 @@ def card_of(doc):
     item = {"name": raw.get("name"), "base": raw.get("base"), "rarity": raw.get("rarity")}
     status = doc.get("status")
     card = {"status": "error", "wait_s": None, "item": item, "league": doc.get("league"),
-            "count": None, "listings": [], "error": None, "url": None}
+            "count": None, "listings": [], "error": None, "url": None,
+            "ninja": ninja_of(doc.get("ninja"))}
     if status == "link" and trade.is_search_link(doc.get("url")):
         card.update(status="link", url=doc["url"])
     elif status == "skipped" and doc.get("reason") == NOT_AN_ITEM:
@@ -60,14 +66,31 @@ def card_of(doc):
     return card
 
 
+NINJA_KEYS = ("kind", "name", "value", "unit", "listings", "few", "change", "league")
+
+
+def ninja_of(found):
+    """The card's `ninja` part: a cached poe.ninja price with a finite
+    value, else None (pure)."""
+    if not isinstance(found, dict):
+        return None
+    v = found.get("value")
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (
+            float("inf"), float("-inf")) or v < 0:
+        return None
+    return {k: found.get(k) for k in NINJA_KEYS}
+
+
 class PriceChecker:
     """One per core. league: a callable read at call time (the configured
     league or None). publish(doc): receives every decision 0015 doc
     (internal; tests). card(card, at=, keep_time=): receives its decision
     0016 card (the core passes SessionState.set_price)."""
 
-    def __init__(self, league=lambda: None, publish=None, card=None, clock=time.time):
+    def __init__(self, league=lambda: None, publish=None, card=None, clock=time.time,
+                 lookup=None):
         self.league = league
+        self.lookup = lookup  # cached poe.ninja price for a parsed item, or None
         self.publish = publish or (lambda doc: None)
         self.card = card or (lambda card, at=None, keep_time=False: None)
         self.clock = clock
@@ -109,4 +132,13 @@ class PriceChecker:
             url = trade.search_link(parsed, league)
         except ValueError as e:
             return self._new_doc("skipped", press, reason=str(e), item=item)
-        return self._new_doc("link", press, item=item, league=league, url=url)
+        return self._new_doc("link", press, item=item, league=league, url=url,
+                             ninja=self._ninja(parsed))
+
+    def _ninja(self, parsed):
+        if not callable(self.lookup):
+            return None
+        try:
+            return ninja_of(self.lookup(parsed))
+        except Exception:  # noqa: BLE001 - a cache read never breaks the link
+            return None

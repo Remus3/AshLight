@@ -11,7 +11,8 @@ import threading
 import time
 from pathlib import Path
 
-from . import VERSION, acts, layout, logfile, ninja, parser, paths, price, resume, webfetch
+from . import (VERSION, acts, layout, logfile, ninja, parser, paths, price, pricebook,
+               resume, webfetch)
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import live as tc_live
@@ -107,15 +108,19 @@ class Core:
         rates_dir = (ninja.cache_dir() if runtime is None
                      else self.runtime / "cache" / "ninja")
         # UA-CONTACT: poe.ninja also needs the "contact" key.
+        # PRICE-UNIQUE / PRICE-STACKABLES: the unique and stackable overviews
+        # share the rates' refresh, gate, opt-in and contact (pricebook.py).
         self.rates = ninja.RatesClient(rates_dir, enabled=self.web_data_enabled,
                                        league=self.configured_league, fetch=web_fetch,
-                                       contact=self.contact)
+                                       contact=self.contact,
+                                       book=pricebook.PriceBook(rates_dir))
         # PRICE-TRADE-LINK (decision 0017): one offline trade-search link per
         # item-hotkey press (POST /api/eval), published as the decision 0016
         # card with the press time. No trade-site request is ever made and
         # the core never opens the link.
         self.price = price.PriceChecker(league=self.configured_league,
-                                        card=self.state.set_price)
+                                        card=self.state.set_price,
+                                        lookup=self.rates.lookup)
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most

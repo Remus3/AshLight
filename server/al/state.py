@@ -304,6 +304,9 @@ PRICE_TEXT = {
     "error": ("Price check failed", "Press the hotkey again",
               "AshLight couldn't make a trade search for this item. Press the hotkey "
               "again."),
+    # PRICE-UNIQUE / PRICE-STACKABLES: after a poe.ninja value sentence
+    "link_too": "A trade site search in {league} is ready too; click the link to "
+                "see who sells it.",
     "none": ("No listings found", "Nobody sells this now",
              "Nobody lists this item in {league} right now, so AshLight can't price it."),
 }
@@ -327,6 +330,56 @@ def _listing_text(row):
     if amount is None:
         return "price unknown"
     return f"{amount} {cur}" if cur else f"{amount} (currency unknown)"
+
+
+def _ninja_amount(v):
+    """A poe.ninja value: 2 decimals from 1 up, 3 significant digits below,
+    "under 0.001" for dust."""
+    v = float(v)
+    if v >= 1:
+        return _price_amount(v)
+    if v < 0.001:
+        return "under 0.001"
+    return f"{v:.3g}"
+
+
+def ninja_text(ninja):
+    """PRICE-UNIQUE / PRICE-STACKABLES: {line, detail, sentence} for the
+    card's cached poe.ninja price, or None. Exact tests in
+    tests/test_price_book.py."""
+    if not isinstance(ninja, dict):
+        return None
+    v = ninja.get("value")
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v < 0:
+        return None
+    unit = _text(ninja.get("unit"), "")
+    amount = _ninja_amount(v)
+    money = f"{amount} {unit}" if unit else amount
+    league = _text(ninja.get("league"), "this league")
+    listings = ninja.get("listings")
+    has_n = isinstance(listings, int) and not isinstance(listings, bool)
+    change = ninja.get("change")
+    has_ch = (isinstance(change, (int, float)) and not isinstance(change, bool)
+              and change == change and abs(change) >= 0.5)
+    trend = ""
+    if has_ch:
+        word = "up" if change > 0 else "down"
+        trend = f"{word} {_num_text(abs(change))}% over 7 days"
+    if ninja.get("few"):
+        detail = "Few listings: rough price"
+    elif trend:
+        detail = trend[0].upper() + trend[1:] + " (poe.ninja)"
+    else:
+        detail = "From poe.ninja"
+    sentence = f"poe.ninja puts this at about {money} in {league}"
+    if has_n and ninja.get("few"):
+        sentence += (f", but only {listings} "
+                     f"{'is' if listings == 1 else 'are'} listed, so the price is rough")
+    elif has_n:
+        sentence += f", from {listings} listing{'' if listings == 1 else 's'}"
+    if trend:
+        sentence += f"; {trend}"
+    return {"line": f"About {money}", "detail": detail, "sentence": sentence + "."}
 
 
 def price_card_text(card):
@@ -372,6 +425,11 @@ def price_card_text(card):
     if status == "link":
         line, detail, sentence = PRICE_TEXT["link"]
         out.update(line=line, detail=detail, sentence=sentence.format(league=league))
+        ninja = ninja_text(card.get("ninja"))
+        if ninja:
+            out.update(line=ninja["line"], detail=ninja["detail"],
+                       sentence=ninja["sentence"] + " " + PRICE_TEXT["link_too"].format(
+                           league=league))
         return out
     if status == "searching":
         key = status
