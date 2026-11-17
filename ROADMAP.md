@@ -949,6 +949,7 @@ only (blocked on live 1.0 / localised logs).
   imported by the module); design-reviewer pass. ZERO-CLICK: computed by
   the core on every snapshot; folded to "All checks pass" when green and
   opens by itself on a failure; the copy is the only click and optional.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] LANG-GUARD (build) Non-English client notice: when area generations
   arrive but the English `You have entered` line does not follow for 3
   area loads in a row, one notice names what needs English game text
@@ -961,6 +962,7 @@ only (blocked on live 1.0 / localised logs).
   ENTERED x3 -> notice; English line resumes -> clears), DIAG-SELF shows
   the same verdict; design-reviewer pass. ZERO-CLICK: detected and
   cleared by itself from the log; dismissing is optional.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] NEWBIE-HINTS (build) First-hours hints for a new character: one-time,
   auto-expiring hints keyed to Client.txt events (first level-up from
   level 1, first campaign death: "campaign deaths cost no experience",
@@ -975,6 +977,7 @@ only (blocked on live 1.0 / localised logs).
   ACCEPT: tests per hint trigger, a veteran character (first line above
   level 2) gets none, store holds no plain name, test_sidecar_paths green;
   design-reviewer pass. ZERO-CLICK: hints appear and expire by themselves.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-MAP-LADDER (build) Map level ladder: from each map run's area
   level (UTIL-MAPS), show highest map level reached, maps / deaths /
   median map time per area level and level-ups earned in maps, this
@@ -985,6 +988,7 @@ only (blocked on live 1.0 / localised logs).
   tests on synthetic map sequences (one level, several, deaths per level,
   portal re-entry not double counted, resume rebuild), design-reviewer
   pass. ZERO-CLICK: updates by itself on each map generation.
+  BLOCKED: session lane building (2026-11-17)
 
 ## Game settings advisor (operator order 2026-11-16)
 
