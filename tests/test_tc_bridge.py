@@ -259,6 +259,23 @@ def test_live_minimal_build_returns_numeric_outputs(live_bridge):
 
 @LIVE
 @pytest.mark.slow
+def test_live_reload_does_not_leak_state(live_bridge):
+    """TC-DRIFT / research 0017: PoB dev touched the headless global cache
+    cleanup; loading build A, then B, then A again must give A's outputs."""
+    a = (FIX / "minimal_build.xml").read_text(encoding="ascii")
+    b = a.replace('level="1"', 'level="90"', 1)
+    assert a != b
+    live_bridge.load_build(a)
+    first = live_bridge.outputs()
+    live_bridge.load_build(b)
+    other = live_bridge.outputs()
+    assert other.get("Life") != first.get("Life")  # B really differs
+    live_bridge.load_build(a)
+    assert live_bridge.outputs() == first
+
+
+@LIVE
+@pytest.mark.slow
 @pytest.mark.skipif(not EXPECTED, reason="no PoB GUI reference values recorded "
                     "(tests/fixtures/tc_bridge/README.md)")
 def test_live_outputs_match_pob_gui_within_0_1_percent(live_bridge):

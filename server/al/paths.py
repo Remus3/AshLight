@@ -95,9 +95,18 @@ def weights_file():
     return runtime_dir() / "theorycraft" / "weights.json"
 
 
-def tc_pins_file():
+TC_PINS_ENV = "AL_TC_PINS_FILE"  # TC-DRIFT trial only: a candidate pin file
+
+
+def tc_pins_file(environ=None):
     """TC-PIN: the TRACKED hash pins of the optional calc component
-    (decision 0004 item 3); read by tools/tc_pin.py, never written at runtime."""
+    (decision 0004 item 3); read by tools/tc_pin.py, never written at runtime.
+    AL_TC_PINS_FILE points the bridge tests at a candidate pin file in the
+    sidecar during an unattended TC-DRIFT trial (tools/tc_drift.py)."""
+    env = os.environ if environ is None else environ
+    value = (env.get(TC_PINS_ENV) or "").strip().strip('"')
+    if value:
+        return Path(value)
     return repo_root() / "config" / "tc_pins.json"
 
 
