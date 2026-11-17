@@ -44,6 +44,9 @@ SSE_MIN_INTERVAL_S = 0.25  # coalesce pushes to at most 4 Hz
 SSE_HEARTBEAT_S = 15.0
 SSE_WAIT_MAX_S = 1.0  # bound on one wait, so shutdown is noticed quickly
 MAX_BODY = 4096
+# AREA-AUDIT P5-1: a config write refused (config/local.json unreadable or
+# not writable); nothing was changed
+SAVE_FAILED = "AshLight couldn't save the settings."
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
 MAX_EVAL_BODY = 80 * 1024  # POST /api/eval: one item text (64 KB cap, research 0003)
 MAX_WEIGHTS_BODY = 64 * 1024  # PUT /api/weights
@@ -345,7 +348,7 @@ class Handler(BaseHTTPRequestHandler):
         except settingsio.SettingsError as e:
             return self._json(400, {"error": str(e)})
         except OSError:
-            return self._json(500, {"error": "AshLight couldn't save the settings."})
+            return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, report)
 
     def _run_history(self):
@@ -358,8 +361,11 @@ class Handler(BaseHTTPRequestHandler):
         clear = body.get("clear") is True
         if not (isinstance(enabled, bool) or clear):
             return self._json(400, {"error": "enabled: true|false or clear: true required"})
-        view = self.server.core.set_history(enabled if isinstance(enabled, bool) else None,
-                                            clear=clear)
+        try:
+            view = self.server.core.set_history(enabled if isinstance(enabled, bool) else None,
+                                                clear=clear)
+        except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
+            return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, {"run_history": view})
 
     def _price_watch(self):
@@ -369,7 +375,11 @@ class Handler(BaseHTTPRequestHandler):
             return None
         if body.get("clear") is not True:
             return self._json(400, {"error": "clear: true required"})
-        return self._json(200, {"price_watch": self.server.core.clear_watch()})
+        try:
+            view = self.server.core.clear_watch()
+        except OSError:  # AREA-AUDIT P5-1: the runtime file could not be written
+            return self._json(500, {"error": SAVE_FAILED})
+        return self._json(200, {"price_watch": view})
 
     def do_PUT(self):
         path, query = self._url()
@@ -563,7 +573,10 @@ class Handler(BaseHTTPRequestHandler):
             return None
         if not isinstance(body.get("enabled"), bool):
             return self._json(400, {"error": "enabled: true|false required"})
-        self.server.core.set_web_data(body["enabled"])
+        try:
+            self.server.core.set_web_data(body["enabled"])
+        except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
+            return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._web_data_doc())
 
     def _build_code(self):

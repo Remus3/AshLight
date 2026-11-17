@@ -1462,6 +1462,15 @@ merge. Each row names the finding ids it closes.
   0024, 0025 and the 0009 / 0013 amendment; 0023-tc-drift renumbered
   0025; test_audit_batch4 fails on any decision missing from Settled.
 
+- [ ] AUDIT-P5-LOW (build) AREA-AUDIT pass 5 lows P5-2..P5-7
+  (docs/audit/2026-11-17-audit.md "Pass 5"): settings import may switch
+  tc_calc on (treat like web_data); imported hotkeys accept a bare key
+  (require a modifier); Core._config cache misses a same-size rewrite on
+  a coarse-timestamp filesystem; a filter with the start marker but no
+  end marker stacks a second section; Run history says "No finished acts
+  saved yet" while the current run's splits are saved; decision 0035 is
+  an unrecorded gap. ACCEPT: a fix or a recorded ruling and one test
+  each (P5-7: a docs line). ZERO-CLICK: code row, the loop works it.
 - [x] AUDIT-P4-LOW (build) AREA-AUDIT pass 4 lows P4-4..P4-6
   (docs/audit/2026-11-17-audit.md "Pass 4"): core.tick_sources reads
   local.json every 0.5 s loop tick (use an mtime check); delta._swap_sane's
