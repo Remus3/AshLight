@@ -152,15 +152,50 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
 Uses the design-reviewer agent (.claude/agents/design-reviewer.md) and the
 design docs in docs/design/, both made by a separate agent.
 
-- [ ] DESIGN-AUDIT (review) Design / UX audit pass of the dashboard, overlay
+- [x] DESIGN-AUDIT (review) Design / UX audit pass of the dashboard, overlay
   and the new theorycraft and advisor panels with the design-reviewer agent
   against docs/design/. ACCEPT: findings fixed or filed as ROADMAP rows;
   report in docs/design/. ZERO-CLICK: count the clicks each play-session
-  flow needs and file a row for every one that can go.
+  flow needs and file a row for every one that can go. First pass done
+  (ref e909dc8, docs/design/0002-first-audit.md): findings filed as the DS-*
+  rows below; later passes (theorycraft and advisor panels) stay open.
 - [ ] DESIGN-GATE (review) Make the design-reviewer pass a standing step for
   every row that touches web/ or app/ (review lane after build). After
   DESIGN-AUDIT. ACCEPT: lane prompt or loop rule names the step; one row
   reviewed through it. ZERO-CLICK: runs in the loop, no manual trigger.
+
+Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
+Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
+
+- [ ] DS-OPACITY (build, S1) Raise the overlay opacity floor to 0.9 in
+  server/al/layout.py, app/shared/layout.js and the dashboard slider; clamp
+  older saved layouts; update layout tests. ACCEPT: no overlay text pair
+  under 4.5:1 over a white scene at the floor (design 0001 5.2).
+  ZERO-CLICK: saved layouts clamp themselves on load; no user action.
+- [ ] DS-SCALE (build, S2) Raise the overlay scale floor to 0.95 in the same
+  three places so 13px text never renders under 12px. ACCEPT: layout tests
+  and a design 0001 O3 check. ZERO-CLICK: old layouts clamp on load.
+- [ ] DS-NLM (build, S2) Rewrite summarize to the design 0001 section 9
+  templates with honest defaults and no internal ids; add
+  tests/test_summarize.py with one exact-output assert per template.
+  ACCEPT: tests green. ZERO-CLICK: text is generated from events; nothing
+  to configure.
+- [ ] DS-TRADE-EXPIRE (build, S2) Trade requests expire 10 minutes after
+  arrival; the dashboard states the rule; Dismiss stays. ACCEPT: expiry
+  test with a fake clock. ZERO-CLICK: stale requests drop off by themselves.
+- [ ] DS-HUD-AFK (build, S2) Show AFK / DND in the overlay status slot; add
+  the field to the render gate and a test. ACCEPT: test green.
+  ZERO-CLICK: follows the log's AFK / DND lines automatically.
+- [ ] DS-HUD-EMPTY (build, S3) A sensible HUD before the first snapshot (no
+  lone separator). ACCEPT: render test for the empty state.
+  ZERO-CLICK: fills in by itself when the first snapshot arrives.
+- [ ] DS-HUD-CLIP (build, S3) Clip the zone before adding "(HO)"; glanceable
+  stash position text. ACCEPT: render test with a long zone name.
+  ZERO-CLICK: purely display; no input.
+- [ ] DS-REVIEW-HOOK (process) Run the design-reviewer agent on every change
+  to web/, app/overlay/, app/shared/ or summarize before commit (lane prompt
+  or pre-commit reminder). Folds into DESIGN-GATE. ACCEPT: rule named in the
+  lane prompt or loop. ZERO-CLICK: runs in the loop, no manual trigger.
 ## Ops
 
 - [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
