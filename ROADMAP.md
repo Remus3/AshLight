@@ -409,6 +409,17 @@ recorded in research 0018 section 3.
   ops/runtime/session_summaries.json (reloaded at start), dashboard
   "Last session" card (web/summary.js); tests/test_util_session_summary.py,
   app/test/summary.test.js.
+- [x] UTIL-OVERLAY-MAP (build) Compact overlay HUD line for the open map:
+  time in it and its deaths, under the overlay budgets. ZERO-CLICK: would
+  show by itself while a map is open. NOT DONE BY DESIGN (adjudicator
+  ruling 2026-11-17, area-util batch 3): design 0001 sections 7.2 and 10
+  forbid a third HUD line ("2 HUD lines + one 3-line card"); map time and
+  deaths this map stay on the dashboard Maps card. Alternatives: a
+  conditional muted third line "This map 12m, 1 death" with 7.2 / 10
+  amended (fits the 280x176 window with ~34 px spare, budgets passed), or
+  folding it into row 2 (clips at the 258 px plate). Reverses if: the
+  operator or MAIN allows a conditional third HUD line; the prototype is
+  kept as util-overlay-map.patch in the AL sidecar Scratch folder.
 - [ ] TC-CURX (build) Hourly exchange history from GGG's documented public
   Currency Exchange API (`web.poecdn.com/api/currency-exchange/poe2/<hour>`,
   research 0018). BLOCKED: TC-OAUTH-REG (adjudicator ruling 2026-11-17:
