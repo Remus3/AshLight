@@ -224,7 +224,7 @@
         Use web data</label>
     </form>
     <p class="muted">Off unless you turn it on. When on, AshLight asks for two things only.
-      It fetches currency values from poe.ninja about once an hour. It opens a build link you
+      It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
       paste, once. It never asks the trade site anything; the trade link after an item check
       opens only when you click it. It sends no account, password or cookie, and never touches
       the game.</p>
@@ -234,6 +234,14 @@
       aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></p>
     <p id="rates-unit" class="muted" hidden></p>
     <ul id="rates-list" class="rates-list"></ul>
+    <div id="movers" hidden>
+      <h3 class="sub-h">Price movers this week</h3>
+      <p id="movers-empty" class="muted" hidden></p>
+      <h4 id="movers-up-h" class="sub-h4">Rising</h4>
+      <ul id="movers-up" class="rates-list" aria-labelledby="movers-up-h"></ul>
+      <h4 id="movers-down-h" class="sub-h4">Falling</h4>
+      <ul id="movers-down" class="rates-list" aria-labelledby="movers-down-h"></ul>
+    </div>
     <p class="muted small"><span id="rates-credit">Prices: poe.ninja</span>.
       <span id="rates-attrib"></span></p>
   </section>

@@ -306,6 +306,9 @@ PRICE_TEXT = {
     "error": ("Price check failed", "Press the hotkey again",
               "AshLight couldn't make a trade search for this item. Press the hotkey "
               "again."),
+    # PRICE-UNIQUE / PRICE-STACKABLES: after a poe.ninja value sentence
+    "link_too": "A trade site search in {league} is ready too; click the link to "
+                "see who sells it.",
     "none": ("No listings found", "Nobody sells this now",
              "Nobody lists this item in {league} right now, so AshLight can't price it."),
 }
@@ -329,6 +332,61 @@ def _listing_text(row):
     if amount is None:
         return "price unknown"
     return f"{amount} {cur}" if cur else f"{amount} (currency unknown)"
+
+
+def _ninja_amount(v):
+    """A poe.ninja value: 2 decimals from 1 up, 3 significant digits below,
+    None for dust (under 0.001)."""
+    v = float(v)
+    if v >= 1:
+        return _price_amount(v)
+    if v < 0.001:
+        return None
+    return f"{v:.3g}"
+
+
+def ninja_text(ninja):
+    """PRICE-UNIQUE / PRICE-STACKABLES: {line, detail, sentence} for the
+    card's cached poe.ninja price, or None. Exact tests in
+    tests/test_price_book.py."""
+    if not isinstance(ninja, dict):
+        return None
+    v = ninja.get("value")
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v < 0:
+        return None
+    unit = _text(ninja.get("unit"), "")
+    amount = _ninja_amount(v)
+    dust = amount is None
+    amount = "0.001" if dust else amount
+    money = f"{amount} {unit}" if unit else amount
+    league = _text(ninja.get("league"), "this league")
+    listings = ninja.get("listings")
+    has_n = isinstance(listings, int) and not isinstance(listings, bool)
+    change = ninja.get("change")
+    has_ch = (isinstance(change, (int, float)) and not isinstance(change, bool)
+              and change == change and abs(change) >= 0.5)
+    trend = ""
+    if has_ch:
+        word = "up" if change > 0 else "down"
+        trend = f"{word} {_num_text(abs(change))}% over 7 days"
+    if ninja.get("few"):
+        detail = "Few listings: rough price"
+    elif trend:
+        detail = trend[0].upper() + trend[1:] + " (poe.ninja)"
+    else:
+        detail = "From poe.ninja"
+    sentence = (f"poe.ninja puts this at under {money} in {league}" if dust
+                else f"poe.ninja puts this at about {money} in {league}")
+    rough = has_n and ninja.get("few")
+    if rough:
+        sentence += f", but only {listings} {'is' if listings == 1 else 'are'} listed."
+        sentence += f" The price is rough; {trend}." if trend else " The price is rough."
+    else:
+        if has_n:
+            sentence += f", from {listings} listing{'' if listings == 1 else 's'}"
+        sentence += f"; {trend}." if trend else "."
+    line = f"Under {money}" if dust else f"About {money}"
+    return {"line": line, "detail": detail, "sentence": sentence}
 
 
 def price_card_text(card):
@@ -374,6 +432,11 @@ def price_card_text(card):
     if status == "link":
         line, detail, sentence = PRICE_TEXT["link"]
         out.update(line=line, detail=detail, sentence=sentence.format(league=league))
+        ninja = ninja_text(card.get("ninja"))
+        if ninja:
+            out.update(line=ninja["line"], detail=ninja["detail"],
+                       sentence=ninja["sentence"] + " " + PRICE_TEXT["link_too"].format(
+                           league=league))
         return out
     if status == "searching":
         key = status
@@ -776,6 +839,12 @@ class SessionState:
                 rebuilt.fold(a.get("area_id"), a.get("at"), a.get("level"))
             if rebuilt.splits:
                 self.acts = rebuilt
+            # UTIL-MAPS-RESUME: replay the run's map runs and death recap;
+            # no run events keep the current ones.
+            events = fields.get("run_events")
+            if events:
+                self.maps, self.death_log = runs_mod.replay(events,
+                                                            self.character)
             self.version += 1
             return True
 

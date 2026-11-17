@@ -20,6 +20,11 @@ Rules (newest line first):
   start instead of starting empty. A streak of ids in one act (or of maps)
   keeps only its first entry, except the first campaign zone, which may
   start a new character's run; that is all acts.ActSplits.fold needs.
+- UTIL-MAPS-RESUME (decision 0023 pattern): the current run's scenes, area
+  generations, deaths and level-ups come back as `run_events`, oldest
+  first, at most MAX_RUN_EVENTS (the newest kept), so the map runs and the
+  death recap are replayed at core start (runs.replay). Scene lines are
+  therefore read for the whole current run.
 
 Speed: only lines holding a keyword (scene, area generation, system line,
 marker) are decoded and parsed; the keyword search runs in C over each chunk.
@@ -34,11 +39,11 @@ from . import acts, logfile, parser
 
 CHUNK = 1024 * 1024
 DEFAULT_MAX_BYTES = 32 * 1024 * 1024
+MAX_RUN_EVENTS = 20000
+_RUN_TYPES = ("scene_changed", "area_entered", "area_generated", "death",
+              "level_up")
 MARKER = b"***** LOG FILE OPENING *****"
 _KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |: )|\*\*\*\*\* LOG FILE OPENING")
-# Once zone and area are known only system lines, area generations (act
-# splits) and the marker matter.
-_KEY_SYS = re.compile(rb"\] (?:: |Generating level )|\*\*\*\*\* LOG FILE OPENING")
 # Before the current run only level-ups and the marker matter.
 _KEY_LVL = re.compile(rb"\) is now level \d|\*\*\*\*\* LOG FILE OPENING")
 _BOM = b"\xef\xbb\xbf"
@@ -114,6 +119,7 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     deaths = []
     ups = []
     seq = []  # in-run area generations and level-ups, newest first
+    run_ev = []  # in-run events for runs.replay, newest first
     reached = end
     try:
         fh = logfile._open_shared(path)
@@ -123,12 +129,9 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
         for seg, start in _chunks_backward(fh, end, floor):
             reached = start
             done = False
-            if not in_run:
-                key = _KEY_LVL
-            elif out["zone"] is not None and out["area_id"] is not None:
-                key = _KEY_SYS
-            else:
-                key = _KEY
+            # In the current run scenes are needed for the map clock
+            # (UTIL-MAPS-RESUME); before it only level-ups matter.
+            key = _KEY if in_run else _KEY_LVL
             for raw in _lines_newest_first(seg, key):
                 if MARKER in raw[:64]:
                     if in_run:
@@ -142,6 +145,8 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                 if ev is None:
                     continue
                 t = ev["type"]
+                if in_run and t in _RUN_TYPES and len(run_ev) < MAX_RUN_EVENTS:
+                    run_ev.append(ev)
                 if t == "level_up":
                     name = ev.get("character")
                     if out["character"] is None and (fixed is None or name == fixed):
@@ -189,7 +194,19 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     out["dnd"] = bool(out["dnd"])
     out["bytes_scanned"] = end - reached
     out["act_areas"] = _act_areas(seq, me, out["level"])
+    out["run_events"] = _run_events(run_ev)
     return out
+
+
+_EV_KEYS = ("type", "ts_local", "scene", "is_null", "is_transient",
+            "is_hideout", "area_id", "area_level", "character", "level",
+            "name")
+
+
+def _run_events(newest_first):
+    """Oldest-first compact copies of the run's events for runs.replay."""
+    return [{k: ev[k] for k in _EV_KEYS if k in ev}
+            for ev in reversed(newest_first)]
 
 
 def _streak_key(area_id):
@@ -245,4 +262,10 @@ def state_fields(result, now=None):
         if at is not None:
             areas.append({"area_id": a["area_id"], "at": at, "level": a["level"]})
     fields["act_areas"] = areas
+    events = []
+    for ev in result.get("run_events") or ():
+        at = local_ts_to_epoch(ev.get("ts_local"), now)
+        if at is not None:
+            events.append(dict(ev, at=at))
+    fields["run_events"] = events
     return fields

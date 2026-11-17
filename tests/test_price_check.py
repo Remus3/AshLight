@@ -27,7 +27,9 @@ ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "p" * 48
 CONTACT = "test-contact"
 ITEM = {"name": "N", "base": "B", "rarity": "RARE"}
-KEYS = {"status", "wait_s", "item", "league", "count", "listings", "error", "url"}
+# PRICE-UNIQUE: `ninja` (cached poe.ninja price or None) joins the contract.
+KEYS = {"status", "wait_s", "item", "league", "count", "listings", "error", "url",
+        "ninja"}
 
 
 class FakeNet:
