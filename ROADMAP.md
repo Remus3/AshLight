@@ -265,13 +265,15 @@ recorded in research 0018 section 3.
 Uses the design-reviewer agent (.claude/agents/design-reviewer.md) and the
 design docs in docs/design/, both made by a separate agent.
 
-- [ ] DESIGN-GATE (review) Make the design-reviewer pass a standing step for
+- [x] DESIGN-GATE (review) Make the design-reviewer pass a standing step for
   every row that touches web/ or app/ (review lane after build). After
   DESIGN-AUDIT. ACCEPT: lane prompt or loop rule names the step; one row
   reviewed through it. ZERO-CLICK: runs in the loop, no manual trigger.
   Partly done: the lane prompt names the step (DS-REVIEW-HOOK); "one row
   reviewed through it" waits for the next web/ or app/ row the armed loop
-  runs (LOOP-ARM done 2026-11-17).
+  runs (LOOP-ARM done 2026-11-17). DONE 2026-11-17 (area-ux): UX-U7, UX-U8
+  and UX-U9 each went through the design-reviewer before commit (PASS;
+  PASS WITH FINDINGS S3=2 S4=1, fixed; PASS WITH FINDINGS S4=2, fixed).
 
 - [x] UX-U7 (review) Real-browser check of the cards added after audit 0003
   (Act times, item check, price / upgrade link, build view) at 320 / 768 /
@@ -282,11 +284,27 @@ design docs in docs/design/, both made by a separate agent.
   the deaths tile at 320 px; fixed (`.stat .sub` wraps), guarded by
   tests/test_ux_review.py. Forced colours: every badge keeps its text
   label, so nothing is lost. ZERO-CLICK: layout only, no user step.
-- [ ] UX-U8 (review) Windows forced-colours / high-contrast on the
+- [x] UX-U8 (review) Windows forced-colours / high-contrast on the
   transparent overlay window (glance review 0004 U8). ACCEPT: overlay page
   rendered with forced-colors active; the window background stays
   transparent, the plates and text stay legible, fixes test-guarded.
-  ZERO-CLICK: follows the OS setting, no toggle.
+  DONE 2026-11-17 (area-ux): Electron 45 transparent window probe
+  (capturePage with alpha) under forced-colors emulation, dark and
+  light: window stays transparent (alpha 0 outside the plates). Found:
+  the trade card's warn edge and the upgrade card's green edge both fell
+  to plain CanvasText, and the 0.92 plate became 0.92 Canvas. Fixed in
+  overlay.css: root opts out of forcing (never an opaque block over the
+  game), plates opt back in, plate opaque Canvas, trade / upgrade edges
+  Highlight; tests in tests/test_ux_review.py. Not exercised: a real OS
+  high-contrast theme switch (emulation only). ZERO-CLICK: follows the OS
+  setting, no toggle.
+- [x] UX-U9 (review) Session tile empty state (design 0001 rule 9, seen in
+  the UX-U7 pass): before the Client.txt opt-in the Session tile showed
+  "--:--" over a blank line. ACCEPT: the line says when the timer starts;
+  AFK / DND still win; node test. DONE 2026-11-17 (area-ux): web/status.js
+  sessionSub() - "Starts when you allow reading Client.txt" until the
+  opt-in; app/test/dashboard.test.js. ZERO-CLICK: the line clears itself
+  once reading starts.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.

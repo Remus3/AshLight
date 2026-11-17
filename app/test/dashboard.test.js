@@ -57,6 +57,15 @@ test("empty Recent list says what unlocks it", () => {
     "Nothing yet. Allow reading Client.txt above, then zones, level-ups, deaths and whispers show up here.");
 });
 
+test("session sub line: flags first, else says when the timer starts (UX-U9)", () => {
+  assert.equal(v.sessionSub(false, false, false), "Starts when you allow reading Client.txt");
+  assert.equal(v.sessionSub(false, false, true), "\u00a0");
+  assert.equal(v.sessionSub(true, false, true), "AFK");
+  assert.equal(v.sessionSub(true, true, false), "AFK / DND");
+  assert.equal(v.sessionSub(false, true, true), "DND");
+  assert.equal(v.sessionSub(true, false, false), "AFK");
+});
+
 test("trade line uses the core's sentence; never prints undefined", () => {
   assert.deepEqual(v.tradeLine({ text: "Quietfox wants Plain Belt - 5 exalted", where: "tab Sale (3,7)" }),
     { what: "Quietfox wants Plain Belt - 5 exalted", where: "tab Sale (3,7)" });
