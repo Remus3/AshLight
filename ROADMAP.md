@@ -36,9 +36,24 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   UX-REVIEW F1 (HUD status slot says "1 trade" / "N trades" while a card
   holds the slot) and F6 (dashboard polite "New trade request from <name>."
   only when the set of ids grows). ZERO-CLICK: the card clears itself.
-- [ ] HUD-ACT (build) Leveling helpers: act / zone level table from an
+- [x] HUD-ACT (build) Leveling helpers: act / zone level table from an
   attributed build-time data snapshot (license checked first, research 0005);
-  zone timer splits per act. ACCEPT: split table on the dashboard.
+  zone timer splits per act. ACCEPT: split table on the dashboard. DONE
+  2026-11-17 (decision 0020): server/al/acts.py folds area-generation ids
+  into per-act splits (snapshot `acts`; dashboard "Act times": act, time in
+  act, total); zone levels for the current act from repoe-fork
+  world_areas.json, fetched only by the build-time snapshot into the
+  sidecar cache (decision 0009 conditions), attributed under the table, the
+  core only reads the cache. Tests: tests/test_hud_act.py,
+  app/test/acts.test.js. ZERO-CLICK: splits and the zone table update by
+  themselves on every zone change.
+- [ ] HUD-ACT-RESUME (build) Act splits survive a core restart: LIVE-RESUME
+  (decision 0008) also returns the current run's area-generation ids with
+  their line timestamps, so the splits rebuild from Client.txt instead of
+  starting empty and partial. Also confirm the cruel `C_G<n>_` / interlude
+  `P<n>_` id prefixes from a live log (LIVE-1) and fix acts.act_of if they
+  differ. ACCEPT: restart mid-act keeps earlier act times; exact tests.
+  ZERO-CLICK: rebuilt at core start.
 - [x] PRICE-1-COPY (build) Design review of PRICE-1-WIRE (reviews.log
   2026-11-17, S3 x3) on price.card_of: F1 any error text containing
   "league" maps to "no league" (match only trade.search_url's exact

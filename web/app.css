@@ -207,6 +207,19 @@ button.secondary {
 
 /* Shared bits for the build view, item check and graphics panel. */
 .sub-h { font-size: 0.9rem; margin: 16px 0 6px; color: var(--fk-text-muted); }
+/* HUD-ACT: act times and zone levels; numbers right-aligned, no jitter. */
+.acts-table { width: 100%; border-collapse: collapse; }
+.acts-table th, .acts-table td { text-align: left; padding: 6px 8px 6px 0;
+  border-top: 1px solid var(--fk-border); vertical-align: top; }
+.acts-table thead th { border-top: none; font-size: 0.85rem; font-weight: 600;
+  color: var(--fk-text-muted); }
+.acts-table tbody th { font-weight: 600; overflow-wrap: anywhere; }
+.acts-table td.mono { text-align: right; white-space: nowrap; padding-right: 0; }
+.acts-table thead th:not(:first-child) { text-align: right; padding-right: 0; }
+/* Current row: weight on the row header only, so the number columns never
+   change width on an act change (design review HA-8). */
+.acts-table tr[data-current] th, .zones-table tr.here th { font-weight: 700; }
+.acts-table th .muted { font-weight: 400; }
 .small { font-size: 0.9rem; }
 a.out { color: var(--fk-accent); font-size: 0.9rem; }
 a:focus-visible, summary:focus-visible, textarea:focus-visible,

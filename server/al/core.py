@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import VERSION, layout, logfile, ninja, parser, paths, price, resume, trade, webfetch
+from . import VERSION, acts, layout, logfile, ninja, parser, paths, price, resume, trade, webfetch
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import live as tc_live
@@ -73,6 +73,12 @@ class Core:
                      else self.runtime / "gamedata" / treedata.FILE_NAME)
         self.builds = build_store.BuildStore(build_store.default_path(self.runtime),
                                              tree=treedata.TreeCache(tree_path))
+        # HUD-ACT: zone levels from the cached world areas export when the
+        # build-time snapshot fetched it (decision 0020); read only, no fetch.
+        zones_path = (acts.default_path() if runtime is None
+                      else self.runtime / "gamedata" / acts.FILE_NAME)
+        self.zone_table = acts.TableCache(zones_path)
+        self.state.set_zone_table(self.zone_table.get())
         # TC-EVAL: editable stat weights, defaults written on first start.
         self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.

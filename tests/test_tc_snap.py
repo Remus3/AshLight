@@ -142,7 +142,10 @@ def test_sources_policy():
     assert s["stat_translations"] == (
         "https://repoe-fork.github.io/poe2/stat_translations/stat_descriptions.json")
     assert s["skilltree"] == TREE_URL
-    assert set(s) == {"mods", "base_items", "stats", "stat_translations", "skilltree"}
+    # HUD-ACT (decision 0020): world areas for the zone level table.
+    assert s["world_areas"] == "https://repoe-fork.github.io/poe2/world_areas.json"
+    assert set(s) == {"mods", "base_items", "stats", "stat_translations", "skilltree",
+                      "world_areas"}
     assert set(snapshot.ALLOWED_HOSTS) == {"repoe-fork.github.io", "raw.githubusercontent.com"}
 
 

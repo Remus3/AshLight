@@ -11,6 +11,7 @@
 <script src="/web/tc.js" defer></script>
 <script src="/web/prices.js" defer></script>
 <script src="/web/trades.js" defer></script>
+<script src="/web/acts.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -130,6 +131,23 @@
       </form>
       <p id="weights-status" class="muted" role="status" aria-live="polite"></p>
     </details>
+  </section>
+
+  <section id="actsbox" class="card acts" aria-labelledby="acts-title">
+    <h2 id="acts-title">Act times</h2>
+    <p id="acts-empty" class="muted"></p>
+    <table id="acts-table" class="acts-table" hidden>
+      <thead><tr><th scope="col">Act</th><th scope="col">Time in act</th>
+        <th scope="col">Run total</th></tr></thead>
+      <tbody id="acts-rows"></tbody>
+    </table>
+    <h3 id="zones-title" class="sub-h">Zone levels</h3>
+    <p id="zones-empty" class="muted"></p>
+    <table id="zones-table" class="acts-table zones-table" hidden>
+      <thead><tr><th scope="col">Zone</th><th scope="col">Level</th></tr></thead>
+      <tbody id="zones-rows"></tbody>
+    </table>
+    <p id="zones-source" class="muted small" hidden></p>
   </section>
 
   <section class="card events" aria-labelledby="events-title">

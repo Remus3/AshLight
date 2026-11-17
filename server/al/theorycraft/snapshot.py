@@ -75,6 +75,8 @@ SOURCES = {
     "stats": REPOE_POE2 + "stats_by_file.json",
     "stat_translations": REPOE_POE2 + "stat_translations/stat_descriptions.json",
     "skilltree": GGG_TREE_POE2,
+    # HUD-ACT (decision 0020): act / zone levels; reader server/al/acts.py.
+    "world_areas": REPOE_POE2 + "world_areas.json",
 }
 
 

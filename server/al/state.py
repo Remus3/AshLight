@@ -9,6 +9,8 @@ import collections
 import threading
 import time
 
+from . import acts as acts_mod
+
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
 TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
@@ -480,6 +482,9 @@ class SessionState:
         self.price = None
         self._price_ids = 0
         self.build_info = None
+        # HUD-ACT: per-act splits; zone level table from the game-data cache.
+        self.acts = acts_mod.ActSplits()
+        self.zone_table = {}
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -541,6 +546,14 @@ class SessionState:
         with self._lock:
             if info != self.build_info:
                 self.build_info = dict(info) if info else None
+                self.version += 1
+
+    def set_zone_table(self, table):
+        """HUD-ACT: the act / zone level table (acts.load_table())."""
+        with self._lock:
+            table = table if isinstance(table, dict) else {}
+            if table != self.zone_table:
+                self.zone_table = table
                 self.version += 1
 
     def dismiss_trade(self, trade_id=None):
@@ -616,6 +629,7 @@ class SessionState:
             elif t == "area_generated":
                 self.area_id = ev.get("area_id")
                 self.area_level = ev.get("area_level")
+                self.acts.fold(self.area_id, now, self.level)
                 changed = True
             elif t == "area_entered":
                 if ev.get("name") != self.zone:
@@ -737,4 +751,6 @@ class SessionState:
                 # The one overlay card chosen at this moment (decision 0016).
                 "card": overlay_card(self.eval, self.price, now),
                 "build": dict(self.build_info) if self.build_info else None,
+                "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
+                                      self.zone, now),
             }
