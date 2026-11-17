@@ -255,12 +255,30 @@ weights derived from PoB outputs stay with TC-DELTA.
   NamesCache over <cache>/gamedata/base_items.json), item.parse sets
   name = the magic line, base = the true base, base_source; core registers
   the cache; tests/test_math_magic_base.py.
-- [ ] MATH-VALUE-UI (build) Show the item check card's `value` on the
+- [x] MATH-VALUE-UI (build) Show the item check card's `value` on the
   dashboard Item check card: "Listed 4 Exalted Orb = 0.008 Divine Orb,
   2,500 score per Divine Orb", the rates' stale state and the poe.ninja
   credit; nothing when `value` is null. After MATH-VALUE. ACCEPT: web test
   on a synthetic card; design-reviewer pass.
   ZERO-CLICK: appears with the item check of the same hotkey press.
+  DONE 2026-11-17: web/prices.js valueView + "Price and points" box in the
+  Item check card (web/index.html #valuebox, web/app.js); honest no-rate
+  sentences; app/test/prices.test.js; design-reviewer PASS WITH FINDINGS
+  S3=1 S4=2, all fixed (docs/design/reviews.log, section 9 templates).
+- [x] MATH-WEIGHTS (build) Stat weights from PoB outputs kept per build:
+  TC-DELTA probes every stat key through the PoB calc on each check (one
+  PoB run per key, up to 24 per slot); keep PoB's per-mod weights per
+  build / slot / carrier / blend so a re-check probes only new keys, and
+  when the optional calc is off or fails score with the weights PoB
+  measured earlier for the same build (never another build's), with the
+  off / failed notice. ACCEPT: fake-calc tests (probe counts, keying,
+  outage fallback, thread safety); weights stay PoB's own numbers.
+  ZERO-CLICK: automatic on every check and re-score.
+  DONE 2026-11-17: server/al/theorycraft/pobweights.py (PobWeightCache,
+  in memory, LRU 64); evaluate(cache=) and LastEval; calc.source
+  "pob_cached" with state.CALC_CACHED_TEXT; upgrade weights source passes
+  it through; tests/test_math_weights.py. Known limit: memory only, so a
+  restart with the calc off falls back to the hand weights.
 - [x] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
   verdict-band properties (antisymmetry of the delta, band monotone in the
   old score, rounding stable at 4 places, NaN / inf / huge values from a
