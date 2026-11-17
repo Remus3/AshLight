@@ -310,7 +310,7 @@ recorded in research 0018 section 3.
   lines); charjson.BASE_CLASSES adds Duelist / Shadow; ninja league re-
   read every 6 h and within the hour after a 404 / empty overview; trade
   links and the price card label follow the cached poe.ninja league while
-  web data is on (Core.trade_league, decision 0025). OPEN after launch:
+  web data is on (Core.trade_league, decision 0026). OPEN after launch:
   refresh the repoe-fork snapshot for Act 5/6 zone levels and review the
   first 1.0 log's debug sink (filed as UTIL-1.0-POST).
 - [ ] UTIL-1.0-POST (build) After PoE2 1.0 launches (2026-12-11): refresh
