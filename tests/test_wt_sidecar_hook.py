@@ -99,6 +99,74 @@ def test_remove_ignores_paths_outside_sidecar(repo, tmp_path):
     assert repo.exists()
 
 
+WIRED_CMD = 'python "$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py"'
+
+
+def _settings():
+    return json.loads((ROOT / ".claude" / "settings.json").read_text("ascii"))
+
+
+def _wired(event):
+    groups = _settings().get("hooks", {}).get(event)
+    if groups is None:
+        return None
+    assert all("matcher" not in g for g in groups), event
+    cmds = [h for g in groups for h in g["hooks"]]
+    assert [h["command"] for h in cmds] == [WIRED_CMD], event
+    assert all(h["type"] == "command" for h in cmds), event
+    return WIRED_CMD
+
+
+def test_decision_snippet_is_the_wired_command():
+    """The operator's activation snippet (decision 0012) names WIRED_CMD for
+    both events, so the end-to-end test below proves what gets pasted."""
+    text = (ROOT / "docs" / "decisions" / "0012-worktree-sidecar-hook.md").read_text("ascii")
+    snippet = '"command": "python \\"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\\""'
+    assert text.count(snippet) == 2
+    assert '"WorktreeCreate"' in text and '"WorktreeRemove"' in text
+
+
+def test_settings_wire_worktree_create_and_remove():
+    """WT-SIDECAR activation: once wired, both events run the hook with no
+    matcher (the harness ignores one on these events). Agents cannot write
+    .claude/settings.json (harness-protected), so until the operator pastes the
+    decision 0012 snippet this skips; a half or wrong wiring fails."""
+    create, remove = _wired("WorktreeCreate"), _wired("WorktreeRemove")
+    if create is None and remove is None:
+        pytest.skip("WT-SIDECAR hook not wired yet (operator act, decision 0012)")
+    assert create == remove == WIRED_CMD
+
+
+def test_wired_command_lands_worktree_under_sidecar(repo, tmp_path):
+    """Run the settings.json command (or, before activation, the decision 0012
+    snippet) the way the harness does (project dir expanded, posix quoting) for
+    a fresh agent name: the printed path is under the sidecar Worktree dir,
+    never the repo's .claude/worktrees/."""
+    import shlex
+    cmd = _wired("WorktreeCreate") or WIRED_CMD
+    argv = shlex.split(cmd.replace("$CLAUDE_PROJECT_DIR", ROOT.as_posix()))
+    argv[0] = sys.executable
+    env = dict(os.environ)
+    env[paths.SIDECAR_ENV] = str(tmp_path / "AL")
+    p = {"hook_event_name": "WorktreeCreate", "session_id": "s", "cwd": str(repo),
+         "name": "agent-fresh01"}
+    r = subprocess.run(argv, input=json.dumps(p), capture_output=True, text=True,
+                       timeout=120, env=env)
+    assert r.returncode == 0, r.stderr
+    wt = Path(r.stdout.strip().splitlines()[-1])
+    wt.relative_to((tmp_path / "AL" / "Worktree").resolve())
+    assert (wt / "a.txt").is_file()
+    assert not (repo / ".claude" / "worktrees").exists()
+    cmd_rm = _wired("WorktreeRemove") or WIRED_CMD
+    argv = shlex.split(cmd_rm.replace("$CLAUDE_PROJECT_DIR", ROOT.as_posix()))
+    argv[0] = sys.executable
+    r = subprocess.run(argv, input=json.dumps({"hook_event_name": "WorktreeRemove",
+                       "cwd": str(repo), "worktree_path": str(wt)}),
+                       capture_output=True, text=True, timeout=120, env=env)
+    assert r.returncode == 0, r.stderr
+    assert not wt.exists()
+
+
 def test_worktree_dir_resolves_under_sidecar(monkeypatch, tmp_path):
     monkeypatch.setenv(paths.SIDECAR_ENV, str(tmp_path / "AL"))
     assert paths.worktree_dir() == (tmp_path / "AL" / "Worktree").resolve()

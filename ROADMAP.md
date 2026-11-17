@@ -847,7 +847,7 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   serve_forever thread is not yet polling). ACCEPT: root cause named in the
   commit; the test passes 50 runs in a loop and under the full suite; no
   sleep-based fix. ZERO-CLICK: test-only / server fix, no user step.
-- [ ] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates
+- [x] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates -- done 2026-11-17 (loop; refute 1/3 PASS)
   worktrees under the repo's .claude/worktrees/, but the Sidecar rule puts
   them under the AL sidecar Worktree folder. Finding: .claude/worktrees/ IS
   gitignored (.gitignore line 37), so nothing leaks into commits; the
