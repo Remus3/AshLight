@@ -37,3 +37,7 @@ for "ashlight path of exile" returned nothing.
 A verified PoE/PoE2 tool, or an npm/PyPI package named AshLight doing this job,
 appears, or "Ashlight" is confirmed as a GGG proper noun (manual poe2wiki check
 before publishing is ROADMAP row PUB-NAME). Then switch to Vigilmark.
+
+PUB-NAME check done 2026-11-17: poe2wiki.net and poewiki.net have 0
+search hits and no page for "Ashlight" / "Ash Light" (research 0009,
+"Re-check 2026-11-17"). Not a GGG proper noun; the name stands.

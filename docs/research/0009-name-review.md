@@ -163,6 +163,27 @@ Verdict: REJECT.
 - Does not meet the AshLight reversal test and is worse on every axis checked;
   AshLight stays.
 
+## Re-check 2026-11-17 (ROADMAP PUB-NAME closed)
+
+Anonymous MediaWiki API reads (the HTML search pages and the fetch agent
+got an Anubis bot-protection page; the plain API call answered):
+- poe2wiki.net full-text search `ashlight`: totalhits 0; `"ash light"`:
+  totalhits 0
+  (https://www.poe2wiki.net/api.php?action=query&list=search&srsearch=ashlight&format=json)
+  (accessed 2026-11-17).
+- poewiki.net full-text search `ashlight`: totalhits 0; `"ash light"`:
+  totalhits 0
+  (https://www.poewiki.net/api.php?action=query&list=search&srsearch=ashlight&format=json)
+  (accessed 2026-11-17).
+- Exact page titles `Ashlight`, `Ash Light`, `Ash light`: all "missing" on
+  both wikis
+  (https://www.poe2wiki.net/api.php?action=query&titles=Ashlight|Ash_Light|Ash_light&format=json,
+  same on www.poewiki.net) (accessed 2026-11-17).
+
+Verdict: "Ashlight" is not a GGG proper noun (no item, skill, area, NPC or
+page) in PoE1 or PoE2. The decision 0001 reversal condition is not met.
+poe2db stays UNVERIFIED (see section 1).
+
 ## Bottom line
 
 KEEP AshLight. The reversal condition is NOT met:

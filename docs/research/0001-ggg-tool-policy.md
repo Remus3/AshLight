@@ -1,6 +1,6 @@
 # Grinding Gear Games third-party tool policy
 
-Research date: 2026-11-16. Not legal advice. GGG staff reportedly say they "cannot comment on the legality of third-party tools" and cannot guarantee a tool stays allowed (from search-result summaries of staff replies; verbatim text UNVERIFIED).
+Research date: 2026-11-16; re-read 2026-11-17 (ROADMAP RES-POLICY, section at the end). Not legal advice. GGG staff reportedly say they "cannot comment on the legality of third-party tools" and cannot guarantee a tool stays allowed (from search-result summaries of staff replies; verbatim text UNVERIFIED).
 
 ## Official policy (developer docs)
 
@@ -101,3 +101,91 @@ Consequences that bind Ashlight (go into CLAUDE.md as the ToS floor):
 - Ashlight sends no input to the game at all (stricter than the macro rule).
 - The affiliation statement above is shown in the README, the dashboard footer
   and the About panel.
+
+## Re-read 2026-11-17 (ROADMAP RES-POLICY)
+
+Pages re-read anonymously on 2026-11-17:
+https://www.pathofexile.com/developer/docs,
+https://www.pathofexile.com/developer/docs/changelog and
+https://www.pathofexile.com/legal/terms-of-use-and-privacy-policy (all
+accessed 2026-11-17).
+
+Verdict: GGG policy UNCHANGED in substance since the 2026-11-16 verified
+quotes above. Every overlay, macro, standalone-app, game-interaction and
+non-affiliation quote above is still on the page word for word.
+
+What the changelog says:
+- The latest entry is dated 12/11/2026 (DD/MM), 3.30.0 (Covens of Umbra):
+  "Clarified Policy wording on macros and overlays", plus new Character,
+  LeagueAccount and PassiveNode API properties and a fix to the PoE2
+  Account Leagues docs
+  (https://www.pathofexile.com/developer/docs/changelog, accessed
+  2026-11-17). That date is before the 2026-11-16 re-read, so the verified
+  quotes above already reflect the clarified wording. No policy entry
+  since then.
+
+Current Policy section layout (developer docs, accessed 2026-11-17): three
+app classes. "Websites and web apps" ("Little to no risk for end users").
+"Executable apps that run independently from the game" ("While not
+encouraged, these are permitted"; macro rules and overlay rules apply).
+"Executable apps that interact with the game or game files" ("strictly
+against our Terms of Use (sections 7b, 7c, 7i)"). AshLight is in the
+second class. The policy section itself does not mention PoE2. The only
+explicit PoE2 item on the page is the file-format entry "Build Planner
+(PoE2 only)". The docs still state no "last updated" date.
+
+Lines on the 2026-11-17 page that this note did not quote before (all from
+https://www.pathofexile.com/developer/docs, accessed 2026-11-17):
+- "As a general rule, we cannot allow our Intellectual Property to be used
+  to generate commercial revenue." The next sentence says this includes
+  creating and selling physical items or copying GGG's assets to make other
+  games.
+- "You may not present your project or tool in a way that could be
+  construed as it being developed or officially authorised" by GGG (the
+  quote is shortened; the rest of the sentence is not quoted here).
+- "Introducing features against these guidelines or our Terms of Use can
+  result in account termination for you" (the sentence goes on to say the
+  same applies to the tool's users).
+- "We reserve the right to remove access to any or all of our APIs and
+  services without notice at our discretion."
+- "It is against our Terms of Use (section 7i) to reverse-engineer
+  endpoints outside of this documentation." (Research 0004 already
+  recorded this point on 2026-11-16.)
+- The rate limits "are dynamic and can change at any time".
+- In the macro rule, automated invocation "such as but not limited to:
+  timers, reacting to file changes, or from reading the screen" is not
+  allowed. This binds only input automation, and AshLight sends no input
+  at all.
+
+Terms of Use (accessed 2026-11-17): titled "PATH OF EXILE & PATH OF EXILE 2
+- TERMS OF USE". It shows no effective date; the privacy policy on the
+same page reads "Last Updated: October 2024". The section 7 restriction
+lines quoted above are unchanged: modify or adapt the client or its data,
+automated software or bots, connecting through non-authorised client
+software, data gathering and extraction tools, and "Reverse engineer,
+de-compile or disassemble the Website, Materials or Services". The fetcher
+rendered the items as numbers (7.2, 7.3, 7.5, 7.6, 7.9), while the
+developer docs cite letters (7b, 7c, 7i). The API clause still requires
+following "the Website API call limits set out in the API Policies".
+
+### Proposed CLAUDE.md "Game ToS floor" changes (NOT applied; for MAIN / operator)
+
+Nothing in GGG's rules has loosened or tightened, so the floor stays valid.
+The re-read found three places where the floor's wording is incomplete:
+
+1. Tighten: add "No commercial revenue from GGG intellectual property (no
+   paid tier, no sale of GGG-derived data or assets)". Source: the
+   commercial-revenue line above. The floor does not cover this today.
+2. Tighten: extend the branding bullet to "never present AshLight as
+   developed, authorised or endorsed by GGG". Source: the "construed as it
+   being developed or officially authorised" line. The floor has the
+   non-affiliation statement and the no-trademark rule, but not this
+   presentation rule.
+3. Clarify: the floor calls the trade source the "official trade API".
+   The trade2 endpoints are not in GGG's API Reference, and the docs bar
+   reverse-engineering undocumented endpoints (ToU 7i; research 0004).
+   Proposed wording: "the trade site's trade2 endpoints only as an opt-in,
+   best-effort dependency (undocumented; X-Rate-Limit-* headers obeyed
+   dynamically)". Whether the trade2 price check is allowed at all is
+   already settled in decisions 0013 and 0015. This change only makes the
+   floor accurate; it is not a ruling on that question.
