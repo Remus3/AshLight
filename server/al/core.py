@@ -159,6 +159,7 @@ class Core:
         # per zone across runs, one bounded file under the runtime dir.
         self.history = runhistory.RunHistory(self.runtime / runhistory.FILE_NAME)
         self._history_key = None
+        self._parked_keys = {}  # UTIL-MULTICHAR: saved key per parked character
         # UTIL-PRICE-WATCH: the last priced presses, one bounded runtime
         # file; re-read from the cache on a price book refresh only.
         self.watch = pricewatch.PriceWatch(self.runtime / pricewatch.FILE_NAME)
@@ -263,7 +264,33 @@ class Core:
                 self._history_key = key
             except OSError:
                 pass  # the view still shows; the next tick tries again
-        self.state.set_run_history(self.history.view(rec, enabled=on))
+        # UTIL-MULTICHAR (decision 0037): the player's other characters'
+        # runs (rebuilt at core start, or parked by a switch) are saved
+        # too, each under its own name, and every character gets a view.
+        names = self.state.character_names()
+        current = names[0] if names else None
+        for name in names[1:]:
+            prec = self.state.parked_record(name)
+            if not on or prec is None or not prec["closed"]:
+                continue
+            pkey = (prec["started_at"], prec["closed"], prec["finished"])
+            if self._parked_keys.get(name) == pkey:
+                continue
+            try:
+                with self._lock:
+                    wrote = self.history.record(prec) or wrote
+                self._parked_keys[name] = pkey
+            except OSError:
+                pass
+        view = self.history.view(rec, enabled=on)
+        # the selector also lists characters seen only in the saved file
+        others = names[1:] + [n for n in reversed(self.history.characters())
+                              if n and n != current and n not in names]
+        view["by_character"] = {
+            name: self.history.view(self.state.parked_record(name), enabled=on,
+                                    character=name)
+            for name in others[:runhistory.MAX_CHARACTERS - 1]}
+        self.state.set_run_history(view)
         return wrote
 
     def set_history(self, enabled=None, clear=False):
@@ -278,6 +305,13 @@ class Core:
                 self.history.clear()
                 self._history_key = ((rec["started_at"], rec["closed"], rec["finished"])
                                      if rec else None)
+                # UTIL-MULTICHAR: the parked characters' runs likewise
+                self._parked_keys = {}
+                for name in self.state.character_names()[1:]:
+                    prec = self.state.parked_record(name)
+                    if prec is not None:
+                        self._parked_keys[name] = (prec["started_at"], prec["closed"],
+                                                   prec["finished"])
         self.tick_history()
         return self.state.snapshot()["run_history"]
 

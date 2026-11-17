@@ -12,6 +12,8 @@
   var snap = null;
   var offset = 0; // client clock minus server clock, seconds
   var renderedVersion = -1;
+  // UTIL-MULTICHAR: the character the player picked ("" = the one playing)
+  var charPick = "";
   var es = null;
   var ticker = null;
   var linkLive = false; // the state feed is live right now
@@ -968,19 +970,23 @@
     }
     renderEval(s.eval || null);
     renderPrice(s.price || null, false);
+    // UTIL-MULTICHAR: level, pace, deaths, act times and run history of
+    // the picked character (the one playing unless the player picks)
+    if (window.ALChars) { window.ALChars.paint(document, s, charPick); }
+    var c = window.ALChars ? window.ALChars.view(s, charPick) : s;
 
     $("zone").textContent = s.zone || "No zone yet";
     $("hideout").hidden = !s.in_hideout;
     $("zone-stale").hidden = !(s.zone && s.tailer && s.tailer.consented && s.tailer.idle);
-    $("level").textContent = s.level === null ? "-" : String(s.level);
-    $("who").textContent = s.character
-      ? s.character + (s["class"] ? " (" + s["class"] + ")" : "")
+    $("level").textContent = c.level === null || c.level === undefined ? "-" : String(c.level);
+    $("who").textContent = c.character
+      ? c.character + (c["class"] ? " (" + c["class"] + ")" : "") + (c.who_note || "")
       : "character unknown";
     // UTIL-PACE: the core's pace sentence, shown once there is one.
-    var paceText = (s.pace && s.pace.text) || "";
+    var paceText = (c.pace && c.pace.text) || "";
     $("pace").textContent = paceText;
     $("pace").hidden = !paceText;
-    var counts = D.countsView(s.deaths, s.level_ups, !!(s.tailer && s.tailer.consented));
+    var counts = D.countsView(c.deaths, c.level_ups, !!(s.tailer && s.tailer.consented));
     setDeaths($("deaths"), counts.deaths);
 
     $("levelups").textContent = counts.levelups;
@@ -994,7 +1000,7 @@
     showReading();
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
-    if (window.ALActs) { window.ALActs.paint(document, s.acts || null, D.clockUntil(s.tailer, serverNow()), true); }
+    if (window.ALActs) { window.ALActs.paint(document, c.acts || null, D.clockUntil(s.tailer, serverNow()), true); }
     if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
     // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
     if (window.ALSummary) { window.ALSummary.paint(document, s); }
@@ -1003,7 +1009,7 @@
     $("zone-note-box").hidden = !zn;
     if ($("zone-note").textContent !== zn) { $("zone-note").textContent = zn; }
     // UTIL-UNDERLEVEL / UTIL-RUN-HISTORY: the core's sentences, by themselves
-    if (window.ALHistory) { window.ALHistory.paint(document, s); }
+    if (window.ALHistory) { window.ALHistory.paint(document, c); }
     // UTIL-PRICE-WATCH: moved prices of the items the player checked
     if (window.ALPriceWatch) { window.ALPriceWatch.paint(document, s); }
     tick();
@@ -1103,6 +1109,12 @@
     $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
     // UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO: the player's clicks
     if (window.ALHistory) { window.ALHistory.wire(document, api); }
+    if (window.ALChars) {
+      window.ALChars.wire(document, function (name) {
+        charPick = name;
+        if (snap) { renderedVersion = -1; render(snap); }
+      });
+    }
     if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
     if (window.ALSettingsIO) {
       window.ALSettingsIO.wire(document, {

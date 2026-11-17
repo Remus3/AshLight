@@ -778,6 +778,22 @@ LAN access stays off), not a row.
   server/al/settingsio.py, GET /api/settings-export, POST
   /api/settings-import, web/settingsio.js; unknown keys are not applied
   and are listed back; tests/test_ux_settings_io.py, app/test/util9.test.js.
+- [x] UTIL-MULTICHAR (build) Multi-character view (research 0028 section
+  3 item 3, after UTIL-RUN-HISTORY): run history, pace, act splits and
+  deaths keyed by the character name the player's own Client.txt reports;
+  switching character never mixes runs; the dashboard shows the current
+  character by default with a small selector (no aria-live, cap 12).
+  Bounded storage in ops/runtime, schema 1 run_history.json migrated;
+  names never leave the machine. ACCEPT: two characters interleaved in a
+  synthetic log, restart resume, migration; design-reviewer before web/.
+  ZERO-CLICK: the current character follows the log by itself; the
+  selector is only for looking at another character. DONE 2026-11-17
+  (AREA-UTIL b10, decision 0037): state.py per-character field sets
+  (switch on level-up / known death, join / leave names never switch),
+  resume replays multi-character runs, runhistory.py schema 2 (12
+  characters x 20 runs), web/chars.js selector; tests/test_util_multichar.py,
+  app/test/chars.test.js. Known limit (decision 0037): zones entered before
+  a switched-to character's first name line count for the previous one.
 
 ## Game settings advisor (operator order 2026-11-16)
 

@@ -170,6 +170,9 @@ def test_state_restore_sets_fields_without_listing():
     st.apply({"type": "level_up", "character": "Quill", "class": "Monk", "level": 10})
     s = st.snapshot()
     assert s["level"] == 10 and s["level_ups"] == 2
+    # UTIL-MULTICHAR (decision 0037): another player seen joining the area
+    # never counts; an unseen name would be another of the player's characters
+    st.apply({"type": "player_joined_area", "character": "Stranger"})
     st.apply({"type": "level_up", "character": "Stranger", "class": "Monk", "level": 50})
     assert st.snapshot()["level"] == 10
 

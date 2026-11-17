@@ -18,6 +18,7 @@
 <script src="/web/health.js" defer></script>
 <script src="/web/filtermerge.js" defer></script>
 <script src="/web/history.js" defer></script>
+<script src="/web/chars.js" defer></script>
 <script src="/web/pricewatch.js" defer></script>
 <script src="/web/settingsio.js" defer></script>
 <script src="/web/app.js" defer></script>
@@ -63,6 +64,10 @@
       <h2 class="label">Level</h2>
       <p id="level" class="value mono">-</p>
       <p id="who" class="sub">character unknown</p>
+      <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region. -->
+      <p id="char-pick-box" class="sub char-pick" hidden>
+        <label for="char-pick">Show numbers for</label>
+        <select id="char-pick"></select></p>
       <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
       <p id="pace" class="sub" hidden></p>
       <!-- UTIL-UNDERLEVEL: not a live region; the overlay word carries it. -->
