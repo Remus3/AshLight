@@ -418,3 +418,7 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
   counterparty's, else the oldest (decision 0019). Reverses if: a PoE2 log
   line names the counterparty (then match by name only), or the oldest-card
   guess drops the wrong request in normal play.
+- HUD-ACT: act splits from the log's area ids, zone levels read from the
+  build-time repoe-fork world_areas snapshot, credit text only in
+  theorycraft/datacredit.py (decision 0020). Reverses if: decision 0009
+  reverses for repoe-fork, or live cruel / interlude ids break the prefixes.

@@ -65,6 +65,8 @@
     // Before the Client.txt opt-in there is no play session to time.
     $("session").textContent = snap.tailer && snap.tailer.consented
       ? duration(now - snap.session_started_at) : "--:--";
+    // HUD-ACT: the open act split counts up with the zone timer.
+    if (window.ALActs) { window.ALActs.paint(document, snap.acts, now, false); }
   }
 
   function renderEvents(rows) {
@@ -749,6 +751,7 @@
     showReading();
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
+    if (window.ALActs) { window.ALActs.paint(document, s.acts || null, serverNow(), true); }
     tick();
   }
 

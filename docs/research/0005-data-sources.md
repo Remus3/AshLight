@@ -54,6 +54,23 @@ Source for everything in this section: https://poe.ninja/docs/api (accessed 2026
 - Offline caching: keep the last good response per endpoint on disk with a timestamp; show staleness; refresh on launch if older than 1 h for prices, per patch for static data.
 - Attribution text (suggested): "Not affiliated with or endorsed by Grinding Gear Games. Prices from poe.ninja. Game data (c) Grinding Gear Games; community exports via the RePoE fork. Wiki-derived text under CC BY-NC-SA 3.0 from the PoE2 Wiki / PoE2DB where used."
 
+## Act / zone levels (HUD-ACT)
+
+- The repoe-fork PoE2 directory listing (https://repoe-fork.github.io/poe2/,
+  accessed 2026-11-17) holds `world_areas.json` and `world_areas.min.json`
+  next to the files decision 0009 already uses; the page states no license
+  (same as research 0011 line 3).
+- `https://repoe-fork.github.io/poe2/world_areas.json` (accessed
+  2026-11-17, about 1.9 MB): an object keyed by area id; each entry has
+  `act`, `area_level`, `name`, `is_town`, `has_waypoint`, `connections`,
+  `parent_town`, `tags` and more. The first key is a `NULL` placeholder
+  with `area_level` 0.
+- License position: unchanged from research 0011 (repoe-fork code MIT, data
+  owned by GGG). poe2db / wiki act tables stay link-out only (CC BY-NC-SA).
+- Live area ids seen: `G1_1`, `G1_town` (research 0002 section 7). Cruel
+  `C_G<n>_` and interlude `P<n>_` prefixes are not yet seen live.
+- Ruling: decision 0020 (build-time cache only, attributed, never bundled).
+
 ## Sources
 
 - https://poe.ninja/docs/api (accessed 2026-11-16)
@@ -68,3 +85,4 @@ Source for everything in this section: https://poe.ninja/docs/api (accessed 2026
 - https://www.pathofexile.com/developer/docs (accessed 2026-11-16)
 - https://www.pathofexile.com/developer/docs/reference (accessed 2026-11-16)
 - https://www.pathofexile.com/legal/terms-of-use-and-privacy-policy (accessed 2026-11-16; summary only)
+- https://repoe-fork.github.io/poe2/world_areas.json (accessed 2026-11-17)

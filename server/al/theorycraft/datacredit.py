@@ -10,8 +10,10 @@ import json
 
 from .. import DISCLAIMER, paths
 
+# The copyright sentence every game-data credit carries (one source).
+COPYRIGHT = "Game data (c) Grinding Gear Games."
 # Short sentences (design review TC-SNAP-UI-1, design 0001 P1 / P2).
-ATTRIBUTION = ("Game data (c) Grinding Gear Games. Item, mod and stat data comes from "
+ATTRIBUTION = (COPYRIGHT + " Item, mod and stat data comes from "
                "the RePoE fork community export (repoe-fork). Passive tree data comes "
                "from Grinding Gear Games' public skill tree export. AshLight downloaded "
                "both to this computer when it was built. This product isn't affiliated "
@@ -20,6 +22,10 @@ ATTRIBUTION = ("Game data (c) Grinding Gear Games. Item, mod and stat data comes
 # is the attribution without that sentence (never shown twice).
 CREDIT = (ATTRIBUTION[:-len(DISCLAIMER)].rstrip() if ATTRIBUTION.endswith(DISCLAIMER)
           else ATTRIBUTION)
+# The credit line under the HUD-ACT zone level table (server/al/acts.py,
+# decision 0020); the zone levels come from the same snapshot cache.
+ZONE_LEVELS_CREDIT = ("Zone levels: RePoE fork export, downloaded when AshLight "
+                      "was built. " + COPYRIGHT)
 MANIFEST = "manifest.json"
 
 

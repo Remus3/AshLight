@@ -1,0 +1,149 @@
+/* AshLight dashboard: act times (per-act splits) and zone levels (HUD-ACT).
+   UMD: CommonJS for node --test (app/test/acts.test.js), window.ALActs for
+   the page. The core computes the splits and sends every sentence in the
+   snapshot's `acts` part (server/al/acts.py); this file only formats times
+   and fills the table. No timers, no network. */
+(function (root, factory) {
+  "use strict";
+  var api = factory();
+  if (typeof module === "object" && module.exports) {
+    module.exports = api;
+  } else {
+    root.ALActs = api;
+  }
+}(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+
+  /* Seconds as m:ss or h:mm:ss, the same form as the zone timer. */
+  function duration(s) {
+    if (s === null || s === undefined || !isFinite(s)) { return "--:--"; }
+    s = Math.max(0, Math.floor(s));
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    return h > 0 ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
+  }
+
+  /* One display row per split. `now` is server time (s); the open split
+     counts up to it, a closed one keeps its own end. */
+  function splitRows(acts, now) {
+    var splits = (acts && acts.splits) || [];
+    if (splits.length === 0) { return []; }
+    var start = splits[0].started_at;
+    return splits.map(function (s) {
+      var end = s.ended_at === null || s.ended_at === undefined ? now : s.ended_at;
+      var label = s.label || "Act";
+      return {
+        label: label,
+        note: s.partial && acts.partial_text ? acts.partial_text : "",
+        time: duration(end - s.started_at),
+        total: duration(end - start),
+        current: !!s.current
+      };
+    });
+  }
+
+  /* One display row per zone of the current act: name, level, and a note
+     ("you are here", "town"). */
+  function zoneRows(acts) {
+    return ((acts && acts.zones) || []).map(function (z) {
+      var notes = [];
+      if (z.here) { notes.push("you are here"); }
+      if (z.town) { notes.push("town"); }
+      return { name: z.name, level: String(z.level), note: notes.join(", "),
+        here: !!z.here };
+    });
+  }
+
+  /* Heading of the zone level part: "Zone levels in Act 2". */
+  function zonesTitle(acts) {
+    return acts && acts.zones_act ? "Zone levels in " + acts.zones_act : "Zone levels";
+  }
+
+  /* The zone level part's message when there is no table to show: the
+     data is missing on this computer, or the player is not in an act. */
+  function zonesEmpty(acts) {
+    if (!acts) { return ""; }
+    if (!acts.levels) { return acts.no_levels_text || ""; }
+    if (!acts.zones || acts.zones.length === 0) {
+      return acts.no_zones_text || "";
+    }
+    return "";
+  }
+
+  function cell(doc, tag, text, cls) {
+    var c = doc.createElement(tag);
+    if (cls) { c.className = cls; }
+    c.textContent = text;
+    return c;
+  }
+
+  /* Fill the Act times card. full: rebuild every row (new snapshot);
+     otherwise only the open split's times move (the 1 s tick). */
+  function paint(doc, acts, now, full) {
+    var tbody = doc.getElementById("acts-rows");
+    if (!tbody) { return; }
+    var rows = splitRows(acts, now);
+    if (!full) {
+      var live = tbody.querySelector("tr[data-current]");
+      var last = rows[rows.length - 1];
+      if (live && last && last.current) {
+        live.children[1].textContent = last.time;
+        live.children[2].textContent = last.total;
+      }
+      return;
+    }
+    doc.getElementById("acts-table").hidden = rows.length === 0;
+    var empty = doc.getElementById("acts-empty");
+    empty.hidden = rows.length > 0;
+    empty.textContent = (acts && acts.empty_text) || "";
+    tbody.textContent = "";
+    rows.forEach(function (r) {
+      var tr = doc.createElement("tr");
+      if (r.current) { tr.setAttribute("data-current", ""); }
+      var th = cell(doc, "th", r.label);
+      th.setAttribute("scope", "row");
+      var notes = [];
+      if (r.current) { notes.push("now"); }
+      if (r.note) { notes.push(r.note); }
+      if (notes.length) {
+        th.appendChild(cell(doc, "span", " (" + notes.join(", ") + ")", "muted"));
+      }
+      tr.appendChild(th);
+      tr.appendChild(cell(doc, "td", r.time, "mono"));
+      tr.appendChild(cell(doc, "td", r.total, "mono"));
+      tbody.appendChild(tr);
+    });
+
+    var title = doc.getElementById("zones-title");
+    title.textContent = zonesTitle(acts);
+    var zones = zoneRows(acts);
+    // First run with no data: one heading-free pair of messages, not a bare
+    // "Zone levels" heading over a second empty note (design review HA-6).
+    title.hidden = rows.length === 0 && zones.length === 0;
+    var zbody = doc.getElementById("zones-rows");
+    doc.getElementById("zones-table").hidden = zones.length === 0;
+    var zempty = doc.getElementById("zones-empty");
+    zempty.textContent = zonesEmpty(acts);
+    zempty.hidden = zones.length > 0;
+    zbody.textContent = "";
+    zones.forEach(function (z) {
+      var tr = doc.createElement("tr");
+      if (z.here) { tr.className = "here"; }
+      var th = cell(doc, "th", z.name);
+      th.setAttribute("scope", "row");
+      if (z.note) { th.appendChild(cell(doc, "span", " (" + z.note + ")", "muted")); }
+      tr.appendChild(th);
+      tr.appendChild(cell(doc, "td", z.level, "mono"));
+      zbody.appendChild(tr);
+    });
+    var src = doc.getElementById("zones-source");
+    src.textContent = (acts && acts.source) || "";
+    src.hidden = !(acts && acts.source);
+  }
+
+  return { duration: duration, splitRows: splitRows, zoneRows: zoneRows,
+    zonesTitle: zonesTitle, zonesEmpty: zonesEmpty, paint: paint };
+}));

@@ -276,6 +276,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | AFK / DND | status word on the HUD line | flag under Session |
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
+| In a campaign act (HUD-ACT) | no change | Act times card (below Item check): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
 
 Progressive disclosure (source 9): the overlay holds the 2-line HUD plus at
@@ -357,6 +358,17 @@ Generation rules:
      live region `New trade request from <from>.` (no name: `New trade
      request.`; several at once: `<n> new trade requests.`), only when the
      set of open trade ids grows
+   - act times (HUD-ACT, `server/al/acts.py`, `web/acts.js`): dashboard
+     only; rows `Act <n>` / `Cruel Act <n>` / `Interlude <n>` with `Time in
+     act` and `Run total` (m:ss or h:mm:ss); one note per row in one pair of
+     parentheses: `(now)`, `(partial: counted from when AshLight started)`,
+     joined with ", "; zone heading `Zone levels in <act>`, zone notes `(you
+     are here)` / `(town)`; empty `No act times yet. They start by
+     themselves when you enter a campaign zone.`, `Zone levels show here
+     while you are in a campaign act.`, `Zone levels aren't downloaded yet.
+     Run AshLight's build step (scripts/build.ps1) to get them.`; source
+     line `Zone levels: RePoE fork export, downloaded when AshLight was
+     built. Game data (c) Grinding Gear Games.` (decision 0020)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
