@@ -251,7 +251,11 @@ class Handler(BaseHTTPRequestHandler):
                                  f'attachment; filename="{lootfilter.FILE_NAME}"'})
             names = getattr(core, "base_names", None)
             names = names.get() if names is not None else None
-            return self._send(200, lootfilter.generate(core.builds.build, names),
+            # UTIL-FILTER-2 (decision 0032): value tiers from the cached
+            # poe.ninja prices; None while web data is off; never a request
+            rates = getattr(core, "rates", None)
+            prices = rates.filter_prices() if rates is not None else None
+            return self._send(200, lootfilter.generate(core.builds.build, names, prices),
                               "text/plain; charset=utf-8", hdr)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)

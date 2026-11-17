@@ -117,8 +117,8 @@ test("eval view: TC-DELTA calc line and the PoB uncounted wording", () => {
   const pob = v.evalView({ id: 2, ok: true, verdict: "downgrade", at: 0,
     calc: { source: "pob", notice: null }, unweighted: ["Cannot be Example Frozen"],
     text: { sentence: "s", item: "i", comparisons: [],
-            calc: "Path of Building: DPS -36% (from 100 to 64), EHP +12.7% (from 4720 to 5320), with this item in Gloves." } });
-  assert.match(pob.calc, /^Path of Building: DPS -36%/);
+            calc: "Path of Building: this item in Gloves replaces Old Grip. DPS -36% (from 100 to 64). EHP +12.7% (from 4720 to 5320)." } });
+  assert.match(pob.calc, /^Path of Building: this item in Gloves replaces Old Grip. DPS -36%/);
   assert.equal(pob.unweighted, "Not counted (the mod has no number): Cannot be Example Frozen.");
   assert.equal(v.evalView({ id: 3, ok: true, at: 0, text: { calc: 5 } }).calc, "");
 });
