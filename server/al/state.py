@@ -774,6 +774,12 @@ class SessionState:
                 rebuilt.fold(a.get("area_id"), a.get("at"), a.get("level"))
             if rebuilt.splits:
                 self.acts = rebuilt
+            # UTIL-MAPS-RESUME: replay the run's map runs and death recap;
+            # no run events keep the current ones.
+            events = fields.get("run_events")
+            if events:
+                self.maps, self.death_log = runs_mod.replay(events,
+                                                            self.character)
             self.version += 1
             return True
 

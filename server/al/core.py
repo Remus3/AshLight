@@ -255,8 +255,11 @@ class Core:
         recovered = [k for k in ("zone", "character", "class", "level", "area_id")
                      if fields.get(k) is not None]
         recovered += [k for k in ("deaths", "level_ups") if fields.get(k)]
-        if self.state.snapshot()["acts"]["splits"] and fields.get("act_areas"):
+        snap = self.state.snapshot()
+        if snap["acts"]["splits"] and fields.get("act_areas"):
             recovered.append("acts")
+        if fields.get("run_events") and snap["maps"]["count"]:
+            recovered.append("maps")
         self.state.set_tailer(resume={
             "bytes": result["bytes_scanned"], "hit_marker": result["hit_marker"],
             "ms": round((time.perf_counter() - t0) * 1000.0, 1),

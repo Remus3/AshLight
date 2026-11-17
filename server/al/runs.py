@@ -15,8 +15,9 @@ Map runs (UTIL-MAPS):
   hideout trips and loading screens do not count. A map that never got a
   scene is named from its id (`MapCrypt` -> `Crypt`).
 - A death counts into the map only while the player is in it.
-- History is in memory, like the rest of the session (decision 0008): a
-  core restart starts with no maps.
+- History is in memory, like the rest of the session (decision 0008); at
+  core start replay() rebuilds the current game run's maps and deaths from
+  the backward scan of Client.txt (UTIL-MAPS-RESUME), nothing persisted.
 
 Death recap (UTIL-DEATHS): each of the player's deaths with the zone, its
 area level, the character level and the time spent in the zone before it.
@@ -193,3 +194,50 @@ class DeathLog:
                 worst = f"Most deaths: {zone} ({n})."
         return {"recent": recent, "worst_text": worst,
                 "empty_text": DEATHS_EMPTY_TEXT}
+
+
+def replay(events, me=None):
+    """UTIL-MAPS-RESUME: rebuild (MapRuns, DeathLog) from the current game
+    run's events, oldest first, each with an epoch `at` (resume.state_fields
+    `run_events`). The folds are the ones SessionState.apply makes, so a
+    restart mid-map keeps the map's time and the run's deaths. `me` names
+    the player; None counts every death, as the live state does before a
+    character is known."""
+    maps = MapRuns()
+    log = DeathLog()
+    zone = None
+    entered = None
+    area_level = None
+    mine = [e.get("level") for e in events
+            if e.get("type") == "level_up" and e.get("character") == me]
+    level = (mine[0] - 1) if mine and isinstance(mine[0], int) else None
+    for e in events:
+        t = e.get("type")
+        at = e.get("at")
+        if not isinstance(at, (int, float)):
+            continue
+        if t in ("scene_changed", "area_entered"):
+            if t == "scene_changed":
+                if e.get("is_null") or e.get("is_transient"):
+                    continue
+                scene = e.get("scene")
+                hideout = bool(e.get("is_hideout"))
+            else:
+                scene = e.get("name")
+                hideout = "hideout" in (scene or "").lower()
+            if scene and scene != zone:
+                zone = scene
+                entered = at
+                maps.on_scene(zone, at, hideout)
+        elif t == "area_generated":
+            area_level = e.get("area_level")
+            maps.on_generated(e.get("area_id"), at, area_level)
+        elif t == "level_up":
+            if e.get("character") == me:
+                level = e.get("level")
+        elif t == "death":
+            if me is None or e.get("character") == me:
+                log.add(at=at, zone=zone, area_level=area_level, level=level,
+                        zone_s=(max(0.0, at - entered) if entered else None))
+                maps.on_death(at)
+    return maps, log

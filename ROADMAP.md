@@ -449,11 +449,15 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   sentence built in the core (server/al/pace.py, snapshot `pace`). ACCEPT:
   exact tests on replayed level-up lines (tests/test_util_pace.py).
   ZERO-CLICK: updates on every level-up by itself. DONE 2026-11-17.
-- [ ] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
+- [x] UTIL-MAPS-RESUME (build) Rebuild the map runs and death recap at core
   start from the current game run in Client.txt, as HUD-ACT-RESUME does for
   act splits (decision 0023 pattern, no persisted state). ACCEPT: restart
   mid-map keeps the map's time and the session's deaths; exact tests.
-  ZERO-CLICK: rebuilt at core start.
+  ZERO-CLICK: rebuilt at core start. DONE 2026-11-17: resume.scan returns
+  `run_events` (scenes, area generations, deaths, level-ups of the current
+  run, at most 20000), runs.replay folds them like SessionState.apply;
+  tests/test_util_maps_resume.py (core restart mid-map keeps 5:00 and the
+  death).
 
 ## Ops
 
