@@ -598,7 +598,11 @@ class Handler(BaseHTTPRequestHandler):
             while not srv.stopping.is_set():
                 now = time.monotonic()
                 beat_in = SSE_HEARTBEAT_S - (now - last_beat)
-                if pending:
+                # TEST-FULLSTACK-SSE-IDLE: a version bump with no event (the
+                # core loop tick: idle, the summary card, calc / price book
+                # status) wakes this wait (bus.wake_all) and is pushed now.
+                dirty = core.state.version != sent_version
+                if pending or dirty:
                     wait = max(0.0, SSE_MIN_INTERVAL_S - (now - last_push))
                 else:
                     wait = min(SSE_WAIT_MAX_S, max(0.0, beat_in))
@@ -616,6 +620,12 @@ class Handler(BaseHTTPRequestHandler):
                         sent_version = snap["version"]
                         chunk += self._sse_msg("state", snap)
                     self._sse_write(chunk)
+                    last_push = last_beat = now
+                elif (not pending and core.state.version != sent_version
+                      and now - last_push >= SSE_MIN_INTERVAL_S):
+                    snap = core.state.snapshot()
+                    sent_version = snap["version"]
+                    self._sse_write(self._sse_msg("state", snap))
                     last_push = last_beat = now
                 elif now - last_beat >= SSE_HEARTBEAT_S:
                     # A state can change with no log event (a trade card

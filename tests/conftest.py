@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ops" / "fleet_kit"))
 sys.path.insert(0, str(ROOT))
 import fleet_test_guard  # noqa: E402
+import pytest  # noqa: E402
 
 os.environ["FLEET_SIDECAR_ROOT"] = ""  # empty value = off (process env wins)
 
@@ -35,6 +36,24 @@ LOOP_TICK_STATE = (
 
 fleet_test_guard.install(globals(), root=ROOT, env_roots={},
                          extra_ignore=LOOP_TICK_STATE)
+
+
+@pytest.fixture(scope="session")
+def warm_bridge():
+    """TEST-FULLSTACK-CALC-WARM: one live calc process (the core's shared
+    bridge, bridge.shared()) for the whole test session, for the live calc
+    tests that do not measure a cold start or need a fresh process
+    (test_math_perf measures the cold start and test_tc_bridge's reload /
+    leak test keeps its own process). A test core using it must not stop it
+    on close: tests/tc_live_util.keep_warm(core). Skips when the
+    optional calc component is absent."""
+    from server.al.theorycraft import bridge
+    if not bridge.available():
+        pytest.skip("optional calc component absent (setup.ps1 -TcCalc)")
+    b = bridge.shared()
+    b.ping()
+    yield b
+    bridge.shutdown_shared()
 
 
 def pytest_configure(config):

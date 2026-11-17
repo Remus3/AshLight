@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 import math_live_items as items
-from tc_live_util import BUDGET, LIVE_REF, free_test_port, reference
+from tc_live_util import BUDGET, LIVE_REF, free_test_port, keep_warm, reference
 
 from server.al.core import Core
 from server.al.http import serve
@@ -51,7 +51,7 @@ def _req(port, method, path, body=None, timeout=120):
 
 
 @pytest.fixture(scope="module")
-def live(tmp_path_factory):
+def live(tmp_path_factory, warm_bridge):
     ref, xml = reference()
     tmp = tmp_path_factory.mktemp("e2e_live")
     rt = tmp / "rt"
@@ -60,8 +60,11 @@ def live(tmp_path_factory):
     cfg.write_text(json.dumps({"tc_calc": True}), encoding="ascii")
     log = tmp / "Client.txt"
     log.write_bytes(b"")
-    bridge.shutdown_shared()  # a fresh shared bridge: the first press is cold
+    # TEST-FULLSTACK-CALC-WARM: the session's warm shared bridge (the cold
+    # start is measured in test_math_perf); the first press still pays the
+    # build's first probes, under the first-press budget.
     core = Core(runtime=rt, log_path=str(log), poll_s=0.05, config_path=cfg)
+    stops = keep_warm(core)
     assert core.config_path == cfg  # never the operator's config/local.json
     port = free_test_port()
     server = serve(core, TOKEN, port=port, web_root=ROOT / "web",
@@ -75,8 +78,8 @@ def live(tmp_path_factory):
         yield ctx
     finally:
         server.stop()
-        core.close()  # stops the shared bridge (AUDIT-TC-WIRE)
-        assert bridge._SHARED is None
+        core.close()  # asks to stop the shared bridge (AUDIT-TC-WIRE) ...
+        assert stops == [True]  # ... kept warm for the session here
         print("\nMATH-E2E-LIVE press times (s):",
               {k: round(v, 2) for k, v in ctx["times"].items()})
 

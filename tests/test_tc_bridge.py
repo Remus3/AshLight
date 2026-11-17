@@ -248,6 +248,8 @@ EXPECTED = [p for p in (FIX / "gui_expected.json",
 
 @pytest.fixture(scope="module")
 def live_bridge():
+    """Its own process: the reload / leak test must not inherit another
+    test's loaded builds (TEST-FULLSTACK-CALC-WARM keeps it apart)."""
     b = bridge.Bridge.from_component(start_timeout=180.0, timeout=120.0)
     yield b
     b.close()
@@ -255,7 +257,8 @@ def live_bridge():
 
 @LIVE
 @pytest.mark.slow
-def test_live_minimal_build_returns_numeric_outputs(live_bridge):
+def test_live_minimal_build_returns_numeric_outputs(warm_bridge):
+    live_bridge = warm_bridge  # TEST-FULLSTACK-CALC-WARM
     xml = (FIX / "minimal_build.xml").read_text(encoding="ascii")
     assert live_bridge.load_build(xml)["loaded"] is True
     out = live_bridge.outputs()
@@ -286,7 +289,8 @@ def test_live_reload_does_not_leak_state(live_bridge):
 @pytest.mark.slow
 @pytest.mark.skipif(not EXPECTED, reason="no PoB GUI reference values recorded "
                     "(tests/fixtures/tc_bridge/README.md)")
-def test_live_outputs_match_pob_gui_within_0_1_percent(live_bridge):
+def test_live_outputs_match_pob_gui_within_0_1_percent(warm_bridge):
+    live_bridge = warm_bridge  # TEST-FULLSTACK-CALC-WARM
     ref = json.loads(EXPECTED[0].read_text(encoding="ascii"))
     xml = (EXPECTED[0].parent / ref["build_xml"]).read_text(encoding="utf-8")
     live_bridge.load_build(xml)

@@ -48,6 +48,10 @@ pytestmark = pytest.mark.server
 TOKEN = "f" * 48
 WAIT_S = 8.0
 CONTACT = "fullstack-test-contact"
+# TEST-FULLSTACK-SSE-IDLE: the idle state reaches SSE within ~1 s of the
+# loop tick (design); the bound leaves room for a loaded box and is still
+# far below any heartbeat.
+IDLE_PUSH_S = 3.0
 LEAGUE = "Example League"
 EXPECTED_UA = (f"AshLight/{VERSION} (local Path of Exile 2 companion; "
                f"{ninja.UA_PURPOSE}) (contact: {CONTACT})")
@@ -312,9 +316,10 @@ def env(tmp_path):
 
 
 def test_fullstack_session_through_http_and_sse(env, monkeypatch):
-    # A state change with no log event (idle, the summary card) is pushed by
-    # the SSE heartbeat; a short one keeps the test fast.
-    monkeypatch.setattr(al_http, "SSE_HEARTBEAT_S", 0.3)
+    # TEST-FULLSTACK-SSE-IDLE: a state change with no log event (idle, the
+    # summary card) is pushed at once by the state-version wake, not by the
+    # heartbeat: a LONGER heartbeat proves no beat can carry it.
+    monkeypatch.setattr(al_http, "SSE_HEARTBEAT_S", 600.0)
     t_start = time.monotonic()
     rt, log, mock, fetch = env["rt"], env["log"], env["mock"], env["fetch"]
     st = Stack(rt, log, env["cfg"], fetch)
@@ -466,6 +471,7 @@ def test_fullstack_session_through_http_and_sse(env, monkeypatch):
 
         # -- stage 6: 20 minutes of quiet (time-injected), then idle
         quiet = time.time() + summary.IDLE_S + 5
+        t_idle = time.monotonic()
         saved = st.core.tick_summary(now=quiet)
         assert saved is not None and saved["reason"] == "idle"
         snap = st.state()
@@ -475,7 +481,8 @@ def test_fullstack_session_through_http_and_sse(env, monkeypatch):
         assert card["level_to"] == 10
         assert any("Example Unique up 61%" in line for line in card["lines"]), card["lines"]
         pushed = sse.wait(lambda e, d: e == "state" and d["tailer"].get("idle"),
-                          "the idle state")
+                          "the idle state", timeout=IDLE_PUSH_S)
+        assert time.monotonic() - t_idle < IDLE_PUSH_S  # pushed now, no heartbeat
         assert pushed["session_summary"]["id"] == saved["id"]
         disk = json.loads((rt / summary.summary_file().name).read_text(encoding="utf-8"))
         assert disk["summaries"][-1]["id"] == saved["id"]
@@ -576,19 +583,19 @@ def test_synth_marker_has_the_live_shape():
 
 
 @pytest.mark.slow
-def test_fullstack_calc_on_leg(env):
+def test_fullstack_calc_on_leg(env, warm_bridge):
     """The calc ON path: "tc_calc" on in the temp config, the PoB reference
     build loaded as a code, one item check scored by PoB. Runs only where
     the optional calc component and the PoB GUI reference exist."""
-    from tc_live_util import reference
+    from tc_live_util import keep_warm, reference
     from server.al.theorycraft import bridge
     import math_live_items as items
     if not bridge.available() or reference() is None:
         pytest.skip("optional calc component or PoB reference absent (setup.ps1 -TcCalc)")
     _ref, xml = reference()
     env["cfg"].write_text(json.dumps({"contact": CONTACT, "tc_calc": True}), encoding="ascii")
-    bridge.shutdown_shared()
     st = Stack(env["rt"], env["log"], env["cfg"], env["fetch"])
+    keep_warm(st.core)  # TEST-FULLSTACK-CALC-WARM: the session's warm bridge
     env["made"].append(st)
     status, doc = st.req("POST", "/api/build-code", {"code": codec.encode(xml)}, timeout=60)
     assert status == 200, doc

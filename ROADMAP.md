@@ -932,19 +932,33 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   has, so no synthetic session (e2e, soak) ever produced log_opened or a
   resume run start - regression test_synth_marker_has_the_live_shape.
   No core defect found. ZERO-CLICK: runs inside pytest, no user step.
-- [ ] TEST-FULLSTACK-SSE-IDLE (build) A state change with no log event (the
+- [x] TEST-FULLSTACK-SSE-IDLE (build) A state change with no log event (the
   idle state and the session summary card from the core loop tick, a trade
-  card expiring) reaches SSE clients only on the next heartbeat
-  (http.SSE_HEARTBEAT_S 15 s), so the dashboard shows "idle" up to 15 s
-  late. ACCEPT: decide (adjudicator) whether a state-version wake (bus
-  notify on version bump) is worth it; if so, pushed within 1 s, test.
-  ZERO-CLICK: no user step either way.
-- [ ] TEST-FULLSTACK-CALC-WARM (build) The live calc tests
-  (test_math_e2e_live, test_math_perf, test_fullstack calc leg) each start
-  a cold PoB bridge (~10-12 s each) in the normal suite where the component
-  exists. ACCEPT: one shared warm bridge per suite run where the test does
-  not measure the cold start, suite time down, tests still independent.
-  ZERO-CLICK: test-only.
+  card expiring) reached SSE clients only on the next heartbeat
+  (http.SSE_HEARTBEAT_S 15 s). DONE 2026-11-17 (area-test b5): a
+  state-version wake, no new timer: SessionState.version is a property
+  whose bumps outside apply() call on_change = bus.wake_all (sticky
+  Subscription.wake, never lost); the SSE loop pushes a version-only state
+  at once (4 Hz coalescing kept). Core.tick_sources in the existing 0.5 s
+  loop tick expires trade cards and publishes snapshot `sources` (calc_on,
+  calc_running, rates / price book checked_at), so calc on/off and a price
+  book refresh are pushed too. tests/test_sse_idle_push.py (heartbeat 600 s
+  and stream wait 30 s, so only the wake can deliver; fails with the wake
+  unwired) and test_fullstack idle leg (heartbeat lengthened, push < 3 s).
+  ZERO-CLICK: no user step.
+- [x] TEST-FULLSTACK-CALC-WARM (build) The live calc tests each started their
+  own PoB bridge. DONE 2026-11-17 (area-test b5): session fixture
+  `warm_bridge` (tests/conftest.py, the core's bridge.shared()) used by
+  test_math_e2e_live, the test_fullstack calc leg, the drift guard live
+  test and two test_tc_bridge live tests; tc_live_util.keep_warm(core)
+  records the core's stop instead of killing it (e2e asserts the stop was
+  asked). test_math_perf (measures the cold start) and the reload / leak
+  test keep their own processes. 5 luajit starts -> 3. Measured: the 5 live
+  files 58.3 s -> 57.6 s. FINDING: the process cold start is only ~1.2 s
+  (MATH-PERF cold_start_s 1.19); the ~11 s first press is the per-core,
+  per-build probe work (base outputs + MATH-WEIGHTS mod weights), not the
+  bridge. Further cuts would need a cross-core probe cache, which would make
+  the tests depend on each other: not done. ZERO-CLICK: test-only.
 
 ## Utility (lane area-util, 2026-11-17)
 

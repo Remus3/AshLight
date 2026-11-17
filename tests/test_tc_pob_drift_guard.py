@@ -117,19 +117,16 @@ def test_pinned_checkout_is_the_pin():
 
 @LIVE_REF
 @pytest.mark.slow
-def test_live_launch_object_and_output_keys():
+def test_live_launch_object_and_output_keys(warm_bridge):
     ref, xml = reference()
-    b = bridge.Bridge.from_component(start_timeout=180.0, timeout=120.0)
+    b = warm_bridge  # TEST-FULLSTACK-CALC-WARM: the session's warm bridge
     try:
-        try:
-            b.load_build(xml)
-        except bridge.BridgeError as exc:
-            pytest.fail(f"PoB API drift: the bridge could not drive the pinned "
-                        f"checkout ({exc}); the launch object or BUILD mode moved. "
-                        f"{FIX_HINT}")
-        out = b.outputs()
-    finally:
-        b.close()
+        b.load_build(xml)
+    except bridge.BridgeError as exc:
+        pytest.fail(f"PoB API drift: the bridge could not drive the pinned "
+                    f"checkout ({exc}); the launch object or BUILD mode moved. "
+                    f"{FIX_HINT}")
+    out = b.outputs()
     missing = [k for k in ("FullDPS", "TotalEHP", "Life", "EnergyShield") if k not in out]
     assert not missing, (
         f"PoB output key drift: {missing} missing from mainOutput; calcwire.DPS_KEYS "
