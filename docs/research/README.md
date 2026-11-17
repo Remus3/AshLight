@@ -62,6 +62,17 @@ its code (license notes: 0006).
 - 0020 Feature opportunities Nov 2026 - ten features ranked, floor
   yes / no with reasons, filed rows
   ([0020-feature-opportunities-2026-11.md](0020-feature-opportunities-2026-11.md))
+- 0021 PoE2 1.0 readiness - announced acts, classes, Conquerors of
+  Wraeclast league, league end, impact and the UTIL-1.0-POST checklist
+  ([0021-poe2-1-0-readiness.md](0021-poe2-1-0-readiness.md))
+- 0022 Loot filters - GGG filter format and folder, NeverSink MIT,
+  Account Item Filters API, adjudicator ruling: user-saved snippet only
+  (UTIL-FILTER) ([0022-loot-filters.md](0022-loot-filters.md))
+- 0023 Player-value gaps Nov 2026 - companion survey, five features ranked
+  under the floor, three filed
+  ([0023-player-value-gaps-2026-11.md](0023-player-value-gaps-2026-11.md))
+- 0024 Policy / API recheck to 2026-11-17 - no floor change in 30 days
+  ([0024-policy-api-recheck-2026-11.md](0024-policy-api-recheck-2026-11.md))
 
 ## Open research (feeds ROADMAP)
 
