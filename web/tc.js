@@ -162,6 +162,19 @@
 
   var VERDICT_STATE = { upgrade: "done", sidegrade: "idle", downgrade: "idle" };
 
+  /* MATH-POTENTIAL-UI: the item's score now against its score at the worst
+     and best rolls of its ranged mods; "" when there is no spread to tell. */
+  function rollsText(p) {
+    if (!p || typeof p !== "object") { return ""; }
+    var s = p.score, lo = p.worst, hi = p.best;
+    if (num(s) === null || num(lo) === null || num(hi) === null || !(hi > lo)) { return ""; }
+    var pct = typeof p.pct === "number" && isFinite(p.pct) ? p.pct : (s - lo) / (hi - lo) * 100;
+    pct = Math.round(Math.min(100, Math.max(0, pct)));
+    if (pct >= 100) { return "Rolls: worth " + num(s) + " points now, the best these rolls can be."; }
+    return "Rolls: worth " + num(s) + " points now, " + num(lo) + " at the worst and " +
+      num(hi) + " at the best, so " + pct + "% of the way up.";
+  }
+
   /* ev: the snapshot's eval (or null). clock: (ts) -> "14:05". */
   function evalView(ev, clock) {
     if (!ev || !ev.text) { return null; }
@@ -184,6 +197,7 @@
       comparisons: ev.ok ? (t.comparisons || []) : [],
       /* TC-DELTA: Path of Building DPS / EHP, or why the stat weights scored it */
       calc: typeof t.calc === "string" ? t.calc : "",
+      rolls: ev.ok ? rollsText(ev.potential) : "",
       unweighted: !unweighted.length ? ""
         : pob ? "Not counted (the mod has no number): " + labels + "."
         : cached ? "Not counted (Path of Building has not measured these for this build yet): " +

@@ -13,6 +13,7 @@ import time
 from . import acts as acts_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
+from . import summary as summary_mod
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -650,8 +651,16 @@ class SessionState:
         self.death_log = runs_mod.DeathLog()
         # UTIL-PACE: levelling pace from the player's level-ups (pace.py).
         self.pace = pace_mod.Pace()
+        # UTIL-SESSION-SUMMARY: the open play stretch and its last card.
+        self.stretch = summary_mod.Tracker()
+        self.session_summary = None
+        self._summary_ids = 0
+        # TEST-LIVE-EXIT (decision 0029): "idle" = no Client.txt line for
+        # summary.IDLE_S while consented (the game may be closed; a killed
+        # game writes no line). Log staleness only, no process check.
         self.tailer = {"consented": False, "reading": False, "path": None,
-                       "last_reset": None}
+                       "last_reset": None, "idle": False,
+                       "last_line_at": None}
 
     # -- updates
     def set_tailer(self, **fields):
@@ -779,6 +788,17 @@ class SessionState:
             self.events_seen += 1
             changed = False
             listed = t in LISTED
+            # TEST-LIVE-EXIT: any line proves the log is alive again
+            self.tailer["last_line_at"] = now
+            if self.tailer.get("idle"):
+                self.tailer["idle"] = False
+                changed = True
+            active = t in summary_mod.ACTIVITY
+            if active:
+                self.stretch.begin(self._counters())
+            if t == "log_opened":
+                # UTIL-SESSION-SUMMARY: a new game run; the last one closed
+                changed = self._close_stretch("game_closed")
             if t == "scene_changed":
                 # Null and transient scenes (LIVE-1) keep the zone and its
                 # timer and are not listed; only a real zone change is.
@@ -795,7 +815,8 @@ class SessionState:
                 self.area_id = ev.get("area_id")
                 self.area_level = ev.get("area_level")
                 self.acts.fold(self.area_id, now, self.level)
-                self.maps.on_generated(self.area_id, now, self.area_level)
+                self.maps.on_generated(self.area_id, now, self.area_level,
+                                       ev.get("seed"))
                 changed = True
             elif t == "area_entered":
                 if ev.get("name") != self.zone:
@@ -803,6 +824,20 @@ class SessionState:
                     self.in_hideout = "hideout" in (self.zone or "").lower()
                     self.zone_entered_at = now
                     self.maps.on_scene(self.zone, now, self.in_hideout)
+                    changed = True
+            elif t == "log_opened":
+                # TEST-LIVE-RESTART: a new game run. The player is at the
+                # login screen, so the old run's zone, area, zone timer and
+                # AFK / DND are void. Character, level and counts stay.
+                if self.maps.pause(now):
+                    changed = True
+                if (self.zone is not None or self.area_id is not None
+                        or self.area_level is not None or self.in_hideout
+                        or self.zone_entered_at is not None
+                        or self.afk or self.dnd):
+                    self.zone = self.area_id = self.area_level = None
+                    self.zone_entered_at = None
+                    self.in_hideout = self.afk = self.dnd = False
                     changed = True
             elif t == "level_up":
                 # The first level-up names the character unless one was
@@ -853,9 +888,93 @@ class SessionState:
             if listed:
                 self.recent_events.append(self._row(ev, now))
                 changed = True
+            if active:
+                self.stretch.touch(now, self._counters())
             if changed:
                 self.version += 1
             return changed
+
+    # -- UTIL-SESSION-SUMMARY
+    def _counters(self):
+        return {"level": self.level, "level_ups": self.level_ups,
+                "deaths": self.deaths, "maps": self.maps.count}
+
+    def _close_stretch(self, reason, movers=None):
+        """Close the open play stretch into the summary card. Caller holds
+        the lock. True when a card was made."""
+        card = self.stretch.close(reason, movers)
+        if card is None:
+            return False
+        self._summary_ids += 1
+        self.session_summary = dict(card, id=self._summary_ids)
+        return True
+
+    def session_end_due(self, now=None):
+        """True when the open stretch has been idle for IDLE_S (cheap; the
+        core reads the movers only then)."""
+        with self._lock:
+            return self.stretch.due(self._clock() if now is None else now)
+
+    def check_session_end(self, now=None, movers=None):
+        """From the core's main loop: close the stretch after IDLE_S with no
+        game activity. Returns the new card, or None."""
+        with self._lock:
+            now = self._clock() if now is None else now
+            if not self.stretch.due(now):
+                return None
+            if not self._close_stretch("idle", movers):
+                return None
+            self.version += 1
+            return dict(self.session_summary)
+
+    # -- TEST-LIVE-EXIT (decision 0029)
+    def _idle_due(self, now):
+        tl = self.tailer
+        last = tl.get("last_line_at")
+        return (bool(tl.get("consented")) and not tl.get("idle")
+                and last is not None and now - last >= summary_mod.IDLE_S)
+
+    def seed_last_line(self, at):
+        """LIVE-RESUME: the resumed log's last write time (file mtime)
+        stands in for the last line until a live one comes, so a game that
+        closed before the core started turns idle too."""
+        with self._lock:
+            if self.tailer.get("last_line_at") is None and isinstance(at, (int, float)):
+                self.tailer["last_line_at"] = float(at)
+
+    def log_idle_due(self, now=None):
+        """True when Client.txt has been quiet for IDLE_S while consented
+        and the idle state is not set yet (cheap; the core reads the
+        movers only then)."""
+        with self._lock:
+            return self._idle_due(self._clock() if now is None else now)
+
+    def check_log_idle(self, now=None, movers=None):
+        """From the core's main loop: after IDLE_S with no Client.txt line
+        the game may be closed (a killed game writes nothing). Set the idle
+        state, keep the zone, freeze the zone and map clocks at the last
+        line and close the play stretch into the summary card. The next
+        line clears it (apply). True when the state turned idle."""
+        with self._lock:
+            now = self._clock() if now is None else now
+            if not self._idle_due(now):
+                return False
+            last = self.tailer["last_line_at"]
+            self.tailer["idle"] = True
+            self.maps.pause(last)
+            if self.stretch.start is not None:
+                self._close_stretch("idle", movers)
+            self.version += 1
+            return True
+
+    def set_session_summary(self, card):
+        """A saved card loaded at core start (shown until a new one)."""
+        with self._lock:
+            if isinstance(card, dict) and self.session_summary is None:
+                self.session_summary = dict(card)
+                self._summary_ids = max(self._summary_ids,
+                                        card.get("id") if isinstance(card.get("id"), int) else 0)
+                self.version += 1
 
     _RESTORE = {"zone": "zone", "in_hideout": "in_hideout", "area_id": "area_id",
                 "area_level": "area_level", "zone_entered_at": "zone_entered_at",
@@ -900,6 +1019,11 @@ class SessionState:
                 "text": summarize(ev), "trade": bool(ev.get("trade")),
                 "whisper": ev.get("type") in ("whisper_in", "whisper_out")}
 
+    def _zone_until(self, now):
+        if self.tailer.get("idle") and self.tailer.get("last_line_at") is not None:
+            return self.tailer["last_line_at"]
+        return now
+
     # -- read
     def snapshot(self):
         with self._lock:
@@ -917,7 +1041,8 @@ class SessionState:
                 "area_id": self.area_id,
                 "area_level": self.area_level,
                 "zone_entered_at": self.zone_entered_at,
-                "zone_s": (max(0.0, now - self.zone_entered_at)
+                # TEST-LIVE-EXIT: idle freezes the zone clock at the last line
+                "zone_s": (max(0.0, self._zone_until(now) - self.zone_entered_at)
                            if self.zone_entered_at else None),
                 "in_hideout": self.in_hideout,
                 "deaths": self.deaths,
@@ -945,4 +1070,6 @@ class SessionState:
                 "maps": self.maps.view(now),
                 "death_recap": self.death_log.view(self.deaths),
                 "pace": self.pace.view(now, self.pace_started_at),
+                "session_summary": (dict(self.session_summary)
+                                    if self.session_summary else None),
             }
