@@ -43,7 +43,11 @@ test("event kind tags name what happened", () => {
   assert.equal(v.kindOf({ type: "afk_changed" }), "status");
   assert.equal(v.kindOf({ type: "dnd_changed" }), "status");
   assert.equal(v.kindOf({ type: "player_joined_area" }), "party");
-  assert.equal(v.kindOf({ type: "trade_accepted" }), "info");
+  assert.equal(v.kindOf({ type: "area_generated" }), "zone");
+  assert.equal(v.kindOf({ type: "trade_accepted" }), "trade");
+  assert.equal(v.kindOf({ type: "trade_cancelled" }), "trade");
+  assert.equal(v.kindOf({ type: "session_connect" }), "log");
+  assert.equal(v.kindOf({ type: "something_new" }), "info");
 });
 
 test("empty Recent list says what unlocks it", () => {
