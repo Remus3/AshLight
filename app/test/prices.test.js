@@ -136,6 +136,11 @@ test("price section: core words, conversions per listing, state word", () => {
   });
   const retry = p.priceView(Object.assign({}, PRICE, { status: "error", error: "not an item" }), RATES, null);
   assert.deepEqual(retry.badge, { state: "blocked", glyph: "[#]", word: "can't price" });
+  const noBase = p.priceView(Object.assign({}, PRICE, { status: "error", error: "no base type" }), RATES, null);
+  assert.deepEqual(noBase.badge, { state: "blocked", glyph: "[#]", word: "can't price" });
+  // PRICE-1-COPY F2: off for a missing contact never reads "web data off"
+  const noContact = p.priceView(Object.assign({}, PRICE, { status: "off", error: "contact not set" }), RATES, null);
+  assert.deepEqual(noContact.badge, { state: "idle", glyph: "[-]", word: "no contact" });
   assert.equal(p.priceView(null, RATES, null), null);
   assert.equal(p.priceView({ id: 1 }, RATES, null), null); // no text from the core
 });

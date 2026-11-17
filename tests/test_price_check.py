@@ -305,18 +305,42 @@ def test_card_of_status_mapping():
     assert c["count"] == 3
     c = price.card_of(_doc("done", summary=None))
     assert c["status"] == "done" and c["count"] == 0 and c["listings"] == []
-    for reason in ("web data off", "contact not set"):
-        c = price.card_of(_doc("off", reason=reason))
-        assert c["status"] == "off" and c["error"] is None
-    for reason in ("not an item", "item has no base type"):
-        c = price.card_of(_doc("skipped", reason=reason, item=None))
-        assert c["status"] == "error" and c["error"] == "not an item"
-        assert c["item"] == {"name": None, "base": None, "rarity": None}
+    c = price.card_of(_doc("skipped", reason="not an item", item=None))
+    assert c["status"] == "error" and c["error"] == "not an item"
+    assert c["item"] == {"name": None, "base": None, "rarity": None}
     assert price.card_of(_doc("error", error="league required"))["error"] == "no league"
     c = price.card_of(_doc("error", error="trade2 search: HTTP 400"))
     assert c["status"] == "error" and c["error"] == "trade2 search: HTTP 400"
     assert price.card_of(_doc("error"))["error"] == "price check failed"
     assert price.card_of(None)["status"] == "error"
+
+
+def test_card_of_only_exact_league_required_is_no_league():
+    # F1 (PRICE-1-COPY): only trade.search_url's exact "league required"
+    # means a missing league; other text that mentions a league is free text
+    assert price.card_of(_doc("error", error="league required"))["error"] == "no league"
+    for text in ("trade2 search: HTTP 400 unknown league", "League list fetch failed",
+                 "no league found"):
+        c = price.card_of(_doc("error", error=text))
+        assert c["status"] == "error" and c["error"] == text
+
+
+def test_card_of_off_says_why():
+    # F2 (PRICE-1-COPY): the card carries why the check is off
+    c = price.card_of(_doc("off", reason="web data off"))
+    assert c["status"] == "off" and c["error"] is None
+    c = price.card_of(_doc("off", reason="contact not set"))
+    assert c["status"] == "off" and c["error"] == "contact not set"
+
+
+def test_card_of_only_not_an_item_reason_is_not_an_item():
+    # F3 (PRICE-1-COPY): build_query's "item has no base type" is a parsed
+    # item, so it must not read "not an item"
+    c = price.card_of(_doc("skipped", reason="item has no base type"))
+    assert c["status"] == "error" and c["error"] == "no base type"
+    assert c["item"] == ITEM
+    c = price.card_of(_doc("skipped", reason="some other skip"))
+    assert c["status"] == "error" and c["error"] == "some other skip"
 
 
 def test_card_publish_uses_press_time(tmp_path):

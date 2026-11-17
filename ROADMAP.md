@@ -34,7 +34,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [ ] HUD-ACT (build) Leveling helpers: act / zone level table from an
   attributed build-time data snapshot (license checked first, research 0005);
   zone timer splits per act. ACCEPT: split table on the dashboard.
-- [ ] PRICE-1-COPY (build) Design review of PRICE-1-WIRE (reviews.log
+- [x] PRICE-1-COPY (build) Design review of PRICE-1-WIRE (reviews.log
   2026-11-17, S3 x3) on price.card_of: F1 any error text containing
   "league" maps to "no league" (match only trade.search_url's exact
   "league required"; others -> free-text error); F2 `off` covers both web

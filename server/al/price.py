@@ -153,13 +153,24 @@ def summarize(doc, total=None):
     return out
 
 
+# the exact source strings card_of matches (trade.build_query /
+# trade.search_url, webfetch.blocked_reason); anything else is free text
+NOT_AN_ITEM = "not an item"
+LEAGUE_REQUIRED = "league required"
+OFF_NO_CONTACT = "contact not set"
+NO_BASE_TYPE = "item has no base type"
+
+
 def card_of(doc):
     """The decision 0016 card for a decision 0015 result doc (pure).
     queued / searching -> searching; waiting -> waiting with wait_s; done
     -> done with count and the listings (cheapest first: the search sorts
-    by price ascending, so the fetch order is kept); off (web data off /
-    contact not set) -> off; skipped -> error "not an item"; a missing
-    league -> error "no league"; any other failure -> error, free text."""
+    by price ascending, so the fetch order is kept); off -> off, with
+    error "contact not set" when that is why (null for web data off);
+    skipped with reason "not an item" -> error "not an item", with
+    trade.build_query's "item has no base type" -> error "no base type"; the exact
+    trade.search_url error "league required" -> error "no league"; any
+    other failure or skip reason -> error, free text (PRICE-1-COPY)."""
     doc = doc if isinstance(doc, dict) else {}
     raw = doc.get("item") if isinstance(doc.get("item"), dict) else {}
     item = {"name": raw.get("name"), "base": raw.get("base"), "rarity": raw.get("rarity")}
@@ -184,12 +195,16 @@ def card_of(doc):
         card.update(status="done", count=count, listings=listings)
     elif status == "off":
         card["status"] = "off"
-    elif status == "skipped":
-        card["error"] = "not an item"
+        if doc.get("reason") == OFF_NO_CONTACT:
+            card["error"] = OFF_NO_CONTACT
+    elif status == "skipped" and doc.get("reason") == NOT_AN_ITEM:
+        card["error"] = NOT_AN_ITEM
+    elif status == "skipped" and doc.get("reason") == NO_BASE_TYPE:
+        card["error"] = "no base type"
     else:
         err = doc.get("error") or doc.get("reason")
         text = err if isinstance(err, str) and err else "price check failed"
-        card["error"] = "no league" if "league" in text.lower() else text[:200]
+        card["error"] = "no league" if text == LEAGUE_REQUIRED else text[:200]
     return card
 
 

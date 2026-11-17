@@ -243,9 +243,15 @@ PRICE_TEXT = {
     "off": ("Web data is off", "Switch it on in the dashboard",
             "Price checks need web data, which is off. Turn it on under Prices and web "
             "data on this page."),
+    "contact not set": ("Contact not set", "Add it in config/local.json",
+                        "Price checks need a contact for the trade site, such as an email "
+                        "or a name. Add it as \"contact\" in config/local.json, then press "
+                        "the hotkey again."),
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),
+    "no base type": ("Can't price this item", "Try a different item",
+                     "The trade site can't search this item. Try a different one."),
     "no league": ("League unknown", "Try again in a minute",
                   "AshLight doesn't know which league to search yet. Try again in a "
                   "minute."),
@@ -316,11 +322,13 @@ def price_card_text(card):
             out["sentence"] = (f"{count} listed in {league}. The cheapest is {low}; the "
                                f"middle of the {len(rows)} cheapest is {mid}.")
         return out
-    if status == "searching" or status == "off":
+    if status == "searching":
         key = status
+    elif status == "off":
+        key = "contact not set" if card.get("error") == "contact not set" else "off"
     else:
         key = card.get("error") if card.get("error") in PRICE_TEXT else "error"
-        if key in ("searching", "off", "none"):
+        if key in ("searching", "off", "none", "contact not set"):
             key = "error"
     line, detail, sentence = PRICE_TEXT[key]
     out.update(line=line, detail=detail, sentence=sentence)
