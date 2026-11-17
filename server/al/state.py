@@ -13,6 +13,7 @@ import time
 from . import acts as acts_mod
 from . import campaign as campaign_mod
 from . import hints as hints_mod
+from . import langguard as langguard_mod
 from . import num as num_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
@@ -879,6 +880,10 @@ class SessionState:
         # NEWBIE-HINTS (ruling L): first-hours hints; memory only until the
         # core gives the store file (use_hint_store).
         self.hints = hints_mod.Hints()
+        # LANG-GUARD (ruling K, decision 0040): the in-memory language
+        # verdict from the log; DIAG-SELF (ruling J): the core's checks view.
+        self.lang = langguard_mod.LangGuard()
+        self.diag = None
 
     @property
     def version(self):
@@ -1113,7 +1118,18 @@ class SessionState:
             table = table if isinstance(table, dict) else {}
             if table != self.zone_table:
                 self.zone_table = table
+                self.lang.set_table(table)
                 self.version += 1
+
+    def set_diag(self, view):
+        """DIAG-SELF: the self-check view (core tick_diag); bumps only on
+        a change."""
+        with self._lock:
+            if view != self.diag:
+                self.diag = dict(view) if view else None
+                self.version += 1
+                return True
+            return False
 
     def dismiss_trade(self, trade_id=None):
         """Drop one open trade card by id, or all of them (trade_id None).
@@ -1264,6 +1280,9 @@ class SessionState:
         self.events_seen += 1
         changed = False
         listed = t in LISTED
+        # LANG-GUARD: the language verdict from area loads and system lines
+        if ev.get("source") != "tailer" and self.lang.feed(ev, now):
+            changed = True
         # TEST-LIVE-EXIT: any line proves the log is alive again. The
         # tailer's own status events (source "tailer") are not log
         # lines (AREA-AUDIT P3-1): they neither refresh the last line
@@ -1678,4 +1697,7 @@ class SessionState:
                                 if self.run_history else None),
                 "price_watch": (dict(self.price_watch)
                                 if self.price_watch else None),
+                # LANG-GUARD / DIAG-SELF (rulings K, J; decision 0040)
+                "lang": self.lang.view(),
+                "diag": dict(self.diag) if self.diag else None,
             }

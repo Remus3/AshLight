@@ -932,7 +932,7 @@ Ranked in research 0032; floor rulings J / K / L (adjudicator 2026-11-17)
 in its section 6. UTIL-ATLAS-PROGRESS and LANG-PACKS are listed there
 only (blocked on live 1.0 / localised logs).
 
-- [ ] DIAG-SELF (build) Self-diagnostics "Checks" card: Client.txt found /
+- [x] DIAG-SELF (build) Self-diagnostics "Checks" card: Client.txt found /
   consented / reading / last line age, character seen, log language
   (LANG-GUARD), web data on and contact set, price book age and last
   fetch error, calc component installed and pinned, build-time data
@@ -949,8 +949,11 @@ only (blocked on live 1.0 / localised logs).
   imported by the module); design-reviewer pass. ZERO-CLICK: computed by
   the core on every snapshot; folded to "All checks pass" when green and
   opens by itself on a failure; the copy is the only click and optional.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] LANG-GUARD (build) Non-English client notice: when area generations
+  DONE 2026-11-17 (AREA-UTIL b12, decision 0040): server/al/diag.py,
+  Core.tick_diag, web/checks.js Checks tool in the Tools card;
+  tests/test_diag_self.py, app/test/checks.test.js. Build stamp not
+  shown (version only, in the report header).
+- [x] LANG-GUARD (build) Non-English client notice: when area generations
   arrive but the English `You have entered` line does not follow for 3
   area loads in a row, one notice names what needs English game text
   (level, deaths, whispers, trade requests, item check) and what still
@@ -962,7 +965,11 @@ only (blocked on live 1.0 / localised logs).
   ENTERED x3 -> notice; English line resumes -> clears), DIAG-SELF shows
   the same verdict; design-reviewer pass. ZERO-CLICK: detected and
   cleared by itself from the log; dismissing is optional.
-  BLOCKED: session lane building (2026-11-17)
+  DONE 2026-11-17 (AREA-UTIL b12, decision 0040): signal replaced
+  (PoE2 never writes `You have entered`; adjudicator ruling recorded
+  in 0040): scene name vs English zone table, non-ASCII system
+  lines; server/al/langguard.py, #langbox notice;
+  tests/test_lang_guard.py.
 - [x] NEWBIE-HINTS (build) First-hours hints for a new character: one-time,
   auto-expiring hints keyed to Client.txt events (first level-up from
   level 1, first campaign death: "campaign deaths cost no experience",

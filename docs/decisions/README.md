@@ -3,6 +3,8 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Take the next number after the highest file here.
 
+- 0040: self checks and the non-English client notice
+  (DIAG-SELF, LANG-GUARD).
 - 0039: waystone reward totals and campaign checks
   (UTIL-WAYSTONE-REWARD, UTIL-CAMPAIGN-CHECKS).
 - 0038: per-character run history, pace, act splits and deaths

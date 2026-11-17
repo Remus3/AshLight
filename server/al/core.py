@@ -12,8 +12,8 @@ import threading
 import time
 from pathlib import Path
 
-from . import (VERSION, acts, campaign, layout, logfile, ninja, parser, paths, price, pricebook,
-               pricewatch, resume, runhistory, settingsio, tradestats, underlevel,
+from . import (VERSION, acts, campaign, diag, layout, logfile, ninja, parser, paths, ports,
+               price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import summary as summary_mod
@@ -106,6 +106,7 @@ class Core:
         zones_path = (acts.default_path() if runtime is None
                       else self.runtime / "gamedata" / acts.FILE_NAME)
         self.zone_table = acts.TableCache(zones_path)
+        self._zones_path = Path(zones_path)
         self.state.set_zone_table(self.zone_table.get())
         # MATH-MAGIC-BASE: a magic item's base from the cached snapshot base
         # list when the build fetched it (decision 0009); read only, no fetch.
@@ -199,6 +200,18 @@ class Core:
         # file; re-read from the cache on a price book refresh only.
         self.watch = pricewatch.PriceWatch(self.runtime / pricewatch.FILE_NAME)
         self._watch_key = None
+        # DIAG-SELF (ruling J): passive local checks, re-read every
+        # DIAG_TICK_S from the core loop. The port is the served one (the
+        # entry point sets it); a test core reads no process list or
+        # sidecar log unless it injects them.
+        self.port = ports.AL_PORT
+        self._real = runtime is None
+        self.procs_status = ((lambda: procs.status(self.runtime)) if self._real
+                             else (lambda: None))
+        self.overlay_log = (paths.sidecar_dir("Logs") / "overlay.log" if self._real
+                            else self.runtime / "overlay.log")
+        self.calc_status = calcwire.component_status if self._real else (lambda: None)
+        self._next_diag = 0.0
 
     def _outputs_ready(self):
         """A new PoB output table for the loaded build: the build view is
@@ -730,6 +743,68 @@ class Core:
         """AREA-AUDIT P3-6, from the core's main loop: stop the shared calc
         process once the user turned "tc_calc" off. True when it stopped."""
         return self.tc_provider.reap()
+
+    # -- DIAG-SELF (ruling J)
+    DIAG_TICK_S = 5.0
+
+    def diag_facts(self, now=None):
+        """The local facts the checks read (diag.checks). Keys starting
+        with "_" are the values the report must mask, never shown."""
+        snap = self.state.snapshot()
+        tl = snap.get("tailer") or {}
+        log = self.log_path
+        try:
+            log_found = bool(log) and Path(log).is_file()
+        except OSError:
+            log_found = False
+        rates = self.rates.doc if isinstance(self.rates.doc, dict) else {}
+        calc_on = self.tc_calc_enabled()
+        st = None
+        try:
+            st = self.procs_status()
+        except Exception:  # noqa: BLE001 - a process list error reads unknown
+            st = None
+        def live(name):
+            return bool(((st or {}).get(name) or {}).get("live")) if st else None
+        overlay = live("overlay")
+        try:
+            zones_at = self._zones_path.stat().st_mtime
+        except OSError:
+            zones_at = None
+        all_paths = {}
+        if self._real:
+            try:
+                all_paths = {"_repo": str(paths.repo_root()),
+                             "_sidecar": str(paths.sidecar_root())}
+            except Exception:  # noqa: BLE001
+                all_paths = {}
+        return dict(all_paths, **{
+            "log_found": log_found, "consented": bool(tl.get("consented")),
+            "reading": bool(tl.get("reading")), "last_line_at": tl.get("last_line_at"),
+            "idle": bool(tl.get("idle")), "character_seen": bool(snap.get("character")),
+            "lang": (snap.get("lang") or {}).get("verdict"),
+            "web_data": self.web_data_enabled(), "contact_set": self.contact() is not None,
+            "book_checked_at": (snap.get("sources") or {}).get("book_checked_at")
+                               or (snap.get("sources") or {}).get("rates_checked_at"),
+            "book_error": rates.get("last_error"),
+            "calc_on": calc_on, "calc_status": self.calc_status() if calc_on else None,
+            "snapshot": bool((snap.get("acts") or {}).get("levels")),
+            "snapshot_at": zones_at,
+            "overlay": overlay, "supervisor": live("supervisor"),
+            "hotkey": diag.hotkey_registered(self.overlay_log) if overlay else None,
+            "port": self.port,
+            "_log_path": str(log) if log else None,
+            "_contact": self.contact(), "_character": snap.get("character"),
+        })
+
+    def tick_diag(self, now=None, force=False):
+        """DIAG-SELF, ZERO-CLICK: from the core's loop, at most once per
+        DIAG_TICK_S, publish the checks view. No request, no game probe."""
+        mono = time.monotonic()
+        if not force and mono < self._next_diag:
+            return False
+        self._next_diag = mono + self.DIAG_TICK_S
+        return self.state.set_diag(diag.view(self.diag_facts(), VERSION, now=now))
 
     def close(self):
         self.stop_tailing()

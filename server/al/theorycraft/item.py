@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from .. import langguard
 from . import basetypes
 
 SEPARATOR = "--------"
@@ -441,7 +442,9 @@ def parse(text, names=None):
         return item
     sections = _sections(_lines(text))
     if not sections or not looks_like_item(sections[0][0]):
-        item.warnings.append("not an English PoE item text (no Item Class / Rarity line)")
+        # LANG-GUARD: the same wording as the non-English client notice
+        item.warnings.append("not an English PoE item text (no Item Class / Rarity line). "
+                             + langguard.ITEM_HINT)
         return item
     item.is_item = True
     leftover = _header(item, sections[0])

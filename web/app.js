@@ -1030,6 +1030,8 @@
     // UTIL-PRICE-WATCH: moved prices of the items the player checked
     if (window.ALPriceWatch) { window.ALPriceWatch.paint(document, s); }
     if (window.ALHints) { window.ALHints.paint(document, s, serverNow()); }
+    // DIAG-SELF / LANG-GUARD: the core's checks and language notice
+    if (window.ALChecks) { window.ALChecks.paint(document, s); }
     tick();
   }
 
@@ -1135,6 +1137,11 @@
     }
     if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
     if (window.ALHints) { window.ALHints.wire(document, api); }
+    if (window.ALChecks) {
+      var store = null;
+      try { store = window.localStorage; } catch (e) { store = null; }
+      window.ALChecks.wire(document, function () { return snap; }, navigator, store);
+    }
     if (window.ALSettingsIO) {
       window.ALSettingsIO.wire(document, {
         fetch: function (url, opts) { return fetch(url, opts); },

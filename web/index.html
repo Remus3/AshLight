@@ -24,6 +24,7 @@
 <script src="/web/settingsio.js" defer></script>
 <script src="/web/hints.js" defer></script>
 <script src="/web/narrow.js" defer></script>
+<script src="/web/checks.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -53,6 +54,14 @@
       <button id="consent-yes" type="button">Allow reading Client.txt</button>
     </div>
     <p id="consent-error" class="error" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- LANG-GUARD (ruling K): shown and cleared by itself from Client.txt;
+       hiding it is optional -->
+  <section id="langbox" class="card lang-note" hidden aria-labelledby="lang-title">
+    <h2 id="lang-title">Game language</h2>
+    <p id="lang-text"></p>
+    <button id="lang-dismiss" type="button">Hide this notice</button>
   </section>
 
   <section class="stats" aria-label="Session at a glance">
@@ -436,6 +445,23 @@
     <!-- NEWBIE-HINTS: one click shows the new-character tips again -->
     <p class="hint-reset"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
       <span id="hints-said" class="muted"></span></p>
+    <!-- DIAG-SELF (ruling J): computed by the core; folded when green, opens
+         by itself on a failure; the copy is the only click -->
+    <div id="checksbox" class="tool checks" role="group" aria-labelledby="checks-title">
+      <h3 id="checks-title" class="sub-h">Checks</h3>
+      <details id="checks">
+        <summary id="checks-summary">Checking AshLight...</summary>
+        <ul id="checks-list" class="checks-list"></ul>
+        <div class="settings-controls">
+          <button id="checks-copy" type="button" disabled>Copy report</button>
+        </div>
+        <p class="muted small">The report holds no file paths, names, contact or chat.
+          Paste it where you ask for help.</p>
+        <!-- not a live region: the dashboard keeps at most 12 (design N6) -->
+        <p id="checks-said" class="muted"></p>
+      </details>
+    </div>
+
     <details id="tools-more">
     <summary>Overlay position, settings transfer and graphics</summary>
     <div class="tool layout" role="group" aria-labelledby="layout-title">
