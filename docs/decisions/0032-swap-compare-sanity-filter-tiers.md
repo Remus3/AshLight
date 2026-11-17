@@ -16,7 +16,9 @@ MATH-DPS-SANITY, UTIL-FILTER-2 (price-tier part). Inputs: decision 0004
   that slot). A one-hand weapon is compared against Weapon 2 too when the
   build dual wields: the equipped Weapon 2 is a one-hand weapon by its item
   class, or (PoB item text has no class line) its base / name line holds
-  none of the off-hand words shield, buckler, focus, quiver
+  none of the off-hand words shield, buckler, focus, quiver, targe, nor
+  the wordless shield names Glacial Fortress, Golden Flame, Venerable
+  Defender (AREA-AUDIT P4-1)
   (evaluate.slots_for_build). The headline stays the better slot (highest
   PoB blended delta), as TC-DELTA already picked for rings.
 - MATH-DPS-SANITY. delta.CalcImplausible (a CalcError) is raised for
@@ -33,8 +35,9 @@ MATH-DPS-SANITY, UTIL-FILTER-2 (price-tier part). Inputs: decision 0004
   a unique base is tiered by its CHEAPEST unique with 10+ listings (the
   filter cannot tell uniques of one base apart), stackables with trade
   volume under 1 are skipped, names the grammar cannot carry unchanged are
-  skipped, unique bases are checked against the snapshot base list. Tier
-  blocks (Show only) go before the build block. Never a Hide block.
+  skipped, every tier name (unique bases and stackables: the base list
+  holds both, AREA-AUDIT P4-2) is checked against the snapshot base list
+  when it is cached. Tier blocks (Show only) go before the build block. Never a Hide block.
   The merge part of UTIL-FILTER-2 stays open.
 
 ## Alternatives

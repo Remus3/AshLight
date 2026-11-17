@@ -62,7 +62,12 @@ def slots_for_class(item_class):
 # bucklers, foci, quivers carry one of these in their base name); an
 # equipped Weapon 2 whose class or base has none of them is a weapon, so the
 # player dual wields and a checked one-hand weapon fits either hand
-_OFF_HAND_WORDS = ("shield", "buckler", "focus", "quiver")
+_OFF_HAND_WORDS = ("shield", "buckler", "focus", "quiver", "targe")
+# AREA-AUDIT P4-1: released shield / buckler bases whose names carry none
+# of the words above (repoe-fork base_items snapshot, 2026-11-17: the Targe
+# family plus these three, each also Runemastered); matched as a phrase of
+# the (possibly magic) name line
+_OFF_HAND_NAMES = ("glacial fortress", "golden flame", "venerable defender")
 
 
 def _is_one_hand(item_class):
@@ -81,6 +86,9 @@ def _holds_weapon(item):
     # a magic item's line is its full name ("... Buckler of the Fox"), so
     # any word of the line counts, not only the last
     words = str(item.base or parsed.base or "").lower().split()
+    line = " " + " ".join(w.strip(",'") for w in words) + " "
+    if any(f" {n} " in line for n in _OFF_HAND_NAMES):
+        return False
     return bool(words) and not any(w.strip(",'") in _OFF_HAND_WORDS for w in words)
 
 
