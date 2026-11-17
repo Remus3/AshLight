@@ -200,7 +200,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   fixture tests/fixtures/skilltree_synthetic.json. Decision 0009 item 3
   "Decision" text still says DISABLED (file locked this round; the
   "What changes" amendment governs) - fold in at the next 0009 edit.
-- [ ] DATA-TREE-SHAPE (review) With web access, read the real
+- [x] DATA-TREE-SHAPE (review) With web access, read the real
   grindinggear/poe2-skilltree-export data.json top-level keys and one
   main / notable / keystone / ascendancy / class-start node; confirm or
   fix the UNVERIFIED shape in server/al/theorycraft/treedata.py (nodes
@@ -209,6 +209,21 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   whether PoB2 spec node ids equal the export's skill ids. ACCEPT: reader
   test on a dated, anonymised shape fixture. ZERO-CLICK: doc + fixture
   row, run by a lane.
+  DONE 2026-11-17 (research 0014): real file read; id keys, skill, name,
+  stats, isNotable/isKeystone/isJewelSocket, classes match; ascendancyName
+  and int classStartIndex do NOT (see DATA-TREE-FIX). No shape fixture
+  committed (GGG data, no license).
+- [ ] DATA-TREE-FIX (data) Fix server/al/theorycraft/treedata.py parse()
+  per research 0014: (1) node ascendancy comes from `ascendancyId` (string
+  like Warrior3), not `ascendancyName`; map id -> name via
+  classes[].ascendancies[].id / name and keep ascendancy = the name (None
+  when unmapped; keep id as fallback); (2) `classStartIndex` is a LIST of
+  ints (real class-start nodes hold 2 entries), accept int or list; (3)
+  optionally strip [Key|Shown] bracket markup from stats at display time;
+  (4) update tests/fixtures/skilltree_synthetic.json and tests/test_tc_tree.py
+  to the real shapes (synthetic values only); (5) check PoB2 spec node ids
+  against skill ids when PoB2 data is read. ACCEPT: tests cover list
+  classStartIndex and ascendancyId mapping. ZERO-CLICK: code row, build lane.
 - [x] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
   User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
   optional contact value read only from gitignored config/local.json (never
