@@ -15,6 +15,7 @@
 <script src="/web/runs.js" defer></script>
 <script src="/web/summary.js" defer></script>
 <script src="/web/search.js" defer></script>
+<script src="/web/health.js" defer></script>
 <script src="/web/filtermerge.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
@@ -254,6 +255,23 @@
       placeholder="Path of Building code"></textarea>
     <p id="build-status" class="muted" role="status" aria-live="polite"></p>
     <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
+  </section>
+
+  <section id="healthbox" class="card health" hidden aria-labelledby="health-title">
+    <h2 id="health-title">Build health</h2>
+    <p class="muted">Numbers Path of Building saved with your build. They update when
+      you load a build or check an item.</p>
+    <p id="health-msg"></p>
+    <ul id="health-list" class="health-list" hidden></ul>
+    <dl id="health-values" class="kv" hidden></dl>
+    <div id="next-wrap" hidden>
+      <h3 class="sub-h">Look for next</h3>
+      <p class="muted">What to look for on each item you wear: missing resistances
+        and attributes first, then the stats Path of Building rated highest for that slot. Copy one,
+        then paste it into the stash or vendor search box in game.</p>
+      <ul id="next-list" class="search-list"></ul>
+      <p id="next-hint" class="muted" hidden></p>
+    </div>
   </section>
 
   <section id="searchbox" class="card search" hidden aria-labelledby="search-title">

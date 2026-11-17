@@ -275,6 +275,7 @@
   var T = window.ALTc; // web/tc.js: pure view helpers
   var buildRev = null;
   var buildDoc = null;
+  var pobEvalId = null; // MATH-NEXT-LOOK: the last PoB-scored item check
   var lastPaste = "";
 
   function el(tag, cls, text) {
@@ -306,6 +307,8 @@
       renderBuild();
       // UTIL-SEARCHSTR: copy happens only on the player's Copy click
       if (window.ALSearch) { window.ALSearch.paint(document, doc, navigator); }
+      // MATH-BUILD-HEALTH / MATH-NEXT-LOOK: PoB numbers; Copy on a click only
+      if (window.ALHealth) { window.ALHealth.paint(document, doc, navigator); }
     }).catch(function () {
       $("build-status").textContent = "Can't load the build. Is AshLight running?";
     });
@@ -950,8 +953,15 @@
     offset = Date.now() / 1000 - s.now;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
+    // MATH-NEXT-LOOK: a new PoB-scored item check may add PoB stat weights
+    // for a slot, so the build view is read again (no click)
+    var pobEval = s.eval && s.eval.calc && s.eval.calc.source === "pob" ? s.eval.id : null;
+    var newWeights = pobEval !== null && pobEval !== pobEvalId;
+    if (pobEval !== null) { pobEvalId = pobEval; }
     if (s.build && s.build.rev !== buildRev) {
       buildRev = s.build.rev;
+      loadBuild();
+    } else if (newWeights && buildDoc) {
       loadBuild();
     } else {
       renderBuildYou();
