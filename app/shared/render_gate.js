@@ -81,6 +81,33 @@
     return (typeof c === "string" && c.indexOf("bottom") === 0) ? "bottom" : "top";
   }
 
+  /* Seconds on the row-1 timer at server time nowS, or null.
+     TEST-LIVE-EXIT (decision 0029): an idle log stops the timer at its
+     last line (the game may be closed).
+     UTIL-MAPRUN-OVL (adjudicator 2026-11-17, option B): while the player is
+     inside an open map the timer is the time in that map (runs.py time_s,
+     kept across hideout trips), moved on from the snapshot's clock;
+     elsewhere it is the time in this zone instance. Same "12m" text, no
+     new line or word (design 0001 7.2 and 10). */
+  function timerSeconds(snap, nowS) {
+    if (!snap) { return null; }
+    var tl = snap.tailer;
+    var idle = !!(tl && tl.consented && tl.idle);
+    var until = (idle && typeof tl.last_line_at === "number")
+      ? Math.min(nowS, tl.last_line_at) : nowS;
+    var cur = snap.maps && snap.maps.current;
+    /* Design review F1: an idle log pauses the map (inside turns false) while
+       the player still stands in it; keep its frozen map time then. */
+    var here = cur && (cur.inside === true ||
+      (idle && !snap.in_hideout && cur.name && cur.name === snap.zone));
+    if (here && typeof cur.time_s === "number" && isFinite(cur.time_s) &&
+        typeof snap.now === "number" && isFinite(until)) {
+      /* a clock skew never runs the timer backwards */
+      return cur.time_s + Math.max(0, until - snap.now);
+    }
+    return snap.zone_entered_at ? until - snap.zone_entered_at : null;
+  }
+
   /* The visible HUD strings for a state snapshot.
      nowS: the server clock in seconds (client clock minus offset). */
   function baseModel(snap, nowS, status) {
@@ -98,12 +125,8 @@
        the file is missing or quiet: keep what is known and say so. A core
        without the tailer field counts as reading. */
     var tl = snap.tailer;
-    /* TEST-LIVE-EXIT (decision 0029): an idle log stops the zone timer at
-       its last line (the game may be closed). */
     var idle = !!(tl && tl.consented && tl.idle);
-    var until = (idle && typeof tl.last_line_at === "number")
-      ? Math.min(nowS, tl.last_line_at) : nowS;
-    var elapsed = snap.zone_entered_at ? until - snap.zone_entered_at : null;
+    var elapsed = timerSeconds(snap, nowS);
     if (tl && !tl.consented) {
       return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
                log: "not reading - see dashboard", status: status || "live",
@@ -168,6 +191,7 @@
   }
 
   return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
+           timerSeconds: timerSeconds,
            shouldRender: shouldRender,
            changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD };
 }));

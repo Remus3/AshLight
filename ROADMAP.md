@@ -435,12 +435,26 @@ recorded in research 0018 section 3.
   refs/fleet-lanes/lane-2-1794932281) must NOT be merged: it adds a second
   tracker (server/al/maprun.py) beside runs.py and its decision number
   0023 is taken (0023-act-splits-resume).
-- [ ] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
+- [x] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
   (name, time in map), split from UTIL-MAPRUN (adjudicator 2026-11-17).
   Needs a design section 10 review (one card slot) and the decision 0002
   overlay budgets (tests/test_budgets.py). ACCEPT: overlay line from the
   snapshot `maps.current`, hidden outside maps, budget tests green,
   design-reviewer pass. ZERO-CLICK: shows and hides by itself from the log.
+  DONE 2026-11-17 (area-ux batch 7; adjudicator ruling: option B): while
+  `maps.current.inside`, the HUD row-1 timer shows the time in this map
+  (runs.py time_s moved on by the client clock, kept across hideout trips;
+  render_gate.js timerSeconds) instead of the zone-instance time; same "12m"
+  text, no third line, row 2 and the status slot unchanged, map deaths stay
+  on the Maps card. Alternatives: A "N map deaths" in the status slot
+  (contested slot, beside the session count), C row-2 deaths become map
+  deaths (a number that changes meaning), D dashboard-only (the zone timer
+  answers "time in this map" wrongly after a portal trip). Design 0001 7.2
+  row and section 10 amended; app/test/shared.test.js. Reverses if: play
+  shows the timer's map anchor confuses after a portal trip (then D or an
+  explicit marker), or the player asks for map deaths on the HUD (reopen A).
+  Loop duplicate: lane-1 (data) worktree, detached at 570e390, uncommitted:
+  superseded by 86a4216, do not merge.
 - [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
@@ -691,6 +705,7 @@ LAN access stays off), not a row.
   A). ACCEPT: tests on real-shaped PlayerStat sets (capped, uncapped,
   missing stat, negative spirit); design-reviewer pass. ZERO-CLICK:
   rebuilds by itself whenever a build loads or the snapshot changes.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] MATH-NEXT-LOOK (build) "Look for next" per gear slot: order the
   MATH-BUILD-HEALTH gaps and the MATH-WEIGHTS stat ranking into one line
   per slot ("Ring: cold resistance, then life") and pass the top terms to
@@ -699,6 +714,7 @@ LAN access stays off), not a row.
   (decision 0014). ACCEPT: ordering tests (gap first, then weight), slot
   coverage from the build XML's equipped items, string length cap kept.
   ZERO-CLICK: lines rebuild by themselves when the build loads.
+  BLOCKED: session lane building (2026-11-17)
 - [x] UTIL-UNDERLEVEL (build) Under-level warning: area level from the
   `Generating level N area` line minus the player level from level-up
   lines; at or above a setting (default 3 levels under) show "N levels
@@ -709,7 +725,7 @@ LAN access stays off), not a row.
   hideouts skipped; overlay 2-line rule kept (design-reviewer).
   ZERO-CLICK: appears and clears by itself on zone entry and level-up.
   DONE 2026-11-17 (AREA-UTIL b9): server/al/underlevel.py (log area level,
-  world_areas fallback, setting "underlevel_gap"), act card line, overlay
+  world_areas fallback, setting "underlevel_gap"), Level tile line, overlay
   word "N lv under" after the trade count; tests/test_util_underlevel.py,
   app/test/underlevel.test.js.
 - [x] UTIL-RUN-HISTORY (build) Personal-best act splits and deaths by zone

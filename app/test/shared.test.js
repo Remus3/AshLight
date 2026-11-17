@@ -227,3 +227,46 @@ test("F1: slot order is connection, log, trades, then AFK", () => {
   assert.equal(gate.statusText(log), "no Client.txt");
   assert.equal(gate.statusText({ ...afk, status: "offline" }), "offline");
 });
+
+/* UTIL-MAPRUN-OVL (adjudicator 2026-11-17, option B): inside an open map
+   the row-1 timer is the time in that map (it survives a hideout trip);
+   elsewhere the zone-instance time. Still 2 lines, no new word. Values
+   are invented. */
+test("UTIL-MAPRUN-OVL: row-1 timer shows map time inside a map", () => {
+  const cur = { name: "Crypt", area_level: 65, time_s: 750, deaths: 1, inside: true };
+  // back in the map after a hideout trip: zone instance 1 min, map 12 min
+  const snap = { now: 1000, zone: "Crypt", zone_entered_at: 940, level: 70, deaths: 3,
+                 maps: { count: 1, current: cur }, tailer: { consented: true, reading: true } };
+  const m = gate.hudModel(snap, 1000, "live");
+  assert.equal(m.timer, "12m");
+  assert.equal(m.zone, "Crypt");
+  assert.equal(m.deaths, "3 deaths"); // row 2 keeps the session count
+  assert.equal(gate.statusText(m), ""); // no map word in the status slot
+  // moves on from the snapshot clock, minute resolution
+  assert.equal(gate.hudModel(snap, 1030, "live").timer, "13m");
+  assert.equal(gate.timerSeconds(snap, 1030), 780);
+  // a clock skew never runs it backwards
+  assert.equal(gate.timerSeconds(snap, 900), 750);
+  // repaint gate: same minute, no repaint; next rollover from map time
+  assert.equal(gate.shouldRender(m, gate.hudModel(snap, 1020, "live")), false);
+  assert.equal(fmt.msUntilNextChange(gate.timerSeconds(snap, 1000)), 30000);
+  // an idle log freezes it at the last line
+  const idle = { ...snap, tailer: { consented: true, reading: true, idle: true, last_line_at: 1000 } };
+  assert.equal(gate.hudModel(idle, 5000, "live").timer, "12m");
+  // design review F1: the core pauses the map on an idle log (inside false);
+  // the player still stands in it, so the frozen map time stays
+  const paused = { ...idle, maps: { count: 1, current: { ...cur, inside: false } } };
+  assert.equal(gate.hudModel(paused, 5000, "live").timer, "12m");
+  // outside the map (hideout, map open): zone-instance time, unchanged
+  const ho = { ...snap, zone: "Hideout", in_hideout: true, zone_entered_at: 970,
+               maps: { count: 1, current: { ...cur, inside: false } } };
+  assert.equal(gate.hudModel(ho, 1000, "live").timer, "<1m");
+  // no map: zone-instance time; a bad time_s falls back too
+  assert.equal(gate.hudModel({ ...snap, maps: { current: null } }, 1000, "live").timer, "1m");
+  assert.equal(gate.hudModel({ ...snap, maps: null }, 1000, "live").timer, "1m");
+  assert.equal(gate.hudModel({ ...snap, maps: { current: { ...cur, time_s: "x" } } }, 1000,
+                             "live").timer, "1m");
+  assert.equal(gate.timerSeconds(null, 1), null);
+  // not opted in: no numbers at all
+  assert.equal(gate.hudModel({ ...snap, tailer: { consented: false } }, 1000, "live").timer, "");
+});
