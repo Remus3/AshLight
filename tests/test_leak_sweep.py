@@ -178,3 +178,71 @@ def test_pre_push_new_branch_gets_no_exemption(tmp_path):
     _commit(repo, "a.txt", "a\n", "base")
     local = _commit(repo, "b.txt", "b\n", "from zorblax-quux/dep")
     assert _push_kinds(repo, local, ls.ZERO) == ["needle-slot-0"]
+
+
+# --- LEAK-WT: a linked worktree reads the main checkout's needle config ---
+
+def _main_and_worktree(tmp_path):
+    main = _repo(tmp_path)
+    _commit(main, "a.txt", "a\n", "base")
+    wt = tmp_path / "wt"
+    _g(main, "worktree", "add", "-q", "--detach", str(wt))
+    return main, wt
+
+
+def _write_cfg(repo, needles):
+    (repo / "config").mkdir(exist_ok=True)
+    (repo / "config" / "leak_needles.json").write_text(
+        '{"needles": [' + ", ".join('"%s"' % n for n in needles) + "]}", newline="\n")
+
+
+@pytest.mark.git
+def test_worktree_without_config_reads_main_checkout(tmp_path):
+    main, wt = _main_and_worktree(tmp_path)
+    _write_cfg(main, FAKE)
+    assert ls.main_checkout(wt) == main.resolve()
+    path, source = ls.resolve_config(wt)
+    assert source == "main-checkout"
+    assert path == main.resolve() / "config" / "leak_needles.json"
+    assert ls.load_needles(path, environ={}) == (FAKE, "ARMED")
+
+
+@pytest.mark.git
+def test_worktree_local_config_wins(tmp_path):
+    main, wt = _main_and_worktree(tmp_path)
+    _write_cfg(main, FAKE)
+    _write_cfg(wt, ["local-only-xyz"])
+    path, source = ls.resolve_config(wt)
+    assert source == "local"
+    assert ls.load_needles(path, environ={}) == (["local-only-xyz"], "ARMED")
+
+
+@pytest.mark.git
+def test_no_config_anywhere_stays_degraded(tmp_path):
+    main, wt = _main_and_worktree(tmp_path)
+    path, source = ls.resolve_config(wt)
+    assert source == "none"
+    assert ls.load_needles(path, environ={}) == ([], "DEGRADED")
+    # the main checkout itself has no fallback beyond its own file
+    assert ls.main_checkout(main) is None
+    assert ls.resolve_config(main)[1] == "none"
+
+
+def test_not_a_git_repo_has_no_main_checkout(tmp_path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert ls.main_checkout(plain) is None
+    assert ls.resolve_config(plain)[1] == "none"
+
+
+@pytest.mark.git
+def test_report_names_source_never_needles(tmp_path, capsys):
+    main, wt = _main_and_worktree(tmp_path)
+    _write_cfg(main, FAKE)
+    path, source = ls.resolve_config(wt)
+    needles, mode = ls.load_needles(path, environ={})
+    assert ls.report([], mode, len(needles), source) == 0
+    err = capsys.readouterr().err
+    assert "ARMED needles=2 config=main-checkout" in err
+    for n in FAKE:
+        assert n.lower() not in err.lower()
