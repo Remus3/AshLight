@@ -112,7 +112,7 @@ class Core:
                       else self.runtime / "gamedata" / basetypes.FILE_NAME)
         self.base_names = basetypes.NamesCache(bases_path)
         item_mod.set_base_names(self.base_names.get)
-        # TC-UPGRADE-STATS (decision 0038): trade stat ids from the cached
+        # TC-UPGRADE-STATS (decision 0037): trade stat ids from the cached
         # repoe-fork snapshot, used only in the offline upgrade link and
         # only while web data is on; read only, no fetch, no trade call.
         ids_path = (tradestats.default_path() if runtime is None

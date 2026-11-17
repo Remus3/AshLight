@@ -89,9 +89,11 @@ def _weight_group(stats):
         except (TypeError, ValueError):
             continue
         if not (isinstance(tid, str) and tid.startswith("explicit.stat_")
+                and tid[len("explicit.stat_"):].isascii()
                 and tid[len("explicit.stat_"):].isdigit()) or tid in seen:
             continue
-        if isinstance(w, bool) or not isinstance(w, (int, float))                 or not math.isfinite(w) or w <= 0:
+        if (isinstance(w, bool) or not isinstance(w, (int, float))
+                or not math.isfinite(w) or w <= 0):
             continue
         seen.add(tid)
         filters.append({"id": tid, "value": {"weight": round(float(w), 4)}})

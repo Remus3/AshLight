@@ -50,7 +50,8 @@ FILE_NAME = "stat_translations.json"
 MAX_BYTES = 64 * 1024 * 1024
 MAX_TEXT = 200
 KIND = "explicit"
-_ID_RE = re.compile(r"^explicit\.stat_[0-9]{1,10}$")
+# \Z, not $: "$" also matches before a trailing newline (AREA-AUDIT P6-2)
+_ID_RE = re.compile(r"^explicit\.stat_[0-9]{1,10}\Z")
 _SPACE_RE = re.compile(r"\s+")
 # game markup "[Tag|Shown text]" / "[Shown]" -> the shown text, so a
 # marked-up template still compares exactly with its plain twin

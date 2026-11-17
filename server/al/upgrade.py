@@ -50,12 +50,43 @@ def _best(result):
     return None
 
 
-def _filters(top, ids):
+# AREA-AUDIT P6-1: the trade site lists a "(Local)" twin of some stats (the
+# PoB fallback carries them): on an armour piece its armour, evasion and
+# energy shield roll local, on a weapon its attack speed / accuracy do, on
+# jewellery nothing does. The slot picks the id; where the item class is
+# not known from the slot (off hand: shield, focus, quiver or weapon;
+# flasks, charms) a stat with a local twin gets no filter.
+ARMOUR_SLOTS = frozenset({"Helmet", "Body Armour", "Gloves", "Boots"})
+WEAPON_SLOTS = frozenset({"Weapon 1"})
+GLOBAL_SLOTS = frozenset({"Amulet", "Ring 1", "Ring 2", "Belt"})
+LOCAL_SUFFIX = " (Local)"
+_DEFENCE = ("armour", "evasion", "energy shield")
+
+
+def _slot_id(ids, key, slot):
+    """The trade id of `key` for an item in `slot`, or None (no filter)."""
+    tid = tradestats.lookup(ids, key)
+    local = (tradestats.lookup(ids, key + LOCAL_SUFFIX)
+             if isinstance(key, str) else None)
+    if local is None:
+        return tid
+    defence = any(w in key.lower() for w in _DEFENCE)
+    if slot in GLOBAL_SLOTS:
+        return tid
+    if slot in ARMOUR_SLOTS:
+        return local if defence else tid
+    if slot in WEAPON_SLOTS:
+        return None if defence else local
+    return None
+
+
+def _filters(top, ids, slot=None):
     """[{key, id, weight}] for the top weights that have a trade id in the
-    snapshot index `ids` (tradestats.load_index); never guesses an id."""
+    snapshot index `ids` (tradestats.load_index) for an item in `slot`
+    (P6-1: local or global id); never guesses an id."""
     out, seen = [], set()
     for row in top:
-        tid = tradestats.lookup(ids, row.get("key"))
+        tid = _slot_id(ids, row.get("key"), slot)
         if tid is not None and tid not in seen:
             seen.add(tid)
             out.append({"key": row["key"], "id": tid, "weight": row["weight"]})
@@ -84,7 +115,7 @@ def link(result, league=None, ids=None):
         return None
     league = trade.league_or_default(league)
     weights = _weights(result, comp)
-    filters = _filters(weights["top"], ids) if ids else []
+    filters = _filters(weights["top"], ids, result.get("slot")) if ids else []
     try:
         url = trade.upgrade_link(base, league,
                                  [(f["id"], f["weight"]) for f in filters])

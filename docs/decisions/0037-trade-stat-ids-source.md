@@ -86,6 +86,14 @@ names the pinned archive sha256 AND the file's sha256 equals
 lines; a value with a Lua escape is skipped. repoe-fork wins a conflict,
 logged. Guard: tests/test_tc_pob_drift_guard.py (presence, shape, hash).
 
+Local ids (AREA-AUDIT P6-1, 2026-11-17): the PoB file also lists
+"(Local)" twins (armour / evasion / energy shield on armour pieces, attack
+speed / accuracy on weapons). The 39/39 is key coverage; the link picks the
+id by slot in `server/al/upgrade.py` `_slot_id`: armour pieces take the
+local id of a defence stat, Weapon 1 the local id of the others,
+jewellery the global id, and a slot whose item class is not fixed
+(Weapon 2, flasks, charms) gets no filter for a stat with a local twin.
+
 Reverses if: PoB relicenses or its file header disclaims reuse, a real id
 conflict with repoe-fork appears, GGG rules against relaying trade2-derived
 data, repoe-fork gains full coverage (then the fallback is dead weight), or

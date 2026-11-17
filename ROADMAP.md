@@ -1641,6 +1641,15 @@ merge. Each row names the finding ids it closes.
   saved per request. Tests: test_tc_drift, test_tc_pin, test_tc_wire,
   test_audit_pass3 (test_p3_*).
 
+- [ ] AUDIT-P6-LOW (build) AREA-AUDIT pass 6 lows P6-3, P6-4
+  (docs/audit/2026-11-17-audit.md "Pass 6"): web/chars.js `seen` is a
+  plain object, so a character named "constructor" / "toString" /
+  "__proto__" is left out of the selector (use Object.create(null) or a
+  Map); the runbook says `tools/tc_drift.py status` shows the new tag, but
+  before the first check it prints `{}` (document it or print the pinned
+  tag). ACCEPT: a fix and one test each (P6-4: a docs line or a test of
+  the status output). ZERO-CLICK: code row, the loop works it.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
