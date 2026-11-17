@@ -26,10 +26,13 @@ its code (license notes: 0006).
   ([0007-overlay-tech.md](0007-overlay-tech.md))
 - 0008 Second-screen dashboard technology - SSE vs WebSocket, security,
   glanceable UI ([0008-dashboard-tech.md](0008-dashboard-tech.md))
+- 0009 Name review - AshLight collisions, GGG proper-noun check, PoE tool
+  naming, fallback shortlist ([0009-name-review.md](0009-name-review.md))
 
 ## Open research (feeds ROADMAP)
 
 - Verify the PoE2 lines marked UNVERIFIED in 0002 against a live log (LIVE-1).
 - Live trade2 rate-limit values (0004) from a real response's headers.
 - Whether PoE2 "Fullscreen" is exclusive (0007); test the overlay in each mode.
-- poe2wiki proper-noun check for "Ashlight" before publishing (decision 0001).
+- poe2db proper-noun check and a direct USPTO / EUIPO search for "Ashlight"
+  before publishing (poe2wiki / poewiki done in 0009: 0 hits).
