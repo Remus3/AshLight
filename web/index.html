@@ -13,6 +13,7 @@
 <script src="/web/trades.js" defer></script>
 <script src="/web/acts.js" defer></script>
 <script src="/web/runs.js" defer></script>
+<script src="/web/summary.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -97,6 +98,8 @@
     </div>
     <div id="eval-comps" class="eval-comps"></div>
     <p id="eval-unweighted" class="muted" hidden></p>
+    <!-- MATH-POTENTIAL-UI: score now vs the worst / best rolls -->
+    <p id="eval-rolls" class="muted" hidden></p>
     <!-- MATH-VALUE-UI: the item's own listed price against its points;
          outside the live region, the verdict above already announces -->
     <div id="valuebox" class="price-box" hidden>
@@ -188,6 +191,14 @@
     <p id="deaths-empty" class="muted"></p>
     <ol id="deaths-list" class="event-list" hidden></ol>
     <p id="deaths-worst" hidden></p>
+  </section>
+
+  <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
+       the game closes; hidden until the first card -->
+  <section id="summarybox" class="card session" hidden aria-labelledby="summary-title">
+    <h2 id="summary-title">Last session</h2>
+    <ul id="summary-lines" class="event-list"></ul>
+    <p id="summary-ended" class="muted" role="status" aria-live="polite"></p>
   </section>
 
   <section class="card events" aria-labelledby="events-title">
