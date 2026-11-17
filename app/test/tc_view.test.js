@@ -194,3 +194,22 @@ test("eval view: roll potential line, worst / now / best", () => {
     { potential: { score: 5, worst: 0, best: 10, pct: "x" } })).rolls,
     "Rolls: worth 5 points now, 0 at the worst and 10 at the best, so 50% of the way up.");
 });
+
+test("eval view: UTIL-WAYSTONE word and no uncounted line", () => {
+  const text = { sentence: "Tier 15 waystone. Risky for this build: monster critical hits.",
+                 item: "Doom Trail", comparisons: [] };
+  const risky = v.evalView({ id: 9, ok: false, error: "no gear slot for this item class", at: 0,
+    unweighted: ["Monsters have #% increased Critical Hit Chance"], text: text,
+    waystone: { tier: 15, risky: [{ id: "monster_crit", label: "monster critical hits" }] } });
+  assert.equal(risky.word, "Risky");
+  assert.equal(risky.verdict, "risky");
+  assert.equal(risky.unweighted, "");
+  assert.equal(risky.sentence, text.sentence);
+  const calm = v.evalView({ id: 10, ok: false, at: 0, text: text, waystone: { risky: [] } });
+  assert.equal(calm.word, "No risky mods");
+  const unid = v.evalView({ id: 11, ok: false, at: 0, text: text,
+    waystone: { unidentified: true, risky: [] } });
+  assert.equal(unid.word, "Unidentified");
+  assert.equal(v.evalView({ id: 12, ok: false, at: 0, text: text, waystone: null }).word,
+    "Not checked");
+});

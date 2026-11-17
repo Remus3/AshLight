@@ -304,6 +304,8 @@
     api("GET", "/api/build").then(function (doc) {
       buildDoc = doc;
       renderBuild();
+      // UTIL-SEARCHSTR: copy happens only on the player's Copy click
+      if (window.ALSearch) { window.ALSearch.paint(document, doc, navigator); }
     }).catch(function () {
       $("build-status").textContent = "Can't load the build. Is AshLight running?";
     });
@@ -424,6 +426,38 @@
       lastPaste = "";
       $("build-status").textContent = "Not loaded. Can't reach AshLight - is it running?";
     });
+  }
+
+  /* UTIL-FILTER (decision 0031): on the player's click, fetch the snippet
+     and hand it to the browser as a download; the player picks where it
+     goes. AshLight writes no file itself. */
+  function downloadFilter() {
+    var said = $("filter-said");
+    said.textContent = "";
+    fetch("/api/filter", { headers: { "X-AL-Token": token }, cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) {
+          said.textContent = "Can't make the filter. Try again.";
+          return null;
+        }
+        return r.text();
+      }).then(function (text) {
+        if (text === null) { return; }
+        var url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "ashlight.filter";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        said.textContent = text.indexOf("\nShow\n") >= 0
+          ? "Sent to your browser's downloads. Move it to your item filter folder."
+          : "Sent to your browser's downloads, but your build has no gear bases, so it " +
+            "highlights nothing yet.";
+      }).catch(function () {
+        said.textContent = "Can't reach AshLight - is it running?";
+      });
   }
 
   function copyBuild() {
@@ -854,6 +888,10 @@
     if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
     // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
     if (window.ALSummary) { window.ALSummary.paint(document, s); }
+    // UX-ZONE-NOTES: the core's own note for this campaign zone
+    var zn = s.zone_note && typeof s.zone_note.text === "string" ? s.zone_note.text : "";
+    $("zone-note-box").hidden = !zn;
+    if ($("zone-note").textContent !== zn) { $("zone-note").textContent = zn; }
     tick();
   }
 
@@ -941,6 +979,7 @@
     $("build-paste").addEventListener("paste", function () { setTimeout(pasteBuild, 0); });
     $("build-paste").addEventListener("change", pasteBuild);
     $("build-copy").addEventListener("click", copyBuild);
+    $("filter-download").addEventListener("click", downloadFilter);
     $("weights-form").addEventListener("change", saveWeights);
     $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
     $("gfx").addEventListener("toggle", openGfx);

@@ -10,7 +10,7 @@ import logging
 import threading
 from pathlib import Path
 
-from . import codec, model, paste
+from . import codec, model, paste, searchstr
 
 log = logging.getLogger("al.theorycraft")
 
@@ -84,4 +84,6 @@ class BuildStore:
                 log.exception("tree data unavailable")
         return {"loaded": b is not None,
                 "build": b.to_dict(tree_data) if b else None,
-                "code": b.to_code() if b else None, "load_error": self.load_error}
+                "code": b.to_code() if b else None, "load_error": self.load_error,
+                # UTIL-SEARCHSTR (decision 0030): copied only on a click
+                "search_strings": searchstr.strings(b)}

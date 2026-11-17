@@ -20,6 +20,7 @@ from . import evaluate as tc_evaluate
 from . import item as item_parser
 from . import pobweights
 from . import value as value_mod
+from . import waystone as waystone_mod
 
 MAX_COMPARISONS = 3
 MAX_STATS = 8
@@ -114,6 +115,9 @@ class LastEval:
         league = self.league() if callable(self.league) else self.league
         card = dict(compact(result), upgrade=upgrade_mod.link(result, league),
                     value=self._value(text, result))
+        # UTIL-WAYSTONE (decision 0030): the same press on a waystone flags
+        # its mods risky for the loaded build; None for any other item
+        card["waystone"] = waystone_mod.check(text, self.builds.build)
         self.state.set_eval(card, keep_time=keep_time, at=at)
         return result
 
