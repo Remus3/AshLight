@@ -26,7 +26,7 @@ app/shared/render_gate.js):
 - `check_log_idle` (core main loop, via `tick_summary`): consented, a known
   last line and `summary.IDLE_S` (20 min) of silence set `tailer.idle`.
   The zone is kept and tagged "frozen - log quiet"; the zone, act and map clocks
-  stop at the last line; the open UTIL-SESSION-SUMMARY stretch closes into
+  (and the Session tile, UX-REGRESSION-SWEEP 2026-11-17) stop at the last line; the open UTIL-SESSION-SUMMARY stretch closes into
   its card with reason `idle`, ended at the last activity. Nothing is
   wiped.
 - Any next line (including `log_opened`, a new game run) clears `idle`.

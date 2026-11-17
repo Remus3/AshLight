@@ -39,7 +39,7 @@ OFF_EMPTY_TEXT = ("Price watch is paused while web data is off. With web data on
                   "themselves.")
 EMPTY_TEXT = ("No items watched yet. Items you price with the item check "
               "hotkey are watched here by themselves.")
-QUIET_TEXT = "Watching {n}. No price moved by {pct}% or more since you checked."
+QUIET_TEXT = "Watching {items}. No price moved by {pct}% or more since you checked."
 
 
 def pct_setting(value):
@@ -167,5 +167,6 @@ class PriceWatch:
                 moved.append({"name": r["name"], "was": r["value"], "now": r["now_value"],
                               "unit": r["unit"], "change_pct": round(change * 100),
                               "at": r["at"], "text": move_text(r, change)})
-        text = EMPTY_TEXT if not n else ("" if moved else QUIET_TEXT.format(n=n, pct=pct))
+        items = "1 item" if n == 1 else f"{n} items"
+        text = EMPTY_TEXT if not n else ("" if moved else QUIET_TEXT.format(items=items, pct=pct))
         return {"on": True, "count": n, "moved": moved[:SHOWN], "pct": pct, "text": text}

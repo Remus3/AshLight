@@ -1185,6 +1185,27 @@ design docs in docs/design/, both made by a separate agent.
   zone notes, 10 close-out); both log-survey one-liners run on
   tests/fixtures/client_10_shapes.txt; linked from UTIL-1.0-POST (still
   BLOCKED).
+- [x] UX-REGRESSION-SWEEP (review) About 25 merges touched web/ today:
+  sweep every card and state (no consent, no build, build loaded, gear /
+  waystone / weapon item checks, trades, maps, deaths, idle with the last
+  session card) at 360 / 520 / 768 / 1440 px, dark / light / forced
+  colours, folds closed and open: overlaps, clipped text, broken folds,
+  focus order, duplicate or contradictory messages, console errors and
+  CSP violations (from CDP), stale copy. Fix all; add a regression test
+  that loads the dashboard against a synthetic core and fails on any
+  console error or CSP violation. ACCEPT: sweep read back, fixes with
+  tests, design-reviewer pass, suites green. ZERO-CLICK: nothing to set;
+  the test runs in the suite and skips without Chrome. DONE 2026-11-17
+  (area-ux b10, 0004 U28): 0 console errors / CSP violations / overlaps /
+  horizontal scroll in 11 views and 4 states; fixed: the Session tile
+  counted on while idle under a Last session card saying the session
+  ended (it now stops with the zone clock); Run history said "not yet"
+  for acts this run had finished and holds as the best ("best so far");
+  a not-checked item (no build) showed a "not counted" note and a points
+  per currency line; "Watching 1." now "Watching 1 item."; overlay size /
+  opacity sliders stuck 2 px out of the card at 360 / 520 px; file
+  pickers 21 px tall (now 24). Test: tests/test_dash_console.py +
+  app/test/cdp/dash_console.mjs (about 3 s), app/test/ux_sweep.test.js.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.

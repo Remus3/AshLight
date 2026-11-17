@@ -96,8 +96,10 @@
     var until = D.clockUntil(snap.tailer, now);
     $("zone-time").textContent = snap.zone_entered_at ? duration(until - snap.zone_entered_at) : "--:--";
     // Before the Client.txt opt-in there is no play session to time.
+    // UX-REGRESSION-SWEEP: it stops with them while the log is idle, so it
+    // never counts on under a Last session card that says the session ended.
     $("session").textContent = snap.tailer && snap.tailer.consented
-      ? duration(now - snap.session_started_at) : "--:--";
+      ? duration(until - snap.session_started_at) : "--:--";
     // HUD-ACT: the open act split counts up with the zone timer.
     if (window.ALActs) { window.ALActs.paint(document, snap.acts, until, false); }
     // UTIL-MAPS: the open map's time counts up while the player is in it.
@@ -641,6 +643,9 @@
     // MATH-VALUE-UI: the item's Note price against its points, from the
     // rates the core already has; nothing when the item has no note price
     var val = v && ev ? P.valueView(ev.value) : null;
+    // UX-REGRESSION-SWEEP: with no verdict (no build) there is no points
+    // figure to set against the price; the asking price still shows
+    if (val && !ev.ok) { val = Object.assign({}, val, { per: "" }); }
     $("valuebox").hidden = !val;
     [["value-sentence", "sentence"], ["value-per", "per"], ["value-stale", "stale"],
      ["value-credit", "credit"]].forEach(function (f) {

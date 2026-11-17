@@ -138,7 +138,7 @@ def test_p5_6_current_runs_saved_splits_are_not_empty(tmp_path):
     v = h.view(cur)
     assert v["empty_text"] == ""
     assert v["best"] == [{"key": "G1", "label": "Act 1", "best_s": 1500.0,
-                          "best_text": "25:00", "delta_s": None}]
+                          "best_text": "25:00", "delta_s": None, "this_run": True}]
 
 
 def test_p5_6_no_splits_anywhere_is_still_empty(tmp_path):

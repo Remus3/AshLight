@@ -224,7 +224,9 @@ button.secondary {
   border-radius: 6px;
   padding: 6px 8px;
 }
-.layout-form input[type="range"] { width: 100%; min-height: 24px; accent-color: var(--fk-accent); }
+.layout-form input[type="range"] { width: 100%; min-height: 24px; margin: 0; accent-color: var(--fk-accent); }
+/* UX-REGRESSION-SWEEP: file pickers keep the 24px hit target (S2) */
+input[type="file"] { min-height: 24px; max-width: 100%; }
 .layout-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 
 /* Shared bits for the build view, item check and graphics panel. */
