@@ -14,6 +14,8 @@ from pathlib import Path
 from . import VERSION, acts, layout, logfile, ninja, parser, paths, price, resume, webfetch
 from .bus import EventBus
 from .state import SessionState
+from .theorycraft import basetypes
+from .theorycraft import item as item_mod
 from .theorycraft import live as tc_live
 from .theorycraft import shareurl
 from .theorycraft import store as build_store
@@ -85,6 +87,12 @@ class Core:
                       else self.runtime / "gamedata" / acts.FILE_NAME)
         self.zone_table = acts.TableCache(zones_path)
         self.state.set_zone_table(self.zone_table.get())
+        # MATH-MAGIC-BASE: a magic item's base from the cached snapshot base
+        # list when the build fetched it (decision 0009); read only, no fetch.
+        bases_path = (basetypes.default_path() if runtime is None
+                      else self.runtime / "gamedata" / basetypes.FILE_NAME)
+        self.base_names = basetypes.NamesCache(bases_path)
+        item_mod.set_base_names(self.base_names.get)
         # TC-EVAL: editable stat weights, defaults written on first start.
         self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.

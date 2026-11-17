@@ -15,6 +15,8 @@ import re
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from . import basetypes
+
 SEPARATOR = "--------"
 BOM = chr(0xFEFF)
 EM_DASH = chr(0x2014)  # advanced header segment separator
@@ -36,6 +38,7 @@ STATUS_LINES = {
     "split": "split",
 }
 TWO_NAME_RARITIES = ("RARE", "UNIQUE")
+MAGIC = "MAGIC"
 CANNOT_USE = "you cannot use this item"
 
 _NUM = r"[+-]?\d+(?:\.\d+)?"
@@ -139,9 +142,14 @@ class ParsedItem:
     note: str = None
     advanced: bool = False
     warnings: list = field(default_factory=list)
+    # MATH-MAGIC-BASE: how `base` was found (theorycraft.basetypes); None
+    # when the item text names the base itself (normal / rare / unique)
+    base_source: str = None
 
     @property
     def display_name(self):
+        if self.rarity == MAGIC and self.name:
+            return self.name  # the magic name line already holds the base
         return " ".join(x for x in (self.name, self.base) if x) or None
 
     def to_dict(self):
@@ -152,7 +160,7 @@ class ParsedItem:
                 "rune_sockets": self.rune_sockets, "properties": dict(self.properties),
                 "mods": [m.to_dict() for m in self.mods], "flags": dict(self.flags),
                 "note": self.note, "advanced": self.advanced,
-                "warnings": list(self.warnings)}
+                "base_source": self.base_source, "warnings": list(self.warnings)}
 
 
 def looks_like_item(text):
@@ -346,8 +354,39 @@ def _requires(item, value):
             item.requirements[m.group(2).lower()] = int(m.group(1))
 
 
-def parse(text):
-    """A ParsedItem from item text. Never raises on content."""
+# MATH-MAGIC-BASE: the snapshot base list provider ({lower: name} or None),
+# set by the core when the build-time snapshot cache exists
+_base_names = None
+
+
+def set_base_names(provider):
+    """Register a callable returning the snapshot base list (or None)."""
+    global _base_names
+    _base_names = provider
+
+
+def _names():
+    if not callable(_base_names):
+        return None
+    try:
+        return _base_names() or None
+    except Exception:  # noqa: BLE001 - a bad cache file never breaks a parse
+        return None
+
+
+def _magic_base(item, names):
+    """A magic item's name line becomes `name`; `base` is its true base."""
+    if item.rarity != MAGIC or not item.base or item.name or item.flags.get("unidentified"):
+        return
+    line = item.base
+    base, source = basetypes.magic_base(line, item.mods, _names() if names is None else names)
+    if base and base != line:
+        item.name, item.base, item.base_source = line, base, source
+
+
+def parse(text, names=None):
+    """A ParsedItem from item text. Never raises on content. `names`: the
+    snapshot base list for MATH-MAGIC-BASE (default: the registered one)."""
     item = ParsedItem()
     if not isinstance(text, str) or not text.strip():
         item.warnings.append("empty")
@@ -368,4 +407,5 @@ def parse(text):
         _body(item, sec, state)
     if item.base is None:
         item.warnings.append("no base type line")
+    _magic_base(item, names)
     return item

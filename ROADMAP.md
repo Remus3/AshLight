@@ -220,8 +220,7 @@ weights derived from PoB outputs stay with TC-DELTA.
   text, fixture mutations, idempotent keys) green.
   ZERO-CLICK: parsing runs on the existing hotkey press; tests unattended.
   DONE 2026-11-17: server/al/theorycraft/item.py (strip_rolls,
-  resolve_range), weights.stat_key; known limit: a magic item's base keeps
-  its affix words (no base list without a data snapshot).
+  resolve_range), weights.stat_key; magic bases: MATH-MAGIC-BASE.
 - [x] MATH-CODEC-FUZZ (build) Property / fuzz tests for the PoB2 share-code
   codec: random XML round trips byte-exact under every framing, URL-safe
   and padded / unpadded / whitespace-wrapped codes, truncation and bit
@@ -243,6 +242,19 @@ weights derived from PoB outputs stay with TC-DELTA.
   check card (LastEval) carries `value` from core's cached rates snapshot,
   no request; tests/test_math_value.py incl. cross-rate round-trip and
   transitivity properties. Dashboard display is MATH-VALUE-UI.
+- [x] MATH-MAGIC-BASE (build) A magic item's true base type: the name
+  line "Hale Iron Ring of the Bear" keeps its affix words as the base, so
+  the trade / upgrade links searched a type that does not exist. Resolve
+  from the build-time snapshot base list when cached (decision 0009), else
+  the advanced headers' affix names, else a shape strip (" of ..." suffix,
+  a leading prefix word when the explicit mod count says there is one).
+  ACCEPT: tests over many item classes, with and without the snapshot.
+  ZERO-CLICK: runs on the same hotkey press; the core reads the cached
+  list, no fetch.
+  DONE 2026-11-17: server/al/theorycraft/basetypes.py (magic_base,
+  NamesCache over <cache>/gamedata/base_items.json), item.parse sets
+  name = the magic line, base = the true base, base_source; core registers
+  the cache; tests/test_math_magic_base.py.
 - [ ] MATH-VALUE-UI (build) Show the item check card's `value` on the
   dashboard Item check card: "Listed 4 Exalted Orb = 0.008 Divine Orb,
   2,500 score per Divine Orb", the rates' stale state and the poe.ninja
