@@ -12,7 +12,11 @@ and a 304 or an unchanged SHA-256 leaves the file and its entry untouched.
 Offline or failing sources are reported, never fatal (exit 0 unless
 --strict). Nothing here is bundled in the repo (decision 0009 item 1).
 
-    python -m server.al.theorycraft.snapshot [--force] [--strict] [--dir D]
+    python -m server.al.theorycraft.snapshot [--force] [--strict] [--dir D] [--opt-in]
+
+Network only with consent: nothing is fetched while the web_data opt-in
+(config/local.json, decision 0013) is off, unless --opt-in is passed;
+AL_NO_SNAPSHOT=1 skips it always (AUDIT-SNAPSHOT-OPTIN).
 """
 
 import argparse
@@ -223,19 +227,32 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
     return out
 
 
-def main(argv=None, environ=None, fetch=http_fetch, contact=None):
-    """contact: None = read "contact" from gitignored config/local.json."""
+def main(argv=None, environ=None, fetch=http_fetch, contact=None, web_data=None):
+    """contact: None = read "contact" from gitignored config/local.json.
+    web_data: None = read "web_data" from the same file (strictly True, as the
+    core does); while it is off nothing is fetched unless --opt-in is passed
+    (AUDIT-SNAPSHOT-OPTIN, decisions 0009 / 0013 amended 2026-11-17)."""
     env = os.environ if environ is None else environ
-    if contact is None:
+    cfg = None
+    if contact is None or web_data is None:
         cfg = paths.load_local_config()
-        contact = cfg.get(webfetch.CONTACT_KEY) if isinstance(cfg, dict) else None
+        cfg = cfg if isinstance(cfg, dict) else {}
+    if contact is None:
+        contact = cfg.get(webfetch.CONTACT_KEY)
+    if web_data is None:
+        web_data = cfg.get("web_data") is True
     ap = argparse.ArgumentParser(prog="snapshot", description=f"{NAME} game-data snapshot")
     ap.add_argument("--force", action="store_true", help="re-download every file")
     ap.add_argument("--strict", action="store_true", help="exit 1 when a source fails")
     ap.add_argument("--dir", help="cache directory (default: sidecar Cache\\gamedata)")
+    ap.add_argument("--opt-in", action="store_true",
+                    help="run even while web_data is off (build -Snapshot / AL_SNAPSHOT=1)")
     args = ap.parse_args(argv)
     if (env.get(OPT_OUT_ENV) or "").strip() not in ("", "0"):
         print(f"snapshot: skipped ({OPT_OUT_ENV} set)")
+        return 0
+    if not (web_data is True or args.opt_in):
+        print("snapshot: skipped (web_data off; turn web data on or pass --opt-in)")
         return 0
     directory = Path(args.dir) if args.dir else cache_dir(env)
     result = run(directory, fetch=fetch, force=args.force, contact=contact)

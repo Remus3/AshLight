@@ -198,6 +198,9 @@ class Core:
         return bool(self.consent_record().get("consented"))
 
     def record_consent(self, consented, path=None):
+        if path and not logfile.consent_path_ok(path):
+            # AUDIT-HTTP-HARDEN S4: checked before any file system access.
+            raise ValueError("path must be a local Client.txt or the folder holding it")
         if path:
             self._configured_log = path
             self.locate_log()

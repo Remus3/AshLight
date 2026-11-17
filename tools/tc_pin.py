@@ -46,7 +46,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from server.al import paths, webfetch  # noqa: E402
+from server.al import exepin, paths, webfetch  # noqa: E402
 
 COMPONENTS = ("pob2", "luajit")
 ALLOWED_HOSTS = ("github.com", "codeload.github.com")
@@ -341,36 +341,46 @@ def ensure_extracted(name, spec, archive, parent):
 
 # --- LuaJIT build -------------------------------------------------------
 
-def build_plan(which=shutil.which):
+def build_plan(which=None, environ=None):
     """The build command for the verified LuaJIT source, or None when no
-    supported compiler is on PATH. Runs in <source>/src."""
-    if which("cl"):
-        return ["cmd.exe", "/d", "/c", "msvcbuild.bat"]
-    if which("mingw32-make") and which("gcc"):
-        return ["mingw32-make"]
+    supported compiler is on PATH. Runs in <source>/src. AUDIT-EXE-PATH:
+    cmd.exe by its System32 path, PATH tools only from absolute PATH entries
+    (never the current directory)."""
+    find = which or (lambda name: exepin.which_abs(name, environ))
+    if find("cl"):
+        return [str(exepin.system_tool("cmd.exe")), "/d", "/c", "msvcbuild.bat"]
+    make = find("mingw32-make")
+    if make and find("gcc"):
+        return [str(make)]
     return None
 
 
-def ensure_luajit(lay, which=shutil.which, run=subprocess.run, environ=None):
-    """'ready' when luajit.exe exists (built now or before), 'source-only'
-    when no compiler is available. Raises RuntimeError on a failed build."""
+def ensure_luajit(lay, which=None, run=subprocess.run, environ=None):
+    """'ready' when luajit.exe exists AND matches the SHA-256 recorded when
+    this step built it (built now or before), 'source-only' when no compiler
+    is available. An existing luajit.exe without a matching record is not
+    trusted (AUDIT-EXE-PATH): it is rebuilt when a compiler exists.
+    Raises RuntimeError on a failed build."""
     exe = lay["luajit_exe"]
-    if exe.is_file():
-        log("luajit: luajit.exe present (no-op)")
+    if exepin.verified(exe):
+        log("luajit: luajit.exe present and verified (no-op)")
         return "ready"
-    plan = build_plan(which)
+    if exe.is_file():
+        log("luajit: luajit.exe present but not recorded by this step; not trusted")
+    plan = build_plan(which, environ)
     if plan is None:
         log("luajit: no compiler on PATH (MSVC cl or MinGW gcc); source verified, "
             "build skipped. Re-run setup from a Developer PowerShell to build it.")
         return "source-only"
     env = dict(os.environ if environ is None else environ)
     env["TEMP"] = env["TMP"] = str(lay["temp"])
-    log(f"luajit: building with {plan[0]}")
+    log(f"luajit: building with {Path(plan[0]).name}")
     r = run(plan, cwd=str(lay["luajit_source"] / "src"), env=env,
             capture_output=True, timeout=1800)
     if r.returncode != 0 or not exe.is_file():
         raise RuntimeError(f"luajit build failed (rc {r.returncode})")
-    log("luajit: built")
+    exepin.record(exe)
+    log("luajit: built (sha256 recorded)")
     return "ready"
 
 
@@ -395,7 +405,7 @@ def is_noop(doc, lay):
         m = read_marker(lay[key])
         if not m or m.get("archive_sha256") != doc[name]["archive_sha256"]:
             return False
-    return lay["luajit_exe"].is_file()
+    return exepin.verified(lay["luajit_exe"])
 
 
 def write_stamp(doc, lay, status):
@@ -416,7 +426,7 @@ def opted_in(switch, local_cfg):
     return bool(switch) or local_cfg.get(OPT_IN_KEY) is True
 
 
-def run_setup(doc, environ=None, fetch=None, which=shutil.which, run=subprocess.run):
+def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run):
     """Fetch, verify, extract and (when possible) build. Returns the status
     'noop', 'ready' or 'source-only'."""
     lay = layout(doc, environ)

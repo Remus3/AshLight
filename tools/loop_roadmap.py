@@ -141,6 +141,40 @@ def commit_subject(rec, wip=None):
     return head + _clip(desc, SUBJECT_MAX - len(head))
 
 
+# AUDIT-LOOP-COMMIT-MSG (audit C2): the lane's own result (root cause / what
+# was done) goes into the commit body, so an ACCEPT that asks for it in the
+# commit is met by the commit.
+RESULT_MAX = 600
+_RESULT_RX = re.compile(r"^\s*RESULT:\s*(.+?)\s*$", re.M)
+_VERDICT_LINE_RX = re.compile(r"^\s*VERDICT:", re.I)
+
+
+def result_line(text):
+    """The lane's result line: its last `RESULT:` line, else the last
+    paragraph of its reply (a trailing VERDICT line ignored); ASCII, one
+    line, at most RESULT_MAX chars; "" when there is none."""
+    if not text or not str(text).strip():
+        return ""
+    text = ascii_text(text)
+    found = _RESULT_RX.findall(text)
+    if found:
+        out = found[-1]
+    else:
+        paras = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+        paras = [p for p in paras if not _VERDICT_LINE_RX.match(p)] or paras
+        out = paras[-1] if paras else ""
+    return _clip(out, RESULT_MAX)
+
+
+def commit_body(rec):
+    """Label paragraph (cut at 300) plus a `result:` paragraph when the lane
+    left one; the caller appends the refute / verifier lines."""
+    body = f"\n\n{ascii_text(rec.get('label', ''), 300)}\n\n"
+    if rec.get("result"):
+        body += f"result: {ascii_text(rec['result'], RESULT_MAX)}\n\n"
+    return body
+
+
 def merge_subject(rec):
     """`merge: <topic> (<scope>)` for an item's --no-ff merge into main."""
     _, scope, desc = _subject_parts(rec)

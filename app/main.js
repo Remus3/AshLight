@@ -22,6 +22,9 @@ const DISPLAYS_FILE = path.join(REPO, "ops", "runtime", "displays.json");
 const PORTS_PY = path.join(REPO, "server", "al", "ports.py");
 const LOCAL_CONFIG = path.join(REPO, "config", "local.json");
 const OVERLAY_HTML = path.join(__dirname, "overlay", "index.html");
+// AUDIT-ELECTRON S6: the overlay is never packaged, so !app.isPackaged
+// would leave devTools always on; they open only with an explicit AL_DEV=1.
+const DEV_TOOLS = process.env.AL_DEV === "1";
 const DEFAULT_TOGGLE = "Alt+Shift+A";
 const DEFAULT_EVAL_KEY = "Alt+Shift+E";
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
@@ -171,7 +174,7 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
-      devTools: !app.isPackaged
+      devTools: DEV_TOOLS
     }
   });
   win.setAlwaysOnTop(true, "screen-saver");
@@ -213,6 +216,8 @@ function start() {
   app.setAboutPanelOptions({ applicationName: "AshLight overlay", credits: DISCLAIMER });
   // No permission is ever granted to the page (camera, clipboard, ...).
   session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(false));
+  // AUDIT-ELECTRON S7: permission checks (navigator.permissions, ...) too.
+  session.defaultSession.setPermissionCheckHandler(() => false);
 
   ipcMain.on("al:config", (e) => {
     const url = (e.senderFrame && e.senderFrame.url) || "";

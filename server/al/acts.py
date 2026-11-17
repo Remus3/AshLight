@@ -58,8 +58,8 @@ ATTRIBUTION = datacredit.ZONE_LEVELS_CREDIT  # one source: theorycraft/datacredi
 # Dashboard copy (design 0001 section 9); the page prints these as given.
 EMPTY_TEXT = ("No act times yet. They start by themselves when you enter a "
               "campaign zone.")
-NO_LEVELS_TEXT = ("Zone levels aren't downloaded yet. Run AshLight's build step "
-                  "(scripts/build.ps1) to get them.")
+NO_LEVELS_TEXT = ("Zone levels aren't downloaded yet. Turn on web data, then run "
+                  "AshLight's build step (scripts/build.ps1).")
 NO_ZONES_TEXT = "Zone levels show here while you are in a campaign act."
 PARTIAL_TEXT = "partial: counted from the first zone AshLight saw"
 
