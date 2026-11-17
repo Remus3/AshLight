@@ -1,4 +1,4 @@
-# 0006 - TC-CODE: PoB2 share-code codec, build model, paste API
+# 0007 - TC-CODE: PoB2 share-code codec, build model, paste API
 
 Date: 2026-11-16. Trigger: ROADMAP row TC-CODE (decision 0004 phase C).
 Forks ruled by an adjudicator agent the same day; rulings recorded below.

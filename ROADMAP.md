@@ -84,7 +84,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   codes exported from PoB2 v0.23.1 (deflate framing confirmed); no network.
   ZERO-CLICK: a copied PoB code or share URL is taken on the AshLight
   hotkey press; the last build reloads on start.
-  DONE 2026-11-16 (decision 0006): server/al/theorycraft/ codec, model,
+  DONE 2026-11-16 (decision 0007): server/al/theorycraft/ codec, model,
   store; POST /api/build-code, GET /api/build; reload on start. Synthetic
   fixtures (adjudicator F1); share URLs recognized, not fetched (TC-URL);
   hotkey hook is codec.looks_like_build_code for the PRICE-1 clipboard read.
