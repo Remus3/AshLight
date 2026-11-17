@@ -371,3 +371,27 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
 - LIVE-RESUME scans Client.txt backwards at start, no persisted state
   (decision 0008). Reverses if: GGG drops the marker / level-up lines or the
   32 MB cap misses the current run's deaths in normal play.
+- Bundle no game / repoe-fork / poe2db / wiki data; build-time fetch into
+  the sidecar cache only, with attribution (decision 0009). Reverses if: a
+  source's license forbids that use or permits redistribution.
+- server/al/procs.py is the one process registry; stop.ps1 stops core,
+  supervisor and overlay; run.ps1 is idempotent per component (decision
+  0010). Reverses if: the overlay gains a clean-exit channel or Electron
+  moves out of app/node_modules.
+- Logon autostart is an opt-in scheduled task, OFF by default (decision
+  0011). Reverses if: the task is refused for a standard user or autostart
+  is no longer wanted.
+- Agent worktrees go under the sidecar via tools/wt_sidecar_hook.py
+  (decision 0012). Reverses if: the harness gains a worktree base-dir
+  setting or the hook breaks isolated spawns.
+- Web data is one opt-in "web_data" setting, default OFF; nothing hits the
+  network while off (decision 0013). Reverses if: an endpoint is forbidden,
+  GGG policy changes, or the operator rules per-feature opt-in.
+- Build view, item check card (one card slot, 20 s), graphics advisor read
+  on a dashboard click, Copy-code clipboard write on the player's click
+  (decision 0014). Reverses if: design section 10 allows two cards or
+  decision 0003 restricts clipboard writes.
+- Price check shares the item-check hotkey; contact only from gitignored
+  config/local.json; the core publishes `price` in the snapshot, no own
+  endpoint (decisions 0015, 0016). Reverses if: GGG / poe.ninja drop the
+  contact ask, price check needs its own hotkey, or the overlay may fetch.
