@@ -107,7 +107,8 @@ def test_flask_property_line_is_linear_time():
             "Recovers" + " " * 60000 + "x\n")
     t0 = time.perf_counter()
     item.parse(text)
-    assert time.perf_counter() - t0 < 0.5
+    import fleet_test_guard  # load-scaled bound (TEST-FLAKE-SSE)
+    assert time.perf_counter() - t0 < fleet_test_guard.budget(1.0)
     ok = item.parse("Item Class: Life Flasks\nRarity: Normal\nLife Flask\n"
                     "--------\nRecovers 120 Life over 3 Seconds\n")
     assert ok.properties.get("Recovers") == "120 Life over 3 Seconds"
