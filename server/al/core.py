@@ -13,6 +13,7 @@ from pathlib import Path
 
 from . import (VERSION, acts, layout, logfile, ninja, parser, paths, price, pricebook,
                resume, webfetch)
+from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import basetypes
@@ -68,6 +69,12 @@ class Core:
         self.bus = EventBus()
         self.state = SessionState(character=character or cfg.get("character"))
         self.bus.add_listener(self.state.apply)
+        # UTIL-SESSION-SUMMARY: the last saved card shows until a new one;
+        # cards are saved only under the runtime dir.
+        self.summary_path = self.runtime / summary_mod.summary_file().name
+        self.state.set_session_summary(summary_mod.load_last(self.summary_path))
+        last = self.state.session_summary
+        self._summary_saved = last.get("id") if last else None
         self._configured_log = log_path or cfg.get("client_log")
         self.log_path = None
         self.tailer = None
@@ -363,6 +370,25 @@ class Core:
             if self.feed_line(line) is not None:
                 n += 1
         return n
+
+    def tick_summary(self, now=None):
+        """UTIL-SESSION-SUMMARY, ZERO-CLICK: from the core's main loop. Close
+        an idle play stretch (with the price movers the dashboard has; no
+        request) and save any new card. Returns the saved card or None."""
+        if self.state.session_end_due(now):
+            movers = None
+            if self.web_data_enabled():
+                movers = self.rates.snapshot().get("movers")
+            self.state.check_session_end(now=now, movers=movers)
+        card = self.state.session_summary
+        if not card or card.get("id") == self._summary_saved:
+            return None
+        self._summary_saved = card.get("id")
+        try:
+            summary_mod.save(self.summary_path, card)
+        except OSError:
+            pass  # the card still shows; the next one tries again
+        return card
 
     def close(self):
         self.stop_tailing()

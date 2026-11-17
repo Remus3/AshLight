@@ -392,6 +392,11 @@ Generation rules:
      rate for that currency `There is no saved value for <currency> yet,
      so AshLight can't compare the item's price with its points.`; hidden
      when the item has no note price.
+   - roll potential (MATH-POTENTIAL-UI, web/tc.js `rollsText`): muted line
+     on the item check card, `Rolls: worth <n> points now, <n> at the worst
+     and <n> at the best, so <pct>% of the way up.`; at the top `Rolls:
+     worth <n> points now, the best these rolls can be.`; hidden when there
+     is no spread, the numbers are junk or the check failed.
    - price check (PRICE-1-UI, `price_card_text`): overlay `Price: <item>`,
      `<n> listed, ~<middle>` / `Lowest <amount> <currency>`, `Searching
      prices...`, `Prices in about <n> s`, `Web data is off`, `No listings found`,
@@ -433,7 +438,19 @@ Generation rules:
      level <n>) at level <n>, <m:ss> into the zone.` (parts without data
      are left out; no zone: `Died at level <n>.`); `Most deaths: <zone>
      (<n>).` from 2 deaths in one zone; empty `No deaths this session.
-     Each one shows here with its zone and level.`
+     Each one shows here with its zone and level.`; empty after a restart
+     with deaths restored from the log (AUDIT-MAP-SEED): `<n> death(s)
+     before AshLight started reading. New deaths show here with their zone
+     and level.`
+   - last session (UTIL-SESSION-SUMMARY, `server/al/summary.py`,
+     `web/summary.js`): dashboard only, hidden until the first card; lines
+     `Played <m:ss|h:mm:ss> and reached level <n>.` (no levels gained: `at
+     level <n>`; no level known: `Played <t>.`), `Levels: <a> to <b>, at
+     <x.x> an hour.` (pace from 10 minutes of play), `Maps: <n>.`,
+     `Deaths: <n>.`, `Price movers: <name> up|down <n>%, ...` (top 3 by
+     size); then `Session ended at <HH:MM> after 20 minutes with no game
+     activity.` / `... when the game closed.` (date added for an older
+     card), polite live region
    - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
      only, `Your build wears <base> in <slot>, so this finds rare items of
      that base.` (empty slot: `Your build has nothing in <slot>, so this

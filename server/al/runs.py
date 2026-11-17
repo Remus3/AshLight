@@ -7,7 +7,11 @@ the snapshot; the dashboard only prints them (design 0001 section 9).
 
 Map runs (UTIL-MAPS):
 - An area generation whose id starts with `Map` (acts.is_endgame) is a new
-  map: it closes the open one and opens a new one. A campaign area
+  map: it closes the open one and opens a new one. AUDIT-MAP-SEED: the same
+  id with the same seed as the open map is a portal back into that
+  instance (the client logs "Generating level" on every instance load), so
+  the visit merges into the open map; no seed keeps the new-map rule.
+  A campaign area
   generation (acts.act_of) closes the open map. Hideout and other ids
   change nothing (a portal trip keeps the map open).
 - The first non-hideout scene after a map's generation names it and starts
@@ -37,6 +41,13 @@ MAPS_EMPTY_TEXT = ("No maps yet. Map times start by themselves when you "
                    "open a map.")
 DEATHS_EMPTY_TEXT = ("No deaths this session. Each one shows here with its "
                      "zone and level.")
+
+
+def deaths_before_text(n):
+    """AUDIT-MAP-SEED M3: the recap's empty line when the deaths tile shows
+    deaths restored from the log but none has a recap row."""
+    return (f"{_plural(n, 'death')} before AshLight started reading. "
+            "New deaths show here with their zone and level.")
 
 
 def clock_text(s):
@@ -92,14 +103,18 @@ class MapRuns:
         self.cur = None
         return True
 
-    def on_generated(self, area_id, at, area_level):
+    def on_generated(self, area_id, at, area_level, seed=None):
         """One area generation. Returns True when the maps changed."""
         if acts.is_endgame(area_id):
+            m = self.cur
+            if (m is not None and seed is not None and m.get("seed") == seed
+                    and m["area_id"] == area_id):
+                return False  # same instance: a re-entry (AUDIT-MAP-SEED)
             self._close(at)
             self.count += 1
             self.cur = {"area_id": area_id, "area_level": area_level,
-                        "scene": None, "in_s": 0.0, "entered_at": None,
-                        "deaths": 0}
+                        "seed": seed, "scene": None, "in_s": 0.0,
+                        "entered_at": None, "deaths": 0}
             return True
         if acts.act_of(area_id) is not None:
             return self._close(at)
@@ -175,25 +190,32 @@ class DeathLog:
 
     def __init__(self):
         self.rows = collections.deque(maxlen=MAX_DEATHS)
-        self.by_zone = collections.Counter()
 
     def add(self, at, zone, area_level, level, zone_s):
         self.rows.append({"at": at, "zone": zone, "area_level": area_level,
                           "level": level,
                           "text": death_text(zone, area_level, level, zone_s)})
-        if zone:
-            self.by_zone[zone] += 1
 
-    def view(self):
-        """The `death_recap` part of the state snapshot."""
+    def by_zone(self):
+        """Deaths per zone over the capped rows (AUDIT-MAP-SEED M2: no
+        uncapped counter beside them)."""
+        return collections.Counter(r["zone"] for r in self.rows if r["zone"])
+
+    def view(self, total=0):
+        """The `death_recap` part of the state snapshot. `total`: the deaths
+        tile's count; above zero with no rows (restored from the log), the
+        empty line says so instead of "No deaths"."""
         recent = [dict(r) for r in reversed(self.rows)][:RECENT_DEATHS]
         worst = ""
-        if self.by_zone:
-            zone, n = self.by_zone.most_common(1)[0]
+        counts = self.by_zone()
+        if counts:
+            zone, n = counts.most_common(1)[0]
             if n >= 2:
                 worst = f"Most deaths: {zone} ({n})."
-        return {"recent": recent, "worst_text": worst,
-                "empty_text": DEATHS_EMPTY_TEXT}
+        empty = DEATHS_EMPTY_TEXT
+        if not self.rows and isinstance(total, int) and total > 0:
+            empty = deaths_before_text(total)
+        return {"recent": recent, "worst_text": worst, "empty_text": empty}
 
 
 def replay(events, me=None):
@@ -231,7 +253,7 @@ def replay(events, me=None):
                 maps.on_scene(zone, at, hideout)
         elif t == "area_generated":
             area_level = e.get("area_level")
-            maps.on_generated(e.get("area_id"), at, area_level)
+            maps.on_generated(e.get("area_id"), at, area_level, e.get("seed"))
         elif t == "level_up":
             if e.get("character") == me:
                 level = e.get("level")

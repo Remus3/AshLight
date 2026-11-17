@@ -162,3 +162,35 @@ test("graphics view: hardware lines, advice, failure text", () => {
   assert.equal(bad.error, "AshLight could not read this computer's hardware. These are safe middle settings.");
   assert.deepEqual(bad.hardware, []);
 });
+
+/* MATH-POTENTIAL-UI: the score now against the worst and best rolls. */
+test("eval view: roll potential line, worst / now / best", () => {
+  const base = { id: 5, ok: true, verdict: "upgrade", at: 0,
+                 text: { sentence: "s", item: "i", comparisons: [] } };
+  const m = v.evalView(Object.assign({}, base,
+    { potential: { score: 58.04, worst: 30, best: 84.5, pct: 51.4 } }));
+  assert.equal(m.rolls,
+    "Rolls: worth 58 points now, 30 at the worst and 84.5 at the best, so 51% of the way up.");
+  const top = v.evalView(Object.assign({}, base,
+    { potential: { score: 1234.4, worst: 1000, best: 1234.4, pct: 100 } }));
+  assert.equal(top.rolls, "Rolls: worth 1,234 points now, the best these rolls can be.");
+  assert.equal(v.evalView(base).rolls, "");
+  assert.equal(v.evalView(Object.assign({}, base, { potential: null })).rolls, "");
+  // no spread: the rolls don't move the score, so nothing to say
+  assert.equal(v.evalView(Object.assign({}, base,
+    { potential: { score: 10, worst: 10, best: 10, pct: 100 } })).rolls, "");
+  for (const bad of [{ score: "5", worst: 1, best: 9, pct: 50 },
+                     { score: 5, worst: NaN, best: 9, pct: 50 },
+                     { score: 5, worst: 1, best: Infinity, pct: 50 },
+                     { score: 5, worst: 9, best: 1, pct: 50 }]) {
+    assert.equal(v.evalView(Object.assign({}, base, { potential: bad })).rolls, "",
+                 JSON.stringify(bad));
+  }
+  // a failed check never shows rolls
+  assert.equal(v.evalView(Object.assign({}, base, { ok: false,
+    potential: { score: 5, worst: 1, best: 9, pct: 50 } })).rolls, "");
+  // pct missing or junk is computed from the three numbers
+  assert.equal(v.evalView(Object.assign({}, base,
+    { potential: { score: 5, worst: 0, best: 10, pct: "x" } })).rolls,
+    "Rolls: worth 5 points now, 0 at the worst and 10 at the best, so 50% of the way up.");
+});

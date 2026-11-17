@@ -71,8 +71,8 @@ def compact(result):
             "unidentified": bool(flags.get("unidentified")),
             "unweighted": list(r.get("unweighted") or [])[:MAX_LIST],
             "comparisons": comps,
-            # MATH-POTENTIAL: score now vs at the worst / best rolls (no UI
-            # yet: MATH-POTENTIAL-UI)
+            # MATH-POTENTIAL: score now vs at the worst / best rolls (shown
+            # by web/tc.js rollsText, MATH-POTENTIAL-UI)
             "potential": ({k: pot.get(k) for k in ("score", "worst", "best", "pct")}
                           if isinstance(pot, dict) else None)}
 

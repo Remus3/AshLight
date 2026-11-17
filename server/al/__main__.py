@@ -180,6 +180,10 @@ def main(argv=None):
                 core.ensure_tailing()  # TEST-E2E: log found later / moved
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("ensure_tailing failed")
+            try:
+                core.tick_summary()  # UTIL-SESSION-SUMMARY: idle -> card
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_summary failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:
