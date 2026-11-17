@@ -60,15 +60,38 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [ ] DATA-NINJA (data) poe.ninja PoE2 currency rates with ETag caching under
   the AL sidecar Cache, refresh at most hourly, attribution in the UI.
   ACCEPT: offline-cached rates shown; one request per hour max.
-- [ ] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
+- [x] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
   and poe2db / poe2wiki (CC BY-NC-SA) before any snapshot is bundled; record
   in docs/decisions. ACCEPT: decision file with the ruling.
+  DONE 2026-11-16 (decision 0009): bundle nothing; repoe-fork PoE2 mods /
+  base_items / stats / stat_translations may be fetched at build time into
+  the user's sidecar Cache only; GGG tree export disabled until confirmed;
+  poe2db / wiki link-out only. Web fetch was refused this session, so the
+  ruling is conservative and rests on research 0005 (DATA-LICENSE-VERIFY).
+- [ ] DATA-LICENSE-VERIFY (data) With web access, read the repoe-fork
+  LICENSE.md, the repoe-fork.github.io/poe2 page and file names, poe2db's
+  disclaimer and the wiki copyright page; cite URL + date in decision 0009.
+  ACCEPT: every UNVERIFIED line in 0009 resolved or the source removed.
+  ZERO-CLICK: doc-only row, run by the data lane.
+- [ ] DATA-TREE-SRC (data) Confirm whether GGG publishes a PoE2 passive
+  tree export (repo, data-file URL, terms); if so enable
+  `SOURCES["skilltree"]` in server/al/theorycraft/snapshot.py and add its
+  host to ALLOWED_HOSTS. After DATA-LICENSE-VERIFY. ACCEPT: source enabled
+  with a mocked-fetch test, or recorded as absent. ZERO-CLICK: the next
+  build.ps1 run fetches it.
 
 ## Lane: review
 
 - [ ] UX-REVIEW (review) Glanceability review of dashboard and overlay
   (contrast, type scale, motion, phone width) against research 0008.
   ACCEPT: findings fixed or filed.
+- [ ] TEST-413-FLAKE (review) tests/test_tc_code_api.py::test_bad_inputs
+  intermittently fails with WinError 10053 on the oversized-body (413)
+  request: the server answers and closes before the client finishes
+  sending, so the client sees a reset instead of the 413. Seen 2026-11-16
+  by the data lane (passes on re-run). ACCEPT: the server drains or the
+  test tolerates a reset after a 413; 50 consecutive green runs.
+  ZERO-CLICK: fix lands with the suite, no manual step.
 - [ ] RES-POLICY (review) Re-read GGG's developer docs and ToU each patch
   cycle; update research 0001 and the CLAUDE.md floor if anything changed.
 
@@ -107,17 +130,35 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   build renders at desktop and phone width; no GGG art bundled.
   ZERO-CLICK: the view follows the loaded build and the live character's
   level / zone from Client.txt with no refresh button.
-- [ ] TC-JSON (build) Character JSON paste import (GGG reference Character
+- [x] TC-JSON (build) Character JSON paste import (GGG reference Character
   / Item types, PoE2 fields skills, passives.specialisations, runeMods) into
   the build model. After TC-CODE. ACCEPT: fixture JSON maps to the same
   model as its PoB code; unknown fields ignored, not fatal.
   ZERO-CLICK: format (code, URL, JSON) auto-detected; no import dialog.
-- [ ] TC-SNAP (data) Build-time snapshot tool: GGG poe2-skilltree-export
+  DONE 2026-11-16: server/al/theorycraft/charjson.py turns character JSON
+  into PoB build XML read by model.parse (same model, persists as a share
+  code); paste.py detects json / url / code; POST /api/build-code takes
+  {"code": text} of any format or {"character": {...}}, token checks
+  unchanged. Jewel socket placement needs tree data (not mapped).
+  tests/test_tc_json.py (synthetic CHAR_JSON vs JSON_TWIN_XML).
+- [x] TC-SNAP (data) Build-time snapshot tool: GGG poe2-skilltree-export
   plus the RePoE fork PoE2 mods / base_items / stats / stat_translations
   into the AL sidecar Cache with a manifest (URL, fetch date, sha256);
   attribution line in the UI. After DATA-LICENSE. ACCEPT: manifest written;
   no runtime fetch; tool idempotent.
   ZERO-CLICK: runs inside scripts/build.ps1, no manual step.
+  DONE 2026-11-16 (decision 0009): server/al/theorycraft/snapshot.py into
+  Cache\gamedata\ with manifest.json, AshLight/<version> User-Agent, 24 h
+  skip + ETag / sha256 no-op, https + host allowlist, offline never fatal;
+  build.ps1 step (opt-out -NoSnapshot / AL_NO_SNAPSHOT). Skilltree source
+  disabled (DATA-TREE-SRC); repoe-fork file names unverified until
+  DATA-LICENSE-VERIFY. ATTRIBUTION exposed; UI line is TC-SNAP-UI.
+  Mocked-fetch tests only (tests/test_tc_snap.py).
+- [ ] TC-SNAP-UI (build) Show snapshot.ATTRIBUTION (decision 0009) in the
+  dashboard footer / About and the overlay About wherever snapshot data is
+  used; expose it via an API field. After TC-SNAP. ACCEPT: text visible,
+  design-reviewer pass. ZERO-CLICK: shown automatically when the cache
+  exists.
 - [ ] TC-EVAL (build) Item evaluation phase 1: the clipboard item from the
   existing hotkey read (decision 0003, one read per press) scored by
   editable stat weights against the build's item in that slot; result on the

@@ -289,12 +289,16 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {"dismissed": n, "state": self.server.core.state.snapshot()})
 
     def _build_code(self):
-        """TC-CODE: load a pasted PoB2 build code (JSON {"code": text}).
-        Decoded locally; a share URL is recognized but never fetched."""
+        """TC-CODE / TC-JSON: load a pasted build (JSON {"code": text}, or a
+        character object {"character": {...}}). The format (PoB code, share
+        URL, character JSON) is auto-detected; decoded locally; a share URL
+        is recognized but never fetched."""
         body = self._read_json(MAX_BUILD_BODY)
         if body is None:
             return None
         code = body.get("code")
+        if code is None and isinstance(body.get("character"), dict):
+            code = json.dumps({"character": body["character"]})
         if not isinstance(code, str):
             return self._json(400, {"error": "code (string) required"})
         try:

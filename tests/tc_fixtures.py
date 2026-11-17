@@ -93,3 +93,99 @@ Example Bow
 \t</Items>
 </PathOfBuilding>
 """
+
+# TC-JSON: a synthetic character in the shape of GGG's reference Character /
+# Item types (PoE2 fields skills, passives.specialisations, runeMods), plus
+# the PoB build XML it must read as (JSON_TWIN_XML). Every value is invented;
+# unknown and wrongly typed fields are included on purpose.
+CHAR_JSON = {
+    "character": {
+        "id": "0123abcd",
+        "name": "ExampleHero",
+        "realm": "poe2",
+        "class": "Invoker",
+        "league": "Example League",
+        "level": 87,
+        "experience": 123456789,
+        "futureField": {"nested": [1, 2, 3]},
+        "passives": {
+            "hashes": [10, 20, 30, 40],
+            "hashes_ex": [],
+            "specialisations": {"set1": [50], "set2": [60, 20], "set3": "bad"},
+            "jewel_data": {},
+            "quest_stats": ["ignored"],
+        },
+        "equipment": [
+            {"id": "i1", "w": 2, "h": 2, "icon": "https://example.org/i.png",
+             "rarity": "Rare", "name": "Doom Grip", "typeLine": "Example Gloves",
+             "baseType": "Example Gloves", "ilvl": 80, "identified": True,
+             "inventoryId": "Gloves",
+             "runeMods": ["+10% to Fire Resistance"],
+             "explicitMods": ["+40 to maximum Life"]},
+            {"id": "i2", "frameType": 3, "name": "Example Unique",
+             "typeLine": "Example Quarterstaff", "inventoryId": "Weapon",
+             "gemSockets": ["S"], "desecrated": False},
+            {"id": "i3", "frameType": 0, "typeLine": "Example Potion",
+             "inventoryId": "MainInventory"},
+            "not-an-item",
+        ],
+        "jewels": [
+            {"id": "j1", "rarity": "Magic", "typeLine": "Example Jewel of the Test",
+             "x": 0},
+        ],
+        "skills": [
+            {"typeLine": "Example Strike", "support": False,
+             "properties": [{"name": "Level", "values": [["19", 0]]},
+                            {"name": "Quality", "values": [["+20%", 1]]}],
+             "socketedItems": [
+                 {"typeLine": "Example Support", "support": True,
+                  "properties": [{"name": "Level", "values": [["1", 0]]}]}]},
+            {"typeLine": "Example Aura",
+             "properties": [{"name": "Level", "values": [["15", 0]]}]},
+        ],
+        "metadata": {"version": "0.0.0"},
+    }
+}
+
+JSON_TWIN_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding2>
+\t<Build level="87" className="Monk" ascendClassName="Invoker"/>
+\t<Tree activeSpec="1">
+\t\t<Spec title="Imported" nodes="10,20,30,40,50,60"/>
+\t</Tree>
+\t<Skills>
+\t\t<Skill enabled="true">
+\t\t\t<Gem nameSpec="Example Strike" level="19" quality="20" enabled="true"/>
+\t\t\t<Gem nameSpec="Example Support" level="1" enabled="true"/>
+\t\t</Skill>
+\t\t<Skill enabled="true">
+\t\t\t<Gem nameSpec="Example Aura" level="15" enabled="true"/>
+\t\t</Skill>
+\t</Skills>
+\t<Items>
+\t\t<Item id="1">
+Rarity: RARE
+Doom Grip
+Example Gloves
+Item Level: 80
++10% to Fire Resistance
++40 to maximum Life
+</Item>
+\t\t<Item id="2">
+Rarity: UNIQUE
+Example Unique
+Example Quarterstaff
+</Item>
+\t\t<Item id="3">
+Rarity: NORMAL
+Example Potion
+</Item>
+\t\t<Item id="4">
+Rarity: MAGIC
+Example Jewel of the Test
+</Item>
+\t\t<Slot name="Gloves" itemId="1"/>
+\t\t<Slot name="Weapon 1" itemId="2"/>
+\t</Items>
+</PathOfBuilding2>
+"""
