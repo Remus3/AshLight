@@ -457,7 +457,8 @@ Generation rules:
      `Deaths: <n>.`, `Price movers: <name> up|down <n>%, ...` (top 3 by
      size); then `Session ended at <HH:MM> after 20 minutes with no game
      activity.` / `... when the game closed.` (date added for an older
-     card), polite live region
+     card); not a live region (not urgent, never announced; reachable via
+     its labelled `Last session` heading; keeps the 12-region cap)
    - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
      only, `Your build wears <base> in <slot>, so this finds rare items of
      that base.` (empty slot: `Your build has nothing in <slot>, so this
@@ -570,7 +571,8 @@ Natural use and context
 - N5: stale items expire by themselves with a stated time, or the review
   records why not.
 - N6: status changes announced politely (`role="status"` / `aria-live
-  ="polite"`), never assertively.
+  ="polite"`), never assertively. Exempt: the non-urgent last-session card
+  (`#summarybox`), which stays silent and is reached by its heading.
 
 Overlay
 - O1: no animation, transition, keyframes, blink or flash.
