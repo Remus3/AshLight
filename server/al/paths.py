@@ -131,6 +131,10 @@ def all_runtime_paths(environ=None):
     out["luajit_cache"] = out["cache"] / "luajit"  # LuaJIT source archive
     out["luajit_build"] = out["build"] / "luajit"  # LuaJIT source tree + luajit.exe
     out["tc_stamp"] = out["build"] / "tc-pins-stamp.json"
+    # decision 0026: optional pinned portable C toolchain (LuaJIT build only)
+    out["toolchain_cache"] = out["cache"] / "toolchain"
+    # TC-LIVE: PoB GUI reference values for the live bridge test (untracked)
+    out["tc_bridge_ref"] = out["cache"] / "tc_bridge" / "gui_expected.json"
     out["tc_bridge_log"] = out["logs"] / "tc-bridge.log"  # TC-BRIDGE stderr
     out["worktree"] = worktree_dir(environ)  # AUDIT-HYGIENE H4
     # the overlay's Electron profile (app/main.js, AL_SIDECAR_ROOT set by run.ps1)

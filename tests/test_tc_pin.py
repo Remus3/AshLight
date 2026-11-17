@@ -266,6 +266,98 @@ def test_http_stream_refuses_a_host_off_the_allowlist():
         next(tc_pin.http_stream("http://github.com/x.zip", 10))
 
 
+# --- decision 0026: the optional pinned portable toolchain ------------------
+
+TC_TAG = "16.2.0posix-14.0.0-ucrt-r9"
+TC_ASSET = "winlibs-x86_64-test.zip"
+
+
+def _toolchain(world):
+    blob = _zip("mingw64", {"bin/mingw32-make.exe": "m", "bin/gcc.exe": "g",
+                            "COPYING": "GPL"})
+    repo = "brechtsanders/winlibs_mingw"
+    world["doc"]["toolchain"] = {
+        "repo": repo, "tag": TC_TAG, "asset": TC_ASSET,
+        "archive_url": f"https://github.com/{repo}/releases/download/{TC_TAG}/{TC_ASSET}",
+        "archive_sha256": hashlib.sha256(blob).hexdigest(),
+        "archive_size": len(blob), "top_dir": "mingw64",
+    }
+    return blob
+
+
+def test_real_pin_file_toolchain_entry_is_well_formed():
+    doc = tc_pin.load_pins()
+    tc = doc["toolchain"]
+    assert tc_pin._validate_toolchain(tc) == []
+    assert tc["archive_url"].startswith("https://github.com/brechtsanders/winlibs_mingw/"
+                                        "releases/download/")
+    assert tc["asset"].endswith(".zip")  # stdlib zipfile only, never 7z / sfx
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda t: t.__setitem__("archive_url", "https://example.com/x.zip"),
+    lambda t: t.__setitem__("asset", "x.7z"),
+    lambda t: t.__setitem__("asset", "../x.zip"),
+    lambda t: t.__setitem__("top_dir", "../escape"),
+    lambda t: t.pop("archive_sha256"),
+    lambda t: t.__setitem__("archive_size", -1),
+])
+def test_malformed_toolchain_pin_refuses(world, mutate):
+    _toolchain(world)
+    mutate(world["doc"]["toolchain"])
+    assert any(p.startswith("toolchain:") for p in tc_pin.validate_pins(world["doc"]))
+
+
+def test_no_system_compiler_builds_with_the_pinned_toolchain(world, monkeypatch):
+    blob = _toolchain(world)
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+    tc_calls, seen = [], {}
+    monkeypatch.setenv("MSYSTEM", "MINGW64")  # must not leak into the build env
+
+    def tc_fetch(url, max_bytes):
+        tc_calls.append(url)
+        yield blob
+
+    def run(cmd, cwd=None, env=None, capture_output=None, timeout=None):
+        seen["cmd"], seen["env"] = cmd, env
+        lay["luajit_exe"].write_bytes(b"fake")
+
+        class R:
+            returncode = 0
+        return R()
+
+    assert tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler,
+                            run=run, toolchain_fetch=tc_fetch) == "ready"
+    assert tc_calls == [doc["toolchain"]["archive_url"]]
+    assert Path(seen["cmd"][0]) == lay["toolchain_bin"] / "mingw32-make.exe"
+    assert seen["cmd"][1:] == ["BUILDMODE=static"]
+    assert seen["env"]["PATH"].split(";")[0] == str(lay["toolchain_bin"])
+    assert "MSYSTEM" not in seen["env"] and "TERM" not in seen["env"]
+    # everything inside the AL sidecar Cache
+    assert lay["toolchain_root"].is_relative_to(world["root"] / "Cache")
+    # a second toolchain use is a no-op (marker), no refetch
+    assert tc_pin.ensure_toolchain(doc, lay, fetch=None) == lay["toolchain_bin"]
+
+
+def test_system_compiler_wins_over_the_pinned_toolchain(world):
+    _toolchain(world)
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+
+    def no_tc(url, max_bytes):
+        raise AssertionError("system compiler present; toolchain never fetched")
+
+    assert tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_which_cl,
+                            run=_fake_build(lay), toolchain_fetch=no_tc) == "ready"
+
+
+def test_toolchain_hosts_only_widen_for_the_toolchain():
+    with pytest.raises(tc_pin.webfetch.UrlNotAllowed):
+        next(tc_pin.http_stream("https://release-assets.githubusercontent.com/x", 10))
+    assert "release-assets.githubusercontent.com" in tc_pin.TOOLCHAIN_HOSTS
+
+
 def test_setup_ps1_wires_the_opt_in_step():
     text = (ROOT / "scripts" / "setup.ps1").read_text(encoding="ascii")
     assert "[switch]$TcCalc" in text

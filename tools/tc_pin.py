@@ -15,8 +15,11 @@ What it does, all under the AL sidecar (server/al/paths.py):
 - extracts with a path guard (every member under the pinned top dir, no
   absolute / drive / parent / symlink member): PoB into Cache\\pob2\\, LuaJIT
   source into Build\\luajit\\;
-- builds luajit.exe from the verified LuaJIT source only when a compiler is
-  on PATH (MSVC cl via msvcbuild.bat, else MinGW); without one it reports
+- builds luajit.exe from the verified LuaJIT source with a compiler on PATH
+  (MSVC cl via msvcbuild.bat, else MinGW); without one it falls back to the
+  OPTIONAL pinned portable toolchain (decision 0026: a WinLibs MinGW-w64
+  release .zip, SHA-256 + size pinned, fetched into Cache\\toolchain\\ only,
+  on PATH only inside the build subprocess); without either it reports
   "source-only" and the core keeps working (the component is optional);
 - writes Build\\tc-pins-stamp.json; a re-run with the same pins and the
   outputs present is a no-op with no network request.
@@ -50,6 +53,11 @@ from server.al import exepin, paths, webfetch  # noqa: E402
 
 COMPONENTS = ("pob2", "luajit")
 ALLOWED_HOSTS = ("github.com", "codeload.github.com")
+# Decision 0026: a GitHub release asset redirects to its asset host.
+TOOLCHAIN = "toolchain"
+TOOLCHAIN_HOSTS = ALLOWED_HOSTS + ("release-assets.githubusercontent.com",
+                                   "objects.githubusercontent.com")
+TOOLCHAIN_TOP = "mingw64"
 MAX_REDIRECTS = 3
 TIMEOUT_S = 60.0
 CHUNK = 1024 * 1024
@@ -67,6 +75,8 @@ _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _TAG = re.compile(r"^v\d+\.\d+\.\d+$")
 _LJVER = re.compile(r"^2\.1\.\d+$")
+_RELTAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$")
+_ASSET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+-]{0,200}\.zip$")
 
 
 class PinError(Exception):
@@ -119,6 +129,37 @@ def validate_pins(doc):
             out.append(f"{name}: missing")
             continue
         out.extend(f"{name}: {p}" for p in _validate_spec(name, spec))
+    if TOOLCHAIN in doc:  # optional (decision 0026)
+        spec = doc[TOOLCHAIN]
+        if not isinstance(spec, dict):
+            out.append(f"{TOOLCHAIN}: not an object")
+        else:
+            out.extend(f"{TOOLCHAIN}: {p}" for p in _validate_toolchain(spec))
+    return out
+
+
+def _validate_toolchain(spec):
+    """The portable build toolchain pin: a GitHub release .zip asset."""
+    out = []
+    repo, tag, asset = spec.get("repo"), spec.get("tag"), spec.get("asset")
+    if not isinstance(repo, str) or not _REPO.match(repo):
+        out.append("repo missing or malformed")
+    if not isinstance(tag, str) or not _RELTAG.match(tag):
+        out.append("tag missing or malformed")
+    if not isinstance(asset, str) or not _ASSET.match(asset):
+        out.append("asset must be a plain .zip file name")
+    sha = spec.get("archive_sha256")
+    if not isinstance(sha, str) or not _HEX64.match(sha):
+        out.append("archive_sha256 must be 64 lower-case hex")
+    size = spec.get("archive_size")
+    if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
+        out.append("archive_size must be a positive integer")
+    if not out:
+        want = f"https://github.com/{repo}/releases/download/{tag}/{asset}"
+        if spec.get("archive_url") != want:
+            out.append("archive_url must be the github release download URL")
+    if spec.get("top_dir") != TOOLCHAIN_TOP:
+        out.append(f"top_dir must be {TOOLCHAIN_TOP}")
     return out
 
 
@@ -185,6 +226,11 @@ def layout(doc, environ=None):
         "luajit_exe": lj_src / "src" / "luajit.exe",
         "stamp": p["tc_stamp"],
         "temp": p["temp"],
+        # decision 0026: the optional portable build toolchain
+        "toolchain_cache": p["toolchain_cache"],
+        "toolchain_archive": p["toolchain_cache"] / "toolchain.zip",
+        "toolchain_root": p["toolchain_cache"] / TOOLCHAIN_TOP,
+        "toolchain_bin": p["toolchain_cache"] / TOOLCHAIN_TOP / "bin",
     }
 
 
@@ -209,14 +255,14 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def http_stream(url, max_bytes):
+def http_stream(url, max_bytes, hosts=ALLOWED_HOSTS):
     """Yield the body of url in chunks. Redirects are followed by hand, each
-    hop checked against ALLOWED_HOSTS (https, no userinfo, port 443); the
+    hop checked against hosts (default ALLOWED_HOSTS) (https, no userinfo, port 443); the
     body is cut off past max_bytes. No cookie is ever sent."""
     headers = {"User-Agent": webfetch.user_agent(UA_PURPOSE), "Accept": "*/*"}
     opener = urllib.request.build_opener(_NoRedirect())
     for _ in range(MAX_REDIRECTS + 1):
-        webfetch.check_url(url, ALLOWED_HOSTS)
+        webfetch.check_url(url, hosts)
         req = urllib.request.Request(url, headers=headers, method="GET")
         try:
             resp = opener.open(req, timeout=TIMEOUT_S)
@@ -333,7 +379,7 @@ def ensure_extracted(name, spec, archive, parent):
     os.replace(tmp / top, target)
     shutil.rmtree(tmp, ignore_errors=True)
     (target / MARKER).write_text(json.dumps({
-        "component": name, "commit": spec["commit"],
+        "component": name, "commit": spec.get("commit") or spec.get("tag"),
         "archive_sha256": spec["archive_sha256"]}, sort_keys=True) + "\n", encoding="ascii")
     log(f"{name}: extracted")
     return target, True
@@ -359,7 +405,46 @@ def build_plan(which=None, environ=None):
     return None
 
 
-def ensure_luajit(lay, which=None, run=subprocess.run, environ=None):
+def toolchain_env(bin_dir, temp):
+    """A minimal build env for the pinned toolchain: its bin first, then the
+    Windows system dirs only. No MSYS / Git-for-Windows shell or TERM leaks
+    in (LuaJIT's Makefile would then take the POSIX host path), and nothing
+    outside this subprocess sees the PATH change (decision 0026)."""
+    root = os.environ.get("SystemRoot") or os.environ.get("SYSTEMROOT") or "C" + ":\\Windows"
+    env = {k: os.environ[k] for k in ("SystemDrive", "COMSPEC", "PATHEXT",
+                                      "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE",
+                                      "USERPROFILE", "LOCALAPPDATA")
+           if k in os.environ}
+    env["SystemRoot"] = root
+    env["OS"] = "Windows_NT"
+    env["PATH"] = os.pathsep.join([str(bin_dir), str(Path(root) / "System32"), root])
+    env["TEMP"] = env["TMP"] = str(temp)
+    return env
+
+
+def toolchain_plan(bin_dir):
+    """The MinGW build command from the pinned toolchain, or None."""
+    make, gcc = Path(bin_dir) / "mingw32-make.exe", Path(bin_dir) / "gcc.exe"
+    if make.is_file() and gcc.is_file():
+        return [str(make), "BUILDMODE=static"]
+    return None
+
+
+def ensure_toolchain(doc, lay, fetch=None):
+    """Fetch, verify and extract the pinned portable toolchain (decision
+    0026). Returns its bin dir. Raises like the other components."""
+    spec = doc[TOOLCHAIN]
+    marker = read_marker(lay["toolchain_root"])
+    if marker and marker.get("archive_sha256") == spec["archive_sha256"]:
+        log(f"{TOOLCHAIN}: extracted tree present (no-op)")
+    else:
+        fetch = fetch or (lambda url, n: http_stream(url, n, TOOLCHAIN_HOSTS))
+        path, _ = ensure_archive(TOOLCHAIN, spec, lay["toolchain_archive"], fetch)
+        ensure_extracted(TOOLCHAIN, spec, path, lay["toolchain_cache"])
+    return lay["toolchain_bin"]
+
+
+def ensure_luajit(lay, which=None, run=subprocess.run, environ=None, toolchain=None):
     """'ready' when luajit.exe exists AND matches the SHA-256 recorded when
     this step built it (built now or before), 'source-only' when no compiler
     is available. An existing luajit.exe without a matching record is not
@@ -372,12 +457,21 @@ def ensure_luajit(lay, which=None, run=subprocess.run, environ=None):
     if exe.is_file():
         log("luajit: luajit.exe present but not recorded by this step; not trusted")
     plan = build_plan(which, environ)
+    env = None
+    if plan is None and toolchain is not None:
+        log("luajit: no compiler on PATH; using the pinned portable toolchain")
+        bin_dir = toolchain()
+        plan = toolchain_plan(bin_dir)
+        if plan is None:
+            raise RuntimeError("pinned toolchain lacks mingw32-make.exe / gcc.exe")
+        env = toolchain_env(bin_dir, lay["temp"])
     if plan is None:
         log("luajit: no compiler on PATH (MSVC cl or MinGW gcc); source verified, "
             "build skipped. Re-run setup from a Developer PowerShell to build it.")
         return "source-only"
-    env = dict(os.environ if environ is None else environ)
-    env["TEMP"] = env["TMP"] = str(lay["temp"])
+    if env is None:
+        env = dict(os.environ if environ is None else environ)
+        env["TEMP"] = env["TMP"] = str(lay["temp"])
     log(f"luajit: building with {Path(plan[0]).name}")
     r = run(plan, cwd=str(lay["luajit_source"] / "src"), env=env,
             capture_output=True, timeout=1800)
@@ -430,7 +524,8 @@ def opted_in(switch, local_cfg):
     return bool(switch) or local_cfg.get(OPT_IN_KEY) is True
 
 
-def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run):
+def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run,
+              toolchain_fetch=None):
     """Fetch, verify, extract and (when possible) build. Returns the status
     'noop', 'ready' or 'source-only'."""
     lay = layout(doc, environ)
@@ -447,7 +542,12 @@ def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run):
             continue
         path, _ = ensure_archive(name, spec, lay[archive], fetch)
         ensure_extracted(name, spec, path, lay[parent])
-    status = ensure_luajit(lay, which=which, run=run, environ=environ)
+    toolchain = None
+    if TOOLCHAIN in doc:
+        def toolchain():
+            return ensure_toolchain(doc, lay, toolchain_fetch)
+    status = ensure_luajit(lay, which=which, run=run, environ=environ,
+                           toolchain=toolchain)
     write_stamp(doc, lay, status)
     log(f"tc calc component: {status} (PoB-PoE2 {doc['pob2']['tag']}, "
         f"LuaJIT {doc['luajit']['version']})")

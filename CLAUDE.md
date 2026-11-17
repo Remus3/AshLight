@@ -429,3 +429,8 @@ them. Pause: `ops/loop/control/HALT`.
 - HUD-ACT-RESUME: act splits rebuild at core start from the current game
   run's area generations in Client.txt, no persisted state (decision 0023).
   Reverses if: decision 0008 reverses or GGG drops the area generation line.
+- LuaJIT for the optional calc builds with a system compiler, else a
+  hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
+  Cache on -TcCalc only, PATH set only in the build subprocess, never
+  vendored (decision 0026). Reverses if: WinLibs drops .zip assets, a
+  license objection appears, or LuaJIT ships hashed Windows binaries.

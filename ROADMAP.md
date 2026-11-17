@@ -174,6 +174,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   percent; tests skip cleanly when the component is absent.
   ZERO-CLICK: the bridge starts on first need and restarts itself on a crash.
   AUDIT pass 2: ACCEPT not met (live tests skip); see AUDIT-TC-BRIDGE-LIVE.
+  TC-LIVE 2026-11-17: ACCEPT met (bridge = pinned GUI within 0.1 percent).
 - [x] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the -- done 2026-11-17 (loop; refute 0/3 PASS)
   clipboard item vs the equipped one, and per-mod weights from PoB deltas
   (offence and EHP) feeding TC-UPGRADE in place of hand weights. After
@@ -646,15 +647,25 @@ merge. Each row names the finding ids it closes.
   `result:` paragraph in the lane commit and the main merge commit; the
   build prompt asks for it. tests/test_audit_loop_commit_msg.py.
 
-- [ ] AUDIT-TC-BRIDGE-LIVE (review) Pass 2 finding P2-C1 (medium, claim
+- [x] AUDIT-TC-BRIDGE-LIVE (review) Pass 2 finding P2-C1 (medium, claim -- done 2026-11-17 (TC-LIVE)
   re-opened): TC-BRIDGE was flipped done but its ACCEPT ("outputs on a
   fixture build match PoB GUI within 0.1 percent") never ran -
   tests/test_tc_bridge.py live tests skip (no luajit.exe: no compiler on
   this machine; no gui_expected.json). Only the fake-bridge protocol tests
-  ran. ACCEPT: the live 0.1 percent test passes once (no skip). BLOCKED:
-  operator act (a Developer PowerShell / MSVC or MinGW for setup.ps1
-  -TcCalc, and PoB GUI sidebar values for one build).
+  ran. ACCEPT: the live 0.1 percent test passes once (no skip).
   ZERO-CLICK: the live tests run by themselves once both exist.
+  result: operator act i replaced by decision 0026 (hash-pinned WinLibs
+  MinGW-w64 .zip in the sidecar Cache, used only when no system compiler).
+  setup.ps1 -TcCalc built luajit.exe (static) and read back ready / no-op.
+  The real component exposed two bridge.lua bugs, fixed: PoB's '#@' first
+  line no longer loads under current LuaJIT, and the pinned HeadlessWrapper
+  keeps mainObject local. Reference: public pobb.in build Nqt6FK5lIc6F
+  opened in the pinned v0.23.1 GUI; 17 sidebar outputs (TotalDPS 27729.4,
+  CombinedDPS 27739.3, FullDPS 39265.0, TotalEHP 32072, Life 1887, ES 1738,
+  Evasion 19583, ...) match the bridge within 0.1 percent (largest gap
+  0.024 percent, CritChance display rounding). The reference sits untracked
+  in the sidecar Cache\tc_bridge (owner not asked); the live tests read it
+  via paths.py and still skip on machines without it.
 - [ ] AUDIT-TC-WIRE (build) Pass 2 finding P2-C2 (medium): TC-DELTA is not
   wired - core.tc_calc is always None (core.py "TC-BRIDGE sets it", but no
   code does) and no adapter maps Bridge (load_build / set_item / outputs)
