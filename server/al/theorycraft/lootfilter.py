@@ -208,6 +208,11 @@ REFUSED_TEXT = {
                 "it again.",
     "not_text": "That file has characters a loot filter can't hold. Pick your own .filter "
                 "file.",
+    # AREA-AUDIT P5-5: a hand-edited file kept the start line but lost the end
+    # line; stripping to the end of the file would delete the player's filter
+    "no_end": "That filter has the AshLight start line but no end line, so AshLight "
+              "can't tell where its part stops. Pick your original filter, or delete "
+              "the AshLight lines at the top and pick it again.",
 }
 
 
@@ -249,7 +254,7 @@ def _strip_old_section(body):
         return body
     i = body.find(b"\n" + end)
     if i < 0:
-        return body
+        raise MergeRefused("no_end")  # AREA-AUDIT P5-5: never stack a second one
     j = body.find(b"\n", i + 1 + len(end))
     return b"" if j < 0 else body[j + 1:]
 
