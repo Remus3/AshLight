@@ -60,7 +60,8 @@ def test_parse_advanced_crlf_ring():
 
 def test_parse_magic_unique_and_flavour():
     boots = item_parser.parse(MAGIC_BOOTS)
-    assert boots.name is None and boots.base == "Swift Example Boots of Warmth"
+    # MATH-MAGIC-BASE: the name line is the name, the base is stripped
+    assert boots.name == "Swift Example Boots of Warmth" and boots.base == "Example Boots"
     staff = item_parser.parse(UNIQUE_STAFF)
     assert (staff.name, staff.base) == ("Example Unique", "Example Quarterstaff")
     assert [m.text for m in staff.mods] == ["+1 to Level of all Melee Skills",

@@ -97,6 +97,15 @@
     </div>
     <div id="eval-comps" class="eval-comps"></div>
     <p id="eval-unweighted" class="muted" hidden></p>
+    <!-- MATH-VALUE-UI: the item's own listed price against its points;
+         outside the live region, the verdict above already announces -->
+    <div id="valuebox" class="price-box" hidden>
+      <h3 class="sub-h">Price and points</h3>
+      <p id="value-sentence"></p>
+      <p id="value-per" hidden></p>
+      <p id="value-stale" class="muted" hidden></p>
+      <p id="value-credit" class="muted" hidden></p>
+    </div>
     <p id="eval-when" class="muted"></p>
     <!-- TC-UPGRADE: outside the live region on purpose; the verdict above
          already announces the check, this is a static link (review UP-5) -->

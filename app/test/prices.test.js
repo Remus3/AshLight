@@ -242,3 +242,55 @@ test("price movers: words not colour, hidden while web data is off", () => {
   assert.equal(flat.up[0].change, "no change");
   assert.equal(flat.down[0].change, "no change");
 });
+
+/* MATH-VALUE-UI: the item check's value doc (MATH-VALUE) -> card words */
+const VALUE = {
+  price: { kind: "price", amount: 4, currency: "exalted", name: "Exalted Orb" },
+  primary: "divine", primary_name: "Divine Orb", price_primary: 0.01,
+  score_per_primary: 2500, stale: false, credit: "Prices: poe.ninja"
+};
+
+test("value view: listed price, its primary value and points per unit", () => {
+  assert.deepEqual(p.valueView(VALUE), {
+    sentence: "Asking price: 4 Exalted Orb, about 0.01 Divine Orb.",
+    per: "2,500 points per Divine Orb.",
+    stale: "",
+    credit: "Prices: poe.ninja"
+  });
+  const bo = p.valueView(Object.assign({}, VALUE, {
+    price: { kind: "b/o", amount: 0.5, currency: "divine", name: "Divine Orb" },
+    price_primary: 0.5, score_per_primary: 1, stale: true }));
+  assert.equal(bo.sentence, "Buyout price: 0.5 Divine Orb.");
+  assert.equal(bo.per, "1 point per Divine Orb.");
+  assert.equal(bo.stale, "These currency values may be out of date.");
+});
+
+test("value view: no rates or no rate for the currency say so honestly", () => {
+  const none = p.valueView({ price: { kind: "price", amount: 4, currency: "exalted",
+    name: "exalted" }, primary: null, primary_name: null, price_primary: null,
+    score_per_primary: null, stale: true, credit: null });
+  assert.equal(none.sentence, "Asking price: 4 Exalted. No currency values are saved yet, " +
+    "so AshLight can't compare the item's price with its points.");
+  assert.equal(none.per, "");
+  assert.equal(none.stale, "");
+  assert.equal(none.credit, "");
+  const miss = p.valueView(Object.assign({}, VALUE, { price: { kind: "price", amount: 3,
+    currency: "regal", name: "regal" }, price_primary: null, score_per_primary: null }));
+  assert.equal(miss.sentence, "Asking price: 3 Regal. There is no saved value for Regal yet, " +
+    "so AshLight can't compare the item's price with its points.");
+  assert.equal(miss.credit, "");
+  const neg = p.valueView(Object.assign({}, VALUE, { score_per_primary: -120.5 }));
+  assert.equal(neg.per, "-121 points per Divine Orb.");
+});
+
+test("value view: null for no doc or a malformed price", () => {
+  assert.equal(p.valueView(null), null);
+  assert.equal(p.valueView("x"), null);
+  assert.equal(p.valueView({}), null);
+  for (const bad of [0, -1, NaN, Infinity, "4"]) {
+    assert.equal(p.valueView(Object.assign({}, VALUE, {
+      price: Object.assign({}, VALUE.price, { amount: bad }) })), null, String(bad));
+  }
+  assert.equal(p.valueView(Object.assign({}, VALUE, {
+    price: Object.assign({}, VALUE.price, { currency: "" }) })), null);
+});

@@ -459,6 +459,16 @@
     $("eval-unweighted").hidden = !(v && v.unweighted);
     $("eval-unweighted").textContent = v ? v.unweighted : "";
     $("eval-when").textContent = v ? v.when : "";
+    // MATH-VALUE-UI: the item's Note price against its points, from the
+    // rates the core already has; nothing when the item has no note price
+    var val = v && ev ? P.valueView(ev.value) : null;
+    $("valuebox").hidden = !val;
+    [["value-sentence", "sentence"], ["value-per", "per"], ["value-stale", "stale"],
+     ["value-credit", "credit"]].forEach(function (f) {
+      var node = $(f[0]);
+      node.textContent = val ? val[f[1]] : "";
+      if (f[0] !== "value-sentence") { node.hidden = !(val && val[f[1]]); }
+    });
     // TC-UPGRADE (decision 0017): the player's click opens the upgrade
     // search in their browser; AshLight never opens or fetches it
     var up = v && ev ? P.upgradeView(ev.upgrade) : null;

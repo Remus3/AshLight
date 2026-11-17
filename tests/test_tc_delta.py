@@ -257,8 +257,14 @@ def test_live_reruns_with_the_calc_and_without():
     assert card["upgrade"]["weights"]["source"] == "pob"
     n = len(calc.calls)
     last.rerun()  # build or weights change: recompute, no click
-    assert len(calc.calls) == 2 * n
+    # MATH-WEIGHTS: the per-mod probes are cached for this build, so the
+    # rerun needs only the base and the item-delta runs
+    assert len(calc.calls) == n + 2
     last.calc = lambda: None  # component switched off
+    last.rerun()
+    # MATH-WEIGHTS: this build's PoB weights still score it, with the notice
+    assert st.eval["calc"] == {"source": "pob_cached", "notice": "off"}
+    last.pob_weights.clear()
     last.rerun()
     assert st.eval["calc"] == {"source": "weights", "notice": "off"}
 

@@ -123,6 +123,15 @@ test("eval view: TC-DELTA calc line and the PoB uncounted wording", () => {
   assert.equal(v.evalView({ id: 3, ok: true, at: 0, text: { calc: 5 } }).calc, "");
 });
 
+test("eval view: MATH-WEIGHTS cached Path of Building weights wording", () => {
+  const c = v.evalView({ id: 4, ok: true, verdict: "upgrade", at: 0,
+    calc: { source: "pob_cached", notice: "off" }, unweighted: ["+# to Example"],
+    text: { sentence: "s", item: "i", comparisons: [], calc: "Scored with the stat weights." } });
+  assert.equal(c.unweighted,
+    "Not counted (Path of Building has not measured these for this build yet): +N to Example.");
+  assert.equal(c.calc, "Scored with the stat weights.");
+});
+
 test("weights: rows sorted; the PUT document drops blanks", () => {
   assert.deepEqual(v.weightRows({ weights: { b: 1, "+#% to A": 2 } }),
     [{ key: "+#% to A", label: "+N% to A", weight: 2 }, { key: "b", label: "b", weight: 1 }]);
