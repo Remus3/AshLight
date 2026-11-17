@@ -1,0 +1,56 @@
+/* Overlay HUD. The overlay cannot load /tokens.css from the core under its
+   strict file:// CSP, so the few colours here mirror the kit's dark theme
+   values (ops/fleet_kit/tokens.json themes.dark / status.dark). No
+   animation, no transition: a frame is drawn only when text changes. */
+
+:root {
+  --fk-surface: #0f1216;
+  --fk-text: #e4e8ec;
+  --fk-text-muted: #99a1aa;
+  --fk-border: #323840;
+  --fk-status-bad: #f0605a;
+  --fk-status-warn: #d19a2a;
+}
+
+* { animation: none !important; transition: none !important; }
+
+html, body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+.hud {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--fk-border);
+  border-radius: 6px;
+  /* Surface at ~80 percent so the game shows through a little. */
+  background: rgba(15, 18, 22, 0.8);
+  color: var(--fk-text);
+  font: 600 15px/1.3 system-ui, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px #000;
+  max-width: 258px;
+}
+
+.row { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zone { font-size: 16px; }
+.timer { color: var(--fk-text-muted); margin-left: 4px; }
+.sep { color: var(--fk-text-muted); }
+.status { color: var(--fk-status-warn); margin-left: 6px; font-size: 13px; }
+.hud[data-status="live"] .status { display: none; }
+
+/* The disclaimer is the overlay's "About"; screen readers get it, the HUD
+   stays one small box. */
+.about {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  margin: -1px;
+}

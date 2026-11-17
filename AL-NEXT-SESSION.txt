@@ -1,0 +1,25 @@
+AL NEXT SESSION
+---------------
+SESSION: 1   (FLEET item 13 counter; /done writes n+1)
+
+Next action: work ROADMAP.md top open row (LIVE-1: run the core against the
+real Client.txt with the game running, confirm zone / level / death / whisper
+events against docs/research/0002-client-log.md and record each UNVERIFIED
+line pattern as verified or corrected).
+
+Carried forward (not acted on yet):
+- OPERATOR: create the GitHub remote when ready to publish (the pre-push hook
+  refuses every push until then; the AL_ALLOW_PUSH override is documented
+  in .githooks/pre-push). Nothing else needs the operator.
+- NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT) at
+  kit v32; MAIN roster code AL, ports 8960-8979, sidecar E:\Sidecars\AL.
+- NOTE: the headless lane loop is copied and tested but NOT armed (ROADMAP
+  LOOP-ARM).
+
+Context: CLAUDE.md (ToS floor, sidecar rule), docs/decisions/0001-0003,
+docs/research/README.md, ROADMAP.md.
+Acceptance: per ROADMAP row.
+Do NOT redo: research set 0001-0008, stack decision, scaffold (initial commit).
+In flight: none.
+Status: initial commit; gates green at creation (see git log -1 body).
+Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.

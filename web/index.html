@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>AshLight</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/web/app.css">
+<script src="/web/app.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <h1 class="brand">AshLight</h1>
+  <p id="reading" class="pill" data-state="idle" role="status" aria-live="polite">
+    <span class="glyph" aria-hidden="true">[-]</span>
+    <span class="word">not reading Client.txt</span>
+  </p>
+  <p id="link" class="pill" data-state="pending" role="status">
+    <span class="glyph" aria-hidden="true">[ ]</span>
+    <span class="word">connecting</span>
+  </p>
+</header>
+
+<main>
+  <section id="consent" class="card consent" hidden aria-labelledby="consent-title">
+    <h2 id="consent-title">Allow AshLight to read Client.txt?</h2>
+    <p>AshLight reads the game's log file, read only, while it runs:</p>
+    <p class="path"><code id="consent-path">Client.txt (not found yet)</code></p>
+    <p>From it AshLight shows your current zone and time in it, character level,
+      deaths this session, whispers and trade requests. Nothing leaves this
+      computer, and AshLight never touches the game or sends it any input.
+      You can stop it at any time.</p>
+    <div class="actions">
+      <button id="consent-yes" type="button">Allow reading Client.txt</button>
+    </div>
+    <p id="consent-error" class="error" hidden></p>
+  </section>
+
+  <section class="stats" aria-label="Session at a glance">
+    <div class="stat stat-zone">
+      <h2 class="label">Zone</h2>
+      <p id="zone" class="value">-</p>
+      <p class="sub"><span id="zone-time" class="mono">--:--</span>
+        <span id="hideout" class="tag" hidden>hideout</span></p>
+    </div>
+    <div class="stat">
+      <h2 class="label">Level</h2>
+      <p id="level" class="value mono">-</p>
+      <p id="who" class="sub">character unknown</p>
+    </div>
+    <div class="stat">
+      <h2 class="label">Deaths this session</h2>
+      <p id="deaths" class="value mono">0</p>
+      <p id="levelups" class="sub">0 level-ups</p>
+    </div>
+    <div class="stat">
+      <h2 class="label">Session</h2>
+      <p id="session" class="value mono">0:00</p>
+      <p id="flags" class="sub">&nbsp;</p>
+    </div>
+  </section>
+
+  <section class="card events" aria-labelledby="events-title">
+    <h2 id="events-title">Recent</h2>
+    <ol id="events" class="event-list"></ol>
+    <p id="events-empty" class="muted">No events yet.</p>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
+  <p class="muted">Path of Exile is a trademark of Grinding Gear Games.
+    <button id="consent-no" type="button" class="link" hidden>Stop reading Client.txt</button></p>
+</footer>
+</body>
+</html>

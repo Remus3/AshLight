@@ -1,0 +1,600 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 the operator - the kit's owner and sole copyright holder. See NOTICE.
+"""Fleet kit v23 - STATUS BOARD (FLEET-COMMON 18): the per-tree LOCAL board.
+Vendored byte-for-byte at ops/fleet_kit/ and pinned by MANIFEST.json. Do NOT
+edit a vendored copy: report the defect to MAIN.
+
+v23 (operator order 2026-10-25): the board is LOCAL ONLY. No claude.ai
+artifact, no Artifact upload, no ArtifactData update, no board URL. Why: the
+operator views the board locally; the artifact push wasted tokens. Nothing
+this helper prints is a tool call.
+
+    python ops/fleet_kit/fleet_board.py render --session <n> < checklist.txt
+       -> writes <main checkout>/ops/loop/control/board/status.json,
+          state.json and board.html; prints {"rendered", "file", "html", "rows"}
+
+status.json is a JSON array of rows
+
+    {"id", "group": running|operator|next|done, "seq", "task", "state", "detail"}
+
+and board.html is a static, self-contained page (no script, no network, light
+and dark, re-read every 60 s by an open browser tab) built from the same
+rows. Open board.html in any browser. Rendering is deterministic from the
+item-13 session checklist (the text the session already printed, or
+progress-file "checklist" rows) plus this tree's running progress files - no
+model composition. A session renders only at session start, at the
+every-4-completions reprint and at /done (`render --final`), never per step.
+A headless run never renders: render prints {"rendered": false, "reason":
+"headless"} and writes nothing.
+
+Tasks that were open at the last render and are gone now, and not named past
+the cap, move to "done", in completion order; a new session number starts a
+fresh done list.
+
+`calls` is kept for a tree whose /done still names it (v19-v22): it renders
+the same files and prints one line `board: <board.html> (local only, nothing
+to push)`. `pushed` and `account` are kept as no-ops that print one line.
+ops/status_board.json is no longer read except its optional "code" (the
+page title) and, from v32, "opt_in".
+
+v26: task IDs up to ID_MAX (48) chars, shared with fleet_checklist (VW FIX
+0612: a 17+ char ID was silently dropped); a box line that is not a task row
+and not the /done box FAILS LOUDLY (exit 2, nothing written); a non-empty
+checklist that parses to no task and no /done box is refused and leaves
+state.json untouched (KIT-BOARD-EMPTY - stdin is read as UTF-8 bytes, so a
+cp1252 console no longer turns the box into mojibake); `--final` moves only
+the rows passed as done (state done) to done and keeps every carried row
+open (RC 2128 item 4); the page gains a Lanes card from fleet_lanes status
+(holders + queue, local board only; KIT-BOARD-LANES).
+
+Standalone: imports nothing from the rest of the kit at import time (the
+Lanes card loads the sibling fleet_lanes.py by path, and a failure there only
+drops the card). ASCII source.
+
+v30 (KIT-CHECKLIST-CAPS (c), ruling docs/rulings/2026-11-08-kit-checklist-caps.md):
+parse_checklist_full() also returns the kit's overflow line `(+<N> more past
+the 20-row cap: <IDs>)` as {"count", "ids"} (a cut list drops its partial last
+id); parse_checklist() keeps its 2-tuple. build(..., over_ids, over_count): a
+prev-open row absent now but named past the cap stays open; when the list was
+cut (count above the ids given) NO absent row is inferred done on that render.
+A row passed as done still moves (v26). The page shows one "next" line, `+N
+more past the 20-row cap`. --progress reads "checklist_more" the same way.
+
+v32 (KIT-BOARD-OPT-IN, operator order 2026-11-16: "each repo does not need to
+have the status board update unless opted in"): rendering is OPT-IN per tree.
+The signal is `"opt_in": true` (the JSON literal true, nothing else) in the
+tree's own tracked ops/status_board.json, read from the MAIN checkout of
+--root. Without it every render / calls is a SILENT no-op: rc 0, nothing
+printed, nothing read from stdin, nothing written - so a /done or hook that
+calls it never fails or prints. render() returns {"rendered": False,
+"reason": "not opted in"}. `pushed` and `account` are unchanged.
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+
+CONFIG_REL = Path("ops") / "status_board.json"
+STATE_REL = Path("ops") / "loop" / "control" / "board"
+PROGRESS_REL = Path("ops") / "loop" / "control" / "progress"
+HTML_NAME = "board.html"
+REFRESH_S = 60
+GROUPS = ("running", "operator", "next", "done")
+DONE_KEEP = 30
+PROGRESS_MAX_AGE_S = 6 * 3600
+TEXT_MAX = 160
+ID_MAX = 48  # v26: = fleet_checklist.ID_MAX (VW FIX 0612)
+_LINE = re.compile(r"^(?:\u2610|\[ \])\s+\+?([A-Za-z0-9][A-Za-z0-9._-]{0,"
+                   + str(ID_MAX - 1) + r"}):\s+(.+?)\s*$")
+_BOX = re.compile(r"^(?:\u2610|\[ \])")
+_DONE_BOX = re.compile(r"^(?:\u2610|\[ \])\s+/done\b")
+_DONE_STATES = ("done", "complete", "completed")
+_TAIL = re.compile(r"^(.*?)\s+\(([^()]*)\)$")
+_HEAD = re.compile(r"^Session\s+(\d+)\s+checklist")
+_OVER = re.compile(r"^\(\+(\d+) more past the (\d+)-row cap: (.*)\)$")
+OVER_ROW_ID = "+more"  # never a task id: ids are [A-Za-z0-9._-]
+ROWS_CAP = 20  # = fleet_checklist.ROWS_MAX
+# v20 (CHECKLIST-ETA-CLOCK): `38% ~20m of 32m [2:27PM]` is the ETA part too.
+_CLOCK = re.compile(r"^(?:\d{1,3}% ~|started \d{1,2}:\d{2}[AP]M - )")
+_OPERATOR = re.compile(r"\b(operator|you|waiting)\b", re.I)
+_BLOCKED = re.compile(r"\bblocked\b", re.I)
+
+
+def is_headless(environ=None):
+    """True inside a fleet_headless child: the spawn helper sets
+    FLEET_SUBAGENT_FIRST=off and disables background tasks."""
+    env = os.environ if environ is None else environ
+    return (env.get("FLEET_SUBAGENT_FIRST") == "off"
+            or env.get("CLAUDE_CODE_DISABLE_BACKGROUND_TASKS") == "1")
+
+
+def opted_in(root):
+    """v32: True only when the tree's ops/status_board.json (MAIN checkout of
+    root) holds "opt_in": true. Missing, unreadable or any other value = out."""
+    try:
+        cfg = _load(main_checkout(root) / CONFIG_REL, {})
+    except Exception:  # noqa: BLE001 - opt-out must never fail a caller
+        return False
+    return isinstance(cfg, dict) and cfg.get("opt_in") is True
+
+
+def main_checkout(path):
+    """The MAIN working tree for path, even from a linked worktree."""
+    path = Path(path).resolve()
+    dotgit = path / ".git"
+    try:
+        raw = dotgit.read_text(encoding="utf-8").strip() if dotgit.is_file() else ""
+    except (OSError, UnicodeError):
+        raw = ""
+    if raw.startswith("gitdir:"):
+        gitdir = Path(raw.split(":", 1)[1].strip())
+        gitdir = (gitdir if gitdir.is_absolute() else path / gitdir).resolve()
+        if gitdir.parent.name == "worktrees":
+            return gitdir.parents[2]
+    return path
+
+
+def _clip(text):
+    text = " ".join(str(text or "").split())
+    text = text.encode("ascii", "replace").decode("ascii")
+    return text if len(text) <= TEXT_MAX else text[:TEXT_MAX - 3] + "..."
+
+
+def fmt_eta(eta_s):
+    """Item 3 ETA units: s under 120 s, m under 120 m, h beyond."""
+    s = max(0, int(eta_s))
+    if s < 120:
+        return f"~{s}s"
+    if s < 7200:
+        return f"~{round(s / 60)}m"
+    return f"~{round(s / 3600)}h"
+
+
+class ChecklistError(ValueError):
+    """v26: a checklist the board cannot trust - nothing is written."""
+
+
+def parse_checklist(text, strict=False):
+    """(session or None, rows) from a printed item-13 checklist. The /done box,
+    the header and the trailing note line are not rows. v26 strict=True (the
+    CLI): a box line that is neither a task row nor the /done box raises
+    ChecklistError, and so does non-empty text with no task row and no /done
+    box (a mis-decoded checklist must never mark every open task done)."""
+    session, rows, _over = parse_checklist_full(text, strict)
+    return session, rows
+
+
+def parse_over(line):
+    """v30: the kit's overflow line -> {"count": N, "ids": [...]}, else None. A
+    list ending "..." was cut: its partial last id is dropped (ids unknown past
+    there, so count exceeds the ids)."""
+    m = _OVER.match(str(line).strip())
+    if not m:
+        return None
+    body = m.group(3).strip()
+    cut = body.endswith("...")
+    if cut:
+        body = body[:-3]
+    ids = [x.strip() for x in body.split(",") if x.strip()]
+    if cut and ids:
+        ids = ids[:-1]
+    return {"count": int(m.group(1)), "ids": ids}
+
+
+def parse_checklist_full(text, strict=False):
+    """v30: (session or None, rows, over or None) - parse_checklist plus the
+    kit's overflow line (parse_over)."""
+    session, rows, done_box, over = None, [], False, None
+    for raw in str(text).splitlines():
+        s = raw.strip()
+        m = _HEAD.match(s)
+        if m:
+            session = int(m.group(1))
+            continue
+        o = parse_over(s)
+        if o is not None:
+            over = o
+            continue
+        if _DONE_BOX.match(s):
+            done_box = True
+            continue
+        m = _LINE.match(s)
+        if not m:
+            if strict and _BOX.match(s):
+                raise ChecklistError(f"checklist line is not `<box> <ID>: <task>` (ID 1-{ID_MAX}"
+                                     f" of [A-Za-z0-9._-]): {_clip(s)[:80]}")
+            continue
+        rid, rest = m.group(1), m.group(2)
+        state = eta = None
+        t = _TAIL.match(rest)
+        if t:
+            rest, inner = t.group(1), t.group(2)
+            parts = [p.strip() for p in inner.split(",")]
+            if len(parts) > 1 and (parts[-1].startswith("~") or _CLOCK.match(parts[-1])):
+                eta = parts[-1]
+                parts = parts[:-1]
+            state = ", ".join(parts) or None
+        rows.append({"id": rid, "task": rest, "state": state, "eta": eta})
+    if strict and not rows and not done_box and str(text).strip():
+        raise ChecklistError("checklist has no task row and no /done box - refused, "
+                             "nothing written (pipe it as UTF-8 with the U+2610 box)")
+    return session, rows, over
+
+
+def over_from_progress(doc):
+    """v30 C4: a progress file's "checklist_more" -> (ids, count)."""
+    more = doc.get("checklist_more") if isinstance(doc, dict) else None
+    if not isinstance(more, dict):
+        return (), 0
+    ids = [str(x) for x in (more.get("ids") or ()) if isinstance(x, str)]
+    count = more.get("count")
+    count = int(count) if isinstance(count, int) and not isinstance(count, bool) else len(ids)
+    return ids, max(count, len(ids))
+
+
+def rows_from_progress_checklist(items):
+    """Progress-file "checklist" rows {id, task, state, eta_s} -> parse rows.
+    Item 13 d lists remaining tasks only; a row still marked done is skipped
+    (render then moves it to done like any vanished task)."""
+    out = []
+    for r in items or ():
+        if str(r.get("state") or "").strip().lower() in ("done", "complete", "completed"):
+            continue
+        eta_s = r.get("eta_s")
+        out.append({"id": str(r["id"]), "task": r["task"], "state": r.get("state"),
+                    "eta": None if eta_s is None else fmt_eta(eta_s)})
+    return out
+
+
+def classify(state):
+    """(group, chip state) for a checklist state."""
+    if not state or state.strip().lower() == "pending":
+        return "next", "queued"
+    if _OPERATOR.search(state):
+        return "operator", "waiting"
+    if _BLOCKED.search(state):
+        return "next", "blocked"
+    return "running", "running"
+
+
+def running_progress(root, clock=time.time):
+    """Rows for this tree's progress files with status running, fresh mtime."""
+    pdir = Path(root) / PROGRESS_REL
+    out = []
+    try:
+        files = sorted(pdir.glob("*.json"))
+    except OSError:
+        return out
+    now = clock()
+    for f in files:
+        try:
+            if now - f.stat().st_mtime > PROGRESS_MAX_AGE_S:
+                continue
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError, UnicodeError):
+            continue
+        if not isinstance(d, dict) or d.get("status") != "running":
+            continue
+        task = str(d.get("task") or f.stem)
+        detail = []
+        if isinstance(d.get("pct"), (int, float)):
+            detail.append(f"{int(d['pct'])} percent")
+        if isinstance(d.get("eta_s"), (int, float)):
+            detail.append(fmt_eta(d["eta_s"]))
+        out.append({"id": task[:24], "task": d.get("step") or task,
+                    "detail": ", ".join(detail)})
+    return out
+
+
+def _load(path, default):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError):
+        return default
+
+
+def _write(path, text):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
+        fh.write(text)
+    os.replace(tmp, path)
+
+
+def dumps_rows(rows):
+    """status.json text: one row per line, sorted keys, ASCII, LF."""
+    if not rows:
+        return "[]\n"
+    return "[\n" + ",\n".join(json.dumps(r, sort_keys=True, ensure_ascii=True)
+                              for r in rows) + "\n]\n"
+
+
+def build(session, rows, state, final=False, progress=(), over_ids=(), over_count=0):
+    """Pure: (status rows, new state). state = {"session", "open": {id: task},
+    "done": [{id, task, detail}], "version"}. v30: over_ids / over_count from
+    the overflow line - a displaced row stays open; a cut list (over_count
+    above the ids given) infers nothing done on this render."""
+    same = state.get("session") == session
+    prev_open = dict(state.get("open") or {}) if same else {}
+    done = list(state.get("done") or []) if same else []
+    done_ids = {d["id"] for d in done}
+    now_ids = [r["id"] for r in rows]
+    over_ids = list(over_ids or ())
+    over_count = max(int(over_count or 0), len(over_ids))
+    unknown_past_cap = over_count > len(over_ids)
+    kept_open = {}
+    for rid, task in prev_open.items():
+        if rid not in now_ids and rid not in done_ids:
+            if unknown_past_cap or rid in over_ids:
+                kept_open[rid] = task  # displaced past the cap, not done
+                continue
+            done.append({"id": rid, "task": task, "detail": ""})
+            done_ids.add(rid)
+    # v26 (RC 2128 item 4): only a row passed as done moves to done - with or
+    # without --final; a carried, not-acted row stays open on the final board.
+    for r in rows:
+        if str(r.get("state") or "").strip().lower() in _DONE_STATES \
+                and r["id"] not in done_ids:
+            done.append({"id": r["id"], "task": _clip(r["task"]), "detail": ""})
+            done_ids.add(r["id"])
+    done = done[-DONE_KEEP:]
+    out = []
+    seqs = {g: 0 for g in GROUPS}
+    for r in rows:
+        if r["id"] in done_ids:
+            continue
+        group, chip = classify(r.get("state"))
+        seqs[group] += 1
+        shown = r.get("state") if (group != "next" or chip == "blocked") else None
+        detail = ", ".join(x for x in (shown, r.get("eta")) if x)
+        out.append({"id": r["id"], "group": group, "seq": seqs[group],
+                    "task": _clip(r["task"]), "state": chip, "detail": _clip(detail)})
+    if over_count:
+        seqs["next"] += 1
+        out.append({"id": OVER_ROW_ID, "group": "next", "seq": seqs["next"],
+                    "task": f"+{over_count} more past the {ROWS_CAP}-row cap",
+                    "state": "queued", "detail": ""})
+    if not final:
+        for p in progress:
+            if p["id"] in now_ids:
+                continue
+            seqs["running"] += 1
+            out.append({"id": _clip(p["id"]), "group": "running", "seq": seqs["running"],
+                        "task": _clip(p["task"]), "state": "running",
+                        "detail": _clip(p["detail"])})
+    for i, d in enumerate(done, 1):
+        out.append({"id": d["id"], "group": "done", "seq": i, "task": _clip(d["task"]),
+                    "state": "done", "detail": _clip(d.get("detail"))})
+    order = {g: i for i, g in enumerate(GROUPS)}
+    out.sort(key=lambda r: (order[r["group"]], r["seq"]))
+    still = {r["id"]: _clip(r["task"]) for r in rows if r["id"] not in done_ids}
+    for rid, task in kept_open.items():
+        still.setdefault(rid, task)
+    new_state = {"session": session, "open": still,
+                 "done": done, "version": state.get("version")}
+    return out, new_state
+
+
+GROUP_TITLES = (("operator", "Waiting on you", "Physical acts and grants only you can do."),
+                ("running", "Running now", "Background agents working at this moment."),
+                ("next", "Up next", "In execution order."),
+                ("done", "Done", "This session, newest first."))
+
+PAGE_HEAD = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="__REFRESH__">
+<title>__TITLE__</title>
+<style>
+:root { color-scheme: light dark; --bg: #faf9f5; --panel: #ffffff; --fg: #1f1e1d; --muted: #6b6a66; --line: #e3e1da; --ok: #2e7d4f; --warn: #a15c00; --bad: #b3261e; }
+@media (prefers-color-scheme: dark) { :root { --bg: #1f1e1d; --panel: #2a2927; --fg: #f0eee8; --muted: #a8a69f; --line: #3d3b38; --ok: #6cc08b; --warn: #e0a54a; --bad: #f08a80; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+main { max-width: 72rem; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-weight: 500; font-size: 1.5rem; margin: 0; }
+.take { color: var(--muted); margin: 4px 0 0; font-size: .875rem; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; }
+.tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+.tile.you { border-color: var(--warn); }
+.lbl { font-size: .8rem; color: var(--muted); display: block; }
+.num { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 12px; }
+h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+.note { font-size: .8rem; color: var(--muted); margin: 2px 0 8px; }
+.wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+th { text-align: left; font-size: .75rem; color: var(--muted); font-weight: 500; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); }
+td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+.id, .detail { font-size: .75rem; color: var(--muted); }
+.id { white-space: nowrap; }
+.chip { display: inline-block; font-size: .75rem; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.running { color: var(--fg); border-color: var(--fg); }
+.chip.waiting { color: var(--warn); border-color: var(--warn); }
+.chip.blocked { color: var(--bad); border-color: var(--bad); }
+.chip.done { color: var(--ok); border-color: var(--ok); }
+.empty { font-size: .8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+"""
+_CODE = re.compile(r"^[A-Z0-9]{1,8}$")
+
+
+def _esc(text):
+    return (str(text or "").replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def lane_lines(environ=None):
+    """v26 KIT-BOARD-LANES: the machine lane holders + queue as one-line items
+    from the sibling fleet_lanes.py (status_lines), or [] when it cannot be
+    read. Never under pytest unless a test injects lanes= into render()."""
+    env = os.environ if environ is None else environ
+    if env.get("PYTEST_CURRENT_TEST"):
+        return []
+    try:
+        import importlib.util
+        here = Path(__file__).resolve().with_name("fleet_lanes.py")
+        spec = importlib.util.spec_from_file_location("_board_lanes_card", str(here))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        doc = mod.status(admit=lambda: {"free_ram_mb": None, "cpu_pct": None})
+        return [ln for ln in mod.status_lines(doc)
+                if ln.startswith(("free slots:", "- slot ", "- waiting:"))]
+    except Exception:  # noqa: BLE001 - the card is optional; the board still renders
+        return []
+
+
+def page_html(title, rows, updated, lanes=()):
+    """board.html text: static, self-contained, ASCII (rows as build() made them)."""
+    t = _esc(_clip(title))
+    counts = {g: 0 for g in GROUPS}
+    for r in rows:
+        if r["group"] != "operator" or r["state"] == "waiting":
+            counts[r["group"]] += 1
+    out = [PAGE_HEAD.replace("__REFRESH__", str(REFRESH_S)).replace("__TITLE__", t)
+           + "<header><h1>" + t + "</h1>",
+           "<p class=\"take\">The session checklist: what waits on you, what runs now, "
+           "what comes next and what is done. Rendered locally " + _esc(updated) + ".</p></header>",
+           "<section class=\"tiles\" aria-label=\"Counts\">"]
+    for g, label in (("running", "Running now"), ("operator", "Waiting on you"),
+                     ("next", "Up next"), ("done", "Done")):
+        cls = "tile you" if g == "operator" else "tile"
+        out.append(f"<div class=\"{cls}\"><span class=\"lbl\">{label}</span>"
+                   f"<span class=\"num\">{counts[g]}</span></div>")
+    out.append("</section>")
+    out.append("<section class=\"grid\">")
+    for g, h2, note in GROUP_TITLES:
+        mine = sorted((r for r in rows if r["group"] == g),
+                      key=lambda r: -r["seq"] if g == "done" else r["seq"])
+        out.append(f"<article class=\"card\"><h2>{h2}</h2><p class=\"note\">{note}</p>")
+        if not mine:
+            out.append("<p class=\"empty\">Nothing here right now.</p></article>")
+            continue
+        out.append("<div class=\"wrap\"><table><thead><tr><th>ID</th><th>Task</th>"
+                   "<th>State</th><th>Note</th></tr></thead><tbody>")
+        for r in mine:
+            out.append("<tr><td class=\"id\">" + _esc(r["id"]) + "</td><td>" + _esc(r["task"])
+                       + "</td><td><span class=\"chip " + _esc(r["state"]) + "\">"
+                       + _esc(r["state"]) + "</span></td><td class=\"detail\">"
+                       + _esc(r["detail"]) + "</td></tr>")
+        out.append("</tbody></table></div></article>")
+    out.append("</section>")
+    if lanes:
+        out.append("<section class=\"card\" aria-label=\"Lanes\"><h2>Lanes</h2>"
+                   "<p class=\"note\">Machine lane slots and the queue (fleet_lanes status)."
+                   "</p><ul>")
+        out.extend("<li class=\"detail\">" + _esc(_clip(ln)) + "</li>" for ln in lanes)
+        out.append("</ul></section>")
+    out.extend(("</main>", "</body>", "</html>"))
+    return "\n".join(out) + "\n"
+
+
+def render(root, session, rows, final=False, environ=None, clock=time.time, lanes=None,
+           over_ids=(), over_count=0):
+    """Write status.json, state.json and board.html locally; return a summary
+    dict. Nothing is pushed anywhere (v23)."""
+    if not opted_in(root):  # v32: opt-in per tree
+        return {"rendered": False, "reason": "not opted in"}
+    if is_headless(environ):
+        return {"rendered": False, "reason": "headless"}
+    root = main_checkout(root)
+    cfg = _load(root / CONFIG_REL, {})
+    code = str(cfg.get("code") or "") if isinstance(cfg, dict) else ""
+    sdir = root / STATE_REL
+    state = _load(sdir / "state.json", {})
+    state = state if isinstance(state, dict) else {}
+    prog = running_progress(root, clock=clock)
+    out, new_state = build(int(session), rows, state, final=final, progress=prog,
+                           over_ids=over_ids, over_count=over_count)
+    new_state.pop("version", None)
+    at = time.strftime("%Y-%m-%d %H:%M", time.localtime(clock()))
+    title = (code + " status" if _CODE.match(code) else "Status board") + \
+        f" - session {int(session)}"
+    _write(sdir / "status.json", dumps_rows(out))
+    _write(sdir / "state.json", json.dumps(new_state, indent=1, sort_keys=True) + "\n")
+    lns = list(lane_lines(environ) if lanes is None else lanes)
+    _write(sdir / HTML_NAME, page_html(title, out, at, lns))
+    return {"rendered": True, "file": str(sdir / "status.json"),
+            "html": str(sdir / HTML_NAME), "rows": len(out), "lanes": len(lns)}
+
+
+NL = chr(10)
+
+
+def calls_text(plan):
+    """The `calls` verb's one line (v23: nothing to push)."""
+    if not plan.get("rendered"):
+        return "board not rendered: " + str(plan.get("reason", "unknown")) + NL
+    return "board: " + plan["html"] + " (local only, nothing to push)" + NL
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="fleet_board")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    for verb, hlp in (("render", "render the local board; print a JSON summary"),
+                      ("calls", "render the local board; print its path (v19-v22 name)")):
+        r = sub.add_parser(verb, help=hlp)
+        r.add_argument("--root", default=".")
+        r.add_argument("--session", type=int)
+        r.add_argument("--checklist", help="checklist text file (default stdin)")
+        r.add_argument("--progress", help="a progress file whose 'checklist' rows to use")
+        r.add_argument("--final", action="store_true",
+                       help="/done render (v26: only rows passed as done move to done)")
+    p = sub.add_parser("pushed", help="v23 no-op (the board is local only)")
+    p.add_argument("--root", default=".")
+    p.add_argument("--version", type=int)
+    ac = sub.add_parser("account", help="v23 no-op (the board is local only)")
+    ac.add_argument("--root", default=".")
+    ac.add_argument("--url")
+    ac.add_argument("--label")
+    a = ap.parse_args(argv)
+    if a.cmd in ("pushed", "account"):
+        print("v23: the status board is local only; nothing to record")
+        return 0
+    if not opted_in(a.root):  # v32: opted out = silent no-op, before any read
+        return 0
+    if is_headless():  # v26: a headless run renders nothing, before any parse
+        plan = {"rendered": False, "reason": "headless"}
+        if a.cmd == "calls":
+            sys.stdout.write(calls_text(plan))
+        else:
+            print(json.dumps(plan, sort_keys=True))
+        return 0
+    if a.progress:
+        d = _load(a.progress, {})
+        session, rows = a.session, rows_from_progress_checklist(d.get("checklist"))
+        over_ids, over_count = over_from_progress(d)
+    else:
+        # v26 KIT-BOARD-EMPTY: bytes decoded as UTF-8, never the console code page.
+        raw = Path(a.checklist).read_bytes() if a.checklist else sys.stdin.buffer.read()
+        text = raw.decode("utf-8", errors="replace").lstrip("\ufeff")
+        try:
+            session, rows, over = parse_checklist_full(text, strict=True)
+        except ChecklistError as exc:
+            print(json.dumps({"rendered": False, "reason": str(exc)}))
+            return 2
+        session = a.session if a.session is not None else session
+        over_ids, over_count = (over["ids"], over["count"]) if over else ((), 0)
+    if session is None:
+        print(json.dumps({"rendered": False, "reason": "no session number"}))
+        return 2
+    plan = render(a.root, session, rows, final=a.final, over_ids=over_ids,
+                  over_count=over_count)
+    if a.cmd == "calls":
+        sys.stdout.write(calls_text(plan))
+    else:
+        print(json.dumps(plan, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

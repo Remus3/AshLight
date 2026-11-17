@@ -1,0 +1,60 @@
+/* AshLight overlay: pure formatting helpers. UMD: CommonJS for node --test,
+   window.ALShared for the overlay page. No DOM, no timers. */
+(function (root, factory) {
+  "use strict";
+  var api = factory();
+  if (typeof module === "object" && module.exports) {
+    module.exports = api;
+  } else {
+    root.ALShared = Object.assign(root.ALShared || {}, api);
+  }
+}(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  function pad2(n) { return n < 10 ? "0" + n : String(n); }
+
+  /* Coarse zone timer for the HUD: minute resolution, so the overlay
+     repaints at most once a minute for it. */
+  function minutes(seconds) {
+    if (seconds === null || seconds === undefined || !isFinite(seconds) || seconds < 0) {
+      return "--";
+    }
+    var m = Math.floor(seconds / 60);
+    if (m < 1) { return "<1m"; }
+    if (m < 60) { return m + "m"; }
+    return Math.floor(m / 60) + "h" + pad2(m % 60) + "m";
+  }
+
+  /* Milliseconds until minutes(seconds) can show a different text. */
+  function msUntilNextChange(seconds) {
+    if (seconds === null || seconds === undefined || !isFinite(seconds) || seconds < 0) {
+      return null;
+    }
+    var next = (Math.floor(seconds / 60) + 1) * 60;
+    return Math.max(250, Math.ceil((next - seconds) * 1000));
+  }
+
+  function levelText(level) {
+    return (level === null || level === undefined) ? "Lv -" : "Lv " + level;
+  }
+
+  function deathsText(deaths) {
+    var n = Number(deaths) || 0;
+    return n === 1 ? "1 death" : n + " deaths";
+  }
+
+  function zoneText(zone, inHideout, maxLen) {
+    var z = zone ? String(zone) : "No zone yet";
+    var max = maxLen || 28;
+    if (z.length > max) { z = z.slice(0, max - 3) + "..."; }
+    return inHideout ? z + " (HO)" : z;
+  }
+
+  return {
+    minutes: minutes,
+    msUntilNextChange: msUntilNextChange,
+    levelText: levelText,
+    deathsText: deathsText,
+    zoneText: zoneText
+  };
+}));

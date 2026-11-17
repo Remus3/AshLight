@@ -1,0 +1,118 @@
+"""Core budgets (docs/decisions/0002-stack.md): parse speed, tailer idle CPU,
+bounded memory. Timing budgets widen with fleet_test_guard.budget() while
+other suites share the box."""
+
+import gc
+import os
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+import fleet_test_guard
+from server.al import parser
+from server.al.bus import EventBus
+from server.al.logfile import Tailer
+from server.al.state import SessionState
+
+FIXTURE = Path(__file__).parent / "fixtures" / "client_sample.txt"
+
+
+def _lines(n):
+    base = FIXTURE.read_text(encoding="ascii").splitlines()
+    return (base * (n // len(base) + 1))[:n]
+
+
+def test_parse_10k_lines_under_250ms():
+    lines = _lines(10_000)
+    parser.parse_lines(lines[:100])  # warm the regex cache
+    t0 = time.perf_counter()
+    events = parser.parse_lines(lines)
+    elapsed = time.perf_counter() - t0
+    assert len(events) > 8_000
+    assert elapsed < fleet_test_guard.budget(0.25), f"{elapsed * 1000:.1f} ms"
+
+
+def test_tail_1000_line_burst_under_50ms(tmp_path):
+    p = tmp_path / "Client.txt"
+    p.write_bytes(b"")
+    got = []
+    t = Tailer(p, lambda line: got.append(parser.parse_line(line)))
+    t.poll_once()
+    with open(p, "ab") as fh:
+        fh.write(("\n".join(_lines(1000)) + "\n").encode("ascii"))
+    t0 = time.perf_counter()
+    n = t.poll_once()
+    elapsed = time.perf_counter() - t0
+    assert n == 1000
+    assert elapsed < fleet_test_guard.budget(0.05), f"{elapsed * 1000:.1f} ms"
+
+
+def test_tailer_idle_cpu_under_2_percent(tmp_path):
+    p = tmp_path / "Client.txt"
+    p.write_bytes(b"x\n" * 1000)
+    t = Tailer(p, lambda line: None, poll_s=0.25)
+    t.start()
+    try:
+        time.sleep(0.3)
+        c0, w0 = time.process_time(), time.perf_counter()
+        time.sleep(3.0)
+        cpu, wall = time.process_time() - c0, time.perf_counter() - w0
+    finally:
+        t.stop()
+    share = cpu / wall
+    assert share < 0.02 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"
+
+
+def _rss_bytes():
+    try:
+        import psutil  # optional
+        return psutil.Process().memory_info().rss
+    except ImportError:
+        pass
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        class PMC(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                        ("PeakWorkingSetSize", ctypes.c_size_t),
+                        ("WorkingSetSize", ctypes.c_size_t),
+                        ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                        ("PagefileUsage", ctypes.c_size_t),
+                        ("PeakPagefileUsage", ctypes.c_size_t)]
+
+        pmc = PMC()
+        pmc.cb = ctypes.sizeof(PMC)
+        k32 = ctypes.WinDLL("kernel32")
+        psapi = ctypes.WinDLL("psapi")
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+        psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC),
+                                               wintypes.DWORD]
+        if psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(pmc), pmc.cb):
+            return pmc.WorkingSetSize
+    return None
+
+
+@pytest.mark.skipif(_rss_bytes() is None, reason="no psutil and not Windows: no RSS probe")
+def test_rss_growth_under_20mb_after_50k_events():
+    bus = EventBus()
+    state = SessionState()
+    bus.add_listener(state.apply)
+    sub = bus.subscribe()  # a subscriber that never drains: must stay bounded
+    events = parser.parse_lines(_lines(500))
+    gc.collect()
+    before = _rss_bytes()
+    for i in range(50_000):
+        bus.publish(dict(events[i % len(events)]))
+    gc.collect()
+    after = _rss_bytes()
+    growth = (after - before) / (1024 * 1024)
+    assert len(bus.recent()) <= 500 and len(sub.get(timeout=0)) <= 256
+    assert growth < 20, f"{growth:.1f} MB"
+    sub.close()
+    print(f"rss growth {growth:.2f} MB on {sys.platform}")

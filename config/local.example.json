@@ -1,0 +1,17 @@
+{
+  "_doc": "Copy to config/local.json (gitignored). Per-host values only; secrets are REFERENCES resolved by ops/fleet_kit/fleet_secrets.py, never a literal value here.",
+  "loop": {
+    "_doc": "tools/al_loop.py tick. inbox_dir / outbox_dir: blank = <repo>/moon_sync_inbox and <repo>/moon_sync_outbox. max_notes_per_day: kit item 14 cap 12 (may lower, never raise; ORDER / FIX / RULING exempt). max_new_plans_per_day: ROADMAP rows an idle deep-dive may propose per day. dest_inboxes {CODE: dir}: where a reply is byte-copied (else the fleet roster). routes {kind: {model, effort}}: incident override of the ROUTES table (invalid entries ignored).",
+    "inbox_dir": "",
+    "outbox_dir": "",
+    "dest_inboxes": {},
+    "max_notes_per_day": 12,
+    "max_new_plans_per_day": 2
+  },
+  "_doc_core": "server.al and the overlay read these top-level keys. client_log: blank = auto-discover the Steam install's logs/Client.txt (read only, after consent). character: optional name filter. poll_ms: tail poll interval. overlay_toggle: Electron accelerator for show/hide. port: null = 8960 (block 8960-8979).",
+  "client_log": "",
+  "character": "",
+  "poll_ms": 250,
+  "overlay_toggle": "Alt+Shift+A",
+  "port": null
+}

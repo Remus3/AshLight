@@ -1,0 +1,5 @@
+#!/bin/sh
+# Kit v13 (FLEET-COMMON 17): fleet_identity strips every AI / bot attribution line.
+ROOT="$(git rev-parse --show-toplevel)"
+python "$ROOT/ops/fleet_kit/fleet_identity.py" commit-msg "$1" || exit 1
+exit 0

@@ -1,0 +1,67 @@
+{
+ "env": {
+  "PYTHONIOENCODING": "utf-8",
+  "PYTHONUTF8": "1",
+  "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
+ },
+ "permissions": {
+  "allow": [
+   "Bash(git status:*)",
+   "Bash(git log:*)",
+   "Bash(git diff:*)",
+   "Bash(python -m pytest:*)",
+   "Bash(npm test:*)",
+   "Bash(node --test:*)",
+   "Bash(python tools/eta.py:*)",
+   "Bash(python tools/leak_sweep.py:*)",
+   "Bash(python tools/ash_lane.py:*)"
+  ],
+  "deny": []
+ },
+ "hooks": {
+  "Stop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python ops/fleet_kit/fleet_done.py stop-hook",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PreToolUse": [
+   {
+    "matcher": "Bash|PowerShell|Read|Edit|Write|Grep|Glob|NotebookEdit|MultiEdit",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "bash \"$CLAUDE_PROJECT_DIR/ops/fleet_kit/fleet_hook.sh\" fleet_subagent_first.py",
+      "timeout": 15
+     }
+    ]
+   },
+   {
+    "matcher": "Edit|Write|NotebookEdit|MultiEdit|Bash|PowerShell",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "bash \"$CLAUDE_PROJECT_DIR/ops/fleet_kit/fleet_hook.sh\" fleet_claims.py hook",
+      "timeout": 15
+     }
+    ]
+   }
+  ],
+  "SubagentStop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python \"$CLAUDE_PROJECT_DIR/ops/fleet_kit/fleet_claims.py\" release-hook",
+      "timeout": 10
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,16 @@
+AshLight
+Copyright 2026 the operator
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+ops/fleet_kit/ is the MAIN fleet kit, vendored unmodified under its own
+LICENSE and NOTICE in that directory.
+
+ops/loop/slots.py is a shared, byte-identical concurrency governor from the
+same operator's fleet, Apache-2.0.
+
+Path of Exile is a trademark of Grinding Gear Games. AshLight is an
+unofficial companion tool; it is not affiliated with, endorsed by or
+sponsored by Grinding Gear Games. It reads only the game's own log file
+(Client.txt), item text the player copies with Ctrl+C, and public web data.
+No game files, game art or logos are included.

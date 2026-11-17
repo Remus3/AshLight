@@ -1,0 +1,8 @@
+{
+  "_doc": "Copy to config/leak_needles.json (gitignored) and replace the placeholders with the real strings that must never be published: sibling tree names, account ids, user names, host names. tools/leak_sweep.py loads it at run time (or env AL_LEAK_NEEDLES, ';'-separated) and prints only a needle's slot number. Without it the sweep runs DEGRADED (structural arm only: drive paths, user-profile paths, emails, secret shapes). Each needle is at least 3 characters.",
+  "needles": [
+    "placeholder-sibling-tree-name",
+    "placeholder-account-id",
+    "placeholder-user-name"
+  ]
+}

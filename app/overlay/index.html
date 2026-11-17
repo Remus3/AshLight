@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src http://127.0.0.1:*; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>AshLight overlay</title>
+<link rel="stylesheet" href="overlay.css">
+<script src="../shared/format.js" defer></script>
+<script src="../shared/render_gate.js" defer></script>
+<script src="overlay.js" defer></script>
+</head>
+<body>
+<div id="hud" class="hud" data-status="waiting">
+  <p class="row zone"><span id="zone">AshLight</span> <span id="timer" class="timer"></span></p>
+  <p class="row nums"><span id="level"></span> <span class="sep" aria-hidden="true">|</span> <span id="deaths"></span>
+    <span id="status" class="status"></span></p>
+</div>
+<p class="about">This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
+</body>
+</html>

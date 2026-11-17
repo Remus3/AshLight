@@ -1,0 +1,24 @@
+#!/bin/sh
+# AshLight is LOCAL ONLY for now (operator order 2026-11-16): refuse every push.
+# The repo is kept public-ready (no machine paths, no secrets, leak sweep in
+# pre-commit), but it has no remote until the operator creates one.
+#
+# When the operator creates the GitHub remote, the deliberate override is:
+#   AL_ALLOW_PUSH=1 git push ...
+# which still runs the kit v13 identity gate and the leak sweep first.
+
+ROOT="$(git rev-parse --show-toplevel)"
+if [ "$AL_ALLOW_PUSH" = "1" ]; then
+  REFS="$(cat)"
+  printf '%s\n' "$REFS" | python "$ROOT/ops/fleet_kit/fleet_identity.py" pre-push "$@" || exit 1
+  if [ -f "$ROOT/tools/leak_sweep.py" ]; then
+    printf '%s\n' "$REFS" | python "$ROOT/tools/leak_sweep.py" --pre-push "$@" || exit 1
+  fi
+  echo "pre-push: AL_ALLOW_PUSH=1 set - proceeding."
+  exit 0
+fi
+# Kit v13 (FLEET-COMMON 17): the identity gate is wired even while every push
+# is refused, so the hook text names it: fleet_identity.py pre-push.
+echo "PUSH REFUSED - AshLight is a local-only repository for now (no remote)."
+echo "Nothing was pushed."
+exit 1
