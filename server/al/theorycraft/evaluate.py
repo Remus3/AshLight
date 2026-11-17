@@ -17,6 +17,7 @@ import math
 from . import delta as delta_mod
 from . import item as item_parser
 from . import pobweights
+from . import potential as potential_mod
 from . import weights as weights_mod
 
 UPGRADE, SIDEGRADE, DOWNGRADE = "upgrade", "sidegrade", "downgrade"
@@ -220,6 +221,15 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
     saves calc probes, and with the calc off or failing it scores with the
     PoB weights measured earlier for this build (calc.source
     "pob_cached")."""
+    out, parsed = _evaluate(item_text, build, weights, slot, calc, blend, cache)
+    # MATH-POTENTIAL: the roll-range potential under the weights that
+    # scored the item (hand, PoB or cached PoB); None without ranges
+    out["potential"] = (potential_mod.item_potential(
+        parsed, out["mod_weights"].get("weights")) if parsed.is_item else None)
+    return out
+
+
+def _evaluate(item_text, build, weights, slot, calc, blend, cache):
     stat_weights, side = _weights_of(weights)
     table = weights_mod.lookup(stat_weights)
     parsed = item_parser.parse(item_text)
@@ -236,7 +246,7 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
            "mod_weights": {"source": "hand", "weights": dict(stat_weights)}}
     if not parsed.is_item:
         out["error"] = "not an item"
-        return out
+        return out, parsed
     if parsed.flags.get("unidentified"):
         out["warnings"].append("unidentified: its mods are hidden")
     new_stats = stats_of(parsed)
@@ -249,10 +259,10 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
     out["slots"] = list(slots)
     if not slots:
         out["error"] = "no gear slot for this item class"
-        return out
+        return out, parsed
     if build is None:
         out["error"] = "no build loaded"
-        return out
+        return out, parsed
     comps = [_compare(s, new_stats, out["score"], build.equipped(s), table, side)
              for s in slots]
     best = max(comps, key=lambda c: c["score_delta"])
@@ -262,10 +272,10 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
         try:
             # _pob updates `out` only after every calc call succeeded
             _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache)
-            return out
+            return out, parsed
         except delta_mod.CalcError:
             out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
                            "notice": delta_mod.NOTICE_FAILED}
     if cache is not None:
         _cached(out, build, slots, new_stats, cache, blend, side, out["calc"]["notice"])
-    return out
+    return out, parsed

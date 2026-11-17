@@ -60,6 +60,7 @@ def compact(result):
                                 for s in stats[:MAX_STATS]]})
     flags = item.get("flags") or {}
     calc = r.get("calc") if isinstance(r.get("calc"), dict) else {}
+    pot = r.get("potential")
     return {"ok": bool(r.get("ok")), "error": r.get("error"), "verdict": r.get("verdict"),
             "calc": {"source": calc.get("source", "weights"), "notice": calc.get("notice")},
             "slot": r.get("slot"), "score": r.get("score"),
@@ -69,7 +70,11 @@ def compact(result):
                      "item_class": item.get("item_class"), "rarity": item.get("rarity")},
             "unidentified": bool(flags.get("unidentified")),
             "unweighted": list(r.get("unweighted") or [])[:MAX_LIST],
-            "comparisons": comps}
+            "comparisons": comps,
+            # MATH-POTENTIAL: score now vs at the worst / best rolls (no UI
+            # yet: MATH-POTENTIAL-UI)
+            "potential": ({k: pot.get(k) for k in ("score", "worst", "best", "pct")}
+                          if isinstance(pot, dict) else None)}
 
 
 class LastEval:

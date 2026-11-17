@@ -118,10 +118,15 @@ class Mod:
     name: str = None  # affix name from the advanced header
     tier: int = None
     values: tuple = ()  # rolled numbers, in order
+    # MATH-POTENTIAL: per value, its roll range (lo, hi) from the item text
+    # ("+90(80-99)", PoB "+(40-60)"), or None for a fixed number; () when
+    # the line could not be aligned with `values`
+    ranges: tuple = ()
 
     def to_dict(self):
         return {"text": self.text, "section": self.section, "kind": self.kind,
-                "name": self.name, "tier": self.tier, "values": list(self.values)}
+                "name": self.name, "tier": self.tier, "values": list(self.values),
+                "ranges": [list(r) if r else None for r in self.ranges]}
 
 
 @dataclass
@@ -258,10 +263,41 @@ def _mod(line, header, implicit_left, at=DEFAULT_RANGE):
             section = "implicit"
         else:
             section = "explicit"
+    ranges = roll_ranges(line)
+    if len(ranges) != len(values):
+        ranges = ()
     return Mod(text=text, section=section,
                kind=header["kind"] if header else None,
                name=header["name"] if header else None,
-               tier=header["tier"] if header else None, values=values)
+               tier=header["tier"] if header else None, values=values, ranges=ranges)
+
+
+# MATH-POTENTIAL: one token per number of strip_rolls(line), in order: a
+# rolled number with its range, a bare range, or a fixed number
+_TOKEN_RE = re.compile(r"(?<=\d)\((" + _NUM + r")-(" + _NUM + r")\)"
+                       r"|(?<![\d)])\((" + _NUM + r")-(" + _NUM + r")\)"
+                       r"|(" + _NUM + r")")
+
+
+def roll_ranges(line):
+    """Per number of the rolled line, (lo, hi) as numbers or None; a range
+    right after a number belongs to that number."""
+    out = []
+    last_kept = False  # the previous number made it into `values`
+    for m in _TOKEN_RE.finditer(line or ""):
+        if m.group(1) is not None:
+            lo, hi = _number(m.group(1)), _number(m.group(2))
+            if out and last_kept:
+                out[-1] = (lo, hi) if lo is not None and hi is not None else None
+        elif m.group(3) is not None:
+            lo, hi = _number(m.group(3)), _number(m.group(4))
+            out.append((lo, hi) if lo is not None and hi is not None else None)
+            last_kept = True
+        else:
+            last_kept = _number(m.group(5)) is not None
+            if last_kept:
+                out.append(None)
+    return tuple(out)
 
 
 def _body(item, lines, state):

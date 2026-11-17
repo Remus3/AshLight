@@ -279,6 +279,25 @@ weights derived from PoB outputs stay with TC-DELTA.
   "pob_cached" with state.CALC_CACHED_TEXT; upgrade weights source passes
   it through; tests/test_math_weights.py. Known limit: memory only, so a
   restart with the calc off falls back to the hand weights.
+- [x] MATH-POTENTIAL (build) Ranged-roll potential of a checked item:
+  keep each value's roll range from advanced / PoB item text, where each
+  roll sits in its range, and the item score now vs at the worst / best
+  rolls under the weights that scored it (a "reduced" mod is best at its
+  small end for a positive weight). Display math on stated numbers, no
+  game mechanic (decision 0004). ACCEPT: stdlib tests incl. random ranged
+  lines (worst <= score <= best, JSON-safe).
+  ZERO-CLICK: computed on the same hotkey press.
+  DONE 2026-11-17: item.Mod.ranges + item.roll_ranges;
+  server/al/theorycraft/potential.py (roll_pct, mod_potential,
+  item_potential); evaluate() `potential`, live.compact carries score /
+  worst / best / pct; tests/test_math_potential.py. Equipped-vs-checked
+  compare with PoB deltas was already TC-DELTA's per-slot comparisons
+  (dps / ehp on each compared slot), so no separate MATH-COMPARE row.
+- [ ] MATH-POTENTIAL-UI (build) Show the item check card's `potential` on
+  the dashboard: "Rolls: 51% of the way from the worst to the best rolls
+  (score 58, best 84)" or similar; nothing when null. After
+  MATH-POTENTIAL. ACCEPT: web test on a synthetic card; design-reviewer
+  pass. ZERO-CLICK: appears with the item check of the same press.
 - [x] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
   verdict-band properties (antisymmetry of the delta, band monotone in the
   old score, rounding stable at 4 places, NaN / inf / huge values from a
