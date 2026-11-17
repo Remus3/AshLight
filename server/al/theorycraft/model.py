@@ -63,6 +63,7 @@ class Gem:
     level: int = None
     quality: int = None
     enabled: bool = True
+    gem_id: str = None  # PoB `gemId`: the gem's base item id (TC-BUILDFILE)
 
     def to_dict(self):
         return {"name": self.name, "skill_id": self.skill_id, "level": self.level,
@@ -248,7 +249,8 @@ def _skills(root):
     for sk in holder.findall("Skill"):
         gems = tuple(Gem(name=g.get("nameSpec") or g.get("skillId") or "",
                          skill_id=g.get("skillId"), level=_int(g.get("level")),
-                         quality=_int(g.get("quality")), enabled=_bool(g.get("enabled")))
+                         quality=_int(g.get("quality")), enabled=_bool(g.get("enabled")),
+                         gem_id=(g.get("gemId") or "").strip() or None)
                      for g in sk.findall("Gem"))
         out.append(SkillGroup(gems=gems, enabled=_bool(sk.get("enabled")),
                               slot=sk.get("slot") or None, label=sk.get("label") or None))

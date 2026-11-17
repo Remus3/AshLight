@@ -76,6 +76,9 @@ its code (license notes: 0006).
 - 0025 PoE2 search box (250 chars since 0.5.0, regex, `|`, `!`) and item
   filter syntax; snapshot checks of zone notes and waystone rules
   ([0025-search-box-and-filter-syntax.md](0025-search-box-and-filter-syntax.md))
+- 0026 The game's `.build` file: GGG's documented Build object, passive
+  ids = GGG tree export `id` (all 6 example ids found), PoB PR #2432 ideas
+  only ([0026-build-file-passive-ids.md](0026-build-file-passive-ids.md))
 
 ## Open research (feeds ROADMAP)
 

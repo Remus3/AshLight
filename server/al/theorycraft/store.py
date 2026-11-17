@@ -10,7 +10,7 @@ import logging
 import threading
 from pathlib import Path
 
-from . import codec, model, paste, searchstr
+from . import buildfile, codec, model, paste, searchstr
 
 log = logging.getLogger("al.theorycraft")
 
@@ -74,16 +74,50 @@ class BuildStore:
                 log.exception("build listener failed")
         return build
 
+    def _tree_data(self, b):
+        if b is None or self.tree is None:
+            return None
+        try:
+            return self.tree.get()
+        except Exception:  # optional data must never break the view
+            log.exception("tree data unavailable")
+            return None
+
+    def file_export(self):
+        """TC-BUILDFILE: buildfile.export of the loaded build, or None."""
+        b = self.build
+        return build_file(b, self._tree_data(b))
+
     def snapshot(self):
         b = self.build
-        tree_data = None
-        if b is not None and self.tree is not None:
-            try:
-                tree_data = self.tree.get()
-            except Exception:  # optional data must never break the view
-                log.exception("tree data unavailable")
+        tree_data = self._tree_data(b)
         return {"loaded": b is not None,
                 "build": b.to_dict(tree_data) if b else None,
                 "code": b.to_code() if b else None, "load_error": self.load_error,
                 # UTIL-SEARCHSTR (decision 0030): copied only on a click
-                "search_strings": searchstr.strings(b)}
+                "search_strings": searchstr.strings(b),
+                # TC-BUILDFILE (decision 0034): what the .build download
+                # holds; the text itself comes from GET /api/buildfile
+                "build_file": build_file_summary(b, tree_data)}
+
+
+def build_file(b, tree_data):
+    """TC-BUILDFILE: buildfile.export for a build, or None without a build
+    or when the export fails (it must never break the view)."""
+    if b is None:
+        return None
+    try:
+        return buildfile.export(b, tree_data)
+    except Exception:
+        log.exception("build file export failed")
+        return None
+
+
+def build_file_summary(b, tree_data):
+    out = build_file(b, tree_data)
+    if out is None:
+        return None
+    doc = out["doc"]
+    return {"filename": out["filename"], "notes": out["notes"],
+            "passives": len(doc.get("passives", ())), "skills": len(doc.get("skills", ())),
+            "slots": len(doc.get("inventory_slots", ()))}

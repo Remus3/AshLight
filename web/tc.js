@@ -277,7 +277,30 @@
              settings: adv.settings || [], warnings: adv.warnings || [] };
   }
 
+  /* TC-BUILDFILE (decision 0034): what the .build download holds, from the
+     core's `build_file` summary. `summary` is one plain line; `notes` names
+     each part left out (the core's sentences, never guessed ids). */
+  function buildFileView(doc) {
+    var bf = doc && doc.loaded && doc.build_file;
+    if (!bf || typeof bf.filename !== "string") {
+      return { ready: false, filename: "", summary: "", notes: [] };
+    }
+    var parts = [];
+    var n = function (k) { return typeof bf[k] === "number" ? bf[k] : 0; };
+    if (n("passives")) { parts.push(plural(n("passives"), "passive", "passives")); }
+    if (n("skills")) { parts.push(plural(n("skills"), "skill", "skills")); }
+    if (n("slots")) { parts.push(plural(n("slots"), "gear slot", "gear slots")); }
+    var notes = (Array.isArray(bf.notes) ? bf.notes : []).filter(function (s) {
+      return typeof s === "string" && s;
+    });
+    return { ready: true, filename: bf.filename,
+             summary: parts.length ? "Holds " + parts.join(", ") + "."
+               : "Holds the build's name only.",
+             notes: notes };
+  }
+
   return { buildView: buildView, pasteResult: pasteResult, evalView: evalView,
+           buildFileView: buildFileView,
            weightRows: weightRows, weightsDoc: weightsDoc, toKey: toKey, gfxView: gfxView,
            links: links, num: num, safeTreeUrl: safeTreeUrl };
 }));

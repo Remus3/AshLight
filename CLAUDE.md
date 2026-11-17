@@ -508,3 +508,9 @@ them. Pause: `ops/loop/control/HALT`.
   and returns a download; no path, no file, no log (decision 0033).
   Reverses if: GGG forbids tools reading or rewriting user filters, or the
   core ever needs a path or a stored copy.
+- The game's `.build` file is only a download on the player's click (GET
+  /api/buildfile); AshLight never writes into the game's planner folder;
+  passive ids come from the cached GGG tree export `id`, unmapped parts are
+  dropped with a note, never guessed (decision 0034). Reverses if: GGG
+  explicitly permits tools to write there, the operator rules a
+  click-triggered write acceptable, or a file made this way fails in game.
