@@ -210,7 +210,7 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a
   trivial row. ACCEPT: task read back; first tick's progress file done.
-- [ ] FLAKY-EVAL-API (build) tests/test_tc_eval_api.py::
+- [x] FLAKY-EVAL-API (build) tests/test_tc_eval_api.py:: -- done 2026-11-17 (loop; refute 0/3 PASS)
   test_endpoints_need_token_host_origin failed once with a connection error
   under the full suite on 2026-11-17 and passed when rerun; find and fix the
   race (suspects: the server answers 401 / 400 / 403 / 413 before reading

@@ -6,6 +6,7 @@ The item text is posted by the test; the server never reads the clipboard.
 
 import http.client
 import json
+import socket
 import threading
 from pathlib import Path
 
@@ -75,6 +76,46 @@ def test_endpoints_need_token_host_origin(env):
         assert req(srv, method, path, body, origin="null")[0] == 403
     assert req(srv, "PUT", "/api/build-code", {"code": "x"})[0] == 405
     assert req(srv, "DELETE", "/api/weights")[0] == 405
+
+
+def _early_reject_roundtrip(srv, host, extra_head=""):
+    """FLAKY-EVAL-API: send the headers, wait for the first reply byte (or
+    for the server to wait on the body), then send the body and read to EOF.
+    A server that answers and closes with the body still unread makes
+    Windows send a reset, and the client loses the reply (WinError 10053 /
+    10054). Event-ordered, no sleep: the reply cannot come before the body
+    once the server drains it, so the recv times out harmlessly first."""
+    body = b'{"item": "x"}'
+    s = socket.create_connection(("127.0.0.1", srv.port), timeout=5)
+    try:
+        s.sendall(("POST /api/eval HTTP/1.1\r\nHost: %s\r\n%s"
+                   "Content-Type: application/json\r\nContent-Length: %d\r\n\r\n"
+                   % (host, extra_head, len(body))).encode("ascii"))
+        s.settimeout(0.2)
+        try:
+            data = s.recv(65536)
+        except socket.timeout:
+            data = b""
+        s.settimeout(5)
+        s.sendall(body)
+        while True:
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            data += chunk
+        return data
+    finally:
+        s.close()
+
+
+def test_early_reject_drains_body_no_reset(env):
+    start, _ = env
+    srv = start()
+    good = f"127.0.0.1:{srv.port}"
+    assert _early_reject_roundtrip(srv, good).startswith(b"HTTP/1.0 401")
+    assert _early_reject_roundtrip(srv, "evil.example:80").startswith(b"HTTP/1.0 400")
+    assert _early_reject_roundtrip(
+        srv, good, "X-AL-Token: %s\r\nOrigin: null\r\n" % TOKEN).startswith(b"HTTP/1.0 403")
 
 
 def test_eval_against_loaded_build(env):

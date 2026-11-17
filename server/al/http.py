@@ -117,6 +117,7 @@ class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body=b"", ctype="text/plain; charset=utf-8", extra=None):
         if isinstance(body, str):
             body = body.encode("utf-8")
+        self._discard_unread()
         self.send_response(code)
         self._common_headers(ctype, len(body), extra)
         self.end_headers()
@@ -273,6 +274,26 @@ class Handler(BaseHTTPRequestHandler):
     do_PATCH = _not_allowed
     do_OPTIONS = _not_allowed
 
+    def parse_request(self):
+        self._body_done = False  # per request: the body is not read yet
+        return super().parse_request()
+
+    def _discard_unread(self):
+        """FLAKY-EVAL-API: every reply sent before the body was read (the
+        400 / 403 / 401 guard, 404, 405, 501) drains it first. Replying and
+        closing with request bytes still unread makes Windows reset the
+        connection, and the client loses the reply (WinError 10053 / 10054).
+        Once per request; a request without a body costs nothing."""
+        if getattr(self, "_body_done", True):
+            return
+        self._body_done = True
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if length:
+            self._discard_body(length)
+
     def _discard_body(self, length):
         """TEST-413-FLAKE: before an early error reply, read and drop a
         rejected body of at most DRAIN_MAX bytes within DRAIN_TIMEOUT_S, so
@@ -306,6 +327,7 @@ class Handler(BaseHTTPRequestHandler):
     # -- endpoints
     def _read_json(self, max_body=MAX_BODY):
         """The JSON object body, or None after sending the error reply."""
+        self._body_done = True  # read or discarded below, never twice
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         try:
             length = int(self.headers.get("Content-Length") or 0)
