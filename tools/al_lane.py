@@ -3,6 +3,7 @@
 
     al_lane.py status
     al_lane.py run <lane> --prompt-file F [--writes-code] [--timeout S] [--dry-run]
+               [--item "ID: task" ...] [--checklist-file F.json]
 
 Roster lanes: build, data, review. Up to lane_cap() run at once (kit v25:
 the live machine config `fleet_lanes.load_config()`, default 3). Each run goes
@@ -32,9 +33,12 @@ missing. The prompt file is read, never echoed to chat.
 import argparse
 import contextlib
 import importlib.util
+import json
 import os
+import re
 import shutil
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -181,10 +185,115 @@ def progress_task(index):
     return _load("fleet_checklist", "ops/fleet_kit/fleet_checklist.py").lane_task(index)
 
 
+# LANE-CHECKLIST: lane ETA floors (s). Measured lane runs took 400-450 s of
+# model time plus claim / gate / governor overhead, so a history median alone
+# under-reads; a code lane never estimates below 15 min.
+ETA_FLOOR_S = {"code": 900.0, "read": 300.0}
+HEARTBEAT_S = 90.0      # progress rewrite cadence while the run lasts (60-120 s)
+PCT_START, PCT_CAP = 5, 95  # running pct band: elapsed / eta, never 100 until done
+REMAIN_MIN_S = 300      # eta_s written never drops below this while running
+_CHECK_ID = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def lane_eta(writes_code, kind, eta_kind=None):
+    """The progress ETA (s): the recorded history median of the item kind
+    (else the lane kind), never below the lane floor."""
+    base = eta.estimate(eta_kind, default=eta.estimate(kind)) if eta_kind \
+        else eta.estimate(kind)
+    return max(float(base), ETA_FLOOR_S["code" if writes_code else "read"])
+
+
+def running_pct(elapsed, eta_s):
+    """pct from elapsed / eta, in [PCT_START, PCT_CAP]."""
+    if eta_s <= 0:
+        return PCT_CAP
+    return int(max(PCT_START, min(PCT_CAP, 100.0 * max(elapsed, 0.0) / eta_s)))
+
+
+def remaining_s(elapsed, eta_s):
+    return int(max(REMAIN_MIN_S, eta_s - max(elapsed, 0.0)))
+
+
+def norm_checklist(rows):
+    """FLEET item 13 d rows [{id, task, state, eta_s}] (remaining tasks only),
+    checked here so a bad row fails before the lane is claimed. Ids keep the
+    kit's charset (others become '-'), at most 48 chars."""
+    if rows is None:
+        return None
+    if not isinstance(rows, (list, tuple)):
+        raise ValueError("checklist must be a list of {id, task, state, eta_s}")
+    out = []
+    for r in rows:
+        if not isinstance(r, dict):
+            raise ValueError(f"bad checklist row {r!r}")
+        rid = _CHECK_ID.sub("-", str(r.get("id") or "")).strip("-._")[:48]
+        task = " ".join(str(r.get("task") or "").split())
+        if not rid or not task:
+            raise ValueError(f"bad checklist row {r!r}")
+        state = r.get("state")
+        e = r.get("eta_s")
+        out.append({"id": rid, "task": task,
+                    "state": None if state is None else str(state),
+                    "eta_s": None if e is None else max(0, int(e))})
+    return out
+
+
+def parse_items(items):
+    """CLI --item "ID: task" -> checklist rows (state queued)."""
+    rows = []
+    for text in items or ():
+        rid, sep, task = str(text).partition(":")
+        if not sep or not rid.strip() or not task.strip():
+            raise ValueError(f"--item {text!r}: expected 'ID: task'")
+        rows.append({"id": rid.strip(), "task": task.strip(), "state": "queued",
+                     "eta_s": None})
+    return rows
+
+
+def _rows_now(checklist, remain):
+    """Rows for one write: a row with no eta_s carries the lane's remaining ETA."""
+    if checklist is None:
+        return None
+    return [dict(r, eta_s=remain if r["eta_s"] is None else r["eta_s"]) for r in checklist]
+
+
+class Heartbeat:
+    """Rewrites the lane progress row every interval while the run lasts, so a
+    2x-ETA staleness check fires only on a real hang. beat() is the one write;
+    the thread only calls it. Write errors never touch the run."""
+
+    def __init__(self, write, clock, t0, eta_s, interval=HEARTBEAT_S):
+        self.write, self.clock, self.t0, self.eta_s = write, clock, t0, eta_s
+        self.interval = interval
+        self.stop_evt = threading.Event()
+        self.thread = None
+
+    def beat(self):
+        elapsed = self.clock() - self.t0
+        with contextlib.suppress(Exception):
+            self.write(running_pct(elapsed, self.eta_s), remaining_s(elapsed, self.eta_s))
+
+    def _loop(self):
+        while not self.stop_evt.wait(self.interval):
+            self.beat()
+
+    def start(self):
+        self.thread = threading.Thread(target=self._loop, name="al-lane-heartbeat",
+                                       daemon=True)
+        self.thread.start()
+        return self
+
+    def stop(self):
+        self.stop_evt.set()
+        if self.thread is not None:
+            self.thread.join(timeout=10)
+
+
 def run_lane(lane, prompt, writes_code=False, timeout=3600, dry_run=False, root=ROOT,
              spawn=None, lane_ctx=None, progress=None, record=eta.record,
              clock=time.time, model=None, effort=None, eta_kind=None,
-             sample_retry=False, sample_label=None):
+             sample_retry=False, sample_label=None, checklist=None,
+             heartbeat_s=HEARTBEAT_S):
     """One headless run on one lane. Returns the kit usage line plus "worktree".
     Progress goes to the MAIN checkout's progress/lane-<i>.json once the lane
     index is claimed; a dry run or a refused claim has no index and writes none.
@@ -194,15 +303,26 @@ def run_lane(lane, prompt, writes_code=False, timeout=3600, dry_run=False, root=
     recorded beside the lane kind, so mixed item sizes on one lane stop skewing
     each other's estimate. Order Nd11eb1 item 6: 1 lane in 20 and every retry
     after a failure (sample_retry) run with persistence on and their transcript
-    is copied to the sidecar when the run ends (tools/lane_samples.py)."""
+    is copied to the sidecar when the run ends (tools/lane_samples.py).
+    LANE-CHECKLIST: checklist (FLEET item 13 d rows, remaining tasks only)
+    rides on every write of the lane progress file; the ETA is lane_eta()
+    (history median, floored) and a Heartbeat rewrites the row every
+    heartbeat_s while the spawn lasts, pct = elapsed / eta capped at 95. The
+    kit spawn only closes the row (close_progress keeps the checklist)."""
     check_lane(lane)
+    checklist = norm_checklist(checklist)
     import lane_samples  # call time only: see the note at the module imports
     route = {k: v for k, v in (("model", model), ("effort", effort)) if v is not None}
     run_id = f"lane-{lane}"
     if progress is None:
         progress = kit().write_progress
     kind = f"lane-{lane}-{'code' if writes_code else 'read'}"
-    eta_s = eta.estimate(eta_kind, default=eta.estimate(kind)) if eta_kind         else eta.estimate(kind)
+    eta_s = lane_eta(writes_code, kind, eta_kind)
+
+    def put(pct, step, eta_now, status, rows):
+        extra = {} if rows is None else {"checklist": rows}
+        progress(main, task, pct, step, eta_now, status, **extra)
+
     if dry_run:
         return {"lane": lane, "dry_run": True, "eta": eta.fmt(eta_s)}
     if lane_ctx is None:
@@ -219,17 +339,23 @@ def run_lane(lane, prompt, writes_code=False, timeout=3600, dry_run=False, root=
             task = progress_task(claim["index"])
             wt = Path(claim["worktree"])
             seed_config(wt, root)
-            progress(main, task, 20, f"{lane}: running headless in {wt.name}", eta_s,
-                     "running")
+            step = f"{lane}: running headless in {wt.name}"
+            put(PCT_START, step, int(eta_s), "running", _rows_now(checklist, int(eta_s)))
             sampled = lane_samples.begin(main, retry=sample_retry)
             if sampled:
                 route["session_id"] = sampled
-            with sidecar_temp_env():  # SIDECAR: TEMP / TMP under <sidecar>/AL/Temp
-                line = spawn(root, CODE, prompt, note=run_id, writes_code=writes_code,
-                             timeout=timeout, cwd=wt, stdin=True,
-                             extra=CODE_EXTRA if writes_code else (),
-                             governor="queued", governor_timeout=timeout, kind="build",
-                             slot_id=lane, progress_task=task, **route)
+            beat = Heartbeat(lambda pct, rem: put(pct, step, rem, "running",
+                                                  _rows_now(checklist, rem)),
+                             clock, t0, eta_s, heartbeat_s).start()
+            try:
+                with sidecar_temp_env():  # SIDECAR: TEMP / TMP under <sidecar>/AL/Temp
+                    line = spawn(root, CODE, prompt, note=run_id, writes_code=writes_code,
+                                 timeout=timeout, cwd=wt, stdin=True,
+                                 extra=CODE_EXTRA if writes_code else (),
+                                 governor="queued", governor_timeout=timeout, kind="build",
+                                 slot_id=lane, progress_task=task, **route)
+            finally:
+                beat.stop()  # before the kit / run_lane close the row
         line = dict(line, worktree=str(wt))
         ok = line.get("rc") == 0 and not line.get("error")
         return line
@@ -240,8 +366,10 @@ def run_lane(lane, prompt, writes_code=False, timeout=3600, dry_run=False, root=
         if eta_kind:
             record(eta_kind, spent, ok=ok)
         if task is not None:
-            progress(main, task, 100, f"{lane}: {'finished' if ok else 'failed'}", 0,
-                     "done" if ok else "failed")
+            # done: nothing of this run remains; failed: its rows still do
+            put(100, f"{lane}: {'finished' if ok else 'failed'}", 0,
+                "done" if ok else "failed",
+                ([] if ok else _rows_now(checklist, 0)) if checklist is not None else None)
 
 
 def status(root=ROOT):
@@ -264,12 +392,24 @@ def main(argv=None):
     r.add_argument("--writes-code", action="store_true")
     r.add_argument("--timeout", type=int, default=3600)
     r.add_argument("--dry-run", action="store_true")
+    r.add_argument("--item", action="append", default=[], metavar="'ID: task'",
+                   help="a checklist row for the progress file (repeatable)")
+    r.add_argument("--checklist-file", help="JSON list of {id, task, state, eta_s}")
     a = ap.parse_args(argv)
     if a.cmd == "status":
         print("\n".join(status()))
         return 0
+    try:
+        rows = parse_items(a.item)
+        if a.checklist_file:
+            rows += json.loads(Path(a.checklist_file).read_text(encoding="utf-8"))
+        checklist = norm_checklist(rows) if rows else None
+    except (OSError, ValueError, TypeError) as exc:
+        print(f"{a.lane}: bad checklist: {exc}", file=sys.stderr)
+        return 64
     prompt = Path(a.prompt_file).read_text(encoding="utf-8")
-    line = run_lane(a.lane, prompt, a.writes_code, a.timeout, a.dry_run)
+    line = run_lane(a.lane, prompt, a.writes_code, a.timeout, a.dry_run,
+                    checklist=checklist)
     if a.dry_run:
         print(f"{a.lane}: dry-run ok")
         return 0

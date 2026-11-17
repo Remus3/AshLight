@@ -915,10 +915,16 @@ def test_lane_worker_records_result(tmp_path):
 
     def run_lane(lane, prompt, **kw):
         seen.append((lane, prompt, kw["writes_code"]))
+        seen_rows.append(kw["checklist"])
         return {"rc": 0, "error": None, "worktree": "wt"}
 
+    seen_rows = []
     assert al_loop.lane_worker("012", deps=deps(root), run_lane=run_lane) == 0
     assert seen == [("data", "implement plan 012", True)]
+    assert seen_rows[0][0]["id"] == "012"
+    # LANE-CHECKLIST: the dispatched item rides on the lane progress file
+    assert al_loop.lane_checklist(items.get("012")) == \
+        [{"id": "012", "task": "t", "state": "data running", "eta_s": None}]
     rec = items.get("012")
     assert rec["state"] == "ran" and rec["worktree"] == "wt"
     assert al_loop.lane_worker("012", deps=deps(root), run_lane=run_lane) == 0

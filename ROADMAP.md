@@ -85,13 +85,17 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [ ] UX-REVIEW (review) Glanceability review of dashboard and overlay
   (contrast, type scale, motion, phone width) against research 0008.
   ACCEPT: findings fixed or filed.
-- [ ] TEST-413-FLAKE (review) tests/test_tc_code_api.py::test_bad_inputs
+- [x] TEST-413-FLAKE (review) tests/test_tc_code_api.py::test_bad_inputs
   intermittently fails with WinError 10053 on the oversized-body (413)
   request: the server answers and closes before the client finishes
   sending, so the client sees a reset instead of the 413. Seen 2026-11-16
   by the data lane (passes on re-run). ACCEPT: the server drains or the
   test tolerates a reset after a 413; 50 consecutive green runs.
   ZERO-CLICK: fix lands with the suite, no manual step.
+  DONE 2026-11-16: server/al/http.py _discard_body reads and drops a
+  rejected body (413 / 415) before the reply, capped at DRAIN_MAX 1 MiB and
+  DRAIN_TIMEOUT_S 2 s, then closes; test_rejected_body_drain_is_bounded.
+  50/50 consecutive green runs.
 - [ ] RES-POLICY (review) Re-read GGG's developer docs and ToU each patch
   cycle; update research 0001 and the CLAUDE.md floor if anything changed.
 
@@ -332,13 +336,31 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   DONE 2026-11-16: X-AL-Token was already accepted; Authorization: Bearer
   added, ?token= kept for EventSource; Host / Origin unchanged and checked
   first. Decision 0002 "API token"; tests/test_api_token_hdr.py.
-- [ ] OPS-OVL-PID (build) run.ps1's overlay no-op line prints a child
+- [x] OPS-OVL-PID (build) run.ps1's overlay no-op line prints a child
   electron pid (e.g. the NetworkService utility process) instead of the
   recorded main pid in ops/runtime/overlay.pid; procs status should report
   the main process. Seen 2026-11-16 by the lane supervisor after the
   restart (overlay.pid and the process tree were correct; message only).
   ACCEPT: the no-op line and procs status name the overlay.pid process;
   test. ZERO-CLICK: no operator step.
+  DONE 2026-11-16: procs.overlay_main_pid(); status "pid" is the recorded
+  main process when live (children stay in "pids"; no record = lowest
+  scanned pid). run.ps1 already prints status.overlay.pid, so unchanged.
+  tests/test_procs.py.
+- [x] LANE-CHECKLIST (build) tools/al_lane.py run_lane wrote
+  progress/lane-<i>.json without the FLEET item-13 d "checklist" and with an
+  unrealistic ETA (eta_s 416 vs 400-450 s runs plus overhead, pct stuck at
+  20), so the file read STALE at 2x ETA. ACCEPT: checklist on every write,
+  realistic ETA, file kept fresh while the run lasts. ZERO-CLICK: lanes and
+  the loop carry it with no operator step.
+  DONE 2026-11-16: run_lane(checklist=) normalises rows and passes them on
+  every write (done = [], failed keeps them); lane_eta = history median
+  floored at 900 s (code) / 300 s (read); a Heartbeat thread rewrites the
+  row every 90 s, pct = elapsed / eta in 5..95, eta_s = remaining (min
+  300 s). CLI `al_lane.py run --item "ID: task"` / --checklist-file;
+  al_loop lane_worker passes lane_checklist(rec). The kit spawn only closes
+  the row (close_progress keeps the checklist), so no kit change.
+  tests/test_al_lane.py, tests/test_al_loop.py.
 - [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.

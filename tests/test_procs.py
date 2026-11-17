@@ -144,6 +144,34 @@ def test_stop_request_cancels_a_pending_restart(tmp_path):
     assert launched == []
 
 
+def test_status_reports_the_recorded_main_overlay_pid(tmp_path, monkeypatch):
+    """OPS-OVL-PID: a lower-pid Electron child (network utility) never
+    becomes the overlay "pid"; it stays in "pids"."""
+    main, child = 7000, 300
+    (tmp_path / procs.OVERLAY_PID_FILE).write_text(
+        json.dumps({"pid": main, "created": 5}), encoding="ascii")
+    monkeypatch.setattr(procs, "is_ours",
+                        lambda pid, prefix, created=0: prefix == procs.ELECTRON_IMAGE
+                        and pid in (main, child))
+    monkeypatch.setattr(procs, "list_processes",
+                        lambda: [(child, "electron.exe"), (main, "electron.exe"),
+                                 (42, "PathOfExile.exe")])
+    monkeypatch.setattr(procs.ka, "image_path",
+                        lambda pid: str(tmp_path / "dist" / "electron.exe"))
+    st = procs.status(tmp_path, edir=tmp_path / "dist")["overlay"]
+    assert st == {"live": True, "pid": main, "pids": [child, main]}
+    # no record (an older run): the scan still reports the overlay live
+    (tmp_path / procs.OVERLAY_PID_FILE).unlink()
+    st = procs.status(tmp_path, edir=tmp_path / "dist")["overlay"]
+    assert st["live"] and st["pid"] == child and st["pids"] == [child, main]
+    assert procs.overlay_main_pid(tmp_path) == 0
+
+
+def test_run_script_no_op_line_prints_the_status_pid():
+    text = RUN.read_text(encoding="ascii")
+    assert "overlay already running (pid $($plan.status.overlay.pid)" in text
+
+
 # -- end to end on a tmp runtime ---------------------------------------------
 
 def _fake_electron(folder):

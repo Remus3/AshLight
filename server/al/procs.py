@@ -127,12 +127,24 @@ def _inside(path, folder):
         return False
 
 
+def overlay_main_pid(runtime):
+    """The recorded overlay main process (<runtime>/overlay.pid) when it is
+    provably ours, else 0. OPS-OVL-PID: Electron's children (GPU, network
+    utility, renderer) also live in the dist dir and may have lower pids, so
+    only this record names the main process."""
+    rec = _read_json(Path(runtime) / OVERLAY_PID_FILE) or {}
+    try:
+        pid = int(rec.get("pid") or 0)
+    except (TypeError, ValueError):
+        return 0
+    return pid if pid > 0 and is_ours(pid, ELECTRON_IMAGE, rec.get("created")) else 0
+
+
 def overlay_pids(runtime, edir=None, processes=None):
     """Sorted pids of our overlay: the recorded pid plus the dir scan."""
     found = set()
-    rec = _read_json(Path(runtime) / OVERLAY_PID_FILE) or {}
-    pid = int(rec.get("pid") or 0)
-    if pid and is_ours(pid, ELECTRON_IMAGE, rec.get("created")):
+    pid = overlay_main_pid(runtime)
+    if pid:
         found.add(pid)
     edir = electron_dir() if edir is None else edir
     if edir is not None:
@@ -176,10 +188,14 @@ def status(runtime=None, edir=None):
     cpid = core_pid(runtime)
     spid = supervisor_pid(runtime)
     olist = overlay_pids(runtime, edir)
+    main = overlay_main_pid(runtime) if olist else 0
     return {
         "core": {"live": bool(cpid), "pid": cpid},
         "supervisor": {"live": supervisor_locked(runtime) or bool(spid), "pid": spid},
-        "overlay": {"live": bool(olist), "pid": olist[0] if olist else 0,
+        # OPS-OVL-PID: "pid" is the recorded main process; children stay in
+        # "pids". Without a record (older run) the lowest scanned pid is shown.
+        "overlay": {"live": bool(olist),
+                    "pid": main if main in olist else (olist[0] if olist else 0),
                     "pids": olist},
     }
 
