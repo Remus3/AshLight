@@ -15,6 +15,7 @@ from pathlib import Path
 from . import (VERSION, acts, campaign, layout, logfile, ninja, parser, paths, price, pricebook,
                pricewatch, resume, runhistory, settingsio, tradestats, underlevel,
                webfetch)
+from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
@@ -188,6 +189,12 @@ class Core:
         self.history = runhistory.RunHistory(self.runtime / runhistory.FILE_NAME)
         self._history_key = None
         self._parked_keys = {}  # UTIL-MULTICHAR: saved key per parked character
+        # UTIL-MAP-LADDER (ruling I): finished maps per area level across
+        # sessions, under the same run-history switch, one bounded file.
+        self.ladder = mapladder.MapLadder(self.runtime / mapladder.FILE_NAME)
+        self._ladder_since = None  # maps opened before a clear stay unsaved
+        # NEWBIE-HINTS (ruling L): hashed character keys and hint ids only
+        self.state.use_hint_store(self.runtime / hints.FILE_NAME)
         # UTIL-PRICE-WATCH: the last priced presses, one bounded runtime
         # file; re-read from the cache on a price book refresh only.
         self.watch = pricewatch.PriceWatch(self.runtime / pricewatch.FILE_NAME)
@@ -325,6 +332,31 @@ class Core:
                                     character=name)
             for name in others[:runhistory.MAX_CHARACTERS - 1]}
         self.state.set_run_history(view)
+        return self.tick_ladder(on) or wrote
+
+    def tick_ladder(self, on=None):
+        """UTIL-MAP-LADDER: save the session's finished maps (run history
+        on) and publish the all-sessions ladder; off publishes none. True
+        when the file was written."""
+        if on is None:
+            on = self.history_enabled()
+        if not on:
+            self.state.set_map_ladder(None)
+            return False
+        character, rows = self.state.map_ladder_rows()
+        since = self._ladder_since
+        if since is not None:
+            rows = [r for r in rows if isinstance(r.get("opened_at"), (int, float))
+                    and r["opened_at"] > since]
+        wrote = False
+        try:
+            with self._lock:
+                wrote = self.ladder.record(character, [r for r in rows if r.get("done")])
+        except OSError:
+            pass  # the view still shows; the next tick tries again
+        with self._lock:
+            view = self.ladder.view(character, rows)
+        self.state.set_map_ladder(view)
         return wrote
 
     def set_history(self, enabled=None, clear=False):
@@ -337,6 +369,8 @@ class Core:
             rec = self.state.run_record()
             with self._lock:
                 self.history.clear()
+                self.ladder.clear()  # UTIL-MAP-LADDER: same switch, same button
+                self._ladder_since = self.state.now()
                 self._history_key = ((rec["started_at"], rec["closed"], rec["finished"])
                                      if rec else None)
                 # UTIL-MULTICHAR: the parked characters' runs likewise
@@ -348,6 +382,11 @@ class Core:
                                                    prec["finished"])
         self.tick_history()
         return self.state.snapshot()["run_history"]
+
+    # -- NEWBIE-HINTS
+    def reset_hints(self):
+        """The dashboard's "reset hints" click."""
+        return self.state.reset_hints()
 
     # -- UTIL-PRICE-WATCH
     def watch_pct(self):

@@ -451,3 +451,12 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
   padding: 4px 0; cursor: pointer; }
 .narrow-tools > .card { border: none; border-top: 1px solid var(--fk-border); border-radius: 0;
   background: none; padding: 12px 0 0; margin-top: 12px; }
+/* NEWBIE-HINTS: the new character's tip card, accent edge like Last session */
+.card.hint { border-left: 4px solid var(--fk-accent); }
+.card.hint p { margin: 0; overflow-wrap: anywhere; }
+.hint-reset { margin: 8px 0 0; }
+/* UTIL-MAP-LADDER: five number columns; tighter padding and wrapping
+   headers keep them inside a phone-width card */
+#ladder .acts-table td.mono, #ladder-all .acts-table td.mono { padding-left: 8px; }
+#ladder .acts-table thead th, #ladder-all .acts-table thead th { overflow-wrap: anywhere;
+  white-space: normal; padding-left: 8px; }

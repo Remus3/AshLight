@@ -64,6 +64,7 @@
       case "tailer_started": case "tailer_reset": case "session_connect": return "log";
       case "afk_changed": case "dnd_changed": return "status";
       case "player_joined_area": case "player_left_area": return "party";
+      case "hint": return "tip";
       default: return "info";
     }
   }

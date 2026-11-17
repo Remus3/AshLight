@@ -158,15 +158,54 @@
     worst.hidden = !foot;
   }
 
+  /* UTIL-MAP-LADDER: display rows of a ladder view (highest level first),
+     every number as the core counted it. */
+  function ladderRows(lad) {
+    return ((lad && lad.levels) || []).map(function (r) {
+      return { level: levelText(r.area_level), maps: deathsCount(r.maps),
+        deaths: deathsCount(r.deaths), median: r.median_text || "--:--",
+        levelups: deathsCount(r.level_ups) };
+    });
+  }
+
+  function paintLadder(doc, prefix, lad) {
+    var wrap = doc.getElementById(prefix);
+    if (!wrap) { return; }
+    var rows = ladderRows(lad);
+    // the empty sentence shows until the first map (design rule 9)
+    wrap.hidden = !lad;
+    doc.getElementById(prefix + "-table").hidden = rows.length === 0;
+    doc.getElementById(prefix + "-text").textContent =
+      (lad && (rows.length ? lad.text : lad.empty_text)) || "";
+    var tbody = doc.getElementById(prefix + "-rows");
+    tbody.textContent = "";
+    rows.forEach(function (r) {
+      var tr = doc.createElement("tr");
+      var th = cell(doc, "th", r.level);
+      th.setAttribute("scope", "row");
+      tr.appendChild(th);
+      [r.maps, r.deaths, r.median, r.levelups].forEach(function (v) {
+        tr.appendChild(cell(doc, "td", v, "mono"));
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
   /* full: a new snapshot (rebuild both cards); otherwise the 1 s tick
      moves only the open map's time. */
   function paint(doc, snap, now, full) {
     if (!snap) { return; }
     paintMaps(doc, snap.maps || null, snap.now, now, full);
-    if (full) { paintDeaths(doc, snap.death_recap || null); }
+    if (full) {
+      paintDeaths(doc, snap.death_recap || null);
+      var maps = snap.maps || {};
+      paintLadder(doc, "ladder", maps.ladder || null);
+      paintLadder(doc, "ladder-all", maps.ladder_all || null);
+    }
   }
 
   return { duration: duration, levelText: levelText, clock: clock,
     liveTime: liveTime, mapRows: mapRows, mapsSummary: mapsSummary,
-    deathLines: deathLines, recapFoot: recapFoot, paint: paint };
+    deathLines: deathLines, recapFoot: recapFoot, ladderRows: ladderRows,
+    paint: paint };
 }));

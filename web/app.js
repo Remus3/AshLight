@@ -104,6 +104,8 @@
     if (window.ALActs) { window.ALActs.paint(document, snap.acts, until, false); }
     // UTIL-MAPS: the open map's time counts up while the player is in it.
     if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
+    // NEWBIE-HINTS: the tip hides by itself at its end time.
+    if (window.ALHints) { window.ALHints.paint(document, snap, now); }
   }
 
   /* UX-PERF: most state pushes (timers, trades, HUD fields) leave the
@@ -1027,6 +1029,7 @@
     if (window.ALHistory) { window.ALHistory.paint(document, c); }
     // UTIL-PRICE-WATCH: moved prices of the items the player checked
     if (window.ALPriceWatch) { window.ALPriceWatch.paint(document, s); }
+    if (window.ALHints) { window.ALHints.paint(document, s, serverNow()); }
     tick();
   }
 
@@ -1131,6 +1134,7 @@
       });
     }
     if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
+    if (window.ALHints) { window.ALHints.wire(document, api); }
     if (window.ALSettingsIO) {
       window.ALSettingsIO.wire(document, {
         fetch: function (url, opts) { return fetch(url, opts); },

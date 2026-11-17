@@ -334,7 +334,19 @@ class Handler(BaseHTTPRequestHandler):
             return self._run_history()
         if path == "/api/price-watch":
             return self._price_watch()
+        if path == "/api/hints":
+            return self._hints()
         return self._send(404, "not found\n")
+
+    def _hints(self):
+        """NEWBIE-HINTS: {"reset": true} shows the new-character tips
+        again."""
+        body = self._read_json()
+        if body is None:
+            return None
+        if body.get("reset") is not True:
+            return self._json(400, {"error": "reset: true required"})
+        return self._json(200, {"text": self.server.core.reset_hints()})
 
     def _settings_import(self):
         """UX-SETTINGS-IO: the settings file the player picked in the

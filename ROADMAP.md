@@ -963,7 +963,7 @@ only (blocked on live 1.0 / localised logs).
   the same verdict; design-reviewer pass. ZERO-CLICK: detected and
   cleared by itself from the log; dismissing is optional.
   BLOCKED: session lane building (2026-11-17)
-- [ ] NEWBIE-HINTS (build) First-hours hints for a new character: one-time,
+- [x] NEWBIE-HINTS (build) First-hours hints for a new character: one-time,
   auto-expiring hints keyed to Client.txt events (first level-up from
   level 1, first campaign death: "campaign deaths cost no experience",
   first town / hideout, first map: "deaths in maps cost experience", first
@@ -977,8 +977,15 @@ only (blocked on live 1.0 / localised logs).
   ACCEPT: tests per hint trigger, a veteran character (first line above
   level 2) gets none, store holds no plain name, test_sidecar_paths green;
   design-reviewer pass. ZERO-CLICK: hints appear and expire by themselves.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] UTIL-MAP-LADDER (build) Map level ladder: from each map run's area
+  DONE 2026-11-17 (area-util b13): server/al/hints.py (4 triggers: start,
+  town, campaign_death, first_map; 10 min each; none past level 30),
+  runtime hints.json (salted SHA-256 key, fresh flag, seen ids, 50 chars,
+  64 KB), POST /api/hints reset, dashboard tip card + Tools button, event
+  list "tip"; tests/test_newbie_hints.py, app/test/util13.test.js. Overlay
+  status word not used (dashboard and event list only). Design review H1
+  (penalty wording) kept: research 0032 section 1 allows exactly "campaign
+  deaths cost no experience, map deaths cost experience", no number.
+- [x] UTIL-MAP-LADDER (build) Map level ladder: from each map run's area
   level (UTIL-MAPS), show highest map level reached, maps / deaths /
   median map time per area level and level-ups earned in maps, this
   session and, with run history on, across sessions (research 0032
@@ -988,7 +995,12 @@ only (blocked on live 1.0 / localised logs).
   tests on synthetic map sequences (one level, several, deaths per level,
   portal re-entry not double counted, resume rebuild), design-reviewer
   pass. ZERO-CLICK: updates by itself on each map generation.
-  BLOCKED: session lane building (2026-11-17)
+  DONE 2026-11-17 (area-util b13): server/al/mapladder.py (per area level:
+  maps, deaths, median finished time, level-ups in maps; 10 rows), Maps
+  card "this session" + "all saved sessions" tables, runtime
+  map_ladder.json (500 maps x 12 characters) under the run-history switch
+  and clear button, restart dedupe by id + seed + open time;
+  tests/test_util_map_ladder.py.
 
 ## Game settings advisor (operator order 2026-11-16)
 

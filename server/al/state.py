@@ -12,6 +12,7 @@ import time
 
 from . import acts as acts_mod
 from . import campaign as campaign_mod
+from . import hints as hints_mod
 from . import num as num_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
@@ -872,6 +873,12 @@ class SessionState:
         self._first_gen_at = None
         # UTIL-PRICE-WATCH: the price watch view the core publishes.
         self.price_watch = None
+        # UTIL-MAP-LADDER: the all-sessions ladder the core publishes
+        # (mapladder.py; None while run history is off).
+        self.map_ladder_all = None
+        # NEWBIE-HINTS (ruling L): first-hours hints; memory only until the
+        # core gives the store file (use_hint_store).
+        self.hints = hints_mod.Hints()
 
     @property
     def version(self):
@@ -1055,6 +1062,41 @@ class SessionState:
                 self.version += 1
                 return True
             return False
+
+    def use_hint_store(self, path):
+        """NEWBIE-HINTS: keep the hint store in `path` (core start)."""
+        with self._lock:
+            self.hints.use_file(path)
+
+    def reset_hints(self):
+        """NEWBIE-HINTS: the dashboard's "reset hints" click."""
+        with self._lock:
+            self.hints.reset()
+            self.version += 1
+            return hints_mod.RESET_TEXT
+
+    def _hint(self, shown, now):
+        """List a hint that just started in the event list. Caller holds
+        the lock."""
+        if shown is None:
+            return False
+        self.recent_events.append({"seq": None, "type": "hint", "at": now,
+                                   "text": shown["text"], "trade": False,
+                                   "whisper": False})
+        return True
+
+    def map_ladder_rows(self):
+        """UTIL-MAP-LADDER: (character, this session's map rows) for the
+        core's saved ladder."""
+        with self._lock:
+            return self.character, self.maps.ladder_rows(self._clock())
+
+    def set_map_ladder(self, view):
+        """UTIL-MAP-LADDER: the all-sessions ladder view, or None."""
+        with self._lock:
+            if view != self.map_ladder_all:
+                self.map_ladder_all = dict(view) if view else None
+                self.version += 1
 
     def set_price_watch(self, view):
         """UTIL-PRICE-WATCH: the price watch view (core tick)."""
@@ -1264,6 +1306,8 @@ class SessionState:
                 self._first_gen_at = now
             self.maps.on_generated(self.area_id, now, self.area_level,
                                    ev.get("seed"))
+            self._hint(self.hints.on_area(self.character, self.area_id,
+                                          self.level, now), now)
             changed = True
         elif t == "area_entered":
             if ev.get("name") != self.zone:
@@ -1306,6 +1350,8 @@ class SessionState:
                 self.level = ev.get("level")
                 self.level_ups += 1
                 self.pace.on_level(self.level, now)
+                self.maps.on_level_up(now)  # UTIL-MAP-LADDER
+                self._hint(self.hints.on_level(self.character, self.level, now), now)
                 changed = True
         elif t == "death":
             if self._may_switch(ev.get("character")):
@@ -1324,6 +1370,8 @@ class SessionState:
                 # UTIL-RUN-HISTORY: campaign deaths per zone of this run
                 if self.acts.splits and not self.acts.finished and self.zone:
                     self._run_counter()[self.zone] += 1
+                self._hint(self.hints.on_death(self.character, self.area_id,
+                                               self.level, now), now)
                 changed = True
         elif t in ("player_joined_area", "player_left_area"):
             self._note_other(ev.get("character"))
@@ -1603,7 +1651,9 @@ class SessionState:
                 "build": dict(self.build_info) if self.build_info else None,
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
-                "maps": self.maps.view(now),
+                "maps": dict(self.maps.view(now),
+                             ladder_all=(dict(self.map_ladder_all)
+                                         if self.map_ladder_all else None)),
                 # UTIL-UNDERLEVEL (ruling B): log area level minus player level
                 "underlevel": underlevel_mod.view(
                     self.level, self.area_level, self.area_id, self.zone,
@@ -1615,6 +1665,8 @@ class SessionState:
                                               self.campaign_facts, self.flask_table,
                                               self.boots_level),
                 "death_recap": self.death_log.view(self.deaths),
+                # NEWBIE-HINTS: the first-hours hint on show, or None
+                "hint": self.hints.view(now),
                 "pace": self.pace.view(now, self.pace_started_at),
                 # UTIL-MULTICHAR: every character's numbers, current first
                 "characters": self._characters_view(now),
