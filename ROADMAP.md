@@ -435,12 +435,26 @@ recorded in research 0018 section 3.
   refs/fleet-lanes/lane-2-1794932281) must NOT be merged: it adds a second
   tracker (server/al/maprun.py) beside runs.py and its decision number
   0023 is taken (0023-act-splits-resume).
-- [ ] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
+- [x] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
   (name, time in map), split from UTIL-MAPRUN (adjudicator 2026-11-17).
   Needs a design section 10 review (one card slot) and the decision 0002
   overlay budgets (tests/test_budgets.py). ACCEPT: overlay line from the
   snapshot `maps.current`, hidden outside maps, budget tests green,
   design-reviewer pass. ZERO-CLICK: shows and hides by itself from the log.
+  DONE 2026-11-17 (area-ux batch 7; adjudicator ruling: option B): while
+  `maps.current.inside`, the HUD row-1 timer shows the time in this map
+  (runs.py time_s moved on by the client clock, kept across hideout trips;
+  render_gate.js timerSeconds) instead of the zone-instance time; same "12m"
+  text, no third line, row 2 and the status slot unchanged, map deaths stay
+  on the Maps card. Alternatives: A "N map deaths" in the status slot
+  (contested slot, beside the session count), C row-2 deaths become map
+  deaths (a number that changes meaning), D dashboard-only (the zone timer
+  answers "time in this map" wrongly after a portal trip). Design 0001 7.2
+  row and section 10 amended; app/test/shared.test.js. Reverses if: play
+  shows the timer's map anchor confuses after a portal trip (then D or an
+  explicit marker), or the player asks for map deaths on the HUD (reopen A).
+  Loop duplicate: lane-1 (data) worktree, detached at 570e390, uncommitted:
+  superseded by 86a4216, do not merge.
 - [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
@@ -722,6 +736,7 @@ LAN access stays off), not a row.
   / state tests incl. unknown player level (no warning), towns and
   hideouts skipped; overlay 2-line rule kept (design-reviewer).
   ZERO-CLICK: appears and clears by itself on zone entry and level-up.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-RUN-HISTORY (build) Personal-best act splits and deaths by zone
   across runs: on a finished campaign act / run, append a small summary
   (act splits, deaths per zone, character class) to a local history file
@@ -733,6 +748,7 @@ LAN access stays off), not a row.
   off setting. ACCEPT: fold tests on synthetic runs, file bound (cap on
   runs kept), clear works, test_sidecar_paths green. ZERO-CLICK: recorded
   and shown by itself; only clearing is a click.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-PRICE-WATCH (build) Price watch: the item-check press remembers
   the last 20 priced items (name, price, time) locally; each hourly price
   book refresh (decision 0026) flags those whose price moved past a
@@ -743,6 +759,7 @@ LAN access stays off), not a row.
   clearable. ACCEPT: tests with a fake price book (rise, fall, under
   threshold, item gone, web_data off). ZERO-CLICK: filled by the existing
   press and refreshed by itself.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UX-SETTINGS-IO (build) Settings export / import: "Download settings"
   on the player's click saves AshLight's own settings as a JSON file
   (decision 0031 / 0034 download pattern); "Import" reads a file the
@@ -752,6 +769,7 @@ LAN access stays off), not a row.
   confirm. ACCEPT: round-trip test, secret-exclusion test, bad-file tests;
   design-reviewer pass. ZERO-CLICK: nothing to do in play; one click each
   way only when moving PCs.
+  BLOCKED: session lane building (2026-11-17)
 
 ## Game settings advisor (operator order 2026-11-16)
 

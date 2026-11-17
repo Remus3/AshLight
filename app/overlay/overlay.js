@@ -48,7 +48,8 @@
     if (timer) { clearTimeout(timer); timer = null; }
     if (!snap) { return; }
     var now = Date.now() / 1000 - offset;
-    var ms = snap.zone_entered_at ? S.msUntilNextChange(now - snap.zone_entered_at) : null;
+    /* UTIL-MAPRUN-OVL: the row-1 timer's own clock (map time inside a map) */
+    var ms = S.msUntilNextChange(S.timerSeconds(snap, now));
     var evalMs = S.msUntilEvalExpires(snap, now);
     if (evalMs !== null && (ms === null || evalMs < ms)) { ms = evalMs; }
     if (ms !== null) { timer = setTimeout(paint, ms); }
