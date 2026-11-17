@@ -210,6 +210,14 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a
   trivial row. ACCEPT: task read back; first tick's progress file done.
+- [ ] FLAKY-EVAL-API (build) tests/test_tc_eval_api.py::
+  test_endpoints_need_token_host_origin failed once with a connection error
+  under the full suite on 2026-11-17 and passed when rerun; find and fix the
+  race (suspects: the server answers 401 / 400 / 403 / 413 before reading
+  the request body and closes, so the client sees a reset; or the
+  serve_forever thread is not yet polling). ACCEPT: root cause named in the
+  commit; the test passes 50 runs in a loop and under the full suite; no
+  sleep-based fix. ZERO-CLICK: test-only / server fix, no user step.
 - [ ] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates
   worktrees under the repo's .claude/worktrees/, but the Sidecar rule puts
   them under the AL sidecar Worktree folder. Finding: .claude/worktrees/ IS
