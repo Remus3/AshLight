@@ -31,6 +31,9 @@ its code (license notes: 0006).
 - 0010 Theorycraft scope - PoB2 license / headless / build codes, GGG OAuth
   character import, game data licenses, upgrade search, tools, name fit
   ([0010-theorycraft-scope.md](0010-theorycraft-scope.md))
+- 0011 Data license verification - repoe-fork, GGG exports, PoB2, poe2db,
+  wiki, poe.ninja, GGG API User-Agent, with URLs and dates
+  ([0011-data-license-verification.md](0011-data-license-verification.md))
 
 ## Open research (feeds ROADMAP)
 
