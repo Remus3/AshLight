@@ -1,5 +1,5 @@
 /* AshLight dashboard: the per-character selector (UTIL-MULTICHAR, decision
-   0037). UMD: CommonJS for node --test (app/test/chars.test.js),
+   0038). UMD: CommonJS for node --test (app/test/chars.test.js),
    window.ALChars for the page. The core keys level, deaths, pace, act times
    and run history by the character name the player's own Client.txt
    reports (`characters`, `run_history.by_character`); the page shows the

@@ -1,5 +1,5 @@
 /* UTIL-MULTICHAR: exact output of the per-character selector helpers
-   (web/chars.js, decision 0037). Synthetic names only. */
+   (web/chars.js, decision 0038). Synthetic names only. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");

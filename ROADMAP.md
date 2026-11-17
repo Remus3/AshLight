@@ -798,12 +798,18 @@ LAN access stays off), not a row.
   synthetic log, restart resume, migration; design-reviewer before web/.
   ZERO-CLICK: the current character follows the log by itself; the
   selector is only for looking at another character. DONE 2026-11-17
-  (AREA-UTIL b10, decision 0037): state.py per-character field sets
-  (switch on level-up / known death, join / leave names never switch),
+  (AREA-UTIL b10, decision 0038): state.py per-character field sets
+  (MULTICHAR-FIX: switch only on the first level-up / death after a game
+  start with no join / leave since it, or when no character is known;
+  join / leave names never switch),
   resume replays multi-character runs, runhistory.py schema 2 (12
   characters x 20 runs), web/chars.js selector; tests/test_util_multichar.py,
-  app/test/chars.test.js. Known limit (decision 0037): zones entered before
-  a switched-to character's first name line count for the previous one.
+  app/test/chars.test.js. Known limits (decision 0038): zones entered before
+  a switched-to character's first name line count for the previous one; a
+  character change without a game restart is followed at the next game
+  start (or pin `character`); a party member already in the area at login
+  who levels or dies before the player's first name line is taken as the
+  player.
 
 ## Game settings advisor (operator order 2026-11-16)
 

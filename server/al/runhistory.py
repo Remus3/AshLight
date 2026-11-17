@@ -16,7 +16,7 @@ start time (MATCH_S), so a core restart never duplicates a run.
 
 Bounded: at most MAX_RUNS runs (oldest dropped), MAX_SPLITS splits and
 MAX_ZONES zones per run, strings cut to MAX_TEXT, a file over MAX_BYTES
-reads as empty. UTIL-MULTICHAR (decision 0037): runs are kept per
+reads as empty. UTIL-MULTICHAR (decision 0038): runs are kept per
 character name as the player's own Client.txt reports it (at most
 MAX_CHARACTERS names, MAX_RUNS runs each; the name never leaves the
 machine), bests and deaths by zone are per character, and a schema 1 file

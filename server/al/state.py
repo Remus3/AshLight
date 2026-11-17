@@ -50,9 +50,10 @@ LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
 
 FALLBACK_TEXT = "Something happened in the log"
 UNKNOWN_CHARACTER = "Unknown character"
-# UTIL-MULTICHAR (decision 0037): at most this many characters are kept
+# UTIL-MULTICHAR (decision 0038): at most this many characters are kept
 # (the current one included); names seen joining / leaving the area this
-# game run are other players and never switch the current character.
+# game run are other players and never switch the current character, and
+# a switch happens only on the first name line after a game start.
 MAX_CHARACTERS = 12
 MAX_OTHERS = 64
 # The per-character fields; SessionState holds the current character's
@@ -821,9 +822,14 @@ class SessionState:
         # use first) and the other players' names of this game run.
         self._parked = collections.OrderedDict()
         self._others = set()
+        # Decision 0038 switch rule: True from a game start (log_opened)
+        # until its first level-up or death line; party is True once
+        # another player joined or left the area since that game start.
+        self._start_window = False
+        self._party_since_start = False
         # The time of the first campaign zone generated since the last name
         # line: a brand-new character's run starts there, not at its first
-        # level-up (decision 0037).
+        # level-up (decision 0038).
         self._first_gen_at = None
         # UTIL-PRICE-WATCH: the price watch view the core publishes.
         self.price_watch = None
@@ -1043,7 +1049,7 @@ class SessionState:
     def _is_me(self, name):
         return self.character is None or name == self.character
 
-    # -- UTIL-MULTICHAR (decision 0037)
+    # -- UTIL-MULTICHAR (decision 0038)
     @staticmethod
     def _fresh_fields(now):
         p = pace_mod.Pace()
@@ -1052,15 +1058,19 @@ class SessionState:
                 "acts": acts_mod.ActSplits(), "pace": p,
                 "run_deaths": collections.Counter(), "_run_start": None}
 
-    def _may_switch(self, name, known_only):
-        """True when a name line should make `name` the current character.
-        A configured character never switches; other players' names (seen
-        joining or leaving the area this game run) never do; a death line
-        switches only to a character the player already has."""
+    def _may_switch(self, name):
+        """True when a name line should make `name` the current character
+        (decision 0038): only the first level-up or death line after a game
+        start (log_opened), and only while no other player has joined or
+        left the area since that start. Never mid-session: a party member
+        already in the area levels up with no join line of their own. A
+        configured character never switches; other players' names (seen
+        joining or leaving the area this game run) never do. The first
+        level-up when no character is known yet names it (apply)."""
         if (self.character_fixed or not name or name == self.character
                 or self.character is None or name in self._others):
             return False
-        return not known_only or name in self._parked
+        return self._start_window and not self._party_since_start
 
     def _switch(self, name, now):
         """Park the current character's fields and load `name`'s (fresh
@@ -1194,6 +1204,8 @@ class SessionState:
             if self.maps.pause(now):
                 changed = True
             self._others.clear()
+            self._start_window = True
+            self._party_since_start = False
             if (self.zone is not None or self.area_id is not None
                     or self.area_level is not None or self.in_hideout
                     or self.zone_entered_at is not None
@@ -1206,10 +1218,13 @@ class SessionState:
             # The first level-up names the character unless one was
             # configured; other players' level-ups are listed, not counted.
             if self.character is None:
-                self.character = ev.get("character")
-            elif self._may_switch(ev.get("character"), known_only=False):
+                if ev.get("character") not in self._others:
+                    self.character = ev.get("character")
+            elif self._may_switch(ev.get("character")):
                 # UTIL-MULTICHAR: another of the player's characters
                 self._switch(ev.get("character"), now)
+            if ev.get("character"):
+                self._start_window = False
             if ev.get("character") == self.character:
                 self._first_gen_at = None
                 self.char_class = ev.get("class")
@@ -1218,8 +1233,10 @@ class SessionState:
                 self.pace.on_level(self.level, now)
                 changed = True
         elif t == "death":
-            if self._may_switch(ev.get("character"), known_only=True):
+            if self._may_switch(ev.get("character")):
                 self._switch(ev.get("character"), now)
+            if ev.get("character"):
+                self._start_window = False
             if self._is_me(ev.get("character")):
                 self._first_gen_at = None
                 self.deaths += 1
@@ -1235,6 +1252,7 @@ class SessionState:
                 changed = True
         elif t in ("player_joined_area", "player_left_area"):
             self._note_other(ev.get("character"))
+            self._party_since_start = True
         elif t in ("whisper_in", "whisper_out"):
             self.recent_whispers.append(self._row(ev, now))
             if t == "whisper_in" and ev.get("trade"):
@@ -1390,6 +1408,10 @@ class SessionState:
             # UTIL-MAPS-RESUME: replay the run's map runs and death recap;
             # no run events keep the current ones.
             events = fields.get("run_events")
+            if events and not self.character_fixed:
+                # UTIL-MULTICHAR: the run's character by the live rule
+                self._restore_chars(events,
+                                    fields.get("session_started_at") is not None)
             if events:
                 self.maps, self.death_log = runs_mod.replay(events,
                                                             self.character)
@@ -1401,8 +1423,6 @@ class SessionState:
                 r["zone"] for r in self.death_log.rows
                 if start is not None and r.get("zone")
                 and isinstance(r.get("at"), (int, float)) and r["at"] >= start)
-            if events and not self.character_fixed:
-                self._restore_chars(events)
             self.version += 1
             return True
 
@@ -1410,28 +1430,49 @@ class SessionState:
                      "level_up", "player_joined_area", "player_left_area",
                      "log_opened")
 
-    def _restore_chars(self, events):
-        """UTIL-MULTICHAR: when the run's events name more than one of the
-        player's characters, replay them through a scratch state (the same
-        attribution rules as live) and take its per-character fields, so a
-        restart keeps every character's splits, deaths and level apart.
-        A run with one character keeps the single-character restore above.
-        Pace counts live level-ups only (UTIL-PACE), so it starts fresh.
-        Caller holds the lock."""
+    def _restore_chars(self, events, run_start_known):
+        """UTIL-MULTICHAR: replay the current game run's events through a
+        scratch state seeded with the scanned character (the newest
+        level-up) and a game start when the scan reached the run's marker,
+        so the decision 0038 switch rule decides the run's character the
+        same way it does live: the first name line after the start, unless
+        another player joined or left the area first. When the rule keeps
+        the scanned character, the single-character restore above stays;
+        otherwise the run's character takes its name, class, level and
+        counts from the replay.
+        A scanned name that the run shows joining or leaving the area is
+        another player: the character becomes unknown, so the player's
+        next level-up names it. Pace counts live level-ups only
+        (UTIL-PACE), so it starts fresh. Caller holds the lock."""
         tmp = SessionState(clock=self._clock)
+        tmp.character = self.character
+        first = next((e["at"] for e in events
+                      if isinstance(e.get("at"), (int, float))), None)
+        if run_start_known and first is not None:
+            tmp.apply({"type": "log_opened", "recv_ts": first})
         for e in events:
             if e.get("type") in self._REPLAY_TYPES and isinstance(e.get("at"), (int, float)):
                 tmp.apply(dict(e, recv_ts=e["at"]))
-        if not tmp._parked or tmp.character is None:
+        self._start_window = tmp._start_window
+        self._party_since_start = tmp._party_since_start
+        joined = {e.get("character") for e in events
+                  if e.get("type") in ("player_joined_area", "player_left_area")
+                  and e.get("character")}
+        self._others = set(list(tmp._others | joined)[:MAX_OTHERS])
+        if tmp.character is not None and tmp.character in joined:
+            self.character = None
+            self.char_class = self.level = None
+            self.level_ups = self.deaths = 0
             return
+        if tmp.character is None or tmp.character == self.character:
+            return
+        # The act splits stay the run-wide rebuild above (decision 0023):
+        # one game run is one character now, and its first campaign zone
+        # still starts a brand-new character's run.
         self.character = tmp.character
-        for f in CHAR_FIELDS:
+        for f in ("char_class", "level", "level_ups", "deaths"):
             setattr(self, f, getattr(tmp, f))
         self.pace = pace_mod.Pace()
-        self._parked = tmp._parked
-        for fields in self._parked.values():
-            fields["pace"] = pace_mod.Pace()
-        self._others = set(tmp._others)
 
     @staticmethod
     def _row(ev, now):

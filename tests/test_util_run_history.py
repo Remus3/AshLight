@@ -126,7 +126,7 @@ def test_file_is_bounded_and_survives_reload(tmp_path):
     assert again.runs == h.runs
     assert again.runs[0]["splits"][0]["time_s"] == 105.0  # oldest dropped
     doc = json.loads(p.read_text(encoding="ascii"))
-    # UTIL-MULTICHAR: schema 2, runs kept per character (decision 0037)
+    # UTIL-MULTICHAR: schema 2, runs kept per character (decision 0038)
     assert doc["schema"] == 2
     assert len(doc["characters"]["Ash"]["runs"]) == runhistory.MAX_RUNS
     # long strings and many zones are cut
