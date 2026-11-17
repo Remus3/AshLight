@@ -823,6 +823,30 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   BuildError (/api/build-code got no 400) - fixed in model._root.
   ZERO-CLICK: one command (tools/cover.py) writes the report, no user
   step.
+- [x] TEST-FLAKE-SSE (build) tests/test_http_robust.py::
+  test_slow_sse_reader_is_dropped_and_does_not_stall_others failed once in
+  a full gated suite. ACCEPT: root cause named (test or server), fixed,
+  looped green alone and under load; other wall-clock tests at risk listed.
+  DONE 2026-11-17: reproduced 1/25 under CPU load ("fast stream closed").
+  Root cause in the TEST, not the server: the "fast" client never read while
+  1.6 MB was published, so its server thread blocked on a full socket and
+  the fixture's 0.5 s write timeout cut it; it survived only while Windows
+  loopback buffering (probed: ~3 MB default, ~400 KB at SO_RCVBUF 4096)
+  absorbed the burst. Server checked: publish is a bounded deque append per
+  subscriber and a stalled writer blocks only its own thread, so no
+  server/al/http.py change. The test now reads the fast stream on a thread,
+  publishes until the slow subscription is gone (60 s deadline), asserts
+  the worst single publish < 2 s and a marker reaches the fast stream (30 s
+  deadline); the cap test's slot-release deadline 5 -> 20 s. Loops: new test 50/50 alone, 30/30 under 24 CPU
+  burner processes, plus two full gated suites green.
+  Other wall-clock thresholds at risk under load: test_fuzz _timed < 0.25 s
+  and CALL_S 1.0 s, test_audit_pass2 flask regex < 0.5 s (fixed: now
+  fleet_test_guard.budget(), 0.5 / 1.0 s base); left as is (bounds 4-10x
+  the work): test_e2e_replay resume < 5 s, test_tc_bridge timeout kill
+  < 5 s, test_tc_code_api drain < DRAIN_TIMEOUT_S + 3, test_audit_http_harden
+  idle close < 4 s, test_http_robust thread count after 0.3 s sleep,
+  test_budgets (already budget()-scaled). ZERO-CLICK: test-only, no user
+  step.
 
 ## Utility (lane area-util, 2026-11-17)
 

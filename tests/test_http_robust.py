@@ -200,7 +200,7 @@ def test_sse_client_cap_and_slot_release(srv):
         assert status(out) == 200
         socks.pop().close()
         srv.core.bus.publish({"type": "death", "character": "Me", "suicide": False})
-        end = time.monotonic() + 5
+        end = time.monotonic() + 20  # generous: a deadline, not a budget
         while True:  # the closed stream's slot frees once its write fails
             s, buf = open_sse(srv)
             while b"event: state" not in buf and b"event: busy" not in buf:
@@ -218,36 +218,82 @@ def test_sse_client_cap_and_slot_release(srv):
 
 
 def test_slow_sse_reader_is_dropped_and_does_not_stall_others(srv):
+    """A stalled SSE client (never reads, tiny receive buffer) is cut by its
+    write timeout; no publish blocks on it and a reading client keeps up.
+
+    TEST-FLAKE-SSE: the old version let the "fast" client sit unread while
+    1.6 MB was published, so it survived only while Windows loopback
+    buffering (~3 MB default, ~400 KB at SO_RCVBUF 4096) outran the 0.5 s
+    write timeout, with a fixed 400-event count and wall-clock budgets on
+    top. Now the fast client really reads (a thread), publishing runs until
+    the slow subscription is gone, and every wait is a condition with a
+    generous deadline - load only makes it slower, never red."""
     slow = socket.socket()
     slow.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
     slow.connect(("127.0.0.1", srv.port))
     slow.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{srv.port}"
                   "\r\n\r\n").encode())
-    fast, _ = open_sse(srv)
+    fast, got = open_sse(srv)
+    got = bytearray(got)
+    lock = threading.Lock()
+    stop = threading.Event()
+    closed = threading.Event()
+
+    def read_fast():
+        fast.settimeout(0.2)
+        while not stop.is_set():
+            try:
+                chunk = fast.recv(1 << 20)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            if not chunk:
+                break
+            with lock:
+                got.extend(chunk)
+        closed.set()
+
+    reader = threading.Thread(target=read_fast, daemon=True)
     try:
+        end = time.monotonic() + 30
+        while srv.core.bus.subscriber_count < 2:
+            assert time.monotonic() < end, "streams never subscribed"
+            time.sleep(0.02)
+        reader.start()
         big = "x" * 4000
-        t0 = time.monotonic()
-        for i in range(400):  # far more than the slow socket buffers hold
+        worst = 0.0
+        n = 0
+        end = time.monotonic() + 60
+        while srv.core.bus.subscriber_count > 1:  # until the slow one is cut
+            assert time.monotonic() < end, "slow reader was never dropped"
+            assert not closed.is_set(), "fast stream closed while reading"
+            t0 = time.perf_counter()
             srv.core.bus.publish({"type": "chat", "channel": "#", "name": "Spam",
-                                  "text": big, "i": i})
-            if i % 50 == 0:
-                time.sleep(0.3)  # let the 4 Hz coalescer flush
-        assert time.monotonic() - t0 < 10.0  # publishing never blocks on a reader
-        fast.settimeout(5)
-        got = b""
-        while b'"i":399' not in got:
-            chunk = fast.recv(1 << 20)
-            assert chunk, "fast stream closed"
-            got += chunk
-        end = time.monotonic() + 8
-        while srv.core.bus.subscriber_count > 1 and time.monotonic() < end:
-            srv.core.bus.publish({"type": "chat", "channel": "#", "name": "S",
-                                  "text": big})
-            time.sleep(0.2)
-        assert srv.core.bus.subscriber_count == 1  # the slow one was cut
+                                  "text": big, "i": n})
+            worst = max(worst, time.perf_counter() - t0)
+            n += 1
+            if n % 10 == 0:
+                time.sleep(0.02)  # ~2 MB/s: fills the slow socket, not the fast
+        # a publish is a deque append per subscriber; seconds would mean it
+        # waited on a socket (generous: it is ~microseconds unloaded)
+        assert worst < 2.0, f"a publish blocked for {worst:.2f} s"
+        srv.core.bus.publish({"type": "chat", "channel": "#", "name": "Marker",
+                              "text": "end"})
+        end = time.monotonic() + 30
+        while True:
+            with lock:
+                if b'"name":"Marker"' in got:
+                    break
+            assert not closed.is_set(), "fast stream closed"
+            assert time.monotonic() < end, "fast stream stalled"
+            time.sleep(0.05)
+        assert srv.core.bus.subscriber_count == 1  # the fast one is still live
     finally:
+        stop.set()
         slow.close()
         fast.close()
+        reader.join(timeout=5) if reader.is_alive() else None
 
 
 def test_default_socket_timeout_is_finite():
