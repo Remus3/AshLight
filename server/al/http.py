@@ -22,6 +22,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from . import DISCLAIMER, NAME, VERSION, layout, ports
+from .theorycraft import codec as build_codec
+from .theorycraft import model as build_model
 
 log = logging.getLogger("al.http")
 
@@ -34,6 +36,7 @@ SSE_MIN_INTERVAL_S = 0.25  # coalesce pushes to at most 4 Hz
 SSE_HEARTBEAT_S = 15.0
 SSE_WAIT_MAX_S = 1.0  # bound on one wait, so shutdown is noticed quickly
 MAX_BODY = 4096
+MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
 # The overlay is a local file:// page; its EventSource / fetch carry
 # "Origin: null". Allowed for these read-only, token-gated GETs only.
 FILE_ORIGIN_PATHS = {"/events", "/api/state", "/api/health"}
@@ -180,6 +183,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, core.state.snapshot(), extra)
         if path == "/api/overlay-layout":
             return self._json(200, self._layout_doc(), extra)
+        if path == "/api/build":
+            return self._json(200, core.builds.snapshot(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -205,6 +210,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._set_layout()
         if path == "/api/trade-dismiss":
             return self._trade_dismiss()
+        if path == "/api/build-code":
+            return self._build_code()
         return self._send(404, "not found\n")
 
     def do_PUT(self):
@@ -215,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
     do_OPTIONS = do_PUT
 
     # -- endpoints
-    def _read_json(self):
+    def _read_json(self, max_body=MAX_BODY):
         """The JSON object body, or None after sending the error reply."""
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         if ctype != "application/json":
@@ -225,7 +232,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             length = -1
-        if length < 0 or length > MAX_BODY:
+        if length < 0 or length > max_body:
             self._json(413, {"error": "body too large"})
             return None
         try:
@@ -269,6 +276,23 @@ class Handler(BaseHTTPRequestHandler):
         else:
             return self._json(400, {"error": "id (integer) or all: true required"})
         return self._json(200, {"dismissed": n, "state": self.server.core.state.snapshot()})
+
+    def _build_code(self):
+        """TC-CODE: load a pasted PoB2 build code (JSON {"code": text}).
+        Decoded locally; a share URL is recognized but never fetched."""
+        body = self._read_json(MAX_BUILD_BODY)
+        if body is None:
+            return None
+        code = body.get("code")
+        if not isinstance(code, str):
+            return self._json(400, {"error": "code (string) required"})
+        try:
+            self.server.core.builds.load_code(code)
+        except build_codec.ShareUrlError as e:
+            return self._json(422, {"error": str(e), "kind": "url"})
+        except (build_codec.CodeError, build_model.BuildError) as e:
+            return self._json(400, {"error": str(e)})
+        return self._json(200, self.server.core.builds.snapshot())
 
     def _consent(self):
         body = self._read_json()
