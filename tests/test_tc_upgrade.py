@@ -1,7 +1,8 @@
 """TC-UPGRADE (decision 0017 item 3): an offline upgrade-search link per item
 check. From the build's item in the checked slot (else the checked item's
-base) trade.upgrade_link builds a trade2 search URL: base type and rarity
-only, no stat filters (TC-UPGRADE-STATS), complexity under the site's cap.
+base) trade.upgrade_link builds a trade2 search URL: base type and rarity,
+plus weighted stat filters only with a trade id index (TC-UPGRADE-STATS,
+tests/test_tc_upgrade_stats.py), complexity under the site's cap.
 The URL comes from the same builder as the price link; nothing touches the
 network and the core never opens it."""
 
@@ -116,7 +117,9 @@ def test_link_uses_the_base_the_build_wears():
                        {"key": "+# to maximum Life", "weight": 1},
                        {"key": "+#% to Cold Resistance", "weight": 1},
                        {"key": "+#% to Fire Resistance", "weight": 1},
-                       {"key": "+#% to Lightning Resistance", "weight": 1}]}}
+                       {"key": "+#% to Lightning Resistance", "weight": 1}]},
+                   # TC-UPGRADE-STATS: no trade id index given, no filters
+                   "filters": []}
 
 
 def test_link_ring_uses_the_best_slot():
@@ -145,7 +148,8 @@ def test_link_none_without_a_slot_to_search():
 def test_upgrade_module_imports_only_trade():
     tree = ast.parse((ROOT / "server" / "al" / "upgrade.py").read_text(encoding="ascii"))
     imports = [ast.dump(n) for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
-    assert imports == [ast.dump(ast.parse("from . import trade").body[0])]
+    # TC-UPGRADE-STATS: plus the read-only trade stat id index
+    assert imports == [ast.dump(ast.parse("from . import trade, tradestats").body[0])]
 
 
 # -- core: built on the hotkey press, no network ----------------------------

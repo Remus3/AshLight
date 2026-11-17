@@ -136,7 +136,8 @@ def test_trade_module_has_no_network_code():
         assert not hasattr(trade, gone), gone
     src = (ROOT / "server" / "al" / "trade.py").read_text(encoding="ascii")
     imports = [ln for ln in src.splitlines() if ln.startswith(("import ", "from "))]
-    assert imports == ["import json", "import urllib.parse"], imports
+    # math: the weight checks of the TC-UPGRADE-STATS stat group (decision 0037)
+    assert imports == ["import json", "import math", "import urllib.parse"], imports
 
 
 def test_no_code_path_names_a_trade_api_endpoint():
