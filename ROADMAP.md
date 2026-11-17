@@ -505,7 +505,9 @@ recorded in research 0018 section 3.
   re-run the id_match guard (passive tree overhaul); (7) confirm
   poe.ninja lists the new league first and the price label follows
   within 1 h; (8) on a PoB-PoE2 1.0 release run TC-DRIFT and bump
-  config/tc_pins.json. BLOCKED: PoE2 1.0 not released yet (2026-12-11).
+  config/tc_pins.json. RUNBOOK: docs/ops/1.0-launch-runbook.md (files,
+  tests, commands and read-back per step; DOC-1.0-RUNBOOK). BLOCKED: PoE2
+  1.0 not released yet (2026-12-11).
   ACCEPT: fixture lines from the real 1.0 log; zone table has G5 / G6
   rows; checklist items 1-7 ticked with read-back evidence. ZERO-CLICK:
   data and parser only.
@@ -1002,6 +1004,42 @@ design docs in docs/design/, both made by a separate agent.
   DONE 2026-11-17 (area-ux b8, 0004 U27): `Sun Temple 14m` / `Lv 4 | 1
   death 11 lv under`, 2 lines; 2 processes, 184.1 MB peak; click-through
   and non-focus hold.
+- [x] UX-NARROW (build) Single-column dashboard below about 520 px for a
+  narrow side window next to the game (research 0028 section 5 item 2,
+  ruling F: desktop layout only, the bind stays 127.0.0.1): the first
+  screen is live play info (session tiles, trades, acts, maps, deaths,
+  item check, recent), the tool cards (build, build health, search,
+  prices, price watch, run history, tools) go into one folded group at the
+  end; DOM order = Tab order (nodes move, no CSS `order`); live regions
+  unchanged (cap 12); wider windows keep today's order. ACCEPT: 360 /
+  420 / 520 px screenshots read back, no horizontal scroll, node test of
+  the order plan, design-reviewer pass. ZERO-CLICK: the layout follows
+  the window width by itself; the fold is closed by default and nothing
+  in play needs it. DONE 2026-11-17 (area-ux b9): web/narrow.js +
+  app/test/narrow.test.js; live core + headless Chrome: page 4840 ->
+  2862 px at 360, 4517 -> 2651 at 420, 4168 -> 2471 at 520; 521 px and
+  wider keep the old order; narrow -> wide -> narrow resize restores
+  order; no horizontal scroll with the fold open; 11 live regions;
+  design 0001 section 4 records the 12px narrow spacing.
+- [x] UX-U25 (review) Glance review 0004 U25 filed S4: a build with no
+  saved stats got the same cause twice (Build card "No stats saved ..."
+  and Build health "This build has no Path of Building numbers ...").
+  One message, one place: the Build card keeps it, Build health says
+  nothing and hides unless it has Look for next rows. ACCEPT: node test,
+  design-reviewer pass. ZERO-CLICK: shows by itself when a build loads.
+  DONE 2026-11-17 (area-ux b9): web/health.js view(); test in
+  app/test/health.test.js.
+- [x] DOC-1.0-RUNBOOK (docs) docs/ops/1.0-launch-runbook.md: each
+  UTIL-1.0-POST step with the files / tests it touches, the commands
+  (snapshot refresh, PoB pin check via tools/tc_drift.py, zone-note
+  additions) and how to verify, so launch day is mechanical. ACCEPT:
+  every UTIL-1.0-POST checklist item (1)-(8) has a runbook section; the
+  row links it; every named file and command exists. ZERO-CLICK: the
+  runbook is the script; launch day only runs it. DONE 2026-11-17
+  (area-ux b9): 10 sections (0 baseline, 1-9 = checklist items 1-8 plus
+  zone notes, 10 close-out); both log-survey one-liners run on
+  tests/fixtures/client_10_shapes.txt; linked from UTIL-1.0-POST (still
+  BLOCKED).
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.

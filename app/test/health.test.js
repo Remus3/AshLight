@@ -48,9 +48,21 @@ test("view says all clear only when PoB has no real warning", () => {
   const doc = { loaded: true, health: { loaded: true, has_stats: true, values: [],
     warnings: [{ id: "weakest", severity: "low", text: "Weakest is cold." }] } };
   assert.equal(h.view(doc).message, h.ALL_CLEAR);
+});
+
+test("UX-U25: no saved stats is said once, on the Build card, not in Build health", () => {
   const none = { loaded: true, health: { loaded: true, has_stats: false,
     message: "This build has no PoB numbers.", warnings: [], values: [] } };
-  assert.equal(h.view(none).message, "This build has no PoB numbers.");
+  const v = h.view(none);
+  assert.equal(v.message, "");
+  assert.equal(v.show, false);
+  const withNext = Object.assign({}, none, { next_look: { pob_weights: false,
+    slots: [{ slot: "Ring 1", line: "Look for", text: "res" }] } });
+  assert.equal(h.view(withNext).show, true);
+  assert.equal(h.view(withNext).message, "");
+  const html = require("node:fs").readFileSync(
+    require("node:path").join(__dirname, "..", "..", "web", "index.html"), "utf8");
+  assert.match(html.split("id=\"buildbox\"")[1].split("</section>")[0], /No stats saved in this build/);
 });
 
 test("view hides the card with no build", () => {
