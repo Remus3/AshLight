@@ -248,9 +248,13 @@ Source and quotes: `docs/research/0001-ggg-tool-policy.md`, decision
 - READ ONLY what GGG permits: the game's `Client.txt` log (tailed only after
   the user's opt-in, with a visible indicator), the clipboard and the screen
   ONLY once per manual press of an AshLight hotkey (no watcher, no timer, no
-  continuous capture), and public web data (official trade API with its
-  `X-Rate-Limit-*` headers obeyed dynamically, poe.ninja; poe2db / wiki data
-  only as attributed build-time snapshots after a license check).
+  continuous capture), and public web data (GGG endpoints only if they are
+  in the API Reference or Data Exports (headers obeyed dynamically); the
+  trade site is never called by the app (its trade2 endpoints are not
+  documented, and ToU 7i bars reverse-engineering endpoints outside the
+  docs). The app may only build a trade-search URL that the user opens in
+  their own browser. Also poe.ninja; poe2db / wiki data only as attributed
+  build-time snapshots after a license check).
 - Every web request sends a truthful User-Agent naming AshLight and its
   version; never require or store a POESESSID cookie.
 - The overlay is a SEPARATE transparent, always-on-top, click-through,
@@ -259,7 +263,12 @@ Source and quotes: `docs/research/0001-ggg-tool-policy.md`, decision
   overlay smoke test. Supported display mode: Windowed Fullscreen.
 - Show "This product isn't affiliated with or endorsed by Grinding Gear Games
   in any way." in the README, the dashboard footer and the overlay About.
-- No GGG trademarks, art or logos in the app name, icon or branding.
+- No GGG trademarks, art or logos in the app name, icon or branding. Never
+  present AshLight as developed, authorised or endorsed by GGG; 'Path of
+  Exile 2' appears only descriptively.
+- No commercial revenue from GGG intellectual property: no paid tier, no
+  sale of GGG-derived data or assets, no ads or donation gate on
+  GGG-derived features.
 
 ## Sidecar (operator order 2026-11-16)
 
@@ -393,5 +402,10 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
   decision 0003 restricts clipboard writes.
 - Price check shares the item-check hotkey; contact only from gitignored
   config/local.json; the core publishes `price` in the snapshot, no own
-  endpoint (decisions 0015, 0016). Reverses if: GGG / poe.ninja drop the
-  contact ask, price check needs its own hotkey, or the overlay may fetch.
+  endpoint; prices from poe.ninja only, trade as a link (decisions 0015,
+  0016, amended by 0017). Reverses if: GGG / poe.ninja drop the contact
+  ask, price check needs its own hotkey, or the overlay may fetch.
+- The app calls no trade2 endpoint; it only builds a trade-search URL the
+  user opens in their own browser (decision 0017). Reverses if: GGG
+  documents trade endpoints or permits third-party use in writing, the
+  operator rules otherwise, or the ?q= URL form proves unstable.

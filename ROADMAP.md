@@ -43,6 +43,18 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   review); F3 every skipped doc maps to "not an item" incl. build_query's
   "item has no base type" (map only reason "not an item"). ACCEPT: tests
   per mapping; design-reviewer pass. ZERO-CLICK: code row.
+- [ ] PRICE-TRADE-LINK (build) Decision 0017: remove every reachable app
+  HTTP path to trade2 (/data/stats, /data/leagues, /search, /fetch); keep
+  build_query offline, producing
+  https://www.pathofexile.com/trade2/search/poe2/<league>?q=<json>; price
+  card status "link" with `url` (0016 Fork 1 amended); dashboard shows a
+  click-through link, overlay "Trade link ready"; the core never opens it;
+  league from config, else Standard, nothing fetched; prices from poe.ninja
+  only. After PRICE-1-COPY merges (both edit price.py). ACCEPT: tests that
+  no trade host is in the webfetch allowlist and no code path reaches a
+  trade2 request; URL round-trip test; design-reviewer pass.
+  ZERO-CLICK: the item-check press builds the link with the price card; the
+  user clicks it only if they want the trade site.
 
 ## Lane: data
 
@@ -84,14 +96,25 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   used; expose it via an API field. After TC-SNAP. ACCEPT: text visible,
   design-reviewer pass. ZERO-CLICK: shown automatically when the cache
   exists.
-- [ ] TC-UPGRADE (build) Upgrade search: weighted trade2 query ("type":
-  "weight" stat group) from the local weights, complexity under 200, one
-  search per user action, through the PRICE-1 limiter (X-Rate-Limit-*,
-  Retry-After), opt-in, no POESESSID; prices shown with poe.ninja rates.
-  After PRICE-1, TC-EVAL, DATA-NINJA. ACCEPT: query-builder tests; limiter
-  shared, not duplicated; no request without the opt-in.
-  ZERO-CLICK: once opted in, the same hotkey press that evaluates the item
-  queues the search; results appear when the limiter allows, no extra click.
+- [ ] TC-UPGRADE (build) Upgrade search as a link builder (decision
+  0017): from the local weights build a trade2 search URL offline
+  (https://www.pathofexile.com/trade2/search/poe2/<league>?q=<json>) that
+  the user opens in their own browser; the app makes no trade2 request, no
+  POESESSID; prices shown come from poe.ninja only. Until TC-UPGRADE-STATS
+  lands the link carries name, base and rarity only; weighted mod filters
+  are BLOCKED on TC-UPGRADE-STATS. After PRICE-TRADE-LINK, TC-EVAL.
+  ACCEPT: URL-builder tests; shares PRICE-TRADE-LINK's builder, not
+  duplicated; no trade host in the webfetch allowlist.
+  ZERO-CLICK: the same hotkey press that evaluates the item builds the
+  link; the user clicks it only to open the trade site.
+- [ ] TC-UPGRADE-STATS (review) Find a permitted source for trade stat ids
+  (mod filters for TC-UPGRADE links): GGG API Reference / Data Exports
+  check first (decision 0017), then attributed build-time snapshots with a
+  license check per decision 0009; never the trade2 /data/stats endpoint
+  from the app. ACCEPT: source and license recorded in docs/research and a
+  decision, or a dated "no permitted source" note.
+  ZERO-CLICK: research row; if a source is found, the build-time fetch runs
+  in setup.ps1 unattended.
 - [ ] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
   archive sha256; LuaJIT version, sha256; no absolute paths); setup.ps1
   step fetches the PoB source archive to the sidecar Cache and builds or

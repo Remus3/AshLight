@@ -81,3 +81,9 @@ surface unchanged.
 REVERSES IF: a caller needs the live limiter wait or the internal doc
 outside the state (then a GET returning `latest()` returns with the same
 guards), or the overlay is allowed to fetch.
+
+## Amended by 0017
+
+Amended by 0017 (2026-11-17): item 3 (trade2 search queue): removed; the
+press builds a trade-search URL offline. See docs/decisions/0017-trade-no-
+app-calls-and-floor-wording.md.

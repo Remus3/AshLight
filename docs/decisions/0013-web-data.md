@@ -83,3 +83,9 @@ needed: every fork below follows from CLAUDE.md, decisions 0003 / 0004 /
 
 poe.ninja or a share site changes or forbids these endpoints, GGG's tool
 policy changes, or the operator rules web data must be per feature.
+
+## Amended by 0017
+
+Amended by 0017 (2026-11-17): item 5 (trade2 calls): the app no longer
+calls trade2; trade is a search link the user opens. See
+docs/decisions/0017-trade-no-app-calls-and-floor-wording.md.

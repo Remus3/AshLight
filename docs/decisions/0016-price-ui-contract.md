@@ -116,3 +116,9 @@ change matches the other settings (design 0001 N1); labelled stale values
 are useful and honest; the overlay is at its glance limit.
 REVERSES IF: the operator wants an explicit confirm step for web data, or
 the poe.ninja attribution changes.
+
+## Amended by 0017
+
+Amended by 0017 (2026-11-17): Fork 1: the card gains status "link" with a
+`url`; the dashboard shows a click-through link, the overlay a short
+notice. See docs/decisions/0017-trade-no-app-calls-and-floor-wording.md.
