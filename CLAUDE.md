@@ -466,3 +466,8 @@ them. Pause: `ops/loop/control/HALT`.
   Cache on -TcCalc only, PATH set only in the build subprocess, never
   vendored (decision 0027). Reverses if: WinLibs drops .zip assets, a
   license objection appears, or LuaJIT ships hashed Windows binaries.
+- Theorycraft is proven end to end on the real reference build (PoB-sourced
+  card deltas, kill fallback), with calc budgets in decision 0024 R7, a
+  bridge.lua GC ceiling (384 MB Lua heap) and a PoB API drift guard test
+  (decision 0028). Reverses if: a pin move or the target machine breaches
+  the budgets, or the GC ceiling costs more than it saves.

@@ -315,6 +315,34 @@ weights derived from PoB outputs stay with TC-DELTA.
   1e9 or non-finite is no value (weights.MAX_VALUE, item._number), score
   skips non-finite terms, verdict on non-finite input is sidegrade, _clean
   maps non-finite to 0. tests/test_math_num.py.
+- [x] MATH-E2E-LIVE (build) Prove the theorycraft path on real data: test
+  core (port 8961-8979, temp config "tc_calc": true), the real reference
+  build via POST /api/build-code, PoE2 copy-format items via POST
+  /api/eval; card deltas from PoB, sane, in budget, graceful when the calc
+  is killed. ZERO-CLICK: live tests run in the suite wherever the
+  component and reference exist, skip elsewhere.
+  DONE 2026-11-17 (AREA-MATH b3, decision 0028): tests/test_math_e2e_live.py
+  + tests/math_live_items.py. Base DPS / EHP on the card = PoB GUI (39265 /
+  32072); ring upgrade +2.7 % DPS +3.2 % EHP, amulet sidegrade, bow
+  downgrade -53 % DPS, body upgrade +10.3 % EHP; presses 12.4 s cold, 3.6
+  to 5.5 s warm, 1.3 s repeat; killed calc -> 200 + "failed" notice in
+  0.5 s, next press PoB again.
+- [x] MATH-PERF (build) Bridge latency (cold start, warm item check,
+  reload) and LuaJIT memory; budget in decision 0024 and a ceiling test.
+  ZERO-CLICK: the budget test runs unattended in the suite.
+  DONE 2026-11-17 (decision 0028, 0024 R7): cold 1.2 s, load 0.4 s,
+  reload 0.3 s, set_item+outputs 0.1 s; luajit.exe working set reached
+  ~900 MB over repeated reloads (heap garbage, not a leak), now a full GC
+  past a 384 MB Lua heap in bridge.lua load_build: peak 511 MB, no median
+  cost. tests/test_math_perf.py (budgets tests/tc_live_util.py).
+- [x] MATH-POB-DRIFT-GUARD (build) Fail loudly when the pinned PoB
+  checkout's API shape that bridge.lua relies on changes (launch object,
+  HeadlessWrapper, output keys), so TC-DRIFT pin moves are safe.
+  ZERO-CLICK: runs in the suite and in every TC-DRIFT trial.
+  DONE 2026-11-17 (decision 0028): tests/test_tc_pob_drift_guard.py - 23
+  static shape rows read from the checkout, a meta-test that every PoB
+  method bridge.lua calls is guarded, a live launch + output-key check;
+  each failure names file, shape and the fix.
 
 ## Research-filed features (AREA-RES 2026-11-17, research 0020)
 
