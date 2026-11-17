@@ -364,11 +364,22 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   MAX_SSE_CLIENTS and the overlay got "busy" for 30 s - http.py
   _client_gone() peeks the socket every loop wake (<= 1 s). ZERO-CLICK:
   runs inside pytest; the long run is one env var.
-- [ ] TEST-SUPERVISOR (build) Keepalive supervisor kill / hang / restart and
+- [x] TEST-SUPERVISOR (build) Keepalive supervisor kill / hang / restart and
   stop.request paths (decision 0005), plus scripts/run.ps1 / stop.ps1
   idempotency checks; PowerShell validated with powershell.exe 5.1
-  ParseFile. ACCEPT: tests green; defects fixed. ZERO-CLICK: runs inside
-  pytest, no user step.
+  ParseFile. ACCEPT: tests green; defects fixed. DONE 2026-11-17:
+  tests/test_supervisor.py (18 tests: pid reuse, stop during backoff,
+  unterminable hung core never duplicated, start grace timeout, launch
+  failure give-up, restart window expiry, clean exit, second supervisor,
+  every scripts/*.ps1 through 5.1 ParseFile, run.ps1 gating, stop.ps1 run
+  twice on a tmp runtime). Defects fixed: (1) SUP-1 a dead core's pid
+  reused by another process read as a live hung core - the supervisor
+  tried to terminate it (any python.exe died) and, refused, never
+  relaunched the core; keepalive now compares the heartbeat's recorded
+  creation time; (2) SUP-2 stop.ps1 force-stopped any python process
+  holding a leftover core.alive pid; it now asks server.al.procs status
+  (image + creation time) and leaves a reused pid alone (rc 0, the core is
+  not running). ZERO-CLICK: runs inside pytest, no user step.
 - [ ] TEST-COVER (build) Line coverage with stdlib trace; the untested
   modules listed in docs/research (a file); tests added for the worst gaps.
   ACCEPT: coverage file committed; worst gaps covered. ZERO-CLICK: one

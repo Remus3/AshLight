@@ -146,7 +146,8 @@ def read_heartbeat(path):
     try:
         data = json.loads(Path(path).read_text(encoding="ascii"))
         return {"pid": int(data["pid"]), "port": int(data.get("port", 0)),
-                "updated": float(data["updated"])}
+                "updated": float(data["updated"]),
+                "created": int(data.get("created") or 0)}
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
@@ -201,7 +202,7 @@ class Keepalive:
     """The supervisor state machine; step() is one poll."""
 
     def __init__(self, runtime, port, launch, pid_alive=pid_alive, health=None,
-                 terminate=terminate_core, now=time.time, log=None,
+                 terminate=terminate_core, now=time.time, log=None, created=None,
                  stale_s=STALE_S, start_grace_s=START_GRACE_S, backoff=BACKOFF_S,
                  cap=CAP, window_s=WINDOW_S):
         self.runtime = Path(runtime)
@@ -210,6 +211,7 @@ class Keepalive:
         self._alive = pid_alive
         self._health = health or (lambda: health_check(self.runtime, self.port))
         self._terminate = terminate
+        self._created_of = created or process_created
         self._now = now
         self._log = log or (lambda line: None)
         self.stale_s = float(stale_s)
@@ -239,7 +241,7 @@ class Keepalive:
     def step(self):
         now = self._now()
         hb = read_heartbeat(self.runtime / HEARTBEAT_FILE)
-        if hb and self._alive(hb["pid"]):
+        if hb and self._alive(hb["pid"]) and self._same_process(hb):
             if hb["pid"] != self.pid:
                 self.pid = hb["pid"]
                 self._log(f"watching core pid {self.pid} on port {hb['port']}")
@@ -286,6 +288,17 @@ class Keepalive:
         else:
             reason = "no core running"
         return self._crashed(now, reason)
+
+    def _same_process(self, hb):
+        """SUP-1: the heartbeat's pid is still the core that wrote it. A
+        dead core's pid can be reused by any process; the recorded creation
+        time tells them apart (a heartbeat without one keeps the pid rule).
+        A reused pid reads as a crash: never terminated, core relaunched."""
+        want = hb.get("created") or 0
+        if not want:
+            return True
+        got = self._created_of(hb["pid"])
+        return not got or got == want
 
     def _crashed(self, now, reason):
         self.restarts = [t for t in self.restarts if now - t < self.window_s]
