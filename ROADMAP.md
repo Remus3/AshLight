@@ -110,7 +110,7 @@ Every row carries the minimal-interaction constraint (CLAUDE.md, decision
 0004): no click the app can safely make for the user, state updates itself,
 and the row's own dev / test steps run unattended. ZERO-CLICK states how.
 
-- [ ] TC-CODE-REAL (review) Confirm the codec on a real PoB2 v0.23.1 export
+- [x] TC-CODE-REAL (review) Confirm the codec on a real PoB2 v0.23.1 export -- done 2026-11-17 (loop; refute 0/3 PASS)
   (framing, root element, PlayerStat names) once a PoB2 install or an
   operator-supplied code is available; add it as a fixture only if its
   owner allows. After TC-CODE. ACCEPT: decode + parse + byte-exact round
