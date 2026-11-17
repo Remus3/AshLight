@@ -83,6 +83,11 @@ def consent_file():
     return runtime_dir() / "consent.json"
 
 
+def weights_file():
+    """TC-EVAL editable stat weights (gitignored per-host state)."""
+    return runtime_dir() / "theorycraft" / "weights.json"
+
+
 def local_config_file():
     """Per-host config (gitignored). Read only by the core."""
     return repo_root() / "config" / "local.json"
@@ -95,6 +100,7 @@ def all_runtime_paths(environ=None):
         "runtime": runtime_dir(),
         "token": token_file(),
         "consent": consent_file(),
+        "weights": weights_file(),
         "sidecar": sidecar_root(environ),
     }
     for name in SIDECAR_SUBDIRS:

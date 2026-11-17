@@ -159,12 +159,31 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   used; expose it via an API field. After TC-SNAP. ACCEPT: text visible,
   design-reviewer pass. ZERO-CLICK: shown automatically when the cache
   exists.
-- [ ] TC-EVAL (build) Item evaluation phase 1: the clipboard item from the
+- [x] TC-EVAL (build) Item evaluation phase 1: the clipboard item from the
   existing hotkey read (decision 0003, one read per press) scored by
   editable stat weights against the build's item in that slot; result on the
   dashboard and a compact overlay card. After TC-CODE, TC-SNAP. ACCEPT:
   fixture items scored; no second clipboard read; no input to the game.
   ZERO-CLICK: the one hotkey press shows price and upgrade verdict together.
+  DONE 2026-11-16 core: server/al/theorycraft/item.py (PoE2 Ctrl+C /
+  Ctrl+Alt+C and PoB item text parser, never fatal, English only),
+  weights.py (mod text -> stat key, defaults written to
+  <runtime>/theorycraft/weights.json, validated PUT), evaluate.py (pure
+  evaluate(item_text, build, weights): class -> slot, score = sum(w * v),
+  upgrade / sidegrade / downgrade with per-stat delta, both rings / charms
+  compared, best swap headlined); model.SLOTS + Build.equipped; API POST
+  /api/eval {"item", "slot"?}, GET / PUT /api/weights (token, Host,
+  Origin as /api/build-code). Never reads the clipboard; TC-SNAP data not
+  needed. Base defences / weapon DPS not compared (TC-DELTA). Synthetic
+  fixtures only (tests/test_tc_eval.py, tests/test_tc_eval_api.py). UI
+  part moved to TC-EVAL-UI.
+- [ ] TC-EVAL-UI (build) Dashboard view + compact overlay card for the
+  TC-EVAL result (verdict, score delta, top per-stat deltas, both rings),
+  plus a weights editor on the dashboard backed by GET / PUT /api/weights;
+  design-reviewer pass. After TC-EVAL, PRICE-1 (the hotkey read). ACCEPT:
+  fixture result renders at desktop and phone width; overlay card in the
+  RAM / FPS budget; no second clipboard read. ZERO-CLICK: the hotkey press
+  posts the read text to /api/eval and the card appears; no evaluate button.
 - [ ] TC-UPGRADE (build) Upgrade search: weighted trade2 query ("type":
   "weight" stat group) from the local weights, complexity under 200, one
   search per user action, through the PRICE-1 limiter (X-Rate-Limit-*,

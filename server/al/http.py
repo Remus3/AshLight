@@ -24,7 +24,9 @@ from urllib.parse import parse_qs, urlsplit
 
 from . import DISCLAIMER, NAME, VERSION, layout, ports
 from .theorycraft import codec as build_codec
+from .theorycraft import evaluate as tc_evaluate
 from .theorycraft import model as build_model
+from .theorycraft import weights as tc_weights
 
 log = logging.getLogger("al.http")
 
@@ -38,6 +40,9 @@ SSE_HEARTBEAT_S = 15.0
 SSE_WAIT_MAX_S = 1.0  # bound on one wait, so shutdown is noticed quickly
 MAX_BODY = 4096
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
+MAX_EVAL_BODY = 80 * 1024  # POST /api/eval: one item text (64 KB cap, research 0003)
+MAX_WEIGHTS_BODY = 64 * 1024  # PUT /api/weights
+MAX_DISCARD = 1024 * 1024  # most bytes drained from a refused (413) body
 # The overlay is a local file:// page; its EventSource / fetch carry
 # "Origin: null". Allowed for these read-only, token-gated GETs only.
 FILE_ORIGIN_PATHS = {"/events", "/api/state", "/api/health"}
@@ -196,6 +201,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, self._layout_doc(), extra)
         if path == "/api/build":
             return self._json(200, core.builds.snapshot(), extra)
+        if path == "/api/weights":
+            return self._json(200, core.weights.snapshot(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -223,14 +230,25 @@ class Handler(BaseHTTPRequestHandler):
             return self._trade_dismiss()
         if path == "/api/build-code":
             return self._build_code()
+        if path == "/api/eval":
+            return self._eval()
         return self._send(404, "not found\n")
 
     def do_PUT(self):
+        path, query = self._url()
+        if path != "/api/weights":
+            return self._send(405, "method not allowed\n")
+        extra = self._guard(path, query, self._needs_token(path))
+        if extra is None:
+            return None
+        return self._put_weights()
+
+    def _not_allowed(self):
         self._send(405, "method not allowed\n")
 
-    do_DELETE = do_PUT
-    do_PATCH = do_PUT
-    do_OPTIONS = do_PUT
+    do_DELETE = _not_allowed
+    do_PATCH = _not_allowed
+    do_OPTIONS = _not_allowed
 
     # -- endpoints
     def _read_json(self, max_body=MAX_BODY):
@@ -244,6 +262,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             length = -1
         if length < 0 or length > max_body:
+            self._discard(length)
             self._json(413, {"error": "body too large"})
             return None
         try:
@@ -255,6 +274,22 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "json object required"})
             return None
         return body
+
+    def _discard(self, length):
+        """Drain an oversized body (bounded) before the 413, so the client
+        reads the reply instead of a reset (Windows aborts a socket closed
+        with unread data); the connection is closed after the reply."""
+        self.close_connection = True
+        left = min(max(length, 0), MAX_DISCARD)
+        try:
+            self.connection.settimeout(2.0)
+            while left > 0:
+                chunk = self.rfile.read(min(left, 64 * 1024))
+                if not chunk:
+                    break
+                left -= len(chunk)
+        except OSError:
+            pass
 
     def _layout_doc(self):
         core = self.server.core
@@ -308,6 +343,35 @@ class Handler(BaseHTTPRequestHandler):
         except (build_codec.CodeError, build_model.BuildError) as e:
             return self._json(400, {"error": str(e)})
         return self._json(200, self.server.core.builds.snapshot())
+
+    def _eval(self):
+        """TC-EVAL: score item text ({"item": text, "slot": optional}) against
+        the loaded build with the stored weights. The text comes from the
+        caller (the one per-press clipboard read, decision 0003); this
+        endpoint never reads the clipboard and sends nothing to the game."""
+        body = self._read_json(MAX_EVAL_BODY)
+        if body is None:
+            return None
+        text = body.get("item")
+        if not isinstance(text, str) or not text.strip():
+            return self._json(400, {"error": "item (string) required"})
+        slot = body.get("slot")
+        if slot is not None and (not isinstance(slot, str) or len(slot) > 40):
+            return self._json(400, {"error": "slot must be a short string"})
+        core = self.server.core
+        result = tc_evaluate.evaluate(text, core.builds.build, core.weights.get(),
+                                      slot=slot or None)
+        return self._json(200, result)
+
+    def _put_weights(self):
+        body = self._read_json(MAX_WEIGHTS_BODY)
+        if body is None:
+            return None
+        try:
+            self.server.core.weights.put(body)
+        except tc_weights.WeightsError as e:
+            return self._json(400, {"error": str(e)})
+        return self._json(200, self.server.core.weights.snapshot())
 
     def _consent(self):
         body = self._read_json()

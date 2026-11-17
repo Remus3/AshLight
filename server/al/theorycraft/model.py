@@ -21,6 +21,11 @@ from . import codec
 
 ROOTS = ("PathOfBuilding2", "PathOfBuilding")
 NO_ASCENDANCY = ("", "None")
+# PoB gear slot names (TC-EVAL slot mapping). Flask / charm names follow the
+# PoB numbering; jewels sit in tree sockets, not in a gear slot.
+SLOTS = ("Weapon 1", "Weapon 2", "Helmet", "Body Armour", "Gloves", "Boots",
+         "Amulet", "Ring 1", "Ring 2", "Belt", "Flask 1", "Flask 2",
+         "Charm 1", "Charm 2", "Charm 3")
 
 
 class BuildError(ValueError):
@@ -143,6 +148,14 @@ class Build:
 
     def to_code(self):
         return codec.encode(self.raw_xml)
+
+    def equipped(self, slot):
+        """The Item in a gear slot (case-insensitive name), or None."""
+        want = (slot or "").strip().lower()
+        for name, item in self.gear.items():
+            if name.lower() == want:
+                return item
+        return None
 
     def to_dict(self):
         """JSON-ready view (no raw XML; the code is the export)."""

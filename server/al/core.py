@@ -15,6 +15,7 @@ from . import VERSION, layout, logfile, parser, paths, resume
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import store as build_store
+from .theorycraft import weights as weights_mod
 
 
 def _utc_now():
@@ -64,6 +65,8 @@ class Core:
         self.state.set_overlay_layout(layout.load(self.config_path))
         # TC-CODE: the last loaded PoB build reloads on start (no click).
         self.builds = build_store.BuildStore(build_store.default_path(self.runtime))
+        # TC-EVAL: editable stat weights, defaults written on first start.
+        self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
 
     # -- Client.txt location
     def locate_log(self):
