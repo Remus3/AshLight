@@ -1,0 +1,4 @@
+# design-reviewer ledger (DS-REVIEW-HOOK). One line per review, append only:
+# YYYY-MM-DD | scope=<paths> | verdict=<verdict> S1=<n> S2=<n> S3=<n> S4=<n> | <row id> | audit=<docs/design file or ->
+2026-11-16 | scope=web/ app/overlay/ app/shared/ server/al/state.py | verdict=PASS WITH FINDINGS S1=0 S2=2 S3=7 S4=3 | UI-REVIEW-2 pass 1 | audit=docs/design/0003-second-audit.md
+2026-11-16 | scope=web/ app/overlay/ app/shared/ server/al/state.py | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=0 S4=3 | UI-REVIEW-2 pass 2 (S4s then fixed) | audit=docs/design/0003-second-audit.md

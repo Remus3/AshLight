@@ -14,6 +14,7 @@ ops/runtime/
 ops/loop/control/*
 logs/
 *.log
+!docs/design/reviews.log
 
 # Channel (per-host, never published)
 moon_sync_inbox/*
