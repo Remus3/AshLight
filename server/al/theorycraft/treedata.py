@@ -7,22 +7,28 @@ amended: fetch-only, never bundled). This module only READS that cache; it
 never fetches, and the core works the same when the file is missing (every
 lookup then returns None and `TreeCache.get()` returns None).
 
-Shape assumption, UNVERIFIED against the live PoE2 file (no web access when
-written; modelled on the PoE1 skilltree-export layout; ROADMAP review row
-DATA-TREE-SHAPE confirms it):
+Shape, checked against the real PoE2 file in research 0014
+(DATA-TREE-SHAPE, 2026-11-17):
 - top level: an object with `nodes` (object keyed by the node id as a
   string) and `classes` (list of objects with `name` and an optional
   `ascendancies` list of objects with `id` / `name`);
-- a node: `skill` (int id, optional; the key is used when missing), `name`,
-  `stats` (list of strings), `ascendancyName` (string, ascendancy nodes
-  only), `isNotable` / `isKeystone` / `isJewelSocket` (bools), and for a
-  class start either `classStartIndex` (int into `classes`) or
-  `classesStart` (list of class names).
+- a node: `skill` (int id; the key is used when missing), `name`, `stats`
+  (list of strings, may hold [Key|Shown] markup; `display_stat` strips it),
+  `ascendancyId` (an ascendancy id on ascendancy nodes, mapped to its name
+  through classes[].ascendancies; the id itself when unmapped),
+  `isNotable` / `isKeystone` / `isJewelSocket` (bools), and on a class start
+  `classStartIndex` (a list of indexes into `classes`; a bare int is also
+  accepted).
+Legacy keys `ascendancyName` (a name) and `classesStart` (class names) are
+still accepted. The pseudo node `root` has no skill and a non-numeric key,
+so it is skipped. PoB2 spec node ids are looked up as export `skill` ids;
+that they match is NOT verified (no PoB2 data read; ROADMAP DATA-TREE-FIX).
 Unknown fields are ignored; a malformed node is skipped, never an error.
 """
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +36,17 @@ from .. import paths
 
 FILE_NAME = "skilltree.json"
 MAX_BYTES = 256 * 1024 * 1024
+
+_MARKUP = re.compile(r"\[([^\[\]|]*)\|([^\[\]]*)\]|\[([^\[\]|]*)\]")
+
+
+def display_stat(text):
+    """Stat text for display: `[Key|Shown]` reads as `Shown` and `[Word]`
+    as `Word`; anything else is left as is."""
+    if not isinstance(text, str):
+        return text
+    return _MARKUP.sub(lambda m: m.group(2) if m.group(2) is not None
+                       else m.group(3), text)
 
 
 @dataclass(frozen=True)
@@ -44,11 +61,16 @@ class Node:
     class_start: tuple = ()  # class names that start on this node
 
     @property
+    def display_stats(self):
+        return tuple(display_stat(s) for s in self.stats)
+
+    @property
     def is_ascendancy(self):
         return bool(self.ascendancy)
 
     def to_dict(self):
-        return {"id": self.id, "name": self.name, "stats": list(self.stats),
+        return {"id": self.id, "name": self.name,
+                "stats": list(self.display_stats),
                 "ascendancy": self.ascendancy, "notable": self.notable,
                 "keystone": self.keystone, "jewel_socket": self.jewel_socket,
                 "class_start": list(self.class_start)}
@@ -105,14 +127,28 @@ class TreeData:
         return out
 
 
+def _ascendancy(raw, asc_names):
+    """Ascendancy name from `ascendancyId` (the id itself when no class
+    lists it), else the legacy `ascendancyName`, else None."""
+    aid = _str(raw.get("ascendancyId"))
+    if aid:
+        return asc_names.get(aid, aid)
+    return _str(raw.get("ascendancyName"))
+
+
 def parse(doc):
     """TreeData from the decoded JSON document. Raises ValueError only when
     the top level is not an object with a `nodes` object."""
     if not isinstance(doc, dict) or not isinstance(doc.get("nodes"), dict):
         raise ValueError("not a passive tree export (no nodes object)")
     classes = []
+    asc_names = {}  # ascendancy id -> name
     for c in doc.get("classes") if isinstance(doc.get("classes"), list) else ():
         classes.append(_str(c.get("name")) if isinstance(c, dict) else None)
+        ascs = c.get("ascendancies") if isinstance(c, dict) else None
+        for a in ascs if isinstance(ascs, list) else ():
+            if isinstance(a, dict) and _str(a.get("id")) and _str(a.get("name")):
+                asc_names.setdefault(a["id"], a["name"])
     nodes = {}
     for key, raw in doc["nodes"].items():
         if not isinstance(raw, dict):
@@ -126,14 +162,15 @@ def parse(doc):
         stats = tuple(s for s in stats if isinstance(s, str)) if isinstance(stats, list) else ()
         starts = []
         idx = raw.get("classStartIndex")
-        if isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(classes):
-            if classes[idx]:
-                starts.append(classes[idx])
+        for i in idx if isinstance(idx, list) else (idx,):
+            if isinstance(i, int) and not isinstance(i, bool) and 0 <= i < len(classes):
+                if classes[i] and classes[i] not in starts:
+                    starts.append(classes[i])
         cs = raw.get("classesStart")
         if isinstance(cs, list):
             starts.extend(s for s in cs if isinstance(s, str) and s and s not in starts)
         nodes[nid] = Node(id=nid, name=_str(raw.get("name")), stats=stats,
-                          ascendancy=_str(raw.get("ascendancyName")),
+                          ascendancy=_ascendancy(raw, asc_names),
                           notable=raw.get("isNotable") is True,
                           keystone=raw.get("isKeystone") is True,
                           jewel_socket=raw.get("isJewelSocket") is True,
