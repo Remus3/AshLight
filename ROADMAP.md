@@ -846,7 +846,7 @@ Ranked in research 0031; floor rulings G / H / I (adjudicator 2026-11-17)
 in its section 5. UTIL-CRAFT-SLOTS and UTIL-ATLAS-PROGRESS are listed
 there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
 
-- [ ] MATH-SKILL-SPLIT (build) Skill and ailment DPS split: parse the
+- [x] MATH-SKILL-SPLIT (build) Skill and ailment DPS split: parse the
   build XML's `<FullDPSSkill stat value skillPart source>` elements (PoB
   writes one per contributing skill in every saved build) into one row per
   skill (name, count, DPS, share of the summed total) and, when non-zero,
@@ -858,8 +858,17 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   none -> card hidden, non-finite value dropped); `skill_split` in GET
   /api/build; design-reviewer pass. ZERO-CLICK: rebuilt by itself when a
   build loads or the calc snapshot changes.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] MATH-DEF-BREAKDOWN (build) Defence breakdown and PoB's remaining
+  DONE 2026-11-17 (AREA-MATH b10): server/al/theorycraft/skillsplit.py
+  (FullDPSSkill rows; PoB writes a count as "<n>x <name>", value already
+  dps * count; share of the summed values, which equals PoB's FullDPS on
+  the reference build), `skill_split` in GET /api/build, web/skillsplit.js
+  "Damage by skill" on the Build card (6 rows, then "N more"; ailment DPS
+  line; no live region). Calc on: theorycraft/pobout.py fetches PoB's
+  outputs for the loaded build once, in the background (calcwire raw),
+  and a ready table bumps build_info.calc_rev so the dashboard re-reads.
+  Tests tests/test_math_skill_split.py (live legs: reference build split,
+  live calc outputs), app/test/skillsplit.test.js.
+- [x] MATH-DEF-BREAKDOWN (build) Defence breakdown and PoB's remaining
   warnings: add to MATH-BUILD-HEALTH PoB's other warnFunc conditions
   (unreserved Life <= 0, unreserved Mana < 0, accuracy below Life with
   Precise Technique, DoT DPS at or above PoB's DotDpsCap) and a compact
@@ -873,7 +882,16 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   real-shaped stat sets (each new warning, missing stat shows nothing,
   calc off hides calc-only rows); design-reviewer pass. ZERO-CLICK:
   rebuilt by itself with the build health card.
-  BLOCKED: session lane building (2026-11-17)
+  DONE 2026-11-17 (AREA-MATH b10): health.more_warnings (LifeUnreserved
+  <= 0, ManaUnreserved < 0, Main/OffHandAccuracy below Life while PoB's
+  PreciseTechnique output is set, Total/Bleed/Ignite/PoisonDPS >= PoB's
+  DotDpsCap 35791394) and health.defence ("defence" in `health`: ailment
+  avoid chances for Ignite / Chill / Freeze / Shock / Bleed / Poison,
+  stun threshold / avoid, flask charge gen, charm effect (calc only), mana
+  cost / regen / net regen (PlayerStat or calc)); names checked against
+  the pinned checkout. web/health.js "Defence and sustain" block with a
+  calc-off hint. Tests tests/test_math_def_breakdown.py (live: Data.lua
+  cap, names, reference build), app/test/skillsplit.test.js.
 - [x] UTIL-WAYSTONE-REWARD (build) Waystone reward summary on the same
   item-check press: sum the reward mods on waystone text (item quantity,
   item rarity, pack size, rare / magic monsters, waystone drop chance;

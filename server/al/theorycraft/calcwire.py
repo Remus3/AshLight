@@ -89,6 +89,20 @@ def make_calc(get_bridge):
                     out["weapon_unusable"] = unusable
             return out
 
+    def raw(build, keys):
+        """MATH-SKILL-SPLIT / MATH-DEF-BREAKDOWN: PoB's output table for the
+        build itself (no swap), only the named keys (pobout.OutputsCache)."""
+        xml = getattr(build, "raw_xml", None)
+        if not isinstance(xml, str) or not xml.strip():
+            raise OutputError("no build XML")
+        b = get_bridge()
+        with lock:
+            if state["dirty"] or state["xml"] != xml:
+                b.load_build(xml)
+                state["xml"], state["dirty"] = xml, False
+            return dict(b.outputs(keys=list(keys)))
+
+    calc.raw = raw
     return calc
 
 

@@ -16,6 +16,7 @@
 <script src="/web/summary.js" defer></script>
 <script src="/web/search.js" defer></script>
 <script src="/web/health.js" defer></script>
+<script src="/web/skillsplit.js" defer></script>
 <script src="/web/filtermerge.js" defer></script>
 <script src="/web/history.js" defer></script>
 <script src="/web/chars.js" defer></script>
@@ -261,6 +262,13 @@
       <dl id="build-stats" class="kv"></dl>
       <p id="build-stats-empty" class="muted" hidden>No stats saved in this build. Open it in
         Path of Building once and copy the code again to include them.</p>
+      <!-- MATH-SKILL-SPLIT: Path of Building's own per-skill DPS -->
+      <div id="split-wrap" hidden>
+        <h3 class="sub-h">Damage by skill <span class="muted">(from Path of Building)</span></h3>
+        <dl id="split-list" class="kv"></dl>
+        <p id="split-more" class="muted" hidden></p>
+        <p id="split-ailments" hidden></p>
+      </div>
       <h3 class="sub-h">Gear</h3>
       <ul id="build-gear" class="gear-list"></ul>
       <h3 class="sub-h">Skills</h3>
@@ -297,11 +305,18 @@
 
   <section id="healthbox" class="card health" hidden aria-labelledby="health-title">
     <h2 id="health-title">Build health</h2>
-    <p class="muted">Numbers Path of Building saved with your build. They update when
-      you load a build or check an item.</p>
+    <p class="muted">Numbers from Path of Building: the ones saved with your build, plus
+      more when the optional calc is on. They update when you load a build or check an
+      item.</p>
     <p id="health-msg"></p>
     <ul id="health-list" class="health-list" hidden></ul>
     <dl id="health-values" class="kv" hidden></dl>
+    <!-- MATH-DEF-BREAKDOWN: Path of Building's defence and sustain numbers -->
+    <div id="def-wrap" hidden>
+      <h3 class="sub-h">Defence and sustain</h3>
+      <dl id="def-list" class="kv"></dl>
+      <p id="def-hint" class="muted" hidden></p>
+    </div>
     <div id="next-wrap" hidden>
       <h3 class="sub-h">Look for next</h3>
       <p class="muted">What to look for on each item you wear: missing resistances

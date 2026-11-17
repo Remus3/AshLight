@@ -19,10 +19,19 @@ Nothing is recomputed (decision 0004, research 0028 ruling A):
 
 The build XML stats need no calc run, so this works with the optional
 calc component off: it shows PoB's numbers from the last build load.
+
+MATH-DEF-BREAKDOWN (research 0031 sections 2, 4.2) adds PoB's remaining
+warnFunc conditions (unreserved Life <= 0, unreserved Mana < 0, Accuracy
+below Life with Precise Technique, DoT DPS at or above PoB's DotDpsCap) and
+a compact defence / sustain list of PoB values. CalcDefence / CalcPerform
+values (ailment and stun avoidance, flask and charm figures) exist only in
+the calc's output table, so those rows show only with the calc on
+(`calc_out`). No own uptime or "enough" verdict.
 """
 
 import re
 
+from .. import num
 from . import item as item_parser
 from . import searchstr, waystone
 from . import weights as weights_mod
@@ -42,6 +51,46 @@ VALUES = (("Life", "Life", ""), ("EnergyShield", "Energy shield", ""),
           ("EffectiveBlockChance", "Block chance", "%"),
           ("ChaosResist", "Chaos resistance", "%"),
           ("Spirit", "Spirit", ""), ("SpiritUnreserved", "Spirit left", ""))
+# MATH-DEF-BREAKDOWN: id, label, unit, decimals, calc only. Labels are
+# PoB's stat meanings; the values are shown as PoB exports them. The pinned
+# checkout (7d6f530c) names: <Ailment>AvoidChance for Ignite / Chill /
+# Freeze / Shock / Bleed / Poison (CalcDefence.lua, data.*AilmentTypeList),
+# StunThreshold / StunAvoidChance, FlaskChargeGen / Life- / ManaFlaskChargeGen
+# (FlaskChargesGenerated BASE), CharmEffect (an INC sum, so a percent);
+# Mana sustain from BuildDisplayStats.lua (saved PlayerStat too). Decimals
+# are display only and follow PoB: avoid chances are m_floor'd whole
+# numbers, StunThreshold prints with %d, mana sustain with .1f / .2f.
+DEFENCE = (
+    ("IgniteAvoidChance", "Ignite avoid chance", "%", 0, True),
+    ("ShockAvoidChance", "Shock avoid chance", "%", 0, True),
+    ("FreezeAvoidChance", "Freeze avoid chance", "%", 0, True),
+    ("ChillAvoidChance", "Chill avoid chance", "%", 0, True),
+    ("BleedAvoidChance", "Bleed avoid chance", "%", 0, True),
+    ("PoisonAvoidChance", "Poison avoid chance", "%", 0, True),
+    ("StunThreshold", "Stun threshold", "", 0, True),
+    ("StunAvoidChance", "Stun avoid chance", "%", 0, True),
+    ("FlaskChargeGen", "Flask charges gained per second", "", 2, True),
+    ("LifeFlaskChargeGen", "Life flask charges gained per second", "", 2, True),
+    ("ManaFlaskChargeGen", "Mana flask charges gained per second", "", 2, True),
+    ("CharmEffect", "Increased charm effect", "%", 0, True),
+    ("ManaPerSecondCost", "Mana cost per second", "", 1, False),
+    ("ManaRegenRecovery", "Mana regeneration per second", "", 1, False),
+    ("NetManaRegen", "Net mana regeneration per second", "", 1, False),
+)
+# PoB's data.misc.DotDpsCap (Data.lua: 35791394, (2^31 - 1) / 60); the live
+# test reads the pinned checkout when it is installed (TC-DRIFT)
+DOT_DPS_CAP = 35791394
+# the DPS stats PoB's warnFunc checks against DotDpsCap, with our words
+DOT_STATS = (("TotalDotDPS", "damage over time"), ("BleedDPS", "bleed damage"),
+             ("IgniteDPS", "ignite damage"), ("PoisonDPS", "poison damage"))
+# Precise Technique: PoB checks MainHand / OffHand Accuracy (saved as
+# PlayerStat MainHandAccuracy / OffHandAccuracy) against Life, only while
+# its output flag PreciseTechnique is set (a calc output)
+ACCURACY_STATS = (("MainHandAccuracy", "main hand"), ("OffHandAccuracy", "off hand"))
+# every PoB output the build health reads from the calc (calcwire asks only
+# for these)
+CALC_KEYS = tuple(d[0] for d in DEFENCE) + tuple(k for k, _ in DOT_STATS) + (
+    "LifeUnreserved", "ManaUnreserved", "Life", "PreciseTechnique")
 # API only: the dashboard hides the card with no build (the build card
 # carries that empty state)
 NO_BUILD = "Load a build to see its health."
@@ -108,18 +157,84 @@ def weakest(stats):
     return {"element": el, "hit": h}
 
 
-def health(build):
+def _calc(calc_out):
+    """The calc's output table with only finite numbers and booleans."""
+    if not isinstance(calc_out, dict):
+        return {}
+    return {k: v for k, v in calc_out.items()
+            if isinstance(k, str) and (isinstance(v, bool) or num.finite(v) is not None)}
+
+
+def more_warnings(stats, calc):
+    """MATH-DEF-BREAKDOWN: PoB's remaining warnFunc conditions. `stats`:
+    the saved PlayerStat values with the calc's outputs laid over them;
+    `calc`: the calc outputs alone (Precise Technique is a calc flag)."""
+    warns = []
+    life = _num(stats.get("LifeUnreserved"))
+    if life is not None and life <= 0:
+        warns.append({"id": "life-reserved", "severity": "high", "stat": "LifeUnreserved",
+                      "value": life, "limit": 0,
+                      "text": f"Your unreserved Life is {_fmt(life)}: your skills "
+                              "reserve all of your Life."})
+    mana = _num(stats.get("ManaUnreserved"))
+    if mana is not None and mana < 0:
+        warns.append({"id": "mana-reserved", "severity": "high", "stat": "ManaUnreserved",
+                      "value": mana, "limit": 0,
+                      "text": f"Your unreserved Mana is {_fmt(mana)}: your skills "
+                              "reserve more Mana than you have."})
+    max_life = _num(stats.get("Life"))
+    precise = calc.get("PreciseTechnique")
+    if precise is True or (_num(precise) is not None and precise != 0):
+        for sid, hand in ACCURACY_STATS:
+            acc = _num(stats.get(sid))
+            if acc is not None and max_life is not None and acc < max_life:
+                warns.append({"id": "precise-" + sid, "severity": "high", "stat": sid,
+                              "value": acc, "limit": max_life,
+                              "text": f"Your {hand} Accuracy ({_fmt(acc)}) is below your "
+                                      f"Life ({_fmt(max_life)}), and Precise Technique "
+                                      "needs at least as much Accuracy as Life."})
+    for sid, words in DOT_STATS:
+        dot = _num(stats.get(sid))
+        if dot is not None and dot >= DOT_DPS_CAP:
+            warns.append({"id": "dot-cap-" + sid, "severity": "medium", "stat": sid,
+                          "value": dot, "limit": DOT_DPS_CAP,
+                          "text": f"Your {words} ({_fmt(dot)} per second) is at the game's "
+                                  "limit, so more of it adds nothing."})
+    return warns
+
+
+def defence(stats, calc_on):
+    """MATH-DEF-BREAKDOWN: [{"id", "label", "value", "unit", "digits"}] in
+    DEFENCE order; calc-only rows only when the calc is on. A missing or
+    non-numeric stat shows nothing."""
+    out = []
+    for sid, label, unit, digits, calc_only in DEFENCE:
+        if calc_only and not calc_on:
+            continue
+        v = _num(stats.get(sid))
+        if v is not None and num.finite(v) is not None:
+            out.append({"id": sid, "label": label, "value": v, "unit": unit,
+                        "digits": digits})
+    return out
+
+
+def health(build, calc_out=None):
     """{"loaded", "has_stats", "source", "message", "warnings", "values",
-    "weakest"}. warnings: [{"id", "severity" (high / medium / low), "text",
-    "stat", "value", "limit"}], high first."""
+    "defence", "calc_on", "weakest"}. warnings: [{"id", "severity" (high /
+    medium / low), "text", "stat", "value", "limit"}], high first.
+    `calc_out`: PoB's output table for the loaded build when the optional
+    calc is on (it wins over the saved PlayerStat), None with it off."""
     out = {"loaded": build is not None, "has_stats": False, "source": SOURCE,
-           "message": None, "warnings": [], "values": [], "weakest": None}
+           "message": None, "warnings": [], "values": [], "defence": [],
+           "calc_on": False, "weakest": None}
     if build is None:
         out["message"] = NO_BUILD
         return out
-    stats = _stats(build)
+    calc = _calc(calc_out)
+    out["calc_on"] = bool(calc)
+    stats = dict(_stats(build))
     out["has_stats"] = any(_num(v) is not None for v in stats.values())
-    if not stats:
+    if not stats and not calc:
         out["message"] = NO_STATS
         return out
     warns = []
@@ -139,6 +254,8 @@ def health(build):
                       "value": v, "limit": RES_CAP,
                       "text": f"{el.capitalize()} resistance is {_fmt(v)}%, below the "
                               f"{RES_CAP}% cap."})
+    merged = dict(stats, **calc)
+    warns.extend(more_warnings(merged, calc))
     weak = weakest(stats)
     if weak is not None:
         warns.append({"id": "weakest", "severity": "low",
@@ -153,6 +270,7 @@ def health(build):
         v = _num(stats.get(sid))
         if v is not None:
             out["values"].append({"id": sid, "label": label, "value": v, "unit": unit})
+    out["defence"] = defence(merged, out["calc_on"])
     return out
 
 

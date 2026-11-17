@@ -276,6 +276,7 @@
      button). Text from the build goes in via textContent only. */
   var T = window.ALTc; // web/tc.js: pure view helpers
   var buildRev = null;
+  var calcRev = null; // MATH-SKILL-SPLIT / MATH-DEF-BREAKDOWN: PoB calc outputs ready
   var buildDoc = null;
   var pobEvalId = null; // MATH-NEXT-LOOK: the last PoB-scored item check
   var lastPaste = "";
@@ -311,6 +312,8 @@
       if (window.ALSearch) { window.ALSearch.paint(document, doc, navigator); }
       // MATH-BUILD-HEALTH / MATH-NEXT-LOOK: PoB numbers; Copy on a click only
       if (window.ALHealth) { window.ALHealth.paint(document, doc, navigator); }
+      // MATH-SKILL-SPLIT: PoB's per-skill DPS on the Build card
+      if (window.ALSkillSplit) { window.ALSkillSplit.paint(document, doc); }
     }).catch(function () {
       $("build-status").textContent = "Can't load the build. Is AshLight running?";
     });
@@ -963,8 +966,12 @@
     var pobEval = s.eval && s.eval.calc && s.eval.calc.source === "pob" ? s.eval.id : null;
     var newWeights = pobEval !== null && pobEval !== pobEvalId;
     if (pobEval !== null) { pobEvalId = pobEval; }
+    var newCalc = !!(s.build && s.build.calc_rev && s.build.calc_rev !== calcRev);
+    if (s.build) { calcRev = s.build.calc_rev || null; }
     if (s.build && s.build.rev !== buildRev) {
       buildRev = s.build.rev;
+      loadBuild();
+    } else if (newCalc && buildDoc) {
       loadBuild();
     } else if (newWeights && buildDoc) {
       loadBuild();

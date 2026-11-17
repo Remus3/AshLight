@@ -11,7 +11,7 @@ import threading
 from pathlib import Path
 
 from .. import jsonfile
-from . import buildfile, codec, health, model, paste, searchstr
+from . import buildfile, codec, health, model, paste, searchstr, skillsplit
 
 log = logging.getLogger("al.theorycraft")
 
@@ -30,6 +30,10 @@ class BuildStore:
         # PoB measured for this build (core sets the MATH-WEIGHTS cache's
         # fallback); None uses the health gaps only
         self.weights_for = None
+        # MATH-SKILL-SPLIT / MATH-DEF-BREAKDOWN: callable(build) -> PoB's
+        # output table for the loaded build when the optional calc is on
+        # and has answered (pobout.OutputsCache.get), else None
+        self.calc_outputs = None
         self.build = None
         self.load_error = None
         self._lock = threading.Lock()
@@ -88,6 +92,7 @@ class BuildStore:
     def snapshot(self):
         b = self.build
         tree_data = self._tree_data(b)
+        calc_out = _safe(self.calc_outputs, b) if callable(self.calc_outputs) and b else None
         return {"loaded": b is not None,
                 "build": b.to_dict(tree_data) if b else None,
                 "code": b.to_code() if b else None, "load_error": self.load_error,
@@ -96,7 +101,11 @@ class BuildStore:
                 # MATH-BUILD-HEALTH / MATH-NEXT-LOOK: PoB's own numbers only
                 # (decision 0004); rebuilt on every read, so a new build or a
                 # new PoB weight shows with no click
-                "health": _safe(health.health, b, fallback=health.health(None)),
+                "health": _safe(health.health, b, calc_out, fallback=health.health(None)),
+                # MATH-SKILL-SPLIT: PoB's per-skill and ailment DPS (saved in
+                # every build XML; the calc's values win when it is on)
+                "skill_split": _safe(skillsplit.split, b, calc_out,
+                                     fallback=skillsplit.split(None)),
                 "next_look": _safe(health.next_look, b, self.weights_for,
                                    fallback={"slots": [], "pob_weights": False}),
                 # TC-BUILDFILE (decision 0034): what the .build download
