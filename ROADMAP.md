@@ -674,6 +674,71 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   app/test/filtermerge.test.js. LIVE-FILTER-MERGE: merge a real filter
   (e.g. a NeverSink file) and load it in game once.
 
+## Research-filed features, batch 3 (AREA-RES 2026-11-17, research 0028)
+
+Ranked in research 0028; floor rulings (adjudicator 2026-11-17) in its
+section 6. Phone view over the LAN is an OPERATOR decision (CLAUDE.md:
+LAN access stays off), not a row.
+
+- [ ] MATH-BUILD-HEALTH (build) Build health card from the loaded build's
+  PoB-exported PlayerStat values only: each element resist below the 75
+  cap (chaos shown as a number), ReqStr / ReqDex / ReqInt above Str / Dex
+  / Int (PoB's own warning condition), SpiritUnreserved below 0, weakest
+  element by PoB's *MaximumHitTaken; Life / ES / armour / evasion / block
+  shown as plain values (research 0028 sections 1-2). A missing stat
+  shows nothing; labelled "from PoB". floor-ok: comparisons of PoB
+  outputs to the 75 cap and 0, nothing recomputed (decision 0004; ruling
+  A). ACCEPT: tests on real-shaped PlayerStat sets (capped, uncapped,
+  missing stat, negative spirit); design-reviewer pass. ZERO-CLICK:
+  rebuilds by itself whenever a build loads or the snapshot changes.
+- [ ] MATH-NEXT-LOOK (build) "Look for next" per gear slot: order the
+  MATH-BUILD-HEALTH gaps and the MATH-WEIGHTS stat ranking into one line
+  per slot ("Ring: cold resistance, then life") and pass the top terms to
+  the UTIL-SEARCHSTR builder. After MATH-BUILD-HEALTH. floor-ok: ordering
+  of PoB-derived numbers, no formula; the Copy stays the player's click
+  (decision 0014). ACCEPT: ordering tests (gap first, then weight), slot
+  coverage from the build XML's equipped items, string length cap kept.
+  ZERO-CLICK: lines rebuild by themselves when the build loads.
+- [ ] UTIL-UNDERLEVEL (build) Under-level warning: area level from the
+  `Generating level N area` line minus the player level from level-up
+  lines; at or above a setting (default 3 levels under) show "N levels
+  under this zone" in the act card and the overlay status word (research
+  0028 section 3). No XP-penalty formula shown. floor-ok: subtraction of
+  two values from the opted-in Client.txt tail (ruling B). ACCEPT: parser
+  / state tests incl. unknown player level (no warning), towns and
+  hideouts skipped; overlay 2-line rule kept (design-reviewer).
+  ZERO-CLICK: appears and clears by itself on zone entry and level-up.
+- [ ] UTIL-RUN-HISTORY (build) Personal-best act splits and deaths by zone
+  across runs: on a finished campaign act / run, append a small summary
+  (act splits, deaths per zone, character class) to a local history file
+  resolved by server/al/paths.py (gitignored ops/runtime or the AL
+  sidecar); act card shows best and delta to best, a deaths-by-zone list
+  shows the top zones. floor-ok with condition (ruling C): Client.txt-
+  derived only, LIVE-RESUME untouched (decision 0008 not reversed; record
+  that in a new decision), visible "history on" indicator and a clear /
+  off setting. ACCEPT: fold tests on synthetic runs, file bound (cap on
+  runs kept), clear works, test_sidecar_paths green. ZERO-CLICK: recorded
+  and shown by itself; only clearing is a click.
+- [ ] UTIL-PRICE-WATCH (build) Price watch: the item-check press remembers
+  the last 20 priced items (name, price, time) locally; each hourly price
+  book refresh (decision 0026) flags those whose price moved past a
+  threshold (default 25 percent) in a dashboard list. floor-ok with
+  condition (ruling D): the press records only what it already read, the
+  refresh reads no clipboard or screen, no trade call, no auto-opened URL,
+  nothing fetched or flagged while web_data is off (decision 0013), list
+  clearable. ACCEPT: tests with a fake price book (rise, fall, under
+  threshold, item gone, web_data off). ZERO-CLICK: filled by the existing
+  press and refreshed by itself.
+- [ ] UX-SETTINGS-IO (build) Settings export / import: "Download settings"
+  on the player's click saves AshLight's own settings as a JSON file
+  (decision 0031 / 0034 download pattern); "Import" reads a file the
+  player picks in a browser file input. floor-ok with condition (ruling
+  E): no contact, token or session cookie in the file; allow-list schema,
+  unknown keys rejected; web_data never switched on without the player's
+  confirm. ACCEPT: round-trip test, secret-exclusion test, bad-file tests;
+  design-reviewer pass. ZERO-CLICK: nothing to do in play; one click each
+  way only when moving PCs.
+
 ## Game settings advisor (operator order 2026-11-16)
 
 ## Design and UX audit (operator order 2026-11-16)
