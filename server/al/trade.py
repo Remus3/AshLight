@@ -36,7 +36,8 @@ BASE = "https://www.pathofexile.com"
 ALLOWED_HOSTS = ("www.pathofexile.com",)
 SEARCH_PATH = "/api/trade2/search/poe2/{league}"
 FETCH_PATH = "/api/trade2/fetch/{ids}?query={query}"
-USER_AGENT = webfetch.user_agent("price check on user request")
+UA_PURPOSE = "price check on user request"
+USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; requests add the contact
 RETRY_AFTER_DEFAULT_S = 60.0
 HEADROOM = 1
 MAX_BYTES = 2 * 1024 * 1024
@@ -184,11 +185,14 @@ class RateLimiter:
 class TradeClient:
     """One serial queue in front of the shared limiter. submit() returns a
     Future-like Job; the worker waits for the limiter, sends, and feeds the
-    response headers back. enabled() is the web-data opt-in."""
+    response headers back. enabled() is the web-data opt-in; contact() is
+    the configured User-Agent contact (UA-CONTACT): without one nothing is
+    sent (webfetch.ContactMissing), because GGG asks for it."""
 
     def __init__(self, enabled=lambda: False, fetch=None, limiter=None,
-                 sleep=time.sleep, clock=time.monotonic):
+                 sleep=time.sleep, clock=time.monotonic, contact=lambda: None):
         self.enabled = enabled
+        self.contact = contact
         self.fetch = fetch
         self.limiter = limiter or RateLimiter(clock=clock)
         self.sleep = sleep
@@ -205,6 +209,7 @@ class TradeClient:
 
     def submit(self, kind, method, url, body=None):
         webfetch.require_opt_in(self.enabled)
+        webfetch.require_contact(self.contact)
         webfetch.check_url(url, ALLOWED_HOSTS)
         job = Job(kind, method, url, body)
         self._q.put(job)
@@ -217,12 +222,15 @@ class TradeClient:
         try:
             while True:
                 webfetch.require_opt_in(self.enabled)
+                contact = webfetch.require_contact(self.contact)
                 wait = self.limiter.wait_s(job.kind)
                 if wait <= 0:
                     break
                 job.waiting_s = wait
                 self.sleep(min(wait, 5.0))
-            headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+            job.waiting_s = 0.0
+            headers = {"User-Agent": webfetch.user_agent(UA_PURPOSE, contact),
+                       "Accept": "application/json"}
             data = None
             if job.body is not None:
                 headers["Content-Type"] = "application/json"
@@ -289,7 +297,7 @@ def build_query(item, stat_ids=None, online=True):
     whose text maps to a trade stat id in stat_ids (mod text with numbers
     replaced by "#" -> "explicit.stat_..."), min at 90 percent of the roll.
     Without stat_ids only the base / name query is built (the stat-id table
-    comes from /api/trade2/data/stats, not fetched yet: PRICE-1 remains).
+    comes from /api/trade2/data/stats, cached daily by server/al/price.py).
     The "misc_filters" / "corrupted" filter names follow the trade site's
     query shape and are UNVERIFIED for trade2 (research 0004)."""
     if item is None or not getattr(item, "is_item", False):

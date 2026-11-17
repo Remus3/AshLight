@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import VERSION, layout, logfile, ninja, parser, paths, resume, trade
+from . import VERSION, layout, logfile, ninja, parser, paths, price, resume, trade, webfetch
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import live as tc_live
@@ -83,9 +83,18 @@ class Core:
         self.web_fetch = web_fetch
         rates_dir = (ninja.cache_dir() if runtime is None
                      else self.runtime / "cache" / "ninja")
+        # UA-CONTACT: poe.ninja and trade2 also need the "contact" key.
         self.rates = ninja.RatesClient(rates_dir, enabled=self.web_data_enabled,
-                                       league=self.configured_league, fetch=web_fetch)
-        self.trade = trade.TradeClient(enabled=self.web_data_enabled, fetch=web_fetch)
+                                       league=self.configured_league, fetch=web_fetch,
+                                       contact=self.contact)
+        self.trade = trade.TradeClient(enabled=self.web_data_enabled, fetch=web_fetch,
+                                       contact=self.contact)
+        # PRICE-1: one price check per item-hotkey press (POST /api/eval).
+        trade_dir = (price.cache_dir() if runtime is None
+                     else self.runtime / "cache" / "trade")
+        self.price = price.PriceChecker(self.trade, trade_dir, enabled=self.web_data_enabled,
+                                        contact=self.contact, league=self.configured_league,
+                                        publish=self.state.set_price)
 
     # -- web data opt-in (decision 0013)
     def _config(self):
@@ -99,12 +108,23 @@ class Core:
         """True only when the user turned web data on (default off)."""
         return self._config().get("web_data") is True
 
+    def contact(self):
+        """UA-CONTACT: the User-Agent contact from the gitignored local
+        config ("contact"), cleaned; None when unset or unusable."""
+        return webfetch.clean_contact(self._config().get(webfetch.CONTACT_KEY))
+
+    def web_blocked_reason(self):
+        """Why poe.ninja / trade2 fetches are off now ("web data off",
+        "contact not set") or None."""
+        return webfetch.blocked_reason(self.web_data_enabled, self.contact)
+
     def configured_league(self):
         value = self._config().get("league")
         return value if isinstance(value, str) and value.strip() else None
 
     def set_web_data(self, enabled):
-        """Persist the opt-in in the local config, keeping every other key."""
+        """Persist the opt-in in the local config, keeping every other key
+        (the contact included; it is never written here)."""
         with self._lock:
             cfg = self._config()
             cfg["web_data"] = bool(enabled)

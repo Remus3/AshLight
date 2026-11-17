@@ -220,6 +220,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, doc, extra)
         if path == "/api/web-data":
             return self._json(200, self._web_data_doc(), extra)
+        if path == "/api/price":
+            # PRICE-1: the latest price check and the live limiter wait;
+            # never starts a request (only the hotkey's POST /api/eval does).
+            return self._json(200, core.price.latest(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -362,6 +366,11 @@ class Handler(BaseHTTPRequestHandler):
         return {"web_data": core.web_data_enabled(),
                 "uses": ["poe.ninja currency rates", "build share links you paste",
                          "price checks you ask for"],
+                # UA-CONTACT: rates and price checks also need the contact
+                # (config/local.json "contact"); the value is never echoed.
+                "contact_set": core.contact() is not None,
+                "needs_contact": ["poe.ninja currency rates", "price checks you ask for"],
+                "blocked": core.web_blocked_reason(),
                 "policy": "docs/decisions/0013-web-data.md"}
 
     def _set_web_data(self):
@@ -428,6 +437,11 @@ class Handler(BaseHTTPRequestHandler):
         # TC-EVAL-UI: the result is also published in the state (dashboard
         # and overlay card) and re-scored when the weights or build change.
         result = self.server.core.last_eval.run(text, slot or None)
+        # PRICE-1: the same press queues at most one price check (no second
+        # clipboard read, no second app call); off without the web-data
+        # opt-in and a contact, and the same text within a short window
+        # reuses the last result. The result arrives in the state.
+        self.server.core.price.request(text)
         return self._json(200, result)
 
     def _put_weights(self):

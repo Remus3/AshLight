@@ -92,6 +92,9 @@ def test_kinds_sharing_a_policy_share_state():
     assert lim.wait_s("fetch") == 0
 
 
+CONTACT = "test-contact"
+
+
 class FakeNet:
     def __init__(self, replies):
         self.replies = list(replies)
@@ -107,7 +110,7 @@ def test_client_needs_opt_in_and_allowlist():
     c = trade.TradeClient(enabled=lambda: False, fetch=net)
     with pytest.raises(webfetch.WebDataOff):
         c.submit("search", "POST", trade.search_url("Standard"), {"query": {}})
-    on = trade.TradeClient(enabled=lambda: True, fetch=net)
+    on = trade.TradeClient(enabled=lambda: True, fetch=net, contact=lambda: CONTACT)
     with pytest.raises(webfetch.UrlNotAllowed):
         on.submit("search", "POST", "https://evil.example/api/trade2/search/poe2/x", {})
     assert net.calls == []
@@ -124,7 +127,8 @@ def test_client_waits_for_the_limiter_and_sends_truthful_headers():
     net = FakeNet([(200, HDRS, b'{"id": "Q1", "result": ["a1"], "total": 1}'),
                    (200, HDRS, b'{"id": "Q2", "result": [], "total": 0}'),
                    (429, dict(HDRS, **{"Retry-After": "7"}), b"{}")])
-    c = trade.TradeClient(enabled=lambda: True, fetch=net, sleep=sleep, clock=clock)
+    c = trade.TradeClient(enabled=lambda: True, fetch=net, sleep=sleep, clock=clock,
+                          contact=lambda: CONTACT)
     url = trade.search_url("Example League")
     j1 = c.run_one(trade.Job("search", "POST", url, {"query": {"type": "X"}}))
     assert j1.error is None and j1.result["id"] == "Q1"
@@ -136,22 +140,32 @@ def test_client_waits_for_the_limiter_and_sends_truthful_headers():
     for method, u, h, body in net.calls:
         assert method == "POST" and u == url
         assert h["User-Agent"].startswith(f"{NAME}/{VERSION} ")
+        assert h["User-Agent"].endswith(f"(contact: {CONTACT})")
         assert "Cookie" not in h and h["Content-Type"] == "application/json"
 
 
 def test_client_rechecks_opt_in_before_sending():
     state = {"on": True}
     net = FakeNet([])
-    c = trade.TradeClient(enabled=lambda: state["on"], fetch=net)
+    c = trade.TradeClient(enabled=lambda: state["on"], fetch=net, contact=lambda: CONTACT)
     job = trade.Job("search", "POST", trade.search_url("Standard"), {})
     state["on"] = False
     c.run_one(job)
     assert job.error and net.calls == []
 
 
+def test_client_needs_a_contact():
+    net = FakeNet([])
+    c = trade.TradeClient(enabled=lambda: True, fetch=net)
+    with pytest.raises(webfetch.ContactMissing):
+        c.submit("search", "POST", trade.search_url("Standard"), {"query": {}})
+    job = c.run_one(trade.Job("search", "POST", trade.search_url("Standard"), {}))
+    assert job.error == webfetch.REASON_CONTACT and net.calls == []
+
+
 def test_queue_runs_jobs_in_order():
     net = FakeNet([(200, {}, b'{"n": 1}'), (200, {}, b'{"n": 2}')])
-    c = trade.TradeClient(enabled=lambda: True, fetch=net)
+    c = trade.TradeClient(enabled=lambda: True, fetch=net, contact=lambda: CONTACT)
     url = trade.search_url("Standard")
     a = c.submit("search", "POST", url, {"query": {}})
     b = c.submit("search", "POST", url, {"query": {}})

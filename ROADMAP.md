@@ -49,7 +49,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [x] HUD-WHISPER (build) Trade whisper card on the overlay (item, price,
   stash position) with a quiet, non-flashing cue; dismissed from the
   dashboard. ACCEPT: fixture whisper renders; no input sent to the game.
-- [ ] PRICE-1 (build) Price check: AshLight hotkey reads the clipboard ONCE
+- [x] PRICE-1 (build) Price check: AshLight hotkey reads the clipboard ONCE
   (decision 0003), parses the item (research 0003), queries the trade2 API
   through one rate-limited queue that parses X-Rate-Limit headers
   dynamically; opt-in setting. ACCEPT: parser tests on fixtures; limiter
@@ -66,6 +66,17 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   values recorded in research 0004.
   ZERO-CLICK: once opted in, the one hotkey press queues the check; the
   limiter paces it with no click.
+  DONE 2026-11-17 (build lane, decision 0015): server/al/price.py - the
+  item hotkey's existing POST /api/eval (one clipboard read per press,
+  app/eval_hotkey.js) queues at most ONE check: trade2 /data/stats table
+  cached daily under <sidecar>\Cache\trade, league from config else
+  /data/leagues (daily) else Standard, build_query -> search -> fetch of
+  the first 10 -> summary (currency, min / median of the cheapest 5,
+  listing count, total); same text within 30 s reuses the result; live
+  "waiting N s" from the limiter; neutral state field `price` and
+  token-gated GET /api/price. Off (zero requests) without web_data or a
+  contact (UA-CONTACT). tests/test_price_check.py (mocked). UI remains in
+  PRICE-1-UI; live header values in research 0004 remain UNVERIFIED.
 - [ ] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
   prices, "waiting N s" from the limiter, poe.ninja rates for conversion).
   After PRICE-1. ACCEPT: fixture result renders at desktop and phone width;
@@ -93,11 +104,22 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   After DATA-NINJA. ACCEPT: fixture rates render at desktop and phone
   width; credit visible; design-reviewer pass. ZERO-CLICK: the panel polls
   /api/rates on its own; no refresh button.
-- [ ] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
+- [x] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
   overview response fields (lines[].id / primaryValue, core.items names,
   core.primary) against server/al/ninja.parse_overview and record them in
   research 0005; add a dated, anonymised fixture. ACCEPT: parser test on
   the real shape. ZERO-CLICK: doc + fixture row, run by a lane.
+  DONE 2026-11-17 (research 0013, not 0005): paths, ETag 304, ids and values
+  verified; item names are in a top-level `items`, not core.items (row
+  DATA-NINJA-NAMES). The trimmed real shape is in research 0013.
+- [ ] DATA-NINJA-NAMES (data) server/al/ninja.parse_overview reads names
+  from core.items, which holds only the 3 reference currencies; the real
+  response (research 0013, 2026-11-17) has every line's name in the
+  top-level `items` array (id, name, category, detailsId). Read names from
+  top-level `items` first, core.items as fallback; update tests/test_data_ninja.py
+  OVERVIEW to the real shape (top-level items, primary "divine"). ACCEPT:
+  a test on the trimmed shape in research 0013 names every line.
+  ZERO-CLICK: next /api/rates refresh.
 - [x] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
   and poe2db / poe2wiki (CC BY-NC-SA) before any snapshot is bundled; record
   in docs/decisions. ACCEPT: decision file with the ruling.
@@ -150,7 +172,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   whether PoB2 spec node ids equal the export's skill ids. ACCEPT: reader
   test on a dated, anonymised shape fixture. ZERO-CLICK: doc + fixture
   row, run by a lane.
-- [ ] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
+- [x] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
   User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
   optional contact value read only from gitignored config/local.json (never
   a tracked file; no email in any tracked file, leak sweep), appended to
@@ -160,6 +182,15 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   2026-11-17 from the coordinator's review of the round-3 data lane.
   ACCEPT: tests with and without a contact (mocked fetch); leak sweep
   clean. ZERO-CLICK: setting the contact once enables the fetches.
+  DONE 2026-11-17 (build lane, decision 0015): "contact" read only from
+  gitignored config/local.json (example file: empty value);
+  webfetch.user_agent appends "(contact: <value>)" (cleaned: printable
+  ASCII, no parentheses / backslash, max 120); ninja, trade and the
+  snapshot (snapshot.user_agent, GGG sources via needs_contact) send
+  nothing without it; "blocked": "contact not set" in /api/rates,
+  /api/web-data, /api/price and the state price field; the value is never
+  echoed. pobb.in / pastebin share links unchanged. Tests:
+  test_price_check.py, test_data_ninja.py, test_trade_limiter.py.
 
 ## Lane: review
 
@@ -217,10 +248,21 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   detected URL once when web_data is on (422 off / not allowed, 502 fetch
   failure), the text goes through paste detection into the build store.
   tests/test_tc_url.py (SSRF cases, mocked).
-- [ ] TC-URL-VERIFY (review) With web access, confirm the raw-download
+- [x] TC-URL-VERIFY (review) With web access, confirm the raw-download
   paths pobb.in/pob/<id> and pastebin.com/raw/<id> (and whether pobb.in
   redirects) and record them in research 0010. ACCEPT: paths cited with an
   access date or shareurl.RAW_TEMPLATES fixed. ZERO-CLICK: doc row.
+  DONE 2026-11-17 (research 0013): pobb.in /pob/<id> and /<id>/raw both 200
+  text/plain, no redirect; pastebin /raw/<id> route exists (404 page for a
+  missing id), 200 body untested. Row TC-URL-POBBIN-RAW filed.
+- [ ] TC-URL-POBBIN-RAW (theorycraft) shareurl.RAW_TEMPLATES uses
+  pobb.in/pob/<id>, the PoB import route; pobb.in's README documents
+  /<id>/raw and /u/<name>/<id>/raw as the public third-party routes
+  (research 0013, 2026-11-17). Switch the pobb.in template to
+  https://pobb.in/{id}/raw and accept https://pobb.in/u/<name>/<id> links
+  (rebuilt as /u/<name>/<id>/raw, name charset [A-Za-z0-9_-]); update the
+  module docstring and decision 0013 item 4. ACCEPT: tests/test_tc_url.py
+  covers both forms and the SSRF cases. ZERO-CLICK: pasting a pobb.in link.
 - [x] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture

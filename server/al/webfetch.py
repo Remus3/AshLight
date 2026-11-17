@@ -43,9 +43,61 @@ class WebDataOff(FetchError):
     """The web-data opt-in is off; nothing was sent."""
 
 
-def user_agent(purpose):
-    """AshLight's truthful User-Agent: name, version and what the call is for."""
-    return f"{NAME}/{VERSION} (local Path of Exile 2 companion; {purpose})"
+class ContactMissing(FetchError):
+    """UA-CONTACT: the host asks for a contact in the User-Agent and none is
+    configured (config/local.json "contact"); nothing was sent."""
+
+
+CONTACT_KEY = "contact"  # the key in gitignored config/local.json, never a tracked file
+CONTACT_MAX = 120
+REASON_OFF = "web data off"
+REASON_CONTACT = "contact not set"
+
+
+def clean_contact(value):
+    """The configured contact as safe header text, or None when it is unset
+    or unusable (non-string, blank, too long, non-printable-ASCII, or a
+    parenthesis / backslash that would break the User-Agent comment)."""
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value or len(value) > CONTACT_MAX:
+        return None
+    if any(not 32 <= ord(c) < 127 or c in "()\\" for c in value):
+        return None
+    return value
+
+
+def contact_value(contact):
+    """clean_contact of contact() (a callable, read at call time) or of a value."""
+    return clean_contact(contact() if callable(contact) else contact)
+
+
+def require_contact(contact):
+    """The cleaned contact, else ContactMissing (nothing may be sent)."""
+    value = contact_value(contact)
+    if value is None:
+        raise ContactMissing(REASON_CONTACT)
+    return value
+
+
+def user_agent(purpose, contact=None):
+    """AshLight's truthful User-Agent: name, version and what the call is
+    for, plus "(contact: <value>)" when a contact is configured (UA-CONTACT;
+    GGG's developer docs and poe.ninja's API docs ask for one, research 0011)."""
+    ua = f"{NAME}/{VERSION} (local Path of Exile 2 companion; {purpose})"
+    value = clean_contact(contact)
+    return f"{ua} (contact: {value})" if value else ua
+
+
+def blocked_reason(enabled, contact):
+    """Why a contact-requiring fetch (poe.ninja, trade2, GGG) may not run now:
+    REASON_OFF, REASON_CONTACT, or None when it may."""
+    if not (enabled() if callable(enabled) else enabled):
+        return REASON_OFF
+    if contact_value(contact) is None:
+        return REASON_CONTACT
+    return None
 
 
 def require_opt_in(enabled):

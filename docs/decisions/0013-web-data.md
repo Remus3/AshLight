@@ -64,9 +64,10 @@ needed: every fork below follows from CLAUDE.md, decisions 0003 / 0004 /
 
 ## Open (UNVERIFIED)
 
-- pobb.in and pastebin raw-download paths (ROADMAP TC-URL-VERIFY).
-- poe.ninja overview response field names beyond research 0005's summary;
-  the parser is defensive (DATA-NINJA-VERIFY).
+- pastebin raw 200 body shape (route confirmed, research 0013); pobb.in
+  /pob/<id> verified but the documented route is /<id>/raw (TC-URL-POBBIN-RAW).
+- poe.ninja names live in a top-level `items`, not core.items (verified
+  2026-11-17, research 0013; row DATA-NINJA-NAMES).
 - trade2 filter names (misc_filters / corrupted) and real limit values
   (research 0004).
 - poe.ninja asks for a contact in the User-Agent; AshLight sends name,
