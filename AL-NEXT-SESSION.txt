@@ -1,104 +1,108 @@
 AL NEXT SESSION
 ---------------
-SESSION: 4   (FLEET item 13 counter; /done writes n+1)
+SESSION: 5   (FLEET item 13 counter; /done writes n+1)
 
-Next action: supervise the armed lane loop (\AshLightOps\LaneLoop, every 15
-min): read ops/loop/control/progress/lane-*.json and loop.json, merge and
-verify finished lane rounds (lane-0 HUD-ACT-RESUME and lane-2 TC-CODE-REAL
-first: staged, uncommitted work in their worktrees), restart once per round and check exactly 1 core / 1
-supervisor / 1 overlay after it; then the next unblocked ROADMAP row.
-Supervisor rules (history in ops/loop/control/progress/lane-supervisor.json):
-merge main into the lane branch first; check for silent duplicate defs after
-auto-merge (state.py had two set_price defs once); renumber colliding
-decision / research numbers; one restart per round; design-reviewer on any
-web/ app/ state.py text change.
+Next action: work ROADMAP AUDIT-P8-LOW (P8-3..P8-8, docs/audit/
+2026-11-17-audit.md "Pass 8"), then CODE-HEALTH-FOLLOWUP. Run them as area
+lanes in worktrees with a merger agent (session 4 pattern): merge main into
+the branch first, full suites green, design-reviewer on any web/ app/
+state.py text change. The headless loop is PAUSED (see Context); decide at
+start whether to resume it (delete ops/loop/control/HALT) or keep working
+interactively.
 
 Carried forward (not acted on yet):
-- OPERATOR ACTS (one batched ask; all optional unless noted):
-  (a) in-map FPS test, Windowed Fullscreen, game FPS display: overlay off /
-  on idle / on updating (OVL-FPS and OVL-BUDGET, both BLOCKED on this);
-  (b) LIVE-1 play session: play to whisper unlock, receive a trade whisper,
-  die once, join a party, toggle AFK - covers the 13 unseen LIVE-1 patterns
-  and replaces the HUD-WHISPER sample fixtures;
-  (c) TC-OAUTH-REG when GGG reopens OAuth registration;
-  (d) create the GitHub remote when ready to publish (pre-push hook refuses
-  every push until then; the AL_ALLOW_PUSH override is documented in
-  .githooks/pre-push);
-  (e) enable logon autostart: scripts\autostart.ps1 -Enable (optional,
-  decision 0011, OFF by default);
-  (f) WT-SIDECAR: add the WorktreeCreate / WorktreeRemove hook snippet from
-  the ROADMAP WT-SIDECAR row to .claude/settings.json, then check one
-  isolated spawn lands under the sidecar Worktree dir;
-  (g) set the UA contact in config/local.json and turn on web_data in the
-  dashboard - now only for poe.ninja / share-URL features (trade needs no
-  contact: the app makes no trade call, decision 0017);
-  (h) NLM interpretation check: "NLM" read as natural-language messaging
-  (docs/design/0001 top) - correct it if wrong;
-  (i) NEW: install a C compiler (MSVC Build Tools or MinGW) or approve a
-  pinned prebuilt LuaJIT binary - TC-BRIDGE cannot build luajit.exe on this
-  machine (decision 0018 pins PoB-PoE2 v0.23.1 + LuaJIT source by sha256);
-  (j) NEW: paste one real PoB2 export / build code for TC-CODE-REAL and the
-  DATA-TREE real-export confirmation;
-  (k) NEW: review decision 0017 (adjudicated while the operator was away:
-  the app calls no trade2 endpoint, trade-search link only; 3 ToS floor
-  wording changes in CLAUDE.md) and say if it should be reversed.
-- Open rows (ROADMAP): HUD-ACT-RESUME (lane-0 finished, unmerged), UX-REVIEW
-  (lane-1 running; second pass), TC-CODE-REAL (lane-2 finished, unmerged; also needs
-  operator act j), TC-UPGRADE-STATS, TC-BRIDGE (blocked on operator act i),
-  TC-DELTA, TC-DRIFT, TC-OAUTH-REG (operator act c), TC-IMPORT,
-  DESIGN-GATE, LIVE-1 / OVL-BUDGET / OVL-FPS (BLOCKED: operator acts a, b),
-  WT-SIDECAR (partial, operator act f), OPERATOR GitHub remote (act d).
-- NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT) at
-  kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
-- NOTE: reap applied: 0 removed, 3 kept, 0 listed (base main) - kept lane-0,
-  lane-1, lane-2 (fleet_lanes lane worktrees under the sidecar). The
-  session-2 worktree agent-aa7b5bb6af01db38e was reaped this session (REAP).
-- NOTE: headless usage: 14 runs logged in headless_usage.jsonl, about $25.5
-  total, all kind build, rc 0.
-- NOTE: ops/status_board.json "code" fixed ASH -> AL at this /done (trivial,
-  tracked tree file; no STATUS-CODE row needed).
-
-Context: CLAUDE.md (ToS floor with decision 0017 wording, Loop heading ARMED,
-Settled 0001-0020), ROADMAP.md, ops/loop/control/progress/ (lane-*.json,
-loop.json, lane-supervisor.json), tools/al_loop.py, tools/al_lane.py,
-docs/decisions/0017-0020, docs/research/0015-0016, docs/design/reviews.log.
-Live at /done (read back): /api/health 200 (with token) tailing:true, core
-21976, keepalive supervisor 9892, overlay 14428 (electron) on build 26c802a
-area - probe /api/health and the process list before touching them; other
-pythonw processes belong to other trees, leave them alone.
-Acceptance: lane rounds merged with gates green (pytest + npm), 1/1/1 after
-restart; HUD-ACT-RESUME / UX-REVIEW / TC-CODE-REAL rows flipped or re-filed
-per their lane outcome.
-Do NOT redo: shipped session 3 (all on main): REAP; PRICE-1-COPY;
-DATA-TREE-IDS (PoB2 node ids = GGG export skill ids, guard, research 0015);
-RES-POLICY (policy unchanged 2026-11-17); PUB-NAME ("Ashlight" not a GGG
-proper noun); decision 0017 (trade link only, floor wording); TC-PIN
-(decision 0018); UX-REVIEW first pass + UX-FIX (F3 F4 F5 F7 F8);
-OVL-TRADE-CANCEL (decision 0019) with UX F1/F2/F6; PRICE-TRADE-LINK (trade
-network code deleted, webfetch refuses trade URLs, research 0016); LEAK-WT
-(sweep ARMED in worktrees); TC-SNAP-UI (data_credit in /api/version, footer
-+ overlay About); HUD-ACT (decision 0020); TC-UPGRADE (link builder);
-LOOP-ARM (scheduled task read back, first tick rc 0); FLAKY-EVAL-API
-(9181d6f, by the loop). Earlier sessions: see git log.
-In flight (do not stop; the loop owns them):
-- lane-0 build HUD-ACT-RESUME: progress/lane-0.json done 08:21; worktree
-  <sidecar>\Worktree\lane-0 holds staged uncommitted
-  docs/decisions/0021-act-splits-resume.md, server/al/acts.py, core.py,
-  resume.py, state.py (design-reviewer needed), tests/test_hud_act_resume.py.
-  NOTE: lane-0 and lane-2 both took decision number 0021 - renumber one on
-  merge.
-- lane-1 review UX-REVIEW: progress/lane-1.json running 20% at 08:21, ETA
-  718 s (about 08:33).
+- AUDIT-P8-LOW (open ROADMAP row): P8-3 overlay corePort (app/main.js)
+  takes AL_PORT / config "port" without the 8960-8979 check; P8-4 core
+  --port flag outside the block still binds (refuse; 0 for tests only);
+  P8-5 tick_ladder re-dedupes all session maps twice per 0.5 s tick (about
+  10 ms at 200 + 500 maps); P8-6 dashboard console / CSP test never renders
+  the Checks rows, a hint or ladder_all; P8-7 diag.redact can blank a word
+  in fixed report text matching a character / contact name; P8-8 "This
+  session" ladder and Maps card mix characters after a switch (and a map
+  open across a game restart is saved under neither).
+- CODE-HEALTH-FOLLOWUP (open ROADMAP row, added at this /done; details in
+  docs/audit/code-health-2026-11-17.md): state.py split (card / event text
+  out, update design_gate / design-reviewer / loop_prompts / design docs
+  0001-0002 together); web/ pad / duration / clock helper dedup; runtime
+  pid / state / heartbeat files still written CRLF (switch to LF, re-test
+  stop.ps1 / run.ps1).
+- LIVE rows needing the operator or the live game (all BLOCKED in ROADMAP):
+  LIVE-1 remaining unseen lines; TEST-LIVE-CLICKS (operator logs in once
+  while the core runs, or a desktop-control tool grant); OVL-BUDGET active
+  in-map measurement; OVL-FPS in-map FPS test; TC-BUILDFILE-LIVE (load an
+  AshLight .build in game once); LIVE-FILTER-MERGE (merge a real filter);
+  waystone / search-string / filter in-game checks.
+- UTIL-1.0-POST: BLOCKED until PoE2 1.0 launch 2026-12-11; runbook
+  docs/ops/1.0-launch-runbook.md.
+- TC-OAUTH-REG / TC-IMPORT / TC-CURX: BLOCKED on GGG OAuth app registration
+  (operator act).
+- OPERATOR ACTS (one batched ask; all optional): (a) in-map FPS / RAM test,
+  Windowed Fullscreen (OVL-FPS, OVL-BUDGET); (b) LIVE-1 play session (trade
+  whisper, death, party, AFK) and one login for TEST-LIVE-CLICKS; (c)
+  TC-OAUTH-REG when GGG reopens registration; (d) create the GitHub remote
+  when ready to publish (pre-push hook refuses every push until then); (e)
+  logon autostart scripts\autostart.ps1 -Enable (decision 0011, OFF by
+  default); (g) UA contact in config/local.json + web_data on (poe.ninja /
+  share-URL features only); (h) confirm "NLM" = natural-language messaging
+  (docs/design/0001 top); (k) review decision 0017 (trade link only) and say
+  if it should be reversed.
+- OPERATOR DECISION: phone view needs LAN access; CLAUDE.md keeps LAN off.
+- Headless loop PAUSED: ops/loop/control/HALT exists (operator wind-down
+  2026-11-17); scheduled task \AshLightOps\LaneLoop is still enabled. To
+  resume: delete HALT (tools/loop_task.py status reads the task back).
+- NOTE: reap applied: 33 removed (clean, every commit on main by patch,
+  branches deleted), 37 kept: 34 session-4 agent worktrees under
+  .claude/worktrees (owner pid 21836 alive at /done - reap again next
+  session once that session is gone) and lane-0 / lane-1 / lane-2
+  (fleet_lanes lane worktrees under the sidecar), 0 listed (base main).
 - NOTE: a live lane writing ops/loop/control/loop_items/*.json mid-suite
-  trips fleet_test_guard (false error at teardown of a random test); re-run
-  the suite when it happens (seen once at this /done, re-run green).
-- lane-2 data TC-CODE-REAL: progress/lane-2.json done 08:20 (rc 0, $0.82);
-  worktree <sidecar>\Worktree\lane-2 holds staged uncommitted
-  docs/decisions/0021-tc-code-real.md, tests/fixtures/pob2_real/README.md,
-  tests/test_tc_code_real.py - merge or let the loop pick it up.
-- loop: progress/loop.json fire 8 done 08:18; next tick every 15 min.
-Status: session 3 commits 316ebba .. 26c802a, then this /done commit. Gates
-fresh at /done on 26c802a: pytest 1045 passed, npm 87 passed, leak sweep
-ARMED needles=22 clean. Inbox: 1 note (MAIN INFORMATION/TERMINAL,
-kit v32 join), already recorded, no reply; nothing new.
+  can trip fleet_test_guard (false error at a random teardown); re-run the
+  suite when it happens.
+- NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
+  at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
+
+Context: CLAUDE.md (Settled list), ROADMAP.md (open rows: LIVE-1,
+TEST-LIVE-CLICKS, OVL-BUDGET, OVL-FPS, TC-OAUTH-REG, TC-IMPORT,
+UTIL-1.0-POST, TC-BUILDFILE-LIVE, TC-CURX, AUDIT-P8-LOW,
+CODE-HEALTH-FOLLOWUP, OPERATOR GitHub remote), docs/audit/2026-11-17-audit.md,
+docs/audit/code-health-2026-11-17.md, ops/loop/control/HALT. Live at /done
+(per session ground truth): core on 127.0.0.1:8960, /api/health ok,
+overlay 2 processes, running from main - probe /api/health and the process
+list before touching them; other pythonw processes belong to other trees.
+Acceptance: AUDIT-P8-LOW and CODE-HEALTH-FOLLOWUP flipped [x] with one
+regression test per item, pytest + npm green, leak sweep clean, app
+restarted from main with 1 core / 1 supervisor / overlay up.
+
+Do NOT redo (shipped session 4, all on main): research 0017-0032;
+AREA-AUDIT passes 1-8 and every P3/P4/P5/P6/P7 low fixed
+(docs/audit/2026-11-17-audit.md); TC-LIVE (portable WinLibs toolchain,
+decision 0027, bridge matches the PoB GUI within 0.024%); TC-DELTA wired;
+MATH-* (item parser, value, weights, compare, sanity, weapon type, e2e
+live, perf / GC, drift guard, build health, next look, skill split, def
+breakdown, trade stat coverage 39/39 with PoB fallback, decision 0037);
+UTIL-* (maps, deaths, pace, resume, price book, movers, 1.0 readiness,
+waystone risk + reward, search strings, zone notes, filter + tiers + merge,
+session summary, game-idle by log staleness 0029, underlevel, run history,
+price watch, settings IO, multi-character 0038, campaign checks 0039, map
+ladder, newbie hints, diagnostics + language guard 0040, .build download
+0034); UX passes U7-U28 (real overlay invisible-bug fix, overlay RAM about
+181 MB in 2 processes, narrow layout, density / Tools group, a11y cap 12,
+dashboard console / CSP test); TEST hardening (fuzz, soak, supervisor pid
+reuse, SSE deflake, fullstack e2e, clean-clone release check, port
+override limited to 8960-8979, shared jsonfile / num helpers);
+research-number uniqueness test; decision 0035 intentionally unused.
+Previous-session carried rows now done: HUD-ACT-RESUME, UX-REVIEW,
+TC-CODE-REAL, TC-UPGRADE-STATS, TC-BRIDGE, TC-DELTA, TC-DRIFT, DESIGN-GATE,
+WT-SIDECAR (operator acts f, i, j no longer needed). Session 3 and earlier:
+see git log.
+
+In flight: none (no lane or agent running; loop paused by HALT).
+
+Status: main at 139b0fb before this /done, then the /done commits (ROADMAP
+CODE-HEALTH-FOLLOWUP row, this hand-off). No git remote; nothing pushed
+(self-adjudicated: commit and merge locally only). Gates fresh at /done on
+139b0fb + ROADMAP row: pytest 2219 passed, 3 skipped; npm 180/180; leak
+sweep ARMED needles=22 clean. Inbox: 1 note (MAIN INFORMATION/TERMINAL, kit
+v32 join), classify -> skip terminal, no reply; nothing new.
+
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.

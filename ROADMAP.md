@@ -1922,6 +1922,19 @@ merge. Each row names the finding ids it closes.
   across the game restart is saved under neither. ACCEPT: a fix and one
   regression test each. ZERO-CLICK: code row, the loop works it.
 
+- [ ] CODE-HEALTH-FOLLOWUP (build) Follow-ups filed in
+  docs/audit/code-health-2026-11-17.md: (1) state.py split - move the card /
+  event text functions (lines 74-745) to their own module and update
+  tools/design_gate.py, the design-reviewer agent, loop_prompts and design
+  docs 0001 / 0002 that key the UI-copy review on server/al/state.py, in one
+  change; (2) web/ pad / duration / clock helper dedup into one shared
+  script (design review needed); (3) runtime pid / state / heartbeat files
+  (core.write_private, procs.record_overlay, keepalive._write_state,
+  __main__.write_heartbeat) still written CRLF - switch to LF and re-test
+  stop.ps1 / run.ps1 parsing. ACCEPT: behaviour unchanged, suites green,
+  design-reviewer PASS on (1) and (2). ZERO-CLICK: code row, the loop
+  works it.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
