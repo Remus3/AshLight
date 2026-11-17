@@ -453,6 +453,8 @@ recorded in research 0018 section 3.
   row and section 10 amended; app/test/shared.test.js. Reverses if: play
   shows the timer's map anchor confuses after a portal trip (then D or an
   explicit marker), or the player asks for map deaths on the HUD (reopen A).
+  Loop duplicate: lane-1 (data) worktree, detached at 570e390, uncommitted:
+  superseded by 86a4216, do not merge.
 - [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
@@ -703,6 +705,7 @@ LAN access stays off), not a row.
   A). ACCEPT: tests on real-shaped PlayerStat sets (capped, uncapped,
   missing stat, negative spirit); design-reviewer pass. ZERO-CLICK:
   rebuilds by itself whenever a build loads or the snapshot changes.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] MATH-NEXT-LOOK (build) "Look for next" per gear slot: order the
   MATH-BUILD-HEALTH gaps and the MATH-WEIGHTS stat ranking into one line
   per slot ("Ring: cold resistance, then life") and pass the top terms to
@@ -711,6 +714,7 @@ LAN access stays off), not a row.
   (decision 0014). ACCEPT: ordering tests (gap first, then weight), slot
   coverage from the build XML's equipped items, string length cap kept.
   ZERO-CLICK: lines rebuild by themselves when the build loads.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-UNDERLEVEL (build) Under-level warning: area level from the
   `Generating level N area` line minus the player level from level-up
   lines; at or above a setting (default 3 levels under) show "N levels
@@ -720,6 +724,7 @@ LAN access stays off), not a row.
   / state tests incl. unknown player level (no warning), towns and
   hideouts skipped; overlay 2-line rule kept (design-reviewer).
   ZERO-CLICK: appears and clears by itself on zone entry and level-up.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-RUN-HISTORY (build) Personal-best act splits and deaths by zone
   across runs: on a finished campaign act / run, append a small summary
   (act splits, deaths per zone, character class) to a local history file
@@ -731,6 +736,7 @@ LAN access stays off), not a row.
   off setting. ACCEPT: fold tests on synthetic runs, file bound (cap on
   runs kept), clear works, test_sidecar_paths green. ZERO-CLICK: recorded
   and shown by itself; only clearing is a click.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UTIL-PRICE-WATCH (build) Price watch: the item-check press remembers
   the last 20 priced items (name, price, time) locally; each hourly price
   book refresh (decision 0026) flags those whose price moved past a
@@ -741,6 +747,7 @@ LAN access stays off), not a row.
   clearable. ACCEPT: tests with a fake price book (rise, fall, under
   threshold, item gone, web_data off). ZERO-CLICK: filled by the existing
   press and refreshed by itself.
+  BLOCKED: session lane building (2026-11-17)
 - [ ] UX-SETTINGS-IO (build) Settings export / import: "Download settings"
   on the player's click saves AshLight's own settings as a JSON file
   (decision 0031 / 0034 download pattern); "Import" reads a file the
@@ -750,6 +757,7 @@ LAN access stays off), not a row.
   confirm. ACCEPT: round-trip test, secret-exclusion test, bad-file tests;
   design-reviewer pass. ZERO-CLICK: nothing to do in play; one click each
   way only when moving PCs.
+  BLOCKED: session lane building (2026-11-17)
 
 ## Game settings advisor (operator order 2026-11-16)
 
