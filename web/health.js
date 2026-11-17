@@ -1,5 +1,5 @@
 /* AshLight dashboard: build health and "look for next" (MATH-BUILD-HEALTH,
-   MATH-NEXT-LOOK, decision 0004). UMD: CommonJS for node --test
+   MATH-NEXT-LOOK, MATH-DEF-BREAKDOWN, decision 0004). UMD: CommonJS for node --test
    (app/test/health.test.js), window.ALHealth for the page. The core builds
    both from Path of Building's own numbers (server/al/theorycraft/
    health.py) and sends them in GET /api/build as `health` and `next_look`;
@@ -26,6 +26,9 @@
   // UX-B9-CARDS: name the optional calc, not "build calc"
   var NO_WEIGHTS = "More stats show here for each slot once you check items. This " +
     "needs the optional Path of Building calc, which is off by default.";
+  // MATH-DEF-BREAKDOWN: the calc-only rows (CalcDefence / CalcPerform)
+  var NO_CALC = "Ailment and stun avoidance, flask and charm numbers show here once the " +
+    "optional Path of Building calc is on. It is off by default.";
   var COPIED = "Copied - paste it into the search box in game";
   var FALLBACK = "Can't copy here. The text is selected: press Ctrl+C.";
   var FALLBACK_SAID = "can't copy here, the text is selected, press Ctrl+C";
@@ -57,7 +60,8 @@
     /* UX-U25: with no saved stats the Build card already says so (Key
        stats); this card says nothing and shows only for Look for next rows */
     if (h.has_stats === false && !warnings.length && !values.length) {
-      return { show: nextView(doc).rows.length > 0, message: "", warnings: [], values: [] };
+      return { show: nextView(doc).rows.length > 0 || defView(doc).rows.length > 0,
+        message: "", warnings: [], values: [] };
     }
     var message = str(h.message);
     if (!message && h.has_stats &&
@@ -66,6 +70,44 @@
     }
     if (!message && !warnings.length && !values.length) { message = NO_STATS; }
     return { show: true, message: message, warnings: warnings, values: values };
+  }
+
+  function fmtDigits(n, digits) {
+    var d = isNum(digits) && digits >= 0 && digits <= 3 ? digits : 1;
+    return n.toLocaleString("en-US", { maximumFractionDigits: d });
+  }
+
+  /* doc -> {rows: [{label, text}], hint} for "defence and sustain"
+     (MATH-DEF-BREAKDOWN): PoB's values as it exports them. */
+  function defView(doc) {
+    var h = doc && doc.loaded && doc.health && typeof doc.health === "object" &&
+      doc.health.loaded ? doc.health : null;
+    if (!h) { return { rows: [], hint: "" }; }
+    var rows = (Array.isArray(h.defence) ? h.defence : []).filter(function (r) {
+      return r && str(r.label) && isNum(r.value);
+    }).map(function (r) {
+      return { label: r.label, text: fmtDigits(r.value, r.digits) + str(r.unit) };
+    });
+    var hint = h.calc_on === false && (rows.length || h.has_stats) ? NO_CALC : "";
+    return { rows: rows, hint: hint };
+  }
+
+  function paintDef(doc, buildDoc) {
+    var wrap = doc.getElementById("def-wrap");
+    var list = doc.getElementById("def-list");
+    var hint = doc.getElementById("def-hint");
+    if (!wrap || !list) { return; }
+    var v = defView(buildDoc);
+    list.replaceChildren();
+    list.hidden = !v.rows.length;
+    wrap.hidden = !v.rows.length && !v.hint;
+    if (hint) { hint.textContent = v.hint; hint.hidden = !v.hint; }
+    v.rows.forEach(function (x) {
+      var row = el(doc, "div", "kv-row");
+      row.appendChild(el(doc, "dt", null, x.label));
+      row.appendChild(el(doc, "dd", "mono", x.text));
+      list.appendChild(row);
+    });
   }
 
   /* doc -> {rows: [{slot, line, text, note}], hint} for "look for next". */
@@ -159,7 +201,7 @@
     var box = doc.getElementById("healthbox");
     if (!box) { return; }
     var v = view(buildDoc);
-    var sig = JSON.stringify([v, nextView(buildDoc)]);
+    var sig = JSON.stringify([v, nextView(buildDoc), defView(buildDoc)]);
     if (sig === lastSig) { return; }
     lastSig = sig;
     box.hidden = !v.show;
@@ -185,9 +227,10 @@
       row.appendChild(el(doc, "dd", null, x.text));
       vals.appendChild(row);
     });
+    paintDef(doc, buildDoc);
     paintNext(doc, buildDoc, nav);
   }
 
-  return { view: view, nextView: nextView, paint: paint, SEVERITY: SEVERITY,
-    ALL_CLEAR: ALL_CLEAR, NO_STATS: NO_STATS, NO_WEIGHTS: NO_WEIGHTS, COPIED: COPIED };
+  return { view: view, nextView: nextView, defView: defView, paint: paint, SEVERITY: SEVERITY,
+    ALL_CLEAR: ALL_CLEAR, NO_CALC: NO_CALC, NO_STATS: NO_STATS, NO_WEIGHTS: NO_WEIGHTS, COPIED: COPIED };
 }));

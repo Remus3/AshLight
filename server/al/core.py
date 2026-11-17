@@ -19,7 +19,7 @@ from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import basetypes
-from .theorycraft import calcwire
+from .theorycraft import calcwire, health, pobout, skillsplit
 from .theorycraft import item as item_mod
 from .theorycraft import live as tc_live
 from .theorycraft import shareurl
@@ -148,6 +148,14 @@ class Core:
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
         # weights PoB measured for this build (never another build's)
         self.builds.weights_for = self.last_eval.pob_weights.fallback
+        # MATH-SKILL-SPLIT / MATH-DEF-BREAKDOWN: PoB's calc-only outputs for
+        # the loaded build, fetched in the background when the calc is on;
+        # a ready table bumps the build view (no click)
+        self.pob_outputs = pobout.OutputsCache(
+            lambda: self.tc_calc if self.tc_calc is not None else self.tc_provider(),
+            health.CALC_KEYS + skillsplit.KEYS, on_ready=self._outputs_ready)
+        self.builds.calc_outputs = self.pob_outputs.get
+        self.builds.add_listener(self.pob_outputs.get)
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
         # local config; every outbound request goes through server/al/webfetch.py
         # with an injectable transport (tests pass web_fetch, never the network).
@@ -177,6 +185,13 @@ class Core:
         # file; re-read from the cache on a price book refresh only.
         self.watch = pricewatch.PriceWatch(self.runtime / pricewatch.FILE_NAME)
         self._watch_key = None
+
+    def _outputs_ready(self):
+        """A new PoB output table for the loaded build: the build view is
+        read again (the state's build summary gets a new calc_rev)."""
+        info = self.state.build_info
+        if info:
+            self.state.set_build_info(dict(info, calc_rev=int(info.get("calc_rev") or 0) + 1))
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
