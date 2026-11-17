@@ -102,7 +102,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   used; expose it via an API field. After TC-SNAP. ACCEPT: text visible,
   design-reviewer pass. ZERO-CLICK: shown automatically when the cache
   exists.
-- [ ] TC-UPGRADE (build) Upgrade search as a link builder (decision
+- [x] TC-UPGRADE (build) Upgrade search as a link builder (decision
   0017): from the local weights build a trade2 search URL offline
   (https://www.pathofexile.com/trade2/search/poe2/<league>?q=<json>) that
   the user opens in their own browser; the app makes no trade2 request, no
@@ -113,6 +113,14 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   duplicated; no trade host in the webfetch allowlist.
   ZERO-CLICK: the same hotkey press that evaluates the item builds the
   link; the user clicks it only to open the trade site.
+  DONE 2026-11-17 (link builder): server/al/upgrade.py turns the item
+  check's best slot into trade.upgrade_link (rare items of the base the
+  build wears there, else the checked item's base; base and rarity only,
+  complexity cap 200 checked) through trade.link_for, the price link's
+  builder; the eval card carries `upgrade` and the dashboard Item check
+  card shows an "Upgrade search" link; a build or weights change rebuilds
+  it. Tests: tests/test_tc_upgrade.py, app/test/prices.test.js. Weighted
+  mod filters stay with TC-UPGRADE-STATS.
 - [ ] TC-UPGRADE-STATS (review) Find a permitted source for trade stat ids
   (mod filters for TC-UPGRADE links): GGG API Reference / Data Exports
   check first (decision 0017), then attributed build-time snapshots with a

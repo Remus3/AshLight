@@ -446,6 +446,21 @@
     $("eval-unweighted").hidden = !(v && v.unweighted);
     $("eval-unweighted").textContent = v ? v.unweighted : "";
     $("eval-when").textContent = v ? v.when : "";
+    // TC-UPGRADE (decision 0017): the player's click opens the upgrade
+    // search in their browser; AshLight never opens or fetches it
+    var up = v && ev ? P.upgradeView(ev.upgrade) : null;
+    $("upgradebox").hidden = !up;
+    $("upgrade-sentence").textContent = up ? up.sentence : "";
+    var ubox = $("upgrade-link");
+    ubox.replaceChildren();
+    if (up) {
+      var a = el("a", "out", up.text);
+      a.href = up.href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.setAttribute("aria-label", up.label);
+      ubox.appendChild(a);
+    }
   }
 
   /* Stat weights editor: saves on change (PUT /api/weights). */

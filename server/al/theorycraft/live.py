@@ -15,6 +15,7 @@
 
 import threading
 
+from .. import upgrade as upgrade_mod
 from . import evaluate as tc_evaluate
 
 MAX_COMPARISONS = 3
@@ -69,20 +70,26 @@ class LastEval:
     """The last evaluated item, kept so a weights or build change re-scores
     it at once. One per core."""
 
-    def __init__(self, builds, weights, state):
+    def __init__(self, builds, weights, state, league=None):
         self.builds = builds
         self.weights = weights
         self.state = state
+        # TC-UPGRADE: a callable read at run time (the configured league or
+        # None -> Standard); nothing is fetched
+        self.league = league
         self._input = None
         self._lock = threading.Lock()
 
     def run(self, text, slot=None, keep_time=False, at=None):
         """`at`: the press time (PRICE-1-WIRE shares it with the price
-        check of the same press); None stamps now."""
+        check of the same press); None stamps now. The card gains
+        `upgrade`: the offline upgrade-search link doc, or None (TC-UPGRADE)."""
         result = tc_evaluate.evaluate(text, self.builds.build, self.weights.get(), slot=slot)
         with self._lock:
             self._input = (text, slot)
-        self.state.set_eval(compact(result), keep_time=keep_time, at=at)
+        league = self.league() if callable(self.league) else self.league
+        card = dict(compact(result), upgrade=upgrade_mod.link(result, league))
+        self.state.set_eval(card, keep_time=keep_time, at=at)
         return result
 
     def rerun(self):
@@ -95,10 +102,10 @@ class LastEval:
         return self.run(last[0], last[1], keep_time=True)
 
 
-def attach(builds, weights, state):
+def attach(builds, weights, state, league=None):
     """Wire the live views into a core: build summary now and on every load,
     and a LastEval that re-runs on a build change. Returns the LastEval."""
-    last = LastEval(builds, weights, state)
+    last = LastEval(builds, weights, state, league=league)
     rev = [0]
 
     def on_build(build):

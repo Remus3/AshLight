@@ -93,6 +93,13 @@
     <div id="eval-comps" class="eval-comps"></div>
     <p id="eval-unweighted" class="muted" hidden></p>
     <p id="eval-when" class="muted"></p>
+    <!-- TC-UPGRADE: outside the live region on purpose; the verdict above
+         already announces the check, this is a static link (review UP-5) -->
+    <div id="upgradebox" class="price-box" hidden>
+      <h3 class="sub-h">Upgrade search</h3>
+      <p id="upgrade-sentence"></p>
+      <p id="upgrade-link" class="price-link"></p>
+    </div>
     <div id="pricebox" class="price-box">
       <h3 class="sub-h">Price</h3>
       <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
