@@ -31,7 +31,7 @@ import threading
 import time
 from pathlib import Path
 
-from server.al import paths
+from server.al import exepin, paths
 
 FRAME_PREFIX = "ALB1 "
 SCRIPT = Path(__file__).resolve().with_name("bridge.lua")
@@ -79,7 +79,8 @@ def status(environ=None):
     except (OSError, ValueError, KeyError) as exc:
         return {"available": False, "missing": ["pins"], "error": str(exc)}
     missing = []
-    if not comp["luajit"].is_file():
+    if not exepin.verified(comp["luajit"]):
+        # AUDIT-EXE-PATH: only the luajit.exe setup built and recorded
         missing.append("luajit")
     if not (comp["pob_src"] / "HeadlessWrapper.lua").is_file():
         missing.append("pob")
@@ -99,8 +100,11 @@ class Bridge:
     a lock serialises calls so the core may share one instance."""
 
     def __init__(self, argv, cwd=None, env=None, timeout=DEFAULT_TIMEOUT,
-                 start_timeout=DEFAULT_START_TIMEOUT, log_path=None):
+                 start_timeout=DEFAULT_START_TIMEOUT, log_path=None, exe_check=None):
         self.argv = list(argv)
+        # AUDIT-EXE-PATH: when set, argv[0] must match its recorded SHA-256
+        # before every exec (first start and every restart).
+        self.exe_check = Path(exe_check) if exe_check else None
         self.cwd = cwd
         self.env = env
         self.timeout = float(timeout)
@@ -130,7 +134,8 @@ class Bridge:
             str(runtime / "lua" / "?" / "init.lua")])
         env["LUA_CPATH"] = ";".join(["?.dll", str(runtime / "?.dll")])
         return cls([str(comp["luajit"]), str(comp["script"])],
-                   cwd=str(comp["pob_src"]), env=env, log_path=comp["log"], **kw)
+                   cwd=str(comp["pob_src"]), env=env, log_path=comp["log"],
+                   exe_check=comp["luajit"], **kw)
 
     # -- lifecycle --
 
@@ -139,6 +144,9 @@ class Bridge:
 
     def _start(self):
         self._stop(kill=True)
+        if self.exe_check is not None and not exepin.verified(self.exe_check):
+            raise BridgeUnavailable("luajit.exe does not match its recorded hash; "
+                                    "re-run setup.ps1 -TcCalc")
         stderr = subprocess.DEVNULL
         if self.log_path is not None:
             try:

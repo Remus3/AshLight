@@ -95,6 +95,39 @@ def steam_libraries(steam_roots=None):
     return libs
 
 
+_DRIVE = re.compile(r"^[A-Za-z]:$")
+LOG_NAME = "client.txt"
+
+
+def consent_path_ok(path, windows=None):
+    """AUDIT-HTTP-HARDEN S4: may a user-given consent "path" be used? Purely
+    lexical (no stat, so a UNC name never reaches SMB): an absolute local
+    path (a drive letter on Windows; no UNC, no device form, no NUL, no ':'
+    stream suffix, no '..') that names Client.txt or a folder without a dot
+    in its name (the game folder or its logs folder; discover_client_log then
+    opens only a file named Client.txt inside it)."""
+    from pathlib import PurePosixPath, PureWindowsPath
+    windows = (os.name == "nt") if windows is None else windows
+    if not isinstance(path, str) or not path or "\x00" in path or len(path) > 1024:
+        return False
+    if windows:
+        if path[:2] in ("\\\\", "//", "\\/", "/\\"):
+            return False
+        pp = PureWindowsPath(path)
+        if not (_DRIVE.match(pp.drive) and pp.root) or ":" in path[2:]:
+            return False
+    else:
+        if path.startswith("//"):
+            return False
+        pp = PurePosixPath(path)
+        if not pp.is_absolute():
+            return False
+    if ".." in pp.parts:
+        return False
+    name = pp.name.lower()
+    return name == LOG_NAME or "." not in name
+
+
 def discover_client_log(configured=None, steam_roots=None):
     """The Client.txt path: the configured value when it exists, else the first
     Steam library holding the PoE2 log. None when nothing is found."""

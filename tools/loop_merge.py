@@ -11,7 +11,7 @@ from loop_base import (
     RED_TTL_S, RESOLVABLE, ROADMAP_REL, ascii_text, atomic_write, epoch_of, iso,
     read_json,
 )
-from loop_roadmap import base_kind, flip_roadmap, merge_subject, resolve_roadmap
+from loop_roadmap import base_kind, commit_body, flip_roadmap, merge_subject, resolve_roadmap
 
 
 # ---------------------------------------------------------------- gate verdicts
@@ -124,7 +124,7 @@ class MergeMixin:
         state = "merge-conflict"
         if why is None:
             # PUBREPO 1b: `merge: <topic>`, never the lane / worktree name
-            msg = (f"{merge_subject(rec)}\n\n{ascii_text(rec['label'], 300)}\n\n"
+            msg = (f"{merge_subject(rec)}{commit_body(rec)}"
                    f"refute-rounds: {rec.get('rounds', 0)}/{MAX_ROUNDS}\n")
             c = g(["commit", "-q", "-F", "-"], main, input=msg)
             if c.returncode != 0:

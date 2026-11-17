@@ -156,7 +156,9 @@ counted. Nothing found forbids the fetch-only ruling.
 2. Build-time fetch into the user's own sidecar cache is permitted for:
    the repoe-fork PoE2 JSON files `mods`, `base_items`, `stats`,
    `stat_translations` (https://repoe-fork.github.io/poe2/). Conditions:
-   - fetched on the user's machine by `scripts/build.ps1` (opt-out), into
+   - fetched on the user's machine by `scripts/build.ps1` only while the
+     web_data opt-in is on or the build is forced (AUDIT-SNAPSHOT-OPTIN
+     amendment below), into
      `<AL sidecar>\Cache\gamedata\` resolved by `server/al/paths.py`;
    - never at runtime by the core, never committed, never uploaded,
      never redistributed from the cache;
@@ -214,3 +216,28 @@ repoe-fork license turns out to be.
   GGG tree export with explicit terms): bundling that source may be
   re-ruled.
 - poe2db or the wiki publish an API with terms that permit app use.
+
+## Amendment 2026-11-17 (AUDIT-SNAPSHOT-OPTIN, audit finding T1)
+
+Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
+- Decision: the build-time game-data snapshot follows the single
+  `web_data` opt-in of decision 0013 (default off). `scripts/build.ps1`
+  runs it only when config/local.json holds `"web_data": true` (strict
+  bool, as the core reads it) or the build is forced with `-Snapshot` /
+  env `AL_SNAPSHOT=1` (passed on as `snapshot --opt-in`); `-NoSnapshot` /
+  `AL_NO_SNAPSHOT=1` still skip and win. `snapshot.main` checks the same
+  setting itself, so a direct run also makes no request while it is off.
+  Once web data is on, every build refreshes the snapshot by itself
+  (the 24 h gate keeps a re-run a no-op).
+- Alternatives: (b) keep the opt-out and write a build-time exception into
+  0013 - rejected: users read "nothing hits the network while off"
+  literally and a fresh build would still contact two hosts; (c) a second
+  `snapshot` setting - rejected: two consent switches contradict 0013's
+  one opt-in.
+- Why: one consent switch, the promise kept literally, zero-click after
+  the opt-in; the app already treats the snapshot as optional (zone levels,
+  tree names and the data credit read a missing cache as absent).
+- Reverses if: a core feature turns out to need snapshot data and cannot
+  degrade, the operator rules that a build-time fetch is not "web data",
+  or first-run use shows users missing the data and not finding the switch.
+- Tests: tests/test_audit_snapshot_optin.py.

@@ -11,7 +11,9 @@ transparent click-through Electron overlay).
 - **Core (`server/`)**: Python 3.11+ standard library only. Client.txt tailer
   -> parser -> in-process event bus -> state store -> HTTP server on
   `127.0.0.1:8960` with Server-Sent Events. No third-party Python packages at
-  runtime.
+  runtime. Tests: `pytest` is the one allowed test dependency (dev only,
+  never imported by `server/` or `tools/`); anything else a test uses is
+  optional and guarded by ImportError (AUDIT-HYGIENE H3, 2026-11-17).
 - **Dashboard (`web/`)**: static HTML / CSS / vanilla JS served by the core,
   no framework, no CDN, styled only with the fleet kit design tokens
   (`ops/fleet_kit/tokens.css`). Opens in any browser or an Edge `--app`

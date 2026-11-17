@@ -44,8 +44,18 @@
             { label: "wiki", href: "https://www.poe2wiki.net/wiki/" + slug }];
   }
 
-  function safeUrl(u) {
-    return (typeof u === "string" && /^https:\/\/[^\s]+$/i.test(u)) ? u : "";
+  /* AUDIT-TREE-URL: a pasted build's tree URL is a link only on a known
+     passive-tree host (or its subdomain): https, no user info, no port. */
+  var TREE_HOSTS = ["pathofexile.com", "pathofexile2.com", "poe2db.tw", "maxroll.gg"];
+  function safeTreeUrl(u) {
+    if (typeof u !== "string") { return ""; }
+    var m = /^https:\/\/([a-z0-9.-]+)(\/[^\s]*)?$/i.exec(u);
+    if (!m) { return ""; }
+    var host = m[1].toLowerCase();
+    var ok = TREE_HOSTS.some(function (h) {
+      return host === h || host.slice(-(h.length + 1)) === "." + h;
+    });
+    return ok ? u : "";
   }
 
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
@@ -108,7 +118,7 @@
       var n = b.tree.node_count || 0;
       tree = { line: (b.tree.title || "Passive tree") + ": " + plural(n, "point", "points") +
                      " allocated" + (b.tree.tree_version ? " (tree " + b.tree.tree_version + ")" : ""),
-               url: safeUrl(b.tree.url),
+               url: safeTreeUrl(b.tree.url),
                jewels: Object.keys(b.tree.jewels || {}).length };
     }
     return { loaded: true, title: title, levelLine: "Planned at " + planned + ".", you: you,
@@ -234,5 +244,5 @@
 
   return { buildView: buildView, pasteResult: pasteResult, evalView: evalView,
            weightRows: weightRows, weightsDoc: weightsDoc, toKey: toKey, gfxView: gfxView,
-           links: links, num: num };
+           links: links, num: num, safeTreeUrl: safeTreeUrl };
 }));

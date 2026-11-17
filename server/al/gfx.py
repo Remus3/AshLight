@@ -23,6 +23,8 @@ import subprocess
 import threading
 import time
 
+from . import exepin
+
 QUERY_TIMEOUT_S = 25
 GB = 1024 ** 3
 
@@ -58,7 +60,9 @@ def run_query(timeout=QUERY_TIMEOUT_S):
         return None
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        r = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive",
+        # AUDIT-EXE-PATH: by its System32 path, never a bare name.
+        exe = str(exepin.system_tool("WindowsPowerShell", "v1.0", "powershell.exe"))
+        r = subprocess.run([exe, "-NoProfile", "-NonInteractive",
                             "-ExecutionPolicy", "Bypass", "-Command", PS_SCRIPT],
                            capture_output=True, text=True, timeout=timeout,
                            creationflags=flags, stdin=subprocess.DEVNULL)
