@@ -251,10 +251,13 @@
       search box in game. AshLight copies only when you click Copy.</p>
     <ul id="search-list" class="search-list"></ul>
     <h3 class="sub-h">Loot filter add-on</h3>
-    <p class="muted">Shows rare drops of the item bases you wear larger. Save the file in
-      your item filter folder. Then add this line near the top of your own filter:</p>
-    <p><code>Import "ashlight.filter" Optional</code></p>
-    <p class="muted">AshLight never changes your game files.</p>
+    <p class="muted">A small add-on for your own loot filter. It shows rare drops of the item
+      bases your build wears in larger text. The button sends ashlight.filter to your
+      browser's downloads. Move it yourself to the folder the game's own filter button
+      opens. Then add this line near the top of your own filter:</p>
+    <p><code class="filter-line">Import "ashlight.filter" Optional</code></p>
+    <p class="muted">AshLight writes nothing into your game folders. You move the file, and
+      you can delete it at any time.</p>
     <div class="actions">
       <button id="filter-download" type="button" class="secondary">Download ashlight.filter</button>
       <span id="filter-said" class="muted"></span>
@@ -338,6 +341,30 @@
 
 <footer class="foot">
   <p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
+  <!-- UX-ONBOARD-COPY: the ToS-floor promises in plain words (CLAUDE.md
+       "Game ToS floor", decision 0003); folded, always on the page -->
+  <details id="promises" class="promises">
+    <summary>What AshLight does and never does</summary>
+    <p><strong>AshLight does</strong></p>
+    <ul>
+      <li>Read the game's log file, Client.txt, only after you allow it on this page. The
+        pill at the top says when it is reading.</li>
+      <li>Read the clipboard once each time you press the item check hotkey, and at no
+        other time.</li>
+      <li>Copy text to your clipboard only when you click a Copy button.</li>
+      <li>Fetch prices from poe.ninja, and open a build link you paste, only when you turn
+        on web data.</li>
+      <li>Run on this computer only. This page can't be opened from another device.</li>
+    </ul>
+    <p><strong>AshLight never</strong></p>
+    <ul>
+      <li>Sends a key press, click or chat message to the game.</li>
+      <li>Reads or changes the game's memory or network traffic, or changes any game
+        file.</li>
+      <li>Writes into your game folders.</li>
+      <li>Asks for your account, password or login cookie.</li>
+    </ul>
+  </details>
   <p id="data-credit" class="muted" hidden></p>
   <p class="muted">Path of Exile is a trademark of Grinding Gear Games.
     <button id="consent-no" type="button" class="link" hidden>Stop reading Client.txt</button></p>

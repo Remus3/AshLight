@@ -18,7 +18,8 @@
   "use strict";
 
   var COPIED = "Copied - paste it into the search box in game";
-  var FALLBACK = "Can't copy here. Select the text and press Ctrl+C.";
+  var FALLBACK = "Can't copy here. The text is selected: press Ctrl+C.";
+  var FALLBACK_SAID = "can't copy here, the text is selected, press Ctrl+C";
 
   function str(v) { return typeof v === "string" ? v : ""; }
 
@@ -45,6 +46,16 @@
     }
   }
 
+  /* Select a text block's words so the player can press Ctrl+C. */
+  function selectText(doc, node) {
+    var sel = doc.getSelection ? doc.getSelection() : null;
+    if (!sel || !doc.createRange) { return; }
+    var range = doc.createRange();
+    range.selectNodeContents(node);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
   function paint(doc, buildDoc, nav) {
     var box = doc.getElementById("searchbox");
     if (!box) { return; }
@@ -65,12 +76,12 @@
         p.textContent = r.why;
         li.appendChild(p);
       }
-      var code = doc.createElement("input");
-      code.type = "text";
-      code.readOnly = true;
-      code.className = "search-text mono";
-      code.value = r.text;
-      code.setAttribute("aria-label", r.label + " search string");
+      /* UX-B5-CARDS: a wrapping text block, not a one-line input, so a
+         long string (the waystone one runs to about 250 characters) is
+         read whole at 320 px; only the Copy button takes focus */
+      var code = doc.createElement("p");
+      code.className = "search-text";
+      code.textContent = r.text;
       li.appendChild(code);
       var btn = doc.createElement("button");
       btn.type = "button";
@@ -79,9 +90,25 @@
       btn.setAttribute("aria-label", "Copy " + r.label + " search string");
       var said = doc.createElement("span");
       said.className = "muted search-said";
+      /* UX-B5-CARDS: no live region (the page keeps its 12, audit 0004
+         U16). The word beside the button is for the eye; the focused
+         button's own name gains the outcome, which a screen reader may
+         read on the click that caused it (best effort; never at any other
+         time). Only the last clicked row says anything. */
+      var name = "Copy " + r.label + " search string";
+      var tell = function (text, state) {
+        Array.prototype.forEach.call(list.querySelectorAll(".search-row"), function (row) {
+          var s = row.querySelector(".search-said"), b = row.querySelector("button");
+          if (s) { s.textContent = ""; }
+          if (b && b.dataset.name) { b.setAttribute("aria-label", b.dataset.name); }
+        });
+        said.textContent = text;
+        btn.setAttribute("aria-label", name + " (" + state + ")");
+      };
+      btn.dataset.name = name;
       btn.addEventListener("click", function () {
-        copy(r.text, nav, function () { said.textContent = COPIED; },
-          function () { code.focus(); code.select(); said.textContent = FALLBACK; });
+        copy(r.text, nav, function () { tell(COPIED, "copied"); },
+          function () { selectText(doc, code); tell(FALLBACK, FALLBACK_SAID); });
       });
       li.appendChild(btn);
       li.appendChild(said);

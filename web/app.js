@@ -433,11 +433,20 @@
      goes. AshLight writes no file itself. */
   function downloadFilter() {
     var said = $("filter-said");
-    said.textContent = "";
+    /* UX-B5-CARDS: no live region (the page keeps its 12); the focused
+       button's name carries the answer; most screen readers read it on
+       this click (best effort, audit 0004 U22) */
+    var btn = $("filter-download");
+    var tell = function (text) {
+      said.textContent = text;
+      btn.setAttribute("aria-label", text ? "Download ashlight.filter (" + text + ")"
+        : "Download ashlight.filter");
+    };
+    tell("");
     fetch("/api/filter", { headers: { "X-AL-Token": token }, cache: "no-store" })
       .then(function (r) {
         if (!r.ok) {
-          said.textContent = "Can't make the filter. Try again.";
+          tell("Can't make the filter. Try again.");
           return null;
         }
         return r.text();
@@ -451,12 +460,12 @@
         a.click();
         a.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        said.textContent = text.indexOf("\nShow\n") >= 0
-          ? "Sent to your browser's downloads. Move it to your item filter folder."
+        tell(text.indexOf("\nShow\n") >= 0
+          ? "Sent to your browser's downloads. Move it to the game's filter folder."
           : "Sent to your browser's downloads, but your build has no gear bases, so it " +
-            "highlights nothing yet.";
+            "highlights nothing yet.");
       }).catch(function () {
-        said.textContent = "Can't reach AshLight - is it running?";
+        tell("Can't reach AshLight - is it running?");
       });
   }
 

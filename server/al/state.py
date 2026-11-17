@@ -616,11 +616,18 @@ def overlay_card(ev, price, now):
     if not ev_ok and not pr_ok:
         return None
 
+    ws = ev.get("waystone") if isinstance(ev, dict) and isinstance(ev.get("waystone"), dict) \
+        else None
+
     def eval_part():
         t = eval_card_text(ev)
+        verdict = str(ev.get("verdict") or "") if ev.get("ok") else "note"
+        # UX-OVERLAY-WAYSTONE: a risky waystone takes the warn edge, as its
+        # dashboard pill does (never alone: the head says "Risky")
+        if ws and _dicts(ws.get("risky")) and not ws.get("unidentified"):
+            verdict = "risky"
         return {"kind": "eval", "head": t["head"], "line2": t["item"], "line3": t["line"],
-                "verdict": str(ev.get("verdict") or "") if ev.get("ok") else "note",
-                "expires_at": ev["at"] + EVAL_CARD_S}
+                "verdict": verdict, "expires_at": ev["at"] + EVAL_CARD_S}
 
     def price_part():
         t = price_card_text(price)
@@ -631,7 +638,8 @@ def overlay_card(ev, price, now):
     if ev_ok and pr_ok:
         if abs(price["at"] - ev["at"]) >= SAME_PRESS_S:
             return price_part() if price["at"] > ev["at"] else eval_part()
-        if not ev.get("ok") and ev.get("error") == "no build loaded":
+        # a waystone's verdict needs no build (UX-OVERLAY-WAYSTONE): keep it
+        if not ev.get("ok") and ev.get("error") == "no build loaded" and not ws:
             return price_part()
         if price.get("status") in ("off", "error"):
             return eval_part()
