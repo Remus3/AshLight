@@ -52,7 +52,7 @@
   function webDataView(doc) {
     var on = !!(doc && doc.web_data === true);
     return { on: on, status: on
-      ? "Web data is on. Currency values come from poe.ninja about once an hour."
+      ? "Web data is on. Prices come from poe.ninja about once an hour."
       : "Web data is off. AshLight asks nothing from the internet." };
   }
 
@@ -168,6 +168,33 @@
              attribution: (doc && doc.attribution) || "" };
   }
 
+  /* ---- UTIL-MOVERS: the week's biggest price changes from the cached
+     poe.ninja overviews (/api/rates `movers`; no extra request). Shown only
+     while web data is on. */
+  function moverRow(r) {
+    var ch = typeof r.change === "number" && isFinite(r.change) ? r.change : 0;
+    // under 0.5% is no trend, as the core's price card says (state.ninja_text)
+    var change = Math.abs(ch) < 0.5 ? "no change"
+      : (ch > 0 ? "up " : "down ") + num(Math.abs(ch)) + "%";
+    var unit = typeof r.unit === "string" && r.unit ? " " + r.unit : "";
+    var value = typeof r.value === "number" && isFinite(r.value) ? num(r.value) + unit : "";
+    var name = typeof r.name === "string" && r.name ? r.name : "Unnamed item";
+    return { name: name, change: change, value: value };
+  }
+
+  function moversView(doc) {
+    var on = !!(doc && doc.web_data === true);
+    var m = doc && doc.movers && typeof doc.movers === "object" ? doc.movers : {};
+    var up = Array.isArray(m.up) ? m.up.map(moverRow) : [];
+    var down = Array.isArray(m.down) ? m.down.map(moverRow) : [];
+    return {
+      show: on, up: up, down: down,
+      empty: on && !up.length && !down.length
+        ? "No price changes to show yet. They appear after the next hourly price update."
+        : ""
+    };
+  }
+
   /* ---- PRICE-1-UI: the snapshot's price (decision 0016 contract). */
   var PRICE_BADGE = {
     // PRICE-TRADE-LINK (decision 0017): the trade search link is ready
@@ -255,5 +282,5 @@
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
            ratesView: ratesView, convert: convert, aboutText: aboutText,
            tradeAbout: tradeAbout, priceView: priceView, priceEmpty: priceEmpty,
-           tradeLink: tradeLink, upgradeView: upgradeView };
+           tradeLink: tradeLink, upgradeView: upgradeView, moversView: moversView };
 }));

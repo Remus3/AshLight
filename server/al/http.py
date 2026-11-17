@@ -422,11 +422,12 @@ class Handler(BaseHTTPRequestHandler):
         return {"web_data": core.web_data_enabled(),
                 # decision 0017: the trade link is built offline, so it is
                 # no web-data use; the app calls no trade-site endpoint
-                "uses": ["poe.ninja currency rates", "build share links you paste"],
+                "uses": ["poe.ninja currency rates", "poe.ninja item prices",
+                         "build share links you paste"],
                 # UA-CONTACT: rates also need the contact (config/local.json
                 # "contact"); the value is never echoed.
                 "contact_set": core.contact() is not None,
-                "needs_contact": ["poe.ninja currency rates"],
+                "needs_contact": ["poe.ninja currency rates", "poe.ninja item prices"],
                 "blocked": core.web_blocked_reason(),
                 "policy": "docs/decisions/0013-web-data.md"}
 

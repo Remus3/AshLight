@@ -334,12 +334,12 @@ def _listing_text(row):
 
 def _ninja_amount(v):
     """A poe.ninja value: 2 decimals from 1 up, 3 significant digits below,
-    "under 0.001" for dust."""
+    None for dust (under 0.001)."""
     v = float(v)
     if v >= 1:
         return _price_amount(v)
     if v < 0.001:
-        return "under 0.001"
+        return None
     return f"{v:.3g}"
 
 
@@ -354,6 +354,8 @@ def ninja_text(ninja):
         return None
     unit = _text(ninja.get("unit"), "")
     amount = _ninja_amount(v)
+    dust = amount is None
+    amount = "0.001" if dust else amount
     money = f"{amount} {unit}" if unit else amount
     league = _text(ninja.get("league"), "this league")
     listings = ninja.get("listings")
@@ -371,15 +373,18 @@ def ninja_text(ninja):
         detail = trend[0].upper() + trend[1:] + " (poe.ninja)"
     else:
         detail = "From poe.ninja"
-    sentence = f"poe.ninja puts this at about {money} in {league}"
-    if has_n and ninja.get("few"):
-        sentence += (f", but only {listings} "
-                     f"{'is' if listings == 1 else 'are'} listed, so the price is rough")
-    elif has_n:
-        sentence += f", from {listings} listing{'' if listings == 1 else 's'}"
-    if trend:
-        sentence += f"; {trend}"
-    return {"line": f"About {money}", "detail": detail, "sentence": sentence + "."}
+    sentence = (f"poe.ninja puts this at under {money} in {league}" if dust
+                else f"poe.ninja puts this at about {money} in {league}")
+    rough = has_n and ninja.get("few")
+    if rough:
+        sentence += f", but only {listings} {'is' if listings == 1 else 'are'} listed."
+        sentence += f" The price is rough; {trend}." if trend else " The price is rough."
+    else:
+        if has_n:
+            sentence += f", from {listings} listing{'' if listings == 1 else 's'}"
+        sentence += f"; {trend}." if trend else "."
+    line = f"Under {money}" if dust else f"About {money}"
+    return {"line": line, "detail": detail, "sentence": sentence}
 
 
 def price_card_text(card):

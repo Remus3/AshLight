@@ -254,13 +254,16 @@ def test_ninja_text_exact():
                       "change": -40.0, "league": "L"})
     assert few == {"line": "About 20 Divine Orb", "detail": "Few listings: rough price",
                    "sentence": "poe.ninja puts this at about 20 Divine Orb in L, but "
-                               "only 3 are listed, so the price is rough; down 40% "
+                               "only 3 are listed. The price is rough; down 40% "
                                "over 7 days."}
     dust = ninja_text({"value": 0.0004, "unit": "Divine Orb", "listings": None,
                        "league": None})
-    assert dust == {"line": "About under 0.001 Divine Orb", "detail": "From poe.ninja",
-                    "sentence": "poe.ninja puts this at about under 0.001 Divine Orb "
+    assert dust == {"line": "Under 0.001 Divine Orb", "detail": "From poe.ninja",
+                    "sentence": "poe.ninja puts this at under 0.001 Divine Orb "
                                 "in this league."}
+    rough = ninja_text({"value": 2, "unit": "Divine Orb", "listings": 1, "few": True})
+    assert rough["sentence"] == ("poe.ninja puts this at about 2 Divine Orb in this "
+                                 "league, but only 1 is listed. The price is rough.")
     small = ninja_text({"value": 0.0347, "unit": "", "listings": 1, "change": 0.2,
                         "league": "L"})
     assert small["line"] == "About 0.0347"

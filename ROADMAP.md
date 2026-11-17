@@ -318,10 +318,14 @@ recorded in research 0018 section 3.
   acceptable) as a decision when TC-BUILDFILE lands, and add a test-backed
   check that no code path writes under the BuildPlanner folder. ACCEPT:
   decision file + test. ZERO-CLICK: review row.
-- [ ] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
+- [x] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
   poe.ninja overviews (`sparkline.totalChange`), no extra requests. After
   PRICE-STACKABLES. ACCEPT: panel test, design-reviewer pass.
-  ZERO-CLICK: refreshes with the hourly gate.
+  ZERO-CLICK: refreshes with the hourly gate. DONE 2026-11-17:
+  PriceBook.movers (5 risers / 5 fallers, thin markets out), `movers` in
+  /api/rates (empty while web data is off), dashboard Price movers card
+  (web/prices.js moversView); tests/test_price_book.py,
+  app/test/prices.test.js.
 - [ ] TC-CURX (build) Hourly exchange history from GGG's documented public
   Currency Exchange API (`web.poecdn.com/api/currency-exchange/poe2/<hour>`,
   research 0018). BLOCKED: TC-OAUTH-REG (adjudicator ruling 2026-11-17:
