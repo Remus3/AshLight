@@ -204,16 +204,30 @@ design docs in docs/design/, both made by a separate agent.
   DESIGN-AUDIT. ACCEPT: lane prompt or loop rule names the step; one row
   reviewed through it. ZERO-CLICK: runs in the loop, no manual trigger.
   Partly done: the lane prompt names the step (DS-REVIEW-HOOK); "one row
-  reviewed through it" waits for LOOP-ARM (the loop is not armed).
+  reviewed through it" waits for the next web/ or app/ row the armed loop
+  runs (LOOP-ARM done 2026-11-17).
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
 ## Ops
 
-- [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
+- [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a
   trivial row. ACCEPT: task read back; first tick's progress file done.
+  DONE 2026-11-17. Preconditions read back: route valid (kit read_route, 4
+  accounts), base URL var present (check_url ok), lanes.json readable, no
+  HALT. Dry-run tick: loop.json status done. Real tick on FLAKY-EVAL-API
+  (work list narrowed to that row by a driver over the stock Tick; the CLI
+  has no row filter): lane-0 status done, lane + review usage lines in
+  headless_usage.jsonl, merged 9181d6f (verifier PASS, refute 0/3), closing
+  tick loop.json status done. Task read back (schtasks /Query /V):
+  \AshLightOps\LaneLoop, Ready, Enabled; trigger one-time 2026-11-17 8:18
+  AM repeating every 15 min, no end; action pythonw.exe
+  "<repo>\tools\al_loop.py" tick, start in the repo root; Interactive only
+  (no stored password); IgnoreNew. Hidden = pythonw + CREATE_NO_WINDOW (no
+  console); the XML Hidden flag stays false so the task shows in Task
+  Scheduler.
 - [x] FLAKY-EVAL-API (build) tests/test_tc_eval_api.py:: -- done 2026-11-17 (loop; refute 0/3 PASS)
   test_endpoints_need_token_host_origin failed once with a connection error
   under the full suite on 2026-11-17 and passed when rerun; find and fix the

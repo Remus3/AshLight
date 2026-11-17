@@ -332,15 +332,19 @@ E: root item that is not this repo.
 - Commits only via `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git commit ...`.
 - No AI or bot attribution trailer (FLEET item 17; the commit-msg hook strips).
 
-## Loop (headless lanes, copied from the fleet's lane pattern) - NOT ARMED
+## Loop (headless lanes, copied from the fleet's lane pattern) - ARMED
 
 `tools/al_lane.py` (lanes `build`, `data`, `review`; kit `fleet_lanes.run_lane`,
 own worktree, one governor slot at the call, fail closed) and `tools/al_loop.py
 tick` (inbox folded into the tick via `fleet_inbox.classify`, ROADMAP rows as
 the work list, runs cap from `~/.fleet/lanes.json`, progress files
 `ops/loop/control/progress/lane-<i>.json` and `loop.json` with the item-13
-checklist). Arming the scheduled tick is ROADMAP row LOOP-ARM; until then the
-tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
+checklist). ARMED 2026-11-17 (ROADMAP LOOP-ARM): per-user scheduled task
+`\AshLightOps\LaneLoop` from `tools/loop_task.py install` (PT15M, IgnoreNew,
+pythonw, interactive token, no stored password); read it back with
+`tools/loop_task.py status`, remove with `tools/loop_task.py remove`. Rows
+whose remaining work is an operator act carry `BLOCKED:` so the tick skips
+them. Pause: `ops/loop/control/HALT`.
 
 ## Session workflow
 
