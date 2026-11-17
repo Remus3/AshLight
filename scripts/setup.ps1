@@ -46,6 +46,20 @@ function Get-AlPaths([string]$Python) {
     return $json | ConvertFrom-Json
 }
 
+# TEST-CLEAN-CLONE: under $ErrorActionPreference 'Stop', Windows PowerShell
+# 5.1 turns the first stderr line of a redirected native command (a pytest
+# plugin warning, an npm notice) into a terminating error. Native tools run
+# here with 'Continue' (function scope) and their exit code decides.
+function Invoke-AlLogged([string]$LogFile, [string]$Exe, [string[]]$ArgList, [switch]$Append) {
+    $ErrorActionPreference = 'Continue'
+    if ($Append) {
+        & $Exe @ArgList 2>&1 | ForEach-Object { [string]$_ } | Add-Content -Path $LogFile -Encoding ASCII
+    } else {
+        & $Exe @ArgList 2>&1 | ForEach-Object { [string]$_ } | Set-Content -Path $LogFile -Encoding ASCII
+    }
+    return $LASTEXITCODE
+}
+
 $py = Get-AlPython
 $pyVer = (& $py -c "import sys; print('%d.%d' % sys.version_info[:2])").Trim()
 if ([version]$pyVer -lt [version]'3.11') {
@@ -65,6 +79,18 @@ function Write-AlLog([string]$Message) {
 }
 
 Write-AlLog "setup: python $pyVer ok"
+
+# TEST-CLEAN-CLONE: build.ps1 runs the test suite with pytest (a dev tool,
+# never imported by the app). Say so here instead of failing in build.ps1.
+$ErrorActionPreference = 'Continue'
+& $py -c "import pytest" 2>$null
+$hasPytest = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = 'Stop'
+if ($hasPytest) {
+    Write-AlLog 'setup: pytest ok (build.ps1 runs the tests with it)'
+} else {
+    Write-AlLog 'setup: pytest not found - the app runs without it, but build.ps1 needs it: python -m pip install pytest'
+}
 
 # Per-host config: copy the example once, never overwrite.
 $example = Join-Path $Repo 'config\local.example.json'
@@ -140,16 +166,16 @@ Push-Location $app
 try {
     if (Test-Path $lock) {
         Write-AlLog 'setup: npm ci'
-        & npm.cmd ci --no-audit *>> $npmLog
+        $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('ci', '--no-audit') -Append
     } else {
         Write-AlLog 'setup: npm install --save-exact (no lockfile)'
-        & npm.cmd install --save-exact --no-audit *>> $npmLog
+        $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('install', '--save-exact', '--no-audit') -Append
     }
-    if ($LASTEXITCODE -ne 0) { throw "npm failed (rc $LASTEXITCODE); see $npmLog" }
+    if ($npmRc -ne 0) { throw "npm failed (rc $npmRc); see $npmLog" }
     if (-not (Test-Path $electronExe)) {
         Write-AlLog 'setup: fetching the Electron binary'
-        & $node.Source 'node_modules\electron\install.js' *>> $npmLog
-        if ($LASTEXITCODE -ne 0) { throw "Electron download failed; see $npmLog" }
+        $elRc = Invoke-AlLogged $npmLog $node.Source @('node_modules\electron\install.js') -Append
+        if ($elRc -ne 0) { throw "Electron download failed (rc $elRc); see $npmLog" }
     }
 } finally {
     Pop-Location

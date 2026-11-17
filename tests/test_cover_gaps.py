@@ -51,7 +51,7 @@ def _sleeper():
 
 def test_entry_parser_defaults_and_flags():
     a = entry.build_parser().parse_args([])
-    assert a.port == ports.AL_PORT and not a.no_tail and not a.quiet
+    assert a.port is None and not a.no_tail and not a.quiet  # ports.resolve at start
     a = entry.build_parser().parse_args(["--port", "8961", "--no-tail", "--quiet",
                                          "--character", "X"])
     assert (a.port, a.no_tail, a.quiet, a.character) == (8961, True, True, "X")
