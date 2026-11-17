@@ -26,6 +26,7 @@ Cache: <sidecar>\\Cache\\ninja\\book.json (compact entries, never raw bodies).
 
 import json
 import logging
+import math
 import urllib.parse
 from pathlib import Path
 
@@ -52,7 +53,11 @@ MOVERS_MIN_VOLUME = 1.0  # and stackables with almost no trade volume
 def _num(v):
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return None
-    return float(v) if v == v and abs(v) != float("inf") else None
+    try:
+        f = float(v)  # AREA-AUDIT P3-2 (FUZZ-4): a huge JSON int overflows
+    except OverflowError:
+        return None
+    return f if math.isfinite(f) else None
 
 
 def _key(text):

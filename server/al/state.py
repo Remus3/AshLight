@@ -788,11 +788,15 @@ class SessionState:
             self.events_seen += 1
             changed = False
             listed = t in LISTED
-            # TEST-LIVE-EXIT: any line proves the log is alive again
-            self.tailer["last_line_at"] = now
-            if self.tailer.get("idle"):
-                self.tailer["idle"] = False
-                changed = True
+            # TEST-LIVE-EXIT: any line proves the log is alive again. The
+            # tailer's own status events (source "tailer") are not log
+            # lines (AREA-AUDIT P3-1): they neither refresh the last line
+            # (which would overwrite the resume mtime seed) nor clear idle.
+            if ev.get("source") != "tailer":
+                self.tailer["last_line_at"] = now
+                if self.tailer.get("idle"):
+                    self.tailer["idle"] = False
+                    changed = True
             active = t in summary_mod.ACTIVITY
             if active:
                 self.stretch.begin(self._counters())

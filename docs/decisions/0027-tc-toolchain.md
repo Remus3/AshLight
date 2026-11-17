@@ -13,7 +13,7 @@ agent (FLEET item 1), no operator act waited on.
    The SHA-256 equals the digest GitHub publishes for the asset and was
    re-computed from two independent downloads on 2026-11-17.
 2. `tools/tc_pin.py` uses it ONLY when no system compiler (MSVC `cl`, or
-   `mingw32-make` + `gcc`) is on PATH, and only on the `-TcCalc` opt-in. It
+   `mingw32-make` + `gcc`) is on PATH, and only on the calc opt-in (`-TcCalc`, or `"tc_calc": true` in config/local.json; tools/tc_pin.py opted_in, wording fixed by AREA-AUDIT pass 3). It
    downloads with the same host-allowlisted, size-capped, hash-verified
    stream as the other pins (the allowlist widens to the GitHub release
    asset hosts for this entry only), extracts with stdlib `zipfile` under the

@@ -1061,6 +1061,17 @@ merge. Each row names the finding ids it closes.
   0024, 0025 and the 0009 / 0013 amendment; 0023-tc-drift renumbered
   0025; test_audit_batch4 fails on any decision missing from Settled.
 
+- [ ] AUDIT-P3-LOW (build) AREA-AUDIT pass 3 lows P3-4..P3-10
+  (docs/audit/2026-11-17-audit.md "Pass 3"): map clock stays paused after
+  idle clears on a non-scene line; ninja.py rollover docstring says "at
+  once" (it is the next hourly refresh); calcwire keeps luajit running
+  after tc_calc is turned off; PriceBook saves attempt_at only after the
+  whole loop; AL_TC_PINS_FILE honoured outside the TC-DRIFT trial; the
+  TC-DRIFT trial runs new upstream PoB Lua unattended; the extracted
+  toolchain is trusted by its marker (no re-hash before the build).
+  ACCEPT: a fix or a recorded ruling and one test each. ZERO-CLICK: code
+  row, the loop works it.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
