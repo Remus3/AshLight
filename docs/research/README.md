@@ -76,6 +76,9 @@ its code (license notes: 0006).
 - 0025 PoE2 search box (250 chars since 0.5.0, regex, `|`, `!`) and item
   filter syntax; snapshot checks of zone notes and waystone rules
   ([0025-search-box-and-filter-syntax.md](0025-search-box-and-filter-syntax.md))
+- 0026 Deep dive 2026-11-17 - policy / APIs / patch notes / tools, no floor
+  change; Exile-UI disabled screen-read automation after the 3.30.0 wording
+  ([0026-deep-dive-20261117.md](0026-deep-dive-20261117.md))
 
 ## Open research (feeds ROADMAP)
 
