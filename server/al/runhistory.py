@@ -24,9 +24,9 @@ machine), bests and deaths by zone are per character, and a schema 1 file
 local config, or the dashboard switch) and clear it (dashboard button).
 """
 
-import json
-import os
 from pathlib import Path
+
+from . import jsonfile, num
 
 FILE_NAME = "run_history.json"
 CONFIG_KEY = "run_history"
@@ -58,11 +58,10 @@ def _text(value):
 
 
 def _num(value):
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return None
-    if value != value or value in (float("inf"), float("-inf")) or value < 0:
-        return None
-    return float(value)
+    # AREA-TEST batch 6: num.finite also drops a huge int, whose float()
+    # raised OverflowError out of load()
+    f = num.finite(value)
+    return None if f is None or f < 0 else f
 
 
 def clean_run(run):
@@ -118,14 +117,8 @@ def flat(by):
 
 def _read(path):
     """(doc, schema) of the file, or (None, None)."""
-    try:
-        p = Path(path)
-        if p.stat().st_size > MAX_BYTES:
-            return None, None
-        doc = json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None, None
-    if not isinstance(doc, dict):
+    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict)
+    if doc is None:
         return None, None
     return doc, doc.get("schema")
 
@@ -153,16 +146,10 @@ def load(path):
 
 def save(path, runs):
     """Write the runs (a flat list, any characters) as schema 2."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
     by = group(runs)
     doc = {"schema": SCHEMA,
            "characters": {k: {"runs": v} for k, v in by.items()}}
-    text = json.dumps(doc, indent=1, ensure_ascii=True) + "\n"
-    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(text)
-    os.replace(tmp, path)
+    jsonfile.write_json(path, doc)
 
 
 def migrate(path):

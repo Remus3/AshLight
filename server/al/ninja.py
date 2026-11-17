@@ -38,7 +38,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from . import paths, webfetch
+from . import jsonfile, num, paths, webfetch
 
 log = logging.getLogger("al.ninja")
 
@@ -72,14 +72,7 @@ def _utc(ts):
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
 
 
-def _num(v):
-    if isinstance(v, bool) or not isinstance(v, (int, float)):
-        return None
-    try:
-        f = float(v)  # FUZZ-4: a huge JSON int raised OverflowError
-    except OverflowError:
-        return None
-    return f if math.isfinite(f) else None
+_num = num.finite  # FUZZ-4 / AREA-AUDIT P3-2: huge JSON ints read as None
 
 
 def parse_leagues(body):
@@ -131,14 +124,6 @@ def parse_overview(body):
     return {"primary": primary, "rates": rates}
 
 
-def _write_atomic(path, doc):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(json.dumps(doc, indent=1, sort_keys=True, ensure_ascii=True) + "\n")
-    tmp.replace(path)
-
-
 class RatesClient:
     """Cached poe.ninja currency rates.
 
@@ -165,15 +150,11 @@ class RatesClient:
         self.book = book  # pricebook.PriceBook or None
 
     def _load(self):
-        try:
-            doc = json.loads(self.path.read_text(encoding="ascii"))
-            return doc if isinstance(doc, dict) else {}
-        except (OSError, ValueError):
-            return {}
+        return jsonfile.read_json(self.path, encoding="ascii", kind=dict, default={})
 
     def _save(self):
         try:
-            _write_atomic(self.path, self.doc)
+            jsonfile.write_json(self.path, self.doc, sort_keys=True)
         except OSError as e:
             log.warning("rates cache not written: %s", e)
 

@@ -16,9 +16,10 @@ Inputs are only the user's pasted build XML and hotkey-read item text;
 nothing here touches the game (CLAUDE.md ToS floor).
 """
 
-import math
 import threading
 import time
+
+from .. import num
 
 # PoB output names, first present wins (research 0010 section 4: FullDPS
 # with fallbacks; TotalEHP, else Life + EnergyShield)
@@ -44,10 +45,8 @@ class OutputError(RuntimeError):
     """PoB's output table had no usable DPS or EHP figure."""
 
 
-def _num(v):
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
-        return None
-    return float(v)
+# AREA-TEST batch 6: math.isfinite of a huge int raised OverflowError here
+_num = num.finite
 
 
 def map_outputs(out):

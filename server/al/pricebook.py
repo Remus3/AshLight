@@ -26,9 +26,10 @@ Cache: <sidecar>\\Cache\\ninja\\book.json (compact entries, never raw bodies).
 
 import json
 import logging
-import math
 import urllib.parse
 from pathlib import Path
+
+from . import jsonfile, num
 
 log = logging.getLogger("al.pricebook")
 
@@ -50,14 +51,7 @@ MOVERS_MIN_LISTINGS = 20  # movers ignore thin uniques (noise)
 MOVERS_MIN_VOLUME = 1.0  # and stackables with almost no trade volume
 
 
-def _num(v):
-    if isinstance(v, bool) or not isinstance(v, (int, float)):
-        return None
-    try:
-        f = float(v)  # AREA-AUDIT P3-2 (FUZZ-4): a huge JSON int overflows
-    except OverflowError:
-        return None
-    return f if math.isfinite(f) else None
+_num = num.finite  # FUZZ-4 / AREA-AUDIT P3-2: huge JSON ints read as None
 
 
 def _key(text):
@@ -144,14 +138,6 @@ def parse_exchange_overview(body):
     return {"primary": pid, "unit": unit, "entries": entries}
 
 
-def _write_atomic(path, doc):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(json.dumps(doc, indent=1, sort_keys=True, ensure_ascii=True) + "\n")
-    tmp.replace(path)
-
-
 def _all_types():
     return ([(t, ITEM_PATH, "unique") for t in UNIQUE_TYPES]
             + [(t, EXCHANGE_PATH, "exchange") for t in EXCHANGE_TYPES])
@@ -167,17 +153,14 @@ class PriceBook:
         self.doc = self._load()
 
     def _load(self):
-        try:
-            doc = json.loads(self.path.read_text(encoding="ascii"))
-            if isinstance(doc, dict) and isinstance(doc.get("types"), dict):
-                return doc
-        except (OSError, ValueError):
-            pass
+        doc = jsonfile.read_json(self.path, encoding="ascii", kind=dict)
+        if doc is not None and isinstance(doc.get("types"), dict):
+            return doc
         return {"types": {}}
 
     def _save(self):
         try:
-            _write_atomic(self.path, self.doc)
+            jsonfile.write_json(self.path, self.doc, sort_keys=True)
         except OSError as e:
             log.warning("price book not written: %s", e)
 
