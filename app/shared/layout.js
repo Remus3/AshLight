@@ -25,7 +25,10 @@
                  "bottom-left", "bottom-center", "bottom-right"];
   var DEFAULT = { display: "primary", corner: "top-right", scale: 1.0,
                   opacity: 0.9, margin: 16 };
-  var LIMITS = { scale: [0.75, 2.0], opacity: [0.3, 1.0], margin: [0, 400] };
+  /* Floors from design 0001 (DS-OPACITY, DS-SCALE): opacity under 0.9 drops
+     overlay text under 4.5:1 over a white scene; scale under 0.95 renders
+     13px text under 12px. Old saved layouts clamp to them on load. */
+  var LIMITS = { scale: [0.95, 2.0], opacity: [0.9, 1.0], margin: [0, 400] };
   /* Base HUD window at scale 1, in DIPs: the status box plus room for one
      trade card below it. The window is transparent and click-through, so
      the unused part costs nothing. */

@@ -22,9 +22,18 @@ test("normalizeLayout fills defaults and clamps", () => {
   const n = L.normalizeLayout({ corner: "nope", scale: 9, opacity: 0, margin: -5, display: "x" });
   assert.equal(n.corner, "top-right");
   assert.equal(n.scale, 2);
-  assert.equal(n.opacity, 0.3);
+  assert.equal(n.opacity, 0.9);
   assert.equal(n.margin, 0);
   assert.equal(n.display, "primary");
+});
+
+test("DS-OPACITY / DS-SCALE: old layouts clamp to the floors", () => {
+  assert.deepEqual(L.LAYOUT_LIMITS.opacity, [0.9, 1.0]);
+  assert.deepEqual(L.LAYOUT_LIMITS.scale, [0.95, 2.0]);
+  const n = L.normalizeLayout({ scale: 0.75, opacity: 0.3 });
+  assert.equal(n.scale, 0.95);
+  assert.equal(n.opacity, 0.9);
+  assert.ok(13 * n.scale >= 12);
 });
 
 test("displays are indexed left to right", () => {

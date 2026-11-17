@@ -39,9 +39,63 @@ def test_normalize_strict_rejects(bad):
 
 
 def test_normalize_lenient_never_raises():
-    got = layout.normalize({"corner": "middle", "scale": 99, "extra": 1}, strict=False)
+    got = layout.normalize({"corner": "middle", "scale": "big", "extra": 1}, strict=False)
     assert got == layout.DEFAULT
     assert layout.normalize("garbage", strict=False) == layout.DEFAULT
+
+
+# DS-OPACITY / DS-SCALE (design 0001 5.2 and O3): opacity floor 0.9 keeps
+# every overlay text pair >= 4.5:1 over a white scene; scale floor 0.95
+# keeps 13px secondary text >= 12px.
+
+def test_floors():
+    assert (layout.OPACITY_MIN, layout.OPACITY_MAX) == (0.9, 1.0)
+    assert (layout.SCALE_MIN, layout.SCALE_MAX) == (0.95, 2.0)
+    assert 13 * layout.SCALE_MIN >= 12
+
+
+@pytest.mark.parametrize("bad", [
+    {"opacity": 0.85}, {"opacity": 0.3}, {"scale": 0.9}, {"scale": 0.75},
+])
+def test_strict_rejects_below_floor(bad):
+    with pytest.raises(layout.LayoutError):
+        layout.normalize(bad)
+
+
+def test_strict_accepts_floor():
+    got = layout.normalize({"opacity": 0.9, "scale": 0.95})
+    assert got["opacity"] == 0.9 and got["scale"] == 0.95
+
+
+def test_lenient_clamps_old_layouts():
+    # A layout saved before the floors were raised clamps itself on load.
+    got = layout.normalize({"opacity": 0.3, "scale": 0.75, "margin": 999},
+                           strict=False)
+    assert got["opacity"] == 0.9 and got["scale"] == 0.95 and got["margin"] == 400
+    assert layout.normalize({"scale": 99}, strict=False)["scale"] == 2.0
+
+
+def test_load_clamps_saved_config(tmp_path):
+    cfg = tmp_path / "local.json"
+    cfg.write_text(json.dumps({"overlay": {"opacity": 0.5, "scale": 0.8,
+                                           "corner": "top-left"}}),
+                   encoding="ascii")
+    got = layout.load(cfg)
+    assert got["opacity"] == 0.9 and got["scale"] == 0.95
+    assert got["corner"] == "top-left"
+
+
+def test_dashboard_sliders_match_floors():
+    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    assert 'id="layout-scale" name="scale" type="range" min="0.95"' in html
+    assert 'id="layout-opacity" name="opacity" type="range" min="0.9"' in html
+
+
+def test_overlay_js_limits_match_python():
+    js = (ROOT / "app" / "shared" / "layout.js").read_text(encoding="ascii")
+    assert ("scale: [%s, %s], opacity: [%s, %s]" % (
+        layout.SCALE_MIN, layout.SCALE_MAX, layout.OPACITY_MIN,
+        layout.OPACITY_MAX)) in js
 
 
 def test_save_keeps_other_keys_ascii_lf(tmp_path):
@@ -68,12 +122,12 @@ def test_save_refuses_to_clobber_broken_config(tmp_path):
 def test_layout_survives_restart(tmp_path):
     rt = tmp_path / "rt"
     core = Core(runtime=rt, tail=False)
-    core.set_overlay_layout({"corner": "top-left", "opacity": 0.6, "display": 1})
+    core.set_overlay_layout({"corner": "top-left", "opacity": 0.95, "display": 1})
     core.close()
     again = Core(runtime=rt, tail=False)
     try:
         got = again.overlay_layout()
-        assert got["corner"] == "top-left" and got["opacity"] == 0.6 and got["display"] == 1
+        assert got["corner"] == "top-left" and got["opacity"] == 0.95 and got["display"] == 1
         assert again.state.snapshot()["overlay_layout"] == got
     finally:
         again.close()

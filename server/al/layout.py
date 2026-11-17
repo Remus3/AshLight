@@ -17,8 +17,11 @@ from pathlib import Path
 CONFIG_KEY = "overlay"
 CORNERS = ("top-left", "top-center", "top-right",
            "bottom-left", "bottom-center", "bottom-right")
-SCALE_MIN, SCALE_MAX = 0.75, 2.0
-OPACITY_MIN, OPACITY_MAX = 0.3, 1.0
+# Floors from design 0001 (DS-OPACITY, DS-SCALE): window opacity fades text
+# and plate together, so below 0.9 overlay text drops under 4.5:1 over a
+# white scene (5.2); below 0.95 the 13px secondary text renders under 12px.
+SCALE_MIN, SCALE_MAX = 0.95, 2.0
+OPACITY_MIN, OPACITY_MAX = 0.9, 1.0
 MARGIN_MAX = 400
 MAX_DISPLAYS = 16
 
@@ -30,18 +33,24 @@ class LayoutError(ValueError):
     pass
 
 
-def _number(value, name, lo, hi):
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+def _number(value, name, lo, hi, clamp=False):
+    """A rounded number in [lo, hi]. clamp=True (lenient load) pulls an
+    out-of-range number to the nearest bound, so a layout saved before a
+    floor was raised clamps itself; strict input raises instead."""
+    if isinstance(value, bool) or not isinstance(value, (int, float))             or value != value:  # wrong type or NaN
         raise LayoutError(f"{name} must be a number")
-    if value != value or not lo <= value <= hi:  # NaN or out of range
-        raise LayoutError(f"{name} must be between {lo} and {hi}")
+    if not lo <= value <= hi:
+        if not clamp:
+            raise LayoutError(f"{name} must be between {lo} and {hi}")
+        value = min(hi, max(lo, value))
     return round(float(value), 2)
 
 
 def normalize(layout, strict=True):
     """A complete, valid layout dict. strict=True raises LayoutError on a bad
-    field (API input); strict=False drops bad fields to the default (a
-    hand-edited config file must never stop the app)."""
+    field (API input); strict=False clamps an out-of-range number to its
+    bound and drops any other bad field to the default (a hand-edited or
+    older config file must never stop the app)."""
     if not isinstance(layout, dict):
         if strict:
             raise LayoutError("layout must be an object")
@@ -51,9 +60,10 @@ def normalize(layout, strict=True):
         "corner": lambda v: v if v in CORNERS else _bad("corner must be one of "
                                                         + ", ".join(CORNERS)),
         "display": _display,
-        "scale": lambda v: _number(v, "scale", SCALE_MIN, SCALE_MAX),
-        "opacity": lambda v: _number(v, "opacity", OPACITY_MIN, OPACITY_MAX),
-        "margin": lambda v: int(_number(v, "margin", 0, MARGIN_MAX)),
+        "scale": lambda v: _number(v, "scale", SCALE_MIN, SCALE_MAX, not strict),
+        "opacity": lambda v: _number(v, "opacity", OPACITY_MIN, OPACITY_MAX,
+                                     not strict),
+        "margin": lambda v: int(_number(v, "margin", 0, MARGIN_MAX, not strict)),
     }
     for key, check in checks.items():
         if key not in layout:
