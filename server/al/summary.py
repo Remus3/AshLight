@@ -6,7 +6,7 @@ ends by itself, ZERO-CLICK, when either:
 - no game activity came for IDLE_S (reason "idle"), checked from the core's
   main loop; or
 - Client.txt starts a new game run (`***** LOG FILE OPENING *****`, parsed
-  as `game_started`): the previous game closed (reason "game_closed"). No
+  as `log_opened`): the previous game closed (reason "game_closed"). No
   line is known to mark the exit itself, so the next launch stands in.
 
 The card counts the stretch only: time played (gaps longer than IDLE_S are

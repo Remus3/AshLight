@@ -31,6 +31,20 @@ test("log pill: unknown while the feed is down, never a stale claim", () => {
     { state: "idle", glyph: "[-]", word: "not reading Client.txt" });
 });
 
+test("TEST-LIVE-EXIT: a quiet log reads idle and freezes the clocks", () => {
+  const idle = { consented: true, reading: true, path: "x", idle: true, last_line_at: 100 };
+  const p = v.readingView(idle, true);
+  assert.equal(p.state, "blocked");
+  assert.equal(p.glyph, "[#]");
+  assert.equal(p.word, v.IDLE_WORD);
+  // the feed down still wins: no stale claim
+  assert.equal(v.readingView(idle, false).word, "Client.txt status unknown");
+  assert.equal(v.clockUntil(idle, 500), 100);
+  assert.equal(v.clockUntil({ ...idle, idle: false }, 500), 500);
+  assert.equal(v.clockUntil(null, 500), 500);
+  assert.equal(v.clockUntil({ idle: true, last_line_at: null }, 500), 500);
+});
+
 test("event kind tags name what happened", () => {
   assert.equal(v.kindOf({ type: "whisper_in", trade: true }), "trade");
   assert.equal(v.kindOf({ type: "whisper_in" }), "from");

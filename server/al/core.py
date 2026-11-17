@@ -300,6 +300,10 @@ class Core:
             return
         fields = resume.state_fields(result)
         self.state.restore(fields)
+        try:  # TEST-LIVE-EXIT: a game closed before the core started
+            self.state.seed_last_line(os.path.getmtime(path))
+        except OSError:
+            pass
         recovered = [k for k in ("zone", "character", "class", "level", "area_id")
                      if fields.get(k) is not None]
         recovered += [k for k in ("deaths", "level_ups") if fields.get(k)]
@@ -372,13 +376,17 @@ class Core:
         return n
 
     def tick_summary(self, now=None):
-        """UTIL-SESSION-SUMMARY, ZERO-CLICK: from the core's main loop. Close
-        an idle play stretch (with the price movers the dashboard has; no
+        """UTIL-SESSION-SUMMARY, ZERO-CLICK: from the core's main loop. Set
+        the quiet-log idle state (TEST-LIVE-EXIT) and close an idle play
+        stretch (with the price movers the dashboard has; no
         request) and save any new card. Returns the saved card or None."""
-        if self.state.session_end_due(now):
+        idle = self.state.log_idle_due(now)  # TEST-LIVE-EXIT (decision 0029)
+        if idle or self.state.session_end_due(now):
             movers = None
             if self.web_data_enabled():
                 movers = self.rates.snapshot().get("movers")
+            if idle:
+                self.state.check_log_idle(now=now, movers=movers)
             self.state.check_session_end(now=now, movers=movers)
         card = self.state.session_summary
         if not card or card.get("id") == self._summary_saved:

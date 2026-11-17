@@ -106,7 +106,7 @@ def test_idle_gaps_do_not_count_as_played_and_a_new_stretch_starts_fresh():
 def test_new_game_run_closes_the_previous_session():
     line = "2026/11/17 21:00:00 ***** LOG FILE OPENING *****"
     ev = parser.parse_line(line)
-    assert ev["type"] == "game_started"
+    assert ev["type"] == "log_opened"
     assert ev["ts_local"] == "2026-11-17T21:00:00"
     clk = Clock(1000.0)
     st = SessionState(clock=clk)
@@ -126,7 +126,7 @@ def test_no_activity_no_card():
     clk.t = 99999.0
     assert st.check_session_end() is None
     assert st.snapshot()["session_summary"] is None
-    st.apply({"type": "game_started", "recv_ts": 100000.0})
+    st.apply({"type": "log_opened", "recv_ts": 100000.0})
     assert st.snapshot()["session_summary"] is None
 
 
