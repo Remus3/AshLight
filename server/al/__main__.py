@@ -26,8 +26,9 @@ def build_parser():
     p = argparse.ArgumentParser(prog="python -m server.al",
                                 description=f"{NAME} {VERSION} core server")
     p.add_argument("--log", help="path to Client.txt (default: config, then Steam scan)")
-    p.add_argument("--port", type=int, default=ports.AL_PORT,
-                   help=f"port (default {ports.AL_PORT}; block "
+    p.add_argument("--port", type=int, default=None,
+                   help=f"port (default: env {ports.PORT_ENV}, then config "
+                        f"\"port\", then {ports.AL_PORT}; block "
                         f"{ports.PORT_BLOCK[0]}-{ports.PORT_BLOCK[1]})")
     p.add_argument("--no-tail", action="store_true", help="never tail Client.txt")
     p.add_argument("--replay", metavar="FILE",
@@ -118,6 +119,8 @@ def main(argv=None):
     setup_logging(args.quiet)
     log = logging.getLogger("al")
     install_crash_logging(log)
+    if args.port is None:
+        args.port = ports.resolve(os.environ, paths.load_local_config())
     if args.port and not ports.in_block(args.port):
         log.warning("port %s is outside the assigned block", args.port)
 

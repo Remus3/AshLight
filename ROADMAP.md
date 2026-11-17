@@ -1401,6 +1401,41 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   wrong act, sensible text where data predates 1.0. ZERO-CLICK: test-only.
   DONE 2026-11-17 (area-util batch 8): see UTIL-1.0-POST PRE-VERIFIED;
   one defect fixed (pre-1.0 zone table message in Acts 5-6).
+- [x] TEST-CLEAN-CLONE (build) Release readiness: a fresh `git clone` of
+  main into the AL sidecar Scratch dir, with AL_SIDECAR_ROOT on a throwaway
+  sidecar and a free port 8961-8979, runs the README first-time path
+  exactly as written (setup.ps1, build.ps1 with web_data off, the suites,
+  run.ps1 -NoBrowser, /api/health, stop.ps1). ACCEPT: every gap (failure,
+  undocumented step, write outside the clone + its sidecar, checked on the
+  E: root and %TEMP% before / after) fixed in README / scripts; README
+  sweep (every feature one line, ToS floor matches the footer explainer,
+  disclaimer present); clone and sidecar deleted after. ZERO-CLICK: one
+  lane run; the first-time path itself is four script calls with no prompt.
+  DONE 2026-11-17 (area-test b7) on a clone of main e28f71d. setup.ps1 ok
+  and a no-op on re-run. GAPS FIXED: (1) build.ps1 FAILED on a fresh clone:
+  under ErrorActionPreference Stop, Windows PowerShell 5.1 turns the first
+  stderr line of a redirected native command (here a pytest-asyncio
+  deprecation warning from a globally installed plugin) into a terminating
+  error; setup.ps1's npm calls had the same trap. Both now run native tools
+  through Invoke-AlLogged (Continue in function scope, exit code decides,
+  clean text log). (2) No port override: the documented config "port" key
+  was read by the overlay only; ports.resolve (env AL_PORT, then config
+  "port", then 8960; out-of-block ignored) now feeds the core, keepalive
+  and run.ps1, and run.ps1 -Port N passes it to all three
+  (tests/test_port_resolve.py). (3) pytest was an unstated prerequisite of
+  build.ps1: setup.ps1 reports it, build.ps1 fails with the pip line, the
+  README says so. Then build.ps1 green (2099 passed, 55 skipped; node
+  green) and a no-op on re-run; run.ps1 -NoBrowser -NoOverlay -Port 8977
+  started core + supervisor (keepalive.log read back: port 8977), health
+  {"ok":true,"port":8977}, re-run no-op; stop.ps1 clean, nothing left on
+  8977, the operator's 8960 untouched. E: root and %TEMP% listings
+  identical before / after; every write in the clone (ignored paths only)
+  or its sidecar. Overlay start not exercised (it would draw on the
+  operator's screen). README sweep: feature list per dashboard card,
+  never-does list matches the footer explainer (clipboard write only on
+  Copy, nothing written into game folders), config keys complete
+  (eval_hotkey, port, contact, tc_calc), -TcCalc / autostart / sidecar
+  noted. Clone and its sidecar deleted (disposable, direct delete).
 
 ## Utility (lane area-util, 2026-11-17)
 

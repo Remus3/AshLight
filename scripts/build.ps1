@@ -27,6 +27,20 @@ function Get-AlPython {
     throw 'Python 3.11 or newer was not found on PATH.'
 }
 
+# TEST-CLEAN-CLONE: under $ErrorActionPreference 'Stop', Windows PowerShell
+# 5.1 turns the first stderr line of a redirected native command (a pytest
+# plugin warning, an npm notice) into a terminating error. Native tools run
+# here with 'Continue' (function scope) and their exit code decides.
+function Invoke-AlLogged([string]$LogFile, [string]$Exe, [string[]]$ArgList, [switch]$Append) {
+    $ErrorActionPreference = 'Continue'
+    if ($Append) {
+        & $Exe @ArgList 2>&1 | ForEach-Object { [string]$_ } | Add-Content -Path $LogFile -Encoding ASCII
+    } else {
+        & $Exe @ArgList 2>&1 | ForEach-Object { [string]$_ } | Set-Content -Path $LogFile -Encoding ASCII
+    }
+    return $LASTEXITCODE
+}
+
 $py = Get-AlPython
 Push-Location $Repo
 try {
@@ -73,8 +87,8 @@ if ($NoSnapshot -or ($env:AL_NO_SNAPSHOT -and $env:AL_NO_SNAPSHOT -ne '0')) {
     if ($forceSnap) { $snapArgs += '--opt-in' }
     Push-Location $Repo
     try {
-        & $py @snapArgs *> $snapLog
-        Write-AlLog "build: game-data snapshot rc $LASTEXITCODE (log $snapLog)"
+        $snapRc = Invoke-AlLogged $snapLog $py $snapArgs
+        Write-AlLog "build: game-data snapshot rc $snapRc (log $snapLog)"
     } catch {
         Write-AlLog 'build: game-data snapshot failed (ignored)'
     } finally {
@@ -120,16 +134,24 @@ $env:TEMP = $paths.temp
 $env:TMP = $paths.temp
 
 $pyLog = Join-Path $paths.logs 'build-pytest.log'
+# TEST-CLEAN-CLONE: a clear message, not a traceback, when pytest is missing.
+$ErrorActionPreference = 'Continue'
+& $py -c "import pytest" 2>$null
+$hasPytest = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = 'Stop'
+if (-not $hasPytest) {
+    Write-AlLog 'build: FAILED - pytest is not installed; run: python -m pip install pytest'
+    exit 1
+}
 $gate = Join-Path $Repo 'ops\fleet_kit\fleet_suite_gate.py'
 Push-Location $Repo
 try {
     if (Test-Path $gate) {
         $owner = 'al-build.' + $PID
-        & $py $gate run --owner $owner -- $py -m pytest -q tests *> $pyLog
+        $pyRc = Invoke-AlLogged $pyLog $py @($gate, 'run', '--owner', $owner, '--', $py, '-m', 'pytest', '-q', 'tests')
     } else {
-        & $py -m pytest -q tests *> $pyLog
+        $pyRc = Invoke-AlLogged $pyLog $py @('-m', 'pytest', '-q', 'tests')
     }
-    $pyRc = $LASTEXITCODE
 } finally {
     Pop-Location
 }
@@ -141,8 +163,7 @@ if ($node) {
     $nodeLog = Join-Path $paths.logs 'build-node.log'
     Push-Location (Join-Path $Repo 'app')
     try {
-        & npm.cmd test *> $nodeLog
-        $nodeRc = $LASTEXITCODE
+        $nodeRc = Invoke-AlLogged $nodeLog 'npm.cmd' @('test')
     } finally {
         Pop-Location
     }

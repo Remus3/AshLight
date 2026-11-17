@@ -383,7 +383,8 @@ def _file_logger(path):
 def build_parser():
     p = argparse.ArgumentParser(prog="python -m server.al.keepalive",
                                 description="restart the AshLight core when it dies")
-    p.add_argument("--port", type=int, default=ports.AL_PORT)
+    p.add_argument("--port", type=int, default=None,
+                   help="core port (default: ports.resolve, as the core)")
     p.add_argument("--runtime", help="runtime dir (default: the core's)")
     p.add_argument("--poll", type=float, default=POLL_S)
     p.add_argument("--stale", type=float, default=STALE_S)
@@ -397,6 +398,8 @@ def build_parser():
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.port is None:
+        args.port = ports.resolve(os.environ, paths.load_local_config())
     runtime = Path(args.runtime) if args.runtime else paths.runtime_dir()
     log = _file_logger(paths.all_runtime_paths()["keepalive_log"])
     lock = acquire_lock(runtime)

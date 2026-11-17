@@ -15,6 +15,11 @@
   Do not start the overlay (one that is already running is left alone).
 .PARAMETER NoBrowser
   Do not open the dashboard.
+.PARAMETER Port
+  Core port for this run (block 8960-8979). Default: env AL_PORT, then
+  "port" in config\local.json, then 8960 (server\al\ports.py resolve).
+  Lets a second checkout run beside the first. Core, keepalive and overlay
+  all get the same port.
 .PARAMETER EdgeApp
   Open the dashboard in an Edge --app window instead of the default browser.
 .PARAMETER Autostart
@@ -28,6 +33,7 @@ param(
     [switch]$NoOverlay,
     [switch]$NoBrowser,
     [switch]$EdgeApp,
+    [int]$Port = 0,
     [switch]$Autostart
 )
 
@@ -46,10 +52,14 @@ function Get-AlPython {
 }
 
 $py = Get-AlPython
+if ($Port -ne 0) {
+    if ($Port -lt 8960 -or $Port -gt 8979) { throw "-Port $Port is outside AshLight's port block 8960-8979." }
+    $env:AL_PORT = [string]$Port
+}
 Push-Location $Repo
 try {
     $paths = ((& $py -m server.al.paths) -join "`n") | ConvertFrom-Json
-    $port = [int]((& $py -c "from server.al import ports; print(ports.AL_PORT)").Trim())
+    $port = [int]((& $py -c "import os; from server.al import paths, ports; print(ports.resolve(os.environ, paths.load_local_config()))").Trim())
 } finally {
     Pop-Location
 }
@@ -108,7 +118,7 @@ Remove-Item -LiteralPath (Join-Path $paths.runtime 'stop.request') -Force -Error
 
 $pyw = Get-Command pythonw -ErrorAction SilentlyContinue
 $exe = if ($pyw) { $pyw.Source } else { $py }
-$detachEnv = @{ TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar }
+$detachEnv = @{ TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar; AL_PORT = [string]$port }
 
 function Get-AlPlan {
     # Which of core / supervisor / overlay must start (server\al\procs.py).
@@ -142,7 +152,7 @@ if (Test-AlHealth) {
 } else {
     # Detached via WMI (scripts\al_detach.ps1): the core must outlive this
     # script and whatever shell started it. --quiet: core.log is the record.
-    $corePid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al', '--quiet') `
+    $corePid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al', '--quiet', '--port', [string]$port) `
         -WorkingDirectory $Repo -Environment $detachEnv
     Write-AlLog "run: core launched detached (pid $corePid)"
     $deadline = (Get-Date).AddSeconds(15)
