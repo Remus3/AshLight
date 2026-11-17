@@ -127,8 +127,9 @@ function applyLayout(force) {
   win.setBounds(rect);
   win.setBounds(rect);
   win.setOpacity(layout.opacity);
-  win.webContents.setZoomFactor(layout.scale);
+  win.webContents.setZoomFactor(b.zoom); // the user scale times UX-DPI autoScale
   log("layout " + layout.corner + " display " + layout.display + " scale " + layout.scale +
+      " zoom " + b.zoom +
       " at " + b.x + "," + b.y + " " + b.width + "x" + b.height + " sf " + b.scaleFactor);
 }
 

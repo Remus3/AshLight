@@ -62,6 +62,9 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
 .status { color: var(--fk-status-warn); margin-left: 6px; font-size: 13px; }
 /* The slot shows a connection word, or AFK / DND while live; empty hides. */
 .status:empty, .sep:empty { display: none; }
+/* UX-DPI: with no numbers (first run, offline) the word starts the line,
+   flush with the zone line above. */
+#deaths:empty + .status { margin-left: 0; }
 
 /* Trade whisper card (HUD-WHISPER). The cue is quiet and static: a steady
    accent edge, no flash, no motion, no sound. Dismissed on the dashboard. */

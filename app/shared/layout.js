@@ -34,6 +34,23 @@
      the unused part costs nothing. */
   var BASE = { width: 280, height: 176 };
 
+  /* UX-DPI: a monitor taller than 1440 physical px at a low Windows scale
+     (4K at 100 percent, say) would draw the 13 px secondary line under
+     2 mm tall, while the game's own UI grows with the resolution. The HUD
+     then grows by itself so its text is never physically smaller than at
+     1440p and 100 percent: factor = physical height / scale factor / 1440,
+     which is the display's DIP height / 1440, never under 1 (1080p, 1440p and 4K at 150 percent are unchanged), at
+     most 2, in 0.05 steps. Zero clicks: it follows the monitor. */
+  var AUTO_REF_HEIGHT = 1440;
+  var MAX_ZOOM = 2.5;
+
+  function autoScale(display) {
+    if (!display || !display.bounds) { return 1; }
+    var f = display.bounds.height / AUTO_REF_HEIGHT; // DIPs: physical / scaleFactor
+    if (!isFinite(f) || f <= 1) { return 1; }
+    return Math.min(2, Math.round(f * 20) / 20);
+  }
+
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
   function num(v, key) {
@@ -79,8 +96,10 @@
     var b = base || BASE;
     var d = pickDisplay(l, displays, primaryId);
     var area = d ? d.workArea : { x: 0, y: 0, width: b.width, height: b.height };
-    var w = Math.min(Math.round(b.width * l.scale), area.width);
-    var h = Math.min(Math.round(b.height * l.scale), area.height);
+    // the user scale times autoScale, capped at 2.5 (design review F4)
+    var zoom = Math.min(MAX_ZOOM, Math.round(l.scale * autoScale(d) * 100) / 100);
+    var w = Math.min(Math.round(b.width * zoom), area.width);
+    var h = Math.min(Math.round(b.height * zoom), area.height);
     var m = Math.min(l.margin, Math.floor((area.width - w) / 2),
                      Math.floor((area.height - h) / 2));
     m = Math.max(0, m);
@@ -94,7 +113,7 @@
       x = area.x + Math.floor((area.width - w) / 2);
     }
     var y = parts[0] === "top" ? area.y + m : area.y + area.height - h - m;
-    return { x: Math.round(x), y: Math.round(y), width: w, height: h,
+    return { x: Math.round(x), y: Math.round(y), width: w, height: h, zoom: zoom,
              displayId: d ? d.id : null, scaleFactor: d ? (d.scaleFactor || 1) : 1 };
   }
 
@@ -115,6 +134,6 @@
 
   return { CORNERS: CORNERS, LAYOUT_DEFAULT: DEFAULT, LAYOUT_LIMITS: LIMITS, BASE: BASE,
            normalizeLayout: normalize, orderDisplays: orderDisplays,
-           pickDisplay: pickDisplay, computeBounds: computeBounds,
+           pickDisplay: pickDisplay, autoScale: autoScale, computeBounds: computeBounds,
            describeDisplays: describeDisplays, anchor: anchor };
 }));

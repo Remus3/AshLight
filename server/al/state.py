@@ -35,11 +35,13 @@ PRICE_LISTINGS = 10
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
 
-# Event types shown in the dashboard's recent list.
+# Event types shown in the dashboard's recent list. UX-COPY: not
+# session_connect - the game logs one before every zone change, so
+# "Connected to a game server" doubled every "Entered <zone>" row and
+# pushed deaths and whispers out of the 30-row list sooner.
 LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
           "whisper_out", "afk_changed", "dnd_changed", "player_joined_area",
-          "player_left_area", "trade_accepted", "session_connect",
-          "tailer_started", "tailer_reset"}
+          "player_left_area", "trade_accepted", "tailer_started", "tailer_reset"}
 
 
 FALLBACK_TEXT = "Something happened in the log"
