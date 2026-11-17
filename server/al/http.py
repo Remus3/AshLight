@@ -336,7 +336,15 @@ class Handler(BaseHTTPRequestHandler):
                     self._sse_write(chunk)
                     last_push = last_beat = now
                 elif now - last_beat >= SSE_HEARTBEAT_S:
-                    self._sse_write(": hb\n\n")
+                    # A state can change with no log event (a trade card
+                    # expiring, DS-TRADE-EXPIRE): the heartbeat sends it.
+                    snap = core.state.snapshot()
+                    if snap["version"] != sent_version:
+                        sent_version = snap["version"]
+                        self._sse_write(self._sse_msg("state", snap))
+                        last_push = now
+                    else:
+                        self._sse_write(": hb\n\n")
                     last_beat = now
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
             pass

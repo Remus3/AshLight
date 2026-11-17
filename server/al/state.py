@@ -12,6 +12,9 @@ import time
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
 TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
+# DS-TRADE-EXPIRE (design 0001 N5): a card clears by itself this long after
+# it arrived; the dashboard states the rule and Dismiss stays.
+TRADE_EXPIRE_S = 600
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
 
@@ -22,46 +25,102 @@ LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
           "tailer_started", "tailer_reset"}
 
 
+FALLBACK_TEXT = "Something happened in the log"
+UNKNOWN_CHARACTER = "Unknown character"
+UNKNOWN_PLAYER = "Unknown player"
+UNKNOWN_ZONE = "an unknown zone"
+
+# tailer_reset reasons, as plain sentences (design 0001 section 9).
+RESET_TEXT = {
+    "missing": "Client.txt is missing - waiting for the game",
+    "replaced": "Client.txt was replaced - reading the new file",
+    "truncated": "Client.txt was cleared - reading from the start",
+}
+
+
+def _text(value, default):
+    """A field as display text; missing or empty reads as the default."""
+    if value is None:
+        return default
+    value = str(value)
+    return value if value.strip() else default
+
+
+def _amount(value):
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return str(value)
+
+
+def _trade_text(sender, tr):
+    """<from> wants <item> - <price> (design 0001 section 9)."""
+    item = _text(tr.get("item"), "an item")
+    if tr.get("kind") == "exchange":
+        if tr.get("want_amount") is not None:
+            item = f"{_amount(tr['want_amount'])} {item}"
+        price = "no price set"
+        if tr.get("price_amount") is not None:
+            price = " ".join(p for p in ("for", _amount(tr["price_amount"]),
+                                         _text(tr.get("price_currency"), "")) if p)
+    elif tr.get("price_amount") is not None:
+        price = " ".join(p for p in (_amount(tr["price_amount"]),
+                                     _text(tr.get("price_currency"), "")) if p)
+    else:
+        price = "no price set"
+    return f"{sender} wants {item} - {price}"
+
+
 def summarize(ev):
-    """One short display line for an event."""
+    """One natural sentence for an event (design 0001 section 9). This is
+    the only place event wording is made; every template has an exact-output
+    test in tests/test_summarize.py. Missing fields read honestly, never
+    "None", and internal ids never show."""
     t = ev.get("type")
-    if t == "scene_changed":
-        return f"Entered {ev.get('scene')}" + (" (hideout)" if ev.get("is_hideout") else "")
-    if t == "area_entered":
-        return f"Entered {ev.get('name')}"
+    if t in ("scene_changed", "area_entered"):
+        zone = _text(ev.get("scene") if t == "scene_changed" else ev.get("name"),
+                     UNKNOWN_ZONE)
+        tag = " (hideout)" if t == "scene_changed" and ev.get("is_hideout") else ""
+        return f"Entered {zone}{tag}"
     if t == "area_generated":
-        return f"Area level {ev.get('area_level')} ({ev.get('area_id')})"
+        return f"Area level {_text(ev.get('area_level'), 'unknown')}"
     if t == "level_up":
-        return f"{ev.get('character')} is now level {ev.get('level')}"
+        who = _text(ev.get("character"), UNKNOWN_CHARACTER)
+        if ev.get("level") is None:
+            return f"{who} reached a new level (level unknown)"
+        return f"{who} reached level {ev['level']}"
     if t == "death":
-        return f"{ev.get('character')} died" + (" (suicide)" if ev.get("suicide") else "")
+        who = _text(ev.get("character"), UNKNOWN_CHARACTER)
+        return f"{who} died" + (" (self-inflicted)" if ev.get("suicide") else "")
     if t == "whisper_in":
+        sender = _text(ev.get("from"), UNKNOWN_PLAYER)
         tr = ev.get("trade")
-        if tr:
-            price = ""
-            if tr.get("price_amount") is not None:
-                price = f" for {tr['price_amount']} {tr.get('price_currency')}"
-            return f"Trade from {ev.get('from')}: {tr.get('item')}{price}"
-        return f"From {ev.get('from')}: {ev.get('text')}"
+        if isinstance(tr, dict):
+            return _trade_text(sender, tr)
+        body = _text(ev.get("text"), "")
+        return f'{sender}: "{body}"' if body else f"{sender} sent an empty whisper"
     if t == "whisper_out":
-        return f"To {ev.get('to')}: {ev.get('text')}"
+        to = _text(ev.get("to"), "unknown player")
+        body = _text(ev.get("text"), "")
+        return f'To {to}: "{body}"' if body else f"Sent an empty whisper to {to}"
     if t == "afk_changed":
-        return "AFK on" if ev.get("on") else "AFK off"
+        return "You're AFK" if ev.get("on") else "You're back"
     if t == "dnd_changed":
-        return "DND on" if ev.get("on") else "DND off"
+        return "Do not disturb on" if ev.get("on") else "Do not disturb off"
     if t == "player_joined_area":
-        return f"{ev.get('character')} joined"
+        return f"{_text(ev.get('character'), UNKNOWN_CHARACTER)} joined the area"
     if t == "player_left_area":
-        return f"{ev.get('character')} left"
+        return f"{_text(ev.get('character'), UNKNOWN_CHARACTER)} left the area"
     if t == "trade_accepted":
         return "Trade accepted"
+    if t == "trade_cancelled":
+        return "Trade cancelled"
     if t == "session_connect":
-        return "Connected to an instance"
+        return "Connected to a game server"
     if t == "tailer_started":
         return "Reading Client.txt"
     if t == "tailer_reset":
-        return f"Client.txt {ev.get('reason')}"
-    return t or "event"
+        return RESET_TEXT.get(ev.get("reason"), "Client.txt was reset")
+    return FALLBACK_TEXT
 
 
 class SessionState:
@@ -125,6 +184,15 @@ class SessionState:
                 self.version += 1
             return n
 
+    def _expire_trades(self, now):
+        """Drop trade cards older than TRADE_EXPIRE_S. Caller holds the
+        lock. Bumps the version when one goes, so the change is pushed."""
+        kept = [r for r in self.trade_requests if now - r["at"] < TRADE_EXPIRE_S]
+        if len(kept) != len(self.trade_requests):
+            self.trade_requests.clear()
+            self.trade_requests.extend(kept)
+            self.version += 1
+
     def _trade_row(self, ev, now):
         self._trade_ids += 1
         row = {"id": self._trade_ids, "at": now, "from": ev.get("from")}
@@ -183,6 +251,7 @@ class SessionState:
             elif t in ("whisper_in", "whisper_out"):
                 self.recent_whispers.append(self._row(ev, now))
                 if t == "whisper_in" and ev.get("trade"):
+                    self._expire_trades(now)
                     self.trade_requests.append(self._trade_row(ev, now))
                 changed = True
             elif t == "afk_changed":
@@ -217,6 +286,7 @@ class SessionState:
     def snapshot(self):
         with self._lock:
             now = self._clock()
+            self._expire_trades(now)
             return {
                 "version": self.version,
                 "now": now,
