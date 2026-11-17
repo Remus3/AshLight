@@ -160,11 +160,25 @@ class Core:
 
     # -- web data opt-in (decision 0013)
     def _config(self):
+        """The local config as a fresh dict ({} when missing or bad).
+        AREA-AUDIT P4-4: the 0.5 s loop tick asks for it, so the file is
+        stat-ed each call and read and parsed only when its mtime or size
+        changed."""
         try:
-            cfg = json.loads(self.config_path.read_text(encoding="utf-8"))
-            return cfg if isinstance(cfg, dict) else {}
-        except (OSError, ValueError):
+            st = self.config_path.stat()
+            key = (st.st_mtime_ns, st.st_size)
+        except OSError:
+            self._config_cache = None
             return {}
+        cache = getattr(self, "_config_cache", None)
+        if cache is None or cache[0] != key:
+            try:
+                cfg = json.loads(self.config_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                cfg = {}
+            cache = (key, cfg if isinstance(cfg, dict) else {})
+            self._config_cache = cache
+        return dict(cache[1])
 
     def tc_calc_enabled(self):
         """AUDIT-TC-WIRE: the optional PoB calc opt-in (default off)."""
@@ -406,7 +420,7 @@ class Core:
         cards and publish the calc on / running state and the poe.ninja
         rates / price book check times in the snapshot, so turning the calc
         on or off and a price book refresh reach SSE clients at once. No
-        request (one small local config read per tick)."""
+        request (one local config stat per tick; read only on change)."""
         self.state.expire_trades(now)
         try:
             calc_on = self.tc_calc_enabled()

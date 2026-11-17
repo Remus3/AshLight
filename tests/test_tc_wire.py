@@ -126,6 +126,51 @@ def test_core_reads_the_opt_in(tmp_path):
     core.close()
 
 
+def test_p4_4_config_is_read_only_when_its_mtime_or_size_changes(tmp_path, monkeypatch):
+    """AREA-AUDIT P4-4: the 0.5 s loop tick asks tc_calc_enabled (tick_sources
+    and the provider's reap); the config file is stat-ed each time but read
+    and parsed only when its mtime or size changed."""
+    import os
+    from server.al.core import Core
+    log = tmp_path / "Client.txt"
+    log.write_text("", encoding="utf-8")
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
+    cfg = tmp_path / "rt" / "local.json"
+    cfg.write_text('{"tc_calc": true}', encoding="utf-8")
+    reads = []
+    real = Path.read_text
+
+    def counting(self, *a, **k):
+        if self == core.config_path:
+            reads.append(1)
+        return real(self, *a, **k)
+
+    monkeypatch.setattr(Path, "read_text", counting)
+    try:
+        for _ in range(20):
+            assert core.tc_calc_enabled() is True
+            core.tick_sources()
+        assert len(reads) == 1
+        cfg.write_text('{"tc_calc": false}', encoding="utf-8")  # size changes
+        assert core.tc_calc_enabled() is False
+        assert len(reads) == 2
+        st = cfg.stat()
+        cfg.write_text('{"tc_calc": 00000}', encoding="utf-8")  # same size
+        os.utime(cfg, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))  # new mtime
+        assert core.tc_calc_enabled() is False
+        assert len(reads) == 3
+        cfg.unlink()  # a missing file reads as off
+        assert core._config() == {}
+        cfg.write_text('{"tc_calc": true}', encoding="utf-8")
+        assert core.tc_calc_enabled() is True
+        # the cached dict is never handed out for mutation
+        core._config()["tc_calc"] = False
+        assert core.tc_calc_enabled() is True
+    finally:
+        monkeypatch.undo()
+        core.close()
+
+
 def test_end_to_end_over_the_stdio_bridge(tmp_path):
     """Provider -> make_calc -> Bridge (fake process) -> delta engine."""
     env = dict(os.environ)
