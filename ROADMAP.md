@@ -747,6 +747,23 @@ design docs in docs/design/, both made by a separate agent.
   through, foreground unchanged, top-left 16,16 280 x 176; idle word
   `log quiet 20m` fits; 3 processes, working set 248 MB summed (budget
   250, no margin, as in OVL-BUDGET), private 109 MB, CPU 0 ms in 60 s.
+- [x] UX-OVL-RAM (build) Give the overlay RAM headroom under the 250 MB
+  budget (248 MB measured, 3 processes). ACCEPT: >= 20 percent headroom
+  without losing transparency, click-through, non-focus, always-on-top
+  or the U14 opacity fix; numbers in decision 0002; smoke budget
+  tightened with margin. ZERO-CLICK: nothing to set; the switch ships
+  in app/main.js.
+  DONE 2026-11-17 (area-ux b5, 0004 U20): network service in the
+  browser process; 2 processes, 179 to 186 MB summed (was 245 to 252),
+  private 96 to 102 MB; desktop read-back passes; smoke asserts <= 2
+  processes and < 215 MB. 20 percent met against the 250 MB ceiling;
+  the smoke gate is 215 MB to absorb run-to-run noise.
+- [x] UX-OVL-FORCED (review) Re-test forced colours in the real
+  transparent overlay window. ACCEPT: the area outside the plates stays
+  transparent, or a fix. ZERO-CLICK: nothing to set.
+  DONE 2026-11-17 (area-ux b5, 0004 U21): `--force-high-contrast` on
+  the real window: plates repaint to Canvas, outside stays transparent;
+  no fix needed.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
@@ -895,6 +912,39 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   idle close < 4 s, test_http_robust thread count after 0.3 s sleep,
   test_budgets (already budget()-scaled). ZERO-CLICK: test-only, no user
   step.
+- [x] TEST-FULLSTACK (build) One synthetic scenario through every feature
+  over the real HTTP / SSE surface of a core on a free port 8961-8979:
+  consent, log opened, acts 1-4 with level-ups / deaths / splits, maps with
+  a same-seed portal re-entry, trades accepted / cancelled, item checks
+  (gear, waystone, unique), price book from a local mock poe.ninja, build
+  code, 20 min quiet (time-injected), idle + saved summary, core restart +
+  resume. ACCEPT: snapshot and SSE asserted per stage; web data OFF sends
+  nothing; under ~20 s; defects fixed with tests. DONE 2026-11-17:
+  tests/test_fullstack.py (4 tests, ~1.5 s main scenario; the calc ON leg
+  ~12 s, runs only where setup.ps1 -TcCalc installed the component). The
+  mock is a stdlib 127.0.0.1 server behind the core's injected transport
+  (webfetch still checks the real https://poe.ninja URL): asserted 24 GETs
+  on opt-in with the truthful User-Agent + contact and no Cookie, none more
+  within the hour, then 23 conditional GETs (If-None-Match, 304, no league
+  re-read inside 6 h), none after a restart, none with web data off before
+  or after. Defect fixed: (1) FULLSTACK-1 synth_client wrote the LOG FILE
+  OPENING marker with a millisecond counter, a shape the live log never
+  has, so no synthetic session (e2e, soak) ever produced log_opened or a
+  resume run start - regression test_synth_marker_has_the_live_shape.
+  No core defect found. ZERO-CLICK: runs inside pytest, no user step.
+- [ ] TEST-FULLSTACK-SSE-IDLE (build) A state change with no log event (the
+  idle state and the session summary card from the core loop tick, a trade
+  card expiring) reaches SSE clients only on the next heartbeat
+  (http.SSE_HEARTBEAT_S 15 s), so the dashboard shows "idle" up to 15 s
+  late. ACCEPT: decide (adjudicator) whether a state-version wake (bus
+  notify on version bump) is worth it; if so, pushed within 1 s, test.
+  ZERO-CLICK: no user step either way.
+- [ ] TEST-FULLSTACK-CALC-WARM (build) The live calc tests
+  (test_math_e2e_live, test_math_perf, test_fullstack calc leg) each start
+  a cold PoB bridge (~10-12 s each) in the normal suite where the component
+  exists. ACCEPT: one shared warm bridge per suite run where the test does
+  not measure the cold start, suite time down, tests still independent.
+  ZERO-CLICK: test-only.
 
 ## Utility (lane area-util, 2026-11-17)
 

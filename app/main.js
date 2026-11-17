@@ -94,6 +94,12 @@ app.disableHardwareAcceleration();
 // software compositor in the browser process removes that process: the
 // overlay starts, and it is one Electron process fewer (RAM budget).
 app.commandLine.appendSwitch("in-process-gpu");
+// UX-OVL-RAM (2026-11-17): the network service (the overlay's only network
+// use is the SSE feed from 127.0.0.1) runs in the browser process instead of
+// its own utility process. Measured: 3 processes -> 2, summed working set
+// 245-252 MB -> about 180 MB (decision 0002). The renderer sandbox is
+// unchanged. Chromium's feature name carries the "2".
+app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
