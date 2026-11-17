@@ -193,13 +193,25 @@ def _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache=None)
     PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError.
     MATH-WEIGHTS: with a pobweights cache only unmeasured keys are probed."""
     probe = cache.mod_weights if cache is not None else delta_mod.mod_weights
+    hand_weights = dict(out["mod_weights"]["weights"])
+    hand = weights_mod.lookup(hand_weights)
     base = delta_mod.outputs(calc, build)
     comps, per_slot = [], {}
     for s in slots:
         old_item = build.equipped(s)
         old_parsed = item_parser.parse(old_item.text) if old_item is not None else None
         old_stats = stats_of(old_parsed) if old_parsed is not None else {}
-        d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=base)
+        try:
+            d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=base)
+        except delta_mod.CalcWeaponUnusable as e:
+            # MATH-WEAPON-TYPE (decision 0032 amendment): PoB says the main
+            # skill cannot use this weapon here; a real downgrade, shown in
+            # words, no PoB numbers and no probes for this slot
+            c = _compare(s, new_stats, score(new_stats, hand), old_item, hand, side)
+            c.update(verdict=delta_mod.DOWNGRADE, weapon_unusable={"skill": e.skill})
+            comps.append(c)
+            per_slot[s] = ({"weights": hand_weights, "detail": {}}, hand)
+            continue
         carrier = old_item.text if old_item is not None else item_text
         mw = probe(calc, build, s, carrier, _keys(new_stats, old_stats), blend=blend)
         table = weights_mod.lookup(mw["weights"])
@@ -208,14 +220,19 @@ def _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache=None)
                  verdict=delta_mod.verdict(d["score_delta"]), dps=d["dps"], ehp=d["ehp"])
         comps.append(c)
         per_slot[s] = (mw, table)
-    best = max(comps, key=lambda c: c["score_delta"])
+    # a hand the main skill can use always beats one it cannot
+    best = max(comps, key=lambda c: (not c.get("weapon_unusable"), c["score_delta"]))
     mw, table = per_slot[best["slot"]]
+    unusable = bool(best.get("weapon_unusable"))
     out.update(ok=True, comparisons=comps, slot=best["slot"], verdict=best["verdict"],
                score_delta=best["score_delta"], score=_clean(score(new_stats, table)),
                unweighted=sorted(k for k in new_stats if k.lower() not in table),
-               calc={"source": delta_mod.SOURCE_POB, "notice": None},
-               mod_weights={"source": "pob", "slot": best["slot"],
-                            "weights": dict(mw["weights"]), "detail": dict(mw["detail"])})
+               calc={"source": delta_mod.SOURCE_POB,
+                     "notice": delta_mod.NOTICE_WEAPON_TYPE if unusable else None},
+               mod_weights=({"source": "hand", "weights": hand_weights} if unusable else
+                            {"source": "pob", "slot": best["slot"],
+                             "weights": dict(mw["weights"]),
+                             "detail": dict(mw["detail"])}))
 
 
 def _cached(out, build, slots, new_stats, cache, blend, side, notice):

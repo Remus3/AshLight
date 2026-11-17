@@ -27,6 +27,17 @@ EHP_KEYS = ("TotalEHP",)
 EHP_PARTS = ("Life", "EnergyShield")
 OUTPUT_KEYS = DPS_KEYS + EHP_KEYS + EHP_PARTS
 RECHECK_S = 30.0
+# MATH-WEAPON-TYPE (decision 0032 amendment): PoB's own disableReason texts
+# (pinned checkout, src/Modules/CalcActiveSkill.lua) that mean the main
+# skill cannot use the weapon now equipped. Name drift stays here (TC-DRIFT);
+# the live test in tests/test_math_weapon_type.py reads the real one.
+WEAPON_REASONS = (
+    "Main Hand weapon is not usable with this skill",
+    "Off Hand weapon is not usable with this skill",
+    "No usable weapon equipped",
+    "Weapon Types Need to be Different",
+)
+WEAPON_SLOT_PREFIX = "Weapon "
 
 
 class OutputError(RuntimeError):
@@ -72,9 +83,35 @@ def make_calc(get_bridge):
             for slot, text in (swaps or {}).items():
                 state["dirty"] = True
                 b.set_item(text, slot=slot)
-            return map_outputs(b.outputs(keys=list(OUTPUT_KEYS)))
+            out = map_outputs(b.outputs(keys=list(OUTPUT_KEYS)))
+            if any(str(s).startswith(WEAPON_SLOT_PREFIX) for s in (swaps or {})):
+                unusable = weapon_unusable(b)
+                if unusable:
+                    out["weapon_unusable"] = unusable
+            return out
 
     return calc
+
+
+def weapon_unusable(bridge):
+    """MATH-WEAPON-TYPE: {"skill", "reason"} when PoB says the main skill
+    cannot use the equipped weapon, else None. A bridge without the
+    "main_skill" command (or an error from it) reads as None, so the
+    sanity guard in delta still applies."""
+    ask = getattr(bridge, "main_skill", None)
+    if not callable(ask):
+        return None
+    try:
+        got = ask()
+    except Exception:  # noqa: BLE001 - extra info only; never fail the calc
+        return None
+    if not isinstance(got, dict) or not got.get("disabled"):
+        return None
+    reason = got.get("reason")
+    if reason not in WEAPON_REASONS:
+        return None
+    name = got.get("name")
+    return {"skill": name if isinstance(name, str) and name else None, "reason": reason}
 
 
 class Provider:

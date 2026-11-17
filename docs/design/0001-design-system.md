@@ -377,7 +377,15 @@ Generation rules:
      DPS <+pct>%, EHP <+pct>%.` under its sentence; when PoB's numbers make
      no sense (MATH-DPS-SANITY) it adds `Scored with your stat weights. DPS
      and EHP are not shown because Path of Building's numbers for this item
-     don't add up. Try the check again.` (implausible); otherwise the dashboard
+     don't add up. Try the check again.` (implausible); when PoB says the
+     main skill cannot use the checked weapon type (MATH-WEAPON-TYPE,
+     decision 0032 amendment) the overlay head is `Downgrade - wrong weapon
+     type`, the third line `Main skill can't use this weapon`, the dashboard
+     adds `Your main skill can't use this weapon type, so this item is a
+     downgrade for this build. Path of Building counts no damage from
+     <skill> with it in <slot>.` (`that skill` without a name) and that
+     slot's sentence reads `Downgrade: your main skill can't use this weapon
+     type in <slot> (<name>).` (no name for an empty slot); otherwise the dashboard
      adds `Scored with your stat weights. To see DPS and EHP, turn on the
      optional Path of Building calc in AshLight's settings file.` (off) or
      `Scored with your stat weights. DPS and EHP are not shown because Path

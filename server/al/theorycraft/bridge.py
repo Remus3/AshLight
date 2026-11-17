@@ -362,6 +362,14 @@ class Bridge:
         out = result.get("outputs")
         return out if isinstance(out, dict) else {}
 
+    def main_skill(self):
+        """MATH-WEAPON-TYPE: PoB's state of the build's main skill after the
+        last calc: {"found", "disabled", "reason", "name"} (reason and name
+        only when PoB has them, e.g. "Main Hand weapon is not usable with
+        this skill")."""
+        result = self.request("main_skill")
+        return result if isinstance(result, dict) else {}
+
 
 class _Crashed(BridgeError):
     """Internal: the process exited; request() restarts once."""

@@ -32,6 +32,8 @@ OUTPUTS = ("dps", "ehp")
 SOURCE_POB, SOURCE_WEIGHTS = "pob", "weights"
 NOTICE_OFF, NOTICE_FAILED = "off", "failed"
 NOTICE_IMPLAUSIBLE = "implausible"  # MATH-DPS-SANITY (decision 0032)
+NOTICE_WEAPON_TYPE = "weapon_type"  # MATH-WEAPON-TYPE (decision 0032 amendment)
+WEAPON_UNUSABLE = "weapon_unusable"
 DEFAULT_BLEND = {"dps": 0.5, "ehp": 0.5}
 PROBE_VALUE = 10
 MAX_PROBES = 24
@@ -48,6 +50,19 @@ class CalcImplausible(CalcError):
     no sense for the card (negative DPS or EHP, zero EHP, an attack build
     at 0 DPS after a swap). The card falls back to the weights and says the
     result looks wrong instead of showing a misleading number."""
+
+
+class CalcWeaponUnusable(CalcError):
+    """MATH-WEAPON-TYPE (decision 0032 amendment): Path of Building itself
+    reports that the build's main skill cannot use the swapped-in weapon
+    (its own disableReason, via calcwire). That is a real downgrade for the
+    build, so the card says so instead of a -100 % DPS number or the
+    "numbers don't add up" fallback. `skill`: PoB's main skill name or
+    None."""
+
+    def __init__(self, skill=None):
+        super().__init__("the main skill cannot use this weapon type")
+        self.skill = skill
 
 
 def _number(value, name):
@@ -68,6 +83,9 @@ def outputs(calc, build, swaps=None):
     if not isinstance(raw, dict):
         raise CalcError("calc answer is not an object")
     out = {k: _number(raw.get(k), k) for k in OUTPUTS}
+    unusable = raw.get(WEAPON_UNUSABLE)
+    if isinstance(unusable, dict):
+        out[WEAPON_UNUSABLE] = dict(unusable)
     if out["dps"] < 0:
         raise CalcImplausible("calc output dps is negative")
     if out["ehp"] <= 0:
@@ -78,7 +96,12 @@ def outputs(calc, build, swaps=None):
 def _swap_sane(base, new):
     """An attack build (DPS above 0) never drops to exactly 0 DPS from one
     item swap in a sane calc: that means a skill PoB lost track of (e.g. a
-    weapon type the main skill cannot use), not a number to show."""
+    weapon type the main skill cannot use), not a number to show. When PoB
+    itself names that cause (calcwire's weapon_unusable flag, absent on the
+    base) the swap raises CalcWeaponUnusable instead."""
+    unusable = new.get(WEAPON_UNUSABLE)
+    if unusable and not base.get(WEAPON_UNUSABLE):
+        raise CalcWeaponUnusable(unusable.get("skill"))
     if base["dps"] > 0 and new["dps"] == 0:
         raise CalcImplausible("calc gives 0 DPS after the swap")
 

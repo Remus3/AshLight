@@ -13,7 +13,7 @@
 -- client ignores it). One ready frame with id 0 is sent after start.
 --
 -- Commands: "ping", "load_build" {xml}, "set_item" {text, slot?},
--- "outputs" {keys?}, "quit".
+-- "outputs" {keys?}, "main_skill", "quit".
 --
 -- This script reads only its stdin and PoB's own files; it runs no shell,
 -- opens no network connection and writes no file.
@@ -371,6 +371,33 @@ handlers["outputs"] = function(req)
     end
   end
   return { outputs = result }
+end
+
+-- MATH-WEAPON-TYPE (decision 0032 amendment): PoB's own verdict on the main
+-- skill after the last calc: is it disabled, and PoB's reason (e.g. "Main
+-- Hand weapon is not usable with this skill", CalcActiveSkill.lua). Read
+-- only; no recalculation (the preceding "outputs" already ran the frame).
+handlers["main_skill"] = function()
+  local build = build_mode()
+  if not build or not build.calcsTab then error("no build loaded", 0) end
+  local env = build.calcsTab.mainEnv
+  local skill = type(env) == "table" and type(env.player) == "table" and env.player.mainSkill
+  if type(skill) ~= "table" then return { found = false } end
+  local disabled = false
+  local eff = skill.activeEffect
+  if type(eff) == "table" and type(eff.statSet) == "table"
+      and type(eff.statSet.skillFlags) == "table" and eff.statSet.skillFlags.disable then
+    disabled = true
+  end
+  if type(skill.skillFlags) == "table" and skill.skillFlags.disable then disabled = true end
+  local name
+  if type(eff) == "table" and type(eff.grantedEffect) == "table" then
+    name = eff.grantedEffect.name
+  end
+  local reason = skill.disableReason
+  return { found = true, disabled = disabled,
+           reason = type(reason) == "string" and reason or nil,
+           name = type(name) == "string" and name or nil }
 end
 
 -- ---------------------------------------------------------------- loop --

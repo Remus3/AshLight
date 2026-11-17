@@ -65,3 +65,47 @@ no request and refresh by themselves (ZERO-CLICK).
 - poe.ninja stops giving a Divine Orb rate, or players report the
   thresholds highlight too much / too little (move TOP_DIVINE /
   PICK_DIVINE in lootfilter.py, one place).
+
+## Amendment 2026-11-17 (AREA-MATH b5, main-session ruling): weapon type
+
+Ruling: an attack build at 0 DPS after a weapon swap read "Path of
+Building's numbers don't add up", which misleads when the checked weapon
+type is one the main skill cannot use: then it IS a real downgrade for this
+build. MATH-WEAPON-TYPE:
+
+- The bridge gains a read-only "main_skill" command (bridge.lua /
+  Bridge.main_skill): PoB's own mainEnv.player.mainSkill state after the
+  calc, {"found", "disabled", "reason", "name"}, where reason is PoB's
+  disableReason (src/Modules/CalcActiveSkill.lua, the text its sidebar
+  shows under "Skill disabled:"). No own skill database.
+- calcwire asks it only after a swap into a "Weapon ..." slot and maps the
+  four PoB weapon reasons (calcwire.WEAPON_REASONS: main hand / off hand
+  not usable, no usable weapon, weapon types need to be different) to a
+  `weapon_unusable` flag {"skill", "reason"}. A bridge without the
+  command, an error from it or any other reason reads as no flag.
+- delta raises CalcWeaponUnusable (a CalcError, NOT CalcImplausible) when
+  the swap carries the flag and the base does not, before the 0 DPS guard.
+- evaluate: that slot is a "downgrade" comparison with weapon_unusable
+  {"skill"}, scored with the hand weights, no dps / ehp and no probes; a
+  slot the skill can use always wins the headline. When the headline slot
+  is unusable, calc = {"source": "pob", "notice": "weapon_type"}.
+- Card (state.py, design-reviewer pass): overlay head "Downgrade - wrong
+  weapon type", line "Main skill can't use this weapon"; dashboard "Your
+  main skill can't use this weapon type, so this item is a downgrade for
+  this build. Path of Building counts no damage from <skill> with it in
+  <slot>." and per slot
+  "Downgrade: your main skill can't use this weapon type in <slot>
+  (<name>)."
+- The sanity fallback (implausible) stays for every other 0 DPS or
+  nonsense answer, including "This skill requires a Shield" (left out:
+  not a weapon type; a follow-up may word it separately).
+
+Alternatives: an own weapon-type table per skill (rejected, decision 0004:
+never an own calc engine or skill database); show PoB's -100 % (rejected:
+FullDPS can include other skills, and the number hides the cause); ask
+main_skill on every calc (rejected: one extra round trip per probe on
+non-weapon slots for nothing).
+
+Reverses if: PoB renames its disableReason texts (update WEAPON_REASONS;
+the live test reads the real one), PoB moves mainSkill out of
+calcsTab.mainEnv, or players want shield requirements worded the same way.
