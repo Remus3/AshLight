@@ -249,6 +249,19 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
+- [ ] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates
+  worktrees under the repo's .claude/worktrees/, but the Sidecar rule puts
+  them under the AL sidecar Worktree folder. Finding: .claude/worktrees/ IS
+  gitignored (.gitignore line 37), so nothing leaks into commits; the
+  violation is placement only. Fix: a WorktreeCreate hook in
+  .claude/settings.json that creates the worktree at
+  server/al/paths.py's Worktree path (kit fleet_lanes.worktree_path), or
+  harness config pointing worktrees at the sidecar; whichever the harness
+  supports. Also note: the isolation hook blocks a worktree agent from
+  merging into main, so the main checkout merges its branches (ff-only via
+  fleet_gitlock). ACCEPT: a fresh isolated agent's worktree resolves under
+  the sidecar Worktree dir; tests/test_sidecar_paths.py still green.
+  ZERO-CLICK: the hook fires on every isolated spawn; no manual move.
 - [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
