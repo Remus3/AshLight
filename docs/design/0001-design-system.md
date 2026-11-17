@@ -285,7 +285,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | AFK / DND | status word on the HUD line | flag under Session |
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
-| In a map (UTIL-MAPS) | no change | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
+| In a map (UTIL-MAPS, UTIL-MAPRUN-OVL) | row-1 timer is the time in this map (kept across hideout trips) instead of this zone instance; no new line or word; map deaths stay on the dashboard | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
 | Died (UTIL-DEATHS) | no change | Death recap card: newest first, local time, zone and level |
 | In a campaign act (HUD-ACT) | no change | Act times card (below Item check): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
@@ -535,6 +535,10 @@ Generation rules:
   cycling. A change is a single repaint.
 - Repaint budget: only when a visible string changes; the zone timer
   repaints at most once a minute (`render_gate.js`, `test_budgets.py`).
+  The row-1 timer is the time in the open map while the player stands in
+  that map (an idle log freezes it there), otherwise the time in this zone
+  instance (`render_gate.js timerSeconds`; UTIL-MAPRUN-OVL): same text,
+  same once-a-minute repaint, no marker.
 - Glance time target: each line readable in one fixation (< 1 s): <= 5
   words, number or name first, no wrapping (`nowrap` + ellipsis).
 - Placement: corners only, user-chosen; default top-right. In PoE2 that
