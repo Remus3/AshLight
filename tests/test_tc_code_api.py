@@ -90,7 +90,8 @@ def test_bad_inputs(env):
     srv = env()
     req(srv, "POST", "/api/build-code", {"code": codec.encode(MINIMAL_XML)})
     status, doc = req(srv, "POST", "/api/build-code", {"code": "https://pobb.in/AbCd"})
-    assert status == 422 and doc["kind"] == "url" and "not supported yet" in doc["error"]
+    # TC-URL: a share URL is only fetched with the web-data opt-in (default off)
+    assert status == 422 and doc["kind"] == "url" and doc["web_data"] is False
     assert req(srv, "POST", "/api/build-code", {"code": "garbage!!"})[0] == 400
     assert req(srv, "POST", "/api/build-code", {"code": 5})[0] == 400
     assert req(srv, "POST", "/api/build-code", b"{}", ctype="text/plain")[0] == 415

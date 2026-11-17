@@ -23,10 +23,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, layout, ports
+from . import DISCLAIMER, NAME, VERSION, layout, ports, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import evaluate as tc_evaluate
 from .theorycraft import model as build_model
+from .theorycraft import paste as build_paste
+from .theorycraft import shareurl
 from .theorycraft import weights as tc_weights
 
 log = logging.getLogger("al.http")
@@ -205,6 +207,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, core.builds.snapshot(), extra)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)
+        if path == "/api/rates":
+            # DATA-NINJA: cached rates with their age, never a blocking fetch;
+            # a due refresh (opt-in on, at most hourly) runs in the background.
+            started = core.rates.refresh_async()
+            doc = core.rates.snapshot()
+            doc["refreshing"] = bool(doc["refreshing"] or started)
+            return self._json(200, doc, extra)
+        if path == "/api/web-data":
+            return self._json(200, self._web_data_doc(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -234,6 +245,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._build_code()
         if path == "/api/eval":
             return self._eval()
+        if path == "/api/web-data":
+            return self._set_web_data()
         return self._send(404, "not found\n")
 
     def do_PUT(self):
@@ -340,11 +353,29 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "id (integer) or all: true required"})
         return self._json(200, {"dismissed": n, "state": self.server.core.state.snapshot()})
 
+    def _web_data_doc(self):
+        core = self.server.core
+        return {"web_data": core.web_data_enabled(),
+                "uses": ["poe.ninja currency rates", "build share links you paste",
+                         "price checks you ask for"],
+                "policy": "docs/decisions/0013-web-data.md"}
+
+    def _set_web_data(self):
+        """The one web-data opt-in (decision 0013), default off."""
+        body = self._read_json()
+        if body is None:
+            return None
+        if not isinstance(body.get("enabled"), bool):
+            return self._json(400, {"error": "enabled: true|false required"})
+        self.server.core.set_web_data(body["enabled"])
+        return self._json(200, self._web_data_doc())
+
     def _build_code(self):
-        """TC-CODE / TC-JSON: load a pasted build (JSON {"code": text}, or a
-        character object {"character": {...}}). The format (PoB code, share
-        URL, character JSON) is auto-detected; decoded locally; a share URL
-        is recognized but never fetched."""
+        """TC-CODE / TC-JSON / TC-URL: load a pasted build (JSON {"code":
+        text}, or a character object {"character": {...}}). The format (PoB
+        code, share URL, character JSON) is auto-detected; codes decode
+        locally; a share URL is fetched once per paste through
+        theorycraft/shareurl.py, only with the web-data opt-in on."""
         body = self._read_json(MAX_BUILD_BODY)
         if body is None:
             return None
@@ -353,13 +384,26 @@ class Handler(BaseHTTPRequestHandler):
             code = json.dumps({"character": body["character"]})
         if not isinstance(code, str):
             return self._json(400, {"error": "code (string) required"})
+        core = self.server.core
         try:
-            self.server.core.builds.load_code(code)
+            if build_paste.detect(code) == "url":
+                core.load_share_url(code)
+            else:
+                core.builds.load_code(code)
+        except webfetch.WebDataOff:
+            return self._json(422, {"error": "web data is off: turn it on to load "
+                                    "share links, or paste the build code itself",
+                                    "kind": "url", "web_data": False})
+        except webfetch.UrlNotAllowed as e:
+            return self._json(422, {"error": f"share link not supported: {e}",
+                                    "kind": "url", "hosts": list(shareurl.ALLOWED_HOSTS)})
+        except webfetch.FetchError as e:
+            return self._json(502, {"error": f"share link fetch failed: {e}", "kind": "url"})
         except build_codec.ShareUrlError as e:
             return self._json(422, {"error": str(e), "kind": "url"})
         except (build_codec.CodeError, build_model.BuildError) as e:
             return self._json(400, {"error": str(e)})
-        return self._json(200, self.server.core.builds.snapshot())
+        return self._json(200, core.builds.snapshot())
 
     def _eval(self):
         """TC-EVAL: score item text ({"item": text, "slot": optional}) against

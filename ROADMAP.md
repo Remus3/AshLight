@@ -54,12 +54,50 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   through one rate-limited queue that parses X-Rate-Limit headers
   dynamically; opt-in setting. ACCEPT: parser tests on fixtures; limiter
   tests; no request without the opt-in.
+  PARTIAL 2026-11-17 (data lane, decision 0013): server/al/trade.py - shared
+  RateLimiter (X-Rate-Limit-Policy / -Rules / -<rule> / -State, Retry-After
+  with 60 s fallback, headroom 1, kinds sharing a policy share state), one
+  serial TradeClient queue behind the web_data opt-in (re-checked before
+  send), search / fetch URL builders, build_query(ParsedItem, stat_ids).
+  tests/test_trade_limiter.py (mocked). REMAINS: the per-press clipboard
+  read + hotkey (decision 0003), the trade2 /data/stats stat-id table
+  (cached) for build_query, search -> fetch flow and price summary, an API
+  endpoint, league choice, "waiting N s" surfaced in state, live header
+  values recorded in research 0004.
+  ZERO-CLICK: once opted in, the one hotkey press queues the check; the
+  limiter paces it with no click.
+- [ ] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
+  prices, "waiting N s" from the limiter, poe.ninja rates for conversion).
+  After PRICE-1. ACCEPT: fixture result renders at desktop and phone width;
+  design-reviewer pass. ZERO-CLICK: appears after the hotkey press, no
+  button.
 
 ## Lane: data
 
-- [ ] DATA-NINJA (data) poe.ninja PoE2 currency rates with ETag caching under
+- [x] DATA-NINJA (data) poe.ninja PoE2 currency rates with ETag caching under
   the AL sidecar Cache, refresh at most hourly, attribution in the UI.
   ACCEPT: offline-cached rates shown; one request per hour max.
+  DONE (core) 2026-11-17 (decision 0013): server/al/ninja.py RatesClient,
+  documented endpoints only (research 0005), If-None-Match, last attempt
+  persisted in <sidecar>\Cache\ninja\rates.json (one request per hour per
+  endpoint, leagues once a day or skipped via "league" in local config),
+  offline -> cached rates with age_s / stale; ATTRIBUTION exposed. Web
+  opt-in "web_data" (default off) in the local config, GET / POST
+  /api/web-data; GET /api/rates (token, Host, Origin) never blocks, starts a
+  due refresh in the background. tests/test_data_ninja.py (mocked).
+  ZERO-CLICK: rates refresh themselves hourly once opted in.
+- [ ] DATA-NINJA-UI (build) Rates panel on the dashboard from GET /api/rates
+  (top currencies in the primary unit, age, stale marker) with the
+  ATTRIBUTION / "Prices: poe.ninja" credit, and the one web-data toggle
+  backed by GET / POST /api/web-data (off by default, says what it enables).
+  After DATA-NINJA. ACCEPT: fixture rates render at desktop and phone
+  width; credit visible; design-reviewer pass. ZERO-CLICK: the panel polls
+  /api/rates on its own; no refresh button.
+- [ ] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
+  overview response fields (lines[].id / primaryValue, core.items names,
+  core.primary) against server/al/ninja.parse_overview and record them in
+  research 0005; add a dated, anonymised fixture. ACCEPT: parser test on
+  the real shape. ZERO-CLICK: doc + fixture row, run by a lane.
 - [x] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
   and poe2db / poe2wiki (CC BY-NC-SA) before any snapshot is bundled; record
   in docs/decisions. ACCEPT: decision file with the ruling.
@@ -124,10 +162,22 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   owner allows. After TC-CODE. ACCEPT: decode + parse + byte-exact round
   trip of the real code. ZERO-CLICK: a test that skips when the fixture is
   absent.
-- [ ] TC-URL (build) Fetch a user-pasted share URL (pobb.in, pastebin) once
+- [x] TC-URL (build) Fetch a user-pasted share URL (pobb.in, pastebin) once
   per paste: host allowlist, truthful User-Agent, size cap, no redirects off
   the allowlist (SSRF guard). After TC-CODE. ACCEPT: mocked-fetch tests; no
   other host reachable. ZERO-CLICK: the pasted URL loads like a code.
+  DONE 2026-11-17 (decision 0013): server/al/theorycraft/shareurl.py takes
+  only the paste id and rebuilds pobb.in/pob/<id> or pastebin.com/raw/<id>;
+  server/al/webfetch.py (https, exact allowlist, no userinfo / port / IP
+  literal, manual redirects re-checked, max 3, 2 MB cap, 10 s timeout,
+  User-Agent required, cookies refused); POST /api/build-code fetches a
+  detected URL once when web_data is on (422 off / not allowed, 502 fetch
+  failure), the text goes through paste detection into the build store.
+  tests/test_tc_url.py (SSRF cases, mocked).
+- [ ] TC-URL-VERIFY (review) With web access, confirm the raw-download
+  paths pobb.in/pob/<id> and pastebin.com/raw/<id> (and whether pobb.in
+  redirects) and record them in research 0010. ACCEPT: paths cited with an
+  access date or shareurl.RAW_TEMPLATES fixed. ZERO-CLICK: doc row.
 - [ ] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture

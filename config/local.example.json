@@ -13,5 +13,8 @@
   "character": "",
   "poll_ms": 250,
   "overlay_toggle": "Alt+Shift+A",
-  "port": null
+  "port": null,
+  "_doc_web": "web_data: the one web-data opt-in (decision 0013), default false; while false nothing is requested from the web (poe.ninja rates, pasted share links, price checks). Also set by POST /api/web-data. league: optional league id for poe.ninja rates; blank = the current league from poe.ninja's league list.",
+  "web_data": false,
+  "league": ""
 }

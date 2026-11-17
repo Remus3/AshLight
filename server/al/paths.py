@@ -109,6 +109,7 @@ def all_runtime_paths(environ=None):
     out["keepalive_log"] = out["logs"] / "keepalive.log"
     out["npm_cache"] = out["cache"] / "npm"
     out["electron_cache"] = out["cache"] / "electron"
+    out["ninja_cache"] = out["cache"] / "ninja"  # DATA-NINJA rates.json
     out["build_stamp"] = out["build"] / "build-stamp.json"
     return out
 
