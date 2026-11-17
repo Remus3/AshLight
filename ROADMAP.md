@@ -222,13 +222,21 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   push_worker, push_last, ledger_rotate as extra_ignore;
   tests/test_guard_loop_state.py pins it to tools/loop_base.py. ZERO-CLICK:
   test-only, no user step.
-- [ ] TEST-E2E (build) Synthetic end-to-end harness: replay a generated
+- [x] TEST-E2E (build) Synthetic end-to-end harness: replay a generated
   Client.txt session (zones, level-ups, deaths, whispers, trades, rotation /
   truncation, partial lines, non-ASCII names, a file near the 32 MB resume
   cap) into a running core and assert snapshot / SSE output; fix what it
   breaks. ACCEPT: stdlib harness test green, defects fixed with tests.
-  ZERO-CLICK: runs inside pytest, no user step. BLOCKED: claimed by the
-  interactive AREA-TEST lane (not an operator act; cleared on merge).
+  DONE 2026-11-17: tools/synth_client.py (generator + CLI) and
+  tests/test_e2e_replay.py (7 tests: HTTP consent, SSE events, odd-chunk
+  UTF-8 splits, BOM-only log, truncate / replace / delete-recreate, partial
+  line, 34 MB file resume). Defects fixed: (1) an unterminated line grew the
+  tailer buffer without bound (NUL padding after a crash) - capped at
+  logfile.MAX_PARTIAL, dropped to its next newline; (2) a consented core
+  that found no Client.txt at start never tailed until a re-consent, and a
+  discovered log whose Steam library moved was never followed -
+  Core.ensure_tailing() from the core loop, every 5 s. ZERO-CLICK: runs
+  inside pytest; the fixes need no user step.
 - [ ] TEST-HTTP (build) HTTP / SSE surface robustness: token, Host / Origin,
   oversized and malformed requests, many and slow SSE clients, core restart
   under the keepalive supervisor. ACCEPT: tests green, defects fixed.
