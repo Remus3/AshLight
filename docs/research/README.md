@@ -97,6 +97,10 @@ its code (license notes: 0006).
   FullDPSSkill, defence breakdown + PoB's remaining warnings, waystone
   reward summary, campaign level checks; craft slots and atlas progress
   listed ([0031-wave-3-2026-11.md](0031-wave-3-2026-11.md))
+- 0032 Fourth wave (Nov 2026): self-diagnostics card, non-English client
+  detector (what Client.txt lines are language dependent), first-hours
+  hints for F2P newcomers, map level ladder; atlas progress and locale
+  pattern packs listed ([0032-wave-4-2026-11.md](0032-wave-4-2026-11.md))
 
 ## Open research (feeds ROADMAP)
 

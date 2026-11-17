@@ -926,6 +926,66 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   boss / flask / boots hints, act card list, overlay status word last;
   tests/test_util_campaign.py, app/test/campaign.test.js.
 
+## Research-filed features, batch 5 (AREA-RES 2026-11-17, research 0032)
+
+Ranked in research 0032; floor rulings J / K / L (adjudicator 2026-11-17)
+in its section 6. UTIL-ATLAS-PROGRESS and LANG-PACKS are listed there
+only (blocked on live 1.0 / localised logs).
+
+- [ ] DIAG-SELF (build) Self-diagnostics "Checks" card: Client.txt found /
+  consented / reading / last line age, character seen, log language
+  (LANG-GUARD), web data on and contact set, price book age and last
+  fetch error, calc component installed and pinned, build-time data
+  snapshots present and age, overlay and supervisor alive (procs.py),
+  hotkey registered, version / build stamp. Each failing check shows one
+  fix line naming the existing step (consent button, web-data box,
+  `scripts\setup.ps1 -TcCalc`, `scripts\run.ps1`). "Copy report" writes a
+  plain-text report on the player's click (research 0032 sections 3,
+  5.1). floor-ok with condition (ruling J): local state only, no network;
+  report redacts user name, home / sidecar paths, contact and character
+  name, carries no chat; passive checks only, no game-process probe.
+  ACCEPT: one test per check (pass / fail / unknown), a redaction test on
+  a report built from a seeded state, no new network call (webfetch not
+  imported by the module); design-reviewer pass. ZERO-CLICK: computed by
+  the core on every snapshot; folded to "All checks pass" when green and
+  opens by itself on a failure; the copy is the only click and optional.
+- [ ] LANG-GUARD (build) Non-English client notice: when area generations
+  arrive but the English `You have entered` line does not follow for 3
+  area loads in a row, one notice names what needs English game text
+  (level, deaths, whispers, trade requests, item check) and what still
+  works (zone, act and map times from area ids); item.py's existing
+  non-English warning reuses the same wording (research 0032 sections 4,
+  5.2). floor-ok (ruling K): opted-in Client.txt only, counter in memory,
+  notice dismissible, never claims the client is broken. ACCEPT: parser /
+  state tests on synthetic logs (English -> no notice; ids without
+  ENTERED x3 -> notice; English line resumes -> clears), DIAG-SELF shows
+  the same verdict; design-reviewer pass. ZERO-CLICK: detected and
+  cleared by itself from the log; dismissing is optional.
+- [ ] NEWBIE-HINTS (build) First-hours hints for a new character: one-time,
+  auto-expiring hints keyed to Client.txt events (first level-up from
+  level 1, first campaign death: "campaign deaths cost no experience",
+  first town / hideout, first map: "deaths in maps cost experience", first
+  item-check moment: the hotkey how-to), AshLight-authored restated facts,
+  shown in the event feed and the overlay status word (research 0032
+  sections 1, 5.3). floor-ok with condition (ruling L): Client.txt events
+  only, no wiki / guide text bundled (decision 0009); seen hint ids
+  stored keyed by a hash of the character name in gitignored ops/runtime;
+  nothing without consent; one-click "reset hints"; per-session fallback.
+  Death-penalty numbers stay out until 1.0 patch notes confirm them.
+  ACCEPT: tests per hint trigger, a veteran character (first line above
+  level 2) gets none, store holds no plain name, test_sidecar_paths green;
+  design-reviewer pass. ZERO-CLICK: hints appear and expire by themselves.
+- [ ] UTIL-MAP-LADDER (build) Map level ladder: from each map run's area
+  level (UTIL-MAPS), show highest map level reached, maps / deaths /
+  median map time per area level and level-ups earned in maps, this
+  session and, with run history on, across sessions (research 0032
+  sections 2, 5.4). Stated facts only, no push / step-down advice.
+  floor-ok (research 0031 ruling I): "Generating level" lines only, history
+  in gitignored ops/runtime under the existing run-history opt-in. ACCEPT:
+  tests on synthetic map sequences (one level, several, deaths per level,
+  portal re-entry not double counted, resume rebuild), design-reviewer
+  pass. ZERO-CLICK: updates by itself on each map generation.
+
 ## Game settings advisor (operator order 2026-11-16)
 
 ## Design and UX audit (operator order 2026-11-16)
