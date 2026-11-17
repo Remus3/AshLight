@@ -358,3 +358,16 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
   optional pinned LuaJIT subprocess), never an own calc engine (decision
   0004). Reverses if: PoB drift breaks the bridge every release, PoB ships
   an official headless API, or its license changes.
+- A detached stdlib keepalive supervisor restarts a dead or hung core;
+  stop.ps1's stop.request is honoured (decision 0005). Reverses if: the
+  supervisor proves unreliable, logon survival is wanted, or the stale
+  heartbeat kill false-fires on slow machines.
+- OVL-FPS never uses PresentMon or ETW Present tracing of the game, not even
+  dev-only (decision 0006). Reverses if: GGG explicitly permits it or the
+  operator rules OS performance telemetry is allowed.
+- PoB2 share codes: stdlib codec, share-URL fetch deferred to TC-URL, no
+  clipboard read in the codec (decision 0007). Reverses if: a real PoB2
+  export fails to decode, or the operator orders TC-URL.
+- LIVE-RESUME scans Client.txt backwards at start, no persisted state
+  (decision 0008). Reverses if: GGG drops the marker / level-up lines or the
+  32 MB cap misses the current run's deaths in normal play.

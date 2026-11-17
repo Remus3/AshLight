@@ -249,6 +249,23 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   the core exits cleanly and is not restarted (decision 0005). End-to-end
   test kills a real core on a tmp runtime and sees it back. Takes effect on
   the next run.ps1.
+- [ ] OPS-STOP (build) scripts/stop.ps1 leaves the keepalive supervisor
+  and the Electron overlay running; it must stop every AshLight process
+  (core via stop.request, then supervisor and overlay by their recorded
+  pids / single-instance locks), never the game client. ACCEPT: after
+  stop.ps1 no AshLight python / pythonw / electron process remains (test on
+  a tmp runtime). ZERO-CLICK: one stop.ps1 call, no manual kill.
+- [ ] OPS-RUN-IDEMP (build) run.ps1 -NoBrowser does not start the overlay,
+  and re-running run.ps1 -Overlay spawns a second supervisor that only exits
+  on its own. Make run.ps1 idempotent per component: core, supervisor and
+  overlay each started only when not already live. ACCEPT: two run.ps1 calls
+  in a row leave exactly one core, one supervisor, one overlay. ZERO-CLICK:
+  any run.ps1 call converges to the full running set.
+- [ ] API-TOKEN-HDR (review) The API token is accepted only as the ?token=
+  query parameter, not as an Authorization Bearer header. Confirm intended
+  (SSE / EventSource cannot set headers) and document it in decision 0002 or
+  the API notes, or accept both. ACCEPT: documented and covered by a test.
+  ZERO-CLICK: no operator step.
 - [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
