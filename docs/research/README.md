@@ -93,6 +93,10 @@ its code (license notes: 0006).
 - 0030 Trade stat ids source - no GGG source; repoe-fork stat_translations
   `trade_stats` (already snapshotted) chosen, PoB tables same provenance
   ([0030-trade-stat-ids-source.md](0030-trade-stat-ids-source.md))
+- 0031 Third wave (Nov 2026): skill / ailment DPS split from PoB
+  FullDPSSkill, defence breakdown + PoB's remaining warnings, waystone
+  reward summary, campaign level checks; craft slots and atlas progress
+  listed ([0031-wave-3-2026-11.md](0031-wave-3-2026-11.md))
 
 ## Open research (feeds ROADMAP)
 
