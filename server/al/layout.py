@@ -11,8 +11,9 @@ displays.json so the dashboard can offer them; the core only reads that file.
 """
 
 import json
-import os
 from pathlib import Path
+
+from . import jsonfile
 
 CONFIG_KEY = "overlay"
 CORNERS = ("top-left", "top-center", "top-right",
@@ -101,11 +102,7 @@ def from_config(cfg):
 
 
 def load(config_path):
-    try:
-        cfg = json.loads(Path(config_path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        cfg = {}
-    return from_config(cfg if isinstance(cfg, dict) else {})
+    return from_config(jsonfile.read_json(config_path, kind=dict, default={}))
 
 
 def save(config_path, layout):
@@ -123,20 +120,13 @@ def save(config_path, layout):
         # Never overwrite a config file the user broke by hand.
         raise LayoutError(f"config/local.json is unreadable: {e}") from e
     cfg[CONFIG_KEY] = layout
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(json.dumps(cfg, indent=2, ensure_ascii=True) + "\n")
-    os.replace(tmp, path)
+    jsonfile.write_json(path, cfg, indent=2)
     return layout
 
 
 def read_displays(runtime_dir):
     """Monitors the overlay last reported ([] when it has not run yet)."""
-    try:
-        doc = json.loads((Path(runtime_dir) / "displays.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
+    doc = jsonfile.read_json(Path(runtime_dir) / "displays.json")
     rows = doc.get("displays") if isinstance(doc, dict) else None
     out = []
     for d in (rows or [])[:MAX_DISPLAYS]:

@@ -16,9 +16,9 @@ new request of any kind: zero network. While web data is off (decision
 0013) nothing is re-read and nothing is flagged. The list is clearable.
 """
 
-import json
-import os
 from pathlib import Path
+
+from . import jsonfile
 
 FILE_NAME = "price_watch.json"
 CONFIG_KEY = "price_watch_pct"
@@ -95,22 +95,12 @@ class PriceWatch:
         self.items = self._load()
 
     def _load(self):
-        try:
-            if self.path.stat().st_size > MAX_BYTES:
-                return []
-            doc = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return []
+        doc = jsonfile.read_json(self.path, max_bytes=MAX_BYTES)
         rows = doc.get("items") if isinstance(doc, dict) else None
         return [r for r in (_clean(x) for x in rows or ()) if r is not None][-MAX_ITEMS:]
 
     def _save(self):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_name(self.path.name + ".tmp")
-        with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-            fh.write(json.dumps({"schema": SCHEMA, "items": self.items}, indent=1,
-                                ensure_ascii=True) + "\n")
-        os.replace(tmp, self.path)
+        jsonfile.write_json(self.path, {"schema": SCHEMA, "items": self.items})
 
     @staticmethod
     def _same(a, b):

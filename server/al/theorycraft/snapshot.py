@@ -31,7 +31,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .. import NAME, VERSION, paths, webfetch
+from .. import NAME, VERSION, jsonfile, paths, webfetch
 from . import datacredit
 
 ATTRIBUTION = datacredit.ATTRIBUTION  # one source: theorycraft/datacredit.py
@@ -141,19 +141,9 @@ def _header(headers, name):
     return None
 
 
-def _write_atomic(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_bytes(data)
-    tmp.replace(path)
-
-
 def load_manifest(directory):
-    try:
-        doc = json.loads((Path(directory) / MANIFEST).read_text(encoding="ascii"))
-        return doc if isinstance(doc, dict) else {}
-    except (OSError, ValueError):
-        return {}
+    return jsonfile.read_json(Path(directory) / MANIFEST, encoding="ascii", kind=dict,
+                              default={})
 
 
 def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
@@ -204,7 +194,7 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
                 if have and sha == entry.get("sha256"):
                     out[name] = "unchanged"
                 else:
-                    _write_atomic(target, body)
+                    jsonfile.write_bytes(target, body)
                     entry = {"url": url, "fetched_at": _utc(now), "sha256": sha,
                              "bytes": len(body)}
                     out[name] = "fetched"
@@ -222,8 +212,8 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
         doc = {"tool": f"{NAME} {VERSION} theorycraft.snapshot", "attribution": ATTRIBUTION,
                "decision": "docs/decisions/0009-data-license.md",
                "files": {k: files[k] for k in sorted(files)}}
-        _write_atomic(directory / MANIFEST,
-                      (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("ascii"))
+        jsonfile.write_bytes(directory / MANIFEST,
+                         (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("ascii"))
     return out
 
 
