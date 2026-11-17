@@ -203,7 +203,7 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   each [{"hooks": [{"type": "command", "command": "python
   \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""}]}], then checks one
   isolated spawn lands under the sidecar Worktree dir.
-- [ ] LEAK-WT (build) The commit hook's leak sweep reports DEGRADED in agent
+- [x] LEAK-WT (build) The commit hook's leak sweep reports DEGRADED in agent
   worktrees: config/local.json and config/leak_needles.json are gitignored
   and absent there. Fix: tools/leak_sweep.py resolves the main checkout via
   `git rev-parse --git-common-dir` and reads its needle config when the
@@ -211,6 +211,9 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   in a linked worktree prints ARMED with the main checkout's needle count; a
   test on a tmp repo + linked worktree covers it. ZERO-CLICK: the hook finds
   the config itself on every worktree commit; no copy step.
+  Done 2026-11-17: resolve_config() in tools/leak_sweep.py (worktree
+  config wins, else main checkout); run line names config=<source>;
+  tests/test_leak_sweep.py tmp repo + linked worktree.
 - [x] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001). Done 2026-11-17: 0 hits on both wikis
   (research 0009).

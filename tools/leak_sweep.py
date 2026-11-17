@@ -18,7 +18,9 @@ Modes: `--tree` (every tracked file), `--staged` (pre-commit, added lines),
 `--pre-push` (stdin ref lines; added lines + commit messages of the pushed
 range). Exit 0 clean, 2 HALT (finding), 3 FAULT (could not run). DEGRADED (no
 needle config) is announced on every run and is not silent; it is not a FAULT,
-because CI legitimately has no config.
+because CI legitimately has no config. LEAK-WT: a linked worktree without its
+own config reads the main checkout's (parent of `git rev-parse
+--git-common-dir`); the run line names the source, never a needle.
 
 Escape rate is above zero: `--no-verify` bypasses the hooks, and a needle
 spelled in a shape nobody listed passes. A clean run is not proof.
@@ -56,8 +58,57 @@ STRUCTURAL = [
 ]
 
 
-def load_needles(config=CONFIG, environ=None):
-    """Return (needles, mode). mode is ARMED, DEGRADED or raises ValueError (FAULT)."""
+def main_checkout(root=ROOT):
+    """The main checkout of `root`'s repository (LEAK-WT), or None.
+
+    `git rev-parse --git-common-dir` names the shared .git dir; in a linked
+    worktree its parent is the main checkout. None when git fails, the repo is
+    bare-like, or `root` already is the main checkout."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=str(root),
+                             capture_output=True)
+    except OSError:
+        return None
+    if out.returncode != 0:
+        return None
+    raw = out.stdout.decode("utf-8", "replace").strip()
+    if not raw:
+        return None
+    common = Path(raw)
+    if not common.is_absolute():
+        common = Path(root) / common
+    common = common.resolve()
+    if common.name != ".git":
+        return None
+    main = common.parent
+    try:
+        if main == Path(root).resolve():
+            return None
+    except OSError:
+        return None
+    return main
+
+
+def resolve_config(root=ROOT):
+    """(path, source) of the needle config. The worktree's own file wins; a
+    linked worktree without one reads the main checkout's (LEAK-WT). source is
+    "local", "main-checkout" or "none" (path then is the local candidate)."""
+    local = Path(root) / "config" / "leak_needles.json"
+    if local.is_file():
+        return local, "local"
+    main = main_checkout(root)
+    if main is not None:
+        shared = main / "config" / "leak_needles.json"
+        if shared.is_file():
+            return shared, "main-checkout"
+    return local, "none"
+
+
+def load_needles(config=None, environ=None):
+    """Return (needles, mode). mode is ARMED, DEGRADED or raises ValueError (FAULT).
+    config None resolves it via resolve_config() (worktree first, then main)."""
+    if config is None:
+        config, _ = resolve_config()
     env = os.environ if environ is None else environ
     raw = env.get("AL_LEAK_NEEDLES")
     if raw:
@@ -217,8 +268,9 @@ def scan_pre_push(ref_lines, needles_rx, cwd=ROOT):
     return findings, scanned
 
 
-def report(findings, mode, n_needles):
-    print(f"[leak-sweep] {mode} needles={n_needles}", file=sys.stderr)
+def report(findings, mode, n_needles, source=""):
+    tail = f" config={source}" if source else ""
+    print(f"[leak-sweep] {mode} needles={n_needles}{tail}", file=sys.stderr)
     if mode == "DEGRADED":
         print("[leak-sweep] DEGRADED: no needle config - the needle arm proved nothing; "
               "structural arm ran", file=sys.stderr)
@@ -238,8 +290,11 @@ def main(argv=None):
     g.add_argument("--pre-push", nargs="*", metavar="ARG")
     g.add_argument("--explain", type=int)
     args = ap.parse_args(argv)
+    config, source = resolve_config()
+    if os.environ.get("AL_LEAK_NEEDLES"):
+        source = "env"
     try:
-        needles, mode = load_needles()
+        needles, mode = load_needles(config)
     except (ValueError, OSError) as exc:
         print(f"[leak-sweep] FAULT config: {exc}", file=sys.stderr)
         return 3
@@ -268,7 +323,7 @@ def main(argv=None):
     except RuntimeError as exc:
         print(f"[leak-sweep] FAULT: {exc}", file=sys.stderr)
         return 3
-    return report(findings, mode, len(needles))
+    return report(findings, mode, len(needles), source)
 
 
 if __name__ == "__main__":
