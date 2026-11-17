@@ -175,6 +175,10 @@
     waiting: pill("pending", "[ ]", "waiting"),
     done: pill("done", "[+]", "priced"),
     off: pill("idle", "[-]", "web data off"),
+    // off because config/local.json has no contact (PRICE-1-COPY F2); idle
+    // like "web data off": a setting the player chose not to make, not a
+    // failed check (design review PRICE-1-COPY F3)
+    contact: pill("idle", "[-]", "no contact"),
     error: pill("failed", "[x]", "not priced"),
     // the player can fix these themselves: warn, not red (review N5)
     retry: pill("blocked", "[#]", "can't price")
@@ -191,8 +195,12 @@
     return {
       key: String(price.id), status: price.status,
       badge: (price.status === "error" &&
-              (price.error === "not an item" || price.error === "no league"))
-        ? PRICE_BADGE.retry : (PRICE_BADGE[price.status] || PRICE_BADGE.error),
+              (price.error === "not an item" || price.error === "no league" ||
+               price.error === "no base type"))
+        ? PRICE_BADGE.retry
+        : (price.status === "off" && price.error === "contact not set")
+          ? PRICE_BADGE.contact
+          : (PRICE_BADGE[price.status] || PRICE_BADGE.error),
       item: t.item || "", sentence: t.sentence || "", rows: rows,
       when: typeof price.at === "number" && clock ? "Checked at " + clock(price.at) : ""
     };

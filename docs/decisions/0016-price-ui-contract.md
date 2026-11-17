@@ -21,8 +21,10 @@ no endpoint of its own. `card` fields:
 - `count`: listings found in total;
 - `listings`: [{`amount`, `currency`}], cheapest first, at most 10 (the
   core trims to 10);
-- `error`: a machine string: `not an item` | `no league` | free text (never
-  shown; free text reads "Price check failed").
+- `error`: a machine string: `not an item` | `no base type` | `no league` |
+  free text (never shown; free text reads "Price check failed"); with
+  status `off` it is
+  null (web data off) or `contact not set` (PRICE-1-COPY amendment below).
 
 The core adds `id`, `at` (press time, server clock s; the same press stamps
 both the item check and the price check), `expires_at` (`at` +
@@ -116,3 +118,22 @@ change matches the other settings (design 0001 N1); labelled stale values
 are useful and honest; the overlay is at its glance limit.
 REVERSES IF: the operator wants an explicit confirm step for web data, or
 the poe.ninja attribution changes.
+
+AMENDMENT 2026-11-17 (PRICE-1-COPY; design review of PRICE-1-WIRE, S3 x3).
+DECISION: `price.card_of()` matches exact source strings only: skipped
+with reason `not an item` (trade.build_query) -> error "not an item",
+`item has no base type` -> error "no base type" ("Can't price this item /
+Try a different item", retry badge; design review F1), any other skip
+reason -> error free text; the
+exact trade.search_url error `league required` -> error "no league", any
+other error text -> free text; off -> off with `error` = `contact not set`
+when that is the reason, else null. `state.py PRICE_TEXT["contact not
+set"]` says to add the contact in config/local.json; the dashboard badge
+reads "no contact" instead of "web data off".
+ALTERNATIVES: (B) a new `reason` card field; (C) keep substring matching.
+WHY: B widens the closed card contract when `error` already carries a
+machine string; C gave wrong advice (a trade 400 mentioning a league read
+"League unknown", a parsed item read "Not an item", a missing contact read
+"Web data is off").
+REVERSES IF: the card contract gains a reason field, or the source strings
+in trade.py / webfetch.py change (the constants in price.py follow them).

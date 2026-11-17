@@ -3,8 +3,8 @@ section 9 rule 10), the PRICE-1 result contract in the state snapshot
 (decision 0016 fork 1) and the one overlay card chooser (fork 2). Fixture
 values are invented."""
 
-from server.al.state import (EVAL_CARD_S, PRICE_CARD_S, SAME_PRESS_S, SessionState,
-                             overlay_card, price_card_text)
+from server.al.state import (EVAL_CARD_S, PRICE_CARD_S, PRICE_TEXT, SAME_PRESS_S,
+                             SessionState, overlay_card, price_card_text)
 from server.al.theorycraft import live
 
 
@@ -75,6 +75,28 @@ def test_off_and_errors_say_what_to_do():
     assert other["sentence"] == ("The trade site didn't answer. Press the hotkey again in a "
                                  "minute.")
     assert "503" not in str(other) and "HTTP" not in str(other)
+
+
+def test_off_contact_not_set_says_what_to_do():
+    # F2 (PRICE-1-COPY): off because no contact is set must not say web data is off
+    t = price_card_text(price("off", error="contact not set"))
+    assert (t["line"], t["detail"]) == ("Contact not set", "Add it in config/local.json")
+    assert t["sentence"] == ("Price checks need a contact for the trade site, such as an "
+                             "email or a name. Add it as \"contact\" in config/local.json, "
+                             "then press the hotkey again.")
+    assert "Web data is off" not in str(t)
+    # the generic error key never borrows the contact text
+    e = price_card_text(price("error", error="contact not set"))
+    assert e["line"] == "Price check failed"
+
+
+def test_no_base_type_says_try_another_item():
+    # PRICE-1-COPY F3 + design review F1: no request was made, so it must not
+    # blame the trade site or ask for a retry of the same item
+    t = price_card_text(price("error", error="no base type"))
+    assert (t["line"], t["detail"]) == ("Can't price this item", "Try a different item")
+    assert t["sentence"] == "The trade site can't search this item. Try a different one."
+    assert PRICE_TEXT["no base type"] == (t["line"], t["detail"], t["sentence"])
 
 
 def test_missing_values_read_honestly():
