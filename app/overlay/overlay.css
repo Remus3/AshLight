@@ -10,6 +10,7 @@
   --fk-border: #323840;
   --fk-status-bad: #f0605a;
   --fk-status-warn: #d19a2a;
+  --fk-status-ok: #46b85c;
   /* HUD plate (design system 0001 section 10): 92 percent so every text
      colour above keeps 4.5:1 even over a pure white game scene. */
   --al-plate: rgba(15, 18, 22, 0.92);
@@ -74,6 +75,26 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
 .trade .from-row { display: flex; gap: 4px; align-items: baseline; }
 .trade .from-row #tradeFrom { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .trade .from-row .more { flex: none; }
+
+/* Item check card (TC-EVAL-UI): same plate as the trade card, shown for
+   20 s after the hotkey press. The verdict word leads the first line; the
+   edge colour only repeats it (ok green for an upgrade, muted otherwise;
+   red stays for failures and deaths). Static: no motion, no flash. */
+.evalcard {
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--fk-border);
+  border-left: 3px solid var(--fk-text-muted);
+  border-radius: 6px;
+  background: var(--al-plate);
+  color: var(--fk-text);
+  font: 600 14px/1.3 system-ui, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px var(--al-shadow);
+  max-width: 258px;
+}
+.evalcard[data-verdict="upgrade"] { border-left-color: var(--fk-status-ok); }
+.evalcard .line { color: var(--fk-text-muted); font-size: 13px; }
 
 /* The disclaimer is the overlay's "About"; screen readers get it, the HUD
    stays one small box. */

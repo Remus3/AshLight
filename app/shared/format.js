@@ -89,7 +89,25 @@
              where: clipText(where) };
   }
 
+  function clip(s, max) {
+    s = s ? String(s) : "";
+    return s.length > max ? s.slice(0, max - 3) + "..." : s;
+  }
+
+  /* TC-EVAL-UI: the item check card. The words come from the core
+     (state.py eval_card_text, one template for both surfaces); this only
+     clips them to the card's line limit. verdict drives the edge colour,
+     never alone (the head starts with the verdict word). */
+  function evalCard(ev, maxLen) {
+    var max = maxLen || 34;
+    var t = (ev && ev.text) || {};
+    if (!ev || !t.head) { return { head: "", item: "", line: "", verdict: "" }; }
+    return { head: clip(t.head, max), item: clip(t.item, max), line: clip(t.line, max),
+             verdict: ev.ok ? String(ev.verdict || "") : "note" };
+  }
+
   return {
+    evalCard: evalCard,
     tradeCard: tradeCard,
     minutes: minutes,
     msUntilNextChange: msUntilNextChange,

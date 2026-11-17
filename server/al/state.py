@@ -15,6 +15,10 @@ TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
 # DS-TRADE-EXPIRE (design 0001 N5): a card clears by itself this long after
 # it arrived; the dashboard states the rule and Dismiss stays.
 TRADE_EXPIRE_S = 600
+# TC-EVAL-UI: the overlay shows the item check card this long after the
+# hotkey press, then the card leaves by itself (design 0001 N5); the
+# dashboard keeps the last result.
+EVAL_CARD_S = 20
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
 
@@ -88,6 +92,137 @@ def trade_card_text(row):
     trade wording itself."""
     sender = _text(row.get("from"), UNKNOWN_PLAYER)
     return {"text": _trade_text(sender, row), "where": _trade_where(row)}
+
+
+# -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
+# the overlay print these; neither builds verdict wording itself.
+VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
+EVAL_ERROR_TEXT = {
+    # error: (overlay head, overlay line, dashboard sentence)
+    "no build loaded": ("No build loaded", "Paste a build on the dashboard",
+                        "No build loaded yet. Paste a Path of Building code under Build, "
+                        "then press the hotkey again."),
+    "not an item": ("Not an item", "Copy an item in game first",
+                    "The clipboard did not hold an item. Hover an item in game, press "
+                    "Ctrl+C, then press the hotkey."),
+    "no gear slot for this item class": ("Can't compare this", "Only gear is compared",
+                                         "Only gear is compared, and this item has no "
+                                         "gear slot."),
+}
+
+
+def _num_text(n):
+    """A number as short display text: at most 1 decimal, no trailing .0."""
+    try:
+        n = round(float(n), 1)
+    except (TypeError, ValueError):
+        return "0"
+    if n == 0:
+        n = 0.0  # no "-0"
+    return str(int(n)) if n.is_integer() else str(n)
+
+
+def _signed(n):
+    t = _num_text(n)
+    return t if t.startswith("-") else "+" + t
+
+
+def _signed_points(n):
+    """"+1 point", "-1 point", "+2.5 points" (rule 7: correct plurals)."""
+    t = _signed(n)
+    return f"{t} point" + ("" if t in ("+1", "-1") else "s")
+
+
+def _points(n):
+    try:
+        t = _num_text(abs(float(n or 0)))
+    except (TypeError, ValueError):
+        t = "0"
+    return f"{t} point" + ("" if t == "1" else "s")
+
+
+def stat_delta_text(key, delta):
+    """One stat change in the item's own words: "+30 to maximum Life",
+    "-10% to Lightning Resistance", "+12% increased Attack Speed". A flag
+    mod (no number) reads "Gains: <mod>" / "Loses: <mod>"."""
+    key = _text(key, "an unknown stat")
+    try:
+        d = float(delta or 0)
+    except (TypeError, ValueError):
+        d = 0.0
+    if "#" not in key:
+        return ("Gains: " if d >= 0 else "Loses: ") + key
+    if key.startswith("Adds # to # "):
+        return f"{_signed(d)} average {key[len('Adds # to # '):]}"
+    if key.startswith("+#"):
+        return _signed(d) + key[2:].replace("#", _num_text(abs(d)))
+    return ("-" if d < 0 else "+") + key.replace("#", _num_text(abs(d)), 1)
+
+
+def _equipped_name(comp):
+    eq = comp.get("equipped") or {}
+    return _text(eq.get("name") or eq.get("base"), "an unnamed item")
+
+
+def _compare_sentence(comp):
+    verdict = VERDICT_WORD.get(comp.get("verdict"), "Checked")
+    slot = _text(comp.get("slot"), "that slot")
+    delta = comp.get("score_delta") or 0
+    if comp.get("empty"):
+        return f"{verdict}: your build has nothing in {slot} ({_signed_points(delta)})."
+    name = _equipped_name(comp)
+    if comp.get("verdict") == "upgrade":
+        return f"{verdict}: {_points(delta)} more than your {slot} ({name})."
+    if comp.get("verdict") == "downgrade":
+        return f"{verdict}: {_points(delta)} less than your {slot} ({name})."
+    return f"{verdict}: about the same as your {slot} ({name}), {_signed_points(delta)}."
+
+
+def _stat_rows(comp):
+    rows = []
+    for s in comp.get("stats") or []:
+        rows.append({"text": stat_delta_text(s.get("key"), s.get("delta")),
+                     "points": _signed_points(s.get("score_delta"))
+                     if s.get("weighted") else "not counted"})
+    return rows
+
+
+def eval_card_text(card):
+    """The words for one item check (TC-EVAL-UI): `head`, `item` and `line`
+    for the 3-line overlay card, `sentence` for the dashboard, and per
+    compared slot a sentence and its stat rows. Missing values read
+    honestly; every template has an exact-output test
+    (tests/test_eval_text.py)."""
+    card = card or {}
+    item = card.get("item") or {}
+    name = _text(item.get("name") or item.get("base"), "Unnamed item")
+    if card.get("unidentified"):
+        name += " (unidentified)"
+    out = {"head": "", "item": name, "line": "", "sentence": "", "comparisons": []}
+    if not card.get("ok"):
+        head, line, sentence = EVAL_ERROR_TEXT.get(
+            card.get("error"), ("Can't check this item", "See the dashboard",
+                                "AshLight could not check this item."))
+        out.update(head=head, line=line, sentence=sentence)
+        return out
+    comps = card.get("comparisons") or []
+    best = next((c for c in comps if c.get("slot") == card.get("slot")),
+                comps[0] if comps else {})
+    verdict = VERDICT_WORD.get(card.get("verdict"), "Checked")
+    slot = _text(card.get("slot"), "its slot")
+    delta = _signed(card.get("score_delta") or 0)
+    out["head"] = (f"{verdict} {delta} - {slot} empty" if best.get("empty")
+                   else f"{verdict} {delta} vs {slot}")
+    counted = [stat_delta_text(s.get("key"), s.get("delta"))
+               for s in best.get("stats") or [] if s.get("weighted")]
+    if card.get("unidentified"):
+        out["line"] = "Mods hidden - identify it first"
+    else:
+        out["line"] = counted[0] if counted else "No counted stat changes"
+    out["sentence"] = _compare_sentence(best) if best else f"{verdict}."
+    out["comparisons"] = [{"slot": c.get("slot"), "sentence": _compare_sentence(c),
+                           "stats": _stat_rows(c)} for c in comps]
+    return out
 
 
 def summarize(ev):
@@ -169,6 +304,10 @@ class SessionState:
         self.trade_requests = collections.deque(maxlen=TRADE_REQUESTS)
         self.overlay_layout = None
         self._trade_ids = 0
+        # TC-EVAL-UI / TC-VIEW (server/al/theorycraft/live.py).
+        self.eval = None
+        self._eval_ids = 0
+        self.build_info = None
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -185,6 +324,25 @@ class SessionState:
         with self._lock:
             if layout != self.overlay_layout:
                 self.overlay_layout = dict(layout)
+                self.version += 1
+
+    def set_eval(self, card, keep_time=False):
+        """TC-EVAL-UI: publish the last item check (a live.compact() card).
+        keep_time keeps the previous card's time (a re-score after a
+        weights or build change), so the overlay does not show it again."""
+        with self._lock:
+            at = self._clock()
+            if keep_time and self.eval is not None:
+                at = self.eval["at"]
+            self._eval_ids += 1
+            self.eval = dict(card, id=self._eval_ids, at=at)
+            self.version += 1
+
+    def set_build_info(self, info):
+        """TC-VIEW: the loaded build's summary (live.build_info())."""
+        with self._lock:
+            if info != self.build_info:
+                self.build_info = dict(info) if info else None
                 self.version += 1
 
     def dismiss_trade(self, trade_id=None):
@@ -355,4 +513,8 @@ class SessionState:
                                    for r in self.trade_requests],
                 "overlay_layout": dict(self.overlay_layout) if self.overlay_layout else None,
                 "tailer": dict(self.tailer),
+                "eval": (dict(self.eval, text=eval_card_text(self.eval),
+                              expires_at=self.eval["at"] + EVAL_CARD_S)
+                         if self.eval else None),
+                "build": dict(self.build_info) if self.build_info else None,
             }

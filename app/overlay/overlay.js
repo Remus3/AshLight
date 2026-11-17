@@ -1,7 +1,7 @@
 /* AshLight overlay page. Event-driven only: no requestAnimationFrame, no
    polling loop. A repaint happens when an SSE "state" push changes a visible
-   string, or when the coarse zone timer's minute text rolls over (one
-   setTimeout to that boundary). */
+   string, or when the coarse zone timer's minute text rolls over or the
+   item check card leaves (one setTimeout to the nearer of the two). */
 (function () {
   "use strict";
 
@@ -25,6 +25,11 @@
         } else if (f === "tradeItem") {
           nodes.tradeItem.textContent = model.tradeItem;
           nodes.trade.hidden = !model.tradeItem;
+        } else if (f === "evalHead") {
+          nodes.evalHead.textContent = model.evalHead;
+          nodes.evalCard.hidden = !model.evalHead;
+        } else if (f === "evalVerdict") {
+          nodes.evalCard.setAttribute("data-verdict", model.evalVerdict);
         } else if (f === "status" || f === "away" || f === "log") {
           nodes.hud.setAttribute("data-status", model.status);
           nodes.status.textContent = S.statusText(model);
@@ -37,10 +42,15 @@
     schedule();
   }
 
+  /* One timer to the next visible change: the zone timer's minute
+     rollover, or the item check card leaving (TC-EVAL-UI). */
   function schedule() {
     if (timer) { clearTimeout(timer); timer = null; }
-    if (!snap || !snap.zone_entered_at) { return; }
-    var ms = S.msUntilNextChange(Date.now() / 1000 - offset - snap.zone_entered_at);
+    if (!snap) { return; }
+    var now = Date.now() / 1000 - offset;
+    var ms = snap.zone_entered_at ? S.msUntilNextChange(now - snap.zone_entered_at) : null;
+    var evalMs = S.msUntilEvalExpires(snap, now);
+    if (evalMs !== null && (ms === null || evalMs < ms)) { ms = evalMs; }
     if (ms !== null) { timer = setTimeout(paint, ms); }
   }
 
@@ -70,7 +80,8 @@
 
   function start() {
     ["hud", "zone", "timer", "level", "deaths", "sep", "status", "trade", "tradeFrom",
-     "tradeItem", "tradeWhere", "tradeMore"].forEach(function (id) {
+     "tradeItem", "tradeWhere", "tradeMore", "evalCard", "evalHead", "evalItem",
+     "evalLine"].forEach(function (id) {
       nodes[id] = document.getElementById(id);
     });
     connect();

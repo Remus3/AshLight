@@ -43,7 +43,8 @@ test("hudModel builds the visible strings", () => {
   assert.deepEqual(m, { zone: "Clearfell", timer: "2m", level: "Lv 3",
                         deaths: "1 death", sep: "|", away: "", log: "", status: "live",
                         tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "",
-                        anchor: "top" });
+                        anchor: "top", evalHead: "", evalItem: "", evalLine: "",
+                        evalVerdict: "" });
   const empty = gate.hudModel(null, 0);
   assert.equal(empty.status, "connecting");
 });

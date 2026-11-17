@@ -128,12 +128,17 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   per paste: host allowlist, truthful User-Agent, size cap, no redirects off
   the allowlist (SSRF guard). After TC-CODE. ACCEPT: mocked-fetch tests; no
   other host reachable. ZERO-CLICK: the pasted URL loads like a code.
-- [ ] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
+- [x] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture
   build renders at desktop and phone width; no GGG art bundled.
   ZERO-CLICK: the view follows the loaded build and the live character's
   level / zone from Client.txt with no refresh button.
+  DONE 2026-11-17 (decision 0011): dashboard Build card (web/tc.js
+  buildView); the state carries a build rev, so the view refetches by
+  itself; paste box loads on paste; copy button plus a selectable code box
+  (ruling F4); poe2db / wiki links for gems and uniques.
+  app/test/tc_view.test.js; screenshots in the sidecar Scratch ui-features.
 - [x] TC-JSON (build) Character JSON paste import (GGG reference Character
   / Item types, PoE2 fields skills, passives.specialisations, runeMods) into
   the build model. After TC-CODE. ACCEPT: fixture JSON maps to the same
@@ -181,13 +186,20 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   needed. Base defences / weapon DPS not compared (TC-DELTA). Synthetic
   fixtures only (tests/test_tc_eval.py, tests/test_tc_eval_api.py). UI
   part moved to TC-EVAL-UI.
-- [ ] TC-EVAL-UI (build) Dashboard view + compact overlay card for the
+- [x] TC-EVAL-UI (build) Dashboard view + compact overlay card for the
   TC-EVAL result (verdict, score delta, top per-stat deltas, both rings),
   plus a weights editor on the dashboard backed by GET / PUT /api/weights;
   design-reviewer pass. After TC-EVAL, PRICE-1 (the hotkey read). ACCEPT:
   fixture result renders at desktop and phone width; overlay card in the
   RAM / FPS budget; no second clipboard read. ZERO-CLICK: the hotkey press
   posts the read text to /api/eval and the card appears; no evaluate button.
+  DONE 2026-11-17 (decision 0011): Alt+Shift+E (config eval_hotkey) in
+  app/eval_hotkey.js, one clipboard read per press (ruling F1, ahead of
+  PRICE-1, which reuses the press); live.py publishes the card in the state
+  and re-scores on a weights or build change; words in state.py
+  eval_card_text; dashboard Item check + Stat weights editor (saves on
+  change); overlay card 20 s in the one card slot (ruling F2, design 0001
+  section 10 amended). Tests: test_eval_text.py, app/test/eval.test.js.
 - [ ] TC-UPGRADE (build) Upgrade search: weighted trade2 query ("type":
   "weight" stat group) from the local weights, complexity under 200, one
   search per user action, through the PRICE-1 limiter (X-Rate-Limit-*,
@@ -233,7 +245,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
 
 ## Game settings advisor (operator order 2026-11-16)
 
-- [ ] GFX-ADVISOR (build) Optional dashboard panel: read this machine's
+- [x] GFX-ADVISOR (build) Optional dashboard panel: read this machine's
   hardware (CPU, GPU and VRAM, RAM, displays with resolution and refresh)
   through stdlib calls or Windows' own CIM query, and recommend PoE2
   graphics settings for it, Windowed Fullscreen required (decision 0002).
@@ -243,6 +255,12 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   the game's folders opened; the panel says "apply in game".
   ZERO-CLICK: hardware read on first start and on change, panel ready with
   no button; nothing runs while the game is focused.
+  DONE 2026-11-17 (decision 0011, research 0011): server/al/gfx.py, one
+  hidden powershell.exe CIM query + the display-adapter registry key
+  (VRAM), pure parse / recommend; GET /api/gfx; collapsed dashboard panel
+  read on its first open (ruling F3: a dashboard click, so the game is not
+  focused; deviation from "read on first start" recorded), kept for the
+  core's life. Opens no file (AST test). tests/test_gfx.py.
 
 ## Design and UX audit (operator order 2026-11-16)
 

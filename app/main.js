@@ -5,12 +5,15 @@
    window. It reads the AshLight core's SSE feed and draws only when a
    visible value changes. ToS floor (CLAUDE.md): it never touches the game
    process, never reads game memory, never sends any key or mouse input.
-   The only global shortcut is the show/hide toggle. */
+   Global shortcuts: the show/hide toggle, and the item check (TC-EVAL-UI),
+   which reads the clipboard once per press (eval_hotkey.js). */
 
-const { app, BrowserWindow, globalShortcut, ipcMain, screen, session } = require("electron");
+const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, screen, session } = require("electron");
 const fs = require("fs");
+const http = require("http");
 const path = require("path");
 const L = require("./shared/layout.js");
+const EvalKey = require("./eval_hotkey.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -19,6 +22,7 @@ const PORTS_PY = path.join(REPO, "server", "al", "ports.py");
 const LOCAL_CONFIG = path.join(REPO, "config", "local.json");
 const OVERLAY_HTML = path.join(__dirname, "overlay", "index.html");
 const DEFAULT_TOGGLE = "Alt+Shift+A";
+const DEFAULT_EVAL_KEY = "Alt+Shift+E";
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
 
 let win = null;
@@ -64,6 +68,7 @@ function readToken() {
 const config = readJson(LOCAL_CONFIG);
 const port = corePort(config);
 const toggleKey = process.env.AL_OVERLAY_TOGGLE || config.overlay_toggle || DEFAULT_TOGGLE;
+const evalKey = process.env.AL_EVAL_HOTKEY || config.eval_hotkey || DEFAULT_EVAL_KEY;
 
 // Sidecar rule: Electron's profile (cache, crash dumps) never lands in the
 // user's roaming profile - it goes to the AL sidecar (set by run.ps1 from
@@ -219,7 +224,16 @@ function start() {
   if (!globalShortcut.register(toggleKey, toggle)) {
     log("toggle shortcut not available: " + toggleKey);
   }
-  log("overlay started; port " + port + "; toggle " + toggleKey);
+  // TC-EVAL-UI: one clipboard read per press, posted to the core.
+  const onEval = EvalKey.createEvalHotkey({
+    readText: () => clipboard.readText(),
+    post: EvalKey.makePost(http, port, readToken),
+    log: log
+  });
+  if (!globalShortcut.register(evalKey, onEval)) {
+    log("item check shortcut not available: " + evalKey);
+  }
+  log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey);
 
   const smoke = Number(process.env.AL_OVERLAY_SMOKE_S || 0);
   if (smoke > 0) { setTimeout(() => app.quit(), smoke * 1000); }

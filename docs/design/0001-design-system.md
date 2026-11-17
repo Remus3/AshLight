@@ -248,8 +248,9 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 - Everything updates by itself: SSE pushes state; timers tick locally; the
   overlay moves when the layout file changes.
 - Hotkey-first: any action a player needs mid-game is a global hotkey
-  (today: Alt+Shift+A shows / hides the overlay). Clipboard or screen reads
-  happen only on a hotkey press (CLAUDE.md ToS floor).
+  (today: Alt+Shift+A shows / hides the overlay; Alt+Shift+E checks the
+  item the player copied with Ctrl+C in game). Clipboard or screen reads
+  happen only on a hotkey press, once per press (CLAUDE.md ToS floor).
 - No modals: no `alert`, `confirm`, `prompt`, dialog or toast that blocks
   input or steals focus. The overlay window is non-focusable and
   click-through.
@@ -269,6 +270,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | Died | deaths count changes; no flash, no pop-up | death in recent events |
 | AFK / DND | status word on the HUD line | flag under Session |
 | Not reading / offline | one status word ("offline") | pill with the fix |
+| Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
 
 Progressive disclosure (source 9): the overlay holds the 2-line HUD plus at
 most one trade card ("+N more" for the rest). Everything else (history,
@@ -310,7 +312,8 @@ Good / bad examples:
 ## 9. Natural-language messaging (NLM)
 
 How AshLight turns a log event into words. All event text is produced in
-one place (`server/al/state.py` `summarize`) and the overlay formats in
+one place (`server/al/state.py`: `summarize`, `trade_card_text`, and for
+the item check `eval_card_text` / `stat_delta_text`) and the overlay formats in
 `app/shared/format.js`; no other site invents event wording.
 
 Generation rules:
@@ -328,6 +331,13 @@ Generation rules:
    - AFK / DND: `You're AFK` / `You're back`, `Do not disturb on` / `off`
    - party: `<character> joined the area` / `<character> left the area`
    - log state: `Reading Client.txt`, `Client.txt was reset (<reason>)`
+   - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
+     (empty slot: `<Verdict> <+delta> - <slot> empty`), item name, top
+     counted stat (`+35 to maximum Life`; a flag mod `Gains: <mod>` /
+     `Loses: <mod>`); dashboard `Upgrade: <n> points more than your <slot>
+     (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
+     the same as your <slot> (<name>), <+n> points.`; errors `No build
+     loaded`, `Not an item`, `Can't compare this` with the next step
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
@@ -336,7 +346,8 @@ Generation rules:
 5. **Overlay register is telegraphic**: drop verbs and articles when a
    line must fit (`Lv 12 | 3 deaths`, `Trade: Quietfox`). The dashboard
    register is the full sentence.
-6. **Line limits**: overlay zone 28 chars, trade card 34 chars per line;
+6. **Line limits**: overlay zone 28 chars, trade card and item check card
+   34 chars per line;
    dashboard event lines wrap, never truncate.
 7. **Plurals are correct**: `1 death`, `2 deaths`, `1 level-up`.
 8. **Time words are relative on the overlay** (`3m`, `1h05m`) and local
@@ -351,7 +362,10 @@ Generation rules:
 - Window: separate, transparent, always-on-top, click-through,
   non-focusable (CLAUDE.md). Base size 280 x 176 DIP at scale 1.0
   (`app/shared/layout.js` BASE); HUD plates max-width 258px.
-- Content cap: 2 HUD lines + one 3-line trade card. Nothing else.
+- Content cap: 2 HUD lines + one 3-line card. Nothing else. The card slot
+  holds the trade card, or for 20 s after the item check hotkey press the
+  item check card (TC-EVAL-UI; the player just asked for it), after which
+  the trade card comes back by itself. Never two cards at once.
 - Plate: `--al-plate` (92 percent) with a 1px kit-border edge and a
   `0 1px 1px #000` text shadow (source 4: outlines and shadows separate
   text from busy scenes).

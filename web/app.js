@@ -212,11 +212,383 @@
     });
   }
 
+  /* ---- TC-VIEW: the loaded build. It follows the core: the state carries
+     a build revision, and a new one fetches GET /api/build (no refresh
+     button). Text from the build goes in via textContent only. */
+  var T = window.ALTc; // web/tc.js: pure view helpers
+  var buildRev = null;
+  var buildDoc = null;
+  var lastPaste = "";
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+
+  function linkOut(l, name) {
+    var a = el("a", "out", l.label);
+    a.href = l.href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.setAttribute("aria-label", name + " on " + l.label + " (opens in a new tab)");
+    return a;
+  }
+
+  function appendLinks(parent, list, name) {
+    list.forEach(function (l) {
+      parent.appendChild(document.createTextNode(" "));
+      parent.appendChild(linkOut(l, name));
+    });
+  }
+
+  function loadBuild() {
+    api("GET", "/api/build").then(function (doc) {
+      buildDoc = doc;
+      renderBuild();
+    }).catch(function () {
+      $("build-status").textContent = "Can't load the build. Is AshLight running?";
+    });
+  }
+
+  function renderBuildYou() {
+    if (!buildDoc) { return; }
+    var v = T.buildView(buildDoc, snap);
+    if (v.loaded) { $("build-you").textContent = v.you; }
+  }
+
+  function renderBuild() {
+    var v = T.buildView(buildDoc, snap);
+    $("build-view").hidden = !v.loaded;
+    $("build-empty").hidden = v.loaded;
+    $("build-paste-label").textContent = v.loaded ? "Paste another build" : "Paste a build";
+    if (!v.loaded) {
+      $("build-empty").textContent = v.empty;
+      return;
+    }
+    $("build-name").textContent = v.title;
+    $("build-level").textContent = v.levelLine;
+    $("build-you").textContent = v.you;
+    var dl = document.createDocumentFragment();
+    v.stats.forEach(function (s) {
+      var row = el("div", "kv-row");
+      row.appendChild(el("dt", "", s.label));
+      row.appendChild(el("dd", "mono", s.value));
+      dl.appendChild(row);
+    });
+    $("build-stats").replaceChildren(dl);
+    $("build-stats-empty").hidden = v.stats.length > 0;
+
+    var gear = document.createDocumentFragment();
+    v.gear.forEach(function (g) {
+      var li = el("li");
+      var line = el("p", "gear-line");
+      line.appendChild(el("span", "slot", g.slot));
+      line.appendChild(el("span", "name", g.name));
+      if (g.base) { line.appendChild(el("span", "muted", g.base)); }
+      if (g.rarity) { line.appendChild(el("span", "tag", g.rarity)); }
+      appendLinks(line, g.links, g.name);
+      li.appendChild(line);
+      if (g.text) {
+        var d = el("details", "item-text");
+        d.appendChild(el("summary", "", "Item text"));
+        d.appendChild(el("pre", "", g.text));
+        li.appendChild(d);
+      }
+      gear.appendChild(li);
+    });
+    if (!v.gear.length) { gear.appendChild(el("li", "muted", "No gear in this build.")); }
+    $("build-gear").replaceChildren(gear);
+
+    var sk = document.createDocumentFragment();
+    v.skills.forEach(function (g) {
+      var li = el("li", g.enabled ? "" : "off");
+      var head = el("p", "skill-head");
+      head.appendChild(el("strong", "", g.label));
+      if (g.main) { head.appendChild(el("span", "tag", "main skill")); }
+      if (!g.enabled) { head.appendChild(el("span", "tag", "off")); }
+      if (g.slot) { head.appendChild(el("span", "muted", g.slot)); }
+      li.appendChild(head);
+      var gems = el("ul", "gems");
+      g.gems.forEach(function (m) {
+        var gi = el("li", m.enabled ? "" : "off");
+        gi.appendChild(el("span", "", m.name));
+        if (m.detail) { gi.appendChild(el("span", "muted", " (" + m.detail + ")")); }
+        appendLinks(gi, m.links, m.name);
+        gems.appendChild(gi);
+      });
+      li.appendChild(gems);
+      sk.appendChild(li);
+    });
+    if (!v.skills.length) { sk.appendChild(el("li", "muted", "No skills in this build.")); }
+    $("build-skills").replaceChildren(sk);
+
+    var tree = $("build-tree");
+    tree.replaceChildren();
+    if (v.tree) {
+      tree.appendChild(document.createTextNode(v.tree.line + ". "));
+      if (v.tree.url) {
+        var a = el("a", "out", "Open the tree");
+        a.href = v.tree.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        tree.appendChild(a);
+      }
+    } else {
+      tree.textContent = "No passive tree in this build.";
+    }
+    $("build-notes-box").hidden = !v.notes;
+    $("build-notes").textContent = v.notes;
+    $("build-code-out").value = v.code;
+  }
+
+  function pasteBuild() {
+    var text = $("build-paste").value.trim();
+    if (!text || text === lastPaste) { return; }
+    lastPaste = text;
+    $("build-status").textContent = "Loading the build...";
+    var opts = { method: "POST", cache: "no-store",
+                 headers: { "X-AL-Token": token, "Content-Type": "application/json" },
+                 body: JSON.stringify({ code: text }) };
+    fetch("/api/build-code", opts).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (body) {
+        var res = T.pasteResult(r.status, body);
+        $("build-status").textContent = res.text;
+        if (res.ok) {
+          $("build-paste").value = "";
+          buildDoc = body;
+          renderBuild();
+        } else {
+          lastPaste = ""; // the same text may be pasted again after a fix
+        }
+      });
+    }).catch(function () {
+      lastPaste = "";
+      $("build-status").textContent = "Not loaded. Can't reach AshLight - is it running?";
+    });
+  }
+
+  function copyBuild() {
+    var code = buildDoc && buildDoc.code;
+    if (!code) { return; }
+    var out = $("build-code-out");
+    var done = function () {
+      $("build-copy-status").textContent =
+        "Copied. In Path of Building, open Import/Export Build and paste it.";
+    };
+    var fallback = function () {
+      out.hidden = false;
+      out.focus();
+      out.select();
+      $("build-copy-status").textContent = "Select the code above and press Ctrl+C to copy it.";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(done, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  /* ---- TC-EVAL-UI: the last item check (from the hotkey press). */
+  var evalShown = null;
+
+  function renderEval(ev) {
+    var key = ev ? ev.id : null;
+    if (key === evalShown) { return; }
+    evalShown = key;
+    var v = T.evalView(ev, clock);
+    $("eval-empty").hidden = !!v;
+    $("eval-body").hidden = !v;
+    var comps = document.createDocumentFragment();
+    if (v) {
+      var w = $("eval-word");
+      w.textContent = v.word;
+      w.setAttribute("data-verdict", v.verdict);
+      $("eval-item").textContent = v.item;
+      $("eval-sentence").textContent = v.sentence;
+      v.comparisons.forEach(function (c) {
+        var box = el("div", "eval-comp");
+        box.appendChild(el("h3", "sub-h", c.slot || "Slot"));
+        // the headline already says the best slot's sentence
+        if (c.slot !== ev.slot) { box.appendChild(el("p", "", c.sentence)); }
+        if (c.stats && c.stats.length) {
+          var ul = el("ul", "eval-stats");
+          c.stats.forEach(function (s) {
+            var li = el("li");
+            li.appendChild(el("span", "stat-text", s.text));
+            li.appendChild(el("span", "stat-points mono", s.points));
+            ul.appendChild(li);
+          });
+          box.appendChild(ul);
+        } else {
+          box.appendChild(el("p", "muted", "No stat differences."));
+        }
+        comps.appendChild(box);
+      });
+    }
+    $("eval-comps").replaceChildren(comps);
+    $("eval-unweighted").hidden = !(v && v.unweighted);
+    $("eval-unweighted").textContent = v ? v.unweighted : "";
+    $("eval-when").textContent = v ? v.when : "";
+  }
+
+  /* Stat weights editor: saves on change (PUT /api/weights). */
+  var weightsBusy = false;
+  var weightsAgain = false; // a change arrived while a save was in flight
+
+  /* Update the rows in place when the stat list is the same, so focus and
+     a value being typed survive a save; rebuild only when stats were added
+     or removed, then put focus back on the same stat. */
+  function fillWeights(doc) {
+    var rows = T.weightRows(doc);
+    var inputs = $("weights-list").querySelectorAll("input[data-key]");
+    var same = inputs.length === rows.length && rows.every(function (r, i) {
+      return inputs[i].getAttribute("data-key") === r.key;
+    });
+    fillBand(doc);
+    if (same) {
+      rows.forEach(function (r, i) {
+        if (inputs[i] !== document.activeElement) { inputs[i].value = String(r.weight); }
+      });
+      return;
+    }
+    var focusKey = document.activeElement && document.activeElement.getAttribute
+      ? document.activeElement.getAttribute("data-key") : null;
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r, i) {
+      var li = el("li");
+      var id = "w-" + i;
+      var lab = el("label", "", r.label);
+      lab.htmlFor = id;
+      var inp = el("input");
+      inp.type = "number";
+      inp.step = "any";
+      inp.id = id;
+      inp.value = String(r.weight);
+      inp.setAttribute("data-key", r.key);
+      inp.setAttribute("inputmode", "decimal");
+      li.appendChild(lab);
+      li.appendChild(inp);
+      frag.appendChild(li);
+    });
+    $("weights-list").replaceChildren(frag);
+    if (focusKey) {
+      var back = Array.prototype.find.call($("weights-list").querySelectorAll("input[data-key]"),
+        function (inp) { return inp.getAttribute("data-key") === focusKey; });
+      if (back) { back.focus(); }
+    }
+  }
+
+  function fillBand(doc) {
+    var sg = (doc && doc.sidegrade) || {};
+    [["weights-abs", sg.abs], ["weights-pct", sg.pct]].forEach(function (p) {
+      if ($(p[0]) !== document.activeElement) {
+        $(p[0]).value = p[1] === undefined ? "" : String(p[1]);
+      }
+    });
+  }
+
+  function loadWeights() {
+    api("GET", "/api/weights").then(fillWeights).catch(function () {
+      $("weights-status").textContent = "Can't load the weights. Is AshLight running?";
+    });
+  }
+
+  function saveWeights(e) {
+    if (weightsBusy) { weightsAgain = true; return; }
+    var rows = [];
+    Array.prototype.forEach.call($("weights-list").querySelectorAll("input[data-key]"),
+      function (inp) { rows.push({ key: inp.getAttribute("data-key"), value: inp.value }); });
+    var nk = $("weights-new-key").value.trim();
+    var nv = $("weights-new-value").value;
+    var numOk = nv !== "" && isFinite(parseFloat(nv));
+    var adding = !!nk && numOk;
+    var target = e && e.target;
+    if ((nk || nv !== "") && !adding &&
+        (target === $("weights-new-key") || target === $("weights-new-value"))) {
+      // half a new row: wait for the other field, save nothing yet
+      $("weights-status").textContent = nk ? "Add the points to add this stat."
+                                           : "Add the stat name to add these points.";
+      return;
+    }
+    if (adding) { rows.push({ key: nk, value: nv }); }
+    weightsBusy = true;
+    $("weights-status").textContent = "Saving...";
+    api("PUT", "/api/weights", T.weightsDoc(rows, $("weights-abs").value, $("weights-pct").value))
+      .then(function (doc) {
+        fillWeights(doc);
+        if (adding) {
+          $("weights-new-key").value = "";
+          $("weights-new-value").value = "";
+        }
+        $("weights-status").textContent = snap && snap.eval
+          ? "Saved. The last item was checked again." : "Saved.";
+      }).catch(function () {
+        $("weights-status").textContent = "Not saved. Check that each value is a number, then try again.";
+      }).then(function () {
+        weightsBusy = false;
+        if (weightsAgain) { weightsAgain = false; saveWeights(); }
+      });
+  }
+
+  /* ---- GFX-ADVISOR: read on the first open of the panel (a click on the
+     dashboard, so the game is not focused then); kept for the session. */
+  var gfxLoaded = false;
+
+  function renderGfx(doc) {
+    var v = T.gfxView(doc);
+    var hw = document.createDocumentFragment();
+    v.hardware.forEach(function (h) {
+      var row = el("div", "kv-row");
+      row.appendChild(el("dt", "", h.label));
+      row.appendChild(el("dd", "", h.value));
+      hw.appendChild(row);
+    });
+    $("gfx-hw").replaceChildren(hw);
+    $("gfx-tier").textContent = v.ok ? v.tierText : v.error;
+    var warn = document.createDocumentFragment();
+    v.warnings.forEach(function (w) { warn.appendChild(el("li", "", w)); });
+    $("gfx-warn").replaceChildren(warn);
+    var list = document.createDocumentFragment();
+    v.settings.forEach(function (s) {
+      var li = el("li");
+      var line = el("p", "gfx-line");
+      line.appendChild(el("span", "gfx-name", s.setting));
+      line.appendChild(el("strong", "gfx-value", s.value));
+      li.appendChild(line);
+      li.appendChild(el("p", "muted gfx-why", s.why.charAt(0).toUpperCase() + s.why.slice(1) + "."));
+      list.appendChild(li);
+    });
+    $("gfx-list").replaceChildren(list);
+    $("gfx-body").hidden = false;
+  }
+
+  function openGfx() {
+    if (!$("gfx").open || gfxLoaded) { return; }
+    gfxLoaded = true;
+    $("gfx-status").textContent = "Checking this computer's hardware...";
+    api("GET", "/api/gfx").then(function (doc) {
+      renderGfx(doc);
+      $("gfx-status").textContent = "";
+    }).catch(function () {
+      gfxLoaded = false;
+      $("gfx-status").textContent = "Can't check right now. Is AshLight running? Close and open this panel to try again.";
+    });
+  }
+
   function render(s) {
     snap = s;
     offset = Date.now() / 1000 - s.now;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
+    if (s.build && s.build.rev !== buildRev) {
+      buildRev = s.build.rev;
+      loadBuild();
+    } else {
+      renderBuildYou();
+    }
+    renderEval(s.eval || null);
 
     $("zone").textContent = s.zone || "No zone yet";
     $("hideout").hidden = !s.in_hideout;
@@ -284,6 +656,7 @@
       return;
     }
     loadLayout();
+    loadWeights();
     api("GET", "/api/state").then(render).catch(function () {
       if (!linkLive) { setLink("error"); }
     });
@@ -308,6 +681,12 @@
         $(id + "-out").textContent = Math.round(parseFloat($(id).value) * 100) + "%";
       });
     });
+    $("build-paste").addEventListener("paste", function () { setTimeout(pasteBuild, 0); });
+    $("build-paste").addEventListener("change", pasteBuild);
+    $("build-copy").addEventListener("click", copyBuild);
+    $("weights-form").addEventListener("change", saveWeights);
+    $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
+    $("gfx").addEventListener("toggle", openGfx);
     // The two timers advance once a second; nothing else moves.
     ticker = setInterval(tick, 1000);
     connect();

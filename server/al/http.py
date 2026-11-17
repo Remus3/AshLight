@@ -23,9 +23,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, layout, ports
+from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports
 from .theorycraft import codec as build_codec
-from .theorycraft import evaluate as tc_evaluate
 from .theorycraft import model as build_model
 from .theorycraft import weights as tc_weights
 
@@ -72,6 +71,8 @@ class ALServer(ThreadingHTTPServer):
         self.web_root = Path(web_root).resolve() if web_root else None
         self.tokens_css = Path(tokens_css) if tokens_css else None
         self.stopping = threading.Event()
+        # GFX-ADVISOR: hardware read once, on the first GET /api/gfx.
+        self.gfx = gfx.Advisor()
         super().__init__((ports.LOOPBACK, int(port)), Handler)
         self.port = self.server_address[1]
         self.allowed_hosts = {f"127.0.0.1:{self.port}", f"localhost:{self.port}"}
@@ -205,6 +206,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, core.builds.snapshot(), extra)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)
+        if path == "/api/gfx":
+            # GFX-ADVISOR: recommend only; never touches the game's files.
+            return self._json(200, self.server.gfx.get(), extra)
         if path == "/events":
             return self._sse(extra)
         return self._send(404, "not found\n")
@@ -370,14 +374,16 @@ class Handler(BaseHTTPRequestHandler):
         if body is None:
             return None
         text = body.get("item")
-        if not isinstance(text, str) or not text.strip():
+        # TC-EVAL-UI: a blank string (an empty clipboard at the hotkey press)
+        # is checked too, so the overlay can say "Not an item".
+        if not isinstance(text, str):
             return self._json(400, {"error": "item (string) required"})
         slot = body.get("slot")
         if slot is not None and (not isinstance(slot, str) or len(slot) > 40):
             return self._json(400, {"error": "slot must be a short string"})
-        core = self.server.core
-        result = tc_evaluate.evaluate(text, core.builds.build, core.weights.get(),
-                                      slot=slot or None)
+        # TC-EVAL-UI: the result is also published in the state (dashboard
+        # and overlay card) and re-scored when the weights or build change.
+        result = self.server.core.last_eval.run(text, slot or None)
         return self._json(200, result)
 
     def _put_weights(self):
@@ -388,6 +394,7 @@ class Handler(BaseHTTPRequestHandler):
             self.server.core.weights.put(body)
         except tc_weights.WeightsError as e:
             return self._json(400, {"error": str(e)})
+        self.server.core.last_eval.rerun()  # TC-EVAL-UI: re-score at once
         return self._json(200, self.server.core.weights.snapshot())
 
     def _consent(self):

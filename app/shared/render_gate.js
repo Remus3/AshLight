@@ -16,7 +16,41 @@
   "use strict";
 
   var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "log", "status",
-                "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor"];
+                "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
+                "evalHead", "evalItem", "evalLine", "evalVerdict"];
+
+  /* TC-EVAL-UI: the item check card shows from the hotkey press until the
+     core's expires_at (state.py EVAL_CARD_S), then leaves by itself. While
+     it shows it takes the one card slot (design 0001 section 10: at most
+     one card), so the trade card waits; trades stay on the dashboard. */
+  function evalFresh(snap, nowS) {
+    var ev = snap && snap.eval;
+    return !!(ev && typeof ev.expires_at === "number" && nowS < ev.expires_at &&
+              ev.text && ev.text.head);
+  }
+
+  function withEval(model, snap, nowS) {
+    var card = evalFresh(snap, nowS) ? fmt.evalCard(snap.eval)
+                                     : { head: "", item: "", line: "", verdict: "" };
+    model.evalHead = card.head;
+    model.evalItem = card.item;
+    model.evalLine = card.line;
+    model.evalVerdict = card.verdict;
+    if (card.head) {
+      model.tradeFrom = model.tradeItem = model.tradeWhere = model.tradeMore = "";
+    }
+    return model;
+  }
+
+  /* Milliseconds until the item check card leaves, or null. */
+  function msUntilEvalExpires(snap, nowS) {
+    if (!evalFresh(snap, nowS)) { return null; }
+    return Math.max(250, Math.ceil((snap.eval.expires_at - nowS) * 1000));
+  }
+
+  function hudModel(snap, nowS, status) {
+    return withEval(baseModel(snap, nowS, status), snap, nowS);
+  }
 
   function anchorOf(snap) {
     var c = snap && snap.overlay_layout && snap.overlay_layout.corner;
@@ -25,7 +59,7 @@
 
   /* The visible HUD strings for a state snapshot.
      nowS: the server clock in seconds (client clock minus offset). */
-  function hudModel(snap, nowS, status) {
+  function baseModel(snap, nowS, status) {
     if (!snap) {
       /* DS-HUD-EMPTY: before the first snapshot the HUD reads "AshLight"
          and the status word; no lone separator. */
@@ -90,6 +124,7 @@
     return out;
   }
 
-  return { FIELDS: FIELDS, hudModel: hudModel, shouldRender: shouldRender,
+  return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
+           shouldRender: shouldRender,
            changedFields: changedFields, statusText: statusText };
 }));

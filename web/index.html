@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/web/app.css">
 <script src="/web/status.js" defer></script>
+<script src="/web/tc.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -73,11 +74,83 @@
     </div>
   </section>
 
+  <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
+    <h2 id="eval-title">Item check</h2>
+    <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
+      <p id="eval-empty" class="muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
+        then press Alt+Shift+E. AshLight reads the clipboard once per press and shows the
+        verdict here and on the overlay for 20 seconds. You can change the key in AshLight's
+        settings file.</p>
+      <div id="eval-body" hidden>
+        <p class="eval-head"><span id="eval-word" class="verdict"></span>
+          <span id="eval-item" class="eval-item"></span></p>
+        <p id="eval-sentence"></p>
+      </div>
+    </div>
+    <div id="eval-comps" class="eval-comps"></div>
+    <p id="eval-unweighted" class="muted" hidden></p>
+    <p id="eval-when" class="muted"></p>
+    <details id="weights" class="weights">
+      <summary>Stat weights</summary>
+      <p class="muted">Points per point of each stat. The verdict adds them up for the new
+        item and for yours. Changes save at once and the last item is checked again. Set 0
+        to ignore a stat. N stands for the number on the item.</p>
+      <form id="weights-form" class="weights-form">
+        <ul id="weights-list" class="weights-list"></ul>
+        <fieldset class="weights-add">
+          <legend>Add a stat</legend>
+          <label>Stat, with N for the number
+            <input id="weights-new-key" type="text" maxlength="200" placeholder="+N% to Fire Resistance" autocomplete="off"></label>
+          <label>Points
+            <input id="weights-new-value" type="number" step="any" inputmode="decimal"></label>
+        </fieldset>
+        <fieldset class="weights-band">
+          <legend>Sidegrade band (no clear winner within)</legend>
+          <label>Points <input id="weights-abs" type="number" min="0" step="any"></label>
+          <label>Percent of your item's score <input id="weights-pct" type="number" min="0" step="any"></label>
+        </fieldset>
+      </form>
+      <p id="weights-status" class="muted" role="status" aria-live="polite"></p>
+    </details>
+  </section>
+
   <section class="card events" aria-labelledby="events-title">
     <h2 id="events-title">Recent</h2>
     <ol id="events" class="event-list"></ol>
     <p id="events-empty" class="muted">Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.</p>
   </section>
+  <section id="buildbox" class="card build" aria-labelledby="build-title">
+    <h2 id="build-title">Build</h2>
+    <p id="build-empty" class="muted">No build yet.</p>
+    <div id="build-view" hidden>
+      <p class="build-title"><strong id="build-name"></strong>
+        <span id="build-level" class="muted"></span></p>
+      <p id="build-you" class="build-you"></p>
+      <h3 class="sub-h">Key stats <span class="muted">(saved by Path of Building)</span></h3>
+      <dl id="build-stats" class="kv"></dl>
+      <p id="build-stats-empty" class="muted" hidden>No stats saved in this build. Open it in
+        Path of Building once and copy the code again to include them.</p>
+      <h3 class="sub-h">Gear</h3>
+      <ul id="build-gear" class="gear-list"></ul>
+      <h3 class="sub-h">Skills</h3>
+      <ul id="build-skills" class="skill-list"></ul>
+      <h3 class="sub-h">Passive tree</h3>
+      <p id="build-tree"></p>
+      <details id="build-notes-box" hidden><summary>Build notes</summary>
+        <p id="build-notes" class="notes"></p></details>
+      <div class="actions">
+        <button id="build-copy" type="button" class="secondary">Copy code for Path of Building</button>
+      </div>
+      <textarea id="build-code-out" class="code-out" readonly rows="2" aria-label="Build code for Path of Building"></textarea>
+    </div>
+    <p id="build-copy-status" class="muted" role="status" aria-live="polite"></p>
+    <label class="paste" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
+    <textarea id="build-paste" class="paste-box" rows="3" spellcheck="false" autocomplete="off"
+      placeholder="Path of Building code"></textarea>
+    <p id="build-status" class="muted" role="status" aria-live="polite"></p>
+    <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
+  </section>
+
   <section class="card layout" aria-labelledby="layout-title">
     <h2 id="layout-title">Overlay position</h2>
     <form id="layout-form" class="layout-form">
@@ -98,8 +171,25 @@
       </label>
     </form>
     <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
-    <p class="muted">Show or hide the overlay any time with Alt+Shift+A (unless you set
-      another key in AshLight's settings file).</p>
+    <p class="muted">Show or hide the overlay any time with Alt+Shift+A, and check an item
+      with Alt+Shift+E (unless you set other keys in AshLight's settings file).</p>
+  </section>
+
+  <section class="card gfx" aria-labelledby="gfx-title">
+    <h2 id="gfx-title">Graphics settings for this PC</h2>
+    <details id="gfx">
+      <summary>Show suggested settings</summary>
+      <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only
+        suggests them: apply them in game under Options, Graphics. AshLight never reads or
+        changes the game's files.</p>
+      <p id="gfx-status" class="muted" role="status" aria-live="polite"></p>
+      <div id="gfx-body" hidden>
+        <dl id="gfx-hw" class="kv"></dl>
+        <p id="gfx-tier"></p>
+        <ul id="gfx-warn" class="gfx-warn"></ul>
+        <ul id="gfx-list" class="gfx-list"></ul>
+      </div>
+    </details>
   </section>
 </main>
 

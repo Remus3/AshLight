@@ -199,6 +199,98 @@ button.secondary {
 .layout-form input[type="range"] { width: 100%; min-height: 24px; accent-color: var(--fk-accent); }
 .layout-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 
+/* Shared bits for the build view, item check and graphics panel. */
+.sub-h { font-size: 0.9rem; margin: 16px 0 6px; color: var(--fk-text-muted); }
+.small { font-size: 0.9rem; }
+a.out { color: var(--fk-accent); font-size: 0.9rem; }
+a:focus-visible, summary:focus-visible, textarea:focus-visible,
+.weights-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
+.actions { margin: 12px 0 0; }
+.kv { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; }
+.kv-row { min-width: 0; }
+.kv dt { font-size: 0.85rem; color: var(--fk-text-muted); }
+.kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+summary { cursor: pointer; min-height: 24px; padding: 4px 0; }
+textarea, .weights-form input {
+  font: inherit;
+  color: var(--fk-text);
+  background: var(--fk-surface);
+  border: 1px solid var(--fk-text-muted); /* control boundary, 0001 5.1 */
+  border-radius: 6px;
+  padding: 6px 8px;
+  max-width: 100%;
+}
+
+::placeholder { color: var(--fk-text-muted); opacity: 1; }
+
+/* Item check (TC-EVAL-UI). The verdict is a word; the colour only repeats
+   it (ok green for an upgrade; red stays for failures and deaths). */
+.eval-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 4px; }
+.verdict {
+  font-weight: 700;
+  padding: 0 10px;
+  border: 1px solid var(--fk-text-muted);
+  border-radius: 999px;
+}
+.verdict[data-verdict="upgrade"] { color: var(--fk-status-ok); border-color: var(--fk-status-ok); }
+.eval-item { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.eval-comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px 16px; }
+.eval-comp .sub-h { margin-top: 8px; }
+.eval-comp p { margin: 0 0 6px; }
+.eval-stats { list-style: none; margin: 0; padding: 0; }
+.eval-stats li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--fk-border);
+}
+.eval-stats .stat-text { overflow-wrap: anywhere; min-width: 0; }
+.eval-stats .stat-points { color: var(--fk-text-muted); white-space: nowrap; }
+.weights { margin-top: 12px; }
+.weights-form { display: grid; gap: 12px; }
+.weights-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
+.weights-list li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.weights-list label { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.9rem; }
+.weights-list input { width: 6.5em; flex: none; }
+.weights-form fieldset { border: 1px solid var(--fk-border); border-radius: 6px; margin: 0;
+  padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.weights-form fieldset label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; min-width: 0; }
+.weights-add label:first-of-type { flex: 1 1 16em; }
+.weights-band input, .weights-add input[type="number"] { width: 8em; }
+
+/* Build view (TC-VIEW). */
+.build-title { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.build-title strong { font-size: 1rem; }
+.build-you { margin: 4px 0 0; }
+.gear-list, .skill-list { list-style: none; margin: 0; padding: 0; }
+.gear-list > li, .skill-list > li { padding: 6px 0; border-top: 1px solid var(--fk-border); min-width: 0; }
+.gear-list > li:first-child, .skill-list > li:first-child { border-top: none; }
+.gear-line, .skill-head { margin: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; }
+.gear-line .slot { flex: 0 0 7.5em; color: var(--fk-text-muted); font-size: 0.9rem; }
+.gear-line .name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.item-text summary { font-size: 0.9rem; color: var(--fk-text-muted); }
+.item-text pre { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 0.9rem; }
+.gems { margin: 4px 0 0; padding-left: 20px; }
+.gems li { overflow-wrap: anywhere; }
+li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(--fk-text-muted); }
+.notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.code-out { width: 100%; margin-top: 8px; font-size: 0.85rem; }
+.paste { display: block; margin: 16px 0 4px; font-weight: 600; }
+.paste-box { width: 100%; resize: vertical; font-size: 0.9rem; }
+
+/* Graphics advisor (GFX-ADVISOR): optional, opened with a click. */
+.gfx-warn { margin: 8px 0; padding-left: 20px; color: var(--fk-status-warn); }
+.gfx-warn:empty { display: none; }
+.gfx-list { list-style: none; margin: 8px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 8px 16px; }
+.gfx-list li { border-top: 1px solid var(--fk-border); padding: 6px 0; min-width: 0; }
+.gfx-line { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+.gfx-value { overflow-wrap: anywhere; }
+.gfx-why { margin: 2px 0 0; font-size: 0.9rem; }
+
 .foot {
   padding: 12px 16px;
   border-top: 1px solid var(--fk-border);
