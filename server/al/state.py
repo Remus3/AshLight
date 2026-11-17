@@ -19,6 +19,13 @@ TRADE_EXPIRE_S = 600
 # hotkey press, then the card leaves by itself (design 0001 N5); the
 # dashboard keeps the last result.
 EVAL_CARD_S = 20
+# PRICE-1-UI (decision 0016): the price check result rides the same card
+# slot for this long after the press; an eval and a price stamped within
+# SAME_PRESS_S of each other came from one press and share one card.
+PRICE_CARD_S = 20
+SAME_PRESS_S = 2.0
+PRICE_STATUSES = ("searching", "waiting", "done", "off", "error")
+PRICE_LISTINGS = 10
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
 
@@ -225,6 +232,160 @@ def eval_card_text(card):
     return out
 
 
+# -- PRICE-1-UI: price check text (design 0001 section 9, decision 0016).
+# The PRICE-1 result contract (state snapshot "price") is documented in
+# docs/decisions/0016-price-ui-contract.md; these templates are the only
+# place price wording is made.
+PRICE_TEXT = {
+    # status / error: (overlay price line, overlay detail line, dashboard sentence)
+    "searching": ("Searching prices...", "On the official trade site",
+                  "Searching the official trade site for this item..."),
+    "off": ("Web data is off", "Switch it on in the dashboard",
+            "Price checks need web data, which is off. Turn it on under Prices and web "
+            "data on this page."),
+    "not an item": ("Not an item", "Copy an item in game first",
+                    "The clipboard did not hold an item. Hover an item in game, press "
+                    "Ctrl+C, then press the hotkey."),
+    "no league": ("League unknown", "Try again in a minute",
+                  "AshLight doesn't know which league to search yet. Try again in a "
+                  "minute."),
+    "error": ("Price check failed", "Try again in a minute",
+              "The trade site didn't answer. Press the hotkey again in a minute."),
+    "none": ("No listings found", "Nobody sells this now",
+             "Nobody lists this item in {league} right now, so AshLight can't price it."),
+}
+
+
+def _price_amount(value):
+    """A listed amount: digits, at most 2 decimals, no trailing zeros."""
+    try:
+        n = round(float(value), 2)
+    except (TypeError, ValueError):
+        return None
+    if n == 0:
+        n = 0.0
+    return str(int(n)) if n.is_integer() else f"{n:.2f}".rstrip("0")
+
+
+def _listing_text(row):
+    row = row if isinstance(row, dict) else {}
+    amount = _price_amount(row.get("amount"))
+    cur = _text(row.get("currency"), "")
+    if amount is None:
+        return "price unknown"
+    return f"{amount} {cur}" if cur else f"{amount} (currency unknown)"
+
+
+def price_card_text(card):
+    """The words for one price check (PRICE-1-UI): `head`, `line` and
+    `detail` for the overlay card, `sentence` and `rows` (one per listing)
+    for the dashboard. Missing values read honestly; every template has an
+    exact-output test (tests/test_price_text.py)."""
+    card = card if isinstance(card, dict) else {}
+    item = card.get("item") or {}
+    name = _text(item.get("name") or item.get("base"), "Unnamed item")
+    listings = [r for r in (card.get("listings") or []) if isinstance(r, dict)]
+    rows = [_listing_text(r) for r in listings[:PRICE_LISTINGS]]
+    out = {"head": f"Price: {name}", "item": name, "line": "", "detail": "",
+           "sentence": "", "rows": rows}
+    status = card.get("status")
+    league = _text(card.get("league"), "this league")
+    if status == "waiting":
+        try:
+            secs = max(1, int(-(-float(card.get("wait_s") or 0) // 1)))
+        except (TypeError, ValueError):
+            secs = 1
+        out.update(line=f"Prices in about {secs} s", detail="Waiting for the trade site",
+                   sentence=f"Waiting about {secs} s for the trade site, then AshLight "
+                            "searches by itself.")
+        return out
+    if status == "done":
+        count = card.get("count")
+        if not isinstance(count, int) or isinstance(count, bool) or count < len(rows):
+            count = len(rows)
+        if not rows:
+            line, detail, sentence = PRICE_TEXT["none"]
+            out.update(line=line, detail=detail, sentence=sentence.format(league=league))
+            return out
+        low, mid = rows[0], rows[(len(rows) - 1) // 2]
+        out["line"] = f"{count} listed, ~{mid}"
+        out["detail"] = f"Lowest {low}"
+        if len(rows) == 1:
+            out["sentence"] = f"{count} listed in {league}, for {low}."
+        else:
+            out["sentence"] = (f"{count} listed in {league}. The cheapest is {low}; the "
+                               f"middle of the {len(rows)} cheapest is {mid}.")
+        return out
+    if status == "searching" or status == "off":
+        key = status
+    else:
+        key = card.get("error") if card.get("error") in PRICE_TEXT else "error"
+        if key in ("searching", "off", "none"):
+            key = "error"
+    line, detail, sentence = PRICE_TEXT[key]
+    out.update(line=line, detail=detail, sentence=sentence)
+    return out
+
+
+def _fresh(part, life_s, now):
+    return (isinstance(part, dict) and isinstance(part.get("at"), (int, float))
+            and now < part["at"] + life_s)
+
+
+def price_until(price):
+    """When the price card leaves: 20 s from the press, and never sooner
+    than 20 s after its last update, so a result that waited on the trade
+    site's limit still shows for the full time (design 0001 N5)."""
+    at = price["at"]
+    upd = price.get("updated_at")
+    last = upd if isinstance(upd, (int, float)) and upd > at else at
+    wait = price.get("wait_s") if price.get("status") == "waiting" else 0
+    if not isinstance(wait, (int, float)) or isinstance(wait, bool) or wait < 0:
+        wait = 0
+    # a long wait keeps the card until the result can arrive (review N4)
+    return last + min(float(wait), 600.0) + PRICE_CARD_S
+
+
+def overlay_card(ev, price, now):
+    """The one overlay card (design 0001 section 10, decision 0016 fork 2):
+    {kind, head, line2, line3, verdict, expires_at} or None.
+    - eval and price both fresh and from one press: a merged card (eval
+      head, price line, eval top stat); a price error or "off" leaves the
+      eval card unchanged; a "no build loaded" eval gives the price card;
+    - from different presses: the newest one;
+    - only one fresh: that one."""
+    ev_ok = _fresh(ev, EVAL_CARD_S, now)
+    pr_ok = (isinstance(price, dict) and isinstance(price.get("at"), (int, float))
+             and now < price_until(price))
+    if not ev_ok and not pr_ok:
+        return None
+
+    def eval_part():
+        t = eval_card_text(ev)
+        return {"kind": "eval", "head": t["head"], "line2": t["item"], "line3": t["line"],
+                "verdict": str(ev.get("verdict") or "") if ev.get("ok") else "note",
+                "expires_at": ev["at"] + EVAL_CARD_S}
+
+    def price_part():
+        t = price_card_text(price)
+        return {"kind": "price", "head": t["head"], "line2": t["line"],
+                "line3": t["detail"], "verdict": "price",
+                "expires_at": price_until(price)}
+
+    if ev_ok and pr_ok:
+        if abs(price["at"] - ev["at"]) >= SAME_PRESS_S:
+            return price_part() if price["at"] > ev["at"] else eval_part()
+        if not ev.get("ok") and ev.get("error") == "no build loaded":
+            return price_part()
+        if price.get("status") in ("off", "error"):
+            return eval_part()
+        card = eval_part()
+        card.update(kind="merged", line2=price_card_text(price)["line"],
+                    expires_at=max(card["expires_at"], price_until(price)))
+        return card
+    return eval_part() if ev_ok else price_part()
+
+
 def summarize(ev):
     """One natural sentence for an event (design 0001 section 9). This is
     the only place event wording is made; every template has an exact-output
@@ -307,9 +468,10 @@ class SessionState:
         # TC-EVAL-UI / TC-VIEW (server/al/theorycraft/live.py).
         self.eval = None
         self._eval_ids = 0
-        self.build_info = None
-        # PRICE-1: the latest price check (server/al/price.py doc), data only.
+        # PRICE-1-UI: the last price check (decision 0016 contract).
         self.price = None
+        self._price_ids = 0
+        self.build_info = None
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -340,18 +502,30 @@ class SessionState:
             self.eval = dict(card, id=self._eval_ids, at=at)
             self.version += 1
 
+    def set_price(self, card, at=None, keep_time=False):
+        """PRICE-1-UI (decision 0016): publish the last price check. `card`
+        follows the PRICE-1 result contract (status, wait_s, item, league,
+        count, listings, error). `at` is the hotkey press time (the same
+        press stamps the eval too); keep_time keeps the previous card's time
+        for a status update of the same check (searching -> done)."""
+        card = dict(card) if isinstance(card, dict) else {}
+        card["listings"] = [dict(r) for r in (card.get("listings") or [])
+                            if isinstance(r, dict)][:PRICE_LISTINGS]
+        with self._lock:
+            if at is None:
+                at = self._clock()
+                if keep_time and self.price is not None:
+                    at = self.price["at"]
+            self._price_ids += 1
+            self.price = dict(card, id=self._price_ids, at=float(at),
+                              updated_at=float(self._clock()))
+            self.version += 1
+
     def set_build_info(self, info):
         """TC-VIEW: the loaded build's summary (live.build_info())."""
         with self._lock:
             if info != self.build_info:
                 self.build_info = dict(info) if info else None
-                self.version += 1
-
-    def set_price(self, doc):
-        """PRICE-1: the latest price check (price.PriceChecker doc)."""
-        with self._lock:
-            if doc != self.price:
-                self.price = dict(doc) if doc else None
                 self.version += 1
 
     def dismiss_trade(self, trade_id=None):
@@ -525,6 +699,10 @@ class SessionState:
                 "eval": (dict(self.eval, text=eval_card_text(self.eval),
                               expires_at=self.eval["at"] + EVAL_CARD_S)
                          if self.eval else None),
+                "price": (dict(self.price, text=price_card_text(self.price),
+                               expires_at=price_until(self.price))
+                          if self.price else None),
+                # The one overlay card chosen at this moment (decision 0016).
+                "card": overlay_card(self.eval, self.price, now),
                 "build": dict(self.build_info) if self.build_info else None,
-                "price": dict(self.price) if self.price else None,
             }

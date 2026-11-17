@@ -125,8 +125,8 @@
                (b.level ? ", level " + b.level : "") + "." };
     }
     if (status === 422 && body && body.web_data === false) {
-      return { ok: false, text: "Build links need web data, which is off. Turn it on in " +
-               "AshLight's settings file, or paste the build code instead." };
+      return { ok: false, text: "Build links need web data, which is off. Turn it on under " +
+               "Prices and web data, or paste the build code instead." };
     }
     if (status === 422) {
       var hosts = body && Array.isArray(body.hosts) && body.hosts.length

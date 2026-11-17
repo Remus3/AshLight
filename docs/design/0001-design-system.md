@@ -271,6 +271,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | AFK / DND | status word on the HUD line | flag under Session |
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
+| Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
 
 Progressive disclosure (source 9): the overlay holds the 2-line HUD plus at
 most one trade card ("+N more" for the rest). Everything else (history,
@@ -338,6 +339,12 @@ Generation rules:
      (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
      the same as your <slot> (<name>), <+n> points.`; errors `No build
      loaded`, `Not an item`, `Can't compare this` with the next step
+   - price check (PRICE-1-UI, `price_card_text`): overlay `Price: <item>`,
+     `<n> listed, ~<middle>` / `Lowest <amount> <currency>`, `Searching
+     prices...`, `Prices in about <n> s`, `Web data is off`, `No listings found`,
+     `Price check failed`; dashboard `<n> listed in <league>. The cheapest
+     is <a>; the middle of the <k> cheapest is <b>.`; the one card is
+     chosen by `overlay_card` (decision 0016)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
@@ -365,7 +372,9 @@ Generation rules:
 - Content cap: 2 HUD lines + one 3-line card. Nothing else. The card slot
   holds the trade card, or for 20 s after the item check hotkey press the
   item check card (TC-EVAL-UI; the player just asked for it), after which
-  the trade card comes back by itself. Never two cards at once.
+  the trade card comes back by itself. Never two cards at once. A price
+  check from the same press shares that card (decision 0016: merged card,
+  or the price-only card when no build is loaded).
 - Plate: `--al-plate` (92 percent) with a 1px kit-border edge and a
   `0 1px 1px #000` text shadow (source 4: outlines and shadows separate
   text from busy scenes).

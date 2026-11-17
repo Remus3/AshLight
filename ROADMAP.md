@@ -77,11 +77,40 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   token-gated GET /api/price. Off (zero requests) without web_data or a
   contact (UA-CONTACT). tests/test_price_check.py (mocked). UI remains in
   PRICE-1-UI; live header values in research 0004 remain UNVERIFIED.
-- [ ] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
+- [x] PRICE-1-UI (build) Price-check card on the dashboard and overlay (best
   prices, "waiting N s" from the limiter, poe.ninja rates for conversion).
   After PRICE-1. ACCEPT: fixture result renders at desktop and phone width;
   design-reviewer pass. ZERO-CLICK: appears after the hotkey press, no
   button.
+  DONE 2026-11-17 (decision 0016), STUB-BUILT: no PRICE-1 result contract
+  existed, so the adjudicator ruled one (0016 fork 1): the lane calls
+  state.SessionState.set_price(card, at=<press time>) and adds no endpoint;
+  snapshot `price` (status searching|waiting|done|off|error, wait_s, item,
+  league, count, listings <= 10, error) with text from state.py
+  price_card_text, and `card` from overlay_card (merged with the item check
+  of the same press, or price-only). Nothing calls set_price in this branch
+  yet; UI checked against fixture cards (tests/test_price_text.py,
+  app/test/price.test.js, prices.test.js, stand-in server screenshots).
+  Dashboard: Price section in the Item check card with "about N <primary>"
+  per listing (web/prices.js). REMAINS for PRICE-1: call set_price.
+- [ ] PRICE-1-WIRE (build) (next build lane, first) Reconcile the PRICE-1
+  server (decision 0015) with the PRICE-1-UI contract (decision 0016).
+  Same hotkey (Alt+Shift+E, the one /api/eval read), but the method and
+  endpoint differ: price.PriceChecker publishes its own doc (id, status
+  incl. queued / skipped, reason, wait_s, league, summary {count, total,
+  min, median, currency}, error) through set_price(doc) with no press time,
+  while the card reads item {name, base, rarity}, count, listings
+  [{amount, currency}] and error, and is stamped with at=<press time>; the
+  lane also added GET /api/price, which 0016 does not use. Until wired a
+  real check shows "Unnamed item" (only with web_data and a contact on;
+  both are off by default). Fix: a thin adapter (price doc -> card: item
+  from the parsed item, listings from the fetched results, reason -> off /
+  error, queued -> searching, skipped -> "not an item") and call
+  set_price(card, at=<press time>, keep_time=True for status updates);
+  decide whether GET /api/price stays (amend 0015 / 0016). The supervisor's
+  merge of 544c614 kept the 0016 set_price signature (the 0015 one was a
+  duplicate). ACCEPT: an end-to-end mocked check renders the card text
+  with name and prices; tests. ZERO-CLICK: no operator step.
 
 ## Lane: data
 
@@ -97,13 +126,21 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   /api/web-data; GET /api/rates (token, Host, Origin) never blocks, starts a
   due refresh in the background. tests/test_data_ninja.py (mocked).
   ZERO-CLICK: rates refresh themselves hourly once opted in.
-- [ ] DATA-NINJA-UI (build) Rates panel on the dashboard from GET /api/rates
+- [x] DATA-NINJA-UI (build) Rates panel on the dashboard from GET /api/rates
   (top currencies in the primary unit, age, stale marker) with the
   ATTRIBUTION / "Prices: poe.ninja" credit, and the one web-data toggle
   backed by GET / POST /api/web-data (off by default, says what it enables).
   After DATA-NINJA. ACCEPT: fixture rates render at desktop and phone
   width; credit visible; design-reviewer pass. ZERO-CLICK: the panel polls
   /api/rates on its own; no refresh button.
+  DONE 2026-11-17 (decision 0016 fork 3): "Prices and web data" card -
+  web-data checkbox (never pre-ticked, saves on change, says what it
+  fetches), top 8 currencies by volume in the primary unit, kit-state pill
+  (updated / old / not updating - web data is off / can't reach), league,
+  "Prices: poe.ninja" credit + attribution; local poll every 5 min while
+  visible; trade rows show "about N <primary>" (rate age as tooltip). The
+  build-link 422 text now points at this card. web/prices.js,
+  app/test/prices.test.js.
 - [x] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
   overview response fields (lines[].id / primaryValue, core.items names,
   core.primary) against server/al/ninja.parse_overview and record them in

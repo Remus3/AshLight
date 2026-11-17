@@ -248,6 +248,32 @@ textarea, .weights-form input {
 }
 .eval-stats .stat-text { overflow-wrap: anywhere; min-width: 0; }
 .eval-stats .stat-points { color: var(--fk-text-muted); white-space: nowrap; }
+
+/* PRICE-1-UI / DATA-NINJA-UI (decision 0016). The state is a word with a
+   glyph (kit pill); colour only repeats it. Prices are never red. */
+.price-box { margin-top: 12px; }
+.price-box .pill { font-weight: 600; }
+.price-list, .rates-list { list-style: none; margin: 0; padding: 0; }
+.price-list li, .rates-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--fk-border);
+  min-width: 0;
+}
+.price-list li:first-child, .rates-list li:first-child { border-top: none; }
+.rates-list .rate-name { flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; }
+.rates-list .rate-value { font-weight: 600; white-space: nowrap; }
+.rates-list .rate-per { white-space: nowrap; }
+#rates-pill { margin: 0 0 8px; }
+#rates-unit { margin: 0 0 4px; }
+.trade-list .about { color: var(--fk-text-muted); }
+.webdata-form { margin: 0 0 8px; }
+.check { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-weight: 600; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--fk-accent);
+  outline: 1px solid var(--fk-text-muted); outline-offset: 0; } /* boundary, 0001 5.1 */
+.check input:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 .weights { margin-top: 12px; }
 .weights-form { display: grid; gap: 12px; }
 .weights-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px;
@@ -304,6 +330,7 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
   .stats .stat:last-child { grid-column: 1 / -1; }
   .stat { padding: 8px 10px; }
   .event-list .time { display: none; }
+  .rates-list .rate-name { flex-basis: 100%; }
 }
 
 /* No animation anywhere; this also stops any user-agent smooth scrolling. */
