@@ -3,7 +3,9 @@
 AshLight: a live, glanceable companion for Path of Exile 2 (Steam, Windows).
 It tails the game's Client.txt log into a local event bus and shows the result
 on a second-screen dashboard (127.0.0.1) and a transparent click-through
-overlay. It never touches the game process. Channel code `AL`. Roadmap:
+overlay. It also does theorycraft and item optimization: build view via
+Path of Building PoE2 interop, item evaluation and upgrade search (decision
+0004). It never touches the game process. Channel code `AL`. Roadmap:
 `ROADMAP.md`. Research: `docs/research/`. Decisions: `docs/decisions/`.
 
 **This file is RULES ONLY.** Reasoning and history live in `docs/`.
@@ -273,12 +275,27 @@ the E: root except the repo itself. `server/al/paths.py` is the one resolver
 outside the repo or the AL sidecar. Never touch another tree's sidecar or any
 E: root item that is not this repo.
 
+## Minimal interaction (operator order 2026-11-16)
+
+- Design every feature and every dev step for as little user interaction as
+  possible: in play the app progresses and updates itself with no clicks;
+  in build / debug the workflow runs itself. Every ROADMAP row states how
+  (`ZERO-CLICK:`). It never overrides the ToS floor: the per-press clipboard
+  / screen read stays a manual press, and nothing is sent to the game
+  (decision 0004).
+
 ## Stack and ports
 
 - Python 3.11+ standard library only for `server/`, `tools/`, `tests/`
   (decision 0002). Electron `45.3.3` (exact pin) for the overlay in `app/`;
   npm deps pinned exactly (`--save-exact`), `npm ci` from the lockfile. No CDN
   at runtime.
+- Stdlib-only binds AshLight's own code. Optional external tools (LuaJIT and
+  a Path of Building PoE2 source checkout, for build calcs) run only as
+  hash-pinned, unmodified subprocesses fetched at setup into the AL sidecar
+  (`Cache\`, `Build\`), never vendored or imported, off by default; the core
+  works without them. They get only user-pasted build text and hotkey-read
+  item text (decision 0004). No ToS floor change.
 - Ports: block 8960-8979 (assigned by MAIN 2026-11-16). 8960 = core server
   (API, dashboard assets, SSE). Constants in `server/al/ports.py`; a port
   literal at a bind site is a defect.
@@ -337,3 +354,7 @@ tick runs only by hand with `--dry-run`. Pause: `ops/loop/control/HALT`.
   Reverses if: the overlay misses its RAM / FPS budget on the target machine.
 - Clipboard / screen only per AshLight hotkey press, never a watcher, never
   input to the game (decision 0003). Reverses if: GGG's overlay rules change.
+- Theorycraft via Path of Building PoE2 interop (codes first, then an
+  optional pinned LuaJIT subprocess), never an own calc engine (decision
+  0004). Reverses if: PoB drift breaks the bridge every release, PoB ships
+  an official headless API, or its license changes.

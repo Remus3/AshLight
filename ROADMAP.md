@@ -53,6 +53,114 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 - [ ] RES-POLICY (review) Re-read GGG's developer docs and ToU each patch
   cycle; update research 0001 and the CLAUDE.md floor if anything changed.
 
+## Theorycraft and item optimization (decision 0004, research 0010)
+
+Phase 1 is stdlib-only file interop with Path of Building PoE2; phase 2
+adds the optional pinned LuaJIT + PoB calc subprocess. Rows run in order.
+Every row carries the minimal-interaction constraint (CLAUDE.md, decision
+0004): no click the app can safely make for the user, state updates itself,
+and the row's own dev / test steps run unattended. ZERO-CLICK states how.
+
+- [ ] TC-CODE (build) PoB2 share-code codec in server/al: URL-safe base64 +
+  zlib decode / encode (stdlib) to build XML, plus a typed build model
+  (class, ascendancy, level, tree nodes, gear, skills, PoB's saved stats);
+  paste-a-code API behind the token. ACCEPT: round-trip tests on fixture
+  codes exported from PoB2 v0.23.1 (deflate framing confirmed); no network.
+  ZERO-CLICK: a copied PoB code or share URL is taken on the AshLight
+  hotkey press; the last build reloads on start.
+- [ ] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
+  key stats from the XML, tree summary; "copy code for PoB" export; link out
+  to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture
+  build renders at desktop and phone width; no GGG art bundled.
+  ZERO-CLICK: the view follows the loaded build and the live character's
+  level / zone from Client.txt with no refresh button.
+- [ ] TC-JSON (build) Character JSON paste import (GGG reference Character
+  / Item types, PoE2 fields skills, passives.specialisations, runeMods) into
+  the build model. After TC-CODE. ACCEPT: fixture JSON maps to the same
+  model as its PoB code; unknown fields ignored, not fatal.
+  ZERO-CLICK: format (code, URL, JSON) auto-detected; no import dialog.
+- [ ] TC-SNAP (data) Build-time snapshot tool: GGG poe2-skilltree-export
+  plus the RePoE fork PoE2 mods / base_items / stats / stat_translations
+  into the AL sidecar Cache with a manifest (URL, fetch date, sha256);
+  attribution line in the UI. After DATA-LICENSE. ACCEPT: manifest written;
+  no runtime fetch; tool idempotent.
+  ZERO-CLICK: runs inside scripts/build.ps1, no manual step.
+- [ ] TC-EVAL (build) Item evaluation phase 1: the clipboard item from the
+  existing hotkey read (decision 0003, one read per press) scored by
+  editable stat weights against the build's item in that slot; result on the
+  dashboard and a compact overlay card. After TC-CODE, TC-SNAP. ACCEPT:
+  fixture items scored; no second clipboard read; no input to the game.
+  ZERO-CLICK: the one hotkey press shows price and upgrade verdict together.
+- [ ] TC-UPGRADE (build) Upgrade search: weighted trade2 query ("type":
+  "weight" stat group) from the local weights, complexity under 200, one
+  search per user action, through the PRICE-1 limiter (X-Rate-Limit-*,
+  Retry-After), opt-in, no POESESSID; prices shown with poe.ninja rates.
+  After PRICE-1, TC-EVAL, DATA-NINJA. ACCEPT: query-builder tests; limiter
+  shared, not duplicated; no request without the opt-in.
+  ZERO-CLICK: once opted in, the same hotkey press that evaluates the item
+  queues the search; results appear when the limiter allows, no extra click.
+- [ ] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
+  archive sha256; LuaJIT version, sha256; no absolute paths); setup.ps1
+  step fetches the PoB source archive to the sidecar Cache and builds or
+  accepts LuaJIT into Build, hash-verified, off by default; THIRD-PARTY
+  notices with PoB's MIT and component notices. ACCEPT: hash mismatch
+  refuses; re-run is a no-op; test_sidecar_paths covers the new paths.
+  ZERO-CLICK: one opt-in toggle; setup.ps1 does the rest unattended.
+- [ ] TC-BRIDGE (build) Fresh stdio JSON bridge (our own Lua, no code from
+  pob-mcp / pob2-mcp) driving the unmodified pinned PoB checkout via
+  luajit.exe, plus a Python client in server/al: load build XML, set an item
+  from item text, return outputs; timeout kill; core runs without it.
+  After TC-PIN. ACCEPT: outputs on a fixture build match PoB GUI within 0.1
+  percent; tests skip cleanly when the component is absent.
+  ZERO-CLICK: the bridge starts on first need and restarts itself on a crash.
+- [ ] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the
+  clipboard item vs the equipped one, and per-mod weights from PoB deltas
+  (offence and EHP) feeding TC-UPGRADE in place of hand weights. After
+  TC-BRIDGE, TC-EVAL. ACCEPT: delta tests on fixtures; falls back to stat
+  weights with a visible notice when the component is off.
+  ZERO-CLICK: deltas recompute on item or build change, no Calculate button.
+- [ ] TC-DRIFT (review) On each PoB-PoE2 release: run the bridge tests
+  against the new tag, then move the pin in one commit, or hold it and
+  record why. ACCEPT: pin moved or a dated hold note in decision 0004.
+  ZERO-CLICK: a loop check spots the new tag and runs the tests unattended.
+- [ ] TC-OAUTH-REG (review) OPERATOR act: apply to GGG for an AshLight
+  public OAuth client (PKCE, loopback redirect in port block 8960-8979,
+  scopes account:profile and account:characters) once GGG reopens
+  registration. BLOCKED: registration closed ("currently unable to process
+  new applications", research 0010).
+- [ ] TC-IMPORT (build) Live character import with AshLight's own public
+  client: PKCE sign-in, GET /character/poe2[/name], tokens in the OS
+  credential store, refresh handled, into the build model. BLOCKED on
+  TC-OAUTH-REG. ACCEPT: mocked-flow tests; no POESESSID; no undocumented
+  endpoint. ZERO-CLICK: one sign-in ever; silent refresh after that.
+
+## Game settings advisor (operator order 2026-11-16)
+
+- [ ] GFX-ADVISOR (build) Optional dashboard panel: read this machine's
+  hardware (CPU, GPU and VRAM, RAM, displays with resolution and refresh)
+  through stdlib calls or Windows' own CIM query, and recommend PoE2
+  graphics settings for it, Windowed Fullscreen required (decision 0002).
+  RECOMMEND ONLY: the user applies them in game; AshLight never reads or
+  writes the game's config files (ToS floor: no game file modification).
+  ACCEPT: recommendation tests on fixture hardware profiles; no file under
+  the game's folders opened; the panel says "apply in game".
+  ZERO-CLICK: hardware read on first start and on change, panel ready with
+  no button; nothing runs while the game is focused.
+
+## Design and UX audit (operator order 2026-11-16)
+
+Uses the design-reviewer agent (.claude/agents/design-reviewer.md) and the
+design docs in docs/design/, both made by a separate agent.
+
+- [ ] DESIGN-AUDIT (review) Design / UX audit pass of the dashboard, overlay
+  and the new theorycraft and advisor panels with the design-reviewer agent
+  against docs/design/. ACCEPT: findings fixed or filed as ROADMAP rows;
+  report in docs/design/. ZERO-CLICK: count the clicks each play-session
+  flow needs and file a row for every one that can go.
+- [ ] DESIGN-GATE (review) Make the design-reviewer pass a standing step for
+  every row that touches web/ or app/ (review lane after build). After
+  DESIGN-AUDIT. ACCEPT: lane prompt or loop rule names the step; one row
+  reviewed through it. ZERO-CLICK: runs in the loop, no manual trigger.
 ## Ops
 
 - [ ] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,

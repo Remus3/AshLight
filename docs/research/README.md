@@ -28,6 +28,9 @@ its code (license notes: 0006).
   glanceable UI ([0008-dashboard-tech.md](0008-dashboard-tech.md))
 - 0009 Name review - AshLight collisions, GGG proper-noun check, PoE tool
   naming, fallback shortlist ([0009-name-review.md](0009-name-review.md))
+- 0010 Theorycraft scope - PoB2 license / headless / build codes, GGG OAuth
+  character import, game data licenses, upgrade search, tools, name fit
+  ([0010-theorycraft-scope.md](0010-theorycraft-scope.md))
 
 ## Open research (feeds ROADMAP)
 
