@@ -89,11 +89,12 @@ def test_null_scene_keeps_zone_and_hideout_flag():
     st.apply({"type": "scene_changed", "scene": "Felled Hideout", "is_null": False,
               "is_hideout": True})
     v = st.version
+    # LIVE-1: a null scene is neither a zone nor a listed event.
     assert st.apply({"type": "scene_changed", "scene": None, "is_null": True,
-                     "is_hideout": False}) is True  # listed, but zone kept
+                     "is_hideout": False}) is False
     s = st.snapshot()
     assert s["zone"] == "Felled Hideout" and s["in_hideout"] is True
-    assert st.version > v
+    assert st.version == v
 
 
 def test_configured_character_filters_level_ups():
@@ -138,3 +139,45 @@ def test_core_no_tail_never_tails(tmp_path):
     n = core.replay(FIXTURE.read_text(encoding="ascii").splitlines())
     assert n > 20 and core.state.snapshot()["level"] == 3
     core.close()
+
+
+# --- LIVE-1 (2026-11-16): state from the anonymised real-shaped fixture.
+LIVE = Path(__file__).parent / "fixtures" / "client_live_shapes.txt"
+
+
+def test_live_state_with_empty_configured_character():
+    # config/local.json ships "character": "" - it must mean "learn it".
+    clock = [1000.0]
+    st = SessionState(character="", clock=lambda: clock[0])
+    for ev in parser.parse_lines(LIVE.read_text(encoding="ascii").splitlines()):
+        clock[0] += 1
+        ev["recv_ts"] = clock[0]
+        st.apply(ev)
+    s = st.snapshot()
+    assert s["character"] == "Cinderwisp" and s["class"] == "Sorceress"
+    assert s["level"] == 2 and s["level_ups"] == 1
+    assert s["zone"] == "Clearfell Encampment"  # not "(unknown)" or "Act 1"
+    assert (s["area_id"], s["area_level"]) == ("G1_town", 15)
+    assert s["deaths"] == 0
+    zones = [r["text"] for r in s["recent_events"] if r["type"] == "scene_changed"]
+    assert zones == ["Entered The Riverbank", "Entered Clearfell Encampment"]
+
+
+def test_empty_character_counts_deaths():
+    st = SessionState(character="", clock=lambda: 1.0)
+    st.apply({"type": "level_up", "character": "Me", "class": "Monk", "level": 2})
+    st.apply({"type": "death", "character": "Me", "suicide": False})
+    st.apply({"type": "death", "character": "Other", "suicide": False})
+    assert st.snapshot()["deaths"] == 1
+
+
+def test_transient_scene_keeps_zone_and_timer():
+    st = SessionState(clock=lambda: 5.0)
+    st.apply({"type": "scene_changed", "scene": "The Riverbank", "is_null": False,
+              "is_hideout": False, "is_transient": False, "recv_ts": 5.0})
+    v = st.version
+    assert st.apply({"type": "scene_changed", "scene": "Act 1", "is_null": False,
+                     "is_hideout": False, "is_transient": True, "recv_ts": 9.0}) is False
+    s = st.snapshot()
+    assert s["zone"] == "The Riverbank" and s["zone_entered_at"] == 5.0
+    assert st.version == v

@@ -26,7 +26,7 @@ def summarize(ev):
     """One short display line for an event."""
     t = ev.get("type")
     if t == "scene_changed":
-        return f"Zone: {ev.get('scene')}" + (" (hideout)" if ev.get("is_hideout") else "")
+        return f"Entered {ev.get('scene')}" + (" (hideout)" if ev.get("is_hideout") else "")
     if t == "area_entered":
         return f"Entered {ev.get('name')}"
     if t == "area_generated":
@@ -70,7 +70,8 @@ class SessionState:
         self._clock = clock
         self.version = 0
         self.session_started_at = clock()
-        self.character = character
+        # "" (the shipped config default) means "learn it from the log".
+        self.character = character or None
         self.character_fixed = bool(character)
         self.char_class = None
         self.level = None
@@ -143,11 +144,17 @@ class SessionState:
         with self._lock:
             self.events_seen += 1
             changed = False
+            listed = t in LISTED
             if t == "scene_changed":
-                if not ev.get("is_null") and ev.get("scene") != self.zone:
+                # Null and transient scenes (LIVE-1) keep the zone and its
+                # timer and are not listed; only a real zone change is.
+                listed = False
+                if (not ev.get("is_null") and not ev.get("is_transient")
+                        and ev.get("scene") != self.zone):
                     self.zone = ev.get("scene")
                     self.in_hideout = bool(ev.get("is_hideout"))
                     self.zone_entered_at = now
+                    listed = True
                     changed = True
             elif t == "area_generated":
                 self.area_id = ev.get("area_id")
@@ -193,7 +200,7 @@ class SessionState:
                 if ev.get("reason") == "missing":
                     self.tailer["reading"] = False
                 changed = True
-            if t in LISTED:
+            if listed:
                 self.recent_events.append(self._row(ev, now))
                 changed = True
             if changed:

@@ -153,3 +153,66 @@ def test_fixture_is_ascii_lf():
     data = FIXTURE.read_bytes()
     data.decode("ascii")
     assert b"\r" not in data
+
+
+# --- LIVE-1 (2026-11-16): shapes seen in a real PoE2 Client.txt. The fixture
+# is synthetic and anonymised (made-up names, TEST-NET addresses, fake seeds);
+# only the line SHAPES come from the live log.
+LIVE = Path(__file__).parent / "fixtures" / "client_live_shapes.txt"
+
+
+def _live():
+    return parser.parse_lines(LIVE.read_text(encoding="ascii").splitlines())
+
+
+def test_live_fixture_is_ascii_lf():
+    data = LIVE.read_bytes()
+    data.decode("ascii")
+    assert b"\r" not in data
+
+
+def test_live_unknown_scene_is_transient_not_a_zone():
+    # "(unknown)" is the login / character-select / full-screen panel scene.
+    ev = _one("[SCENE] Set Source [(unknown)]")
+    assert ev["type"] == "scene_changed" and ev["is_transient"]
+    assert ev["scene"] is None and not ev["is_null"] and not ev["is_hideout"]
+
+
+def test_live_act_scene_is_transient_not_a_zone():
+    # "Act <N>" shows for a few seconds (world map) and the same zone returns.
+    ev = _one("[SCENE] Set Source [Act 1]")
+    assert ev["is_transient"] and ev["scene"] == "Act 1" and not ev["is_null"]
+    assert not _one("[SCENE] Set Source [The Riverbank]")["is_transient"]
+    assert not _one("[SCENE] Set Source [(null)]")["is_transient"]
+    assert not _one("[SCENE] Set Source [Actor Hideout]")["is_transient"]
+
+
+def test_live_debug_level_and_short_hex_prefix():
+    line = '2026/11/16 21:00:01 59200 2a3b4c5 [DEBUG Client 5150] Generating level 1 area "G1_1" with seed 1'
+    ev = parser.parse_line(line)
+    assert ev["type"] == "area_generated" and ev["level_tag"] == "DEBUG"
+
+
+def test_live_trade_cancelled():
+    assert _one(": Trade cancelled.")["type"] == "trade_cancelled"
+
+
+def test_live_npc_dialogue_and_engine_lines_ignored():
+    assert _one("Riverside Miller: Grind you down!") is None
+    assert _one("[WINDOW] Gained focus") is None
+    assert parser.parse_line("2026/11/16 21:00:00 ***** LOG FILE OPENING *****") is None
+
+
+def test_live_fixture_event_types():
+    evs = _live()
+    types = [e["type"] for e in evs]
+    for t in ("scene_changed", "session_connect", "area_generated", "level_up", "chat",
+              "unknown_system_line", "trade_cancelled"):
+        assert t in types, t
+    lv = [e for e in evs if e["type"] == "level_up"][0]
+    assert (lv["character"], lv["class"], lv["level"]) == ("Cinderwisp", "Sorceress", 2)
+    chans = sorted(e["channel"] for e in evs if e["type"] == "chat")
+    assert chans == ["global", "trade"]
+    areas = [(e["area_level"], e["area_id"]) for e in evs if e["type"] == "area_generated"]
+    assert areas == [(1, "G1_1"), (15, "G1_town")]
+    assert "area_entered" not in types  # PoE2 does not log "You have entered"

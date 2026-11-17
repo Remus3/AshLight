@@ -6,21 +6,28 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 
 ## Lane: build
 
-- [ ] LIVE-1 (build) (priority) Run the core against the real Client.txt with
-  the game running; confirm or correct every UNVERIFIED pattern in
-  docs/research/0002-client-log.md; add the real (anonymized) lines as
-  fixtures. ACCEPT: every event type seen live has a fixture and a passing test.
-  BLOCKED (2026-11-16, adjudicated): operator physical act - PoE2 is installed
-  but has never been launched (no logs/Client.txt). Unblocks when the operator
-  plays once (or names the log path); then replace the HUD-WHISPER fixture
-  whispers with real anonymized lines. The loop skips BLOCKED rows.
-- [ ] OVL-BUDGET (build) BLOCKED with LIVE-1 (needs the game running). Measure the overlay idle and active (RSS of all
-  Electron processes, CPU over 60 s) with the game running in Windowed
-  Fullscreen; add the numbers to decision 0002. ACCEPT: within budget or a
-  ruling on Tauri / native.
-- [ ] OVL-FPS (build) BLOCKED with LIVE-1 (needs the game running). PresentMon capture: game alone vs game + overlay idle vs
-  overlay updating. ACCEPT: average FPS loss under 1 percent, 1 percent lows
-  unchanged within noise; numbers in decision 0002.
+- [ ] LIVE-1 (build) (priority) PARTIAL 2026-11-16: first live log verified
+  (research 0002 section 7): prefix, SCENE, area generation, instance
+  connect, level-up, global / trade chat VERIFIED; "(unknown)" and "Act <N>"
+  scenes and the empty-character config were WRONG and are fixed; fixture
+  tests/fixtures/client_live_shapes.txt. REMAINS: death, whispers and trade
+  templates (then replace the HUD-WHISPER fixture whispers with anonymised
+  real-shaped ones), party / guild chat, AFK / DND, joined / left, Trade
+  accepted, hideout scene names. ACCEPT: every event type seen live has a
+  fixture and a passing test. Needs the operator to play past the whisper
+  level, die once, and receive one trade whisper.
+- [ ] OVL-BUDGET (build) PARTIAL 2026-11-16 (decision 0002 "Measured
+  2026-11-16 (OVL-BUDGET, game running)"): idle with the game open at
+  character select 3 processes, about 204 MB working set, 0.000 percent CPU,
+  0 GPU - within budget, after the in-process-gpu start fix. REMAINS: the
+  ACTIVE measurement (overlay updating during play, in a map). ACCEPT: within
+  budget or a ruling on Tauri / native.
+- [ ] OVL-FPS (build) PARTIAL 2026-11-16. Method per decision 0006 (no
+  PresentMon / ETW of the game). Character-select proxy: system-wide GPU 3D
+  utilisation off 52.5 vs on 53.3 percent, inside noise, GPU saturated.
+  REMAINS: in-map run read from the game's own FPS display, overlay off vs
+  idle vs updating, Windowed Fullscreen. ACCEPT: average FPS loss under 1
+  percent, 1 percent lows unchanged within noise; numbers in decision 0002.
 - [x] OVL-POS (build) Overlay layout editor on the dashboard (corner, scale,
   opacity), DPI-aware, multi-monitor; stored in config/local.json. ACCEPT:
   position survives restart; tests for the layout math.

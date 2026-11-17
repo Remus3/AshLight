@@ -55,8 +55,10 @@ transparent click-through Electron overlay).
   under 250 MB, no frames rendered while no event arrives, hardware
   acceleration off (`app.disableHardwareAcceleration()`) so it never contends
   for the game's GPU queue.
-- Game FPS: PresentMon before / after with the overlay idle and active, loss
-  under 1 percent (ROADMAP row OVL-FPS, needs the game running).
+- Game FPS: FPS before / after with the overlay idle and active, loss
+  under 1 percent (ROADMAP row OVL-FPS). Method per decision 0006: no
+  PresentMon / ETW tracing of the game; the in-game FPS display read by the
+  human, or system-wide counters only.
 
 ## Reverses if
 
@@ -83,3 +85,35 @@ launch, over a 10 s window:
   app sets no such switch; re-measure from a normal desktop launch
   (ROADMAP OVL-BUDGET), and add a dedicated RAM trim pass if the summed
   working set stays near 250 MB.
+
+## Measured 2026-11-16 (OVL-BUDGET, game running)
+
+Live run on the operator's machine, PoE2 open at CHARACTER SELECT (a light
+scene; GPU already at 99-100 percent per nvidia-smi because the menu renders
+uncapped). Overlay started detached exactly as scripts\run.ps1 does
+(scripts\al_detach.ps1, WMI). Idle: the feed was live but no events arrived.
+
+- Start-up: the shipped build exited at once ("GPU process launch failed:
+  error_code=18" six times, then "GPU process isn't usable. Goodbye.") also
+  when started detached by WMI, so this is not only an agent-session effect.
+  Fix: `app.commandLine.appendSwitch("in-process-gpu")` in app/main.js
+  (acceleration stays off; the software compositor runs in the browser
+  process; renderer sandbox unchanged). The overlay then starts and stays up.
+- Processes: 3 electron.exe (was 4; no separate GPU process).
+- Working set, summed: 201.7 to 204.4 MB over 60 s; private bytes, summed:
+  107.4 to 110.2 MB. Budget 250 MB: met (about 46 MB margin).
+- CPU: 0.000 CPU-s over a 60.9 s window = 0.000 percent of one core.
+  Budget 1 percent: met.
+- Overlay's own GPU 3D-engine utilisation (its own pids): 0.000 percent in
+  all 12 samples.
+
+Game FPS proxy (decision 0006: system-wide counters only, 5 s samples):
+
+- Total 3D-engine utilisation, overlay off: mean 52.5 percent (12 samples,
+  range 49.6 to 66.1); overlay on and idle: mean 53.3 percent (12 samples,
+  range 50.8 to 55.7). Difference +0.8 points, inside the off-run spread.
+- nvidia-smi GPU utilisation 99-100 percent in both runs.
+- Limitation: a utilisation proxy at a saturated GPU cannot show an FPS
+  loss; it shows only that the overlay adds no measurable GPU work.
+  STILL NEEDED: an in-map run (same map, overlay off vs on idle vs on
+  updating), reading the game's own FPS display, Windowed Fullscreen.

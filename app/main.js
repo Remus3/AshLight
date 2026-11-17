@@ -77,6 +77,13 @@ app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
 
 // Never contend for the game's GPU queue (decision 0002).
 app.disableHardwareAcceleration();
+// OVL-BUDGET (2026-11-16): with acceleration off Chromium still starts a
+// sandboxed GPU process for software compositing; on the operator's machine a
+// WMI-detached start (scripts\al_detach.ps1) failed to launch it
+// (error_code=18, then "GPU process isn't usable", exit). Running the
+// software compositor in the browser process removes that process: the
+// overlay starts, and it is one Electron process fewer (RAM budget).
+app.commandLine.appendSwitch("in-process-gpu");
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();

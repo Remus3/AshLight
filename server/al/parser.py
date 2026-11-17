@@ -39,6 +39,8 @@ JOINED = re.compile(r"^(.+?) has joined the area\.?\s*$")
 LEFT = re.compile(r"^(.+?) has left the area\.?\s*$")
 # Trade accepted. - PoE2 sample seen.
 TRADE_ACCEPTED = re.compile(r"^Trade accepted\.?\s*$")
+# Trade cancelled. - seen in a live PoE2 log (LIVE-1, 2026-11-16).
+TRADE_CANCELLED = re.compile(r"^Trade cancelled\.?\s*$")
 
 # Whispers - EE2 client strings (MIT).
 WHISPER_IN = re.compile(r"^@From (?:<(.+?)> )?(.+?): (.*)$")
@@ -58,6 +60,15 @@ TRADE_EXCHANGE = re.compile(
     r"^Hi, I'd like to buy your ([\d.]+) (.+?) for my ([\d.]+) (.+?) in (.+?)\.\s*(.*)$")
 
 HIDEOUT_WORD = "hideout"  # substring match on the scene name - UNVERIFIED
+
+# Scenes that are not zones (LIVE-1, live PoE2 log 2026-11-16): "(unknown)"
+# is the login / character select / full-screen panel scene, and "Act <N>"
+# shows for a few seconds (world map) before the same zone returns. Both are
+# reported as transient so the current zone and its timer are kept.
+# "scene" is None for "(unknown)" (no name) and keeps "Act <N>" (a real act
+# label); consumers decide on is_transient, never on the scene text.
+UNKNOWN_SCENE = "(unknown)"
+ACT_SCENE = re.compile(r"^Act \d+$")
 
 
 def _num(text):
@@ -127,6 +138,8 @@ def _system(body):
         return {"type": "player_left_area", "character": m.group(1)}
     if TRADE_ACCEPTED.match(body):
         return {"type": "trade_accepted"}
+    if TRADE_CANCELLED.match(body):
+        return {"type": "trade_cancelled"}
     return {"type": "unknown_system_line", "body": body}
 
 
@@ -139,8 +152,12 @@ def parse_body(body):
         if m:
             scene = m.group(1)
             null = scene in ("(null)", "")
-            return {"type": "scene_changed", "scene": None if null else scene,
-                    "is_null": null, "is_hideout": (not null) and is_hideout(scene)}
+            unknown = scene == UNKNOWN_SCENE
+            transient = unknown or bool(ACT_SCENE.match(scene))
+            return {"type": "scene_changed",
+                    "scene": None if (null or unknown) else scene,
+                    "is_null": null, "is_transient": transient,
+                    "is_hideout": not (null or transient) and is_hideout(scene)}
         return None
     m = AREA_GEN.match(body)
     if m:
