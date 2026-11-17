@@ -15,19 +15,23 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   real-shaped ones), party / guild chat, AFK / DND, joined / left, Trade
   accepted, hideout scene names. ACCEPT: every event type seen live has a
   fixture and a passing test. Needs the operator to play past the whisper
-  level, die once, and receive one trade whisper.
+  level, die once, and receive one trade whisper. BLOCKED: operator act
+  (in-game play, hand-off OPERATOR act (b)); the loop skips it until then.
 - [ ] OVL-BUDGET (build) PARTIAL 2026-11-16 (decision 0002 "Measured
   2026-11-16 (OVL-BUDGET, game running)"): idle with the game open at
   character select 3 processes, about 204 MB working set, 0.000 percent CPU,
   0 GPU - within budget, after the in-process-gpu start fix. REMAINS: the
   ACTIVE measurement (overlay updating during play, in a map). ACCEPT: within
-  budget or a ruling on Tauri / native.
+  budget or a ruling on Tauri / native. BLOCKED: operator act (in-map play,
+  hand-off OPERATOR act (a)); the loop skips it until then.
 - [ ] OVL-FPS (build) PARTIAL 2026-11-16. Method per decision 0006 (no
   PresentMon / ETW of the game). Character-select proxy: system-wide GPU 3D
   utilisation off 52.5 vs on 53.3 percent, inside noise, GPU saturated.
   REMAINS: in-map run read from the game's own FPS display, overlay off vs
   idle vs updating, Windowed Fullscreen. ACCEPT: average FPS loss under 1
   percent, 1 percent lows unchanged within noise; numbers in decision 0002.
+  BLOCKED: operator act (in-map FPS test, hand-off OPERATOR act (a)); the
+  loop skips it until then.
 - [x] OVL-TRADE-CANCEL (build) Decide whether ": Trade cancelled." (new
   event trade_cancelled) should clear or mark an open trade card (design
   review 2026-11-16). ACCEPT: behaviour decided and tested. DONE
