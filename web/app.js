@@ -469,6 +469,37 @@
       });
   }
 
+  /* UTIL-FILTER-MERGE (decision 0033): picking a file is the player's act;
+     the merged copy goes to the browser's downloads. No live region (the
+     page keeps its 12): as for downloadFilter, the focused input's name
+     carries the answer (best effort, audit 0004 U22). */
+  function mergeFilter() {
+    var input = $("filter-merge-file");
+    var file = input.files && input.files[0];
+    window.ALFilterMerge.run(file, {
+      fetch: function (url, opts) { return fetch(url, opts); },
+      token: token,
+      tell: function (text) {
+        $("filter-merge-said").textContent = text;
+        if (text) {
+          input.setAttribute("aria-label", "Your loot filter file (" + text + ")");
+        } else {
+          input.removeAttribute("aria-label");
+        }
+      },
+      save: function (blob, name) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+    }).then(function () { input.value = ""; });  /* the same file can be picked again */
+  }
+
   function copyBuild() {
     var code = buildDoc && buildDoc.code;
     if (!code) { return; }
@@ -992,6 +1023,7 @@
     $("build-paste").addEventListener("change", pasteBuild);
     $("build-copy").addEventListener("click", copyBuild);
     $("filter-download").addEventListener("click", downloadFilter);
+    $("filter-merge-file").addEventListener("change", mergeFilter);
     $("weights-form").addEventListener("change", saveWeights);
     $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
     $("gfx").addEventListener("toggle", openGfx);

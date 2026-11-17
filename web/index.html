@@ -15,6 +15,7 @@
 <script src="/web/runs.js" defer></script>
 <script src="/web/summary.js" defer></script>
 <script src="/web/search.js" defer></script>
+<script src="/web/filtermerge.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -261,6 +262,14 @@
     <div class="actions">
       <button id="filter-download" type="button" class="secondary">Download ashlight.filter</button>
       <span id="filter-said" class="muted"></span>
+    </div>
+    <p class="muted">Or add it to your own filter: pick your filter file. AshLight
+      puts its blocks at the top, hides nothing and leaves the rest as it is. Your browser
+      saves the combined copy as a new file; your own file is not changed.</p>
+    <div class="actions">
+      <label for="filter-merge-file">Your loot filter file</label>
+      <input id="filter-merge-file" type="file" accept=".filter,text/plain">
+      <span id="filter-merge-said" class="muted"></span>
     </div>
   </section>
 

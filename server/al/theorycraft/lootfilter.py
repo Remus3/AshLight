@@ -32,6 +32,13 @@ Tiers: top (TOP_DIVINE and up: big text, red beam, star icon), worth
 picking up (PICK_DIVINE and up: larger text, white beam), and everything
 else gets no block at all, so the player's own filter decides. AshLight
 never writes a Hide block.
+
+UTIL-FILTER-MERGE (decision 0033): merge() prepends the same Show blocks,
+between two marker comment lines, to a filter the player picked in the
+browser. The player's bytes after the section are byte-identical (CRLF and
+a leading UTF-8 BOM kept); the only part of their file read beyond the
+text checks is an AshLight section from an earlier merge at the very
+start, which is replaced. Bytes in, bytes out, in memory: no file, no path.
 """
 
 import re
@@ -153,7 +160,13 @@ def generate(build, base_names=None, prices=None):
              "# near the top of your own filter:",
              "#   " + IMPORT_LINE,
              ""]
-    lines += _tier_lines(tiers(prices, base_names))
+    return "\n".join(lines + _body_lines(build, base_names, prices)) + "\n"
+
+
+def _body_lines(build, base_names=None, prices=None):
+    """The tier and build blocks with their comments, one string per line,
+    no trailing blank line."""
+    lines = _tier_lines(tiers(prices, base_names))
     names, dropped = known(bases(build) if build is not None else [], base_names)
     if dropped:
         n = len(dropped)
@@ -162,7 +175,7 @@ def generate(build, base_names=None, prices=None):
     if not names:
         lines += ["# No build loaded, or no gear in it.",
                   "# Load a build in AshLight, then download this again."]
-        return "\n".join(lines) + "\n"
+        return lines
     who = " ".join(str(x) for x in (getattr(build, "class_name", None),
                                      getattr(build, "ascendancy", None)) if x)
     if who:
@@ -175,6 +188,97 @@ def generate(build, base_names=None, prices=None):
               "    SetFontSize 40",
               "    SetBorderColor 255 190 60",
               "    PlayEffect Yellow",
-              "    MinimapIcon 1 Yellow Diamond",
-              ""]
-    return "\n".join(lines)
+              "    MinimapIcon 1 Yellow Diamond"]
+    return lines
+
+
+# -- UTIL-FILTER-MERGE (decision 0033)
+MAX_MERGE_BYTES = 2 * 1024 * 1024
+MERGE_BEGIN = "# ===== AshLight section start ====="
+MERGE_END = "# ===== AshLight section end ====="
+_BOM = b"\xef\xbb\xbf"
+# C0 controls other than tab, LF and CR, and DEL: not in a text filter
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_NAME_SAFE = re.compile(r"[^A-Za-z0-9 ._()-]")
+MAX_NAME = 80
+REFUSED_TEXT = {
+    "empty": "That file is empty. Pick your own .filter file.",
+    "too_big": "That file is over 2 MB, so it is not a loot filter. Pick your own .filter file.",
+    "not_utf8": "That file is not plain text. Save it as UTF-8 in your editor, then pick "
+                "it again.",
+    "not_text": "That file has characters a loot filter can't hold. Pick your own .filter "
+                "file.",
+}
+
+
+class MergeRefused(ValueError):
+    """The upload is not a text filter; `reason` is a REFUSED_TEXT key."""
+
+    def __init__(self, reason):
+        super().__init__(REFUSED_TEXT[reason])
+        self.reason = reason
+
+
+def check_text(data):
+    """The upload without its BOM, after the size and text checks; raises
+    MergeRefused. Never echoes the content."""
+    if not isinstance(data, (bytes, bytearray)):
+        raise MergeRefused("not_text")
+    if len(data) > MAX_MERGE_BYTES:
+        raise MergeRefused("too_big")
+    body = bytes(data[len(_BOM):] if data.startswith(_BOM) else data)
+    if not body:
+        raise MergeRefused("empty")
+    if b"\x00" in body:
+        raise MergeRefused("not_utf8" if body[:2] in (b"\xff\xfe", b"\xfe\xff")
+                           else "not_text")
+    try:
+        text = body.decode("utf-8")
+    except UnicodeDecodeError:
+        raise MergeRefused("not_utf8") from None
+    if _CONTROL.search(text):
+        raise MergeRefused("not_text")
+    return body
+
+
+def _strip_old_section(body):
+    """An AshLight section from an earlier merge, at the very start only,
+    is AshLight's own text: drop it (through the end marker's line)."""
+    begin, end = MERGE_BEGIN.encode("ascii"), MERGE_END.encode("ascii")
+    if not body.startswith(begin):
+        return body
+    i = body.find(b"\n" + end)
+    if i < 0:
+        return body
+    j = body.find(b"\n", i + 1 + len(end))
+    return b"" if j < 0 else body[j + 1:]
+
+
+def merge(data, build, base_names=None, prices=None):
+    """The player's filter bytes with AshLight's Show blocks prepended in a
+    marked section. A leading BOM stays first; the section uses CRLF when
+    the file does; everything after it is the player's bytes unchanged."""
+    body = _strip_old_section(check_text(data))
+    bom = _BOM if data.startswith(_BOM) else b""
+    nl = "\r\n" if b"\r\n" in body else "\n"
+    lines = [MERGE_BEGIN,
+             "# Added by AshLight: Show blocks only, nothing is hidden. Your own",
+             "# filter follows the end line below, unchanged. To undo, delete",
+             "# everything from the start line to the end line.",
+             "# " + NOTICE,
+             ""]
+    lines += _body_lines(build, base_names, prices)
+    lines += ["", MERGE_END, ""]
+    return bom + nl.join(lines).encode("ascii") + body
+
+
+def out_name(name):
+    """The download name: the picked file's own name (no folders; ASCII
+    letters, digits, space . _ ( ) - only) plus "-ashlight.filter"."""
+    base = str(name or "").replace("\\", "/").rsplit("/", 1)[-1]
+    if base.lower().endswith(".filter"):
+        base = base[:-len(".filter")]
+    if base.lower().endswith("-ashlight"):
+        base = base[:-len("-ashlight")]
+    base = " ".join(_NAME_SAFE.sub("", base).split()).strip(" .")[:MAX_NAME].strip(" .")
+    return (base or "filter") + "-ashlight.filter"

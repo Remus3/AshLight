@@ -305,6 +305,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._eval()
         if path == "/api/web-data":
             return self._set_web_data()
+        if path == "/api/filter-merge":
+            return self._filter_merge(query)
         return self._send(404, "not found\n")
 
     def do_PUT(self):
@@ -407,6 +409,44 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "json object required"})
             return None
         return body
+
+    def _filter_merge(self, query):
+        """UTIL-FILTER-MERGE (decision 0033): the filter the player picked in
+        the browser, as raw bytes, comes back with AshLight's Show blocks
+        prepended, as a download. Body in memory only; the name, path and
+        content are never logged or stored; the core writes no file."""
+        self._body_done = True  # read or discarded below, never twice
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if ctype != "application/octet-stream":
+            self._discard_body(length)
+            return self._json(415, {"error": "application/octet-stream required"})
+        if length < 0 or length > lootfilter.MAX_MERGE_BYTES:
+            self._discard_body(length)
+            return self._json(413, {"error": lootfilter.REFUSED_TEXT["too_big"]})
+        try:
+            raw = self.rfile.read(length)
+        except OSError:
+            self.close_connection = True
+            return None
+        if len(raw) < length:
+            self.close_connection = True
+            return None
+        core = self.server.core
+        names = getattr(core, "base_names", None)
+        names = names.get() if names is not None else None
+        rates = getattr(core, "rates", None)
+        prices = rates.filter_prices() if rates is not None else None
+        try:
+            out = lootfilter.merge(raw, core.builds.build, names, prices)
+        except lootfilter.MergeRefused as exc:
+            return self._json(400, {"error": str(exc), "reason": exc.reason})
+        name = lootfilter.out_name((query.get("name") or [""])[0])
+        hdr = {"Content-Disposition": f'attachment; filename="{name}"'}
+        return self._send(200, out, "application/octet-stream", hdr)
 
     def _layout_doc(self):
         core = self.server.core
