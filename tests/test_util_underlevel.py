@@ -86,6 +86,8 @@ def test_state_snapshot_appears_and_clears():
     assert st.snapshot()["underlevel"] is None
     # another player's level-up never counts
     st.apply(gen("G1_5", 12, at=170.0))
+    # (seen joining the area: another player, decision 0038)
+    st.apply({"type": "player_joined_area", "character": "Other", "recv_ts": 170.5})
     st.apply(lvl(1, name="Other", at=171.0))
     assert st.snapshot()["underlevel"]["level"] == 7
     # a town entry clears it

@@ -41,7 +41,10 @@ CHUNK = 1024 * 1024
 DEFAULT_MAX_BYTES = 32 * 1024 * 1024
 MAX_RUN_EVENTS = 20000
 _RUN_TYPES = ("scene_changed", "area_entered", "area_generated", "death",
-              "level_up")
+              "level_up",
+              # UTIL-MULTICHAR: other players' names, so a restart keeps
+              # them from switching the current character (decision 0038)
+              "player_joined_area", "player_left_area")
 MARKER = b"***** LOG FILE OPENING *****"
 _MARKER_TS = re.compile(rb"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) ")
 _KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |: )|\*\*\*\*\* LOG FILE OPENING")
@@ -203,7 +206,7 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
 
 _EV_KEYS = ("type", "ts_local", "scene", "is_null", "is_transient",
             "is_hideout", "area_id", "area_level", "seed", "character",
-            "level", "name")
+            "level", "class", "name")
 
 
 def _run_events(newest_first):

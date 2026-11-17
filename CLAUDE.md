@@ -528,3 +528,12 @@ them. Pause: `ops/loop/control/HALT`.
   never turns web_data on (decision 0036). Reverses if: the operator rules
   local history files unwanted, GGG restricts derived local records, or
   decision 0013 changes.
+- UTIL-MULTICHAR: level, deaths, pace, act splits and run history are
+  keyed by the character name in the player's own Client.txt (switch only
+  on the first level-up / death after a game start with no join / leave
+  since it, or when none is known; never mid-session; a configured
+  character never switches; 12 characters, run history schema 2 with
+  schema 1 migrated; names stay local) (decision 0038). Reverses if: a
+  login line naming the character is found, party play misfiles splits
+  in normal use, relogs without a game restart misfile runs, or names
+  must not be stored.

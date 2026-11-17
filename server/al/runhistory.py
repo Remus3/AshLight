@@ -16,7 +16,11 @@ start time (MATCH_S), so a core restart never duplicates a run.
 
 Bounded: at most MAX_RUNS runs (oldest dropped), MAX_SPLITS splits and
 MAX_ZONES zones per run, strings cut to MAX_TEXT, a file over MAX_BYTES
-reads as empty. The player can turn it off ("run_history": false in the
+reads as empty. UTIL-MULTICHAR (decision 0038): runs are kept per
+character name as the player's own Client.txt reports it (at most
+MAX_CHARACTERS names, MAX_RUNS runs each; the name never leaves the
+machine), bests and deaths by zone are per character, and a schema 1 file
+(one flat list) is migrated in place on load. The player can turn it off ("run_history": false in the
 local config, or the dashboard switch) and clear it (dashboard button).
 """
 
@@ -26,12 +30,13 @@ from pathlib import Path
 
 FILE_NAME = "run_history.json"
 CONFIG_KEY = "run_history"
-SCHEMA = 1
-MAX_RUNS = 20
+SCHEMA = 2
+MAX_RUNS = 20  # per character
+MAX_CHARACTERS = 12
 MAX_SPLITS = 16
 MAX_ZONES = 40
 MAX_TEXT = 64
-MAX_BYTES = 256 * 1024
+MAX_BYTES = 2 * 1024 * 1024
 MATCH_S = 300.0
 TOP_ZONES = 5
 
@@ -89,29 +94,85 @@ def clean_run(run):
             "finished": run.get("finished") is True}
 
 
-def load(path):
-    """The saved runs, oldest first ([] when missing, oversized or bad)."""
+def char_key(run):
+    """The history key of a run: its character name, "" when unknown."""
+    return run.get("character") or ""
+
+
+def group(runs):
+    """{key: [runs oldest first]} with the MAX_RUNS / MAX_CHARACTERS caps;
+    the characters whose newest run is oldest are dropped first."""
+    by = {}
+    for r in sorted(runs, key=lambda r: r["started_at"]):
+        by.setdefault(char_key(r), []).append(r)
+    for k in by:
+        by[k] = by[k][-MAX_RUNS:]
+    keep = sorted(by, key=lambda k: by[k][-1]["started_at"])[-MAX_CHARACTERS:]
+    return {k: by[k] for k in keep}
+
+
+def flat(by):
+    return sorted((r for runs in by.values() for r in runs),
+                  key=lambda r: r["started_at"])
+
+
+def _read(path):
+    """(doc, schema) of the file, or (None, None)."""
     try:
         p = Path(path)
         if p.stat().st_size > MAX_BYTES:
-            return []
+            return None, None
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
+        return None, None
+    if not isinstance(doc, dict):
+        return None, None
+    return doc, doc.get("schema")
+
+
+def _raw_runs(doc):
+    if doc is None:
         return []
-    runs = doc.get("runs") if isinstance(doc, dict) else None
-    out = [r for r in (clean_run(x) for x in runs or ()) if r is not None]
-    return out[-MAX_RUNS:]
+    if isinstance(doc.get("characters"), dict):
+        raw = []
+        for entry in doc["characters"].values():
+            if isinstance(entry, dict) and isinstance(entry.get("runs"), list):
+                raw.extend(entry["runs"])
+        return raw
+    # schema 1: one flat list (UTIL-RUN-HISTORY before UTIL-MULTICHAR)
+    return doc.get("runs") if isinstance(doc.get("runs"), list) else []
+
+
+def load(path):
+    """The saved runs of every character, oldest first ([] when missing,
+    oversized or bad); schema 1 and 2 files both read."""
+    doc, _ = _read(path)
+    out = [r for r in (clean_run(x) for x in _raw_runs(doc)) if r is not None]
+    return flat(group(out))
 
 
 def save(path, runs):
+    """Write the runs (a flat list, any characters) as schema 2."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    text = json.dumps({"schema": SCHEMA, "runs": runs[-MAX_RUNS:]}, indent=1,
-                      ensure_ascii=True) + "\n"
+    by = group(runs)
+    doc = {"schema": SCHEMA,
+           "characters": {k: {"runs": v} for k, v in by.items()}}
+    text = json.dumps(doc, indent=1, ensure_ascii=True) + "\n"
     with open(tmp, "w", encoding="ascii", newline="\n") as fh:
         fh.write(text)
     os.replace(tmp, path)
+
+
+def migrate(path):
+    """UTIL-MULTICHAR: rewrite a schema 1 file as schema 2 (runs grouped by
+    their character). True when the file was rewritten."""
+    doc, schema = _read(path)
+    if doc is None or schema == SCHEMA or not isinstance(doc.get("runs"), list):
+        return False
+    save(path, load(path))
+    return True
 
 
 def same_run(a, b):
@@ -131,7 +192,15 @@ class RunHistory:
 
     def __init__(self, path):
         self.path = Path(path)
+        try:
+            migrate(self.path)
+        except OSError:
+            pass  # read as is; the next save writes schema 2
         self.runs = load(self.path)
+
+    def characters(self):
+        """The character keys with saved runs, newest run last."""
+        return list(group(self.runs))
 
     def record(self, run):
         """Save one run (a new one, or the update of a saved one). True
@@ -147,7 +216,7 @@ class RunHistory:
                 break
         else:
             self.runs.append(run)
-            self.runs = self.runs[-MAX_RUNS:]
+        self.runs = flat(group(self.runs))
         save(self.path, self.runs)
         return True
 
@@ -155,15 +224,24 @@ class RunHistory:
         self.runs = []
         save(self.path, self.runs)
 
-    def view(self, current=None, enabled=True):
+    def view(self, current=None, enabled=True, character=None):
         """The snapshot `run_history` part. current: the live run record
         (state.run_record()), excluded from the bests so the act card can
-        show the delta to the best of the OTHER runs."""
+        show the delta to the best of the OTHER runs. UTIL-MULTICHAR: only
+        one character's runs count: `character`, else the current run's
+        character (None and "" are the unknown character)."""
         if not enabled:
             return {"on": False, "runs": 0, "best": [], "deaths_by_zone": [],
                     "text": OFF_TEXT, "empty_text": "", "deaths_empty_text": ""}
         cur = clean_run(current) if current else None
-        others = [r for r in self.runs if cur is None or not same_run(r, cur)]
+        if character is None and cur is not None:
+            key = char_key(cur)
+        else:
+            key = character or ""
+        if cur is not None and char_key(cur) != key:
+            cur = None
+        others = [r for r in self.runs if char_key(r) == key
+                  and (cur is None or not same_run(r, cur))]
         best = {}
         for r in others:
             for s in r["splits"]:
