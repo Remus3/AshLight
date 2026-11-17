@@ -45,11 +45,6 @@ class WebDataOff(FetchError):
     """The web-data opt-in is off; nothing was sent."""
 
 
-class ContactMissing(FetchError):
-    """UA-CONTACT: the host asks for a contact in the User-Agent and none is
-    configured (config/local.json "contact"); nothing was sent."""
-
-
 CONTACT_KEY = "contact"  # the key in gitignored config/local.json, never a tracked file
 CONTACT_MAX = 120
 REASON_OFF = "web data off"
@@ -73,14 +68,6 @@ def clean_contact(value):
 def contact_value(contact):
     """clean_contact of contact() (a callable, read at call time) or of a value."""
     return clean_contact(contact() if callable(contact) else contact)
-
-
-def require_contact(contact):
-    """The cleaned contact, else ContactMissing (nothing may be sent)."""
-    value = contact_value(contact)
-    if value is None:
-        raise ContactMissing(REASON_CONTACT)
-    return value
 
 
 def user_agent(purpose, contact=None):

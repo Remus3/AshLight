@@ -9,10 +9,10 @@ has a note. Hideouts, maps and unknown ids get none. Read only from the
 already tailed area / scene lines; nothing new is read.
 """
 
-import json
 from pathlib import Path
 
 from . import acts as acts_mod
+from . import jsonfile
 
 PATH = Path(__file__).resolve().parent / "data" / "zone_notes.json"
 MAX_NOTE = 110
@@ -23,11 +23,7 @@ def load(path=PATH):
     """The notes document ({} when missing or malformed)."""
     key = str(path)
     if key not in _cache:
-        try:
-            doc = json.loads(Path(path).read_text(encoding="ascii"))
-        except (OSError, ValueError):
-            doc = {}
-        _cache[key] = doc if isinstance(doc, dict) else {}
+        _cache[key] = jsonfile.read_json(path, encoding="ascii", kind=dict, default={})
     return _cache[key]
 
 

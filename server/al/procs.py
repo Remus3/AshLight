@@ -35,7 +35,7 @@ import time
 from pathlib import Path
 
 from . import keepalive as ka
-from . import paths
+from . import jsonfile, paths
 
 OVERLAY_PID_FILE = "overlay.pid"
 ELECTRON_DIR_ENV = "AL_ELECTRON_DIR"  # tests only: a tmp electron dist dir
@@ -46,11 +46,7 @@ _TH32CS_SNAPPROCESS = 0x2
 
 
 def _read_json(path):
-    try:
-        data = json.loads(Path(path).read_text(encoding="ascii"))
-        return data if isinstance(data, dict) else None
-    except (OSError, ValueError):
-        return None
+    return jsonfile.read_json(path, encoding="ascii", kind=dict)
 
 
 def electron_dir():
