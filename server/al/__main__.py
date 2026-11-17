@@ -145,6 +145,7 @@ def main(argv=None):
         print(f"{NAME} {VERSION} on {url}", flush=True)
         print(DISCLAIMER, flush=True)
     log.info("listening on %s:%s", ports.LOOPBACK, server.port)
+    core.port = server.port  # DIAG-SELF: the served port
 
     if core.consented():
         core.start_tailing()
@@ -203,6 +204,10 @@ def main(argv=None):
                 core.tick_watch()  # UTIL-PRICE-WATCH: moves on book refresh
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_watch failed")
+            try:
+                core.tick_diag()  # DIAG-SELF: the Checks card (ruling J)
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_diag failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:

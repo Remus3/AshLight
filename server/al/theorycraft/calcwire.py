@@ -106,6 +106,14 @@ def make_calc(get_bridge):
     return calc
 
 
+def component_status():
+    """DIAG-SELF: the calc component's {"available", "missing"} file check
+    (bridge.status; pins and the recorded luajit.exe hash). Lazy import,
+    asked only while the opt-in is on; never starts the bridge."""
+    from . import bridge
+    return bridge.status()
+
+
 def weapon_unusable(bridge):
     """MATH-WEAPON-TYPE: {"skill", "reason"} when PoB says the main skill
     cannot use the equipped weapon, else None. A bridge without the

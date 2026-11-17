@@ -451,3 +451,19 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
   padding: 4px 0; cursor: pointer; }
 .narrow-tools > .card { border: none; border-top: 1px solid var(--fk-border); border-radius: 0;
   background: none; padding: 12px 0 0; margin-top: 12px; }
+
+/* DIAG-SELF: the Checks tool (glyph + word per row, never colour alone).
+   LANG-GUARD: the game language notice (warn edge, never red). */
+.checks-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.checks-list li { border-top: 1px solid var(--fk-border); padding: 6px 0; min-width: 0; }
+.checks-list li:first-child { border-top: none; }
+.check-line, .check-detail, .check-fix { margin: 0; overflow-wrap: anywhere; }
+.check-line .glyph { font-family: ui-monospace, Consolas, monospace; }
+.check-word { color: var(--fk-text-muted); font-size: 0.9rem; }
+.checks-list li[data-state="done"] .glyph { color: var(--fk-status-ok); }
+.checks-list li[data-state="blocked"] .glyph,
+.checks-list li[data-state="blocked"] .check-word { color: var(--fk-status-warn); }
+.check-fix { font-weight: 600; }
+.checks > details > summary { color: var(--fk-text); font-weight: 600; min-height: 32px; cursor: pointer; }
+.lang-note { border-left: 4px solid var(--fk-status-warn); }
+.lang-note p { overflow-wrap: anywhere; }

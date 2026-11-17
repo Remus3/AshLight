@@ -549,3 +549,9 @@ them. Pause: `ops/loop/control/HALT`.
   elements AshLight-authored (decision 0039). Reverses if: GGG changes
   the reward property names, ruling H is withdrawn, or live play shows
   a boss element wrong.
+- DIAG-SELF / LANG-GUARD: passive local checks, report copied only on a
+  click and redacted; the non-English notice fires on 3 scene-name /
+  non-ASCII system-line strikes, not on `You have entered` (PoE2 never
+  writes it) (decision 0040). Reverses if: a localised log sample shows
+  the signals misfire, the zone snapshot is dropped, or a report field
+  leaks a path or identifier.
