@@ -13,6 +13,7 @@ from pathlib import Path
 from . import VERSION, layout, logfile, parser, paths
 from .bus import EventBus
 from .state import SessionState
+from .theorycraft import store as build_store
 
 
 def _utc_now():
@@ -60,6 +61,8 @@ class Core:
         self.locate_log()
         self.state.set_tailer(consented=self.consented())
         self.state.set_overlay_layout(layout.load(self.config_path))
+        # TC-CODE: the last loaded PoB build reloads on start (no click).
+        self.builds = build_store.BuildStore(build_store.default_path(self.runtime))
 
     # -- Client.txt location
     def locate_log(self):
