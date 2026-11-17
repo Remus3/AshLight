@@ -213,3 +213,18 @@ test("eval view: UTIL-WAYSTONE word and no uncounted line", () => {
   assert.equal(v.evalView({ id: 12, ok: false, at: 0, text: text, waystone: null }).word,
     "Not checked");
 });
+
+test("buildFileView summarises the .build download and keeps the core's notes", () => {
+  assert.equal(v.buildFileView(null).ready, false);
+  assert.equal(v.buildFileView({ loaded: false, build_file: { filename: "x.build" } }).ready, false);
+  const f = v.buildFileView({ loaded: true, build_file: {
+    filename: "ashlight-Titan-level-90.build", passives: 1, skills: 3, slots: 0,
+    notes: ["2 gems left out: no game id in the build.", 7, ""] } });
+  assert.equal(f.ready, true);
+  assert.equal(f.filename, "ashlight-Titan-level-90.build");
+  assert.equal(f.summary, "Holds 1 passive, 3 skills.");
+  assert.deepEqual(f.notes, ["2 gems left out: no game id in the build."]);
+  const empty = v.buildFileView({ loaded: true, build_file: { filename: "a.build" } });
+  assert.equal(empty.summary, "Holds the build's name only.");
+  assert.deepEqual(empty.notes, []);
+});

@@ -79,6 +79,9 @@ its code (license notes: 0006).
 - 0026 Deep dive 2026-11-17 - policy / APIs / patch notes / tools, no floor
   change; Exile-UI disabled screen-read automation after the 3.30.0 wording
   ([0026-deep-dive-20261117.md](0026-deep-dive-20261117.md))
+- 0027 The game's `.build` file: GGG's documented Build object, passive
+  ids = GGG tree export `id` (all 6 example ids found), PoB PR #2432 ideas
+  only ([0027-build-file-passive-ids.md](0027-build-file-passive-ids.md))
 
 ## Open research (feeds ROADMAP)
 

@@ -32,6 +32,12 @@ same names. So spec node ids ARE export `skill` ids and `resolve` maps them
 1:1 with no table. `id_match` is the guard: a spec whose ids mostly miss the
 loaded tree (a different id space, or a far-off tree version) reads as not
 ok, and the build view then shows no names rather than wrong ones.
+
+String ids (TC-BUILDFILE, research 0021): each node also carries the
+export's `id` slug (e.g. `strength89`; null on some nodes), kept as
+`Node.gid`. The game's `.build` file names passives by that slug, so the
+mapping PoB node id -> `.build` passive id is: spec id == export `skill` ->
+that node's `id`. No table, no guess: a null or missing slug is skipped.
 """
 
 import json
@@ -72,6 +78,7 @@ class Node:
     keystone: bool = False
     jewel_socket: bool = False
     class_start: tuple = ()  # class names that start on this node
+    gid: str = None  # the export's string `id` slug (TC-BUILDFILE), None when null
 
     @property
     def display_stats(self):
@@ -104,9 +111,14 @@ def _str(value):
 
 
 class TreeData:
-    def __init__(self, nodes, classes):
+    def __init__(self, nodes, classes, ascendancy_ids=None):
         self.nodes = nodes      # int id -> Node
         self.classes = classes  # tuple of class names, index order
+        self._asc_ids = dict(ascendancy_ids or {})  # ascendancy name -> id
+
+    def ascendancy_id(self, name):
+        """The export's ascendancy id (e.g. `Witch1`) for a name, or None."""
+        return self._asc_ids.get(name) if isinstance(name, str) else None
 
     def node(self, node_id):
         nid = _id(node_id)
@@ -198,8 +210,11 @@ def parse(doc):
                           notable=raw.get("isNotable") is True,
                           keystone=raw.get("isKeystone") is True,
                           jewel_socket=raw.get("isJewelSocket") is True,
-                          class_start=tuple(starts))
-    return TreeData(nodes, tuple(classes))
+                          class_start=tuple(starts), gid=_str(raw.get("id")))
+    asc_ids = {}
+    for aid, name in asc_names.items():
+        asc_ids.setdefault(name, aid)
+    return TreeData(nodes, tuple(classes), asc_ids)
 
 
 def load(path):

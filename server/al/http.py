@@ -257,6 +257,16 @@ class Handler(BaseHTTPRequestHandler):
             prices = rates.filter_prices() if rates is not None else None
             return self._send(200, lootfilter.generate(core.builds.build, names, prices),
                               "text/plain; charset=utf-8", hdr)
+        if path == "/api/buildfile":
+            # TC-BUILDFILE (decision 0034): the game's .build JSON as a
+            # download the player saves; the core writes no file anywhere.
+            # The name comes from buildfile.filename (letters, digits, -).
+            out = core.builds.file_export()
+            if out is None:
+                return self._json(404, {"error": "no build loaded"}, extra)
+            hdr = dict(extra, **{"Content-Disposition":
+                                 f'attachment; filename="{out["filename"]}"'})
+            return self._send(200, out["text"], "application/json; charset=utf-8", hdr)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)
         if path == "/api/gfx":

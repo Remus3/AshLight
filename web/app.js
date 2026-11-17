@@ -400,6 +400,63 @@
     $("build-notes-box").hidden = !v.notes;
     $("build-notes").textContent = v.notes;
     $("build-code-out").value = v.code;
+    renderBuildFile();
+  }
+
+  /* TC-BUILDFILE (decision 0034): what the .build download holds and what
+     was left out; ready as soon as a build is loaded (no click). */
+  function renderBuildFile() {
+    var f = T.buildFileView(buildDoc);
+    tellBuildFile("");  /* a new build: the last click's answer is stale */
+    $("buildfile-save").disabled = !f.ready;
+    $("buildfile-summary").textContent = f.ready ? f.summary
+      : "The build file isn't available for this build.";
+    var list = $("buildfile-notes");
+    list.textContent = "";
+    f.notes.forEach(function (s) {
+      var li = document.createElement("li");
+      li.textContent = s;
+      list.appendChild(li);
+    });
+    list.hidden = !f.notes.length;
+  }
+
+  /* TC-BUILDFILE: on the player's click, fetch the .build text and hand it
+     to the browser as a download; the player picks where it goes. AshLight
+     writes no file itself. No live region (the page keeps its 12): as for
+     downloadFilter, the focused button's name carries the answer. */
+  function tellBuildFile(text) {
+    $("buildfile-said").textContent = text;
+    $("buildfile-save").setAttribute("aria-label", text ? "Save .build file (" + text + ")"
+      : "Save .build file");
+  }
+
+  function saveBuildFile() {
+    var tell = tellBuildFile;
+    tell("");
+    var name = T.buildFileView(buildDoc).filename || "ashlight.build";
+    fetch("/api/buildfile", { headers: { "X-AL-Token": token }, cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) {
+          tell(r.status === 404 ? "Paste a build first." : "Can't make the file. Try again.");
+          return null;
+        }
+        return r.text();
+      }).then(function (text) {
+        if (text === null) { return; }
+        var url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        tell("Saved to your browser's downloads. Move it to the game's planner folder " +
+          "in your Documents.");
+      }).catch(function () {
+        tell("Can't reach AshLight - is it running?");
+      });
   }
 
   function pasteBuild() {
@@ -1022,6 +1079,7 @@
     $("build-paste").addEventListener("paste", function () { setTimeout(pasteBuild, 0); });
     $("build-paste").addEventListener("change", pasteBuild);
     $("build-copy").addEventListener("click", copyBuild);
+    $("buildfile-save").addEventListener("click", saveBuildFile);
     $("filter-download").addEventListener("click", downloadFilter);
     $("filter-merge-file").addEventListener("change", mergeFilter);
     $("weights-form").addEventListener("change", saveWeights);

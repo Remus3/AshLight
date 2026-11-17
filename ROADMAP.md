@@ -474,7 +474,7 @@ recorded in research 0018 section 3.
   ACCEPT: fixture lines from the real 1.0 log; zone table has G5 / G6
   rows; checklist items 1-7 ticked with read-back evidence. ZERO-CLICK:
   data and parser only.
-- [ ] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
+- [x] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
   Planner `*.build` JSON (Version 1, research 0018 section 3) offered as a
   dashboard "Save .build" download on the player's click; NEVER written
   into the game's BuildPlanner folder (adjudicator ruling 2026-11-17).
@@ -483,7 +483,22 @@ recorded in research 0018 section 3.
   against the documented fields; mapping source recorded; no write path
   to the BuildPlanner folder (test). ZERO-CLICK: the file is ready as soon
   as a build is loaded; one click to save is the user's placement act.
-- [ ] AUDIT-BUILDFILE (review) Record the `.build` ruling (user-saved
+  DONE 2026-11-17 (AREA-MATH b6, decision 0034, research 0027): mapping
+  source = the cached GGG tree export `id` (all 6 passive ids of GGG's
+  example found in it), ascendancy = export ascendancy id, gems = PoB
+  `gemId`; `server/al/theorycraft/buildfile.py` (export + validate), GET
+  /api/buildfile attachment, `build_file` summary/notes in GET /api/build,
+  dashboard "Save .build file" (web/app.js, web/tc.js buildFileView);
+  unmapped parts dropped with a visible note; tests/test_tc_buildfile.py,
+  app/test/tc_view.test.js; design-reviewer PASS WITH FINDINGS, all fixed.
+  Follow-up TC-BUILDFILE-LIVE.
+- [ ] TC-BUILDFILE-LIVE (build) Load an AshLight-made `.build` in game once
+  and record whether it loads, which passives / gems show, and whether
+  class-start or placeholder ids or meta gems are refused (research 0027
+  UNVERIFIED). BLOCKED: needs the player to place the file and open the
+  game. ACCEPT: read-back note in research 0027; mapping fixed if refused.
+  ZERO-CLICK: one-time check.
+- [x] AUDIT-BUILDFILE (review) Record the `.build` ruling (user-saved
   only, never written into the game folder; reverses if GGG explicitly
   permits tool writes there or the operator rules a click write
   acceptable) as a decision when TC-BUILDFILE lands, and add a test-backed
@@ -491,7 +506,9 @@ recorded in research 0018 section 3.
   decision file + test. ZERO-CLICK: review row.
   PARTIAL 2026-11-17 (AREA-AUDIT b2): the no-write check landed
   (tests/test_audit_buildfile.py: no source names the BuildPlanner or My
-  Games folder). REMAINS: the decision file when TC-BUILDFILE lands.
+  Games folder). DONE 2026-11-17 (AREA-MATH b6): decision 0034 with both
+  reversal clauses + CLAUDE.md Settled line; tests/test_tc_buildfile.py
+  adds the generator / endpoint no-write checks.
 - [x] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
   poe.ninja overviews (`sparkline.totalChange`), no extra requests. After
   PRICE-STACKABLES. ACCEPT: panel test, design-reviewer pass.

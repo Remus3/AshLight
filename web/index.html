@@ -237,6 +237,16 @@
         <button id="build-copy" type="button" class="secondary">Copy code for Path of Building</button>
       </div>
       <textarea id="build-code-out" class="code-out" readonly rows="2" aria-label="Build code for Path of Building"></textarea>
+      <h3 class="sub-h">Build file for the game</h3>
+      <p class="muted">The game can load this build as a guide. The button saves a .build
+        file to your browser's downloads. Move it yourself to the game's planner
+        folder in your Documents. AshLight writes nothing into your game folders.</p>
+      <div class="actions">
+        <button id="buildfile-save" type="button" class="secondary">Save .build file</button>
+        <span id="buildfile-said" class="muted"></span>
+      </div>
+      <p id="buildfile-summary" class="muted"></p>
+      <ul id="buildfile-notes" class="muted small" hidden></ul>
     </div>
     <p id="build-copy-status" class="muted" role="status" aria-live="polite"></p>
     <label class="paste" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
