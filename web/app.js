@@ -486,6 +486,9 @@
     $("eval-comps").replaceChildren(comps);
     $("eval-unweighted").hidden = !(v && v.unweighted);
     $("eval-unweighted").textContent = v ? v.unweighted : "";
+    // MATH-POTENTIAL-UI: the core's worst / now / best roll scores
+    $("eval-rolls").hidden = !(v && v.rolls);
+    $("eval-rolls").textContent = v ? v.rolls : "";
     $("eval-when").textContent = v ? v.when : "";
     // MATH-VALUE-UI: the item's Note price against its points, from the
     // rates the core already has; nothing when the item has no note price
@@ -845,6 +848,8 @@
     renderTrades(s.trade_requests || []);
     if (window.ALActs) { window.ALActs.paint(document, s.acts || null, serverNow(), true); }
     if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
+    // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
+    if (window.ALSummary) { window.ALSummary.paint(document, s); }
     tick();
   }
 
