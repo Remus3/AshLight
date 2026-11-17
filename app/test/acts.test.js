@@ -14,6 +14,7 @@ const ACTS = {
     { name: "Vastiri Outskirts", level: 16, town: false, here: true },
     { name: "Ardura Caravan", level: 16, town: true, here: false }
   ],
+  current: "G2",
   zones_act: "Act 2",
   levels: true,
   source: "Zone levels: RePoE fork export, downloaded when AshLight was built. Game data (c) Grinding Gear Games.",
@@ -50,6 +51,8 @@ test("zoneRows, zonesTitle and zonesEmpty, exact", () => {
   assert.equal(a.zonesTitle(ACTS), "Zone levels in Act 2");
   assert.equal(a.zonesTitle({}), "Zone levels");
   assert.equal(a.zonesEmpty(ACTS), "");
+  assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { levels: false, zones: [], current: null })),
+    "Zone levels show here while you are in a campaign act.");
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { levels: false, zones: [] })),
     "Zone levels aren't downloaded yet. Turn on web data, then run AshLight's build step (scripts/build.ps1).");
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { zones: [] })),

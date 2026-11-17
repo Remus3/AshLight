@@ -66,6 +66,22 @@ test("session sub line: flags first, else says when the timer starts (UX-U9)", (
   assert.equal(v.sessionSub(true, false, false), "AFK");
 });
 
+test("eventsKey changes when the recent list changes, not otherwise (UX-PERF)", () => {
+  const a = [{ at: 1, type: "death", text: "A died" }, { at: 2, type: "level_up", text: "A reached level 2" }];
+  assert.equal(v.eventsKey(a), v.eventsKey(a.map((r) => ({ ...r }))));
+  assert.notEqual(v.eventsKey(a), v.eventsKey(a.concat([{ at: 3, type: "death", text: "A died" }])));
+  // full list: the oldest drops as one arrives, same length
+  assert.notEqual(v.eventsKey(a), v.eventsKey([a[1], { at: 3, type: "death", text: "A died" }]));
+  assert.equal(v.eventsKey([]), v.eventsKey(null));
+});
+
+test("counts: no number before the opt-in, plurals after (UX-FIRSTRUN)", () => {
+  assert.deepEqual(v.countsView(0, 0, false), { deaths: "-", levelups: "Counts once reading starts" });
+  assert.deepEqual(v.countsView(3, 1, true), { deaths: "3", levelups: "1 level-up" });
+  assert.deepEqual(v.countsView(0, 2, true), { deaths: "0", levelups: "2 level-ups" });
+  assert.deepEqual(v.countsView(undefined, null, true), { deaths: "0", levelups: "0 level-ups" });
+});
+
 test("trade line uses the core's sentence; never prints undefined", () => {
   assert.deepEqual(v.tradeLine({ text: "Quietfox wants Plain Belt - 5 exalted", where: "tab Sale (3,7)" }),
     { what: "Quietfox wants Plain Belt - 5 exalted", where: "tab Sale (3,7)" });

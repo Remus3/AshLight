@@ -349,7 +349,14 @@ Generation rules:
    - whisper in / out: `<from>: "<text>"` / `To <to>: "<text>"`
    - AFK / DND: `You're AFK` / `You're back`, `Do not disturb on` / `off`
    - party: `<character> joined the area` / `<character> left the area`
-   - log state: `Reading Client.txt`, `Client.txt was reset (<reason>)`
+   - log state: `Reading Client.txt`, `Client.txt was reset (<reason>)`;
+     the game's server connect line is not listed (it came before every
+     zone, UX-COPY); overlay status slot before the opt-in `not reading -
+     see dashboard` (UX-FIRSTRUN), opted in `waiting for log` when
+     the file is known but quiet (15 characters at most next to the
+     numbers), `no Client.txt` when it is not found
+     (UX-COPY); dashboard deaths tile before the opt-in `-` over `Counts
+     once reading starts` (UX-FIRSTRUN)
    - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
      (empty slot: `<Verdict> <+delta> - <slot> empty`), item name, top
      counted stat (`+35 to maximum Life`; a flag mod `Gains: <mod>` /
@@ -466,8 +473,20 @@ Generation rules:
   repaints at most once a minute (`render_gate.js`, `test_budgets.py`).
 - Glance time target: each line readable in one fixation (< 1 s): <= 5
   words, number or name first, no wrapping (`nowrap` + ellipsis).
-- Placement: corners only, user-chosen; default top-right away from the
-  game's own minimap and life / mana globes.
+- Placement: corners only, user-chosen; default top-right. In PoE2 that
+  corner holds the game's corner map (with the quest tracker below it),
+  so the 2-line HUD covers its top edge and a card covers more for its
+  20 s; every other region costs more in a fight (top-left: buffs and
+  party frames; top-center: the boss life bar; bottom: globes, flasks,
+  skill bar, XP bar). The player moves it in one change on the dashboard
+  (UX-DPI ruling 2026-11-17; reverses if play shows the corner map is
+  routinely needed and covered, or the HUD grows past 2 lines).
+- Size follows the monitor: the window is in DIPs, so Windows scaling
+  applies by itself, and on a monitor taller than 1440 DIPs (4K at 100
+  or 125 percent) `layout.js autoScale` grows the HUD by DIP height /
+  1440 (at most 2x) so text is never physically smaller than at 1440p
+  and 100 percent (UX-DPI). User size times that factor is capped at
+  2.5, and the window never exceeds the work area.
 - Display mode: Windowed Fullscreen only (CLAUDE.md).
 - About text carries the GGG disclaimer (screen-reader visible).
 
