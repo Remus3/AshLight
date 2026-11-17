@@ -135,3 +135,51 @@ def test_rss_growth_under_20mb_after_50k_events():
     assert growth < 20, f"{growth:.1f} MB"
     sub.close()
     print(f"rss growth {growth:.2f} MB on {sys.platform}")
+
+
+@pytest.mark.slow
+@pytest.mark.server
+def test_core_idle_cpu_under_1_percent_with_dashboard_and_overlay_streams(tmp_path):
+    """TEST-OVL: decision 0002 "Core idle: under 1 percent of one core" for the
+    whole core, not just the tailer: consented tailer at the 250 ms poll, the
+    HTTP server and two open SSE streams (dashboard + overlay), no events."""
+    import socket
+    import threading
+
+    from server.al.core import Core
+    from server.al.http import serve
+
+    token = "b" * 48
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"x\n" * 1000)
+    rt = tmp_path / "rt"
+    rt.mkdir()
+    (rt / "consent.json").write_text('{"consented": true}\n', encoding="ascii")
+    core = Core(runtime=rt, log_path=str(log), poll_s=0.25)
+    srv = serve(core, token, port=0)
+    t = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.5},
+                         daemon=True)
+    t.start()
+    socks = []
+    try:
+        assert core.start_tailing()
+        for _ in range(2):
+            s = socket.create_connection(("127.0.0.1", srv.port), timeout=5)
+            s.sendall((f"GET /events?token={token} HTTP/1.1\r\nHost: 127.0.0.1:"
+                       f"{srv.port}\r\n\r\n").encode())
+            buf = b""
+            while b"event: state" not in buf:
+                buf += s.recv(65536)
+            socks.append(s)
+        time.sleep(0.5)
+        c0, w0 = time.process_time(), time.perf_counter()
+        time.sleep(3.0)
+        cpu, wall = time.process_time() - c0, time.perf_counter() - w0
+    finally:
+        for s in socks:
+            s.close()
+        srv.stop()
+        core.close()
+    share = cpu / wall
+    print(f"core idle {share * 100:.3f} percent of one core")
+    assert share < 0.01 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"

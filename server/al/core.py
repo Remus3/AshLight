@@ -40,6 +40,11 @@ def write_private(path, text):
     os.replace(tmp, path)
 
 
+# TEST-E2E: how often a consented core without a running tailer looks for
+# Client.txt again (a few stat calls and one libraryfolders.vdf read).
+LOCATE_RETRY_S = 5.0
+
+
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
                  character=None, start_at_end=True, config_path=None, web_fetch=None):
@@ -62,6 +67,7 @@ class Core:
         self._configured_log = log_path or cfg.get("client_log")
         self.log_path = None
         self.tailer = None
+        self._next_locate = 0.0
         self._lock = threading.Lock()
         self.locate_log()
         self.state.set_tailer(consented=self.consented())
@@ -269,6 +275,33 @@ class Core:
                                          on_resume=self._resume)
             self.tailer.start()
             return True
+
+    def ensure_tailing(self, now=None):
+        """TEST-E2E, ZERO-CLICK: called from the core's main loop. With
+        consent recorded, start the tailer once Client.txt is found (the game
+        installed after the core started, a Steam library added), and follow
+        a DISCOVERED log that vanished and shows up in another library. A
+        configured path is never second-guessed. Rate limited to one look per
+        LOCATE_RETRY_S. True when a tailer was started."""
+        now = time.monotonic() if now is None else now
+        if now < self._next_locate:
+            return False
+        self._next_locate = now + LOCATE_RETRY_S
+        if not self.tail_enabled or not self.consented():
+            return False
+        t = self.tailer
+        if t is None:
+            return self.start_tailing()
+        if self._configured_log or not t._missing:
+            return False
+        found = logfile.discover_client_log(None)
+        if found is None or Path(found) == t.path:
+            return False
+        self.stop_tailing()
+        with self._lock:
+            self.log_path = Path(found)
+        self.state.set_tailer(path=str(found))
+        return self.start_tailing()
 
     def stop_tailing(self):
         with self._lock:

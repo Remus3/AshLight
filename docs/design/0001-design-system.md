@@ -319,6 +319,7 @@ Good / bad examples:
 | token rejected or core stopped | can't reach AshLight - restart it | no internals; gives the fix |
 | Layout unavailable (core stopped?) | Can't load the overlay settings. Is AshLight running? | plain words, a question the user can answer |
 | No events yet. | Nothing yet. Zones, level-ups, deaths and whispers show up here as you play. | says what and when |
+| --:-- (blank line under it) | Starts when you allow reading Client.txt | an empty timer says when it starts (UX-U9) |
 | Client.txt waiting | waiting for Client.txt | subject-verb order |
 | core not running (overlay) | AshLight offline | the user knows "AshLight", not "core" |
 | AFK on / AFK off | You're AFK / You're back | natural sentence |
@@ -429,7 +430,11 @@ Generation rules:
   `0 1px 1px #000` text shadow (source 4: outlines and shadows separate
   text from busy scenes). In high-contrast mode (`prefers-contrast:
   more`) the plate has no alpha of its own; the window opacity still
-  applies (audit 0004 U3).
+  applies (audit 0004 U3). In Windows forced colours the plate is opaque
+  Canvas, text and edges take the system theme (the trade and upgrade
+  edges use Highlight), the page root opts out so the window stays
+  transparent, and contrast is the theme's own, not measured here; the
+  window opacity slider still multiplies (audit 0004 U8).
 - Opacity: the effective opacity must keep every overlay text pair >= 4.5:1
   over a white scene (5.2). Decorative transparency comes from the plate,
   not from fading the text.

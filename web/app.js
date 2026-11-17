@@ -755,10 +755,7 @@
       : "character unknown";
     $("deaths").textContent = String(s.deaths);
     $("levelups").textContent = s.level_ups + (s.level_ups === 1 ? " level-up" : " level-ups");
-    var flags = [];
-    if (s.afk) { flags.push("AFK"); }
-    if (s.dnd) { flags.push("DND"); }
-    $("flags").textContent = flags.length ? flags.join(" / ") : "\u00a0";
+    $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
 
     var tl = s.tailer || {};
     $("consent").hidden = !!tl.consented;

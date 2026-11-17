@@ -16,7 +16,25 @@ import fleet_test_guard  # noqa: E402
 
 os.environ["FLEET_SIDECAR_ROOT"] = ""  # empty value = off (process env wins)
 
-fleet_test_guard.install(globals(), root=ROOT, env_roots={})
+# TEST-FLAKE: the armed lane loop (tools/al_loop.py tick, every 15 min) and
+# its lanes rewrite these control files while a suite may be running, so the
+# guard reported a false "created/changed" at a random teardown. They are the
+# tick's own state (tools/loop_base.py *_REL), never written by a test against
+# the live root; the kit's documented mechanism is extra_ignore. HALT and
+# SESSION_HALT stay watched (stop sentinels).
+LOOP_TICK_STATE = (
+    "ops/loop/control/loop_items/*",
+    "ops/loop/control/loop_inbox_watch.json",
+    "ops/loop/control/loop_orders.json",
+    "ops/loop/control/backoff.json",
+    "ops/loop/control/gate_verdicts.json",
+    "ops/loop/control/push_worker.json",
+    "ops/loop/control/push_last.json",
+    "ops/loop/control/ledger_rotate.json",
+)
+
+fleet_test_guard.install(globals(), root=ROOT, env_roots={},
+                         extra_ignore=LOOP_TICK_STATE)
 
 
 def pytest_configure(config):
