@@ -963,6 +963,21 @@ class SessionState:
                 self.build_info = dict(info) if info else None
                 self.version += 1
 
+    def bump_calc_rev(self):
+        """MATH-SKILL-SPLIT: a new PoB output table is ready, so the build
+        view is read again. AREA-AUDIT P7-4: read and write under one lock
+        hold, so a build loaded meanwhile is never overwritten. Returns
+        whether a build summary was there to bump."""
+        with self._lock:
+            info = self.build_info
+            if not info:
+                return False
+            rev = info.get("calc_rev")
+            rev = rev if isinstance(rev, int) and not isinstance(rev, bool) else 0
+            self.build_info = dict(info, calc_rev=rev + 1)
+            self.version += 1
+            return True
+
     def set_campaign(self, facts=False, flasks=False, boots_level=False):
         """UTIL-CAMPAIGN-CHECKS: any of the build facts
         (campaign.build_facts()), the flask table (campaign.load_flasks())

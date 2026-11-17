@@ -218,20 +218,23 @@ def defence(stats, calc_on):
     return out
 
 
-def health(build, calc_out=None):
+def health(build, calc_out=None, calc_active=False):
     """{"loaded", "has_stats", "source", "message", "warnings", "values",
-    "defence", "calc_on", "weakest"}. warnings: [{"id", "severity" (high /
-    medium / low), "text", "stat", "value", "limit"}], high first.
-    `calc_out`: PoB's output table for the loaded build when the optional
-    calc is on (it wins over the saved PlayerStat), None with it off."""
+    "defence", "calc_on", "calc_pending", "weakest"}. warnings: [{"id",
+    "severity" (high / medium / low), "text", "stat", "value", "limit"}],
+    high first. `calc_out`: PoB's output table for the loaded build when
+    the optional calc is on (it wins over the saved PlayerStat), None with
+    it off. `calc_active`: the calc switch is on (AREA-AUDIT P7-5), so a
+    missing table is "pending", not "off"."""
     out = {"loaded": build is not None, "has_stats": False, "source": SOURCE,
            "message": None, "warnings": [], "values": [], "defence": [],
-           "calc_on": False, "weakest": None}
+           "calc_on": False, "calc_pending": False, "weakest": None}
     if build is None:
         out["message"] = NO_BUILD
         return out
     calc = _calc(calc_out)
     out["calc_on"] = bool(calc)
+    out["calc_pending"] = bool(calc_active) and not calc
     stats = dict(_stats(build))
     out["has_stats"] = any(_num(v) is not None for v in stats.values())
     if not stats and not calc:

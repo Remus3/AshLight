@@ -159,6 +159,9 @@ class Core:
             lambda: self.tc_calc if self.tc_calc is not None else self.tc_provider(),
             health.CALC_KEYS + skillsplit.KEYS, on_ready=self._outputs_ready)
         self.builds.calc_outputs = self.pob_outputs.get
+        # AREA-AUDIT P7-5: the calc switch apart from "table ready", so the
+        # card never says "once the calc is on" while it is on and pending
+        self.builds.calc_active = self.pob_outputs.active
         self.builds.add_listener(self.pob_outputs.get)
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
         # local config; every outbound request goes through server/al/webfetch.py
@@ -192,10 +195,9 @@ class Core:
 
     def _outputs_ready(self):
         """A new PoB output table for the loaded build: the build view is
-        read again (the state's build summary gets a new calc_rev)."""
-        info = self.state.build_info
-        if info:
-            self.state.set_build_info(dict(info, calc_rev=int(info.get("calc_rev") or 0) + 1))
+        read again (the state's build summary gets a new calc_rev). AREA-AUDIT
+        P7-4: the bump runs under the state lock (no read-then-write here)."""
+        self.state.bump_calc_rev()
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
@@ -666,6 +668,9 @@ class Core:
         self.state.set_underlevel_gap(self._config().get(underlevel.CONFIG_KEY))
         # UTIL-CAMPAIGN-CHECKS: the boots level setting (read only on change)
         self.state.set_campaign(boots_level=self._config().get(campaign.CONFIG_KEY))
+        # AREA-AUDIT P7-6: the flask table again when its file changed (one
+        # stat per tick; FlaskCache reads only on a new mtime / size)
+        self.state.set_campaign(flasks=self.flask_table.get())
         try:
             calc_on = self.tc_calc_enabled()
         except Exception:  # noqa: BLE001 - a bad config reads as off

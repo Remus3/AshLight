@@ -1741,7 +1741,7 @@ merge. Each row names the finding ids it closes.
   before the first check (tests/test_tc_drift.py status_text tests), both
   runbook Verify lines say so.
 
-- [ ] AUDIT-P7-LOW (build) AREA-AUDIT pass 7 lows P7-4 to P7-8
+- [x] AUDIT-P7-LOW (build) AREA-AUDIT pass 7 lows P7-4 to P7-8
   (docs/audit/2026-11-17-audit.md "Pass 7"): P7-4 core._outputs_ready
   reads state.build_info outside the state lock and writes it back, so a
   build loaded in that window can be overwritten by the old build's info
@@ -1756,6 +1756,15 @@ merge. Each row names the finding ids it closes.
   default size cap (layout config, displays.json, summaries, ninja caches
   read uncapped; add a generous default such as 32 MB). ACCEPT: a fix and
   one regression test each. ZERO-CLICK: code row, the loop works it.
+  DONE 2026-11-17 (audit batch 14; tests/test_audit_pass7_low.py,
+  app/test/skillsplit.test.js): P7-4 SessionState.bump_calc_rev reads and
+  writes build_info under one lock hold (core._outputs_ready calls it);
+  P7-5 health() gets calc_active (pobout.OutputsCache.active via
+  store.calc_active) and returns calc_pending, web/health.js hides the
+  calc-off hint while pending (no copy change); P7-6 tick_sources polls
+  FlaskCache.get() (mtime / size, read only on change); P7-7 boots count
+  as fast only for a positive "N% increased Movement Speed"; P7-8
+  jsonfile.DEFAULT_MAX_BYTES = 32 MB applies when max_bytes is None.
 
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the

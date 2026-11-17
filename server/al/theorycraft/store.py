@@ -34,6 +34,9 @@ class BuildStore:
         # output table for the loaded build when the optional calc is on
         # and has answered (pobout.OutputsCache.get), else None
         self.calc_outputs = None
+        # AREA-AUDIT P7-5: callable() -> whether the calc is on (its first
+        # answer may still be pending; pobout.OutputsCache.active)
+        self.calc_active = None
         self.build = None
         self.load_error = None
         self._lock = threading.Lock()
@@ -93,6 +96,7 @@ class BuildStore:
         b = self.build
         tree_data = self._tree_data(b)
         calc_out = _safe(self.calc_outputs, b) if callable(self.calc_outputs) and b else None
+        calc_active = bool(_safe(self.calc_active)) if callable(self.calc_active) else False
         return {"loaded": b is not None,
                 "build": b.to_dict(tree_data) if b else None,
                 "code": b.to_code() if b else None, "load_error": self.load_error,
@@ -101,7 +105,8 @@ class BuildStore:
                 # MATH-BUILD-HEALTH / MATH-NEXT-LOOK: PoB's own numbers only
                 # (decision 0004); rebuilt on every read, so a new build or a
                 # new PoB weight shows with no click
-                "health": _safe(health.health, b, calc_out, fallback=health.health(None)),
+                "health": _safe(health.health, b, calc_out, calc_active,
+                                fallback=health.health(None)),
                 # MATH-SKILL-SPLIT: PoB's per-skill and ailment DPS (saved in
                 # every build XML; the calc's values win when it is on)
                 "skill_split": _safe(skillsplit.split, b, calc_out,

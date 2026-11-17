@@ -75,6 +75,14 @@ test("defence rows follow PoB's digits and units; hint only with the calc off", 
   assert.deepEqual(h.defView(null), { rows: [], hint: "" });
 });
 
+test("AREA-AUDIT P7-5: no calc-off hint while the calc is on and pending", () => {
+  const doc = { loaded: true, health: { loaded: true, has_stats: true, calc_on: false,
+    calc_pending: true, warnings: [], values: [], defence: [] } };
+  assert.equal(h.defView(doc).hint, "");
+  doc.health.calc_pending = false;
+  assert.equal(h.defView(doc).hint, h.NO_CALC);
+});
+
 test("scripts load, blocks exist, no live region, no timers or network", () => {
   const html = fs.readFileSync(path.join(WEB, "index.html"), "ascii");
   assert.ok(html.indexOf("/web/skillsplit.js") > 0);
