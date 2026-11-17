@@ -14,6 +14,14 @@
     "license_file": "LICENSE.md",
     "verified": "2026-11-17"
   },
+  "pob2_files": {
+    "_doc": "Decision 0037 amendment (MATH-TRADESTAT-POB). sha256 of single files inside the pinned pob2 checkout that AshLight reads as data (never runs). Outside the setup pin digest. Re-read and update with every pob2 pin move; tests/test_tc_pob_drift_guard.py fails on a mismatch.",
+    "src/Data/TradeSiteStats.lua": {
+      "sha256": "00f5f45376a726ac93e5c129933c681a63e9fcaa368db17c4c15cb0cbc8cac53",
+      "size": 1139860,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    }
+  },
   "luajit": {
     "name": "LuaJIT",
     "repo": "LuaJIT/LuaJIT",

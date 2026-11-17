@@ -50,3 +50,43 @@ change is small to undo and nothing is bundled.
 GGG states that third-party use of trade stat ids is not permitted,
 repoe-fork drops the `trade_stats` field, the repoe-fork data license is
 found to forbid this use, or the operator rules otherwise.
+
+## Amendment 2026-11-17 - PoB-PoE2 fallback (MATH-TRADESTAT-POB)
+
+Trigger: research 0030 section 6 (repoe-fork gives ids for only 11 of 39
+default weights). Ruled YES by a distinct adjudicator agent (FLEET item 1).
+Record, verbatim:
+
+> A read-only fallback to PoB-PoE2 src/Data/TradeSiteStats.lua is allowed
+> ONLY when the optional calc component (0018) is installed and the file
+> hash matches config/tc_pins.json. It fills only keys repoe-fork lacks, by
+> exact tradestats.norm match, through a bounded stdlib text parser (never
+> run as Lua). Nothing is bundled, tests use a self-made fixture, and
+> datacredit.py names PoB-PoE2 (MIT) and GGG as data owner. Vetting: 0 id
+> conflicts on the overlapping keys (coverage 11/39 -> 39/39) and the hash
+> pin. This is the 0009 check the Alternatives section required. Same
+> GGG-owned data as repoe-fork; AshLight calls no trade endpoint (0017).
+
+This amends item 3 ("no fallback to another source") and replaces the PoB
+line under Alternatives. Checks behind the ruling: the checkout's
+LICENSE.md opens with PoB's MIT grant (the file itself says "Game data (c)
+Grinding Gear Games" and names the trade2 stats endpoint as its origin, so
+MIT covers PoB's format and code, the ids stay GGG data exactly as under
+this decision); ToU 7i concerns the conduct of whoever calls an undocumented
+endpoint, and AshLight still calls none, validates nothing, and only shapes
+the offline URL. Alternatives: keep 11/39 (zero risk, 28 keys unfiltered);
+author ids by hand (bundles GGG data, barred by 0009).
+
+Implementation: `server/al/tradestats.py` (`parse_pob_trade_stats`,
+`load_pob_index`, `merge`, `IndexCache(pob=...)`), wired in core only for the
+real runtime. The file is used only when the checkout's `.al-extracted.json`
+names the pinned archive sha256 AND the file's sha256 equals
+`pob2_files["src/Data/TradeSiteStats.lua"].sha256` in config/tc_pins.json
+(outside the setup pin digest, so no re-fetch); size cap 8 MB, 400000
+lines; a value with a Lua escape is skipped. repoe-fork wins a conflict,
+logged. Guard: tests/test_tc_pob_drift_guard.py (presence, shape, hash).
+
+Reverses if: PoB relicenses or its file header disclaims reuse, a real id
+conflict with repoe-fork appears, GGG rules against relaying trade2-derived
+data, repoe-fork gains full coverage (then the fallback is dead weight), or
+the operator rules otherwise.

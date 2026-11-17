@@ -14,7 +14,9 @@ const dash = require("../../web/status.js");
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
 const CREDIT = "Game data (c) Grinding Gear Games. Item, mod and stat data comes from the " +
   "RePoE fork community export (repoe-fork). Trade search stat ids are " +
-  "Grinding Gear Games' trade site data, passed on by repoe-fork. Passive tree data comes from " +
+  "Grinding Gear Games' trade site data, passed on by repoe-fork. Ids it lacks come from " +
+  "Path of Building Community (PoE2, MIT license) when its optional calc files " +
+  "are installed. Passive tree data comes from " +
   "Grinding Gear Games' public skill tree export. AshLight downloaded all of it to " +
   "this computer when it was built.";
 const WITH = { name: "AshLight", version: "0.1.0", disclaimer: DISCLAIMER,

@@ -21,7 +21,9 @@ ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "s" * 48
 CREDIT = ("Game data (c) Grinding Gear Games. Item, mod and stat data comes from the "
           "RePoE fork community export (repoe-fork). Trade search stat ids are "
-          "Grinding Gear Games' trade site data, passed on by repoe-fork. Passive tree data comes from "
+          "Grinding Gear Games' trade site data, passed on by repoe-fork. Ids it lacks come from "
+          "Path of Building Community (PoE2, MIT license) when its optional calc files "
+          "are installed. Passive tree data comes from "
           "Grinding Gear Games' public skill tree export. AshLight downloaded all of it to "
           "this computer when it was built.")
 

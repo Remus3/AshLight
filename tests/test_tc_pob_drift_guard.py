@@ -136,3 +136,31 @@ def test_live_launch_object_and_output_keys(warm_bridge):
     mapped = calcwire.map_outputs(out)
     assert mapped["dps"] == pytest.approx(ref["outputs"]["FullDPS"], rel=1e-3)
     assert mapped["ehp"] == pytest.approx(ref["outputs"]["TotalEHP"], rel=1e-3)
+
+
+# MATH-TRADESTAT-POB (decision 0037 amendment): the trade stat id fallback
+# reads src/Data/TradeSiteStats.lua as data. Its presence, line shape and
+# sha256 pin (config/tc_pins.json "pob2_files") are guarded here so a pin
+# move cannot silently drop or change the fallback.
+TRADE_HINT = ("Re-read src/Data/TradeSiteStats.lua in the new checkout, check the "
+              "id / text / type line shape still matches server/al/tradestats.py "
+              "parse_pob_trade_stats, and update pob2_files in config/tc_pins.json.")
+
+
+@STATIC
+def test_pinned_trade_site_stats_shape_and_hash():
+    from server.al import tradestats
+    import hashlib
+    pins = bridge._load_pins()
+    path = SRC.parent / tradestats.POB_REL
+    assert path.is_file(), f"PoB data drift: {tradestats.POB_REL} is gone. {TRADE_HINT}"
+    raw = path.read_bytes()
+    want = pins["pob2_files"][tradestats.POB_REL]["sha256"]
+    assert hashlib.sha256(raw).hexdigest() == want, (
+        f"PoB data drift: {tradestats.POB_REL} sha256 differs from the pin. {TRADE_HINT}")
+    assert len(raw) <= tradestats.POB_MAX_BYTES
+    text = raw.decode("utf-8")
+    assert "trade2/data/stats" in text[:2000] and "Grinding Gear Games" in text[:2000]
+    idx = tradestats.parse_pob_trade_stats(text)
+    assert len(idx) > 1000, f"PoB data drift: only {len(idx)} explicit rows parsed. {TRADE_HINT}"
+    assert tradestats.load_pob_index(path, pins) == idx

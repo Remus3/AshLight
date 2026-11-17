@@ -432,6 +432,12 @@ them. Pause: `ops/loop/control/HALT`.
   no bundled table, a missing id means no filter (decision 0037). Reverses
   if: GGG bars third-party use of the ids, repoe-fork drops the field or
   its license forbids this use, or the operator rules otherwise.
+- Ids repoe-fork lacks may come from the hash-pinned PoB-PoE2 checkout's
+  TradeSiteStats.lua, only when the optional calc component is installed
+  and the file sha256 matches config/tc_pins.json pob2_files; exact match,
+  text parse (never run as Lua), repoe-fork wins conflicts (decision 0037
+  amendment). Reverses if: PoB relicenses, a real id conflict appears,
+  GGG bars relaying trade2-derived data, or the operator rules otherwise.
 - The card names the item a swap replaces (better slot first, one-hand
   weapons in either hand of a dual wielder); nonsense PoB outputs fall back
   to the weights with a "looks wrong" notice, except a weapon PoB says the

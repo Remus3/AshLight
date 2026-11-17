@@ -215,6 +215,18 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   number from the stat name was rejected as a guess. Research 0030 sec. 6;
   tests/test_math_tradestat_cover.py. Next if wanted: decision 0009 check
   of PoB-PoE2 TradeSiteStats.lua (decision 0037 alternative), adjudicated.
+- [x] MATH-TRADESTAT-POB (build) Fill the trade stat ids repoe-fork lacks
+  from the hash-pinned PoB-PoE2 checkout's TradeSiteStats.lua when the
+  optional calc component is installed (no new download or host), exact
+  template match, bounded text parse, never run as Lua.
+  ZERO-CLICK: the core reads the installed file at start and on change;
+  the upgrade link carries the extra filters on the next hotkey press.
+  DONE 2026-11-17 (AREA-MATH b9): adjudicated YES (decision 0037
+  amendment). Gated on the checkout marker = pinned archive sha256 and the
+  file sha256 = config/tc_pins.json pob2_files; repoe-fork wins any
+  conflict (logged; 0 of 238 overlapping keys differ). Coverage before
+  11/39, after 39/39. tests/test_math_tradestat_pob.py, drift guard row
+  in tests/test_tc_pob_drift_guard.py; credit in datacredit.ATTRIBUTION.
 - [x] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
   archive sha256; LuaJIT version, sha256; no absolute paths); setup.ps1
   step fetches the PoB source archive to the sidecar Cache and builds or

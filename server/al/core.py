@@ -117,7 +117,11 @@ class Core:
         # only while web data is on; read only, no fetch, no trade call.
         ids_path = (tradestats.default_path() if runtime is None
                     else self.runtime / "gamedata" / tradestats.FILE_NAME)
-        self.trade_ids = tradestats.IndexCache(ids_path)
+        # MATH-TRADESTAT-POB (0037 amendment): the hash-pinned PoB checkout's
+        # TradeSiteStats.lua fills only keys repoe-fork lacks, when the
+        # optional calc component is installed; none with a test runtime.
+        self.trade_ids = tradestats.IndexCache(
+            ids_path, pob=tradestats.pob_source() if runtime is None else None)
         # TC-EVAL: editable stat weights, defaults written on first start.
         self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.
