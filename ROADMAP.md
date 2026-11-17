@@ -273,6 +273,21 @@ design docs in docs/design/, both made by a separate agent.
   reviewed through it" waits for the next web/ or app/ row the armed loop
   runs (LOOP-ARM done 2026-11-17).
 
+- [x] UX-U7 (review) Real-browser check of the cards added after audit 0003
+  (Act times, item check, price / upgrade link, build view) at 320 / 768 /
+  1440 px, dark, light and forced colours (glance review 0004 U7). ACCEPT:
+  screenshots taken against a replayed-fixture core, what fails fixed and
+  test-guarded. DONE 2026-11-17 (area-ux): no horizontal scroll at any
+  width; one defect - an unbroken character name under the level ran into
+  the deaths tile at 320 px; fixed (`.stat .sub` wraps), guarded by
+  tests/test_ux_review.py. Forced colours: every badge keeps its text
+  label, so nothing is lost. ZERO-CLICK: layout only, no user step.
+- [ ] UX-U8 (review) Windows forced-colours / high-contrast on the
+  transparent overlay window (glance review 0004 U8). ACCEPT: overlay page
+  rendered with forced-colors active; the window background stays
+  transparent, the plates and text stay legible, fixes test-guarded.
+  ZERO-CLICK: follows the OS setting, no toggle.
+
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 

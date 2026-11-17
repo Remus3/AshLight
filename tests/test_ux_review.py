@@ -252,3 +252,11 @@ def test_viewport_meta_allows_zoom():
     m = re.search(r'<meta name="viewport" content="([^"]+)"', html)
     assert m and "width=device-width" in m.group(1)
     assert "maximum-scale" not in m.group(1) and "user-scalable" not in m.group(1)
+
+
+def test_stat_tile_sub_line_wraps_long_names():
+    """UX-U7 (live 320 px pass): an unbroken character name under the level
+    overflowed its tile into the deaths tile; the sub line must wrap."""
+    bodies = [b for s, b in _rules(_strip_media(_css(APP_CSS))) if s == ".stat .sub"]
+    assert bodies and any(re.search(r"overflow-wrap\s*:\s*anywhere", b) for b in bodies)
+
