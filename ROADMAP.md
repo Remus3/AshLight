@@ -167,9 +167,8 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   0017): from the local weights build a trade2 search URL offline
   (https://www.pathofexile.com/trade2/search/poe2/<league>?q=<json>) that
   the user opens in their own browser; the app makes no trade2 request, no
-  POESESSID; prices shown come from poe.ninja only. Until TC-UPGRADE-STATS
-  lands the link carries name, base and rarity only; weighted mod filters
-  are BLOCKED on TC-UPGRADE-STATS. After PRICE-TRADE-LINK, TC-EVAL.
+  POESESSID; prices shown come from poe.ninja only. Weighted mod filters
+  came with TC-UPGRADE-STATS (decision 0037). After PRICE-TRADE-LINK, TC-EVAL.
   ACCEPT: URL-builder tests; shares PRICE-TRADE-LINK's builder, not
   duplicated; no trade host in the webfetch allowlist.
   ZERO-CLICK: the same hotkey press that evaluates the item builds the
@@ -182,7 +181,7 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   card shows an "Upgrade search" link; a build or weights change rebuilds
   it. Tests: tests/test_tc_upgrade.py, app/test/prices.test.js. Weighted
   mod filters stay with TC-UPGRADE-STATS.
-- [ ] TC-UPGRADE-STATS (review) Find a permitted source for trade stat ids
+- [x] TC-UPGRADE-STATS (review) Find a permitted source for trade stat ids
   (mod filters for TC-UPGRADE links): GGG API Reference / Data Exports
   check first (decision 0017), then attributed build-time snapshots with a
   license check per decision 0009; never the trade2 /data/stats endpoint
@@ -190,6 +189,15 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   decision, or a dated "no permitted source" note.
   ZERO-CLICK: research row; if a source is found, the build-time fetch runs
   in setup.ps1 unattended.
+  DONE 2026-11-17: no GGG source (API Reference, Data Exports read
+  2026-11-17); source = the `trade_stats` field of the repoe-fork
+  stat_translations file the build-time snapshot already fetches (no new
+  fetch, behind web_data), adjudicated in decision 0037, research 0030.
+  server/al/tradestats.py indexes the cached ids; the upgrade link adds one
+  weighted stat group (top weighted stats that have an id, at most 6) and
+  sorts by it; no id, no snapshot or web data off = no filter. Tests:
+  tests/test_tc_upgrade_stats.py. Coverage of the cached copy: 11 of 39
+  default weight keys (resists / attributes have no id there).
 - [x] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
   archive sha256; LuaJIT version, sha256; no absolute paths); setup.ps1
   step fetches the PoB source archive to the sidecar Cache and builds or
