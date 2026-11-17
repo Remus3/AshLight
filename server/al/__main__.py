@@ -60,6 +60,27 @@ def setup_logging(quiet):
 
 
 HEARTBEAT_S = 30.0
+STOP_FILE = "stop.request"  # written by scripts/stop.ps1: a user stop, not a crash
+
+
+def _heartbeat_s():
+    try:
+        return max(0.1, float(os.environ.get("AL_HEARTBEAT_S") or HEARTBEAT_S))
+    except ValueError:
+        return HEARTBEAT_S
+
+
+def stop_requested(path):
+    """True when the user asked the core to stop (scripts/stop.ps1)."""
+    return Path(path).exists()
+
+
+def clear_stop_request(path):
+    """A stop.request left from an earlier stop must not end this start."""
+    try:
+        Path(path).unlink()
+    except OSError:
+        pass
 
 
 def install_crash_logging(log):
@@ -137,15 +158,21 @@ def main(argv=None):
             except (ValueError, OSError):
                 pass
 
+    clear_stop_request(paths.runtime_dir() / STOP_FILE)
     t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.5},
                          name="al-http", daemon=True)
     t.start()
     heartbeat = paths.runtime_dir() / "core.alive"
+    stop_file = paths.runtime_dir() / STOP_FILE
+    beat_s = _heartbeat_s()
     next_beat = 0.0
     try:
         while not stop.wait(0.5):
+            if stop_requested(stop_file):
+                log.info("stop requested (%s); exiting cleanly", STOP_FILE)
+                break
             if time.monotonic() >= next_beat:
-                next_beat = time.monotonic() + HEARTBEAT_S
+                next_beat = time.monotonic() + beat_s
                 try:
                     write_heartbeat(heartbeat, os.getpid(), server.port)
                 except OSError:

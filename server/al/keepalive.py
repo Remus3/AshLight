@@ -1,0 +1,378 @@
+"""CORE-KEEPALIVE: a tiny stdlib supervisor for the AshLight core.
+
+    python -m server.al.keepalive [--port N] [--runtime DIR] [--poll S]
+        [--stale S] [--backoff 2,10,30] [--cap N] [--window S]
+        [--core-args ARG ...]
+
+scripts/run.ps1 starts it detached (Start-AlDetached, pythonw) on every run;
+a second copy exits at once (single-instance lock in the runtime dir). It
+adopts a core that is already running (pid from <runtime>/core.alive) and
+polls every POLL_S seconds:
+
+- core pid gone, core.alive left behind -> crash -> relaunch after backoff
+- core pid alive, heartbeat older than STALE_S and /api/health failing ->
+  hung -> terminate (only when the image is python) -> relaunch
+- core pid gone and core.alive removed (clean exit) or stop.request present
+  (scripts/stop.ps1) -> user stop -> log it and exit; never restarted
+- no heartbeat but /api/health answers (a core from an older build) ->
+  left alone; started only once nothing answers
+- more than CAP restarts inside WINDOW_S -> logged give-up and exit
+
+It only ever looks at, starts or stops AshLight's own python core; it never
+touches the game process (ToS floor). Decision: docs/decisions/0005.
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.request
+from pathlib import Path
+
+from . import paths, ports
+
+POLL_S = 5.0
+STALE_S = 90.0          # three missed 30 s heartbeats
+START_GRACE_S = 60.0    # a fresh core must write its first heartbeat by then
+BACKOFF_S = (2.0, 10.0, 30.0, 60.0, 120.0)
+CAP = 5                 # restarts allowed inside WINDOW_S
+WINDOW_S = 900.0
+HEARTBEAT_FILE = "core.alive"
+STOP_FILE = "stop.request"
+STATE_FILE = "keepalive.json"
+LOCK_FILE = "keepalive.lock"
+
+_STILL_ACTIVE = 259
+_QUERY_LIMITED = 0x1000
+_TERMINATE = 0x0001
+
+
+def _kernel32():
+    import ctypes
+    from ctypes import wintypes
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.OpenProcess.restype = wintypes.HANDLE
+    k.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    k.CloseHandle.argtypes = (wintypes.HANDLE,)
+    k.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+    k.QueryFullProcessImageNameW.argtypes = (wintypes.HANDLE, wintypes.DWORD,
+                                             wintypes.LPWSTR,
+                                             ctypes.POINTER(wintypes.DWORD))
+    k.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
+    return ctypes, wintypes, k
+
+
+def pid_alive(pid):
+    """True while process pid runs. No signal is sent (os.kill with signal 0
+    terminates the target on Windows)."""
+    pid = int(pid or 0)
+    if pid <= 0:
+        return False
+    if os.name != "nt":
+        return Path(f"/proc/{pid}").exists()
+    ctypes, wintypes, k = _kernel32()
+    h = k.OpenProcess(_QUERY_LIMITED, False, pid)
+    if not h:
+        return False
+    try:
+        code = wintypes.DWORD()
+        if not k.GetExitCodeProcess(h, ctypes.byref(code)):
+            return False
+        return code.value == _STILL_ACTIVE
+    finally:
+        k.CloseHandle(h)
+
+
+def image_name(pid):
+    """Base name of the executable of pid ('' when unknown)."""
+    if os.name != "nt":
+        return ""
+    ctypes, wintypes, k = _kernel32()
+    h = k.OpenProcess(_QUERY_LIMITED, False, int(pid))
+    if not h:
+        return ""
+    try:
+        buf = ctypes.create_unicode_buffer(1024)
+        size = wintypes.DWORD(1024)
+        if not k.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
+            return ""
+        return Path(buf.value).name
+    finally:
+        k.CloseHandle(h)
+
+
+def terminate_core(pid):
+    """Terminate pid only when it is a python process (our core)."""
+    if os.name != "nt" or not image_name(pid).lower().startswith("python"):
+        return False
+    ctypes, wintypes, k = _kernel32()
+    h = k.OpenProcess(_TERMINATE | _QUERY_LIMITED, False, int(pid))
+    if not h:
+        return False
+    try:
+        return bool(k.TerminateProcess(h, 1))
+    finally:
+        k.CloseHandle(h)
+
+
+def read_heartbeat(path):
+    try:
+        data = json.loads(Path(path).read_text(encoding="ascii"))
+        return {"pid": int(data["pid"]), "port": int(data.get("port", 0)),
+                "updated": float(data["updated"])}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def acquire_lock(runtime):
+    """Hold <runtime>/keepalive.lock for this process; None when another
+    supervisor holds it. The OS drops the lock when the holder dies."""
+    runtime = Path(runtime)
+    runtime.mkdir(parents=True, exist_ok=True)
+    fh = open(runtime / LOCK_FILE, "a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+            fh.seek(0)
+            msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fh.close()
+        return None
+    return fh
+
+
+def release_lock(fh):
+    try:
+        if os.name == "nt":
+            import msvcrt
+            fh.seek(0)
+            msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
+    fh.close()
+
+
+def health_check(runtime, port, timeout=3.0):
+    """True when the core answers /api/health with the current token."""
+    try:
+        token = (Path(runtime) / "token").read_text(encoding="ascii").strip()
+    except OSError:
+        return False
+    req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}/api/health",
+                                 headers={"X-AL-Token": token})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status == 200
+    except (OSError, ValueError):
+        return False
+
+
+class Keepalive:
+    """The supervisor state machine; step() is one poll."""
+
+    def __init__(self, runtime, port, launch, pid_alive=pid_alive, health=None,
+                 terminate=terminate_core, now=time.time, log=None,
+                 stale_s=STALE_S, start_grace_s=START_GRACE_S, backoff=BACKOFF_S,
+                 cap=CAP, window_s=WINDOW_S):
+        self.runtime = Path(runtime)
+        self.port = int(port)
+        self._launch = launch
+        self._alive = pid_alive
+        self._health = health or (lambda: health_check(self.runtime, self.port))
+        self._terminate = terminate
+        self._now = now
+        self._log = log or (lambda line: None)
+        self.stale_s = float(stale_s)
+        self.start_grace_s = float(start_grace_s)
+        self.backoff = tuple(float(x) for x in backoff) or BACKOFF_S
+        self.cap = int(cap)
+        self.window_s = float(window_s)
+        self.pid = None
+        self.seen_beat = False
+        self.launched_at = None
+        self.next_launch = None
+        self.restarts = []
+
+    def _write_state(self, status):
+        data = {"pid": os.getpid(), "status": status, "core_pid": self.pid,
+                "restarts": len(self.restarts), "port": self.port,
+                "updated": self._now()}
+        try:
+            tmp = self.runtime / (STATE_FILE + ".tmp")
+            tmp.write_text(json.dumps(data) + "\n", encoding="ascii")
+            os.replace(tmp, self.runtime / STATE_FILE)
+        except OSError:
+            pass
+
+    def step(self):
+        now = self._now()
+        hb = read_heartbeat(self.runtime / HEARTBEAT_FILE)
+        if hb and self._alive(hb["pid"]):
+            if hb["pid"] != self.pid:
+                self.pid = hb["pid"]
+                self._log(f"watching core pid {self.pid} on port {hb['port']}")
+                self._write_state("watching")
+            self.seen_beat = True
+            self.launched_at = None
+            if now - hb["updated"] > self.stale_s and not self._health():
+                ok = self._terminate(hb["pid"])
+                return self._crashed(now, f"core hung (pid {hb['pid']}, heartbeat "
+                                     f"{now - hb['updated']:.0f} s old, "
+                                     f"terminated={bool(ok)})")
+            return "ok"
+        if self.launched_at is not None and self.pid and self._alive(self.pid):
+            if now - self.launched_at > self.start_grace_s and not self._health():
+                ok = self._terminate(self.pid)
+                return self._crashed(now, f"core start timed out (pid {self.pid}, "
+                                     f"terminated={bool(ok)})")
+            return "starting"
+        if self._health():
+            # a core answers but writes no heartbeat (an older build): leave it
+            if self.next_launch is not None:
+                self.next_launch = None
+                self._log("a core answers /api/health; restart cancelled")
+            return "ok"
+        if self.next_launch is not None:
+            if now >= self.next_launch:
+                return self._launch_core(now)
+            return "waiting"
+        if (self.runtime / STOP_FILE).exists():
+            self._log("user stop (stop.request); not restarting; supervisor exits")
+            self._write_state("user-stop")
+            return "user-stop"
+        if hb is None and self.seen_beat:
+            self._log("user stop (core exited cleanly); not restarting; supervisor exits")
+            self._write_state("user-stop")
+            return "user-stop"
+        if self.launched_at is not None:
+            reason = f"core crash before first heartbeat (pid {self.pid})"
+        elif hb is not None:
+            reason = f"core crash (pid {hb['pid']} gone, heartbeat left behind)"
+        else:
+            reason = "no core running"
+        return self._crashed(now, reason)
+
+    def _crashed(self, now, reason):
+        self.restarts = [t for t in self.restarts if now - t < self.window_s]
+        self.pid = None
+        self.seen_beat = False
+        self.launched_at = None
+        if len(self.restarts) >= self.cap:
+            self._log(f"{reason}; give up: {len(self.restarts)} restarts in "
+                      f"{self.window_s:.0f} s; supervisor exits")
+            self._write_state("gave-up")
+            return "gave-up"
+        delay = self.backoff[min(len(self.restarts), len(self.backoff) - 1)]
+        self.next_launch = now + delay
+        self._log(f"{reason}; restart {len(self.restarts) + 1}/{self.cap} "
+                  f"in {delay:g} s")
+        self._write_state("restarting")
+        return "waiting"
+
+    def _launch_core(self, now):
+        self.next_launch = None
+        self.restarts.append(now)
+        try:
+            self.pid = int(self._launch())
+        except OSError as exc:
+            self.pid = None
+            self.launched_at = now
+            self._log(f"core launch failed: {exc}")
+            return "launched"
+        self.launched_at = now
+        self._log(f"core launched (pid {self.pid})")
+        self._write_state("starting")
+        return "launched"
+
+    def run(self, poll_s=POLL_S, sleep=time.sleep):
+        while True:
+            result = self.step()
+            if result in ("user-stop", "gave-up"):
+                return result
+            sleep(poll_s)
+
+
+def core_command(port, extra=()):
+    exe = Path(sys.executable)
+    if os.name == "nt" and exe.name.lower() == "python.exe":
+        w = exe.with_name("pythonw.exe")
+        if w.exists():
+            exe = w
+    return [str(exe), "-m", "server.al", "--quiet", "--port", str(int(port))] + list(extra)
+
+
+class _Launcher:
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.child = None
+
+    def __call__(self):
+        if self.child is not None:
+            self.child.poll()  # reap the previous core
+        flags = 0
+        if os.name == "nt":
+            flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+        self.child = subprocess.Popen(self.cmd, cwd=str(paths.repo_root()),
+                                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL, close_fds=True,
+                                      creationflags=flags)
+        return self.child.pid
+
+
+def _file_logger(path):
+    def log(line):
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+        text = f"{stamp} keepalive[{os.getpid()}] {line}\n"
+        try:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "a", encoding="ascii", errors="replace", newline="\n") as fh:
+                fh.write(text)
+        except OSError:
+            pass
+    return log
+
+
+def build_parser():
+    p = argparse.ArgumentParser(prog="python -m server.al.keepalive",
+                                description="restart the AshLight core when it dies")
+    p.add_argument("--port", type=int, default=ports.AL_PORT)
+    p.add_argument("--runtime", help="runtime dir (default: the core's)")
+    p.add_argument("--poll", type=float, default=POLL_S)
+    p.add_argument("--stale", type=float, default=STALE_S)
+    p.add_argument("--backoff", default=",".join(f"{x:g}" for x in BACKOFF_S))
+    p.add_argument("--cap", type=int, default=CAP)
+    p.add_argument("--window", type=float, default=WINDOW_S)
+    p.add_argument("--core-args", nargs=argparse.REMAINDER, default=[],
+                   help="extra arguments for the core (must be last)")
+    return p
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    runtime = Path(args.runtime) if args.runtime else paths.runtime_dir()
+    log = _file_logger(paths.all_runtime_paths()["keepalive_log"])
+    lock = acquire_lock(runtime)
+    if lock is None:
+        return 0  # another supervisor is already watching this runtime dir
+    try:
+        backoff = tuple(float(x) for x in args.backoff.split(",") if x.strip())
+        sup = Keepalive(runtime, args.port, _Launcher(core_command(args.port, args.core_args)),
+                        log=log, stale_s=args.stale, backoff=backoff, cap=args.cap,
+                        window_s=args.window)
+        log(f"supervisor started (port {args.port}, poll {args.poll:g} s)")
+        result = sup.run(poll_s=args.poll)
+        return 0 if result == "user-stop" else 3
+    except Exception as exc:  # noqa: BLE001 - last-resort record, pythonw has no stderr
+        log(f"supervisor failed: {exc!r}")
+        raise
+    finally:
+        release_lock(lock)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

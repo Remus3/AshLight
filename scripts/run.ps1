@@ -74,17 +74,20 @@ $env:TEMP = $paths.temp
 $env:TMP = $paths.temp
 $env:AL_SIDECAR_ROOT = $paths.sidecar
 
+# A stop.request left by scripts\stop.ps1 must not stop this start.
+Remove-Item -LiteralPath (Join-Path $paths.runtime 'stop.request') -Force -ErrorAction SilentlyContinue
+
+$pyw = Get-Command pythonw -ErrorAction SilentlyContinue
+$exe = if ($pyw) { $pyw.Source } else { $py }
+$detachEnv = @{ TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar }
+
 if (Test-AlHealth) {
     Write-AlLog "run: core already running on 127.0.0.1:$port (no-op)"
 } else {
     # Detached via WMI (scripts\al_detach.ps1): the core must outlive this
     # script and whatever shell started it. --quiet: core.log is the record.
-    $pyw = Get-Command pythonw -ErrorAction SilentlyContinue
-    $exe = if ($pyw) { $pyw.Source } else { $py }
     $corePid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al', '--quiet') `
-        -WorkingDirectory $Repo -Environment @{
-            TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar
-        }
+        -WorkingDirectory $Repo -Environment $detachEnv
     Write-AlLog "run: core launched detached (pid $corePid)"
     $deadline = (Get-Date).AddSeconds(15)
     while (-not (Test-AlHealth)) {
@@ -96,6 +99,13 @@ if (Test-AlHealth) {
     }
     Write-AlLog "run: core started on 127.0.0.1:$port"
 }
+
+# CORE-KEEPALIVE: a detached supervisor restarts the core if it dies
+# (decision 0005). It adopts the running core; a second copy exits at once
+# (single-instance lock), so this is idempotent. Log: Logs\keepalive.log.
+$supPid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al.keepalive', '--port', [string]$port) `
+    -WorkingDirectory $Repo -Environment $detachEnv
+Write-AlLog "run: keepalive supervisor launched (pid $supPid; stop with scripts\stop.ps1)"
 
 $url = "http://127.0.0.1:$port/#token=" + (Get-AlToken)
 

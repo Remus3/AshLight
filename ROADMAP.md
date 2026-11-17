@@ -208,10 +208,17 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   time of a silent kill. Cause of the 2026-11-16 21:57-22:12 death not
   proven: no crash event, no log line, Start-Process children survived probe
   sub-agent exits.
-- [ ] CORE-KEEPALIVE (build) Restart the core without the operator when it is
-  not answering /api/health (logon scheduled task or watchdog via the kit's
-  task helper, hidden, Start-AlDetached, consent and tail state kept).
-  ACCEPT: core killed by hand is back within 2 min with no input. ZERO-CLICK.
+- [x] CORE-KEEPALIVE (build) run.ps1 starts a detached stdlib supervisor
+  (server/al/keepalive.py, single-instance) that relaunches the core when its
+  pid is gone with core.alive left behind, or when it hangs (heartbeat 90 s
+  stale and /api/health failing); backoff 2/10/30/60/120 s, cap 5 per 15 min
+  with a logged give-up. scripts/stop.ps1 writes ops/runtime/stop.request:
+  the core exits cleanly and is not restarted (decision 0005). End-to-end
+  test kills a real core on a tmp runtime and sees it back. Takes effect on
+  the next run.ps1.
+- [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
+  task, hidden, opt-in recorded), filed by decision 0005 option C.
+  ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
 - [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish

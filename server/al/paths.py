@@ -19,6 +19,7 @@ from pathlib import Path
 
 CODE = "AL"
 SIDECAR_ENV = "AL_SIDECAR_ROOT"
+RUNTIME_ENV = "AL_RUNTIME_DIR"  # tests only: a tmp runtime dir for a test core
 SIDECAR_SUBDIRS = ("Temp", "Build", "Logs", "Cache")
 
 _KIT_DEFAULT = None
@@ -30,7 +31,11 @@ def repo_root():
 
 
 def runtime_dir():
-    """Gitignored per-host state: token, consent, pid."""
+    """Gitignored per-host state: token, consent, pid. AL_RUNTIME_DIR moves it
+    (tests run a real core and supervisor against tmp, never the live dir)."""
+    value = (os.environ.get(RUNTIME_ENV) or "").strip().strip('"')
+    if value:
+        return Path(value).resolve()
     return repo_root() / "ops" / "runtime"
 
 
@@ -95,6 +100,7 @@ def all_runtime_paths(environ=None):
     for name in SIDECAR_SUBDIRS:
         out[name.lower()] = sidecar_dir(name, environ)
     out["core_log"] = out["logs"] / "core.log"
+    out["keepalive_log"] = out["logs"] / "keepalive.log"
     out["npm_cache"] = out["cache"] / "npm"
     out["electron_cache"] = out["cache"] / "electron"
     out["build_stamp"] = out["build"] / "build-stamp.json"
