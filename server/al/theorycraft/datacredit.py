@@ -14,9 +14,11 @@ from .. import DISCLAIMER, paths
 COPYRIGHT = "Game data (c) Grinding Gear Games."
 # Short sentences (design review TC-SNAP-UI-1, design 0001 P1 / P2).
 ATTRIBUTION = (COPYRIGHT + " Item, mod and stat data comes from "
-               "the RePoE fork community export (repoe-fork). Passive tree data comes "
+               "the RePoE fork community export (repoe-fork). Trade search stat ids "
+               "are Grinding Gear Games' trade site data, passed on by repoe-fork. "
+               "Passive tree data comes "
                "from Grinding Gear Games' public skill tree export. AshLight downloaded "
-               "both to this computer when it was built. This product isn't affiliated "
+               "all of it to this computer when it was built. This product isn't affiliated "
                "with or endorsed by Grinding Gear Games in any way.")
 # The UI shows the non-affiliation line on its own already, so the credit line
 # is the attribution without that sentence (never shown twice).

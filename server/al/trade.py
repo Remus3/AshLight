@@ -7,8 +7,9 @@ https://www.pathofexile.com/trade2/search/poe2/<league>?q=<url-encoded JSON>
 that the user may open in their own browser from the dashboard; the core
 never opens it. The `?q=` form carries the same object as a trade search
 body (research 0016: community tools build this link; GGG does not document
-it). The query holds the item name (uniques), base type and rarity only, no
-stat filters (TC-UPGRADE-STATS has no permitted stat-id source yet).
+it). The price query holds the item name (uniques), base type and rarity
+only. The upgrade query may add one weighted stat group whose ids come from
+the cached repoe-fork snapshot (server/al/tradestats.py, decision 0037).
 TC-UPGRADE reuses the same builder: `upgrade_link` searches rare items of
 the base the build wears in the checked slot (server/al/upgrade.py).
 
@@ -16,6 +17,7 @@ This module never reads the clipboard and never sends anything to the game.
 """
 
 import json
+import math
 import urllib.parse
 
 TRADE_SITE = "https://www.pathofexile.com"
@@ -56,9 +58,9 @@ def _search(q, rarity):
 
 # TC-UPGRADE (decision 0017 item 3): the trade site caps a search at a
 # complexity of 200, 4 per stat filter (research 0010 section 4, PoB's
-# TradeQueryGenerator). The upgrade link carries no stat filter until
-# TC-UPGRADE-STATS finds a permitted stat-id source, so its complexity is 0;
-# the cap is checked anyway so a later stat group cannot exceed it.
+# TradeQueryGenerator). The upgrade link carries at most upgrade.MAX_TOP
+# weighted stat filters (TC-UPGRADE-STATS, decision 0037); the cap is
+# checked anyway.
 MAX_COMPLEXITY = 200
 STAT_FILTER_COST = 4
 UPGRADE_RARITY = "RARE"
@@ -75,14 +77,41 @@ def complexity(search):
     return n * STAT_FILTER_COST
 
 
-def upgrade_query(base):
+def _weight_group(stats):
+    """One trade "weight" stat group from [(trade id, weight)] pairs
+    (TC-UPGRADE-STATS, decision 0037): ids of the form explicit.stat_<n>,
+    weights finite and > 0, first id wins on a repeat; None when no pair is
+    usable."""
+    filters, seen = [], set()
+    for pair in stats or ():
+        try:
+            tid, w = pair
+        except (TypeError, ValueError):
+            continue
+        if not (isinstance(tid, str) and tid.startswith("explicit.stat_")
+                and tid[len("explicit.stat_"):].isdigit()) or tid in seen:
+            continue
+        if isinstance(w, bool) or not isinstance(w, (int, float))                 or not math.isfinite(w) or w <= 0:
+            continue
+        seen.add(tid)
+        filters.append({"id": tid, "value": {"weight": round(float(w), 4)}})
+    return {"type": "weight", "filters": filters} if filters else None
+
+
+def upgrade_query(base, stats=None):
     """A trade2 search object for an upgrade candidate: rare items of `base`
-    (the base the build wears in the slot, else the checked item's), base
-    type and rarity only, no stat filters. Raises ValueError "no base type"
-    for a missing base, "too complex" past MAX_COMPLEXITY."""
+    (the base the build wears in the slot, else the checked item's). With
+    `stats` ([(explicit trade id, weight)], TC-UPGRADE-STATS) it adds one
+    weighted stat group and sorts by its sum; without, base type and rarity
+    only. Raises ValueError "no base type" for a missing base, "too complex"
+    past MAX_COMPLEXITY."""
     if not isinstance(base, str) or not base.strip():
         raise ValueError("no base type")
     search = _search({"status": {"option": "online"}, "type": base.strip()}, UPGRADE_RARITY)
+    group = _weight_group(stats)
+    if group is not None:
+        search["query"]["stats"] = [group]
+        search["sort"] = {"statgroup.0": "desc"}
     if complexity(search) > MAX_COMPLEXITY:
         raise ValueError("too complex")
     return search
@@ -109,10 +138,11 @@ def search_link(item, league=None):
     return link_for(build_query(item), league)
 
 
-def upgrade_link(base, league=None):
-    """The trade2 search URL for upgrade candidates of `base` in `league`.
-    Pure. Raises ValueError like upgrade_query."""
-    return link_for(upgrade_query(base), league)
+def upgrade_link(base, league=None, stats=None):
+    """The trade2 search URL for upgrade candidates of `base` in `league`,
+    weighted by `stats` when given. Pure. Raises ValueError like
+    upgrade_query."""
+    return link_for(upgrade_query(base, stats), league)
 
 
 def is_search_link(url):

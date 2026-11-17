@@ -90,6 +90,9 @@ its code (license notes: 0006).
   0001 quotes per changelog entry and at 1.0; baseline UNCHANGED 2026-11-17, 1.0
   re-read pending
   ([0029-policy-wording-watch.md](0029-policy-wording-watch.md))
+- 0030 Trade stat ids source - no GGG source; repoe-fork stat_translations
+  `trade_stats` (already snapshotted) chosen, PoB tables same provenance
+  ([0030-trade-stat-ids-source.md](0030-trade-stat-ids-source.md))
 
 ## Open research (feeds ROADMAP)
 

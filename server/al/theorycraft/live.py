@@ -82,7 +82,8 @@ class LastEval:
     """The last evaluated item, kept so a weights or build change re-scores
     it at once. One per core."""
 
-    def __init__(self, builds, weights, state, league=None, calc=None, rates=None):
+    def __init__(self, builds, weights, state, league=None, calc=None, rates=None,
+                 trade_ids=None):
         self.builds = builds
         self.weights = weights
         self.state = state
@@ -93,6 +94,9 @@ class LastEval:
         # the PoB calc callable (theorycraft.delta) or None while the
         # optional component is off; TC-BRIDGE supplies it
         self.calc = calc
+        # TC-UPGRADE-STATS (decision 0037): a callable returning the trade
+        # stat id index from the cached snapshot ({} while web data is off)
+        self.trade_ids = trade_ids
         # MATH-VALUE: a callable returning the cached poe.ninja rates
         # snapshot (never fetches; empty while web data is off)
         self.rates = rates
@@ -113,7 +117,8 @@ class LastEval:
         with self._lock:
             self._input = (text, slot)
         league = self.league() if callable(self.league) else self.league
-        card = dict(compact(result), upgrade=upgrade_mod.link(result, league),
+        ids = self.trade_ids() if callable(self.trade_ids) else None
+        card = dict(compact(result), upgrade=upgrade_mod.link(result, league, ids),
                     value=self._value(text, result))
         # UTIL-WAYSTONE (decision 0030): the same press on a waystone flags
         # its mods risky for the loaded build; None for any other item
@@ -147,10 +152,11 @@ class LastEval:
         return self.run(last[0], last[1], keep_time=True)
 
 
-def attach(builds, weights, state, league=None, calc=None, rates=None):
+def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids=None):
     """Wire the live views into a core: build summary now and on every load,
     and a LastEval that re-runs on a build change. Returns the LastEval."""
-    last = LastEval(builds, weights, state, league=league, calc=calc, rates=rates)
+    last = LastEval(builds, weights, state, league=league, calc=calc, rates=rates,
+                    trade_ids=trade_ids)
     rev = [0]
 
     def on_build(build):
