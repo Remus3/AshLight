@@ -348,12 +348,22 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   price_until and set_price, so one bad card broke every /api/state;
   (4) FUZZ-4 ninja._num raised OverflowError on a huge JSON int.
   ZERO-CLICK: runs inside pytest; the fixes need no user step.
-- [ ] TEST-SOAK (build) Time-compressed soak harness: the core runs many
+- [x] TEST-SOAK (build) Time-compressed soak harness: the core runs many
   simulated hours of synthetic Client.txt (tools/synth_client.py) with SSE
   clients reconnecting; assert bounded memory (tracemalloc), bounded event
   history, no thread / handle growth. Short variant in every suite, long
   variant opt-in (AL_SOAK=1). ACCEPT: both variants green; defects fixed.
-  ZERO-CLICK: runs inside pytest; the long run is one env var.
+  DONE 2026-11-17: synth_client.play() (five-minute rounds of game time);
+  tests/test_soak.py: 48 simulated hours in every suite (~4 s), AL_SOAK=1
+  500 hours (19 s, second half may not outgrow the first); heap growth
+  measured ~0.7 MB flat (budget 2.5 MB), handles and threads back to the
+  baseline, ring / recent lists / trade cards at their caps; a planted
+  ~700 B/event leak fails it. Defect fixed: (1) SOAK-1 a closed SSE client
+  kept its slot, bus subscription and thread until two writes failed (two
+  15 s heartbeats on a quiet log), so reloading the dashboard filled
+  MAX_SSE_CLIENTS and the overlay got "busy" for 30 s - http.py
+  _client_gone() peeks the socket every loop wake (<= 1 s). ZERO-CLICK:
+  runs inside pytest; the long run is one env var.
 - [ ] TEST-SUPERVISOR (build) Keepalive supervisor kill / hang / restart and
   stop.request paths (decision 0005), plus scripts/run.ps1 / stop.ps1
   idempotency checks; PowerShell validated with powershell.exe 5.1

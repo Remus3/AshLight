@@ -16,6 +16,7 @@ import json
 import logging
 import mimetypes
 import os
+import select
 import socket
 import threading
 import time
@@ -580,6 +581,8 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     wait = min(SSE_WAIT_MAX_S, max(0.0, beat_in))
                 got = sub.get(timeout=wait)
+                if self._client_gone():
+                    break
                 pending.extend(got)
                 now = time.monotonic()
                 if pending and now - last_push >= SSE_MIN_INTERVAL_S:
@@ -608,6 +611,19 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             sub.close()
             self.close_connection = True
+
+    def _client_gone(self):
+        """SOAK-1: True once the SSE client closed its end. The loop wakes
+        at least every SSE_WAIT_MAX_S, so a dropped tab frees its slot,
+        subscription and thread within about a second instead of after two
+        failed writes (up to two heartbeats)."""
+        try:
+            readable, _, _ = select.select([self.connection], [], [], 0)
+            if not readable:
+                return False
+            return self.connection.recv(1, socket.MSG_PEEK) == b""
+        except (OSError, ValueError):
+            return True
 
     @staticmethod
     def _sse_msg(event, data):
