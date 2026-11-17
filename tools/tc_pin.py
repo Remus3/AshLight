@@ -358,13 +358,37 @@ def read_marker(target):
         return None
 
 
-def ensure_extracted(name, spec, archive, parent):
+def tree_digest(target):
+    """SHA-256 over every file under target (sorted relative path, size and
+    content hash; the marker itself excluded). AREA-AUDIT P3-10: the
+    toolchain tree is re-hashed against its marker before each build."""
+    target = Path(target)
+    files = []
+    for dirpath, dirnames, filenames in os.walk(target):
+        dirnames.sort()
+        for fn in filenames:
+            p = Path(dirpath) / fn
+            rel = p.relative_to(target).as_posix()
+            if rel != MARKER:
+                files.append((rel, p))
+    outer = hashlib.sha256()
+    for rel, p in sorted(files):
+        h = hashlib.sha256()
+        with open(p, "rb") as f:
+            for block in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(block)
+        outer.update(f"{rel}\0{p.stat().st_size}\0{h.hexdigest()}\n".encode("utf-8"))
+    return outer.hexdigest()
+
+
+def ensure_extracted(name, spec, archive, parent, force=False):
     """Extract archive into parent/<top_dir> once; a marker carrying the
-    archive sha makes a re-run a no-op."""
+    archive sha makes a re-run a no-op (unless `force`). The marker also
+    records the extracted tree's digest (tree_digest)."""
     top = spec["top_dir"]
     target = parent / top
     marker = read_marker(target)
-    if marker and marker.get("archive_sha256") == spec["archive_sha256"]:
+    if not force and marker and marker.get("archive_sha256") == spec["archive_sha256"]:
         log(f"{name}: extracted tree present (no-op)")
         return target, False
     parent.mkdir(parents=True, exist_ok=True)
@@ -380,7 +404,8 @@ def ensure_extracted(name, spec, archive, parent):
     shutil.rmtree(tmp, ignore_errors=True)
     (target / MARKER).write_text(json.dumps({
         "component": name, "commit": spec.get("commit") or spec.get("tag"),
-        "archive_sha256": spec["archive_sha256"]}, sort_keys=True) + "\n", encoding="ascii")
+        "archive_sha256": spec["archive_sha256"], "tree_sha256": tree_digest(target)},
+        sort_keys=True) + "\n", encoding="ascii")
     log(f"{name}: extracted")
     return target, True
 
@@ -432,15 +457,22 @@ def toolchain_plan(bin_dir):
 
 def ensure_toolchain(doc, lay, fetch=None):
     """Fetch, verify and extract the pinned portable toolchain (decision
-    0027). Returns its bin dir. Raises like the other components."""
+    0027). Returns its bin dir. Raises like the other components.
+    AREA-AUDIT P3-10: called right before each build; the tree is re-hashed
+    against the digest its marker recorded at extraction, and any change (or
+    a marker without a digest) re-extracts it from the verified archive."""
     spec = doc[TOOLCHAIN]
-    marker = read_marker(lay["toolchain_root"])
-    if marker and marker.get("archive_sha256") == spec["archive_sha256"]:
-        log(f"{TOOLCHAIN}: extracted tree present (no-op)")
+    root = lay["toolchain_root"]
+    marker = read_marker(root)
+    if marker and marker.get("archive_sha256") == spec["archive_sha256"] \
+            and marker.get("tree_sha256") == tree_digest(root):
+        log(f"{TOOLCHAIN}: extracted tree present and re-hashed (no-op)")
     else:
+        if marker:
+            log(f"{TOOLCHAIN}: extracted tree does not match its marker; re-extracting")
         fetch = fetch or (lambda url, n: http_stream(url, n, TOOLCHAIN_HOSTS))
         path, _ = ensure_archive(TOOLCHAIN, spec, lay["toolchain_archive"], fetch)
-        ensure_extracted(TOOLCHAIN, spec, path, lay["toolchain_cache"])
+        ensure_extracted(TOOLCHAIN, spec, path, lay["toolchain_cache"], force=True)
     return lay["toolchain_bin"]
 
 

@@ -661,6 +661,7 @@ class SessionState:
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None, "idle": False,
                        "last_line_at": None}
+        self._idle_paused_map = False  # AREA-AUDIT P3-4
 
     # -- updates
     def set_tailer(self, **fields):
@@ -797,6 +798,13 @@ class SessionState:
                 if self.tailer.get("idle"):
                     self.tailer["idle"] = False
                     changed = True
+                    # AREA-AUDIT P3-4: the map clock idle froze runs again
+                    # from this line while the player is still in that map
+                    # (a zone change below then decides as usual); a game
+                    # restart (log_opened) keeps it stopped.
+                    if self._idle_paused_map and t != "log_opened":
+                        self.maps.on_scene(self.zone, now, self.in_hideout)
+                self._idle_paused_map = False
             active = t in summary_mod.ACTIVITY
             if active:
                 self.stretch.begin(self._counters())
@@ -965,7 +973,7 @@ class SessionState:
                 return False
             last = self.tailer["last_line_at"]
             self.tailer["idle"] = True
-            self.maps.pause(last)
+            self._idle_paused_map = self.maps.pause(last)
             if self.stretch.start is not None:
                 self._close_stretch("idle", movers)
             self.version += 1

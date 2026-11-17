@@ -116,6 +116,21 @@ def test_pins_file_env_override(tmp_path):
     assert paths.tc_pins_file(environ={tc_drift.PINS_ENV: str(alt)}) == alt
 
 
+def test_p3_8_pins_env_ignored_outside_a_test_run(tmp_path):
+    """AREA-AUDIT P3-8: the core and setup never import pytest, so the env
+    var cannot move their trust root; only the trial's pytest child sees it."""
+    alt = tmp_path / "cand.json"
+    env = {tc_drift.PINS_ENV: str(alt)}
+    assert paths.tc_pins_file(environ=env, modules={}) == ROOT / "config" / "tc_pins.json"
+    assert paths.tc_pins_file(environ=env, modules={"pytest": object()}) == alt
+    import subprocess
+    code = ("import sys; from server.al import paths; "
+            "print(paths.tc_pins_file(), 'pytest' in sys.modules)")
+    out = subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), capture_output=True,
+                         text=True, env=dict(__import__("os").environ, **env), timeout=60)
+    assert out.stdout.split() == [str(ROOT / "config" / "tc_pins.json"), "False"], out
+
+
 # --- check and the loop hook --------------------------------------------------
 
 def test_check_current_writes_state_and_throttles(tmp_path):
@@ -137,7 +152,7 @@ def test_loop_check_launches_one_trial_per_new_tag(tmp_path):
     root = _root(tmp_path)
     launched = []
     line = tc_drift.loop_check(root, NOW, fetch=_fake(),
-                               launch=lambda r, tag: launched.append(tag) or 777)
+                               launch=lambda r, tag, live=False: launched.append(tag) or 777)
     assert launched == ["v0.24.0"]
     assert "v0.24.0" in line and "trial launched" in line
     st = tc_drift.load_state(root)
@@ -145,14 +160,14 @@ def test_loop_check_launches_one_trial_per_new_tag(tmp_path):
     # a still-running trial is not relaunched before it goes stale
     tc_drift.save_state(root, dict(tc_drift.load_state(root), next_check=0))
     tc_drift.loop_check(root, NOW + 60, fetch=_fake(),
-                        launch=lambda r, tag: launched.append(tag))
+                        launch=lambda r, tag, live=False: launched.append(tag))
     assert launched == ["v0.24.0"]
     # a finished trial for the same tag is never re-run
     st = tc_drift.load_state(root)
     st["trial"] = {"tag": "v0.24.0", "state": "done", "verdict": "red"}
     tc_drift.save_state(root, st)
     line = tc_drift.loop_check(root, NOW + 2 * tc_drift.CHECK_EVERY_S, fetch=_fake(),
-                               launch=lambda r, tag: launched.append(tag))
+                               launch=lambda r, tag, live=False: launched.append(tag))
     assert launched == ["v0.24.0"] and "trial red, hold" in line
 
 
@@ -162,7 +177,7 @@ def test_loop_check_relaunches_a_dead_trial_a_bounded_number_of_times(tmp_path):
     t = NOW
     for _ in range(tc_drift.TRIAL_MAX_LAUNCHES + 2):
         tc_drift.loop_check(root, t, fetch=_fake(),
-                            launch=lambda r, tag: launched.append(tag) or 1)
+                            launch=lambda r, tag, live=False: launched.append(tag) or 1)
         t += tc_drift.CHECK_EVERY_S  # past TRIAL_STALE_S each time
     assert len(launched) == tc_drift.TRIAL_MAX_LAUNCHES
     assert tc_drift.load_state(root)["trial"]["launches"] == tc_drift.TRIAL_MAX_LAUNCHES
@@ -221,8 +236,8 @@ def test_parse_junit_counts_live_cases():
     assert r["failures"] == 1 and r["errors"] == 1 and r["live_ran"] == 1
 
 
-def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None):
-    seen = {"setup": [], "tests": []}
+def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None, live=True):
+    seen = {"setup": [], "tests": [], "live": []}
     it = iter(sizes)
 
     def download(url, dest):
@@ -232,23 +247,24 @@ def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None):
     def setup(doc, environ):
         seen["setup"].append(doc["pob2"]["tag"])
 
-    def run_tests(cand_path, junit_path, environ):
+    def run_tests(cand_path, junit_path, environ, live=False):
         seen["tests"].append(cand_path)
+        seen["live"].append(live)
         assert json.loads(Path(cand_path).read_text(encoding="ascii"))["pob2"]["tag"] == "v0.24.0"
         return tc_drift.parse_junit(junit)
     env = {"AL_SIDECAR_ROOT": str(tmp or root / "sidecar")}
     res = tc_drift.trial(root, "v0.24.0", environ=env, fetch=_fake(), download=download,
-                         setup=setup, run_tests=run_tests, today="2026-12-11")
+                         setup=setup, run_tests=run_tests, today="2026-12-11", live=live)
     return res, seen
 
 
 def test_trial_green_records_ready_candidate(tmp_path):
     root = _root(tmp_path)
     res, seen = _trial(root, JUNIT_GREEN)
-    assert res["verdict"] == "green", res
+    assert res["verdict"] == "live-green", res
     assert seen["setup"] == ["v0.24.0"] and len(seen["tests"]) == 1
     st = tc_drift.load_state(root)
-    assert st["trial"]["verdict"] == "green" and st["trial"]["tag"] == "v0.24.0"
+    assert st["trial"]["verdict"] == "live-green" and st["trial"]["tag"] == "v0.24.0"
     cand = json.loads(Path(st["trial"]["candidate"]).read_text(encoding="ascii"))
     assert cand["pob2"]["archive_sha256"] == "c" * 64 and cand["pob2"]["archive_size"] == 400
 
@@ -290,6 +306,54 @@ def test_apply_moves_pin_only_after_green_trial(tmp_path):
     assert tc_pin.validate_pins(moved) == []
     assert moved["pob2"]["tag"] == "v0.24.0" and moved["_doc"].startswith("TC-PIN")
     assert tc_drift.load_state(root)["trial"]["state"] == "applied"
+
+
+# --- P3-9: unattended trial is static only ---------------------------------
+
+JUNIT_STATIC = """<testsuites><testsuite><testcase name="test_pinned_pob_api_shape"/>
+<testcase name="test_pinned_checkout_is_the_pin"/></testsuite></testsuites>"""
+
+
+def test_p3_9_default_trial_is_static_and_never_applies(tmp_path):
+    root = _root(tmp_path)
+    res, seen = _trial(root, JUNIT_STATIC, live=False)
+    assert seen["live"] == [False]
+    assert res["verdict"] == "static-green" and res["live"] is False, res
+    with pytest.raises(tc_drift.DriftError):
+        tc_drift.apply(root)  # static-green never moves the pin
+    assert "--live" in tc_drift.summary(dict(tc_drift.load_state(root), status="new",
+                                             latest="v0.24.0"))
+    # a static run that somehow executed live tests is an error, not a pass
+    res, _ = _trial(root, JUNIT_GREEN, live=False)
+    assert res["verdict"] == "error"
+
+
+def test_p3_9_static_argv_selects_no_luajit_tests(tmp_path):
+    argv = tc_drift.trial_argv(tmp_path / "j.xml", live=False)
+    assert "-I" in argv
+    assert "tests/test_tc_bridge.py" not in argv and "tests/test_tc_delta.py" not in argv
+    assert argv[argv.index("-k") + 1] == "not test_live"
+    live = tc_drift.trial_argv(tmp_path / "j.xml", live=True)
+    assert "tests/test_tc_bridge.py" in live and "-k" not in live
+
+
+def test_p3_9_loop_launches_live_only_with_local_opt_in(tmp_path, monkeypatch):
+    root = _root(tmp_path)
+    monkeypatch.setenv("TC_DRIFT_LIVE", "1")
+    monkeypatch.setenv(tc_drift.LIVE_OPT_IN_KEY, "true")  # env never enables it
+    got = []
+    tc_drift.loop_check(root, NOW, fetch=_fake(),
+                        launch=lambda r, tag, live=False: got.append(live) or 1)
+    assert got == [False]
+    (root / "config" / "local.json").write_text('{"tc_drift_live_unattended": "true"}',
+                                                encoding="ascii")
+    assert tc_drift.live_opted_in(root) is False  # a real boolean only
+    (root / "config" / "local.json").write_text('{"tc_drift_live_unattended": true}',
+                                                encoding="ascii")
+    tc_drift.save_state(root, {})
+    tc_drift.loop_check(root, NOW, fetch=_fake(),
+                        launch=lambda r, tag, live=False: got.append(live) or 1)
+    assert got == [False, True]
 
 
 def test_hold_note_is_dated():

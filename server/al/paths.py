@@ -100,14 +100,18 @@ def weights_file():
 TC_PINS_ENV = "AL_TC_PINS_FILE"  # TC-DRIFT trial only: a candidate pin file
 
 
-def tc_pins_file(environ=None):
+def tc_pins_file(environ=None, modules=None):
     """TC-PIN: the TRACKED hash pins of the optional calc component
     (decision 0004 item 3); read by tools/tc_pin.py, never written at runtime.
     AL_TC_PINS_FILE points the bridge tests at a candidate pin file in the
-    sidecar during an unattended TC-DRIFT trial (tools/tc_drift.py)."""
+    sidecar during a TC-DRIFT trial (tools/tc_drift.py). AREA-AUDIT P3-8: it
+    is honoured only inside a pytest run (the trial's child and the suite);
+    the core and setup never import pytest, so the env var cannot move their
+    trust root."""
     env = os.environ if environ is None else environ
+    mods = sys.modules if modules is None else modules
     value = (env.get(TC_PINS_ENV) or "").strip().strip('"')
-    if value:
+    if value and "pytest" in mods:
         return Path(value)
     return repo_root() / "config" / "tc_pins.json"
 

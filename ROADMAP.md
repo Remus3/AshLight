@@ -1095,7 +1095,7 @@ merge. Each row names the finding ids it closes.
   0024, 0025 and the 0009 / 0013 amendment; 0023-tc-drift renumbered
   0025; test_audit_batch4 fails on any decision missing from Settled.
 
-- [ ] AUDIT-P3-LOW (build) AREA-AUDIT pass 3 lows P3-4..P3-10
+- [x] AUDIT-P3-LOW (build) AREA-AUDIT pass 3 lows P3-4..P3-10
   (docs/audit/2026-11-17-audit.md "Pass 3"): map clock stays paused after
   idle clears on a non-scene line; ninja.py rollover docstring says "at
   once" (it is the next hourly refresh); calcwire keeps luajit running
@@ -1105,6 +1105,14 @@ merge. Each row names the finding ids it closes.
   toolchain is trusted by its marker (no re-hash before the build).
   ACCEPT: a fix or a recorded ruling and one test each. ZERO-CLICK: code
   row, the loop works it.
+  DONE 2026-11-17 (area-audit batch 6): P3-9 ruled (decision 0025
+  amendment: unattended trial static only, live on --live or local.json
+  opt-in, apply needs live-green); P3-8 env honoured only in pytest;
+  P3-10 toolchain tree re-hashed before each build (0027 amendment); P3-6
+  core loop stops luajit when tc_calc goes off; P3-4 map clock resumes
+  when idle clears in the same map; P3-5 docstring fixed; P3-7 price book
+  saved per request. Tests: test_tc_drift, test_tc_pin, test_tc_wire,
+  test_audit_pass3 (test_p3_*).
 
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the

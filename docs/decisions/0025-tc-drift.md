@@ -66,3 +66,36 @@ a green trial and an ordinary gated commit, as decision 0004 item 3 says.
 - PoB-PoE2 stops publishing GitHub releases (then watch tags with a v0.x
   filter) or ships an official headless API (decision 0004).
 - The loop gains a safe auto-commit path for data-only pin moves.
+
+## Amendment 2026-11-17 (AREA-AUDIT P3-9, P3-8)
+
+Ruled by the adjudicator agent (FLEET item 1): combine "static checks only
+unattended" with an opt-in switch.
+
+- Decision: the unattended TC-DRIFT trial runs download, double hash,
+  extract and the static drift-guard tests only (tests/test_tc_pob_drift_guard.py
+  `-k "not test_live"`: reads the candidate's Lua, runs none of it); verdict
+  `static-green` / `static-red` / `untested` / `error`. Live luajit
+  execution of candidate Lua needs `tc_drift.py trial --tag X --live` (a
+  manual trigger) or `config/local.json` `"tc_drift_live_unattended": true`
+  (a real boolean, default off; no env var enables it). `apply` requires
+  `live-green` from a live trial; static-green never moves the pin. The
+  trial child runs `python -I -m pytest` with a hard timeout, cwd the repo
+  (never the extracted tree). Item 2's "runs the bridge tests" and item 3's
+  "green" now read as above.
+- P3-8: item 4 narrowed. `paths.tc_pins_file()` honours `AL_TC_PINS_FILE`
+  only inside a pytest run (`pytest` in sys.modules: the trial child and
+  the suite). The core and setup never import pytest, so the variable
+  cannot move their trust root.
+- Alternatives: (A) opt-in only, leaving unattended execution the only live
+  path with no static tier; (B) a sandboxed live run, not possible without
+  admin or firewall rules on stdlib Windows (false assurance); status quo,
+  unreviewed upstream Lua run unattended.
+- Why: no unreviewed upstream code runs by default, the static tier keeps
+  early drift detection, and the opt-in keeps ZERO-CLICK for an operator
+  who accepts the risk; apply's live-green gate keeps a review in front of
+  the pin move. No GGG ToS surface change.
+- Reverses if: PoB-PoE2 releases become signed or otherwise verifiable, a
+  real OS sandbox is available without admin, or the operator rules
+  unattended live trials acceptable by default.
+- Tests: tests/test_tc_drift.py test_p3_9_* and test_p3_8_*.

@@ -62,3 +62,71 @@ def test_p3_2_pricebook_parsers_survive_a_huge_json_int():
     got = pricebook.parse_item_overview(body)
     assert [e["name"] for e in got["entries"]] == ["B"]
     assert pricebook._num(10 ** 400) is None
+
+
+def test_p3_5_ninja_rollover_wording_matches_decision_0026():
+    # Behaviour (tests/test_price_book.py rollover test): the next hourly
+    # refresh re-reads the league; the docstring no longer claims "at once".
+    from server.al import ninja
+    doc = " ".join(ninja.__doc__.split())
+    assert "at once" not in doc
+    assert "the next hourly refresh re-reads it (within the hour, decision 0026" in doc
+    assert ninja.MIN_INTERVAL_S <= 3600
+
+
+def test_p3_7_pricebook_saves_each_request_time_as_it_goes(tmp_path):
+    # A core killed mid-loop (up to 22 GETs x 10 s) must not re-request the
+    # types it already asked for: attempt_at is on disk per request.
+    from server.al import pricebook
+    book = pricebook.PriceBook(tmp_path)
+    asked = []
+
+    class Killed(BaseException):
+        pass
+
+    def get(url, etag):
+        asked.append(url)
+        if len(asked) == 3:
+            raise Killed()  # the process dies during the third GET
+        return 200, {}, b'{"core": {}, "lines": []}'
+    try:
+        book.refresh(get, "https://poe.ninja", "Example League", 1000.0)
+    except Killed:
+        pass
+    again = pricebook.PriceBook(tmp_path)  # the restarted core
+    done = [n for n, t in again.doc["types"].items()
+            if isinstance(t.get("attempt_at"), (int, float))]
+    assert len(done) >= 2
+    asked2 = []
+    again.refresh(lambda url, etag: asked2.append(url) or (200, {}, b"{}"),
+                  "https://poe.ninja", "Example League", 1000.0 + 60)
+    assert not set(asked[:2]) & set(asked2)  # not re-requested early
+
+
+def test_p3_4_map_clock_resumes_when_idle_clears_in_the_same_zone():
+    # Idle freezes the map clock at the last line; a later non-scene line in
+    # the same map proves the game is alive, so the clock runs again from it
+    # (the idle gap itself is not counted).
+    from test_live_exit import Clock, consented, in_map, scene, whisper_in
+    clk = Clock()
+    st = consented(clk)
+    in_map(st)  # Crypt entered at 1010
+    st.apply(whisper_in(1100.0))
+    assert st.check_log_idle(now=1100.0 + IDLE) is True
+    back = 1100.0 + IDLE + 600
+    st.apply(whisper_in(back))
+    clk.t = back + 30
+    cur = st.snapshot()["maps"]["current"]
+    assert cur["inside"] is True
+    assert cur["time_s"] == 90.0 + 30.0
+    # a game restart (log_opened) clearing idle keeps the clock stopped
+    st.apply(whisper_in(back + 40))
+    assert st.check_log_idle(now=back + 40 + IDLE) is True
+    st.apply({"type": "log_opened", "recv_ts": back + 40 + IDLE + 5})
+    assert st.snapshot()["maps"]["current"]["inside"] is False
+    # idle that cleared on a zone change: the new zone decides, as before
+    st2 = consented(Clock())
+    in_map(st2)
+    st2.check_log_idle(now=1010.0 + IDLE)
+    st2.apply(scene("Hideout", 1010.0 + IDLE + 9, hideout=True))
+    assert st2.snapshot()["maps"]["current"]["inside"] is False

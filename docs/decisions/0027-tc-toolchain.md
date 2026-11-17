@@ -62,3 +62,19 @@ WinLibs drops `.zip` assets or the pin goes stale with no successor; a
 license objection to running GCC as a build tool appears; LuaJIT ships
 hashed Windows binaries (then use those and drop this entry); or the
 operator installs MSVC / MinGW and wants this entry removed.
+
+## Amendment 2026-11-17 (AREA-AUDIT P3-10)
+
+The extraction marker now also records `tree_sha256` (tools/tc_pin.py
+`tree_digest`: every file's relative path, size and SHA-256, marker
+excluded). `ensure_toolchain` runs right before each LuaJIT build and
+re-hashes the tree; a changed, added or removed file, or a marker without a
+digest, re-extracts the tree from the hash-verified cached archive before
+gcc / mingw32-make run. Alternatives: trust the marker (the audit finding);
+re-download each build (network for nothing). Why: the build tools are the
+only executables run from the tree, and the build is rare (only when
+luajit.exe is not verified), so the re-hash cost is paid once per build.
+Still the same-user model of P2-B3: it stops a stale or partial tree, not a
+same-user attacker who can also edit the archive and marker. Reverses if:
+the re-hash makes setup noticeably slow, or the toolchain entry is dropped.
+Test: tests/test_tc_pin.py test_p3_10_tampered_toolchain_tree_is_reextracted_before_the_build.

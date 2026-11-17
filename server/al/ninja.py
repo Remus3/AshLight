@@ -24,9 +24,10 @@ refresh (same opt-in, contact, User-Agent, league, one request at a time),
 each type on its own hourly gate and ETag; snapshot() adds the movers.
 
 UTIL-1.0-READY (league rollover, research 0019): the auto league is
-re-read at most every LEAGUE_INTERVAL_S (6 h), and at once (still at most
-hourly) when the current league's overview answers 404 or has no lines, so
-a new league (PoE2 1.0, 2026-12-11) is picked up the same day.
+re-read at most every LEAGUE_INTERVAL_S (6 h); after the current league's
+overview answers 404 or has no lines, the next hourly refresh re-reads it
+(within the hour, decision 0026 item 4; AREA-AUDIT P3-5), so a new league
+(PoE2 1.0, 2026-12-11) is picked up the same day.
 """
 
 import json

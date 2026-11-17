@@ -85,10 +85,12 @@ class Provider:
     lazily); tests inject doubles. Availability is re-checked at most every
     RECHECK_S while enabled but not yet available."""
 
-    def __init__(self, enabled, available=None, get_bridge=None, clock=time.monotonic):
+    def __init__(self, enabled, available=None, get_bridge=None, clock=time.monotonic,
+                 stop=None):
         self.enabled = enabled
         self._available = available
         self._get_bridge = get_bridge
+        self._stop = stop  # tests; default: the real shared bridge's shutdown
         self._clock = clock
         self._calc = None
         self._checked = None
@@ -108,6 +110,7 @@ class Provider:
         except Exception:  # noqa: BLE001 - a bad config reads as off
             on = False
         if not on:
+            self.close()  # P3-6: turned off while running -> stop the process
             return None
         with self._lock:
             if self._calc is not None:
@@ -125,10 +128,29 @@ class Provider:
             self._calc = make_calc(self._get_bridge or self._real_bridge)
             return self._calc
 
+    def reap(self):
+        """AREA-AUDIT P3-6, from the core's loop tick: stop the calc process
+        once the user turned tc_calc off. Reads the opt-in only while a calc
+        is running (no config read when idle). True when it stopped one."""
+        if self._calc is None:
+            return False
+        try:
+            on = bool(self.enabled())
+        except Exception:  # noqa: BLE001 - a bad config reads as off
+            on = False
+        return False if on else self.close()
+
     def close(self):
-        """Stop the shared bridge process if this provider started one."""
+        """Stop the shared bridge process if this provider started one;
+        True when it did."""
         with self._lock:
             started, self._calc = self._calc is not None, None
-        if started and self._get_bridge is None:
+            self._checked = None  # a later opt-in re-checks at once
+        if not started:
+            return False
+        if self._stop is not None:
+            self._stop()
+        elif self._get_bridge is None:
             from . import bridge
             bridge.shutdown_shared()
+        return True
