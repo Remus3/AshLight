@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from server.al.theorycraft import lootfilter
+from server.al.theorycraft import basetypes, lootfilter
 from server.al.theorycraft.model import Build, Item
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,3 +116,29 @@ def test_no_code_path_writes_the_filter_to_disk():
     http = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
     block = http.split('if path == "/api/filter":', 1)[1].split("if path ==", 1)[0]
     assert "_send(" in block and ".write" not in block and "open(" not in block
+
+
+def test_unknown_bases_are_left_out_with_a_base_list():
+    # AREA-UTIL b6: an unknown BaseType value would break the player's
+    # filter, so with the snapshot base list only known names stay.
+    names = {"expert hunting bow": "Expert Hunting Bow"}
+    text = lootfilter.generate(BUILD, names)
+    check_grammar(text)
+    assert 'BaseType == "Expert Hunting Bow"\n' in text
+    assert "Odd Hood" not in text and "# Left out 1 item base that the game data does not list." in text
+    assert lootfilter.known(["expert HUNTING bow"], names) == (["Expert Hunting Bow"], [])
+    assert lootfilter.known(["A"], {}) == (["A"], [])
+    text = lootfilter.generate(BUILD, {"x": "X"})
+    check_grammar(text)
+    assert "\nShow\n" not in text and "Left out 2 item bases that" in text
+
+
+@pytest.mark.skipif(not basetypes.default_path().is_file(), reason="base_items snapshot not fetched")
+def test_real_bases_from_the_snapshot_pass():
+    names = basetypes.load_names(basetypes.default_path())
+    for real in ("Waystone (Tier 15)",):
+        assert names.get(real.lower()) == real
+    b = Build(raw_xml="", gear={"Ring 1": Item(1, "", "RARE", "R", "Ruby Ring")})
+    text = lootfilter.generate(b, names)
+    check_grammar(text)
+    assert 'BaseType == "Ruby Ring"' in text

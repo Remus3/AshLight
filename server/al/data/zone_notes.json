@@ -27,7 +27,7 @@
    "default": "Act 2: desert travel by caravan; clear the side zones you need and head for the act boss.",
    "zones": {
     "Vastiri Outskirts": "Desert edge: follow the road to the caravan.",
-    "Ardura Caravan": "Moving town: vendors and travel to the next zone are here.",
+    "The Ardura Caravan": "Moving town: vendors and travel to the next zone are here.",
     "Traitor's Passage": "Cave passage with a boss; it opens the way deeper into the desert.",
     "The Halani Gates": "Gate fight: clear the way through to continue the act.",
     "Keth": "Ruined city: explore toward the Lost City below.",
@@ -42,8 +42,8 @@
     "The Spires of Deshar": "High spires: clear to the top to move the act on.",
     "Mawdun Quarry": "Quarry: fight down toward the mine.",
     "Mawdun Mine": "Mine with a boss at the end; it unlocks the way forward.",
-    "The Dreadnought": "The great war machine: clear through to its front.",
-    "Dreadnought Vanguard": "Act boss at the front: cap your resistances and refill flasks first."
+    "The Dreadnought's Wake": "The trail of the great war machine: clear through to it.",
+    "Dreadnought": "Act boss aboard the war machine: cap your resistances and refill flasks first."
    }
   },
   "G3": {

@@ -485,8 +485,9 @@ them. Pause: `ops/loop/control/HALT`.
   the budgets, or the GC ceiling costs more than it saves.
 - Waystone risk check on the item-check press from an own rule table and
   the build's PoB numbers; search strings (<= 250 chars) copied only on
-  the player's click; own zone notes with an act default (decision 0030).
-  Reverses if: GGG's tool rules change, the search limit differs, or a
+  the player's click; own zone notes with an act default (decision 0030,
+  amended 2026-11-17: rules checked against the snapshot waystone pool,
+  250 is GGG's limit since 0.5.0). Reverses if: GGG's tool rules change, the search limit differs, or a
   note proves copied.
 - The ashlight.filter snippet is only a download on the player's click
   (GET /api/filter); AshLight never writes it into a game folder

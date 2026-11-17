@@ -6,13 +6,17 @@ dashboard's Copy button (the clipboard write happens only on that click,
 decision 0014) and pastes it into the game's search box. AshLight never
 types into the game.
 
-Syntax (the in-game stash / vendor search box, research 0023): one quoted
-string; `|` between terms means OR; a leading `!` inside the quotes means
-NOT. Terms are matched as text on the item, case-insensitive. Terms here
-are plain lower-case words: every character the search box treats as
-syntax (quotes, `|`, `!`, regex marks) is removed, so a term never breaks
-the string. A string is at most MAX_LEN characters (250, reported, not yet
-verified in game); whole terms are dropped from the end to fit, never cut.
+Syntax (the in-game stash / vendor search box, research 0025, checked
+2026-11-17): the box takes a regular expression; one double-quoted string
+keeps spaces inside a term; `|` between terms means OR; a leading `!`
+inside the quotes means NOT (the whole OR group); quoted blocks separated
+by a space must all match (AND, not used here). Terms are matched as text
+on the item, case-insensitive. Terms here are plain lower-case words:
+every character the box treats as syntax (quotes, `|`, `!`, regex marks)
+is removed, so a term never breaks the string. A string is at most MAX_LEN
+characters: 250 since PoE2 0.5.0 ("Increased the maximum character limit
+of search textboxes to 250 characters", GGG patch notes); whole terms are
+dropped from the end to fit, never cut.
 """
 
 import re

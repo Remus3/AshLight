@@ -69,3 +69,18 @@ def test_snapshot_ids_all_resolve():
             continue  # Acts 5-6 after 1.0 (UTIL-1.0-POST)
         name = a.get("name") if isinstance(a, dict) else None
         assert zonenotes.note_for(area_id, name) is not None, area_id
+
+
+@pytest.mark.skipif(not acts.default_path().is_file(), reason="world_areas snapshot not fetched")
+def test_every_zone_note_names_a_snapshot_zone_of_its_act():
+    # AREA-UTIL b6: a note keyed by a name the game never logs would never
+    # show; the snapshot's area names are the [SCENE] names (G2 fix).
+    doc = json.loads(acts.default_path().read_text(encoding="utf-8"))
+    names = {}
+    for area_id, a in doc.items():
+        info = acts.act_of(area_id)
+        if info is not None and isinstance(a, dict) and isinstance(a.get("name"), str):
+            names.setdefault(info["key"], set()).add(a["name"].strip())
+    for key, entry in DOC["acts"].items():
+        for zone in entry.get("zones", {}):
+            assert zone in names.get(key, set()), (key, zone)

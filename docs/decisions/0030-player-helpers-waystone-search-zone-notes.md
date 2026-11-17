@@ -37,6 +37,17 @@ UTIL-WAYSTONE, UTIL-SEARCHSTR, UX-ZONE-NOTES.
    dashboard act card on zone entry; no wiki or poe2db prose (decision
    0009). Notes are general guidance and not yet checked in play.
 
+## Amendment 2026-11-17 (AREA-UTIL batch 6, research 0025)
+
+- The rule table was checked against the snapshot's waystone mod pool:
+  11 rules now (removed 5 that no waystone mod carries, added
+  penetration, bleed, ailments, speed); `less_recovery` is risky always
+  (the mod cuts life and energy shield recovery alike); a rule's `avoid`
+  may hold several terms.
+- The 250-character search limit is GGG's own since PoE2 0.5.0 (patch
+  notes), no longer "reported".
+- Three Act 2 zone-note names were corrected to the snapshot area names.
+
 ## Alternatives
 
 - Waystone: a third-party mod list (poe2.re, Exile-UI): rejected, copied
