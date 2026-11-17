@@ -40,7 +40,9 @@ CANNOT_USE = "you cannot use this item"
 _NUM = r"[+-]?\d+(?:\.\d+)?"
 _RANGE_RE = re.compile(r"\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)")
 _NUM_RE = re.compile(_NUM)
-_TAG_RE = re.compile(r"\s*\((" + "|".join(re.escape(t) for t in MOD_TAGS) + r")\)\s*$", re.I)
+# FUZZ-2: no leading \s* (it made re.search quadratic on a run of spaces);
+# callers rstrip the text before the match.
+_TAG_RE = re.compile(r"\((" + "|".join(re.escape(t) for t in MOD_TAGS) + r")\)\s*$", re.I)
 _POB_PREFIX_RE = re.compile(r"^(?:\{[^{}]*\})+")
 _ADV_HEADER_RE = re.compile(r"^\{\s(.*)\s\}$")
 _PROP_RE = re.compile(r"^([A-Z][A-Za-z0-9 '()/-]{0,40}):\s*(.*)$")

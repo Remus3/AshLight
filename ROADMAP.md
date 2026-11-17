@@ -330,6 +330,40 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   test covered only the tailer at 2 percent). ZERO-CLICK: static part runs
   in every suite; the live part is one env var.
 
+- [x] TEST-FUZZ (build) Stdlib seeded property / fuzz tests (bounded time)
+  for the Client.txt line parser, the item-text parser, the PoB2 share-code
+  codec, the build / character JSON / poe.ninja parsers and the price /
+  snapshot builders: random bytes in mixed encodings, truncations,
+  mutations, extreme numbers, wrong-typed card fields. ACCEPT: fuzz tests
+  green; every crash fixed with a regression test. DONE 2026-11-17:
+  tests/test_fuzz.py (AL_FUZZ_S / AL_FUZZ_SEED for a longer hunt; per-call
+  time bound catches regex blow-ups). Defects fixed: (1) FUZZ-1 the trade
+  whisper regexes backtracked cubically (10 KB whisper 4 s on the tailer
+  thread, a 64 KB line hours) and guild / chat / level-up quadratically -
+  parser.MAX_LINE_CHARS 8192 (longer lines ignored), MAX_TRADE_TEXT 1024
+  (longer whispers stay plain whispers); (2) FUZZ-2 item._TAG_RE's leading
+  \s* made re.search quadratic (60 000 spaces 7 s on a hotkey press);
+  (3) FUZZ-3 wrong-typed card fields (number for item, dict for error,
+  non-list listings, huge ints) raised in eval / price / trade card text,
+  price_until and set_price, so one bad card broke every /api/state;
+  (4) FUZZ-4 ninja._num raised OverflowError on a huge JSON int.
+  ZERO-CLICK: runs inside pytest; the fixes need no user step.
+- [ ] TEST-SOAK (build) Time-compressed soak harness: the core runs many
+  simulated hours of synthetic Client.txt (tools/synth_client.py) with SSE
+  clients reconnecting; assert bounded memory (tracemalloc), bounded event
+  history, no thread / handle growth. Short variant in every suite, long
+  variant opt-in (AL_SOAK=1). ACCEPT: both variants green; defects fixed.
+  ZERO-CLICK: runs inside pytest; the long run is one env var.
+- [ ] TEST-SUPERVISOR (build) Keepalive supervisor kill / hang / restart and
+  stop.request paths (decision 0005), plus scripts/run.ps1 / stop.ps1
+  idempotency checks; PowerShell validated with powershell.exe 5.1
+  ParseFile. ACCEPT: tests green; defects fixed. ZERO-CLICK: runs inside
+  pytest, no user step.
+- [ ] TEST-COVER (build) Line coverage with stdlib trace; the untested
+  modules listed in docs/research (a file); tests added for the worst gaps.
+  ACCEPT: coverage file committed; worst gaps covered. ZERO-CLICK: one
+  command (tools/cover.py) writes the report, no user step.
+
 ## Ops
 
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
