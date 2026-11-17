@@ -427,5 +427,5 @@ them. Pause: `ops/loop/control/HALT`.
   theorycraft/datacredit.py (decision 0020). Reverses if: decision 0009
   reverses for repoe-fork, or live cruel / interlude ids break the prefixes.
 - HUD-ACT-RESUME: act splits rebuild at core start from the current game
-  run's area generations in Client.txt, no persisted state (decision 0022).
+  run's area generations in Client.txt, no persisted state (decision 0023).
   Reverses if: decision 0008 reverses or GGG drops the area generation line.

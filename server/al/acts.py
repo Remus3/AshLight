@@ -27,7 +27,7 @@ Split rules (one run, oldest first):
   saw (live, or read back from Client.txt at core start).
 - Times are receipt times (s). A core restart rebuilds the splits from the
   current game run's area generations in Client.txt, timed by their log
-  lines (HUD-ACT-RESUME, decision 0022; still no persisted state, as
+  lines (HUD-ACT-RESUME, decision 0023; still no persisted state, as
   decision 0008). The game run starts at the log's newest opening marker,
   so a run that began mid-campaign stays partial.
 """

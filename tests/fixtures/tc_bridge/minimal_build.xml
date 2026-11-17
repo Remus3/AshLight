@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding2>
+	<Build level="1" className="Warrior" ascendClassName="None" mainSocketGroup="1" viewMode="CALCS">
+	</Build>
+	<Tree activeSpec="1">
+	</Tree>
+	<Items activeItemSet="1">
+		<ItemSet id="1"/>
+	</Items>
+	<Skills activeSkillSet="1">
+		<SkillSet id="1"/>
+	</Skills>
+	<Config>
+	</Config>
+</PathOfBuilding2>

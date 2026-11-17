@@ -109,7 +109,14 @@ def test_link_uses_the_base_the_build_wears():
     doc = upgrade.link(result, "Example League")
     assert doc == {"slot": "Gloves", "base": "Other Gloves", "source": "equipped",
                    "rarity": "rare", "league": "Example League",
-                   "url": trade.upgrade_link("Other Gloves", "Example League")}
+                   "url": trade.upgrade_link("Other Gloves", "Example League"),
+                   # TC-DELTA: the hand weights of the compared stats (no calc)
+                   "weights": {"source": "hand", "top": [
+                       {"key": "#% increased Attack Speed", "weight": 2},
+                       {"key": "+# to maximum Life", "weight": 1},
+                       {"key": "+#% to Cold Resistance", "weight": 1},
+                       {"key": "+#% to Fire Resistance", "weight": 1},
+                       {"key": "+#% to Lightning Resistance", "weight": 1}]}}
 
 
 def test_link_ring_uses_the_best_slot():

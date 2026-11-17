@@ -19,6 +19,24 @@ item and rebuilds the link with no click (ZERO-CLICK).
 from . import trade
 
 RARITY = "rare"
+MAX_TOP = 6
+
+
+def _weights(result, comp):
+    """TC-DELTA (decision 0022): which weights valued this slot ("pob" when
+    the PoB calc answered, else "hand") and the top positive per-mod
+    weights among the compared stats, ready for the stat filters
+    TC-UPGRADE-STATS will add. Not put in the URL yet."""
+    mw = result.get("mod_weights") if isinstance(result.get("mod_weights"), dict) else {}
+    source = "pob" if mw.get("source") == "pob" else "hand"
+    top = []
+    for row in comp.get("stats") or ():
+        w = row.get("weight") if isinstance(row, dict) else None
+        if row.get("weighted") and isinstance(w, (int, float)) \
+                and not isinstance(w, bool) and w > 0:
+            top.append({"key": row.get("key"), "weight": w})
+    top.sort(key=lambda r: (-r["weight"], str(r["key"]).lower()))
+    return {"source": source, "top": top[:MAX_TOP]}
 
 
 def _best(result):
@@ -32,7 +50,8 @@ def _best(result):
 def link(result, league=None):
     """The upgrade link doc for an evaluate() result, or None when there is
     no slot to search (not an item, no gear slot, no build loaded) or no base
-    type. Doc: slot, base, source ("equipped" | "item"), rarity, league, url.
+    type. Doc: slot, base, source ("equipped" | "item"), rarity, league, url,
+    weights ({source: "pob" | "hand", top: [{key, weight}]}).
     Never raises on input content."""
     if not isinstance(result, dict) or not result.get("ok") or not result.get("slot"):
         return None
@@ -54,4 +73,5 @@ def link(result, league=None):
     if not trade.is_search_link(url):
         return None
     return {"slot": result["slot"], "base": base.strip(), "source": source,
-            "rarity": RARITY, "league": league, "url": url}
+            "rarity": RARITY, "league": league, "url": url,
+            "weights": _weights(result, comp)}

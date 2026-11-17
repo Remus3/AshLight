@@ -14,7 +14,7 @@ Rules (newest line first):
   (the configured one, else the newest level-up seen), across runs, because a
   character's level persists.
 - The scan stops at the marker once the character is known, or at the cap.
-- HUD-ACT-RESUME (decision 0022): the current run's campaign and endgame
+- HUD-ACT-RESUME (decision 0023): the current run's campaign and endgame
   area generations come back as `act_areas`, oldest first, with their line
   time and the character's level then, so the act splits rebuild at core
   start instead of starting empty. A streak of ids in one act (or of maps)

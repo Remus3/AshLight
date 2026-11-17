@@ -1,6 +1,6 @@
 """HUD-ACT-RESUME: act splits survive a core restart. LIVE-RESUME (decision
 0008) also returns the current game run's area generations with their line
-times, and the state rebuilds the splits from them (decision 0022).
+times, and the state rebuilds the splits from them (decision 0023).
 
 Every line here is synthetic (invented names); no real log line is copied."""
 
