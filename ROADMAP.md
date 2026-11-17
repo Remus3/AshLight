@@ -198,6 +198,23 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   sorts by it; no id, no snapshot or web data off = no filter. Tests:
   tests/test_tc_upgrade_stats.py. Coverage of the cached copy: 11 of 39
   default weight keys (resists / attributes have no id there).
+- [x] MATH-TRADESTAT-COVER (build) Only 11 of 39 default weights find a
+  trade stat id in the cached stat_descriptions.json: find why and map
+  every default weight that has an explicit trade stat in the file, exact
+  template match only, never a guessed id (decision 0037 item 3).
+  ZERO-CLICK: the upgrade link picks up any newly mapped id on the next
+  hotkey press; the snapshot refresh is unattended.
+  DONE 2026-11-17 (AREA-MATH b8): cause is upstream - repoe-fork attaches
+  `trade_stats` to only ~290 of ~10800 entries and to none whose English
+  string holds markup ("{0}% to [Resistances|Fire Resistance]"); all 28
+  unmapped default keys have their template in the file with trade_stats
+  null (no implicit / pseudo / local twin either). Coverage before 11/39,
+  after 11/39 on the 2026-11-14 snapshot (every key with an explicit row
+  maps); tradestats.norm now strips markup and tradestats.coverage reports,
+  so a fixed upstream file maps all 39 with no code change. Deriving the
+  number from the stat name was rejected as a guess. Research 0030 sec. 6;
+  tests/test_math_tradestat_cover.py. Next if wanted: decision 0009 check
+  of PoB-PoE2 TradeSiteStats.lua (decision 0037 alternative), adjudicated.
 - [x] TC-PIN (build) Phase 2 setup: tracked pin file (PoB-PoE2 tag, commit,
   archive sha256; LuaJIT version, sha256; no absolute paths); setup.ps1
   step fetches the PoB source archive to the sidecar Cache and builds or
