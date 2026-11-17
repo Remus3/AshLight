@@ -370,6 +370,23 @@ handlers["outputs"] = function(req)
       end
     end
   end
+  -- AREA-AUDIT P7-1: PoB sets some outputs only in its CALCS pass
+  -- (`if breakdown then`: FlaskChargeGen, CharmEffect, ...). A REQUESTED
+  -- key the main table lacks comes from PoB's own calcsOutput (same build,
+  -- same frame); a keyless read stays the main table alone.
+  local calcs = build.calcsTab.calcsOutput
+  if want and type(calcs) == "table" then
+    for k in pairs(want) do
+      local v = calcs[k]
+      if result[k] == nil and main[k] == nil then
+        if type(v) == "boolean" then
+          result[k] = v
+        elseif type(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge then
+          result[k] = v
+        end
+      end
+    end
+  end
   return { outputs = result }
 end
 

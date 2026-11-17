@@ -182,7 +182,8 @@ def _check_rule(rule, m, stats):
 # so the game prints them summed as properties under the tier line
 # ("Item Rarity: +38% (augmented)"). Keys below match those property
 # names; `line` also accepts a plain "N% increased <thing>" mod line. Order
-# is the sentence order. Totals are per kind, every source added.
+# is the sentence order. Totals are per kind: the property (already the
+# game's sum) wins; mod lines add up only for a kind with no property.
 REWARDS = (
     {"id": "quantity", "key": r"item quantity",
      "line": r"increased quantity of items found", "label": "item quantity",
@@ -231,13 +232,16 @@ def rewards(parsed, mods):
                 if v is not None:
                     total[rule["id"]] = total.get(rule["id"], 0.0) + v
                 break
+    # AREA-AUDIT P7-2: an "(augmented)" property is already the game's sum of
+    # every source, so a mod line counts only for a kind with no property
+    from_props = set(total)
     for line in mods or ():
         low = line.lower()
         for rule, rx in _REW_LINE:
             m = rx.match(low)
             if m:
                 v = float(m.group(1))
-                if abs(v) <= MAX_REWARD:
+                if abs(v) <= MAX_REWARD and rule["id"] not in from_props:
                     total[rule["id"]] = total.get(rule["id"], 0.0) + v
                 break
     out = []
