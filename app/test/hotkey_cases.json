@@ -1,0 +1,23 @@
+{
+ "comment": "AREA-AUDIT P5-3: one case table for server/al/hotkeys.py and app/hotkey.js. ok maps an input to its canonical accelerator; bad lists inputs both sides refuse.",
+ "ok": {
+  "Alt+Shift+A": "Alt+Shift+A",
+  "Alt+Shift+E": "Alt+Shift+E",
+  "ctrl+alt+k": "Ctrl+Alt+K",
+  "Control+Shift+F5": "Ctrl+Shift+F5",
+  "CommandOrControl+Shift+Space": "Ctrl+Shift+Space",
+  "Shift+F7": "Shift+F7",
+  "Alt+1": "Alt+1",
+  " Alt + D ": "Alt+D",
+  "Shift+Alt+PageUp": "Alt+Shift+PageUp"
+ },
+ "bad": [
+  "", "C", "Space", "F5", "Enter", "1", "Tab",
+  "Shift+C", "Shift+Space", "Shift+1",
+  "Ctrl+C", "Ctrl+Alt+C", "Ctrl+V", "Ctrl+X", "Ctrl+A", "Ctrl+F", "Ctrl+Enter",
+  "Alt+F4", "Alt+Tab", "Alt+Enter", "Alt+Escape", "Ctrl+Shift+Escape",
+  "Ctrl+Alt+Delete",
+  "Ctrl", "Ctrl+Alt", "Alt+Alt+K", "Ctrl+K+L", "K+Ctrl", "Super+K", "Ctrl++",
+  "Ctrl+Banana", "Ctrl+F25", "Alt+Shift+A\n", "Alt+Shift+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+ ]
+}

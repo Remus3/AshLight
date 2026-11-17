@@ -14,6 +14,7 @@ const http = require("http");
 const path = require("path");
 const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
+const Hotkey = require("./hotkey.js");
 const About = require("./about.js");
 
 const REPO = path.resolve(__dirname, "..");
@@ -72,8 +73,13 @@ function readToken() {
 
 const config = readJson(LOCAL_CONFIG);
 const port = corePort(config);
-const toggleKey = process.env.AL_OVERLAY_TOGGLE || config.overlay_toggle || DEFAULT_TOGGLE;
-const evalKey = process.env.AL_EVAL_HOTKEY || config.eval_hotkey || DEFAULT_EVAL_KEY;
+// AREA-AUDIT P5-3: a bare key (or a game key like Ctrl+C) from the env or a
+// hand-edited / imported config is refused before globalShortcut.register,
+// which would otherwise take that key from the game system-wide.
+const toggleKey = Hotkey.pick([process.env.AL_OVERLAY_TOGGLE, config.overlay_toggle],
+  DEFAULT_TOGGLE, log);
+const evalKey = Hotkey.pick([process.env.AL_EVAL_HOTKEY, config.eval_hotkey],
+  DEFAULT_EVAL_KEY, log);
 
 // Sidecar rule: Electron's profile (cache, crash dumps) never lands in the
 // user's roaming profile - it goes to the AL sidecar (set by run.ps1 from

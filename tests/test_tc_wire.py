@@ -5,6 +5,7 @@ fake_bridge.py) and in-memory doubles; no LuaJIT, no PoB."""
 
 import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -136,27 +137,32 @@ def test_p4_4_config_is_read_only_when_its_mtime_or_size_changes(tmp_path, monke
     log.write_text("", encoding="utf-8")
     core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
     cfg = tmp_path / "rt" / "local.json"
-    cfg.write_text('{"tc_calc": true}', encoding="utf-8")
+    old = int((time.time() - 600) * 1e9)
+
+    def write(text, mtime_ns):
+        # AREA-AUDIT P5-4: a file written more than CONFIG_COARSE_S before the
+        # read is trusted by its stat alone (a fresher one is re-hashed)
+        cfg.write_text(text, encoding="utf-8")
+        os.utime(cfg, ns=(mtime_ns, mtime_ns))
+
+    write('{"tc_calc": true}', old)
     reads = []
-    real = Path.read_text
+    real = Core._read_config_bytes
 
-    def counting(self, *a, **k):
-        if self == core.config_path:
-            reads.append(1)
-        return real(self, *a, **k)
+    def counting(self):
+        reads.append(1)
+        return real(self)
 
-    monkeypatch.setattr(Path, "read_text", counting)
+    monkeypatch.setattr(Core, "_read_config_bytes", counting)
     try:
         for _ in range(20):
             assert core.tc_calc_enabled() is True
             core.tick_sources()
         assert len(reads) == 1
-        cfg.write_text('{"tc_calc": false}', encoding="utf-8")  # size changes
+        write('{"tc_calc": false}', old)  # size changes
         assert core.tc_calc_enabled() is False
         assert len(reads) == 2
-        st = cfg.stat()
-        cfg.write_text('{"tc_calc": 00000}', encoding="utf-8")  # same size
-        os.utime(cfg, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))  # new mtime
+        write('{"tc_calc": 00000}', old + 10**9)  # same size, new mtime
         assert core.tc_calc_enabled() is False
         assert len(reads) == 3
         cfg.unlink()  # a missing file reads as off
