@@ -10,6 +10,7 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
 - strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none'.
 """
 
+import contextlib
 import hmac
 import json
 import logging
@@ -38,6 +39,8 @@ SSE_HEARTBEAT_S = 15.0
 SSE_WAIT_MAX_S = 1.0  # bound on one wait, so shutdown is noticed quickly
 MAX_BODY = 4096
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
+DRAIN_MAX = 1024 * 1024  # a rejected body up to this is read and dropped (413 / 415)
+DRAIN_TIMEOUT_S = 2.0  # ... within this time, else the connection just closes
 # The overlay is a local file:// page; its EventSource / fetch carry
 # "Origin: null". Allowed for these read-only, token-gated GETs only.
 FILE_ORIGIN_PATHS = {"/events", "/api/state", "/api/health"}
@@ -232,18 +235,50 @@ class Handler(BaseHTTPRequestHandler):
     do_PATCH = do_PUT
     do_OPTIONS = do_PUT
 
+    def _discard_body(self, length):
+        """TEST-413-FLAKE: before an early error reply, read and drop a
+        rejected body of at most DRAIN_MAX bytes within DRAIN_TIMEOUT_S, so
+        the client finishes sending and the close is not a reset (WinError
+        10053 / 10054 on the client). Bounded both ways, never an unbounded
+        read; past the cap, a bad length or a timeout the connection just
+        closes after the reply."""
+        self.close_connection = True
+        if length <= 0 or length > DRAIN_MAX:
+            return
+        sock = self.connection
+        old = sock.gettimeout()
+        end = time.monotonic() + DRAIN_TIMEOUT_S
+        left = length
+        try:
+            while left > 0:
+                rem = end - time.monotonic()
+                if rem <= 0:
+                    return
+                sock.settimeout(rem)
+                chunk = self.rfile.read1(min(left, 65536))
+                if not chunk:
+                    return
+                left -= len(chunk)
+        except (OSError, ValueError):
+            return
+        finally:
+            with contextlib.suppress(OSError):
+                sock.settimeout(old)
+
     # -- endpoints
     def _read_json(self, max_body=MAX_BODY):
         """The JSON object body, or None after sending the error reply."""
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-        if ctype != "application/json":
-            self._json(415, {"error": "application/json required"})
-            return None
         try:
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             length = -1
+        if ctype != "application/json":
+            self._discard_body(length)
+            self._json(415, {"error": "application/json required"})
+            return None
         if length < 0 or length > max_body:
+            self._discard_body(length)
             self._json(413, {"error": "body too large"})
             return None
         try:

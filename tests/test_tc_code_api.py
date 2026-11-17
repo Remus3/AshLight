@@ -101,6 +101,34 @@ def test_bad_inputs(env):
     assert doc["build"]["class_name"] == "Warrior"
 
 
+def test_rejected_body_drain_is_bounded(env):
+    """TEST-413-FLAKE: the 413 drain never waits on a client that does not
+    send its declared body (DRAIN_TIMEOUT_S), and a body past DRAIN_MAX is
+    not read at all - the reply still comes."""
+    import socket
+    import time
+    from server.al import http as alhttp
+    srv = env()
+    for length, send in ((MAX_BUILD_BODY + 10, b"A" * 100), (alhttp.DRAIN_MAX + 1, b"")):
+        s = socket.create_connection(("127.0.0.1", srv.port), timeout=10)
+        try:
+            head = (f"POST /api/build-code HTTP/1.1\r\nHost: 127.0.0.1:{srv.port}\r\n"
+                    f"X-AL-Token: {TOKEN}\r\nContent-Type: application/json\r\n"
+                    f"Content-Length: {length}\r\n\r\n").encode("ascii")
+            t0 = time.monotonic()
+            s.sendall(head + send)
+            data = b""
+            while b"\r\n" not in data:
+                chunk = s.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+            assert data.startswith(b"HTTP/1.0 413") or data.startswith(b"HTTP/1.1 413")
+            assert time.monotonic() - t0 < alhttp.DRAIN_TIMEOUT_S + 3
+        finally:
+            s.close()
+
+
 def test_large_real_sized_code_accepted(env):
     srv = env()
     filler = "".join(f'\t\t<PlayerStat stat="S{i}" value="{i * 7919 % 100003}"/>\n'

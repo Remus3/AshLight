@@ -1544,6 +1544,15 @@ def tick(dry_run=False, no_push=False, deps=None):
 
 # ---------------------------------------------------------------- lane worker
 
+def lane_checklist(rec):
+    """LANE-CHECKLIST (FLEET item 13 d): the dispatched item as the lane
+    progress file's one remaining row; eta_s None = the lane's live ETA."""
+    title = ascii_text(" ".join(str(rec.get("title") or rec.get("label")
+                                    or rec["id"]).split()), 70)
+    return [{"id": str(rec["id"]), "task": title or str(rec["id"]),
+             "state": f"{rec.get('lane') or 'lane'} running", "eta_s": None}]
+
+
 def lane_worker(iid, deps=None, run_lane=None):
     """The detached process for one dispatched item: one al_lane.run_lane call."""
     d = deps or Deps()
@@ -1593,7 +1602,7 @@ def lane_worker(iid, deps=None, run_lane=None):
         line = run_lane(rec["lane"], rec["prompt"], writes_code=True, timeout=timeout,
                         root=d.root, spawn=spawn, eta_kind=f"item-{rec.get('kind') or 'plan'}",
                         sample_retry=rec.get("attempts", 1) > 1, sample_label=rec["id"],
-                        **route)
+                        checklist=lane_checklist(rec), **route)
     except Exception as exc:  # noqa: BLE001 - LaneRefused, Refused, OSError: all retryable
         text = f"{type(exc).__name__}: {exc}"
         if is_limit(text):
