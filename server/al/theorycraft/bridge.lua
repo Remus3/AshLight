@@ -312,6 +312,12 @@ handlers["load_build"] = function(req)
   frame()
   local build = build_mode()
   if not build or not build.calcsTab then error("PoB did not load the build", 0) end
+  -- TC-LIVE: a load does not always recalculate on the next frame (seen
+  -- with a sparse build after a full one: the old mainOutput stayed), so
+  -- rebuild the output once here; reads never see a stale build.
+  if type(build.calcsTab.BuildOutput) == "function" then
+    build.calcsTab:BuildOutput()
+  end
   return { loaded = true }
 end
 

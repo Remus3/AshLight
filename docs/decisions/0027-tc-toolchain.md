@@ -1,4 +1,4 @@
-# 0026 - TC-LIVE: pinned portable C toolchain for the LuaJIT build
+# 0027 - TC-LIVE: pinned portable C toolchain for the LuaJIT build
 
 Date: 2026-11-17. Trigger: ROADMAP row AUDIT-TC-BRIDGE-LIVE (audit pass 2,
 P2-C1). The machine has no C compiler, listed as operator act i. The

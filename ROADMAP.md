@@ -654,7 +654,7 @@ merge. Each row names the finding ids it closes.
   this machine; no gui_expected.json). Only the fake-bridge protocol tests
   ran. ACCEPT: the live 0.1 percent test passes once (no skip).
   ZERO-CLICK: the live tests run by themselves once both exist.
-  result: operator act i replaced by decision 0026 (hash-pinned WinLibs
+  result: operator act i replaced by decision 0027 (hash-pinned WinLibs
   MinGW-w64 .zip in the sidecar Cache, used only when no system compiler).
   setup.ps1 -TcCalc built luajit.exe (static) and read back ready / no-op.
   The real component exposed two bridge.lua bugs, fixed: PoB's '#@' first
@@ -665,7 +665,12 @@ merge. Each row names the finding ids it closes.
   Evasion 19583, ...) match the bridge within 0.1 percent (largest gap
   0.024 percent, CritChance display rounding). The reference sits untracked
   in the sidecar Cache\tc_bridge (owner not asked); the live tests read it
-  via paths.py and still skip on machines without it.
+  via paths.py and still skip on machines without it. Also: load_build now
+  forces one BuildOutput (a sparse build after a full one kept the stale
+  output); test_live_reload sets characterLevelAutoMode="false" so level 90
+  really differs. Residual (PoB side, not filed as a defect): the sparse
+  minimal fixture loaded after a full real build inherits its class (Life
+  702 vs 65 fresh); full real builds reload exactly (x, y, x identical).
 - [ ] AUDIT-TC-WIRE (build) Pass 2 finding P2-C2 (medium): TC-DELTA is not
   wired - core.tc_calc is always None (core.py "TC-BRIDGE sets it", but no
   code does) and no adapter maps Bridge (load_build / set_item / outputs)

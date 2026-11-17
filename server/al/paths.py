@@ -140,7 +140,7 @@ def all_runtime_paths(environ=None):
     out["luajit_cache"] = out["cache"] / "luajit"  # LuaJIT source archive
     out["luajit_build"] = out["build"] / "luajit"  # LuaJIT source tree + luajit.exe
     out["tc_stamp"] = out["build"] / "tc-pins-stamp.json"
-    # decision 0026: optional pinned portable C toolchain (LuaJIT build only)
+    # decision 0027: optional pinned portable C toolchain (LuaJIT build only)
     out["toolchain_cache"] = out["cache"] / "toolchain"
     # TC-LIVE: PoB GUI reference values for the live bridge test (untracked)
     out["tc_bridge_ref"] = out["cache"] / "tc_bridge" / "gui_expected.json"

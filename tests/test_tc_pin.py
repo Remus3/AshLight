@@ -266,7 +266,7 @@ def test_http_stream_refuses_a_host_off_the_allowlist():
         next(tc_pin.http_stream("http://github.com/x.zip", 10))
 
 
-# --- decision 0026: the optional pinned portable toolchain ------------------
+# --- decision 0027: the optional pinned portable toolchain ------------------
 
 TC_TAG = "16.2.0posix-14.0.0-ucrt-r9"
 TC_ASSET = "winlibs-x86_64-test.zip"

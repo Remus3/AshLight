@@ -17,7 +17,7 @@ What it does, all under the AL sidecar (server/al/paths.py):
   source into Build\\luajit\\;
 - builds luajit.exe from the verified LuaJIT source with a compiler on PATH
   (MSVC cl via msvcbuild.bat, else MinGW); without one it falls back to the
-  OPTIONAL pinned portable toolchain (decision 0026: a WinLibs MinGW-w64
+  OPTIONAL pinned portable toolchain (decision 0027: a WinLibs MinGW-w64
   release .zip, SHA-256 + size pinned, fetched into Cache\\toolchain\\ only,
   on PATH only inside the build subprocess); without either it reports
   "source-only" and the core keeps working (the component is optional);
@@ -53,7 +53,7 @@ from server.al import exepin, paths, webfetch  # noqa: E402
 
 COMPONENTS = ("pob2", "luajit")
 ALLOWED_HOSTS = ("github.com", "codeload.github.com")
-# Decision 0026: a GitHub release asset redirects to its asset host.
+# Decision 0027: a GitHub release asset redirects to its asset host.
 TOOLCHAIN = "toolchain"
 TOOLCHAIN_HOSTS = ALLOWED_HOSTS + ("release-assets.githubusercontent.com",
                                    "objects.githubusercontent.com")
@@ -129,7 +129,7 @@ def validate_pins(doc):
             out.append(f"{name}: missing")
             continue
         out.extend(f"{name}: {p}" for p in _validate_spec(name, spec))
-    if TOOLCHAIN in doc:  # optional (decision 0026)
+    if TOOLCHAIN in doc:  # optional (decision 0027)
         spec = doc[TOOLCHAIN]
         if not isinstance(spec, dict):
             out.append(f"{TOOLCHAIN}: not an object")
@@ -226,7 +226,7 @@ def layout(doc, environ=None):
         "luajit_exe": lj_src / "src" / "luajit.exe",
         "stamp": p["tc_stamp"],
         "temp": p["temp"],
-        # decision 0026: the optional portable build toolchain
+        # decision 0027: the optional portable build toolchain
         "toolchain_cache": p["toolchain_cache"],
         "toolchain_archive": p["toolchain_cache"] / "toolchain.zip",
         "toolchain_root": p["toolchain_cache"] / TOOLCHAIN_TOP,
@@ -409,7 +409,7 @@ def toolchain_env(bin_dir, temp):
     """A minimal build env for the pinned toolchain: its bin first, then the
     Windows system dirs only. No MSYS / Git-for-Windows shell or TERM leaks
     in (LuaJIT's Makefile would then take the POSIX host path), and nothing
-    outside this subprocess sees the PATH change (decision 0026)."""
+    outside this subprocess sees the PATH change (decision 0027)."""
     root = os.environ.get("SystemRoot") or os.environ.get("SYSTEMROOT") or "C" + ":\\Windows"
     env = {k: os.environ[k] for k in ("SystemDrive", "COMSPEC", "PATHEXT",
                                       "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE",
@@ -432,7 +432,7 @@ def toolchain_plan(bin_dir):
 
 def ensure_toolchain(doc, lay, fetch=None):
     """Fetch, verify and extract the pinned portable toolchain (decision
-    0026). Returns its bin dir. Raises like the other components."""
+    0027). Returns its bin dir. Raises like the other components."""
     spec = doc[TOOLCHAIN]
     marker = read_marker(lay["toolchain_root"])
     if marker and marker.get("archive_sha256") == spec["archive_sha256"]:

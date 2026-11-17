@@ -269,7 +269,9 @@ def test_live_reload_does_not_leak_state(live_bridge):
     """TC-DRIFT / research 0017: PoB dev touched the headless global cache
     cleanup; loading build A, then B, then A again must give A's outputs."""
     a = (FIX / "minimal_build.xml").read_text(encoding="ascii")
-    b = a.replace('level="1"', 'level="90"', 1)
+    # TC-LIVE: PoB-PoE2 v0.23.1 derives the level from spent points unless
+    # characterLevelAutoMode is off, so level="90" alone changes nothing.
+    b = a.replace('level="1"', 'level="90" characterLevelAutoMode="false"', 1)
     assert a != b
     live_bridge.load_build(a)
     first = live_bridge.outputs()
