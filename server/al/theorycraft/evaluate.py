@@ -16,6 +16,7 @@ import math
 
 from . import delta as delta_mod
 from . import item as item_parser
+from . import pobweights
 from . import weights as weights_mod
 
 UPGRADE, SIDEGRADE, DOWNGRADE = "upgrade", "sidegrade", "downgrade"
@@ -147,9 +148,11 @@ def _keys(new_stats, old_stats):
     return list(keys.values())
 
 
-def _pob(out, item_text, build, slots, new_stats, calc, blend, side):
+def _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache=None):
     """TC-DELTA (decision 0022): replace the hand-weight comparisons with
-    PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError."""
+    PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError.
+    MATH-WEIGHTS: with a pobweights cache only unmeasured keys are probed."""
+    probe = cache.mod_weights if cache is not None else delta_mod.mod_weights
     base = delta_mod.outputs(calc, build)
     comps, per_slot = [], {}
     for s in slots:
@@ -158,8 +161,7 @@ def _pob(out, item_text, build, slots, new_stats, calc, blend, side):
         old_stats = stats_of(old_parsed) if old_parsed is not None else {}
         d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=base)
         carrier = old_item.text if old_item is not None else item_text
-        mw = delta_mod.mod_weights(calc, build, s, carrier, _keys(new_stats, old_stats),
-                                   blend=blend)
+        mw = probe(calc, build, s, carrier, _keys(new_stats, old_stats), blend=blend)
         table = weights_mod.lookup(mw["weights"])
         c = _compare(s, new_stats, score(new_stats, table), old_item, table, side)
         c.update(score_delta=_clean(d["score_delta"]),
@@ -176,14 +178,48 @@ def _pob(out, item_text, build, slots, new_stats, calc, blend, side):
                             "weights": dict(mw["weights"]), "detail": dict(mw["detail"])})
 
 
-def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None):
+def _cached(out, build, slots, new_stats, cache, blend, side, notice):
+    """MATH-WEIGHTS: with the calc off or failing, score with the weights PoB
+    measured earlier for this same build, when every slot has some. The
+    score is then PoB's blended percent per point, so the verdict uses
+    delta.verdict's band. Returns True when it scored."""
+    tables = {}
+    for s in slots:
+        w = cache.fallback(build, s, blend)
+        if not w:
+            return False
+        tables[s] = (w, weights_mod.lookup(w))
+    comps = []
+    for s in slots:
+        table = tables[s][1]
+        c = _compare(s, new_stats, score(new_stats, table), build.equipped(s), table, side)
+        c["verdict"] = delta_mod.verdict(c["score_delta"])
+        comps.append(c)
+    best = max(comps, key=lambda c: c["score_delta"])
+    w, table = tables[best["slot"]]
+    out.update(comparisons=comps, slot=best["slot"], verdict=best["verdict"],
+               score_delta=best["score_delta"], score=_clean(score(new_stats, table)),
+               unweighted=sorted(k for k in new_stats if k.lower() not in table),
+               calc={"source": pobweights.SOURCE_CACHED, "notice": notice},
+               mod_weights={"source": pobweights.SOURCE_CACHED, "slot": best["slot"],
+                            "weights": dict(w)})
+    return True
+
+
+def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
+             cache=None):
     """Evaluate item text against a Build (or None). Never raises on input
     content; problems come back as `error` / `warnings`.
 
     `calc` (TC-DELTA): the optional PoB calc callable (theorycraft.delta);
     None means the component is off. With it the verdict comes from PoB's
     DPS / EHP deltas; without it, or when it fails, the stat weights score
-    the item and `calc.notice` says why ("off" / "failed")."""
+    the item and `calc.notice` says why ("off" / "failed").
+
+    `cache` (MATH-WEIGHTS): an optional pobweights.PobWeightCache; it
+    saves calc probes, and with the calc off or failing it scores with the
+    PoB weights measured earlier for this build (calc.source
+    "pob_cached")."""
     stat_weights, side = _weights_of(weights)
     table = weights_mod.lookup(stat_weights)
     parsed = item_parser.parse(item_text)
@@ -225,8 +261,11 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None):
     if calc is not None:
         try:
             # _pob updates `out` only after every calc call succeeded
-            _pob(out, item_text, build, slots, new_stats, calc, blend, side)
+            _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache)
+            return out
         except delta_mod.CalcError:
             out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
                            "notice": delta_mod.NOTICE_FAILED}
+    if cache is not None:
+        _cached(out, build, slots, new_stats, cache, blend, side, out["calc"]["notice"])
     return out

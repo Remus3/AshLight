@@ -28,7 +28,8 @@ def _weights(result, comp):
     weights among the compared stats, ready for the stat filters
     TC-UPGRADE-STATS will add. Not put in the URL yet."""
     mw = result.get("mod_weights") if isinstance(result.get("mod_weights"), dict) else {}
-    source = "pob" if mw.get("source") == "pob" else "hand"
+    # MATH-WEIGHTS: "pob_cached" = PoB weights measured earlier for this build
+    source = mw.get("source") if mw.get("source") in ("pob", "pob_cached") else "hand"
     top = []
     for row in comp.get("stats") or ():
         w = row.get("weight") if isinstance(row, dict) else None

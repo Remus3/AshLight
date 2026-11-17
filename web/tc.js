@@ -164,6 +164,9 @@
     /* TC-DELTA: with Path of Building scoring, only mods with no number
        stay uncounted, and a hand weight would not change that */
     var pob = !!(ev.calc && ev.calc.source === "pob");
+    /* MATH-WEIGHTS: weights Path of Building measured earlier for this
+       build; a stat it has not measured yet is not counted */
+    var cached = !!(ev.calc && ev.calc.source === "pob_cached");
     return {
       verdict: verdict, state: VERDICT_STATE[verdict] || "pending", word: word,
       sentence: t.sentence || "", item: t.item || "",
@@ -173,6 +176,8 @@
       calc: typeof t.calc === "string" ? t.calc : "",
       unweighted: !unweighted.length ? ""
         : pob ? "Not counted (the mod has no number): " + labels + "."
+        : cached ? "Not counted (Path of Building has not measured these for this build yet): " +
+          labels + "."
         : "Not counted (no weight yet): " + labels + ". Add a weight under Stat weights to count them."
     };
   }

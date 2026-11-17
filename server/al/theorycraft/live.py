@@ -18,6 +18,7 @@ import threading
 from .. import upgrade as upgrade_mod
 from . import evaluate as tc_evaluate
 from . import item as item_parser
+from . import pobweights
 from . import value as value_mod
 
 MAX_COMPARISONS = 3
@@ -89,6 +90,10 @@ class LastEval:
         # MATH-VALUE: a callable returning the cached poe.ninja rates
         # snapshot (never fetches; empty while web data is off)
         self.rates = rates
+        # MATH-WEIGHTS: PoB-measured stat weights per build / slot, so a
+        # re-check probes only new stats and a calc outage still scores
+        # with this build's PoB weights
+        self.pob_weights = pobweights.PobWeightCache()
         self._input = None
         self._lock = threading.Lock()
 
@@ -98,7 +103,7 @@ class LastEval:
         `upgrade`: the offline upgrade-search link doc, or None (TC-UPGRADE)."""
         calc = self.calc() if callable(self.calc) else None
         result = tc_evaluate.evaluate(text, self.builds.build, self.weights.get(), slot=slot,
-                                      calc=calc)
+                                      calc=calc, cache=self.pob_weights)
         with self._lock:
             self._input = (text, slot)
         league = self.league() if callable(self.league) else self.league

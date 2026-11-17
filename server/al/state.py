@@ -208,6 +208,18 @@ CALC_NOTICE_TEXT = {
 }
 
 
+# MATH-WEIGHTS: the calc is off or failed, but Path of Building measured
+# stat weights for this same build earlier, so those scored the item
+CALC_CACHED_TEXT = {
+    "off": ("Scored with the stat weights Path of Building measured for this "
+            "build earlier. DPS and EHP are not shown because the Path of "
+            "Building calc is off."),
+    "failed": ("Scored with the stat weights Path of Building measured for this "
+               "build earlier. DPS and EHP are not shown because Path of Building "
+               "could not be reached. Try the check again."),
+}
+
+
 def _pct_text(change):
     p = (change or {}).get("pct")
     return "unknown" if p is None else _signed(p) + "%"
@@ -225,6 +237,8 @@ def _calc_text(card, best):
                 f"to {_num_text(dps.get('new'))}), EHP {_pct_text(ehp)} (from "
                 f"{_num_text(ehp.get('old'))} to {_num_text(ehp.get('new'))}), with this "
                 f"item in {slot}.", line)
+    if calc.get("source") == "pob_cached":
+        return CALC_CACHED_TEXT.get(calc.get("notice"), CALC_CACHED_TEXT["off"]), None
     return CALC_NOTICE_TEXT.get(calc.get("notice"), ""), None
 
 
