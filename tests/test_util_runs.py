@@ -3,7 +3,7 @@ folded from Client.txt events the core already parses (area generation,
 scene change, death). Exact-output tests on replayed event sequences; no
 network, no game."""
 
-from server.al import runs
+from server.al import mapladder, runs
 from server.al.state import SessionState
 
 
@@ -109,7 +109,8 @@ def test_map_view_empty_and_plural_text():
     assert v == {"count": 0, "done": 0, "current": None, "recent": [],
                  "avg_s": None, "avg_text": "", "per_hour": None,
                  "rate_text": "", "deaths_text": "",
-                 "empty_text": runs.MAPS_EMPTY_TEXT}
+                 "empty_text": runs.MAPS_EMPTY_TEXT,
+                 "ladder": mapladder.ladder([])}  # UTIL-MAP-LADDER
     m = runs.MapRuns()
     for i, at in enumerate((0.0, 100.0, 300.0)):
         m.on_generated("MapCrypt", at, 65)

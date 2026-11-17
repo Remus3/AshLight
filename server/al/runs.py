@@ -18,7 +18,8 @@ Map runs (UTIL-MAPS):
   its clock; the clock runs only while the player's scene is that map, so
   hideout trips and loading screens do not count. A map that never got a
   scene is named from its id (`MapCrypt` -> `Crypt`).
-- A death counts into the map only while the player is in it.
+- A death counts into the map only while the player is in it; so does
+  a level-up of the player (UTIL-MAP-LADDER: level-ups earned in maps).
 - History is in memory, like the rest of the session (decision 0008); at
   core start replay() rebuilds the current game run's maps and deaths from
   the backward scan of Client.txt (UTIL-MAPS-RESUME), nothing persisted.
@@ -30,7 +31,7 @@ area level, the character level and the time spent in the zone before it.
 import collections
 import re
 
-from . import acts
+from . import acts, mapladder
 
 MAX_MAPS = 200
 RECENT_MAPS = 5
@@ -114,7 +115,8 @@ class MapRuns:
                 self.first_at = at
             self.cur = {"area_id": area_id, "area_level": area_level,
                         "seed": seed, "scene": None, "in_s": 0.0,
-                        "entered_at": None, "deaths": 0}
+                        "entered_at": None, "deaths": 0, "level_ups": 0,
+                        "opened_at": at}
             return True
         if acts.act_of(area_id) is not None:
             return self._close(at)
@@ -155,6 +157,32 @@ class MapRuns:
         self.deaths += 1
         return True
 
+    def on_level_up(self, at):
+        """UTIL-MAP-LADDER: the player levelled up; counts into the map
+        only while the player is in it."""
+        m = self.cur
+        if m is None or m["entered_at"] is None:
+            return False
+        m["level_ups"] += 1
+        return True
+
+    def ladder_rows(self, now):
+        """The session's maps for mapladder (finished ones and the open
+        one), with what a saved record needs."""
+        out = [dict(area_id=m["area_id"], seed=m.get("seed"),
+                    opened_at=m.get("opened_at"), area_level=m["area_level"],
+                    time_s=m["in_s"], deaths=m["deaths"],
+                    level_ups=m.get("level_ups", 0), done=True)
+               for m in self.closed]
+        if self.cur is not None:
+            m = self.cur
+            out.append(dict(area_id=m["area_id"], seed=m.get("seed"),
+                            opened_at=m.get("opened_at"),
+                            area_level=m["area_level"], time_s=self._time(m, now),
+                            deaths=m["deaths"], level_ups=m.get("level_ups", 0),
+                            done=False))
+        return out
+
     def _row(self, m, now):
         return {"name": map_name(m["area_id"], m["scene"]),
                 "area_level": m["area_level"], "time_s": self._time(m, now),
@@ -193,7 +221,9 @@ class MapRuns:
         return {"count": self.count, "done": self.done, "current": cur,
                 "recent": recent, "avg_s": avg, "avg_text": avg_text,
                 "per_hour": rate, "rate_text": rate_text,
-                "deaths_text": deaths_text, "empty_text": MAPS_EMPTY_TEXT}
+                "deaths_text": deaths_text, "empty_text": MAPS_EMPTY_TEXT,
+                # UTIL-MAP-LADDER: this session per map area level
+                "ladder": mapladder.ladder(self.ladder_rows(now))}
 
 
 def death_text(zone, area_level, level, zone_s):
@@ -291,6 +321,7 @@ def replay(events, me=None):
         elif t == "level_up":
             if e.get("character") == me:
                 level = e.get("level")
+                maps.on_level_up(at)
         elif t == "death":
             if me is None or e.get("character") == me:
                 log.add(at=at, zone=zone, area_level=area_level, level=level,
