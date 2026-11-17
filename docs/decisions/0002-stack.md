@@ -144,3 +144,12 @@ Game FPS proxy (decision 0006: system-wide counters only, 5 s samples):
   loss; it shows only that the overlay adds no measurable GPU work.
   STILL NEEDED: an in-map run (same map, overlay off vs on idle vs on
   updating), reading the game's own FPS display, Windowed Fullscreen.
+
+## Measured 2026-11-17 (TEST-OVL, automated smoke)
+
+`AL_OVERLAY_SMOKE=1 python -m pytest tests/test_overlay_smoke.py` (isolated
+profile, no core, overlay idle): 2 electron.exe processes, peak summed
+working set 142.6 MB, idle CPU 0.000 percent of one core over 7 s, rc 0.
+Whole-core idle (tailer + HTTP + 2 SSE streams, tests/test_budgets.py):
+0.000 percent of one core over 3 s. In-map FPS (OVL-FPS) still needs the
+operator's play session.

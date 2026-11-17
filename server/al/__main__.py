@@ -176,6 +176,10 @@ def main(argv=None):
             if stop_requested(stop_file):
                 log.info("stop requested (%s); exiting cleanly", STOP_FILE)
                 break
+            try:
+                core.ensure_tailing()  # TEST-E2E: log found later / moved
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("ensure_tailing failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:

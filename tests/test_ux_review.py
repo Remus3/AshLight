@@ -252,3 +252,39 @@ def test_viewport_meta_allows_zoom():
     m = re.search(r'<meta name="viewport" content="([^"]+)"', html)
     assert m and "width=device-width" in m.group(1)
     assert "maximum-scale" not in m.group(1) and "user-scalable" not in m.group(1)
+
+
+def test_stat_tile_sub_line_wraps_long_names():
+    """UX-U7 (live 320 px pass): an unbroken character name under the level
+    overflowed its tile into the deaths tile; the sub line must wrap."""
+    bodies = [b for s, b in _rules(_strip_media(_css(APP_CSS))) if s == ".stat .sub"]
+    assert bodies and any(re.search(r"overflow-wrap\s*:\s*anywhere", b) for b in bodies)
+
+
+def test_overlay_forced_colours_keeps_window_transparent():
+    """UX-U8: in forced colours Chromium paints the viewport Canvas, which
+    would make the click-through overlay an opaque block over the game. The
+    root opts out and stays transparent; the plates opt back in."""
+    block = _media(_css(OVERLAY_CSS), "forced-colors: active")
+    assert block, "overlay needs a forced-colors block"
+    rules = dict(_rules(block))
+    root = rules.get("html, body", "")
+    assert re.search(r"forced-color-adjust\s*:\s*none", root)
+    assert re.search(r"background\s*:\s*transparent", root)
+    plates = rules.get(".hud, .trade, .evalcard", "")
+    assert re.search(r"forced-color-adjust\s*:\s*auto", plates)
+
+
+def test_overlay_forced_colours_plate_is_opaque_canvas():
+    """UX-U8: the plate is the system Canvas colour, opaque, so plate text
+    keeps the player's system contrast over any scene."""
+    block = _media(_css(OVERLAY_CSS), "forced-colors: active")
+    assert re.search(r"--al-plate\s*:\s*Canvas\s*;", block)
+
+
+def test_overlay_forced_colours_card_edges_use_highlight():
+    """UX-U8: the trade warn edge and the upgrade green edge fell to plain
+    CanvasText in forced colours; both use the kept Highlight colour."""
+    rules = dict(_rules(_media(_css(OVERLAY_CSS), "forced-colors: active")))
+    edge = rules.get('.trade, .evalcard[data-verdict="upgrade"]', "")
+    assert re.search(r"border-left-color\s*:\s*Highlight", edge)

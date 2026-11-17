@@ -267,16 +267,103 @@ recorded in research 0018 section 3.
 Uses the design-reviewer agent (.claude/agents/design-reviewer.md) and the
 design docs in docs/design/, both made by a separate agent.
 
-- [ ] DESIGN-GATE (review) Make the design-reviewer pass a standing step for
+- [x] DESIGN-GATE (review) Make the design-reviewer pass a standing step for
   every row that touches web/ or app/ (review lane after build). After
   DESIGN-AUDIT. ACCEPT: lane prompt or loop rule names the step; one row
   reviewed through it. ZERO-CLICK: runs in the loop, no manual trigger.
   Partly done: the lane prompt names the step (DS-REVIEW-HOOK); "one row
   reviewed through it" waits for the next web/ or app/ row the armed loop
-  runs (LOOP-ARM done 2026-11-17).
+  runs (LOOP-ARM done 2026-11-17). DONE 2026-11-17 (area-ux): UX-U7, UX-U8
+  and UX-U9 each went through the design-reviewer before commit (PASS;
+  PASS WITH FINDINGS S3=2 S4=1, fixed; PASS WITH FINDINGS S4=2, fixed).
+
+- [x] UX-U7 (review) Real-browser check of the cards added after audit 0003
+  (Act times, item check, price / upgrade link, build view) at 320 / 768 /
+  1440 px, dark, light and forced colours (glance review 0004 U7). ACCEPT:
+  screenshots taken against a replayed-fixture core, what fails fixed and
+  test-guarded. DONE 2026-11-17 (area-ux): no horizontal scroll at any
+  width; one defect - an unbroken character name under the level ran into
+  the deaths tile at 320 px; fixed (`.stat .sub` wraps), guarded by
+  tests/test_ux_review.py. Forced colours: every badge keeps its text
+  label, so nothing is lost. ZERO-CLICK: layout only, no user step.
+- [x] UX-U8 (review) Windows forced-colours / high-contrast on the
+  transparent overlay window (glance review 0004 U8). ACCEPT: overlay page
+  rendered with forced-colors active; the window background stays
+  transparent, the plates and text stay legible, fixes test-guarded.
+  DONE 2026-11-17 (area-ux): Electron 45 transparent window probe
+  (capturePage with alpha) under forced-colors emulation, dark and
+  light: window stays transparent (alpha 0 outside the plates). Found:
+  the trade card's warn edge and the upgrade card's green edge both fell
+  to plain CanvasText, and the 0.92 plate became 0.92 Canvas. Fixed in
+  overlay.css: root opts out of forcing (never an opaque block over the
+  game), plates opt back in, plate opaque Canvas, trade / upgrade edges
+  Highlight; tests in tests/test_ux_review.py. Not exercised: a real OS
+  high-contrast theme switch (emulation only). ZERO-CLICK: follows the OS
+  setting, no toggle.
+- [x] UX-U9 (review) Session tile empty state (design 0001 rule 9, seen in
+  the UX-U7 pass): before the Client.txt opt-in the Session tile showed
+  "--:--" over a blank line. ACCEPT: the line says when the timer starts;
+  AFK / DND still win; node test. DONE 2026-11-17 (area-ux): web/status.js
+  sessionSub() - "Starts when you allow reading Client.txt" until the
+  opt-in; app/test/dashboard.test.js. ZERO-CLICK: the line clears itself
+  once reading starts.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
+
+## Testing and hardening (AREA-TEST, session 4)
+
+- [x] TEST-FLAKE (build) A live lane / loop tick writing
+  ops/loop/control/loop_items/*.json mid-suite tripped fleet_test_guard with
+  a false error at a random teardown. ACCEPT: root cause named; the tick's
+  own state files ignored via the kit's extra_ignore (no kit edit), stop
+  sentinels still watched; regression test. DONE 2026-11-17: the kit IGNORE
+  list has no AL loop-state paths; tests/conftest.py LOOP_TICK_STATE passes
+  loop_items/*, loop_inbox_watch, loop_orders, backoff, gate_verdicts,
+  push_worker, push_last, ledger_rotate as extra_ignore;
+  tests/test_guard_loop_state.py pins it to tools/loop_base.py. ZERO-CLICK:
+  test-only, no user step.
+- [x] TEST-E2E (build) Synthetic end-to-end harness: replay a generated
+  Client.txt session (zones, level-ups, deaths, whispers, trades, rotation /
+  truncation, partial lines, non-ASCII names, a file near the 32 MB resume
+  cap) into a running core and assert snapshot / SSE output; fix what it
+  breaks. ACCEPT: stdlib harness test green, defects fixed with tests.
+  DONE 2026-11-17: tools/synth_client.py (generator + CLI) and
+  tests/test_e2e_replay.py (7 tests: HTTP consent, SSE events, odd-chunk
+  UTF-8 splits, BOM-only log, truncate / replace / delete-recreate, partial
+  line, 34 MB file resume). Defects fixed: (1) an unterminated line grew the
+  tailer buffer without bound (NUL padding after a crash) - capped at
+  logfile.MAX_PARTIAL, dropped to its next newline; (2) a consented core
+  that found no Client.txt at start never tailed until a re-consent, and a
+  discovered log whose Steam library moved was never followed -
+  Core.ensure_tailing() from the core loop, every 5 s. ZERO-CLICK: runs
+  inside pytest; the fixes need no user step.
+- [x] TEST-HTTP (build) HTTP / SSE surface robustness: token, Host / Origin,
+  oversized and malformed requests, many and slow SSE clients, core restart
+  under the keepalive supervisor. ACCEPT: tests green, defects fixed.
+  DONE 2026-11-17: tests/test_http_robust.py (22 tests). Defects fixed in
+  server/al/http.py: (1) no socket timeout - an idle client, a body shorter
+  than its Content-Length or a stalled SSE reader pinned a thread forever
+  (Handler.timeout = REQUEST_TIMEOUT_S 10 s); (2) a garbage request line or
+  a 64 KB+ URI crashed log_message (no self.path yet) so the client got no
+  400 / 414; (3) deeply nested JSON raised RecursionError and the client got
+  no reply (now 400); (4) unbounded SSE streams - capped at MAX_SSE_CLIENTS
+  16, a refused stream gets a closed 200 with retry 30 s (an EventSource
+  gives up for good on 503) ; handler errors go to the core log. Core
+  restart under the supervisor stays covered by tests/test_keepalive.py
+  end-to-end. ZERO-CLICK: runs inside pytest, no user step.
+- [x] TEST-OVL (build) Overlay smoke and budgets: tests/test_budgets.py and
+  the overlay smoke test assert something real and pass. ACCEPT: each
+  budget test fails when its budget is broken. DONE 2026-11-17: the
+  "overlay smoke test" CLAUDE.md names did not exist as a test (only the
+  manual AL_OVERLAY_SMOKE_S quit timer). tests/test_overlay_smoke.py: static
+  checks of the window flags, no input / no timers / no animation, always
+  on; a live run (opt-in AL_OVERLAY_SMOKE=1, isolated profile) asserting
+  summed working set < 250 MB, idle CPU < 1 percent, rc 0 - measured
+  2026-11-17: 2 processes, 142.6 MB, 0.000 percent. test_budgets.py adds the
+  whole-core idle budget (tailer + HTTP + 2 SSE streams < 1 percent; the old
+  test covered only the tailer at 2 percent). ZERO-CLICK: static part runs
+  in every suite; the live part is one env var.
 
 ## Utility (lane area-util, 2026-11-17)
 
