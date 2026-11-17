@@ -171,11 +171,19 @@ class RunHistory:
                 if b is None or s["time_s"] < b["best_s"]:
                     best[s["key"]] = {"key": s["key"], "label": s["label"],
                                       "best_s": s["time_s"]}
+        # AREA-AUDIT P5-6: a split only the current run has closed is the
+        # best so far (no other run to compare: delta stays None), so the
+        # empty text keys on "no saved split at all", not "no other run".
+        for s in (cur["splits"] if cur else ()):
+            if s["key"] not in best:
+                best[s["key"]] = {"key": s["key"], "label": s["label"],
+                                  "best_s": s["time_s"], "own": True}
         rows = []
         cur_times = {s["key"]: s["time_s"] for s in cur["splits"]} if cur else {}
         for key, b in best.items():
+            own = b.pop("own", False)
             row = dict(b, best_text=_fmt(b["best_s"]), delta_s=None)
-            if key in cur_times:
+            if key in cur_times and not own:
                 row["delta_s"] = round(cur_times[key] - b["best_s"], 1)
             rows.append(row)
         deaths = {}

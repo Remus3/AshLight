@@ -45,7 +45,8 @@ def test_round_trip():
     update, report = settingsio.parse_import(doc, {"web_data": True})
     want = {k: v for k, v in FULL.items() if k in settingsio.ALLOWED}
     assert update == want
-    assert report == {"applied": sorted(want), "ignored": [], "web_data_offered": False}
+    assert report == {"applied": sorted(want), "ignored": [], "web_data_offered": False,
+                      "tc_calc_offered": False}
 
 
 def test_web_data_never_switched_on_by_import():

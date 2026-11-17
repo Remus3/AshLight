@@ -1462,7 +1462,7 @@ merge. Each row names the finding ids it closes.
   0024, 0025 and the 0009 / 0013 amendment; 0023-tc-drift renumbered
   0025; test_audit_batch4 fails on any decision missing from Settled.
 
-- [ ] AUDIT-P5-LOW (build) AREA-AUDIT pass 5 lows P5-2..P5-7
+- [x] AUDIT-P5-LOW (build) AREA-AUDIT pass 5 lows P5-2..P5-7
   (docs/audit/2026-11-17-audit.md "Pass 5"): settings import may switch
   tc_calc on (treat like web_data); imported hotkeys accept a bare key
   (require a modifier); Core._config cache misses a same-size rewrite on
@@ -1471,6 +1471,18 @@ merge. Each row names the finding ids it closes.
   saved yet" while the current run's splits are saved; decision 0035 is
   an unrecorded gap. ACCEPT: a fix or a recorded ruling and one test
   each (P5-7: a docs line). ZERO-CLICK: code row, the loop works it.
+  DONE 2026-11-17 (audit batch 10; tests/test_audit_pass5_low.py,
+  app/test/hotkey.test.js): hotkeys need Ctrl or Alt (Shift only with an
+  F key) and never a game / Windows combo (Ctrl+C, Ctrl+Alt+C, Alt+F4
+  ...), one rule in server/al/hotkeys.py (import) and app/hotkey.js
+  (main.js, env and config, before globalShortcut.register), one shared
+  case table; import never turns tc_calc on (tc_calc_offered, named in
+  ignored; a dashboard sentence for it is left to the UX lane, web/ copy
+  untouched); Core._config re-hashes the bytes while the last read is
+  within 2 s of the mtime; an unterminated AshLight filter section is
+  refused (reason no_end); the current run's own splits count as the
+  best so far (delta None), so the empty text means no saved split;
+  docs/decisions/README.md records 0035 as unused.
 - [x] AUDIT-P4-LOW (build) AREA-AUDIT pass 4 lows P4-4..P4-6
   (docs/audit/2026-11-17-audit.md "Pass 4"): core.tick_sources reads
   local.json every 0.5 s loop tick (use an mtime check); delta._swap_sane's

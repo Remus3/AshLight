@@ -5,6 +5,7 @@ ops/runtime/consent.json. Revoking consent stops it.
 """
 
 import datetime as _dt
+import hashlib
 import json
 import os
 import threading
@@ -316,11 +317,22 @@ class Core:
         return self.state.snapshot()["price_watch"]
 
     # -- web data opt-in (decision 0013)
+    # AREA-AUDIT P5-4: FAT keeps a 2 s mtime, SMB / exFAT can be as coarse.
+    CONFIG_COARSE_S = 2.0
+
+    def _read_config_bytes(self):
+        return self.config_path.read_bytes()
+
     def _config(self):
         """The local config as a fresh dict ({} when missing or bad).
         AREA-AUDIT P4-4: the 0.5 s loop tick asks for it, so the file is
         stat-ed each call and read and parsed only when its mtime or size
-        changed."""
+        changed. AREA-AUDIT P5-4: on a coarse-timestamp filesystem a
+        same-size rewrite inside one tick keeps (mtime, size), so while
+        the last read was within CONFIG_COARSE_S of the file's mtime the
+        bytes are re-read and compared (a hash); once a read lands later
+        than that, any further write must move the mtime and the stat
+        alone decides again."""
         try:
             st = self.config_path.stat()
             key = (st.st_mtime_ns, st.st_size)
@@ -328,14 +340,25 @@ class Core:
             self._config_cache = None
             return {}
         cache = getattr(self, "_config_cache", None)
-        if cache is None or cache[0] != key:
-            try:
-                cfg = json.loads(self.config_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                cfg = {}
-            cache = (key, cfg if isinstance(cfg, dict) else {})
-            self._config_cache = cache
-        return dict(cache[1])
+        if cache is not None and cache[0] == key and cache[3]:
+            return dict(cache[1])
+        read_at = time.time()
+        try:
+            raw = self._read_config_bytes()
+        except OSError:
+            self._config_cache = None
+            return {}
+        digest = hashlib.blake2b(raw, digest_size=16).digest()
+        stable = read_at - st.st_mtime_ns / 1e9 > self.CONFIG_COARSE_S
+        if cache is not None and cache[0] == key and cache[2] == digest:
+            self._config_cache = (key, cache[1], digest, stable)
+            return dict(cache[1])
+        try:
+            cfg = json.loads(raw.decode("utf-8"))
+        except ValueError:
+            cfg = {}
+        self._config_cache = (key, cfg if isinstance(cfg, dict) else {}, digest, stable)
+        return dict(self._config_cache[1])
 
     def tc_calc_enabled(self):
         """AUDIT-TC-WIRE: the optional PoB calc opt-in (default off)."""

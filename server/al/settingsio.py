@@ -18,10 +18,14 @@ web_data (decision 0013) is never switched ON by an import: a file that
 has it on while it is off here is reported as "web_data_offered", and the
 dashboard asks the player to turn it on with the existing switch (their
 confirm). Turning it off by import is allowed (the safe direction).
+AREA-AUDIT P5-2: tc_calc (the decision 0018 calc opt-in) follows the same
+rule: never switched ON by an import ("tc_calc_offered", and it is named
+in "ignored" so the import sentence says a setting was skipped).
 """
 
 import re
 
+from . import hotkeys
 from . import layout as layout_mod
 
 KIND = "ashlight-settings"
@@ -29,7 +33,6 @@ SCHEMA = 1
 MAX_BYTES = 16 * 1024
 FILE_NAME = "ashlight-settings.json"
 
-_ACCEL = re.compile(r"^[A-Za-z0-9+ ]{1,40}$")
 _NAME = re.compile(r"^[^\x00-\x1f\x7f]{0,64}$")
 
 
@@ -59,6 +62,17 @@ def _str(rx):
     return check
 
 
+def _hotkey(v):
+    """AREA-AUDIT P5-3: Ctrl or Alt plus a key the game doesn't use (the
+    rule in hotkeys.py, mirrored by app/hotkey.js before Electron registers
+    it); stored canonical."""
+    ok = hotkeys.safe_accelerator(v)
+    if ok is None:
+        raise SettingsError("needs Ctrl or Alt held with a key, and can't be a key "
+                            "the game uses")
+    return ok
+
+
 def _overlay(v):
     try:
         return layout_mod.normalize(v, strict=True)
@@ -70,8 +84,8 @@ def _overlay(v):
 ALLOWED = {
     "character": _str(_NAME),
     "poll_ms": _int(50, 5000),
-    "overlay_toggle": _str(_ACCEL),
-    "eval_hotkey": _str(_ACCEL),
+    "overlay_toggle": _hotkey,
+    "eval_hotkey": _hotkey,
     "league": _str(_NAME),
     "web_data": _bool,
     "tc_calc": _bool,
@@ -135,6 +149,11 @@ def parse_import(doc, current):
     if update.get("web_data") is True and current.get("web_data") is not True:
         del update["web_data"]
         offered = True
+    calc_offered = False
+    if update.get("tc_calc") is True and current.get("tc_calc") is not True:
+        del update["tc_calc"]
+        ignored.append("tc_calc")
+        calc_offered = True
     report = {"applied": sorted(update), "ignored": sorted(ignored)[:20],
-              "web_data_offered": offered}
+              "web_data_offered": offered, "tc_calc_offered": calc_offered}
     return update, report
