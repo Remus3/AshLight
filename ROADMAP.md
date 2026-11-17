@@ -320,6 +320,13 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   DONE 2026-11-16: X-AL-Token was already accepted; Authorization: Bearer
   added, ?token= kept for EventSource; Host / Origin unchanged and checked
   first. Decision 0002 "API token"; tests/test_api_token_hdr.py.
+- [ ] OPS-OVL-PID (build) run.ps1's overlay no-op line prints a child
+  electron pid (e.g. the NetworkService utility process) instead of the
+  recorded main pid in ops/runtime/overlay.pid; procs status should report
+  the main process. Seen 2026-11-16 by the lane supervisor after the
+  restart (overlay.pid and the process tree were correct; message only).
+  ACCEPT: the no-op line and procs status name the overlay.pid process;
+  test. ZERO-CLICK: no operator step.
 - [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
