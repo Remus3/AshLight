@@ -1,25 +1,59 @@
 AL NEXT SESSION
 ---------------
-SESSION: 1   (FLEET item 13 counter; /done writes n+1)
+SESSION: 2   (FLEET item 13 counter; /done writes n+1)
 
-Next action: work ROADMAP.md top open row (LIVE-1: run the core against the
-real Client.txt with the game running, confirm zone / level / death / whisper
-events against docs/research/0002-client-log.md and record each UNVERIFIED
-line pattern as verified or corrected).
+Next action: work the top unblocked ROADMAP row; first OPS-STOP then
+OPS-RUN-IDEMP (stop.ps1 / run.ps1 process handling breaks zero-interaction),
+unless the operator has done the in-map FPS test (then finish OVL-FPS and
+the active OVL-BUDGET from the numbers).
 
 Carried forward (not acted on yet):
-- OPERATOR: create the GitHub remote when ready to publish (the pre-push hook
-  refuses every push until then; the AL_ALLOW_PUSH override is documented
-  in .githooks/pre-push). Nothing else needs the operator.
+- OPS-STOP: scripts/stop.ps1 leaves the keepalive supervisor and the
+  Electron overlay running - must stop all AshLight processes (ROADMAP row).
+- OPS-RUN-IDEMP: run.ps1 -NoBrowser does not start the overlay; re-running
+  run.ps1 -Overlay spawns a second supervisor that only exits on its own -
+  make run.ps1 idempotent per component (ROADMAP row).
+- API-TOKEN-HDR: API token accepted only as ?token= query param, not a
+  Bearer header - confirm intended, document (ROADMAP row).
+- OPERATOR acts (batched, one ask): (a) in-map FPS test, Windowed
+  Fullscreen, game FPS display: overlay off / on idle / on updating (OVL-FPS
+  and the active overlay budget); (b) play to whisper unlock, receive a trade
+  whisper, die once, join a party, toggle AFK - covers the 13 unseen LIVE-1
+  patterns and replaces the HUD-WHISPER sample fixtures; (c) TC-OAUTH-REG
+  when GGG reopens OAuth registration; (d) create the GitHub remote when
+  ready to publish (pre-push hook refuses every push until then; the
+  AL_ALLOW_PUSH override is documented in .githooks/pre-push).
+- "NLM" read as natural-language messaging (docs/design/0001 top) - the
+  operator may correct.
+- Still open rows: TC-CODE-REAL (verify on a real PoB2 export), TC-URL,
+  DS-REVIEW-HOOK, CORE-AUTOSTART, OVL-TRADE-CANCEL, WT-SIDECAR, LOOP-ARM.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT) at
   kit v32; MAIN roster code AL, ports 8960-8979, sidecar E:\Sidecars\AL.
 - NOTE: the headless lane loop is copied and tested but NOT armed (ROADMAP
   LOOP-ARM).
+- NOTE: reap applied: 3 removed, 0 kept, 0 listed (base main) - the merged
+  worktrees agent-a2a430d51c00195bd, agent-ae9d5323e4cbf60dd,
+  agent-a3e98e0d8e91c5d52 and their branches are gone; WT-SIDECAR (future
+  placement under the sidecar) stays open.
 
-Context: CLAUDE.md (ToS floor, sidecar rule), docs/decisions/0001-0003,
-docs/research/README.md, ROADMAP.md.
-Acceptance: per ROADMAP row.
-Do NOT redo: research set 0001-0008, stack decision, scaffold (initial commit).
+Context: CLAUDE.md (ToS floor, sidecar rule, Settled 0001-0008),
+scripts/run.ps1, scripts/stop.ps1, scripts/al_detach.ps1,
+server/al/keepalive.py, docs/decisions/0005-0008, ROADMAP.md Ops section.
+Live: core, keepalive supervisor and overlay running on build 92a933a,
+tailing:true - probe /api/health and the process list before touching them.
+Acceptance: per ROADMAP row (OPS-STOP: no AshLight process after stop.ps1;
+OPS-RUN-IDEMP: two run.ps1 calls leave exactly one of each component).
+Do NOT redo: name review 0009 (keep AshLight; Herald rejected); OVL-POS,
+HUD-WHISPER; lane skips BLOCKED rows; theorycraft scope (decision 0004,
+TC-* / GFX-ADVISOR / DESIGN rows); design system 0001 + design-reviewer
+agent + DS rows; CORE-DETACH; CORE-KEEPALIVE (0005); LIVE-1 first pass
+(8 verified / 3 fixed / 13 unseen), OVL-BUDGET idle met, OVL-FPS method
+(0006, no ETW); TC-CODE (0007); LIVE-RESUME (0008); DS-OPACITY / SCALE /
+HUD-EMPTY / HUD-CLIP / NLM / HUD-AFK / TRADE-EXPIRE; Settled lines
+0005-0008 and rows OPS-STOP / OPS-RUN-IDEMP / API-TOKEN-HDR (2b86fa0).
 In flight: none.
-Status: initial commit; gates green at creation (see git log -1 body).
+Status: session 1 commits 4417d6b .. 92a933a, then 2b86fa0 (done
+paperwork). Gates fresh at /done: pytest 635 passed, npm 20 passed, leak
+sweep clean. Inbox: 1 note (MAIN INFORMATION/TERMINAL, kit v32 join),
+recorded, no reply.
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
