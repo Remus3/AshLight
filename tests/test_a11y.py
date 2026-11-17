@@ -150,8 +150,8 @@ def test_live_regions_are_few_and_named():
     for n in live:
         assert n.attrs.get("id"), n.attrs  # each is written by id, nowhere else
     # pills, consent error, trade, item check, price, weights, build (2),
-    # web data, layout, graphics: a new one is a deliberate change here
-    assert len(live) <= 12, [n.attrs.get("id") for n in live]
+    # web data, layout, graphics, session summary: a new one is a deliberate change here
+    assert len(live) <= 13, [n.attrs.get("id") for n in live]
 
 
 def test_no_positive_tabindex():
