@@ -9,7 +9,8 @@
 #>
 [CmdletBinding()]
 param(
-    [switch]$Force
+    [switch]$Force,
+    [switch]$NoSnapshot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,6 +42,25 @@ function Write-AlLog([string]$Message) {
     $line = (Get-Date -Format 's') + ' ' + $Message
     Add-Content -Path $log -Value $line -Encoding ASCII
     Write-Host $Message
+}
+
+# TC-SNAP (decision 0009): refresh the game-data snapshot in the sidecar
+# Cache. Opt-out with -NoSnapshot or env AL_NO_SNAPSHOT=1. The tool skips
+# files checked in the last 24 h; offline or a failing source never fails
+# the build.
+if ($NoSnapshot -or ($env:AL_NO_SNAPSHOT -and $env:AL_NO_SNAPSHOT -ne '0')) {
+    Write-AlLog 'build: game-data snapshot skipped (opt-out)'
+} else {
+    $snapLog = Join-Path $paths.logs 'build-snapshot.log'
+    Push-Location $Repo
+    try {
+        & $py -m server.al.theorycraft.snapshot *> $snapLog
+        Write-AlLog "build: game-data snapshot rc $LASTEXITCODE (log $snapLog)"
+    } catch {
+        Write-AlLog 'build: game-data snapshot failed (ignored)'
+    } finally {
+        Pop-Location
+    }
 }
 
 # Source fingerprint: every authored file the build depends on.

@@ -10,7 +10,7 @@ import logging
 import threading
 from pathlib import Path
 
-from . import codec, model
+from . import codec, model, paste
 
 log = logging.getLogger("al.theorycraft")
 
@@ -54,11 +54,12 @@ class BuildStore:
         self._listeners.append(fn)
 
     def load_code(self, text):
-        """Decode, parse, persist and publish. Raises codec.CodeError
+        """Decode, parse, persist and publish any pasted format (PoB code or
+        character JSON, auto-detected; TC-JSON). Raises codec.CodeError
         (ShareUrlError included) or model.BuildError; the previous build
-        stays on error."""
-        build = model.from_code(text)
-        code = build.to_code() if codec.classify(text) != "code" else "".join(text.split())
+        stays on error. A JSON paste persists as its PoB share code."""
+        build = paste.parse(text)
+        code = build.to_code() if paste.detect(text) != "code" else "".join(text.split())
         with self._lock:
             _write(self.path, code + "\n")
             self.build = build
