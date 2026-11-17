@@ -105,6 +105,18 @@ small, keeps the core dependency-free, adds no contact with the game, and
 puts the effort into what no existing tool does: the build next to the live
 session and one-press "is this an upgrade for me".
 
+## Pin log (TC-DRIFT, decision 0025)
+
+One dated line per drift check that changed nothing or moved the pin;
+`python tools/tc_drift.py note` prints the next line.
+
+- 2026-11-17 HOLD: no PoB-PoE2 release after v0.23.1 (2026-07-28); latest
+  v0.23.1; pin stays (tag v0.23.1, commit 7d6f530c). dev is 109 commits
+  ahead (0.5.5 rune / runemastered data, HeadlessWrapper "Restore headless
+  global cache cleanup", .build export) but untagged (research 0017). At
+  the next tag the unattended trial runs the bridge tests, including the
+  new reload-leak test, before any pin move.
+
 ## Reverses if
 
 - PoB-PoE2 internals drift breaks the bridge at every release: pin harder

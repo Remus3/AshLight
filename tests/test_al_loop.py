@@ -123,6 +123,23 @@ def test_tick_rotates_control_ledgers_once_a_day_after_reap(tmp_path):
     assert len(calls) == 2
 
 
+@pytest.mark.git
+def test_tick_runs_the_tc_drift_check_and_logs_its_line(tmp_path):
+    """TC-DRIFT: the tick calls the drift hook (daily throttle lives in
+    tools/tc_drift.py) and logs its one line; a dry run never calls it, and
+    a drift fault never stops the tick."""
+    root = make_root(tmp_path)
+    calls = []
+    line = "tc drift: PoB-PoE2 v0.24.0 released (pin v0.23.1), trial launched"
+    d = deps(root, drift=lambda r, now: calls.append((r, now)) or line)
+    al_loop.tick(deps=d, no_push=True)
+    assert calls == [(root, 1_790_000_000.0)]
+    assert line in progress(root)["log"]
+    al_loop.tick(dry_run=True, deps=d, no_push=True)
+    assert len(calls) == 1
+    assert al_loop._drift_check(tmp_path / "no-such-tree", 0.0) is None
+
+
 def test_inbox_defaults_to_fleet_moon_sync_dirs(tmp_path):
     cfg = al_loop.load_config(tmp_path)
     assert Path(cfg["inbox_dir"]) == tmp_path / "moon_sync_inbox"

@@ -92,3 +92,21 @@ build XML and hotkey-read item text; nothing reaches the game).
   script cannot fix without modifying PoB.
 - The stdio prefix framing proves unreliable (PoB writing partial lines to
   stdout): move PoB output off stdout entirely or use a separate pipe.
+
+## Amendment 2026-11-17 (AUDIT-BRIDGE-LOW, audit Pass 2 P2-B3)
+
+- What the luajit.exe hash check guards: exepin writes the SHA-256 record
+  (`luajit.exe.sha256`) beside the exe in the user-writable AL sidecar
+  (`Build\`). Anyone who can replace the exe can rewrite the record, so the
+  check stops a stale, half-built or foreign exe (a planted file, a
+  different build left over in the folder) from being run; it is NOT
+  tamper protection against a local process running as the same user.
+  That attacker already runs code as the user, so a record elsewhere in a
+  user-writable place (the repo's `ops/runtime/`) would add no real bar.
+- Alternatives: keep the record in the repo runtime (same user, same bar;
+  it would also need tools/tc_pin.py and setup changes the TC-LIVE lane
+  owns); pin a hash in config/tc_pins.json (impossible: the exe is built
+  locally, so no hash exists before the build; decision 0018). Rejected.
+- Reverses if: a pinned LuaJIT release binary with a published hash
+  becomes available (then pin it in config/tc_pins.json and verify against
+  that, decision 0018's own reversal).

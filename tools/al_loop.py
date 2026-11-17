@@ -441,11 +441,22 @@ class Deps:
         self.record = eta.record
         self.clock = time.time
         self.rotate = ledger_rotate.rotate_daily  # plan 138
+        self.drift = _drift_check  # TC-DRIFT: daily PoB-PoE2 release check
         # plan 093: the machine fleet roster ({"repos": [{code, root, inbox?}]}),
         # the same FLEET_ROSTER the kit statusline reads; tests pass None.
         self.roster_path = os.environ.get("FLEET_ROSTER") or None
         for key, val in over.items():
             setattr(self, key, val)
+
+
+def _drift_check(root, now):
+    """TC-DRIFT: the daily PoB-PoE2 release check (tools/tc_drift.py); one
+    summary line when a check ran, None otherwise. Never fails the tick."""
+    try:
+        import tc_drift
+        return tc_drift.loop_check(root, now)
+    except Exception as exc:  # noqa: BLE001 - a drift fault must not stop the tick
+        return f"tc drift: {type(exc).__name__}: {exc}"
 
 
 def _load_watch():
@@ -1456,6 +1467,9 @@ class Tick(InboxMixin, MergeMixin):
             res = self.d.rotate(self.root, self.d.clock())
             if res is not None:
                 self.step(ledger_rotate.summary(res))
+            line = self.d.drift(self.root, self.d.clock())  # TC-DRIFT
+            if line:
+                self.step(line)
         self.stalls()
         if not self.blocked():
             self.inbox()
