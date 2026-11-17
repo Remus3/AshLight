@@ -207,6 +207,12 @@ test("eval view: UTIL-WAYSTONE word and no uncounted line", () => {
   assert.equal(risky.sentence, text.sentence);
   const calm = v.evalView({ id: 10, ok: false, at: 0, text: text, waystone: { risky: [] } });
   assert.equal(calm.word, "No risky mods");
+  assert.equal(calm.rewards, "");
+  const paid = v.evalView({ id: 13, ok: false, at: 0, waystone: { risky: [] },
+    text: Object.assign({ rewards: "Rewards: +38% item rarity." }, text) });
+  assert.equal(paid.rewards, "Rewards: +38% item rarity.");
+  assert.equal(v.evalView({ id: 14, ok: true, at: 0, verdict: "upgrade",
+    text: Object.assign({ rewards: "Rewards: +1% item rarity." }, text) }).rewards, "");
   const unid = v.evalView({ id: 11, ok: false, at: 0, text: text,
     waystone: { unidentified: true, risky: [] } });
   assert.equal(unid.word, "Unidentified");

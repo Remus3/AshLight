@@ -84,6 +84,8 @@
     out.acts = acts;
     // underlevel compares the zone the player is in: current character only
     out.underlevel = null;
+    // UTIL-CAMPAIGN-CHECKS: the hints read the current level and zone too
+    out.campaign = null;
     if (snap.run_history) {
       out.run_history = hist || null;
     }

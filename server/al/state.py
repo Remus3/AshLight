@@ -11,6 +11,7 @@ import threading
 import time
 
 from . import acts as acts_mod
+from . import campaign as campaign_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
@@ -354,9 +355,39 @@ def _short_list(words, width=CARD_LINE):
 WAYSTONE_LISTED = 3  # design 0001 rule 1: the sentence names at most 3 mods
 
 
+def waystone_rewards_text(ws):
+    """UTIL-WAYSTONE-REWARD: `rewards` (the dashboard sentence) and
+    `reward_line` (the overlay card's item line, "" when there is nothing to
+    show). Exact tests in tests/test_waystone_reward.py."""
+    ws = _dict(ws)
+    if ws.get("unidentified"):
+        return {"rewards": "Rewards: identify it to see them.", "reward_line": ""}
+    rows = [r for r in _dicts(ws.get("rewards"))
+            if _reward_pct(r.get("pct")) is not None and _text(r.get("label"), "")]
+    if not rows:
+        return {"rewards": "Rewards: none found in the item text.", "reward_line": ""}
+    full = ", ".join(f"{_signed(r['pct'])}% {_text(r.get('label'), '')}" for r in rows)
+    shorts = [f"{_signed(r['pct'])}% {_text(r.get('short'), '') or _text(r.get('label'), '')}"
+              for r in rows]
+    return {"rewards": f"Rewards: {full}.", "reward_line": _short_list(shorts)}
+
+
+def _reward_pct(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v:
+        return None
+    return v if abs(v) <= 10000 and v != 0 else None
+
+
 def waystone_text(ws):
     """UTIL-WAYSTONE (decision 0030): `head`, `line` and `sentence` for a
-    waystone check. Exact tests in tests/test_waystone.py."""
+    waystone check, plus the UTIL-WAYSTONE-REWARD `rewards` / `reward_line`.
+    Exact tests in tests/test_waystone.py."""
+    out = _waystone_risk_text(ws)
+    out.update(waystone_rewards_text(ws))
+    return out
+
+
+def _waystone_risk_text(ws):
     ws = _dict(ws)
     tier = ws.get("tier")
     what = (f"Tier {tier} waystone" if isinstance(tier, int) and not isinstance(tier, bool)
@@ -666,7 +697,10 @@ def overlay_card(ev, price, now):
         # dashboard pill does (never alone: the head says "Risky")
         if ws and _dicts(ws.get("risky")) and not ws.get("unidentified"):
             verdict = "risky"
-        return {"kind": "eval", "head": t["head"], "line2": t["item"], "line3": t["line"],
+        # UTIL-WAYSTONE-REWARD: a waystone's reward totals take the item line
+        # (as a price line does, design 0001 section 10); never a third line
+        line2 = t.get("reward_line") or t["item"]
+        return {"kind": "eval", "head": t["head"], "line2": line2, "line3": t["line"],
                 "verdict": verdict, "expires_at": ev["at"] + EVAL_CARD_S}
 
     def price_part():
@@ -812,6 +846,11 @@ class SessionState:
         self._idle_paused_map = False  # AREA-AUDIT P3-4
         # UTIL-UNDERLEVEL: the gap threshold ("underlevel_gap" setting).
         self.underlevel_gap = underlevel_mod.DEFAULT_GAP
+        # UTIL-CAMPAIGN-CHECKS (ruling H): the loaded build's facts, the
+        # snapshot flask table and the boots level setting (campaign.py).
+        self.campaign_facts = None
+        self.flask_table = {}
+        self.boots_level = campaign_mod.DEFAULT_BOOTS_LEVEL
         # UTIL-RUN-HISTORY: the player's deaths per zone in the current
         # campaign run (keyed by the run's first split start), and the
         # history view the core publishes (runhistory.py).
@@ -923,6 +962,27 @@ class SessionState:
             if info != self.build_info:
                 self.build_info = dict(info) if info else None
                 self.version += 1
+
+    def set_campaign(self, facts=False, flasks=False, boots_level=False):
+        """UTIL-CAMPAIGN-CHECKS: any of the build facts
+        (campaign.build_facts()), the flask table (campaign.load_flasks())
+        and the boots level setting; an argument left out keeps its value.
+        Bumps the version only on a change; returns whether it changed."""
+        with self._lock:
+            new = {"campaign_facts": self.campaign_facts, "flask_table": self.flask_table,
+                   "boots_level": self.boots_level}
+            if facts is not False:
+                new["campaign_facts"] = dict(facts) if isinstance(facts, dict) else None
+            if flasks is not False:
+                new["flask_table"] = flasks if isinstance(flasks, dict) else {}
+            if boots_level is not False:
+                new["boots_level"] = campaign_mod.boots_level_setting(boots_level)
+            if all(getattr(self, k) == v for k, v in new.items()):
+                return False
+            for k, v in new.items():
+                setattr(self, k, v)
+            self.version += 1
+            return True
 
     def set_underlevel_gap(self, value):
         """UTIL-UNDERLEVEL: the threshold from the local config (core
@@ -1535,6 +1595,10 @@ class SessionState:
                     self.in_hideout, self.zone_table, self.underlevel_gap),
                 # UX-ZONE-NOTES (decision 0030): our own note for this zone
                 "zone_note": self._zone_note(),
+                # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039)
+                "campaign": campaign_mod.view(self.level, self.area_id,
+                                              self.campaign_facts, self.flask_table,
+                                              self.boots_level),
                 "death_recap": self.death_log.view(self.deaths),
                 "pace": self.pace.view(now, self.pace_started_at),
                 # UTIL-MULTICHAR: every character's numbers, current first

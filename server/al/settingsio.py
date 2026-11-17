@@ -93,6 +93,7 @@ ALLOWED = {
     "underlevel_gap": _int(1, 20),
     "run_history": _bool,
     "price_watch_pct": _int(5, 500),
+    "boots_speed_level": _int(1, 100),
 }
 # Player words for each key, for the import error sentence (design 0001 P2).
 LABELS = {
@@ -101,6 +102,7 @@ LABELS = {
     "league": "league", "web_data": "web data switch", "tc_calc": "calc switch",
     "overlay": "overlay position", "underlevel_gap": "under-level gap",
     "run_history": "run history switch", "price_watch_pct": "price watch threshold",
+    "boots_speed_level": "boots speed level",
 }
 # Never exported or imported, even if a later key list grows (tests pin it).
 NEVER = ("contact", "client_log", "port", "loop", "token", "poesessid")

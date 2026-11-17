@@ -173,10 +173,88 @@ def _check_rule(rule, m, stats):
     return risky, label, avoid, short
 
 
+# UTIL-WAYSTONE-REWARD (research 0031 4.3): the reward kinds a waystone can
+# carry. In the repoe-fork mods snapshot (fetched 2026-11-17, decision 0009
+# build-time cache) every waystone prefix / suffix carries its reward as a
+# hidden "_from_map" stat with no English translation
+# (map_map_item_drop_chance, map_item_drop_rarity, map_pack_size,
+# map_number_of_magic_and_rare_packs; uniques add map_item_drop_quantity),
+# so the game prints them summed as properties under the tier line
+# ("Item Rarity: +38% (augmented)"). Keys below match those property
+# names; `line` also accepts a plain "N% increased <thing>" mod line. Order
+# is the sentence order. Totals are per kind, every source added.
+REWARDS = (
+    {"id": "quantity", "key": r"item quantity",
+     "line": r"increased quantity of items found", "label": "item quantity",
+     "short": "quantity"},
+    {"id": "rarity", "key": r"item rarity",
+     "line": r"increased rarity of items found", "label": "item rarity",
+     "short": "rarity"},
+    {"id": "pack", "key": r"(?:monster )?pack size",
+     "line": r"increased (?:monster )?pack size", "label": "pack size",
+     "short": "pack"},
+    {"id": "magic", "key": r"magic monsters|number of magic monsters",
+     "line": r"increased number of magic monsters", "label": "magic monsters",
+     "short": "magic"},
+    {"id": "rare", "key": r"rare monsters|number of rare monsters",
+     "line": r"increased number of rare monsters", "label": "rare monsters",
+     "short": "rare"},
+    {"id": "waystones", "key": r"waystone drop chance|waystones found",
+     "line": r"increased (?:chance|quantity) of waystones", "label": "waystone drops",
+     "short": "waystones"},
+)
+_REW_KEY = tuple((r, re.compile("^(?:" + r["key"] + ")$")) for r in REWARDS)
+_REW_LINE = tuple((r, re.compile(r"^([+-]?\d+(?:\.\d+)?)% (?:" + r["line"] + ")"))
+                  for r in REWARDS)
+_PCT_RE = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)%")
+MAX_REWARD = 10000  # a pasted absurd number reads as no reward, not a huge one
+
+
+def _pct(value):
+    m = _PCT_RE.match(str(value or ""))
+    if not m:
+        return None
+    v = float(m.group(1))
+    return v if abs(v) <= MAX_REWARD else None
+
+
+def rewards(parsed, mods):
+    """[{"id", "label", "short", "pct"}] in REWARDS order: the waystone's
+    reward properties plus any reward mod line, summed per kind; a kind that
+    sums to 0 is left out. Pure; never raises on content."""
+    total = {}
+    for key, value in (getattr(parsed, "properties", None) or {}).items():
+        low = str(key).strip().lower()
+        for rule, rx in _REW_KEY:
+            if rx.match(low):
+                v = _pct(value)
+                if v is not None:
+                    total[rule["id"]] = total.get(rule["id"], 0.0) + v
+                break
+    for line in mods or ():
+        low = line.lower()
+        for rule, rx in _REW_LINE:
+            m = rx.match(low)
+            if m:
+                v = float(m.group(1))
+                if abs(v) <= MAX_REWARD:
+                    total[rule["id"]] = total.get(rule["id"], 0.0) + v
+                break
+    out = []
+    for rule in REWARDS:
+        v = total.get(rule["id"])
+        if v is None or round(v) == 0:
+            continue
+        out.append({"id": rule["id"], "label": rule["label"], "short": rule["short"],
+                    "pct": int(round(v))})
+    return out
+
+
 def check(text, build):
     """None when the text is not a waystone; else {"tier", "item_level",
     "corrupted", "unidentified", "build_loaded", "risky": [{"id", "label",
-    "mod"}], "mods": count}. Never raises on content."""
+    "mod"}], "mods": count, "rewards": [{"id", "label", "short", "pct"}]}.
+    Never raises on content."""
     if not isinstance(text, str):
         return None
     parsed = item_parser.parse(text)
@@ -206,7 +284,8 @@ def check(text, build):
     return {"tier": tier, "item_level": parsed.item_level,
             "corrupted": bool(parsed.flags.get("corrupted")),
             "unidentified": bool(parsed.flags.get("unidentified")),
-            "build_loaded": build is not None, "risky": risky, "mods": len(mods)}
+            "build_loaded": build is not None, "risky": risky, "mods": len(mods),
+            "rewards": rewards(parsed, mods)}
 
 
 def avoid_terms(build):
