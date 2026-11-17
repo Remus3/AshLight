@@ -99,3 +99,11 @@ BUDGET = {
     "fallback_press_s": 30.0,   # a press while the calc is being killed
     "peak_ws_mb": 768.0,        # luajit peak working set, 30 reloads (~510 MB)
 }
+
+
+def keep_warm(core, stops=None):
+    """A test core's calc provider records its stop instead of shutting the
+    session's warm bridge down (TEST-FULLSTACK-CALC-WARM)."""
+    stops = [] if stops is None else stops
+    core.tc_provider._stop = lambda: stops.append(True)
+    return stops

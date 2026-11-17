@@ -128,6 +128,10 @@ class Provider:
             self._calc = make_calc(self._get_bridge or self._real_bridge)
             return self._calc
 
+    def running(self):
+        """True while this provider holds a calc (the process may be up)."""
+        return self._calc is not None
+
     def reap(self):
         """AREA-AUDIT P3-6, from the core's loop tick: stop the calc process
         once the user turned tc_calc off. Reads the opt-in only while a calc

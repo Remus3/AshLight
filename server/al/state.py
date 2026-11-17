@@ -666,7 +666,18 @@ class SessionState:
     def __init__(self, character=None, clock=time.time):
         self._lock = threading.Lock()
         self._clock = clock
-        self.version = 0
+        # TEST-FULLSTACK-SSE-IDLE: on_change() runs (under the lock) on every
+        # version bump outside apply(); the core points it at the bus wake so
+        # a change with no log line (idle, the summary card, a trade card
+        # expiring, the calc or price book status) reaches SSE clients at
+        # once instead of on the next heartbeat. apply() bumps are pushed
+        # with their event, so they do not wake.
+        self.on_change = None
+        self._applying = False
+        self._version = 0
+        # The calc and price book status (core tick_sources); no request.
+        self.sources = {"calc_on": False, "calc_running": False,
+                        "rates_checked_at": None, "book_checked_at": None}
         self.session_started_at = clock()
         # The pace counts only level-ups seen live, so its hourly base stays
         # the core start even when LIVE-RESUME moves the Session tile back
@@ -719,7 +730,38 @@ class SessionState:
                        "last_line_at": None}
         self._idle_paused_map = False  # AREA-AUDIT P3-4
 
+    @property
+    def version(self):
+        return self._version
+
+    @version.setter
+    def version(self, value):
+        self._version = value
+        if not self._applying and self.on_change is not None:
+            try:
+                self.on_change()
+            except Exception:  # noqa: BLE001 - a wake never breaks a state change
+                pass
+
     # -- updates
+    def set_sources(self, **fields):
+        """TEST-FULLSTACK-SSE-IDLE: the calc on / running and the poe.ninja
+        rates / price book check times, from the core's loop tick. Bumps
+        the version (so SSE pushes it) only when one changed."""
+        with self._lock:
+            fields = {k: v for k, v in fields.items() if k in self.sources}
+            changed = any(self.sources.get(k) != v for k, v in fields.items())
+            if changed:
+                self.sources.update(fields)
+                self.version += 1
+            return changed
+
+    def expire_trades(self, now=None):
+        """From the core's loop tick: drop expired trade cards now, so the
+        change is pushed without waiting for a snapshot."""
+        with self._lock:
+            self._expire_trades(self._clock() if now is None else now)
+
     def set_tailer(self, **fields):
         with self._lock:
             changed = any(self.tailer.get(k) != v for k, v in fields.items())
@@ -842,125 +884,133 @@ class SessionState:
         t = ev.get("type")
         now = ev.get("recv_ts") or self._clock()
         with self._lock:
-            self.events_seen += 1
-            changed = False
-            listed = t in LISTED
-            # TEST-LIVE-EXIT: any line proves the log is alive again. The
-            # tailer's own status events (source "tailer") are not log
-            # lines (AREA-AUDIT P3-1): they neither refresh the last line
-            # (which would overwrite the resume mtime seed) nor clear idle.
-            if ev.get("source") != "tailer":
-                self.tailer["last_line_at"] = now
-                if self.tailer.get("idle"):
-                    self.tailer["idle"] = False
-                    changed = True
-                    # AREA-AUDIT P3-4: the map clock idle froze runs again
-                    # from this line while the player is still in that map
-                    # (a zone change below then decides as usual); a game
-                    # restart (log_opened) keeps it stopped.
-                    if self._idle_paused_map and t != "log_opened":
-                        self.maps.on_scene(self.zone, now, self.in_hideout)
-                self._idle_paused_map = False
-            active = t in summary_mod.ACTIVITY
-            if active:
-                self.stretch.begin(self._counters())
-            if t == "log_opened":
-                # UTIL-SESSION-SUMMARY: a new game run; the last one closed
-                changed = self._close_stretch("game_closed")
-            if t == "scene_changed":
-                # Null and transient scenes (LIVE-1) keep the zone and its
-                # timer and are not listed; only a real zone change is.
-                listed = False
-                if (not ev.get("is_null") and not ev.get("is_transient")
-                        and ev.get("scene") != self.zone):
-                    self.zone = ev.get("scene")
-                    self.in_hideout = bool(ev.get("is_hideout"))
-                    self.zone_entered_at = now
-                    self.maps.on_scene(self.zone, now, self.in_hideout)
-                    listed = True
-                    changed = True
-            elif t == "area_generated":
-                self.area_id = ev.get("area_id")
-                self.area_level = ev.get("area_level")
-                self.acts.fold(self.area_id, now, self.level)
-                self.maps.on_generated(self.area_id, now, self.area_level,
-                                       ev.get("seed"))
+            self._applying = True
+            try:
+                return self._apply_locked(ev, t, now)
+            finally:
+                self._applying = False
+
+    def _apply_locked(self, ev, t, now):
+        """apply() under the lock (its bumps do not wake: see on_change)."""
+        self.events_seen += 1
+        changed = False
+        listed = t in LISTED
+        # TEST-LIVE-EXIT: any line proves the log is alive again. The
+        # tailer's own status events (source "tailer") are not log
+        # lines (AREA-AUDIT P3-1): they neither refresh the last line
+        # (which would overwrite the resume mtime seed) nor clear idle.
+        if ev.get("source") != "tailer":
+            self.tailer["last_line_at"] = now
+            if self.tailer.get("idle"):
+                self.tailer["idle"] = False
                 changed = True
-            elif t == "area_entered":
-                if ev.get("name") != self.zone:
-                    self.zone = ev.get("name")
-                    self.in_hideout = "hideout" in (self.zone or "").lower()
-                    self.zone_entered_at = now
+                # AREA-AUDIT P3-4: the map clock idle froze runs again
+                # from this line while the player is still in that map
+                # (a zone change below then decides as usual); a game
+                # restart (log_opened) keeps it stopped.
+                if self._idle_paused_map and t != "log_opened":
                     self.maps.on_scene(self.zone, now, self.in_hideout)
-                    changed = True
-            elif t == "log_opened":
-                # TEST-LIVE-RESTART: a new game run. The player is at the
-                # login screen, so the old run's zone, area, zone timer and
-                # AFK / DND are void. Character, level and counts stay.
-                if self.maps.pause(now):
-                    changed = True
-                if (self.zone is not None or self.area_id is not None
-                        or self.area_level is not None or self.in_hideout
-                        or self.zone_entered_at is not None
-                        or self.afk or self.dnd):
-                    self.zone = self.area_id = self.area_level = None
-                    self.zone_entered_at = None
-                    self.in_hideout = self.afk = self.dnd = False
-                    changed = True
-            elif t == "level_up":
-                # The first level-up names the character unless one was
-                # configured; other players' level-ups are listed, not counted.
-                if self.character is None:
-                    self.character = ev.get("character")
-                if ev.get("character") == self.character:
-                    self.char_class = ev.get("class")
-                    self.level = ev.get("level")
-                    self.level_ups += 1
-                    self.pace.on_level(self.level, now)
-                    changed = True
-            elif t == "death":
-                if self._is_me(ev.get("character")):
-                    self.deaths += 1
-                    self.death_log.add(
-                        at=now, zone=self.zone, area_level=self.area_level,
-                        level=self.level,
-                        zone_s=(max(0.0, now - self.zone_entered_at)
-                                if self.zone_entered_at else None))
-                    self.maps.on_death(now)
-                    changed = True
-            elif t in ("whisper_in", "whisper_out"):
-                self.recent_whispers.append(self._row(ev, now))
-                if t == "whisper_in" and ev.get("trade"):
-                    self._expire_trades(now)
-                    self.trade_requests.append(self._trade_row(ev, now))
+            self._idle_paused_map = False
+        active = t in summary_mod.ACTIVITY
+        if active:
+            self.stretch.begin(self._counters())
+        if t == "log_opened":
+            # UTIL-SESSION-SUMMARY: a new game run; the last one closed
+            changed = self._close_stretch("game_closed")
+        if t == "scene_changed":
+            # Null and transient scenes (LIVE-1) keep the zone and its
+            # timer and are not listed; only a real zone change is.
+            listed = False
+            if (not ev.get("is_null") and not ev.get("is_transient")
+                    and ev.get("scene") != self.zone):
+                self.zone = ev.get("scene")
+                self.in_hideout = bool(ev.get("is_hideout"))
+                self.zone_entered_at = now
+                self.maps.on_scene(self.zone, now, self.in_hideout)
+                listed = True
                 changed = True
-            elif t in ("trade_accepted", "trade_cancelled"):
+        elif t == "area_generated":
+            self.area_id = ev.get("area_id")
+            self.area_level = ev.get("area_level")
+            self.acts.fold(self.area_id, now, self.level)
+            self.maps.on_generated(self.area_id, now, self.area_level,
+                                   ev.get("seed"))
+            changed = True
+        elif t == "area_entered":
+            if ev.get("name") != self.zone:
+                self.zone = ev.get("name")
+                self.in_hideout = "hideout" in (self.zone or "").lower()
+                self.zone_entered_at = now
+                self.maps.on_scene(self.zone, now, self.in_hideout)
+                changed = True
+        elif t == "log_opened":
+            # TEST-LIVE-RESTART: a new game run. The player is at the
+            # login screen, so the old run's zone, area, zone timer and
+            # AFK / DND are void. Character, level and counts stay.
+            if self.maps.pause(now):
+                changed = True
+            if (self.zone is not None or self.area_id is not None
+                    or self.area_level is not None or self.in_hideout
+                    or self.zone_entered_at is not None
+                    or self.afk or self.dnd):
+                self.zone = self.area_id = self.area_level = None
+                self.zone_entered_at = None
+                self.in_hideout = self.afk = self.dnd = False
+                changed = True
+        elif t == "level_up":
+            # The first level-up names the character unless one was
+            # configured; other players' level-ups are listed, not counted.
+            if self.character is None:
+                self.character = ev.get("character")
+            if ev.get("character") == self.character:
+                self.char_class = ev.get("class")
+                self.level = ev.get("level")
+                self.level_ups += 1
+                self.pace.on_level(self.level, now)
+                changed = True
+        elif t == "death":
+            if self._is_me(ev.get("character")):
+                self.deaths += 1
+                self.death_log.add(
+                    at=now, zone=self.zone, area_level=self.area_level,
+                    level=self.level,
+                    zone_s=(max(0.0, now - self.zone_entered_at)
+                            if self.zone_entered_at else None))
+                self.maps.on_death(now)
+                changed = True
+        elif t in ("whisper_in", "whisper_out"):
+            self.recent_whispers.append(self._row(ev, now))
+            if t == "whisper_in" and ev.get("trade"):
                 self._expire_trades(now)
-                if self._close_trade(ev.get("name")):
-                    changed = True
-            elif t == "afk_changed":
-                self.afk = bool(ev.get("on"))
+                self.trade_requests.append(self._trade_row(ev, now))
+            changed = True
+        elif t in ("trade_accepted", "trade_cancelled"):
+            self._expire_trades(now)
+            if self._close_trade(ev.get("name")):
                 changed = True
-            elif t == "dnd_changed":
-                self.dnd = bool(ev.get("on"))
-                changed = True
-            elif t == "tailer_started":
-                self.tailer["reading"] = True
-                self.tailer["path"] = ev.get("path")
-                changed = True
-            elif t == "tailer_reset":
-                self.tailer["last_reset"] = ev.get("reason")
-                if ev.get("reason") == "missing":
-                    self.tailer["reading"] = False
-                changed = True
-            if listed:
-                self.recent_events.append(self._row(ev, now))
-                changed = True
-            if active:
-                self.stretch.touch(now, self._counters())
-            if changed:
-                self.version += 1
-            return changed
+        elif t == "afk_changed":
+            self.afk = bool(ev.get("on"))
+            changed = True
+        elif t == "dnd_changed":
+            self.dnd = bool(ev.get("on"))
+            changed = True
+        elif t == "tailer_started":
+            self.tailer["reading"] = True
+            self.tailer["path"] = ev.get("path")
+            changed = True
+        elif t == "tailer_reset":
+            self.tailer["last_reset"] = ev.get("reason")
+            if ev.get("reason") == "missing":
+                self.tailer["reading"] = False
+            changed = True
+        if listed:
+            self.recent_events.append(self._row(ev, now))
+            changed = True
+        if active:
+            self.stretch.touch(now, self._counters())
+        if changed:
+            self.version += 1
+        return changed
 
     # -- UTIL-SESSION-SUMMARY
     def _zone_note(self):
@@ -1150,4 +1200,5 @@ class SessionState:
                 "pace": self.pace.view(now, self.pace_started_at),
                 "session_summary": (dict(self.session_summary)
                                     if self.session_summary else None),
+                "sources": dict(self.sources),
             }

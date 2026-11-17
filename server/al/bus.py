@@ -21,6 +21,7 @@ class Subscription:
         self._cond = threading.Condition(threading.Lock())
         self.dropped = 0
         self.closed = False
+        self._woken = False  # a wake() not yet seen by get() (never lost)
 
     def _push(self, event):
         with self._cond:
@@ -32,14 +33,16 @@ class Subscription:
     def get(self, timeout=None):
         """All queued events (oldest first); waits up to timeout for one."""
         with self._cond:
-            if not self._q and not self.closed:
+            if not self._q and not self.closed and not self._woken:
                 self._cond.wait(timeout)
+            self._woken = False
             out = list(self._q)
             self._q.clear()
             return out
 
     def wake(self):
         with self._cond:
+            self._woken = True
             self._cond.notify_all()
 
     def close(self):
@@ -83,6 +86,15 @@ class EventBus:
         with self._lock:
             self._subs.add(sub)
         return sub
+
+    def wake_all(self):
+        """TEST-FULLSTACK-SSE-IDLE: wake every waiting subscriber with no
+        event (its get() returns []), so a state change with no log line
+        is pushed at once."""
+        with self._lock:
+            subs = list(self._subs)
+        for sub in subs:
+            sub.wake()
 
     def unsubscribe(self, sub):
         with self._lock:

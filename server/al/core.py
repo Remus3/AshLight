@@ -69,6 +69,9 @@ class Core:
         self.bus = EventBus()
         self.state = SessionState(character=character or cfg.get("character"))
         self.bus.add_listener(self.state.apply)
+        # TEST-FULLSTACK-SSE-IDLE: a state change outside a log event wakes
+        # the SSE streams at once (no new timer; see SessionState.on_change).
+        self.state.on_change = self.bus.wake_all
         # UTIL-SESSION-SUMMARY: the last saved card shows until a new one;
         # cards are saved only under the runtime dir.
         self.summary_path = self.runtime / summary_mod.summary_file().name
@@ -397,6 +400,29 @@ class Core:
         except OSError:
             pass  # the card still shows; the next one tries again
         return card
+
+    def tick_sources(self, now=None):
+        """TEST-FULLSTACK-SSE-IDLE, from the core's main loop: expire trade
+        cards and publish the calc on / running state and the poe.ninja
+        rates / price book check times in the snapshot, so turning the calc
+        on or off and a price book refresh reach SSE clients at once. No
+        request (one small local config read per tick)."""
+        self.state.expire_trades(now)
+        try:
+            calc_on = self.tc_calc_enabled()
+        except Exception:  # noqa: BLE001 - a bad config reads as off
+            calc_on = False
+        book = getattr(self.rates, "book", None)
+        book_at = None
+        if book is not None:
+            stamps = [t.get("checked_at") for t in (book.doc.get("types") or {}).values()
+                      if isinstance(t, dict) and isinstance(t.get("checked_at"), (int, float))]
+            book_at = max(stamps) if stamps else None
+        rates_at = self.rates.doc.get("checked_at")
+        return self.state.set_sources(
+            calc_on=calc_on, calc_running=self.tc_provider.running(),
+            rates_checked_at=rates_at if isinstance(rates_at, (int, float)) else None,
+            book_checked_at=book_at)
 
     def tick_calc(self):
         """AREA-AUDIT P3-6, from the core's main loop: stop the shared calc
