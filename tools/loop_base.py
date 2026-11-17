@@ -120,6 +120,9 @@ SKIP_TAGS = (("operator", re.compile(r"^(OPERATOR\b|.*\(physical\))|\bphysical\b
                                      r"\bpasswords?\b|\boauth\b|\bper-host\b", re.I)),
              ("other-tree", re.compile(r"^MAIN\b")),
              ("info", re.compile(r"^(NOTE|INFO)\s*[:(]", re.I)))
+# A ROADMAP row whose text carries the upper-case word BLOCKED waits for an
+# operator act (FLEET item 1); the tick lists it and never dispatches it.
+BLOCKED_RX = re.compile(r"\bBLOCKED\b")
 STOP = {"the", "and", "for", "from", "with", "per", "via", "tab", "new", "plan", "into",
         "by", "of", "a", "an", "to", "in", "on", "vs"}
 # Plan 096: no pytest - the loop's cached gate run on the same tree is the

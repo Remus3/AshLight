@@ -1865,13 +1865,27 @@ def test_current_roadmap_dispatches_only_ready_rows(tmp_path):
             text = al_loop.plan_doc(ROOT, w["id"]) or ""
             assert not set(al_loop.plan_depends(text)) & open_ids, w["id"]
     for s in skipped:
-        if s.get("reason"):
+        if s.get("reason") and s.get("skip") != "blocked":
             want = [x for x in al_loop.plan_depends(al_loop.plan_doc(ROOT, s["id"]))
                     if x in open_ids]
             assert want and s["reason"] == "waits on " + ", ".join(want)
     plans = [w["id"] for w in work if w["kind"] == "plan"]
     waits = [s["id"] for s in skipped if s.get("reason")]
     assert sorted(plans + waits) == sorted(open_ids)
+
+
+@pytest.mark.git
+def test_work_list_never_dispatches_blocked_rows(tmp_path):
+    rm = DEP_ROADMAP.replace("- [ ] 013 Season pass tracker",
+                             "- [ ] 013 Season pass tracker BLOCKED (operator plays once)")
+    root = dep_root(tmp_path, {"014": "none."}, roadmap=rm)
+    d = deps(root)
+    rows, work, skipped = al_loop.Tick(d).work_list()
+    assert "013" not in [w["id"] for w in work]
+    hit = next(s for s in skipped if s["id"] == "013")
+    assert hit["skip"] == "blocked" and hit["reason"].startswith("BLOCKED")
+    # lower-case "blocked" in a title is prose, not the marker
+    assert not al_loop.BLOCKED_RX.search("unblocked or blocked rows")
 
 
 def test_rearm_falls_back_to_git_when_dependency_has_no_merged_at(tmp_path):

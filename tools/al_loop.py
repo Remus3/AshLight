@@ -106,7 +106,7 @@ from loop_base import (  # noqa: E402
     DEP_ID_RX, GATE_CACHE_MAX, GATE_CACHE_REL, HOP_RX, INBOX_REL, ITEMS_REL, KEEP_REF,  # noqa: F401
     LANE_TIMEOUT_S, LEGACY_LEDGER_REL, LIMIT_RX, NOTE_HEAD, NOTE_MAX, NOTE_STAMP,  # noqa: F401
     ORDERS_REL, OUTBOX_REL, RED_TTL_S, RESOLVABLE, ROADMAP_REL, ROUTES, ROUTE_EFFORTS,  # noqa: F401
-    ROW_RX, SKIP_TAGS, STOP, TICK_S, WATCH_REL, _ROUTE_MODEL, eta_label,  # noqa: F401
+    BLOCKED_RX, ROW_RX, SKIP_TAGS, STOP, TICK_S, WATCH_REL, _ROUTE_MODEL, eta_label,  # noqa: F401
     load_routes, next_number, read_jsonl, with_hop,  # noqa: F401
 )
 from loop_prompts import (  # noqa: E402
@@ -1109,6 +1109,10 @@ class Tick(InboxMixin, MergeMixin):
         waiting = {}
         for r in open_rows:
             if r["id"] in resolving:
+                continue
+            if BLOCKED_RX.search(r.get("text") or ""):
+                skipped.append({"id": r["id"], "text": r["title"], "skip": "blocked",
+                                "reason": "BLOCKED: operator act (see ROADMAP)"})
                 continue
             wait = [dep for dep in self.plan_deps(r["id"], row_open, log=True)
                     if row_open[dep]]
