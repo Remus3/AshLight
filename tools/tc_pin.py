@@ -347,11 +347,15 @@ def build_plan(which=None, environ=None):
     cmd.exe by its System32 path, PATH tools only from absolute PATH entries
     (never the current directory)."""
     find = which or (lambda name: exepin.which_abs(name, environ))
+    # AUDIT pass 2 (P2-B2): a static build is one luajit.exe with the VM
+    # inside, so the SHA-256 exepin records covers everything that runs (the
+    # default dynamic build loads an unhashed lua51.dll beside it).
     if find("cl"):
-        return [str(exepin.system_tool("cmd.exe")), "/d", "/c", "msvcbuild.bat"]
+        return [str(exepin.system_tool("cmd.exe")), "/d", "/c", "msvcbuild.bat",
+                "static"]
     make = find("mingw32-make")
     if make and find("gcc"):
-        return [str(make)]
+        return [str(make), "BUILDMODE=static"]
     return None
 
 

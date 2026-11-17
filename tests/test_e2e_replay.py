@@ -160,7 +160,11 @@ def test_live_session_end_to_end_over_http_and_sse(tmp_path, live_factory):
         assert "Ma\u00eblle" in json.dumps(snap["recent_whispers"], ensure_ascii=False)
         assert "\u30b5\u30af\u30e9" in json.dumps(snap["recent_whispers"], ensure_ascii=False)
         assert len(snap["recent_whispers"]) == s.whispers_in
-        assert len(snap["trade_requests"]) <= s.trade_requests  # accepted may close it
+        # AUDIT pass 2 (P2-T1): exact, not <= (which passed with no card at
+        # all): the session has one request and its acceptance, and decision
+        # 0019 closes that one card.
+        assert s.trade_requests == 1
+        assert snap["trade_requests"] == []
         sse.read_until(b"\"type\":\"death\"")
         types = sse.event_types()
         for t in ("scene_changed", "area_generated", "level_up", "death", "whisper_in",

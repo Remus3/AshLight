@@ -204,9 +204,9 @@ def test_no_compiler_is_source_only_and_rerun_does_not_refetch(world):
 
 
 def test_build_plan_prefers_msvc_then_mingw():
-    assert tc_pin.build_plan(_which_cl)[-1] == "msvcbuild.bat"
+    assert tc_pin.build_plan(_which_cl)[-2:] == ["msvcbuild.bat", "static"]
     both = {"mingw32-make": "m", "gcc": "g"}
-    assert tc_pin.build_plan(both.get) == ["m"]  # the resolved path (AUDIT-EXE-PATH)
+    assert tc_pin.build_plan(both.get) == ["m", "BUILDMODE=static"]  # the resolved path (AUDIT-EXE-PATH)
     assert tc_pin.build_plan(_no_compiler) is None
 
 

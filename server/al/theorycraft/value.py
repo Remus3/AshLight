@@ -97,7 +97,13 @@ def to_primary(amount, currency, snap):
     rate = _rate(currency, snap)
     if rate is None:
         return None
-    return amount * rate
+    return _finite(amount * rate)
+
+
+def _finite(x):
+    """AUDIT pass 2 (P2-V1): an inf / nan result reads as None, so json.dumps
+    never writes Infinity into the snapshot (a seller's tiny note price)."""
+    return x if math.isfinite(x) else None
 
 
 def convert(amount, src, dst, snap):
@@ -106,7 +112,7 @@ def convert(amount, src, dst, snap):
     rate = _rate(dst, snap)
     if base is None or rate is None:
         return None
-    return base / rate
+    return _finite(base / rate)
 
 
 def per_unit(score, price):
@@ -117,7 +123,7 @@ def per_unit(score, price):
     if isinstance(price, bool) or not isinstance(price, (int, float)) \
             or not math.isfinite(price) or price <= 0:
         return None
-    return score / price
+    return _finite(score / price)
 
 
 def _name(currency, snap):

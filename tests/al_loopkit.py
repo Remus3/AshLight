@@ -102,6 +102,7 @@ def deps(root, **over):
         roster_path=None,  # plan 093: never the machine roster from FLEET_ROSTER
         should_yield=lambda: False,  # kit v25: never the live governor
         lane_cap=lambda: 3,
+        drift=lambda root, now: None,  # TC-DRIFT: never the network in tests
     )
     base.update(over)
     d = al_loop.Deps(root, **base)
