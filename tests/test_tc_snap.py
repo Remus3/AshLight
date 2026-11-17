@@ -15,8 +15,9 @@ from server.al.theorycraft import snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = {"mods": "https://repoe-fork.github.io/poe2/mods.json",
-       "stats": "https://repoe-fork.github.io/poe2/stats.json",
+       "stats": "https://repoe-fork.github.io/poe2/stats_by_file.json",
        "skilltree": None}
+TREE_URL = "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/main/data.json"
 
 
 class Fake:
@@ -112,19 +113,53 @@ def test_default_cache_is_in_al_sidecar(tmp_path):
 @pytest.mark.parametrize("url", ["http://repoe-fork.github.io/poe2/mods.json",
                                  "https://example.org/mods.json",
                                  "https://poe2db.tw/us/Modifiers",
-                                 "https://www.poe2wiki.net/wiki/Mods"])
+                                 "https://www.poe2wiki.net/wiki/Mods",
+                                 "http://raw.githubusercontent.com/grindinggear/"
+                                 "poe2-skilltree-export/main/data.json",
+                                 "https://raw.githubusercontent.com/someone/else/main/data.json",
+                                 "https://raw.githubusercontent.com/grindinggear/"
+                                 "poe2-skilltree-export/../../x/y.json",
+                                 "https://githubusercontent.com.example.org/grindinggear/"
+                                 "poe2-skilltree-export/main/data.json"])
 def test_url_guard_refuses_off_allowlist(url):
     with pytest.raises(snapshot.FetchError):
         snapshot.http_fetch(url, {})
 
 
-def test_sources_policy():
-    # decision 0009: repoe-fork only; tree export disabled until confirmed
-    for name, url in snapshot.SOURCES.items():
+def test_url_guard_accepts_every_enabled_source():
+    for url in snapshot.SOURCES.values():
         if url:
-            assert url.startswith("https://repoe-fork.github.io/poe2/"), name
-    assert snapshot.SOURCES["skilltree"] is None
-    assert {"mods", "base_items", "stats", "stat_translations"} <= set(snapshot.SOURCES)
+            snapshot._check_url(url)  # raises when off the allowlist
+
+
+def test_sources_policy():
+    # decision 0009 (items 2, 3 amended, 4; research 0011): repoe-fork PoE2
+    # files under their real names, plus GGG's own tree export, fetch-only.
+    s = snapshot.SOURCES
+    assert s["mods"] == "https://repoe-fork.github.io/poe2/mods.json"
+    assert s["base_items"] == "https://repoe-fork.github.io/poe2/base_items.json"
+    assert s["stats"] == "https://repoe-fork.github.io/poe2/stats_by_file.json"
+    assert s["stat_translations"] == (
+        "https://repoe-fork.github.io/poe2/stat_translations/stat_descriptions.json")
+    assert s["skilltree"] == TREE_URL
+    assert set(s) == {"mods", "base_items", "stats", "stat_translations", "skilltree"}
+    assert set(snapshot.ALLOWED_HOSTS) == {"repoe-fork.github.io", "raw.githubusercontent.com"}
+
+
+def test_real_source_names_mocked_fetch(tmp_path):
+    # DATA-SRC-URLS / DATA-TREE-SRC acceptance: the real URLs through a mock.
+    bodies = {u: b'{"nodes": {}}' for u in snapshot.SOURCES.values() if u}
+    fake = Fake(bodies)
+    out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000)
+    assert out == {k: "fetched" for k in snapshot.SOURCES}
+    assert sorted(u for u, _ in fake.calls) == sorted(bodies)
+    man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
+    assert man["files"]["skilltree"]["url"] == TREE_URL
+    assert man["files"]["stats"]["url"].endswith("/stats_by_file.json")
+    assert (tmp_path / "skilltree.json").is_file()
+    assert "tree export" in snapshot.ATTRIBUTION
+    for _, headers in fake.calls:
+        assert headers["User-Agent"].startswith(f"AshLight/{VERSION} ")
 
 
 def test_core_never_imports_snapshot():

@@ -30,8 +30,9 @@ from pathlib import Path
 from .. import NAME, VERSION, paths
 
 ATTRIBUTION = ("Game data (c) Grinding Gear Games. Item, mod and stat data from the "
-               "RePoE fork community export (repoe-fork), downloaded to this computer "
-               "at build time. This product isn't affiliated with or endorsed by "
+               "RePoE fork community export (repoe-fork); passive tree data from "
+               "Grinding Gear Games' public skill tree export; downloaded to this "
+               "computer at build time. This product isn't affiliated with or endorsed by "
                "Grinding Gear Games in any way.")
 USER_AGENT = (f"{NAME}/{VERSION} (local Path of Exile 2 companion; build-time "
               "game-data snapshot)")
@@ -39,18 +40,25 @@ OPT_OUT_ENV = "AL_NO_SNAPSHOT"
 MIN_AGE_S = 24 * 3600
 MAX_BYTES = 256 * 1024 * 1024
 TIMEOUT_S = 60
-ALLOWED_HOSTS = ("repoe-fork.github.io",)
+ALLOWED_HOSTS = ("repoe-fork.github.io", "raw.githubusercontent.com")
+# raw.githubusercontent.com serves every public repo: only GGG's own export
+# repository is allowed there (decision 0009 item 3 as amended).
+HOST_PATH_PREFIX = {"raw.githubusercontent.com": "/grindinggear/poe2-skilltree-export/"}
 MANIFEST = "manifest.json"
 REPOE_POE2 = "https://repoe-fork.github.io/poe2/"
+GGG_TREE_POE2 = ("https://raw.githubusercontent.com/grindinggear/"
+                 "poe2-skilltree-export/main/data.json")
 
-# name -> url; url None = disabled until its source is confirmed (decision
-# 0009 item 3, ROADMAP DATA-TREE-SRC).
+# name -> url; cached as <name>.json; url None = disabled. File names per
+# decision 0009 "What changes" and research 0011 (ROADMAP DATA-SRC-URLS).
+# The GGG tree export is fetch-only, never bundled (DATA-TREE-SRC; reader:
+# theorycraft/treedata.py).
 SOURCES = {
     "mods": REPOE_POE2 + "mods.json",
     "base_items": REPOE_POE2 + "base_items.json",
-    "stats": REPOE_POE2 + "stats.json",
-    "stat_translations": REPOE_POE2 + "stat_translations.json",
-    "skilltree": None,
+    "stats": REPOE_POE2 + "stats_by_file.json",
+    "stat_translations": REPOE_POE2 + "stat_translations/stat_descriptions.json",
+    "skilltree": GGG_TREE_POE2,
 }
 
 
@@ -76,6 +84,9 @@ def _parse_utc(text):
 def _check_url(url):
     parts = urllib.parse.urlsplit(url)
     if parts.scheme != "https" or parts.hostname not in ALLOWED_HOSTS:
+        raise FetchError(f"URL not allowed: {url}")
+    prefix = HOST_PATH_PREFIX.get(parts.hostname)
+    if prefix and (not parts.path.startswith(prefix) or ".." in parts.path):
         raise FetchError(f"URL not allowed: {url}")
 
 

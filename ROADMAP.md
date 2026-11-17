@@ -114,18 +114,42 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   DONE 2026-11-17 (decision 0009, research 0011): repoe-fork MIT confirmed;
   bundle-nothing stands; two fetch URLs found dead (see DATA-SRC-URLS); GGG
   PoE2 tree export exists (see DATA-TREE-SRC).
-- [ ] DATA-SRC-URLS (data) Fix SOURCES in server/al/theorycraft/snapshot.py:
+- [x] DATA-SRC-URLS (data) Fix SOURCES in server/al/theorycraft/snapshot.py:
   `stats` -> repoe-fork poe2 `stats_by_file.json`, `stat_translations` ->
   `stat_translations/stat_descriptions.json` (old URLs return 404;
   decision 0009 item 4). Update tests and consumers. ACCEPT: mocked-fetch
   test uses the real file names. ZERO-CLICK: next build.ps1 run.
-- [ ] DATA-TREE-SRC (data) Confirm whether GGG publishes a PoE2 passive
+  DONE 2026-11-17: SOURCES fixed (cache names stay stats.json /
+  stat_translations.json); no other consumer of the old names;
+  tests/test_tc_snap.py test_sources_policy + test_real_source_names_mocked_fetch.
+- [x] DATA-TREE-SRC (data) Confirm whether GGG publishes a PoE2 passive
   tree export (repo, data-file URL, terms); if so enable
   `SOURCES["skilltree"]` in server/al/theorycraft/snapshot.py and add its
   host to ALLOWED_HOSTS. Repo exists (grindinggear/poe2-skilltree-export,
   data.json, no license file; decision 0009 item 3 amended: fetch-only). ACCEPT: source enabled
   with a mocked-fetch test, or recorded as absent. ZERO-CLICK: the next
   build.ps1 run fetches it.
+  DONE 2026-11-17: SOURCES["skilltree"] = raw.githubusercontent.com
+  grindinggear/poe2-skilltree-export main/data.json -> Cache\gamedata\
+  skilltree.json (fetch-only); ALLOWED_HOSTS + raw host limited to that
+  repo path (HOST_PATH_PREFIX); ATTRIBUTION names the tree export.
+  Reader server/al/theorycraft/treedata.py (node id -> name / stats /
+  ascendancy / notable / keystone, class starts; unknown fields ignored;
+  shape UNVERIFIED, see DATA-TREE-SHAPE). Build view: tree.named_nodes in
+  the build snapshot when the cache exists (BuildStore tree=TreeCache,
+  mtime-checked), absent otherwise. tests/test_tc_tree.py on the synthetic
+  fixture tests/fixtures/skilltree_synthetic.json. Decision 0009 item 3
+  "Decision" text still says DISABLED (file locked this round; the
+  "What changes" amendment governs) - fold in at the next 0009 edit.
+- [ ] DATA-TREE-SHAPE (review) With web access, read the real
+  grindinggear/poe2-skilltree-export data.json top-level keys and one
+  main / notable / keystone / ascendancy / class-start node; confirm or
+  fix the UNVERIFIED shape in server/al/theorycraft/treedata.py (nodes
+  keyed by id, skill, name, stats, ascendancyName, isNotable, isKeystone,
+  isJewelSocket, classStartIndex or classesStart, classes[].name) and
+  whether PoB2 spec node ids equal the export's skill ids. ACCEPT: reader
+  test on a dated, anonymised shape fixture. ZERO-CLICK: doc + fixture
+  row, run by a lane.
 - [ ] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
   User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
   optional contact value read only from gitignored config/local.json (never

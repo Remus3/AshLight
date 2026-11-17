@@ -28,8 +28,11 @@ def _write(path, text):
 
 
 class BuildStore:
-    def __init__(self, path):
+    def __init__(self, path, tree=None):
+        """`tree`: optional treedata.TreeCache (DATA-TREE-SRC); when its
+        cache file exists the snapshot names the tree nodes."""
         self.path = Path(path)
+        self.tree = tree
         self.build = None
         self.load_error = None
         self._lock = threading.Lock()
@@ -73,5 +76,12 @@ class BuildStore:
 
     def snapshot(self):
         b = self.build
-        return {"loaded": b is not None, "build": b.to_dict() if b else None,
+        tree_data = None
+        if b is not None and self.tree is not None:
+            try:
+                tree_data = self.tree.get()
+            except Exception:  # optional data must never break the view
+                log.exception("tree data unavailable")
+        return {"loaded": b is not None,
+                "build": b.to_dict(tree_data) if b else None,
                 "code": b.to_code() if b else None, "load_error": self.load_error}

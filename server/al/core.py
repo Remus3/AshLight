@@ -17,6 +17,7 @@ from .state import SessionState
 from .theorycraft import live as tc_live
 from .theorycraft import shareurl
 from .theorycraft import store as build_store
+from .theorycraft import treedata
 from .theorycraft import weights as weights_mod
 
 
@@ -66,7 +67,12 @@ class Core:
         self.state.set_tailer(consented=self.consented())
         self.state.set_overlay_layout(layout.load(self.config_path))
         # TC-CODE: the last loaded PoB build reloads on start (no click).
-        self.builds = build_store.BuildStore(build_store.default_path(self.runtime))
+        # DATA-TREE-SRC: node names from the cached GGG tree export when the
+        # build-time snapshot fetched it; a test core never reads the sidecar.
+        tree_path = (treedata.default_path() if runtime is None
+                     else self.runtime / "gamedata" / treedata.FILE_NAME)
+        self.builds = build_store.BuildStore(build_store.default_path(self.runtime),
+                                             tree=treedata.TreeCache(tree_path))
         # TC-EVAL: editable stat weights, defaults written on first start.
         self.weights = weights_mod.WeightsStore(weights_mod.default_path(self.runtime))
         # TC-VIEW / TC-EVAL-UI: build summary and last item check in the state.

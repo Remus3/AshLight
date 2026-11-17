@@ -89,10 +89,16 @@ class TreeSpec:
     url: str = None
     jewels: dict = field(default_factory=dict)  # node id -> item id
 
-    def to_dict(self):
-        return {"title": self.title, "tree_version": self.tree_version,
-                "nodes": list(self.nodes), "node_count": len(self.nodes),
-                "url": self.url, "jewels": {str(k): v for k, v in self.jewels.items()}}
+    def to_dict(self, tree=None):
+        """`tree`: optional treedata.TreeData; when given, `named_nodes`
+        resolves the node ids to names (DATA-TREE-SRC). Without it the dict
+        is unchanged."""
+        out = {"title": self.title, "tree_version": self.tree_version,
+               "nodes": list(self.nodes), "node_count": len(self.nodes),
+               "url": self.url, "jewels": {str(k): v for k, v in self.jewels.items()}}
+        if tree is not None:
+            out["named_nodes"] = tree.resolve(self.nodes)
+        return out
 
 
 @dataclass(frozen=True)
@@ -157,14 +163,15 @@ class Build:
                 return item
         return None
 
-    def to_dict(self):
-        """JSON-ready view (no raw XML; the code is the export)."""
+    def to_dict(self, tree_data=None):
+        """JSON-ready view (no raw XML; the code is the export). `tree_data`
+        (optional treedata.TreeData) adds node names to the tree view."""
         tree = self.active_spec
         return {"class_name": self.class_name, "ascendancy": self.ascendancy,
                 "level": self.level, "target_version": self.target_version,
                 "main_skill_index": self.main_skill_index,
                 "stats": dict(self.stats),
-                "tree": tree.to_dict() if tree else None,
+                "tree": tree.to_dict(tree_data) if tree else None,
                 "spec_titles": [s.title for s in self.specs],
                 "gear": {slot: it.to_dict() for slot, it in self.gear.items()},
                 "skills": [s.to_dict() for s in self.skills],
