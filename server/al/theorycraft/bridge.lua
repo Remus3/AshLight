@@ -220,6 +220,34 @@ if not pcall(require, "lua-utf8") then
     { __index = string })
 end
 
+-- TC-LIVE: current LuaJIT v2.1 parses a first line that starts with "#" but
+-- not "#!" as a line-number directive, so PoB's files that begin with "#@"
+-- (a SimpleGraphic launcher hint: HeadlessWrapper.lua, Launch.lua) fail to
+-- load ("unexpected symbol near '#'"). PoB's own runtime skips that line;
+-- so do we, read-only, without touching the checkout. Line numbers stay
+-- (the skipped line becomes empty).
+local real_loadfile = loadfile
+local function pob_loadfile(name, ...)
+  if type(name) ~= "string" or select("#", ...) > 0 then
+    return real_loadfile(name, ...)
+  end
+  local ok, iter = pcall(io.lines, name)
+  if not ok then return nil, tostring(iter) end
+  local parts, first = {}, true
+  for line in iter do
+    if first and line:sub(1, 1) == "#" then line = "" end
+    first = false
+    parts[#parts + 1] = line
+  end
+  return loadstring(table.concat(parts, "\n"), "@" .. name)
+end
+loadfile = pob_loadfile
+dofile = function(name)
+  local f, err = pob_loadfile(name)
+  if not f then error(err, 2) end
+  return f()
+end
+
 -- HeadlessWrapper waits on io.read when PoB reports a start-up problem;
 -- that would swallow our first request, so reads return nil during start.
 local real_read = io.read
@@ -227,11 +255,27 @@ io.read = function() return nil end
 local started, start_err = pcall(dofile, "HeadlessWrapper.lua")
 io.read = real_read
 
+-- TC-LIVE: the pinned HeadlessWrapper keeps its launch object in a LOCAL
+-- (`local mainObject`, set by SetMainObject), not a global. Read it from
+-- runCallback's upvalue (read-only introspection), else the old global.
+local function pob_main()
+  if type(mainObject) == "table" then return mainObject end
+  if type(runCallback) == "function" and debug and debug.getupvalue then
+    for i = 1, 64 do
+      local name, value = debug.getupvalue(runCallback, i)
+      if name == nil then break end
+      if name == "mainObject" and type(value) == "table" then return value end
+    end
+  end
+  return nil
+end
+
 local function build_mode()
-  if type(mainObject) ~= "table" or not mainObject.main or not mainObject.main.modes then
+  local m = pob_main()
+  if not m or not m.main or not m.main.modes then
     return nil
   end
-  return mainObject.main.modes["BUILD"]
+  return m.main.modes["BUILD"]
 end
 
 local function frame()
@@ -242,8 +286,8 @@ if not started then
   send(0, false, "PoB failed to start: " .. tostring(start_err))
   return
 end
-if type(mainObject) == "table" and mainObject.promptMsg then
-  send(0, false, "PoB start-up message: " .. tostring(mainObject.promptMsg))
+if pob_main() and pob_main().promptMsg then
+  send(0, false, "PoB start-up message: " .. tostring(pob_main().promptMsg))
   return
 end
 
@@ -260,12 +304,20 @@ handlers["load_build"] = function(req)
   if type(loadBuildFromXML) == "function" then
     loadBuildFromXML(req.xml, "AshLight")
   else
-    mainObject.main:SetMode("BUILD", false, "AshLight", req.xml)
+    local m = pob_main()
+    if not m then error("PoB launch object not found", 0) end
+    m.main:SetMode("BUILD", false, "AshLight", req.xml)
     frame()
   end
   frame()
   local build = build_mode()
   if not build or not build.calcsTab then error("PoB did not load the build", 0) end
+  -- TC-LIVE: a load does not always recalculate on the next frame (seen
+  -- with a sparse build after a full one: the old mainOutput stayed), so
+  -- rebuild the output once here; reads never see a stale build.
+  if type(build.calcsTab.BuildOutput) == "function" then
+    build.calcsTab:BuildOutput()
+  end
   return { loaded = true }
 end
 

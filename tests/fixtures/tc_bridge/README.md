@@ -11,7 +11,9 @@
 
 The live comparison test reads `gui_expected.json` from this folder (tracked,
 only for a build its owner allowed, see `tests/fixtures/pob2_real/README.md`)
-or from the gitignored `ops/runtime/tc_bridge/gui_expected.json`:
+or from the gitignored `ops/runtime/tc_bridge/gui_expected.json`, or from
+the AL sidecar `Cache\tc_bridge\gui_expected.json` (paths.py key
+`tc_bridge_ref`; TC-LIVE recorded one there for a public pobb.in build):
 
     {
       "pob": "v0.23.1",

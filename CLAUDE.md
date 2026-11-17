@@ -461,3 +461,8 @@ them. Pause: `ops/loop/control/HALT`.
   while web data is on (decision 0026). Reverses if: poe.ninja asks for
   less polling or blocks it, decision 0013 goes per-feature, or the
   overview shapes break every release.
+- LuaJIT for the optional calc builds with a system compiler, else a
+  hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
+  Cache on -TcCalc only, PATH set only in the build subprocess, never
+  vendored (decision 0027). Reverses if: WinLibs drops .zip assets, a
+  license objection appears, or LuaJIT ships hashed Windows binaries.

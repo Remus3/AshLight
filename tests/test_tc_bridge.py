@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import tc_pin  # noqa: E402
 
-from server.al import exepin  # noqa: E402
+from server.al import exepin, paths  # noqa: E402
 from server.al.theorycraft import bridge  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures" / "tc_bridge"
@@ -238,8 +238,11 @@ def test_lua_script_is_our_own_and_stays_inside_the_floor():
 
 LIVE = pytest.mark.skipif(not bridge.available(),
                           reason="optional calc component absent (setup.ps1 -TcCalc)")
+# TC-LIVE: the reference may also live beside the component in the AL
+# sidecar Cache (a public build whose owner was not asked stays untracked).
 EXPECTED = [p for p in (FIX / "gui_expected.json",
-                        ROOT / "ops" / "runtime" / "tc_bridge" / "gui_expected.json")
+                        ROOT / "ops" / "runtime" / "tc_bridge" / "gui_expected.json",
+                        paths.all_runtime_paths()["tc_bridge_ref"])
             if p.is_file()]
 
 
@@ -266,7 +269,9 @@ def test_live_reload_does_not_leak_state(live_bridge):
     """TC-DRIFT / research 0017: PoB dev touched the headless global cache
     cleanup; loading build A, then B, then A again must give A's outputs."""
     a = (FIX / "minimal_build.xml").read_text(encoding="ascii")
-    b = a.replace('level="1"', 'level="90"', 1)
+    # TC-LIVE: PoB-PoE2 v0.23.1 derives the level from spent points unless
+    # characterLevelAutoMode is off, so level="90" alone changes nothing.
+    b = a.replace('level="1"', 'level="90" characterLevelAutoMode="false"', 1)
     assert a != b
     live_bridge.load_build(a)
     first = live_bridge.outputs()
