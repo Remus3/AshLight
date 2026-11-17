@@ -1,5 +1,6 @@
 """Port constants (block 8960-8979). A port literal at a bind site is a defect."""
 
+import logging
 import os
 
 PORT_BLOCK = (8960, 8979)
@@ -27,12 +28,20 @@ def _block_port(value):
 def resolve(environ=None, config=None):
     """The core port, ONE rule for the core, run.ps1, keepalive and the
     overlay (app/main.js corePort): env AL_PORT, then config/local.json
-    "port", then AL_PORT. A value outside the block is ignored
+    "port", then AL_PORT. A value outside the block is ignored with a
+    logged warning, so the core never binds outside 8960-8979
     (TEST-CLEAN-CLONE: the documented "port" key was read by the overlay
     only, so a second checkout could not move off 8960)."""
     env = os.environ if environ is None else environ
-    for value in ((env.get(PORT_ENV) or ""), (config or {}).get("port")):
-        port = _block_port(value) if value not in ("", None) else None
+    sources = ((f"env {PORT_ENV}", env.get(PORT_ENV) or ""),
+               ('config "port"', (config or {}).get("port")))
+    for name, value in sources:
+        if value in ("", None):
+            continue
+        port = _block_port(value)
         if port is not None:
             return port
+        logging.getLogger("al").warning(
+            "%s=%r is not a port in the block %s-%s; ignored (default %s)",
+            name, value, PORT_BLOCK[0], PORT_BLOCK[1], AL_PORT)
     return AL_PORT

@@ -44,3 +44,26 @@ def test_run_ps1_uses_resolve_and_passes_the_port_on():
 def test_overlay_reads_the_same_sources():
     text = (ROOT / "app" / "main.js").read_text(encoding="utf-8")
     assert "process.env.AL_PORT" in text and "cfg.port" in text
+
+
+def test_out_of_block_logs_a_warning_and_falls_back(caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger="al"):
+        assert ports.resolve({"AL_PORT": "8080"}, {"port": 65000}) == 8960
+    msgs = [r.getMessage() for r in caplog.records]
+    assert any("AL_PORT" in m and "8080" in m for m in msgs)
+    assert any("config" in m and "65000" in m for m in msgs)
+
+
+def test_in_block_and_unset_log_nothing(caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger="al"):
+        assert ports.resolve({"AL_PORT": "8979"}, {}) == 8979
+        assert ports.resolve({}, {}) == 8960
+    assert caplog.records == []
+
+
+def test_bind_stays_loopback():
+    assert ports.LOOPBACK == "127.0.0.1"
+    text = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
+    assert "(ports.LOOPBACK, int(port))" in text
