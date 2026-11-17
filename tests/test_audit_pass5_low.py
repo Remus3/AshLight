@@ -155,3 +155,17 @@ def test_p5_7_decision_0035_gap_is_recorded():
     assert not list(dec.glob("0035-*.md"))
     text = (dec / "README.md").read_text(encoding="ascii")
     assert "0035" in text and "unused" in text
+
+
+# FOLLOWUP11: Windows system combinations (task switcher, window cycling,
+# Task Manager, secure attention, Win key) are refused, and every blocked
+# combination is in the shared table so app/hotkey.js is held to it too.
+def test_followup11_windows_system_combos_refused():
+    for value in ("Alt+Shift+Tab", "Shift+Alt+Tab", "Ctrl+Alt+Tab", "Alt+Shift+Escape",
+                  "Ctrl+Shift+Esc", "Ctrl+Alt+Delete", "Ctrl+Alt+End", "Win+Tab", "Win+D"):
+        assert hotkeys.safe_accelerator(value) is None, value
+        assert value in CASES["bad"], value
+
+
+def test_followup11_every_blocked_combo_is_in_the_table():
+    assert hotkeys.GAME_KEYS <= set(CASES["bad"])

@@ -7,7 +7,9 @@
    file path. Import: the player picks that file with the browser's file
    input; the browser reads it (size-capped) and posts its JSON to the
    core, which applies allowed keys only. Web data is never turned on by
-   an import: the player is told to tick the switch themselves. No timers. */
+   an import: the player is told to tick the switch themselves. Nor is
+   the optional calc (tc_calc_offered): the player is told it stays off
+   until they set it up. No timers. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -29,6 +31,11 @@
     "only: no contact, password or file paths.";
   var WEB_OFFER = " The file had web data on. It stays off here until you tick " +
     "\"Use web data\" under Prices and web data.";
+  /* FOLLOWUP11: the dashboard has no switch for the calc (it is set up
+     with setup.ps1 -TcCalc, decision 0018), so the sentence names that
+     step instead of a tick box. */
+  var CALC_OFFER = " The file had the optional Path of Building calc on. It stays " +
+    "off here. Set it up with the AshLight setup script to use it.";
 
   /* The sentence after an import, from the core's report. */
   function importedText(report) {
@@ -37,11 +44,16 @@
     var text = n === 0 ? "No settings in that file were changed."
       : "Imported " + n + (n === 1 ? " setting." : " settings.");
     var ignored = report.ignored || [];
+    /* the calc gets its own sentence, so it isn't counted as skipped too */
+    if (report.tc_calc_offered) {
+      ignored = ignored.filter(function (k) { return k !== "tc_calc"; });
+    }
     if (ignored.length) {
       text += " Skipped " + ignored.length + (ignored.length === 1 ? " setting" : " settings") +
         " that AshLight doesn't take from a file.";
     }
     if (report.web_data_offered) { text += WEB_OFFER; }
+    if (report.tc_calc_offered) { text += CALC_OFFER; }
     return text;
   }
 
@@ -130,5 +142,5 @@
   return { runImport: runImport, runExport: runExport, importedText: importedText,
     refusedText: refusedText, wire: wire, MAX_BYTES: MAX_BYTES, TOO_BIG: TOO_BIG,
     NOT_JSON: NOT_JSON, FAILED: FAILED, OFFLINE: OFFLINE, SAVED: SAVED,
-    WEB_OFFER: WEB_OFFER };
+    WEB_OFFER: WEB_OFFER, CALC_OFFER: CALC_OFFER };
 }));

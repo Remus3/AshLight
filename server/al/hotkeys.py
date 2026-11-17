@@ -5,7 +5,9 @@ Electron's globalShortcut takes its key from EVERY program, the game
 included. So an AshLight hotkey always holds Ctrl or Alt (Shift alone only
 with an F key: Shift + a letter types in the game's chat), and never a
 combination the game or Windows uses (item copy Ctrl+C / Ctrl+Alt+C,
-paste, stash search, chat send, Alt+F4, Alt+Tab ...).
+paste, stash search, chat send, Alt+F4, Alt+Tab,
+Alt+Shift+Tab, Ctrl+Alt+Tab, Task Manager Ctrl+Shift+Esc, Ctrl+Alt+Delete
+...). The Win key is never a modifier: Windows owns it.
 """
 
 import re
@@ -22,7 +24,8 @@ _F = re.compile(r"^f([1-9]|1[0-9]|2[0-4])$")
 GAME_KEYS = frozenset({
     "Ctrl+C", "Ctrl+Alt+C", "Ctrl+V", "Ctrl+X", "Ctrl+A", "Ctrl+Z", "Ctrl+F",
     "Ctrl+Enter", "Ctrl+Escape", "Ctrl+Shift+Escape", "Ctrl+Alt+Delete",
-    "Alt+F4", "Alt+Tab", "Alt+Enter", "Alt+Escape", "Alt+Space"})
+    "Alt+F4", "Alt+Tab", "Alt+Enter", "Alt+Escape", "Alt+Space",
+    "Alt+Shift+Tab", "Ctrl+Alt+Tab", "Alt+Shift+Escape", "Ctrl+Alt+End"})
 
 
 def _key(token):

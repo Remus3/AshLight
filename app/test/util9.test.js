@@ -48,6 +48,18 @@ test("settings io: import sentences", () => {
   "Imported 2 settings. Skipped 1 setting that AshLight doesn't take from a file." +
     sio.WEB_OFFER);
   assert.equal(sio.importedText({ applied: [] }), "No settings in that file were changed.");
+  // FOLLOWUP11: a file with the calc on gets one plain sentence, and the
+  // calc is not counted as skipped as well
+  assert.equal(sio.importedText({ applied: ["league"], ignored: ["tc_calc"],
+    tc_calc_offered: true }), "Imported 1 setting." + sio.CALC_OFFER);
+  assert.equal(sio.importedText({ applied: [], ignored: ["contact", "tc_calc"],
+    web_data_offered: true, tc_calc_offered: true }),
+  "No settings in that file were changed. Skipped 1 setting that AshLight doesn't " +
+    "take from a file." + sio.WEB_OFFER + sio.CALC_OFFER);
+  assert.equal(sio.importedText({ applied: [], ignored: ["tc_calc"] }),
+    "No settings in that file were changed. Skipped 1 setting that AshLight doesn't " +
+    "take from a file.");
+  assert.match(sio.CALC_OFFER, /^ [^\n]+\.$/);
   assert.equal(sio.refusedText(413, null), sio.TOO_BIG);
   assert.equal(sio.refusedText(400, { error: "Bad." }), "Bad. Nothing changed.");
   assert.equal(sio.refusedText(500, null), sio.FAILED);
