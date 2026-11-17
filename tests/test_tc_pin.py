@@ -340,6 +340,38 @@ def test_no_system_compiler_builds_with_the_pinned_toolchain(world, monkeypatch)
     assert tc_pin.ensure_toolchain(doc, lay, fetch=None) == lay["toolchain_bin"]
 
 
+def test_p3_10_tampered_toolchain_tree_is_reextracted_before_the_build(world):
+    """AREA-AUDIT P3-10: the marker alone no longer vouches for the tree; a
+    file changed after extraction is caught by the re-hash and the tree is
+    re-extracted from the hash-verified archive before any build uses it."""
+    blob = _toolchain(world)
+    doc = world["doc"]
+    lay = tc_pin.layout(doc, world["env"])
+    fetched = []
+
+    def tc_fetch(url, max_bytes):
+        fetched.append(url)
+        yield blob
+    tc_pin.ensure_toolchain(doc, lay, fetch=tc_fetch)
+    gcc = lay["toolchain_bin"] / "gcc.exe"
+    assert gcc.read_text() == "g"
+    marker = tc_pin.read_marker(lay["toolchain_root"])
+    assert marker["tree_sha256"] == tc_pin.tree_digest(lay["toolchain_root"])
+    gcc.write_text("planted")  # same marker, different compiler
+    (lay["toolchain_bin"] / "extra.dll").write_text("x")  # an added file counts too
+    tc_pin.ensure_toolchain(doc, lay, fetch=tc_fetch)
+    assert gcc.read_text() == "g"
+    assert not (lay["toolchain_bin"] / "extra.dll").exists()
+    assert fetched == [doc["toolchain"]["archive_url"]]  # cached archive re-verified
+    # an old marker without a tree digest is not trusted either
+    m = lay["toolchain_root"] / tc_pin.MARKER
+    old = json.loads(m.read_text(encoding="ascii"))
+    old.pop("tree_sha256")
+    m.write_text(json.dumps(old), encoding="ascii")
+    tc_pin.ensure_toolchain(doc, lay, fetch=tc_fetch)
+    assert "tree_sha256" in tc_pin.read_marker(lay["toolchain_root"])
+
+
 def test_system_compiler_wins_over_the_pinned_toolchain(world):
     _toolchain(world)
     doc, env = world["doc"], world["env"]

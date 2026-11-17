@@ -12,11 +12,16 @@ Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
 - `trial --tag vX.Y.Z`: resolves the tag's commit, downloads the commit
   archive twice (both SHA-256 and sizes must agree, as decision 0018 requires
   for a pin), writes a candidate pin file in the sidecar, runs the opt-in
-  setup step on it (tools/tc_pin.py) and the bridge tests against it
-  (AL_TC_PINS_FILE). Verdict: green (every test passed and live tests ran),
-  red, untested (the live tests skipped: no luajit.exe on this host) or error.
-- `apply`: writes the green candidate into config/tc_pins.json (the pin moves
-  in one commit by whoever commits it); refuses without a green trial.
+  setup step on it (tools/tc_pin.py) and then, by default, ONLY the static
+  drift guard against it (AL_TC_PINS_FILE; reads the candidate's Lua, runs
+  none of it): verdict static-green, static-red, untested (nothing ran) or
+  error. Decision 0025 amendment (AREA-AUDIT P3-9): candidate PoB Lua runs
+  under luajit only with `--live` (a manual trigger), or from the loop when
+  config/local.json has "tc_drift_live_unattended": true (default off; no
+  env var enables it). Live verdict: live-green (every test passed and live
+  tests ran), red, untested (live tests skipped: no luajit.exe) or error.
+- `apply`: writes the live-green candidate into config/tc_pins.json (the pin
+  moves in one commit by whoever commits it); refuses anything else.
 - `note`: the dated HOLD line for decision 0004 when the pin stays.
 
 Nothing from an archive is imported here; the bridge tests run in a
@@ -56,6 +61,10 @@ TRIAL_STALE_S = 6 * 3600
 TRIAL_MAX_LAUNCHES = 3
 TRIAL_TESTS = ("tests/test_tc_bridge.py", "tests/test_tc_delta.py",
                "tests/test_tc_pob_drift_guard.py")  # MATH-POB-DRIFT-GUARD
+# P3-9: the unattended default runs only the guard's static part (no luajit).
+STATIC_TESTS = ("tests/test_tc_pob_drift_guard.py",)
+STATIC_SELECT = "not test_live"
+LIVE_OPT_IN_KEY = "tc_drift_live_unattended"
 TRIAL_TIMEOUT_S = 3600
 MAX_ARCHIVE = 2 * 1024 ** 3
 API_MAX_BYTES = 256 * 1024
@@ -230,16 +239,30 @@ def summary(st):
         tr = st.get("trial") or {}
         if tr.get("state") == "launched":
             return f"tc drift: PoB-PoE2 {latest} released (pin {pinned}), trial launched"
-        if tr.get("verdict") == "green":
-            return (f"tc drift: PoB-PoE2 {latest} trial green, pin move ready "
+        if tr.get("verdict") == "live-green":
+            return (f"tc drift: PoB-PoE2 {latest} trial live-green, pin move ready "
                     "(tools/tc_drift.py apply)")
+        if tr.get("verdict") == "static-green":
+            return (f"tc drift: PoB-PoE2 {latest} trial static-green, live trial is "
+                    f"manual (tools/tc_drift.py trial --tag {latest} --live), hold")
         return f"tc drift: PoB-PoE2 {latest} trial {tr.get('verdict') or tr.get('state')}, hold"
     return f"tc drift: latest {latest} vs pin {pinned}: {status}, hold"
 
 
+def live_opted_in(root):
+    """P3-9: the loop's trial runs candidate Lua only when config/local.json
+    carries "tc_drift_live_unattended": true (a real boolean). No env var."""
+    try:
+        cfg = json.loads((Path(root) / "config" / "local.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(cfg, dict) and cfg.get(LIVE_OPT_IN_KEY) is True
+
+
 def loop_check(root, now, fetch=None, launch=None):
     """The al_loop tick hook: None when no check is due (or no pin file);
-    else one summary line. A new tag launches one detached trial."""
+    else one summary line. A new tag launches one detached trial: static
+    only unless the host opted in to unattended live trials (P3-9)."""
     if not (Path(root) / "config" / "tc_pins.json").is_file():
         return None
     st = load_state(root)
@@ -254,7 +277,7 @@ def loop_check(root, now, fetch=None, launch=None):
         n = int(prev.get("launches") or 0) + 1 if prev.get("tag") == st["latest"] else 1
         launch = launch or launch_trial
         try:
-            pid = launch(root, st["latest"])
+            pid = launch(root, st["latest"], live=live_opted_in(root))
         except OSError as e:
             return f"tc drift: {st['latest']} released, trial launch failed: {e}"
         st["trial"] = {"tag": st["latest"], "state": "launched", "at": iso(now),
@@ -263,8 +286,9 @@ def loop_check(root, now, fetch=None, launch=None):
     return summary(st)
 
 
-def launch_trial(root, tag):
-    """A detached, windowless `tc_drift.py trial --tag <tag>`; returns its pid."""
+def launch_trial(root, tag, live=False):
+    """A detached, windowless `tc_drift.py trial --tag <tag>` (plus `--live`
+    only when the host opted in, P3-9); returns its pid."""
     exe = Path(sys.executable)
     pyw = exe.with_name("pythonw.exe")
     exe = pyw if pyw.is_file() else exe
@@ -276,7 +300,8 @@ def launch_trial(root, tag):
                  | subprocess.CREATE_NO_WINDOW)
     with open(logs / "tc-drift.log", "ab") as out:
         proc = subprocess.Popen([str(exe), str(Path(root) / "tools" / "tc_drift.py"),
-                                 "trial", "--tag", tag], cwd=str(root),
+                                 "trial", "--tag", tag, *(["--live"] if live else [])],
+                                cwd=str(root),
                                 stdin=subprocess.DEVNULL, stdout=out, stderr=out,
                                 creationflags=flags, close_fds=True)
     return proc.pid
@@ -329,37 +354,56 @@ def download_measure(url, dest):
     return h.hexdigest(), size
 
 
-def run_bridge_tests(cand_path, junit_path, environ):
-    """The bridge tests against the candidate pins, in a subprocess."""
+def trial_argv(junit_path, live=False):
+    """The pytest argv of a trial: the static guard only unless live (P3-9).
+    Isolated interpreter (-I: no PYTHONPATH, no user site)."""
+    select = [*TRIAL_TESTS] if live else [*STATIC_TESTS, "-k", STATIC_SELECT]
+    return [sys.executable, "-I", "-m", "pytest", "-q", "-p", "no:cacheprovider",
+            *select, f"--junitxml={junit_path}"]
+
+
+def run_bridge_tests(cand_path, junit_path, environ, live=False):
+    """The trial tests against the candidate pins, in a subprocess with a
+    hard timeout; cwd is the repo, never the extracted candidate tree."""
     env = dict(os.environ)
     env.update(environ or {})
     env[PINS_ENV] = str(cand_path)
-    argv = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-            *TRIAL_TESTS, f"--junitxml={junit_path}"]
+    argv = trial_argv(junit_path, live)
     subprocess.run(argv, cwd=str(ROOT), env=env, timeout=TRIAL_TIMEOUT_S,
                    stdin=subprocess.DEVNULL, capture_output=True)
     return parse_junit(Path(junit_path).read_text(encoding="utf-8"))
 
 
-def _verdict(res):
+def _verdict(res, live=True):
+    if not live:
+        if res["live_ran"]:
+            raise DriftError("static trial ran live tests")  # selection broke
+        if res["failures"] or res["errors"]:
+            return "static-red", (f"{res['failures']} failed, {res['errors']} errors "
+                                  f"of {res['tests']} static guard tests")
+        if res["tests"] <= res["skipped"]:
+            return "untested", "static guard skipped (candidate checkout absent)"
+        return "static-green", (f"{res['tests'] - res['skipped']} static guard tests "
+                                "passed; live trial is manual (--live)")
     if res["failures"] or res["errors"]:
         return "red", f"{res['failures']} failed, {res['errors']} errors of {res['tests']}"
     if not res["live_ran"]:
         return "untested", (f"live bridge tests skipped ({res['skipped']} skipped): "
                             "no luajit.exe on this host")
-    return "green", f"{res['tests']} tests, {res['live_ran']} live, all passed"
+    return "live-green", f"{res['tests']} tests, {res['live_ran']} live, all passed"
 
 
 def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
-          run_tests=None, today=None):
-    """Trial the bridge tests on `tag`; records and returns the result."""
+          run_tests=None, today=None, live=False):
+    """Trial `tag`: the static guard only, or the live bridge tests when
+    `live` (P3-9); records and returns the result."""
     download = download or download_measure
     setup = setup or (lambda doc, env: tc_pin.run_setup(doc, environ=env))
     run_tests = run_tests or run_bridge_tests
     today = today or time.strftime("%Y-%m-%d")
     doc = _pins(root)
     work = paths.all_runtime_paths(environ)["build"] / "tc-drift"
-    res = {"tag": tag, "state": "done", "at": iso(time.time())}
+    res = {"tag": tag, "state": "done", "at": iso(time.time()), "live": bool(live)}
     try:
         commit = resolve_commit(doc["pob2"]["repo"], tag, fetch=fetch)
         name = doc["pob2"]["repo"].split("/")[1]
@@ -383,9 +427,9 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
         cand_path.write_text(json.dumps(cand, indent=2) + "\n", encoding="ascii")
         res["candidate"] = str(cand_path)
         setup(cand, environ)
-        tests = run_tests(cand_path, work / f"{tag}-junit.xml", environ)
+        tests = run_tests(cand_path, work / f"{tag}-junit.xml", environ, live=live)
         res["tests"] = tests
-        res["verdict"], res["detail"] = _verdict(tests)
+        res["verdict"], res["detail"] = _verdict(tests, live)
     except (DriftError, webfetch.FetchError, tc_pin.HashMismatch, tc_pin.UnsafeArchive,
             OSError, RuntimeError, ValueError, ET.ParseError,
             subprocess.SubprocessError) as e:
@@ -405,8 +449,9 @@ def apply(root):
     """Move config/tc_pins.json to the green trial's candidate; the tag."""
     st = load_state(root)
     tr = st.get("trial") or {}
-    if tr.get("verdict") != "green" or not tr.get("candidate"):
-        raise DriftError(f"no green trial to apply (trial: {tr.get('verdict') or 'none'})")
+    if tr.get("verdict") != "live-green" or not tr.get("live") or not tr.get("candidate"):
+        raise DriftError("no live-green trial to apply "
+                         f"(trial: {tr.get('verdict') or 'none'})")
     cand = json.loads(Path(tr["candidate"]).read_text(encoding="ascii"))
     problems = tc_pin.validate_pins(cand)
     if problems or cand["pob2"]["tag"] != tr["tag"]:
@@ -443,6 +488,8 @@ def main(argv=None):
     sub.add_parser("check", help="one release check now (ignores the daily throttle)")
     t = sub.add_parser("trial", help="trial the bridge tests on a release tag")
     t.add_argument("--tag", required=True)
+    t.add_argument("--live", action="store_true",
+                   help="also run the candidate's Lua under luajit (manual trigger, P3-9)")
     sub.add_parser("apply", help="move the pin to the green trial's candidate")
     sub.add_parser("note", help="print the dated HOLD line for decision 0004")
     sub.add_parser("status", help="print the drift state")
@@ -454,9 +501,9 @@ def main(argv=None):
             print(summary(st))
             return RC_FAIL if st.get("status") in ("error", "rate-limited") else RC_OK
         if args.cmd == "trial":
-            res = trial(root, args.tag)
+            res = trial(root, args.tag, live=args.live)
             print(f"trial {args.tag}: {res['verdict']}: {res['detail']}")
-            return RC_OK if res["verdict"] == "green" else RC_FAIL
+            return RC_OK if res["verdict"] in ("live-green", "static-green") else RC_FAIL
         if args.cmd == "apply":
             print(f"pin moved to PoB-PoE2 {apply(root)}; commit config/tc_pins.json")
             return RC_OK

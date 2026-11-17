@@ -82,6 +82,38 @@ def test_provider_off_unless_opted_in_and_available():
     assert calcwire.Provider(lambda: True, available=boom)() is None
 
 
+def test_p3_6_turning_tc_calc_off_stops_the_calc_process(tmp_path):
+    """AREA-AUDIT P3-6: the shared luajit process stops once the user turns
+    tc_calc off, from the core's loop tick, not only at core close."""
+    on, stopped = [True], []
+    p = calcwire.Provider(lambda: on[0], available=lambda: True, get_bridge=FakeBridge,
+                          stop=lambda: stopped.append(1))
+    assert p.reap() is False and stopped == []  # nothing started yet
+    assert callable(p())
+    assert p.reap() is False and stopped == []  # still on: keep it
+    on[0] = False
+    assert p.reap() is True and stopped == [1]
+    assert p.reap() is False and stopped == [1]  # stopped once
+    on[0] = True
+    assert callable(p())  # turning it on again starts a fresh calc
+    on[0] = False
+    assert p() is None and stopped == [1, 1]  # a call while off also stops it
+    # the core's loop tick reaps through the provider
+    from server.al.core import Core
+    log = tmp_path / "Client.txt"
+    log.write_text("", encoding="utf-8")
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
+    reaped = []
+    core.tc_provider = type("P", (), {"reap": lambda self: reaped.append(1) or False,
+                                      "close": lambda self: None})()
+    core.tick_calc()
+    assert reaped == [1]
+    core.close()
+    main = (Path(__file__).resolve().parents[1] / "server" / "al" / "__main__.py").read_text(
+        encoding="ascii")
+    assert "core.tick_calc()" in main
+
+
 def test_core_reads_the_opt_in(tmp_path):
     from server.al.core import Core
     log = tmp_path / "Client.txt"

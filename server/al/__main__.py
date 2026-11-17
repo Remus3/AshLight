@@ -184,6 +184,10 @@ def main(argv=None):
                 core.tick_summary()  # UTIL-SESSION-SUMMARY: idle -> card
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_summary failed")
+            try:
+                core.tick_calc()  # AREA-AUDIT P3-6: tc_calc off -> stop luajit
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_calc failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:

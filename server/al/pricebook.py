@@ -231,7 +231,9 @@ class PriceBook:
             except Exception as e:  # noqa: BLE001 - one bad type never stops the rest
                 t["last_error"] = str(e)[:200]
                 out["errors"] += 1
-        self._save()
+            # AREA-AUDIT P3-7: on disk per request, so a core killed mid-loop
+            # (up to 22 GETs x 10 s) does not re-request these types early.
+            self._save()
         return out
 
     # -- offline reads

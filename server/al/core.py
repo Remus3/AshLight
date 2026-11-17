@@ -398,6 +398,11 @@ class Core:
             pass  # the card still shows; the next one tries again
         return card
 
+    def tick_calc(self):
+        """AREA-AUDIT P3-6, from the core's main loop: stop the shared calc
+        process once the user turned "tc_calc" off. True when it stopped."""
+        return self.tc_provider.reap()
+
     def close(self):
         self.stop_tailing()
         self.tc_provider.close()  # AUDIT-TC-WIRE: stop the bridge if started

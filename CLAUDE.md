@@ -456,9 +456,15 @@ them. Pause: `ops/loop/control/HALT`.
   source, or uncached probes make a press feel slow.
 - TC-DRIFT: one read-only GitHub releases check per 24 h from the loop tick,
   a detached trial per new tag, the pin moves only via `tc_drift.py apply`
-  after a green trial, committed by a session (decision 0025). Reverses if:
+  after a live-green trial, committed by a session (decision 0025). The
+  unattended trial runs only the static drift guard; candidate Lua runs
+  under luajit only on `trial --live` or local.json
+  "tc_drift_live_unattended": true; AL_TC_PINS_FILE is honoured only in a
+  pytest run (0025 amendment, AREA-AUDIT P3-9 / P3-8). Reverses if:
   GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
-  releases or ships a headless API, or the loop gains safe auto-commit.
+  releases or ships a headless API, the loop gains safe auto-commit, PoB
+  releases become verifiable (signed), a no-admin OS sandbox exists, or
+  the operator rules unattended live trials acceptable by default.
 - Price book: unique and stackable poe.ninja overviews ride the rates
   refresh (same opt-in, contact, UA, league; per-type hourly gate + ETag),
   the press reads the cache only, movers from the same cache, auto league
@@ -469,7 +475,8 @@ them. Pause: `ops/loop/control/HALT`.
 - LuaJIT for the optional calc builds with a system compiler, else a
   hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
   Cache on -TcCalc only, PATH set only in the build subprocess, never
-  vendored (decision 0027). Reverses if: WinLibs drops .zip assets, a
+  vendored, its extracted tree re-hashed against the marker before each
+  build (decision 0027; amendment 2026-11-17, P3-10). Reverses if: WinLibs drops .zip assets, a
   license objection appears, or LuaJIT ships hashed Windows binaries.
 - Theorycraft is proven end to end on the real reference build (PoB-sourced
   card deltas, kill fallback), with calc budgets in decision 0024 R7, a
