@@ -41,11 +41,11 @@ const snap = {
 test("hudModel builds the visible strings", () => {
   const m = gate.hudModel(snap, 1000 + 125, "live");
   assert.deepEqual(m, { zone: "Clearfell", timer: "2m", level: "Lv 3",
-                        deaths: "1 death", sep: "|", away: "", status: "live",
+                        deaths: "1 death", sep: "|", away: "", log: "", status: "live",
                         tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "",
                         anchor: "top" });
   const empty = gate.hudModel(null, 0);
-  assert.equal(empty.status, "waiting");
+  assert.equal(empty.status, "connecting");
 });
 
 test("shouldRender: only when a visible string changes", () => {
@@ -75,7 +75,7 @@ test("DS-HUD-EMPTY: before the first snapshot there is no lone separator", () =>
   assert.equal(m.deaths, "");
   assert.equal(m.sep, "");
   assert.equal(m.away, "");
-  assert.equal(m.status, "waiting");
+  assert.equal(m.status, "connecting");
   // The first snapshot fills the line and brings the separator back.
   const f = gate.hudModel(snap, 1000, "live");
   assert.deepEqual(gate.changedFields(m, f).sort(),
@@ -125,4 +125,38 @@ test("DS-HUD-AFK: AFK / DND show in the status slot while live", () => {
   assert.equal(gate.statusText(afk), "AFK");
   assert.equal(gate.statusText({ ...afk, status: "offline" }), "offline");
   assert.equal(gate.statusText(live), "");
+});
+
+test("UI-REVIEW-2: the HUD says when Client.txt is not being read", () => {
+  // Not opted in: no made-up numbers, one status word.
+  const off = gate.hudModel({ ...snap, zone: null, zone_entered_at: null, level: null, deaths: 0,
+                              tailer: { consented: false, reading: false, path: null } }, 1000, "live");
+  assert.equal(off.zone, "AshLight");
+  assert.equal(off.timer, "");
+  assert.equal(off.level, "");
+  assert.equal(off.deaths, "");
+  assert.equal(off.sep, "");
+  assert.equal(off.log, "not reading");
+  assert.equal(gate.statusText(off), "not reading");
+  // Opted in but the file is missing or quiet: keep what is known, say so.
+  const wait = gate.hudModel({ ...snap, tailer: { consented: true, reading: false, path: null } },
+                             1000, "live");
+  assert.equal(wait.level, "Lv 3");
+  assert.equal(wait.log, "no Client.txt");
+  assert.equal(gate.statusText(wait), "no Client.txt");
+  // Reading, or an older core without the tailer field: nothing extra.
+  const ok = gate.hudModel({ ...snap, tailer: { consented: true, reading: true, path: "x" } }, 1000, "live");
+  assert.equal(ok.log, "");
+  assert.equal(gate.hudModel(snap, 1000, "live").log, "");
+  assert.ok(gate.FIELDS.indexOf("log") >= 0);
+  // Order in the slot: connection, then log, then AFK.
+  const both = gate.hudModel({ ...snap, afk: true, tailer: { consented: true, reading: false } }, 1000, "live");
+  assert.equal(gate.statusText(both), "no Client.txt");
+  assert.equal(gate.statusText({ ...both, status: "offline" }), "offline");
+});
+
+test("UI-REVIEW-2: no zone yet means no timer dashes", () => {
+  const m = gate.hudModel({ ...snap, zone: null, zone_entered_at: null }, 1000, "live");
+  assert.equal(m.zone, "No zone yet");
+  assert.equal(m.timer, "");
 });

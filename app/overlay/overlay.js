@@ -10,7 +10,7 @@
   var snap = null;
   var offset = 0;
   var shown = null;
-  var status = "waiting";
+  var status = "connecting";
   var timer = null;
   var nodes = {};
 
@@ -25,7 +25,7 @@
         } else if (f === "tradeItem") {
           nodes.tradeItem.textContent = model.tradeItem;
           nodes.trade.hidden = !model.tradeItem;
-        } else if (f === "status" || f === "away") {
+        } else if (f === "status" || f === "away" || f === "log") {
           nodes.hud.setAttribute("data-status", model.status);
           nodes.status.textContent = S.statusText(model);
         } else {
@@ -46,7 +46,7 @@
 
   function connect() {
     if (!cfg.token || !cfg.port) {
-      status = "AshLight offline";
+      status = "offline";
       paint();
       return; // main reloads this page when the core writes a token
     }

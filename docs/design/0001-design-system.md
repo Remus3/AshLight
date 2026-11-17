@@ -86,7 +86,7 @@ current 0.75 floor.
 ## 4. Spacing and shape
 
 - 4px grid: 4, 8, 12, 16, 24, 32. Cards pad 16px; stat tiles 12px 16px;
-  gaps 16px (8px under 480px width).
+  gaps 16px (8px under 600px width).
 - Radius: 8px cards, 6px controls and overlay plates, 999px pills.
 - Hit targets on the dashboard: at least 24x24 CSS px (WCAG 2.2 SC 2.5.8);
   aim for 32px tall buttons.

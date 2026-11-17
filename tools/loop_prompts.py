@@ -6,6 +6,17 @@ from loop_base import MAX_ROUNDS, next_number
 
 # ---------------------------------------------------------------- prompts
 
+# DS-REVIEW-HOOK (design 0003, adjudicator ruling): a UI change is reviewed
+# by the design-reviewer agent before the lane finishes; the warn-only
+# pre-commit reminder is tools/design_gate.py.
+DESIGN_RULE = ("Design review: if your change touches web/, app/overlay/, app/shared/ "
+               "or the event text in server/al/state.py, run the design-reviewer agent "
+               "(.claude/agents/design-reviewer.md) in the foreground on your diff, fix "
+               "every S1 and S2 it reports, and append one line to "
+               "docs/design/reviews.log: 'YYYY-MM-DD | scope=<paths> | verdict=<PASS|PASS "
+               "WITH FINDINGS|FAIL> S1=<n> S2=<n> S3=<n> S4=<n> | <row id> | "
+               "audit=<docs/design file or ->'.")
+
 # Plan 096: producers run touched tests only; the loop runs the authoritative
 # gates (ops/loop/gates.txt, whole suite included) once on the finished tree.
 # Plan 101: a headless lane works inline (nested background agents only added
@@ -32,7 +43,8 @@ GATES = ("Gates before you finish: the test files your change touched or added g
          "remaining steps only, ASCII, updated after each step. Work inline in this "
          "run: do not start background sub-agents or background shell commands and "
          "wait on them; run each step in the foreground. Name any helper or scratch "
-         "script after your task ({task}_*.py), never a generic name like prog.py.")
+         "script after your task ({task}_*.py), never a generic name like prog.py. "
+         + DESIGN_RULE)
 
 
 NO_ROADMAP = ("Do NOT edit ROADMAP.md: the loop flips your row in main when "
@@ -94,7 +106,9 @@ def verify_prompt(item, rnd, tree=None):
             f"(whole pytest suite, npm test, leak sweep) ran green on exactly this "
             f"tree{on}: do not re-run pytest. " + order + "Check the diff against the "
             "row's ACCEPT line and its tests, the game ToS floor in CLAUDE.md, ASCII + "
-            "LF, and no machine path. End with exactly one line 'VERDICT: PASS' or "
+            "LF, and no machine path. A diff touching web/, app/overlay/, app/shared/ "
+            "or server/al/state.py event text without a new docs/design/reviews.log "
+            "line (design-reviewer verdict with S1=0 S2=0) is a FAIL. End with exactly one line 'VERDICT: PASS' or "
             "'VERDICT: FAIL', then numbered findings for a FAIL.")
 
 

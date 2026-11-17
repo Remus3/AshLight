@@ -70,6 +70,10 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   max-width: 258px;
 }
 .trade .where, .trade .more { color: var(--fk-text-muted); font-size: 13px; }
+/* A long sender name clips itself, so "+N more" always stays visible. */
+.trade .from-row { display: flex; gap: 4px; align-items: baseline; }
+.trade .from-row #tradeFrom { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.trade .from-row .more { flex: none; }
 
 /* The disclaimer is the overlay's "About"; screen readers get it, the HUD
    stays one small box. */

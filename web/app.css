@@ -28,7 +28,7 @@ body {
   border-bottom: 1px solid var(--fk-border);
   background: var(--fk-surface-2);
 }
-.brand { font-size: 1.1rem; margin: 0 auto 0 0; letter-spacing: 0.02em; }
+.brand { font-size: 1rem; margin: 0 auto 0 0; letter-spacing: 0.02em; }
 
 .pill {
   margin: 0;
@@ -68,6 +68,7 @@ main {
 .consent { border-color: var(--fk-accent); }
 .consent .path code { overflow-wrap: anywhere; }
 .consent .error { color: var(--fk-status-bad); }
+.consent .error:empty { margin: 0; }
 
 button {
   font: inherit;
@@ -90,7 +91,7 @@ button.link {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 .stat {
@@ -114,7 +115,12 @@ button.link {
   line-height: 1.1;
   overflow-wrap: anywhere;
 }
-.stat-zone .value { font-size: clamp(1.5rem, 4.5vw, 2.4rem); }
+/* The zone is the main glance value: it gets the whole first row, and a
+   long name wraps between words, never mid-word (UI-REVIEW-2). */
+.stat-zone { grid-column: 1 / -1; }
+/* Glance numbers (level, deaths, timers) never break inside a number. */
+.stat .value.mono { white-space: nowrap; overflow-wrap: normal; }
+.stat-zone .value { font-size: clamp(1.5rem, 4.5vw, 2.4rem); overflow-wrap: break-word; }
 .stat .sub { margin: 0; color: var(--fk-text-muted); }
 .stat-zone .sub .mono { font-size: 1.6rem; color: var(--fk-text); font-weight: 600; }
 
@@ -190,7 +196,7 @@ button.secondary {
   border-radius: 6px;
   padding: 6px 8px;
 }
-.layout-form input[type="range"] { width: 100%; accent-color: var(--fk-accent); }
+.layout-form input[type="range"] { width: 100%; min-height: 24px; accent-color: var(--fk-accent); }
 .layout-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 
 .foot {
@@ -201,10 +207,10 @@ button.secondary {
 }
 .foot p { margin: 4px 0; }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stats .stat:last-child { grid-column: 1 / -1; }
   .stat { padding: 8px 10px; }
-  .stat-zone { grid-column: 1 / -1; }
   .event-list .time { display: none; }
 }
 

@@ -15,7 +15,7 @@
 }(typeof self !== "undefined" ? self : this, function (fmt) {
   "use strict";
 
-  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "status",
+  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "log", "status",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor"];
 
   function anchorOf(snap) {
@@ -30,12 +30,24 @@
       /* DS-HUD-EMPTY: before the first snapshot the HUD reads "AshLight"
          and the status word; no lone separator. */
       return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
-               status: status || "waiting",
+               log: "", status: status || "connecting",
                tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
     var elapsed = snap.zone_entered_at ? nowS - snap.zone_entered_at : null;
     var open = snap.trade_requests || [];
     var card = fmt.tradeCard(open.length ? open[open.length - 1] : null);
+    /* UI-REVIEW-2 (design 0001 7.2): say when Client.txt is not being read.
+       Not opted in: no numbers at all (they would be made up). Opted in but
+       the file is missing or quiet: keep what is known and say so. A core
+       without the tailer field counts as reading. */
+    var tl = snap.tailer;
+    if (tl && !tl.consented) {
+      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
+               log: "not reading", status: status || "live",
+               tradeFrom: card.from, tradeItem: card.item, tradeWhere: card.where,
+               tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
+               anchor: anchorOf(snap) };
+    }
     return {
       tradeFrom: card.from,
       tradeItem: card.item,
@@ -43,21 +55,22 @@
       tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
       anchor: anchorOf(snap),
       zone: fmt.zoneText(snap.zone, snap.in_hideout),
-      timer: fmt.minutes(elapsed),
+      timer: snap.zone ? fmt.minutes(elapsed) : "",
       level: fmt.levelText(snap.level),
       deaths: fmt.deathsText(snap.deaths),
       sep: "|",
       /* DS-HUD-AFK: the log's AFK / DND state (design 0001 7.2). */
       away: snap.afk ? "AFK" : (snap.dnd ? "DND" : ""),
+      log: (tl && !tl.reading) ? "no Client.txt" : "",
       status: status || "live"
     };
   }
 
-  /* The word in the HUD status slot: a connection problem first, then
-     AFK / DND, else nothing. */
+  /* The word in the HUD status slot: a connection problem first, then the
+     Client.txt state, then AFK / DND, else nothing. */
   function statusText(model) {
     if (model.status !== "live") { return model.status; }
-    return model.away || "";
+    return model.log || model.away || "";
   }
 
   function shouldRender(prev, next) {
