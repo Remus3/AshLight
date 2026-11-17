@@ -1,0 +1,28 @@
+2026/11/16 21:00:00 ***** LOG FILE OPENING *****
+2026/11/16 21:00:01 100 1f2e3d4 [INFO Client 5150] [WINDOW] Gained focus
+2026/11/16 21:00:03 2100 1f2e3d4c [INFO Client 5150] [SCENE] Set Source [(unknown)]
+2026/11/16 21:01:00 59000 1f2e3d4c [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:01:01 59100 1f2e3d4c [INFO Client 5150] Connecting to instance server at 192.0.2.10:21360
+2026/11/16 21:01:01 59200 2a3b4c5d [DEBUG Client 5150] Generating level 1 area "G1_1" with seed 1111111
+2026/11/16 21:01:01 59300 2a3b4c5d [INFO Client 5150] [SCENE] Set Source [The Riverbank]
+2026/11/16 21:01:01 59400 2a3b4c5d [WARN Client 5150] Tried to SetExtraActivationRangeAroundTile() after level generation was complete
+2026/11/16 21:01:20 78000 2a3b4c5d [INFO Client 5150] [SCENE] Set Source [(unknown)]
+2026/11/16 21:01:24 82000 2a3b4c5d [INFO Client 5150] [SCENE] Set Source [The Riverbank]
+2026/11/16 21:02:00 118000 2a3b4c5d [INFO Client 5150] #Chatterbox: anyone know a good leveling build
+2026/11/16 21:02:05 123000 2a3b4c5d [INFO Client 5150] $Sellsword: WTS cheap uniques, whisper me
+2026/11/16 21:02:10 128000 2a3b4c5d [INFO Client 5150] Riverside Miller: Grind you down!
+2026/11/16 21:02:30 148000 2a3b4c5d [INFO Client 5150] [SCENE] Set Source [Act 1]
+2026/11/16 21:02:33 151000 2a3b4c5d [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:02:33 151100 2a3b4c5d [INFO Client 5150] [SCENE] Set Source [The Riverbank]
+2026/11/16 21:03:00 178000 2a3b4c5d [INFO Client 5150] : You can't send whispers until you are level 3
+2026/11/16 21:05:00 298000 2a3b4c5d [INFO Client 5150] : Cinderwisp (Sorceress) is now level 2
+2026/11/16 21:06:00 358000 2a3b4c5d [INFO Client 5150] Connecting to instance server at 192.0.2.20:21360
+2026/11/16 21:06:00 358100 3b4c5d6e [DEBUG Client 5150] Generating level 15 area "G1_town" with seed 2222222
+2026/11/16 21:06:00 358200 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:06:00 358300 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [Clearfell Encampment]
+2026/11/16 21:07:00 418000 3b4c5d6e [INFO Client 5150] : Trade cancelled.
+2026/11/16 21:08:00 478000 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [Act 1]
+2026/11/16 21:08:10 488000 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:08:10 488100 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [Clearfell Encampment]
+2026/11/16 21:09:00 538000 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:09:00 538100 3b4c5d6e [INFO Client 5150] [SCENE] Set Source [(unknown)]

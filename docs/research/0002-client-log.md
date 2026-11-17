@@ -230,6 +230,76 @@ Regex-ready description of the prefix (derived from the samples; the field meani
   prohibited per the page (account termination); read-only log tailing is what existing tools do.
   (accessed 2026-11-16) [GGG-DEV]
 
+## 7. Live verification (LIVE-1, 2026-11-16)
+
+Source: the operator's own PoE2 Client.txt (Steam, English client), read
+once by AshLight's parser after about 10 minutes of play: 1,102 lines, two
+game sessions, a new character from The Riverbank to Clearfell Encampment
+(level 1 to 2). Counts below are line matches. No raw line, name or chat
+text from that log is copied here; the anonymised fixture
+`tests/fixtures/client_live_shapes.txt` reproduces the shapes.
+
+File facts (VERIFIED): no BOM, CRLF line endings, valid UTF-8 (0 replacement
+characters). The 8-hex field is sometimes 7 characters (leading zero
+dropped): 10 of 1,100 lines. Level tags seen: INFO, WARN, CRIT and DEBUG
+(DEBUG is new). The file opens each run with
+`<date> <time> ***** LOG FILE OPENING *****` (no counter, no level).
+
+Per pattern (VERIFIED = matched live; NOT SEEN = no such event happened;
+WRONG = matched live but meant something else, fixed):
+
+- Line prefix: VERIFIED (1,100 of 1,102 lines; the 2 misses are the
+  LOG FILE OPENING marker).
+- `[SCENE] Set Source [<name>]`: VERIFIED, 27. Only `Set Source` was seen;
+  `Load Source` NOT SEEN.
+- `[SCENE] Set Source [(null)]`: VERIFIED, between scenes.
+- `[SCENE] Set Source [(unknown)]`: NEW. Shows at the login / character
+  select screen and for minutes at a time between two scenes of the same
+  zone with no new instance connection (a full-screen panel). WRONG before:
+  the parser reported it as a zone named "(unknown)" and the dashboard
+  showed it. Fixed: `is_transient`, the zone and its timer are kept.
+- `[SCENE] Set Source [Act <N>]`: NEW. Shows for 1 to 10 s, then `(null)`,
+  then the same zone again (3 of 3 times; most likely the world map).
+  WRONG before (shown as a zone, reset the zone timer). Fixed: transient.
+- `Generating level <N> area "<id>" with seed <N>`: VERIFIED, 2 (logged at
+  DEBUG level). Seen ids `G1_1` (level 1) and `G1_town` (level 15 for the
+  act 1 town).
+- `Connecting to instance server at <ip>:<port>`: VERIFIED, 2, one per
+  zone instance.
+- `: You have entered <Zone>.`: NOT EMITTED by PoE2 - 0 lines across 6 real
+  zone entries. Zone comes from `[SCENE]` only; the pattern stays harmless.
+- `: <Name> (<Class>) is now level <N>`: VERIFIED, 1.
+- `: <Name> has been slain.` / `has committed suicide.`: NOT SEEN (no death).
+- `@From` / `@To` whispers and the three trade-whisper templates: NOT SEEN
+  (no whisper; the character was below the whisper level, see below).
+- `#` global chat: VERIFIED (196); `$` trade chat: VERIFIED (4). `%` party,
+  `&` guild and `<GuildTag>` prefixes: NOT SEEN.
+- `: AFK mode is now ON/OFF`, `: DND ...`: NOT SEEN.
+- `: <Name> has joined / has left the area.`: NOT SEEN (solo play).
+- `: Trade accepted.`: NOT SEEN. `: Trade cancelled.`: NEW, VERIFIED (1);
+  parsed as `trade_cancelled`.
+- New system lines seen (kept as `unknown_system_line`):
+  `: You can't send whispers until you are level <N>` and
+  `: Your character will now use the <Cosmetic> Portrait Frame. You must
+  log out and in again for the change to take effect.`
+- New non-system shapes (ignored): NPC dialogue `<NPC Name>: <text>` with no
+  channel prefix (so it can never pass as chat or a system line), and engine
+  lines `[WINDOW] Gained focus / Lost focus`, `[ENGINE] ...`, `[JOB] ...`,
+  `[STORAGE] ...`, `[BUNDLE] ...`, `[RENDER] RestartSwapChain`,
+  `Async connecting to <host>:<N>`, `Connected to <host> in <N>ms.`,
+  `Unable to connect to login server.` (365 distinct redacted shapes in all).
+
+State check (dashboard /api/state vs the log, core started mid-session):
+zone showed `(unknown)` (log: last zone Clearfell Encampment, now at
+character select); level showed none and level_ups 0 although the level-up
+line arrived while tailing (cause: config `"character": ""` was taken as a
+fixed name, so no level-up or death ever counted); deaths 0 matched.
+Both fixed in server/al/parser.py and server/al/state.py with tests.
+
+Still to verify live: death, whispers in/out and the trade templates, party
+and guild chat, AFK / DND, joined / left, Trade accepted, hideout scene
+names, `Load Source`.
+
 ## Event schema proposal
 
 All events carry `ts_local` (ISO 8601 without zone, from the line), `counter` (int), `raw` (original
