@@ -101,10 +101,13 @@ def install_crash_logging(log):
     threading.excepthook = _thread_hook
 
 
-def write_heartbeat(path, pid, port, now=None):
-    """Refresh <runtime>/core.alive so the time of a silent kill is bounded."""
+def write_heartbeat(path, pid, port, now=None, created=None):
+    """Refresh <runtime>/core.alive so the time of a silent kill is bounded.
+    created (the process creation time) lets stop.ps1 prove the pid is ours."""
     data = {"pid": int(pid), "port": int(port),
             "updated": float(time.time() if now is None else now)}
+    if created:
+        data["created"] = int(created)
     tmp = Path(str(path) + ".tmp")
     tmp.write_text(json.dumps(data) + "\n", encoding="ascii")
     os.replace(tmp, path)
@@ -166,6 +169,8 @@ def main(argv=None):
     stop_file = paths.runtime_dir() / STOP_FILE
     beat_s = _heartbeat_s()
     next_beat = 0.0
+    from .keepalive import process_created  # pid + creation time = this process
+    created = process_created(os.getpid())
     try:
         while not stop.wait(0.5):
             if stop_requested(stop_file):
@@ -174,7 +179,7 @@ def main(argv=None):
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:
-                    write_heartbeat(heartbeat, os.getpid(), server.port)
+                    write_heartbeat(heartbeat, os.getpid(), server.port, created=created)
                 except OSError:
                     pass
     except KeyboardInterrupt:

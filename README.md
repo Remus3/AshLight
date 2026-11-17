@@ -30,12 +30,13 @@ optional overlay.
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # checks, folders, overlay packages
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1   # runs the tests, writes a build stamp
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1     # starts the core, opens the dashboard
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -Overlay   # also starts the overlay
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1     # core, supervisor, overlay (if installed), dashboard
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoOverlay   # same, without the overlay
+powershell -ExecutionPolicy Bypass -File scripts\stop.ps1    # stops every AshLight process
 ```
 
 Every script is safe to run again: a finished step is skipped, and `run.ps1`
-does nothing when AshLight is already running.
+starts only the parts of AshLight that are not already running.
 
 Without the scripts:
 

@@ -60,6 +60,33 @@ transparent click-through Electron overlay).
   PresentMon / ETW tracing of the game; the in-game FPS display read by the
   human, or system-wide counters only.
 
+## API token (API-TOKEN-HDR, 2026-11-16)
+
+Every `/api/*` and `/events` request carries the per-start token
+(`ops/runtime/token`) in one of three forms, checked in this order, the
+first one given wins, constant-time compare (`server/al/http.py`
+`_token_ok`):
+
+1. header `X-AL-Token: <token>` (dashboard fetch, run.ps1, keepalive);
+2. header `Authorization: Bearer <token>` (any standard HTTP client);
+3. query `?token=<token>` - kept because EventSource (the SSE feed of the
+   dashboard and the overlay) cannot set request headers.
+
+The ROADMAP row assumed only `?token=` worked; X-AL-Token was already
+accepted. Bearer was added because it does not weaken the floor: the Host
+and Origin checks run before the token check for every form; a cross-origin
+page cannot send either header (no CORS preflight is ever granted - OPTIONS
+is refused, no `Access-Control-Allow-Headers`); browsers never attach a
+Bearer header on their own, and a 401 carries no `WWW-Authenticate`, so no
+credential prompt or cached Basic credentials come into play. The query
+form never reaches a log (the request logger drops the query string) and
+the dashboard keeps its token in the URL fragment, which is never sent.
+Tests: `tests/test_api_token_hdr.py`, `tests/test_http_security.py`.
+Alternatives: query only (rejected: needlessly puts the token in URLs for
+fetch calls); header only (impossible: EventSource). Reverses if: a browser
+starts attaching Authorization to cross-origin requests without preflight,
+or the SSE feed moves to fetch streaming (then drop `?token=`).
+
 ## Reverses if
 
 The Electron overlay misses the RAM or FPS budget on the operator's machine

@@ -85,9 +85,9 @@ def pid_alive(pid):
         k.CloseHandle(h)
 
 
-def image_name(pid):
-    """Base name of the executable of pid ('' when unknown)."""
-    if os.name != "nt":
+def image_path(pid):
+    """Full path of the executable of pid ('' when unknown)."""
+    if os.name != "nt" or int(pid or 0) <= 0:
         return ""
     ctypes, wintypes, k = _kernel32()
     h = k.OpenProcess(_QUERY_LIMITED, False, int(pid))
@@ -98,7 +98,32 @@ def image_name(pid):
         size = wintypes.DWORD(1024)
         if not k.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
             return ""
-        return Path(buf.value).name
+        return buf.value
+    finally:
+        k.CloseHandle(h)
+
+
+def image_name(pid):
+    """Base name of the executable of pid ('' when unknown)."""
+    value = image_path(pid)
+    return Path(value).name if value else ""
+
+
+def process_created(pid):
+    """Creation time of pid as a FILETIME integer (0 when unknown). A pid
+    plus its creation time names one process; a reused pid differs."""
+    if os.name != "nt" or int(pid or 0) <= 0:
+        return 0
+    ctypes, wintypes, k = _kernel32()
+    k.GetProcessTimes.argtypes = (wintypes.HANDLE,) + (ctypes.POINTER(wintypes.FILETIME),) * 4
+    h = k.OpenProcess(_QUERY_LIMITED, False, int(pid))
+    if not h:
+        return 0
+    try:
+        t = [wintypes.FILETIME() for _ in range(4)]
+        if not k.GetProcessTimes(h, *(ctypes.byref(x) for x in t)):
+            return 0
+        return (t[0].dwHighDateTime << 32) | t[0].dwLowDateTime
     finally:
         k.CloseHandle(h)
 
@@ -197,9 +222,11 @@ class Keepalive:
         self.launched_at = None
         self.next_launch = None
         self.restarts = []
+        self._created = process_created(os.getpid())
 
     def _write_state(self, status):
-        data = {"pid": os.getpid(), "status": status, "core_pid": self.pid,
+        data = {"pid": os.getpid(), "created": self._created, "status": status,
+                "core_pid": self.pid,
                 "restarts": len(self.restarts), "port": self.port,
                 "updated": self._now()}
         try:
@@ -237,14 +264,17 @@ class Keepalive:
                 self.next_launch = None
                 self._log("a core answers /api/health; restart cancelled")
             return "ok"
+        if (self.runtime / STOP_FILE).exists():
+            # checked before a pending restart: a stop during the backoff wins
+            # (a relaunched core would clear stop.request on start)
+            self.next_launch = None
+            self._log("user stop (stop.request); not restarting; supervisor exits")
+            self._write_state("user-stop")
+            return "user-stop"
         if self.next_launch is not None:
             if now >= self.next_launch:
                 return self._launch_core(now)
             return "waiting"
-        if (self.runtime / STOP_FILE).exists():
-            self._log("user stop (stop.request); not restarting; supervisor exits")
-            self._write_state("user-stop")
-            return "user-stop"
         if hb is None and self.seen_beat:
             self._log("user stop (core exited cleanly); not restarting; supervisor exits")
             self._write_state("user-stop")
@@ -364,6 +394,7 @@ def main(argv=None):
         sup = Keepalive(runtime, args.port, _Launcher(core_command(args.port, args.core_args)),
                         log=log, stale_s=args.stale, backoff=backoff, cap=args.cap,
                         window_s=args.window)
+        sup._write_state("started")  # records this supervisor's pid for stop.ps1
         log(f"supervisor started (port {args.port}, poll {args.poll:g} s)")
         result = sup.run(poll_s=args.poll)
         return 0 if result == "user-stop" else 3

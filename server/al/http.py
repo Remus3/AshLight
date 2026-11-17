@@ -3,7 +3,8 @@
 Security floor (CLAUDE.md "Stack and ports", research 0008):
 - binds 127.0.0.1 only (ports.LOOPBACK), on ports.AL_PORT by default;
 - a per-start random token guards every /api/* and /events request
-  (header X-AL-Token, or ?token= because EventSource cannot set headers);
+  (header X-AL-Token or Authorization: Bearer, or ?token= because
+  EventSource cannot set headers; decision 0002 "API token");
 - the Host header must be 127.0.0.1:<port> or localhost:<port> (DNS
   rebinding guard); an Origin header, when present, must match;
 - strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none'.
@@ -134,8 +135,18 @@ class Handler(BaseHTTPRequestHandler):
             return True, {"Access-Control-Allow-Origin": "null", "Vary": "Origin"}
         return False, {}
 
+    def _bearer(self):
+        """The token from "Authorization: Bearer <token>" ('' otherwise)."""
+        value = (self.headers.get("Authorization") or "").strip()
+        scheme, _, rest = value.partition(" ")
+        return rest.strip() if scheme.lower() == "bearer" else ""
+
     def _token_ok(self, query):
-        given = self.headers.get(TOKEN_HEADER) or (query.get("token") or [""])[0]
+        # header first (X-AL-Token, then Authorization: Bearer), then ?token=
+        # for EventSource, which cannot set headers (API-TOKEN-HDR, decision
+        # 0002 "API token"). All three compare in constant time.
+        given = (self.headers.get(TOKEN_HEADER) or self._bearer()
+                 or (query.get("token") or [""])[0])
         return bool(given) and hmac.compare_digest(given.encode(), self.server.token.encode())
 
     def _guard(self, path, query, needs_token):

@@ -249,23 +249,36 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   the core exits cleanly and is not restarted (decision 0005). End-to-end
   test kills a real core on a tmp runtime and sees it back. Takes effect on
   the next run.ps1.
-- [ ] OPS-STOP (build) scripts/stop.ps1 leaves the keepalive supervisor
+- [x] OPS-STOP (build) scripts/stop.ps1 leaves the keepalive supervisor
   and the Electron overlay running; it must stop every AshLight process
   (core via stop.request, then supervisor and overlay by their recorded
   pids / single-instance locks), never the game client. ACCEPT: after
   stop.ps1 no AshLight python / pythonw / electron process remains (test on
   a tmp runtime). ZERO-CLICK: one stop.ps1 call, no manual kill.
-- [ ] OPS-RUN-IDEMP (build) run.ps1 -NoBrowser does not start the overlay,
+  DONE 2026-11-16 (decision 0010): server/al/procs.py proves pids ours (pid
+  + creation time; electron.exe only under app/node_modules/electron/dist);
+  stop.ps1 then stops supervisor and overlay; supervisor honours
+  stop.request during a restart backoff. tests/test_procs.py runs the real
+  stop.ps1 on a tmp runtime (core, supervisor, overlay + child gone; an
+  unrelated electron.exe left alone).
+- [x] OPS-RUN-IDEMP (build) run.ps1 -NoBrowser does not start the overlay,
   and re-running run.ps1 -Overlay spawns a second supervisor that only exits
   on its own. Make run.ps1 idempotent per component: core, supervisor and
   overlay each started only when not already live. ACCEPT: two run.ps1 calls
   in a row leave exactly one core, one supervisor, one overlay. ZERO-CLICK:
   any run.ps1 call converges to the full running set.
-- [ ] API-TOKEN-HDR (review) The API token is accepted only as the ?token=
+  DONE 2026-11-16 (decision 0010): run.ps1 follows `procs plan`; overlay
+  starts by default when installed (-NoOverlay opts out, -Overlay kept),
+  pid recorded in ops/runtime/overlay.pid. Convergence and "re-run starts
+  nothing" tested in tests/test_procs.py (decision logic + live tmp set).
+- [x] API-TOKEN-HDR (review) The API token is accepted only as the ?token=
   query parameter, not as an Authorization Bearer header. Confirm intended
   (SSE / EventSource cannot set headers) and document it in decision 0002 or
   the API notes, or accept both. ACCEPT: documented and covered by a test.
   ZERO-CLICK: no operator step.
+  DONE 2026-11-16: X-AL-Token was already accepted; Authorization: Bearer
+  added, ?token= kept for EventSource; Host / Origin unchanged and checked
+  first. Decision 0002 "API token"; tests/test_api_token_hdr.py.
 - [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
