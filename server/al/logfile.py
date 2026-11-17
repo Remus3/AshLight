@@ -3,7 +3,8 @@
 Read policy (decision 0003): the tailer runs only after the user's opt-in,
 opens the file read-only with full sharing, never writes to it and never
 touches the game process. It starts at the END of the file by default, so an
-old session is never replayed.
+old session is never replayed; state is recovered from the skipped bytes by
+the on_resume hook (server/al/resume.py, LIVE-RESUME).
 
 Discovery reads Steam's libraryfolders.vdf (read only) and looks for
 steamapps/common/Path of Exile 2/logs/Client.txt in every library.
@@ -158,12 +159,17 @@ class Tailer:
     """
 
     def __init__(self, path, on_line, on_status=None, poll_s=DEFAULT_POLL_S,
-                 start_at_end=True):
+                 start_at_end=True, on_resume=None):
         self.path = Path(path)
         self.on_line = on_line
         self.on_status = on_status or (lambda ev: None)
         self.poll_s = float(poll_s)
         self.start_at_end = start_at_end
+        # LIVE-RESUME: on_resume(path, end_offset) runs once, before the
+        # first start at the end, so state can be recovered from the bytes
+        # the tailer skips (server/al/resume.py). Its errors never stop
+        # the tailer.
+        self.on_resume = on_resume
         self._fh = None
         self._ident = None
         self._offset = 0
@@ -206,6 +212,11 @@ class Tailer:
         self._fh = None
 
     def _started(self, st, at_end):
+        if at_end and not self._opened_once and self.on_resume is not None:
+            try:
+                self.on_resume(self.path, st.st_size)
+            except Exception:  # noqa: BLE001 - recovery is best effort
+                pass
         self._ident = _identity(st)
         self._offset = st.st_size if at_end else 0
         self._partial = b""

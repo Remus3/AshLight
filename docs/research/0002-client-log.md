@@ -296,6 +296,11 @@ line arrived while tailing (cause: config `"character": ""` was taken as a
 fixed name, so no level-up or death ever counted); deaths 0 matched.
 Both fixed in server/al/parser.py and server/al/state.py with tests.
 
+Restart (LIVE-RESUME, decision 0008): the core now recovers zone,
+character, class, level and deaths at tailer start by a bounded backward
+scan from the start offset; the current game run is bounded by the newest
+`***** LOG FILE OPENING *****` marker.
+
 Still to verify live: death, whispers in/out and the trade templates, party
 and guild chat, AFK / DND, joined / left, Trade accepted, hideout scene
 names, `Load Source`.

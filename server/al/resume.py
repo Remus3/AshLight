@@ -1,0 +1,204 @@
+"""LIVE-RESUME: recover the current state from the end of Client.txt.
+
+The tailer starts at the end of the file so old events are never re-listed.
+That left zone, character, class, level and deaths empty after a core restart
+until the next zone change or level-up. scan() reads the file BACKWARDS from
+the tailer's start offset in fixed chunks, bounded by a byte cap, and returns
+the state fields only; nothing is published on the bus (decision 0008).
+
+Rules (newest line first):
+- The current game run starts at the newest `***** LOG FILE OPENING *****`
+  marker. Zone, area, AFK / DND and the death and level-up counts come from
+  the current run only; a zone of an earlier run is not current.
+- Character, class and level come from the newest level-up of the character
+  (the configured one, else the newest level-up seen), across runs, because a
+  character's level persists.
+- The scan stops at the marker once the character is known, or at the cap.
+
+Speed: only lines holding a keyword (scene, area generation, system line,
+marker) are decoded and parsed; the keyword search runs in C over each chunk.
+Read only, with full sharing, exactly like the tailer (decision 0003).
+"""
+
+import os
+import re
+import time
+
+from . import logfile, parser
+
+CHUNK = 1024 * 1024
+DEFAULT_MAX_BYTES = 32 * 1024 * 1024
+MARKER = b"***** LOG FILE OPENING *****"
+_KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |: )|\*\*\*\*\* LOG FILE OPENING")
+# Once zone and area are known only system lines and the marker matter.
+_KEY_SYS = re.compile(rb"\] : |\*\*\*\*\* LOG FILE OPENING")
+# Before the current run only level-ups and the marker matter.
+_KEY_LVL = re.compile(rb"\) is now level \d|\*\*\*\*\* LOG FILE OPENING")
+_BOM = b"\xef\xbb\xbf"
+
+
+def _lines_newest_first(seg, key=_KEY):
+    """Keyword lines of one complete-lines segment, newest first."""
+    out = []
+    last_start = -1
+    for m in key.finditer(seg):
+        p = m.start()
+        start = seg.rfind(b"\n", 0, p) + 1
+        if start == last_start:
+            continue
+        last_start = start
+        stop = seg.find(b"\n", p)
+        out.append(seg[start:stop if stop >= 0 else len(seg)])
+    out.reverse()
+    return out
+
+
+def _chunks_backward(fh, end, floor):
+    """Yield complete-line segments from end back to floor, newest first, and
+    the start offset reached. A line cut by the cap or by `end` is dropped."""
+    pos = end
+    carry = b""
+    tail_open = True  # the bytes before `end` may end in an unterminated line
+    while pos > floor:
+        start = max(floor, pos - CHUNK)
+        fh.seek(start)
+        data = fh.read(pos - start) + carry
+        pos = start
+        if tail_open:
+            cut = data.rfind(b"\n")
+            if cut < 0:
+                carry = b""  # all of it belongs to the unterminated line
+                continue
+            tail_open = False
+            data = data[:cut + 1]
+        if start > 0:
+            nl = data.find(b"\n")
+            if nl < 0:
+                carry = data
+                if start == floor:
+                    return
+                continue
+            carry = data[:nl + 1] if start > floor else b""
+            data = data[nl + 1:]
+        else:
+            carry = b""
+            if data.startswith(_BOM):
+                data = data[len(_BOM):]
+        yield data, start
+
+
+def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
+    """State fields from the newest lines of Client.txt up to byte `end`
+    (default: the current size), reading at most max_bytes backwards.
+    Returns None when the file cannot be read."""
+    try:
+        size = os.stat(path).st_size
+    except OSError:
+        return None
+    end = size if end is None else min(int(end), size)
+    floor = max(0, end - int(max_bytes))
+    fixed = character or None
+    out = {"zone": None, "in_hideout": False, "zone_ts_local": None,
+           "area_id": None, "area_level": None, "character": None,
+           "class": None, "level": None, "deaths": 0, "level_ups": 0,
+           "afk": None, "dnd": None, "hit_marker": False, "bytes_scanned": 0,
+           "end": end}
+    in_run = True
+    deaths = []
+    ups = []
+    reached = end
+    try:
+        fh = logfile._open_shared(path)
+    except OSError:
+        return None
+    try:
+        for seg, start in _chunks_backward(fh, end, floor):
+            reached = start
+            done = False
+            if not in_run:
+                key = _KEY_LVL
+            elif out["zone"] is not None and out["area_id"] is not None:
+                key = _KEY_SYS
+            else:
+                key = _KEY
+            for raw in _lines_newest_first(seg, key):
+                if MARKER in raw[:64]:
+                    if in_run:
+                        in_run = False
+                        out["hit_marker"] = True
+                    if out["character"] is not None:
+                        done = True
+                        break
+                    continue
+                ev = parser.parse_line(raw.rstrip(b"\r").decode("utf-8", "replace"))
+                if ev is None:
+                    continue
+                t = ev["type"]
+                if t == "level_up":
+                    name = ev.get("character")
+                    if out["character"] is None and (fixed is None or name == fixed):
+                        out["character"] = name
+                        out["class"] = ev.get("class")
+                        out["level"] = ev.get("level")
+                    if in_run:
+                        ups.append(name)
+                    elif out["character"] is not None:
+                        done = True
+                        break
+                    continue
+                if not in_run:
+                    continue
+                if t == "scene_changed":
+                    if (out["zone"] is None and not ev.get("is_null")
+                            and not ev.get("is_transient") and ev.get("scene")):
+                        out["zone"] = ev["scene"]
+                        out["in_hideout"] = bool(ev.get("is_hideout"))
+                        out["zone_ts_local"] = ev.get("ts_local")
+                elif t == "area_generated":
+                    if out["area_id"] is None:
+                        out["area_id"] = ev.get("area_id")
+                        out["area_level"] = ev.get("area_level")
+                elif t == "death":
+                    deaths.append(ev.get("character"))
+                elif t == "afk_changed":
+                    if out["afk"] is None:
+                        out["afk"] = bool(ev.get("on"))
+                elif t == "dnd_changed":
+                    if out["dnd"] is None:
+                        out["dnd"] = bool(ev.get("on"))
+            if done:
+                break
+    finally:
+        fh.close()
+    me = out["character"]
+    out["deaths"] = sum(1 for n in deaths if me is None or n == me)
+    out["level_ups"] = sum(1 for n in ups if me is not None and n == me)
+    out["afk"] = bool(out["afk"])
+    out["dnd"] = bool(out["dnd"])
+    out["bytes_scanned"] = end - reached
+    return out
+
+
+def local_ts_to_epoch(ts_local, now=None):
+    """Epoch seconds for a line's local ISO time, never in the future; None
+    when it does not parse."""
+    if not ts_local:
+        return None
+    try:
+        t = time.mktime(time.strptime(ts_local, "%Y-%m-%dT%H:%M:%S"))
+    except (ValueError, OverflowError):
+        return None
+    now = time.time() if now is None else now
+    return min(t, now)
+
+
+def state_fields(result, now=None):
+    """The SessionState.restore() fields for a scan() result."""
+    if not result:
+        return {}
+    fields = {k: result[k] for k in ("zone", "in_hideout", "area_id", "area_level",
+                                     "character", "class", "level", "deaths",
+                                     "level_ups", "afk", "dnd")}
+    if result["zone"] is not None:
+        fields["zone_entered_at"] = local_ts_to_epoch(result["zone_ts_local"], now)
+    return fields

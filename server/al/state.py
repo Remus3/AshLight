@@ -207,6 +207,28 @@ class SessionState:
                 self.version += 1
             return changed
 
+    _RESTORE = {"zone": "zone", "in_hideout": "in_hideout", "area_id": "area_id",
+                "area_level": "area_level", "zone_entered_at": "zone_entered_at",
+                "class": "char_class", "level": "level", "deaths": "deaths",
+                "level_ups": "level_ups", "afk": "afk", "dnd": "dnd"}
+
+    def restore(self, fields):
+        """LIVE-RESUME: set state fields recovered from the end of Client.txt
+        (server/al/resume.py). Nothing is listed. A configured character is
+        kept; another character's level, class and counts are ignored."""
+        with self._lock:
+            name = fields.get("character")
+            other = bool(name) and self.character_fixed and name != self.character
+            if name and not self.character_fixed:
+                self.character = name
+            for key, attr in self._RESTORE.items():
+                if other and key in ("class", "level", "deaths", "level_ups"):
+                    continue
+                if key in fields:
+                    setattr(self, attr, fields[key])
+            self.version += 1
+            return True
+
     @staticmethod
     def _row(ev, now):
         return {"seq": ev.get("seq"), "type": ev.get("type"), "at": now,

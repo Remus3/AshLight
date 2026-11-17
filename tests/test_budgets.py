@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 import fleet_test_guard
-from server.al import parser
+from server.al import parser, resume
 from server.al.bus import EventBus
 from server.al.logfile import Tailer
 from server.al.state import SessionState
@@ -63,6 +63,25 @@ def test_tailer_idle_cpu_under_2_percent(tmp_path):
         t.stop()
     share = cpu / wall
     assert share < 0.02 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"
+
+
+def test_resume_scan_of_full_32mb_cap_under_500ms(tmp_path):
+    # LIVE-RESUME worst realistic case: no LOG FILE OPENING marker, so the
+    # scan runs to the full byte cap. One fixture block per 200 engine lines.
+    block = FIXTURE.read_bytes().replace(b"LOG FILE OPENING", b"LOG FILE X")
+    noise = (b"2026/11/16 20:00:01 1100 1a2b3c4d [INFO Client 4242] "
+             b"[ENGINE] synthetic engine noise line\r\n") * 200
+    p = tmp_path / "Client.txt"
+    with open(p, "wb") as fh:
+        while fh.tell() < resume.DEFAULT_MAX_BYTES + 1024 * 1024:
+            fh.write(block + noise)
+    resume.scan(p, max_bytes=1024 * 1024)  # warm the file cache
+    t0 = time.perf_counter()
+    r = resume.scan(p)
+    elapsed = time.perf_counter() - t0
+    assert r["bytes_scanned"] > resume.DEFAULT_MAX_BYTES - 1024
+    assert r["level"] is not None and r["zone"] is not None
+    assert elapsed < fleet_test_guard.budget(0.5), f"{elapsed * 1000:.1f} ms"
 
 
 def _rss_bytes():
