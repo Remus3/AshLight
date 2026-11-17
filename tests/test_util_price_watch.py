@@ -53,7 +53,7 @@ def test_under_threshold_no_flag(tmp_path):
     w.refresh(Book({"Headhunter": (120.0, "Divine Orb")}))
     v = w.view(True)
     assert v["moved"] == []
-    assert v["text"] == "Watching 1. No price moved by 25% or more since you checked."
+    assert v["text"] == "Watching 1 item. No price moved by 25% or more since you checked."
     assert w.view(True, pct=10)["moved"][0]["change_pct"] == 20
 
 

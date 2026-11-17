@@ -248,6 +248,8 @@ class RunHistory:
         for key, b in best.items():
             own = b.pop("own", False)
             row = dict(b, best_text=_fmt(b["best_s"]), delta_s=None)
+            if own:  # UX-REGRESSION-SWEEP: "best so far", not "not yet"
+                row["this_run"] = True
             if key in cur_times and not own:
                 row["delta_s"] = round(cur_times[key] - b["best_s"], 1)
             rows.append(row)

@@ -393,6 +393,48 @@ fixed (Price watch says "paused", the Look for next hint in two short
 sentences, the Tools summary reworded, a separator above each in-card
 fold).
 
+## Live pass, batch 10 (2026-11-17)
+
+Method: a test core on a spare port with test_fullstack's mock poe.ninja,
+fed by `tools/synth_client.py` (acts 1-4, two maps with a portal trip,
+three deaths, three trade requests, a whisper), web data on, the eval
+fixture build, item checks of gloves, a waystone and a weapon into an
+empty slot, the core loop ticks running; plus a fresh core (no consent)
+and one with no build. Headless Chrome over CDP at 360 / 520 / 768 /
+1440 px, dark, light and forced colours, folds closed and open, then
+idle (20 minutes, time-injected) with the Last session card. Console,
+exceptions, failed loads and CSP violations collected from CDP: none.
+No overlap between cards, no horizontal scroll, no positive tabindex,
+DOM order is Tab order, every control labelled, 12 live regions (cap 12).
+Tests: `tests/test_dash_console.py`, `app/test/ux_sweep.test.js`.
+
+- U28 UX-REGRESSION-SWEEP [S3; fixed] (a) Idle: the zone, act and map
+  clocks stopped at the last line, the Last session card said the
+  session ended, but the Session tile kept counting; it now stops with
+  them. (b) Run history with one run: every act this run finished and
+  holds as the best said "not yet" under This run, beside an Act times
+  card showing it done; it now says "best so far". (c) An item checked
+  with no build loaded ("Not checked") still showed the "Not counted (no
+  weight yet)" note and a points per Exalted Orb line, though nothing was
+  scored; both are gone until a build is loaded (the asking price stays).
+  (d) "Watching 1." now "Watching 1 item." (P7). (e) The overlay Size and
+  Opacity sliders stuck 2 px out of the Tools card at 360 / 520 px (the
+  browser's own slider margin); the file pickers (settings import, loot
+  filter merge) were 21 px tall, under the 24 px target (S2). Holds: trade
+  requests appear in Trade requests and in Recent (a live card and the
+  log, by design); the GGG line sits in the Prices credit and the footer
+  (attribution); the 20 px check boxes sit inside their labels, which are
+  the target; the graphics fold inside Tools reads the PC on open
+  (decision 0014), so it stays its own fold. The 0:00 pace and map times
+  are the synthetic log's one-second clock, not a defect.
+
+design-reviewer on batch 10: PASS WITH FINDINGS S1=0 S2=0 S3=1 S4=1.
+S4 fixed (the no-build points line is cleared on a copy, not on the
+shared view object). S3 kept: "best so far" stays in the This run
+column beside "same as best" / "slower" / "faster"; it is pinned by
+app/test/ux_sweep.test.js, and "Watching 1 item." by
+tests/test_util_price_watch.py.
+
 ## Kept by decision
 
 - K1 (SC 2.2.2): the zone and session timers keep updating with no pause

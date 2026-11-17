@@ -53,7 +53,8 @@
   function bestRows(h) {
     return ((h && h.best) || []).map(function (b) {
       return { label: b.label || b.key, best: b.best_text || duration(b.best_s),
-        delta: deltaText(b.delta_s), slower: typeof b.delta_s === "number" && b.delta_s >= 1 };
+        // UX-REGRESSION-SWEEP: the best time is this run's own act
+        delta: b.this_run ? "best so far" : deltaText(b.delta_s), slower: typeof b.delta_s === "number" && b.delta_s >= 1 };
     });
   }
 

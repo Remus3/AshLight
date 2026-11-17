@@ -183,7 +183,9 @@
     var verdict = ev.ok ? String(ev.verdict || "") : "note";
     var word = { upgrade: "Upgrade", sidegrade: "Sidegrade", downgrade: "Downgrade" }[verdict] ||
                "Not checked";
-    var unweighted = (ev.unweighted || []).filter(function (k) { return typeof k === "string"; });
+    /* UX-REGRESSION-SWEEP: a not-checked item (no build) scored nothing, so
+       it has no "not counted" note either */
+    var unweighted = (ev.ok ? ev.unweighted || [] : []).filter(function (k) { return typeof k === "string"; });
     var labels = unweighted.map(function (k) { return k.replace(/#/g, "N"); }).join("; ");
     /* TC-DELTA: with Path of Building scoring, only mods with no number
        stay uncounted, and a hand weight would not change that */
