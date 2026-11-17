@@ -102,6 +102,8 @@ def _number(text):
         v = float(text)
     except (TypeError, ValueError):
         return None
+    if v != v or v in (float("inf"), float("-inf")):
+        return None  # MATH-NUM: a 400-digit roll is no number (JSON-safe)
     return int(v) if v.is_integer() else v
 
 
@@ -237,7 +239,7 @@ def _mod(line, header, implicit_left, at=DEFAULT_RANGE):
         section = tag_m.group(1).lower().replace(" ", "_")
         line = line[:tag_m.start()].rstrip()
     rolled = strip_rolls(line, at)
-    values = tuple(_number(v) for v in _NUM_RE.findall(rolled))
+    values = tuple(n for n in (_number(v) for v in _NUM_RE.findall(rolled)) if n is not None)
     text = re.sub(r"\s{2,}", " ", rolled).strip()
     if not text:
         return None

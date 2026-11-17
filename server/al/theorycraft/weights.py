@@ -27,6 +27,9 @@ VERSION = 1
 MAX_KEYS = 500
 MAX_KEY_LEN = 200
 MAX_WEIGHT = 1e6
+# MATH-NUM: a rolled value past this (or not finite) is no value, so a
+# crafted item line can never push a score to inf / NaN (invalid JSON)
+MAX_VALUE = 1e9
 
 # Sane phase-1 defaults: a generic life / resist / damage leaning. Values
 # are per point of the stat ("Adds # to #" uses the average of the two).
@@ -127,6 +130,8 @@ def stat_key(text):
     else:
         value = values[0]
     value = value * sign
+    if not math.isfinite(value) or abs(value) > MAX_VALUE:
+        return key, None
     if isinstance(value, float) and value.is_integer():
         value = int(value)
     return key, value

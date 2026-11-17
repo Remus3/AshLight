@@ -17,6 +17,8 @@ import threading
 
 from .. import upgrade as upgrade_mod
 from . import evaluate as tc_evaluate
+from . import item as item_parser
+from . import value as value_mod
 
 MAX_COMPARISONS = 3
 MAX_STATS = 8
@@ -73,7 +75,7 @@ class LastEval:
     """The last evaluated item, kept so a weights or build change re-scores
     it at once. One per core."""
 
-    def __init__(self, builds, weights, state, league=None, calc=None):
+    def __init__(self, builds, weights, state, league=None, calc=None, rates=None):
         self.builds = builds
         self.weights = weights
         self.state = state
@@ -84,6 +86,9 @@ class LastEval:
         # the PoB calc callable (theorycraft.delta) or None while the
         # optional component is off; TC-BRIDGE supplies it
         self.calc = calc
+        # MATH-VALUE: a callable returning the cached poe.ninja rates
+        # snapshot (never fetches; empty while web data is off)
+        self.rates = rates
         self._input = None
         self._lock = threading.Lock()
 
@@ -97,9 +102,26 @@ class LastEval:
         with self._lock:
             self._input = (text, slot)
         league = self.league() if callable(self.league) else self.league
-        card = dict(compact(result), upgrade=upgrade_mod.link(result, league))
+        card = dict(compact(result), upgrade=upgrade_mod.link(result, league),
+                    value=self._value(text, result))
         self.state.set_eval(card, keep_time=keep_time, at=at)
         return result
+
+    def _value(self, text, result):
+        """MATH-VALUE: the item's own Note price in the primary currency and
+        score per primary unit, from cached rates; None without a note
+        price. A failing rates source gives a value doc with no rate."""
+        note = item_parser.parse(text).note if isinstance(text, str) else None
+        if value_mod.parse_note_price(note) is None:
+            return None
+        snap = None
+        if callable(self.rates):
+            try:
+                snap = self.rates()
+            except Exception:  # noqa: BLE001 - the item check must still publish
+                snap = None
+        delta = result.get("score_delta") if result.get("ok") else result.get("score")
+        return value_mod.value_of(note, delta, snap)
 
     def rerun(self):
         """Re-score the last item (weights or build changed). The card keeps
@@ -111,10 +133,10 @@ class LastEval:
         return self.run(last[0], last[1], keep_time=True)
 
 
-def attach(builds, weights, state, league=None, calc=None):
+def attach(builds, weights, state, league=None, calc=None, rates=None):
     """Wire the live views into a core: build summary now and on every load,
     and a LastEval that re-runs on a build change. Returns the LastEval."""
-    last = LastEval(builds, weights, state, league=league, calc=calc)
+    last = LastEval(builds, weights, state, league=league, calc=calc, rates=rates)
     rev = [0]
 
     def on_build(build):

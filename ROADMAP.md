@@ -230,21 +230,36 @@ weights derived from PoB outputs stay with TC-DELTA.
   ZERO-CLICK: tests run unattended in the suite.
   DONE 2026-11-17: tests/test_math_codec_fuzz.py (19 tests, ~4k cases);
   no codec defect found, codec.py unchanged.
-- [ ] MATH-VALUE (build) Price-per-stat value math on poe.ninja rates:
+- [x] MATH-VALUE (build) Price-per-stat value math on poe.ninja rates:
   parse the item's own Note price ("~price 5 exalted", "~b/o 1/2 divine"),
   convert any currency to the primary via the cached rates (cross rates,
-  stale / missing rate -> no value, never a guess), and score per primary
+  missing / zero rate -> no value, never a guess; stale rates carry the
+  snapshot's stale flag), and score per primary
   unit for the evaluated item. ACCEPT: pure-function tests on synthetic
   rates; no network; decision 0013 (web data off -> cached or nothing).
   ZERO-CLICK: computed on the same hotkey press from cached rates.
-  BLOCKED: held by the area-math session lane (2026-11-17) until it merges.
-- [ ] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
+  DONE 2026-11-17: server/al/theorycraft/value.py (parse_note_price,
+  to_primary, convert, per_unit, value_of; 6 significant figures); the item
+  check card (LastEval) carries `value` from core's cached rates snapshot,
+  no request; tests/test_math_value.py incl. cross-rate round-trip and
+  transitivity properties. Dashboard display is MATH-VALUE-UI.
+- [ ] MATH-VALUE-UI (build) Show the item check card's `value` on the
+  dashboard Item check card: "Listed 4 Exalted Orb = 0.008 Divine Orb,
+  2,500 score per Divine Orb", the rates' stale state and the poe.ninja
+  credit; nothing when `value` is null. After MATH-VALUE. ACCEPT: web test
+  on a synthetic card; design-reviewer pass.
+  ZERO-CLICK: appears with the item check of the same hotkey press.
+- [x] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
   verdict-band properties (antisymmetry of the delta, band monotone in the
   old score, rounding stable at 4 places, NaN / inf / huge values from a
   weights file or item never crash or flip a verdict), ring best-slot pick
   ties deterministic. ACCEPT: stdlib property tests; defects fixed.
   ZERO-CLICK: tests run unattended in the suite.
-  BLOCKED: held by the area-math session lane (2026-11-17) until it merges.
+  DONE 2026-11-17: defect fixed - a huge roll ("+999...9 to maximum Life")
+  made the score inf and the eval JSON invalid (Infinity); now a value past
+  1e9 or non-finite is no value (weights.MAX_VALUE, item._number), score
+  skips non-finite terms, verdict on non-finite input is sidegrade, _clean
+  maps non-finite to 0. tests/test_math_num.py.
 
 ## Research-filed features (AREA-RES 2026-11-17, research 0020)
 
