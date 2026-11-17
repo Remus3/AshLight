@@ -435,12 +435,24 @@ recorded in research 0018 section 3.
   refs/fleet-lanes/lane-2-1794932281) must NOT be merged: it adds a second
   tracker (server/al/maprun.py) beside runs.py and its decision number
   0023 is taken (0023-act-splits-resume).
-- [ ] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
+- [x] UTIL-MAPRUN-OVL (build) One overlay status line for the open map
   (name, time in map), split from UTIL-MAPRUN (adjudicator 2026-11-17).
   Needs a design section 10 review (one card slot) and the decision 0002
   overlay budgets (tests/test_budgets.py). ACCEPT: overlay line from the
   snapshot `maps.current`, hidden outside maps, budget tests green,
   design-reviewer pass. ZERO-CLICK: shows and hides by itself from the log.
+  DONE 2026-11-17 (area-ux batch 7; adjudicator ruling: option B): while
+  `maps.current.inside`, the HUD row-1 timer shows the time in this map
+  (runs.py time_s moved on by the client clock, kept across hideout trips;
+  render_gate.js timerSeconds) instead of the zone-instance time; same "12m"
+  text, no third line, row 2 and the status slot unchanged, map deaths stay
+  on the Maps card. Alternatives: A "N map deaths" in the status slot
+  (contested slot, beside the session count), C row-2 deaths become map
+  deaths (a number that changes meaning), D dashboard-only (the zone timer
+  answers "time in this map" wrongly after a portal trip). Design 0001 7.2
+  row and section 10 amended; app/test/shared.test.js. Reverses if: play
+  shows the timer's map anchor confuses after a portal trip (then D or an
+  explicit marker), or the player asks for map deaths on the HUD (reopen A).
 - [x] PRICE-UNIQUE (build) Unique prices on the item-check press from
   poe.ninja `/poe2/api/economy/stash/current/item/overview` (Unique*
   types, research 0019): match name + baseType (+ corrupted), show value,
