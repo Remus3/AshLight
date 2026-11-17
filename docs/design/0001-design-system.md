@@ -284,6 +284,8 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | AFK / DND | status word on the HUD line | flag under Session |
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
+| In a map (UTIL-MAPS) | no change | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
+| Died (UTIL-DEATHS) | no change | Death recap card: newest first, local time, zone and level |
 | In a campaign act (HUD-ACT) | no change | Act times card (below Item check): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
 | Item check from the same press | none on the overlay | Upgrade search sub-section under the item check (TC-UPGRADE) |
@@ -319,6 +321,7 @@ Good / bad examples:
 | token rejected or core stopped | can't reach AshLight - restart it | no internals; gives the fix |
 | Layout unavailable (core stopped?) | Can't load the overlay settings. Is AshLight running? | plain words, a question the user can answer |
 | No events yet. | Nothing yet. Zones, level-ups, deaths and whispers show up here as you play. | says what and when |
+| --:-- (blank line under it) | Starts when you allow reading Client.txt | an empty timer says when it starts (UX-U9) |
 | Client.txt waiting | waiting for Client.txt | subject-verb order |
 | core not running (overlay) | AshLight offline | the user knows "AshLight", not "core" |
 | AFK on / AFK off | You're AFK / You're back | natural sentence |
@@ -346,7 +349,14 @@ Generation rules:
    - whisper in / out: `<from>: "<text>"` / `To <to>: "<text>"`
    - AFK / DND: `You're AFK` / `You're back`, `Do not disturb on` / `off`
    - party: `<character> joined the area` / `<character> left the area`
-   - log state: `Reading Client.txt`, `Client.txt was reset (<reason>)`
+   - log state: `Reading Client.txt`, `Client.txt was reset (<reason>)`;
+     the game's server connect line is not listed (it came before every
+     zone, UX-COPY); overlay status slot before the opt-in `not reading -
+     see dashboard` (UX-FIRSTRUN), opted in `waiting for log` when
+     the file is known but quiet (15 characters at most next to the
+     numbers), `no Client.txt` when it is not found
+     (UX-COPY); dashboard deaths tile before the opt-in `-` over `Counts
+     once reading starts` (UX-FIRSTRUN)
    - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
      (empty slot: `<Verdict> <+delta> - <slot> empty`), item name, top
      counted stat (`+35 to maximum Life`; a flag mod `Gains: <mod>` /
@@ -354,7 +364,7 @@ Generation rules:
      (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
      the same as your <slot> (<name>), <+n> points.`; errors `No build
      loaded`, `Not an item`, `Can't compare this` with the next step
-   - item check scoring source (TC-DELTA, decision 0022, `_calc_text`):
+   - item check scoring source (TC-DELTA, decision 0024, `_calc_text`):
      when Path of Building scored the item the overlay third line is `DPS
      <+pct>%, EHP <+pct>%` (a 0 base reads `unknown`) and the dashboard adds
      `Path of Building: DPS <+pct>% (from <old> to <new>), EHP <+pct>% (from
@@ -381,7 +391,7 @@ Generation rules:
    - act times (HUD-ACT, `server/al/acts.py`, `web/acts.js`): dashboard
      only; rows `Act <n>` / `Cruel Act <n>` / `Interlude <n>` with `Time in
      act` and `Run total` (m:ss or h:mm:ss); one note per row in one pair of
-     parentheses: `(now)`, `(partial: counted from when AshLight started)`,
+     parentheses: `(now)`, `(partial: counted from the first zone AshLight saw)`,
      joined with ", "; zone heading `Zone levels in <act>`, zone notes `(you
      are here)` / `(town)`; empty `No act times yet. They start by
      themselves when you enter a campaign zone.`, `Zone levels show here
@@ -389,6 +399,24 @@ Generation rules:
      Run AshLight's build step (scripts/build.ps1) to get them.`; source
      line `Zone levels: RePoE fork export, downloaded when AshLight was
      built. Game data (c) Grinding Gear Games.` (decision 0020)
+   - map runs (UTIL-MAPS, `server/al/runs.py`, `web/runs.js`): dashboard
+     only; rows `<map>` with `Level` (missing: `unknown`), `Time in map`
+     (m:ss or h:mm:ss) and `<n> death(s)`; open row note `(now)` or
+     `(paused)`; summary `Average map: <m:ss> over <n> finished map(s).`
+     then `<n> death(s) in maps.` or `No deaths in maps.`; empty `No maps
+     yet. Map times start by themselves when you open a map.`
+   - level pace (UTIL-PACE, `server/al/pace.py`): dashboard only, one
+     line under the Level tile, hidden while empty, key word first:
+     `Pace: about <m:ss> per level over the last <n> levels, <x.x> levels
+     an hour this session.` (one level: `about <m:ss> for the last level`;
+     `1.0 level an hour`; the hourly part needs 2+ level-ups and 10
+     minutes; m:ss matches the dashboard timers)
+   - death recap (UTIL-DEATHS, same files): dashboard only; one line per
+     death, newest first, `HH:MM` local time then `Died in <zone> (area
+     level <n>) at level <n>, <m:ss> into the zone.` (parts without data
+     are left out; no zone: `Died at level <n>.`); `Most deaths: <zone>
+     (<n>).` from 2 deaths in one zone; empty `No deaths this session.
+     Each one shows here with its zone and level.`
    - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
      only, `Your build wears <base> in <slot>, so this finds rare items of
      that base.` (empty slot: `Your build has nothing in <slot>, so this
@@ -429,7 +457,11 @@ Generation rules:
   `0 1px 1px #000` text shadow (source 4: outlines and shadows separate
   text from busy scenes). In high-contrast mode (`prefers-contrast:
   more`) the plate has no alpha of its own; the window opacity still
-  applies (audit 0004 U3).
+  applies (audit 0004 U3). In Windows forced colours the plate is opaque
+  Canvas, text and edges take the system theme (the trade and upgrade
+  edges use Highlight), the page root opts out so the window stays
+  transparent, and contrast is the theme's own, not measured here; the
+  window opacity slider still multiplies (audit 0004 U8).
 - Opacity: the effective opacity must keep every overlay text pair >= 4.5:1
   over a white scene (5.2). Decorative transparency comes from the plate,
   not from fading the text.
@@ -441,8 +473,20 @@ Generation rules:
   repaints at most once a minute (`render_gate.js`, `test_budgets.py`).
 - Glance time target: each line readable in one fixation (< 1 s): <= 5
   words, number or name first, no wrapping (`nowrap` + ellipsis).
-- Placement: corners only, user-chosen; default top-right away from the
-  game's own minimap and life / mana globes.
+- Placement: corners only, user-chosen; default top-right. In PoE2 that
+  corner holds the game's corner map (with the quest tracker below it),
+  so the 2-line HUD covers its top edge and a card covers more for its
+  20 s; every other region costs more in a fight (top-left: buffs and
+  party frames; top-center: the boss life bar; bottom: globes, flasks,
+  skill bar, XP bar). The player moves it in one change on the dashboard
+  (UX-DPI ruling 2026-11-17; reverses if play shows the corner map is
+  routinely needed and covered, or the HUD grows past 2 lines).
+- Size follows the monitor: the window is in DIPs, so Windows scaling
+  applies by itself, and on a monitor taller than 1440 DIPs (4K at 100
+  or 125 percent) `layout.js autoScale` grows the HUD by DIP height /
+  1440 (at most 2x) so text is never physically smaller than at 1440p
+  and 100 percent (UX-DPI). User size times that factor is capped at
+  2.5, and the window never exceeds the work area.
 - Display mode: Windowed Fullscreen only (CLAUDE.md).
 - About text carries the GGG disclaimer (screen-reader visible).
 

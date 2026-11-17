@@ -100,9 +100,10 @@ def test_main_opt_out_and_strict(tmp_path, capsys):
     assert snapshot.main(["--dir", str(tmp_path)], environ={"AL_NO_SNAPSHOT": "1"},
                          fetch=offline) == 0
     assert "skipped" in capsys.readouterr().out
-    assert snapshot.main(["--dir", str(tmp_path)], environ={}, fetch=offline) == 0
+    assert snapshot.main(["--dir", str(tmp_path)], environ={}, fetch=offline,
+                         web_data=True) == 0
     assert snapshot.main(["--dir", str(tmp_path), "--strict"], environ={},
-                         fetch=offline) == 1
+                         fetch=offline, web_data=True) == 1
 
 
 def test_default_cache_is_in_al_sidecar(tmp_path):

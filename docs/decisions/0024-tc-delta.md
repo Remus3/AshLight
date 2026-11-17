@@ -1,6 +1,10 @@
-# 0022 - TC-DELTA: PoB-backed item deltas and per-mod weights
+# 0024 - TC-DELTA: PoB-backed item deltas and per-mod weights
 
 Date: 2026-11-17. Trigger: ROADMAP row TC-DELTA (decision 0004 phase 2).
+
+Renumbered from 0022 to 0024 on 2026-11-17: 0022 collided with
+0022-tc-bridge (kept, earlier commit); 0023 is taken on main and on lane
+branches, so 0024 is the next number free on every branch.
 Ruled by the build lane itself (CLAUDE.md FLEET item 1).
 
 ## Decision

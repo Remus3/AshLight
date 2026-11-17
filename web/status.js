@@ -54,10 +54,43 @@
     }
   }
 
+  /* UX-PERF: a cheap identity for the recent list (it is capped at 30
+     rows and only ever appends at the end, dropping the oldest), so the
+     page skips rebuilding the rows when a push did not change it. */
+  function eventsKey(rows) {
+    var list = rows || [];
+    var first = list[0];
+    var last = list[list.length - 1];
+    function one(r) { return r ? r.at + "|" + r.type + "|" + r.text : ""; }
+    return list.length + "#" + one(first) + "#" + one(last);
+  }
+
   function emptyText(consented) {
     return consented
       ? "Nothing yet. Zones, level-ups, deaths and whispers show up here as you play."
       : "Nothing yet. Allow reading Client.txt above, then zones, level-ups, deaths and whispers show up here.";
+  }
+
+  /* UX-U9 (design 0001 rule 9: empty states say what will appear and
+     when): the line under the session timer. AFK / DND when set; before
+     the Client.txt opt-in the "--:--" timer says when it starts. */
+  function sessionSub(afk, dnd, consented) {
+    var flags = [];
+    if (afk) { flags.push("AFK"); }
+    if (dnd) { flags.push("DND"); }
+    if (flags.length) { return flags.join(" / "); }
+    return consented ? "\u00a0" : "Starts when you allow reading Client.txt";
+  }
+
+  /* UX-FIRSTRUN (design 0001 rule 7, honest): before the Client.txt
+     opt-in nothing has been counted, so the deaths tile shows no number
+     (the overlay shows none either) and the line says when counting
+     starts. */
+  function countsView(deaths, levelUps, consented) {
+    if (!consented) { return { deaths: "-", levelups: "Counts once reading starts" }; }
+    var n = Number(levelUps) || 0;
+    return { deaths: String(Number(deaths) || 0),
+             levelups: n + (n === 1 ? " level-up" : " level-ups") };
   }
 
   /* The core sends each open card's sentence (state.py trade_card_text);
@@ -85,6 +118,6 @@
   }
 
   return { linkView: linkView, readingView: readingView, kindOf: kindOf,
-           emptyText: emptyText, tradeLine: tradeLine, cornerLabel: cornerLabel,
+           emptyText: emptyText, eventsKey: eventsKey, sessionSub: sessionSub, countsView: countsView, tradeLine: tradeLine, cornerLabel: cornerLabel,
            dataCreditText: dataCreditText };
 }));

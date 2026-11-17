@@ -113,3 +113,14 @@ session and one-press "is this an upgrade for me".
 - PoB's license changes away from a permissive license.
 - GGG documents trade search, opens a character endpoint without OAuth, or
   changes its tool policy: re-rule items 4 and 6 (research 0001 refresh).
+
+## Pin log (TC-DRIFT)
+
+- 2026-11-17 HOLD (no move needed). Read back from the GitHub API
+  (`repos/PathOfBuildingCommunity/PathOfBuilding-PoE2/releases/latest` and
+  `/tags`): the latest PoB-PoE2 release is still v0.23.1 (published
+  2026-07-28, tag commit 7d6f530c), equal to `config/tc_pins.json`; the
+  newer-looking v2.49.x tags in that repo are inherited PoE1 PoB tags, not
+  PoE2 releases. LuaJIT `v2.1` branch head read back as 63c8f1a9 (committed
+  2026-11-11), equal to the pin. No bridge tests exist yet (TC-BRIDGE open),
+  so nothing to re-run. Next check: the next PoB-PoE2 release tag `v0.*`.

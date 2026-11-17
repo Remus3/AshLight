@@ -23,7 +23,7 @@ MAX_TOP = 6
 
 
 def _weights(result, comp):
-    """TC-DELTA (decision 0022): which weights valued this slot ("pob" when
+    """TC-DELTA (decision 0024): which weights valued this slot ("pob" when
     the PoB calc answered, else "hand") and the top positive per-mod
     weights among the compared stats, ready for the stat filters
     TC-UPGRADE-STATS will add. Not put in the URL yet."""

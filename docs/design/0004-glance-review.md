@@ -69,9 +69,77 @@ instead of waiting for the next review.
   view) at 320 px in a real browser. This headless lane has no browser;
   the static test above is the guard. Filed for the next interactive
   design pass (hand-off / ROADMAP by the loop), no code change expected.
+  Done 2026-11-17 (ROADMAP UX-U7): headless Chrome over a core fed a
+  replayed Client.txt fixture plus a pasted build and one item check, at
+  320 / 768 / 1440 px in dark, light and forced colours. No horizontal
+  scroll at any width (scrollWidth = clientWidth). One defect: a long
+  unbroken character name under the level ran past its tile into the
+  deaths tile at 320 px; fixed with `overflow-wrap: anywhere` on
+  `.stat .sub` and a test. Forced colours drop the status hues, but every
+  badge (Upgrade, link ready, live, TRADE / DEATH tags) carries its word,
+  so no meaning is lost (R2 holds).
 - U8 [S4, R4; filed] Windows forced-colours mode on the transparent overlay
   window is not verified: forced colours may repaint the plate or the
   transparent page background. Filed with U7 for the next live pass.
+  Done 2026-11-17 (ROADMAP UX-U8): the overlay page in an Electron 45
+  transparent window (capturePage keeps alpha) under forced-colors
+  emulation stays transparent outside the plates. Headless Chrome, by
+  contrast, paints the viewport Canvas in this mode, so the root now opts
+  out of forcing (`forced-color-adjust: none`, background transparent)
+  and never depends on the Electron behaviour; the plates opt back in.
+  Defects fixed: the trade warn edge and the upgrade green edge both fell
+  to plain CanvasText (now Highlight, a kept system colour), and the plate
+  became 92 percent Canvas (now opaque Canvas). Tests guard all three. A
+  real OS high-contrast theme switch was not exercised (emulation only).
+
+## Live pass, batch 2 (2026-11-17)
+
+Method: a core on a spare port in the AshLight block with its own
+runtime and sidecar dirs, a scratch Client.txt fed by
+`tools/synth_client.py`, headless Chrome over CDP (`--in-process-gpu`),
+and emulated device scale factors.
+
+- U10 UX-FIRSTRUN [S3; fixed] Cold start (no consent, no config, web data
+  off, no Path of Building calc). The one required click (Allow reading
+  Client.txt) is the first card, and run.ps1 opens the dashboard by
+  itself. Friction found: (a) the overlay said only "not reading", not
+  where to fix it; now `not reading - see dashboard`, flush left
+  (an empty number row left a 6 px indent); (b) the deaths tile showed
+  "0" and "0 level-ups" before anything was counted while the overlay
+  shows no numbers; now `-` over `Counts once reading starts`; (c) the
+  Act times card told a new player to run `scripts/build.ps1` while not
+  in an act; that note now shows only inside an act; (d) the consent
+  card printed the registry's lower-case Steam path; discovery returns
+  the file's real spelling. Every other card already explains itself
+  (item check, price, build, web data, Recent).
+- U11 UX-DPI [S3; fixed] Overlay at device scale 0.95, 1, 1.25, 1.5 and 2
+  over a white scene; dashboard at 1080p 100 / 125 / 150, 1440p 100, 4K
+  100 / 200. No clipping, no horizontal scroll (scrollWidth =
+  clientWidth everywhere). Gap: 13 px secondary text at 4K and 100
+  percent is about 2 mm tall (163 ppi on 27 in), roughly 10 arcmin at
+  70 cm, under the about 16 arcmin legibility floor; 1080p 24 in (3.6
+  mm, about 18 arcmin) and 1440p 27 in (3.0 mm, about 15 arcmin) pass or
+  sit at it. Fix: `layout.js autoScale` (design 0001 section 10).
+  Placement ruled by an adjudicator: top-right stays (design 0001
+  section 10). The dashboard keeps its 1100 px column on wide screens;
+  the player sizes it with browser zoom.
+- U12 UX-COPY [S4; fixed] "Connected to a game server" was listed before
+  every zone and halved the useful rows in Recent: no longer listed.
+  The overlay said "no Client.txt" for a known but quiet file: now
+  `waiting for log` (short enough to fit after the numbers; design
+  review F1, guarded by a 15-character test). "Graphics
+  settings for this PC" (the card says "computer"), "Overlay position"
+  (it also sets size and opacity) and "Edge gap (px)" reworded.
+- U13 UX-PERF [-; holds] Dashboard fed 20 synthetic sessions (800 log
+  lines, about 600 events) in 13 s: 33 state pushes, handler mean 0.39
+  ms, max 1.1 ms; 0 long tasks; 1 Hz tick mean 0.09 ms; DOM nodes 1256
+  before, 1265 after (after GC; the list is capped at 30 rows); JS heap
+  flat. No regression. The recent list now skips its rebuild on pushes
+  that do not change it (`status.js eventsKey`).
+
+design-reviewer on batch 2: PASS WITH FINDINGS S1=0 S2=0 S3=2 S4=2, all
+fixed (quiet-file word shortened and width-tested, deaths dash has an
+aria-label, combined zoom capped at 2.5).
 
 ## Kept by decision
 

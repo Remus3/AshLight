@@ -67,9 +67,18 @@
       ? duration(now - snap.session_started_at) : "--:--";
     // HUD-ACT: the open act split counts up with the zone timer.
     if (window.ALActs) { window.ALActs.paint(document, snap.acts, now, false); }
+    // UTIL-MAPS: the open map's time counts up while the player is in it.
+    if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
   }
 
+  /* UX-PERF: most state pushes (timers, trades, HUD fields) leave the
+     recent list as it was; rebuild its rows only when the list changed. */
+  var renderedEvents = "";
+
   function renderEvents(rows) {
+    var key = D.eventsKey(rows);
+    if (key === renderedEvents) { return; }
+    renderedEvents = key;
     var list = $("events");
     var frag = document.createDocumentFragment();
     for (var i = rows.length - 1; i >= 0; i--) {
@@ -753,12 +762,16 @@
     $("who").textContent = s.character
       ? s.character + (s["class"] ? " (" + s["class"] + ")" : "")
       : "character unknown";
-    $("deaths").textContent = String(s.deaths);
-    $("levelups").textContent = s.level_ups + (s.level_ups === 1 ? " level-up" : " level-ups");
-    var flags = [];
-    if (s.afk) { flags.push("AFK"); }
-    if (s.dnd) { flags.push("DND"); }
-    $("flags").textContent = flags.length ? flags.join(" / ") : "\u00a0";
+    // UTIL-PACE: the core's pace sentence, shown once there is one.
+    var paceText = (s.pace && s.pace.text) || "";
+    $("pace").textContent = paceText;
+    $("pace").hidden = !paceText;
+    var counts = D.countsView(s.deaths, s.level_ups, !!(s.tailer && s.tailer.consented));
+    $("deaths").textContent = counts.deaths;
+    if (counts.deaths === "-") { $("deaths").setAttribute("aria-label", "Not counted yet"); }
+    else { $("deaths").removeAttribute("aria-label"); }
+    $("levelups").textContent = counts.levelups;
+    $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
 
     var tl = s.tailer || {};
     $("consent").hidden = !!tl.consented;
@@ -769,6 +782,7 @@
     renderEvents(s.recent_events || []);
     renderTrades(s.trade_requests || []);
     if (window.ALActs) { window.ALActs.paint(document, s.acts || null, serverNow(), true); }
+    if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
     tick();
   }
 

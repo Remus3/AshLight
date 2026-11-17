@@ -12,6 +12,7 @@
 <script src="/web/prices.js" defer></script>
 <script src="/web/trades.js" defer></script>
 <script src="/web/acts.js" defer></script>
+<script src="/web/runs.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -54,11 +55,13 @@
       <h2 class="label">Level</h2>
       <p id="level" class="value mono">-</p>
       <p id="who" class="sub">character unknown</p>
+      <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
+      <p id="pace" class="sub" hidden></p>
     </div>
     <div class="stat">
       <h2 class="label">Deaths this session</h2>
-      <p id="deaths" class="value mono">0</p>
-      <p id="levelups" class="sub">0 level-ups</p>
+      <p id="deaths" class="value mono" aria-label="Not counted yet">-</p>
+      <p id="levelups" class="sub">Counts once reading starts</p>
     </div>
     <div class="stat">
       <h2 class="label">Session</h2>
@@ -159,6 +162,24 @@
     <p id="zones-source" class="muted small" hidden></p>
   </section>
 
+  <section id="mapsbox" class="card acts maps" aria-labelledby="maps-title">
+    <h2 id="maps-title">Maps</h2>
+    <p id="maps-empty" class="muted"></p>
+    <p id="maps-summary" hidden></p>
+    <table id="maps-table" class="acts-table" hidden>
+      <thead><tr><th scope="col">Map</th><th scope="col">Level</th>
+        <th scope="col">Time in map</th><th scope="col">Deaths</th></tr></thead>
+      <tbody id="maps-rows"></tbody>
+    </table>
+  </section>
+
+  <section id="deathsbox" class="card deaths" aria-labelledby="deaths-title">
+    <h2 id="deaths-title">Death recap</h2>
+    <p id="deaths-empty" class="muted"></p>
+    <ol id="deaths-list" class="event-list" hidden></ol>
+    <p id="deaths-worst" hidden></p>
+  </section>
+
   <section class="card events" aria-labelledby="events-title">
     <h2 id="events-title">Recent</h2>
     <ol id="events" class="event-list"></ol>
@@ -218,7 +239,7 @@
   </section>
 
   <section class="card layout" aria-labelledby="layout-title">
-    <h2 id="layout-title">Overlay position</h2>
+    <h2 id="layout-title">Overlay position and size</h2>
     <form id="layout-form" class="layout-form">
       <label>Monitor
         <select id="layout-display" name="display"><option value="primary">Primary</option></select>
@@ -232,7 +253,7 @@
       <label>Opacity <span id="layout-opacity-out" class="mono"></span>
         <input id="layout-opacity" name="opacity" type="range" min="0.9" max="1" step="0.05">
       </label>
-      <label>Edge gap (px)
+      <label>Gap from the screen edge (px)
         <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
       </label>
     </form>
@@ -242,7 +263,7 @@
   </section>
 
   <section class="card gfx" aria-labelledby="gfx-title">
-    <h2 id="gfx-title">Graphics settings for this PC</h2>
+    <h2 id="gfx-title">Graphics settings for this computer</h2>
     <details id="gfx">
       <summary>Show suggested settings</summary>
       <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only

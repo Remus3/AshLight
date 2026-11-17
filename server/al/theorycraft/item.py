@@ -13,6 +13,7 @@ fatal; anything odd goes to `warnings`. A first line that is neither
 
 import re
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 SEPARATOR = "--------"
 BOM = chr(0xFEFF)
@@ -38,10 +39,20 @@ TWO_NAME_RARITIES = ("RARE", "UNIQUE")
 CANNOT_USE = "you cannot use this item"
 
 _NUM = r"[+-]?\d+(?:\.\d+)?"
-_RANGE_RE = re.compile(r"\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)")
+# MATH-ITEM: a roll range follows its rolled number ("+90(80-99)",
+# "-15(-20--10)%"); a bare range stands for the number itself (PoB unique
+# text "+(40-60)", read at {range:r}, default the midpoint).
+_ROLL_RE = re.compile(r"(?<=\d)\((" + _NUM + r")-(" + _NUM + r")\)")
+_BARE_RANGE_RE = re.compile(r"(?<![\d)])\((" + _NUM + r")-(" + _NUM + r")\)")
+_POB_RANGE_RE = re.compile(r"\{range:\s*([0-9]*\.?[0-9]+)\s*\}", re.I)
+DEFAULT_RANGE = 0.5
+# flask / charm property lines that carry numbers but are not mods
+# AUDIT pass 2 (P2-I2): no ".*\d.*" (quadratic backtracking on a long line);
+# the digit is checked in code.
+_FLASK_PROP_RE = re.compile(r"^(Recovers|Consumes|Currently has|Lasts) +(\S.*)$")
 _NUM_RE = re.compile(_NUM)
-# FUZZ-2: no leading \s* (it made re.search quadratic on a run of spaces);
-# callers rstrip the text before the match.
+# AUDIT pass 2 (P2-I2): no leading \s* (quadratic under search() on a long
+# blank run); callers rstrip the text before the tag.
 _TAG_RE = re.compile(r"\((" + "|".join(re.escape(t) for t in MOD_TAGS) + r")\)\s*$", re.I)
 _POB_PREFIX_RE = re.compile(r"^(?:\{[^{}]*\})+")
 _ADV_HEADER_RE = re.compile(r"^\{\s(.*)\s\}$")
@@ -50,11 +61,56 @@ _TIER_RE = re.compile(r"\((?:Tier|Rank):\s*(\d+)\)")
 _REQUIRES_RE = re.compile(r"(\d+)\s+(Str|Dex|Int)\b|Level\s+(\d+)", re.I)
 
 
+def _places(text):
+    return len(text.split(".", 1)[1]) if "." in text else 0
+
+
+def resolve_range(lo, hi, at=DEFAULT_RANGE):
+    """The roll at fraction `at` (clamped to 0..1) of the range lo..hi (number
+    strings), rounded half away from zero to the endpoints' decimal places,
+    as a plain number string ("50", "1.5", "-15")."""
+    try:
+        a, b = Decimal(lo), Decimal(hi)
+        f = min(Decimal(1), max(Decimal(0), Decimal(str(at))))
+    except (InvalidOperation, ValueError):
+        return lo
+    if not (a.is_finite() and b.is_finite() and f.is_finite()):
+        return lo
+    places = max(_places(lo), _places(hi))
+    try:  # AUDIT pass 2 (P2-I1): past the 28-digit context quantize raises
+        v = (a + (b - a) * f).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, ArithmeticError):
+        return lo
+    if v == 0:
+        v = abs(v)
+    return format(v, "f")
+
+
+def strip_rolls(text, at=DEFAULT_RANGE):
+    """Mod text without roll ranges; bare ranges become their roll at `at`."""
+    if "(" not in text:
+        return text
+    text = _ROLL_RE.sub("", text)
+    return _BARE_RANGE_RE.sub(lambda m: resolve_range(m.group(1), m.group(2), at), text)
+
+
+def _range_of(prefix):
+    m = _POB_RANGE_RE.search(prefix or "")
+    if not m:
+        return DEFAULT_RANGE
+    try:
+        return float(m.group(1))
+    except ValueError:
+        return DEFAULT_RANGE
+
+
 def _number(text):
     try:
         v = float(text)
     except (TypeError, ValueError):
         return None
+    if v != v or v in (float("inf"), float("-inf")):
+        return None  # MATH-NUM: a 400-digit roll is no number (JSON-safe)
     return int(v) if v.is_integer() else v
 
 
@@ -182,15 +238,15 @@ def _parse_header(text):
             "tier": int(tier_m.group(1)) if tier_m else None, "section": section}
 
 
-def _mod(line, header, implicit_left):
+def _mod(line, header, implicit_left, at=DEFAULT_RANGE):
     """A Mod from a stat line, or None when it is not one."""
     tag_m = _TAG_RE.search(line)
     section = None
     if tag_m:
         section = tag_m.group(1).lower().replace(" ", "_")
         line = line[:tag_m.start()].rstrip()
-    rolled = _RANGE_RE.sub("", line)
-    values = tuple(_number(v) for v in _NUM_RE.findall(rolled))
+    rolled = strip_rolls(line, at)
+    values = tuple(n for n in (_number(v) for v in _NUM_RE.findall(rolled)) if n is not None)
     text = re.sub(r"\s{2,}", " ", rolled).strip()
     if not text:
         return None
@@ -219,12 +275,22 @@ def _body(item, lines, state):
             item.advanced = True
             header = _parse_header(adv.group(1))
             continue
+        pob = _POB_PREFIX_RE.match(line)
+        at = _range_of(pob.group(0)) if pob else DEFAULT_RANGE
         line = _POB_PREFIX_RE.sub("", line).strip()
         if not line:
             continue
         low = line.lower()
         if line.startswith("(") and line.endswith(")"):
             continue  # reminder text
+        if line.endswith(".") and header is None and not _has_tag(line):
+            continue  # flavour, help or description text: mods carry no full stop
+        flask = _FLASK_PROP_RE.match(line)
+        if flask and not any(c.isdigit() for c in flask.group(2)):
+            flask = None
+        if flask and any(k in (item.item_class or "").lower() for k in ("flask", "charm")):
+            item.properties[flask.group(1)] = flask.group(2).strip()
+            continue
         if low in STATUS_LINES:
             item.flags[STATUS_LINES[low]] = True
             continue
@@ -261,7 +327,7 @@ def _body(item, lines, state):
         mod = None
         if header is not None or _NUM_RE.search(line) or section_has_mods \
                 or _TAG_RE.search(line) or state.get("implicits"):
-            mod = _mod(line, header, state.get("implicits", 0) > 0)
+            mod = _mod(line, header, state.get("implicits", 0) > 0, at)
         header = None
         if mod is None:
             continue  # flavour or help text

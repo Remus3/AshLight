@@ -14,13 +14,14 @@ const ACTS = {
     { name: "Vastiri Outskirts", level: 16, town: false, here: true },
     { name: "Ardura Caravan", level: 16, town: true, here: false }
   ],
+  current: "G2",
   zones_act: "Act 2",
   levels: true,
   source: "Zone levels: RePoE fork export, downloaded when AshLight was built. Game data (c) Grinding Gear Games.",
   empty_text: "No act times yet. They start by themselves when you enter a campaign zone.",
-  no_levels_text: "Zone levels aren't downloaded yet. Run AshLight's build step (scripts/build.ps1) to get them.",
+  no_levels_text: "Zone levels aren't downloaded yet. Turn on web data, then run AshLight's build step (scripts/build.ps1).",
   no_zones_text: "Zone levels show here while you are in a campaign act.",
-  partial_text: "partial: counted from when AshLight started"
+  partial_text: "partial: counted from the first zone AshLight saw"
 };
 
 test("duration matches the zone timer form", () => {
@@ -35,7 +36,7 @@ test("duration matches the zone timer form", () => {
 
 test("splitRows: closed and open splits, exact", () => {
   assert.deepEqual(a.splitRows(ACTS, 4900), [
-    { label: "Act 1", note: "partial: counted from when AshLight started", time: "20:00", total: "20:00", current: false },
+    { label: "Act 1", note: "partial: counted from the first zone AshLight saw", time: "20:00", total: "20:00", current: false },
     { label: "Act 2", note: "", time: "1:00:00", total: "1:20:00", current: true }
   ]);
   assert.deepEqual(a.splitRows(null, 1), []);
@@ -50,8 +51,10 @@ test("zoneRows, zonesTitle and zonesEmpty, exact", () => {
   assert.equal(a.zonesTitle(ACTS), "Zone levels in Act 2");
   assert.equal(a.zonesTitle({}), "Zone levels");
   assert.equal(a.zonesEmpty(ACTS), "");
+  assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { levels: false, zones: [], current: null })),
+    "Zone levels show here while you are in a campaign act.");
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { levels: false, zones: [] })),
-    "Zone levels aren't downloaded yet. Run AshLight's build step (scripts/build.ps1) to get them.");
+    "Zone levels aren't downloaded yet. Turn on web data, then run AshLight's build step (scripts/build.ps1).");
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { zones: [] })),
     "Zone levels show here while you are in a campaign act.");
   assert.equal(a.zonesEmpty(null), "");
@@ -87,7 +90,7 @@ test("paint: one note per row, live tick, first-run heading hidden", () => {
   const rows = doc.els["acts-rows"].children;
   assert.equal(rows.length, 1);
   assert.equal(rows[0].children[0].textContent,
-    "Act 3 (now, partial: counted from when AshLight started)");
+    "Act 3 (now, partial: counted from the first zone AshLight saw)");
   assert.equal(rows[0].children[1].textContent, "1:05");
   a.paint(doc, live, 130, false);
   assert.equal(rows[0].children[1].textContent, "2:10");

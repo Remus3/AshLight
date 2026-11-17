@@ -19,12 +19,17 @@ import re
 import threading
 from pathlib import Path
 
+from . import item as item_mod
+
 log = logging.getLogger("al.theorycraft")
 
 VERSION = 1
 MAX_KEYS = 500
 MAX_KEY_LEN = 200
 MAX_WEIGHT = 1e6
+# MATH-NUM: a rolled value past this (or not finite) is no value, so a
+# crafted item line can never push a score to inf / NaN (invalid JSON)
+MAX_VALUE = 1e9
 
 # Sane phase-1 defaults: a generic life / resist / damage leaning. Values
 # are per point of the stat ("Adds # to #" uses the average of the two).
@@ -73,6 +78,7 @@ DEFAULT_SIDEGRADE = {"abs": 2.0, "pct": 5.0}
 
 _NUM_RE = re.compile(r"([+-]?)(\d+(?:\.\d+)?)")
 _NEGATE = (("reduced", "increased"), ("less", "more"))
+_GOVERN_RE = re.compile(r"\b(increased|reduced|more|less)\b", re.I)
 
 
 class WeightsError(ValueError):
@@ -96,6 +102,7 @@ def stat_key(text):
     the first number is the value."""
     if not isinstance(text, str):
         return None, None
+    text = item_mod.strip_rolls(text)
     values = []
 
     def repl(m):
@@ -109,12 +116,13 @@ def stat_key(text):
         return m.group(1) + "#"
 
     key = re.sub(r"\s+", " ", _NUM_RE.sub(repl, text)).strip()
-    sign = 1
+    # the sign follows the word that governs the first number only
+    # ("10% increased A and 5% reduced B" stays positive); every negative
+    # word is still rewritten so the key matches its positive twin
+    first = _GOVERN_RE.search(key)
+    sign = -1 if first and first.group(1).lower() in ("reduced", "less") else 1
     for word, repl in _NEGATE:
-        pattern = re.compile(r"\b" + word + r"\b", re.I)
-        if pattern.search(key):
-            key = pattern.sub(repl, key)
-            sign = -sign
+        key = re.sub(r"\b" + word + r"\b", repl, key, flags=re.I)
     if not values:
         return key, None
     if len(values) == 2 and key.lower().startswith("adds # to #"):
@@ -122,6 +130,8 @@ def stat_key(text):
     else:
         value = values[0]
     value = value * sign
+    if not math.isfinite(value) or abs(value) > MAX_VALUE:
+        return key, None
     if isinstance(value, float) and value.is_integer():
         value = int(value)
     return key, value

@@ -11,6 +11,8 @@ import threading
 import time
 
 from . import acts as acts_mod
+from . import pace as pace_mod
+from . import runs as runs_mod
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -34,11 +36,13 @@ PRICE_LISTINGS = 10
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
 
-# Event types shown in the dashboard's recent list.
+# Event types shown in the dashboard's recent list. UX-COPY: not
+# session_connect - the game logs one before every zone change, so
+# "Connected to a game server" doubled every "Entered <zone>" row and
+# pushed deaths and whispers out of the 30-row list sooner.
 LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
           "whisper_out", "afk_changed", "dnd_changed", "player_joined_area",
-          "player_left_area", "trade_accepted", "session_connect",
-          "tailer_started", "tailer_reset"}
+          "player_left_area", "trade_accepted", "tailer_started", "tailer_reset"}
 
 
 FALLBACK_TEXT = "Something happened in the log"
@@ -216,7 +220,7 @@ def _stat_rows(comp):
 
 
 CALC_NOTICE_TEXT = {
-    # TC-DELTA (decision 0022): why the card shows stat-weight points, not
+    # TC-DELTA (decision 0024): why the card shows stat-weight points, not
     # Path of Building DPS / EHP
     "off": ("Scored with your stat weights. To see DPS and EHP, turn on the "
             "optional Path of Building calc in AshLight's settings file."),
@@ -560,6 +564,11 @@ class SessionState:
         # HUD-ACT: per-act splits; zone level table from the game-data cache.
         self.acts = acts_mod.ActSplits()
         self.zone_table = {}
+        # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
+        self.maps = runs_mod.MapRuns()
+        self.death_log = runs_mod.DeathLog()
+        # UTIL-PACE: levelling pace from the player's level-ups (pace.py).
+        self.pace = pace_mod.Pace()
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None}
 
@@ -698,18 +707,21 @@ class SessionState:
                     self.zone = ev.get("scene")
                     self.in_hideout = bool(ev.get("is_hideout"))
                     self.zone_entered_at = now
+                    self.maps.on_scene(self.zone, now, self.in_hideout)
                     listed = True
                     changed = True
             elif t == "area_generated":
                 self.area_id = ev.get("area_id")
                 self.area_level = ev.get("area_level")
                 self.acts.fold(self.area_id, now, self.level)
+                self.maps.on_generated(self.area_id, now, self.area_level)
                 changed = True
             elif t == "area_entered":
                 if ev.get("name") != self.zone:
                     self.zone = ev.get("name")
                     self.in_hideout = "hideout" in (self.zone or "").lower()
                     self.zone_entered_at = now
+                    self.maps.on_scene(self.zone, now, self.in_hideout)
                     changed = True
             elif t == "level_up":
                 # The first level-up names the character unless one was
@@ -720,10 +732,17 @@ class SessionState:
                     self.char_class = ev.get("class")
                     self.level = ev.get("level")
                     self.level_ups += 1
+                    self.pace.on_level(self.level, now)
                     changed = True
             elif t == "death":
                 if self._is_me(ev.get("character")):
                     self.deaths += 1
+                    self.death_log.add(
+                        at=now, zone=self.zone, area_level=self.area_level,
+                        level=self.level,
+                        zone_s=(max(0.0, now - self.zone_entered_at)
+                                if self.zone_entered_at else None))
+                    self.maps.on_death(now)
                     changed = True
             elif t in ("whisper_in", "whisper_out"):
                 self.recent_whispers.append(self._row(ev, now))
@@ -765,7 +784,8 @@ class SessionState:
     def restore(self, fields):
         """LIVE-RESUME: set state fields recovered from the end of Client.txt
         (server/al/resume.py). Nothing is listed. A configured character is
-        kept; another character's level, class and counts are ignored."""
+        kept; another character's level, class and counts are ignored.
+        Act splits are run-wide and are rebuilt for any character."""
         with self._lock:
             name = fields.get("character")
             other = bool(name) and self.character_fixed and name != self.character
@@ -776,6 +796,13 @@ class SessionState:
                     continue
                 if key in fields:
                     setattr(self, attr, fields[key])
+            # HUD-ACT-RESUME: rebuild the act splits from the run's area
+            # generations (decision 0023); none keeps the current splits.
+            rebuilt = acts_mod.ActSplits()
+            for a in fields.get("act_areas") or ():
+                rebuilt.fold(a.get("area_id"), a.get("at"), a.get("level"))
+            if rebuilt.splits:
+                self.acts = rebuilt
             self.version += 1
             return True
 
@@ -827,4 +854,7 @@ class SessionState:
                 "build": dict(self.build_info) if self.build_info else None,
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
+                "maps": self.maps.view(now),
+                "death_recap": self.death_log.view(),
+                "pace": self.pace.view(now, self.session_started_at),
             }

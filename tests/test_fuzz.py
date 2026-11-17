@@ -418,3 +418,14 @@ def test_lone_surrogate_in_character_json_is_a_build_error():
         charjson.from_json(text)
     with pytest.raises(model.BuildError):
         model.parse("<PathOfBuilding2>" + chr(0xD800) + "</PathOfBuilding2>")
+
+
+def test_absurd_level_up_does_not_break_the_snapshot():
+    # FUZZ-6 (found after merging UTIL-PACE): a level-up line with a huge
+    # number overflowed pace maths (int too large to convert to float).
+    st = state.SessionState()
+    for i, lvl in enumerate((5, 6, 10 ** 400, 7)):
+        ev = parser.parse_line(PREFIX + f": Cinderwisp (Sorceress) is now level {lvl}")
+        ev["recv_ts"] = 1000.0 + 60 * i
+        st.apply(ev)
+    _json(st.snapshot())

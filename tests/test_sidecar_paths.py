@@ -9,7 +9,7 @@ from pathlib import Path
 from server.al import paths
 
 ROOT = Path(__file__).resolve().parents[1]
-SCANNED = ("server", "web", "app", "scripts")
+SCANNED = ("server", "web", "app", "scripts", "tools")  # tools: AUDIT-HYGIENE H5
 SKIP_DIRS = {"node_modules", "__pycache__", "out", "dist"}
 TEXT = {".py", ".js", ".html", ".css", ".json", ".ps1", ".md", ".txt", ".cmd", ".vbs"}
 

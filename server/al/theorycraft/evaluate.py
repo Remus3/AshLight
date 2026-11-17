@@ -12,6 +12,8 @@ kind and the headline is the best swap. No game data snapshot is needed
 are compared only through the optional PoB calc (TC-DELTA, `calc=`).
 """
 
+import math
+
 from . import delta as delta_mod
 from . import item as item_parser
 from . import weights as weights_mod
@@ -88,11 +90,15 @@ def score(stats, table):
     for key, value in stats.items():
         hit = table.get(key.lower())
         if hit:
-            total += hit[1] * value
+            term = hit[1] * value
+            if math.isfinite(term) and math.isfinite(total + term):
+                total += term  # MATH-NUM: a non-finite term never poisons the sum
     return round(total, 4)
 
 
 def verdict(delta, old_score, side):
+    if not (math.isfinite(delta) and math.isfinite(old_score)):
+        return SIDEGRADE  # MATH-NUM: no verdict from a non-finite number
     band = max(float(side.get("abs", 0)), abs(old_score) * float(side.get("pct", 0)) / 100.0)
     if delta > band:
         return UPGRADE
@@ -102,6 +108,8 @@ def verdict(delta, old_score, side):
 
 
 def _clean(n):
+    if not math.isfinite(n):
+        return 0  # MATH-NUM: the feed stays valid JSON
     n = round(n, 4)
     return int(n) if float(n).is_integer() else n
 
@@ -140,7 +148,7 @@ def _keys(new_stats, old_stats):
 
 
 def _pob(out, item_text, build, slots, new_stats, calc, blend, side):
-    """TC-DELTA (decision 0022): replace the hand-weight comparisons with
+    """TC-DELTA (decision 0024): replace the hand-weight comparisons with
     PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError."""
     base = delta_mod.outputs(calc, build)
     comps, per_slot = [], {}
