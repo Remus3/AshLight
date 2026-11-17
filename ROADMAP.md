@@ -93,11 +93,22 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   After DATA-NINJA. ACCEPT: fixture rates render at desktop and phone
   width; credit visible; design-reviewer pass. ZERO-CLICK: the panel polls
   /api/rates on its own; no refresh button.
-- [ ] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
+- [x] DATA-NINJA-VERIFY (review) With web access, confirm poe.ninja's PoE2
   overview response fields (lines[].id / primaryValue, core.items names,
   core.primary) against server/al/ninja.parse_overview and record them in
   research 0005; add a dated, anonymised fixture. ACCEPT: parser test on
   the real shape. ZERO-CLICK: doc + fixture row, run by a lane.
+  DONE 2026-11-17 (research 0013, not 0005): paths, ETag 304, ids and values
+  verified; item names are in a top-level `items`, not core.items (row
+  DATA-NINJA-NAMES). The trimmed real shape is in research 0013.
+- [ ] DATA-NINJA-NAMES (data) server/al/ninja.parse_overview reads names
+  from core.items, which holds only the 3 reference currencies; the real
+  response (research 0013, 2026-11-17) has every line's name in the
+  top-level `items` array (id, name, category, detailsId). Read names from
+  top-level `items` first, core.items as fallback; update tests/test_data_ninja.py
+  OVERVIEW to the real shape (top-level items, primary "divine"). ACCEPT:
+  a test on the trimmed shape in research 0013 names every line.
+  ZERO-CLICK: next /api/rates refresh.
 - [x] DATA-LICENSE (data) License check for RePoE / repoe-fork PoE2 exports
   and poe2db / poe2wiki (CC BY-NC-SA) before any snapshot is bundled; record
   in docs/decisions. ACCEPT: decision file with the ruling.
@@ -193,10 +204,21 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   detected URL once when web_data is on (422 off / not allowed, 502 fetch
   failure), the text goes through paste detection into the build store.
   tests/test_tc_url.py (SSRF cases, mocked).
-- [ ] TC-URL-VERIFY (review) With web access, confirm the raw-download
+- [x] TC-URL-VERIFY (review) With web access, confirm the raw-download
   paths pobb.in/pob/<id> and pastebin.com/raw/<id> (and whether pobb.in
   redirects) and record them in research 0010. ACCEPT: paths cited with an
   access date or shareurl.RAW_TEMPLATES fixed. ZERO-CLICK: doc row.
+  DONE 2026-11-17 (research 0013): pobb.in /pob/<id> and /<id>/raw both 200
+  text/plain, no redirect; pastebin /raw/<id> route exists (404 page for a
+  missing id), 200 body untested. Row TC-URL-POBBIN-RAW filed.
+- [ ] TC-URL-POBBIN-RAW (theorycraft) shareurl.RAW_TEMPLATES uses
+  pobb.in/pob/<id>, the PoB import route; pobb.in's README documents
+  /<id>/raw and /u/<name>/<id>/raw as the public third-party routes
+  (research 0013, 2026-11-17). Switch the pobb.in template to
+  https://pobb.in/{id}/raw and accept https://pobb.in/u/<name>/<id> links
+  (rebuilt as /u/<name>/<id>/raw, name charset [A-Za-z0-9_-]); update the
+  module docstring and decision 0013 item 4. ACCEPT: tests/test_tc_url.py
+  covers both forms and the SSRF cases. ZERO-CLICK: pasting a pobb.in link.
 - [x] TC-VIEW (build) Build view on the dashboard: gear by slot, skills,
   key stats from the XML, tree summary; "copy code for PoB" export; link out
   to poe2db / wiki pages, no copied text. After TC-CODE. ACCEPT: fixture

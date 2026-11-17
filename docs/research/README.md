@@ -37,6 +37,9 @@ its code (license notes: 0006).
 - 0012 PoE2 graphics options and PC specs - option labels, official
   minimum / recommended specs, what costs the most FPS (GFX-ADVISOR)
   ([0012-poe2-graphics.md](0012-poe2-graphics.md))
+- 0013 Web endpoint verification - live poe.ninja overview shape, pobb.in and
+  pastebin raw paths, rate and terms checks (DATA-NINJA-VERIFY, TC-URL-VERIFY)
+  ([0013-web-endpoint-verify.md](0013-web-endpoint-verify.md))
 
 ## Open research (feeds ROADMAP)
 
