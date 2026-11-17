@@ -15,6 +15,7 @@ from . import VERSION, acts, layout, logfile, ninja, parser, paths, price, resum
 from .bus import EventBus
 from .state import SessionState
 from .theorycraft import basetypes
+from .theorycraft import calcwire
 from .theorycraft import item as item_mod
 from .theorycraft import live as tc_live
 from .theorycraft import shareurl
@@ -103,10 +104,16 @@ class Core:
         # scores with the stat weights and says so on the card.
         # MATH-VALUE: the card's `value` reads the cached rates at run time
         # (self.rates is made below; a lambda defers the lookup).
+        # AUDIT-TC-WIRE: the calc comes from theorycraft.calcwire when the
+        # user opted in ("tc_calc": true in config/local.json) and setup
+        # installed the hash-pinned component; else None (off notice).
+        # `tc_calc`, when set (tests), overrides the provider.
         self.tc_calc = None
+        self.tc_provider = calcwire.Provider(self.tc_calc_enabled)
         self.last_eval = tc_live.attach(self.builds, self.weights, self.state,
                                         league=self.configured_league,
-                                        calc=lambda: self.tc_calc,
+                                        calc=lambda: (self.tc_calc if self.tc_calc is not None
+                                                      else self.tc_provider()),
                                         rates=lambda: self.rates.snapshot())
         # Web data (decision 0013): one default-off opt-in, "web_data" in the
         # local config; every outbound request goes through server/al/webfetch.py
@@ -143,6 +150,10 @@ class Core:
             return cfg if isinstance(cfg, dict) else {}
         except (OSError, ValueError):
             return {}
+
+    def tc_calc_enabled(self):
+        """AUDIT-TC-WIRE: the optional PoB calc opt-in (default off)."""
+        return self._config().get("tc_calc") is True
 
     def web_data_enabled(self):
         """True only when the user turned web data on (default off)."""
@@ -333,3 +344,4 @@ class Core:
 
     def close(self):
         self.stop_tailing()
+        self.tc_provider.close()  # AUDIT-TC-WIRE: stop the bridge if started

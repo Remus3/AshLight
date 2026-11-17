@@ -691,6 +691,20 @@ merge. Each row names the finding ids it closes.
   line (else its last paragraph) is stored by lane_worker and written as a
   `result:` paragraph in the lane commit and the main merge commit; the
   build prompt asks for it. tests/test_audit_loop_commit_msg.py.
+- [x] AUDIT-TC-WIRE (build) TC-DELTA was never wired into the core
+  (Core.tc_calc stayed None), so every item check in play used the stat
+  weights. Wire the TC-BRIDGE client as the delta calc: opt-in, off by
+  default, graceful when the component is absent or fails. ACCEPT: tests
+  over the stdio bridge double; core runs unchanged with it off.
+  ZERO-CLICK: one opt-in key; the bridge starts on the first item check.
+  DONE 2026-11-17 (AREA-MATH b2, with MATH-WEIGHTS):
+  server/al/theorycraft/calcwire.py (map_outputs: FullDPS / CombinedDPS /
+  TotalDPS / TotalDotDPS, TotalEHP else Life + EnergyShield; make_calc
+  reloads the build around every swap; Provider returns None unless local
+  config "tc_calc": true AND bridge.available(), rechecked at most every
+  30 s, bridge imported lazily); Core.tc_provider + tc_calc_enabled,
+  Core.close stops the shared bridge; tests/test_tc_wire.py. A failing
+  bridge gives the "failed" notice (or cached PoB weights, MATH-WEIGHTS).
 
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the

@@ -19,6 +19,6 @@
   "web_data": false,
   "league": "",
   "contact": "",
-  "_doc_tc": "tc_calc: opt-in for the optional theorycraft calc component (TC-PIN, decision 0018), default false. When true, scripts/setup.ps1 fetches the hash-pinned Path of Building PoE2 source and LuaJIT (config/tc_pins.json) into the sidecar and verifies them; same as setup.ps1 -TcCalc. Read by setup only, never by the running core.",
+  "_doc_tc": "tc_calc: opt-in for the optional theorycraft calc component (TC-PIN, decision 0018), default false. When true, scripts/setup.ps1 fetches the hash-pinned Path of Building PoE2 source and LuaJIT (config/tc_pins.json) into the sidecar and verifies them; same as setup.ps1 -TcCalc. The running core also reads it (AUDIT-TC-WIRE): with it true and the component installed, item checks use Path of Building DPS and EHP deltas; otherwise they use the stat weights.",
   "tc_calc": false
 }
