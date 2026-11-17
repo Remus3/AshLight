@@ -70,3 +70,16 @@ test("chars: a name past the 12-name cap is not picked", () => {
   assert.equal(ch.view(snap, "C19"), snap);
   assert.notEqual(ch.view(snap, "C0"), snap);
 });
+
+test("chars: Object.prototype names are kept (AUDIT-P6-LOW P6-3)", () => {
+  const snap = {
+    character: "constructor",
+    characters: [{ name: "constructor", current: true }, { name: "toString", current: false }],
+    run_history: { by_character: JSON.parse(
+      '{"__proto__": {"best": []}, "hasOwnProperty": {"best": []}}') },
+  };
+  assert.deepEqual(ch.names(snap), [{ name: "constructor", current: true },
+    { name: "toString", current: false }, { name: "__proto__", current: false },
+    { name: "hasOwnProperty", current: false }]);
+  assert.equal(ch.view(snap, "__proto__").character, "__proto__");
+});

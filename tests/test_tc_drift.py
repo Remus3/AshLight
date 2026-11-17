@@ -383,3 +383,19 @@ def test_floor_no_trade_or_cookie_paths_in_module():
     text = (ROOT / "tools" / "tc_drift.py").read_text(encoding="ascii")
     assert "POESESSID" not in text and "trade" not in text.lower()
     assert tc_drift.API_HOSTS == ("api.github.com",)
+
+
+# --- AUDIT-P6-LOW P6-4: status before the first check ------------------------
+
+def test_status_text_before_first_check_says_so(tmp_path):
+    root = _root(tmp_path)
+    pinned = tc_pin.load_pins(root / "config" / "tc_pins.json")["pob2"]["tag"]
+    assert tc_drift.status_text(root) == (
+        f"tc drift: no check run yet; pinned PoB-PoE2 {pinned} "
+        "(run `python tools/tc_drift.py check`)")
+
+
+def test_status_text_after_check_prints_state(tmp_path):
+    root = _root(tmp_path)
+    tc_drift.check(root, NOW, fetch=_fake(latest="v0.23.1"))
+    assert json.loads(tc_drift.status_text(root))["status"] == "current"
