@@ -139,7 +139,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   Done 2026-11-17: policy unchanged; 3 floor wording proposals in research
   0001 for MAIN / operator.
 - [x] FLOOR-STATIC-SCAN (review) Test-backed ToS floor scan beyond the overlay smoke test: tests/test_floor_static.py greps server/, tools/, scripts/ and app/ for input / memory / screen-capture APIs (SendInput, SendKeys, keybd_event, mouse_event, ReadProcessMemory, WriteProcessMemory, CopyFromScreen, ImageGrab, DXGI hooks) and for clipboard reads outside the hotkey handler. ACCEPT: the test fails when such a call is planted in a temp copy, passes on the tree, allow-list entries name a reason (research 0026). -- done 2026-11-17 (loop; refute 2/3 PASS)
-- [ ] POLICY-WORDING-WATCH (review) After the 1.0 notes (2026-12-11) and each developer-docs changelog entry, re-read the overlay / macro wording and diff it against the quotes in research 0001. ACCEPT: research 0001 or a new 0027 records the diff or "unchanged" with source URL and date; CLAUDE.md floor proposals go to MAIN, never self-edited.
+- [x] POLICY-WORDING-WATCH (review) After the 1.0 notes (2026-12-11) and each developer-docs changelog entry, re-read the overlay / macro wording and diff it against the quotes in research 0001. ACCEPT: research 0001 or a new 0027 records the diff or "unchanged" with source URL and date; CLAUDE.md floor proposals go to MAIN, never self-edited. -- done 2026-11-17 (loop; refute 0/3 PASS)
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
 
