@@ -26,17 +26,19 @@
      then characters seen only in the saved run history; at most MAX. */
   function names(snap) {
     var out = [];
-    var seen = {};
+    // a Map, not {}: "constructor" / "toString" / "__proto__" are valid
+    // names (AUDIT-P6-LOW P6-3)
+    var seen = new Map();
     ((snap && snap.characters) || []).forEach(function (c) {
-      if (c && typeof c.name === "string" && c.name && !seen[c.name] && out.length < MAX) {
-        seen[c.name] = true;
+      if (c && typeof c.name === "string" && c.name && !seen.has(c.name) && out.length < MAX) {
+        seen.set(c.name, true);
         out.push({ name: c.name, current: !!c.current });
       }
     });
     var by = (snap && snap.run_history && snap.run_history.by_character) || {};
     Object.keys(by).forEach(function (n) {
-      if (n && !seen[n] && out.length < MAX) {
-        seen[n] = true;
+      if (n && !seen.has(n) && out.length < MAX) {
+        seen.set(n, true);
         out.push({ name: n, current: false });
       }
     });

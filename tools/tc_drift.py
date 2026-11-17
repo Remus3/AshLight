@@ -227,6 +227,17 @@ def _trial_due(st, now):
     return stale and int(tr.get("launches") or 0) < TRIAL_MAX_LAUNCHES
 
 
+def status_text(root):
+    """`status` output: the saved state as JSON, or one plain line naming the
+    pinned tag before the first check (AUDIT-P6-LOW P6-4)."""
+    st = load_state(root)
+    if st:
+        return json.dumps(st, indent=1, sort_keys=True)
+    pinned = _pins(root)["pob2"]["tag"]
+    return (f"tc drift: no check run yet; pinned PoB-PoE2 {pinned} "
+            "(run `python tools/tc_drift.py check`)")
+
+
 def summary(st):
     status, pinned, latest = st.get("status"), st.get("pinned"), st.get("latest")
     if status == "current":
@@ -510,7 +521,7 @@ def main(argv=None):
         if args.cmd == "note":
             print(hold_note(load_state(root)))
             return RC_OK
-        print(json.dumps(load_state(root), indent=1, sort_keys=True))
+        print(status_text(root))
         return RC_OK
     except (DriftError, tc_pin.PinError) as e:
         print(f"refused: {e}")
