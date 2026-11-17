@@ -47,6 +47,15 @@ MAX_EVAL_BODY = 80 * 1024  # POST /api/eval: one item text (64 KB cap, research 
 MAX_WEIGHTS_BODY = 64 * 1024  # PUT /api/weights
 DRAIN_MAX = 1024 * 1024  # a rejected body up to this is read and dropped (413 / 415)
 DRAIN_TIMEOUT_S = 2.0  # ... within this time, else the connection just closes
+# TEST-HTTP: socket timeout per connection. A client that connects and sends
+# nothing, sends a body shorter than its Content-Length, or (SSE) stops
+# reading is dropped after this, so it cannot pin a thread forever.
+REQUEST_TIMEOUT_S = 10.0
+# TEST-HTTP: at most this many live SSE streams (dashboard tabs + overlay);
+# one more gets 503 with Retry-After, so a runaway client cannot spawn
+# unbounded threads and bus subscriptions.
+MAX_SSE_CLIENTS = 16
+SSE_BUSY_RETRY_MS = 30000  # a stream refused for the cap reconnects after this
 # The overlay is a local file:// page; its EventSource / fetch carry
 # "Origin: null". Allowed for these read-only, token-gated GETs only.
 FILE_ORIGIN_PATHS = {"/events", "/api/state", "/api/health"}
@@ -74,6 +83,7 @@ class ALServer(ThreadingHTTPServer):
         self.web_root = Path(web_root).resolve() if web_root else None
         self.tokens_css = Path(tokens_css) if tokens_css else None
         self.stopping = threading.Event()
+        self.sse_slots = threading.BoundedSemaphore(MAX_SSE_CLIENTS)
         # GFX-ADVISOR: hardware read once, on the first GET /api/gfx.
         self.gfx = gfx.Advisor()
         super().__init__((ports.LOOPBACK, int(port)), Handler)
@@ -91,14 +101,30 @@ class ALServer(ThreadingHTTPServer):
         self.shutdown()
         self.server_close()
 
+    def handle_error(self, request, client_address):
+        """TEST-HTTP: a dropped or timed-out client is routine (debug); any
+        other handler error goes to the core log, not to a stderr that
+        pythonw does not have."""
+        import sys
+        exc = sys.exc_info()[1]
+        if isinstance(exc, OSError):
+            log.debug("client connection error: %s", type(exc).__name__)
+        else:
+            log.exception("request handler error")
+
 
 class Handler(BaseHTTPRequestHandler):
     server_version = f"{NAME}/{VERSION}"
     sys_version = ""
+    timeout = REQUEST_TIMEOUT_S  # TEST-HTTP (StreamRequestHandler applies it)
 
-    # -- logging: never log the query string (it may carry the token)
+    # -- logging: never log the query string (it may carry the token).
+    # TEST-HTTP: a malformed request line (garbage, a 64 KB+ URI) is logged
+    # before command / path exist; reading them unguarded raised and the
+    # client got no 400 / 414 at all.
     def log_message(self, fmt, *args):
-        log.debug("%s %s", self.command, urlsplit(self.path).path)
+        log.debug("%s %s", getattr(self, "command", None) or "-",
+                  urlsplit(getattr(self, "path", "") or "").path)
 
     # -- helpers
     def _common_headers(self, ctype=None, length=None, extra=None):
@@ -342,8 +368,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json(413, {"error": "body too large"})
             return None
         try:
-            body = json.loads(self.rfile.read(length) or b"{}")
-        except ValueError:
+            raw = self.rfile.read(length)
+        except OSError:  # TEST-HTTP: body shorter than its length (timeout) or reset
+            self.close_connection = True
+            return None
+        if len(raw) < length:  # the client closed mid-body: nobody to answer
+            self.close_connection = True
+            return None
+        try:
+            body = json.loads(raw or b"{}")
+        except (ValueError, RecursionError):  # TEST-HTTP: deep nesting too
             self._json(400, {"error": "bad json"})
             return None
         if not isinstance(body, dict):
@@ -508,6 +542,21 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, target.read_bytes(), ctype)
 
     def _sse(self, extra):
+        srv = self.server
+        if not srv.sse_slots.acquire(blocking=False):
+            # A non-200 reply makes an EventSource give up for good (the
+            # overlay would stay offline); a 200 stream that only sets a long
+            # retry and closes makes it come back on its own (ZERO-CLICK).
+            self.close_connection = True
+            return self._send(200, "retry: %d\nevent: busy\ndata: {}\n\n"
+                              % SSE_BUSY_RETRY_MS, "text/event-stream; charset=utf-8",
+                              dict(extra, **{"Retry-After": str(SSE_BUSY_RETRY_MS // 1000)}))
+        try:
+            return self._sse_stream(extra)
+        finally:
+            srv.sse_slots.release()
+
+    def _sse_stream(self, extra):
         srv = self.server
         core = srv.core
         sub = core.bus.subscribe()
