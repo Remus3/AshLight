@@ -6,9 +6,12 @@ flags and the render rules the FPS / RAM budgets rest on.
 Live part (opt-in: AL_OVERLAY_SMOKE=1, Windows, Electron installed in app/ or
 in the main checkout's app/): starts the real overlay with an isolated
 profile (AL_SIDECAR_ROOT in tmp, so a running overlay's single-instance lock
-is not hit) and AL_OVERLAY_SMOKE_S, samples every Electron process of that
-profile, and asserts the decision 0002 budgets: summed working set under
-250 MB, idle CPU under 1 percent of one core, a clean exit. Opt-in because it
+is not hit) and AL_OVERLAY_SMOKE_S, samples every Electron process in the
+started overlay's own process tree, and asserts the decision 0002 budgets:
+at most 2 processes, summed working set under 215 MB (UX-OVL-RAM: the
+decision's 250 MB, tightened to about 15 percent over the 186 MB peak
+measured with the core's SSE feed bursting), idle CPU under 1 percent of
+one core, a clean exit. Opt-in because it
 puts a (transparent, click-through) window on the screen for a few seconds;
 the armed loop's suites never set it.
 """
@@ -28,7 +31,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = (ROOT / "app" / "main.js").read_text(encoding="utf-8")
 OVL_JS = (ROOT / "app" / "overlay" / "overlay.js").read_text(encoding="utf-8")
 OVL_CSS = (ROOT / "app" / "overlay" / "overlay.css").read_text(encoding="utf-8")
-RAM_BUDGET = 250 * 1024 * 1024
+RAM_BUDGET = 215 * 1024 * 1024  # decision 0002: 250 MB; measured peak 186 MB
+MAX_PROCS = 2  # browser + renderer (no GPU or network utility process)
 CPU_BUDGET = 0.01  # share of one core, idle
 SMOKE_S = 14
 IDLE_FROM_S, IDLE_TO_S = 5, 12
@@ -45,7 +49,8 @@ def test_window_flags_behind_the_budgets():
     for needle in ("app.disableHardwareAcceleration()", 'appendSwitch("in-process-gpu")',
                    "transparent: true", "alwaysOnTop: true", "focusable: false",
                    "skipTaskbar: true", "frame: false", "setIgnoreMouseEvents(true)",
-                   "requestSingleInstanceLock()"):
+                   "requestSingleInstanceLock()",
+                   'appendSwitch("enable-features", "NetworkServiceInProcess2")'):
         assert needle in code, needle
 
 
@@ -87,20 +92,27 @@ def _electron():
     return None
 
 
-def _sample(profile):
-    """[(pid, working_set, cpu_100ns)] of the Electron processes whose
-    command line names this profile dir (Chromium passes it to children)."""
+def _sample(root):
+    """[(pid, working_set, cpu_100ns)] of the Electron processes in the tree
+    under the started overlay's pid (the browser process's command line
+    does not name the profile, so a profile match would miss it)."""
     ps = ("Get-CimInstance Win32_Process -Filter \"Name='electron.exe'\" | "
-          "Select-Object ProcessId,WorkingSetSize,KernelModeTime,UserModeTime,CommandLine"
+          "Select-Object ProcessId,ParentProcessId,WorkingSetSize,KernelModeTime,UserModeTime"
           " | ConvertTo-Json -Compress")
     out = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps],
                          capture_output=True, text=True, timeout=60).stdout.strip()
     rows = json.loads(out) if out else []
     rows = rows if isinstance(rows, list) else [rows]
-    key = str(profile).lower()
+    want, grew = {root}, True
+    while grew:
+        grew = False
+        for r in rows:
+            if r["ParentProcessId"] in want and r["ProcessId"] not in want:
+                want.add(r["ProcessId"])
+                grew = True
     return [(r["ProcessId"], int(r["WorkingSetSize"]),
              int(r["KernelModeTime"]) + int(r["UserModeTime"]))
-            for r in rows if key in (r.get("CommandLine") or "").lower()]
+            for r in rows if r["ProcessId"] in want]
 
 
 @pytest.mark.slow
@@ -116,15 +128,15 @@ def test_live_overlay_smoke_within_budget(tmp_path):
     env.pop("ELECTRON_RUN_AS_NODE", None)
     proc = subprocess.Popen([str(exe), str(ROOT / "app")], env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    profile = side / "Cache" / "overlay-profile"
     try:
         t0 = time.monotonic()
-        peak, first, last = 0, None, None
+        peak, procs, first, last = 0, 0, None, None
         while time.monotonic() - t0 < IDLE_TO_S:
-            rows = _sample(profile)
+            rows = _sample(proc.pid)
             el = time.monotonic() - t0
             if rows:
                 peak = max(peak, sum(r[1] for r in rows))
+                procs = max(procs, len(rows))
                 cpu = sum(r[2] for r in rows)
                 if el >= IDLE_FROM_S and first is None:
                     first = (el, cpu, {r[0] for r in rows})
@@ -138,6 +150,7 @@ def test_live_overlay_smoke_within_budget(tmp_path):
             proc.kill()
     assert first and last and last[0] > first[0], "no Electron process seen"
     assert rc == 0
+    assert procs <= MAX_PROCS, f"{procs} Electron processes"
     assert peak < RAM_BUDGET, f"summed working set {peak / 2**20:.1f} MB"
     share = (last[1] - first[1]) / 1e7 / (last[0] - first[0])
     print(f"overlay smoke: {len(last[2])} processes, peak summed working set "
