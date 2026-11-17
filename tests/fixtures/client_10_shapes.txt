@@ -1,0 +1,49 @@
+# UTIL-1.0-FIXTURES (area-util batch 8): a SANITIZED, SYNTHETIC Client.txt
+# shaped like a PoE2 1.0 log (launch 2026-12-11, research 0021). No real 1.0
+# log exists yet. Line formats are the verified 0.x shapes (research 0002
+# section 7); every 1.0 area id, scene name, ascendancy and system line below
+# is a GUESS or invented, marked per block. Character, IPs and names are
+# invented. Lines starting with "#" are fixture comments, not log lines; the
+# tests drop them before replaying. The dates are placeholders BEFORE the
+# launch so the core-start backward scan (resume) reads them as past lines;
+# the line shapes, not the dates, are what the fixture stands for.
+#
+# Block 1: an Act 4 character (verified G<n>_ shape) on a fresh game run.
+2026/11/16 19:00:00 ***** LOG FILE OPENING *****
+2026/11/16 19:00:05 5000 1a2b3c4d [INFO Client 4242] Connecting to instance server at 192.0.2.20:21360
+2026/11/16 19:00:06 6000 1a2b3c4d [DEBUG Client 4242] Generating level 42 area "G4_4" with seed 101
+2026/11/16 19:00:06 6100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Shore of Echoes]
+2026/11/16 19:05:00 300000 1a2b3c4d [INFO Client 4242] : Quill (Shadow) is now level 44
+# Block 2: Act 5. GUESS: the G5_ prefix (research 0021 section 2: real
+# prefixes UNVERIFIED); scene names invented.
+2026/11/16 19:10:00 600000 1a2b3c4d [DEBUG Client 4242] Generating level 45 area "G5_1" with seed 201
+2026/11/16 19:10:00 600100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Ashen Causeway]
+2026/11/16 19:14:00 840000 1a2b3c4d [INFO Client 4242] : Quill has been slain.
+# GUESS: a 1.0 league system line (Conquerors of Wraeclast army battle);
+# the text is invented, the debug sink should take it.
+2026/11/16 19:15:00 900000 1a2b3c4d [INFO Client 4242] : Your mercenaries take the field.
+2026/11/16 19:15:30 930000 1a2b3c4d [DEBUG Client 4242] Siege battle state changed to 3
+2026/11/16 19:20:00 1200000 1a2b3c4d [DEBUG Client 4242] Generating level 47 area "G5_town" with seed 202
+2026/11/16 19:20:00 1200100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Conqueror Camp]
+# GUESS: an ascendancy name not in charjson.ASCENDANCY_CLASS (reported
+# Assassin, UNVERIFIED, research 0021 section 1).
+2026/11/16 19:25:00 1500000 1a2b3c4d [INFO Client 4242] : Quill (Assassin) is now level 48
+# Block 3: Act 6. GUESS: the G6_ prefix; scene names invented.
+2026/11/16 19:30:00 1800000 1a2b3c4d [DEBUG Client 4242] Generating level 50 area "G6_1" with seed 301
+2026/11/16 19:30:00 1800100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Hollow Marches]
+2026/11/16 19:35:00 2100000 1a2b3c4d [INFO Client 4242] : Quill (Assassin) is now level 50
+# GUESS: the return-to-Oriath area may not use G6_ (research 0021 section
+# 2). An id with an unknown prefix must change nothing (no new act).
+2026/11/16 19:40:00 2400000 1a2b3c4d [DEBUG Client 4242] Generating level 52 area "Oriath_Return_1" with seed 401
+2026/11/16 19:40:00 2400100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Return to Oriath]
+2026/11/16 19:44:00 2640000 1a2b3c4d [INFO Client 4242] : Quill has been slain.
+# Block 4: endgame. The Map prefix is verified for 0.x only; 1.0 map ids are
+# a GUESS (LIVE-1 confirms the prefix on a real map).
+2026/11/16 19:50:00 3000000 1a2b3c4d [DEBUG Client 4242] Generating level 1 area "HideoutConqueror" with seed 1
+2026/11/16 19:50:00 3000100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Conqueror Hideout]
+2026/11/16 19:52:00 3120000 1a2b3c4d [DEBUG Client 4242] Generating level 65 area "MapStrongholdSiege" with seed 501
+2026/11/16 19:52:00 3120100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Stronghold Siege]
+2026/11/16 19:55:00 3300000 1a2b3c4d [INFO Client 4242] : Quill has been slain.
+2026/11/16 19:58:00 3480000 1a2b3c4d [DEBUG Client 4242] Generating level 66 area "MapAshenFields" with seed 502
+2026/11/16 19:58:00 3480100 1a2b3c4d [INFO Client 4242] [SCENE] Set Source [Ashen Fields]
+2026/11/16 20:00:00 3600000 1a2b3c4d [INFO Client 4242] : Quill (Assassin) is now level 51

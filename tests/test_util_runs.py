@@ -107,7 +107,8 @@ def test_death_outside_a_map_is_not_counted_in_it():
 def test_map_view_empty_and_plural_text():
     v = runs.MapRuns().view(0.0)
     assert v == {"count": 0, "done": 0, "current": None, "recent": [],
-                 "avg_s": None, "avg_text": "", "deaths_text": "",
+                 "avg_s": None, "avg_text": "", "per_hour": None,
+                 "rate_text": "", "deaths_text": "",
                  "empty_text": runs.MAPS_EMPTY_TEXT}
     m = runs.MapRuns()
     for i, at in enumerate((0.0, 100.0, 300.0)):

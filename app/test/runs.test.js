@@ -66,3 +66,11 @@ test("recapFoot joins the worst zone and the deaths before reading (UX-NEW-CARDS
     earlier_text: "1 death came before AshLight started reading." }),
     "Most deaths: Crypt (2). 1 death came before AshLight started reading.");
 });
+
+test("mapsSummary adds maps per hour between average and deaths (UTIL-MAPRUN)", () => {
+  assert.equal(r.mapsSummary(null), "");
+  assert.equal(r.mapsSummary(MAPS), "Average map: 6:30 over 1 finished map. 1 death in maps.");
+  const rate = Object.assign({}, MAPS, { rate_text: "4.0 maps per hour since the first map." });
+  assert.equal(r.mapsSummary(rate),
+    "Average map: 6:30 over 1 finished map. 4.0 maps per hour since the first map. 1 death in maps.");
+});

@@ -172,6 +172,7 @@ def test_snapshot_acts_exact(tmp_path):
         "no_levels_text": ("Zone levels aren't downloaded yet. Turn on web data, "
                            "then run AshLight's build step (scripts/build.ps1)."),
         "no_zones_text": "Zone levels show here while you are in a campaign act.",
+        "act_levels_text": "",
         "partial_text": "partial: counted from the first zone AshLight saw",
     }
     st.set_zone_table(acts.load_table(write_areas(tmp_path)))
