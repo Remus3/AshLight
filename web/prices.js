@@ -272,6 +272,50 @@
     };
   }
 
+  /* MATH-VALUE-UI: the item check's `value` doc (MATH-VALUE: the item's own
+     Note price in poe.ninja's primary currency, points per primary unit,
+     the rates' stale flag and credit) -> the card's words, or null when
+     the item has no note price. Nothing is fetched: the core computed it
+     from the cached rates. */
+  function currencyName(id, name) {
+    return (typeof name === "string" && name && name !== id) ? name : nameOf(id, null);
+  }
+
+  function valueView(v) {
+    if (!v || typeof v !== "object" || !v.price || typeof v.price !== "object") { return null; }
+    var p = v.price;
+    if (typeof p.amount !== "number" || !isFinite(p.amount) || p.amount <= 0 ||
+        typeof p.currency !== "string" || !p.currency) { return null; }
+    var cur = currencyName(p.currency, p.name);
+    var listed = (p.kind === "b/o" ? "Buyout price: " : "Asking price: ") +
+                 num(p.amount) + " " + cur;
+    var primary = (typeof v.primary === "string" && v.primary)
+      ? currencyName(v.primary, v.primary_name) : "";
+    var rated = !!primary && typeof v.price_primary === "number" && isFinite(v.price_primary);
+    var sentence;
+    if (!primary) {
+      sentence = listed + ". No currency values are saved yet, so AshLight can't " +
+                 "compare the item's price with its points.";
+    } else if (!rated) {
+      sentence = listed + ". There is no saved value for " + cur + " yet, so AshLight " +
+                 "can't compare the item's price with its points.";
+    } else if (p.currency === v.primary) {
+      sentence = listed + ".";
+    } else {
+      sentence = listed + ", about " + num(v.price_primary) + " " + primary + ".";
+    }
+    var spp = v.score_per_primary;
+    var per = rated && typeof spp === "number" && isFinite(spp)
+      ? (num(spp) === "1" || num(spp) === "-1" ? num(spp) + " point" : num(spp) + " points") +
+        " per " + primary + "."
+      : "";
+    return {
+      sentence: sentence, per: per,
+      stale: rated && v.stale ? "These currency values may be out of date." : "",
+      credit: rated ? ((typeof v.credit === "string" && v.credit) || "Prices: poe.ninja") : ""
+    };
+  }
+
   /* The trade link needs no web data (it is built offline), so the empty
      state reads the same either way. */
   function priceEmpty() {
@@ -282,5 +326,6 @@
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
            ratesView: ratesView, convert: convert, aboutText: aboutText,
            tradeAbout: tradeAbout, priceView: priceView, priceEmpty: priceEmpty,
-           tradeLink: tradeLink, upgradeView: upgradeView, moversView: moversView };
+           tradeLink: tradeLink, upgradeView: upgradeView, moversView: moversView,
+           valueView: valueView };
 }));

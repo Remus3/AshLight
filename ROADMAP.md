@@ -224,8 +224,7 @@ weights derived from PoB outputs stay with TC-DELTA.
   text, fixture mutations, idempotent keys) green.
   ZERO-CLICK: parsing runs on the existing hotkey press; tests unattended.
   DONE 2026-11-17: server/al/theorycraft/item.py (strip_rolls,
-  resolve_range), weights.stat_key; known limit: a magic item's base keeps
-  its affix words (no base list without a data snapshot).
+  resolve_range), weights.stat_key; magic bases: MATH-MAGIC-BASE.
 - [x] MATH-CODEC-FUZZ (build) Property / fuzz tests for the PoB2 share-code
   codec: random XML round trips byte-exact under every framing, URL-safe
   and padded / unpadded / whitespace-wrapped codes, truncation and bit
@@ -247,12 +246,62 @@ weights derived from PoB outputs stay with TC-DELTA.
   check card (LastEval) carries `value` from core's cached rates snapshot,
   no request; tests/test_math_value.py incl. cross-rate round-trip and
   transitivity properties. Dashboard display is MATH-VALUE-UI.
-- [ ] MATH-VALUE-UI (build) Show the item check card's `value` on the
+- [x] MATH-MAGIC-BASE (build) A magic item's true base type: the name
+  line "Hale Iron Ring of the Bear" keeps its affix words as the base, so
+  the trade / upgrade links searched a type that does not exist. Resolve
+  from the build-time snapshot base list when cached (decision 0009), else
+  the advanced headers' affix names, else a shape strip (" of ..." suffix,
+  a leading prefix word when the explicit mod count says there is one).
+  ACCEPT: tests over many item classes, with and without the snapshot.
+  ZERO-CLICK: runs on the same hotkey press; the core reads the cached
+  list, no fetch.
+  DONE 2026-11-17: server/al/theorycraft/basetypes.py (magic_base,
+  NamesCache over <cache>/gamedata/base_items.json), item.parse sets
+  name = the magic line, base = the true base, base_source; core registers
+  the cache; tests/test_math_magic_base.py.
+- [x] MATH-VALUE-UI (build) Show the item check card's `value` on the
   dashboard Item check card: "Listed 4 Exalted Orb = 0.008 Divine Orb,
   2,500 score per Divine Orb", the rates' stale state and the poe.ninja
   credit; nothing when `value` is null. After MATH-VALUE. ACCEPT: web test
   on a synthetic card; design-reviewer pass.
   ZERO-CLICK: appears with the item check of the same hotkey press.
+  DONE 2026-11-17: web/prices.js valueView + "Price and points" box in the
+  Item check card (web/index.html #valuebox, web/app.js); honest no-rate
+  sentences; app/test/prices.test.js; design-reviewer PASS WITH FINDINGS
+  S3=1 S4=2, all fixed (docs/design/reviews.log, section 9 templates).
+- [x] MATH-WEIGHTS (build) Stat weights from PoB outputs kept per build:
+  TC-DELTA probes every stat key through the PoB calc on each check (one
+  PoB run per key, up to 24 per slot); keep PoB's per-mod weights per
+  build / slot / carrier / blend so a re-check probes only new keys, and
+  when the optional calc is off or fails score with the weights PoB
+  measured earlier for the same build (never another build's), with the
+  off / failed notice. ACCEPT: fake-calc tests (probe counts, keying,
+  outage fallback, thread safety); weights stay PoB's own numbers.
+  ZERO-CLICK: automatic on every check and re-score.
+  DONE 2026-11-17: server/al/theorycraft/pobweights.py (PobWeightCache,
+  in memory, LRU 64); evaluate(cache=) and LastEval; calc.source
+  "pob_cached" with state.CALC_CACHED_TEXT; upgrade weights source passes
+  it through; tests/test_math_weights.py. Known limit: memory only, so a
+  restart with the calc off falls back to the hand weights.
+- [x] MATH-POTENTIAL (build) Ranged-roll potential of a checked item:
+  keep each value's roll range from advanced / PoB item text, where each
+  roll sits in its range, and the item score now vs at the worst / best
+  rolls under the weights that scored it (a "reduced" mod is best at its
+  small end for a positive weight). Display math on stated numbers, no
+  game mechanic (decision 0004). ACCEPT: stdlib tests incl. random ranged
+  lines (worst <= score <= best, JSON-safe).
+  ZERO-CLICK: computed on the same hotkey press.
+  DONE 2026-11-17: item.Mod.ranges + item.roll_ranges;
+  server/al/theorycraft/potential.py (roll_pct, mod_potential,
+  item_potential); evaluate() `potential`, live.compact carries score /
+  worst / best / pct; tests/test_math_potential.py. Equipped-vs-checked
+  compare with PoB deltas was already TC-DELTA's per-slot comparisons
+  (dps / ehp on each compared slot), so no separate MATH-COMPARE row.
+- [ ] MATH-POTENTIAL-UI (build) Show the item check card's `potential` on
+  the dashboard: "Rolls: 51% of the way from the worst to the best rolls
+  (score 58, best 84)" or similar; nothing when null. After
+  MATH-POTENTIAL. ACCEPT: web test on a synthetic card; design-reviewer
+  pass. ZERO-CLICK: appears with the item check of the same press.
 - [x] MATH-NUM (build) Numeric edge cases of scoring: score / delta /
   verdict-band properties (antisymmetry of the delta, band monotone in the
   old score, rounding stable at 4 places, NaN / inf / huge values from a
@@ -674,6 +723,20 @@ merge. Each row names the finding ids it closes.
   line (else its last paragraph) is stored by lane_worker and written as a
   `result:` paragraph in the lane commit and the main merge commit; the
   build prompt asks for it. tests/test_audit_loop_commit_msg.py.
+- [x] AUDIT-TC-WIRE (build) TC-DELTA was never wired into the core
+  (Core.tc_calc stayed None), so every item check in play used the stat
+  weights. Wire the TC-BRIDGE client as the delta calc: opt-in, off by
+  default, graceful when the component is absent or fails. ACCEPT: tests
+  over the stdio bridge double; core runs unchanged with it off.
+  ZERO-CLICK: one opt-in key; the bridge starts on the first item check.
+  DONE 2026-11-17 (AREA-MATH b2, with MATH-WEIGHTS):
+  server/al/theorycraft/calcwire.py (map_outputs: FullDPS / CombinedDPS /
+  TotalDPS / TotalDotDPS, TotalEHP else Life + EnergyShield; make_calc
+  reloads the build around every swap; Provider returns None unless local
+  config "tc_calc": true AND bridge.available(), rechecked at most every
+  30 s, bridge imported lazily); Core.tc_provider + tc_calc_enabled,
+  Core.close stops the shared bridge; tests/test_tc_wire.py. A failing
+  bridge gives the "failed" notice (or cached PoB weights, MATH-WEIGHTS).
 
 - [ ] AUDIT-TC-BRIDGE-LIVE (review) Pass 2 finding P2-C1 (medium, claim
   re-opened): TC-BRIDGE was flipped done but its ACCEPT ("outputs on a

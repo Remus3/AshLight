@@ -63,6 +63,17 @@ positive per-mod weights of the compared stats}.
 - R5 Probes are not cached across presses: one press costs 1 + per slot
   (1 + 1 + probed keys) calc calls. Reverses if: the real bridge makes a
   press feel slow (then cache per build revision, slot and carrier).
+  REVERSED 2026-11-17 (MATH-WEIGHTS): probes are cached per build XML,
+  slot, carrier and blend (theorycraft/pobweights.py, in memory, LRU 64),
+  taken before the real bridge was measured, because each probe is one full
+  PoB calculation; the cache also lets a calc outage score with this
+  build's PoB weights (calc.source "pob_cached"). Values stay PoB's own.
+- R6 (2026-11-17, AUDIT-TC-WIRE) R1's provider is now real:
+  theorycraft/calcwire.py maps PoB outputs (R2) and the core enables it
+  only with local config "tc_calc": true and the component installed.
+  Alternatives: always on when installed - rejected: the opt-in already
+  exists for setup and a slow first press should be a choice. Reverses if:
+  the operator rules the calc on whenever installed.
 
 ## Reverses if
 

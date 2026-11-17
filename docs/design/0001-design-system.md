@@ -375,6 +375,23 @@ Generation rules:
      of Building could not be reached. Try the check again.` (failed); with
      PoB scoring, uncounted mods read `Not counted (the mod has no number):
      <mods>.`
+   - cached PoB weights (MATH-WEIGHTS, `CALC_CACHED_TEXT`): with the calc
+     off or failing but weights Path of Building measured earlier for the
+     same build, the dashboard adds `Scored with the stat weights Path of
+     Building measured for this build earlier. DPS and EHP are not shown
+     because the Path of Building calc is off.` (off) or `... because Path
+     of Building could not be reached. Try the check again.` (failed);
+     uncounted mods read `Not counted (Path of Building has not measured
+     these for this build yet): <mods>.`
+   - price and points (MATH-VALUE-UI, web/prices.js `valueView`): `Asking
+     price: <n> <currency>, about <n> <primary>.` (`Buyout price: ...` for
+     a b/o note; no "about" when already the primary), `<n> points per
+     <primary>.`, `These currency values may be out of date.`, the
+     poe.ninja credit; without rates `No currency values are saved yet, so
+     AshLight can't compare the item's price with its points.`, without a
+     rate for that currency `There is no saved value for <currency> yet,
+     so AshLight can't compare the item's price with its points.`; hidden
+     when the item has no note price.
    - price check (PRICE-1-UI, `price_card_text`): overlay `Price: <item>`,
      `<n> listed, ~<middle>` / `Lowest <amount> <currency>`, `Searching
      prices...`, `Prices in about <n> s`, `Web data is off`, `No listings found`,
