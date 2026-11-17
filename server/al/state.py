@@ -201,7 +201,7 @@ def _stat_rows(comp):
 
 
 CALC_NOTICE_TEXT = {
-    # TC-DELTA (decision 0022): why the card shows stat-weight points, not
+    # TC-DELTA (decision 0024): why the card shows stat-weight points, not
     # Path of Building DPS / EHP
     "off": ("Scored with your stat weights. To see DPS and EHP, turn on the "
             "optional Path of Building calc in AshLight's settings file."),

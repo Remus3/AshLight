@@ -546,7 +546,8 @@ merge. Each row names the finding ids it closes.
   /api/consent "path" accepts any file or UNC path (refuse UNC and names
   other than Client.txt / a folder holding it). ACCEPT: one test per item.
   ZERO-CLICK: code row. DONE 2026-11-17 (AREA-AUDIT b2): HEAD /events is a
-  405 (Allow: GET); Handler.timeout 30 s; ?token= only on /events; consent
+  405 (Allow: GET); Handler.timeout (10 s, REQUEST_TIMEOUT_S after
+  the TEST-HTTP merge; audit pass 2); ?token= only on /events; consent
   path checked lexically (logfile.consent_path_ok: local absolute, no UNC /
   device / stream / '..', Client.txt or a dot-free folder) before any file
   access. tests/test_audit_http_harden.py.

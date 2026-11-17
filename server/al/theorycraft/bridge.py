@@ -37,6 +37,10 @@ FRAME_PREFIX = "ALB1 "
 SCRIPT = Path(__file__).resolve().with_name("bridge.lua")
 DEFAULT_TIMEOUT = 60.0
 DEFAULT_START_TIMEOUT = 120.0
+# AUDIT pass 2 (P2-B1): the crash-replay list keeps the last item per slot
+# (one entry per distinct text when no slot is named) and at most this many,
+# so item checks over a long session cannot grow it without bound.
+MAX_REPLAY_ITEMS = 32
 _EOF = object()
 
 
@@ -315,8 +319,18 @@ class Bridge:
             args["slot"] = str(slot)
         with self._lock:
             result = self.request("set_item", **args)
-            self._items.append(args)
+            self._remember(args)
             return result
+
+    def _remember(self, args):
+        key = ("slot", args["slot"]) if "slot" in args else ("text", args["text"])
+
+        def same(a):
+            return (("slot", a["slot"]) if "slot" in a else ("text", a["text"])) == key
+
+        self._items = [a for a in self._items if not same(a)]
+        self._items.append(args)
+        del self._items[:-MAX_REPLAY_ITEMS]
 
     def outputs(self, keys=None):
         """PoB's main output table: {stat name: number or bool}."""

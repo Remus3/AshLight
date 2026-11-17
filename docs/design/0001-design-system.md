@@ -357,7 +357,7 @@ Generation rules:
      (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
      the same as your <slot> (<name>), <+n> points.`; errors `No build
      loaded`, `Not an item`, `Can't compare this` with the next step
-   - item check scoring source (TC-DELTA, decision 0022, `_calc_text`):
+   - item check scoring source (TC-DELTA, decision 0024, `_calc_text`):
      when Path of Building scored the item the overlay third line is `DPS
      <+pct>%, EHP <+pct>%` (a 0 base reads `unknown`) and the dashboard adds
      `Path of Building: DPS <+pct>% (from <old> to <new>), EHP <+pct>% (from

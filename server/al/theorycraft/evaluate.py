@@ -148,7 +148,7 @@ def _keys(new_stats, old_stats):
 
 
 def _pob(out, item_text, build, slots, new_stats, calc, blend, side):
-    """TC-DELTA (decision 0022): replace the hand-weight comparisons with
+    """TC-DELTA (decision 0024): replace the hand-weight comparisons with
     PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError."""
     base = delta_mod.outputs(calc, build)
     comps, per_slot = [], {}
