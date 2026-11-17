@@ -421,3 +421,16 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .tools .tool:first-of-type { border-top: none; }
 .tool-fold { margin-top: 12px; border-top: 1px solid var(--fk-border); padding-top: 4px; }
 .tool-fold > summary, .tools > details > summary { color: var(--fk-text); font-weight: 600; }
+
+/* UX-NARROW: a narrow side window next to the game (web/narrow.js moves
+   the tool cards into one fold at the end below 520 px). Tighter spacing
+   only; the fold's cards drop their own frame and read as sections. */
+@media (max-width: 520px) {
+  main { padding: 12px; gap: 12px; }
+  .card { padding: 12px; }
+  .bar { padding: 8px 12px; }
+}
+.narrow-tools > summary { color: var(--fk-text); font-weight: 600; min-height: 32px;
+  padding: 4px 0; cursor: pointer; }
+.narrow-tools > .card { border: none; border-top: 1px solid var(--fk-border); border-radius: 0;
+  background: none; padding: 12px 0 0; margin-top: 12px; }

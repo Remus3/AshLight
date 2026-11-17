@@ -365,7 +365,9 @@ monitor, GDI copies of the screen. Tests: `tests/test_ux_b8.py`.
   `11 lv under` (11 characters, cap 15), no horizontal scroll at any
   width, forced colours keep every boundary. Filed, not fixed (S4): with
   a build that has no saved stats, the Build card and Build health both
-  say so (two sentences, one cause).
+  say so (two sentences, one cause). FIXED 2026-11-17 (area-ux b9,
+  UX-U25): the Build card keeps it; Build health says nothing and hides
+  unless it has Look for next rows.
 - U26 UX-DASH-DENSITY [S3; fixed] 15 cards with a build loaded; the
   first screen at 1440 x 900 is Zone, Level / Deaths / Session, Item
   check and Act times, which is what play needs, so the order stays.

@@ -54,6 +54,11 @@
     }).map(function (v) {
       return { label: v.label, text: fmt(v.value) + str(v.unit) };
     });
+    /* UX-U25: with no saved stats the Build card already says so (Key
+       stats); this card says nothing and shows only for Look for next rows */
+    if (h.has_stats === false && !warnings.length && !values.length) {
+      return { show: nextView(doc).rows.length > 0, message: "", warnings: [], values: [] };
+    }
     var message = str(h.message);
     if (!message && h.has_stats &&
         !warnings.some(function (w) { return w.severity !== "low"; })) {
