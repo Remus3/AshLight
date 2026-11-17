@@ -60,6 +60,17 @@
       : "Nothing yet. Allow reading Client.txt above, then zones, level-ups, deaths and whispers show up here.";
   }
 
+  /* UX-U9 (design 0001 rule 9: empty states say what will appear and
+     when): the line under the session timer. AFK / DND when set; before
+     the Client.txt opt-in the "--:--" timer says when it starts. */
+  function sessionSub(afk, dnd, consented) {
+    var flags = [];
+    if (afk) { flags.push("AFK"); }
+    if (dnd) { flags.push("DND"); }
+    if (flags.length) { return flags.join(" / "); }
+    return consented ? "\u00a0" : "Starts when you allow reading Client.txt";
+  }
+
   /* The core sends each open card's sentence (state.py trade_card_text);
      an older core without it gets a plain, honest line. */
   function tradeLine(t) {
@@ -85,6 +96,6 @@
   }
 
   return { linkView: linkView, readingView: readingView, kindOf: kindOf,
-           emptyText: emptyText, tradeLine: tradeLine, cornerLabel: cornerLabel,
+           emptyText: emptyText, sessionSub: sessionSub, tradeLine: tradeLine, cornerLabel: cornerLabel,
            dataCreditText: dataCreditText };
 }));
