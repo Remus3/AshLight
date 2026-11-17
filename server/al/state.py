@@ -12,6 +12,7 @@ import time
 
 from . import acts as acts_mod
 from . import campaign as campaign_mod
+from . import num as num_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
@@ -373,9 +374,8 @@ def waystone_rewards_text(ws):
 
 
 def _reward_pct(v):
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v:
-        return None
-    return v if abs(v) <= 10000 and v != 0 else None
+    v = num_mod.finite(v)
+    return v if v is not None and abs(v) <= 10000 and v != 0 else None
 
 
 def waystone_text(ws):

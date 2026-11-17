@@ -874,7 +874,7 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   calc off hides calc-only rows); design-reviewer pass. ZERO-CLICK:
   rebuilt by itself with the build health card.
   BLOCKED: session lane building (2026-11-17)
-- [ ] UTIL-WAYSTONE-REWARD (build) Waystone reward summary on the same
+- [x] UTIL-WAYSTONE-REWARD (build) Waystone reward summary on the same
   item-check press: sum the reward mods on waystone text (item quantity,
   item rarity, pack size, rare / magic monsters, waystone drop chance;
   unidentified noted) into one line next to the UTIL-WAYSTONE risk line
@@ -885,8 +885,10 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   real-shaped waystone text (several reward mods summed, none, corrupted,
   unidentified); design-reviewer pass. ZERO-CLICK: computed on the
   press the player already makes; no other click.
-  BLOCKED: session lane building (2026-11-17)
-- [ ] UTIL-CAMPAIGN-CHECKS (build) Campaign level checks: from the player
+  DONE 2026-11-17 (AREA-UTIL b11, decision 0039): reward properties +
+  mod lines summed per kind; dashboard Rewards sentence, overlay item
+  line; tests/test_waystone_reward.py.
+- [x] UTIL-CAMPAIGN-CHECKS (build) Campaign level checks: from the player
   level (Client.txt) and the loaded PoB build, show (a) a higher life /
   mana flask base available at this level (base drop levels from the
   build-time repoe-fork base_items snapshot vs the build's equipped
@@ -902,7 +904,9 @@ there only; Acts 5-6 boss / zone data rides UTIL-1.0-POST.
   not shown, unknown level -> nothing, no build -> nothing, boss zone
   line), test_sidecar_paths green, design-reviewer pass. ZERO-CLICK:
   appears and clears by itself on level-up and zone entry.
-  BLOCKED: session lane building (2026-11-17)
+  DONE 2026-11-17 (AREA-UTIL b11, decision 0039): server/al/campaign.py
+  boss / flask / boots hints, act card list, overlay status word last;
+  tests/test_util_campaign.py, app/test/campaign.test.js.
 
 ## Game settings advisor (operator order 2026-11-16)
 

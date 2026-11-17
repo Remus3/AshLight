@@ -297,6 +297,8 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | In a map (UTIL-MAPS, UTIL-MAPRUN-OVL) | row-1 timer is the time in this map (kept across hideout trips) instead of this zone instance; no new line or word; map deaths stay on the dashboard | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
 | Died (UTIL-DEATHS) | no change | Death recap card: newest first, local time, zone and level |
 | In a campaign act (HUD-ACT) | no change | Act times card (below Item check): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
+| Waystone check (UTIL-WAYSTONE-REWARD) | reward line (`+38% rarity, +12% pack`) replaces the item name in that card | `Rewards: ...` sentence under the risk sentence in the Item check card |
+| Campaign hint (UTIL-CAMPAIGN-CHECKS) | status word, last in the slot order (`Cold res 32%`, `Better flask`, `Boots: no speed`, `Boss: cold`) | Hint list under the zone tip in the Act times card |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
 | Item check from the same press | none on the overlay | Upgrade search sub-section under the item check (TC-UPGRADE) |
 
@@ -443,7 +445,8 @@ Generation rules:
    - open trade count (UX-REVIEW F1, `format.js tradeCount`): HUD status
      slot `1 trade` / `<n> trades` while a card hides the trade card;
      slot order: connection, Client.txt state, trade count, under-level
-     word (UTIL-UNDERLEVEL `N lv under`, at most 11 characters), AFK / DND
+     word (UTIL-UNDERLEVEL `N lv under`, at most 11 characters), AFK / DND,
+     campaign hint word (UTIL-CAMPAIGN-CHECKS, at most 15 characters)
    - new trade request (UX-REVIEW F6, `web/trades.js`): dashboard polite
      live region `New trade request from <from>.` (no name: `New trade
      request.`; several at once: `<n> new trade requests.`), only when the
@@ -523,6 +526,16 @@ Generation rules:
    does not pop up, chime or take focus. At most one overlay card is new at
    a time.
 10. Every new template gets a unit test of its exact output.
+11. Waystone rewards (decision 0039): `Rewards: +N% item quantity, +N%
+    item rarity, ...` / `Rewards: none found in the item text.` /
+    `Rewards: identify it to see them.`; overlay `+N% quantity, +N% rarity
+    +K more` (34 chars). Campaign hints: `This zone's boss deals mostly
+    <element> damage. Your build has N% <element> resistance (the cap is
+    75%).` (or `(at the cap)`, or `... resistance is unknown.`), `A(n)
+    <base> can drop at your level; your build has a(n) <base>.`, `Your
+    build's boots have no movement speed. Boots with it help in the
+    campaign.`; words `<Element> res N%`, `Boss: <element>`, `Better
+    flask`, `Boots: no speed` (15 chars).
 
 ## 10. Overlay rules
 

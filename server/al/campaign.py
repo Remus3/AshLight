@@ -20,11 +20,12 @@ Hints, at most one per kind, in this order:
 Unknown level, no build, a non-campaign area or missing data: no hint.
 """
 
-import json
 import os
 import re
 import threading
 from pathlib import Path
+
+from . import jsonfile, num
 
 CONFIG_KEY = "boots_speed_level"
 DEFAULT_BOOTS_LEVEL = 16
@@ -54,23 +55,14 @@ def _is_level(v):
     return isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= 100
 
 
-def _num(v):
-    if isinstance(v, bool) or not isinstance(v, (int, float)):
-        return None
-    return v if v == v and abs(v) != float("inf") else None
+_num = num.finite
 
 
 def load_flasks(path):
     """{"life": [(drop_level, name), ...], "mana": [...]} sorted by level,
     from a cached base_items.json; missing, oversized or malformed -> {}."""
-    try:
-        p = Path(path)
-        if p.stat().st_size > MAX_BYTES:
-            return {}
-        doc = json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
-        return {}
-    if not isinstance(doc, dict):
+    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict)
+    if doc is None:
         return {}
     out = {}
     for entry in doc.values():
