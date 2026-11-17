@@ -126,6 +126,16 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   data.json, no license file; decision 0009 item 3 amended: fetch-only). ACCEPT: source enabled
   with a mocked-fetch test, or recorded as absent. ZERO-CLICK: the next
   build.ps1 run fetches it.
+- [ ] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
+  User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
+  optional contact value read only from gitignored config/local.json (never
+  a tracked file; no email in any tracked file, leak sweep), appended to
+  the webfetch / ninja / trade / snapshot User-Agent; with no contact
+  configured, poe.ninja, trade2 and GGG fetches stay off even when
+  web_data is on (state says why). Queued by the lane supervisor
+  2026-11-17 from the coordinator's review of the round-3 data lane.
+  ACCEPT: tests with and without a contact (mocked fetch); leak sweep
+  clean. ZERO-CLICK: setting the contact once enables the fetches.
 
 ## Lane: review
 
