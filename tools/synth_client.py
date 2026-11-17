@@ -61,16 +61,23 @@ class Session:
         return line
 
     def marker(self):
-        line = f"{self._stamp()} {MARKER}"
+        # TEST-FULLSTACK: the live marker is "<date> <time> *****...", with
+        # no millisecond counter (tests/fixtures/client_live_restart.txt);
+        # with one the parser saw no log_opened.
+        stamp = self._stamp().rsplit(" ", 1)[0]
+        line = f"{stamp} {MARKER}"
         self.lines.append(line)
         return line
 
     # -- events
-    def zone_change(self, area_id, area_level, name):
+    def zone_change(self, area_id, area_level, name, seed=None):
+        """seed: the instance seed (TEST-FULLSTACK: the same seed again is a
+        portal back into the same map instance); default a random one."""
         self.raw(f"Connecting to instance server at 192.0.2.{self.rng.randrange(2, 250)}:21360")
         self._hash = f"{self.rng.getrandbits(32):08x}"
+        seed = self.rng.randrange(1, 10 ** 9) if seed is None else seed
         self.raw(f'Generating level {area_level} area "{area_id}" with seed '
-                 f"{self.rng.randrange(1, 10 ** 9)}", level="DEBUG")
+                 f"{seed}", level="DEBUG")
         self.raw("[SCENE] Set Source [(null)]")
         self.raw(f"[SCENE] Set Source [{name}]")
         self.zone, self.area_id = name, area_id
@@ -96,6 +103,12 @@ class Session:
 
     def trade_accepted(self):
         self.raw(": Trade accepted.")
+
+    def trade_cancelled(self):
+        self.raw(": Trade cancelled.")
+
+    def whisper_out(self, who, text):
+        self.raw(f"@To {who}: {text}")
 
     def chat(self, channel, who, text):
         self.raw(f"{channel}{who}: {text}")
