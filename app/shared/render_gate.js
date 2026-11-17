@@ -15,9 +15,6 @@
 }(typeof self !== "undefined" ? self : this, function (fmt) {
   "use strict";
 
-  /* TEST-LIVE-EXIT: the HUD status word for an idle log (<= 15 chars). */
-  var IDLE_WORD = "log quiet 20m";
-
   var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "log", "status", "trades",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
                 "evalHead", "evalItem", "evalLine", "evalVerdict"];
@@ -91,6 +88,7 @@
                log: "", status: status || "connecting",
                tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
+    var elapsed = snap.zone_entered_at ? nowS - snap.zone_entered_at : null;
     var open = snap.trade_requests || [];
     var card = fmt.tradeCard(open.length ? open[open.length - 1] : null);
     /* UI-REVIEW-2 (design 0001 7.2): say when Client.txt is not being read.
@@ -98,12 +96,6 @@
        the file is missing or quiet: keep what is known and say so. A core
        without the tailer field counts as reading. */
     var tl = snap.tailer;
-    /* TEST-LIVE-EXIT (decision 0029): an idle log stops the zone timer at
-       its last line (the game may be closed). */
-    var idle = !!(tl && tl.consented && tl.idle);
-    var until = (idle && typeof tl.last_line_at === "number")
-      ? Math.min(nowS, tl.last_line_at) : nowS;
-    var elapsed = snap.zone_entered_at ? until - snap.zone_entered_at : null;
     if (tl && !tl.consented) {
       return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "",
                log: "not reading - see dashboard", status: status || "live",
@@ -127,8 +119,7 @@
       /* UX-COPY: a known file that is quiet is not missing. Telegraphic so
          it fits after "Lv 100 | 99 deaths" in the 258 px plate (design
          review F1: "waiting for Client.txt" clipped). */
-      log: idle ? IDLE_WORD
-        : ((tl && !tl.reading) ? (tl.path ? "waiting for log" : "no Client.txt") : ""),
+      log: (tl && !tl.reading) ? (tl.path ? "waiting for log" : "no Client.txt") : "",
       status: status || "live"
     };
   }
@@ -160,5 +151,5 @@
 
   return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
            shouldRender: shouldRender,
-           changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD };
+           changedFields: changedFields, statusText: statusText };
 }));

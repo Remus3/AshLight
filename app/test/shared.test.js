@@ -158,14 +158,7 @@ test("UI-REVIEW-2: the HUD says when Client.txt is not being read", () => {
   assert.equal(gate.statusText(quiet), "waiting for log");
   // Design review F2: a status word shown next to the numbers stays within
   // the 15 characters that fit after "Lv 100 | 99 deaths" at 13 px.
-  // TEST-LIVE-EXIT: a quiet log (game may be closed) freezes the timer.
-  const idle = gate.hudModel({ ...snap, zone: "Crypt", zone_entered_at: 400,
-    tailer: { consented: true, reading: true, path: "x", idle: true, last_line_at: 460 } },
-                             1000, "live");
-  assert.equal(idle.timer, "1m");
-  assert.equal(idle.zone, "Crypt");
-  assert.equal(gate.statusText(idle), gate.IDLE_WORD);
-  const words = [quiet, wait, idle].map((m) => gate.statusText(m))
+  const words = [quiet, wait].map((m) => gate.statusText(m))
     .concat(["offline", "connecting", "9 trades", "AFK", "DND"]);
   words.forEach((w) => assert.ok(w.length <= 15, w));
   // Reading, or an older core without the tailer field: nothing extra.

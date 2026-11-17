@@ -426,11 +426,6 @@ them. Pause: `ops/loop/control/HALT`.
   build-time repoe-fork world_areas snapshot, credit text only in
   theorycraft/datacredit.py (decision 0020). Reverses if: decision 0009
   reverses for repoe-fork, or live cruel / interlude ids break the prefixes.
-- Game exit shows as an idle "game may be closed" state from Client.txt
-  staleness (20 min, mtime-seeded at start), never an OS process-list
-  check (decision 0029). Reverses if: GGG or the operator permits a
-  process-presence check, AFK false positives make it useless, or a
-  reliable quit / crash log line is verified.
 - HUD-ACT-RESUME: act splits rebuild at core start from the current game
   run's area generations in Client.txt, no persisted state (decision 0023).
   Reverses if: decision 0008 reverses or GGG drops the area generation line.

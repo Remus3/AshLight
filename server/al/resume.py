@@ -202,8 +202,8 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
 
 
 _EV_KEYS = ("type", "ts_local", "scene", "is_null", "is_transient",
-            "is_hideout", "area_id", "area_level", "seed", "character",
-            "level", "name")
+            "is_hideout", "area_id", "area_level", "character", "level",
+            "name")
 
 
 def _run_events(newest_first):
