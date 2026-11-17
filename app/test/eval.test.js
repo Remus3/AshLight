@@ -82,13 +82,47 @@ function fakeDeps(text, fail) {
 
 test("hotkey: creating it reads nothing; each press reads the clipboard once", async () => {
   const d = fakeDeps("Item Class: Rings\nRarity: Rare\nStorm Loop\n");
+  let t = 10000;
+  d.now = () => t;
   const press = hk.createEvalHotkey(d);
   assert.equal(d.reads, 0);
   assert.equal(await press(), true);
   assert.equal(d.reads, 1);
   assert.deepEqual(d.posts, [["/api/eval", { item: "Item Class: Rings\nRarity: Rare\nStorm Loop\n" }]]);
+  t += hk.REPEAT_GAP_MS + 1;
   await press();
   assert.equal(d.reads, 2);
+});
+
+test("hotkey: a held key (auto-repeat) reads the clipboard once (AUDIT-HOTKEY-REPEAT)", async () => {
+  // Windows auto-repeat re-fires a held global shortcut every ~30 ms after a
+  // 250-1000 ms delay. Decision 0003: one read per manual press, so every
+  // event inside REPEAT_GAP_MS of the previous event is the same press.
+  const d = fakeDeps("x");
+  let t = 5000;
+  d.now = () => t;
+  const press = hk.createEvalHotkey(d);
+  assert.equal(await press(), true);
+  t += 1000; // the longest Windows repeat delay
+  assert.equal(await press(), false);
+  for (let i = 0; i < 100; i++) {
+    t += 33;
+    assert.equal(await press(), false);
+  }
+  assert.equal(d.reads, 1);
+  assert.equal(d.posts.length, 1);
+  t += hk.REPEAT_GAP_MS + 1; // released, then pressed again
+  assert.equal(await press(), true);
+  assert.equal(d.reads, 2);
+  assert.ok(hk.REPEAT_GAP_MS > 1000);
+});
+
+test("hotkey: without an injected clock it still guards repeats", async () => {
+  const d = fakeDeps("x");
+  const press = hk.createEvalHotkey(d);
+  assert.equal(await press(), true);
+  assert.equal(await press(), false);
+  assert.equal(d.reads, 1);
 });
 
 test("hotkey: a press while one is in flight reads nothing", async () => {

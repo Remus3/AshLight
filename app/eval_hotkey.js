@@ -10,12 +10,25 @@
    injected readText / post, so node --test covers it without Electron. */
 
 const MAX_ITEM_CHARS = 64 * 1024; // the core caps one item text at 64 KB
+// AUDIT-HOTKEY-REPEAT (audit 2026-11-17): a held global shortcut re-fires
+// with Windows keyboard auto-repeat (first repeat after 250-1000 ms, then
+// about every 30 ms). Every event within this gap of the PREVIOUS event
+// (sliding, ignored ones included) is the same manual press, so a held key
+// reads the clipboard exactly once. Longer than the 1000 ms maximum delay.
+const REPEAT_GAP_MS = 1200;
 
-/* deps: { readText(): string, post(path, body): Promise, log(msg) }.
+/* deps: { readText(): string, post(path, body): Promise, log(msg),
+   now(): ms (optional, default Date.now) }.
    Returns the press handler. Creating it reads nothing. */
 function createEvalHotkey(deps) {
   let busy = false;
+  let lastEvent = null;
+  const now = typeof deps.now === "function" ? deps.now : Date.now;
   return function onPress() {
+    const t = now();
+    const repeat = lastEvent !== null && t - lastEvent < REPEAT_GAP_MS;
+    lastEvent = t;
+    if (repeat) { return Promise.resolve(false); } // auto-repeat of a held key
     if (busy) { return Promise.resolve(false); } // one request in flight
     busy = true;
     let text = "";
@@ -56,4 +69,4 @@ function makePost(http, port, getToken) {
   };
 }
 
-module.exports = { createEvalHotkey, makePost, MAX_ITEM_CHARS };
+module.exports = { createEvalHotkey, makePost, MAX_ITEM_CHARS, REPEAT_GAP_MS };
