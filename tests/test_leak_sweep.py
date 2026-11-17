@@ -246,3 +246,61 @@ def test_report_names_source_never_needles(tmp_path, capsys):
     assert "ARMED needles=2 config=main-checkout" in err
     for n in FAKE:
         assert n.lower() not in err.lower()
+
+
+# --- AUDIT-LEAK-MSG (audit 2026-11-17): commit messages at commit time and a
+# full-history mode, so a leak in a message is caught before the first push.
+
+def test_message_mode_scans_message_skips_comments(tmp_path):
+    rx = ls.compile_needles(FAKE)
+    msg = tmp_path / "COMMIT_EDITMSG"
+    msg.write_text("subject\n\nbody mentions Zorblax Quux\n# zorblax quux in a comment\n",
+                   newline="\n")
+    kinds = [k for _, _, k in ls.scan_message(msg.read_text(), rx)]
+    assert kinds == ["needle-slot-0"]
+    clean = "subject\n\n# acct-0000-fake only in git's comment lines\n"
+    assert ls.scan_message(clean, rx) == []
+    drive = "subject " + "C" + ":" + "\\" + "Secret Project" + "\\" + "x"
+    assert [k for _, _, k in ls.scan_message(drive, rx)] == ["drive-path"]
+
+
+def test_message_mode_cli_exit_codes(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("AL_LEAK_NEEDLES", ";".join(FAKE))
+    bad = tmp_path / "bad.txt"
+    bad.write_text("fix acct-0000-fake\n", newline="\n")
+    good = tmp_path / "good.txt"
+    good.write_text("fix the parser\n", newline="\n")
+    assert ls.main(["--message", str(bad)]) == 2
+    assert ls.main(["--message", str(good)]) == 0
+    assert ls.main(["--message", str(tmp_path / "missing.txt")]) == 3
+    assert "acct-0000-fake" not in capsys.readouterr().err
+
+
+@pytest.mark.git
+def test_history_mode_finds_leak_in_old_commit_and_message(tmp_path):
+    repo = _repo(tmp_path)
+    _commit(repo, "a.txt", "a\n", "base")
+    _commit(repo, "b.txt", "has Zorblax Quux\n", "add b")
+    _commit(repo, "b.txt", "clean now\n", "scrub b")  # removed later: still in history
+    _commit(repo, "c.txt", "c\n", "msg names acct-0000-fake")
+    rx = ls.compile_needles(FAKE)
+    findings, n = ls.scan_history(rx, cwd=repo)
+    kinds = sorted(k for _, _, k in findings)
+    assert kinds == ["needle-slot-0", "needle-slot-1"]
+    assert n == 4
+    assert any(w == "commit-message" for w, _, _ in findings)
+
+
+@pytest.mark.git
+def test_history_mode_clean_repo(tmp_path):
+    repo = _repo(tmp_path)
+    _commit(repo, "a.txt", "a\n", "base")
+    findings, n = ls.scan_history(ls.compile_needles(FAKE), cwd=repo)
+    assert findings == [] and n == 1
+
+
+def test_commit_msg_hook_runs_the_message_sweep():
+    hook = (ROOT / ".githooks" / "commit-msg").read_text(encoding="ascii")
+    assert "leak_sweep.py" in hook and "--message" in hook
+    # identity strip first, so a stripped trailer is never swept
+    assert hook.index("fleet_identity.py") < hook.index("leak_sweep.py")

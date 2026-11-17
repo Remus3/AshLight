@@ -337,6 +337,62 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 - [x] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001). Done 2026-11-17: 0 hits on both wikis
   (research 0009).
+## Audit 2026-11-17 (docs/audit/2026-11-17-audit.md)
+
+Low findings filed by AREA-AUDIT; the medium ones were fixed in the audit
+merge. Each row names the finding ids it closes.
+
+- [ ] AUDIT-TC-CODE-REAL (review) Re-open the real-code check (finding C1):
+  TC-CODE-REAL was flipped done with only a skip-when-absent harness
+  (tests/test_tc_code_real.py skips; tests/fixtures/pob2_real holds a README
+  only). ACCEPT: one real PoB2 export decodes, parses and round-trips
+  through the harness (no skip), owner consent recorded if kept as a
+  fixture. BLOCKED: operator act (supply one real PoB2 code).
+  ZERO-CLICK: the harness runs by itself once the file exists.
+- [ ] AUDIT-HTTP-HARDEN (build) Findings S1-S4: HEAD /events streams a body
+  forever (http.py do_HEAD -> do_GET -> _sse); Handler has no socket
+  timeout (an idle connection holds a thread); ?token= is accepted on every
+  /api route (restrict it to /events, the only EventSource route);
+  POST /api/consent "path" accepts any file or UNC path (refuse UNC and
+  names other than Client.txt / a folder holding it). ACCEPT: one test per
+  item. ZERO-CLICK: code row.
+- [ ] AUDIT-EXE-PATH (build) Finding S5: gfx.py runs bare "powershell.exe"
+  and tc_pin.py bare "cmd.exe" / "mingw32-make" (Windows CreateProcess also
+  searches the current directory); use the System32 absolute path for the
+  Windows tools, and TC-BRIDGE must hash-check luajit.exe before every
+  exec (tc_pin.ensure_luajit trusts any existing luajit.exe). ACCEPT:
+  tests on the argv. ZERO-CLICK: code row.
+- [ ] AUDIT-ELECTRON (build) Findings S6-S7: devTools follow
+  !app.isPackaged, and the overlay is never packaged, so they are always
+  on (gate on an AL_DEV env instead); add
+  session.setPermissionCheckHandler(() => false) next to the request
+  handler. ACCEPT: a main.js source test for both. ZERO-CLICK: code row.
+- [ ] AUDIT-SNAPSHOT-OPTIN (review) Finding T1: scripts/build.ps1 runs the
+  game-data snapshot by default (opt-out, decision 0009) while CLAUDE.md
+  Settled says nothing hits the network while web_data is off (decision
+  0013). Adjudicate one rule (build step honours web_data, or 0013 states
+  the build-time exception) and record it. ACCEPT: decision amended and
+  build.ps1 / README match. ZERO-CLICK: ruling row.
+- [ ] AUDIT-TREE-URL (build) Finding S8: web/tc.js safeUrl lets a pasted
+  build's tree URL be any https host as an "Open the tree" link. Allow
+  only known tree hosts (pathofexile.com, poe2db.tw, poeplanner-style
+  hosts after a check) or show the host name in the link text. ACCEPT:
+  app test with an off-list host. ZERO-CLICK: code row.
+- [ ] AUDIT-HYGIENE (build) Findings H2-H6: tests/test_ascii_lf.py checks
+  a suffix list (skips .log, .vbs, .sh, .xml, .svg, LICENSE) - check every
+  non-binary tracked file; server/al/paths.py SIDECAR_SUBDIRS lacks
+  Scratch and ClaudeHistory and all_runtime_paths() omits worktree_dir()
+  and the overlay profile; tests/test_sidecar_paths.py SCANNED skips
+  tools/; AL-NEXT-SESSION.txt spells the sidecar with a drive letter (use
+  <sidecar>); decision 0002 should name pytest as the one allowed test
+  dependency. ACCEPT: tests for the first three. ZERO-CLICK: code row.
+- [ ] AUDIT-LOOP-COMMIT-MSG (build) Finding C2: loop merge commits carry the
+  row text cut mid-sentence plus refute / verifier lines, so an ACCEPT that
+  says "root cause named in the commit" (FLAKY-EVAL-API, 5e7b30e) is not
+  met by the commit. Carry the lane's result line (root cause / what was
+  done) in the commit body. ACCEPT: tools/loop_merge.py test on the
+  message. ZERO-CLICK: code row.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
