@@ -502,3 +502,9 @@ them. Pause: `ops/loop/control/HALT`.
   (GET /api/filter); AshLight never writes it into a game folder
   (decision 0031). Reverses if: GGG forbids filter tools or allows a
   filter-folder write in writing, or the operator orders the write.
+- Loot filter merge: the player picks their own filter in the browser; the
+  core gets the bytes only (token API, 2 MB, UTF-8 text), prepends
+  AshLight's Show blocks in a marked section, keeps the rest byte-identical
+  and returns a download; no path, no file, no log (decision 0033).
+  Reverses if: GGG forbids tools reading or rewriting user filters, or the
+  core ever needs a path or a stored copy.

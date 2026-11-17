@@ -613,7 +613,7 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   game data does not know are left out (an unknown BaseType breaks the
   filter). LIVE-FILTER: load the downloaded file through the Import line
   in game once.
-- [ ] UTIL-FILTER-2 (build) Loot filter, part 2: price-tier blocks from
+- [x] UTIL-FILTER-2 (build) Loot filter, part 2: price-tier blocks from
   the cached poe.ninja overviews in ashlight.filter, and the optional merge
   into a filter the player hands over via the browser file input (upload
   body in memory only, path never stored, merged copy returned as a
@@ -625,6 +625,14 @@ Ranked in research 0023; loot filter ruling (adjudicator) in 0022 section 3.
   tiers (top >= 1 Divine Orb, worth picking >= 0.05; unique base by its
   cheapest well-listed unique; never Hide); GET /api/filter passes them;
   tests/test_lootfilter_tiers.py. Remaining: the optional merge.
+  MERGE DONE 2026-11-17 (area-util b7, decision 0033, adjudicator: within
+  the floor): lootfilter.merge / check_text / out_name, POST
+  /api/filter-merge (raw bytes, 2 MB, UTF-8 text; marked AshLight section
+  first, player's bytes identical, CRLF and BOM kept, an earlier section
+  replaced), dashboard file input (web/filtermerge.js) saving
+  <name>-ashlight.filter; tests/test_lootfilter_merge.py,
+  app/test/filtermerge.test.js. LIVE-FILTER-MERGE: merge a real filter
+  (e.g. a NeverSink file) and load it in game once.
 
 ## Game settings advisor (operator order 2026-11-16)
 
