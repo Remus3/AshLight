@@ -15,6 +15,9 @@
      colour above keeps 4.5:1 even over a pure white game scene. */
   --al-plate: rgba(15, 18, 22, 0.92);
   --al-shadow: #000;
+  /* Neutral item-check card edge: the muted grey, kept apart from the
+     muted text token so high-contrast mode does not whiten it (UX-REVIEW). */
+  --al-edge: #99a1aa;
 }
 
 * { animation: none !important; transition: none !important; }
@@ -89,7 +92,7 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   margin: 0;
   padding: 5px 10px;
   border: 1px solid var(--fk-border);
-  border-left: 3px solid var(--fk-text-muted);
+  border-left: 3px solid var(--al-edge);
   border-radius: 6px;
   background: var(--al-plate);
   color: var(--fk-text);
@@ -111,4 +114,15 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   clip: rect(0 0 0 0);
   white-space: nowrap;
   margin: -1px;
+}
+
+/* High-contrast mode (UX-REVIEW U3, research 0008): follows the Windows
+   "more contrast" setting, no click. Secondary text takes the full text
+   colour and the plate drops its own alpha (the window opacity, 0.9 to
+   1.0, still applies). The card edge keeps --al-edge. */
+@media (prefers-contrast: more) {
+  :root {
+    --fk-text-muted: var(--fk-text);
+    --al-plate: #0f1216;
+  }
 }

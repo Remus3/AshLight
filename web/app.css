@@ -355,6 +355,13 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
   .rates-list .rate-name { flex-basis: 100%; }
 }
 
+/* High-contrast mode (UX-REVIEW U3, research 0008): follows the Windows /
+   browser "more contrast" setting, no click. Muted text takes the full text
+   colour; set on body so it beats every tokens.css theme selector. */
+@media (prefers-contrast: more) {
+  body { --fk-text-muted: var(--fk-text); }
+}
+
 /* No animation anywhere; this also stops any user-agent smooth scrolling. */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
