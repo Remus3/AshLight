@@ -24,8 +24,11 @@ Split rules (one run, oldest first):
   less starts a new run (a new character), unless the run is in Act 1.
 - A run that did not start at G1_1 (the core started mid-campaign) marks
   its first split partial: its time counts from when AshLight saw it.
-- Times are receipt times (s); a core restart starts a new, empty run
-  (no persisted state, as decision 0008).
+- Times are receipt times (s). A core restart rebuilds the splits from the
+  current game run's area generations in Client.txt, timed by their log
+  lines (HUD-ACT-RESUME, decision 0022; still no persisted state, as
+  decision 0008). The game run starts at the log's newest opening marker,
+  so a run that began mid-campaign stays partial.
 """
 
 import json

@@ -14,6 +14,12 @@ Rules (newest line first):
   (the configured one, else the newest level-up seen), across runs, because a
   character's level persists.
 - The scan stops at the marker once the character is known, or at the cap.
+- HUD-ACT-RESUME (decision 0022): the current run's campaign and endgame
+  area generations come back as `act_areas`, oldest first, with their line
+  time and the character's level then, so the act splits rebuild at core
+  start instead of starting empty. A streak of ids in one act (or of maps)
+  keeps only its first entry, except the first campaign zone, which may
+  start a new character's run; that is all acts.ActSplits.fold needs.
 
 Speed: only lines holding a keyword (scene, area generation, system line,
 marker) are decoded and parsed; the keyword search runs in C over each chunk.
@@ -24,14 +30,15 @@ import os
 import re
 import time
 
-from . import logfile, parser
+from . import acts, logfile, parser
 
 CHUNK = 1024 * 1024
 DEFAULT_MAX_BYTES = 32 * 1024 * 1024
 MARKER = b"***** LOG FILE OPENING *****"
 _KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |: )|\*\*\*\*\* LOG FILE OPENING")
-# Once zone and area are known only system lines and the marker matter.
-_KEY_SYS = re.compile(rb"\] : |\*\*\*\*\* LOG FILE OPENING")
+# Once zone and area are known only system lines, area generations (act
+# splits) and the marker matter.
+_KEY_SYS = re.compile(rb"\] (?:: |Generating level )|\*\*\*\*\* LOG FILE OPENING")
 # Before the current run only level-ups and the marker matter.
 _KEY_LVL = re.compile(rb"\) is now level \d|\*\*\*\*\* LOG FILE OPENING")
 _BOM = b"\xef\xbb\xbf"
@@ -106,6 +113,7 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     in_run = True
     deaths = []
     ups = []
+    seq = []  # in-run area generations and level-ups, newest first
     reached = end
     try:
         fh = logfile._open_shared(path)
@@ -142,6 +150,7 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                         out["level"] = ev.get("level")
                     if in_run:
                         ups.append(name)
+                        seq.append(("l", name, ev.get("level")))
                     elif out["character"] is not None:
                         done = True
                         break
@@ -158,6 +167,9 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                     if out["area_id"] is None:
                         out["area_id"] = ev.get("area_id")
                         out["area_level"] = ev.get("area_level")
+                    aid = ev.get("area_id")
+                    if acts.act_of(aid) is not None or acts.is_endgame(aid):
+                        seq.append(("a", aid, ev.get("ts_local")))
                 elif t == "death":
                     deaths.append(ev.get("character"))
                 elif t == "afk_changed":
@@ -176,6 +188,32 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     out["afk"] = bool(out["afk"])
     out["dnd"] = bool(out["dnd"])
     out["bytes_scanned"] = end - reached
+    out["act_areas"] = _act_areas(seq, me, out["level"])
+    return out
+
+
+def _streak_key(area_id):
+    info = acts.act_of(area_id)
+    return info["key"] if info else "Map"
+
+
+def _act_areas(seq, me, level_now):
+    """Oldest-first area generations of the run with the character's level
+    at each; streaks compressed (see the module notes)."""
+    seq = list(reversed(seq))
+    mine = [lv for kind, name, lv in seq if kind == "l" and name == me]
+    level = (mine[0] - 1) if mine and isinstance(mine[0], int) else level_now
+    out = []
+    prev = None
+    for kind, a, b in seq:
+        if kind == "l":
+            if a == me:
+                level = b
+            continue
+        key = _streak_key(a)
+        if key != prev or a == acts.FIRST_AREA:
+            out.append({"area_id": a, "ts_local": b, "level": level})
+        prev = key
     return out
 
 
@@ -201,4 +239,10 @@ def state_fields(result, now=None):
                                      "level_ups", "afk", "dnd")}
     if result["zone"] is not None:
         fields["zone_entered_at"] = local_ts_to_epoch(result["zone_ts_local"], now)
+    areas = []
+    for a in result.get("act_areas") or ():
+        at = local_ts_to_epoch(a["ts_local"], now)
+        if at is not None:
+            areas.append({"area_id": a["area_id"], "at": at, "level": a["level"]})
+    fields["act_areas"] = areas
     return fields

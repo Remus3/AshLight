@@ -13,7 +13,8 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   tests/fixtures/client_live_shapes.txt. REMAINS: death, whispers and trade
   templates (then replace the HUD-WHISPER fixture whispers with anonymised
   real-shaped ones), party / guild chat, AFK / DND, joined / left, Trade
-  accepted, hideout scene names. ACCEPT: every event type seen live has a
+  accepted, hideout scene names, cruel `C_G<n>_` / interlude `P<n>_` area
+  id prefixes (acts.act_of, decision 0022). ACCEPT: every event type seen live has a
   fixture and a passing test. Needs the operator to play past the whisper
   level, die once, and receive one trade whisper. BLOCKED: operator act
   (in-game play, hand-off OPERATOR act (b)); the loop skips it until then.
@@ -51,13 +52,14 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   core only reads the cache. Tests: tests/test_hud_act.py,
   app/test/acts.test.js. ZERO-CLICK: splits and the zone table update by
   themselves on every zone change.
-- [ ] HUD-ACT-RESUME (build) Act splits survive a core restart: LIVE-RESUME
+- [x] HUD-ACT-RESUME (build) Act splits survive a core restart: LIVE-RESUME
   (decision 0008) also returns the current run's area-generation ids with
   their line timestamps, so the splits rebuild from Client.txt instead of
-  starting empty and partial. Also confirm the cruel `C_G<n>_` / interlude
-  `P<n>_` id prefixes from a live log (LIVE-1) and fix acts.act_of if they
-  differ. ACCEPT: restart mid-act keeps earlier act times; exact tests.
-  ZERO-CLICK: rebuilt at core start.
+  starting empty and partial. ACCEPT: restart mid-act keeps earlier act
+  times; exact tests. ZERO-CLICK: rebuilt at core start. DONE 2026-11-17
+  (area-util): lane WIP 19d548d redone on main, decision renumbered 0022,
+  tests/test_hud_act_resume.py (9). The cruel `C_G<n>_` / interlude `P<n>_`
+  prefix check moved into LIVE-1: the live Client.txt holds Act 1 ids only.
 - [x] PRICE-1-COPY (build) Design review of PRICE-1-WIRE (reviews.log
   2026-11-17, S3 x3) on price.card_of: F1 any error text containing
   "league" maps to "no league" (match only trade.search_url's exact

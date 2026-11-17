@@ -715,6 +715,13 @@ class SessionState:
                     continue
                 if key in fields:
                     setattr(self, attr, fields[key])
+            # HUD-ACT-RESUME: rebuild the act splits from the run's area
+            # generations (decision 0022); none keeps the current splits.
+            rebuilt = acts_mod.ActSplits()
+            for a in fields.get("act_areas") or ():
+                rebuilt.fold(a.get("area_id"), a.get("at"), a.get("level"))
+            if rebuilt.splits:
+                self.acts = rebuilt
             self.version += 1
             return True
 
