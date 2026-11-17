@@ -17,13 +17,18 @@
   Do not open the dashboard.
 .PARAMETER EdgeApp
   Open the dashboard in an Edge --app window instead of the default browser.
+.PARAMETER Autostart
+  Set only by the opt-in logon task (scripts\autostart.ps1, decision 0011):
+  implies -NoBrowser and starts nothing unless the recorded opt-in
+  (ops\runtime\autostart.json) says enabled.
 #>
 [CmdletBinding()]
 param(
     [switch]$Overlay,
     [switch]$NoOverlay,
     [switch]$NoBrowser,
-    [switch]$EdgeApp
+    [switch]$EdgeApp,
+    [switch]$Autostart
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,6 +57,24 @@ foreach ($dir in @($paths.runtime, $paths.logs, $paths.temp)) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
 }
 $log = Join-Path $paths.logs 'run.log'
+
+# CORE-AUTOSTART (decision 0011): the logon task passes -Autostart; the
+# recorded opt-in decides, so a task left behind after -Disable is a no-op.
+if ($Autostart) {
+    $NoBrowser = [switch]$true
+    $optin = $false
+    $optinFile = Join-Path $paths.runtime 'autostart.json'
+    if (Test-Path -LiteralPath $optinFile) {
+        try {
+            $optin = [bool]((Get-Content -LiteralPath $optinFile -Raw | ConvertFrom-Json).enabled)
+        } catch {
+            $optin = $false
+        }
+    }
+    $state = if ($optin) { 'on' } else { 'off (no-op)' }
+    Add-Content -Path $log -Value ((Get-Date -Format 's') + " run: logon autostart, opt-in $state") -Encoding ASCII
+    if (-not $optin) { exit 0 }
+}
 
 function Write-AlLog([string]$Message) {
     $line = (Get-Date -Format 's') + ' ' + $Message

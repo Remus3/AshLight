@@ -106,15 +106,24 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   the user's sidecar Cache only; GGG tree export disabled until confirmed;
   poe2db / wiki link-out only. Web fetch was refused this session, so the
   ruling is conservative and rests on research 0005 (DATA-LICENSE-VERIFY).
-- [ ] DATA-LICENSE-VERIFY (data) With web access, read the repoe-fork
+- [x] DATA-LICENSE-VERIFY (data) With web access, read the repoe-fork
   LICENSE.md, the repoe-fork.github.io/poe2 page and file names, poe2db's
   disclaimer and the wiki copyright page; cite URL + date in decision 0009.
   ACCEPT: every UNVERIFIED line in 0009 resolved or the source removed.
   ZERO-CLICK: doc-only row, run by the data lane.
+  DONE 2026-11-17 (decision 0009, research 0011): repoe-fork MIT confirmed;
+  bundle-nothing stands; two fetch URLs found dead (see DATA-SRC-URLS); GGG
+  PoE2 tree export exists (see DATA-TREE-SRC).
+- [ ] DATA-SRC-URLS (data) Fix SOURCES in server/al/theorycraft/snapshot.py:
+  `stats` -> repoe-fork poe2 `stats_by_file.json`, `stat_translations` ->
+  `stat_translations/stat_descriptions.json` (old URLs return 404;
+  decision 0009 item 4). Update tests and consumers. ACCEPT: mocked-fetch
+  test uses the real file names. ZERO-CLICK: next build.ps1 run.
 - [ ] DATA-TREE-SRC (data) Confirm whether GGG publishes a PoE2 passive
   tree export (repo, data-file URL, terms); if so enable
   `SOURCES["skilltree"]` in server/al/theorycraft/snapshot.py and add its
-  host to ALLOWED_HOSTS. After DATA-LICENSE-VERIFY. ACCEPT: source enabled
+  host to ALLOWED_HOSTS. Repo exists (grindinggear/poe2-skilltree-export,
+  data.json, no license file; decision 0009 item 3 amended: fetch-only). ACCEPT: source enabled
   with a mocked-fetch test, or recorded as absent. ZERO-CLICK: the next
   build.ps1 run fetches it.
 
@@ -430,9 +439,15 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   al_loop lane_worker passes lane_checklist(rec). The kit spawn only closes
   the row (close_progress keeps the checklist), so no kit change.
   tests/test_al_lane.py, tests/test_al_loop.py.
-- [ ] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
+- [x] CORE-AUTOSTART (build) Optional logon autostart of run.ps1 (scheduled
   task, hidden, opt-in recorded), filed by decision 0005 option C.
   ACCEPT: after a logon the core answers with no input. ZERO-CLICK.
+  DONE 2026-11-17 (opt-in, operator enables with `scripts\autostart.ps1
+  -Enable`; decision 0011): current-user task "AshLight Autostart" at
+  logon +30 s, Limited, wscript + scripts/autostart_launch.vbs runs
+  run.ps1 -NoBrowser -Autostart hidden; opt-in in gitignored
+  ops/runtime/autostart.json, run.ps1 -Autostart is a no-op without it;
+  -Disable / -Status / -DryRun; tests/test_autostart.py (dry-run only).
 - [ ] WT-SIDECAR (build) Harness Agent-tool worktree isolation creates
   worktrees under the repo's .claude/worktrees/, but the Sidecar rule puts
   them under the AL sidecar Worktree folder. Finding: .claude/worktrees/ IS
@@ -446,6 +461,14 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   fleet_gitlock). ACCEPT: a fresh isolated agent's worktree resolves under
   the sidecar Worktree dir; tests/test_sidecar_paths.py still green.
   ZERO-CLICK: the hook fires on every isolated spawn; no manual move.
+  PARTIAL 2026-11-17: hook ready; activation = operator act. Decision
+  0012: tools/wt_sidecar_hook.py (WorktreeCreate + WorktreeRemove) makes
+  the worktree at server/al/paths.py worktree_dir()/<name>, tested on a
+  tmp repo (tests/test_wt_sidecar_hook.py). Operator adds to
+  .claude/settings.json "hooks": "WorktreeCreate" and "WorktreeRemove",
+  each [{"hooks": [{"type": "command", "command": "python
+  \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""}]}], then checks one
+  isolated spawn lands under the sidecar Worktree dir.
 - [ ] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001).
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish

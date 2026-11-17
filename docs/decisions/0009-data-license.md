@@ -5,7 +5,7 @@ snapshots only after this ruling). Inputs: research 0005 ("Game data
 exports", "poe2db.tw", "PoE2 Wiki") and research 0010 section 1, all
 accessed 2026-11-16.
 
-## Verification status (read this first)
+## Verification status at the original ruling (2026-11-16)
 
 This session could NOT fetch any license page: the web fetch tool was
 refused by permission for every URL tried on 2026-11-16
@@ -35,6 +35,117 @@ Known facts (research 0005, accessed 2026-11-16):
   behind bot protection). Automated access is actively blocked.
 - AshLight is Apache-2.0 (LICENSE, NOTICE): not share-alike compatible
   with CC BY-NC-SA.
+
+## Verification results (DATA-LICENSE-VERIFY, 2026-11-17)
+
+Web access worked this session. Evidence and quotes: research 0011. Every
+URL below was accessed 2026-11-17. Status: V verified, C corrected,
+U unverifiable (could not be read at the source).
+
+1. V. repoe-fork code license is MIT, (c) 2016 brather1ng. Source:
+   https://raw.githubusercontent.com/repoe-fork/repoe/master/LICENSE.md.
+   It adds a notice that generated files in `data` are owned by Grinding
+   Gear Games and "shall not be used or published without being in
+   accordance with their terms of use". (Resolves the "MIT assumed" line;
+   the data notice is new and supports decision items 1 and 2.)
+2. V. repoe-fork credits: GGG owns the data files ("The contents of all
+   `data` files obviously belong to them"). Source:
+   https://github.com/repoe-fork/repoe.
+3. V. https://repoe-fork.github.io/poe2/ states no license and links to the
+   repoe-fork GitHub project.
+4. C. The hosted PoE2 files do not match the fetch list. `mods.json` and
+   `base_items.json` exist (HTTP 200). `stats.json` and
+   `stat_translations.json` return 404. The real files are
+   `stats_by_file.json` (14.4 MB) and the directory `stat_translations/`
+   (for example `stat_translations/stat_descriptions.json`, 10.1 MB). The
+   snapshot source list in `server/al/theorycraft/snapshot.py` points at
+   the two 404 URLs: ROADMAP row DATA-SRC-URLS.
+5. U. The repoe-fork README warning that formats may change at any time:
+   not seen in the fetched README text; keep treating formats as unstable.
+6. C. A GGG PoE2 tree export exists:
+   https://github.com/grindinggear/poe2-skilltree-export (public, `main`,
+   files `assets/`, `README.md`, `data.json`; raw `data.json` returns 200).
+   It has NO LICENSE file and its README says only "Exported data for Path
+   of Exile 2's Passive Skill Tree". The PoE1 repo
+   (https://github.com/grindinggear/skilltree-export) also shows no license
+   file. See "What changes" below (item 3 amended).
+7. V (code) / U (data). Path of Building PoE2 is MIT (c) David Gowor with
+   third-party licenses listed:
+   https://raw.githubusercontent.com/PathOfBuildingCommunity/PathOfBuilding-PoE2/dev/LICENSE.md
+   (https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2). The
+   `src/Data` files' own terms could not be read; the MIT grant covers
+   PoB's code, not GGG-owned data. Nothing from PoB data is bundled.
+8. V. GGG developer terms (https://www.pathofexile.com/developer/docs):
+   only resources in the API Reference or Data Exports are supported, other
+   internal APIs or in-game resources are denied; "we cannot allow our
+   Intellectual Property to be used to generate commercial revenue"; the
+   "isn't affiliated" line must be visible; tools that interact with the
+   game or its files mean account termination. U: the Terms of Use
+   sections it cites (7b, 7c, 7i) were not shown, and the page gives no
+   explicit rule on redistributing extracted data. Hence "bundle nothing"
+   stands.
+9. V. poe2db: "Wikis Content is available under CC BY-NC-SA 3.0 unless
+   otherwise noted", (c) 2014-2026 PoE2DB, GGG holds the game copyright,
+   some articles adapted from Project PoE Wiki. Source:
+   https://poe2db.tw/General_disclaimer. C: the page has no scraping,
+   crawling or API terms at all (absence, not a prohibition), and our fetch
+   was not bot-blocked there. Link-out only still stands (NC-SA, no
+   sanctioned API).
+10. V (secondary). PoE2 wiki text and graphics are CC BY-NC-SA 3.0
+    Unported where lawfully licensable; game assets are GGG copyright, use
+    permitted on the wiki only. Source: search summary of
+    https://www.poe2wiki.net/wiki/Path_of_Exile_2_Wiki:Copyrights . The
+    page itself (and /General_disclaimer, /COPYING) returned an Anubis
+    "Access Denied" bot wall to our fetch: V that automated access is
+    blocked; U the license text was not read first-hand.
+11. V. poe.ninja API terms: https://poe.ninja/docs/api. Descriptive
+    User-Agent identifying the app AND a contact; modest concurrency and
+    volume; use ETag / conditional requests, do not bypass caching; no
+    polling faster than a few minutes; do not use the API to replicate the
+    site; desktop apps "should proxy these requests through their own
+    backend"; only the economy endpoints are documented, builds / profiles
+    endpoints are "not available for third-party use"; no SLA, breaking
+    changes without notice; misbehaving clients are blocked. poe.ninja
+    footer: "not affiliated with or endorsed by Grinding Gear Games".
+    Effect on DATA-NINJA: UA must carry a contact; economy endpoints only.
+12. C. User-Agent for GGG's API: the developer docs require
+    `User-Agent: OAuth {clientId}/{version} (contact: {contact}) ...` from
+    "any application that interacts with our API". Our "AshLight plus
+    version" rule is not enough where the OAuth API is used: it needs the
+    client id form and a contact. The pathofexile.com/api/trade2 endpoints
+    are not described on the docs page (U); GGG staff forum posts (search
+    summary only) say a unique identifiable User-Agent is needed or you get
+    blocked, and that rate limits are per IP or account. Research 0004
+    stays the working note for trade2; no contact value is stored in the
+    tracked tree (per-host `config/local.json`).
+13. V. Apache-2.0 vs CC BY-NC-SA share-alike incompatibility: a legal
+    reading, not a fetchable claim; unchanged.
+
+Counts (13 numbered lines, 17 claim parts; lines 7, 8, 9, 10, 12 split): verified
+8 (1, 2, 3, 7 code, 8, 9 license, 10 blocked-bot, 11), corrected 4 (4, 6,
+9 scraping-terms note, 12), unverifiable 5 (5, 7 data, 8 ToS sections, 10
+license text first-hand, 12 trade2 docs). Line 13 is reasoning, not
+counted. Nothing found forbids the fetch-only ruling.
+
+### What changes for fetch / bundle
+
+- Bundling: unchanged, still nothing (the MIT grant covers code only; data
+  is GGG-owned and its "terms of use" are not spelled out anywhere
+  readable).
+- Fetch list corrected: `stats` -> `stats_by_file.json`;
+  `stat_translations` -> `stat_translations/stat_descriptions.json`
+  (combined file; others optional). ROADMAP DATA-SRC-URLS.
+- Item 3 amended: the GGG PoE2 tree export exists, so the "disabled until
+  confirmed" gate is lifted for DATA-TREE-SRC: it may be fetched under the
+  item 2 conditions at
+  https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/main/data.json
+  (host raw.githubusercontent.com to ALLOWED_HOSTS). No license file exists,
+  so it stays fetch-only, never bundled. Decided without an adjudicator: no
+  fork in the road, it applies the existing conservative rule.
+- poe.ninja and GGG API clients must send the User-Agent form with a
+  contact (ROADMAP DATA-NINJA note); poe.ninja's "proxy through your own
+  backend" advice is met by the local core being the only caller (one
+  caller per machine, one request per hour).
 
 ## Decision
 
