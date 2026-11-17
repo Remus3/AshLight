@@ -1,0 +1,140 @@
+"""UX-SETTINGS-IO: AshLight settings export / import (research 0028
+section 5, ruling E).
+
+Export: on the player's click the dashboard downloads AshLight's own
+settings as one JSON file (the decision 0031 / 0034 download pattern: the
+core writes no file anywhere). Import: the player picks that file in a
+browser file input; the page posts its JSON and the core merges the
+allowed keys into config/local.json.
+
+Allow-list only (ALLOWED). Never in the file, and never taken from one:
+the contact (config "contact"), the per-start API token, any session
+cookie (AshLight never has one), the Client.txt path ("client_log") and
+every other per-host path or key ("port", "loop", ...). Unknown keys in
+an imported file are not applied; they are named back to the player as
+ignored. A key with a bad value refuses the whole file (nothing applied).
+
+web_data (decision 0013) is never switched ON by an import: a file that
+has it on while it is off here is reported as "web_data_offered", and the
+dashboard asks the player to turn it on with the existing switch (their
+confirm). Turning it off by import is allowed (the safe direction).
+"""
+
+import re
+
+from . import layout as layout_mod
+
+KIND = "ashlight-settings"
+SCHEMA = 1
+MAX_BYTES = 16 * 1024
+FILE_NAME = "ashlight-settings.json"
+
+_ACCEL = re.compile(r"^[A-Za-z0-9+ ]{1,40}$")
+_NAME = re.compile(r"^[^\x00-\x1f\x7f]{0,64}$")
+
+
+class SettingsError(ValueError):
+    pass
+
+
+def _bool(v):
+    if not isinstance(v, bool):
+        raise SettingsError("must be true or false")
+    return v
+
+
+def _int(lo, hi):
+    def check(v):
+        if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+            raise SettingsError(f"must be a whole number from {lo} to {hi}")
+        return v
+    return check
+
+
+def _str(rx):
+    def check(v):
+        if not isinstance(v, str) or not rx.match(v):
+            raise SettingsError("is not a valid value")
+        return v.strip()
+    return check
+
+
+def _overlay(v):
+    try:
+        return layout_mod.normalize(v, strict=True)
+    except layout_mod.LayoutError as e:
+        raise SettingsError(str(e)) from e
+
+
+# key -> validator. The ONLY keys an export writes or an import applies.
+ALLOWED = {
+    "character": _str(_NAME),
+    "poll_ms": _int(50, 5000),
+    "overlay_toggle": _str(_ACCEL),
+    "eval_hotkey": _str(_ACCEL),
+    "league": _str(_NAME),
+    "web_data": _bool,
+    "tc_calc": _bool,
+    "overlay": _overlay,
+    "underlevel_gap": _int(1, 20),
+    "run_history": _bool,
+    "price_watch_pct": _int(5, 500),
+}
+# Player words for each key, for the import error sentence (design 0001 P2).
+LABELS = {
+    "character": "character name", "poll_ms": "log check interval",
+    "overlay_toggle": "overlay hotkey", "eval_hotkey": "item check hotkey",
+    "league": "league", "web_data": "web data switch", "tc_calc": "calc switch",
+    "overlay": "overlay position", "underlevel_gap": "under-level gap",
+    "run_history": "run history switch", "price_watch_pct": "price watch threshold",
+}
+# Never exported or imported, even if a later key list grows (tests pin it).
+NEVER = ("contact", "client_log", "port", "loop", "token", "poesessid")
+
+
+def export_doc(cfg, version):
+    """The download: AshLight settings only. A stored value that does not
+    validate is left out (a hand-broken config never breaks the export)."""
+    cfg = cfg if isinstance(cfg, dict) else {}
+    out = {}
+    for key, check in ALLOWED.items():
+        if key not in cfg:
+            continue
+        try:
+            out[key] = check(cfg[key])
+        except SettingsError:
+            continue
+    return {"kind": KIND, "schema": SCHEMA, "app_version": version, "settings": out}
+
+
+def parse_import(doc, current):
+    """Validate an imported file against the current config. Returns
+    (update, report): update = the keys to merge into config/local.json,
+    report = {"applied": [...], "ignored": [...], "web_data_offered": bool}.
+    Raises SettingsError (nothing applied) on a file that is not an
+    AshLight settings file or holds a bad value."""
+    if not isinstance(doc, dict) or doc.get("kind") != KIND:
+        raise SettingsError("This file isn't an AshLight settings file.")
+    if doc.get("schema") != SCHEMA:
+        raise SettingsError("This settings file is from a version AshLight can't read.")
+    settings = doc.get("settings")
+    if not isinstance(settings, dict):
+        raise SettingsError("This settings file has no settings in it.")
+    current = current if isinstance(current, dict) else {}
+    update, ignored = {}, []
+    for key, value in settings.items():
+        check = ALLOWED.get(key) if isinstance(key, str) and key not in NEVER else None
+        if check is None:
+            ignored.append(str(key)[:40])
+            continue
+        try:
+            update[key] = check(value)
+        except SettingsError as e:
+            raise SettingsError(f"The {LABELS.get(key, key)} in that file {e}.") from e
+    offered = False
+    if update.get("web_data") is True and current.get("web_data") is not True:
+        del update["web_data"]
+        offered = True
+    report = {"applied": sorted(update), "ignored": sorted(ignored)[:20],
+              "web_data_offered": offered}
+    return update, report

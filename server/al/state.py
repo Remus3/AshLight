@@ -14,6 +14,7 @@ from . import acts as acts_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
+from . import underlevel as underlevel_mod
 from . import zonenotes
 
 RECENT_EVENTS = 30
@@ -799,6 +800,16 @@ class SessionState:
                        "last_reset": None, "idle": False,
                        "last_line_at": None}
         self._idle_paused_map = False  # AREA-AUDIT P3-4
+        # UTIL-UNDERLEVEL: the gap threshold ("underlevel_gap" setting).
+        self.underlevel_gap = underlevel_mod.DEFAULT_GAP
+        # UTIL-RUN-HISTORY: the player's deaths per zone in the current
+        # campaign run (keyed by the run's first split start), and the
+        # history view the core publishes (runhistory.py).
+        self.run_deaths = collections.Counter()
+        self._run_start = None
+        self.run_history = None
+        # UTIL-PRICE-WATCH: the price watch view the core publishes.
+        self.price_watch = None
 
     @property
     def version(self):
@@ -889,6 +900,63 @@ class SessionState:
             if info != self.build_info:
                 self.build_info = dict(info) if info else None
                 self.version += 1
+
+    def set_underlevel_gap(self, value):
+        """UTIL-UNDERLEVEL: the threshold from the local config (core
+        tick). Bumps the version only when it changed."""
+        value = underlevel_mod.gap_setting(value)
+        with self._lock:
+            if value == self.underlevel_gap:
+                return False
+            self.underlevel_gap = value
+            self.version += 1
+            return True
+
+    def _run_counter(self):
+        """UTIL-RUN-HISTORY: the deaths counter of the current run, reset
+        when the act splits start a new run. Caller holds the lock."""
+        start = self.acts.splits[0]["started_at"] if self.acts.splits else None
+        if start != self._run_start:
+            self._run_start = start
+            self.run_deaths = collections.Counter()
+        return self.run_deaths
+
+    def run_record(self):
+        """UTIL-RUN-HISTORY: the current campaign run as a history record
+        (runhistory.clean_run shape) plus "closed" (closed split count),
+        or None before the first act split. Only closed, complete splits
+        carry a time (a partial or open split is no best)."""
+        with self._lock:
+            if not self.acts.splits:
+                return None
+            rows = self.acts.rows(self._clock())
+            closed = [r for r in rows if not r["current"]]
+            deaths = self._run_counter()
+            return {"started_at": self.acts.splits[0]["started_at"],
+                    "character": self.character, "class": self.char_class,
+                    "splits": [{"key": r["key"], "label": r["label"],
+                                "time_s": r["time_s"]}
+                               for r in closed if not r["partial"]],
+                    "deaths": dict(deaths), "finished": self.acts.finished,
+                    "closed": len(closed)}
+
+    def set_run_history(self, view):
+        """UTIL-RUN-HISTORY: the history view (core tick)."""
+        with self._lock:
+            if view != self.run_history:
+                self.run_history = dict(view) if view else None
+                self.version += 1
+                return True
+            return False
+
+    def set_price_watch(self, view):
+        """UTIL-PRICE-WATCH: the price watch view (core tick)."""
+        with self._lock:
+            if view != self.price_watch:
+                self.price_watch = dict(view) if view else None
+                self.version += 1
+                return True
+            return False
 
     def set_zone_table(self, table):
         """HUD-ACT: the act / zone level table (acts.load_table())."""
@@ -1047,6 +1115,9 @@ class SessionState:
                     zone_s=(max(0.0, now - self.zone_entered_at)
                             if self.zone_entered_at else None))
                 self.maps.on_death(now)
+                # UTIL-RUN-HISTORY: campaign deaths per zone of this run
+                if self.acts.splits and not self.acts.finished and self.zone:
+                    self._run_counter()[self.zone] += 1
                 changed = True
         elif t in ("whisper_in", "whisper_out"):
             self.recent_whispers.append(self._row(ev, now))
@@ -1206,6 +1277,14 @@ class SessionState:
             if events:
                 self.maps, self.death_log = runs_mod.replay(events,
                                                             self.character)
+            # UTIL-RUN-HISTORY: this run's deaths per zone from the
+            # replayed death recap (its rows are capped, like the card)
+            start = self.acts.splits[0]["started_at"] if self.acts.splits else None
+            self._run_start = start
+            self.run_deaths = collections.Counter(
+                r["zone"] for r in self.death_log.rows
+                if start is not None and r.get("zone")
+                and isinstance(r.get("at"), (int, float)) and r["at"] >= start)
             self.version += 1
             return True
 
@@ -1264,6 +1343,10 @@ class SessionState:
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
                 "maps": self.maps.view(now),
+                # UTIL-UNDERLEVEL (ruling B): log area level minus player level
+                "underlevel": underlevel_mod.view(
+                    self.level, self.area_level, self.area_id, self.zone,
+                    self.in_hideout, self.zone_table, self.underlevel_gap),
                 # UX-ZONE-NOTES (decision 0030): our own note for this zone
                 "zone_note": self._zone_note(),
                 "death_recap": self.death_log.view(self.deaths),
@@ -1271,4 +1354,9 @@ class SessionState:
                 "session_summary": (dict(self.session_summary)
                                     if self.session_summary else None),
                 "sources": dict(self.sources),
+                # UTIL-RUN-HISTORY / UTIL-PRICE-WATCH (core-published views)
+                "run_history": (dict(self.run_history)
+                                if self.run_history else None),
+                "price_watch": (dict(self.price_watch)
+                                if self.price_watch else None),
             }

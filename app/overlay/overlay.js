@@ -30,7 +30,8 @@
           nodes.evalCard.hidden = !model.evalHead;
         } else if (f === "evalVerdict") {
           nodes.evalCard.setAttribute("data-verdict", model.evalVerdict);
-        } else if (f === "status" || f === "away" || f === "log" || f === "trades") {
+        } else if (f === "status" || f === "away" || f === "under" || f === "log" ||
+                   f === "trades") {
           nodes.hud.setAttribute("data-status", model.status);
           nodes.status.textContent = S.statusText(model);
         } else {

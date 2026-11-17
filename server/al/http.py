@@ -24,7 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, webfetch
+from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, settingsio, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -267,6 +267,14 @@ class Handler(BaseHTTPRequestHandler):
             hdr = dict(extra, **{"Content-Disposition":
                                  f'attachment; filename="{out["filename"]}"'})
             return self._send(200, out["text"], "application/json; charset=utf-8", hdr)
+        if path == "/api/settings-export":
+            # UX-SETTINGS-IO (ruling E): AshLight's own settings as a
+            # download the player saves; allow-list only (no contact,
+            # token, cookie or path); the core writes no file anywhere.
+            hdr = dict(extra, **{"Content-Disposition":
+                                 f'attachment; filename="{settingsio.FILE_NAME}"'})
+            text = json.dumps(core.export_settings(), indent=2, ensure_ascii=True) + "\n"
+            return self._send(200, text, "application/json; charset=utf-8", hdr)
         if path == "/api/weights":
             return self._json(200, core.weights.snapshot(), extra)
         if path == "/api/gfx":
@@ -317,7 +325,51 @@ class Handler(BaseHTTPRequestHandler):
             return self._set_web_data()
         if path == "/api/filter-merge":
             return self._filter_merge(query)
+        if path == "/api/settings-import":
+            return self._settings_import()
+        if path == "/api/run-history":
+            return self._run_history()
+        if path == "/api/price-watch":
+            return self._price_watch()
         return self._send(404, "not found\n")
+
+    def _settings_import(self):
+        """UX-SETTINGS-IO: the settings file the player picked in the
+        browser, as its JSON. Size-capped; allow-list keys only; nothing
+        applied on a bad file; web data never switched on here."""
+        body = self._read_json(max_body=settingsio.MAX_BYTES)
+        if body is None:
+            return None
+        try:
+            report = self.server.core.import_settings(body)
+        except settingsio.SettingsError as e:
+            return self._json(400, {"error": str(e)})
+        except OSError:
+            return self._json(500, {"error": "AshLight couldn't save the settings."})
+        return self._json(200, report)
+
+    def _run_history(self):
+        """UTIL-RUN-HISTORY: {"enabled": bool} turns it on or off,
+        {"clear": true} deletes every saved run."""
+        body = self._read_json()
+        if body is None:
+            return None
+        enabled = body.get("enabled")
+        clear = body.get("clear") is True
+        if not (isinstance(enabled, bool) or clear):
+            return self._json(400, {"error": "enabled: true|false or clear: true required"})
+        view = self.server.core.set_history(enabled if isinstance(enabled, bool) else None,
+                                            clear=clear)
+        return self._json(200, {"run_history": view})
+
+    def _price_watch(self):
+        """UTIL-PRICE-WATCH: {"clear": true} empties the watched list."""
+        body = self._read_json()
+        if body is None:
+            return None
+        if body.get("clear") is not True:
+            return self._json(400, {"error": "clear: true required"})
+        return self._json(200, {"price_watch": self.server.core.clear_watch()})
 
     def do_PUT(self):
         path, query = self._url()
