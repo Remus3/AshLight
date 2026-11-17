@@ -303,16 +303,32 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   discovered log whose Steam library moved was never followed -
   Core.ensure_tailing() from the core loop, every 5 s. ZERO-CLICK: runs
   inside pytest; the fixes need no user step.
-- [ ] TEST-HTTP (build) HTTP / SSE surface robustness: token, Host / Origin,
+- [x] TEST-HTTP (build) HTTP / SSE surface robustness: token, Host / Origin,
   oversized and malformed requests, many and slow SSE clients, core restart
   under the keepalive supervisor. ACCEPT: tests green, defects fixed.
-  ZERO-CLICK: runs inside pytest, no user step. BLOCKED: claimed by the
-  interactive AREA-TEST lane (not an operator act; cleared on merge).
-- [ ] TEST-OVL (build) Overlay smoke and budgets: tests/test_budgets.py and
+  DONE 2026-11-17: tests/test_http_robust.py (22 tests). Defects fixed in
+  server/al/http.py: (1) no socket timeout - an idle client, a body shorter
+  than its Content-Length or a stalled SSE reader pinned a thread forever
+  (Handler.timeout = REQUEST_TIMEOUT_S 10 s); (2) a garbage request line or
+  a 64 KB+ URI crashed log_message (no self.path yet) so the client got no
+  400 / 414; (3) deeply nested JSON raised RecursionError and the client got
+  no reply (now 400); (4) unbounded SSE streams - capped at MAX_SSE_CLIENTS
+  16, a refused stream gets a closed 200 with retry 30 s (an EventSource
+  gives up for good on 503) ; handler errors go to the core log. Core
+  restart under the supervisor stays covered by tests/test_keepalive.py
+  end-to-end. ZERO-CLICK: runs inside pytest, no user step.
+- [x] TEST-OVL (build) Overlay smoke and budgets: tests/test_budgets.py and
   the overlay smoke test assert something real and pass. ACCEPT: each
-  budget test fails when its budget is broken. ZERO-CLICK: runs inside
-  pytest / npm test, no user step. BLOCKED: claimed by the interactive
-  AREA-TEST lane (not an operator act; cleared on merge).
+  budget test fails when its budget is broken. DONE 2026-11-17: the
+  "overlay smoke test" CLAUDE.md names did not exist as a test (only the
+  manual AL_OVERLAY_SMOKE_S quit timer). tests/test_overlay_smoke.py: static
+  checks of the window flags, no input / no timers / no animation, always
+  on; a live run (opt-in AL_OVERLAY_SMOKE=1, isolated profile) asserting
+  summed working set < 250 MB, idle CPU < 1 percent, rc 0 - measured
+  2026-11-17: 2 processes, 142.6 MB, 0.000 percent. test_budgets.py adds the
+  whole-core idle budget (tailer + HTTP + 2 SSE streams < 1 percent; the old
+  test covered only the tailer at 2 percent). ZERO-CLICK: static part runs
+  in every suite; the live part is one env var.
 
 ## Ops
 
