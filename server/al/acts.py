@@ -23,7 +23,8 @@ Split rules (one run, oldest first):
 - Entering the first campaign zone (G1_1) while the player is level 2 or
   less starts a new run (a new character), unless the run is in Act 1.
 - A run that did not start at G1_1 (the core started mid-campaign) marks
-  its first split partial: its time counts from when AshLight saw it.
+  its first split partial: its time counts from the first zone AshLight
+  saw (live, or read back from Client.txt at core start).
 - Times are receipt times (s). A core restart rebuilds the splits from the
   current game run's area generations in Client.txt, timed by their log
   lines (HUD-ACT-RESUME, decision 0022; still no persisted state, as
@@ -60,7 +61,7 @@ EMPTY_TEXT = ("No act times yet. They start by themselves when you enter a "
 NO_LEVELS_TEXT = ("Zone levels aren't downloaded yet. Run AshLight's build step "
                   "(scripts/build.ps1) to get them.")
 NO_ZONES_TEXT = "Zone levels show here while you are in a campaign act."
-PARTIAL_TEXT = "partial: counted from when AshLight started"
+PARTIAL_TEXT = "partial: counted from the first zone AshLight saw"
 
 
 def act_of(area_id):

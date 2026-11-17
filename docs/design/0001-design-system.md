@@ -370,7 +370,7 @@ Generation rules:
    - act times (HUD-ACT, `server/al/acts.py`, `web/acts.js`): dashboard
      only; rows `Act <n>` / `Cruel Act <n>` / `Interlude <n>` with `Time in
      act` and `Run total` (m:ss or h:mm:ss); one note per row in one pair of
-     parentheses: `(now)`, `(partial: counted from when AshLight started)`,
+     parentheses: `(now)`, `(partial: counted from the first zone AshLight saw)`,
      joined with ", "; zone heading `Zone levels in <act>`, zone notes `(you
      are here)` / `(town)`; empty `No act times yet. They start by
      themselves when you enter a campaign zone.`, `Zone levels show here

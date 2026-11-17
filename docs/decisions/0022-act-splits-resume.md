@@ -48,10 +48,10 @@ renumbered from the lane draft 0021.
   the start of a normal play session's run.
 - Players want act splits that span game restarts (then a persisted run).
 
-## Known gap
+## Copy
 
-A run that began mid-campaign shows its first split as partial with the
-existing copy "partial: counted from when AshLight started"; after a
-resume it is really counted from the game run's first act zone in the log.
-The copy is left unchanged (no dashboard / event text change in this row);
-a wording follow-up belongs to the design review queue.
+The partial-split note read "partial: counted from when AshLight started",
+false after a resume (the time counts from the game run's first act zone
+in the log). Design review 2026-11-17 (R1) reworded it to "partial:
+counted from the first zone AshLight saw", true for both a live start and
+a resume.

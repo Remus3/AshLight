@@ -704,7 +704,8 @@ class SessionState:
     def restore(self, fields):
         """LIVE-RESUME: set state fields recovered from the end of Client.txt
         (server/al/resume.py). Nothing is listed. A configured character is
-        kept; another character's level, class and counts are ignored."""
+        kept; another character's level, class and counts are ignored.
+        Act splits are run-wide and are rebuilt for any character."""
         with self._lock:
             name = fields.get("character")
             other = bool(name) and self.character_fixed and name != self.character
