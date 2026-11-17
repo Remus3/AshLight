@@ -25,6 +25,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, webfetch
 from .theorycraft import codec as build_codec
+from .theorycraft import datacredit
 from .theorycraft import model as build_model
 from .theorycraft import paste as build_paste
 from .theorycraft import shareurl
@@ -198,8 +199,11 @@ class Handler(BaseHTTPRequestHandler):
                                     "tailing": bool(core.tailer and core.tailer.running)},
                               extra)
         if path == "/api/version":
+            # TC-SNAP-UI: the snapshot attribution, only while snapshot data
+            # exists in the sidecar cache (decision 0009); else null.
             return self._json(200, {"name": NAME, "version": VERSION,
-                                    "disclaimer": DISCLAIMER}, extra)
+                                    "disclaimer": DISCLAIMER,
+                                    "data_credit": datacredit.credit_doc()}, extra)
         if path == "/api/state":
             return self._json(200, core.state.snapshot(), extra)
         if path == "/api/overlay-layout":

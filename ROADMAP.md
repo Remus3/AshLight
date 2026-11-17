@@ -95,11 +95,14 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   owner allows. After TC-CODE. ACCEPT: decode + parse + byte-exact round
   trip of the real code. ZERO-CLICK: a test that skips when the fixture is
   absent.
-- [ ] TC-SNAP-UI (build) Show snapshot.ATTRIBUTION (decision 0009) in the
+- [x] TC-SNAP-UI (build) Show snapshot.ATTRIBUTION (decision 0009) in the
   dashboard footer / About and the overlay About wherever snapshot data is
   used; expose it via an API field. After TC-SNAP. ACCEPT: text visible,
   design-reviewer pass. ZERO-CLICK: shown automatically when the cache
-  exists.
+  exists. DONE 2026-11-17: GET /api/version "data_credit" (null without
+  the cache; theorycraft/datacredit.py holds ATTRIBUTION, no network);
+  dashboard footer line read on every feed connect; overlay About panel and
+  page About read at start and on each core restart (no polling).
 - [ ] TC-UPGRADE (build) Upgrade search as a link builder (decision
   0017): from the local weights build a trade2 search URL offline
   (https://www.pathofexile.com/trade2/search/poe2/<league>?q=<json>) that

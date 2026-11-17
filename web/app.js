@@ -775,6 +775,17 @@
     });
   }
 
+  /* TC-SNAP-UI: the game-data credit in the footer, read on every connect,
+     so a snapshot made by the build shows up without a click. */
+  function loadDataCredit() {
+    api("GET", "/api/version").then(function (doc) {
+      var text = D.dataCreditText(doc);
+      var p = $("data-credit");
+      p.textContent = text;
+      p.hidden = !text;
+    }).catch(function () { /* keep the last line; the next connect retries */ });
+  }
+
   function connect() {
     if (!token) {
       setLink("notoken");
@@ -784,6 +795,7 @@
     loadWeights();
     loadWebData();
     loadRates();
+    loadDataCredit();
     api("GET", "/api/state").then(render).catch(function () {
       if (!linkLive) { setLink("error"); }
     });
