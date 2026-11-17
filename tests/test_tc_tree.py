@@ -1,6 +1,6 @@
 """DATA-TREE-SRC: cached GGG PoE2 passive tree reader and its optional use in
 the build view. Synthetic fixture only (tests/fixtures/skilltree_synthetic.json,
-modelled on the documented export shape, UNVERIFIED); no network.
+synthetic values in the real export shape per research 0014); no network.
 """
 
 import json
@@ -23,22 +23,54 @@ def tree():
 
 
 def test_reader_names_stats_and_flags(tree):
-    assert tree.classes == ("Alpha Class", "Beta Class")
+    assert tree.classes == ("Alpha Class", "Beta Class", "Gamma Class")
     assert tree.name(20) == "Test Small Node" and tree.name("30") == "Test Notable"
     n = tree.node(30)
     assert n.notable and not n.keystone and n.stats == ("10% increased Test Damage",)
     assert tree.node(40).keystone and tree.node(40).stats == ()
-    asc = tree.node(50)
-    assert asc.is_ascendancy and asc.ascendancy == "First Ascent"
     assert not tree.node(20).is_ascendancy
     assert tree.node(55).jewel_socket and tree.name(55) == "Keyed By Id Only"
     assert tree.node(999) is None and tree.name("x") is None
-    assert set(tree.nodes) == {10, 11, 20, 30, 40, 50, 55}  # root / bad skipped
+    assert set(tree.nodes) == {10, 11, 20, 30, 40, 50, 51, 55}  # root / bad skipped
+
+
+def test_ascendancy_id_maps_to_name(tree):
+    asc = tree.node(50)
+    assert asc.is_ascendancy and asc.ascendancy == "First Ascent"
     assert json.loads(json.dumps(asc.to_dict()))["ascendancy"] == "First Ascent"
+    unmapped = tree.node(51)  # id no class lists: the id is the fallback
+    assert unmapped.is_ascendancy and unmapped.ascendancy == "Alpha9"
 
 
-def test_class_starts_both_shapes(tree):
-    assert tree.class_starts() == {"Alpha Class": 10, "Beta Class": 11}
+def test_legacy_ascendancy_name_still_read():
+    t = treedata.parse({"nodes": {"1": {"name": "A", "ascendancyName": "Old"},
+                                  "2": {"name": "B", "ascendancyId": 5}}})
+    assert t.node(1).ascendancy == "Old" and t.node(2).ascendancy is None
+
+
+def test_class_start_index_list(tree):
+    assert tree.node(10).class_start == ("Alpha Class", "Gamma Class")
+    assert tree.class_starts() == {"Alpha Class": 10, "Gamma Class": 10,
+                                   "Beta Class": 11}
+
+
+def test_class_start_int_and_legacy_shapes():
+    doc = {"classes": [{"name": "A"}, {"name": "B"}, {"name": "C"}],
+           "nodes": {"1": {"classStartIndex": 0},
+                     "2": {"classStartIndex": [1, 9, True, "2", 1]},
+                     "3": {"classesStart": ["C"]}}}
+    t = treedata.parse(doc)
+    assert t.class_starts() == {"A": 1, "B": 2, "C": 3}
+    assert t.node(2).class_start == ("B",)
+
+
+def test_stat_markup_stripped_for_display(tree):
+    n = tree.node(20)
+    assert n.stats == ("+5 to [SynthStat|Synthetic Stat]",)  # raw kept
+    assert n.display_stats == ("+5 to Synthetic Stat",)
+    assert n.to_dict()["stats"] == ["+5 to Synthetic Stat"]
+    assert treedata.display_stat("a [Word] b\n[K|Two Words]") == "a Word b\nTwo Words"
+    assert treedata.display_stat("no markup") == "no markup"
 
 
 def test_resolve_keeps_order_and_unknown_ids(tree):

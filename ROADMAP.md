@@ -229,7 +229,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   stats, isNotable/isKeystone/isJewelSocket, classes match; ascendancyName
   and int classStartIndex do NOT (see DATA-TREE-FIX). No shape fixture
   committed (GGG data, no license).
-- [ ] DATA-TREE-FIX (data) Fix server/al/theorycraft/treedata.py parse()
+- [x] DATA-TREE-FIX (data) Fix server/al/theorycraft/treedata.py parse()
   per research 0014: (1) node ascendancy comes from `ascendancyId` (string
   like Warrior3), not `ascendancyName`; map id -> name via
   classes[].ascendancies[].id / name and keep ascendancy = the name (None
@@ -240,6 +240,13 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   to the real shapes (synthetic values only); (5) check PoB2 spec node ids
   against skill ids when PoB2 data is read. ACCEPT: tests cover list
   classStartIndex and ascendancyId mapping. ZERO-CLICK: code row, build lane.
+  DONE 2026-11-17: ascendancyId -> name (id fallback, legacy
+  ascendancyName kept), classStartIndex int or list (legacy classesStart
+  kept), display_stat strips [Key|Shown] in Node.to_dict (raw stats kept),
+  fixture and tests on the real shapes, UNVERIFIED wording removed. (5):
+  PoB2 spec node ids (model.py tree nodes -> TreeData.resolve) are looked
+  up as export skill ids WITHOUT a check that they match; still open until
+  PoB2 data is read.
 - [x] UA-CONTACT (data) GGG's API and poe.ninja ask for a contact in the
   User-Agent (DATA-LICENSE-VERIFY, decision 0009 / research 0011). Add an
   optional contact value read only from gitignored config/local.json (never
