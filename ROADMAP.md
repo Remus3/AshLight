@@ -94,7 +94,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
 
 ## Lane: review
 
-- [ ] UX-REVIEW (review) Glanceability review of dashboard and overlay
+- [x] UX-REVIEW (review) Glanceability review of dashboard and overlay -- done 2026-11-17 (loop; refute 0/3 PASS)
   (contrast, type scale, motion, phone width) against research 0008.
   ACCEPT: findings fixed or filed.
 - [x] RES-POLICY (review) Re-read GGG's developer docs and ToU each patch

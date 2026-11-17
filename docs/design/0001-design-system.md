@@ -189,7 +189,15 @@ text / text-muted: window opacity 1.0
 gives 12.50 / 5.89, 0.9 gives 9.34 / 4.80, 0.85 gives 7.94 / 4.29, 0.7
 gives 4.99 / 3.05, 0.5 gives 2.83 / 2.01. Rule: the effective overlay
 opacity floor is the value that keeps `text-muted` at 4.5:1 over white,
-0.87 with the 0.92 plate (measured 0.867); see audit 0002 (the current slider allows 0.3).
+0.87 with the 0.92 plate (measured 0.867); the slider floor is 0.9
+(`layout.js` LIMITS.opacity, DS-OPACITY).
+At the 0.9 default and floor (`layout.js` LIMITS) status-warn reads 4.96
+and status-bad 3.92, so status-bad is never an overlay text colour;
+`tests/test_ux_review.py` checks every overlay text colour at the floor
+(audit 0004 U1). High-contrast mode (`prefers-contrast: more`) lifts muted
+text to the text colour on both surfaces and drops the plate's own alpha
+(the window opacity still applies); the overlay card's neutral edge keeps
+its `--al-edge` colour (U3).
 
 ### 5.3 Colour-blind safety
 
@@ -408,7 +416,9 @@ Generation rules:
   or the price-only card when no build is loaded).
 - Plate: `--al-plate` (92 percent) with a 1px kit-border edge and a
   `0 1px 1px #000` text shadow (source 4: outlines and shadows separate
-  text from busy scenes).
+  text from busy scenes). In high-contrast mode (`prefers-contrast:
+  more`) the plate has no alpha of its own; the window opacity still
+  applies (audit 0004 U3).
 - Opacity: the effective opacity must keep every overlay text pair >= 4.5:1
   over a white scene (5.2). Decorative transparency comes from the plate,
   not from fading the text.
