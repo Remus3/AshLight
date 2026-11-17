@@ -20,6 +20,10 @@ LOG_REL = Path("steamapps") / "common" / GAME_DIR / "logs" / "Client.txt"
 DEFAULT_POLL_S = 0.25
 MAX_READ = 4 * 1024 * 1024  # bytes per poll; a large backlog drains over polls
 _BOM = b"\xef\xbb\xbf"
+# TEST-E2E: the longest unterminated line held back. Real Client.txt lines are
+# well under 2 KB; a longer run with no newline (NUL padding after a crash,
+# garbage) is dropped up to its next newline instead of growing without bound.
+MAX_PARTIAL = 64 * 1024
 
 
 # ---------------------------------------------------------------- discovery
@@ -174,6 +178,8 @@ class Tailer:
         self._ident = None
         self._offset = 0
         self._partial = b""
+        self._skipping = False  # inside an oversized line, until its newline
+        self.dropped_lines = 0
         self._opened_once = False
         self._missing = False
         self._stop = threading.Event()
@@ -220,6 +226,7 @@ class Tailer:
         self._ident = _identity(st)
         self._offset = st.st_size if at_end else 0
         self._partial = b""
+        self._skipping = False
         resumed = self._opened_once
         self._opened_once = True
         self.on_status({"type": "tailer_started", "path": str(self.path),
@@ -252,6 +259,7 @@ class Tailer:
             self._reset("truncated")
             self._offset = 0
             self._partial = b""
+            self._skipping = False
         self._missing = False
         if st.st_size <= self._offset:
             return 0
@@ -273,6 +281,16 @@ class Tailer:
         buf = self._partial + data
         parts = buf.split(b"\n")
         self._partial = parts.pop()  # the unterminated tail waits for its "\n"
+        if self._skipping:
+            if parts:
+                parts.pop(0)  # the rest of the oversized line
+                self._skipping = False
+            else:
+                self._partial = b""
+        if len(self._partial) > MAX_PARTIAL:
+            self._partial = b""
+            self._skipping = True
+            self.dropped_lines += 1
         n = 0
         for raw in parts:
             if raw.endswith(b"\r"):

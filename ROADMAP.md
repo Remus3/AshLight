@@ -276,6 +276,60 @@ design docs in docs/design/, both made by a separate agent.
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
+## Testing and hardening (AREA-TEST, session 4)
+
+- [x] TEST-FLAKE (build) A live lane / loop tick writing
+  ops/loop/control/loop_items/*.json mid-suite tripped fleet_test_guard with
+  a false error at a random teardown. ACCEPT: root cause named; the tick's
+  own state files ignored via the kit's extra_ignore (no kit edit), stop
+  sentinels still watched; regression test. DONE 2026-11-17: the kit IGNORE
+  list has no AL loop-state paths; tests/conftest.py LOOP_TICK_STATE passes
+  loop_items/*, loop_inbox_watch, loop_orders, backoff, gate_verdicts,
+  push_worker, push_last, ledger_rotate as extra_ignore;
+  tests/test_guard_loop_state.py pins it to tools/loop_base.py. ZERO-CLICK:
+  test-only, no user step.
+- [x] TEST-E2E (build) Synthetic end-to-end harness: replay a generated
+  Client.txt session (zones, level-ups, deaths, whispers, trades, rotation /
+  truncation, partial lines, non-ASCII names, a file near the 32 MB resume
+  cap) into a running core and assert snapshot / SSE output; fix what it
+  breaks. ACCEPT: stdlib harness test green, defects fixed with tests.
+  DONE 2026-11-17: tools/synth_client.py (generator + CLI) and
+  tests/test_e2e_replay.py (7 tests: HTTP consent, SSE events, odd-chunk
+  UTF-8 splits, BOM-only log, truncate / replace / delete-recreate, partial
+  line, 34 MB file resume). Defects fixed: (1) an unterminated line grew the
+  tailer buffer without bound (NUL padding after a crash) - capped at
+  logfile.MAX_PARTIAL, dropped to its next newline; (2) a consented core
+  that found no Client.txt at start never tailed until a re-consent, and a
+  discovered log whose Steam library moved was never followed -
+  Core.ensure_tailing() from the core loop, every 5 s. ZERO-CLICK: runs
+  inside pytest; the fixes need no user step.
+- [x] TEST-HTTP (build) HTTP / SSE surface robustness: token, Host / Origin,
+  oversized and malformed requests, many and slow SSE clients, core restart
+  under the keepalive supervisor. ACCEPT: tests green, defects fixed.
+  DONE 2026-11-17: tests/test_http_robust.py (22 tests). Defects fixed in
+  server/al/http.py: (1) no socket timeout - an idle client, a body shorter
+  than its Content-Length or a stalled SSE reader pinned a thread forever
+  (Handler.timeout = REQUEST_TIMEOUT_S 10 s); (2) a garbage request line or
+  a 64 KB+ URI crashed log_message (no self.path yet) so the client got no
+  400 / 414; (3) deeply nested JSON raised RecursionError and the client got
+  no reply (now 400); (4) unbounded SSE streams - capped at MAX_SSE_CLIENTS
+  16, a refused stream gets a closed 200 with retry 30 s (an EventSource
+  gives up for good on 503) ; handler errors go to the core log. Core
+  restart under the supervisor stays covered by tests/test_keepalive.py
+  end-to-end. ZERO-CLICK: runs inside pytest, no user step.
+- [x] TEST-OVL (build) Overlay smoke and budgets: tests/test_budgets.py and
+  the overlay smoke test assert something real and pass. ACCEPT: each
+  budget test fails when its budget is broken. DONE 2026-11-17: the
+  "overlay smoke test" CLAUDE.md names did not exist as a test (only the
+  manual AL_OVERLAY_SMOKE_S quit timer). tests/test_overlay_smoke.py: static
+  checks of the window flags, no input / no timers / no animation, always
+  on; a live run (opt-in AL_OVERLAY_SMOKE=1, isolated profile) asserting
+  summed working set < 250 MB, idle CPU < 1 percent, rc 0 - measured
+  2026-11-17: 2 processes, 142.6 MB, 0.000 percent. test_budgets.py adds the
+  whole-core idle budget (tailer + HTTP + 2 SSE streams < 1 percent; the old
+  test covered only the tailer at 2 percent). ZERO-CLICK: static part runs
+  in every suite; the live part is one env var.
+
 ## Ops
 
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
