@@ -19,6 +19,8 @@ import re
 import threading
 from pathlib import Path
 
+from . import item as item_mod
+
 log = logging.getLogger("al.theorycraft")
 
 VERSION = 1
@@ -73,6 +75,7 @@ DEFAULT_SIDEGRADE = {"abs": 2.0, "pct": 5.0}
 
 _NUM_RE = re.compile(r"([+-]?)(\d+(?:\.\d+)?)")
 _NEGATE = (("reduced", "increased"), ("less", "more"))
+_GOVERN_RE = re.compile(r"\b(increased|reduced|more|less)\b", re.I)
 
 
 class WeightsError(ValueError):
@@ -96,6 +99,7 @@ def stat_key(text):
     the first number is the value."""
     if not isinstance(text, str):
         return None, None
+    text = item_mod.strip_rolls(text)
     values = []
 
     def repl(m):
@@ -109,12 +113,13 @@ def stat_key(text):
         return m.group(1) + "#"
 
     key = re.sub(r"\s+", " ", _NUM_RE.sub(repl, text)).strip()
-    sign = 1
+    # the sign follows the word that governs the first number only
+    # ("10% increased A and 5% reduced B" stays positive); every negative
+    # word is still rewritten so the key matches its positive twin
+    first = _GOVERN_RE.search(key)
+    sign = -1 if first and first.group(1).lower() in ("reduced", "less") else 1
     for word, repl in _NEGATE:
-        pattern = re.compile(r"\b" + word + r"\b", re.I)
-        if pattern.search(key):
-            key = pattern.sub(repl, key)
-            sign = -sign
+        key = re.sub(r"\b" + word + r"\b", repl, key, flags=re.I)
     if not values:
         return key, None
     if len(values) == 2 and key.lower().startswith("adds # to #"):
