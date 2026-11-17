@@ -114,11 +114,11 @@ from loop_prompts import (  # noqa: E402
     GATES, NO_ROADMAP, resolve_prompt,  # noqa: F401
 )
 from loop_roadmap import (  # noqa: E402
-    commit_subject, dependency_cycles, dispatchable, handoff_items, is_duplicate,
+    commit_body, commit_subject, dependency_cycles, dispatchable, handoff_items, is_duplicate,
     merge_subject,  # noqa: F401
     plan_depends, plan_doc, plan_titles, resolve_item, roadmap_flip_time, roadmap_rows,
     RUN_FIELDS, _norm_words, base_kind, flip_roadmap,  # noqa: F401
-    resolve_roadmap, title_tokens,  # noqa: F401
+    resolve_roadmap, result_line, title_tokens,  # noqa: F401
     dive_backoff, dive_history,
 )
 from loop_inbox import (  # noqa: E402
@@ -441,11 +441,22 @@ class Deps:
         self.record = eta.record
         self.clock = time.time
         self.rotate = ledger_rotate.rotate_daily  # plan 138
+        self.drift = _drift_check  # TC-DRIFT: daily PoB-PoE2 release check
         # plan 093: the machine fleet roster ({"repos": [{code, root, inbox?}]}),
         # the same FLEET_ROSTER the kit statusline reads; tests pass None.
         self.roster_path = os.environ.get("FLEET_ROSTER") or None
         for key, val in over.items():
             setattr(self, key, val)
+
+
+def _drift_check(root, now):
+    """TC-DRIFT: the daily PoB-PoE2 release check (tools/tc_drift.py); one
+    summary line when a check ran, None otherwise. Never fails the tick."""
+    try:
+        import tc_drift
+        return tc_drift.loop_check(root, now)
+    except Exception as exc:  # noqa: BLE001 - a drift fault must not stop the tick
+        return f"tc drift: {type(exc).__name__}: {exc}"
 
 
 def _load_watch():
@@ -982,7 +993,7 @@ class Tick(InboxMixin, MergeMixin):
                 rec, wip=f"no verifier PASS after {MAX_ROUNDS}/{MAX_ROUNDS}, adjudicate")
         else:
             head = commit_subject(rec)
-        msg = (f"{head}\n\n{ascii_text(rec['label'], 300)}\n\n"
+        msg = (f"{head}{commit_body(rec)}"
                f"refute-rounds: {rounds}/{MAX_ROUNDS}\n"
                f"verifier: {rec.get('verdict', 'none')}\nloop item: {rec['id']}\n")
         rec["gates_ok"] = gates_ok  # a refused commit is salvaged with the same verdict
@@ -1456,6 +1467,9 @@ class Tick(InboxMixin, MergeMixin):
             res = self.d.rotate(self.root, self.d.clock())
             if res is not None:
                 self.step(ledger_rotate.summary(res))
+            line = self.d.drift(self.root, self.d.clock())  # TC-DRIFT
+            if line:
+                self.step(line)
         self.stalls()
         if not self.blocked():
             self.inbox()
@@ -1621,7 +1635,8 @@ def lane_worker(iid, deps=None, run_lane=None):
     if line.get("rc") != 0 and is_limit(text):
         backoff_hit(d.root, d.clock(), text)
     rec.update(state="ran", worktree=line.get("worktree"), rc=line.get("rc"),
-               error=line.get("error"), finished=iso(d.clock()))
+               error=line.get("error"), finished=iso(d.clock()),
+               result=result_line(line.get("result")))
     items.put(rec)
     return 0
 

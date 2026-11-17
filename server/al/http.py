@@ -116,6 +116,8 @@ class ALServer(ThreadingHTTPServer):
 class Handler(BaseHTTPRequestHandler):
     server_version = f"{NAME}/{VERSION}"
     sys_version = ""
+    # AUDIT-HTTP-HARDEN S2: a socket timeout, so an idle or stalled local
+    # connection frees its thread.
     timeout = REQUEST_TIMEOUT_S  # TEST-HTTP (StreamRequestHandler applies it)
 
     # -- logging: never log the query string (it may carry the token).
@@ -179,12 +181,15 @@ class Handler(BaseHTTPRequestHandler):
         scheme, _, rest = value.partition(" ")
         return rest.strip() if scheme.lower() == "bearer" else ""
 
-    def _token_ok(self, query):
+    def _token_ok(self, query, path=None):
         # header first (X-AL-Token, then Authorization: Bearer), then ?token=
-        # for EventSource, which cannot set headers (API-TOKEN-HDR, decision
-        # 0002 "API token"). All three compare in constant time.
-        given = (self.headers.get(TOKEN_HEADER) or self._bearer()
-                 or (query.get("token") or [""])[0])
+        # ONLY on /events, for EventSource, which cannot set headers
+        # (API-TOKEN-HDR, decision 0002 "API token"; AUDIT-HTTP-HARDEN S3: a
+        # token in an /api URL would reach history and logs). All compare in
+        # constant time.
+        given = self.headers.get(TOKEN_HEADER) or self._bearer()
+        if not given and path == "/events":
+            given = (query.get("token") or [""])[0]
         return bool(given) and hmac.compare_digest(given.encode(), self.server.token.encode())
 
     def _guard(self, path, query, needs_token):
@@ -196,7 +201,7 @@ class Handler(BaseHTTPRequestHandler):
         if not ok:
             self._send(403, "bad origin\n")
             return None
-        if needs_token and not self._token_ok(query):
+        if needs_token and not self._token_ok(query, path):
             self._json(401, {"error": "token required"}, extra)
             return None
         return extra
@@ -252,6 +257,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/web-data":
             return self._json(200, self._web_data_doc(), extra)
         if path == "/events":
+            if self.command == "HEAD":
+                # AUDIT-HTTP-HARDEN S1: HEAD never opens the endless stream.
+                return self._send(405, "use GET\n", extra={**extra, "Allow": "GET"})
             return self._sse(extra)
         return self._send(404, "not found\n")
 
@@ -522,7 +530,10 @@ class Handler(BaseHTTPRequestHandler):
         path = body.get("path")
         if path is not None and not isinstance(path, str):
             return self._json(400, {"error": "path must be a string"})
-        rec = self.server.core.record_consent(body["consent"], path or None)
+        try:
+            rec = self.server.core.record_consent(body["consent"], path or None)
+        except ValueError as e:
+            return self._json(400, {"error": str(e)})
         return self._json(200, {"consent": rec, "state": self.server.core.state.snapshot()})
 
     def _static(self, rel):

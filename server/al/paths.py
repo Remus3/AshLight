@@ -20,7 +20,9 @@ from pathlib import Path
 CODE = "AL"
 SIDECAR_ENV = "AL_SIDECAR_ROOT"
 RUNTIME_ENV = "AL_RUNTIME_DIR"  # tests only: a tmp runtime dir for a test core
-SIDECAR_SUBDIRS = ("Temp", "Build", "Logs", "Cache")
+# Every sidecar folder CLAUDE.md "Sidecar" lists except Worktree (made by the
+# worktree hook, see worktree_dir) - AUDIT-HYGIENE H4.
+SIDECAR_SUBDIRS = ("Scratch", "Temp", "Build", "Logs", "Cache", "ClaudeHistory")
 
 _KIT_DEFAULT = None
 
@@ -95,9 +97,18 @@ def weights_file():
     return runtime_dir() / "theorycraft" / "weights.json"
 
 
-def tc_pins_file():
+TC_PINS_ENV = "AL_TC_PINS_FILE"  # TC-DRIFT trial only: a candidate pin file
+
+
+def tc_pins_file(environ=None):
     """TC-PIN: the TRACKED hash pins of the optional calc component
-    (decision 0004 item 3); read by tools/tc_pin.py, never written at runtime."""
+    (decision 0004 item 3); read by tools/tc_pin.py, never written at runtime.
+    AL_TC_PINS_FILE points the bridge tests at a candidate pin file in the
+    sidecar during an unattended TC-DRIFT trial (tools/tc_drift.py)."""
+    env = os.environ if environ is None else environ
+    value = (env.get(TC_PINS_ENV) or "").strip().strip('"')
+    if value:
+        return Path(value)
     return repo_root() / "config" / "tc_pins.json"
 
 
@@ -130,6 +141,9 @@ def all_runtime_paths(environ=None):
     out["luajit_build"] = out["build"] / "luajit"  # LuaJIT source tree + luajit.exe
     out["tc_stamp"] = out["build"] / "tc-pins-stamp.json"
     out["tc_bridge_log"] = out["logs"] / "tc-bridge.log"  # TC-BRIDGE stderr
+    out["worktree"] = worktree_dir(environ)  # AUDIT-HYGIENE H4
+    # the overlay's Electron profile (app/main.js, AL_SIDECAR_ROOT set by run.ps1)
+    out["overlay_profile"] = out["cache"] / "overlay-profile"
     return out
 
 

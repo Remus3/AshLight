@@ -60,8 +60,8 @@
     </div>
     <div class="stat">
       <h2 class="label">Deaths this session</h2>
-      <p id="deaths" class="value mono">0</p>
-      <p id="levelups" class="sub">0 level-ups</p>
+      <p id="deaths" class="value mono" aria-label="Not counted yet">-</p>
+      <p id="levelups" class="sub">Counts once reading starts</p>
     </div>
     <div class="stat">
       <h2 class="label">Session</h2>
@@ -247,7 +247,7 @@
   </section>
 
   <section class="card layout" aria-labelledby="layout-title">
-    <h2 id="layout-title">Overlay position</h2>
+    <h2 id="layout-title">Overlay position and size</h2>
     <form id="layout-form" class="layout-form">
       <label>Monitor
         <select id="layout-display" name="display"><option value="primary">Primary</option></select>
@@ -261,7 +261,7 @@
       <label>Opacity <span id="layout-opacity-out" class="mono"></span>
         <input id="layout-opacity" name="opacity" type="range" min="0.9" max="1" step="0.05">
       </label>
-      <label>Edge gap (px)
+      <label>Gap from the screen edge (px)
         <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
       </label>
     </form>
@@ -271,7 +271,7 @@
   </section>
 
   <section class="card gfx" aria-labelledby="gfx-title">
-    <h2 id="gfx-title">Graphics settings for this PC</h2>
+    <h2 id="gfx-title">Graphics settings for this computer</h2>
     <details id="gfx">
       <summary>Show suggested settings</summary>
       <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only

@@ -113,6 +113,15 @@ def test_buffers_bounded():
     assert len(s["recent_whispers"]) <= 10 and len(s["recent_events"]) <= 30
 
 
+def test_zone_change_is_one_recent_row():
+    """UX-COPY: the server connect line before each zone is not listed."""
+    st = SessionState(clock=lambda: 1.0)
+    st.apply({"type": "session_connect", "host": "192.0.2.1", "port": 6112})
+    st.apply({"type": "scene_changed", "scene": "Clearfell", "is_hideout": False})
+    rows = st.snapshot()["recent_events"]
+    assert [r["text"] for r in rows] == ["Entered Clearfell"]
+
+
 def test_core_consent_gate(tmp_path):
     log = tmp_path / "Client.txt"
     log.write_bytes(b"")

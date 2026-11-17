@@ -14,7 +14,7 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   templates (then replace the HUD-WHISPER fixture whispers with anonymised
   real-shaped ones), party / guild chat, AFK / DND, joined / left, Trade
   accepted, hideout scene names, cruel `C_G<n>_` / interlude `P<n>_` area
-  id prefixes (acts.act_of, decision 0023). ACCEPT: every event type seen live has a
+  id prefixes (acts.act_of, decision 0020). ACCEPT: every event type seen live has a
   fixture and a passing test. Needs the operator to play past the whisper
   level, die once, and receive one trade whisper. BLOCKED: operator act
   (in-game play, hand-off OPERATOR act (b)); the loop skips it until then.
@@ -173,12 +173,14 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   After TC-PIN. ACCEPT: outputs on a fixture build match PoB GUI within 0.1
   percent; tests skip cleanly when the component is absent.
   ZERO-CLICK: the bridge starts on first need and restarts itself on a crash.
+  AUDIT pass 2: ACCEPT not met (live tests skip); see AUDIT-TC-BRIDGE-LIVE.
 - [x] TC-DELTA (build) PoB-backed evaluation: DPS and EHP delta of the -- done 2026-11-17 (loop; refute 0/3 PASS)
   clipboard item vs the equipped one, and per-mod weights from PoB deltas
   (offence and EHP) feeding TC-UPGRADE in place of hand weights. After
   TC-BRIDGE, TC-EVAL. ACCEPT: delta tests on fixtures; falls back to stat
   weights with a visible notice when the component is off.
   ZERO-CLICK: deltas recompute on item or build change, no Calculate button.
+  AUDIT pass 2: not wired (core.tc_calc stays None); see AUDIT-TC-WIRE.
 - [x] TC-DRIFT (review) On each PoB-PoE2 release: run the bridge tests
   against the new tag, then move the pin in one commit, or hold it and
   record why. ACCEPT: pin moved or a dated hold note in decision 0004.
@@ -324,6 +326,9 @@ recorded in research 0018 section 3.
   acceptable) as a decision when TC-BUILDFILE lands, and add a test-backed
   check that no code path writes under the BuildPlanner folder. ACCEPT:
   decision file + test. ZERO-CLICK: review row.
+  PARTIAL 2026-11-17 (AREA-AUDIT b2): the no-write check landed
+  (tests/test_audit_buildfile.py: no source names the BuildPlanner or My
+  Games folder). REMAINS: the decision file when TC-BUILDFILE lands.
 - [x] UTIL-MOVERS (build) Dashboard "price movers" panel from the cached
   poe.ninja overviews (`sparkline.totalChange`), no extra requests. After
   PRICE-STACKABLES. ACCEPT: panel test, design-reviewer pass.
@@ -387,6 +392,42 @@ design docs in docs/design/, both made by a separate agent.
   sessionSub() - "Starts when you allow reading Client.txt" until the
   opt-in; app/test/dashboard.test.js. ZERO-CLICK: the line clears itself
   once reading starts.
+- [x] UX-FIRSTRUN (review) Walk the first-run path cold (no consent, no
+  config, web data off, no Path of Building calc) on the dashboard and the
+  overlay. ACCEPT: every card's empty / explain state says what appears and
+  what the player does, the opt-in indicator is visible, the path to a live
+  feed is one click; friction found is fixed and test-guarded. ZERO-CLICK:
+  after the one ToS-required opt-in click nothing else is needed; empty
+  states clear themselves when data arrives.
+  DONE 2026-11-17 (area-ux, glance review 0004 U10): overlay says
+  `not reading - see dashboard`; deaths tile `-` before the opt-in; the
+  build-step note only inside an act; consent card shows the real path
+  spelling. Node and pytest guards.
+- [x] UX-DPI (review) Overlay and dashboard at 100 / 125 / 150 / 200
+  percent scaling and 1080p / 1440p / 4K (emulated device scale factor);
+  overlay card positions against the PoE2 HUD regions; text legibility at
+  glance distance. ACCEPT: screenshots per scale, defects fixed and
+  test-guarded. ZERO-CLICK: the overlay follows the OS scale by itself; no
+  per-monitor setting to touch.
+  DONE 2026-11-17 (area-ux, 0004 U11): no clipping or scroll at any
+  scale; layout.js autoScale grows the HUD on monitors taller than 1440
+  DIPs (4K at 100 / 125 percent); top-right default kept by adjudicator
+  ruling, design 0001 section 10 corrected (it covers the corner map).
+- [x] UX-COPY (review) Sweep every user-facing string (web/, app/overlay/,
+  event text in server/al/state.py) against design 0001 sections 8-9.
+  ACCEPT: inconsistent or unclear strings fixed with exact-output tests.
+  ZERO-CLICK: copy only, no user step.
+  DONE 2026-11-17 (area-ux, 0004 U12): server connect line no longer
+  listed in Recent; overlay `waiting for log` for a quiet file;
+  three dashboard labels reworded.
+- [x] UX-PERF (review) Dashboard paint / JS cost with a busy synthetic
+  session (hundreds of events): long tasks, DOM growth, SSE handler cost.
+  ACCEPT: measured numbers recorded, regressions fixed, overlay budgets
+  (tests/test_budgets.py) green. ZERO-CLICK: no user step; the dashboard
+  stays light by itself in a long session.
+  DONE 2026-11-17 (area-ux, 0004 U13): 600 events in 13 s, handler
+  max 1.1 ms, 0 long tasks, DOM and heap flat after GC; recent list
+  skips unchanged rebuilds.
 
 Rows filed by the first audit (docs/design/0002-first-audit.md; S1 = worst).
 Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
@@ -542,56 +583,137 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 Low findings filed by AREA-AUDIT; the medium ones were fixed in the audit
 merge. Each row names the finding ids it closes.
 
-- [ ] AUDIT-TC-CODE-REAL (review) Re-open the real-code check (finding C1):
+- [x] AUDIT-TC-CODE-REAL (review) Re-open the real-code check (finding C1):
   TC-CODE-REAL was flipped done with only a skip-when-absent harness
   (tests/test_tc_code_real.py skips; tests/fixtures/pob2_real holds a README
   only). ACCEPT: one real PoB2 export decodes, parses and round-trips
   through the harness (no skip), owner consent recorded if kept as a
-  fixture. BLOCKED: operator act (supply one real PoB2 code).
+  fixture.
   ZERO-CLICK: the harness runs by itself once the file exists.
-- [ ] AUDIT-HTTP-HARDEN (build) Findings S1-S4: HEAD /events streams a body
-  forever (http.py do_HEAD -> do_GET -> _sse); Handler has no socket
-  timeout (an idle connection holds a thread); ?token= is accepted on every
-  /api route (restrict it to /events, the only EventSource route);
-  POST /api/consent "path" accepts any file or UNC path (refuse UNC and
-  names other than Client.txt / a folder holding it). ACCEPT: one test per
-  item. ZERO-CLICK: code row.
-- [ ] AUDIT-EXE-PATH (build) Finding S5: gfx.py runs bare "powershell.exe"
+  DONE 2026-11-17 (AREA-AUDIT b2): two public PoB2 exports from pobb.in
+  (a level 68 Ranger Pathfinder and a level 90 Mercenary Gemling Legionnaire,
+  targetVersion 0_1, fetched once by hand into the gitignored sidecar
+  Scratch, never tracked; owner consent not asked, so not a fixture) ran
+  through tests/test_tc_code_real.py via AL_TC_REAL_CODE: zlib framing,
+  root PathOfBuilding2, parse, stats and XML byte-exact round trip PASS
+  (11 passed each); the code string differs from Python zlib (the accepted
+  xfail of decision 0021 R2). Tree URLs: www.pathofexile.com.
+- [x] AUDIT-HTTP-HARDEN (build) Findings S1-S4: HEAD /events streams a body
+  forever (http.py do_HEAD -> do_GET -> _sse); Handler has no socket timeout
+  (an idle connection holds a thread); ?token= is accepted on every /api
+  route (restrict it to /events, the only EventSource route); POST
+  /api/consent "path" accepts any file or UNC path (refuse UNC and names
+  other than Client.txt / a folder holding it). ACCEPT: one test per item.
+  ZERO-CLICK: code row. DONE 2026-11-17 (AREA-AUDIT b2): HEAD /events is a
+  405 (Allow: GET); Handler.timeout (10 s, REQUEST_TIMEOUT_S after
+  the TEST-HTTP merge; audit pass 2); ?token= only on /events; consent
+  path checked lexically (logfile.consent_path_ok: local absolute, no UNC /
+  device / stream / '..', Client.txt or a dot-free folder) before any file
+  access. tests/test_audit_http_harden.py.
+- [x] AUDIT-EXE-PATH (build) Finding S5: gfx.py runs bare "powershell.exe"
   and tc_pin.py bare "cmd.exe" / "mingw32-make" (Windows CreateProcess also
   searches the current directory); use the System32 absolute path for the
-  Windows tools, and TC-BRIDGE must hash-check luajit.exe before every
-  exec (tc_pin.ensure_luajit trusts any existing luajit.exe). ACCEPT:
-  tests on the argv. ZERO-CLICK: code row.
-- [ ] AUDIT-ELECTRON (build) Findings S6-S7: devTools follow
-  !app.isPackaged, and the overlay is never packaged, so they are always
-  on (gate on an AL_DEV env instead); add
-  session.setPermissionCheckHandler(() => false) next to the request
-  handler. ACCEPT: a main.js source test for both. ZERO-CLICK: code row.
-- [ ] AUDIT-SNAPSHOT-OPTIN (review) Finding T1: scripts/build.ps1 runs the
+  Windows tools, and TC-BRIDGE must hash-check luajit.exe before every exec
+  (tc_pin.ensure_luajit trusts any existing luajit.exe). ACCEPT: tests on
+  the argv. ZERO-CLICK: code row. DONE 2026-11-17 (AREA-AUDIT b2):
+  server/al/exepin.py - System32 absolute paths (gfx, tc_pin cmd.exe,
+  lane_samples recycle), PATH tools from absolute entries only (which_abs),
+  luajit.exe SHA-256 recorded at build and checked by tc_pin no-op,
+  bridge.status and before every bridge exec. tests/test_audit_exe_path.py.
+- [x] AUDIT-ELECTRON (build) Findings S6-S7: devTools follow
+  !app.isPackaged, and the overlay is never packaged, so they are always on
+  (gate on an AL_DEV env instead); add session.setPermissionCheckHandler(()
+  => false) next to the request handler. ACCEPT: a main.js source test for
+  both. ZERO-CLICK: code row. DONE 2026-11-17 (AREA-AUDIT b2): devTools only
+  with AL_DEV=1; setPermissionCheckHandler(() => false).
+  app/test/audit_electron.test.js.
+- [x] AUDIT-SNAPSHOT-OPTIN (review) Finding T1: scripts/build.ps1 runs the
   game-data snapshot by default (opt-out, decision 0009) while CLAUDE.md
   Settled says nothing hits the network while web_data is off (decision
   0013). Adjudicate one rule (build step honours web_data, or 0013 states
   the build-time exception) and record it. ACCEPT: decision amended and
-  build.ps1 / README match. ZERO-CLICK: ruling row.
-- [ ] AUDIT-TREE-URL (build) Finding S8: web/tc.js safeUrl lets a pasted
-  build's tree URL be any https host as an "Open the tree" link. Allow
-  only known tree hosts (pathofexile.com, poe2db.tw, poeplanner-style
-  hosts after a check) or show the host name in the link text. ACCEPT:
-  app test with an off-list host. ZERO-CLICK: code row.
-- [ ] AUDIT-HYGIENE (build) Findings H2-H6: tests/test_ascii_lf.py checks
-  a suffix list (skips .log, .vbs, .sh, .xml, .svg, LICENSE) - check every
-  non-binary tracked file; server/al/paths.py SIDECAR_SUBDIRS lacks
-  Scratch and ClaudeHistory and all_runtime_paths() omits worktree_dir()
-  and the overlay profile; tests/test_sidecar_paths.py SCANNED skips
-  tools/; AL-NEXT-SESSION.txt spells the sidecar with a drive letter (use
+  build.ps1 / README match. ZERO-CLICK: ruling row. DONE 2026-11-17
+  (AREA-AUDIT b2): adjudicator ruled option (a) - the build-time snapshot
+  follows web_data (default off); -Snapshot / AL_SNAPSHOT=1 force it,
+  -NoSnapshot / AL_NO_SNAPSHOT=1 win; snapshot.main checks it too.
+  Amendments in decisions 0009 and 0013. tests/test_audit_snapshot_optin.py.
+- [x] AUDIT-TREE-URL (build) Finding S8: web/tc.js safeUrl lets a pasted
+  build's tree URL be any https host as an "Open the tree" link. Allow only
+  known tree hosts (pathofexile.com, poe2db.tw, poeplanner-style hosts after
+  a check) or show the host name in the link text. ACCEPT: app test with an
+  off-list host. ZERO-CLICK: code row. DONE 2026-11-17 (AREA-AUDIT b2):
+  web/tc.js safeTreeUrl allows pathofexile.com, pathofexile2.com, poe2db.tw,
+  maxroll.gg (and subdomains), https, no port / user info; two real PoB2
+  exports use www.pathofexile.com. app/test/audit_tree_url.test.js.
+- [x] AUDIT-HYGIENE (build) Findings H2-H6: tests/test_ascii_lf.py checks a
+  suffix list (skips .log, .vbs, .sh, .xml, .svg, LICENSE) - check every
+  non-binary tracked file; server/al/paths.py SIDECAR_SUBDIRS lacks Scratch
+  and ClaudeHistory and all_runtime_paths() omits worktree_dir() and the
+  overlay profile; tests/test_sidecar_paths.py SCANNED skips tools/;
+  AL-NEXT-SESSION.txt spells the sidecar with a drive letter (use
   <sidecar>); decision 0002 should name pytest as the one allowed test
-  dependency. ACCEPT: tests for the first three. ZERO-CLICK: code row.
-- [ ] AUDIT-LOOP-COMMIT-MSG (build) Finding C2: loop merge commits carry the
+  dependency. ACCEPT: tests for the first three. ZERO-CLICK: code row. DONE
+  2026-11-17 (AREA-AUDIT b2): ASCII / LF check reads every non-binary file;
+  SIDECAR_SUBDIRS adds Scratch, ClaudeHistory; all_runtime_paths adds
+  worktree and overlay_profile; drive scan covers tools/; hand-off spells
+  <sidecar>; decision 0002 names pytest. tests/test_audit_hygiene.py.
+- [x] AUDIT-LOOP-COMMIT-MSG (build) Finding C2: loop merge commits carry the
   row text cut mid-sentence plus refute / verifier lines, so an ACCEPT that
-  says "root cause named in the commit" (FLAKY-EVAL-API, 5e7b30e) is not
-  met by the commit. Carry the lane's result line (root cause / what was
-  done) in the commit body. ACCEPT: tools/loop_merge.py test on the
-  message. ZERO-CLICK: code row.
+  says "root cause named in the commit" (FLAKY-EVAL-API, 5e7b30e) is not met
+  by the commit. Carry the lane's result line (root cause / what was done)
+  in the commit body. ACCEPT: tools/loop_merge.py test on the message.
+  ZERO-CLICK: code row. DONE 2026-11-17 (AREA-AUDIT b2): the lane's RESULT:
+  line (else its last paragraph) is stored by lane_worker and written as a
+  `result:` paragraph in the lane commit and the main merge commit; the
+  build prompt asks for it. tests/test_audit_loop_commit_msg.py.
+
+- [ ] AUDIT-TC-BRIDGE-LIVE (review) Pass 2 finding P2-C1 (medium, claim
+  re-opened): TC-BRIDGE was flipped done but its ACCEPT ("outputs on a
+  fixture build match PoB GUI within 0.1 percent") never ran -
+  tests/test_tc_bridge.py live tests skip (no luajit.exe: no compiler on
+  this machine; no gui_expected.json). Only the fake-bridge protocol tests
+  ran. ACCEPT: the live 0.1 percent test passes once (no skip). BLOCKED:
+  operator act (a Developer PowerShell / MSVC or MinGW for setup.ps1
+  -TcCalc, and PoB GUI sidebar values for one build).
+  ZERO-CLICK: the live tests run by themselves once both exist.
+- [ ] AUDIT-TC-WIRE (build) Pass 2 finding P2-C2 (medium): TC-DELTA is not
+  wired - core.tc_calc is always None (core.py "TC-BRIDGE sets it", but no
+  code does) and no adapter maps Bridge (load_build / set_item / outputs)
+  to delta's calc(build, swaps) -> {"dps", "ehp"}, so every item check
+  scores with stat weights and says "off". Add the adapter (PoB output
+  names for DPS / EHP, swap then restore the slot), set tc_calc when
+  bridge.available(), and bound one evaluation's total calc time (up to 25
+  calls x 60 s timeout today) off the hotkey path. After AUDIT-TC-BRIDGE-LIVE
+  for the output names. ACCEPT: fake-bridge test of the adapter and the
+  core wiring; card says "pob" with the fake present.
+  ZERO-CLICK: the calc switches on by itself when the component exists.
+- [ ] AUDIT-MAP-SEED (build) Pass 2 findings P2-M1 (medium), P2-M2, P2-M3
+  (low); server/al/runs.py was mid-change in UTIL-MAPS-RESUME, so not fixed
+  in pass 2. M1: MapRuns.on_generated opens a new map on every Map*
+  generation and ignores the seed, so a portal back into the same instance
+  (same area id, same seed) counts a second map and splits its clock (PoE1
+  logs "Generating level" on every instance load; PoE2 to be confirmed);
+  keep the seed on the open map and treat same id + seed as a re-entry.
+  M2: DeathLog.by_zone (Counter) is uncapped while rows cap at 500; derive
+  "most deaths" from the capped rows. M3: after a core restart the deaths
+  tile shows the restored count while the recap says "No deaths this
+  session" (check after UTIL-MAPS-RESUME). ACCEPT: replay test gen(MapX,
+  seed 7), hideout, gen(MapX, seed 7) gives count 1 and one clock; 10k
+  distinct-zone deaths keep by_zone <= MAX_DEATHS.
+  ZERO-CLICK: code row.
+- [ ] AUDIT-BRIDGE-LOW (build) Pass 2 lows P2-B3..B5: exepin's .sha256 sits
+  beside luajit.exe in the user-writable sidecar, so it guards against a
+  stale or foreign exe, not tampering (say so in decision 0022 or keep the
+  record in the repo runtime); Bridge._read calls proc.wait(5) after EOF
+  without catching TimeoutExpired (escapes as a non-BridgeError); the
+  reader thread reads unbounded stdout lines from PoB. ACCEPT: one test
+  each. ZERO-CLICK: code row.
+- [ ] AUDIT-SETTLED-LIST (review) Pass 2 low P2-D2: CLAUDE.md "Settled"
+  has no entries for decisions 0021-0024 (tc-code-real, tc-bridge,
+  act-splits-resume, tc-delta); a lane draft "0022-trade-stat-ids-source"
+  would collide again (tests/test_audit_pass2.py now fails on any duplicate
+  number). ACCEPT: Settled lines with "Reverses if" for each.
+  ZERO-CLICK: doc row.
 
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the

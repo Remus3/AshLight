@@ -60,7 +60,8 @@ def test_bearer_wrong_or_other_scheme_refused(srv):
 
 
 def test_query_token_still_accepted_for_eventsource(srv):
-    assert req(srv, "GET", f"/api/health?token={TOKEN}").status == 200
+    # AUDIT-HTTP-HARDEN S3: ?token= is for /events only, never an /api route
+    assert req(srv, "GET", f"/api/health?token={TOKEN}").status == 401
     s = socket.create_connection(("127.0.0.1", srv.port), timeout=5)
     try:
         s.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{srv.port}"

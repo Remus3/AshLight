@@ -66,7 +66,10 @@
      data is missing on this computer, or the player is not in an act. */
   function zonesEmpty(acts) {
     if (!acts) { return ""; }
-    if (!acts.levels) { return acts.no_levels_text || ""; }
+    // UX-FIRSTRUN: outside a campaign act the missing download does not
+    // matter yet, so the player is not told to run a build step.
+    if (!acts.levels && acts.current) { return acts.no_levels_text || ""; }
+    if (!acts.levels) { return acts.no_zones_text || ""; }
     if (!acts.zones || acts.zones.length === 0) {
       return acts.no_zones_text || "";
     }

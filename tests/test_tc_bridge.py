@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import tc_pin  # noqa: E402
 
+from server.al import exepin  # noqa: E402
 from server.al.theorycraft import bridge  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures" / "tc_bridge"
@@ -184,6 +185,7 @@ def test_present_component_builds_luajit_command(tmp_path):
     comp = bridge.component_paths(environ=env)
     comp["luajit"].parent.mkdir(parents=True)
     comp["luajit"].write_bytes(b"")
+    exepin.record(comp["luajit"])  # AUDIT-EXE-PATH: setup records the hash
     comp["pob_src"].mkdir(parents=True)
     (comp["pob_src"] / "HeadlessWrapper.lua").write_text("", encoding="ascii")
     assert bridge.available(environ=env) is True
@@ -202,6 +204,7 @@ def test_shared_bridge_is_lazy_and_reused(tmp_path, monkeypatch):
     comp = bridge.component_paths(environ=env)
     comp["luajit"].parent.mkdir(parents=True)
     comp["luajit"].write_bytes(b"")
+    exepin.record(comp["luajit"])  # AUDIT-EXE-PATH: setup records the hash
     comp["pob_src"].mkdir(parents=True)
     (comp["pob_src"] / "HeadlessWrapper.lua").write_text("", encoding="ascii")
     first = bridge.shared(environ=env)
@@ -255,6 +258,23 @@ def test_live_minimal_build_returns_numeric_outputs(live_bridge):
     out = live_bridge.outputs()
     assert out and all(isinstance(v, (int, float, bool)) for v in out.values())
     assert out.get("Life", 0) > 0
+
+
+@LIVE
+@pytest.mark.slow
+def test_live_reload_does_not_leak_state(live_bridge):
+    """TC-DRIFT / research 0017: PoB dev touched the headless global cache
+    cleanup; loading build A, then B, then A again must give A's outputs."""
+    a = (FIX / "minimal_build.xml").read_text(encoding="ascii")
+    b = a.replace('level="1"', 'level="90"', 1)
+    assert a != b
+    live_bridge.load_build(a)
+    first = live_bridge.outputs()
+    live_bridge.load_build(b)
+    other = live_bridge.outputs()
+    assert other.get("Life") != first.get("Life")  # B really differs
+    live_bridge.load_build(a)
+    assert live_bridge.outputs() == first
 
 
 @LIVE
