@@ -51,6 +51,8 @@ Web (short keys used in the body):
   (tiers and included signatures only; the page shows no dollar figure,
   the 9.99 USD comes from MS-SS)
   (these three were search summaries in the draft; fetched 2026-11-18)
+- KF: https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid
+  (accessed 2026-11-18, gap fill; FOLDERID_UserProgramFiles)
 
 Local measurements (this machine, 2026-11-17; scratch copies under
 `<sidecar>\Scratch`; the repo and the live client were not touched):
@@ -73,6 +75,10 @@ Local measurements (this machine, 2026-11-17; scratch copies under
   download, 400 MB on disk, plus a 0.5 MB app-only zip that keeps updates
   tiny. Proven feasible here: the unmodified embeddable CPython 3.14.10
   imports all 70 core modules (M2); the payload is 148 files, 1.33 MB (M5).
+  [SUPERSEDED in part by "Fit with 0052 and brief F" points 1, 2 and 6:
+  the runtimes, the app zip and the no-framework call stay; the install is
+  0052's per-user home with version folders, entered by one pasted line,
+  and the full zip is only the offline installer input.]
 - Decision 0041's "no packaged .exe" clause does NOT reverse. No release
   channel exists (0 tags, no remote, M7); a framework costs 49 to 276 npm
   packages against 13 today (M6); without a signing identity its stamped
@@ -84,7 +90,9 @@ Local measurements (this machine, 2026-11-17; scratch copies under
 - Updates: a quiet daily "new version" note from GitHub's documented
   releases endpoint, only while web data is on; one click applies a
   hash-verified app zip with preflight and rollback; never silent by
-  default. Releases: only on a `v*` tag, changelog and checksums
+  default. [SUPERSEDED by Fit point 4: with web data on, staged by itself
+  and switched at the next start after a 24 h hold, one line names it.]
+  Releases: only on a `v*` tag, changelog and checksums
   generated, unsigned at first and said plainly. Order: R1 to R8 below.
 
 ## Current state
@@ -294,6 +302,8 @@ F15 - Update options weighed; the building blocks sit in the wrong place.
   the click is the player's consent to new code on their PC.
 - Automatic when idle: zero acts, but one bad or hijacked release reaches
   every install within a day, unsigned. Opt-in at most, later.
+  [SUPERSEDED by Fit point 4: default on with web data, held 24 h,
+  self-test and rollback.]
 - While web data is off there is no check at all (decision 0013, read
   literally); the release page is the fallback and the README says so.
 
@@ -369,7 +379,9 @@ R3 - Release layout with pinned runtimes and one resolver each.
   `runtime\python` and `runtime\electron`; one PowerShell helper and
   launcher.js prefer the bundled `python(w).exe`, `paths.electron_exe()`
   the bundled electron.exe; the `._pth` gains one line for the app root;
-  state stays inside the folder (portable).
+  state stays inside the folder (portable). [SUPERSEDED by Fit points 1
+  and 2: runtimes in `<home>\runtime\<name>-<ver>\`, state in
+  `<home>\data\`.]
 - Impact: H. Effort: M. Risk: M - six lookups and three paths move (F6);
   covered by the run / stop / procs tests plus one release-layout test.
   Keep passing the app folder to electron.exe (never `resources\app`), so
@@ -415,7 +427,10 @@ R5 - First run and uninstall for the release layout.
   stops the processes, removes the autostart task and the two shortcuts
   when they point into this folder, and only with `-PurgeData` sends
   config and state to the Recycle Bin and deletes caches and logs; it
-  prints what is left (the folder itself).
+  prints what is left (the folder itself). [SUPERSEDED by Fit points 5
+  and 6: no `AshLight.cmd`; install.ps1 installs; uninstall.ps1 at the home
+  root, also behind Apps & features, takes `-Purge` and keeps only
+  `data\`.]
 - Impact: H. Effort: M. Risk: M - a delete script; every path comes from
   the resolver, anything outside the install and its sidecar is refused.
 - ToS check: never touches a game folder, Client.txt or files the player
@@ -430,6 +445,8 @@ R5 - First run and uninstall for the release layout.
   at another install is left alone.
 - ZERO-CLICK: install is extract plus one double-click; uninstall is one
   command; data removal needs the switch (consent, not a floor rule).
+  [SUPERSEDED by Fit point 6: one pasted line; uninstall is one click in
+  Apps & features.]
 
 R6 - Tag-triggered CI release with a generated changelog.
 - Action: a GitHub Actions workflow on `v*` tags: tests, tools/release.py,
@@ -484,6 +501,8 @@ R8 - One-click update with verification and rollback.
   back up the replaced files, swap by manifest (never
   `config\local.json` or `ops\runtime`), start, wait for /api/health; on
   failure restore and say so in Checks. Keep one previous version.
+  [SUPERSEDED by Fit point 2: stage into `<home>\app\<ver>\`, switch the
+  marker, roll back by switching back; no in-place swap, no backup copy.]
 - Impact: M. Effort: M to L. Risk: M to H - a self-modifying install;
   held by the preflight, the backup and the health gate.
 - ToS check: writes only inside AshLight's own folder and restarts only
@@ -498,7 +517,8 @@ R8 - One-click update with verification and rollback.
   byte-identical before and after.
 - ZERO-CLICK: one click per update, kept for consent (new code on the
   player's PC), not by the ToS floor; "install when the game is idle"
-  (decision 0029) is a later opt-in decision.
+  (decision 0029) is a later opt-in decision. [SUPERSEDED by Fit point 4:
+  zero clicks with web data on, a Settings switch restores the click.]
 
 R9 - Signing track: unsigned first, said plainly; revisit with an identity.
 - Action: a README "Windows may warn" section (what the prompt is; how to
@@ -551,6 +571,10 @@ in parallel once R3 and R2 are in; R6 as soon as R4 is in and the remote
 exists; R8 after R6 and R7; R9 and R10 any time after R4; R11 after R6.
 
 Decisions this path needs (one decision note, before R3's code):
+[Items 1, 2, 4 and 7 SUPERSEDED in part by "Fit with 0052 and brief F":
+1 = app zip, offline full zip and install.ps1, no framework; 2 = home
+`%LOCALAPPDATA%\Programs\AshLight`, state in `data\`; 4 = automatic staged
+apply with a 24 h hold under web data; 7 = `-Purge`.]
 1. Artifact form: portable zip plus app zip, no installer framework.
    Decision 0041 item 9 stands; restate its trigger as "a public release
    exists AND the operator holds a signing identity" (F10 to F12).
@@ -569,6 +593,132 @@ Decisions this path needs (one decision note, before R3's code):
 9. Decision 0018 item 6 wording: the core may make one documented GitHub
    releases read a day under web_data (R7); an amendment, not a reversal.
 
+## Fit with 0052 and brief F
+
+Added 2026-11-18 (gap fill). Brief F asks for deployment like the
+reference app: one-step install, an update path, a clean uninstall (0052
+line 4 and the plan brief). 0052 maps that app to a per-user home with
+`app\<version>\`, a marker, data outside the code, an Apps & features entry
+and staged updates (0052 P4, P6, M8 to M12, R1, R4 to R6). This note's
+first draft chose an extract-and-run folder instead. Plan 05 takes ONE
+design; the six points below pick it. Every pick keeps F8 / F9 / R3's
+pinned runtimes (embeddable CPython and the prebuilt Electron zip, by hash)
+and F12 / decision 0041 item 9's no-framework finding: 0052's installer is
+itself a PowerShell bootstrap plus stdlib code, no framework (0052 R4).
+
+1. Home: 0052 wins. One per-user home `%LOCALAPPDATA%\Programs\AshLight`
+   (Windows' per-user Programs known folder, FOLDERID_UserProgramFiles,
+   default path `%LOCALAPPDATA%\Programs`, KF), with `-InstallDir` for the
+   operator (0052 Q1); all player state in `<home>\data\` (today's
+   `ops\runtime` and `config\local.json`, 0052 M9), logs / cache / temp in
+   sibling folders, never inside a version folder. Why, against brief F: an
+   update must not carry state across, and a clean uninstall must be able
+   to keep exactly one folder; an extracted folder lives wherever the
+   browser put it (often Downloads or a synced Desktop), so neither is
+   reliable. It also settles this note's open question on state location
+   (closed below). Note: 0052 itself names two homes, `%LOCALAPPDATA%\Programs\AshLight`
+   (P4, Q1) and `%LOCALAPPDATA%\AshLight` as R1's fallback; this pick is the
+   first, and plan 05 should state it once. ToS check: "never modify any
+   game file": the home is AshLight's own; the resolver refuses a home in a
+   Steam library or game folder (0052 R1). Superseded: R3 "state stays
+   inside the folder (portable)"; decision 2 below.
+2. Code layout: 0052 wins. `<home>\app\<version>\` plus the marker
+   `install.json` {version, previous, ...}; the runtimes sit in
+   `<home>\runtime\` in one folder per pin (for example
+   `runtime\electron-45.3.3\`), so a pin move also builds beside. Update =
+   stage beside, self-test, atomic marker switch; rollback = switch back;
+   one previous version kept (0052 P6, M23, M25). Why, against brief F: the
+   old version is never modified, so a failed update cannot leave a
+   half-copied tree, and rollback needs no backup copy; an in-place swap
+   on Windows also fights files held open by the running electron.exe and
+   python DLLs. The extra disk cost is one app payload, about 1.3 MB (F7).
+   R8's checks (size and SHA-256, staged `--check`, stop through stop.ps1,
+   /api/health gate, report in Checks) all stay. ToS check: writes only
+   inside the home, restarts only pids proven ours (server/al/procs.py),
+   no game file or process contact. Superseded: R8 "back up the replaced
+   files, swap by manifest".
+3. Apps & features entry: yes (0052 M12, R4, R5). One per-user uninstall
+   key whose version is rewritten and read back at each switch, uninstall
+   string = the home-root uninstall.ps1. Why, against brief F: a clean
+   uninstall that a player can find is where Windows lists apps; winget
+   also matches installed packages through these entries and knows
+   per-user ("user" scope) installers (WG-INS). Caveat kept from 0052 Q6:
+   Microsoft documents only the machine-wide key; the per-user key works in
+   the reference app on Windows 10 and 11 (UNVERIFIED in Microsoft docs).
+   ToS check: one per-user registry key, no game file, no admin. This note
+   had no entry; nothing to supersede beyond point 6.
+4. Update consent: 0052 wins, with a hold. With web data on, the core
+   checks once a day (R7), then downloads, verifies and stages by itself
+   and switches at the next client start; one Checks / Settings line names
+   the new version; "Update now" switches at once; a Settings switch
+   "Install updates automatically" (default on) turns the apply step back
+   into the click. Hold: a release is applied only when its
+   `published_at` is at least 24 h old. Why, against brief F and the tree's
+   rules: CLAUDE.md "Minimal interaction" orders that in play the app
+   updates itself with no clicks; brief F wants an update path, which
+   0052 R6 delivers with zero acts. This note's objection (one bad or
+   hijacked release reaches every install within a day, F15) is met by the
+   self-test plus automatic rollback (0052 R6), immutable releases (tag
+   and assets cannot be changed after publication) and the hold: during it
+   the operator can still unmark a bad release as "latest", which GitHub
+   allows on an immutable release (GH-IMM, re-read 2026-11-18), so
+   `releases/latest` stops offering it. Note: the reference app itself
+   ships auto mode off by default (0052 P6); the CLAUDE.md order outranks
+   that. With web data off: no check, no download; the Settings tab shows
+   the version and a releases link (decision 0013). ToS check: GitHub's
+   documented releases endpoint and asset hosts only, truthful User-Agent,
+   no cookie, inside the web_data opt-in (decision 0013); a daily network
+   timer is not a clipboard or screen watcher; downloads run at
+   below-normal priority ("must not cost game FPS"). Superseded: Summary
+   "one click applies ... never silent by default"; F15's "Opt-in at most,
+   later"; R8 ZERO-CLICK; decision 4; the Rejected bullet on silent updates
+   (amended there).
+5. Uninstall: 0052's switch name. `uninstall.ps1` at the home root (also
+   the Apps & features uninstall string), `-Purge` and `-DryRun`. Without
+   `-Purge` only `<home>\data\` survives (Client.txt consent, run history,
+   builds, price watch, local.json) plus any filter or `.build` file the
+   player saved elsewhere, which the last lines name; code, runtimes,
+   cache (including the Electron profile and the optional calc archives),
+   logs, temp, marker, shortcuts, the uninstall key and the opt-in
+   autostart task go. `-Purge` sends `data\` to the Recycle Bin (FLEET item
+   9) and removes the home. Exit 1 with one line while anything remains.
+   Why, against brief F: one name across 0052 and 0053 (the reference app
+   uses `--purge`), and "clean" means nothing of AshLight's but the
+   player's own data is left, which this note's in-folder layout could not
+   promise. ToS check: never touches a game folder or Client.txt ("never
+   modify any game file"); stops only pids proven ours. Superseded: R5's
+   `-PurgeData` and "prints what is left (the folder itself)"; decision 7.
+6. First install: one pasted line wins as the primary route, the verified
+   local zip as the documented second. The line runs the release's
+   `install.ps1` from the `/releases/latest/download/` URL (0052 P3, R4);
+   it fetches SHA256SUMS, the app zip and the hash-pinned runtimes,
+   verifies every hash, self-tests, then writes marker, shortcuts and the
+   uninstall key, and opens the app. The second route: download
+   `install.ps1`, the app zip and SHA256SUMS (or the full
+   `AshLight-<ver>-win-x64.zip`, kept from R4 as the offline input), check
+   them with `gh release verify-asset` or the attestation, run
+   `install.ps1 -Zip <file>`. Why, against brief F: brief F names a
+   one-step install; it is also the only route that avoids a SmartScreen
+   prompt for the unsigned electron.exe, because PowerShell downloads
+   carry no Mark of the Web while a browser download plus Explorer
+   extraction marks every file (F10). The cost this note raised (unreviewed
+   remote code) is limited to the small bootstrap script on an immutable
+   release, which verifies everything else; reviewers have route two.
+   ToS check: install-time downloads of AshLight's own runtime from GitHub
+   and python.org with a truthful User-Agent, no GGG host, no cookie; the
+   player pastes into their own PowerShell, nothing is sent to the game.
+   Superseded: R5 "`AshLight.cmd` at the zip root" and "install is extract
+   plus one double-click"; Summary "download, extract, double-click"; the
+   Cut-or-merge bullet "drop the idea of a separate installer"; the
+   Rejected bullet on a one-line web command; decision 1's "portable zip"
+   (the zip stays as an installer input, not a run-in-place folder).
+
+Kept unchanged: F1 to F4 and R1 / R2 (the source install and one version
+are needed under either design), R3's pins and resolver work (pointed at
+`<home>\runtime\` instead of the folder), R4's release tool (it also
+emits `install.ps1`), R6, R7, R9, R10. R11 (scoop) needs a re-check
+against the home layout (open question below).
+
 ## Cut or merge
 
 - Cut build.ps1 from the stranger's quick start (F3); it stays the
@@ -580,12 +730,16 @@ Decisions this path needs (one decision note, before R3's code):
 - Merge first run into setup plus run behind one `AshLight.cmd` (R5), and
   drop the idea of a separate installer: extract-and-run plus an
   uninstall script covers install, repair (extract again) and removal.
+  [SUPERSEDED by Fit point 6: 0052's install.ps1 is the installer; a
+  re-run repairs.]
 
 ## Rejected
 
 - Silent automatic updates by default: new code without the player's act,
   and one hijacked release reaches every install within a day (consent
-  and supply chain, not a floor rule); opt-in at most.
+  and supply chain, not a floor rule); opt-in at most. [Amended by Fit
+  point 4: still rejected is an update with no notice at all; automatic
+  staged apply with a named line, a 24 h hold and rollback is chosen.]
 - Any install, update or uninstall step that writes into a game folder
   (placing the loot filter or `.build` file "for convenience"): floor
   "never modify any game file"; decisions 0031, 0033, 0034.
@@ -605,6 +759,8 @@ Decisions this path needs (one decision note, before R3's code):
   against the per-user, no-admin design (decisions 0011, 0041 item 8).
 - A one-line "download and run" web command in the README: it runs
   unreviewed remote code; the documented flow is download, verify, run.
+  [SUPERSEDED by Fit point 6: the pasted line is the primary route (brief
+  F, no Mark of the Web); download, verify, `-Zip` is the second.]
 - electron-updater or update-electron-app as shipped: they poll on their
   own schedule regardless of the web-data opt-in (EL-UPD against decision
   0013) and need a packaged app.
@@ -620,9 +776,15 @@ Decisions this path needs (one decision note, before R3's code):
   or Canada only, MS-AS), and is 9.99 USD a month acceptable? May the
   project's GitHub owner and repository name appear in tracked files
   (adjudicator if the hygiene rule is read strictly)?
-- State inside the install folder (recommended) or under
-  `%LOCALAPPDATA%`? An adjudicator can rule; it reverses if an MSIX /
-  Store or winget route is chosen.
+- CLOSED 2026-11-18 by Fit point 1: state lives in
+  `%LOCALAPPDATA%\Programs\AshLight\data\`, outside the version folders.
+- R11 (scoop) against the home layout: scoop installs into its own folder
+  and replaces it on update; it needs either an installer script that
+  calls `install.ps1 -Zip` or `persist` for `data\` plus the AL_HOME
+  override (0052 R1). Not tested; plan 05 picks one or drops R11.
+- Fit point 4's 24 h hold and default-on switch are this note's call
+  under the CLAUDE.md minimal-interaction order; the operator may rule
+  click-only (0052 Q4 asks the same question).
 - Which CPython line to pin: 3.14 (this machine's gates run on it; M2
   used 3.14.10) or 3.13? The full suite has not run on the embeddable
   build. Windows on ARM (arm64 zips exist, EL-REL, PY-DL) can wait.
@@ -689,3 +851,29 @@ certificate prices (F11); offline builds on a released electron-builder
 resolver on a missing drive, payload byte counts) were not re-run, though
 the resolver logic was read and matches (paths.py:61-71, the kit's
 fleet_lanes.py:1196-1201).
+
+Gap fill, 2026-11-18 (completeness critic: 0053 never tested against 0052
+or brief F):
+- Added the section "Fit with 0052 and brief F" (six points: home, code
+  layout, Apps & features entry, update consent, uninstall switch, first
+  install), each with a pick, the reason against brief F and a ToS check;
+  every losing text is marked in place with [SUPERSEDED ...] (Summary
+  bullets 1 and 4, F15, R3, R5 twice, R8 twice, the decisions list, Cut or
+  merge, two Rejected bullets); the open question on state location is
+  closed; two new open questions (R11 scoop fit, operator ruling on the
+  update default).
+- Read for it: 0052 Summary, "Reference pattern" P1 to P8, "Mapping onto
+  AshLight's rules" M1 to M37, R1, R4, R5, R6, Rejected and Q1 to Q6;
+  CLAUDE.md "Minimal interaction" (the "updates itself with no clicks"
+  order behind point 4). Found and recorded: 0052 names two homes (P4 / Q1
+  vs R1's fallback); point 1 picks P4's.
+- Web, re-fetched 2026-11-18 into the scratch folder: KF (the per-user
+  Programs folder's default path is `%LOCALAPPDATA%\Programs`); WG-INS
+  (installer Scope "user" / "machine" and AppsAndFeaturesEntries exist);
+  GH-IMM (tag and assets locked after publication; title, notes, the
+  pre-release and "latest" marks stay editable, which point 4's hold
+  relies on). Still UNVERIFIED: a Microsoft page documenting the per-user
+  uninstall key (0052 Q6).
+- Kept: F8 / F9 / R3 pinned runtimes and the F12 no-framework call
+  (0052's installer is a PowerShell bootstrap plus stdlib code). No
+  settled decision reverses; 0013 and 0041 item 9 stand.
