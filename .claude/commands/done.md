@@ -82,7 +82,9 @@ hand-off (and any archive file) through the git lock.
 
 ### 7. Status board (FLEET-COMMON item 18 - LOCAL ONLY)
 
-Pipe the last printed checklist into
+Skip unless ops/status_board.json holds "opt_in": true or the operator asked
+for the board this session (AL board is opt-out, operator order 2026-11-17).
+Otherwise pipe the last printed checklist into
 `python ops/fleet_kit/fleet_board.py render --final --session <n>`. A failed
 render is one hand-off line, never a ritual failure.
 

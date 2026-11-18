@@ -236,6 +236,7 @@ AL channel code: `AL`. Kit: v32, vendored at `ops/fleet_kit/` (never edit;
 MAIN ships new versions). Hand-off: `AL-NEXT-SESSION.txt` (tracked; its
 `SESSION: <n>` line is the item-13 session counter, /done writes n+1).
 Kit conformance: `tests/test_fleet_kit_conformance.py`.
+Status board: opt-out (operator order 2026-11-17); render only when the operator asks.
 
 ## Game ToS floor (non-negotiable; no adjudicator can lift it)
 
@@ -351,7 +352,8 @@ them. Pause: `ops/loop/control/HALT`.
 - Start: read `AL-NEXT-SESSION.txt`, this file, `ROADMAP.md`, `git log -10`;
   triage `moon_sync_inbox/` with `fleet_inbox.classify()`; print the
   `Session <n> checklist` (kit `fleet_checklist.py`); render the local board
-  (`fleet_board.py render --session <n>`, FLEET item 18).
+  (`fleet_board.py render --session <n>`, FLEET item 18) only when the
+  operator asks (board is opt-out).
 - Research grows in `docs/research/NNNN-<topic>.md` (index:
   `docs/research/README.md`); every claim cites a source with an access date.
 - Decisions: `docs/decisions/NNNN-<topic>.md` (decision, alternatives, why,
