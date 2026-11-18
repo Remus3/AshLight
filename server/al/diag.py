@@ -197,14 +197,28 @@ def check_port(f):
     return _check("port", "Dashboard address", UNKNOWN, "Not known.")
 
 
+def check_dev_docs(f):
+    """GGG-DOCS-WATCH (decision 0041): a developer note, listed only while
+    the daily docs watch's flag file says GGG's docs no longer carry the
+    "unable to process new applications" sentence. Players never see it:
+    the flag exists only where the dev loop runs."""
+    if not f.get("ggg_reg_open"):
+        return None
+    return _check("dev_docs", "GGG developer API", NOTE,
+                  "Developer note: GGG's API docs no longer say new app sign-ups "
+                  "are closed. AshLight's own sign-in may be possible now.")
+
+
 def checks(f, now):
     """Every check, in reading order, from a facts dict (see Core.diag_facts)."""
-    return [check_log(f), check_consent(f), check_reading(f), check_last_line(f, now),
+    rows = [check_log(f), check_consent(f), check_reading(f), check_last_line(f, now),
             check_character(f), check_language(f), check_web(f), check_prices(f, now),
             check_calc(f), check_snapshot(f, now),
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
             check_hotkey(f), check_port(f)]
+    dev = check_dev_docs(f)
+    return rows + [dev] if dev else rows
 
 
 # -- redaction (ruling J)

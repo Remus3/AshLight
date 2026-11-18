@@ -793,9 +793,21 @@ class Core:
             "overlay": overlay, "supervisor": live("supervisor"),
             "hotkey": diag.hotkey_registered(self.overlay_log) if overlay else None,
             "port": self.port,
+            # GGG-DOCS-WATCH (decision 0041): tools/ggg_docs_watch.py flag
+            "ggg_reg_open": self._ggg_reg_open(),
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": snap.get("character"),
         })
+
+    def _ggg_reg_open(self):
+        """True while the dev docs watch's REG_OPEN flag exists (a stat of a
+        local file; a test core never reads the live runtime dir)."""
+        if not self._real:
+            return False
+        try:
+            return (paths.runtime_dir() / "ggg_docs" / "REG_OPEN").is_file()
+        except OSError:
+            return False
 
     def tick_diag(self, now=None, force=False):
         """DIAG-SELF, ZERO-CLICK: from the core's loop, at most once per

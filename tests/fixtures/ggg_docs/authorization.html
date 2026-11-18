@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en">
+<!-- Excerpt of https://www.pathofexile.com/developer/docs/authorization
+     recorded 2026-11-17, trimmed and kept ASCII. -->
+<head><title>Developer Docs - Path of Exile</title></head>
+<body>
+    <main>
+<article id="clients">
+<h2>Client Types <a class="self-link" href="#clients"></a></h2>
+<h3>Public Clients</h3>
+<p>A public client is one without a method of securely storing any credentials. The most common example of this is an application that runs on the user's desktop. These clients:</p>
+<ul>
+        <li>Must only use the <a href="#authorization_code">Authorization Code (with PKCE)</a> grant type and must use a local redirect URI (ie. http://127.0.0.1:8080/callback).</li>
+        <li>Cannot use any <code>service:*</code> scopes.</li>
+        <li>Have access tokens that last for 10 hours and refresh tokens that last for 7 days.</li>
+</ul>
+</article>
+<article id="scopes">
+<h2>Available Scopes</h2>
+<ul>
+    <li><code>account:profile</code> - for access to the account's basic profile information.</li>
+    <li><code>account:characters</code> - for viewing the account's characters and inventories.</li>
+</ul>
+<pre class="prettyprint">GET /oauth/authorize?client_id=example
+&amp;redirect_uri=https://example.com</pre>
+</article>
+    </main>
+</body>
+</html>

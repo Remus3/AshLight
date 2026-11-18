@@ -275,7 +275,8 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   public OAuth client (PKCE, loopback redirect in port block 8960-8979,
   scopes account:profile and account:characters) once GGG reopens
   registration. BLOCKED: registration closed ("currently unable to process
-  new applications", research 0010).
+  new applications", research 0010). Watched daily by GGG-DOCS-WATCH
+  (decision 0041): ops/runtime/ggg_docs/REG_OPEN appears when it reopens.
 - [ ] TC-IMPORT (build) Live character import with AshLight's own public
   client: PKCE sign-in, GET /character/poe2[/name], tokens in the OS
   credential store, refresh handled, into the build model. BLOCKED on
@@ -1630,6 +1631,17 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   Done 2026-11-17: resolve_config() in tools/leak_sweep.py (worktree
   config wins, else main checkout); run line names config=<source>;
   tests/test_leak_sweep.py tmp repo + linked worktree.
+- [x] GGG-DOCS-WATCH (build) Daily read of GGG's developer docs (index,
+  authorization, reference, changelog, data, game) for changes, above all
+  whether new OAuth application registration reopened (operator order
+  2026-11-17, decision 0041). ACCEPT: tools/ggg_docs_watch.py, one
+  anonymous GET per page per 24 h, Retry-After obeyed, main-text sha256
+  snapshots in the sidecar Cache, diffs in the sidecar Logs, notes in
+  ops/runtime/ggg_docs/notes.log, flag ops/runtime/ggg_docs/REG_OPEN;
+  fixture tests tests/test_ggg_docs_watch.py. ZERO-CLICK: the loop tick
+  runs it daily even while HALTed; a reopen shows as a note in the
+  dashboard Checks view and in the tick line; the next interactive session
+  that finds REG_OPEN updates TC-OAUTH-REG. DONE 2026-11-17.
 - [x] PUB-NAME (review) Manual poe2wiki check that "Ashlight" is not a GGG
   proper noun (decision 0001). Done 2026-11-17: 0 hits on both wikis
   (research 0009).
