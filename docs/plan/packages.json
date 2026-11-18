@@ -11340,7 +11340,7 @@
    "lane": "build",
    "design_review": true,
    "blocked": null,
-   "operator_act": "After landing: tick the new ledger consent line once in Settings (batched operator ask; section 06 operator act 4).",
+   "operator_act": "OA-19 (docs/plan/09): After landing: tick the new ledger consent line once in Settings (batched operator ask; section 06 operator act 4).",
    "notes": "Tier P1. core.py: feed_line (664-668) and one call in eval_press (260-274, after RUN-METRICS-SITES) for the masked waystone block shape. plug/ledger.py: the write tick, the drift note and the 32 MB resume-cap note (their sentences get a design-reviewer pass). The consent line, route flag and decision are RUN-LEDGER-CONSENT (folded into RUN-METRICS-SITES).",
    "wave": 16,
    "owner": "session",
@@ -12739,7 +12739,7 @@
    "lane": "build",
    "design_review": false,
    "blocked": null,
-   "operator_act": "Q-05: before the public flip send poe.ninja one message asking whether per-install polling at this cadence (about 200 overview GETs a day) is acceptable or a project mirror is wanted. Silence is not consent.",
+   "operator_act": "OA-2 (docs/plan/09): Q-05: before the public flip send poe.ninja one message asking whether per-install polling at this cadence (about 200 overview GETs a day) is acceptable or a project mirror is wanted. Silence is not consent.",
    "notes": "Tier P1. pricebook.py: PriceBook.due and PriceBook.refresh read a per-type interval (3 h; 1 h while pressed_at is under 24 h old) and a new PriceBook.note_press(type, now) keeps pressed_at in memory and saves it with the next refresh (no disk write on the press path). ninja.py: constant RELEASE_POLLING = False, RatesClient.__init__(installed=None), the gate in _refresh, refresh_async and snapshot()['blocked'], and RatesClient.lookup calling book.note_press. 'installed' defaults to a callable reading paths.install_mode() == 'installed' when that function exists (DEP-05, other cluster) and False otherwise, so this package does not wait for it. The constant name RELEASE_POLLING is the contract DEP-08's release build refusal reads. The new decision records the default (no answer yet) and amends decision 0026 item 2 (hourly per type); 0072 is the number the integrator reserves at dispatch (next free from 0046). Decision 0026 gets one dated pointer line to the new decision (item 2 amended); 0026 is also edited by DATA-PRICE-REFRESH-CORE (folded into DATA-CONTACT-FIELD), a dep.",
    "wave": 18,
    "owner": "session",
@@ -13094,7 +13094,7 @@
    "lane": "data",
    "design_review": false,
    "blocked": null,
-   "operator_act": "Optional: paste the in-game reward text of the point books and one line per blank zone (Root Hollow, Library of Kamasa, Isle of Decay, Brinerot Cove). Default with no paste: the entry is left out or neutral.",
+   "operator_act": "OA-37 (docs/plan/09): Optional: paste the in-game reward text of the point books and one line per blank zone (Root Hollow, Library of Kamasa, Isle of Decay, Brinerot Cove). Default with no paste: the entry is left out or neutral.",
    "notes": "Tier P2; S5-FOLLOWUP items (c) and (f). Allowed fact sources, and no other: the attributed build-time snapshots already cached on the dev host (world_areas and base_items under the sidecar Cache; a local file read, credited in theorycraft/datacredit.py), GGG Data Exports, AshLight's own Client.txt observations (the F-061 ledger; never the live log read by an agent) and operator-pasted text. No agent or tool reads a live wiki, poe2db or GGG forum page (ruling Q-07); a fact that would need one is left out, and research 0034 is not a source for new or changed entries. zoneguide.py: the loader accepts 'skip': true (an explicit 'no guide for this area'). The point-books line is reworded so it claims nothing unverified (passive versus weapon-set points) unless an allowed source settles it. S5 (a) is TD-17, (b) is not adopted, (d) is DATA-GUIDE-GAP-TUNE, (e) is the installer work, the launch half (Acts 5-6, interlude) is DATA-GUIDE-ACTS-5-6. The dep on DATA-GUIDE-BOSS is a file-order edge. Not yet tracked at plan time (a dep creates them): tests/test_provenance.py is created by DATA-PROVENANCE.",
    "wave": 18,
    "owner": "session",
@@ -14871,7 +14871,7 @@
    "lane": "build",
    "design_review": false,
    "blocked": null,
-   "operator_act": "Optional (plan 05 operator acts 6 and 7): one run of the pasted line on a Windows 11 PC with Smart App Control on; applying to a free open-source signing program after the first public release. Default in force: the README says the behaviour is unverified and the release is unsigned.",
+   "operator_act": "OA-15, OA-16 (docs/plan/09): Optional (plan 05 operator acts 6 and 7): one run of the pasted line on a Windows 11 PC with Smart App Control on; applying to a free open-source signing program after the first public release. Default in force: the README says the behaviour is unverified and the release is unsigned.",
    "notes": "README.md: new sections Install, Update, Uninstall, Verify your download and Windows may warn, and the 'Privacy and consent' web-data bullet; the 'Quick start' section stays DEP-02's and the public-pass rewrite of the go-public cluster edits the rest: run after that rewrite, alone on README.md. SECURITY.md: one section on release provenance (immutable release, two hash sources, attestation verified by CI and people, not by the installed updater). THIRD-PARTY.md: the 'fetched at install' wording for the two runtimes. Smart App Control behaviour is written as unverified until the optional second-machine run. Code signing: none at first (ruling Q-22).",
    "wave": 21,
    "owner": "session",
@@ -15447,7 +15447,7 @@
    "lane": "build",
    "design_review": false,
    "blocked": null,
-   "operator_act": "Optional (plan 05 operator act 5): enable the Windows Sandbox feature (elevation and a restart) and allow 'stage --sandbox' for the first public release. Default in force without it: the scratch-home round trip is the gate and the per-user uninstall key stays verified only on this machine.",
+   "operator_act": "OA-14 (docs/plan/09): Optional (plan 05 operator act 5): enable the Windows Sandbox feature (elevation and a restart) and allow 'stage --sandbox' for the first public release. Default in force without it: the scratch-home round trip is the gate and the per-user uninstall key stays verified only on this machine.",
    "notes": "Adds sandbox_phases() and the .wsb writer to tools/rel_stage.py; stage.json records sandbox: 'skipped' unless the flag was given. Built and tested without the feature (the runner is injected); only the live run needs the operator act.",
    "wave": 22,
    "owner": "session",
@@ -18683,7 +18683,7 @@
     "who": "operator",
     "unblock": "`grep -c \"^OPERATOR GO Q-23 step 1\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date; a session then sets q23_go_recorded in the builder's overrides and re-runs it"
    },
-   "operator_act": "OA-11 (optional): set \"loop_push\": true in the gitignored config/local.json to let the headless loop push its own commits; default in force: off, a session pushes. Only if the harness denies edits under .claude/: OA-6 (docs/plan/09-operator-acts.md), the two wording changes in .claude/commands/done.md and .claude/agents/adjudicator.md; the rest lands.",
+   "operator_act": "OA-10 (docs/plan/09): OA-11 (optional): set \"loop_push\": true in the gitignored config/local.json to let the headless loop push its own commits; default in force: off, a session pushes. Only if the harness denies edits under .claude/: OA-6 (docs/plan/09-operator-acts.md), the two wording changes in .claude/commands/done.md and .claude/agents/adjudicator.md; the rest lands.",
    "notes": "Tier P0. PLAN 07 (review): rewritten by string anchor, because tools/al_loop.py is split and edited by earlier packages (LOOP-SPLIT-TICK lowers the line cap in tests/test_loop_split.py to under 1300: read the cap from that test, replace lines and add only what the push switch needs). Find each text with git grep, never by line number; if a quoted string now lives in a module that is not in this package's files, stop and name it in the result. Wording changes: in tools/al_loop.py the module docstring paragraph that starts 'Push (unless --no-push): AL is LOCAL ONLY' becomes the 'Push (unless --no-push): ...' text of docs/plan/04-go-public.md section 'Test changes' plus the switch sentence below; the comment that starts '# AL is local only (no CI yet)' becomes 'The loop's gates are the tracked list (CI runs the same commands):'; the push_needed docstring drops '(AL: local only)'. The log string 'push skipped: local only' and its test stay on purpose. tools/loop_inbox.py order_prompt: '(AL is local only: no remote, no gh)' becomes '(a lane gets no gh)'. tools/al_lane.py, the comment above DEP_TOOLS, becomes 'Dependabot bumps are re-applied in the main checkout by tools/dependabot_reapply.py, so no gh is granted to a lane.' tests/test_p163_lane_tools.py: the comment '# AL is local only' becomes '# gh stays out of lanes'; the assert stays. .claude/commands/done.md: the description line, the step-2 heading and the Safety rails line say: push main through fleet_gitlock when origin exists, never force-push; the text after the `fleet_done.py mark` line must not contain the literal 'git push' (pinned by test_done_ritual_last_act_is_the_marker_and_it_is_dispatched), so the rail reads e.g. 'Never force-push, --amend or --no-verify; main is pushed only in step 2.' .claude/agents/adjudicator.md: drop 'no push while the repo is local only'. One logic change (review, floor lens; ruling Q-23 gives push approval to the operator): push_needed reports nothing to push unless the gitignored config/local.json holds \"loop_push\": true; absent or false it logs 'push skipped: loop push is off' and the commits wait for the next session push. No agent, tool or setup step writes that key (OA-11), so with a remote the headless loop still pushes nothing by itself, and a session reads `git log origin/main..main` before its own gated push. Merges only after the Q-23 go record is read back, in the wave of GP-02 and PUB-GO-DECISION when tools/al_loop.py has no other editor there, else in the next wave where it is free; GP-09 waits for it. The .githooks text is GP-02's (its own accept greps it).",
    "wave": 99,
    "owner": "session",
@@ -18786,7 +18786,7 @@
     "who": "GGG",
     "unblock": "a client id granted to AshLight is recorded in gitignored config/local.json after the operator sends the prepared application (F-149)"
    },
-   "operator_act": "After REG_OPEN: send the prepared application (F-149), record the client id, run one live smoke.",
+   "operator_act": "OA-36 (docs/plan/09): After REG_OPEN: send the prepared application (F-149), record the client id, run one live smoke.",
    "notes": "Tier P1, blocked; listed after its P2 groundwork so the order stays topological. Core side only (provider, core methods, token-gated connect and refresh routes); the Build-tab control is TC-IMPORT-UI. GggApiProvider in providers.py is today a no-request stub (decision 0045). Never a POESESSID, never another tool's client id. CARRY-05 also names TC-CURX: that half belongs to cluster DATA (F-206 not adopted). The operator's one live smoke after the client id is recorded is operator_act, not the accept. PLAN 07 (review, floor lens): the REG_OPEN signal rests on a docs page under operator decision A-01; the operator's own report that registration is open unblocks TC-OAUTH-REG just the same, so this chain does not depend on that page.",
    "wave": 99,
    "owner": "session",
@@ -18853,7 +18853,7 @@
     "who": "operator",
     "unblock": "TC-PRESS-FIXTURES (TC cluster, F-082) is merged: the F-082 sample presses were made with the dev-host sample switch on (Q-27) and the stackable fixture with its parsed stack size is in the tree"
    },
-   "operator_act": "",
+   "operator_act": "OA-32 (Q-27): with the dev-host sample switch on, press the item key once on a currency stack in normal play (one of the six presses of TC-PRESS-FIXTURES). Default in force: no loot tally is built.",
    "notes": "Tier P3 unit, blocked. Partial by nature: only pressed items count. New loottally.py: a bounded file under ops/runtime (decision 0036 pattern, cleared with run history, re-read only from the cached book while web data is on; 0036 gets a dated amendment); repeat presses of the same item text within a map count once. core.py: one call in Core._watch_press; state.py: the tally in the maps view and the session summary text (event text: design review). The stack-size parse belongs to the item parser (TC cluster, F-082) and the map block to F-068: see cross. Deps other than DATA-CONTACT-FIELD are file-order edges. The tally file holds counts and sums only; the repeat check uses an in-memory hash of the press text that is never written (decision 0045: checked item text stays in memory). The dep on DATA-GUIDE-BOSS is a file-order edge (state.py).",
    "wave": 99,
    "owner": "session",
@@ -18976,7 +18976,7 @@
     "who": "operator",
     "unblock": "the repository is public (go-public flip package done, all P0 packages green at the flip commit), the address package has put the real owner/name into the tracked config and the README install line, the release build's poe.ninja switch is settled (off, or a decision records poe.ninja's yes), and the operator types 'release 0.2.0' in an interactive session"
    },
-   "operator_act": "Give the Q-23 go for the public flip in your own words (OA-10, step 4), supply the final owner and name of the repository (Q-24), send the one message to poe.ninja (Q-05, OA-2), then type 'release 0.2.0'. Optional: paste the install line once on a machine that is not the dev host; without it that claim rests on the sandbox run of REL-STAGE-SANDBOX only. Default in force: no public release; the installed copy on this machine runs local release candidates.",
+   "operator_act": "OA-5, OA-13, OA-15 (docs/plan/09): Give the Q-23 go for the public flip in your own words (OA-10, step 4), supply the final owner and name of the repository (Q-24), send the one message to poe.ninja (Q-05, OA-2), then type 'release 0.2.0'. Optional: paste the install line once on a machine that is not the dev host; without it that claim rests on the sandbox run of REL-STAGE-SANDBOX only. Default in force: no public release; the installed copy on this machine runs local release candidates.",
    "notes": "Same procedure as REL-RC-LIVE (lane prep, session publish, fast-forward rule). README.md is touched only by 'release.py bump' on its al-version-stamp line. The 'machine that is not the dev host' check is 'stage --sandbox' when the operator enabled the feature, else the optional tester run; without either the README keeps its 'unverified' wording. The in-app update notice and the network update are proven live here (the operator's copy updates itself). Deferred, not part of this: a scoop manifest, winget, a signed exe. Files: its 'release.py bump 0.2.0' and 'notes --changelog' edit the same paths REL-RC-LIVE lists (server/al/__init__.py, app/package.json, app/package-lock.json, README.md stamp line, CHANGELOG.md); they are named only in REL-RC-LIVE because both packages sit in the parked wave 99, where plan_check refuses a path shared by two packages, and the deps edge on REL-RC-LIVE keeps them from ever running together.",
    "wave": 99,
    "owner": "session",
@@ -19092,7 +19092,7 @@
     "who": "operator",
     "unblock": "the private repository exists with main pushed and CI green (go-public remote package), the guarded pre-push hook with the prepush-check call is merged, immutable releases are on before the first v* tag, and the operator types 'release 0.2.0-rc.1' in an interactive session"
    },
-   "operator_act": "Create the private repository and approve the first push (ruling Q-23), turn on immutable releases before the first v* tag, then type 'release 0.2.0-rc.1'. Default in force: the repository stays local, every push is refused and release candidates are built locally with 'build --ref' only.",
+   "operator_act": "OA-10, OA-3, OA-13 (docs/plan/09): Create the private repository and approve the first push (ruling Q-23), turn on immutable releases before the first v* tag, then type 'release 0.2.0-rc.1'. Default in force: the repository stays local, every push is refused and release candidates are built locally with 'build --ref' only.",
    "notes": "Prep (bump, notes --write, curate, notes --changelog, stage) runs as the REL-PREP row in a lane worktree and never tags or pushes; its commit must reach main by fast-forward so HEAD equals the stage commit (else stage is re-run on main). The publish command and the read-back are run by the interactive session from the main checkout: publish refuses under a headless marker. '-rc.' tags publish with --prerelease so releases/latest skips them. Version files are edited only by 'release.py bump'. The live-home update from 0.2.0-rc.0 (REL-CUTOVER-LIVE) to 0.2.0-rc.1 by '--zip' is a session act from the main checkout, only while the live core reports game_idle. README.md is in files because 'release.py bump' rewrites its al-version-stamp install line once DEP-14 has added it.",
    "wave": 99,
    "owner": "session",
@@ -19138,7 +19138,7 @@
     "who": "operator",
     "unblock": "the ledger consent line is ticked and python tools/live1_report.py prints VERIFIED live for at least one LIVE-1 item"
    },
-   "operator_act": "Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
+   "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
    "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items.",
    "wave": 99,
    "owner": "session",
@@ -19192,7 +19192,7 @@
     "who": "operator",
     "unblock": "the operator adds that read-list line to CLAUDE.md in their own words; until then nothing of F-058 is built"
    },
-   "operator_act": "Decide Q-02 (file half). Default in force: no file pick for builds.",
+   "operator_act": "OA-25 (docs/plan/09): Decide Q-02 (file half). Default in force: no file pick for builds.",
    "notes": "Tier P1, blocked. The floor audit holds the file half of ruling Q-02 (the read list is read as exhaustive). Pattern when allowed: decision 0033 (the player picks the file in the browser). No http.py edit: the page reads the picked file and posts {code: text}; theorycraft/paste.py detect / parse learn the save-file XML form. The existing 256 KB cap is stricter than the finding's 2 MB. Needs its own decision record at landing.",
    "wave": 99,
    "owner": "session",
@@ -19251,7 +19251,7 @@
     "who": "operator",
     "unblock": "the hand-off records the operator's A-03 answer, or the ROADMAP row of SEC-LOG-PATH-FIELD is flipped and no answer is recorded (then the strict branch is built)"
    },
-   "operator_act": "A-03 (floor question): write one line, either 'the Steam library scan is not on the read list' (the default once the typed path field exists) or the read-list line that allows it. Why no agent can: only the operator words the floor.",
+   "operator_act": "OA-29 (docs/plan/09): A-03 (floor question): write one line, either 'the Steam library scan is not on the read list' (the default once the typed path field exists) or the read-list line that allows it. Why no agent can: only the operator words the floor.",
    "notes": "PLAN 07 (review, floor lens): added by the review; operator decision A-03 of docs/plan/findings.json had no unit, no package and no place in the batched ask. Default in force until this package runs: the narrowed scan of SEC-NO-DISCOVERY (only the real entry point with no configured path); no package of this plan widens discovery. This is stricter than the default recorded in docs/plan/02 ('the plan does not change today's Steam scan'): silence is not consent to a read the list does not name, and once the typed path field exists nothing is lost by taking the strict reading. Strict branch regions: logfile.py (steam_libraries, parse_libraryfolders, _steam_roots_from_registry, _steam_roots_from_env and the discovery leg of discover_client_log go; a typed folder or file path stays), core.py (Core.locate_log and Core.ensure_tailing lose the discover leg), diag.py (check_log names the typed path field), tests as listed; decision 0003 gets a dated amendment (decision, alternatives, why, reverses if). Nothing is read to migrate: an install that relied on the scan shows the typed path row once. Card and Checks words change: design-reviewer pass, its reviews.log line is returned in the result. Never read the live Client.txt in a test.",
    "wave": 99,
    "owner": "session",
@@ -19303,7 +19303,7 @@
     "who": "operator",
     "unblock": "the operator writes that floor line in CLAUDE.md and it allows the index page"
    },
-   "operator_act": "A-01: write one floor line saying whether GGG's developer-docs pages outside the API Reference and Data Exports (index, authorization, changelog, game) may be read. Default until then: no new work reads those four pages; this package is not built; the settled decision 0044 watch is left as it is. An explicit no files a session row that narrows the 0044 watch to the two pages.",
+   "operator_act": "OA-18 (docs/plan/09): A-01: write one floor line saying whether GGG's developer-docs pages outside the API Reference and Data Exports (index, authorization, changelog, game) may be read. Default until then: no new work reads those four pages; this package is not built; the settled decision 0044 watch is left as it is. An explicit no files a session row that narrows the 0044 watch to the two pages.",
    "notes": "W15 of docs/plan/06. Compare whitespace-normalised. Template kind policy_quote: id POLICY-QUOTE-<YYYYMMDD>, lane review, 'BLOCKED: session', token <qid>. The tool never edits the floor. server/al/diag.py and server/al/core.py (diag_facts) carry the dev-host note beside check_dev_docs; both are hot files of many other units, so this package needs its own wave slot on them.",
    "wave": 99,
    "owner": "session",
@@ -19624,7 +19624,7 @@
     "who": "operator",
     "unblock": "the operator reports whether Alt+Shift+E / Alt+Shift+A flip the keyboard layout with two layouts installed and names one unbound Ctrl+letter next to C from the game's key binds"
    },
-   "operator_act": "Q-09: with two keyboard layouts installed press Alt+Shift+E and Alt+Shift+A and say whether the layout changes; in the game's key binds name one unbound Ctrl+letter next to C.",
+   "operator_act": "OA-26 (docs/plan/09): Q-09: with two keyboard layouts installed press Alt+Shift+E and Alt+Shift+A and say whether the layout changes; in the game's key binds name one unbound Ctrl+letter next to C.",
    "notes": "Tier P1. Default in force until then: Alt+Shift+E (item check) and Alt+Shift+A (show / hide), at most two global keys. AshLight never reads the game's key bindings (a game file): the free letter comes from the operator's look. Edits: DEFAULT_EVAL_KEY in app/main.js (ctx.defaults), the fallback lists in app/hotkey.js and server/al/hotkeys.py (Alt+Shift+E becomes the first alternate), the case table, config/local.example.json, the README default sentence, a dated amendment of decision 0014 F1. The chosen letter must pass safeAccelerator and stay out of GAME_KEYS.",
    "wave": 99,
    "owner": "session",
@@ -19720,7 +19720,7 @@
     "who": "operator",
     "unblock": ".claude/settings.json names tools/wt_sidecar_hook.py under both WorktreeCreate and WorktreeRemove"
    },
-   "operator_act": "Paste the two hook entries of decision 0012 (WorktreeCreate and WorktreeRemove, each running tools/wt_sidecar_hook.py) into .claude/settings.json. Default until then: agent worktrees are created under .claude/worktrees inside the repository (gitignored) and reaped at /done.",
+   "operator_act": "OA-12 (docs/plan/09): Paste the two hook entries of decision 0012 (WorktreeCreate and WorktreeRemove, each running tools/wt_sidecar_hook.py) into .claude/settings.json. Default until then: agent worktrees are created under .claude/worktrees inside the repository (gitignored) and reaped at /done.",
    "notes": "The wiring test (tests/test_wt_sidecar_hook.py line 136) skips while neither entry exists and fails on a half or wrong wiring; after the paste turn the skip into a failure so the wiring cannot silently vanish. Should precede the first isolated wave spawn; when the paste has not happened the waves run with the default above. File overlap outside this cluster: .claude/settings.json itself is the operator's (units F-200, GP-07 (folded into PUB-README-PLAYERS), GP-16 also ask for a line there).",
    "wave": 99,
    "owner": "session",
@@ -19770,7 +19770,7 @@
     "who": "poe.ninja",
     "unblock": "the operator pastes poe.ninja's written yes (or its mirror request, which opens a new decision instead); silence is not consent"
    },
-   "operator_act": "Send the Q-05 message (see DATA-PRICE-CADENCE) and paste the reply.",
+   "operator_act": "OA-2 (docs/plan/09): Send the Q-05 message (see DATA-PRICE-CADENCE) and paste the reply.",
    "notes": "Tier P1 unit, blocked. One constant flip (ninja.RELEASE_POLLING) plus a dated amendment in the decision DATA-PRICE-CADENCE created (same file, hence the dep). A mirror request is a new decision and new packages, not this one. Not yet tracked at plan time (a dep creates them): tests/test_price_cadence.py is created by DATA-PRICE-CADENCE; docs/decisions/0072-poe-ninja-cadence-and-release-gate.md is created by DATA-PRICE-CADENCE.",
    "wave": 99,
    "owner": "session",
@@ -19820,7 +19820,7 @@
     "who": "operator",
     "unblock": "python tools/live1_report.py (built by RUN-LEDGER-REPORT) prints VERIFIED live for the endgame Map area-id prefix item of LIVE-1, after the operator has ticked the parse-ledger consent line once and played one map normally."
    },
-   "operator_act": "Tick the parse-ledger consent line once (batched ask) and play one map normally; nothing else.",
+   "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the parse-ledger consent line once (batched ask) and play one map normally; nothing else.",
    "notes": "Tier P1. One constant in server/al/playview.py and the map state's expectations. The painter and the composed rows already exist (PLAY-TD-11-CONTEXT, PLAY-TD-07B-PLAY-CARDS). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
    "wave": 99,
    "owner": "session",
@@ -19868,7 +19868,7 @@
     "who": "GGG",
     "unblock": "the launch gate GATE-POE2-10 (F-052 / AUTO-07) has flipped: local date 2026-12-11 or later and the snapshot metadata shows 1.0; the cache refresh needs web data on and the contact set on the dev host (batched ask act g), or an operator-run build.ps1 -Snapshot"
    },
-   "operator_act": "",
+   "operator_act": "OA-8: set the contact on the dev host (web data is already on there) so the 1.0 world_areas snapshot can refresh, or run build.ps1 -Snapshot once. Default in force: the Acts 5-6 entries wait for the snapshot.",
    "notes": "Tier P2 unit, blocked; no deadline (the 48-hour launch clock was dropped by the floor audit). Same work as the UTIL-10-NOTES row AUTO-07 lands: the integrator maps that row to this package so it is delivered once. Same four allowed sources as DATA-GUIDE-FACTS; sparse entries are acceptable, unsure facts are left out (decision 0043).",
    "wave": 99,
    "owner": "session",
@@ -19919,7 +19919,7 @@
     "who": "operator",
     "unblock": "at least six sanitized candidate files, one per shape, exist under the sidecar Scratch press-samples folder"
    },
-   "operator_act": "Set \"dev_press_samples\": true in config/local.json, then press the item key once on each of the six item kinds during normal play (Q-27).",
+   "operator_act": "OA-32 (docs/plan/09): Set \"dev_press_samples\": true in config/local.json, then press the item key once on each of the six item kinds during normal play (Q-27).",
    "notes": "Tier P2, blocked on the operator. No parser.py edit: parser.py:33-66 holds log-line patterns (death, joins, whispers, trade templates) and every LIVE-1 'remains' entry is a log shape; both close in cluster RUN (RUN-LEDGER-CORE / LIVE-1), which edit parser.py. item.py has no UNVERIFIED comments today. PLAN 07 (review, floor lens): decision 0009 (no bundled game data) and the prepared publication: a fixture under tests/fixtures/press holds invented names, base types and mod text only. If a parser fix needs the exact real wording, the test reads the sidecar sample when it is present and skips otherwise.",
    "wave": 99,
    "owner": "session",
@@ -20185,7 +20185,7 @@
     "who": "operator",
     "unblock": "the parse ledger packages (RUN-LEDGER-CORE, RUN-LEDGER-CONSENT (folded into RUN-METRICS-SITES), RUN-LEDGER-WIRE; F-061) are merged with the per-exit gap bucket, the operator has ticked the ledger consent, and the dev host's ledger spans 14 days of campaign play"
    },
-   "operator_act": "",
+   "operator_act": "OA-19 and OA-20: tick the ledger consent once, then play the campaign as usual for 14 days with the client running. Default in force: the gap constants stay as they are.",
    "notes": "Tier P2 unit (S5-FOLLOWUP d), blocked. The ledger must carry the gap per zone exit (a bucket, no raw line): asked of F-061 in cross. Constants only: zoneguide.advice and, if the data says so, underlevel.DEFAULT_GAP. The dep on DATA-GUIDE-BOSS is a file-order edge (zoneguide.py, tests/test_zone_guide.py).",
    "wave": 99,
    "owner": "session",
@@ -20242,7 +20242,7 @@
     "who": "operator",
     "unblock": "the file Cache/gamedata/skilltree.json exists under the AL sidecar root (treedata.FILE_NAME) after the operator sets the contact and the snapshot runs"
    },
-   "operator_act": "Set the contact in config/local.json (operator act g) so the snapshot can fetch the tree export.",
+   "operator_act": "OA-8 (docs/plan/09): Set the contact in config/local.json (operator act g) so the snapshot can fetch the tree export.",
    "notes": "Tier P3, blocked. store.py snapshot adds tree_url (line 339 region); web/tc.js buildView shows it through safeTreeUrl. Class and ascendancy byte values are undocumented: check against the export before shipping. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file).",
    "wave": 99,
    "owner": "session",
@@ -20295,7 +20295,7 @@
     "who": "operator",
     "unblock": "the operator sets the contact and turns web data on on the dev host (batched ask act g) and the sidecar Cache ninja book.json holds a fetched round"
    },
-   "operator_act": "Batched ask act (g): type the contact in the dashboard field and tick 'Use web data' on the dev host.",
+   "operator_act": "OA-8 (docs/plan/09): Batched ask act (g): type the contact in the dashboard field and tick 'Use web data' on the dev host.",
    "notes": "Tier P3 unit, blocked. The tool reads only AshLight's own cache files in the sidecar (counts and key names; never a real item name into a fixture: fixtures stay synthetic, decision 0009's spirit). First candidate to drop: PrecursorTablets (only UNIQUE-rarity items are looked up in the item types). value.py: ALIASES loses ids the rates do not carry. Hosting the report in the loop tick needs the watcher frame (AUTO-05): see cross. PRICE-VARIANT (F-207) stays deferred until this round shows whether lines carry 'variant'. Not yet tracked at plan time (a dep creates them): server/al/data/price_types.json is created by DATA-PRICE-TYPES-FILE; server/al/data/ninja_read_keys.json is created by DATA-NINJA-SHAPE-WATCH; server/al/ninjashape.py is created by DATA-NINJA-SHAPE-WATCH.",
    "wave": 99,
    "owner": "session",
@@ -20430,7 +20430,7 @@
     "who": "operator",
     "unblock": "The operator says in their own words that the game is closed and allows one run with speech output and a visible browser; the agent then runs python tools/sr_pass.py with the operator flag once, game_idle true, and commits the transcript."
    },
-   "operator_act": "With the game closed, allow one run with speech output and a visible browser on this machine and pass the operator flag.",
+   "operator_act": "OA-35 (docs/plan/09): With the game closed, allow one run with speech output and a visible browser on this machine and pass the operator flag.",
    "notes": "Tier P3. Runs only tools/sr_pass.py from PLAY-F-204A-SR-TOOL; no new code. Floor audit (L3): only with the game closed; keys to the page through the browser driver, no screen or audio capture.",
    "wave": 99,
    "owner": "session",
@@ -20646,7 +20646,7 @@
     "who": "operator",
     "unblock": "python tools/live1_report.py prints the five TEST-LIVE-CLICKS fields as seen"
    },
-   "operator_act": "Log in once as usual with the client running (after the ledger consent tick).",
+   "operator_act": "OA-20, OA-19 (docs/plan/09): Log in once as usual with the client running (after the ledger consent tick).",
    "notes": "Tier P0. Docs only: one dated line in research 0002 section 7. Nothing is clicked or typed in the game by any tool.",
    "wave": 99,
    "owner": "session",
@@ -20778,7 +20778,7 @@
     "who": "operator",
     "unblock": "python -m server.al.budgetlog check prints 10 or more rows tagged in map with the overlay shown"
    },
-   "operator_act": "Play one map as usual with the client running (no measurement act).",
+   "operator_act": "OA-20 (docs/plan/09): Play one map as usual with the client running (no measurement act).",
    "notes": "Tier P1. Only the RAM / CPU part; the FPS reading stays with the OVL cluster (OVL-FPS).",
    "wave": 99,
    "owner": "session",
@@ -20834,7 +20834,7 @@
     "who": "GGG",
     "unblock": "ops/runtime/ggg_docs/REG_OPEN exists (the settled decision 0044 watch; its index-page read is under operator decision A-01), or the hand-off holds the operator's own line 'REG OPEN (operator)'"
    },
-   "operator_act": "Send the prepared application from the operator's own GGG account and paste GGG's reply; the client id goes only into gitignored config/local.json.",
+   "operator_act": "OA-36 (docs/plan/09): Send the prepared application from the operator's own GGG account and paste GGG's reply; the client id goes only into gitignored config/local.json.",
    "notes": "Tier P2, blocked (registration closed since 2026-07; read back 2026-11-18: state 'closed', no flag). Agent work at unblock: compare the note with the docs watch's diff in the sidecar Logs (a local file; no extra page read), update it, put the send into the batched operator ask; after the reply record the answers and which default-off constants of F-116 they allow. Keeps the existing ROADMAP id. Never require or store a POESESSID. Not yet tracked at plan time (a dep creates them): docs/ops/ggg-oauth-application.md is created by DATA-GGG-APPLICATION; docs/decisions/0048-ggg-oauth-client.md is created by DATA-GGG-APPLICATION. PLAN 07 (narrowed): the cluster file left tests empty; the four docs checks of its acceptance line are named as run-only tests.",
    "wave": 99,
    "owner": "session",
@@ -20888,7 +20888,7 @@
     "who": "operator",
     "unblock": "the sidecar Logs dir holds an ovl_check report JSON that includes the operator's same / dropped answer"
    },
-   "operator_act": "Play one map in Windowed Fullscreen with the game's FPS display on while tools/ovl_check.py is armed; answer 'same' or 'dropped' once at the end.",
+   "operator_act": "OA-33 (docs/plan/09): Play one map in Windowed Fullscreen with the game's FPS display on while tools/ovl_check.py is armed; answer 'same' or 'dropped' once at the end.",
    "notes": "Tier P2. Docs only. Default in force until the act: the overlay ships under the character-select proxy of decision 0006 (GPU load inside noise) and the static budget tests; no PresentMon / ETW, no screen capture. Write the report's AshLight CPU, system totals and the answer into decision 0006 (dated) only: ruling Q-18 records 'no change to 0002', so decision 0002 (its OVL-FPS sentence and Measured blocks) is not edited. A 'dropped' answer opens a new row instead of closing this one.",
    "wave": 99,
    "owner": "session",
@@ -20976,7 +20976,7 @@
     "who": "operator",
     "unblock": "ops/runtime/verdicts.json holds a TC-BUILDFILE-LIVE verdict"
    },
-   "operator_act": "Save the .build from the dashboard, open it in the game's planner, press Worked or Refused on the 'Tried in game' card (batched ask).",
+   "operator_act": "OA-34 (docs/plan/09): Save the .build from the dashboard, open it in the game's planner, press Worked or Refused on the 'Tried in game' card (batched ask).",
    "notes": "Tier P1. The player saves and places the file; AshLight writes nothing into a game folder (decision 0034).",
    "wave": 99,
    "owner": "session",
@@ -21070,7 +21070,7 @@
     "who": "operator",
     "unblock": "ops/runtime/verdicts.json holds verdicts for LIVE-SEARCHSTR, LIVE-FILTER and LIVE-FILTER-MERGE"
    },
-   "operator_act": "Paste one search string with a leading '!', import the downloaded filter snippet, load a merged real filter; press Worked or Refused for each (batched ask; filter and merged filter are one act).",
+   "operator_act": "OA-34 (docs/plan/09): Paste one search string with a leading '!', import the downloaded filter snippet, load a merged real filter; press Worked or Refused for each (batched ask; filter and merged filter are one act).",
    "notes": "Tier P2. The player pastes and saves; AshLight copies only on the player's click and never writes a game folder (decisions 0031, 0033).",
    "wave": 99,
    "owner": "session",
@@ -21117,7 +21117,7 @@
     "who": "operator",
     "unblock": "loop_base.load_config(root)['dest_inboxes'] holds a MAIN entry (set on the host by the operator, or supplied by the fleet owner)"
    },
-   "operator_act": "Give the fleet owner's inbox as a loop.dest_inboxes entry in the gitignored per-host config (a location outside this tree; the fleet owner may supply it instead). Default until then: the drafted note waits; nothing is sent.",
+   "operator_act": "OA-21 (docs/plan/09): Give the fleet owner's inbox as a loop.dest_inboxes entry in the gitignored per-host config (a location outside this tree; the fleet owner may supply it instead). Default until then: the drafted note waits; nothing is sent.",
    "notes": "No tracked file. Copy the draft into the outbox folder (load_config(root)['outbox_dir']) under the fleet note name stamp (loop_base.NOTE_STAMP) and deliver it with the loop's own code (tools/loop_inbox.py InboxMixin.deliver_note, which byte-copies, re-hashes and appends the delivery ledger line; redeliver retries a note whose last line is not reached on every running tick). It counts toward the 12 outbound notes a day (FLEET item 14 c) and is the only note this plan section sends. Never put a directory name, account id or email in the note or in a tracked file.",
    "wave": 99,
    "owner": "session",
