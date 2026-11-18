@@ -2,16 +2,9 @@ AL NEXT SESSION
 ---------------
 SESSION: 6   (FLEET item 13 counter; /done writes n+1)
 
-Fable ultraplan: done = plan index (docs/plan/README.md), all 24 research
-notes 0035-0058 (verified, indexed in docs/research/README.md; critic gap
-fills landed for 0057, 0053 and 0043) and plan sections 01-06 (final):
-01-open-items, 02-findings (machine-readable source docs/plan/findings.json),
-03-target-design (with design review record), 04-go-public, 05-deployment,
-06-automation. Next = docs/plan/07-execution-plan.md with
-docs/plan/packages.json, then 08-orchestration.md, then
-09-operator-acts.md; then land the plan in the tree: decisions (next free
-0046), ROADMAP rows for every package, the CLAUDE.md public-repo section,
-the pre-push flip, and this hand-off rewritten so "continue" starts wave 1.
+Fable ultraplan: done = research 0035-0058, plan 01-09 and packages.json;
+next = UP-PUBLIC (go-public decision, CLAUDE.md, pre-push flip), UP-ROWS
+(ROADMAP rows, decisions, hand-off rewrite), UP-GATE, /done.
 A listed file is done when it is at HEAD with Status: verified / final;
 resume with the first one that is not (order: docs/plan/README.md).
 

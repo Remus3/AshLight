@@ -49,9 +49,9 @@ The boxes below are a convenience; the file at HEAD decides.
 - [x] docs/plan/04-go-public.md - E go-public plan
 - [x] docs/plan/05-deployment.md - F deployment plan
 - [x] docs/plan/06-automation.md - G automation plan
-- [ ] docs/plan/07-execution-plan.md and docs/plan/packages.json - waves and work packages
-- [ ] docs/plan/08-orchestration.md - orchestration script outline for the executing sessions
-- [ ] docs/plan/09-operator-acts.md - the one batched operator ask
+- [x] docs/plan/07-execution-plan.md and docs/plan/packages.json - waves and work packages
+- [x] docs/plan/08-orchestration.md - orchestration script outline for the executing sessions
+- [x] docs/plan/09-operator-acts.md - the one batched operator ask
 
 ## Then
 
