@@ -1,12 +1,15 @@
 # 09 - Operator acts (the one batched ask)
 
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md).
-Status: draft
+Status: final
 
 This is the single list of what only the operator can do or decide.
 Agents do everything else. No open wave waits on any entry: every entry
-has a default in force, and the packages it gates are parked in wave 99
-until the act is recorded. Answer in one message, any subset, in any
+has a default in force. A package that cannot land without the act is
+parked in wave 99 until the act is recorded; a package whose act is
+optional (GP-03, GP-05, RUN-LEDGER-WIRE, DATA-PRICE-CADENCE,
+DATA-GUIDE-FACTS, DEP-14, REL-STAGE-SANDBOX) lands in its open wave on
+the default. Answer in one message, any subset, in any
 order; a session copies the answers into the hand-off and reads them
 back.
 
@@ -75,7 +78,8 @@ agents.
   docs/decisions/0012-worktree-sidecar-hook.md (each runs
   tools/wt_sidecar_hook.py). In the same edit do OA-6 (drop line 17).
   A session then spawns one isolated agent, checks its path is under the
-  sidecar Worktree folder and un-skips tests/test_wt_sidecar_hook.py.
+  sidecar Worktree folder and runs tests/test_wt_sidecar_hook.py, whose
+  wiring test stops skipping by itself once both entries are present.
 - Unblocks: AUTO-26 (F-057, WT-SIDECAR-WIRE).
 - Default (F-057): agent worktrees are created under the repository's
   gitignored .claude/worktrees and reaped at /done. Nothing leaks, but it
@@ -89,8 +93,9 @@ agents.
 - Ask: say in your own words (step 1) that the private GitHub repository
   may be created and main pushed, and later (step 4) that it may be made
   public.
-- Kind: decision (an account act and an OAuth grant done by agents with
-  gh only after the go).
+- Kind: decision (once it is recorded, a session creates the repository
+  and pushes with the gh sign-in that already exists; OA-1 covers a
+  missing sign-in).
 - Why only the operator: CLAUDE.md says creating the remote is an
   operator act; ruling Q-23 needs the operator; a plan sentence is not
   the record.
@@ -98,12 +103,15 @@ agents.
   main" (step 1) and, when ready, "make it public" (step 4). A session
   writes `OPERATOR GO Q-23 step 1 (<date>): "<your words>"` (and the
   step 4 line) into AL-NEXT-SESSION.txt verbatim, reads it back with
-  grep, sets q23_go_recorded and re-runs the builder. One message may
-  order both steps.
+  grep, sets "q23_go_recorded": true in the params of the planning
+  builder's overrides.json and re-runs the builder (docs/plan/07,
+  "Operator go for publishing"). One message may order both steps.
 - Unblocks: step 1: GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT, GP-09,
   then PUB-HOOK-RELEASE-CHECK, PUB-DEPBOT-ACTIONS, PUB-DEPBOT-NPM,
-  PUB-DEPBOT-TICK, GP-10, GP-11, REL-RC-LIVE; step 4: GP-12, then GP-13,
-  GP-15, GP-16, DEP-18.
+  PUB-DEPBOT-TICK, PUB-DEPBOT-FIRST-RUN, GP-10, GP-11, AUTO-19,
+  LOOP-CI-ISSUES, DATA-CONTACT-DEFAULT, PUB-GUIDE-DOWNLOAD-PLACE,
+  REL-RC-LIVE; step 4 (with OA-2): GP-12, then GP-13, GP-15, GP-16,
+  AUTO-20, DEP-18.
 - Default (Q-23): stay local and prepare everything; pre-push keeps
   refusing every push; GP-01, GP-03, GP-04, GP-05 and the community files
   land in the open waves.
@@ -158,10 +166,13 @@ agents.
 - Why only the operator: the operator's order of session 5 (releases
   only on a milestone or an explicit tag); the phrase is the only
   trigger (docs/plan/05 operator act 4).
-- Steps: type the phrase; the session runs the publish gates.
+- Steps: type the phrase `release <version>`; the session runs the
+  publish gates (`python tools/release.py publish`, built by
+  REL-PUBLISH-GATES, wave 21).
 - Unblocks: REL-RC-LIVE (rc.1, private phase), DEP-18 (0.2.0, after the
   flip).
-- Default: no release; local release candidates only (`build --ref`).
+- Default: no release; local release candidates only
+  (`python tools/release.py build --ref`, no tag, never pushed).
 - When: after OA-10 step 1 and OA-3 (rc); after the public flip (0.2.0).
 
 ## C - Before going public
@@ -343,11 +354,13 @@ under B and is needed here as well.
 - Kind: decision (a personal value in a gitignored file).
 - Why only the operator: the contact is the operator's identity and
   cannot be guessed (decisions 0015, 0016).
-- Steps: after DATA-CONTACT-FIELD (wave 17): type it once in the
-  dashboard field; before that: "contact": "<value>" in
-  config/local.json. Keep "Use web data" ticked.
+- Steps: after DATA-CONTACT-UI (wave 24; it adds the write-only field
+  to the "Prices and web data" card on top of the DATA-CONTACT-FIELD
+  setter of wave 17): type it once in the dashboard field; before that:
+  "contact": "<value>" in config/local.json. Keep "Use web data" ticked.
 - Unblocks: TC-TREE-URL, DATA-PRICE-TYPE-PROOF, DATA-GUIDE-ACTS-5-6
-  (snapshot refresh), the W6 watcher; CARRY-16.
+  (snapshot refresh; `scripts/build.ps1 -Snapshot` once is the
+  alternative there), the W6 watcher; CARRY-16.
 - Default: no contact: no poe.ninja request and no GGG tree export on
   the dev host; the trade link only. Once public the project issues page
   is the default contact (Q-03).
@@ -446,7 +459,9 @@ under B and is needed here as well.
   config/local.json (a session sets it on the operator's yes); press on a
   rare, a unique, a currency stack, a waystone, a tablet, a gem (plain
   and advanced copy).
-- Unblocks: TC-PRESS-FIXTURES, DATA-LOOT-TALLY.
+- Unblocks: TC-PRESS-FIXTURES, DATA-LOOT-TALLY; through
+  TC-PRESS-FIXTURES also TC-WAYSTONE-TUNE, TC-WAYSTONE-TUNE-UI and
+  TC-AFFIX-LINE.
 - Default: switch off; fixtures stay synthetic.
 - When: after wave 20.
 
@@ -475,8 +490,8 @@ under B and is needed here as well.
   write "REG OPEN (operator)"): send the text DATA-GGG-APPLICATION
   prepared; the client id goes only into config/local.json; one live
   smoke follows.
-- Unblocks: TC-OAUTH-REG, TC-IMPORT (event fetches also wait for GGG's
-  written answers to F-083 questions 1 and 2).
+- Unblocks: TC-OAUTH-REG, TC-IMPORT, then TC-IMPORT-UI (event fetches
+  also wait for GGG's written answers to F-083 questions 1 and 2).
 - Default: no OAuth client; the ggg_api provider stays a no-request stub.
 - When: when REG_OPEN appears (absent on 2026-11-18).
 
@@ -542,7 +557,8 @@ under B and is needed here as well.
 
 ### OA-14 Windows Sandbox for the first public release
 
-- Ask: allow `stage --sandbox` for the first public release.
+- Ask: allow `python tools/release.py stage --sandbox` (the flag
+  REL-STAGE-SANDBOX adds, off by default) for the first public release.
 - Kind: decision.
 - Why only the operator: it starts a sandbox VM on the play machine.
 - Steps: the feature is already Enabled (checked); say "allow sandbox
@@ -603,6 +619,10 @@ under B and is needed here as well.
 
 ## Index: packages and units that name an operator act
 
+Packages whose operator_act or coverage names the act. Packages that
+wait only through another package (for example AUTO-19 behind GP-09)
+appear in the entry's Unblocks line, not here.
+
 - OA-1: GP-05, GP-09. OA-2: DATA-PRICE-CADENCE, DATA-NINJA-RELEASE-ON,
   GP-12, DEP-18. OA-3: GP-15, REL-RC-LIVE. OA-4: GP-11. OA-5: GP-03,
   GP-09, DEP-18. OA-6: GP-16, PUB-LOCAL-ONLY-TEXT.
@@ -624,7 +644,10 @@ under B and is needed here as well.
 
 Hand-off acts mapped: a = OA-33 (FPS) and OA-20 (RAM via the budget
 log); b = OA-19 and OA-20 (no separate session); c = OA-36; d = OA-10;
-e = OA-7; g = OA-8; h = OA-30; k = OA-9. The hand-off's phone decision
+e = OA-7; g = OA-8; h = OA-30; k = OA-9. Letters absent from today's
+hand-off (traced by docs/plan/01 OP-ACTS): f = OA-12 (dropped in session
+4 without being acted on, carried as WT-SIDECAR-WIRE); i is replaced by
+decision 0027 and j is done (decision 0021). The hand-off's phone decision
 is OA-27. docs/plan/05 acts 1 to 9 = OA-10 with OA-3, OA-5, OA-1, OA-13,
 OA-14, OA-15, OA-16, OA-17, OA-2. docs/plan/06 acts 1 to 9 = OA-18,
 OA-10, OA-12, OA-19, OA-8, OA-20, OA-21, OA-22, OA-23.
@@ -656,3 +679,71 @@ OA-10, OA-12, OA-19, OA-8, OA-20, OA-21, OA-22, OA-23.
   TC-PRESS-STAGED-LIVE), creating the repository and pushing with gh
   after OA-10 is recorded, every build, stage and tag after the release
   phrase, unmarking a bad release as latest.
+
+## Verification record
+
+Independent verifier, 2026-11-18, HEAD 1fb7aae. Read-only on the
+machine: no app, core, overlay or loop started, no Client.txt read, only
+this file changed.
+
+Checked:
+- Every package id named here against docs/plan/packages.json (396
+  packages; every other id is a coverage unit, a finding of
+  docs/plan/findings.json, a ROADMAP row or a hand-off item). Every
+  package whose operator_act is not empty is named; the index matches
+  the OA ids each operator_act names, both ways; the seven units whose
+  coverage starts with "operator:" are named; every operator_decisions
+  qid (Q-01, Q-02, Q-05, Q-07, Q-09, Q-11, Q-23, Q-24, A-01, A-02, A-03)
+  stands beside "Default"; every ruling of the planning scratch set with
+  needs_operator true (Q-01, Q-05, Q-07, Q-09, Q-11, Q-23, Q-24) has an
+  entry; A-01 and A-03 carry "floor" and the strict answer first.
+- Wave numbers of every package named as a precondition (DATA-CONTACT-
+  FIELD 17, REL-AUTOSTART-SWITCH 14, RUN-METRICS-SITES 15,
+  RUN-LEDGER-WIRE 16, RUN-VERDICTS-UI 19, TC-PRESS-SAMPLES 20, OVL-CHECK
+  21, REL-PUBLISH-GATES 21, RUN-BUDGET-TESTS-LIVE 24, PLAY-F-204A-SR-TOOL
+  29); wave 1 has 11 worktree-isolated packages.
+- Commands and flags: `gh auth login`, `gh auth refresh -s` (gh help);
+  `scripts\autostart.ps1 -Enable` and `scripts/build.ps1 -Snapshot`
+  (param blocks); tools/wt_sidecar_hook.py, tests/test_wt_sidecar_hook.py
+  and decision 0012's two entries exist; ops/fleet_kit/fleet_rewrite.py
+  exists; tools/release.py (build --ref, stage --sandbox, publish),
+  tools/ovl_check.py and tools/sr_pass.py are future files of
+  DEP-08 / REL-STAGE-SANDBOX / REL-PUBLISH-GATES, OVL-CHECK and
+  PLAY-F-204A-SR-TOOL and are named as such; loop.dest_inboxes is the key
+  tools/loop_base.py and tools/loop_inbox.py read (MAIN entry).
+- Machine facts re-read: gh signed in with repo and workflow; no git
+  remote; .claude/settings.json line 17 is the ash_lane line, no
+  Worktree hook entry, tools/ash_lane.py absent; config/local.json has
+  web_data true, no contact key, an empty loop.dest_inboxes, no
+  dev_press_samples or loop_push; FLEET_ROSTER unset; \AshLightOps\LaneLoop
+  Ready, HALT present, no \AshLight Autostart task; Windows Sandbox
+  Enabled; REG_OPEN and verdicts.json absent, no skilltree.json or
+  book.json in the sidecar cache; fleet_suite_gate.py line 672 unchanged.
+- Sources: docs/plan/01 OP-ACTS (letters a to k), OP-PHONE-LAN,
+  WT-SIDECAR-WIRE, FLEET-KIT-GATE-REPORT; 04 OA-1 to OA-6; 05 and 06
+  operator acts 1 to 9; 07 "Operator go for publishing"; the hand-off
+  OPERATOR ACTS, phone decision and kit defect. Floor and CLAUDE.md: no
+  entry asks for input to the game, a game-folder write, an undocumented
+  trade call, a forum read or a LAN bind without the operator's own
+  words; every floor change is offered strict first and worded only by
+  the operator. No private name, machine path or account id.
+
+Changed:
+- Intro: only packages that cannot land without the act are parked; the
+  seven packages with an optional act land in open waves on the default.
+- OA-8: the dashboard contact field lands with DATA-CONTACT-UI (wave
+  24), not DATA-CONTACT-FIELD (wave 17, the setter only); added the
+  build.ps1 -Snapshot alternative for DATA-GUIDE-ACTS-5-6.
+- OA-10: Kind no longer says agents do an OAuth grant; the builder
+  switch is named with its file; Unblocks adds PUB-DEPBOT-FIRST-RUN,
+  AUTO-19, LOOP-CI-ISSUES, DATA-CONTACT-DEFAULT, PUB-GUIDE-DOWNLOAD-PLACE
+  (step 1) and AUTO-20 (step 4, with OA-2), as docs/plan/06 act 2 and the
+  parked blocks require.
+- OA-12: the hook test skips by itself while unwired (nothing to
+  un-skip).
+- OA-13, OA-14: the bare `build --ref` and `stage --sandbox` are now
+  full tools/release.py commands with the package that builds them; the
+  phrase is written `release <version>`.
+- OA-32: adds TC-WAYSTONE-TUNE, TC-WAYSTONE-TUNE-UI and TC-AFFIX-LINE
+  (parked behind TC-PRESS-FIXTURES). OA-36: adds TC-IMPORT-UI.
+- Index: states its rule. Hand-off map: letters f, i and j traced.
