@@ -6,7 +6,7 @@ spacing, numeral setting and truncation rule in `web/` and the overlay;
 legibility on a second monitor at 60-90 cm and of the overlay at 1080p,
 1440p and 4K; a measured overlay scrim / halo recipe; a small type scale
 that becomes design-system tokens.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -14,39 +14,51 @@ Status: draft
   (SC 1.4.3: 4.5:1, large text 3:1 at 24px or 18.5px bold; 4.5 = 3 x 1.5
   to cover the contrast loss of about 20/40 acuity; a thin outline counts
   as part of the glyph, a wide halo counts as background).
-- WCAG-CE: SC 1.4.6 Contrast (Enhanced), 7:1 for normal text,
-  https://www.w3.org/WAI/WCAG22/Understanding/contrast-enhanced.html -
-  not re-fetched this session (stable text since WCAG 2.0); UNVERIFIED today.
+- WCAG-CE: SC 1.4.6 Contrast (Enhanced), Level AAA, 7:1 for normal text
+  and 4.5:1 for large text,
+  https://www.w3.org/WAI/WCAG22/Understanding/contrast-enhanced.html
+  (re-fetched by the verifier 2026-11-18).
 - WCAG-TS: https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html
   (SC 1.4.12: content survives line height 1.5, paragraph 2x, letter 0.12em,
   word 0.16em overrides without clipping).
 - MS-TYPE: https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/typography
   (Windows ramp 12/16, 14/20, 18/24, 20/28, 28/36, 40/52, 68/92 epx;
   minimums 14px semibold, 12px regular; Semibold instead of Bold for
-  emphasis; ellipsis for truncation; Segoe UI Variable is the Windows 11
+  emphasis; ellipsis for truncation in most cases (the page prefers a plain
+  clip only where the container is well defined and no "see more" exists);
+  50-60 letters per line; Segoe UI Variable is the Windows 11
   face and must be named in CSS for HTML; Selawik is a metric-compatible
   open font for non-Windows use; page updated 2026-07-14).
-- MS-FAQ: https://learn.microsoft.com/typography/fonts/font-faq (seen via a
-  search summary: fonts supplied with Windows may be named in a CSS stack
-  but not copied, self-hosted or shipped with an app).
+- MS-FAQ: https://learn.microsoft.com/en-us/typography/fonts/font-faq
+  (page dated 2024-11-19; read directly by the verifier: Windows fonts may
+  be named in a CSS font stack, but may not be copied to a server for
+  self-hosting, converted to WOFF / WOFF2 or other formats, or shipped
+  inside an app or game; Segoe UI Variable is not licensable for use
+  outside Microsoft products).
 - MDN-FF: https://developer.mozilla.org/en-US/docs/Web/CSS/font-family
-  (system-ui is meant for UI text; ui-monospace is a newer generic).
-- CIU: https://caniuse.com/extended-system-fonts (seen via a search
-  summary: ui-serif / ui-sans-serif / ui-monospace / ui-rounded unsupported
-  in Chrome and Edge, Safari only). Confirmed locally by P-FONT.
-- SUV: https://tigeroakes.com/posts/segoe-ui-variable (third party: on
-  Windows 11 `system-ui` still resolves to legacy Segoe UI; the Variable
-  face is used only when named). Not confirmed in Chromium source;
-  UNVERIFIED.
-- LB: Legge and Bigelow 2011, "Does print size matter for reading?",
-  Journal of Vision 11(5):8, https://pmc.ncbi.nlm.nih.gov/articles/PMC3428264 ;
-  the critical print size of about 0.2 deg x-height (fluent range 0.2 to
-  2 deg) as restated by https://pmc.ncbi.nlm.nih.gov/articles/PMC7720185
-  (the 2011 wording itself not read this session).
+  (system-ui is meant for UI text; ui-monospace is a newer generic). Not
+  re-fetched by the verifier; nothing decision-relevant rests on it.
+- CIU: https://caniuse.com/extended-system-fonts (fetched by the verifier:
+  ui-serif / ui-sans-serif / ui-monospace / ui-rounded unsupported in every
+  listed Chrome version up to 160 and Edge up to 156). Confirmed locally
+  by P-FONT.
+- SUV: https://tigeroakes.com/posts/segoe-ui-variable (third party,
+  published 2022-05-25: `system-ui` does not pick up Segoe UI Variable on
+  Windows 11; the face must be named as "Segoe UI Variable Text", "Small"
+  or "Display", the bare family name does not work in browsers). The
+  article does not say what `system-ui` resolves to instead; "legacy Segoe
+  UI on Windows 11" is an inference, UNVERIFIED (no Windows 11 machine).
+- LB: Legge and Bigelow 2011, "Does print size matter for reading? A
+  review of findings from vision science and typography", Journal of
+  Vision 11(5):8, https://pmc.ncbi.nlm.nih.gov/articles/PMC3428264 (read
+  directly by the verifier: critical print size about 0.2 deg x-height
+  for normal sight, individual values 0.15 to 0.3 deg; fluent range about
+  0.2 to 2 deg).
 - DOB: Dobres et al. 2016, Ergonomics 59(10):1377-1391,
   https://pmc.ncbi.nlm.nih.gov/articles/PMC5213401 (glance legibility:
-  light-on-dark needed about 39 percent longer exposure than dark-on-light
-  (119 vs 85 ms); a 3 mm cap height raised thresholds 26 percent for a
+  light-on-dark needed about 40 percent longer exposure than dark-on-light
+  (119.4 vs 85.3 ms table means; the paper's text says 38.6 percent);
+  3 mm text raised thresholds 26 percent for a
   humanist face, 62 percent for a square grotesque, vs 4 mm; thresholds
   rise with age, about 70 ms at 20 to 126 ms at 65).
 - PACK: the ultraplan evidence pack (`<sidecar>\Scratch\up-evidence`),
@@ -74,7 +86,8 @@ Status: draft
 ## Summary
 
 - One sans family everywhere (`system-ui, "Segoe UI", sans-serif`), which
-  resolves to Segoe UI on Windows 10 and, per SUV, also on Windows 11. No
+  resolves to Segoe UI on Windows 10 (P-FONT) and, per SUV, never to Segoe
+  UI Variable on Windows 11 (what it does pick there is UNVERIFIED). No
   font is bundled and none should be: Segoe UI ships with Windows and may
   not be redistributed (MS-FAQ). The `ui-monospace` head of the mono stack
   is dead in Chromium (CIU, P-FONT); Consolas renders.
@@ -124,8 +137,9 @@ Font stacks (3 in use, plus one in the client splash):
   `font-src`, so a bundled font could not even load there.
 
 Sizes (declarations in `web/app.css`, by value):
-- 0.9rem (14.4px) x17, 0.85rem (13.6px) x7, 0.8125rem (13px) x4 (+2 in the
-  shell media query), 1rem x3, 1.6rem x1 (`:149`), 1.3rem x1 (`:541`),
+- 0.9rem (14.4px) x17, 0.85rem (13.6px) x7, 0.8125rem (13px) x4 (event
+  kind tags `:173`, tab marks `:500`, and two inside media queries: footer
+  `:558`, short-window stat label `:567`), 1rem x3, 1.6rem x1 (`:149`), 1.3rem x1 (`:541`),
   clamp glance `:122` and `:539`, clamp zone `:132` and `:540`.
 - Rendered over the pack (PACK key measurement 9; aggregate): 13, 13.6,
   14.4, 16, 20.8, 24, 28.16, 32, 33.28, 36, 44 px. Share of visible
@@ -197,6 +211,14 @@ margin is thin, not negative.
   head 14px 8.92 / 9.15; amber status 13px 4.82 / 4.98 (4.15 over the
   split, 4.62 over the checker); muted 13px 4.56 / 4.65 (4.18 checker);
   "|" separator 15px 3.75 / 4.24.
+- Per role over the brief's three backdrops (P-REC r0, dpr 1.0, far field;
+  white / warm #f2e6c8 / grey #808080): zone 16px 9.33 / 9.76 / 11.30;
+  card head 14px 8.92 / 9.35 / 10.82; amber status 13px 4.82 / 5.06 /
+  5.71; muted secondary 13px 4.56 / 4.75 / 5.34; "|" separator 3.75 /
+  3.87 / 4.32. Worst case for every role is white (the fine checker and
+  the split are lower still for the two small roles, above). Only the two
+  13 px secondary roles and the separator sit under 7:1 anywhere; the
+  separator is the only glyph under 4.5:1.
 - Why: the plan must not size a fix to a wrong number, and must not call
   the overlay compliant either. Secondary lines carry the trade location
   and the item-check reason, read in one glance during play; at 13 px and
@@ -233,7 +255,7 @@ F4. The overlay's smallest text is physically small for a glance.
   (27 inch 1440p at 100 percent, 27 inch 4K at 100 or 150 percent); 14 px
   gives 8.6 and 16 px 9.9 arcmin there. The critical print size for full
   reading speed is about 0.2 deg = 12 arcmin (LB).
-- Glance research: light-on-dark already costs about 39 percent more
+- Glance research: light-on-dark already costs about 40 percent more
   exposure time, and the small-size penalty grows with smaller text (DOB).
   The overlay is light-on-dark by necessity (a dark plate is the only thing
   that holds contrast over any scene), so size is the lever left.
@@ -339,10 +361,18 @@ secondary colours, soft halo.
     3.75 over white.
 - Why the alternatives lose (P-REC): r4 / r5 (plate 0.70 / 0.60, 2 px
   stroke) drop primary to 5.71 / 3.98 over white; r6 (no plate, outline
-  only) reads 1.00-1.37 far-field over white, warm and fire; r8 (0.86 with
+  only) reads 1.22-1.28 far-field over white, warm and fire (1.00 over the
+  checker, 1.37 over the split); r8 (0.86 with
   today's colours) leaves secondary at 4.63.
-- Impact: H. Every overlay line holds >= 7:1 at the default over a white
-  scene (WCAG-CE level for small text), still >= 5.7 at the floor.
+- Impact: H. Every overlay text colour holds >= 7:1 (solid-colour
+  calculation, re-computed by the verifier) at the default over a white
+  scene (WCAG-CE level for small text), and the rendered glyph cores are
+  estimated at 7.1-7.3 there; still >= 5.7 rendered at the floor.
+- Mechanism constraint: the plate alpha stays page CSS inserted by
+  `app/main.js` `applyOpacity` (`app/main.js:163-175`), never
+  `BrowserWindow.setOpacity` (that comment records that window-level alpha
+  drew nothing on the real desktop); the `prefers-contrast: more` block
+  keeps its opaque `--al-plate: #0f1216` (`app/overlay/overlay.css:134-139`).
 - Effort: S (CSS, `layout.js` opacityCss to a plate-alpha variable, tests).
 - Risk: the slider's meaning changes from "whole HUD" to "background";
   saved layouts with 0.9-1.0 map linearly onto 0.86-1.0 so nobody's HUD
@@ -357,7 +387,10 @@ secondary colours, soft halo.
 - Files likely touched: `app/overlay/overlay.css`, `app/shared/layout.js`,
   `app/main.js`, `web/index.html` (slider label "Background"),
   `app/test/layout.test.js`, `tests/test_ux_review.py`,
-  `tests/test_design_contrast.py`, `docs/design/0001-design-system.md`.
+  `tests/test_design_contrast.py`, `tests/test_overlay_layout.py` (14
+  `opacity` references, verifier grep), `tests/test_ux_settings_io.py`
+  (1 reference: settings import of the old opacity value),
+  `docs/design/0001-design-system.md`.
 - Acceptance test: a unit test composites every overlay text token over
   the plate at the floor and default alpha over #ffffff and #f2e6c8 with
   8-bit rounding and asserts primary >= 7, secondary and warn >= 5.5 at
@@ -482,8 +515,9 @@ R5. Tabs keep their width when selected.
 R6. Overlay physical size: normalise `autoScale` to 1200 DIP instead of
 1440.
 - Action: `AUTO_REF_HEIGHT` 1440 to 1200 (`app/shared/layout.js:44`), so
-  1440p at 100 percent and 4K at 150 percent get zoom 1.2 and 4K at 100
-  percent 1.8 (capped 2.0); 1080p unchanged.
+  1440p at 100 percent and 4K at 150 percent (both 1440 DIP tall) get zoom
+  1.2, 4K at 125 percent (1728 DIP) 1.45 instead of 1.2, and 4K at 100
+  percent 1.8 (`autoScale` caps at 2.0, `layout.js:51`); 1080p unchanged.
 - Numbers: 14 px secondary (after R2) becomes 1.96 mm / 10.4 arcmin
   x-height at 65 cm on those screens (from 8.0 today at 13 px), about the
   1080p physical size; window 280 x 176 becomes 336 x 211 DIP.
@@ -497,10 +531,12 @@ R6. Overlay physical size: normalise `autoScale` to 1200 DIP instead of
   same repaint gate; research 0048 owns the budget check.
 - Depends on: R2 (measure after the size change).
 - Files likely touched: `app/shared/layout.js`, `app/test/layout.test.js`
-  (`autoScale` expectations at `:100-105`), design 0001 section 10.
-- Acceptance test: `autoScale` returns 1 at 1920x1080 / 1.0, 1.2 at
-  2560x1440 / 1.0 and 3840x2160 / 1.5, 1.8 at 3840x2160 / 1.0, 2 at 8K;
-  the overlay budget test stays green.
+  (`autoScale` expectations at `:98-106`), design 0001 section 10.
+- Acceptance test: `autoScale` takes DIP bounds (`layout.js:49`), so the
+  updated test asserts by DIP height: 1080 gives 1, 1440 (1440p at 100
+  percent, 4K at 150 percent) 1.2, 1728 (4K at 125 percent) 1.45, 2160
+  (4K at 100 percent) 1.8, 4320 (8K) 2; the overlay budget test stays
+  green.
 - ZERO-CLICK: follows the monitor; no click.
 
 R7. Fix the contrast gate so it measures what the eye sees.
@@ -581,8 +617,8 @@ R9. Text-spacing survival check (WCAG 1.4.12) for the dashboard.
 - A plate that adapts to the scene brightness by sampling the screen:
   needs a continuous screen read, which the floor forbids (screen only
   once per manual hotkey press, no watcher, no timer).
-- Outline-only text with no plate (P-REC r6): 1.00-1.37 far-field over
-  white, warm and fire; fails at any size.
+- Outline-only text with no plate (P-REC r6): 1.22-1.28 far-field over
+  white, warm and fire, 1.00 over the checker; fails at any size.
 - `-webkit-text-stroke` outlines (P-REC r4 / r5): thicken and blur 13-14 px
   glyphs and only work with a weaker plate, which costs more than they add.
 - Flashing, pulsing or colour cycling to raise salience: design 0001
@@ -608,3 +644,76 @@ R9. Text-spacing survival check (WCAG 1.4.12) for the dashboard.
 - The slider relabel ("Background" in place of "Opacity") is a wording call
   for the target design (docs/plan/03-target-design.md); no adjudicator
   needed.
+
+## Verification
+
+Independent verifier, 2026-11-18.
+
+Checked:
+- Code (A): about 40 path:line citations opened in `web/app.css`,
+  `app/overlay/overlay.css`, `app/overlay/index.html`,
+  `app/shared/layout.js`, `app/main.js`, `app/client/starting.css`,
+  `web/index.html`, `web/acts.js`, `web/runs.js`, `web/history.js`,
+  `web/app.js`, `web/health.js`, `docs/design/0001-design-system.md` and
+  the cited tests; all hold. Declaration counts re-counted (0.9rem x17,
+  0.85rem x7, 0.8125rem x4, `overflow-wrap: anywhere` x30, `white-space:
+  nowrap` x8).
+- Evidence (A): PACK `run/summary_lines.txt` re-aggregated (135 dashboard
+  captures: Play 12-16 styles / 6-7 sizes, Build 8-12 / 3-4, Items 9-10 /
+  3-4, Run 9-10 / 3-4, Settings 10 / 3, minimum ratio 5.31, 0 truncated;
+  light run minimum 4.90); PACK `run/c/overlay.json` method string and
+  its 3.81 confirmed; `px_probe.py` re-run on PACK `run/c` reproduces
+  4.88 / 5.06 / 5.69 / 6.03; P-REC measurement JSON re-read for every
+  r0 / r1 / r3 / r4 / r5 / r6 / r8 figure quoted; P-FONT JSON re-read for
+  digit advances, widths, metrics and line fits.
+- Arithmetic: every R1 solid-colour ratio (alpha 0.86 and 0.80 over four
+  backdrops) and the pack's 3.81 model re-computed independently; every
+  x-height / arcmin figure in F4, R3 and R6 re-derived from panel
+  geometry (24 inch 1080p 0.277 mm/px, 27 inch 1440p 0.234 mm/px).
+- Web (B): 9 sources re-fetched (WCAG-CM, WCAG-CE, WCAG-TS, MS-TYPE,
+  MS-FAQ, CIU, SUV, LB, DOB); all claims used hold except as corrected.
+- ToS floor (C): R1-R9 are CSS, window-size or test-tooling changes; none
+  reads the screen, the clipboard, the game or Client.txt, sends input, or
+  uses GGG branding. The scene-adaptive plate (screen watcher) and a
+  game-style face (GGG look) stay under Rejected.
+- Settled decisions (D): no CLAUDE.md settled entry covers overlay
+  opacity, type sizes or fonts; R1 / R2 / R6 stay inside decision 0002
+  (separate click-through overlay, budgets) and do not touch decision
+  0041 (overlay inside the desktop client). R1 does reverse design 0001
+  section 5.2's opacity-floor rule and test pins, which are design-doc
+  rules, not settled decisions; the file says so (R1 Depends on).
+- Completeness (E): every brief point is covered: stacks, sizes, weights,
+  line height, tracking with counts; bundling and licence; numerals;
+  truncation; 60-90 cm and 1080p / 1440p / 4K with scaling; per-role
+  worst case over white / warm / grey (added by the verifier to F1);
+  recipe with numbers; scale and tokens; cited guidance.
+- Recommendations (F): all nine carry the required fields.
+
+Corrected (8):
+- WCAG-CE, MS-FAQ, CIU and LB were unread or read via summaries; now
+  fetched directly and labelled so (WCAG-CE no longer UNVERIFIED).
+- SUV overclaimed: the article says only that `system-ui` does not use
+  Segoe UI Variable; the "legacy Segoe UI on Windows 11" reading is now
+  marked UNVERIFIED in Sources and Summary.
+- DOB polarity cost 39 to about 40 percent (table means 119.4 vs 85.3 ms;
+  the paper's text says 38.6).
+- 0.8125rem count: x4 in total including the two media-query
+  declarations, not 4 plus 2.
+- r6 outline-only range: 1.22-1.28 over white / warm / fire (1.00 checker,
+  1.37 split), not 1.00-1.37 over white / warm / fire (R1, Rejected).
+- R6 acceptance test restated in DIP heights (the test helper passes DIP
+  bounds, so "3840x2160 / 1.5" was not a valid input), the 4K at 125
+  percent case added (1.2 to 1.45), test line range `:98-106`.
+- R1 impact split into solid-colour (>= 7.30) and rendered estimate
+  (7.1-7.3); mechanism constraint added (page CSS via insertCSS, never
+  setOpacity; high-contrast plate stays opaque); two more test files that
+  pin opacity named.
+- MS-TYPE nuance on ellipsis vs clip and the 50-60 letters line-length
+  guidance added.
+
+UNVERIFIED (remaining):
+- What `system-ui` resolves to on Windows 11, and Segoe UI Variable's
+  default figures and metrics (no Windows 11 machine).
+- All P-REC numbers come from headless Chrome on opaque backdrops, not
+  the real Electron transparent window (Open questions).
+- MDN-FF not re-fetched (no decision rests on it).
