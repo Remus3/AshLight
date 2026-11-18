@@ -7,9 +7,9 @@ This is the single list of what only the operator can do or decide.
 Agents do everything else. No open wave waits on any entry: every entry
 has a default in force. A package that cannot land without the act is
 parked in wave 99 until the act is recorded; a package whose act is
-optional (GP-03, GP-05, RUN-LEDGER-WIRE, DATA-PRICE-CADENCE,
-DATA-GUIDE-FACTS, DEP-14, REL-STAGE-SANDBOX) lands in its open wave on
-the default. Answer in one message, any subset, in any
+optional (GP-03, GP-05, GP-09, PUB-LOCAL-ONLY-TEXT, RUN-LEDGER-WIRE,
+DATA-PRICE-CADENCE, DATA-GUIDE-FACTS, DEP-14, REL-STAGE-SANDBOX) lands in
+its open wave on the default. Answer in one message, any subset, in any
 order; a session copies the answers into the hand-off and reads them
 back.
 
@@ -58,7 +58,8 @@ Where docs/plan/04 ("The go"), 05 (operator act 1) or 06 (operator act
 2) read differently on ruling Q-23, docs/plan/07 section "Operator go
 for publishing" wins: creating the repository, the first push and the
 public flip each need the operator's own words recorded in the hand-off
-(OA-10).
+(OA-10). 2026-11-18: the go is recorded; 04, 05 and 06 now agree
+(adjudicator LE-01).
 
 ## A - Needed before wave 1
 
@@ -81,41 +82,48 @@ agents.
   sidecar Worktree folder and runs tests/test_wt_sidecar_hook.py, whose
   wiring test stops skipping by itself once both entries are present.
 - Unblocks: AUTO-26 (F-057, WT-SIDECAR-WIRE).
-- Default (F-057): agent worktrees are created under the repository's
-  gitignored .claude/worktrees and reaped at /done. Nothing leaks, but it
-  breaks the Sidecar placement rule (decision 0012, Alternatives).
+- Default (F-057; docs/plan/08 section 2): each wave builder makes its
+  own worktree under the sidecar Worktree folder by running
+  tools/wt_sidecar_hook.py by hand. The repository's gitignored
+  .claude/worktrees is only the fallback if the permission system refuses
+  edits under the sidecar path; it breaks the Sidecar placement rule
+  (decision 0012, Alternatives) and gets one NOTE line in the hand-off.
 - When: before wave 1 (recommended; wave 1 does not wait for it).
 
 ## B - Before the first push
 
+Since 2026-11-18 the only remaining ask in this part is OA-1, and it is
+conditional and expected to be nothing: the Q-23 go is recorded (OA-10)
+and the repository address has a default (OA-5).
+
 ### OA-10 The Q-23 go in the operator's own words
 
-- Ask: say in your own words (step 1) that the private GitHub repository
-  may be created and main pushed, and later (step 4) that it may be made
-  public.
-- Kind: decision (once it is recorded, a session creates the repository
-  and pushes with the gh sign-in that already exists; OA-1 covers a
-  missing sign-in).
-- Why only the operator: CLAUDE.md says creating the remote is an
-  operator act; ruling Q-23 needs the operator; a plan sentence is not
-  the record.
-- Steps: one message, for example "create the private repo and push
-  main" (step 1) and, when ready, "make it public" (step 4). A session
-  writes `OPERATOR GO Q-23 step 1 (<date>): "<your words>"` (and the
-  step 4 line) into AL-NEXT-SESSION.txt verbatim, reads it back with
-  grep, sets "q23_go_recorded": true in the params of the planning
-  builder's overrides.json and re-runs the builder (docs/plan/07,
-  "Operator go for publishing"). One message may order both steps.
-- Unblocks: step 1: GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT, GP-09,
-  then PUB-HOOK-RELEASE-CHECK, PUB-DEPBOT-ACTIONS, PUB-DEPBOT-NPM,
-  PUB-DEPBOT-TICK, PUB-DEPBOT-FIRST-RUN, GP-10, GP-11, AUTO-19,
-  LOOP-CI-ISSUES, DATA-CONTACT-DEFAULT, PUB-GUIDE-DOWNLOAD-PLACE,
-  REL-RC-LIVE; step 4 (with OA-2): GP-12, then GP-13, GP-15, GP-16,
-  AUTO-20, DEP-18.
-- Default (Q-23): stay local and prepare everything; pre-push keeps
-  refusing every push; GP-01, GP-03, GP-04, GP-05 and the community files
-  land in the open waves.
-- When: step 1 before the first push; step 4 before the public flip.
+Recorded 2026-11-18 (steps 1 and 4) from the operator's session brief.
+Nothing to do.
+
+- Ask: none. The operator's go-public order of 2026-11-18 is the go for
+  step 1 (create the private GitHub repository and push main) and for
+  step 4 (make it public once the plan-04 gates pass); adjudicator LE-01.
+- Kind: decision (recorded).
+- Why only the operator: CLAUDE.md called creating the remote an
+  operator act and ruling Q-23 asked for the operator's own words; a plan
+  sentence is not the record.
+- Steps: none for the operator. PLAN-LANDING writes
+  `OPERATOR GO Q-23 step 1 (2026-11-18): "<the operator's words>"` and
+  the step 4 line into AL-NEXT-SESSION.txt, copied verbatim from the
+  brief by the main session, and reads them back with grep (docs/plan/07,
+  "Operator go for publishing").
+- Unblocks: step 1: GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT (wave 4),
+  GP-09 (wave 5), PUB-DEPBOT-ACTIONS and PUB-DEPBOT-TICK (wave 18),
+  PUB-DEPBOT-NPM (wave 19), PUB-HOOK-RELEASE-CHECK (wave 22); behind
+  GP-09: PUB-DEPBOT-FIRST-RUN, GP-10, GP-11, AUTO-19, LOOP-CI-ISSUES,
+  DATA-CONTACT-DEFAULT, PUB-GUIDE-DOWNLOAD-PLACE, REL-RC-LIVE; step 4:
+  GP-12 (it waits for packages only), then GP-13, GP-15, GP-16, AUTO-20,
+  DEP-18.
+- Default (Q-23), in force only if the lines cannot be written verbatim:
+  stay local and prepare everything; pre-push keeps refusing every push;
+  the eight step 1 packages go back to wave 99.
+- When: done.
 
 ### OA-1 gh sign-in (conditional)
 
@@ -140,10 +148,11 @@ agents.
 - Steps: one line, for example "holder: <name>; repo: <owner>/<name>".
 - Unblocks: GP-03 (licence holder), GP-09 (repository name), GP-10 and
   DEP-18 (the real install line and update constant).
-- Default (Q-24): holder "The AshLight authors"; owner = the account gh
-  is signed in as, name AshLight; until the repository exists a
-  placeholder constant read from config; the leak-sweep allow-list entry
-  is added only at go-public.
+- Default (Q-24): signed-in gh account / AshLight, read at GP-09; holder
+  "The AshLight authors"; nothing waits for it. No address sits in a
+  tracked file until GP-10 writes config/public_repo.json from origin
+  (features needing it stay off); the leak-sweep allow-list entry is
+  added only at go-public (adjudicator LE-02).
 - When: before the first push (GP-03 lands before GP-09).
 
 ### OA-3 Immutable releases (conditional)
@@ -173,29 +182,36 @@ agents.
   flip).
 - Default: no release; local release candidates only
   (`python tools/release.py build --ref`, no tag, never pushed).
-- When: after OA-10 step 1 and OA-3 (rc); after the public flip (0.2.0).
+- When: after the first push (GP-09) and OA-3 (rc); after the public flip
+  (0.2.0).
 
 ## C - Before going public
 
+Nothing is asked in this part since 2026-11-18: OA-2 is skipped in
+writing and the step 4 go is recorded (OA-10, part B).
+
 ### OA-2 One message to poe.ninja (Q-05)
 
-- Ask: send poe.ninja one message asking whether per-install polling at
-  the tiered cadence (about 200 overview requests a day) is acceptable,
-  or a project mirror is wanted; or record a written skip.
+Skipped in writing 2026-11-18 (operator order). Optional: sending the
+message later only serves DATA-NINJA-RELEASE-ON, which needs poe.ninja's
+written yes.
+
+- Ask: none required. Optionally send poe.ninja one message asking
+  whether per-install polling at the tiered cadence (about 200 overview
+  requests a day) is acceptable, or a project mirror is wanted.
 - Kind: physical act (a message to a third party in the operator's
-  name).
+  name), optional.
 - Why only the operator: it speaks for the project to a third party.
-- Steps: send the message through poe.ninja's published contact; tell
-  the session "sent" or "skip"; paste the reply when it comes.
-- Unblocks: GP-12 (the flip waits only for sent-or-skip, not the
-  answer), DATA-PRICE-CADENCE (its gate on the flip), DATA-NINJA-RELEASE-
-  ON and DEP-18 (need the written yes; silence is not consent).
+- Steps: if wanted, send the message through poe.ninja's published
+  contact and paste the reply when it comes.
+- Unblocks: DATA-NINJA-RELEASE-ON and the poe.ninja prices of DEP-18's
+  release builds (both need the written yes; silence is not consent).
+  GP-12 no longer waits for it: its gate 5 reads the hand-off line
+  `OA-2 SKIPPED IN WRITING` (adjudicator LE-38). DATA-PRICE-CADENCE lands
+  either way.
 - Default (Q-05): the tiered cadence ships for source checkouts; release
   builds make no poe.ninja request and show the trade link only.
-- When: before the public flip.
-
-OA-10 step 4 (the public flip in the operator's own words) is listed
-under B and is needed here as well.
+- When: any time; never a gate.
 
 ## D - Decisions with a safe default already in force
 
@@ -624,12 +640,11 @@ wait only through another package (for example AUTO-19 behind GP-09)
 appear in the entry's Unblocks line, not here.
 
 - OA-1: GP-05, GP-09. OA-2: DATA-PRICE-CADENCE, DATA-NINJA-RELEASE-ON,
-  GP-12, DEP-18. OA-3: GP-15, REL-RC-LIVE. OA-4: GP-11. OA-5: GP-03,
-  GP-09, DEP-18. OA-6: GP-16, PUB-LOCAL-ONLY-TEXT.
+  DEP-18. OA-3: GP-15, REL-RC-LIVE. OA-4: GP-11. OA-5: GP-03, GP-09,
+  DEP-18. OA-6: GP-16, PUB-LOCAL-ONLY-TEXT.
 - OA-7: CARRY-15. OA-8: TC-TREE-URL, DATA-PRICE-TYPE-PROOF,
-  DATA-GUIDE-ACTS-5-6, CARRY-16. OA-9: CARRY-18. OA-10: GP-02,
-  PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT, GP-09, GP-12, REL-RC-LIVE, DEP-18.
-  OA-11: PUB-LOCAL-ONLY-TEXT.
+  DATA-GUIDE-ACTS-5-6, CARRY-16. OA-9: CARRY-18. OA-10: none (recorded
+  2026-11-18). OA-11: PUB-LOCAL-ONLY-TEXT.
 - OA-12: AUTO-26. OA-13: REL-RC-LIVE, DEP-18. OA-14: REL-STAGE-SANDBOX.
   OA-15: DEP-14, DEP-18. OA-16: DEP-14.
 - OA-18: AUTO-24. OA-19: RUN-LEDGER-WIRE, RUN-LIVE1-FIXTURES,
@@ -672,13 +687,14 @@ OA-10, OA-12, OA-19, OA-8, OA-20, OA-21, OA-22, OA-23.
   the prepared application when registration opens (OA-36); agents
   never contact GGG.
 - poe.ninja: answer the Q-05 message (yes, or a mirror request that
-  opens a new decision). How: the operator sends it (OA-2) and pastes the
-  reply; silence is not consent.
+  opens a new decision). How: only if the operator chooses to send it
+  (OA-2, optional since 2026-11-18) and pastes the reply; silence is not
+  consent.
 - Sessions (not operator acts): removing HALT (AUTO-21, no later than
   2026-12-04), setting tc_calc on the dev host (Q-10, the integrator of
-  TC-PRESS-STAGED-LIVE), creating the repository and pushing with gh
-  after OA-10 is recorded, every build, stage and tag after the release
-  phrase, unmarking a bad release as latest.
+  TC-PRESS-STAGED-LIVE), creating the repository, pushing with gh and
+  the public flip (GP-09, GP-12; OA-10 is recorded), every build, stage
+  and tag after the release phrase, unmarking a bad release as latest.
 
 ## Verification record
 
@@ -747,3 +763,16 @@ Changed:
 - OA-32: adds TC-WAYSTONE-TUNE, TC-WAYSTONE-TUNE-UI and TC-AFFIX-LINE
   (parked behind TC-PRESS-FIXTURES). OA-36: adds TC-IMPORT-UI.
 - Index: states its rule. Hand-off map: letters f, i and j traced.
+
+Close-out, 2026-11-18 (docs/plan/07, Rulings 2026-11-18 (close-out)):
+- OA-10: recorded (steps 1 and 4); PLAN-LANDING writes the hand-off
+  lines; the eight step 1 packages are scheduled in waves 4, 5, 18, 19
+  and 22 (LE-01).
+- OA-2: skipped in writing; optional; no longer a flip gate (LE-38).
+- OA-5: the default address is read live at GP-09; no placeholder in a
+  tracked file (LE-02). OA-12: the default follows docs/plan/08 section 2
+  (LE-91). OA-13: needs the first push, not an operator go.
+- Parts B and C: the only remaining ask is OA-1, conditional. The index
+  follows the operator_act fields of packages.json again: OA-10 names no
+  package, GP-12 left OA-2.
+- The "Checked" lines above describe the plan before the close-out.

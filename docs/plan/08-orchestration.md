@@ -141,16 +141,19 @@ added with `+`. The status board is not rendered (AL is opt-out).
 ### What is dispatched
 
 - One builder per open worktree package of the wave (`isolation:
-  worktree`, owner session), all at once: at most 12, 11 in wave 1, plus
-  the carried packages. A package is dispatched only when every id in its
+  worktree`, owner session), all at once: at most 12, 11 in wave 1 (14 in
+  waves 4 and 18, 13 in waves 19 and 22: the close-out of 2026-11-18 put
+  the publishing packages there as a fourth merge batch), plus the
+  carried packages. A package is dispatched only when every id in its
   `deps` has a flipped row; otherwise it is deferred with cause `waits on
   <id>`. Inside a Workflow run (section 10) the tool runs at most
   min(16, CPUs - 2) agents at once; builders past that queue.
 - The main-checkout acts (`isolation: none`) as ONE serial chain beside
   the builders: one agent after another in merge order, each committed or
   read back before the next starts. An act that the wave's `gate` text or
-  its own notes place last or alone (AUTO-21 in wave 6, REL-CUTOVER-LIVE
-  in wave 24) waits until the last merge batch has moved main.
+  its own notes place last or alone (GP-09 in wave 5, AUTO-21 in wave 6,
+  REL-CUTOVER-LIVE in wave 24) waits until the last merge batch has moved
+  main.
 - Loop-owned packages (`owner: loop`) are never dispatched by a session.
 - One watcher (section 3).
 
@@ -199,8 +202,8 @@ Whether decision 0012's hook is wired is read, not assumed:
 - Fallback, only if the permission system refuses a builder's edits or
   shell calls under the sidecar path in the unwired method: harness
   isolation with the harness default folder, `.claude/worktrees/` inside
-  the repository (gitignored), which is the default packages.json names
-  for AUTO-26. It breaks the Sidecar placement rule (decision 0012,
+  the repository (gitignored), which packages.json names for AUTO-26 as
+  the fallback only. It breaks the Sidecar placement rule (decision 0012,
   Alternatives), so the hand-off gets one `NOTE:` line and the wiring
   moves to the top of the batched operator ask.
 
@@ -310,7 +313,11 @@ Your final message is data for the orchestrator: short, facts only.
 8. COMMIT on your branch, named paths only. For each new file first:
    cd "<WT>" && git add -N -- <path>
    then:
-   cd "<WT>" && python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "<ID>: <subject>" -- <paths>
+   cd "<WT>" && python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "<type>(<ID>): <subject>" -- <paths>
+   <type> is one of feat, fix, perf, refactor, data, docs, test, chore,
+   ops, security, deps, design, tools or loop, whichever fits the change.
+   Once REL-SUBJECT-CHECK is on main (wave 8) the commit-msg hook refuses
+   a subject without a known type.
    Never git add -A, commit -a, --amend, --no-verify, push, rebase, reset,
    stash or clean. Exit 3 or an index.lock error: wait 30 to 60 s, retry.
    No AI or bot attribution. Leave nothing uncommitted:
@@ -602,7 +609,7 @@ The commit, on `<INT>` (named paths: exactly the integrator files and
 done files it changed or added, for example
 `ROADMAP.md CLAUDE.md docs/decisions/README.md docs/design/reviews.log`):
 
-    cd "<INT>" && python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "integrate: wave <n> batch <b> (<IDs>)" -- <changed paths>
+    cd "<INT>" && python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "chore(integrate): wave <n> batch <b> (<IDs>)" -- <changed paths>
 
 Edits of acts that run after the last batch, and of a wave that has no
 worktree package, are committed the same way in the main checkout. The
@@ -638,7 +645,7 @@ checkout, after the last batch and the last act:
    `python -m pytest -q tests/test_ascii_lf.py tests/test_leak_sweep.py`
    and commits:
 
-       python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "handoff: wave <n> done, next wave <n+1>" -- AL-NEXT-SESSION.txt
+       python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "docs(handoff): wave <n> done, next wave <n+1>" -- AL-NEXT-SESSION.txt
 
    Read back: the line is at HEAD (`git show HEAD:AL-NEXT-SESSION.txt`).
 
@@ -723,7 +730,7 @@ Rows the headless loop may take once HALT is gone:
 - watcher rows with lane `data`, requested dives, and hand-off bullets
   that start with `LOOP:`;
 - a parked package that leaves wave 99 and passes the loop-owner test of
-  07, after the builder is re-run with its owner set.
+  07, after its owner is set in packages.json and the validator passes.
 
 Never a row with BLOCKED, never a row that touches `web/`,
 `app/overlay/`, `app/shared/` or the event text while a wave holds those
@@ -756,7 +763,10 @@ docs/plan/09-operator-acts.md is the one batched operator ask: every
 entry with its default in force and what it blocks. No open wave waits
 for it. A session never asks in chat beyond pointing at that file once,
 and never performs an operator act itself (a password, an OAuth grant, a
-physical act, creating the remote, editing .claude/settings.json).
+physical act, editing .claude/settings.json). Creating the remote, the
+first push and the public flip are agent steps (GP-09, GP-12) since the
+operator's go was recorded on 2026-11-18 (07, Operator go for publishing;
+adjudicator LE-01); without the hand-off lines they stay parked.
 
 How an answered item releases parked packages (wave 99):
 
@@ -776,17 +786,20 @@ How an answered item releases parked packages (wave 99):
    (GGG, poe.ninja) is read the same way; it is true only when its own
    text is satisfied.
 3. The move. For each condition that reads true, the package joins the
-   next open wave (never the wave in flight): the plan builder is re-run
-   with the override 07 names (How the two files are built), then
+   next open wave (never the wave in flight): packages.json is patched
+   directly, as 07 says (How the two files are kept; the planning builder
+   is retired since the close-out of 2026-11-18): the package's wave and
+   blocked field, the two merge_order lists, the package order, the
+   sessions and hotspots lists, and the matching lines of 07. Then
 
        python tools/plan_check.py check
 
-   must print ok. The integrator commits packages.json and the generated
-   part of 07 with the row text from
+   must print ok. The integrator commits packages.json and 07 with the
+   row text from
    `python tools/plan_check.py rows --wave <n>` (the parked `BLOCKED:`
-   text becomes `BLOCKED: session wave <n>`). If the builder folder in
-   the sidecar is gone, the move is ruled by the adjudicator and proven
-   by the same check.
+   text becomes `BLOCKED: session wave <n>`). A move that is not
+   mechanical (a file or serial-group overlap in every near wave) is
+   ruled by the adjudicator and proven by the same check.
 4. Order inside a release follows the plan (for Q-23: PUB-GO-DECISION
    first, with GP-02 in one merge batch, so the CLAUDE.md lift and the
    hook land in one integrator commit).
@@ -1139,10 +1152,17 @@ Notes on the template:
   an edit, at the time of writing.
 - The hand-off line `WAVE POINTER: ...` and the `DEFERRED:` lines are
   defined here; PLAN-LANDING writes the first pointer (`wave 0 done, next
-  wave 1`) when it rewrites the hand-off.
-- packages.json names `.claude/worktrees/` as the default until the hook
-  is wired (AUTO-26); section 2 uses the sidecar by hand instead and keeps
-  that folder as the fallback only.
+  wave 1`) when it rewrites the hand-off (its accept line checks it since
+  the close-out of 2026-11-18).
+- Closed 2026-11-18: AUTO-26 in packages.json words the default as
+  section 2 does (the hand-run sidecar worktree; `.claude/worktrees/` as
+  the fallback only).
+- Not ruled at the close-out of 2026-11-18 (07, Open points): whether the
+  `.claude/worktrees/` fallback of section 2 may be used before the hook
+  is wired or the waves must wait (LE-92, LE-99, LE-100), and whether the
+  builder's own stop at 2 x est_min plus a whole-run restart is accepted
+  as the Workflow equivalent of the kill at 3x (LE-96). Both stay as
+  written here until ruled.
 - The integrator commits once per merge batch (07, Gate commands), not
   once per wave: the batch suite needs the Settled bullets first.
 
@@ -1230,3 +1250,18 @@ Changed:
   design review in the chain; the reader's `open` matches section 1.
 - Rules: no research number is reserved (no package writes a note);
   input list names research 0058 for the loop.
+
+Close-out, 2026-11-18 (docs/plan/07, Rulings 2026-11-18 (close-out)):
+- Section 2: the dispatch width names the four waves that hold 13 or 14
+  worktree packages; GP-09 (wave 5) joins the acts that wait for the last
+  merge batch; the AUTO-26 fallback wording (LE-91).
+- Builder prompt step 8, sections 6 and 7: every commit subject carries a
+  type, from wave 1 on, so nothing changes when REL-SUBJECT-CHECK lands
+  in wave 8 (LE-54, LE-165).
+- Sections 8 and 9: the plan is changed by patching packages.json (the
+  builder is retired, LE-166); creating the remote, the first push and
+  the flip are agent steps since the go was recorded (LE-01).
+- The "Checked" lines above describe the plan before the close-out:
+  GP-02 and PUB-GO-DECISION are now in wave 4, and waves 4, 18, 19 and 22
+  hold more than 12 worktree packages (check still prints ok 396
+  packages, 39 waves).

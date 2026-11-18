@@ -347,7 +347,10 @@ random source; otherwise CI's rebuild could never match the staged
 SHA256SUMS.
 
 It refuses a dirty tree, a tag and VERSION mismatch, a final version
-without a tag, anything from the sidecar cache in the staged tree, and a
+without a tag (2026-11-18, adjudicator LE-53: only for `build --tag`;
+`stage` builds with `--ref`, the artifacts carry no tag, the tag binds
+the staged sums at publish, and CI's `--tag` rebuild must match byte for
+byte), anything from the sidecar cache in the staged tree, and a
 leak-sweep hit in the staged tree. No game data, PoB source, LuaJIT,
 Electron or CPython is in any artifact (decisions 0009, 0018; Q-20).
 
@@ -515,8 +518,9 @@ client on 8960, the live Client.txt or a visible window.
 
 ### DEP-01 Spike: AshLight under the private runtimes
 - Goal: prove the runtime design before any code rests on it.
-- Files: none tracked except this file's "Spike record"; work under
-  `<sidecar>\Scratch\dep-spike\`.
+- Files: the new docs/ops/runtime-spike-record.md (amended 2026-11-18,
+  close-out LE-164: this final file is not edited by a package); work
+  under `<sidecar>\Scratch\dep-spike\`.
 - Acceptance: with the hash-checked embeddable CPython 3.14.10 zip and a
   `git archive` copy of the tree, no Python or Node on PATH and
   `AL_SIDECAR_ROOT` at scratch: a demo core answers `/api/health` on a
@@ -1037,13 +1041,14 @@ its "Reverses if"):
 Each is something no agent can do (a grant, an account act, a physical
 act) or the operator's own stated trigger.
 
-1. Create the private repository, approve the first push and the later
-   flip, and turn on immutable releases before the first `v*` tag (Q-23;
-   plan 04 owns the steps). Why: an account act and an OAuth grant.
-   Blocks: DEP-15 live, DEP-17 live, DEP-18.
-2. Supply the final owner and name of the repository (Q-24). Why: only
-   the operator names the account. Blocks: the real install line and the
-   update constant.
+1. Done: the operator's order of 2026-11-18 (hand-off OPERATOR GO lines)
+   makes creating the repo, the first push and the flip agent steps (plan
+   04 GP-09, GP-12). Immutable releases are switched on through the API;
+   OA-3 applies only if that answers 404. (Amended 2026-11-18,
+   adjudicator LE-01.)
+2. Optional (OA-5); default signed-in account / AshLight; the real
+   install line and update constant come from config/public_repo.json
+   (GP-10). (Amended 2026-11-18, adjudicator LE-02.)
 3. No `gh` sign-in is needed: `gh` is already authenticated on the dev
    host (research 0057; findings conflict "Operator act for the remote").
    Only if a publish or read-back reports a missing token scope does the
@@ -1063,7 +1068,8 @@ act) or the operator's own stated trigger.
 8. Optional: say "click-only" to flip the update default (Q-21).
 9. From plan 04, named because it gates release builds: the one message
    to poe.ninja (Q-05); until its yes, a release build makes no poe.ninja
-   request (F-046).
+   request (F-046). Optional since 2026-11-18: skipped in writing
+   (adjudicator LE-38).
 
 Not operator acts: the cut-over (DEP-13 waits for `game_idle` by itself),
 unmarking a bad release as latest (a session does it with `gh`), every
@@ -1115,8 +1121,9 @@ build and stage.
 
 ## Spike record
 
-Empty until DEP-01 runs; it writes its results in this section, above
-Verification (F-038).
+Amended 2026-11-18 (close-out, LE-164): DEP-01 writes its results to the
+new file docs/ops/runtime-spike-record.md (F-038). This section stays
+empty, because a final planning file is not edited by a package.
 
 ## Verification
 
@@ -1220,3 +1227,10 @@ Corrected (27):
 Left as stated: sizes L for DEP-09 and DEP-11 (one agent each, own
 files); the offline full zip stays a marked option (Q-20 wins over
 F-048); scoop stays deferred (F-210).
+
+Amended 2026-11-18 (close-out; docs/plan/07, Rulings 2026-11-18
+(close-out)); Status stays final: the 'final version without a tag'
+refusal applies to `build --tag` only (LE-53); operator acts 1 and 2
+follow the recorded go and the default address (LE-01, LE-02); the
+poe.ninja message is optional (LE-38); the spike record moves to
+docs/ops/runtime-spike-record.md (LE-164).

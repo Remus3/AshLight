@@ -743,10 +743,11 @@
     5,
     6
    ],
-   "est_wall_min": 387,
-   "session_packages": 37,
+   "est_wall_min": 447,
+   "session_packages": 41,
    "milestones": [
     "the Play skeleton (7 fixed regions) is on the page",
+    "the private repository exists and the first push is green",
     "HALT is removed; the headless loop takes the loop-owned rows"
    ]
   },
@@ -807,8 +808,8 @@
     20,
     21
    ],
-   "est_wall_min": 495,
-   "session_packages": 48,
+   "est_wall_min": 511,
+   "session_packages": 51,
    "milestones": [
     "the bootstrap installer exists",
     "the release stage round trip (install, update, rollback, uninstall) passes"
@@ -822,8 +823,8 @@
     23,
     24
    ],
-   "est_wall_min": 450,
-   "session_packages": 36,
+   "est_wall_min": 458,
+   "session_packages": 37,
    "milestones": []
   },
   {
@@ -1106,9 +1107,12 @@
   },
   {
    "n": 4,
-   "title": "Wave 4: Play tab and dashboard, theorycraft, local security",
-   "goal": "Leads: Wave folder hold and the shared merge lock; Private runtime files: explicit ACL on the runtime dir and local config; CI workflows and their lint test.",
+   "title": "Wave 4: go-public, Play tab and dashboard, theorycraft",
+   "goal": "Leads: Record the go-public decision and the rules text; Guarded pre-push hook and its tests; Replace the local-only wording in loop tools and ritual files.",
    "merge_order": [
+    "PUB-GO-DECISION",
+    "GP-02",
+    "PUB-LOCAL-ONLY-TEXT",
     "LOOP-WAVE-HOLD",
     "SEC-ACL-APPLY",
     "GP-05",
@@ -1127,7 +1131,7 @@
   {
    "n": 5,
    "title": "Wave 5: Play tab and dashboard, reliability and observability, overlay and client",
-   "goal": "Milestones: the Play skeleton (7 fixed regions) is on the page. Leads: WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD; Plug-in folder: ticks, Checks rows and token-gated routes without shared-file edits; setup.ps1 makes the sidecar private; the logon launcher starts PowerShell by its System....",
+   "goal": "Milestones: the Play skeleton (7 fixed regions) is on the page; the private repository exists and the first push is green. Leads: WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD; Plug-in folder: ticks, Checks rows and token-gated routes without shared-file edits; setup.ps1 makes the sidecar private; the logon launcher starts PowerShell by its System....",
    "merge_order": [
     "AUTO-06",
     "RUN-SEAMS",
@@ -1140,9 +1144,10 @@
     "OVL-KEYS-CLIENT",
     "PLAY-TD-19A-PAGER",
     "OVL-GLANCE-RULES",
-    "PLAY-TD-04A-DARK-CLIENT"
+    "PLAY-TD-04A-DARK-CLIENT",
+    "GP-09"
    ],
-   "gate": "per package: its named tests as a file-named run (timing files and any subset over 90 s and the fixed-port files through the suite gate); main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+   "gate": "per package: its named tests as a file-named run (timing files and any subset over 90 s and the fixed-port files through the suite gate); main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean; GP-09 runs alone after the last batch is on main, with nothing else in flight"
   },
   {
    "n": 6,
@@ -1399,7 +1404,7 @@
   },
   {
    "n": 18,
-   "title": "Wave 18: web data, reliability and observability, loop and watchers",
+   "title": "Wave 18: go-public, web data, reliability and observability",
    "goal": "Leads: Build and items grid 2: Last item, Prices with checked items, Item scoring; One hook for data checks: diag_data (attach, facts, rows); A bind failure names its cause; --port stays in the block (P8-4).",
    "merge_order": [
     "PLAY-TD-19D-ITEMS-GRID",
@@ -1413,7 +1418,9 @@
     "PUB-SETTINGS-FILES",
     "GP-08",
     "TEST-SUITE-SOAK",
-    "DATA-GUIDE-FACTS"
+    "DATA-GUIDE-FACTS",
+    "PUB-DEPBOT-ACTIONS",
+    "PUB-DEPBOT-TICK"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1434,6 +1441,7 @@
     "OVL-CLIENT-GUARD",
     "PUB-GUIDE-PAGES",
     "DATA-RESEARCH-GAPS",
+    "PUB-DEPBOT-NPM",
     "DATA-SNAP-SETUP",
     "DATA-TRADESTAT-COVERAGE",
     "TC-BUILDFILE-EXIT-WATCH"
@@ -1496,7 +1504,8 @@
     "REL-PUBLISH-READBACK",
     "REL-STAGE-SANDBOX",
     "DEP-19",
-    "RUN-SECOND-LINE-CLIENT"
+    "RUN-SECOND-LINE-CLIENT",
+    "PUB-HOOK-RELEASE-CHECK"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1685,26 +1694,20 @@
    "title": "Parked",
    "goal": "Blocked packages with their unblock conditions; a package joins the next open wave once its condition reads true.",
    "merge_order": [
-    "GP-02",
-    "PUB-LOCAL-ONLY-TEXT",
     "GP-10",
     "TC-IMPORT",
     "DATA-LOOT-TALLY",
     "TC-WAYSTONE-TUNE",
     "DEP-18",
-    "PUB-DEPBOT-NPM",
     "REL-RC-LIVE",
     "RUN-LIVE1-FIXTURES",
     "TC-BUILD-FILEPICK",
     "SEC-STEAM-SCAN-A03",
     "AUTO-24",
     "TC-WAYSTONE-TUNE-UI",
-    "PUB-DEPBOT-ACTIONS",
     "TC-IMPORT-UI",
     "DATA-CONTACT-DEFAULT",
-    "PUB-DEPBOT-TICK",
     "OVL-ITEM-KEY-CTRL",
-    "PUB-HOOK-RELEASE-CHECK",
     "AUTO-26",
     "DATA-NINJA-RELEASE-ON",
     "PLAY-MAP-MODE-ON",
@@ -1720,8 +1723,6 @@
     "TC-AFFIX-LINE",
     "GP-16",
     "PLAY-F-204B-SR-RUN",
-    "PUB-GO-DECISION",
-    "GP-09",
     "GP-12",
     "RUN-LIVE-CLICKS-CLOSE",
     "GP-11",
@@ -1753,10 +1754,11 @@
     "F-040",
     "OPEN-17"
    ],
-   "files": [],
-   "new_files": [
+   "files": [
     "docs/plan/08-orchestration.md",
-    "docs/plan/09-operator-acts.md",
+    "docs/plan/09-operator-acts.md"
+   ],
+   "new_files": [
     "tests/test_plan_operator_acts.py"
    ],
    "integrator_edits": [
@@ -1766,7 +1768,7 @@
     },
     {
      "file": "AL-NEXT-SESSION.txt",
-     "change": "Rewrite so that 'continue' starts wave 1 (python tools/plan_check.py wave 1). Carry forward every item not acted on, verbatim or tighter (the CARRY items of docs/plan/01 that are still open; the REG_OPEN session-start check stays). Name docs/plan/09-operator-acts.md as the one batched operator ask. Write the line 'OPERATOR GO Q-23 step 1 (<date>): \"<words>\"' only if this session holds the operator's own message that orders creating the repository and pushing, quoting it verbatim; the same for 'OPERATOR GO Q-23 step 4' (the public flip). A plan document saying that the order exists is not the record. SESSION counter per /done."
+     "change": "Rewrite so that 'continue' starts wave 1 (python tools/plan_check.py wave 1): the stale line 'Next action: operator-led planning session ...' is replaced by the wave 1 start, and the line `WAVE POINTER: wave 0 done, next wave 1` is written in the form docs/plan/08 section 1 reads (a later `DEFERRED: <ID> (wave <n>): <cause>; branch <branch>` line uses the form of 08 section 3; none exists at the landing). Carry forward every item not acted on, verbatim or tighter (the CARRY items of docs/plan/01 that are still open; the REG_OPEN session-start check stays). Name docs/plan/09-operator-acts.md as the one batched operator ask. Operator records (adjudicator LE-01, 2026-11-18): the main session, which holds the operator's session brief of 2026-11-18, copies the operator's words from that brief (never from a plan document or a ruling) and writes three lines: `OPERATOR GO Q-23 step 1 (2026-11-18): \"<the brief's passage that orders going public, verbatim>\"`, `OPERATOR GO Q-23 step 4 (2026-11-18): \"<the same words>\"` (one message may be quoted in both lines) and `OA-2 SKIPPED IN WRITING (2026-11-18): \"<the brief's sentence that leaves gh auth login as the only operator act, verbatim>\"`; each is read back with `grep -c` = 1. If the main session cannot quote the brief verbatim, none of the three lines is written and ruling Q-23's default applies: GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT, GP-09, PUB-HOOK-RELEASE-CHECK, PUB-DEPBOT-ACTIONS, PUB-DEPBOT-NPM and PUB-DEPBOT-TICK go back to wave 99 with their Q-23 block before wave 1 starts. A plan document saying that the order exists is not the record. SESSION counter per /done."
     },
     {
      "file": "docs/plan/README.md",
@@ -1780,7 +1782,7 @@
     "tests/test_research_numbers.py (run only)",
     "tests/test_leak_sweep.py (run only)"
    ],
-   "accept": "`python -m pytest -q tests/test_plan_operator_acts.py tests/test_plan_check.py tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py` passes, `python tools/plan_check.py check` prints ok, `git ls-files docs/plan/08-orchestration.md docs/plan/09-operator-acts.md` prints both paths, `grep -c -E \"done: <result>|failed: <cause>\" docs/plan/08-orchestration.md` prints 1 or more, and every id printed by `python tools/plan_check.py rows` is in ROADMAP.md exactly once.",
+   "accept": "`python -m pytest -q tests/test_plan_operator_acts.py tests/test_plan_check.py tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py` passes, `python tools/plan_check.py check` prints ok, `git ls-files docs/plan/08-orchestration.md docs/plan/09-operator-acts.md` prints both paths, `grep -c -E \"done: <result>|failed: <cause>\" docs/plan/08-orchestration.md` prints 1 or more, every id printed by `python tools/plan_check.py rows` is in ROADMAP.md exactly once, `grep -c \"^WAVE POINTER: wave 0 done, next wave 1\" AL-NEXT-SESSION.txt` prints 1, `grep -c \"^Next action: operator-led planning session\" AL-NEXT-SESSION.txt` prints 0, and `grep -c -E \"^OPERATOR GO Q-23 step [14] \\(2026-11-18\\)|^OA-2 SKIPPED IN WRITING \\(2026-11-18\\)\" AL-NEXT-SESSION.txt` prints 3 (or 0 with the eight publishing packages back in wave 99, the Q-23 default).",
    "zero_click": "Developer-side only: the planning session lands the plan by itself. The operator reads one file (docs/plan/09) and answers in one message when convenient; no open wave waits for it.",
    "size": "L",
    "est_min": 90,
@@ -1792,7 +1794,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "PLAN 07 (review, coverage lens): added by the review; CARRY-24 was closed 'by construction' although sections 08 and 09 did not exist and no package wrote them. It also takes over LOOP-PLAN-CONTRACT (dropped): the contract text is written here, before the first wave agent runs. Wave 0, the planning session's own act, in the main checkout; sections 01 to 07 are final and are not edited. 08-orchestration.md: how a session runs a wave (the gate order of 07 section Gate commands, the integration worktree, batches, resume at the first unmerged package), and, each stated once: (1) the last progress write of a task carries the outcome in its step text, 'done: <result>' or 'failed: <cause>' (F-198); (2) the ledger rule: packages never edit the integrator files and return their row flip, review line, Settled line and index line, with merge=union for reviews.log and the two indexes and reserved decision and research numbers (F-017); (3) the six points of docs/plan/06 'How the loop and a session never take the same row' and the point at which HALT is removed (F-033, AUTO-21). 09-operator-acts.md, one batched ask, every entry with its default in force and what it blocks: every package operator_act of packages.json; the operator decisions of findings.json (Q-01 no, Q-02 no file pick, Q-05 release builds make no poe.ninja request, Q-07 no forum reads, Q-09 Alt+Shift+E and Alt+Shift+A, Q-11 no phone path, Q-23 stay local, Q-24 placeholder address, A-01 no, A-02 strict, A-03 strict once the typed path field exists); OA-1 to OA-6 of docs/plan/04; the ids this plan adds: OA-7 logon autostart (hand-off act e), OA-8 contact and web data on the dev host (act g), OA-9 review of decision 0017 (act k), OA-10 the Q-23 go in the operator's own words (step 1: repository and push; step 4: the public flip), OA-11 the loop push switch (optional, default off); the nine operator acts of docs/plan/05 and the nine of docs/plan/06 (the two hook entries of AUTO-26 come before isolated agents are spawned). A-01 and A-03 are marked as floor questions and offer the strict answer first. Where docs/plan/04 ('The go'), 05 (operator act 1) or 06 (operator act 2) read differently on Q-23, section 07 'Operator go for publishing' wins and 09 says so. No name, account id, path or address goes into either file (leak sweep).",
+   "notes": "PLAN 07 (review, coverage lens): added by the review; CARRY-24 was closed 'by construction' although sections 08 and 09 did not exist and no package wrote them. It also takes over LOOP-PLAN-CONTRACT (dropped): the contract text is written here, before the first wave agent runs. Wave 0, the planning session's own act, in the main checkout; sections 01 to 07 are final and are not edited. 08-orchestration.md: how a session runs a wave (the gate order of 07 section Gate commands, the integration worktree, batches, resume at the first unmerged package), and, each stated once: (1) the last progress write of a task carries the outcome in its step text, 'done: <result>' or 'failed: <cause>' (F-198); (2) the ledger rule: packages never edit the integrator files and return their row flip, review line, Settled line and index line, with merge=union for reviews.log and the two indexes and reserved decision and research numbers (F-017); (3) the six points of docs/plan/06 'How the loop and a session never take the same row' and the point at which HALT is removed (F-033, AUTO-21). 09-operator-acts.md, one batched ask, every entry with its default in force and what it blocks: every package operator_act of packages.json; the operator decisions of findings.json (Q-01 no, Q-02 no file pick, Q-05 release builds make no poe.ninja request, Q-07 no forum reads, Q-09 Alt+Shift+E and Alt+Shift+A, Q-11 no phone path, Q-23 go recorded 2026-11-18 (the hand-off lines; fallback stay local), Q-24 the account gh is signed in as and the name AshLight, with no address in a tracked file until GP-10 writes config/public_repo.json from origin (features needing it stay off), A-01 no, A-02 strict, A-03 strict once the typed path field exists); OA-1 to OA-6 of docs/plan/04; the ids this plan adds: OA-7 logon autostart (hand-off act e), OA-8 contact and web data on the dev host (act g), OA-9 review of decision 0017 (act k), OA-10 the Q-23 go (recorded 2026-11-18 from the operator's session brief; step 1: repository and push; step 4: the public flip), OA-11 the loop push switch (optional, default off); the nine operator acts of docs/plan/05 and the nine of docs/plan/06 (the two hook entries of AUTO-26 come before isolated agents are spawned). A-01 and A-03 are marked as floor questions and offer the strict answer first. Where docs/plan/04 ('The go'), 05 (operator act 1) or 06 (operator act 2) read differently on Q-23, section 07 'Operator go for publishing' wins and 09 says so (2026-11-18: the go is recorded; 04, 05 and 06 now agree, adjudicator LE-01). No name, account id, path or address goes into either file (leak sweep). PLAN 07 (close-out 2026-11-18, LE-80, LE-93, LE-101, LE-163): docs/plan/08 and 09 were written and verified in the planning session and are tracked, so they sit in files, not new_files: this package checks them with its new test and edits them only where that test finds a gap; the descriptions above are their contract. The hand-off rewrite replaces the stale 'Next action: operator-led planning session' line and writes the WAVE POINTER line 08 defines. docs/plan/packages.json is the source of truth of the plan from this close-out on (the planning builder is retired); a later change patches it directly and re-runs python tools/plan_check.py check.",
    "wave": 0,
    "owner": "session",
    "tier": "P0",
@@ -2561,7 +2563,7 @@
     },
     {
      "file": "CLAUDE.md",
-     "change": "Apply only once SEC-DEMO-ENTRY have also merged (the bullet describes their parts too). New Settled bullet: Demo mode: 'python -m server.al --demo <fixture dir>' is the one supported isolated instance: the dir must hold AshLight's demo marker and a Client.txt; runtime, config, logs and caches live in a scratch folder under the sidecar Temp dir; config/local.json and the live runtime dir are never read or written; the Steam scan is off; web data is off (the fetcher refuses); the port is the first free one of 8970-8979, never 8960; the process exits 97 if a log outside the fixture dir would be opened; the demo consent record covers the fixture file only (decision 0049). Reverses if: a demo core is ever seen opening a file outside its fixture and scratch dirs, or the operator rules a demo instance unwanted."
+     "change": "Apply only once SEC-DEMO-ENTRY have also merged (the bullet describes their parts too). New Settled bullet: Demo mode: 'python -m server.al --demo <fixture dir>' is the one supported isolated instance: the dir must hold AshLight's demo marker and a Client.txt; runtime, config, logs and caches live in a scratch folder under the sidecar Temp dir; config/local.json and the live runtime dir are never read or written; the Steam scan is off; web data is off (the fetcher refuses); the port is the first free one of 8970-8975 (ports.DEMO_BLOCK), never 8960; the process exits 97 if a log outside the fixture dir would be opened; the demo consent record covers the fixture file only (decision 0049). Reverses if: a demo core is ever seen opening a file outside its fixture and scratch dirs, or the operator rules a demo instance unwanted."
     }
    ],
    "tests": [
@@ -3758,6 +3760,149 @@
    "cluster": "PUB"
   },
   {
+   "id": "PUB-GO-DECISION",
+   "title": "Record the go-public decision and the rules text",
+   "goal": "The go-public decision exists as a decision record, and the integrator lands the CLAUDE.md Public-repo hygiene section, the Gates line, the Settled bullet, the closed OPERATOR row and the hand-off note that go with the guarded hook.",
+   "units": [
+    "F-016",
+    "GP-02",
+    "OPEN-14",
+    "OPERATOR-REMOTE",
+    "CARRY-14"
+   ],
+   "files": [],
+   "new_files": [
+    "docs/decisions/0046-go-public.md"
+   ],
+   "integrator_edits": [
+    {
+     "file": "docs/decisions/README.md",
+     "change": "Index line for the new decision. Title: '0046 - Go public: guarded push, private first, public on gates' (GP-02). 0046 is the number reserved for this package in docs/plan/packages.json (next free today: 0046)."
+    },
+    {
+     "file": "CLAUDE.md",
+     "change": "Tree-specific part only, never the FLEET block. (1) Replace the section from the heading '## Public-repo hygiene (local only for now)' up to, not including, '## Gates' with the fenced text of docs/plan/04-go-public.md section 'CLAUDE.md Public-repo hygiene' (heading '## Public-repo hygiene (guarded push)'), 0046 = this decision. (2) Gates section, add one line: 'A push runs through `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`; never a bare push.' (3) Settled bullet: 'Go public: guarded push of main and v* tags only, private first then public on the plan-04 gates, full history, nothing merged on GitHub, required checks with one admin bypass, the project's own address as the one hygiene exception (decision 0046). Reverses if: the operator withdraws the order, a leak or identity hit is found in pushed history, GitHub's rules stop letting an admin push fresh commits past required checks, or FLEET item 17 changes.'"
+    },
+    {
+     "file": "ROADMAP.md",
+     "change": "Close the row 'OPERATOR: create the GitHub remote' (ROADMAP.md:2059-2061, stable id OPERATOR-REMOTE) as superseded by GP-02, GP-05 and GP-09; the closed line carries the id so the loop parser does not rely on a parse miss."
+    },
+    {
+     "file": "AL-NEXT-SESSION.txt",
+     "change": "Record that decision 0046 quotes the operator's go (the 'OPERATOR GO Q-23 step 1' line stays in the hand-off, verbatim) and lifts the 2026-11-16 local-only order. In the OPERATOR ACTS bullet drop act (d) 'create the GitHub remote ...': the go for both steps and the written skip of OA-2 are recorded (the lines 'OPERATOR GO Q-23 step 1', 'OPERATOR GO Q-23 step 4' and 'OA-2 SKIPPED IN WRITING' stay in the hand-off, verbatim); the only act left for publishing is OA-1, and only if `gh auth status` fails."
+    }
+   ],
+   "tests": [
+    "tests/test_ascii_lf.py (existing)",
+    "tests/test_research_numbers.py (existing)",
+    "tests/test_leak_sweep.py (existing)",
+    "tests/test_fleet_kit_conformance.py (existing)"
+   ],
+   "accept": "`python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py tests/test_fleet_kit_conformance.py` is green and, after the integrator commit, `git grep -n \"refuses every push\\|AL_ALLOW_PUSH\\|NO remote\" -- CLAUDE.md` prints nothing.",
+   "zero_click": "Documentation only. It is written only once the operator's go is recorded (ruling Q-23): the hand-off line 'OPERATOR GO Q-23 step 1' that quotes the operator's own words with their date. After it, creating the repository and the first push are agent steps; the public flip is an agent step too once the flip gates of plan 04 read green (the step 4 line and the 'OA-2 SKIPPED IN WRITING' line are in the hand-off).",
+   "size": "S",
+   "est_min": 25,
+   "deps": [],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "none",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P0. The decision file is the full draft of docs/plan/04-go-public.md section 'Decision text' (11 points, Alternatives, Why, Reverses if); before writing, re-read both commit counts with `python ops/fleet_kit/fleet_identity.py check --history --by-class main` and `check --all` and update point 2 (416 / 430 at HEAD 23cc518 in the draft). Decision 3 of 04 section 'Decisions' (contributions are re-applied, never merged) is folded into point 5 of this record. PLAN 07 (review, floor lens): the decision quotes the operator's own words from the hand-off line 'OPERATOR GO Q-23 step 1'; a sentence in a plan document saying the order was given is not the record. Without that line this package is not started: stay local, GP-02 stays unmerged, GP-09 stays parked (ruling Q-23, default). The integrator lands these edits in the same commit as GP-02's hook so the tree never says 'refuses every push' beside a hook that pushes. isolation none: one new docs file. Verifier fix: no deps edge to GP-02 (the files do not overlap), so the plan can put this package in GP-02's wave with PUB-GO-DECISION first in the merge order and GP-02 right after it; a deps edge would force a strictly later wave (tools/plan_check.py) and break the one-commit landing this note requires. PLAN 07 (close-out 2026-11-18, adjudicator LE-01, LE-27, LE-140): scheduled in wave 4 as a main-checkout act; its integrator edits ride the first merge batch, the one that holds GP-02. The decision's 'Source:' line reads 'operator order, session brief 2026-11-18 (quoted verbatim in the hand-off lines OPERATOR GO Q-23 step 1 and step 4)', with the 2026-11-17 item E order as context; its 'Why' keeps 'The operator ordered it.' and its 'Reverses if' keeps 'the operator withdraws the order'. The stay-local fallback above stays word for word as a live safeguard: the hand-off line is re-read before the file is written. These integrator edits (Public-repo hygiene to 'guarded push', the Gates push line, the Settled bullet, closing OPERATOR-REMOTE) are how the operator's order to update CLAUDE.md and ROADMAP is carried out.",
+   "wave": 4,
+   "owner": "session",
+   "tier": "P0",
+   "cluster": "PUB"
+  },
+  {
+   "id": "GP-02",
+   "title": "Guarded pre-push hook and its tests",
+   "goal": ".githooks/pre-push stops refusing every push: it lets only refs/heads/main and refs/tags/v* out, each to the same name, refuses deletes, moved tags and non-fast-forwards, and runs the fleet_identity pre-push check and the leak sweep on every push, with no override variable.",
+   "units": [
+    "F-016",
+    "GP-02",
+    "OPEN-14",
+    "OPERATOR-REMOTE",
+    "CARRY-14"
+   ],
+   "files": [
+    ".githooks/pre-push",
+    "tests/test_fleet_kit_conformance.py"
+   ],
+   "new_files": [
+    "tests/test_pre_push_hook.py"
+   ],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_pre_push_hook.py (new, 11 cases)",
+    "tests/test_fleet_kit_conformance.py::test_git_hooks_wire_identity_and_leak_sweep (changed)"
+   ],
+   "accept": "`python -m pytest -q tests/test_pre_push_hook.py tests/test_fleet_kit_conformance.py tests/test_al_loop_gate_cache.py tests/test_ascii_lf.py` is green and `git grep -n \"PUSH REFUSED\\|AL_ALLOW_PUSH\" -- .githooks` prints nothing.",
+   "zero_click": "After it lands a push needs no flag: a session pushes after its gated commit. The headless loop pushes only when the operator has turned on the per-host switch loop_push (OA-11, default off; PUB-LOCAL-ONLY-TEXT). Dev side only.",
+   "size": "L",
+   "est_min": 75,
+   "deps": [],
+   "serial_group": "pre-push-hook",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P0. PLAN 07 (review): merges only after the Q-23 go record is read back (the hand-off line 'OPERATOR GO Q-23 step 1' that quotes the operator's own words with their date), in one merge batch with PUB-GO-DECISION, that package first, so the CLAUDE.md lift and the hook land in one integrator commit; PUB-LOCAL-ONLY-TEXT follows in the same wave when tools/al_loop.py is free there, else in the next one, and GP-09 waits for all three. .githooks/pre-push: replace the whole file with the exact text of docs/plan/04-go-public.md section 'New hook, exact text' (check_refs, then fleet_identity.py pre-push, then leak_sweep.py --pre-push, final exit 0; the old `[ -f ... ]` guard around the sweep is gone on purpose: fail closed). tests/test_fleet_kit_conformance.py: only test_git_hooks_wire_identity_and_leak_sweep (lines 152-165): keep the two scan asserts and the commit-msg / pre-commit asserts; replace the refusal assert (`\"exit 1\" in pp.rsplit(\"fi\", 1)[-1]`) with: \"PUSH REFUSED\" not in pp, \"AL_ALLOW_PUSH\" not in pp, pp.rstrip().endswith(\"exit 0\"), \"refs/heads/main|refs/tags/v*\" in pp, and file order check_refs line, identity line, sweep line, final exit 0; docstring becomes 'commit-msg strips, pre-push guards every push (ref rule, identity gate, leak sweep), pre-commit runs the leak sweep over staged lines.' tests/test_pre_push_hook.py: real git under tmp_path, skipped when git or its sh is absent, GIT_CONFIG_GLOBAL pointing at an empty file, a tmp work repo with core.hooksPath set to a copy of .githooks, copies of ops/fleet_kit/fleet_identity.py and tools/leak_sweep.py at the same relative paths, fleet.operatorIdent and user.name / user.email set in that repo only, a bare repo as origin; the 11 cases of 04 section 'Test changes' (clean push; fast-forward; a drive-rooted path string built at run time is refused; fleet-lanes/x, al/keep/x, refs/fleet-lanes/x and refs/al/keep/x refused; delete refused; main:other and HEAD:main refused; tag v0.0.1 pushes, a moved v0.0.1 and a tag rc1 are refused; forced rewind refused; bot author refused; AL_ALLOW_PUSH=1 changes none of 4 to 9; hook text ASCII, LF, starts with #!/bin/sh). tests/test_al_loop_gate_cache.py:272-285 ('push skipped: local only') stays untouched. The release.py prepush-check line of plan 05 is NOT in this package (tools/release.py does not exist yet and the hook fails closed): PUB-HOOK-RELEASE-CHECK adds it. Fallback (Q-23): if PUB-GO-DECISION cannot cite the operator's order, this package stays a ready diff and is not merged. ROADMAP, CLAUDE.md and hand-off edits ride PUB-GO-DECISION's integrator edits. PLAN 07 (close-out 2026-11-18, adjudicator LE-01): the go is recorded in the hand-off by PLAN-LANDING (the operator's order in the session brief of 2026-11-18), so this package is scheduled: wave 4, first merge batch, right after PUB-GO-DECISION's act. Before the merge the merger re-reads `grep -c \"^OPERATOR GO Q-23 step 1\" AL-NEXT-SESSION.txt` = 1; without the line the fallback above applies and the package stays a ready diff. The hook keeps the fleet_identity pre-push check.",
+   "wave": 4,
+   "owner": "session",
+   "tier": "P0",
+   "cluster": "PUB"
+  },
+  {
+   "id": "PUB-LOCAL-ONLY-TEXT",
+   "title": "Replace the local-only wording in loop tools and ritual files",
+   "goal": "No tool comment, loop prompt, ritual or agent file still says the repository is local only or that a push is refused. Also (review): with a remote the loop's push worker still pushes nothing unless the operator's per-host switch loop_push is on (default off).",
+   "units": [
+    "F-016",
+    "GP-02"
+   ],
+   "files": [
+    "tools/al_loop.py",
+    "tools/loop_inbox.py",
+    "tools/al_lane.py",
+    "tests/test_p163_lane_tools.py",
+    ".claude/commands/done.md",
+    ".claude/agents/adjudicator.md",
+    "tests/test_al_loop_gate_cache.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_loop_split.py::test_al_loop_is_smaller (existing; the 1,760-line cap)",
+    "tests/test_p163_lane_tools.py::test_code_lanes_may_bump_dependencies_but_get_no_gh (comment only)",
+    "tests/test_fleet_kit_conformance.py::test_done_ritual_last_act_is_the_marker_and_it_is_dispatched (existing)",
+    "tests/test_al_loop_gate_cache.py (existing)",
+    "tests/test_al_loop_gate_cache.py::test_push_is_skipped_while_the_loop_push_switch_is_off",
+    "tests/test_al_loop_gate_cache.py::test_push_runs_with_a_fake_origin_and_the_switch_on"
+   ],
+   "accept": "`python -m pytest -q tests/test_loop_split.py tests/test_p163_lane_tools.py tests/test_fleet_kit_conformance.py tests/test_al_loop_gate_cache.py tests/test_ascii_lf.py` is green and `git grep -n -i \"AL is local only\\|repo is local only\\|never push, local only\\|AL: local only\\|AL_ALLOW_PUSH\" -- tools .claude` prints nothing.",
+   "zero_click": "Text only: the loop prompt and the /done ritual then describe the guarded push, so sessions and lanes follow it with no reminder.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [],
+   "serial_group": "al-loop",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "OA-11 (optional, docs/plan/09): set \"loop_push\": true in the gitignored config/local.json to let the headless loop push its own commits; default in force: off, a session pushes. Only if the harness denies edits under .claude/: OA-6 (docs/plan/09-operator-acts.md), the two wording changes in .claude/commands/done.md and .claude/agents/adjudicator.md; the rest lands.",
+   "notes": "Tier P0. PLAN 07 (review): rewritten by string anchor, because tools/al_loop.py is split and edited by earlier packages (LOOP-SPLIT-TICK lowers the line cap in tests/test_loop_split.py to under 1300: read the cap from that test, replace lines and add only what the push switch needs). Find each text with git grep, never by line number; if a quoted string now lives in a module that is not in this package's files, stop and name it in the result. Wording changes: in tools/al_loop.py the module docstring paragraph that starts 'Push (unless --no-push): AL is LOCAL ONLY' becomes the 'Push (unless --no-push): ...' text of docs/plan/04-go-public.md section 'Test changes' plus the switch sentence below; the comment that starts '# AL is local only (no CI yet)' becomes 'The loop's gates are the tracked list (CI runs the same commands):'; the push_needed docstring drops '(AL: local only)'. The log string 'push skipped: local only' and its test stay on purpose. tools/loop_inbox.py order_prompt: '(AL is local only: no remote, no gh)' becomes '(a lane gets no gh)'. tools/al_lane.py, the comment above DEP_TOOLS, becomes 'Dependabot bumps are re-applied in the main checkout by tools/dependabot_reapply.py, so no gh is granted to a lane.' tests/test_p163_lane_tools.py: the comment '# AL is local only' becomes '# gh stays out of lanes'; the assert stays. .claude/commands/done.md: the description line, the step-2 heading and the Safety rails line say: push main through fleet_gitlock when origin exists, never force-push; the text after the `fleet_done.py mark` line must not contain the literal 'git push' (pinned by test_done_ritual_last_act_is_the_marker_and_it_is_dispatched), so the rail reads e.g. 'Never force-push, --amend or --no-verify; main is pushed only in step 2.' .claude/agents/adjudicator.md: drop 'no push while the repo is local only'. One logic change (review, floor lens; ruling Q-23 gives push approval to the operator): push_needed reports nothing to push unless the gitignored config/local.json holds \"loop_push\": true; absent or false it logs 'push skipped: loop push is off' and the commits wait for the next session push. No agent, tool or setup step writes that key (OA-11), so with a remote the headless loop still pushes nothing by itself, and a session reads `git log origin/main..main` before its own gated push. Merges only after the Q-23 go record is read back, in the wave of GP-02 and PUB-GO-DECISION when tools/al_loop.py has no other editor there, else in the next wave where it is free; GP-09 waits for it. The .githooks text is GP-02's (its own accept greps it). PLAN 07 (close-out 2026-11-18, adjudicator LE-01): scheduled in wave 4, the first wave in which tools/al_loop.py, tools/loop_inbox.py, .claude/commands/done.md and tests/test_al_loop_gate_cache.py have no other editor; it merges in the first batch, after PUB-GO-DECISION and GP-02.",
+   "wave": 4,
+   "owner": "session",
+   "tier": "P0",
+   "cluster": "PUB"
+  },
+  {
    "id": "LOOP-WAVE-HOLD",
    "title": "Wave folder hold and the shared merge lock",
    "goal": "An item whose diff touches a folder a wave holds (ops/loop/control/wave_owned.json) is parked as 'wave-hold' and merged once the hold file is gone; a hold file older than 48 h is one checklist line and is not obeyed; a wave's merge agent takes the loop's merge lock with `python tools/loop_merge.py hold -- <command>`.",
@@ -3879,7 +4024,7 @@
    ],
    "integrator_edits": [],
    "tests": [
-    "tests/test_ci_workflow.py (new)"
+    "tests/test_ci_workflow.py (new; with the three test-newest asserts of the notes: continue-on-error, the same hash-pinned install steps, the only floating job)"
    ],
    "accept": "`python -m pytest -q tests/test_ci_workflow.py tests/test_ascii_lf.py tests/test_leak_sweep.py tests/test_al_loop.py` is green.",
    "zero_click": "Runs by itself on every push and pull request once the remote exists; CI never turns web data on and calls no GGG or poe.ninja host.",
@@ -3895,7 +4040,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "None expected. OA-1 (gh auth login) only if `gh auth status` fails; without gh the action SHAs recorded in docs/plan/04 are used as written and GP-09 re-reads them before the first push.",
-   "notes": "Tier P0. ci.yml: the exact text of docs/plan/04-go-public.md GP-05 (job id and name `test` on windows-2025, Python 3.11, Node 22.12.0, AL_SIDECAR_ROOT written to GITHUB_ENV, hash-pinned dev requirements, pytest, `npm ci --prefix app --ignore-scripts`, node tests, leak sweep --tree, PowerShell 5.1 parse of scripts/*.ps1) plus a second, NOT required job `test-newest` (same steps, Python 3.14, Node 24, continue-on-error: true); no matrix. Re-read each action pin before use with `gh api repos/actions/<name>/commits/<tag> --jq .sha` (checkout v7.0.1, setup-python v7.1.0, setup-node v7.1.0; SHAs in 04). fleet-identity-guard.yml: a byte copy of ops/fleet_kit/fleet_identity_guard.yml, never edited. .gitattributes: add the one line `.github/workflows/fleet-identity-guard.yml -text` after the ops/loop/slots.py line. requirements-dev.txt: pytest 9.2.0 with `--hash` lines for pytest AND every transitive dependency on Windows (read the list from a scratch venv under the sidecar: `pip install pytest==9.2.0`, `pip freeze`), because --require-hashes refuses any unhashed requirement; if F-019 / DEP-02 landed first and created the file, edit it instead and keep its lines. tests/test_ci_workflow.py (text parse, stdlib only): every `uses:` ends in `@<40 hex> # v<tag>`; top-level permissions is exactly `contents: read`; no `secrets.`, no `pull_request_target`, no `web_data`; job `test` on windows-2025; job `test-newest` exists and is not named `test`; the guard copy is byte-identical to the kit file; every name in requirements-dev.txt carries a `--hash=sha256:` line. The ruleset context check lives in PUB-SETTINGS-FILES. tools/al_loop.py keeps reading ops/loop/gates.txt first (ci.yml is only its fallback, ci_gate_commands), so tests/test_al_loop.py must stay green. Live read-back after GP-09: both workflows `success`. PLAN 07 (review): gh is needed here only to re-read the three action pins; a failing `gh auth status` does not stop the package (the SHAs of docs/plan/04 are used and GP-09 re-reads them).",
+   "notes": "Tier P0. ci.yml: the exact text of docs/plan/04-go-public.md GP-05 (job id and name `test` on windows-2025, Python 3.11, Node 22.12.0, AL_SIDECAR_ROOT written to GITHUB_ENV, hash-pinned dev requirements, pytest, `npm ci --prefix app --ignore-scripts`, node tests, leak sweep --tree, PowerShell 5.1 parse of scripts/*.ps1) plus a second, NOT required job `test-newest` (same steps, Python 3.14, Node 24, continue-on-error: true); no matrix. Re-read each action pin before use with `gh api repos/actions/<name>/commits/<tag> --jq .sha` (checkout v7.0.1, setup-python v7.1.0, setup-node v7.1.0; SHAs in 04). fleet-identity-guard.yml: a byte copy of ops/fleet_kit/fleet_identity_guard.yml, never edited. .gitattributes: add the one line `.github/workflows/fleet-identity-guard.yml -text` after the ops/loop/slots.py line. requirements-dev.txt: pytest 9.2.0 with `--hash` lines for pytest AND every transitive dependency on Windows (read the list from a scratch venv under the sidecar: `pip install pytest==9.2.0`, `pip freeze`), because --require-hashes refuses any unhashed requirement; if F-019 / DEP-02 landed first and created the file, edit it instead and keep its lines. tests/test_ci_workflow.py (text parse, stdlib only): every `uses:` ends in `@<40 hex> # v<tag>`; top-level permissions is exactly `contents: read`; no `secrets.`, no `pull_request_target`, no `web_data`; job `test` on windows-2025; job `test-newest` exists and is not named `test`; the guard copy is byte-identical to the kit file; every name in requirements-dev.txt carries a `--hash=sha256:` line. The ruleset context check lives in PUB-SETTINGS-FILES. tools/al_loop.py keeps reading ops/loop/gates.txt first (ci.yml is only its fallback, ci_gate_commands), so tests/test_al_loop.py must stay green. Live read-back after GP-09: both workflows `success`. PLAN 07 (review): gh is needed here only to re-read the three action pins; a failing `gh auth status` does not stop the package (the SHAs of docs/plan/04 are used and GP-09 re-reads them). PLAN 07 (close-out 2026-11-18, adjudicator LE-28): test-newest floats by design and is not a required check. tests/test_ci_workflow.py gains three asserts: job `test-newest` has `continue-on-error: true`; it uses the same `pip install --require-hashes -r requirements-dev.txt` and `npm ci --prefix app --ignore-scripts` steps as `test`; it is the only job whose python-version or node-version is not the fixed string of docs/plan/04 (`test` keeps \"3.11\" and \"22.12.0\" exactly as written there; no other job names a floating version).",
    "wave": 4,
    "owner": "session",
    "tier": "P0",
@@ -4548,7 +4693,7 @@
   },
   {
    "id": "TEST-PORT-LEASE",
-   "title": "Port lease for tests that bind inside the 8961-8979 block",
+   "title": "Port lease for tests that bind a port (leases 8962-8969)",
    "goal": "Two runs of this tree (two worktrees, or xdist workers) never get the same test port: free_test_port() becomes a lease (per-port lock file plus a bind check) held for the test's life, and the three real supervisor starts use it instead of fixed ports.",
    "units": [
     "F-022"
@@ -4572,7 +4717,7 @@
     "tests/test_procs.py (the real supervisor start near line 237)",
     "tests/test_supervisor.py (the real start near line 212)"
    ],
-   "accept": "python -m pytest -q tests/test_port_lease.py tests/test_keepalive.py tests/test_procs.py tests/test_supervisor.py tests/test_sidecar_paths.py passes, test_port_lease.py proves two processes leasing at the same moment receive different ports in 8961-8979, and two pytest processes started together on tests/test_keepalive.py tests/test_procs.py tests/test_supervisor.py tests/test_dash_console.py are green in 5 rounds out of 5 (finding F-022 acceptance).",
+   "accept": "python -m pytest -q tests/test_port_lease.py tests/test_keepalive.py tests/test_procs.py tests/test_supervisor.py tests/test_sidecar_paths.py passes, test_port_lease.py proves two processes leasing at the same moment receive different ports in 8962-8969, and two pytest processes started together on tests/test_keepalive.py tests/test_procs.py tests/test_supervisor.py tests/test_dash_console.py are green in 5 rounds out of 5 (finding F-022 acceptance).",
    "zero_click": "Test-only: the lease is taken and released by the fixture; no flag, no prompt. Binds stay on 127.0.0.1 inside the assigned block; server/al/ports.py is untouched.",
    "size": "M",
    "est_min": 50,
@@ -4800,7 +4945,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. Pure module plus parser detail; no file is written here (the writer is called by RUN-LEDGER-WIRE). Mask is an allow-list, never a scrubber: every stored token is an allow-list word, a placeholder or punctuation; no raw line text is ever stored. Design: research 0051 section 'Design: the parse ledger'. parser.py: parse_line event fields only (no pattern change).",
+   "notes": "Tier P1. Pure module plus parser detail; no file is written here (the writer is called by RUN-LEDGER-WIRE). Mask is an allow-list, never a scrubber: every stored token is an allow-list word, a placeholder or punctuation; no raw line text is ever stored. Design: research 0051 section 'Design: the parse ledger'. parser.py: parse_line event fields only (no pattern change). PLAN 07 (close-out 2026-11-18, LE-35): also carries the Client.txt half of F-082 (the UNVERIFIED shape comments of server/al/parser.py become ledger shapes); the coverage of F-082 names this package.",
    "wave": 5,
    "owner": "session",
    "tier": "P1",
@@ -4991,6 +5136,55 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "PLAY"
+  },
+  {
+   "id": "GP-09",
+   "title": "Create the private repository, first push, CI green",
+   "goal": "main is on GitHub in a PRIVATE repository under the operator's account and both workflows are green on the pushed commit.",
+   "units": [
+    "F-021",
+    "GP-09",
+    "OPEN-14",
+    "OPERATOR-REMOTE",
+    "CARRY-14"
+   ],
+   "files": [],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "AL-NEXT-SESSION.txt",
+     "change": "Record: the repository exists and is PRIVATE, the pushed commit, both workflows green, the GP-01 counts (identity 0 in 9 classes, leaks 0 / 0, needle count; never a name), and that every later push is a session push through fleet_gitlock; the headless loop pushes nothing unless the operator turns on its per-host switch loop_push (OA-11, default off)."
+    }
+   ],
+   "tests": [
+    "whole suite through ops/fleet_kit/fleet_suite_gate.py and npm test --prefix app (gate 11)",
+    "tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py, tests/test_brand_assets.py, tests/test_ci_workflow.py (gates 6, 7, 10; existing)"
+   ],
+   "accept": "`gh repo view \"$R\" --json visibility --jq .visibility` prints PRIVATE, `git rev-parse main` equals `git rev-parse origin/main`, `git ls-remote --heads --tags origin` lists refs/heads/main and otherwise only refs/heads/dependabot/*, and `gh run list --repo \"$R\" --branch main --limit 4 --json workflowName,conclusion` shows ci and fleet-identity-guard as success.",
+   "zero_click": "Runs only on the operator's recorded go (ruling Q-23, step 1): the hand-off line 'OPERATOR GO Q-23 step 1' that quotes the operator's own words with their date. From there agent steps only: gh is already signed in; no click. A private repository publishes nothing.",
+   "size": "M",
+   "est_min": 50,
+   "deps": [
+    "GP-01",
+    "GP-02",
+    "PUB-GO-DECISION",
+    "PUB-LOCAL-ONLY-TEXT",
+    "GP-03",
+    "GP-04",
+    "GP-05"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "none",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "OA-1 only if `gh auth status` fails or lacks the scopes repo and workflow: gh auth login. Optional (OA-5): another owner or repository name before this runs; default in force: the account gh is signed in as and the name AshLight (ruling Q-24). The Q-23 go is recorded (2026-11-18, hand-off; adjudicator LE-01). If gate 1 does not find the line: stay local; nothing is created or pushed.",
+   "notes": "Tier P1; runs only on the Q-23 go record (the hand-off line that quotes the operator's own words), which the decision of PUB-GO-DECISION quotes too. Runs only after the integrator has landed GP-02 and PUB-GO-DECISION's CLAUDE.md section (today's CLAUDE.md text still makes creating the remote an operator act). isolation none: no tracked edit; the push leaves from the main checkout. Steps = the 12 gates of docs/plan/04-go-public.md section 'Before the first push', in order, a red gate stops the sequence: (1) the hand-off holds the line 'OPERATOR GO Q-23 step 1' quoting the operator's own words with their date and the go-public decision quotes the same words, else stop (Q-23 default: stay local; PLAN 07 review, floor lens: a record that only cites an order is not enough); (2) gh auth status with scopes repo and workflow; (3) clean tree on main, no remote; (4) identity scans 0 / clean, one author-committer line; (5) leak sweep --tree and --history rc 0 ARMED with the GP-01 count, and the GP-01 needle file includes every friend name the operator's order bars (the reviewed set owner's name is one); counts only, never a name; (6) tests/test_brand_assets.py green and the largest blob reachable from main under 500 KB; (7) hook tests green and core.hooksPath ends in .githooks; (8) NOTICE grep empty; (9) GP-04's run on this commit or a docs-only ancestor; (10) tests/test_ci_workflow.py green (plus test_community_files and test_dependabot_config if GP-06 / GP-08 ride this push); (11) the whole suite through the suite gate and npm test, both green; (12) `R=\"$(gh api user --jq .login)/AshLight\"` (the default address, read live; OA-5 may name another before this runs); if `gh repo view \"$R\"` succeeds, stop with 'repository exists' (an existing repository is never reused or overwritten; adjudicator LE-02); otherwise `gh repo create \"$R\" --private --disable-wiki --description \"<the 04 description>\"`; `git remote add origin https://github.com/$R.git`; `python ops/fleet_kit/fleet_gitlock.py run --owner <ID> -- git push -u origin main`; never --all, --mirror, --tags or --force. The hook re-runs both scans over every commit on this first push (one to three minutes). Then read the check names and the reporting app id (`gh api repos/$R/commits/main/check-runs`): expected test, test-newest, fleet-identity-guard and app id 15368; a different id is handed to GP-13. If gate 4 or 5 shows a hit: stop, stay local, one rewrite request to MAIN (Q-25). If the first CI run is red: fix forward while private. The owner login is never written to a tracked file, a progress file or a commit message here (GP-10 owns the one allowed address). A session step: it needs gh and pushes from the main checkout, and no headless lane holds a gh grant, so the loop never works it in a lane. PLAN 07 (close-out 2026-11-18, adjudicator LE-01, LE-107): scheduled in wave 5, one wave after GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT and GP-05; it runs alone after the wave's last batch is on main. Gate 1 stays as written: the hand-off line plus decision 0046 quoting the same words.",
+   "wave": 5,
+   "owner": "session",
+   "tier": "P0",
+   "cluster": "PUB"
   },
   {
    "id": "SEC-ACL-CHECK",
@@ -6184,7 +6378,7 @@
    "integrator_edits": [
     {
      "file": "CLAUDE.md",
-     "change": "Sidecar section, one sentence (Q-19): 'An installed player copy lives in its own per-user home (default %LOCALAPPDATA%\\Programs\\AshLight, state in data\\); on this machine the installed copy uses -InstallDir under the AL sidecar (Install\\) and the checkout runs on the dev port.' Stack and ports: add '8961 = checkout dev port (AL_DEV_PORT); 8970-8979 = installer self-test (SELFTEST_PORTS)'. Settled bullet for the new decision: 'Installed copies live in a per-user home (%LOCALAPPDATA%\\Programs\\AshLight; -InstallDir or AL_HOME moves it): code in app\\<version>\\ plus the marker install.json, all player state in data\\; the resolver refuses a home with a steamapps or \"Path of Exile 2\" path component by path text only, with no registry read, library file or folder listing (decision 0059). Reverses if: the installed copy cannot serve daily dev use, or the override breaks the sidecar path test.'"
+     "change": "Sidecar section, one sentence (Q-19): 'An installed player copy lives in its own per-user home (default %LOCALAPPDATA%\\Programs\\AshLight, state in data\\); on this machine the installed copy uses -InstallDir under the AL sidecar (Install\\) and the checkout runs on the dev port.' Stack and ports: add '8961 = checkout dev port (AL_DEV_PORT); 8970-8975 = installer self-test (SELFTEST_PORTS, the same block as DEMO_BLOCK)'. Settled bullet for the new decision: 'Installed copies live in a per-user home (%LOCALAPPDATA%\\Programs\\AshLight; -InstallDir or AL_HOME moves it): code in app\\<version>\\ plus the marker install.json, all player state in data\\; the resolver refuses a home with a steamapps or \"Path of Exile 2\" path component by path text only, with no registry read, library file or folder listing (decision 0059). Reverses if: the installed copy cannot serve daily dev use, or the override breaks the sidecar path test.'"
     },
     {
      "file": "docs/decisions/README.md",
@@ -6664,21 +6858,21 @@
   {
    "id": "DEP-01",
    "title": "Spike: AshLight under the private runtimes",
-   "goal": "Prove the runtime design (embeddable CPython 3.14.x and the unmodified Electron zip, boot shim or ._pth) before any code rests on it, and record the result.",
+   "goal": "Prove the runtime design (the embeddable CPython and the unmodified Electron zip, each at the exact version and sha256 of docs/plan/05 Design point 4, boot shim or ._pth) before any code rests on it, and record the result.",
    "units": [
     "F-038",
     "DEP-01"
    ],
-   "files": [
-    "docs/plan/05-deployment.md"
+   "files": [],
+   "new_files": [
+    "docs/ops/runtime-spike-record.md"
    ],
-   "new_files": [],
    "integrator_edits": [],
    "tests": [
-    "tests/test_sidecar_paths.py, tests/test_keepalive.py, tests/test_procs.py, tests/test_jsonfile.py, tests/test_http_security.py (unchanged; re-run under the embeddable python in the scratch layout, results in the Spike record)",
-    "tests/test_ascii_lf.py (re-run on the edited docs/plan/05-deployment.md)"
+    "tests/test_sidecar_paths.py, tests/test_keepalive.py, tests/test_procs.py, tests/test_jsonfile.py, tests/test_http_security.py (unchanged; re-run under the embeddable python in the scratch layout, results in docs/ops/runtime-spike-record.md)",
+    "tests/test_ascii_lf.py (re-run on the new docs/ops/runtime-spike-record.md)"
    ],
-   "accept": "The 'Spike record' section of docs/plan/05-deployment.md states PASS or FAIL per check (demo core /api/health on a port in 8970-8979, one supervisor restart, one calc on the reference build when the calc is installed, the five named tests under the embeddable python, boot.py versus ._pth, Electron zip version without Node) and lists every re-spawn site that needed a change; python -m pytest -q tests/test_ascii_lf.py passes.",
+   "accept": "The new file docs/ops/runtime-spike-record.md states PASS or FAIL per check (demo core /api/health on a port in 8970-8975, one supervisor restart, one calc on the reference build when the calc is installed, the five named tests under the embeddable python, boot.py versus ._pth, Electron zip version without Node) and lists every re-spawn site that needed a change; python -m pytest -q tests/test_ascii_lf.py passes.",
    "zero_click": "Dev only: hidden, fixture log, spare port, scratch folder; no player step.",
    "size": "M",
    "est_min": 60,
@@ -6692,7 +6886,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Work under <sidecar>/Scratch/dep-spike only; tracked edit is the Spike record section alone. Downloads (dev-tool reads, truthful AshLight User-Agent, no cookie): python-3.14.10-embed-amd64.zip from www.python.org and electron-v45.3.3-win32-x64.zip from the Electron GitHub release, each checked against the size and SHA-256 written in docs/plan/05-deployment.md Design point 4 before use. Tests under the embeddable python: tests/test_sidecar_paths.py, tests/test_keepalive.py, tests/test_procs.py, tests/test_jsonfile.py, tests/test_http_security.py with pytest placed by the system pip --target <scratch>/site and named in the scratch ._pth. Never the live Client.txt, never port 8960, no visible window, below-normal priority. A FAIL goes to an adjudicator (plan 05 Order: fallback = the player's own Python 3.13+ with the pinned Electron zip) and re-scopes DEP-06 and the installer packages.",
+   "notes": "Work under <sidecar>/Scratch/dep-spike only; the one tracked change is the new file docs/ops/runtime-spike-record.md (close-out 2026-11-18, LE-164: docs/plan/05 is a final planning file and is not edited by a package; its 'Spike record' section points here). Downloads (dev-tool reads, truthful AshLight User-Agent, no cookie): python-3.14.10-embed-amd64.zip from www.python.org and electron-v45.3.3-win32-x64.zip from the Electron GitHub release, each checked against the size and SHA-256 written in docs/plan/05-deployment.md Design point 4 before use. Tests under the embeddable python: tests/test_sidecar_paths.py, tests/test_keepalive.py, tests/test_procs.py, tests/test_jsonfile.py, tests/test_http_security.py with pytest placed by the system pip --target <scratch>/site and named in the scratch ._pth. Never the live Client.txt, never port 8960, no visible window, below-normal priority. A FAIL goes to an adjudicator (plan 05 Order: fallback = the player's own Python 3.13+ with the pinned Electron zip) and re-scopes DEP-06 and the installer packages.",
    "wave": 8,
    "owner": "session",
    "tier": "P1",
@@ -7374,7 +7568,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Gate: dispatch only after the Spike record of DEP-01 (a deps edge, not an outside block) says PASS and names the boot.py or the ._pth variant; on FAIL an adjudicator rules the plan 05 fallback (player's own Python 3.13+, pinned Electron zip kept) and this package and REL-RUNTIME-PINS are re-scoped before dispatch. paths.py: new python_exe(), electron_exe(), python_cmd(module, *args) and runtime_pins_file() only. keepalive.py: core_command() and run_preflight() only. procs.py: electron_dir() only. boot.py at the repo root is the payload-root shim. The pin file, the runtime fetch, THIRD-PARTY.md and the installed-runtimes decision are REL-RUNTIME-PINS; the scripts and the client switch over in REL-RUNTIME-SCRIPTS. Split from the original 90-minute package (sizing check).",
+   "notes": "Gate: dispatch only after the spike record of DEP-01 (docs/ops/runtime-spike-record.md; a deps edge, not an outside block) says PASS and names the boot.py or the ._pth variant; on FAIL an adjudicator rules the plan 05 fallback (player's own Python 3.13+, pinned Electron zip kept) and this package and REL-RUNTIME-PINS are re-scoped before dispatch. paths.py: new python_exe(), electron_exe(), python_cmd(module, *args) and runtime_pins_file() only. keepalive.py: core_command() and run_preflight() only. procs.py: electron_dir() only. boot.py at the repo root is the payload-root shim. The pin file, the runtime fetch, THIRD-PARTY.md and the installed-runtimes decision are REL-RUNTIME-PINS; the scripts and the client switch over in REL-RUNTIME-SCRIPTS. Split from the original 90-minute package (sizing check).",
    "wave": 9,
    "owner": "session",
    "tier": "P1",
@@ -7704,7 +7898,7 @@
    "integrator_edits": [
     {
      "file": "CLAUDE.md",
-     "change": "Stack and ports, one sentence (Q-20): 'An installed copy runs on a hash-pinned private embeddable CPython and the unmodified hash-pinned Electron zip, fetched at install time from their publishers, never bundled or vendored and never fetched by the running core; the checkout keeps npm ci and the system Python.' Settled bullet: 'Installed-copy runtimes: embeddable CPython 3.14.x and the unmodified Electron zip, hash-pinned (config/runtime_pins.json, config/electron_pin.json), fetched at install, never bundled; boot.py plus one command builder (paths.python_cmd); no Electron fuse flipped (decision 0063). Reverses if: the spike fails, a publisher drops hash-verifiable assets, or a licence objection appears.'"
+     "change": "Stack and ports, one sentence (Q-20): 'An installed copy runs on a hash-pinned private embeddable CPython and the unmodified hash-pinned Electron zip, fetched at install time from their publishers, never bundled or vendored and never fetched by the running core; the checkout keeps npm ci and the system Python.' Settled bullet: 'Installed-copy runtimes: the embeddable CPython and the unmodified Electron zip, each at the exact version and sha256 of its pin file (config/runtime_pins.json, config/electron_pin.json), fetched at install, never bundled; boot.py plus one command builder (paths.python_cmd); no Electron fuse flipped (decision 0063). Reverses if: the spike fails, a publisher drops hash-verifiable assets, or a licence objection appears.'"
     },
     {
      "file": "docs/decisions/README.md",
@@ -7949,7 +8143,7 @@
     }
    ],
    "tests": [
-    "tests/test_release_tool.py (new: two builds of one ref give byte-identical zips, also with the clock, host name and random source patched to differ; entries come from git blobs, sorted, every time field = the ref's commit time; the manifest check catches a changed file, a missing file and an unsafe path; nothing under ops/loop, tests or docs and no tool but tools/tc_pin.py is listed; config/local.example.json, .claude, .githooks, ROADMAP.md, CLAUDE.md and the hand-off are not listed; the zip is under 2 MB; a dirty tree, '--tag vX.Y.Z' with no such tag or a tag that differs from v + VERSION, and a sidecar-cache file refuse with nothing written; '--ref' builds any version untagged (stage and the rc dogfood use it) and BUILD records tag: none; 0 network calls)"
+    "tests/test_release_tool.py (new: two builds of one ref give byte-identical zips, also with the clock, host name and random source patched to differ; entries come from git blobs, sorted, every time field = the ref's commit time; the manifest check catches a changed file, a missing file and an unsafe path; nothing under ops/loop, tests or docs and no tool but tools/tc_pin.py is listed; config/local.example.json, .claude, .githooks, ROADMAP.md, CLAUDE.md and the hand-off are not listed; the zip is under 2 MB; a dirty tree, '--tag vX.Y.Z' with no such tag or a tag that differs from v + VERSION, and a sidecar-cache file refuse with nothing written; '--ref' builds any version untagged; BUILD, MANIFEST.json and release.json hold no tag field, and a '--ref HEAD' build and a '--tag vX.Y.Z' build of the same tagged commit give byte-identical zips and SHA256SUMS.txt; 0 network calls)"
    ],
    "accept": "python -m pytest -q tests/test_release_tool.py passes and python tools/release.py build --ref HEAD --out <tmp> twice gives the same SHA-256 for the zip.",
    "zero_click": "One command, no prompt, no upload.",
@@ -7967,7 +8161,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "0064 = the number the wave integrator assigns at dispatch (next free at plan time: 0046); the package writes the decision file under that number. tools/rel_build.py: ship(ref) (allow-list patterns of config/ship_list.json over 'git ls-files' at the ref, so later packages that add files under server/, web/, app/, scripts/ or config/ never edit the list), blobs via 'git cat-file', write_zip() (one top folder AshLight-<ver>/, stored uncompressed if deflate differs between Python builds), manifest(), build_file() (version, 12-hex commit, created = commit time; the format the build-stamp package (RUN) reads), verify_tree() and the refusals. Output under <sidecar>/Build/release/<ver>/. The other assets (release.json, stamped install.ps1, notes copy, SBOM, SHA256SUMS) come with REL-BUILD-ASSETS through one call at the end of build(). The offline full zip of finding F-048 is NOT built (ruling Q-20: never bundled). Design call: plan 05 lists 'a final version without a tag' among the build refusals, but its own Release procedure step 1 runs 'release.py stage', which builds the final version before the tag exists; so the tag checks apply to '--tag' only, '--ref' never needs a tag and BUILD says so, and CI always builds with '--tag'. Reverses if: the operator wants final versions buildable only from a tag (then stage builds with a pre-tag flag).",
+   "notes": "0064 = the number the wave integrator assigns at dispatch (next free at plan time: 0046); the package writes the decision file under that number. tools/rel_build.py: ship(ref) (allow-list patterns of config/ship_list.json over 'git ls-files' at the ref, so later packages that add files under server/, web/, app/, scripts/ or config/ never edit the list), blobs via 'git cat-file', write_zip() (one top folder AshLight-<ver>/, stored uncompressed if deflate differs between Python builds), manifest(), build_file() (version, 12-hex commit, created = commit time; the format the build-stamp package (RUN) reads), verify_tree() and the refusals. Output under <sidecar>/Build/release/<ver>/. The other assets (release.json, stamped install.ps1, notes copy, SBOM, SHA256SUMS) come with REL-BUILD-ASSETS through one call at the end of build(). The offline full zip of finding F-048 is NOT built (ruling Q-20: never bundled). Design call: plan 05 lists 'a final version without a tag' among the build refusals, but its own Release procedure step 1 runs 'release.py stage', which builds the final version before the tag exists; so the tag checks apply to '--tag' only, '--ref' never needs a tag and no artifact records the tag (the tag binds the staged sums at publish; adjudicator LE-53), and CI always builds with '--tag'. Reverses if: the operator wants final versions buildable only from a tag (then stage builds with a pre-tag flag). PLAN 07 (close-out 2026-11-18, adjudicator LE-53): decision 0064 records the narrowed refusal (the 'final version without a tag' refusal applies to 'build --tag' only) and the reason (the release procedure stages before the tag exists; CI's '--tag' rebuild must match the staged SHA256SUMS byte for byte).",
    "wave": 10,
    "owner": "session",
    "tier": "P1",
@@ -8429,7 +8623,7 @@
    ],
    "integrator_edits": [],
    "tests": [
-    "tests/test_install_selftest.py (new: boot.py server.al --check then a demo core on the first free port of 8970-8979 with a scratch runtime under <home>/temp and web data off; /api/health must answer version == <new> within 15 s; a failure moves the folder to <home>/temp/failed-<new>, writes one report and leaves the marker alone; the child runs hidden at below-normal priority; the demo core opens no log outside its fixture (exit 97 otherwise); the gate waits while an injected game_idle status is false and never queries a process list)"
+    "tests/test_install_selftest.py (new: boot.py server.al --check then a demo core on the first free port of 8970-8975 (ports.SELFTEST_PORTS) with a scratch runtime under <home>/temp and web data off; /api/health must answer version == <new> within 15 s; a failure moves the folder to <home>/temp/failed-<new>, writes one report and leaves the marker alone; the child runs hidden at below-normal priority; the demo core opens no log outside its fixture (exit 97 otherwise); the gate waits while an injected game_idle status is false and never queries a process list)"
    ],
    "accept": "python -m pytest -q tests/test_install_selftest.py passes.",
    "zero_click": "Runs by itself inside install and update; starts only while game_idle is true or on the player's click, so it never costs game FPS.",
@@ -12712,7 +12906,7 @@
     },
     {
      "file": "AL-NEXT-SESSION.txt",
-     "change": "Batched operator ask: add the Q-05 message to poe.ninja as an act that gates the public flip."
+     "change": "Record OA-2 as skipped in writing (operator order 2026-11-18); optional later; unlocks release polling only on a written yes; not a flip gate."
     },
     {
      "file": "ROADMAP.md",
@@ -12726,7 +12920,7 @@
     "tests/test_price_cadence.py::test_source_checkout_polls_with_the_constant_off"
    ],
    "accept": "python -m pytest -q tests/test_price_cadence.py tests/test_price_book.py tests/test_data_ninja.py tests/test_audit_pass2.py passes.",
-   "zero_click": "Nothing for players; the cadence is automatic. One operator message (Q-05).",
+   "zero_click": "Nothing for players; the cadence is automatic. The Q-05 message is optional (OA-2, skipped in writing 2026-11-18).",
    "size": "M",
    "est_min": 60,
    "deps": [
@@ -12739,8 +12933,8 @@
    "lane": "build",
    "design_review": false,
    "blocked": null,
-   "operator_act": "OA-2 (docs/plan/09): Q-05: before the public flip send poe.ninja one message asking whether per-install polling at this cadence (about 200 overview GETs a day) is acceptable or a project mirror is wanted. Silence is not consent.",
-   "notes": "Tier P1. pricebook.py: PriceBook.due and PriceBook.refresh read a per-type interval (3 h; 1 h while pressed_at is under 24 h old) and a new PriceBook.note_press(type, now) keeps pressed_at in memory and saves it with the next refresh (no disk write on the press path). ninja.py: constant RELEASE_POLLING = False, RatesClient.__init__(installed=None), the gate in _refresh, refresh_async and snapshot()['blocked'], and RatesClient.lookup calling book.note_press. 'installed' defaults to a callable reading paths.install_mode() == 'installed' when that function exists (DEP-05, other cluster) and False otherwise, so this package does not wait for it. The constant name RELEASE_POLLING is the contract DEP-08's release build refusal reads. The new decision records the default (no answer yet) and amends decision 0026 item 2 (hourly per type); 0072 is the number the integrator reserves at dispatch (next free from 0046). Decision 0026 gets one dated pointer line to the new decision (item 2 amended); 0026 is also edited by DATA-PRICE-REFRESH-CORE (folded into DATA-CONTACT-FIELD), a dep.",
+   "operator_act": "OA-2 optional: skipped in writing 2026-11-18 (operator order); sending it later serves only DATA-NINJA-RELEASE-ON. Default in force: release builds poll nothing, trade link only.",
+   "notes": "Tier P1. pricebook.py: PriceBook.due and PriceBook.refresh read a per-type interval (3 h; 1 h while pressed_at is under 24 h old) and a new PriceBook.note_press(type, now) keeps pressed_at in memory and saves it with the next refresh (no disk write on the press path). ninja.py: constant RELEASE_POLLING = False, RatesClient.__init__(installed=None), the gate in _refresh, refresh_async and snapshot()['blocked'], and RatesClient.lookup calling book.note_press. 'installed' defaults to a callable reading paths.install_mode() == 'installed' when that function exists (DEP-05, other cluster) and False otherwise, so this package does not wait for it. The constant name RELEASE_POLLING is the contract DEP-08's release build refusal reads. The new decision records the default (no answer yet) and amends decision 0026 item 2 (hourly per type); 0072 is the number the integrator reserves at dispatch (next free from 0046). Decision 0026 gets one dated pointer line to the new decision (item 2 amended); 0026 is also edited by DATA-PRICE-REFRESH-CORE (folded into DATA-CONTACT-FIELD), a dep. PLAN 07 (close-out 2026-11-18, adjudicator LE-38): the stricter gate stays (no poe.ninja request in a release build until poe.ninja's written yes, an approved mirror or the operator's written ruling). Decision 0072 'Alternatives' adds 'Q-05 ship-regardless: rejected (stricter reading; adjudicator LE-38).' Code, tests and the Settled bullet stay as written.",
    "wave": 18,
    "owner": "session",
    "tier": "P1",
@@ -12958,7 +13152,7 @@
    ],
    "integrator_edits": [],
    "tests": [
-    "tests/test_repo_settings_files.py (new)"
+    "tests/test_repo_settings_files.py (new; also: test-newest is not a required context)"
    ],
    "accept": "`python -m pytest -q tests/test_repo_settings_files.py tests/test_ascii_lf.py tests/test_leak_sweep.py` is green.",
    "zero_click": "Files only; GP-13 and GP-15 apply them with gh and read them back, with no click.",
@@ -12974,7 +13168,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. Split from GP-13 / GP-15 so the files and their test land before the flip. Exact JSON in 04 section 'Repository settings' C, D and G: ruleset-main-protect (deletion, non_fast_forward, bypass_actors []), ruleset-main-checks (required_status_checks fleet-identity-guard and test, integration_id 15368 each, one bypass actor: RepositoryRole 5, always), ruleset-release-tags (target tag, refs/tags/v*, deletion / non_fast_forward / update, no bypass), security.json (secret scanning and push protection enabled), branch-protection-fallback.json (contexts fleet-identity-guard and test, enforce_admins false, no force pushes, no deletions). tests/test_repo_settings_files.py: each file is valid JSON; only the checks ruleset has a bypass actor; its contexts and the fallback file's contexts equal the `name:` of the job in .github/workflows/ci.yml and of the job in .github/workflows/fleet-identity-guard.yml; each required check carries integration_id 15368; the protect and tag rulesets have no bypass. The ids 5 and 15368 are confirmed live by GP-09's check-run read-back and GP-13's read-backs; GP-13 corrects the file before applying if a read-back differs. The files hold no owner or repository name.",
+   "notes": "Tier P1. Split from GP-13 / GP-15 so the files and their test land before the flip. Exact JSON in 04 section 'Repository settings' C, D and G: ruleset-main-protect (deletion, non_fast_forward, bypass_actors []), ruleset-main-checks (required_status_checks fleet-identity-guard and test, integration_id 15368 each, one bypass actor: RepositoryRole 5, always), ruleset-release-tags (target tag, refs/tags/v*, deletion / non_fast_forward / update, no bypass), security.json (secret scanning and push protection enabled), branch-protection-fallback.json (contexts fleet-identity-guard and test, enforce_admins false, no force pushes, no deletions). tests/test_repo_settings_files.py: each file is valid JSON; only the checks ruleset has a bypass actor; its contexts and the fallback file's contexts equal the `name:` of the job in .github/workflows/ci.yml and of the job in .github/workflows/fleet-identity-guard.yml; each required check carries integration_id 15368; the protect and tag rulesets have no bypass. The ids 5 and 15368 are confirmed live by GP-09's check-run read-back and GP-13's read-backs; GP-13 corrects the file before applying if a read-back differs. The files hold no owner or repository name. PLAN 07 (close-out 2026-11-18, adjudicator LE-28): tests/test_repo_settings_files.py also asserts that `test-newest` is NOT among the required contexts of the checks ruleset or of the fallback file.",
    "wave": 18,
    "owner": "session",
    "tier": "P1",
@@ -13100,6 +13294,89 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "DATA"
+  },
+  {
+   "id": "PUB-DEPBOT-ACTIONS",
+   "title": "Dependabot re-apply tool: actions bumps and the commit, push and close path",
+   "goal": "An open github-actions bump is re-applied locally as one operator commit, pushed through the guarded hook and closed with 'Applied locally as <sha>.'; nothing is merged on GitHub.",
+   "units": [
+    "F-081",
+    "GP-14"
+   ],
+   "files": [
+    "tools/dependabot_reapply.py",
+    "tests/test_dependabot_reapply.py"
+   ],
+   "new_files": [
+    "tests/fixtures/dependabot/pr_actions.json"
+   ],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_dependabot_reapply.py::test_actions_bump_is_one_operator_commit_pushed_and_closed (new)",
+    "tests/test_dependabot_reapply.py::test_red_gate_leaves_the_pull_request_open (new)"
+   ],
+   "accept": "`python -m pytest -q tests/test_dependabot_reapply.py tests/test_p163_lane_tools.py tests/test_ascii_lf.py tests/test_leak_sweep.py` is green.",
+   "zero_click": "Part of `python tools/dependabot_reapply.py run`: no prompt; a session runs it until the loop resumes (F-078), then the tick does (PUB-DEPBOT-TICK).",
+   "size": "M",
+   "est_min": 50,
+   "deps": [
+    "GP-14",
+    "GP-02",
+    "GP-05"
+   ],
+   "serial_group": "dependabot-reapply",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "data",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P1. Split from GP-14 by the verifier. Fills the apply_actions seam GP-14 leaves in tools/dependabot_reapply.py (a file that exists once GP-14 lands) and adds the shared path PUB-DEPBOT-NPM reuses: rewrite the `uses:` SHA and the `# v<tag>` comment in .github/workflows/ci.yml (GP-05) after re-reading the SHA with `gh api repos/actions/<name>/commits/<tag> --jq .sha`; run the gates of ops/loop/gates.txt (a red gate leaves the pull request open, commits nothing and reports one line); one commit as the operator through ops/fleet_kit/fleet_gitlock.py (no trailer; the subject names the dependency and versions); push main through fleet_gitlock (the guarded hook of GP-02 applies); `gh pr close <n> --comment \"Applied locally as <sha>.\"`. git, gh, the clock and the gate runner are injected. Test: on the recorded pull-request fixture plus a tmp git repo with a bare remote, a copy of .githooks and copies of ops/fleet_kit/fleet_identity.py and tools/leak_sweep.py at the same relative paths (the harness of tests/test_pre_push_hook.py), fleet.operatorIdent set in that repo only, exactly one local commit whose author and committer equal the tmp fleet.operatorIdent, no trailer line, one push to main and one close comment (gh a recording fake); skipped when git or its sh is absent. Fixture JSON holds made-up names only.",
+   "wave": 18,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
+  },
+  {
+   "id": "PUB-DEPBOT-TICK",
+   "title": "Loop tick launches the Dependabot re-apply worker once a day",
+   "goal": "Once the loop runs again, the tick starts one detached `tools/dependabot_reapply.py run` worker in the main checkout at most once per 24 hours, and never without an origin remote.",
+   "units": [
+    "F-081",
+    "GP-14"
+   ],
+   "files": [
+    "tools/al_loop.py"
+   ],
+   "new_files": [
+    "tools/loop_depbot.py",
+    "tests/test_loop_depbot.py"
+   ],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_loop_depbot.py (new)",
+    "tests/test_loop_split.py::test_al_loop_is_smaller (existing; the 1,760-line cap)"
+   ],
+   "accept": "`python -m pytest -q tests/test_loop_depbot.py tests/test_loop_split.py tests/test_al_loop.py tests/test_p163_lane_tools.py` is green.",
+   "zero_click": "Fully unattended once F-078 resumes the loop; while HALT is present nothing is launched and a session runs the tool instead.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [
+    "GP-14",
+    "PUB-LOCAL-ONLY-TEXT"
+   ],
+   "serial_group": "al-loop",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P1. New file tools/loop_depbot.py (must not import al_loop; tests/test_loop_split.py forbids it for split modules): STATE_REL = 'ops/runtime/depbot.json' (gitignored runtime state, beside tc_drift.json; sidecar rule); loop_check(root, now, git, popen, pid_alive) returns one summary line or None and never raises: no origin remote = None; a worker in flight = 'depbot worker in flight'; last launch under 24 h ago = None; else launch `pythonw tools/dependabot_reapply.py run` detached with no console (the creation flags _NO_WINDOW / _DETACHED / _BREAKAWAY of tools/loop_base.py, imported from there, never from al_loop) and write {launched, pid} to the state file; join(a, b) joins two optional summary lines. tools/al_loop.py: only the body of _drift_check (lines 453-460): the two lines `import tc_drift` / `return tc_drift.loop_check(root, now)` are replaced by two lines that also call loop_depbot.loop_check and return loop_depbot.join(...); net 0 added lines (file is 1,757 lines, cap < 1,760). No lane tool list changes: lanes keep no gh. tests/test_loop_depbot.py: with fake deps the worker is launched once per 24 h, not while one is alive, never without origin, and a fault in the check returns a line instead of raising. If AUTO-05 (WATCH-CORE) has already replaced the daily-check seam in Tick.run, register loop_check as one more daily check in that frame instead and leave al_loop.py untouched; the DEPBOT-PR rows of AUTO-20 are worked by this worker, not by a code lane (see cross).",
+   "wave": 18,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
   },
   {
    "id": "RUN-VERDICTS-UI",
@@ -13699,6 +13976,48 @@
    "owner": "session",
    "tier": "",
    "cluster": "DATA"
+  },
+  {
+   "id": "PUB-DEPBOT-NPM",
+   "title": "Dependabot re-apply tool: the npm branch",
+   "goal": "An npm bump pull request is re-applied through the pin procedure (lockfile regenerated without scripts, registry signatures audited, the 3-day age rule), and an electron bump is treated as a signal for the Electron bump procedure.",
+   "units": [
+    "F-081",
+    "GP-14"
+   ],
+   "files": [
+    "tools/dependabot_reapply.py",
+    "tests/test_dependabot_reapply.py"
+   ],
+   "new_files": [
+    "tests/fixtures/dependabot/pr_npm.json"
+   ],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_dependabot_reapply.py::test_npm_bump_regenerates_lockfile_and_closes (new)",
+    "tests/test_dependabot_reapply.py::test_npm_bump_younger_than_three_days_waits (new)",
+    "tests/test_dependabot_reapply.py::test_electron_bump_is_a_signal_only (new)"
+   ],
+   "accept": "`python -m pytest -q tests/test_dependabot_reapply.py tests/test_ascii_lf.py` is green.",
+   "zero_click": "Part of `run`: no prompt; an electron pin never moves without the Electron bump procedure.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "PUB-DEPBOT-ACTIONS",
+    "OVL-NPM-LOCK"
+   ],
+   "serial_group": "dependabot-reapply",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "data",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P1. Edits only the apply_npm function left by GP-14 in tools/dependabot_reapply.py and adds three test functions. Needs F-037 (OVL cluster: app/.npmrc, --ignore-scripts, the 3-day rule, npm audit signatures) and, for electron, F-130 / AUTO-09 and F-044 (the Electron bump procedure and config/electron_pin.json); see cross. Behaviour: a non-electron lockfile bump runs `npm install --prefix app --package-lock-only --ignore-scripts`, then `npm audit signatures`, refuses a version published less than 3 days ago (the pull request stays open, one line reported), then the shared gate / commit / push / close path of GP-14. app/package.json has one dependency, electron 45.3.3 (exact pin named in CLAUDE.md): a pull request that bumps electron itself yields no commit; it is closed with one line naming the Electron bump procedure once that procedure exists, and left open and reported before then. npm is injected in tests (a recording fake); no network in tests. Verifier fix: deps PUB-DEPBOT-ACTIONS, whose gate / commit / push / close path the npm branch reuses; tools/dependabot_reapply.py and tests/test_dependabot_reapply.py exist once GP-14 lands.",
+   "wave": 19,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
   },
   {
    "id": "DATA-SNAP-SETUP",
@@ -14673,7 +14992,7 @@
     "tests/test_release_stage.py::test_round_trip_skips_cleanly_without_cached_runtimes (new: verdict FAIL with the reason, never a download)"
    ],
    "accept": "python -m pytest -q tests/test_release_stage.py passes and, with the runtimes cached, python tools/release.py stage --version <VERSION> writes stage.json with step 6 PASS.",
-   "zero_click": "Runs by itself inside the stage; hidden, spare ports 8970-8979, web data off.",
+   "zero_click": "Runs by itself inside the stage; hidden, self-test ports 8970-8975, web data off.",
    "size": "L",
    "est_min": 75,
    "deps": [
@@ -15216,7 +15535,7 @@
     "tests/test_budget_snapshot.py::test_snapshot_under_32_kb_no_key_over_8_kb (B7)",
     "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent (retired: superseded by B1)"
    ],
-   "accept": "python -m pytest -q tests/test_budgets.py tests/test_budget_tick.py tests/test_budget_snapshot.py passes, and each new test fails once with its defect put back (recorded in the commit message).",
+   "accept": "python -m pytest -q tests/test_budgets.py tests/test_budget_tick.py tests/test_budget_snapshot.py passes.",
    "zero_click": "The suite runs them.",
    "size": "M",
    "est_min": 60,
@@ -15231,7 +15550,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Tests only; uses Core.tick_all (RUN-SEAMS) as the real loop body. Prefer the deterministic checks; keep fleet_test_guard.budget on the timed ones. B4 is in RUN-QUIET-FEED, B6 in RUN-PERF-PARSE-ONCE.",
+   "notes": "Tier P2. Tests only; uses Core.tick_all (RUN-SEAMS) as the real loop body. Prefer the deterministic checks; keep fleet_test_guard.budget on the timed ones. B4 is in RUN-QUIET-FEED, B6 in RUN-PERF-PARSE-ONCE. PLAN 07 (close-out 2026-11-18, LE-20): before it is committed green, each new test is shown to fail once with its defect put back, and the commit message records it (F-108 acceptance; a working rule for the agent, not part of the accept command).",
    "wave": 22,
    "owner": "session",
    "tier": "P2",
@@ -15537,6 +15856,46 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "RUN"
+  },
+  {
+   "id": "PUB-HOOK-RELEASE-CHECK",
+   "title": "Guarded hook: refuse a v* tag without a PASS stage report",
+   "goal": "The pre-push hook calls `tools/release.py prepush-check`, so a release tag leaves the machine only after plan 05's stage gate passed.",
+   "units": [
+    "F-016"
+   ],
+   "files": [
+    ".githooks/pre-push",
+    "tests/test_pre_push_hook.py",
+    "tests/test_fleet_kit_conformance.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_pre_push_hook.py::test_tag_without_pass_stage_report_is_refused (new)",
+    "tests/test_pre_push_hook.py::test_branch_push_ignores_the_stage_check (new)",
+    "tests/test_fleet_kit_conformance.py::test_git_hooks_wire_identity_and_leak_sweep (order assert extended)"
+   ],
+   "accept": "`python -m pytest -q tests/test_pre_push_hook.py tests/test_fleet_kit_conformance.py tests/test_ascii_lf.py` is green and `git grep -n \"release.py\\\" prepush-check\" -- .githooks/pre-push` prints one line.",
+   "zero_click": "Runs by itself on every push; a release needs no extra step beyond plan 05's one operator phrase.",
+   "size": "S",
+   "est_min": 25,
+   "deps": [
+    "GP-02",
+    "REL-PUBLISH-GATES"
+   ],
+   "serial_group": "pre-push-hook",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P1. Plan 05 (DEP-12, corrections item 3) puts this one call into F-016's diff; it cannot ride GP-02 because tools/release.py does not exist then and the hook fails closed. Runs only after DEP-12 (REL cluster) has landed `release.py prepush-check` (refuses a v* ref with no matching PASS stage report, passes a branch ref untouched). .githooks/pre-push: one new line between the check_refs line and the identity line: `printf '%s\\n' \"$REFS\" | python \"$ROOT/tools/release.py\" prepush-check \"$@\" || exit 1`, and one more line in the header comment list. tests/test_pre_push_hook.py: the tmp repo also gets a copy of tools/release.py (or a stub with the same sub-command contract when release.py needs more files); case 7 (tag v0.0.1 pushes) gets a PASS stage report fixture. If the REL cluster's own packages already add this line, drop this package at merge (see cross). tests/test_pre_push_hook.py exists once GP-02 lands (a dep).",
+   "wave": 22,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
   },
   {
    "id": "PLAY-TD-21A-SETTINGS-RAIL",
@@ -18515,6 +18874,7 @@
     "tests/test_price_ninja_link.py::test_card_carries_an_https_poe_ninja_url_for_a_unique",
     "tests/test_price_ninja_link.py::test_no_url_for_an_unknown_category",
     "tests/test_price_ninja_link.py::test_the_app_requests_nothing_for_the_link",
+    "tests/test_price_ninja_link.py::test_ninjalink_table_has_no_api_route (no '/api/' in any form of the table)",
     "app/test/prices.test.js (new case: the link shows only for an https poe.ninja economy URL)"
    ],
    "accept": "npm test --prefix app passes (app/test/zoneguide.test.js unchanged) and no file under web/ contains 'zone-note'. Also (folded DATA-PRICE-NINJA-LINK): python -m pytest -q tests/test_price_ninja_link.py tests/test_price_check.py tests/test_price_card_age.py passes and npm test --prefix app passes.",
@@ -18534,7 +18894,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. web/index.html: remove the #zone-note-box paragraph inside .zone-guide-box; web/app.js: remove the three UX-ZONE-NOTES lines in render(); web/app.css: remove .zone-note. The boss hint keeps its place in #campaign-hints. The dep on DATA-LEAGUE-PICKER-UI (folded into DATA-CONTACT-UI) is a file-order edge (index.html, app.js). The Play redesign (TD-11, F-068) rewrites this tile later: see cross. FOLDED DATA-PRICE-NINJA-LINK: Tier P3. New ninjalink.py (pure): a type-to-page table and url_for(type, league list entry) with a strict https://poe.ninja/ allow pattern; price.py: card_of adds one key (ninja_url); web/prices.js: priceView adds a second link object and its own allow regex; web/app.js: renderPrice only. The page URL form is undocumented and uses a league slug (research 0036 NE knows one form): the table holds only forms read from poe.ninja's public economy pages, one dated read by the package agent with the truthful User-Agent, recorded in research 0036 with the access date; a human-facing page, never an API or data route, and never a derived or guessed slug. A category or league whose form was not read gets no link; if no form beyond research 0036 NE is recorded the link is the economy landing page only. The app itself requests nothing (as decision 0017 for trade). Deps are file-order edges for price.py and the web files. Decision 0016 (the card contract) gets one dated amendment for the ninja_url key: a page link the player opens, the app requests nothing; 0016 is also edited by DATA-PRICE-CARD-TEXT (a dep) and DATA-CONTACT-DEFAULT (depends on this package). PLAN 07: folded from DATA-GUIDE-ONE-BLOCK, DATA-PRICE-NINJA-LINK (one agent, one commit series, at most 90 minutes).",
+   "notes": "Tier P2. web/index.html: remove the #zone-note-box paragraph inside .zone-guide-box; web/app.js: remove the three UX-ZONE-NOTES lines in render(); web/app.css: remove .zone-note. The boss hint keeps its place in #campaign-hints. The dep on DATA-LEAGUE-PICKER-UI (folded into DATA-CONTACT-UI) is a file-order edge (index.html, app.js). The Play redesign (TD-11, F-068) rewrites this tile later: see cross. FOLDED DATA-PRICE-NINJA-LINK: Tier P3. New ninjalink.py (pure): a type-to-page table and url_for(type, league list entry) with a strict https://poe.ninja/ allow pattern; price.py: card_of adds one key (ninja_url); web/prices.js: priceView adds a second link object and its own allow regex; web/app.js: renderPrice only. The page URL form is undocumented and uses a league slug (research 0036 NE knows one form): the table holds only forms read from poe.ninja's public economy pages, never a derived or guessed slug (adjudicator LE-39, 2026-11-18). One read pass, in one run, by a stdlib urllib script in the scratch dir (run with python -I). User-Agent: AshLight/<VERSION> (dev research; contact per decision 0015). Read https://poe.ninja/robots.txt first and obey it. Then at most one GET per category page form, 30 GETs total, only human-facing economy pages, never an /api/ or data route, 1 s apart. Record each URL form with the access date in research 0036. Store no page body in a tracked file. If robots disallows the pages or a read fails, the table holds only what research 0036 NE already records, else nothing, and the card links the poe.ninja landing page. A category or league whose form was not read gets no link. The app itself requests nothing (as decision 0017 for trade). Deps are file-order edges for price.py and the web files. Decision 0016 (the card contract) gets one dated amendment for the ninja_url key: a page link the player opens, the app requests nothing; 0016 is also edited by DATA-PRICE-CARD-TEXT (a dep) and DATA-CONTACT-DEFAULT (depends on this package). PLAN 07: folded from DATA-GUIDE-ONE-BLOCK, DATA-PRICE-NINJA-LINK (one agent, one commit series, at most 90 minutes).",
    "wave": 36,
    "owner": "session",
    "tier": "P2",
@@ -18595,100 +18955,6 @@
    "owner": "session",
    "tier": "P3",
    "cluster": "RUN"
-  },
-  {
-   "id": "GP-02",
-   "title": "Guarded pre-push hook and its tests",
-   "goal": ".githooks/pre-push stops refusing every push: it lets only refs/heads/main and refs/tags/v* out, each to the same name, refuses deletes, moved tags and non-fast-forwards, and runs the fleet_identity pre-push check and the leak sweep on every push, with no override variable.",
-   "units": [
-    "F-016",
-    "GP-02",
-    "OPEN-14",
-    "OPERATOR-REMOTE",
-    "CARRY-14"
-   ],
-   "files": [
-    ".githooks/pre-push",
-    "tests/test_fleet_kit_conformance.py"
-   ],
-   "new_files": [
-    "tests/test_pre_push_hook.py"
-   ],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_pre_push_hook.py (new, 11 cases)",
-    "tests/test_fleet_kit_conformance.py::test_git_hooks_wire_identity_and_leak_sweep (changed)"
-   ],
-   "accept": "`python -m pytest -q tests/test_pre_push_hook.py tests/test_fleet_kit_conformance.py tests/test_al_loop_gate_cache.py tests/test_ascii_lf.py` is green and `git grep -n \"PUSH REFUSED\\|AL_ALLOW_PUSH\" -- .githooks` prints nothing.",
-   "zero_click": "After it lands a push needs no flag: a session pushes after its gated commit. The headless loop pushes only when the operator has turned on the per-host switch loop_push (OA-11, default off; PUB-LOCAL-ONLY-TEXT). Dev side only.",
-   "size": "L",
-   "est_min": 75,
-   "deps": [],
-   "serial_group": "pre-push-hook",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "the operator's recorded go for step 1 of ruling Q-23 (create the private repository and push main), quoted in the hand-off in the operator's own words",
-    "who": "operator",
-    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 1\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date; a session then sets q23_go_recorded in the builder's overrides and re-runs it"
-   },
-   "operator_act": "OA-10 (ruling Q-23, step 1): say in your own words that the private repository may be created and main pushed. Default in force without it: stay local; the hook keeps refusing every push.",
-   "notes": "Tier P0. PLAN 07 (review): merges only after the Q-23 go record is read back (the hand-off line 'OPERATOR GO Q-23 step 1' that quotes the operator's own words with their date), in one merge batch with PUB-GO-DECISION, that package first, so the CLAUDE.md lift and the hook land in one integrator commit; PUB-LOCAL-ONLY-TEXT follows in the same wave when tools/al_loop.py is free there, else in the next one, and GP-09 waits for all three. .githooks/pre-push: replace the whole file with the exact text of docs/plan/04-go-public.md section 'New hook, exact text' (check_refs, then fleet_identity.py pre-push, then leak_sweep.py --pre-push, final exit 0; the old `[ -f ... ]` guard around the sweep is gone on purpose: fail closed). tests/test_fleet_kit_conformance.py: only test_git_hooks_wire_identity_and_leak_sweep (lines 152-165): keep the two scan asserts and the commit-msg / pre-commit asserts; replace the refusal assert (`\"exit 1\" in pp.rsplit(\"fi\", 1)[-1]`) with: \"PUSH REFUSED\" not in pp, \"AL_ALLOW_PUSH\" not in pp, pp.rstrip().endswith(\"exit 0\"), \"refs/heads/main|refs/tags/v*\" in pp, and file order check_refs line, identity line, sweep line, final exit 0; docstring becomes 'commit-msg strips, pre-push guards every push (ref rule, identity gate, leak sweep), pre-commit runs the leak sweep over staged lines.' tests/test_pre_push_hook.py: real git under tmp_path, skipped when git or its sh is absent, GIT_CONFIG_GLOBAL pointing at an empty file, a tmp work repo with core.hooksPath set to a copy of .githooks, copies of ops/fleet_kit/fleet_identity.py and tools/leak_sweep.py at the same relative paths, fleet.operatorIdent and user.name / user.email set in that repo only, a bare repo as origin; the 11 cases of 04 section 'Test changes' (clean push; fast-forward; a drive-rooted path string built at run time is refused; fleet-lanes/x, al/keep/x, refs/fleet-lanes/x and refs/al/keep/x refused; delete refused; main:other and HEAD:main refused; tag v0.0.1 pushes, a moved v0.0.1 and a tag rc1 are refused; forced rewind refused; bot author refused; AL_ALLOW_PUSH=1 changes none of 4 to 9; hook text ASCII, LF, starts with #!/bin/sh). tests/test_al_loop_gate_cache.py:272-285 ('push skipped: local only') stays untouched. The release.py prepush-check line of plan 05 is NOT in this package (tools/release.py does not exist yet and the hook fails closed): PUB-HOOK-RELEASE-CHECK adds it. Fallback (Q-23): if PUB-GO-DECISION cannot cite the operator's order, this package stays a ready diff and is not merged. ROADMAP, CLAUDE.md and hand-off edits ride PUB-GO-DECISION's integrator edits.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P0",
-   "cluster": "PUB"
-  },
-  {
-   "id": "PUB-LOCAL-ONLY-TEXT",
-   "title": "Replace the local-only wording in loop tools and ritual files",
-   "goal": "No tool comment, loop prompt, ritual or agent file still says the repository is local only or that a push is refused. Also (review): with a remote the loop's push worker still pushes nothing unless the operator's per-host switch loop_push is on (default off).",
-   "units": [
-    "F-016",
-    "GP-02"
-   ],
-   "files": [
-    "tools/al_loop.py",
-    "tools/loop_inbox.py",
-    "tools/al_lane.py",
-    "tests/test_p163_lane_tools.py",
-    ".claude/commands/done.md",
-    ".claude/agents/adjudicator.md",
-    "tests/test_al_loop_gate_cache.py"
-   ],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_loop_split.py::test_al_loop_is_smaller (existing; the 1,760-line cap)",
-    "tests/test_p163_lane_tools.py::test_code_lanes_may_bump_dependencies_but_get_no_gh (comment only)",
-    "tests/test_fleet_kit_conformance.py::test_done_ritual_last_act_is_the_marker_and_it_is_dispatched (existing)",
-    "tests/test_al_loop_gate_cache.py (existing)",
-    "tests/test_al_loop_gate_cache.py::test_push_is_skipped_while_the_loop_push_switch_is_off",
-    "tests/test_al_loop_gate_cache.py::test_push_runs_with_a_fake_origin_and_the_switch_on"
-   ],
-   "accept": "`python -m pytest -q tests/test_loop_split.py tests/test_p163_lane_tools.py tests/test_fleet_kit_conformance.py tests/test_al_loop_gate_cache.py tests/test_ascii_lf.py` is green and `git grep -n -i \"AL is local only\\|repo is local only\\|never push, local only\\|AL: local only\\|AL_ALLOW_PUSH\" -- tools .claude` prints nothing.",
-   "zero_click": "Text only: the loop prompt and the /done ritual then describe the guarded push, so sessions and lanes follow it with no reminder.",
-   "size": "M",
-   "est_min": 45,
-   "deps": [],
-   "serial_group": "al-loop",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "the operator's recorded go for step 1 of ruling Q-23 (create the private repository and push main), quoted in the hand-off in the operator's own words",
-    "who": "operator",
-    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 1\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date; a session then sets q23_go_recorded in the builder's overrides and re-runs it"
-   },
-   "operator_act": "OA-10 (docs/plan/09): OA-11 (optional): set \"loop_push\": true in the gitignored config/local.json to let the headless loop push its own commits; default in force: off, a session pushes. Only if the harness denies edits under .claude/: OA-6 (docs/plan/09-operator-acts.md), the two wording changes in .claude/commands/done.md and .claude/agents/adjudicator.md; the rest lands.",
-   "notes": "Tier P0. PLAN 07 (review): rewritten by string anchor, because tools/al_loop.py is split and edited by earlier packages (LOOP-SPLIT-TICK lowers the line cap in tests/test_loop_split.py to under 1300: read the cap from that test, replace lines and add only what the push switch needs). Find each text with git grep, never by line number; if a quoted string now lives in a module that is not in this package's files, stop and name it in the result. Wording changes: in tools/al_loop.py the module docstring paragraph that starts 'Push (unless --no-push): AL is LOCAL ONLY' becomes the 'Push (unless --no-push): ...' text of docs/plan/04-go-public.md section 'Test changes' plus the switch sentence below; the comment that starts '# AL is local only (no CI yet)' becomes 'The loop's gates are the tracked list (CI runs the same commands):'; the push_needed docstring drops '(AL: local only)'. The log string 'push skipped: local only' and its test stay on purpose. tools/loop_inbox.py order_prompt: '(AL is local only: no remote, no gh)' becomes '(a lane gets no gh)'. tools/al_lane.py, the comment above DEP_TOOLS, becomes 'Dependabot bumps are re-applied in the main checkout by tools/dependabot_reapply.py, so no gh is granted to a lane.' tests/test_p163_lane_tools.py: the comment '# AL is local only' becomes '# gh stays out of lanes'; the assert stays. .claude/commands/done.md: the description line, the step-2 heading and the Safety rails line say: push main through fleet_gitlock when origin exists, never force-push; the text after the `fleet_done.py mark` line must not contain the literal 'git push' (pinned by test_done_ritual_last_act_is_the_marker_and_it_is_dispatched), so the rail reads e.g. 'Never force-push, --amend or --no-verify; main is pushed only in step 2.' .claude/agents/adjudicator.md: drop 'no push while the repo is local only'. One logic change (review, floor lens; ruling Q-23 gives push approval to the operator): push_needed reports nothing to push unless the gitignored config/local.json holds \"loop_push\": true; absent or false it logs 'push skipped: loop push is off' and the commits wait for the next session push. No agent, tool or setup step writes that key (OA-11), so with a remote the headless loop still pushes nothing by itself, and a session reads `git log origin/main..main` before its own gated push. Merges only after the Q-23 go record is read back, in the wave of GP-02 and PUB-GO-DECISION when tools/al_loop.py has no other editor there, else in the next wave where it is free; GP-09 waits for it. The .githooks text is GP-02's (its own accept greps it).",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P0",
-   "cluster": "PUB"
   },
   {
    "id": "GP-10",
@@ -18972,62 +19238,16 @@
    "lane": "build",
    "design_review": false,
    "blocked": {
-    "on": "the public flip, the project's address in tracked files, poe.ninja's answer for release builds and the operator's release phrase",
+    "on": "the public flip, the project's address in tracked files, the release build's poe.ninja switch settled (off by default) and the operator's release phrase",
     "who": "operator",
     "unblock": "the repository is public (go-public flip package done, all P0 packages green at the flip commit), the address package has put the real owner/name into the tracked config and the README install line, the release build's poe.ninja switch is settled (off, or a decision records poe.ninja's yes), and the operator types 'release 0.2.0' in an interactive session"
    },
-   "operator_act": "OA-5, OA-13, OA-15 (docs/plan/09): Give the Q-23 go for the public flip in your own words (OA-10, step 4), supply the final owner and name of the repository (Q-24), send the one message to poe.ninja (Q-05, OA-2), then type 'release 0.2.0'. Optional: paste the install line once on a machine that is not the dev host; without it that claim rests on the sandbox run of REL-STAGE-SANDBOX only. Default in force: no public release; the installed copy on this machine runs local release candidates.",
+   "operator_act": "OA-13, OA-15 (docs/plan/09): type 'release 0.2.0' once the repository is public. The Q-23 go for the flip is recorded (2026-11-18, hand-off); owner and name default to the account gh is signed in as and AshLight (OA-5 is an optional override before GP-09); OA-2 is skipped in writing, so release builds make no poe.ninja request until DATA-NINJA-RELEASE-ON. Optional: paste the install line once on a machine that is not the dev host; without it that claim rests on the sandbox run of REL-STAGE-SANDBOX only. Default in force: no public release; the installed copy on this machine runs local release candidates.",
    "notes": "Same procedure as REL-RC-LIVE (lane prep, session publish, fast-forward rule). README.md is touched only by 'release.py bump' on its al-version-stamp line. The 'machine that is not the dev host' check is 'stage --sandbox' when the operator enabled the feature, else the optional tester run; without either the README keeps its 'unverified' wording. The in-app update notice and the network update are proven live here (the operator's copy updates itself). Deferred, not part of this: a scoop manifest, winget, a signed exe. Files: its 'release.py bump 0.2.0' and 'notes --changelog' edit the same paths REL-RC-LIVE lists (server/al/__init__.py, app/package.json, app/package-lock.json, README.md stamp line, CHANGELOG.md); they are named only in REL-RC-LIVE because both packages sit in the parked wave 99, where plan_check refuses a path shared by two packages, and the deps edge on REL-RC-LIVE keeps them from ever running together.",
    "wave": 99,
    "owner": "session",
    "tier": "P1",
    "cluster": "REL"
-  },
-  {
-   "id": "PUB-DEPBOT-NPM",
-   "title": "Dependabot re-apply tool: the npm branch",
-   "goal": "An npm bump pull request is re-applied through the pin procedure (lockfile regenerated without scripts, registry signatures audited, the 3-day age rule), and an electron bump is treated as a signal for the Electron bump procedure.",
-   "units": [
-    "F-081",
-    "GP-14"
-   ],
-   "files": [
-    "tools/dependabot_reapply.py",
-    "tests/test_dependabot_reapply.py"
-   ],
-   "new_files": [
-    "tests/fixtures/dependabot/pr_npm.json"
-   ],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_dependabot_reapply.py::test_npm_bump_regenerates_lockfile_and_closes (new)",
-    "tests/test_dependabot_reapply.py::test_npm_bump_younger_than_three_days_waits (new)",
-    "tests/test_dependabot_reapply.py::test_electron_bump_is_a_signal_only (new)"
-   ],
-   "accept": "`python -m pytest -q tests/test_dependabot_reapply.py tests/test_ascii_lf.py` is green.",
-   "zero_click": "Part of `run`: no prompt; an electron pin never moves without the Electron bump procedure.",
-   "size": "M",
-   "est_min": 60,
-   "deps": [
-    "PUB-DEPBOT-ACTIONS",
-    "OVL-NPM-LOCK"
-   ],
-   "serial_group": "dependabot-reapply",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "data",
-   "design_review": false,
-   "blocked": {
-    "on": "the Dependabot re-apply tool",
-    "who": "package PUB-DEPBOT-ACTIONS",
-    "unblock": "PUB-DEPBOT-ACTIONS is merged (its ROADMAP row is flipped), which needs the Q-23 go record of the operator"
-   },
-   "operator_act": "",
-   "notes": "Tier P1. Edits only the apply_npm function left by GP-14 in tools/dependabot_reapply.py and adds three test functions. Needs F-037 (OVL cluster: app/.npmrc, --ignore-scripts, the 3-day rule, npm audit signatures) and, for electron, F-130 / AUTO-09 and F-044 (the Electron bump procedure and config/electron_pin.json); see cross. Behaviour: a non-electron lockfile bump runs `npm install --prefix app --package-lock-only --ignore-scripts`, then `npm audit signatures`, refuses a version published less than 3 days ago (the pull request stays open, one line reported), then the shared gate / commit / push / close path of GP-14. app/package.json has one dependency, electron 45.3.3 (exact pin named in CLAUDE.md): a pull request that bumps electron itself yields no commit; it is closed with one line naming the Electron bump procedure once that procedure exists, and left open and reported before then. npm is injected in tests (a recording fake); no network in tests. Verifier fix: deps PUB-DEPBOT-ACTIONS, whose gate / commit / push / close path the npm branch reuses; tools/dependabot_reapply.py and tests/test_dependabot_reapply.py exist once GP-14 lands.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
   },
   {
    "id": "REL-RC-LIVE",
@@ -19092,7 +19312,7 @@
     "who": "operator",
     "unblock": "the private repository exists with main pushed and CI green (go-public remote package), the guarded pre-push hook with the prepush-check call is merged, immutable releases are on before the first v* tag, and the operator types 'release 0.2.0-rc.1' in an interactive session"
    },
-   "operator_act": "OA-10, OA-3, OA-13 (docs/plan/09): Create the private repository and approve the first push (ruling Q-23), turn on immutable releases before the first v* tag, then type 'release 0.2.0-rc.1'. Default in force: the repository stays local, every push is refused and release candidates are built locally with 'build --ref' only.",
+   "operator_act": "OA-3, OA-13 (docs/plan/09): OA-3 only if the immutable-releases call answers 404 (switch it on in the repository settings page before the first v* tag); then type 'release 0.2.0-rc.1'. Creating the private repository and the first push are agent steps (GP-09; the Q-23 go is recorded 2026-11-18). Default in force: no release candidate is published; release candidates are built locally with 'build --ref' only.",
    "notes": "Prep (bump, notes --write, curate, notes --changelog, stage) runs as the REL-PREP row in a lane worktree and never tags or pushes; its commit must reach main by fast-forward so HEAD equals the stage commit (else stage is re-run on main). The publish command and the read-back are run by the interactive session from the main checkout: publish refuses under a headless marker. '-rc.' tags publish with --prerelease so releases/latest skips them. Version files are edited only by 'release.py bump'. The live-home update from 0.2.0-rc.0 (REL-CUTOVER-LIVE) to 0.2.0-rc.1 by '--zip' is a session act from the main checkout, only while the live core reports game_idle. README.md is in files because 'release.py bump' rewrites its al-version-stamp install line once DEP-14 has added it.",
    "wave": 99,
    "owner": "session",
@@ -19139,7 +19359,7 @@
     "unblock": "the ledger consent line is ticked and python tools/live1_report.py prints VERIFIED live for at least one LIVE-1 item"
    },
    "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
-   "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items.",
+   "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items. PLAN 07 (close-out 2026-11-18, LE-35): also closes the LIVE-1 remains list of F-082 (its Client.txt shapes); the coverage of F-082 names this package.",
    "wave": 99,
    "owner": "session",
    "tier": "P1",
@@ -19367,52 +19587,6 @@
    "cluster": "TC"
   },
   {
-   "id": "PUB-DEPBOT-ACTIONS",
-   "title": "Dependabot re-apply tool: actions bumps and the commit, push and close path",
-   "goal": "An open github-actions bump is re-applied locally as one operator commit, pushed through the guarded hook and closed with 'Applied locally as <sha>.'; nothing is merged on GitHub.",
-   "units": [
-    "F-081",
-    "GP-14"
-   ],
-   "files": [
-    "tools/dependabot_reapply.py",
-    "tests/test_dependabot_reapply.py"
-   ],
-   "new_files": [
-    "tests/fixtures/dependabot/pr_actions.json"
-   ],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_dependabot_reapply.py::test_actions_bump_is_one_operator_commit_pushed_and_closed (new)",
-    "tests/test_dependabot_reapply.py::test_red_gate_leaves_the_pull_request_open (new)"
-   ],
-   "accept": "`python -m pytest -q tests/test_dependabot_reapply.py tests/test_p163_lane_tools.py tests/test_ascii_lf.py tests/test_leak_sweep.py` is green.",
-   "zero_click": "Part of `python tools/dependabot_reapply.py run`: no prompt; a session runs it until the loop resumes (F-078), then the tick does (PUB-DEPBOT-TICK).",
-   "size": "M",
-   "est_min": 50,
-   "deps": [
-    "GP-14",
-    "GP-02",
-    "GP-05"
-   ],
-   "serial_group": "dependabot-reapply",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "data",
-   "design_review": false,
-   "blocked": {
-    "on": "the guarded pre-push hook (its push path runs through it)",
-    "who": "package GP-02",
-    "unblock": "GP-02 is merged (its ROADMAP row is flipped), which needs the Q-23 go record of the operator"
-   },
-   "operator_act": "",
-   "notes": "Tier P1. Split from GP-14 by the verifier. Fills the apply_actions seam GP-14 leaves in tools/dependabot_reapply.py (a file that exists once GP-14 lands) and adds the shared path PUB-DEPBOT-NPM reuses: rewrite the `uses:` SHA and the `# v<tag>` comment in .github/workflows/ci.yml (GP-05) after re-reading the SHA with `gh api repos/actions/<name>/commits/<tag> --jq .sha`; run the gates of ops/loop/gates.txt (a red gate leaves the pull request open, commits nothing and reports one line); one commit as the operator through ops/fleet_kit/fleet_gitlock.py (no trailer; the subject names the dependency and versions); push main through fleet_gitlock (the guarded hook of GP-02 applies); `gh pr close <n> --comment \"Applied locally as <sha>.\"`. git, gh, the clock and the gate runner are injected. Test: on the recorded pull-request fixture plus a tmp git repo with a bare remote, a copy of .githooks and copies of ops/fleet_kit/fleet_identity.py and tools/leak_sweep.py at the same relative paths (the harness of tests/test_pre_push_hook.py), fleet.operatorIdent set in that repo only, exactly one local commit whose author and committer equal the tmp fleet.operatorIdent, no trailer line, one push to main and one close comment (gh a recording fake); skipped when git or its sh is absent. Fixture JSON holds made-up names only.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
-  },
-  {
    "id": "TC-IMPORT-UI",
    "title": "Connect and Refresh controls on the Build tab",
    "goal": "The Build tab gets a Connect control (shown only with web data on) and a Refresh control, the import's age and a quiet reconnect note on the dashboard, never the overlay.",
@@ -19524,7 +19698,7 @@
    "design_review": true,
    "blocked": {
     "on": "the project's public repository address exists as one tracked constant (Q-24)",
-    "who": "package GP-10 (PUB cluster), itself behind the operator's repository creation and first push (GP-09, Q-23)",
+    "who": "package GP-10 (PUB cluster), itself behind the repository and first push (GP-09)",
     "unblock": "GP-10 is merged to main, so the address constant and its leak-sweep allow-list entry are in the tree"
    },
    "operator_act": "",
@@ -19533,51 +19707,6 @@
    "owner": "session",
    "tier": "P1",
    "cluster": "DATA"
-  },
-  {
-   "id": "PUB-DEPBOT-TICK",
-   "title": "Loop tick launches the Dependabot re-apply worker once a day",
-   "goal": "Once the loop runs again, the tick starts one detached `tools/dependabot_reapply.py run` worker in the main checkout at most once per 24 hours, and never without an origin remote.",
-   "units": [
-    "F-081",
-    "GP-14"
-   ],
-   "files": [
-    "tools/al_loop.py"
-   ],
-   "new_files": [
-    "tools/loop_depbot.py",
-    "tests/test_loop_depbot.py"
-   ],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_loop_depbot.py (new)",
-    "tests/test_loop_split.py::test_al_loop_is_smaller (existing; the 1,760-line cap)"
-   ],
-   "accept": "`python -m pytest -q tests/test_loop_depbot.py tests/test_loop_split.py tests/test_al_loop.py tests/test_p163_lane_tools.py` is green.",
-   "zero_click": "Fully unattended once F-078 resumes the loop; while HALT is present nothing is launched and a session runs the tool instead.",
-   "size": "M",
-   "est_min": 45,
-   "deps": [
-    "GP-14",
-    "PUB-LOCAL-ONLY-TEXT"
-   ],
-   "serial_group": "al-loop",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "the loop wording and push switch in tools/al_loop.py",
-    "who": "package PUB-LOCAL-ONLY-TEXT",
-    "unblock": "PUB-LOCAL-ONLY-TEXT is merged (its ROADMAP row is flipped), which needs the Q-23 go record of the operator"
-   },
-   "operator_act": "",
-   "notes": "Tier P1. New file tools/loop_depbot.py (must not import al_loop; tests/test_loop_split.py forbids it for split modules): STATE_REL = 'ops/runtime/depbot.json' (gitignored runtime state, beside tc_drift.json; sidecar rule); loop_check(root, now, git, popen, pid_alive) returns one summary line or None and never raises: no origin remote = None; a worker in flight = 'depbot worker in flight'; last launch under 24 h ago = None; else launch `pythonw tools/dependabot_reapply.py run` detached with no console (the creation flags _NO_WINDOW / _DETACHED / _BREAKAWAY of tools/loop_base.py, imported from there, never from al_loop) and write {launched, pid} to the state file; join(a, b) joins two optional summary lines. tools/al_loop.py: only the body of _drift_check (lines 453-460): the two lines `import tc_drift` / `return tc_drift.loop_check(root, now)` are replaced by two lines that also call loop_depbot.loop_check and return loop_depbot.join(...); net 0 added lines (file is 1,757 lines, cap < 1,760). No lane tool list changes: lanes keep no gh. tests/test_loop_depbot.py: with fake deps the worker is launched once per 24 h, not while one is alive, never without origin, and a fault in the check returns a line instead of raising. If AUTO-05 (WATCH-CORE) has already replaced the daily-check seam in Tick.run, register loop_check as one more daily check in that frame instead and leave al_loop.py untouched; the DEPBOT-PR rows of AUTO-20 are worked by this worker, not by a code lane (see cross).",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
   },
   {
    "id": "OVL-ITEM-KEY-CTRL",
@@ -19632,50 +19761,6 @@
    "cluster": "OVL"
   },
   {
-   "id": "PUB-HOOK-RELEASE-CHECK",
-   "title": "Guarded hook: refuse a v* tag without a PASS stage report",
-   "goal": "The pre-push hook calls `tools/release.py prepush-check`, so a release tag leaves the machine only after plan 05's stage gate passed.",
-   "units": [
-    "F-016"
-   ],
-   "files": [
-    ".githooks/pre-push",
-    "tests/test_pre_push_hook.py",
-    "tests/test_fleet_kit_conformance.py"
-   ],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_pre_push_hook.py::test_tag_without_pass_stage_report_is_refused (new)",
-    "tests/test_pre_push_hook.py::test_branch_push_ignores_the_stage_check (new)",
-    "tests/test_fleet_kit_conformance.py::test_git_hooks_wire_identity_and_leak_sweep (order assert extended)"
-   ],
-   "accept": "`python -m pytest -q tests/test_pre_push_hook.py tests/test_fleet_kit_conformance.py tests/test_ascii_lf.py` is green and `git grep -n \"release.py\\\" prepush-check\" -- .githooks/pre-push` prints one line.",
-   "zero_click": "Runs by itself on every push; a release needs no extra step beyond plan 05's one operator phrase.",
-   "size": "S",
-   "est_min": 25,
-   "deps": [
-    "GP-02",
-    "REL-PUBLISH-GATES"
-   ],
-   "serial_group": "pre-push-hook",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "the guarded pre-push hook (it edits the hook file GP-02 writes)",
-    "who": "package GP-02",
-    "unblock": "GP-02 is merged (its ROADMAP row is flipped), which needs the Q-23 go record of the operator"
-   },
-   "operator_act": "",
-   "notes": "Tier P1. Plan 05 (DEP-12, corrections item 3) puts this one call into F-016's diff; it cannot ride GP-02 because tools/release.py does not exist then and the hook fails closed. Runs only after DEP-12 (REL cluster) has landed `release.py prepush-check` (refuses a v* ref with no matching PASS stage report, passes a branch ref untouched). .githooks/pre-push: one new line between the check_refs line and the identity line: `printf '%s\\n' \"$REFS\" | python \"$ROOT/tools/release.py\" prepush-check \"$@\" || exit 1`, and one more line in the header comment list. tests/test_pre_push_hook.py: the tmp repo also gets a copy of tools/release.py (or a stub with the same sub-command contract when release.py needs more files); case 7 (tag v0.0.1 pushes) gets a PASS stage report fixture. If the REL cluster's own packages already add this line, drop this package at merge (see cross). tests/test_pre_push_hook.py exists once GP-02 lands (a dep).",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
-  },
-  {
    "id": "AUTO-26",
    "title": "WT-SIDECAR-WIRE: prove agent worktrees land under the sidecar",
    "goal": "After the operator pastes the two worktree hook entries into .claude/settings.json, one isolated spawn is shown to create its worktree under the sidecar Worktree folder and the wiring test stops skipping.",
@@ -19720,7 +19805,7 @@
     "who": "operator",
     "unblock": ".claude/settings.json names tools/wt_sidecar_hook.py under both WorktreeCreate and WorktreeRemove"
    },
-   "operator_act": "OA-12 (docs/plan/09): Paste the two hook entries of decision 0012 (WorktreeCreate and WorktreeRemove, each running tools/wt_sidecar_hook.py) into .claude/settings.json. Default until then: agent worktrees are created under .claude/worktrees inside the repository (gitignored) and reaped at /done.",
+   "operator_act": "OA-12 (docs/plan/09): Paste the two hook entries of decision 0012 (WorktreeCreate and WorktreeRemove, each running tools/wt_sidecar_hook.py) into .claude/settings.json. Default until then (docs/plan/08 section 2, decision 0012): a wave builder makes its own worktree under the sidecar Worktree folder by running tools/wt_sidecar_hook.py by hand; .claude/worktrees inside the repository (gitignored) is only the fallback when the permission system refuses edits under the sidecar path, recorded with one NOTE line in the hand-off.",
    "notes": "The wiring test (tests/test_wt_sidecar_hook.py line 136) skips while neither entry exists and fails on a half or wrong wiring; after the paste turn the skip into a failure so the wiring cannot silently vanish. Should precede the first isolated wave spawn; when the paste has not happened the waves run with the default above. File overlap outside this cluster: .claude/settings.json itself is the operator's (units F-200, GP-07 (folded into PUB-README-PLAYERS), GP-16 also ask for a line there).",
    "wave": 99,
    "owner": "session",
@@ -20438,120 +20523,6 @@
    "cluster": "PLAY"
   },
   {
-   "id": "PUB-GO-DECISION",
-   "title": "Record the go-public decision and the rules text",
-   "goal": "The go-public decision exists as a decision record, and the integrator lands the CLAUDE.md Public-repo hygiene section, the Gates line, the Settled bullet, the closed OPERATOR row and the hand-off note that go with the guarded hook.",
-   "units": [
-    "F-016",
-    "GP-02",
-    "OPEN-14",
-    "OPERATOR-REMOTE",
-    "CARRY-14"
-   ],
-   "files": [],
-   "new_files": [
-    "docs/decisions/0046-go-public.md"
-   ],
-   "integrator_edits": [
-    {
-     "file": "docs/decisions/README.md",
-     "change": "Index line for the new decision. Title: '0046 - Go public: guarded push, private first, public on gates' (GP-02). 0046 is the number reserved for this package in docs/plan/packages.json (next free today: 0046)."
-    },
-    {
-     "file": "CLAUDE.md",
-     "change": "Tree-specific part only, never the FLEET block. (1) Replace the section from the heading '## Public-repo hygiene (local only for now)' up to, not including, '## Gates' with the fenced text of docs/plan/04-go-public.md section 'CLAUDE.md Public-repo hygiene' (heading '## Public-repo hygiene (guarded push)'), 0046 = this decision. (2) Gates section, add one line: 'A push runs through `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`; never a bare push.' (3) Settled bullet: 'Go public: guarded push of main and v* tags only, private first then public on the plan-04 gates, full history, nothing merged on GitHub, required checks with one admin bypass, the project's own address as the one hygiene exception (decision 0046). Reverses if: the operator withdraws the order, a leak or identity hit is found in pushed history, GitHub's rules stop letting an admin push fresh commits past required checks, or FLEET item 17 changes.'"
-    },
-    {
-     "file": "ROADMAP.md",
-     "change": "Close the row 'OPERATOR: create the GitHub remote' (ROADMAP.md:2059-2061, stable id OPERATOR-REMOTE) as superseded by GP-02, GP-05 and GP-09; the closed line carries the id so the loop parser does not rely on a parse miss."
-    },
-    {
-     "file": "AL-NEXT-SESSION.txt",
-     "change": "Record that decision 0046 quotes the operator's go (the 'OPERATOR GO Q-23 step 1' line stays in the hand-off, verbatim) and lifts the 2026-11-16 local-only order. In the OPERATOR ACTS bullet replace act (d) 'create the GitHub remote ...' by: the public flip needs the operator's own words for step 4 (OA-10) and OA-2 (one message to poe.ninja or a written skip, Q-05)."
-    }
-   ],
-   "tests": [
-    "tests/test_ascii_lf.py (existing)",
-    "tests/test_research_numbers.py (existing)",
-    "tests/test_leak_sweep.py (existing)",
-    "tests/test_fleet_kit_conformance.py (existing)"
-   ],
-   "accept": "`python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py tests/test_fleet_kit_conformance.py` is green and, after the integrator commit, `git grep -n \"refuses every push\\|AL_ALLOW_PUSH\\|NO remote\" -- CLAUDE.md` prints nothing.",
-   "zero_click": "Documentation only. It is written only once the operator's go is recorded (ruling Q-23): the hand-off line 'OPERATOR GO Q-23 step 1' that quotes the operator's own words with their date. After it, creating the repository and the first push are agent steps; the public flip needs its own quoted go (step 4) and OA-2.",
-   "size": "S",
-   "est_min": 25,
-   "deps": [],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "none",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "the operator's recorded go for step 1 of ruling Q-23 (create the private repository and push main), quoted in the hand-off in the operator's own words",
-    "who": "operator",
-    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 1\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date; a session then sets q23_go_recorded in the builder's overrides and re-runs it"
-   },
-   "operator_act": "OA-10 (ruling Q-23, step 1): say in your own words that the private repository may be created and main pushed. Default in force without it: stay local; the hook keeps refusing every push.",
-   "notes": "Tier P0. The decision file is the full draft of docs/plan/04-go-public.md section 'Decision text' (11 points, Alternatives, Why, Reverses if); before writing, re-read both commit counts with `python ops/fleet_kit/fleet_identity.py check --history --by-class main` and `check --all` and update point 2 (416 / 430 at HEAD 23cc518 in the draft). Decision 3 of 04 section 'Decisions' (contributions are re-applied, never merged) is folded into point 5 of this record. PLAN 07 (review, floor lens): the decision quotes the operator's own words from the hand-off line 'OPERATOR GO Q-23 step 1'; a sentence in a plan document saying the order was given is not the record. Without that line this package is not started: stay local, GP-02 stays unmerged, GP-09 stays parked (ruling Q-23, default). The integrator lands these edits in the same commit as GP-02's hook so the tree never says 'refuses every push' beside a hook that pushes. isolation none: one new docs file. Verifier fix: no deps edge to GP-02 (the files do not overlap), so the plan can put this package in GP-02's wave with merge order GP-02 first; a deps edge would force a strictly later wave (tools/plan_check.py) and break the one-commit landing this note requires.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P0",
-   "cluster": "PUB"
-  },
-  {
-   "id": "GP-09",
-   "title": "Create the private repository, first push, CI green",
-   "goal": "main is on GitHub in a PRIVATE repository under the operator's account and both workflows are green on the pushed commit.",
-   "units": [
-    "F-021",
-    "GP-09",
-    "OPEN-14",
-    "OPERATOR-REMOTE",
-    "CARRY-14"
-   ],
-   "files": [],
-   "new_files": [],
-   "integrator_edits": [
-    {
-     "file": "AL-NEXT-SESSION.txt",
-     "change": "Record: the repository exists and is PRIVATE, the pushed commit, both workflows green, the GP-01 counts (identity 0 in 9 classes, leaks 0 / 0, needle count; never a name), and that every later push is a session push through fleet_gitlock; the headless loop pushes nothing unless the operator turns on its per-host switch loop_push (OA-11, default off)."
-    }
-   ],
-   "tests": [
-    "whole suite through ops/fleet_kit/fleet_suite_gate.py and npm test --prefix app (gate 11)",
-    "tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py, tests/test_brand_assets.py, tests/test_ci_workflow.py (gates 6, 7, 10; existing)"
-   ],
-   "accept": "`gh repo view \"$R\" --json visibility --jq .visibility` prints PRIVATE, `git rev-parse main` equals `git rev-parse origin/main`, `git ls-remote --heads --tags origin` lists refs/heads/main and otherwise only refs/heads/dependabot/*, and `gh run list --repo \"$R\" --branch main --limit 4 --json workflowName,conclusion` shows ci and fleet-identity-guard as success.",
-   "zero_click": "Runs only on the operator's recorded go (ruling Q-23, step 1): the hand-off line 'OPERATOR GO Q-23 step 1' that quotes the operator's own words with their date. From there agent steps only: gh is already signed in; no click. A private repository publishes nothing.",
-   "size": "M",
-   "est_min": 50,
-   "deps": [
-    "GP-01",
-    "GP-02",
-    "PUB-GO-DECISION",
-    "PUB-LOCAL-ONLY-TEXT",
-    "GP-03",
-    "GP-04",
-    "GP-05"
-   ],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "none",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "the operator's recorded go for step 1 of ruling Q-23 (create the private repository and push main), quoted in the hand-off in the operator's own words",
-    "who": "operator",
-    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 1\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date; a session then sets q23_go_recorded in the builder's overrides and re-runs it; GP-02, PUB-GO-DECISION and PUB-LOCAL-ONLY-TEXT are merged first"
-   },
-   "operator_act": "OA-10 (ruling Q-23, step 1): say in your own words that the private repository may be created and main pushed; the session copies the words into the hand-off and reads them back. OA-1 only if `gh auth status` fails or lacks the scopes repo and workflow: gh auth login. Optional (OA-5): another owner or repository name before this runs; default in force: the account gh is signed in as and the name AshLight (ruling Q-24). Default in force without the go: stay local; nothing is created or pushed.",
-   "notes": "Tier P1; runs only on the Q-23 go record (the hand-off line that quotes the operator's own words), which the decision of PUB-GO-DECISION quotes too. Runs only after the integrator has landed GP-02 and PUB-GO-DECISION's CLAUDE.md section (today's CLAUDE.md text still makes creating the remote an operator act). isolation none: no tracked edit; the push leaves from the main checkout. Steps = the 12 gates of docs/plan/04-go-public.md section 'Before the first push', in order, a red gate stops the sequence: (1) the hand-off holds the line 'OPERATOR GO Q-23 step 1' quoting the operator's own words with their date and the go-public decision quotes the same words, else stop (Q-23 default: stay local; PLAN 07 review, floor lens: a record that only cites an order is not enough); (2) gh auth status with scopes repo and workflow; (3) clean tree on main, no remote; (4) identity scans 0 / clean, one author-committer line; (5) leak sweep --tree and --history rc 0 ARMED with the GP-01 count; (6) tests/test_brand_assets.py green and the largest blob reachable from main under 500 KB; (7) hook tests green and core.hooksPath ends in .githooks; (8) NOTICE grep empty; (9) GP-04's run on this commit or a docs-only ancestor; (10) tests/test_ci_workflow.py green (plus test_community_files and test_dependabot_config if GP-06 / GP-08 ride this push); (11) the whole suite through the suite gate and npm test, both green; (12) `R=\"$(gh api user --jq .login)/AshLight\"`; `gh repo create \"$R\" --private --disable-wiki --description \"<the 04 description>\"`; `git remote add origin https://github.com/$R.git`; `python ops/fleet_kit/fleet_gitlock.py run --owner <ID> -- git push -u origin main`; never --all, --mirror, --tags or --force. The hook re-runs both scans over every commit on this first push (one to three minutes). Then read the check names and the reporting app id (`gh api repos/$R/commits/main/check-runs`): expected test, test-newest, fleet-identity-guard and app id 15368; a different id is handed to GP-13. If gate 4 or 5 shows a hit: stop, stay local, one rewrite request to MAIN (Q-25). If the first CI run is red: fix forward while private. The owner login is never written to a tracked file, a progress file or a commit message here (GP-10 owns the one allowed address). A session step: it needs gh and pushes from the main checkout, and no headless lane holds a gh grant, so the loop never works it in a lane.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P0",
-   "cluster": "PUB"
-  },
-  {
    "id": "GP-12",
    "title": "Flip the repository to public",
    "goal": "The repository becomes public only when every flip gate of docs/plan/04-go-public.md reads green on the commit at origin/main.",
@@ -20573,7 +20544,7 @@
     "the GP-01 scan commands, re-run on the flip commit"
    ],
    "accept": "`gh repo view \"$R\" --json visibility --jq .visibility` prints PUBLIC and an anonymous `git ls-remote --heads --tags \"https://github.com/$R\"` lists refs/heads/main and otherwise only refs/heads/dependabot/*.",
-   "zero_click": "The flip is an agent step that runs once the gates read green and the operator's own words for the flip are in the hand-off (ruling Q-23, step 4); the other operator act is the one message of OA-2 (or its written skip).",
+   "zero_click": "The flip is an agent step that runs once the gates read green and the operator's own words for the flip are in the hand-off (ruling Q-23, step 4; recorded 2026-11-18). OA-2 is skipped in writing (the hand-off line 'OA-2 SKIPPED IN WRITING'), so no operator act is left.",
    "size": "S",
    "est_min": 25,
    "deps": [
@@ -20594,12 +20565,12 @@
    "lane": "review",
    "design_review": false,
    "blocked": {
-    "on": "the operator's recorded go for the public flip (ruling Q-23, step 4), ruling Q-05 / OA-2 (the operator's message to poe.ninja is sent or a written skip is recorded), and every P0 unit of the plan on origin/main",
-    "who": "operator",
-    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 4\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date, the hand-off records OA-2 as sent or skipped in writing, and `python -m pytest -q tests/test_http_security.py tests/test_tc_code.py tests/test_no_discovery.py` is green on the commit at origin/main"
+    "on": "every P0 unit of the plan on origin/main, and flip gates 0 to 6 green",
+    "who": "packages",
+    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 4\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date, `grep -c \"^OA-2 SKIPPED IN WRITING\" AL-NEXT-SESSION.txt` prints 1, and `python -m pytest -q tests/test_http_security.py tests/test_tc_code.py tests/test_no_discovery.py` is green on the commit at origin/main"
    },
-   "operator_act": "OA-10 (ruling Q-23, step 4): say in your own words that the repository may be made public; the session copies the words into the hand-off and reads them back. OA-2: send one message to poe.ninja asking whether per-install polling at the tiered cadence (about 200 overview requests a day) is acceptable or a project mirror is wanted, or record a written skip (ruling Q-05). The flip does not wait for poe.ninja's answer. Default in force until then: the repository stays private; release builds make no poe.ninja request (F-046).",
-   "notes": "Tier P0 (F-006, blocker B7), placed after its dependencies. No tracked file; isolation none. Flip gates, all read back on the commit at origin/main: (1) every other P0 unit of the plan has landed; hard minimum F-006: the commits of F-001, F-002 and F-005 are in `git log origin/main` and the three test files above are green; (2) GP-01's commands re-run: identity 0, leaks 0, set names 0; (3) both workflows success on that commit; (4) GP-06, GP-07 (folded into PUB-README-PLAYERS), GP-10 and GP-11 landed; (5) OA-2 sent or skipped in writing; (6) `git ls-files` has no FUNDING file and README images are only assets/brand/*. Then `gh repo edit \"$R\" --visibility public --accept-visibility-change-consequences`. A red gate stops; nothing is skipped. A later finding scored 4 or more joins gate 1 before any release. The gate read-backs go into the progress file (counts, never names). PLAN 07 (review, floor lens): a flip gate 0 is added in front of the six: the hand-off line 'OPERATOR GO Q-23 step 4' quotes the operator's own words; one message that orders both steps may be quoted in both lines.",
+   "operator_act": "",
+   "notes": "Tier P0 (F-006, blocker B7), placed after its dependencies. No tracked file; isolation none. Flip gates, all read back on the commit at origin/main: (1) every other P0 unit of the plan has landed; hard minimum F-006: the commits of F-001, F-002 and F-005 are in `git log origin/main` and the three test files above are green; (2) GP-01's commands re-run: identity 0, leaks 0, set names 0; (3) both workflows success on that commit; (4) GP-06, GP-07 (folded into PUB-README-PLAYERS), GP-10 and GP-11 landed; (5) OA-2 sent or skipped in writing (met by the hand-off line 'OA-2 SKIPPED IN WRITING' of 2026-11-18; adjudicator LE-38); (6) `git ls-files` has no FUNDING file and README images are only assets/brand/*. Then `gh repo edit \"$R\" --visibility public --accept-visibility-change-consequences`. A red gate stops; nothing is skipped. A later finding scored 4 or more joins gate 1 before any release. The gate read-backs go into the progress file (counts, never names). PLAN 07 (review, floor lens): a flip gate 0 is added in front of the six: the hand-off line 'OPERATOR GO Q-23 step 4' quotes the operator's own words; one message that orders both steps may be quoted in both lines. PLAN 07 (close-out 2026-11-18, adjudicator LE-01): steps 1 and 4 of Q-23 are recorded, so the flip waits for packages only (every P0 unit on origin/main, gates 0 to 6). A hit of the gate 2 scans keeps the repository private and files one rewrite request to MAIN (fleet_rewrite.py, ORDER only). The dependency on DATA-PRICE-CADENCE stays, so the release polling gate is in code before the flip.",
    "wave": 99,
    "owner": "session",
    "tier": "P0",
@@ -21503,7 +21474,9 @@
   ],
   "F-082": [
    "TC-PRESS-SAMPLES",
-   "TC-PRESS-FIXTURES"
+   "TC-PRESS-FIXTURES",
+   "RUN-LEDGER-CORE",
+   "RUN-LIVE1-FIXTURES"
   ],
   "F-083": [
    "DATA-GGG-APPLICATION"

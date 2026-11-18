@@ -46,24 +46,27 @@ full detail.
 - Main-checkout acts (isolation none) run one at a time in merge order, each
   committed or read back before the next starts and never while main is
   being moved.
-- Publishing waits for the operator's own recorded words (section Operator
-  go for publishing); until then the packages that lift the local-only order
-  are parked.
+- Publishing rests on the operator's own recorded words (section Operator go
+  for publishing). The go was recorded on 2026-11-18, so the packages that
+  lift the local-only order are scheduled (waves 4 and 5); without the
+  hand-off lines they go back to wave 99.
 - Decision numbers are reserved here (section Reserved decision numbers); a
   package that writes a decision uses the number given in its new_files
   entry.
 
-How the two files are built. Nothing in packages.json or in the generated
-parts of this file is typed by hand. The builder lives outside the tree, in
-the AL sidecar folder Scratch/up-plan (CLAUDE.md, Sidecar): build_plan.py,
-doc07.py and the small hand-edited overrides.json, beside the cluster files
-pk-*.json and exec-inputs.json. It reads every cluster file, applies the
-patches, resolves cross entries into deps, folds, marks owners, assigns
-waves, reserves decision numbers and writes both files. To change the plan,
-edit overrides.json and run, from the repository root:
+How the two files are kept. Until the close-out of 2026-11-18 both files
+were written by a builder outside the tree (the AL sidecar folder
+Scratch/up-plan: build_plan.py, doc07.py and overrides.json). The builder is
+retired: it no longer reproduced the tracked files (PLAN-LANDING listed two
+tracked files as new, and 31 operator_act fields had been edited in
+packages.json directly). docs/plan/packages.json is now the source of truth
+of the plan. To change the plan, patch packages.json with a small script
+(ASCII, LF, JSON indent 1), keep each wave's merge_order, the package order
+(wave, then merge order), the sessions list and the hotspots list in step,
+update the matching lines of this file, and run, from the repository root:
 
-    python <AL sidecar>/Scratch/up-plan/build_plan.py --repo . --report
     python tools/plan_check.py check
+    python -m pytest -q tests/test_plan_check.py
 
 The validator was extended for this plan (tools/plan_check.py, schema 1
 kept): an optional package field `owner`, an optional top-level `sessions`
@@ -78,12 +81,12 @@ carry.
   (PLAN-LANDING, SEC-STEAM-SCAN-A03, DATA-RESEARCH-GAPS) and dropped 1
   (LOOP-PLAN-CONTRACT, its work moved into PLAN-LANDING); 396 in the plan
   after 25 folds.
-- Owners: 331 session packages in waves 0 to 37, 16 loop-owned packages, 49
+- Owners: 339 session packages in waves 0 to 37, 16 loop-owned packages, 41
   parked in wave 99.
 - Waves: wave 0 (the landing), 37 open waves and the parked wave. Sessions:
-  10 operator `continue`s after the landing (session 0), about 74 h 02 min
-  of wall-clock in all (6.1 to 8.3 hours each).
-- Agent time: about 318 hours in sessions, 11 hours in the loop, 33 hours
+  10 operator `continue`s after the landing (session 0), about 75 h 26 min
+  of wall-clock in all (6.1 to 8.5 hours each).
+- Agent time: about 325 hours in sessions, 11 hours in the loop, 27 hours
   parked.
 - Input units: 387 (4 added by the review: A-02, A-03, RG-0056, RG-0055);
   every one is mapped (section Coverage).
@@ -116,6 +119,13 @@ an hour.
   chains (section Hotspot schedule), not by the width.
 - Main-checkout acts (isolation none: docs, records, the first push, the
   HALT removal) do not take a worktree slot; at most 4 a wave.
+- Close-out 2026-11-18: the eight publishing packages joined existing waves
+  without moving any other package, so four waves are wider than 12 and run
+  a fourth merge batch: wave 4 (14 worktree packages), wave 18 (14), wave 19
+  (13) and wave 22 (13). The width of 12 was a parameter of the retired
+  builder, not a rule of the validator; each of these waves costs one more
+  batch suite (about 10 minutes before wave 10, about 8 after it), which the
+  wave times below include.
 - If wave 1 measures an escape rate above 10 percent, the session lowers the
   batch to 3 (width 9) until TEST-SELECT has landed (wave 8); the plan needs
   no rebuild for that.
@@ -139,10 +149,10 @@ minutes of merge work + 10 minutes for the integrator. The suite is taken as
 minutes. Three terms were added by the review: 10 minutes when the longest
 package of the wave is a fold of 85 minutes or more (a second context and
 review inside one agent); the full estimate of a package that must run alone
-after the last batch (REL-CUTOVER-LIVE); and, after wave 6, one more suite
-per merge batch, because a lane suite of the loop may be ahead of the
-session's (one suite per tree, research 0049 F5). A session is filled up to
-520 minutes and at most 5 waves.
+after the last batch (REL-CUTOVER-LIVE, and GP-09 since the close-out); and,
+after wave 6, one more suite per merge batch, because a lane suite of the
+loop may be ahead of the session's (one suite per tree, research 0049 F5). A
+session is filled up to 520 minutes and at most 5 waves.
 
 ## Sessions
 
@@ -160,9 +170,10 @@ sessions rises (three waves a session: 13 sessions). Nothing else changes.
   the no-discovery guard (F-001) is on main; the local HTTP surface is
   pinned by one test file; the isolated demo mode exists (python -m
   server.al --demo).
-- Session 2: waves 4 to 6, 37 session packages, about 6 h 27 min. Delivers:
-  the Play skeleton (7 fixed regions) is on the page; HALT is removed; the
-  headless loop takes the loop-owned rows.
+- Session 2: waves 4 to 6, 41 session packages, about 7 h 27 min. Delivers:
+  the Play skeleton (7 fixed regions) is on the page; the private repository
+  exists and the first push is green; HALT is removed; the headless loop
+  takes the loop-owned rows.
 - Session 3: waves 7 to 9, 36 session packages, about 6 h 48 min. Delivers:
   the wave gate policy is recorded and the test selector picks each
   package's subset.
@@ -174,10 +185,10 @@ sessions rises (three waves a session: 13 sessions). Nothing else changes.
   Delivers: four tabs: Play, Build and items, Run, Settings; the dashboard
   prints the real keys and can change them; the parse ledger is wired
   (LIVE-1 read-back starts).
-- Session 6: waves 18 to 21, 48 session packages, about 8 h 15 min.
+- Session 6: waves 18 to 21, 51 session packages, about 8 h 31 min.
   Delivers: the bootstrap installer exists; the release stage round trip
   (install, update, rollback, uninstall) passes.
-- Session 7: waves 22 to 24, 36 session packages, about 7 h 30 min.
+- Session 7: waves 22 to 24, 37 session packages, about 7 h 38 min.
 - Session 8: waves 25 to 29, 15 session packages, about 8 h 10 min.
   Delivers: the Settings rail is complete.
 - Session 9: waves 30 to 33, 12 session packages, about 7 h 27 min.
@@ -225,15 +236,15 @@ named.
   mode entry: python -m server.al --demo <fixture dir>; Pin the pytest
   plugin set; register markers; keep the end of the gate output; A failed
   item is parked visibly; a foreign gate failure ends the fix rounds.
-- Wave 4 (session 2): width 12 + 0; about 129 min. Leads: Wave folder hold
-  and the shared merge lock; Private runtime files: explicit ACL on the
-  runtime dir and local config; CI workflows and their lint test.
-- Wave 5 (session 2): width 12 + 0; about 129 min. Milestones: the Play
-  skeleton (7 fixed regions) is on the page. Leads: WAVE-INTERPLAY: BLOCKED
-  reason echo and the dispatch re-check from HEAD; Plug-in folder: ticks,
-  Checks rows and token-gated routes without shared-file edits; setup.ps1
-  makes the sidecar private; the logon launcher starts PowerShell by its
-  System....
+- Wave 4 (session 2): width 14 + 1; about 139 min. Leads: Record the
+  go-public decision and the rules text; Guarded pre-push hook and its
+  tests; Replace the local-only wording in loop tools and ritual files.
+- Wave 5 (session 2): width 12 + 1; about 179 min. Milestones: the Play
+  skeleton (7 fixed regions) is on the page; the private repository exists
+  and the first push is green. Leads: WAVE-INTERPLAY: BLOCKED reason echo
+  and the dispatch re-check from HEAD; Plug-in folder: ticks, Checks rows
+  and token-gated routes without shared-file edits; setup.ps1 makes the
+  sidecar private; the logon launcher starts PowerShell by its System....
 - Wave 6 (session 2): width 12 + 1; about 129 min. Milestones: HALT is
   removed; the headless loop takes the loop-owned rows. Leads: Checks note
   when AshLight's folders let someone else write; Move the five CRLF /
@@ -294,11 +305,11 @@ named.
   items grid 1: Build, Health and next, Search strings; Overlay legibility
   recipe and two type sizes in the overlay CSS (TD-05, part 1); Contact
   value: a write-only POST and its core setter. Releases 1 loop-owned rows.
-- Wave 18 (session 6): width 12 + 0; about 125 min. Leads: Build and items
+- Wave 18 (session 6): width 14 + 0; about 133 min. Leads: Build and items
   grid 2: Last item, Prices with checked items, Item scoring; One hook for
   data checks: diag_data (attach, facts, rows); A bind failure names its
   cause; --port stays in the block (P8-4).
-- Wave 19 (session 6): width 12 + 0, 3 loop; about 135 min. Leads: 'Tried in
+- Wave 19 (session 6): width 13 + 0, 3 loop; about 143 min. Leads: 'Tried in
   game' card on the Checks tool; Map ladder tick is free when nothing
   changed (AUDIT-P8-LOW P8-5); overlay.log and run.log bounded, same stamp
   format. Releases 3 loop-owned rows.
@@ -312,7 +323,7 @@ named.
   grid 1: Acts, Maps and Deaths cards; Quiet feed: no minute stamp or report
   text in the snapshot, ages stepped at 5 minutes; Zone moment card in the
   one card slot, and the guide-line fields for HUD line 2.
-- Wave 22 (session 7): width 12 + 0; about 135 min. Leads: Run grid 2:
+- Wave 22 (session 7): width 13 + 0; about 143 min. Leads: Run grid 2:
   Recent, Last session and Characters cards; The report from an allow-list
   of structured fields, with a hardened redactor (P8-7); Overlay HUD line 2:
   the opt-in guide line and the fixed card anchor.
@@ -368,7 +379,7 @@ named.
   guide block, no separate Zone tip.
 - Wave 37 (session 10): width 1 + 0; about 48 min. Leads: Small leftovers:
   Windowed Fullscreen sentence, the dead 501 stub, the no-op switch.
-- Wave 99 (parked): 49 packages; no gate; see Parked packages.
+- Wave 99 (parked): 41 packages; no gate; see Parked packages.
 
 ## Gate commands
 
@@ -598,14 +609,14 @@ ends the fix rounds.
 - OVL-HIDEOUT-AREA [session, M 35m, build, P2] in_hideout from the area id of the generation line, not an English scene-name substring. Files: server/al/parser.py, server/al/state.py, tests/test_parser.py, tests/test_bus_state.py. Deps: none.
 - GP-04 [session, M 60m, build, P0] Fresh-clone proof of the suite. Files: none (an act or a read-back). Deps: SEC-NO-DISCOVERY.
 
-### Wave 4: Play tab and dashboard, theorycraft, local security
+### Wave 4: go-public, Play tab and dashboard, theorycraft
 
-Goal: Leads: Wave folder hold and the shared merge lock; Private runtime
-files: explicit ACL on the runtime dir and local config; CI workflows and
-their lint test.
+Goal: Leads: Record the go-public decision and the rules text; Guarded
+pre-push hook and its tests; Replace the local-only wording in loop tools
+and ritual files.
 
-- Session 2; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 129 minutes.
+- Session 2; width 14 worktree + 1 main-checkout, 0 loop rows released;
+  about 139 minutes.
 - Hotspots: web/index.html (TC-FILTER-ONE-CONTROL); server/al/core.py
   (SEC-ACL-APPLY); server/al/http.py (SEC-HELLO-CORE); server/al/state.py
   (DATA-PRICE-CARD-TEXT); web/app.css (PLAY-TD-03-TOKENS); server/al/diag.py
@@ -618,16 +629,19 @@ their lint test.
   docs/design/0001-design-system.md (PLAY-TD-03-TOKENS);
   tests/test_keepalive.py (SEC-HELLO-CORE); server/al/ninja.py
   (TC-FILTER-ONE-CONTROL).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md: SEC-ACL-APPLY,
-  TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE; docs/decisions/README.md:
-  SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE;
-  AL-NEXT-SESSION.txt: PLAY-TD-03-TOKENS; docs/design/reviews.log: 5 lines.
-- Watch: tests/test_diag_self.py (PLAY-F-131-STATUS-TABLE edits,
-  OVL-MAIN-PARTS runs).
-- Batches: 1: LOOP-WAVE-HOLD, SEC-ACL-APPLY, GP-05, DATA-PRICE-CARD-TEXT; 2:
-  PLAY-F-131-STATUS-TABLE, PLAY-TD-01B-FIT-HARNESS, PLAY-TD-03-TOKENS,
-  TC-PRESS-STAGED-EVAL; 3: TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE,
-  TC-FILTER-ONE-CONTROL.
+- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
+  PUB-GO-DECISION, SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS,
+  SEC-HELLO-CORE; docs/decisions/README.md: PUB-GO-DECISION, SEC-ACL-APPLY,
+  TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE; AL-NEXT-SESSION.txt:
+  PUB-GO-DECISION, PLAY-TD-03-TOKENS; docs/design/reviews.log: 5 lines.
+- Watch: tests/test_fleet_kit_conformance.py (GP-02 edits, PUB-GO-DECISION
+  runs); tests/test_fleet_kit_conformance.py (GP-02 edits,
+  PUB-LOCAL-ONLY-TEXT runs); tests/test_diag_self.py
+  (PLAY-F-131-STATUS-TABLE edits, OVL-MAIN-PARTS runs).
+- Batches: 1: GP-02, PUB-LOCAL-ONLY-TEXT, LOOP-WAVE-HOLD, SEC-ACL-APPLY; 2:
+  GP-05, DATA-PRICE-CARD-TEXT, PLAY-F-131-STATUS-TABLE,
+  PLAY-TD-01B-FIT-HARNESS; 3: PLAY-TD-03-TOKENS, TC-PRESS-STAGED-EVAL,
+  TC-WORN-STORE, OVL-MAIN-PARTS; 4: SEC-HELLO-CORE, TC-FILTER-ONE-CONTROL.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s and the fixed-port files through the suite gate);
   main-checkout acts one at a time in merge order; per merge batch of 4 on
@@ -637,6 +651,9 @@ their lint test.
   moves; then python tools/plan_check.py check; the wave closes when every
   session row is flipped and main is clean.
 
+- PUB-GO-DECISION [session, S 25m, build, P0] Record the go-public decision and the rules text. Files: docs/decisions/0046-go-public.md. Deps: none.
+- GP-02 [session, L 75m, build, P0] Guarded pre-push hook and its tests. Files: .githooks/pre-push, tests/test_fleet_kit_conformance.py, tests/test_pre_push_hook.py. Deps: none.
+- PUB-LOCAL-ONLY-TEXT [session, M 45m, build, P0] Replace the local-only wording in loop tools and ritual files. Files: tools/al_loop.py, tools/loop_inbox.py, tools/al_lane.py, tests/test_p163_lane_tools.py, .claude/commands/done.md (+2 more). Deps: none.
 - LOOP-WAVE-HOLD [session, M 55m, build, P1] Wave folder hold and the shared merge lock. Files: tools/loop_merge.py, tools/loop_base.py, tools/loop_review.py, tests/test_loop_wave_hold.py. Deps: LOOP-ROWFILES-MERGE, LOOP-FAILED-PARK.
 - SEC-ACL-APPLY [session, L 70m, build, P0] Private runtime files: explicit ACL on the runtime dir and local config. Files: server/al/__main__.py, server/al/core.py, server/al/acl.py, tests/test_acl.py, docs/decisions/0051-private-runtime-files.md. Deps: SEC-NO-DISCOVERY.
 - GP-05 [session, M 60m, build, P0] CI workflows and their lint test. Files: .gitattributes, .github/workflows/ci.yml, .github/workflows/fleet-identity-guard.yml, requirements-dev.txt, tests/test_ci_workflow.py. Deps: GP-04.
@@ -652,14 +669,15 @@ their lint test.
 
 ### Wave 5: Play tab and dashboard, reliability and observability, overlay and client
 
-Goal: Milestones: the Play skeleton (7 fixed regions) is on the page. Leads:
+Goal: Milestones: the Play skeleton (7 fixed regions) is on the page; the
+private repository exists and the first push is green. Leads:
 WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD;
 Plug-in folder: ticks, Checks rows and token-gated routes without
 shared-file edits; setup.ps1 makes the sidecar private; the logon launcher
 starts PowerShell by its System....
 
-- Session 2; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 129 minutes.
+- Session 2; width 12 worktree + 1 main-checkout, 0 loop rows released;
+  about 179 minutes.
 - Hotspots: web/index.html (PLAY-TD-09B-SKELETON); server/al/core.py
   (RUN-SEAMS); web/app.js (PLAY-TD-09B-SKELETON); server/al/http.py
   (RUN-SEAMS); server/al/state.py (PLAY-TD-07A-PLAY-VIEW); web/app.css
@@ -672,10 +690,10 @@ starts PowerShell by its System....
   (OVL-GLANCE-RULES); tests/test_a11y.py (PLAY-TD-09B-SKELETON);
   tests/test_keepalive.py (TEST-PORT-LEASE); app/test/tabs.test.js
   (PLAY-TD-09B-SKELETON).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md: AUTO-06,
+- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md: AUTO-06,
   RUN-SEAMS, TC-CAMPAIGN-KEEP, OVL-KEYS-CLIENT; docs/decisions/README.md:
   AUTO-06, RUN-SEAMS, TC-CAMPAIGN-KEEP, OVL-KEYS-CLIENT;
-  docs/design/reviews.log: 6 lines.
+  AL-NEXT-SESSION.txt: GP-09; docs/design/reviews.log: 6 lines.
 - Batches: 1: AUTO-06, RUN-SEAMS, SEC-ACL-SETUP, TEST-PORT-LEASE; 2:
   PLAY-TD-07A-PLAY-VIEW, PLAY-TD-09B-SKELETON, TC-CAMPAIGN-KEEP,
   RUN-LEDGER-CORE; 3: OVL-KEYS-CLIENT, PLAY-TD-19A-PAGER, OVL-GLANCE-RULES,
@@ -687,12 +705,13 @@ starts PowerShell by its System....
   as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner
   <id> -- python -m pytest -q and npm test --prefix app, green, then main
   moves; then python tools/plan_check.py check; the wave closes when every
-  session row is flipped and main is clean.
+  session row is flipped and main is clean; GP-09 runs alone after the last
+  batch is on main, with nothing else in flight.
 
 - AUTO-06 [session, M 50m, build, P1] WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD. Files: tools/loop_work.py, tests/test_loop_wave.py, docs/decisions/0055-loop-and-wave-contract.md. Deps: LOOP-ROWFILES-WORK, LOOP-WAVE-HOLD, AUTO-01.
 - RUN-SEAMS [session, M 60m, build, P2] Plug-in folder: ticks, Checks rows and token-gated routes without shared-file edits. Files: server/al/core.py, server/al/__main__.py, server/al/diag.py, server/al/http.py, tests/test_security_surface.py (+3 more). Deps: SEC-SURFACE-PIN, SEC-NO-DISCOVERY.
 - SEC-ACL-SETUP [session, M 40m, build, P0] setup.ps1 makes the sidecar private; the logon launcher starts PowerShell by its System32 path. Files: scripts/setup.ps1, scripts/autostart_launch.vbs, tests/test_autostart.py, tests/test_launcher_paths.py. Deps: SEC-ACL-APPLY.
-- TEST-PORT-LEASE [session, M 50m, build, P1] Port lease for tests that bind inside the 8961-8979 block. Files: tests/tc_live_util.py, tests/test_keepalive.py, tests/test_procs.py, tests/test_supervisor.py, tests/test_dash_console.py (+3 more). Deps: SEC-DEMO-CORE.
+- TEST-PORT-LEASE [session, M 50m, build, P1] Port lease for tests that bind a port (leases 8962-8969). Files: tests/tc_live_util.py, tests/test_keepalive.py, tests/test_procs.py, tests/test_supervisor.py, tests/test_dash_console.py (+3 more). Deps: SEC-DEMO-CORE.
 - PLAY-TD-07A-PLAY-VIEW [session, L 90m, build, DR] Play view: capped strings for strip, feed, notices and build line. Files: server/al/state.py, server/al/playview.py, tests/test_play_view.py. Deps: PLAY-F-131-STATUS-TABLE, DATA-PRICE-CARD-TEXT, PLAY-TD-01A-PLAY-STATES.
 - PLAY-TD-09B-SKELETON [session, L 80m, build, P1, DR] Play skeleton: 7 fixed regions on the cockpit grid. Files: web/index.html, web/app.css, web/app.js, tests/test_a11y.py, tests/test_ux_review.py (+2 more). Deps: PLAY-TD-09A-REGION-HOOK, PLAY-TD-03-TOKENS, PLAY-TD-01B-FIT-HARNESS.
 - TC-CAMPAIGN-KEEP [session, L 75m, build, P1, DR] Keep-or-vendor verdict with no build loaded. Files: tests/test_eval_text.py, tests/test_price_text.py, server/al/theorycraft/levelrules.py, server/al/data/level_rules.json, server/al/theorycraft/cardparts/keep.py (+2 more). Deps: TC-CARD-PARTS.
@@ -701,6 +720,7 @@ starts PowerShell by its System....
 - PLAY-TD-19A-PAGER [session, M 50m, build, P1, DR] Pager: list pages and the Full text page. Files: web/pager.js, app/test/pager.test.js. Deps: PLAY-TD-09A-REGION-HOOK.
 - OVL-GLANCE-RULES [session, M 40m, build, P2, DR] Glance budget and notification policy in design 0001, held by tests. Files: docs/design/0001-design-system.md, tests/test_glance_rules.py. Deps: none.
 - PLAY-TD-04A-DARK-CLIENT [session, S 25m, build, P2, DR] Dark by default in the desktop client. Files: app/main.js, app/client/window.js, app/client/starting.css, app/test/theme.test.js. Deps: none.
+- GP-09 [session, M 50m, build, P0] Create the private repository, first push, CI green. Files: none (an act or a read-back). Deps: GP-01, GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT, GP-03, GP-04, GP-05.
 
 ### Wave 6: Play tab and dashboard, local security, reliability and observability
 
@@ -839,7 +859,7 @@ the test files for a diff.
 - PLAY-TD-12-CONTEXT-SETUP [session, M 60m, build, P1, DR] Context C: setup, error and idle modes. Files: web/setupcard.js, web/setupcard.css, tests/play_fit_pending/c-setup.txt, app/test/setupcard.test.js. Deps: PLAY-TD-11-CONTEXT.
 - GP-06 [session, M 40m, build, P1] Community files. Files: CODE_OF_CONDUCT.md, .github/ISSUE_TEMPLATE/bug.yml, .github/ISSUE_TEMPLATE/feature.yml, .github/ISSUE_TEMPLATE/config.yml, .github/pull_request_template.md (+1 more). Deps: none.
 - DEP-03 [session, M 45m, build, P1] One version, enforced, and the release tool dispatcher. Files: tools/release.py, tools/rel_version.py, tests/test_version.py. Deps: none.
-- DEP-01 [session, M 60m, build, P1] Spike: AshLight under the private runtimes. Files: docs/plan/05-deployment.md. Deps: SEC-DEMO-ENTRY.
+- DEP-01 [session, M 60m, build, P1] Spike: AshLight under the private runtimes. Files: docs/ops/runtime-spike-record.md. Deps: SEC-DEMO-ENTRY.
 - REL-SUBJECT-CHECK [session, M 40m, build, P2] Commit subject check in the commit-msg hook. Files: .githooks/commit-msg, tools/commit_subject.py, tests/test_commit_subject.py, tests/fixtures/commit_subjects_untyped.txt. Deps: none.
 - DATA-WEBFETCH-GZIP [session, M 40m, build, P1] webfetch: bounded gzip inflate, HTTPException mapping, Retry-After helper. Files: server/al/webfetch.py, tests/test_fuzz.py, tests/test_webfetch_gzip.py. Deps: none.
 - OVL-ELECTRON-PIN [session, M 60m, build, P1] Electron pin: config/electron_pin.json and tools/electron_pin.py (hash-pinned fetch, verify, unpack). Files: config/electron_pin.json, tools/electron_pin.py, tests/test_electron_pin.py. Deps: none.
@@ -1296,14 +1316,14 @@ loop-owned rows.
 - PUB-SOCIAL-CARD [session, M 40m, build, P1, DR] Own-art social preview card. Files: tools/make_icons.py, tests/test_brand_assets.py, assets/brand/social-preview.svg, assets/brand/social-preview.png. Deps: none.
 - TC-ASC-FROM-TREE [loop, M 45m, build, P2] Ascendancy names from the cached tree export. Files: server/al/theorycraft/treedata.py, server/al/theorycraft/charjson.py, server/al/theorycraft/buildlive.py, tests/test_build_live.py, tests/test_util_10_ready.py (+1 more). Deps: TC-CHARJSON-SHAPES, TC-VERDICT-CAVEAT, DATA-TREE-HOLD, DATA-LEAGUE-IDENTITY.
 
-### Wave 18: web data, reliability and observability, loop and watchers
+### Wave 18: go-public, web data, reliability and observability
 
 Goal: Leads: Build and items grid 2: Last item, Prices with checked items,
 Item scoring; One hook for data checks: diag_data (attach, facts, rows); A
 bind failure names its cause; --port stays in the block (P8-4).
 
-- Session 6; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 125 minutes.
+- Session 6; width 14 worktree + 0 main-checkout, 0 loop rows released;
+  about 133 minutes.
 - Hotspots: web/index.html (PLAY-TD-19D-ITEMS-GRID); server/al/core.py
   (DATA-DIAG-SEAM); web/app.js (PLAY-TD-19D-ITEMS-GRID); server/al/http.py
   (DATA-DIAG-SEAM); web/app.css (PLAY-TD-19D-ITEMS-GRID); server/al/diag.py
@@ -1316,7 +1336,7 @@ bind failure names its cause; --port stays in the block (P8-4).
   server/al/pricebook.py (DATA-PRICE-CADENCE); server/al/zoneguide.py
   (DATA-GUIDE-FACTS); tests/test_tc_bridge.py (LOOP-DRIFT-REF);
   tools/tc_drift.py (LOOP-DRIFT-REF).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
   DATA-PRICE-CADENCE, LOOP-DRIFT-REF; docs/decisions/README.md:
   DATA-PRICE-CADENCE; AL-NEXT-SESSION.txt: DATA-PRICE-CADENCE;
   docs/design/reviews.log: 1 lines.
@@ -1325,7 +1345,7 @@ bind failure names its cause; --port stays in the block (P8-4).
 - Batches: 1: PLAY-TD-19D-ITEMS-GRID, DATA-DIAG-SEAM, RUN-START-REASON-CORE,
   DATA-PRICE-CADENCE; 2: REL-RUNTIME-SCRIPTS, LOOP-DRIFT-REF,
   LOOP-WATCH-POBNEXT, RUN-LEDGER-REPORT; 3: PUB-SETTINGS-FILES, GP-08,
-  TEST-SUITE-SOAK, DATA-GUIDE-FACTS.
+  TEST-SUITE-SOAK, DATA-GUIDE-FACTS; 4: PUB-DEPBOT-ACTIONS, PUB-DEPBOT-TICK.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1346,6 +1366,8 @@ bind failure names its cause; --port stays in the block (P8-4).
 - GP-08 [session, S 20m, build, P1] Dependabot config file. Files: .github/dependabot.yml, tests/test_dependabot_config.py. Deps: none.
 - TEST-SUITE-SOAK [session, L 75m, review, P2] Prove the parallel gate: 10 green runs, one serial fallback run, one spelling. Files: docs/research/0049-test-suite-speed.md. Deps: TEST-GATE-CALLERS.
 - DATA-GUIDE-FACTS [session, M 60m, data, P2] Guide facts from allowed sources: 4 blank zones, point-books wording, coverage. Files: server/al/data/zone_guide.json, server/al/zoneguide.py, tests/test_zone_guide.py, tests/test_provenance.py. Deps: DATA-GUIDE-MERGE, DATA-GUIDE-BOSS.
+- PUB-DEPBOT-ACTIONS [session, M 50m, data, P1] Dependabot re-apply tool: actions bumps and the commit, push and close path. Files: tools/dependabot_reapply.py, tests/test_dependabot_reapply.py, tests/fixtures/dependabot/pr_actions.json. Deps: GP-14, GP-02, GP-05.
+- PUB-DEPBOT-TICK [session, M 45m, build, P1] Loop tick launches the Dependabot re-apply worker once a day. Files: tools/al_loop.py, tools/loop_depbot.py, tests/test_loop_depbot.py. Deps: GP-14, PUB-LOCAL-ONLY-TEXT.
 
 ### Wave 19: reliability and observability, web data, install and release
 
@@ -1353,8 +1375,8 @@ Goal: Leads: 'Tried in game' card on the Checks tool; Map ladder tick is
 free when nothing changed (AUDIT-P8-LOW P8-5); overlay.log and run.log
 bounded, same stamp format. Releases 3 loop-owned rows.
 
-- Session 6; width 12 worktree + 0 main-checkout, 3 loop rows released;
-  about 135 minutes.
+- Session 6; width 13 worktree + 0 main-checkout, 3 loop rows released;
+  about 143 minutes.
 - Hotspots: web/index.html (RUN-VERDICTS-UI); server/al/core.py
   (RUN-LADDER-TICK); web/app.js (RUN-VERDICTS-UI); server/al/http.py
   (RUN-SUPERVISOR-CLOCK); app/main.js (RUN-OBS-LOGS-SHELL);
@@ -1368,13 +1390,13 @@ bounded, same stamp format. Releases 3 loop-owned rows.
   web/checks.js (RUN-VERDICTS-UI); web/prices.js (TEST-STATE-TEXT-PINS);
   server/al/ninja.py (DATA-PRICE-SHAPE-GUARD); server/al/pricebook.py
   (DATA-PRICE-SHAPE-GUARD); tools/tc_drift.py (TC-BUILDFILE-EXIT-WATCH).
-- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 16 packages; CLAUDE.md:
   RUN-SUPERVISOR-CLOCK; AL-NEXT-SESSION.txt: TEST-STATE-TEXT-PINS;
   docs/design/reviews.log: 3 lines.
 - Batches: 1: RUN-VERDICTS-UI, RUN-LADDER-TICK, RUN-OBS-LOGS-SHELL,
   RUN-SUPERVISOR-CLOCK; 2: REL-BUILD-ASSETS, DATA-PRICE-SHAPE-GUARD,
   TEST-STATE-TEXT-PINS, REL-UPDATE-LAUNCH; 3: DATA-SNAP-PROBE,
-  OVL-CLIENT-GUARD, PUB-GUIDE-PAGES, DATA-RESEARCH-GAPS.
+  OVL-CLIENT-GUARD, PUB-GUIDE-PAGES, DATA-RESEARCH-GAPS; 4: PUB-DEPBOT-NPM.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1395,6 +1417,7 @@ bounded, same stamp format. Releases 3 loop-owned rows.
 - OVL-CLIENT-GUARD [session, M 60m, build, P2] CLIENT-GUARD: the client survives its own errors without a dialog and rebuilds a dead overlay or companion page. Files: app/crashguard.js, app/parts/05-crashguard.js, app/test/crashguard.test.js. Deps: OVL-MAIN-PARTS.
 - PUB-GUIDE-PAGES [session, M 60m, build, P2] Four-page player guide. Files: docs/guide/download.md, docs/guide/quick-start.md, docs/guide/common-issues.md, docs/guide/faq.md, tests/test_player_guide.py. Deps: PUB-README-PLAYERS.
 - DATA-RESEARCH-GAPS [session, M 60m, data] Research gaps: triage table for note 0056 and the adopted-patterns register of note 0055. Files: docs/research/0056-third-party-repo-review.md, docs/research/0055-competitive-companions-overlays.md. Deps: GP-01.
+- PUB-DEPBOT-NPM [session, M 60m, data, P1] Dependabot re-apply tool: the npm branch. Files: tools/dependabot_reapply.py, tests/test_dependabot_reapply.py, tests/fixtures/dependabot/pr_npm.json. Deps: PUB-DEPBOT-ACTIONS, OVL-NPM-LOCK.
 - DATA-SNAP-SETUP [loop, S 25m, build, P1] setup.ps1 runs the game-data snapshot when web data is already on. Files: scripts/setup.ps1, tests/test_setup_snapshot.py. Deps: REL-RUNTIME-SCRIPTS.
 - DATA-TRADESTAT-COVERAGE [loop, M 35m, build, P3] Count trade stat id coverage per source before retiring the PoB fallback. Files: server/al/tradestats.py, server/al/upgrade.py, tests/test_math_tradestat_local.py. Deps: DATA-DIAG-SEAM, TC-UPGRADE-PER-SLOT.
 - TC-BUILDFILE-EXIT-WATCH [loop, M 35m, review, P3] .build exit trigger from the PoB release check. Files: tools/tc_drift.py, tests/test_tc_drift.py, docs/decisions/0034-build-file-download.md. Deps: TC-CALC-VERIFY-PIN, AUTO-12, AUTO-05, LOOP-DRIFT-REF.
@@ -1492,8 +1515,8 @@ Goal: Leads: Run grid 2: Recent, Last session and Characters cards; The
 report from an allow-list of structured fields, with a hardened redactor
 (P8-7); Overlay HUD line 2: the opt-in guide line and the fixed card anchor.
 
-- Session 7; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 135 minutes.
+- Session 7; width 13 worktree + 0 main-checkout, 0 loop rows released;
+  about 143 minutes.
 - Hotspots: web/index.html (PLAY-TD-20B-RUN-CARDS); server/al/core.py
   (REL-UPDATE-WIRE); web/app.js (PLAY-TD-20B-RUN-CARDS); server/al/http.py
   (REL-UPDATE-WIRE); server/al/state.py (REL-UPDATE-WIRE); web/app.css
@@ -1502,12 +1525,12 @@ report from an allow-list of structured fields, with a hardened redactor
   (RUN-SECOND-LINE-CLIENT); app/shared/render_gate.js (OVL-LINE2-GUIDE);
   app/test/checks.test.js (RUN-REPORT-FIELDS); web/checks.js
   (RUN-REPORT-FIELDS); server/al/settingsio.py (REL-UPDATE-WIRE).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
   REL-UPDATE-WIRE; docs/design/reviews.log: 5 lines.
 - Batches: 1: PLAY-TD-20B-RUN-CARDS, RUN-REPORT-FIELDS, OVL-LINE2-GUIDE,
   OVL-ACT-CARD; 2: RUN-BUDGET-TESTS-DET, OVL-TD06-AUTOSCALE, DEP-15,
   REL-UPDATE-WIRE; 3: REL-PUBLISH-READBACK, REL-STAGE-SANDBOX, DEP-19,
-  RUN-SECOND-LINE-CLIENT.
+  RUN-SECOND-LINE-CLIENT; 4: PUB-HOOK-RELEASE-CHECK.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1528,6 +1551,7 @@ report from an allow-list of structured fields, with a hardened redactor
 - REL-STAGE-SANDBOX [session, M 40m, build, P1] Release stage: optional Windows Sandbox phases. Files: tools/rel_stage.py, tests/test_release_stage.py. Deps: REL-STAGE-ROUNDTRIP.
 - DEP-19 [session, M 45m, build] CPython pin watch. Files: tools/upstream_watch.py, tests/test_upstream_watch.py, ops/loop/watch_rows/cpython.json. Deps: REL-RUNTIME-PINS, AUTO-05, LOOP-WATCH-ROWS, AUTO-09.
 - RUN-SECOND-LINE-CLIENT [session, M 30m, build, P2] The client restarts a core that stays down. Files: app/client/window.js, app/client/launcher.js, app/test/client.test.js. Deps: RUN-OBS-LOGS-SHELL, RUN-SECOND-LINE-PY.
+- PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py. Deps: GP-02, REL-PUBLISH-GATES.
 
 ### Wave 23: install and release, overlay and client, tests and code seams
 
@@ -1995,11 +2019,11 @@ after folding.
   0, by PLAN-LANDING from `python tools/plan_check.py rows`; the 118
   packages whose cluster text said 'add the row' now say 'flip the row', so
   no id is added twice.
-- CLAUDE.md (integrator only): wave 1: 3; wave 2: 4; wave 3: 1; wave 4: 4;
+- CLAUDE.md (integrator only): wave 1: 3; wave 2: 4; wave 3: 1; wave 4: 5;
   wave 5: 4; wave 6: 1; wave 7: 1; wave 9: 5; wave 10: 5; wave 11: 2; wave
   12: 3; wave 13: 5; wave 14: 5; wave 15: 1; wave 16: 2; wave 17: 3; wave
   18: 2; wave 19: 1; wave 20: 2; wave 21: 1; wave 22: 1; wave 24: 3; wave
-  29: 1; wave 31: 1 Settled-list edits (61 in all). The packages are named
+  29: 1; wave 31: 1 Settled-list edits (62 in all). The packages are named
   in each wave's Integrator line.
 
 The ten most contended files and how the plan handles each:
@@ -2114,19 +2138,19 @@ PLAY-TD-21A-SETTINGS-RAIL (23) -> PLAY-TD-21B-SETTINGS-ABOUT (26) ->
 PLAY-TD-22A-A11Y-CSS (27) -> PLAY-TD-22C-A11Y-CDP (28) -> PLAY-TD-23-RECORDS
 (31) -> PLAY-F-189A-SPACING-BADGE (33) -> PLAY-F-189B-OVERLAY-PLATE (34)
 
-Milestone targets. A target wave (overrides.json, deadlines) is scheduling
-pressure: the target and everything it stands on are picked first, earliest
-target first. A target is missed where a hot file or a serial group was
-taken by a package with an earlier target or by P0 work; the wave it lands
-in is the plan.
+Milestone targets. A target wave (the deadlines of the retired builder) is
+scheduling pressure: the target and everything it stands on are picked
+first, earliest target first. A target is missed where a hot file or a
+serial group was taken by a package with an earlier target or by P0 work;
+the wave it lands in is the plan.
 
 - SEC-DEMO-ENTRY: target wave 3, lands in wave 3 - the isolated demo mode
   exists (python -m server.al --demo).
 - TC-CARD-PARTS-WEB: target wave 3, lands in wave 3.
 - TEST-PORT-LEASE: target wave 3, lands in wave 5.
 - TEST-WEB-FMT: target wave 4, lands in wave 8.
-- GP-09: target wave 5; parked (wave 99) until its unblock condition reads
-  true.
+- GP-09: target wave 5, lands in wave 5 - the private repository exists and
+  the first push is green.
 - TEST-SELECT: target wave 5, lands in wave 8.
 - AUTO-21: target wave 6, lands in wave 6 - HALT is removed; the headless
   loop takes the loop-owned rows.
@@ -2140,9 +2164,8 @@ in is the plan.
 - TEST-WEB-ASSEMBLE: target wave 8, lands in wave 12.
 - PLAY-LEGACY-OUT-2: target wave 9, lands in wave 11 - the Play tab never
   scrolls (legacy cards are gone).
-- All 20 open P0 packages are merged by wave 8; 6 P0 packages are parked
-  (GP-02, PUB-LOCAL-ONLY-TEXT, PUB-GO-DECISION, GP-09, GP-12,
-  RUN-LIVE-CLICKS-CLOSE).
+- All 24 open P0 packages are merged by wave 8; 2 P0 packages are parked
+  (GP-12, RUN-LIVE-CLICKS-CLOSE).
 
 ## Dedupe, narrowing, folds and cross entries
 
@@ -2244,32 +2267,64 @@ operator act or a deferred unit) and add nothing.
 
 ## Operator go for publishing (Q-23)
 
-- Ruling Q-23 needs the operator: the operator creates or approves the
-  repository, approves the first push and approves the public flip; until
-  then the repository stays local and the hook keeps refusing. CLAUDE.md
-  says the same (creating the remote is an operator act).
-- docs/plan/04 reads the session-6 planning order as that go. No tracked
-  file holds the operator's words, the hand-off's list of recorded orders
-  does not name it, and docs/plan/05 and 06 still list the acts as operator
-  acts. The review (floor lens) therefore takes the default of Q-23, and
-  this section is the one rule: where 04, 05 or 06 read differently, this
-  section wins.
-- The go record is a line in AL-NEXT-SESSION.txt: `OPERATOR GO Q-23 step 1
-  (<date>): "<the operator's own words>"` for the repository and the first
-  push, and `OPERATOR GO Q-23 step 4 (<date>): "<the operator's own words>"`
-  for the public flip. Only a session that holds the operator's message
-  writes it, verbatim, and reads it back with grep. PLAN-LANDING writes it
-  if the planning session holds such a message; a sentence in a plan
-  document is not the record. One message that orders both steps may be
-  quoted in both lines.
-- Parked until the step 1 line is read back: GP-02, PUB-GO-DECISION,
-  PUB-LOCAL-ONLY-TEXT, GP-09, PUB-HOOK-RELEASE-CHECK, PUB-DEPBOT-ACTIONS,
-  PUB-DEPBOT-NPM, PUB-DEPBOT-TICK. The public flip (GP-12) and what follows
-  it wait for the step 4 line and for OA-2. Then: set `"q23_go_recorded":
-  true` in the params of the builder's overrides.json and re-run the
-  builder; the packages re-enter the schedule (GP-02 in one merge batch with
-  PUB-GO-DECISION, that package first, so the CLAUDE.md lift and the hook
-  land in one integrator commit).
+- Ruling Q-23 asked for the operator's recorded go before anything is
+  created or pushed, and CLAUDE.md calls creating the remote an operator act
+  until the edits of PUB-GO-DECISION land. The review (floor lens) parked
+  the publishing packages because no tracked file held the operator's words.
+- Recorded 2026-11-18 (adjudicator LE-01; section Rulings 2026-11-18
+  (close-out)): the operator's go-public order in the session brief of
+  2026-11-18 is the go for step 1 (create the private repository and push
+  main) and for step 4 (make it public once the plan-04 gates pass). Agents
+  create the repository, push and flip. The only operator act left for
+  publishing is OA-1, gh auth login, and only if `gh auth status` fails.
+  docs/plan/04, 05 and 06 carry dated amendments and now agree with this
+  section.
+- The record is three lines in AL-NEXT-SESSION.txt: `OPERATOR GO Q-23 step 1
+  (2026-11-18): "<the operator's own words>"`, `OPERATOR GO Q-23 step 4
+  (2026-11-18): "<the same words>"` (one message may be quoted in both
+  lines) and `OA-2 SKIPPED IN WRITING (2026-11-18): "<the operator's own
+  words>"`. PLAN-LANDING writes them: the main session, which holds the
+  brief, copies the words from it verbatim (never from a plan document or a
+  ruling) and reads each line back with `grep -c`. A sentence in a plan
+  document is not the record.
+- Fallback, kept as a live safeguard (adjudicator LE-27): if the main
+  session cannot quote the brief verbatim, no line is written and the
+  default of Q-23 applies: stay local, GP-02 stays a ready diff, and the
+  eight publishing packages go back to wave 99 before wave 1 starts.
+  PUB-GO-DECISION re-reads the step 1 line before it writes decision 0046,
+  and GP-09 re-reads it as its gate 1.
+- Schedule of the eight packages (none of the other packages moved). Wave 4:
+  PUB-GO-DECISION (a main-checkout act) with GP-02 and PUB-LOCAL-ONLY-TEXT
+  in the first merge batch, in that merge order, so the CLAUDE.md lift and
+  the guarded hook land in one integrator commit and no push can happen
+  while CLAUDE.md still says local only. Wave 5: GP-09, alone after the last
+  batch. Wave 18: PUB-DEPBOT-ACTIONS and PUB-DEPBOT-TICK. Wave 19:
+  PUB-DEPBOT-NPM. Wave 22: PUB-HOOK-RELEASE-CHECK. Each sits in the earliest
+  wave its deps and file overlaps allow: the files of PUB-LOCAL-ONLY-TEXT
+  have other editors in waves 1 to 3 (LOOP-SPLIT-TICK, AUTO-01, AUTO-04,
+  TEST-PLUGIN-PIN, LOOP-FAILED-PARK, LOOP-DONE-FOLD), GP-02 and the decision
+  land with it in one batch, and GP-09 needs GP-05 (wave 4) in any case, so
+  nothing is later than its dependencies force.
+- Still in wave 99 behind them: the packages that need the repository to
+  exist (GP-10, GP-11, AUTO-19, LOOP-CI-ISSUES, PUB-DEPBOT-FIRST-RUN, then
+  PUB-GUIDE-DOWNLOAD-PLACE and DATA-CONTACT-DEFAULT) join the next open wave
+  once GP-09's row is flipped. The public flip (GP-12) waits for packages
+  only: every P0 unit on origin/main and flip gates 0 to 6 green; gate 0 is
+  the step 4 line and gate 5 is met by the OA-2 skip line. GP-13, GP-15,
+  GP-16 and AUTO-20 follow the flip. REL-RC-LIVE and DEP-18 still wait for
+  the operator's release phrase (OA-13).
+- The safeguards stay as gates, not as operator clicks: identity scan 0 and
+  leak sweep 0 with the needles armed (the GP-01 needle file includes every
+  friend name the operator's order bars) before the first push, private
+  first, and the flip only on P0 green plus the re-run scans. A hit stops
+  everything and files one rewrite request to MAIN (fleet_rewrite.py, ORDER
+  only).
+- Default repository address (adjudicator LE-02): the account gh is signed
+  in as and the name AshLight, read live at GP-09 (`gh api user --jq
+  .login`); OA-5 stays an optional override. No address sits in a tracked
+  file until GP-10 writes config/public_repo.json from the real origin
+  remote; features that need the address stay off until then. An existing
+  repository of that name stops GP-09; it is never reused or overwritten.
 - Preparation that needs no remote stays in the open waves: the scans
   (GP-01), the licence record (GP-03), the fresh-clone proof (GP-04), the CI
   files (GP-05) and the community files.
@@ -2303,21 +2358,8 @@ package in waves 1 to 37 depends on a parked one. Each line: id, what it
 waits on, who unblocks, the exact condition, and the earliest wave it can
 join (one after its last unparked dependency).
 
-Unblocked by operator (26):
+Unblocked by operator (21):
 
-- GP-02: waits on the operator's recorded go for step 1 of ruling Q-23
-  (create the private repository and push main), quoted in the hand-off in
-  the operator's own words. Who: operator. Unblock: `grep -c "^OPERATOR GO
-  Q-23 step 1" AL-NEXT-SESSION.txt` prints 1 and the line quotes the
-  operator's own words with their date; a session then sets q23_go_recorded
-  in the builder's overrides and re-runs it. Joins wave 1 or later.
-- PUB-LOCAL-ONLY-TEXT: waits on the operator's recorded go for step 1 of
-  ruling Q-23 (create the private repository and push main), quoted in the
-  hand-off in the operator's own words. Who: operator. Unblock: `grep -c
-  "^OPERATOR GO Q-23 step 1" AL-NEXT-SESSION.txt` prints 1 and the line
-  quotes the operator's own words with their date; a session then sets
-  q23_go_recorded in the builder's overrides and re-runs it. Joins wave 1 or
-  later.
 - DATA-LOOT-TALLY: waits on a real stackable item text sample confirming the
   stack-size line. Who: operator. Unblock: TC-PRESS-FIXTURES (TC cluster,
   F-082) is merged: the F-082 sample presses were made with the dev-host
@@ -2325,21 +2367,20 @@ Unblocked by operator (26):
   size is in the tree. Joins wave 37 or later; also behind parked
   TC-PRESS-FIXTURES.
 - DEP-18: waits on the public flip, the project's address in tracked files,
-  poe.ninja's answer for release builds and the operator's release phrase.
-  Who: operator. Unblock: the repository is public (go-public flip package
-  done, all P0 packages green at the flip commit), the address package has
-  put the real owner/name into the tracked config and the README install
-  line, the release build's poe.ninja switch is settled (off, or a decision
-  records poe.ninja's yes), and the operator types 'release 0.2.0' in an
-  interactive session. Joins wave 35 or later; also behind parked
-  REL-RC-LIVE, GP-12, GP-15.
+  the release build's poe.ninja switch settled (off by default) and the
+  operator's release phrase. Who: operator. Unblock: the repository is
+  public (go-public flip package done, all P0 packages green at the flip
+  commit), the address package has put the real owner/name into the tracked
+  config and the README install line, the release build's poe.ninja switch
+  is settled (off, or a decision records poe.ninja's yes), and the operator
+  types 'release 0.2.0' in an interactive session. Joins wave 35 or later;
+  also behind parked REL-RC-LIVE, GP-12, GP-15.
 - REL-RC-LIVE: waits on the private remote, the immutable-releases setting
   and the operator's release phrase. Who: operator. Unblock: the private
   repository exists with main pushed and CI green (go-public remote
   package), the guarded pre-push hook with the prepush-check call is merged,
   immutable releases are on before the first v* tag, and the operator types
-  'release 0.2.0-rc.1' in an interactive session. Joins wave 25 or later;
-  also behind parked GP-09, GP-02, PUB-HOOK-RELEASE-CHECK.
+  'release 0.2.0-rc.1' in an interactive session. Joins wave 25 or later.
 - RUN-LIVE1-FIXTURES: waits on live sightings of the 11 remaining shapes in
   normal play. Who: operator. Unblock: the ledger consent line is ticked and
   python tools/live1_report.py prints VERIFIED live for at least one LIVE-1
@@ -2405,29 +2446,6 @@ Unblocked by operator (26):
   output and a visible browser; the agent then runs python tools/sr_pass.py
   with the operator flag once, game_idle true, and commits the transcript.
   Joins wave 30 or later.
-- PUB-GO-DECISION: waits on the operator's recorded go for step 1 of ruling
-  Q-23 (create the private repository and push main), quoted in the hand-off
-  in the operator's own words. Who: operator. Unblock: `grep -c "^OPERATOR
-  GO Q-23 step 1" AL-NEXT-SESSION.txt` prints 1 and the line quotes the
-  operator's own words with their date; a session then sets q23_go_recorded
-  in the builder's overrides and re-runs it. Joins wave 1 or later.
-- GP-09: waits on the operator's recorded go for step 1 of ruling Q-23
-  (create the private repository and push main), quoted in the hand-off in
-  the operator's own words. Who: operator. Unblock: `grep -c "^OPERATOR GO
-  Q-23 step 1" AL-NEXT-SESSION.txt` prints 1 and the line quotes the
-  operator's own words with their date; a session then sets q23_go_recorded
-  in the builder's overrides and re-runs it; GP-02, PUB-GO-DECISION and
-  PUB-LOCAL-ONLY-TEXT are merged first. Joins wave 5 or later; also behind
-  parked GP-02, PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT.
-- GP-12: waits on the operator's recorded go for the public flip (ruling
-  Q-23, step 4), ruling Q-05 / OA-2 (the operator's message to poe.ninja is
-  sent or a written skip is recorded), and every P0 unit of the plan on
-  origin/main. Who: operator. Unblock: `grep -c "^OPERATOR GO Q-23 step 4"
-  AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words
-  with their date, the hand-off records OA-2 as sent or skipped in writing,
-  and `python -m pytest -q tests/test_http_security.py tests/test_tc_code.py
-  tests/test_no_discovery.py` is green on the commit at origin/main. Joins
-  wave 19 or later; also behind parked GP-09, GP-10, GP-11.
 - RUN-LIVE-CLICKS-CLOSE: waits on one normal login to town or hideout while
   the core runs. Who: operator. Unblock: python tools/live1_report.py prints
   the five TEST-LIVE-CLICKS fields as seen. Joins wave 19 or later.
@@ -2478,49 +2496,30 @@ Unblocked by GGG or poe.ninja (4):
   hand-off holds the operator's own line 'REG OPEN (operator)'. Joins wave 2
   or later.
 
-Unblocked by another package (19):
+Unblocked by another package (16):
 
 - GP-10: waits on the repository exists (first push done). Who: package
   GP-09. Unblock: `git remote get-url origin` prints the repository address
-  and `gh repo view` succeeds for it. Joins wave 18 or later; also behind
-  parked GP-09.
+  and `gh repo view` succeeds for it. Joins wave 18 or later.
 - TC-WAYSTONE-TUNE: waits on a real waystone sample as a fixture. Who:
   package TC-PRESS-FIXTURES. Unblock: tests/fixtures/press holds a reviewed
   waystone fixture. Joins wave 26 or later; also behind parked
   TC-PRESS-FIXTURES.
-- PUB-DEPBOT-NPM: waits on the Dependabot re-apply tool. Who: package
-  PUB-DEPBOT-ACTIONS. Unblock: PUB-DEPBOT-ACTIONS is merged (its ROADMAP row
-  is flipped), which needs the Q-23 go record of the operator. Joins wave 13
-  or later; also behind parked PUB-DEPBOT-ACTIONS.
 - TC-WAYSTONE-TUNE-UI: waits on the core half. Who: package
   TC-WAYSTONE-TUNE. Unblock: TC-WAYSTONE-TUNE is merged. Joins wave 36 or
   later; also behind parked TC-WAYSTONE-TUNE.
-- PUB-DEPBOT-ACTIONS: waits on the guarded pre-push hook (its push path runs
-  through it). Who: package GP-02. Unblock: GP-02 is merged (its ROADMAP row
-  is flipped), which needs the Q-23 go record of the operator. Joins wave 18
-  or later; also behind parked GP-02.
 - TC-IMPORT-UI: waits on the core half of the import. Who: package
   TC-IMPORT. Unblock: TC-IMPORT is merged. Joins wave 4 or later; also
   behind parked TC-IMPORT.
 - DATA-CONTACT-DEFAULT: waits on the project's public repository address
   exists as one tracked constant (Q-24). Who: package GP-10 (PUB cluster),
-  itself behind the operator's repository creation and first push (GP-09,
-  Q-23). Unblock: GP-10 is merged to main, so the address constant and its
-  leak-sweep allow-list entry are in the tree. Joins wave 37 or later; also
-  behind parked GP-10.
-- PUB-DEPBOT-TICK: waits on the loop wording and push switch in
-  tools/al_loop.py. Who: package PUB-LOCAL-ONLY-TEXT. Unblock:
-  PUB-LOCAL-ONLY-TEXT is merged (its ROADMAP row is flipped), which needs
-  the Q-23 go record of the operator. Joins wave 18 or later; also behind
-  parked PUB-LOCAL-ONLY-TEXT.
-- PUB-HOOK-RELEASE-CHECK: waits on the guarded pre-push hook (it edits the
-  hook file GP-02 writes). Who: package GP-02. Unblock: GP-02 is merged (its
-  ROADMAP row is flipped), which needs the Q-23 go record of the operator.
-  Joins wave 22 or later; also behind parked GP-02.
+  itself behind the repository and first push (GP-09). Unblock: GP-10 is
+  merged to main, so the address constant and its leak-sweep allow-list
+  entry are in the tree. Joins wave 37 or later; also behind parked GP-10.
 - AUTO-19: waits on the remote does not exist yet (the repository is local
   only and the pre-push hook refuses every push). Who: package GP-09.
   Unblock: `git remote get-url origin` exits 0 and the first push is green
-  (GP-09 done). Joins wave 14 or later; also behind parked GP-09.
+  (GP-09 done). Joins wave 14 or later.
 - AUTO-20: waits on Dependabot alerts and pull requests exist only after the
   public flip. Who: package GP-12. Unblock: the repository is public (GP-12
   done) and .github/dependabot.yml and tools/dependabot_reapply.py are on
@@ -2542,9 +2541,16 @@ Unblocked by another package (19):
   Who: package GP-12. Unblock: `gh repo view "$R" --json visibility --jq
   .visibility` prints PUBLIC. Joins wave 1 or later; also behind parked
   GP-12.
+- GP-12: waits on every P0 unit of the plan on origin/main, and flip gates 0
+  to 6 green. Who: packages. Unblock: `grep -c "^OPERATOR GO Q-23 step 4"
+  AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words
+  with their date, `grep -c "^OA-2 SKIPPED IN WRITING" AL-NEXT-SESSION.txt`
+  prints 1, and `python -m pytest -q tests/test_http_security.py
+  tests/test_tc_code.py tests/test_no_discovery.py` is green on the commit
+  at origin/main. Joins wave 19 or later; also behind parked GP-10, GP-11.
 - GP-11: waits on the repository exists (first push done). Who: package
-  GP-09. Unblock: `gh repo view` succeeds for the repository. Joins wave 1
-  or later; also behind parked GP-09.
+  GP-09. Unblock: `gh repo view` succeeds for the repository. Joins wave 6
+  or later.
 - GP-13: waits on the public flip (rulesets and free secret scanning need a
   public repository on a personal account). Who: package GP-12. Unblock: `gh
   repo view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins
@@ -2552,8 +2558,7 @@ Unblocked by another package (19):
 - PUB-DEPBOT-FIRST-RUN: waits on the repository exists and
   .github/dependabot.yml is on main. Who: package GP-09. Unblock: `gh api
   "repos/$R/contents/.github/dependabot.yml" --jq .path` prints the config
-  path. Joins wave 19 or later; also behind parked GP-09,
-  PUB-DEPBOT-ACTIONS.
+  path. Joins wave 19 or later.
 - GP-15: waits on the public flip. Who: package GP-12. Unblock: `gh repo
   view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins wave 19
   or later; also behind parked GP-12.
@@ -2569,27 +2574,27 @@ operator string to their packages: CARRY-11, F-040, F-054, F-058, OPEN-04,
 OPEN-17, OVL-FPS). Per kind: units, mapped to packages (of which every
 delivering package is parked), operator, not adopted, done.
 
-- findings (F-..): 211 units; 202 mapped (14 parked); 1 operator; 8 not
+- findings (F-..): 211 units; 202 mapped (13 parked); 1 operator; 8 not
   adopted; 0 done.
 - open items (OPEN-..): 50 units; 42 mapped (6 parked); 1 operator; 2 not
   adopted; 5 done.
 - automation packages (AUTO-..): 26 units; 26 mapped (4 parked); 0 operator;
   0 not adopted; 0 done.
-- carried hand-off items (CARRY-..): 24 units; 17 mapped (5 parked); 4
+- carried hand-off items (CARRY-..): 24 units; 17 mapped (4 parked); 4
   operator; 1 not adopted; 2 done.
 - target design steps (TD-..): 23 units; 23 mapped (0 parked); 0 operator; 0
   not adopted; 0 done.
 - deployment steps (DEP-..): 19 units; 19 mapped (1 parked); 0 operator; 0
   not adopted; 0 done.
-- go-public steps (GP-..): 16 units; 16 mapped (5 parked); 0 operator; 0 not
+- go-public steps (GP-..): 16 units; 16 mapped (3 parked); 0 operator; 0 not
   adopted; 0 done.
-- open ROADMAP rows: 14 units; 13 mapped (3 parked); 0 operator; 1 not
+- open ROADMAP rows: 14 units; 13 mapped (2 parked); 0 operator; 1 not
   adopted; 0 done.
 - operator decisions without a unit until the review (A-..): 2 units; 1
   mapped (1 parked); 1 operator; 0 not adopted; 0 done.
 - research gaps (RG-..): 2 units; 2 mapped (0 parked); 0 operator; 0 not
   adopted; 0 done.
-- Total: 387 units; 361 mapped (39 parked); 7 operator; 12 not adopted; 7
+- Total: 387 units; 361 mapped (34 parked); 7 operator; 12 not adopted; 7
   done.
 
 Not adopted, with the reason (12):
@@ -2707,12 +2712,12 @@ Done (nothing left to do) (7):
   rein...): no defect; the LaneLoop task stays enabled while HALT is set
   (01-open-items L15) and AUTO-21 neither reinstalls nor runs it
 
-Mapped but waiting: 39 units are delivered only by parked packages (A-03,
+Mapped but waiting: 34 units are delivered only by parked packages (A-03,
 AUTO-19, AUTO-20, AUTO-24, AUTO-26, CARRY-04, CARRY-05, CARRY-09, CARRY-13,
-CARRY-14, DEP-18, F-006, F-016, F-051, F-057, F-058, F-080, F-100, F-149,
-F-150, F-182, F-183, F-184, F-200, F-202, GP-02, GP-09, GP-11, GP-12, GP-16,
-OPEN-08, OPEN-24, OPEN-25, OPEN-26, OPEN-28, OPEN-37, OPERATOR-REMOTE,
-TC-BUILDFILE-LIVE, TC-IMPORT); they close when those packages leave wave 99.
+DEP-18, F-006, F-051, F-057, F-058, F-080, F-100, F-149, F-150, F-182,
+F-183, F-184, F-200, F-202, GP-11, GP-12, GP-16, OPEN-08, OPEN-24, OPEN-25,
+OPEN-26, OPEN-28, OPEN-37, TC-BUILDFILE-LIVE, TC-IMPORT); they close when
+those packages leave wave 99.
 
 ## HALT removal and the headless loop
 
@@ -2782,19 +2787,18 @@ budget) the loop needs 1 to 2 days for them, beside the watcher rows.
 Later rows the loop may take without a plan change: every watcher row the
 frame files (docs/plan/06, Rows the loop may take while sessions run waves),
 requested dives, and any parked package that leaves wave 99 and passes the
-same test; a session re-runs the builder with its owner set in
-overrides.json.
+same test; a session sets its owner in packages.json and re-runs the
+validator.
 
 ## Reserved decision numbers
 
 Numbers 0046 to 0076 are reserved in wave and merge order (research 0047 R1:
 no agent takes the next number). A decision written outside a package takes
-the next number after this block. A number already handed out never moves:
-when the builder is re-run after work has started, the numbers in use are
-pinned in overrides.json (decision_numbers); the go-public decision keeps
-0046 although its package is parked.
+the next number after this block. A number already handed out never moves
+(the reserved_decisions list of packages.json): the go-public decision kept
+0046 while its package was parked and keeps it in wave 4.
 
-- 0046-go-public.md: PUB-GO-DECISION (wave 99)
+- 0046-go-public.md: PUB-GO-DECISION (wave 4)
 - 0047-licence-and-notice.md: GP-03 (wave 1)
 - 0048-ggg-oauth-client.md: DATA-GGG-APPLICATION (wave 1)
 - 0049-demo-mode.md: SEC-DEMO-CORE (wave 2)
@@ -2838,8 +2842,9 @@ pinned in overrides.json (decision_numbers); the go-public decision keeps
 - Loop and wave: the loop and a session never take the same row (section
   HALT removal and the headless loop; docs/plan/06, Loop and wave interplay;
   F-033).
-- docs/plan/08-orchestration.md, written by PLAN-LANDING in wave 0, states
-  the same three once more together with how a session runs a wave.
+- docs/plan/08-orchestration.md (written in the planning session, checked by
+  PLAN-LANDING in wave 0) states the same three once more together with how
+  a session runs a wave.
 
 ## Review record
 
@@ -2867,7 +2872,9 @@ What changed:
   mapped to it instead of 'done by construction'; LOOP-PLAN-CONTRACT is
   dropped and its units (F-198, OPEN-44) move there; its test file
   tests/test_plan_operator_acts.py fails when an operator unit, a package
-  operator act or an operator decision is missing from 09.
+  operator act or an operator decision is missing from 09. (Close-out
+  2026-11-18: 08 and 09 were then written in the planning session itself;
+  PLAN-LANDING lists them under files and checks them.)
 - Gate order (execution S1): the integrator's edits for a batch are
   committed on the integration worktree before the batch suite, so the
   Settled-list tests no longer make every decision-writing batch red;
@@ -2967,14 +2974,18 @@ Not applied as written (one line each, with the reason):
   the moment the typed path field is on main, not earlier, so no install is
   left without a way to name its log; until then SEC-NO-DISCOVERY's narrowed
   scan is in force.
-- Aligning the text of docs/plan/04, 05 and 06 on Q-23 (coverage S2, floor
-  S1): those sections are final and outside this section's files; the rule
-  is stated here and PLAN-LANDING repeats it in 09.
 - F-006 mapped to a parked package only (coverage S3): left as it is; it is
   the flip gate itself and is listed under 'Mapped but waiting'.
 - DEP-09 User-Agent (floor S2): the finding said no User-Agent was required;
   the package's test entry already asked for it, so the rule was made
   explicit rather than added.
+
+Applied later:
+
+- Aligning the text of docs/plan/04, 05 and 06 on Q-23 (coverage S2, floor
+  S1; first left out because those sections are final): applied 2026-11-18
+  (LE-01). Each of the three files carries dated amendment lines; see
+  section Rulings 2026-11-18 (close-out).
 
 Packages whose text the review changed (54): AUTO-11, AUTO-15, AUTO-21,
 DATA-GGG-APPLICATION, DATA-PRICE-FALLBACK-RUNBOOK, DEP-05, DEP-09, DEP-18,
@@ -2990,18 +3001,343 @@ TC-GGG-LISTENER, TC-IMPORT, TC-OAUTH-REG, TC-PRESS-FIXTURES,
 TC-PRESS-SAMPLES, TC-WORN-STORE, TC-WORN-WIRE, TEST-HTTP-ROUTES, TEST-MARKS,
 TEST-PORT-LEASE, TEST-WEB-SRCPATHS-NODE.
 
+## Rulings 2026-11-18 (close-out)
+
+After the phase 3 checkpoint the loose ends of sections 01 to 09 were
+collected (166 items: 132 already resolved, 15 to fix, 19 needing a ruling).
+A distinct adjudicator ruled; the rulings that reached the close-out are
+recorded here and were applied to docs/plan/packages.json, this file, 08 and
+09 and, as dated amendment lines, to 04, 05 and 06 (their Status stays
+final). Each entry: decision, alternatives, why, reverses if.
+
+- LE-01 (who creates the repository, makes the first push and flips it
+  public (Q-23)).
+  - Decision: The operator's go-public order in the 2026-11-18 session brief
+    is the recorded go for Q-23 step 1 (create the private repo and push
+    main) and step 4 (make it public once the plan-04 gates pass). Agents
+    create the repo, push and flip. The only operator act is OA-1, gh auth
+    login, and only if `gh auth status` fails. Nothing is pushed in this
+    planning session.
+  - Alternatives: (a) Q-23 as first ruled: the operator creates or confirms
+    the remote and the flip, and the repo stays local until then. (b) Step 1
+    only, with the flip waiting for a separate later go. (c) Treat the
+    2026-11-17 'item E' citation as enough without a verbatim record.
+  - Why: The order is the operator's own instruction for this session. It
+    says going public is ordered and that gh auth login is the only act
+    left. FLEET rule 1 keeps only physical acts, passwords and OAuth grants
+    for the operator, and gh is already signed in with the repo and workflow
+    scopes (04 OA-1, checked 2026-11-18).
+  - Why, also: Q-23 waited for a 'recorded go'. Its own record format (07
+    'Operator go for publishing') is the operator's words quoted verbatim in
+    AL-NEXT-SESSION.txt. This session holds those words, so the condition is
+    met. A plan sentence citing 'item E' is not the record (alternative c is
+    rejected).
+  - Why, also: The CLAUDE.md line 'creating the remote is an operator act'
+    and the local-only order are lifted by the operator's own order.
+    PUB-GO-DECISION lands that lift, together with GP-02 in one integrator
+    commit, before GP-09 can run. So no push ever happens while CLAUDE.md
+    still says local only, and the 'no push while local only' floor holds.
+  - Why, also: The safeguards stay as gates, not operator clicks: identity
+    scan 0 and leak sweep 0 (needles armed) before the first push, private
+    first, and the flip only on P0 green plus re-run scans. Any hit stops
+    everything and files a rewrite request to MAIN (fleet_rewrite.py, ORDER
+    only). Private-first is reversible.
+  - Why, also: The Game ToS floor is not touched: no game, process, input or
+    GGG endpoint is involved, and CI never turns web data on.
+  - Reverses if: The main session cannot copy the operator's words verbatim
+    from the brief it holds. Then Q-23's default applies: stay local, GP-02
+    stays a ready diff, and the publishing packages stay parked.
+  - Reverses if, also: The operator withdraws or narrows the order, for
+    example 'private only'. Then drop the step 4 line and leave GP-12
+    parked.
+  - Reverses if, also: A GP-01, GP-09 gate 4/5 or GP-12 gate 2 scan finds an
+    identity, AI-trailer, path, account, email, sibling-tree or friend-name
+    hit. Then stay local or private and file the rewrite request to MAIN.
+  - Reverses if, also: `gh auth status` fails. Then OA-1 is the single
+    batched ask.
+- LE-05 (findings.json and ruling Q-23 against docs/plan/04).
+  - Decision: Same ruling as LE-01. 04 is right in substance: the operator's
+    2026-11-18 order, quoted verbatim in the hand-off, is the Q-23 go.
+    findings.json and ruling Q-23 are brought up to date to match it.
+  - Alternatives: Follow findings.json and Q-23 as first written: the
+    operator creates the repo, and the plan stays local.
+  - Why: Q-23's own condition was a recorded operator go. The operator's
+    order for this session supplies it, and the hand-off line is the record
+    Q-23 asked for.
+  - Why, also: 'Stay local' remains the written fallback if the verbatim
+    record cannot be made.
+  - Reverses if: Same as LE-01.
+- LE-27 (GP-09 and GP-12 follow 04; the stay-local fallback).
+  - Decision: Same ruling as LE-01. GP-09 and GP-12 follow 04. The
+    stay-local fallback stays in PUB-GO-DECISION and in GP-09 gate 1 as a
+    live safeguard, not as dead text.
+  - Alternatives: Remove the fallback text now that the go is recorded.
+  - Why: With the go recorded, gate 1 just re-checks the hand-off line and
+    decision 0046 at push time. That costs nothing and catches a lost or
+    edited record.
+  - Why, also: Keeping the fallback keeps the plan reversible if the order
+    is withdrawn.
+  - Reverses if: Same as LE-01.
+- LE-79 (04, 05 and 06 word the Q-23 go their own way).
+  - Decision: Same ruling as LE-01. Align 04, 05 and 06 with dated amendment
+    lines rather than rewriting the final sections.
+  - Alternatives: Leave 04, 05 and 06 unaligned and rely on 07's 'this
+    section wins'.
+  - Why: Three documents that disagree on who acts is the kind of drift that
+    misleads a later agent. Short dated lines fix it and keep the review
+    history readable.
+  - Why, also: Once the go is recorded, 07's override rule and 04's reading
+    lead to the same result.
+  - Reverses if: Same as LE-01.
+- LE-81 (the go record is not in the hand-off; eight packages parked).
+  - Decision: Same ruling as LE-01. The planning session holds the
+    operator's brief, so PLAN-LANDING writes the OPERATOR GO step 1 and step
+    4 lines and the OA-2 skip line verbatim and unparks the eight publishing
+    packages.
+  - Alternatives: Leave the packages parked until a later session that holds
+    a new operator message.
+  - Why: 07 says PLAN-LANDING writes the record 'if the planning session
+    holds such a message'. This one does.
+  - Why, also: Leaving them parked would add a wait the operator has already
+    ruled out.
+  - Reverses if: The main session cannot quote the brief verbatim. Then the
+    packages stay parked under Q-23's default.
+- LE-107 (GP-09 as an agent package in an open wave).
+  - Decision: Same ruling as LE-01. GP-09 stays an agent package in its
+    scheduled wave. Its unblock is now satisfied by the verbatim hand-off
+    record of the operator's 2026-11-18 order, not by the 'item E' citation
+    alone.
+  - Alternatives: Move GP-09 into 09 as an operator act.
+  - Why: The sources disagreed only because the operator's words were not
+    recorded. They now are, and the CLAUDE.md lift lands before GP-09
+    through its dependencies.
+  - Reverses if: Same as LE-01.
+- LE-140 (floor lens: agent steps resting on an untracked brief).
+  - Decision: Same ruling as LE-01. Agent steps for repo creation, first
+    push and flip are allowed. They rest on the operator's own words in the
+    tracked hand-off, not on an untracked brief citation.
+  - Alternatives: Keep these steps as operator acts under the stricter
+    reading.
+  - Why: This is not a Game ToS floor question: GitHub publishing touches no
+    game process, input, file or GGG endpoint, so 'stricter floor reading
+    wins' does not apply.
+  - Why, also: The repo floor 'no push while local only' holds because the
+    hygiene lift and the guarded hook land before any push.
+  - Why, also: The source problem the finding raised (an untracked brief) is
+    fixed by the verbatim tracked record.
+  - Reverses if: Same as LE-01.
+- LE-160 (07 Review record, 'not applied' line on 04, 05 and 06).
+  - Decision: Same ruling as LE-01. Align 04, 05 and 06 on Q-23.
+  - Alternatives: Leave them unaligned.
+  - Why: Same as LE-79.
+  - Reverses if: Same as LE-01.
+- LE-02 (default repository owner and name (Q-24)).
+  - Decision: The default repository address is `<account gh is signed in
+    as>/AshLight`, read live at GP-09 with `gh api user --jq .login`. No
+    operator input is needed. OA-5 stays an optional override. 'Placeholder'
+    means only that config/public_repo.json is absent until GP-10 writes it
+    from the real origin remote.
+  - Alternatives: (a) Q-24 operator_note: the operator supplies owner and
+    name, and GP-09 waits for it. (b) A placeholder constant in tracked
+    config before the remote exists.
+  - Why: The operator's order leaves gh auth login as the only act.
+    Requiring the operator to supply the address would add a second act for
+    a value the signed-in account already gives.
+  - Why, also: The name AshLight is settled (decision 0001), and the account
+    is the operator's own by definition of the gh sign-in.
+  - Why, also: No tracked placeholder string means nothing to forget and no
+    fake address leaking into README or the update check. Features that need
+    the address stay off until GP-10, as Q-24 intended ('not live until the
+    address exists').
+  - Why, also: It is reversible: GitHub repos can be renamed or transferred,
+    and GP-10 reads the value from origin, so it follows.
+  - Reverses if: The operator names another owner or name before GP-09
+    (OA-5).
+  - Reverses if, also: `gh repo view <login>/AshLight` shows an existing
+    repo. Then GP-09 stops and reports; it never reuses or overwrites one.
+  - Reverses if, also: Leak-sweep testing shows the allow entry masks other
+    ids.
+- LE-28 (the floating CI job test-newest beside the exact-pin rule).
+  - Decision: Keep test-newest with floating Python 3.14 and Node 24 as a
+    non-required job with continue-on-error, and fence it with tests.
+  - Alternatives: (a) Pin it to exact patch versions (3.14.x, 24.x.y). (b)
+    Drop the job.
+  - Why: The exact-pin rule in CLAUDE.md covers dependencies (Electron
+    45.3.3, exact npm deps, npm ci from the lockfile). test-newest still
+    installs from the hash-pinned requirements-dev.txt and the lockfile, and
+    its action SHAs are pinned. Only the runner's interpreter floats.
+  - Why, also: The job's purpose (0046 R3: run the floor and the newest
+    branch) is early warning on new runtimes. Exact pins would defeat that
+    and need manual bumps.
+  - Why, also: It is not a required check and failures do not block merges,
+    so it cannot gate a release. Shipped artifacts use the builder's exact
+    Python (05 step 5).
+  - Why, also: It is reversible and cheap. The only cost is metered Windows
+    minutes during the short private phase.
+  - Reverses if: test-newest produces noise that hides real failures.
+  - Reverses if, also: Private-phase Actions minutes become a real cost.
+    Then restrict it to `push` on main or a schedule.
+  - Reverses if, also: MAIN's kit or the operator rules every CI runtime
+    must be exact.
+- LE-38 (the release polling gate against ruling Q-05; OA-2).
+  - Decision: Keep the stricter gate: release builds make no poe.ninja
+    request (ninja.RELEASE_POLLING off, trade link only) until poe.ninja's
+    written yes, an approved mirror or the operator's written ruling. The
+    poe.ninja message (OA-2) stops being a flip gate: the operator's
+    2026-11-18 order is recorded as its written skip, which Q-05 itself
+    allows.
+  - Alternatives: (a) Q-05 as written: ship the tiered cadence in release
+    builds regardless. (b) Keep OA-2 as an operator act that gates the
+    public flip.
+  - Why: poe.ninja asks apps to proxy through their own backend. A public
+    release multiplies per-install requests, and silence is not consent. The
+    stricter reading wins (F-046 and the floor audit). The cost to players
+    is small: the price card shows the trade link only.
+  - Why, also: Q-05's core intent, not getting the price feature cut off by
+    a later objection, is better served by not polling from releases than by
+    polling while waiting for an answer.
+  - Why, also: The operator said gh auth login is the only act left. That
+    reads as the written skip Q-05 and 04 already allow, so the flip waits
+    for nobody. The release gate removes the risk the message was meant to
+    cover.
+  - Why, also: It is reversible with one constant flip
+    (DATA-NINJA-RELEASE-ON).
+  - Reverses if: poe.ninja replies yes: flip the constant through
+    DATA-NINJA-RELEASE-ON.
+  - Reverses if, also: poe.ninja asks for a mirror or less polling: new
+    decision.
+  - Reverses if, also: The operator says they want to send the message
+    before the flip: OA-2 becomes a gate again.
+  - Reverses if, also: Source-checkout polling draws an objection: gate it
+    the same way.
+- LE-39 (one agent read of poe.ninja's public economy pages
+  (DATA-GUIDE-ONE-BLOCK)).
+  - Decision: Allowed: the DATA-GUIDE-ONE-BLOCK package agent makes one
+    dated read pass of poe.ninja's public, human-facing economy pages to
+    record their URL forms. It runs under strict conditions. The fallback is
+    a link to the landing page only.
+  - Alternatives: (a) Landing-page link only, with no agent web read. (b)
+    Derive or guess the URL slugs without reading.
+  - Why: The floor governs what AshLight (the app) reads. The app here
+    requests nothing and only builds a link the player opens. poe.ninja is
+    on the floor's permitted list, and research notes already cite dated web
+    reads (CLAUDE.md: every research claim cites a source with an access
+    date).
+  - Why, also: Guessing slugs (alternative b) is worse than reading. A wrong
+    link misleads the player, and the package already bans derived or
+    guessed slugs.
+  - Why, also: The conditions meet even the strictest reading of the floor's
+    web rules: truthful AshLight UA, human pages only, no API or data route,
+    bounded and one-off. They are written into the package notes: robots.txt
+    first and obeyed, at most one GET per category page form, 30 GETs in
+    all, 1 s apart, no page body in a tracked file.
+  - Why, also: It is reversible: the table is data in ninjalink.py, and an
+    empty table falls back to the landing page.
+  - Reverses if: poe.ninja's robots.txt or terms disallow automated reads of
+    those pages.
+  - Reverses if, also: poe.ninja objects.
+  - Reverses if, also: The operator rules that agents may not make web reads
+    for research.
+  - Reverses if, also: In any of these cases: landing-page link only.
+- LE-53 (the build refusal 'a final version without a tag' (DEP-08, plan
+  05)).
+  - Decision: Accept DEP-08's change: the 'final version without a tag'
+    refusal applies to `build --tag` only, and `--ref` builds the staged
+    final version before the tag exists. Condition: BUILD and every other
+    artifact carry no tag field, so `--ref` and `--tag` builds of one commit
+    are byte-identical.
+  - Alternatives: (a) Plan 05 as worded: refuse every untagged final build,
+    with stage adding a pre-tag flag. (b) Tag first, then stage.
+  - Why: 05's own procedure stages the final version before tagging, and the
+    tag message binds the staged SHA256SUMS (`sums-sha256`). An untagged
+    final build is therefore required, and the old refusal contradicts the
+    procedure.
+  - Why, also: The refusal's purpose still holds: no untagged final release
+    can be published. REL-PUBLISH-GATES tags only the stage commit with a
+    PASS report, the guarded pre-push refuses a v* tag without one, and CI
+    rebuilds with `--tag` and fails on any hash difference.
+  - Why, also: Load-bearing defect found: DEP-08's test said '--ref ...
+    BUILD records tag: none'. Release CI (05 step 5) compares the hash of
+    its `--tag` build's SHA256SUMS with the staged one. If BUILD differed by
+    a tag field, every release would fail CI. So the tag must not be inside
+    any artifact.
+  - Why, also: Tagging first (alternative b) would push a tag before the
+    PASS report exists.
+  - Reverses if: The operator wants final versions buildable only from a
+    tag. Then stage uses a pre-tag flag and BUILD stays tag-free.
+  - Reverses if, also: CI's byte comparison is dropped.
+
+Not ruled here. Six of the 19 items did not reach the close-out with a
+usable ruling and stay as the plan words them (section Open points): LE-69,
+LE-76, LE-92, LE-96, LE-99 and LE-100.
+
+Loose ends fixed without a ruling (15 items):
+
+- LE-20: RUN-BUDGET-TESTS-DET's accept is the pytest command alone; the
+  'fails once with its defect put back' rule moved to its notes.
+- LE-32, LE-132, LE-148: the stale port ranges in SEC-DEMO-CORE, DEP-05,
+  TEST-PORT-LEASE, DEP-01, REL-INSTALL-SELFTEST and REL-STAGE-ROUNDTRIP now
+  read as the one table of section Port block (leases 8962 to 8969, demo and
+  self-test 8970 to 8975).
+- LE-35: the coverage of F-082 also names RUN-LEDGER-CORE and
+  RUN-LIVE1-FIXTURES (its Client.txt half).
+- LE-54, LE-165: 08's builder commit subject carries a type (`<type>(<ID>):
+  <subject>`), which REL-SUBJECT-CHECK enforces from wave 8.
+- LE-80, LE-163: PLAN-LANDING lists 08 and 09 under files (both are tracked)
+  and keeps only tests/test_plan_operator_acts.py as new.
+- LE-91: AUTO-26's default reads as 08 section 2 and decision 0012: a
+  hand-run sidecar worktree, with .claude/worktrees only as the fallback.
+- LE-93, LE-101: PLAN-LANDING's hand-off edit and accept name the `WAVE
+  POINTER: wave 0 done, next wave 1` line and the `DEFERRED:` form of 08,
+  and replace the stale 'Next action: operator-led planning session' line.
+- LE-150: REL-RUNTIME-PINS and DEP-01 name the embeddable CPython by the
+  exact version and sha256 of its pin, not as 3.14.x.
+- LE-164: DEP-01 writes its spike record to the new file
+  docs/ops/runtime-spike-record.md and no longer edits docs/plan/05.
+- LE-166: the planning builder is retired and docs/plan/packages.json is the
+  source of truth (section How to read this plan).
+
+What the close-out moved:
+
+- Eight packages left wave 99: PUB-GO-DECISION, GP-02 and
+  PUB-LOCAL-ONLY-TEXT to wave 4, GP-09 to wave 5, PUB-DEPBOT-ACTIONS and
+  PUB-DEPBOT-TICK to wave 18, PUB-DEPBOT-NPM to wave 19,
+  PUB-HOOK-RELEASE-CHECK to wave 22. No other package changed its wave; 41
+  packages stay parked.
+- Waves 4, 18, 19 and 22 run a fourth merge batch (14, 14, 13 and 13
+  worktree packages). In wave 4 the go-public batch is the first one. GP-09
+  runs alone after the last batch of wave 5, and its 50 minutes count in
+  full.
+- Expected time: wave 4 from 129 to 139 minutes, wave 5 from 129 to 179,
+  wave 18 from 125 to 133, wave 19 from 135 to 143, wave 22 from 135 to 143;
+  session 2 from 6 h 27 min to 7 h 27 min, session 6 from 8 h 15 min to 8 h
+  31 min, session 7 from 7 h 30 min to 7 h 38 min. No session passes the
+  520-minute budget and the count of sessions stays 10.
+- Session 2 delivers the milestone 'the private repository exists and the
+  first push is green' again.
+- Operator acts: OA-10 is recorded and OA-2 is skipped in writing, so
+  neither is asked any more; GP-02, PUB-GO-DECISION and GP-12 name no
+  operator act; OA-1 (conditional), OA-5 and OA-11 (optional) are kept.
+
 ## Open points
 
 - The escape rate of package subsets is assumed, not measured; wave 1
   measures it and the width rule above says what follows.
 - Session lengths are a forecast from the packages' own estimates;
-  docs/plan/08-orchestration.md (PLAN-LANDING) defines how a session runs a
-  wave and resumes.
+  docs/plan/08-orchestration.md defines how a session runs a wave and
+  resumes.
 - The operator acts named by packages (operator_act) and the operator
-  decisions are collected in docs/plan/09-operator-acts.md by PLAN-LANDING;
-  none of them blocks an open wave.
-- The Q-23 go record is not in the hand-off at the time of writing; the
-  publishing packages are parked on it (section Operator go for publishing).
-- docs/plan/04 (The go), 05 (operator act 1) and 06 (operator act 2) still
-  word the Q-23 go their own way; this section's rule wins until the
-  operator's words are recorded.
+  decisions are collected in docs/plan/09-operator-acts.md; none of them
+  blocks an open wave.
+- The three hand-off lines of section Operator go for publishing are written
+  by PLAN-LANDING, not by this close-out (only the main session holds the
+  operator's brief). Until they are read back the eight publishing packages
+  are scheduled on the plan's word, and the fallback of that section sends
+  them back to wave 99.
+- Rulings that did not reach the close-out: LE-69 (a dated pointer in
+  decision 0002 to budget B19 of decision 0006; the ruling text arrived cut
+  off), LE-76 (the CI fetch of AUTO-19 beside decision 0013), LE-92 with
+  LE-99 and LE-100 (the .claude/worktrees fallback before OA-12 is done) and
+  LE-96 (the Workflow equivalent of the kill at 3x). These items stay as the
+  plan words them; each needs its ruling before the package or section it
+  names runs.

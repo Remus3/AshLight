@@ -59,11 +59,14 @@ Done means every line below is true and read back:
 
 ### The go
 
-- The operator ordered going public in the session-6 ultraplan order
-  (2026-11-17, item E). That order is the "recorded go" ruling Q-23 waits
-  for, for both steps: create the remote and push (step 1), and flip to
-  public once the gates hold (step 4; Q-23's own recommended option "go
-  for both; the flip happens by itself once the P0 list is green").
+- The operator ordered going public: source, the operator order in the
+  session brief of 2026-11-18, recorded verbatim in the hand-off lines
+  OPERATOR GO Q-23 step 1 and step 4; the 2026-11-17 item E order is the
+  same intent (amended 2026-11-18, adjudicator LE-01). That order is the
+  "recorded go" ruling Q-23 waits for, for both steps: create the remote
+  and push (step 1), and flip to public once the gates hold (step 4;
+  Q-23's own recommended option "go for both; the flip happens by itself
+  once the P0 list is green").
 - The go-public decision (section "Decision text") records the order and
   lifts the 2026-11-16 local-only order that CLAUDE.md:319-321 cites. The
   hand-off records it too (Q-23 "record").
@@ -113,8 +116,9 @@ Done means every line below is true and read back:
   project's issues page (Q-03; owned by F-018, recorded as an amendment of
   decisions 0015 and 0016 there, not here).
 - Release builds make no poe.ninja request until poe.ninja's yes is
-  recorded (F-046, Q-05; owned by the prices work). Here it only gates the
-  flip on the operator's message.
+  recorded (F-046, Q-05; owned by the prices work). The operator skipped
+  the message in writing on 2026-11-18; the release gate stands (amended
+  2026-11-18, adjudicator LE-38).
 - No code signing at first (Q-22); release provenance is F-148 (plan 05).
 
 ### Hero image
@@ -1299,6 +1303,8 @@ Rulings this section relies on:
   until its yes; owned by F-046).
 - Q-03 (issues page as default contact once public; owned by F-018).
 - Q-22 (no code signing at first; owned by F-148).
+- test-newest floats by design (adjudicator LE-28, 2026-11-18); not
+  required.
 
 Decisions to record (numbers assigned later):
 
@@ -1336,12 +1342,11 @@ the flip.
   in, or the scopes `repo` and `workflow` missing). Why no agent: a
   credential and an OAuth grant. Verified signed in on 2026-11-18, so
   this is expected to be nothing.
-- OA-2 One message to poe.ninja asking whether per-install polling at the
-  tiered cadence (about 200 overview requests a day) is acceptable or a
-  project mirror is wanted; or the operator's written skip (Q-05). Why no
-  agent: a message to a third party in the operator's name. Gates only
-  the flip (GP-12 gate 5); everything up to the private push runs
-  without it. Until it is done the repository stays private.
+- OA-2 One message to poe.ninja: skipped in writing 2026-11-18 by the
+  operator's order; gate 5 reads that line (the hand-off line `OA-2
+  SKIPPED IN WRITING`; amended 2026-11-18, adjudicator LE-01, LE-38).
+  Sending it later is optional and serves only the release polling
+  switch.
 - OA-3 Only if "Repository settings" G answers 404: switch on immutable
   releases in the repository's settings page. Why no agent: no working
   command. Gates only the first `v*` tag (plan 05).
@@ -1504,3 +1509,14 @@ re-run by the verifier (GP-01 re-runs it on the pushed commit); the
 immutable-releases endpoint and the admin role id stay UNVERIFIED with
 fallbacks; `docs/plan/09-operator-acts.md` does not exist yet (listed
 in docs/plan/README.md).
+
+Amended 2026-11-18 (close-out; docs/plan/07, Rulings 2026-11-18
+(close-out)); Status stays final:
+- "The go" names the operator's order of the 2026-11-18 session brief and
+  its verbatim hand-off record (LE-01). The decision file's "Source:"
+  line follows PUB-GO-DECISION's notes in packages.json; its "Why" keeps
+  "The operator ordered it."
+- OA-2 is skipped in writing and the release polling gate stands (LE-38).
+- test-newest floats by design and is not a required check (LE-28).
+- The default address is read live at GP-09, and an existing repository
+  of that name stops it (LE-02; GP-09's notes carry the step).

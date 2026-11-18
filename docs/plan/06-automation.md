@@ -1473,10 +1473,10 @@ Each goes into the one batched ask (docs/plan/09, F-040).
    0044 watch to the two pages; `TC-OAUTH-REG-OPEN` (it keys on the
    authorization page's REG_OPEN flag) then needs another signal and
    that row says so.
-2. Q-23: create the private repository, approve the first push and
-   later the public flip. Why: the operator's recorded go (order of
-   2026-11-16). Blocks AUTO-19 and AUTO-20; until then every source
-   runs on the dev loop only.
+2. Q-23: recorded 2026-11-18 (operator order; hand-off). AUTO-19
+   unblocks on GP-09, AUTO-20 on GP-12; until then every source runs on
+   the dev loop only. (Amended 2026-11-18, adjudicator LE-01; the date
+   first cited here was that of the local-only order.)
 3. F-057: paste the two WorktreeCreate hook entries into
    `.claude/settings.json`. Why: an agent may not edit settings. Blocks
    AUTO-26.
@@ -1649,3 +1649,7 @@ Corrected (16):
     added; the word DEPENDS removed from a template body.
 16. Work packages: how acceptance is run (Q-17 subsets, injected
     transport, read-backs) stated once; request counts updated.
+
+Amended 2026-11-18 (close-out; docs/plan/07, Rulings 2026-11-18
+(close-out)); Status stays final: operator act 2 reads the recorded
+Q-23 go, so AUTO-19 waits for GP-09 and AUTO-20 for GP-12 (LE-01).

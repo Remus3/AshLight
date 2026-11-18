@@ -252,7 +252,7 @@ What matters most, in order:
 - Depends on: nothing
 - Acceptance: Replace refusal assert at conformance:162: no PUSH REFUSED, no AL_ALLOW_PUSH, both scan lines present, ends in exit 0. New test (Git sh, skip if absent): tmp repo + bare remote; clean main commit pushes; planted drive path refused; fleet-lanes/x ref refused; deleting main refused; fleet.operatorIdent in tmp repo only.
 - ZERO-CLICK: After it lands the loop pushes on its own.
-- Disposition: blocked: operator decision Q-23 (go for the private remote and the first push); built and tested now as a ready diff, merged in the first commit after the go
+- Disposition: plan: go recorded 2026-11-18 (hand-off); owned by GP-02 / GP-09, GP-12
 - Notes: The 15 local lane / keep refs never leave: no --all, --mirror or unfiltered --tags.
 
 ## Tier P1 - the operator's explicit wants and what unblocks them
@@ -318,7 +318,7 @@ What matters most, in order:
 - Depends on: F-004, F-006, F-008, F-009, F-013, F-016, F-020
 - Acceptance: gh api read-back: public; ruleset active with two required checks and admin as only bypass; next loop push lands (tick 'push ok'); private-vulnerability-reporting true; automated-security-fixes true; vulnerability-alerts 204; sha_pinning_required true; workflow default permissions read.
 - ZERO-CLICK: No sign-in needed; steps 1 and 4 wait for operator's recorded go in batched ask (docs/plan/09) per 2026-11-16 order unless lifted in a recorded decision; every other step agent.
-- Disposition: blocked: operator decision Q-23 (create the private repository and its address, approve the push, approve the public flip after P0 green and a clean needle scan, enable immutable releases before the first v* tag)
+- Disposition: plan: go recorded 2026-11-18 (hand-off); owned by GP-02 / GP-09, GP-12
 - Notes: Conflict resolved: gh being authenticated removes the sign-in, not the operator's go (order of 2026-11-16). The description says unofficial; no game art in the social preview. Plan default until the go: stay local, prepare everything; pre-push keeps refusing. A needle hit keeps the repository private until a rewrite on MAIN's ORDER via fleet_rewrite.py (Q-25).
 
 ### F-022 - Make overlapping test runs safe and pin the plugin set
