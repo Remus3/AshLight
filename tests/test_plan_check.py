@@ -472,3 +472,62 @@ def test_real_plan_passes(capsys):
     rc = plan_check.main(["check"])
     out = capsys.readouterr().out
     assert rc == 0, out
+
+
+def _shared(packages):
+    """{wave: {key: [ids]}} of every path (files + new_files) and every
+    serial group ('group:<name>') named by two or more packages of one wave.
+    Written without check_plan, as a second count of the same rule."""
+    seen = {}
+    for p in packages:
+        keys = list(p["files"]) + list(p["new_files"])
+        if p["serial_group"]:
+            keys.append("group:" + p["serial_group"])
+        for k in keys:
+            seen.setdefault(p["wave"], {}).setdefault(k, []).append(p["id"])
+    return {w: {k: ids for k, ids in ks.items() if len(ids) > 1}
+            for w, ks in seen.items()}
+
+
+def test_real_plan_open_waves_share_no_path_or_group():
+    """In every wave that runs (0 to 37) no file, new file or serial group
+    has two packages. The parked wave is a holding list and may share; what
+    it shares is listed in docs/plan/07 (Parked packages), so a release of
+    two such packages into one wave is seen before the validator refuses."""
+    if not plan_check.DEFAULT_FILE.exists():
+        pytest.skip("docs/plan/packages.json not written yet")
+    plan = json.loads(plan_check.DEFAULT_FILE.read_text(encoding="utf-8"))
+    shared = _shared(plan["packages"])
+    waves = {w["n"] for w in plan["waves"]}
+    assert {p["wave"] for p in plan["packages"]} <= waves
+    assert len(waves - {plan_check.PARKED_WAVE}) >= 2
+    open_clash = {w: ks for w, ks in shared.items()
+                  if w != plan_check.PARKED_WAVE and ks}
+    assert open_clash == {}
+    for hot in plan["hotspots"]:
+        editors = {}
+        for p in plan["packages"]:
+            if p["wave"] != plan_check.PARKED_WAVE and hot in p["files"]:
+                editors.setdefault(p["wave"], []).append(p["id"])
+        assert all(len(ids) == 1 for ids in editors.values()), (hot, editors)
+    doc = (ROOT / "docs" / "plan" / "07-execution-plan.md").read_text(
+        encoding="ascii")
+    start = doc.index("\nShared files inside the parked list.")
+    end = doc.index("\nUnblocked by operator", start)
+    listed = {}
+    for ln in " ".join(doc[start:end].split()).split(" - ")[1:]:
+        key, ids = ln.split(": ", 1)
+        key = key.replace("Serial group ", "group:")
+        listed[key] = sorted(i.strip(" .") for i in ids.split(","))
+    parked = {k: sorted(ids) for k, ids in
+              shared.get(plan_check.PARKED_WAVE, {}).items()}
+    assert listed == parked
+
+
+def test_shared_recount_sees_a_clash():
+    plan = base_plan()
+    assert not any(_shared(plan["packages"]).values())
+    find(plan, "C3")["files"] = list(find(plan, "B2")["files"])
+    find(plan, "C3")["serial_group"] = find(plan, "B2")["serial_group"] = "g1"
+    assert _shared(plan["packages"])[2] == {
+        "server/al/b2.py": ["B2", "C3"], "group:g1": ["B2", "C3"]}

@@ -5,7 +5,6 @@ SESSION: 6   (FLEET item 13 counter; /done writes n+1)
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
 WAVE POINTER: wave 0 done, next wave 1
-DEFERRED: PLAN-LANDING (wave 0): tests/test_plan_operator_acts.py is not written, so its accept line is not run and its row is not flipped; branch main
 
 Next action: start wave 1 of docs/plan/07-execution-plan.md (session 1 =
 waves 1 to 3, 42 session packages, about 6 h 47 min) and run it exactly as
@@ -28,18 +27,18 @@ dispatches; every command runs in a sub-agent, in the main checkout):
    copied from there: section 1 step 4 (open rows) with argument 1, step
    5 (session group) with argument 1, section 9 step 2 (parked packages),
    section 1 step 7 (checklist) with arguments 6 1, the deferred ids, the
-   open ids. Read back 2026-11-18 at f238d51: step 4 prints the 15 ids
+   open ids. Read back 2026-11-18 (at f238d51, and again once wave 0 was
+   closed: argument 0 prints "none open"): step 4 prints the 15 ids
    SEC-NO-DISCOVERY SEC-STATIC-MAP SEC-XML-NUL RUN-DURABLE-JSONFILE
    SEC-NO-PROXY LOOP-SPLIT-TICK LOOP-TESTS-CARVE PLAY-TD-02-SLOTS AUTO-03
    LOOP-LEDGERS LOOP-PREFLIGHT-CMD GP-01 GP-03 RUN-LIVE-CLICKS-STRIKE
-   DATA-GGG-APPLICATION; step 5 prints [1, 2, 3]; the one deferred id is
-   PLAN-LANDING (the DEFERRED line above). The main session prints the
-   returned checklist verbatim.
+   DATA-GGG-APPLICATION; step 5 prints [1, 2, 3]; there is no deferred id
+   (this file holds no DEFERRED line; wave 0 is closed, row PLAN-LANDING
+   is flipped). The main session prints the returned checklist verbatim.
 2. Dispatch wave 1 (08 section 2): one builder per open worktree package
    (11, all at once), the main-checkout acts as ONE serial chain in merge
-   order (the deferred PLAN-LANDING first, then GP-01, GP-03,
-   RUN-LIVE-CLICKS-STRIKE, DATA-GGG-APPLICATION) and one watcher (08
-   section 3). The wiring command of 08 section 2 prints "not wired"
+   order (GP-01, GP-03, RUN-LIVE-CLICKS-STRIKE, DATA-GGG-APPLICATION)
+   and one watcher (08 section 3). The wiring command of 08 section 2 prints "not wired"
    (read back 2026-11-18), so the builders are dispatched WITHOUT harness
    isolation and each makes its own sidecar worktree from the repository
    root:
@@ -226,10 +225,14 @@ Carried forward (not acted on yet):
 - NOTE (01 L18): three overlay asks compete for the capped HUD (S5 (a)
   zone-guide line, the UX-ZONE-NOTES overlay word, UTIL-OVERLAY-MAP); rows
   OVL-ZONE-CARD and OVL-LINE2-RULE wave 21, OVL-LINE2-GUIDE wave 22.
-- NOTE (PLAN-LANDING, wave 0): landed in session 6: docs/plan/08 and 09,
-  one ROADMAP row per package, this hand-off; open: its new test file
-  tests/test_plan_operator_acts.py, its accept line and its row flip. It
-  runs as the first main-checkout act of wave 1 (the DEFERRED line above).
+- NOTE (PLAN-LANDING, wave 0): closed in session 6: docs/plan/08 and 09,
+  one ROADMAP row per package, this hand-off, and its test file
+  tests/test_plan_operator_acts.py (added after the plan verification).
+  Read back 2026-11-18: every part of its accept line holds (the wave 0
+  gate of docs/plan/07: the five named test files green, plan_check ok,
+  396 of 396 row ids in ROADMAP.md exactly once, the pointer line 1, the
+  stale Next-action line 0, the three operator record lines 3) and row
+  PLAN-LANDING is flipped. Nothing of wave 0 is carried into wave 1.
 - NOTE (RUN-LIVE-CLICKS-STRIKE, wave 1): its accept line greps ROADMAP.md
   and this file for two words and wants 0 lines in both. Read back
   2026-11-18: this file 0 lines, ROADMAP.md 2 lines, both inside the
@@ -253,7 +256,7 @@ Carried forward (not acted on yet):
 Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078),
 docs/plan/07-execution-plan.md, docs/plan/08-orchestration.md,
 docs/plan/09-operator-acts.md, docs/plan/packages.json (the plan of
-record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (395 open
+record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (394 open
 rows read back 2026-11-18: one per open package, each session row tagged
 BLOCKED: session wave <n>, plus the old rows UTIL-1.0-POST and TC-CURX;
 OPERATOR GitHub remote is closed as OPERATOR-REMOTE [x]),
@@ -296,7 +299,8 @@ Do NOT redo (session 6, the Fable ultraplan, all on main):
   ledger); the guarded pre-push hook, tools/push_guard.py and the
   CLAUDE.md Public-repo hygiene section (rows GP-02, PUB-GO-DECISION,
   PUB-LOCAL-ONLY-TEXT, commits 7fe4993 and 01c2216); one ROADMAP row per
-  package (commit 9ce8275); tools/plan_check.py.
+  package (commit 9ce8275); tools/plan_check.py; wave 0 (row PLAN-LANDING,
+  tests/test_plan_operator_acts.py).
 Shipped session 5, all merged to main: UI-GLANCE tabs (Play / Run and
 history / Build / Items and prices / Settings, no page scroll);
 DESKTOP-CLIENT (decision 0041: Electron --client window, tray, X closes to
@@ -318,7 +322,11 @@ id is in ROADMAP.md exactly once; python tools/leak_sweep.py --tree exits
 0 (ARMED needles=24); gh auth status exits 0. The whole suite and npm test
 were not run by this rewrite (documents only); /done step 1 runs them
 fresh. The last whole-suite figures this file held (session-5 /done):
-pytest 2316 passed / 3 skipped, npm 230/230. Inbox: 1 note (MAIN
+pytest 2316 passed / 3 skipped, npm 230/230. After this rewrite, same day:
+the plan verification closed wave 0 (tests/test_plan_operator_acts.py, row
+PLAN-LANDING flipped, the DEFERRED line dropped; before that commit the
+whole suite through the gate read 2404 passed / 3 skipped and npm test
+230/230). Inbox: 1 note (MAIN
 INFORMATION / TERMINAL, kit v32 join), classify -> skip terminal, no
 reply; the folder holds no other note.
 

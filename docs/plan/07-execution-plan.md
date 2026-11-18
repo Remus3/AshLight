@@ -19,9 +19,11 @@ full detail.
   docs/plan/packages.json; `python tools/plan_check.py wave <n>` prints a
   wave's packages in merge order.
 - Wave: a set of packages that may run at the same time. Every dependency
-  sits in a strictly earlier wave; inside a wave no two packages share a
-  file, a new file or a serial group. A wave ends with main green and its
-  rows flipped.
+  sits in a strictly earlier wave; inside a wave that runs (waves 0 to 37)
+  no two packages share a file, a new file or a serial group. The parked
+  wave 99 is a holding list, not a wave that runs, and is the one exemption
+  (bullet Wave 99 below, and section Parked packages). A wave ends with
+  main green and its rows flipped.
 - Session: consecutive waves one operator `continue` runs hands-off. The
   grouping is a forecast; a session that stops early resumes at the first
   unmerged package of the open wave.
@@ -35,7 +37,13 @@ full detail.
   from the hand-off it writes.
 - Wave 99: parked packages, each with its unblock condition. Once the
   condition reads true the package joins the next open wave; re-run the
-  validator after the move.
+  validator after the move. Parked packages may name the same file or
+  serial group (10 files and 6 groups today; section Parked packages lists
+  them): nothing in the list runs. The shared-file rule binds a package
+  from the wave it joins, so two parked packages that share a file or a
+  group never join the same wave, and a parked package never joins a wave
+  that already has an editor of one of its files; the validator refuses
+  either plan.
 - Integrator: the one writer of ROADMAP.md, CLAUDE.md, AL-NEXT-SESSION.txt,
   the three README indexes and docs/design/reviews.log. A package returns
   its row flip, Settled bullet, index line and review line in its result
@@ -2358,6 +2366,41 @@ package in waves 1 to 37 depends on a parked one. Each line: id, what it
 waits on, who unblocks, the exact condition, and the earliest wave it can
 join (one after its last unparked dependency).
 
+Shared files inside the parked list. The rule 'one editor of a file per
+wave' is checked for waves 0 to 37 only (`python tools/plan_check.py check`;
+recomputed without the validator by
+tests/test_plan_check.py::test_real_plan_open_waves_share_no_path_or_group).
+The parked list is exempt because nothing in it runs; read back 2026-11-18,
+these files and serial groups are named by more than one parked package.
+The 'joins wave' figure of a package is its earliest wave by dependencies
+only: when two packages of one line below are released together they go to
+different waves, a dependency before its dependant, each to the first wave
+that has no other editor of its files; docs/plan/08 section 9 step 3 is the
+move and its check. The same test fails when a line here falls out of step
+with packages.json.
+
+- README.md: GP-10, REL-RC-LIVE, OVL-ITEM-KEY-CTRL,
+  PUB-GUIDE-DOWNLOAD-PLACE.
+- server/al/core.py: TC-IMPORT, DATA-LOOT-TALLY, SEC-STEAM-SCAN-A03,
+  AUTO-24, DATA-CONTACT-DEFAULT.
+- server/al/state.py: DATA-LOOT-TALLY, TC-WAYSTONE-TUNE.
+- web/index.html: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI,
+  DATA-CONTACT-DEFAULT.
+- web/tc.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-TREE-URL.
+- web/app.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI.
+- app/test/tc_view.test.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
+  TC-TREE-URL.
+- server/al/diag.py: SEC-STEAM-SCAN-A03, AUTO-24.
+- app/main.js: OVL-ITEM-KEY-CTRL, PUB-GUIDE-DOWNLOAD-PLACE.
+- tests/test_zone_guide.py: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
+- Serial group readme: GP-10, PUB-GUIDE-DOWNLOAD-PLACE.
+- Serial group item-press: TC-IMPORT, TC-WAYSTONE-TUNE.
+- Serial group data-core: DATA-LOOT-TALLY, DATA-CONTACT-DEFAULT.
+- Serial group web-tc: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
+  TC-IMPORT-UI, TC-TREE-URL.
+- Serial group ninja: DATA-NINJA-RELEASE-ON, DATA-PRICE-TYPE-PROOF.
+- Serial group guide-data: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
+
 Unblocked by operator (21):
 
 - DATA-LOOT-TALLY: waits on a real stackable item text sample confirming the
@@ -3341,3 +3384,35 @@ What the close-out moved:
   LE-96 (the Workflow equivalent of the kill at 3x). These items stay as the
   plan words them; each needs its ruling before the package or section it
   names runs.
+
+## Verification follow-up (2026-11-18)
+
+Two claims about this plan were checked again by independent verifiers
+after the landing; what was found and what was changed:
+
+- "Inside every wave no two packages share a file": true for waves 0 to 37
+  (0 shared files, new files or serial groups; server/al/state.py,
+  web/app.js, server/al/core.py, server/al/http.py, web/index.html and
+  web/app.css have one editor a wave), not true for the parked wave 99,
+  which the validator exempts on purpose (10 shared files, 6 shared serial
+  groups). Changed: the Wave and Wave 99 bullets of 'How to read this plan'
+  now say so in the rule itself, section Parked packages lists every shared
+  file and group with what a joint release must do, and
+  tests/test_plan_check.py recounts the rule without the validator
+  (test_real_plan_open_waves_share_no_path_or_group; it also fails when the
+  list in Parked packages and packages.json disagree). No package moved;
+  the validator is unchanged.
+- "Every wave has its gate, and wave 0 is done": every wave 0 to 37 has a
+  Gate line, but the wave 0 gate named tests/test_plan_operator_acts.py,
+  which was not written, so the gate could not run and row PLAN-LANDING was
+  open while the hand-off pointer read 'wave 0 done' beside a DEFERRED
+  line. Changed: the test file is written as PLAN-LANDING's tests field
+  words it (it found no gap in docs/plan/09, which is unchanged); the whole
+  accept line of PLAN-LANDING was read back (the five test files green,
+  plan_check ok, both files tracked, the 08 grep 3, 396 of 396 row ids in
+  ROADMAP.md exactly once, pointer line 1, stale Next-action line 0,
+  operator record lines 3); the row is flipped and the hand-off's DEFERRED
+  line is dropped. The open-row command of docs/plan/08 section 1 step 4
+  prints 'none open' for wave 0 and the 15 ids of wave 1. The Open point
+  above on the three hand-off lines is thereby closed: they are in the
+  hand-off and read back.

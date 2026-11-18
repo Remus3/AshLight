@@ -2012,7 +2012,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 0: plan landing
 
-- [ ] PLAN-LANDING (build) Land the plan: orchestration and operator-acts sections, ROADMAP rows,
+- [x] PLAN-LANDING (build) Land the plan: orchestration and operator-acts sections, ROADMAP rows, -- done 2026-11-18 (session 6, wave 0: landed at 9ce8275 + 2121b63, its test file tests/test_plan_operator_acts.py added after the plan verification; read back: the ACCEPT pytest set green, plan_check ok, 396 of 396 row ids in ROADMAP.md exactly once, pointer line 1, stale Next-action line 0, operator record lines 3)
   hand-off. ACCEPT: `python -m pytest -q tests/test_plan_operator_acts.py tests/test_plan_check.py
   tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py` passes, `python
   tools/plan_check.py check` prints ok, `git ls-files docs/plan/08-orchestration.md
