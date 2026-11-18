@@ -2,13 +2,20 @@ AL NEXT SESSION
 ---------------
 SESSION: 6   (FLEET item 13 counter; /done writes n+1)
 
+Fable ultraplan: done = plan index (docs/plan/README.md); next = research
+notes 0035-0058, then plan sections 01-09, in the order of the work list in
+docs/plan/README.md. A listed file is done when it is at HEAD
+with Status: verified / final; resume with the first one that is not.
+
 Next action: operator-led planning session (operator supplies the brief);
 afterwards execute the resulting plan's wave 1.
 
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
-apply act in the batched operator ask. Reap the session-5 agent worktrees
-(fleet_done.py reap --apply) once the session-5 main process is gone.
+apply act in the batched operator ask. Session-5 agent worktree reap: DONE
+in session 6 (2026-11-17, fleet_done.py reap --apply); read back: git
+worktree list shows main plus lane-0 / lane-1 / lane-2 only, git branch
+shows main only, .claude/worktrees is empty.
 
 Carried forward (not acted on yet):
 - MERGE-SEAMS-FOLLOWUP (open ROADMAP row): Play tab fit with both slots
@@ -75,11 +82,12 @@ Carried forward (not acted on yet):
   2026-11-17); scheduled task \AshLightOps\LaneLoop is still enabled. To
   resume: delete HALT (tools/loop_task.py status reads the task back).
   GGG-DOCS-WATCH runs before the HALT check, so it keeps running.
-- NOTE: reap applied at this /done: 0 removed, 43 kept: 40 agent worktrees
-  under .claude/worktrees (owner pid of the session-5 main process alive
-  at /done; all 7 session-5 feature branches are merged into main - reap
-  again next session) and lane-0 / lane-1 / lane-2 (fleet_lanes lane
-  worktrees under the sidecar), 0 listed (base main).
+- NOTE: reap applied at the session-5 /done: 0 removed, 43 kept: 40 agent
+  worktrees under .claude/worktrees (owner pid of the session-5 main
+  process alive at /done; all 7 session-5 feature branches are merged into
+  main; reaped in session 6, see Session start checks) and lane-0 / lane-1
+  / lane-2 (fleet_lanes lane worktrees under the sidecar), 0 listed (base
+  main).
 - NOTE: a live lane writing ops/loop/control/loop_items/*.json mid-suite
   can trip fleet_test_guard (false error at a random teardown); re-run the
   suite when it happens.
