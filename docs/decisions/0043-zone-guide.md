@@ -14,9 +14,9 @@ character data; world_areas connections / waypoint fields) and research
    publishes `zone_guide` in the snapshot (server/al/zoneguide.py); the
    dashboard fills `#zone-guide` (web/zoneguide.js; through
    `ALTabs.fill(document, "zone-guide", node)` when the Play tab provides
-   that slot). Zone, goal, first bonus, level lean, waypoint and next zone
-   always show; the rest folds under "More for this zone" so the Play tab
-   stays short. Zero clicks.
+   that slot). Zone, goal, first bonus, level lean and next zone
+   always show; the rest (the waypoint row too, since the merge design
+   review) folds under "More for this zone" so the Play tab stays short. Zero clicks.
 2. Guide content lives in the tracked file
    `server/al/data/zone_guide.json`, keyed by act key and the zone name the
    `[SCENE]` line gives (the same keys as zone_notes.json): objective,

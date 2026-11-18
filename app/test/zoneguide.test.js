@@ -25,8 +25,8 @@ test("zone guide: short rows first, the rest folded, empty fields left out", () 
     "Goal: Find the way on.",
     "Bonus: Rare boss: resist.",
     "You are 3 levels under this zone.",
-    "Waypoint in this zone.",
     "Next zone: The Grelwood",
+    "+ Waypoint in this zone.",
     "+ Bonus: X.",
     "+ Layout: Cave by the waypoint.",
     "+ Act 1 main path: 1 of 2 zones passed.",
@@ -64,10 +64,10 @@ test("zone guide: paints the #zone-guide slot, folding the extra rows", () => {
   zg.paint(doc, { zone_guide: GUIDE });
   const body = doc.slot.children[0];
   assert.equal(doc.slot.hidden, false);
-  assert.equal(body.children.filter((c) => c.tag === "p").length, 6);
+  assert.equal(body.children.filter((c) => c.tag === "p").length, 5);
   const fold = body.children.find((c) => c.tag === "details");
   assert.equal(fold.children[0].textContent, zg.MORE);
-  assert.equal(fold.children.length, 7);
+  assert.equal(fold.children.length, 8);
   zg.paint(doc, { zone_guide: null });
   assert.equal(doc.slot.hidden, true);
 });

@@ -23,9 +23,10 @@
   function str(v) { return typeof v === "string" ? v : ""; }
 
   /* The rows to show, as [{cls, label, text, more}] in order; [] for none.
-     The first rows (zone, goal, first bonus, level lean, waypoint, next
-     zone) always show; rows with more: true fold under "More for this
-     zone" so the guide stays short on the Play tab. */
+     The first rows (zone, goal, first bonus, level lean, next zone)
+     always show; rows with more: true (the waypoint row since the merge
+     design review, F1) fold under "More for this zone" so the guide
+     stays short on the Play tab. */
   function rows(g) {
     if (!g || typeof g !== "object" || !str(g.zone)) { return []; }
     var out = [];
@@ -45,9 +46,10 @@
     if (g.advice && str(g.advice.text)) {
       add("zg-advice zg-" + str(g.advice.mode), "", g.advice.text);
     }
-    add("zg-waypoint", "", g.waypoint);
     add("zg-next", "Next zone: ", g.next);
     more = true;
+    // merge review F1: the waypoint row folds so Play keeps one screen
+    add("zg-waypoint", "", g.waypoint);
     bonus.slice(1).forEach(addBonus);
     add("zg-layout", "Layout: ", g.layout);
     var q = g.quest;

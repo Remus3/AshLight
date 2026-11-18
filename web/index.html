@@ -156,7 +156,7 @@
   <!-- UI-GLANCE: build alert slot, empty and hidden until filled with
        ALTabs.fill(document, "build-alert", node); a new alert shows Play.
        Not a live region (the dashboard keeps at most 12, design N6). -->
-  <div id="build-alert" class="card build-alert" hidden></div>
+  <div id="build-alert" class="card build-alert" role="group" aria-labelledby="build-alert-title" hidden></div>
 
   <!-- NEWBIE-HINTS (ruling L): a new character's one-time tip, shown and
        hidden by itself (10 minutes). Not a live region (polite regions are

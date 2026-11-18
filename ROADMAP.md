@@ -2034,6 +2034,17 @@ merge. Each row names the finding ids it closes.
   tests/test_zone_guide.py, app/test/zoneguide.test.js. Overlay line
   waits for an overlay slot (view carries `line`).
 
+- [ ] MERGE-SEAMS-FOLLOWUP (build) Open items from the 2026-11-17 merge
+  design review (docs/design/reviews.log MERGE-SEAMS): F1 measure the Play
+  tab at 1280x760 and 1920x950 with a zone guide, a build alert and 2
+  trades, record the figures in design 0001 section 4 (waypoint row
+  already folded); F2 live regions are 12 of 12, update the N6 text and
+  free a slot (make #link a plain pill); F4 give each .col a labelled
+  group with tabindex 0 and drop tabindex from #panel-play; F5 clear
+  #restart-overlay-said on the next state push and list it as a silent
+  N6 exemption; F7 rename the shared hint-reset class to tool-row.
+  ZERO-CLICK: layout and copy only; nothing new for the player to do.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).

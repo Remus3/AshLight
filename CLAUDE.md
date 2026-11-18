@@ -587,8 +587,9 @@ them. Pause: `ops/loop/control/HALT`.
   sources, nothing copied, unsure facts left out), waypoints from the
   snapshot graph, quest tracker from entered zones per character (never
   claims a reward was taken), visits file under the run-history switch,
-  guide file hot reloaded via hotreload.register (decisions 0043, 0042). Reverses if: a licence objection,
-  verified PoE2 quest log lines, or the operator rules the file unwanted.
+  guide file hot reloaded via hotreload.register (decisions 0043, 0042).
+  Reverses if: a licence objection, verified PoE2 quest log lines, or the
+  operator rules the file unwanted.
 - BUILD-LIVE: one build per decision 0038 character, swapped by the loop
   tick and hot-reloaded on mtime; stale-build alert; checked items kept in
   memory only and re-scored on build / weight change into upgrade notices;
