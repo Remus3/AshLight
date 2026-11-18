@@ -1,0 +1,13 @@
+/* DESKTOP-CLIENT: the companion window's local page while the core starts
+   (no core yet, so no /tokens.css; light / dark follow the system). */
+:root { color-scheme: light dark; --bg: #f6f6f4; --fg: #1d1f23; --muted: #4f5560; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16181d; --fg: #e8e8e6; --muted: #a9adb5; }
+}
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+body { font: 16px/1.5 "Segoe UI", system-ui, sans-serif; display: flex;
+       align-items: center; justify-content: center; }
+main { max-width: 34rem; padding: 0 16px; }
+h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+p { margin: 0 0 0.75rem; }
+.about { margin-top: 2rem; font-size: 0.875rem; color: var(--muted); }

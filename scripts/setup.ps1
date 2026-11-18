@@ -15,11 +15,20 @@
   tools/tc_pin.py fetches the hash-pinned archives (config/tc_pins.json)
   into the sidecar Cache / Build dirs, verifies SHA-256, refuses on a
   mismatch (setup fails) and is a no-op on a re-run.
+
+  DESKTOP-CLIENT (decision 0041): with the overlay packages installed, a
+  per-user "AshLight" shortcut goes to the Start Menu and the desktop
+  (no admin). It starts the pinned Electron with the app and --client (the
+  companion window, tray and overlay; the client starts the core itself).
+  Its icon is AshLight's own, drawn by app\client\icon.js into the sidecar
+  Build dir (no game art). A re-run changes nothing when both are current;
+  -NoShortcut skips the step.
 #>
 [CmdletBinding()]
 param(
     [switch]$Force,
-    [switch]$TcCalc
+    [switch]$TcCalc,
+    [switch]$NoShortcut
 )
 
 $ErrorActionPreference = 'Stop'
@@ -148,8 +157,61 @@ $upToDate = $false
 if ((Test-Path $modules) -and (Test-Path $stamp) -and (Test-Path $electronExe)) {
     $upToDate = ((Get-Content -Path $stamp -Raw).Trim() -eq $hash)
 }
+# DESKTOP-CLIENT (decision 0041): the per-user Start Menu and desktop
+# shortcuts. Idempotent: a shortcut is rewritten only when its target,
+# arguments, folder or icon differ.
+function Set-AlShortcut([string]$LinkPath, [string]$Target, [string]$Arguments,
+                        [string]$WorkDir, [string]$Icon) {
+    $shell = New-Object -ComObject WScript.Shell
+    $want = $Icon + ',0'
+    if (Test-Path -LiteralPath $LinkPath) {
+        $old = $shell.CreateShortcut($LinkPath)
+        if ($old.TargetPath -eq $Target -and $old.Arguments -eq $Arguments -and
+            $old.WorkingDirectory -eq $WorkDir -and $old.IconLocation -eq $want) {
+            return $false
+        }
+    }
+    $lnk = $shell.CreateShortcut($LinkPath)
+    $lnk.TargetPath = $Target
+    $lnk.Arguments = $Arguments
+    $lnk.WorkingDirectory = $WorkDir
+    $lnk.IconLocation = $want
+    $lnk.Description = 'AshLight: a companion app for Path of Exile 2'
+    $lnk.WindowStyle = 1
+    $lnk.Save()
+    return $true
+}
+
+function Install-AlShortcuts {
+    if ($NoShortcut) {
+        Write-AlLog 'setup: shortcuts skipped (-NoShortcut)'
+        return
+    }
+    if (-not (Test-Path $electronExe)) {
+        Write-AlLog 'setup: shortcuts skipped (the client is not installed)'
+        return
+    }
+    $icon = Join-Path $paths.build 'ashlight.ico'
+    $iconState = (& $node.Source (Join-Path $app 'client\icon.js') $icon)
+    if ($LASTEXITCODE -ne 0) { throw 'setup: the AshLight icon was not written' }
+    $linkArgs = '"' + $app + '" --client'
+    $made = @()
+    foreach ($folder in @([Environment]::GetFolderPath('Programs'),
+                          [Environment]::GetFolderPath('Desktop'))) {
+        if (-not $folder) { continue }
+        $link = Join-Path $folder 'AshLight.lnk'
+        if (Set-AlShortcut $link $electronExe $linkArgs $app $icon) { $made += $link }
+    }
+    if ($made.Count -gt 0) {
+        Write-AlLog ("setup: AshLight shortcut written (" + $made.Count + "; icon " + $iconState + ")")
+    } else {
+        Write-AlLog 'setup: AshLight shortcuts up to date (no-op)'
+    }
+}
+
 if ($upToDate -and -not $Force) {
     Write-AlLog 'setup: app/node_modules up to date (no-op)'
+    Install-AlShortcuts
     exit 0
 }
 
@@ -183,4 +245,5 @@ try {
 if (Test-Path $lock) { $hash = (Get-FileHash -Path $lock -Algorithm SHA256).Hash }
 Set-Content -Path $stamp -Value $hash -Encoding ASCII
 Write-AlLog 'setup: app/node_modules installed'
+Install-AlShortcuts
 exit 0

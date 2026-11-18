@@ -1672,6 +1672,10 @@ class SessionState:
                                    for r in self.trade_requests],
                 "overlay_layout": dict(self.overlay_layout) if self.overlay_layout else None,
                 "tailer": dict(self.tailer),
+                # decision 0029 amendment (DESKTOP-CLIENT): the 0029 idle
+                # "game may be closed" state as one boolean; the overlay
+                # hides while it is true
+                "game_idle": bool(self.tailer.get("consented") and self.tailer.get("idle")),
                 "eval": (dict(self.eval, text=eval_card_text(self.eval),
                               expires_at=self.eval["at"] + EVAL_CARD_S)
                          if self.eval else None),

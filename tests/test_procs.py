@@ -169,7 +169,8 @@ def test_status_reports_the_recorded_main_overlay_pid(tmp_path, monkeypatch):
 
 def test_run_script_no_op_line_prints_the_status_pid():
     text = RUN.read_text(encoding="ascii")
-    assert "overlay already running (pid $($plan.status.overlay.pid)" in text
+    # DESKTOP-CLIENT (decision 0041): the "overlay" component is the client
+    assert "client already running (pid $($plan.status.overlay.pid)" in text
 
 
 # -- end to end on a tmp runtime ---------------------------------------------

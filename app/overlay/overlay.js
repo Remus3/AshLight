@@ -56,10 +56,22 @@
     if (ms !== null) { timer = setTimeout(paint, ms); }
   }
 
+  /* Decision 0029 amendment: tell main whether the overlay may show (it
+     hides the window while the game may be closed). Sent on change only. */
+  var reported = null;
+  function reportGate() {
+    var want = S.overlayWanted(snap, status);
+    if (want !== reported && typeof cfg.reportGate === "function") {
+      reported = want;
+      cfg.reportGate(want);
+    }
+  }
+
   function connect() {
     if (!cfg.token || !cfg.port) {
       status = "offline";
       paint();
+      reportGate();
       return; // main reloads this page when the core writes a token
     }
     var es = new EventSource("http://127.0.0.1:" + cfg.port + "/events?token=" +
@@ -69,13 +81,14 @@
       status = "live";
       paint();
     });
-    es.addEventListener("error", function () { status = "offline"; paint(); });
+    es.addEventListener("error", function () { status = "offline"; paint(); reportGate(); });
     es.addEventListener("state", function (m) {
       try {
         snap = JSON.parse(m.data);
         offset = Date.now() / 1000 - snap.now;
         status = "live";
         paint();
+        reportGate();
       } catch (e) { /* ignore a bad frame */ }
     });
   }
