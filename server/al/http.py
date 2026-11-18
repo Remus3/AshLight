@@ -229,7 +229,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/tokens.css":
             return self._file(self.server.tokens_css)
         if path == "/favicon.ico":
-            return self._send(204)
+            # BRAND-ICON: the local icon file (web/favicon.ico), no network.
+            return self._static("favicon.ico")
         if path == "/api/health":
             return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
                                     "port": self.server.port,

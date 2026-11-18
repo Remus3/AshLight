@@ -11,7 +11,8 @@
 param(
     [switch]$Force,
     [switch]$Snapshot,
-    [switch]$NoSnapshot
+    [switch]$NoSnapshot,
+    [switch]$Icons
 )
 
 $ErrorActionPreference = 'Stop'
@@ -95,6 +96,24 @@ if ($NoSnapshot -or ($env:AL_NO_SNAPSHOT -and $env:AL_NO_SNAPSHOT -ne '0')) {
         Pop-Location
     }
 }
+
+# BRAND-ICON (docs/design/0005-brand-mark.md): the icon set and README
+# hero are tracked renders of assets/brand/*.svg. Every build checks them
+# (no Electron needed); -Icons re-renders with the pinned Electron, and
+# tools/make_icons.py rewrites only files whose bytes changed.
+$iconLog = Join-Path $paths.logs 'build-icons.log'
+$iconMode = 'check'
+if ($Icons) { $iconMode = 'render' }
+Push-Location $Repo
+try {
+    $iconRc = Invoke-AlLogged $iconLog $py @('tools\make_icons.py', $iconMode)
+} finally {
+    Pop-Location
+}
+if ($iconRc -ne 0) {
+    throw "build: brand icons $iconMode failed (log $iconLog; -Icons re-renders)"
+}
+Write-AlLog "build: brand icons $iconMode ok"
 
 # Source fingerprint: every authored file the build depends on.
 function Get-AlSourceHash {

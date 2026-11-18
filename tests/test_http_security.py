@@ -166,3 +166,12 @@ def test_sse_stream_sends_state_then_events(srv):
     while b"event: events" not in buf:
         buf += s.recv(65536)
     s.close()
+
+
+def test_favicon_is_the_local_brand_icon(srv):
+    # BRAND-ICON: /favicon.ico and /web/favicon.svg are served from web/.
+    r, body = req(srv, "GET", "/favicon.ico")
+    assert r.status == 200 and r.getheader("Content-Type") == "image/x-icon"
+    assert body == (ROOT / "web" / "favicon.ico").read_bytes()
+    r, body = req(srv, "GET", "/web/favicon.svg")
+    assert r.status == 200 and r.getheader("Content-Type") == "image/svg+xml"

@@ -81,9 +81,10 @@ overlay gate amendment to decision 0029 was adjudicated separately.
    skips), target the pinned `app\node_modules\electron\dist\electron.exe`
    with `"<repo>\app" --client`. It is rewritten only when target,
    arguments, folder or icon differ (a re-run is a no-op). The icon is
-   AshLight's own, drawn in code (`app/client/icon.js`, a warm dot on a
-   dark rounded square; no GGG art, logo or trademark) into the sidecar
-   `Build\ashlight.ico`; no binary file is tracked.
+   AshLight's own brand mark (no GGG art, logo or trademark): the tracked
+   `app\assets\icon.ico` and the tray PNGs from `app/brand/index.js`
+   (BRAND-ICON, docs/design/0005-brand-mark.md; at merge 2026-11-17 this
+   replaced the first code-drawn `app/client/icon.js`).
 9. No packaged .exe for now. `electron-builder` / `@electron/packager`
    would add a large exact-pinned devDependency tree whose build step
    downloads further binaries (NSIS, winCodeSign, rcedit) at build time, so

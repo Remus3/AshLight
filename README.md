@@ -1,8 +1,11 @@
 # AshLight
 
-A live, glanceable second-screen dashboard and quiet overlay for your play session.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/readme-hero-dark.png">
+  <img src="assets/brand/readme-hero-light.png" width="1280" alt="AshLight: a live, glanceable companion for Path of Exile 2">
+</picture>
 
-A companion app for Path of Exile 2.
+A second-screen dashboard and quiet overlay for your Path of Exile 2 session.
 
 AshLight follows the game's own log file (`Client.txt`) and shows the few things
 worth a glance: the zone you are in and how long you have been there, your

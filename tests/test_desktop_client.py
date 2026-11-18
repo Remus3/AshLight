@@ -120,7 +120,7 @@ def test_setup_writes_per_user_shortcuts_only():
     text = (ROOT / "scripts" / "setup.ps1").read_text(encoding="ascii")
     assert "GetFolderPath('Programs')" in text and "GetFolderPath('Desktop')" in text
     assert "CommonPrograms" not in text and "CommonDesktop" not in text
-    assert "client\\icon.js" in text and "[switch]$NoShortcut" in text
+    assert "assets\\icon.ico" in text and "client\\icon.js" not in text and "[switch]$NoShortcut" in text
     assert text.count("Install-AlShortcuts\n") == 2  # both exits of the npm step
 
 

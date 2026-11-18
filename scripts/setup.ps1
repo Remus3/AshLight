@@ -20,8 +20,9 @@
   per-user "AshLight" shortcut goes to the Start Menu and the desktop
   (no admin). It starts the pinned Electron with the app and --client (the
   companion window, tray and overlay; the client starts the core itself).
-  Its icon is AshLight's own, drawn by app\client\icon.js into the sidecar
-  Build dir (no game art). A re-run changes nothing when both are current;
+  Its icon is AshLight's own tracked app\assets\icon.ico (BRAND-ICON,
+  docs/design/0005-brand-mark.md; no game art). A re-run changes nothing
+  when both are current;
   -NoShortcut skips the step.
 #>
 [CmdletBinding()]
@@ -191,9 +192,9 @@ function Install-AlShortcuts {
         Write-AlLog 'setup: shortcuts skipped (the client is not installed)'
         return
     }
-    $icon = Join-Path $paths.build 'ashlight.ico'
-    $iconState = (& $node.Source (Join-Path $app 'client\icon.js') $icon)
-    if ($LASTEXITCODE -ne 0) { throw 'setup: the AshLight icon was not written' }
+    $icon = Join-Path $app 'assets\icon.ico'
+    if (-not (Test-Path $icon)) { throw 'setup: app\assets\icon.ico is missing' }
+    $iconState = 'app\assets\icon.ico'
     $linkArgs = '"' + $app + '" --client'
     $made = @()
     foreach ($folder in @([Environment]::GetFolderPath('Programs'),

@@ -1603,7 +1603,7 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   core through scripts\run.ps1 when it is not answering; links leave for
   the default browser (http(s) only); the token rides the URL fragment of
   a window with no URL bar. setup.ps1 writes per-user Start Menu and
-  desktop shortcuts with AshLight's own code-drawn icon. No packaged .exe
+  desktop shortcuts with AshLight's brand icon (BRAND-ICON). No packaged .exe
   (decision 0041 point 9). The overlay hides while the game may be closed
   (decision 0029 amendment 2026-11-17, snapshot game_idle). DONE
   2026-11-17: node + pytest green, live checks against test cores on
@@ -1612,6 +1612,14 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   everything; the core, supervisor and overlay start by themselves, a
   second click only brings the window forward, and the overlay shows and
   hides with the log by itself.
+- [x] BRAND-ICON (build) A distinctive app icon (shortcut, window, tray),
+  dashboard favicon and README hero, drawn from own SVG sources (design
+  note docs/design/0005-brand-mark.md). ACCEPT: ICO 16-256, PNGs at size,
+  hero light and dark, check mode clean, design-reviewer run. ZERO-CLICK:
+  every build checks the set by itself; `scripts/build.ps1 -Icons` (or
+  `python tools/make_icons.py`) re-renders and rewrites only changed
+  files. DONE 2026-11-17 on a worktree branch; the desktop-client branch
+  switches its code-drawn icon to app/brand/index.js at merge.
 
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a

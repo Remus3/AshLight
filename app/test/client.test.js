@@ -1,6 +1,6 @@
 "use strict";
 /* DESKTOP-CLIENT (decision 0041): the companion window's rules
-   (app/client/link.js), its generated icon (app/client/icon.js), its
+   (app/client/link.js), its brand icon (app/brand/index.js), its
    launcher (app/client/launcher.js, run with fakes) and the window's
    security wiring (app/client/window.js, read as text). */
 const test = require("node:test");
@@ -8,9 +8,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
-const zlib = require("node:zlib");
 const Link = require("../client/link.js");
-const Icon = require("../client/icon.js");
 const Launcher = require("../client/launcher.js");
 
 const TOKEN = "ab".repeat(24);
@@ -124,41 +122,9 @@ test("health check sends the token header and reads 200 as up", async () => {
   assert.equal(await Link.makeHealthCheck(http, port, () => TOKEN)(), false); // closed
 });
 
-function decodePng(buf) {
-  assert.deepEqual([...buf.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  let o = 8;
-  const out = {};
-  const idat = [];
-  while (o < buf.length) {
-    const len = buf.readUInt32BE(o);
-    const type = buf.toString("ascii", o + 4, o + 8);
-    const data = buf.subarray(o + 8, o + 8 + len);
-    assert.equal(buf.readUInt32BE(o + 8 + len), Icon.crc32(buf.subarray(o + 4, o + 8 + len)), type);
-    if (type === "IHDR") { out.w = data.readUInt32BE(0); out.h = data.readUInt32BE(4); }
-    if (type === "IDAT") { idat.push(data); }
-    o += 12 + len;
-  }
-  out.raw = zlib.inflateSync(Buffer.concat(idat));
-  return out;
-}
-
-test("the icon is a valid PNG / ICO of AshLight's own drawing", () => {
-  assert.equal(Icon.crc32(Buffer.from("123456789")), 0xcbf43926);
-  const p = decodePng(Icon.png(32));
-  assert.equal(p.w, 32);
-  assert.equal(p.raw.length, 32 * (32 * 4 + 1));
-  const px = Icon.rgba(32);
-  assert.equal(px[3], 0); // transparent rounded corner
-  const mid = (16 * 32 + 16) * 4;
-  assert.equal(px[mid + 3], 255);
-  assert.ok(px[mid] > 200 && px[mid + 2] < 160, "warm ember centre");
-  const ico = Icon.ico([16, 256]);
-  assert.equal(ico.readUInt16LE(2), 1);
-  assert.equal(ico.readUInt16LE(4), 2);
-  assert.equal(ico[6 + 16], 0); // 256 is written as 0
-  const off = ico.readUInt32LE(6 + 16 + 12);
-  assert.equal(decodePng(ico.subarray(off)).w, 256);
-  assert.deepEqual(Icon.ico(), Icon.ico()); // deterministic: setup re-runs are no-ops
+test("the window and tray use the brand icon files", () => {
+  assert.match(WIN_SRC, /require\("\.\.\/brand\/index\.js"\)/);
+  assert.match(WIN_SRC, /return Brand\.trayImage\(nativeImage\);/);
 });
 
 test("launcher runs the repo's own scripts, hidden, never detached", () => {

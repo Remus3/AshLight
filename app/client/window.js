@@ -22,7 +22,7 @@
 const fs = require("fs");
 const path = require("path");
 const Link = require("./link.js");
-const Icon = require("./icon.js");
+const Brand = require("../brand/index.js"); // BRAND-ICON (design 0005)
 const Launcher = require("./launcher.js");
 const TrayMenu = require("./tray_menu.js");
 
@@ -51,10 +51,7 @@ function createClient(opts) {
   let closedNoteShown = false;
 
   function iconImage() {
-    const img = nativeImage.createEmpty();
-    img.addRepresentation({ scaleFactor: 1, buffer: Icon.png(16) });
-    img.addRepresentation({ scaleFactor: 2, buffer: Icon.png(32) });
-    return img;
+    return Brand.trayImage(nativeImage);
   }
 
   function clientSession() {
