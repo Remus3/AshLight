@@ -2,11 +2,13 @@
 
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md); machine-readable source: docs/plan/findings.json.
 
-Status: draft
+Status: final
 
 ## Summary
 
-211 findings from 314 recommendations of 25 sources: P0 16, P1 64, P2 69, P3 53, P4 9. 221 ids not adopted (213 rejected by their own files, 8 recommendations). 28 questions in 10 clusters, all ruled (7 need an operator decision, see Operator decisions); 89 source questions settled or folded into findings.
+211 findings from 314 recommendations of 25 sources: P0 16, P1 64, P2 69, P3 53, P4 9. 221 ids not adopted (213 rejected by their own files, 8 recommendations). 28 questions in 10 clusters, all ruled (8 need an operator decision; with the floor audit 11 operator decisions in all, see Operator decisions); 89 source questions settled or folded into findings.
+
+Floor audit applied: 28 ids flagged by three auditors, 24 reworked, 4 blocked on the operator, 0 rejected, 0 kept as they were (section Floor audit).
 
 What matters most, in order:
 1. Three confirmed defects are documented in tracked research and must be fixed before anything is public: the token-free /web/ route resolves UNC paths (F-002), a build payload with a NUL byte passes the DTD guard (F-005), and a core with a missing log path tails the live Client.txt outside the opt-in indicator (F-001). F-006 ties the visibility flip to them.
@@ -14,17 +16,18 @@ What matters most, in order:
 3. History has not been scanned for the names of the reviewed third-party set (F-004); it is the one go-public unknown.
 4. Nothing in the plan runs in parallel safely until the ledger rule (F-017), the loop parser fix (F-024) and safe overlapping tests (F-022) land; HALT comes off only after six checks (F-078).
 5. No-scroll Play is measured and fits with every sibling change applied: build F-025, put the budgets under test (F-066), adopt one type scale (F-053) and four tabs (F-067).
-6. The build pain has two floor-safe fixes, ruled in (F-042, F-058; Q-02); reading Path of Building's builds folder is outside the current floor text and not adopted unless the operator amends the read list (Q-01); a current-shape character paste loses every mod today (F-035).
+6. The build pain has one floor-safe fix ruled in, the hotkey load (F-042; Q-02); the save-file pick (F-058) waits for one read-list line from the operator, and reading Path of Building's builds folder is outside the current floor text and not adopted unless the operator amends the read list (Q-01); a current-shape character paste loses every mod today (F-035).
 7. The item pain: a staged verdict that answers at once (F-059), a keep-or-vendor verdict with no build (F-060), a worn-gear baseline (F-070) and an honest caveat on every verdict (F-043).
 8. Prices are silently blocked today without a typed contact (F-018) and refresh only while the page is open (F-036); league identity must be ready before 2026-12-11 (F-031).
 9. Go-public is about two days of agent work plus the operator's go: guarded push and rules (F-016), CI (F-013), fresh-clone proof (F-008), then F-021; a stranger's source install is broken until F-019.
 10. Deployment like the reference app is one design now (per-user home, version folders, pinned runtimes, install line, Apps & features entry, staged updates): F-038 first, then F-049, F-047, F-048, F-050, F-063, F-077.
-11. No-reminder automation: one watcher frame (F-030), rows filed as add-only files (F-029), a launch gate that opens the 1.0 rows by itself before 2026-12-10 (F-052), policy quotes under watch (F-051).
+11. No-reminder automation: one watcher frame (F-030), rows filed as add-only files (F-029), a launch gate that opens the 1.0 rows by itself before 2026-12-10 (F-052); new sources follow the dev host's web-data switch and read repository metadata only; policy quotes under watch (F-051) wait for the operator's floor line on GGG's docs pages (A-01).
 12. The open live checks close without scheduled operator sessions: log shapes by a consented parse ledger (F-061), RAM and CPU by AshLight's own budget log (F-032), in-game tries by one click each (F-062).
 13. Reliability and observability follow as P2: the client survives its own errors, nothing stays down, every log is bounded, Checks explains causes.
 14. Dated items: tree hold by 2026-12-08, launch gate by 2026-12-10, league identity by 2026-12-11, Electron 45 line ends about 2027-04-27, GGG registration expected to reopen about 2027-01.
-15. The operator is asked once (docs/plan/09): the seven operator decisions below, a handful of one-minute acts and four in-game tries (F-040); every item carries a default the plan follows meanwhile.
-16. Blocked on others: GGG OAuth registration (F-080, F-149) and an outbound note path to the fleet owner (F-203).
+15. The operator is asked once (docs/plan/09): the eleven operator decisions below, a handful of one-minute acts and four in-game tries (F-040); every item carries a default the plan follows meanwhile.
+16. Blocked on others: GGG OAuth registration and GGG's written answers on token storage and log-triggered reads (F-080, F-116, F-149), poe.ninja's answer before any release build polls it (F-046), and an outbound note path to the fleet owner (F-203).
+17. Floor audit: three independent auditors checked all 211 findings and 28 rulings; 28 ids were flagged and every one took the stricter reading (24 reworked to a floor-safe form, 4 blocked on the operator, none rejected, none kept as it was). Two conflicts between the strict reading and settled behaviour go to the operator: the docs watch pages (A-01) and the Steam library scan (A-03).
 
 ## Method
 
@@ -41,6 +44,9 @@ What matters most, in order:
 - Dispositions: plan (a session or wave can do it now), blocked (the exact condition is stated), needs-ruling (question ids of the Open decisions section), operator (the act), defer (why).
 - Field text (risk, ToS check, acceptance, ZERO-CLICK, files) comes from the owning source unless the merge changed it; R-, F- and B-numbers inside such text are that source's own.
 - Rulings: all 28 questions were ruled by adjudicator agents on 2026-11-18 (section Rulings); each finding carries its ruled disposition, a finding ruled out or outside the current floor text moved to not_adopted with the ruling as its reason, and the items only the operator can decide are listed under Operator decisions with the default the plan follows meanwhile.
+- Floor audit: three independent auditors, each told to refute compliance, checked every finding and ruling against the floor on 2026-11-18 (section Floor audit).
+- An id flagged by two or three lenses took the strictest fix; an id flagged by one lens took the stricter reading too unless the flag was plainly mistaken; no doubt was resolved in favour of the looser reading.
+- A flagged finding was reworked to its floor-safe form or blocked on an operator decision; no source id moved, so coverage is unchanged.
 
 ## Tier P0 - defects and what must hold before the first public push
 
@@ -420,15 +426,15 @@ What matters most, in order:
 ### F-030 - WATCH-CORE: one upstream watcher frame on the dev loop
 
 - Rank 30, tier P1; area automation; kind feature.
-- Action: One stdlib tools/upstream_watch.py with a source registry, state in ops/runtime/watch/state.json, at most one due source per tick, called before the HALT return; TC-DRIFT and the docs watch become sources; further sources: PoB release and master head, repoe-fork data, GGG tree export, poe.ninja docs page; sources return typed findings (name, key, validated tokens) that the tick files as rows through two primitives.
+- Action: One stdlib tools/upstream_watch.py with a source registry, state in ops/runtime/watch/state.json, at most one due source per tick, called before the HALT return; TC-DRIFT and the docs watch become sources and keep their settled reads (decisions 0025, 0044). Further sources: PoB master head, repoe-fork data, GGG tree export, poe.ninja docs page; these run only while the dev host's web_data is on, read repository metadata only (commit id, tag, date through the documented GitHub API) and never a data file; the poe.ninja docs page is their one page read. Sources return typed findings (name, key, validated tokens) that the tick files as rows through two primitives.
 - Impact / effort / risk: H / M / Unattended commit on main; bounded by diff check (added lines parse as rows, one flipped gate, nothing removed), hooks, daily cap.
-- ToS check: Public pages/files/documented APIs via webfetch.py with AshLight UA, no cookie; dev tooling, never player's core (0025, 0044 item 7).
+- ToS check: Public pages and documented APIs via webfetch.py with the AshLight UA, no cookie; dev tooling, never the player's core (0025, 0044 item 7). Floor audit (L3): decisions 0009 and 0013 let nothing hit the network while web data is off and only TC-DRIFT and the docs watch are settled exceptions, so every new source waits for web_data and reads metadata, never the data files.
 - Sources: 0058-R2, 0037-R5, 0037-R2
 - Depends on: F-024, F-029
-- Acceptance: Fake fetches drive each source; token failing its pattern files nothing; fourth row in a day waits; HALTed tick records finding, commits nothing. A tick commit that touches any path outside docs/roadmap/new/ or docs/roadmap/done/ is refused; commits go only through fleet_gitlock with the operator identity; under HALT the PoB release check (static trial only) still reads and records, but nothing is bumped, trialled or committed.
+- Acceptance: Fake fetches drive each source; token failing its pattern files nothing; fourth row in a day waits; HALTed tick records finding, commits nothing. A tick commit that touches any path outside docs/roadmap/new/ or docs/roadmap/done/ is refused; commits go only through fleet_gitlock with the operator identity; under HALT the PoB release check (static trial only) still reads and records, but nothing is bumped, trialled or committed. With the dev host's web_data off the new sources make 0 requests (injected transport) while TC-DRIFT and the docs watch still read; with it on no new source requests a data-file URL (only GitHub API metadata paths and the one poe.ninja docs page pass the source URL check).
 - ZERO-CLICK: Fully unattended.
 - Disposition: plan
-- Notes: Q-12: the tick may auto-commit add-only row files (docs/roadmap/new|done/<ID>.md) from templated validated tokens, at most 3 rows a day, operator identity, via fleet_gitlock only, never while HALTed. Q-13: sources read while HALTed and act on nothing; findings wait in the halted tick's checklist. Record: amend decision 0025 (dated 2026-11-18, cross-reference 0044); pin moves stay session commits. Conflict resolved: no CI job reads poe.ninja or a GGG host; the poe.ninja docs-page source (W6) runs here. Row text never comes from an issue body, release note or commit title (0058-X3).
+- Notes: Q-12: the tick may auto-commit add-only row files (docs/roadmap/new|done/<ID>.md) from templated validated tokens, at most 3 rows a day, operator identity, via fleet_gitlock only, never while HALTed. Q-13: sources read while HALTed and act on nothing; findings wait in the halted tick's checklist. Record: amend decision 0025 (dated 2026-11-18, cross-reference 0044); pin moves stay session commits. Conflict resolved: no CI job reads poe.ninja or a GGG host; the poe.ninja docs-page source (W6) runs here. Row text never comes from an issue body, release note or commit title (0058-X3). Floor audit 2026-11-18: reworked (new sources follow web_data and read metadata only; no new exemption is recorded).
 
 ### F-031 - PRICE-LEAGUE-1.0: league identity ready for launch day (before 2026-12-11)
 
@@ -511,14 +517,15 @@ What matters most, in order:
 ### F-037 - Lock npm down
 
 - Rank 37, tier P1; area electron; kind security.
-- Action: Tracked app/.npmrc (ignore-scripts, engine-strict, save-exact); setup.ps1 uses 'npm ci --ignore-scripts' and refuses without a lockfile; the lane bump prompt gains --ignore-scripts and the 3-day rule; electron moves to dependencies; the bump gate adds 'npm audit signatures'.
+- Action: Tracked app/.npmrc (ignore-scripts, engine-strict, save-exact); setup.ps1 uses 'npm ci --ignore-scripts' and refuses without a lockfile; the lane bump prompt gains --ignore-scripts and the 3-day rule; electron moves to dependencies; the bump gate adds 'npm audit signatures'. app/.npmrc also sets user-agent to 'AshLight/<VERSION> npm/{npm-version} node/{node-version}' (a test keeps <VERSION> equal to the app version), so npm's requests name AshLight; the Electron download part is carried by F-044 (AshLight's own fetch code, never electron's install.js).
 - Impact / effort / risk: M / S / A later package needing its install script (none today); a packager (0053) may want electron as a dev entry.
-- ToS check: No floor rule touched; setup-time installs only.
+- ToS check: Floor audit (L1): 'Every web request sends a truthful User-Agent naming AshLight and its version' is read to cover the requests setup makes through npm, so npm sends an AshLight User-Agent; setup-time installs only. Whether the bullet binds package tools at all is operator decision A-02; the strict form ships meanwhile.
 - Sources: 0046-R2
 - Depends on: nothing
-- Acceptance: Asserts .npmrc keys, no npm call in setup.ps1 without --ignore-scripts, no lockfile-less branch, no hasInstallScript in lockfile, npm audit --omit=dev covering 13 packages.
+- Acceptance: Asserts .npmrc keys, no npm call in setup.ps1 without --ignore-scripts, no lockfile-less branch, no hasInstallScript in lockfile, npm audit --omit=dev covering 13 packages. The .npmrc user-agent line names AshLight and equals the app version; setup.ps1 does not run node_modules/electron/install.js.
 - ZERO-CLICK: No change for the user.
 - Disposition: plan
+- Notes: Floor audit 2026-11-18: reworked (npm sends an AshLight User-Agent).
 
 ### F-038 - Spike: run AshLight under the embeddable CPython layout
 
@@ -601,14 +608,15 @@ What matters most, in order:
 ### F-044 - Close the Electron chain at both ends
 
 - Rank 44, tier P1; area electron; kind security.
-- Action: setup.ps1 clears the install override variables before npm and install.js; tracked config/electron_pin.json holds version, line EOL date, zip SHA-256 and electron.exe SHA-256 and size per arch; setup and run.ps1 verify the exe against it.
+- Action: setup.ps1 clears the install override variables before npm; the Electron zip is fetched by AshLight's own hash-pinned fetch code (AshLight User-Agent) and unpacked where electron expects it, instead of running electron's install.js; tracked config/electron_pin.json holds version, line EOL date, zip SHA-256 and electron.exe SHA-256 and size per arch; setup and run.ps1 verify the exe against it.
 - Impact / effort / risk: M / S / arm64 needs its own entry (ship both, or warn and continue on unknown arch).
 - ToS check: No floor rule touched; hashes AshLight's own runtime file.
 - Sources: 0046-R4
 - Depends on: F-037
-- Acceptance: With electron_use_remote_checksums=1 setup still verifies against packaged checksums; a one-byte change in a copy of the exe fails the check; pin version equals package.json.
+- Acceptance: With electron_use_remote_checksums=1 setup still verifies against packaged checksums; a one-byte change in a copy of the exe fails the check; pin version equals package.json. The Electron zip is fetched by AshLight's own hash-pinned fetch code with the AshLight User-Agent and checked against the pin; setup.ps1 never runs electron's install.js.
 - ZERO-CLICK: Runs inside setup and run.
 - Disposition: plan
+- Notes: Floor audit 2026-11-18: with F-037 (L1): the Electron zip is downloaded only by AshLight's own fetch code (AshLight User-Agent, pin checked), not by electron's install.js, whose requests do not name AshLight.
 
 ### F-045 - PRICE-POLITE: back off, compress, space the requests
 
@@ -622,18 +630,18 @@ What matters most, in order:
 - ZERO-CLICK: Automatic.
 - Disposition: plan
 
-### F-046 - GO-PUBLIC-NINJA: ask poe.ninja, ship the tiered cadence either way
+### F-046 - GO-PUBLIC-NINJA: ask poe.ninja; release builds poll only after its yes
 
 - Rank 46, tier P1; area go-public; kind operator.
-- Action: Before the public flip the operator sends poe.ninja one message asking whether per-install polling at this cadence is acceptable or a project mirror is wanted (Q-05); ship the tiered cadence now, with or without an answer (Currency hourly; the other 22 types every 3 h unless pressed in the last 24 h: daily ceiling 552 down to 200 overview GETs); a decision records the outcome.
+- Action: Before the public flip the operator sends poe.ninja one message asking whether per-install polling at this cadence is acceptable or a project mirror is wanted (Q-05). The tiered cadence (Currency hourly; the other 22 types every 3 h unless pressed in the last 24 h: daily ceiling 552 down to 200 overview GETs) ships now for source checkouts. A release build makes no poe.ninja request (one release constant in server/al/ninja.py, off) and shows the trade-search link only, until a decision records poe.ninja's yes, a mirror it approves exists, or the operator rules in writing; silence is not consent.
 - Impact / effort / risk: H / S / A mirror republishes poe.ninja data; scheduled jobs slip and stop after 60 idle days. Effort S for (1)(2), L for a mirror.
-- ToS check: Public-web-data rule (named source; mirror is AshLight's own file, no GGG endpoint, no trade site); no-revenue rule (free, attributed).
+- ToS check: Public-web-data rule (named source; a mirror is AshLight's own file, no GGG endpoint, no trade site); no-revenue rule (free, attributed). Floor audit (L2): poe.ninja asks desktop apps to proxy through their own backend (research 0036 F2), so polling from every public install is not clearly allowed by the source; public polling waits for its answer.
 - Sources: 0036-R7
 - Depends on: F-036, F-045
-- Acceptance: A decision records the answer or the default, and a test proves the daily request ceiling.
+- Acceptance: A decision records the answer or the default; a test proves the daily request ceiling; a test proves a release build with the constant off makes 0 poe.ninja requests with web data on and still builds the trade link.
 - ZERO-CLICK: Nothing for players; one operator message.
-- Disposition: plan: the tiered cadence ships now; operator act before the public flip: one message to poe.ninja (Q-05)
-- Notes: Only the public flip waits for the message; a reply that per-install polling is fine closes the item, a mirror request opens a new decision.
+- Disposition: plan: the tiered cadence ships now for source checkouts; blocked for release builds: operator decision Q-05 (send the message) and poe.ninja's yes recorded in a decision
+- Notes: The public flip waits only for the message; releases ship with poe.ninja polling off until the yes is recorded; a mirror request opens a new decision. Floor audit 2026-11-18: blocked on the operator for public polling (silence is not consent).
 
 ### F-047 - Release layout with pinned runtimes and one resolver each
 
@@ -664,15 +672,15 @@ What matters most, in order:
 ### F-049 - Installed-mode paths
 
 - Rank 49, tier P1; area deploy; kind feature.
-- Action: server/al/paths.py gains an installed mode (marker above the package, or AL_HOME): state, config, logs, cache and temp resolve under the install home; the kit default counts only when its folder exists; the resolver refuses a home inside a game folder. An -InstallDir override: this machine installs under the AL sidecar; the operator's live copy becomes an installed release and the checkout runs on a spare dev port taken from the 8960-8979 block in server/al/ports.py (Q-19).
+- Action: server/al/paths.py gains an installed mode (marker above the package, or AL_HOME): state, config, logs, cache and temp resolve under the install home; the kit default counts only when its folder exists; the resolver refuses a home whose own path has a steamapps component or a game-directory component ('Path of Exile 2'), decided from the path text alone: no Steam registry key, no libraryfolders.vdf, no game-folder listing or stat. An -InstallDir override: this machine installs under the AL sidecar; the operator's live copy becomes an installed release and the checkout runs on a spare dev port taken from the 8960-8979 block in server/al/ports.py (Q-19).
 - Impact / effort / risk: H / M / Path regressions across the core, held by the path test.
-- ToS check: Never modify any game file: resolver and installer refuse a home inside a Steam library or game folder; consent moves with the data folder, no new read.
+- ToS check: Never modify any game file: resolver and installer refuse a home inside a Steam library or game folder, by path shape only; floor audit (L3): finding those folders through the registry, a vdf file or a listing would be a read the floor does not list. Consent moves with the data folder, no new read.
 - Sources: 0052-R1
 - Depends on: F-019
-- Acceptance: With AL_HOME=<tmp> every runtime path inside <tmp>; with no env and no kit folder none leaves %LOCALAPPDATA%; cores from <tmp>\app\0.1.0 and <tmp>\app\0.1.1 read same consent file; home inside fake game folder refused. With -InstallDir under the AL sidecar every path stays in the sidecar (tests/test_sidecar_paths.py green); the spare dev port is a ports.py constant inside 8960-8979.
+- Acceptance: With AL_HOME=<tmp> every runtime path inside <tmp>; with no env and no kit folder none leaves %LOCALAPPDATA%; cores from <tmp>\app\0.1.0 and <tmp>\app\0.1.1 read same consent file; a home path with a steamapps or game-directory component is refused while winreg and every listing or stat outside the chosen home are patched to fail. With -InstallDir under the AL sidecar every path stays in the sidecar (tests/test_sidecar_paths.py green); the spare dev port is a ports.py constant inside 8960-8979.
 - ZERO-CLICK: Resolved from the marker; nothing to set.
 - Disposition: plan
-- Notes: Home per the 0053 Fit section: %LOCALAPPDATA%\Programs\AshLight with state in data\ (0052 names two different homes; this one wins). Record: amend the CLAUDE.md Sidecar rule by one sentence (installed player copy default path, operator -InstallDir) (Q-19).
+- Notes: Home per the 0053 Fit section: %LOCALAPPDATA%\Programs\AshLight with state in data\ (0052 names two different homes; this one wins). Record: amend the CLAUDE.md Sidecar rule by one sentence (installed player copy default path, operator -InstallDir) (Q-19). Floor audit 2026-11-18: reworked (refusal by path shape only).
 
 ### F-050 - Installer and bootstrap, local zip first
 
@@ -690,28 +698,28 @@ What matters most, in order:
 ### F-051 - POLICY-QUOTES: the floor's source quotes under watch
 
 - Rank 51, tier P1; area automation; kind feature.
-- Action: Add the 12 baseline quotes of research 0029 as a check in the docs watch: each must appear in the index page text; a missing quote writes ops/runtime/ggg_docs/POLICY_CHANGED, a dev-host Checks note and a review row with 'BLOCKED: session'.
+- Action: Add the 12 baseline quotes of research 0029 as a check in the docs watch: each must appear in the index page text; a missing quote writes ops/runtime/ggg_docs/POLICY_CHANGED, a dev-host Checks note and a review row with 'BLOCKED: session'. Built only after the operator's floor line (A-01); no new check reads the index page before that.
 - Impact / effort / risk: H / S / Page reflow reads as change; compare whitespace-normalised.
-- ToS check: Same six pages, cadence, identity as 0044; no new request; tool never edits the floor.
+- ToS check: Floor audit (L1): the floor allows GGG endpoints only if they are in the API Reference or Data Exports, and Q-07 reads that as binding every GGG host read. Of the six watched pages only reference and data are in those sets; the index page that holds the quotes is not, and settled decision 0044 cannot widen the floor. Blocked until the operator rules (A-01). If allowed: same six pages, cadence and identity as 0044, no new request, the tool never edits the floor.
 - Sources: 0058-R4
 - Depends on: nothing
 - Acceptance: Fixture page missing quote O3 raises flag naming O3; real cached page raises nothing.
 - ZERO-CLICK: Unattended.
-- Disposition: plan
-- Notes: Same six pages, cadence and identity as decision 0044; no new request.
+- Disposition: blocked: operator decision A-01 (one floor line saying whether GGG's developer-docs pages outside the API Reference and Data Exports may be read); the 12 quotes live on the index page
+- Notes: Same six pages, cadence and identity as decision 0044; no new request. Floor audit 2026-11-18: blocked on the operator (A-01).
 
 ### F-052 - LAUNCH-GATE: 1.0 rows that open by themselves (before 2026-12-10)
 
 - Rank 52, tier P1; area automation; kind feature.
-- Action: Land three parseable rows (UTIL-10-DATA, UTIL-10-NOTES, UTIL-10-LOG) and one gate row; the launch source flips GATE-POE2-10 when the local date is 2026-12-11 or later and the repoe-fork data or the GGG tree export shows version 1.0 or newer, not a preview; add the runbook steps of note 0037 (bridge fix before the first pin move, re-read pob2_files, new GUI reference per pin move, a 1.0-era export fixture, Acts 5-6 and interlude handling).
-- Impact / effort / risk: H / S / Slipped launch (two-signal rule) or preview tree read as live (preview filter).
-- ToS check: Tree export is GGG's listed data export from its public repo; repoe-fork public repo metadata; no game system, no trade site.
+- Action: Land three parseable rows (UTIL-10-DATA, UTIL-10-NOTES, UTIL-10-LOG) and one gate row; the launch source flips GATE-POE2-10 when the local date is 2026-12-11 or later and the repository metadata of the repoe-fork data or of the GGG tree export (tag, release or commit title, read by the F-030 source while web_data is on) shows version 1.0 or newer, not a preview; the loop downloads no data file for this; add the runbook steps of note 0037 (bridge fix before the first pin move, re-read pob2_files, new GUI reference per pin move, a 1.0-era export fixture, Acts 5-6 and interlude handling).
+- Impact / effort / risk: H / S / Slipped launch (two-signal rule) or preview tree read as live (preview filter); with web data off on the dev host the gate does not flip (a Checks note says so).
+- ToS check: Repository metadata only (documented GitHub API) of GGG's listed data export repo and of repoe-fork; floor audit (L3): no data download by the loop and nothing with web data off (decisions 0009, 0013 amendments); no game system, no trade site.
 - Sources: 0058-R3, 0037-R7, P01-UTIL-1.0-POST
 - Depends on: F-024, F-030
-- Acceptance: Clock 2026-12-10 flips nothing; 2026-12-11 with fixture 1.0.0 flips gate once and dependents dispatchable; 'Preview' title flips nothing. A fixture run-history file with an Act 5 split opens UTIL-10-LOG; with run history off a ledger Act 5 hit opens it.
+- Acceptance: Clock 2026-12-10 flips nothing; 2026-12-11 with a fixture metadata record tagged 1.0.0 flips the gate once and dependents are dispatchable; a 'Preview' title flips nothing; the launch source requests no data-file URL and makes 0 requests with web_data off. A fixture run-history file with an Act 5 split opens UTIL-10-LOG; with run history off a ledger Act 5 hit opens it.
 - ZERO-CLICK: Unattended, bar the operator's own play session the floor requires of a log read.
 - Disposition: plan
-- Notes: Replaces the UTIL-1.0-POST row the loop cannot see. UTIL-10-LOG opens from AshLight's own run-history file (the first Act 5 split), falling back to the parse ledger's first Act 5 hit when run history is off (Q-28); the gate flip lands as an add-only row file (Q-12). 1.0 ascendancy names and area-id prefixes are unverified until launch.
+- Notes: Replaces the UTIL-1.0-POST row the loop cannot see. UTIL-10-LOG opens from AshLight's own run-history file (the first Act 5 split), falling back to the parse ledger's first Act 5 hit when run history is off (Q-28); the gate flip lands as an add-only row file (Q-12). 1.0 ascendancy names and area-id prefixes are unverified until launch. Floor audit 2026-11-18: reworked (version signal from repository metadata, no data download).
 
 ### F-053 - Dashboard type scale as tokens, with a measured distance rule
 
@@ -729,15 +737,15 @@ What matters most, in order:
 ### F-054 - Item-check default chord: one roll under Ctrl, after two one-minute operator checks
 
 - Rank 54, tier P1; area items; kind operator.
-- Action: The operator (1) presses Alt+Shift+E and Alt+Shift+A with two keyboard layouts installed and reports whether the layout flips, (2) looks once at the game's input options for a free Ctrl+letter next to C; then the default item key becomes that second tap under Ctrl (Alt+Shift+E stays a listed alternative).
-- Impact / effort / risk: M / S / Clash with a game bind hides that bind while AshLight runs (global shortcut); Checks row reports failed registration. A Ctrl+letter default is taken from browser and every program while AshLight runs.
-- ToS check: Still the player's own Ctrl+C, then one manual AshLight hotkey press with one clipboard read; no input sent, no watcher.
+- Action: The operator (1) presses Alt+Shift+E and Alt+Shift+A with two keyboard layouts installed and reports whether the layout flips, (2) looks once at the game's input options for a free Ctrl+letter next to C; then the default item key becomes that second tap under Ctrl (Alt+Shift+E stays a listed alternative). The chord keeps exactly one clipboard read per press: no retry, no wait-for-change, no timer; an empty read shows a 'Copy the item first' card.
+- Impact / effort / risk: M / S / Clash with a game bind hides that bind while AshLight runs (global shortcut); Checks row reports failed registration. A Ctrl+letter default is taken from browser and every program while AshLight runs. A press that lands before the game has written the clipboard shows the copy-first card or the previous item; the player presses again.
+- ToS check: Still the player's own Ctrl+C, then one manual AshLight hotkey press with one clipboard read; no input sent, no watcher. Floor audit (L3): one clipboard read per press is a tested invariant of the new chord; a retry or wait-for-change loop would be several reads or a short poll on one press.
 - Sources: 0043-R5, 0042-R12
 - Depends on: F-026
-- Acceptance: Hotkey case table accepts the new default and still refuses every GAME_KEYS entry; B9 (<=3 key presses per item).
+- Acceptance: Hotkey case table accepts the new default and still refuses every GAME_KEYS entry; B9 (<=3 key presses per item); a test presses the chord with an empty clipboard and with item text and counts exactly 1 clipboard read each, with the 'Copy the item first' card on the empty one.
 - ZERO-CLICK: 2 presses under one hold; floor forbids fewer with the clipboard.
 - Disposition: blocked: operator decision Q-09 (two one-minute key checks); meanwhile the default stays Alt+Shift+E / Alt+Shift+A and the case-table and config work proceeds
-- Notes: AshLight never reads the game's key bindings (a game file); the free key comes from the operator's look. Q-09: the item key moves to Ctrl+<letter> only on a confirmed free letter; the Alt+Shift pair is replaced only if it flips the layout.
+- Notes: AshLight never reads the game's key bindings (a game file); the free key comes from the operator's look. Q-09: the item key moves to Ctrl+<letter> only on a confirmed free letter; the Alt+Shift pair is replaced only if it flips the layout. Floor audit 2026-11-18: reworked (single read per press under test).
 
 ### F-055 - In-app update notice from the core
 
@@ -747,10 +755,10 @@ What matters most, in order:
 - ToS check: Documented GitHub endpoint, not GGG/trade; truthful UA, no cookie; inside web-data opt-in (0013); a network timer is not a clipboard/screen watcher. Q-21 ruled the daily releases check inside web data (Retry-After obeyed); record: amend decision 0013 and the 0018 item 6 wording.
 - Sources: 0053-R7, 0054-R6
 - Depends on: F-021, F-023, F-027
-- Acceptance: web_data off: injected transport never called; on: one call per 24 h, 304 costs no parse, 403 with reset honoured; note text passes design voice tests.
+- Acceptance: web_data off: injected transport never called; on: one call per 24 h, 304 costs no parse, 403 with reset honoured; note text passes design voice tests. An earlier web-data opt-in without the acknowledged update wording makes 0 release requests.
 - ZERO-CLICK: Note appears by itself; no toast, no prompt.
 - Disposition: plan
-- Notes: Conflict resolved: a version check is allowed only inside the web-data opt-in (0053, 0052); what stays rejected is a check outside it or by default (0046-X3). Blocked in practice until a public release exists.
+- Notes: Conflict resolved: a version check is allowed only inside the web-data opt-in (0053, 0052); what stays rejected is a check outside it or by default (0046-X3). Blocked in practice until a public release exists. Floor audit 2026-11-18: with F-077 and Q-21 (L3): the releases check runs only once the player has seen the web-data sentence that names it.
 
 ### F-056 - Fold price watch into price movers and make a move visible
 
@@ -782,13 +790,13 @@ What matters most, in order:
 - Rank 58, tier P1; area theorycraft; kind feature.
 - Action: Beside the paste box a file control lets the player pick a Path of Building save file in the browser; the core gets the bytes only (token API, 2 MB cap, no path, no stored copy), the same bytes as a paste.
 - Impact / effort / risk: M / S / Low; the pattern is decision 0033 (the player picks the file in the browser; the core never sees a path).
-- ToS check: The player's own act per load; no folder read, no watcher, no game file. Q-02 ruled it player-supplied build text (decision 0004 amendment with F-042); bytes only, never a path (decision 0033).
+- ToS check: Floor audit (L1): a Path of Building save file the player picks is not Client.txt, not a per-press clipboard or screen read and not public web data, so the floor's read list (read as exhaustive by Q-01) does not name it; decision 0033 is a precedent, not floor text. Outside the current floor text until the operator adds one line. If allowed: the player's own act per load, bytes only, never a path, no stored copy, no folder read, no watcher, no game file.
 - Sources: 0054-F2
 - Depends on: nothing
 - Acceptance: Picking a fixture save file loads the same build as pasting its export code; the request carries no path; nothing is written to disk.
 - ZERO-CLICK: One pick per build change; no terminal, no code export in PoB.
-- Disposition: plan
-- Notes: The floor-safe build source (Q-02); the builds-folder source F-071 is not adopted (Q-01, outside the current floor text).
+- Disposition: blocked: operator decision Q-02 (one floor read-list line allowing a file the player picks in AshLight's own page: bytes only, never a path or a stored copy); until then nothing of F-058 is built and F-042 ships alone
+- Notes: The builds-folder source F-071 is not adopted (Q-01, outside the current floor text); the hotkey load F-042 carries the build pain meanwhile. Floor audit 2026-11-18: blocked on the operator; the file-pick half of ruling Q-02 is held.
 
 ### F-059 - PRESS-STAGED: publish the item check in stages
 
@@ -847,13 +855,13 @@ What matters most, in order:
 - Rank 63, tier P1; area deploy; kind feature.
 - Action: uninstall.ps1 at the home root, also behind Apps & features: stop via stop.request and the registry, remove the logon task if present, shortcuts, key, code, runtime, cache, logs, temp; keep data\ unless -Purge (Recycle Bin); exit 1 with one line while anything remains; -DryRun prints the plan.
 - Impact / effort / risk: H / M / Deleting a wrong folder, held by fixed child names under a home with a valid marker, else refusal.
-- ToS check: Touches no game folder even where player copied an AshLight filter/build file there (0031, 0033, 0034); last lines name those files. Stops only pids proven ours.
+- ToS check: Touches, lists, stats and opens no game folder, even where the player copied an AshLight filter or build file there (0031, 0033, 0034). Floor audit (L1, L3): naming such files as found would be a read of game folders the floor does not list, so the last lines are a fixed sentence naming the file names AshLight hands out (ashlight.filter and the AshLight .build name) and saying the player may have put them in the game's filter or planner folder. Stops only pids proven ours.
 - Sources: 0052-R5, 0053-R5
 - Depends on: F-050
-- Acceptance: Scratch home ends with only data\; -Purge leaves nothing (recycle injected); held file gives exit 1 and the one line; -DryRun changes nothing; PS 5.1 parse.
+- Acceptance: Scratch home ends with only data\; -Purge leaves nothing (recycle injected); held file gives exit 1 and the one line; -DryRun changes nothing; PS 5.1 parse. The last lines are byte-identical with and without such files on the machine; a static test finds no game-folder path, listing or Test-Path outside the install home in uninstall.ps1.
 - ZERO-CLICK: One click in Apps & features; no question by default.
 - Disposition: plan
-- Notes: 0053-R5's AshLight.cmd first-run wrapper is superseded by the installer (Fit points 5 and 6). Touches no game folder, even where the player copied an AshLight filter or build file.
+- Notes: 0053-R5's AshLight.cmd first-run wrapper is superseded by the installer (Fit points 5 and 6). Touches no game folder, even where the player copied an AshLight filter or build file. Floor audit 2026-11-18: reworked (fixed sentence, no game-folder read).
 
 ### F-064 - TC-DRIFT-TRIAL-FIX: a trial that can end green
 
@@ -975,15 +983,15 @@ What matters most, in order:
 ### F-074 - Stage and publish gates
 
 - Rank 73, tier P1; area deploy; kind infra.
-- Action: 'tools/release.py stage' writes a PASS / FAIL stage.json: suite through the gate, node tests, two identical builds, leak sweep of the staged tree, a scratch-home install / update / rollback / uninstall round trip, optional sandbox phases (.wsb with networking and clipboard off, assets in a read-only mapped folder); a v* tag is pushed only after PASS.
+- Action: 'tools/release.py stage' writes a PASS / FAIL stage.json: suite through the gate, node tests, two identical builds, leak sweep of the staged tree, a scratch-home install / update / rollback / uninstall round trip, optional sandbox phases (.wsb with networking and clipboard off, assets in a read-only mapped folder) that run only on the operator's explicit --sandbox flag, release.py never looking for the game (no process list, no window query, no Client.txt access); a v* tag is pushed only after PASS.
 - Impact / effort / risk: M / M / A release by accident, held by typed phrase and the loop having no path to it.
-- ToS check: Notes and assets pass README brand checks and carry disclaimer; no revenue; publishing touches no game system; CI keeps web data off.
+- ToS check: Notes and assets pass README brand checks and carry disclaimer; no revenue; publishing touches no game system; CI keeps web data off. Floor audit (L3): decision 0029 allows game presence only from Client.txt staleness, never a process check, and the release tool is outside the core, so it detects nothing and the sandbox runs only on the operator's flag.
 - Sources: 0052-R7
 - Depends on: F-048, F-050, F-063
-- Acceptance: Every gate has a refusal test where nothing changed; rehearse makes 0 pushes; digest mismatch fails read-back; planted drive path fails CI. Sandbox phases never run while game runs.
+- Acceptance: Every gate has a refusal test where nothing changed; rehearse makes 0 pushes; digest mismatch fails read-back; planted drive path fails CI. Sandbox phases run only with the explicit --sandbox flag; a static test finds no process-list, window or Client.txt call in tools/release.py.
 - ZERO-CLICK: One operator phrase per release (operator order); everything before and after automatic.
 - Disposition: plan
-- Notes: Conflict resolved (who cuts a release): local stage is the gate, the published artifact is built, compared and attested by CI on the tag (F-076). The sandbox phases verify the per-user uninstall key on Windows 10 and 11 (undocumented by the vendor).
+- Notes: Conflict resolved (who cuts a release): local stage is the gate, the published artifact is built, compared and attested by CI on the tag (F-076). The sandbox phases verify the per-user uninstall key on Windows 10 and 11 (undocumented by the vendor). Floor audit 2026-11-18: reworked (sandbox only on the operator's flag, no game detection).
 
 ### F-075 - GP-COMMUNITY: code of conduct, issue forms and PR template
 
@@ -1014,15 +1022,15 @@ What matters most, in order:
 ### F-077 - Update and rollback
 
 - Rank 76, tier P1; area deploy; kind feature.
-- Action: update --check / --yes / --zip FILE and rollback in the installer package: download, verify size, SHA-256 and attestation, stage into app\<new version>\, self-check, switch the marker at the next client start (or on 'Update now') after a 24 h hold, keep the previous version for rollback; Checks and the copied report show mode, version, previous and the last update result. Default: the verified update applies automatically at the next start after the 24 h hold; a Settings switch gives click-only (Q-21).
+- Action: update --check / --yes / --zip FILE and rollback in the installer package: download, verify size, SHA-256 and attestation, stage into app\<new version>\, self-check, switch the marker at the next client start (or on 'Update now') after a 24 h hold, keep the previous version for rollback; Checks and the copied report show mode, version, previous and the last update result. Default: the verified update applies automatically at the next start after the 24 h hold; a Settings switch gives click-only (Q-21). The web-data opt-in sentence names the update check and the automatic apply; an install that turned web data on before that wording stays click-only, with no update check or download, until the player has acknowledged the new sentence once.
 - Impact / effort / risk: H / L / A bad release, held by self-test, automatic rollback and one kept previous version.
-- ToS check: Decision 0013: check and download behind web-data opt-in; off = Settings shows version and a releases link opened in own browser. Download/extract below-normal priority, never during live session unless clicked. Report redacted, click-only (0040, 0014).
+- ToS check: Decision 0013: check and download behind web-data opt-in; off = Settings shows version and a releases link opened in own browser. Download/extract below-normal priority, never during live session unless clicked. Report redacted, click-only (0040, 0014). Floor audit (L3): an opt-in covers only what its wording named, so an earlier opt-in does not carry the update check or the automatic apply until it is shown again.
 - Sources: 0052-R6, 0053-R8
 - Depends on: F-050, F-055, F-076
-- Acceptance: N to N+2 with fake release keeps data\ byte for byte; tampered zip refused; failed self-test leaves marker on N with exit 1; rollback restores N and reads back marker and uninstall entry; web data off: fake fetch 0 calls. With the click-only switch on, a staged update waits for 'Update now'.
-- ZERO-CLICK: Web data on: no click, next start runs new version, one line names it. Off: one click on releases link.
+- Acceptance: N to N+2 with fake release keeps data\ byte for byte; tampered zip refused; failed self-test leaves marker on N with exit 1; rollback restores N and reads back marker and uninstall entry; web data off: fake fetch 0 calls. With the click-only switch on, a staged update waits for 'Update now'. A settings file with web_data on and no acknowledgement of the update wording gives 0 update requests and no automatic apply until the acknowledgement is stored; the opt-in sentence in web/ names the update check and the automatic apply.
+- ZERO-CLICK: Web data on with the new wording seen: no click, next start runs new version, one line names it. An earlier opt-in: one acknowledgement click, once. Off: one click on releases link.
 - Disposition: plan
-- Notes: Conflict resolved (mechanism): marker switch between version folders (0052), not an in-place swap (0053-R8 original). Never while web data is off; the restart is timed by game_idle from the log, never a process check. Network half blocked until a published release exists.
+- Notes: Conflict resolved (mechanism): marker switch between version folders (0052), not an in-place swap (0053-R8 original). Never while web data is off; the restart is timed by game_idle from the log, never a process check. Network half blocked until a published release exists. Floor audit 2026-11-18: reworked (opt-in wording names updates; earlier opt-ins re-shown).
 
 ### F-078 - LOOP-RESUME: remove HALT only after the six checks
 
@@ -1052,15 +1060,15 @@ What matters most, in order:
 ### F-080 - TC-IMPORT: character import through GGG's OAuth (the zero-paste end state)
 
 - Rank 79, tier P1; area theorycraft; kind feature.
-- Action: A Connect action (web data on) opens GGG's consent page in the system browser; then fetch on events only (core start, character switch, level-up, town / hideout entry when the last fetch is over 5 min old, a Refresh click); tokens in the OS credential store; measure staleness once.
+- Action: A Connect action (web data on) opens GGG's consent page in the system browser. Until GGG answers the F-083 questions in writing: fetch only on the player's Connect click and Refresh click, hold the access token in memory only and keep no refresh token. Only GGG's written yes turns on, each behind its own constant (off by default): the event fetches (core start, character switch, level-up, town / hideout entry when the last fetch is over 5 min old) and token storage in the OS credential store; measure staleness once.
 - Impact / effort / risk: H / M / Limits shared with every public client; staleness unknown; the weekly approval. Effort M after R4.
-- ToS check: Documented endpoints, player's own account by consent on GGG's page, no POESESSID, nothing sent to the game, headers obeyed; log-based triggers come from the opted-in Client.txt tail and an API read sends no input, so D-IDX's file-change ban (macro rules) is not hit.
+- ToS check: Documented endpoints, the player's own account by consent on GGG's page, no POESESSID, nothing sent to the game, headers obeyed. Floor audit (L2, L3): GGG's text names timers and 'reacting to file changes' as automated invocation without limiting it to input, and says refresh tokens must be stored securely on a server; neither a log-triggered API read nor a refresh token on the player's PC is clearly permitted, so both stay off until GGG says yes in writing.
 - Sources: 0035-R5, P01-TC-IMPORT
 - Depends on: F-035, F-116, F-149
-- Acceptance: Mocked-flow tests ROADMAP asks for, one live smoke by the operator, and a lapsed grant leaves the last import loaded.
-- ZERO-CLICK: No click between approvals; one browser approval per 7 days is GGG's limit (F4). A lapse shows the last import with its age and a quiet reconnect note on the dashboard, never the overlay.
-- Disposition: blocked: GGG reopens OAuth registration (docs watch raises REG_OPEN) and grants AshLight a public client
-- Notes: Refresh lifetime is 7 days and may not be granted to a desktop app: a lapsed grant is the normal case and the last import stays usable. Never a POESESSID, never another tool's client id.
+- Acceptance: Mocked-flow tests ROADMAP asks for; with the two constants off a test proves that a level-up, zone or character line and a core start make 0 API requests and that nothing is written to the credential store; one live smoke by the operator; a lapsed grant leaves the last import loaded.
+- ZERO-CLICK: One Connect click per session and one Refresh click per re-read until GGG's written yes; after it, no click between approvals (one browser approval per 7 days is GGG's limit, F4). A lapse shows the last import with its age and a quiet reconnect note on the dashboard, never the overlay.
+- Disposition: blocked: GGG reopens OAuth registration (docs watch raises REG_OPEN) and grants AshLight a public client; the event fetches and refresh storage also wait for GGG's written answers (F-083 questions 1 and 2)
+- Notes: Refresh lifetime is 7 days and may not be granted to a desktop app: a lapsed grant is the normal case and the last import stays usable. Never a POESESSID, never another tool's client id. Floor audit 2026-11-18: reworked (click-only fetch, memory-only token until GGG's written yes).
 
 ### F-081 - GP-DEPENDABOT: config plus the local re-apply lane
 
@@ -1092,15 +1100,15 @@ What matters most, in order:
 ### F-083 - Prepare the GGG application and its decision now
 
 - Rank 82, tier P2; area data-sources; kind decision.
-- Action: Write the application note (public client; auth code with PKCE plus refresh; account:characters and account:item_filter with a one-line reason each; loopback redirect URIs on 8979 and 8978; two questions for GGG: refresh tokens for a desktop client, and the public Currency Exchange endpoint) and the decision that amends decision 0004 item 4 for an own client id.
+- Action: Write the application note (public client; auth code with PKCE; account:characters only, with a one-line reason; loopback redirect URIs on 8979 and 8978; three questions for GGG: refresh tokens for a desktop client and where they may be stored, whether API reads triggered by the player's own Client.txt lines or by core start are allowed, and the public Currency Exchange endpoint) and the decision that amends decision 0004 item 4 for an own client id. account:item_filter is not requested.
 - Impact / effort / risk: H / S / GGG may decline or stay closed; preparation is cheap.
-- ToS check: Documentation only; the application is the path D-IDX requires of an executable; no floor rule bent.
+- ToS check: Documentation only; the application is the path D-IDX requires of an executable. Floor audit (L3): account:item_filter can only create or update a filter the game then loads, which the floor (never modify any game file) and the settled download-only decisions 0031 and 0033 do not allow, so the scope is dropped.
 - Sources: 0035-R2
 - Depends on: nothing
-- Acceptance: Every one of the six asks answered with no private value (leak sweep clean); the decision has a Reverses if; the ROADMAP line is corrected.
+- Acceptance: Every ask of the application answered with no private value (leak sweep clean); the scope list is exactly account:characters; the three questions are present; the decision has a Reverses if; the ROADMAP line is corrected.
 - ZERO-CLICK: The watch raises REG_OPEN by itself; sending is one operator act because a registration belongs to the operator's account.
 - Disposition: plan
-- Notes: account:profile is cut from the scope request. The contact in the application is the project's issues page (Q-03). Sending waits for registration (F-149).
+- Notes: account:profile and account:item_filter are cut from the scope request. The contact in the application is the project's issues page (Q-03). Sending waits for registration (F-149). Floor audit 2026-11-18: reworked (item-filter scope dropped; token storage and log-triggered reads put to GGG as questions).
 
 ### F-084 - LADDER-TICK: make the map ladder tick free when nothing changed
 
@@ -1138,7 +1146,7 @@ What matters most, in order:
 - Acceptance: With prefers-color-scheme light emulated the page background computes to rgb(15,18,22) and a capture has mean relative luminance < 0.05; with the setting on Light it computes to white; a node test proves themeSource is set before window creation.
 - ZERO-CLICK: Dark with no action; the choice is one optional click.
 - Disposition: plan
-- Notes: Both the desktop client and the browser path start dark (static attribute).
+- Notes: Both the desktop client and the browser path start dark (static attribute). Floor audit 2026-11-18: with F-147 (L3): any capture in this acceptance goes only through the F-147 helper (own page, headless, demo core).
 
 ### F-087 - Stale and empty values look stale
 
@@ -1175,7 +1183,7 @@ What matters most, in order:
 - Acceptance: 10 consecutive parallel whole runs green on a quiet tree; median hold under 75 s; one command spelling in GATELOG; a run with xdist hidden still passes serially.
 - ZERO-CLICK: Gate command picks the mode itself.
 - Disposition: plan
-- Notes: First step (research gap): three diagnosed parallel runs through the gate to find why 24 of 37 loop-gate xdist runs were red; Q-16 ruled: pytest-xdist as an optional dev extra in requirements-dev.txt, never imported by server/, tools/ or app code, adopted once those runs clear it; if they show xdist caused the flakes the stdlib shard tool takes its place. Record: amend decision 0002 (dated clarification).
+- Notes: First step (research gap): three diagnosed parallel runs through the gate to find why 24 of 37 loop-gate xdist runs were red; Q-16 ruled: pytest-xdist as an optional dev extra in requirements-dev.txt, never imported by server/, tools/ or app code, adopted once those runs clear it; if they show xdist caused the flakes the stdlib shard tool takes its place. Record: amend decision 0002 (dated clarification). Floor audit 2026-11-18: with F-037 (L1): no AshLight script runs pip; the optional dev extra is installed by hand and the serial path stays the default (operator decision A-02 covers package tools).
 
 ### F-090 - OBS-LOGS: every log bounded, one format
 
@@ -1239,7 +1247,7 @@ What matters most, in order:
 - Acceptance: Unit test composites every overlay text token over the plate at floor and default alpha over #ffffff and #f2e6c8 with 8-bit rounding: primary >= 7, secondary and warn >= 5.5 at floor, >= 7 at default; CDP overlay smoke renders plate over white and asserts brightest-3-percent glyph core of secondary >= 5.5 at floor; html has no opacity rule.
 - ZERO-CLICK: Applies at the next overlay start; nothing to press.
 - Disposition: plan
-- Notes: Conflict resolved: the 0041 recipe (owner) replaces the optional plate change of 0044-R11 and 0040's 'no token change'; the 3.81:1 pack reading is a method error, today's value is about 4.88:1. CSS only, no new repaint. Design 0001 sections 5.2 and 10 are amended through the design reviewer.
+- Notes: Conflict resolved: the 0041 recipe (owner) replaces the optional plate change of 0044-R11 and 0040's 'no token change'; the 3.81:1 pack reading is a method error, today's value is about 4.88:1. CSS only, no new repaint. Design 0001 sections 5.2 and 10 are amended through the design reviewer. Floor audit 2026-11-18: with F-147 (L3): any capture in this acceptance goes only through the F-147 helper (own page, headless, demo core).
 
 ### F-095 - Glance budget and notification policy into design 0001, with tests
 
@@ -1281,15 +1289,15 @@ What matters most, in order:
 ### F-098 - Find Client.txt outside Steam
 
 - Rank 97, tier P2; area setup; kind feature.
-- Action: A 'Can't find Client.txt?' field on the consent card for the folder or file, sent through the existing consent API; discovery also tries the standalone client's default folder once that path is confirmed.
+- Action: A 'Can't find Client.txt?' field on the consent card for the folder or file, sent through the existing consent API. No new discovery leg: nothing probes for a standalone client's folder, registry key or config file.
 - Impact / effort / risk: M / S / Low; path check exists (logfile.py:106-132).
-- ToS check: Only Client.txt, only after the opt-in; a folder stat reads no game file; game registry keys and config files stay unread (research 0032).
+- ToS check: Only Client.txt, only after the opt-in, at the path the player typed; game registry keys and config files stay unread (research 0032). Floor audit (L3): a wider discovery scan before the opt-in is a read the floor list does not name, so this finding adds none; whether today's Steam library scan (Steam's registry key and libraryfolders.vdf, server/al/logfile.py) is on the read list is operator decision A-03.
 - Sources: 0039-R6
 - Depends on: F-001
-- Acceptance: A posted path starts the tailer; a bad one shows the existing error; discovery finds a fake non-Steam tree in a temp dir.
-- ZERO-CLICK: Discovery first; field shows only if nothing is found.
+- Acceptance: A posted path starts the tailer; a bad one shows the existing error; a test proves the change adds no registry, vdf or directory-listing call (the discovery call set is unchanged).
+- ZERO-CLICK: Today's discovery first; the field shows only if nothing is found.
 - Disposition: plan
-- Notes: A file path must be named Client.txt (F-001).
+- Notes: A file path must be named Client.txt (F-001). Floor audit 2026-11-18: reworked (typed path only, no new discovery).
 
 ### F-099 - Companion window on the second monitor on first run
 
@@ -1470,15 +1478,15 @@ What matters most, in order:
 ### F-113 - UTIL-ASC-FROM-TREE: ascendancy names from the cached tree
 
 - Rank 112, tier P2; area theorycraft; kind fix.
-- Action: Read the class to ascendancy map from the cached tree export first, keep the built-in table as fallback, add the 3 missing names now and the 1.0 names when GGG publishes them.
+- Action: Read the class to ascendancy map from the cached GGG tree export (Data Exports) first and keep the built-in table as fallback; a name enters the built-in table only when it is in the cached tree export or in operator-pasted patch text (the 3 missing names now, the 1.0 names when GGG publishes the export).
 - Impact / effort / risk: M / S / Low.
-- ToS check: Names from GGG's published export read from the local cache; nothing new bundled.
+- ToS check: Names from GGG's published tree export (Data Exports) read from the local cache, or from operator-pasted text; no forum, wiki or poe2db read (Q-07; floor audit L1, L3); nothing new bundled.
 - Sources: 0037-R9
 - Depends on: nothing
-- Acceptance: With a synthetic tree naming a new ascendancy, class_fits knows its class with no code change.
+- Acceptance: With a synthetic tree naming a new ascendancy, class_fits knows its class with no code change; each name added to the built-in table is present in the cached tree export fixture or in a pasted-text record cited by the commit.
 - ZERO-CLICK: Follows the tree file.
 - Disposition: plan
-- Notes: 1.0 names (0038 F13) are re-checked against the patch notes at launch (F-052).
+- Notes: 1.0 names (0038 F13) are re-checked at launch (F-052) against the cached tree export and operator-pasted patch text only; no agent reads the patch notes. Floor audit 2026-11-18: reworked (tree export and pasted text are the only name sources).
 
 ### F-114 - DIAG-DATA-AGE: say when the game data is older than the game
 
@@ -1496,40 +1504,41 @@ What matters most, in order:
 ### F-115 - Give the GGG docs watch a 'shape' topic
 
 - Rank 114, tier P2; area automation; kind feature.
-- Action: A topic keyed on the field names the reader uses, so a reference or changelog diff touching them is tagged and the note line names the fields.
+- Action: A topic keyed on the field names the reader uses, so a diff of the API Reference page (/developer/docs/reference) or the Data Exports page (/developer/docs/data) touching them is tagged and the note line names the fields. The topic does not run on the changelog or the other docs pages unless the operator's floor line (A-01) allows them (one constant, off).
 - Impact / effort / risk: M / S / None; dev tool, read only.
-- ToS check: Public web data: same six documentation pages at same cadence (decision 0044), allowed by robots.txt; not API endpoints, no API call.
+- ToS check: GGG pages inside the floor's two named sets only (API Reference, Data Exports), at the cadence of decision 0044; no API call. Floor audit (L1): the other four docs pages are outside both sets under Q-07's reading, so the topic leaves them out.
 - Sources: 0035-R3
 - Depends on: nothing
-- Acceptance: A synthetic reference diff that retypes explicitMods gets topic 'shape' and a note naming the field.
+- Acceptance: A synthetic reference diff that retypes explicitMods gets topic 'shape' and a note naming the field; a synthetic changelog diff gets no 'shape' tag while the A-01 constant is off.
 - ZERO-CLICK: Runs on the loop tick, also while HALTed.
 - Disposition: plan
+- Notes: Floor audit 2026-11-18: reworked to the reference and data pages.
 
 ### F-116 - Build the offline core of a GGG client
 
 - Rank 115, tier P2; area data-sources; kind feature.
-- Action: In a module outside providers.py with an injected transport: the OAuth User-Agent form, PKCE and state, authorize URL, token exchange and refresh with the 7-day ceiling, the header-driven limiter, a one-shot 127.0.0.1 listener (state and path checked, closes after one request), tokens in the OS credential store; the bearer token never follows a redirect.
+- Action: In a module outside providers.py with an injected transport: the OAuth User-Agent form, PKCE and state, authorize URL, token exchange, the header-driven limiter, a one-shot 127.0.0.1 listener (state and path checked, closes after one request); the access token is held in memory only; refresh (7-day ceiling) and the OS credential store sit behind one constant that is off by default and is turned on only by a decision citing GGG's written reply to the F-083 refresh question; the bearer token never follows a redirect.
 - Impact / effort / risk: M / M / Rests on details only GGG's reply settles (port matching, refresh on/off); a declined application wastes the day.
-- ToS check: No request possible without a client id; later requests only to API Reference hosts, GGG UA form, headers obeyed dynamically, no POESESSID; listener binds 127.0.0.1 on a block port.
+- ToS check: No request possible without a client id; later requests only to API Reference hosts, GGG UA form, headers obeyed dynamically, no POESESSID; listener binds 127.0.0.1 on a block port. Floor audit (L2): GGG's docs say refresh tokens must be stored securely on a server, so nothing keeps a token on the player's PC until GGG allows it in writing.
 - Sources: 0035-R4
 - Depends on: F-083
-- Acceptance: D-AUTH's verifier/challenge example round-trips; a refresh never moves the stored ceiling; limiter honours synthetic headers and Retry-After; listener refuses wrong state, path or Host; no token in state snapshot, log, diag report or settings export.
+- Acceptance: D-AUTH's verifier/challenge example round-trips; with the constant off no refresh request is built and no credential-store call is made (transport and store injected, 0 calls); with it on in a test a refresh never moves the stored ceiling; limiter honours synthetic headers and Retry-After; listener refuses wrong state, path or Host; no token in state snapshot, log, diag report or settings export.
 - ZERO-CLICK: Not applicable until wired (R5).
 - Disposition: plan
-- Notes: No request is possible without a client id; details that depend on GGG's reply stay behind constants.
+- Notes: No request is possible without a client id; details that depend on GGG's reply stay behind constants. Floor audit 2026-11-18: reworked (refresh and stored tokens behind a default-off constant).
 
 ### F-117 - Recover a refused share link in one click
 
 - Rank 116, tier P2; area theorycraft; kind feature.
-- Action: On the web-data-off refusal the status line offers 'Turn on web data and load this link', which saves the opt-in and repeats the load.
+- Action: On the web-data-off refusal the status line offers 'Turn on web data and load this link'; the click shows the same opt-in sentence as the Settings card (everything web data turns on) and only a confirm click on that sentence saves the opt-in and repeats the load.
 - Impact / effort / risk: M / S / A privacy switch behind a button; the label must name it.
-- ToS check: The click is the explicit opt-in of 0013; fetch stays one request to an allow-listed host with truthful UA; nothing without the click.
+- ToS check: The confirm click on the full opt-in sentence is the explicit opt-in of 0013; floor audit (L3): a label naming only the link would turn on more than the player saw. Fetch stays one request to an allow-listed host with truthful UA; nothing without the confirm.
 - Sources: 0042-R8
 - Depends on: nothing
-- Acceptance: Node test: refusal renders the button; a click posts the opt-in, then the same code once.
-- ZERO-CLICK: One click replaces four acts.
+- Acceptance: Node test: the refusal renders the button; the first click posts nothing and shows the opt-in sentence (one string shared with Settings); the confirm click posts the opt-in, then the same code once.
+- ZERO-CLICK: Two clicks replace four acts.
 - Disposition: plan
-- Notes: The click is the explicit opt-in of decision 0013; web data is never turned on without it.
+- Notes: The confirm click is the explicit opt-in of decision 0013; web data is never turned on without it. Floor audit 2026-11-18: reworked (the full opt-in sentence is shown before anything is saved).
 
 ### F-118 - Overlay parts chooser, a sample card, and a quiet overlay
 
@@ -1584,15 +1593,15 @@ What matters most, in order:
 ### F-122 - One guide file, ready for 1.0
 
 - Rank 121, tier P2; area play-tab; kind data.
-- Action: Fold zone_notes.json and the boss table into zone_guide.json (goal, bonus, layout, next, boss element) and print one guide block; fill the 4 blank zones and verify the '+2 point books' wording; one level-gap rule (zoneguide.advice reads underlevel_gap). At launch: drop interlude acts once live ids confirm it and write Acts 5-6 entries within 48 hours.
-- Impact / effort / risk: H / M / Thin sources in first two days; ship goals first, leave unsure facts out (decision 0043 rule). Merge is S; 24 zones of own-word notes is the rest.
-- ToS check: Public pages read as facts and restated in own words (decisions 0009, 0043), plus build-time area snapshot under web-data opt-in.
+- Action: Fold zone_notes.json and the boss table into zone_guide.json (goal, bonus, layout, next, boss element) and print one guide block; fill the 4 blank zones and check the '+2 point books' wording only from the allowed fact sources: the attributed build-time snapshots (credited in theorycraft/datacredit.py), GGG Data Exports, AshLight's own Client.txt observations (the F-061 ledger, the operator's own play) and operator-pasted text; a fact that would need a live wiki, poe2db or GGG forum read is left out; one level-gap rule (zoneguide.advice reads underlevel_gap). At launch: drop interlude acts once live ids confirm it and write Acts 5-6 entries from the same sources, best effort, with no deadline.
+- Impact / effort / risk: H / M / Thin sources at launch; ship goals first, leave unsure facts out (decision 0043 rule); Acts 5-6 may stay sparse for days. Merge is S; 24 zones of own-word notes is the rest.
+- ToS check: Floor audit (L1, L3): poe2db / wiki data only as attributed build-time snapshots after a licence check, and no GGG forum read (Q-07); so guide facts come only from the snapshots (under the web-data opt-in), GGG Data Exports, AshLight's own Client.txt observations and operator-pasted text, restated in own words (decisions 0009, 0043). No agent or tool reads a live wiki, poe2db or forum page for the guide.
 - Sources: 0038-R5, P01-S5-FOLLOWUP, P01-L10
 - Depends on: F-097
-- Acceptance: One data file; every campaign area id in the cached snapshot has a goal or explicit skip; zone tile shows no separate 'Zone tip'; boss hint fires for every zone with a boss element; after launch G5 and G6 ids covered.
+- Acceptance: One data file; every campaign area id in the cached snapshot has a goal or explicit skip; zone tile shows no separate 'Zone tip'; boss hint fires for every zone with a boss element; after launch G5 and G6 ids covered or explicitly skipped; every new or changed entry carries src and checked (F-097) naming one of the four allowed sources; a test refuses a wiki, poe2db or GGG forum host in any src field.
 - ZERO-CLICK: Data only; file hot-reloads (decision 0042).
 - Disposition: plan
-- Notes: Split: S5 (a) is F-119, (b) was F-211, not adopted (Q-26 (b): the upgrade list stays memory-only), (d) (clear-or-push threshold) is tuned from two weeks of F-061 data, (e) is F-050. The launch part is gated by F-052. Facts restated in own words, unsure facts left out.
+- Notes: Split: S5 (a) is F-119, (b) was F-211, not adopted (Q-26 (b): the upgrade list stays memory-only), (d) (clear-or-push threshold) is tuned from two weeks of F-061 data, (e) is F-050. The launch part is gated by F-052. Facts restated in own words, unsure facts left out. Floor audit 2026-11-18: reworked (fact sources named, the 48-hour launch clock dropped).
 
 ### F-123 - Upgrade search per slot from the build
 
@@ -1872,7 +1881,7 @@ What matters most, in order:
 - Acceptance: New check fails on today's CSS (secondary core 4.56 < 5.5) and passes after R1.
 - ZERO-CLICK: Runs in the suite.
 - Disposition: plan
-- Notes: Synthetic backdrops only; no capture of the real desktop or the game (strict reading; 0041-Q2 is settled this way).
+- Notes: Synthetic backdrops only; no capture of the real desktop or the game (strict reading; 0041-Q2 is settled this way). Floor audit 2026-11-18: with F-147 (L3): any capture in this acceptance goes only through the F-147 helper (own page, headless, demo core).
 
 ### F-145 - Probe and restore zoom in the desktop client
 
@@ -1903,15 +1912,15 @@ What matters most, in order:
 ### F-147 - SHOTS: screenshots from the demo core
 
 - Rank 146, tier P2; area observability; kind feature.
-- Action: tools/shots.py renders the dashboard states from a demo core in a headless browser for README, release notes and the design pack.
+- Action: tools/shots.py renders the dashboard states from a demo core in a headless browser for README, release notes and the design pack, through one shared capture helper that is the only capture path in the repo: AshLight's own page in a headless or hidden test browser on a demo core. Every capture-based acceptance (F-086, F-094, F-144, F-159, F-189) goes through it.
 - Impact / effort / risk: M / M / Running timers make pixels differ; staleness judged on input hash.
-- ToS check: Capture of AshLight's own page inside headless browser, never screen, game or game image; fixture invented names; floor scan gains protocol screenshot call as banned word with one allow entry.
+- ToS check: Capture of AshLight's own page inside a headless browser, never the screen, the game or a game image; fixture invented names. Floor audit (L3): the floor scan bans the protocol screenshot call outside the helper and also desktopCapturer, capturePage on a live window and OS screen grabs; the helper is the one allow entry.
 - Sources: 0058-R8
 - Depends on: F-034
-- Acceptance: Demo start with missing fixture log exits non-zero, opens no file outside fixture folder (planted Steam root with decoy Client.txt); two renders same manifest; planted second capture call fails floor scan; no window appears.
+- Acceptance: Demo start with missing fixture log exits non-zero, opens no file outside fixture folder (planted Steam root with decoy Client.txt); two renders same manifest; planted second capture call fails floor scan; no window appears. A planted desktopCapturer, capturePage or OS grab call anywhere fails the floor scan; the helper refuses a target that is not a page of the demo core.
 - ZERO-CLICK: Unattended, hidden, below-normal priority.
 - Disposition: plan
-- Notes: Split: part (a) DEMO-MODE is F-034. Captures AshLight's own page only: never the screen, never game art.
+- Notes: Split: part (a) DEMO-MODE is F-034. Captures AshLight's own page only: never the screen, never game art. Floor audit 2026-11-18: reworked (one capture helper, wider ban list).
 
 ### F-148 - Free release provenance, and a plain account of 'unsigned'
 
@@ -2063,6 +2072,7 @@ What matters most, in order:
 - Acceptance: In PACK state f computed colour of #reading and #link is the muted token; footer first p still computes to --fk-text; exactly one element matches button.primary; pixel count of a Settings capture finds no filled accent block wider than 100 px.
 - ZERO-CLICK: Nothing to press.
 - Disposition: plan
+- Notes: Floor audit 2026-11-18: with F-147 (L3): any capture in this acceptance goes only through the F-147 helper (own page, headless, demo core).
 
 ### F-160 - Quiet control edges and an honest checkbox
 
@@ -2204,15 +2214,15 @@ What matters most, in order:
 ### F-171 - DIVE-ON-DEMAND: research dives when a source asks
 
 - Rank 170, tier P3; area loop; kind feature.
-- Action: A source may write ops/loop/control/dive_request.json (topic key, validated URLs); the tick dispatches the deep dive even when not idle, at most one a day; the daily idle dive becomes weekly. The dive prompt and runbook step 1 name only the documented developer-docs changelog, public repositories and operator-pasted text as patch sources; no agent or tool reads GGG's patch-notes forum (Q-07; amend research 0029 and the runbook text).
-- Impact / effort / risk: M / S / More dives after launch; one-a-day cap holds 2 runs a day.
-- ToS check: GGG pages only from the developer docs (API Reference / Data Exports set), plus GitHub and the poe.ninja docs page; no forum URL anywhere; the URL validator refuses every other GGG host.
+- Action: Step 1, a floor fix on today's dive that lands alone: the dive prompt and runbook step 1 name only operator-pasted text, public non-GGG repositories (documented GitHub API) and GGG's API Reference and Data Exports pages as patch sources; no agent or tool reads GGG's patch-notes forum (Q-07; amend research 0029 and the runbook text) and the developer-docs changelog stays out until the operator's floor line (A-01). Step 2: every dive is spawned without free web tools (no WebFetch, no WebSearch); each fetch goes through tools/webfetch.py (AshLight User-Agent) behind one host allow-list function that refuses the forum, the trade site, every other GGG path, poe2db and wiki hosts, and logs each fetched host. Step 3, only after step 2: a source may write ops/loop/control/dive_request.json (topic key, validated URLs); the tick dispatches the dive even when not idle, at most one a day; the daily idle dive becomes weekly.
+- Impact / effort / risk: M / S / More dives after launch; one-a-day cap holds 2 runs a day. A dive without search finds less; operator-pasted text fills the gap.
+- ToS check: Floor audit (L1, L3): Q-07 binds dev research reads, so a dive reads GGG only at /developer/docs/reference and /developer/docs/data, sends the AshLight User-Agent on every request (tools/webfetch.py, never an agent web tool) and reads no poe2db or wiki page (those are build-time snapshots only). Enforced by the allow-list in code and the spawn arguments, not by prompt wording; no forum or trade URL anywhere.
 - Sources: 0058-R11
 - Depends on: F-030
-- Acceptance: A request with open rows present still dispatches one dive; a request carrying a GGG forum URL is refused and dispatches nothing; a test finds no forum host in the dive prompt or the runbook.
+- Acceptance: The allow-list function refuses a GGG forum URL, a trade URL, a /developer/docs/changelog URL (A-01 off), a poe2db URL and a wiki URL, and passes the reference and data pages; a dive spawn carries no WebFetch or WebSearch tool (test on the spawn arguments); every fetch of a fixture dive is in the host log with the AshLight User-Agent; a request with open rows present still dispatches one dive; a request carrying a refused URL dispatches nothing; a test finds no forum host in the dive prompt or the runbook.
 - ZERO-CLICK: Unattended.
 - Disposition: plan
-- Notes: Q-07 ruled the floor-safe default: no forum reads. The operator may amend the floor or paste patch notes once at 1.0 (Operator decisions).
+- Notes: Q-07 ruled the floor-safe default: no forum reads. The operator may amend the floor, rule on the docs pages (A-01) or paste patch notes once at 1.0 (Operator decisions). Step 1 does not wait for F-030. Floor audit 2026-11-18: reworked (allow-list in code, AshLight User-Agent, no agent web tools, no changelog).
 
 ### F-173 - Ceilings on threads, deadlines and body sizes
 
@@ -2413,12 +2423,13 @@ What matters most, in order:
 - Rank 187, tier P3; area structure; kind refactor.
 - Action: Declare --al-space-0..4 and three radius tokens and use only them; replace .pill, .verdict, .tab-mark and .tag by one .badge; one list-row rule with two densities; merge the three overlay plate blocks into one class.
 - Impact / effort / risk: M / M / Many small visual diffs in one change; do it after R2 so it is not done twice.
-- ToS check: No floor rule touched; overlay: no new repaint, no animation, plate CSS same after merge.
+- ToS check: No floor rule touched; overlay: no new repaint, no animation, plate CSS same after merge. Floor audit (L3): a capture of the live transparent overlay window would grab whatever is under it, the game included, so the comparison uses the headless render only.
 - Sources: 0040-R7
-- Depends on: F-025, F-053
-- Acceptance: New test passes; M1 re-run reports 100 percent spacing values in the set and 3 radii; PACK overlay window captures pixel-identical before and after.
+- Depends on: F-025, F-053, F-147
+- Acceptance: New test passes; M1 re-run reports 100 percent spacing values in the set and 3 radii; the overlay page rendered in the headless test browser over a synthetic backdrop through the F-147 helper is pixel-identical before and after; no capture of the live overlay window or the desktop.
 - ZERO-CLICK: Nothing to press.
 - Disposition: plan
+- Notes: Floor audit 2026-11-18: reworked (headless render through the F-147 helper).
 
 ### F-190 - The mark beside the name
 
@@ -2595,14 +2606,15 @@ What matters most, in order:
 ### F-204 - One real screen-reader pass
 
 - Rank 202, tier P3; area tests; kind test.
-- Action: After the accessibility fixes land, an agent runs a screen reader over the dashboard on a fixture core and records what is heard for page load, an item check, a trade request, a tab switch and the Settings form.
+- Action: After the accessibility fixes land, an agent runs a screen reader over the dashboard on a fixture core and records what is heard for page load, an item check, a trade request, a tab switch and the Settings form. Keys go to the page through the browser driver, never the OS input queue; the transcript is the reader's own speech log, with no screen or audio capture.
 - Impact / effort / risk: M / M / Needs a visible window and audio on the operator's machine, so must run when the operator is not playing.
-- ToS check: Reads AshLight's own page with an OS reader; nothing touches the game.
+- ToS check: Reads AshLight's own page with an OS reader. Floor audit (L3): the floor bars any input to the game and any screen read outside a manual press, so the pass runs only with the game closed (the operator's word and game_idle true from Client.txt staleness), sends no OS-level key event and captures no screen or audio.
 - Sources: 0044-R12
 - Depends on: F-096, F-121, F-151
-- Acceptance: A dated transcript of what was heard per step, no unnamed or doubled announcements.
+- Acceptance: A dated transcript from the reader's speech log per step, no unnamed or doubled announcements; the run script refuses to start unless game_idle is true and the operator flag is given, and contains no OS input or capture call.
 - ZERO-CLICK: A dev task; no player step.
-- Disposition: blocked: a time the operator confirms they are not playing (speech output and a visible browser on this machine)
+- Disposition: blocked: the operator confirms the game is closed (not only that they are not playing) and game_idle is true; speech output and a visible browser on this machine
+- Notes: Floor audit 2026-11-18: reworked (game closed, driver keys only, speech log only).
 
 ## Tier P4 - defer
 
@@ -2646,14 +2658,15 @@ What matters most, in order:
 ### F-208 - Peek key for one-screen players
 
 - Rank 206, tier P4; area electron; kind feature.
-- Action: An optional third AshLight key shows the companion window at a compact size on the game's monitor and hides it on the next press.
-- Impact / effort / risk: L / S / Focus leaves the game while the window is up (player's own press); the game may apply a background frame cap (UNVERIFIED for PoE2, Q3); a third global key.
-- ToS check: Overlay stays click-through and non-focusable; companion is AshLight's own window (decision 0041); press reads and sends nothing; hiding acts on AshLight's window only, never queries or activates the game window (decision 0029 amendment).
+- Action: An optional third AshLight key shows a compact detail in the existing overlay card slot (click-through, non-focusable, one card at a time per decision 0014) and hides it on the next press. AshLight never shows the companion window on the game's monitor; the companion opens only on another display (F-167).
+- Impact / effort / risk: L / S / The one card slot is small (design section 10); a third global key; the overlay budgets (decision 0002) must hold with the detail card.
+- ToS check: Floor audit (L1): the overlay must be a separate transparent, always-on-top, click-through, non-focusable window; a focusable companion placed over the game would act as a second overlay without those properties and could take focus from the game. So the detail is drawn inside the existing overlay window; the press reads and sends nothing; nothing queries or activates the game window (decision 0029 amendment).
 - Sources: 0054-R8
 - Depends on: F-026
-- Acceptance: Node test: one press shows, next hides, held key does not repeat; handler makes no clipboard or screen call; unset by default.
+- Acceptance: Node test: one press shows the detail card in the overlay slot, the next hides it, a held key does not repeat; the overlay window stays non-focusable and click-through while the card shows (flags asserted); the handler makes no clipboard or screen call and no show or focus call on the companion window; unset by default; tests/test_budgets.py green.
 - ZERO-CLICK: Off by default; one press when the player wants detail.
-- Disposition: defer: needs a live focus test with the operator and an operator taste call; no demand evidence
+- Disposition: defer: needs an operator taste call; no demand evidence; the detail must fit the one overlay card slot
+- Notes: Floor audit 2026-11-18: reworked (detail in the overlay card slot, no companion over the game).
 
 ### F-209 - PRICE-OVERRIDE: player price overrides
 
@@ -2682,14 +2695,15 @@ What matters most, in order:
 ### F-212 - Spike: one press per item by a screen read
 
 - Rank 209, tier P4; area items; kind decision.
-- Action: Time-boxed test: one capture of the tooltip area on the AshLight press, read by an optional external OCR tool or the OS engine, compared against the clipboard text of the same 30 items.
-- Impact / effort / risk: M / L / Misread numbers give wrong verdicts; new optional dependency (core stays stdlib-only, 0002); OS engine languages depend on device install (English recognizer presence UNVERIFIED).
-- ToS check: One screen read per manual AshLight key press is what floor and GGG allow; no continuous capture, timer, or input; capture by AshLight's own window process, not a hook in game graphics.
+- Action: Time-boxed test: one capture of the tooltip area on the AshLight spike-key press, read by the OS engine (an external OCR tool only after a decision pins it by hash with a licence check), compared offline against the clipboard text of the same 30 items taken by separate item-key presses or from fixtures. Each manual press does exactly one read, the screen or the clipboard, never both. The image is discarded after the read, never stored and never sent off the PC.
+- Impact / effort / risk: M / L / Misread numbers give wrong verdicts; an external OCR tool needs its own decision and pin (core stays stdlib-only, 0002); OS engine languages depend on device install (English recognizer presence UNVERIFIED).
+- ToS check: One read per manual AshLight key press is what the floor and GGG allow; floor audit (L2, L3): a press that read both the screen and the clipboard would be two reads, and no unpinned external tool may see a game image. No continuous capture, timer or input; capture by AshLight's own window process, not a hook in game graphics.
 - Sources: 0043-R7
 - Depends on: F-054
-- Acceptance: 30 of 30 items parse to the same stats as their clipboard text, or spike closed as rejected.
+- Acceptance: A test proves the spike-key handler makes exactly one screen read and 0 clipboard reads and the item-key handler one clipboard read and 0 screen reads; no image file is written; 30 of 30 items parse to the same stats as their clipboard text, or the spike is closed as rejected.
 - ZERO-CLICK: 1 press, floor minimum for any item read.
-- Disposition: defer: after the changed item key the saving is one key press per item; no wave before 1.0; a pick-one-of-N recommender (0056-Q2) waits with it
+- Disposition: defer: after the changed item key the saving is one key press per item; no wave before 1.0; a pick-one-of-N recommender (0056-Q2) waits with it and would need one manual press per screen read
+- Notes: Floor audit 2026-11-18: reworked (one read per press, OS engine only, image never stored).
 
 ### F-213 - CLOCK-STEP: timers survive a clock change
 
@@ -2892,7 +2906,7 @@ Every cut, merge, demote, promote, hide and retire-on-trigger candidate of the s
 
 1. Reading Path of Building's own files: 0043 recommends following the builds folder behind an opt-in; 0042 rejects it as outside the floor's read list; 0054 and 0035 ask.
    - Ids: 0043-R3, 0042-X4, 0054-Q2, 0035-Q5
-   - Resolution: Ruled Q-01: outside the current floor text; F-071 is not adopted and F-042 and F-058 (ruled in by Q-02) carry the build pain.
+   - Resolution: Ruled Q-01: outside the current floor text; F-071 is not adopted and F-042 (ruled in by Q-02) carries the build pain; F-058 waits on the operator (floor audit, Q-02 file half).
 2. Parse ledger consent: plan 01 says the ledger closes LIVE-1 with zero operator acts; 0051 asks whether the existing Client.txt consent covers a persisted ledger.
    - Ids: 0051-R1, P01-R3, 0051-Q1
    - Resolution: Stricter reading: both persisted ledger parts wait for a new consent line; in-memory counters need none; revoking consent deletes the file. One tick by the operator (F-061).
@@ -2965,6 +2979,12 @@ Every cut, merge, demote, promote, hide and retire-on-trigger candidate of the s
 25. AUDIT-P8-LOW P8-3 and P8-4 (port checks) are claimed by both 0045-R6 and 0050-R8.
    - Ids: 0045-R6, 0050-R8, P01-AUDIT-P8-LOW
    - Resolution: They land with F-091 (the smaller change); F-137 depends on it.
+26. Floor audit: Q-07 reads the floor's GGG clause (endpoints only if in the API Reference or Data Exports) as binding every GGG host read, while settled decision 0044 reads six developer-docs pages of which only two are in those sets.
+   - Ids: F-051, F-115, F-171, Q-07
+   - Resolution: The stricter reading governs all new work (F-051 blocked, F-115 and F-171 reworked); the settled watch is left as it is and the question goes to the operator as A-01, because a settled decision cannot widen the floor and this plan cannot reverse one whose Reverses-if is not met.
+27. Floor audit: Q-01 reads the floor's read list as exhaustive, while today's Client.txt discovery reads Steam's registry key and libraryfolders.vdf, which the list does not name.
+   - Ids: F-098, F-049, F-001, Q-01
+   - Resolution: No finding widens discovery (F-098 typed path only, F-049 path shape only); today's scan is left as it is and the question goes to the operator as A-03.
 
 ## Open decisions
 
@@ -3210,18 +3230,20 @@ Ruled by adjudicator agents on 2026-11-18; machine-readable under rulings in doc
 
 ### Build input paths
 
-- Q-01 (floor: outside-current-floor; operator decision: yes): Outside the current floor text: no reading of PoB's builds folder or API answer file. Plan ships hotkey load and browser file pick; folder source stays a deferred add-on.
-  - Why: The floor's READ ONLY list names only Client.txt, per-press clipboard/screen and public web data. It reads as exhaustive and no adjudicator may widen it. Hotkey load plus file pick (Q-02) cover most of the paste pain with no floor change.
+- Q-01 (floor: outside-current-floor; operator decision: yes): Outside the current floor text: no reading of PoB's builds folder or API answer file. Plan ships the hotkey load; the browser file pick waits on Q-02; the folder source stays a deferred add-on.
+  - Why: The floor's READ ONLY list names only Client.txt, per-press clipboard/screen and public web data. It reads as exhaustive and no adjudicator may widen it. The hotkey load (Q-02) covers most of the paste pain with no floor change.
   - Alternatives: Builds folder opt-in via new decision plus a read-list line; folder plus API answer file.
   - Reverses if: Operator amends the floor read list in their own words; then add the folder source under a new decision with no rework.
   - Record: none
   - Applies to: F-071 (not adopted)
-- Q-02 (floor: within-floor; operator decision: no): Yes for both: a build loaded by the item-check hotkey press (the same single clipboard read) or from a save file the player picks in the browser counts as player-supplied build text.
-  - Why: Each load is the player's own act and the bytes equal a paste. The clipboard rule (one read per manual press) is kept. The file pick follows decision 0033: the core gets bytes, never a path. This is additive and contradicts no settled decision.
+  - Floor audit: the file pick no longer counts as shipped (see Q-02).
+- Q-02 (floor: within-floor (hotkey press); outside-current-floor (file pick); operator decision: yes): Yes for the hotkey press: a build loaded by the item-check hotkey press (the same single clipboard read) counts as player-supplied build text. The save-file pick is held: the floor audit found it outside the current read list, so it waits for the operator's one read-list line.
+  - Why: The hotkey load is the player's own act and the clipboard rule (one read per manual press) is kept. The file pick follows decision 0033 in shape (bytes, never a path), but the floor's read list does not name a picked file and no adjudicator or settled decision may widen it.
   - Alternatives: Hotkey press only; paste box only.
   - Reverses if: Operator rules the clipboard build load needs its own hotkey or opts out, or GGG's overlay rules change (decision 0003 reverse).
   - Record: amend decision 0004 (item 4 and the CLAUDE.md Stack sentence, dated 2026-11-18)
-  - Applies to: F-042, F-058
+  - Applies to: F-042, F-058 (blocked on the operator)
+  - Floor audit: the file-pick half is held for the operator (L1); the hotkey half stands.
 
 ### Data sources and web requests
 
@@ -3237,24 +3259,26 @@ Ruled by adjudicator agents on 2026-11-18; machine-readable under rulings in doc
   - Reverses if: A source objects to start-time fetches, or the hidden process costs overlay budget in play.
   - Record: amend decision 0009 item 2 and 0013 amendment
   - Applies to: F-072
-- Q-05 (floor: within-floor; operator decision: yes): Send the message to poe.ninja before the public flip; ship the tiered cadence regardless.
+- Q-05 (floor: within-floor; operator decision: yes): Send the message to poe.ninja before the public flip. The tiered cadence ships for source checkouts; release builds make no poe.ninja request until poe.ninja's yes is recorded in a decision.
   - Why: poe.ninja asks apps to proxy via their own backend and a public release multiplies requests; one message is cheap, an objection later costs the price feature. Sending to a third party is an operator act.
   - Alternatives: Explicit skip and ship the tiered cadence unasked.
-  - Reverses if: poe.ninja replies that per-install polling is fine (close the item) or wants a mirror (new decision).
+  - Reverses if: poe.ninja replies that per-install polling is fine (the release constant turns on, close the item) or wants a mirror (new decision), or the operator rules in writing that the risk is accepted.
   - Record: none
   - Applies to: F-046
+  - Floor audit: 'ship regardless' is struck for release builds (L2): silence is not consent.
 - Q-06 (floor: within-floor; operator decision: no): Keep decision 0017 unchanged and allow the wording change: the overlay card shows the item name instead of 'Trade link ready' when no poe.ninja value exists.
   - Why: trade2 endpoints are undocumented and the floor bars them; only a URL the player opens is built. The wording is display text only and the name is more useful.
   - Alternatives: Keep 0017 and old wording; operator rules otherwise.
   - Reverses if: GGG documents trade endpoints or permits third-party use in writing (0017's own condition).
   - Record: amend decision 0016 (card wording, dated)
   - Applies to: F-163, F-040
-- Q-07 (floor: outside-current-floor; operator decision: yes): Binds: no agent or tool reads GGG's patch-notes forum; amend the dive prompt and runbook step 1 to the documented developer-docs changelog, public repositories and operator-pasted text.
+- Q-07 (floor: outside-current-floor; operator decision: yes): Binds: no agent or tool reads GGG's patch-notes forum; amend the dive prompt and runbook step 1 to operator-pasted text, public repositories and GGG's API Reference and Data Exports pages; the developer-docs changelog only if the operator's floor line (A-01) allows it.
   - Why: The floor allows GGG endpoints only if in the API Reference or Data Exports; the forum is a GGG host outside both sets, and the floor cannot be read more loosely. The research reads were not clearly permitted.
   - Alternatives: Robots-respecting low-frequency research reads allowed (outside the current floor text).
   - Reverses if: The operator amends the floor to permit research reads of the forum, or GGG documents it as a permitted source.
   - Record: none (amend research 0029 and the runbook text)
   - Applies to: F-171
+  - Floor audit: the changelog is not in the API Reference or Data Exports, so it is no longer named as a dive source (see F-171, A-01).
 
 ### Settings, hotkeys and autostart
 
@@ -3351,12 +3375,13 @@ Ruled by adjudicator agents on 2026-11-18; machine-readable under rulings in doc
   - Reverses if: The spike fails (embeddable CPython breaks the server or Electron zip unusable without Node), a publisher drops stable hash-verifiable assets, or a licence objection appears.
   - Record: new decision (installed-copy runtimes) amending 0002 stack note, 0010 and 0041 point 8 (shortcut target path); add one sentence to the CLAUDE.md Stack rule and a licence record
   - Applies to: F-038, F-047, F-050
-- Q-21 (floor: within-floor; operator decision: no): (a) Yes: one read-only GitHub releases check per 24 h, only while web_data is on, UA truthful, Retry-After obeyed. (b) Verified update staged, applied automatically at next start after a 24 h hold; Settings switch gives click-only; previous version kept.
+- Q-21 (floor: within-floor; operator decision: no): (a) Yes: one read-only GitHub releases check per 24 h, only while web_data is on, UA truthful, Retry-After obeyed. (b) Verified update staged, applied automatically at next start after a 24 h hold; Settings switch gives click-only; previous version kept. The opt-in sentence must name the update check and the automatic apply; an opt-in given before that wording stays click-only (no check, no apply) until the player has seen it once.
   - Why: Mirrors the settled TC-DRIFT daily read and 0013 single opt-in, so nothing hits the network while off. Auto-apply follows the minimal-interaction order; hash/attestation checks, hold and rollback bound the risk. GitHub API is a documented public endpoint, not a game endpoint.
   - Alternatives: (a) yes, (b) click only (more upkeep for players); (a) no, notice from release page only (not glanceable).
   - Reverses if: GitHub or GGG terms bar the daily read, a bad release auto-applies in practice, or the operator wants click-only default.
   - Record: amend decision 0013 (and 0018 item 6 wording) with the release-check and staged-apply clause
   - Applies to: F-055, F-077
+  - Floor audit: wording and re-show clause added (L3).
 - Q-22 (floor: within-floor; operator decision: no): No code signing at first; apply to a free open-source signing program after the first public release; README states plainly what unsigned means and how to verify hashes.
   - Why: No revenue to fund it and signing must not be funded by GGG-derived features; the pasted install line avoids the SmartScreen prompt; reversible later with no rework.
   - Alternatives: Paid individual signing now (about 10 USD a month), a purchase that is the operator's call.
@@ -3406,18 +3431,88 @@ Ruled by adjudicator agents on 2026-11-18; machine-readable under rulings in doc
   - Record: none (note in the ROADMAP row; decision 0036 untouched)
   - Applies to: F-052
 
+## Floor audit
+
+Three independent auditors, each told to refute compliance, checked every finding and ruling against the Game ToS floor on 2026-11-18. Rule applied: flagged by two or three lenses = the strictest fix; flagged by one lens = the stricter reading too unless the flag is plainly mistaken; no doubt is resolved in favour of the looser reading. Machine-readable under floor_audit in docs/plan/findings.json.
+
+- L1: 239 items checked, 10 flagged
+- L2: 239 items checked, 5 flagged
+- L3: 239 items checked, 19 flagged
+- Distinct ids flagged: 28 (by two lenses: 6); reworked 24, blocked on the operator 4, rejected 0, kept 0.
+- Changed by consequence (not flagged themselves): F-044, F-055, F-086, F-089, F-094, F-144, F-159, Q-01, Q-07.
+
+- Q-02 (L1): blocked on operator - The picked save file is a read source the list does not name; the hotkey half stays within the floor, the file half waits for the operator's read-list line.
+  - Rule: READ ONLY list: Client.txt, clipboard / screen once per manual press, public web data
+- F-058 (L1): blocked on operator - Same as Q-02: nothing of the file pick is built until the operator adds the line; F-042 ships alone.
+  - Rule: READ ONLY list: Client.txt, clipboard / screen once per manual press, public web data
+- F-051 (L1): blocked on operator - The quotes live on the docs index page, which is in neither set under Q-07's reading; decision 0044 cannot widen the floor; waits for operator decision A-01.
+  - Rule: GGG endpoints only if they are in the API Reference or Data Exports
+- F-115 (L1): reworked - The shape topic runs on the reference and data pages only; the changelog and the other pages stay out until A-01.
+  - Rule: GGG endpoints only if they are in the API Reference or Data Exports
+- F-171 (L1, L3): reworked - Dives lose free web tools: every fetch goes through tools/webfetch.py behind a host allow-list in code (reference and data pages only on GGG; no forum, trade, changelog, poe2db or wiki), tested on the code and the spawn arguments.
+  - Rule: GGG endpoints only if in the API Reference or Data Exports; truthful AshLight User-Agent on every web request; poe2db / wiki only as build-time snapshots; trade site never called
+- F-122 (L1, L3): reworked - Guide facts come only from the snapshots, GGG Data Exports, AshLight's own Client.txt observations and operator-pasted text; the 48-hour launch clock is dropped; a test refuses wiki, poe2db and forum hosts as sources.
+  - Rule: poe2db / wiki data only as attributed build-time snapshots after a license check; no GGG forum read (Q-07)
+- F-113 (L1, L3): reworked - Names come only from the cached GGG tree export or operator-pasted patch text; no agent reads the patch notes.
+  - Rule: GGG endpoints only if in the API Reference or Data Exports (no forum read); poe2db / wiki only as snapshots
+- F-037 (L1): reworked - npm sends an AshLight User-Agent through app/.npmrc and Electron is downloaded only by AshLight's own fetch code (F-044); the scope of the bullet for package tools goes to the operator as A-02.
+  - Rule: Every web request sends a truthful User-Agent naming AshLight and its version
+- F-208 (L1): reworked - The detail is drawn in the existing overlay card slot; the focusable companion is never shown over the game. Still deferred.
+  - Rule: The overlay is a SEPARATE transparent, always-on-top, click-through, non-focusable window
+- F-063 (L1, L3): reworked - The uninstaller prints a fixed sentence with the file names AshLight hands out; it lists, stats and opens no game folder.
+  - Rule: READ ONLY list is exhaustive; never modify or touch game folders
+- F-046 (L2): blocked on operator - Release builds make no poe.ninja request until poe.ninja's yes is recorded; the tiered cadence ships for source checkouts only; the operator sends the message (Q-05).
+  - Rule: Public web data from poe.ninja as the source allows it (research 0036 F2: desktop apps are asked to proxy)
+- Q-05 (L2): reworked - 'Ship regardless' is struck for release builds: silence is not consent.
+  - Rule: Public web data from poe.ninja as the source allows it (research 0036 F2)
+- F-080 (L2, L3): reworked - Fetch only on the Connect and Refresh clicks, access token in memory only, no refresh token; event fetches and stored tokens wait for GGG's written yes. Still blocked on registration.
+  - Rule: GGG docs: no automated invocation by timers or reacting to file changes; refresh tokens stored securely on a server; read only what GGG permits
+- F-116 (L2): reworked - Refresh and the credential store sit behind a default-off constant; the access token is memory-only.
+  - Rule: GGG docs: refresh tokens must be stored securely on a server
+- F-212 (L2, L3): reworked - Screen press and clipboard press are separate presses with one read each; OS engine only; the image is never stored. Still deferred.
+  - Rule: Screen or clipboard read only once per manual key press; optional external tools hash-pinned by decision
+- F-030 (L3): reworked - New watcher sources run only while the dev host's web_data is on and read repository metadata only, never data files; no new exemption is recorded.
+  - Rule: Decisions 0009 / 0013: nothing hits the network while web data is off; public web data only from listed sources
+- F-052 (L3): reworked - The 1.0 signal comes from repository metadata; the loop downloads no data file and reads nothing with web data off.
+  - Rule: Decisions 0009 / 0013 amendments: snapshot and tree fetch only under the web_data opt-in
+- F-049 (L3): reworked - The resolver refuses a game-folder home by path shape only: no registry, vdf or folder listing.
+  - Rule: READ ONLY list is exhaustive (Q-01, decision 0006)
+- F-054 (L3): reworked - Exactly one clipboard read per press is a tested invariant of the new chord; no retry or wait-for-change. Still blocked on Q-09.
+  - Rule: Clipboard only once per manual press of an AshLight hotkey (no watcher, no timer)
+- F-074 (L3): reworked - Sandbox phases run only on the operator's explicit flag; release.py detects nothing about the game.
+  - Rule: Decision 0029: game presence only from Client.txt staleness, never an OS process-list check
+- F-077 (L3): reworked - The opt-in sentence names the update check and automatic apply; earlier opt-ins stay click-only until re-shown (F-055 follows).
+  - Rule: Decision 0013: one web_data opt-in whose wording names what is fetched
+- Q-21 (L3): reworked - The ruling now requires the new opt-in wording and the re-show for earlier opt-ins.
+  - Rule: Decision 0013: single web_data opt-in with stated scope
+- F-083 (L3): reworked - account:item_filter is dropped from the application; token storage and log-triggered reads are asked of GGG as questions.
+  - Rule: Never modify any game file; decisions 0031 / 0033 (filter is a download the player places)
+- F-098 (L3): reworked - The typed path is the only new route; no new discovery leg. Today's Steam scan goes to the operator as A-03.
+  - Rule: READ ONLY list is exhaustive; Client.txt only after the opt-in
+- F-117 (L3): reworked - The full opt-in sentence is shown and confirmed before anything is saved.
+  - Rule: Decision 0013: web data is an explicit opt-in, default OFF
+- F-147 (L3): reworked - One shared headless capture helper is the only capture path; the floor scan also bans desktopCapturer, live-window capturePage and OS grabs; F-086, F-094, F-144, F-159 and F-189 use the helper.
+  - Rule: Screen only once per manual press; no continuous capture
+- F-189 (L3): reworked - The overlay comparison uses the headless render over a synthetic backdrop, never the live overlay window.
+  - Rule: Screen read only once per manual hotkey press; no capture of the game
+- F-204 (L3): reworked - The pass runs only with the game closed and game_idle true, with driver keys and the reader's speech log; no OS input, no capture.
+  - Rule: NEVER send input to the game; screen read only per manual press
+
 ## Operator decisions
 
-Each item: what the operator decides, the default the plan follows meanwhile, and what it blocks. All go into the one batched ask (F-040, docs/plan/09).
+Each item: what the operator decides, the default the plan follows meanwhile, and what it blocks. Q- items come from the rulings, A- items from the floor audit. All go into the one batched ask (F-040, docs/plan/09).
 
 - Q-01: Whether to add one line to the CLAUDE.md read list allowing an opt-in read of Path of Building's builds folder (and optionally its API answer file), path shown.
-  - Default meanwhile: No: the folder is not read; the item-hotkey build load (F-042) and the browser file pick (F-058) carry the build pain.
+  - Default meanwhile: No: the folder is not read; the item-hotkey build load (F-042) carries the build pain; the browser file pick (F-058) waits on Q-02.
   - Blocks: Nothing in the plan; F-071 stays not adopted until the floor text changes, then lands under a new decision with no rework.
+- Q-02: Whether to add one line to the CLAUDE.md read list allowing a file the player picks in AshLight's own page (bytes only, never a path or a stored copy). The same line would put the filter pick of settled decision 0033 beyond doubt.
+  - Default meanwhile: No file pick for builds: F-058 is not built; the hotkey load (F-042) ships alone.
+  - Blocks: F-058.
 - Q-05: Send one message to poe.ninja asking whether per-install polling at the tiered cadence (about 200 overview GETs a day) is acceptable or a project mirror is wanted.
-  - Default meanwhile: The tiered cadence ships now (F-046).
-  - Blocks: Only the public flip (F-021 step 4) waits for the message.
+  - Default meanwhile: The tiered cadence ships for source checkouts (F-046); release builds make no poe.ninja request and show the trade link only until poe.ninja's yes is recorded.
+  - Blocks: poe.ninja prices in public releases (F-046); the public flip (F-021 step 4) waits only for the message.
 - Q-07: Optional: amend the floor to allow robots-respecting research reads of GGG's patch-notes forum, or paste the patch notes once at 1.0.
-  - Default meanwhile: No forum reads by any agent or tool; dives use the developer-docs changelog, public repositories and operator-pasted text (F-171).
+  - Default meanwhile: No forum reads by any agent or tool; dives use operator-pasted text, public repositories and GGG's API Reference and Data Exports pages (F-171).
   - Blocks: Nothing.
 - Q-09: One minute: with two keyboard layouts installed press Alt+Shift+E and Alt+Shift+A and say whether the layout changes; in the game's key binds name one unbound Ctrl+letter next to C.
   - Default meanwhile: The item key stays Alt+Shift+E and the second key Alt+Shift+A (two global keys).
@@ -3431,7 +3526,15 @@ Each item: what the operator decides, the default the plan follows meanwhile, an
 - Q-24: Supply the final owner/name address when creating the repository.
   - Default meanwhile: A placeholder constant read from config; the leak-sweep allow-list entry is added only at go-public.
   - Blocks: The real README install line (F-020) and the update-check constant (F-055); nothing else.
-- Also open, for MAIN rather than the operator: on a needle hit from F-004, the history rewrite needs MAIN's ORDER (Q-25); the repository stays private until then.
+- A-01: Floor audit: whether GGG's developer-docs pages outside the API Reference and Data Exports (index, authorization, changelog, game) may be read. Q-07 reads the floor's GGG clause as binding every GGG host read; settled decision 0044 reads all six pages daily.
+  - Default meanwhile: No new work reads those four pages: F-051 is blocked, F-115 runs on reference and data only, dives skip the changelog (F-171). The plan does not change the settled 0044 watch itself; a no from the operator means a new row that narrows it to the two pages (REG_OPEN, F-149 and F-080 then need another signal).
+  - Blocks: F-051; the changelog parts of F-115 and F-171.
+- A-02: Floor audit, optional: whether the User-Agent bullet binds package tools that setup runs (npm, pip) or only AshLight's own requests.
+  - Default meanwhile: Strict: npm sends an AshLight User-Agent (F-037), Electron comes only through AshLight's own fetch code (F-044), no AshLight script runs pip (F-089).
+  - Blocks: Nothing; an 'own requests only' answer drops the .npmrc line.
+- A-03: Floor audit: whether finding Client.txt through Steam's registry key and libraryfolders.vdf (today's discovery in server/al/logfile.py) is on the read list, by one added line, or the typed path becomes the only route.
+  - Default meanwhile: No finding widens discovery (F-098 is the typed path only; F-001 narrows it; F-049 decides by path shape). The plan does not change today's Steam scan; a no from the operator means a new row that removes it.
+  - Blocks: Nothing in the plan.
 
 Optional notes, no reply needed (the ruled default stands): Q-14: Optional: the operator may send monitor size, resolution and distance whenever convenient. Q-15: Confirming is a one-word reply only; the default stands if no reply. Q-21: Optional: operator may flip the auto-apply default to click-only; plan proceeds with auto. Q-22: Only if the operator wants to buy signing; plan assumes none.
 
@@ -3655,7 +3758,7 @@ Optional notes, no reply needed (the ruled default stands): Q-14: Optional: the 
 - P01-X2 R-2 Reading the game's FPS from outside (PresentMon, ETW, frame hook, screen capture of the counter) - rejected by its file; against a settled decision: Decision 0006 and the floor bar them; OVL-FPS stays a player reading.
 - P01-X3 R-3 Persisting raw unknown Client.txt lines for LIVE-1 - rejected by its file: N51 rejects it too; only masked shapes, no chat text or names kept.
 - P01-X4 R-4 Timer or watcher reading the clipboard for LIVE-WAYSTONE - rejected by its file; against a settled decision: Per-press only (decision 0003).
-- 0043-R3 Follow the Path of Building builds folder (zero-paste build) - outside the current floor text (Q-01): the floor's READ ONLY list does not name Path of Building's builds folder or API answer file; F-042 and F-058 carry the build pain; reopens only if the operator amends the read list (was F-071)
+- 0043-R3 Follow the Path of Building builds folder (zero-paste build) - outside the current floor text (Q-01): the floor's READ ONLY list does not name Path of Building's builds folder or API answer file; F-042 carries the build pain (F-058 waits on operator decision Q-02); reopens only if the operator amends the read list (was F-071)
 - 0045-R10 A read-only stream key - ruled out (Q-11): the plan follows P0 / design A, no AshLight network path for a phone, so the read-only stream key is not built; reopens if the operator picks a data-sending phone design (was F-172)
 - P01-L16 S5 (b): persist the BUILD-LIVE upgrade list - ruled out (Q-26 (b)): the BUILD-LIVE upgrade list stays memory-only under decision 0045; reopens only on a 0045 Reverses-if (was F-211)
 
@@ -3711,4 +3814,5 @@ Per source: recommendations, how many became findings, how many were not adopted
 - Totals: 314 recs = 306 in findings + 8 not adopted; 213 rejected ideas; 527 ids in all; 211 findings; 221 not-adopted entries.
 - Sources that are not recommendation ids (a finding without a recommendation, a critic gap): 0054-F2, CRITIC-GAP-08, CRITIC-GAP-09.
 - Questions: 146 in the sources = 57 cited by the 28 open decisions + 89 folded.
-- Coverage check: PASS (re-run after the rulings, 2026-11-18: an independent script over the eight extraction files and findings.json: each of the 527 ids appears exactly once; no rejected idea sits in a finding; fids unique, ranks 1 to 211, every depends-on id exists; each of the 146 source questions is either cited by an open decision or folded, never both).
+- Coverage check: PASS: each of the 527 ids appears exactly once (independent script, 2026-11-18; re-run after the rulings and again after the floor audit: 211 findings, 221 not-adopted entries)
+- Floor audit: 28 ids flagged, all changed in place (reworked or blocked on the operator); no source id moved between findings and not adopted, so the counts above are unchanged.
