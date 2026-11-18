@@ -38,7 +38,7 @@ full detail.
 - Wave 99: parked packages, each with its unblock condition. Once the
   condition reads true the package joins the next open wave; re-run the
   validator after the move. Parked packages may name the same file or
-  serial group (10 files and 6 groups today; section Parked packages lists
+  serial group (11 files and 6 groups today; section Parked packages lists
   them): nothing in the list runs. The shared-file rule binds a package
   from the wave it joins, so two parked packages that share a file or a
   group never join the same wave, and a parked package never joins a wave
@@ -119,21 +119,25 @@ an hour.
   This is the measuring wave: research 0049 left the escape rate open (its
   Open question 3) and names a dry wave of 8 packages with at most 3
   whole-suite gate rows as the acceptance of R1.
-- Waves 2 and later: at most 12 worktree packages, three merge batches of 4.
-  Gate time for a full wave is about 3 x 1.19 x 4 min = 14 minutes (about 5
-  once the suite runs in parallel), far below the build time of the wave,
-  and the integrator has at most 12 results to apply. More, narrower waves
-  were preferred over wider ones: the number of waves is set by the file
-  chains (section Hotspot schedule), not by the width.
+- Waves 2 and later: at most 12 worktree packages when planned, in merge
+  batches of at most 4; a close-out that adds packages without moving others
+  may widen a wave to at most 16 (four batches) (ruling R6, 2026-11-18). Gate
+  time for a full wave is about 3 x 1.19 x 4 min = 14 minutes (about 5 once
+  the suite runs in parallel), far below the build time of the wave, and the
+  integrator has at most 12 results to apply. More, narrower waves were
+  preferred over wider ones: the number of waves is set by the file chains
+  (section Hotspot schedule), not by the width.
 - Main-checkout acts (isolation none: docs, records, the first push, the
   HALT removal) do not take a worktree slot; at most 4 a wave.
 - Close-out 2026-11-18: the eight publishing packages joined existing waves
-  without moving any other package, so four waves are wider than 12 and run
-  a fourth merge batch: wave 4 (14 worktree packages), wave 18 (14), wave 19
+  without moving any other package, so four waves are wider than 12 and run a
+  fourth merge batch: wave 4 (14 worktree packages), wave 18 (14), wave 19
   (13) and wave 22 (13). The width of 12 was a parameter of the retired
   builder, not a rule of the validator; each of these waves costs one more
   batch suite (about 10 minutes before wave 10, about 8 after it), which the
-  wave times below include.
+  wave times below include. Every batch, the fourth included, has its own
+  whole suite before main moves; with the batch lowered to 3 (rule below)
+  these waves run five batches.
 - If wave 1 measures an escape rate above 10 percent, the session lowers the
   batch to 3 (width 9) until TEST-SELECT has landed (wave 8); the plan needs
   no rebuild for that.
@@ -520,7 +524,7 @@ payload holding a NUL byte.
 - LOOP-PREFLIGHT-CMD [session, M 55m, build, P1] Loop preflight command: gates once on unchanged main, hand-off count. Files: tools/loop_preflight.py, tests/test_loop_preflight.py. Deps: none.
 - GP-01 [session, S 25m, review, P0] Arm the set-name needles and re-run every scan. Files: none (an act or a read-back). Deps: none.
 - GP-03 [session, S 20m, build, P0] NOTICE as a public file and the licence record. Files: NOTICE, docs/decisions/0047-licence-and-notice.md. Deps: none.
-- RUN-LIVE-CLICKS-STRIKE [session, S 10m, review, P0] Strike the desktop-control unblock path from TEST-LIVE-CLICKS. Files: none (an act or a read-back). Deps: none.
+- RUN-LIVE-CLICKS-STRIKE [session, S 10m, review, P0] Strike the tool-click unblock path from TEST-LIVE-CLICKS. Files: none (an act or a read-back). Deps: none.
 - DATA-GGG-APPLICATION [session, M 45m, review, P2] Prepare the GGG OAuth application note and its decision. Files: docs/decisions/0004-scope-theorycraft.md, docs/ops/ggg-oauth-application.md, docs/decisions/0048-ggg-oauth-client.md. Deps: none.
 
 ### Wave 2: loop and watchers, local security, reliability and observability
@@ -637,8 +641,8 @@ and ritual files.
   docs/design/0001-design-system.md (PLAY-TD-03-TOKENS);
   tests/test_keepalive.py (SEC-HELLO-CORE); server/al/ninja.py
   (TC-FILTER-ONE-CONTROL).
-- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
-  PUB-GO-DECISION, SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS,
+- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md: PUB-GO-DECISION,
+  PUB-LOCAL-ONLY-TEXT, SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS,
   SEC-HELLO-CORE; docs/decisions/README.md: PUB-GO-DECISION, SEC-ACL-APPLY,
   TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE; AL-NEXT-SESSION.txt:
   PUB-GO-DECISION, PLAY-TD-03-TOKENS; docs/design/reviews.log: 5 lines.
@@ -706,15 +710,17 @@ starts PowerShell by its System....
   PLAY-TD-07A-PLAY-VIEW, PLAY-TD-09B-SKELETON, TC-CAMPAIGN-KEEP,
   RUN-LEDGER-CORE; 3: OVL-KEYS-CLIENT, PLAY-TD-19A-PAGER, OVL-GLANCE-RULES,
   PLAY-TD-04A-DARK-CLIENT.
-- Gate: per package: its named tests as a file-named run (timing files and
-  any subset over 90 s and the fixed-port files through the suite gate);
-  main-checkout acts one at a time in merge order; per merge batch of 4 on
-  the integration worktree: merge, then the integrator's edits for the batch
-  as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner
-  <id> -- python -m pytest -q and npm test --prefix app, green, then main
-  moves; then python tools/plan_check.py check; the wave closes when every
-  session row is flipped and main is clean; GP-09 runs alone after the last
-  batch is on main, with nothing else in flight.
+- Gate: per package: its named tests as a file-named run (timing files and any
+  subset over 90 s and the fixed-port files through the suite gate);
+  main-checkout acts one at a time in merge order; per merge batch of 4 on the
+  integration worktree: merge, then the integrator's edits for the batch as
+  one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id>
+  -- python -m pytest -q and npm test --prefix app, green, then main moves;
+  then python tools/plan_check.py check; the wave closes when every session
+  row is flipped and main is clean; GP-09 runs alone after the last batch is
+  on main: from its gate 3 to its read-back no merge, integrator commit, batch
+  suite, revert or other act touches main, and the wave closes only after its
+  read-back or its DEFERRED line (ruling R1, 2026-11-18).
 
 - AUTO-06 [session, M 50m, build, P1] WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD. Files: tools/loop_work.py, tests/test_loop_wave.py, docs/decisions/0055-loop-and-wave-contract.md. Deps: LOOP-ROWFILES-WORK, LOOP-WAVE-HOLD, AUTO-01.
 - RUN-SEAMS [session, M 60m, build, P2] Plug-in folder: ticks, Checks rows and token-gated routes without shared-file edits. Files: server/al/core.py, server/al/__main__.py, server/al/diag.py, server/al/http.py, tests/test_security_surface.py (+3 more). Deps: SEC-SURFACE-PIN, SEC-NO-DISCOVERY.
@@ -2295,6 +2301,14 @@ operator act or a deferred unit) and add nothing.
   brief, copies the words from it verbatim (never from a plan document or a
   ruling) and reads each line back with `grep -c`. A sentence in a plan
   document is not the record.
+- Checked 2026-11-18 (close-out 2): the three quoted texts were compared with
+  the brief, word for word. The two OPERATOR GO lines quote its first two
+  sentences on going public; the OA-2 line quotes its sentence on the one
+  operator act left, now with the brief's own backticks around the command.
+  What the lines stand for is the reading of a ruling, never the operator's
+  wording: that the order is the go for steps 1 and 4 is ruling LE-01, that
+  the sentence on the one act left is the written skip of OA-2 is ruling
+  LE-38. The hand-off says so directly under the lines.
 - Fallback, kept as a live safeguard (adjudicator LE-27): if the main
   session cannot quote the brief verbatim, no line is written and the
   default of Q-23 applies: stay local, GP-02 stays a ready diff, and the
@@ -2337,9 +2351,11 @@ operator act or a deferred unit) and add nothing.
   (GP-01), the licence record (GP-03), the fresh-clone proof (GP-04), the CI
   files (GP-05) and the community files.
 - The headless loop does not push by itself even with a remote: its push
-  worker needs the operator's per-host switch loop_push (OA-11, default off;
-  PUB-LOCAL-ONLY-TEXT). A session reads the loop's commits before its own
-  gated push.
+  worker needs the operator's per-host switch loop_push (OA-11, default off).
+  The switch is not built yet: PUB-LOCAL-ONLY-TEXT builds it in wave 4
+  (reopened 2026-11-18, ruling R2), and GP-09 waits for that package, so no
+  remote exists before the switch does. A session reads the loop's commits
+  before its own gated push.
 
 ## Port block (8960 to 8979)
 
@@ -2393,6 +2409,7 @@ with packages.json.
 - server/al/diag.py: SEC-STEAM-SCAN-A03, AUTO-24.
 - app/main.js: OVL-ITEM-KEY-CTRL, PUB-GUIDE-DOWNLOAD-PLACE.
 - tests/test_zone_guide.py: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
+- docs/decisions/0002-stack.md: RUN-OVL-BUDGET-CLOSE, OVL-FPS.
 - Serial group readme: GP-10, PUB-GUIDE-DOWNLOAD-PLACE.
 - Serial group item-press: TC-IMPORT, TC-WAYSTONE-TUNE.
 - Serial group data-core: DATA-LOOT-TALLY, DATA-CONTACT-DEFAULT.
@@ -2559,19 +2576,20 @@ Unblocked by another package (16):
   itself behind the repository and first push (GP-09). Unblock: GP-10 is
   merged to main, so the address constant and its leak-sweep allow-list
   entry are in the tree. Joins wave 37 or later; also behind parked GP-10.
-- AUTO-19: waits on the remote does not exist yet (the repository is local
-  only and the pre-push hook refuses every push). Who: package GP-09.
-  Unblock: `git remote get-url origin` exits 0 and the first push is green
-  (GP-09 done). Joins wave 14 or later.
+- AUTO-19: waits on the remote does not exist yet (no git remote is
+  configured; GP-09 creates the repository and makes the first push). Who:
+  package GP-09. Unblock: `git remote get-url origin` exits 0 and the first
+  push is green (GP-09 done). Joins wave 14 or later.
 - AUTO-20: waits on Dependabot alerts and pull requests exist only after the
   public flip. Who: package GP-12. Unblock: the repository is public (GP-12
   done) and .github/dependabot.yml and tools/dependabot_reapply.py are on
   main. Joins wave 19 or later; also behind parked AUTO-19, LOOP-CI-ISSUES,
   GP-12.
-- LOOP-CI-ISSUES: waits on the remote does not exist yet (the repository is
-  local only and the pre-push hook refuses every push). Who: package GP-09.
-  Unblock: `git remote get-url origin` exits 0 and the first push is green
-  (GP-09 done). Joins wave 22 or later; also behind parked AUTO-19.
+- LOOP-CI-ISSUES: waits on the remote does not exist yet (no git remote is
+  configured; GP-09 creates the repository and makes the first push). Who:
+  package GP-09. Unblock: `git remote get-url origin` exits 0 and the first
+  push is green (GP-09 done). Joins wave 22 or later; also behind parked
+  AUTO-19.
 - PUB-GUIDE-DOWNLOAD-PLACE: waits on the project's address is in tracked
   config/public_repo.json. Who: package GP-10. Unblock: `python -c "import
   json;print(json.load(open('config/public_repo.json'))['repo'])"` prints
@@ -2749,8 +2767,9 @@ Done (nothing left to do) (7):
   docs/plan/01-open-items.md L8 - no TODO, FIXME, XXX or HACK marker exists
   outside the vendored kit and docs; no action
 - OPEN-43 (L11 decision number 0035 intentionally unused; next free 0046 (no
-  a...): docs/decisions/README.md records 0035 as intentionally unused and
-  the next free number is 0046; no action
+  a...): docs/decisions/README.md records 0035 as intentionally unused; the
+  next free number was 0046 when the item was written and is 0079 since
+  2026-11-18 (section Reserved decision numbers); no action
 - OPEN-47 (L15 LaneLoop task enabled while HALT is set (no defect; do not
   rein...): no defect; the LaneLoop task stays enabled while HALT is set
   (01-open-items L15) and AUTO-21 neither reinstalls nor runs it
@@ -2837,9 +2856,12 @@ validator.
 
 Numbers 0046 to 0076 are reserved in wave and merge order (research 0047 R1:
 no agent takes the next number). A decision written outside a package takes
-the next number after this block. A number already handed out never moves
-(the reserved_decisions list of packages.json): the go-public decision kept
-0046 while its package was parked and keeps it in wave 4.
+the next number after this block. Two are taken that way, both written in the
+planning session on 2026-11-18: 0077 (ultraplan execution model) and 0078
+(ultraplan rulings ledger). The next free number is 0079. A number already
+handed out never moves (the reserved_decisions list of packages.json): the
+go-public decision kept 0046 while its package was parked and keeps it in wave
+4.
 
 - 0046-go-public.md: PUB-GO-DECISION (wave 4)
 - 0047-licence-and-notice.md: GP-03 (wave 1)
@@ -2872,6 +2894,12 @@ the next number after this block. A number already handed out never moves
 - 0074-player-notes.md: PLAY-F-186A-PLAYER-NOTES-STORE (wave 29)
 - 0075-fixed-cockpit-play.md: PLAY-TD-23-RECORDS (wave 31)
 - 0076-ci-issue-protocol.md: AUTO-19 (wave 99)
+
+Taken outside a package (not reserved, listed so the next number is plain):
+
+- 0077-ultraplan-execution-model.md: taken 2026-11-18 (planning session)
+- 0078-ultraplan-rulings-ledger.md: taken 2026-11-18 (planning session)
+- 0079: the next free number
 
 ## Contract lines for package agents
 
@@ -2933,8 +2961,9 @@ What changed:
   file; PUB-HOOK-RELEASE-CHECK adds the hook line), so the release tooling
   stays in the open waves.
 - Loop push (floor S2): the loop's push worker needs the operator's per-host
-  switch loop_push (default off), built by PUB-LOCAL-ONLY-TEXT; the stale
-  'the loop is HALTed' assumption left GP-10.
+  switch loop_push (default off), to be built by PUB-LOCAL-ONLY-TEXT (reopened
+  2026-11-18, ruling R2; wave 4, before GP-09 adds origin); the stale 'the
+  loop is HALTed' assumption left GP-10.
 - Steam library scan (floor S1, coverage S2): operator decisions A-02 and
   A-03 are units now; A-03 is carried by the parked package
   SEC-STEAM-SCAN-A03, whose default is the stricter reading (scan removed)
@@ -3310,9 +3339,10 @@ final). Each entry: decision, alternatives, why, reverses if.
     tag. Then stage uses a pre-tag flag and BUILD stays tag-free.
   - Reverses if, also: CI's byte comparison is dropped.
 
-Not ruled here. Six of the 19 items did not reach the close-out with a
-usable ruling and stay as the plan words them (section Open points): LE-69,
-LE-76, LE-92, LE-96, LE-99 and LE-100.
+Not applied at this close-out. All 19 items were ruled. Six rulings were not
+applied here, because their text was cut off on the way to the fixer: LE-69,
+LE-76, LE-92, LE-96, LE-99 and LE-100. They are recorded and applied in
+section Rulings 2026-11-18 (close-out 2).
 
 Loose ends fixed without a ruling (15 items):
 
@@ -3362,6 +3392,396 @@ What the close-out moved:
   neither is asked any more; GP-02, PUB-GO-DECISION and GP-12 name no
   operator act; OA-1 (conditional), OA-5 and OA-11 (optional) are kept.
 
+## Rulings 2026-11-18 (close-out 2)
+
+The close-out audit of 2026-11-18 (HEAD 3e14f77) found that the adjudicator of
+the close-out had ruled all 19 loose ends, that 13 rulings were applied
+(section Rulings 2026-11-18 (close-out)) and that six were never applied,
+because their text was cut off on the way to the fixer. The full text of the
+six was read again from the adjudicator's own result and is applied here:
+LE-69, LE-76, LE-92, LE-99, LE-100 and LE-96. They are followed by six new
+rulings of a distinct adjudicator on gaps the same audit found (R1 to R6).
+Each entry: decision, alternatives, why, reverses if, and where it was
+applied. Decision 0078 ledgers all twelve.
+
+One fact changed the form of LE-92: its probe was run early, on 2026-11-18 in
+the planning session, and it passed. Wave 1 therefore uses hand-made sidecar
+worktrees (docs/plan/08 section 2), and the .claude/worktrees fallback stays
+unused.
+
+- LE-69 (the stale OVL-FPS acceptance sentence in decision 0002).
+  - Decision: Decision 0002 gets one dated, append-only pointer under its Game
+    FPS line saying the OVL-FPS acceptance is restated as budget B19 in
+    decision 0006. The old sentence stays as written, and no budget changes.
+  - Alternatives: (a) Leave 0002 stale, as Q-18's 'no change to 0002'
+    literally says. (b) Rewrite 0002's FPS sentence.
+  - Why: Q-18's 'no change to 0002' protects 0002's contract: the stack and
+    the budgets. A cross-reference changes neither. Leaving a known-stale
+    acceptance line misleads the next reader, and the CLAUDE.md 'Reverses if'
+    of decision 0002 cites the FPS budget.
+  - Why, also: The plan already amends 0002 with a dated clarification (Q-16,
+    dev-only test plugins), so a dated note there is the established form.
+  - Why, also: Append-only keeps history intact and is reversible.
+  - Reverses if: The operator rules decision records must not carry forward
+    pointers.
+  - Reverses if, also: The B19 result shows a real FPS budget change, which
+    needs a real 0002 amendment instead.
+  - Applied 2026-11-18: package OVL-FPS (parked on OA-33) lists
+    docs/decisions/0002-stack.md under files, its notes carry the line word
+    for word and its accept greps it. The line is written when the package
+    lands, not now: budget B19 enters decision 0006 only with OVL-CHECK (wave
+    21). Section Parked packages lists the file as shared by
+    RUN-OVL-BUDGET-CLOSE and OVL-FPS.
+- LE-76 (the CI fetch of AUTO-19 beside decision 0013).
+  - Decision: Accept AUTO-19 as designed. tools/watch_ci.py does not read
+    web_data, runs only when GITHUB_ACTIONS is 'true', fetches only URLs that
+    pass watch_gate.check_url, and never touches a GGG or poe.ninja host.
+    Decision 0076 records the scope boundary with decision 0013.
+  - Alternatives: (a) Give CI its own web_data switch, for example a
+    repository variable. (b) Drop the CI watcher and keep all sources on the
+    dev loop.
+  - Why: Decision 0013 governs the app and the dev host: one web_data opt-in,
+    default off, nothing on the network while off. A GitHub runner is project
+    infrastructure, not a player's install or the operator's machine, so there
+    is no user whose opt-in is missing.
+  - Why, also: The guard that matters is kept and tested: it refuses to run
+    off a GitHub runner, so it can never bypass web_data on a real machine.
+    The URL allow-list and a test that no GGG or poe.ninja host appears in the
+    workflow match 04 ('CI never turns web data on and calls no GGG or
+    poe.ninja host').
+  - Why, also: A repository variable (alternative a) would be an opt-in with
+    no user behind it. Dropping the watcher (alternative b) loses unattended
+    watching while the dev host is off, against the minimal-interaction order.
+  - Reverses if: A CI source needs a GGG or poe.ninja host.
+  - Reverses if, also: The operator rules decision 0013 covers CI.
+  - Reverses if, also: The GITHUB_ACTIONS guard proves spoofable in a way that
+    lets it run on a user machine.
+  - Applied 2026-11-18: decision 0076 is reserved for AUTO-19 and does not
+    exist yet, so the ruling's 'Scope' sentence stands word for word in the
+    notes of AUTO-19 and its accept greps it in the decision file; the Settled
+    bullet text in its integrator_edits carries 'never a GGG or poe.ninja
+    host; outside decision 0013's scope'; docs/plan/06 (AUTO-19) has a dated
+    amendment line. Tests unchanged.
+- LE-92 (sidecar worktrees before the hook of decision 0012 is wired (OA-12)).
+  - Decision: Do not wait. At the start of session 1, before wave 1, run one
+    probe: create a hand-made sidecar worktree with the hook script, have a
+    background sub-agent edit and revert a scratch file in it, then remove it
+    with the hook's WorktreeRemove. If the edit is allowed, use 08's unwired
+    method. If it is refused, use the harness default .claude/worktrees as a
+    temporary, recorded fallback until OA-12 is pasted.
+  - Alternatives: (a) Waves wait for the operator's OA-12 paste. (b) Run every
+    package with isolation none in the main checkout, serialised. (c) Use the
+    unwired method untested.
+  - Why: Waiting (alternative a) stalls 11 or more wave-1 agents on an
+    optional physical act the operator may not do soon, against FLEET rule 1
+    and the minimal-interaction order. Serialising in main (alternative b)
+    costs hours and raises claim and race risk.
+  - Why, also: .claude/worktrees is gitignored, local and leak-free, and it is
+    what isolated spawns already used before the hook (08 'What earlier
+    sessions did'; decision 0012 Alternatives). It breaks only the sidecar
+    placement rule, and only until the paste. It touches no ToS floor and no
+    security floor.
+  - Why, also: A one-agent probe costs about a minute and removes the
+    uncertainty in LE-99. Running untested (alternative c) risks failing 11
+    builders at once.
+  - Why, also: It is reversible: once OA-12 is pasted the harness places
+    worktrees under the sidecar, and /done reaps the fallback ones.
+  - Reverses if: The probe shows edits under the sidecar path work: the
+    unwired method is used and the fallback is never invoked.
+  - Reverses if, also: The operator pastes OA-12: the wired method is used.
+  - Reverses if, also: The operator rules the sidecar rule absolute even
+    temporarily: then alternative b (serial, isolation none).
+  - Applied 2026-11-18: the probe ran early, on 2026-11-18 in the planning
+    session, by one sub-agent with the ruling's method (08 section 2,
+    'Probe'). The edit was allowed, so the first Reverses-if is met: wave 1
+    uses the unwired sidecar method and the fallback is not taken. 08 (the
+    probe record, the Fallback bullet, Open points), 09 OA-12, the
+    operator_act of AUTO-26 and the hand-off say so.
+- LE-99 (edits under a hand-made sidecar worktree were unverified).
+  - Decision: Same ruling as LE-92. A one-agent probe at the start of session
+    1 settles whether edits are allowed under a hand-made sidecar worktree.
+    Creating and removing that one probe worktree is allowed.
+  - Alternatives: Leave it unverified and find out when wave 1's builders run.
+  - Why: The verifier avoided creating a worktree because it was read-only.
+    Session 1 is not, and a probe worktree is created and removed through the
+    same hook code the tests already run end to end.
+  - Why, also: Nothing irreplaceable is deleted: `git worktree remove` without
+    --force refuses a dirty tree.
+  - Reverses if: Same as LE-92.
+  - Applied 2026-11-18: the probe of 2026-11-18 (see LE-92): Edit and Write
+    under the sidecar worktree were allowed with no prompt; the hook's
+    WorktreeRemove refused the dirty tree and removed it once it was clean,
+    without --force.
+- LE-100 (the .claude/worktrees fallback beside decision 0012).
+  - Decision: Same ruling as LE-92. The .claude/worktrees fallback is allowed
+    as a temporary, recorded deviation from decision 0012's placement. The
+    real fix stays OA-12 / AUTO-26.
+  - Alternatives: Forbid the fallback and serialise in the main checkout.
+  - Why: It is gitignored, leak-free, matches the pre-hook status quo, ends on
+    the paste, and is reaped at /done. Serialising costs hours.
+  - Reverses if: Same as LE-92.
+  - Applied 2026-11-18: 08's Fallback bullet says it is taken without waiting
+    and reaped at /done; the hand-off NOTE line stays as 08 states it, and
+    OA-12 moves to the top of the one batched ask only when the fallback is
+    actually used. It was not needed on 2026-11-18.
+- LE-96 (the kill at 3x inside a Workflow run).
+  - Decision: Accepted as the Workflow-run equivalent of FLEET item 3's 3x
+    kill: the builder stops itself at 2 x est_min, and a run that is still
+    silent at 3x is stopped as a whole and restarted with that package id in
+    args.defer. Waves where a single-agent kill matters run as plain
+    background Agents. If the Monitor tool is not available, the watcher waits
+    with a bounded background Bash until-loop.
+  - Alternatives: (a) Never use Workflow runs for waves; dispatch plain
+    background Agents, which can be stopped one by one. (b) Use Workflow runs
+    with no kill at all.
+  - Why: FLEET item 3 is meant to ensure no task runs unchecked past 3x its
+    ETA. A self-stop at 2x is stricter, and the whole-run stop at 3x enforces
+    the limit when a builder hangs. Restarting loses little, because worktrees
+    are reused by name (the hook returns the same path), progress files
+    persist, and the deferred id is skipped.
+  - Why, also: Not using Workflow runs at all (alternative a) gives up their
+    batching. Using them with no kill (alternative b) breaks item 3.
+  - Why, also: The Monitor tool's schema was not checked. A background Bash
+    bounded loop that exits on a changed or stale progress file, re-invoking
+    the watcher on exit, is the item-12 'poll in bounded slices' pattern and
+    does not depend on that tool. Foreground sleep stays banned.
+  - Reverses if: The Workflow API gains a per-agent stop: then the normal 3x
+    kill of one agent is used.
+  - Reverses if, also: Whole-run restarts lose work in practice, for example
+    uncommitted builder state: then waves switch to plain Agents.
+  - Reverses if, also: MAIN's kit rules a different Workflow kill rule.
+  - Applied 2026-11-18: 08 section 3 (the Kill bullet and the watcher bullet)
+    and section 10 (the line on waves that run as plain background Agents).
+- R1 (GP-09 runs alone).
+  - Decision: GP-09 runs ALONE. It starts only after wave 5's last merge batch
+    has moved main. From its gate 3 to its read-back nothing touches main: no
+    merge, integrator commit, batch suite, revert or other act. Wave 5 closes
+    only after that read-back, or after GP-09's DEFERRED line if a gate is
+    red. It does not ride in a merge batch. This is expressed in the gate text
+    and the notes, not through serial_group or deps.
+  - Alternatives: (a) GP-09 inside a normal merge batch; (b) alone, which is
+    chosen; (c) a serial_group or a synthetic dep.
+  - Why: Gates 3 to 11 (clean tree, identity, leak, brand, hooks, GP-04
+    commit, CI test, whole suite) all read the state of main. A merge landing
+    between those gates and the push would send a commit that was never
+    scanned or suite-tested, a check-then-push race.
+  - Why, also: The plan already said this in the wave 5 gate, 08 section 2 and
+    the notes of GP-09 in packages.json; it was never ruled. This ruling makes
+    it binding and adds the close and carry rules.
+  - Why, also: serial_group is the validator's tool for keeping two file
+    editors apart inside a wave. GP-09 edits no file, so a group would mean
+    nothing there. The 08 Workflow already treats an act that the gate text
+    places 'alone' as one that waits for the last batch.
+  - Why, also: Fully reversible: it is text only, and it costs nothing extra
+    because the 50 minutes are already counted in wave 5.
+  - Reverses if: The merge lock (LOOP-WAVE-HOLD) is proven to cover the whole
+    GP-09 gate-to-push span on its own.
+  - Reverses if, also: GP-09 is split so that the push is a single atomic step
+    that re-runs every gate on the exact commit it pushes.
+  - Reverses if, also: The operator orders otherwise.
+  - Applied 2026-11-18: the wave 5 gate (packages.json and this file), the
+    notes of GP-09 (a red gate defers it to the end of the next wave; after
+    AUTO-21 it runs under python tools/loop_merge.py hold), 08 section 2 and
+    08 Open points.
+- R2 (the loop_push switch that PUB-LOCAL-ONLY-TEXT never built).
+  - Decision: ROADMAP row PUB-LOCAL-ONLY-TEXT is reopened. Its remaining work
+    is the loop_push switch and the two tests packages.json already names. It
+    stays in wave 4, batch 1, with the same files and est_min. GP-09 keeps it
+    as a dep, so no origin remote can exist before the switch does.
+    CLAUDE.md's push-worker sentence gets the switch condition when the
+    package lands.
+  - Alternatives: (a) reopen, which is chosen; (b) keep the row ticked and
+    move the switch into a 'push worker package'; (c) drop the switch and let
+    the loop push by itself as soon as origin exists.
+  - Why: Fact checked: push_needed() and push() in tools/al_loop.py have no
+    loop_push gate. The two tests named in the tests field
+    (test_push_is_skipped_while_the_loop_push_switch_is_off,
+    test_push_runs_with_a_fake_origin_and_the_switch_on) do not exist in
+    tests/test_al_loop_gate_cache.py. The accept line passed only because it
+    runs whole files. So the tick was a false record.
+  - Why, also: Option (b) has no target: the push worker already exists, and
+    no planned package builds it. PUB-LOCAL-ONLY-TEXT already owns the
+    al_loop.py and gate-cache test files in wave 4, where nothing else edits
+    them.
+  - Why, also: Option (c) undoes the floor-lens review (Review record, 'Loop
+    push (floor S2)') and the Q-23 assignment of push approval. Default off
+    fails closed. It also adds no operator interaction, because a session
+    pushes after its own gated commit.
+  - Why, also: Ordering safety holds: GP-09 (wave 5) depends on this package,
+    and HALT stays until AUTO-21 (wave 6). So the unswitched worker can never
+    see an origin remote.
+  - Reverses if: The operator rules that the headless loop may push by itself
+    (then drop the switch, and CLAUDE.md keeps its present sentence).
+  - Reverses if, also: A later package moves the push worker out of
+    tools/al_loop.py (then the switch moves with it).
+  - Applied 2026-11-18: PUB-LOCAL-ONLY-TEXT in packages.json (accept,
+    integrator_edits, notes), its ROADMAP row (reopened, with a REOPENED
+    sentence), the wave 4 Integrator bullet, the Review record bullet 'Loop
+    push (floor S2)', 09 OA-11 and the hand-off. tools/al_loop.py is
+    untouched: the switch is the package's work in wave 4.
+- R3 (the kit fleet_identity pre-push gap and its report to MAIN).
+  - Decision: The fleet_identity pre-push gap is folded into the existing kit
+    report: row AUTO-25 drafts it in wave 2, and LOOP-KIT-REPORT-SEND sends it
+    once OA-21 gives a destination. It is carried in the hand-off KIT DEFECT
+    bullet. Decision 0046 is corrected to say 'not yet reported'. No note is
+    sent now.
+  - Alternatives: (a) send one combined FIX note now; (b) fold the gap into
+    AUTO-25 / LOOP-KIT-REPORT-SEND, which is chosen; (c) hand-off carry only.
+  - Why: Option (a) cannot be carried out. The outbox holds only its
+    placeholder file; nothing has ever been sent. The inbox holds one MAIN
+    INFORMATION / TERMINAL note. No loop.dest_inboxes entry or fleet roster
+    exists for AL (hand-off KIT DEFECT bullet; OA-21 is open). FLEET item 7
+    defines delivery as destination copies that are re-hashed and counted, so
+    with no destination there is no delivery to record.
+  - Why, also: FLEET item 11 requires the defect to be reported to MAIN and
+    never patched locally. The plan already has one report path for the older
+    fleet_suite_gate defect (AUTO-25 drafts, LOOP-KIT-REPORT-SEND delivers on
+    OA-21). Folding both into that one note also follows item 14 c ('several
+    answers go in ONE note').
+  - Why, also: Decision 0046 said 'reported to MAIN', which was false. The
+    record has to state the truth: drafted later, sent on OA-21.
+  - Why, also: The local cover already exists: tools/push_guard.py checks
+    taggers, tag objects and the wide trailer rule. Waiting on the kit leaves
+    no exposure.
+  - Reverses if: A delivery path to MAIN exists (an OA-21 entry or a fleet
+    roster), which makes option (a) the right move at the next session.
+  - Reverses if, also: MAIN ships a kit version whose fleet_identity checks
+    tag objects and wide trailers (then drop item 5 from the draft and amend
+    0046 to 'fixed in kit vN').
+  - Reverses if, also: MAIN asks for kit defects by another channel.
+  - Applied 2026-11-18: AUTO-25 (goal, notes item 5, accept) and
+    LOOP-KIT-REPORT-SEND (notes) in packages.json, a dated correction line in
+    decision 0046 (the decision file is append-only, so the false words stay
+    and the line under them corrects them), and the hand-off KIT DEFECT
+    bullet. Nothing was sent; no remote and no dest_inboxes value was added.
+- R4 (three server-side limits of the go-public setup).
+  - Decision: (a) The admin always-bypass on main's required checks is
+    ACCEPTED as designed. (b) Branch and tag creation on the remote is
+    ACCEPTED as designed, plus a read-back clause added to GP-13 so that drift
+    is caught. (c) The CI leak sweep running --tree only is ACCEPTED as
+    designed. All three acceptances go in a new dated amendment of decision
+    0046.
+  - Alternatives: Assign each gap to a package as a hard server rule; for (b),
+    a no-bypass 'restrict creations' ruleset on every ref except main,
+    dependabot/** and v*.
+  - Why: (a) Pushes go straight to main, so required checks can only run after
+    the push. A no-bypass rule would reject every fresh direct push. Decision
+    0046 already rejected 'required checks with no bypass', and its Settled
+    entry depends on it. The same gates run before the push anyway: the whole
+    suite before every commit, and the pre-push identity check, push_guard and
+    object leak sweep on every push. GP-12 gate 3 also reads both workflows
+    green before the flip.
+  - Why, also: (b) The repository stays private until GP-12, and only the
+    operator's account plus Dependabot write to it. The local ref rule plus
+    push_guard refuse every ref except main and v*. The release-tag ruleset
+    (deletion, non_fast_forward, update; no bypass) already protects v* tags.
+    A creation-restricting ruleset would add a new tracked file and an
+    amendment to plan 04, and it could break Dependabot's dependabot/*
+    branches. A read-back catches the same drift with no risk.
+  - Why, also: (c) CI holds no private needles, so --history in CI would add
+    only the structural arm over history. GP-09 gate 5 already sweeps the
+    history locally, armed, and every later push is swept object by object
+    with the needles. CI's tree sweep is a second structural check, not the
+    authority.
+  - Why, also: Every acceptance is text and can be undone with a ruleset or a
+    workflow line later.
+  - Reverses if: GitHub lets required checks run before a direct push lands
+    (then drop the bypass).
+  - Reverses if, also: A second writer (collaborator, app or token) gets push
+    access, or a ref outside main, dependabot/* and v* ever appears on the
+    remote (then add the creation-restricting ruleset in PUB-SETTINGS-FILES
+    and GP-13).
+  - Reverses if, also: CI ever receives needles through a secret-free channel,
+    or a leak is found in pushed history (then CI also runs --history).
+  - Applied 2026-11-18: decision 0046, 'Amendment 2026-11-18 - accepted
+    server-side limits (ruling R4)', and GP-13 in packages.json (the ls-remote
+    read-back in its accept; its notes say what happens to another ref).
+    docs/plan/04 is unchanged.
+- R5 (three limits of the leak sweep).
+  - Decision: All three leak sweep limits are ACCEPTED and recorded in
+    decision 0046: archives and base64 are not decoded; --no-verify skips the
+    hooks; binary files get no structural arm. Each gets a named backstop. No
+    package is assigned.
+  - Alternatives: Assign an archive and base64 decoder, a server-side sweep,
+    or a binary structural arm to a package.
+  - Why: Archives and base64: checked 2026-11-18, none of the 575 tracked
+    files is an archive. The only binaries are 14 png / ico brand and app
+    assets, and tests/test_brand_assets.py caps the blob size. Release zips
+    never go through git: plan 05 sweeps the staged tree before packing (its
+    stage gate step 5). A decoder would cost CPU on every push to guard
+    against a file type the repository does not hold.
+  - Why, also: --no-verify: only the operator can use it. Every agent rule
+    (CLAUDE.md Gates, the rules of 08) forbids it. GP-12 gate 2 re-runs
+    leak_sweep --history on origin/main before the repository turns public, so
+    a bypassed push is still caught while the repository is private.
+  - Why, also: Binary structural arm: left out on purpose (0046 amendment item
+    1). Three history images form drive-path shapes by chance. The needle arm
+    still reads binaries as UTF-8 and UTF-16, which covers the names that
+    matter.
+  - Why, also: Recording the limits in the decision (not only in a docstring)
+    makes the claim 'a clean run is not proof' auditable.
+  - Reverses if: An archive, a packed or base64 blob, or a new binary type
+    becomes tracked (then add a decoder or a no-archive test through a
+    package).
+  - Reverses if, also: A --no-verify push is found on origin.
+  - Reverses if, also: A needle is ever found inside a binary or encoded
+    object.
+  - Applied 2026-11-18: decision 0046, 'Amendment 2026-11-18 - accepted leak
+    sweep limits (ruling R5)', and one pointer line in the docstring of
+    tools/leak_sweep.py.
+- R6 (waves 4, 18, 19 and 22 are wider than 12).
+  - Decision: Waves 4, 18, 19 and 22 are ACCEPTED as they stand. The rule:
+    merge batches hold at most 4 packages, every batch (the fourth included)
+    runs its own whole suite before main moves, and a wave holds at most 16
+    worktree packages (4 batches). A new or re-planned wave is still filled to
+    12 at most. Above 12 is allowed only where a close-out adds packages
+    without moving others. No re-sequence.
+  - Alternatives: Re-sequence the 7 extra packages into later waves; lower K
+    to 5 to fit 3 batches; accept with a fourth batch, which is chosen.
+  - Why: Correctness comes from the batch suite, not the width. Every batch of
+    up to 4 gets its own whole suite, so escape exposure per batch is
+    unchanged (research 0049 R1 ruled K = 4 as Q-17).
+  - Why, also: Wave 3 already runs a fourth batch (GP-04), so the merger and
+    the 08 Workflow (one entry per Batches line) handle 4 batches today. 08
+    section 2 already lists the four wide waves, and the Workflow caps
+    parallel agents at min(16, CPUs - 2), which is 14 on this 16-CPU machine.
+  - Why, also: Re-sequencing would move packages past the file-chain order the
+    Hotspot schedule settled, for about 8 to 10 minutes saved per wave. The
+    extra time is already in the wave and session estimates, and no session
+    passes the 520-minute budget.
+  - Why, also: Text only and reversible. The escape-rate fallback still
+    applies: if K drops to 3, these waves run 5 batches, each with its own
+    suite.
+  - Reverses if: Wave 1 measures an escape rate above 10 percent and a wide
+    wave's extra batch pushes its session over 520 minutes (then move that
+    wave's last batch into the next wave).
+  - Reverses if, also: The suite gate shows a wide wave holding a slot long
+    enough to starve the loop (a stale or OVERRUN gate row).
+  - Reverses if, also: A machine with fewer than 14 usable CPUs queues
+    builders past the wave estimate.
+  - Applied 2026-11-18: section Wave width and expected time, 08 section 2 and
+    08 Open points. No package changed its wave.
+
+Also closed at this close-out, without a ruling:
+
+- RUN-LIVE-CLICKS-STRIKE: its accept counted two words in ROADMAP.md, and its
+  own row held them (in the title and in the pattern text), so the count could
+  never be 0. The title and the pattern were reworded; the accept still counts
+  both words in the same two files.
+- docs/plan/09: the lines that still said the pre-push hook refuses every push
+  now name the guarded push of decision 0046 (commits 7fe4993 and 01c2216);
+  the same stale words left the blocked text of the parked packages AUTO-19
+  and LOOP-CI-ISSUES.
+- Section Reserved decision numbers names 0077 and 0078 as taken and 0079 as
+  the next free number; docs/decisions/README.md agrees.
+- Decision 0078 was checked against its sources (the rulings and the floor
+  audit in docs/plan/findings.json, the adjudicator's result of the
+  close-out): the six rulings above were missing and are added; where an
+  earlier source reads differently (Q-01, Q-02, Q-05, Q-07, Q-23) the entry
+  now names the source that wins; A-01 to A-03 name their source.
+- The operator record lines of the hand-off were compared with the brief
+  (section Operator go for publishing, bullet Checked 2026-11-18).
+
 ## Open points
 
 - The escape rate of package subsets is assumed, not measured; wave 1
@@ -3377,13 +3797,18 @@ What the close-out moved:
   operator's brief). Until they are read back the eight publishing packages
   are scheduled on the plan's word, and the fallback of that section sends
   them back to wave 99.
-- Rulings that did not reach the close-out: LE-69 (a dated pointer in
-  decision 0002 to budget B19 of decision 0006; the ruling text arrived cut
-  off), LE-76 (the CI fetch of AUTO-19 beside decision 0013), LE-92 with
-  LE-99 and LE-100 (the .claude/worktrees fallback before OA-12 is done) and
-  LE-96 (the Workflow equivalent of the kill at 3x). These items stay as the
-  plan words them; each needs its ruling before the package or section it
-  names runs.
+- Closed 2026-11-18 (section Rulings 2026-11-18 (close-out 2)): LE-69, LE-76,
+  LE-92 with LE-99 and LE-100, and LE-96 had been ruled at the close-out; only
+  their application was missing, and it is done. The worktree probe of LE-92
+  ran on 2026-11-18 and passed.
+- Closed 2026-11-18 (section Rulings 2026-11-18 (close-out 2)): GP-09 alone
+  (R1), PUB-LOCAL-ONLY-TEXT reopened for loop_push (R2), the kit gap report
+  path (R3), server-side and leak sweep limits (R4, R5), the wide waves (R6).
+- Still open after the close-out 2: the two kit defects and the claims-hook
+  path fault seen by the probe are not reported to MAIN (no outbound note
+  path; AUTO-25 drafts, LOOP-KIT-REPORT-SEND sends on OA-21); the loop_push
+  switch is not built (PUB-LOCAL-ONLY-TEXT, wave 4); decision 0002 gets its
+  B19 pointer only when OVL-FPS lands.
 
 ## Verification follow-up (2026-11-18)
 

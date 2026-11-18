@@ -656,8 +656,9 @@ them. Pause: `ops/loop/control/HALT`.
   escaping past 10 percent, schema 1 cannot express a needed change, the
   loop and a session work one row, the six checks cannot go green by
   2026-12-04, or the kit forbids ungated file-named runs.
-- Ultraplan rulings: Q-01 to Q-28, A-01 to A-03 and the close-out LE
-  rulings stand as audited, each operator item with its default in force
+- Ultraplan rulings: Q-01 to Q-28, A-01 to A-03, the close-out LE
+  rulings and R1 to R6 stand as audited, each operator item with its
+  default in force
   (no PoB folder or picked-file read, no GGG forum read, no phone
   network path, release builds make no poe.ninja request, the item keys
   stay, the Steam scan is only narrowed until the typed path lands);

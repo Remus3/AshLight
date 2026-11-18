@@ -111,6 +111,17 @@ block, so this record is 0077 and the rulings ledger is 0078.
     the worktree hook of decision 0012 is wired (LE-92, LE-99, LE-100)
     and whether a builder's own stop at 2 x est_min plus a whole-run
     restart is the Workflow equivalent of the kill at 3x (LE-96).
+    2026-11-18 note (close-out 2): both had been ruled; the rulings
+    were applied late (decision 0078; docs/plan/07, Rulings 2026-11-18
+    (close-out 2)). The fallback may be taken without waiting as a
+    recorded temporary deviation; it was not needed, because a probe
+    of a hand-made sidecar worktree passed on 2026-11-18 and wave 1
+    uses that method (docs/plan/08 section 2). The builder's stop at
+    2 x est_min plus a whole-run restart at 3 x is accepted as the
+    Workflow equivalent of the kill. Also ruled there: GP-09 runs
+    alone and holds main to its read-back (R1); a wave may hold up
+    to 16 worktree packages in batches of at most 4, each with its
+    own whole suite, while a planned wave stays at 12 (R6).
 
 ## Alternatives
 

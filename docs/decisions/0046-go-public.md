@@ -153,6 +153,12 @@ Kit gaps (fleet_identity is vendored, never edited here; reported to
 MAIN): it checks commits only (no tagger, no tag message) and its trailer
 rule matches three keys and the names claude, anthropic and bot.
 
+Correction 2026-11-18 (ruling R3): the words 'reported to MAIN' in the
+paragraph above were not true and are not true yet. The kit gaps are NOT
+yet reported to MAIN, because AL has no outbound note path until OA-21;
+the report is drafted by row AUTO-25 and sent by row
+LOOP-KIT-REPORT-SEND. No note was sent.
+
 Alternatives: keep the diff scan and patch each header case (rejected;
 every diff option is another hole); vendor a patched fleet_identity
 (rejected; FLEET item 11); trust local remote-tracking refs as the public
@@ -160,3 +166,66 @@ set (rejected; a local update-ref would hide a commit from the scan).
 Reverses if: the kit gate gains tag and wide-trailer checks (then
 push_guard keeps only the ref shape), or the object scan proves too slow
 for a normal push.
+
+## Amendment 2026-11-18 - accepted server-side limits (ruling R4)
+
+- Required checks on main carry one always-bypass actor, the repository
+  admin role: pushes go straight to main, so checks run after the push;
+  the same gates run locally before it (whole suite before the commit;
+  pre-push identity, push_guard and object leak sweep), and GP-12 gate 3
+  needs both workflows green before the flip. A red check after a push
+  is fixed forward.
+- No ruleset limits creating branches or tags other than main and v* on
+  the remote: the repository has one writer plus Dependabot, the local
+  ref rule refuses every other ref, and the release-tag ruleset protects
+  v*; GP-13 reads git ls-remote back and any other ref is removed and
+  reported.
+- CI runs leak_sweep --tree only: CI holds no needles, so --history
+  would add only the structural arm; the history is swept ARMED at GP-09
+  gate 5 and every pushed object at each push.
+
+Reverses if: GitHub lets required checks run before a direct push lands
+(then drop the bypass); a second writer (collaborator, app or token) gets
+push access, or a ref outside main, dependabot/* and v* ever appears on
+the remote (then add the creation-restricting ruleset in
+PUB-SETTINGS-FILES and GP-13); CI ever receives needles through a
+secret-free channel, or a leak is found in pushed history (then CI also
+runs --history).
+
+## Amendment 2026-11-18 - accepted leak sweep limits (ruling R5)
+
+- Archives and base64 are not decoded: no archive is tracked (read back
+  2026-11-18: 0 of 575 tracked files; binaries are 14 png/ico brand and
+  app assets, size-capped by tests/test_brand_assets.py), and release
+  zips are swept as the staged tree before packing (plan 05 stage gate).
+- --no-verify skips every hook: agents may never use it (CLAUDE.md
+  Gates); GP-12 gate 2 re-runs leak_sweep --history on origin/main
+  before the flip, so a bypassed push is caught while private.
+- Binary files get the needle arm (UTF-8 and UTF-16 readings) but no
+  structural arm, on purpose: images form drive-path shapes by chance.
+
+Reverses if: an archive, a packed or base64 blob, or a new binary type
+becomes tracked (then add a decoder or a no-archive test through a
+package); a --no-verify push is found on origin; or a needle is ever found
+inside a binary or encoded object.
+
+## Amendment 2026-11-18 - the quoted words, checked against the brief
+
+The quote at the top of this file was compared with the operator's session
+brief on 2026-11-18. Its first passage (from 'The operator has ordered
+going public.' to '(fleet_identity pre-push check stays).') is word for
+word, and it is the text of the hand-off lines OPERATOR GO Q-23 step 1 and
+step 4. Its second passage (after the dots) is shortened, not word for
+word. The brief's last sentence reads, word for word: "The only operator
+act left is `gh auth login` if gh is not authenticated, batched into the
+one ask." The hand-off line OA-2 SKIPPED IN WRITING quotes it in that
+form.
+
+What the brief says and what a ruling reads into it are kept apart: that
+the order is the go for step 1 (create the private repository and push
+main) and for step 4 (the public flip) is the reading of ruling LE-01;
+that the last sentence is the written skip of the message to poe.ninja
+(OA-2) is the reading of ruling LE-38. Neither reading is the operator's
+wording. The copy of the brief read for this check is stamped the evening
+of 2026-11-17; 2026-11-18, the date in the hand-off lines, is the day the
+words were recorded.

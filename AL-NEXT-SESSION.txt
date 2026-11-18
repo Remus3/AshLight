@@ -41,8 +41,20 @@ dispatches; every command runs in a sub-agent, in the main checkout):
    and one watcher (08 section 3). The wiring command of 08 section 2 prints "not wired"
    (read back 2026-11-18), so the builders are dispatched WITHOUT harness
    isolation and each makes its own sidecar worktree from the repository
-   root:
+   root, with the Bash tool:
        echo '{"hook_event_name": "WorktreeCreate", "cwd": ".", "name": "w1-<ID>"}' | python tools/wt_sidecar_hook.py
+   Worktree mode: hand-made sidecar worktrees, proven. The probe of
+   ruling LE-92 ran on 2026-11-18 in the planning session (08 section 2,
+   Probe; method only): in a hook-made sidecar worktree the Edit and
+   Write tools, named tests, a commit through the git lock and a
+   progress write were all allowed, and the hook's WorktreeRemove took
+   the clean tree away again. Session 1 does not repeat the probe and
+   does not use .claude/worktrees (the fallback, only if a builder is
+   refused; then one NOTE line here). Builders cd into the worktree
+   with Bash and forward slashes; commits of all worktrees share one
+   git lock and gated test runs share one suite-per-tree line, so both
+   queue; the batch suite runs on w1-int, never in the main checkout
+   (08 section 2, What the kit does across worktrees).
    Every builder gets the text of 08 section 2 "Builder prompt template"
    as written, with ID = the package id, N = 1, WIRED = no; model and
    effort per 08 "Model and effort". With the Workflow tool: the script of
@@ -69,18 +81,24 @@ only, git branch shows main only, .claude/worktrees is empty.
 Operator records (the three lines below stay in this file, verbatim):
 OPERATOR GO Q-23 step 1 (2026-11-18): "The operator has ordered going public. Record that as a decision (docs/decisions/NNNN-go-public.md: decision, alternatives, why, reverses if), update CLAUDE.md "Public-repo hygiene" and ROADMAP, and flip .githooks/pre-push from refuse-all to the normal guarded push (fleet_identity pre-push check stays)."
 OPERATOR GO Q-23 step 4 (2026-11-18): "The operator has ordered going public. Record that as a decision (docs/decisions/NNNN-go-public.md: decision, alternatives, why, reverses if), update CLAUDE.md "Public-repo hygiene" and ROADMAP, and flip .githooks/pre-push from refuse-all to the normal guarded push (fleet_identity pre-push check stays)."
-OA-2 SKIPPED IN WRITING (2026-11-18): "The only operator act left is gh auth login if gh is not authenticated, batched into the one ask."
-Source of the three lines: the operator's session brief of 2026-11-18 as
-quoted in docs/decisions/0046-go-public.md ("The operator's words"). This
-rewrite copied them from that quote; its writer did not hold the brief.
-Read back: grep -c prints 1 for each of the three line starts, and each
-quoted text is found in the decision's quote. Readers: GP-09 gate 1 (step
-1), GP-12 gates 0 and 5 (step 4, OA-2); ruling LE-01 (docs/plan/07,
-Operator go for publishing). If a line is lost or edited, the Q-23 default
-holds: stay local, nothing is pushed.
+OA-2 SKIPPED IN WRITING (2026-11-18): "The only operator act left is `gh auth login` if gh is not authenticated, batched into the one ask."
+Wording and reading. The text inside each pair of quotes is the wording of
+the operator's session brief, word for word (its section on going public;
+line breaks joined). The label in front of a quote is not the operator's
+wording, it is the reading of a ruling: that the order is the go for Q-23
+step 1 (create the private repository, push main) and step 4 (the public
+flip on the plan-04 gates) is the reading of ruling LE-01; that the
+sentence on the one act left is the written skip of OA-2 (the message to
+poe.ninja) is the reading of ruling LE-38 (docs/plan/07, Rulings
+2026-11-18 (close-out); decision 0078).
+Quotes checked against the brief on 2026-11-18 (close-out 2): all three are word for word (the third now with the brief's backticks); the date in the lines is the day they were recorded, the copy of the brief read is stamped the evening of 2026-11-17.
+Read back: grep -c prints 1 for each of the three line starts. Readers:
+GP-09 gate 1 (step 1; decision 0046 quotes the same words), GP-12 gates 0
+and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
+stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
-- OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json.
+- OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
 - OPERATOR before the first push (OA-1; rows GP-05, GP-09; conditional): gh auth login only if gh auth status fails (read back 2026-11-18: exit 0).
 - OPERATOR before the first push (OA-5; rows GP-03, GP-09; optional): name another holder, owner or repository name; default: the gh account and AshLight.
 - OPERATOR ACTS (the one batched ask is docs/plan/09-operator-acts.md,
@@ -147,6 +165,15 @@ Carried forward (not acted on yet):
   returning None while other agents were queued (AttributeError on .get);
   a retry worked. Report via a note to MAIN once a delivery path exists
   (config loop.dest_inboxes MAIN or FLEET_ROSTER), under the 12/day cap.
+  Second defect, same note and rows (ruling R3, 2026-11-18): the kit
+  fleet_identity pre-push check reads no tag object or tagger and matches
+  three trailer keys and three names only; tools/push_guard.py covers
+  both locally (decision 0046 amendment). Third line, same note (worktree
+  probe 2026-11-18): for a PowerShell `cd <backslash path>; git add -N`
+  call the claims hook recorded a path that does not exist (harmless;
+  builders use Bash with forward slashes). Nothing is sent: read back
+  2026-11-18, the outbox holds no note, and decision 0046 now says NOT
+  yet reported.
   A gate traceback seen in a wave is one more line here, not a note.
 - AUDIT-P8-LOW (folded into rows RUN-START-REASON-CORE wave 18,
   RUN-OBS-LOGS-SHELL and RUN-LADDER-TICK wave 19, RUN-REPORT-FIELDS wave
@@ -197,11 +224,14 @@ Carried forward (not acted on yet):
   LOOP-HANDOFF-PREFIX (wave 2) lands, a tick without HALT would dispatch
   the untagged bullets of this list as work (01 L3). GGG-DOCS-WATCH runs
   before the HALT check, so it keeps running.
-- NOTE (01 OPERATOR GitHub remote; old act d): rows GP-02, PUB-GO-DECISION
-  and PUB-LOCAL-ONLY-TEXT are done (session 6); open: GP-01 and GP-03
-  (wave 1), GP-05 (wave 4), GP-09 (wave 5: private repository, first push,
-  CI green), then the parked rows behind GP-09 (07, Operator go for
-  publishing). Read back 2026-11-18: git remote -v prints nothing.
+- NOTE (01 OPERATOR GitHub remote; old act d): rows GP-02 and
+  PUB-GO-DECISION are done (session 6); PUB-LOCAL-ONLY-TEXT is reopened
+  (ruling R2, 2026-11-18: wording landed, loop_push switch not built; wave
+  4); open: GP-01 and GP-03 (wave 1), GP-05 (wave 4), GP-09 (wave 5:
+  private repository, first push, CI green; it runs alone and holds main
+  to its read-back, ruling R1), then the parked rows behind GP-09 (07,
+  Operator go for publishing). Read back 2026-11-18: git remote -v prints
+  nothing.
 - NOTE (01 LIVE-VERDICTS): a "Tried in game" card with Worked / Refused
   for the player checks; rows RUN-VERDICTS-CORE wave 6, RUN-VERDICTS-UI
   wave 19.
@@ -233,20 +263,16 @@ Carried forward (not acted on yet):
   396 of 396 row ids in ROADMAP.md exactly once, the pointer line 1, the
   stale Next-action line 0, the three operator record lines 3) and row
   PLAN-LANDING is flipped. Nothing of wave 0 is carried into wave 1.
-- NOTE (RUN-LIVE-CLICKS-STRIKE, wave 1): its accept line greps ROADMAP.md
-  and this file for two words and wants 0 lines in both. Read back
-  2026-11-18: this file 0 lines, ROADMAP.md 2 lines, both inside the
-  row's own title and ACCEPT text; the integrator rewords that row when
-  it flips it, or the accept can never pass.
-- NOTE (07 Open points): rulings that did not reach the close-out: LE-69
-  (a dated pointer in decision 0002 to budget B19), LE-76 (the CI fetch of
-  AUTO-19 beside decision 0013), LE-92 / LE-99 / LE-100 (the
-  .claude/worktrees fallback before OA-12 is done), LE-96 (the Workflow
-  equivalent of the kill at 3x). The plan stands as written; the
-  adjudicator rules each one when its package or section first needs it.
-- NOTE (docs/plan/09, Checked on this machine): its lines predate commit
-  7fe4993; .githooks/pre-push is now the guarded push of decision 0046,
-  it no longer refuses every push.
+- NOTE (close-out 2, 2026-11-18; 07 Rulings 2026-11-18 (close-out 2),
+  decision 0078): the six rulings that had been ruled but not applied
+  (LE-69, LE-76, LE-92, LE-99, LE-100, LE-96) and six new ones (R1 to R6)
+  are applied; nothing of them waits for a ruling. Left for their
+  packages: the loop_push switch (PUB-LOCAL-ONLY-TEXT, wave 4), the kit
+  report (AUTO-25 wave 2, LOOP-KIT-REPORT-SEND on OA-21), the B19 pointer
+  line in decision 0002 (OVL-FPS, parked on OA-33), the Scope sentence of
+  decision 0076 (AUTO-19, parked behind GP-09), the ls-remote read-back
+  (GP-13, parked). Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
+  packages (four batches, each with its own suite; ceiling 16).
 - NOTE: a live lane writing ops/loop/control/loop_items/*.json mid-suite
   can trip fleet_test_guard (false error at a random teardown); re-run the
   suite when it happens. (Row AUTO-01, wave 2, re-checks and drops this.)
@@ -256,8 +282,9 @@ Carried forward (not acted on yet):
 Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078),
 docs/plan/07-execution-plan.md, docs/plan/08-orchestration.md,
 docs/plan/09-operator-acts.md, docs/plan/packages.json (the plan of
-record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (394 open
-rows read back 2026-11-18: one per open package, each session row tagged
+record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (395 open
+rows read back 2026-11-18 after PUB-LOCAL-ONLY-TEXT was reopened: one per
+open package, each session row tagged
 BLOCKED: session wave <n>, plus the old rows UTIL-1.0-POST and TC-CURX;
 OPERATOR GitHub remote is closed as OPERATOR-REMOTE [x]),
 docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT,
@@ -298,9 +325,13 @@ Do NOT redo (session 6, the Fable ultraplan, all on main):
 - decisions 0046 (go public), 0077 (execution model), 0078 (rulings
   ledger); the guarded pre-push hook, tools/push_guard.py and the
   CLAUDE.md Public-repo hygiene section (rows GP-02, PUB-GO-DECISION,
-  PUB-LOCAL-ONLY-TEXT, commits 7fe4993 and 01c2216); one ROADMAP row per
+  the wording half of PUB-LOCAL-ONLY-TEXT, commits 7fe4993 and 01c2216);
+  one ROADMAP row per
   package (commit 9ce8275); tools/plan_check.py; wave 0 (row PLAN-LANDING,
   tests/test_plan_operator_acts.py).
+- the close-out 2 of 2026-11-18: its twelve rulings are applied to
+  docs/plan/06 to 09, packages.json, ROADMAP.md, decisions 0046, 0077 and
+  0078; the worktree probe (it passed; do not run it again).
 Shipped session 5, all merged to main: UI-GLANCE tabs (Play / Run and
 history / Build / Items and prices / Settings, no page scroll);
 DESKTOP-CLIENT (decision 0041: Electron --client window, tray, X closes to
@@ -326,7 +357,13 @@ pytest 2316 passed / 3 skipped, npm 230/230. After this rewrite, same day:
 the plan verification closed wave 0 (tests/test_plan_operator_acts.py, row
 PLAN-LANDING flipped, the DEFERRED line dropped; before that commit the
 whole suite through the gate read 2404 passed / 3 skipped and npm test
-230/230). Inbox: 1 note (MAIN
+230/230). Close-out 2, same day (documents, packages.json, ROADMAP rows
+and one docstring line of tools/leak_sweep.py; no behaviour change): read
+back before its commit, python tools/plan_check.py check prints ok 396
+packages, 39 waves, ROADMAP.md holds 395 open rows and every package id
+exactly once, the whole suite through the gate read 2404 passed / 3
+skipped and npm test 230/230; no remote, nothing pushed, HALT untouched.
+Inbox: 1 note (MAIN
 INFORMATION / TERMINAL, kit v32 join), classify -> skip terminal, no
 reply; the folder holds no other note.
 

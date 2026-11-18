@@ -28,6 +28,8 @@ own config reads the main checkout's (parent of `git rev-parse
 
 Escape rate is above zero: `--no-verify` bypasses the hooks, and a needle
 spelled in a shape nobody listed passes. A clean run is not proof.
+Accepted limits and their backstops: decision 0046, amendment 2026-11-18
+(ruling R5).
 """
 
 import argparse

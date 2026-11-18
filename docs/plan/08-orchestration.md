@@ -143,8 +143,10 @@ added with `+`. The status board is not rendered (AL is opt-out).
 - One builder per open worktree package of the wave (`isolation:
   worktree`, owner session), all at once: at most 12, 11 in wave 1 (14 in
   waves 4 and 18, 13 in waves 19 and 22: the close-out of 2026-11-18 put
-  the publishing packages there as a fourth merge batch), plus the
-  carried packages. A package is dispatched only when every id in its
+  the publishing packages there as a fourth merge batch; never more than
+  16, and every batch of at most 4 has its own whole suite: 07, Wave
+  width, ruling R6), plus the carried packages. A package is dispatched
+  only when every id in its
   `deps` has a flipped row; otherwise it is deferred with cause `waits on
   <id>`. Inside a Workflow run (section 10) the tool runs at most
   min(16, CPUs - 2) agents at once; builders past that queue.
@@ -153,7 +155,8 @@ added with `+`. The status board is not rendered (AL is opt-out).
   read back before the next starts. An act that the wave's `gate` text or
   its own notes place last or alone (GP-09 in wave 5, AUTO-21 in wave 6,
   REL-CUTOVER-LIVE in wave 24) waits until the last merge batch has moved
-  main.
+  main. GP-09 additionally holds main from its gate 3 to its read-back,
+  and wave 5 closes only after that (07, ruling R1).
 - Loop-owned packages (`owner: loop`) are never dispatched by a session.
 - One watcher (section 3).
 
@@ -179,7 +182,8 @@ Whether decision 0012's hook is wired is read, not assumed:
 
 - Today it prints `not wired` (wiring is the operator act of parked
   package AUTO-26; an agent cannot edit .claude/settings.json). The
-  method that works now: the builder is dispatched WITHOUT harness
+  method that works now, proven by the probe of 2026-11-18 (below), and
+  the mode of wave 1: the builder is dispatched WITHOUT harness
   isolation and makes its own worktree by running the hook script by hand
   from the repository root, with the Bash tool:
 
@@ -199,13 +203,87 @@ Whether decision 0012's hook is wired is read, not assumed:
   `git rev-parse --show-toplevel` prints the path and
   `git branch --show-current` the branch (`worktree-<name>`). The first
   wave after the wiring also closes AUTO-26 (its accept line).
+- Probe (adjudicator LE-92, LE-99). It ran once, on 2026-11-18, in the
+  planning session, by one sub-agent, ahead of the session 1 start the
+  ruling names; session 1 does not repeat it. Method, as the ruling words
+  it:
+
+      echo '{"hook_event_name": "WorktreeCreate", "cwd": ".", "name": "c2-probe"}' | python tools/wt_sidecar_hook.py
+
+  then an Edit and a Write under that path, two named test files, one
+  commit through the git lock, one progress write, and the hook's
+  WorktreeRemove (git worktree remove, no --force). Result: every step was
+  allowed, with no permission prompt and no hook denial, so the unwired
+  method above is used and the fallback below is not. What it proved:
+  - the hook printed one path under the sidecar Worktree folder; the
+    branch was `worktree-<name>`, cut from main;
+  - the Edit and Write tools worked on absolute paths under the worktree,
+    and `git status --porcelain` of the main checkout stayed empty;
+  - `python -m pytest -q <files>` run after `cd "<WT>"` tested the
+    worktree's files, not the main checkout's (40 passed; an untracked
+    file that existed only in the worktree was checked too);
+  - a commit through `fleet_gitlock.py run` landed on the worktree branch
+    only and main did not move; the tracked git hooks ran there (the hooks
+    path is shared through the common git dir), and both leak sweeps found
+    the gitignored needle file of the main checkout (ARMED); the author
+    was the operator identity, no trailer;
+  - `fleet_headless.py progress --root .` run inside the worktree wrote
+    its file into the main checkout and none into the worktree;
+  - the hook's WorktreeRemove refused the tree while it held an
+    uncommitted edit and removed it once `git -C <WT> status --short`
+    printed nothing; the probe branch was deleted, nothing was merged.
 - Fallback, only if the permission system refuses a builder's edits or
   shell calls under the sidecar path in the unwired method: harness
   isolation with the harness default folder, `.claude/worktrees/` inside
   the repository (gitignored), which packages.json names for AUTO-26 as
   the fallback only. It breaks the Sidecar placement rule (decision 0012,
   Alternatives), so the hand-off gets one `NOTE:` line and the wiring
-  moves to the top of the batched operator ask.
+  moves to the top of the batched operator ask. It is a temporary,
+  recorded deviation, taken without waiting (adjudicator LE-92, LE-100);
+  reaped at /done by fleet_done.py reap; ends when OA-12 is pasted. Not
+  taken so far: the probe passed.
+
+### What the kit does across worktrees
+
+Read on 2026-11-18 by the probe in the source of the vendored kit (v32;
+read, never edited). Builders, the merger and the watcher act on it:
+
+- Git lock: one lock for the whole tree. Every worktree of the repository
+  uses the lock file of the main checkout, so the commits and merges of
+  all builders, the merger and the integrator go one at a time. Exit 3
+  means another holder: wait 30 to 60 s and retry (Rules). Only the
+  index.lock check is per worktree.
+- Suite gate, one suite per tree: a gated run is keyed to the main
+  checkout, whichever worktree starts it. A builder's gated subset (the
+  timing files, a subset over 90 s, the fixed-port files), the batch suite
+  on `w<n>-int` and any suite in the main checkout therefore queue behind
+  each other, one at a time, beside the machine-wide slots. Expect waiting
+  in a wave with several gated subsets. The agent that waits keeps its
+  progress file fresh (so the wait does not read as STALE) and names who
+  holds the gate (`python ops/fleet_kit/fleet_suite_gate.py status
+  --brief`).
+- Suite gate, uncommitted edits: the gate refuses a suite while another
+  live agent holds uncommitted edits, but it looks only at the worktree it
+  is started in, and it leaves docs and prose paths out. A suite started
+  in the main checkout does not see edits held in a sidecar worktree, and
+  a suite in one worktree does not see another's. So this refusal never
+  stops a builder because of its neighbours, and it does not guard the
+  batch suite: the merger runs the batch suite on `<INT>`, never in the
+  main checkout, and only after every merged branch is committed (section
+  4, steps 2 to 4). Inside one worktree the refusal does apply: a fix
+  round and the first builder of a package never run at the same time.
+- Claims: one registry in the main checkout for all worktrees; a path is
+  claimed in its absolute form. A shell call that enters a worktree goes
+  through the Bash tool with forward slashes (`cd "<WT>" && <command>`).
+  The same call through the PowerShell tool with a backslash path made the
+  claims hook record a path that does not exist (harmless, seen once in
+  the probe; it rides in the kit report of AUTO-25). A heavy command that
+  takes the low-priority PowerShell form of the Rules writes the worktree
+  path with forward slashes too.
+- Removal: a wave agent never removes a worktree (below). Where one must
+  go (a probe, a mistyped name), the order is: revert or commit, read `git
+  -C <WT> status --short` empty, then the hook's WorktreeRemove; never
+  --force.
 
 Worktrees are never removed by a wave agent. /done runs
 `python ops/fleet_kit/fleet_done.py reap --apply`, which removes a clean
@@ -263,9 +341,11 @@ Your final message is data for the orchestrator: short, facts only.
    <BASE> is the output of  cd "<WT>" && git merge-base main HEAD
    (the commit your work starts from; it stays right on a resumed run).
    Work ONLY under <WT>: every file you read or edit has a path under it;
-   every shell call is  cd "<WT>" && <command>.  Never edit a file in the
-   main checkout, never switch a branch, never touch another worktree. The
-   one write outside <WT> is your progress file (step 4).
+   every shell call is  cd "<WT>" && <command>,  run with the Bash tool
+   and <WT> written with forward slashes (a PowerShell cd with
+   backslashes makes the claims hook record a wrong path).  Never edit a
+   file in the main checkout, never switch a branch, never touch another
+   worktree. The one write outside <WT> is your progress file (step 4).
 
 4. PROGRESS after every step (task name w<N>-<ID>):
    cd "<WT>" && python ops/fleet_kit/fleet_headless.py progress --root . --task w<N>-<ID> --pct <0-100> --step "<text>" --eta-s <seconds left> --status running
@@ -299,7 +379,9 @@ Your final message is data for the orchestrator: short, facts only.
    and, until TEST-PORT-LEASE is on main, for tests/test_keepalive.py,
    tests/test_procs.py, tests/test_supervisor.py,
    tests/test_dash_console.py, tests/test_fullstack.py and
-   tests/test_math_e2e_live.py. If tools/test_select.py exists in <WT>,
+   tests/test_math_e2e_live.py. A gated run may wait: one suite per tree
+   covers every worktree; keep your progress file fresh while you wait.
+   If tools/test_select.py exists in <WT>,
    read its usage text and run the lists it prints instead of choosing by
    hand. If you touch app/ or web/:
    cd "<WT>" && npm test --prefix app
@@ -375,7 +457,11 @@ worktree path and branch of the first builder, plus the findings to fix.
   slice), never a foreground sleep. It returns one line per task:
   `<task>: <status> <pct>% <step>`. When the wave runs as a Workflow run
   (section 10), the main session dispatches the watcher as a plain
-  background agent beside the run; the script itself has no watcher.
+  background agent beside the run; the script itself has no watcher. If
+  the Monitor tool is not loaded, wait with a background Bash until-loop,
+  run_in_background, at most 9 minutes, exiting early when
+  `fleet_checklist.py stale` exits 3 or a wave progress file changes
+  status; never a foreground sleep.
 - The main session is told when a background agent ends; it does not hold
   its turn open on one event. Before any status answer it has the
   watcher's latest lines; the answer is the remaining checklist (item 13
@@ -390,6 +476,10 @@ worktree path and branch of the first builder, plus the findings to fix.
   watcher then closes the row:
 
       python ops/fleet_kit/fleet_headless.py progress --root . --task w<n>-<ID> --pct <last pct> --step "failed: killed at 3x est_min" --eta-s 0 --status failed
+
+  Accepted as the Workflow equivalent of FLEET item 3 (adjudicator LE-96,
+  2026-11-18). A restart reuses each worktree by name, keeps progress
+  files, and passes the stopped id in args.defer.
 
 - STALE: a row past 2 x its own ETA step with no write is a failure and
   is investigated at once, not at the deadline: the agent is stopped, the
@@ -477,7 +567,11 @@ Per batch, packages in merge order:
    (TEST-GATE-CALLERS lands in wave 10). Exit
    0 is not the verdict: the merger reads the tail (passed and failed
    counts). While it waits on the gate it reports who holds it:
-   `python ops/fleet_kit/fleet_suite_gate.py status --brief`.
+   `python ops/fleet_kit/fleet_suite_gate.py status --brief`. The suite
+   runs on `<INT>`, never in the main checkout: the gate's check for
+   uncommitted edits sees only the worktree it starts in, and builders'
+   gated subsets queue in the same one-suite-per-tree line (section 2,
+   What the kit does across worktrees).
 5. Green: main moves to the integration tip, in the main checkout:
 
        python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git merge --ff-only worktree-w<n>-int
@@ -1140,16 +1234,23 @@ Notes on the template:
   main, whether the wave closed. The main session prints at most one
   line per deferred id and the item-13 b remaining rows, then starts the
   next wave or /done.
+- A wave that holds a package with est_min of 60 or more and a history of
+  overrun (an OVERRUN line or a kill in an earlier dispatch of it) is
+  dispatched as plain background Agents (sections 1 to 7), not as a
+  Workflow run, so that the one agent can be stopped at 3x (adjudicator
+  LE-96).
 - The script does not run /done and does not start the next wave: the
   main session reads one wave's result before it decides (a deferred
   package may ask for a second run of the same wave, section 3).
 
 ## Open points
 
-- The unwired worktree method relies on the session's permission mode
-  letting an agent edit files under the sidecar; the fallback of section
-  2 covers a refusal. It was checked for reads and shell calls, not for
-  an edit, at the time of writing.
+- Closed 2026-11-18, settled by the probe (adjudicator LE-92, LE-99;
+  section 2, Probe): a sub-agent may edit, test and commit under a
+  hand-made sidecar worktree in the session's permission mode. Not yet
+  seen: several builders at once (wave 1 is the first such run); if a
+  builder is refused there, the fallback of section 2 is taken without
+  waiting.
 - The hand-off line `WAVE POINTER: ...` and the `DEFERRED:` lines are
   defined here; PLAN-LANDING writes the first pointer (`wave 0 done, next
   wave 1`) when it rewrites the hand-off (its accept line checks it since
@@ -1157,12 +1258,17 @@ Notes on the template:
 - Closed 2026-11-18: AUTO-26 in packages.json words the default as
   section 2 does (the hand-run sidecar worktree; `.claude/worktrees/` as
   the fallback only).
-- Not ruled at the close-out of 2026-11-18 (07, Open points): whether the
-  `.claude/worktrees/` fallback of section 2 may be used before the hook
-  is wired or the waves must wait (LE-92, LE-99, LE-100), and whether the
-  builder's own stop at 2 x est_min plus a whole-run restart is accepted
-  as the Workflow equivalent of the kill at 3x (LE-96). Both stay as
-  written here until ruled.
+- Closed 2026-11-18 (07, Rulings 2026-11-18 (close-out 2); LE-92, LE-99,
+  LE-100, LE-96): both questions had been ruled at the close-out and the
+  rulings were applied late. The `.claude/worktrees/` fallback of section
+  2 may be taken without waiting, as a recorded temporary deviation; the
+  builder's own stop at 2 x est_min plus a whole-run restart at 3 x is
+  accepted as the Workflow equivalent of the kill at 3x.
+- Closed 2026-11-18 (07, Rulings 2026-11-18 (close-out 2), R1): GP-09 runs
+  alone after wave 5's last batch and holds main until its read-back.
+- Closed 2026-11-18 (07, ruling R6): waves 4, 18, 19 and 22 keep 14, 14,
+  13 and 13 worktree packages as four merge batches, each with its own
+  whole suite; the planned width stays 12, the ceiling 16.
 - The integrator commits once per merge batch (07, Gate commands), not
   once per wave: the batch suite needs the Settled bullets first.
 
@@ -1265,3 +1371,21 @@ Close-out, 2026-11-18 (docs/plan/07, Rulings 2026-11-18 (close-out)):
   GP-02 and PUB-GO-DECISION are now in wave 4, and waves 4, 18, 19 and 22
   hold more than 12 worktree packages (check still prints ok 396
   packages, 39 waves).
+
+Close-out 2, 2026-11-18 (docs/plan/07, Rulings 2026-11-18 (close-out 2)):
+- Section 2: the probe of a hand-made sidecar worktree ran and passed
+  (LE-92, LE-99), so wave 1 uses the unwired method; the Fallback bullet
+  says it is taken without waiting and reaped at /done (LE-100); new
+  subsection on what the kit's git lock, suite gate and claims do across
+  worktrees; the wide waves have a ceiling of 16 (R6); GP-09 holds main to
+  its read-back (R1).
+- Builder prompt steps 3 and 7: Bash with forward slashes for every cd
+  into the worktree; a gated run may queue.
+- Section 3: the watcher's wait without the Monitor tool, and the Workflow
+  kill rule as accepted (LE-96). Section 4: the batch suite runs on the
+  integration worktree, and why. Section 10: when a wave runs as plain
+  background Agents (LE-96).
+- Open points: the unverified-edit and the not-ruled entries are closed;
+  R1 and R6 are recorded.
+- The "no worktree created" line of the verifier above stays true for its
+  own run; the probe is a later act of the planning session.

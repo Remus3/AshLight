@@ -1,10 +1,16 @@
 # Decisions
 
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
-reverses if). Take the next number after the highest file here.
+reverses if). Numbers 0047 to 0076 are reserved for the packages of
+docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
+package uses the number in its new_files entry. 0077 and 0078 are
+taken. A decision written outside a package takes the next free
+number: 0079 (read back 2026-11-18), then the next after the highest
+file here.
 
-- 0078: ultraplan rulings ledger: Q-01 to Q-28, A-01 to A-03 and the
-  close-out LE rulings, each with its default in force (ULTRAPLAN).
+- 0078: ultraplan rulings ledger: Q-01 to Q-28, A-01 to A-03, the
+  close-out LE rulings and R1 to R6 of the close-out 2, each with its
+  default in force (ULTRAPLAN).
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).

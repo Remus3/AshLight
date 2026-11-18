@@ -6,7 +6,13 @@ docs/plan/02 Rulings), the floor audit of the same day by three lenses
 (findings.json `floor_audit`, `operator_decisions`), the close-out
 rulings on the loose ends (docs/plan/07, Rulings 2026-11-18 (close-out)),
 the one batched operator ask (docs/plan/09) and the target design
-(docs/plan/03, design 0001 amendment 2026-11-18).
+(docs/plan/03, design 0001 amendment 2026-11-18). Edited in place on
+2026-11-18 at the close-out 2 (docs/plan/07, Rulings 2026-11-18
+(close-out 2)): the ledger was checked against its sources; six
+close-out rulings that had been ruled but not applied (LE-69, LE-76,
+LE-92, LE-99, LE-100, LE-96) and six new rulings (R1 to R6) were added,
+and an entry now names its source where an earlier source reads
+differently.
 
 ## Decision
 
@@ -39,6 +45,10 @@ settled decision widens the Game ToS floor.
   - Reverses if: the operator adds a read-list line in their own words;
     then the folder source lands under a new decision with no rework.
   - Record: none (F-071 stays not adopted).
+  - Source note (checked 2026-11-18): findings.json `rulings` Q-01 as
+    audited. The first ruling of the planning scratch set shipped the
+    browser file pick together with the hotkey load; the floor audit
+    held the pick (Q-02), and that reading wins here.
 - Q-02 (hotkey half settled; file half OPERATOR, OA-25) What counts as
   player-supplied build text.
   - Decision: a build loaded by the item-check hotkey press (the same
@@ -56,6 +66,10 @@ settled decision widens the Game ToS floor.
     own hotkey, or decision 0003 reverses.
   - Record: TC-PRESS-BUILD (wave 3) amends decision 0004 and the
     CLAUDE.md Stack sentence.
+  - Source note (checked 2026-11-18): findings.json `rulings` Q-02 as
+    audited and `floor_audit` Q-02 (lens L1). The first ruling said yes
+    to both halves; the floor audit struck the file half, and that
+    reading wins here.
 
 ### Data sources and web requests
 
@@ -109,6 +123,13 @@ settled decision widens the Game ToS floor.
     returns); or source-checkout polling draws an objection (gate it the
     same way).
   - Record: DATA-PRICE-CADENCE (wave 18, reserved 0072).
+  - Source note (checked 2026-11-18): findings.json `rulings` Q-05 still
+    says the message is sent before the public flip; ruling LE-38
+    supersedes that sentence (the message is no flip gate), and
+    `floor_audit` Q-05 (lens L2) struck 'ship regardless' for release
+    builds. That the operator's sentence on the one act left is the
+    written skip of OA-2 is the reading of ruling LE-38, not the
+    operator's wording; the hand-off line quotes the sentence itself.
 - Q-06 (OPERATOR review of 0017, OA-9) Trade link wording.
   - Decision: decision 0017 stands unchanged. The overlay card shows the
     item name instead of "Trade link ready" when no poe.ninja value
@@ -134,6 +155,10 @@ settled decision widens the Game ToS floor.
     GGG documents the forum as a permitted source.
   - Record: AUTO-04 (wave 2, reserved 0050) and its edits of research
     0029 and the runbook.
+  - Source note (checked 2026-11-18): findings.json `rulings` Q-07 as
+    audited. The first ruling named the developer-docs changelog as a
+    dive source; the floor audit took it out (it is in neither the API
+    Reference nor Data Exports; A-01), and that reading wins here.
 
 ### Settings, hotkeys and autostart
 
@@ -389,6 +414,16 @@ settled decision widens the Game ToS floor.
     auth status` fails (then OA-1 is the one ask).
   - Record: decision 0046 (GP-02, landed); the hand-off lines are
     written by PLAN-LANDING.
+  - Source note (checked 2026-11-18): findings.json `rulings` Q-23 and
+    `operator_decisions` Q-23 still carry the first ruling (the operator
+    performs or confirms the creation and the flip; stay local until
+    then). Ruling LE-01 supersedes it; stay-local survives only as the
+    fallback of GP-09 gate 1. The hand-off lines were compared with the
+    brief and match it word for word. What they quote is the brief; that
+    the order is the go for steps 1 and 4 is the reading of ruling
+    LE-01, and the OA-2 skip is the reading of ruling LE-38. Neither
+    reading is the operator's wording (decision 0046, amendment
+    2026-11-18 on the quoted words).
 - Q-24 with LE-02 (OPERATOR option, OA-5) The project's own address.
   - Decision: the project's own repository address may appear in
     tracked files through one leak-sweep allow entry. Default address:
@@ -408,6 +443,9 @@ settled decision widens the Game ToS floor.
     prefers an address-free README.
   - Record: decision 0046 point 8 and CLAUDE.md Public-repo hygiene
     (landed); GP-09 (wave 5), PUB-SWEEP-OWN-ADDRESS (wave 17).
+  - Source note (checked 2026-11-18): findings.json `operator_decisions`
+    Q-24 still names a placeholder constant read from config; ruling
+    LE-02 supersedes it (no placeholder in a tracked file).
 - Q-25 A needle hit in history.
   - Decision: only if a scan finds a hit: the affected commits are
     rewritten only on MAIN's ORDER via fleet_rewrite.py, and the
@@ -485,6 +523,14 @@ settled decision widens the Game ToS floor.
 
 ### Floor audit questions (the operator words the floor)
 
+Source (checked 2026-11-18): docs/plan/findings.json
+`operator_decisions`, qid A-01, A-02 and A-03, written by the floor
+audit of 2026-11-18; its `floor_audit` entries F-051 and F-115 (A-01),
+F-037 (A-02) and F-098 (A-03) refer to them. They are not among the 28
+rulings and not in the adjudicator's close-out result: no adjudicator
+ruled them, they are questions for the operator with the strict default
+in force.
+
 - A-01 (OPERATOR, OA-18) GGG developer-docs pages outside the API
   Reference and Data Exports (index, authorization, changelog, game).
   - Decision: no new work reads those four pages. The settled watch of
@@ -543,19 +589,209 @@ settled decision widens the Game ToS floor.
     poe.ninja objects, or the operator rules agents may not make web
     reads for research (then: the landing-page link only).
   - Record: DATA-GUIDE-ONE-BLOCK (wave 36).
+- LE-69 The stale OVL-FPS acceptance sentence in decision 0002.
+  - Decision: Decision 0002 gets one dated, append-only pointer line
+    under its Game FPS bullet: the OVL-FPS acceptance is restated as
+    budget B19 in decision 0006. The old sentence stays; no budget
+    changes.
+  - Alternatives: leave 0002 stale; rewrite its FPS sentence.
+  - Why: Q-18's 'no change to 0002' protects the stack and the budgets,
+    and a cross-reference changes neither; a known-stale acceptance line
+    misleads the next reader.
+  - Reverses if: the operator rules decision records must not carry
+    forward pointers, or the B19 result shows a real FPS budget change
+    (then a real 0002 amendment).
+  - Record: OVL-FPS (parked on OA-33) writes the line when it lands; B19
+    itself enters decision 0006 with OVL-CHECK (wave 21).
+- LE-76 The CI fetch of AUTO-19 beside decision 0013.
+  - Decision: AUTO-19 is accepted as designed: tools/watch_ci.py does
+    not read web_data, runs only when GITHUB_ACTIONS is 'true' (else it
+    refuses), fetches only URLs that pass watch_gate.check_url and never
+    touches a GGG or poe.ninja host. It is outside the scope of decision
+    0013, which governs the app and the dev host; decision 0076 records
+    that boundary in one 'Scope' sentence.
+  - Alternatives: a web_data switch for CI (a repository variable); drop
+    the CI watcher.
+  - Why: a GitHub runner is project infrastructure with no user whose
+    opt-in is missing; the runner-only guard, the URL allow-list and the
+    no-GGG, no-poe.ninja test are kept.
+  - Reverses if: a CI source needs a GGG or poe.ninja host, the operator
+    rules decision 0013 covers CI, or the GITHUB_ACTIONS guard proves
+    spoofable on a user machine.
+  - Record: AUTO-19 (parked behind GP-09, reserved 0076) writes the
+    'Scope' sentence; its notes carry it word for word until then.
+- LE-92 with LE-99 and LE-100 Wave worktrees before the hook of decision
+  0012 is wired (OA-12).
+  - Decision: The waves do not wait for OA-12. One probe of a hand-made
+    sidecar worktree (made with the hook script, edited, removed with
+    the hook's WorktreeRemove) settles the mode: if the edit is allowed,
+    builders make their own sidecar worktrees (docs/plan/08 section 2,
+    the unwired method); if it is refused, the harness default
+    `.claude/worktrees/` is taken as a temporary, recorded deviation
+    from decision 0012's placement until OA-12 is pasted, reaped at
+    /done. The probe ran on 2026-11-18 in the planning session and
+    passed: Edit, Write, named tests, a commit through the git lock and
+    a progress write were all allowed. In force: the unwired sidecar
+    method; the fallback is not taken.
+  - Alternatives: the waves wait for the operator's paste; every package
+    serial in the main checkout; the unwired method untested.
+  - Why: waiting stalls 11 or more wave-1 agents on an optional physical
+    act; the fallback folder is gitignored, local and leak-free and
+    breaks only the placement rule, only until the paste; a one-agent
+    probe costs about a minute.
+  - Reverses if: a later session is refused edits under the sidecar path
+    (then the fallback, without waiting), the operator pastes OA-12
+    (then the wired method), or the operator rules the sidecar rule
+    absolute even temporarily (then serial, isolation none).
+  - Record: docs/plan/08 section 2 (the probe and its result); AUTO-26
+    (parked on OA-12) closes the wiring itself.
+- LE-96 The kill at 3x inside a Workflow run.
+  - Decision: Accepted as the Workflow-run equivalent of FLEET item 3's
+    kill at 3x: the builder stops itself at 2 x est_min, and a run still
+    silent at 3 x is stopped as a whole and started again with that
+    package id in args.defer. A wave where a single-agent kill matters
+    runs as plain background Agents. Without the Monitor tool the
+    watcher waits with a bounded background Bash until-loop, never a
+    foreground sleep.
+  - Alternatives: never use Workflow runs for waves; Workflow runs with
+    no kill.
+  - Why: a self-stop at 2x is stricter than the 3x kill and the
+    whole-run stop enforces the limit when a builder hangs; a restart
+    loses little (worktrees are reused by name, progress files persist).
+  - Reverses if: the Workflow API gains a per-agent stop, whole-run
+    restarts lose work in practice (then plain Agents), or MAIN's kit
+    rules a different Workflow kill rule.
+  - Record: docs/plan/08 sections 3 and 10.
 - Fixed without a ruling at the close-out (docs/plan/07 lists each):
   LE-20, LE-32, LE-35, LE-54, LE-80, LE-91, LE-93, LE-101, LE-132,
   LE-148, LE-150, LE-163, LE-164, LE-165, LE-166.
-- NOT settled (no usable ruling reached the close-out; each needs its
-  ruling before the package or section it names runs): LE-69 (a dated
-  pointer in decision 0002 to budget B19), LE-76 (the CI fetch of
-  AUTO-19 beside decision 0013), LE-92, LE-99 and LE-100 (the
-  `.claude/worktrees/` fallback before OA-12), LE-96 (the Workflow
-  equivalent of the kill at 3x).
+- All 19 loose ends that needed a ruling at the close-out are settled
+  and listed in this file: LE-01, LE-05, LE-27, LE-79, LE-81, LE-107,
+  LE-140 and LE-160 (with Q-23), LE-02 (with Q-24), LE-28, LE-38 (with
+  Q-05), LE-39, LE-53, LE-69, LE-76, LE-92, LE-99, LE-100 and LE-96. Six
+  of them (LE-69, LE-76, LE-92, LE-99, LE-100, LE-96) had been ruled at
+  the close-out but reached the plan only at the close-out 2: their text
+  was cut off on the way to the fixer, and an earlier state of this file
+  listed them as not settled.
+
+### Close-out 2 rulings (2026-11-18)
+
+- R1 GP-09 runs alone.
+  - Decision: GP-09 runs alone: it starts only after wave 5's last merge
+    batch has moved main, and from its gate 3 to its read-back nothing
+    touches main (no merge, integrator commit, batch suite, revert or
+    other act). Wave 5 closes only after that read-back, or after
+    GP-09's DEFERRED line if a gate is red; a deferred GP-09 runs again
+    as the last act of the next wave, alone, and after AUTO-21 under the
+    loop's merge hold.
+  - Alternatives: GP-09 inside a normal merge batch; a serial_group or a
+    synthetic dep.
+  - Why: its gates 3 to 11 all read the state of main, so a merge
+    landing between them and the push would send a commit that was never
+    scanned or suite-tested; GP-09 edits no file, so a serial group
+    would mean nothing.
+  - Reverses if: the merge lock is proven to cover the whole
+    gate-to-push span on its own, GP-09 is split so the push re-runs
+    every gate on the exact commit it pushes, or the operator orders
+    otherwise.
+  - Record: the wave 5 gate and the notes of GP-09 (wave 5).
+- R2 The loop_push switch that PUB-LOCAL-ONLY-TEXT never built.
+  - Decision: ROADMAP row PUB-LOCAL-ONLY-TEXT is reopened: its wording
+    half landed at 7fe4993, the loop_push switch (default off, OA-11)
+    and its two named tests were never built and are the remaining work.
+    It stays in wave 4, batch 1; GP-09 keeps it as a dep, so no origin
+    remote can exist before the switch does.
+  - Alternatives: keep the row ticked and move the switch into a
+    push-worker package; drop the switch and let the loop push by
+    itself.
+  - Why: tools/al_loop.py has no loop_push gate and the two named tests
+    do not exist, so the tick was a false record; default off fails
+    closed and keeps the Q-23 assignment of push approval.
+  - Reverses if: the operator rules the headless loop may push by
+    itself, or a later package moves the push worker out of
+    tools/al_loop.py.
+  - Record: PUB-LOCAL-ONLY-TEXT (wave 4) builds the switch and its
+    integrator edit adds the condition to CLAUDE.md's push-worker
+    sentence.
+- R3 The kit fleet_identity pre-push gap and its report to MAIN.
+  - Decision: The kit gap (the vendored fleet_identity pre-push check
+    reads no tag object, tagger or tag message and matches three trailer
+    keys and three names only) is NOT yet reported to MAIN. It is folded
+    into the one kit report: AUTO-25 drafts it in wave 2,
+    LOOP-KIT-REPORT-SEND sends it once OA-21 gives a destination, and
+    the hand-off KIT DEFECT bullet carries it. No note is sent before
+    that.
+  - Alternatives: send one combined FIX note now; hand-off carry only.
+  - Why: AL has no outbound note path (no destination inbox, no fleet
+    roster), so nothing can be delivered and read back; FLEET item 11
+    wants one report and no local patch; tools/push_guard.py already
+    covers both gaps locally.
+  - Reverses if: a delivery path to MAIN exists (then send at the next
+    session), MAIN ships a kit whose fleet_identity checks tag objects
+    and wide trailers, or MAIN asks for kit defects by another channel.
+  - Record: AUTO-25 (wave 2) drafts, LOOP-KIT-REPORT-SEND (parked on
+    OA-21) sends; decision 0046 carries the dated correction.
+- R4 Three server-side limits of the go-public setup.
+  - Decision: Three server-side limits are accepted as designed: (a) the
+    repository admin role is the one always-bypass actor on main's
+    required checks; (b) no ruleset limits the creation of other
+    branches or tags on the remote, and GP-13 reads `git ls-remote` back
+    so that drift is caught; (c) CI runs the leak sweep with --tree
+    only.
+  - Alternatives: a hard server rule per gap; a no-bypass
+    creation-restricting ruleset on every ref except main, dependabot/**
+    and v*.
+  - Why: pushes go straight to main, so checks can only run after the
+    push, and the same gates run locally before it; the repository has
+    one writer plus Dependabot and the local ref rule refuses every
+    other ref; CI holds no needles, and the history is swept armed at
+    GP-09 and object by object at every push.
+  - Reverses if: GitHub lets required checks run before a direct push
+    lands, a second writer gets push access or another ref appears on
+    the remote, CI receives needles through a secret-free channel, or a
+    leak is found in pushed history.
+  - Record: decision 0046, amendment 2026-11-18 (accepted server-side
+    limits); GP-13 (parked behind GP-12) holds the read-back.
+- R5 Three limits of the leak sweep.
+  - Decision: Three leak sweep limits are accepted, each with a named
+    backstop: archives and base64 are not decoded (no archive is
+    tracked; release zips are swept as the staged tree before packing);
+    --no-verify skips every hook (agents may never use it; GP-12 gate 2
+    re-runs the history sweep before the flip); binary files get the
+    needle arm but no structural arm. No package is assigned.
+  - Alternatives: a decoder for archives and base64, a server-side
+    sweep, or a binary structural arm as a package.
+  - Why: none of the 575 tracked files is an archive and the 14 binaries
+    are size-capped brand and app assets; images form drive-path shapes
+    by chance; recording the limits in a decision makes 'a clean run is
+    not proof' auditable.
+  - Reverses if: an archive, a packed or base64 blob or a new binary
+    type becomes tracked, a --no-verify push is found on origin, or a
+    needle is ever found inside a binary or encoded object.
+  - Record: decision 0046, amendment 2026-11-18 (accepted leak sweep
+    limits).
+- R6 Waves 4, 18, 19 and 22 are wider than 12.
+  - Decision: Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
+    packages. The rule: a merge batch holds at most 4 packages, every
+    batch (the fourth included) runs its own whole suite before main
+    moves, and a wave holds at most 16 worktree packages (4 batches). A
+    new or re-planned wave is still filled to 12 at most; above 12 only
+    where a close-out adds packages without moving others.
+  - Alternatives: re-sequence the 7 extra packages into later waves;
+    lower the batch size to fit 3 batches.
+  - Why: correctness comes from the batch suite, not the width; wave 3
+    already runs a fourth batch; re-sequencing would move packages past
+    the settled file-chain order for a few minutes a wave.
+  - Reverses if: wave 1 measures an escape rate above 10 percent and a
+    wide wave's extra batch pushes its session over 520 minutes, a wide
+    wave starves the loop at the suite gate, or a machine with fewer
+    than 14 usable CPUs queues builders past the wave estimate.
+  - Record: docs/plan/07 (Wave width and expected time) and docs/plan/08
+    section 2.
 
 ## Alternatives
 
-- One decision file per ruling: rejected; about 40 files, most of which
+- One decision file per ruling: rejected; about 50 files, most of which
   a package will supersede with the real record when it lands, and the
   reserved numbers 0047 to 0076 already name those records.
 - Leave the rulings in docs/plan only: rejected; the plan sections are

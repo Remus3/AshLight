@@ -1234,6 +1234,11 @@ their read-back commands. A package id names the section (prefix
 - Parallel with: AUTO-20.
 - Hotspots: none. Prepared and tested with fixtures before the remote;
   merged with the first commit after the operator's go.
+- Amended 2026-11-18 (adjudicator LE-76): accepted as designed. Decision
+  0013 governs the app and the dev host; the CI watcher runs only on a
+  GitHub runner (GITHUB_ACTIONS true, else it refuses), reads only URLs
+  that pass watch_gate.check_url, never a GGG or poe.ninja host, and is
+  not a web_data path. Decision 0076 records this scope.
 
 ### AUTO-20 DEPBOT-WATCH (W9) - blocked: after the public flip (F-081)
 
@@ -1653,3 +1658,7 @@ Corrected (16):
 Amended 2026-11-18 (close-out; docs/plan/07, Rulings 2026-11-18
 (close-out)); Status stays final: operator act 2 reads the recorded
 Q-23 go, so AUTO-19 waits for GP-09 and AUTO-20 for GP-12 (LE-01).
+
+Amended 2026-11-18 (close-out 2; docs/plan/07, Rulings 2026-11-18
+(close-out 2)); Status stays final: AUTO-19 carries one line on its
+scope beside decision 0013 (LE-76).

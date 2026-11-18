@@ -31,11 +31,11 @@ Done rows are flipped to `[x]` by the merge and pruned at /done.
   row. ACCEPT: python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
   tests/test_leak_sweep.py passes and git grep -n B19 --
   docs/decisions/0006-fps-measurement-method.md shows the dated result line with the report's
-  figures. ZERO-CLICK: The operator plays one map they would play anyway; the schedule, the record
-  and this write-up need no further act. DEPENDS: OVL-CHECK, RUN-BUDGET-LOG-CORE. BLOCKED: one
-  normally played map with tools/ovl_check.py armed (Q-18, budget B19); unblocks when the sidecar
-  Logs dir holds an ovl_check report JSON that includes the operator's same / dropped answer
-  (operator).
+  figures and `git grep -n "B19" -- docs/decisions/0002-stack.md` prints exactly that one appended
+  line. ZERO-CLICK: The operator plays one map they would play anyway; the schedule, the record and
+  this write-up need no further act. DEPENDS: OVL-CHECK, RUN-BUDGET-LOG-CORE. BLOCKED: one normally
+  played map with tools/ovl_check.py armed (Q-18, budget B19); unblocks when the sidecar Logs dir
+  holds an ovl_check report JSON that includes the operator's same / dropped answer (operator).
 - [x] OVL-TRADE-CANCEL (build) Decide whether ": Trade cancelled." (new
   event trade_cancelled) should clear or mark an open trade card (design
   review 2026-11-16). ACCEPT: behaviour decided and tested. DONE
@@ -2108,9 +2108,9 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   operator\|MAIN" -- NOTICE` prints nothing and `python -m pytest -q tests/test_ascii_lf.py
   tests/test_leak_sweep.py tests/test_research_numbers.py` is green. ZERO-CLICK: Documentation only;
   nothing for the player to do. BLOCKED: session wave 1.
-- [ ] RUN-LIVE-CLICKS-STRIKE (review) Strike the desktop-control unblock path from TEST-LIVE-CLICKS.
-  ACCEPT: grep -c -i -E 'desktop-tool|desktop-control' ROADMAP.md AL-NEXT-SESSION.txt prints 0 for
-  both files and python -m pytest -q tests/test_floor_static.py passes. ZERO-CLICK: No operator act;
+- [ ] RUN-LIVE-CLICKS-STRIKE (review) Strike the tool-click unblock path from TEST-LIVE-CLICKS.
+  ACCEPT: `grep -c -i -E 'desktop-(tool|control)' ROADMAP.md AL-NEXT-SESSION.txt` prints 0 for both
+  files and `python -m pytest -q tests/test_floor_static.py` passes. ZERO-CLICK: No operator act;
   docs step run by the integrator. BLOCKED: session wave 1.
 - [ ] DATA-GGG-APPLICATION (review) Prepare the GGG OAuth application note and its decision. ACCEPT:
   python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py
@@ -2185,10 +2185,10 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   Code change; nothing for the player. BLOCKED: session wave 2.
 - [ ] AUTO-25 (review) KIT-REPORT: draft the one note for the fleet owner. ACCEPT: `python -c
   "import pathlib;t=pathlib.Path('ops/runtime/notes/kit-gate-report.md').read_bytes();assert
-  t.isascii() and b'\r' not in t"` and `python tools/leak_sweep.py --message
-  ops/runtime/notes/kit-gate-report.md` both exit 0. ZERO-CLICK: The draft waits; the tick's note
-  path sends it once a destination exists (LOOP-KIT-REPORT-SEND), with no reminder. BLOCKED: session
-  wave 2.
+  t.isascii() and b'\r' not in t and b'fleet_suite_gate' in t and b'fleet_identity' in t"` and
+  `python tools/leak_sweep.py --message ops/runtime/notes/kit-gate-report.md` both exit 0.
+  ZERO-CLICK: The draft waits; the tick's note path sends it once a destination exists
+  (LOOP-KIT-REPORT-SEND), with no reminder. BLOCKED: session wave 2.
 - [ ] DATA-PRICE-FALLBACK-RUNBOOK (review) Write down the price source fallback order. ACCEPT:
   python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py
   tests/test_audit_pass2.py passes and the note names the 4 fallbacks, each with a terms date.
@@ -2287,13 +2287,17 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   prints nothing. ZERO-CLICK: After it lands a push needs no flag: a session pushes after its gated
   commit. The headless loop pushes only when the operator has turned on the per-host switch
   loop_push (OA-11, default off; PUB-LOCAL-ONLY-TEXT). Dev side only. BLOCKED: session wave 4.
-- [x] PUB-LOCAL-ONLY-TEXT (build) Replace the local-only wording in loop tools and ritual files. -- done 2026-11-18 (session 6, ahead of wave 4: 7fe4993; read back at 01c2216: the ACCEPT pytest set green and the tools / .claude git grep prints nothing)
+- [ ] PUB-LOCAL-ONLY-TEXT (build) Replace the local-only wording in loop tools and ritual files.
   ACCEPT: `python -m pytest -q tests/test_loop_split.py tests/test_p163_lane_tools.py
   tests/test_fleet_kit_conformance.py tests/test_al_loop_gate_cache.py tests/test_ascii_lf.py` is
   green and `git grep -n -i "AL is local only\|repo is local only\|never push, local only\|AL: local
-  only\|AL_ALLOW_PUSH" -- tools .claude` prints nothing. ZERO-CLICK: Text only: the loop prompt and
-  the /done ritual then describe the guarded push, so sessions and lanes follow it with no reminder.
-  BLOCKED: session wave 4.
+  only\|AL_ALLOW_PUSH" -- tools .claude` prints nothing and `python -m pytest -q
+  "tests/test_al_loop_gate_cache.py::test_push_is_skipped_while_the_loop_push_switch_is_off"
+  "tests/test_al_loop_gate_cache.py::test_push_runs_with_a_fake_origin_and_the_switch_on"` is green
+  and `git grep -c loop_push -- tools/al_loop.py` prints a count of at least 1. ZERO-CLICK: Text
+  only: the loop prompt and the /done ritual then describe the guarded push, so sessions and lanes
+  follow it with no reminder. REOPENED 2026-11-18 (ruling R2): the wording landed at 7fe4993; the
+  loop_push switch was never built and is the remaining work. BLOCKED: session wave 4.
 - [ ] LOOP-WAVE-HOLD (build) Wave folder hold and the shared merge lock. ACCEPT: `python -m pytest
   -q tests/test_loop_wave_hold.py tests/test_loop_flip.py tests/test_al_loop_gate_cache.py
   tests/test_al_loop.py` passes. ZERO-CLICK: The session that starts a wave writes the hold file and
@@ -4302,12 +4306,13 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   and advanced copy); unblocks when at least six sanitized candidate files, one per shape, exist
   under the sidecar Scratch press-samples folder (operator).
 - [ ] AUTO-19 (build) CI-WATCH (workflow half): a daily workflow that writes one key issue per
-  finding. ACCEPT: `python -m pytest -q tests/test_watch_ci.py` passes and, after the first push,
+  finding. ACCEPT: `python -m pytest -q tests/test_watch_ci.py` passes, `git grep -c "not a web_data
+  path" -- docs/decisions/0076-ci-issue-protocol.md` prints a count of 1 and, after the first push,
   the workflow's manual run ends green. ZERO-CLICK: Unattended: the watch survives a dev host that
   is off; standard runners are free on a public repository. DEPENDS: AUTO-05, LOOP-WATCH-GATE,
-  GP-09, GP-05. BLOCKED: the remote does not exist yet (the repository is local only and the
-  pre-push hook refuses every push); unblocks when `git remote get-url origin` exits 0 and the first
-  push is green (GP-09 done) (package GP-09).
+  GP-09, GP-05. BLOCKED: the remote does not exist yet (no git remote is configured; GP-09 creates
+  the repository and makes the first push); unblocks when `git remote get-url origin` exits 0 and
+  the first push is green (GP-09 done) (package GP-09).
 - [ ] AUTO-20 (build) DEPBOT-WATCH: Dependabot alerts and pull requests become rows. ACCEPT: `python
   -m pytest -q tests/test_watch_dependabot.py tests/test_watch_rows.py` passes. ZERO-CLICK: The lane
   runs from the tick and re-applies the bump locally as an operator commit; nothing is merged on
@@ -4319,9 +4324,9 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   ACCEPT: `python -m pytest -q tests/test_watch_ci_issues.py tests/test_watch_rows.py` passes.
   ZERO-CLICK: Unattended: the watch survives a dev host that is off, and the dev loop takes over by
   itself when CI goes quiet. DEPENDS: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08. BLOCKED:
-  the remote does not exist yet (the repository is local only and the pre-push hook refuses every
-  push); unblocks when `git remote get-url origin` exits 0 and the first push is green (GP-09 done)
-  (package GP-09).
+  the remote does not exist yet (no git remote is configured; GP-09 creates the repository and makes
+  the first push); unblocks when `git remote get-url origin` exits 0 and the first push is green
+  (GP-09 done) (package GP-09).
 - [ ] PUB-GUIDE-DOWNLOAD-PLACE (build) One download place in README, FAQ and About. ACCEPT: `python
   -m pytest -q tests/test_download_place.py tests/test_player_guide.py tests/test_leak_sweep.py
   tests/test_ascii_lf.py` and `npm test --prefix app` are green. ZERO-CLICK: No click: About shows
@@ -4402,11 +4407,12 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] GP-13 (review) Apply protection and security settings, read back. ACCEPT: `gh api
   "repos/$R/rules/branches/main" --jq '[.[].type] | sort | join(",")'` prints
   deletion,non_fast_forward,required_status_checks and, after one ordinary push of a fresh commit
-  through fleet_gitlock, `git rev-parse main` equals `git rev-parse origin/main`. ZERO-CLICK: Agent
-  step with gh; later pushes need nothing. DEPENDS: GP-12, PUB-SETTINGS-FILES, GP-05. BLOCKED: the
-  public flip (rulesets and free secret scanning need a public repository on a personal account);
-  unblocks when `gh repo view "$R" --json visibility --jq .visibility` prints PUBLIC (package
-  GP-12).
+  through fleet_gitlock, `git rev-parse main` equals `git rev-parse origin/main`, and `git ls-remote
+  --heads --tags origin` lists only refs/heads/main, refs/heads/dependabot/* and refs/tags/v* refs.
+  ZERO-CLICK: Agent step with gh; later pushes need nothing. DEPENDS: GP-12, PUB-SETTINGS-FILES,
+  GP-05. BLOCKED: the public flip (rulesets and free secret scanning need a public repository on a
+  personal account); unblocks when `gh repo view "$R" --json visibility --jq .visibility` prints
+  PUBLIC (package GP-12).
 - [ ] RUN-OVL-BUDGET-CLOSE (review) Close OVL-BUDGET from the budget log. ACCEPT: python -m
   server.al.budgetlog check exits 0 and prints at least 10 rows tagged in map with the overlay
   shown, and python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py

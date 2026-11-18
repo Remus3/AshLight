@@ -26,7 +26,12 @@ phone decision, the kit defect), decision 0012.
 
 - gh: signed in; the token carries the scopes repo and workflow. OA-1 is
   expected to be nothing.
-- git: no remote configured; .githooks/pre-push refuses every push.
+- git: no remote configured. .githooks/pre-push is the guarded push of
+  decision 0046 since commits 7fe4993 and 01c2216 (only main and v*
+  release tags, tools/push_guard.py, the identity check and the leak
+  sweep over every pushed object; no override); when these lines were
+  first written it still refused every push. (Corrected 2026-11-18,
+  close-out 2.)
 - .claude/settings.json: no WorktreeCreate and no WorktreeRemove entry
   (decision 0012 is not wired); line 17 still holds
   "Bash(python tools/ash_lane.py:*)" and tools/ash_lane.py does not exist.
@@ -42,6 +47,13 @@ phone decision, the kit defect), decision 0012.
   skilltree.json and no poe.ninja book.
 - ops/fleet_kit/fleet_suite_gate.py line 672 still reads each ticket
   twice (`_rec(a) and _rec(a).get(...)`): the kit defect is unreported.
+  So is the kit fleet_identity pre-push gap (no tag object, three
+  trailer keys; ruling R3, 2026-11-18): both ride in the one note of
+  AUTO-25 and LOOP-KIT-REPORT-SEND (Not for the operator, below).
+- Worktrees: a hand-made sidecar worktree was probed on 2026-11-18
+  (docs/plan/08 section 2): Edit, Write, named tests, a commit through
+  the git lock and a progress write were all allowed, so wave 1 does
+  not need OA-12.
 
 ## How to read an entry
 
@@ -64,8 +76,9 @@ public flip each need the operator's own words recorded in the hand-off
 ## A - Needed before wave 1
 
 Nothing is strictly needed: wave 1 runs on the defaults. One act is
-strongly recommended before wave 1 because wave 1 spawns 11 isolated
-agents.
+recommended before wave 1 because wave 1 spawns 11 isolated agents;
+since the probe of 2026-11-18 passed (docs/plan/08 section 2) the
+default works without it.
 
 ### OA-12 Wire the worktree hook of decision 0012
 
@@ -88,6 +101,11 @@ agents.
   .claude/worktrees is only the fallback if the permission system refuses
   edits under the sidecar path; it breaks the Sidecar placement rule
   (decision 0012, Alternatives) and gets one NOTE line in the hand-off.
+  Default in force (adjudicator LE-92, LE-99, LE-100): the unwired
+  method, because the probe passed (it ran on 2026-11-18 in the planning
+  session); else .claude/worktrees, taken without waiting as a recorded
+  temporary fallback and reaped at /done. This act moves to the top of
+  the ask only if the fallback is ever used.
 - When: before wave 1 (recommended; wave 1 does not wait for it).
 
 ## B - Before the first push
@@ -121,8 +139,13 @@ Nothing to do.
   GP-12 (it waits for packages only), then GP-13, GP-15, GP-16, AUTO-20,
   DEP-18.
 - Default (Q-23), in force only if the lines cannot be written verbatim:
-  stay local and prepare everything; pre-push keeps refusing every push;
-  the eight step 1 packages go back to wave 99.
+  stay local and prepare everything: no remote is created and nothing
+  is pushed (GP-09 gate 1 stops; the pre-push hook itself is the
+  guarded push of decision 0046 since commits 7fe4993 and 01c2216 and
+  no longer refuses every push); the eight step 1 packages go back to
+  wave 99. Checked 2026-11-18 (close-out 2): the lines are in the
+  hand-off and match the brief word for word; that they are the go is
+  the reading of ruling LE-01, not the operator's wording.
 - When: done.
 
 ### OA-1 gh sign-in (conditional)
@@ -540,7 +563,9 @@ written yes.
 - Kind: decision.
 - Why only the operator: a per-host switch in a gitignored file.
 - Steps: "loop_push": true in config/local.json.
-- Unblocks: nothing required (PUB-LOCAL-ONLY-TEXT ships the switch off).
+- Unblocks: nothing required (PUB-LOCAL-ONLY-TEXT, reopened 2026-11-18
+  by ruling R2, builds the switch in wave 4 and ships it off; GP-09
+  waits for it, so no remote exists before the switch).
 - Default: off; a session reads the loop's commits and pushes.
 - When: after the first push.
 
@@ -676,7 +701,11 @@ OA-10, OA-12, OA-19, OA-8, OA-20, OA-21, OA-22, OA-23.
   under the 12 a day cap once a delivery path exists (OA-21, or MAIN
   supplies the inbox); kit files are never edited locally (FLEET item
   11). The same note carries GP-13's two peer gaps (Dependabot security
-  updates, the identity guard as a required check). Any Dependabot pull
+  updates, the identity guard as a required check) and, since ruling R3
+  (2026-11-18), the gap of the kit fleet_identity pre-push check (no tag
+  object, tagger or tag message; three trailer keys and three names),
+  which tools/push_guard.py covers locally. Nothing of it is reported
+  yet. Any Dependabot pull
   request on the vendored identity guard is closed and reported to MAIN
   (GP-14). A history rewrite runs only on MAIN's ORDER via
   fleet_rewrite.py; none is needed (Q-25: needle scan clean).
@@ -776,3 +805,15 @@ Close-out, 2026-11-18 (docs/plan/07, Rulings 2026-11-18 (close-out)):
   follows the operator_act fields of packages.json again: OA-10 names no
   package, GP-12 left OA-2.
 - The "Checked" lines above describe the plan before the close-out.
+
+Close-out 2, 2026-11-18 (docs/plan/07, Rulings 2026-11-18 (close-out 2)):
+- Checked on this machine and OA-10: the pre-push hook is the guarded
+  push of decision 0046 (commits 7fe4993 and 01c2216); it no longer
+  refuses every push.
+- OA-12: default in force after the probe of 2026-11-18 (LE-92, LE-99,
+  LE-100). OA-11: the switch is still to be built by PUB-LOCAL-ONLY-TEXT
+  (R2). Not for the operator: the second kit gap rides in the one note
+  (R3).
+- OA-10: the hand-off lines were compared with the brief; the reading
+  that they are the go belongs to ruling LE-01, the OA-2 skip to ruling
+  LE-38.
