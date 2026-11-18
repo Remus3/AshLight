@@ -91,6 +91,11 @@ ALLOW = [
      "The one clipboard read: readText handed to the item-check hotkey "
      "handler (eval_hotkey.js), called once per manual press, never at "
      "start, by a timer or a watcher (decision 0003)."),
+    ("scripts/brand_render.js", "capturePage", 1,
+     "offscreen page only, never the screen",
+     "BRAND-ICON build tool: captures its own offscreen window holding "
+     "AshLight's brand SVG to write the icon PNGs; never the screen, never "
+     "the game, never at run time (docs/design/0005-brand-mark.md)."),
     ("app/test/eval.test.js", "SendInput", 1, "for (const word of [",
      "A banned-word list: the node test asserts eval_hotkey.js never "
      "contains sendInput; the word is the check, not a call."),

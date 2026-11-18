@@ -1590,6 +1590,15 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
 ## Ops
 
+- [x] BRAND-ICON (build) A distinctive app icon (shortcut, window, tray),
+  dashboard favicon and README hero, drawn from own SVG sources (design
+  note docs/design/0005-brand-mark.md). ACCEPT: ICO 16-256, PNGs at size,
+  hero light and dark, check mode clean, design-reviewer run. ZERO-CLICK:
+  every build checks the set by itself; `scripts/build.ps1 -Icons` (or
+  `python tools/make_icons.py`) re-renders and rewrites only changed
+  files. DONE 2026-11-17 on a worktree branch; the desktop-client branch
+  switches its code-drawn icon to app/brand/index.js at merge.
+
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a
   trivial row. ACCEPT: task read back; first tick's progress file done.

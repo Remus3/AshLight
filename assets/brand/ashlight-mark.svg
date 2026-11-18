@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- AshLight mark (BRAND-ICON, docs/design/0005-brand-mark.md).
+       An ember flame rising from two bars of ash on a dark tile.
+       Own drawing; no font, no game art. Colours: kit tokens (surface,
+       surface-2, border, text-muted, status-idle, chart-2, chart-4) plus
+       one brand core colour. Use 48 px and up; 16-32 px use
+       ashlight-mark-small.svg. -->
+  <title>AshLight</title>
+  <defs>
+    <linearGradient id="al-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d222a"/>
+      <stop offset="1" stop-color="#0f1216"/>
+    </linearGradient>
+    <radialGradient id="al-glow" cx="128" cy="150" r="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eb6834" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#eb6834" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="al-flame" x1="0" y1="30" x2="0" y2="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eb6834"/>
+      <stop offset="1" stop-color="#eda100"/>
+    </linearGradient>
+    <linearGradient id="al-core" x1="0" y1="96" x2="0" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7c35f"/>
+      <stop offset="1" stop-color="#fff1d2"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#al-tile)"/>
+  <rect x="9" y="9" width="238" height="238" rx="51" fill="none" stroke="#323840" stroke-width="2"/>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#al-glow)"/>
+  <path fill="url(#al-flame)" d="M140 30C154 66 190 92 188 144C186 178 160 196 128 196C96 196 70 176 70 146C70 116 88 98 100 72C104 92 112 104 122 108C120 80 126 52 140 30Z"/>
+  <path fill="url(#al-core)" d="M132 96C144 120 162 136 160 160C158 180 144 190 128 190C112 190 100 180 100 162C100 142 118 128 132 96Z"/>
+  <circle cx="192" cy="60" r="6" fill="#eda100"/>
+  <circle cx="74" cy="50" r="5" fill="#eb6834"/>
+  <circle cx="204" cy="96" r="4.5" fill="#eda100" fill-opacity="0.8"/>
+  <path d="M64 210H192" stroke="#99a1aa" stroke-width="14" stroke-linecap="round"/>
+  <path d="M96 231H160" stroke="#5b636c" stroke-width="12" stroke-linecap="round"/>
+</svg>
