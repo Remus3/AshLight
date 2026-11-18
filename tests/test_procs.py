@@ -283,7 +283,11 @@ def test_stop_script_leaves_no_ashlight_process(tmp_path):
         assert not (runtime / procs.OVERLAY_PID_FILE).exists()
         assert not (runtime / "core.alive").exists()
         log = (tmp_path / "AL" / "Logs" / "run.log").read_text(encoding="ascii")
-        assert "supervisor exited" in log and "overlay stopped (2 process(es))" in log
+        # the supervisor exits by itself on stop.request; under a loaded full
+        # suite it can be gone before procs.stop looks ("not running"), which
+        # is the same outcome (sup.wait above proved a clean exit)
+        assert ("supervisor exited" in log or "supervisor not running" in log), log
+        assert "overlay stopped (2 process(es))" in log
     finally:
         for p in spawned:
             if p.poll() is None:
