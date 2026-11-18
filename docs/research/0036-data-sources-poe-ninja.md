@@ -5,13 +5,19 @@ permitted data sources (poe.ninja). Scope: every poe.ninja request AshLight
 makes, what poe.ninja asks of API consumers, what PoE2 1.0 (2026-12-11)
 will change, alternatives, and the shape-watch input for note 0058.
 Extends 0013 and 0019 (their live shape samples are not repeated here).
-Status: draft
+Verified 2026-11-18 by an independent pass (see the Verification section).
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (accessed 2026-11-17; re-read 2026-11-18 where marked)
 
 - ND: https://poe.ninja/docs/api - the API reference. The whole page text
   was read from the raw HTML (96,862 bytes, server rendered, no `<main>`
   element; `Cache-Control: public, max-age=600`, served through Cloudflare).
+  Re-read 2026-11-18: routes, both PoE2 type lists, the line fields and
+  every policy point used below still hold; it also says PoE2 has no
+  stash currency route, overview responses are HTTP-cached for about
+  5 minutes with ETags, and using the API to replicate the site directly
+  is not allowed.
 - WV: the responses research 0013 saved on 2026-11-17 under
   `<sidecar>\Scratch\wv` (league list, two Currency overviews, their
   headers, one 304, the docs page). Read locally; no new request.
@@ -20,7 +26,8 @@ Status: draft
 - NP: https://poe.ninja/posts/poe2-unique-items - poe.ninja's post on PoE2
   unique items in the economy section (dated Thu May 14, year not shown;
   2026 inferred: it speaks of the coming 0.5 launch, which research 0013
-  dates 2026-05-29).
+  dates 2026-05-29). Re-read 2026-11-18: 8 categories, prices from the
+  official trade API, no PoE2 stash stream.
 - NB: https://poe.ninja/poe2/builds - the PoE2 builds section (exists);
   NL: https://poe.ninja/docs/character-not-listed-poe2 - its data comes
   from GGG's ladder API.
@@ -34,12 +41,19 @@ Status: draft
 - PS: https://poe2scout.com/ ; PSR: https://github.com/poe2scout/poe2scout
   (README, MIT); PSA: https://api.poe2scout.com/swagger and its OpenAPI
   document https://api.poe2scout.com/openapi/v1.json (62,797 bytes, title
-  Poe2scout.Api, 20 GET paths).
-- PW: https://poe.watch/ - navigation shows PoE1 sections only.
+  Poe2scout.Api, 20 GET paths). Re-read 2026-11-18: MIT, 557 commits,
+  66 stars; 20 GET paths, title "Poe2scout.Api | v1".
+- PW: https://poe.watch/ - navigation shows PoE1 sections only (re-read
+  2026-11-18, same).
 - GH1: https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
 - GH2: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
 - PV1: https://www.poe-vault.com/poe2/news/conquerors-of-wraeclast-explained-path-of-exile-2s-1-0-league-has-you-raise-an-army
 - PV2: https://www.poe-vault.com/poe2/news/your-path-of-exile-early-access-characters-survive-1-0-but-they-will-never-reach-standard
+  (GH1, GH2, PV1, PV2 re-read 2026-11-18; PV1 and PV2 show no post date.)
+- RS: https://www.rpgsite.net/news/21188-path-of-exile-2-reaches-its-10-full-release-on-december-11
+  (accessed 2026-11-18): 1.0 on 2026-12-11, announced at Gamescom; the
+  same date in several other outlets of the same search. The league name
+  rests on PV1 alone.
 - Repo: research 0013, 0018, 0019, 0021, 0033; decisions 0013, 0015, 0016,
   0017, 0026; server/al/ (ninja.py, pricebook.py, webfetch.py, price.py,
   core.py, http.py, state.py, diag.py, __main__.py), web/app.js,
@@ -51,7 +65,8 @@ Status: draft
 ## Summary
 
 - Contract: 3 documented route families, 24 URL shapes (league list, 14
-  exchange types, 9 unique types); at most 23 GETs an hour, 556 a day per
+  exchange types, 9 unique types); at most 24 GETs in one hour (23
+  overviews plus the 6-hourly league read), 556 a day per
   install, behind the opt-in and a contact. Nothing formal backs it: one
   docs page, use tolerated, no SLA, no numeric limit, blocking for
   excess, and a request that desktop apps go through a backend (F1, F2).
@@ -85,7 +100,10 @@ Status: draft
 - C3 stackables. The same route with `type` = Fragments, Abyss, UncutGems,
   LineageSupportGems, Essences, SoulCores, Idols, Runes, Ritual,
   Expedition, Delirium, Breach, Verisium (pricebook.py:43-45). Read: as C2
-  plus `sparkline.totalChange` (pricebook.py:61-68, 114-138). Cadence: per
+  plus the change from the first of `sparkLine`, `sparkline` or
+  `lowConfidenceSparkLine` that has a `totalChange` (pricebook.py:61-68,
+  114-138). Unlike C2, a line whose id has no name is dropped
+  (pricebook.py:133). Cadence: per
   type hourly gate and ETag (pricebook.py:182-198). Cache: `book.json`,
   compact entries only.
 - C4 uniques. `GET /poe2/api/economy/stash/current/item/overview?league=
@@ -161,7 +179,9 @@ Status: draft
   SLA, routes may change without notice (redirects are best effort), and
   clients that overuse the economy routes get blocked. There is no terms
   page, no numeric limit, no licence or attribution clause and no API
-  changelog; contact is a Discord server (ND, NF). No public source
+  changelog; the page links a Discord server and a Support page but names
+  no API contact channel (ND, NF). It does forbid using the API to
+  replicate the site directly (ND, re-read 2026-11-18). No public source
   repository or issue tracker for poe.ninja was found (UNVERIFIED
   negative). Why it matters: the price features are best effort by
   construction; the offline trade link (decision 0017) is the only part
@@ -176,7 +196,14 @@ Status: draft
   sharply with AI-assisted development (ND). The edge does not absorb
   it: the league list and the current league's Currency overview came
   back `cache-control: no-cache`, revalidated against the origin; only
-  the older league's overview was edge-cached, for 1,800 s (WV).
+  the older league's overview was edge-cached, for 1,800 s (WV: `fr.h`
+  and the leagues header read `cf-cache-status: REVALIDATED`, `ov.h` and
+  the 304 `c.h` read `HIT`, `max-age=1800`; checked 2026-11-18). Settled
+  decision check: decision 0026 reverses if "poe.ninja asks clients to
+  poll less or blocks the pattern". The proxy request is about routing,
+  not frequency, and one install polls exactly what 0026 assessed, so the
+  condition is not met today; at go-public it becomes the question R7
+  puts to poe.ninja (needs adjudication then, not now).
 - F3 The feature is dark on the operator's machine and the UI hides why.
   config/local.json holds `web_data: true` and no `contact`; the folder
   `<sidecar>\Cache\ninja` does not exist, although the client writes its
@@ -187,7 +214,12 @@ Status: draft
   (web/prices.js:143) and "after the next hourly price update"
   (web/prices.js:192-194). `/api/rates` does carry `blocked: "contact not
   set"` (ninja.py:316) but web/ never reads `blocked` or `contact_set`
-  (grep: 0 hits). Only the Checks card says it (diag.py:119-125). The fix
+  (grep: 0 hits; the "blocked" strings in web/ are pill state names).
+  `GET /api/web-data` carries both fields too (http.py:568-580) and is
+  equally unread for them. Only the Checks card says it (diag.py:119-125).
+  The press-card words for that state are also stale: they call it "a
+  contact for the trade site" (state.py:559-562), but since decision 0017
+  the contact only serves poe.ninja and GGG. The fix
   is a hand edit of a JSON file (config/local.example.json `_doc_web`).
   Why it matters: every poe.ninja feature (price on the press, movers,
   price watch, filter tiers, conversions) is unproven in real use, and a
@@ -275,9 +307,11 @@ Status: draft
   - poe2scout: site (PS), MIT repository with 557 commits and 66 stars
     (PSR), OpenAPI document with 20 GET paths: leagues, currencies and
     uniques by category, items, histories, exchange snapshot (PSA). Its
-    README asks sustained users for a User-Agent with contact details and
-    names GGG API client credentials for its workers. No terms page (a
-    privacy policy only), no SLA, no limits published. A smaller volunteer
+    README asks sustained users for a User-Agent with contact details;
+    its worker deployment reads a `POEAPI_CLIENT_ID` / secret pair, which
+    suggests a GGG API client (the README does not say so; inference).
+    The README names no upstream source, no terms, no SLA and no limits;
+    the site showed a privacy policy only (PS, 2026-11-17, not re-read). A smaller volunteer
     service: the same class of risk as poe.ninja.
   - poe.watch: only PoE1 sections are visible (PW). Not an alternative
     (UNVERIFIED negative).
@@ -286,17 +320,19 @@ Status: draft
     what F2's request describes. Feasible on GitHub: Pages allows a 1 GB
     site and 100 GB a month (soft) (GH1); scheduled workflows run at 5
     minute granularity, slip at the top of the hour and stop after 60
-    days without repository activity (GH2). It republishes poe.ninja
-    data to anyone, so it needs poe.ninja's yes first.
+    days without repository activity in a public repository (GH2). It
+    republishes poe.ninja data to anyone, and ND forbids using the API to
+    replicate the site directly, so it needs poe.ninja's yes first.
   - Floor state: the trade link alone (decision 0017), already the
     behaviour whenever the cache has no price.
-- F12 What 1.0 (2026-12-11) changes. A new league, Conquerors of
-  Wraeclast, should lead the list; Forbidden Rites and Runes of Aldur end
+- F12 What 1.0 (2026-12-11, RS) changes. A new league, Conquerors of
+  Wraeclast (PV1 only), should lead the list; Forbidden Rites and Runes of Aldur end
   (0021). Per GGG's early-access FAQ as reported, early-access characters
   move to an "Early Access" league and never reach Standard (PV2; not
   reconfirmed for 1.0), so Standard and Hardcore would restart empty and
   continuing players sit in a league that is not first. The league adds
-  crafting materials (PV1): expect new exchange lines or a new type.
+  crafting materials, Crimson Iron and Infused Blood (PV1): expect new
+  exchange lines or a new type.
   40 new and 70 revamped uniques (0021) grow the item overviews; the
   4 MiB cap is 6.0 times the largest body seen. First days: thin
   listings, hourly lag, possibly another primary currency (read
@@ -342,22 +378,30 @@ Status: draft
   report, and the first round creates `<sidecar>\Cache\ninja\rates.json`.
   ZERO-CLICK: one typed value, once (an identity cannot be guessed and
   the hygiene rule bars a tracked default); nothing after.
-- R2 PRICE-LEAGUE-1.0 (before 2026-12-11). Action: re-read the league
-  list on every hourly round with If-None-Match; cache the whole list as
-  id + name; use the id for poe.ninja and the name for trade links and
-  labels; show the league on the overlay price line for 24 h after a
-  change; correct runbook step 8. Impact: H - on launch day every price
-  and trade link hangs on it. Effort: S. Risk: 20 more league reads a day
-  (24, was 4), bodiless when unchanged. ToS check: public-web-data rule
-  (documented poe.ninja route, conditional as ND asks); the trade link is
-  still only built, never called (decision 0017). Depends on: R3 for
-  overlay-only play. Files: server/al/ninja.py, core.py, state.py,
+- R2 PRICE-LEAGUE-1.0 (before 2026-12-11). Action: (a) now, inside
+  decision 0026: send If-None-Match on the league GET; cache the whole
+  list as id + name; use the id for poe.ninja and the name for trade
+  links and labels; show the league on the overlay price line for 24 h
+  after a change; correct runbook step 8 to say "within 6 h" (today it
+  promises 1 h, which the code does not do). (b) Only after a recorded
+  amendment of decision 0026 item 4 (settled: "re-read every 6 h"): move
+  the league re-read to every hourly round. None of 0026's "Reverses if"
+  conditions is met, so (b) is a cadence amendment for an adjudicator or
+  the operator, not a change this note may make; its case is 0026's own
+  reason for leaving 24 h (launch day must not price the old league),
+  and the conditional read costs a header exchange, not a body. Impact:
+  H - on launch day every price and trade link hangs on it. Effort: S.
+  Risk: (b) adds 20 league reads a day (24, was 4), bodiless when
+  unchanged. ToS check: public-web-data rule (documented poe.ninja route,
+  conditional as ND asks); the trade link is still only built, never
+  called (decision 0017). Depends on: R3 for overlay-only play; the 0026
+  amendment for (b). Files: server/al/ninja.py, core.py, state.py,
   docs/ops/1.0-launch-runbook.md, tests/test_price_book.py,
-  tests/test_util_10_ready.py; an amendment line in decision 0026 item 4.
-  Acceptance: a list whose id differs from its name puts the id in the
-  poe.ninja URL and the name in the trade URL; a list change while the old
-  league still answers 200 is followed within 2 rounds; the league GET
-  carries If-None-Match. ZERO-CLICK: automatic.
+  tests/test_util_10_ready.py; for (b) an amendment line in decision 0026
+  item 4. Acceptance: a list whose id differs from its name puts the id
+  in the poe.ninja URL and the name in the trade URL; the league GET
+  carries If-None-Match; with (b), a list change while the old league
+  still answers 200 is followed within 2 rounds. ZERO-CLICK: automatic.
 - R3 PRICE-REFRESH-CORE. Action: start a due refresh from the core loop
   when web data is on and either the log is not idle (decision 0029) or
   `/api/rates` was read in the last 10 minutes; pass the cache age to the
@@ -421,8 +465,10 @@ Status: draft
   (2) without an answer ship direct calls with a tiered cadence (Currency
   hourly, the other 22 types every 3 h unless pressed in the last 24 h:
   the all-day ceiling falls from 552 to 200 overview GETs); (3) keep the
-  mirror design (F11) ready. Impact: H for go-public risk. Effort: S for
-  (1) and (2), L for a mirror. Risk: a mirror republishes poe.ninja data;
+  mirror design (F11) ready; build it only on poe.ninja's explicit yes,
+  since ND forbids replicating the site through the API. Impact: H for
+  go-public risk. Effort: S for (1) and (2), L for a mirror. Risk: a
+  mirror republishes poe.ninja data;
   scheduled jobs slip and stop after 60 idle days (GH2). ToS check:
   public-web-data rule (poe.ninja is a named source; a mirror is
   AshLight's own file, no GGG endpoint, no trade site); no-revenue rule
@@ -518,8 +564,8 @@ Status: draft
   from the loop tick, like the GGG docs watch (decision 0044): hash the
   normalised page text, never the raw HTML or the Last-Modified header
   (two reads 17 h apart differed as HTML, 96,712 and 96,862 bytes, and
-  were identical as text, 13,196 characters; Last-Modified is the render
-  time). The page has no `<main>`, so take the text from the "API
+  were identical once reduced to text, by the author's extraction;
+  Last-Modified is the render time). The page has no `<main>`, so take the text from the "API
   Reference" heading to the footer line. Keep the baseline in the sidecar
   Cache, write a diff to the sidecar Logs, tag changed lines as types
   (the two PoE2 type tables), routes (lines starting GET /poe2) or policy
@@ -551,8 +597,9 @@ Status: draft
   the repository goes public (R7): saves 352 of 552 daily requests.
 - Cut the dead price-card states (for the features review, 0038):
   `searching`, `waiting`, `done`, `off` and the "contact not set" words
-  are not produced since decision 0017 (web/prices.js:199-213;
-  state.py:559-561).
+  are not produced since decision 0017: the card status is only `link`
+  or `error` (price.py:17-19, 53-62), yet the view still maps the others
+  (web/prices.js:199-213; state.py:43, 554-562, 709-717).
 - Keep movers: no request of its own. Its 20-listing floor rests on a
   sampled count (F8), so word it as a trend, not a fact.
 
@@ -598,3 +645,56 @@ Status: draft
    FAQ; GGG has not restated it).
 5. poe2scout's data source, limits and stance on desktop clients: ask
    only if R11 is triggered.
+6. Whether R2 (b), an hourly league re-read, may amend decision 0026
+   item 4 although none of its "Reverses if" conditions is met (see R2).
+
+## Verification
+
+Independent pass, 2026-11-18, by an agent that did not write the draft.
+
+- Code (A): about 50 path:line citations opened in server/al (ninja.py,
+  pricebook.py, webfetch.py, core.py, http.py, price.py, state.py,
+  diag.py, pricewatch.py, settingsio.py, parser.py, __main__.py,
+  theorycraft/value.py), web/app.js, web/prices.js,
+  app/client/window.js, the runbook and the two test files. All held,
+  including the four headline findings: no contact and no Cache\ninja
+  folder on this machine (config/local.json key names read, folder
+  absent), refresh only from the opt-in switch and `/api/rates`
+  (`tick_sources` makes no request, core.py:782-787), success on an
+  empty parse (pricebook.py:200-211), the 6 h league wait
+  (ninja.py:57, 188).
+- Local evidence: the saved WV bodies were re-parsed: 51 and 44 lines,
+  every read key on every line, primary `divine` worth 1, all 11
+  value.py alias ids present, 6 leagues with id equal to name; the header
+  files match the edge-cache claims.
+- Web (B): 10 sources re-fetched (ND, NP, PSR, PSA, PW, GH1, GH2, PV1,
+  PV2, plus a new date source RS). All load-bearing claims held.
+- Corrected: the hourly ceiling (24 GETs in one hour, not 23); C3's
+  change keys (three spellings) and the dropped no-name lines; F1's
+  "contact is a Discord server" (the page names no API channel); the
+  poe2scout credentials sentence (an inference, now labelled); the
+  docs-page text length (13,196 characters could not be reproduced; the
+  saved extract is 11,980, so the figure was removed).
+- Added: ND's ban on replicating the site (F1, F11, R7); ND's note that
+  PoE2 has no stash currency route; a settled-decision check on F2
+  against decision 0026; the stale "contact for the trade site" card
+  words and the unread `/api/web-data` fields (F3); the 1.0 date source
+  and the crafting material names (F12); the card-status evidence for
+  the dead-state cut.
+- Settled decisions (D): R2 changed decision 0026 item 4's settled 6 h
+  cadence without a met "Reverses if"; it is now split into an in-bounds
+  part (a) and a part (b) that waits for a recorded amendment (open
+  question 6). R3 and R8 add card keys or league logic and already name
+  the amendment lines they need. No other recommendation contradicts a
+  settled entry.
+- ToS floor (C): all 12 recommendations re-tested against every floor
+  rule; none reads process memory, injects, hooks, sends input, watches
+  the clipboard or screen, calls a trade-site or undocumented GGG
+  endpoint or uses a POESESSID. The mirror (R7) stays a design that waits
+  on poe.ninja's yes. Nothing moved to Rejected.
+- Completeness (E): every brief point is covered; no gap found.
+- UNVERIFIED, still: the 12 requests per 5 minutes limit (CN); whether
+  precursor tablets can be unique (F9); a public poe.ninja source
+  repository (negative); poe.watch having no PoE2 data (negative); the
+  league name Conquerors of Wraeclast (one source, PV1); the early-access
+  league plan for 1.0 (PV2 quotes an old FAQ); the year of NP.
