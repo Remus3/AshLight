@@ -439,18 +439,12 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .tool-fold { margin-top: 12px; border-top: 1px solid var(--fk-border); padding-top: 4px; }
 .tool-fold > summary, .tools > details > summary { color: var(--fk-text); font-weight: 600; }
 
-/* UX-NARROW: a narrow side window next to the game (web/narrow.js moves
-   the tool cards into one fold at the end below 520 px). Tighter spacing
-   only; the fold's cards drop their own frame and read as sections. */
+/* Narrow side window next to the game: tighter spacing only. */
 @media (max-width: 520px) {
   main { padding: 12px; gap: 12px; }
   .card { padding: 12px; }
   .bar { padding: 8px 12px; }
 }
-.narrow-tools > summary { color: var(--fk-text); font-weight: 600; min-height: 32px;
-  padding: 4px 0; cursor: pointer; }
-.narrow-tools > .card { border: none; border-top: 1px solid var(--fk-border); border-radius: 0;
-  background: none; padding: 12px 0 0; margin-top: 12px; }
 /* NEWBIE-HINTS: the new character's tip card, accent edge like Last session */
 .card.hint { border-left: 4px solid var(--fk-accent); }
 .card.hint p { margin: 0; overflow-wrap: anywhere; }
@@ -476,3 +470,96 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .checks > details > summary { color: var(--fk-text); font-weight: 600; min-height: 32px; cursor: pointer; }
 .lang-note { border-left: 4px solid var(--fk-status-warn); }
 .lang-note p { overflow-wrap: anywhere; }
+
+/* UI-GLANCE: tabs. Play is the glance tab and fits one screen; the other
+   tabs use compact grids. The selected tab has a bar under it AND bold
+   weight plus aria-selected (colour never alone); no motion. */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 100%; }
+.brand { margin-right: 8px; }
+button.tab {
+  color: var(--fk-text);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 12px;
+  min-height: 32px;
+  font-weight: 400;
+}
+button.tab[aria-selected="true"] { border-bottom-color: var(--fk-accent); font-weight: 700; }
+button.tab:hover { background: var(--fk-surface); }
+button.tab:focus-visible { outline-offset: -3px; }
+.tab-mark {
+  margin-left: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--fk-text-muted);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.panel { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.panel:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
+.play-main, .play-side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.panel-grid { grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); align-items: start; }
+.panel-grid > .col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+/* a column whose cards are all hidden (no build yet) takes no track */
+.panel-grid > .col:not(:has(> section:not([hidden]))) { display: none; }
+.zone-guide-box > * { margin: 8px 0 0; }
+.build-alert { border-left: 4px solid var(--fk-status-warn); overflow-wrap: anywhere; }
+.build-alert p { margin: 0; }
+.play-main:focus-visible, .play-side:focus-visible, .panel-grid > .col:focus-visible {
+  outline: 3px solid var(--fk-text); outline-offset: 2px; }
+/* the header news line: words only, empty takes no space */
+.tab-news { margin: 0; font-size: 0.9rem; font-weight: 600; }
+.tab-news:empty { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+/* Wide and tall enough: an app shell. The page itself never scrolls; Play
+   is two columns (glance left, item card right) and any long list scrolls
+   inside its own column or tab. Smaller windows keep the normal page flow. */
+@media (min-width: 900px) and (min-height: 560px) {
+  body { height: 100vh; }
+  main {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-width: 1600px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .bar { flex-wrap: nowrap; padding: 6px 16px; }
+  .bar .tabs { flex: 1 1 auto; }
+  .stat { padding: 8px 12px; }
+  .stat .value { font-size: clamp(2rem, 2.6vw, 2.75rem); margin: 2px 0; }
+  .stat-zone .value { font-size: clamp(1.5rem, 2.2vw, 2.25rem); }
+  .stat-zone .sub .mono { font-size: 1.3rem; }
+  .stats { gap: 12px; }
+  .play-main, .play-side, .panel { gap: 12px; }
+  .card { padding: 12px; }
+  .stat .sub { font-size: 0.9rem; }
+  .trade-list li { padding: 4px 8px; }
+  .trades .muted { margin: 0 0 4px; }
+  .trades .actions { margin-top: 4px; }
+  .panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .panel-play {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .play-main, .play-side { min-height: 0; overflow-y: auto; padding-right: 4px; }
+  /* each column of a tab scrolls on its own; the page never does */
+  .panel-grid > .col { max-height: 100%; overflow-y: auto; padding-right: 4px; gap: 12px; }
+  .foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
+    gap: 0 16px; padding: 4px 16px; font-size: 0.8125rem; }
+  .foot .promises { margin: 0; }
+  .foot p { margin: 2px 0; }
+}
+
+/* UI-GLANCE: a short window (the ~1280x800 desktop client) tightens the
+   glance tiles a little more so Play keeps its trades and tip in view. */
+@media (min-width: 900px) and (min-height: 560px) and (max-height: 820px) {
+  .stat { padding: 4px 10px; }
+  .stat .label { font-size: 0.8125rem; }
+  main { padding-top: 8px; padding-bottom: 8px; gap: 8px; }
+  .play-main, .play-side, .panel-grid > .col { gap: 8px; }
+}

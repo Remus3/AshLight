@@ -69,6 +69,12 @@ Dashboard (root 16px; rem values are the source):
 Rules: nothing under 13px; line-height 1.4 for body, 1.1 for glance
 numbers; uppercase only for labels of 3 words or fewer.
 
+Shell sizes (UI-GLANCE): at 900px wide and 560px tall or more the Play
+tab is two columns, so the glance sizes scale with the column, not the
+window: glance numbers clamp(2rem, 2.6vw, 2.75rem), zone name
+clamp(1.5rem, 2.2vw, 2.25rem), zone timer 1.3rem; tiles pad 8px 12px
+(4px 10px at 820px tall or less), stat sub lines 0.9rem, footer 0.8125rem.
+
 Overlay (CSS px at zoom 1.0; the window zoom is the layout `scale`):
 
 | Role | Size | Weight |
@@ -93,14 +99,43 @@ current 0.75 floor.
   aim for 32px tall buttons.
 - The layout must work at 320px width (dashboard on a phone or a narrow
   second screen) with no horizontal scroll.
-- Narrow side window (UX-NARROW, under 520px width): main and card padding
-  12px, main gap 12px; web/narrow.js puts the live play cards first and
-  moves the tool cards into one closed fold at the end (nodes move, so Tab
-  order = screen order). The status lines inside that fold speak after a
-  click inside it (paste, copy, a setting, a save), so the fold is open
-  then; the only others are page-load lines (a setting's current state, or
-  "Can't load ... Is AshLight running?", which the header connection pill
-  also shows), read when the player opens the fold.
+- Tabs (UI-GLANCE, 2026-11-17; replaces the UX-NARROW fold): the
+  dashboard is five tabs in the header (ARIA tablist, web/tabs.js): Play,
+  Run and history, Build, Items and prices, Settings. Play is the glance
+  tab: zone tile with its guide (zone tip, campaign hints, the
+  `#zone-guide` slot), level / deaths / session, the `#build-alert` slot,
+  trades, the new-character tip, and the item card (verdict, upgrade
+  search, price). Both slots are filled only through
+  `ALTabs.fill(document, id, node)`. The picked tab is remembered per
+  viewer (localStorage, try/catch). ZERO-CLICK: a new item card, trade
+  request or build alert shows Play by itself unless focus is inside the
+  shown tab (the player is working there); then Play carries the word
+  "new". Settings carries "fix" while a self-check needs one. No focus
+  moves, nothing animates; the selected tab is bold with a bar and
+  aria-selected (never colour alone). Arrow keys, Home and End move
+  between tabs (one Tab stop for the row).
+- App shell at 900px wide and 560px tall or more: the page never scrolls;
+  Play is two columns (glance left, item card right) and every tab's
+  columns scroll on their own. Headless Chrome read back (synthetic
+  session, 2 trades, 3 item checks): 1920x950 Play left column fits
+  exactly, 1280x760 is within 26px with two open trades; the item card
+  scrolls inside its column below the verdict; each column is a
+  labelled group with tabindex 0 so it scrolls from the keyboard. Under
+  820px tall the tiles tighten further. The game-data credit (decision
+  0009) is a footer fold, shown only while snapshot data exists, so the
+  footer stays one or two lines; the GGG disclaimer and trademark lines
+  stay open in the footer.
+- Auto-switch grace: a click, key press or scroll inside the shown tab or
+  the tab row holds that tab for 10 s; a new item card, trade or build
+  alert in that time marks Play "new" and the header line says once
+  "New on Play: <what>." (a polite region outside the panels, since
+  Play's own regions are silent while it is hidden). When the game has
+  focus Play is always shown. Build-alert nodes carry their own words.
+- Narrow side window (under 520px width): main and card padding 12px,
+  main gap 12px; below the shell the page flows in one column in DOM
+  order (Tab order = screen order), the tab row wraps under the brand.
+  Status lines in a hidden tab speak once that tab is shown, after the
+  player's own click there (paste, copy, a setting, a save).
 
 ## 5. Colour
 
@@ -293,12 +328,12 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | AFK / DND | status word on the HUD line | flag under Session |
 | Under-levelled for the zone (UTIL-UNDERLEVEL) | status word `N lv under` (gap at or above the setting, default 3) | line under the Level tile naming the zone level (the tile already shows the player level; UX-B9-CARDS) |
 | Not reading / offline | one status word ("offline") | pill with the fix |
-| Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card with every compared slot |
+| Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card (Play tab, right column) with every compared slot; the stat weights it adds up are in the Item check scoring card (Items and prices tab); a new card shows Play by itself |
 | In a map (UTIL-MAPS, UTIL-MAPRUN-OVL) | row-1 timer is the time in this map (kept across hideout trips) instead of this zone instance; no new line or word; map deaths stay on the dashboard | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
 | Died (UTIL-DEATHS) | no change | Death recap card: newest first, local time, zone and level |
-| In a campaign act (HUD-ACT) | no change | Act times card (below Item check): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
+| In a campaign act (HUD-ACT) | no change | Act times card (Run and history tab): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Waystone check (UTIL-WAYSTONE-REWARD) | reward line (`+38% rarity, +12% pack`) replaces the item name in that card | `Rewards: ...` sentence under the risk sentence in the Item check card |
-| Campaign hint (UTIL-CAMPAIGN-CHECKS) | status word, last in the slot order (`Cold res 32%`, `Better flask`, `Boots: no speed`, `Boss: cold`) | Hint list under the zone tip in the Act times card |
+| Campaign hint (UTIL-CAMPAIGN-CHECKS) | status word, last in the slot order (`Cold res 32%`, `Better flask`, `Boots: no speed`, `Boss: cold`) | Hint list under the zone tip in the Play tab's Zone tile |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
 | Item check from the same press | none on the overlay | Upgrade search sub-section under the item check (TC-UPGRADE) |
 
@@ -309,8 +344,8 @@ third HUD line to fit a feature; add a dashboard card instead.
 
 Dashboard density (UX-DASH-DENSITY, glance review 0004 U26): play cards
 come first and stay open. Set-once tools (overlay position, moving
-settings, graphics settings) live in one folded Tools card at the end of
-the page, with the hotkey hint outside the fold. A tool made from one
+settings, graphics settings) live in one folded Tools card on the
+Settings tab, with the hotkey hint outside the fold. A tool made from one
 card's content (the .build file from the Build card, the loot filter
 add-on from the Search strings card) folds inside that card instead, so it
 stays beside what it is made from and hides with it. A destructive action

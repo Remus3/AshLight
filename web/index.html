@@ -23,13 +23,32 @@
 <script src="/web/pricewatch.js" defer></script>
 <script src="/web/settingsio.js" defer></script>
 <script src="/web/hints.js" defer></script>
-<script src="/web/narrow.js" defer></script>
+<script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
 <script src="/web/app.js" defer></script>
 </head>
 <body>
 <header class="bar">
   <h1 class="brand">AshLight</h1>
+  <!-- UI-GLANCE: a few tabs instead of one long column; Play is the glance
+       tab and fits one screen. web/tabs.js: remembered per viewer, arrow
+       keys move between tabs, a new item card, trade or build alert shows
+       Play again by itself. -->
+  <div id="tabs" class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button id="tab-play" class="tab" type="button" role="tab" aria-selected="true"
+      aria-controls="panel-play" tabindex="0">Play <span class="tab-mark" hidden></span></button>
+    <button id="tab-run" class="tab" type="button" role="tab" aria-selected="false"
+      aria-controls="panel-run" tabindex="-1">Run and history <span class="tab-mark" hidden></span></button>
+    <button id="tab-build" class="tab" type="button" role="tab" aria-selected="false"
+      aria-controls="panel-build" tabindex="-1">Build <span class="tab-mark" hidden></span></button>
+    <button id="tab-items" class="tab" type="button" role="tab" aria-selected="false"
+      aria-controls="panel-items" tabindex="-1">Items and prices <span class="tab-mark" hidden></span></button>
+    <button id="tab-settings" class="tab" type="button" role="tab" aria-selected="false"
+      aria-controls="panel-settings" tabindex="-1">Settings <span class="tab-mark" hidden></span></button>
+  </div>
+  <!-- UI-GLANCE: says once when news for Play arrives while another tab
+       is shown (Play itself is hidden then, so its regions are silent) -->
+  <p id="tab-news" class="tab-news" role="status" aria-live="polite"></p>
   <p id="reading" class="pill" data-state="pending" role="status" aria-live="polite">
     <span class="glyph" aria-hidden="true">[ ]</span>
     <span class="word">Client.txt status unknown</span>
@@ -41,6 +60,8 @@
 </header>
 
 <main>
+  <div id="panel-play" class="panel panel-play" role="tabpanel" aria-labelledby="tab-play" tabindex="0">
+  <div class="play-main" role="group" aria-label="At a glance" tabindex="0">
   <section id="consent" class="card consent" hidden aria-labelledby="consent-title">
     <h2 id="consent-title">Allow AshLight to read Client.txt?</h2>
     <p>AshLight reads the game's log file, read only, while it runs:</p>
@@ -71,6 +92,16 @@
       <p class="sub"><span id="zone-time" class="mono">--:--</span>
         <span id="hideout" class="tag" hidden>hideout</span>
         <span id="zone-stale" class="tag" hidden>frozen - log quiet</span></p>
+      <!-- UI-GLANCE: the zone's guide sits with the zone. #zone-guide is a
+           slot for a fuller guide: ALTabs.fill(document, "zone-guide", node)
+           fills it (null empties and hides it). Not a live region. -->
+      <div class="zone-guide-box">
+        <p id="zone-note-box" class="zone-note" hidden><strong>Zone tip:</strong>
+          <span id="zone-note"></span></p>
+        <!-- UTIL-CAMPAIGN-CHECKS: not a live region; the overlay word carries it. -->
+        <ul id="campaign-hints" class="campaign-hints" hidden></ul>
+        <div id="zone-guide" class="zone-guide" hidden></div>
+      </div>
     </div>
     <div class="stat">
       <h2 class="label">Level</h2>
@@ -118,6 +149,11 @@
   <!-- F6: outside #trades so the live region exists before the first request -->
   <p id="trade-status" class="muted trade-status" role="status" aria-live="polite"></p>
 
+  <!-- UI-GLANCE: build alert slot, empty and hidden until filled with
+       ALTabs.fill(document, "build-alert", node); a new alert shows Play.
+       Not a live region (the dashboard keeps at most 12, design N6). -->
+  <div id="build-alert" class="card build-alert" hidden></div>
+
   <!-- NEWBIE-HINTS (ruling L): a new character's one-time tip, shown and
        hidden by itself (10 minutes). Not a live region (polite regions are
        capped); the same text is listed in Recent events. -->
@@ -126,6 +162,8 @@
     <p id="hint-text"></p>
   </section>
 
+  </div>
+  <div class="play-side" role="group" aria-label="Item check" tabindex="0">
   <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
     <h2 id="eval-title">Item check</h2>
     <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
@@ -180,36 +218,15 @@
       <p id="value-stale" class="muted" hidden></p>
       <p id="value-credit" class="muted" hidden></p>
     </div>
-    <details id="weights" class="weights">
-      <summary>Stat weights</summary>
-      <p class="muted">How much each point of a stat is worth. The verdict adds them up for the new
-        item and for yours. Changes save at once and the last item is checked again. Set 0
-        to ignore a stat. N stands for the number on the item.</p>
-      <form id="weights-form" class="weights-form">
-        <ul id="weights-list" class="weights-list"></ul>
-        <fieldset class="weights-add">
-          <legend>Add a stat</legend>
-          <label>Stat, with N for the number
-            <input id="weights-new-key" type="text" maxlength="200" placeholder="+N% to Fire Resistance" autocomplete="off"></label>
-          <label>Points
-            <input id="weights-new-value" type="number" step="any" inputmode="decimal"></label>
-        </fieldset>
-        <fieldset class="weights-band">
-          <legend>Sidegrade range (counts as about the same)</legend>
-          <label>Points <input id="weights-abs" type="number" min="0" step="any"></label>
-          <label>Percent of your item's score <input id="weights-pct" type="number" min="0" step="any"></label>
-        </fieldset>
-      </form>
-      <p id="weights-status" class="muted" role="status" aria-live="polite"></p>
-    </details>
   </section>
 
+  </div>
+  </div>
+
+  <div id="panel-run" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
+  <div class="col">
   <section id="actsbox" class="card acts" aria-labelledby="acts-title">
     <h2 id="acts-title">Act times</h2>
-    <p id="zone-note-box" class="zone-note" hidden><strong>Zone tip:</strong>
-      <span id="zone-note"></span></p>
-    <!-- UTIL-CAMPAIGN-CHECKS: not a live region; the overlay word carries it. -->
-    <ul id="campaign-hints" class="campaign-hints" hidden></ul>
     <p id="acts-empty" class="muted"></p>
     <table id="acts-table" class="acts-table" hidden>
       <thead><tr><th scope="col">Act</th><th scope="col">Time in act</th>
@@ -226,6 +243,28 @@
     <p id="zones-source" class="muted small" hidden></p>
   </section>
 
+  <section id="historybox" class="card history" hidden aria-labelledby="history-title">
+    <h2 id="history-title">Run history</h2>
+    <p id="history-on" class="muted"></p>
+    <p id="history-empty" class="muted" hidden></p>
+    <table id="history-table" class="acts-table" hidden>
+      <thead><tr><th scope="col">Act</th><th scope="col">Your best</th>
+        <th scope="col">This run</th></tr></thead>
+      <tbody id="history-rows"></tbody>
+    </table>
+    <h3 id="history-deaths-title" class="sub-h">Most deaths across runs</h3>
+    <p id="history-deaths-empty" class="muted" hidden></p>
+    <ol id="history-deaths" class="event-list" hidden></ol>
+    <div class="history-controls">
+      <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
+        Keep run history on this computer</label>
+      <button id="history-clear" type="button" class="secondary">Clear run history</button>
+    </div>
+    <p id="history-said" class="muted"></p>
+  </section>
+
+  </div>
+  <div class="col">
   <section id="mapsbox" class="card acts maps" aria-labelledby="maps-title">
     <h2 id="maps-title">Maps</h2>
     <p id="maps-empty" class="muted"></p>
@@ -258,6 +297,8 @@
     </div>
   </section>
 
+  </div>
+  <div class="col">
   <section id="deathsbox" class="card deaths" aria-labelledby="deaths-title">
     <h2 id="deaths-title">Death recap</h2>
     <p id="deaths-empty" class="muted"></p>
@@ -265,31 +306,16 @@
     <p id="deaths-worst" hidden></p>
   </section>
 
-  <section id="historybox" class="card history" hidden aria-labelledby="history-title">
-    <h2 id="history-title">Run history</h2>
-    <p id="history-on" class="muted"></p>
-    <p id="history-empty" class="muted" hidden></p>
-    <table id="history-table" class="acts-table" hidden>
-      <thead><tr><th scope="col">Act</th><th scope="col">Your best</th>
-        <th scope="col">This run</th></tr></thead>
-      <tbody id="history-rows"></tbody>
-    </table>
-    <h3 id="history-deaths-title" class="sub-h">Most deaths across runs</h3>
-    <p id="history-deaths-empty" class="muted" hidden></p>
-    <ol id="history-deaths" class="event-list" hidden></ol>
-    <div class="history-controls">
-      <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
-        Keep run history on this computer</label>
-      <button id="history-clear" type="button" class="secondary">Clear run history</button>
-    </div>
-    <p id="history-said" class="muted"></p>
-  </section>
-
   <section class="card events" aria-labelledby="events-title">
     <h2 id="events-title">Recent</h2>
     <ol id="events" class="event-list"></ol>
     <p id="events-empty" class="muted">Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.</p>
   </section>
+  </div>
+  </div>
+
+  <div id="panel-build" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-build" tabindex="0" hidden>
+  <div class="col">
   <section id="buildbox" class="card build" aria-labelledby="build-title">
     <h2 id="build-title">Build</h2>
     <p id="build-empty" class="muted">No build yet.</p>
@@ -342,6 +368,8 @@
     <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
   </section>
 
+  </div>
+  <div class="col">
   <section id="healthbox" class="card health" hidden aria-labelledby="health-title">
     <h2 id="health-title">Build health</h2>
     <p class="muted">Numbers from Path of Building: the ones saved with your build, plus
@@ -366,6 +394,8 @@
     </div>
   </section>
 
+  </div>
+  <div class="col">
   <section id="searchbox" class="card search" hidden aria-labelledby="search-title">
     <h2 id="search-title">Search strings</h2>
     <p class="muted">Made from your build. Copy one, then paste it into the stash or vendor
@@ -396,6 +426,11 @@
     </details>
   </section>
 
+  </div>
+  </div>
+
+  <div id="panel-items" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-items" tabindex="0" hidden>
+  <div class="col">
   <section id="pricesbox" class="card prices" aria-labelledby="prices-title">
     <h2 id="prices-title">Prices and web data</h2>
     <form id="webdata-form" class="webdata-form">
@@ -435,6 +470,39 @@
       nothing new.</p>
   </section>
 
+  </div>
+  <div class="col">
+  <!-- UI-GLANCE: the item check's stat weights, moved out of the Play
+       card; the verdict on Play adds them up -->
+  <section id="weightsbox" class="card weightsbox" aria-labelledby="weightsbox-title">
+    <h2 id="weightsbox-title">Item check scoring</h2>
+    <details id="weights" class="weights" open>
+      <summary>Stat weights</summary>
+      <p class="muted">How much each point of a stat is worth. The verdict adds them up for the new
+        item and for yours. Changes save at once and the last item is checked again. Set 0
+        to ignore a stat. N stands for the number on the item.</p>
+      <form id="weights-form" class="weights-form">
+        <ul id="weights-list" class="weights-list"></ul>
+        <fieldset class="weights-add">
+          <legend>Add a stat</legend>
+          <label>Stat, with N for the number
+            <input id="weights-new-key" type="text" maxlength="200" placeholder="+N% to Fire Resistance" autocomplete="off"></label>
+          <label>Points
+            <input id="weights-new-value" type="number" step="any" inputmode="decimal"></label>
+        </fieldset>
+        <fieldset class="weights-band">
+          <legend>Sidegrade range (counts as about the same)</legend>
+          <label>Points <input id="weights-abs" type="number" min="0" step="any"></label>
+          <label>Percent of your item's score <input id="weights-pct" type="number" min="0" step="any"></label>
+        </fieldset>
+      </form>
+      <p id="weights-status" class="muted" role="status" aria-live="polite"></p>
+    </details>
+  </section>
+  </div>
+  </div>
+
+  <div id="panel-settings" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
   <!-- UX-DASH-DENSITY: set-once tools folded into one group at the end; the
        hotkey hint stays visible. The .build file and the loot filter add-on stay
        folded in the Build and Search strings cards, next to what they are made from. -->
@@ -505,7 +573,9 @@
         <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only
           suggests them: apply them in game under Options, Graphics. AshLight never reads or
           changes the game's files.</p>
-        <p id="gfx-status" class="muted" role="status" aria-live="polite"></p>
+        <!-- not a live region: read once the player opens this fold
+             (the dashboard keeps at most 12, design N6) -->
+        <p id="gfx-status" class="muted"></p>
         <div id="gfx-body" hidden>
           <dl id="gfx-hw" class="kv"></dl>
           <p id="gfx-tier"></p>
@@ -516,6 +586,7 @@
     </div>
     </details>
   </section>
+  </div>
 </main>
 
 <footer class="foot">
@@ -544,7 +615,12 @@
       <li>Asks for your account, password or login cookie.</li>
     </ul>
   </details>
+  <!-- UI-GLANCE: the game-data credit folds so the footer stays one line
+       and the Play tab keeps its height; hidden with no snapshot data -->
+  <details id="credits" class="promises credits" hidden>
+    <summary>Game data credits</summary>
   <p id="data-credit" class="muted" hidden></p>
+  </details>
   <p class="muted">Path of Exile is a trademark of Grinding Gear Games.
     <button id="consent-no" type="button" class="link" hidden>Stop reading Client.txt</button></p>
 </footer>
