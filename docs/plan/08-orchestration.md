@@ -541,8 +541,9 @@ Both run per package, after its builder returns and before its merge.
   with the flag), by the `design-reviewer` agent, scope `git diff
   <base>..<tip>` in the package worktree (the main checkout for an act),
   with base and tip from the builder's result. Its verdict decides:
-  PASS, or PASS WITH FINDINGS with no S1 and no S2 open, lets the package go on; anything else returns the
-  findings to a fix round (a builder in the same worktree), then the
+  PASS, or PASS WITH FINDINGS with no S1 and no S2 open, lets the
+  package go on; anything else returns the findings to a fix round (a
+  builder in the same worktree), then the
   review runs again; after two fix rounds still failing, the package is
   deferred. The reviewer returns the reviews.log line (date, scope,
   verdict with the four counts, the package id and what was fixed or
@@ -646,8 +647,9 @@ tree that suite passed, plus document commits. Then the session starts
 the next wave of its group (section 1, steps 2 to 7, by a new start
 agent, which reads the `DEFERRED:` lines from the hand-off again). When
 no checklist row remains, or the usage window or the context ends the
-session early, it runs /done unprompted: the main session dispatches the whole ritual of .claude/commands/done.md to ONE
-background agent (whole suite through the suite gate, `npm test --prefix
+session early, it runs /done unprompted: the main session dispatches
+the whole ritual of .claude/commands/done.md to ONE background agent
+(whole suite through the suite gate, `npm test --prefix
 app`, the leak sweep, `python ops/fleet_kit/fleet_done.py reap --apply`,
 the hand-off rewritten with `SESSION: <n+1>` and the pointer and
 `DEFERRED:` lines carried verbatim, `python ops/fleet_kit/fleet_done.py
@@ -664,8 +666,9 @@ and waves 1 to 5. The scheduled task keeps firing; while HALT exists the
 tick only runs the reads allowed under HALT (the docs watch, decision
 0044; later the release checks of ruling Q-13, read only) and returns.
 A wave session never removes HALT, never installs, removes or starts
-the task, and never starts a tick. HALT may be removed only after these packages are on main with one
-whole green suite (07, HALT removal and the headless loop): AUTO-01,
+the task, and never starts a tick. HALT may be removed only after these
+packages are on main with one whole green suite (07, HALT removal and
+the headless loop): AUTO-01,
 LOOP-HANDOFF-PREFIX, LOOP-PREFLIGHT-CMD, LOOP-FAILED-PARK, AUTO-02,
 AUTO-03, LOOP-ROWFILES-MERGE, LOOP-ROWFILES-WORK, LOOP-DONE-FOLD,
 AUTO-04, AUTO-06, LOOP-WAVE-HOLD, TEST-PLUGIN-PIN. The removal is package
