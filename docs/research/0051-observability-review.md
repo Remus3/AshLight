@@ -5,9 +5,9 @@ observability. What AshLight records about itself today (logs, the Checks
 report, /api/health, progress and usage files, the GGG docs watch), what is
 missing, and a ranked plan inside the ToS floor and the privacy rules.
 Product code was read and probed, never changed.
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (all accessed 2026-11-17; re-fetched 2026-11-18 by the verifier)
 
 Web:
 
@@ -23,12 +23,16 @@ Web:
 - ELWC: https://www.electronjs.org/docs/latest/api/web-contents
 - ELGONE: https://www.electronjs.org/docs/latest/api/structures/render-process-gone-details
 - ELINIT: https://raw.githubusercontent.com/electron/electron/main/lib/browser/init.ts
-  (the main process's default handler for an uncaught exception).
+  (the main process's default handler for an uncaught exception); the
+  same handler is on the 45-x-y branch that app/ pins (only its import
+  line differs).
 - GHFORM: https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema
 - GHTPL: https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
 - DRAIN: https://pinjiahe.github.io/files/pdf/research/ICWS17.pdf ("Drain:
-  An Online Log Parsing Approach with Fixed Depth Tree", ICWS 2017; read
-  as a search summary only, the PDF was not opened).
+  An Online Log Parsing Approach with Fixed Depth Tree", ICWS 2017; the
+  author read a search summary only; the verifier downloaded the PDF,
+  whose text layer is mostly not extractable, so only the title is
+  confirmed. Used only behind a Rejected item.)
 
 Repo (path:line cited in the body): server/al/ (entry point, core, diag,
 http, logfile, parser, bus, state, keepalive, procs, webfetch, paths,
@@ -53,11 +57,13 @@ Local evidence (this machine, 2026-11-17; no Client.txt line was read):
 AshLight knows that its parts run, not what they did. Liveness is covered
 (16 checks, /api/health, the supervisor). Behaviour is not: 123 core log
 lines in 24 hours, all start or stop; 5 counters nothing reads; a version
-shared by 356 commits; a dead log reader that shows as healthy (F1).
+shared by every commit (381 on 2026-11-18); a dead log reader that shows
+as healthy (F1).
 Best step: a local parse ledger (R1) of per-pattern hit counts and masked
 shapes of the lines the parser missed. Normal play then closes LIVE-1
 with no play script, and it is the alarm for the 1.0 log format on
-2026-12-11; a prototype masked 20,000 hostile lines with 0 leaked tokens.
+2026-12-11; a prototype masked 20,000 hostile lines with 0 leaked tokens
+(two edge gaps found in verification, closed by R1's acceptance tests).
 Then: a build stamp everywhere (R2), crash records and no error box over
 the game (R3), counters with a debug endpoint and a probe command (R4),
 "why is this not showing" rows (R5), a public-tracker report (R6), log
@@ -86,6 +92,8 @@ Logs, all under `<sidecar>\Logs`, none rotated:
   stamps (server/al/theorycraft/bridge.py:158-163). L1: 18,019 lines,
   387 KB in under a day; 12,024 lines (66.7 percent) are one repeated
   "missing node" message; some lines are two writers interleaved.
+  (Verifier re-count 2026-11-18: 18,166 lines, 390 KB, 12,122 of them
+  the same message, 66.7 percent.)
 - run.log, setup.log, build logs: appended by the scripts (run.ps1:98).
 
 Health surfaces:
@@ -101,7 +109,8 @@ Health surfaces:
   folded, opens by itself on a new failure (web/checks.js:77-131); "Copy
   report" writes a 15-line, 709-byte text inside the click
   (web/checks.js:140-156; L2); values are masked by a known-value list
-  plus an e-mail and a drive-path pattern (diag.py:239-279).
+  plus an e-mail and a drive-path pattern (diag.py:239-279; patterns at
+  diag.py:267-268).
 - Snapshot `tailer` block: consented, reading, path, last_reset, idle,
   last_line_at, and the resume scan's bytes and milliseconds
   (state.py:925-927; core.py:674-699). That scan is the only timed
@@ -148,7 +157,10 @@ heartbeat and the supervisor log; the progress files.
   start a new one (core.py:730-734), the next log line is never read,
   and /api/health alone says tailing false (http.py:237). For the
   player every live number freezes under a green Checks card; 20
-  minutes later the overlay hides as "game may be closed".
+  minutes later the overlay hides as "game may be closed". (Verifier:
+  the one trace is the "unhandled exception in thread" line that the
+  thread hook writes to core.log, __main__.py:121-127; no surface
+  reads it.)
 - F2 (high) LIVE-1 waits for an operator play script although the
   evidence flows past every day. The parser drops what it does not
   understand with no count and no record: 5 `return None` exits
@@ -160,10 +172,12 @@ heartbeat and the supervisor log; the progress files.
   328) and found 365 distinct shapes in 1,102 lines by a one-off manual
   read (0002:290). Row: ROADMAP.md:9-31.
 - F3 (high) The version identifies nothing. `VERSION = "0.1.0"` since
-  the first commit (server/al/__init__.py:7); 356 commits share it, and
+  the first commit (server/al/__init__.py:7); every commit shares it (356
+  at drafting, 381 on 2026-11-18), and
   the report header, /api/health, the Server header and the User-Agent
   carry only that. No surface has a commit id; build-stamp.json records
-  none (scripts/build.ps1:196-204), nothing in server/ reads it
+  none, only a source hash and the build time (scripts/build.ps1:196-204,
+  hash from build.ps1:138), nothing in server/ reads it
   (paths.py:141) and it does not exist on this machine. The dashboard
   and the overlay show no version (web/index.html:602-636;
   app/main.js:267-268). DIAG-SELF closed with "Build stamp not shown"
@@ -172,7 +186,9 @@ heartbeat and the supervisor log; the progress files.
 - F4 (high) Crash paths have gaps. (a) app/main.js registers no handler
   for an uncaught exception or rejection (0 `process.on(` in app/), so
   Electron's default applies: a modal error box (ELINIT), a
-  focus-taking window during play. (b) No handler for a lost renderer
+  focus-taking window during play. Whether an unhandled promise
+  rejection in the main process reaches the same box is UNVERIFIED;
+  R3 handles both either way. (b) No handler for a lost renderer
   or child process, an unresponsive page or a failed load (ELAPP, ELWC,
   ELGONE): a crashed overlay page leaves a dead window and no line. (c)
   L1: 4 of 44 core starts have no end record of any kind, and
@@ -196,6 +212,11 @@ heartbeat and the supervisor log; the progress files.
   app/eval_hotkey.js:44); the calc fails at run time (Checks knows
   installed and pinned only: diag.py:142-155); lines are read but not
   understood (F2); the core restarted (F4d).
+
+(F2 detail: the 5 exits are in `parse_body`; `parse_line` has 3 more:
+an overlong line, a line with neither the prefix nor the log-open
+marker, and the pass-through of a body `parse_body` refused
+(parser.py:220, 225, 234).)
 - F7 (medium) The report redactor is safe only because no free text
   reaches it. Probe L3, synthetic strings: a drive path with a space is
   masked up to the space; a UNC path, a POSIX home path, an IPv4
@@ -211,6 +232,13 @@ heartbeat and the supervisor log; the progress files.
   version (state.py:1274-1282). L4: version 187 to 189 in 125 s with 0
   new events. The Checks view is 2,424 of 6,384 snapshot bytes (38
   percent, L2). The idle overlay parses 6.4 KB a minute for nothing.
+  Verifier correction (synthetic probe on diag.view, 2026-11-18): the
+  report stamp is not the only minute clock. The "Last log line" and
+  "Price book" rows print a relative age (diag.py:89-97, 128-140), so
+  with a line under an hour old or web data on, the rows themselves
+  change every minute; only with web data off and a quiet log is the
+  stamp the sole change. Removing the report alone does not stop the
+  pushes; the rows need absolute times that the page turns into ages.
 - F9 (medium) Every parsed event goes to every SSE client in an
   "events" frame that no page listens to (http.py:754-763; listeners:
   web/app.js:1127-1134, app/overlay/overlay.js:79-85). It holds other
@@ -223,7 +251,8 @@ heartbeat and the supervisor log; the progress files.
   time-stamp formats in 3 app logs, no level in overlay.log, no start
   line with version, build or pid (__main__.py:180; app/main.js:404).
 - F11 (low) Development records: subagent_first.jsonl is 1.55 MB and
-  11,214 rows after 26 hours and is not on the rotation list
+  11,214 rows after 26 hours (2.06 MB and 14,861 rows on 2026-11-18) and
+  is not on the rotation list
   (ledger_rotate.py:40) though it has the `at` field the rule needs; a
   failing GGG docs watch shows for one 15-minute tick only (its line is
   overwritten in loop.json, and state.json's status and errors are read
@@ -251,7 +280,8 @@ ToS and policy:
 Privacy classes for AshLight's own logs, ledgers and reports:
 
 - Never on disk in a log or ledger: Client.txt lines or fragments, chat
-  and whisper text, other players' names, item text, build codes, the
+  and whisper text, other players' character or account names, item
+  text, build codes, the
   contact value, the API token, the Windows user name, absolute paths,
   game server addresses.
 - Local only, never in a report: the player's own character names
@@ -297,7 +327,13 @@ line passes. Two parts, one bounded file `ops/runtime/logshapes.json`.
    joined, left ...). Every other token becomes a placeholder by form:
    number, address, path, host, hex run, or `<w>` for any other word;
    equal neighbours collapse. A name, a chat word or a path cannot be
-   stored, by construction.
+   stored, by construction, unless the token is itself an allow-list
+   word (verifier probe on the prototype, 2026-11-18: a character named
+   "Trade" survives as `trade has been slain.`; a chat line whose speaker
+   part exceeds 48 characters, or which has no space after the colon,
+   escapes the speech class and keeps its allow-list words). Such a
+   leak carries only common function words, but R1's acceptance adds
+   both cases.
 4. Bounds: 200 shapes (least recently seen goes first, with an evicted
    total), 64 tags, file under 64 KB, written at most once a minute and
    only when changed, by temp file and replace. Times are kept to the
@@ -340,7 +376,11 @@ R1. OBS-PARSE-LEDGER
   decision note.
 - Acceptance: property test on 10,000 seeded hostile lines: every
   stored token is an allow-list word, a placeholder or punctuation; a
-  chat, whisper or speech-like line never reaches the file; replaying
+  chat, whisper or speech-like line never reaches the file, including a
+  speaker part over 48 characters and a colon with no space after it;
+  a death line for a character named like an allow-list word stores the
+  name slot as a placeholder (so the mask must place-hold the name
+  position of known templates, not judge the word); replaying
   tests/fixtures/client_live_shapes.txt yields the expected pattern ids;
   the file stays under 64 KB after 1,000,000 synthetic lines; with
   consent off or revoked no file exists; test_budgets.py stays green.
@@ -354,8 +394,8 @@ R2. OBS-BUILD-STAMP
   while hot reload is on; show it in /api/health, /api/version, the
   report header, a muted dashboard footer line, the overlay About and
   the tray tooltip, and as the first line of every log at start.
-- Impact: H. Every record becomes attributable; today 356 commits read
-  the same (F3). Effort: S.
+- Impact: H. Every record becomes attributable; today every commit
+  reads the same (F3). Effort: S.
 - Risk: none for play. The User-Agent stays as it is (decisions 0013,
   0015). Depends on: none; a non-git install needs a BUILD file from
   the release step (Open questions 3).
@@ -463,7 +503,9 @@ R6. OBS-REPORT
   explicit second choice adds them through a hardened redactor (whole
   words, every known character name, UNC and quoted paths, POSIX home
   paths, addresses, hex runs of 32 or more, mail). Take the report text
-  and its stamp out of the snapshot (F8). At go-public add an issue
+  and its stamp out of the snapshot, and send the two age rows as
+  absolute times that web/checks.js renders as ages (F8, verifier
+  correction). At go-public add an issue
   form with a report text area and a required "I read it" checkbox
   (GHFORM, GHTPL).
 - Impact: H once the repo is public; M now (F7, F8). Effort: M.
@@ -472,10 +514,12 @@ R6. OBS-REPORT
 - ToS check: no upload (ruling J); the clipboard is written only on
   the player's click (decision 0014); nothing new is read.
 - Files: server/al/diag.py, http.py, core.py, state.py, web/checks.js,
-  web/index.html, tests, .github/ISSUE_TEMPLATE/ (at go-public).
+  web/index.html, app/overlay/overlay.js (only if it reads the age
+  rows), tests, .github/ISSUE_TEMPLATE/ (at go-public).
 - Acceptance: a fuzz test with the L3 strings and 1,000 seeded variants
   finds none of the seeded secrets in the output; the snapshot holds no
-  report text and its version stays still over 3 idle minutes; the
+  report text and its version stays still over 3 idle minutes with web
+  data on and a last line 5 minutes old (the case that moves today); the
   preview equals the copied text byte for byte.
 - ZERO-CLICK: one click to copy (decision 0014 requires it); the
   preview costs no extra click.
@@ -597,3 +641,77 @@ R10. OBS-DEV-LEDGERS
    (design review)?
 5. Should the public issue form ask for the shape list (operator
    decision at go-public)? Recommended: yes, for English clients.
+
+## Verification
+
+Independent verifier, 2026-11-18. Product code read, never changed; no
+Client.txt line read; no core started; nothing touched the game.
+
+Checked:
+
+- Code (A): about 40 path:line citations opened, covering every finding and
+  every recommendation's evidence (logfile, bus, core, state, diag,
+  http, parser, __main__, keepalive, bridge, webfetch, procs, build.ps1,
+  run.ps1, paths, web/checks.js, web/app.js, app/main.js,
+  app/overlay_gate.js, app/eval_hotkey.js, app/client/link.js,
+  overlay.js, al_loop.py, ledger_rotate.py, ROADMAP rows, the audit,
+  research 0002, the hand-off). All held except the details corrected
+  below. F1's mechanism confirmed in code: `Tailer._run` catches OSError
+  only and listeners run synchronously in the tailer thread. 0 handlers
+  for uncaught errors, lost renderers or failed loads in app/ (grep).
+  The 4 tests that read the "events" frame confirmed (a fifth,
+  test_trade_expire.py:105, asserts its absence).
+- Numbers (Summary and findings): core.log 123 lines and its 44 / 39 /
+  38 kinds re-counted; 16 Checks rows (diag.py:226-234); /api/health 74
+  bytes; 5 unread counters; 10 tick calls in the 0.5 s loop
+  (ensure_tailing plus 9 tick_*); report 15 lines; 12 tracked
+  characters (state.py:63).
+- Web (B): 9 of 11 sources re-fetched 2026-11-18 and matched the claims
+  (GHTPL not re-fetched: it only names the go-public template folder)
+  (GGG docs: user-aware rule, once-per-press reads, general privacy
+  sentence, new applications still not processed; PYLOG backupCount 0
+  means no rollover, page is 3.15.2; PYFAULT keeps the file descriptor;
+  ELCRASH submitURL optional when uploadToServer is false, dumps under
+  crashDumps; ELAPP getAppMetrics, child-process-gone,
+  render-process-gone; ELWC render-process-gone, unresponsive,
+  did-fail-load; ELGONE reason values; ELINIT on main and 45-x-y;
+  GHFORM required checkboxes). DRAIN: title only (see Sources). The
+  1.0 date is also in research 0018 and docs/plan/01-open-items.md.
+- Probes: re-ran the synthetic Checks-view probe (diag.view with fixed
+  facts, 60 s apart) and a 12-case edge probe against the author's
+  allow-list prototype, both in the sidecar scratch area.
+- ToS (C): each of R1 to R10 tested against every floor rule. All stay
+  inside: no game process, window, screen or memory access; no input;
+  Client.txt read only after opt-in; clipboard written only on a click;
+  no network beyond existing opt-in paths; all endpoints on 127.0.0.1
+  behind the token; no branding change; no revenue. Nothing moved to
+  Rejected.
+- Settled decisions (D): no reversal proposed. R1's file does not touch
+  LIVE-RESUME's no-persisted-state rule (0008); the User-Agent stays
+  (0013, 0015); report copy on a click stays (0040, 0014); no process
+  check (0029); no frame tracing (0006); stdlib core (0002).
+- Completeness (E): every brief point is covered (logs, DIAG-SELF,
+  /api/health, Checks, progress, usage log, docs watch; parse ledger,
+  counters, explainer, public report, crash records, build stamp, dev
+  observation, privacy and ToS limits, ranking). Gap filled: account
+  names added to the never-on-disk class.
+- Recommendations (F): all 10 carry the required fields. Ranking kept;
+  execution note: R3's error-box handler and the F1 Checks fix need no
+  ruling and should ship before or with R1, which waits on Open
+  question 1.
+
+Corrected (9): commit count (356 at drafting, 381 now; wording made
+count-free); build-stamp.json does record a source hash; F1 now names
+the core.log trace the thread hook leaves; parser exit detail added;
+tc-bridge.log and subagent_first.jsonl re-counts; F8 and R6: the age
+rows also change each minute, so R6 now moves them to absolute times
+and its acceptance test covers the moving case; the mask "by
+construction" claim narrowed to its two edge gaps, with R1 acceptance
+cases added; unhandled-rejection default marked UNVERIFIED; DRAIN
+source note.
+
+UNVERIFIED (3): Electron main-process default for an unhandled promise
+rejection; whether PoE2 local chat looks like the speech-like NPC lines
+(Open question 2); the live L2 / L4 figures (snapshot 6,384 bytes,
+version 187 to 189) were not re-read, though the mechanism behind L4
+was reproduced synthetically.
