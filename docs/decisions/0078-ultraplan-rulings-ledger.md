@@ -730,7 +730,9 @@ in force.
     session), MAIN ships a kit whose fleet_identity checks tag objects
     and wide trailers, or MAIN asks for kit defects by another channel.
   - Record: AUTO-25 (wave 2) drafts, LOOP-KIT-REPORT-SEND (parked on
-    OA-21) sends; decision 0046 carries the dated correction.
+    OA-21) sends; decision 0046 says NOT yet reported (its Kit gaps
+    clause amended in place by added words, a dated correction under
+    it).
 - R4 Three server-side limits of the go-public setup.
   - Decision: Three server-side limits are accepted as designed: (a) the
     repository admin role is the one always-bypass actor on main's

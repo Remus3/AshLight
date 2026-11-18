@@ -149,15 +149,22 @@ non-version v* tags). Changes:
    case; the shell ref rule, the guard, the kit gate and the sweep keep
    that order (tests/test_fleet_kit_conformance.py).
 
-Kit gaps (fleet_identity is vendored, never edited here; reported to
-MAIN): it checks commits only (no tagger, no tag message) and its trailer
-rule matches three keys and the names claude, anthropic and bot.
+Kit gaps (fleet_identity is vendored, never edited here; NOT yet reported
+to MAIN, because AL has no outbound note path until OA-21; the report is
+drafted by row AUTO-25 and sent by row LOOP-KIT-REPORT-SEND; ruling R3,
+2026-11-18): it checks commits only (no tagger, no tag message) and its
+trailer rule matches three keys and the names claude, anthropic and bot.
 
 Correction 2026-11-18 (ruling R3): the words 'reported to MAIN' in the
 paragraph above were not true and are not true yet. The kit gaps are NOT
 yet reported to MAIN, because AL has no outbound note path until OA-21;
 the report is drafted by row AUTO-25 and sent by row
 LOOP-KIT-REPORT-SEND. No note was sent.
+Same day, after the verification of the close-out 2: the clause above
+is now amended in place as ruling R3 words it. Words were added only
+('NOT yet', the reason, the ruling and its date); no recorded word was
+removed. Before that amendment the clause read '... never edited here;
+reported to MAIN):', and those are the words this correction names.
 
 Alternatives: keep the diff scan and patch each header case (rejected;
 every diff option is another hole); vendor a patched fleet_identity

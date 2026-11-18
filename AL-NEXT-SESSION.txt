@@ -263,6 +263,21 @@ Carried forward (not acted on yet):
   396 of 396 row ids in ROADMAP.md exactly once, the pointer line 1, the
   stale Next-action line 0, the three operator record lines 3) and row
   PLAN-LANDING is flipped. Nothing of wave 0 is carried into wave 1.
+- NOTE (RUN-LIVE-CLICKS-STRIKE, wave 1): its accept line greps ROADMAP.md
+  and this file for two words and wants 0 lines in both. Acted on at the
+  close-out 2 (commit 95e35e4): the row's title and its accept pattern
+  were reworded, so the row no longer holds the two words. Read back
+  2026-11-18: the accept's grep prints 0 for both files. The row stays
+  open for wave 1 (the read-back and the flip).
+- NOTE (07 Open points): the rulings carried here before (LE-69, LE-76,
+  LE-92 / LE-99 / LE-100, LE-96) had all been ruled at the close-out and
+  are applied (close-out 2, commit 95e35e4). Read back 2026-11-18: 07
+  Open points lists them as closed. What is left for their packages is
+  in the close-out 2 NOTE below.
+- NOTE (docs/plan/09, Checked on this machine): acted on at the close-out
+  2 (commit 95e35e4). Read back 2026-11-18: its git line names the
+  guarded push of decision 0046 (commits 7fe4993 and 01c2216), and
+  .githooks/pre-push no longer refuses every push.
 - NOTE (close-out 2, 2026-11-18; 07 Rulings 2026-11-18 (close-out 2),
   decision 0078): the six rulings that had been ruled but not applied
   (LE-69, LE-76, LE-92, LE-99, LE-100, LE-96) and six new ones (R1 to R6)

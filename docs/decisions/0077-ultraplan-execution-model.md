@@ -106,7 +106,9 @@ block, so this record is 0077 and the rulings ledger is 0078.
     ask; no open wave waits for it and every entry has a default in
     force (decision 0078). Only a session that holds the operator's own
     message records an answer, verbatim, in the hand-off.
-12. Not ruled at this record, left as docs/plan/08 words them until
+12. Not ruled at this record (superseded 2026-11-18: both questions
+    had been ruled and are applied; the note that ends this point
+    says how), left as docs/plan/08 words them until
     ruled: whether the `.claude/worktrees/` fallback may be used before
     the worktree hook of decision 0012 is wired (LE-92, LE-99, LE-100)
     and whether a builder's own stop at 2 x est_min plus a whole-run
@@ -122,6 +124,10 @@ block, so this record is 0077 and the rulings ledger is 0078.
     alone and holds main to its read-back (R1); a wave may hold up
     to 16 worktree packages in batches of at most 4, each with its
     own whole suite, while a planned wave stays at 12 (R6).
+    Same day, after the verification of the close-out 2: the first
+    sentence of this point carries a dated 'superseded' marker, so
+    that it is not read alone as the present state. Words were added
+    only; no recorded word was removed.
 
 ## Alternatives
 

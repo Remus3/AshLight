@@ -3650,10 +3650,12 @@ unused.
     0046 to 'fixed in kit vN').
   - Reverses if, also: MAIN asks for kit defects by another channel.
   - Applied 2026-11-18: AUTO-25 (goal, notes item 5, accept) and
-    LOOP-KIT-REPORT-SEND (notes) in packages.json, a dated correction line in
-    decision 0046 (the decision file is append-only, so the false words stay
-    and the line under them corrects them), and the hand-off KIT DEFECT
-    bullet. Nothing was sent; no remote and no dest_inboxes value was added.
+    LOOP-KIT-REPORT-SEND (notes) in packages.json, the Kit gaps clause of
+    decision 0046 (amended in place as this ruling words it: 'NOT yet
+    reported to MAIN, because ...'; words were added only, and a dated
+    correction under the clause quotes its first wording), and the hand-off
+    KIT DEFECT bullet. Nothing was sent; no remote and no dest_inboxes value
+    was added.
 - R4 (three server-side limits of the go-public setup).
   - Decision: (a) The admin always-bypass on main's required checks is
     ACCEPTED as designed. (b) Branch and tag creation on the remote is
@@ -3841,3 +3843,33 @@ after the landing; what was found and what was changed:
   prints 'none open' for wave 0 and the 15 ids of wave 1. The Open point
   above on the three hand-off lines is thereby closed: they are in the
   hand-off and read back.
+
+After the close-out 2 the verifiers checked its claims again. Four did not
+hold as worded; what was found and what was changed (2026-11-18):
+
+- Decision 0046 still read 'reported to MAIN' in its Kit gaps clause, with
+  the dated correction only under it. Ruling R3 words a replacement for that
+  clause; its first application had kept the old clause.
+  - Decision: the clause is amended in place, exactly as ruling R3 words it.
+  - Alternatives: (a) keep the old clause and let the correction under it
+    stand alone; (b) rewrite the whole paragraph.
+  - Why: R3 rules on this very clause. Its wording adds words only ('NOT
+    yet', the reason, the ruling and its date), so no recorded word is lost
+    and the file no longer states a report that never happened. The
+    correction under the clause stays and now quotes the first wording, so
+    the change can be read from the file itself.
+  - Reverses if: the operator or MAIN rules that no text above an amendment
+    of a decision file may ever change; the clause then gets its first
+    wording back and the correction alone stands.
+- Decision 0077 point 12 still opened with 'Not ruled at this record' above
+  its dated note. The same form was used: a dated 'superseded' marker stands
+  inside that sentence (words added only), and the note under it says so.
+  With it, no tracked file outside the vendored kit presents LE-69, LE-76,
+  LE-92, LE-99, LE-100 or LE-96 as waiting for a ruling.
+- The hand-off: three Carried forward bullets of the state before the
+  close-out 2 had been dropped as acted on (RUN-LIVE-CLICKS-STRIKE, 07 Open
+  points, docs/plan/09 Checked on this machine). They are back in tighter
+  wording, each with what was read back. A close-out drops no carried
+  bullet; /done may drop an item that was acted on (FLEET item 5). All 30
+  bullets of that state are present, beside the one NOTE the close-out 2
+  added; SESSION stays 6 and the next action stays wave 1.
