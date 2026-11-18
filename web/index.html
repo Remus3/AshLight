@@ -442,6 +442,7 @@
     <h2 id="tools-title">Tools</h2>
     <p class="muted">Show or hide the overlay any time with Alt+Shift+A, and check an item
       with Alt+Shift+E (unless you set other keys in AshLight's settings file).</p>
+    <p id="overlay-idle-note" class="muted" hidden>Overlay hidden: no game activity for 20 min. It comes back with the next log line.</p>
     <!-- NEWBIE-HINTS: one click shows the new-character tips again -->
     <p class="hint-reset"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
       <span id="hints-said" class="muted"></span></p>
@@ -484,6 +485,9 @@
         </label>
       </form>
       <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
+      <!-- DESKTOP-CLIENT (decision 0041): shown only inside the AshLight
+           desktop client, which hands the page this one action -->
+      <p id="restart-overlay-row" hidden><button id="restart-overlay" type="button">Restart overlay</button></p>
     </div>
 
     <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">

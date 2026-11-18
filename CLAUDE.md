@@ -449,7 +449,8 @@ them. Pause: `ops/loop/control/HALT`.
   words, or the tier thresholds misfire in play.
 - Game exit shows as an idle "game may be closed" state from Client.txt
   staleness (20 min, mtime-seeded at start), never an OS process-list
-  check (decision 0029). Reverses if: GGG or the operator permits a
+  check (decision 0029, amended 2026-11-17: the overlay hides while game_idle and
+  reappears on the next fresh line). Reverses if: GGG or the operator permits a
   process-presence check, AFK false positives make it useless, or a
   reliable quit / crash log line is verified.
 - HUD-ACT-RESUME: act splits rebuild at core start from the current game
@@ -555,3 +556,15 @@ them. Pause: `ops/loop/control/HALT`.
   writes it) (decision 0040). Reverses if: a localised log sample shows
   the signals misfire, the zone snapshot is dropped, or a report field
   leaks a path or identifier.
+- DESKTOP-CLIENT: the Electron app with --client is the desktop client
+  (companion window on its own session partition, tray, overlay) in one
+  process; the overlay exists only inside it (no bare-overlay start; run.ps1
+  starts the client); X closes the window to the tray (tray Quit stops
+  everything); tray Minimize-Restore / overlay toggle / Restart overlay /
+  Quit; token in the URL fragment; one preload action (restart overlay);
+  only http(s) links leave via shell.openExternal; per-user Start Menu +
+  Desktop shortcut from setup.ps1; no packaged .exe (decision 0041).
+  Reverses if:
+  the overlay must run without the client, a release channel makes a
+  signed .exe worth its build deps, or the companion renderer breaks the
+  RAM budget in play.

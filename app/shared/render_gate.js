@@ -203,8 +203,20 @@
     return out;
   }
 
+  /* Decision 0029 amendment (DESKTOP-CLIENT): may the overlay show? Not
+     while a live core reports the 0029 idle "game may be closed" state
+     (snapshot game_idle; Client.txt staleness only, no process or window
+     check). Offline or no state yet: shown, so the HUD can say so. The
+     next fresh log line clears game_idle and the overlay comes back. */
+  function overlayWanted(snap, status) {
+    if (status !== "live" || !snap) { return true; }
+    if (typeof snap.game_idle === "boolean") { return !snap.game_idle; }
+    var tl = snap.tailer;
+    return !(tl && tl.consented && tl.idle);
+  }
+
   return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
-           timerSeconds: timerSeconds,
+           timerSeconds: timerSeconds, overlayWanted: overlayWanted,
            shouldRender: shouldRender,
            changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD };
 }));

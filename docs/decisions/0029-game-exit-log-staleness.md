@@ -58,3 +58,29 @@ matches the UTIL-SESSION-SUMMARY idle close, so the two agree.
 GGG or the operator explicitly permits a process-presence check; AFK false
 positives make the idle state useless in normal play; or a reliable quit /
 crash log line is verified (it then gives a firm "closed" state).
+
+## Amendment 2026-11-17 (overlay gate, DESKTOP-CLIENT / decision 0041)
+
+Adjudicated (distinct adjudicator, via MAIN): the overlay hides
+(`win.hide`) while the core snapshot reports this decision's idle "game may
+be closed" state, and reappears with `win.showInactive()` on the next fresh
+log line. Seeded from the initial snapshot: stale at start = hidden, with
+no flash (the window shows only after the page's first report, or after a
+3 s grace with no core, when the HUD shows its offline word).
+
+Built: the snapshot carries `game_idle` (bool: consented and
+`tailer.idle`); the overlay page (`app/shared/render_gate.js
+overlayWanted`) reports "may show" to main on change only, through one
+write-only preload call (`al:gate`); main's one hook `setOverlayGate`
+feeds `app/overlay_gate.js`, which also keeps the player's own
+toggle (the gate never shows an overlay the player turned off).
+
+No foreground-window poll, process-list or memory check of any kind.
+
+Alternatives rejected: a foreground-window poll and a process-list check
+(outside the floor's read allow-list; the process check is barred by this
+decision above).
+
+Reverses if: GGG or the operator permits a window / process check in
+writing; a reliable quit / crash log line is verified (hide on it too); or
+the 20 min lag annoys in play (then shorten it for the overlay only).

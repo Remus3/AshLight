@@ -16,6 +16,9 @@ const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
 const Hotkey = require("./hotkey.js");
 const About = require("./about.js");
+const OverlayGate = require("./overlay_gate.js");
+const Link = require("./client/link.js");
+const Launcher = require("./client/launcher.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -31,6 +34,8 @@ const DEFAULT_EVAL_KEY = "Alt+Shift+E";
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
 
 let win = null;
+let client = null; // DESKTOP-CLIENT companion window + tray (client mode only)
+let gate = null; // overlay visibility (app/overlay_gate.js)
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let logStream = null;
 
@@ -81,6 +86,17 @@ const toggleKey = Hotkey.pick([process.env.AL_OVERLAY_TOGGLE, config.overlay_tog
 const evalKey = Hotkey.pick([process.env.AL_EVAL_HOTKEY, config.eval_hotkey],
   DEFAULT_EVAL_KEY, log);
 
+// DESKTOP-CLIENT (decision 0041): "--client" (the Start Menu shortcut,
+// scripts\run.ps1) runs the companion window, tray and overlay. Started
+// from a shortcut there is no AL_SIDECAR_ROOT from run.ps1, so the one
+// resolver (server.al.paths) gives it: the profile, and with it the
+// single-instance lock, is then the same one a run.ps1 start holds.
+const CLIENT_MODE = Link.wantsClient(process.argv);
+if (CLIENT_MODE && !process.env.AL_SIDECAR_ROOT) {
+  const side = Launcher.resolveSidecar(REPO);
+  if (side) { process.env.AL_SIDECAR_ROOT = side; }
+}
+
 // Sidecar rule: Electron's profile (cache, crash dumps) never lands in the
 // user's roaming profile - it goes to the AL sidecar (set by run.ps1 from
 // server.al.paths) or, without it, to the repo's gitignored ops/runtime.
@@ -107,10 +123,25 @@ app.commandLine.appendSwitch("in-process-gpu");
 // unchanged. Chromium's feature name carries the "2".
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 
-if (!app.requestSingleInstanceLock()) {
+// Operator order 2026-11-17 (decision 0041): the overlay exists only while
+// the AshLight client runs. It is a window of the client's own process, so
+// quitting or a crash of the client takes it down too; a start without
+// --client exits at once. Only the opt-in overlay smoke (AL_OVERLAY_SMOKE_S,
+// a bounded test run) may start the overlay alone, to measure its budget.
+const SMOKE_S = Number(process.env.AL_OVERLAY_SMOKE_S || 0);
+const OVERLAY_ALONE_TEST = !CLIENT_MODE && SMOKE_S > 0;
+
+if (!CLIENT_MODE && !OVERLAY_ALONE_TEST) {
+  process.stderr.write("AshLight: the overlay starts only with the client (--client)\n");
+  app.quit();
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => { /* one overlay only; nothing to focus */ });
+  // One process: a second start never makes a second overlay. A second
+  // start with --client (the shortcut) opens the companion window here.
+  app.on("second-instance", (e, argv) => {
+    if (Link.wantsClient(argv)) { openClient(); }
+  });
   app.whenReady().then(start);
 }
 
@@ -215,7 +246,15 @@ function createWindow() {
     log("renderer: " + (e.message || ""));
   });
   win.webContents.on("did-finish-load", () => applyLayout(true));
-  win.once("ready-to-show", () => win.showInactive());
+  gate = OverlayGate.createOverlayGate({
+    isVisible: () => !!(win && win.isVisible()),
+    showInactive: () => { if (win) { win.showInactive(); } },
+    hide: () => { if (win) { win.hide(); } }
+  }, log);
+  win.once("ready-to-show", () => {
+    gate.ready();
+    setTimeout(() => { if (gate) { gate.graceOver(); } }, OverlayGate.GRACE_MS);
+  });
   win.loadFile(OVERLAY_HTML);
 }
 
@@ -232,12 +271,58 @@ function setCredit(c) {
 function refreshAboutAndReload(getVersion) {
   getVersion().then((doc) => setCredit(About.creditOf(doc)), (e) => {
     log("about: version not read: " + e.message);
-  }).then(() => { if (win) { win.webContents.reload(); } });
+  }).then(() => {
+    if (win) { win.webContents.reload(); }
+    if (client) { client.reload(); }
+  });
 }
 
 function toggle() {
-  if (!win) { return; }
-  if (win.isVisible()) { win.hide(); } else { win.showInactive(); }
+  if (!win || !gate) { return; }
+  gate.toggleUser();
+  if (client) { client.refresh(); }
+}
+
+/* DESKTOP-CLIENT: "Restart overlay" (tray, or the dashboard's button in
+   the client): close the overlay window cleanly and build it again. The
+   player's show / hide choice carries over; the gate re-seeds from the
+   new page's first report. */
+function restartOverlay() {
+  const wantsIt = !gate || gate.userWants();
+  if (win) {
+    const old = win;
+    win = null;
+    gate = null;
+    old.destroy();
+  }
+  createWindow();
+  if (!wantsIt) { gate.toggleUser(); }
+  log("overlay restarted");
+  if (client) { client.refresh(); }
+}
+
+/* The ONE overlay gate hook (decision 0029 amendment 2026-11-17): false
+   hides the overlay while the core reports the 0029 idle "game may be
+   closed" state, true shows it again on the next fresh log line. Fed by
+   the overlay page (al:gate) from the snapshot's game_idle. */
+function setOverlayGate(visible) {
+  if (gate) { gate.setGate(visible === true); }
+}
+
+/* DESKTOP-CLIENT: the companion window (app/client/window.js), built on
+   first use only, so an overlay-only start never loads a second renderer. */
+function openClient() {
+  if (!app.isReady()) { return; }
+  if (!client) {
+    const electron = require("electron");
+    client = require("./client/window.js").createClient({
+      electron: electron, http: http, repo: REPO, port: port, readToken: readToken,
+      runtimeDir: path.dirname(TOKEN_FILE), log: log, devTools: DEV_TOOLS,
+      toggleOverlay: toggle, overlayVisible: () => !gate || gate.userWants(),
+      restartOverlay: restartOverlay
+    });
+  }
+  client.open();
 }
 
 function start() {
@@ -254,8 +339,20 @@ function start() {
       .endsWith("/overlay/index.html");
     e.returnValue = ok ? { token: readToken(), port: port, credit: dataCredit } : {};
   });
+  ipcMain.on("al:gate", (e, visible) => {
+    if (!win || e.sender !== win.webContents) { return; } // the overlay page only
+    setOverlayGate(visible === true);
+  });
+  // DESKTOP-CLIENT: the dashboard's "Restart overlay", from the companion
+  // window's main frame on the local core only (app/client/preload.js).
+  ipcMain.on("al:restart-overlay", (e) => {
+    if (client && client.isCompanion(e)) { restartOverlay(); }
+  });
 
   writeDisplays();
+  // DESKTOP-CLIENT: the companion window first, so the shortcut shows
+  // something at once (it starts the core itself when needed).
+  if (CLIENT_MODE) { openClient(); }
   // TC-SNAP-UI: the credit is read before the page loads (at most
   // About.START_WAIT_MS), so the window never reloads just to show it.
   const getVersion = About.makeGetVersion(http, port, readToken);
@@ -293,14 +390,19 @@ function start() {
   }
   log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey);
 
-  const smoke = Number(process.env.AL_OVERLAY_SMOKE_S || 0);
-  if (smoke > 0) { setTimeout(() => app.quit(), smoke * 1000); }
+  if (SMOKE_S > 0) { setTimeout(() => app.quit(), SMOKE_S * 1000); }
 }
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  if (client) { client.dispose(); }
   fs.unwatchFile(TOKEN_FILE);
   fs.unwatchFile(LOCAL_CONFIG);
 });
 
-app.on("window-all-closed", () => app.quit());
+// With the tray up (client mode) closing windows does not quit; the tray's
+// Close / Stop items do.
+app.on("window-all-closed", () => {
+  if (client && client.hasTray()) { return; }
+  app.quit();
+});

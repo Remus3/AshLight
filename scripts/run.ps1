@@ -4,17 +4,25 @@
 .DESCRIPTION
   Converges to the full running set (OPS-RUN-IDEMP, decision 0010): the core
   hidden (pythonw when available) on 127.0.0.1, the keepalive supervisor and,
-  when installed, the Electron overlay - each started only when it is not
-  already live (server\al\procs.py decides), so any number of calls leaves
-  exactly one of each. Then opens the dashboard with the per-start token in
-  the URL fragment. Logs go to the sidecar Logs dir.
+  when installed, the AshLight desktop client (Electron, --client: the
+  companion window, tray and overlay; decision 0041) - each started only
+  when it is not already live (server\al\procs.py decides), so any number
+  of calls leaves exactly one of each. The overlay exists only while the
+  client runs (operator order 2026-11-17): there is no overlay-only start.
+  Without the client installed (or with -Browser) the dashboard opens in the
+  browser with the per-start token in the URL fragment. Logs go to the
+  sidecar Logs dir.
 .PARAMETER Overlay
-  Accepted for compatibility; the overlay now starts by default when
-  installed (scripts\setup.ps1 with Node).
+  Accepted for compatibility; the client (with its overlay) starts by
+  default when installed (scripts\setup.ps1 with Node).
 .PARAMETER NoOverlay
-  Do not start the overlay (one that is already running is left alone).
+  Do not start the client (and so no overlay); the dashboard opens in the
+  browser instead. A running client is left alone.
 .PARAMETER NoBrowser
-  Do not open the dashboard.
+  Open no window: neither the client nor the browser (the core and
+  supervisor only; the client starts the core this way itself).
+.PARAMETER Browser
+  Open the dashboard in the default browser instead of the client.
 .PARAMETER Port
   Core port for this run (block 8960-8979). Default: env AL_PORT, then
   "port" in config\local.json, then 8960 (server\al\ports.py resolve).
@@ -33,6 +41,7 @@ param(
     [switch]$NoOverlay,
     [switch]$NoBrowser,
     [switch]$EdgeApp,
+    [switch]$Browser,
     [int]$Port = 0,
     [switch]$Autostart
 )
@@ -134,7 +143,9 @@ function Get-AlPlan {
 }
 
 $electron = Join-Path $Repo 'app\node_modules\electron\dist\electron.exe'
-$wantOverlay = -not $NoOverlay
+# DESKTOP-CLIENT (decision 0041): the "overlay" component is the client
+# process; it is wanted only when a window is wanted and the browser is not.
+$wantOverlay = -not ($NoOverlay -or $NoBrowser -or $Browser -or $EdgeApp)
 $plan = Get-AlPlan
 
 if (Test-AlHealth) {
@@ -180,33 +191,43 @@ if (@($plan.start) -contains 'supervisor') {
 
 $url = "http://127.0.0.1:$port/#token=" + (Get-AlToken)
 
-# The overlay is part of the full running set: started whenever it is
-# installed and not already live, independent of -NoBrowser; -NoOverlay
-# opts out. Its pid is recorded (ops\runtime\overlay.pid) for stop.ps1.
+# DESKTOP-CLIENT (decision 0041): the client (companion window, tray and
+# the overlay, one Electron process) is started detached with --client. When
+# it is already live, a second --client start only asks it to show its
+# window (single-instance lock) and exits; its pid is not recorded. The
+# client's pid is recorded (ops\runtime\overlay.pid) for stop.ps1.
+$clientShown = $false
 if (-not $wantOverlay) {
-    Write-AlLog 'run: overlay not requested (-NoOverlay)'
+    Write-AlLog 'run: client not requested (-NoOverlay / -NoBrowser / -Browser)'
 } elseif (-not (Test-Path $electron)) {
-    Write-AlLog 'run: overlay not installed - run scripts\setup.ps1 with Node 20+'
-} elseif (@($plan.start) -contains 'overlay') {
-    $ovlPid = Start-AlDetached -FilePath $electron -ArgumentList @('"' + (Join-Path $Repo 'app') + '"') `
-        -WorkingDirectory (Join-Path $Repo 'app') -Environment $detachEnv
-    Push-Location $Repo
-    try {
-        & $py -m server.al.procs record-overlay ([string]$ovlPid)
-        $recRc = $LASTEXITCODE
-    } finally {
-        Pop-Location
-    }
-    if ($recRc -ne 0) {
-        Write-AlLog "run: overlay pid $ovlPid exited at once (see the overlay log)"
-    } else {
-        Write-AlLog "run: overlay started (pid $ovlPid; toggle Alt+Shift+A)"
-    }
+    Write-AlLog 'run: client not installed - run scripts\setup.ps1 with Node 20+'
 } else {
-    Write-AlLog "run: overlay already running (pid $($plan.status.overlay.pid); no-op)"
+    $clientArgs = @('"' + (Join-Path $Repo 'app') + '"', '--client')
+    $ovlPid = Start-AlDetached -FilePath $electron -ArgumentList $clientArgs `
+        -WorkingDirectory (Join-Path $Repo 'app') -Environment $detachEnv
+    $clientShown = $true
+    if (@($plan.start) -contains 'overlay') {
+        Push-Location $Repo
+        try {
+            & $py -m server.al.procs record-overlay ([string]$ovlPid)
+            $recRc = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        if ($recRc -ne 0) {
+            Write-AlLog "run: client pid $ovlPid exited at once (see the overlay log)"
+            $clientShown = $false
+        } else {
+            Write-AlLog "run: client started (pid $ovlPid; overlay toggle Alt+Shift+A)"
+        }
+    } else {
+        Write-AlLog "run: client already running (pid $($plan.status.overlay.pid)); asked it to show its window"
+    }
 }
 
-if (-not $NoBrowser) {
+if ($clientShown) {
+    Write-AlLog 'run: dashboard shown in the AshLight client'
+} elseif (-not $NoBrowser) {
     if ($EdgeApp) {
         $edge = Get-Command msedge -ErrorAction SilentlyContinue
         if ($edge) {

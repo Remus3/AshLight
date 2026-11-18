@@ -240,7 +240,7 @@ Kit state vocabulary (tokens.json `states`) mapped to AshLight meanings:
 | dashboard feed live | done | [+] | status-ok | live |
 | connecting / reconnecting | pending | [ ] | status-idle | reconnecting |
 | opted in but file missing / quiet | blocked | [#] | status-warn | waiting for Client.txt |
-| opted in, no log line for 20 min (TEST-LIVE-EXIT, decision 0029) | blocked | [#] | status-warn | quiet for 20 min - game closed or AFK? (HUD: log quiet 20m) |
+| opted in, no log line for 20 min (TEST-LIVE-EXIT, decision 0029) | blocked | [#] | status-warn | quiet for 20 min - game closed or AFK? (the overlay hides in this state, decision 0029 amendment 2026-11-17; the dashboard Tools card says "Overlay hidden: no game activity for 20 min. It comes back with the next log line.") |
 | not opted in | idle | [-] | status-idle | not reading Client.txt |
 | cannot reach AshLight | failed | [x] | status-bad | can't reach AshLight |
 
@@ -540,7 +540,9 @@ Generation rules:
 ## 10. Overlay rules
 
 - Window: separate, transparent, always-on-top, click-through,
-  non-focusable (CLAUDE.md). Base size 280 x 176 DIP at scale 1.0
+  non-focusable (CLAUDE.md). It exists only while the desktop client runs
+  and hides while the game looks closed (decision 0041; decision 0029
+  amendment 2026-11-17). Base size 280 x 176 DIP at scale 1.0
   (`app/shared/layout.js` BASE); HUD plates max-width 258px.
 - Content cap: 2 HUD lines + one 3-line card. Nothing else. The card slot
   holds the trade card, or for 20 s after the item check hotkey press the

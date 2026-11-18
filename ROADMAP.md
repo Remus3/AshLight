@@ -1574,6 +1574,29 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
 ## Ops
 
+- [x] DESKTOP-CLIENT (build) A launchable desktop client instead of the
+  dashboard in a browser tab (operator ask 2026-11-17; decision 0041): the
+  Electron app with --client runs a framed, resizable "AshLight" companion
+  window with the standard title bar (X closes it to the tray; size /
+  position remembered in ops/runtime), a tray (Minimize-Restore / Show
+  in-game overlay / Restart overlay / Quit; left-click restores), a
+  "Restart overlay" dashboard button inside the client (id
+  restart-overlay) and the overlay, in one process;
+  the overlay exists only while the client runs (operator order 2026-11-17;
+  run.ps1 starts the client, never a bare overlay). The client starts the
+  core through scripts\run.ps1 when it is not answering; links leave for
+  the default browser (http(s) only); the token rides the URL fragment of
+  a window with no URL bar. setup.ps1 writes per-user Start Menu and
+  desktop shortcuts with AshLight's own code-drawn icon. No packaged .exe
+  (decision 0041 point 9). The overlay hides while the game may be closed
+  (decision 0029 amendment 2026-11-17, snapshot game_idle). DONE
+  2026-11-17: node + pytest green, live checks against test cores on
+  8975-8977 (cold start via run.ps1, already-running core, second-instance
+  --client into a running process). ZERO-CLICK: one shortcut click opens
+  everything; the core, supervisor and overlay start by themselves, a
+  second click only brings the window forward, and the overlay shows and
+  hides with the log by itself.
+
 - [x] LOOP-ARM (build) Arm the lane loop as a scheduled task (every 15 min,
   IgnoreNew, hidden) after one supervised dry-run tick and one real tick on a
   trivial row. ACCEPT: task read back; first tick's progress file done.

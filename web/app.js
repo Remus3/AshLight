@@ -245,6 +245,21 @@
     $("layout-opacity-out").textContent = Math.round(l.opacity * 100) + "%";
   }
 
+  /* DESKTOP-CLIENT (decision 0041): inside the desktop client the page
+     gets one action, window.alClient.restartOverlay (app/client/preload.js);
+     in a browser there is none and the button stays hidden. */
+  function wireRestartOverlay() {
+    var c = window.alClient;
+    if (!c || typeof c.restartOverlay !== "function") { return; }
+    $("restart-overlay-row").hidden = false;
+    $("restart-overlay").addEventListener("click", function () {
+      c.restartOverlay();
+      setText($("layout-status"), snap && snap.game_idle
+        ? "Restarting the overlay. It stays hidden while the game looks closed."
+        : "Restarting the overlay.");
+    });
+  }
+
   function readLayoutForm() {
     var d = $("layout-display").value;
     return {
@@ -965,6 +980,8 @@
 
   function render(s) {
     snap = s;
+    // decision 0029 amendment: say why the overlay is hidden (no live region)
+    $("overlay-idle-note").hidden = s.game_idle !== true;
     offset = Date.now() / 1000 - s.now;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
@@ -1125,6 +1142,7 @@
     $("weights-form").addEventListener("change", saveWeights);
     $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
     $("gfx").addEventListener("toggle", openGfx);
+    wireRestartOverlay();
     $("webdata-form").addEventListener("change", saveWebData);
     $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
     // UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO: the player's clicks

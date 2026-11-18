@@ -78,8 +78,13 @@ def test_p4_6_ram_budget_static_guard():
     assert "main.js" in src and "overlay/index.html" in src
     code = {k: (_code(v) if k.endswith(".js") else re.sub(r"<!--.*?-->", "", v, flags=re.S))
             for k, v in src.items()}
-    windows = sum(len(re.findall(r"\bnew\s+BrowserWindow\s*\(", c)) for c in code.values())
-    assert windows == 1, "one overlay window only (one renderer process)"
+    windows = {k: len(re.findall(r"\bnew\s+BrowserWindow\s*\(", c)) for k, c in code.items()}
+    windows = {k: n for k, n in windows.items() if n}
+    # one overlay window (one renderer process). DESKTOP-CLIENT (decision
+    # 0041): the companion window lives in client/window.js and is built
+    # only in client mode (--client), never at the overlay-only start the
+    # live smoke below measures.
+    assert windows == {"main.js": 1, "client/window.js": 1}, windows
     banned = (r"child_process", r"\butilityProcess\b", r"\bnew\s+(Shared)?Worker\s*\(",
               r"\bBrowserView\b", r"\bWebContentsView\b", r"webviewTag\s*:\s*true",
               r"<\s*webview\b", r"<\s*iframe\b", r"\bwindow\.open\s*\(",
@@ -87,8 +92,12 @@ def test_p4_6_ram_budget_static_guard():
               r"\bprocess\.fork\b")
     for name, c in code.items():
         for pat in banned:
+            if pat == r"child_process" and name == "client/launcher.js":
+                continue  # DESKTOP-CLIENT: runs the repo's run.ps1 / stop.ps1 only
             assert not re.search(pat, c), (name, pat)
     main = code["main.js"]
+    # the companion window module loads lazily, inside openClient() only
+    assert 'require("./client/window.js")' not in main.split("function openClient")[0]
     # popups stay denied (a popup is a new window and renderer)
     assert 'setWindowOpenHandler(() => ({ action: "deny" }))' in main
     assert len(re.findall(r'appendSwitch\(\s*"enable-features"', main)) == 1
