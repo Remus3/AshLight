@@ -87,10 +87,11 @@
     var before = Number(box.getAttribute("data-failed") || "0");
     if (m.failed > 0 && before === 0) {
       fold.open = true;
-      // UX-NARROW: the Tools card may sit in the closed narrow fold
-      var narrow = doc.getElementById("narrow-tools");
-      if (narrow && narrow.contains && narrow.contains(box)) { narrow.open = true; }
     }
+    // UI-GLANCE: the Settings tab says "fix" while a check needs one (it
+    // never switches tabs by itself; Play stays in front during play)
+    var tabs = typeof self !== "undefined" && self.ALTabs ? self.ALTabs : null;
+    if (tabs) { tabs.mark(doc, "settings", m.failed > 0 ? "fix" : ""); }
     box.setAttribute("data-failed", String(m.failed));
     var list = doc.getElementById("checks-list");
     list.textContent = "";

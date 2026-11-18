@@ -102,7 +102,7 @@ test("eval view uses the core's words; empty is null", () => {
   assert.equal(m.when, "Checked at 14:05");
   assert.equal(m.comparisons.length, 1);
   assert.equal(m.unweighted,
-    "Not counted (no weight yet): +N to Example. Add a weight under Stat weights to count them.");
+    "Not counted (no weight yet): +N to Example. Add a weight under Stat weights (Items and prices tab) to count them.");
   assert.equal(m.calc, "");
   const err = v.evalView({ ok: false, error: "no build loaded", text: { sentence: "No build loaded yet." } });
   assert.equal(err.word, "Not checked");

@@ -192,6 +192,8 @@
     $("trades").hidden = rows.length === 0;
     /* UX-REVIEW F6: a new request is said once in the polite region. */
     TR.showStatus($("trade-status"), prevIds, rows);
+    // UI-GLANCE ZERO-CLICK: a new trade request shows Play by itself
+    if (window.ALTabs && TR.newTradeSentence(prevIds, rows)) { window.ALTabs.notify(document, "trade request"); }
   }
 
   /* Dashboard-only: dismissing never sends anything to the game. */
@@ -592,11 +594,15 @@
 
   /* ---- TC-EVAL-UI: the last item check (from the hotkey press). */
   var evalShown = null;
+  var evalPainted = false; // false until the first state paint
 
   function renderEval(ev) {
     var key = ev ? ev.id : null;
     if (key === evalShown) { return; }
+    // UI-GLANCE ZERO-CLICK: a new card (not the first paint) shows Play
+    var fresh = evalPainted && key !== null;
     evalShown = key;
+    if (fresh && window.ALTabs) { window.ALTabs.notify(document, "item check"); }
     var v = T.evalView(ev, clock);
     $("eval-empty").hidden = !!v;
     $("eval-body").hidden = !v;
@@ -986,6 +992,7 @@
       renderBuildYou();
     }
     renderEval(s.eval || null);
+    evalPainted = true;
     renderPrice(s.price || null, false);
     // UTIL-MULTICHAR: level, pace, deaths, act times and run history of
     // the picked character (the one playing unless the player picks)
@@ -1079,6 +1086,7 @@
       var p = $("data-credit");
       p.textContent = text;
       p.hidden = !text;
+      $("credits").hidden = !text; // UI-GLANCE: the footer fold around it
     }).catch(function () { /* keep the last line; the next connect retries */ });
   }
 

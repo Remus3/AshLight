@@ -1248,7 +1248,23 @@ design docs in docs/design/, both made by a separate agent.
   2862 px at 360, 4517 -> 2651 at 420, 4168 -> 2471 at 520; 521 px and
   wider keep the old order; narrow -> wide -> narrow resize restores
   order; no horizontal scroll with the fold open; 11 live regions;
-  design 0001 section 4 records the 12px narrow spacing.
+  design 0001 section 4 records the 12px narrow spacing. Superseded by
+  UI-GLANCE (tabs replace the fold; web/narrow.js retired).
+- [x] UI-GLANCE (build) The dashboard was one column of ~19 cards and
+  scrolled at 1080p. Now five tabs (Play, Run and history, Build, Items
+  and prices, Settings; web/tabs.js, ARIA tablist, arrow keys, picked tab
+  remembered per viewer in localStorage). Play fits one screen: zone tile
+  with its guide (zone tip, campaign hints, `#zone-guide` slot), level /
+  deaths / session, `#build-alert` slot, trades, tip, item card; filled
+  only via `ALTabs.fill`. At 900x560 and up the page never scrolls; each
+  column scrolls on its own. ACCEPT: node test app/test/tabs.test.js,
+  headless Chrome read back at 1920x950 / 1280x760 / 520x900 (page
+  scrollHeight = viewport in every tab at the two wide sizes), existing
+  web tests green, design-reviewer pass. ZERO-CLICK: a new item card,
+  trade request or build alert shows Play by itself (unless the player
+  is working in another tab, then Play says "new"); Settings says "fix"
+  while a self-check needs one; nothing to press during play. DONE
+  2026-11-17 (ui-glance branch).
 - [x] UX-U25 (review) Glance review 0004 U25 filed S4: a build with no
   saved stats got the same cause twice (Build card "No stats saved ..."
   and Build health "This build has no Path of Building numbers ...").
