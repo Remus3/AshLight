@@ -3,6 +3,7 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Take the next number after the highest file here.
 
+- 0043: live zone guide and quest tracker (ZONE-GUIDE).
 - 0042: hot reload of data files, web assets, overlay page and core
   code (HOT-RELOAD).
 - 0041: desktop client (companion window, tray, overlay only inside the

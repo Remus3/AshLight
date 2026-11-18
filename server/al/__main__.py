@@ -240,6 +240,10 @@ def main(argv=None):
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_sources failed")
             try:
+                core.tick_guide()  # ZONE-GUIDE: hot reload, save visits
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_guide failed")
+            try:
                 core.tick_history()  # UTIL-RUN-HISTORY: save closed acts
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_history failed")

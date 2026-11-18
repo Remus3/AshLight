@@ -574,3 +574,9 @@ them. Pause: `ops/loop/control/HALT`.
   supervisor preflight then clean restart keeping the token, never on
   broken code (decision 0042). Reverses if: the polls cost overlay budget,
   token reuse is ruled unsafe, or a restart loses unrebuildable state.
+- ZONE-GUIDE: per-zone guide in AshLight's own words (facts from public
+  sources, nothing copied, unsure facts left out), waypoints from the
+  snapshot graph, quest tracker from entered zones per character (never
+  claims a reward was taken), visits file under the run-history switch,
+  guide file hot reloaded via hotreload.register (decisions 0043, 0042). Reverses if: a licence objection,
+  verified PoE2 quest log lines, or the operator rules the file unwanted.

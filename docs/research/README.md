@@ -106,6 +106,9 @@ its code (license notes: 0006).
   passives, no backpack; registration closed); PoB2, poe.ninja, Steam,
   game files ruled out; campaign pathing from world_areas
   ([0033-live-character-data.md](0033-live-character-data.md))
+- 0034 Zone guide facts - lasting campaign rewards per zone, main-path
+  order, layout tendencies, map completion; facts only, own words
+  ([0034-zone-guide-facts.md](0034-zone-guide-facts.md))
 
 ## Open research (feeds ROADMAP)
 

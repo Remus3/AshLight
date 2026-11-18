@@ -20,6 +20,7 @@ from . import runs as runs_mod
 from . import summary as summary_mod
 from . import underlevel as underlevel_mod
 from . import zonenotes
+from . import zoneguide as zoneguide_mod
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -830,6 +831,11 @@ class SessionState:
         # HUD-ACT: per-act splits; zone level table from the game-data cache.
         self.acts = acts_mod.ActSplits()
         self.zone_table = {}
+        # ZONE-GUIDE (decision 0043): the guide file, the snapshot area
+        # graph and the zones each character entered (zoneguide.py).
+        self.zone_guide = {}
+        self.area_graph = {}
+        self.visits = zoneguide_mod.VisitBook()
         # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
         self.maps = runs_mod.MapRuns()
         self.death_log = runs_mod.DeathLog()
@@ -1132,6 +1138,41 @@ class SessionState:
                 self.lang.set_table(table)
                 self.version += 1
 
+    def set_zone_guide(self, guide=False, graph=False):
+        """ZONE-GUIDE: the guide document and / or the snapshot area graph
+        (an argument left out keeps its value). Bumps only on a change."""
+        with self._lock:
+            changed = False
+            if guide is not False:
+                guide = guide if isinstance(guide, dict) else {}
+                if guide is not self.zone_guide and guide != self.zone_guide:
+                    self.zone_guide, changed = guide, True
+            if graph is not False:
+                graph = graph if isinstance(graph, dict) else {}
+                if graph is not self.area_graph and graph != self.area_graph:
+                    self.area_graph, changed = graph, True
+            if changed:
+                self.version += 1
+            return changed
+
+    def visits_doc(self):
+        """ZONE-GUIDE: (version, file document) of the visited zones."""
+        with self._lock:
+            return self.visits.version, self.visits.to_doc()
+
+    def load_visits(self, doc):
+        """ZONE-GUIDE: merge the saved visited zones in (core start)."""
+        with self._lock:
+            if self.visits.load_doc(doc):
+                self.version += 1
+                return True
+            return False
+
+    def clear_visits(self):
+        with self._lock:
+            self.visits.clear()
+            self.version += 1
+
     def set_diag(self, view):
         """DIAG-SELF: the self-check view (core tick_diag); bumps only on
         a change."""
@@ -1330,6 +1371,11 @@ class SessionState:
                 self.maps.on_scene(self.zone, now, self.in_hideout)
                 listed = True
                 changed = True
+            # ZONE-GUIDE: the zone this character entered (quest tracker)
+            if (not ev.get("is_null") and not ev.get("is_transient")
+                    and not ev.get("is_hideout") and ev.get("scene")):
+                if self.visits.visit(self.character, self.area_id, ev.get("scene")):
+                    changed = True
         elif t == "area_generated":
             self.area_id = ev.get("area_id")
             self.area_level = ev.get("area_level")
@@ -1452,6 +1498,21 @@ class SessionState:
         note = zonenotes.note_for(self.area_id, self.zone)
         return dict(note, zone=self.zone) if note else None
 
+    def _zone_guide_view(self):
+        """ZONE-GUIDE: the guide for the zone the player is in. Caller
+        holds the lock."""
+        zone_level = None
+        info = acts_mod.act_of(self.area_id)
+        if info is not None and self.zone:
+            row = next((r for r in self.zone_table.get(info["key"], ())
+                        if r["id"] == self.area_id or r["name"] == self.zone), None)
+            zone_level = row["level"] if row else None
+        visits = (self.visits.by_name.get(self.character or "")
+                  if self.visits.by_name else None)
+        return zoneguide_mod.view(self.zone_guide, self.area_graph, self.area_id,
+                                  self.zone, self.in_hideout, self.level,
+                                  self.area_level, visits, zone_level)
+
     def _counters(self):
         return {"level": self.level, "level_ups": self.level_ups,
                 "deaths": self.deaths, "maps": self.maps.count}
@@ -1571,6 +1632,9 @@ class SessionState:
             if events:
                 self.maps, self.death_log = runs_mod.replay(events,
                                                             self.character)
+            # ZONE-GUIDE: the run's entered zones for the tracker
+            if events:
+                zoneguide_mod.replay(events, self.visits, self.character)
             # UTIL-RUN-HISTORY: this run's deaths per zone from the
             # replayed death recap (its rows are capped, like the card)
             start = self.acts.splits[0]["started_at"] if self.acts.splits else None
@@ -1697,6 +1761,8 @@ class SessionState:
                     self.in_hideout, self.zone_table, self.underlevel_gap),
                 # UX-ZONE-NOTES (decision 0030): our own note for this zone
                 "zone_note": self._zone_note(),
+                # ZONE-GUIDE (decision 0043): the live zone guide and tracker
+                "zone_guide": self._zone_guide_view(),
                 # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039)
                 "campaign": campaign_mod.view(self.level, self.area_id,
                                               self.campaign_facts, self.flask_table,

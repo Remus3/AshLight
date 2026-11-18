@@ -14,6 +14,7 @@ from pathlib import Path
 
 from . import (VERSION, acts, campaign, diag, layout, logfile, ninja, parser, paths, ports,
                price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
+               zoneguide,
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import hotreload  # HOT-RELOAD (decision 0042)
@@ -109,6 +110,11 @@ class Core:
         self.zone_table = acts.TableCache(zones_path)
         self._zones_path = Path(zones_path)
         self.state.set_zone_table(self.zone_table.get())
+        # ZONE-GUIDE (decision 0043): our own guide file (hot reloaded on a
+        # new mtime) and the waypoint graph from the same cached export.
+        self.guide = zoneguide.guide_cache()
+        self.area_graph = zoneguide.graph_cache(zones_path)
+        self.state.set_zone_guide(guide=self.guide.get(), graph=self.area_graph.get())
         # MATH-MAGIC-BASE: a magic item's base from the cached snapshot base
         # list when the build fetched it (decision 0009); read only, no fetch.
         bases_path = (basetypes.default_path() if runtime is None
@@ -195,6 +201,11 @@ class Core:
         # sessions, under the same run-history switch, one bounded file.
         self.ladder = mapladder.MapLadder(self.runtime / mapladder.FILE_NAME)
         self._ladder_since = None  # maps opened before a clear stay unsaved
+        # ZONE-GUIDE: zones each character entered, one bounded runtime file
+        # under the same run-history switch (decision 0036).
+        self.visits_path = self.runtime / zoneguide.FILE_NAME
+        self.state.load_visits(zoneguide.read_visits(self.visits_path))
+        self._visits_saved = self.state.visits_doc()[0]
         # NEWBIE-HINTS (ruling L): hashed character keys and hint ids only
         self.state.use_hint_store(self.runtime / hints.FILE_NAME)
         # UTIL-PRICE-WATCH: the last priced presses, one bounded runtime
@@ -361,6 +372,33 @@ class Core:
         self.state.set_run_history(view)
         return self.tick_ladder(on) or wrote
 
+    # -- ZONE-GUIDE (decision 0043)
+    def tick_guide(self):
+        """From the core's loop: re-read the guide file and the area graph
+        when their files changed (one stat each), and save the visited
+        zones when they changed and run history is on. No request. True
+        when the visits file was written."""
+        self.state.set_zone_guide(guide=self.guide.get(), graph=self.area_graph.get())
+        version, doc = self.state.visits_doc()
+        if version == self._visits_saved or not self.history_enabled():
+            return False
+        try:
+            with self._lock:
+                zoneguide.write_visits(self.visits_path, doc)
+            self._visits_saved = version
+            return True
+        except OSError:
+            return False  # the tracker still shows; the next tick tries again
+
+    def _clear_visits(self):
+        """Caller holds self._lock."""
+        self.state.clear_visits()
+        try:
+            zoneguide.write_visits(self.visits_path, self.state.visits_doc()[1])
+        except OSError:
+            pass
+        self._visits_saved = self.state.visits_doc()[0]
+
     def tick_ladder(self, on=None):
         """UTIL-MAP-LADDER: save the session's finished maps (run history
         on) and publish the all-sessions ladder; off publishes none. True
@@ -397,6 +435,7 @@ class Core:
             with self._lock:
                 self.history.clear()
                 self.ladder.clear()  # UTIL-MAP-LADDER: same switch, same button
+                self._clear_visits()  # ZONE-GUIDE: same switch, same button
                 self._ladder_since = self.state.now()
                 self._history_key = ((rec["started_at"], rec["closed"], rec["finished"])
                                      if rec else None)
