@@ -44,11 +44,11 @@ The boxes below are a convenience; the file at HEAD decides.
 ## Work list - plan sections
 
 - [x] docs/plan/01-open-items.md - D every open item with its unblock condition
-- [ ] docs/plan/02-findings.md - one consolidated ranked findings list
-- [ ] docs/plan/03-target-design.md - target design: Play tab, tab set, overlay, type scale, colour tokens
-- [ ] docs/plan/04-go-public.md - E go-public plan
-- [ ] docs/plan/05-deployment.md - F deployment plan
-- [ ] docs/plan/06-automation.md - G automation plan
+- [x] docs/plan/02-findings.md - one consolidated ranked findings list (machine-readable source: docs/plan/findings.json)
+- [x] docs/plan/03-target-design.md - target design: Play tab, tab set, overlay, type scale, colour tokens
+- [x] docs/plan/04-go-public.md - E go-public plan
+- [x] docs/plan/05-deployment.md - F deployment plan
+- [x] docs/plan/06-automation.md - G automation plan
 - [ ] docs/plan/07-execution-plan.md and docs/plan/packages.json - waves and work packages
 - [ ] docs/plan/08-orchestration.md - orchestration script outline for the executing sessions
 - [ ] docs/plan/09-operator-acts.md - the one batched operator ask
