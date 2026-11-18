@@ -6,10 +6,11 @@ Scope: where the Python and node suites spend their time, what the
 machine-wide suite gate costs a wave of parallel worktree agents, and a
 ranked plan (hot spots, parallelism, budgets, wave gate policy). No product
 code was changed; two kit gate findings are documented, not fixed.
+Verified 2026-11-18 by an independent agent (see "Verification").
 
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (all accessed 2026-11-17; web sources re-fetched 2026-11-18)
 
 Local measurements (raw files kept in `<sidecar>\Scratch\up-0049\`):
 
@@ -30,7 +31,8 @@ Local measurements (raw files kept in `<sidecar>\Scratch\up-0049\`):
   `-m slow`, `-m git`, `-m server` and the negation, joined to RUN's times.
 - NPM: three runs of `npm test --prefix app` (node-only, see F9).
 - VERD: `ops/loop/control/gate_verdicts.json` (untracked loop state).
-- GIT: `git log` of the same 23.6 h window (355 commits, 150 merges).
+- GIT: `git log` of the same 23.6 h window (354 commits, 150 merges;
+  re-counted 2026-11-18 with `--since` / `--until` on the window bounds).
 
 Web:
 
@@ -48,7 +50,10 @@ Web:
 
 - The whole Python suite takes 191 s (median of the last 30 green serial
   gate runs) and 238 s under tonight's load (RUN). It was 38 s a day
-  earlier: a 5x growth in 24 hours. The node suite takes 0.45 s.
+  earlier: a 5x growth in 24 hours. About 64 s of that step is the
+  optional calc component becoming present on this machine around 10h
+  (its live tests skip without it, F2); the rest is new tests and load.
+  The node suite takes 0.45 s.
 - Time is concentrated: 5 of 157 test files hold 60 percent, 23 files hold
   91.5 percent; 1819 of 2319 tests finish in under 10 ms and total 3.2 s.
   Collection (0.5 s), setup (4.9 s) and teardown (5.7 s) are not the issue.
@@ -65,7 +70,7 @@ Web:
   plus one whole suite per merge batch, which lifts the gate ceiling to
   about 64 to 77 packages per hour with no code speed-up; (R2) memoise the
   floor scan (-25.7 s, one test file); (R3) run the whole suite in parallel
-  (237 s to about 60-70 s; the loop gate already does this with xdist).
+  (237 s to about 60-80 s; the loop gate already does this with xdist).
 - A slow-test budget (R5) and plugin pinning (R6) stop the regrowth. Two
   kit gate defects are documented for MAIN (F11, F12).
 
@@ -102,7 +107,9 @@ Web:
   2026-10-27: PYPI, PTCL), node 24.15.0. The shared interpreter also
   auto-loads five plugin modules the repo never asks for (anyio,
   pytest-asyncio 1.4.1, pytest-timeout 2.4.0, pytest-xdist 3.8.0 with its
-  looponfail module); xdist 3.8.0 and timeout 2.4.0 are the latest (PYPI).
+  looponfail module); xdist 3.8.0 and timeout 2.4.0 are the latest (PYPI);
+  pytest-asyncio 1.4.1 and anyio 4.13.0 trail their latest releases (1.5.0
+  of 2026-11-12 and 4.16.0 of 2026-11-01, PYPI, accessed 2026-11-18).
 - Decision 0002 allows pytest as the one test dependency and anything else
   only as optional and ImportError-guarded
   (`docs/decisions/0002-stack.md:14-16`).
@@ -197,7 +204,12 @@ Web:
 - 10 runs had wait plus hold over 600 s, the foreground tool-call ceiling;
   one died with exit 143 at 590 s (wait 435, hold 155).
 - 18 command spellings (6 for the serial whole suite; the done ritual, the
-  loop gate and build.ps1 each produce a different one). Lane and memory
+  loop gate and build.ps1 each produce a different one; the verifier
+  decoded all six serial hashes from `fleet_suite_gate.py:1363-1365`:
+  `python -m pytest -q`, the same with `-x`, with `tests`, with `-p
+  no:cacheprovider`, with `-x -p no:cacheprovider` and with `-p
+  no:cacheprovider -x`; `-x` runs end at the first failure, so red holds
+  are short). Lane and memory
   history are per spelling, so each new spelling starts with no history.
 - The serial suite lost lane eligibility at 10:23 when its median passed
   130 s. Getting back under 130 s restores a third way in.
@@ -211,7 +223,7 @@ Web:
 - N packages ready together need N x r x T of gate time: 8 packages 52
   min, 12 packages 78 min, 25 packages 162 min (at 190.9 s), however fast
   the agents work.
-- GIT agrees in shape: 38 merges in the 09h hour (suite 60-75 s), 16 at 10h
+- GIT agrees in shape: 37 merges in the 09h hour (suite 60-75 s), 14 at 10h
   (as it passed 137 s), 8-12 per hour at 140-180 s, 4-5 at 180-185 s.
 - With a named-file check per package and one whole suite per batch of K
   on an integration worktree, suites per package = (1 + Pred) / K, Pred = 1
@@ -244,8 +256,11 @@ real runs add contention and about 0.9 s start per process.
   by test_al_loop.py). With R2, R11 and that file split in three: K=4 51 s,
   K=6 34 s, K=8 32 s (bound by test_math_e2e_live.py).
 - C. pytest-xdist when importable. Real data: the loop gate's `-n 8 --dist
-  loadfile` runs took 47.8 s median (26.5-61.9 s, 37 runs) in hours when
-  serial runs took 137-178 s: 2.5x to 3.3x. Session fixtures run once per
+  loadfile` runs took 47.8 s median (37 runs, red included). Green runs
+  only (13, 26.5-61.9 s): 48.6-61.9 s in the 10h-13h hours when green
+  serial runs took 137-163 s (about 2.6x to 3.1x), but 26.5-46.5 s in the
+  08h-09h hours when serial took 60-72 s (about 1.5x): the gain is mostly
+  the calc and git files spread over workers. Session fixtures run once per
   worker (XD-H), so `warm_bridge` can start in up to 6 workers; xdist runs
   peaked at 0.7 to 3.6 GB commit against 1.0 GB serial. `--dist loadgroup`
   keeps marked groups on one worker (XD-D).
@@ -389,7 +404,7 @@ R3. Run the whole suite in parallel.
   with groups for the calc files and the three fixed-port files; run the
   timing files (F10, 31 s) after the parallel phase. If the plugin is
   ruled out: option B, a stdlib shard tool with the same pins.
-- Impact: H. 237 s to about 60-70 s; the suite regains lane eligibility
+- Impact: H. 237 s to about 60-80 s; the suite regains lane eligibility
   (under 130 s) and stays under the 600 s tool ceiling when queued.
 - Effort: S for xdist (code exists), M for the shard tool. Risk:
   parallel-only flakes; machines without xdist stay serial.
@@ -518,7 +533,11 @@ R11. Small timer fixes.
   0.5,1,2 to 0.1 / 0.1,0.2,0.4 with a 0.2 s heartbeat (-4 s); pass a 0.05 s
   poll at test_audit_pass5.py:73,107 and test_cover_gaps.py:249 (-1.4 s);
   `AL_FUZZ_S=0.1` in per-package checks only (-6 s there); mark
-  tests/test_budgets.py:52 slow; drop the pid literal (F10).
+  tests/test_budgets.py:52 slow; drop the pid literal (F10). Sleeps to
+  events: the fixed 0.5 s settles at `tests/test_procs.py:196` become a
+  poll for the awaited state with a deadline; the keepalive supervisor
+  takes its timings as flags already, so no fake clock is needed there.
+  The two 3.0 s CPU windows in test_budgets measure real time and stay.
 - Impact: L (about 6 s per whole suite, 6 s per package check).
 - Effort: S. Risk: shorter backoff makes the restart test more load
   sensitive (keep its 30 s deadlines).
@@ -530,7 +549,8 @@ R11. Small timer fixes.
 
 R12. Shared server fixture.
 - Action: one `al_server` factory in conftest (core, serve on port 0,
-  0.01 s poll, stop and close) replacing the copies in about 25 files.
+  0.01 s poll, stop and close) replacing the copies (`serve_forever`
+  appears in 28 test files, verifier count 2026-11-18).
 - Impact: L for speed (about 4 s of teardown), M for upkeep.
 - Effort: M. Risk: a behaviour difference in one copy.
 - ToS check: binds 127.0.0.1 with the per-start token as today.
@@ -553,6 +573,10 @@ R12. Shared server fixture.
   (docs/audit/code-health-2026-11-17.md:73-76). See R12.
 - Do not merge for speed: the 17 `test_audit_*` files cost 4.9 s in total.
   Re-homing them by subject is a structure question, not a speed one.
+  Duplicated coverage: no test function name repeats across the 17 files
+  (verifier grep), and each pass imports a different module mix (for
+  example `tests/test_audit_pass6.py` trade / upgrade, `test_audit_pass8.py`
+  mapladder), so no merge or parametrize candidate was found there.
 - Cut: 21 `slow` markers on tests under 1.5 s; the stale hand-off NOTE
   (AL-NEXT-SESSION.txt:91-93); gated `npm test` runs (F9).
 
@@ -596,3 +620,63 @@ R12. Shared server fixture.
    1 can measure it; record red batch suites per batch.
 4. Why the loop's xdist runs were red 24 times in 37. Unknown until R6
    restores the failure records and R3's 10-run check is done.
+
+## Verification
+
+Independent verifier, 2026-11-18. The whole suite was not re-run (brief);
+RUN was checked from its raw files and one file was re-timed.
+
+Checked:
+
+- Numbers (about 45): RUN totals (2316 passed, 3 skipped, 237.17 s in
+  suite_raw.txt); F1 recomputed from junit.xml (2319 cases, 235.8 s, 157
+  files, the top-10 per-file list, top 5 / 10 / 23 shares, median 1.0 ms,
+  the 10 ms / 0.1 s / 1 s / 5 s bands, the audit family 17 files / 146
+  tests / 4.9 s); GATELOG recomputed from the kit's durations.jsonl (348
+  rows, 10.25 h hold, 9.02 h wait, 76.4 percent share, 29 runs of 10 other
+  trees, 18 spellings, serial 267 runs / 221 green / 45 red / 1 killed,
+  wait median 30 s / p90 217 s / max 785 s, last-30 green median 190.9 s,
+  the hourly growth series, 10 runs over 600 s, 16 same-tree overlap pairs
+  all with a lane holder); F5 capacity and batch arithmetic recomputed
+  (9.3 / 7.9 / 7.5 per hour; K = 4 / 5 / 8 gives 64 / 77 / 113; 19.5 and
+  6.6 min); GIT merges (150); PROBE summary (431 passed, 1 skipped, 128.9
+  s); VERD (25 red verdicts, 23 hold only the anyio warning block, the
+  lane-1 13:20:33 verdict carries the :672 traceback); node 34 files, 23
+  load `web/`; copied-helper counts (gen 11 ... _isolated_git 5).
+- Re-timed: tests/test_floor_static.py alone, 35 passed in 29.5 s at
+  below-normal priority (F2 says 28.4 s); individual plants 0.89-0.94 s.
+- Code citations (about 40 opened): pytest.ini, conftest markers and
+  warm_bridge, the gate (:43-45, :46-53, :134-136, :175, :179, :192, :201,
+  :274-279, :444-446, :495, :515, :568, :594, :648-654, :672, :681, :686,
+  :710, :753, :770, :1154-1163, :1363-1373, :1432-1434, main's handler),
+  the claims hook's whole-suite test, al_loop.py :242 and :268-304,
+  loop_merge.py :48, loop_prompts.py :20-29, done.md :26-28, gates.txt,
+  build.ps1 :165-172 and :185, decision 0002 :14-16, al_loopkit.py
+  :144-159, the fixed test ports, free_test_port, the guard's load factor,
+  the three 0.5 s server polls, test_keepalive.py:374, test_fuzz.py:35,
+  test_procs.py:196, the four PowerShell parse tests, the hand-off lines,
+  ROADMAP TEST-CLEAN-CLONE and AUDIT-P8-LOW P8-4. All hold.
+- Web (8 sources re-fetched 2026-11-18): PyPI versions and the pytest
+  9.2.0 date; the changelog places `faulthandler_exit_on_timeout` in
+  9.0.0; the reference lists it and `PYTEST_DISABLE_PLUGIN_AUTOLOAD`;
+  xdist docs show session fixtures run per worker unless made to run once
+  and list `loadgroup`; node docs say each test file runs in its own child
+  process, bounded by `--test-concurrency`.
+- ToS floor: all 12 recommendations re-read against every floor rule; none
+  reads the game process, sends input, captures the screen or calls a web
+  endpoint; nothing moved to Rejected. Settled decisions: none contradicted;
+  the xdist question stays open against decision 0002, not reversed.
+- Brief coverage: every point present; added the audit-file duplication
+  check and the sleeps-to-events note (both were thin).
+
+Corrected: GIT commit count 355 to 354; merges per hour 38 / 16 to 37 /
+14; the xdist speed-up split into green-only runs (2.6x-3.1x at 137-163 s
+serial, about 1.5x at 60-72 s), so R3's target is 60-80 s, not 60-70 s;
+the 5x growth now names the calc component's share; R12's file count 25
+to 28; pytest-asyncio and anyio noted as not the latest; the six serial
+command spellings decoded and listed (F4).
+
+UNVERIFIED: F12's race mechanism (inferred from timing, not reproduced);
+the escape rate e (assumed 5 percent); the cause of the red xdist runs;
+F6's subset timings (scratch prototype, not re-run); PROBE's per-cause
+splits (git, sleep, thread waits) beyond its summary line.
