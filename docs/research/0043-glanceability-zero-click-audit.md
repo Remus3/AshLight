@@ -62,7 +62,14 @@ Status: verified
   server/al/core.py, server/al/hotkeys.py,
   server/al/theorycraft/{providers,store,buildlive,paste,shareurl}.py,
   scripts/*.ps1, docs/design/0001-design-system.md, decisions 0003, 0013,
-  0017, 0041, 0045, research 0033, 0035, 0038, 0039, 0042, 0054.
+  0017, 0041, 0045, research 0033, 0035, 0038, 0039, 0040, 0041, 0042,
+  0054, 0055.
+- FIT: a second re-measure made for the gap fill (ports 8967 and 8968,
+  states c and d, each core on its own fixture Client.txt written by the
+  pack script, tailer path read back as that file; hidden headless
+  Chrome; cores stopped by the script). The prototype as above plus two
+  font override sets injected after it. Files: `<sidecar>\Scratch\up-0043\fill3\`
+  fonts.js, probe-fs.mjs, table.py, fs-c.json, fs-d.json.
 
 ## Summary
 
@@ -77,6 +84,13 @@ Status: verified
   the worst case to 472 px left and 367 px right: 0 px overflow at both
   sizes with 182 px to spare at 1280x760, and 397 words down to 256. The
   idle state fits with 79 px to spare. That is R1.
+- The fit survives the type scale of the sibling notes [FIT]: with the
+  note 0041 R3 sizes, and with those plus note 0055 R2's 19.2 px tile
+  labels and sub lines, states c and d still overflow 0 px at 1280x760,
+  1920x950 and 1264x821; the tightest column keeps 48 px (state d,
+  1280x760). Word headroom in the worst state is 4 words, so each
+  proposed Play addition must replace something (section "Fit after
+  sibling notes").
 - Items: today hover, Ctrl+C, Alt+Shift+E: 2 chords, 5 key presses. With
   the clipboard, 2 chords is the floor minimum; a roll under one held
   modifier makes it 3 key presses (R5). One press per item is possible
@@ -416,13 +430,120 @@ plus 6 / 4 s is under 2 s. The test asserts the proxy, not the time.
   (first trade row); my level and whether I am under-levelled; deaths;
   session time; is AshLight reading (pill); is my build stale (alert
   heading).
-- B7 Glance values: zone name, level, deaths, session and verdict word at
-  20 px or larger; no Play text under 13 px (design 0001 section 3).
+- B7 Glance values, on the note 0041 R3 scale: zone name 28 px; level,
+  deaths and session 40 px (32 px in the short-window query, height 820
+  px or less); zone timer and item-check verdict line 20 px (the same
+  size, note 0040 R2 d); no Play text under 14 px (13 px is the footer
+  only, which is outside the Play columns). If note 0055 R2 is adopted,
+  tile labels and tile sub lines at 19.2 px or larger. The gap fill
+  measured all of these as computed sizes [FIT]; the draft's 13 px
+  floor (design 0001 section 3) is superseded by 0041 R3.
 - B8 Tabs: at most 4; a new card, trade or alert shows Play with no act
   (exists, app/test/tabs.test.js).
 - B9 Item check: at most 3 key presses per item with the default keys
   (after R5); build load: 0 acts in AshLight with the folder source on
   (after R3).
+
+## Fit after sibling notes
+
+The prototype (F5) was re-run with font overrides injected after it
+[FIT], at the three sizes of notes 0040 and 0043. Case "today" is the
+prototype alone (a control; it reproduces F5: 182 px and 79 px at
+1280x760). Case a = note 0041 R3: tile labels, sub lines and other meta
+text 14 px, card titles 20 px, zone name 28 px, level / deaths / session
+40 px (32 px in the short-window query), zone timer and verdict line
+20 px, with the R3 line heights on those elements. Case b = a plus note
+0055 R2: tile labels and tile sub lines 19.2 px. Computed sizes were read
+back from the page, not assumed. Available column height: 654 px at
+1280x760, 836 px at 1920x950, 707 px at 1264x821 (that size is just
+outside the short-window query, so its hero is 40 px). Overflow and
+spare are left / right column in px; "strip" is the tile strip height.
+
+| State | Size | Case | Overflow L / R | Spare L / R | Strip |
+|---|---|---|---|---|---|
+| c | 1280x760 | today | 0 / 0 | 182 / 287 | 79 |
+| c | 1280x760 | a | 0 / 0 | 166 / 280 | 88 |
+| c | 1280x760 | b | 0 / 0 | 155 / 280 | 99 |
+| c | 1920x950 | today | 0 / 0 | 347 / 469 | 80 |
+| c | 1920x950 | a | 0 / 0 | 327 / 462 | 93 |
+| c | 1920x950 | b | 0 / 0 | 312 / 462 | 108 |
+| c | 1264x821 | today | 0 / 0 | 218 / 340 | 80 |
+| c | 1264x821 | a | 0 / 0 | 198 / 333 | 93 |
+| c | 1264x821 | b | 0 / 0 | 183 / 333 | 108 |
+| d | 1280x760 | today | 0 / 0 | 79 / 512 | 79 |
+| d | 1280x760 | a | 0 / 0 | 57 / 508 | 90 |
+| d | 1280x760 | b | 0 / 0 | 48 / 508 | 99 |
+| d | 1920x950 | today | 0 / 0 | 240 / 694 | 80 |
+| d | 1920x950 | a | 0 / 0 | 216 / 690 | 93 |
+| d | 1920x950 | b | 0 / 0 | 201 / 690 | 108 |
+| d | 1264x821 | today | 0 / 0 | 111 / 565 | 80 |
+| d | 1264x821 | a | 0 / 0 | 87 / 561 | 93 |
+| d | 1264x821 | b | 0 / 0 | 72 / 561 | 108 |
+
+Reading:
+- B1 and B2: both case a and case b meet B1 for states c and d at all
+  three sizes (0 px overflow, page overflow 0) and B2 (state c at
+  1280x760 keeps 166 px and 155 px in the left column, 280 px in the
+  right; 40 px needed). The tightest column is state d, case b, 1280x760:
+  48 px. States b, c2, f and g were not re-run; b and c2 hold less than
+  c, but g's item card with web data on (1030 px today, F4) was never in
+  the prototype, so B1 for g stays open (Open question 5).
+- The scale costs the left column 16 / 27 px (a / b) at 1280x760 and
+  20 / 35 px at the other two sizes: the strip grows 79 -> 88 -> 99 px
+  (80 -> 93 -> 108 px), card titles add 4 px to trades and to the build
+  alert. The strip stays inside note 0040 R2's 120 px band in every case.
+- B7 as amended holds in a and b: the smallest text on Play is 14 px
+  (today 13 px at 1280x760); verdict line and zone timer are both 20 px.
+- One cost of case b: the Level tile's sub line (character name and
+  class, 21 characters) no longer fits and is cut with an ellipsis at all
+  three sizes; no tile label wraps. R1's rule (one-line rows ellipsize,
+  full text in the title attribute) covers it.
+- Words and controls do not change with font size: 256 words (c) and 231
+  (d); 6 controls in c (4 left, 2 right) and 4 in d, all in the first
+  view. Headroom in the worst state: 4 words (B3 260) and 2 controls (B5
+  8).
+
+Proposed Play additions (words and heights of the additions are
+estimates from their notes; the blocks they replace are measured):
+- Note 0054 R1 setup card: before the opt-in (states a, a2) it replaces
+  the consent card on an otherwise empty Play (state a 161 words with the
+  consent card, a2 84 without [PACK]), so it fits B3 at 116 words or
+  fewer (B3's 200-word cap for the light state b, minus 84) and B5 with at
+  most 8 controls open at once (allow, paste box, web-data box, contact
+  field, corner choice, sample-card button = 6; a folded done row counts
+  its summary). After row 1 it can sit beside the worst state (rows 2 to
+  4 still open while the player plays) and there it does NOT fit
+  (headroom 4 words). Condition: once row 1 is done the card folds to one
+  line with one button ("Setup: 3 steps left") in the notice slot of note
+  0038 R6, replacing the tip line (36 px, 16 words): net about -10 words,
+  +1 control (7 of 8).
+- Note 0054 R4 vendor search row: shows only in a town or the hideout
+  with a build loaded. The 7 town guide entries hold 8 to 20 words
+  against Clearfell's 46 (server/al/data/zone_guide.json, counted for the
+  gap fill), and in the hideout no guide shows at all
+  (server/al/zoneguide.py:441-442), so the row (a name and Copy, about 5
+  words, one line of about 30 px) replaces 26 to 46 guide words: fits B3
+  (about 235 words in the worst town state) and B5 (+1 control, 7 of 8).
+  Put it on the guide card's first line (in the hideout, in its place),
+  not in the strip, so the strip stays one row (0040 R2).
+- Note 0042 R3 "Paste a build" button: shows only while no build is
+  loaded, so it never appears with the R4 row or with upgrade rows (both
+  need a build). The no-build alert loses the 2 upgrade rows (state c's
+  alert is 38 words with them, state d's 21 without), so the button's 3
+  words fit B3; +1 control (7 of 8); placed in the alert heading row, 0 px
+  added. If 0043 R4 lands, the alert names the press and the button stays
+  as the fallback route.
+- Note 0038 R6 context states: in a map the map block (map time, deaths,
+  maps this session, maps per hour, average: 5 label and value pairs,
+  about 15 words) replaces the guide card (140 px, 46 words), and one
+  notice slot replaces build alert plus tip (71 + 36 px, 38 + 16 words;
+  the larger stays). Fits B3 with about 47 words gained and B5 unchanged
+  (0 controls added); height falls by 36 px or more. "Last session on
+  Play only while idle" is state d, measured above (48 px spare in case
+  b). This is the addition that makes room for the other three.
+- Together: the R4 row and the R3 button exclude each other, so the
+  largest set that can show at once is the folded setup line plus one of
+  them: 8 controls (the B5 cap) and about 225 words. B5 stays at 8.
 
 ## Recommendations
 
@@ -659,6 +780,14 @@ R7. Spike: one press per item by a screen read.
    after R5 the saving is 1 key press per item.
 4. B4 (100 elements) and B2 (40 px) are set from one prototype run with
    short synthetic strings; confirm on the first real run of R2.
+5. B1 for state g (web data on, item card 1030 px today) is not shown
+   with the prototype at any font size: the prototype and the gap-fill
+   re-run covered states c and d only. Missing: one run of fill3
+   probe-fs.mjs on a state g fixture core (the pack's mock price book).
+6. The four Play additions in "Fit after sibling notes" are fitted by
+   arithmetic on measured blocks; none is built yet. Missing: R2's test
+   on each once implemented (the R1-folded setup line, the town row, the
+   paste button, the map block).
 
 ## Verification
 
@@ -722,3 +851,39 @@ Ctrl neighbour of C is free in the game's default binds (Open question
 2); the prototype element count (B4) and real-string heights (B2), since
 the probe ran states c and d only with synthetic strings, calc off and a
 thin price book.
+
+Gap fill, 2026-11-18 (completeness critic: fit not shown after the
+sibling notes' type scale and Play additions).
+Added: Sources entry FIT and research 0040, 0041, 0055 in the repo list;
+a Summary bullet; B7 rewritten on the 0041 R3 scale (14 px floor on Play,
+19.2 px tile labels and sub lines under 0055 R2); section "Fit after
+sibling notes" (18-row table, B1 / B2 verdict, one line per addition
+from 0054 R1, 0054 R4, 0042 R3, 0038 R6); Open questions 5 and 6.
+How it was confirmed:
+- Two fixture cores, states c and d, ports 8967 and 8968, started by the
+  pack's evidence.py (it writes the fixture Client.txt before the core
+  starts and pins log discovery); each snapshot's tailer path was read
+  back as the fixture file before probing; the script stopped both cores
+  after their hold. The live core on 8960 and the live log were not
+  touched; the cores ran at below-normal priority, Chrome headless and
+  windowless.
+- fill3/probe-fs.mjs loads the page at 1280x760, 1920x950 and 1264x821,
+  injects proto.js unchanged, then fonts.js in mode today, a or b, and
+  runs measure.js unchanged. fonts.js returns the computed font sizes
+  (label, sub, hero, zone, timer, verdict, titles), the strip height, the
+  smallest Play text and any clipped tile text; all match the intended
+  token values (for example hero 32 px at 1280x760, 40 px at the other
+  two sizes).
+- Control row: case "today" reproduces F5 exactly (state c left 472 px of
+  654, spare 182; state d 575 px, spare 79; item card 367 px), so the
+  re-run measures the same page as the original probe.
+- Available height = main height minus its padding (16 px in the
+  short-window query, 24 px otherwise), checked against the original
+  probe's overflowing columns (670 - 16 = 654, 860 - 24 = 836).
+- Town guide word counts recounted from server/al/data/zone_guide.json
+  (7 entries, 8 to 20 words); hideout without a guide read at
+  server/al/zoneguide.py:441-442; addition sizes taken from the action
+  text of notes 0054 R1 / R4, 0042 R3, 0038 R6.
+Not closed: B1 for state g and the built additions (Open questions 5,
+6). The fit claim holds for states c and d at today's, 0041 R3 and
+0055 R2 sizes.
