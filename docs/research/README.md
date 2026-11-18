@@ -101,6 +101,11 @@ its code (license notes: 0006).
   detector (what Client.txt lines are language dependent), first-hours
   hints for F2P newcomers, map level ladder; atlas progress and locale
   pattern packs listed ([0032-wave-4-2026-11.md](0032-wave-4-2026-11.md))
+- 0033 Live character data beyond Client.txt - GGG OAuth public client
+  (PKCE, loopback, account:characters: PoE2 equipment / skills /
+  passives, no backpack; registration closed); PoB2, poe.ninja, Steam,
+  game files ruled out; campaign pathing from world_areas
+  ([0033-live-character-data.md](0033-live-character-data.md))
 
 ## Open research (feeds ROADMAP)
 
