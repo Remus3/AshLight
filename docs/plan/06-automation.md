@@ -1,6 +1,6 @@
 # 06 - Automation
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md).
-Status: draft
+Status: final
 
 Dimension G: the operator never has to remind anyone. Inputs: research
 0058 (primary), the watcher inputs of 0036, 0037, 0046 and 0051,
@@ -27,8 +27,9 @@ Done means every statement below can be shown by a test or a read-back.
   Dependabot.
 - G4 An unattended commit on main only ever adds one file under
   `docs/roadmap/new/` or `docs/roadmap/done/`, built from a tracked
-  template and validated tokens, at most 3 a local day, never while HALT
-  exists (Q-12). A test refuses any other path.
+  template and validated tokens, at most 3 new-row files a local day
+  (Q-12) and at most 3 done files a local day (gate flips first), never
+  while HALT exists (Q-12, Q-13). A test refuses any other path.
 - G5 Watcher-caused work stays inside 32 of the 117 usable runs a day and
   sends 0 fleet notes.
 - G6 README facts, doc indexes, screenshots and release notes cannot drift
@@ -117,9 +118,13 @@ Done means every statement below can be shown by a test or a read-back.
 ### The two primitives and the commit path (Q-12)
 
 `upstream_watch.py file` runs inside the tick, after the work list, only
-when all hold: HALT absent; not a dry run; fewer than 3 row files
-committed this local day; the usage gate under 60 percent of the cap
-(rows with `(priority)` skip this one test); the id is unused in
+when all hold: HALT absent; not a dry run; fewer than 3 files of the
+same kind committed this local day (new-row files are the "3 filed rows"
+of Q-12; done files have their own cap of 3 so a burst of LIVE-1 done
+files on launch day cannot hold a gate flip, and a gate flip is written
+before any other done file); the usage gate under 60 percent of the cap
+(rows with `(priority)` and done files skip this one test); the id is
+unused in
 ROADMAP.md, `docs/roadmap/new/`, `docs/roadmap/done/` and
 `docs/roadmap/archive/`; no flag `ops/runtime/watch/COMMIT_FAULT`.
 
@@ -172,17 +177,23 @@ the lane's diff ends at 1 run. User-Agent everywhere is
 host the contact part comes from the gitignored config when set. All
 templates below were shaped against the loop's row grammar (research 0058
 "Row templates the parser accepts"); `<YYYYMMDD>` keeps an id unique for
-all time. Check done 2026-11-18: all 23 templates of this section, with
-sample tokens filled in, match the loop's own `ROW_RX` and continuation
-rule, carry a valid lane and stay under 700 characters. One id
-(`TC-OAUTH-REG-OPEN`) extends an existing id by a hyphen; that is safe
-only after AUTO-03 matches briefs on the exact id, which AUTO-05 already
+all time. Check done 2026-11-18 (re-run by the verifier after the
+corrections): all 24 templates of this section, with sample tokens
+filled in, parse through `tools/loop_roadmap.py` `roadmap_rows` as
+exactly one row each, carry a valid lane, are ASCII and stay under 700
+characters; BLOCKED appears only as a tag. No two template ids are
+hyphen-prefixes of each other. Two ids extend an existing ROADMAP id by
+a hyphen: `TC-OAUTH-REG-OPEN` (of TC-OAUTH-REG) and the F-061
+`LIVE-1-<ITEM>` rows (of LIVE-1); both are safe only after AUTO-03
+matches briefs and done files on the exact id, which AUTO-05 already
 depends on.
 
 ### W0 Price refresh (exists)
 
 - Home: shipped app. Gate: hourly per type, ETag, web-data opt-in and
-  contact (decision 0026; cadence tiers per F-046).
+  contact (decision 0026; cadence tiers per F-046). Release builds make
+  no poe.ninja request until poe.ninja's yes is recorded (F-046, operator
+  decision Q-05); source checkouts, the dev host included, poll as today.
 - Source: poe.ninja documented routes; purpose `price check`.
 - On change: acts inside decision 0026; nothing is filed.
 - Row template: none. Cost: 0 runs.
@@ -225,9 +236,11 @@ depends on.
 - Source: the GitHub releases API of the PoB-PoE2 repository; purpose as
   today.
 - On change: the decision 0025 flow. A new tag starts the detached
-  static trial at below-normal priority; under HALT the read and the
-  record happen and nothing else (Q-13). When the static verdict is
-  known the row below is filed.
+  static trial at below-normal priority (static drift guard only, no
+  candidate Lua). Under HALT the read, the record and that static trial
+  happen, as Q-13 rules ("static trial only"); no row file, no live
+  trial, no pin move, no commit. When the static verdict is known and
+  HALT is absent the row below is filed.
 - Row template:
 
       - [ ] POB-<VTAG> (review) PoB-PoE2 <tag> is out (pin <pin>), static
@@ -345,13 +358,20 @@ depends on.
   nothing then (Q-13).
 - Source: the two public JSON files named in research 0046 R1 (npm
   dist-tags for the pinned package, the Electron release schedule);
-  purpose `electron watch`. In CI also `npm audit --package-lock-only`
-  against the tracked lockfile.
+  purpose `electron watch`; 2 requests. A second registry entry,
+  `npm-audit` (24 h, `web_data` on, after F-037 lands), runs
+  `npm audit --package-lock-only --json --prefix app` against the
+  tracked lockfile; npm sends the AshLight User-Agent through the
+  tracked `app/.npmrc` (F-037, strict reading of A-02). The same entry
+  runs in CI after go-public. Without it the dev loop has no advisory
+  signal before the remote exists (research 0046 R1 b: "within 24 h").
 - On change, by the written upgrade policy (F-130): a patch or minor at
   least 3 days old, at most once per 7 days, files the first row; an
-  advisory on a pinned package files it at once with `(priority)`; 30
-  days before the line's end of life (`config/electron_pin.json`, F-044)
-  the second row is filed.
+  advisory on a pinned package files it at once with `(priority)`. The
+  second row is filed once per major, at the earlier of: the next
+  major's .0.0 is 14 days old (policy c: adopt N+1 14 to 42 days after
+  its .0.0, one major at a time), or 30 days before the pinned line's
+  end of life (`config/electron_pin.json`, F-044; policy d).
 - Row templates:
 
       - [ ] ELECTRON-<MAJ>-<MIN>-<PAT> (data) Electron <version> is 3 days
@@ -361,38 +381,57 @@ depends on.
         freshness test pass. ZERO-CLICK: the loop works it. SOURCE: watch
         electron <version>, filed <YYYY-MM-DD>.
 
-      - [ ] ELECTRON-EOL-<MAJ> (review) Electron line <MAJ> ends on
-        <YYYY-MM-DD>: plan the move to the next major under the written
-        upgrade policy and re-measure the decision 0002 budgets. ACCEPT:
-        a pin on a supported line or a dated plan. BLOCKED: session.
-        SOURCE: watch electron eol <MAJ>, filed <YYYY-MM-DD>.
+      - [ ] ELECTRON-MAJOR-<MAJ> (review) Electron <MAJ> is due (line
+        <PIN-MAJ> ends <YYYY-MM-DD>): move to the next major under the
+        written upgrade policy and re-measure the decision 0002 budgets.
+        ACCEPT: a pin on line <MAJ> or a dated plan. BLOCKED: session.
+        SOURCE: watch electron major <MAJ>, filed <YYYY-MM-DD>.
 
-  Tokens: `<version>` and `<pin>` match `[0-9]+\.[0-9]+\.[0-9]+`.
+  Tokens: `<version>` and `<pin>` match `[0-9]+\.[0-9]+\.[0-9]+`;
+  `<MAJ>` and `<PIN-MAJ>` match `[0-9]{2,3}`.
 - Cost: 0 runs; a bump row 2 to 8.
 
 ### W9 Dependabot (after the public flip; F-081)
 
 - Home: CI reads the repository's alerts with the read-only
-  `vulnerability-alerts` permission; the tick reads the labelled issue.
+  `vulnerability-alerts` permission and lists the open Dependabot pull
+  requests (`pull-requests: read`); the tick reads the labelled issues.
   Gate: daily in CI, issues read every 6 h by the tick.
 - Source: GitHub only; purpose `upstream watch` with the issues page as
   contact (Q-03).
-- On change: a new alert files the row; its lane re-applies the bump
-  locally (`tools/dependabot_reapply.py`, F-081); the push worker pushes;
-  the same tool closes the pull request with a one-line comment. Nothing
-  is merged on GitHub (FLEET item 17).
-- Row template:
+- On change: a new alert files the first row; an open Dependabot pull
+  request (the weekly version updates of `.github/dependabot.yml`,
+  section 04 GP-08) files the second, unless an open `DEPBOT-` advisory
+  row names the same package (that lane closes the pull request too).
+  Each lane runs `tools/dependabot_reapply.py apply <n>` (section 04
+  GP-14): the bump is re-applied locally as an operator commit through
+  the bump gates, the tool pushes main through the guarded pre-push hook
+  (section 04 GP-02) and closes the pull request with a one-line
+  comment. Nothing is merged on GitHub (FLEET item 17). An Electron bump
+  pull request is only a signal: the lane follows the Electron bump
+  procedure (F-130, F-044), as GP-14 does.
+- Row templates (prefix `DEPBOT-`, because section 05's package ids use
+  `DEP-`):
 
-      - [ ] DEP-<PACKAGE>-<GHSA> (data) (priority) Advisory <GHSA> on
+      - [ ] DEPBOT-<PACKAGE>-<GHSA> (data) (priority) Advisory <GHSA> on
         <package>: re-apply the fixed version locally. ACCEPT: npm audit
         reports 0 for the package; the bump is an operator commit; the
         pull request is closed with one comment. ZERO-CLICK: the loop
         works it. SOURCE: watch dependabot <GHSA>, filed <YYYY-MM-DD>.
 
+      - [ ] DEPBOT-PR-<n> (data) Dependabot pull request <n> is open:
+        re-apply it locally with tools/dependabot_reapply.py. ACCEPT: one
+        operator commit names the dependency and versions; the pull
+        request is closed with one comment, never merged. ZERO-CLICK: the
+        loop works it. SOURCE: watch dependabot pr <n>, filed
+        <YYYY-MM-DD>.
+
   Tokens: `<GHSA>` is upper-cased and matches `GHSA(-[0-9A-Z]{4}){3}`;
   `<package>` must be a name in the tracked lockfile; `<PACKAGE>` is that
-  name upper-cased with every character outside A-Z and 0-9 as a hyphen.
-- Cost: 0 runs; the row 2 to 8.
+  name upper-cased with every character outside A-Z and 0-9 as a hyphen;
+  `<n>` is 1 to 999999 and must be a pull request whose author is the
+  Dependabot app (the CI key carries the number only).
+- Cost: 0 runs; each row 2 to 8.
 
 ### W10 Pin canaries (marked option, not adopted)
 
@@ -466,11 +505,19 @@ depends on.
         the loop works it. SOURCE: watch refresh shots, filed
         <YYYY-MM-DD>.
 
-      - [ ] REL-PREP-<YYYYMMDD> (data) <n> merged rows since the last
-        notes update: curate the release notes draft, run the docs and
-        screenshot checks. ACCEPT: every merged row id appears once in
-        the draft or its skip list. ZERO-CLICK: the loop works it.
-        SOURCE: watch refresh notes, filed <YYYY-MM-DD>.
+      - [ ] REL-DUE-<YYYYMMDD> (review) <n> rows merged in <d> days since
+        the last tag with no release row open: decide whether they make
+        a milestone and, if so, file a REL-PREP row that waits on them.
+        ACCEPT: a REL-PREP row exists or a dated "no milestone" line.
+        BLOCKED: session. SOURCE: watch refresh notes, filed
+        <YYYY-MM-DD>.
+
+  Tokens: `<n>` is 1 to 9999; `<d>` is 1 to 999. The notes themselves
+  are generated at release time from merge subjects (section 05,
+  "Changelog generation"), so they cannot go stale between releases;
+  this row only keeps a release from never being planned. It never
+  bumps, stages, tags or pushes (releases only at a milestone or on an
+  explicit version request, section 05 "Release procedure").
 
 - Cost: 0 runs; each row 2 to 8, at most 3 rows a week.
 
@@ -560,14 +607,15 @@ sub-agents are not headless runs.
   stay for pre-landed plan rows the loop may take.
 - Soft gate: at 72 used (60 percent) the tick files no row without
   `(priority)` and requests no dive; pending findings wait and show in
-  the checklist. Advisory rows (`DEP-`, an Electron advisory) are never
+  the checklist. Advisory rows (`DEPBOT-<PACKAGE>-`, an Electron advisory) are never
   held by the soft gate, only by the hard stop at 117.
 - Launch week peak (2026-12-11 to 2026-12-17): about 12 rows, 24 to 96
   runs over 7 days, inside the daily bound because of the 3-a-day cap.
 - CI: 0 headless runs; one scheduled workflow run a day on a standard
   runner, free on a public repository.
-- Requests a day on the dev host: about 9 (6 docs pages counted as one
-  watch; 1 releases read; W3 to W6 and W8 about 6), about 12 in the
+- Requests a day on the dev host: about 10 (6 docs pages counted as one
+  watch; 1 releases read; W3 to W6 and W8 about 6; 1 npm audit read to
+  the npm registry), about 13 in the
   launch window; all anonymous GitHub reads stay far under the 60 per
   hour limit the address shares with other tools.
 - Inbox cost rules (FLEET item 14): a watcher sends no note, answers no
@@ -593,8 +641,10 @@ sub-agents are not headless runs.
 
 ### Rows the loop may take while sessions run waves
 
-- Every watcher row with lane `data`: `ELECTRON-<version>`, `DEP-`,
-  `SNAP-`, `NINJA-DOCS-`, `NINJA-SHAPE-`, `DOCS-FRESH-`, `REL-PREP-`.
+- Every watcher row with lane `data`: `ELECTRON-<MAJ>-<MIN>-<PAT>`,
+  `DEPBOT-`, `SNAP-`, `NINJA-DOCS-`, `NINJA-SHAPE-`, `DOCS-FRESH-`.
+- `REL-PREP-<n>` once its `DEPENDS:` rows are done (section 05's lane;
+  it never tags or pushes).
 - `SHOTS-` only while no wave owns `web/` (it is filed only then).
 - `LOG-SHAPE-`, `UTIL-10-DATA`, `UTIL-10-NOTES` and `UTIL-10-LOG` once
   their gates are closed.
@@ -738,32 +788,35 @@ wave row does the work. Nothing here needs the operator.
 
 ### Changelog and release notes (F-101, F-023)
 
-- `tools/release.py notes` drafts the unreleased notes from the
-  first-parent `merge:` subjects since the last tag (or since the root
-  while no tag exists), joined to row titles, grouped Added / Changed /
-  Fixed / Security: `feat` under Added, `fix` under Fixed, `(data)` rows
-  under Changed, `DEP-` and `ELECTRON-` rows under Security. The notes
-  folder and file name are section 05's (F-023); the generator keeps
-  hand-edited lines (matched by row id) and a skip list.
-- A commit-msg check holds session subjects to `type(scope): text` with
-  type one of feat, fix, docs, test, chore, refactor, perf, merge. It
-  runs after the kit identity hook and never rewrites a message.
+- The generator, its groups, the commit-msg subject check and its type
+  list are section 05's ("Changelog generation", package DEP-04):
+  `tools/release.py notes` from first-parent subjects joined to row
+  titles; the Security group keys on the commit type and the row kind,
+  never on an id prefix; `CHANGELOG.md` is regenerated and tested
+  against `docs/releases/`. This section adds no second rule set. The
+  watcher's own commit subjects (`chore(roadmap): file <ID> (watch
+  <source>)`, `chore(roadmap): done <ID> (watch <source>)`) pass that
+  check.
+- This section adds only `release.py notes --count` (rows merged since
+  the last tag, or since the root while no tag exists, with the date of
+  the oldest), read by W12 (AUTO-16).
 - Each wave ends with a pre-filed `REL-PREP-<n>` row carrying `DEPENDS:`
-  on the wave's rows; between waves W12 files `REL-PREP-<YYYYMMDD>` when
-  10 merged rows or 14 days have passed since the notes last changed and
-  no REL-PREP row is open.
-- The REL-PREP lane curates the draft, runs `docs_fresh.py index
-  --write`, `docs_fresh.py check` and `shots.py check`. The version
-  bump, the tag and the publish stay with section 05 and the operator's
-  one phrase.
-- Notes carry the not-affiliated statement and no GGG art.
+  on the wave's rows (plan 07; section 05 runs it). Between waves W12
+  files `REL-DUE-<YYYYMMDD>` (a session decision, never a bump) when at
+  least 10 rows merged and 30 days passed since the last tag and no
+  REL-PREP row is open.
+- The REL-PREP lane also runs `docs_fresh.py index --write`,
+  `docs_fresh.py check` and `shots.py check` before section 05's `bump`.
+  The tag and the publish stay with section 05 and the operator's one
+  phrase.
+- Notes carry the not-affiliated statement and no GGG art (section 05).
 
 ### Cadence summary
 
 - Every merge: the freshness test, the version test.
 - Every local day: `refresh` source (stale markers, shots hash, notes
   count), 0 runs.
-- At most weekly per kind: one DOCS-FRESH, one SHOTS, one REL-PREP row.
+- At most weekly per kind: one DOCS-FRESH, one SHOTS, one REL-DUE row.
 - Every wave end: `REL-PREP-<n>`.
 
 ## Work packages
@@ -771,6 +824,16 @@ wave row does the work. Nothing here needs the operator.
 Sizes: S up to 2 h of agent time, M up to a day. "Hotspots" names the
 shared files of the task brief (state.py, web/app.js, ROADMAP.md,
 CLAUDE.md) and other shared files worth a warning.
+
+How acceptance is run: every acceptance line is a test in the test
+files the package names (new or extended), run by the package agent as
+`python -m pytest -q <those files>` (Q-17: a named subset, no timing
+tests, under 90 s); main moves only after one whole suite through the
+suite gate per merge batch. All network behaviour is proven with an
+injected transport and fixtures: no acceptance test makes a real
+request. Packages with no test file (AUTO-21, AUTO-25, AUTO-26) name
+their read-back commands. A package id names the section (prefix
+`AUTO-`); `DEP-` ids are section 05's, `GP-` ids section 04's.
 
 ### AUTO-01 LOOP-PREFLIGHT (F-024)
 
@@ -879,7 +942,9 @@ CLAUDE.md) and other shared files worth a warning.
   tests/test_upstream_watch.py (new), tests/test_al_loop.py,
   docs/decisions/0025-*.md (dated amendment).
 - Acceptance: fake fetches drive each source; a token failing its
-  pattern files nothing; a fourth row in one day waits; a HALTed tick
+  pattern files nothing; a fourth new row in one day waits; a fourth
+  done file waits, and with a gate flip and three LIVE-1 done files due
+  the gate flip is committed first; a HALTed tick
   records the finding and commits nothing; a commit touching any path
   outside `docs/roadmap/new/` or `docs/roadmap/done/` is refused and
   sets COMMIT_FAULT; commits go only through fleet_gitlock; with
@@ -959,14 +1024,18 @@ CLAUDE.md) and other shared files worth a warning.
 - Goal: W8 on the dev loop. The written upgrade policy, the setup
   refusal while the client runs and the pin file are the Electron
   section's half of F-130 (with F-037, F-044); this package adds the
-  source, the two templates and the end-of-life Checks note input.
+  `electron` and `npm-audit` sources, the two templates and the
+  end-of-life Checks note input.
 - Files: tools/upstream_watch.py, ops/loop/watch_rows.json,
   tests/test_upstream_watch.py.
 - Acceptance: a fixture with the line head 4 days old yields one bump
-  finding, 2 days none; a second bump inside 7 days waits; an advisory
-  fixture yields a `(priority)` row at once; a schedule fixture inside
-  the 30-day window yields the end-of-life row once; a HALTed tick reads
-  and records but files nothing; with `web_data` off 0 requests.
+  finding, 2 days none; a second bump inside 7 days waits; a recorded
+  `npm audit --json` fixture naming electron yields a `(priority)` row
+  at once; a schedule fixture with the next major's .0.0 15 days old
+  yields `ELECTRON-MAJOR-<MAJ>` once, and one inside the 30-day
+  end-of-life window with no new major yields it once; a HALTed tick
+  reads and records but files nothing; with `web_data` off 0 requests
+  and the npm subprocess is not started (injected runner).
 - ZERO-CLICK: unattended.
 - Size: S. Depends on: AUTO-05, F-037, F-044, the F-130 decision.
   Findings: F-130, Q-13.
@@ -1082,19 +1151,20 @@ CLAUDE.md) and other shared files worth a warning.
 
 ### AUTO-16 REL-NOTES (F-101)
 
-- Goal: `tools/release.py notes` (and `--count`), the commit-msg subject
-  check, the `REL-PREP-<n>` row text for plan 07.
-- Files: tools/release.py (section 05 owns the file; this is one
-  subcommand), .githooks/commit-msg, tests/test_release_notes.py (new),
-  tests/test_audit_loop_commit_msg.py.
-- Acceptance: a fixture history of 3 merges yields 3 grouped lines; a
-  `DEP-` merge lands under Security; a subject without a type is
-  refused; the kit identity strip still runs first; a hand-edited line
-  survives a regeneration.
-- ZERO-CLICK: prepared unattended; one operator phrase per release.
-- Size: S. Depends on: F-023, AUTO-01. Findings: F-101.
+- Goal: the `--count` option on section 05's generator and the
+  `REL-PREP-<n>` row text for plan 07 (section 05 Release procedure
+  step 1). The generator, the groups and the commit-msg subject check
+  are section 05's package DEP-04; this package builds none of them.
+- Files: tools/release.py (one option on DEP-04's `notes`),
+  tests/test_release_notes.py (extended).
+- Acceptance: on a fixture history with a tag and 3 later merges,
+  `notes --count` prints 3 and the date of the oldest; with no tag it
+  counts from the root; the watcher's two `chore(roadmap): ...` subjects
+  pass the DEP-04 subject check (test calls the check function).
+- ZERO-CLICK: read by the `refresh` source; no operator step.
+- Size: S. Depends on: DEP-04 (section 05), AUTO-01. Findings: F-101.
 - Parallel with: all watcher packages.
-- Hotspots: .githooks/commit-msg (shared with the kit hook install).
+- Hotspots: tools/release.py (section 05's file).
 
 ### AUTO-17 REFRESH-SOURCE (W12)
 
@@ -1102,9 +1172,11 @@ CLAUDE.md) and other shared files worth a warning.
 - Files: tools/upstream_watch.py, ops/loop/watch_rows.json,
   tests/test_upstream_watch.py.
 - Acceptance: a stale manifest for 3 days files one SHOTS row and none
-  while `wave_owned.json` holds `web/`; 10 merged rows since the last
-  notes change files one REL-PREP row and none while one is open; each
-  kind files at most one row per 7 days; the source makes no request.
+  while `wave_owned.json` holds `web/`; 10 merged rows and 30 days since
+  the last tag file one REL-DUE row, 9 rows or 29 days file none, and
+  none is filed while a REL-PREP row is open; a 31-day-old dated marker
+  files one DOCS-FRESH row; each kind files at most one row per 7 days;
+  the source makes no request.
 - ZERO-CLICK: unattended.
 - Size: S. Depends on: AUTO-05, AUTO-14, AUTO-15, AUTO-16. Findings:
   F-146, F-147, F-101.
@@ -1137,7 +1209,7 @@ CLAUDE.md) and other shared files worth a warning.
   plus manual dispatch, a standard runner, permissions `contents: read`
   and `issues: write`, actions pinned by full commit id, no secret. It
   runs `python tools/upstream_watch.py ci` for the sources with home ci
-  or both (W2 tag, W3, W4, W5, W8), compares with the tracked pins and
+  or both (W2 tag, W3, W4, W5, W8, `npm-audit`), compares with the tracked pins and
   a tracked baseline, opens one issue per finding (label `al-watch`,
   body exactly one line `AL-WATCH key=<source>:<key> v=1`) and closes it
   when the finding is gone. It never commits and opens no pull request.
@@ -1148,8 +1220,8 @@ CLAUDE.md) and other shared files worth a warning.
   a day; not active or 48 h silent switches the dev loop to run those
   sources itself and, after 7 days, files `WATCH-BROKEN-CI-<YYYYMMDD>`.
 - Files: .github/workflows/watch.yml, tools/upstream_watch.py,
-  tools/al_loop.py, tests/test_ci_workflow.py,
-  tests/test_upstream_watch.py.
+  tools/al_loop.py, tests/test_ci_workflow.py (created by section 04
+  GP-05; extended here), tests/test_upstream_watch.py.
 - Acceptance: a recorded issue list with one valid key and one forged
   issue files exactly one row; a body with extra text is ignored; a
   workflow state of `disabled_inactivity` switches the tick to
@@ -1163,19 +1235,26 @@ CLAUDE.md) and other shared files worth a warning.
 - Hotspots: none. Prepared and tested with fixtures before the remote;
   merged with the first commit after the operator's go.
 
-### AUTO-20 DEP-WATCH (W9) - blocked: after the public flip (F-081)
+### AUTO-20 DEPBOT-WATCH (W9) - blocked: after the public flip (F-081)
 
-- Goal: the Dependabot alert source in the CI job (adds
-  `vulnerability-alerts: read`), the `DEP-` template, and the dispatch
-  wiring to `tools/dependabot_reapply.py` (section 04 owns that tool and
+- Goal: the Dependabot alert and pull-request source in the CI job
+  (adds `vulnerability-alerts: read` and `pull-requests: read`), the two
+  `DEPBOT-` templates, and the dispatch wiring to
+  `tools/dependabot_reapply.py` (section 04 GP-14 owns that tool, GP-08
   `.github/dependabot.yml`).
 - Files: .github/workflows/watch.yml, tools/upstream_watch.py,
-  ops/loop/watch_rows.json, tests/test_upstream_watch.py.
+  ops/loop/watch_rows.json, tests/test_upstream_watch.py,
+  tests/test_ci_workflow.py.
 - Acceptance: a recorded alert yields one `(priority)` row; a lower-case
   advisory id is upper-cased and validated; a package name not in the
-  lockfile files nothing; the soft budget gate does not hold the row.
+  lockfile files nothing; the soft budget gate does not hold the row; a
+  recorded open Dependabot pull request yields one `DEPBOT-PR-<n>` row,
+  and none while a `DEPBOT-` advisory row names the same package; a
+  pull request from any other author yields nothing; the workflow file
+  grants no write permission but `issues: write` (test).
 - ZERO-CLICK: the lane runs from the tick; nothing is merged on GitHub.
-- Size: S. Depends on: AUTO-19, F-081. Findings: F-081, F-150.
+- Size: S. Depends on: AUTO-19, F-081, GP-02 and GP-14 (section 04).
+  Findings: F-081, F-150.
 - Parallel with: nothing in this section.
 - Hotspots: none.
 
@@ -1215,7 +1294,9 @@ CLAUDE.md) and other shared files worth a warning.
   docs-watch last good read older than 3 days; one-off suite logs move
   to the sidecar `Logs\dev\`.
 - Files: tools/ledger_rotate.py, tests/test_ledger_rotate.py,
-  server/al/probe.py.
+  server/al/probe.py (created by F-032's probe command; it does not
+  exist today). The probe reads the docs watch state and, once AUTO-05
+  lands, `ops/runtime/watch/state.json`.
 - Acceptance: a fixture ledger over its cap rotates; a 4-day-old read
   raises the probe flag.
 - ZERO-CLICK: unattended.
@@ -1281,7 +1362,8 @@ Then, in any order after AUTO-05: AUTO-08, AUTO-09 (after F-037 and
 F-044), AUTO-10, AUTO-13, AUTO-18 (after F-061 and F-143).
 
 Refresh track, independent of the loop track until its last step:
-F-023 -> AUTO-14 and AUTO-16; F-001 -> F-034 -> AUTO-15; then AUTO-17.
+F-023 (section 05 DEP-03) -> AUTO-14; DEP-04 -> AUTO-16; F-001 ->
+F-034 -> AUTO-15; then AUTO-17.
 
 After the operator's go for the remote: AUTO-19, then AUTO-20 after the
 public flip.
@@ -1353,15 +1435,17 @@ Decisions to record at landing (numbers assigned later):
   Why: the README can show the product with no screen read and no game
   art. Reverses if: the helper cannot render a state a design check
   needs, or the floor's capture rule changes.
-- Refresh pipeline and one changelog generator. Decision (F-101,
-  F-146): facts in docs are tested against the tree; notes are drafted
-  from first-parent merge subjects joined to row titles under four
-  headings; commit subjects carry a type; no second changelog tool.
-  Alternatives: generated notes from pull requests (this repository
-  merges locally, they would be empty); a hand-kept changelog. Why: the
-  merge line already names the row. Reverses if: the repository moves
-  to pull-request merges or the draft needs more curation than writing
-  by hand.
+- Refresh pipeline. Decision (F-146, F-147, F-101): facts in docs are
+  tested against the tree; screenshots are judged stale by an input
+  hash; a daily local check files at most one row a week per kind; the
+  changelog is section 05's one generator (its decision), run at each
+  release, and between releases the watcher only asks a session whether
+  a milestone is due (REL-DUE), never bumps. Alternatives: a periodic
+  notes-draft row (it would trigger section 05's bump and break
+  "releases only at a milestone"); a hand-kept changelog. Why: drift is
+  blocked at merge time, and what a test cannot see costs 0 runs to
+  find. Reverses if: the freshness test blocks good merges more than
+  once a month, or section 05's release trigger changes.
 - CI issue protocol. Decision (F-150, Q-03): one labelled issue per
   finding with a one-line key body from the workflow's bot account; the
   tick trusts only that account and the key pattern; failover to the dev
@@ -1383,7 +1467,12 @@ Each goes into the one batched ask (docs/plan/09, F-040).
 1. A-01: write one floor line saying whether GGG's developer-docs pages
    outside the API Reference and Data Exports may be read. Why no agent
    can: only the operator may word the floor. Blocks AUTO-24 and the
-   changelog parts of AUTO-11 and AUTO-04. Default until then: no.
+   changelog parts of AUTO-11 and AUTO-04. Default until then: no new
+   work reads those four pages, and the settled decision 0044 watch is
+   left as it is. An explicit "no" files a session row that narrows the
+   0044 watch to the two pages; `TC-OAUTH-REG-OPEN` (it keys on the
+   authorization page's REG_OPEN flag) then needs another signal and
+   that row says so.
 2. Q-23: create the private repository, approve the first push and
    later the public flip. Why: the operator's recorded go (order of
    2026-11-16). Blocks AUTO-19 and AUTO-20; until then every source
@@ -1394,8 +1483,12 @@ Each goes into the one batched ask (docs/plan/09, F-040).
 4. F-061: tick the new ledger consent line once in Settings. Why:
    consent is the player's. Without it W14's log half stays idle and
    `GATE-ACT5-SEEN` relies on run history alone.
-5. Set the contact on the dev host (the existing operator act g). Why:
-   a personal value in a gitignored file. Without it W6 stays idle.
+5. Turn `web_data` on and set the contact on the dev host (batched ask
+   item g, F-040). Why: a per-host opt-in and a personal value in a
+   gitignored file. Without `web_data` W3, W4, W5, W6, W8 and
+   `npm-audit` stay idle (one checklist line) and `GATE-POE2-10` can
+   only be flipped by hand after `LAUNCH-CHECK-`; without the contact
+   W6 stays idle.
 6. Play one session after the 1.0 launch with AshLight running. Why:
    the floor allows a log read only of the operator's own play. It
    opens `UTIL-10-LOG` by itself; no report is needed.
@@ -1453,7 +1546,7 @@ publish phrase (section 05).
 - R12 Docs freshness patterns are brittle and block a good merge.
   Bound: each fact has a fixture test and names the stale file.
 - R13 The GitHub address quota (60 an hour, shared) is used up by other
-  tools on the host. Bound: about 12 reads a day, ETag where given;
+  tools on the host. Bound: about 13 reads a day, ETag where given;
   a rate-limit reply sets the source's next run to the reset time.
 - R14 Preflight is red because a test is tied to live processes on the
   host (research 0058 F4). Fallback: HALT stays; the fix is the tests
@@ -1462,3 +1555,97 @@ publish phrase (section 05).
 - R15 The poe.ninja docs page reflows and files noise. Bound: the hash
   is of normalised text between two anchors; one NINJA-DOCS row a week
   at most.
+
+## Verification
+
+Independent verifier pass, 2026-11-18, against HEAD 30b6bbe and the
+draft sections 04 and 05 present in the tree.
+
+Checked:
+
+- Yardstick G point by point: README, docs, screenshots and changelog
+  refresh (W12, Refresh pipeline, AUTO-14 to AUTO-17); GGG developer
+  docs (W1, settled 0044); PoB-PoE2 releases (W2, settled 0025) and the
+  next release (W3); poe.ninja response shapes (W7) and docs page (W6);
+  the repoe-fork snapshot (W4); the GGG passive tree export (W5);
+  Electron security releases (W8); Dependabot (W9). Every watcher acts
+  inside its decision or files a row; the runs cap (Runs budget, 32 of
+  117) and FLEET item 14 (no watcher note, inbox folded into the tick)
+  hold. What cannot be automated is listed once under Operator acts.
+- Repo claims, opened: tools/al_loop.py:1543 `tick`, :1547 docs watch
+  before HALT and skipped on a dry run, :1549-1551 HALT return, :1525-1528
+  `handoff_session` with the `\s*$` defect, :1714 `--dry-run` only;
+  tools/loop_base.py:57 HEADROOM = 3, :109-111 ROW_ID / ROW_RX, :112
+  continuation rule, :133 DEEP_EXTRA, :238-240 `loop.dest_inboxes`;
+  tools/loop_roadmap.py:29 `roadmap_rows`, :60 `flip_roadmap`, :269
+  `handoff_items`; server/al/webfetch.py `request`, `user_agent`,
+  `WebDataOff`; tools/tc_drift.py `check`, `trial --tag --live`,
+  `apply`, `status`; tools/usage_ledger.py `gate`; the AL runs cap of
+  120 in the machine lanes config; ROADMAP ids LIVE-1, TC-OAUTH-REG,
+  UTIL-1.0-POST; every test and tool named as existing exists. Named as
+  new and absent today, correctly: tools/upstream_watch.py,
+  tools/roadmap.py, tools/webfetch.py, tools/docs_fresh.py,
+  tools/shots.py, tools/live1_report.py (F-061), tools/release.py
+  (section 05), config/electron_pin.json (F-044), server/al/probe.py
+  (F-032), tests/test_ci_workflow.py (section 04 GP-05),
+  tests/test_roadmap_shape.py, tests/test_upstream_watch.py.
+- All 24 row templates re-run through the loop's own parser (see the
+  catalogue note); no template id collides with an existing ROADMAP id
+  except the two hyphen extensions named there.
+- Findings: every F-id cited exists in docs/plan/findings.json; nothing
+  relies on a not-adopted item; the blocked items (F-021, F-051, F-057,
+  F-061 consent, F-078, F-081, F-150, F-203) appear only as blocked
+  packages or operator acts; 0058-X1 to X11 stay rejected.
+- Rulings Q-03, Q-04, Q-07, Q-12, Q-13, Q-17, Q-23, Q-28 and operator
+  decisions A-01, A-02, Q-05 read against the text; the floor read
+  strictly: no new GGG page beyond the two sets, no data-file download
+  by the loop or CI, no trade site, no capture outside the one
+  demo-core helper, no process-list check, no input, every request with
+  the AshLight User-Agent (npm through F-037's `.npmrc`).
+- Settled decisions 0009 (with Q-04), 0013, 0025, 0029, 0044 are not
+  contradicted; FLEET items 9, 10, 13, 14, 16 and 17 hold (no bot
+  author, no merge on GitHub, pushes only by section 04's guarded path,
+  releases only at a milestone or on an explicit request).
+- Order: the dependency graph of AUTO-01 to AUTO-26 has no cycle; the
+  dated path AUTO-01 -> AUTO-02 -> AUTO-03 -> AUTO-05 -> AUTO-07 fits
+  before 2026-12-04.
+- Inputs 0058 (R1 to R12, catalogue, templates, loop and waves, cut,
+  rejected, open questions), 0036 R6, 0037 R2 / R5 / R7, 0046 R1 and
+  R9, 0051 R1 and R10, and 01-open-items L1 to L4, L12, L15, R1, R9.
+
+Corrected (16):
+
+1. W2: under HALT the static trial now runs, as Q-13 rules ("static
+   trial only"); the draft stopped it.
+2. G4, the two primitives and AUTO-05: done files get their own cap of
+   3 a day and gate flips go first, so a burst of LIVE-1 done files on
+   launch day cannot hold `GATE-POE2-10` or `GATE-ACT5-SEEN`; Q-12's
+   "3 filed rows" stays the new-row cap.
+3. W8 and AUTO-09: the dev loop had no advisory source before the
+   remote exists; added the `npm-audit` source (after F-037).
+4. W8: research 0046 R1 (c), adopt the next major 14 to 42 days after
+   its .0.0, was dropped; `ELECTRON-MAJOR-<MAJ>` replaces the EOL-only
+   row and covers both triggers.
+5. W9: row prefix `DEP-` collided with section 05's `DEP-` package ids;
+   now `DEPBOT-`.
+6. W9 and AUTO-20: weekly Dependabot version-update pull requests had
+   no trigger; added `DEPBOT-PR-<n>`.
+7. W9 and AUTO-20: the push is done by section 04's GP-14 tool through
+   GP-02's guarded hook, not an unnamed push worker; dependencies added.
+8. Refresh pipeline and AUTO-16: the generator, groups and commit-msg
+   type list now defer to section 05 (final), which keys Security on
+   the commit type, never an id prefix; AUTO-16 shrinks to `--count`.
+9. W12, AUTO-17 and Decisions: a between-wave `REL-PREP-<date>` row
+   would have run section 05's bump outside a milestone; replaced by
+   `REL-DUE-<date>`, a session decision that never bumps.
+10. W0: release builds poll poe.ninja only after its yes (F-046, Q-05).
+11. Operator act 1: what an explicit "no" on A-01 does to the 0044 watch
+    and to `TC-OAUTH-REG-OPEN`.
+12. Operator act 5: `web_data` on the dev host is needed by W3 to W6, W8
+    and the launch gate's upstream signal, not only the contact.
+13. AUTO-23: server/al/probe.py does not exist; F-032 creates it.
+14. AUTO-19: tests/test_ci_workflow.py is created by section 04 GP-05.
+15. Template check re-run on 24 templates; the LIVE-1 hyphen extension
+    added; the word DEPENDS removed from a template body.
+16. Work packages: how acceptance is run (Q-17 subsets, injected
+    transport, read-backs) stated once; request counts updated.
