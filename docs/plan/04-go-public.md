@@ -1,7 +1,7 @@
 # 04 - Go public
 
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md).
-Status: draft
+Status: final
 
 Inputs: research 0057 (primary), 0046 (R3, R9, R10), 0053 (R6), 0045 (F1,
 F2), 0050 (F32); docs/plan/findings.json (findings F-004, F-006, F-008,
@@ -19,9 +19,12 @@ app/package.json, the hero files, and three read-only scans (section
 Done means every line below is true and read back:
 
 1. The repository exists on GitHub under the operator's account, is
-   public, and `git ls-remote origin` lists exactly `HEAD`,
-   `refs/heads/main` and (later) `refs/tags/v*`. No lane or keep ref ever
-   left the machine.
+   public, and `git ls-remote --heads --tags origin` lists
+   `refs/heads/main`, (later) `refs/tags/v*`, and nothing else except
+   `refs/heads/dependabot/*` branches that GitHub's Dependabot creates on
+   the server (`refs/pull/*` are GitHub's own and are not listed by
+   `--heads --tags`). No `fleet-lanes` or `al/keep` ref ever left the
+   machine.
 2. Every commit reachable from the pushed main has the one operator
    identity as author and committer and no AI or bot attribution line
    (`fleet_identity.py check --history --by-class main`: 0 in all 9
@@ -154,6 +157,15 @@ All read-only; no tracked or local config file was changed.
   repository name removed.
 - Binaries: the two hero PNGs re-read (above); 0057 found all 12 tracked
   PNGs free of metadata chunks and no blob at HEAD over 500 KB.
+- Re-run by the verifier at HEAD 23cc518 (2026-11-18): identity
+  `check --history --by-class main` 416 commits, 0 in all 9 classes;
+  `check --all` 430 commits clean; leak sweep `--tree` and `--history`
+  rc 0, `ARMED needles=24`. The refs besides main are 13
+  `refs/fleet-lanes/*` and 2 `refs/al/keep/*` (custom namespaces, not
+  branches). The operator's GitHub login is already one of the 24 local
+  needles (checked as a boolean, never printed), which is why GP-10's
+  allow entry is needed. The 40-needle set-name scan was not re-run here
+  (GP-01 re-runs it on the commit that is pushed).
 
 ## Work packages
 
@@ -169,18 +181,25 @@ settings").
 - Goal: the scans above hold on the exact commit that is pushed, and the
   reviewed set's names guard every later commit.
 - Files touched: `config/leak_needles.json` (gitignored, local only): add
-  the owner name and the 20 own-repository names (24 to 45 needles). Do
-  NOT add fork names that equal a public upstream project's name: the
-  tree legitimately names such projects. Names come from the remotes of
-  the clones under `<sidecar>\Scratch\tp-review` and the owner's public
-  repository list; they are never written to a tracked file, a note or a
-  commit message. No tracked file changes.
+  the set owner's name (the owner of the third-party set reviewed in
+  0056, not the operator) and the 20 own-repository names (24 to 45
+  needles), plus any distinctive plugin display name of the 7 reviewed
+  repositories that differs from its repository name, read from each
+  clone's manifest (F-004 "owner, repository and distinctive plugin
+  names"; a display name that is a common word or equals a public
+  upstream project's name is skipped). Do NOT add fork names that equal a
+  public upstream project's name: the tree legitimately names such
+  projects. Names come from the remotes and manifests of the clones under
+  `<sidecar>\Scratch\tp-review` and the set owner's public repository
+  list; they are never written to a tracked file, a note or a commit
+  message. No tracked file changes.
 - Acceptance tests: `python tools/leak_sweep.py --tree` rc 0 and
-  `--history` rc 0, both printing `ARMED needles=45`;
+  `--history` rc 0, both printing `ARMED needles=<N>` with N >= 45 (the
+  sweep prints this line on stderr);
   `python ops/fleet_kit/fleet_identity.py check --history --by-class main`
-  prints 0 for all 9 classes; `check --all` prints clean; `git grep` for
-  the owner name over HEAD is empty. Counts go into the GP-09 commit
-  message or progress file, never the names.
+  prints 0 for all 9 classes; `check --all` prints clean; `git grep -i`
+  for the set owner's name over HEAD is empty. Counts go into the GP-09
+  progress file, never the names.
 - ZERO-CLICK: an agent step; the armed needles then run in pre-commit,
   commit-msg and pre-push with no act.
 - Size: S. Depends on: nothing. Findings: F-004 (Q-25).
@@ -193,25 +212,37 @@ settings").
   `tests/test_fleet_kit_conformance.py` (the test at :152-165);
   new `tests/test_pre_push_hook.py`; `CLAUDE.md` (tree-specific part
   only: the Public-repo hygiene section, and one new Settled line);
-  `tools/al_loop.py` (docstring :52-57, comment :204, docstring :1285;
-  no logic change; `tests/test_loop_split.py:126` caps the file under
-  1,760 lines, so replace lines, do not add); `.claude/commands/done.md`
-  (:2, :33, :100: push main through fleet_gitlock when origin exists) and
+  `tools/al_loop.py` (docstring :52-57, comment :204, docstring
+  :1284-1285; no logic change; the file has 1,757 lines and
+  `tests/test_loop_split.py:126` asserts fewer than 1,760, so replace
+  lines, do not add); `tools/loop_inbox.py:129-130` (prompt text "(AL is
+  local only: no remote, no gh)" becomes "(a lane gets no gh)");
+  `tools/al_lane.py:54-55` (comment becomes "Dependabot bumps are
+  re-applied in the main checkout by tools/dependabot_reapply.py, so no
+  gh is granted to a lane.") and `tests/test_p163_lane_tools.py:37`
+  (comment `# AL is local only` becomes `# gh stays out of lanes`; the
+  assert stays); `.claude/commands/done.md` (:2, :33, :100: push main
+  through fleet_gitlock when origin exists) and
   `.claude/agents/adjudicator.md:23` (drop "no push while the repo is
   local only"); new `docs/decisions/NNNN-go-public.md`;
   `docs/decisions/README.md` index line; `ROADMAP.md:2059-2061` (close
   the OPERATOR row as superseded by the GP rows).
 - Acceptance tests: `python -m pytest -q tests/test_pre_push_hook.py
   tests/test_fleet_kit_conformance.py tests/test_al_loop_gate_cache.py
-  tests/test_loop_split.py tests/test_ascii_lf.py` green; `git grep -n
-  "refuses every push\|AL_ALLOW_PUSH\|NO remote"` over CLAUDE.md,
-  tools/, .githooks/ and .claude/ is empty.
+  tests/test_loop_split.py tests/test_p163_lane_tools.py
+  tests/test_ascii_lf.py` green; `git grep -n "refuses every
+  push\|AL_ALLOW_PUSH\|NO remote" -- CLAUDE.md tools .githooks .claude`
+  is empty; `git grep -n -i "AL is local only\|repo is local
+  only\|never push, local only\|AL: local only" -- CLAUDE.md tools
+  .githooks .claude` is empty (the log string `push skipped: local only`
+  at tools/al_loop.py:1290 and its test stay on purpose).
 - ZERO-CLICK: after it lands a push needs no flag and the loop's push
   worker pushes by itself.
 - Size: S. Depends on: nothing. Findings: F-016 (0057 R1, R2, R6); Q-23.
 - Parallel with: GP-03 to GP-08. Hotspots: CLAUDE.md, ROADMAP.md.
 - Note: if the harness denies edits under `.claude/`, the two wording
-  changes there move to the operator batch (docs/plan/09) and the rest
+  changes there move to the operator batch
+  (docs/plan/09-operator-acts.md, OA-6) and the rest
   lands; CLAUDE.md outranks both files.
 
 ### GP-03 NOTICE and the licence record
@@ -263,16 +294,22 @@ settings").
   `ops/fleet_kit/fleet_identity_guard.yml`; never edited); `.gitattributes`
   (add `.github/workflows/fleet-identity-guard.yml -text`);
   `requirements-dev.txt` if F-019 has not added it (pytest 9.2.0, the
-  version the main checkout runs, with `--hash` lines); new
+  version the main checkout runs, with `--hash` lines for pytest AND
+  every transitive dependency it pulls on Windows (iniconfig, packaging,
+  pluggy, colorama, pygments at the time of writing; read the list from
+  a scratch venv `pip install pytest==9.2.0` then `pip freeze`), because
+  `--require-hashes` refuses any unhashed requirement); new
   `tests/test_ci_workflow.py`.
 - Acceptance tests: `tests/test_ci_workflow.py` (text parse, stdlib only)
   asserts: every `uses:` line ends in `@<40 hex> # v<tag>`; top-level
   `permissions:` is exactly `contents: read`; no `secrets.`, no
   `pull_request_target`, no `web_data`; job id and name `test` on
-  `windows-2025`; the guard copy is byte-identical to the kit file; the
-  required context names in `ops/github/ruleset-main-checks.json` (GP-13)
-  equal the two job names. After GP-09: `gh run list --repo "$R" --branch
-  main --limit 4 --json workflowName,conclusion` shows both `success`.
+  `windows-2025`; job `test-newest` exists and is not named `test`; the
+  guard copy is byte-identical to the kit file; every name in
+  `requirements-dev.txt` carries a `--hash=sha256:` line. (The ruleset
+  context check lives in GP-13's test, so GP-05 does not wait for GP-13.)
+  After GP-09: `gh run list --repo "$R" --branch main --limit 4 --json
+  workflowName,conclusion` shows both `success`.
 - ZERO-CLICK: runs on every push and pull request.
 - Size: M. Depends on: GP-04; F-019 (Node floor 22.12.0,
   requirements-dev.txt). Findings: F-013 (0057 R3; CI halves of 0046 R9
@@ -344,10 +381,11 @@ jobs:
 ```
 
   The `runner` context is not available in a job-level `env`, hence the
-  step that writes `AL_SIDECAR_ROOT`. A second, NOT required job
-  `test-newest` (same steps, Python 3.14, Node 24) may be added once the
-  first is green; a matrix is avoided so the required context stays the
-  plain name `test`.
+  step that writes `AL_SIDECAR_ROOT`. 0046 R3 asks CI to run the floor
+  and the newest branch, so GP-05 also adds a second, NOT required job
+  `test-newest` (name `test-newest`, the same steps with Python "3.14"
+  and Node "24", `continue-on-error: true`); a matrix is avoided so the
+  required context stays the plain name `test`.
 
 ### GP-06 Community files
 
@@ -358,8 +396,11 @@ jobs:
   the Security tab's private report; no email address);
   `.github/ISSUE_TEMPLATE/bug.yml` (asks for the AshLight version,
   Windows version, what happened, and the redacted Checks report of
-  decision 0040; states "never attach Client.txt, game files, memory
-  dumps or screenshots of the game");
+  decision 0040 in a text area, with a required "I read the report
+  before pasting it" checkbox (0051 R6); an optional text area for the
+  ledger shape list, English clients only (F-075, 0051 Q5); states
+  "never attach Client.txt, game files, memory dumps or screenshots of
+  the game");
   `.github/ISSUE_TEMPLATE/feature.yml` (asks what the player wants to
   see and which line of "What AshLight never does" it might touch);
   `.github/ISSUE_TEMPLATE/config.yml` (`blank_issues_enabled: false`; the
@@ -369,10 +410,14 @@ jobs:
   change is re-applied by the maintainer as their own commit and this
   pull request is closed with a link to it; you are credited in the
   release notes.").
-- Acceptance tests: `python -m pytest -q tests/test_ascii_lf.py
-  tests/test_leak_sweep.py`; `tests/test_ci_workflow.py` also asserts the
-  three issue files parse as key: value text with `name:` and `body:`;
-  after GP-12: `gh api "repos/$R/community/profile" --jq
+- Acceptance tests: `python -m pytest -q tests/test_community_files.py
+  tests/test_ascii_lf.py tests/test_leak_sweep.py`; new
+  `tests/test_community_files.py` (its own file, so GP-05, GP-06 and
+  GP-08 never share a test file) asserts `bug.yml` and `feature.yml`
+  hold top-level `name:` and `body:`, `bug.yml` has a `checkboxes` item
+  with `required: true`, `config.yml` holds `blank_issues_enabled:
+  false`, CODE_OF_CONDUCT.md and the PR template exist and hold no `@`
+  address; after GP-12: `gh api "repos/$R/community/profile" --jq
   .health_percentage` prints 100.
 - ZERO-CLICK: documentation only.
 - Size: S. Depends on: nothing. Findings: F-075 (0057 R11; issue half of
@@ -404,8 +449,8 @@ jobs:
   the non-affiliation sentence verbatim (pinned by test_brand_assets).
 - ZERO-CLICK: documentation only.
 - Size: S. Depends on: F-019 and F-020 for the quick-start, Node-floor
-  and client wording (those findings own README.md:55-75; this package
-  adds its section after them). Findings: F-020 (0057 R10 half), 0057
+  and client wording (those findings own the "Quick start (Windows)" section,
+  README.md:60-114; this package adds its section after them). Findings: F-020 (0057 R10 half), 0057
   F8 (c), (d), F9, F12.
 - Parallel with: GP-02 to GP-06, GP-08. Hotspots: none of the four;
   README.md is shared with F-019, F-020, F-126: run after F-020.
@@ -413,11 +458,17 @@ jobs:
 ### GP-08 Dependabot config file
 
 - Goal: the config is in the tree before the remote exists.
-- Files touched: `.github/dependabot.yml` (below);
-  `tests/test_ci_workflow.py` (key lint: version 2, two ecosystems,
-  weekly, limit 2, cooldown keys, the exclude path).
-- Acceptance tests: `python -m pytest -q tests/test_ci_workflow.py`.
+- Files touched: `.github/dependabot.yml` (below); new
+  `tests/test_dependabot_config.py` (key lint: version 2, two
+  ecosystems, weekly, limit 2, cooldown keys, the exclude path).
+- Acceptance tests: `python -m pytest -q tests/test_dependabot_config.py
+  tests/test_ascii_lf.py`.
 - ZERO-CLICK: GitHub opens the pull requests; GP-14 handles them.
+- Timing: version updates run as soon as the file reaches main, on the
+  private repository too, so bump pull requests may open right after
+  GP-09; security updates open as soon as an alert exists once settings
+  C enable them. Open pull requests are harmless: nothing on GitHub
+  merges them (auto-merge off, no one merges); they wait for GP-14.
 - Size: S. Depends on: nothing. Findings: F-081 (config half; 0057 R8,
   0046 R9).
 - Parallel with: all. Hotspots: none.
@@ -463,8 +514,9 @@ updates:
 - Files touched: none tracked (repository and local git config only).
 - Steps: section "Before the first push (gates, in order)", gates 1-12.
 - Acceptance tests: `gh repo view "$R" --json visibility --jq
-  .visibility` prints PRIVATE; `git ls-remote origin` lists exactly HEAD
-  and refs/heads/main; `git rev-parse main` equals `git rev-parse
+  .visibility` prints PRIVATE; `git ls-remote --heads --tags origin`
+  lists refs/heads/main and otherwise only `refs/heads/dependabot/*`
+  (if GP-08 rode the push); `git rev-parse main` equals `git rev-parse
   origin/main`; both workflow runs `success` on that commit.
 - ZERO-CLICK: agent steps; `gh` is already signed in.
 - Size: S. Depends on: GP-01, GP-02, GP-03, GP-04, GP-05 (GP-06 to GP-08
@@ -480,18 +532,19 @@ updates:
   update check of F-055); `tools/leak_sweep.py` (before both arms run on
   a line, blank each exact, case-sensitive occurrence of
   `github.com/<repo>` and of `<repo>` bounded by non-word characters;
-  nothing else of the owner is allowed, so the owner name alone or with
-  another repository name still hits its needle slot; the config file
-  itself is scanned the same way); `tests/test_leak_sweep.py` (with a
-  made-up needle and a made-up repo value: the address passes; the owner
-  alone HALTs; owner plus another repository name HALTs; a missing or
+  nothing else of the repository owner (the operator's GitHub login,
+  already a local needle) is allowed, so the login alone or with another
+  repository name still hits its needle slot; the config file itself is
+  scanned the same way); `tests/test_leak_sweep.py` (with a made-up
+  needle and a made-up repo value: the address passes; the login alone
+  HALTs; login plus another repository name HALTs; a missing or
   malformed config file changes nothing); `README.md`, `SECURITY.md`,
   `.github/ISSUE_TEMPLATE/config.yml` (real links: clone address, the
   Security tab's private report link).
 - Acceptance tests: `python -m pytest -q tests/test_leak_sweep.py`;
   `python tools/leak_sweep.py --tree` rc 0 ARMED with the address in
-  README; `git grep` for the owner name finds only lines holding the
-  full address.
+  README; `git grep -i` for the login finds only lines holding the full
+  address.
 - ZERO-CLICK: documentation and one config value.
 - Size: S. Depends on: GP-09 (the address must exist). Findings: F-020,
   F-055 (Q-24).
@@ -514,8 +567,9 @@ updates:
 - Files touched: none tracked; the flip agent writes the gate read-backs
   into its progress file and the hand-off.
 - Flip gates, all read back on the commit at origin/main:
-  1. Every P0 finding of the plan has landed (F-001 to F-016; Q-23). The
-     hard minimum is F-006: the commits of F-001, F-002 and F-005 are in
+  1. Every other P0 finding of the plan has landed (F-001 to F-016
+     except F-006, which is this gate; Q-23). The hard minimum is F-006:
+     the commits of F-001, F-002 and F-005 are in
      `git log origin/main`, and `python -m pytest -q
      tests/test_http_security.py tests/test_tc_code.py
      tests/test_no_discovery.py` is green.
@@ -531,10 +585,12 @@ updates:
 - Then: `gh repo edit "$R" --visibility public
   --accept-visibility-change-consequences`.
 - Acceptance tests: `gh repo view "$R" --json visibility --jq
-  .visibility` prints PUBLIC; an anonymous `git ls-remote
-  https://github.com/$R` lists exactly HEAD and refs/heads/main.
+  .visibility` prints PUBLIC; an anonymous `git ls-remote --heads --tags
+  "https://github.com/$R"` lists refs/heads/main and otherwise only
+  `refs/heads/dependabot/*`.
 - ZERO-CLICK: the flip happens by itself once the gates read green.
-- Size: S. Depends on: GP-09, GP-10, GP-11, all P0 packages, OA-2.
+- Size: S. Depends on: GP-06, GP-07, GP-09, GP-10, GP-11, all P0
+  packages, OA-2.
   Findings: F-006, F-021 step 4, F-046 (flip half).
 - Parallel with: nothing. Hotspots: none.
 
@@ -546,8 +602,10 @@ updates:
   `ops/github/ruleset-release-tags.json`, `ops/github/security.json`,
   `ops/github/branch-protection-fallback.json` (all in "Repository
   settings"); new `tests/test_repo_settings_files.py` (each file is valid
-  JSON; only the checks ruleset has a bypass actor; its contexts equal
-  the workflow job names; the protect ruleset has no bypass).
+  JSON; only the checks ruleset has a bypass actor; its contexts and the
+  fallback file's contexts equal the `name:` of the job in ci.yml and of
+  the job in fleet-identity-guard.yml; each required check carries
+  `integration_id` 15368; the protect and tag rulesets have no bypass).
 - Acceptance tests: every read-back in "Repository settings" C to F
   matches; then one ordinary session push of a fresh commit lands with
   rc 0 (`git rev-parse main` equals `origin/main` afterwards); `gh api
@@ -567,10 +625,17 @@ updates:
 - Goal: bump pull requests are re-applied locally and closed, never
   merged on GitHub.
 - Files touched: new `tools/dependabot_reapply.py` (stdlib; `list`,
-  `apply <n>`, `close <n>`); `tools/al_lane.py:55` and
-  `tests/test_p163_lane_tools.py:37` (grant the lane exactly `gh pr
-  list`, `gh pr view`, `gh pr close`, `gh pr comment`; no other gh
-  call); new `tests/test_dependabot_reapply.py`.
+  `apply <n>`, `close <n>`, `run` = all three for every open bump); a
+  launch of `run` as a detached worker at most once per 24 h from the
+  loop tick, placed in a `tools/loop_*.py` mixin, never in
+  `tools/al_loop.py` (3 lines under its cap); new
+  `tests/test_dependabot_reapply.py`.
+- Where it runs: in the MAIN checkout, like the loop's push worker,
+  never inside a lane worktree (`tools/al_lane.py:51`: commits and
+  merges are done by the main session). No headless Claude lane gets a
+  gh grant: `tests/test_p163_lane_tools.py:37` keeps asserting that code
+  lanes hold no `Bash(gh` tool. While the loop stays HALTed (until
+  F-078), a session runs `python tools/dependabot_reapply.py run`.
 - Behaviour: `gh pr list --repo "$R" --author "app/dependabot" --state
   open --json number,title,headRefOid,files`; for each: read the changed
   files; an npm bump re-runs the pin procedure locally (F-130, F-044:
@@ -579,22 +644,28 @@ updates:
   F-037); an action bump rewrites the `uses:` SHA and tag comment in
   `ci.yml` after re-reading the SHA with gh; gates; one commit as the
   operator through fleet_gitlock (no trailer; the subject names the
-  dependency and versions); push main; `gh pr close <n> --repo "$R"
-  --comment "Applied locally as <sha>."`. A pull request that touches
+  dependency and versions); push main through fleet_gitlock (the
+  guarded hook applies); `gh pr close <n> --repo "$R" --comment
+  "Applied locally as <sha>."`. A pull request that touches
   `fleet-identity-guard.yml` is closed with "This file is vendored; the
   change is reported upstream." and reported to MAIN. The pull request's
   red `fleet-identity-guard` check is expected.
 - Acceptance tests: on a recorded pull-request fixture (JSON plus a tmp
   git repo with a bare remote) the tool yields exactly one local commit
   whose author and committer equal the tmp `fleet.operatorIdent`, no
-  trailer line, one push to main and one close comment; a guard-file
-  pull request yields no commit; the lane grant test lists the four gh
-  verbs only.
-- ZERO-CLICK: the lane runs from the loop tick; first bump pull request
-  is due 7 days after the flip at the earliest.
-- Size: M. Depends on: GP-13, F-037; F-130 for electron bumps. Findings:
-  F-081 (0057 R8, 0046 R9).
-- Parallel with: GP-15, GP-16. Hotspots: none.
+  trailer line, one push to main and one close comment (gh replaced by a
+  recording fake); a guard-file pull request yields no commit and one
+  close comment; with fake deps the tick launches the worker once per
+  24 h; `python -m pytest -q tests/test_dependabot_reapply.py
+  tests/test_p163_lane_tools.py tests/test_loop_split.py` green.
+- ZERO-CLICK: the loop tick runs it once F-078 resumes the loop; until
+  then the session that handles go-public runs it. Bump pull requests
+  can open right after GP-09 (GP-08 timing); they wait unmerged.
+- Size: M. Depends on: GP-09, F-037; F-130 for electron bumps (the only
+  npm dependency is electron, `app/package.json` devDependencies; its
+  13 lockfile entries can still get security bumps). Findings: F-081
+  (0057 R8, 0046 R9).
+- Parallel with: GP-10 to GP-13, GP-15, GP-16. Hotspots: none.
 
 ### GP-15 Release settings
 
@@ -639,11 +710,17 @@ Critical path:
 3. GP-04 (needs F-001), then GP-05 (needs GP-04 and F-019).
 4. GP-01 re-run on the commit to push, then GP-09 (private, first push,
    CI green).
-5. In parallel: GP-10, GP-11; meanwhile the remaining P0 findings land
+5. In parallel: GP-10, GP-11, GP-14 (bump pull requests may already be
+   open; they wait unmerged); meanwhile the remaining P0 findings land
    and the operator sends the Q-05 message (OA-2).
 6. GP-12 (flip), then at once GP-13.
-7. In parallel: GP-14 (before the first bump pull request, 7 days after
-   the flip), GP-15, GP-16.
+7. In parallel: GP-15, GP-16.
+
+Dependency check (no cycle): GP-01, GP-02, GP-03, GP-06, GP-08, GP-16
+need nothing in this section; GP-04 needs F-001; GP-05 needs GP-04;
+GP-07 needs F-020; GP-09 needs GP-01 to GP-05; GP-10, GP-11, GP-14 need
+GP-09; GP-12 needs GP-06, GP-07, GP-09, GP-10, GP-11; GP-13 and GP-15
+need GP-12. No package needs a later one.
 
 What must come first: F-001 before GP-04 (a clone must not find the live
 log); GP-02 before any push; GP-05's check names before GP-13's required
@@ -668,29 +745,33 @@ the sequence; nothing is skipped.
    --all --format="%ae %ce" | sort -u` prints one line ending in the
    GitHub noreply domain.
 5. Leaks: `python tools/leak_sweep.py --tree` and `--history` both rc 0
-   with `ARMED needles=45` (GP-01).
+   with `ARMED needles=<N>`, N the GP-01 count (45 or more).
 6. Binaries: `python -m pytest -q tests/test_brand_assets.py` green; the
    largest blob reachable from main is under 500 KB (`git rev-list
    --objects main | git cat-file --batch-check="%(objecttype)
    %(objectsize) %(rest)"`, largest `blob` line).
 7. Hook: `python -m pytest -q tests/test_pre_push_hook.py
    tests/test_fleet_kit_conformance.py` green; `git config
-   core.hooksPath` prints `.githooks`.
+   core.hooksPath` prints a path ending in `.githooks` (the local config
+   holds the absolute path of the checkout's `.githooks`).
 8. Public files: `git grep -n "the operator\|MAIN" -- NOTICE` empty.
 9. Fresh clone: GP-04's run is green on this commit or on an ancestor
    with only documentation changes since.
-10. CI files: `python -m pytest -q tests/test_ci_workflow.py` green.
+10. CI files: `python -m pytest -q tests/test_ci_workflow.py
+    tests/test_community_files.py tests/test_dependabot_config.py` green
+    (the last two only if GP-06 / GP-08 ride this push).
 11. The CLAUDE.md gates on this commit: the suite through
     `fleet_suite_gate.py run --owner <ID> -- python -m pytest -q` and
     `npm test --prefix app`, both green.
 12. Create and push (section "Repository settings" A): create PRIVATE;
     `git remote add origin`; `python ops/fleet_kit/fleet_gitlock.py run
     --owner <ID> -- git push -u origin main`; never `--all`, `--mirror`,
-    `--tags` or `--force`. Read back: `git ls-remote origin` lists exactly
-    HEAD and refs/heads/main; both workflows `success`.
+    `--tags` or `--force`. Read back: `git ls-remote --heads --tags
+    origin` lists refs/heads/main (plus only `refs/heads/dependabot/*`
+    once Dependabot runs); both workflows `success`.
 
 The pre-push hook itself re-runs the identity check and the leak sweep
-over all 413-plus commits on this first push (a new remote ref gets no
+over all 416-plus commits on this first push (a new remote ref gets no
 exemption, tools/leak_sweep.py:243-268); expect one to three minutes.
 
 If gate 4 or 5 ever shows a hit: stop, keep everything local, file one
@@ -718,14 +799,16 @@ gh repo create "$R" --private --disable-wiki --description "<the description>"
 gh repo view "$R" --json visibility,isEmpty --jq '.visibility, .isEmpty'   # PRIVATE, true
 git remote add origin "https://github.com/$R.git"
 python ops/fleet_kit/fleet_gitlock.py run --owner <ID> -- git push -u origin main
-git ls-remote origin                                                     # HEAD, refs/heads/main
+git ls-remote --heads --tags origin                                      # refs/heads/main
 gh run list --repo "$R" --branch main --limit 4 --json workflowName,conclusion,headSha
 gh api "repos/$R/commits/main/check-runs" --jq '.check_runs[] | "\(.name) \(.conclusion) \(.app.id)"'
 ```
 
-   The last line prints the two check names (`test`,
+   The last line prints the check names (`test`, `test-newest`,
    `fleet-identity-guard`) and the id of the app that reported them; that
-   id is the `integration_id` used in D.
+   id is the `integration_id` used in D (15368, the GitHub Actions app;
+   if the read-back shows another id, the D file is corrected before it
+   is applied).
 
 B. Description, topics, features (GP-11):
 
@@ -790,9 +873,11 @@ gh api "repos/$R/rulesets/<id of main-protect>" --jq '.bypass_actors | length'  
 ```
 
    `ops/github/ruleset-main-checks.json` (required checks; the repository
-   admin role bypasses so a direct push of fresh commits lands; the id 5
-   for that role and the `integration_id` are confirmed by the read-backs
-   above before the file is applied):
+   admin role bypasses so a direct push of fresh commits lands; the
+   `integration_id` is confirmed by the A read-back before the file is
+   applied; actor id 5 is GitHub's documented id for the admin role,
+   confirmed after applying by the `.bypass_actors` read-back and by
+   GP-13's fresh push landing):
 
 ```json
 {
@@ -808,8 +893,8 @@ gh api "repos/$R/rulesets/<id of main-protect>" --jq '.bypass_actors | length'  
         "strict_required_status_checks_policy": false,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          {"context": "fleet-identity-guard"},
-          {"context": "test"}
+          {"context": "fleet-identity-guard", "integration_id": 15368},
+          {"context": "test", "integration_id": 15368}
         ]
       }
     }
@@ -887,12 +972,9 @@ gh release list --repo "$R"                                               # empt
    `python ops/fleet_kit/fleet_gitlock.py run --owner <ID> -- git push
    origin v<version>`.
 
-Option, not from an adopted finding (5 of 7 public peers run CodeQL):
-`gh api -X PATCH "repos/$R/code-scanning/default-setup" -f
-state=configured`, read back with `gh api
-"repos/$R/code-scanning/default-setup" --jq .state`. It adds no file.
-Enable it in GP-13 only if the read-back prints `configured`; on any
-error skip it and note it in the next note to MAIN.
+Not in this plan: CodeQL default setup (5 of 7 public peers run it, but
+no adopted finding asks for it). A later finding may add it; nothing
+here depends on it.
 
 ## pre-push hook
 
@@ -1013,7 +1095,9 @@ exit 0
   2. a second clean commit fast-forwards (rc 0);
   3. a commit adding a drive-rooted path string built at run time (never
      spelled in the test file) is refused, remote main unchanged;
-  4. a `fleet-lanes/x` branch is refused; `al/keep/x` is refused;
+  4. a `fleet-lanes/x` branch is refused; `al/keep/x` is refused; a ref
+     in the loop's real namespaces, `refs/fleet-lanes/x:refs/fleet-lanes/x`
+     and `refs/al/keep/x:refs/al/keep/x`, is refused;
   5. `git push origin :main` (delete) is refused;
   6. `git push origin main:other` and `HEAD:main` are refused;
   7. a tag `v0.0.1` pushes; pushing it again after moving it locally with
@@ -1115,7 +1199,8 @@ rulings Q-23, Q-24, Q-25.
    lifts the 2026-11-16 order that kept the repository local only.
 2. Full history is published. No rewrite and no fresh root: on
    2026-11-18 the identity check found 0 violations in 9 classes over
-   413 commits on main (427 on all refs), one author / committer
+   416 commits on main (430 on all refs, HEAD 23cc518; GP-02 re-reads and
+   updates both counts when it writes this file), one author / committer
    identity with a GitHub noreply address, 0 attribution lines; the leak
    sweep found 0 at HEAD and 0 in history with the needle arm armed,
    including the names of the third-party set reviewed in research 0056
@@ -1238,6 +1323,15 @@ Decisions to record (numbers assigned later):
 
 ## Operator acts
 
+The ordered target is "gh auth login is the only operator act". It holds
+for everything up to and including the private push and green CI
+(GP-01 to GP-11, GP-14): OA-1 only, and gh is already signed in. One
+more act is forced by ruling Q-05 (needs_operator: a message to a third
+party in the operator's name) and gates only the public flip: OA-2,
+which the operator may replace by a written skip (Q-05 "Reverses if").
+OA-3 to OA-6 are conditional or optional and gate neither the push nor
+the flip.
+
 - OA-1 `gh auth login`, only if gate 2 fails (`gh auth status` not signed
   in, or the scopes `repo` and `workflow` missing). Why no agent: a
   credential and an OAuth grant. Verified signed in on 2026-11-18, so
@@ -1258,7 +1352,7 @@ Decisions to record (numbers assigned later):
 - OA-5 Optional override: a named copyright holder (default "The AshLight
   authors") and another owner or name for the repository (default: the
   signed-in account and `AshLight`), each before GP-09.
-- OA-6 Batched with F-057 in docs/plan/09: drop the stale
+- OA-6 Batched with F-057 in docs/plan/09-operator-acts.md: drop the stale
   `tools/ash_lane.py` line from `.claude/settings.json` (F-200), and the
   two `.claude/` wording changes of GP-02 if the harness denies them. Why
   no agent: settings edits are the operator's.
@@ -1270,7 +1364,7 @@ Decisions to record (numbers assigned later):
 
 - The go cannot be cited when the decision is written. Fallback: Q-23's
   default; GP-02 stays a ready diff, GP-03 to GP-08 still land, GP-09
-  waits in docs/plan/09.
+  waits in docs/plan/09-operator-acts.md.
 - First CI run red on the Windows runner (slower, no local state).
   Mitigation: GP-04 first. Fallback: fix forward while private; the flip
   needs green.
@@ -1306,5 +1400,107 @@ Decisions to record (numbers assigned later):
   Mitigation: polling needs the web-data opt-in and a contact; release
   builds make no poe.ninja request until the yes is recorded (F-046).
 - An unverified command in "Repository settings" (immutable releases,
-  the admin role id, code scanning default setup). Each has a read-back
+  the admin role id, the Actions app id). Each has a read-back
   and a stated fallback; none gates the first push or the flip.
+
+## Verification
+
+Independent verifier, 2026-11-18, HEAD 23cc518. Read-only: no core
+started, no Client.txt read, no tracked file other than this one
+changed, no pytest beyond the docs lint.
+
+Checked against the yardstick (operator order, item E): README with the
+own-art hero (located, nothing to create), LICENSE, CONTRIBUTING,
+SECURITY, CODE_OF_CONDUCT, issue and PR templates, CI with pytest and
+npm test, the kit guard as a required check, Dependabot alerts and
+security updates, bump pull requests re-applied and closed (never
+merged), branch protection, topics, description, releases (settings now,
+first release in plan 05), identity and leak scans before the first
+push, rewrite only on MAIN's ORDER (none needed), the pre-push flip with
+the identity check kept, and gh auth login as the only act up to the
+private push. Each point maps to a package or an OA.
+
+Claims opened and confirmed true: `.githooks/pre-push:10-24` (refuse-all
+plus `AL_ALLOW_PUSH`); `tests/test_fleet_kit_conformance.py:152-165`
+with the refusal assert at :162; `tests/test_al_loop_gate_cache.py:272`
+("push skipped: local only"); `tools/leak_sweep.py` modes `--tree`,
+`--history`, `--pre-push`, `--staged`, `--message`, the `AL_LEAK_NEEDLES`
+override, the `ARMED needles=` line, and the full scan of a new remote
+ref at :243-268; `ops/fleet_kit/fleet_identity.py` `check --history
+--by-class`, `check <range>` (so `check --all` works) and `pre-push`;
+`ops/fleet_kit/fleet_identity_guard.yml` (job name
+`fleet-identity-guard`, checkout pinned at the same SHA as ci.yml);
+`ops/fleet_kit/fleet_rewrite.py` exists and runs only on ORDER;
+`tools/al_loop.py` :52-57, :204, :1284-1285 and the 1,760-line cap at
+`tests/test_loop_split.py:126` (file at 1,757); `.claude/commands/done.md`
+:2, :33, :100; `.claude/agents/adjudicator.md:23`;
+`.claude/settings.json:17`; `ROADMAP.md:2059-2061`; NOTICE lines 2, 6-7,
+12-13; SECURITY.md:5; README.md:3-6 hero block and
+`tests/test_brand_assets.py::test_readme_hero_and_disclaimer`; both hero
+PNGs 1280 x 400 with only IHDR / IDAT / IEND; `app/package.json` (electron
+45.3.3 the only dependency); pytest 9.2.0 local; `gh auth status` signed
+in with `repo` and `workflow`; `fleet.operatorIdent` set (1 value); no
+`.github/`, no CODE_OF_CONDUCT, no requirements-dev.txt yet. Scans re-run
+(section "Scans run"): identity 416 / 430 clean, leaks 0 / 0.
+
+Rulings and findings: Q-03, Q-05, Q-22, Q-23, Q-24, Q-25 applied as
+ruled. F-016 and F-021 are marked "blocked: operator decision Q-23";
+the operator's go-public order is that go, recorded by the GP-02
+decision (Q-23 record: hand-off). Q-24's owner / name defaults to the
+signed-in account (OA-5 may override). Nothing relies on a not-adopted
+item: 0057-X1 to X6 and 0046-X2 stay rejected in the text. The flip's
+only operator-blocked input is Q-05 (OA-2), as ruled. Game ToS floor:
+no screenshot, GGG art, logo, funding link or revenue; CI never turns
+web data on; descriptive game name only. FLEET: pushes only through
+fleet_gitlock and only as the plan orders; no merge on GitHub; no AI
+trailer; no release before plan 05's tag.
+
+Corrected (17):
+1. Gate 7: `core.hooksPath` holds an absolute path, not `.githooks`.
+2. A cycle: GP-05's test asserted GP-13's ruleset file; moved to GP-13.
+3. GP-05, GP-06 and GP-08 all wrote `tests/test_ci_workflow.py` in
+   parallel; GP-06 and GP-08 now own `tests/test_community_files.py`
+   and `tests/test_dependabot_config.py`.
+4. `requirements-dev.txt` with `--require-hashes` must hash pytest's
+   transitive dependencies too.
+5. `test-newest` (0046 R3 "CI runs the floor and the newest branch") is
+   now part of GP-05, not optional.
+6. GP-06 bug form: report text area with a required "I read it"
+   checkbox (0051 R6) and the optional ledger shape list (F-075, 0051
+   Q5) were dropped; restored.
+7. GP-14 said the first bump pull request comes 7 days after the flip;
+   version updates run as soon as the config reaches main (private
+   too) and security updates as soon as an alert exists. GP-14 now
+   follows GP-09 and open pull requests wait unmerged (GP-08 timing).
+8. GP-14 granted gh verbs to headless Claude lanes, against
+   `tools/al_lane.py:51` (commits by the main session) and a narrower
+   grant; it now runs in the main checkout, lanes keep no gh, and the
+   loop launch lives in a `tools/loop_*.py` mixin (al_loop.py cap).
+9. GP-14's ZERO-CLICK ignored the HALTed loop; a session runs it until
+   F-078.
+10. GP-02 missed three "local only" texts: `tools/loop_inbox.py:129-130`,
+    `tools/al_lane.py:54-55`, `tests/test_p163_lane_tools.py:37`; added
+    with a second grep in the acceptance.
+11. `git ls-remote origin` "exactly HEAD and main" is false once
+    Dependabot runs (server-side `dependabot/*` branches, `refs/pull/*`);
+    Goal 1, GP-09, GP-12, gate 12 and settings A now use `--heads --tags`
+    with the allowed set.
+12. GP-01 dropped F-004's "distinctive plugin names"; added (N >= 45).
+13. "Owner" meant both the set owner (GP-01) and the operator's login
+    (GP-10); each is now named. The login is a local needle (checked).
+14. Settings A named an `integration_id` that D never used; D's checks
+    now carry 15368 with a read-back, and the admin role id 5 is
+    confirmed after applying, not before.
+15. GP-12 gate 1 listed F-006 among the P0s it gates; F-006 is the gate.
+    GP-12 now also depends on GP-06 and GP-07 (its gate 4).
+16. CodeQL was an option outside any adopted finding; now out of scope.
+17. Stale numbers and paths: decision counts (416 / 430), README
+    quick-start lines (60-114), al_loop docstring lines (1284-1285),
+    docs/plan/09 named as `09-operator-acts.md`, hook test case 4 adds
+    the real `refs/fleet-lanes/*` and `refs/al/keep/*` namespaces.
+
+Open, not a defect of this section: the 40-needle set-name scan was not
+re-run by the verifier (GP-01 re-runs it on the pushed commit); the
+immutable-releases endpoint and the admin role id stay UNVERIFIED with
+fallbacks; `docs/plan/09-operator-acts.md` does not exist yet (listed
+in docs/plan/README.md).
