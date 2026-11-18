@@ -1126,7 +1126,8 @@ class SessionState:
         """HUD-ACT: the act / zone level table (acts.load_table())."""
         with self._lock:
             table = table if isinstance(table, dict) else {}
-            if table != self.zone_table:
+            # HOT-RELOAD: polled every tick; the same object is no change
+            if table is not self.zone_table and table != self.zone_table:
                 self.zone_table = table
                 self.lang.set_table(table)
                 self.version += 1

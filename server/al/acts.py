@@ -37,10 +37,10 @@ Split rules (one run, oldest first):
 """
 
 import json
-import os
 import re
 from pathlib import Path
 
+from . import hotreload
 from .theorycraft import datacredit
 
 FILE_NAME = "world_areas.json"
@@ -210,25 +210,13 @@ def default_path(environ=None):
     return datacredit.cache_dir(environ) / FILE_NAME
 
 
-class TableCache:
-    """Loads the cached table once and again only when the file changes."""
+class TableCache(hotreload.Watched):
+    """Loads the cached table once and again only when the file changes;
+    a malformed rewrite keeps the last good table (HOT-RELOAD, 0042)."""
 
     def __init__(self, path):
-        self.path = Path(path)
-        self._sig = None
-        self._table = {}
-
-    def get(self):
-        try:
-            st = os.stat(self.path)
-            sig = (st.st_mtime_ns, st.st_size)
-        except OSError:
-            self._sig, self._table = None, {}
-            return self._table
-        if sig != self._sig:
-            self._table = load_table(self.path)
-            self._sig = sig
-        return self._table
+        super().__init__(path, load_table, name="Zone level table", default=dict,
+                         check=hotreload.check_json(MAX_BYTES))
 
 
 def view(splits, table, area_id, zone, now):

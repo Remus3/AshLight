@@ -17,7 +17,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import DISCLAIMER, NAME, VERSION, paths, ports
+from . import DISCLAIMER, NAME, VERSION, hotreload, paths, ports
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -35,7 +35,35 @@ def build_parser():
                    help="feed a fixture file through the parser at start")
     p.add_argument("--character", help="character name to track")
     p.add_argument("--quiet", action="store_true", help="no console output")
+    p.add_argument("--check", action="store_true",
+                   help="HOT-RELOAD preflight: import the core and compile every "
+                        "server .py file, then exit (0 = loadable)")
     return p
+
+
+def check_code(root=None, out=None):
+    """HOT-RELOAD (decision 0042): the supervisor's preflight before a code
+    reload. Importing this module already imported the core and the HTTP
+    server; this compiles every .py under server/ too (no .pyc written).
+    0 when all compile, else 1 with "<file>:<line>: <message>" printed."""
+    root = Path(root) if root else paths.repo_root()
+    out = out if out is not None else sys.stdout
+    for f in sorted((root / "server").rglob("*.py")):
+        if "__pycache__" in f.parts:
+            continue
+        try:
+            compile(f.read_bytes(), str(f), "exec", dont_inherit=True)
+        except SyntaxError as exc:
+            rel = f.relative_to(root).as_posix()
+            msg = " ".join(str(exc.msg or "syntax error").split())
+            if out is not None:
+                print(f"{rel}:{exc.lineno}: {msg}", file=out)
+            return 1
+        except (OSError, ValueError) as exc:
+            if out is not None:
+                print(f"{f.relative_to(root).as_posix()}: {type(exc).__name__}", file=out)
+            return 1
+    return 0
 
 
 def setup_logging(quiet):
@@ -116,6 +144,8 @@ def write_heartbeat(path, pid, port, now=None, created=None):
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.check:
+        return check_code()
     setup_logging(args.quiet)
     log = logging.getLogger("al")
     install_crash_logging(log)
@@ -129,7 +159,10 @@ def main(argv=None):
         lines = Path(args.replay).read_text(encoding="utf-8", errors="replace").splitlines()
         log.info("replayed %d events from %s", core.replay(lines), Path(args.replay).name)
 
-    token = new_token()
+    # HOT-RELOAD: a core that exited for a code reload lets this start keep
+    # its token, so the open dashboard and overlay reconnect on their own
+    token = (hotreload.take_token_reuse(paths.runtime_dir(), paths.token_file())
+             or new_token())
     root = paths.repo_root()
     try:
         server = serve(core, token, port=args.port, web_root=root / "web",
@@ -166,6 +199,9 @@ def main(argv=None):
                 pass
 
     clear_stop_request(paths.runtime_dir() / STOP_FILE)
+    restart_file = paths.runtime_dir() / hotreload.RESTART_FILE
+    clear_stop_request(restart_file)  # one left from an earlier reload
+    restarting = False
     t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.5},
                          name="al-http", daemon=True)
     t.start()
@@ -179,6 +215,13 @@ def main(argv=None):
         while not stop.wait(0.5):
             if stop_requested(stop_file):
                 log.info("stop requested (%s); exiting cleanly", STOP_FILE)
+                break
+            if stop_requested(restart_file):
+                # HOT-RELOAD: the supervisor saw a code change that passed
+                # its preflight; exit cleanly and it starts the new code
+                clear_stop_request(restart_file)
+                log.info("code changed; exiting for a hot reload")
+                restarting = True
                 break
             try:
                 core.ensure_tailing()  # TEST-E2E: log found later / moved
@@ -208,6 +251,10 @@ def main(argv=None):
                 core.tick_diag()  # DIAG-SELF: the Checks card (ruling J)
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_diag failed")
+            try:
+                core.tick_reload()  # HOT-RELOAD: data files, web/ (0042)
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_reload failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:
@@ -219,11 +266,14 @@ def main(argv=None):
     log.info("shutting down")
     server.stop()
     core.close()
-    try:
-        if token_file.read_text(encoding="ascii").strip() == token:
-            token_file.unlink()
-    except OSError:
-        pass
+    if restarting:
+        hotreload.mark_token_reuse(paths.runtime_dir())  # token file stays
+    else:
+        try:
+            if token_file.read_text(encoding="ascii").strip() == token:
+                token_file.unlink()
+        except OSError:
+            pass
     try:
         heartbeat.unlink()  # a leftover core.alive means the core did not exit cleanly
     except OSError:

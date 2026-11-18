@@ -568,3 +568,9 @@ them. Pause: `ops/loop/control/HALT`.
   the overlay must run without the client, a release channel makes a
   signed .exe worth its build deps, or the companion renderer breaks the
   RAM budget in play.
+- HOT-RELOAD: data files re-read on stat change (last good copy kept,
+  Checks note); web / overlay page / server .py reload only in a source
+  checkout (.git; "hot_reload" / AL_HOT_RELOAD override); code reload =
+  supervisor preflight then clean restart keeping the token, never on
+  broken code (decision 0042). Reverses if: the polls cost overlay budget,
+  token reuse is ruled unsafe, or a restart loses unrebuildable state.

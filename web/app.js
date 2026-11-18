@@ -1127,6 +1127,13 @@
     es.addEventListener("state", function (m) {
       try { render(JSON.parse(m.data)); } catch (e) { /* ignore a bad frame */ }
     });
+    /* HOT-RELOAD (decision 0042): a dashboard file changed on disk (source
+       checkout only); load the new page. The token stays in sessionStorage. */
+    es.addEventListener("reload", function (m) {
+      var d = null;
+      try { d = JSON.parse(m.data); } catch (e) { d = null; }
+      if (d && d.target === "web") { location.reload(); }
+    });
   }
 
   function start() {

@@ -20,12 +20,11 @@ Pure functions plus a small mtime-keyed cache; no network, no clipboard.
 """
 
 import json
-import os
 import re
-import threading
 from pathlib import Path
 
 from . import datacredit
+from .. import hotreload
 
 FILE_NAME = "base_items.json"
 MAX_BYTES = 64 * 1024 * 1024
@@ -67,28 +66,13 @@ def default_path(environ=None):
     return datacredit.cache_dir(environ) / FILE_NAME
 
 
-class NamesCache:
-    """Loads the base list once and again only when the file changes."""
+class NamesCache(hotreload.Watched):
+    """Loads the base list once and again only when the file changes;
+    a malformed rewrite keeps the last good list (HOT-RELOAD, 0042)."""
 
     def __init__(self, path):
-        self.path = Path(path)
-        self._sig = None
-        self._names = {}
-        self._lock = threading.Lock()
-
-    def get(self):
-        try:
-            st = os.stat(self.path)
-            sig = (st.st_mtime_ns, st.st_size)
-        except OSError:
-            with self._lock:
-                self._sig, self._names = None, {}
-            return {}
-        with self._lock:
-            if sig != self._sig:
-                self._names = load_names(self.path)
-                self._sig = sig
-            return self._names
+        super().__init__(path, load_names, name="Base item list", default=dict,
+                         check=hotreload.check_json(MAX_BYTES))
 
 
 def from_names(line, names):

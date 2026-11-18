@@ -16,6 +16,10 @@ import fleet_test_guard  # noqa: E402
 import pytest  # noqa: E402
 
 os.environ["FLEET_SIDECAR_ROOT"] = ""  # empty value = off (process env wins)
+# HOT-RELOAD (decision 0042): a real core or supervisor a test starts from
+# this source checkout never restarts on a .py edit made during the suite;
+# the hot reload tests pass their own environ.
+os.environ["AL_HOT_RELOAD"] = "0"
 
 # TEST-FLAKE: the armed lane loop (tools/al_loop.py tick, every 15 min) and
 # its lanes rewrite these control files while a suite may be running, so the

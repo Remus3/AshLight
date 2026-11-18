@@ -9,22 +9,32 @@ has a note. Hideouts, maps and unknown ids get none. Read only from the
 already tailed area / scene lines; nothing new is read.
 """
 
+import json
 from pathlib import Path
 
 from . import acts as acts_mod
-from . import jsonfile
+from . import hotreload, jsonfile
 
 PATH = Path(__file__).resolve().parent / "data" / "zone_notes.json"
 MAX_NOTE = 110
-_cache = {}
+MAX_BYTES = 1024 * 1024
+
+
+def _load_doc(path):
+    return json.loads(Path(path).read_text(encoding="ascii"))
+
+
+# HOT-RELOAD (decision 0042): an edit of the data file shows on the next
+# zone entry; a malformed edit keeps the last good notes (Checks card note).
+_watch = hotreload.register(PATH, _load_doc, name="Zone notes", default=dict,
+                            check=hotreload.check_json(MAX_BYTES))
 
 
 def load(path=PATH):
     """The notes document ({} when missing or malformed)."""
-    key = str(path)
-    if key not in _cache:
-        _cache[key] = jsonfile.read_json(path, encoding="ascii", kind=dict, default={})
-    return _cache[key]
+    if Path(path) == PATH:
+        return _watch.get()
+    return jsonfile.read_json(path, encoding="ascii", kind=dict, default={})
 
 
 def _act_entry(doc, area_id):

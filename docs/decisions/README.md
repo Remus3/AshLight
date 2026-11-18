@@ -3,6 +3,8 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Take the next number after the highest file here.
 
+- 0042: hot reload of data files, web assets, overlay page and core
+  code (HOT-RELOAD).
 - 0041: desktop client (companion window, tray, overlay only inside the
   client) (DESKTOP-CLIENT).
 - 0040: self checks and the non-English client notice

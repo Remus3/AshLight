@@ -19,6 +19,7 @@ const About = require("./about.js");
 const OverlayGate = require("./overlay_gate.js");
 const Link = require("./client/link.js");
 const Launcher = require("./client/launcher.js");
+const HotReload = require("./hotreload.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -36,6 +37,7 @@ const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding G
 let win = null;
 let client = null; // DESKTOP-CLIENT companion window + tray (client mode only)
 let gate = null; // overlay visibility (app/overlay_gate.js)
+let stopHotReload = null; // HOT-RELOAD: stops the overlay page file watch
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let logStream = null;
 
@@ -376,6 +378,17 @@ function start() {
     }
   });
 
+  // HOT-RELOAD (decision 0042): in a source checkout, an edit of the
+  // overlay page's own files reloads the page (stat poll here, none in it).
+  if (HotReload.devEnabled(REPO, process.env, () => readJson(LOCAL_CONFIG), fs.existsSync)) {
+    const files = HotReload.pageFiles([path.join(__dirname, "overlay"),
+                                       path.join(__dirname, "shared")], fs.readdirSync);
+    stopHotReload = HotReload.watch(files, () => {
+      log("hot reload: overlay page files changed; reloading the page");
+      if (win) { win.webContents.reload(); }
+    });
+  }
+
   if (!globalShortcut.register(toggleKey, toggle)) {
     log("toggle shortcut not available: " + toggleKey);
   }
@@ -398,6 +411,7 @@ app.on("will-quit", () => {
   if (client) { client.dispose(); }
   fs.unwatchFile(TOKEN_FILE);
   fs.unwatchFile(LOCAL_CONFIG);
+  if (stopHotReload) { stopHotReload(); }
 });
 
 // With the tray up (client mode) closing windows does not quit; the tray's
