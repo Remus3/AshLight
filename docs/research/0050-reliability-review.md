@@ -5,10 +5,14 @@ reliability. Scope: every way AshLight's own parts (core, keepalive
 supervisor, desktop client and overlay, calc bridge, runtime files, logs)
 fail or go quietly wrong, what detects it today, and what would make it heal
 by itself and say so in one line. Research and judgement only; no product
-code was changed.
-Status: draft
+code was changed. Verified 2026-11-18 by an independent agent (see
+Verification).
+Status: verified
 
 ## Sources (all accessed 2026-11-17)
+
+PY-OS, PY-TIME, PY-LOG, MS-QPC, MS-MOVE, EL-WC, EL-GONE, EL-INIT and FILES
+were re-read on 2026-11-18 by the verifier.
 
 - PY-OS: https://docs.python.org/3/library/os.html (os.replace, os.fsync)
 - PY-TIME: https://docs.python.org/3/library/time.html (monotonic, time)
@@ -37,14 +41,18 @@ Status: draft
 Crashes are handled well: a dead core is relaunched after a 5 s poll plus
 a 2 s backoff, a hung one inside 97 s; in 21.6 h of supervisor log it
 never had to act (X2). The weak side is failure that does not crash: of
-31 failure modes, 8 heal by themselves, 12 stay wrong with no cause shown
-and 10 need a manual act. Three were reproduced on temp files (X1): one
+32 failure modes, 8 heal by themselves, 13 stay wrong with no cause shown
+and 10 need a manual act. The most urgent one is not a crash at all (F32):
+a test or demo core whose log path is missing silently discovers and can
+tail the operator's live Client.txt, outside the opt-in indicator the floor
+asks for; it happened once during this session's UI capture. Three more were
+reproduced on temp files (X1): one
 listener exception kills the log reader for good while the Checks card
 still says it is reading; a Client.txt that vanishes and returns, or is
 trimmed, replays from byte 0 as live events (24 MB in 0.59 s left 3,200
 deaths and 5 open trade cards); a failed run-history write is never
 retried. The client has no failure handling, runtime writes are atomic
-but not durable, no log is capped. Twelve ranked fixes (R1-R12) and 26
+but not durable, no log is capped. Thirteen ranked fixes (R0-R12) and 28
 chaos tests follow; none bends the floor or reverses a settled decision.
 
 ## Current state
@@ -90,7 +98,7 @@ chaos tests follow; none bends the floor or reverses a settled decision.
   log is 89 percent of the bytes (865 build loads, about 21 lines each).
 - Tests today cover the supervisor state machine, the registry and a real
   stop, tailer basics, resume, hot reload, soak, fuzz and HTTP robustness.
-  The gaps F3-F8, F10-F13 and F19-F23 below have no test.
+  The gaps F3-F8, F10-F13, F19-F23 and F32 below have no test.
 
 ## Findings
 
@@ -185,7 +193,9 @@ Client.txt
   appears late. [silent]
   Today: any file seen after "missing" is read from byte 0
   (logfile.py:288-295), also a configured path that did not exist at
-  start (core.py:608-614). X1: a 1,000-line file renamed away and back
+  start (core.py:608-614); that path is kept only when the Steam scan finds
+  no log, otherwise the core tails the discovered log instead (F32).
+  X1: a 1,000-line file renamed away and back
   was re-emitted in full; so was one that appeared late. Every line gets
   the receipt time (state.py:3, 1422), so old whispers become new trade
   cards and old deaths count again: 24 MB replayed in 0.59 s left 3,200
@@ -207,8 +217,12 @@ Client.txt
 - F14 Path moved. [manual]
   Today: a discovered path is followed to another Steam library
   (core.py:717-742, tests/test_e2e_replay.py:313); a configured path is
-  never looked for again (core.py:733) and the Checks row's fix line
-  talks about starting the game (diag.py:68-71). Fix: R1 (row text); Q6.
+  never looked for again once a reader runs (core.py:733) and the Checks
+  row's fix line talks about starting the game (diag.py:68-71). At start,
+  though, a configured path that is missing is silently swapped for the
+  discovered one (logfile.py:138-152 via core.py:609), against the
+  "never second-guessed" promise in the ensure_tailing docstring
+  (core.py:721-722). Fix: R0 (no swap), R1 (row text); Q6.
 - F15 Very large file. [heals]
   Today: start at the end, 32 MB backward scan, 4 MB per poll; size alone
   is safe. When the scan hits the cap before the game-start marker,
@@ -230,9 +244,9 @@ Files and disk
 
 - F19 Power loss or crash in the middle of a write. [manual]
   Detect: none. Today: temp file, then os.replace, no flush to disk
-  (jsonfile.py:46-53). A rename is atomic in normal running only, not
-  across a crash (PY-OS, FILES); os.fsync and a write-through move exist
-  for that (PY-OS, MS-MOVE). A torn or empty file reads as the default
+  (jsonfile.py:46-53). A rename is atomic in normal running (PY-OS), but
+  not across a crash (FILES); os.fsync and the MOVEFILE_WRITE_THROUGH move
+  flag exist for that (PY-OS, MS-MOVE). A torn or empty file reads as the default
   (jsonfile.py:21-37) and the next save overwrites it: history silently
   starts empty. For config/local.json it is worse: reads fall back to {}
   (web data off, contact, paths, layout and port gone) and every write
@@ -320,13 +334,96 @@ Environment
   restarts the core after an update replaces its files, so old code can
   serve new web files (for research 0052).
 
+Isolation
+
+- F32 A test or demo core reads the live Client.txt. [silent]
+  Observed: during this session's UI evidence capture a demo core built
+  the way the tests build one (a runtime dir plus a log path that did not
+  exist) found the real game log and tailed the operator's live
+  Client.txt, read-only, for about 20 seconds.
+  Detect: none. Today: Core.__init__ always calls locate_log
+  (core.py:96), also with tail=False. locate_log passes the configured
+  path to discover_client_log (core.py:609), which returns it only when it
+  is an existing file and otherwise walks the Steam libraries from the
+  registry and Program Files and returns the first PoE2 log
+  (logfile.py:138-152; steam_libraries at logfile.py:82-85). The fallback
+  that keeps a missing configured path "for later" (core.py:610-611) is
+  reached only when that scan finds nothing. The found path lands in the
+  state (core.py:613) and the snapshot (core.py:898). Once the core's own
+  runtime holds a consent record (core.py:67, 623-624; a demo writes one,
+  or POST /api/consent does), start_tailing and the main loop's
+  ensure_tailing (core.py:701-715, 724-732) tail it. Nothing in
+  tests/conftest.py stops discovery.
+  Tests today: 1 core gets a log path that is never created
+  (tests/test_tc_tree.py:151) and 27 test cores get a runtime and no log
+  path at all (for example tests/test_audit_pass3.py:42,
+  tests/test_overlay_layout.py:124-187, tests/test_live_exit.py:151, 197,
+  tests/test_diag_self.py:171, 184). All 28 pass tail=False, so none
+  tails, but every one runs the real Steam scan and stores the operator's
+  real log path in its state. The 2 tail-enabled cores without a log path
+  monkeypatch discover_client_log (tests/test_e2e_replay.py:287, 322);
+  the other 43 Core calls with a log_path write their fixture log first
+  (73 Core calls in 54 test files; grep plus a scan script in the
+  verifier's scratch folder, 2026-11-18). Some tail-enabled tests also
+  write consent.json into the core's runtime before the core starts
+  (tests/test_e2e_replay.py:264); one forgotten log write in such a test
+  tails the live log.
+  Entry point: `python -m server.al` builds Core with no runtime
+  (`__main__.py`:157), so the core reads config/local.json
+  (core.py:71-75), a fixed path with no override (paths.py:119-121); only
+  the runtime dir moves (AL_RUNTIME_DIR, paths.py:35-41), and the port
+  also comes from that config (`__main__.py`:153). A second instance
+  therefore reads the operator's client_log, web_data and character and
+  writes overlay layout changes back into the operator's config
+  (core.py:648-658). There is no supported isolated demo start; the
+  screenshot pipeline of research 0058 (F17, R8 SHOTS) needs one.
+  ToS angle: the floor allows tailing Client.txt only after the user's
+  opt-in and with a visible indicator. A second instance's indicator is on
+  a page nobody is looking at, and its consent record is a test artefact,
+  not the player's opt-in. The read itself is harmless (read-only, full
+  sharing, logfile.py:158-175), but it must never happen.
+  Fix: R0. Test: C27, C28.
+
 What the player sees today, by tag: [heals] 8 (F1, F2, F4, F9, F15, F16,
-F27, F31), only F9 and F31 say so; [silent] 12 (F3, F10-F13, F17, F18,
-F20, F21, F23, F28, F30); [manual] 10 (F5-F8, F14, F19, F22, F25, F26,
-F29); hygiene 1 (F24).
+F27, F31), only F9 and F31 say so; [silent] 13 (F3, F10-F13, F17, F18,
+F20, F21, F23, F28, F30, F32); [manual] 10 (F5-F8, F14, F19, F22, F25,
+F26, F29); hygiene 1 (F24).
 
 ## Recommendations
 
+- R0 NO-DISCOVERY: a test, demo or explicitly pointed core never looks for
+  the live log, and a supported demo start exists.
+  Action: (a) Core gains discover=None; it resolves to False whenever
+  runtime or log_path is passed, so locate_log keeps the given path even
+  when it is missing and ensure_tailing never calls discover_client_log
+  (core.py:96, 608-614, 717-742); only the real entry point with no
+  --log keeps discovery. (b) Stop the start-up swap for the live app too:
+  a configured client_log that is missing stays the configured path (a
+  Checks row says it is missing) instead of falling through to the Steam
+  scan (logfile.py:138-152), matching core.py:721-722. (c) tests/conftest.py
+  replaces discover_client_log and steam_libraries with a function that
+  fails the test when called, unless the test opts in with a marker.
+  (d) `python -m server.al --demo <dir>`: runtime and config both under
+  <dir> (a new paths override for local_config_file, honoured only with
+  --demo), a copy of a tracked fixture log, consent written into <dir>,
+  discovery off, a port from the block that is free, web data forced off;
+  it never reads or writes config/local.json.
+  Impact: H - closes F32, the one finding with a floor angle; also removes
+  27 real registry scans from the suite and unblocks research 0058 R8.
+  Effort: S for (a)-(c), M for (d). Risk: a test that relied on discovery
+  fails loudly, which is the point; the 2 discovery tests already
+  monkeypatch it.
+  ToS check: floor rule "READ ONLY ... the game's Client.txt log (tailed
+  only after the user's opt-in, with a visible indicator)": the change
+  narrows reading to the one instance whose indicator the player sees; it
+  reads nothing new and touches no game file or process.
+  Depends on: none. Files: server/al/core.py, logfile.py, paths.py,
+  `__main__.py`, diag.py, tests/conftest.py, tests/test_e2e_replay.py,
+  new tests/test_no_discovery.py.
+  Acceptance: C27, C28; the e2e discovery tests still pass with their
+  monkeypatch.
+  ZERO-CLICK: automatic; a missing configured path shows one Checks line
+  ("The Client.txt path in your settings is missing.").
 - R1 TAIL-HEAL: the log reader never dies and never replays a backlog.
   Action: guard each line callback (log the first error, count the rest,
   keep reading); let ensure_tailing restart a dead reader thread; when the
@@ -374,7 +471,9 @@ F29); hygiene 1 (F24).
   ToS check: only AshLight's own python processes are started or stopped,
   proven by pid and creation time (decision 0010); the game process is
   never listed (decision 0029). Decision 0041 stands: the supervisor
-  never starts Electron.
+  never starts Electron. Decision 0005 is extended, not reversed: its own
+  reversal clause names the supervisor as a single point of failure, and
+  F5 / F6 show that gap; record R3 as a 0005 amendment.
   Depends on: none. Files: scripts/run.ps1, server/al/keepalive.py,
   core.py, procs.py, app/client/window.js, app/client/launcher.js,
   tests/test_supervisor.py, tests/test_procs.py, app/test/client.test.js.
@@ -412,7 +511,9 @@ F29); hygiene 1 (F24).
   minutes.
   Impact: M - closes F3 and F4 and gives F1 and F2 their one line.
   Effort: S to M. Risk: worst-case hang recovery grows from 97 s to
-  102 s, inside the 120 s budget tests/test_keepalive.py:83 asserts.
+  102 s, inside the 120 s hang budget tests/test_keepalive.py:87 asserts
+  (that assert covers STALE_S + POLL_S + BACKOFF_S[0]; R5 must extend it
+  by the second health check).
   ToS check: only AshLight's own core is probed (loopback, token) and
   terminated (python image, creation time); no game contact.
   Depends on: none. Files: server/al/keepalive.py, `__main__.py`, http.py,
@@ -436,16 +537,19 @@ F29); hygiene 1 (F24).
 - R7 PRICE-TICK: prices refresh without a visible page.
   Action: the core loop calls rates.refresh_async() once a minute while
   web data is on and the log is not idle (the hourly gates decide); map
-  http.client.HTTPException to FetchError in webfetch._open_once; a
-  failure that got no HTTP answer may retry after 5 minutes, at most 3
-  times an hour, if research 0036 finds that inside poe.ninja's terms.
+  http.client.HTTPException to FetchError in webfetch._open_once. No
+  faster retry after a failure: research 0036 (verified) reads poe.ninja
+  as blocking clients that overuse the economy routes, rejects polling
+  faster than hourly and asks for longer back-off on errors (its R5
+  PRICE-POLITE), so the hourly gate stays as is.
   Impact: M - fresh prices with the window closed to the tray. Effort: S.
   Risk: none new for poe.ninja: still at most one request per endpoint
   per hour (ninja.py:56), and none while idle.
   ToS check: floor rules "public web data ... poe.ninja" and "truthful
   User-Agent"; decision 0013 opt-in and decision 0026 gates unchanged; no
   new host, no trade endpoint.
-  Depends on: research 0036 for the retry part only. Files: server/al/
+  Depends on: none; lands with or after 0036 R5 (both edit ninja.py).
+  Files: server/al/
   core.py, webfetch.py, ninja.py, tests/test_data_ninja.py,
   tests/test_price_book.py.
   Acceptance: C12, plus a refresh with no HTTP client connected and none
@@ -510,15 +614,17 @@ F29); hygiene 1 (F24).
 
 Sequencing for parallel waves: R2 and R9 share no file with the rest. R1,
 R4 and R7 each add one small hook to core.py; R5, R6 and R8 all edit
-`__main__.py`. Run R1, R2, R4, R9 in one wave, then R5 + R6 + R8 as one
-package, then R3, R7, R10-R12. Land each chaos test first as an expected
+`__main__.py`; R0 edits core.py, `__main__.py`, paths.py and conftest.py.
+Land R0 first, alone (it changes how every test core is built), then R1,
+R2, R4, R9 in one wave, then R5 + R6 + R8 as one package, then R3, R7,
+R10-R12. Land each chaos test first as an expected
 failure, then the fix.
 
 ## Chaos tests (CI, no game)
 
 All use tmp runtime dirs under the existing guard (tests/conftest.py);
 pytest unless marked node; "Win" needs Windows (share modes, process APIs,
-PowerShell 5.1). Each stays under 2 s except C16, C17 and C25 (real
+PowerShell 5.1). Each stays under 2 s except C16, C17, C25 and C28 (real
 processes, about 15 s each; a `chaos` marker lets research 0049 shard
 them). Setup -> expected result:
 
@@ -548,6 +654,8 @@ them). Setup -> expected result:
 - C24 (Win) A plain socket holds the port -> exit 2, the error file names the port.
 - C25 (Win) A fake overlay starts after stop.request -> stop leaves it.
 - C26 Three anchor lines in a changed shape -> one Checks note; live-shapes fixture -> none.
+- C27 Core(runtime=tmp, log_path=missing) and Core(runtime=tmp), consent written, ensure_tailing run, with discover_client_log and steam_libraries replaced by spies -> neither spy called, log_path is the given path or None, no tailer.
+- C28 `python -m server.al --demo <tmp>` with a spy on the config path -> config/local.json never opened, tailer path inside <tmp>, health answers.
 
 ## Cut or merge
 
@@ -578,6 +686,13 @@ them). Setup -> expected result:
   tailer holds no handle between polls on purpose (logfile.py:277-280).
 - Send a key to the game so it writes a log line as a liveness probe:
   any synthesized input is outside the floor.
+- Retry a failed poe.ninja fetch after 5 minutes (the draft's R7 part):
+  research 0036 reads overuse as a block risk and rejects polling faster
+  than hourly; the floor's "public web data" allowance does not cover
+  hammering a source.
+- Let a demo or test core keep discovery but hide its indicator: the
+  floor ties tailing to the player's opt-in and a visible indicator; a
+  hidden instance cannot meet either (R0 removes discovery instead).
 
 ## Open questions
 
@@ -595,5 +710,59 @@ them). Setup -> expected result:
   block by itself, or only say so (R8)?
 - Q6: when a configured Client.txt path is gone and discovery finds
   exactly one other log, switch by itself or only offer it?
-- Q7: the retry spacing after a network failure with no HTTP answer (R7)
-  waits for research 0036's reading of poe.ninja's terms.
+- Q7 (closed 2026-11-18): no faster retry after a network failure; research
+  0036 rejects polling faster than hourly (see R7).
+
+## Verification
+
+Independent check on 2026-11-18 (not the author).
+
+- Code claims: about 50 path:line citations opened in server/al (keepalive,
+  core, logfile, bus, diag, state, http, jsonfile, runhistory, mapladder,
+  hints, ninja, webfetch, procs, paths, `__main__`), app/main.js,
+  app/client/window.js, scripts/run.ps1, web/app.js and the cited tests.
+  All hold except one: the 120 s hang budget is asserted at
+  tests/test_keepalive.py:87, not :83 (fixed in R5). The supervisor
+  constants, the 97 s hang path (90 + 5 + 2), the unguarded listener loop,
+  the OSError-only tailer loop, the reading flag cleared only on
+  "missing", the missing-then-byte-0 rule, the unsynced temp-plus-replace
+  write, the record() no-retry path, the absent Electron error handlers,
+  the 15 s run.ps1 wait before the supervisor start and the page-driven
+  rates refresh were all confirmed in code.
+- Web claims: 9 sources re-fetched (PY-OS, PY-TIME, PY-LOG, MS-QPC,
+  MS-MOVE, EL-WC, EL-GONE, EL-INIT, FILES). Confirmed: monotonic is not
+  affected by clock updates and uses QueryPerformanceCounter on Windows;
+  QPC counts through standby and hibernate; Electron's default
+  uncaughtException handler calls dialog.showErrorBox; the
+  render-process-gone, unresponsive and did-fail-load events exist; rename
+  is atomic only in normal operation. Corrected: F19 now attributes the
+  crash part to FILES, not PY-OS. EL-APP, NODE-EV and SSE were not
+  re-fetched (low stakes).
+- Numbers: the 31 to 32 failure-mode tally re-counted from the tags;
+  core.log 7.7 KB and keepalive.log 9.6 KB re-read from the sidecar Logs
+  folder (sizes only).
+- Added: finding F32, recommendation R0, chaos tests C27 and C28, two
+  Rejected entries; the F11 and F14 text now states the start-up swap of a
+  missing configured path.
+- Corrected: R7's 5-minute retry removed (conflicts with research 0036,
+  verified), Q7 closed; R3 recorded as a decision 0005 amendment, not a
+  reversal; R0 sequenced first.
+- ToS floor: every recommendation re-read against each floor rule; none
+  reads memory, injects, hooks graphics, inspects packets, writes a game
+  file, sends input, watches the clipboard or screen, calls the trade site
+  or an undocumented endpoint, or touches branding or revenue. R0 narrows
+  log reading.
+- Settled decisions: R1 keeps 0008 (scan only), R3 extends 0005 and keeps
+  0041 point 2, R4 keeps 0036, R5 keeps 0005's kill rule with a second
+  check, R7 keeps 0013 and 0026; no reversal is proposed.
+- Completeness: every brief point maps to a finding (supervisor F1-F6,
+  registry and scripts F26-F27, hot reload F31, components F1 F7 F8 F9,
+  Client.txt F10-F17, resume F15 F18 F28, bounded files and writes
+  F19-F22 F24, logs F23, clock and sleep F4 F28, disk full F22, port
+  F25, double start F26, stale pids F27, autostart F29, network F30,
+  power loss F19, isolation F32).
+- UNVERIFIED and left as such: the X1 experiment results (24 MB replay in
+  0.59 s, 3,200 deaths, fsync +0.7 / +1.0 ms, winerror 5) were not re-run;
+  the X2 counts beyond the two log sizes (21.6 h, 1 of 39 stops, 0 of 50
+  overlay restarts, 865 build loads); whether PoE2 itself trims or rotates
+  Client.txt (Q4); the cold start time at logon (Q3).
