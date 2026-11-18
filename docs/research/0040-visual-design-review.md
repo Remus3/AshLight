@@ -7,7 +7,7 @@ and dark-room comfort of `web/`, `app/client`, `app/overlay`, `app/shared`
 and `app/brand`, measured against docs/design/0001-design-system.md.
 Typography is note 0041 and accessibility is note 0044: cross-references
 only. No product code was changed.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -15,7 +15,13 @@ Web:
 - ELTH Electron nativeTheme API (themeSource values, what it changes):
   https://www.electronjs.org/docs/latest/api/native-theme
 - NNG Nielsen Norman Group, dark mode against light mode (article dated
-  2020-02-02): https://www.nngroup.com/articles/dark-mode/
+  2020-02-02): https://www.nngroup.com/articles/dark-mode/ . Light
+  polarity reads better, at night too; it advises letting users switch to
+  dark and advises against a dark default for a general audience.
+- WINLM Winaero, Microsoft statement that every Windows 11 edition ships
+  with light mode by default and that device makers may ship dark
+  (updated 2021-07-26):
+  https://winaero.com/microsoft-confirms-all-windows-11-skus-will-ship-with-light-mode-by-default
 - WEBDEV web.dev, prefers-color-scheme (dark theme practice, manual
   switch): https://web.dev/articles/prefers-color-scheme
 - NTC W3C, Understanding WCAG 2.2 SC 1.4.11 Non-text Contrast:
@@ -52,8 +58,10 @@ Repo and pack:
    background pairs with the lowest at 5.31:1, no shadow, no motion, and a
    dark page whose mean relative luminance is 0.016 to 0.037 (M2).
 2. The largest comfort defect is that nothing makes the surface dark. The
-   dashboard and the client follow the Windows app mode; in light mode the
-   same Play tab has a mean luminance of 0.90, 25 to 56 times the dark one.
+   dashboard and the client follow the Windows app mode, which is light
+   out of the box (WINLM); in light mode the same Play tab has a mean
+   luminance of 0.90, about 25 times the same state in dark (26 for Run
+   and Items; 56 against the darkest dark capture).
 3. Play does not read as one surface. It has 5 container looks, the
    answer the player just asked for (the verdict) is 16 px in a pill while
    a zone name is 28 px, the zone tile takes 48 percent of the left
@@ -147,9 +155,12 @@ never a window opacity.
 - Play is two equal columns (app.css:551); `main` caps at 1600 px
   (app.css:530), so at 1920 x 950 a column is about 774 px and a prose
   line runs to about 105 characters (PACK run/c/dash-play-1920x950.png).
-- Spacing: 195 px values in web/app.css; 140 (72 percent) are on the DS 4
-  grid (0, 4, 8, 12, 16). Off the grid: 6 px 19 times, 2 px 17, 10 px 11,
-  20 px 5, 14 px once. The grid's 24 and 32 are used 0 times.
+- Spacing: 195 non-zero px values in web/app.css (padding, margin, gap
+  and outline-offset; zeros left out); 140 (72 percent) are on the DS 4
+  grid (4, 8, 12, 16, 24, 32). Off the grid: 6 px 19 times, 2 px 17 (7
+  of them focus outline offsets), 10 px 11, 20 px 5, 14 px once, -1 px
+  once. The grid's 24 and 32 are used 0 times. Counting zeros as on the
+  grid gives 84 percent; the defect is the same 55 off-grid values.
 - Three density tiers by media query: card padding 16 / 12 / 12, gaps
   16 / 12 / 8, tile padding 12-16 / 8-12 / 4-10 (app.css:63-68, 106-111,
   536-546, 565-570), plus two narrow tiers (413, 446).
@@ -181,6 +192,13 @@ never a window opacity.
   and 6 are secondary; 2 more are made in script (web/app.js:172,
   web/search.js:86).
 - Tables: one `.acts-table` style for all 6 tables (236-250). Consistent.
+- Iconography (verifier addition): no icon set and no icon font. State
+  glyphs are ASCII bracket marks in the monospace face, `[+]` live,
+  `[>]` running, `[#]` blocked, `[x]` failed, `[ ]` pending, `[-]` idle
+  (web/status.js:33-52, app.css:46); they repeat the pill word, so colour
+  never works alone. Consistent; nothing to change beyond R4 a.
+- Slots: `#zone-guide` and `#build-alert` are filled only through
+  `ALTabs.fill` (DS 4); they take the card look of their content.
 - Toasts: none, by rule (DS 11 item N2). 12 status regions.
 
 ### States as drawn
@@ -198,8 +216,12 @@ never a window opacity.
 - Error (PACK run/e/dash-play-1280x760.png, run/e/dash-settings-1280x760.png):
   amber pill, the word "fix" on the Settings tab, a neutral "Not checked"
   verdict, a Checks row with glyph, word and a bold fix line.
-- Feed down: a red pill (web/status.js:37) and stopped timers
-  (web/app.js:89). Not in the PACK; UNVERIFIED by eye.
+- Feed down: after the feed was live once, the link pill turns grey
+  "reconnecting" and the Client.txt pill grey "Client.txt status unknown"
+  (web/status.js:36, 43); the red "can't reach AshLight" pill shows only
+  when the page never connected (web/status.js:37). Timers stop
+  (web/app.js:87-90). Not in the PACK, so the look by eye is UNVERIFIED;
+  the code path is read.
 
 ### Luminance and colour share (M2, 1280 x 760 unless said)
 
@@ -221,8 +243,9 @@ never a window opacity.
   sets `nativeTheme.themeSource` (no match in web/, app/main.js or app/client). The PACK ran
   the full matrix in dark only, which hides this. In light mode the
   second screen is a 0.90 panel beside a dark game (M2), the case MSCOL
-  calls painful in a dark room. UNVERIFIED: that light is the Windows
-  out-of-box app mode; if so this is what a new player gets. Why it
+  calls painful in a dark room. Windows 11 ships in light mode by
+  default unless the device maker chose dark (WINLM), so this is what
+  most new players get. Why it
   matters: it is the one visual defect that can make the player close the
   dashboard at night.
 - F2 Play has no dominant element and its first screen is prose. Read off
@@ -296,7 +319,8 @@ never a window opacity.
   plate #373a3d); over the warm backdrop 9.86 / 5.18 / 5.06; over black
   12.51 / 6.22 / 6.03. These match DS 5.2 (9.34 / 4.96 / 4.80 with
   8-bit rounding). PACK README measurement 15 reports 3.81 and 4.04
-  because it composited the text over the plate; the page fades as one
+  because it composited the text over the plate (that model reproduces
+  3.81 exactly: glyph #8f979f on #383b3e); the page fades as one
   group over the scene, so text gains light from a bright scene. The
   margin over 4.5:1 is thin (0.38) and rests on the 0.9 floor, which
   app/shared/layout.js:31 enforces. Notes 0041 and 0044 should not plan
@@ -345,10 +369,17 @@ AshLight cannot edit `--fk-*` (FLEET item 11), so every change is an
   window, and add one Settings choice "Theme: Dark / Follow Windows /
   Light" that swaps both (the kit sheet already honours `data-theme`;
   ELTH: themeSource drives `prefers-color-scheme`).
-- Impact: H. Removes a 25 to 56 times brightness jump for every player
-  whose Windows app mode is light. NNG reports that light polarity reads
-  faster, in a night glance test too, and that users should be able to
-  switch: hence a choice, and hence R2 keeps glance sizes large.
+- Impact: H. Removes a 25 times brightness jump (same state, M2) for
+  every player whose Windows app mode is light, the out-of-box mode
+  (WINLM). NNG reports that light polarity reads better, at night too,
+  and advises against a dark default for a general audience; this
+  surface is not general reading but a glance panel beside a dark game
+  in a dim room, the case MSCOL warns about for white pages, so dark
+  wins here. NNG's finding is why the choice stays and why R2 keeps
+  glance sizes large. With `data-theme="dark"` the kit rule
+  `:root[data-theme="dark"]` (ops/fleet_kit/tokens.css:58-59) also sets
+  `color-scheme: dark` and outranks `html { color-scheme: light dark }`
+  (web/app.css:6), so native scrollbars and controls turn dark too.
 - Effort: S for the default, M with the setting.
 - Risk: a player who wants light must find the setting; the start page
   cannot read it before the core is up (R6 makes that page dark).
@@ -419,8 +450,12 @@ AshLight cannot edit `--fk-*` (FLEET item 11), so every change is an
   default: bare `button` is quiet, `.primary` is filled, used for the
   consent button only; (c) one amber cue per item: drop the trades card
   outline (app.css:187), keep the row edges; the slower split
-  (app.css:436) goes to normal text with its word; (d) footer lines and
-  the fold summary take `--fk-text-muted` (7.18:1 at 13 px).
+  (app.css:436) goes to normal text with its word; (d) the promises fold
+  summary (web/index.html:607) takes `--fk-text-muted` (7.18:1 on the
+  page); the data credit and trademark lines are already muted
+  (web/index.html:632, 634); the disclaimer sentence
+  (web/index.html:603) keeps `--fk-text` (verifier change: the floor
+  rule is read strictly, so its brightness is not lowered).
 - Impact: M to H. In the normal state the header has no colour, so an
   amber or red pill is the only coloured thing when it appears.
 - Effort: S.
@@ -428,14 +463,13 @@ AshLight cannot edit `--fk-*` (FLEET item 11), so every change is an
   and the word remain.
 - ToS check: the floor rule on the visible reading indicator: the pill
   stays, with glyph and words, in the same place. The disclaimer rule:
-  the sentence stays shown in the footer at AA contrast; only its
-  brightness changes. If the operator reads "show" more strictly, keep
-  the disclaimer at `--fk-text` and mute the other two lines.
+  the sentence is not touched (same place, same `--fk-text` colour).
 - Depends on: 0042 R7 (one status vocabulary) for the pill words.
 - Files likely touched: web/app.css, web/index.html (5 class changes),
   tests/test_ux_review.py, DS 6.
 - Acceptance test: in PACK state f the computed colour of `#reading` and
-  `#link` is the muted token; exactly one element matches
+  `#link` is the muted token; the footer's first `p` still computes to
+  `--fk-text`; exactly one element matches
   `button.primary`; a pixel count of a Settings capture finds no filled
   accent block wider than 100 px.
 - ZERO-CLICK: nothing to press.
@@ -565,9 +599,8 @@ AshLight cannot edit `--fk-*` (FLEET item 11), so every change is an
 
 - Should the browser path be dark by default too, or only the desktop
   client? Recommended: both, by the static attribute. Adjudicator.
-- Does the operator accept a muted disclaimer line (R4 d)? The floor says
-  "show"; a strict reading keeps it at full text colour. Operator or
-  adjudicator.
+- Closed by the verifier: R4 d no longer mutes the disclaimer, so no
+  floor question remains there.
 - Is 10.55:1 body text comfortable on the operator's second monitor in a
   dark room? Not measurable here (no photometer, headless captures);
   settle by eye once, then freeze the value in the contrast test.
@@ -576,3 +609,55 @@ AshLight cannot edit `--fk-*` (FLEET item 11), so every change is an
 - All captures are headless Chrome, not the Electron window, and light
   mode has 3 captures. A light-mode pass of every tab is needed only if
   the Light choice of R1 is kept.
+
+## Verification
+
+Independent verifier, 2026-11-18.
+
+Checked:
+- Code: about 40 path:line citations opened (web/app.css, web/index.html,
+  web/status.js, web/app.js, web/search.js, web/tabs.js,
+  app/overlay/overlay.css, app/shared/layout.js, app/client/link.js,
+  app/client/window.js, app/client/starting.css, app/main.js,
+  server/al/http.py, ops/fleet_kit/tokens.css). All held except the two
+  corrected below.
+- Tokens: all 11 kit token values and all 11 `var()` use counts in
+  web/app.css re-counted by script and matching; 8 overlay token counts
+  matching; zero colour literals in web/app.css re-confirmed.
+- Numbers: 25 contrast ratios recomputed from the hex values (every
+  token-change value in the at-a-glance list, 1.07, 1.10, 1.59, 1.45,
+  1.06, 6.78, 4.88), all matching. Spacing, radius and border counts
+  re-run by an own regex. The author's pixel scripts re-run read-only on
+  the PACK: every dark and light mean luminance, colour share and the
+  overlay glyph samples reproduced. Overflow figures (356, 207, 521 px)
+  and the 821 px content height read back from the run JSON and the
+  Electron probe output.
+- Web: 6 sources re-fetched (ELTH, NNG, WEBDEV, NTC, MSCOL, WINLM); one
+  added (WINLM). All access dates 2026-11-18.
+- ToS floor: 8 recommendations and 9 rejected items tested against every
+  floor rule; all recommendations stay inside after the R4 d change.
+- Settled decisions: R3 against 0029, R2 against 0014, R1 against 0036
+  (the theme value is not contact, token, cookie or path) and 0041; no
+  contradiction, no reversal proposed.
+
+Corrected:
+- Summary 2 and R1: "25 to 56 times" compared different states; the
+  same-state factor is about 25 (26 for Run and Items).
+- F1: the Windows out-of-box app mode is now sourced (WINLM: light,
+  device makers may ship dark), no longer UNVERIFIED.
+- R1: added NNG's advice against a dark default for a general audience
+  and why this surface differs; added the color-scheme cascade fact.
+- Feed-down state: the red pill shows only before a first connection;
+  after one the pills turn grey (web/status.js:36-43).
+- Spacing: the 195 values leave zeros out and include 7 outline
+  offsets; the DS 4 grid list fixed (it names 24 and 32, not 0).
+- F15: the "text over plate" model reproduces PACK 15's 3.81 exactly,
+  confirming the model-error reading.
+- R4 d: the footer disclaimer keeps `--fk-text` (strict reading of the
+  floor); the credit and trademark lines were already muted, so only
+  the fold summary changes. The matching open question is closed.
+- Added: iconography and slot lines under Components (brief gap).
+
+Still UNVERIFIED: the look of the feed-down state by eye; 821 px of
+content on Windows 11 frames; dark-room comfort beyond sRGB pixel maths
+(no photometer, headless Chrome captures, 3 light captures).
