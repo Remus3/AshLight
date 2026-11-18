@@ -20,7 +20,8 @@ FILE SCHEMA (schema 1), one JSON object:
                 "merge_order": [package id, ...], "gate": str}],
      "packages": [{PACKAGE FIELDS, "wave": int}],
      "coverage": {unit id: [package id, ...] | "not_adopted: ..." |
-                  "operator: ..." | "done: ..."}}
+                  "operator: ..." | "done: ..."},
+     "sessions": [{"n": int, "waves": [int, ...], ...}]   (optional)}
 
 PACKAGE FIELDS:
     id              str, ^[A-Z0-9]+(-[A-Z0-9]+)*$ (loop-safe), unique
@@ -49,19 +50,31 @@ PACKAGE FIELDS:
     operator_act    str, may be empty
     notes           str, may be empty
     wave            int, the n of a listed wave (99 = parked)
+    owner           optional: "session" (a wave session runs it; its ROADMAP
+                    row carries BLOCKED: session wave <n>) | "loop" (the
+                    headless loop takes the row once its DEPENDS are done)
 
 CHECKS: required fields present and typed; every string ASCII; ids unique and
 loop-safe; paths repo-relative with forward slashes; every dep is a package id;
 no dependency cycle; a dep sits in a strictly earlier wave (a package in the
 parked wave 99 is exempt); inside a wave no path shared by two packages across
-files and new_files and no non-empty serial_group shared; no integrator file
+files and new_files and no non-empty serial_group shared (the parked wave is a
+holding list, not a wave that runs, and is exempt); no integrator file
 in files or new_files; integrator_edits name only integrator files; tests,
 accept and zero_click non-empty; size in S M L and est_min at most 90; lane in
 build data review; blocked has on, who and unblock and a blocked package sits
 in wave 99; each wave's merge_order is exactly its packages; every package
 unit appears in coverage (and a coverage list for it names the package);
 every coverage list names existing packages; coverage strings start with
-"not_adopted:", "operator:" or "done:".
+"not_adopted:", "operator:" or "done:"; owner, when present, is session or
+loop, a loop package is neither blocked nor parked, and no session package
+depends on a loop package (a session never waits for the loop); sessions,
+when present, have unique n, name listed non-parked waves, share no wave, and
+cover every wave that holds a package not owned by the loop.
+
+rows adds, for a package that has an owner: "DEPENDS: <ids>." when it has
+deps, and "BLOCKED: session wave <n>." when a session owns it and it is not
+blocked already.
 """
 
 import argparse
@@ -89,6 +102,7 @@ SIZES = ("S", "M", "L")
 LANES = ("build", "data", "review")
 ISOLATIONS = ("worktree", "none")
 COVERAGE_PREFIXES = ("not_adopted:", "operator:", "done:")
+OWNERS = ("session", "loop")
 MAX_EST_MIN = 90
 
 TOP_FIELDS = {
@@ -211,6 +225,14 @@ def check_package(p, integrator):
                            " integrator file")
             if not e["change"].strip():
                 out.append(f"{tag}: integrator_edits[{i}] change is empty")
+    if "owner" in p:
+        if p["owner"] not in OWNERS:
+            out.append(f"{tag}: owner {p['owner']!r} not in session loop")
+        elif p["owner"] == "loop":
+            if p.get("blocked") is not None:
+                out.append(f"{tag}: owner loop but blocked")
+            if _wave_of(p) == PARKED_WAVE:
+                out.append(f"{tag}: owner loop but in the parked wave")
     blocked = p.get("blocked")
     if isinstance(blocked, dict):
         for key in ("on", "who", "unblock"):
@@ -309,6 +331,9 @@ def check_plan(plan):
             if not dw < pw:
                 out.append(f"package {pid}: dep {d} is in wave {dw}, not before"
                            f" wave {pw}")
+            if p.get("owner") == "session" and by_id[d].get("owner") == "loop":
+                out.append(f"package {pid}: owner session but dep {d} is owned"
+                           " by the loop")
     for ring in _cycles(graph):
         out.append(f"dependency cycle: {ring}")
 
@@ -336,6 +361,8 @@ def check_plan(plan):
         for x in sorted(expected - set(order)):
             out.append(f"wave {n}: package {x} missing from merge_order")
     for n, ids in sorted(members.items()):
+        if n == PARKED_WAVE:
+            continue
         owner, groups = {}, {}
         for pid in ids:
             p = by_id[pid]
@@ -351,6 +378,8 @@ def check_plan(plan):
                                f" {sg}")
                 else:
                     groups[sg] = pid
+
+    out.extend(_check_sessions(plan, wave_ns, members, by_id))
 
     # coverage
     coverage = plan.get("coverage") if isinstance(plan.get("coverage"), dict) else {}
@@ -373,6 +402,44 @@ def check_plan(plan):
                 out.append(f"package {pid}: unit {unit} missing from coverage")
             elif isinstance(coverage[unit], list) and pid not in coverage[unit]:
                 out.append(f"package {pid}: coverage {unit} does not name it")
+    return out
+
+
+def _check_sessions(plan, wave_ns, members, by_id):
+    """Problems of the optional sessions list."""
+    if "sessions" not in plan:
+        return []
+    sessions = plan["sessions"]
+    if not isinstance(sessions, list):
+        return ["plan: field sessions must be a list"]
+    out, seen_n, in_session = [], set(), {}
+    for i, s in enumerate(sessions):
+        ok = (isinstance(s, dict) and _typed(s.get("n"), int)
+              and isinstance(s.get("waves"), list)
+              and all(_typed(w, int) for w in s["waves"]))
+        if not ok:
+            out.append(f"sessions[{i}]: needs an integer n and a list of wave numbers")
+            continue
+        tag = f"session {s['n']}"
+        if s["n"] in seen_n:
+            out.append(f"{tag}: duplicate session number")
+        seen_n.add(s["n"])
+        if not s["waves"]:
+            out.append(f"{tag}: no waves")
+        for w in s["waves"]:
+            if w == PARKED_WAVE:
+                out.append(f"{tag}: names the parked wave")
+            elif w not in wave_ns:
+                out.append(f"{tag}: wave {w} is not a listed wave")
+            elif w in in_session:
+                out.append(f"{tag}: wave {w} is already in session {in_session[w]}")
+            else:
+                in_session[w] = s["n"]
+    for n, ids in sorted(members.items()):
+        if n == PARKED_WAVE or n in in_session or n not in wave_ns:
+            continue
+        if any(by_id[pid].get("owner") != "loop" for pid in ids):
+            out.append(f"wave {n}: holds session work but is in no session")
     return out
 
 
@@ -411,11 +478,15 @@ def row(p):
     text = (f"- [ ] {p['id']} ({p['lane']}) {title}. ACCEPT: {_sentence(p['accept'])}"
             f" ZERO-CLICK: {_sentence(p['zero_click'])}")
     b = p.get("blocked")
+    if "owner" in p and p["deps"]:
+        text += f" DEPENDS: {', '.join(p['deps'])}."
     if b:
         on = " ".join(b["on"].split()).rstrip(".")
         unblock = " ".join(b["unblock"].split()).rstrip(".")
         who = " ".join(b["who"].split())
         text += f" BLOCKED: {on}; unblocks when {unblock} ({who})."
+    elif p.get("owner") == "session":
+        text += f" BLOCKED: session wave {p['wave']}."
     return textwrap.fill(text, width=WIDTH, subsequent_indent="  ",
                          break_long_words=False, break_on_hyphens=False)
 
@@ -427,7 +498,8 @@ def wave_info(plan, n):
     keys = ("id", "title", "lane", "files", "new_files", "deps", "tests", "agent",
             "size", "est_min", "design_review", "isolation", "serial_group")
     return {"n": n, "title": w["title"], "goal": w["goal"], "gate": w["gate"],
-            "packages": [{k: p[k] for k in keys} for p in ordered(plan, n)]}
+            "packages": [{k: p[k] for k in keys + (("owner",) if "owner" in p else ())}
+                         for p in ordered(plan, n)]}
 
 
 def _valid(path):
@@ -484,8 +556,9 @@ def main(argv=None):
         return 0
     print(f"wave {info['n']}: {info['title']} (gate: {info['gate']})")
     for p in info["packages"]:
+        owner = f", owner {p['owner']}" if "owner" in p else ""
         print(f"{p['id']} ({p['lane']}, {p['size']} {p['est_min']}m, agent"
-              f" {p['agent']}, design_review {str(p['design_review']).lower()})")
+              f" {p['agent']}, design_review {str(p['design_review']).lower()}{owner})")
         print(f"  files: {', '.join(p['files'] + p['new_files']) or '-'}")
         print(f"  deps: {', '.join(p['deps']) or '-'}")
         print(f"  tests: {', '.join(p['tests']) or '-'}")

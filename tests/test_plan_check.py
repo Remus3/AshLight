@@ -372,6 +372,100 @@ def test_wave_json(tmp_path, capsys):
     assert plan_check.main(["wave", "8", "--file", str(f), "--json"]) == 1
 
 
+def test_parked_wave_is_exempt_from_shared_paths_and_groups():
+    plan = base_plan()
+    block = {"on": "x", "who": "operator", "unblock": "y"}
+    plan["packages"].append(pkg("P9", 99, units=[], files=["web/index.html"],
+                                serial_group="web", blocked=dict(block)))
+    plan["packages"].append(pkg("Q9", 99, units=[], files=["web/index.html"],
+                                serial_group="web", blocked=dict(block)))
+    plan["waves"].append({"n": 99, "title": "Parked", "goal": "g",
+                          "merge_order": ["P9", "Q9"], "gate": "none"})
+    assert problems(plan) == []
+
+
+def test_owner_values_and_loop_rules():
+    plan = base_plan()
+    find(plan, "A1")["owner"] = "loop"
+    find(plan, "B2")["owner"] = "session"
+    find(plan, "C3")["owner"] = "robot"
+    got = problems(plan)
+    assert "package C3: owner 'robot' not in session loop" in got
+    assert "package B2: owner session but dep A1 is owned by the loop" in got
+    # a loop package may depend on a session package
+    plan = base_plan()
+    find(plan, "A1")["owner"] = "session"
+    find(plan, "B2")["owner"] = "loop"
+    find(plan, "C3")["owner"] = "session"
+    assert problems(plan) == []
+    # a loop package is never blocked or parked
+    find(plan, "B2")["blocked"] = {"on": "x", "who": "operator", "unblock": "y"}
+    find(plan, "B2")["wave"] = 99
+    plan["waves"][1]["merge_order"] = ["C3"]
+    plan["waves"].append({"n": 99, "title": "Parked", "goal": "g",
+                          "merge_order": ["B2"], "gate": "none"})
+    got = problems(plan)
+    assert "package B2: owner loop but blocked" in got
+    assert "package B2: owner loop but in the parked wave" in got
+
+
+def test_sessions_list():
+    plan = base_plan()
+    plan["sessions"] = [{"n": 1, "waves": [1, 2]}]
+    assert problems(plan) == []
+    plan["sessions"] = [{"n": 1, "waves": [1]}, {"n": 1, "waves": [1, 7, 99]},
+                        {"n": 2, "waves": []}, {"waves": [2]}]
+    got = problems(plan)
+    assert "session 1: duplicate session number" in got
+    assert "session 1: wave 1 is already in session 1" in got
+    assert "session 1: wave 7 is not a listed wave" in got
+    assert "session 1: names the parked wave" in got
+    assert "session 2: no waves" in got
+    assert "sessions[3]: needs an integer n and a list of wave numbers" in got
+    assert "wave 2: holds session work but is in no session" in got
+    # a wave that holds only loop packages needs no session
+    plan = base_plan()
+    for p in plan["packages"]:
+        p["owner"] = "loop" if p["wave"] == 2 else "session"
+    plan["sessions"] = [{"n": 1, "waves": [1]}]
+    assert problems(plan) == []
+    plan["sessions"] = "none"
+    assert "plan: field sessions must be a list" in problems(plan)
+
+
+def test_rows_owner_tags_and_wave_owner(tmp_path, capsys):
+    plan = base_plan()
+    find(plan, "A1")["owner"] = "session"
+    find(plan, "B2")["owner"] = "loop"
+    find(plan, "C3")["owner"] = "session"
+    plan["packages"].append(pkg("P9", 99, units=[], files=["docs/p9.md"], deps=["A1"],
+                                owner="session",
+                                blocked={"on": "a reply", "who": "operator",
+                                         "unblock": "the reply is recorded"}))
+    plan["waves"].append({"n": 99, "title": "Parked", "goal": "g",
+                          "merge_order": ["P9"], "gate": "none"})
+    f = write(tmp_path, plan)
+    assert plan_check.main(["rows", "--file", str(f)]) == 0
+    rows, cur = {}, None
+    for ln in capsys.readouterr().out.splitlines():
+        if ln.startswith("- [ ] "):
+            cur = ln.split()[3]
+            rows[cur] = ln
+        else:
+            rows[cur] += " " + ln.strip()
+    assert rows["A1"].endswith("BLOCKED: session wave 1.") and "DEPENDS" not in rows["A1"]
+    assert rows["B2"].endswith("DEPENDS: A1.") and "BLOCKED" not in rows["B2"]
+    assert rows["C3"].endswith("BLOCKED: session wave 2.")
+    assert rows["P9"].endswith("DEPENDS: A1. BLOCKED: a reply; unblocks when the reply is"
+                               " recorded (operator).")
+    assert "session wave" not in rows["P9"]
+    assert plan_check.main(["wave", "2", "--file", str(f), "--json"]) == 0
+    info = json.loads(capsys.readouterr().out)
+    assert [p["owner"] for p in info["packages"]] == ["loop", "session"]
+    assert plan_check.main(["wave", "2", "--file", str(f)]) == 0
+    assert "owner loop" in capsys.readouterr().out
+
+
 def test_real_plan_passes(capsys):
     if not plan_check.DEFAULT_FILE.exists():
         pytest.skip("docs/plan/packages.json not written yet")
