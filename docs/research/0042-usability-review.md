@@ -7,7 +7,7 @@ issue (status, errors and empty states, wording, dashboard and overlay
 consistency, settings discoverability), and the open operator decision on a
 phone view laid out without deciding it. Pure glance and zero-click
 questions are note 0043; the settings surface itself is note 0039.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -36,7 +36,9 @@ Status: draft
 - EE2-DL: https://kvan7.github.io/Exiled-Exchange-2/download and EE2-QS:
   https://kvan7.github.io/Exiled-Exchange-2/quick-start (a PoE2 price
   overlay: download, run the installer, launch; the installer build
-  updates itself; hotkeys are changed in its settings window).
+  updates itself, the portable one does not; hotkeys are changed in its
+  settings window; the extra steps on that page are for players moving
+  from the PoE1 tool).
 - PACK: the ultraplan UI evidence pack `up-evidence` (made 2026-11-17 at
   commit b8fda80; synthetic states a to g, 135 dashboard captures, overlay
   composites). Items are cited by their path inside the pack.
@@ -44,8 +46,9 @@ Status: draft
   11; decisions 0003, 0013, 0014, 0016, 0017, 0029, 0038, 0041, 0045;
   research 0038, 0039, 0045, 0049, 0050, 0051, 0052, 0053. The sibling
   notes 0040 (visual design), 0043 (glance and zero-click) and 0044
-  (accessibility) were not in the tree when this was written; they are
-  cross-referenced by dimension, not by finding number.
+  (accessibility) were not in the tree when this was drafted; the
+  verifier added their recommendation numbers where they overlap (see
+  "Verification").
 
 ## Summary
 
@@ -60,7 +63,7 @@ Status: draft
 - Heuristic evaluation (NN10, severity NNSEV): 23 findings, none a
   catastrophe, 6 major, 13 minor, 4 cosmetic. The majors: a web-data
   switch that promises prices that never come (F1), a verdict that hides
-  that the build is stale (F2), 9 sentences that end at a file or script
+  that the build is stale (F2), 11 sentences that end at a file or script
   the player cannot find (F3), a README that sends players down the
   developer path (F4), no next step after the opt-in (F5), and a dead end
   for a log outside Steam (F6).
@@ -80,7 +83,7 @@ Status: draft
 - Heuristics: NN10. H1 visibility of system status, H2 match with the real
   world, H3 user control and freedom, H4 consistency and standards, H5
   error prevention, H6 recognition rather than recall, H7 flexibility and
-  efficiency, H8 minimalist design, H9 help users recognise, diagnose and
+  efficiency, H8 aesthetic and minimalist design, H9 help users recognise, diagnose and
   recover from errors, H10 help and documentation.
 - Severity: NNSEV. 0 no problem, 1 cosmetic, 2 minor, 3 major, 4
   catastrophe; judged from how often it occurs, how hard it is to get
@@ -245,16 +248,20 @@ Format: F, [heuristic; severity], what, evidence, why it matters.
   State c shows "Upgrade +21 vs Gloves" for a Sorceress scored against a
   Ranger build (PACK run/c/overlay-corner2x-black.png). Matters: wrong
   advice at the moment of decision, with the warning out of view.
-- F3 [H2, H9, H10; 3] Nine sentences end at a place the player cannot
-  find. "AshLight's settings file" with no location
-  (web/index.html:176-177, 515-516; server/al/diag.py:45-46;
-  server/al/state.py:269-270), `config\local.json`
-  (diag.py:40; state.py:559-562), or a PowerShell script
-  (diag.py:39, 43, 44, 46; server/al/acts.py:65-66, 71-74). "Settings
-  file" is also the name of a second, different file, the export
-  (web/index.html:573; web/settingsio.js:26-27). Design 0001 section 8
-  rule 4 bans internals in a main line. Research 0039 F1, F2 count the
-  settings; this finding is the wording that sends the player there.
+- F3 [H2, H9, H10; 3] Eleven sentences end at a place the player cannot
+  find (verifier count; the draft said nine). "AshLight's settings file"
+  with no location (web/index.html:176-177, 515-516;
+  server/al/state.py:269-270), `config\local.json` (server/al/diag.py:40;
+  state.py:559-562), a PowerShell script (diag.py:39, 43, 44;
+  server/al/acts.py:65-66, 71-74), or both at once (diag.py:45-46). One
+  of the eleven (state.py:559-562) looks unreachable today (see "Cut or
+  merge"), so ten are live. "Settings file" is also the name of a
+  second, different file, the export (web/index.html:573;
+  web/settingsio.js:26-27). Design 0001 section 8 rule 4 and checklist
+  P2 bar internals in a main line; their list names core, token, SSE,
+  tailer and HTTP codes, and this note reads a repo path or a script
+  name as the same class. Research 0039 F1, F2 count the settings; this
+  finding is the wording that sends the player there.
 - F4 [H10, H2; 3] The README sends players down the developer path. Its
   quick start lists three commands, the second being the whole test suite
   (README.md:66-69; 191 s, research 0049) with pytest as a prerequisite
@@ -315,9 +322,11 @@ Format: F, [heuristic; severity], what, evidence, why it matters.
 - F11 [H4, H6; 2] The Settings tab holds 4 of the 10 controls a player
   can use; the switches for web data and run history live on content
   tabs, Stop reading in the footer, show or hide the overlay in the tray
-  only. Moving the overlay is tab plus fold. The only filled button on
-  the tab is "Show new-character tips again" (web/index.html:524), its
-  least important action.
+  only. Moving the overlay is tab plus fold. Outside the fold, the
+  only filled (not "secondary") buttons are "Restart overlay", shown in
+  the client only, and "Show new-character tips again"
+  (web/index.html:521, 524); the tips button, the least important action,
+  is the one every player sees.
 - F12 [H9; 2] Errors stop one step short of the recovery. "The run log in
   AshLight's Logs folder" names no place and guesses one cause
   (app/client/starting.html:15; research 0050). "can't reach AshLight -
@@ -383,7 +392,10 @@ R1. Tell the truth at the web-data switch.
   to 3. Effort: S for the words, M with the field (0039 R2).
 - Risk: the contact is personal; never echo it (decision 0015).
 - ToS check: "truthful User-Agent" and "never a POESESSID" untouched; no
-  new request, the one web-data opt-in stays (decision 0013).
+  new request, the one web-data opt-in stays (decision 0013). Settled
+  check: decision 0015 reads the contact only from the gitignored
+  config/local.json, so the field must write it there and nowhere else,
+  and it stays out of the settings export allow-list (decision 0036).
 - Depends on: 0039 R2 for the field. Files: web/prices.js, web/app.js,
   web/index.html, app/test/prices.test.js.
 - Acceptance test: a rates doc with web_data true and blocked "contact
@@ -419,7 +431,12 @@ R3. A build prompt with its own button, from the first minute.
 - Risk: a button in a card that is not a live region; keep its words.
 - ToS check: the build stays user-pasted text (decision 0004); the paste
   is the player's own act; no clipboard read.
-- Depends on: none. Files: server/al/theorycraft/buildlive.py,
+- Depends on: none. Related: note 0043 R4 (the item hotkey loads a
+  copied build) would remove the tab and the paste box altogether; it
+  needs a ruling on whether hotkey-read build text counts as the
+  "user-pasted build text" of decision 0004. R3 stays useful either
+  way: the prompt is what tells a new player a build is needed.
+  Files: server/al/theorycraft/buildlive.py,
   server/al/state.py, web/buildlive.js, web/tabs.js, web/tc.js.
 - Acceptance test: a consented snapshot with no build and no character
   carries the prompt; a node test clicks the button and finds Build
@@ -427,7 +444,7 @@ R3. A build prompt with its own button, from the first minute.
 - ZERO-CLICK: the prompt shows and leaves by itself; the paste is the
   one act the floor-safe sources leave (TC-IMPORT waits on registration).
 
-R4. No dead ends: a copy pass over the nine sentences and four errors.
+R4. No dead ends: a copy pass over the eleven sentences and four errors.
 - Action: every sentence in F3 and F12 either gets its control (0039 R2,
   R3, R5, R6) or, until then, names the exact place ("config\local.json
   in the AshLight folder") and never a script for a player task; the
@@ -536,7 +553,11 @@ R11. On the overlay, a name beats "Trade link ready".
 - Action: line 2 of the item card shows the price only when there is a
   poe.ninja value; otherwise the item name stays.
 - Impact: M to L, every check while web data is off. Effort: S.
-- Risk: refines the merged-card wording of decision 0016, not its rule.
+- Risk: decision 0017 item 2 gives the overlay "a short notice" for the
+  link; R11 drops that notice when no value exists, so it needs a
+  recorded amendment of 0017 item 2 (decision, alternatives, why). The
+  settled part of 0017 (no trade2 call, a URL the player opens) is
+  untouched, and 0016's merged-card rule stays.
 - ToS check: cached poe.ninja value only; the trade link stays a
   dashboard link the player opens.
 - Depends on: the design reviewer. Files: server/al/state.py,
@@ -624,7 +645,10 @@ R10, R11. Cost rises from P0 to P4; the decision is Open question 1.
   (research 0038 lists it the same way).
 - Reading Path of Building's own build folder to skip the paste: not on
   the floor's read list, and decision 0004 gives AshLight only
-  user-pasted build text; none of its reverse conditions is met.
+  user-pasted build text; none of its reverse conditions is met. Note
+  0043 R3 recommends this read behind its own opt-in and a new
+  decision; the two notes conflict and the plan needs one ruling
+  (Open question 7).
 - Finding the game window or process to say "game closed" for certain or
   to show the hotkeys in place: decision 0029.
 - Reading the game's key bindings or config to avoid chord clashes: a
@@ -648,3 +672,67 @@ R10, R11. Cost rises from P0 to P4; the decision is Open question 1.
 5. UNVERIFIED: the frame cost of display-extension software (P2).
 6. Unknown: how many players use a browser tab instead of the client.
    It sets the severity of F19; AshLight has no telemetry and wants none.
+7. Plan ruling (adjudicator or operator): this note rejects reading Path
+   of Building's builds folder (the floor's read list and decision 0004
+   name only user-pasted build text); note 0043 R3 recommends it behind
+   an opt-in. Also whether a build read by the item hotkey (0043 R4)
+   counts as user-pasted text under decision 0004.
+
+## Verification
+
+Independent verifier, 2026-11-18, against HEAD and the evidence pack.
+
+Checked:
+- Code citations: about 85 cited path:line ranges opened, covering every
+  finding and every recommendation's evidence (F1 to F23, T1 to T14,
+  the state-by-state list, the phone-view facts). All but the items
+  below said what the note says.
+- Evidence pack: every number in the Summary and the findings re-read
+  from up-evidence run/summary_lines.txt and its README (84, 161, 197,
+  365, 397 and 419 words; 52 controls; 21, 166, 321, 380 and 541 px;
+  135 captures; the state c overlay composite shows "Upgrade +21 vs
+  Gloves / Trade link ready" for a Sorceress against a Ranger build).
+- The Summary's act counts re-derived from the walks: 8 + 1 + 3 + 2 =
+  14 (README), 6 + 1 + 3 + 2 = 12 (shortest), 3 + 1 + 2 + 2 = 8
+  (installer and R3).
+- Web sources: all 10 re-fetched on 2026-11-18 and their content
+  re-read (NN10, NNSEV, MS-LANG, MS-KEYS, EL-GS, MS-FW, TS, SD, EE2-DL,
+  EE2-QS); each supports the claim it is cited for.
+- ToS floor: all 12 recommendations and the five phone options tested
+  against each floor rule; none needs the floor bent. R8 keeps the
+  web-data opt-in an explicit click; R12 is the operator pressing an
+  AshLight hotkey, nothing synthesized.
+- Settled decisions: checked R1 against 0015, R11 against 0016 and
+  0017, R12 against 0014, R6 and R7 against 0029, R9 against 0036,
+  R8 against 0013.
+
+Corrected:
+- F3 count: eleven sentences, not nine (ten live); Summary and R4
+  follow. Rule 4 nuance added (its list does not name paths).
+- F11: "Restart overlay" is also a filled button; the claim that the
+  tips button was the only one was wrong.
+- R11: it amends decision 0017 item 2 (the overlay's short notice), not
+  only 0016's wording; it now says an amendment must be recorded.
+- R1: added the decision 0015 / 0036 constraint on where the contact
+  field writes.
+- Method: H8 is "aesthetic and minimalist design" (NN10).
+- Sources: EE2-DL extra steps are for PoE1 migrants; the portable build
+  does not self-update.
+
+Cross-references added now that the sibling notes exist:
+- 0043 R3 (PoB builds folder) conflicts with this note's Rejected list:
+  Open question 7.
+- 0043 R4 (item hotkey loads a copied build) complements R3.
+- 0043 R1 and 0040 R2 (Play fits its column) own T6, T7 and F17's
+  overflow; 0043 R6 (four tabs, closed folds) overlaps R10.
+- 0044 R8 (item-check empty text) touches the same sentence as F9 and
+  R4; one copy change should serve both.
+- 0040 R3 (stale and empty values look stale) overlaps F21 and R7.
+
+UNVERIFIED (unchanged):
+- F8 / R12: whether Alt+Shift+E or Alt+Shift+A flips the keyboard
+  layout in play (no input may be sent; Open question 2). MS-KEYS does
+  not list Left Alt+Shift; MS-LANG does.
+- P2: the frame cost of display-extension software (Open question 5).
+- F21's "0" deaths reading rests on the pack capture of state e, not on
+  a code path traced end to end.
