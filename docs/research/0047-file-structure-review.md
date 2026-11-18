@@ -4,10 +4,12 @@ Date: 2026-11-17. For the ultraplan (docs/plan/README.md), dimension B10
 file structure. Scope: where code, tests and docs sit, where parallel
 agents collide, and the restructures (state.py, web/, ROADMAP.md, tests,
 docs) that let waves of packages land without merge conflicts. Code read
-at HEAD b8fda80; nothing but this note was changed.
-Status: draft
+at HEAD b8fda80; nothing but this note was changed. Verified 2026-11-18
+at 1f91dc6: no file under server/, tools/, web/, app/, tests/, .claude/
+or docs/design changed since b8fda80, so every path:line still holds.
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (all accessed 2026-11-17; the four web pages re-fetched 2026-11-18)
 
 - GIT-ATTR: https://git-scm.com/docs/gitattributes (built-in merge
   drivers, where a custom driver is defined; last updated in git 2.56.0).
@@ -28,7 +30,7 @@ Status: draft
 ## Summary
 
 Agents collide on nine "append here" seams, not on file size: ROADMAP.md
-(149 of 206 non-merge commits; both sides of 110 of 150 merges),
+(149 of 206 non-merge commits; both sides of 106 of 150 merges),
 reviews.log, three SessionState methods, Core.__init__, do_GET, render()
 in web/app.js, the index.html script tags, design 0001 section 9 and the
 CLAUDE.md Settled list. The import graph is healthy (72 modules, 0
@@ -63,7 +65,7 @@ scripts 8. server/al (MEASURED graph.py):
   (core.py:64), SessionState._apply_locked 159 (state.py:1430), main 145
   (__main__.py:145), SessionState.__init__ 117 (state.py:855),
   resume.scan 99 (resume.py:106), Handler.do_GET 83 (http.py:219),
-  SessionState.snapshot 82 (state.py:1807).
+  SessionState.snapshot 82 (state.py:1806).
 
 Largest files (lines): tests/test_al_loop.py 2783, ROADMAP.md 2061,
 state.py 1888, tools/al_loop.py 1757, web/app.js 1207, the audit doc
@@ -74,14 +76,16 @@ code-health pass measured them the same day
 (docs/audit/code-health-2026-11-17.md:13-16).
 
 Churn (MEASURED churn.py): 356 commits in two days (34, then 322), 150 of
-them merges. Non-merge commits touching the file / merges in which both
-sides changed it:
+them merges. Non-merge commits touching the file (`git log --no-merges
+--full-history`) / merges in which both sides changed it (the file
+differs from the merge base on both parents; re-measured by the
+verifier, the draft's own method gave smaller merge counts):
 
-- ROADMAP.md 149 / 110; docs/design/reviews.log 51 / 35
-- server/al/state.py 55 / 29; server/al/core.py 52 / 27
-- web/index.html 48 / 25; web/app.js 43 / 24; web/app.css 28 / 10
-- CLAUDE.md 37 / 15; docs/design/0001-design-system.md 37 / 16
-- server/al/http.py 31 / 14; docs/research/README.md 22 / 4
+- ROADMAP.md 149 / 106; docs/design/reviews.log 51 / 41
+- server/al/state.py 55 / 33; server/al/core.py 52 / 33
+- web/index.html 48 / 33; web/app.js 43 / 29; web/app.css 28 / 15
+- CLAUDE.md 37 / 20; docs/design/0001-design-system.md 37 / 18
+- server/al/http.py 31 / 23; docs/research/README.md 22 / 9
 - every other file 18 or fewer; all of tools/ 48 touches, scripts/ 23
 
 Where inside those files (MEASURED class_churn.py on the path-limited
@@ -104,7 +108,7 @@ and every button wire. 22 of the 34 node test files test web/ modules.
 
 app/: main.js (422 lines) and six loose main-process modules at the
 root, client/, overlay/, shared/ (render_gate, layout, format), brand/,
-assets/. Low churn: main.js 12 commits, both sides of 3 merges. tools/:
+assets/. Low churn: main.js 12 commits, both sides of 5 merges. tools/:
 22 flat modules, 8,127 lines; the loop family is 12 files and 5,168
 lines. scripts/: 5 PowerShell entry points and 3 helpers. tests/: 157
 test files with 1,745 test functions and 7 helper modules, all flat;
@@ -127,7 +131,7 @@ ultraplan lands), decisions (44), design (5 plus reviews.log), audit
   "Open work only" and "pruned at /done" (ROADMAP.md:3-5), but the /done
   ritual has no prune step (.claude/commands/done.md:50). Every session
   start reads the file (CLAUDE.md "Session workflow"): 139 KB for 14
-  open rows. A median row is 12 lines, the longest 35.
+  open bullets (12 parse as rows, F3). A median row is 12 lines, the longest 35.
 - F3 The loop's row parser misses rows and misreads the hand-off.
   (a) ROW_ID allows only upper-case words joined by `-`
   (tools/loop_base.py:109), so 5 checklist bullets are not rows:
@@ -141,7 +145,9 @@ ultraplan lands), decisions (44), design (5 plus reviews.log), audit
   done.md:68): it returns None and the checklist header shows the tick's
   fire count (tools/al_loop.py:1539); the only test uses the bare form
   (tests/test_al_loop.py:663). (d) An unknown lane hint, `(docs)` at
-  ROADMAP.md:1277, falls into the title unnoticed.
+  ROADMAP.md:1277: that bullet is unseen today because of its dot, but
+  once (a) is fixed the hint falls into the title unnoticed
+  (ROW_RX accepts only build / data / review, tools/loop_base.py:110-111).
 - F4 Nine of the 15 "Carried forward" bullets in the live hand-off would
   be dispatched as lane work when HALT is lifted (MEASURED: the bullets
   run through copies of SKIP_TAGS, tools/loop_base.py:119-122, and
@@ -149,8 +155,9 @@ ultraplan lands), decisions (44), design (5 plus reviews.log), audit
   ROADMAP rows that are dispatched anyway (MERGE-SEAMS-FOLLOWUP,
   S5-FOLLOWUP, AUDIT-P8-LOW, CODE-HEALTH-FOLLOWUP), three are blocked
   items (BLOCKED_RX is applied to rows only, tools/al_loop.py:1125), two
-  are status notes. Each would cost one opus lane run
-  (tools/loop_base.py:74), and the item id is a hash of the bullet text,
+  are status notes. Each would cost one opus lane run (the unskipped
+  bullets become "handoff" work, tools/al_loop.py:1142-1147, routed to
+  opus, tools/loop_base.py:73), and the item id is a hash of the bullet text,
   so a reworded bullet is dispatched again after every /done.
 - F5 The CODE-HEALTH-FOLLOWUP claim holds, with corrections. The gate
   matches one exact path (tools/design_gate.py:16, 20-22); the reviewer
@@ -181,8 +188,10 @@ ultraplan lands), decisions (44), design (5 plus reviews.log), audit
   with zero findings: the gate fired on state-machine work.
 - F7 The text move alone does not stop state.py collisions. Of 54
   commits, 12 touched only module-level code, 17 only the class and 25
-  both; 42 touched the class (MEASURED state_churn.py). Four setters are
-  the same six lines (state.py:1171, 1213, 1220, 1274), each paired with
+  both; 42 touched the class (MEASURED state_churn.py). Four setters share
+  one body - lock, compare, copy, bump the version - (state.py:1171,
+  1213, 1220, 1274; set_run_history also returns a changed flag), each
+  paired with
   a field in __init__ and a key in snapshot().
 - F8 web/ duplicates helpers and funnels every panel through one
   function. `pad` is defined in 5 files (web/acts.js:17, app.js:37,
@@ -197,8 +206,9 @@ ultraplan lands), decisions (44), design (5 plus reviews.log), audit
   after a batch, pass, plan or kit number (10 audit pass / batch files
   with 73 tests, test_ux_b6, test_ux_b8, four `_p16x` files, two `kit_v`
   files; app/test util9, util13, ux_sweep); one covers five modules
-  (tests/test_audit_pass5_low.py). 11 test files import helpers from
-  another test file (13 imports, such as tests/test_math_weights.py from
+  (tests/test_audit_pass5_low.py). 12 test files import helpers from
+  another test file (14 imports, one of them inside a function at
+  tests/test_audit_pass3.py:110; such as tests/test_math_weights.py from
   test_tc_delta), 34 add tools/ to sys.path, and tests read sources by
   name: web/index.html in 13 files, web/app.js in 9, web/app.css in 5,
   http.py in 9, scripts/run.ps1 in 10, app/main.js in 13 (MEASURED
@@ -214,7 +224,7 @@ ultraplan lands), decisions (44), design (5 plus reviews.log), audit
   219 lines are the byte-pinned fleet block; of the 366 tree lines, 234
   are the 45 Settled bullets. A test demands one Settled line per
   decision file (tests/test_audit_batch4.py:19-46), so every decision
-  edits CLAUDE.md: 37 commits, both sides of 15 merges.
+  edits CLAUDE.md: 37 commits, both sides of 20 merges.
 - F12 No equivalence check for a state refactor is committed. The
   code-health pass proved byte-identical snapshots with an ad hoc replay
   (docs/audit/code-health-2026-11-17.md:136-142); only the generator,
@@ -246,7 +256,7 @@ commit or merge and a running core reloads itself in a source checkout
   Each package lists the seam files it writes (`writes`: the eleven
   files in "Current state" plus __main__.py); the orchestrator never
   puts two packages with a common seam file in one wave.
-- Impact: H. Removes the top two collision files (110 and 35 merges)
+- Impact: H. Removes the top two collision files (106 and 41 merges)
   with no code. The loop already works this way for ROADMAP.md
   (tools/loop_prompts.py:50-51) and CLAUDE.md (:36).
 - Effort: S (3 lines in .gitattributes, a test of about 25 lines, fields
@@ -278,7 +288,9 @@ commit or merge and a running core reloads itself in a source checkout
   wider id grammar feeds DEP_ID_RX, item file names and keep refs
   (tools/loop_base.py:96, 115-116); the row at ROADMAP.md:530 carries
   BLOCKED, so it becomes listed, not dispatched; the prune breaks
-  tests/test_desktop_client.py:138-140 unless it reads the archive.
+  tests/test_desktop_client.py:138-140 (the only test that reads the
+  live ROADMAP.md; the loop tests write their own copy,
+  tests/al_loopkit.py:79) unless it reads the archive.
 - Sequence: (1) a shape test, marked xfail, listing today's 5 unseen
   bullets, the duplicate id and the odd lane hint; (2) parser and reader
   fixes with unit tests, fix the two bullets, drop the xfail; (3) the
@@ -341,8 +353,8 @@ commit or merge and a running core reloads itself in a source checkout
   firing on state-machine work, and gives copy packages (voice,
   accessibility wording, glanceability) one file per card family.
 - Effort: M (772 lines moved, about 30 changed in 12 pinned files).
-  Risk: a moved name read through the old module. All 48 importers
-  (core.py:23 and 47 tests) import or read attributes and none patches a
+  Risk: a moved name read through the old module. All importers
+  (core.py:23 and 43 to 47 test files, by regex) import or read attributes and none patches a
   state constant, so same-object re-exports keep them working, as in the
   loop split (tools/al_loop.py:92-96).
 - Tests: the equivalence run reports identical output after every step;
@@ -518,7 +530,7 @@ commit or merge and a running core reloads itself in a source checkout
 - Action: name test files by subject, never by batch, pass, plan or kit
   number (the id goes in the docstring); helpers live in non-test
   modules; keep tests/ flat. Add a guard test with the 21 batch-named
-  files and the 13 test-to-test imports as allow-lists that may only
+  files and the 14 test-to-test imports as allow-lists that may only
   shrink. A package that owns a subject moves that subject's tests out
   of a batch file as part of its own change; no big-bang fold.
 - Impact: L-M. Effort: S (about 70 lines). Risk: none for the guard; a
@@ -528,7 +540,7 @@ commit or merge and a running core reloads itself in a source checkout
   tests/test_test_layout.py.
 - Why flat: in the default prepend mode test files without packages
   need unique names, and importlib mode forbids tests importing each
-  other (PYTEST-PATH); 11 files do.
+  other (PYTEST-PATH); 12 files do.
 - Acceptance test: the guard fails on a new `test_audit_pass9.py` and on
   a new `from test_x import`; both allow-lists shrink wave by wave.
 
@@ -605,11 +617,74 @@ commit or merge and a running core reloads itself in a source checkout
   moves the collision, which R1 already removes. Shortening the bullets
   is a rules change: operator or adjudicator.
 - Do headless lanes started with lean or bare flags expand CLAUDE.md
-  imports and load `.claude/rules/`? UNVERIFIED; it decides whether any
-  rule text may ever leave CLAUDE.md.
+  imports and load `.claude/rules/`? Partly answered (CC-MEM, re-read
+  2026-11-18): project rules are skipped when `project` is left out of
+  `--setting-sources`, so a lane on "project settings only" keeps them;
+  bare mode is still UNVERIFIED. It decides whether any rule text may
+  ever leave CLAUDE.md.
 - `.claude/settings.json:17` (F13): removing a permission entry is a
   settings change; it belongs in the operator's batched ask.
 - Should the 1,786 archived ROADMAP lines be published? They are session
   narrative; the go-public note (0057) decides archive or git history.
 - Will the target design (docs/plan/03-target-design.md) keep one block
   per card? If not, drop the fragment half of R8.
+
+## Verification
+
+Independent check, 2026-11-18, at HEAD 1f91dc6 (code identical to
+b8fda80 for every cited path).
+
+- Code citations (A): about 70 path:line references opened, all but
+  three held as written. Fixed: SessionState.snapshot is state.py:1806 (not 1807); the
+  opus route for hand-off work is tools/loop_base.py:73 (line 74 is the
+  sonnet data lane), now with the dispatch site tools/al_loop.py:1142-1147;
+  F3 (d) reworded, since the `(docs)` bullet is invisible today and the
+  hint only leaks into a title after the dot fix.
+- Numbers (Summary and Findings): re-ran the loop's own ROW_RX on
+  ROADMAP.md (156 bullets, 151 rows, 139 done, 12 open, 150 unique ids,
+  the 5 unseen lines exactly as F3 lists), the live hand-off through
+  handoff_items (15 bullets, 9 unskipped, handoff_session None), commit
+  counts with `--full-history` (all 11 match), tracked files (532), the
+  21 script tags, pad / duration / clock sites, the render() line-up
+  (10 modules, 5 renderers), the 16 "renumber" subjects, state.py
+  772-line text region and its top-level names. Corrected: the
+  both-sides merge counts (re-measured against the merge base: ROADMAP
+  106 not 110, reviews.log 41, state.py 33, core.py 33, index.html 33,
+  app.js 29, CLAUDE.md 20, design 0001 18, http.py 23, main.js 5);
+  test-to-test imports 12 files / 14 imports (not 11 / 13); state.py
+  importers stated as a range (43 to 47 test files by regex); "14 open
+  rows" is 14 open bullets of which 12 parse; the setters share a body,
+  not six identical lines. No ranking changes.
+- Web sources (B): GIT-ATTR (union is built-in and may reorder added
+  lines; drivers live in git config; merge, revert, cherry-pick named;
+  rebase not named, stays UNVERIFIED; page at git 2.56.0), CC-MEM (target
+  under 200 lines; imports do not cut context cost; `paths` rules load
+  only on matching files), PYTEST-PATH (unique names in prepend mode;
+  importlib forbids test-to-test imports), MDN-SCRIPT (defer keeps
+  document order, runs before DOMContentLoaded; module scripts defer by
+  default) all re-fetched and confirmed.
+- ToS floor (C): all ten recommendations re-tested against each floor
+  rule; none reads memory, injects, hooks graphics, touches packets or
+  game files, sends input, adds a clipboard / screen read, timer or
+  request, calls a trade or undocumented endpoint, or touches branding or
+  revenue. R4 keeps the Copy-code write on the player's click; R8 keeps
+  CSP and the 127.0.0.1 bind. The five Rejected items stay rejected.
+- Settled decisions (D): no recommendation reverses one; R4 and the
+  Rejected bundler respect 0002, the datacredit item respects 0020, the
+  clipboard item respects 0003, R3 leaves the disclaimer and 0014 click
+  write untouched.
+- Completeness (E): every brief point is covered (server/al map, churn,
+  collisions, state.py split with move order and the gate / reviewer /
+  prompts / design-doc claim verified in code with three corrections,
+  web/ helpers and app.js division, app/, tools/, scripts/, tests/
+  naming policy, docs/ with docs/plan, ROADMAP structure plus both known
+  parser defects). Added: the --setting-sources fact to the lanes open
+  question.
+- Recommendations (F): each carries Action, Impact, Effort, Risk, ToS
+  check, Depends on, Files and Acceptance test; ZERO-CLICK is stated once
+  for all ten above R1 (developer-side, the player does nothing).
+- Hygiene (G): ASCII and LF via the lint; no drive path, email, account
+  id, other tree name or private name.
+- UNVERIFIED remaining: whether union merge applies during rebase;
+  whether bare-mode lanes load CLAUDE.md imports and rules; the
+  copyscan.py sentence counts in F6 (a heuristic, not re-run).
