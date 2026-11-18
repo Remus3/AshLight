@@ -1,16 +1,42 @@
 AL NEXT SESSION
 ---------------
-SESSION: 5   (FLEET item 13 counter; /done writes n+1)
+SESSION: 6   (FLEET item 13 counter; /done writes n+1)
 
-Next action: work ROADMAP AUDIT-P8-LOW (P8-3..P8-8, docs/audit/
-2026-11-17-audit.md "Pass 8"), then CODE-HEALTH-FOLLOWUP. Run them as area
-lanes in worktrees with a merger agent (session 4 pattern): merge main into
-the branch first, full suites green, design-reviewer on any web/ app/
-state.py text change. The headless loop is PAUSED (see Context); decide at
-start whether to resume it (delete ops/loop/control/HALT) or keep working
-interactively.
+Next action: operator-led planning session (operator supplies the brief);
+afterwards execute the resulting plan's wave 1.
+
+Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
+reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
+apply act in the batched operator ask. Reap the session-5 agent worktrees
+(fleet_done.py reap --apply) once the session-5 main process is gone.
 
 Carried forward (not acted on yet):
+- MERGE-SEAMS-FOLLOWUP (open ROADMAP row): Play tab fit with both slots
+  full (zone guide + build alert + 2 trades) unmeasured at 1280x760 and
+  1920x950; live regions at the 12/12 cap (free one, update N6 text);
+  column keyboard focus (.col labelled group, tabindex 0); restart-overlay
+  status text never clears; reused hint-reset class name (rename tool-row).
+- S5-FOLLOWUP (open ROADMAP row, added at this /done): overlay zone-guide
+  line (overlay has no slot yet); BUILD-LIVE item upgrade list is
+  memory-only (lost on restart) - consider persisting; zone guide "+2 point
+  books" wording unverified (passive vs weapon-set); clear-or-push
+  threshold is a rule of thumb; no packaged .exe (electron-builder not
+  offline) - revisit with deployment work; 4 blank zone-guide zones (Root
+  Hollow, Library of Kamasa, Isle of Decay, Brinerot Cove).
+- TC-OAUTH-REG: BLOCKED until GGG reopens OAuth app registration (public
+  client PKCE, scopes account:profile + account:characters, fixed loopback
+  redirect in 8960-8979; the PoE2 API gives equipment / skills / passives,
+  no backpack / stash). GGG-DOCS-WATCH (decision 0044) checks daily and
+  writes ops/runtime/ggg_docs/REG_OPEN; registration still CLOSED at /done.
+- O1 / TC-IMPORT: live character import via the ggg_api provider
+  (theorycraft/providers.py stub) after registration. TC-CURX also BLOCKED
+  on registration.
+- KIT DEFECT for MAIN (not yet reported: no destination inbox / fleet
+  roster configured for AL, so no outbound note path): fleet_suite_gate.py
+  line ~672 crashed once with `_rec(a)` returning None while other agents
+  were queued (AttributeError on .get); a retry worked. Report via a note
+  to MAIN once a delivery path exists (config loop.dest_inboxes MAIN or
+  FLEET_ROSTER), under the 12/day cap.
 - AUDIT-P8-LOW (open ROADMAP row): P8-3 overlay corePort (app/main.js)
   takes AL_PORT / config "port" without the 8960-8979 check; P8-4 core
   --port flag outside the block still binds (refuse; 0 for tests only);
@@ -20,7 +46,7 @@ Carried forward (not acted on yet):
   in fixed report text matching a character / contact name; P8-8 "This
   session" ladder and Maps card mix characters after a switch (and a map
   open across a game restart is saved under neither).
-- CODE-HEALTH-FOLLOWUP (open ROADMAP row, added at this /done; details in
+- CODE-HEALTH-FOLLOWUP (open ROADMAP row; details in
   docs/audit/code-health-2026-11-17.md): state.py split (card / event text
   out, update design_gate / design-reviewer / loop_prompts / design docs
   0001-0002 together); web/ pad / duration / clock helper dedup; runtime
@@ -34,8 +60,6 @@ Carried forward (not acted on yet):
   waystone / search-string / filter in-game checks.
 - UTIL-1.0-POST: BLOCKED until PoE2 1.0 launch 2026-12-11; runbook
   docs/ops/1.0-launch-runbook.md.
-- TC-OAUTH-REG / TC-IMPORT / TC-CURX: BLOCKED on GGG OAuth app registration
-  (operator act).
 - OPERATOR ACTS (one batched ask; all optional): (a) in-map FPS / RAM test,
   Windowed Fullscreen (OVL-FPS, OVL-BUDGET); (b) LIVE-1 play session (trade
   whisper, death, party, AFK) and one login for TEST-LIVE-CLICKS; (c)
@@ -50,11 +74,12 @@ Carried forward (not acted on yet):
 - Headless loop PAUSED: ops/loop/control/HALT exists (operator wind-down
   2026-11-17); scheduled task \AshLightOps\LaneLoop is still enabled. To
   resume: delete HALT (tools/loop_task.py status reads the task back).
-- NOTE: reap applied: 33 removed (clean, every commit on main by patch,
-  branches deleted), 37 kept: 34 session-4 agent worktrees under
-  .claude/worktrees (owner pid 21836 alive at /done - reap again next
-  session once that session is gone) and lane-0 / lane-1 / lane-2
-  (fleet_lanes lane worktrees under the sidecar), 0 listed (base main).
+  GGG-DOCS-WATCH runs before the HALT check, so it keeps running.
+- NOTE: reap applied at this /done: 0 removed, 43 kept: 40 agent worktrees
+  under .claude/worktrees (owner pid of the session-5 main process alive
+  at /done; all 7 session-5 feature branches are merged into main - reap
+  again next session) and lane-0 / lane-1 / lane-2 (fleet_lanes lane
+  worktrees under the sidecar), 0 listed (base main).
 - NOTE: a live lane writing ops/loop/control/loop_items/*.json mid-suite
   can trip fleet_test_guard (false error at a random teardown); re-run the
   suite when it happens.
@@ -64,45 +89,45 @@ Carried forward (not acted on yet):
 Context: CLAUDE.md (Settled list), ROADMAP.md (open rows: LIVE-1,
 TEST-LIVE-CLICKS, OVL-BUDGET, OVL-FPS, TC-OAUTH-REG, TC-IMPORT,
 UTIL-1.0-POST, TC-BUILDFILE-LIVE, TC-CURX, AUDIT-P8-LOW,
-CODE-HEALTH-FOLLOWUP, OPERATOR GitHub remote), docs/audit/2026-11-17-audit.md,
-docs/audit/code-health-2026-11-17.md, ops/loop/control/HALT. Live at /done
-(per session ground truth): core on 127.0.0.1:8960, /api/health ok,
-overlay 2 processes, running from main - probe /api/health and the process
-list before touching them; other pythonw processes belong to other trees.
-Acceptance: AUDIT-P8-LOW and CODE-HEALTH-FOLLOWUP flipped [x] with one
-regression test per item, pytest + npm green, leak sweep clean, app
-restarted from main with 1 core / 1 supervisor / overlay up.
+CODE-HEALTH-FOLLOWUP, MERGE-SEAMS-FOLLOWUP, S5-FOLLOWUP, OPERATOR GitHub
+remote), docs/decisions/0041-0045, docs/design/reviews.log,
+ops/loop/control/HALT, ops/runtime/ggg_docs/.
+Operator orders recorded session 5 (2026-11-17):
+- Releases only on a milestone or an explicit tag, never per commit.
+- docs / README refresh and upstream watches must be scheduled, never
+  need a reminder.
+- Overlay / app restarts mid-game are fine.
+- The operator plays while work runs: heavy work runs at low priority.
+- Status board only on request (ops/status_board.json opt_in false).
+Live at /done: setup.ps1 created the Desktop and Start Menu AshLight
+shortcuts (electron.exe app --client, icon app\assets\icon.ico); the
+client is running (core 127.0.0.1:8960 /api/health ok, tailing true).
+Probe /api/health and the process list before touching them; other
+pythonw processes belong to other trees.
 
-Do NOT redo (shipped session 4, all on main): research 0017-0032;
-AREA-AUDIT passes 1-8 and every P3/P4/P5/P6/P7 low fixed
-(docs/audit/2026-11-17-audit.md); TC-LIVE (portable WinLibs toolchain,
-decision 0027, bridge matches the PoB GUI within 0.024%); TC-DELTA wired;
-MATH-* (item parser, value, weights, compare, sanity, weapon type, e2e
-live, perf / GC, drift guard, build health, next look, skill split, def
-breakdown, trade stat coverage 39/39 with PoB fallback, decision 0037);
-UTIL-* (maps, deaths, pace, resume, price book, movers, 1.0 readiness,
-waystone risk + reward, search strings, zone notes, filter + tiers + merge,
-session summary, game-idle by log staleness 0029, underlevel, run history,
-price watch, settings IO, multi-character 0038, campaign checks 0039, map
-ladder, newbie hints, diagnostics + language guard 0040, .build download
-0034); UX passes U7-U28 (real overlay invisible-bug fix, overlay RAM about
-181 MB in 2 processes, narrow layout, density / Tools group, a11y cap 12,
-dashboard console / CSP test); TEST hardening (fuzz, soak, supervisor pid
-reuse, SSE deflake, fullstack e2e, clean-clone release check, port
-override limited to 8960-8979, shared jsonfile / num helpers);
-research-number uniqueness test; decision 0035 intentionally unused.
-Previous-session carried rows now done: HUD-ACT-RESUME, UX-REVIEW,
-TC-CODE-REAL, TC-UPGRADE-STATS, TC-BRIDGE, TC-DELTA, TC-DRIFT, DESIGN-GATE,
-WT-SIDECAR (operator acts f, i, j no longer needed). Session 3 and earlier:
-see git log.
+Acceptance: the operator's planning session produces a plan and its wave 1
+is executed: rows flipped [x] with tests, pytest + npm green, leak sweep
+clean, client restarted from main with core / supervisor / overlay up.
+
+Do NOT redo (shipped session 5, all merged to main): UI-GLANCE tabs
+(Play / Run and history / Build / Items and prices / Settings, no page
+scroll); DESKTOP-CLIENT (decision 0041: Electron --client window, tray, X
+closes to tray, overlay lives only inside the client, Restart overlay on
+the Settings tab; 0029 amended: overlay hides on Client.txt staleness);
+HOT-RELOAD (0042); ZONE-GUIDE (0043, 93 zones, 4 blank); GGG-DOCS-WATCH
+(0044, daily, runs before HALT); BUILD-LIVE (0045: per-character builds,
+build_alert, upgrades list, ggg_api provider stub); BRAND-ICON (design note
+0005); research 0033 live-character-data and 0034 zone-guide-facts;
+status board opt-out (629676f); MERGE-SEAMS S2/S3 fixes (09136df).
+Session 4 and earlier: see git log and docs/audit/2026-11-17-audit.md.
 
 In flight: none (no lane or agent running; loop paused by HALT).
 
-Status: main at 139b0fb before this /done, then the /done commits (ROADMAP
-CODE-HEALTH-FOLLOWUP row, this hand-off). No git remote; nothing pushed
-(self-adjudicated: commit and merge locally only). Gates fresh at /done on
-139b0fb + ROADMAP row: pytest 2219 passed, 3 skipped; npm 180/180; leak
-sweep ARMED needles=22 clean. Inbox: 1 note (MAIN INFORMATION/TERMINAL, kit
-v32 join), classify -> skip terminal, no reply; nothing new.
+Status: main at f7323db before this /done, then the /done commits (ROADMAP
+S5-FOLLOWUP row, this hand-off). No git remote; nothing pushed. Gates at
+merge: pytest 2316 passed / 3 skipped, npm 230/230. Gates fresh at /done:
+pytest 2316 passed / 3 skipped (via fleet_suite_gate); npm 230/230;
+leak sweep ARMED needles=22 clean. Inbox: 1 note (MAIN INFORMATION /
+TERMINAL, kit v32 join), classify -> skip terminal, no reply; nothing new.
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.

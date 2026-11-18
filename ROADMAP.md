@@ -2045,6 +2045,17 @@ merge. Each row names the finding ids it closes.
   N6 exemption; F7 rename the shared hint-reset class to tool-row.
   ZERO-CLICK: layout and copy only; nothing new for the player to do.
 
+- [ ] S5-FOLLOWUP (build) Open items from session 5 (2026-11-17): (a)
+  overlay zone-guide line (the view already carries `line`; the overlay
+  has no slot yet); (b) the BUILD-LIVE upgrade list is memory-only and
+  lost on a core restart - consider a bounded file under ops/runtime; (c)
+  zone guide "+2 point books" wording unverified (passive vs weapon-set
+  points); (d) the clear-or-push threshold is a rule of thumb - tune from
+  play; (e) no packaged .exe (electron-builder is not offline) - revisit
+  with deployment work; (f) the 4 blank zone-guide zones (Root Hollow,
+  Library of Kamasa, Isle of Decay, Brinerot Cove). ZERO-CLICK: each item
+  keeps the guide, list and notices updating from the log with no click.
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).
