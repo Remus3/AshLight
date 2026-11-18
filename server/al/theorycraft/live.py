@@ -17,6 +17,7 @@ import threading
 
 from .. import campaign as campaign_mod
 from .. import upgrade as upgrade_mod
+from . import buildlive
 from . import evaluate as tc_evaluate
 from . import item as item_parser
 from . import pobweights
@@ -28,12 +29,15 @@ MAX_STATS = 8
 MAX_LIST = 12
 
 
-def build_info(build, rev=0):
+def build_info(build, rev=0, character=None):
+    """`character` (BUILD-LIVE): whose build this is (the store's active
+    character), so the stale-build check never compares another's."""
     if build is None:
         return {"loaded": False, "rev": rev, "class_name": None, "ascendancy": None,
-                "level": None}
+                "level": None, "character": character}
     return {"loaded": True, "rev": rev, "class_name": build.class_name,
-            "ascendancy": build.ascendancy, "level": build.level}
+            "ascendancy": build.ascendancy, "level": build.level,
+            "character": character}
 
 
 def _named(d):
@@ -107,6 +111,14 @@ class LastEval:
         self.pob_weights = pobweights.PobWeightCache()
         self._input = None
         self._lock = threading.Lock()
+        # BUILD-LIVE (decision 0045): the items checked per character, in
+        # memory only, re-scored when the build or the weights change
+        self.candidates = buildlive.Candidates()
+
+    def _who(self):
+        """(character, level) from the state: the player's own log facts."""
+        return (getattr(self.state, "character", None),
+                getattr(self.state, "level", None))
 
     def run(self, text, slot=None, keep_time=False, at=None):
         """`at`: the press time (PRICE-1-WIRE shares it with the price
@@ -125,7 +137,47 @@ class LastEval:
         # its mods risky for the loaded build; None for any other item
         card["waystone"] = waystone_mod.check(text, self.builds.build)
         self.state.set_eval(card, keep_time=keep_time, at=at)
+        if not keep_time and result.get("ok") and card["waystone"] is None:
+            # BUILD-LIVE: a press adds the item to this character's list
+            with self._lock:
+                self.candidates.add(self._who()[0], text, slot, result.get("verdict"),
+                                    at if at is not None else _now(self.state))
+            self.rescore(fresh=False)
         return result
+
+    def rescore(self, fresh=True):
+        """BUILD-LIVE: re-score the current character's checked items with
+        the loaded build and weights, and publish the ones that are
+        upgrades now (`new`: not an upgrade before this re-score). Uses the
+        stat weights, or the weights Path of Building measured for this
+        build earlier (MATH-WEIGHTS cache); no new calc run, so a build swap
+        stays quick. `fresh` False (a press) keeps every verdict as it was."""
+        character, level = self._who()
+        build = self.builds.build
+        weights = self.weights.get()
+        with self._lock:
+            rows = self.candidates.rows(character)
+        items = []
+        for entry in rows:
+            try:
+                res = tc_evaluate.evaluate(entry["text"], build, weights, slot=entry["slot"],
+                                           calc=None, cache=self.pob_weights)
+            except Exception:  # noqa: BLE001 - one bad row never stops the list
+                continue
+            with self._lock:
+                if fresh:
+                    entry["was"] = entry.get("verdict")
+                entry["verdict"] = res.get("verdict") if res.get("ok") else None
+            n = buildlive.notice(res, entry, level, build)
+            if n is not None:
+                items.append(n)
+        items.sort(key=lambda n: (not n["new"], -(n.get("at") or 0)))
+        view = {"character": character, "checked": len(rows),
+                "build_loaded": build is not None, "items": items[:buildlive.MAX_ITEMS]}
+        setter = getattr(self.state, "set_upgrades", None)
+        if callable(setter):
+            setter(view)
+        return view
 
     def _value(self, text, result):
         """MATH-VALUE: the item's own Note price in the primary currency and
@@ -148,9 +200,15 @@ class LastEval:
         its time, so the overlay does not show it again."""
         with self._lock:
             last = self._input
+        self.rescore()  # BUILD-LIVE: the checked items too
         if last is None:
             return None
         return self.run(last[0], last[1], keep_time=True)
+
+
+def _now(state):
+    clock = getattr(state, "now", None)
+    return clock() if callable(clock) else None
 
 
 def _campaign_facts(state, build):
@@ -169,11 +227,11 @@ def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids
 
     def on_build(build):
         rev[0] += 1
-        state.set_build_info(build_info(build, rev[0]))
+        state.set_build_info(build_info(build, rev[0], getattr(builds, "character", None)))
         _campaign_facts(state, build)
         last.rerun()
 
     builds.add_listener(on_build)
-    state.set_build_info(build_info(builds.build, 0))
+    state.set_build_info(build_info(builds.build, 0, getattr(builds, "character", None)))
     _campaign_facts(state, builds.build)
     return last

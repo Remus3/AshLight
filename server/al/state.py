@@ -21,6 +21,7 @@ from . import summary as summary_mod
 from . import underlevel as underlevel_mod
 from . import zonenotes
 from . import zoneguide as zoneguide_mod
+from .theorycraft import buildlive as buildlive_mod
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -417,6 +418,76 @@ def _waystone_risk_text(ws):
     if len(labels) > WAYSTONE_LISTED:
         listed += f", and {len(labels) - WAYSTONE_LISTED} more"
     return {"head": head, "line": _short_list(shorts), "sentence": sentence + listed + "."}
+
+
+# BUILD-LIVE (decision 0045): the stale-build alert and the upgrade
+# notices for items checked earlier. Exact-output tests in
+# tests/test_build_live.py.
+
+
+def build_alert_text(alert):
+    """The words of a buildlive.alert() finding, or None."""
+    a = _dict(alert)
+    kind = a.get("kind")
+    who = _text(a.get("character"), "this character")
+    if kind == "missing":
+        return {"kind": kind, "head": f"No build saved for {who} yet",
+                "text": (f"No build saved for {who} yet. Paste a PoB code on the "
+                         f"Build tab to check items for {who}.")}
+    if kind == "class":
+        build_class = _text(a.get("build_class"), "another class")
+        log_class = _text(a.get("log_class"), "another class")
+        return {"kind": kind, "head": f"Build is for a {build_class}",
+                "text": (f"Build is for a {build_class}, but {who} is a {log_class}. "
+                         f"Paste {who}'s own PoB code so item checks fit.")}
+    if kind == "level":
+        return {"kind": kind,
+                "head": f"Build is from level {_num_text(a.get('build_level'))}",
+                "text": (f"Build is from level {_num_text(a.get('build_level'))}; "
+                         f"you are level {_num_text(a.get('level'))}. Paste a fresh "
+                         "PoB code to keep item checks right.")}
+    return None
+
+
+def _upgrade_delta(n):
+    d = n.get("score_delta") or 0
+    if n.get("source") in ("pob", "pob_cached"):
+        return _signed(d) + "%"
+    return _signed_points(d)
+
+
+def upgrade_notice_text(n):
+    """One upgrade notice: `head` (new or not, slot, item), `line` (what it
+    replaces and by how much) and `fit` (class / level fit)."""
+    n = _dict(n)
+    name = _text(n.get("name") or n.get("base"), "Unnamed item")
+    slot = _text(n.get("slot"), "its slot")
+    head = ("New upgrade" if n.get("new") else "Upgrade") + f" for {slot}: {name}"
+    delta = _upgrade_delta(n)
+    if n.get("empty") or not n.get("replaces"):
+        line = f"Goes in your empty {slot} slot, {delta}."
+    else:
+        line = f"Replaces {_text(n.get('replaces'), 'your item')}, {delta}."
+    fit = _dict(n.get("fit"))
+    if fit.get("kind") == "level" and not fit.get("ok", True):
+        fit_text = (f"Needs level {_num_text(fit.get('need'))}; you are level "
+                    f"{_num_text(fit.get('level'))}.")
+    elif fit.get("build_class"):
+        fit_text = f"Fits your {_text(fit.get('build_class'), 'current')} build."
+    else:
+        fit_text = "Fits your build."
+    return {"head": head, "line": line, "fit": fit_text}
+
+
+def upgrades_text(view):
+    """The heading line of the upgrade list ("" with none: the dashboard
+    then hides the list)."""
+    count = len(_dicts(_dict(view).get("items")))
+    if count == 0:
+        return ""
+    if count == 1:
+        return "1 item you checked is an upgrade now."
+    return f"{count} items you checked are upgrades now."
 
 
 def eval_card_text(card):
@@ -828,6 +899,9 @@ class SessionState:
         self.price = None
         self._price_ids = 0
         self.build_info = None
+        # BUILD-LIVE (decision 0045): the checked items that are upgrades
+        # now (live.LastEval.rescore)
+        self.upgrades = None
         # HUD-ACT: per-act splits; zone level table from the game-data cache.
         self.acts = acts_mod.ActSplits()
         self.zone_table = {}
@@ -985,6 +1059,30 @@ class SessionState:
             if info != self.build_info:
                 self.build_info = dict(info) if info else None
                 self.version += 1
+
+    def set_upgrades(self, view):
+        """BUILD-LIVE: the upgrade notices of the current character's
+        checked items (live.LastEval.rescore)."""
+        with self._lock:
+            view = dict(view) if isinstance(view, dict) else None
+            if view != self.upgrades:
+                self.upgrades = view
+                self.version += 1
+
+    def _upgrades_view(self):
+        """Caller holds the lock. None until the first check."""
+        v = self.upgrades
+        if not v:
+            return None
+        items = [dict(n, **upgrade_notice_text(n)) for n in _dicts(v.get("items"))]
+        return dict(v, items=items, text=upgrades_text(v),
+                    new=sum(1 for n in items if n.get("new")))
+
+    def _build_alert(self):
+        """Caller holds the lock. BUILD-LIVE: the stale-build alert."""
+        found = buildlive_mod.alert(self.build_info, self.character, self.char_class,
+                                    self.level)
+        return dict(found, **build_alert_text(found)) if found else None
 
     def bump_calc_rev(self):
         """MATH-SKILL-SPLIT: a new PoB output table is ready, so the build
@@ -1750,6 +1848,9 @@ class SessionState:
                 # The one overlay card chosen at this moment (decision 0016).
                 "card": overlay_card(self.eval, self.price, now),
                 "build": dict(self.build_info) if self.build_info else None,
+                # BUILD-LIVE (decision 0045): stale build, upgrades now
+                "build_alert": self._build_alert(),
+                "upgrades": self._upgrades_view(),
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
                 "maps": dict(self.maps.view(now),

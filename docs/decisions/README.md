@@ -3,6 +3,8 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Take the next number after the highest file here.
 
+- 0045: per-character build, stale-build alert and upgrade notices
+  (BUILD-LIVE).
 - 0044: daily GGG developer docs watch, registration reopen alert
   (GGG-DOCS-WATCH).
 - 0043: live zone guide and quest tracker (ZONE-GUIDE).

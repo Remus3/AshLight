@@ -1010,6 +1010,7 @@
     }
     renderEval(s.eval || null);
     evalPainted = true;
+    if (window.ALBuildLive) { window.ALBuildLive.paint(document, s); } // BUILD-LIVE
     renderPrice(s.price || null, false);
     // UTIL-MULTICHAR: level, pace, deaths, act times and run history of
     // the picked character (the one playing unless the player picks)

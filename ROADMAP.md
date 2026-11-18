@@ -1588,6 +1588,20 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
   run, at most 20000), runs.replay folds them like SessionState.apply;
   tests/test_util_maps_resume.py (core restart mid-map keeps 5:00 and the
   death).
+- [x] BUILD-LIVE (build) Item upgrade notices tied to the character being
+  played (operator order 2026-11-17, decision 0045): one build per
+  character (keyed by the decision 0038 name; legacy last-code.txt moves
+  to the first character), swapped by the core loop tick; stale-build
+  alert `build_alert` (missing / class / 5+ levels behind) in the
+  #build-alert slot (web/buildlive.js); every checked item kept per
+  character in memory (10) and re-scored on each build or weight change,
+  `upgrades` lists the ones that beat the gear now (slot replaced, delta,
+  fit); build files hot-reload on mtime; build sources behind
+  theorycraft/providers.py (paste now, ggg_api stub: not set up, no
+  request). ACCEPT: tests/test_build_live.py, app/test/buildlive.test.js.
+  ZERO-CLICK: the build, item card and notices follow the character the
+  log names and any build file change, with no click; the only act is the
+  paste of a character's build once. DONE 2026-11-17.
 
 ## Ops
 

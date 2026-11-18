@@ -228,6 +228,10 @@ def main(argv=None):
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("ensure_tailing failed")
             try:
+                core.tick_build()  # BUILD-LIVE: this character's build, hot reload
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("tick_build failed")
+            try:
                 core.tick_summary()  # UTIL-SESSION-SUMMARY: idle -> card
             except Exception:  # noqa: BLE001 - never stops the core loop
                 log.exception("tick_summary failed")

@@ -162,7 +162,7 @@ def test_core_rescores_on_weights_and_build_change(core):
     core.builds.load_code(codec.encode(EVAL_BUILD_XML))
     snap = core.state.snapshot()
     assert snap["build"] == {"loaded": True, "rev": 1, "class_name": "Ranger",
-                             "ascendancy": None, "level": 80}
+                             "ascendancy": None, "level": 80, "character": None}
     assert snap["eval"]["ok"] and snap["eval"]["verdict"] == "upgrade"
     assert snap["eval"]["at"] == first["at"]  # a re-score keeps the card time
     core.weights.put({"weights": {"+# to maximum Life": 0}})

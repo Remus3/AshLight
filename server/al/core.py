@@ -101,8 +101,13 @@ class Core:
         # build-time snapshot fetched it; a test core never reads the sidecar.
         tree_path = (treedata.default_path() if runtime is None
                      else self.runtime / "gamedata" / treedata.FILE_NAME)
+        # BUILD-LIVE (decision 0045): one build per character the log names;
+        # tick_build swaps to the character being played and hot-reloads
+        # its file when it changes on disk (no click)
         self.builds = build_store.BuildStore(build_store.default_path(self.runtime),
-                                             tree=treedata.TreeCache(tree_path))
+                                             tree=treedata.TreeCache(tree_path),
+                                             per_character=True)
+        self.builds.character_of = lambda: self.state.character
         # HUD-ACT: zone levels from the cached world areas export when the
         # build-time snapshot fetched it (decision 0020); read only, no fetch.
         zones_path = (acts.default_path() if runtime is None
@@ -244,12 +249,24 @@ class Core:
         P7-4: the bump runs under the state lock (no read-then-write here)."""
         self.state.bump_calc_rev()
 
+    def tick_build(self):
+        """BUILD-LIVE (decision 0045), from the core loop: follow the
+        character being played and re-read its build file when it changed
+        on disk. The store's listeners re-publish the build summary,
+        re-score the last item and the checked items. Returns what
+        happened ("switch", "reload" or None)."""
+        return self.builds.sync()
+
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
         one price check, both stamped with the same press time so the
         overlay merges them (decision 0016 Fork 2). The text is the app's one
         clipboard read for this press; nothing here reads the clipboard. The
         price check is an offline trade-search link (decision 0017)."""
+        try:
+            self.tick_build()  # BUILD-LIVE: score against this character's build
+        except Exception:  # noqa: BLE001 - the press must still be checked
+            pass
         at = self.state.now()
         result = self.last_eval.run(text, slot, at=at)
         doc = self.price.request(text, at=at)
