@@ -4,9 +4,10 @@ Date: 2026-11-18. For the ultraplan (docs/plan/README.md), dimension B16
 competitive review: PoE trade and overlay tools. Design patterns only
 (layout, glance density, notices, onboarding, settings, updates) from 30
 tools and modules in 9 classes. Features are note 0038, utilities and
-settings note 0039, other games' companions note 0055. No code, asset or
-text of any tool is copied; GPL and NC tools are read for ideas only.
-Status: draft
+settings note 0039, other games' companions note 0055 (planned in
+docs/plan/README.md, not written yet). No code, asset or text of any
+tool is copied; GPL and NC tools are read for ideas only.
+Status: verified
 
 ## Sources (accessed 2026-11-18; keys marked (17) on 2026-11-17, local time)
 
@@ -75,9 +76,10 @@ Repository (read 2026-11-17 / 18): research 0001, 0006, 0023, 0026, 0038,
 ## Summary
 
 - The field's norm is an overlay the player can click, an item copy the
-  tool triggers itself, trade-site queries and chat commands. Three of
-  those four are outside the floor; AshLight has none and should not
-  (F2, F3, Rejected).
+  tool triggers itself, trade-site queries and chat commands. Read
+  literally, all four are outside the floor (the overlay must be
+  click-through; no input; no trade-site call); AshLight has none and
+  should not (F2, F3, Rejected).
 - What transfers is pattern-level. Eight changes: a setup card that ends
   first run on one tab (R1), a chooser for what the overlay shows plus a
   sample card (R2), lines that say when a part is off (R3), the vendor
@@ -95,8 +97,8 @@ Repository (read 2026-11-17 / 18): research 0001, 0006, 0023, 0026, 0038,
 
 ## Current state
 
-- Windows: an overlay of 2 HUD lines and one 3-line card
-  (app/overlay/index.html:13-27), 280 x 176 DIP base
+- Windows: an overlay of 2 HUD lines and a 3-line card (trade or item
+  check; app/overlay/index.html:13-27), 280 x 176 DIP base
   (app/shared/layout.js:35), 6 corners, default top-right, scale 0.95-2.0,
   opacity 0.9-1.0 (layout.js:24-31); it never takes a click (CLAUDE.md
   floor; design 0001 section 10). A companion window and a tray with 4
@@ -141,27 +143,29 @@ A. Price-check overlays
 - A1 Exiled Exchange 2 (PoE2, MIT). Glance: the item's stats as ticked
   filters with editable ranges; the tool says it does not decide the
   price (EE2-QS). Window: a transient price window (hold Ctrl to keep it,
-  or a second key that stays) and a widget layer on Shift+Space with the
-  settings behind a cog (EE2-FAQ). Data: clipboard item text, trade-site
-  queries, poe.ninja (EE2-GH). Outside our floor: it presses the copy
-  keys itself (its FAQ explains a chat app's clip key firing on every
+  or a second key that stays) and a widget layer on Shift+Space (EE2-QS)
+  with the settings behind a cog (EE2-FAQ). Data: clipboard item text,
+  trade-site queries, poe.ninja (EE2-GH). Outside our floor: it presses
+  keys itself (its FAQ says the clip key is pressed by the tool on every
   price check), sends chat commands, pastes saved text into the game's
-  search bar and scrolls stash tabs (EE2-FAQ, EE2-CHAT, EE2-SS, EE2-QS);
+  search bar and scrolls stash tabs on Ctrl+wheel (EE2-FAQ, EE2-CHAT,
+  EE2-SS, EE2-QS);
   the trade site is not ours to call (decision 0017). An optional widget
   reads the screen once per key press (EE2-OCR). First run: installer;
   Windowed or Windowed Fullscreen only; 9 game languages; an unsigned-app
   warning; one named download place against fakes (EE2-DL). Voices: F8;
-  324,913 installer downloads of v0.16.3 (research 0039).
+  324,973 Windows installer downloads of v0.16.3 (research 0039).
 - A2 Awakened PoE Trade (PoE1, MIT; parent of A1). Same keys, window
   model and six-page docs (APT-QS, APT-FAQ). Voices: never search
   automatically, add a manual button (#314, closed 2021-02-19); bring
-  back a removed price option (#1694, opened 2025-11-07, 14 comments);
+  back a removed price option (#1694, opened 2025-11-07, 14 thumbs-up);
   the tool takes focus from the game on Linux (#1428, opened 2024-08-04)
   (APT-TOP).
 - A3 Sidekick (PoE1 and PoE2, MIT). Price check and dangerous map
   modifiers; a desktop window that hides to the tray, an overlay view
   with its own navigation bar, a web mode with no login (SK, SK-REL).
-  Outside our floor: needs input-device control to copy the item (SK);
+  Outside our floor: the tool copies the item itself (on KDE Wayland it
+  asks for the desktop's Remote Control permission to do so, SK);
   trade-site data. Notices: releases of 15 Nov 2026 shrank the API
   status, hid it until the first request and, on Linux, made a failed
   copy say why (SK-REL). Voices: Traditional Chinese (#274, 17 comments,
@@ -180,17 +184,21 @@ B. Overlay-platform apps
 
 - B1 PoE Overlay II (PoE2; platform store or standalone; ads and a paid
   tier). Price check with a model estimate, campaign guide, stash
-  tracker, market browser (POV). Outside our floor: account sign-in
-  features, ads and paid tiers on GGG-derived features (POV-FAQ), and a
-  platform whose reference speaks of an overlay it injects at game launch
-  (OW-DEV; how the PoE build attaches is UNVERIFIED). Notices: 1.68.0
+  tracker, market browser (POV). Outside our floor: optional ads and a
+  Premium tier (monthly, yearly, 60-day league pass) on GGG-derived
+  features (POV-FAQ), and a platform whose reference speaks of an overlay
+  it injects at game launch (OW-DEV; how the PoE build attaches is
+  UNVERIFIED). Its OAuth sign-in (POV-FAQ) is a documented route, closed
+  to AshLight while registration is closed (F3; decision 0045 keeps a
+  no-request stub for it). Notices: 1.68.0
   (2026-10-03) tells the player when the overlay or auto-launch is
   disabled; 1.69.0 (2026-10-23) helps when the wrong game is detected;
   1.64.0 (2026-09-07) added maps done, maps an hour and average time;
-  1.62.0 fixed hotkey errors that were not shown (POV-CL). Voices: 3.8
-  of 5 from 81 ratings, 2.26M downloads; reviews of 1-16 Nov 2026 are
-  short praise, one says a second monitor makes judging drops easier
-  (POV-OW).
+  1.62.0 (2026-09-03) fixed hotkey errors that were not shown (POV-CL).
+  Voices: 3.8 of 5 from 81 ratings, 2.26M downloads; reviews of 1-16 Nov
+  2026 are short praise; one player with two monitors says checking the
+  trade site by hand was workable but the overlay made sorting drops much
+  easier (POV-OW), a point for in-game glance, not for a second screen.
 - B2 PoE2K (platform store, ads): a floating trade panel, one-click copy
   of a trade message, compact to full search windows, a desktop mode.
   3.5 of 5 from 4 ratings; two of four visible reviews are negative (did
@@ -286,9 +294,11 @@ F to I. Build views, build sites, filter editors, crafting helpers
   (NINJA-BP). G2 pobb.in: paste a code, get a page (PBB). G3 Maxroll
   planner: imports own characters after an account login (MAXR). G4
   exiles.build: hibernating until GGG reviews OAuth applications (EXB).
-- H1 FilterBlade: six tabs, a strictness slider, a class-first shortcut
-  (pick the class, apply, export), a 3-step new-filter flow; export by
-  account sync, paid automatic sync or download (FB). H2 poe2filter.com:
+- H1 FilterBlade: an Overview / Get-started tab, then "Auto-Adjust for
+  build" (it starts from the player's class and character) before the
+  detailed customise tabs; a strictness setting that sets how much shows;
+  a 3-step export (name, export, finish) by one-time account sync, paid
+  automatic sync or download (FB). H2 poe2filter.com:
   presets first, then quick filters with a tutorial; sync, a save
   straight into the game's folder with standing browser access, download
   or copy (P2F).
@@ -312,9 +322,11 @@ costs one-screen players the detail (note 0038 F2).
 ### F3. Posture
 
 At least 8 of those 14 send input to the game (A1, A2, A3, A5, C1, C2,
-C3, D1). D1 had three screen reads that ran by themselves and switched
-them off in v1.65.3 / v1.65.4 (12-13 Nov 2026) after GGG's reworded
-policy (EUI-REL; research 0026). Client.txt only: D2, D3, D4, E2, and D5
+C3, D1). D1 switched off three screen-read features (a continuous scan
+while a key is held, an auto-hide, automatic overlay repositioning) in
+v1.65.3 / v1.65.4 (12-13 Nov; the year is not printed on the release
+page, 2026 per research 0026) after GGG's reworded policy, and now calls
+older releases use at your own risk (EUI-REL). Client.txt only: D2, D3, D4, E2, and D5
 plus the player's own build files. Account APIs: B1, A5 (one feature),
 E3, G3, G4; of these E3 is dark because inventory access is disabled and
 G4 is hibernating until OAuth reviews resume (read 2026-11-18), so
@@ -343,10 +355,10 @@ covers only the idle hide).
 
 ### F6. Settings and language
 
-Every surveyed overlay rebinds keys in a settings screen. The file edits
-that remain are named by their own docs as the main source of trouble
-(A1's window-title key on migration, EE2-DL) or sit in a script config
-(E3). AshLight's keys and 11 of its 14 settings need the file (note
+Every surveyed overlay whose docs were read rebinds keys in a settings
+screen. The file edits that remain are flagged by their own docs as a
+trouble spot (A1: without a hand-edited window-title key in config.json
+it opens only for PoE1, EE2-DL) or sit in a script config (E3). AshLight's keys and 11 of its 14 settings need the file (note
 0039). Tuning in place exists in E1 (rank a mod where it is shown) and A1
 (edit a range in the price window); AshLight tunes weights on another tab
 and waystone rules not at all. A1 handles 9 game languages; AshLight
@@ -389,8 +401,9 @@ nothing. B1 fixed the same class of silent failure in 1.62.0 (POV-CL).
 
 - P1 Three-step first run (find the log, set the key, choose what shows)
   - Play setup card, R1 - https://github.com/Vyary/qutm - 2026-11-17.
-- P2 Preset first, detail later (pick a class, apply) - setup card row 2
-  and the weights card, with note 0038 R1 -
+- P2 Preset first, detail later (auto-adjust from the class, customise
+  after) - setup card row 2 and the weights card, beside note 0038 R1's
+  default-weights path -
   https://www.filterblade.xyz/?game=Poe2 - 2026-11-18.
 - P3 Per-part show / hide and density modes - Settings "Overlay shows",
   R2 - https://github.com/XileHUD/poe_overlay - 2026-11-18.
@@ -428,7 +441,9 @@ note (A3; window.js:225-229); progress per character from the log (D4;
 decisions 0038, 0045); timers that stop when away (D1; decision 0029);
 checks folded while green (A3); history rebuilt from the log after a
 restart (C1; decision 0008); map numbers as a small fixed set (B1; note
-0038 R6); a second screen for judging drops (B1 review).
+0038 R6). (The draft also counted a B1 review as backing a second screen
+for judging drops; re-read, that review credits the in-game overlay, so
+it is struck.)
 
 ### R1. Setup card: finish first run on the Play tab
 
@@ -571,7 +586,8 @@ restart (C1; decision 0008); map numbers as a small fixed set (B1; note
 - ToS check: floor rules on branding: every page carries the
   non-affiliation line, uses no GGG art and never says GGG approves or
   authorises AshLight.
-- Depends on: notes 0057 (go-public) and 0053 (where downloads live).
+- Depends on: notes 0057 (go-public; planned, not written yet) and 0053
+  (where downloads live).
 - Files likely touched: docs/ (new player pages), README.md, app/about.js.
 - Acceptance test: the four pages pass the ASCII and leak tests, each has
   the disclaimer, and one test finds the same download place in the
@@ -584,7 +600,9 @@ restart (C1; decision 0008); map numbers as a small fixed set (B1; note
   at a compact size on the game's monitor and hides it on the next press.
 - Impact: L to M. 13 of 14 surveyed overlays work on one screen (F2).
 - Effort: S. Risk: focus leaves the game while the window is up (the
-  player's own key press); a third global key.
+  player's own key press), and the game may apply its own background
+  frame cap then (UNVERIFIED for PoE2; Open question 3); a third global
+  key.
 - ToS check: the overlay stays click-through and non-focusable (floor);
   the companion is AshLight's own ordinary window (decision 0041); the
   press reads nothing and sends nothing; hiding acts on AshLight's window
@@ -627,9 +645,9 @@ restart (C1; decision 0008); map numbers as a small fixed set (B1; note
   SNIP-POL2): settled, decision 0029 amendment (Open question 1).
 - Platform overlay infrastructure, ads and paid tiers (B1-B3): floor (no
   injection; no revenue from GGG-derived features).
-- Account sign-in features: stash value, merchant history, inventory
-  snapshots, character import (B1, A5, E3, G3, G4): registration is
-  closed and two such tools are dark (F3).
+- Account sign-in features: stash tracking, inventory snapshots,
+  character import (B1, A5, E3, G3, G4): registration is closed and two
+  such tools are dark (F3); decision 0045 already keeps the stub.
 - Sounds and desktop toasts (C1, E2, E3): clutter; design 0001 principle
   3. A patch-notes window at launch (C1, C2): clutter; R6 uses a fold.
 - Saving a filter into the game's folder or by account sync (H2, H1):
@@ -693,3 +711,60 @@ AshLight does, they do not:
    rebuilds its session memory from the log (death list, act splits, map
    ladder, run history, last session). The closest are E2 (PoE1, typed
    chat commands), E3 (dark) and A3's web mode (no login).
+
+## Verification
+
+Independent verifier, 2026-11-18 (local time).
+
+Checked:
+- Code: 33 path:line citations opened (overlay HTML, layout.js, tray
+  menu, window.js, tabs.js, logfile.py, main.js, state.py, diag.py,
+  waystone.py, zoneguide.py, __init__.py, app.js, 15 ranges of
+  web/index.html); all hold. F9 confirmed: app/main.js:392-394 only logs
+  "toggle shortcut not available", and server/al/diag.py:316-334 scans
+  only for "item check shortcut not available". The 14 + 2 check rows
+  (diag.py:228-234) and 11 waystone rules (waystone.py:44-86) counted.
+  All 23 files named under "Files likely touched" exist.
+- Cross-references: notes 0038 R1-R6, 0039 F1 / F15 / R2 / R3 / R13 and
+  0052 R2 / R6 exist and say what this note relies on; 0055 and 0057 are
+  planned only (now labelled).
+- Web: 24 sources re-fetched 2026-11-18: EE2 issue list (the 15
+  most-commented, F8's 6 / 3 / 2 / 2 / 2 split and dates hold), EE2
+  quick start, FAQ, download, XP tracker; APT issue list; Sidekick repo,
+  releases, issue list; XileHUD; PoE Lurker; Exile-UI releases and
+  Map-Tracker wiki; PoE Overlay II changelog, FAQ and store page; qutm;
+  Path of Levelling 2 download and quick start; ExileXP forum post;
+  SlimTrade releases; MercuryTrade fork; DillaPoE2Stat; exiles.build;
+  Path of Building PoE2 repo; FilterBlade; poe2filter.com.
+- Floor (C): every R1-R8 ToS check re-read against each floor rule; none
+  needs input, a watcher, a trade-site call, memory, injection or
+  revenue. R8 gained the background-frame-cap risk. Settled decisions
+  (D): no recommendation contradicts one; the foreground hide stays an
+  operator question under decision 0029.
+- Brief (E): all nine tool classes covered; recommendation fields (F)
+  complete for R1-R8.
+
+Corrected:
+- Summary: all four field norms are outside the floor, not three.
+- EE2 installer downloads 324,913 -> 324,973 (research 0039 figure).
+- APT #1694: 14 thumbs-up, not 14 comments.
+- EE2 window model cited to the quick start (the FAQ does not say it).
+- Sidekick copy mechanism worded as the README states it.
+- PoE Overlay II: the paid tier and ads are what sit outside the floor;
+  OAuth sign-in is documented but closed to AshLight; 1.62.0 dated.
+- The B1 "second monitor" review was misread: it credits the in-game
+  overlay; struck from the validated list.
+- FilterBlade layout and export described from the page (not "six tabs"
+  and a "slider"); P2 reworded to match.
+- F6: "main source of trouble" softened to what EE2's page says.
+- F3: the three Exile-UI features named; the release page omits the year.
+- Rejected: "merchant history" removed (not on the POV FAQ).
+
+Still UNVERIFIED: how PoE Overlay II standalone and PoE2K read item and
+chat data; how the PoE Overlay II platform build attaches; Path of
+Building's update dialog (its README only promises updates in seconds);
+the date and content of SNIP-POL2; Mobalytics' PoE2 overlay; whether
+PoE2 caps frames while unfocused (R8). Not re-fetched (sampled out, low
+decision weight): XT, MOBA, OW-DEV, P2K, PLO, EC, TX, NINJA-B / BP, PBB,
+MAXR, COE, DBT, EUI-ACT / SC / MI / SS / SN / W, EE2-OCR / CHAT / SS /
+ISS, ST repo page. The file runs past the 500-line target; left as is.
