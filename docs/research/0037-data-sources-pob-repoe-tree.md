@@ -5,7 +5,7 @@ permitted data sources (PoB-PoE2, repoe-fork, passive tree export). Scope:
 the build-time and calc data sources: pinned vs current, drift risk, what
 PoE2 1.0 (2026-12-11) breaks, and watcher inputs for note 0058. Extends
 research 0011, 0014, 0015, 0017, 0021 and 0030.
-Status: draft
+Status: verified
 
 Method: read-only GETs of public repository pages and files with a generic
 client, plus a blobless no-checkout clone of PoB-PoE2 (9.3 MB) in the
@@ -13,7 +13,7 @@ sidecar Scratch for history and file-at-ref reads. Nothing from any upstream
 tree was executed. No upstream data is kept in the repo; this note holds
 counts and hashes only.
 
-## Sources (all accessed 2026-11-17)
+## Sources (accessed 2026-11-17; every load-bearing one re-fetched 2026-11-18 by the verifier)
 
 - PB-REF: git ref advertisement of PoB-PoE2 (tags, branch heads),
   https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2.git/info/refs?service=git-upload-pack
@@ -50,6 +50,9 @@ counts and hashes only.
   (2026-11-07; 1.0 content, a secondary source)
 - P05: https://www.rpgsite.net/news/20334-path-exile-2-return-of-the-ancients-release-date-new-content-screenshots
   (0.5.0 launch date 2026-05-29; search summary, several outlets agree)
+- P05T: https://mobalytics.gg/poe-2/guides/0-5-return-of-the-ancients-release-date
+  (launch hour 1 PM PDT = 20:00 UTC on 2026-05-29; search summary only,
+  accessed 2026-11-18, page not fetched)
 - Repo files read: config/tc_pins.json, tools/tc_drift.py, tools/tc_pin.py,
   tools/al_loop.py, server/al/theorycraft/snapshot.py, treedata.py,
   bridge.lua, bridge.py, charjson.py, buildlive.py, datacredit.py,
@@ -75,9 +78,12 @@ counts and hashes only.
   reading recorded for v0.23.1, and there is no rehearsal against dev.
 - repoe-fork is healthy and fast (5 game client versions exported in 21
   days, a fix deployed 30 minutes after its commit) but volatile by its own
-  word. Its deploy of 2026-11-18 lifts trade stat id coverage of the default
-  weights from 11 of 39 to 39 of 39, which meets the reversal condition of
-  the decision 0037 PoB fallback.
+  word. Its deploy of 2026-11-18 lifts trade stat id key coverage of the
+  default weights from 11 of 39 to 39 of 39, but it carries none of the 8
+  "(Local)" twin ids that the upgrade link picks per slot
+  (server/al/upgrade.py:66-80), so the decision 0037 PoB fallback is NOT
+  dead weight yet and its "full coverage" reversal is not met (verifier
+  correction).
 - The GGG tree export is unchanged since 2026-09-04. Previews reach its
   main branch about 3.6 days before a patch, so a 1.0 preview tree would be
   fetched while the live game is still 0.5.5.
@@ -180,7 +186,8 @@ Pinned vs current, measured 2026-11-17:
 - F4. The live gate is tied to one PoB version. The GUI reference in the
   sidecar (`Cache\tc_bridge\gui_expected.json`, tests/tc_live_util.py:20-36)
   says `"pob": "v0.23.1"` and holds 17 values read from a screenshot of
-  that GUI. Live tests compare the candidate's numbers with them at 0.1
+  that GUI (the verifier read back `pob` v0.23.1 and 17 output keys).
+  Live tests compare the candidate's numbers with them at 0.1
   percent (tests/test_tc_bridge.py:300-302,
   tests/test_tc_pob_drift_guard.py:137-138). A release that rebalances
   anything the reference build uses turns the live trial red and `apply`
@@ -206,7 +213,8 @@ Pinned vs current, measured 2026-11-17:
   does not guarantee checksums of generated source archives and points to
   release assets for that (GH-A2); its 2023 commitment kept zip and tar
   stable for at least one year (to 2024-02-21) and promises six months of
-  notice before a format change (GH-A1). The PoB and LuaJIT pins use
+  notice before a format change, with a reserved right to move faster for
+  a critical vulnerability in the compression path (GH-A1). The PoB and LuaJIT pins use
   generated archives; WinLibs is a release asset. A generator change would
   move every commit archive at once, so the 1.2 MB LuaJIT archive is a
   faithful canary for the 390 MB one. The archive host answers conditional
@@ -232,21 +240,36 @@ Pinned vs current, measured 2026-11-17:
   as in research 0011: MIT code, data stated to be GGG-owned (RF-LIC).
   Pages sends ETag, Last-Modified and a 600 s cache lifetime; the ETag
   encodes deploy time and size, so each redeploy forces a full download.
-- F11. The decision 0037 fallback now meets its own reversal condition.
-  Upstream commit 21f4f6d1 (2026-11-18 05:13 UTC) adds a second lookup
-  with the bracket markup reduced to its shown text (RF-FIX, RF-ISSUE);
-  the deploy followed 30 minutes later. Measured with
-  server/al/tradestats.py `build_index` and `coverage` on both files:
+- F11. repoe-fork closes the key gap but not the local-twin gap
+  (verifier correction: the draft said the decision 0037 fallback met its
+  reversal condition; it does not). Upstream commit 21f4f6d1 (2026-11-18
+  05:13 UTC) adds a second lookup with the bracket markup reduced to its
+  shown text (RF-FIX, RF-ISSUE); the deploy followed 30 minutes later.
+  Measured with server/al/tradestats.py `build_index` (:73-93) and
+  `coverage` (:212-222) on both files (re-measured by the verifier):
   entries with `trade_stats` 292 -> 1851 of 10759; explicit index 238 ->
   1543; default weights mapped by repoe-fork alone 11 of 39 -> 39 of 39.
   Against the pinned PoB file: 1540 shared keys, 0 conflicts, 306 keys
-  only in PoB, 3 only in repoe-fork. The amendment's condition "repoe-fork
-  gains full coverage" holds for the 39 default weights, the yardstick it
-  used. Why it matters: hosts without the calc component get all default
-  filters after a refresh, and the fallback is what causes F3.
-- F12. Two of six files are fetched for nothing. mods.json and stats.json
-  are 27.9 MB of the 48.2 MB set (58 percent), and no module reads them
-  (server/al/theorycraft/snapshot.py:74, :76).
+  only in PoB, 3 only in repoe-fork. Of the 306 PoB-only keys, 8 are the
+  "(Local)" twins (armour, evasion, energy shield, increased armour /
+  evasion, attack speed, accuracy, block); the new repoe-fork index has 0
+  keys with "local". The upgrade link takes the local id on armour slots
+  for defence stats and on Weapon 1 for the others
+  (server/al/upgrade.py:52-80), and decision 0037's amendment calls 39 of
+  39 key coverage while the link picks by slot
+  (docs/decisions/0037-trade-stat-ids-source.md:90-95). Without the
+  fallback `_slot_id` returns the global id on armour pieces and weapons,
+  a wrong filter. Why it matters: hosts without the calc component get
+  global-slot filters (jewellery, belt) after a refresh, but armour and
+  weapon filters still need the PoB file, so the fallback stays and F3
+  must be fixed in TC-DRIFT itself (R3 a).
+- F12. Two of six files are fetched for nothing. mods.json and
+  stats_by_file.json are 27.1 MB of the 47.8 MB repoe-fork set (57
+  percent; 53.0 MB with the tree file), by Content-Length of the
+  2026-11-18 deploy (re-measured by the verifier; the draft's 27.9 of
+  48.2 MB was not reproduced), and no module under server/ or
+  tools/ reads them (server/al/theorycraft/snapshot.py:74, :76; a grep
+  for the cached file names finds readers only for the other four).
 - F13. The snapshot has no shape check and no refresh trigger. Any valid
   JSON replaces the cached file (snapshot.py:188-200); the hot-reload
   guard checks size, validity and top-level type only
@@ -260,9 +283,11 @@ Pinned vs current, measured 2026-11-17:
   0.5.5 is untagged (GT-REF, GT-FEED). The current file parses fully with
   treedata.py: 5152 nodes, 240 without a string id, 669 ascendancy nodes,
   12 classes, 23 named ascendancies, as in research 0014. "0.5.0 Preview"
-  was pushed 2026-05-26 04:48 UTC, 3.6 days before the 0.5.0 launch. The
-  snapshot follows `main` (snapshot.py:66-67) and keeps one file, so a 1.0
-  preview would replace the live tree around 2026-12-07. GGG lists this
+  was pushed 2026-05-26 04:48 UTC, 3.6 days before the 0.5.0 launch at
+  20:00 UTC on 2026-05-29 (P05T), and "0.5.0 Preview 2" followed on
+  2026-05-28 00:46 UTC (GT-FEED). The snapshot follows `main`
+  (snapshot.py:66-67) and keeps one file, so a 1.0 preview would replace
+  the live tree around 2026-12-08 if the lead time repeats. GGG lists this
   repository as its one official data export for PoE2 (GGG-DATA). On the
   dev host the tree is not cached at all: web data is on but no contact is
   set, so the Build view has no node names and a `.build` export has no
@@ -283,7 +308,7 @@ Pinned vs current, measured 2026-11-17:
   world_areas file has 24 areas with act 6: the 23 interlude areas and one
   placeholder; what 1.0 does with them is UNVERIFIED.
 - F18. What 1.0 breaks, in order, and what the runbook covers. Around
-  2026-12-07: a preview tree on `main` (F14). 2026-12-11: the game.
+  2026-12-08: a preview tree on `main` (F14). 2026-12-11: the game.
   Within about a day of each client version: a repoe-fork export (F10),
   now with Acts 5-6 areas, about 200 new base types and a reworked passive
   tree (NB). Then the first PoB release, 1 day after 0.5.0 last time (0 to
@@ -324,8 +349,10 @@ Ranked, best first. ROADMAP row names are proposals.
   due check updates ops/runtime/tc_drift.json. ZERO-CLICK: the tick does
   it.
 - R3 (TC-DRIFT-TRIAL-FIX). Action: make a trial able to end green: (a)
-  re-hash `pob2_files` from the extracted candidate after setup, unless R4
-  removes the block; (b) add `trial --ref <branch or commit>` for dev and
+  re-hash `pob2_files` from the extracted candidate after setup and record
+  the old and new hash plus the parsed row count in the trial result, so a
+  session reviews the trade data change at `apply` (the fallback stays,
+  F11); (b) add `trial --ref <branch or commit>` for dev and
   beta, static by default, never accepted by `apply`; (c) key the GUI
   reference by tag: compare numbers only for the same tag, otherwise
   report per-key deltas against the previous pin and require a recorded
@@ -334,25 +361,29 @@ Ranked, best first. ROADMAP row names are proposals.
   changes what live-green means and needs an adjudicated amendment to
   decisions 0025 and 0028. ToS check: none touched; build-time dev tooling
   on public repository files; candidate Lua still runs only on the manual
-  trigger. Depends on: R1 for a green rehearsal; R4 decides (a). Files
+  trigger. Depends on: R1 for a green rehearsal. Files
   likely touched: tools/tc_drift.py, tests/test_tc_drift.py,
   tests/tc_live_util.py, tests/test_tc_bridge.py. Acceptance test: fakes
   prove (a) to (d); a rehearsal against beta reports static-green after
   R1. ZERO-CLICK: static tier unattended; the live tier stays manual by
   decision 0025.
-- R4 (MATH-TRADESTAT-RETIRE). Action: have an adjudicator retire the PoB
-  TradeSiteStats fallback, since its reversal condition is met (F11).
-  Impact: M; removes a hash pin, the cause of F3, and a second relay of
-  trade-site data. Effort: S. Risk: 306 PoB-only keys lose filters for
-  user-edited weights; repoe-fork could regress, which the R8 coverage
-  count would show. ToS check: narrows the surface; still no trade
-  endpoint call (decision 0017). Depends on: a snapshot refresh to the
-  2026-11-18 export or newer. Files likely touched: config/tc_pins.json,
-  server/al/tradestats.py, server/al/theorycraft/datacredit.py,
-  tests/test_tc_pob_drift_guard.py, tests/test_math_tradestat_pob.py,
-  docs/decisions/0037-trade-stat-ids-source.md. Acceptance test: with the
-  refreshed cache and no calc component, coverage of the default weights
-  is 39 of 39. ZERO-CLICK: the link gains its filters with no action.
+- R4 (MATH-TRADESTAT-LOCAL). Verifier rewrite: the draft proposed
+  retiring the PoB TradeSiteStats fallback; F11 shows that would put
+  global ids on armour and weapon filters, so it is moved to Rejected.
+  Action: keep the fallback; add a coverage line that counts both the 39
+  default keys and their 8 "(Local)" twins per source (repoe-fork, PoB,
+  merged), and file an upstream-data note when repoe-fork starts to carry
+  the twins; only then may an adjudicator retire the fallback under the
+  decision 0037 amendment's "full coverage" clause. Impact: M; makes the
+  retirement condition measurable and catches a regression in either
+  source. Effort: S. Risk: low; a diagnostic only. ToS check: local
+  counts over cached public files; no trade endpoint call (decision 0017,
+  floor rule on trade2). Depends on: a snapshot refresh to the 2026-11-18
+  export or newer. Files likely touched: server/al/tradestats.py,
+  server/al/diag.py, tests/test_math_tradestat_pob.py. Acceptance test:
+  with the 2026-11-18 cache and the pinned PoB file the line reads keys
+  39/39, local twins 0/8 repoe-fork and 8/8 merged. ZERO-CLICK: computed
+  at each index load, shown on the Checks page.
 - R5 (WATCH-UPSTREAM). Action: build the watchers below as one stdlib
   tool on the dev loop host, called before the HALT return, with a state
   file under ops/runtime and one tick line per change. Impact: M. Effort:
@@ -395,14 +426,15 @@ Ranked, best first. ROADMAP row names are proposals.
   id_match share. Impact: M; removes the preview hazard and helps players
   who keep a 0.5 build after 1.0. Effort: M. Risk: low; two 5 MB files.
   ToS check: GGG's own Data Exports source, fetch-only, nothing bundled
-  (decision 0009 item 3). Depends on: nothing; wanted before 2026-12-07.
+  (decision 0009 item 3). Depends on: nothing; wanted before 2026-12-08.
   Files likely touched: server/al/theorycraft/snapshot.py, treedata.py,
   store.py, buildfile.py, tests/test_tc_tree.py, tests/test_tc_tree_ids.py.
   Acceptance test: with a foreign-version tree as the newest file, a build
   still gets names and `.build` ids from the older file. ZERO-CLICK: the
   choice is made per build with no setting.
 - R7 (DOC-1.0-RUNBOOK-2). Action: add to the runbook and UTIL-1.0-POST:
-  (1) R1 before the first pin move; (2) re-read `pob2_files` or apply R4;
+  (1) R1 before the first pin move; (2) re-read `pob2_files` (R3 a) and
+  re-run the R4 coverage line;
   (3) a new GUI reference and the decision 0028 budgets per pin move; (4)
   a real-export fixture from the 1.0-era PoB, whose builds save in a
   stable element and attribute order (decision 0021); (5) Acts 5-6 entries
@@ -470,7 +502,9 @@ Ranked, best first. ROADMAP row names are proposals.
 ## Cut or merge
 
 - Cut: the `mods` and `stats` snapshot files (R11).
-- Cut: the PoB TradeSiteStats fallback and its `pob2_files` pin (R4).
+- Not cut (verifier correction): the PoB TradeSiteStats fallback and its
+  `pob2_files` pin stay until repoe-fork carries the "(Local)" twins (F11,
+  R4).
 - Cut: the toolchain tree after the one build it serves (R12).
 - Merge: the PoB release check, the docs watch and W2 to W8 into one
   upstream watcher with one state file and one tick section (R5).
@@ -496,6 +530,10 @@ Ranked, best first. ROADMAP row names are proposals.
   secret for a read-only check is a cost without a gain.
 - poe2db or wiki text for Acts 5-6 on launch day. Against decision 0009
   item 4.
+- Retiring the PoB TradeSiteStats fallback now (the draft's R4). Not a
+  floor issue but a correctness one: the 2026-11-18 repoe-fork export has
+  0 of the 8 "(Local)" twin ids, so the decision 0037 amendment's "full
+  coverage" reversal is not met (F11).
 
 ## Open questions
 
@@ -519,3 +557,71 @@ Ranked, best first. ROADMAP row names are proposals.
   in it (R3 rehearsal answers this); what the archive ETag is derived
   from; the PoB 390 MB archive was not re-downloaded today (its pin was
   recorded from two downloads on 2026-11-17, decision 0018).
+
+## Verification
+
+Independent check on 2026-11-18 by a second agent (public pages and files
+only, generic client, nothing upstream executed; the guard regexes were
+applied as text to downloaded files in the sidecar Scratch).
+
+Checked:
+
+- Code citations: 41 path:line references opened (tc_pins.json, tc_drift.py
+  15 ranges, al_loop.py, drift guard rows and hash test, bridge.lua,
+  bridge.py, snapshot.py, tradestats.py, upgrade.py, charjson.py,
+  buildlive.py, core.py, diag.py, hotreload.py, tc_pin.py, tc_live_util.py,
+  test_tc_bridge.py, decision 0004 headings, runbook sections, ROADMAP
+  UTIL-1.0-POST). All held; the sidecar GUI reference reads v0.23.1 with 17
+  keys; HALT exists and ops/runtime/tc_drift.json last checked 2026-11-17
+  10:03.
+- Web claims re-fetched: PoB-PoE2 refs (34 v0 tags, master = pin, dev
+  601768bd, beta 45bb2301) and release feed (newest 0.23.1, no note
+  mentions headless, XML, LuaJIT or breaking); HeadlessWrapper.lua 5723 ->
+  2494 bytes and the 553-line _SimpleGraphic.def.lua; the 23 guard rows
+  give 0 failures at v0.23.1 and 3 at dev and at beta (the same 3 rows);
+  `maxtrace` 4000 -> 20000 in Launch.lua; TradeSiteStats.lua hash at the
+  pin equals `pob2_files`, dev differs, 2 commits since the pin and 13
+  from 2026-06-03 to 2026-07-11. LuaJIT v2.1 head = pin, no tags, archive
+  re-hashed equal (1246780 bytes); version stamps decode to 2026-11-11 and
+  2026-07-20 (113 days). WinLibs pinned asset size and digest equal the
+  pin, newest UCRT POSIX release, .zip for all four variants, API limit 60
+  per hour. GitHub archive posts (GH-A1, GH-A2). repoe-fork headers (600 s,
+  ETag = deploy time and size), data and code feeds (5 client versions
+  2026-10-28 to 2026-11-18; code changed 6 of the last 7 days; fix 05:13,
+  export 05:42, deploy 05:43 UTC). Trade id counts re-measured with the
+  repo's own functions (292 -> 1851, 238 -> 1543, 11 -> 39 of 39, 1540
+  shared, 0 conflicts, 306 / 3). Tree export refs (688 bytes, 4 tags, head
+  bd87e651), feed dates, data.json 5140821 bytes, 23 named ascendancies
+  including the 3 missing from charjson.py, no LICENSE file. The 1.0
+  content (26 ascendancies, 200+ base types, Acts 5-6) against NB; the
+  0.5.0 launch date and hour by search.
+- ToS floor: all 12 recommendations and W1-W8 re-tested; all stay inside
+  (public repository reads with a truthful User-Agent, no trade endpoint,
+  no game process or file, no input, no clipboard or screen read; R10
+  reads only the opted-in Client.txt). Q3 stays a question, not a
+  recommendation.
+- Settled decisions: R2 and R3 c are proposed as dated amendments to 0025
+  / 0028, not silent changes; R2 follows the decision 0044 item 6
+  precedent.
+
+Corrected (5):
+
+- F11, Summary, R4, Cut list: the draft said the decision 0037 PoB
+  fallback met its "full coverage" reversal. It does not: repoe-fork has
+  0 of the 8 "(Local)" twin ids that server/al/upgrade.py:66-80 picks for
+  armour and weapon slots. R4 is rewritten as a coverage line; retirement
+  moved to Rejected; R3 a now always re-hashes; R7 step 2 updated.
+- F12: sizes re-measured as 27.1 of 47.8 MB (57 percent); the draft's
+  27.9 of 48.2 MB was not reproduced.
+- F14, F18, R6: preview date moved to around 2026-12-08 (the 0.5.0 lead
+  of 3.6 days applied to 2026-12-11; the 1.0 launch hour is not known); a
+  second 0.5.0 preview noted.
+- F7: GitHub's six-month notice has a critical-vulnerability exception.
+- Source list: access dates, and P05T added for the launch hour.
+
+Still UNVERIFIED or not re-checked: the items in the UNVERIFIED line
+above; the PoB-PoE2 tag dates behind F6 (34 releases in 557 days, the
+gaps, 11 releases in 59 days; only the last 10 dates were re-read and
+fit); the disk footprints in F6, F9 and R12; the PoB-bundled LuaJIT DLL
+version and size (F9, Q3); the treedata.py node counts of F14 (raw
+export has 5153 keys under `nodes`); the act-6 count in F17.
