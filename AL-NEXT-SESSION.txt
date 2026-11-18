@@ -2,10 +2,15 @@ AL NEXT SESSION
 ---------------
 SESSION: 6   (FLEET item 13 counter; /done writes n+1)
 
-Fable ultraplan: done = plan index (docs/plan/README.md); next = research
-notes 0035-0058, then plan sections 01-09, in the order of the work list in
-docs/plan/README.md. A listed file is done when it is at HEAD
-with Status: verified / final; resume with the first one that is not.
+Fable ultraplan: done = plan index (docs/plan/README.md), all 24 research
+notes 0035-0058 (verified, indexed in docs/research/README.md) and plan
+section docs/plan/01-open-items.md (final); critic gap fills landed for
+0057, 0053 and 0043. Next = docs/plan/02-findings.md, then plan sections
+03-09, in the order of the work list in docs/plan/README.md (inputs: the
+research summary in the sidecar Scratch folder, up-research-summary.json,
+with the critic's open gaps, conflicts and duplicates). A listed file is
+done when it is at HEAD with Status: verified / final; resume with the
+first one that is not.
 
 Next action: operator-led planning session (operator supplies the brief);
 afterwards execute the resulting plan's wave 1.

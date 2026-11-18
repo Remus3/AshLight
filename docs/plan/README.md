@@ -16,34 +16,34 @@ The boxes below are a convenience; the file at HEAD decides.
 
 ## Work list - research notes
 
-- [ ] docs/research/0035-data-sources-ggg-api.md - B1 GGG OAuth character API, API Reference, Data Exports, developer docs
-- [ ] docs/research/0036-data-sources-poe-ninja.md - B1 poe.ninja PoE2 contract
-- [ ] docs/research/0037-data-sources-pob-repoe-tree.md - B1 PoB-PoE2 releases, repoe-fork, GGG passive tree export
-- [ ] docs/research/0038-features-review.md - B2 features: gaps vs player value, cut or merge
-- [ ] docs/research/0039-utilities-review.md - B3 utilities: gaps vs player value, cut or merge
-- [ ] docs/research/0040-visual-design-review.md - B4 visual design
-- [ ] docs/research/0041-typography-review.md - B5 typography
-- [ ] docs/research/0042-usability-review.md - B6 usability
-- [ ] docs/research/0043-glanceability-zero-click-audit.md - B7 glanceability and every remaining click or paste
-- [ ] docs/research/0044-accessibility-review.md - B8 accessibility
-- [ ] docs/research/0045-security-local-surface.md - B9 token, CSP, Host / Origin, local API surface
-- [ ] docs/research/0046-security-electron-supply-chain.md - B9 Electron hardening and supply chain
-- [ ] docs/research/0047-file-structure-review.md - B10 file structure
-- [ ] docs/research/0048-performance-budgets-review.md - B11 speed, RAM, FPS budgets
-- [ ] docs/research/0049-test-suite-speed.md - B12 test suite speed
-- [ ] docs/research/0050-reliability-review.md - B13 reliability
-- [ ] docs/research/0051-observability-review.md - B14 observability
-- [ ] docs/research/0052-deployment-reference-pattern.md - B15 / F reference install, build, release, update, uninstall pattern
-- [ ] docs/research/0053-packaging-release-options.md - B15 / F packaging and release options
-- [ ] docs/research/0054-competitive-poe-tools.md - B16 competitive review: PoE trade and overlay tools
-- [ ] docs/research/0055-competitive-companions-overlays.md - B16 competitive review: other games' companions and overlays
-- [ ] docs/research/0056-third-party-repo-review.md - C a reviewed third-party repo set
-- [ ] docs/research/0057-go-public-readiness.md - E go-public readiness
-- [ ] docs/research/0058-automation-watchers.md - G no-reminder automation and upstream watchers
+- [x] docs/research/0035-data-sources-ggg-api.md - B1 GGG OAuth character API, API Reference, Data Exports, developer docs
+- [x] docs/research/0036-data-sources-poe-ninja.md - B1 poe.ninja PoE2 contract
+- [x] docs/research/0037-data-sources-pob-repoe-tree.md - B1 PoB-PoE2 releases, repoe-fork, GGG passive tree export
+- [x] docs/research/0038-features-review.md - B2 features: gaps vs player value, cut or merge
+- [x] docs/research/0039-utilities-review.md - B3 utilities: gaps vs player value, cut or merge
+- [x] docs/research/0040-visual-design-review.md - B4 visual design
+- [x] docs/research/0041-typography-review.md - B5 typography
+- [x] docs/research/0042-usability-review.md - B6 usability
+- [x] docs/research/0043-glanceability-zero-click-audit.md - B7 glanceability and every remaining click or paste
+- [x] docs/research/0044-accessibility-review.md - B8 accessibility
+- [x] docs/research/0045-security-local-surface.md - B9 token, CSP, Host / Origin, local API surface
+- [x] docs/research/0046-security-electron-supply-chain.md - B9 Electron hardening and supply chain
+- [x] docs/research/0047-file-structure-review.md - B10 file structure
+- [x] docs/research/0048-performance-budgets-review.md - B11 speed, RAM, FPS budgets
+- [x] docs/research/0049-test-suite-speed.md - B12 test suite speed
+- [x] docs/research/0050-reliability-review.md - B13 reliability
+- [x] docs/research/0051-observability-review.md - B14 observability
+- [x] docs/research/0052-deployment-reference-pattern.md - B15 / F reference install, build, release, update, uninstall pattern
+- [x] docs/research/0053-packaging-release-options.md - B15 / F packaging and release options
+- [x] docs/research/0054-competitive-poe-tools.md - B16 competitive review: PoE trade and overlay tools
+- [x] docs/research/0055-competitive-companions-overlays.md - B16 competitive review: other games' companions and overlays
+- [x] docs/research/0056-third-party-repo-review.md - C a reviewed third-party repo set
+- [x] docs/research/0057-go-public-readiness.md - E go-public readiness
+- [x] docs/research/0058-automation-watchers.md - G no-reminder automation and upstream watchers
 
 ## Work list - plan sections
 
-- [ ] docs/plan/01-open-items.md - D every open item with its unblock condition
+- [x] docs/plan/01-open-items.md - D every open item with its unblock condition
 - [ ] docs/plan/02-findings.md - one consolidated ranked findings list
 - [ ] docs/plan/03-target-design.md - target design: Play tab, tab set, overlay, type scale, colour tokens
 - [ ] docs/plan/04-go-public.md - E go-public plan
