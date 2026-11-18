@@ -1,39 +1,47 @@
 # 01 - Open items
 
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md), section D.
-Status: draft
+Status: final
 
-Scope: every open item the plan must carry, read at HEAD a55fb3b plus the
+Scope: every open item the plan must carry, drafted at HEAD a55fb3b and
+re-checked at HEAD 1f2d537 (see Verification), plus the
 untracked research drafts of this session. Sources: ROADMAP.md (2061
 lines), AL-NEXT-SESSION.txt (141 lines), docs/decisions/, docs/audit/,
 the loop code (tools/loop_base.py, tools/loop_roadmap.py, tools/al_loop.py),
 the core (server/al/), tests/ and the runtime files under ops/loop/control/.
 Sibling notes are cited as N<number> (N48 = docs/research/0048-...).
 Web check: PoE2 1.0 launches 2026-12-11 (rpgsite.net news 21188 and the
-Epic Games Store news post, both accessed 2026-11-18); the 1.0 ascendancy
-names stay UNVERIFIED (the coverage names a new Duelist class).
+Epic Games Store news post, both accessed 2026-11-18, re-found by the
+verifier the same day); the 1.0 ascendancy names stay UNVERIFIED (the
+coverage names a new Duelist class). GGG OAuth registration: closed (the
+developer docs index page says it cannot process new applications, and
+that standalone apps must use a public client; accessed 2026-11-18).
 
 ## Summary
 
 - Open ROADMAP rows: 14 (13 IDs plus the OPERATOR GitHub-remote bullet).
 - Hand-off carried items: 16 top-level (15 "Carried forward" bullets plus
   the session-start REG_OPEN check), 38 sub-items under them.
-- Items with no ROADMAP row: 14 (each gets a proposed row below).
-- Loose ends found in code and docs: 17 (L1 to L17).
+- Items with no ROADMAP row: 13 (each gets a proposed row below; the
+  draft's LOOP-ITEMS-TIDY is merged into LOOP-PARSER-FIX).
+- Loose ends found in code and docs: 18 (L1 to L18).
+- Ranked recommendations: 9 (R1 to R9, section "Recommendations").
 
-By type (the 14 rows plus the 14 no-row items, 28 in all; an item counted
+By type (the 14 rows plus the 13 no-row items, 27 in all; each counted
 once under its main type):
-- code: 9 (AUDIT-P8-LOW, CODE-HEALTH-FOLLOWUP, MERGE-SEAMS-FOLLOWUP,
-  S5-FOLLOWUP, LOOP-PARSER-FIX, CORE-LOG-NO-FALLBACK, CORE-DEMO-MODE,
-  LOOP-ITEMS-TIDY, DOC-DECISION-TIDY)
-- live-game check: 8 (LIVE-1, TEST-LIVE-CLICKS, OVL-BUDGET, OVL-FPS,
-  TC-BUILDFILE-LIVE, LIVE-WAYSTONE, LIVE-SEARCHSTR, LIVE-FILTER /
-  LIVE-FILTER-MERGE as one)
+- live-game check: 9 (LIVE-1, TEST-LIVE-CLICKS, OVL-BUDGET, OVL-FPS,
+  TC-BUILDFILE-LIVE, LIVE-WAYSTONE, LIVE-SEARCHSTR, LIVE-FILTER,
+  LIVE-FILTER-MERGE)
+- code or docs: 9 (AUDIT-P8-LOW, CODE-HEALTH-FOLLOWUP,
+  MERGE-SEAMS-FOLLOWUP, S5-FOLLOWUP, LIVE-VERDICTS, LOOP-PARSER-FIX,
+  CORE-LOG-NO-FALLBACK, CORE-DEMO-MODE, DOC-DECISION-TIDY)
 - external wait: 4 (TC-OAUTH-REG, TC-IMPORT, TC-CURX, UTIL-1.0-POST)
-- operator act or decision: 5 (OPERATOR GitHub remote, OP-ACTS batch,
-  OP-PHONE-LAN, WT-SIDECAR-WIRE, LOOP-RESUME)
+- operator act or decision: 4 (OPERATOR GitHub remote, OP-PHONE-LAN,
+  WT-SIDECAR-WIRE, LOOP-RESUME)
 - fleet: 1 (FLEET-KIT-GATE-REPORT)
-- informational, no work: 1 (NOTE tree created)
+Outside the 27: the OP-ACTS batch (8 lettered acts, mapped onto rows or
+kept optional) and 3 hand-off NOTEs (one obsolete, one test flake, one
+informational).
 
 By who or what unblocks:
 - a normal session or wave, no operator: 9 code items plus the
@@ -228,8 +236,10 @@ By who or what unblocks:
   use a public OAuth client (N35 F11 confirms it stays blocked for us).
 - Unblocked by: TC-OAUTH-REG, or GGG exempting scope-less endpoints in
   writing.
-- Next step that needs no operator: parser and cache against a recorded
-  public fixture, off by default.
+- Next step that needs no operator: parser and cache against a fixture
+  written by hand from the response shape GGG's API Reference documents
+  (never a recorded live call: that call needs the OAuth client), off by
+  default.
 - Proposed disposition: keep BLOCKED; package groundwork with TC-IMPORT.
 - ToS check: API Reference endpoint only, headers obeyed dynamically.
 
@@ -278,8 +288,10 @@ By who or what unblocks:
   pill, update the N6 text); F4 each .col a labelled group, tabindex 0,
   drop tabindex from #panel-play; F5 clear #restart-overlay-said on the
   next state push, list it as a silent N6 exemption; F7 rename the
-  hint-reset class to tool-row. F3 and F6 are not carried (the review
-  line records the waypoint row folded as FIXED).
+  hint-reset class to tool-row. F3 (build-alert group) and F6 (dead zone
+  margins) are not carried: docs/design/reviews.log:59 records both FIXED
+  (and the waypoint row fold inside F1 FIXED; only F1's measurement is
+  open).
 - Type: code (design).
 - Blocked by: nothing. F1 needs only a headless browser on a fixture
   core, which needs CORE-DEMO-MODE first (L13, L14).
@@ -295,9 +307,10 @@ By who or what unblocks:
 - Remaining work: (a) overlay zone-guide line (view carries `line`, the
   overlay has no slot; design section 10 caps the HUD at 2 lines + one
   card); (b) BUILD-LIVE upgrade list memory-only, lost on restart (a
-  bounded ops/runtime file; decision 0045 reverses-if "item text must not
-  stay in memory" only covers the opposite direction, so persisting needs
-  a 0045 amendment); (c) "+2 point books" wording unverified (passive vs
+  bounded ops/runtime file would fix it, but decision 0045 settles
+  "checked items kept in memory only" and none of its Reverses-if
+  conditions is met: persisting needs an operator ruling or an
+  adjudicated 0045 amendment; default stays memory-only); (c) "+2 point books" wording unverified (passive vs
   weapon-set points); (d) clear-or-push threshold is a rule of thumb; (e)
   no packaged .exe; (f) 4 blank zones (Root Hollow, Library of Kamasa,
   Isle of Decay, Brinerot Cove).
@@ -309,10 +322,12 @@ By who or what unblocks:
   research pass on public sources; (d) the parse ledger plus run history
   (level vs zone level at each zone exit); (e) docs/plan/05 deployment
   and N53.
-- Next step that needs no operator: (c) and (f) research now; (b) decide
-  in 03 / a 0045 amendment; (d) log level-minus-zone-level per zone exit
+- Next step that needs no operator: (c) and (f) research now; (b) put
+  the ruling in the operator batch (09) or to an adjudicator; (d) log level-minus-zone-level per zone exit
   in run history and tune from 2 weeks of the operator's play.
-- Proposed disposition: split: (a) into 03; (b) one code row; (c) and (f)
+- Proposed disposition: split: (a) into 03 together with the other two
+  overlay asks that compete for the same 2-line HUD (L18); (b) one code
+  row only after the ruling; (c) and (f)
   one data row; (d) a loop row after the ledger; (e) into 05.
 - ToS check: (c), (f) own words from public facts (decision 0043); (b)
   local file only, no new read.
@@ -381,9 +396,15 @@ By who or what unblocks:
     top): keep; one word answer.
   - (k) review decision 0017 (trade link only): keep; its reverses-if
     names "the operator rules otherwise".
-  - Letters f, i and j are absent. ROADMAP.md:1819 records act i replaced
-    by decision 0027 (WinLibs toolchain); no source left for f and j in
-    the tracked files, so nothing is lost by their absence.
+  - Letters f, i and j are absent from today's hand-off. Verifier traced
+    them in git history (hand-off before commit a3bf44c, session 4):
+    (f) = wire the WT-SIDECAR WorktreeCreate / WorktreeRemove hook in
+    .claude/settings.json; it was dropped at a3bf44c WITHOUT being acted
+    on (no hook entry today), a FLEET item 5 carry-forward miss; it is
+    carried here as WT-SIDECAR-WIRE. (i) = install a compiler or approve
+    a prebuilt LuaJIT; replaced by decision 0027 (ROADMAP.md:1819).
+    (j) = paste one real PoB2 export; done (TC-CODE-REAL [x] at
+    ROADMAP.md:152, decision 0021). Nothing else is lost.
 - Proposed disposition: one batched ask in docs/plan/09, ordered by
   value: (k), (g), (h), FPS map, TC-BUILDFILE-LIVE, filter checks, (e),
   (d), (c) when open.
@@ -468,19 +489,21 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
    operator pastes the two hook entries, then a session checks one
    isolated spawn lands under the sidecar Worktree dir. Reopen as its own
    row so the act is not lost behind a done mark.
-10. LOOP-PARSER-FIX (build): L1, L2, L3 below (N58 R1 LOOP-PREFLIGHT
-    covers L1 and L3; L2 is new).
+10. LOOP-PARSER-FIX (build): L1, L2, L3 and L4 below (N58 R1
+    LOOP-PREFLIGHT covers L1, L3 and the failed-state change behind L4;
+    L2 is new).
 11. CORE-LOG-NO-FALLBACK (build): L13 below.
 12. CORE-DEMO-MODE (build): L14 below (N58 R8 a DEMO-MODE is the same
     design).
-13. LOOP-ITEMS-TIDY (build): L4 below.
-14. DOC-DECISION-TIDY (review): L9 below.
+13. DOC-DECISION-TIDY (review): L9 below (L10 rides the S5 (f) data
+    row instead).
 
 ## Loose ends found in code and docs
 
 - L1 Loop row parser drops ids with a dot or a colon. tools/loop_base.py:
   109-111 `ROW_ID = (?:\d{3}|[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*)` followed by
-  whitespace. Run on ROADMAP.md today: 150 rows parsed, 12 open seen;
+  whitespace. Run on ROADMAP.md (verifier re-run at 1f2d537): 151 rows
+  parsed, 12 open seen;
   the open UTIL-1.0-POST (ROADMAP.md:530) and the OPERATOR bullet
   (ROADMAP.md:2059) are invisible, as are the done UTIL-1.0-READY (516),
   DOC-1.0-RUNBOOK (1277) and UTIL-1.0-FIXTURES (1518). Fix: rename the
@@ -497,7 +520,10 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
 - L3 Hand-off bullets become loop work without the BLOCKED check or a
   row dedupe. tools/al_loop.py:1142-1147 appends every hand-off item
   whose skip tag is None; the BLOCKED test (al_loop.py:1125) runs only on
-  ROADMAP rows. Run on the live hand-off: 15 items, 9 untagged (the five
+  ROADMAP rows; tools/loop_roadmap.py:269-292 tags a bullet only by
+  SKIP_TAGS (tools/loop_base.py:119: operator / other-tree / info), and
+  each dispatched bullet is an opus / medium run (tools/loop_base.py:73).
+  Run on the live hand-off (verifier re-run): 15 items, 9 untagged (the five
   that repeat open rows: MERGE-SEAMS, S5, TC-IMPORT, AUDIT-P8, CODE-HEALTH;
   plus LIVE rows, UTIL-1.0-POST, KIT DEFECT, loop PAUSED). N58 R1 a
   (hand-off bullet is work only with a `LOOP:` prefix) fixes it; it must
@@ -509,8 +535,14 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
   UTIL-WAYSTONE, UX-ZONE-NOTES (ops/loop/control/loop_items/*.json,
   updated 2026-11-17). AUDIT-BUILDFILE's result names
   docs/plans/AUDIT-BUILDFILE-decision-draft.md; docs/plans/ does not
-  exist (decision 0034 superseded it). Fix: mark them superseded so a
-  resumed loop does not re-adjudicate (N58 R1 c covers the failed state).
+  exist (decision 0034 superseded it). Today they are inert: "failed" is a
+  done state (tools/loop_base.py:85) and dispatchable() never re-sends it
+  (tools/loop_roadmap.py:318-330), so a resumed loop does NOT
+  re-adjudicate them (the draft's claim was wrong). They start to matter
+  when N58 R1 (c) takes "failed" out of the done states: then all 12
+  would show as parked work. Fix: in the same change as R1 (c), mark
+  these 12 superseded (or skip failed records whose row is [x]); part of
+  LOOP-PARSER-FIX, not a row of its own.
 - L5 WT-SIDECAR flipped done while its activation is an operator act
   (see no-row item 9).
 - L6 TEST-LIVE-CLICKS names a desktop-tool grant as an unblock path
@@ -529,12 +561,16 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
 - L8 No TODO, FIXME, XXX or HACK marker exists outside ops/fleet_kit/
   and docs/ (grep 2026-11-18): the code carries its open work in ROADMAP
   only, which is the intended pattern.
-- L9 Stale "Open (UNVERIFIED)" sections: docs/decisions/0013-web-data.md:
-  69-79 (trade2 filter names and limits) and
-  docs/decisions/0015-price-check-and-contact.md:50-53 (trade2 /data and
-  /fetch shapes) ask about endpoints the app no longer calls (decision
-  0017). Fix: an amendment line "moot since 0017" so no session
-  researches them again.
+- L9 Stale "Open (UNVERIFIED)" entries. docs/decisions/0015-price-check-
+  and-contact.md:52-53 (trade2 /data/stats, /data/leagues, /fetch shapes)
+  is moot: the app calls no trade2 endpoint (decision 0017). In
+  docs/decisions/0013-web-data.md the trade2 bullet (:77-78) is half moot:
+  the limit values no longer matter, but filter names still feed the
+  ?q= link (server/al/trade.py:55 writes type_filters), so that half
+  stays open; the poe.ninja names bullet (:74-76) is already verified and
+  only sits under the wrong heading. Fix: one amendment line per entry
+  (moot since 0017 / resolved / still open for the link) so no session
+  researches the moot ones again.
 - L10 decision 0030:38 "Notes are general guidance and not yet checked in
   play": the zone notes have no live check row; fold into S5 (f) data row
   and the parse ledger (zone visits).
@@ -542,11 +578,13 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
   docs/plan/README.md says the next free number is 0046. Consistent; no
   action.
 - L12 Progress files: up-0051-v and up-0056-r1 read failed ("died at the
-  model usage limit; re-queued", 2026-11-18T00:46); 14 more ultraplan rows
-  were running at 00:47. No stale old rows outside this session. Action
-  for the plan's orchestration (docs/plan/08): a re-queued task writes a
-  new row and the failed one is cleared, so the status line does not show
-  a dead failure next to its live retry.
+  model usage limit; re-queued", 2026-11-18T00:46). Verifier read-back
+  01:00: both rows now read done (the retry reuses the task name and
+  overwrites the failed row), and no up-* row of 60 reads failed. One
+  oddity remains: up-0056-r1 reads status done with step "reviewing repo
+  1", so the step text was not updated on the last write. Action for
+  docs/plan/08: the final progress write names the outcome in its step;
+  no other action.
 - L13 A configured but missing log path falls back to the live
   Client.txt. server/al/logfile.py:138-152: when the configured path is
   not a file, discover_client_log() continues to the Steam library scan
@@ -564,11 +602,13 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
   visible indicator)": the fix keeps a non-live instance from reading the
   live log under someone else's consent.
 - L14 No isolated instance is possible. server/al/__main__.py:153 reads
-  paths.load_local_config() for the port, and Core(runtime=None)
-  (core.py:72-75) reads config/local.json (paths.py:119-121, no env
+  paths.load_local_config() for the port, and __main__.py:157 always
+  builds Core with runtime=None, which (core.py:72-75) reads config/local.json (paths.py:119-121, no env
   override) and the shared runtime dir unless AL_RUNTIME_DIR is set
   (documented "tests only", paths.py:22). There is no --config or --demo
-  flag. Fix: N58 R8 a DEMO-MODE: `python -m server.al --demo <fixture
+  flag; the existing --no-tail and --replay flags (__main__.py:33-34) stop
+  the tail but still share the real config, token and runtime dir, so
+  they are not a safe demo either. Fix: N58 R8 a DEMO-MODE: `python -m server.al --demo <fixture
   dir>` with runtime, config and fetcher in a scratch folder, Steam scan
   off, web data off or a loopback mock, exit if any open log is outside
   the fixture folder. It unblocks MERGE-SEAMS F1, the screenshot work and
@@ -580,7 +620,169 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
 - L16 S5 (b) persisting the upgrade list touches decision 0045's
   in-memory clause: it needs an amendment, not a silent change.
 - L17 KIT DEFECT race at ops/fleet_kit/fleet_suite_gate.py:672 (above);
-  a kit file, so a report, never a local edit.
+  a kit file, so a report, never a local edit. _rec (line 274 on) returns
+  None on OSError / ValueError, which is the removed-ticket case.
+- L18 Three overlay asks compete for the same capped HUD (design 0001
+  sections 7.2 and 10: 2 HUD lines plus one card): S5 (a) zone-guide
+  line, the UX-ZONE-NOTES "overlay word" left "Not done" inside a done
+  row (ROADMAP.md:678-679), and UTIL-OVERLAY-MAP, closed "NOT DONE BY
+  DESIGN" by an adjudicator (ROADMAP.md:607-612). Found by the verifier
+  in done rows; the draft missed the first two links. Disposition: one
+  decision in docs/plan/03 (overlay target design) settles all three.
+
+## Recommendations
+
+Ranked by what blocks other work first, then by operator effort saved.
+Waves are docs/plan/07's call; "Depends on" names hard prerequisites.
+
+### R1 LOOP-PARSER-FIX (before HALT is removed)
+- Action: (a) a hand-off bullet is loop work only with a `LOOP:` prefix,
+  and BLOCKED_RX applies to it (al_loop.py:1142-1147); (b) rename the five
+  dot / colon ids (UTIL-10-..., `OPERATOR-REMOTE` tagged operator) and
+  add a test that fails on any `- [` line ROW_RX misses or a repeated id;
+  (c) handoff_session() matches `^SESSION:\s*(\d+)\b`; (d) when "failed"
+  leaves the done states (N58 R1 c), skip failed records whose row is [x]
+  (the 12 of L4).
+- Impact: H. Stops 9 duplicate opus runs per resumed tick (L3), makes
+  UTIL-1.0-POST visible before 2026-12-11, restores the checklist header.
+- Effort: S-M (3 regex / filter changes, 4 tests). Risk: low; a bullet
+  without `LOOP:` simply stops being work.
+- ToS check: no floor rule touched (dev tooling, no game, no network).
+- Depends on: nothing. Blocks: R9 LOOP-RESUME, the UTIL-1.0 split.
+- Files: tools/loop_base.py, tools/loop_roadmap.py, tools/al_loop.py,
+  ROADMAP.md (ids), tests/test_al_loop*.py.
+- Acceptance test: on today's ROADMAP.md every `- [` line parses (14
+  open seen, not 12); on today's hand-off the tick's work list holds 0
+  hand-off items; handoff_session(real hand-off) == 6.
+- ZERO-CLICK: the loop reads the fixed files by itself each tick.
+
+### R2 CORE-LOG-NO-FALLBACK
+- Action: discover_client_log returns the configured path when one is
+  given, existing or not (logfile.py:138-143); the Steam scan runs only
+  with no configured path.
+- Impact: H. A demo or test core can no longer tail the live log under
+  the operator's consent (L13, seen this session for about 20 s).
+- Effort: S (one branch, one test with a fake Steam library). Risk: a
+  user with a stale configured path sees "log not found" instead of an
+  auto-found log; the first-run card already shows the path, so the fix
+  is visible.
+- ToS check: "Client.txt (tailed only after the user's opt-in, with a
+  visible indicator)": tightens it; no new read.
+- Depends on: nothing. Files: server/al/logfile.py, server/al/core.py
+  (locate_log comment), tests/test_logfile*.py.
+- Acceptance test: configured missing path plus a fake library holding a
+  Client.txt returns the configured path; no path configured still finds
+  the library log.
+- ZERO-CLICK: no user step changes.
+
+### R3 OBS-PARSE-LEDGER plus live read-back (closes LIVE-1 shapes,
+TEST-LIVE-CLICKS, LIVE-WAYSTONE from normal play)
+- Action: N51 R1 ledger at Core.feed_line (hit counts per pattern id,
+  masked shapes of unparsed lines, bounded ops/runtime/logshapes.json);
+  tools/live1_report.py prints VERIFIED live / NOT SEEN / NEW SHAPE per
+  LIVE-1 shape plus the five TEST-LIVE-CLICKS fields from a saved
+  /api/state snapshot; the item-check press records the masked property
+  block shape of a waystone; split LIVE-1 into one row per shape.
+- Impact: H. Turns operator acts (b) and the login ask into zero acts.
+- Effort: M. Risk: a masking bug could keep a name; the test feeds real
+  shaped lines with names and asserts none survive.
+- ToS check: Client.txt read only after opt-in, same lines the tailer
+  already reads; per-press item text only (decision 0003); no raw text
+  stored (R-3), no network.
+- Depends on: nothing. Files: server/al/core.py, new
+  server/al/logshapes.py, tools/live1_report.py, tests.
+- Acceptance test: replaying the UTIL-1.0 fixture log yields per-pattern
+  counts and masked shapes with no character name; the report marks each
+  LIVE-1 shape.
+- ZERO-CLICK: the operator plays; a session or tick runs the report.
+
+### R4 BUDGET-LOG (closes OVL-BUDGET from normal play)
+- Action: N48 R4: client main process logs app.getAppMetrics() per
+  process once a minute, the core its own working set / CPU, tagged by
+  game idle / active / in map / overlay shown (from Client.txt state,
+  never a process check), 1 MB cap in <sidecar>\Logs, one Checks row.
+- Impact: H (N48: closes OVL-BUDGET with no operator action). Effort: M.
+  Risk: log growth, capped.
+- ToS check: own processes only; no game memory, no process-list check
+  (decision 0029).
+- Depends on: nothing. Files: app/main.js (or app/client/*),
+  server/al/ (core metrics), web/checks.js, tests.
+- Acceptance test: a fixture run writes tagged rows and stops at 1 MB.
+- ZERO-CLICK: logs by itself.
+
+### R5 CORE-DEMO-MODE
+- Action: `python -m server.al --demo <fixture dir>`: runtime, config and
+  fetcher in a scratch folder, Steam scan off, web data off, exit if any
+  open log is outside the fixture folder (N58 R8 a).
+- Impact: M-H. Unblocks MERGE-SEAMS F1 measurement and screenshots with
+  no risk to the live client.
+- Effort: M. Risk: low once R2 lands.
+- ToS check: reads only a fixture copy; no live log, no network.
+- Depends on: R2. Files: server/al/__main__.py, server/al/paths.py,
+  server/al/core.py, tests.
+- Acceptance test: a demo core given a missing fixture exits non-zero
+  and opens no file outside the fixture dir; the live runtime dir is
+  untouched (mtime check).
+- ZERO-CLICK: scripted; no operator step.
+
+### R6 LIVE-VERDICTS plus OVL-CHECK (one-click player checks)
+- Action: a Checks-tab "Tried in game" card (TC-BUILDFILE-LIVE,
+  LIVE-SEARCHSTR, LIVE-FILTER, LIVE-FILTER-MERGE, OVL-FPS numbers) with
+  Worked / Refused and a note, stored in a bounded ops/runtime file and
+  read back by a script that drafts the ROADMAP flips; N48 R5 OVL-CHECK
+  cycles the overlay through timed blocks in a map so FPS readings line
+  up.
+- Impact: M. Each player check costs one click instead of prose.
+- Effort: M. Risk: low; nothing sent anywhere.
+- ToS check: dashboard clicks only; the player saves files and pastes
+  strings (decisions 0031, 0033, 0034); overlay cycling is AshLight's own
+  window; FPS read by the player (decision 0006, R-2).
+- Depends on: nothing (R4 shares the Checks row). Files: web/checks.js,
+  server/al/http.py, new ops/runtime file, tools/ovl_check.py, tests.
+- Acceptance test: a verdict posted via the token API appears in the
+  read-back script output; OVL-CHECK writes its block schedule.
+- ZERO-CLICK: developer side automatic; one click per check for the
+  player.
+
+### R7 Code rows as filed
+- Action: AUDIT-P8-LOW (P8-3 to P8-8), CODE-HEALTH-FOLLOWUP (3 items, (1)
+  folded into the N47 layout), MERGE-SEAMS F2 / F4 / F5 / F7 now and F1
+  after R5, S5 (c) / (f) research, (d) after R3.
+- Impact: M. Effort: M in total. Risk: low; design-reviewer PASS for UI.
+- ToS check: none touched; P8-7 tightens redaction.
+- Depends on: R5 for F1. Files: per row (ROADMAP.md:1981-2057).
+- Acceptance test: each row's own ACCEPT line plus pytest / npm green.
+- ZERO-CLICK: no player step.
+
+### R8 Housekeeping docs and fleet
+- Action: DOC-DECISION-TIDY (L9 amendment lines); strike "or a
+  desktop-tool grant to the lane" from TEST-LIVE-CLICKS (ROADMAP.md:54,
+  R-1); reopen WT-SIDECAR as WT-SIDECAR-WIRE (operator act); draft the
+  FLEET-KIT-GATE-REPORT note now and send it once loop.dest_inboxes has a
+  MAIN entry; S5 (b) and OP-PHONE-LAN go to the operator batch.
+- Impact: M (prevents re-research and a ToS-breaking unblock path).
+  Effort: S. Risk: none.
+- ToS check: R-1 removal enforces "NEVER send input to the game".
+- Depends on: nothing. Files: docs/decisions/0013, 0015, ROADMAP.md,
+  a draft note in the outbox only when a path exists.
+- Acceptance test: grep finds no "desktop-tool grant" in ROADMAP.md;
+  test_wt_sidecar_hook.py still skips until the operator wires the hook.
+- ZERO-CLICK: no player step.
+
+### R9 LOOP-RESUME and the operator batch
+- Action: remove ops/loop/control/HALT after R1 lands; one batched ask
+  (docs/plan/09): (k) 0017 review, (g) UA contact / web_data, (h) NLM,
+  OVL-FPS map, TC-BUILDFILE-LIVE, filter checks, LIVE-SEARCHSTR paste,
+  S5 (b) ruling, phone / LAN pick, WT-SIDECAR-WIRE paste, (e) autostart,
+  (d) GitHub remote, (c) apply when REG_OPEN appears.
+- Impact: H for throughput once R1 is in. Effort: S. Risk: a resumed
+  loop without R1 burns runs (L3).
+- ToS check: no floor rule touched; every act is the operator's own.
+- Depends on: R1 (HALT); R6 for one-click verdicts.
+- Files: ops/loop/control/HALT, docs/plan/09.
+- Acceptance test: after removal, one tick's loop.json lists no
+  hand-off item as work and no row marked BLOCKED.
+- ZERO-CLICK: the tick resumes by itself every 15 minutes.
 
 ## Rejected
 
@@ -613,4 +815,39 @@ Each gets a proposed row (ID, lane, one line); docs/plan/07 assigns waves.
   TEST-LIVE-CLICKS, OVL-BUDGET, OVL-FPS, TC-BUILDFILE-LIVE,
   LIVE-FILTER-MERGE, waystone, search string, filter), operator acts 8
   (a, b, c, d, e, g, h, k), TC-CURX 1; listed = 38.
-- Items with no ROADMAP row = 14; each has a proposed row ID above.
+- Items with no ROADMAP row = 13; each has a proposed row ID above.
+- Verifier re-derivation (1f2d537): `^\s*- \[ \]` on ROADMAP.md gives the
+  same 14 lines; handoff_items() on AL-NEXT-SESSION.txt gives 15 bullets
+  (9 untagged); every bullet and sub-item maps to a block above. The
+  hand-off's 5 "Operator orders recorded session 5" are standing orders,
+  not open items, and are not counted.
+
+## Verification
+
+Verifier pass 2026-11-18 (independent of the author), at HEAD 1f2d537.
+- Checked: 14 of 14 open rows and 15 of 15 hand-off bullets re-derived
+  (both match); 31 code citations opened (loop_base 73 / 85 / 109-111 /
+  119 / 238, loop_roadmap 269-292 / 318-330, al_loop 448 / 1125 /
+  1142-1147 / 1525-1528 / 1747-1750, logfile 135-153, core 66-75 /
+  608-614, paths 22 / 35-41 / 119-121, __main__ 33-34 / 153-157,
+  fleet_suite_gate 274 / 672, 6 test skip / xfail lines, reviews.log:59,
+  decisions 0013 / 0015 / 0030, 12 loop_items records, ROADMAP lines 54,
+  607-612, 647, 665, 678, 708, 728, 1663-1683, 1819); parsers re-run
+  read-only on the live files; 2 web claims re-fetched (1.0 date, OAuth
+  registration closed); docs-watch state read back ("reg": "closed").
+  All 9 recommendations tested against the ToS floor and the Settled list.
+- Corrected: L1 row count 150 -> 151; L4 claim that stale failed records
+  get re-adjudicated (false: failed is a done state today); L9 scope
+  (0013 trade2 filter names still feed the ?q= link); L12 (failed rows
+  already overwritten; one stale step text); MERGE-SEAMS F3 / F6
+  reason; S5 (b) now states no 0045 Reverses-if is met; TC-CURX fixture
+  must not come from a live call; OP-ACTS f / i / j traced (f was
+  dropped unacted); Summary type counts (LIVE-VERDICTS was missing,
+  OP-ACTS is not a row-level item); LOOP-ITEMS-TIDY merged into
+  LOOP-PARSER-FIX (14 -> 13 no-row items).
+- Added: L18 (three overlay asks on one capped HUD); the Recommendations
+  section R1 to R9 with all fields; L14 note on --no-tail / --replay.
+- UNVERIFIED: the 1.0 ascendancy names; whether G5_ / G6_ prefixes hold
+  in 1.0 (runbook item); N48's per-tick cost figure for P8-5 (about
+  10 ms, quoted, not re-measured); the "about 20 s" live-tail duration
+  (session report, not re-read from a log).
