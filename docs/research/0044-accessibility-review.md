@@ -4,7 +4,7 @@ Date: 2026-11-18. For the ultraplan (docs/plan/README.md), dimension B8
 accessibility. WCAG 2.2 AA for the dashboard, the desktop client window
 and, as far as it applies to a click-through non-focusable surface, the
 overlay; plus the automated checks and tests that would hold the result.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -21,15 +21,33 @@ Status: draft
   zoom disabled by default.
 - S4: Electron docs, Menu, https://www.electronjs.org/docs/latest/api/menu
   - a default application menu is created when the app sets none; null
-  removes it. The page does not say what happens to the zoom
-  accelerators; see F4.
-- S5: WCAG 2.2 success criteria numbers and levels as cited below
-  (https://www.w3.org/TR/WCAG22/). Not re-read in full this session; the
-  numbers and AA / AAA levels come from the recommendation as known before
-  this session. UNVERIFIED re-read.
-- S6: Chrome "keyboard-focusable scroll containers" (shipped in Chrome 130,
-  2024): a scroller with no focusable child becomes focusable by itself.
-  From prior knowledge, not re-fetched. UNVERIFIED.
+  removes it (on Windows also the window's menu bar).
+- S4b: the API doc strings shipped with the pinned Electron 45.3.3
+  (app/node_modules/electron/electron.d.ts, read 2026-11-18): the note on
+  `setVisualZoomLevelLimits` says the Ctrl / Cmd plus, minus and 0 zoom
+  shortcuts come from the zoomIn, zoomOut and resetZoom menu item roles in
+  the application menu; `setZoomMode` says that in the `default` mode zoom
+  requests (the `zoom-changed` wheel request included) are applied
+  automatically, and only `manual` stops them.
+- S5: W3C, WCAG 2.2 Recommendation of 12 December 2024,
+  https://www.w3.org/TR/WCAG22/ - re-fetched 2026-11-18: levels A for
+  2.1.4, 2.2.1, 2.2.2, 2.4.3, 3.2.1; AA for 1.4.3, 1.4.4, 1.4.10, 1.4.11,
+  1.4.12, 2.4.7, 2.4.11, 2.5.8, 4.1.3; 1.4.11 exempts inactive components;
+  2.5.8 exceptions Spacing, Equivalent, Inline, User Agent Control,
+  Essential.
+- S6: Chrome developer blog "Keyboard focusable scrollers",
+  https://developer.chrome.com/blog/keyboard-focusable-scrollers, and the
+  Chrome 130 release notes: a scroller with no focusable child becomes
+  focusable by itself. The release notes list it for Chrome 130 (stable
+  15 October 2024); a later note on the blog says it moved to Chrome 132.
+  Either way it is in the Chromium of the pinned Electron 45.3.3, which
+  reports Chromium 156.0.8078.100 (process.versions, read 2026-11-18).
+- S9: W3C CSS Color Adjustment Level 1, Candidate Recommendation Snapshot
+  of 16 December 2025, https://www.w3.org/TR/css-color-adjust-1/ -
+  section 3.1: forced colours replace only author colours that are not
+  system colours; an author system colour (Highlight, Canvas) is kept.
+- S10: axe-core repository, https://github.com/dequelabs/axe-core -
+  licence MPL-2.0.
 - S7: Machado, Oliveira, Fernandes (2009) colour vision deficiency
   simulation matrices, severity 1.0, applied in linear RGB (used for the
   CVD numbers below; the maths only, no copied text).
@@ -72,10 +90,12 @@ Status: draft
   colours every tab gets the same underline, so the selected tab is shown
   by weight only (F3); the auto switch to Play leaves focus on a
   de-selected tab (F9); disabled buttons look enabled (F12).
-- The one possibly High item is the desktop client: `win.setMenu(null)`
-  (app/client/window.js:171) with no zoom handler may leave the companion
-  window with no keyboard zoom, a 1.4.4 Resize Text failure there (F4,
-  UNVERIFIED until a probe runs in Electron).
+- The desktop client very likely has no keyboard zoom:
+  `win.setMenu(null)` (app/client/window.js:171) removes the menu whose
+  zoom roles carry Ctrl + plus / minus / 0 (S4b). Ctrl + wheel should
+  still zoom because the client keeps the default zoom mode (S4b), so
+  1.4.4 is probably met for mouse users; keyboard-only users lose zoom.
+  Medium, not High (F4; not run in a real Electron window).
 - The 20 s overlay card passes 2.2.1 because the dashboard keeps the same
   item check without a timer (S2 toast rule); the dashboard text that says
   "here and on the overlay for 20 seconds" is wrong about "here" (F10).
@@ -92,8 +112,10 @@ Status: draft
   509).
 - Live regions: 12 role=status nodes (index.html:55, 56, 60, 81, 154, 173,
   201, 367, 371, 449, 503, 564), all polite; the cap is held by
-  tests/test_a11y.py:148 and design 0001 section 11 N6. PROBE live_idle:
-  0 mutations while idle.
+  tests/test_a11y.py:148-155 and design 0001 section 11 N6. The test's
+  comment lists a "graphics" region that is not in the page and omits
+  `#tab-news`, which is (stale comment, the count is right). PROBE
+  live_idle: 0 mutations while idle.
 - Focus: a 3 px ring in the text colour on every focusable kind
   (web/app.css:91, 148, 230, 253-254, 328, 504, 515-516); tabs use an inset
   ring (app.css:494).
@@ -112,7 +134,8 @@ Status: draft
   colours as measured token pairs). It is static (html.parser and regex);
   nothing checks the rendered page for clipping, forced colours, zoom or
   real focus order.
-- Overlay: a separate click-through, non-focusable window (main.js:221-244);
+- Overlay: a separate click-through, non-focusable window
+  (app/main.js:224 `focusable: false`, :243 `setIgnoreMouseEvents(true)`);
   0 interactive elements, 0 live regions, a screen-reader-only disclaimer
   (PACK key measurement 13).
 - Card lifetime: EVAL_CARD_S = 20 and PRICE_CARD_S = 20
@@ -141,16 +164,30 @@ F1 - Overlay contrast passes; the pack's number is wrong (method).
 - Why it matters: SC 1.4.3 passes; no plate or opacity change is needed
   for conformance. A plan built on key measurement 15 would spend work on
   a non-defect. The margin is thin (0.33 for muted over white), and the
-  1 px text-shadow (overlay.css:53) does not count toward contrast.
+  1 px text-shadow (overlay.css:54) does not count toward contrast.
+- Verifier recompute (sRGB relative luminance, text opaque inside the
+  group, group opacity 0.9, plate alpha 0.92 x 0.9 = 0.828): muted over
+  black / grey 128 / #f2e6c8 / white = 6.02 / 5.66 / 5.01 / 4.83, the same
+  as above; the pack itself states 3.81 over white (PACK README key
+  measurement 15), so the disagreement is real and the method is the cause.
 
 F2 - Play column focus ring clipped; one redundant tab stop.
 - Evidence: PROBE tabs.play: `#panel-play > div.play-main` keeps 3 px of
   ring only on the right edge, 0 px left / top / bottom; `.play-side`
   keeps only the left edge; both clipped by `#panel-play`, which has
   `overflow: hidden` (app.css:551-552) while the ring is drawn outside
-  (`outline-offset: 2px`, app.css:515-516). Play has 11 tab stops, 3 of
+  (`outline-offset: 2px`, app.css:515-516). Play has 11 tab stops in
+  PROBE state f (PACK key measurement 8: 12 in its worst case), 3 of
   them containers (panel, two columns: index.html:67, 68, 170). The
   panel stop adds nothing on Play because both columns are stops.
+- The same clip will hit the Run / Build / Items columns once
+  MERGE-SEAMS F4 gives each `.col` tabindex 0: today the eight `.col`
+  divs (index.html:231-478) have no tabindex, and `.panel` scrolls
+  (app.css:549), which clips a 2px-offset ring the same way.
+- Verifier note: PROBE `tabs.run`, `tabs.build`, `tabs.items` and
+  `tabs.settings` hold the Play walk again (the same 11 stops, the Play
+  columns), so the probe did not switch tabs; they are not evidence for
+  those tabs.
 - SC: 2.4.7 Focus Visible (AA) is weakened, not strictly failed (one edge
   shows); 2.4.11 Focus Not Obscured (AA) is about author content covering
   focus and is met. Severity Medium: a keyboard user sees a 3 px line at
@@ -164,7 +201,7 @@ F3 - Forced colours: the selected tab shows by font weight only.
   `probe-out/forced-dark-play.png`: five identical underlines. The
   transparent unselected border (app.css:486) is forced to a system colour
   and the accent border on the selected tab (app.css:492) becomes the same
-  colour.
+  colour. There is no `forced-colors` block in web/app.css (grep).
 - SC: 1.4.11 Non-text Contrast asks that a state indicator be
   perceivable; a weight change alone on 16 px text is a weak cue for low
   vision users, who are the forced-colours audience. 4.1.2 is met
@@ -174,21 +211,26 @@ F3 - Forced colours: the selected tab shows by font weight only.
   dark_focus: rgb(26, 235, 255), 3 px, unclipped on the zone guide
   summary); links stay distinct.
 
-F4 - Desktop client: keyboard zoom probably missing.
+F4 - Desktop client: keyboard zoom very likely missing; wheel zoom kept.
 - Evidence: app/client/window.js:159 `autoHideMenuBar: true` and :171
-  `win.setMenu(null)`; no `zoom-changed` or `before-input-event` handler in
-  window.js (grep). Electron creates a default menu only when the app sets
-  none (S4); the zoom shortcuts Chrome users expect (Ctrl + plus / minus /
-  0) are bound by that menu's zoom roles in Electron, so removing the menu
-  likely removes them. S3 documents `zoom-changed` for the Ctrl + wheel
-  request; whether the default zoom mode applies it without a handler is
-  not stated for a BrowserWindow. UNVERIFIED in the real window: the pack
-  and PROBE ran in headless Chrome (PACK README GAPS).
+  `win.setMenu(null)`; no `zoom-changed`, `before-input-event`,
+  `setZoomMode` or `Menu.setApplicationMenu` call in app/client/window.js
+  or app/main.js (grep; the only zoom call is the overlay's
+  `setZoomFactor`, app/main.js:191). The pinned Electron 45.3.3 doc
+  strings (S4b) say the Ctrl + plus / minus / 0 shortcuts come from the
+  zoom roles of the application menu, and on Windows menu accelerators
+  live on the window's own menu, which line 171 removes. The same doc
+  strings say the `default` zoom mode applies wheel zoom requests by
+  itself, and the client never changes the mode, so Ctrl + wheel should
+  zoom. Not run in a real Electron window (the pack and PROBE ran in
+  headless Chrome, PACK README GAPS); R4's first step settles both.
 - SC: 1.4.4 Resize Text (AA) needs 200 percent text without assistive
-  technology; Windows display scaling counts as AT-free only partly
-  (it rescales everything, the window minimum size stays). Severity High
-  if confirmed: the companion window is the main surface since decision
-  0041.
+  technology; a user-agent zoom counts, and Ctrl + wheel is one, so 1.4.4
+  is probably met for mouse users. A keyboard-only player has no zoom
+  at all (Windows display scaling rescales everything and keeps the
+  window minimum size). Severity Medium: the companion window is the
+  main surface since decision 0041; it becomes High if the R4 probe shows
+  wheel zoom is also dead.
 - The dashboard itself zooms well when the browser zooms (F5), so the fix
   is only to give the window the zoom keys back.
 
@@ -237,7 +279,8 @@ F8 - Colour-blind safety: rule C4 holds; the palette itself would not.
 - SC: 1.4.1 Use of Colour passes because of the words. Why it matters:
   the deutan ok / bad near match means any future colour-only cue (a
   coloured dot, a chart series, an edge without a word) fails at once for
-  about 6 percent of male players; design 0001 section 5.3 already says
+  deutan players (a commonly quoted figure is about 6 percent of men; not
+  re-sourced here, UNVERIFIED); design 0001 section 5.3 already says
   so, but no test checks new CSS for it.
 
 F9 - Auto switch to Play leaves focus on a de-selected tab.
@@ -245,7 +288,8 @@ F9 - Auto switch to Play leaves focus on a de-selected tab.
   (selected, tabindex 0); an item check arrives; Play is shown and
   `#tab-build` keeps focus with aria-selected false and tabindex -1. The
   rule treats focus in the tab row as "not working in the panel"
-  (web/tabs.js:68-73, focusTab returns null for the row). With focus in
+  (shouldSwitch, web/tabs.js:68-73; focusTab, web/tabs.js:137-145, returns
+  null when the active element is in no panel, which is true of the row). With focus in
   the Build paste box the switch is held and the header says "New on
   Play: item check." (PROBE switch_busy) - correct.
 - SC: 2.4.3 Focus Order (A) is strained (the focused tab is no longer the
@@ -270,8 +314,11 @@ F11 - Target size passes; two checkboxes are 20 px.
   `#webdata-on` are 20x20 (app.css:326); every other target is at least
   24 px (PROBE targets on Play: 12 targets, 0 small). The label around
   each is a 32 px tall target that toggles the same box (app.css:325).
-- SC: 2.5.8 Target Size (Minimum, AA) passes via the equivalent-control /
-  spacing exceptions; design 0001 S2 asks 24 px for the hit target itself.
+- SC: 2.5.8 Target Size (Minimum, AA) passes: the 32 px label hit area
+  makes the effective target large enough, and the Spacing exception
+  (S5: a 24 px circle on each small target touches no other target)
+  covers the box itself; design 0001 S2 asks 24 px for the hit target
+  itself.
   Severity Low.
 
 F12 - Disabled buttons look exactly like enabled ones.
@@ -300,7 +347,8 @@ F14 - Keyboard reach: complete but long on Items.
   20, Settings 16, Run 6 (DOM order). The Run / Items / Build columns
   scroll (app.css:556) without tabindex; a column with a focusable child
   scrolls by keyboard from that child, and one without becomes focusable
-  by itself in Chrome 130 and later (S6, UNVERIFIED for Electron 45).
+  by itself in Chrome 130 / 132 and later (S6; Electron 45.3.3 ships
+  Chromium 156, so the client has it too).
   No keyboard trap found (PROBE walk returns to the first stop). Global
   hotkeys always hold Ctrl or Alt (app/hotkey.js:2-6), so 2.1.4 Character
   Key Shortcuts does not apply.
@@ -365,7 +413,9 @@ R2 - Fix the Play column focus (MERGE-SEAMS-FOLLOWUP F4).
 - Depends on: none (R1 guards it). Files likely touched: web/index.html,
   web/app.css, tests/test_a11y.py.
 - Acceptance test: R1's walk shows 3 px of ring on all four edges of each
-  column at 1280x760 and 1024x700; Play has 10 stops in state c.
+  column at 1280x760 and 1024x700; Play has one stop fewer than before
+  (11 to 10 in PROBE state f); after MERGE-SEAMS F4 the `.col` groups on
+  Run, Build and Items show the same full ring.
 - ZERO-CLICK: no player step.
 
 R3 - Give the selected tab a forced-colours cue.
@@ -374,7 +424,9 @@ R3 - Give the selected tab a forced-colours cue.
   `button.tab[aria-selected="true"] { border-bottom-color: Highlight; }`.
 - Impact: M - the current tab is visible in every Windows contrast theme.
 - Effort: S. Risk: low; system colour keywords only (design 0001 C3
-  allows them where tokens cannot apply, as overlay.css:151-157 does).
+  allows them where tokens cannot apply, as overlay.css:151-157 does);
+  forced colours keep an author system colour (S9), so Highlight
+  survives the mode.
 - ToS check: CSS only; touches no floor rule.
 - Depends on: none. Files likely touched: web/app.css,
   tests/test_ux_review.py or R1's job.
@@ -383,19 +435,26 @@ R3 - Give the selected tab a forced-colours cue.
 - ZERO-CLICK: follows the OS setting; no click.
 
 R4 - Probe and restore zoom in the desktop client.
-- Action: in the Electron test path, open the client window hidden, send
-  Ctrl+= to its own webContents and read `getZoomFactor()`; if it stays
-  1.0, add a hidden application menu with the zoomIn / zoomOut / resetZoom
-  roles (or a `before-input-event` handler for Ctrl + plus / minus / 0)
-  and a `zoom-changed` handler for Ctrl + wheel, persisting the factor in
-  the window state the client already keeps (readState,
-  app/client/window.js:84).
-- Impact: H if F4 is confirmed - 1.4.4 for the main surface.
+- Action: in the Electron test path, open the client window with
+  `show: false` (no visible window, no focus taken), send Ctrl+= and a
+  Ctrl + wheel event to its own webContents with `sendInputEvent`, and
+  read `getZoomFactor()` after each. If the key leaves it at 1.0, add a
+  `before-input-event` handler for Ctrl + plus / minus / 0 (or a hidden
+  application menu with the zoomIn / zoomOut / resetZoom roles, S4b);
+  add a `zoom-changed` handler only if the wheel test also fails. Persist
+  the factor in the window state the client already keeps (readState /
+  saveState, app/client/window.js:84-90).
+- Impact: M - keyboard zoom for the main surface (H if the wheel test
+  also fails, then a 1.4.4 failure).
 - Effort: S to M. Risk: low; the menu stays hidden (autoHideMenuBar), no
   reload or devtools accelerator is added (keep `devTools` gated,
   window.js:168).
-- ToS check: the key event goes to AshLight's own hidden test window, never
-  to the game; the overlay keeps its own fixed zoom (main.js:191).
+- ToS check: floor rule "never send input to the game": the synthetic
+  key and wheel events go only to AshLight's own hidden test window via
+  its own webContents, never to the OS input queue or the game; the
+  shipped fix only listens to keys the player presses in AshLight's
+  window. The overlay keeps its own fixed zoom (app/main.js:191) and stays
+  click-through and non-focusable.
 - Depends on: none. Files likely touched: app/client/window.js,
   app/test/client.test.js.
 - Acceptance test: an Electron test shows zoom 1.1 after one Ctrl+= and
@@ -459,7 +518,9 @@ R8 - Correct the item-check empty text.
 R9 - 24 px checkboxes.
 - Action: set `.check input` to 24x24 (app.css:326).
 - Impact: L - meets design 0001 S2 without the exception. Effort: S.
-- ToS check: CSS only. Files likely touched: web/app.css.
+  Risk: low; the 32 px label row (app.css:325) already fits a 24 px box.
+- ToS check: CSS only; touches no floor rule. Depends on: none (merge
+  with R3 and R7, see Cut or merge). Files likely touched: web/app.css.
 - Acceptance test: PACK-style target scan reports 0 targets under 24 px.
 - ZERO-CLICK: no player step.
 
@@ -471,7 +532,8 @@ R10 - Lock rule C4 with a test.
 - Impact: M - the deutan ok / bad near match (F8) makes any colour-only
   cue an instant failure; the test makes it impossible to merge one.
 - Effort: S. Risk: false positives handled by the allow-list.
-- ToS check: test only. Files likely touched: tests/test_a11y.py.
+- ToS check: test only; touches no floor rule. Depends on: none. Files
+  likely touched: tests/test_a11y.py.
 - Acceptance test: planting `.foo { color: var(--fk-status-ok) }` on a
   wordless node fails the test.
 - ZERO-CLICK: a test.
@@ -518,8 +580,9 @@ R12 - One real screen-reader pass, scripted where possible.
 - Merge R7 and R9 into one CSS package with R3 (one small change to
   web/app.css plus its tests).
 - Deferred: axe-core as a dev-only checker. It would add an npm
-  devDependency and a licence check (MPL-2.0 as known before this session,
-  UNVERIFIED), which needs a decision under CLAUDE.md "Third-party code".
+  devDependency and a licence check (MPL-2.0, S10: a weak copyleft, not
+  GPL / AGPL / NC, so not barred, but still a recorded decision under
+  CLAUDE.md "Third-party code").
   R1 uses only Chrome's own protocol and covers the rules this UI needs;
   revisit only if R1 misses a class of defect in two reviews.
 
@@ -540,10 +603,61 @@ R12 - One real screen-reader pass, scripted where possible.
 
 ## Open questions
 
-- F4 needs one Electron probe (R4 first step) to move from UNVERIFIED to
-  confirmed or closed; no operator decision needed.
+- F4 needs one hidden Electron probe (R4 first step) to move from
+  "very likely" to confirmed or closed; no operator decision needed.
 - R11 plate value is a target-design call for plan section 03 (visual
   weight of the HUD against contrast margin); an adjudicator can take it
   if section 03 does not.
 - Light-theme coverage outside states c and f and every fold open in the
   other tabs remain unmeasured; R1's job closes this without a new pack.
+
+## Verification
+
+Independent verifier, 2026-11-18.
+
+- Code claims: 74 path:line citations opened across web/index.html (34
+  lines, including all 12 role=status nodes), web/app.css (25),
+  app/overlay/overlay.css (7), app/client/window.js (6), app/main.js (3),
+  server/al/state.py (5), web/tabs.js, web/app.js, web/checks.js,
+  web/prices.js, web/status.js, web/history.js, app/shared/format.js,
+  app/hotkey.js, app/client/starting.html, tests/test_a11y.py and
+  ROADMAP.md (MERGE-SEAMS-FOLLOWUP, UX rows). All held except four,
+  corrected: overlay text-shadow is overlay.css:54 (not :53); focusTab is
+  web/tabs.js:137-145 (the cited :68-73 is shouldSwitch); the overlay
+  window lines are app/main.js:224 and :243; the overlay verdict edge is
+  in app/shared/format.js:105-108 (the file path was given as format.js).
+  Added: the live-region cap assert is test_a11y.py:148-155 and its
+  comment is stale; the eight `.col` divs have no tabindex today.
+- Evidence files: PROBE probe.json re-read (Play focus ring clip, forced
+  colours tab borders, disabled button styles, live_idle, switch states
+  all as stated). Found: its per-tab entries for Run / Build / Items /
+  Settings repeat the Play walk, so they are not evidence (noted in F2).
+  PACK README key measurements 8, 10, 12, 15 match the numbers quoted.
+- Numbers: the F1 overlay composite recomputed independently (muted
+  6.02 / 5.66 / 5.01 / 4.83; plate 0.96 gives 5.49; muted #b0b8c0 gives
+  6.08), all equal to the note.
+- Web: 6 sources re-fetched (S1/S5 WCAG 2.2 levels and 2.5.8 exceptions,
+  S2 Timing Adjustable toast reasoning, S6 keyboard-focusable scrollers,
+  S9 forced-colours system-colour rule, S10 axe-core licence) plus the
+  pinned Electron 45.3.3 doc strings (S4b) and its Chromium version.
+  S5 and S6 are no longer UNVERIFIED; S6 corrected (Chrome 130 per release
+  notes, 132 per a later blog note).
+- Corrected finding: F4 rewritten from "possibly High, 1.4.4 failure" to
+  Medium: the Electron 45.3.3 doc strings make the missing keyboard zoom
+  very likely and say the default zoom mode still applies Ctrl + wheel,
+  so 1.4.4 is probably met for mouse users. R4 impact lowered to M and
+  its probe now tests wheel and key separately in a `show: false` window.
+- Recommendations: all 12 now carry every field (R9 gained Risk and
+  Depends on, R10 Depends on). ToS check: each tested against every floor
+  rule; R1 and R4 send synthetic events only to AshLight's own windowless
+  or hidden page, never to the game or the OS input queue; nothing reads
+  the clipboard, screen or game files; Rejected keeps the overlay focus
+  mode and reading game settings out. Settled decisions: R4's handler
+  lives in the main process, so decision 0041's one preload action is
+  untouched; R8 and the Rejected 20 s timer keep decision 0014's one card
+  slot; nothing proposes a reversal.
+- Still UNVERIFIED: F4 until R4's probe runs in a real Electron window;
+  the deutan prevalence figure (F8); light theme outside states c and f;
+  focus walks and fold-open contrast on Run, Build, Items and Settings
+  (PROBE did not switch tabs; only the pack's DOM order covers them); no
+  real screen-reader pass (F15, R12).
