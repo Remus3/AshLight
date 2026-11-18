@@ -6,9 +6,9 @@ token, runtime files, supervisor, hot reload, scheduled tasks and every
 input it parses (log, item text, build codes, settings, filters, web
 replies), read at HEAD b8fda80; plus what a phone view would need.
 Electron hardening and the supply chain are note 0046.
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (all accessed 2026-11-17; LNA-C, LNA-F, SFS, EXPAT, PYXML and TS re-fetched 2026-11-18)
 
 - LNA-C: https://developer.chrome.com/blog/local-network-access
 - LNA-F: https://www.firefox.com/firefox/151.0/releasenotes/
@@ -65,9 +65,10 @@ Attackers, most likely first:
 
 - T1 a hostile web page in the player's browser while AshLight runs:
   CSRF, DNS rebinding, cross-origin reads, no-cors requests to the
-  token-free static routes. Chrome from 142 and Firefox from 151 (still
-  rolling out) ask the player before a public page may reach loopback
-  (LNA-C, LNA-F); embedded browsers, older builds and an "Allow" click
+  token-free static routes. Chrome 142 (where LNA-C's 2025-09-29 update
+  puts the prompt's launch) and Firefox 151 (released 2026-05-19, a
+  progressive roll-out) ask the player before a public page may reach
+  loopback (LNA-C, LNA-F); embedded browsers, older builds and an "Allow" click
   remain, so the server's own checks stay the primary defence.
 - T2 hostile content the player feeds in: a pasted build code or share
   link (builds from strangers are the normal input), item text on the
@@ -89,7 +90,9 @@ Attackers, most likely first:
   by `--port`, which only warns (server/al/__main__.py:154-155; audit
   P8-4). `SO_EXCLUSIVEADDRUSE` stops a second socket taking the port
   (http.py:99-102; EXCL); IPv6 loopback is not bound. Stdlib
-  `ThreadingHTTPServer`, HTTP/1.0 (http.py:79-80), which Python documents
+  `ThreadingHTTPServer` (http.py:79-80); the handler sets no
+  `protocol_version`, so the stdlib default HTTP/1.0 applies
+  (http.py:121-126), and Python documents the module
   as doing only basic security checks (PYHTTP).
 - Token: 192 random bits as 48 hex chars (http.py:75-76), compared in
   constant time, accepted as `X-AL-Token`, `Authorization: Bearer`, or
@@ -186,9 +189,11 @@ Attackers, most likely first:
   `stop.request` ends core and supervisor (scripts/stop.ps1:77,
   __main__.py:216-218, keepalive.py:301-307); `restart.request` makes
   the core exit and keep its token (keepalive.py:419,
-  __main__.py:219-225). The supervisor terminates only a python image
-  whose creation time equals the one in the heartbeat file
-  (keepalive.py:139-150, 343-352).
+  __main__.py:219-225). The supervisor terminates only an image whose
+  name starts with "python" (keepalive.py:139-150) and, when the
+  heartbeat holds a creation time, only the process with that time; a
+  heartbeat without one falls back to the bare pid
+  (keepalive.py:343-352).
 - At rest: `<repo>/ops/runtime/` (token, consent, control files, build
   codes, weights, run history; server/al/paths.py:35-41, 87-97),
   `config/local.json` (contact, Client.txt path, opt-ins;
@@ -330,7 +335,8 @@ Score = exploitability x impact, each 1 (low) to 3 (high).
   and plant `token.reuse` so the next core adopts a chosen token
   (hotreload.py:289-311); write the stop and restart files, or a forged
   heartbeat that points the supervisor's terminate at another python
-  process (keepalive.py:343-352); edit repo code, which hot reload runs
+  process (one without a creation time skips that check,
+  keepalive.py:348-350); edit repo code, which hot reload runs
   within about 2 s and the two scheduled tasks start later; swap
   luajit.exe together with its hash record (exepin.py:11-13). The logon
   launcher's bare `powershell.exe` with the repo as working directory
@@ -420,10 +426,14 @@ settings import; filter merge; TLS verification.
     spy on Path.resolve, os.stat and open sees no request text; every
     file in web/ still loads.
 - R2 Strict build XML intake.
-  - Action: refuse a payload that holds a NUL byte or is not valid UTF-8
-    before the guard runs, and refuse a DOCTYPE inside the parser (an
-    Expat doctype handler that raises); keep the text search as a second
-    layer.
+  - Action: `decode_bytes` refuses an inflated payload that holds a NUL
+    byte (codec.py:141 is the place); every UTF-16 or UTF-32 form of
+    ASCII markup holds NUL bytes and UTF-8 XML never may. Keep the text
+    search as a second layer. Do not require valid UTF-8: the
+    surrogateescape round trip (codec.py:26) carries decision 0021's
+    byte-exact check. Not a fix (verifier probe, 2026-11-18):
+    `ET.XMLParser(encoding="utf-8")` still parsed BOM-less UTF-16LE and
+    UTF-16BE documents with the entity expanded.
   - Impact M: closes F2. Effort S. Risk: a PoB export in UTF-16, if one
     ever existed, would be refused with a clear message. Depends on:
     nothing.
@@ -446,9 +456,13 @@ settings import; filter merge; TLS verification.
     before any F1-class bug. Browsers set the header themselves, send it
     to loopback (SFS, SC) and page script cannot forge it (SFS); the
     rule is the resource isolation recipe, made stricter (FM); CORP
-    blocks no-cors loads from other origins (CORP). Effort S. Risk:
+    blocks no-cors loads from other origins (CORP). Refusing `same-site`
+    too (MDN's sample allows it, SFS) matters here: a page from another
+    loopback port is same-site with the dashboard. Effort S. Risk:
     clients that send no such header behave as today; the overlay's file
-    page sends `cross-site`, hence the exception. Depends on: R1.
+    page is expected to send `cross-site` (opaque origin; UNVERIFIED in
+    Electron 45, the overlay smoke run below decides), hence the
+    exception. Depends on: R1.
   - ToS check: floor untouched. ZERO-CLICK: code change.
   - Files likely touched: server/al/http.py,
     tests/test_http_security.py, app/test. Acceptance test: with
@@ -494,17 +508,23 @@ settings import; filter merge; TLS verification.
     closed local port and no `no_proxy`, the health check is true
     against a test core and the fake proxy port sees no connection.
 - R6 Clients verify the core before they send anything.
-  - Action: add GET /api/hello?nonce=<32 hex> (no token) answering an
-    HMAC-SHA256 keyed with the token over nonce and port; the Electron
-    main process checks it once per token value, and again after any
-    request error, before it posts item text or loads the dashboard;
-    apply the 8960-8979 rule in app/main.js and refuse `--port` outside
-    the block.
+  - Action: add GET /api/hello where the client sends a fresh 128-bit
+    nonce and an HMAC-SHA256 keyed with the token over ("client", nonce),
+    never the token itself; the core checks that proof (so the route is
+    still token-gated, as the stack rule "every API / SSE call needs the
+    per-start token" demands) and answers an HMAC over ("server", nonce,
+    the port it bound). The Electron main process, keepalive and run.ps1
+    check the answer, including that the port equals the one they dialled,
+    once per token value and again after any request error, before they
+    send the token, post item text or load the dashboard; apply the
+    8960-8979 rule in app/main.js and refuse `--port` outside the block.
   - Impact M: closes F5, P8-3 and P8-4; clipboard text can no longer
-    reach a foreign listener. Effort M. Risk: anyone can ask for MACs
-    over chosen nonces; with a 192-bit key that reveals nothing, and the
-    API still wants the token. Depends on: R3; the Electron side is
-    shared with note 0046.
+    reach a foreign listener. Effort M. Risk: a foreign listener learns
+    one MAC over a nonce it cannot choose twice, which reveals nothing of
+    a 192-bit key; binding the port into the answer stops a listener on a
+    wrong port from relaying the challenge to the real core and passing
+    its answer back. Depends on: R3; the Electron side is shared with
+    note 0046.
   - ToS check: the clipboard is still read once per manual press
     (decision 0003); this only narrows where that text may go.
     ZERO-CLICK: code change.
@@ -563,7 +583,10 @@ settings import; filter merge; TLS verification.
   - Impact M: closes F8; nothing in a URL can change state and the
     overlay page loses control rights; the base for any phone view.
     Effort M. Risk: amends the "API token" section of decision 0002
-    (`?token=` on /events); the stack decision itself stands. Depends
+    (`?token=` on /events) and the CLAUDE.md stack line "every API / SSE
+    call needs the per-start token" (a key derived from that token, but
+    not the token itself), so it needs that wording changed by the
+    operator or an adjudicator first; the stack decision itself stands. Depends
     on: R3; the Electron side with note 0046.
   - ToS check: floor untouched. ZERO-CLICK: code change.
   - Files likely touched: server/al/http.py, web/app.js, app/preload.js,
@@ -685,3 +708,54 @@ Residual risk rises from A to B to C; doing none keeps today's surface.
 7. Does replaceState keep the fragment out of a synced browser history
    in `-Browser` mode? UNVERIFIED; low stakes, the token dies with the
    core.
+
+## Verification
+
+Independent verifier, 2026-11-18, at HEAD c6469d5 (no code under
+server/, app/, web/ or scripts/ changed since the draft's b8fda80 read).
+
+- Code claims: about 60 path:line citations opened across 32 files (http.py
+  routes, guard, headers, limits, static, SSE, errors; __main__.py token
+  and control loop; hotreload.py reuse; core.py write_private; ports.py;
+  logfile.py consent; parser.py; codec.py; model.py; store.py;
+  settingsio.py (12 keys counted); lootfilter.py; shareurl.py;
+  webfetch.py; snapshot.py; ninja.py; layout.py; bridge.py; exepin.py;
+  keepalive.py; app/main.js, preload.js, eval_hotkey.js, client/link.js,
+  overlay/overlay.js; web/app.js, index.html; run.ps1, autostart.ps1,
+  autostart_launch.vbs; tools/loop_task.py; tests/test_http_security.py).
+  The route inventory matches do_GET / do_POST / do_PUT line for line (13
+  token GET routes plus the static ones, 12 POST, 1 PUT). No caller of `Authorization: Bearer` or
+  /api/clipboard-read exists outside http.py; the overlay fetches no /api
+  route. Audit claims (static "info", token "0600", P8-3 / P8-4 open,
+  ROADMAP AUDIT-P8-LOW unchecked) read back from the audit and ROADMAP.
+- Probes re-run by the verifier (pure function calls in a scratch
+  process, no server, no network): F2 reproduced (a BOM-less UTF-16LE
+  share code with a DTD entity parsed with the entity expanded through
+  codec.decode and model._root; its UTF-8 twin was refused); F1's join
+  step reproduced (the web root joined with a two-slash tail becomes a
+  UNC name). F1's SMB timing was not re-run, to keep the machine off the
+  network; the code order (resolve before containment, http.py:686-687)
+  is confirmed. Python 3.14.4, Expat 2.7.5, OpenSSL 3.0.19 confirmed.
+- Web: 6 sources re-fetched (LNA-C, LNA-F, SFS, EXPAT, PYXML, TS); all
+  support the claims as worded after the corrections below.
+- Corrected (6): the HTTP/1.0 citation (the handler sets no
+  protocol_version); the supervisor's terminate rule (a heartbeat without
+  a creation time falls back to the pid, also added to F3); the browser
+  LNA versions and dates; R2's action (NUL-byte refusal instead of a
+  valid-UTF-8 rule that would endanger decision 0021's byte-exact round
+  trip, and a recorded non-fix: forcing the parser encoding); R6
+  redesigned so the new route stays token-gated per the CLAUDE.md stack
+  rule and binds the port against relaying; R10 now names the CLAUDE.md
+  token line it would amend. R3 gained why `same-site` is refused.
+- ToS floor: all 11 recommendations and the three phone designs checked
+  against each floor rule; none reads game memory, injects, hooks,
+  sends input, watches the clipboard or screen, calls a trade or
+  undocumented GGG endpoint or touches game files. Nothing moved to
+  Rejected. Settled decisions: none contradicted; R10 amends a section
+  of decision 0002, not its settled choice; Design C would reverse the
+  bind rule and is labelled so.
+- Still UNVERIFIED: the overlay page's `Sec-Fetch-Site` value in
+  Electron 45 (R3); PowerShell 5.1 proxy behaviour for 127.0.0.1 (F6,
+  Open question 4); the Host header behind a tunnel (Design B); WebDAV
+  fallback for UNC names (Open question 5); synced-history fragment
+  (Open question 7); which display tools suit Design A.
