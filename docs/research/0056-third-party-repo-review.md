@@ -6,7 +6,7 @@ repositories does, how each gets game data and where that sits against the
 ToS floor, which ideas AshLight should learn from (ranked, each with a
 floor-safe adaptation), licence status for any reuse, cautions, and which
 dimension note 0035-0058 each idea informs. No code from the set is copied.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -17,18 +17,25 @@ Status: draft
   copyright by default; nobody may copy, distribute or modify).
 - L2: https://choosealicense.com/licenses/mit/ (MIT permits reuse on the
   condition that the licence and copyright notice travel with the code).
-- Repo files (this tree, read at HEAD 040e97a): server/al/theorycraft/
-  weights.py, evaluate.py, item.py, snapshot.py, bridge.py;
+- L3: a public PoE2 game-guide page found by web search on 2026-11-18
+  whose search summary names "SSF Standard" and an "SSF <challenge
+  league>" form for PoE2; the page itself returned HTTP 402 to a fetch and
+  the community wiki returned a bot wall, so the naming stays UNVERIFIED.
+- Repo files (this tree, read at HEAD 040e97a; every cited line re-read by
+  the verifier at HEAD 5ec96b8): server/al/theorycraft/
+  weights.py, evaluate.py, item.py, snapshot.py, bridge.py, waystone.py;
   server/al/hotreload.py, zonenotes.py, underlevel.py, state.py, hints.py,
-  ninja.py, trade.py, core.py, settingsio.py, campaign.py.
+  parser.py, langguard.py, ninja.py, trade.py, core.py, settingsio.py,
+  campaign.py; web/tc.js; app/shared/render_gate.js, format.js.
 - Sibling notes cross-referenced: 0036, 0037, 0038, 0039, 0040, 0042,
   0043, 0044, 0048, 0050, 0051, 0054, 0058 (all drafts or verified in this
   ultraplan).
 
 ## Summary
 
-- The set holds 39 public repositories. 7 were deep-reviewed (repo A to
-  repo G); 32 were not, for low relevance or the review cap.
+- The set holds 39 public repositories (count from the review data; the
+  verifier had only the 7 reviewed clones). 7 were deep-reviewed (repo A
+  to repo G); 32 were not, for low relevance or the review cap.
 - 6 of the 7 are plugins for third-party HUD frameworks that read game
   process memory and draw inside the game; one of those also sends
   synthesized input. The 7th is a data-mining tool that reads installed
@@ -36,18 +43,18 @@ Status: draft
   set is outside the floor. Nothing about those paths is carried here.
 - What transfers is product and engineering ideas: how settings, rule
   tables, zone notes, caches and drift are handled. 58 ideas were logged
-  across the 7 repos; 12 recommendations below draw on them, and the rest
-  are merged into sibling notes, already present, deferred or rejected.
+  across the 7 repos (review data); 12 recommendations below draw on them,
+  and the rest are merged into sibling notes, already present, deferred or
+  rejected.
 - Best three for AshLight: store only the player's weight changes over
   shipped defaults (today a default change never reaches an existing
-  install, weights.py:198-200); a campaign keep-or-vendor rule check that
+  install, weights.py:197-200); a campaign keep-or-vendor rule check that
   works with no build loaded (today the item check stops at "no build
-  loaded", evaluate.py:327-329); a once-per-session list of item text the
-  parser did not recognise, for patch catch-up (item.py:9 drops it
-  silently).
+  loaded", evaluate.py:327-329); and the hot reload fix below (R4).
 - One small defect surfaced while checking an idea: hot reload records a
-  file's stat signature before loading it, so a transient read error pins
-  the last good copy until the file changes again (hotreload.py:143-155).
+  file's stat signature before loading it, so a read error that happens
+  after the file's last write (for example a scanner holding it) pins the
+  last good copy until the file changes again (hotreload.py:143-155).
 - Code reuse: none recommended. 2 repos are MIT but their useful logic is
   tied to a memory-reading host or a TypeScript stack; 5 state no licence,
   which means all rights reserved (L1). Ideas only.
@@ -63,10 +70,13 @@ What AshLight already does in the areas the ideas touch:
   defaults with `load_error` set (weights.py:204-212). No per-row reset, no
   "changed from default" marker.
 - Item check without a build: returns `error: "no build loaded"` and no
-  verdict (evaluate.py:327-329). The campaign hints cover boss resists and
-  boots speed only (campaign.py:12-19, 28-29).
+  verdict (evaluate.py:327-329). The campaign hints cover boss resist,
+  flask base and boots speed, and need a build (campaign.py:11-20, 28-29).
 - Item parser: English client strings; unknown lines and sections are
-  ignored (item.py:9). Nothing records what was ignored.
+  ignored, odd input goes to `warnings` (item.py:9-10). Mod lines with no
+  weight are listed per press as `unweighted` (evaluate.py:318) and shown
+  on the card as "Not counted" (web/tc.js:188-216), but nothing keeps them
+  past the press or collects them across presses.
 - Hot reload: a stat signature `(mtime_ns, size)` (hotreload.py:110-115)
   gates re-reads; `get()` stores the new signature before `check` and
   `loader` run (hotreload.py:143, 147-150), and any exception keeps the
@@ -74,10 +84,14 @@ What AshLight already does in the areas the ideas touch:
 - Zone notes: looked up by the act of the area id, then by the English
   zone name from the log, with an act default (zonenotes.py:46-66).
   AshLight-written only; no player layer.
-- Hideout flag: from the scene line's `is_hideout` (state.py:1467), but on
-  an `area_entered` line it is a substring test for "hideout" in the zone
-  name (state.py:1491). hints.py:86-90 already has an area-id based
-  `is_town`.
+- Hideout flag: from the scene line's `is_hideout` (state.py:1467), which
+  the parser sets by an English substring test on the scene name
+  (parser.py:76, 120-121, 176; the code marks it UNVERIFIED); the
+  `area_entered` branch does the same on the zone name (state.py:1491),
+  but that line is a PoE1 form PoE2 never writes (langguard.py:5,
+  parser.py:33). hints.py:86-90 already has an area-id based `is_town`.
+  The overlay shows the zone in a hideout with an "(HO)" tag
+  (render_gate.js:144, format.js:56-61).
 - Under-level word: one-sided, shows only when the player is at least the
   threshold under the zone, quiet in towns and hideouts
   (underlevel.py:16-28, 35, 61-85; ROADMAP UTIL-UNDERLEVEL, no XP formula).
@@ -146,12 +160,16 @@ rule, plus a separate boots band for movement speed (TP). AshLight returns
 campaign most players have no PoB build pasted; the item hotkey is the one
 press they make, and today it tells them nothing about keep or vendor.
 
-F5. Patch catch-up has no signal on the item side. Repo C logs each
-unrecognised option once per session with its raw text so the table can
-be extended after a patch (TP). AshLight ignores unknown item lines
-(item.py:9). 0051 R1 (OBS-PARSE-LEDGER) and 0050 R11 (LOG-DRIFT) cover the
-Client.txt side only. Why it matters: after the 1.0 patch, new mod lines
-score as zero with no hint to the operator or player.
+F5. Patch catch-up has only a per-press signal on the item side. Repo C
+logs each unrecognised option once per area visit (its seen-set clears on
+area change) with its raw text, behind a default-on setting, so the table
+can be extended after a patch (TP). AshLight already shows the player the
+mod lines with no weight on each card (evaluate.py:318, web/tc.js:188-216)
+but keeps no list across presses, so the operator cannot see after a
+patch which lines players keep hitting. 0051 R1 (OBS-PARSE-LEDGER) and
+0050 R11 (LOG-DRIFT) cover the Client.txt side only. Why it matters:
+after the 1.0 patch, a diagnostics report could carry the zero-weight
+lines without the player retyping them.
 
 F6. Hot reload can pin a stale copy after a transient read error. Repo E
 retries a locked rule file up to 10 times at 100 ms (TP). AshLight's
@@ -160,8 +178,11 @@ loader runs; an OSError from a sharing violation (editor mid-save,
 antivirus scan) lands in the except branch (hotreload.py:151-155) and the
 next poll sees the same signature and returns the old value
 (hotreload.py:141-142). The file is re-read only when its mtime or size
-changes again. Why it matters: a hand edit of zone notes or the zone guide
-can silently not apply, while the Checks note says the last good copy is
+changes again. A lock held while the writer is still writing usually
+heals itself (the finished write changes the mtime); the pinning case is
+a lock taken after the last write, such as a scanner reading the new
+file. Why it matters: a hand edit of zone notes or the zone guide can
+then silently not apply, while the Checks note says the last good copy is
 in use; the operator would think the edit is broken.
 
 F7. Snapshot drift is caught late. Repo A gates a fetched schema on a
@@ -174,14 +195,16 @@ list are the parts not yet planned.
 
 F8. Showing nothing is a design rule in the set. Repo B draws no panel
 when every section is empty, hides in town and hideout by default (each a
-setting) and draws separators only between drawn sections; repo E runs
-its heavy highlight only in safe areas unless the player opts in (TP).
-AshLight's overlay keeps zone text in hideouts (app/shared/
-render_gate.js:144) and decides hideout on `area_entered` by an English
-substring (state.py:1491). Why it matters: fewer pixels over the game is
-the overlay's FPS and glance budget (decision 0002, 0043, 0048); the
-substring test also breaks on a non-English client (LANG-GUARD, decision
-0040).
+setting) and draws separators only between drawn sections; repo E has a
+setting to run its highlight outside towns and hideouts, default on, so
+the safe-area gate there is opt-out, not opt-in (TP). AshLight's overlay
+keeps zone text in hideouts with an "(HO)" tag (app/shared/
+render_gate.js:144, format.js:56-61) and decides hideout by an English
+substring of the scene name (parser.py:120-121). Why it matters: fewer
+pixels over the game is the overlay's FPS and glance budget (decision
+0002, 0043, 0048); the substring test also breaks on a non-English client
+whose scene names are translated (LANG-GUARD, decision 0040), while the
+area id from the generation line is language-independent.
 
 F9. Zone-scoped state lacks one reset point. Repos D, F and G clear all
 per-zone state in one place on area change, and repo F ties async work to
@@ -197,9 +220,11 @@ league to its trade league for prices and offers the permanent leagues as
 fallback; it prefers a direct base-currency rate over a derived one and
 warns when expected entries are zero (TP). AshLight uses a configured
 league verbatim for poe.ninja and the trade link (ninja.py:182-189,
-trade.py:122-126). Whether PoE2 names its solo leagues with an "SSF "
-prefix was not confirmed for this note: UNVERIFIED. 0036 R4
-(PRICE-SHAPE-GUARD) already covers the zero-entry warning.
+trade.py:122-126). Repo D strips an "SSF " prefix, but it targets the
+first game, so that says nothing about PoE2. For PoE2 a search summary
+names "SSF Standard" and an "SSF <challenge league>" form (L3), but no
+primary page could be read: UNVERIFIED. 0036 R4 (PRICE-SHAPE-GUARD)
+already covers the zero-entry warning.
 
 F11. Player-owned layers over authored data. Repo B layers a per-build
 player note over a general zone note and shows the build layer last, dim
@@ -241,7 +266,8 @@ R1. WEIGHTS-DELTA: keep only the player's weight changes.
 - Depends on: nothing; coordinate with 0039 R11 so the export schema
   carries the delta form.
 - Files likely touched: server/al/theorycraft/weights.py, evaluate.py
-  (`_weights_of`), web settings panel JS, tests/test_tc_weights*.py.
+  (`_weights_of`), web settings panel JS, tests/test_math_weights.py and
+  tests/test_tc_eval.py (the existing WeightsStore tests).
 - Acceptance test: a test changes one default in a patched module and
   shows an install with an untouched row picks it up while a changed row
   keeps the player value; reset row and reset all return to defaults; a
@@ -278,14 +304,17 @@ R2. CAMPAIGN-KEEP: a keep-or-vendor check with no build loaded.
 - ZERO-CLICK: no new press; it rides the existing item-check hotkey, the
   minimum the floor allows (decision 0003, one read per manual press).
 
-R3. UNKNOWN-ITEM-TEXT: list item lines the parser did not use.
-- Action: during item parsing collect mod lines that match no weight key,
-  rule or snapshot translation; keep them in memory, deduplicated, at most
-  200 per session; show the count on the Checks card and include the
-  lines in the redacted diagnostics report that the player copies on a
-  click (DIAG-SELF).
-- Impact: M. After a patch the operator sees exactly which new lines
-  score zero, and a player report carries them without extra work.
+R3. UNKNOWN-ITEM-TEXT: keep the per-press "Not counted" lines for a
+session.
+- Action: collect the `unweighted` list that every press already computes
+  (evaluate.py:318) into an in-memory, deduplicated session list, at most
+  200 entries; show the count on the Checks card and include the lines in
+  the redacted diagnostics report that the player copies on a click
+  (DIAG-SELF). The per-press card text stays as it is (web/tc.js:188-216).
+- Impact: L-M. After a patch the operator sees which lines players keep
+  hitting with zero weight, and a player report carries them without
+  retyping. The player-facing part already exists, so the gain is
+  operator-side only.
 - Effort: S.
 - Risk: memory growth (capped); privacy is low because mod text is game
   text, but the line list stays out of any file to keep decision 0045's
@@ -294,8 +323,8 @@ R3. UNKNOWN-ITEM-TEXT: list item lines the parser did not use.
   (decision 0003); the report leaves only on the player's click (decision
   0040).
 - Depends on: complements 0051 R1 (log side) and 0050 R11.
-- Files likely touched: server/al/theorycraft/item.py or evaluate.py,
-  server/al/diag.py, Checks card JS, tests.
+- Files likely touched: server/al/theorycraft/live.py or evaluate.py,
+  server/al/diag.py, Checks card JS, tests/test_diag_self.py.
 - Acceptance test: pressing a fixture with one invented mod line twice
   yields one entry and a Checks count of 1; the copied report contains the
   line and no path; a restart clears it.
@@ -316,8 +345,7 @@ R4. HOTRELOAD-RETRY: never pin a stale copy on a transient read error.
   flicker.
 - ToS check: own data files only; nothing game-side.
 - Depends on: nothing. Belongs with 0050 (reliability).
-- Files likely touched: server/al/hotreload.py,
-  tests/test_hot_reload*.py.
+- Files likely touched: server/al/hotreload.py, tests/test_hot_reload.py.
 - Acceptance test: a test loader raises PermissionError once then
   succeeds with the same mtime and size; the next `get()` returns the new
   value; a JSON syntax error still keeps the last good copy without a
@@ -340,7 +368,7 @@ R5. SNAP-DRIFT-REPORT: add counts and lost fields to the snapshot probe.
   snapshots (decisions 0009, 0013); nothing new is fetched.
 - Depends on: 0037 R8; 0037 R11 (field trim) supplies the allow-list.
 - Files likely touched: server/al/theorycraft/snapshot.py, diag or Checks
-  note source, tests/test_tc_snapshot*.py.
+  note source, tests/test_tc_snap.py.
 - Acceptance test: a fixture pair where one record loses a field and the
   count drops 25 percent produces one Checks line naming both; an
   unchanged refresh produces none; old cached copies beyond one are
@@ -351,9 +379,12 @@ R6. QUIET-OVERLAY: draw nothing when there is nothing, and fix the
 hideout test.
 - Action: (a) the overlay hides the HUD card entirely when no part has
   content; (b) a setting "hide in town and hideout" (default on for the
-  zone line, off for cards the player asked for); (c) decide hideout on
-  `area_entered` from the area id via hints.is_town-style prefixes, not
-  the English name substring at state.py:1491.
+  zone line, off for cards the player asked for); (c) once the generation
+  line has given an area id, decide `in_hideout` from it with the
+  hints.is_town rule (hints.py:86-90) instead of the English scene-name
+  substring (parser.py:120-121); keep the substring only as the fallback
+  before any area id is known, and drop it from the PoE1-only
+  `area_entered` branch (state.py:1491) the same way.
 - Impact: M. Fewer overlay pixels in safe areas and empty moments; the
   hideout flag works on any client language.
 - Effort: S for (c), M for (a)+(b) with tests.
@@ -363,11 +394,14 @@ hideout test.
 - ToS check: data from the opted-in Client.txt only; the overlay stays a
   separate click-through window (decision 0002).
 - Depends on: 0054 R2 and 0043 R2 if they land first (share the setting).
-- Files likely touched: server/al/state.py, server/al/hints.py (shared
-  helper), app/shared/render_gate.js, overlay page, tests in both suites.
-- Acceptance test: a fixture log entering a hideout via `area_entered`
-  with a non-English name sets in_hideout from the area id; the overlay
-  test shows no card element when all parts are empty.
+- Files likely touched: server/al/state.py, server/al/parser.py,
+  server/al/hints.py (shared helper), app/shared/render_gate.js, overlay
+  page, tests/test_bus_state.py, tests/test_parser.py, app tests.
+- Acceptance test: a fixture log whose generation line names a hideout
+  area id followed by a scene line with a non-English name sets
+  in_hideout; a town scene with "hideout" in a translated name but a
+  non-hideout id does not; the overlay test shows no card element when
+  all parts are empty.
 - ZERO-CLICK: automatic on every zone change.
 
 R7. ZONE-RESET: one function clears per-zone state.
@@ -382,7 +416,8 @@ R7. ZONE-RESET: one function clears per-zone state.
   (state.py:1747) and run the resume tests.
 - ToS check: Client.txt lines only.
 - Depends on: none; land before 0038 R2.
-- Files likely touched: server/al/state.py, tests/test_state*.py.
+- Files likely touched: server/al/state.py, tests/test_bus_state.py,
+  tests/test_resume.py.
 - Acceptance test: a card scheduled in zone 1 never publishes after a
   zone 2 generation line; the field list test fails if a new zone field
   skips the reset.
@@ -420,7 +455,10 @@ R9. PROVENANCE: a source and check date on every authored fact.
 - ToS check: own data files; facts stay in own words (decisions 0039,
   0043).
 - Depends on: 0058 (watchers) consumes the re-verify list.
-- Files likely touched: server/al/data/*.json, a data test.
+- Files likely touched: server/al/data/zone_notes.json and
+  zone_guide.json, the boss table in server/al/campaign.py:42, the rule
+  table in server/al/theorycraft/waystone.py, R2's new rule file, a data
+  test.
 - Acceptance test: the data test lists zero entries without `src` and
   `checked`; a script prints entries checked before a given date.
 - ZERO-CLICK: the list is produced by the loop or a test, no player act.
@@ -431,7 +469,7 @@ R10. LEAGUE-SSF: price lookups follow the trade league for a solo league.
   from <league>" on the card; first confirm PoE2's solo league naming.
 - Impact: L-M (solo players get prices instead of a 404).
 - Effort: S once the naming is confirmed.
-- Risk: the naming is UNVERIFIED for PoE2 (F10); a wrong guess would
+- Risk: the naming is UNVERIFIED for PoE2 (F10, L3); a wrong guess would
   send a solo player to the wrong book, so the card must name the league.
 - ToS check: poe.ninja under decision 0026; the trade link stays a URL
   the player opens (decision 0017).
@@ -483,7 +521,7 @@ R12. HOLD-BACK: no verdict while an input is missing.
 - 0042 usability: R1 reset controls, R8 editor; repo C searchable
   settings list and repo G grouped settings with one help line each.
 - 0043 glanceability and 0048 performance: R6; repo E safe-area gate for
-  heavy cards.
+  heavy cards (a default-on "run outside town" toggle there).
 - 0050 reliability: R4, R7.
 - 0051 observability: R3; repo G in-app A/B diagnostics (deferred).
 - 0054 competitive PoE tools: R6 shares the parts chooser (0054 R2); the
@@ -565,7 +603,7 @@ R12. HOLD-BACK: no verdict while an input is missing.
   levelling notes and modifier weights are someone else's work and go
   stale per league (repos B, C).
 - Key data by Client.txt area id, never the English display name (repo B
-  does; AshLight does too at zonenotes.py:59-60 and state.py:1491).
+  does; AshLight does too at zonenotes.py:59-60 and parser.py:120-121).
 - Repo B swallows JSON and write errors silently; AshLight shows a Checks
   note instead (decision 0042), and R4 keeps that note truthful.
 - Repo D's price fetch sends no truthful User-Agent and no contact;
@@ -580,13 +618,58 @@ R12. HOLD-BACK: no verdict while an input is missing.
 
 ## Open questions
 
-- Q1. PoE2 solo league naming (prefix form) for R10: UNVERIFIED here;
-  settle by the 0036 league picker work, which reads the leagues list.
+- Q1. PoE2 solo league naming (prefix form) for R10: UNVERIFIED here (a
+  search summary suggests "SSF <league>", L3); settle by the 0036 league
+  picker work, which reads the leagues list.
 - Q2. A pick-one-of-N choice recommender (repo C idea: rank the options
-  of a timed-trial reward choice from an own table). The options are not
+  of an in-game choose-one screen from an own table). The options are not
   items, so the clipboard may not carry them; it would need the per-press
   screen read that 0043 R7 is spiking. Decide after that spike; no
   adjudicator needed now.
 - Q3. Whether R2's thresholds should be a pure AshLight table or derived
   from the base_items snapshot plus level; recommend the own table first
   (simpler, hot-reloaded), revisit after one live levelling run.
+
+## Verification
+
+Independent verifier, 2026-11-18, at HEAD 5ec96b8.
+
+- Code claims: 34 path:line citations re-read in this tree. 27 held as
+  written. Corrected: weights first-write range (197-200); campaign hints
+  also cover the flask base and need a build (campaign.py:11-20); the
+  item side already lists zero-weight mods per press (evaluate.py:318,
+  web/tc.js:188-216), so F5 and R3 were narrowed and R3 dropped from M to
+  L-M and out of the Summary's best three (R4 took its place); the PoE2
+  hideout flag comes from the parser's scene-name substring
+  (parser.py:120-121), while state.py:1491 sits on a PoE1-only line PoE2
+  never writes (langguard.py:5), so F8, R6 (c) and its acceptance test
+  were rewritten; F6 narrowed to locks taken after the last write; seven
+  "Files likely touched" paths fixed to real test files and data
+  locations (waystone.py, campaign.py:42, server/al/data/).
+- Third-party claims: 21 claims re-checked read-only against the local
+  clones (licence files and fields, override-only weights with per-row
+  and all reset and a changed count, unknown-option log, 10 x 100 ms
+  retry, count-of-N levelling rules with a boots band, town and hideout
+  hide defaults, separators, swallowed JSON errors, notes keyed by
+  display name, prefix strip, rate preference, missing-data warning, no
+  User-Agent header, 32-bit memo hash, synthesized input with a per-area
+  cancellation token, a donation line, price overrides, zero tests, one
+  repo with CI on caret ranges). 19 held; 2 corrected: repo C logs once
+  per area visit, not per session; repo E's outside-town toggle defaults
+  on (opt-out), not opt-in. Nothing from the clones was run.
+- Web claims: L1 and L2 re-fetched 2026-11-18 and hold. PoE2 solo league
+  naming searched
+  again (L3): still UNVERIFIED; F10, R10 and Q1 say so.
+- ToS floor: all 12 recommendations re-tested against every floor rule;
+  all stay inside (local files, Client.txt, the per-press clipboard read,
+  poe.ninja under decision 0026, a trade URL the player opens). Q2 would
+  need the per-press screen read, which decision 0003 permits. Nothing
+  moved to Rejected; the Rejected list already holds every outside path.
+- Settled decisions: none contradicted (0003, 0009, 0013, 0017, 0026,
+  0036, 0039, 0040, 0042, 0045 checked against R1-R12).
+- Brief: every point covered (set, techniques with floor status, ranked
+  ideas with adaptations, licence classes and the decision check, cautions,
+  plan placement, standard recommendation fields). Hygiene: identity of
+  the set withheld; one Q2 phrase made generic.
+- Still UNVERIFIED: the set size (39) and idea count (58), from the review
+  data only; PoE2 solo league naming.
