@@ -116,3 +116,47 @@ and gate-driven steps need no operator click beyond a signed-in gh.
   the gap reported to MAIN).
 - FLEET item 17 changes its rule on merges or required checks.
 - GGG's rules for public tools change (research 0001 is re-read).
+
+## Amendment 2026-11-18 - pre-push guard hardened after the GP-02 review
+
+The GP-02 review pushed to a local bare repo and got 15 classes of content
+past the first hook text (tag on a blob or a tree, annotated tag message,
+non-operator tagger, needle added then removed, diff.noprefix and
+diff.dstPrefix at push time, binary and -diff files, an empty file and a
+pure rename named after a needle, a missing needle config, an env
+override, attribution trailers with keys or names the kit does not list,
+non-version v* tags). Changes:
+
+1. The leak sweep's pre-push mode scans OBJECTS, not a diff: every blob,
+   tree, commit and tag the push sends that the remote lacks (objects
+   reachable from the old remote tips and from `git ls-remote` are
+   public already; local remote-tracking refs are never trusted), full
+   blob bytes, every tree entry name, commit and tag messages and the
+   ref names. git runs with the caller's GIT_* and `git -c` values
+   dropped. A binary blob gets the needle arm over its UTF-8 and UTF-16
+   readings; the structural arm stays text-only (three images in history
+   form drive-path shapes by chance).
+2. The pre-push sweep needs config/leak_needles.json: DEGRADED is a FAULT
+   there, and AL_LEAK_NEEDLES only adds needles, never replaces the file.
+3. New tools/push_guard.py runs after the shell ref rule and before the
+   kit identity gate: main names a commit; a release tag is
+   v<major>.<minor>.<patch>[-<pre>] (plan 05 D4; the shell rule narrows to
+   refs/tags/v[0-9]*) and names a commit or an annotated tag that peels to
+   one; every pushed tag object has the operator as tagger; no commit or
+   tag message carries a `<Key>-by:` (or Assisted / Generated / AI /
+   Model / Tool) trailer naming an AI model, AI tool or bot.
+4. tests/test_pre_push_hook.py carries one regression test per review
+   case; the shell ref rule, the guard, the kit gate and the sweep keep
+   that order (tests/test_fleet_kit_conformance.py).
+
+Kit gaps (fleet_identity is vendored, never edited here; reported to
+MAIN): it checks commits only (no tagger, no tag message) and its trailer
+rule matches three keys and the names claude, anthropic and bot.
+
+Alternatives: keep the diff scan and patch each header case (rejected;
+every diff option is another hole); vendor a patched fleet_identity
+(rejected; FLEET item 11); trust local remote-tracking refs as the public
+set (rejected; a local update-ref would hide a commit from the scan).
+Reverses if: the kit gate gains tag and wide-trailer checks (then
+push_guard keeps only the ref shape), or the object scan proves too slow
+for a normal push.

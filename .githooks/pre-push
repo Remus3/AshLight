@@ -1,12 +1,20 @@
 #!/bin/sh
 # AshLight pre-push: the guarded push (go-public decision, 2026-11-18).
 # A push is never refused for being a push. Every push must pass, in order:
-#   1. Ref rule: only refs/heads/main and refs/tags/v* leave this machine,
-#      each to the same name on the remote. A delete, a moved tag and a
-#      non-fast-forward of main are refused. Lane and keep refs stay local.
-#   2. Kit v13 (FLEET-COMMON 17) identity gate: fleet_identity.py pre-push.
-#   3. Leak sweep over what is being pushed: tools/leak_sweep.py --pre-push.
-# There is no override variable. Exit 1 = nothing was pushed.
+#   1. Ref rule: only refs/heads/main and refs/tags/v[0-9]* leave this
+#      machine, each to the same name on the remote. A delete, a moved tag
+#      and a non-fast-forward of main are refused. Lane and keep refs stay
+#      local.
+#   2. Push guard: tools/push_guard.py - main names a commit, a release tag
+#      is v<SemVer> on a commit (never a blob or tree), every pushed tag
+#      object has the operator as tagger, and no commit or tag message
+#      carries an AI or bot attribution trailer of any key.
+#   3. Kit v13 (FLEET-COMMON 17) identity gate: fleet_identity.py pre-push.
+#   4. Leak sweep over every object being pushed (blobs, trees, commit and
+#      tag messages, ref names): tools/leak_sweep.py --pre-push. It needs
+#      config/leak_needles.json; without it the push fails closed.
+# There is no override variable (AL_LEAK_NEEDLES only adds needles).
+# Exit 1 = nothing was pushed.
 
 ROOT="$(git rev-parse --show-toplevel)"
 REFS="$(cat)"
@@ -20,8 +28,8 @@ check_refs() {
          return 1 ;;
     esac
     case "$rref" in
-      refs/heads/main|refs/tags/v*) ;;
-      *) echo "pre-push: refused - $rref: only refs/heads/main and refs/tags/v* are pushed." >&2
+      refs/heads/main|refs/tags/v[0-9]*) ;;
+      *) echo "pre-push: refused - $rref: only refs/heads/main and refs/tags/v[0-9]* are pushed." >&2
          return 1 ;;
     esac
     if [ "$lref" != "$rref" ]; then
@@ -44,6 +52,7 @@ check_refs() {
 }
 
 printf '%s\n' "$REFS" | check_refs || exit 1
+printf '%s\n' "$REFS" | python "$ROOT/tools/push_guard.py" "$@" || exit 1
 printf '%s\n' "$REFS" | python "$ROOT/ops/fleet_kit/fleet_identity.py" pre-push "$@" || exit 1
 printf '%s\n' "$REFS" | python "$ROOT/tools/leak_sweep.py" --pre-push "$@" || exit 1
 exit 0

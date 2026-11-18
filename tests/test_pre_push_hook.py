@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / ".githooks" / "pre-push"
 OPERATOR = ("Op Erator", "op@example.com")
 REFUSED = "pre-push: refused"
+# Synthetic needles only; the hook test never spells a real one.
+NEEDLES = ["Zorblax Quux", "acct-0000-fake"]
 
 pytestmark = pytest.mark.git
 
@@ -69,7 +71,8 @@ class World:
         shutil.copytree(ROOT / ".githooks", hooks)
         for p in hooks.iterdir():
             p.chmod(0o755)
-        for rel in ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py"):
+        for rel in ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py",
+                    "tools/push_guard.py"):
             dst = self.work / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / rel, dst)
@@ -81,7 +84,11 @@ class World:
         self.git("remote", "add", "origin", str(self.bare))
         # the hook runs the copies from the work tree; they are never committed
         (self.work / ".git" / "info" / "exclude").write_text(
-            "/.githooks/\n/ops/\n/tools/\n", encoding="ascii", newline="\n")
+            "/.githooks/\n/ops/\n/tools/\n/config/\n", encoding="ascii", newline="\n")
+        self.cfg = self.work / "config" / "leak_needles.json"
+        self.cfg.parent.mkdir()
+        self.cfg.write_text('{"needles": ["%s", "%s"]}\n' % tuple(NEEDLES), encoding="ascii",
+                            newline="\n")
         self.commit("README.txt", "hello\n", "first commit")
 
     def git_in(self, cwd, *args, env=None, check=True):
@@ -96,7 +103,13 @@ class World:
 
     def commit(self, name, text, msg, author=None):
         path = self.work / name
-        path.write_text(text, encoding="ascii", newline="\n")
+        if isinstance(text, bytes):
+            path.write_bytes(text)
+        else:
+            path.write_text(text, encoding="ascii", newline="\n")
+        return self.commit_staged(msg, author)
+
+    def commit_staged(self, msg, author=None):
         self.git("-c", f"core.hooksPath={self.nohooks}", "add", "-A")
         extra = ["--author", author] if author else []
         self.git("-c", f"core.hooksPath={self.nohooks}", "commit", "-q", "-m", msg, *extra)
@@ -105,9 +118,16 @@ class World:
     def rev(self, ref):
         return self.git("rev-parse", ref).stdout.strip()
 
-    def push(self, *args, extra_env=None):
+    def push(self, *args, extra_env=None, config=()):
         env = dict(self.env, **(extra_env or {}))
-        return self.git("push", "origin", *args, env=env, check=False)
+        pre = [x for c in config for x in ("-c", c)]
+        return self.git(*pre, "push", "origin", *args, env=env, check=False)
+
+    def blob(self, data):
+        r = subprocess.run(["git", "hash-object", "-w", "--stdin"], cwd=str(self.work),
+                           input=data, capture_output=True, env=self.env, timeout=60)
+        assert r.returncode == 0, r.stderr
+        return r.stdout.decode("ascii").strip()
 
     def remote_refs(self):
         out = self.git_in(self.bare, "for-each-ref", "--format=%(refname) %(objectname)").stdout
@@ -243,3 +263,208 @@ def test_hook_text_is_ascii_lf_sh():
     assert data.startswith(b"#!/bin/sh\n")
     text = data.decode("ascii")
     assert "AL_ALLOW_PUSH" not in text and "PUSH REFUSED" not in text
+
+
+# --- GP-02 review regressions: each bypass the review found is refused ---
+
+N0, N1 = NEEDLES
+ZERO = "0" * 40
+
+
+def _halted(r):
+    return r.returncode != 0 and "HALT" in r.stderr
+
+
+def _sweep_kinds(world, ref_line):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import leak_sweep as ls
+    f, _ = ls.scan_pre_push([ref_line], ls.compile_needles(NEEDLES), cwd=world.work)
+    return sorted({(w, k) for w, _, k in f})
+
+
+# B-TAG-BLOB
+@pytest.mark.parametrize("annotated", [False, True])
+def test_tag_on_a_blob_is_refused(pushed, annotated):
+    before = pushed.remote_refs()
+    blob = pushed.blob(f"note {N0}\n".encode("ascii"))
+    for name in ("v8", "v0.8.0"):
+        args = ["-a", "-m", "rel"] if annotated else []
+        pushed.git("tag", *args, name, blob)
+        r = pushed.push(name)
+        assert _refused(r), (name, r.stderr)
+    assert pushed.remote_refs() == before
+    # the sweep alone also sees the blob's bytes
+    assert ("blob", "needle-slot-0") in _sweep_kinds(
+        pushed, f"refs/tags/v0.8.0 {blob} refs/tags/v0.8.0 {ZERO}")
+
+
+# B-TAG-TREE
+def test_tag_on_a_tree_is_refused(pushed):
+    before = pushed.remote_refs()
+    blob = pushed.blob(f"{N1}\n".encode("ascii"))
+    r = subprocess.run(["git", "mktree"], cwd=str(pushed.work), capture_output=True,
+                       input=f"100644 blob {blob}\t{N1}-synth.txt\n".encode("ascii"),
+                       env=pushed.env, timeout=60)
+    tree = r.stdout.decode("ascii").strip()
+    pushed.git("tag", "v0.6.0", tree)
+    r = pushed.push("v0.6.0")
+    assert _refused(r) and "tree" in r.stderr, r.stderr
+    assert pushed.remote_refs() == before
+    kinds = _sweep_kinds(pushed, f"refs/tags/v0.6.0 {tree} refs/tags/v0.6.0 {ZERO}")
+    assert ("path", "needle-slot-1") in kinds
+
+
+# B-TAG-MSG
+def test_annotated_tag_message_is_swept(pushed):
+    before = pushed.remote_refs()
+    pushed.git("tag", "-a", "v0.9.0", "-m", "release", "-m", f"thanks {N0}")
+    r = pushed.push("v0.9.0")
+    assert _halted(r) and "tag-message" in r.stderr, r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-TAGGER
+def test_tag_object_identity_and_trailer(pushed):
+    before = pushed.remote_refs()
+    other = dict(pushed.env, GIT_COMMITTER_NAME="Some One",
+                 GIT_COMMITTER_EMAIL="someone@example.org")
+    pushed.git("tag", "-a", "v0.10.0", "-m", "rel", env=other)
+    r = pushed.push("v0.10.0")
+    assert _refused(r) and "non-operator-tagger" in r.stderr, r.stderr
+    pushed.git("tag", "-a", "v0.11.0", "-m", "rel", "-m", "Co-Authored-By: Claude")
+    r = pushed.push("v0.11.0")
+    assert _refused(r) and "trailer" in r.stderr, r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-ADD-REMOVE
+def test_needle_added_then_removed_is_refused(pushed):
+    before = pushed.remote_refs()
+    pushed.commit("t1.txt", f"{N0}\n", "add t1")
+    (pushed.work / "t1.txt").unlink()
+    pushed.commit_staged("drop t1")
+    r = pushed.push("main")
+    assert _halted(r), r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-NOPREFIX, B-DSTPREFIX
+@pytest.mark.parametrize("cfg", ["diff.noprefix=true", "diff.dstPrefix=x/",
+                                 "diff.mnemonicPrefix=true", "core.quotePath=false"])
+def test_push_time_diff_config_does_not_blind_the_sweep(pushed, cfg):
+    before = pushed.remote_refs()
+    pushed.commit("t2.txt", f"see {N1}\n", "add t2")
+    r = pushed.push("main", config=[cfg])
+    assert _halted(r), (cfg, r.stderr)
+    assert pushed.remote_refs() == before
+
+
+# B-BINARY-NUL
+@pytest.mark.parametrize("data", [b"\0" + N0.encode("ascii") + b"\n",
+                                  b"\0\0" + N1.encode("utf-16-le"),
+                                  b"\x89PNG\0" + N1.encode("utf-16-be")])
+def test_needle_in_a_binary_blob_is_refused(pushed, data):
+    before = pushed.remote_refs()
+    pushed.commit("t4.dat", data, "add t4")
+    r = pushed.push("main")
+    assert _halted(r), r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-GITATTR
+def test_minus_diff_attribute_does_not_hide_a_file(pushed):
+    before = pushed.remote_refs()
+    (pushed.work / ".gitattributes").write_text("t5.txt -diff\n", encoding="ascii",
+                                               newline="\n")
+    pushed.commit("t5.txt", f"{N0}\n", "add t5")
+    r = pushed.push("main")
+    assert _halted(r), r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-EMPTY-PATH
+def test_empty_file_with_a_needle_name_is_refused(pushed):
+    before = pushed.remote_refs()
+    pushed.commit(f"{N1}.txt", "", "add empty")
+    r = pushed.push("main")
+    assert _halted(r) and "path" in r.stderr, r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-RENAME-PATH
+def test_pure_rename_to_a_needle_name_is_refused(pushed):
+    pushed.commit("clean1.txt", "clean\n", "add clean1")
+    assert pushed.push("main").returncode == 0
+    before = pushed.remote_refs()
+    pushed.git("mv", "clean1.txt", f"{N1}.md")
+    pushed.commit_staged("rename")
+    r = pushed.push("main")
+    assert _halted(r) and "path" in r.stderr, r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-CONFIG-MISSING
+def test_missing_needle_config_fails_closed(pushed):
+    before = pushed.remote_refs()
+    pushed.cfg.unlink()
+    pushed.commit("t6.txt", f"{N0}\n", "add t6")
+    r = pushed.push("main")
+    assert r.returncode != 0 and "FAULT" in r.stderr, r.stderr
+    pushed.commit("t7.txt", "clean\n", "clean only")
+    r = pushed.push("main")
+    assert r.returncode != 0 and "FAULT" in r.stderr, r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-ENV-OVERRIDE
+def test_env_needles_only_add(pushed):
+    before = pushed.remote_refs()
+    pushed.commit("t8.txt", f"{N0}\n", "add t8")
+    r = pushed.push("main", extra_env={"AL_LEAK_NEEDLES": "nothing-xyz"})
+    assert _halted(r), r.stderr
+    assert pushed.remote_refs() == before
+
+
+# B-TRAILER-KEYS
+@pytest.mark.parametrize("trailer", [
+    "Helped-by: GitHub Copilot <x@example.com>",
+    "Co-authored-by: Opus <x@example.com>",
+    "Assisted-by: Claude",
+    "Reviewed-by: Sonnet",
+    "Generated-by: ChatGPT",
+    "AI-assisted: Gemini",
+])
+def test_ai_trailer_of_any_key_is_refused(pushed, trailer):
+    before = pushed.remote_refs()
+    pushed.commit("t9.txt", "t9\n", "change t9\n\n" + trailer)
+    r = pushed.push("main")
+    assert _refused(r) and "ai-trailer" in r.stderr, (trailer, r.stderr)
+    assert pushed.remote_refs() == before
+
+
+def test_human_trailer_passes(pushed):
+    pushed.commit("t10.txt", "t10\n", "change t10\n\nReviewed-by: Op Erator <op@example.com>")
+    r = pushed.push("main")
+    assert r.returncode == 0, r.stderr
+
+
+# B-NONVERSION-TAG
+def test_only_semver_release_tags(pushed):
+    before = pushed.remote_refs()
+    for name in ("v1x", "vendor-notes", "v1", "v1.2", "v01.2.3", "v1.2.3-"):
+        pushed.git("tag", name)
+        r = pushed.push(name)
+        assert _refused(r), (name, r.stderr)
+    assert pushed.remote_refs() == before
+    for name in ("v0.2.0-rc.1", "v0.2.0"):
+        pushed.git("tag", name)
+        r = pushed.push(name)
+        assert r.returncode == 0, (name, r.stderr)
+        assert pushed.remote_refs()[f"refs/tags/{name}"] == pushed.rev(name)
+
+
+def test_annotated_operator_tag_on_public_commit_pushes(pushed):
+    pushed.git("tag", "-a", "v0.3.0", "-m", "release 0.3.0")
+    r = pushed.push("v0.3.0")
+    assert r.returncode == 0, r.stderr
+    assert pushed.remote_refs()["refs/tags/v0.3.0"] == pushed.rev("v0.3.0")

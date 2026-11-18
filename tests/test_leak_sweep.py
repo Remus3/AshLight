@@ -304,3 +304,32 @@ def test_commit_msg_hook_runs_the_message_sweep():
     assert "leak_sweep.py" in hook and "--message" in hook
     # identity strip first, so a stripped trailer is never swept
     assert hook.index("fleet_identity.py") < hook.index("leak_sweep.py")
+
+
+# --- GP-02 review: pre-push needle config is required, env only adds ---
+
+def test_push_mode_requires_config_and_env_only_adds(tmp_path):
+    missing = tmp_path / "none.json"
+    assert ls.load_needles(missing, environ={"AL_LEAK_NEEDLES": "abc"}, push=True) == \
+        ([], "DEGRADED")
+    cfg = tmp_path / "c.json"
+    cfg.write_text('{"needles": ["Zorblax Quux"]}', newline="\n")
+    assert ls.load_needles(cfg, environ={"AL_LEAK_NEEDLES": "nothing-xyz"}, push=True) == \
+        (["Zorblax Quux", "nothing-xyz"], "ARMED")
+    # outside a push the env list still replaces the file (tests, CI)
+    assert ls.load_needles(cfg, environ={"AL_LEAK_NEEDLES": "nothing-xyz"}) == \
+        (["nothing-xyz"], "ARMED")
+
+
+def test_binary_blob_gets_needle_arm_only():
+    rx = ls.compile_needles(FAKE)
+    data = b"\x89PNG\0" + "acct-0000-fake".encode("utf-16-le")
+    assert [k for _, _, k in ls.scan_blob(data, "x.png", rx)] == ["needle-slot-1"]
+    drive = ("C" + ":" + "\\" + "Secret" + "\\" + "x").encode("ascii")
+    assert ls.scan_blob(b"\0" + drive, "x.png", rx) == []
+    assert [k for _, _, k in ls.scan_blob(drive, "x.txt", rx)] == ["drive-path"]
+
+
+def test_tree_names_parse():
+    raw = b"100644 a.txt\0" + b"\x01" * 20 + b"40000 sub dir\0" + b"\x02" * 20
+    assert ls.tree_names(raw, 20) == ["a.txt", "sub dir"]

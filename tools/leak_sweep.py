@@ -15,10 +15,14 @@ already runs, reduced to AL's size:
   It still runs in a fresh clone and on CI, where no needle file exists.
 
 Modes: `--tree` (every tracked file), `--staged` (pre-commit, added lines),
-`--pre-push` (stdin ref lines; added lines + commit messages of the pushed
-range). Exit 0 clean, 2 HALT (finding), 3 FAULT (could not run). DEGRADED (no
-needle config) is announced on every run and is not silent; it is not a FAULT,
-because CI legitimately has no config. LEAK-WT: a linked worktree without its
+`--pre-push` (stdin ref lines; every OBJECT the push sends that the remote
+lacks: full blob bytes, tree entry names, commit and tag messages, ref names;
+no diff, so no diff config, rename, empty file, -diff attribute or binary
+file hides anything - GP-02 review). Exit 0 clean, 2 HALT (finding), 3 FAULT
+(could not run). DEGRADED (no needle config) is announced on every run and
+is not silent; it is not a FAULT, because CI legitimately has no config -
+except in `--pre-push`, where it is a FAULT and env AL_LEAK_NEEDLES only adds
+needles to the file, never replaces it. LEAK-WT: a linked worktree without its
 own config reads the main checkout's (parent of `git rev-parse
 --git-common-dir`); the run line names the source, never a needle.
 
@@ -104,15 +108,20 @@ def resolve_config(root=ROOT):
     return local, "none"
 
 
-def load_needles(config=None, environ=None):
+def load_needles(config=None, environ=None, push=False):
     """Return (needles, mode). mode is ARMED, DEGRADED or raises ValueError (FAULT).
-    config None resolves it via resolve_config() (worktree first, then main)."""
+    config None resolves it via resolve_config() (worktree first, then main).
+    push=True (GP-02 review B-ENV-OVERRIDE): the config file is required and
+    env AL_LEAK_NEEDLES only ADDS needles to it, never replaces it."""
     if config is None:
         config, _ = resolve_config()
     env = os.environ if environ is None else environ
     raw = env.get("AL_LEAK_NEEDLES")
-    if raw:
-        needles = [n.strip() for n in raw.split(";") if n.strip()]
+    extra = [n.strip() for n in raw.split(";") if n.strip()] if raw else []
+    if push and not Path(config).is_file():
+        return [], "DEGRADED"
+    if extra and not push:
+        needles = extra
     elif Path(config).is_file():
         doc = json.loads(Path(config).read_text(encoding="utf-8"))
         raw_list = doc.get("needles") if isinstance(doc, dict) else None
@@ -121,6 +130,8 @@ def load_needles(config=None, environ=None):
         needles = [n.strip() for n in raw_list if isinstance(n, str) and n.strip()]
         if not needles:
             raise ValueError("needle config present but holds no usable needle")
+        if push:
+            needles += [n for n in extra if n not in needles]
     else:
         return [], "DEGRADED"
     short = [i for i, n in enumerate(needles) if len(n) < 3]
@@ -240,31 +251,177 @@ def scan_diff(diff_text, needles_rx):
     return findings
 
 
-def scan_pre_push(ref_lines, needles_rx, cwd=ROOT):
+_ZERO_RX = re.compile(r"^0+$")
+_SHA_RX = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+
+
+def _git_raw(args, cwd=ROOT, stdin=b""):
+    """git with bytes in and out; the caller's GIT_* env and `git -c` values
+    (GIT_CONFIG_PARAMETERS) are dropped, so a push-time config never reshapes
+    what the sweep reads (GP-02 review B-NOPREFIX / B-DSTPREFIX)."""
+    env = {k: v for k, v in os.environ.items()
+           if not k.upper().startswith("GIT_") or k.upper() in ("GIT_EXEC_PATH",)}
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    out = subprocess.run(["git", *args], cwd=str(cwd), input=stdin, capture_output=True,
+                         env=env, timeout=600)
+    if out.returncode != 0:
+        raise RuntimeError(f"git {args[0]} failed")
+    return out.stdout
+
+
+def _present(shas, cwd=ROOT):
+    """The subset of shas this object store holds (any object type)."""
+    shas = sorted({s for s in shas if _SHA_RX.match(s)})
+    if not shas:
+        return []
+    out = _git_raw(["cat-file", "--batch-check=%(objectname) %(objecttype)"], cwd,
+                   ("\n".join(shas) + "\n").encode("ascii")).decode("ascii", "replace")
+    return [ln.split()[0] for ln in out.splitlines()
+            if len(ln.split()) == 2 and ln.split()[1] != "missing"]
+
+
+def remote_advertised(remote, cwd=ROOT):
+    """Shas `git ls-remote <remote>` advertises (public already), [] on any
+    failure: an unread advertisement only widens the scan, never narrows it.
+    Local remote-tracking refs are never trusted as "public"."""
+    if not remote:
+        return []
+    try:
+        out = _git_raw(["ls-remote", "--", remote], cwd).decode("utf-8", "replace")
+    except (RuntimeError, OSError, subprocess.SubprocessError):
+        return []
+    return [ln.split()[0] for ln in out.splitlines()
+            if ln.split() and _SHA_RX.match(ln.split()[0])]
+
+
+def _ref_lines(ref_lines):
+    """[(lref, lsha, rref, rsha)] for well-formed stdin lines."""
+    return [tuple(ln.split()) for ln in ref_lines if len(ln.split()) == 4]
+
+
+def pushed_objects(ref_lines, cwd=ROOT, remote=None, advertised=None):
+    """GP-02 review: every object a push would send that the remote does not
+    hold already - commits, annotated tags, trees and blobs, whatever the ref
+    points at (a blob or tree tag too). Returns [(sha, type, data, path_hint)].
+    Excluded: objects reachable from the pushed refs' old remote tips and
+    from the remote's advertised refs, when present locally; nothing else."""
+    rows = _ref_lines(ref_lines)
+    tips = [lsha for _l, lsha, _r, _o in rows if not _ZERO_RX.match(lsha)]
+    if not tips:
+        return []
+    if advertised is None:
+        advertised = remote_advertised(remote, cwd)
+    olds = [o for _l, _s, _r, o in rows if not _ZERO_RX.match(o)]
+    exclude = _present(olds + list(advertised), cwd)
+    spec = "\n".join(tips + ["^" + s for s in exclude]) + "\n"
+    listing = _git_raw(["rev-list", "--objects", "--stdin"], cwd, spec.encode("ascii"))
+    order, hints = [], {}
+    if listing.endswith(b"\n"):
+        listing = listing[:-1]
+    for raw in listing.split(b"\n") if listing else []:
+        line = raw.decode("utf-8", "replace")
+        head = line[:64].split(" ", 1)[0]
+        if _SHA_RX.match(head) and (len(line) == len(head) or line[len(head)] == " "):
+            if head not in hints:
+                order.append(head)
+                hints[head] = line[len(head) + 1:]
+        elif order:  # a path holding a newline continues the previous row
+            hints[order[-1]] += "\n" + line
+    if not order:
+        return []
+    batch = _git_raw(["cat-file", "--batch"], cwd, ("\n".join(order) + "\n").encode("ascii"))
+    out, pos = [], 0
+    for sha in order:
+        nl = batch.index(b"\n", pos)
+        head = batch[pos:nl].decode("ascii", "replace").split()
+        if len(head) != 3 or head[1] == "missing":
+            raise RuntimeError("cat-file missing object")
+        size = int(head[2])
+        data = batch[nl + 1:nl + 1 + size]
+        pos = nl + 1 + size + 1
+        out.append((head[0], head[1], data, hints.get(sha, "")))
+    return out
+
+
+def object_message(data):
+    """(header text, message text) of a commit or tag object."""
+    head, _, body = data.partition(b"\n\n")
+    return head.decode("utf-8", "replace"), body.decode("utf-8", "replace")
+
+
+def tree_names(data, hash_len):
+    """Entry names of a raw tree object."""
+    names, pos = [], 0
+    while pos < len(data):
+        sp = data.index(b" ", pos)
+        nul = data.index(b"\0", sp)
+        names.append(data[sp + 1:nul].decode("utf-8", "replace"))
+        pos = nul + 1 + hash_len
+    return names
+
+
+def scan_blob(data, rel, needles_rx):
+    """A blob's bytes, text or binary. Text gets both arms. Binary (a NUL in
+    its first 8 KB, or a -diff attribute, which no longer matters) gets the
+    needle arm over its UTF-8, UTF-16LE and UTF-16BE readings; the structural
+    arm is skipped on binary (image bytes form drive and mail shapes by chance)."""
+    where = rel or "blob"
+    if _is_text(data):
+        return scan_text(data.decode("utf-8", "replace"), where, needles_rx, rel)
+    findings = []
+    texts = [data.decode("utf-8", "replace").replace("\0", "\n")]
+    for codec in ("utf-16-le", "utf-16-be"):  # both byte alignments of each
+        texts += [data[:len(data) // 2 * 2].decode(codec, "ignore"),
+                  data[1:][:(len(data) - 1) // 2 * 2].decode(codec, "ignore")]
+    seen = set()
+    for text in texts:
+        for f in scan_text(text, where, needles_rx, rel):
+            if f[2].startswith("needle-slot-") and (f[0], f[2]) not in seen:
+                seen.add((f[0], f[2]))
+                findings.append(f)
+    return findings
+
+
+def scan_pre_push(ref_lines, needles_rx, cwd=ROOT, remote=None, advertised=None):
+    """GP-02 review: the pushed OBJECTS, not a diff. Every new blob's full
+    bytes, every new tree's entry names, every new commit and tag message,
+    and the pushed ref names. Returns (findings, bytes scanned)."""
     findings, scanned = [], 0
-    for line in ref_lines:
-        parts = line.split()
-        if len(parts) != 4 or parts[1] == ZERO:
+    rows = _ref_lines(ref_lines)
+    for lref, lsha, rref, _rsha in rows:
+        if _ZERO_RX.match(lsha):
             continue
-        local_sha, remote_sha = parts[1], parts[3]
-        rng = local_sha if remote_sha == ZERO else f"{remote_sha}..{local_sha}"
-        if remote_sha == ZERO:
-            diff = _git("show", "--format=", "--no-color", "-p", "--root", local_sha, cwd=cwd)
-            all_commits = _git("rev-list", local_sha, cwd=cwd).split()
-            diff = "\n".join(_git("show", "--format=", "--no-color", "-p", c, cwd=cwd)
-                             for c in all_commits) or diff
-            msgs = _git("log", "--format=%B", local_sha, cwd=cwd)
-        else:
-            diff = _git("diff", "--no-color", rng, cwd=cwd)
-            # A message byte-identical to one already reachable from the remote
-            # ref is public already (a history rewrite re-pushes old messages
-            # under new SHAs); only messages new to the remote are scanned.
-            public = set(_git("log", "-z", "--format=%B", remote_sha, cwd=cwd).split("\0"))
-            msgs = "\n".join(m for m in _git("log", "-z", "--format=%B", rng, cwd=cwd).split("\0")
-                             if m not in public)
-        scanned += len(diff) + len(msgs)
-        findings += scan_diff(diff, needles_rx)
-        findings += scan_text(msgs, "commit-message", needles_rx)
+        for name in {lref, rref}:
+            findings += scan_text(name, "ref-name", needles_rx)
+            scanned += len(name)
+    objs = pushed_objects(ref_lines, cwd, remote, advertised)
+    hash_len = 32 if any(len(s) == 64 for _l, s, _r, _o in rows) else 20
+    # A message byte-identical to one already reachable from a pushed ref's
+    # old remote tip is public already (a history rewrite re-pushes old
+    # messages under new SHAs). A new ref gets no such exemption.
+    olds = _present([o for _l, _s, _r, o in rows if not _ZERO_RX.match(o)], cwd)
+    public = set()
+    if olds:
+        logs = _git_raw(["log", "-z", "--format=%B", *olds], cwd).decode("utf-8", "replace")
+        public = {m.strip() for m in logs.split("\0")}
+    for sha, kind, data, hint in objs:
+        scanned += len(data) + 1
+        if kind == "blob":
+            findings += scan_blob(data, hint, needles_rx)
+        elif kind == "tree":
+            for name in tree_names(data, hash_len):
+                findings += scan_text(name, "path", needles_rx)
+            if hint:
+                findings += scan_text(hint, "path", needles_rx)
+        elif kind == "commit":
+            _head, msg = object_message(data)
+            if msg.strip() not in public:
+                findings += scan_text(msg, "commit-message", needles_rx)
+        elif kind == "tag":
+            head, msg = object_message(data)
+            names = [ln[4:] for ln in head.splitlines() if ln.startswith("tag ")]
+            findings += scan_text("\n".join(names), "tag-name", needles_rx)
+            findings += scan_text(msg, "tag-message", needles_rx)
     return findings, scanned
 
 
@@ -313,13 +470,19 @@ def main(argv=None):
     g.add_argument("--message", metavar="FILE", help="commit-msg hook: sweep the message")
     g.add_argument("--history", action="store_true", help="every commit and message")
     args = ap.parse_args(argv)
+    push = args.pre_push is not None
     config, source = resolve_config()
     if os.environ.get("AL_LEAK_NEEDLES"):
-        source = "env"
+        source = source + "+env" if push else "env"
     try:
-        needles, mode = load_needles(config)
+        needles, mode = load_needles(config, push=push)
     except (ValueError, OSError) as exc:
         print(f"[leak-sweep] FAULT config: {exc}", file=sys.stderr)
+        return 3
+    if push and mode != "ARMED":
+        # GP-02 review B-CONFIG-MISSING: a push never runs DEGRADED.
+        print("[leak-sweep] FAULT: pre-push needs config/leak_needles.json; nothing is "
+              "pushed without the needle arm", file=sys.stderr)
         return 3
     if args.explain is not None:
         if 0 <= args.explain < len(needles):
@@ -349,7 +512,8 @@ def main(argv=None):
                 return 3
         else:
             refs = [ln for ln in sys.stdin.read().splitlines() if ln.strip()]
-            findings, scanned = scan_pre_push(refs, rx)
+            remote = args.pre_push[0] if args.pre_push else None
+            findings, scanned = scan_pre_push(refs, rx, remote=remote)
             if refs and scanned == 0 and any(r.split()[1] != ZERO for r in refs
                                              if len(r.split()) == 4):
                 print("[leak-sweep] FAULT: zero bytes scanned for a non-empty push",

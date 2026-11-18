@@ -164,8 +164,9 @@ def test_git_hooks_wire_identity_and_leak_sweep():
     assert "PUSH REFUSED" not in pp
     assert "AL_ALLOW_PUSH" not in pp
     assert pp.rstrip().endswith("exit 0")
-    assert "refs/heads/main|refs/tags/v*" in pp
+    assert "refs/heads/main|refs/tags/v[0-9]*" in pp
     order = [pp.index("check_refs || exit 1"),
+             pp.index('push_guard.py" "$@" || exit 1'),
              pp.index('fleet_identity.py" pre-push "$@" || exit 1'),
              pp.index('leak_sweep.py" --pre-push "$@" || exit 1'),
              pp.rstrip().rindex("exit 0")]

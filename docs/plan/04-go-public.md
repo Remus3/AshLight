@@ -997,6 +997,14 @@ here depends on it.
 
 ### New hook, exact text
 
+Amended 2026-11-18 after the GP-02 review (decision 0046 amendment): the
+tracked `.githooks/pre-push` is now authoritative. It narrows the tag
+pattern to `refs/tags/v[0-9]*`, adds `tools/push_guard.py` between the
+ref rule and the kit gate (ref targets, SemVer tag names, operator
+tagger, AI trailers of any key), and the sweep's pre-push mode scans
+every pushed object and fails closed without the needle config. The text
+below is the GP-02 original.
+
 ```sh
 #!/bin/sh
 # AshLight pre-push: the guarded push (go-public decision, 2026-11-18).

@@ -321,16 +321,19 @@ E: root item that is not this repo.
   repository is created private and flipped to public when the gates of
   `docs/plan/04-go-public.md` hold. Once it exists its address is the one
   value in tracked `config/public_repo.json`.
-- Push policy: only `main` and `v*` release tags leave this machine, each
+- Push policy: only `main` and `v<major>.<minor>.<patch>[-<pre>]` release
+  tags (on a commit, operator tagger) leave this machine, each
   to the same name on `origin`, always as
   `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`
   (a tag: `... -- git push origin v<version>`). Never `--all`,
   `--mirror`, `--tags`, `--force` or a delete; lane and keep refs stay
-  local. `.githooks/pre-push` enforces the ref rule and runs the
-  fleet_identity pre-push check and `tools/leak_sweep.py --pre-push` on
-  every push; it has no override. A session pushes after its gated
-  commit; the loop's push worker pushes when main is clean, gated and
-  ahead of `origin/main`.
+  local. `.githooks/pre-push` enforces the ref rule, then runs
+  `tools/push_guard.py` (ref targets, tagger, AI trailers of any key),
+  the fleet_identity pre-push check and `tools/leak_sweep.py --pre-push`
+  (every pushed object; fails closed without `config/leak_needles.json`)
+  on every push; it has no override (decision 0046 amendment). A
+  session pushes after its gated commit; the loop's push worker pushes
+  when main is clean, gated and ahead of `origin/main`.
 - Nothing is merged on GitHub. A pull request (Dependabot's or a
   contributor's) is re-applied locally as an operator commit, pushed, and
   closed with a one-line comment (FLEET item 17). Dependabot alerts and
@@ -632,7 +635,11 @@ them. Pause: `ops/loop/control/HALT`.
 - Go public: guarded push of main and v* tags only, private first then
   public on the plan-04 gates, full history, nothing merged on GitHub,
   required checks with one admin bypass, the project's own address as the
-  one hygiene exception (decision 0046). Reverses if: the operator
-  withdraws the order, a leak or identity hit is found in pushed history,
-  GitHub's rules stop letting an admin push fresh commits past required
-  checks, or FLEET item 17 changes.
+  one hygiene exception (decision 0046, amended 2026-11-18: release tags
+  are SemVer on a commit with the operator as tagger, tools/push_guard.py
+  refuses AI trailers of any key, the pre-push sweep scans every pushed
+  object and fails closed without the needle config). Reverses if: the
+  operator withdraws the order, a leak or identity hit is found in pushed
+  history, GitHub's rules stop letting an admin push fresh commits past
+  required checks, FLEET item 17 changes, or the kit gate gains tag and
+  wide-trailer checks (then push_guard keeps only the ref shape).
