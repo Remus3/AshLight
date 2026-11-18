@@ -103,6 +103,7 @@ def deps(root, **over):
         should_yield=lambda: False,  # kit v25: never the live governor
         lane_cap=lambda: 3,
         drift=lambda root, now: None,  # TC-DRIFT: never the network in tests
+        docs_watch=lambda root, now: None,  # decision 0044: never the network
     )
     base.update(over)
     d = al_loop.Deps(root, **base)

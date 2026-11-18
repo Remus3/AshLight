@@ -442,6 +442,7 @@ class Deps:
         self.clock = time.time
         self.rotate = ledger_rotate.rotate_daily  # plan 138
         self.drift = _drift_check  # TC-DRIFT: daily PoB-PoE2 release check
+        self.docs_watch = lambda r, now: __import__("ggg_docs_watch").safe_check(r, now)
         # plan 093: the machine fleet roster ({"repos": [{code, root, inbox?}]}),
         # the same FLEET_ROSTER the kit statusline reads; tests pass None.
         self.roster_path = os.environ.get("FLEET_ROSTER") or None
@@ -1543,6 +1544,8 @@ def tick(dry_run=False, no_push=False, deps=None):
     d = deps or Deps()
     t = Tick(d, dry_run, no_push)
     t0 = d.clock()
+    if not dry_run and (line := d.docs_watch(d.root, d.clock())):  # 0044: even HALTed
+        t.step(line)
     if (d.root / HALT_REL).exists():
         t.step("HALT file present")
         return t.write("halted", "Halted", [], t0)

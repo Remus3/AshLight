@@ -552,6 +552,13 @@ them. Pause: `ops/loop/control/HALT`.
   elements AshLight-authored (decision 0039). Reverses if: GGG changes
   the reward property names, ruling H is withdrawn, or live play shows
   a boss element wrong.
+- GGG-DOCS-WATCH: the loop tick reads six GGG developer docs pages once
+  per 24 h (anonymous, Retry-After obeyed), even while HALTed; main-text
+  hashes in the sidecar Cache, diffs in Logs, flag
+  ops/runtime/ggg_docs/REG_OPEN while the closed-registration sentence is
+  gone, shown as a Checks note; no toast (decision 0044). Reverses if: GGG
+  asks tools not to read the docs automatically, the docs leave `<main>`,
+  or the operator rules the watch must respect HALT.
 - DIAG-SELF / LANG-GUARD: passive local checks, report copied only on a
   click and redacted; the non-English notice fires on 3 scene-name /
   non-ASCII system-line strikes, not on `You have entered` (PoE2 never
