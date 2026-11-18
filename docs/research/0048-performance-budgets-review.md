@@ -6,9 +6,12 @@ promise, what the tests assert, what the core, dashboard, overlay / client
 and calc bridge cost (measured), the budgets to adopt, the tests that
 enforce them, the cheapest wins and a five-minute OVL-FPS / OVL-BUDGET
 protocol. No product code was changed.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-17)
+
+S1, S2, S3, S4, S5, S8 and the Electron CPUUsage page were re-fetched
+by the verifier on 2026-11-18 and support the claims below.
 
 Web:
 - S1 Microsoft Learn, DXGI flip model guidance (page metadata updated
@@ -20,12 +23,17 @@ Web:
 - S4 Electron ProcessMetric and MemoryInfo structures:
   https://www.electronjs.org/docs/latest/api/structures/process-metric and
   https://www.electronjs.org/docs/latest/api/structures/memory-info
+  (all sizes in kilobytes; privateBytes is Windows only), and CPUUsage:
+  https://www.electronjs.org/docs/latest/api/structures/cpu-usage
+  (idleWakeupsPerSecond always reads 0 on Windows)
 - S5 Electron BrowserWindow (page visibility, showInactive, levels):
   https://www.electronjs.org/docs/latest/api/browser-window
 - S6 Electron WebPreferences (backgroundThrottling):
   https://www.electronjs.org/docs/latest/api/structures/web-preferences
 - S7 Chromium note on Windows native window occlusion:
   https://chromium.googlesource.com/chromium/src/+/master/docs/windows_native_window_occlusion_tracking.md
+  (background only; not relied on: Electron's own page, S5, says a
+  Windows window reads hidden only when minimised or hidden)
 - S8 Microsoft Learn, scheduling priorities (dated 2025-07-14):
   https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities
 - S9 Python subprocess, Windows constants (priority classes, 3.7+):
@@ -57,8 +65,11 @@ PresentMon, no ETW (decision 0006).
   calc on, the item check card takes 3.5 to 10.9 s where 0.5 s is possible.
 - RAM beside the game: luajit keeps 517 to 527 MB after one press, more
   than the rest of AshLight together (248 MB).
-- Half of the written budgets are not enforced, the shipped client shape
-  is unmeasured, and the calc's time ceilings are 5 to 25 times too loose.
+- Of decision 0002's eight budgets, two run in the normal suite (the
+  burst, and core idle in part), two only in an opt-in smoke no lane
+  runs, two only as static source checks, and two never (core RSS, game
+  FPS). The shipped client shape is unmeasured, and the calc's time
+  ceilings sit 5.5 to 25 times above today's values.
 - Cheapest wins: R1, R2, R3, R7, R10. R4 closes OVL-BUDGET with no
   operator action; R5 makes OVL-FPS one normally played map.
 
@@ -96,7 +107,9 @@ asserted by tests/test_math_perf.py and tests/test_math_e2e_live.py only
 where the optional component and the reference build exist. Ceiling /
 measured: cold start 30 s / 1.2; load 5 s / 0.36; reload 5 s / 0.29; set
 item 2 s / 0.09; first press 60 s / 10.9; warm press 30 s / 3.5; repeat
-10 s / 1.3; luajit peak 768 MB / 490 to 527. A fivefold slowdown passes
+10 s / 1.3; fallback press 30 s / not measured here; luajit peak 768 MB
+/ 490 to 527 (decision 0024 R7 records the same ceilings). A fivefold
+slowdown passes
 every time ceiling.
 
 No budget exists for: the supervisor, the client with the companion
@@ -199,8 +212,8 @@ open, snapshot size, feed pushes while idle, dashboard render cost
   and 16.5 MB more on the first tick, for 10.1 MB of files; the RSS
   budget's headroom (peak 56.7 of 60 MB) goes to these copies.
 - F8 (low) With the calc on, the 5 s Checks tick re-hashes luajit.exe
-  every time (server/al/exepin.py:91-97 through bridge.py:83-97 and
-  core.py:889).
+  every time (server/al/exepin.py:91-97 through bridge.py:83-97,
+  theorycraft/calcwire.py:109-114 and core.py:889).
 - F9 (low) Idle is not idle, but it is cheap. While the game may be
   closed the tailer still stats 4 times a second, the loop ticks twice a
   second with 17 stats (local.json 6 times), Checks reads the process
@@ -238,6 +251,15 @@ open, snapshot size, feed pushes while idle, dashboard render cost
   install path (decision 0041 point 9), so every user gets the 1 s
   polls. Negligible cost (M10); one for the deployment notes. Start-up
   itself is good: about 1.1 s to a listening core.
+- F14 (low; added by the verifier) Throttling and frame caps. Neither
+  window sets backgroundThrottling (app/main.js:233,
+  app/client/window.js:161), so the default applies: timers and
+  animations throttle while a page is hidden (S5, S6). The overlay is
+  hidden by the idle gate with a window hide, so while the game may be
+  closed its one timer is throttled, but it still parses every feed
+  frame (F3; R7 and R8 fix that). While shown, the render gate already
+  caps paints at the feed's 4 a second (B13), so no separate frame-rate
+  cap is needed. The companion stays "visible" behind the game (F10).
 
 ## Recommendations
 
@@ -277,11 +299,18 @@ bytes), hard also on a loaded machine; the rest are timings.
 - B16 Calc ceilings at about 2.5 times today's values: cold start 5 s,
   load 1.5 s, reload 1 s, set item 0.5 s, all probes 30 s first and 12 s
   warm, repeat 4 s.
+  Settled-decision check: this tightens decision 0024 R7 and the 0028
+  budgets; it does not reverse them. R7's own clause ("a re-measure
+  after a pin move or on the target machine says otherwise") is met by
+  M8 and M9, so it lands as an R7 amendment with those numbers.
 - B17 luajit peak 768 MB until R9 lands, then 400 MB; gone within a
   minute of R9's idle rule.
 - B18 All of AshLight beside the game, calc off: under 350 MB [248].
 - B19 Game FPS: no change visible on the game's own display with the
   HUD on; system-wide proxies inside their own noise (R5, questions).
+
+Ranking: R1 to R12 are ordered by impact over effort, with R4 and R5
+ahead of R6 because they close the two operator-blocked ROADMAP rows.
 
 ### R1 LADDER-TICK - make the map ladder tick free when nothing changed
 
@@ -305,8 +334,10 @@ bytes), hard also on a loaded machine; the rest are timings.
   preflight, the drift trial, the snapshot build), with the
   below-normal priority class (S8, S9). The core and the client stay at
   normal: they cost nothing (M5).
-- Impact: M to H. A probe burst can no longer take a core from the
-  game: below-normal threads run only when nothing normal wants it (S8).
+- Impact: M to H. A probe burst stops competing with the game's
+  threads: a below-normal process's normal thread has base priority 6
+  against 8 for a normal one, and the scheduler preempts the lower one
+  whenever a higher one is ready (S8; dynamic priority boosts aside).
 - Effort: S. Risk: a press takes longer on a saturated CPU; with R3
   the first card does not depend on it.
 - ToS check: "never touches the game process": only AshLight's own
@@ -333,7 +364,8 @@ bytes), hard also on a loaded machine; the rest are timings.
 - ToS check: "clipboard ... ONLY once per manual press": unchanged, the
   same single read feeds every stage; nothing is sent to the game.
 - Depends on: the usability and glance notes for the staged wording.
-  Decisions 0016 (one card slot, same press time) and 0024 stand.
+  Decisions 0014 (one card slot, 20 s), 0016 (one press time for the
+  item and price cards, core.py:260-274) and 0024 stand.
 - Files: server/al/theorycraft/live.py, evaluate.py, server/al/core.py,
   http.py, app/eval_hotkey.js, web/tc.js, tests/test_tc_delta.py,
   tests/test_math_e2e_live.py.
@@ -346,7 +378,8 @@ bytes), hard also on a loaded machine; the rest are timings.
 
 - Action: on top of the counters in research 0051 (R4): once a minute
   the client's main process logs `app.getAppMetrics()` per process
-  (working set, private bytes, CPU percent, idle wake-ups; S3, S4), the
+  (working set, private bytes, CPU percent; S3, S4; not idle wake-ups,
+  which Electron always reports as 0 on Windows), the
   core logs its own working set and CPU seconds and luajit's when up,
   each row tagged with its state (game idle or active, in a map, overlay
   shown, companion open, calc on). A bounded file in `<sidecar>\Logs`
@@ -401,10 +434,13 @@ bytes), hard also on a loaded machine; the rest are timings.
   "dropped". The report says what it is: a proxy, blind at a saturated
   GPU or at the FPS cap, display mode not detected.
 - Impact: H. Closes both operator-blocked rows with nothing but play.
-- Effort: M. Risk: the HUD blinks for 4.5 minutes of one map (the
-  operator has said restarts mid-game are fine); a developer control in
-  product code (off outside a source checkout, token-gated, with a
-  static test that it is unreachable otherwise).
+- Effort: M. Risk: the HUD blinks for 4.5 minutes of one map; a
+  developer control in product code. Gate (verifier correction): NOT
+  hotreload.dev_enabled, because that is true in every clone
+  (hotreload.py:64-76) and a clone is today's only install (F13); the
+  mode answers only while the arm flag that tools/ovl_check.py writes
+  exists, with the per-start token, and clears the flag when done; a
+  static test proves no other path reaches it.
 - ToS check: "NEVER send input to the game": the phases switch through
   AshLight's own window calls, no key is synthesised. "the screen ONLY
   once per manual press ... no timer": nothing reads the screen.
@@ -416,7 +452,8 @@ bytes), hard also on a loaded machine; the rest are timings.
   web/checks.js, tests/test_ovl_check.py (new), docs/decisions/0002.
 - Acceptance: on a test core with a synthetic map session the tool
   runs its nine blocks against a fake clock, writes the report and
-  clears its flag; the mode is refused outside developer mode.
+  clears its flag; the mode is refused while the arm flag is absent,
+  also in a source checkout.
 - ZERO-CLICK: play one map. One optional click at the end; no floor
   rule asks for a press.
 
@@ -589,6 +626,8 @@ bytes), hard also on a loaded machine; the rest are timings.
 3. Adjudicator: decision 0006 item 4 says nothing from the measurement
    ships. This note reads that as the on / off FPS measurement and
    treats own-process counters (R4) as decision 0040's Checks class.
+   The same question covers R5's armed phase-switch mode, which is code
+   in the product even though only a session-run tool can arm it.
 4. After R4's first log: is the client with the companion open inside
    250 MB? If not, raise the client budget to B11 or close the
    companion to the tray by default (decision 0041's reverse clause).
@@ -598,3 +637,61 @@ bytes), hard also on a loaded machine; the rest are timings.
 6. Whether a hardware plane keeps the game on its direct path under
    the plate on this GPU and driver: not knowable inside the floor;
    R5's hidden and shown blocks answer the practical question.
+
+## Verification
+
+Independent verifier, 2026-11-18.
+
+Checked:
+- Code (A): cited locations in 30 files opened; all hold after the fixes
+  below (decision 0002 lines 52-63; test_budgets.py 27-185;
+  __main__.py 215-265, ten calls per tick; test_overlay_smoke.py 34-36,
+  47-54, 125-130, 175-214; tc_live_util.py 91-101; core.py 172-179,
+  260-274, 390, 419-442, 852, 889; mapladder.py 27, 31, 171-206;
+  live.py 123-139; state.py 35, 1843; eval_hotkey.js 47, 57; diag.py
+  49-60, 89-97, 282-285, 302-310; http.py 43, 723-773; overlay.js
+  48-57, 85-93; render_gate.js 189-195; hotreload.py 64-76, 147-150;
+  campaign.py 81; basetypes.py 69-75; acts.py 213; zoneguide.py
+  160-161; exepin.py 91-97; bridge.py 171-175; keepalive.py 32, 48;
+  logfile.py 20; web/app.js 92-102, 987-1062; app/main.js 113, 233;
+  layout.js 35 (280 by 176); decision 0028 lines 42-43, 62; decision
+  0006; ROADMAP 56-70; audit P8-5 947-950).
+- Web (B): 7 sources re-fetched (S1, S2, S3, S4 with MemoryInfo and
+  CPUUsage, S5, S8); all support the claims as now worded.
+- Measurements: 2 of 10 re-run. M8: tests/test_budgets.py 6 passed in
+  7.6 s. M3 / F1: an own micro-benchmark of MapLadder.record plus view
+  with 200 session maps took 11.8 ms per tick with 500 saved maps in
+  all and 14.1 ms with 700 (2.4 to 2.8 percent of a core at 2 Hz),
+  matching M3 and the audit's independent 10 ms. M1, M2, M4 to M7, M9
+  and M10 are the author's own measurements, not repeated (M9 would
+  start a 500 MB luajit beside a possibly running game); M9 agrees with
+  decisions 0024 R7 and 0028 (511 MB peak, 12.4 s first press).
+- ToS floor (C): all 12 recommendations and the 7 rejected ideas tested
+  against each floor rule; none needs the floor bent. Settled decisions
+  (D): no silent contradiction; B16 recorded as an amendment under
+  0024 R7's own clause.
+- Completeness (E): every brief point covered; background throttling
+  and frame-rate caps were missing and are now F14.
+- Format (F): all 12 recommendations carry the nine fields; a ranking
+  line was added.
+
+Corrected (8):
+1. R4 listed idle wake-ups; Electron reports them as 0 on Windows.
+2. R5's gate relied on "outside a source checkout", which is every
+   install today (F13); now an arm-flag gate, and open question 3
+   extended to it.
+3. R5's unverifiable "the operator has said restarts mid-game are fine"
+   removed.
+4. R3 cited decision 0016 for the one card slot; that is decision 0014.
+5. R2 overstated the scheduler ("run only when nothing normal wants
+   it"); reworded to base priority 6 against 8 with preemption (S8).
+6. Summary's "half of the written budgets" replaced by the exact split.
+7. F8's call chain lacked calcwire.py:109-114.
+8. The calc ceilings omitted fallback_press_s; S7 marked not relied on.
+
+UNVERIFIED (unchanged): S10 and S11 (search summaries only); the PoE2
+FPS display key (open question 5); the author-only measurements listed
+above. Note for the plan: ROADMAP OVL-BUDGET records 3 Electron
+processes and about 204 MB at character select, while M5 saw 2
+processes and 169 MB with the companion closed; R4's log should settle
+which shape is normal.
