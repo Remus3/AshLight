@@ -5,14 +5,47 @@ complete, sequenced plan that normal sessions then execute in waves. This
 directory holds the plan. The research it rests on lives in
 `docs/research/`.
 
-## How to resume
+## State: complete (2026-11-18)
 
-A listed file is DONE when it exists at HEAD and its header carries
-`Status: verified` (research notes) or `Status: final` (plan sections).
-The next action is always the first listed file that is missing or not
-done. Redo only missing files; never redo a done one.
+Every file listed below is at HEAD with `Status: verified` (research
+notes) or `Status: final` (plan sections), read back 2026-11-18. Nothing
+here is redone. The plan of record is `docs/plan/packages.json`, checked
+by `python tools/plan_check.py check` (396 packages, 39 waves; decision
+0077); `07-execution-plan.md` is its readable form, `08-orchestration.md`
+says how a session runs a wave, `09-operator-acts.md` is the one batched
+operator ask. The rulings behind the plan are ledgered in decision 0078.
 
-The boxes below are a convenience; the file at HEAD decides.
+To change the plan: patch `packages.json` (07, How the two files are
+kept), keep 07 in step, then run `python tools/plan_check.py check` and
+`python -m pytest -q tests/test_plan_check.py`.
+
+## How a session starts a wave
+
+The operator types `continue`. The session reads `AL-NEXT-SESSION.txt`
+(the `WAVE POINTER:` line, the `DEFERRED:` lines, the operator records)
+and follows `08-orchestration.md` from section 1. It asks the operator
+nothing: every item of 09 has a default in force.
+
+1. The main session dispatches one start agent (08 section 1). It checks
+   the ground (`git status --short` empty, branch `main`,
+   `python ops/fleet_kit/fleet_checklist.py stale` exit 0), validates the
+   plan (`python tools/plan_check.py check`), finds the open wave from the
+   pointer and the ROADMAP rows (the open-row command of 08 section 1
+   step 4; `python tools/plan_check.py wave <n>` prints the wave), reads
+   the session group from `packages.json` and returns the item-13
+   checklist.
+2. Dispatch (08 section 2): one builder per open worktree package, each
+   in its own sidecar worktree `w<n>-<ID>` with the builder prompt
+   template; the main-checkout acts as one serial chain; one watcher.
+3. Reviews and verification per package (08 section 5), merge batches on
+   the integration worktree `w<n>-int` with one integrator commit and one
+   whole suite per batch (08 sections 4 and 6), then the wave close and
+   the new pointer line (08 section 7).
+4. The next wave of the session group starts the same way; `/done` runs
+   unprompted when no checklist row is left. A session that stops early
+   resumes at the first unmerged package of the open wave.
+
+The first wave to run is wave 1 (session 1 = waves 1 to 3).
 
 ## Work list - research notes
 
@@ -53,20 +86,28 @@ The boxes below are a convenience; the file at HEAD decides.
 - [x] docs/plan/08-orchestration.md - orchestration script outline for the executing sessions
 - [x] docs/plan/09-operator-acts.md - the one batched operator ask
 
-## Then
+## Then - landed 2026-11-18
 
-Once every listed file is done, the plan lands in the tree:
+- [x] decisions for the settled calls: 0046 (go public), 0077 (execution
+  model), 0078 (rulings ledger); numbers 0047 to 0076 are reserved for
+  the packages that write them (07, Reserved decision numbers);
+- [x] ROADMAP rows for every package (`python tools/plan_check.py rows`;
+  read back: every package id is in ROADMAP.md exactly once);
+- [x] the CLAUDE.md public-repo section (decision 0046);
+- [x] the pre-push flip: `.githooks/pre-push` is the guarded push (only
+  `main` and `v*` release tags, `tools/push_guard.py`, the identity check
+  and the leak sweep over every pushed object; no override);
+- [x] `AL-NEXT-SESSION.txt` rewritten so a plain "continue" starts wave 1.
 
-- decisions for every settled call (`docs/decisions/`, next free number
-  0046);
-- ROADMAP rows for every package;
-- the CLAUDE.md public-repo section;
-- the pre-push flip (`.githooks/pre-push` refuses every push today);
-- `AL-NEXT-SESSION.txt` rewritten so a plain "continue" starts wave 1.
+What is still open of the landing itself is carried in
+`AL-NEXT-SESSION.txt` (its `DEFERRED:` lines), never here.
 
 ## Loop
 
 The headless loop stays paused (`ops/loop/control/HALT`, operator
-wind-down 2026-11-17) while the ultraplan runs, so lanes do not race the
-plan's ROADMAP edits. The execution plan (`07-execution-plan.md`) names
-the point where HALT is removed.
+wind-down 2026-11-17) through waves 1 to 5, so lanes do not race the
+plan's ROADMAP edits. HALT is removed only by package AUTO-21, the last
+act of wave 6, after its six checks (07, HALT removal and the headless
+loop; 08 section 8); no session removes it by hand. After that the loop
+takes the rows `packages.json` marks `owner: loop` and the other rows 08
+section 8 lists, never a row tagged BLOCKED.
