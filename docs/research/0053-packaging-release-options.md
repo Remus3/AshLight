@@ -5,9 +5,9 @@ packaging and release options. Scope: how a stranger gets AshLight from the
 public repo onto a Windows x64 PC, updates it and removes it; the artifact
 to ship; code signing; how a release is cut. Neighbours: 0052 (reference
 pattern), 0057 (go-public readiness), 0058 (upstream watchers).
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (accessed 2026-11-17; the load-bearing ones re-fetched 2026-11-18, see Verification)
 
 Web (short keys used in the body):
 - EL-DIST: https://www.electronjs.org/docs/latest/tutorial/application-distribution
@@ -45,10 +45,12 @@ Web (short keys used in the body):
 - PEERS: `https://api.github.com/repos/<repo>/releases/latest` for three
   public PoE tools: Kvan7/Exiled-Exchange-2, SnosMe/awakened-poe-trade,
   PathOfBuildingCommunity/PathOfBuilding-PoE2
-- Seen only through search summaries (page not fetched): MS-STORE
-  https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/ ;
-  MS-VBS https://techcommunity.microsoft.com/blog/Windows-ITPro-blog/vbscript-deprecation-timelines-and-next-steps/4148301 ;
-  MS-ASP https://azure.microsoft.com/pricing/details/artifact-signing/
+- MS-STORE: https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/
+- MS-VBS: https://techcommunity.microsoft.com/blog/Windows-ITPro-blog/vbscript-deprecation-timelines-and-next-steps/4148301
+- MS-ASP: https://azure.microsoft.com/en-us/pricing/details/artifact-signing/
+  (tiers and included signatures only; the page shows no dollar figure,
+  the 9.99 USD comes from MS-SS)
+  (these three were search summaries in the draft; fetched 2026-11-18)
 
 Local measurements (this machine, 2026-11-17; scratch copies under
 `<sidecar>\Scratch`; the repo and the live client were not touched):
@@ -104,8 +106,8 @@ Local measurements (this machine, 2026-11-17; scratch copies under
 - Version: `VERSION = "0.1.0"` (server/al/__init__.py:7) feeds the server
   header, /api/health, /api/version and the User-Agent
   (server/al/http.py:122, :234-244; server/al/webfetch.py:73-79). No tag,
-  no changelog, no remote (M7); every push is refused
-  (.githooks/pre-push:10-24).
+  no changelog, no remote (M7); every push is refused unless
+  AL_ALLOW_PUSH=1 is set (.githooks/pre-push:10-24).
 - State and data: per-host state in `<repo>\ops\runtime` and
   `<repo>\config\local.json` (server/al/paths.py:35-41, :119-121); logs,
   caches, the Electron profile and the optional calc component under the
@@ -142,7 +144,7 @@ F2 - The stated Node floor is wrong. README.md:62-64 and setup.ps1:5, :141
 accept Node 20. The pinned Electron 45.3.3 and its downloader declare
 `node >= 22.12.0` (app/package-lock.json:21-23, :39-41, :89-91), and the
 downloader is an ES module loaded with require() (M8). Node 20 is
-end-of-life (NODE). UNVERIFIED: which Node 20 minors fail in practice
+end-of-life since 2026-03-24 (NODE). UNVERIFIED: which Node 20 minors fail in practice
 (local Node is 24.15.0). Why it matters: a stranger on Node 20 passes the
 check and then fails at "Electron download failed".
 
@@ -154,7 +156,7 @@ tests at the last gate, AL-NEXT-SESSION.txt:136-137) through a fleet gate
 F4 - No single version source, no tags. Three literals
 (server/al/__init__.py:7, app/package.json:3, app/package-lock.json:3, :9),
 no test that ties them (app/test/about.test.js:22-24 only uses the number
-as a fixture), 0 tags in 356 commits (M7). The User-Agent floor rule
+as a fixture), 0 tags in 370 commits at a55fb3b (M7). The User-Agent floor rule
 ("names AshLight and its version") depends on this number being right.
 
 F5 - State sits inside the program tree: `ops\runtime` (token, consent, run
@@ -186,8 +188,9 @@ imported (M2). Two facts shape the layout: under the shipped
 `python314._pth` the current directory is not on sys.path (the run failed
 until one line naming the app root was added), and the registry and
 PYTHON* variables are ignored (PY-WIN), isolating the bundle from any
-installed Python. The classic installer ends with 3.15; the embeddable
-package is still listed for 3.15.2 (PY-WIN, PY-DL).
+installed Python. The classic installer is deprecated since 3.14 and will
+not be built for 3.16 or later (PY-WIN); the embeddable package is still
+listed for 3.15.2 (PY-DL).
 
 F9 - Electron's prebuilt zip is pin-ready, but its exe is unsigned.
 electron-v45.3.3-win32-x64.zip is 158,325,836 bytes, SHA-256
@@ -216,17 +219,22 @@ of the unsigned electron.exe (a prompt is possible when the file is
 marked); a framework-stamped `AshLight.exe` would be a new unknown hash
 every release. UNVERIFIED: how either rates the upstream electron.exe.
 
-F11 - Signing costs and who can get it. Azure Artifact Signing is 9.99 USD
-a month (Basic, 5,000 signatures; MS-SS, MS-ASP) with no hardware token,
+F11 - Signing costs and who can get it. Azure Artifact Signing starts at
+9.99 USD a month (MS-SS; the Basic tier includes 5,000 signatures a month,
+MS-ASP) with no hardware token,
 but public-trust validation is open to individual developers only in the
 United States and Canada, and to organizations in a listed set of
 countries (MS-AS). Classic certificates need keys on certified hardware
 since June 2023 (EL-SIGN) and last at most 460 days since 2026-03-01
 (CAB); prices UNVERIFIED. SignPath Foundation signs open-source projects
-free of charge but wants a CI build from the repository, a published
-signing policy, an already released project and a verifiable reputation
-(SPF). The Microsoft Store signs MSIX packages; registration is free for
-individuals (MS-STORE). GitHub attestations and immutable releases are
+free of charge but wants an OSI license for every component (Apache-2.0,
+MIT and the PSF license qualify), an already released version, a "Code
+signing policy" section with named author / reviewer / approver roles and
+a privacy policy on the home page, MFA for the team, artifacts built from
+the project's own source, an uninstall path, and it runs its own
+reputation review (SPF). R5's uninstall script and R6's CI build feed
+that list. The Microsoft Store signs MSIX packages; registration has been
+free for individuals since 2025-09-10 in about 200 markets (MS-STORE). GitHub attestations and immutable releases are
 free provenance (GH-ATT, GH-IMM, GH-VER); SmartScreen does not read them.
 
 F12 - Installer frameworks cost much and do not solve Python. Lockfile
@@ -234,11 +242,15 @@ sizes (M6): 13 packages today (docs/audit/2026-11-17-audit.md:161-164);
 @electron/packager 20.3.0: 49; Electron Forge 8.0.1 with the Squirrel and
 zip makers: 163; electron-builder 26.18.0: 276 (the last two each pull a
 package with an install script). electron-builder also fetches toolsets at
-build time (NSIS, winCodeSign, 7-Zip; checksums pinned) and since 26.15
-documents pre-seeded caches (EB-OFF), so the hand-off's "not offline"
-(AL-NEXT-SESSION.txt:30, ROADMAP.md:2054) is outdated in that detail; the
-dependency cost stands. Electron's updater needs a packaged
-Squirrel.Windows app and its helper polls every ten minutes (EL-UPD),
+build time (NSIS, winCodeSign, 7-Zip; checksums pinned in the tool) and
+its docs describe pre-seeded caches for offline builds (EB-OFF). That page
+is the docs of the not yet released v27; it says only that cache layouts
+older than 26.15 are not read, so offline builds on a released version are
+UNVERIFIED. The hand-off's "not offline" (AL-NEXT-SESSION.txt:30,
+ROADMAP.md:2054; decision 0041 item 9) may be outdated in that detail; the
+dependency cost stands. Electron's built-in Windows updater is built on
+Squirrel.Windows and its helper module checks at startup, then every ten
+minutes (EL-UPD),
 against decision 0013 while web data is off. No framework ships the
 Python core; each needs F8's runtime as an extra resource. Peers (PEERS):
 both Electron PoE overlays publish an electron-builder setup exe (104 to
@@ -249,10 +261,13 @@ F13 - Package managers are thin manifests on a stable artifact. Scoop: a
 JSON manifest (url, hash, shortcuts, persist, checkver, autoupdate) that
 can live in the project's own repository as a bucket; `persist` keeps
 named files and folders across updates and uninstalls (SC-MAN, SC-PER);
-the main bucket wants about 500 stars (SC-CRIT). winget: a zip needs a
-nested installer, and the `portable` kind maps commands to exe files
-(WG-INS); a submission must install and uninstall cleanly for non-admins,
-run unattended and pass several antivirus engines (MS-WGR). A .cmd entry
+the main bucket takes only non-GUI tools, with about 500 stars and 150
+forks as its popularity example (SC-CRIT), so AshLight never fits it and
+its own bucket is the route. winget: a zip needs a nested installer, and
+the `portable` kind maps commands to exe files (WG-INS); a submission must
+install and uninstall cleanly for both admins and non-admins, run
+non-interactively, come from the publisher's own release location and
+pass several antivirus engines (MS-WGR). A .cmd entry
 point is a poor fit, and replace-on-upgrade would drop in-folder state.
 
 F14 - Nothing uninstalls. stop.ps1 stops the processes
@@ -282,9 +297,12 @@ F15 - Update options weighed; the building blocks sit in the wrong place.
 - While web data is off there is no check at all (decision 0013, read
   literally); the release page is the fallback and the README says so.
 
-F16 - Release mechanics. Commit subjects: 232 of 356 (65 percent) follow
-`type(scope): text`, with 65 feat and 22 fix; 85 are merges; the scope is
-usually the ROADMAP row id (M7). GitHub's generated notes list merged pull
+F16 - Release mechanics. Commit subjects at the draft commit a55fb3b (370
+commits): 150 are merge commits, 85 of them with a `merge: <ROW-ID> ...`
+subject and 39 with git's default "Merge branch"; of the 220 non-merge
+commits, 160 (73 percent) follow `type(scope): text`, with 64 feat, 22 fix
+and 41 docs; the scope is usually the ROADMAP row id (M7, recounted in
+verification). GitHub's generated notes list merged pull
 requests only (GH-NOTES); this repo merges locally, so they would be
 empty. Done ROADMAP rows are pruned at /done (ROADMAP.md:3-5): a changelog
 must read them from git history. Standard runners are free for public
@@ -354,6 +372,9 @@ R3 - Release layout with pinned runtimes and one resolver each.
   state stays inside the folder (portable).
 - Impact: H. Effort: M. Risk: M - six lookups and three paths move (F6);
   covered by the run / stop / procs tests plus one release-layout test.
+  Keep passing the app folder to electron.exe (never `resources\app`), so
+  `app.isPackaged` stays false and the devTools gate at app/main.js:30
+  behaves as today.
 - ToS check: the runtimes are public web data from python.org and GitHub
   release assets, no GGG endpoint, truthful User-Agent, no cookie; fetched
   by setup or the release build, never by the running core (decision 0018
@@ -432,15 +453,20 @@ R6 - Tag-triggered CI release with a generated changelog.
 
 R7 - In-app update notice from the core.
 - Action: server/al/updates.py: at most one GET per 24 h of
-  `releases/latest` for the project's repository (ETag and rate-limit
-  headers honoured as tools/tc_drift.py does), only while `web_data` is
+  `releases/latest` for the project's repository (rate-limit headers
+  honoured as tools/tc_drift.py:118-133 does; If-None-Match / ETag as the
+  price book sends it, server/al/ninja.py:176-178; tc_drift sends no
+  ETag), only while `web_data` is
   on; a newer tag adds one Checks row and a Settings line linking the
   release page; the repository name is one constant, empty = feature off.
 - Impact: M. Effort: S to M. Risk: low.
 - ToS check: public web data from a documented GitHub endpoint, not GGG
   and not the trade site; truthful User-Agent, no cookie; inside the one
   web-data opt-in (decision 0013); a network timer is not a clipboard or
-  screen watcher.
+  screen watcher. Settled-decision note: decision 0018 item 6 states the
+  running core "fetches nothing from GitHub"; R7 changes that fact (under
+  0013's opt-in, not 0018's setup opt-in), so its decision note amends
+  0018 item 6's wording. Nothing in 0018 reverses.
 - Depends on: R2 and the public repository. Files likely touched:
   server/al/updates.py, server/al/core.py, web/status.js, README.md (the
   privacy text names the daily GitHub request), tests/test_updates.py.
@@ -453,7 +479,9 @@ R8 - One-click update with verification and rollback.
 - Action: "Update now" on that Settings line starts a detached updater:
   fetch release.json, SHA256SUMS and the app zip (runtimes only when a
   pin changed), verify size and SHA-256, stage, run the staged tree's
-  `--check`, stop, back up the replaced files, swap by manifest (never
+  `--check`, stop through scripts/stop.ps1 (its stop.request keeps the
+  keepalive supervisor from restarting the core mid-swap, decision 0005),
+  back up the replaced files, swap by manifest (never
   `config\local.json` or `ops\runtime`), start, wait for /api/health; on
   failure restore and say so in Checks. Keep one previous version.
 - Impact: M. Effort: M to L. Risk: M to H - a self-modifying install;
@@ -538,6 +566,8 @@ Decisions this path needs (one decision note, before R3's code):
 6. Versioning: SemVer 0.y.z, tag `vX.Y.Z` equals VERSION; first public tag.
 7. Uninstall consent: data kept unless `-PurgeData`. 8. Signing: none at
    first; identity and budget later (operator).
+9. Decision 0018 item 6 wording: the core may make one documented GitHub
+   releases read a day under web_data (R7); an amendment, not a reversal.
 
 ## Cut or merge
 
@@ -598,3 +628,64 @@ Decisions this path needs (one decision note, before R3's code):
   build. Windows on ARM (arm64 zips exist, EL-REL, PY-DL) can wait.
 - Does deflate output differ between the CI's Python and a contributor's
   (F16)? R4's acceptance test settles it; the fallback is a stored zip.
+
+## Verification
+
+Independent verifier, 2026-11-18. Draft commit a55fb3b.
+
+Checked:
+- Code claims: about 60 path:line citations opened (setup / build / run / stop /
+  autostart scripts, al_detach.ps1, autostart_launch.vbs, pre-push,
+  launcher.js, main.js, about.test.js, paths.py, procs.py, http.py,
+  webfetch.py, __main__.py, hotreload.py, tc_drift.py, tc_pin.py,
+  loop_task.py, the kit's fleet_lanes.py, test_sidecar_paths.py,
+  tc_pins.json, package.json and its lock, THIRD-PARTY.md, the audit,
+  decisions 0005 / 0018 / 0025 / 0041, ROADMAP and hand-off lines). All
+  but 2 held as written; 2 corrected (pre-push refuses unless AL_ALLOW_PUSH=1;
+  tc_drift sends no ETag, the ETag pattern now cites ninja.py).
+- Measurements re-run: the embeddable CPython 3.14.10 zip re-hashed
+  (matches PY-REL), re-extracted (37 files) and run against a fresh `git
+  archive` of server/ at HEAD: 70 modules imported, 0 failed, `--check`
+  rc 0 (M2 confirmed). Authenticode re-read: electron.exe and ffmpeg.dll
+  NotSigned, python.exe / pythonw.exe / python314.dll valid PSF (M1).
+  Lockfile counts re-read: 13 / 49 / 163 / 276, electron-winstaller is the
+  install-script package in the last two (M6). Electron zip size and
+  SHA-256 match SHASUMS256.txt and the API digest (EL-REL). Peer assets
+  re-read from the saved release JSON (PEERS). Git counts recounted (M7).
+- Web: 19 sources re-fetched 2026-11-18 (PY-REL, PY-WIN, NODE, EL-SCHED,
+  EL-UPD, EB-OFF, MS-SS, MS-AS, MS-SAC, MS-WGR, CAB, SPF, SC-CRIT, GH-RATE,
+  GH-NOTES, GH-IMM, MS-VBS, MS-STORE, MS-ASP); all support the claims after
+  the corrections below.
+- ToS floor: all 11 recommendations re-tested against every floor rule;
+  none needs the floor bent (no game process, input, game-file write,
+  watcher, trade or undocumented endpoint, cookie, GGG branding or
+  revenue). Rejected list unchanged.
+- Settled decisions: 0041 item 9 stays (its reverse condition, a release
+  channel, is not met); 0013 respected by R7; 0018 item 6 wording needs an
+  amendment for R7 (added to R7 and as decision 9); 0005 now named in R8.
+- Brief: every point covered.
+
+Corrected:
+- F16 commit stats: the draft's "85 are merges" counted only `merge:`
+  subjects; there are 150 merge commits; non-merge conventional share is
+  160 of 220 (73 percent), feat 64 (not 65). F4 commit count 356 -> 370.
+- F12: the offline-cache page documents the unreleased v27; offline builds
+  on a released electron-builder are now UNVERIFIED; Electron updater
+  wording tightened.
+- F13: the scoop main bucket is non-GUI only; winget wants clean install
+  and uninstall for admins and non-admins.
+- F11: SignPath conditions listed exactly (OSI license, policy page, MFA,
+  roles, uninstall); Artifact Signing price source split (9.99 USD from
+  MS-SS, 5,000 signatures from MS-ASP); Store date added.
+- F8: classic installer "not built for 3.16 or later" stated as the
+  source says it. F2: Node 20 end-of-life date added.
+- R3: keep `app.isPackaged` false. R7: ETag citation and the 0018 note.
+  R8: stop through stop.ps1 so the supervisor does not restart the core.
+
+Still UNVERIFIED: how SmartScreen and Smart App Control rate the upstream
+electron.exe (F10); which Node 20 minors fail (F2); classic code-signing
+certificate prices (F11); offline builds on a released electron-builder
+(F12); deflate determinism across Python builds (F16); M3 and M5 (sidecar
+resolver on a missing drive, payload byte counts) were not re-run, though
+the resolver logic was read and matches (paths.py:61-71, the kit's
+fleet_lanes.py:1196-1201).
