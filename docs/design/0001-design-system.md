@@ -763,12 +763,15 @@ Section 3 - type scale (TD-03; overlay roles TD-05):
   rem line box per token: 18, 20, 22, 26, 32, 36px at root 16px.
 - Minimum. Old: nothing under 13px. New: nothing under 14px on the
   dashboard except the two footer sentences (13px); no weight 600 or more
-  under 14px; in-play text (strip labels, sub lines, status words, the top
-  answers) at the 20px token or larger.
+  under 14px; in-play text (strip labels, sub lines, status words in the
+  bar, strip, notice, build line and item check, the top answers) at the
+  20px token or larger; the kept-check rows are review text at 14px.
 - Root scale. Old: none; the shell sizes scale with `vw` and the tiles
   tighten at 820px tall or less. New: root font size 100% x s, s the
-  largest of 1, 1.25, 1.5, 2 with a viewport of at least 75em x 47.5em
-  times s; the 820px query and the UI-GLANCE shell clamps go.
+  largest of 1, 1.25, 1.5, 2 whose compact cockpit fits (a viewport of at
+  least 64em x 43.75em times s); the class is full from 75em x 47.5em
+  times s, else compact; the 820px query and the UI-GLANCE shell clamps
+  go.
 - Distance rule (new): in-play text is at least 16 arcmin of cap height at
   the reference setup (24 inch 1080p, dashboard at 80 cm, overlay at 60 cm).
 - Overlay roles. Old: zone line 16px, timer 16px, HUD numbers 15px, trade
@@ -788,11 +791,32 @@ Section 4 - spacing and shape:
   (strip G; context C, feed T, notice N on the left; build line B, item
   check I, kept checks U on the right) with tracks 100 / 228 / 204 / 96 /
   68 / 360 / 100px at root 16px (grid 652px + 108px chrome = 760px), the
-  same in every state; a compact class from 64em x 43.75em with tracks
-  100 / 212 / 204 / 52 / 68 / 348 / 52px; below that, one column with one
-  page scroll. Regions are not scroll containers and have no tab stop. The
-  other tabs are fixed 3 x 2 card grids whose lists page at 10 rows;
-  Settings is a rail with one visible section.
+  same in every state; a compact class from 64em x 43.75em times s with
+  tracks 100 / 212 / 204 / 52 / 68 / 348 / 52px (grid 592px + 108px =
+  700px; region U pads 4px there, so its label and one row are 2 + 8 + 20
+  + 20 = 50px in the 52px track); below that, one column with one page
+  scroll. One DOM order in every class (strip, context, feed, notice,
+  build line, item check, kept checks), placed by grid placement only, so
+  Tab order = screen order still holds. Regions are not scroll containers
+  and have no tab stop. The other tabs are fixed 3 x 2 card grids whose
+  lists page at 10 one-line rows, with a "Full text" page of 3 entries of
+  up to 3 wrapped lines; Settings is a rail with one visible section of at
+  most 448px of rows (14 rows of 32px), paged beyond that.
+- Narrow widths (TD-09, TD-22). The 320px rule stays and gets its parts:
+  under 40em the Zone cell takes a full strip row and Level, Deaths and
+  Session share the next; the tab row wraps under the brand; a trade
+  row's right-hand segment moves under its lead line; the footer
+  sentences stack; rows wrap, nothing takes the ellipsis.
+- Header line (TD-09). The "New on Play: <what>." polite region stays but
+  is visually hidden (no box, no height in the 52px bar); the count on
+  the Play tab is its visible twin.
+- Reading indicator and footer (TD-21). Old: "Stop reading Client.txt"
+  and the game-data credit are footer folds. New: the bar status word is
+  the reading indicator on every tab and a button that shows Settings >
+  Reading and web data with focus on "Stop reading Client.txt"; the full
+  credits move to Settings > About and data, and a one-line credit stays
+  on each card that shows the credited data (Run > Acts, Build and items
+  > Prices, the price row of the item check).
 - Play content (TD-10 to TD-16). Old: zone tile with its guide, level /
   deaths / session, the `#build-alert` slot, trades, the tip, the item
   card. New: the 7 regions; the build alert is a state of region B; the
@@ -800,12 +824,15 @@ Section 4 - spacing and shape:
   (one at a time); trades are one line each and all 5 open requests show.
 - Padding and gaps. Old: cards pad 16px, stat tiles 12px 16px, gaps 16px.
   New (rem, scaling with s): region padding 12px (8px in N, B and U, 6px
-  in T, 4px in G); 8px between regions, 12px between the two columns.
+  in T, 4px in G; U 4px in the compact class); 8px between regions, 12px
+  between the two columns.
 - Focus ring (TD-22). New: a 3px accent ring drawn inside the element
   (outline-offset -3px).
-- Auto-switch (TD-22). Old: "No focus moves". New: when Play is shown by
-  itself and focus sits on the tab row, focus moves to the Play tab;
-  nothing else moves focus.
+- Auto-switch (TD-22). Old: "No focus moves". New: Play is shown by
+  itself only after the 10 s grace (unchanged), so never while the user
+  is pressing keys in the tab row; if focus then sits on the tab row it
+  moves to the Play tab and the header line says once "Showing Play.
+  <what>."; a focus inside a panel is never moved.
 - Unchanged: the 4px grid, the radii, the 24px minimum target (aim 32px),
   320px width with no horizontal scroll, the 10 s auto-switch grace.
 
@@ -836,8 +863,21 @@ Section 5 - colour:
 
 Section 6 - state colours (TD-10, TD-13):
 - Trade request. Old: `status-warn` edge + `TRADE` tag. New: `accent` edge
-  + the word "Trade". Warn keeps one meaning: act when you can (stale
+  + the word "Trade". Warn keeps one meaning: act when you can (old
   build, risky waystone, under-level, blocked).
+- Accent. One meaning, "you can act here": links, the selected tab, the
+  focus ring, the one filled button, and the edge of a trade request that
+  waits for a reply.
+- Whisper. Old: `accent` edge + `FROM` / `TO` tag. New: a whisper that is
+  not a trade request is not on the Play tab; in Run > Recent it keeps the
+  muted `FROM` / `TO` tag and has no edge. Also Run > Recent only: trade
+  accepted / cancelled lines and party joins and leaves.
+- Build state words (TD-15): "Build fits", "Old build", "Wrong class",
+  "No build". "Old build" takes `[?]` and `status-warn`; the kit word
+  `stale` is not used for it.
+- The state table above is unchanged: reading Client.txt stays `[>]`
+  (running). For 60 s a new row says "new" at the start of its right-hand
+  segment ("new, 2m"); the row's own sentence is not changed.
 - Normal states are neutral: the reading word and normal rows carry no
   colour while all is well.
 - Stale data (new): while the log is idle or AshLight cannot be reached,
@@ -850,20 +890,36 @@ Section 7.2 - context (TD-17):
   match: the press card, the newest open trade card, a zone or act card
   (12 s, only into a free slot), the key hint line, nothing. "Never add a
   third HUD line" stays.
-- HUD line 2. Old: level, deaths and one status word. New: the same, but
-  in a guided campaign zone the zone-guide line (the guide entry's `short`
+- HUD line 2. Old: level, deaths and one status word. New: the same by
+  default. Setting "Zone guide on the overlay": On entry (default; the
+  zone card only) / Always / Never. Only under Always (an opt-in), in a
+  guided campaign zone, the zone-guide line (the guide entry's `short`
   field, at most 34 characters, shown as authored or not at all) replaces
-  the level text while it is due and no connection, log state, trade
-  count, under-level or AFK / DND word is due. Setting: Always / On entry /
-  Never; with no stored choice, Always with 1 display and On entry with 2
-  or more.
+  the level text while no connection, log state, trade count, under-level
+  or AFK / DND word is due.
+- Row "Died". Old: deaths count changes; no flash, no pop-up. New: the
+  same; while the opt-in guide line holds line 2, a death or a level-up
+  puts the level and deaths text back for 20 s.
+- HUD line 2 width (new): level text and status word together at most 26
+  characters (the plate is 236px inside); over that the deaths text
+  drops; a status word over 20 characters stands alone (at most 27).
+- Rows "Trade request arrives" and "Under-levelled". The dashboard keeps
+  the trade list with a Dismiss on every row (plus "Dismiss all" from 2
+  open requests); the line under the Level tile uses the overlay's words,
+  "N lv under".
 
 Section 9 - messaging (TD-07, TD-17):
 - Rule 6 line limits. Old: overlay zone 28 chars, card lines 34 chars;
   dashboard event lines wrap, never truncate. New: the same overlay limits
-  plus the guide `short` line at 34 chars; on the Play tab every row is
-  one line with an ellipsis as the last guard, the full text in `title`
-  and in its twin on Run or Build and items, where lines still wrap.
+  plus the guide `short` line at 34 chars and the key hint "<key>: check
+  an item"; on the Play tab every row is one line, composed under a
+  character cap that fits the narrowest column even with the WCAG 1.4.12
+  spacing (context title 38, context and notice rows 52, event sentence
+  38, build row 36, item sentence 2 x 36, kept row 42); only a name can
+  take the ellipsis, with the full text in `title` and on the "Full text"
+  page of its card on Run or Build and items (list rows there are one
+  line too). Under a text-spacing override rows wrap and the page
+  scrolls.
 - Status slot order. Old: connection, Client.txt state, trade count,
   under-level word, AFK / DND, campaign hint word. New: the zone-guide
   line sits after AFK / DND and before the campaign hint word.
@@ -885,18 +941,25 @@ Section 10 - overlay rules:
 - Size (TD-06). Old: `autoScale` grows the HUD by DIP height / 1440. New:
   DIP height / 1200 (1440 DIPs give 1.2); the 2x cap stays; the overlay
   budgets of decision 0002 are re-run in the same package.
-- Glance (TD-17). New: a card's first line starts with the verdict word or
-  the buyer; every card that leaves by itself has a dashboard twin.
+- Glance (TD-17). New: the first line of an answer card or a trade card
+  starts with its answer (verdict word, price word or buyer); a status
+  card starts with its status words ("Build loaded", "Not an item", "Copy
+  the item first"); a zone or act card and the key hint start with their
+  subject. Every card that leaves by itself has a dashboard twin.
 - Unchanged: the window flags, base size 280 x 176 DIP, plates max-width
   258px, corners only with the top-right default (the UX-DPI ruling is not
   reversed: the HUD stays at 2 lines), no flashing, the repaint budget,
   the display mode, the About text.
 
 Section 11 - checklist (ids added at the end of their groups by TD-23):
-- C7: text sizes come only from the six type tokens.
-- N7: no Play region scrolls, moves or changes size between states.
+- C7: dashboard text sizes come only from the six type tokens; overlay
+  sizes only from the two overlay tokens (16px and 14px).
+- N7: in the full and compact classes at default text settings, no Play
+  region scrolls, moves or changes size between states.
 - N8: every item that leaves by itself has a twin that stays.
-- O7: a card's first line starts with the verdict word or the buyer.
+- O7: a press or trade card starts with its answer (verdict word, price
+  word or buyer); a status card starts with its status words; a moment
+  card or the key hint starts with its subject.
 - O8: overlay text pairs >= 7:1 at the default plate and >= 5.5:1 at the
   alpha floor over white (replaces O5 when TD-05 lands).
 - S6: the focus ring is drawn inside the element and is never clipped.
