@@ -1,13 +1,13 @@
 # 08 - Orchestration
 
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md).
-Status: draft
+Status: final
 
 How a normal session runs one wave of docs/plan/packages.json, hands-off,
 under CLAUDE.md. Inputs: docs/plan/07-execution-plan.md (the plan; where
 this file and 07 differ, 07 wins), docs/plan/packages.json,
 tools/plan_check.py, CLAUDE.md, research 0047 (ledger rule), 0049 (merge
-batches), 0050 and 0058 (loop), decision 0012 and tools/wt_sidecar_hook.py,
+batches), 0058 (loop and watchers), decision 0012 and tools/wt_sidecar_hook.py,
 tools/al_loop.py, tools/al_lane.py, the kit helpers under ops/fleet_kit
 (read, never edited), .claude/agents, .claude/commands/done.md and the git
 history of sessions 1 to 5.
@@ -45,9 +45,10 @@ batch on an integration worktree.
   It returns its row flip, review line, Settled line and index line in its
   result and the wave integrator applies them (section 6). reviews.log and
   the two docs README indexes merge with `merge=union` once LOOP-LEDGERS
-  (wave 1) is on main; ROADMAP.md never does. Decision and research numbers
-  are the reserved ones (07, Reserved decision numbers; a package's number
-  is in its new_files entry); no agent takes "the next number".
+  (wave 1) is on main; ROADMAP.md never does. Decision numbers are the
+  reserved ones (07, Reserved decision numbers; a package's number is in
+  its new_files entry); no package writes a new research note, and no
+  agent takes "the next number" of either series.
 - Loop and wave: the loop and a session never take the same row (section 8
   states the six points and the HALT removal point).
 - Game ToS floor (CLAUDE.md): no agent starts the app, the core, the
@@ -78,12 +79,16 @@ returns. The start agent, in this order:
    every `DEFERRED:` line, operator records), CLAUDE.md, ROADMAP.md and
    `git log -10`; triages `moon_sync_inbox/` with `fleet_inbox.classify()`
    (free; ANSWER / ACK / INFORMATION / TERMINAL notes are recorded, never
-   answered; an ORDER / FIX / RULING note becomes a checklist row).
+   answered; an ORDER / FIX / RULING note becomes a checklist row); runs
+   the hand-off's `Session start checks` (today: whether
+   ops/runtime/ggg_docs/REG_OPEN exists) and returns what they found.
 2. Checks the ground: `git status --short` prints nothing and
    `git branch --show-current` prints `main` in the main checkout;
-   `python ops/fleet_kit/fleet_checklist.py stale` prints `stale: none`
-   (exit 3 means a STALE row: section 3 first); `git worktree list` names
-   leftover wave worktrees (`w<n>-...`), which are reused, never deleted.
+   `python ops/fleet_kit/fleet_checklist.py stale` exits 0 (it prints
+   `stale: none`, or one line per OVERRUN or STALE row; exit 3 means a
+   STALE row: section 3 first; an OVERRUN line of another task is
+   reported, not acted on); `git worktree list` names leftover wave
+   worktrees (`w<n>-...`), which are reused, never deleted.
 3. Validates the plan: `python tools/plan_check.py check` prints
    `plan_check: ok <n> packages, <w> waves`.
 4. Finds the open wave. The hand-off line
@@ -91,15 +96,21 @@ returns. The start agent, in this order:
        WAVE POINTER: wave <n> done, next wave <n+1>
 
    is the claim; the ROADMAP rows decide. For the pointer's next wave this
-   prints the session packages whose row is not flipped:
+   prints the session packages that are neither flipped nor carried. A
+   row is flipped when ROADMAP.md holds `- [x] <ID> ` or, once AUTO-03 is
+   on main, when docs/roadmap/done/<ID>.md exists (the done file marks
+   the row done until /done folds it into ROADMAP.md, section 6); a
+   carried package is one named by a `DEFERRED:` line of the hand-off:
 
-       python -c "import json,re,subprocess,sys; w=json.loads(subprocess.run([sys.executable,'tools/plan_check.py','wave',sys.argv[1],'--json'],capture_output=True,text=True,check=True).stdout); t=open('ROADMAP.md',encoding='ascii').read(); print(' '.join(p['id'] for p in w['packages'] if p.get('owner')!='loop' and not re.search(r'(?m)^- \[x\] '+re.escape(p['id'])+' ',t)) or 'none open')" <n>
+       python -c "import json,os,re,subprocess,sys; w=json.loads(subprocess.run([sys.executable,'tools/plan_check.py','wave',sys.argv[1],'--json'],capture_output=True,text=True,check=True).stdout); t=open('ROADMAP.md',encoding='ascii').read(); d=set(re.findall(r'(?m)^DEFERRED: (\S+) ',open('AL-NEXT-SESSION.txt',encoding='ascii').read())); f=lambda i: re.search(r'(?m)^- \[x\] '+re.escape(i)+' ',t) or os.path.exists('docs/roadmap/done/'+i+'.md'); print(' '.join(p['id'] for p in w['packages'] if p.get('owner')!='loop' and p['id'] not in d and not f(p['id'])) or 'none open')" <n>
 
    `none open` moves on to wave n+1. The first wave that prints ids is the
    open wave; the session resumes at its first unmerged package (a flipped
    row on main is a merged package, because the flip rides in the merge
    batch, section 6). Carried packages are the ids of the `DEFERRED:`
-   lines; they join this dispatch (section 3).
+   lines whose row is not flipped; they join this dispatch (section 3).
+   Without the carried-id exclusion a deferred package would hold its
+   wave open for ever.
 5. Reads which waves this `continue` runs: the session group that holds
    the open wave.
 
@@ -108,12 +119,11 @@ returns. The start agent, in this order:
 6. Checks the operator gates (section 9) and, from wave 5 on, writes the
    folder hold (section 8).
 7. Renders the item-13 checklist through the kit, never by hand: one row
-   per open package of the wave in merge order, then MERGE, INTEGRATE and
-   CLOSE, then one row per later wave of this session (one more
-   `c.item('W<m>','Run wave <m>')` appended to the `rows` list of the
-   command).
+   per carried id, then one row per open id of step 4 in merge order,
+   then MERGE, INTEGRATE and CLOSE, then one row per later wave of this
+   session's group (`W<m>: Run wave <m>`):
 
-       python -c "import json,subprocess,sys; sys.path.insert(0,'ops/fleet_kit'); import fleet_checklist as c; w=json.loads(subprocess.run([sys.executable,'tools/plan_check.py','wave',sys.argv[2],'--json'],capture_output=True,text=True,check=True).stdout); rows=[c.item(p['id'],p['title']) for p in w['packages'] if p.get('owner')!='loop']+[c.item('MERGE','Merge the wave in merge order, batch suites green'),c.item('INTEGRATE','Apply the integrator edits per batch'),c.item('CLOSE','Close the wave: gates, leak sweep, hand-off pointer')]; c.emit(c.render(int(sys.argv[1]),rows,cap=True))" <session n> <wave n>
+       python -c "import json,sys; sys.path.insert(0,'ops/fleet_kit'); import fleet_checklist as c; d=json.load(open('docs/plan/packages.json',encoding='utf-8')); ps={p['id']:p for p in d['packages']}; w=int(sys.argv[2]); g=next(x['waves'] for x in d['sessions'] if w in x['waves']); rows=[c.item(i,ps[i]['title']) for i in sys.argv[3:]]+[c.item('MERGE','Merge the wave in merge order, batch suites green'),c.item('INTEGRATE','Apply the integrator edits per batch'),c.item('CLOSE','Close the wave: gates, leak sweep, hand-off pointer')]+[c.item('W%d'%m,'Run wave %d'%m) for m in g if m>w]; c.emit(c.render(int(sys.argv[1]),rows,cap=True))" <session n> <wave n> <carried ids> <open ids>
 
    Past 20 rows the kit prints its own overflow line above the `/done`
    box. The start agent returns that text, the wave number, the open ids,
@@ -131,9 +141,11 @@ added with `+`. The status board is not rendered (AL is opt-out).
 ### What is dispatched
 
 - One builder per open worktree package of the wave (`isolation:
-  worktree`, owner session), all at once: at most 12, 11 in wave 1. A
-  package is dispatched only when every id in its `deps` has a flipped
-  row; otherwise it is deferred with cause `waits on <id>`.
+  worktree`, owner session), all at once: at most 12, 11 in wave 1, plus
+  the carried packages. A package is dispatched only when every id in its
+  `deps` has a flipped row; otherwise it is deferred with cause `waits on
+  <id>`. Inside a Workflow run (section 10) the tool runs at most
+  min(16, CPUs - 2) agents at once; builders past that queue.
 - The main-checkout acts (`isolation: none`) as ONE serial chain beside
   the builders: one agent after another in merge order, each committed or
   read back before the next starts. An act that the wave's `gate` text or
@@ -203,10 +215,11 @@ Set where the dispatch takes it (the `model` field of the Agent tool, the
 `model` and `effort` options of a Workflow `agent()` call). The three
 defined agents keep their own frontmatter and are never overridden.
 
-- Builder, size S (under 30 minutes): sonnet, effort medium.
+- Builder, size S (10 to 30 minutes in packages.json): sonnet, effort
+  medium.
 - Builder, size M (30 to 60 minutes): opus, effort medium (the route the
   loop uses for plan rows, tools/loop_base.py).
-- Builder, size L (60 to 90 minutes), or any size that edits a hotspot
+- Builder, size L (65 to 90 minutes), or any size that edits a hotspot
   file (packages.json `hotspots`) or is tier P0: opus, effort high.
 - Main-checkout act: by its size, as above.
 - design-reviewer, verifier, adjudicator: sonnet, effort medium
@@ -244,6 +257,8 @@ Your final message is data for the orchestrator: short, facts only.
    WIRED = yes: you already are in your worktree; <WT> is the output of
    git rev-parse --show-toplevel, your branch that of
    git branch --show-current.
+   <BASE> is the output of  cd "<WT>" && git merge-base main HEAD
+   (the commit your work starts from; it stays right on a resumed run).
    Work ONLY under <WT>: every file you read or edit has a path under it;
    every shell call is  cd "<WT>" && <command>.  Never edit a file in the
    main checkout, never switch a branch, never touch another worktree. The
@@ -316,8 +331,9 @@ Your final message is data for the orchestrator: short, facts only.
     cause: <only when failed>
     worktree: <WT>
     branch: <branch>
+    base: <BASE>
     tip: <output of git rev-parse HEAD in <WT>>
-    files: <output of git diff --name-only main...HEAD in <WT>>
+    files: <output of git diff --name-only <BASE>..HEAD in <WT>>
     tests: <each command run, its exit code and counts>
     row: flip <ID>
     settled: <the Settled bullet text for CLAUDE.md, or none>
@@ -327,10 +343,11 @@ Your final message is data for the orchestrator: short, facts only.
 ```
 
 A main-checkout act gets the same text with step 3 replaced by "You work
-in the main checkout on branch main; no worktree" and `cd "<WT>" &&`
-dropped. A fix round (section 5) gets the same text with step 3 replaced
-by the worktree path and branch of the first builder, plus the findings to
-fix.
+in the main checkout on branch main; no worktree; <WT> is the main
+checkout, your branch is main, and <BASE> is the output of git rev-parse
+HEAD read before your first commit" and `cd "<WT>" &&` dropped. A fix
+round (section 5) gets the same text with step 3 replaced by the
+worktree path and branch of the first builder, plus the findings to fix.
 
 ## 3. Monitoring
 
@@ -349,7 +366,9 @@ fix.
   its own (`w<n>-watch`), then wait for the next slice with the harness
   Monitor tool (an until-loop on the progress files, at most 9 minutes a
   slice), never a foreground sleep. It returns one line per task:
-  `<task>: <status> <pct>% <step>`.
+  `<task>: <status> <pct>% <step>`. When the wave runs as a Workflow run
+  (section 10), the main session dispatches the watcher as a plain
+  background agent beside the run; the script itself has no watcher.
 - The main session is told when a background agent ends; it does not hold
   its turn open on one event. Before any status answer it has the
   watcher's latest lines; the answer is the remaining checklist (item 13
@@ -413,9 +432,15 @@ Before the first batch:
   `worktree-w<n>-int`, cut from main after the act chain's commits). An
   integration worktree left by an interrupted run is reused: its merges
   are kept and the batch continues where it stopped.
-- From wave 5 on (LOOP-WAVE-HOLD on main) steps 1 to 4 of a batch run
-  under the loop's merge lock, through the hold command that package adds
-  to tools/loop_merge.py, so no lane merge moves main under the batch.
+- From wave 5 on (LOOP-WAVE-HOLD on main) the batch suite of step 4 and
+  every command of step 5 that moves main or merges main into `<INT>`
+  run under the loop's merge lock (ops/loop/control/merge.lock), each
+  wrapped in the command that package adds:
+  `python tools/loop_merge.py hold -- <command>` (07, Gate commands,
+  step 2: "under the merge lock"). A lane merge that lands between two
+  held commands makes the fast-forward of step 5 refuse, and step 5's
+  fallback handles it. Before wave 5 HALT stops the loop, so no lane
+  merge can move main and the hold command does not exist yet.
 
 Per batch, packages in merge order:
 
@@ -440,8 +465,9 @@ Per batch, packages in merge order:
        cd "<INT>" && python ops/fleet_kit/fleet_suite_gate.py run --owner <OWNER> -- python -m pytest -q
        cd "<INT>" && npm test --prefix app
 
-   The suite command is the one the wave's `gate` text names (`python
-   tools/suite_run.py` once TEST-GATE-CALLERS is on main, wave 10). Exit
+   The suite command is the one the wave's `gate` text names: `python -m
+   pytest -q` up to wave 10, `python tools/suite_run.py` from wave 11 on
+   (TEST-GATE-CALLERS lands in wave 10). Exit
    0 is not the verdict: the merger reads the tail (passed and failed
    counts). While it waits on the gate it reports who holds it:
    `python ops/fleet_kit/fleet_suite_gate.py status --brief`.
@@ -458,12 +484,17 @@ Per batch, packages in merge order:
 6. Red in step 4 (07, step 3): a failing Settled-list or index test is the
    integrator's commit to fix, never a reason to back a package out.
    Otherwise the failing test files are run on each package tip of the
-   batch; the culprit's merge is reverted on `<INT>` together with its
-   integrator edits (`git revert` through the git lock: `-m 1 <merge
-   commit>` for the merge, a normal revert for its part of the integrator
-   commit; history is never rewritten), the culprit is deferred, and one
-   more suite runs. A Python traceback from fleet_suite_gate.py in the
-   output is infrastructure (research 0049 F11): one retry, no verdict.
+   batch; the culprit's merge is reverted on `<INT>` (`cd "<INT>" &&
+   python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git
+   revert --no-edit -m 1 <merge commit>`), and the integrator takes the
+   culprit's own edits (row flip, Settled bullet, index line, review
+   line) out of the integrator files by one new commit (a `git revert` of
+   the integrator commit would also drop the other packages' edits);
+   history is never rewritten. The culprit is deferred and one more suite
+   runs. A Python traceback from fleet_suite_gate.py in the output is
+   infrastructure (research 0049 F11): one retry, no verdict. So is a
+   fleet_test_guard error at a teardown while a loop lane was writing
+   ops/loop/control/loop_items (the hand-off NOTE): run the suite again.
 
 After the last batch: the acts held for the end run one at a time on
 main, each with its verifier and the integrator's commit of its edits.
@@ -477,8 +508,10 @@ it.
   the merge through the git lock and re-runs the package's tests.
 - A conflict in a file outside the package's list is a contract breach:
   main's version of that file is kept
-  (`cd "<WT>" && git checkout --theirs -- <path>`, then
-  `git add -- <path>`), the package's tests are re-run, and the verifier
+  (`cd "<WT>" && git checkout --theirs -- <path>`, a path restore inside
+  the merge, never a branch switch; then `git add -- <path>` of that one
+  path and the merge commit through the git lock), the package's tests
+  are re-run, and the verifier
   checks the accept line again; if it no longer holds the package is
   deferred.
 - An integrator file never conflicts by a package's hand (packages do not
@@ -503,10 +536,12 @@ session lowers the batch to 3 (width 9) until TEST-SELECT is on main
 
 Both run per package, after its builder returns and before its merge.
 
-- Design review: every package with `design_review: true`, by the
-  `design-reviewer` agent, scope `git diff main...<branch>` in the
-  package worktree. Its verdict decides: PASS, or PASS WITH FINDINGS with
-  no S1 and no S2 open, lets the package go on; anything else returns the
+- Design review: every package with `design_review: true`, worktree
+  package or main-checkout act (PLAY-TD-23-RECORDS, wave 31, is an act
+  with the flag), by the `design-reviewer` agent, scope `git diff
+  <base>..<tip>` in the package worktree (the main checkout for an act),
+  with base and tip from the builder's result. Its verdict decides:
+  PASS, or PASS WITH FINDINGS with no S1 and no S2 open, lets the package go on; anything else returns the
   findings to a fix round (a builder in the same worktree), then the
   review runs again; after two fix rounds still failing, the package is
   deferred. The reviewer returns the reviews.log line (date, scope,
@@ -518,7 +553,7 @@ Both run per package, after its builder returns and before its merge.
   by the `verifier` agent before a ROADMAP box is ticked. It did not
   write the change. It re-runs the package's accept command fresh in the
   worktree (a whole-suite part of an accept line is proven by the batch
-  suite, not here), reads `git diff --name-only main...<branch>` against
+  suite, not here), reads `git diff --name-only <base>..<tip>` against
   `files` plus `new_files`, checks that no integrator file and no kit
   file changed, and answers VERIFIED or REFUTED with the command, exit
   code and counts. REFUTED sends the evidence to a fix round; refute
@@ -528,6 +563,9 @@ Both run per package, after its builder returns and before its merge.
   and, where flagged, a passing design review. The row is flipped by the
   integrator's commit of its batch, and that batch's whole suite is the
   second half of the proof: a culprit loses its flip with its merge.
+- An act is already on main when it is reviewed. One that ends deferred
+  keeps its commits on main and its row unflipped; its next fix round
+  works in the main checkout.
 
 ## 6. Integrator
 
@@ -545,7 +583,11 @@ batch (plus, in the first batch, the acts of the chain that are verified):
   ` -- done <date> (session wave <n>; verified)` is appended to the row's
   first line, the form the loop uses. Rows are never added here: they
   were landed once, in wave 0. Once AUTO-03 is on main (wave 1) the flip
-  uses tools/roadmap.py as its usage text says.
+  uses tools/roadmap.py as its usage text says: its `done` writes the new
+  file docs/roadmap/done/<ID>.md (one line ` -- done <date> (session wave
+  <n>; verified)`), which marks the row done and leaves ROADMAP.md alone
+  until /done folds it (LOOP-DONE-FOLD, wave 3). The done file is a new
+  path: `git add -N -- <path>` first, and it is named in the commit.
 - CLAUDE.md: each new Settled bullet, with its "Reverses if", from the
   package's integrator_edits and the builder's `settled:` line; nothing
   inside the FLEET COMMON block.
@@ -555,9 +597,11 @@ batch (plus, in the first batch, the acts of the chain that are verified):
 - AL-NEXT-SESSION.txt: only what a package's integrator_edits name; the
   wave pointer is written at wave close (section 7).
 
-The commit, on `<INT>` (named paths, only the files it changed):
+The commit, on `<INT>` (named paths: exactly the integrator files and
+done files it changed or added, for example
+`ROADMAP.md CLAUDE.md docs/decisions/README.md docs/design/reviews.log`):
 
-    cd "<INT>" && python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "integrate: wave <n> batch <b> (<IDs>)" -- ROADMAP.md CLAUDE.md docs/decisions/README.md docs/design/reviews.log
+    cd "<INT>" && python ops/fleet_kit/fleet_gitlock.py run --owner <OWNER> -- git commit -m "integrate: wave <n> batch <b> (<IDs>)" -- <changed paths>
 
 Edits of acts that run after the last batch, and of a wave that has no
 worktree package, are committed the same way in the main checkout. The
@@ -574,15 +618,22 @@ checkout, after the last batch and the last act:
    prints main.
 3. The open-row command of section 1 prints `none open`, or only ids
    that are deferred.
-4. `python tools/leak_sweep.py --tree` prints no HALT line.
-5. `python ops/fleet_kit/fleet_checklist.py stale` prints `stale: none`.
-6. From wave 5 on: the folder hold file is removed (section 8).
-7. The hand-off pointer. The integrator replaces the pointer line in
+4. `python tools/leak_sweep.py --tree` exits 0 and prints no
+   `[leak-sweep] HALT` line (exit 2 is a finding).
+5. `python ops/fleet_kit/fleet_checklist.py stale` exits 0 and names no
+   row of this wave.
+6. From wave 5 on: the folder hold file is removed (section 8), after the
+   last suite of the wave has ended.
+7. The hand-off pointer. The close agent acts here as the wave's
+   integrator (the integrator's work for the wave is done, so the file
+   still has one writer). It replaces the pointer line in
    AL-NEXT-SESSION.txt with
 
        WAVE POINTER: wave <n> done, next wave <n+1>
 
-   keeps or adds the `DEFERRED:` lines, adds wave 1's escape count, runs
+   adds one `DEFERRED:` line per newly deferred package, drops the
+   `DEFERRED:` line of every carried package that merged in this wave,
+   keeps the others, adds wave 1's escape count, runs
    `python -m pytest -q tests/test_ascii_lf.py tests/test_leak_sweep.py`
    and commits:
 
@@ -593,9 +644,9 @@ checkout, after the last batch and the last act:
 The whole-suite gate of the wave is the last batch suite: main sits on a
 tree that suite passed, plus document commits. Then the session starts
 the next wave of its group (section 1, steps 2 to 7, by a new start
-agent). When no checklist row remains, or the usage window or the
-context ends the session early, it runs /done unprompted: the main
-session dispatches the whole ritual of .claude/commands/done.md to ONE
+agent, which reads the `DEFERRED:` lines from the hand-off again). When
+no checklist row remains, or the usage window or the context ends the
+session early, it runs /done unprompted: the main session dispatches the whole ritual of .claude/commands/done.md to ONE
 background agent (whole suite through the suite gate, `npm test --prefix
 app`, the leak sweep, `python ops/fleet_kit/fleet_done.py reap --apply`,
 the hand-off rewritten with `SESSION: <n+1>` and the pointer and
@@ -610,9 +661,10 @@ the first unmerged package.
 
 HALT. `ops/loop/control/HALT` exists today and stays through the landing
 and waves 1 to 5. The scheduled task keeps firing; while HALT exists the
-tick only runs the docs watch and returns. A wave session never removes
-HALT, never installs, removes or starts the task, and never starts a
-tick. HALT may be removed only after these packages are on main with one
+tick only runs the reads allowed under HALT (the docs watch, decision
+0044; later the release checks of ruling Q-13, read only) and returns.
+A wave session never removes HALT, never installs, removes or starts
+the task, and never starts a tick. HALT may be removed only after these packages are on main with one
 whole green suite (07, HALT removal and the headless loop): AUTO-01,
 LOOP-HANDOFF-PREFIX, LOOP-PREFLIGHT-CMD, LOOP-FAILED-PARK, AUTO-02,
 AUTO-03, LOOP-ROWFILES-MERGE, LOOP-ROWFILES-WORK, LOOP-DONE-FOLD,
@@ -645,7 +697,12 @@ points):
    of the wave's files and new_files, time) and the close agent removes
    it; the loop parks a finished item whose diff touches a held prefix as
    `wave-hold` and merges it when the file is gone (LOOP-WAVE-HOLD, wave
-   4). The file is gitignored control state, never committed.
+   4); a hold file older than 48 h is one checklist line and is not
+   obeyed, so a wave that stops early cannot hold the loop for ever. The
+   file is gitignored control state, never committed. It is written
+   before the first builder is dispatched and removed after the wave's
+   last suite, never while a suite of the session runs (the test guard
+   watches control files).
 5. Shared ground. Both sides commit through the kit git lock. The loop
    merges only into a clean main under `ops/loop/control/merge.lock`; the
    wave's merger takes the same lock for a batch (section 4). Wave agents
@@ -794,7 +851,7 @@ const BUILD_SCHEMA = {
   required: ['id', 'status'],
   properties: {
     id: str, status: { type: 'string', enum: ['done', 'failed'] }, cause: str,
-    worktree: str, branch: str, tip: str, files: ids, tests: str,
+    worktree: str, branch: str, base: str, tip: str, files: ids, tests: str,
     settled: str, index: str, deviations: str,
   },
 }
@@ -857,7 +914,8 @@ const wave = await agent(
   ' packages: every package of the wave in merge order, plus, first, every package named by a' +
   ' DEFERRED: line of AL-NEXT-SESSION.txt (its own wave number in `wave`). Copy id, title, size,' +
   ' est_min, design_review, isolation and owner ("session" when absent) from the tool output.' +
-  ' open: its ROADMAP row is not flipped (the open-row command of section 1). deps_open: the ids' +
+  ' open: its row is not flipped (no "- [x] <ID> " line in ROADMAP.md and no' +
+  ' docs/roadmap/done/<ID>.md; section 1 step 4). deps_open: the ids' +
   ' of its deps whose row is not flipped. held: it shares a path of files or new_files, or a' +
   ' non-empty serial_group, with a carried package. hot: it edits a file of the packages.json' +
   ' hotspots list or its tier is P0. after_merge: an isolation none package that the wave gate' +
@@ -889,7 +947,7 @@ const build = p => agent(builderText(p), Object.assign(
 
 const act = p => agent(
   builderText(p, ' This package is a main-checkout act: work in the main checkout on branch main,' +
-    ' no worktree, one act at a time.'),
+    ' no worktree, one act at a time; BASE is git rev-parse HEAD read before your first commit.'),
   Object.assign({ label: 'act ' + p.id, phase: 'Build', schema: BUILD_SCHEMA, agentType: 'general-purpose' }, tier(p)))
 
 const fix = (p, b, what) => agent(
@@ -903,8 +961,8 @@ const review = async (b, p) => {
   let cur = b
   for (let round = 1; round <= 3; round++) {
     const r = await agent(
-      'Design review of package ' + p.id + ' per ' + DOC + ' section 5. Scope: `git diff main...' +
-      cur.branch + '` in ' + cur.worktree + '. Return the verdict, the S1 and S2 counts, the findings' +
+      'Design review of package ' + p.id + ' per ' + DOC + ' section 5. Scope: `git diff ' +
+      cur.base + '..' + cur.tip + '` in ' + cur.worktree + '. Return the verdict, the S1 and S2 counts, the findings' +
       ' as text and the one docs/design/reviews.log line for this package.' + DATA,
       { label: 'design ' + p.id + ' r' + round, phase: 'Review', schema: REVIEW_SCHEMA, agentType: 'design-reviewer' })
     if (!r) return fail(cur, p.id, 'the design review returned nothing')
@@ -924,7 +982,7 @@ const verify = async (b, p) => {
   for (let round = 1; round <= 3; round++) {
     const v = await agent(
       'Verify the done-claim of package ' + p.id + ' per ' + DOC + ' section 5: worktree ' + cur.worktree +
-      ', branch ' + cur.branch + ', tip ' + cur.tip + '. Answer VERIFIED or REFUTED with the evidence.' + DATA,
+      ', branch ' + cur.branch + ', base ' + cur.base + ', tip ' + cur.tip + '. Answer VERIFIED or REFUTED with the evidence.' + DATA,
       { label: 'verify ' + p.id + ' r' + round, phase: 'Review', schema: VERDICT_SCHEMA, agentType: 'verifier' })
     if (!v) return fail(cur, p.id, 'the verifier returned nothing')
     if (v.verdict === 'VERIFIED') return Object.assign({}, cur, { verified: true })
@@ -945,7 +1003,7 @@ const verify = async (b, p) => {
 
 const chain = async list => {
   const out = []
-  for (const p of list) out.push(await verify(await act(p), p))
+  for (const p of list) out.push(await verify(await review(await act(p), p), p))
   return out
 }
 
@@ -1084,3 +1142,88 @@ Notes on the template:
   that folder as the fallback only.
 - The integrator commits once per merge batch (07, Gate commands), not
   once per wave: the batch suite needs the Settled bullets first.
+
+## Verification record
+
+Independent verifier, 2026-11-18, HEAD 18914e1. Read-only on the
+machine: no app, core, overlay or loop started, no Client.txt read, no
+worktree created; only this file changed.
+
+Checked:
+- Package ids: every id named here exists in docs/plan/packages.json (396
+  packages) with the wave and isolation the text gives (AUTO-03 and
+  LOOP-LEDGERS wave 1, LOOP-WAVE-HOLD 4, AUTO-06 and TEST-PORT-LEASE 5,
+  AUTO-21 6 as an act, TEST-SELECT 8, TEST-GATE-CALLERS 10,
+  REL-CUTOVER-LIVE 24 as an act, AUTO-26, GP-02 and PUB-GO-DECISION 99);
+  the HALT list equals AUTO-21's deps and 07's list; 16 loop-owned
+  packages; wave 1 has 11 worktree and 4 main-checkout packages; no open
+  wave has more than 12 worktree or 4 main-checkout packages; the only id
+  holding a `lane` word (TEST-LOOP-SPLIT-LANES) is loop-owned.
+- Commands run or read in source: tools/plan_check.py check, wave <n>
+  --json and rows --wave (usage text; check prints ok 396 packages, 39
+  waves); the open-row, session-group, wiring, worktree-folder and
+  checklist one-liners (run; wiring prints not wired, the folder is the
+  sidecar Worktree folder); fleet_checklist (item, render with cap,
+  emit, `stale` exit 0 or 3), fleet_headless progress (--root --task
+  --pct --step --eta-s --status, written in the main checkout from a
+  worktree), fleet_gitlock run (commit, push, and merge / reset / revert
+  lock only), fleet_suite_gate run and status --brief, fleet_done reap
+  --apply, archive --auto and mark --session --status, fleet_claims
+  release --owner, tools/wt_sidecar_hook.py (stdin JSON, one path line,
+  branch worktree-<name>, idempotent), tools/leak_sweep.py --tree (exit
+  2 on a HALT finding), tools/usage_ledger.py gate, tools/loop_base.py
+  routes and MERGE_LOCK_REL, loop_items states dispatched / ran /
+  committed, .claude/agents (three agents, sonnet, effort medium),
+  .claude/commands/done.md. Future commands are named as such:
+  tools/loop_merge.py hold (LOOP-WAVE-HOLD), tools/roadmap.py
+  (AUTO-03), tools/test_select.py (TEST-SELECT), tools/suite_run.py
+  (TEST-GATE-CALLERS).
+- The Workflow template against the Workflow tool contract (meta
+  literal, agent options label / phase / schema / model / effort /
+  agentType / isolation, pipeline stage arguments, parallel, null
+  results): it parses with node --check and runs end to end against
+  stub agents (build, review with a fix round, verify, acts before and
+  after the merge, a held package).
+- Sources: 07 (How to read, Wave width, Gate commands, Batches lines of
+  waves 1 to 24, HALT removal, Reserved decision numbers, Contract
+  lines), every wave's gate text in packages.json, 06 (the six points,
+  Runs budget, contract line F-198), 01 L12, rulings Q-12, Q-13, Q-17
+  and Q-23, the hand-off (SESSION line, Session start checks, kit defect,
+  loop_items NOTE, low-priority order). Floor and CLAUDE.md: nothing here
+  starts the app, core, overlay or loop, reads the live Client.txt,
+  sends input, pushes, rewrites history or edits ops/fleet_kit or
+  .claude/settings.json. No private name, machine path or account id.
+
+Changed:
+- Section 1: the open-row command also counts a docs/roadmap/done/<ID>.md
+  file as a flip (AUTO-03 writes done files, folded only at /done) and
+  leaves out carried ids, which before held a wave with a deferred
+  package open for ever; the checklist command now lists the carried and
+  open ids only and adds the later waves of the group itself; the start
+  agent runs the hand-off's Session start checks; `stale` is judged by
+  its exit code (it prints OVERRUN lines too).
+- Section 2: carried packages and the Workflow concurrency cap added;
+  size ranges as packages.json has them (S up to 30, L from 65); builder
+  results carry `base`, and the diff scopes use base..tip so a
+  main-checkout act can be reviewed and verified.
+- Section 3: the watcher beside a Workflow run.
+- Section 4: the merge lock covers the batch suite and the move of main,
+  through `tools/loop_merge.py hold -- <command>`, not steps 1 to 4
+  only; suite_run.py from wave 11 (wave 10's gate still names pytest);
+  a culprit's integrator edits leave by a new commit, since a revert of
+  the batch's integrator commit would drop every package's edits; the
+  fleet_test_guard teardown error counts as infrastructure; the
+  `checkout --theirs` is marked as a path restore.
+- Section 5: design review also for main-checkout acts
+  (PLAY-TD-23-RECORDS); a deferred act stays on main.
+- Section 6: the done file of tools/roadmap.py and its `git add -N`;
+  the commit names the paths actually changed.
+- Section 7: leak sweep and stale checks by exit code; the close agent
+  is the one writer of the hand-off at close and drops the DEFERRED line
+  of a carried package that merged.
+- Section 8: reads allowed under HALT (Q-13), the 48 h hold-file rule,
+  when the hold file is written and removed.
+- Section 10: `base` in the build schema and prompts; acts get the
+  design review in the chain; the reader's `open` matches section 1.
+- Rules: no research number is reserved (no package writes a note);
+  input list names research 0058 for the loop.
