@@ -7,27 +7,38 @@ inside the ToS floor, the scroll and tab audit from the evidence pack, and
 glance budgets a test can assert. It also answers MERGE-SEAMS-FOLLOWUP F1.
 Usability heuristics, the settings surface and feature cuts are notes
 0042, 0039 and 0038; this note cites them instead of repeating them.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
-- GGG: https://www.pathofexile.com/developer/docs - screen or clipboard
-  reads once per manual key press; macros invoked by hand, never by a
-  timer, a file change or a screen read; new OAuth applications are not
-  being processed today.
+- GGG: https://www.pathofexile.com/developer/docs (re-fetched by the
+  verifier) - screen or clipboard reads once per manual key press; macros
+  invoked by hand, never by a timer, a file change or a screen read, one
+  game action each; executable apps that interact with the game or its
+  files are prohibited; new OAuth applications are not being processed
+  today. The page says nothing about local files other than the game
+  log.
 - NHTSA: https://www.transportation.gov/briefing-room/us-dot-releases-guidelines-minimize-vehicle-distractions
-  - the 2013 in-vehicle guideline: no single look away longer than 2 s,
-  12 s in total per task (read through search summaries of the release
-  and its press coverage, not the guideline text). Used here only as an
-  analogy for a look at a second screen during a fight.
+  - the 2013 voluntary Phase 1 in-vehicle guideline: single glances away
+  of 2 s or less on average, 12 s in total per testable task. The release
+  page answered 403 to the verifier; the figures are confirmed only
+  through search summaries of the release and its press coverage, not
+  the guideline text. Used here only as an analogy for a look at a
+  second screen during a fight.
 - GLANCE: https://www2.eecs.berkeley.edu/Pubs/TechRpts/2006/EECS-2006-113.html
-  - glanceable peripheral displays: the amount of information shown
-  strongly affects how fast a display is read (abstract, through a search
-  summary).
+  - "Designing Glanceable Peripheral Displays" (2006, 3 authors). Its
+  abstract (re-fetched) defines glanceability as a quick, low-effort read
+  that interrupts the primary task as little as possible, and offers a
+  taxonomy of visual variables. It does NOT state that the amount of
+  information shown sets the reading speed; the draft's claim to that
+  effect is withdrawn (verifier correction).
 - OCR: https://learn.microsoft.com/en-us/uwp/api/windows.media.ocr.ocrengine
-  - the Windows OCR engine class (image in, lines and words out; through
-  a search summary). That it ships with every Windows 10 / 11 install is
-  a vendor claim only: UNVERIFIED.
+  (re-fetched) - the Windows OCR engine class: a bitmap in, lines and
+  words with positions out; part of the Windows API since Windows 10
+  build 10240 (UniversalApiContract v1, windows.dll). The recognizer
+  languages are those available on the device (AvailableRecognizerLanguages),
+  so whether an English recognizer is present on every install is
+  UNVERIFIED.
 - PACK: the evidence pack, names relative to its directory (README.txt,
   run/summary_lines.txt, run/<state>/dash-<tab>-<W>x<H>.json and .png).
 - PROBE: a re-measure made for this note with the pack's own script
@@ -37,11 +48,15 @@ Status: draft
   no product file changed. Files: `<sidecar>\Scratch\up-0043\`
   probe-c.json, probe-d.json, proto.js, measure.js.
 - POB: the hash-pinned PoB-PoE2 v0.23.1 checkout in the sidecar Cache
-  (config/tc_pins.json): src/Modules/Main.lua:91 and :849-853 (user
-  folder "Path of Building (PoE2)" under the user's documents, builds in
+  (config/tc_pins.json): src/Modules/Main.lua:87-91 and :849-853 (user
+  folder "Path of Building (PoE2)" under the host's user path, builds in
   its "Builds" sub-folder, a custom place in Settings.xml `buildPath`,
-  :577-578); src/Classes/PoEAPI.lua:93 (PoB imports a character through
-  its own OAuth client).
+  :577-578); Main.lua:82-84 (dev or standalone mode keeps user data next
+  to the program instead); src/Classes/PoEAPI.lua:93 (PoB imports a
+  character through its own OAuth client, `client_id=pob`). The user
+  path comes from the runtime's GetUserPath, which is not in the PoB
+  source; that it is the Documents folder is UNVERIFIED. Builds are saved
+  as `<name>.xml` (src/Modules/Build.lua:1480).
 - Repo: web/index.html, web/app.js, web/tabs.js, web/app.css,
   web/zoneguide.js, app/main.js, app/eval_hotkey.js, server/al/http.py,
   server/al/core.py, server/al/hotkeys.py,
@@ -53,7 +68,8 @@ Status: draft
 
 - Play does not fit. It scrolls in 6 of 9 pack states at 1280x760 and 5
   of 9 at 1920x950: worst case 380 px left and 321 px right at 1280x760,
-  124 / 117 px at 1920x950, and 541 / 311 px when the game is idle.
+  124 / 117 px at 1920x950; the idle state (d) overflows its left
+  column by 541 px at 1280x760 and 311 px at 1920x950.
 - One cause carries most of it: the zone tile spans the row and holds the
   guide, so the tile block takes 457 of 654 px while three tiles of 129 px
   hold 2 to 13 words each.
@@ -152,6 +168,49 @@ Setup and occasional:
 Counts: 10 kinds of act in play, of which 1 is forced by the floor per
 item (I1), 1 is forced by the layout (I7) and 8 are by choice; 15 setup
 or occasional kinds, of which 2 are floor-bound (I12, I24).
+
+Furthest reduction per act inside the floor (added by the verifier; the
+brief asks for one per act). "Floor" names the CLAUDE.md rule that bounds
+it.
+- I1: 2 chords to 3 key presses (R5); 1 press only by a screen read (R7).
+  Floor: one clipboard / screen read per manual AshLight press; no input
+  to the game, so the game's copy stays the player's own key.
+- I2: already automatic while idle (decision 0029 amendment); the key
+  stays for choice. Floor: none.
+- I3: already automatic (10 min, decision 0019); the button stays as an
+  option. Floor: none.
+- I4: stays one click; R1 keeps it one line in the first view. Floor: the
+  app never calls the trade site, the player opens the URL (decision
+  0017).
+- I5: stays click plus the player's own paste; the town string can move
+  to Play (note 0054 R4) to save the tab switch. Floor: no input to the
+  game; clipboard write only on a click (decision 0014).
+- I6: Play already returns by itself (web/tabs.js:68-73); 5 tabs to 4
+  (R6). Floor: none.
+- I7: removed (R1). Floor: none.
+- I8: stays an optional fold; the objective line shows without it.
+- I9: already automatic from the log (decision 0038); the picker only
+  views another character. Floor: none.
+- I10: already clears by itself; button optional.
+- I11: once; note 0042 owns the first-run count. Floor: none.
+- I12: stays one click. Floor: Client.txt only after opt-in with a
+  visible indicator.
+- I13: 6 acts to 0 in AshLight (R3, after one opt-in) or to 1 chord (R4).
+  Floor: R4 is the same single read per press; R3 needs a ruling (Open
+  question 1).
+- I14: the checkbox stays (decision 0013, default OFF); the hand-typed
+  contact moves into the app (note 0039 R2). Floor: public web data
+  only, truthful User-Agent.
+- I15: hand edit to an in-app setting (note 0039 R3). Floor: hotkey rule
+  of server/al/hotkeys.py (no game or Windows combination).
+- I16, I17, I18, I21, I22: rare, by choice; R6 closes the folds so they
+  cost no scroll. Floor: none.
+- I19, I20: stay a download plus a manual move. Floor and decisions
+  0031, 0033, 0034: AshLight never writes into a game folder.
+- I23: Quit stays; logon start is opt-in (decision 0011).
+- I24: stays. Floor: revocable opt-in.
+- I25: once each (note 0039 R4, R5); the calc stays opt-in (decision
+  0018).
 
 ## Findings
 
@@ -294,7 +353,9 @@ panel and bring scroll back; not recommended.
 
 ## The two named pains
 
-Build, ranked (all inside the floor unless listed under Rejected):
+Build, ranked by acts saved (all inside the floor unless listed under
+Rejected; R3 subject to the Open question 1 ruling). Build order differs:
+R4 first (effort S, certainly inside the floor), R3 after the ruling.
 1. Follow the Path of Building builds folder (R3). After one opt-in the
    player only saves in PoB; AshLight acts 0. PoB can refresh the live
    character through its own account import, so "import, save" in PoB
@@ -330,9 +391,10 @@ Minimum the floor allows:
 
 ## Glance budgets (testable)
 
-Model: one look is at most 2 s [NHTSA, analogy]; less shown reads faster
-[GLANCE]; a reader takes about 4 words a second (rule of thumb,
-UNVERIFIED as a measured rate). So an answer must be in the first view
+Model: one look is at most 2 s [NHTSA, analogy]; a glance read should
+interrupt the main task as little as possible [GLANCE]; that fewer words
+read faster is assumed here, not sourced (UNVERIFIED); a reader takes
+about 4 words a second (rule of thumb, UNVERIFIED as a measured rate). So an answer must be in the first view
 and reachable within 6 words of its card's first word: 0.3 s to land
 plus 6 / 4 s is under 2 s. The test asserts the proxy, not the time.
 
@@ -412,14 +474,32 @@ R3. Follow the Path of Building builds folder.
   PoB's own character import the build tracks the live character.
 - Effort: M. Risk: wrong file picked (bounded by the class and level
   checks and the alert naming the file); a custom PoB folder (read
-  `buildPath` from PoB's Settings.xml, or let the player pick once).
+  `buildPath` from PoB's Settings.xml, or let the player pick once); a
+  portable or dev PoB keeps its user data next to the program
+  (Main.lua:82-84), so the default path is wrong there and the one-time
+  pick is the fallback.
 - ToS check: reads the player's own planner files, written by PoB, not
   by the game: no game file, no process, no clipboard, no screen, no
   network, no input. GGG's read rules cover the screen, the clipboard and
-  the game's logs [GGG]; reacting to a file change starts no macro and no
-  game action. It is a new local read, so it gets its own opt-in with the
-  path shown and its own decision (Open question 1).
-- Depends on: decision 0045 (store, providers); a new decision.
+  the game's logs, and bar macros triggered by a file change [GGG]; a
+  file change here starts no macro and no game action. Read literally,
+  the CLAUDE.md floor's "READ ONLY what GGG permits" list names only
+  Client.txt, the clipboard / screen per press and public web data, and
+  a PoB file is none of them; the precedents that AshLight already reads
+  non-game local files are decision 0033 (filter bytes the player picks)
+  and the decision 0037 amendment (one file of the pinned PoB checkout).
+  The file holds the same build text the player pastes today. Verifier
+  call: keep R3 as a recommendation but do not build it before a
+  recorded ruling (Open question 1); if the ruling says the floor list
+  is exhaustive, R3 moves to Rejected and R4 carries the build pain.
+- Settled decisions: decision 0004 (and the CLAUDE.md stack clause)
+  says the optional calc gets "only user-pasted build text and
+  hotkey-read item text"; a build read from a file widens that input and
+  needs a recorded amendment, not a reversal (none of 0004's "Reverses
+  if" conditions is met). Decision 0045 makes sources pluggable and says
+  turning a provider on is its own decision.
+- Depends on: decision 0045 (store, providers); a new decision plus the
+  0004 amendment.
 - Files likely touched: server/al/theorycraft/providers.py, store.py,
   model.py (XML entry), server/al/core.py (tick_build), server/al/http.py,
   web/tc.js, web/buildlive.js, tests/.
@@ -442,13 +522,21 @@ R4. Let the item hotkey load a copied build.
 - ToS check: the same single clipboard read on the same manual AshLight
   hotkey press (decision 0003); nothing new is read, nothing is sent to
   the game; the share-link fetch stays under the web-data opt-in
-  (decision 0013) and its host allow-list.
-- Depends on: nothing.
+  (decision 0013) and its host allow-list. The "Build loaded" card uses
+  the one overlay card slot like an item card (decision 0014 F2).
+- Settled decisions: the text reaching the calc is a hotkey-read build,
+  not "user-pasted build text" in the words of decision 0004; the same
+  player-copied text reaches the same parser, so record a one-line
+  amendment to 0004 with R4 (no "Reverses if" condition needed, nothing
+  is reversed).
+- Depends on: the 0004 amendment line.
 - Files likely touched: server/al/core.py, server/al/state.py (card
   words), app/overlay/overlay.js, web/index.html (hint text), tests/.
 - Acceptance test: POST /api/eval with a fixture code changes `build`
-  and returns a "Build loaded" card; item text still gives a verdict; a
-  link with web data off gives the existing refusal words.
+  and returns a "Build loaded" card; item text still gives a verdict;
+  text that paste.detect calls "code" but that fails to decode falls
+  back to the item check; a link with web data off gives the existing
+  refusal words.
 - ZERO-CLICK: 1 press, required by the floor (one read per manual press).
 
 R5. A roll for the item check.
@@ -463,6 +551,14 @@ R5. A roll for the item check.
 - Effort: S. Risk: a clash with a game bind hides that bind while
   AshLight runs (a global shortcut takes the key from every program);
   the Checks row for the hotkey already reports a failed registration.
+  A Ctrl+letter default is also taken from the browser and every other
+  program while AshLight runs (server/al/hotkeys.py:4-5 says so for all
+  AshLight keys), so pick a letter no common program binds, or keep
+  Alt+Shift+E as a listed alternative.
+- Settled decisions: decision 0014 F1 names Alt+Shift+E as the default;
+  changing the default keeps its contract (own hotkey, one read per
+  press, config `eval_hotkey`), so it is an amendment to the default,
+  not a reversal.
 - ToS check: still the player's own Ctrl+C, then one manual press of an
   AshLight hotkey with one clipboard read; no input sent, no watcher.
 - Depends on: note 0039 R3 for the in-app setting.
@@ -497,7 +593,8 @@ R7. Spike: one press per item by a screen read.
 - Impact: M if it reads mods exactly, none otherwise. Effort: L. Risk:
   misread numbers give wrong verdicts; a new optional dependency
   (decision 0002 keeps the core stdlib-only, so it must follow the
-  decision 0018 pattern or use the OS engine [OCR]).
+  decision 0018 pattern or use the OS engine [OCR], whose languages
+  depend on what the device has installed).
 - ToS check: one screen read per manual AshLight key press is what the
   floor and [GGG] allow; no continuous capture, no timer, nothing sent
   to the game. The capture is made by AshLight's own window process, not
@@ -516,7 +613,9 @@ R7. Spike: one press per item by a screen read.
   expiry sentence, tip heading, "Upgrade search" / "Price" / "Price and
   points" headings and sentences (R1; all kept in Details or Run).
 - Cut: the dead `/api/clipboard-read` stub (server/al/http.py:311-317;
-  501 since the hotkey reads in the client). One route less to explain.
+  501 since the hotkey reads in the client, decision 0014 F1 chose the
+  client read over it). One route less to explain. Its one consumer,
+  tests/test_http_security.py:152-154, goes with it.
 
 ## Rejected
 
@@ -547,8 +646,12 @@ R7. Spike: one press per item by a screen read.
 ## Open questions
 
 1. R3 needs a recorded decision that a player-chosen PoB builds folder
-   is a permitted local read (not a game file; opt-in; path shown).
-   Adjudicator can take it; the evidence is in the R3 ToS check.
+   is a permitted local read (not a game file; opt-in; path shown), and
+   whether the CLAUDE.md floor's "READ ONLY" list is exhaustive for
+   non-game local files; plus the decision 0004 input-clause amendment
+   (R3 and R4). Adjudicator can take it; the evidence is in the R3 ToS
+   check. The verifier could not spawn one (no agent tool in its run),
+   so it is filed, not ruled.
 2. R5: which key next to C is free in the game's default binds. One look
    at the game's input options settles it (operator, or the live capture
    session of note 0038 R4).
@@ -556,3 +659,66 @@ R7. Spike: one press per item by a screen read.
    after R5 the saving is 1 key press per item.
 4. B4 (100 elements) and B2 (40 px) are set from one prototype run with
    short synthetic strings; confirm on the first real run of R2.
+
+## Verification
+
+Independent verifier, 2026-11-18. No product file, core or browser was
+started; the live core and Client.txt were not touched.
+
+Checked:
+- Code citations: about 75 path:line claims opened (web/index.html 34 lines,
+  web/app.js 7, web/app.css 2, web/tabs.js 2, web/search.js, web/health.js,
+  web/zoneguide.js, web/chars.js, app/main.js 5, app/eval_hotkey.js,
+  app/client/tray_menu.js, server/al/http.py 5, core.py, state.py,
+  hotkeys.py, theorycraft store.py 2, buildlive.py, providers.py,
+  paste.py, scripts setup / run / autostart, design 0001:117-121). All
+  hold; the setup.ps1 and run.ps1 cites point at the parameter blocks of
+  the typed commands, which is what the inventory means. 15 named
+  "files likely touched" exist.
+- Numbers: every Play overflow figure in the Summary and F1 re-read from
+  the pack's per-state JSON (18 column values at two sizes, 6 of 9 and 5
+  of 9 scrolling states, 0 page overflow in 135 dashboard captures, 397
+  words and 133 elements in state c); F2, F3, F5 block heights, word
+  counts, spare height (182 px, 79 px) and the 7 px at 1024x700 re-read
+  from the author's probe files (`<sidecar>\Scratch\up-0043\`); F6 guide
+  statistics recounted from server/al/data/zone_guide.json (93 entries,
+  Clearfell 46 words, median 12, 90th percentile 26, counting every text
+  field); F11 other-tab overflows and F12 control counts re-read from the
+  pack.
+- Web: 4 sources re-fetched (GGG docs, Berkeley abstract, Microsoft OCR
+  page; NHTSA answered 403, checked through search summaries); PoB
+  source lines re-read in the pinned checkout.
+- ToS floor: R1 to R7 tested against every floor rule; Rejected list
+  re-checked (all 9 stay rejected).
+- Settled decisions: R3, R4 against decision 0004; R5 against 0014 F1;
+  the clipboard-read cut against 0014 F1; R1, R6 against 0019, 0029,
+  0013.
+- Completeness: brief points 1 to 5 covered; the per-act reduction
+  (brief point 2) was missing for most acts and was added.
+
+Corrected:
+- GLANCE: the abstract does not say the amount of information sets the
+  reading speed; claim withdrawn from Sources and the budget model.
+- OCR: the class is part of the Windows API since build 10240 (now
+  sourced); only the per-device recognizer language stays UNVERIFIED.
+- PoB: user path comes from the runtime's GetUserPath (Documents
+  UNVERIFIED); portable or dev PoB keeps user data next to the program
+  (Main.lua:82-84), added as an R3 risk; citation widened to :87-91.
+- Summary: the idle figures were written as a left / right pair; they
+  are the left column at two sizes.
+- R3: the literal floor reading and the decision 0004 input clause
+  added; R3 is held behind a ruling, R4 is built first.
+- R4: decision 0004 amendment line, card slot (0014 F2) and a decode
+  fallback test added.
+- R5: system-wide key capture risk for a Ctrl+letter default and the
+  0014 F1 default noted.
+- Cut list: the stub's test consumer named.
+- Added: "Furthest reduction per act" for I1 to I25.
+
+Still UNVERIFIED: the 4 words a second rate; that fewer words read
+faster; NHTSA figures (search summaries only); an OCR recognizer
+language on every install; PoB's user path being Documents; which
+Ctrl neighbour of C is free in the game's default binds (Open question
+2); the prototype element count (B4) and real-string heights (B2), since
+the probe ran states c and d only with synthetic strings, calc off and a
+thin price book.
