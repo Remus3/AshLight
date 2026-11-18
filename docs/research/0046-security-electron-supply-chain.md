@@ -6,9 +6,9 @@ session in `app/`, the 45.x line and an upgrade policy, the npm tree, the
 hash pins of the optional calc component, the Python and Node floors,
 and provenance for an unsigned, no-revenue release. The local HTTP
 surface is research 0045; packaging choices are 0053.
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (accessed 2026-11-17; S1-S7, S9, S10, S12-S21, S24-S26 re-fetched 2026-11-18)
 
 - S1: https://releases.electronjs.org/releases.json
 - S2: https://releases.electronjs.org/schedule.json (future dates tentative)
@@ -38,7 +38,10 @@ Status: draft
 - S22: https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/overview
 - S23: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies
 - S24: https://signpath.org/terms
-- S25: https://osv.dev/vulnerability/GHSA-4x49-vf9v-38px
+- S25: https://osv.dev/vulnerability/GHSA-4x49-vf9v-38px (and
+  https://api.osv.dev/v1/vulns/GHSA-4x49-vf9v-38px)
+- S26: https://api.github.com/repos/electron/electron/security-advisories
+  (newest 10, accessed 2026-11-18)
 
 Local, read-only, 2026-11-17 (Node 24.15.0, npm 11.12.1, Python 3.14.4):
 - L1: `npm audit --json` in `app/`: 0 vulnerabilities, 13 packages.
@@ -64,8 +67,9 @@ No critical or high finding: of the 20 Electron checklist items [S5] the
 shell meets 13, 2 do not apply (no webview), 2 are partial (15, 17) and 3
 are open (16 staying current, 18 file:// pages, 19 fuses). The pin 45.3.3
 (2026-11-14) is on the newest stable major, one non-security patch behind
-45.3.4 (2026-11-17); the line ends 2027-04-27 and 46.0.0 is due
-2027-01-05, both tentative. The real risk is lag: 11 releases in 27 days
+45.3.4 (2026-11-17), and no published Electron advisory affects it
+[S26]; the line ends 2027-04-27 and 46.0.0 is due 2027-01-05, both
+tentative. The real risk is lag: 11 releases in 27 days
 and nothing watches them (F1, R1). The Electron binary is hash-chained
 from the lockfile (re-verified here), but environment overrides can cut
 the chain and the unsigned exe is never checked (F2, R4). npm: 13
@@ -146,7 +150,12 @@ F1 (medium). Version lag is the one recurring Electron risk and nothing
 tracks it.
 - 45.3.4 holds one fix (a leak of right-clicked elements) on the same
   Chromium 156.0.8078.100 and Node 24.22.3 as the pin: nothing
-  security-relevant is missing today [S1, S3].
+  security-relevant is missing today [S1, S3]. Of the newest 10 Electron
+  security advisories (2026-08-29 to 2026-10-22), every one that names
+  the 45 line was fixed in a 45.0.0 alpha or beta, before 45.0.0 stable;
+  none lists 45.3.3 as vulnerable [S26].
+- Within a supported major only the newest minor gets fixes [S4], so the
+  pin must follow minors (45.3.x is the newest minor today).
 - 11 stable releases in 27 days; 9 of the 10 after 45.0.0 moved Chromium
   or Node, backported upstream fixes or distrusted a certificate
   authority [S3]. Chromium 156 is Chrome's Extended Stable milestone,
@@ -154,8 +163,10 @@ tracks it.
   [S10].
 - The latest three majors are supported [S4]: 45 until 2027-04-27, 44
   until 2027-03-02, 43 until 2027-01-05; 46.0.0 is planned for
-  2027-01-05 and 47.0.0 for 2027-03-02, all tentative [S2]. No stable
-  major newer than 45 exists.
+  2027-01-05 (end of life 2027-06-22) and 47.0.0 for 2027-03-02 (end of
+  life 2027-08-17), all tentative [S2]. No stable major newer than 45
+  exists: 46 is at 46.0.0-alpha.11 (2026-11-16, Chromium 160, Node
+  26.13.1), beta due 2026-12-03 [S1, S2].
 - Only PoB releases are watched (tools/tc_drift.py:1-10); the lane bump
   prompt has no waiting period (tools/loop_inbox.py:128-129). A bump is
   also unsafe to apply (reasoned, not run here): setup.ps1:228-245 runs
@@ -170,8 +181,11 @@ hole and no check at the end.
   checksums.json -> zip SHA-256; the cached zip matches [L4].
 - The package's install.js takes overrides from the caller's
   environment, which setup.ps1:240 passes through: a remote-checksum
-  switch (and its `npm_config_` twin) skips the packaged checksums, and
-  the mirror variables move the download host. Set together they replace
+  switch (and its `npm_config_` twin) skips the packaged checksums
+  (install.js:45-48 in the electron 45.3.3 package), the cache root,
+  platform, architecture and dist-path variables redirect what is used
+  (install.js:18-19, :43-44, :71), and the mirror variables, read by
+  prefix in @electron/get, move the download host. Set together they replace
   both the binary and the checksum it is checked against, silently.
 - Nothing compares the installed exe with a tracked value; the shortcut
   starts whatever sits at that path (setup.ps1:198-204); the exe has no
@@ -184,8 +198,11 @@ waiting period.
   and `npm ci --ignore-scripts` gives the same tree [L3]. With no
   lockfile, setup.ps1:233-235 installs unpinned versions, not a refusal.
 - The lockfile holds debug 4.4.3 (package-lock.json:56-59), the clean
-  release after 4.4.2 carried malware for some hours on 2025-09-08
-  [S25]: a bump on that day with scripts allowed is the scenario.
+  cache-busting release published on 2025-09-13 after 4.4.2 carried
+  malware for most of 2025-09-08 [S25]. That payload sat in the module
+  code and targeted browser bundles, not an install script, so it argues
+  for the waiting period (a lockfile bump on that day would have pulled
+  it), while ignore-scripts guards the other common worm route.
 - 6 of 13 packages carry a provenance attestation; electron itself has
   only a registry signature [L2, S9].
 - electron sits under devDependencies although it is the runtime:
@@ -351,8 +368,9 @@ R1. ELECTRON-WATCH and a written upgrade policy.
   bump item, at 2 days none; a schedule fixture inside the 30-day window
   yields the note; setup with a live client exits before npm runs.
 - ZERO-CLICK: unattended for the operator; other users get one Checks
-  note naming setup.ps1 (a silent fetch at start would break the
-  network-off-by-default rule).
+  note naming setup.ps1, computed offline from the end-of-life date that
+  R4's tracked config/electron_pin.json carries (a fetch by the app would
+  break the network-off-by-default rule, decision 0013).
 
 R2. Lock npm down.
 - Action: a tracked `app/.npmrc` (ignore-scripts, engine-strict and
@@ -391,9 +409,12 @@ R3. Runtime floors: fix Node now, set a Python policy.
 R4. Close the Electron chain at both ends.
 - Action: setup.ps1 clears the install override variables (the
   remote-checksum pair, the mirror family, ELECTRON_OVERRIDE_DIST_PATH,
+  ELECTRON_INSTALL_PLATFORM / _ARCH, electron_config_cache,
   force_no_cache) before npm and install.js run; a tracked
-  `config/electron_pin.json` holds the version, the zip SHA-256 and the
-  electron.exe SHA-256 and size per architecture; setup verifies the exe
+  `config/electron_pin.json` holds the version, the line's end-of-life
+  date, the zip SHA-256 and the electron.exe SHA-256 and size per
+  architecture (today, x64: 250,093,056 bytes, cf7ff337...0724 [L5]);
+  setup verifies the exe
   after install; run.ps1 re-verifies only when its size or mtime changed.
 - Impact M; Effort S. Risk: arm64 needs its own entry (ship both, or
   warn and continue on an unknown architecture).
@@ -461,8 +482,11 @@ R7. Verify the calc component at use, and pin contents, not bytes.
   only when its extracted tree digest equals the pin, under a size cap,
   and the log says so; (e) bridge.lua removes the C loaders, bridge.py
   stops setting LUA_CPATH, and `tc_drift.py apply` writes the digests.
-- Impact M; Effort M. Risk: start time (0.07 s measured); (d) amends
-  decision 0018 in the direction its own "Reverses if" points.
+- Impact M; Effort M. Risk: start time (0.07 s measured); (d) is an
+  amendment to decision 0018, not a reversal: its "Reverses if" (GitHub
+  archives stop being byte-stable) is not met today, since GitHub only
+  declines to promise byte stability and has announced no change [S14];
+  (d) removes the failure mode before it happens.
 - ToS check: no floor rule touched; the component only ever gets pasted
   build text and hotkey-read item text.
 - Depends on: none. Files: config/tc_pins.json, tools/tc_pin.py,
@@ -477,7 +501,7 @@ R7. Verify the calc component at use, and pin contents, not bytes.
 R8. Narrow external links and downloads.
 - Action: open a link only while the companion window has focus, at most
   1 per second and 5 per minute, https only, passing the parsed href,
-  with hosts from one tracked list shared with web/tc.js:49; accept
+  with hosts from one tracked list shared with web/tc.js:48-52; accept
   downloads only from the core origin with an extension on a short list
   (.build, .filter, .json, .txt); log each refusal.
 - Impact L to M (no browser window over the game); Effort S. Risk: a
@@ -598,3 +622,71 @@ R11. Move the two local pages off file://.
   does (decision 0044)? Adjudicator; assumed here: read yes, bump no.
 - Do the 46.x builds keep the two in-process switches? Known on
   2027-01-05 at the earliest; the smoke test's process count tells.
+
+## Verification
+
+Independent check on 2026-11-18 by a second agent (not the author).
+
+Checked:
+- Code: 64 of 66 path:line citations opened and read (all of main.js,
+  client/window.js, both preloads, link.js, launcher.js, the two pages,
+  package.json, package-lock.json, setup.ps1, run.ps1, al_detach.ps1,
+  README.md, tc_pin.py, exepin.py, bridge.py, bridge.lua, tradestats.py,
+  tc_drift.py, loop_inbox.py, al_lane.py, tc_pins.json, http.py,
+  pre-push, the kit identity guard, ROADMAP.md, the 2026-11-17 audit,
+  brand_render.js, test_overlay_smoke.py, make_icons.py,
+  client.test.js). 63 hold as written; 1 range corrected (web/tc.js).
+  The lockfile has 13 entries, 13 sha512 integrity values, 0
+  hasInstallScript; the electron package has no scripts block; its
+  install.js reads the override variables F2 names (citations added).
+- Web: 22 of 26 sources re-fetched (S1-S7, S9, S10, S12-S21, S24-S26).
+  Confirmed: the 11 releases from 45.0.0 (2026-10-21) to 45.3.4
+  (2026-11-17), their Chromium and Node versions, the 45.3.4 and 45.3.3
+  notes, F1's "9 of 10" (6 moved Chromium or Node per S1, 45.2.0 and
+  45.2.3 backported upstream fixes, 45.3.1 distrusted the revoked eMudhra
+  intermediates; only 45.3.4 did none), the schedule (45 end 2027-04-27, 44 2027-03-02, 43 2027-01-05,
+  46.0.0 2027-01-05), npm dist-tag 45-x-y = 45.3.4, Chrome Stable 158 and
+  Extended 156.0.8078.108 rolling out 2026-11-17, the 20-item checklist
+  and its numbering, the 9 fuses, Windows ASAR integrity from 30, the
+  three-major support rule, libuv's cwd-first search, Node 20 end
+  2026-04-30 / 22 2027-04-30 / 24 2028-04-30, Python branch status and
+  the Windows installer dates, GitHub's archive stability wording, the
+  Dependabot cooldown keys, the dev-dependency preset being on by default
+  for public repositories, attestations giving SLSA Build Level 2,
+  SmartScreen hash reputation and the Smart App Control note, the signing
+  prices and the EV change in 2024, SignPath's per-release manual
+  approval, and the debug 4.4.2 incident.
+- Local, re-run read-only: `npm audit` (0 vulnerabilities, 13
+  packages, L1), `npm audit signatures` (13 signatures, 6 attestations,
+  L2), electron.exe size, SHA-256 and NotSigned status (L5).
+- ToS floor: all 11 recommendations re-read against every floor rule;
+  none needs a floor change (R1's reads are by the dev loop, not the
+  app; R6 enforces the no-fetch rule). Settled decisions: no silent
+  contradiction; R7 (d) relabelled an amendment of 0018 whose "Reverses
+  if" is not met; R11 needs research 0045 for the origin change.
+- Completeness against the brief: every point is covered; the brief's
+  "security fixes since 45.3.3" was missing an advisory check and was
+  filled (S26).
+
+Corrected:
+- F3: the debug 4.4.2 malware was a runtime payload for browser
+  bundles, not an install script; the example now argues for the
+  waiting period, and 4.4.3's date (2025-09-13) is added.
+- F1 and Summary: no Electron advisory affects 45.3.3 (S26); only the
+  newest minor of a major gets fixes (S4); 46 and 47 end-of-life dates
+  and 46's alpha state added.
+- F2 and R4: install.js line citations; the cache-root and
+  platform / architecture overrides added to R4's clear list; the pin
+  file carries the end-of-life date and today's exe hash.
+- R1 ZERO-CLICK: the other-user Checks note is now computed offline from
+  the tracked pin file instead of an unspecified source.
+- R7: decision 0018 wording; R8: web/tc.js range.
+
+UNVERIFIED (left labelled or carried as stated):
+- F6: whether `requestingOrigin` carries a trailing slash in Electron 45.
+- F15: Smart App Control behaviour on the stock electron.exe and a
+  locally built luajit.exe (no Windows 11 machine with it on).
+- F4: the actual failure under Node 20 (not reproduced).
+- L3, L4, L6, L7 (scratch npm ci, zip hash, SBOM, PoB tree hashing) were
+  not re-run; S8, S11 (only the search-order line), S22 and S23 were not
+  re-fetched in full.
