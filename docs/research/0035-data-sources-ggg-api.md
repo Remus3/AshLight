@@ -5,14 +5,15 @@ permitted data sources (GGG platform). Scope: what GGG's developer platform
 offers a local PoE2 desktop tool today, a claim-by-claim re-check of
 research 0033, and what TC-OAUTH-REG, TC-IMPORT and TC-CURX can be. Only
 documentation pages were read; no API endpoint was called.
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (all accessed 2026-11-17; re-fetched for verification 2026-11-18)
 
 Each D- page was read from the docs watch cache
 (`<sidecar>\Cache\ggg_docs\pages\*.txt`, written 2026-11-18T02:06:44Z, which
 is 20:06 local on 2026-11-17); D-IDX, D-AUTH and D-LOG were re-read live at
-about 23:30 local and matched the cache.
+about 23:30 local and matched the cache. The verifier re-fetched all six D-
+pages, TOU and ROBOTS live on 2026-11-18 (see Verification).
 
 - D-IDX: https://www.pathofexile.com/developer/docs (policy, errors, limits)
 - D-AUTH: https://www.pathofexile.com/developer/docs/authorization
@@ -22,8 +23,12 @@ about 23:30 local and matched the cache.
 - D-GAME: https://www.pathofexile.com/developer/docs/game
 - TOU: https://www.pathofexile.com/legal/terms-of-use-and-privacy-policy
 - ROBOTS: https://www.pathofexile.com/robots.txt
-- ARCH: 40 archived copies of D-IDX, 2024-01-16 to 2026-11-03, at
+- ARCH: archived copies of D-IDX, 2024-01-16 to 2026-11-03, at
   https://web.archive.org/web/<stamp>/https://www.pathofexile.com/developer/docs
+  (capture list: https://web.archive.org/cdx/search/cdx?url=pathofexile.com/developer/docs,
+  accessed 2026-11-18)
+- REL-1.0: https://www.rpgsite.net/news/21188-path-exile-2-reaches-its-10-full-release-on-december-11
+  (PoE2 1.0 on 2026-12-11; search result, accessed 2026-11-18)
 - TREE: https://github.com/grindinggear/poe2-skilltree-export and its public
   feeds `commits/main.atom`, `tags.atom`, `releases.atom`
 - F-REG: https://www.pathofexile.com/forum/view-thread/3683605
@@ -46,8 +51,9 @@ about 23:30 local and matched the cache.
 
 - Registration is closed, with no channel listed. It is the second
   closure since 2024; the first ended 4 to 6 weeks after a major launch,
-  so a reopening some weeks after 1.0 is plausible (our inference).
-- A desktop tool gets a public client only: PKCE, a registered loopback
+  so a reopening some weeks after 1.0 (2026-12-11) is plausible (our
+  inference).
+- A desktop tool gets a public client only: PKCE, a local (loopback)
   redirect, access 10 h, refresh 7 days with no extension. Best case: one
   browser approval per 7 days, not ROADMAP's "one sign-in ever".
 - PoE2 data for a public client: own characters (gear, skills, passives;
@@ -82,8 +88,10 @@ about 23:30 local and matched the cache.
   allowlist, cookie refused (:183-210), User-Agent
   `AshLight/<version> (...) (contact: ...)` (:73-79), 2 MiB default cap
   (:32). No rate-limit header parser is in the tree: the header-driven
-  limiter of commit 31e4ea4 (`server/al/trade.py`, about 130 lines, with
-  a 213-line test file) left in 5f0e866 with decision 0017.
+  limiter (`parse_rate_headers` and `RateLimiter` in `server/al/trade.py`,
+  lines 61-184 at commit 31e4ea4, added in 3f1df5d; test file
+  `tests/test_trade_limiter.py`, 213 lines) was deleted in 5f0e866 with
+  decision 0017.
 - Ports: block 8960-8979, core 8960 (`server/al/ports.py:6-9`); see R2.
 - Tree export: fetched at build time from the `main` branch of TREE
   (`server/al/theorycraft/snapshot.py:66-67`), only with web_data on and a
@@ -100,17 +108,21 @@ to process new applications at present and that applications an account
 already owns are managed from a profile link. No mail address, form or
 other channel is on the page (watch state: 0 forms, 0 mail links).
 
-ARCH, 40 archived copies of that page:
-- open, by mail to an OAuth address: 5 copies, 2024-01-16 to 2024-09-09;
-- closed: 10 copies, 2024-09-29 to 2025-01-03;
-- open, by mail: 19 copies, 2025-01-20 to 2026-07-02;
-- closed: 6 copies, 2026-07-31 to 2026-11-03, and today.
+ARCH, archived copies of that page (the capture list holds 60
+distinct-content captures, 2024-01-16 to 2026-11-03; the verifier re-read
+the six boundary captures, the author's per-phase copy counts of 5 / 10 /
+19 / 6 out of 40 were not reproduced and are dropped):
+- open, by mail to an OAuth address: to 2024-09-09 (re-read);
+- closed: 2024-09-29 (re-read) to 2025-01-03 (re-read);
+- open, by mail: 2025-01-20 (re-read) to 2026-07-02 (re-read);
+- closed: 2026-07-31 (re-read) to 2026-11-03, and today.
 
 The first closure lasted 96 to 133 days and ended 28 to 45 days after the
 PoE2 early access launch (2024-12-06, EA-DATE). The current one began
 between 2026-07-02 and 2026-07-31 (docs entry 3.29.0 is dated 21/07/2026,
-D-LOG) and is 109 to 138 days old. If GGG repeats the pattern around 1.0,
-the page reopens between about 2027-01-08 and 2027-01-25: our inference,
+D-LOG) and is 110 to 139 days old on 2026-11-18. If GGG repeats the
+pattern around 1.0 (2026-12-11, REL-1.0), the page reopens between about
+2027-01-08 and 2027-01-25: our inference,
 not a GGG statement. Why it matters: the operator act is probably weeks
 away, so R1 to R4 can be finished first. A staff reply to a registration
 question in January 2025 gave only the general tool warning (F-REG): the
@@ -135,21 +147,30 @@ channel at reopening is unknown until the watch captures it.
 - Redirect: a local URI (the page's example is a 127.0.0.1 address with a
   port and a path). The `redirect_uri` sent must match the client's
   registered URI. No port rule is stated, so a port in 8960-8979 is
-  admissible, but it is fixed at registration.
+  admissible. Whether the match includes the port is UNVERIFIED: read
+  literally the port is fixed at registration, but GGG says it closely
+  follows OAuth 2.1, and RFC8252 section 7.3 requires an authorization
+  server to accept any port on a loopback IP redirect. Plan for a fixed
+  port and ask (R2).
 - The authorization code lives 30 seconds. Tokens: access 10 hours,
   refresh 7 days (confidential clients: 28 and 90 days).
 - Rate limits are shared between all public clients. The consent page
   warns the user that the request cannot be verified.
 - The token answer carries `username` and `sub` next to the tokens.
 - Users review and revoke tokens on their profile page; the revoke
-  endpoint needs `oauth:revoke`, which is not a scope a client can ask for.
+  endpoint needs `oauth:revoke`, which is absent from the list of scopes
+  a client may request.
+- A 401 means the token expired or was revoked; a 403 means the token
+  lacks the scope (D-AUTH, Authorizing a Request).
 - Guidelines: no credentials in code or in a distributed binary; one
   product per registered application.
 
 Practice (POB-API, POB-SRV): PoB-PoE2 uses its own client id, S256, a
 `localhost` redirect on three fixed ports (49082 to 49084, tried in
-order) and a 60 s wait. That suggests GGG matches the port and accepts
-several registered URIs (inference). RFC8252 section 8.3 prefers the IP
+order) and a 60 s wait. Its authorize URL sends no `redirect_uri` at all;
+only the token request names `http://localhost:<port>`. That fits either
+several registered URIs or a port-agnostic loopback match (inference;
+POB-API, POB-SRV re-read 2026-11-18). RFC8252 section 8.3 prefers the IP
 literal over `localhost`; section 8.12 forbids an embedded web view.
 
 ### F4 - "One sign-in ever" is impossible: the 7-day ceiling
@@ -229,6 +250,9 @@ Shape changes that matter:
   `desecratedMods` were removed.
 - Entry 0.5.0: `frameType` is deprecated for `frameTypeId`, a string whose
   values D-REF does not list.
+- Entry 3.30.0 (12/11/2026): ItemMod gained `rareonly`. Note also that
+  D-REF types the Character `realm` field as pc, xbox or sony (poe2 is not
+  listed there, only in the path), so the reader must not depend on it.
 
 Extra value: `current` may name the character being played at start
 (decision 0045 lists the official API as a possible better key);
@@ -244,9 +268,11 @@ text of `quest_stats` are UNVERIFIED until a real answer is seen.
   in seconds; several windows), `X-Rate-Limit-<rule>-State` and
   `Retry-After` on a 429. Frequent breaches cost the application access.
 - Too many 4xx answers in a short time (401, 403 and 429 count) restrict
-  the application or user. A client must refresh before the access token
-  expires, take character names from the list call and never retry inside
-  a restriction.
+  the application or user, and a client must make reasonable attempts to
+  stay under that threshold. (The draft also listed "refresh before
+  expiry, names from the list call, never retry inside a restriction" as
+  D-IDX rules; no such text is on D-IDX, D-AUTH or D-REF on 2026-11-18,
+  so they are our design rules, not GGG's.)
 - Errors: `{"error": {"code", "message"}}` with codes 0 to 10; act on the
   code. OAuth endpoints answer in the RFC form.
 - User-Agent: every application that uses the API sends a header starting
@@ -266,8 +292,9 @@ Probe, 2026-11-17: an item in today's documented shape (ItemMod objects in
 `implicitMods` / `explicitMods`, plus `bondedMods` and `runeMods`) left
 `charjson.item_text` with the rune mod only. Cause:
 `server/al/theorycraft/charjson.py:134-137` keeps a mod only when it is a
-string, and `MOD_FIELDS` (:63-64) lists four fields GGG removed and omits
-`bondedMods`. The fixture uses the old string form
+string, and `MOD_FIELDS` (:63-64) lists three fields GGG removed
+(`fracturedMods`, `craftedMods`, `desecratedMods`) and omits `bondedMods`
+(verifier re-ran the probe 2026-11-18: same result). The fixture uses the old string form
 (`tests/tc_fixtures.py:123-124`), so the tests pass.
 
 Lesser gaps from the same probe:
@@ -355,6 +382,11 @@ exchange overview is in use (decision 0026).
 - ROBOTS disallows `/api/`, `/search/` and account pages for every agent,
   not `/developer/`: the docs watch stays inside it, so decision 0044's
   reverse condition is not met.
+- D-LOG entry 3.30.0 (12/11/2026) reworded the macro and overlay policy.
+  Research 0001 already records that entry, and its quoted overlay and
+  macro rules match the live D-IDX text of 2026-11-18 (manual invocation;
+  timers, file-change reactions and screen reading named as automated;
+  one screen or clipboard read per manual key press; user awareness).
 - Research 0001 keeps the verified quotes. Nothing here changes the floor.
 
 ### F13 - Research 0033, claim by claim
@@ -382,7 +414,9 @@ Still true (17):
 
 True but missing a binding detail (2):
 18. Loopback redirect with "no port rule": the URI must equal the
-    registered one, so the port is fixed at registration (F3).
+    registered one, so the port may be fixed at registration; RFC8252
+    section 7.3 says the opposite for loopback, so this stays a question
+    for GGG (F3, R2).
 19. Token lifetimes: the refresh token cannot be extended (F4), and the
     server-side storage sentence was not recorded.
 
@@ -442,7 +476,12 @@ No registration needed: R1, R2, R3, R4, R7. Waiting for GGG: R5, R6.
   questions for GGG: refresh tokens for a desktop client, and the public
   Currency Exchange endpoint) and a decision record for scopes, ports,
   token store, the User-Agent contact and the 7-day behaviour. Restate
-  `ROADMAP.md:284` as "one browser approval per 7 days at most".
+  `ROADMAP.md:284` as "one browser approval per 7 days at most". The scope
+  change amends decision 0004 item 4 (it names `account:profile`); that is
+  a detail of the import path, not the settled PoB-interop core, so the
+  new record states the amendment and its own "Reverses if" (GGG needs
+  `account:profile` for the User-Agent or consent). Register one fixed
+  port and ask whether others are accepted (F3).
 - Impact: H. Unblocks three rows; GGG's queue was described as slow, so a
   same-day send matters.
 - Effort: S. Risk: GGG may decline or stay closed; preparation is cheap.
@@ -525,7 +564,10 @@ one-shot listener; test cores fill the block from 8961 upward
   weekly approval. Depends on: TC-OAUTH-REG, R1, R4.
 - ToS check: documented endpoints, the player's own account by their
   consent on GGG's page, no POESESSID, no undocumented endpoint, nothing
-  sent to the game, headers obeyed.
+  sent to the game, headers obeyed. The level-up and zone triggers come
+  from the Client.txt tail the player already opted into; D-IDX's ban on
+  file-change triggers is part of the macro rules (input that affects the
+  game), and an API read sends no input, so the floor holds.
 - Files likely touched: `server/al/theorycraft/providers.py`,
   `server/al/core.py`, the Build tab under `web/`.
 - Acceptance test: the mocked-flow tests ROADMAP asks for, one live smoke
@@ -621,3 +663,55 @@ one-shot listener; test cores fill the block from 8961 upward
    strings on a live answer (F9): R1's optional paste or the first call.
 
 No adjudicator was needed for this note.
+
+## Verification
+
+Independent verifier, 2026-11-18. No API endpoint was called; only
+documentation pages, public repository pages, public archive captures
+and one search were read.
+
+Checked:
+- Web (B): 8 GGG pages re-fetched live (six D- pages, TOU, ROBOTS); every
+  D-IDX / D-AUTH / D-REF / D-LOG / D-DATA claim in F1 to F12 compared with
+  the live text (about 60 claims). Registration sentence, public client
+  rules, token lifetimes, refresh rotation and the server-side storage
+  sentence, the six account and six service scopes, the PoE2 note, the
+  character / leagues / item filter / ladder / Currency Exchange shapes,
+  the changelog entries and dates, the rate-limit headers, the 4xx rule,
+  the error codes and the User-Agent form all hold. The D-REF PoE2 tree
+  URL example decodes as stated (34 bytes, version 7, class 10, 5 nodes)
+  and D-AUTH's PKCE example pair round-trips. TREE: 7 commits (last
+  2026-09-04), 4 tags, licence null (repository metadata). ARCH: the six
+  boundary captures re-read. POB-API / POB-SRV: scopes, ports 49082 to
+  49084, 60 s wait, refresh token kept, response file written, the two
+  rate-limit policy names. RFC8252 sections 7.3, 8.3, 8.12. F-REG: thread
+  of January 2025 exists. REL-1.0 found by search.
+- Code (A): 31 path:line citations opened; all hold within two lines.
+  The F9 probe was re-run and reproduces (only the rune mod survives).
+  Local state re-read: watch state (6 pages, closed, 3.30.0, 0 forms,
+  0 mail links), snapshot manifest (5 repoe-fork files, no tree), local
+  config (web_data on, no contact), no REG_OPEN flag.
+- ToS floor (C): every recommendation and rejection re-tested; none needs
+  the floor bent. R5's event triggers were checked against the macro rule.
+- Settled decisions (D): no reversal proposed; R2's scope change is an
+  amendment of decision 0004 item 4, now stated as such.
+- Brief (E): (a) to (e) and the three rows are covered; nothing added.
+- Recommendations (F): all seven carry the required fields; ranking kept.
+- Hygiene (G): lint run before commit.
+
+Corrected (8): ARCH copy counts replaced by re-read boundary captures;
+closure age moved to 2026-11-18 and the 1.0 date sourced; loopback port
+match marked UNVERIFIED with the RFC8252 section 7.3 counter-rule (F3,
+F13 item 18, R2); three D-IDX "rules" in F8 that are not on any GGG page
+relabelled as our own; `MOD_FIELDS` holds three removed fields, not four;
+limiter history (added 3f1df5d, line range at 31e4ea4); the `oauth:revoke`
+wording; PoB's authorize URL carries no `redirect_uri`. Added: 401 / 403
+meanings, `rareonly` and the Character `realm` typing, the 3.30.0 policy
+rewording check, R5's macro-rule note, R2's decision 0004 amendment note.
+
+UNVERIFIED (remaining): whether GGG matches the loopback port; whether a
+desktop public client gets refresh tokens; staleness of a character
+answer; real rate-limit numbers; the `class`, `inventoryId`,
+`frameTypeId` and `quest_stats` values on a live answer; the meaning of
+`current`; the reopening window (inference only); the content of the
+staff reply in F-REG; the 0033 claims 20 to 23 (as labelled in F13).
