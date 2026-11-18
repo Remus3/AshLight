@@ -1,6 +1,6 @@
 AL NEXT SESSION
 ---------------
-SESSION: 6   (FLEET item 13 counter; /done writes n+1)
+SESSION: 7   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
@@ -91,7 +91,7 @@ flip on the plan-04 gates) is the reading of ruling LE-01; that the
 sentence on the one act left is the written skip of OA-2 (the message to
 poe.ninja) is the reading of ruling LE-38 (docs/plan/07, Rulings
 2026-11-18 (close-out); decision 0078).
-Quotes checked against the brief on 2026-11-18 (close-out 2): all three are word for word (the third now with the brief's backticks); the date in the lines is the day they were recorded, the copy of the brief read is stamped the evening of 2026-11-17.
+Quotes checked against the brief on 2026-11-18 (close-out 2): all three are word for word (the third now with the brief's backticks); the date in the lines is the day they were recorded, the copy of the brief read is stamped the evening of 2026-11-17; the brief is stamped 2026-11-17 and the operator handed it to the planning session on 2026-11-17 (local time), so the record lines carry the next day's date.
 Read back: grep -c prints 1 for each of the three line starts. Readers:
 GP-09 gate 1 (step 1; decision 0046 quotes the same words), GP-12 gates 0
 and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
@@ -263,21 +263,6 @@ Carried forward (not acted on yet):
   396 of 396 row ids in ROADMAP.md exactly once, the pointer line 1, the
   stale Next-action line 0, the three operator record lines 3) and row
   PLAN-LANDING is flipped. Nothing of wave 0 is carried into wave 1.
-- NOTE (RUN-LIVE-CLICKS-STRIKE, wave 1): its accept line greps ROADMAP.md
-  and this file for two words and wants 0 lines in both. Acted on at the
-  close-out 2 (commit 95e35e4): the row's title and its accept pattern
-  were reworded, so the row no longer holds the two words. Read back
-  2026-11-18: the accept's grep prints 0 for both files. The row stays
-  open for wave 1 (the read-back and the flip).
-- NOTE (07 Open points): the rulings carried here before (LE-69, LE-76,
-  LE-92 / LE-99 / LE-100, LE-96) had all been ruled at the close-out and
-  are applied (close-out 2, commit 95e35e4). Read back 2026-11-18: 07
-  Open points lists them as closed. What is left for their packages is
-  in the close-out 2 NOTE below.
-- NOTE (docs/plan/09, Checked on this machine): acted on at the close-out
-  2 (commit 95e35e4). Read back 2026-11-18: its git line names the
-  guarded push of decision 0046 (commits 7fe4993 and 01c2216), and
-  .githooks/pre-push no longer refuses every push.
 - NOTE (close-out 2, 2026-11-18; 07 Rulings 2026-11-18 (close-out 2),
   decision 0078): the six rulings that had been ruled but not applied
   (LE-69, LE-76, LE-92, LE-99, LE-100, LE-96) and six new ones (R1 to R6)
@@ -293,6 +278,9 @@ Carried forward (not acted on yet):
   suite when it happens. (Row AUTO-01, wave 2, re-checks and drops this.)
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
+- NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
+  applied: 0 removed, 3 kept, 0 listed (base main); kept lane-0, lane-1,
+  lane-2 (fleet_lanes lane worktrees).
 
 Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078),
 docs/plan/07-execution-plan.md, docs/plan/08-orchestration.md,
@@ -378,6 +366,11 @@ back before its commit, python tools/plan_check.py check prints ok 396
 packages, 39 waves, ROADMAP.md holds 395 open rows and every package id
 exactly once, the whole suite through the gate read 2404 passed / 3
 skipped and npm test 230/230; no remote, nothing pushed, HALT untouched.
+Session 6 /done (2026-11-18, read back): whole suite through the gate
+2404 passed / 3 skipped; npm test 230/230; leak sweep --tree and
+--history exit 0 (ARMED needles=24); plan_check ok 396 packages, 39
+waves; no remote, nothing pushed; HALT untouched; no lane or agent
+running. Server health not probed (a /done never touches the app).
 Inbox: 1 note (MAIN
 INFORMATION / TERMINAL, kit v32 join), classify -> skip terminal, no
 reply; the folder holds no other note.
