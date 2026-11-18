@@ -7,39 +7,47 @@ history, price watch, character keying, Checks, language notice, graphics
 advisor, hot reload, logon autostart, tray, copy helpers, the scripts) and
 the whole settings surface. Play features are dimension B2 (0038);
 usability and the click audit are B6 / B7 (0042, 0043).
-Status: draft
+Status: verified (2026-11-18; see the Verification section)
 
-## Sources (all accessed 2026-11-17)
+## Sources (all accessed 2026-11-17; the ones marked * re-fetched 2026-11-18)
 
 Web:
-- POB-REL: https://api.github.com/repos/PathOfBuildingCommunity/PathOfBuilding-PoE2/releases
-  (newest release v0.23.1, 2026-07-28: 88,943 installer and 41,395
-  portable downloads; no `.build` export in the last 4 release notes).
-- EE2-REL: https://api.github.com/repos/Kvan7/Exiled-Exchange-2/releases
-  (v0.16.3, 2026-09-06: 324,913 installer downloads; its update manifest
-  was fetched 1,608,214 times).
-- EE2-DOC: https://kvan7.github.io/Exiled-Exchange-2/download and its
-  quick-start and faq pages (the installer build updates itself; one
-  settings file under %APPDATA%, copied by hand on migration; hotkeys
-  changed in a settings screen opened from the overlay; nine game
-  languages; Windowed or Windowed Fullscreen only).
-- NS-README: https://github.com/NeverSinkDev/NeverSink-Filter-for-PoE2
+- POB-REL*: https://api.github.com/repos/PathOfBuildingCommunity/PathOfBuilding-PoE2/releases
+  (newest release still v0.23.1, 2026-07-28: 88,980 installer and 41,428
+  portable downloads on 2026-11-18; it predates the `.build` export
+  merge, so no release ships that export yet).
+- POB-PR*: https://api.github.com/repos/PathOfBuildingCommunity/PathOfBuilding-PoE2/pulls/2432
+  ("Add Path of Exile 2 BuildPlanner (.build) export", merged to the dev
+  branch 2026-08-27).
+- EE2-REL*: https://api.github.com/repos/Kvan7/Exiled-Exchange-2/releases
+  (v0.16.3, 2026-09-06: 324,973 Windows installer downloads on
+  2026-11-18; its Windows update manifest `latest.yml` was fetched
+  1,608,537 times).
+- EE2-DOC*: https://kvan7.github.io/Exiled-Exchange-2/download and its
+  faq page (the installer build updates itself, the portable one does
+  not; settings live in one folder under %APPDATA% that players copy by
+  hand when migrating; nine game languages; Windowed or Windowed
+  Fullscreen only). That hotkeys are changed in an in-app settings
+  screen is UNVERIFIED (not on the two pages re-read).
+- NS-README*: https://github.com/NeverSinkDev/NeverSink-Filter-for-PoE2
   (manual install folder; a subscription on the official filter ladder
-  updates by itself; otherwise a manual re-download about monthly;
-  FilterBlade for styling; a paid auto-updater). NS-API:
+  updates by itself; otherwise a manual re-download at least once a
+  league, better monthly; FilterBlade for styling; a paid auto-updater
+  for supporters). NS-API*:
   https://api.github.com/repos/NeverSinkDev/NeverSink-Filter-for-PoE2
   (2,852 stars, MIT, release 0.10.4a on 2026-10-15).
-- GGG-FILTER: https://www.pathofexile.com/item-filter/about (Import with
-  Optional, PoE2-only conditions; silent on account-hosted filters).
-- GGG-GAME: https://www.pathofexile.com/developer/docs/game (item filters
+- GGG-FILTER*: https://www.pathofexile.com/item-filter/about (Import with
+  Optional skips a missing file; silent on account-hosted filters).
+- GGG-GAME*: https://www.pathofexile.com/developer/docs/game (item filters
   and the Build Planner `*.build`, version 1, experimental; a build
   reaches the game by a website subscription, by the player's own upload
   there, or from the local planner folder, which the game watches).
-- NINJA-BP: https://poe.ninja/posts/poe2-build-planner-prototype (dated
-  Friday May 29, year not shown; 2026 fits the weekday: a `.build`
+- NINJA-BP*: https://poe.ninja/posts/poe2-build-planner-prototype (dated
+  "Fri May 29", year not shown; 2026 fits the weekday: a `.build`
   export for any listed character; passives and skills, no items yet).
-- MAXROLL: https://maxroll.gg/poe2/news/poe2planner-character-import-feature
-  (updated 2025-03-30: imports the player's own characters by login).
+- MAXROLL*: https://maxroll.gg/poe2/news/poe2planner-character-import-feature
+  (updated 2025-03-30: imports the player's own characters, with
+  passives, skills and items, after a site login and authentication).
 - SNIP-FILTER, search snippets only (the pages answered HTTP 403):
   https://www.exitlag.com/blog/path-of-exile-2-loot-filter/ and
   https://esports.gg/guides/path-of-exile-2/how-to-install-and-use-an-item-filter-in-path-of-exile-2
@@ -48,11 +56,13 @@ Web:
 - SNIP-BUILD, search snippet only (HTTP 403):
   https://mobalytics.gg/poe-2/guides/build-files (guide pages offer one
   planner file per build variant; the planner arrived with patch 0.5.0).
-- EXUI-REL: https://api.github.com/repos/Lailloken/Exile-UI/releases
-  (v1.65.4, 2026-11-13, switched off three continuous screen-read
-  features after GGG's reworded tool policy).
-- SK: https://github.com/Sidekick-Poe/Sidekick (closing the window hides
-  it in the tray).
+- EXUI-REL*: https://api.github.com/repos/Lailloken/Exile-UI/releases
+  (a Path of Exile 1 overlay: v1.65.3, 2026-11-12, repeated in v1.65.4
+  on 2026-11-13, removed or disabled three screen-reading sub-features
+  after GGG updated its tool policy on screen reading; newest v1.66.0,
+  2026-11-14).
+- SK*: https://github.com/Sidekick-Poe/Sidekick (README: closing the
+  desktop window only hides it in the system tray).
 - SNIP-GFX, search snippet: https://www.pcgamesn.com/path-of-exile-2/best-settings-pc
   and other guides in the same results (they disagree on Dynamic Resolution).
 
@@ -63,8 +73,12 @@ snapshot cache holds five repoe-fork files (48.2 MB) and no tree export.
 
 ## Summary
 
-- Verdicts on 15 utilities: keep 5 as is, keep and fix 4, merge 3, hide
-  and retire on a trigger 2, rebuild 1 (logon autostart saves no click).
+- Verdicts on 15 utilities: keep 5 as is (U5 run history, U9 language
+  notice, U11 hot reload, U13 tray, U14 copy helpers), keep and fix 4
+  (U4 settings transfer, U7 character keying, U8 Checks, U15 scripts),
+  merge 3 (U1 into U2, U6 into the movers), hide and retire on a
+  trigger 2 (U3 `.build`, U10 graphics advisor), rebuild 1 (U12 logon
+  autostart saves no click).
 - The clicks are in the settings, not the utilities: of 14 player
   settings 3 have a control and 11 need a JSON file the app never
   locates; 5 of 9 Checks fix lines point at PowerShell or that file,
@@ -74,7 +88,9 @@ snapshot cache holds five repoe-fork files (48.2 MB) and no tree export.
 - Market (F15): filters and `.build` files mostly arrive without a
   local file or from other tools; do not grow AshLight's two file tools.
 - With R1-R6: one setup command, a few one-time clicks and one paste per
-  character, then no click per session and no PowerShell.
+  character, then no click per session and no PowerShell. The "no
+  click per session" part needs R4, and R1's automatic refresh needs a
+  ruling (Open questions 1 and 2); R2, R3, R5 step 1 and R6 need none.
 
 ## Current state
 
@@ -184,8 +200,9 @@ telemetry (and wants none). Clicks are counted from the Play tab.
 
 ### Settings surface
 
-config/local.json has 18 top-level keys: 14 for players, 4 for
-developers. Format: key - default - set where - read when - could it be
+The code reads 18 top-level keys from config/local.json: 14 for
+players, 4 for developers (config/local.example.json shows only 11 of
+them, plus four `_doc` notes). Format: key - default - set where - read when - could it be
 inferred - verdict.
 
 - client_log - blank = Steam libraries are searched - JSON or `--log` -
@@ -293,8 +310,8 @@ UTIL-CRAFT-SLOTS and UTIL-ATLAS-PROGRESS are listed only.
   the first league is kept (ninja.py:78-88), so a hardcore or standard
   player prices against the wrong league unless they type an id.
 - F9 The `.build` download has four competitors and omits GGG's easier
-  route. PoB merged its own export on 2026-08-27 (research 0017; not
-  released yet, POB-REL), poe.ninja exports any listed character
+  route. PoB merged its own export to its dev branch on 2026-08-27
+  (POB-PR, research 0017; not released yet, POB-REL), poe.ninja exports any listed character
   (NINJA-BP), guide sites ship files (SNIP-BUILD). GGG's page also lets
   a player upload their own file on the game's website, after which the
   game loads it (GGG-GAME); the dashboard copy names only the folder
@@ -303,7 +320,7 @@ UTIL-CRAFT-SLOTS and UTIL-ATLAS-PROGRESS are listed only.
   on the Items tab; the only tab mark in the app is the Checks one
   (web/checks.js:94). Nobody will tune its threshold in a JSON file.
 - F11 The filter pair is two paths to one outcome, unproven in game.
-  One fold holds three paragraphs and two controls
+  One fold holds four paragraphs, the Import line and two controls
   (web/index.html:409-430); both LIVE rows are open; whether an Import
   line works in an account filter is not documented (GGG-FILTER). Each
   refresh costs a manual move, by the floor.
@@ -323,35 +340,53 @@ UTIL-CRAFT-SLOTS and UTIL-ATLAS-PROGRESS are listed only.
   project (2,852 stars, NS-API) reaches players by a self-updating
   ladder subscription or FilterBlade's account sync; only the manual
   path leaves a local file, re-downloaded about monthly (NS-README,
-  SNIP-FILTER). Planners: Path of Building (130,338 downloads of the
-  newest release, POB-REL) and web planners that import the player's
-  own characters by login (MAXROLL), which AshLight cannot do while
+  SNIP-FILTER). Planners: Path of Building (130,408 downloads of the
+  newest release by 2026-11-18, POB-REL) and web planners that import
+  the player's own characters by login (MAXROLL), which AshLight cannot do while
   OAuth registration is closed. Exports: PoB codes, share links and,
   since 0.5.0, `.build` files (F9). Backups: no product; a widely used
   price-check overlay keeps one settings file that players copy by
   hand (EE2-DOC). Two norms AshLight lacks: settings changed inside the
-  app and updates without a command (324,913 installer downloads and
+  app and updates without a command (324,973 installer downloads and
   1.6 million update-manifest fetches for that overlay's newest release,
   EE2-REL); the update check belongs to B15 (0052, 0053).
 
 ## Recommendations
 
-R1 Let the game-data snapshot refresh itself.
-- Action: run the existing snapshot tool (it already checks web_data,
-  the contact and a 24 h gate) as a hidden, low-priority process from
-  run.ps1 at each start and from the keepalive supervisor when web data
-  turns on, then daily while the log is idle. Never from the core.
+Ranked by player impact, then effort. R2, R3, R5 step 1, R6-R12 and
+R1 step 1 need no ruling; R1 step 2, R4 and R13 wait on Open questions
+1, 2 and 4.
+
+R1 Let the game-data snapshot arrive without a terminal.
+- Action: step 1 (inside today's decisions): setup.ps1 runs build.ps1's
+  existing snapshot step when web_data is already true, the README puts
+  "tick Use web data, then build" in that order, and the snapshot fix
+  line (diag.py:44) says the same in player words. Step 2 (only after
+  a ruling): run the existing snapshot tool (it already checks
+  web_data, the contact and a 24 h gate) as a hidden, low-priority
+  process from run.ps1 at each start and when web data turns on, then
+  daily while the log is idle. Never from the core.
 - Impact: H (nine data consumers; Acts 5-6 rows at 1.0 with no step).
-  Effort: M. Risk: a 48 MB first fetch during play - start and idle
-  time only, one run at a time.
+  Effort: S for step 1, M for step 2. Risk: a 48 MB first fetch during
+  play - start and idle time only, one run at a time.
 - ToS check: "public web data" rule; same sources, opt-in, User-Agent
   and contact as decision 0009; nothing bundled.
-- Depends on: Open question 1. Files: scripts/run.ps1,
-  server/al/keepalive.py, theorycraft/snapshot.py, diag.py, README.md.
-- Acceptance: web data off -> no request at start (existing test); on
-  -> a test core with a fake fetch has the files within one supervisor
+- Settled check: step 2 is a run-time fetch, which decision 0009
+  rejects ("Runtime fetch on demand", citing decision 0004 item 7) and
+  the settled snapshot entry ties to build.ps1. None of its "Reverses
+  if" conditions is met by evidence here (F3 is structural; the
+  consumers degrade instead of failing), so step 2 is not recommended
+  until the adjudicator or the operator rules (Open question 1).
+- Depends on: step 2 on Open question 1. Files: scripts/setup.ps1,
+  scripts/run.ps1, server/al/keepalive.py, theorycraft/snapshot.py,
+  diag.py, README.md.
+- Acceptance: step 1 - a setup run with web_data true in a sandbox
+  leaves the five snapshot files, with web_data false makes no request;
+  step 2 - web data off -> no request at start (existing test); on ->
+  a test core with a fake fetch has the files within one supervisor
   poll, no second request inside 24 h; no fix line names build.ps1.
-- ZERO-CLICK: nothing beyond the one web-data tick.
+- ZERO-CLICK: step 2 needs nothing beyond the one web-data tick; step
+  1 still needs one typed command after the tick.
 
 R2 One card for web data: contact field and league picker.
 - Action: add to "Prices and web data" a write-only contact field
@@ -400,6 +435,14 @@ R4 Autostart that is worth enabling.
 - ToS check: the overlay stays a separate click-through window inside
   the client; game start is read from Client.txt freshness only
   (decision 0029); opt-in, off by default, per-user task.
+- Settled check: decision 0011 (opt-in, off by default) holds. Decision
+  0041 point 2 says the logon start runs core and supervisor only ("no
+  overlay at logon") and that the keepalive supervisor never starts
+  Electron, so both the tray-client payload and the fallback (a client
+  started on the first fresh log line) need a ruling; so does the
+  Settings-tab checkbox, because the companion page gets exactly one
+  preload action today (decision 0041, restart overlay) and the core
+  starts no scripts. The tray item alone needs only the 0041 ruling.
 - Depends on: Open question 2. Files: scripts/autostart.ps1,
   autostart_launch.vbs, run.ps1, app/main.js, app/client/tray_menu.js.
 - Acceptance: -DryRun shows the tray-client action; node test - tray
@@ -417,8 +460,9 @@ R5 Calc opt-in in one act.
   the flag untouched.
 - ToS check: optional tools stay hash-pinned, unmodified and fetched
   only on the player's opt-in (decision 0018); the click is that opt-in.
-- Depends on: the button needs a second client action (decision 0041
-  point 7 allows one). Files: scripts/setup.ps1, tools/tc_pin.py,
+- Depends on: step 1 none; the button needs a second preload action,
+  and decision 0041 allows exactly one (restart overlay), so it needs a
+  ruling. Files: scripts/setup.ps1, tools/tc_pin.py,
   web/settingsio.js, diag.py; later app/client/preload.js, launcher.js.
 - Acceptance: in a sandbox the switch leaves the flag set and the calc
   row passing with no edit; a forced mismatch leaves the flag as it was.
@@ -459,7 +503,7 @@ R8 One filter control, stamped, verified before it grows.
 - Action: the merge becomes the one primary control, the plain download
   a small secondary link; the section header carries date and league;
   LIVE-FILTER-MERGE runs before any further filter work.
-- Impact: M (one paragraph and control instead of three and two;
+- Impact: M (one paragraph and control instead of four and two;
   staleness visible). Effort: S. Risk: none new.
 - ToS check: "never modify any game file" - still a download the
   player places (decisions 0031, 0033); cached prices only.
@@ -477,8 +521,11 @@ R9 `.build`: fix the texts, name the upload route, plan the exit.
 - Impact: L-M. Effort: S. Risk: players who paste a share link and have
   no PoB lose a route - guide sites cover them.
 - ToS check: download only (decision 0034); the upload is the player's
-  own browser act; AshLight calls no endpoint.
-- Depends on: none. Files: buildfile.py, web/index.html, tc_drift.py.
+  own browser act; AshLight calls no endpoint. The release check reuses
+  decision 0025's one read-only releases read per 24 h; no new request.
+- Depends on: none for the texts; the retirement itself is recorded as
+  an amendment of decision 0034 when the trigger fires (its "Reverses
+  if" does not cover a retirement). Files: buildfile.py, web/index.html, tc_drift.py.
 - Acceptance: note text test; a fake release body naming the export
   raises the note.
 - ZERO-CLICK: the exit trigger needs no reminder.
@@ -514,7 +561,10 @@ R12 Small items: one graphics sentence, three leftovers.
 - Impact: L. Effort: S. Risk: tests that name the stub or the switch.
 - ToS check: advice only, no game file read or written; the one
   clipboard read stays the client's per-press one.
-- Depends on: none. Files: web/index.html, server/al/diag.py, http.py,
+- Depends on: none, except the advisor removal: the graphics advisor is
+  part of settled decision 0014, whose "Reverses if" does not cover a
+  label drift, so removal needs a decision amendment (or the operator's
+  word) when the trigger fires. Files: web/index.html, server/al/diag.py, http.py,
   app/overlay_gate.js, scripts/run.ps1, docs/ops/1.0-launch-runbook.md.
 - Acceptance: the note shows in Checks; the route answers 404; a
   hidden overlay stays hidden after a client restart.
@@ -547,7 +597,8 @@ R13 Search-string hotkey for one-screen players.
   price movers (R10); contact and league into the web-data card (R2).
 - Hide: settings transfer and graphics stay folded; port, hot_reload
   and the drift key stay out of player docs.
-- Automate away: snapshot fetch (R1), hotkey conflicts (R3), the league
+- Automate away: snapshot fetch (R1 step 2, after a ruling), hotkey
+  conflicts (R3), the league
   (R2), the calc flag (R5), the logon start (R4), the overlay choice
   (R12), non-Steam log discovery (R6).
 - Keep as is: run history with ladder and visits, character keying,
@@ -566,8 +617,8 @@ R13 Search-string hotkey for one-screen players.
 - Typing or pasting a search string into the game, or sending Ctrl+C:
   synthesized input, floor.
 - A clipboard watcher that checks items by itself: floor, one read per
-  manual press (another tool switched such reads off on 2026-11-13,
-  EXUI-REL).
+  manual press (a Path of Exile 1 overlay switched off its continuous
+  screen reads on 2026-11-12 after GGG's policy update, EXUI-REL).
 - A filter upload or build subscription through GGG's account API: OAuth
   only, registration closed (ROADMAP TC-OAUTH-REG); never a cookie.
 - Sending the Checks report anywhere by itself: ruling J (research 0032).
@@ -578,12 +629,17 @@ R13 Search-string hotkey for one-screen players.
 
 ## Open questions
 
-1. R1 needs decision 0009 item 2 and the 0013 amendment reworded (they
-   tie the fetch to build.ps1). Their "Reverses if" names users missing
-   the data and the switch; the evidence here is structural (F3), not
-   observed on other players. Needs an adjudicator.
+1. R1 step 2 needs decision 0009 item 2, its rejection of a runtime
+   fetch (decision 0004 item 7) and the 0013 amendment reworded (they
+   tie the fetch to build time and build.ps1). Their "Reverses if"
+   names a core feature that cannot degrade, a ruling that a build-time
+   fetch is not "web data", or users missing the data and the switch;
+   the evidence here is structural (F3), not observed on other players,
+   so none is met yet. Needs an adjudicator or the operator.
 2. R4 changes what the logon task starts and adds a tray item; decision
-   0041 point 2 states "no overlay at logon". Needs an adjudicator or
+   0041 point 2 states "no overlay at logon" and that the supervisor
+   never starts Electron; the Settings-tab checkbox also needs a second
+   preload action. Needs an adjudicator or
    the operator, with the idle memory number.
 3. Once a public repository exists, may the User-Agent carry a
    project-level contact (its public issue page) so that no player
@@ -598,3 +654,49 @@ R13 Search-string hotkey for one-screen players.
    the planner folder itself? UNVERIFIED until a release after v0.23.1.
 7. The standalone client's default log folder for PoE2: UNVERIFIED
    (research 0002).
+
+## Verification
+
+Independent check on 2026-11-18 by a second agent.
+
+- Code claims: over 60 path:line citations opened (core.py, diag.py,
+  ninja.py, snapshot.py, buildfile.py, lootfilter.py, searchstr.py,
+  settingsio.py, http.py, logfile.py, gfx.py, hotkeys.py, state.py,
+  hotreload.py, runhistory.py, layout.py, underlevel.py,
+  pricewatch.py, campaign.py, calcwire.py, tc_pin.py, app/main.js,
+  overlay_gate.js, tray_menu.js, window.js, launcher.js,
+  web/index.html, web/checks.js, web/app.js, web/prices.js,
+  web/settingsio.js, run.ps1, autostart_launch.vbs, build.ps1,
+  setup.ps1, README.md); all held. Every file named under a
+  recommendation's Files exists.
+- Summary numbers re-derived: 15 utilities and the 5/4/3/2/1 split
+  (mapping now spelled out); 14 player settings with 3 controls
+  (web_data, overlay, run_history; the character picker only changes
+  the view, web/index.html:114-117); 9 fix sentences, 5 naming a
+  script or the JSON file (diag.py:36-46, 193-194); 14 Checks rows
+  plus 2 conditional (diag.py:226-234); 12 transferred keys
+  (settingsio.py:84-97); 48.2 MB in five snapshot files and no tree
+  export in the live cache (listed read-only).
+- Web: 12 sources re-fetched (POB-REL, POB-PR added, EE2-REL, EE2-DOC,
+  NS-README, NS-API, GGG-FILTER, GGG-GAME, NINJA-BP, MAXROLL, EXUI-REL,
+  SK); the three snippet-only sources (SNIP-FILTER, SNIP-BUILD,
+  SNIP-GFX) were not re-fetched and stay snippet-grade.
+- Corrected: download counts (PoB 130,408; the overlay 324,973 and
+  1,608,537 manifest fetches); EXUI-REL is a PoE1 tool, first release
+  with the change 2026-11-12, and it removed screen reads, not a
+  clipboard watcher; MAXROLL imports items too; NS-README cadence; the
+  example config shows 11 of the 18 keys; the filter fold has four
+  paragraphs, not three; the PoB export merge is on the dev branch
+  (POB-PR).
+- Settled decisions: R1 split - step 2 (run-time fetch) contradicts
+  decision 0009 / 0004 item 7 and no "Reverses if" is met, so it is
+  gated on a ruling, step 1 stays inside them; R4 and R5 now name the
+  0041 limits they need ruled (logon payload, supervisor never starts
+  Electron, one preload action); R9 and R12 retirements need decision
+  amendments of 0034 and 0014.
+- ToS floor: all 13 recommendations re-tested against every floor rule;
+  none needs the floor bent (R13 writes, never reads, the clipboard on a
+  press and sends nothing to the game). Rejected list unchanged except
+  the EXUI wording.
+- UNVERIFIED: EE2's in-app hotkey screen; Open questions 5-7; the three
+  snippet sources; use counts marked est.
