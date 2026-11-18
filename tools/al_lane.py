@@ -51,8 +51,9 @@ SEED_CONFIG = ("config/leak_needles.json", "config/local.json")
 # plus the gate commands below; commits and merges are done by the main session.
 GATE_TOOLS = ("Bash(python -m pytest:*),Bash(npm test:*),Bash(node --test:*),"
               "Bash(python tools/leak_sweep.py:*)")
-# A dependency-bump item needs npm and git add of a regenerated lockfile. AL is
-# local only (no remote), so no gh / Dependabot reads are granted.
+# A dependency-bump item needs npm and git add of a regenerated lockfile.
+# Dependabot bumps are re-applied in the main checkout by
+# tools/dependabot_reapply.py, so no gh is granted to a lane.
 DEP_TOOLS = ("Bash(npm install:*),Bash(npm ci:*),Bash(npm ls:*),Bash(npm view:*),"
              "Bash(npm outdated:*),Bash(npm audit:*),"
              "Bash(git add:*),Bash(git status:*),Bash(git diff:*)")

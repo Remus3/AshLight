@@ -34,7 +34,7 @@ def test_code_lanes_may_bump_dependencies_but_get_no_gh():
               "Bash(git add:*)", "Bash(git diff:*)", "Bash(python -m pytest:*)",
               "Bash(node --test:*)", "Bash(python tools/leak_sweep.py:*)"):
         assert t in tools, t
-    assert not any(t.startswith("Bash(gh") for t in tools)  # AL is local only
+    assert not any(t.startswith("Bash(gh") for t in tools)  # gh stays out of lanes
 
 
 def test_lane_tools_never_grant_a_bare_gh_or_git_or_commit():

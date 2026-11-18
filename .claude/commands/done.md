@@ -1,5 +1,5 @@
 ---
-description: End-of-session ritual - gate, commit (never push, local only), paperwork, rewrite AL-NEXT-SESSION.txt carrying forward every unacted item, then print ONLY "Done ritual complete, safe to clear".
+description: End-of-session ritual - gate, commit (push main through fleet_gitlock when origin exists, never force-push), paperwork, rewrite AL-NEXT-SESSION.txt carrying forward every unacted item, then print ONLY "Done ritual complete, safe to clear".
 ---
 
 > **CHAT OUTPUT CONTRACT (FLEET items 2, 3, 5).** /done's ONLY chat output is the
@@ -30,7 +30,7 @@ remaining steps and repeats nothing destructive.
 - Run fresh this turn; never carry a sub-agent's green forward. RED: fix and
   re-run; a pre-existing unrelated red becomes the hand-off's first action.
 
-### 2. Commit (batched, coherent; NEVER push - the repo is local only)
+### 2. Commit (batched, coherent), then push main when origin exists
 
 - Refuse to stage `config/local.json`, `config/leak_needles.json`, `.env*`,
   `*.key`, `*.pem`, anything under `ops/runtime/` or the sidecar.
@@ -39,6 +39,9 @@ remaining steps and repeats nothing destructive.
 - Body records adjudicated decisions (decision / alternatives / why).
 - No AI / bot attribution line (FLEET-COMMON 17). Never `--amend`, never
   `--no-verify`.
+- When `git remote get-url origin` succeeds, push main through the git lock:
+  `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`
+  (the guarded pre-push hook applies; never force-push, no other ref).
 
 ### 3. Background work
 
@@ -97,5 +100,6 @@ render is one hand-off line, never a ritual failure.
 
 ### Safety rails
 
-- Never push, force-push, `--amend` or `--no-verify`. Never commit secrets.
+- Never force-push, `--amend` or `--no-verify`; main is pushed only in step 2.
+  Never commit secrets.
 - Never run `/clear` yourself. Never touch the game client in any step.

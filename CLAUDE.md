@@ -314,14 +314,44 @@ E: root item that is not this repo.
 - Setup / build / run: `scripts/setup.ps1`, `scripts/build.ps1`,
   `scripts/run.ps1` (idempotent; a re-run of a finished step is a no-op).
 
-## Public-repo hygiene (local only for now)
+## Public-repo hygiene (guarded push)
 
-- The repo is kept publish-ready but has NO remote (operator order
-  2026-11-16): `.githooks/pre-push` refuses every push. Creating the GitHub
-  remote is an operator act.
+- Publishing is ordered (operator orders 2026-11-17 and 2026-11-18;
+  decision 0046 lifts the 2026-11-16 local-only order). The GitHub
+  repository is created private and flipped to public when the gates of
+  `docs/plan/04-go-public.md` hold. Once it exists its address is the one
+  value in tracked `config/public_repo.json`.
+- Push policy: only `main` and `v*` release tags leave this machine, each
+  to the same name on `origin`, always as
+  `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`
+  (a tag: `... -- git push origin v<version>`). Never `--all`,
+  `--mirror`, `--tags`, `--force` or a delete; lane and keep refs stay
+  local. `.githooks/pre-push` enforces the ref rule and runs the
+  fleet_identity pre-push check and `tools/leak_sweep.py --pre-push` on
+  every push; it has no override. A session pushes after its gated
+  commit; the loop's push worker pushes when main is clean, gated and
+  ahead of `origin/main`.
+- Nothing is merged on GitHub. A pull request (Dependabot's or a
+  contributor's) is re-applied locally as an operator commit, pushed, and
+  closed with a one-line comment (FLEET item 17). Dependabot alerts and
+  security updates stay on.
+- Server side: `.github/workflows/fleet-identity-guard.yml` is a byte
+  copy of `ops/fleet_kit/fleet_identity_guard.yml`; the checks
+  `fleet-identity-guard` and `test` are required on main. Workflows pin
+  every action by full commit SHA, use a read-only token and no secret,
+  never turn web data on and never call a GGG or poe.ninja host.
 - No absolute machine path, account id, email or sibling tree name in any
-  tracked file outside `ops/fleet_kit/`; per-host values live in gitignored
-  `config/local.json`. `tools/leak_sweep.py` runs in pre-commit.
+  tracked file outside `ops/fleet_kit/`; per-host values live in
+  gitignored `config/local.json`. One exception (ruling Q-24,
+  2026-11-18): the project's own repository address, the
+  `config/public_repo.json` value, may appear in tracked files; the leak
+  sweep allows exactly that string and nothing else of its owner.
+  `tools/leak_sweep.py` runs in pre-commit, commit-msg and pre-push.
+- Repository page: the description and topics say unofficial and use
+  'Path of Exile 2' only descriptively; no game screenshot, GGG art or
+  logo in the README, social preview or release images; no Sponsors link
+  and no FUNDING file (Game ToS floor: branding and revenue rules).
+- A history rewrite runs only on MAIN's ORDER via `fleet_rewrite.py`.
 - ASCII + LF in every authored file (FLEET item 8); `tests/test_ascii_lf.py`.
 - Third-party code: none copied without a license check recorded in
   `docs/decisions/`; GPL / AGPL / NC-licensed tools are studied for ideas only.
@@ -331,6 +361,9 @@ E: root item that is not this repo.
 - `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q`
   and `npm test --prefix app` green before any commit to main.
 - Commits only via `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git commit ...`.
+- A push runs through
+  `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`;
+  never a bare push.
 - No AI or bot attribution trailer (FLEET item 17; the commit-msg hook strips).
 
 ## Loop (headless lanes, copied from the fleet's lane pattern) - ARMED
@@ -596,3 +629,10 @@ them. Pause: `ops/loop/control/HALT`.
   build sources pluggable, the ggg_api provider a no-request stub
   (decision 0045). Reverses if: 0038 reverses, a better key appears, the
   5-level gap misfires, or item text must not stay in memory.
+- Go public: guarded push of main and v* tags only, private first then
+  public on the plan-04 gates, full history, nothing merged on GitHub,
+  required checks with one admin bypass, the project's own address as the
+  one hygiene exception (decision 0046). Reverses if: the operator
+  withdraws the order, a leak or identity hit is found in pushed history,
+  GitHub's rules stop letting an admin push fresh commits past required
+  checks, or FLEET item 17 changes.

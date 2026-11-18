@@ -1,24 +1,49 @@
 #!/bin/sh
-# AshLight is LOCAL ONLY for now (operator order 2026-11-16): refuse every push.
-# The repo is kept public-ready (no machine paths, no secrets, leak sweep in
-# pre-commit), but it has no remote until the operator creates one.
-#
-# When the operator creates the GitHub remote, the deliberate override is:
-#   AL_ALLOW_PUSH=1 git push ...
-# which still runs the kit v13 identity gate and the leak sweep first.
+# AshLight pre-push: the guarded push (go-public decision, 2026-11-18).
+# A push is never refused for being a push. Every push must pass, in order:
+#   1. Ref rule: only refs/heads/main and refs/tags/v* leave this machine,
+#      each to the same name on the remote. A delete, a moved tag and a
+#      non-fast-forward of main are refused. Lane and keep refs stay local.
+#   2. Kit v13 (FLEET-COMMON 17) identity gate: fleet_identity.py pre-push.
+#   3. Leak sweep over what is being pushed: tools/leak_sweep.py --pre-push.
+# There is no override variable. Exit 1 = nothing was pushed.
 
 ROOT="$(git rev-parse --show-toplevel)"
-if [ "$AL_ALLOW_PUSH" = "1" ]; then
-  REFS="$(cat)"
-  printf '%s\n' "$REFS" | python "$ROOT/ops/fleet_kit/fleet_identity.py" pre-push "$@" || exit 1
-  if [ -f "$ROOT/tools/leak_sweep.py" ]; then
-    printf '%s\n' "$REFS" | python "$ROOT/tools/leak_sweep.py" --pre-push "$@" || exit 1
-  fi
-  echo "pre-push: AL_ALLOW_PUSH=1 set - proceeding."
-  exit 0
-fi
-# Kit v13 (FLEET-COMMON 17): the identity gate is wired even while every push
-# is refused, so the hook text names it: fleet_identity.py pre-push.
-echo "PUSH REFUSED - AshLight is a local-only repository for now (no remote)."
-echo "Nothing was pushed."
-exit 1
+REFS="$(cat)"
+
+check_refs() {
+  while read -r lref lsha rref rsha; do
+    [ -n "$lref" ] || continue
+    case "$lsha" in
+      *[!0]*) ;;
+      *) echo "pre-push: refused - deleting $rref on the remote is not allowed." >&2
+         return 1 ;;
+    esac
+    case "$rref" in
+      refs/heads/main|refs/tags/v*) ;;
+      *) echo "pre-push: refused - $rref: only refs/heads/main and refs/tags/v* are pushed." >&2
+         return 1 ;;
+    esac
+    if [ "$lref" != "$rref" ]; then
+      echo "pre-push: refused - $lref must go to the same name, not to $rref." >&2
+      return 1
+    fi
+    case "$rsha" in
+      *[!0]*)
+        case "$rref" in
+          refs/tags/*) echo "pre-push: refused - $rref exists on the remote; a release tag never moves." >&2
+                       return 1 ;;
+        esac
+        if ! git merge-base --is-ancestor "$rsha" "$lsha" 2>/dev/null; then
+          echo "pre-push: refused - $rref would not fast-forward (fetch first; never force)." >&2
+          return 1
+        fi ;;
+    esac
+  done
+  return 0
+}
+
+printf '%s\n' "$REFS" | check_refs || exit 1
+printf '%s\n' "$REFS" | python "$ROOT/ops/fleet_kit/fleet_identity.py" pre-push "$@" || exit 1
+printf '%s\n' "$REFS" | python "$ROOT/tools/leak_sweep.py" --pre-push "$@" || exit 1
+exit 0

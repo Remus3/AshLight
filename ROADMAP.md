@@ -2056,6 +2056,15 @@ merge. Each row names the finding ids it closes.
   Library of Kamasa, Isle of Decay, Brinerot Cove). ZERO-CLICK: each item
   keeps the guide, list and notices updating from the log with no click.
 
-- [ ] OPERATOR: create the GitHub remote when the operator wants to publish
-  (then lift the pre-push refusal in the same change, CI workflow with the
-  kit's fleet_identity_guard.yml as a required check).
+- [x] OPERATOR-REMOTE OPERATOR: create the GitHub remote when the operator
+  wants to publish (then lift the pre-push refusal in the same change, CI
+  workflow with the kit's fleet_identity_guard.yml as a required check).
+  CLOSED 2026-11-18, superseded by GP-02, GP-05 and GP-09
+  (docs/plan/04-go-public.md): the operator ordered going public (decision
+  0046); GP-02 replaced the refuse-all pre-push with the guarded push, the
+  CI workflow is GP-05 and the private repository plus first push is
+  GP-09, both agent steps. Read back after GP-02: tests/test_pre_push_hook.py
+  and tests/test_fleet_kit_conformance.py green against a throwaway local
+  bare repository; `git grep "refuses every push\|AL_ALLOW_PUSH\|NO remote"
+  -- CLAUDE.md tools .githooks .claude` empty; `git remote -v` empty (no
+  remote created yet).

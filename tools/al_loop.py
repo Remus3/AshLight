@@ -49,12 +49,12 @@ One tick, under ops/loop/control/loop.lock (fleet_watch.watch_lock):
      ops/loop/control/progress/loop.json with a "checklist" array (FLEET item
      13 d: remaining tasks as kit rows {id, task, state, eta_s}, at most 20;
      "fire" = this tick's run count, the item-13 session number).
-  Push (unless --no-push): AL is LOCAL ONLY. With no remote named origin the
-  push is a no-op that logs "push skipped: local only". Once the operator adds
-  origin, when main is clean and ahead of origin/main the tick launches ONE
-  detached `push` worker (plan 098), which under the merge lock needs gates
-  green and leak_sweep --pre-push clean (the pre-push hook still refuses
-  unless AL_ALLOW_PUSH=1).
+  Push (unless --no-push): with no remote named origin the push is a no-op
+  that logs "push skipped: local only". With origin, when main is clean and
+  ahead of origin/main the tick launches ONE detached `push` worker (plan
+  098), which under the merge lock needs gates green and leak_sweep
+  --pre-push clean, then runs `git push origin main`; .githooks/pre-push
+  re-checks the ref rule, the identity gate and the leak sweep on every push.
   Gates: the commands of ops/loop/gates.txt (one per line, run as argv, no
   shell), else the `run:` lines of .github/workflows/ci.yml; neither = fail
   closed.
@@ -201,7 +201,7 @@ def hooks_path_problem(root, git):
 
 CI_WORKFLOW_REL = Path(".github/workflows/ci.yml")
 CI_SETUP_RX = re.compile(r"\bpip\s+install\b")
-# AL is local only (no CI yet): the loop's gates are the tracked list
+# The loop's gates are the tracked list (CI runs the same commands):
 # ops/loop/gates.txt, one command per line, `#` comments; ci.yml is the fallback.
 GATES_REL = Path("ops/loop/gates.txt")
 
@@ -1281,8 +1281,8 @@ class Tick(InboxMixin, MergeMixin):
     # -- push
     def push_needed(self):
         """Commits main is ahead of origin/main (git only, no gates), 0 when
-        there is nothing to push, main is not clean on main, or (AL: local
-        only) no remote named origin exists."""
+        there is nothing to push, main is not clean on main, or no remote
+        named origin exists."""
         if self.no_push or self.dry:
             return 0
         main, g = self.d.main_tree, self.d.git

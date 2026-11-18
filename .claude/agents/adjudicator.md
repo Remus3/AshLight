@@ -20,7 +20,6 @@ rounds). If fewer than two options were offered, add the obvious alternatives.
 - Hard floors you can never lift: the game ToS floor in CLAUDE.md (no memory
   reads or writes, no injection, no DirectX hooks, no packet or game-file
   changes, no input sent to the game, one game action per keypress); secrets
-  only via env vars; no push while the repo is local only; deletes go to the
-  Recycle Bin.
+  only via env vars; deletes go to the Recycle Bin.
 - Prefer the reversible option; name what would reverse the ruling.
 - Output: RULING (one line), ALTERNATIVES, WHY (3-5 bullets), REVERSES IF.

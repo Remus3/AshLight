@@ -150,8 +150,9 @@ def test_conftest_installs_test_guard():
 
 
 def test_git_hooks_wire_identity_and_leak_sweep():
-    """Kit v13 (FLEET-COMMON 17): commit-msg strips, pre-push refuses (AL is
-    local only), pre-commit runs the leak sweep over staged lines."""
+    """Kit v13 (FLEET-COMMON 17): commit-msg strips, pre-push guards every
+    push (ref rule, identity gate, leak sweep), pre-commit runs the leak
+    sweep over staged lines."""
     hooks = ROOT / ".githooks"
     cm = (hooks / "commit-msg").read_text("ascii")
     pp = (hooks / "pre-push").read_text("ascii")
@@ -159,7 +160,16 @@ def test_git_hooks_wire_identity_and_leak_sweep():
     assert re.search(r'fleet_identity\.py" commit-msg "\$1" \|\| (true|exit 1)', cm)
     assert 'fleet_identity.py" pre-push "$@" || exit 1' in pp
     assert 'leak_sweep.py" --pre-push' in pp
-    assert "exit 1" in pp.rsplit("fi", 1)[-1]  # refuses by default
+    # GP-02 (decision 0046): the guarded push replaces refuse-all
+    assert "PUSH REFUSED" not in pp
+    assert "AL_ALLOW_PUSH" not in pp
+    assert pp.rstrip().endswith("exit 0")
+    assert "refs/heads/main|refs/tags/v*" in pp
+    order = [pp.index("check_refs || exit 1"),
+             pp.index('fleet_identity.py" pre-push "$@" || exit 1'),
+             pp.index('leak_sweep.py" --pre-push "$@" || exit 1'),
+             pp.rstrip().rindex("exit 0")]
+    assert order == sorted(order), order
     assert 'tools/leak_sweep.py" --staged' in pc
     for hook in (cm, pp, pc):
         assert "\r" not in hook and hook.startswith("#!/bin/sh")
