@@ -1,0 +1,643 @@
+{
+ "about": "ZONE-GUIDE (decision 0041): AshLight's own per-zone guide, keyed by act key and zone name as the log names it. Facts from public sources (research 0034), never their wording; unsure facts are left out. Reloads by itself when saved.",
+ "version": 1,
+ "acts": {
+  "G1": {
+   "default": "Act 1: push north through the woods to Ogham Manor and its count.",
+   "zones": {
+    "The Riverbank": {
+     "objective": "Beat the swollen miller boss at the far end of the river.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut skill gem - in a chest partway along the river."
+      }
+     ],
+     "next": "Clearfell Encampment"
+    },
+    "Clearfell Encampment": {
+     "objective": "Town: talk to Renly for a gem, sell, then head into Clearfell.",
+     "next": "Clearfell"
+    },
+    "Clearfell": {
+     "objective": "Find the Grelwood exit; the Mud Burrow cave is a short detour.",
+     "layout": "The Mud Burrow entrance tends to sit near the waypoint.",
+     "optional": [
+      {
+       "kind": "resist",
+       "text": "+10% cold resistance - beat Beira at a ritual site near the middle."
+      },
+      {
+       "kind": "gem",
+       "text": "Uncut skill gem - in an abandoned campsite stash."
+      }
+     ],
+     "next": "Mud Burrow"
+    },
+    "Mud Burrow": {
+     "objective": "Beat the Devourer at the bottom, then report back to Renly.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut skill gem - from the Devourer; Renly adds a support gem."
+      }
+     ],
+     "next": "The Grelwood"
+    },
+    "The Grelwood": {
+     "objective": "Hub: take the runes from the Red Vale to the Tree of Souls here.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Flasks and an uncut support gem - from a witch's hut cauldron."
+      }
+     ],
+     "next": "The Red Vale"
+    },
+    "The Red Vale": {
+     "objective": "Activate three rust obelisks, survive each wave, then beat the Rust King.",
+     "next": "The Grim Tangle"
+    },
+    "The Grim Tangle": {
+     "objective": "Pass through to the Cemetery of the Eternals.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut support gem - beat the Rotten Druid, an optional boss."
+      }
+     ],
+     "next": "Cemetery of the Eternals"
+    },
+    "Cemetery of the Eternals": {
+     "objective": "Clear both tombs, open the memorial gate and beat Lachlann.",
+     "optional": [
+      {
+       "kind": "item",
+       "text": "A random ring - from a grave at the zone edge."
+      }
+     ],
+     "next": "Hunting Grounds"
+    },
+    "Mausoleum of the Praetor": {
+     "objective": "Beat Draven, the Eternal Praetor, at the end.",
+     "next": "Tomb of the Consort",
+     "main": false
+    },
+    "Tomb of the Consort": {
+     "objective": "Beat Asinia, the Praetor's Consort, at the end.",
+     "next": "Cemetery of the Eternals",
+     "main": false
+    },
+    "Hunting Grounds": {
+     "objective": "Head on to Ogham Farmlands; Freythorn is a worthwhile side trip.",
+     "layout": "Points of interest tend to sit near the corners.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - beat the Crowbell in a gated pit arena."
+      }
+     ],
+     "next": "Ogham Farmlands"
+    },
+    "Freythorn": {
+     "objective": "Optional: light the three small ritual altars, then the big one.",
+     "optional": [
+      {
+       "kind": "spirit",
+       "text": "+30 spirit - beat the King in the Mists at the big altar."
+      }
+     ],
+     "main": false
+    },
+    "Ogham Farmlands": {
+     "objective": "Push through the farms to Ogham Village.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - bring Una's lute, found in a hut, back to Una."
+      }
+     ],
+     "next": "Ogham Village"
+    },
+    "Ogham Village": {
+     "objective": "Beat the Executioner and free Leitis; grab Renly's tools.",
+     "next": "The Manor Ramparts"
+    },
+    "The Manor Ramparts": {
+     "objective": "Climb the walls to the manor door; no boss here.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut support gem - cut down the hanged man at the gallows."
+      }
+     ],
+     "next": "Ogham Manor"
+    },
+    "Ogham Manor": {
+     "objective": "Act boss: Count Geonor on the top floor.",
+     "optional": [
+      {
+       "kind": "life",
+       "text": "+20 maximum life - beat Candlemass on the first floor."
+      }
+     ],
+     "next": "Vastiri Outskirts"
+    }
+   }
+  },
+  "G2": {
+   "default": "Act 2: travel by caravan; the map marks the next quest zone.",
+   "zones": {
+    "Vastiri Outskirts": {
+     "objective": "Beat Rathbreaker and reach the caravan.",
+     "next": "The Ardura Caravan"
+    },
+    "The Ardura Caravan": {
+     "objective": "Town: use the desert map to travel; follow the quest marker.",
+     "next": "Mawdun Quarry"
+    },
+    "Mawdun Quarry": {
+     "objective": "Fight down to the mine entrance.",
+     "next": "Mawdun Mine"
+    },
+    "Mawdun Mine": {
+     "objective": "Beat Rudja and free Risu.",
+     "next": "The Halani Gates"
+    },
+    "The Halani Gates": {
+     "objective": "First visit: face Jamanra. Later: sound the horn to open the gates.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut skill gem - beat L'im, an optional boss."
+      }
+     ],
+     "next": "Traitor's Passage"
+    },
+    "Traitor's Passage": {
+     "objective": "Open the ancient seal and beat Balbala.",
+     "next": "Trial of the Sekhemas"
+    },
+    "Trial of the Sekhemas": {
+     "objective": "Clear the trial and beat Rattlecage for your ascendancy.",
+     "next": "Keth"
+    },
+    "Keth": {
+     "objective": "Cross the city to the Lost City.",
+     "layout": "The exit tends to be across a large bridge, opposite the entrance.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - beat Kabala, the Constrictor Queen, in a central pit."
+      }
+     ],
+     "next": "The Lost City"
+    },
+    "The Lost City": {
+     "objective": "Find the way down to the Buried Shrines.",
+     "next": "Buried Shrines"
+    },
+    "Buried Shrines": {
+     "objective": "Beat Azarian and bring the cinders to the water goddess.",
+     "optional": [
+      {
+       "kind": "item",
+       "text": "A resistance ring - from an elemental offering before the boss."
+      }
+     ],
+     "next": "Mastodon Badlands"
+    },
+    "Mastodon Badlands": {
+     "objective": "Find the way into the Bone Pits.",
+     "next": "The Bone Pits"
+    },
+    "The Bone Pits": {
+     "objective": "Beat the two pit bosses; a sun clan relic drops here.",
+     "next": "Valley of the Titans"
+    },
+    "Valley of the Titans": {
+     "objective": "Touch the three ancient seals to open the Titan Grotto.",
+     "optional": [
+      {
+       "kind": "charm",
+       "text": "A charm bonus of your choice - set both clan relics on the altar near the waypoint."
+      }
+     ],
+     "next": "The Titan Grotto"
+    },
+    "The Titan Grotto": {
+     "objective": "Beat Zalmarath.",
+     "next": "Deshar"
+    },
+    "Deshar": {
+     "objective": "Clear on to the Path of Mourning.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - take a fallen soldier's last letter to Shambrin."
+      }
+     ],
+     "next": "Path of Mourning"
+    },
+    "Path of Mourning": {
+     "objective": "Keep climbing toward the spires.",
+     "next": "The Spires of Deshar"
+    },
+    "The Spires of Deshar": {
+     "objective": "Beat Tor Gul at the top.",
+     "optional": [
+      {
+       "kind": "resist",
+       "text": "+10% lightning resistance - pray at the sisters' shrine."
+      }
+     ],
+     "next": "The Dreadnought's Wake"
+    },
+    "The Dreadnought's Wake": {
+     "objective": "Follow the war machine's trail to it.",
+     "next": "Dreadnought"
+    },
+    "Dreadnought": {
+     "objective": "Act boss: Jamanra. Cap your resistances first.",
+     "next": "Sandswept Marsh"
+    }
+   }
+  },
+  "G3": {
+   "default": "Act 3: jungle and Vaal ruins; clear toward Utzaal and the act boss.",
+   "zones": {
+    "Sandswept Marsh": {
+     "objective": "Walk on to the Ziggurat Encampment.",
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut skill gem - beat Rootdredge, an optional boss."
+      }
+     ],
+     "next": "Ziggurat Encampment"
+    },
+    "Ziggurat Encampment": {
+     "objective": "Town: head out to the Jungle Ruins.",
+     "layout": "The jungle exit tends to be near the top of town.",
+     "next": "Jungle Ruins"
+    },
+    "Jungle Ruins": {
+     "objective": "Hub: the Venom Crypts and the Infested Barrens start here.",
+     "layout": "The Venom Crypts entrance tends to be by the waypoint.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - beat Mighty Silverfist, an optional boss."
+      }
+     ],
+     "next": "Infested Barrens"
+    },
+    "The Venom Crypts": {
+     "optional": [
+      {
+       "kind": "other",
+       "text": "A permanent bonus of your choice - bring the venom vial to Servi."
+      }
+     ],
+     "main": false
+    },
+    "Infested Barrens": {
+     "objective": "Take the outer exit to the Chimeral Wetlands.",
+     "next": "Chimeral Wetlands"
+    },
+    "Chimeral Wetlands": {
+     "objective": "Beat Xyclucian at the Machinarium entrance.",
+     "next": "Jiquani's Machinarium"
+    },
+    "Jiquani's Machinarium": {
+     "objective": "Carry soul cores through to the Sanctum.",
+     "optional": [
+      {
+       "kind": "resist",
+       "text": "+10% fire resistance - beat Blackjaw behind a two-core door."
+      }
+     ],
+     "next": "Jiquani's Sanctum"
+    },
+    "Jiquani's Sanctum": {
+     "objective": "Power the generators, beat Zicoatl and take the large soul core.",
+     "next": "The Matlan Waterways"
+    },
+    "The Matlan Waterways": {
+     "objective": "Work the levers to drain the water; the last lever opens the city.",
+     "next": "The Drowned City"
+    },
+    "The Azak Bog": {
+     "optional": [
+      {
+       "kind": "spirit",
+       "text": "+30 spirit - beat Ignagduk, the bog witch."
+      }
+     ],
+     "main": false
+    },
+    "The Drowned City": {
+     "objective": "Two exits: Apex of Filth is the main path.",
+     "next": "Apex of Filth"
+    },
+    "The Molten Vault": {
+     "optional": [
+      {
+       "kind": "gem",
+       "text": "Uncut skill gem and a reforging bench - beat Mektul in a timed fight."
+      }
+     ],
+     "main": false
+    },
+    "Apex of Filth": {
+     "objective": "Beat the Queen of Filth in the centre.",
+     "next": "Temple of Kopec"
+    },
+    "Temple of Kopec": {
+     "objective": "Climb the temple and beat Ketzuli.",
+     "layout": "Stairs tend to be in the corners of the triangle.",
+     "next": "Utzaal"
+    },
+    "The Trial of Chaos": {
+     "objective": "Optional: do the trial any time for ascendancy points.",
+     "main": false
+    },
+    "Utzaal": {
+     "objective": "Beat Viper Napuatzi.",
+     "next": "Aggorat"
+    },
+    "Aggorat": {
+     "objective": "Push through to the Black Chambers.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - sacrifice a Vaal heart at the altar."
+      }
+     ],
+     "next": "The Black Chambers"
+    },
+    "The Black Chambers": {
+     "objective": "Act boss: Doryani.",
+     "next": "Kingsmarch"
+    }
+   }
+  },
+  "G4": {
+   "default": "Act 4: sail from Kingsmarch to the islands in any order.",
+   "any_order": true,
+   "zones": {
+    "Kingsmarch": {
+     "objective": "Town: sail from the dock to the next island.",
+     "town": true
+    },
+    "Isle of Kin": {
+     "objective": "Fight on to the Volcanic Warrens.",
+     "next": "Volcanic Warrens"
+    },
+    "Volcanic Warrens": {
+     "objective": "Beat Krutog in the throne room.",
+     "next": "Kingsmarch"
+    },
+    "Kedge Bay": {
+     "objective": "Head on to Journey's End.",
+     "next": "Journey's End"
+    },
+    "Journey's End": {
+     "objective": "Beat Captain Hartlin, then use the spikes to clear the dark mists.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - beat Omniphobia in the dark mists."
+      }
+     ],
+     "next": "Kingsmarch"
+    },
+    "Whakapanu Island": {
+     "objective": "Head on to the Singing Caverns.",
+     "optional": [
+      {
+       "kind": "other",
+       "text": "A defence bonus of your choice - bring the great white's fin to Kaimana."
+      }
+     ],
+     "next": "Singing Caverns"
+    },
+    "Singing Caverns": {
+     "objective": "Beat Diamora.",
+     "next": "Kingsmarch"
+    },
+    "Shrike Island": {
+     "objective": "Beat the Scourge of the Skies for a torn map piece.",
+     "next": "Kingsmarch"
+    },
+    "Abandoned Prison": {
+     "objective": "Head down to Solitary Confinement.",
+     "optional": [
+      {
+       "kind": "flask",
+       "text": "A flask recovery bonus of your choice - from the goddess of justice."
+      }
+     ],
+     "next": "Solitary Confinement"
+    },
+    "Solitary Confinement": {
+     "objective": "Beat the Prisoner below.",
+     "next": "Kingsmarch"
+    },
+    "Eye of Hinekora": {
+     "objective": "Head on to the Halls of the Dead.",
+     "optional": [
+      {
+       "kind": "mana",
+       "text": "+5% maximum mana - in the silent hall past a checkpoint near the end."
+      }
+     ],
+     "next": "Halls of the Dead"
+    },
+    "Halls of the Dead": {
+     "objective": "Do the three tattoo trials; the way on is at the far end.",
+     "optional": [
+      {
+       "kind": "other",
+       "text": "Three permanent bonuses of your choice - one per tattoo trial."
+      }
+     ],
+     "next": "Trial of the Ancestors"
+    },
+    "Trial of the Ancestors": {
+     "objective": "Beat Yama the White, then speak to Hinekora.",
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - for finishing the trial."
+      }
+     ],
+     "next": "Kingsmarch"
+    },
+    "Arastas": {
+     "objective": "Reach Torvian at the end.",
+     "next": "The Excavation"
+    },
+    "The Excavation": {
+     "objective": "Beat Benedictus.",
+     "next": "Ngakanu"
+    },
+    "Ngakanu": {
+     "objective": "Push on to the Heart of the Tribe.",
+     "next": "Heart of the Tribe"
+    },
+    "Heart of the Tribe": {
+     "objective": "Act boss: Tavakai, the Chieftain."
+    },
+    "Plunder's Point": {
+     "objective": "Optional: opens once you hold four torn map pieces.",
+     "main": false
+    }
+   }
+  },
+  "P1": {
+   "default": "Interlude 1: from the Refuge to Holten Estate.",
+   "zones": {
+    "The Refuge": {
+     "objective": "Town: leave for the Scorched Farmlands.",
+     "next": "Scorched Farmlands"
+    },
+    "Scorched Farmlands": {
+     "objective": "Beat Isolde and Heldra.",
+     "next": "The Blackwood"
+    },
+    "Stones of Serle": {
+     "objective": "Optional: wake six megaliths on the edge, then face Siora in the centre.",
+     "main": false
+    },
+    "The Blackwood": {
+     "objective": "Find the hidden way into Holten.",
+     "next": "Holten"
+    },
+    "Holten": {
+     "objective": "Free the ferryman's soul in the centre.",
+     "layout": "The side path to Wolvenhold starts in this zone.",
+     "next": "Holten Estate"
+    },
+    "Wolvenhold": {
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - beat Oswin, the Dread Warden, for his ledger."
+      }
+     ],
+     "main": false
+    },
+    "Holten Estate": {
+     "objective": "Final fight: Thane Wulfric and Lady Elswyth."
+    }
+   }
+  },
+  "P2": {
+   "default": "Interlude 2: from the Khari Bazaar to Qimah Reservoir.",
+   "zones": {
+    "The Khari Bazaar": {
+     "objective": "Town: any exit leads to the Khari Crossing.",
+     "next": "The Khari Crossing"
+    },
+    "The Khari Crossing": {
+     "objective": "Head on to the Pools of Khatal.",
+     "optional": [
+      {
+       "kind": "life",
+       "text": "+5% maximum life - at the molten shrine up the north stairway."
+      },
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - beat the two bosses in the east arena, then see Risu."
+      }
+     ],
+     "next": "Pools of Khatal"
+    },
+    "Pools of Khatal": {
+     "objective": "No boss: go on to the sanctuary.",
+     "next": "Sel Khari Sanctuary"
+    },
+    "Sel Khari Sanctuary": {
+     "objective": "Beat Elzarah.",
+     "next": "The Galai Gates"
+    },
+    "The Galai Gates": {
+     "objective": "Beat Vornas to reach Qimah.",
+     "next": "Qimah"
+    },
+    "Qimah": {
+     "objective": "Cross the city to the reservoir.",
+     "optional": [
+      {
+       "kind": "other",
+       "text": "A permanent bonus of your choice - at a pillar down a narrow passage on the outer wall."
+      }
+     ],
+     "next": "Qimah Reservoir"
+    },
+    "Qimah Reservoir": {
+     "objective": "Final fight: Azmadi, the Faridun Prince."
+    }
+   }
+  },
+  "P3": {
+   "default": "Interlude 3: from the Glade up to the Cuachic Vault.",
+   "zones": {
+    "The Glade": {
+     "objective": "Town: leave for the Ashen Forest.",
+     "next": "Ashen Forest"
+    },
+    "Ashen Forest": {
+     "objective": "Walk on to Kriar Village.",
+     "next": "Kriar Village"
+    },
+    "Kriar Village": {
+     "objective": "Head on to the Glacial Tarn.",
+     "optional": [
+      {
+       "kind": "spirit",
+       "text": "+40 spirit - beat Lythara, the Wayward Spear."
+      }
+     ],
+     "next": "Glacial Tarn"
+    },
+    "Glacial Tarn": {
+     "objective": "Beat Rakkar, the Frozen Talon.",
+     "layout": "The side path to the Howling Caves starts in this zone.",
+     "next": "Kriar Peaks"
+    },
+    "Howling Caves": {
+     "optional": [
+      {
+       "kind": "passive",
+       "text": "A book of 2 skill points - bring the yeti's tusks to Hilda."
+      }
+     ],
+     "main": false
+    },
+    "Kriar Peaks": {
+     "objective": "Climb on to the Etched Ravine.",
+     "optional": [
+      {
+       "kind": "item",
+       "text": "A free unique item - follow the spirits to an elder on a cliff top."
+      }
+     ],
+     "next": "Etched Ravine"
+    },
+    "Etched Ravine": {
+     "objective": "Beat Stormgore, the Guardian.",
+     "next": "The Cuachic Vault"
+    },
+    "The Cuachic Vault": {
+     "objective": "Final fight: Zolin and Zelina."
+    }
+   }
+  }
+ },
+ "endgame": {
+  "objective": "Kill the map boss to complete the map; the other rares are optional.",
+  "layout": "Layouts are random: read the map's mods before you go in."
+ }
+}

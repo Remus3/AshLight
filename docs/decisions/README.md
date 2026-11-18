@@ -3,6 +3,7 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Take the next number after the highest file here.
 
+- 0041: live zone guide and quest tracker (ZONE-GUIDE).
 - 0040: self checks and the non-English client notice
   (DIAG-SELF, LANG-GUARD).
 - 0039: waystone reward totals and campaign checks

@@ -101,6 +101,9 @@ its code (license notes: 0006).
   detector (what Client.txt lines are language dependent), first-hours
   hints for F2P newcomers, map level ladder; atlas progress and locale
   pattern packs listed ([0032-wave-4-2026-11.md](0032-wave-4-2026-11.md))
+- 0034 Zone guide facts - lasting campaign rewards per zone, main-path
+  order, layout tendencies, map completion; facts only, own words
+  ([0034-zone-guide-facts.md](0034-zone-guide-facts.md))
 
 ## Open research (feeds ROADMAP)
 

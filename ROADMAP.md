@@ -1935,6 +1935,18 @@ merge. Each row names the finding ids it closes.
   design-reviewer PASS on (1) and (2). ZERO-CLICK: code row, the loop
   works it.
 
+- [x] ZONE-GUIDE (build) Live zone guide and quest tracker: on every
+  zone change the dashboard shows the zone's goal, bonus content with a
+  permanent reward, a layout tendency, the next zone, waypoint / nearest
+  waypoint (world_areas snapshot), a clear-or-push lean from level vs zone
+  level, and per character the act's main-path steps done plus bonus zones
+  skipped in earlier acts. ZERO-CLICK: published in the snapshot on each
+  zone change from lines already tailed; the guide file hot-reloads on a
+  new mtime. DONE 2026-11-17 (decision 0041): server/al/zoneguide.py,
+  server/al/data/zone_guide.json, web/zoneguide.js (#zone-guide),
+  tests/test_zone_guide.py, app/test/zoneguide.test.js. Overlay line
+  waits for an overlay slot (view carries `line`).
+
 - [ ] OPERATOR: create the GitHub remote when the operator wants to publish
   (then lift the pre-push refusal in the same change, CI workflow with the
   kit's fleet_identity_guard.yml as a required check).

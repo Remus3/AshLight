@@ -1032,6 +1032,7 @@
     if (window.ALHints) { window.ALHints.paint(document, s, serverNow()); }
     // DIAG-SELF / LANG-GUARD: the core's checks and language notice
     if (window.ALChecks) { window.ALChecks.paint(document, s); }
+    if (window.ALZoneGuide) { window.ALZoneGuide.paint(document, s); }
     tick();
   }
 

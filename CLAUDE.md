@@ -555,3 +555,9 @@ them. Pause: `ops/loop/control/HALT`.
   writes it) (decision 0040). Reverses if: a localised log sample shows
   the signals misfire, the zone snapshot is dropped, or a report field
   leaks a path or identifier.
+- ZONE-GUIDE: per-zone guide in AshLight's own words (facts from public
+  sources, nothing copied, unsure facts left out), waypoints from the
+  snapshot graph, quest tracker from entered zones per character (never
+  claims a reward was taken), visits file under the run-history switch,
+  hot reload on mtime (decision 0041). Reverses if: a licence objection,
+  verified PoE2 quest log lines, or the operator rules the file unwanted.
