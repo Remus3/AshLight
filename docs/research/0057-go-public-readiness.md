@@ -4,7 +4,7 @@ Date: 2026-11-18. For the ultraplan (docs/plan/README.md), dimension E
 go-public readiness. Audit only: history identity, leaks at HEAD and in
 history, what a public reader sees, the operator's public-repo pattern, CI,
 the pre-push hook and GGG's asks of public tools. Nothing was fixed.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -18,6 +18,18 @@ Status: draft
 - GH-ACT: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository
 - GH-RULES: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
 - GH-RUN: https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job
+  (labels re-checked at verification on
+  https://docs.github.com/en/actions/reference/runners/github-hosted-runners:
+  windows-latest, windows-2025, windows-2025-vs2026 and windows-2022 exist).
+- GH-BP (added at verification): https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+  (direct pushes to a branch with required checks are allowed once the
+  checks have passed on those commits).
+- GH-DOPT (added at verification): https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+  (`cooldown`, default 3 days, github-actions supports only default-days;
+  `exclude-paths` per ecosystem, version updates only).
+- GH-ABOUT-RS (added at verification): https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets
+  (availability line names Team and Enterprise plans; personal-account
+  private repos are not addressed).
 - GH-REL-API: the public releases API of the three first-party actions
   (checkout, setup-python, setup-node), read with an authenticated
   read-only gh call: checkout v7.0.1 (2026-07-20) commit 3d3c42e5aac5ba805825da76410c181273ba90b1;
@@ -35,17 +47,21 @@ Status: draft
 ## Summary
 
 - History is clean. fleet_identity reports 0 violations in all 9 classes over
-  the 370 commits of main and 384 commits on all 16 local refs clean; one
-  author / committer identity tuple across all 384, its address a GitHub
+  the 390 commits of main and 404 commits on all 16 local refs clean (counts
+  re-run at verification; the draft's 370 / 384 predate later commits); one
+  author / committer identity tuple across all 404, its address a GitHub
   noreply one; 0 attribution trailers. No rewrite is needed, so no request to
   MAIN via fleet_rewrite.py.
 - Leaks: leak_sweep --tree and --history are both 0 findings with the needle
-  arm ARMED (24 needles, local config) over every tracked file and all 384
-  commits. 13 tracked PNGs carry 0 metadata chunks; no blob over 500 KB.
+  arm ARMED (24 needles, local config) over every tracked file and all 404
+  commits. 12 tracked PNGs (12 PNG paths ever added) carry 0 metadata
+  chunks; no blob at HEAD over 500 KB.
   Full history can be published; a fresh root commit buys nothing.
 - The brief's premise is wrong: the README hero IS tracked at HEAD
   (assets/brand/readme-hero-{light,dark}.png and .svg, added in 87212c0),
   drawn strokes with no font and no GGG imagery. Keep it where it is.
+  app/brand/ holds only index.js, a loader that points the Electron side at
+  the tracked icon files (app/brand/index.js:2-6); it is code, not art.
 - LICENSE (Apache-2.0, full text), NOTICE, THIRD-PARTY.md, CONTRIBUTING.md,
   SECURITY.md and the GGG disclaimer (README, dashboard, overlay, client
   start page) exist. Missing: .github/ (CI, identity guard, Dependabot,
@@ -104,9 +120,9 @@ Status: draft
 ## Findings
 
 F1. Identity history: clean, no rewrite. `fleet_identity.py check
---history --by-class main`: commits 370, distinct flagged 0, all 9 classes
-0. `check --all`: 384 commits clean. `ci-check - main`: 370 clean (push,
-whole history). Own scan: 1 distinct author / committer tuple over 384
+--history --by-class main`: commits 390, distinct flagged 0, all 9 classes
+0. `check --all`: 404 commits clean. `ci-check - main`: 390 clean (push,
+whole history). Own scan: 1 distinct author / committer tuple over 404
 commits; 0 lines matching co-authored-by / signed-off-by / co-developed-by /
 "generated with" / session URLs; 0 AI or bot names in identities. The
 address is a GitHub noreply one, so publishing history publishes no
@@ -115,12 +131,13 @@ MAIN rewrite order is needed.
 
 F2. Leaks: clean at HEAD and in history. --tree 0 and --history 0 (needle
 arm ARMED, 24 needles; structural arm on). Blind spots: binary blobs and
-author headers are not swept; I checked both separately (13 PNGs with no
-tEXt / iTXt / zTXt / eXIf / tIME chunk; 2 ICO files; identity in F1).
+author headers are not swept; both were checked separately (12 PNGs with
+only IHDR / IDAT / IEND chunks, so no tEXt / iTXt / zTXt / eXIf / tIME; 2
+ICO files; identity in F1).
 History matters as much as HEAD because every reachable commit is public
 after a push; it is clean, so the choice between a MAIN-ordered rewrite and
 a fresh root commit does not arise. Weighed anyway: a rewrite keeps the
-narrative but needs a MAIN order and re-hashes 384 commits (every hash
+narrative but needs a MAIN order and re-hashes 404 commits (every hash
 cited in docs goes stale); a fresh root is cheap but drops the record the
 docs cite by hash (decisions and notes cite commits such as b8fda80 and
 87212c0). Neither is warranted.
@@ -135,7 +152,11 @@ push the operator ordered needs the refusal gone while both scans stay.
 The CLAUDE.md "Public-repo hygiene" section (CLAUDE.md:317-324), the
 al_loop docstring (tools/al_loop.py:52-57) and the ROADMAP operator row
 (ROADMAP.md:2059-2061) all describe the refusal and must change in the
-same commit.
+same commit. The hand-off also mentions it (AL-NEXT-SESSION.txt:74); /done
+rewrites that file, so it follows on its own. The pinning test's docstring
+(tests/test_fleet_kit_conformance.py:153-154) says "pre-push refuses" and
+changes with the assert. The FLEET block's "pre-push refuses"
+(CLAUDE.md:208) means refusing bot commits, not every push: it stays.
 
 F5. Loop auto-push once public. After the first manual push the armed
 loop pushes main every tick it is ahead (F-state above), through gates and
@@ -155,7 +176,7 @@ the overlay smoke test already skips unless AL_OVERLAY_SMOKE=1 on Windows
 (tests/test_overlay_smoke.py:175-180).
 
 F7. NOTICE reads as internal. NOTICE:2 "Copyright 2026 the operator" names
-no holder a reader can identify; NOTICE:6-7 and :14-15 say "MAIN fleet
+no holder a reader can identify; NOTICE:6-7 and :12-13 say "MAIN fleet
 kit" and "the same operator's fleet". Apache-2.0 needs no named holder to
 be valid, but a placeholder looks unfinished. The vendored kit's own
 NOTICE says the same and is byte-pinned (MAIN's to change).
@@ -166,7 +187,9 @@ F8. README accuracy, 4 gaps. (a) README.md:62-64 says Node 20 or newer;
 0041: companion window, tray, overlay in one Electron process started by
 run.ps1) is not described; README.md:69-70 still says "overlay (if
 installed)" and `-NoOverlay` actually means "no client"
-(scripts/run.ps1:148, 201). (c) No word on what ops/, CLAUDE.md, the
+(scripts/run.ps1:146-148, 201); `-NoBrowser` also drops the client
+(run.ps1:148), which README.md:71 ("prints the dashboard link instead")
+does not say. (c) No word on what ops/, CLAUDE.md, the
 hand-off file and ROADMAP are, so the first-screen file list looks like
 noise. (d) README.md:119-124 says nothing leaves the computer unless web
 data is on; true for the app, but the developer loop (GGG docs watch,
@@ -180,7 +203,7 @@ on in 7 of 7 peers (PEERS).
 F10. Missing community files: CODE_OF_CONDUCT (6 of 7 peers have one),
 issue templates (all 7 have an ISSUE_TEMPLATE folder), PR template (6 of
 7). Research 0051 already plans a .github/ISSUE_TEMPLATE at go-public
-(0051:475). No CHANGELOG (0053 R6 owns it).
+(0051:518 in its current working copy). No CHANGELOG (0053 R6 owns it).
 
 F11. The operator's public-repo pattern (7 public of 12; PEERS):
 - Files: 6 of 7 publish CLAUDE.md, the vendored kit and the hand-off file
@@ -228,9 +251,15 @@ Archive placement is 0047's call.
 F15. GGG's asks of a public tool (research 0001, re-read GGG-DEV): state
 non-affiliation (done, 4 surfaces); never present the tool as developed or
 authorised by GGG; no commercial revenue from GGG IP (no paid tier,
-donation gate or sale of derived data); no GGG logo or trademark in
-graphics; call only documented endpoints, obey rate limits, identifiable
-User-Agent; never embed keys or credentials in a distributed binary. A
+donation gate or sale of derived data); no use of GGG or game logos that
+imitates an official platform (GGG-DEV; the wider "no GGG trademarks, art
+or logos in name, icon or branding" is AshLight's own stricter floor in
+CLAUDE.md); call only documented endpoints, obey rate limits, identifiable
+User-Agent (GGG-DEV spells out the client-id / version / contact form for
+OAuth API clients; AshLight calls no GGG API, and its web requests follow
+the CLAUDE.md floor: a truthful User-Agent naming AshLight and its version,
+no POESESSID); never embed keys or credentials in code or a
+distributed binary. A
 public repo adds three concrete checks: the repository description and
 topics must read as unofficial and descriptive; no Sponsors / FUNDING.yml
 on a GGG-derived tool; no screenshot of the game in the README (the hero is
@@ -329,7 +358,7 @@ R4. GP-FRESH: prove the suite in a fresh clone before anything is pushed
 R5. GP-NOTICE: public-facing NOTICE and copyright line (B6).
 - Action: replace NOTICE:2 with "Copyright 2026 The AshLight authors"
   (the convention big projects use; it names no person) and reword
-  NOTICE:6-7 and :14-15 to "ops/fleet_kit/ is a vendored development kit
+  NOTICE:6-7 and :12-13 to "ops/fleet_kit/ is a vendored development kit
   (Apache-2.0, own LICENSE and NOTICE)". Record the license choice
   (Apache-2.0 for own code; nothing third-party bundled; data only as
   attributed sidecar snapshots per decision 0009) in a decision.
@@ -362,8 +391,18 @@ R7. GP-SETUP: create and configure the repository with gh, private first.
   branch protection on a private personal repo may need a paid plan
   (UNVERIFIED), set a ruleset on main: block force pushes, restrict
   deletions, require status checks `fleet-identity-guard` and `test`
-  (GH-RULES), no bypass actors, no PR requirement (the operator merges
-  locally and pushes main directly; a PR rule would block the loop);
+  (GH-RULES), no PR requirement (the operator merges locally and pushes
+  main directly; a PR rule would block the loop);
+  (verification correction) the ruleset gets ONE bypass actor, the
+  repository admin role, bypass mode always: GitHub lets a commit be pushed
+  directly to a branch with required checks only once those checks have
+  already passed on it (GH-BP), and the loop pushes fresh local commits to
+  main that no CI has seen, so a no-bypass ruleset would reject every loop
+  push. With the admin bypass the required checks bind pull requests
+  (Dependabot and outside contributors, the web-UI merge case the guard
+  exists for, ops/fleet_kit/fleet_identity_guard.yml:11-17) and the
+  operator's direct pushes stay gated by the local pre-push identity check
+  and leak sweep (R1), while both workflows still run on every push to main;
   (6) enable private vulnerability reporting (GH-PVR), Dependabot alerts
   and security updates (GH-DSU), secret scanning and push protection;
   turn on "require actions pinned to a full-length commit SHA" (GH-ACT;
@@ -378,7 +417,8 @@ R7. GP-SETUP: create and configure the repository with gh, private first.
   preview (use the hero).
 - Depends on: R1-R6 landed. Files: none (repository settings).
 - Acceptance test: read-back with gh api: visibility public; ruleset
-  active with the two required checks and no bypass;
+  active with the two required checks and the admin role as the only
+  bypass actor; the next loop push lands (tick log "push ok");
   private-vulnerability-reporting enabled true; automated-security-fixes
   enabled true; vulnerability-alerts 204; actions permissions
   sha_pinning_required true; workflow default permissions read.
@@ -386,8 +426,12 @@ R7. GP-SETUP: create and configure the repository with gh, private first.
 
 R8. GP-DEPENDABOT: config plus the local re-apply lane (FLEET item 17).
 - Action: .github/dependabot.yml with npm in /app and github-actions,
-  weekly, one group per ecosystem, cooldown as 0046 R9; exclude the
-  identity-guard copy from github-actions bumps (byte-pinned). Bump PRs
+  weekly, one group per ecosystem, cooldown as 0046 R9 (for github-actions
+  only `default-days` applies, GH-DOPT); exclude the identity-guard copy
+  from github-actions bumps with `exclude-paths:
+  [".github/workflows/fleet-identity-guard.yml"]` (GH-DOPT; version
+  updates only, so a security update could still open a PR there: close it
+  and report to MAIN, the kit owns that file). Bump PRs
   are never merged on GitHub: a lane cherry-picks the PR head with
   --no-commit, regenerates app/package-lock.json locally, commits as the
   operator through fleet_gitlock, pushes main, closes the PR with one
@@ -402,8 +446,11 @@ R8. GP-DEPENDABOT: config plus the local re-apply lane (FLEET item 17).
 
 R9. GP-META: description, topics, social preview.
 - Action: description "Unofficial second-screen dashboard and
-  click-through overlay for Path of Exile 2 on Windows. Reads only the
-  game's log file. Not affiliated with Grinding Gear Games."; topics:
+  click-through overlay for Path of Exile 2 on Windows. Reads the game's
+  log file; never touches the game process. Not affiliated with Grinding
+  Gear Games." (verification correction: the draft's "Reads only the
+  game's log file" was untrue, AshLight also reads item text on a hotkey
+  press and opt-in web data, NOTICE:17-18); topics:
   path-of-exile-2, poe2, overlay, companion-app, dashboard, electron,
   python, windows, path-of-building, loot-filter (10, peers use 8-12);
   social preview: readme-hero-dark.png; no homepage until a release
@@ -469,7 +516,8 @@ R12. GP-TIDY: three small public-surface cleanups.
 ## Go / no-go for the first push
 
 GO (verified this session):
-- Identity: 0 violations, 384 commits, noreply address (F1).
+- Identity: 0 violations, 404 commits on all refs (390 on main), noreply
+  address (F1). Re-run both scans right before the push: history grows.
 - Leaks: 0 at HEAD, 0 in history, binaries clean (F2).
 - LICENSE, NOTICE text present; disclaimer on 4 surfaces; own brand art.
 - gh authenticated with repo and workflow scopes.
@@ -523,10 +571,62 @@ text (Open questions), and R5 has a default.
   here; the operator may prefer a public handle. Operator override only,
   not a blocker.
 - Whether a personal-account private repository can carry the ruleset
-  before the flip (UNVERIFIED; R7 sequences it after the flip so the
-  answer does not matter).
+  before the flip (UNVERIFIED: GH-ABOUT-RS names only Team and Enterprise,
+  and the account plan is not readable with the token's scopes; R7
+  sequences it after the flip so the answer does not matter).
 - Peer gaps for MAIN (not AL work): Dependabot security updates on in 1 of
   7 public peers and the identity guard required in 0 of 7, both against
   FLEET item 17. Report in AL's next batched note to MAIN.
 - Whether the kit tolerates absent channel folders (R12); read
   fleet_inbox before moving them.
+
+## Verification
+
+Independent verification, 2026-11-18, by an agent that did not write the
+draft.
+
+Checked (re-run or re-read, not taken from the draft):
+- Identity: fleet_identity `check --history --by-class main` (390, all 9
+  classes 0), `check --all` (404 clean), `ci-check - main` (390 clean);
+  own git log scan: 1 identity tuple, 0 trailer lines, noreply domain.
+  16 refs, no remote.
+- Leaks: leak_sweep --tree (rc 0) and --history, both ARMED with 24
+  needles, 0 findings; PNG chunk scan of all 12 tracked PNGs (only IHDR /
+  IDAT / IEND); 0 blobs at HEAD over 500 KB.
+- Code citations, 24 checked: .githooks/pre-push:2-24, commit-msg:7-8,
+  tests/test_fleet_kit_conformance.py:152-165, fleet_identity.py def lines
+  454 / 536 / 601, leak_sweep.py:50-58, 175, 278-289, al_loop.py:52-57,
+  168-178 (push runs under the kit git lock), 1282-1297, 1322-1338,
+  CLAUDE.md:317-324, ROADMAP.md:2059-2061, README.md:62-72, 119-124,
+  161-169, NOTICE, SECURITY.md:5, .claude/settings.json:17 (tools/ash_lane.py
+  absent), run.ps1:146-148, 201, test_overlay_smoke.py:175-180,
+  app/package.json test script, the guard yml, design 0005:6, 29, 77, the
+  disclaimer in 3 HTML files, .gitattributes, .gitignore, file line counts.
+- gh (read-only): auth status and scopes; latest releases and commit SHAs
+  of checkout, setup-python, setup-node (all three match the draft); the 7
+  public of 12 peers and every PEERS settings count in F11 (security
+  updates 1/7, private reporting 7/7, alerts 7/7, 5 classic protections
+  with 0 required checks, 1 with 2 rulesets, 1 unprotected, SHA pinning
+  off 7/7, token read-only and PR approval off 7/7, identity guard
+  workflow 5/7, 8-12 topics).
+- Web: GGG-DEV re-fetched (all six asks present; logos clause narrower
+  than drafted), GH-ACT, GH-PVR, GH-DSU, GH-RULES, runner labels, GH-BP,
+  GH-DOPT, GH-ABOUT-RS.
+- ToS floor: every R and every Rejected item re-tested; none needs the
+  floor bent. Settled decisions: none contradicted (0009, 0013, 0015-0017,
+  0041 touched only descriptively).
+
+Corrected (10): commit counts 370 / 384 to 390 / 404 (history grew); PNG
+count 13 to 12; NOTICE cite :14-15 to :12-13 (twice); 0051 cite :475 to
+:518; F15 logo clause narrowed to GGG-DEV's wording and the User-Agent
+format scoped to OAuth API clients; R9 description no longer claims
+"reads only the game's log file"; R7 ruleset gets the admin role as its
+one bypass actor, because a no-bypass required-check rule would reject
+every direct loop push (GH-BP); R8 names the real `exclude-paths` option
+and its version-updates-only limit; F4 and F8 gained the hand-off,
+docstring, FLEET-block and `-NoBrowser` details; app/brand explained.
+
+UNVERIFIED: whether a personal-account private repository can carry a
+ruleset or branch protection before the visibility flip (R7 is sequenced
+so it does not matter); the fresh-clone suite run (R4, deliberately not
+run here: the ground rules forbid the whole suite).
