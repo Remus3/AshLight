@@ -7,7 +7,7 @@ refresh, scheduled task), then the missing set: upstream watchers, docs,
 screenshot and changelog refresh, the PoE2 1.0 trigger, and how the loop and
 the session-run waves share ROADMAP.md. Watcher inputs come from notes 0035,
 0036, 0037, 0046 and 0052; this note owns the shared frame.
-Status: draft
+Status: verified
 
 ## Sources (all accessed 2026-11-18)
 
@@ -25,6 +25,8 @@ Web:
 - GH-ISS: https://docs.github.com/en/rest/issues/issues
 - GH-REL: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 - GH-DBS: https://docs.github.com/en/code-security/dependabot/dependabot-security-updates/about-dependabot-security-updates
+- GH-DBE: https://docs.github.com/en/code-security/reference/supply-chain-security/troubleshoot-dependabot/dependabot-errors
+  (added by the verifier)
 - KAC: https://keepachangelog.com/en/1.1.0/
 - GGG-ROB: https://www.pathofexile.com/robots.txt
 - GGG-PN: https://www.pathofexile.com/forum/view-forum/2212 (one read of the
@@ -211,7 +213,8 @@ test_audit_batch4.py; ops/loop/gates.txt; .githooks/; decisions 0009, 0013,
   (tools/loop_base.py:85; tools/al_loop.py:1386-1391) and the parked list
   holds only `adjudicate` (tools/loop_inbox.py:388-392). 12 of 22 items of
   the armed day ended there [L-USE]. Their rows stayed open with no line
-  anywhere, and their commits have no keep ref.
+  anywhere, and 10 of the 12 commits have no keep ref (only TC-UPGRADE-STATS
+  and UTIL-WAYSTONE carry one).
 - F4 Fix rounds were spent on failures no lane can fix. On the armed day
   (87 runs in 15.8 h) 39 were fix runs and 36 of those went to the 12
   failed items. 7 items name a test tied to live processes on the host
@@ -237,7 +240,8 @@ test_audit_batch4.py; ops/loop/gates.txt; .githooks/; decisions 0009, 0013,
   it (N37 F8). In CI the automatic token gets 1,000 per hour per repository
   and a 304 is free only with authentication [GH-RATE, GH-COND].
 - F10 Docs drift is unguarded. The Electron pin is quoted in 6 tracked
-  files, CLAUDE.md:300 among them, and no test binds them; the decisions
+  files outside docs/research (12 counting research notes), CLAUDE.md:300
+  among them, and no test binds them; the decisions
   index lists 8 of 44 files; the version lives in two unlinked strings
   (N52 F4). A lane may not edit CLAUDE.md, so the first unattended bump
   leaves it wrong.
@@ -250,8 +254,9 @@ test_audit_batch4.py; ops/loop/gates.txt; .githooks/; decisions 0009, 0013,
   screenshot of the product (README.md:3-6).
 - F12 No changelog, no tag. GitHub's generated notes list merged pull
   requests [GH-REL]; this repository merges locally, so they would be
-  empty. On main's first-parent line 80 of 169 subjects are `merge:` with
-  the row id in the scope and 58 follow no convention. A changelog should
+  empty. On main's first-parent line 80 of 188 subjects (recounted at HEAD
+  on 2026-11-18) are `merge:` with the row id in the scope and 53 match no
+  `type(scope):` form. A changelog should
   not be a commit dump anyway [KAC].
 - F13 Three notes each propose a new watcher tool (N36 R6, N37 R5, N46 R1).
   Three tools mean three state files, three tick hooks and three ways to
@@ -264,11 +269,16 @@ test_audit_batch4.py; ops/loop/gates.txt; .githooks/; decisions 0009, 0013,
   letter from `docs/plan/` (this plan); the brief glob lets row `A-B` read
   `A-B-C-x.md` (tools/loop_roadmap.py:86); an unknown dependency id is
   ignored, so a typo runs the row early.
-- F16 What a row costs. Clean: 2 runs (lane, verifier). Each fix round
-  adds 2, up to 8. Measured: lane median 280 s and 1.79 USD, verifier and
-  fix 0.14 to 0.15 USD, 67.78 USD in the first two days [L-USE, L-GATE].
+- F16 What a row costs. Clean: 2 runs (lane, verifier). The verifier runs
+  only on green gates (tools/al_loop.py:764-776), so a round after red
+  gates adds 1 run (the fix) and a round after a verifier FAIL adds 2.
+  Gates red throughout: 4 runs, then `failed` (the 12 failed items cost 48).
+  Worst case 8 (lane, 3 fixes, 4 verifiers). Measured: lane median 280 s
+  and 1.79 USD, verifier and fix medians 0.14 and 0.15 USD, 67.78 USD over
+  the 87 runs [L-USE, L-GATE].
 - F17 The product cannot start as an isolated demo. `python -m server.al`
-  reads config/local.json for its port (server/al/__main__.py:152-153;
+  reads config/local.json for its port when no `--port` is given
+  (server/al/__main__.py:152-153;
   server/al/paths.py:165-170) and builds its Core with no runtime or config
   override (server/al/__main__.py:157), so it inherits the operator's web
   data setting, log path and consent. Worse, a missing log path falls back
@@ -370,8 +380,8 @@ Python; a model run happens only when a filed row is dispatched.
   Effort: S. Risk: a wave that ends early leaves rows tagged; they stay
   listed as blocked on every tick, so nothing is lost. ToS check: no floor
   rule touched. Depends on: R1. Files likely touched: tools/al_loop.py (one
-  reason string), ROADMAP.md, docs/plan/07-execution-plan.md,
-  docs/plan/08-orchestration.md. Acceptance test: a dry-run tick on the
+  reason string), ROADMAP.md, docs/plan/07-execution-plan.md and
+  docs/plan/08-orchestration.md (neither exists yet; the plan writes them). Acceptance test: a dry-run tick on the
   landed ROADMAP lists only loop rows as "would dispatch". ZERO-CLICK: no
   operator step; the session that ends a wave flips its rows.
 - R6 DOCS-FRESH. Action: `tools/docs_fresh.py` holds a table of facts, each
@@ -445,8 +455,9 @@ Python; a model run happens only when a filed row is dispatched.
   unattended, hidden, below-normal priority.
 - R9 REL-NOTES. Action: `tools/release.py notes` (N52 R2, R3) drafts a
   version's notes from the first-parent `merge:` subjects since the last
-  tag, joined to their row titles, grouped Added / Changed / Fixed [KAC],
-  `(data)` rows under Changed. Each wave ends with a pre-filed
+  tag, joined to their row titles, grouped Added / Changed / Fixed /
+  Security [KAC lists six headings; these four fit the row kinds],
+  `(data)` rows under Changed, `DEP-` and `ELECTRON-` rows under Security. Each wave ends with a pre-filed
   `REL-PREP-<n>` row that depends on the wave's rows: its lane curates the
   draft, runs R6 and R8. A session commit-msg check holds subjects to the
   same types. The tag and the publish stay the operator's one phrase (N52
@@ -475,7 +486,11 @@ Python; a model run happens only when a filed row is dispatched.
   get read with web tools. Effort: S. Risk: more dives after launch; the
   one-a-day cap holds it at 2 runs a day. ToS check: "public web data": the
   lane's reads are the anonymous, robots-respecting reads the dive prompt
-  already orders (tools/loop_prompts.py:72-92). Depends on: R2. Files
+  already orders (tools/loop_prompts.py:77-92, which already names "GGG
+  patch notes"). A request file carries only URLs on GitHub, poe.ninja's
+  docs page and the six GGG developer-docs pages; it never adds a forum
+  URL. Whether a research lane may read the patch-notes forum at all is
+  the same question the Rejected entry raises (open question 8). Depends on: R2. Files
   likely touched: tools/al_loop.py, loop_prompts.py, tests. Acceptance
   test: a request with open rows present still dispatches one dive.
   ZERO-CLICK: unattended.
@@ -493,7 +508,9 @@ Python; a model run happens only when a filed row is dispatched.
 Each line: home; cadence and gate; what it reads; on change; failure.
 Runs cost is 0 for all; "row" means 2 to 8 runs when dispatched. Identity
 everywhere: `AshLight/<version>` with a purpose text; the web-data opt-in
-applies only to W0 and W7 (the app); the rest is dev tooling.
+applies only to W0 and W7 (the app); the rest is dev tooling. Failure,
+where a line names none: the source keeps its last good state and R10
+reports it (one tick line after 3 misses, a row after 7 days).
 
 - W0 Price refresh (exists, decision 0026). App. Hourly, ETag, opt-in and
   contact required. poe.ninja documented routes. Acts inside 0026; N36 R3
@@ -550,6 +567,10 @@ a date, a 40-character hash); no upstream sentence is ever copied (F14).
     - [ ] <ID> (<lane>) <what changed, inside 70 characters>: <task>.
       ACCEPT: <checkable outcome>. ZERO-CLICK: <how>. SOURCE: watch
       <name> <key>, filed <YYYY-MM-DD>.
+
+Filled examples below are illustrative (no claim that Electron 45.3.4
+exists). A GHSA id is lower case upstream; the token is upper-cased and
+must match `GHSA(-[0-9A-Z]{4}){3}` before it enters an id.
 
     - [ ] ELECTRON-45-3-4 (data) Electron 45.3.4 is 3 days old (pin
       45.3.3): bump the exact pin and the lockfile. ACCEPT: both files
@@ -637,7 +658,11 @@ Rules the parser enforces today:
 - A plain-Python daily read of the official patch-notes board [GGG-PN].
   robots.txt allows the path [GGG-ROB], but it is a GGG page outside the
   API Reference and Data Exports and the page has no feed; the floor's GGG
-  clause is not clearly met and W4 / W5 detect a patch without it.
+  clause is not clearly met and W4 / W5 detect a patch without it. The
+  existing dive prompt (tools/loop_prompts.py:80-81) and runbook step 1
+  (docs/ops/1.0-launch-runbook.md:37-41) already send a model lane or a
+  session to read those notes; that practice predates this note and is
+  not extended here (open question 8).
 - A CI job that commits a state file, moves a pin or merges a Dependabot
   pull request: FLEET item 17 (no bot author, no merge on GitHub).
 - Row text taken from an issue body, a release note or a commit title:
@@ -669,8 +694,13 @@ Rules the parser enforces today:
    build-time fetch into the sidecar cache. Needs an adjudicator.
 3. FLEET item 17 asks a lane to close a Dependabot pull request with a
    comment. That needs a GitHub credential on the dev host (operator act),
-   or a MAIN ruling that Dependabot's own close is enough. Whether
-   Dependabot closes it once main is fixed is UNVERIFIED [GH-DBS].
+   or a MAIN ruling that Dependabot's own close is enough. GitHub's
+   errors reference says Dependabot normally closes its own pull request
+   once the same update is on the default branch, but in rare cases it
+   stays open, and it cannot close a security pull request for a
+   dependency that is no longer vulnerable [GH-DBE]; so the lane's close
+   comment stays needed as a fallback. Not yet observed on this
+   repository (no remote).
 4. Does a list read of public issues work without a token at the stated
    60 per hour? The pages read do not say so in words [GH-ISS, GH-RATE];
    UNVERIFIED until the remote exists.
@@ -682,3 +712,62 @@ Rules the parser enforces today:
 7. How does the first 1.0 play session unblock `UTIL-10-LOG` without a
    reminder: a read of AshLight's own run-history file for an Act 5 split
    is proposed; it needs the run-history box ticked. Operator decision.
+8. Does the floor's GGG clause ("GGG endpoints only if they are in the API
+   Reference or Data Exports") bind dev research reads of the public
+   patch-notes forum, which the dive prompt and runbook step 1 already
+   order? This note rejects an automated reader and adds none; the
+   existing practice needs a ruling. Adjudicator.
+
+## Verification
+
+Independent verifier, 2026-11-18. Checked:
+- Code: about 60 of the cited path:line ranges re-opened (tools/al_loop.py,
+  loop_base.py, loop_roadmap.py, loop_merge.py, loop_prompts.py,
+  loop_inbox.py, al_lane.py, loop_task.py, usage_ledger.py,
+  ggg_docs_watch.py, tc_drift.py, the kit's fleet_headless.py; server/al
+  __main__.py, paths.py, core.py, logfile.py, ninja.py, http.py,
+  theorycraft/snapshot.py; ROADMAP.md, AL-NEXT-SESSION.txt, CLAUDE.md,
+  README.md, research 0029, .githooks/pre-push, three tests,
+  scripts/brand_render.js). All held; two were tightened (F17 port read is
+  conditional on no `--port`; R11 prompt range).
+- Numbers: re-derived with the loop's own parser and the control files:
+  156 row-like bullets, 5 unparsed, 1 duplicate id, 12 open rows of which
+  8 BLOCKED; hand-off 15 bullets, 9 dispatchable; 22 items, 12 failed and
+  10 merged; 87 usage rows over 15.8 h, 67.78 USD; 39 fix runs, 36 on
+  failed items; 7 failed items name tests/test_procs.py and 4
+  tests/test_audit_batch4.py; 44 decision files, 8 indexed; the five row
+  templates parse as stated and the gate row flips to done.
+- Web: 11 sources re-fetched on 2026-11-18 (GH-SCHED, GH-DIS, GH-BILL,
+  GH-RATE, GH-COND, GH-CL, GH-REL, GH-DBS, GH-ISS, GGG-ROB, KAC) plus
+  GH-DBE added.
+  The 60 / 1,000 per hour limits, the authenticated-only free 304, the
+  60-day schedule disable for public repositories, dropped scheduled jobs,
+  free standard runners, the `vulnerability-alerts` read permission and
+  the robots rules all hold.
+- ToS floor and settled decisions: every recommendation re-read against
+  each floor rule and decisions 0009, 0013, 0025, 0029, 0044; no silent
+  reversal found.
+
+Corrected:
+- F3: 10 of 12 failed commits lack a keep ref (2 have one), not all 12.
+- F10: the pin is in 6 tracked files outside docs/research, 12 with them.
+- F12: 80 of 188 first-parent subjects (not 169), 53 without a type form
+  (not 58), recounted at HEAD.
+- F16: a round after red gates costs 1 run, not 2; the verifier runs only
+  on green gates; the USD figure is over the 87 runs.
+- R9: Keep a Changelog has six headings; Security added for bump rows.
+- R11 and Rejected: the dive prompt and runbook already read GGG patch
+  notes; R11 adds no forum URL; open question 8 added for a ruling.
+- Templates: filled examples marked illustrative; GHSA tokens upper-cased.
+- Open question 3: GitHub documents that Dependabot usually closes its own
+  pull request once the update is on the default branch, with exceptions.
+- R5: the two docs/plan files it names do not exist yet.
+- Catalogue: a default failure rule for watchers that named none.
+
+UNVERIFIED (stays open):
+- Open question 4: anonymous list reads of public issues (the endpoint
+  page is silent; needs the remote).
+- Dependabot's close behaviour on this repository (no remote yet).
+- The lane median of 280 s and 1.79 USD is the author's pooled figure;
+  per-label medians recomputed here are 307 to 318 s and 1.67 to 2.19 USD
+  for build and data lanes, so the figure is plausible, not re-derived.
