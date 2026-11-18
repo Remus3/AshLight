@@ -6,9 +6,9 @@ on this machine, called "the reference app" here. This note extracts that
 app's whole deployment pattern, maps each element onto AshLight's rules and
 ends with the gap to AshLight's five scripts. Packaging alternatives are
 research 0053; go-public readiness is 0057; upstream watchers are 0058.
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (accessed 2026-11-17; every web source re-fetched 2026-11-18)
 
 The reference app, read only (file reads and git log / show; nothing was
 built, installed, run or changed there). By the brief it is cited by role,
@@ -18,8 +18,10 @@ never by name, path or repository:
 - REF-BOOT: its one-command PowerShell bootstrap installer.
 - REF-ENGINE: its installer command line and about 20 modules (install,
   update, swap, stop, repair, uninstall, launcher, manifest, release, paths).
-- REF-TESTS: its 13 deployment test files (about 137 tests by declaration
-  count) and its CI workflow.
+- REF-TESTS: about a dozen deployment test files (installer, setup, update
+  swap, auto-update, update API, shutdown, recover, purge, safe kill, crash
+  report, two no-egress files: about 130 tests by declaration count, the
+  verifier's own selection) and its CI workflow.
 - REF-PUB: its export / stage / publish tool and Windows Sandbox harness,
   kept beside the app in its parent tree.
 - REF-NOTES: its six per-version release notes and its version-bump commits.
@@ -38,16 +40,20 @@ Web:
 - S10: https://releases.electronjs.org/schedule
 - S11: https://learn.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key
 - S12: https://learn.microsoft.com/en-us/windows/security/application-security/application-isolation/windows-sandbox/windows-sandbox-configure-using-wsb-file
+- S13: https://releases.electronjs.org/release?channel=stable (accessed
+  2026-11-18)
 
 Repo: scripts/*.ps1, server/al/, app/, tools/tc_pin.py, tools/tc_drift.py,
 the decisions cited below, ROADMAP.md, AL-NEXT-SESSION.txt.
 
 ## Summary
 
-- The reference app ships with no packaged executable and no admin rights:
-  a zip with a per-file SHA-256 manifest and a checksum file, installed per
-  user by one pasted PowerShell line and self-tested before an install
-  marker is written. That fits decision 0041 point 9 as it stands.
+- The reference app ships with no packaged executable: a zip with a
+  per-file SHA-256 manifest and a checksum file, installed per user by one
+  pasted PowerShell line and self-tested before an install marker is
+  written. The app itself needs no admin rights; only a missing runtime
+  prerequisite (installed through winget or the publisher's MSI) can raise
+  an elevation prompt. That fits decision 0041 point 9 as it stands.
 - Its core idea is the layout: one home with `app\<version>\`, user data
   outside the code and a marker naming the active and previous version.
   Update = build beside, self-test, switch the marker; rollback = switch back.
@@ -76,7 +82,8 @@ the decisions cited below, ROADMAP.md, AL-NEXT-SESSION.txt.
 - Version: `VERSION = "0.1.0"` (server/al/__init__.py:7) and `"version":
   "0.1.0"` (app/package.json:3), served by /api/health and /api/version
   (server/al/http.py:234-245) and sent in the User-Agent
-  (server/al/webfetch.py:77). 0 tags, 356 commits, no notes file.
+  (server/al/webfetch.py:77). 0 tags, 381 commits (2026-11-18), no notes
+  file.
 - Paths: one resolver (server/al/paths.py:124-155). State lives in the
   checkout's `ops/runtime` (:35-41), config in `config/local.json`
   (:119-121), the rest under the sidecar root from the fleet kit (:44-71).
@@ -94,8 +101,10 @@ P1 Version (REF-ENGINE, REF-NOTES).
 - One field in the package manifest is the source (semver; a pre-release
   suffix selects a beta channel), served from the info endpoint.
 - A bump is one commit: manifest, lockfile and a new hand-written notes
-  file. Six releases shipped between 2026-10-18 and 2026-11-03. Tags exist
-  only in the public repository; the publish step creates them.
+  file. Six per-version notes files were added between 2026-10-18 and
+  2026-11-03 (git history); that all six were published is UNVERIFIED (the
+  public repository was not opened, to keep it unnamed). Tags exist only in
+  the public repository; the publish step creates them.
 
 P2 Build (REF-ENGINE).
 - One CLI command, `release --out DIR`: stage the source through a skip
@@ -106,16 +115,19 @@ P2 Build (REF-ENGINE).
 
 P3 Install (REF-README, REF-BOOT).
 - One pasted line pipes the bootstrap from the latest release's download URL
-  (the `/releases/latest/download/<asset>` form, S1) into PowerShell; no
-  admin rights. It also takes a local zip; a re-run upgrades or repairs.
-- Bootstrap order: the runtime (installed when missing through winget or the
-  publisher's installer, checked against the publisher's SHA-256 list,
-  failing closed when no hash can be got); `SHA256SUMS.txt`, then the zip it
+  (the `/releases/latest/download/<asset>` form, S1) into PowerShell. The
+  app needs no admin rights. It also takes a local zip; a re-run upgrades
+  or repairs.
+- Bootstrap order: the runtime and git (each installed when missing through
+  winget or the publisher's installer; the MSI route runs elevated, so a
+  standard user sees a prompt; the MSI is checked against the publisher's
+  SHA-256 list, failing closed when no hash can be got); `SHA256SUMS.txt`, then the zip it
   names, verified; hand-over to the release's own installer; start.
 - Before the marker is written a self-test starts that version's server on
   an ephemeral port with scratch data, checks the info endpoint for the
-  expected version and runs a 2-file test subset. A failure moves the build
-  aside, writes a report and leaves no marker.
+  expected version and runs a 2-file test subset (skipped with a note when
+  git is missing, because the subset builds git fixtures). A failure moves
+  the build aside, writes a report and leaves no marker.
 
 P4 What an install creates (REF-ENGINE).
 - A home under `%LOCALAPPDATA%\Programs\<app>` (a flag or an environment
@@ -139,10 +151,11 @@ P5 Release process (REF-PUB, REF-TESTS).
   suite, export and scan, the exported tree's suite, end-to-end UI, release
   assets, media, README lint, then Windows Sandbox phases: clean install
   from the staged assets, update from the previous published release, stop
-  / uninstall / purge, and a no-egress phase with networking disabled. A
-  sandbox needs more than 6 GB free.
-- Publish: nine refusals before anything changes (the exact typed phrase
-  naming the version; a stage report that exists, is PASS, matches the
+  / uninstall / purge, and a no-egress phase with networking disabled
+  (seven sandbox phases in all). The sandbox launcher refuses with 6 GB of
+  free memory or less; a stage without the sandbox phases cannot PASS.
+- Publish: at least nine refusals before anything changes (the exact typed
+  phrase naming the version; a stage report that exists, is PASS, matches the
   version and is under 24 h old; an unmoved release ref; an unmoved public
   head; a clean dry run of the final private merge; a no-reply identity).
   Then one squash commit, a tag `v<version>`, a fast-forward push, the
@@ -310,8 +323,10 @@ install, maybe with an elevation prompt, to download one zip.
 F7. No uninstall, no update path, and no record of what an install created.
 Today's footprint: 2 shortcuts (scripts/setup.ps1:200-204), the optional
 task (scripts/autostart.ps1:42), `config/local.json`
-(scripts/setup.ps1:105-110), `ops/runtime`, 6 sidecar folders
-(server/al/paths.py:25) and `app/node_modules`; no registry write (the only
+(scripts/setup.ps1:105-110), `ops/runtime`, the sidecar folders setup
+creates (Temp, Build, Logs, Cache; scripts/setup.ps1:80-81; the full list of
+six, with the dev-only Scratch and ClaudeHistory, is server/al/paths.py:25)
+and `app/node_modules`; no registry write (the only
 registry code reads Steam's keys, server/al/logfile.py:37-48). The README
 has no Update or Uninstall section (README.md:60-113). Matters: removal is
 five manual steps the player has to guess.
@@ -330,9 +345,9 @@ shortcut-started client (only run.ps1 records its pid, scripts/run.ps1:212)
 and the shortcut would start the old version. The reference app records its
 runtime's full path at install.
 
-F9. A release needs a ship list, not a skip list. The tree tracks 532
-files, 5.0 MB; server, web, app without tests, scripts, assets and config
-are about 1.5 MB. A skip list would ship 29 ops files and 22 tools files
+F9. A release needs a ship list, not a skip list. The tree tracks 550
+files, 5.7 MB (2026-11-18); server, web, app without tests, scripts, assets
+and config are about 1.5 MB. A skip list would ship 29 ops files and 22 tools files
 that players never run, plus the hand-off and the roadmap.
 
 F10. Most building blocks exist: hash check, bounded download with a host
@@ -349,7 +364,8 @@ Matters: effort goes into layout, swap and gates, not plumbing.
 F11. The Electron pin sets a floor on release frequency. Electron supports
 its latest three majors and ships one about every 8 weeks (S9); Electron 45
 went stable on 2026-10-20 and its end of life is listed as 2027-04-27,
-tentative (S10). Matters: "only on a milestone" must count "the pinned
+tentative (S10). The newest stable build is already 45.3.4 (2026-11-17,
+S13), one patch past the 45.3.3 pin. Matters: "only on a milestone" must count "the pinned
 Electron leaves support" as one, or installs keep an unsupported engine.
 
 F12. Python for strangers is in transition. The newest Windows builds are
@@ -359,7 +375,10 @@ The classic installer is deprecated since 3.14 and ends with 3.16; the
 install manager replaces it (S4, S7). Each line has an embeddable zip: 12.0
 MB for 3.14.10, SHA-256 on its release page (S6), with the standard
 library, python.exe and pythonw.exe, no pip, isolated by a path file (S4).
-Matters: "3.11 or newer" means 3.13+ for a new install; the embeddable zip
+With no runtime installed, the install manager installs the latest release
+by itself on any launch command (S4, setting `automatic_install`, on by
+default). Matters: "3.11 or newer" means 3.13+ for a new install that wants
+a current binary build; the embeddable zip
 is the smallest hash-checkable route with no admin prompt. UNVERIFIED: that
 the core, supervisor and tools run under its path file.
 
@@ -382,8 +401,10 @@ R1. Installed-mode paths.
 - ToS check: "never modify any game file": resolver and installer refuse a
   home inside a Steam library or game folder; consent moves with the data
   folder, no new read.
-- Depends on: nothing (the plan records a decision and one Sidecar
-  sentence). Files: server/al/paths.py, procs.py, __main__.py,
+- Depends on: nothing in code; a recorded decision and one CLAUDE.md
+  Sidecar sentence (installed copies live under their install home), since
+  tests/test_sidecar_paths.py:33-41 today fails any path outside the repo or
+  the AL sidecar. Files: server/al/paths.py, procs.py, __main__.py,
   app/client/launcher.js, tests/test_sidecar_paths.py.
 - Acceptance test: with `AL_HOME=<tmp>` every runtime path is inside
   `<tmp>`; with no env and no kit folder none leaves `%LOCALAPPDATA%`; cores
@@ -435,9 +456,20 @@ R4. Installer and bootstrap, local zip first.
   decision (Q2).
 - ToS check: "truthful User-Agent" and "public web data": downloads go only
   to GitHub's release hosts and python.org, named as the AshLight installer
-  with its version, no cookie, no GGG or trade endpoint. "Never modify any
-  game file": it writes its home, two shortcuts and one per-user key.
-- Depends on: R1, R2, R3. Files: the bootstrap, the installer package, a
+  with its version, no cookie, no GGG or trade endpoint. These are
+  install-time fetches of AshLight's own runtime, like setup.ps1's `npm ci`
+  today, not game data; decision 0013 governs the running app and stays
+  untouched. "Never modify any game file": it writes its home, two
+  shortcuts and one per-user key.
+- Depends on: R1, R2, R3; three recorded rule changes before code:
+  (a) decision 0010's own "Reverses if" (Electron moves out of
+  app/node_modules) is met by design, so 0010 needs an amendment naming the
+  new proven-ours Electron folder (server/al/procs.py:52-60);
+  (b) decision 0041 point 8 (shortcut written by setup.ps1, targeting the
+  checkout) needs an amendment for the installer; point 9 (no packaged
+  .exe) stands;
+  (c) the Stack rule "npm ci from the lockfile" needs a sentence for the
+  pinned-zip route (Q2). Files: the bootstrap, the installer package, a
   runtime pin file beside config/tc_pins.json, README.md, tests.
 - Acceptance test: in a scratch home with fakes a clean install lays out
   marker, code, data and runtime; a tampered zip or a missing hash installs
@@ -496,7 +528,10 @@ R7. Stage, publish and CI, with gates.
 - Action: `tools/release.py stage` writes a PASS / FAIL `stage.json` (suite
   through the gate, node tests, two identical builds, leak sweep of the
   staged tree, a scratch-home install / update / rollback / uninstall round
-  trip, optional sandbox phases); `publish --version V --go "release V"`
+  trip, optional sandbox phases from a .wsb file with Networking and
+  ClipboardRedirection set to Disable and the staged assets in a ReadOnly
+  mapped folder, S12, since clipboard sharing and networking are on by
+  default); `publish --version V --go "release V"`
   refuses unless the stage is PASS, under 24 h old, for the same commit and
   the tag is free; then tag, push through the hook's override, release,
   read back tag and asset digests; a rehearse mode stops before the push.
@@ -545,7 +580,9 @@ R7. Stage, publish and CI, with gates.
 - A Windows service or a machine-wide install: against decisions 0005 and
   0011 (a detached per-user supervisor; logon start is an opt-in task).
 - Telemetry, a crash upload or an update ping with an identifier: against
-  the README's privacy promise and the floor's no-account rule.
+  the README's privacy promise ("nothing leaves your computer unless you
+  turn on web data", README.md:119), decision 0013, and decision 0040 (the
+  diagnostic report leaves only by the player's click, redacted).
 
 ## Open questions
 
@@ -564,9 +601,10 @@ R7. Stage, publish and CI, with gates.
 - Q5 (operator): whether the operator's live copy becomes an installed
   release, with the checkout on another port for dev.
 - Q6 (UNVERIFIED): Microsoft documents only the machine-wide uninstall key
-  (S11); the per-user key works for the reference app on Windows 10 and 11
-  (REF-PUB sandbox phases). That 45.3.3 is Electron's newest stable build
-  (2026-11-14) was seen only through a search summary of the releases page.
+  (S11, re-read 2026-11-18: HKLM only); the per-user key works for the
+  reference app on Windows 10 and 11 (its code writes and reads back the
+  per-user key; the sandbox phases exercise it). The draft's "45.3.3 is the
+  newest stable" is superseded: S13 lists 45.3.4 (2026-11-17).
 
 ## Gap list (AshLight today vs the pattern)
 
@@ -591,3 +629,67 @@ R7. Stage, publish and CI, with gates.
 - Already at or above the pattern: 127.0.0.1 only with a per-start token,
   one outbound path with an allow-list, a supervisor that restarts a dead
   core, an idempotent start, a redacted report, PowerShell 5.1 parse tests.
+
+## Verification
+
+Independent check, 2026-11-18, by a second agent (not the author).
+
+Checked:
+- Code (A): about 40 cited repo locations opened (scripts/setup.ps1,
+  build.ps1, run.ps1, stop.ps1, autostart.ps1, server/al/paths.py,
+  __init__.py, http.py, webfetch.py, procs.py, __main__.py, logfile.py,
+  diag.py, ninja.py, app/package.json, app/client/launcher.js,
+  config/local.example.json, .githooks/pre-push, tools/tc_pin.py,
+  tc_drift.py, loop_task.py, tests/test_sidecar_paths.py, README.md,
+  ROADMAP.md, AL-NEXT-SESSION.txt, decision 0041); all hold. Re-measured:
+  tags, commits, tracked files and bytes, ops / tools file counts, the
+  ship-set size, every `require` in app/ outside tests, the registry grep,
+  the 151.0 MiB Electron zip, 13 packages and 372 MB in app/node_modules.
+  F2 re-probed: Python's mkdir on a missing drive letter gives
+  FileNotFoundError (WinError 3).
+- Reference app (read-only file reads and git log only): install layout and
+  marker fields, release builder outputs and its "not uploaded" line, the
+  4-host download pattern, the ETag release check, the self-test (ephemeral
+  port, scratch dirs, 2 test files), uninstall order, refusal, purge to the
+  Recycle Bin and "uninstall incomplete" line, the per-user uninstall key
+  with read-back, the stage step list (11, 3 app-specific), the publish
+  refusals, the 24 h stage age, digest read-back, rehearse mode, the CI
+  workflow (Windows runner, commit-pinned actions, privacy scan, 5.1 parse),
+  and the notes-file history. Nothing identifying it is written here.
+- Web (B): all 13 sources re-fetched 2026-11-18; S1 to S12 support the
+  claims that cite them.
+- ToS floor (C): R1 to R7 and every Rejected item tested against each floor
+  rule; none needs the floor bent. Sandbox phases stay operator-run and
+  never while the game runs (they open a visible window).
+- Settled decisions (D): no silent contradiction left. Added to R4: decision
+  0010's "Reverses if" is met by design (Electron leaves app/node_modules)
+  and 0041 point 8 needs an amendment; added to R1: the Sidecar rule and its
+  test need a recorded change.
+- Brief (E): version, build, install, release, update, uninstall, config,
+  logs, health, tests, mapping and gap list are all covered.
+- Recommendations (F): each of R1 to R7 has every required field; ranking
+  kept (R1 and R2 unblock everything; R7 waits for operator acts).
+- Hygiene (G): ASCII, LF, no drive path, email, account id, tree or repo
+  name; own words.
+
+Corrected (11):
+- "No admin rights" for the reference install: true for the app only; its
+  bootstrap elevates for a missing runtime's MSI (Summary, P3).
+- Self-test subset is skipped when git is missing (P3).
+- Sandbox needs more than 6 GB of free memory, not disk; seven phases; a
+  stage without them cannot PASS (P5). "Nine refusals" is "at least nine".
+- "Six releases shipped" is six notes files in git history; publication
+  UNVERIFIED (P1).
+- REF-TESTS count: about a dozen files and about 130 tests, not 13 / 137.
+- Commit count 356 to 381; tracked files 532 / 5.0 MB to 550 / 5.7 MB.
+- F7 sidecar folders: setup creates four, not six.
+- F11 / Q6: newest stable Electron is 45.3.4 (2026-11-17), not 45.3.3.
+- F12: the install manager's auto-install of a runtime added (S4).
+- Rejected: "the floor's no-account rule" does not exist; now cites
+  README.md:119 and decisions 0013 and 0040.
+- R7: sandbox config must disable networking and clipboard sharing (S12).
+
+UNVERIFIED (3): that all six reference versions were published; that the
+core, supervisor and calc bridge run under the embeddable Python path file
+(F12, Q3); that the per-user uninstall key behaves on Windows 10 and 11
+beyond the reference app's own sandbox phases (Q6, S11 documents only HKLM).
