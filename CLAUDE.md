@@ -555,3 +555,9 @@ them. Pause: `ops/loop/control/HALT`.
   writes it) (decision 0040). Reverses if: a localised log sample shows
   the signals misfire, the zone snapshot is dropped, or a report field
   leaks a path or identifier.
+- BUILD-LIVE: one build per decision 0038 character, swapped by the loop
+  tick and hot-reloaded on mtime; stale-build alert; checked items kept in
+  memory only and re-scored on build / weight change into upgrade notices;
+  build sources pluggable, the ggg_api provider a no-request stub
+  (decision 0041). Reverses if: 0038 reverses, a better key appears, the
+  5-level gap misfires, or item text must not stay in memory.

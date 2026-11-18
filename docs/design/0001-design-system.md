@@ -422,6 +422,22 @@ Generation rules:
      again.` (implausible); uncounted mods read `Not counted (Path of
      Building has not measured
      these for this build yet): <mods>.`
+   - build alert and upgrade notices (BUILD-LIVE, decision 0041,
+     `build_alert_text` / `upgrade_notice_text` / `upgrades_text` in
+     state.py, shown by web/buildlive.js in the #build-alert card titled
+     `Your build`, hidden when the build fits and nothing is an upgrade;
+     not a live region): `No build saved for <name> yet. Paste a PoB code
+     on the Build tab to check items for <name>.`, `Build is for a
+     <class>, but <name> is a <class>. Paste <name>'s own PoB code so item
+     checks fit.`, `Build is from level <n>; you are level <n>. Paste a
+     fresh PoB code to keep item checks right.`; list `Upgrades from items
+     you checked`, `1 item you checked is an upgrade now.` / `<n> items you
+     checked are upgrades now.` (no list and no text with none), rows `New upgrade for <slot>: <item>` (or
+     `Upgrade for ...`), `Replaces <name>, <+n points|+n%>.` / `Goes in
+     your empty <slot> slot, <delta>.`, fit `Fits your <class> build.` or
+     `Needs level <n>; you are level <n>.` The card clears by itself when
+     the build is fixed (re-pasted, or the character's file changes) or a
+     re-score drops the item; no timer and no dismiss button.
    - price and points (MATH-VALUE-UI, web/prices.js `valueView`): `Asking
      price: <n> <currency>, about <n> <primary>.` (`Buyout price: ...` for
      a b/o note; no "about" when already the primary), `<n> points per
@@ -630,7 +646,11 @@ Natural use and context
   records why not.
 - N6: status changes announced politely (`role="status"` / `aria-live
   ="polite"`), never assertively. Exempt: the non-urgent last-session card
-  (`#summarybox`), which stays silent and is reached by its heading.
+  (`#summarybox`), which stays silent and is reached by its heading, and
+  the build card (`#build-alert`, BUILD-LIVE): it changes only when the
+  character or build changes, is not urgent, and the polite-region cap
+  (12, test_a11y) keeps its last slot for urgent states, so it is
+  reached by its heading too.
 
 Overlay
 - O1: no animation, transition, keyframes, blink or flash.
