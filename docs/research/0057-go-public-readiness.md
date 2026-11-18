@@ -43,6 +43,12 @@ Status: verified
   .gitattributes, .claude/settings.json, tests/test_fleet_kit_conformance.py.
 - Research 0001 (GGG policy), 0046 R9 (go-public wiring), 0047 (file
   structure), 0049 (suite speed), 0052 R7 and 0053 R6 (release and CI).
+- Gap fill (2026-11-18): research 0045 (Findings scores, R1, R2, R7), 0046
+  Findings, 0050 F32 and R0, 0036 R7, 0035 R2, 0058 R7 and Open question
+  3; docs/plan/01-open-items.md ("OPERATOR: GitHub remote");
+  ROADMAP.md:2059-2061; CLAUDE.md:319-321; server/al/http.py:682-689,
+  server/al/theorycraft/codec.py:136-143, server/al/core.py:608-613,
+  tests/conftest.py; `gh auth status` (scopes only).
 
 ## Summary
 
@@ -67,10 +73,19 @@ Status: verified
   start page) exist. Missing: .github/ (CI, identity guard, Dependabot,
   issue and PR templates), CODE_OF_CONDUCT. NOTICE names "the operator" as
   copyright holder and uses fleet jargon.
-- gh is authenticated (scopes repo, workflow, read:org, gist): creating the
-  remote and setting the repository up needs NO operator act.
-- Verdict: NO-GO today on 6 blockers (B1-B6 below), all agent work of
-  about one day in total; then GO.
+- No sign-in or credential act is needed (gh authenticated, scopes repo,
+  workflow, read:org, gist verified); creating the remote (R7 step 1) and
+  the visibility flip (step 4) each wait for the operator's recorded go in
+  the batched ask (docs/plan/09), per the 2026-11-16 order, unless that
+  order is lifted in a recorded decision.
+- Three open security defects are fully written up in tracked notes and
+  would be published with the tree: 0045 F1 (token-free /web/ route
+  resolves UNC paths, SMB hash leak), 0045 F2 (UTF-16 build code passes the
+  DTD guard) and 0050 F32 (a core with a missing log path tails the live
+  Client.txt). All three are unfixed at 510a11a (F16).
+- Verdict: NO-GO today on 7 blockers (B1-B7 below), all agent work of
+  about two days in total (B7 adds 0045 R1 and R2 and 0050 R0 (a)-(c), S
+  each); then GO once the operator says go.
 
 ## Current state
 
@@ -265,6 +280,36 @@ topics must read as unofficial and descriptive; no Sponsors / FUNDING.yml
 on a GGG-derived tool; no screenshot of the game in the README (the hero is
 own art; a future screenshot of the dashboard is fine, of the game is not).
 
+F16. Open security defects are documented in the tree that goes public.
+Every finding in research 0045 scored 4 or more, plus 0050 F32, is unfixed
+at HEAD 510a11a, and each has a full write-up (cause, line numbers, probe)
+in a tracked note that a public push publishes, in history as well as at
+HEAD (F2 keeps full history, so deleting the notes would not hide them):
+- 0045 F1 (score 6, probe-confirmed): `_static` still calls
+  `(root / rel).resolve()` on the URL tail before the containment check
+  (server/al/http.py:686-687); a tail with two leading slashes is a UNC
+  name, so one token-free GET makes the core open an SMB connection to a
+  named host (credential hash, T1187). Closed by 0045 R1.
+- 0045 F2 (score 4, probe-confirmed): `decode_bytes` only checks that the
+  payload starts with `<` (server/al/theorycraft/codec.py:141-142); no NUL
+  refusal exists, so a BOM-less UTF-16 build code passes the UTF-8 text
+  DTD guard and an entity expands. Closed by 0045 R2.
+- 0050 F32 (floor angle): `locate_log` still passes the configured path to
+  `discover_client_log` and keeps a missing path only when the Steam scan
+  finds nothing (server/al/core.py:608-613); tests/conftest.py has no
+  discovery guard (0 matches for discover_client_log or steam_libraries).
+  A test or demo core with a missing log path therefore finds and, with a
+  consent record in its runtime, tails the live Client.txt behind an
+  indicator nobody sees. Closed by 0050 R0 (a)-(c).
+No other 0045 finding scores above 3 (F3 and F4 are 3; F5-F8 2; F9-F13 1).
+Research 0046 has no critical or high finding (0046 Summary); its two
+"medium at publish" items (F14 wiring, F15 unsigned) are covered by R3, R8
+and 0046 R10, so 0046 adds no row to B7. Why it matters: a public tree with
+a probe-confirmed, token-free credential-leak path and its write-up next to
+it is a disclosure without a fix; anyone who clones and runs it is exposed,
+and SECURITY.md asks reporters for private reports the project itself would
+be skipping.
+
 ## Recommendations
 
 R1. GP-HOOK: the normal guarded push (blocker B1).
@@ -415,14 +460,64 @@ R7. GP-SETUP: create and configure the repository with gh, private first.
 - ToS check: "never present AshLight as developed, authorised or endorsed
   by GGG": the description says unofficial; no GGG art in the social
   preview (use the hero).
-- Depends on: R1-R6 landed. Files: none (repository settings).
+- Depends on: R1-R6 landed; step 1 on the operator's recorded go; step 4
+  also on R13 (B7) done and a second recorded go. Files: none (repository
+  settings).
 - Acceptance test: read-back with gh api: visibility public; ruleset
   active with the two required checks and the admin role as the only
   bypass actor; the next loop push lands (tick log "push ok");
   private-vulnerability-reporting enabled true; automated-security-fixes
   enabled true; vulnerability-alerts 204; actions permissions
   sha_pinning_required true; workflow default permissions read.
-- ZERO-CLICK: gh is already authenticated; no operator act.
+- ZERO-CLICK: no sign-in or credential act is needed (gh authenticated,
+  scopes verified); creating the remote (R7 step 1) and the visibility
+  flip (step 4) each wait for the operator's recorded go in the batched
+  ask (docs/plan/09), per the 2026-11-16 order (CLAUDE.md:319-321:
+  creating the remote is an operator act), unless that order is lifted in
+  a recorded decision. Every other step is an agent step.
+
+R13. GP-SECFIX: security fixes before the visibility flip (blocker B7).
+- Action: land, each with its own acceptance test, before R7 step 4:
+  (a) 0045 R1, a fixed name map for /web/ with no filesystem call on
+  request text (closes 0045 F1, score 6); (b) 0045 R2, refuse an inflated
+  build payload holding a NUL byte at codec.py:141 (closes 0045 F2, score
+  4); (c) 0050 R0 (a)-(c), no log discovery for a test, demo or pointed
+  core, no start-up swap of a missing configured log, and a conftest guard
+  that fails any test calling discover_client_log or steam_libraries
+  (closes 0050 F32). Rule: R7 steps 1-3 (create PRIVATE, push main, CI
+  green) may go first, because a private repository publishes nothing;
+  step 4 (flip to public) waits until (a)-(c) are done. If a later 0045 or
+  0050 re-score lifts another finding to 4 or more, it joins this list.
+  Should-fix in the same window, not gating: 0045 R3 (second barrier
+  before any F1-class bug, depends on R1), 0045 R7 (consent file must be
+  named Client.txt, closes F9), 0050 R0 (d) (supported demo start).
+- Impact: H - removes the only probe-confirmed, token-free remote-trigger
+  path and the floor-angle read before their write-ups go public.
+  Effort: S each for (a), (b), (c) per 0045 and 0050. Risk: L; R0 (c)
+  makes a test that silently relied on discovery fail loudly, which is
+  the point.
+- ToS check: floor rule "READ ONLY ... the game's Client.txt log (tailed
+  only after the user's opt-in, with a visible indicator)": (c) narrows
+  reading to the one instance whose indicator the player sees; (a) and (b)
+  touch no floor rule (they remove an unintended outbound SMB connection
+  and an entity expansion in locally pasted build text, decision 0004).
+  No game file, process or input is involved.
+- Depends on: nothing; independent of R1-R6 and may land in parallel.
+  Files: per 0045 R1 / R2 and 0050 R0 (server/al/http.py,
+  server/al/theorycraft/codec.py, server/al/theorycraft/model.py,
+  server/al/core.py, server/al/logfile.py, tests/conftest.py and the
+  tests below).
+- Acceptance test: at the flip commit these are green: 0045 R1's cases in
+  tests/test_http_security.py (two-slash, drive, stream-suffix,
+  trailing-dot and device tails each 404 with a spy seeing no
+  Path.resolve / os.stat / open of request text; every web/ file still
+  loads); 0045 R2's cases in tests/test_tc_code.py (UTF-16 LE and BE codes,
+  with and without a mark, holding an entity get 400 from POST
+  /api/build-code and nothing is saved; decision 0021 fixtures still
+  byte-exact); 0050 C27 in the new tests/test_no_discovery.py (neither spy
+  called, no tailer). The flip agent reads `git log` for the three fix
+  commits and runs those three files by name before step 4.
+- ZERO-CLICK: code changes only; nothing for the player to do.
 
 R8. GP-DEPENDABOT: config plus the local re-apply lane (FLEET item 17).
 - Action: .github/dependabot.yml with npm in /app and github-actions,
@@ -522,20 +617,51 @@ GO (verified this session):
 - LICENSE, NOTICE text present; disclaimer on 4 surfaces; own brand art.
 - gh authenticated with repo and workflow scopes.
 
-NO-GO until fixed (all agent work, one commit series, about one day):
+NO-GO until fixed (all agent work, about two days; B1-B6 one commit
+series, B7 three fix commits that may run in parallel):
 - B1 hook refuses every push and lets any ref out: R1.
 - B2 rules and docstrings say local only: R2 (same commit as R1).
 - B3 no CI and no identity guard workflow: R3.
 - B4 suite unproven in a fresh clone: R4 (before R3 is pushed).
 - B5 15 local lane / keep refs must stay local: R6 (enforced by R1).
 - B6 NOTICE placeholder holder and fleet jargon: R5.
+- B7 security fixes before the visibility flip: R13. Rows: 0045 F1
+  (score 6) closed by 0045 R1; 0045 F2 (score 4) closed by 0045 R2; 0050
+  F32 closed by 0050 R0 (a)-(c). Rule: R7 steps 1-3 (private create, push,
+  CI green) may go first; R7 step 4 (flip to public) waits until all three
+  rows are done and their tests (R13 acceptance: tests/test_http_security.py,
+  tests/test_tc_code.py, tests/test_no_discovery.py) are green at the flip
+  commit.
 
-Should-fix before the visibility flip (not blockers): R9, R10, R11.
+Should-fix before the visibility flip (not blockers): R9, R10, R11, and
+0045 R3 / R7 and 0050 R0 (d) (R13).
 After the flip: R7 steps 5-7, R8, R12.
 
-Operator act: none. gh is authenticated, so `gh auth login` is not needed.
-The only operator input that could change the plan is the copyright-holder
-text (Open questions), and R5 has a default.
+Operator act: no sign-in or credential act is needed (gh authenticated,
+scopes verified); creating the remote (R7 step 1) and the visibility flip
+(step 4) each wait for the operator's recorded go in the batched ask
+(docs/plan/09), per the 2026-11-16 order, unless that order is lifted in a
+recorded decision.
+
+Operator inputs before the flip (one batched ask, docs/plan/09):
+- The go itself: one for R7 step 1 (create the private remote) and one for
+  step 4 (flip to public); both may be given in the same answer.
+- Copyright-holder text (R5); default "The AshLight authors".
+- 0036 R7: one message from the operator to poe.ninja asking whether
+  per-install polling is acceptable or a mirror is wanted; stated default
+  without an answer: direct calls on the tiered cadence (Currency hourly,
+  the other 22 types every 3 h unless pressed in the last 24 h; ceiling
+  552 to 200 overview GETs a day), recorded in a decision. The flip does
+  not wait for poe.ninja's reply, only for the message or an explicit skip.
+- The immutable-releases repository setting (0053 R6 lists it as an
+  operator act); needed before the first v* release, not before the flip,
+  but asked in the same batch.
+Not a pre-flip input: the GGG application and its contact (0035 R2, Open
+question 3 there) depend on the repository already being public.
+Superseded: 0046 R9's risk "gh needs a token (one operator grant)" and 0058
+Open question 3's "needs a GitHub credential on the dev host (operator
+act)" are settled by the verified `gh auth status` (repo, workflow,
+read:org, gist): the credential exists; only the go is the operator's.
 
 ## Cut or merge
 
@@ -579,6 +705,10 @@ text (Open questions), and R5 has a default.
   FLEET item 17. Report in AL's next batched note to MAIN.
 - Whether the kit tolerates absent channel folders (R12); read
   fleet_inbox before moving them.
+- docs/plan/09 (the batched operator ask this note routes the go and the
+  operator inputs to) does not exist at 510a11a; docs/plan/README.md:54
+  lists it as planned. Until it lands, the go-public inputs sit in
+  docs/plan/01 "OPERATOR: GitHub remote" and in this note's Go / no-go.
 
 ## Verification
 
@@ -630,3 +760,29 @@ UNVERIFIED: whether a personal-account private repository can carry a
 ruleset or branch protection before the visibility flip (R7 is sequenced
 so it does not matter); the fresh-clone suite run (R4, deliberately not
 run here: the ground rules forbid the whole suite).
+
+Gap fill, 2026-11-18 (completeness critic, 2 high gaps):
+- Added F16, R13 and blocker B7 (security fixes before the visibility
+  flip); Summary now counts 7 blockers. Scores and closers read from 0045
+  Findings (F1 6, F2 4; F3 / F4 3; F5-F8 2; F9-F13 1) and its R1, R2, R3,
+  R7; 0050 F32 and R0 (acceptance C27, C28); 0046 Summary and F14 / F15
+  (no high finding, nothing added). Unfixed status confirmed by reading
+  HEAD 510a11a: server/al/http.py:686 still resolves the URL tail before
+  the containment check at :687; codec.py:141-142 has only the `<` check
+  and no NUL refusal; core.py:608-613 still calls discover_client_log on
+  the configured path; grep of tests/conftest.py finds no discovery
+  guard; `git log` of the four files shows no fix commit. The three
+  named test files: tests/test_http_security.py and tests/test_tc_code.py
+  exist; tests/test_no_discovery.py is new per 0050 R0. No test was run
+  and no core was started.
+- Rewrote "no operator act" in Summary, R7 ZERO-CLICK and Go / no-go to:
+  no sign-in needed, the go for R7 steps 1 and 4 is the operator's, per
+  CLAUDE.md:319-321 (operator order 2026-11-16) and ROADMAP.md:2059-2061,
+  docs/plan/01 "OPERATOR: GitHub remote" (Type: operator act). Added the
+  "Operator inputs before the flip" list (go, copyright holder, 0036 R7
+  with its default read from 0036 R7 (2), immutable releases from 0053 R6
+  "operator acts"); 0035 R2 placed after the flip (its Depends line needs a
+  public repository). `gh auth status` re-run read-only: scopes gist,
+  read:org, repo, workflow, which supersedes 0046 R9's "gh needs a token"
+  risk and 0058 Open question 3's credential ask.
+- New open question: docs/plan/09 not yet written.
