@@ -5,13 +5,15 @@ features. Scope: every player-facing feature except the utilities (filter
 tools, build file, settings export / import, run history, diagnostics,
 multi-character, hot reload: note 0039, cross-referenced only). PoE2 1.0
 launches 2026-12-11, 24 days after this note.
-Status: draft
+Status: verified
 
-## Sources (all accessed 2026-11-17)
+## Sources (accessed 2026-11-17; re-fetched 2026-11-18 where marked V)
 
 Web (facts restated in own words; nothing copied):
-- GGG: https://www.pathofexile.com/developer/docs (policy, re-read today).
-- DBT: https://poe2db.tw/Tools (community tool list, 24 entries).
+- GGG (V): https://www.pathofexile.com/developer/docs (policy; OAuth
+  registration still closed on 2026-11-18).
+- DBT (V): https://poe2db.tw/Tools (community tool list, 26 entries on
+  2026-11-18).
 - BM (2026-05-19): https://boostmatch.gg/blog/poe-2/articles/poe2-third-party-tools-guide
 - EUI: https://github.com/Lailloken/Exile-UI (module list, 1.4k stars).
 - EE2: https://github.com/Kvan7/Exiled-Exchange-2 (1.2k stars); EE2X:
@@ -29,6 +31,12 @@ Web (facts restated in own words; nothing copied):
 - PCGN (2026-08-31): https://www.pcgamesn.com/path-of-exile-2/campaign-final-acts-interview-gamescom
 - RPGS (2026-08-25): https://www.rpgsite.net/news/21188-path-exile-2-reaches-its-10-full-release-on-december-11
 - EE (2026-11-08, one outlet): https://everythingedinburgh.com/?p=31851
+- GOL (V, 2026-11-09): https://www.gamingonlinux.com/2026/11/path-of-exile-2-releases-december-11-with-a-huge-update-it-goes-free-to-play/
+  (1.0 contents: Acts 5-6 with 24 areas and 18 bosses, Shadow with
+  Assassin and Infiltrator, Duelist with Knight and Master-at-Arms, a
+  passive tree rework).
+- V also: BM, POVC, PV, NT, FRVR, PCGN, RPGS, EE, EUI, EE2X, DILLA, EXB
+  re-fetched 2026-11-18 and the claims below checked against them.
 - PH (user comments, about 4 months old): https://www.producthunt.com/products/poe2builds
 - SNIP: search-result summaries only (pages not opened or fetch refused):
   a 2025 r/PathOfExile2 levelling overlay thread; GGG forum threads
@@ -94,7 +102,9 @@ the log line shapes (English text; 1.0 may add lines).
 - A3 Deaths this session. Overlay row 2; Play tile. Use: per death.
   Live: no; the death wording is unverified for PoE2 (parser.py:37-38).
 - A4 Session time, AFK / DND. Play session tile; overlay word. Use: an
-  occasional glance. Live: AFK / DND wording unverified (parser.py:39-42).
+  occasional glance. Live: AFK ON was seen in a PoE2 sample, AFK OFF is
+  inferred and DND is unverified (parser.py:39-42); LIVE-1 still lists
+  both as not recorded live (ROADMAP.md:9-31).
 - A5 Level pace: time per level, levels per hour. Play level tile. Use:
   C 4-10, M under 1. Live: yes. (pace.py:12-13)
 - A6 Under-level warning. Play level tile; overlay word. Use: C when a
@@ -224,14 +234,16 @@ guide build. With no build, gear returns the error "no build loaded"
 in that slot (evaluate.py:330), and decision 0045 (lines 75-76) treats a
 build planned for a higher level as the normal levelling case, so a level
 12 drop is scored against level 90 gear. PoB is rated recommended, not
-critical [BM], and 1.0 is free-to-play [RPGS]: most new players will have
-no build, and guide followers get false downgrades. A key-press item
-overlay is rated critical [BM] and 4 of them are on the community list
-[DBT]; AshLight's version gives these players nothing today.
+critical [BM], and 1.0 is free-to-play [RPGS]: most new players will
+likely have no build (an estimate; no source counts PoB use), and guide
+followers get false downgrades. A key-press item overlay is rated
+critical [BM] and 4 price checkers are on the community list [DBT];
+AshLight's version gives these players nothing today.
 
 F2. The overlay carries no guide and no map facts. The zone guide already
-builds a one-line form (zoneguide.py:423-434) but "the overlay has no
-slot yet" (ROADMAP.md:2048-2050). The campaign overlays surveyed draw
+builds a one-line form of at most 120 characters (zoneguide.py:46,
+423-434) but the overlay has no slot for it yet (ROADMAP.md:2048-2050,
+S5-FOLLOWUP item a). The campaign overlays surveyed draw
 their guide over the game [EUI, POVC, EC, EXP, POL2, QUTM]. AshLight's
 two HUD lines mostly repeat what the game shows (zone name, level); its
 own value is the timer, the death count, the status word and the card. A
@@ -248,7 +260,10 @@ unmeasured (ROADMAP.md:2037-2041).
 F4. All price features wait on a hand-edited file. poe.ninja requests are
 refused without a contact (ninja.py:227-229) and the only fix offered is
 to add a key to config/local.json (diag.py:40; state.py:559-561). No
-dashboard field exists. That blocks D2 values, D3, P1, P2, P3 and the
+dashboard field exists. The Play copy is also stale: it says price
+checks need a contact "for the trade site" and suggests an email
+(state.py:560-561), but the contact goes to poe.ninja and the app calls
+no trade endpoint (decision 0017). That blocks D2 values, D3, P1, P2, P3 and the
 filter price tiers. On the live install the contact is unset.
 
 F5. Live proof is thin where it matters most. The press path (D1, D2,
@@ -256,9 +271,10 @@ D5) has never been fed a real copied item; deaths, trades and maps rest
 on unverified wording or ids (parser.py:37-66; acts.py:58). One wrong
 regex silently zeroes a headline number (deaths) for every user.
 
-F6. Trade whisper cards lost weight. Since 0.3.0 (2025-08-29) buyers
-take merchant-tab items through an NPC with the seller offline; only
-direct player trade still uses a whisper [NT, PV]. AshLight may never
+F6. Trade whisper cards lost weight. Since 0.3.0 (2025-08-29; PV gives
+the day without the year, NT names the patch) buyers take merchant-tab
+items through the market panel with the seller offline; only direct
+player trade still starts with a whisper [NT, PV]. AshLight may never
 answer for the player (no input, floor), while a rival panel handles
 invites and messages [POVW]. The card is a read-only notice whose
 templates are unverified.
@@ -267,8 +283,9 @@ F7. Campaign data is duplicated, thin on bosses and about to shift. Zone
 tip (65 notes) and zone guide (88 goals) describe the same zones in two
 files and both print in the zone tile (index.html:102-108). Boss hints
 cover 2 zones (campaign.py:42). At 1.0 the three interludes are removed
-[PCGN], which strands 22 guide entries, and Acts 5-6 add 24 areas and 18
-bosses (research 0021).
+[PCGN], which strands 22 guide entries (all 22 interlude zones in
+zone_guide.json, recounted), and Acts 5-6 add 24 areas and 18 bosses
+(research 0021; GOL).
 
 F8. The level-gap advice exists twice and states an XP fact it cannot
 back. underlevel.py warns at a configurable gap (default 3,
@@ -276,8 +293,9 @@ underlevel.py:16); zoneguide.advice hard-codes that gap and adds a "push
 on" rule of 3 + level // 16 with the words "it gives less experience"
 (zoneguide.py:64-65, 373-378). A changed setting makes the two disagree.
 The rule has the shape of the PoE1 experience safe zone (UNVERIFIED for
-PoE2); a rival tool that models the penalty calls its own formula an
-approximation [EE2X]. Research 0028 ruling B kept XP formulas out.
+PoE2); a rival tool that models the penalty describes its formula as
+PoE1-like, fitted to speedrunner data, and warns that it may be off
+above level 70 [EE2X]. Research 0028 ruling B kept XP formulas out.
 
 F9. What players use and ask for (dated sources):
 - Rated critical: a loot filter, a price-check overlay, the trade site,
@@ -302,6 +320,10 @@ F9. What players use and ask for (dated sources):
 - Stash value and loot per map need OAuth or the inventory API; one tool
   says the API is disabled, one has paused until registration reopens
   [DILLA, EXB]. Registration is still closed [GGG].
+- A log of currency-exchange and merchant-tab trades is a module in the
+  largest overlay suite [EUI, "Vaal Street"]; how it reads its data was
+  not checked, so it is no evidence of a permitted source (see the
+  rejected "sold" feed).
 - An in-game death recap (damage by type, attackers, mitigation) is
   reported for 1.0 [EE; one outlet, UNVERIFIED]. A9 carries the same
   name but only lists where and when.
@@ -324,6 +346,15 @@ F12. The calc half will sag in launch week. The PoB pin is v0.23.1
 63-76). Until a PoB 1.0 release is pinned, PoB deltas are unavailable;
 anything that works on stat weights alone (R1) keeps working.
 
+F13. 1.0 names are now public but not in the class map. Launch press
+names Shadow (Assassin, Infiltrator) and Duelist (Knight,
+Master-at-Arms) [GOL]; charjson.py:30-35 still says the ascendancy names
+are unpublished and has no entry for them, so a build of those classes
+shows the ascendancy as the class name (the pass-through is safe, not a
+crash). A four-line data change at launch, re-checked against the GGG
+patch notes; it belongs to the 1.0 runbook (UTIL-1.0-READY), not to a
+new feature.
+
 ## Recommendations
 
 R1. Worn-gear baseline by a second hotkey.
@@ -343,9 +374,14 @@ R1. Worn-gear baseline by a second hotkey.
   "clipboard ... once per manual press of an AshLight hotkey": one read
   per press, the player copies in game, no input is sent, nothing leaves
   the computer. Decision 0004 holds: existing weight scoring, no formula.
-- Depends on: a new decision for the worn-gear file (decision 0045 keeps
-  checked items in memory only; this adds a file, so an adjudicator
-  rules); R4 for real item samples.
+- Depends on: a new decision for the worn-gear file, ruled by an
+  adjudicator. It does not reverse decision 0045 (checked items stay in
+  memory only; none of 0045's "Reverses if" conditions is claimed): worn
+  items are a separate, player-filed set, bounded like the 0036 files and
+  kept out of the settings export. ROADMAP S5-FOLLOWUP (b) already asks
+  the same file question for the upgrade list (ROADMAP.md:2050-2051).
+  R4 for real item samples. The default key must pass the game-key
+  refusal list (app/hotkey.js:21-24; server/al/hotkeys.py:25-26).
 - Files likely touched: app/main.js, app/eval_hotkey.js, app/hotkey.js,
   server/al/hotkeys.py, http.py, core.py, state.py,
   server/al/theorycraft/evaluate.py, live.py, a new worn-gear module,
@@ -390,7 +426,8 @@ R2. Overlay moment cards: zone card and act card.
 R3. A contact field at the web-data opt-in.
 - Action: when the player ticks "Use web data", ask for the contact in
   the same card and save it to the gitignored local config; the Play
-  price box names this one step while prices are blocked.
+  price box names this one step while prices are blocked, and its copy
+  says poe.ninja, not "the trade site" (state.py:559-561).
 - Impact: H for the price group (F4): unblocks D2 values, D3, P1, P2, P3
   and the filter tiers with one field instead of a file edit.
 - Effort: S. Risk: the contact is personal; keep it out of the state,
@@ -496,7 +533,9 @@ R8. Loot tally from presses.
   stack-size text is unverified (research 0003 line 51); repeat presses
   must not count twice.
 - ToS check: data = per-press item text and cached poe.ninja prices
-  (web data on); no new read.
+  (web data on); no new read. Decision 0036 holds: the tally re-reads
+  only the cached book, only while web_data is on, and any stored tally
+  is a bounded file under ops/runtime like price watch.
 - Files likely touched: server/al/pricewatch.py or server/al/runs.py,
   server/al/theorycraft/live.py, server/al/state.py, web/runs.js.
 - Acceptance test: 3 presses in one map, one repeated, count 2 items and
@@ -551,7 +590,8 @@ Promote: B2 to the overlay (R2); A10 to Play in maps (R6); D4 to the
 Build tab (R7); act split results to the overlay (R2).
 
 Demote: A12 Last session to the Run tab (R6); E6 weights editor and the
-web-data switch to Settings, leaving that tab for prices only; the
+web-data switch to Settings, leaving the Items and prices tab for prices
+only; the
 character picker to the Run tab (note 0039).
 
 ## Rejected
@@ -598,3 +638,65 @@ character picker to the Run tab (note 0039).
 - Non-English clients at a worldwide free launch: level, death, whisper
   and item paths need English text; language packs wait on samples
   (research 0032). Left to note 0057.
+
+## Verification
+
+Independent check, 2026-11-18, by a second agent.
+
+Checked:
+- Code: about 40 path:line citations opened, the ones the findings and
+  recommendations rest on first (evaluate.py, zoneguide.py,
+  parser.py, acts.py, state.py, render_gate.js, ninja.py, diag.py,
+  http.py, summary.py, underlevel.py, campaign.py, upgrade.py,
+  buildlive.py, item.py, pricewatch.py, pricebook.py, hints.py,
+  eval_hotkey.js, main.js, hotkey.js, tabs.js, index.html, charjson.py,
+  decision 0045, research 0021, ROADMAP.md). All hold within a line or
+  two; none had to be withdrawn. Not opened (inventory-only citations):
+  health.py, waystone.py, runs.py, mapladder.py, skillsplit.py,
+  searchstr.py, gfx.py, price.py.
+- Numbers recounted from the data files: 93 guide zones, 88 goals, 38
+  bonus rewards in 36 zones, 8 layout notes, 22 interlude zones, 65 zone
+  notes, 84 of 88 goals wrap into two 34-character lines; 35 features
+  and the 15-feature unproven list recounted from the inventory; repeat
+  gap 1200 ms (eval_hotkey.js:18); PoB pin v0.23.1 (config/tc_pins.json).
+- Web: 15 sources re-fetched (marked V). Confirmed: 1.0 on 2026-12-11 and
+  free-to-play [RPGS]; interludes removed and the new-player remark
+  [PCGN]; BM ratings; POVC versions and dates (1.38.0 on 2026-05-24,
+  1.61.0 on 2026-09-01, 1.69.0 latest); merchant tabs work with the
+  seller offline [PV, NT]; Build Planner from 0.5 on 2026-05-29 [FRVR];
+  death recap report [EE]; registration closed [GGG]; DILLA and EXB
+  outage notes; EUI 1.4k stars and modules.
+- ToS floor: all 9 recommendations, 5 merges, 4 cuts and the promote /
+  demote moves tested against every floor rule; all stay inside (R1 and
+  R9 are one clipboard read per AshLight press; R2 draws only AshLight's
+  window; R3, R8 touch only poe.ninja; R7 builds a URL only). The 11
+  rejected items stay rejected.
+- Settled decisions: none contradicted. R1 needs a new decision next to
+  0045, not a reversal; R3 keeps decision 0015's read source; R7 stays
+  inside 0017 and 0037; R8 inside 0036.
+
+Corrected:
+- DBT now lists 26 entries, not 24 (counts of 4 / 4 / 6 / 1 still hold).
+- EE2X does not call its formula an approximation; restated as what the
+  page says (PoE1-like, fitted to speedrunner data, off above 70).
+- A4: AFK ON was seen in a sample; only AFK OFF and DND are unproven.
+- F1: "most new players have no build" labelled as an estimate.
+- F2: the overlay line quote replaced by a paraphrase with the 120
+  character cap (zoneguide.py:46).
+- F6: the merchant-tab date source split stated (PV day, NT patch).
+- Demote wording fixed (the Items and prices tab, not Settings).
+
+Added:
+- F4 / R3: stale "contact for the trade site" copy (state.py:560-561).
+- F9: the EUI trade-log module, as a data point only.
+- F13: 1.0 ascendancy names [GOL] missing from charjson.py:30-35.
+- R1: the 0045 relation spelled out and the game-key refusal list;
+  R8: the 0036 bounds.
+
+UNVERIFIED (left labelled in the text):
+- The SNIP hints (forum threads, a levelling thread, a checklist guide).
+- The 1.0 death recap rests on one outlet [EE].
+- The PoE1 safe-zone shape for PoE2 XP (F8).
+- Use-per-hour figures in the inventory are estimates, not measured.
+- PH user comments were not re-fetched; POV, POVW, SK, EC, EXP, QUTM,
+  POL2 were sampled through DBT and EUI only, not re-fetched.
