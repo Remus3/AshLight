@@ -726,6 +726,9 @@ class Handler(BaseHTTPRequestHandler):
             last_push = time.monotonic()
             last_beat = last_push
             pending = []
+            # HOT-RELOAD (decision 0041): a web/ change bumps
+            # core.reload_web; each stream says "reload" once per bump
+            sent_reload = getattr(core, "reload_web", 0)
             while not srv.stopping.is_set():
                 now = time.monotonic()
                 beat_in = SSE_HEARTBEAT_S - (now - last_beat)
@@ -740,6 +743,11 @@ class Handler(BaseHTTPRequestHandler):
                 got = sub.get(timeout=wait)
                 if self._client_gone():
                     break
+                reload_web = getattr(core, "reload_web", 0)
+                if reload_web != sent_reload:
+                    sent_reload = reload_web
+                    self._sse_write(self._sse_msg("reload", {"target": "web",
+                                                             "seq": reload_web}))
                 pending.extend(got)
                 now = time.monotonic()
                 if pending and now - last_push >= SSE_MIN_INTERVAL_S:

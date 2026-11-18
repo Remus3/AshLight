@@ -16,6 +16,7 @@ const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
 const Hotkey = require("./hotkey.js");
 const About = require("./about.js");
+const HotReload = require("./hotreload.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -31,6 +32,7 @@ const DEFAULT_EVAL_KEY = "Alt+Shift+E";
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
 
 let win = null;
+let stopHotReload = null; // HOT-RELOAD: stops the overlay page file watch
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let logStream = null;
 
@@ -279,6 +281,17 @@ function start() {
     }
   });
 
+  // HOT-RELOAD (decision 0041): in a source checkout, an edit of the
+  // overlay page's own files reloads the page (stat poll here, none in it).
+  if (HotReload.devEnabled(REPO, process.env, () => readJson(LOCAL_CONFIG), fs.existsSync)) {
+    const files = HotReload.pageFiles([path.join(__dirname, "overlay"),
+                                       path.join(__dirname, "shared")], fs.readdirSync);
+    stopHotReload = HotReload.watch(files, () => {
+      log("hot reload: overlay page files changed; reloading the page");
+      if (win) { win.webContents.reload(); }
+    });
+  }
+
   if (!globalShortcut.register(toggleKey, toggle)) {
     log("toggle shortcut not available: " + toggleKey);
   }
@@ -301,6 +314,7 @@ app.on("will-quit", () => {
   globalShortcut.unregisterAll();
   fs.unwatchFile(TOKEN_FILE);
   fs.unwatchFile(LOCAL_CONFIG);
+  if (stopHotReload) { stopHotReload(); }
 });
 
 app.on("window-all-closed", () => app.quit());

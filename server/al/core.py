@@ -16,6 +16,7 @@ from . import (VERSION, acts, campaign, diag, layout, logfile, ninja, parser, pa
                price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
+from . import hotreload  # HOT-RELOAD (decision 0041)
 from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
@@ -212,6 +213,19 @@ class Core:
                             else self.runtime / "overlay.log")
         self.calc_status = calcwire.component_status if self._real else (lambda: None)
         self._next_diag = 0.0
+        # HOT-RELOAD (decision 0041): data files re-read on change (always,
+        # hotreload.REGISTRY); web/ edits reload the open dashboard through
+        # an SSE "reload" event only in a source checkout (dev_enabled); the
+        # supervisor's code reload status shows on the Checks card. A test
+        # core watches no web root.
+        self.hot = bool(self._real and hotreload.dev_enabled(cfg))
+        self.web_watch = (hotreload.TreeWatch([paths.repo_root() / "web"])
+                          if self.hot else None)
+        self.reload_web = 0
+        self.code_status = hotreload.Watched(self.runtime / hotreload.STATUS_FILE,
+                                             hotreload.load_json, name="Code reload",
+                                             default=dict, registry=False)
+        self._reload_notes = []
 
     def _outputs_ready(self):
         """A new PoB output table for the loaded build: the build view is
@@ -723,6 +737,8 @@ class Core:
         # AREA-AUDIT P7-6: the flask table again when its file changed (one
         # stat per tick; FlaskCache reads only on a new mtime / size)
         self.state.set_campaign(flasks=self.flask_table.get())
+        # HOT-RELOAD: the zone level table likewise (it was read at start only)
+        self.state.set_zone_table(self.zone_table.get())
         try:
             calc_on = self.tc_calc_enabled()
         except Exception:  # noqa: BLE001 - a bad config reads as off
@@ -738,6 +754,33 @@ class Core:
             calc_on=calc_on, calc_running=self.tc_provider.running(),
             rates_checked_at=rates_at if isinstance(rates_at, (int, float)) else None,
             book_checked_at=book_at)
+
+    def reload_notes(self):
+        """HOT-RELOAD: one line per data file holding its last good copy,
+        then the supervisor's code reload error, if any."""
+        notes = list(hotreload.REGISTRY.notes())
+        code = hotreload.read_code_error(self.code_status.get())
+        if code:
+            notes.append(code)
+        return notes
+
+    def tick_reload(self):
+        """HOT-RELOAD, ZERO-CLICK, from the core's main loop: stat the
+        registered data files (re-read on change), and in a source checkout
+        scan web/ (stat only, at most once a second); a change bumps
+        reload_web, which every SSE stream sends as a "reload" event. A new
+        or cleared note refreshes the Checks card at once. True when the
+        dashboard was told to reload."""
+        hotreload.REGISTRY.poll()
+        notes = self.reload_notes()
+        if notes != self._reload_notes:
+            self._reload_notes = notes
+            self.tick_diag(force=True)
+        if self.web_watch is not None and self.web_watch.poll():
+            self.reload_web += 1
+            self.bus.wake_all()
+            return True
+        return False
 
     def tick_calc(self):
         """AREA-AUDIT P3-6, from the core's main loop: stop the shared calc
@@ -793,6 +836,7 @@ class Core:
             "overlay": overlay, "supervisor": live("supervisor"),
             "hotkey": diag.hotkey_registered(self.overlay_log) if overlay else None,
             "port": self.port,
+            "reload_notes": self.reload_notes(),
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": snap.get("character"),
         })

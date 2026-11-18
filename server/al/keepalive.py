@@ -25,13 +25,14 @@ touches the game process (ToS floor). Decision: docs/decisions/0005.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import urllib.request
 from pathlib import Path
 
-from . import paths, ports
+from . import hotreload, paths, ports
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -43,6 +44,13 @@ HEARTBEAT_FILE = "core.alive"
 STOP_FILE = "stop.request"
 STATE_FILE = "keepalive.json"
 LOCK_FILE = "keepalive.lock"
+# HOT-RELOAD (decision 0041), source checkout only
+DEV_POLL_S = 1.0           # poll cadence while code reload is on (stat only)
+RELOAD_DEBOUNCE_S = 1.5    # a burst of saves settles before the preflight
+RELOAD_EXIT_S = 20.0       # the old core's clean exit, then it is terminated
+PREFLIGHT_TIMEOUT_S = 60.0
+RELOAD_DEAD_NOTE = ("A code change passed the check, but the new version did not "
+                    "start. AshLight tries again after your next save.")
 
 _STILL_ACTIVE = 259
 _QUERY_LIMITED = 0x1000
@@ -204,7 +212,22 @@ class Keepalive:
     def __init__(self, runtime, port, launch, pid_alive=pid_alive, health=None,
                  terminate=terminate_core, now=time.time, log=None, created=None,
                  stale_s=STALE_S, start_grace_s=START_GRACE_S, backoff=BACKOFF_S,
-                 cap=CAP, window_s=WINDOW_S):
+                 cap=CAP, window_s=WINDOW_S, code_watch=None, preflight=None,
+                 reload_debounce_s=RELOAD_DEBOUNCE_S, reload_exit_s=RELOAD_EXIT_S):
+        # HOT-RELOAD (decision 0041): code_watch has signature() (the
+        # server/ *.py stat set); preflight() -> (ok, error line). None:
+        # no code reload (tests, and outside a source checkout).
+        self._code_watch = code_watch
+        self._preflight = preflight or (lambda: (True, None))
+        self.reload_debounce_s = float(reload_debounce_s)
+        self.reload_exit_s = float(reload_exit_s)
+        self._code_sig = None
+        self._code_changed_at = None
+        self.reloading_since = None   # restart.request written, old core exiting
+        self.hot_launch = False       # the running launch is a code reload
+        self.blocked = False          # new code failed to start; wait for an edit
+        if code_watch is not None:
+            self._code_sig = code_watch.signature()  # changes from here on count
         self.runtime = Path(runtime)
         self.port = int(port)
         self._launch = launch
@@ -248,12 +271,21 @@ class Keepalive:
                 self._write_state("watching")
             self.seen_beat = True
             self.launched_at = None
+            self.hot_launch = False
+            self.blocked = False
             if now - hb["updated"] > self.stale_s and not self._health():
                 ok = self._terminate(hb["pid"])
                 return self._crashed(now, f"core hung (pid {hb['pid']}, heartbeat "
                                      f"{now - hb['updated']:.0f} s old, "
                                      f"terminated={bool(ok)})")
-            return "ok"
+            if self.reloading_since is not None:
+                if now - self.reloading_since > self.reload_exit_s:
+                    ok = self._terminate(hb["pid"])
+                    self._log(f"core did not exit for the code reload in "
+                              f"{self.reload_exit_s:g} s (terminated={bool(ok)})")
+                    self.reloading_since = now  # one terminate per window
+                return "reloading"
+            return self._code_step(now) or "ok"
         if self.launched_at is not None and self.pid and self._alive(self.pid):
             if now - self.launched_at > self.start_grace_s and not self._health():
                 ok = self._terminate(self.pid)
@@ -273,6 +305,25 @@ class Keepalive:
             self._log("user stop (stop.request); not restarting; supervisor exits")
             self._write_state("user-stop")
             return "user-stop"
+        if self.reloading_since is not None:
+            # HOT-RELOAD: the old core left for the code reload; the new
+            # code starts at once (no backoff, not a crash restart)
+            self.reloading_since = None
+            self.pid = None
+            self.seen_beat = False
+            self._log("core exited for a code reload; starting the new code")
+            return self._launch_core(now, hot=True)
+        if self.blocked:
+            if self._code_due(now) != "ready":
+                return "reload-blocked"
+            ok, err = self._preflight()
+            if not ok:
+                self._reload_refused(err)
+                return "reload-blocked"
+            self.blocked = False
+            hotreload.write_status(self.runtime, None, now=now)
+            self._log("code changed again and passed the check; starting it")
+            return self._launch_core(now, hot=True)
         if self.next_launch is not None:
             if now >= self.next_launch:
                 return self._launch_core(now)
@@ -305,6 +356,18 @@ class Keepalive:
         self.pid = None
         self.seen_beat = False
         self.launched_at = None
+        if self.hot_launch and self._code_watch is not None:
+            # HOT-RELOAD: the new code died before its first heartbeat.
+            # Never a crash loop: nothing starts until the code changes
+            # again and passes the check.
+            self.hot_launch = False
+            self.blocked = True
+            self.next_launch = None
+            self._log(f"{reason}; the new code did not start; waiting for the "
+                      f"next code change")
+            hotreload.write_status(self.runtime, RELOAD_DEAD_NOTE, now=now)
+            self._write_state("reload-blocked")
+            return "reload-blocked"
         if len(self.restarts) >= self.cap:
             self._log(f"{reason}; give up: {len(self.restarts)} restarts in "
                       f"{self.window_s:.0f} s; supervisor exits")
@@ -317,9 +380,62 @@ class Keepalive:
         self._write_state("restarting")
         return "waiting"
 
-    def _launch_core(self, now):
+    # -- HOT-RELOAD (decision 0041)
+
+    def _code_due(self, now):
+        """None (no change), "pending" (settling) or "ready" (debounced)."""
+        if self._code_watch is None:
+            return None
+        sig = self._code_watch.signature()
+        if self._code_sig is None:
+            self._code_sig = sig
+            return None
+        if sig != self._code_sig:
+            self._code_sig = sig
+            self._code_changed_at = now
+            return "pending"
+        if self._code_changed_at is None:
+            return None
+        if now - self._code_changed_at < self.reload_debounce_s:
+            return "pending"
+        self._code_changed_at = None
+        return "ready"
+
+    def _code_step(self, now):
+        """With a healthy core: a settled server/ .py change that passes
+        the preflight asks the core to exit (restart.request); one that
+        fails it keeps the running core and publishes the error."""
+        due = self._code_due(now)
+        if due is None:
+            return None
+        if due == "pending":
+            return "reload-pending"
+        ok, err = self._preflight()
+        if not ok:
+            self._reload_refused(err)
+            return "reload-refused"
+        hotreload.write_status(self.runtime, None, now=now)
+        try:
+            (self.runtime / hotreload.RESTART_FILE).write_text("reload\n", encoding="ascii")
+        except OSError as exc:
+            self._log(f"code reload: cannot ask the core to exit ({exc})")
+            return "ok"
+        self.reloading_since = now
+        self._log("code changed and passed the check; asking the core to restart")
+        self._write_state("reloading")
+        return "reloading"
+
+    def _reload_refused(self, err):
+        where = f" ({err})" if err else ""
+        note = f"A code change did not load{where}. The running version stays in use."[:300]
+        self._log(f"code reload refused: {err}")
+        hotreload.write_status(self.runtime, note, now=self._now())
+
+    def _launch_core(self, now, hot=False):
         self.next_launch = None
-        self.restarts.append(now)
+        self.hot_launch = bool(hot)
+        if not hot:
+            self.restarts.append(now)  # a code reload is not a crash restart
         try:
             self.pid = int(self._launch())
         except OSError as exc:
@@ -347,6 +463,55 @@ def core_command(port, extra=()):
         if w.exists():
             exe = w
     return [str(exe), "-m", "server.al", "--quiet", "--port", str(int(port))] + list(extra)
+
+
+_FILE_LINE = re.compile(r'File "([^"]+)", line (\d+)')
+
+
+def preflight_error(text, root):
+    """One line from the --check output or an import traceback: the last
+    "File ..., line N" (repo-relative) and the last line; no absolute path."""
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines:
+        return "the code check failed"
+    last = lines[-1]
+    where = ""
+    for ln in reversed(lines[:-1]):
+        m = _FILE_LINE.search(ln)
+        if m:
+            try:
+                rel = Path(m.group(1)).resolve().relative_to(Path(root).resolve()).as_posix()
+            except (ValueError, OSError):
+                rel = Path(m.group(1)).name
+            where = f"{rel}:{m.group(2)}: "
+            break
+    out = where + last
+    out = out.replace(str(root), "").replace(str(root).replace("\\", "/"), "")
+    return " ".join(out.split())[:200]
+
+
+def run_preflight(root=None, timeout=PREFLIGHT_TIMEOUT_S, run=subprocess.run):
+    """HOT-RELOAD: (True, None) when `python -m server.al --check` loads the
+    changed code, else (False, one-line error). It runs in a child process,
+    so the running core and this supervisor never import the new code."""
+    root = Path(root) if root else paths.repo_root()
+    exe = Path(sys.executable)
+    if exe.name.lower() == "pythonw.exe" and exe.with_name("python.exe").exists():
+        exe = exe.with_name("python.exe")  # pipes need a console-subsystem python
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    try:
+        r = run([str(exe), "-m", "server.al", "--check"], cwd=str(root),
+                stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout,
+                creationflags=flags)
+    except subprocess.TimeoutExpired:
+        return False, "the code check timed out"
+    except OSError as exc:
+        return False, f"the code check did not run ({type(exc).__name__})"
+    if r.returncode == 0:
+        return True, None
+    text = (r.stdout or b"").decode("utf-8", "replace") + "\n" + \
+        (r.stderr or b"").decode("utf-8", "replace")
+    return False, preflight_error(text, root)
 
 
 class _Launcher:
@@ -407,12 +572,24 @@ def main(argv=None):
         return 0  # another supervisor is already watching this runtime dir
     try:
         backoff = tuple(float(x) for x in args.backoff.split(",") if x.strip())
+        # HOT-RELOAD (decision 0041): server/ *.py edits restart the core,
+        # in a source checkout only; a stale code note from an earlier run
+        # is cleared either way
+        hotreload.write_status(runtime, None)
+        code_watch = None
+        poll = args.poll
+        if hotreload.dev_enabled(paths.load_local_config()):
+            code_watch = hotreload.TreeWatch([paths.repo_root() / "server"],
+                                             suffixes=(".py",), every_s=0.0)
+            poll = min(poll, DEV_POLL_S)
         sup = Keepalive(runtime, args.port, _Launcher(core_command(args.port, args.core_args)),
                         log=log, stale_s=args.stale, backoff=backoff, cap=args.cap,
-                        window_s=args.window)
+                        window_s=args.window, code_watch=code_watch,
+                        preflight=run_preflight if code_watch is not None else None)
         sup._write_state("started")  # records this supervisor's pid for stop.ps1
-        log(f"supervisor started (port {args.port}, poll {args.poll:g} s)")
-        result = sup.run(poll_s=args.poll)
+        log(f"supervisor started (port {args.port}, poll {poll:g} s, code reload "
+            f"{'on' if code_watch is not None else 'off'})")
+        result = sup.run(poll_s=poll)
         return 0 if result == "user-stop" else 3
     except Exception as exc:  # noqa: BLE001 - last-resort record, pythonw has no stderr
         log(f"supervisor failed: {exc!r}")

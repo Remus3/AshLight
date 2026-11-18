@@ -20,12 +20,10 @@ Hints, at most one per kind, in this order:
 Unknown level, no build, a non-campaign area or missing data: no hint.
 """
 
-import os
 import re
-import threading
 from pathlib import Path
 
-from . import jsonfile, num
+from . import hotreload, jsonfile, num
 
 CONFIG_KEY = "boots_speed_level"
 DEFAULT_BOOTS_LEVEL = 16
@@ -80,27 +78,13 @@ def default_path(environ=None):
     return datacredit.cache_dir(environ) / FILE_NAME
 
 
-class FlaskCache:
-    """Loads the flask table once and again only when the file changes."""
+class FlaskCache(hotreload.Watched):
+    """Loads the flask table once and again only when the file changes;
+    a malformed rewrite keeps the last good table (HOT-RELOAD, 0041)."""
 
     def __init__(self, path):
-        self.path = Path(path)
-        self._sig, self._table = None, {}
-        self._lock = threading.Lock()
-
-    def get(self):
-        try:
-            st = os.stat(self.path)
-            sig = (st.st_mtime_ns, st.st_size)
-        except OSError:
-            with self._lock:
-                self._sig, self._table = None, {}
-            return {}
-        with self._lock:
-            if sig != self._sig:
-                self._table = load_flasks(self.path)
-                self._sig = sig
-            return self._table
+        super().__init__(path, load_flasks, name="Flask table", default=dict,
+                         check=hotreload.check_json(MAX_BYTES))
 
 
 # AREA-AUDIT P7-7: only a positive "N% increased Movement Speed" counts;

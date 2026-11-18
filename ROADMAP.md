@@ -1922,6 +1922,20 @@ merge. Each row names the finding ids it closes.
   across the game restart is saved under neither. ACCEPT: a fix and one
   regression test each. ZERO-CLICK: code row, the loop works it.
 
+- [x] HOT-RELOAD (build) Make the app hot-reloadable: data files (tracked
+  data/, cached snapshots) re-read on change with the last good copy kept
+  on a bad edit and a one-line health note; web/ edits reload the open
+  dashboard (SSE "reload"); overlay page edits reload the overlay page;
+  server/ .py edits restart the core through the supervisor after a
+  preflight, never looping on broken code. ACCEPT: stdlib only, stat
+  polls on existing ticks, overlay budget untouched, tests for each path.
+  ZERO-CLICK: every reload runs by itself on save; web / overlay / code
+  reload only in a source checkout (config "hot_reload" overrides).
+  DONE 2026-11-17 (decision 0041): server/al/hotreload.py (Watched,
+  register, TreeWatch), Core.tick_reload, keepalive code reload,
+  `python -m server.al --check`, app/hotreload.js; tests/test_hot_reload.py,
+  app/test/hotreload.test.js.
+
 - [ ] CODE-HEALTH-FOLLOWUP (build) Follow-ups filed in
   docs/audit/code-health-2026-11-17.md: (1) state.py split - move the card /
   event text functions (lines 74-745) to their own module and update

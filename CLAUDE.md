@@ -555,3 +555,9 @@ them. Pause: `ops/loop/control/HALT`.
   writes it) (decision 0040). Reverses if: a localised log sample shows
   the signals misfire, the zone snapshot is dropped, or a report field
   leaks a path or identifier.
+- HOT-RELOAD: data files re-read on stat change (last good copy kept,
+  Checks note); web / overlay page / server .py reload only in a source
+  checkout (.git; "hot_reload" / AL_HOT_RELOAD override); code reload =
+  supervisor preflight then clean restart keeping the token, never on
+  broken code (decision 0041). Reverses if: the polls cost overlay budget,
+  token reuse is ruled unsafe, or a restart loses unrebuildable state.

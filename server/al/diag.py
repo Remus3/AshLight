@@ -190,6 +190,20 @@ def check_hotkey(f):
                   "Known once the overlay is running.")
 
 
+FIX_RELOAD = ("Fix the file and save it again. AshLight keeps the last working "
+              "version until then.")
+
+
+def check_reload(f):
+    """HOT-RELOAD (decision 0041): shown only while a data file or a code
+    change did not load; None otherwise (no row)."""
+    notes = [n for n in (f.get("reload_notes") or []) if isinstance(n, str) and n]
+    if not notes:
+        return None
+    more = f" (+{len(notes) - 1} more)" if len(notes) > 1 else ""
+    return _check("reload", "Live reload", FAIL, notes[0] + more, FIX_RELOAD)
+
+
 def check_port(f):
     port = f.get("port")
     if isinstance(port, int) and not isinstance(port, bool):
@@ -204,7 +218,7 @@ def checks(f, now):
             check_calc(f), check_snapshot(f, now),
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
-            check_hotkey(f), check_port(f)]
+            check_hotkey(f), check_port(f)] + [r for r in (check_reload(f),) if r]
 
 
 # -- redaction (ruling J)
