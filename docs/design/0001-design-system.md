@@ -740,3 +740,163 @@ All accessed 2026-11-16.
     blame): https://learn.microsoft.com/en-us/windows/win32/debug/error-message-guidelines
 13. W3C, Understanding WCAG 2.2 SC 2.5.8 Target Size (Minimum):
     https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
+
+## Amendment 2026-11-18 - target design (not yet shipped; lands with the TD-nn packages of docs/plan/03-target-design.md)
+
+Status: not in force yet. Each rule, token and limit below changes only when
+the named TD-nn package of `docs/plan/03-target-design.md` lands. Until
+then every rule in sections 1 to 11 above stays in force for shipped UI, and
+reviews of shipped UI use those sections unchanged. A package that lands
+edits the section it names (and, for colours, the measured block of 5.2 in
+the same commit as the CSS); when TD-23 lands, this section is removed.
+Heights are design budgets until TD-01 has measured them.
+
+Section 3 - type scale (TD-03; overlay roles TD-05):
+- Dashboard tokens. Old: `--al-fs-caption` 13px, `--al-fs-label` 13.6px,
+  `--al-fs-small` 14.4px, `--al-fs-body` 16px, `--al-fs-sub` 25.6px,
+  `--al-fs-zone` clamp(1.5rem, 4.5vw, 2.4rem), `--al-fs-glance` clamp(2rem,
+  6vw, 3.25rem). New: six rem tokens: `--al-fs-micro` 0.8125rem (13px),
+  `--al-fs-meta` 0.875rem (14px), `--al-fs-body` 1rem (16px),
+  `--al-fs-title` 1.25rem (20px), `--al-fs-glance` 1.75rem (28px),
+  `--al-fs-hero` 2rem (32px). No `vw` and no `clamp()` in any font size.
+- Line height. Old: 1.4 for body, 1.1 for glance numbers. New: one fixed
+  rem line box per token: 18, 20, 22, 26, 32, 36px at root 16px.
+- Minimum. Old: nothing under 13px. New: nothing under 14px on the
+  dashboard except the two footer sentences (13px); no weight 600 or more
+  under 14px; in-play text (strip labels, sub lines, status words, the top
+  answers) at the 20px token or larger.
+- Root scale. Old: none; the shell sizes scale with `vw` and the tiles
+  tighten at 820px tall or less. New: root font size 100% x s, s the
+  largest of 1, 1.25, 1.5, 2 with a viewport of at least 75em x 47.5em
+  times s; the 820px query and the UI-GLANCE shell clamps go.
+- Distance rule (new): in-play text is at least 16 arcmin of cap height at
+  the reference setup (24 inch 1080p, dashboard at 80 cm, overlay at 60 cm).
+- Overlay roles. Old: zone line 16px, timer 16px, HUD numbers 15px, trade
+  card 14px, secondary 13px. New: two sizes only: 16px (HUD lines, status
+  word) and 14px (card lines, guide line, key hint), weight 600,
+  line-height 1.3. The rule "rendered text never under 12px after zoom"
+  stays.
+
+Section 4 - spacing and shape:
+- Tabs (TD-19). Old: five tabs (Play, Run and history, Build, Items and
+  prices, Settings). New: four tabs: Play, Build and items, Run, Settings;
+  a stored `items` tab name maps to `build`.
+- App shell (TD-09, TD-19 to TD-21). Old: at 900px wide and 560px tall or
+  more the page never scrolls, Play is two columns, every tab's columns
+  scroll on their own and each column is a labelled group with tabindex 0.
+  New: no column and no card scrolls. Play is a fixed grid of 7 regions
+  (strip G; context C, feed T, notice N on the left; build line B, item
+  check I, kept checks U on the right) with tracks 100 / 228 / 204 / 96 /
+  68 / 360 / 100px at root 16px (grid 652px + 108px chrome = 760px), the
+  same in every state; a compact class from 64em x 43.75em with tracks
+  100 / 212 / 204 / 52 / 68 / 348 / 52px; below that, one column with one
+  page scroll. Regions are not scroll containers and have no tab stop. The
+  other tabs are fixed 3 x 2 card grids whose lists page at 10 rows;
+  Settings is a rail with one visible section.
+- Play content (TD-10 to TD-16). Old: zone tile with its guide, level /
+  deaths / session, the `#build-alert` slot, trades, the tip, the item
+  card. New: the 7 regions; the build alert is a state of region B; the
+  tip, language note, setup line and part-is-broken notes share region N
+  (one at a time); trades are one line each and all 5 open requests show.
+- Padding and gaps. Old: cards pad 16px, stat tiles 12px 16px, gaps 16px.
+  New (rem, scaling with s): region padding 12px (8px in N, B and U, 6px
+  in T, 4px in G); 8px between regions, 12px between the two columns.
+- Focus ring (TD-22). New: a 3px accent ring drawn inside the element
+  (outline-offset -3px).
+- Auto-switch (TD-22). Old: "No focus moves". New: when Play is shown by
+  itself and focus sits on the tab row, focus moves to the Play tab;
+  nothing else moves focus.
+- Unchanged: the 4px grid, the radii, the 24px minimum target (aim 32px),
+  320px width with no horizontal scroll, the 10 s auto-switch grace.
+
+Section 5 - colour:
+- 5.1 `--al-plate` (TD-05). Old: rgba(15, 18, 22, 0.92). New: rgba(15, 18,
+  22, 0.86), user range 0.80 to 1.0.
+- 5.1 control boundary (TD-03). Old: `var(--fk-text-muted)`. New:
+  `--al-control-edge`, #737c88 dark and #7a828c light (4.44 on surface and
+  4.05 on surface-2 dark; 3.89 and 3.53 light).
+- 5.1 new token `--al-text-body` (TD-03): #c5ccd3 dark and #30353c light,
+  for sentences and rows (11.58 and 10.55 dark; 12.35 and 11.22 light).
+- 5.1 new overlay-only tokens (TD-05): `--al-ovl-text-2` #c3c9d0
+  (secondary text) and `--al-ovl-warn` #f0bd55 (warn word). Old: the
+  overlay uses kit `text-muted` and `status-warn` for those roles.
+- 5.2 overlay rows over the white scene (TD-05). Text: old 12.50, new
+  10.28. Secondary: old 5.89 (text-muted), new 7.59 (`--al-ovl-text-2`).
+  Warn: old 6.13 (status-warn), new 7.30 (`--al-ovl-warn`). `status-bad`:
+  old 4.78 as text, new an edge only (3.93). At the 0.80 alpha floor the
+  three text values are 8.30, 6.13 and 5.90. Minimum: old 4.5 for every
+  overlay text pair; new 7.0 at the default plate and 5.5 at the alpha
+  floor.
+- 5.2 opacity rule (TD-05). Old: the window opacity multiplies text and
+  plate; slider floor 0.9. New: text is always opaque; the slider (named
+  "Background") sets the plate alpha only, floor 0.80; no page opacity.
+- 5.4 (TD-04). Old: the dashboard follows `prefers-color-scheme`. New:
+  dark by default (`data-theme="dark"`, native theme source dark) with one
+  setting, Theme: Dark / Follow Windows / Light. The overlay stays dark.
+
+Section 6 - state colours (TD-10, TD-13):
+- Trade request. Old: `status-warn` edge + `TRADE` tag. New: `accent` edge
+  + the word "Trade". Warn keeps one meaning: act when you can (stale
+  build, risky waystone, under-level, blocked).
+- Normal states are neutral: the reading word and normal rows carry no
+  colour while all is well.
+- Stale data (new): while the log is idle or AshLight cannot be reached,
+  strip values, timers and feed rows use `text-muted` and the zone sub
+  line says "frozen <time>".
+
+Section 7.2 - context (TD-17):
+- Progressive disclosure. Old: "the 2-line HUD plus at most one trade
+  card". New: the 2-line HUD plus one card slot whose holder is, first
+  match: the press card, the newest open trade card, a zone or act card
+  (12 s, only into a free slot), the key hint line, nothing. "Never add a
+  third HUD line" stays.
+- HUD line 2. Old: level, deaths and one status word. New: the same, but
+  in a guided campaign zone the zone-guide line (the guide entry's `short`
+  field, at most 34 characters, shown as authored or not at all) replaces
+  the level text while it is due and no connection, log state, trade
+  count, under-level or AFK / DND word is due. Setting: Always / On entry /
+  Never; with no stored choice, Always with 1 display and On entry with 2
+  or more.
+
+Section 9 - messaging (TD-07, TD-17):
+- Rule 6 line limits. Old: overlay zone 28 chars, card lines 34 chars;
+  dashboard event lines wrap, never truncate. New: the same overlay limits
+  plus the guide `short` line at 34 chars; on the Play tab every row is
+  one line with an ellipsis as the last guard, the full text in `title`
+  and in its twin on Run or Build and items, where lines still wrap.
+- Status slot order. Old: connection, Client.txt state, trade count,
+  under-level word, AFK / DND, campaign hint word. New: the zone-guide
+  line sits after AFK / DND and before the campaign hint word.
+
+Section 10 - overlay rules:
+- Content cap (TD-17). The count is unchanged: 2 HUD lines + one 3-line
+  card, never two cards. Holders: old the trade card or, for 20 s after
+  the press, the item check card; new the list under 7.2 above. The card's
+  near edge is anchored 62px from the window's anchored edge in every
+  state.
+- Card time (TD-18). Old: 20 s. New: 20 s by default, setting 20 / 60 /
+  200 s.
+- Plate (TD-05). Old: 92 percent plate and a `0 1px 1px #000` text shadow.
+  New: 86 percent plate (80 to 100) and the text shadow `0 0 2px #000,
+  0 0 2px #000, 0 1px 2px #000`; no stroke.
+- Opacity (TD-05). Old: the effective opacity keeps every overlay text
+  pair >= 4.5:1 over a white scene. New: text is opaque; text pairs >= 7:1
+  at the default plate and >= 5.5:1 at the alpha floor; edges >= 3:1.
+- Size (TD-06). Old: `autoScale` grows the HUD by DIP height / 1440. New:
+  DIP height / 1200 (1440 DIPs give 1.2); the 2x cap stays; the overlay
+  budgets of decision 0002 are re-run in the same package.
+- Glance (TD-17). New: a card's first line starts with the verdict word or
+  the buyer; every card that leaves by itself has a dashboard twin.
+- Unchanged: the window flags, base size 280 x 176 DIP, plates max-width
+  258px, corners only with the top-right default (the UX-DPI ruling is not
+  reversed: the HUD stays at 2 lines), no flashing, the repaint budget,
+  the display mode, the About text.
+
+Section 11 - checklist (ids added at the end of their groups by TD-23):
+- C7: text sizes come only from the six type tokens.
+- N7: no Play region scrolls, moves or changes size between states.
+- N8: every item that leaves by itself has a twin that stays.
+- O7: a card's first line starts with the verdict word or the buyer.
+- O8: overlay text pairs >= 7:1 at the default plate and >= 5.5:1 at the
+  alpha floor over white (replaces O5 when TD-05 lands).
+- S6: the focus ring is drawn inside the element and is never clipped.
