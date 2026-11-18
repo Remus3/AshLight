@@ -643,3 +643,25 @@ them. Pause: `ops/loop/control/HALT`.
   history, GitHub's rules stop letting an admin push fresh commits past
   required checks, FLEET item 17 changes, or the kit gate gains tag and
   wide-trailer checks (then push_guard keeps only the ref shape).
+- Execution model: docs/plan/packages.json checked by tools/plan_check.py
+  is the plan of record; packages run in waves (disjoint files, every
+  dependency in an earlier wave) grouped into sessions, one `continue`
+  each, resuming at the first unmerged package; a package runs its named
+  test files and main moves only on one whole green suite per merge
+  batch; one integrator per wave is the only writer of ROADMAP.md,
+  CLAUDE.md, the hand-off, the README indexes and reviews.log; decision
+  numbers 0047 to 0076 are reserved for packages; the loop takes only
+  loop-owned rows, and HALT is removed only by AUTO-21 at the end of
+  wave 6 after the six checks (decision 0077). Reverses if: subsets keep
+  escaping past 10 percent, schema 1 cannot express a needed change, the
+  loop and a session work one row, the six checks cannot go green by
+  2026-12-04, or the kit forbids ungated file-named runs.
+- Ultraplan rulings: Q-01 to Q-28, A-01 to A-03 and the close-out LE
+  rulings stand as audited, each operator item with its default in force
+  (no PoB folder or picked-file read, no GGG forum read, no phone
+  network path, release builds make no poe.ninja request, the item keys
+  stay, the Steam scan is only narrowed until the typed path lands);
+  target design A (fixed cockpit) is the base; the package named in an
+  entry writes the lasting record (decision 0078). Reverses if: an
+  entry's own Reverses-if is met, the operator answers an item of
+  docs/plan/09, or a package's record lands and outranks the entry.

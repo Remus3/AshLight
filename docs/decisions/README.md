@@ -3,6 +3,11 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Take the next number after the highest file here.
 
+- 0078: ultraplan rulings ledger: Q-01 to Q-28, A-01 to A-03 and the
+  close-out LE rulings, each with its default in force (ULTRAPLAN).
+- 0077: ultraplan execution model: waves in sessions, per-wave
+  integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
+  for packages in docs/plan/packages.json (ULTRAPLAN).
 - 0046: go public: guarded push, private first, public on gates
   (GP-02).
 - 0045: per-character build, stale-build alert and upgrade notices
