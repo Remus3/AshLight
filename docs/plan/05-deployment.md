@@ -1,6 +1,6 @@
 # 05 - Deployment
 Date: 2026-11-18. Ultraplan plan section (docs/plan/README.md).
-Status: draft
+Status: final
 
 Scope: operator ask F. Make AshLight deployable like the reference app:
 one-step install, a versioned release artifact, an update path and a clean
@@ -37,7 +37,10 @@ Done means every statement below is true and tested.
 - G6 An installed copy updates itself with web data on: daily check,
   verified download, staged beside the running version, applied at the
   next client start after a 24 h hold, rolled back by itself when the new
-  version does not come up. With web data off: zero requests.
+  version does not come up. With web data off: zero requests; Settings
+  shows the installed version and a releases link the player opens in
+  their own browser, and a re-run of the pasted line (or `install.ps1
+  -Zip`) upgrades in place.
 - G7 `uninstall.ps1` (also the Apps and features button) needs no Python
   and leaves nothing of AshLight but `<home>\data\`; `-Purge` leaves
   nothing. It never reports success while a file remains.
@@ -90,9 +93,12 @@ research 0053 and the rulings. Nothing below relies on a not-adopted item.
    stays a marked option (see Risks) that needs its own licence decision.
 6. Launch under the private Python (F-038, F-047): the embeddable
    runtime ignores the current directory and PYTHON* variables, and
-   today every start is `python -m server.al` with the checkout as cwd
-   (scripts/run.ps1, server/al/keepalive.py core_command and
-   run_preflight, app/client/launcher.js). Target: a tracked `boot.py` at
+   today every start uses the `-m` form with the checkout as cwd:
+   scripts/run.ps1 (`-m server.al.paths`, then the core),
+   server/al/keepalive.py core_command and run_preflight (`-m server.al`),
+   and app/client/launcher.js (a bare-name `python` / `py` lookup for
+   `-m server.al.paths`, then a hidden `scripts\run.ps1 -NoBrowser`).
+   Target: a tracked `boot.py` at
    the payload root puts its own folder first on sys.path and runs the
    named module; one command builder (`paths.python_cmd`) and one
    PowerShell helper return `<python> <app>\boot.py <module> ...` in
@@ -122,6 +128,29 @@ research 0053 and the rulings. Nothing below relies on a not-adopted item.
     plainly what "unsigned" means.
 12. Deferred, not built now: a scoop manifest (F-210, defer), winget, a
     signed packaged exe, Windows on ARM.
+13. Runtime fetches in an installed copy happen only in the installer
+    package's own process (`boot.py server.al.install ...`): at install,
+    at repair, and inside an update whose release changes a pin (that
+    update runs under web data, Q-21). The core process itself never
+    fetches a runtime (F-047 ToS check; decision 0018 item 6 is amended
+    only for the release read, D5).
+14. Game data and the optional calc in an installed copy. Game data:
+    the client start runs the snapshot tool (`boot.py
+    server.al.theorycraft.snapshot`) as its own hidden below-normal
+    process when web data is on and the cache is missing or over 24 h
+    (F-072 step 2, Q-04 amends decision 0009 item 2); nothing is bundled.
+    Calc: `installer calc --opt-in` runs the shipped `tools\tc_pin.py`
+    against `<home>\cache` and `<home>\build` and sets `tc_calc` only
+    after a verified install (F-132); off by default (decision 0018), the
+    decision 0027 toolchain route unchanged.
+15. The first-run config an install writes has web data off and no
+    Client.txt consent: both stay the player's own clicks on the first
+    window (the floor's opt-in with its visible indicator; decision 0013;
+    F-069's setup card). A fresh install never inherits dev keys.
+16. The release build ships with poe.ninja polling off (F-046 release
+    constant in server/al/ninja.py, keyed on `paths.install_mode() ==
+    "installed"`) until a decision records poe.ninja's yes (Q-05); the
+    trade-search link stays.
 
 ## Installed-mode layout
 
@@ -192,9 +221,12 @@ How an update swaps versions:
 2. Self-test of `<new>`: `boot.py server.al --check`, then a demo core
    (F-034 demo mode, shipped synthetic fixture log, scratch runtime under
    `<home>\temp\`, web data off) on the first free port of 8970-8979;
-   `/api/health` must answer with `version == <new>` within 15 s. Any
-   failure moves the folder to `<home>\temp\failed-<new>\`, writes the
-   report and leaves the marker alone.
+   `/api/health` must answer with `version == <new>` within 15 s. Like
+   the download and extract, the self-test runs hidden at below-normal
+   priority and starts only while `game_idle` is true or on a click
+   ("must not cost game FPS"; decision 0029 signal, never a process
+   check). Any failure moves the folder to `<home>\temp\failed-<new>\`,
+   writes the report and leaves the marker alone.
 3. Write `<home>\staged\<new>.json` with `apply_after = published_at +
    24 h`. One Settings and Checks line names the staged version.
 4. Apply: at the next client start the launcher runs `apply-staged
@@ -236,12 +268,17 @@ on the operator's word.
 Who triggers what:
 
 1. The REL-PREP lane (unattended; it never tags or pushes): `release.py
-   bump X.Y.Z` (one commit, exactly 4 paths: server/al/__init__.py,
-   app/package.json, app/package-lock.json, docs/releases/X.Y.Z.md with a
-   STUB mark); `release.py notes X.Y.Z --write`; it curates the notes,
-   regenerates CHANGELOG.md and commits; `release.py stage`; it files one
-   line in the hand-off's operator batch: "release X.Y.Z staged, PASS".
-2. The operator types `release X.Y.Z` in an interactive session. No
+   bump X.Y.Z` (one commit: server/al/__init__.py, app/package.json,
+   app/package-lock.json, docs/releases/X.Y.Z.md with a STUB mark, plus
+   each line marked `al-version-stamp`, today README.md's install line
+   once DEP-14 adds it); `release.py notes X.Y.Z --write`; it curates the notes,
+   regenerates CHANGELOG.md and commits; `release.py stage`; it then sets
+   the REL-PREP row to `BLOCKED: operator phrase "release X.Y.Z" (stage
+   PASS)` so the tick skips it and the next /done carries it into the
+   operator batch (the lane never edits the hand-off).
+2. The operator types `release X.Y.Z` in an interactive session (a MAIN
+   ORDER carrying the same phrase counts, FLEET item 6, and is likewise
+   acted on only in an interactive session). No
    other input exists. A lane, a loop tick and an inbox responder cannot
    publish: `publish` refuses when a headless marker is set (the kit
    progress-owner variable or a lane lock), and a static test finds no
@@ -259,9 +296,12 @@ Who triggers what:
    records in config/release.json).
 4. Then: an annotated tag `vX.Y.Z` on the stage commit whose message
    carries `sums-sha256: <hex of the staged SHA256SUMS.txt>`; one push of
-   that tag through fleet_gitlock and the guarded pre-push hook (F-016
-   allows `refs/tags/v*`; `release.py prepush-check` in the hook refuses
-   a `v*` tag without a matching PASS stage report).
+   that one ref (`git push origin refs/tags/vX.Y.Z`, never `--tags`,
+   `--all` or `--mirror`) through fleet_gitlock and the guarded pre-push
+   hook (F-016 allows `refs/tags/v*`; `release.py prepush-check` in the
+   hook refuses a `v*` tag without a matching PASS stage report). Main
+   itself is pushed under plan 04's push policy; publish never pushes a
+   branch.
 5. CI (`.github/workflows/release.yml`, trigger: `v*` tags only; actions
    pinned by 40-hex commit; Windows runner; Python pinned to the
    builder's exact version): checkout with full history; pytest and the
@@ -271,7 +311,9 @@ Who triggers what:
    provenance); create a draft release with the notes file as body;
    upload the assets; publish it (immutable; `--prerelease` for an
    `-rc.` tag so `releases/latest` skips it). The kit's identity guard
-   stays a required check. CI keeps web data off.
+   (fleet_identity_guard.yml, installed with the remote by plan 04) is a
+   required check. CI keeps web data off, merges no pull request and
+   pushes no commit.
 6. Read-back by the session, bounded polling to a deadline: the release
    is published and immutable, the tag targets the stage commit, every
    asset digest equals the staged one, `gh attestation verify` passes on
@@ -288,7 +330,8 @@ What `release.py build` writes, to `<sidecar>\Build\release\<ver>\`:
   Budget: under 2 MB (0053 F7 measured 542,447 bytes deflated for 148
   files). If deflate differs between two Python builds the zip is stored
   uncompressed (0053 F16).
-- `install.ps1`: the bootstrap with the version stamped in.
+- `install.ps1`: the bootstrap with the version stamped in; every
+  request it makes sends `AshLight/<ver> (installer)` as User-Agent.
 - `release.json`: name, version, channel, commit, created, bootstrap
   protocol (1), the runtime pins (url, sha256, size, licence) and the
   asset list (name, size, sha256).
@@ -296,6 +339,12 @@ What `release.py build` writes, to `<sidecar>\Build\release\<ver>\`:
 - `AshLight-<ver>.sbom.json`: from tools/sbom.py (13 npm components, the
   Electron binary, CPython, the 3 calc pins, each with a hash; F-148).
 - `SHA256SUMS.txt`: one `<sha256>  <name>` line per file above, sorted.
+
+Reproducible means: every `created` field (release.json, `BUILD`, the
+SBOM timestamp) is the ref's commit time, the SBOM serial number is a
+uuid5 of the commit id, and nothing reads the clock, the host name or a
+random source; otherwise CI's rebuild could never match the staged
+SHA256SUMS.
 
 It refuses a dirty tree, a tag and VERSION mismatch, a final version
 without a tag, anything from the sidecar cache in the staged tree, and a
@@ -308,7 +357,11 @@ checks; (2) the Python suite through the suite gate; (3) node tests; (4)
 two builds, identical; (5) leak sweep and deny test on the staged tree;
 (6) a scratch-home round trip with the real runtimes taken from the
 sidecar cache: install, update from the previous version (a synthetic
-N-1 for the first release), rollback, uninstall, purge; (7) Windows
+N-1 for the first release), rollback, uninstall, purge; its shell
+effects (shortcuts, the uninstall key, the logon task) go to a scratch
+root, so the operator's real Start Menu, Desktop, registry and task
+entries are never written or removed, and its demo cores run hidden on
+8970-8979 with web data off; (7) Windows
 Sandbox phases (networking and clipboard off, assets in a read-only
 mapped folder), only with the operator's `--sandbox` flag. The tool never
 looks for the game: no process list, no window query, no Client.txt
@@ -351,9 +404,15 @@ Rules:
 - This plan's package ids start with `DEP-` and mean deployment; the
   Security group therefore keys on the commit type and the row kind,
   never on an id prefix (0058 R9 proposed the prefix).
-- `.githooks/commit-msg` gains a subject check with the same type list
-  (feat, fix, perf, refactor, data, docs, test, chore, ops, security,
-  deps, merge, release); a subject without a type is refused.
+- `.githooks/commit-msg` gains a subject check with the type list the
+  history already uses plus the new ones (feat, fix, perf, refactor,
+  data, docs, test, chore, ops, security, deps, merge, release, audit,
+  design, verify, revert, done); git's own generated `Merge branch ...`
+  subjects (worktree syncs) pass and count as plain merges; any other
+  subject without a type is refused. The check runs after the kit's
+  identity strip and the leak sweep already in that hook.
+- Only subjects are read, never bodies or trailers, so no attribution
+  line can reach a notes file (FLEET item 17).
 - Every notes file ends with the not-affiliated sentence; no GGG art, no
   link to a paid page.
 
@@ -417,8 +476,9 @@ Steps, in order. Every removal is conditional on "it is ours":
    history, builds, price watch, visits, local.json) and
    `uninstall.ps1` is removed. With `-Purge`: `data\` goes to the
    Recycle Bin (FLEET item 9), then the empty home is removed.
-8. Last lines, byte-identical on every machine: what stays (`<home>\data`
-   or nothing) and one fixed sentence: AshLight hands out the files
+8. Last lines, byte-identical for a given home whether or not any
+   AshLight file sits in a game folder: what stays (`<home>\data` or
+   nothing) and one fixed sentence: AshLight hands out the files
    `ashlight.filter` and its `.build` file as downloads; if you copied
    them into the game's filter or planner folder they are still there.
    The script never looks (floor audit on F-063).
@@ -435,15 +495,23 @@ and for this machine's checkout): stops the checkout's processes, removes
 the logon task and the links only when they point into this checkout,
 and prints what stays. With `-Purge` it sends `ops\runtime` and
 `config\local.json` to the Recycle Bin and deletes the sidecar's `Cache`,
-`Logs`, `Temp` and `Build`. It never removes `Worktree`, `Scratch` or
-`ClaudeHistory`, never touches another tree's sidecar, and names the loop
-task with its own remove command (`tools/loop_task.py remove`).
+`Logs` and `Build`, and in `Temp` only AshLight's own run files. It
+never removes `Worktree`, `Scratch`, `ClaudeHistory`, `Install` (an
+installed copy has its own uninstall) or the agent temp folders under
+`Temp` (headless runs and live sessions use them), never touches
+another tree's sidecar, and names the loop task with its own remove
+command (`tools/loop_task.py remove`).
 
 ## Work packages
 
-Hotspots named per package: state.py, web/app.js, ROADMAP.md, CLAUDE.md.
-Every package gets a ROADMAP row from plan 07 (one ROADMAP.md edit, done
-by the plan, not by the package).
+Hotspots named per package: state.py, web/app.js, README.md,
+ROADMAP.md, CLAUDE.md; serial files across packages: server/al/paths.py
+(DEP-02, DEP-05, DEP-06), scripts/setup.ps1 and scripts/autostart.ps1
+(DEP-02, DEP-07, DEP-06), tools/release.py (DEP-03, DEP-04, DEP-08,
+DEP-12). Every package gets a ROADMAP row from plan 07 (one ROADMAP.md
+edit, done by the plan, not by the package). Every acceptance test runs
+on named test files, scratch homes and spare ports: never the live
+client on 8960, the live Client.txt or a visible window.
 
 ### DEP-01 Spike: AshLight under the private runtimes
 - Goal: prove the runtime design before any code rests on it.
@@ -454,10 +522,13 @@ by the plan, not by the package).
   `AL_SIDECAR_ROOT` at scratch: a demo core answers `/api/health` on a
   port in 8970-8979; the supervisor restarts it once; the calc bridge
   answers one calc on the reference build when the calc is installed;
-  tests/test_sidecar_paths.py and 4 more named test files pass; the boot
-  shim and the `._pth` variant are both tried and one is recorded; the
-  unpacked Electron zip reports its version without Node. The record
-  lists every re-spawn site that needed a change.
+  with pytest placed by the system pip `--target <scratch>\site` and
+  named in the scratch `._pth`, tests/test_sidecar_paths.py,
+  tests/test_keepalive.py, tests/test_procs.py, tests/test_jsonfile.py
+  and tests/test_http_security.py pass; the boot shim and the `._pth`
+  variant are both tried and one is recorded; the unpacked Electron zip
+  reports its version without Node. The record lists every re-spawn
+  site that needed a change.
 - ZERO-CLICK: dev only; hidden, fixture log, spare port.
 - Size: S. Depends on: F-034 (demo mode). Findings: F-038.
 - Parallel with: DEP-02, DEP-03, DEP-04, DEP-05. Hotspots: none.
@@ -470,19 +541,27 @@ by the plan, not by the package).
 - Acceptance: with the kit default pointed at a missing drive,
   `sidecar_root()` lies inside the tree and `ensure_dirs()` passes; Node
   floor 22.12.0 in setup.ps1, run.ps1 and README, tested against the
-  Electron `engines` field; no build.ps1 in the README quick start;
-  TEST-CLEAN-CLONE re-run with `AL_SIDECAR_ROOT` unset.
+  Electron `engines` field (`>= 22.12.0` in the pinned package today);
+  no build.ps1 in the README quick start (it moves to CONTRIBUTING.md);
+  the TEST-CLEAN-CLONE run repeated with `AL_SIDECAR_ROOT` unset: a fresh
+  `git clone` of HEAD in `<sidecar>\Scratch\clean-clone`, `setup.ps1
+  -NoShortcut`, then `run.ps1 -NoOverlay -NoBrowser -Port 8961`, answers
+  `/api/health`, and every path it created lies in the clone or the AL
+  sidecar.
 - ZERO-CLICK: the same two script calls, no prompt.
 - Size: S. Depends on: none. Findings: F-019.
-- Parallel with: DEP-01, DEP-03, DEP-04. Not with DEP-05 (paths.py).
-  Hotspots: none.
+- Parallel with: DEP-01, DEP-03, DEP-04. Not with DEP-05 (paths.py) or
+  DEP-07 (setup.ps1). Hotspots: README.md.
 
 ### DEP-03 One version, enforced
 - Goal: one source of the version and a one-commit bump.
 - Files: tests/test_version.py, tools/release.py (new, `bump`),
   app/package.json, app/package-lock.json, docs/releases/ (new).
 - Acceptance: the test fails on a planted mismatch; `bump` on a scratch
-  clone changes exactly 4 paths; `bump --check` is a no-op at HEAD;
+  clone changes exactly the 4 paths of Release procedure step 1 plus
+  each tracked file holding an `al-version-stamp` marker line (none
+  until DEP-14 adds README.md's install line), and the test fails when a
+  stamped line differs from VERSION; `bump --check` is a no-op at HEAD;
   `0.2.0-rc.1` sorts below `0.2.0`; a tag must equal `v` + VERSION.
 - ZERO-CLICK: nothing for the player; the loop never bumps by itself.
 - Size: S. Depends on: none. Findings: F-023.
@@ -497,10 +576,13 @@ by the plan, not by the package).
   subject without a type is refused by the hook; a row with id prefix
   `DEP-` and type feat lands under Added, not Security; CHANGELOG.md
   equals the concatenation; two runs give the same bytes; the lead
-  paragraph survives a regeneration.
+  paragraph survives a regeneration; the hook passes every subject
+  shape in the last 400 commits of main except untyped ones listed in a
+  fixture, and passes git's `Merge branch ...` subjects.
 - ZERO-CLICK: prepared unattended by the REL-PREP lane.
 - Size: S. Depends on: DEP-03, F-024 (row id lint). Findings: F-101.
-- Parallel with: DEP-05, DEP-06, DEP-07. Hotspots: none.
+- Parallel with: DEP-05, DEP-06, DEP-07. Not with DEP-08
+  (tools/release.py). Hotspots: none.
 
 ### DEP-05 Installed-mode paths
 - Goal: one resolver that serves a checkout and an install home.
@@ -543,9 +625,10 @@ by the plan, not by the package).
   `app.isPackaged` stays false; the launcher drops
   `ELECTRON_RUN_AS_NODE` and `NODE_OPTIONS`.
 - ZERO-CLICK: fetched inside setup or install; nothing to install.
-- Size: M. Depends on: DEP-01 (pass), DEP-02, DEP-05, F-044. Findings:
-  F-047.
-- Parallel with: DEP-04, DEP-07. Hotspots: CLAUDE.md.
+- Size: M. Depends on: DEP-01 (pass), DEP-02, DEP-05, DEP-07 (setup.ps1
+  and autostart.ps1 serial), F-044. Findings: F-047.
+- Parallel with: DEP-04. Not with DEP-07 (setup.ps1, autostart.ps1).
+  Hotspots: CLAUDE.md.
 
 ### DEP-07 Shell integration helper and a launcher without VBScript
 - Goal: one place that writes and removes shortcuts, the uninstall
@@ -560,8 +643,10 @@ by the plan, not by the package).
   elsewhere is left alone; every write is read back; PowerShell 5.1
   ParseFile passes.
 - ZERO-CLICK: unchanged; autostart stays opt-in (decision 0011).
-- Size: S. Depends on: none. Findings: F-170, 0052 cut-or-merge.
-- Parallel with: DEP-03 to DEP-06, DEP-08. Hotspots: none.
+- Size: S. Depends on: DEP-02 (setup.ps1 serial). Findings: F-170, 0052
+  cut-or-merge.
+- Parallel with: DEP-03, DEP-04, DEP-05. Not with DEP-02 or DEP-06
+  (setup.ps1, autostart.ps1). Hotspots: none.
 
 ### DEP-08 Release build tool
 - Goal: `release.py build` (also `build.ps1 -Package`) as specified in
@@ -575,17 +660,20 @@ by the plan, not by the package).
   is listed; the zip is under 2 MB; a dirty tree, a version mismatch, a
   cache file or a leak-sweep hit refuses; the SBOM lists 13 npm
   components, the Electron binary, CPython and 3 calc pins with hashes;
-  the build makes 0 network calls.
+  the build makes 0 network calls; with the clock, host name and random
+  source patched to differ, a second build still gives the same
+  SHA256SUMS; a build whose staged server/al/ninja.py has the F-046
+  release switch on while no decision records poe.ninja's yes refuses.
 - ZERO-CLICK: one command, no prompt, no upload.
-- Size: M. Depends on: DEP-03, DEP-06, F-027 (BUILD file reader).
-  Findings: F-048, F-148 (SBOM half).
-- Parallel with: DEP-07, DEP-09 (after the layout is fixed). Hotspots:
-  none.
+- Size: M. Depends on: DEP-03, DEP-04 (tools/release.py serial), DEP-06,
+  F-027 (BUILD file reader), F-046 (release constant). Findings: F-048,
+  F-148 (SBOM half).
+- Parallel with: DEP-07. Hotspots: none.
 
 ### DEP-09 Installer and bootstrap
 - Goal: G1. `install.ps1` plus the stdlib package `server/al/install/`
   (`cli`, `home`, `fetch`, `selftest`, `shell`): commands `install`,
-  `repair`, `status`.
+  `repair`, `status`, `calc` (Design point 14).
 - Files: scripts/install.ps1 (new), server/al/install/ (new),
   server/al/data/selftest/ (a synthetic fixture log from
   tools/synth_client.py), config/local.example.json (player keys only),
@@ -595,20 +683,33 @@ by the plan, not by the package).
   then hands over to `<python> boot.py server.al.install install`, which
   fetches Electron, lays out the home, writes the first-run config,
   self-tests, and only then writes the marker, two shortcuts and the
-  uninstall entry, and starts the client. Hosts: github.com and its two
-  asset hosts, www.python.org. User-Agent `AshLight/<ver> (installer)`.
-  Piped use takes `AL_INSTALL_DIR`; file use takes `-Zip`, `-RuntimeDir`,
+  uninstall entry, and starts the client. Hosts: github.com,
+  release-assets.githubusercontent.com, objects.githubusercontent.com
+  (the asset redirect hosts tools/tc_pin.py already allows) and
+  www.python.org. User-Agent `AshLight/<ver> (installer)` on every
+  request, from the bootstrap and the package alike. The pasted line
+  itself names AshLight and the version too: `irm -UserAgent
+  'AshLight/<ver> (installer)' <release address>/download/v<ver>/install.ps1
+  | iex`, stamped by `bump` (DEP-14 writes it into README.md). Piped use
+  takes `AL_INSTALL_DIR`; file use takes `-Zip`, `-RuntimeDir`,
   `-InstallDir`, `-NoStart`.
 - Acceptance: scratch home with fakes: a clean install lays out marker,
   code, data and runtime; a tampered zip or a missing hash installs
   nothing; a failed self-test leaves no marker and one report; a re-run
   restores a deleted shipped file and upgrades an older marker; the
   script parses under PowerShell 5.1; no request goes to a host off the
-  list; no elevation call exists in either file (static test); the
-  self-test core opens no log outside its fixture (exit 97 otherwise).
-- ZERO-CLICK: one pasted line, then the app opens.
-- Size: L. Depends on: F-011, DEP-05, DEP-06, DEP-07, DEP-08. Findings:
-  F-050.
+  list and every request carries the installer User-Agent; no elevation
+  call exists in either file (static test); the self-test core opens no
+  log outside its fixture (exit 97 otherwise); the written `local.json`
+  has `web_data` false, no Client.txt consent and no dev-only key;
+  `calc --opt-in` with a forced hash mismatch leaves `tc_calc` unset;
+  with web data on in a scratch home, an installed start runs the
+  snapshot tool through `boot.py` under `<home>\cache` (F-072 step 2);
+  every shell effect is injected (nothing real is written).
+- ZERO-CLICK: one pasted line, then the app opens; the floor's Client.txt
+  opt-in stays the one required click on the first window.
+- Size: L. Depends on: F-011, DEP-05, DEP-06, DEP-07, DEP-08, F-072
+  (step 2), F-132. Findings: F-050.
 - Parallel with: DEP-10 (separate files). Hotspots: none.
 
 ### DEP-10 Uninstall
@@ -625,7 +726,7 @@ by the plan, not by the package).
 - ZERO-CLICK: one click in Apps and features; no question by default.
 - Size: M. Depends on: DEP-05, DEP-07 (the layout); tested against
   DEP-09's home. Findings: F-063.
-- Parallel with: DEP-09, DEP-11. Hotspots: none.
+- Parallel with: DEP-09, DEP-11. Hotspots: README.md.
 
 ### DEP-11 Update and rollback, local half
 - Goal: the swap, confirm and rollback of the layout section, driven by
@@ -635,35 +736,47 @@ by the plan, not by the package).
   (apply-staged before the core starts; relaunch from the marker),
   server/al/diag.py and server/al/state.py (an `install` entry: mode,
   version, previous, last update result), web/checks.js, web/app.js,
-  tests/test_updater.py, app/test/launcher.test.js.
+  tests/test_updater.py, app/test/launcher.test.js (new).
 - Acceptance: N to N+2 from local zips keeps `data\` byte for byte; a
   tampered zip is refused with nothing changed; a failed self-test
   leaves the marker on N with exit 1; a new version that never answers
   health is rolled back at the second start and lands in
   update_skip.json; `rollback` restores N and reads back marker,
   shortcut and uninstall entry; `apply-staged` with nothing staged
-  returns in under 300 ms; the copied report shows no path.
+  returns in under 300 ms; the copied report shows no path; the
+  self-test runs at below-normal priority and waits while `game_idle` is
+  false (a fake status, no process query); after a switch the new
+  version serves its own web files (0050 F31: no old code with new
+  pages).
 - ZERO-CLICK: applied at the next start; one line names the version.
 - Size: L. Depends on: DEP-09. Findings: F-077 (local half), 0050 F31.
-- Parallel with: DEP-10, DEP-12. Hotspots: state.py, web/app.js.
+- Parallel with: DEP-10. Not with DEP-16 or DEP-17 (state.py,
+  web/app.js). Hotspots: state.py, web/app.js.
 
 ### DEP-12 Stage and publish gates
 - Goal: `release.py stage`, `publish`, `publish --rehearse` and
   `prepush-check`, as in Release procedure, with git, gh and the clock
   injected.
-- Files: tools/release.py, .githooks/pre-push (one call; lands with or
-  after F-016's rewrite), config/release.json (new: repository
+- Files: tools/release.py, config/release.json (new: repository
   placeholder, `immutable_confirmed`), tests/test_release_gates.py,
-  CLAUDE.md (one Gates line: who may publish).
+  CLAUDE.md (one Gates line: who may publish). The one
+  `release.py prepush-check` call in .githooks/pre-push is not part of
+  this package: it goes into F-016's ready diff, which merges only after
+  the operator's go (Q-23); until then every push is refused anyway and
+  `publish` refuses for "no remote".
 - Acceptance: every gate has a refusal test where nothing changed;
   rehearse makes 0 pushes and no tag; a digest mismatch fails the
   read-back; publish refuses under a headless marker; sandbox phases run
-  only with `--sandbox`; a static test finds no process-list, window or
-  Client.txt call in tools/release.py and no publish path in the loop
-  tools.
+  only with `--sandbox`; the stage round trip writes no real shortcut,
+  registry key or task (effects redirected, checked against a snapshot
+  of the real locations taken before and after); a static test finds
+  no process-list, window or Client.txt call in tools/release.py and no
+  `release.py publish` or `git tag` in tools/al_loop.py, tools/al_lane.py
+  and tools/loop_prompts.py; `prepush-check` refuses a `v*` ref with no
+  matching PASS stage report and passes a branch ref untouched.
 - ZERO-CLICK: one operator phrase per release; the rest is automatic.
 - Size: M. Depends on: DEP-08, DEP-09, DEP-10, DEP-11. Findings: F-074.
-- Parallel with: DEP-14. Hotspots: CLAUDE.md.
+- Parallel with: DEP-13, DEP-14. Hotspots: CLAUDE.md.
 
 ### DEP-13 Cut-over: the operator's live copy becomes an installed release
 - Goal: G9 (Q-19).
@@ -680,8 +793,10 @@ by the plan, not by the package).
   run history read the same in the installed copy; every installed path
   is inside the sidecar (tests/test_sidecar_paths.py); with both clients
   up the checkout client reports that the global hotkey is taken instead
-  of failing silently; a later `update --zip` round trip works on the
-  live home.
+  of failing silently; a re-run of the checkout's setup.ps1 leaves the
+  installed copy's shortcuts and logon task alone (DEP-07's "points
+  elsewhere" rule); a later `update --zip` round trip works on the live
+  home.
 - ZERO-CLICK: waits for `game_idle` by itself; no operator step.
 - Size: M. Depends on: DEP-09, DEP-10, DEP-11. Findings: F-049, F-050
   (Q-19 part).
@@ -690,18 +805,21 @@ by the plan, not by the package).
 ### DEP-14 Player docs: install, update, uninstall, verify, "Windows may warn"
 - Goal: the README tells a player the real steps and what unsigned
   means.
-- Files: README.md, SECURITY.md, THIRD-PARTY.md, tests (README lint).
-- Acceptance: sections Install (the pasted line with a placeholder
-  address until Q-24, and the verified `-Zip` route), Update, Uninstall,
+- Files: README.md, SECURITY.md, THIRD-PARTY.md, tests/test_readme.py
+  (new: section and wording lint).
+- Acceptance: sections Install (the pasted line of DEP-09 with a
+  placeholder address until Q-24, its version on an `al-version-stamp`
+  line that DEP-03's stamp check holds to VERSION, and the verified
+  `-Zip` route), Update, Uninstall,
   Verify your download (SHA256SUMS, `gh attestation verify`, `gh release
   verify-asset`), Windows may warn (each prompt named; never advice to
   switch protection off); the privacy text names the daily release read
   under web data; the disclaimer line is present; no repository address
   outside the placeholder before go-public.
 - ZERO-CLICK: nothing for the player.
-- Size: S. Depends on: DEP-09, DEP-10; shares README.md with F-020
-  (plan 07 orders them). Findings: F-148 (text half), F-020.
-- Parallel with: DEP-12, DEP-13. Hotspots: none.
+- Size: S. Depends on: DEP-03, DEP-09, DEP-10; shares README.md with
+  F-020 (plan 07 orders them). Findings: F-148 (text half), F-020.
+- Parallel with: DEP-12, DEP-13. Hotspots: README.md.
 
 ### DEP-15 Tag-triggered release workflow
 - Goal: step 5 of Release procedure. The file is prepared and tested
@@ -709,7 +827,9 @@ by the plan, not by the package).
 - Files: .github/workflows/release.yml, tests/test_workflows.py.
 - Acceptance: before the remote: every `uses:` carries a 40-hex commit;
   the only trigger is `v*` tags; permissions are the minimum (contents
-  write, id-token write, attestations write). After the remote: an
+  write, id-token write, attestations write); no step merges a pull
+  request, pushes a commit or enables web data (static test). After the
+  remote: an
   `-rc.` tag on the private repository yields a pre-release whose assets
   match SHA256SUMS; `gh attestation verify` and `gh release verify-asset`
   pass; a plain commit triggers nothing.
@@ -728,12 +848,18 @@ by the plan, not by the package).
   version): one call per 24 h, a 304 costs no parse, a 403 with a reset
   time and Retry-After are honoured; an earlier opt-in without the
   acknowledgement makes 0 requests; an empty repository constant = off;
-  a settings import never sets the acknowledgement; no toast, no window.
+  a settings import never sets the acknowledgement; no toast, no window;
+  the web-data opt-in sentence in web/index.html names the daily update
+  check and the automatic apply, and ticking it stores `web_data_ack`
+  with the wording version; with web data off Settings shows the
+  version and a releases link (none while the constant is empty) that
+  opens in the player's own browser; the request goes only to
+  api.github.com with the webfetch User-Agent and no cookie.
 - ZERO-CLICK: the line appears by itself.
 - Size: S. Depends on: DEP-03, F-027; live use blocked on a public
-  release (Q-23, Q-24). Findings: F-055.
+  release (Q-23, Q-24). Findings: F-055, F-077 (opt-in wording).
 - Parallel with: DEP-15. Not with DEP-11 or DEP-17 (state.py,
-  web/app.js). Hotspots: state.py, web/app.js.
+  web/app.js). Hotspots: state.py, web/app.js, README.md.
 
 ### DEP-17 Update, network half
 - Goal: G6: download, verify, stage by itself; "Update now"; the
@@ -746,12 +872,17 @@ by the plan, not by the package).
   mismatch stages nothing; a release younger than 24 h is staged but not
   applied; click-only waits for "Update now"; web data off: 0 calls;
   download and extract run at below-normal priority and start only
-  while `game_idle` is true or on a click.
+  while `game_idle` is true or on a click; a release whose `release.json`
+  changes a runtime pin fetches that runtime in the installer process
+  (Design point 13), checked against the new pin; requests go only to
+  api.github.com, github.com and the two asset hosts; a version in
+  update_skip.json is never staged again.
 - ZERO-CLICK: none with web data on; one acknowledgement click, once,
-  for an earlier opt-in.
-- Size: M. Depends on: DEP-11, DEP-16, DEP-15. Findings: F-077 (network
-  half).
-- Parallel with: DEP-18 preparation. Hotspots: state.py, web/app.js.
+  for an earlier opt-in (the proof that the player has seen the new
+  wording, Q-21).
+- Size: M. Depends on: DEP-11, DEP-16, DEP-15 (file half). Findings:
+  F-077 (network half).
+- Parallel with: DEP-13, DEP-14. Hotspots: state.py, web/app.js.
 
 ### DEP-18 First release candidate and first public release
 - Goal: run the procedure once end to end (REL-PREP-1).
@@ -762,9 +893,34 @@ by the plan, not by the package).
   host (stage `--sandbox`, or the tester run); the operator's live copy
   updates to it by itself.
 - ZERO-CLICK: one operator phrase per tag.
-- Size: M. Depends on: DEP-12 to DEP-17, F-021, F-006. Findings: F-074,
+- Size: M. Depends on: DEP-12 to DEP-17, DEP-19, F-021, F-006, F-016
+  (merged after the go), F-046 (release constant). Findings: F-074,
   F-076.
 - Parallel with: nothing. Hotspots: ROADMAP.md (REL-PREP rows).
+
+### DEP-19 CPython pin watch
+- Goal: security patches of the private CPython reach installs, as F-130
+  does for Electron (0053 R10 names both; F-130 covers only Electron).
+- Files: one more source in F-130's watcher (the tools/ file F-130
+  creates), config/runtime_pins.json (read only), tests for that
+  source.
+- Behaviour: once per 24 h on the loop tick, a dev-tool read of
+  python.org's downloads API (`www.python.org/api/v2/downloads/release/`,
+  the host the installer already uses; a moved endpoint is recorded in
+  the row, never guessed) for the pinned 3.14 line with the
+  AshLight User-Agent (TC-DRIFT's shape, decision 0025); a newer patch
+  release that still publishes an embeddable amd64 zip files one bump
+  row (pin url, size, SHA-256 re-read at the move); a pin move ships as
+  a 0.y.z release through REL-PREP. Never from the app.
+- Acceptance: a fixture listing with 3.14.11 files exactly one row; the
+  same listing again files nothing; a fixture without an embeddable zip
+  files nothing and logs one line; 0 requests while `ops/loop/control/
+  HALT` is set (unlike GGG-DOCS-WATCH, this one respects HALT).
+- ZERO-CLICK: the watch runs on the loop tick; a pin move is a gated
+  commit.
+- Size: S. Depends on: F-130, DEP-06. Findings: F-130 (extension), 0053
+  R10.
+- Parallel with: DEP-07 to DEP-17 (own files). Hotspots: none.
 
 Not packages now: the scoop manifest (F-210, deferred until after the
 first public release; it needs `persist` for `data\` or an install
@@ -773,22 +929,36 @@ script calling `install.ps1 -Zip`), winget, a signed exe.
 ## Order
 
 Critical path: F-034 -> DEP-01 -> DEP-06 -> DEP-08 -> DEP-09 -> DEP-11
--> DEP-12 -> (operator: remote, Q-23) -> DEP-15 live -> DEP-18 ->
-DEP-17 live.
+-> DEP-12 -> DEP-15 (file half) -> DEP-17 -> (operator: remote, Q-23)
+-> DEP-15 live -> DEP-18 (its last check is DEP-17 live: the operator's
+copy updates itself).
 
-- First, in parallel, no dependency on the spike: DEP-02, DEP-03, DEP-07;
-  then DEP-04 and DEP-05.
-- DEP-01 runs as soon as F-034 lands. A failed spike reverses Q-20 for
-  the Python half: DEP-06 and DEP-09 then use the player's own Python
-  3.13+ (found by the launcher, hash check dropped for it) and keep the
-  pinned Electron zip; everything else is unchanged.
-- paths.py is serial: DEP-02, then DEP-05, then DEP-06.
+- First, in parallel, no dependency on the spike: DEP-02 and DEP-03;
+  then DEP-07 (after DEP-02, setup.ps1), DEP-04 (after DEP-03) and
+  DEP-05 (after DEP-02).
+- DEP-01 runs as soon as F-034 lands. A failed spike reverses Q-20 (as
+  ruled, F-038). Proposed fallback, taken only after an adjudicator
+  confirms it and recorded in D2: DEP-06 and DEP-09 use the player's own
+  Python 3.13+ (found by the launcher, hash check dropped for it) and
+  keep the pinned Electron zip, which F-044 fetches for the checkout
+  anyway; G1 then reads "no Node" instead of "no Python and no Node";
+  everything else is unchanged.
+- paths.py is serial: DEP-02, then DEP-05, then DEP-06. setup.ps1 and
+  autostart.ps1 are serial: DEP-02, then DEP-07, then DEP-06.
+  tools/release.py is serial: DEP-03, DEP-04, DEP-08, DEP-12.
 - DEP-09 and DEP-10 in parallel; then DEP-11; then DEP-12, DEP-13 and
-  DEP-14 in parallel.
-- Everything through DEP-14, and the file halves of DEP-15 and DEP-16,
-  needs no remote and no operator. DEP-15 live, DEP-17 live and DEP-18
+  DEP-14 in parallel; DEP-16 any time after DEP-03 and F-027 but not
+  beside DEP-11 or DEP-17; DEP-19 any time after DEP-06 and F-130.
+- Everything through DEP-14, DEP-19, the file halves of DEP-15 and
+  DEP-16, and DEP-17 against its fake release server needs no remote
+  and no operator. DEP-15 live, DEP-17 live and DEP-18
   wait for plan 04's remote.
 - Before any of it: F-014 (write path) and F-011 (ACL) from the P0 set.
+- From other plan sections, each needed before the package named:
+  F-034 (DEP-01), F-024 (DEP-04), F-044 (DEP-06), F-027 (DEP-08,
+  DEP-16), F-046 (DEP-08), F-072 and F-132 (DEP-09), F-130 (DEP-19);
+  blocked on the operator and needed only for the live halves: F-016
+  and F-021 (Q-23), the address (Q-24).
 
 ## Decisions
 
@@ -800,7 +970,9 @@ staged automatic apply under web data, wording named and re-shown), Q-22
 releases: operator), Q-24 (the project's own address in tracked files, at
 go-public). Floor audit reworks applied: F-049, F-063, F-074, F-077.
 
-Decisions to record (numbers assigned later):
+Decisions to record (numbers assigned when the plan lands, per
+docs/plan/README.md "Then", each with its CLAUDE.md settled entry and
+its "Reverses if"):
 
 - D1 Installed-mode home and layout. Decision: per-user home
   `%LOCALAPPDATA%\Programs\AshLight`, `-InstallDir` override,
@@ -872,8 +1044,10 @@ act) or the operator's own stated trigger.
 2. Supply the final owner and name of the repository (Q-24). Why: only
    the operator names the account. Blocks: the real install line and the
    update constant.
-3. Sign `gh` in on the dev host (OAuth grant). Blocks: publish and the
-   read-back.
+3. No `gh` sign-in is needed: `gh` is already authenticated on the dev
+   host (research 0057; findings conflict "Operator act for the remote").
+   Only if a publish or read-back reports a missing token scope does the
+   operator re-grant it (OAuth). Blocks then: publish and the read-back.
 4. Type `release X.Y.Z` once per release. Why: the operator's own order;
    it is the only trigger.
 5. Optional: enable the Windows Sandbox feature (needs elevation and a
@@ -926,8 +1100,12 @@ build and stage.
   fixed child names, "is it ours" on every external item, `-DryRun`.
 - The pasted line runs remote code. Limited to the small bootstrap on an
   immutable release; the `-Zip` route is for reviewers.
-- Pin upkeep: Electron 45 ends about 2027-04-27 (tentative); pin moves
-  come from F-130's watcher and ship as a 0.y.z release.
+- Pin upkeep: Electron 45 ends about 2027-04-27 (tentative); Electron
+  pin moves come from F-130's watcher, CPython pin moves from DEP-19,
+  and each ships as a 0.y.z release. An Electron bump that arrives as a
+  Dependabot pull request is never merged on GitHub: the lane re-applies
+  it locally as an operator commit (FLEET item 17, plan 04), and the
+  release workflow merges nothing.
 - GitHub rate limit (60 unauthenticated requests an hour per IP) and
   proxies: the check backs off and stays silent; the release page link
   is the fallback.
@@ -937,4 +1115,108 @@ build and stage.
 
 ## Spike record
 
-Empty until DEP-01 runs; it appends its results here (F-038).
+Empty until DEP-01 runs; it writes its results in this section, above
+Verification (F-038).
+
+## Verification
+
+Independent check, 2026-11-18, by a second agent (not the author).
+
+Checked:
+
+- Yardstick F point by point: one-step install (G1, DEP-09), versioned
+  artifact (G2, G3, DEP-03, DEP-08), update path with web data on and
+  off (G6, DEP-11, DEP-16, DEP-17), clean uninstall of processes, the
+  logon task and the home, data and the checkout sidecar only by
+  consent (G7, DEP-10), releases only on a REL-PREP milestone or an
+  explicit version and the operator's phrase (G4, DEP-12), auto-written
+  changelog from commit subjects and ROADMAP rows (G5, DEP-04), stdlib
+  core, Electron exact pin, no runtime CDN and sidecar rules (G10).
+- Repo claims, by opening the files: VERSION "0.1.0" in
+  server/al/__init__.py and app/package.json; the webfetch User-Agent
+  reads VERSION; ports.py has only AL_PORT 8960 in block 8960-8979;
+  keepalive.py core_command and run_preflight use `-m server.al`;
+  launcher.js; hotreload.py dev_enabled keys on `.git`; autostart.ps1
+  registers "AshLight Autostart" through wscript and
+  autostart_launch.vbs; setup.ps1 writes the Start Menu and Desktop
+  links and has -TcCalc and -NoShortcut; run.ps1 has -NoOverlay,
+  -NoBrowser and -Port; build.ps1 runs the snapshot as `-m
+  server.al.theorycraft.snapshot`; procs.py's proven-ours rule;
+  stop.request in stop.ps1; tools/tc_pin.py's asset hosts;
+  .githooks/pre-push refuses every push and commit-msg runs the identity
+  strip and the leak sweep; 13 packages in the lockfile and electron the
+  only (dev) dependency; Electron `engines` `>= 22.12.0`; no
+  `git tag` or publish path in the loop tools; merge subjects are
+  `merge: <ROW-ID> ...`; the research numbers (0053 F7 to F9, the
+  framework package counts, the 2027-04-27 end of life). Not present
+  yet and named as new: config/electron_pin.json (F-044),
+  config/runtime_pins.json, requirements-dev.txt, CHANGELOG.md,
+  docs/releases/, .github/workflows/, server/al/buildinfo.py (F-027),
+  scripts/install.ps1, scripts/uninstall.ps1, app/test/launcher.test.js.
+- findings.json: every cited finding and ruling; dispositions (F-016,
+  F-021 and F-076 blocked on Q-23; F-046 blocked for release builds;
+  F-210 deferred); not-adopted 0052-X1 to X6 and 0053-X1 to X9; the
+  install-shape, update, release, changelog, version-check, fuses and
+  remote conflicts; the floor audit reworks of F-049, F-063, F-074,
+  F-077, Q-21. Inputs 0052, 0053 (Fit section, R1 to R11, Rejected,
+  Open questions), 0050 F29 and F31, 0039 R1 and R5, 0042, 0046 R9 and
+  R10.
+- Dependency graph: no cycle; every "Parallel with" checked against
+  shared files and dependencies.
+
+Corrected (27):
+
+1. Launch sites: launcher.js runs `-m server.al.paths` and a hidden
+   run.ps1, not `-m server.al`.
+2. Operator act 3: `gh` is already authenticated (findings conflict);
+   no sign-in act.
+3. DEP-12 edited .githooks/pre-push, which rests on F-016 (blocked on
+   Q-23): the call now rides F-016's ready diff.
+4. Parallel claims that contradicted dependencies (DEP-08 with DEP-09,
+   DEP-11 with DEP-12, DEP-17 with DEP-18) or shared files (DEP-02,
+   DEP-07, DEP-06 on setup.ps1 and autostart.ps1; DEP-04 and DEP-08 on
+   tools/release.py); the Order's first wave fixed to match.
+5. Critical path put DEP-17 after DEP-18, which depends on it.
+6. The commit-msg type list would have refused subject types main
+   already uses (audit, design, verify, revert, done) and git's own
+   `Merge branch` subjects.
+7. The unattended REL-PREP lane wrote the hand-off; it now sets a
+   BLOCKED row (CLAUDE.md loop rule; /done owns the hand-off).
+8. DEP-01 named "4 more" tests without naming them, and the embeddable
+   runtime has no pytest.
+9. DEP-02's TEST-CLEAN-CLONE re-run was a ROADMAP row name, not a
+   runnable test.
+10. The stage round trip would have written the operator's real
+    shortcuts, uninstall key and logon task.
+11. Reproducibility left clock, SBOM timestamp and serial open, which
+    would break CI's SHA256SUMS comparison.
+12. Nothing enforced F-046 (release builds poll no poe.ninja until its
+    yes): Design point 16, DEP-08 refusal, DEP-18 dependency.
+13. Runtime fetch inside an update contradicted "never fetched by the
+    running core" (F-047): Design point 13.
+14. Dropped inputs: installed-mode game data (F-072 step 2, Q-04) and
+    the calc opt-in (F-132): Design point 14, DEP-09.
+15. First-run config: web data off and no Client.txt consent stated and
+    tested (floor opt-in, decision 0013).
+16. Floor read strictly: the pasted line and every installer request
+    send an AshLight User-Agent with the version; bump stamps it.
+17. Web data off: version plus releases link (0052 R6, 0053 Fit 4,
+    F-077) added to G6 and DEP-16.
+18. The new opt-in wording (F-077, Q-21) had no package: DEP-16.
+19. Self-test priority and the `game_idle` gate (FPS floor).
+20. CPython pin watch (0053 R10) was dropped: new DEP-19.
+21. Checkout purge would have deleted agent temp folders and the
+    installed home; now excluded.
+22. "Byte-identical on every machine" contradicted printing the home
+    path; narrowed to F-063's test.
+23. Tag push named as one explicit ref; publish never pushes a branch.
+24. CI: the identity guard is installed by plan 04, CI merges no pull
+    request and pushes nothing; Dependabot bumps re-applied locally.
+25. Asset hosts named.
+26. Where the decisions get recorded (plan landing).
+27. New test files marked new or named (app/test/launcher.test.js,
+    tests/test_readme.py).
+
+Left as stated: sizes L for DEP-09 and DEP-11 (one agent each, own
+files); the offline full zip stays a marked option (Q-20 wins over
+F-048); scoop stays deferred (F-210).
