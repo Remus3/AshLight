@@ -130,8 +130,11 @@ STOP = {"the", "and", "for", "from", "with", "per", "via", "tab", "new", "plan",
 VERIFY_EXTRA = ("--allowedTools",
                 "Bash(git diff:*),Bash(git status:*),"
                 "Bash(npm test:*),Bash(node --test:*),Bash(python tools/leak_sweep.py:*)")
+# DIVE-FLOOR (decision 0050): no free web tools; every fetch goes through
+# tools/webfetch.py and its one host allow-list (plan 163: no npm / gh).
+DIVE_FETCH_TOOL = "Bash(python tools/webfetch.py:*)"
 DEEP_EXTRA = ("--permission-mode", "acceptEdits", "--allowedTools",
-              al_lane.GATE_TOOLS + ",WebFetch,WebSearch")  # plan 163: no npm / gh
+              al_lane.GATE_TOOLS + "," + DIVE_FETCH_TOOL)
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 _DETACHED = getattr(subprocess, "DETACHED_PROCESS", 0)
 _BREAKAWAY = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
