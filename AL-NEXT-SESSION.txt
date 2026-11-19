@@ -4,7 +4,19 @@ SESSION: 8   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 4 done, next wave 5
+WAVE POINTER: wave 5 done, next wave 6
+DEFERRED: GP-09 (wave 5): the wave-5 orchestrator brief said "Do not push", so the act (create the private repository, first push, CI green; ruling R1) was not run; branch none (main-checkout act)
+Wave 5 escape count: 1 of 4 merge batches needed a second suite (batch
+3: OVL-KEYS-CLIENT red on tests/test_sidecar_paths.py, a regex literal
+in app/test/hotkeys_live.test.js read as a drive path; reverted, test-only
+fix round, merged as batch 4); 1 of 12 worktree packages = 8 percent, not
+above 10 percent: the batch stays at 4. Batch suites 2903, 2969, 2981
+(after the revert; 2980 + 1 failed before), 2981 passed (3, 4, 4, 4
+skipped); npm 286, 287, 303, 313. Adjudicator rulings: RUN-SEAMS files
+extended with tests/test_tc_wire.py, PLAY-TD-09B-SKELETON files extended
+with tests/test_design_tokens.py (both test-only, wave 4 rule b1af8e7).
+Design fix rounds: PLAY-TD-07A (PV-1, PV-3, PV-4), PLAY-TD-09B (TD9B-2),
+TC-CAMPAIGN-KEEP (TCK-3, TCK-4). GP-09 not run (DEFERRED above).
 Wave 4 escape count: 1 of 3 merge batches of this run (2 to 4) needed a
 second suite for an escape (batch 2: PLAY-TD-01B-FIT-HARNESS red on
 tests/test_test_layout.py, reverted, test-only fix round, merged in batch
@@ -304,6 +316,40 @@ Carried forward (not acted on yet):
   tests/test_test_layout.py refuses (none named it); builder and
   verifier prompts (08 section 2 step 7, section 5) should add
   tests/test_test_layout.py to every package's run.
+- NOTE (wave 5, PLAY-TD-19A-PAGER PGR-1, PGR-2, PGR-3): the CSS owner
+  PLAY-TD-19C-BUILD-GRID gives .al-pager-btn[aria-disabled="true"] a
+  non-colour cue (text 4.5:1, boundary 3:1, target at least 24 px) and
+  adds .al-pager-btn[hidden] { display: none }; web/pager.js set() should
+  move focus to the toggle when it hides a focused Prev or Next.
+- NOTE (wave 5, TC-CAMPAIGN-KEEP TCK-1, TCK-2): design 0001 section 9
+  needs the Keep / Vendor item-check templates (wording in decision 0057);
+  owner: the next package that owns docs/design/0001 (with DPC-2). Line 3
+  "Levelling rule, no build" is owed when a package widens cardparts
+  WORD_KEYS.
+- NOTE (wave 5, PLAY-TD-09B-SKELETON TD9B-1, TD9B-3): nothing sets
+  data-text-spacing="user", so the text-spacing override is inert; its
+  setter (PLAY-TD-09C-BAR, a settings toggle or PLAY-TD-22A-A11Y-CSS) adds
+  a tests/test_a11y.py pin. The legacy tile h2s inside region G become h3
+  or labels with the legacy-out work. The footer is still 57 px: the page
+  runs 25 px over at 1280x760, 1264x821 and 1024x700 until PLAY-TD-09C-BAR
+  and PLAY-TD-21B-SETTINGS-ABOUT.
+- NOTE (wave 5, TEST-PORT-LEASE): tests/play_states.py still uses
+  free_test_port() (a bind-only probe, no lease lock); move it onto
+  lease_port() and allow the lease folder in its recipe audit in the next
+  package that owns tests/play_states.py (with the hex TOKEN note above).
+- NOTE (wave 5, PLAY-TD-07A-PLAY-VIEW): notice kinds 2 (build question)
+  and 7 (key reminder) are never queued (no snapshot source); web data
+  off by choice still counts as a Setup step (no off-on-purpose flag).
+- NOTE (wave 5, process): a resumed integrator refused a CLAUDE.md edit
+  sent by message as not authorised; dispatch a fresh integrator per
+  batch. The batch 2 integrator pasted a stray "index: 0057" line into
+  CLAUDE.md (removed in 9e9d846): integrator briefs give the bullet text
+  only. The watcher agent returned after each slice; the orchestrator's
+  own background watch on the progress files did its job.
+- NOTE (wave 5): tests/test_ux_review.py imports test_design_contrast, a
+  test-to-test import that tests/test_test_layout.py does not flag (seen
+  by the PLAY-TD-09B verifier; pre-existing); check the guard's
+  allow-list in the next package that owns either file.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
