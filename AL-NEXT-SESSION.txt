@@ -120,9 +120,8 @@ Carried forward (not acted on yet):
 - MERGE-SEAMS-FOLLOWUP (folded into rows PLAY-TD-01B-FIT-HARNESS wave 4,
   PLAY-TD-09B-SKELETON wave 5, PLAY-TD-09C-BAR wave 6): Play tab fit with
   both slots full (zone guide + build alert + 2 trades) unmeasured at
-  1280x760 and 1920x950 (F1 measured 2026-11-18 by
-  PLAY-TD-01B-FIT-HARNESS: docs/design/play-fit-figures.md; F2, F4, F5,
-  F7 open); live regions at the 12/12 cap (free one, update N6 text); column keyboard focus (.col labelled group, tabindex 0);
+  1280x760 and 1920x950; live regions at the 12/12 cap (free one, update
+  N6 text); column keyboard focus (.col labelled group, tabindex 0);
   restart-overlay status text never clears; reused hint-reset class name
   (rename tool-row).
 - S5-FOLLOWUP (folded into rows DATA-GUIDE-FACTS wave 18,
@@ -277,9 +276,10 @@ Carried forward (not acted on yet):
 - NOTE (wave 4, DPC-1 follow-up for DATA-CONTACT-FIELD, wave 17): its
   tests must confirm the contact field sits on the "Prices and web data"
   card (packages.json is not an integrator file, so the note lives here).
-- NOTE (wave 4, PLAY-TD-01B-FIT-HARNESS): tests/play_states.py TOKEN
-  "p"*48 is not hex, so the dashboard rejects it (the fit harness swaps
-  in a hex token); fix in the next package that owns tests/play_states.py.
+- NOTE (wave 4, PLAY-TD-01B-FIT-HARNESS builder): tests/play_states.py
+  TOKEN "p"*48 is not hex, so the dashboard rejects it (the fit harness
+  swaps in a hex token); fix in the next package that owns
+  tests/play_states.py.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
