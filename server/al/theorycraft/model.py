@@ -187,8 +187,6 @@ class Build:
 def _root(xml):
     if not isinstance(xml, str):
         raise BuildError("build XML must be text")
-    if "\x00" in xml:
-        raise BuildError("bad build XML: NUL byte")
     head = xml[:4096].upper()
     if "<!DOCTYPE" in head or "<!ENTITY" in xml.upper():
         raise BuildError("DTDs are not allowed in build XML")
