@@ -26,8 +26,20 @@ OPACITY_MIN, OPACITY_MAX = 0.9, 1.0
 MARGIN_MAX = 400
 MAX_DISPLAYS = 16
 
+# OVL-OVERLAY-KEYS (plan 03 section 5.4): the overlay parts the player can
+# switch off, all on by default. A failure word (offline, no Client.txt,
+# not reading) is not a part: it always shows and can never be switched off.
+PARTS = ("zone", "timer", "level", "deaths", "status", "trade", "item",
+         "moment", "hint")
+# Zone guide: shown on zone entry (default), always, or never.
+ZONE_GUIDE = ("entry", "always", "never")
+
 DEFAULT = {"display": "primary", "corner": "top-right", "scale": 1.0,
-           "opacity": 0.9, "margin": 16}
+           "opacity": 0.9, "margin": 16,
+           "parts": {name: True for name in PARTS},
+           # hide the zone line in town and hideout
+           "quiet_town": False,
+           "zone_guide": "entry"}
 
 
 class LayoutError(ValueError):
@@ -58,6 +70,7 @@ def normalize(layout, strict=True):
             raise LayoutError("layout must be an object")
         layout = {}
     out = dict(DEFAULT)
+    out["parts"] = dict(DEFAULT["parts"])
     checks = {
         "corner": lambda v: v if v in CORNERS else _bad("corner must be one of "
                                                         + ", ".join(CORNERS)),
@@ -66,6 +79,10 @@ def normalize(layout, strict=True):
         "opacity": lambda v: _number(v, "opacity", OPACITY_MIN, OPACITY_MAX,
                                      not strict),
         "margin": lambda v: int(_number(v, "margin", 0, MARGIN_MAX, not strict)),
+        "parts": lambda v: _parts(v, strict),
+        "quiet_town": lambda v: _flag(v, "quiet_town"),
+        "zone_guide": lambda v: v if v in ZONE_GUIDE else _bad(
+            "zone_guide must be one of " + ", ".join(ZONE_GUIDE)),
     }
     for key, check in checks.items():
         if key not in layout:
@@ -84,6 +101,33 @@ def normalize(layout, strict=True):
 
 def _bad(msg):
     raise LayoutError(msg)
+
+
+def _flag(value, name):
+    if not isinstance(value, bool):
+        raise LayoutError(f"{name} must be true or false")
+    return value
+
+
+def _parts(value, strict):
+    """The parts switches, every part filled in. A part missing from value
+    keeps its default (on). Strict refuses an unknown part name or a value
+    that is not true / false; lenient drops either and keeps the default."""
+    if not isinstance(value, dict):
+        raise LayoutError("parts must be an object")
+    out = dict(DEFAULT["parts"])
+    for name, on in value.items():
+        if name not in PARTS:
+            if strict:
+                raise LayoutError("unknown overlay part: " + str(name)[:40]
+                                  + " (parts are " + ", ".join(PARTS) + ")")
+            continue
+        if not isinstance(on, bool):
+            if strict:
+                raise LayoutError(f"parts.{name} must be true or false")
+            continue
+        out[name] = on
+    return out
 
 
 def _display(value):
