@@ -51,12 +51,22 @@ def _read_json(path):
 
 def electron_dir():
     """The electron dist dir whose processes are ours, or None when the scan
-    is off (a tmp runtime without an explicit AL_ELECTRON_DIR)."""
+    is off (a tmp runtime without an explicit AL_ELECTRON_DIR, or an install
+    whose marker names no usable electron folder). In an install (decision
+    0059): <home>/runtime/<marker "electron">, the pinned runtime folder."""
     value = (os.environ.get(ELECTRON_DIR_ENV) or "").strip().strip('"')
     if value:
         return Path(value).resolve()
     if (os.environ.get(paths.RUNTIME_ENV) or "").strip():
         return None
+    home = paths.install_home()
+    if home is not None:
+        name = paths.read_marker().get("electron")
+        # one plain folder name, never a path out of <home>/runtime
+        if (not isinstance(name, str) or not name.strip(". ")
+                or any(c in name for c in "\\/:")):
+            return None
+        return home / "runtime" / name
     return paths.repo_root() / "app" / "node_modules" / "electron" / "dist"
 
 

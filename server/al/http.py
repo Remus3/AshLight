@@ -352,16 +352,20 @@ class Handler(BaseHTTPRequestHandler):
                                                 self.headers.get(hello.NONCE_HEADER),
                                                 self.server.port), extra)
         if path == "/api/health":
+            # DEP-05 (decision 0059): mode (checkout / installed) and the
+            # marker's previous version (null in a checkout)
             return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
                                     "port": self.server.port,
-                                    "tailing": bool(core.tailer and core.tailer.running)},
+                                    "tailing": bool(core.tailer and core.tailer.running),
+                                    **paths.install_info()},
                               extra)
         if path == "/api/version":
             # TC-SNAP-UI: the snapshot attribution, only while snapshot data
             # exists in the sidecar cache (decision 0009); else null.
             return self._json(200, {"name": NAME, "version": VERSION,
                                     "disclaimer": DISCLAIMER,
-                                    "data_credit": datacredit.credit_doc()}, extra)
+                                    "data_credit": datacredit.credit_doc(),
+                                    **paths.install_info()}, extra)
         if path == "/api/state":
             return self._json(200, core.state.snapshot(), extra)
         if path == "/api/overlay-layout":
