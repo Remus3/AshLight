@@ -2,7 +2,8 @@
 
 Open work only, as lane rows the loop (`tools/al_loop.py`) can dispatch.
 Format: `- [ ] ID (lane) title. ACCEPT: ...`; `(priority)` jumps the queue.
-Done rows are flipped to `[x]` by the merge and pruned at /done.
+Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
+`docs/roadmap/done/<ID>.md`, and folded in at /done.
 
 ## Lane: build
 
@@ -502,28 +503,23 @@ recorded in research 0018 section 3.
   web data is on (Core.trade_league, decision 0026). OPEN after launch:
   refresh the repoe-fork snapshot for Act 5/6 zone levels and review the
   first 1.0 log's debug sink (filed as UTIL-1.0-POST).
-- [ ] UTIL-1.0-POST (build) After PoE2 1.0 launches (2026-12-11): refresh
-  the repoe-fork world_areas snapshot (build step) so Acts 5-6 get zone
-  levels, add the 1.0 ascendancy names to charjson.ASCENDANCY_CLASS, and
-  review the first 1.0 Client.txt debug sink for new system lines.
-  Checklist (research 0021 section 3): (1) read the 1.0 patch notes for
-  act / area / ascendancy names, chat, log and filter syntax changes;
-  (2) fixture every new system line in the first 1.0 log's debug sink
-  (Conquerors of Wraeclast battles / stronghold, Acts 5-6 scenes, any
-  death summary); (3) confirm the Act 5 / 6 and return-to-Oriath area-id
-  prefixes live, fix acts.act_of if not G5_ / G6_; (4) refresh the
-  repoe-fork world_areas snapshot; (5) add the 1.0 ascendancies
-  (reported Assassin / Infiltrator / Knight, UNVERIFIED) to
-  charjson.ASCENDANCY_CLASS; (6) refresh the GGG tree export snapshot and
-  re-run the id_match guard (passive tree overhaul); (7) confirm
-  poe.ninja lists the new league first and the price label follows
-  within 1 h; (8) on a PoB-PoE2 1.0 release run TC-DRIFT and bump
-  config/tc_pins.json. RUNBOOK: docs/ops/1.0-launch-runbook.md (files,
-  tests, commands and read-back per step; DOC-1.0-RUNBOOK). BLOCKED: PoE2
-  1.0 not released yet (2026-12-11).
-  ACCEPT: fixture lines from the real 1.0 log; zone table has G5 / G6
-  rows; checklist items 1-7 ticked with read-back evidence. ZERO-CLICK:
-  data and parser only.
+- [ ] GATE-POE2-10 (data) Gate: PoE2 1.0 is live. BLOCKED: gate,
+  flipped by the launch watcher (date and one upstream signal).
+- [ ] GATE-ACT5-SEEN (data) Gate: the operator's own log shows Act
+  5. BLOCKED: gate, flipped by the launch watcher (run history or
+  parse ledger).
+- [ ] UTIL-10-DATA (data) (priority) PoE2 1.0 data refresh: runbook
+  steps 4, 6, 7 and 8. ACCEPT: the zone table has Act 5 and 6 rows;
+  id_match passes; read-back per step. DEPENDS: GATE-POE2-10.
+  ZERO-CLICK: the loop works it.
+- [ ] UTIL-10-NOTES (review) PoE2 1.0 notes: runbook step 1 from
+  the allowed sources only (pasted text, public repositories, the
+  API Reference and Data Exports pages). ACCEPT: a dated research
+  note. DEPENDS: GATE-POE2-10. ZERO-CLICK: a requested dive.
+- [ ] UTIL-10-LOG (build) PoE2 1.0 log shapes: runbook steps 2, 3
+  and 5 from tools/live1_report.py output. ACCEPT: every new shape
+  has a fixture and a passing test. DEPENDS: GATE-POE2-10,
+  GATE-ACT5-SEEN. ZERO-CLICK: opens after the first 1.0 session.
 - [x] TC-BUILDFILE (build) Export the loaded PoB build as a GGG Build
   Planner `*.build` JSON (Version 1, research 0018 section 3) offered as a
   dashboard "Save .build" download on the player's click; NEVER written

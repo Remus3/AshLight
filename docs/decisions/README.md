@@ -7,6 +7,8 @@ package uses the number in its new_files entry. 0077 and 0078 are
 taken. A decision written outside a package takes the next free
 number: 0079 (read back 2026-11-18), then the next after the highest
 file here.
+Numbers are reserved per package in docs/plan/packages.json before a
+wave starts; the wave integrator adds the index line. 0035 stays unused.
 
 - 0078: ultraplan rulings ledger: Q-01 to Q-28, A-01 to A-03, the
   close-out LE rulings and R1 to R6 of the close-out 2, each with its

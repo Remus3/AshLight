@@ -288,7 +288,8 @@ docs/plan/09-operator-acts.md, docs/plan/packages.json (the plan of
 record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (395 open
 rows read back 2026-11-18 after PUB-LOCAL-ONLY-TEXT was reopened: one per
 open package, each session row tagged
-BLOCKED: session wave <n>, plus the old rows UTIL-1.0-POST and TC-CURX;
+BLOCKED: session wave <n>, plus the old row TC-CURX and the rows
+GATE-POE2-10, GATE-ACT5-SEEN, UTIL-10-DATA, UTIL-10-NOTES, UTIL-10-LOG;
 OPERATOR GitHub remote is closed as OPERATOR-REMOTE [x]),
 docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT,
 ops/runtime/ggg_docs/.
