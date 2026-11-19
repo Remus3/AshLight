@@ -78,12 +78,12 @@ for (const v of VIEWS) {
     { name: "prefers-color-scheme", value: v.scheme }, { name: "forced-colors", value: v.forced }] });
   await send("Page.navigate", { url: "about:blank" });
   await send("Page.navigate", { url });
-  // the page is live once the feed pill says so (SSE open)
+  // the page is live once the bar status word leaves pending / failed
   let live = false;
   for (let i = 0; i < 80 && !live; i++) {
     await sleep(100);
     const r = await send("Runtime.evaluate", { expression:
-      "!!document.getElementById('build-title') && /live/.test((document.querySelector('header') || {}).textContent || '')",
+      "!!document.getElementById('build-title') && /^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')",
       returnByValue: true });
     live = !!(r.result && r.result.result && r.result.result.value);
   }
