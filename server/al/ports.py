@@ -8,6 +8,22 @@ AL_PORT = 8960  # core server: API, dashboard assets, SSE
 LOOPBACK = "127.0.0.1"  # the only bind address; LAN access stays off
 PORT_ENV = "AL_PORT"  # per-run override (scripts\run.ps1 -Port sets it)
 
+# The one port table of the block (docs/plan/07, "Port block"; SEC-DEMO-CORE
+# defines it once, tests/test_ports_alloc.py pins it; other packages use
+# these names and redefine nothing). Ranges are inclusive (first, last).
+AL_DEV_PORT = 8961  # the dev checkout after the cutover; never leased, never a fixed test port
+TEST_LEASE_PORTS = (8962, 8969)  # TEST-PORT-LEASE: ports a test leases to bind
+DEMO_BLOCK = (8970, 8975)  # demo cores (decision 0049): the first free one
+SELFTEST_PORTS = (8970, 8975)  # the install self-test; the same block, also probed
+OAUTH_REDIRECT_PORTS = (8979, 8978)  # fixed (registered with GGG); in no other range
+SPARE_PORTS = (8976, 8977)  # unassigned
+
+
+def block_range(pair):
+    """The ports of an inclusive (first, last) pair, low to high."""
+    lo, hi = sorted(pair)
+    return range(lo, hi + 1)
+
 
 def in_block(port):
     """True when port is inside the assigned block (0 = ephemeral, tests only)."""

@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import al_loop  # noqa: E402
 
 from al_loopkit import (  # noqa: E402 (plan 156: shared with the sibling loop tests)
-    ROADMAP, FakeSpawn, _inbox_root, deps, git, git_world, isolate_git, make_root,
+    HANDOFF, ROADMAP, FakeSpawn, _inbox_root, deps, git, git_world, isolate_git, make_root,
     real_git)
 
 # Plan 097 / 156 (TESTS-A-18): only the tests that build a real git world under
@@ -596,7 +596,8 @@ def test_dry_run_spawns_and_launches_nothing(tmp_path):
 @pytest.mark.git
 def test_checklist_lines(tmp_path):
     # FLEET item 13 d (kit v7/v8): remaining tasks as {id, task, state, eta_s}
-    root = make_root(tmp_path)
+    # LOOP-HANDOFF-PREFIX: only LOOP: bullets are hand-off items
+    root = make_root(tmp_path, handoff=HANDOFF.replace("\n- ", "\n- LOOP: "))
     d = deps(root)
     doc = al_loop.tick(deps=d, no_push=True)
     cl = doc["checklist"]
