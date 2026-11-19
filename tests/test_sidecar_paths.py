@@ -98,6 +98,22 @@ def test_kit_default_counts_when_its_folder_exists(tmp_path, monkeypatch):
     assert paths.sidecar_root() == tmp_path / "AL"
 
 
+def test_install_home_under_the_al_sidecar_stays_in_the_sidecar(tmp_path, monkeypatch):
+    """DEP-05 (decision 0059): this machine's installed copy lives at
+    <sidecar>/Install (-InstallDir or AL_HOME); every runtime path then
+    stays inside the repo or the AL sidecar."""
+    monkeypatch.delenv(paths.SIDECAR_ENV, raising=False)
+    monkeypatch.delenv(paths.RUNTIME_ENV, raising=False)
+    monkeypatch.setattr(paths, "_KIT_DEFAULT", str(tmp_path))
+    sidecar = tmp_path / "AL"
+    monkeypatch.setenv(paths.HOME_ENV, str(sidecar / "Install"))
+    assert paths.install_mode() == "installed"
+    assert paths.sidecar_root() == sidecar / "Install"
+    for name, p in paths.all_runtime_paths().items():
+        assert _inside(p, ROOT) or _inside(p, sidecar), (name, str(p))
+    assert not sidecar.exists()  # resolving made nothing
+
+
 def test_runtime_state_is_gitignored():
     ignore = (ROOT / ".gitignore").read_text(encoding="ascii").splitlines()
     assert "ops/runtime/" in ignore

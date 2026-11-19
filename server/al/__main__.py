@@ -191,6 +191,12 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.check:
         return check_code()
+    # DEP-05 (decision 0059): a home in a Steam library or the game's folder
+    # is refused by its path text before anything is made or logged there
+    refusal = paths.check_home()
+    if refusal:
+        _say(f"AshLight: {refusal}")
+        return 2
     inst = None
     if args.demo is not None:
         # SEC-DEMO-ENTRY: prepared before logging, so core.log lands in the
@@ -207,6 +213,9 @@ def main(argv=None):
             return 2
     setup_logging(args.quiet)
     log = logging.getLogger("al")
+    info = paths.install_info()  # decision 0059: the mode is the first log line
+    log.info("%s %s starting: mode %s, previous %s", NAME, VERSION, info["mode"],
+             info["previous"] or "none")
     install_crash_logging(log)
     if args.port is None:
         args.port = ports.resolve(os.environ, paths.load_local_config())
