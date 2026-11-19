@@ -176,6 +176,8 @@ class Core:
                                         rates=lambda: self.rates.snapshot(),
                                         trade_ids=lambda: (self.trade_ids.get()
                                                            if self.web_data_enabled() else {}))
+        # TC-CARD-PARTS: the card parts' ctx gets the config and the area
+        self.last_eval.ctx_extra = {"config": self._config, "area_id": lambda: self.state.area_id}
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
         # weights PoB measured for this build (never another build's)
         self.builds.weights_for = self.last_eval.pob_weights.fallback
