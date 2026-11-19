@@ -118,8 +118,10 @@ Carried forward (not acted on yet):
 - MERGE-SEAMS-FOLLOWUP (folded into rows PLAY-TD-01B-FIT-HARNESS wave 4,
   PLAY-TD-09B-SKELETON wave 5, PLAY-TD-09C-BAR wave 6): Play tab fit with
   both slots full (zone guide + build alert + 2 trades) unmeasured at
-  1280x760 and 1920x950; live regions at the 12/12 cap (free one, update
-  N6 text); column keyboard focus (.col labelled group, tabindex 0);
+  1280x760 and 1920x950 (F1 measured 2026-11-18 by
+  PLAY-TD-01B-FIT-HARNESS: docs/design/play-fit-figures.md; F2, F4, F5,
+  F7 open); live regions at the 12/12 cap (free one, update N6 text);
+  column keyboard focus (.col labelled group, tabindex 0);
   restart-overlay status text never clears; reused hint-reset class name
   (rename tool-row).
 - S5-FOLLOWUP (folded into rows DATA-GUIDE-FACTS wave 18,
@@ -278,6 +280,19 @@ Carried forward (not acted on yet):
   TOKEN "p"*48 is not hex, so the dashboard rejects it (the fit harness
   swaps in a hex token); fix in the next package that owns
   tests/play_states.py.
+- NOTE (wave 4, same rule as for 0051): CLAUDE.md holds a core-only
+  Settled bullet for decision 0054 (SEC-HELLO-CORE); the integrator of
+  the batch that merges the later of SEC-HELLO-PS and SEC-HELLO-CLIENT
+  replaces it with the full packages.json wording of SEC-HELLO-CORE.
+- NOTE (wave 4, TC-FILTER-ONE-CONTROL builder):
+  tests/test_audit_pass5_low.py::test_p5_5_terminated_section_still_re_merges_once
+  uses today's date and could flake across midnight.
+- NOTE (wave 4 escape): four packages (PLAY-TD-01B-FIT-HARNESS,
+  PLAY-TD-03-TOKENS, TC-PRESS-STAGED-EVAL, TC-FILTER-ONE-CONTROL) passed
+  builder and verifier with a test-to-test import that
+  tests/test_test_layout.py refuses (none named it); builder and
+  verifier prompts (08 section 2 step 7, section 5) should add
+  tests/test_test_layout.py to every package's run.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap

@@ -720,6 +720,17 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   handlers and the one clipboard read (decision 0053). Reverses if: a
   part needs an order that file names cannot give, a packaged build
   cannot list the directory, or the floor scan stops covering app/parts.
+- Core hello (core part): GET /api/hello takes a fresh 128-bit nonce and
+  HMAC-SHA256(token, 'client' + nonce), never the token, and answers
+  HMAC-SHA256(token, 'server' + nonce + bound port); the Python client
+  (hello.verify) and the supervisor check it once per token value and
+  after any request error before they send the token; the proof is this
+  route's token gate and no process is looked at (decision 0054; the
+  run.ps1 and Electron parts land with SEC-HELLO-PS and
+  SEC-HELLO-CLIENT). Reverses if: a client that cannot compute an HMAC
+  must be supported, the handshake pushes a start past its budget, or
+  the stack rule's token wording is ruled to mean the token itself on
+  every call.
 - NO-DISCOVERY: only the real entry point with no configured log path
   runs the Steam library scan; a core given a runtime dir or a log path
   never scans; a configured Client.txt path that is missing stays

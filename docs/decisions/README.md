@@ -16,6 +16,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0054: core hello handshake: clients prove the core before they send
+  the token (SEC-HELLO-CORE).
 - 0053: main-process parts seam (app/parts/) (OVL-MAIN-PARTS).
 - 0052: worn-gear baseline: parsed mod lines in a bounded per-character
   file (TC-WORN-STORE).
