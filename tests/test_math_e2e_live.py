@@ -1,6 +1,6 @@
 """MATH-E2E-LIVE: the whole theorycraft path on real data (decision 0028).
 
-A test core on a free port in 8961-8979, a temp runtime whose own
+A test core on a leased test port (8962-8969), a temp runtime whose own
 local.json turns "tc_calc" on (the operator's config/local.json is never
 read or written: a test core reads only its runtime's config), the real
 reference build posted as a PoB code to POST /api/build-code, then real
@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 import math_live_items as items
-from tc_live_util import BUDGET, LIVE_REF, free_test_port, keep_warm, reference
+from tc_live_util import BUDGET, LIVE_REF, keep_warm, lease_port, reference
 
 from server.al.core import Core
 from server.al.http import serve
@@ -66,7 +66,7 @@ def live(tmp_path_factory, warm_bridge):
     core = Core(runtime=rt, log_path=str(log), poll_s=0.05, config_path=cfg)
     stops = keep_warm(core)
     assert core.config_path == cfg  # never the operator's config/local.json
-    port = free_test_port()
+    port, release = lease_port()
     server = serve(core, TOKEN, port=port, web_root=ROOT / "web",
                    tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
     threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
@@ -78,6 +78,7 @@ def live(tmp_path_factory, warm_bridge):
         yield ctx
     finally:
         server.stop()
+        release()
         core.close()  # asks to stop the shared bridge (AUDIT-TC-WIRE) ...
         assert stops == [True]  # ... kept warm for the session here
         print("\nMATH-E2E-LIVE press times (s):",

@@ -4,8 +4,9 @@ loop backs off and gives up (logged) at a cap.
 
 Unit tests drive server.al.keepalive.Keepalive with fakes. The end-to-end
 test runs the real supervisor and the real core against a tmp runtime dir
-(AL_RUNTIME_DIR) and a tmp sidecar (AL_SIDECAR_ROOT) on the top port of the
-assigned block, so the live install is never touched.
+(AL_RUNTIME_DIR) and a tmp sidecar (AL_SIDECAR_ROOT) on a leased test port
+(tests/tc_live_util.lease_port, TEST-PORT-LEASE), so the live install is never
+touched.
 """
 
 import json
@@ -21,12 +22,13 @@ import pytest
 from server.al import __main__ as entry
 from server.al import keepalive as ka
 from server.al import paths, ports
+from tc_live_util import leased_port  # noqa: F401 (a fixture)
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN = ROOT / "scripts" / "run.ps1"
 STOP = ROOT / "scripts" / "stop.ps1"
 PS51 = shutil.which("powershell.exe") if sys.platform == "win32" else None
-TEST_PORT = ports.PORT_BLOCK[1]  # never the live core's port
+TEST_PORT = ports.PORT_BLOCK[1]  # a number in fake heartbeats only; real binds lease
 
 
 class Clock:
@@ -333,14 +335,14 @@ def _wait(pred, timeout):
 
 @pytest.mark.slow
 @pytest.mark.server
-def test_end_to_end_real_core_restart_and_user_stop(tmp_path):
+def test_end_to_end_real_core_restart_and_user_stop(tmp_path, leased_port):
     runtime = tmp_path / "runtime"
     runtime.mkdir()
     env = dict(os.environ)
     env[paths.RUNTIME_ENV] = str(runtime)
     env[paths.SIDECAR_ENV] = str(tmp_path / "AL")
     env["AL_HEARTBEAT_S"] = "0.5"
-    cmd = [sys.executable, "-m", "server.al.keepalive", "--port", str(TEST_PORT),
+    cmd = [sys.executable, "-m", "server.al.keepalive", "--port", str(leased_port),
            "--poll", "0.5", "--backoff", "0.5,1,2", "--core-args", "--no-tail"]
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     sup = subprocess.Popen(cmd, cwd=str(ROOT), env=env, stdin=subprocess.DEVNULL,
@@ -351,7 +353,7 @@ def test_end_to_end_real_core_restart_and_user_stop(tmp_path):
     try:
         first = _wait(lambda: (_read_hb(hb) or {}).get("pid"), 30)
         assert first, "core never wrote a heartbeat"
-        assert _read_hb(hb)["port"] == TEST_PORT
+        assert _read_hb(hb)["port"] == leased_port
         # kill the core hard: the supervisor must bring a new one back
         subprocess.run(["taskkill", "/PID", str(first), "/F"] if os.name == "nt"
                        else ["kill", "-9", str(first)], capture_output=True)

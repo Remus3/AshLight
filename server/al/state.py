@@ -17,6 +17,7 @@ from . import langguard as langguard_mod
 from . import num as num_mod
 from . import parser as parser_mod
 from . import pace as pace_mod
+from . import playview as playview_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
 from . import underlevel as underlevel_mod
@@ -1959,7 +1960,7 @@ class SessionState:
         with self._lock:
             now = self._clock()
             self._expire_trades(now)
-            return {
+            snap = {
                 "version": self.version,
                 "now": now,
                 "session_started_at": self.session_started_at,
@@ -2040,3 +2041,6 @@ class SessionState:
                 "lang": self.lang.view(),
                 "diag": dict(self.diag) if self.diag else None,
             }
+            # PLAY-TD-07A: the Play rows, composed and capped at the source
+            snap["play"] = playview_mod.view(snap)
+            return snap

@@ -285,3 +285,25 @@ def test_long_wait_keeps_the_card_until_the_result_can_arrive():
     assert st.snapshot()["price"]["expires_at"] == 1000.0 + 45 + PRICE_CARD_S
     now[0] = 1050.0
     assert st.snapshot()["card"]["kind"] == "price"
+
+
+def test_card_merged_when_the_keep_part_answers_without_a_build():
+    """TC-CAMPAIGN-KEEP (decision 0057): a no-build gear card that the keep
+    part answers stays on the overlay merged with its price line; without
+    that answer the price card alone shows (as before)."""
+    now = [1000.0]
+    st = SessionState(clock=lambda: now[0])
+    ev = ev_card(False, "no build loaded")
+    ev["parts"] = {"keep": {"status": "vendor", "level": 30, "need": 2, "of": 5,
+                            "count": 1, "missed": [],
+                            "met": [{"label": "life", "min": 25, "have": 30}]}}
+    st.set_eval(ev)
+    now[0] = 1001.0
+    st.set_price(price(count=5, listings=FIVE), at=1000.5)
+    _s, card = snap_parts(st)
+    assert (card["kind"], card["head"], card["line2"], card["line3"], card["verdict"]) == (
+        "merged", "Vendor - 1 of 5 met at level 30", "5 listed, ~12 exalted",
+        "Paste a build on the dashboard", "note")
+    ev["parts"] = {"keep": {"status": "no_level"}}
+    st.set_eval(ev, at=1000.0)
+    assert st.snapshot()["card"]["kind"] == "price"

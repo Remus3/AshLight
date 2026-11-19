@@ -1,0 +1,112 @@
+{
+  "_README": "TC-CAMPAIGN-KEEP (decision 0057): AshLight's own levelling rule for the item check with no build loaded. Plain JSON conditions, never run as code: an item meets a check when the summed values of its mods whose stat key (theorycraft/weights.stat_key form, case ignored) is in `stats` reach `min`; a check with `slots` counts only for those gear slots; a band answers Keep when at least `need` of its counted checks are met and no `must` check is missed. Bands cover levels 1 to 100 without a gap or an overlap. The thresholds are AshLight's own levelling judgement, nothing copied from another tool or site; every check carries `src` and `checked`. The movement speed band starts at campaign.py's boots_speed_level default 16. Hot reloaded (decision 0042): a bad edit keeps the last good table and shows a Checks note.",
+  "schema": 1,
+  "slots": ["Weapon 1", "Weapon 2", "Helmet", "Body Armour", "Gloves", "Boots",
+            "Amulet", "Ring 1", "Ring 2", "Belt"],
+  "bands": [
+    {
+      "min_level": 1, "max_level": 15, "need": 1,
+      "checks": [
+        {"id": "life", "label": "life", "min": 10,
+         "stats": ["+# to maximum Life"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "fire", "label": "fire res", "min": 8,
+         "stats": ["+#% to Fire Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Fire and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "cold", "label": "cold res", "min": 8,
+         "stats": ["+#% to Cold Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "lightning", "label": "lightning res", "min": 8,
+         "stats": ["+#% to Lightning Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Lightning Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "chaos", "label": "chaos res", "min": 5,
+         "stats": ["+#% to Chaos Resistance"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"}
+      ]
+    },
+    {
+      "min_level": 16, "max_level": 32, "need": 2,
+      "checks": [
+        {"id": "life", "label": "life", "min": 25,
+         "stats": ["+# to maximum Life"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "fire", "label": "fire res", "min": 12,
+         "stats": ["+#% to Fire Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Fire and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "cold", "label": "cold res", "min": 12,
+         "stats": ["+#% to Cold Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "lightning", "label": "lightning res", "min": 12,
+         "stats": ["+#% to Lightning Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Lightning Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "chaos", "label": "chaos res", "min": 7,
+         "stats": ["+#% to Chaos Resistance"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "speed", "label": "move speed", "min": 10, "must": true, "slots": ["Boots"],
+         "stats": ["#% increased Movement Speed"],
+         "src": "AshLight levelling rule; band start = campaign.py boots_speed_level default (decisions 0039, 0057)",
+         "checked": "2026-11-18"}
+      ]
+    },
+    {
+      "min_level": 33, "max_level": 52, "need": 2,
+      "checks": [
+        {"id": "life", "label": "life", "min": 45,
+         "stats": ["+# to maximum Life"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "fire", "label": "fire res", "min": 18,
+         "stats": ["+#% to Fire Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Fire and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "cold", "label": "cold res", "min": 18,
+         "stats": ["+#% to Cold Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "lightning", "label": "lightning res", "min": 18,
+         "stats": ["+#% to Lightning Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Lightning Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "chaos", "label": "chaos res", "min": 10,
+         "stats": ["+#% to Chaos Resistance"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "speed", "label": "move speed", "min": 10, "must": true, "slots": ["Boots"],
+         "stats": ["#% increased Movement Speed"],
+         "src": "AshLight levelling rule; band start = campaign.py boots_speed_level default (decisions 0039, 0057)",
+         "checked": "2026-11-18"}
+      ]
+    },
+    {
+      "min_level": 53, "max_level": 100, "need": 2,
+      "checks": [
+        {"id": "life", "label": "life", "min": 65,
+         "stats": ["+# to maximum Life"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "fire", "label": "fire res", "min": 25,
+         "stats": ["+#% to Fire Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Fire and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "cold", "label": "cold res", "min": 25,
+         "stats": ["+#% to Cold Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Cold Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "lightning", "label": "lightning res", "min": 25,
+         "stats": ["+#% to Lightning Resistance", "+#% to all Elemental Resistances",
+                   "+#% to Fire and Lightning Resistances", "+#% to Cold and Lightning Resistances"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "chaos", "label": "chaos res", "min": 13,
+         "stats": ["+#% to Chaos Resistance"],
+         "src": "AshLight levelling rule (decision 0057)", "checked": "2026-11-18"},
+        {"id": "speed", "label": "move speed", "min": 10, "must": true, "slots": ["Boots"],
+         "stats": ["#% increased Movement Speed"],
+         "src": "AshLight levelling rule; band start = campaign.py boots_speed_level default (decisions 0039, 0057)",
+         "checked": "2026-11-18"}
+      ]
+    }
+  ]
+}

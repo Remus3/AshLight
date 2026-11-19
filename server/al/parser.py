@@ -4,8 +4,9 @@ Only the line text is read. Anti-spoofing rule from the research: game events
 (level-up, death, AFK, joins) are trusted ONLY from system lines (body starts
 with ": "); player chat carries a channel prefix and can never fake them.
 
-Patterns the research marked UNVERIFIED for PoE2 carry an "UNVERIFIED" comment;
-ROADMAP row LIVE-1 confirms or corrects them against a real log.
+Patterns the research marked UNVERIFIED for PoE2 carry an "UNVERIFIED" comment
+naming the parse-ledger pattern id (server/al/logshapes.py, UNVERIFIED) whose
+first live hit confirms it; the LIVE-1-<ITEM> rows close on those hits.
 """
 
 import re
@@ -22,25 +23,31 @@ MARKER_LINE = re.compile(
     r"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) \*{5} LOG FILE OPENING \*{5}\s*$")
 
 # [SCENE] Set Source [<name>] - confirmed in PoE2 logs.
-# "Load Source" is UNVERIFIED (search snippet only).
+# "Load Source" is UNVERIFIED (search snippet only; ledger: scene.load).
+# The event's "scene_op" says which ("set" or "load").
 SCENE = re.compile(r"^\[SCENE\] (?:Set|Load) Source \[(.*)\]\s*$")
 # Generating level <N> area "<id>" with seed <N> - from EE2 client strings (MIT).
 AREA_GEN = re.compile(r'^Generating level (\d+) area "(.*)" with seed (\d+)\s*$')
-# Connecting to instance server at <host>:<port> - UNVERIFIED (search snippet).
+# Connecting to instance server at <host>:<port> - UNVERIFIED (search snippet;
+# ledger: session_connect).
 INSTANCE = re.compile(r"^Connecting to instance server at ([^\s:]+):(\d+)\s*$")
 
 # System-line bodies (after the leading ": ").
-# You have entered <Zone>. - PoE1-confirmed, UNVERIFIED for PoE2.
+# You have entered <Zone>. - PoE1-confirmed, UNVERIFIED for PoE2 (ledger:
+# area_entered).
 ENTERED = re.compile(r"^You have entered (.+?)\.?\s*$")
 # <Name> (<Class>) is now level <N> - EE2 client strings (MIT).
 LEVEL_UP = re.compile(r"^(.+) \((.+)\) is now level (\d+)\s*$")
-# <Name> has been slain. / has committed suicide. - UNVERIFIED for PoE2.
+# <Name> has been slain. / has committed suicide. - UNVERIFIED for PoE2
+# (ledger: death, death.suicide).
 DEATH = re.compile(r"^(.+?) has (been slain|committed suicide)\.?\s*$")
-# AFK mode is now ON. <autoreply> - PoE2 sample seen; OFF form inferred.
+# AFK mode is now ON. <autoreply> - PoE2 sample seen; OFF form inferred
+# (ledger: afk.off).
 AFK = re.compile(r"^AFK mode is now (ON|OFF)\.?\s*(.*)$")
-# DND mode is now ON/OFF - wording UNVERIFIED.
+# DND mode is now ON/OFF - wording UNVERIFIED (ledger: dnd.on, dnd.off).
 DND = re.compile(r"^DND mode is now (ON|OFF)\.?\s*(.*)$")
-# <Name> has joined / has left the area. - UNVERIFIED for PoE2.
+# <Name> has joined / has left the area. - UNVERIFIED for PoE2 (ledger:
+# joined, left).
 JOINED = re.compile(r"^(.+?) has joined the area\.?\s*$")
 LEFT = re.compile(r"^(.+?) has left the area\.?\s*$")
 # Trade accepted. - PoE2 sample seen.
@@ -55,7 +62,9 @@ WHISPER_OUT = re.compile(r"^@To (?:<(.+?)> )?(.+?): (.*)$")
 CHAT = re.compile(r"^([#$%&])(?:<(.+?)> )?(.+?): (.*)$")
 CHANNELS = {"#": "global", "$": "trade", "%": "party", "&": "guild"}
 
-# Trade whisper templates - exact PoE2 wording UNVERIFIED (research 0002 4).
+# Trade whisper templates - exact PoE2 wording UNVERIFIED (research 0002 4;
+# ledger: trade.priced, trade.unpriced, trade.exchange). The trade dict's
+# "template" names the one that matched.
 _STASH = r'\(stash tab "(.*)"; position: left (\d+), top (\d+)\)'
 TRADE_PRICED = re.compile(
     r"^Hi, I would like to buy your (.+) listed for ([\d.]+) (.+?) in (.+?) "
@@ -64,6 +73,7 @@ TRADE_UNPRICED = re.compile(
     r"^Hi, I would like to buy your (.+) in (.+?) " + _STASH + r"\s*(.*)$")
 TRADE_EXCHANGE = re.compile(
     r"^Hi, I'd like to buy your ([\d.]+) (.+?) for my ([\d.]+) (.+?) in (.+?)\.\s*(.*)$")
+TRADE_TEMPLATES = ("priced", "unpriced", "exchange")
 
 # FUZZ-1 (TEST-FUZZ): the whisper / chat / level-up patterns backtrack
 # quadratically and the trade templates cubically on crafted text (a 10 KB
@@ -73,8 +83,9 @@ TRADE_EXCHANGE = re.compile(
 MAX_LINE_CHARS = 8192
 MAX_TRADE_TEXT = 1024
 
-# Substring match on the scene name - UNVERIFIED and English only; the
-# fallback when no area id is known (is_hideout_area below decides first).
+# Substring match on the scene name - UNVERIFIED and English only (ledger:
+# scene.hideout_word); the fallback when no area id is known
+# (is_hideout_area below decides first).
 HIDEOUT_WORD = "hideout"
 
 # Scenes that are not zones (LIVE-1, live PoE2 log 2026-11-16): "(unknown)"
@@ -101,19 +112,22 @@ def parse_trade(text):
         return None
     m = TRADE_PRICED.match(text)
     if m:
-        return {"kind": "item", "item": m.group(1), "price_amount": _num(m.group(2)),
+        return {"kind": "item", "template": "priced", "item": m.group(1),
+                "price_amount": _num(m.group(2)),
                 "price_currency": m.group(3), "league": m.group(4),
                 "stash_tab": m.group(5), "left": int(m.group(6)),
                 "top": int(m.group(7)), "note": m.group(8) or ""}
     m = TRADE_UNPRICED.match(text)
     if m:
-        return {"kind": "item", "item": m.group(1), "price_amount": None,
+        return {"kind": "item", "template": "unpriced", "item": m.group(1),
+                "price_amount": None,
                 "price_currency": None, "league": m.group(2),
                 "stash_tab": m.group(3), "left": int(m.group(4)),
                 "top": int(m.group(5)), "note": m.group(6) or ""}
     m = TRADE_EXCHANGE.match(text)
     if m:
-        return {"kind": "exchange", "item": m.group(2), "want_amount": _num(m.group(1)),
+        return {"kind": "exchange", "template": "exchange", "item": m.group(2),
+                "want_amount": _num(m.group(1)),
                 "price_amount": _num(m.group(3)), "price_currency": m.group(4),
                 "league": m.group(5), "note": m.group(6) or ""}
     return None
@@ -188,6 +202,7 @@ def parse_body(body):
             unknown = scene == UNKNOWN_SCENE
             transient = unknown or bool(ACT_SCENE.match(scene))
             return {"type": "scene_changed",
+                    "scene_op": "load" if body.startswith("[SCENE] Load") else "set",
                     "scene": None if (null or unknown) else scene,
                     "is_null": null, "is_transient": transient,
                     "is_hideout": not (null or transient) and is_hideout(scene)}
