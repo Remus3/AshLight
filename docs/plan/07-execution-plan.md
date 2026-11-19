@@ -795,7 +795,7 @@ live (node side); tests/srcpaths.py: one helper that knows where dashboard
 sources live (Python side); Core saves retried from the tick with back-off;
 one Checks row while unsaved. Releases 2 loop-owned rows.
 
-- Session 3; width 12 worktree + 0 main-checkout, 2 loop rows released;
+- Session 3; width 12 worktree + 1 main-checkout, 2 loop rows released;
   about 141 minutes.
 - Hotspots: server/al/core.py (RUN-DURABLE-STORES); server/al/http.py
   (DEP-05); server/al/state.py (TC-VERDICT-CAVEAT); tests/test_ux_review.py
@@ -923,6 +923,7 @@ start.
 - DEP-04 [session, L 75m, build, P2] Notes and changelog generator. Files: tools/rel_notes.py, CHANGELOG.md, docs/releases/0.1.0.md, tests/test_release_notes.py, docs/decisions/0062-changelog.md. Deps: DEP-03, REL-SUBJECT-CHECK, AUTO-01, AUTO-03.
 - DEP-06 [session, M 55m, build, P1] Runtime resolvers and one command builder. Files: server/al/paths.py, server/al/keepalive.py, server/al/procs.py, boot.py, tests/test_runtime_layout.py. Deps: DEP-01, DEP-02, DEP-05.
 - DEP-07 [session, M 60m, build, P3] Shell integration helper: shortcuts and the uninstall entry in one place. Files: scripts/setup.ps1, tests/test_desktop_client.py, scripts/al_shell.ps1, tests/test_shell_integration.py. Deps: DEP-02, SEC-ACL-SETUP.
+- GP-11 [session, S 10m, review, P1] Description, topics and feature switches. Files: none. Deps: GP-09.
 - DATA-PRICE-POLITE [session, L 70m, build, P1] poe.ninja client: back off, daily retry of a failing type, spaced requests. Files: server/al/ninja.py, server/al/pricebook.py, tests/test_data_ninja.py, tests/test_price_book.py. Deps: DATA-WEBFETCH-GZIP.
 
 ### Wave 10: install and release, overlay and client, tests and code seams
@@ -2609,9 +2610,7 @@ Unblocked by another package (16):
   prints 1, and `python -m pytest -q tests/test_http_security.py
   tests/test_tc_code.py tests/test_no_discovery.py` is green on the commit
   at origin/main. Joins wave 19 or later; also behind parked GP-10, GP-11.
-- GP-11: waits on the repository exists (first push done). Who: package
-  GP-09. Unblock: `gh repo view` succeeds for the repository. Joins wave 6
-  or later.
+- GP-11: moved to wave 9 on 2026-11-19 (the repository exists; GP-09 is done).
 - GP-13: waits on the public flip (rulesets and free secret scanning need a
   public repository on a personal account). Who: package GP-12. Unblock: `gh
   repo view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins
