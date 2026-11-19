@@ -14,11 +14,15 @@ import loop_prompts  # noqa: E402
 
 
 def test_ui_paths_are_detected():
+    # TEST-STATE-EQUIV: the text package is a UI path before it exists;
+    # server/al/state.py stays one until TEST-STATE-TEXT-PINS.
     for p in ("web/app.js", "web/status.js", "app/overlay/overlay.css",
-              "app/shared/format.js", "server/al/state.py"):
+              "app/shared/format.js", "server/al/state.py",
+              "server/al/text/price.py", r"server\al\text\price.py"):
         assert design_gate.is_ui_path(p), p
     for p in ("server/al/http.py", "scripts/run.ps1", "app/main.js",
-              "tests/test_x.py", "docs/design/0003-second-audit.md"):
+              "tests/test_x.py", "docs/design/0003-second-audit.md",
+              "server/al/textual.py", "server/al/theorycraft/live.py"):
         assert not design_gate.is_ui_path(p), p
 
 
