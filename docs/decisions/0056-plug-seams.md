@@ -77,11 +77,14 @@ ticks); SEC-SURFACE-PIN (the route table in tests/test_security_surface.py).
   failure would otherwise write a traceback every half second, which is
   the flood C22 removes. Reverses if: a recovered-then-new error is
   missed in play because its traceback never shows.
-- `__main__` keeps a comment naming the ten old calls. Why: it records the
-  order at the call site and keeps tests/test_tc_wire.py's
-  `core.tick_calc()` source check meaningful (the call now runs through
-  tick_all; tests/test_plug_seams.py pins that the loop calls no tick by
-  hand). Reverses if: that check is rewritten against Core.ticks.
+- tests/test_tc_wire.py follows the change (adjudicator ruling, wave 5):
+  its source check for the literal `core.tick_calc()` in `__main__` now
+  asserts tick_calc sits in Core's tick list in its old place, that
+  `tick_all` reaches it, and that the loop calls `core.tick_all`.
+  Alternatives: keep a comment naming the old calls; drop the check. Why:
+  a literal a comment satisfies pins nothing. Reverses if: another wave-5
+  package owns that test file, or tick_all is replaced by another
+  dispatch.
 
 ## Alternatives
 

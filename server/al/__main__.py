@@ -286,13 +286,7 @@ def main(argv=None):
                 log.info("code changed; exiting for a hot reload")
                 restarting = True
                 break
-            # RUN-SEAMS (decision 0056): one pass of Core.ticks in the old
-            # order (core.ensure_tailing(), core.tick_build(),
-            # core.tick_summary(), core.tick_calc(), core.tick_sources(),
-            # core.tick_guide(), core.tick_history(), core.tick_watch(),
-            # core.tick_diag(), core.tick_reload()), then the plug ticks;
-            # a failing tick is logged once, then once a minute
-            core.tick_all(log)
+            core.tick_all(log)  # RUN-SEAMS: one pass of Core.ticks (decision 0056)
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:
