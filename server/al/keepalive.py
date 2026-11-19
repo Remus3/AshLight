@@ -32,7 +32,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import hello, hotreload, paths, ports
+from . import hello, hotreload, jsonfile, paths, ports
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -270,9 +270,7 @@ class Keepalive:
                 "restarts": len(self.restarts), "port": self.port,
                 "updated": self._now()}
         try:
-            tmp = self.runtime / (STATE_FILE + ".tmp")
-            tmp.write_text(json.dumps(data) + "\n", encoding="ascii")
-            os.replace(tmp, self.runtime / STATE_FILE)
+            jsonfile.write_text(self.runtime / STATE_FILE, json.dumps(data) + "\n")
         except OSError:
             pass
 
@@ -436,7 +434,7 @@ class Keepalive:
             return "reload-refused"
         hotreload.write_status(self.runtime, None, now=now)
         try:
-            (self.runtime / hotreload.RESTART_FILE).write_text("reload\n", encoding="ascii")
+            jsonfile.write_text(self.runtime / hotreload.RESTART_FILE, "reload\n")
         except OSError as exc:
             self._log(f"code reload: cannot ask the core to exit ({exc})")
             return "ok"
