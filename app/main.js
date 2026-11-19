@@ -6,7 +6,12 @@
    visible value changes. ToS floor (CLAUDE.md): it never touches the game
    process, never reads game memory, never sends any key or mouse input.
    Global shortcuts: the show/hide toggle, and the item check (TC-EVAL-UI),
-   which reads the clipboard once per press (eval_hotkey.js). */
+   which reads the clipboard once per press (eval_hotkey.js); the keys are
+   picked here and registered by app/parts/20-hotkeys.js.
+   OVL-MAIN-PARTS (decision 0053): later main-process features land as
+   app/parts/NN-name.js files run by app/parts.js at the hooks below; this
+   file keeps the two windows' creation, the IPC handlers and the one
+   clipboard read. */
 
 const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, screen, session } = require("electron");
 const fs = require("fs");
@@ -20,6 +25,7 @@ const OverlayGate = require("./overlay_gate.js");
 const Link = require("./client/link.js");
 const Launcher = require("./client/launcher.js");
 const HotReload = require("./hotreload.js");
+const Parts = require("./parts.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -99,6 +105,22 @@ if (CLIENT_MODE && !process.env.AL_SIDECAR_ROOT) {
   if (side) { process.env.AL_SIDECAR_ROOT = side; }
 }
 
+// OVL-MAIN-PARTS (decision 0053): the parts of app/parts/ in file-name
+// order and the one ctx every hook gets. actions.onEval is set in start(),
+// next to the one clipboard read.
+const PARTS = Parts.load(path.join(__dirname, "parts"), fs.readdirSync, require, log);
+const ctx = {
+  app: app, log: log, repo: REPO, runtimeDir: path.dirname(TOKEN_FILE), port: port,
+  readToken: readToken, readConfig: () => readJson(LOCAL_CONFIG), env: process.env,
+  clientMode: CLIENT_MODE, devTools: DEV_TOOLS,
+  defaults: { toggle: DEFAULT_TOGGLE, eval: DEFAULT_EVAL_KEY },
+  keys: { toggle: toggleKey, eval: evalKey },
+  getOverlay: () => win, getClient: () => client, getGate: () => gate,
+  overlayBounds: () => layoutBounds(currentLayout()),
+  actions: { toggle: toggle, restartOverlay: restartOverlay, openClient: openClient, onEval: null }
+};
+function runParts(hook, ...args) { Parts.run(PARTS, hook, ctx, ...args); }
+
 // Sidecar rule: Electron's profile (cache, crash dumps) never lands in the
 // user's roaming profile - it goes to the AL sidecar (set by run.ps1 from
 // server.al.paths) or, without it, to the repo's gitignored ops/runtime.
@@ -133,6 +155,8 @@ app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 const SMOKE_S = Number(process.env.AL_OVERLAY_SMOKE_S || 0);
 const OVERLAY_ALONE_TEST = !CLIENT_MODE && SMOKE_S > 0;
 
+runParts("early");
+
 if (!CLIENT_MODE && !OVERLAY_ALONE_TEST) {
   process.stderr.write("AshLight: the overlay starts only with the client (--client)\n");
   app.quit();
@@ -160,8 +184,8 @@ function layoutBounds(layout) {
 let appliedLayout = "";
 let opacityChain = Promise.resolve(null);
 
-/* UX-REAL-OVERLAY: the opacity is page CSS, never BrowserWindow.setOpacity.
-   On the real desktop (software compositing, transparent window) the
+/* UX-REAL-OVERLAY: the layout's opacity value is applied as page CSS built
+   by L.opacityCss, never BrowserWindow.setOpacity. On the real desktop (software compositing, transparent window) the
    window-level alpha left the whole overlay invisible: nothing reached the
    screen. Page opacity multiplies text and plate together, the same maths
    as design 0001 section 5.2. Chained so a quick second change never
@@ -258,6 +282,7 @@ function createWindow() {
     setTimeout(() => { if (gate) { gate.graceOver(); } }, OverlayGate.GRACE_MS);
   });
   win.loadFile(OVERLAY_HTML);
+  runParts("overlayWindow", win);
 }
 
 /* TC-SNAP-UI: the game-data credit in the About panel and (through
@@ -283,6 +308,7 @@ function toggle() {
   if (!win || !gate) { return; }
   gate.toggleUser();
   if (client) { client.refresh(); }
+  runParts("toggled");
 }
 
 /* DESKTOP-CLIENT: "Restart overlay" (tray, or the dashboard's button in
@@ -309,6 +335,7 @@ function restartOverlay() {
    the overlay page (al:gate) from the snapshot's game_idle. */
 function setOverlayGate(visible) {
   if (gate) { gate.setGate(visible === true); }
+  runParts("gate", visible === true);
 }
 
 /* DESKTOP-CLIENT: the companion window (app/client/window.js), built on
@@ -321,7 +348,8 @@ function openClient() {
       electron: electron, http: http, repo: REPO, port: port, readToken: readToken,
       runtimeDir: path.dirname(TOKEN_FILE), log: log, devTools: DEV_TOOLS,
       toggleOverlay: toggle, overlayVisible: () => !gate || gate.userWants(),
-      restartOverlay: restartOverlay
+      restartOverlay: restartOverlay, overlayBounds: ctx.overlayBounds,
+      onWindow: (w, s) => runParts("clientWindow", w, s)
     });
   }
   client.open();
@@ -366,7 +394,10 @@ function start() {
   screen.on("display-removed", onDisplaysChanged);
   screen.on("display-metrics-changed", onDisplaysChanged);
   // The dashboard saves the layout into config/local.json; follow it.
-  fs.watchFile(LOCAL_CONFIG, { interval: 1000, persistent: false }, () => applyLayout(false));
+  fs.watchFile(LOCAL_CONFIG, { interval: 1000, persistent: false }, () => {
+    applyLayout(false);
+    runParts("configChanged");
+  });
 
   // The core writes a fresh token on every start: reload when it changes.
   let lastToken = readToken();
@@ -389,24 +420,24 @@ function start() {
     });
   }
 
-  if (!globalShortcut.register(toggleKey, toggle)) {
-    log("toggle shortcut not available: " + toggleKey);
-  }
   // TC-EVAL-UI: one clipboard read per press, posted to the core.
   const onEval = EvalKey.createEvalHotkey({
     readText: () => clipboard.readText(),
     post: EvalKey.makePost(http, port, readToken),
     log: log
   });
-  if (!globalShortcut.register(evalKey, onEval)) {
-    log("item check shortcut not available: " + evalKey);
-  }
+  ctx.actions.onEval = onEval;
+  // The parts' ready hook (the two shortcuts, app/parts/20-hotkeys.js) runs
+  // before the start line: server/al/diag.py reads a shortcut failure only
+  // in the lines before it.
+  runParts("ready");
   log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey);
 
   if (SMOKE_S > 0) { setTimeout(() => app.quit(), SMOKE_S * 1000); }
 }
 
 app.on("will-quit", () => {
+  runParts("quit");
   globalShortcut.unregisterAll();
   if (client) { client.dispose(); }
   fs.unwatchFile(TOKEN_FILE);
