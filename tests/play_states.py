@@ -16,7 +16,7 @@ server (the stack fixture of tests/test_dash_console.py):
 - a free test port in 8961-8979 (tests/tc_live_util.free_test_port) or
   the port the caller names; 8960 is refused;
 - web data stays off, except state g, which turns it on against the
-  loopback mock poe.ninja of tests/test_fullstack.py (no external request);
+  loopback mock poe.ninja of tests/fullstack_mocks.py (no external request);
 - lines come from tools/synth_client.py, builds and items from
   tests/tc_eval_fixtures.py; nothing is sent to the game, no clipboard or
   screen is read.
@@ -50,7 +50,7 @@ for _p in (ROOT / "tools", ROOT / "tests", ROOT):
 
 import synth_client  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
-import test_fullstack as fs  # noqa: E402
+import fullstack_mocks as fs  # noqa: E402
 from tc_live_util import free_test_port  # noqa: E402
 
 from server.al import acts, ninja, ports, summary, zoneguide  # noqa: E402
