@@ -1,7 +1,7 @@
 /* AshLight dashboard: the shared time formats (TEST-WEB-FMT). pad, the
    m:ss / h:mm:ss duration and the local clock are defined here once; the
    view modules alias them (web/acts.js, web/app.js, web/history.js,
-   web/runs.js, web/summary.js). UMD: CommonJS for node --test
+   web/runs.js, web/summary.js, web/strip.js). UMD: CommonJS for node --test
    (app/test/fmt.test.js), window.ALFmt for the page, where it is the first
    script tag. Pure functions: no DOM, no timers, no network. The overlay's
    app/shared/format.js keeps its own pad2 (file-system page, own budget). */

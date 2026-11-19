@@ -82,6 +82,21 @@ test("pad is defined once among the five views and fmt.js", () => {
   });
 });
 
+test("no other dashboard file defines a function named pad", () => {
+  const fs = require("node:fs");
+  fs.readdirSync(web.dir).filter((n) => n.endsWith(".js") && n !== "fmt.js").forEach((name) => {
+    assert.doesNotMatch(web.source(name), /function pad\(/, name);
+  });
+});
+
+test("the strip keeps its duration form through fmt.js", () => {
+  const strip = web.load("strip.js");
+  assert.equal(strip.duration(3725), F.duration(3725));
+  assert.equal(strip.duration(-5), "0:00");
+  assert.equal(strip.duration("65"), "--:--");
+  assert.equal(strip.duration(null), "--:--");
+});
+
 test("fmt.js is the page's first script and stays pure and ASCII", () => {
   const html = web.source("index.html");
   const first = /<script src="\/web\/([a-z]+)\.js" defer><\/script>/.exec(html);
