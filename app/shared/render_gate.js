@@ -194,7 +194,26 @@
   var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "under", "campaign", "log",
                 "status", "trades",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
-                "evalHead", "evalItem", "evalLine", "evalVerdict"];
+                "evalHead", "evalItem", "evalLine", "evalVerdict", "hudShown"];
+
+  /* OVL-PARTS-PAGE (F-118, plan 03 section 5.1): the player's parts
+     switches from snap.overlay_layout (server/al/layout.py PARTS). A
+     missing layout or part is on; only an explicit false turns a part
+     off. A failure word (offline, not reading, no Client.txt, log quiet)
+     is not a part and always shows. */
+  function partOn(snap, name) {
+    var l = snap && snap.overlay_layout;
+    var p = l && l.parts;
+    return !(p && typeof p === "object" && p[name] === false);
+  }
+
+  /* quiet_town: the zone line (zone and its timer) drops out in town and
+     in a hideout. */
+  function quietHere(snap) {
+    var l = snap && snap.overlay_layout;
+    return !!(l && l.quiet_town === true && (snap.in_town === true || snap.in_hideout === true));
+  }
+
 
   /* TC-EVAL-UI: the item check card shows from the hotkey press until the
      core's expires_at (state.py EVAL_CARD_S), then leaves by itself. While
@@ -208,10 +227,13 @@
     if (!snap) { return null; }
     if (Object.prototype.hasOwnProperty.call(snap, "card")) {
       var c = snap.card;
-      return c && c.head ? { expires: c.expires_at, text: fmt.cardText(c) } : null;
+      /* every card the core sends today is a press card (item check,
+         price, both, waystone): parts.item */
+      if (!c || !c.head || !partOn(snap, "item")) { return null; }
+      return { expires: c.expires_at, text: fmt.cardText(c) };
     }
     var ev = snap.eval;
-    if (!ev || !ev.text || !ev.text.head) { return null; }
+    if (!ev || !ev.text || !ev.text.head || !partOn(snap, "item")) { return null; }
     var e = fmt.evalCard(ev);
     return { expires: ev.expires_at,
              text: { head: e.head, line2: e.item, line3: e.line, verdict: e.verdict } };
@@ -232,7 +254,7 @@
     /* UX-REVIEW F1: while the card holds the slot, open trade requests
        still show as a count in the status slot, never invisible. */
     var n = (snap && snap.trade_requests) ? snap.trade_requests.length : 0;
-    model.trades = card.head ? fmt.tradeCount(n) : "";
+    model.trades = (card.head && partOn(snap, "status")) ? fmt.tradeCount(n) : "";
     if (card.head) {
       model.tradeFrom = model.tradeItem = model.tradeWhere = model.tradeMore = "";
     }
@@ -247,7 +269,16 @@
   }
 
   function hudModel(snap, nowS, status) {
-    return withEval(baseModel(snap, nowS, status), snap, nowS);
+    var m = withEval(baseModel(snap, nowS, status), snap, nowS);
+    /* OVL-PARTS-PAGE: the HUD plate shows only while one of its lines has
+       something; with every part off and no failure word it is absent.
+       Not enumerable: a boolean for the page, not a visible string, so a
+       dump of the model's strings stays as it was. */
+    Object.defineProperty(m, "hudShown", {
+      value: !!(m.zone || m.timer || m.level || m.deaths || statusText(m)),
+      enumerable: false, writable: true, configurable: true
+    });
+    return m;
   }
 
   function anchorOf(snap) {
@@ -292,7 +323,8 @@
                campaign: "", log: "", status: status || W.link_wait.overlay,
                tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
-    var open = snap.trade_requests || [];
+    var showTrade = partOn(snap, "trade");
+    var open = showTrade ? (snap.trade_requests || []) : [];
     var card = fmt.tradeCard(open.length ? open[open.length - 1] : null);
     /* UI-REVIEW-2 (design 0001 7.2): say when Client.txt is not being read.
        Not opted in: no numbers at all (they would be made up). Opted in but
@@ -302,31 +334,37 @@
     var idle = !!(tl && tl.consented && tl.idle);
     var elapsed = timerSeconds(snap, nowS);
     if (tl && !tl.consented) {
-      return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
+      return { zone: partOn(snap, "zone") ? "AshLight" : "", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
                campaign: "", log: W.off.overlay, status: status || "live",
                tradeFrom: card.from, tradeItem: card.item, tradeWhere: card.where,
                tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
                anchor: anchorOf(snap) };
     }
+    /* OVL-PARTS-PAGE: a part that is off yields "" for its fields; the
+       separator shows only between a shown level and shown deaths. */
+    var quiet = quietHere(snap);
+    var words = partOn(snap, "status");
+    var level = partOn(snap, "level") ? fmt.levelText(snap.level) : "";
+    var deaths = partOn(snap, "deaths") ? fmt.deathsText(snap.deaths) : "";
     return {
       tradeFrom: card.from,
       tradeItem: card.item,
       tradeWhere: card.where,
       tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
       anchor: anchorOf(snap),
-      zone: fmt.zoneText(snap.zone, snap.in_hideout),
-      timer: snap.zone ? fmt.minutes(elapsed) : "",
-      level: fmt.levelText(snap.level),
-      deaths: fmt.deathsText(snap.deaths),
-      sep: "|",
+      zone: (partOn(snap, "zone") && !quiet) ? fmt.zoneText(snap.zone, snap.in_hideout) : "",
+      timer: (snap.zone && partOn(snap, "timer") && !quiet) ? fmt.minutes(elapsed) : "",
+      level: level,
+      deaths: deaths,
+      sep: (level && deaths) ? "|" : "",
       /* DS-HUD-AFK: the log's AFK / DND state (design 0001 7.2). */
-      away: snap.afk ? "AFK" : (snap.dnd ? "DND" : ""),
+      away: !words ? "" : (snap.afk ? "AFK" : (snap.dnd ? "DND" : "")),
       /* UTIL-UNDERLEVEL: the core's word ("4 lv under", <= 15 chars),
          only while the player is the set gap under the zone level. */
-      under: underWord(snap),
+      under: words ? underWord(snap) : "",
       /* UTIL-CAMPAIGN-CHECKS: the core's campaign hint word, last in the
          slot so it never hides AFK / DND or the under-level word. */
-      campaign: campaignWord(snap),
+      campaign: words ? campaignWord(snap) : "",
       /* UX-COPY: a known file that is quiet is not missing. Telegraphic so
          it fits after "Lv 100 | 99 deaths" in the 258 px plate (design
          review F1: "waiting for Client.txt" clipped). */
@@ -339,7 +377,9 @@
   /* The word in the HUD status slot: a connection problem first, then the
      Client.txt state, then the open trade count while a card hides the
      trade card, then the under-level word, then AFK / DND, then the
-     campaign hint word, else nothing. */
+     campaign hint word, else nothing. OVL-PARTS-PAGE: rank 1 (connection
+     and Client.txt words) shows whatever parts.status says; the model
+     already holds "" for the lower ranks when the status part is off. */
   function statusText(model) {
     if (model.status !== "live") { return model.status; }
     return model.log || model.trades || model.under || model.away || model.campaign || "";
