@@ -5,7 +5,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const S = require("../../web/slots.js");
+const web = require("./_web.js");
+const S = web.load("slots.js");
 
 /* One snapshot-shaped state per context mode. */
 const MODE_STATES = {
@@ -454,8 +455,7 @@ test("cardHolder: the key hint fits the 34-character line", () => {
 });
 
 test("slots.js is pure: no DOM, timer, network or clipboard", () => {
-  const src = require("node:fs").readFileSync(
-    require("node:path").join(__dirname, "..", "..", "web", "slots.js"), "utf8");
+  const src = web.source("slots.js");
   const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   for (const bad of ["document", "window", "setTimeout", "setInterval", "fetch(",
                      "XMLHttpRequest", "clipboard", "localStorage", "EventSource",
