@@ -25,6 +25,12 @@ from . import zonenotes
 from . import zoneguide as zoneguide_mod
 from .theorycraft import buildlive as buildlive_mod
 from .theorycraft import cardparts
+from .text.common import (  # noqa: F401 - re-exported, state.<name> stays
+    CARD_LINE, _amount, _dict, _dicts, _is_time, _key, _num_text, _points,
+    _short_list, _signed, _signed_points, _text)
+from .text.events import (  # noqa: F401 - re-exported, state.<name> stays
+    FALLBACK_TEXT, RESET_READ_TEXT, RESET_TEXT, UNKNOWN_CHARACTER, UNKNOWN_PLAYER,
+    UNKNOWN_ZONE, _trade_text, _trade_where, summarize, trade_card_text)
 
 RECENT_EVENTS = 30
 TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
@@ -57,8 +63,6 @@ LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
           "tailer_unreadable", "tailer_readable", "tailer_restarted"}
 
 
-FALLBACK_TEXT = "Something happened in the log"
-UNKNOWN_CHARACTER = "Unknown character"
 # UTIL-MULTICHAR (decision 0038): at most this many characters are kept
 # (the current one included); names seen joining / leaving the area this
 # game run are other players and never switch the current character, and
@@ -69,94 +73,6 @@ MAX_OTHERS = 64
 # set as attributes and parks the others' sets by name.
 CHAR_FIELDS = ("char_class", "level", "level_ups", "deaths", "acts", "pace",
                "run_deaths", "_run_start")
-UNKNOWN_PLAYER = "Unknown player"
-UNKNOWN_ZONE = "an unknown zone"
-
-# tailer_reset reasons, as plain sentences (design 0001 section 9).
-RESET_TEXT = {
-    "missing": "Client.txt is missing - waiting for the game",
-    "replaced": "Client.txt was replaced - reading the new file",
-    "truncated": "Client.txt was cleared - reading from the start",
-    "continued": "Client.txt is back - reading on from where it stopped",
-}
-# RUN-TAIL-HEAL-CORE: after a break the reader says where it reads on
-# (the event's "read": start, kept or end; logfile.Tailer._after_break),
-# so the sentence is true for each: only "start" reads the file's first
-# line again; "end" skips the old lines (the resume scan counts them).
-RESET_READ_TEXT = {
-    ("replaced", "kept"): "Client.txt was replaced - reading on from where it stopped",
-    ("replaced", "end"): "Client.txt was replaced - reading new lines only",
-    ("truncated", "kept"): "Client.txt got shorter - reading on from where it stopped",
-    ("truncated", "end"): "Client.txt got shorter - reading new lines only",
-}
-
-
-def _text(value, default):
-    """A field as display text; missing or empty reads as the default."""
-    if value is None:
-        return default
-    value = str(value)
-    return value if value.strip() else default
-
-
-# FUZZ-3 (TEST-FUZZ): card fields are read through these so a wrong-typed
-# field (a number for a dict, a dict for a key, a non-list) reads as
-# missing instead of raising and breaking every snapshot.
-def _dict(value):
-    return value if isinstance(value, dict) else {}
-
-
-def _dicts(value):
-    return [v for v in value if isinstance(v, dict)] if isinstance(value, (list, tuple)) else []
-
-
-def _key(value):
-    return value if isinstance(value, str) else None
-
-
-def _amount(value):
-    if isinstance(value, float) and value.is_integer():
-        value = int(value)
-    return str(value)
-
-
-def _trade_text(sender, tr):
-    """<from> wants <item> - <price> (design 0001 section 9)."""
-    item = _text(tr.get("item"), "an item")
-    if tr.get("kind") == "exchange":
-        if tr.get("want_amount") is not None:
-            item = f"{_amount(tr['want_amount'])} {item}"
-        price = "no price set"
-        if tr.get("price_amount") is not None:
-            price = " ".join(p for p in ("for", _amount(tr["price_amount"]),
-                                         _text(tr.get("price_currency"), "")) if p)
-    elif tr.get("price_amount") is not None:
-        price = " ".join(p for p in (_amount(tr["price_amount"]),
-                                     _text(tr.get("price_currency"), "")) if p)
-    else:
-        price = "no price set"
-    return f"{sender} wants {item} - {price}"
-
-
-def _trade_where(tr):
-    """Stash position as the overlay writes it: "tab Sale (3,7)", "tab
-    Sale" without a position, "" without a tab."""
-    tab = tr.get("stash_tab")
-    if tab is None or not str(tab).strip():
-        return ""
-    where = f"tab {tab}"
-    if tr.get("left") is not None and tr.get("top") is not None:
-        where += f" ({tr['left']},{tr['top']})"
-    return where
-
-
-def trade_card_text(row):
-    """UI-REVIEW-2: the sentence and stash position for one open trade card
-    row, so the dashboard prints the section 9 template and never builds
-    trade wording itself."""
-    row = _dict(row)
-    sender = _text(row.get("from"), UNKNOWN_PLAYER)
-    return {"text": _trade_text(sender, row), "where": _trade_where(row)}
 
 
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
@@ -182,36 +98,6 @@ EVAL_ERROR_TEXT = {
     "share link not loaded": ("Build not loaded", "See the dashboard",
                               "AshLight did not load a build from the copied share link."),
 }
-
-
-def _num_text(n):
-    """A number as short display text: at most 1 decimal, no trailing .0."""
-    try:
-        n = round(float(n), 1)
-    except (TypeError, ValueError, OverflowError):
-        return "0"
-    if n == 0:
-        n = 0.0  # no "-0"
-    return str(int(n)) if n.is_integer() else str(n)
-
-
-def _signed(n):
-    t = _num_text(n)
-    return t if t.startswith("-") else "+" + t
-
-
-def _signed_points(n):
-    """"+1 point", "-1 point", "+2.5 points" (rule 7: correct plurals)."""
-    t = _signed(n)
-    return f"{t} point" + ("" if t in ("+1", "-1") else "s")
-
-
-def _points(n):
-    try:
-        t = _num_text(abs(float(n or 0)))
-    except (TypeError, ValueError, OverflowError):
-        t = "0"
-    return f"{t} point" + ("" if t == "1" else "s")
 
 
 def stat_delta_text(key, delta):
@@ -360,23 +246,6 @@ def _calc_text(card, best, n_slots=1):
     if calc.get("source") == "pob_cached":
         return CALC_CACHED_TEXT.get(_key(calc.get("notice")), CALC_CACHED_TEXT["off"]), None
     return CALC_NOTICE_TEXT.get(_key(calc.get("notice")), ""), None
-
-
-CARD_LINE = 34  # design 0001 section 9 rule 6: overlay card line length
-
-
-def _short_list(words, width=CARD_LINE):
-    """Words joined by ", " within `width`; the rest as " +N more"."""
-    shown = []
-    for i, w in enumerate(words):
-        rest = len(words) - i - 1
-        tail = f" +{rest} more" if rest else ""
-        cand = ", ".join(shown + [w])
-        if len(cand + tail) > width and shown:
-            return ", ".join(shown) + f" +{len(words) - len(shown)} more"
-        shown.append(w)
-    text = ", ".join(shown)
-    return text if len(text) <= width else text[:width - 3] + "..."
 
 
 WAYSTONE_LISTED = 3  # design 0001 rule 1: the sentence names at most 3 mods
@@ -857,13 +726,6 @@ def price_card_text(card):
     return out
 
 
-def _is_time(value):
-    """A usable epoch time: a real number within any plausible range (a
-    huge int would overflow float arithmetic, FUZZ-3)."""
-    return (isinstance(value, (int, float)) and not isinstance(value, bool)
-            and abs(value) < 1e15)
-
-
 def _fresh(part, life_s, now):
     return (isinstance(part, dict) and _is_time(part.get("at"))
             and now < part["at"] + life_s)
@@ -941,67 +803,6 @@ def overlay_card(ev, price, now, alert=None):
                     expires_at=max(card["expires_at"], price_until(price)))
         return card
     return eval_part() if ev_ok else price_part()
-
-
-def summarize(ev):
-    """One natural sentence for an event (design 0001 section 9). This is
-    the only place event wording is made; every template has an exact-output
-    test in tests/test_summarize.py. Missing fields read honestly, never
-    "None", and internal ids never show."""
-    t = ev.get("type")
-    if t in ("scene_changed", "area_entered"):
-        zone = _text(ev.get("scene") if t == "scene_changed" else ev.get("name"),
-                     UNKNOWN_ZONE)
-        tag = " (hideout)" if t == "scene_changed" and ev.get("is_hideout") else ""
-        return f"Entered {zone}{tag}"
-    if t == "area_generated":
-        return f"Area level {_text(ev.get('area_level'), 'unknown')}"
-    if t == "level_up":
-        who = _text(ev.get("character"), UNKNOWN_CHARACTER)
-        if ev.get("level") is None:
-            return f"{who} reached a new level (level unknown)"
-        return f"{who} reached level {ev['level']}"
-    if t == "death":
-        who = _text(ev.get("character"), UNKNOWN_CHARACTER)
-        return f"{who} died" + (" (self-inflicted)" if ev.get("suicide") else "")
-    if t == "whisper_in":
-        sender = _text(ev.get("from"), UNKNOWN_PLAYER)
-        tr = ev.get("trade")
-        if isinstance(tr, dict):
-            return _trade_text(sender, tr)
-        body = _text(ev.get("text"), "")
-        return f'{sender}: "{body}"' if body else f"{sender} sent an empty whisper"
-    if t == "whisper_out":
-        to = _text(ev.get("to"), "unknown player")
-        body = _text(ev.get("text"), "")
-        return f'To {to}: "{body}"' if body else f"Sent an empty whisper to {to}"
-    if t == "afk_changed":
-        return "You're AFK" if ev.get("on") else "You're back"
-    if t == "dnd_changed":
-        return "Do not disturb on" if ev.get("on") else "Do not disturb off"
-    if t == "player_joined_area":
-        return f"{_text(ev.get('character'), UNKNOWN_CHARACTER)} joined the area"
-    if t == "player_left_area":
-        return f"{_text(ev.get('character'), UNKNOWN_CHARACTER)} left the area"
-    if t == "trade_accepted":
-        return "Trade accepted"
-    if t == "trade_cancelled":
-        return "Trade cancelled"
-    if t == "session_connect":
-        return "Connected to a game server"
-    if t == "tailer_started":
-        return "Reading Client.txt"
-    if t == "tailer_reset":
-        reason = ev.get("reason")
-        return RESET_READ_TEXT.get((reason, ev.get("read")),
-                                   RESET_TEXT.get(reason, "Client.txt was reset"))
-    if t == "tailer_unreadable":
-        return "Client.txt can't be read right now - trying again"
-    if t == "tailer_readable":
-        return "Client.txt can be read again"
-    if t == "tailer_restarted":
-        return "AshLight restarted its log reader"
-    return FALLBACK_TEXT
 
 
 class SessionState:
