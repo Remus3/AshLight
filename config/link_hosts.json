@@ -1,0 +1,11 @@
+{
+  "note": "OVL-LINKS-DOWNLOADS (decision 0041 amendment 2026-11-19): the hosts (and their subdomains) a companion-window link may open in the default browser, https only. app/test/link_hosts.test.js requires every host web/ can emit to be listed and nothing more.",
+  "hosts": [
+    "maxroll.gg",
+    "pathofexile.com",
+    "pathofexile2.com",
+    "poe2db.tw",
+    "www.pathofexile.com",
+    "www.poe2wiki.net"
+  ]
+}
