@@ -13,7 +13,7 @@
    file keeps the two windows' creation, the IPC handlers and the one
    clipboard read. */
 
-const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, screen, session } = require("electron");
+const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, nativeTheme, screen, session } = require("electron");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
@@ -168,6 +168,10 @@ if (!CLIENT_MODE && !OVERLAY_ALONE_TEST) {
   app.on("second-instance", (e, argv) => {
     if (Link.wantsClient(argv)) { openClient(); }
   });
+  // TD-04 (PLAY-TD-04A): AshLight's own windows open dark before the first
+  // window exists; the dashboard in the client follows through the kit's
+  // prefers-color-scheme block. The overlay is already dark and transparent.
+  nativeTheme.themeSource = "dark";
   app.whenReady().then(start);
 }
 
