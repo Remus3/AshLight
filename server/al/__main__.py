@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import DISCLAIMER, NAME, VERSION, acl, demo, hotreload, paths, ports
+from . import DISCLAIMER, NAME, VERSION, acl, demo, hotreload, jsonfile, paths, ports
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -148,9 +148,8 @@ def write_heartbeat(path, pid, port, now=None, created=None):
             "updated": float(time.time() if now is None else now)}
     if created:
         data["created"] = int(created)
-    tmp = Path(str(path) + ".tmp")
-    tmp.write_text(json.dumps(data) + "\n", encoding="ascii")
-    os.replace(tmp, path)
+    # RUN-DURABLE-CRLF: LF and atomic; unsynced, it is rewritten every beat
+    jsonfile.write_text(path, json.dumps(data) + "\n", sync=False)
 
 
 def start_token(runtime, token_file, log=None):
