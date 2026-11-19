@@ -13,14 +13,22 @@ Rules (CLAUDE.md "Game ToS floor", decision 0013):
   never a cookie (no POESESSID, no cookie jar);
 - a response size cap and a short timeout on every request;
 - never the official trade site or its API, whatever a caller's allowlist
-  says (decision 0017, `is_trade_url`).
+  says (decision 0017, `is_trade_url`);
+- a gzip body is inflated through `inflate` with the same size cap applied
+  AFTER inflation (a small compressed body cannot blow up in memory);
+- `retry_after_s` is the one Retry-After parser, bounded to [lo, hi].
 
 `http_request` is the real transport; every client takes an injectable
 `fetch(method, url, headers, body)` -> (status, headers dict, body bytes) so
 tests never touch the network.
 """
 
+import datetime
+import email.utils
+import http.client
 import ipaddress
+import math
+import zlib
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,6 +39,10 @@ TIMEOUT_S = 10.0
 MAX_REDIRECTS = 3
 DEFAULT_MAX_BYTES = 2 * 1024 * 1024
 REDIRECT_CODES = (301, 302, 303, 307, 308)
+GZIP_ENCODINGS = ("gzip", "x-gzip")
+RETRY_AFTER_LO_S = 3600
+RETRY_AFTER_HI_S = 86400
+RETRY_AFTER_MAX_CHARS = 64
 
 
 class FetchError(Exception):
@@ -157,11 +169,13 @@ def _open_once(method, url, headers, body, max_bytes, timeout):
     except urllib.error.HTTPError as e:
         try:
             data = e.read(max_bytes + 1) if e.fp is not None else b""
-        except OSError:
+        except (OSError, http.client.HTTPException):
             data = b""
         return e.code, dict((e.headers or {}).items()), data[:max_bytes]
-    except (urllib.error.URLError, OSError, ValueError) as e:
-        raise FetchError(f"network: {e}") from e
+    except (urllib.error.URLError, OSError, ValueError, http.client.HTTPException) as e:
+        # F-036: IncompleteRead, BadStatusLine, LineTooLong and the rest of
+        # http.client's family are network failures too, never a crash
+        raise FetchError(f"network: {type(e).__name__}: {e}") from e
 
 
 def header(headers, name):
@@ -171,6 +185,69 @@ def header(headers, name):
         if k.lower() == low:
             return v
     return None
+
+
+def inflate(headers, data, max_bytes=DEFAULT_MAX_BYTES):
+    """(headers, body) with a gzip body inflated (F-045). No
+    Content-Encoding or "identity": returned as is. gzip / x-gzip: inflated
+    through one zlib.decompressobj bounded at max_bytes + 1 output bytes, so
+    a decompression bomb costs at most max_bytes of memory; the returned
+    headers drop Content-Encoding. Any other encoding, a body that inflates
+    past max_bytes, a broken, truncated or trailing-data gzip stream raises
+    FetchError."""
+    headers = dict(headers or {})
+    enc = header(headers, "Content-Encoding")
+    if enc is None or data is None:
+        return headers, data
+    enc = str(enc).strip().lower()
+    if enc in ("", "identity"):
+        return headers, data
+    if enc not in GZIP_ENCODINGS:
+        raise FetchError(f"unsupported Content-Encoding: {enc[:40]}")
+    d = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    try:
+        out = d.decompress(bytes(data), max_bytes + 1)
+    except (zlib.error, TypeError, ValueError) as e:
+        raise FetchError(f"bad gzip body: {e}") from e
+    if len(out) > max_bytes or d.unconsumed_tail:
+        raise FetchError("response too large")
+    if not d.eof:
+        raise FetchError("bad gzip body: truncated")
+    if d.unused_data:
+        raise FetchError("bad gzip body: trailing data")
+    return {k: v for k, v in headers.items()
+            if k.lower() != "content-encoding"}, out
+
+
+def retry_after_s(headers, now, lo=RETRY_AFTER_LO_S, hi=RETRY_AFTER_HI_S):
+    """Seconds to wait from a Retry-After header (delta-seconds or an
+    HTTP-date, RFC 9110 10.2.3), clamped to [lo, hi] (default 1 h to 24 h);
+    `now` is epoch seconds. None when the header is absent or unreadable,
+    so the caller keeps its own back-off."""
+    raw = header(headers, "Retry-After")
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text or len(text) > RETRY_AFTER_MAX_CHARS:
+        return None
+    if text.isdigit() and text.isascii():
+        wait = float(int(text))
+    else:
+        try:
+            when = email.utils.parsedate_to_datetime(text)
+        except (TypeError, ValueError, IndexError, OverflowError):
+            return None
+        if when is None:
+            return None
+        if when.tzinfo is None:  # "-0000" / no zone: HTTP-dates are GMT
+            when = when.replace(tzinfo=datetime.timezone.utc)
+        try:
+            wait = when.timestamp() - float(now)
+        except (OverflowError, OSError, ValueError, TypeError):
+            return None
+    if not math.isfinite(wait):
+        return None
+    return min(max(wait, float(lo)), float(hi))
 
 
 def make_transport(max_bytes=DEFAULT_MAX_BYTES, timeout=TIMEOUT_S):
@@ -199,6 +276,7 @@ def request(method, url, headers, allowed_hosts, body=None, fetch=None,
         if data is not None and len(data) > max_bytes:
             raise FetchError("response too large")
         if status not in REDIRECT_CODES:
+            rh, data = inflate(rh, data, max_bytes)  # cap applies after inflation
             return status, rh, data
         location = header(rh, "Location")
         if not location:

@@ -1,0 +1,23 @@
+name: Feature request
+description: Something you would like AshLight to show or do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AshLight only reads what the game allows and never acts in the game.
+        Read "What AshLight never does" in the README before asking.
+  - type: textarea
+    id: want
+    attributes:
+      label: What would you like to see
+      description: What you want AshLight to show or do, and when it would help you in play.
+    validations:
+      required: true
+  - type: textarea
+    id: floor
+    attributes:
+      label: Which "What AshLight never does" line might it touch
+      description: Name the line it might come close to (memory, files, input, Client.txt, clipboard, account), or write "none".
+    validations:
+      required: true

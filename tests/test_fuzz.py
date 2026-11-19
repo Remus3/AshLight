@@ -18,6 +18,7 @@ the input. Properties checked:
 Regression tests for each defect the fuzzing found are at the bottom.
 """
 
+import gzip
 import json
 import math
 import os
@@ -28,7 +29,7 @@ from pathlib import Path
 import fleet_test_guard  # tests/conftest.py puts ops/fleet_kit on sys.path
 import pytest
 
-from server.al import ninja, parser, price, state
+from server.al import ninja, parser, price, state, webfetch
 from server.al.theorycraft import charjson, codec, item, model
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -316,6 +317,31 @@ def test_fuzz_ninja_parsers_yield_finite_rates():
     _run("ninja.overview", overview, lambda r: enc(r, NINJA_OVERVIEW), allowed=(ValueError,))
     _run("ninja.leagues", ninja.parse_leagues, lambda r: enc(r, NINJA_LEAGUES),
          allowed=(ValueError,))
+
+
+@TIMING
+def test_fuzz_webfetch_inflate_raises_only_fetch_error():
+    # DATA-WEBFETCH-GZIP: random bytes, mutated and truncated gzip streams
+    # either inflate within the cap or raise FetchError, nothing else
+    good = gzip.compress(NINJA_OVERVIEW.encode("utf-8"))
+    cap = 4096
+
+    def gen(rng):
+        r = rng.random()
+        if r < 0.4:
+            return bytes(rng.getrandbits(8) for _ in range(rng.randint(0, 300)))
+        b = bytearray(good)
+        for _ in range(rng.randint(0, 6)):
+            if b:
+                b[rng.randrange(len(b))] = rng.getrandbits(8)
+        return bytes(b[:rng.randint(0, len(b))]) if r < 0.7 else bytes(b)
+
+    def target(data):
+        rh, out = webfetch.inflate({"Content-Encoding": "gzip"}, data, cap)
+        assert isinstance(out, bytes) and len(out) <= cap
+        assert webfetch.header(rh, "Content-Encoding") is None
+
+    _run("webfetch.inflate", target, gen, allowed=(webfetch.FetchError,))
 
 
 # ------------------------------------------------------- snapshot builders

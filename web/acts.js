@@ -5,26 +5,19 @@
    and fills the table. No timers, no network. */
 (function (root, factory) {
   "use strict";
-  var api = factory();
-  if (typeof module === "object" && module.exports) {
+  var common = typeof module === "object" && module.exports;
+  var api = factory(common ? require("./fmt.js") : root.ALFmt);
+  if (common) {
     module.exports = api;
   } else {
     root.ALActs = api;
   }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (F) {
   "use strict";
 
-  function pad(n) { return n < 10 ? "0" + n : String(n); }
-
-  /* Seconds as m:ss or h:mm:ss, the same form as the zone timer. */
-  function duration(s) {
-    if (s === null || s === undefined || !isFinite(s)) { return "--:--"; }
-    s = Math.max(0, Math.floor(s));
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = s % 60;
-    return h > 0 ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
-  }
+  /* Seconds as m:ss or h:mm:ss, the same form as the zone timer
+     (web/fmt.js). */
+  var duration = F.duration;
 
   /* One display row per split. `now` is server time (s); the open split
      counts up to it, a closed one keeps its own end. */
