@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+import srcpaths
 from server.al import http as al_http, ports
 from server.al.core import Core
 from server.al.http import CSP, serve, tap_event
@@ -114,7 +115,7 @@ def test_security_headers_on_dashboard(srv):
 
 
 def test_dashboard_has_no_inline_script():
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     import re
     for tag in re.findall(r"<script[^>]*>", html):
         assert "src=" in tag
@@ -132,7 +133,7 @@ def test_static_traversal_blocked(srv):
     # SEC-STATIC-MAP: more shapes; every one misses the name map
     for path in ("/web/..%2fREADME.md", "/web/..\\README.md", "/web/./index.html",
                  "/web//index.html", "/web/INDEX.HTML", "/web/", "/web/%69ndex.html",
-                 "/web/" + str(ROOT / "README.md"), "/web/" + str(ROOT / "web" / "app.js")):
+                 "/web/" + str(ROOT / "README.md"), "/web/" + str(srcpaths.path("app.js"))):
         r, _ = req(srv, "GET", path)
         assert r.status == 404, path
 
@@ -631,6 +632,6 @@ def test_favicon_is_the_local_brand_icon(srv):
     # BRAND-ICON: /favicon.ico and /web/favicon.svg are served from web/.
     r, body = req(srv, "GET", "/favicon.ico")
     assert r.status == 200 and r.getheader("Content-Type") == "image/x-icon"
-    assert body == (ROOT / "web" / "favicon.ico").read_bytes()
+    assert body == srcpaths.read_bytes("favicon.ico")
     r, body = req(srv, "GET", "/web/favicon.svg")
     assert r.status == 200 and r.getheader("Content-Type") == "image/svg+xml"
