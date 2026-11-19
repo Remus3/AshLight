@@ -18,6 +18,7 @@
   var ticker = null;
   var linkLive = false; // the state feed is live right now
   var everLive = false; // ... and was live at least once on this page
+  var linkEvent = null; // the feed's last event, for the one bar word
 
   function $(id) { return document.getElementById(id); }
 
@@ -252,12 +253,14 @@
   /* DESKTOP-CLIENT (decision 0041): inside the desktop client the page
      gets one action, window.alClient.restartOverlay (app/client/preload.js);
      in a browser there is none and the button stays hidden. */
+  var restartSaid = false; // the restart note shows until the next state push
   function wireRestartOverlay() {
     var c = window.alClient;
     if (!c || typeof c.restartOverlay !== "function") { return; }
     $("restart-overlay-row").hidden = false;
     $("restart-overlay").addEventListener("click", function () {
       c.restartOverlay();
+      restartSaid = true;
       setText($("restart-overlay-said"), snap && snap.game_idle
         ? "Restarting the overlay. It stays hidden while the game looks closed."
         : "Restarting the overlay.");
@@ -1060,6 +1063,8 @@
 
   function render(s) {
     snap = s;
+    // MERGE-SEAMS F5: the restart-overlay note clears on the next state push
+    if (restartSaid) { restartSaid = false; setText($("restart-overlay-said"), ""); }
     // decision 0029 amendment: say why the overlay is hidden (no live region)
     $("overlay-idle-note").hidden = s.game_idle !== true;
     offset = Date.now() / 1000 - s.now;
@@ -1139,14 +1144,16 @@
 
   function showPill(id, p) { setPill($(id), p.state, p.glyph, p.word); }
 
+  /* PLAY-TD-09C-BAR: the one bar status word, the worse of the
+     Client.txt reading state and the feed state (MERGE-SEAMS F2) */
   function showReading() {
-    showPill("reading", D.readingView(snap ? snap.tailer : null, linkLive));
+    showPill("reading", D.barStatus(snap ? snap.tailer : null, linkEvent, everLive));
   }
 
   function setLink(event) {
+    linkEvent = event;
     linkLive = event === "open";
     if (linkLive) { everLive = true; }
-    showPill("link", D.linkView(event, everLive));
     showReading();
   }
 
