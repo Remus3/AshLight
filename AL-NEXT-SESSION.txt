@@ -4,7 +4,17 @@ SESSION: 7   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 2 done, next wave 3
+WAVE POINTER: wave 3 done, next wave 4
+Wave 3 escape count: 0 of 4 merge batches needed a second suite; 0 of 12
+worktree packages = 0 percent: the batch stays at 4 (08 section 4).
+Batch suites 2584, 2607, 2643, 2643 passed (3 skipped each); npm 260,
+269, 270, 270. No package deferred. GP-04 fresh clone at 930770d (no
+local config, needles, hooks path or operator identity; scratch sidecar):
+py3.14 2590 passed, 56 skipped (all stated: calc component, PoB checkout,
+snapshots, reference build, overlay smoke opt-in, WT-SIDECAR hook); npm
+270/270; py3.11 found test_soak Reader._stop shadowing Thread._stop
+(fixed: renamed _halt, adjudicator ruling in eb148c9); test_procs is red
+only under a venv launcher, green on the real 3.11 exe.
 Wave 2 escape count: 0 of 3 merge batches needed a second suite; 0 of 12
 worktree packages = 0 percent: the batch stays at 4 (08 section 4).
 Batch suites 2503, 2522, 2561 passed (3 skipped each); npm 247, 247, 260.
