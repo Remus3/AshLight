@@ -14,7 +14,28 @@ from pathlib import Path
 
 import pytest
 
-from test_design_contrast import _hex, ratio
+
+def _hex(h):
+    h = h.strip().lstrip("#")
+    assert re.fullmatch(r"[0-9a-fA-F]{6}", h), h
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _lin(c):
+    c = c / 255
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _luminance(rgb):
+    r, g, b = (_lin(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def ratio(a, b):
+    la, lb = _luminance(a), _luminance(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
