@@ -7,7 +7,9 @@ old session is never replayed; state is recovered from the skipped bytes by
 the on_resume hook (server/al/resume.py, LIVE-RESUME).
 
 Discovery reads Steam's libraryfolders.vdf (read only) and looks for
-steamapps/common/Path of Exile 2/logs/Client.txt in every library.
+steamapps/common/Path of Exile 2/logs/Client.txt in every library. It runs
+only when no path is configured; the core runs it only from the real entry
+point (SEC-NO-DISCOVERY).
 """
 
 import os
@@ -132,15 +134,25 @@ def consent_path_ok(path, windows=None):
     return name == LOG_NAME or "." not in name
 
 
+def configured_log_file(configured):
+    """SEC-NO-DISCOVERY: the one file a configured value may name. A value
+    whose last part is not Client.txt (any case) is a folder: its
+    logs/Client.txt when that logs folder exists, else its Client.txt. So
+    only a file named Client.txt is ever opened. Never None, existing or
+    not (the file may appear later)."""
+    p = Path(configured)
+    if p.name.lower() == LOG_NAME:
+        return p
+    return p / "logs" / "Client.txt" if (p / "logs").is_dir() else p / "Client.txt"
+
+
 def discover_client_log(configured=None, steam_roots=None):
-    """The Client.txt path: the configured value when it exists, else the first
-    Steam library holding the PoE2 log. None when nothing is found."""
+    """The Client.txt path. A configured value always wins, existing or not,
+    with no fall-through to the Steam libraries (SEC-NO-DISCOVERY, decision
+    0003 amendment 2026-11-18). Without one: the first Steam library holding
+    the PoE2 log, or None when nothing is found."""
     if configured:
-        p = Path(configured)
-        if p.is_dir():
-            p = p / "logs" / "Client.txt" if (p / "logs").is_dir() else p / "Client.txt"
-        if p.is_file():
-            return p
+        return configured_log_file(configured)
     for lib in steam_libraries(steam_roots):
         cand = lib / LOG_REL
         if cand.is_file():
