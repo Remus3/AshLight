@@ -138,15 +138,6 @@ Carried forward (not acted on yet):
 - OPERATOR DECISION: phone view needs LAN access; CLAUDE.md keeps LAN off
   (OA-27, ruling Q-11; default P0, no network path; units CARRY-19,
   OPEN-18, F-205; no package until the operator names a design).
-- MERGE-SEAMS-FOLLOWUP (folded into rows PLAY-TD-01B-FIT-HARNESS wave 4,
-  PLAY-TD-09B-SKELETON wave 5, PLAY-TD-09C-BAR wave 6): Play tab fit with
-  both slots full (zone guide + build alert + 2 trades) unmeasured at
-  1280x760 and 1920x950 (F1 measured 2026-11-18 by
-  PLAY-TD-01B-FIT-HARNESS: docs/design/play-fit-figures.md; F2, F4, F5,
-  F7 open); live regions at the 12/12 cap (free one, update N6 text);
-  column keyboard focus (.col labelled group, tabindex 0);
-  restart-overlay status text never clears; reused hint-reset class name
-  (rename tool-row).
 - S5-FOLLOWUP (folded into rows DATA-GUIDE-FACTS wave 18,
   DATA-GUIDE-GAP-TUNE parked, OVL-ZONE-CARD wave 21, OVL-LINE2-GUIDE wave
   22): overlay zone-guide line (overlay has no slot yet; OVL-ZONE-CARD,

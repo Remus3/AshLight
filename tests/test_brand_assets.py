@@ -70,3 +70,18 @@ def test_dashboard_links_local_favicon():
     assert 'rel="icon" href="/web/favicon.svg"' in html
     assert 'href="/favicon.ico"' in html
     assert "http" not in html.split("<title>")[0].replace("http-equiv", "")
+
+
+def test_header_shows_the_mark_left_of_the_name():
+    # PLAY-TD-09C-BAR (F-190): AshLight's own small mark from the dashboard's
+    # own files (no GGG art), decorative (empty alt), in a 20 px box
+    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    head = html[html.index('<header class="bar">'):html.index("</header>")]
+    h1 = head[head.index("<h1"):head.index("</h1>")]
+    img = '<img class="brand-mark" src="/web/favicon.svg" alt="" width="20" height="20">'
+    assert img in h1
+    assert h1.index(img) < h1.index("AshLight")
+    assert head.count("<img") == 1
+    css = (ROOT / "web" / "app.css").read_text(encoding="ascii")
+    assert ".brand-mark { display: block; flex: 0 0 auto; width: 20px; height: 20px; }" in css
+    assert mi.FAVICON_SVG == ROOT / "web" / "favicon.svg"

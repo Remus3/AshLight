@@ -66,7 +66,8 @@ def test_snapshot_carries_the_play_block():
     assert set(play) == {"strip", "feed", "notices", "build", "map_ok",
                          "context", "item", "kept"}
     assert play["map_ok"] is False
-    assert play["context"] is None and play["item"] is None and play["kept"] is None
+    assert set(play["context"]) == {"setup"} and play["context"]["setup"]["mode"] == "setup"
+    assert play["item"] is None and play["kept"] is None
     assert set(play["strip"]) == {"zone", "sub", "level_sub", "deaths_sub",
                                   "session_sub", "fresh"}
     assert set(play["feed"]) == {"trades", "events"}
