@@ -41,7 +41,8 @@
   "use strict";
   var common = typeof module === "object" && module.exports;
   var dash = common ? require("./status.js") : root.ALDash;
-  var api = factory(dash);
+  var fmt = common ? require("./fmt.js") : root.ALFmt;
+  var api = factory(dash, fmt);
   if (common) {
     module.exports = api;
   } else {
@@ -50,7 +51,7 @@
       root.ALRegions.register(api.spec);
     }
   }
-}(typeof self !== "undefined" ? self : this, function (D) {
+}(typeof self !== "undefined" ? self : this, function (D, F) {
   "use strict";
 
   var NAME = "strip";
@@ -73,17 +74,9 @@
   function isNum(v) { return typeof v === "number" && isFinite(v); }
   function str(v) { return typeof v === "string" ? v : ""; }
 
-  function pad(n) { return n < 10 ? "0" + n : String(n); }
-
-  /* Seconds -> "m:ss" or "h:mm:ss"; "--:--" when unknown. */
-  function duration(s) {
-    if (!isNum(s)) { return NO_TIME; }
-    s = Math.max(0, Math.floor(s));
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = s % 60;
-    return h > 0 ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
-  }
+  /* Seconds -> "m:ss" or "h:mm:ss" (web/fmt.js); "--:--" when not a
+     number (a numeric string or a boolean too). */
+  function duration(s) { return isNum(s) ? F.duration(s) : NO_TIME; }
 
   /* The time the clocks count to: the last log line while idle. */
   function until(tailer, now) {
