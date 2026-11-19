@@ -67,13 +67,24 @@ def _overlay_sources():
     return out
 
 
+# OVL-SHELL-GUARDS (decision 0061): debugging switches and process starts
+# by bare name, banned in app/ next to the P4-6 list.
+DEBUG_NAMES = (r"remote-debugging-(port|pipe|address)", r"--inspect", r"\binspect-brk\b",
+               r"\bNODE_OPTIONS\b", r"enableNodeCliInspectArguments")
+SPAWN_NAMES = (r"(?<![\w.$])(spawn|spawnSync|execFile|execFileSync|execSync|exec|fork)\s*\(",)
+
+
 def test_p4_6_ram_budget_static_guard():
     """AREA-AUDIT P4-6: the UX-OVL-RAM budget (at most 2 processes: browser +
     one renderer) is measured only by the opt-in live smoke below; this
     always-on guard fails on the code changes that would add a process: a
     second window or view, a worker, a child / utility process, a webview or
     iframe, a second enable-features switch (it would replace
-    NetworkServiceInProcess2), or the in-process switches set after ready."""
+    NetworkServiceInProcess2), or the in-process switches set after ready.
+    OVL-SHELL-GUARDS (decision 0061): the same one ban list also holds the
+    debugging switch names (only app/guards.js, the one detector, may name
+    them) and the bare spawn names (only client/launcher.js runs a
+    process)."""
     src = _overlay_sources()
     assert "main.js" in src and "overlay/index.html" in src
     code = {k: (_code(v) if k.endswith(".js") else re.sub(r"<!--.*?-->", "", v, flags=re.S))
@@ -89,12 +100,17 @@ def test_p4_6_ram_budget_static_guard():
               r"\bBrowserView\b", r"\bWebContentsView\b", r"webviewTag\s*:\s*true",
               r"<\s*webview\b", r"<\s*iframe\b", r"\bwindow\.open\s*\(",
               r"serviceWorker\.register", r"nodeIntegrationInWorker\s*:\s*true",
-              r"\bprocess\.fork\b")
+              r"\bprocess\.fork\b") + DEBUG_NAMES + SPAWN_NAMES
     for name, c in code.items():
         for pat in banned:
-            if pat == r"child_process" and name == "client/launcher.js":
+            if pat in ((r"child_process",) + SPAWN_NAMES) and name == "client/launcher.js":
                 continue  # DESKTOP-CLIENT: runs the repo's run.ps1 / stop.ps1 only
+            if pat in DEBUG_NAMES and name == "guards.js":
+                continue  # OVL-SHELL-GUARDS: the one place that detects them
             assert not re.search(pat, c), (name, pat)
+    # the guards part is loaded and runs first (file-name order)
+    parts = sorted(k for k in code if k.startswith("parts/"))
+    assert parts and parts[0] == "parts/10-guards.js", parts
     main = code["main.js"]
     # the companion window module loads lazily, inside openClient() only
     assert 'require("./client/window.js")' not in main.split("function openClient")[0]
@@ -182,6 +198,7 @@ def test_live_overlay_smoke_within_budget(tmp_path):
     env = dict(os.environ, AL_SIDECAR_ROOT=str(side), AL_OVERLAY_SMOKE_S=str(SMOKE_S),
                AL_OVERLAY_TOGGLE="Alt+Shift+F9", AL_EVAL_HOTKEY="Alt+Shift+F10")
     env.pop("ELECTRON_RUN_AS_NODE", None)
+    env.pop("NODE_OPTIONS", None)  # decision 0061: the shell quits on it
     proc = subprocess.Popen([str(exe), str(ROOT / "app")], env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
