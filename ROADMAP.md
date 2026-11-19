@@ -1989,8 +1989,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   and `gh repo view "$R" --json
   description,hasIssuesEnabled,hasWikiEnabled,hasProjectsEnabled,hasDiscussionsEnabled` shows the 04
   description, issues on, wiki / projects / discussions off. ZERO-CLICK: Agent step with gh; no
-  click. DEPENDS: GP-09. BLOCKED: the repository exists (first push done); unblocks when `gh repo
-  view` succeeds for the repository (package GP-09).
+  click. DEPENDS: GP-09. BLOCKED: session wave 9.
 - [ ] GP-13 (review) Apply protection and security settings, read back. ACCEPT: `gh api
   "repos/$R/rules/branches/main" --jq '[.[].type] | sort | join(",")'` prints
   deletion,non_fast_forward,required_status_checks and, after one ordinary push of a fresh commit
