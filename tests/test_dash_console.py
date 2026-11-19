@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import synth_client  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
 import test_fullstack as fs  # noqa: E402
-from tc_live_util import free_test_port  # noqa: E402
+from tc_live_util import lease_port  # noqa: E402
 
 from server.al import ninja  # noqa: E402
 from server.al.core import Core  # noqa: E402
@@ -70,17 +70,20 @@ def stack(tmp_path):
     mock = fs.MockNinja()
     core = Core(runtime=rt, log_path=str(log), poll_s=0.02, config_path=cfg,
                 web_fetch=fs.Transport(mock))
-    port = free_test_port()
+    port, release = lease_port()
     server = serve(core, TOKEN, port=port, web_root=ROOT / "web",
                    tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
     threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
                      daemon=True).start()
     st = fs.Stack.__new__(fs.Stack)  # its req / state / wait_for helpers only
     st.core, st.server, st.port = core, server, port
-    yield st, log
-    server.stop()
-    core.close()
-    mock.close()
+    try:
+        yield st, log
+    finally:
+        server.stop()
+        release()
+        core.close()
+        mock.close()
 
 
 def test_dashboard_has_no_console_error_or_csp_violation(stack, tmp_path, monkeypatch):

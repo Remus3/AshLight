@@ -286,46 +286,7 @@ def main(argv=None):
                 log.info("code changed; exiting for a hot reload")
                 restarting = True
                 break
-            try:
-                core.ensure_tailing()  # TEST-E2E: log found later / moved
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("ensure_tailing failed")
-            try:
-                core.tick_build()  # BUILD-LIVE: this character's build, hot reload
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_build failed")
-            try:
-                core.tick_summary()  # UTIL-SESSION-SUMMARY: idle -> card
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_summary failed")
-            try:
-                core.tick_calc()  # AREA-AUDIT P3-6: tc_calc off -> stop luajit
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_calc failed")
-            try:
-                core.tick_sources()  # TEST-FULLSTACK-SSE-IDLE: calc / prices
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_sources failed")
-            try:
-                core.tick_guide()  # ZONE-GUIDE: hot reload, save visits
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_guide failed")
-            try:
-                core.tick_history()  # UTIL-RUN-HISTORY: save closed acts
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_history failed")
-            try:
-                core.tick_watch()  # UTIL-PRICE-WATCH: moves on book refresh
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_watch failed")
-            try:
-                core.tick_diag()  # DIAG-SELF: the Checks card (ruling J)
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_diag failed")
-            try:
-                core.tick_reload()  # HOT-RELOAD: data files, web/ (0042)
-            except Exception:  # noqa: BLE001 - never stops the core loop
-                log.exception("tick_reload failed")
+            core.tick_all(log)  # RUN-SEAMS: one pass of Core.ticks (decision 0056)
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:
