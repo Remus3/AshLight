@@ -167,9 +167,10 @@ def test_host_and_origin_edge_cases(srv):
     assert status(out) == 403 and not srv.core.consented()
 
 
-def open_sse(server):
+def open_sse(server, tap=False):
     s = socket.create_connection(("127.0.0.1", server.port), timeout=5)
-    s.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{server.port}"
+    q = "&tap=1" if tap else ""
+    s.sendall((f"GET /events?token={TOKEN}{q} HTTP/1.1\r\nHost: 127.0.0.1:{server.port}"
                "\r\n\r\n").encode())
     buf = b""
     while b"\r\n\r\n" not in buf:
@@ -228,13 +229,18 @@ def test_slow_sse_reader_is_dropped_and_does_not_stall_others(srv):
     write timeout, with a fixed 400-event count and wall-clock budgets on
     top. Now the fast client really reads (a thread), publishing runs until
     the slow subscription is gone, and every wait is a condition with a
-    generous deadline - load only makes it slower, never red."""
+    generous deadline - load only makes it slower, never red.
+
+    SEC-SSE-TAP: the fill goes through the dev tap (/events?tap=1) because
+    the default stream no longer carries per-event bytes; tap_event strips
+    strings, so the events are numeric-heavy (~4 KB each)."""
+    srv.events_tap = True
     slow = socket.socket()
     slow.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
     slow.connect(("127.0.0.1", srv.port))
-    slow.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{srv.port}"
+    slow.sendall((f"GET /events?token={TOKEN}&tap=1 HTTP/1.1\r\nHost: 127.0.0.1:{srv.port}"
                   "\r\n\r\n").encode())
-    fast, got = open_sse(srv)
+    fast, got = open_sse(srv, tap=True)
     got = bytearray(got)
     lock = threading.Lock()
     stop = threading.Event()
@@ -262,7 +268,7 @@ def test_slow_sse_reader_is_dropped_and_does_not_stall_others(srv):
             assert time.monotonic() < end, "streams never subscribed"
             time.sleep(0.02)
         reader.start()
-        big = "x" * 4000
+        big = {f"k{j}": 123456789 for j in range(250)}
         worst = 0.0
         n = 0
         end = time.monotonic() + 60
@@ -270,8 +276,7 @@ def test_slow_sse_reader_is_dropped_and_does_not_stall_others(srv):
             assert time.monotonic() < end, "slow reader was never dropped"
             assert not closed.is_set(), "fast stream closed while reading"
             t0 = time.perf_counter()
-            srv.core.bus.publish({"type": "chat", "channel": "#", "name": "Spam",
-                                  "text": big, "i": n})
+            srv.core.bus.publish({"type": "chat", "i": n, **big})
             worst = max(worst, time.perf_counter() - t0)
             n += 1
             if n % 10 == 0:
@@ -279,12 +284,11 @@ def test_slow_sse_reader_is_dropped_and_does_not_stall_others(srv):
         # a publish is a deque append per subscriber; seconds would mean it
         # waited on a socket (generous: it is ~microseconds unloaded)
         assert worst < 2.0, f"a publish blocked for {worst:.2f} s"
-        srv.core.bus.publish({"type": "chat", "channel": "#", "name": "Marker",
-                              "text": "end"})
+        srv.core.bus.publish({"type": "chat", "marker": 987654321})
         end = time.monotonic() + 30
         while True:
             with lock:
-                if b'"name":"Marker"' in got:
+                if b'"marker":987654321' in got:
                     break
             assert not closed.is_set(), "fast stream closed"
             assert time.monotonic() < end, "fast stream stalled"
