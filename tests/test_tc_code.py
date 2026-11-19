@@ -73,6 +73,13 @@ def test_decode_rejects_garbage(bad):
         codec.decode(bad)
 
 
+@pytest.mark.parametrize("enc", ["utf-16-le", "utf-16-be", "utf-16", "utf-32-le", "utf-32"])
+def test_decode_refuses_a_payload_with_a_nul_byte(enc):
+    xml = '<!DOCTYPE x [<!ENTITY a "aaaa">]><PathOfBuilding2/>'
+    with pytest.raises(codec.CodeError, match="NUL"):
+        codec.decode(_b64(zlib.compress(xml.encode(enc))))
+
+
 def test_decode_caps_decompressed_size():
     bomb = zlib.compress(b"<" + b"A" * (codec.MAX_XML_BYTES + 10), 9)
     with pytest.raises(codec.CodeError, match="too large"):
@@ -186,6 +193,7 @@ def test_to_dict_is_json_ready():
     "<Other/>",
     '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]><PathOfBuilding2/>',
     "<PathOfBuilding2><Build level='x'/></PathOfBuilding2>",
+    "<PathOfBuilding2><Notes>a\x00b</Notes></PathOfBuilding2>",
 ])
 def test_parse_rejects_bad_xml(xml):
     with pytest.raises(model.BuildError):
