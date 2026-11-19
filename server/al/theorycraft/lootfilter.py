@@ -139,7 +139,8 @@ def stamp(prices=None, today=None):
     league = prices.get("league") if isinstance(prices, dict) else None
     league = _clean(league)[:MAX_LEAGUE].strip() if isinstance(league, str) else ""
     if league:
-        return f"# Made on {day} for the {league} league."
+        word = "" if league.lower().endswith("league") else " league"
+        return f"# Made on {day} for the {league}{word}."
     return f"# Made on {day}."
 
 

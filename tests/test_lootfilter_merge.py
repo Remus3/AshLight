@@ -94,7 +94,7 @@ def test_section_header_carries_date_and_league(tmp_path):
     assert rest == OWN_CRLF
     lines = section.decode("ascii").split("\r\n")
     assert lines[0] == lootfilter.MERGE_BEGIN
-    assert lines[1] == "# Made on 2026-11-18 for the Example League league."
+    assert lines[1] == "# Made on 2026-11-18 for the Example League."
     # no prices (web data off): the day alone
     section, _ = split(lootfilter.merge(OWN_LF, BUILD, today=DAY))
     assert section.decode("ascii").split("\n")[1] == "# Made on 2026-11-18."
@@ -105,6 +105,13 @@ def test_section_header_carries_date_and_league(tmp_path):
     assert section.decode("ascii").split("\n")[1] == \
         "# Made on 2026-11-18 for the Odd Show SetFontSize 1 x league."
     assert all(not ln or ln.startswith("#") for ln in section.decode("ascii").split("\n"))
+    # a name that already ends in "league" gets no second one
+    assert lootfilter.stamp({"league": "Standard"}, DAY) == \
+        "# Made on 2026-11-18 for the Standard league."
+    assert lootfilter.stamp({"league": "Hardcore Test League"}, DAY) == \
+        "# Made on 2026-11-18 for the Hardcore Test League."
+    assert lootfilter.stamp({"league": "Dawn LEAGUE"}, DAY) == \
+        "# Made on 2026-11-18 for the Dawn LEAGUE."
     long = {"league": "L" * 300}
     assert len(lootfilter.stamp(long, DAY)) < 120
     # the core passes no day: today's date

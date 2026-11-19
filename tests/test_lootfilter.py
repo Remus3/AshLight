@@ -70,7 +70,7 @@ def test_generated_header_carries_date_and_league():
     text = lootfilter.generate(BUILD, prices={"uniques": [], "stackables": [],
                                               "league": "Example League"}, today=day)
     check_grammar(text)
-    assert text.split("\n")[1] == "# Made on 2026-11-18 for the Example League league."
+    assert text.split("\n")[1] == "# Made on 2026-11-18 for the Example League."
 
 
 def test_no_build_is_comments_only():
