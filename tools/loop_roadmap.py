@@ -14,8 +14,8 @@ import re
 from pathlib import Path
 
 from loop_base import (
-    DEPENDS_RX, DEP_ID_RX, MAX_ATTEMPTS, ROADMAP_REL, ROW_CONT_RX, ROW_RX, SKIP_TAGS,
-    STOP, ascii_text,
+    BLOCKED_RX, DEPENDS_RX, DEP_ID_RX, MAX_ATTEMPTS, ROADMAP_REL, ROW_CONT_RX, ROW_RX,
+    SKIP_TAGS, STOP, ascii_text,
 )
 from loop_prompts import resolve_prompt
 
@@ -266,9 +266,15 @@ def _norm_words(text):
     return re.findall(r"[a-z0-9]+", text.lower())
 
 
+LOOP_PREFIX_RX = re.compile(r"^LOOP:\s*")
+
+
 def handoff_items(text):
-    """Bullets under "Carried forward" as [{"id", "text", "skip"}]; skip is
-    None or the tag that keeps the loop off it (operator / other-tree / info)."""
+    """LOOP: bullets under "Carried forward" as [{"id", "text", "skip"}]; the
+    prefix is stripped from text. A bullet without the LOOP: prefix is not a
+    work item at all (LOOP-HANDOFF-PREFIX). skip is None or the tag that keeps
+    the loop off it (blocked / operator / other-tree / info); a blocked item
+    also carries a reason, so the work list shows it and never dispatches it."""
     items, cur, inside = [], None, False
     for line in text.splitlines():
         if line.lower().startswith("carried forward"):
@@ -285,9 +291,16 @@ def handoff_items(text):
             break
     out = []
     for parts in items:
-        body = " ".join(parts)
-        skip = next((tag for tag, rx in SKIP_TAGS if rx.search(body)), None)
+        m = LOOP_PREFIX_RX.match(parts[0])
+        if not m:
+            continue
+        body = " ".join([parts[0][m.end():]] + parts[1:]).strip()
         hid = "H" + hashlib.sha1(" ".join(_norm_words(body)).encode()).hexdigest()[:6]
+        if BLOCKED_RX.search(body):
+            out.append({"id": hid, "text": body, "skip": "blocked",
+                        "reason": "BLOCKED: operator act (see the hand-off)"})
+            continue
+        skip = next((tag for tag, rx in SKIP_TAGS if rx.search(body)), None)
         out.append({"id": hid, "text": body, "skip": skip})
     return out
 

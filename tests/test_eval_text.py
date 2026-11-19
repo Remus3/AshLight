@@ -59,6 +59,8 @@ def test_upgrade_card_text():
     assert t["comparisons"][0]["stats"] == [
         {"text": "+Some odd stat 4", "points": "not counted"},
         {"text": "+35 to maximum Life", "points": "+35 points"}]
+    # TC-CARD-PARTS: the mark's word and tone; no part notes without parts
+    assert (t["notes"], t["word"], t["tone"], t["answers"]) == ([], "Upgrade", "upgrade", False)
 
 
 def test_sidegrade_empty_slot_and_unidentified():
@@ -68,6 +70,7 @@ def test_sidegrade_empty_slot_and_unidentified():
     assert t["head"] == "Sidegrade +0.4 vs Belt"
     assert t["sentence"] == "Sidegrade: about the same as your Belt (Cord), +0.4 points."
     assert t["line"] == "No counted stat changes"
+    assert (t["notes"], t["word"], t["tone"]) == ([], "Sidegrade", "sidegrade")
     empty = card(slot="Boots", score_delta=45,
                  comparisons=[comp("Boots", "upgrade", 45, empty=True, stats=[LIFE])])
     one = card(verdict="sidegrade", slot="Belt", score_delta=1,
@@ -91,6 +94,8 @@ def test_error_card_text():
         ("No build loaded", "Grim Clutch", "Paste a build on the dashboard")
     assert t["sentence"] == ("No build loaded yet. Paste a Path of Building code under "
                              "Build, then press the hotkey again.")
+    assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
+        [], "Not checked", "note", False)
     t = eval_card_text({"ok": False, "error": "not an item", "item": {}})
     assert (t["head"], t["item"], t["line"]) == \
         ("Not an item", "Unnamed item", "Copy an item in game first")
@@ -100,6 +105,27 @@ def test_error_card_text():
     assert (t["head"], t["line"]) == ("Can't check this item", "See the dashboard")
     for t in (eval_card_text(None), eval_card_text({})):
         assert "None" not in str(t) and "undefined" not in str(t)
+
+
+def test_every_mark_has_a_word():
+    """TC-CARD-PARTS (F-043): every verdict mark is paired with a word."""
+    down = eval_card_text(card(verdict="downgrade", score_delta=-3))
+    assert (down["word"], down["tone"]) == ("Downgrade", "downgrade")
+    odd = eval_card_text(card(verdict=None))
+    assert (odd["word"], odd["tone"]) == ("Checked", "")
+    risky = {"ok": False, "error": "no gear slot for this item class",
+             "waystone": {"tier": 5, "risky": [{"label": "Monsters fire extra projectiles",
+                                                "short": "Extra projectiles"}]}}
+    t = eval_card_text(risky)
+    assert (t["word"], t["tone"], t["notes"]) == ("Risky", "risky", [])
+    t = eval_card_text(dict(risky, waystone={"tier": 5, "risky": []}))
+    assert (t["word"], t["tone"]) == ("No risky mods", "note")
+    t = eval_card_text(dict(risky, waystone={"tier": 5, "unidentified": True,
+                                             "risky": risky["waystone"]["risky"]}))
+    assert (t["word"], t["tone"]) == ("Not checked", "note")
+    for t in (eval_card_text(None), eval_card_text({})):
+        assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
+            [], "Not checked", "note", False)
 
 
 def test_overlay_lines_fit_the_card():

@@ -135,6 +135,12 @@ def test_decision_and_records():
     claude = (ROOT / "CLAUDE.md").read_text(encoding="ascii")
     assert "(decision 0041)" in claude
     assert re.search(r"Game exit shows as an idle.*?amended 2026-11-17", claude, flags=re.S)
-    roadmap = (ROOT / "ROADMAP.md").read_text(encoding="ascii")
-    row = roadmap[roadmap.index("DESKTOP-CLIENT"):][:3000]
+    # AUTO-02: a done row may have been pruned into docs/roadmap/archive/.
+    texts = [(ROOT / "ROADMAP.md").read_text(encoding="ascii")]
+    texts += [p.read_text(encoding="ascii")
+              for p in sorted((ROOT / "docs" / "roadmap" / "archive").glob("*.md"))]
+    roadmap = "\n".join(texts)
+    m = re.search(r"^- \[[ xX]\] DESKTOP-CLIENT\b", roadmap, flags=re.M)
+    assert m, "DESKTOP-CLIENT row in ROADMAP.md or docs/roadmap/archive/"
+    row = roadmap[m.start():][:3000]
     assert "ZERO-CLICK:" in row

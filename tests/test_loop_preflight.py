@@ -95,8 +95,9 @@ def test_preflight_red_gate_exits_1(tmp_path):
 
 def test_handoff_flag_prints_only_the_count(tmp_path):
     (tmp_path / "AL-NEXT-SESSION.txt").write_text(
-        "SESSION: 7\n\nCarried forward\n- Fix the thing in tools.\n"
-        "- OPERATOR: paste the hook block.\n- Build the other thing\n  over two lines.\n"
+        "SESSION: 7\n\nCarried forward\n- LOOP: Fix the thing in tools.\n"
+        "- LOOP: OPERATOR: paste the hook block.\n- LOOP: Build the other thing\n"
+        "  over two lines.\n- Not loop work.\n"
         "\nNext section\n- not counted\n", encoding="utf-8")
     lines = []
     rc = loop_preflight.main(["--handoff"], root=tmp_path, out=lines.append)
