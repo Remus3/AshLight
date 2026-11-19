@@ -59,13 +59,12 @@ On the dashboard (the overlay shows the first three in a small corner box):
 
 ## Quick start (Windows)
 
-Needs Python 3.11 or newer. `build.ps1` runs the test suite and needs pytest
-(`python -m pip install pytest`); the app itself does not. Node.js 20 or newer
-is only needed for the optional overlay.
+Needs Python 3.11 or newer (take 3.13 or newer for a new install: python.org
+has no Windows installer for 3.11 or 3.12 any more). Node.js 22.12.0 or newer
+is only needed for the optional overlay. Two calls install and start it:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # checks, folders, overlay packages
-powershell -ExecutionPolicy Bypass -File scripts\build.ps1   # runs the tests, writes a build stamp
 powershell -ExecutionPolicy Bypass -File scripts\run.ps1     # core, supervisor, overlay (if installed), dashboard
 powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoOverlay   # same, without the overlay
 powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoBrowser   # same, prints the dashboard link instead

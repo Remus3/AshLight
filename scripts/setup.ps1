@@ -2,7 +2,7 @@
 .SYNOPSIS
   AshLight setup (idempotent). Windows PowerShell 5.1 compatible.
 .DESCRIPTION
-  Checks Python >= 3.11 and Node >= 20, creates the sidecar dirs, copies
+  Checks Python >= 3.11 and Node >= 22.12.0, creates the sidecar dirs, copies
   config/local.example.json to config/local.json only when it is missing, and
   installs the overlay's npm packages only when app/node_modules is missing
   or the lockfile changed (hash stamp in the sidecar Build dir).
@@ -89,6 +89,11 @@ function Write-AlLog([string]$Message) {
 }
 
 Write-AlLog "setup: python $pyVer ok"
+# DEP-02 (F-019): 3.11 stays the floor, but python.org ships no Windows
+# installer for a security-only branch; one advisory line, never a stop.
+if (@('3.11', '3.12') -contains $pyVer) {
+    Write-AlLog "setup: note - Python $pyVer still works, but python.org has no Windows installer for that branch any more; a new install should take 3.13 or newer"
+}
 
 # SEC-ACL-SETUP (F-011, decision 0051): AshLight's own folders and the
 # per-host config get the private ACL (the player, SYSTEM, the local admins
@@ -171,9 +176,13 @@ if (-not $node) {
     Write-AlLog 'setup: Node not found - overlay skipped; core and dashboard work without it'
     exit 0
 }
+# DEP-02 (F-019): the floor is the pinned Electron's engines.node value in
+# app/package-lock.json (tests/test_source_install.py keeps them equal).
+$nodeFloor = '22.12.0'
 $nodeVer = (& $node.Source --version).Trim().TrimStart('v')
-if ([version]$nodeVer -lt [version]'20.0') {
-    Write-AlLog "setup: Node $nodeVer is older than 20 - overlay skipped"
+$nodeNum = ($nodeVer -split '[-+]')[0]
+if ([version]$nodeNum -lt [version]$nodeFloor) {
+    Write-AlLog "setup: Node $nodeVer is older than $nodeFloor - overlay skipped"
     exit 0
 }
 Write-AlLog "setup: node $nodeVer ok"
