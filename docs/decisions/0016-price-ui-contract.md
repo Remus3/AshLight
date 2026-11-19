@@ -183,8 +183,8 @@ after the press (a clock step) or a missing one ages nothing. The `off`
 and `contact not set` words name poe.ninja and the Prices and web data
 card instead of config/local.json (the card's contact field lands with
 DATA-CONTACT-FIELD; until then decision 0017's amendment means neither
-state is produced, so no player meets the pointer early). Exact tests: tests/test_price_card_age.py,
-tests/test_price_text.py.
+state is produced, so no player meets the pointer early). Exact tests:
+tests/test_price_card_age.py, tests/test_price_text.py.
 ALTERNATIVES: (B) the age as a top-level card field; (C) hide every price
 over 2 h old; (D) a league tag on every price line.
 WHY: the age belongs to the cached price, so it rides with it; a 3 h old
@@ -194,3 +194,15 @@ permanent tag costs the glance line.
 REVERSES IF: poe.ninja's refresh cadence makes a 2 h price normal, the
 core gains a refresh that keeps the cache under 2 h in play, or decision
 0026 drops league_changed_at.
+DPC-1 (design review of DATA-PRICE-CARD-TEXT, adjudicator ruling
+2026-11-18). DECISION: keep the spec copy for `off` and `contact not
+set`; DPC-1 is downgraded from S2 to S3 and deferred to
+DATA-CONTACT-FIELD (wave 17).
+ALTERNATIVES: a "settings file" pointer; card-neutral wording.
+WHY: the states are unreachable until the contact field lands (price.py
+only emits status "link" since decision 0017), and the spec bars naming
+a file.
+REVERSES IF: DATA-CONTACT-FIELD is dropped or moved out of the Prices and
+web data card, or any code path emits status "off" / "contact not set"
+before wave 17 (then DPC-1 reopens as S2 and the copy becomes "Contact
+not set - turn on Use web data in Prices and web data").
