@@ -62,6 +62,41 @@ def test_reading():
     assert status({"reading": False, "consented": False}, "reading") == "unknown"
 
 
+def test_reading_dead_and_unreadable():
+    # RUN-TAIL-HEAL-CORE: a dead reader thread reads as not reading (the
+    # core's fact follows the thread), a fix row, never PASS
+    r = row({"reading": False}, "reading")
+    assert r["status"] == "fail" and r["detail"] == "Not reading Client.txt." and r["fix"]
+    # an unreadable file wins over a stale reading flag, with its own words
+    for reading in (True, False):
+        r = row({"reading": reading, "unreadable": True}, "reading")
+        assert r["status"] == "fail" and r["detail"] == diag.UNREADABLE_DETAIL
+        assert r["fix"] == diag.FIX_UNREADABLE
+        assert "Client.txt" in r["fix"] and "run.ps1" not in r["fix"]
+    # no opt-in: nothing is read, so nothing is unreadable
+    assert status({"reading": False, "consented": False, "unreadable": True},
+                  "reading") == "unknown"
+
+
+def test_core_reading_fact_follows_the_thread(tmp_path):
+    core = Core(runtime=tmp_path, tail=False)
+    try:
+        core.state.set_tailer(consented=True, reading=True)
+        facts = core.diag_facts()
+        assert facts["reading"] is False and facts["unreadable"] is False
+
+        class Alive:
+            running = True
+
+        core.tailer = Alive()
+        assert core.diag_facts()["reading"] is True
+        Alive.running = False
+        assert core.diag_facts()["reading"] is False
+        core.tailer = None
+    finally:
+        core.close()
+
+
 def test_last_line():
     assert status({}, "last_line") == "pass"
     assert status({"last_line_at": None}, "last_line") == "unknown"

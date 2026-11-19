@@ -1,1 +1,42 @@
-/* AshLight dashboard: region C, the setup, error and idle cards (stub, no rules yet; PLAY-TD-12-CONTEXT-SETUP fills it). */
+/* AshLight dashboard: region C, the setup, error and idle modes
+   (PLAY-TD-12-CONTEXT-SETUP; plan 03 TD-12, sections 3.4 and 3.8). Line
+   boxes from the shared row classes of web/app.css: title 26, body rows
+   22, the path and facts rows 20, and one 36 px button row, no gaps.
+   Setup 190 px (170 compact, where the promise line leaves), error 172,
+   idle 178, inside region C's content box (206 px full, 190 compact, with
+   the 10 px padding of web/context.css). */
+#play-c .su-rows {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+}
+#play-c .su-title { font-weight: 600; }
+#play-c .su-act {
+  display: flex;
+  align-items: center;
+  gap: 0 0.75rem;
+  min-height: 2.25rem;
+  min-width: 0;
+}
+#play-c .su-btn {
+  flex: 0 0 auto;
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  line-height: var(--al-lh-body);
+  white-space: nowrap;
+}
+#play-c .su-said { flex: 0 1 auto; min-width: 0; color: var(--fk-status-bad); }
+#play-c .su-glyph { font-family: var(--al-font-mono); color: var(--fk-text-muted); }
+#play-c .su-row[data-state="done"] .su-glyph { color: var(--fk-status-ok); }
+/* the compact class drops the promise line (web/slots.js setupPromise):
+   the same scale-step cascade as the track tokens of web/app.css, the
+   last match wins */
+@media (min-width: 64em) and (min-height: 43.75em) { #play-c .su-promise { display: none; } }
+@media (min-width: 75em) and (min-height: 47.5em) { #play-c .su-promise { display: block; } }
+@media (min-width: 80em) and (min-height: 54.6875em) { #play-c .su-promise { display: none; } }
+@media (min-width: 93.75em) and (min-height: 59.375em) { #play-c .su-promise { display: block; } }
+@media (min-width: 96em) and (min-height: 65.625em) { #play-c .su-promise { display: none; } }
+@media (min-width: 112.5em) and (min-height: 71.25em) { #play-c .su-promise { display: block; } }
+@media (min-width: 128em) and (min-height: 87.5em) { #play-c .su-promise { display: none; } }
+@media (min-width: 150em) and (min-height: 95em) { #play-c .su-promise { display: block; } }

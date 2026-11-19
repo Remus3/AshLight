@@ -7,27 +7,21 @@
    (switch, clear). */
 (function (root, factory) {
   "use strict";
-  var api = factory();
-  if (typeof module === "object" && module.exports) {
+  var common = typeof module === "object" && module.exports;
+  var api = factory(common ? require("./fmt.js") : root.ALFmt);
+  if (common) {
     module.exports = api;
   } else {
     root.ALHistory = api;
   }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (F) {
   "use strict";
 
   var CLEARED = "Run history cleared.";
   var FAILED = "That didn't save. Try again.";
 
-  function pad(n) { return n < 10 ? "0" + n : String(n); }
-
-  function duration(s) {
-    s = Math.max(0, Math.floor(Math.abs(s)));
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = s % 60;
-    return h > 0 ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
-  }
+  /* The size of a time either side of zero, no unknown form (web/fmt.js). */
+  var duration = F.durationAbs;
 
   /* "+1:30 slower", "0:45 faster", "same as best", or "" with no time yet. */
   function deltaText(d) {
