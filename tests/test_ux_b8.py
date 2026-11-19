@@ -2,12 +2,10 @@
 UX-DASH-DENSITY, UX-OVERLAY-REAL3."""
 
 import re
-from pathlib import Path
-
+import srcpaths
 from server.al import pricewatch, underlevel
 
-ROOT = Path(__file__).resolve().parents[1]
-HTML = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+HTML = srcpaths.index_html()
 MAIN = HTML[HTML.index("<main>"):HTML.index("</main>")]
 
 
@@ -39,7 +37,7 @@ def test_underlevel_sentence_does_not_repeat_the_level_tile():
 
 
 def test_look_for_next_hint_has_no_jargon():
-    js = (ROOT / "web" / "health.js").read_text(encoding="ascii")
+    js = srcpaths.read("health.js")
     m = re.search(r'var NO_WEIGHTS = ((?:"[^"]*"\s*\+?\s*)+);', js)
     text = "".join(re.findall(r'"([^"]*)"', m.group(1)))
     assert "build calc" not in text and "Path of Building calc" in text
@@ -84,7 +82,7 @@ def test_live_regions_stay_within_the_cap():
 
 
 def test_dom_order_is_tab_order():
-    css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
+    css = srcpaths.read("app.css", encoding="utf-8")
     assert not re.search(r"(^|[;{\s])order\s*:", css)
     assert "tabindex=\"1" not in HTML and "tabindex=\"2" not in HTML
     # PLAY-TD-09B-SKELETON: the Play regions are placed by grid-area only,

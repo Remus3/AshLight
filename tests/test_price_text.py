@@ -5,6 +5,7 @@ values are invented."""
 
 from server.al.state import (EVAL_CARD_S, PRICE_CARD_S, PRICE_TEXT, SAME_PRESS_S,
                              SessionState, overlay_card, price_card_text)
+import srcpaths
 from server.al.theorycraft import live
 
 
@@ -249,9 +250,7 @@ def test_card_different_presses_newest_wins_and_expiry():
 def test_dashboard_markup_opt_in_off_and_credit_visible():
     """DATA-NINJA-UI ACCEPT: the credit is in the page; the web-data box is
     never pre-ticked (the opt-in stays explicit, decision 0013)."""
-    from pathlib import Path
-    root = Path(__file__).resolve().parents[1]
-    html = (root / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     assert '<script src="/web/prices.js" defer></script>' in html
     assert '<input id="webdata-on" type="checkbox">' in html
     assert "checked" not in html.split('id="webdata-on"', 1)[1].split(">", 1)[0]

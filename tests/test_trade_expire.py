@@ -6,6 +6,7 @@ import threading
 import time
 from pathlib import Path
 
+import srcpaths
 from server.al import http as http_mod
 from server.al.core import Core
 from server.al.state import TRADE_EXPIRE_S, SessionState
@@ -71,7 +72,7 @@ def test_dismiss_still_works_before_expiry():
 
 
 def test_dashboard_states_the_rule():
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     assert "Requests clear after 10 minutes." in html
     assert 'id="trade-clear"' in html  # Dismiss all stays
 
