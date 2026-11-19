@@ -86,3 +86,9 @@ def test_dom_order_is_tab_order():
     css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
     assert not re.search(r"(^|[;{\s])order\s*:", css)
     assert "tabindex=\"1" not in HTML and "tabindex=\"2" not in HTML
+    # PLAY-TD-09B-SKELETON: the Play regions are placed by grid-area only,
+    # so their DOM order (G, C, T, N, B, I, U) is the Tab order in every class
+    play = MAIN[MAIN.index('id="panel-play"'):MAIN.index('id="panel-run"')]
+    assert re.findall(r'<section id="play-([a-z])"', play) == list("gctnbiu")
+    for r in "gctnbiu":
+        assert re.search(r"#play-%s \{ grid-area: %s; \}" % (r, r), css), r
