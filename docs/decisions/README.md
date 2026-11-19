@@ -16,6 +16,9 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0056: plug-in folder for ticks, Checks rows and routes (RUN-SEAMS).
+- 0055: loop and wave contract - BLOCKED reasons, tag-then-read claim,
+  folder hold, shared merge lock, the six checks (WAVE-INTERPLAY).
 - 0054: core hello handshake: clients prove the core before they send
   the token (SEC-HELLO-CORE).
 - 0053: main-process parts seam (app/parts/) (OVL-MAIN-PARTS).

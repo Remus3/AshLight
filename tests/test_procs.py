@@ -19,12 +19,13 @@ import pytest
 
 from server.al import keepalive as ka
 from server.al import paths, ports, procs
+from tc_live_util import leased_port  # noqa: F401 (a fixture)
 
 ROOT = Path(__file__).resolve().parents[1]
 STOP = ROOT / "scripts" / "stop.ps1"
 RUN = ROOT / "scripts" / "run.ps1"
 PS51 = shutil.which("powershell.exe") if sys.platform == "win32" else None
-TEST_PORT = ports.PORT_BLOCK[1] - 1  # never the live core's port
+TEST_PORT = ports.PORT_BLOCK[1] - 1  # a number for fake supervisors only; real binds lease
 WIN = pytest.mark.skipif(sys.platform != "win32", reason="Windows process APIs")
 FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
@@ -220,7 +221,7 @@ def _read(path):
 @pytest.mark.slow
 @pytest.mark.server
 @pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
-def test_stop_script_leaves_no_ashlight_process(tmp_path):
+def test_stop_script_leaves_no_ashlight_process(tmp_path, leased_port):
     runtime = tmp_path / "runtime"
     runtime.mkdir()
     edir = tmp_path / "electron" / "dist"
@@ -234,7 +235,7 @@ def test_stop_script_leaves_no_ashlight_process(tmp_path):
 
     spawned = []
     try:
-        sup_cmd = [sys.executable, "-m", "server.al.keepalive", "--port", str(TEST_PORT),
+        sup_cmd = [sys.executable, "-m", "server.al.keepalive", "--port", str(leased_port),
                    "--poll", "0.5", "--backoff", "0.5,1,2", "--core-args", "--no-tail"]
         sup = subprocess.Popen(sup_cmd, cwd=str(ROOT), env=env, stdin=subprocess.DEVNULL,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
