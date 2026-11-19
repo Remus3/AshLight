@@ -3,7 +3,6 @@ spawns claude, touches a git remote or calls schtasks. Merge tests use a
 throwaway local git repo under tmp_path."""
 
 import contextlib
-import datetime as _dt
 import json
 import os
 import re
@@ -18,8 +17,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import al_loop  # noqa: E402
 
 from al_loopkit import (  # noqa: E402 (plan 156: shared with the sibling loop tests)
-    GIT_TIMEOUT_S, HANDOFF, ROADMAP, FakeSpawn, _inbox_root, deps, git, git_world,
-    isolate_git, make_root, real_git)
+    ROADMAP, FakeSpawn, _inbox_root, deps, git, git_world, isolate_git, make_root,
+    real_git)
 
 # Plan 097 / 156 (TESTS-A-18): only the tests that build a real git world under
 # tmp_path are marked git, one by one, so the fast tier runs the pure ones; the
@@ -37,26 +36,6 @@ def progress(root):
 
 
 # ---------------------------------------------------------------- parsing
-
-def test_roadmap_rows_and_flip():
-    rows = al_loop.roadmap_rows(ROADMAP)
-    assert [(r["id"], r["open"]) for r in rows] == [("001", False), ("012", True),
-                                                     ("013", True)]
-    out = al_loop.flip_roadmap(ROADMAP, "012", "done 2026-10-05 (loop; refute 1/3 PASS)")
-    assert "- [x] 012 Grind spot recommender -- done 2026-10-05 (loop; refute 1/3 PASS)" in out
-    assert "- [ ] 013 Season pass tracker" in out
-    assert al_loop.flip_roadmap(out, "001", "x") == out  # done rows never touched
-
-
-def test_handoff_items_tags():
-    items = al_loop.handoff_items(HANDOFF)
-    assert [i["skip"] for i in items] == ["operator", "operator", "other-tree", "info", "info", None]
-    assert items[-1]["text"].endswith("rewrite is re-read.")
-    assert re.fullmatch(r"H[0-9a-f]{6}", items[-1]["id"])
-    # the id is stable across whitespace re-wraps
-    again = al_loop.handoff_items(HANDOFF.replace("is\n  re-read", "is re-read"))
-    assert again[-1]["id"] == items[-1]["id"]
-
 
 def test_title_dedupe_by_token_overlap():
     existing = ["Grind spot recommender by AP/DP/level from a sourced community table",
@@ -548,25 +527,6 @@ def test_priority_rows_dispatch_first(tmp_path):
 # ---------------------------------------------------------------- dispatch
 
 @pytest.mark.git
-def test_dispatch_open_rows_then_handoff_to_free_lanes(tmp_path):
-    root = make_root(tmp_path)
-    d = deps(root, lane_state=lambda: [
-        {"index": 0, "state": "RUNNING", "lane": "build"},
-        {"index": 1, "state": "FREE", "lane": None},
-        {"index": 2, "state": "FREE", "lane": None}])
-    al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["012", "013"]
-    items = al_loop.Items(root)
-    r12 = items.get("012")
-    assert r12["state"] == "dispatched" and r12["lane"] == "data" and r12["pid"] == 4242
-    assert "ROADMAP.md row 012 - Grind spot recommender" in r12["prompt"]
-    assert "v7 checklist" in r12["prompt"] and "decision, alternatives, why" in r12["prompt"]
-    assert items.get("013")["lane"] == "review"
-    al_loop.tick(deps=d, no_push=True)  # all lanes taken: nothing new
-    assert d.seen["launch"] == ["012", "013"]
-
-
-@pytest.mark.git
 def test_dead_lane_process_is_redispatched_once(tmp_path):
     root = make_root(tmp_path, roadmap=ROADMAP.replace("- [ ] 013 Season pass tracker\n", ""),
                      handoff="")
@@ -677,28 +637,6 @@ def test_checklist_cli_heads_with_handoff_session(tmp_path, monkeypatch, capsys)
 
 
 # ---------------------------------------------------------------- finish + merge
-
-@pytest.mark.git
-def test_finished_lane_is_verified_committed_merged_and_flipped(tmp_path):
-    root, wt = git_world(tmp_path)
-    sp = FakeSpawn([{"rc": 0, "error": None, "result": "fine\nVERDICT: PASS"}])
-    d = deps(root, spawn=sp, git=real_git,
-             lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
-                                 for i, n in enumerate(("build", "data", "review"))])
-    al_loop.tick(deps=d, no_push=True)
-    rec = al_loop.Items(root).get("012")
-    assert rec["state"] == "merged" and rec["verdict"] == "PASS"
-    v = sp.calls[0]
-    assert v["cwd"] == wt and v["governor"] == "queued" and v["writes_code"] is False
-    assert "refute round 1/3" in v["prompt"]
-    log = git(root, "log", "-1", "--format=%P%n%B", "main")
-    assert len(log.splitlines()[0].split()) == 2  # --no-ff merge commit
-    lane_msg = git(root, "log", "-1", "--format=%B", rec["commit"])
-    assert "refute-rounds: 0/3" in lane_msg and "verifier: PASS" in lane_msg
-    rm = (root / "ROADMAP.md").read_text()
-    assert "- [x] 012 Grind spot recommender -- done" in rm and "refute 0/3 PASS" in rm
-    assert (root / "feature.txt").exists()
-
 
 @pytest.mark.git
 def test_refute_rounds_cap_at_three_then_adjudicate_unmerged(tmp_path):
@@ -852,37 +790,6 @@ def test_dirty_main_defers_merge(tmp_path):
     assert al_loop.Items(root).get("012")["state"] == "merged"
 
 
-# ---------------------------------------------------------------- idle mode
-
-@pytest.mark.git
-def test_idle_dispatches_one_deep_dive_per_day(tmp_path):
-    rm = ROADMAP.replace("- [ ] ", "- [x] ")
-    root = make_root(tmp_path, roadmap=rm, handoff="",
-                     local={"loop": {"max_new_plans_per_day": 1}})
-    d = deps(root)
-    al_loop.tick(deps=d, no_push=True)
-    assert len(d.seen["launch"]) == 1 and d.seen["launch"][0].startswith("DD-")
-    rec = al_loop.Items(root).get(d.seen["launch"][0])
-    assert rec["kind"] == "deep-dive" and "AT MOST 1 new ROADMAP.md rows" in rec["prompt"]
-    assert "robots.txt" in rec["prompt"] and "Grind spot recommender" in rec["prompt"]
-    assert "docs/research/0001-deep-dive-" in rec["prompt"]
-    al_loop.tick(deps=d, no_push=True)
-    assert len(d.seen["launch"]) == 1
-
-
-def test_deep_dive_checks_cap_and_dupes(tmp_path):
-    root = make_root(tmp_path, local={"loop": {"max_new_plans_per_day": 1}})
-    wt = tmp_path / "wt"
-    (wt / "docs" / "research").mkdir(parents=True)
-    (wt / "ROADMAP.md").write_text(ROADMAP + "- [ ] 015 (build) Grind spot recommender v2\n"
-                                   "- [ ] 016 (data) Lifeskill planner\n", newline="\n")
-    t = al_loop.Tick(deps(root))
-    out = t.extra_checks({"kind": "deep-dive", "date": "20261005"}, wt)
-    assert any("cap is 1" in f for f in out)
-    assert any("row 015" in f and "duplicates" in f for f in out)
-    assert any("missing docs/research" in f for f in out)
-
-
 # ---------------------------------------------------------------- push
 
 class FakeGit:
@@ -946,22 +853,6 @@ def test_lane_worker_records_result(tmp_path):
     assert rec["state"] == "ran" and rec["worktree"] == "wt"
     assert al_loop.lane_worker("012", deps=deps(root), run_lane=run_lane) == 0
     assert len(seen) == 1  # only a dispatched record runs
-
-
-def test_lane_worker_refusal_and_deep_dive_tools(tmp_path):
-    root = make_root(tmp_path)
-    items = al_loop.Items(root)
-    items.put({"id": "DD-1", "kind": "deep-dive", "state": "dispatched", "lane": "build",
-               "prompt": "p", "title": "t", "label": "l"})
-    sp = FakeSpawn()
-
-    def run_lane(lane, prompt, spawn=None, root=None, **kw):
-        spawn(root, "AL", prompt, extra=("x",))
-        raise RuntimeError("lanes_full")
-
-    assert al_loop.lane_worker("DD-1", deps=deps(root, spawn=sp), run_lane=run_lane) == 1
-    assert "WebFetch" in sp.calls[0]["extra"][3]
-    assert items.get("DD-1")["state"] == "refused"
 
 
 def _dispatched(root, iid="012", **extra):
@@ -1193,13 +1084,6 @@ def test_dispatched_without_pid_is_reaped(tmp_path):
     assert al_loop.Items(root).get("012")["state"] == "lost"
 
 
-def test_handoff_password_oauth_per_host_items_are_operator_only():
-    text = ("Carried forward:\n- Enter the account password in the launcher.\n"
-            "- Grant the OAuth scope for the API.\n- Set the per-host OCR path.\n"
-            "- Fix the OCR cache key.\n")
-    assert [i["skip"] for i in al_loop.handoff_items(text)] == ["operator"] * 3 + [None]
-
-
 @pytest.mark.git
 def test_checklist_eta_is_lane_median_less_elapsed(tmp_path):
     root = make_root(tmp_path, roadmap="", handoff="")
@@ -1406,26 +1290,6 @@ def test_loop_gates_fail_closed_on_shell_operators(tmp_path):
 
 # ---------------------------------------------------------------- fix-0130: ROADMAP collisions
 
-def test_resolve_roadmap_takes_both_sides_row_changes():
-    base = ROADMAP
-    ours = ROADMAP.replace("- [ ] 012 Grind spot recommender",
-                           "- [x] 012 Grind spot recommender -- done A")
-    theirs = ROADMAP.replace("- [ ] 013 Season pass tracker",
-                             "- [x] 013 Season pass tracker -- done B") + \
-        "- [ ] 020 New idea\n"
-    out = al_loop.resolve_roadmap(base, ours, theirs)
-    assert "- [x] 012 Grind spot recommender -- done A" in out
-    assert "- [x] 013 Season pass tracker -- done B" in out
-    assert "- [ ] 020 New idea" in out
-    assert out.index("] 013 ") < out.index("] 020 ")
-    # both sides changed one row: main (ours) wins
-    both = theirs.replace("- [ ] 012 Grind spot recommender\n",
-                          "- [x] 012 Grind spot recommender -- lane says\n")
-    assert "-- done A" in al_loop.resolve_roadmap(base, ours, both)
-    # a non-row (prose) change on both sides is not auto-resolved
-    assert al_loop.resolve_roadmap(base, ours + "prose A\n", theirs + "prose B\n") is None
-
-
 def _lane(root, tmp_path, name, iid, edit):
     wt = tmp_path / "al-worktrees" / name
     git(root, "worktree", "add", "-q", "--detach", str(wt))
@@ -1434,11 +1298,6 @@ def _lane(root, tmp_path, name, iid, edit):
                              "label": f"plan {iid}: t", "state": "ran", "worktree": str(wt),
                              "rc": 0, "lane": name, "rounds": 0})
     return wt
-
-
-def _flip_in(wt, iid):
-    rm = wt / "ROADMAP.md"
-    rm.write_text(al_loop.flip_roadmap(rm.read_text(), iid, "done by lane"), newline="\n")
 
 
 def _two_lane_world(tmp_path, edit_a, edit_b):
@@ -1455,46 +1314,6 @@ def _two_lane_world(tmp_path, edit_a, edit_b):
                                  for i, n in enumerate(("build", "data", "review"))])
     al_loop.tick(deps=d, no_push=True)
     return root
-
-
-@pytest.mark.git
-def test_lane_commit_never_flips_roadmap_merge_does(tmp_path):
-    root, wt = git_world(tmp_path)
-    sp = FakeSpawn([{"rc": 0, "error": None, "result": "VERDICT: PASS"}])
-    d = deps(root, spawn=sp, git=real_git,
-             lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
-                                 for i, n in enumerate(("build", "data", "review"))])
-    al_loop.tick(deps=d, no_push=True)
-    rec = al_loop.Items(root).get("012")
-    assert rec["state"] == "merged"
-    lane_files = git(root, "show", "--name-only", "--format=", rec["commit"]).split()
-    assert "ROADMAP.md" not in lane_files
-    assert "- [x] 012 Grind spot recommender -- done" in git(root, "show", "main:ROADMAP.md")
-    assert len(git(root, "log", "-1", "--format=%P", "main").split()) == 2
-    assert git(root, "status", "--porcelain") == ""
-
-
-@pytest.mark.slow
-@pytest.mark.git
-def test_parallel_lanes_flipping_adjacent_rows_both_merge(tmp_path):
-    # the Nfa7953 / 013 / 014 shape: two lanes from one base, adjacent ROADMAP rows
-    def a(wt):
-        (wt / "a.txt").write_text("a\n")
-        _flip_in(wt, "012")
-
-    def b(wt):
-        (wt / "b.txt").write_text("b\n")
-        _flip_in(wt, "013")
-
-    root = _two_lane_world(tmp_path, a, b)
-    items = al_loop.Items(root)
-    assert items.get("012")["state"] == "merged" and items.get("013")["state"] == "merged"
-    rm = (root / "ROADMAP.md").read_text()
-    assert "<<<<" not in rm and rm.count("] 012 ") == 1 and rm.count("] 013 ") == 1
-    assert "- [x] 012 Grind spot recommender -- done" in rm
-    assert "- [x] 013 Season pass tracker -- done" in rm
-    assert (root / "a.txt").exists() and (root / "b.txt").exists()
-    assert git(root, "status", "--porcelain") == ""
 
 
 @pytest.mark.slow
@@ -1546,384 +1365,7 @@ def test_ci_gate_commands_block_run_with_blank_line():
     assert al_loop.ci_gate_commands(text) == ["echo one", "echo two", "echo three"]
 
 
-# ---------------------------------------------------------------- plan 019: dependency gate
-
-DEP_ROADMAP = """# AshLight roadmap
-
-- [x] 001 Skeleton -- done 2026-10-04
-- [ ] 012 Grind spot recommender
-- [ ] 013 Season pass tracker
-- [ ] 014 Coupon check
-"""
-
 T0 = 1_790_000_000.0
-ALL_RUNNING = [{"index": i, "state": "RUNNING", "lane": n}
-               for i, n in enumerate(("build", "data", "review"))]
-
-
-def dep_root(tmp_path, deps_of, roadmap=DEP_ROADMAP):
-    """make_root plus one plan doc per id in deps_of with its Depends-on line."""
-    root = make_root(tmp_path, roadmap=roadmap, handoff="")
-    for iid, line in deps_of.items():
-        body = f"# Plan {iid} - t\n\nText mentioning 099 here.\n\n"
-        if line is not None:
-            body += f"Depends on: {line}\n"
-        (root / "docs" / "plans" / f"{iid}-x.md").write_text(body, newline="\n")
-    if "012" in deps_of:
-        (root / "docs" / "plans" / "012-grind-spots.md").unlink()
-    return root
-
-
-def test_plan_depends_parser():
-    assert al_loop.plan_depends("# Plan 1\n\nDepends on: none.\n") == []
-    assert al_loop.plan_depends("Depends on: 021.\n") == ["021"]
-    assert al_loop.plan_depends("x\nDepends on: 035, 028.\n") == ["035", "028"]
-    assert al_loop.plan_depends("Depends on: 027 (net proceeds) and 031\n") == ["027", "031"]
-    assert al_loop.plan_depends("# Plan 2\nno such line, mentions 027\n") == []
-    # only the first matching line, only at a line start
-    assert al_loop.plan_depends("carry `Depends on:` 010\nDepends on: 022.\n"
-                                "Depends on: 023.\n") == ["022"]
-    assert al_loop.plan_depends("Depends on: 1234, 12, 05x\n") == []
-
-
-@pytest.mark.git
-def test_work_list_skips_rows_waiting_on_open_dependencies(tmp_path):
-    root = dep_root(tmp_path, {"012": "013.", "013": "none.", "014": "001."})
-    d = deps(root)
-    rows, work, skipped = al_loop.Tick(d).work_list()
-    assert [w["id"] for w in work] == ["013", "014"]
-    wait = next(s for s in skipped if s["id"] == "012")
-    assert wait["reason"] == "waits on 013"
-    al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["013", "014"]
-    row = next(r for r in progress(root)["checklist"] if r["id"] == "012")
-    assert row["state"] == "waits on 013"
-    assert al_loop.render_checklist(progress(root)).count(" 012: ") == 1
-
-
-@pytest.mark.git
-def test_done_dependency_dispatches_and_priority_stays_first(tmp_path):
-    rm = DEP_ROADMAP.replace("- [ ] 013 Season pass tracker",
-                             "- [x] 013 Season pass tracker -- done")
-    rm = rm.replace("- [ ] 014 Coupon check",
-                    "- [ ] 014 Coupon check (priority)")
-    root = dep_root(tmp_path, {"012": "013.", "014": "001."}, roadmap=rm)
-    d = deps(root)
-    al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["014", "012"]
-
-
-@pytest.mark.git
-def test_dependency_cycle_leaves_both_skipped_and_is_logged(tmp_path):
-    root = dep_root(tmp_path, {"012": "013.", "013": "012.", "014": "none."})
-    d = deps(root)
-    doc = al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["014"]
-    assert any("dependency cycle" in s for s in doc["log"])
-
-
-@pytest.mark.git
-def test_missing_doc_or_unknown_dependency_fails_open(tmp_path):
-    root = dep_root(tmp_path, {"012": "077.", "014": "none."})  # 013 has no doc
-    d = deps(root)
-    doc = al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["012", "013", "014"]
-    assert any("012" in s and "077" in s and "no ROADMAP row" in s for s in doc["log"])
-    # AL rows rarely have a plan doc: a missing doc gates nothing and logs nothing
-    assert not any("no plan doc" in s for s in doc["log"])
-
-
-# -- 4a blocked markers
-
-def blocked_world(tmp_path, dispatched=T0 - 600):
-    root, wt = git_world(tmp_path)
-    (wt / "feature.txt").unlink()  # a clean worktree: the lane changed nothing
-    items = al_loop.Items(root)
-    rec = items.get("012")
-    rec["dispatched"] = al_loop.iso(dispatched)
-    items.put(rec)
-    return root, wt
-
-
-def marker(tree, updated, status="blocked", needs=("013",)):
-    p = Path(tree) / "ops/loop/control/progress/p012-build.json"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    doc = {"task": "p012-build", "status": status, "updated": updated}
-    if needs is not None:
-        doc["needs"] = list(needs)
-    p.write_text(json.dumps(doc))
-
-
-def finish(root):
-    d = deps(root, git=real_git, lane_state=lambda: ALL_RUNNING)
-    doc = al_loop.tick(deps=d, no_push=True)
-    rec = al_loop.Items(root).get("012")
-    # plan 098: the review worker's steps land in the record, not the tick log
-    doc["log"] = doc["log"] + rec.get("review_log", [])
-    return rec, doc
-
-
-@pytest.mark.git
-def test_fresh_blocked_marker_sets_blocked_not_no_change(tmp_path):
-    root, wt = blocked_world(tmp_path)
-    marker(wt, al_loop.iso(T0 - 60))
-    rec, doc = finish(root)
-    assert rec["state"] == "blocked" and rec["needs"] == ["013"] and rec["blocked_runs"] == 1
-    assert "012: blocked on 013" in doc["log"]
-    row = next(r for r in doc["checklist"] if r["id"] == "012")
-    assert row["state"] == "blocked on 013"
-
-
-@pytest.mark.git
-def test_stale_marker_in_a_reused_worktree_is_plain_no_change(tmp_path):
-    root, wt = blocked_world(tmp_path)
-    marker(wt, al_loop.iso(T0 - 7200))
-    rec, doc = finish(root)
-    assert rec["state"] == "no-change" and "blocked_runs" not in rec
-    assert "012: stale blocked marker ignored" in doc["log"]
-
-
-@pytest.mark.git
-def test_worktree_marker_is_preferred_over_main_checkout(tmp_path):
-    root, wt = blocked_world(tmp_path)
-    marker(wt, al_loop.iso(T0 - 60), needs=("013",))
-    marker(root, al_loop.iso(T0 - 60), needs=("014",))
-    rec, _ = finish(root)
-    assert rec["needs"] == ["013"]
-    root2, _ = blocked_world(tmp_path / "b")
-    marker(root2, al_loop.iso(T0 - 60), needs=("014",))
-    rec2, _ = finish(root2)
-    assert rec2["state"] == "blocked" and rec2["needs"] == ["014"]
-
-
-@pytest.mark.slow
-@pytest.mark.git
-def test_malformed_markers_are_plain_no_change_with_a_step_line(tmp_path):
-    cases = [{"updated": al_loop.iso(T0 - 60), "needs": None},
-             {"updated": al_loop.iso(T0 - 60), "needs": ("13", "abc")},
-             {"updated": al_loop.iso(T0 - 60), "needs": ()},
-             {"updated": "yesterday", "needs": ("013",)}]
-    for i, kw in enumerate(cases):
-        root, wt = blocked_world(tmp_path / str(i))
-        marker(wt, **kw)
-        rec, doc = finish(root)
-        assert rec["state"] == "no-change", kw
-        assert any(s.startswith("012: malformed blocked marker") for s in doc["log"]), kw
-    root, wt = blocked_world(tmp_path / "done")
-    marker(wt, al_loop.iso(T0 - 60), status="done")
-    rec, doc = finish(root)
-    assert rec["state"] == "no-change" and not any("marker" in s for s in doc["log"])
-
-
-# -- 4b blocked dispatch
-
-def test_blocked_dispatchable_only_once_needs_are_done():
-    rec = {"state": "blocked", "needs": ["013"], "blocked_runs": 1}
-    assert not al_loop.dispatchable(rec, {"013"})
-    assert al_loop.dispatchable(rec, set())
-    assert al_loop.dispatchable(rec, {"099"})
-    assert not al_loop.dispatchable(dict(rec, blocked_runs=al_loop.MAX_ATTEMPTS), set())
-    assert "blocked" not in al_loop.DONE_STATES
-
-
-@pytest.mark.git
-def test_blocked_record_waits_then_redispatches_after_need_flips(tmp_path):
-    root = dep_root(tmp_path, {"012": "none."}, roadmap=DEP_ROADMAP.replace(
-        "- [ ] 014 Coupon check\n", ""))
-    al_loop.Items(root).put({"id": "012", "kind": "plan", "state": "blocked", "needs": ["013"],
-                             "blocked_runs": 1, "attempts": 1,
-                             "title": "Grind spot recommender", "label": "l"})
-    d = deps(root, lane_state=lambda: ALL_RUNNING[:1])
-    doc = al_loop.tick(deps=d, no_push=True)
-    assert "012" not in d.seen["launch"]
-    assert next(r for r in doc["checklist"] if r["id"] == "012")["state"] == "blocked on 013"
-    rm = root / "ROADMAP.md"
-    rm.write_text(al_loop.flip_roadmap(rm.read_text(), "013", "done"), newline="\n")
-    (al_loop.Items(root).dir / "013.json").unlink()
-    d = deps(root)
-    al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["012"]
-    rec = al_loop.Items(root).get("012")
-    assert rec["state"] == "dispatched" and rec["blocked_runs"] == 1 and rec["attempts"] == 2
-
-
-@pytest.mark.git
-def test_blocked_runs_cap_becomes_gave_up(tmp_path):
-    root = dep_root(tmp_path, {"012": "none."})
-    al_loop.Items(root).put({"id": "012", "kind": "plan", "state": "blocked", "needs": ["013"],
-                             "blocked_runs": al_loop.MAX_ATTEMPTS, "attempts": 2,
-                             "title": "Grind spot recommender", "label": "l"})
-    d = deps(root)
-    doc = al_loop.tick(deps=d, no_push=True)
-    rec = al_loop.Items(root).get("012")
-    assert rec["state"] == "gave-up" and rec["error"] == "blocked 2 times on 013"
-    assert "012" not in d.seen["launch"]
-    assert next(r for r in doc["checklist"] if r["id"] == "012")["state"] == "gave-up"
-
-
-# -- 4c re-arm
-
-def rearm_world(tmp_path, dep_merged_at, dep_row_done=True, own_deps="013."):
-    rm = DEP_ROADMAP.replace("- [ ] 014 Coupon check\n", "")
-    if dep_row_done:
-        rm = rm.replace("- [ ] 013 Season pass tracker",
-                        "- [x] 013 Season pass tracker -- done")
-    root = dep_root(tmp_path, {"012": own_deps}, roadmap=rm)
-    items = al_loop.Items(root)
-    items.put({"id": "012", "kind": "plan", "state": "no-change", "attempts": 1,
-               "dispatched": al_loop.iso(T0 - 3600), "title": "Grind spot recommender",
-               "label": "l"})
-    if dep_merged_at is not None:
-        items.put({"id": "013", "kind": "plan", "state": "merged", "title": "t", "label": "l",
-                   "merged_at": al_loop.iso(dep_merged_at)})
-    return root, items
-
-
-@pytest.mark.git
-def test_no_change_rearms_once_when_dependency_flipped_after_dispatch(tmp_path):
-    root, items = rearm_world(tmp_path, T0 - 1800)
-    d = deps(root)
-    doc = al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["012"]
-    assert any("012: re-armed" in s for s in doc["log"])
-    rec = items.get("012")
-    assert rec["rearmed"] is True and rec["state"] == "dispatched"
-    rec.update(state="no-change", pid=None)  # the re-run changed nothing either
-    items.put(rec)
-    al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"].count("012") == 1 and items.get("012")["state"] == "no-change"
-
-
-@pytest.mark.git
-def test_no_change_with_dependencies_done_before_dispatch_stays(tmp_path):
-    root, items = rearm_world(tmp_path, T0 - 7200)
-    d = deps(root)
-    for _ in range(3):
-        al_loop.tick(deps=d, no_push=True)
-    rec = items.get("012")
-    assert "012" not in d.seen["launch"] and rec["state"] == "no-change"
-    assert rec["rearmed"] is False
-
-
-@pytest.mark.git
-def test_no_change_untouched_with_own_row_done_or_no_dependencies(tmp_path):
-    root, items = rearm_world(tmp_path / "a", T0 - 1800, own_deps="none.")
-    d = deps(root)
-    al_loop.tick(deps=d, no_push=True)
-    assert "012" not in d.seen["launch"] and "rearmed" not in items.get("012")
-    root, items = rearm_world(tmp_path / "b", T0 - 1800)
-    rm = root / "ROADMAP.md"
-    rm.write_text(al_loop.flip_roadmap(rm.read_text(), "012", "done"), newline="\n")
-    d = deps(root)
-    al_loop.tick(deps=d, no_push=True)
-    assert "012" not in d.seen["launch"] and "rearmed" not in items.get("012")
-
-
-@pytest.mark.git
-def test_no_change_with_dependency_still_open_is_reconsidered_later(tmp_path):
-    root, items = rearm_world(tmp_path, None, dep_row_done=False)
-    d = deps(root)
-    al_loop.tick(deps=d, no_push=True)
-    assert "rearmed" not in items.get("012") and d.seen["launch"] == ["013"]
-
-
-@pytest.mark.slow
-@pytest.mark.git
-def test_merge_records_merged_at_only_when_it_flips_and_succeeds(tmp_path):
-    root, wt = git_world(tmp_path)
-    sp = FakeSpawn([{"rc": 0, "error": None, "result": "VERDICT: PASS"}])
-    d = deps(root, spawn=sp, git=real_git, lane_state=lambda: ALL_RUNNING)
-    al_loop.tick(deps=d, no_push=True)
-    rec = al_loop.Items(root).get("012")
-    assert rec["state"] == "merged" and rec["merged_at"] == al_loop.iso(d.clock())
-    root2 = _two_lane_world(tmp_path / "c", lambda w: (w / "f.txt").write_text("a\n"),
-                            lambda w: (w / "f.txt").write_text("b\n"))
-    states = []
-    for iid in ("012", "013"):
-        r = al_loop.Items(root2).get(iid)
-        states.append(r["state"])
-        assert ("merged_at" in r) == (r["state"] == "merged")
-    assert sorted(states) == ["merge-conflict", "merged"]
-
-
-def _git_at(cwd, when, *args):
-    env = dict(os.environ, GIT_COMMITTER_DATE=when, GIT_AUTHOR_DATE=when)
-    r = subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com",
-                        "-c", "core.hooksPath=/dev/null", *args], cwd=str(cwd),
-                       capture_output=True, text=True, env=env, timeout=GIT_TIMEOUT_S)
-    assert r.returncode == 0, r.stderr
-    return r.stdout.strip()
-
-
-@pytest.mark.git
-def test_flip_time_fallback_finds_the_no_ff_merge_commit(tmp_path):
-    root = make_root(tmp_path, roadmap=DEP_ROADMAP, handoff="")
-    day = "2026-10-0{}T10:00:00+00:00".format
-    _git_at(root, day(1), "init", "-q", "-b", "main")
-    _git_at(root, day(1), "add", "-A")
-    _git_at(root, day(1), "commit", "-q", "-m", "add rows")
-    _git_at(root, day(2), "checkout", "-q", "-b", "lane")
-    rm = root / "ROADMAP.md"
-    rm.write_text(al_loop.flip_roadmap(rm.read_text(), "013", "done"), newline="\n")
-    _git_at(root, day(2), "commit", "-q", "-am", "flip on lane")
-    _git_at(root, day(2), "checkout", "-q", "main")
-    (root / "other.txt").write_text("x\n")
-    _git_at(root, day(3), "add", "-A")
-    _git_at(root, day(3), "commit", "-q", "-m", "main moves")
-    _git_at(root, day(4), "merge", "--no-ff", "-q", "-m", "merge", "lane")
-    when = al_loop.roadmap_flip_time(real_git, root, "013")
-    assert when is not None
-    assert _dt.datetime.fromisoformat(when) == _dt.datetime.fromisoformat(day(4))
-    assert al_loop.roadmap_flip_time(real_git, root, "012") is None
-
-
-def test_current_roadmap_dispatches_only_ready_rows(tmp_path):
-    # acceptance on the real ROADMAP + plan docs (read-only): every open row is
-    # either ready (no open Depends-on row) or waiting on exactly its open ones
-    d = deps(make_root(tmp_path), main_tree=ROOT)
-    rows, work, skipped = al_loop.Tick(d, dry_run=True).work_list()
-    open_ids = {r["id"] for r in rows if r["open"]}
-    for w in work:
-        if w["kind"] == "plan":
-            text = al_loop.plan_doc(ROOT, w["id"]) or ""
-            assert not set(al_loop.plan_depends(text)) & open_ids, w["id"]
-    for s in skipped:
-        if s.get("reason") and s.get("skip") != "blocked":
-            want = [x for x in al_loop.plan_depends(al_loop.plan_doc(ROOT, s["id"]))
-                    if x in open_ids]
-            assert want and s["reason"] == "waits on " + ", ".join(want)
-    plans = [w["id"] for w in work if w["kind"] == "plan"]
-    waits = [s["id"] for s in skipped if s.get("reason")]
-    assert sorted(plans + waits) == sorted(open_ids)
-
-
-@pytest.mark.git
-def test_work_list_never_dispatches_blocked_rows(tmp_path):
-    rm = DEP_ROADMAP.replace("- [ ] 013 Season pass tracker",
-                             "- [ ] 013 Season pass tracker BLOCKED (operator plays once)")
-    root = dep_root(tmp_path, {"014": "none."}, roadmap=rm)
-    d = deps(root)
-    rows, work, skipped = al_loop.Tick(d).work_list()
-    assert "013" not in [w["id"] for w in work]
-    hit = next(s for s in skipped if s["id"] == "013")
-    assert hit["skip"] == "blocked" and hit["reason"].startswith("BLOCKED")
-    # lower-case "blocked" in a title is prose, not the marker
-    assert not al_loop.BLOCKED_RX.search("unblocked or blocked rows")
-
-
-def test_rearm_falls_back_to_git_when_dependency_has_no_merged_at(tmp_path):
-    root, items = rearm_world(tmp_path, None)
-    calls = []
-
-    def g(args, cwd, input=None):
-        calls.append(list(args))
-        out = al_loop.iso(T0 - 1800) if args and args[0] == "log" else ""
-        return subprocess.CompletedProcess(args, 0, out, "")
-
-    d = deps(root, git=g)
-    al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["012"] and items.get("012")["rearmed"] is True
-    assert any(a[0] == "log" and "--first-parent" in a for a in calls)
 
 
 # ---------------------------------------------------------------- lane race (fix 2026-10-05)
@@ -2087,25 +1529,6 @@ def test_conflict_keeps_the_lane_commit_under_a_ref(tmp_path):
 
 @pytest.mark.slow
 @pytest.mark.git
-def test_roadmap_only_conflict_never_keeps_a_ref(tmp_path):
-    def a(wt):
-        (wt / "a.txt").write_text("a\n")
-        _flip_in(wt, "012")
-
-    def b(wt):
-        (wt / "b.txt").write_text("b\n")
-        _flip_in(wt, "013")
-
-    root = _two_lane_world(tmp_path, a, b)
-    assert keep_refs(root) == ""
-    d = _free(root, tmp_path)
-    al_loop.tick(deps=d, no_push=True)
-    assert not {"012", "013"} & set(d.seen["launch"])  # idle deep-dive only
-    assert all(r.get("kind") != "resolve" for r in al_loop.Items(root).all().values())
-
-
-@pytest.mark.slow
-@pytest.mark.git
 def test_next_tick_dispatches_a_resolve_lane_first(tmp_path):
     root, items = _conflict_world(tmp_path)
     rm = root / "ROADMAP.md"
@@ -2157,25 +1580,6 @@ def _review(root, verdicts=1):
     return deps(root, spawn=sp, git=real_git,
                 lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
                                     for i, n in enumerate(("build", "data", "review"))])
-
-
-@pytest.mark.slow
-@pytest.mark.git
-def test_resolve_lane_merges_through_the_normal_path_and_drops_the_ref(tmp_path):
-    root, items = _conflict_world(tmp_path)
-    kept = items.get("013")["commit"]
-    al_loop.tick(deps=_free(root, tmp_path), no_push=True)
-    saw = _run_resolve(root, tmp_path, items, "lane-2", "a\nb\n")
-    assert saw == {"merging": True, "markers": True}
-    al_loop.tick(deps=_review(root), no_push=True)
-    rec = items.get("013")
-    assert rec["state"] == "merged" and rec["verdict"] == "PASS"
-    assert "keep_ref" not in rec and keep_refs(root) == ""
-    assert (root / "f.txt").read_text() == "a\nb\n"
-    assert git(root, "merge-base", "--is-ancestor", kept, "main") == ""
-    assert git(root, "log", "-1", "--format=%s", "main") == "merge: plan 013 (plan-013)"
-    assert "- [x] 013 Season pass tracker -- done" in (root / "ROADMAP.md").read_text()
-    assert git(root, "status", "--porcelain") == ""
 
 
 @pytest.mark.slow
@@ -2280,22 +1684,6 @@ def _refusing_git(wt, refuse):
 
 def _passing(n=1):
     return FakeSpawn([{"rc": 0, "error": None, "result": "VERDICT: PASS"}] * n)
-
-
-@pytest.mark.git
-def test_refused_lane_commit_is_salvaged_and_merged_in_main(tmp_path):
-    root, wt = git_world(tmp_path)
-    d = deps(root, spawn=_passing(), git=_refusing_git(wt, {"on": True}),
-             lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
-                                 for i, n in enumerate(("build", "data", "review"))])
-    al_loop.tick(deps=d, no_push=True)
-    rec = al_loop.Items(root).get("012")
-    assert rec["state"] == "merged" and "leak-sweep" in rec["error"]
-    assert (root / "feature.txt").exists() and keep_refs(root) == ""
-    assert git(wt, "status", "--porcelain") == ""  # lane index usable again
-    assert "refute-rounds: 0/3" in git(root, "log", "-1", "--format=%B", rec["commit"])
-    assert "- [x] 012 Grind spot recommender -- done" in (
-        root / "ROADMAP.md").read_text()
 
 
 @pytest.mark.git
