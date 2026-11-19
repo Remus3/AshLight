@@ -2036,7 +2036,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   Automatic: nothing for the player to click; a missing configured path shows one Checks line ('The
   Client.txt path in your settings is missing.') by itself. Narrows Client.txt reading to the
   instance whose indicator the player sees; reads nothing new. BLOCKED: session wave 1.
-- [ ] SEC-STATIC-MAP (build) Serve /web/ from a fixed name map (closes the UNC path leak) + Refuse
+- [x] SEC-STATIC-MAP (build) Serve /web/ from a fixed name map (closes the UNC path leak) + Refuse -- done 2026-11-18 (session wave 1; verified)
   cross-site requests on every route; trim unused allowances. ACCEPT: python -m pytest -q
   tests/test_http_security.py passes with the new cases: tails starting with two slashes, a drive
   name, a stream suffix, a trailing dot and a device name each answer 404 while spies on
@@ -2049,22 +2049,22 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   ZERO-CLICK: Code change, nothing for the player; the map is rebuilt by itself when the hot-reload
   scan bumps core.reload_web. Also (folded SEC-CROSS-SITE): Code change; browsers set the header
   themselves and clients without it behave as today. BLOCKED: session wave 1.
-- [ ] SEC-XML-NUL (build) Strict build XML intake: refuse an inflated payload holding a NUL byte.
+- [x] SEC-XML-NUL (build) Strict build XML intake: refuse an inflated payload holding a NUL byte. -- done 2026-11-18 (session wave 1; verified)
   ACCEPT: python -m pytest -q tests/test_tc_code.py tests/test_tc_code_api.py
   tests/test_tc_code_real.py passes: share codes holding UTF-16 documents (both byte orders, with
   and without a byte order mark) with an entity get 400 from POST /api/build-code and no build file
   is written, and the real-export fixtures still round-trip byte exact. ZERO-CLICK: Code change; a
   refused paste shows the existing error line by itself. BLOCKED: session wave 1.
-- [ ] RUN-DURABLE-JSONFILE (build) Hardened write path in jsonfile (temp name, fsync, retry, .bak,
+- [x] RUN-DURABLE-JSONFILE (build) Hardened write path in jsonfile (temp name, fsync, retry, .bak, -- done 2026-11-18 (session wave 1; verified)
   Saver). ACCEPT: python -m pytest -q tests/test_jsonfile.py passes with the C7, C8 and C9 cases
   present. ZERO-CLICK: Automatic; no setting. BLOCKED: session wave 1.
-- [ ] SEC-NO-PROXY (build) Loopback calls never use a proxy. ACCEPT: python -m pytest -q
+- [x] SEC-NO-PROXY (build) Loopback calls never use a proxy. ACCEPT: python -m pytest -q -- done 2026-11-18 (session wave 1; verified)
   tests/test_keepalive.py tests/test_run_health_ps.py passes: with http_proxy set to a local port
   that counts connections and no no_proxy, keepalive.health_check is true against a test core and
   the fake proxy sees no connection, and the Test-AlHealth function text run in powershell.exe 5.1
   with an in-session default proxy set to that port does the same. ZERO-CLICK: Code change; the
   checks run by themselves as before. BLOCKED: session wave 1.
-- [ ] LOOP-SPLIT-TICK (build) Split Tick review and work-list methods out of al_loop.py (no
+- [x] LOOP-SPLIT-TICK (build) Split Tick review and work-list methods out of al_loop.py (no -- done 2026-11-18 (session wave 1; verified)
   behaviour change). ACCEPT: `python -m pytest -q tests/test_loop_split.py tests/test_al_loop.py
   tests/test_al_loop_gate_cache.py tests/test_p163_lane_tools.py tests/test_al_lane_sidecar.py`
   passes with no edit to any of those files but tests/test_loop_split.py, whose line-cap assert
