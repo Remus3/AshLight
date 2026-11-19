@@ -106,6 +106,8 @@
     if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
     // NEWBIE-HINTS: the tip hides by itself at its end time.
     if (window.ALHints) { window.ALHints.paint(document, snap, now); }
+    // TD-09 region hook: every registered Play region's tick (web/regions.js)
+    if (window.ALRegions) { window.ALRegions.tick(document, snap, now); }
   }
 
   /* UX-PERF: most state pushes (timers, trades, HUD fields) leave the
@@ -1058,6 +1060,8 @@
     // DIAG-SELF / LANG-GUARD: the core's checks and language notice
     if (window.ALChecks) { window.ALChecks.paint(document, s); }
     if (window.ALZoneGuide) { window.ALZoneGuide.paint(document, s); }
+    // TD-09 region hook: every registered Play region paints after the rest
+    if (window.ALRegions) { window.ALRegions.paint(document, s, serverNow()); }
     tick();
   }
 
@@ -1191,6 +1195,15 @@
           a.remove();
           setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         }
+      });
+    }
+    // TD-09 region hook: wire every registered Play region before the first push
+    if (window.ALRegions) {
+      window.ALRegions.start(document, {
+        api: api,
+        getSnap: function () { return snap; },
+        serverNow: serverNow,
+        tabs: window.ALTabs || null
       });
     }
     setInterval(pollRates, RATES_POLL_MS);
