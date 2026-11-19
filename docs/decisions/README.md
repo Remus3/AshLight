@@ -16,6 +16,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0058: hotkeys: effective keys, rebind in the app, self-healing
+  fallback (OVL-KEYS-CLIENT).
 - 0057: keep-or-vendor levelling rules: own table, hot reloaded, used
   only with no build (TC-CAMPAIGN-KEEP).
 - 0056: plug-in folder for ticks, Checks rows and routes (RUN-SEAMS).
