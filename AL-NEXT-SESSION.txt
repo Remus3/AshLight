@@ -4,7 +4,18 @@ SESSION: 8   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 3 done, next wave 4
+WAVE POINTER: wave 4 done, next wave 5
+Wave 4 escape count: 1 of 3 merge batches of this run (2 to 4) needed a
+second suite for an escape (batch 2: PLAY-TD-01B-FIT-HARNESS red on
+tests/test_test_layout.py, reverted, test-only fix round, merged in batch
+4); 1 of 13 worktree packages = 8 percent, not above 10 percent: the
+batch stays at 4. The merger's step-1 re-runs with test_test_layout.py
+caught the same guard on PLAY-TD-03-TOKENS, TC-PRESS-STAGED-EVAL and
+TC-FILTER-ONE-CONTROL (fix rounds, adjudicator ruling in b1af8e7).
+Batch 4 re-ran once: test_dash_console ERR_CONNECTION_REFUSED on its
+test core (green alone and on the re-run; port race, TEST-PORT-LEASE
+wave 5). Batch suites 2660, 2700, 2866, 2885 passed (3 skipped each);
+npm 270, 279, 285, 286. No package deferred.
 Wave 3 escape count: 0 of 4 merge batches needed a second suite; 0 of 12
 worktree packages = 0 percent: the batch stays at 4 (08 section 4).
 Batch suites 2584, 2607, 2643, 2643 passed (3 skipped each); npm 260,
