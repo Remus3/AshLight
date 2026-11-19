@@ -104,7 +104,7 @@ def test_level_60_armour_keep():
 
 def test_level_60_boots_without_speed_vendor():
     _card, t = card_for(BOOTS_60, 60)
-    assert (t["word"], t["head"]) == ("Vendor", "Vendor - 2 of 6 met at level 60")
+    assert (t["word"], t["head"]) == ("Vendor", "Vendor - no move speed at level 60")
     assert t["notes"] == [
         "Vendor: it lacks move speed 10+, which this levelling rule needs at level 60.",
         "Thresholds met: life 65+, fire res 25+."]
@@ -252,3 +252,23 @@ def test_broken_rule_file_keeps_last_good_copy_with_a_checks_note(tmp_path):
 def test_no_table_gives_no_part(monkeypatch):
     monkeypatch.setattr(levelrules, "table", dict)
     assert keep.compute(ctx_for(GLOVES_10, 30)) is None
+
+
+def test_missed_must_head_names_the_check_and_fits_34():
+    """Design review TCK-3: a Vendor from a missed must check names the
+    check, never a count that reads like a pass; every must label in the
+    table fits 34 at every level (level 100 drops the level)."""
+    doc = levelrules.table()
+    labels = {c["label"] for b in doc["bands"] for c in b["checks"] if c["must"]}
+    assert labels == {"move speed"}
+    for level in range(1, 101):
+        for label in labels:
+            value = {"status": "vendor", "level": level, "need": 2, "of": 6, "count": 5,
+                     "met": [], "missed": [{"label": label, "min": 10, "have": 0}]}
+            h = keep.head(value)
+            assert len(h) <= 34 and h.startswith(f"Vendor - no {label}"), h
+            assert "met" not in h
+    value["level"] = 20
+    assert keep.head(value) == "Vendor - no move speed at level 20"
+    value["level"] = 100
+    assert keep.head(value) == "Vendor - no move speed"

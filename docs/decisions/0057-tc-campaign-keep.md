@@ -42,7 +42,10 @@ replaces it where worn gear is known.
 5. Words (design 0001 section 9, AshLight's own). Word `Keep` with the
    upgrade edge, or `Vendor` with the note edge (never colour alone: the
    word changes with it). Overlay head `<word> - <k> of <n> met at level
-   <lv>` (at most 32 characters, rule 6). Dashboard notes `Worth keeping:
+   <lv>`; a Vendor caused by a missed `must` check reads `Vendor - no
+   <label> at level <lv>` instead (`Vendor - no <label>` where the level
+   would pass the limit), so a count never reads like a pass; every head
+   at most 34 characters (rule 6). Dashboard notes `Worth keeping:
    it meets <k> of <n> levelling thresholds for level <lv>.`, `Vendor: it
    meets <k> of <n> levelling thresholds for level <lv>, and <need>
    is|are needed.` or `Vendor: it lacks <label> <min>+, which this
@@ -65,6 +68,8 @@ replaces it where worn gear is known.
   sentence (outside this package's files); stop and wait (the plan says
   decide). Reverses if: a later package widens WORD_KEYS, then line 3 can
   list the thresholds met.
+- Owed (design review TCK-2): line 3 `Levelling rule, no build` is owed
+  when a later package widens cardparts WORD_KEYS.
 - Edges. Keep takes the upgrade edge, Vendor the note edge (not
   downgrade: nothing was compared). Alternatives: note for both;
   downgrade for Vendor. Reverses if: the design reviewer rules otherwise.
