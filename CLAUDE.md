@@ -304,8 +304,10 @@ E: root item that is not this repo.
   a Path of Building PoE2 source checkout, for build calcs) run only as
   hash-pinned, unmodified subprocesses fetched at setup into the AL sidecar
   (`Cache\`, `Build\`), never vendored or imported, off by default; the core
-  works without them. They get only user-pasted build text and hotkey-read
-  item text (decision 0004). No ToS floor change.
+  works without them. They get only player-supplied build text (pasted,
+  or copied and loaded by the item-key press: the same single clipboard
+  read) and hotkey-read item text (decision 0004, amended 2026-11-18).
+  No ToS floor change.
 - Ports: block 8960-8979 (assigned by MAIN 2026-11-16). 8960 = core server
   (API, dashboard assets, SSE). Constants in `server/al/ports.py`; a port
   literal at a bind site is a defect.
