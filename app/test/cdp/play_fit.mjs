@@ -332,7 +332,7 @@ async function load(url) {
     let ok = false;
     try {
       ok = await evaluate("!!document.getElementById('panel-play') && " +
-        "/live/.test((document.querySelector('header') || {}).textContent || '')");
+        "/^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')");
     } catch { ok = false; }
     if (ok) { await sleep(350); return true; }
   }

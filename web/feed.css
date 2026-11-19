@@ -1,1 +1,126 @@
-/* AshLight dashboard: region T, the feed (stub, no rules yet; PLAY-TD-13-FEED fills it). */
+/* AshLight dashboard: region T, the feed (PLAY-TD-13-FEED; plan 03 3.4 and
+   3.9, design 0001 sections 4 and 6). Track 204 at s = 1: border 2 +
+   padding 6 + 6 + head 26 + 5 rows x 32 = 200, slack 4. Every height is
+   rem, so the scale step multiplies it. One line a row in the cockpit
+   classes (names take the ellipsis, full text in the row's title); in the
+   flow class and under a text-spacing override rows wrap and the right
+   segment moves under the lead. Nothing moves: no animation, no
+   transition. */
+#play-t .feed { display: grid; align-content: start; min-width: 0; }
+
+/* head: "Trades 5" or "Recent" (the T heading), the trade status, and
+   "Dismiss all" (24 px) from 2 open trades */
+#play-t .feed-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--al-lh-title);
+  min-width: 0;
+}
+#play-t .feed-h {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--al-fs-title);
+  line-height: var(--al-lh-title);
+  font-weight: 600;
+}
+#play-t .feed-h:focus { outline: none; }
+#play-t .feed-h:focus-visible { outline: 3px solid var(--fk-accent); outline-offset: -3px; }
+/* the polite trade status: heard, not seen (the row's "new" is its visible
+   twin); a failed dismiss shows in the head line. One line, sized to the
+   head, so it never adds height or a scroll box. */
+#play-t .feed-status {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+  font-size: var(--al-fs-body);
+  line-height: var(--al-lh-body);
+}
+#play-t .feed-status[data-shown="yes"] {
+  position: static;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  clip-path: none;
+  text-overflow: ellipsis;
+  color: var(--fk-text-muted);
+}
+
+/* rows: 5 fixed one-line slots of 32 px */
+#play-t .feed-rows { list-style: none; margin: 0; padding: 0; min-width: 0; }
+#play-t .feed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.5rem;
+  min-height: 2rem;
+  min-width: 0;
+  color: var(--al-text-body);
+}
+#play-t .feed-event { padding-left: 0.75rem; }
+#play-t .feed-tag {
+  flex: none;
+  font-size: var(--al-fs-meta);
+  line-height: var(--al-lh-meta);
+  font-weight: 600;
+  color: var(--fk-text-muted);
+}
+#play-t .feed-death .feed-tag { color: var(--fk-status-bad); }
+#play-t .feed-lead {
+  flex: 1 1 12em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.3em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#play-t .feed-trade .feed-lead { font-size: var(--al-fs-title); line-height: var(--al-lh-title); }
+#play-t .feed-buyer { font-weight: 600; color: var(--fk-text); min-width: 0; }
+#play-t .feed-item { min-width: 0; }
+#play-t .feed-event .feed-lead { font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
+#play-t .feed-right {
+  font-size: var(--al-fs-body);
+  line-height: var(--al-lh-body);
+  color: var(--fk-text-muted);
+  min-width: 0;
+}
+#play-t .feed-dismiss { flex: none; }
+#play-t .feed-head button:focus-visible,
+#play-t .feed-row button:focus-visible { outline: 3px solid var(--fk-accent); outline-offset: -3px; }
+#play-t .feed-empty { margin: 0; }
+
+/* the cockpit classes: one line a row; the item name gives way first */
+@media (min-width: 64em) and (min-height: 43.75em) {
+  #play-t .feed-row { flex-wrap: nowrap; height: 2rem; }
+  #play-t .feed-lead { flex: 1 1 auto; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  #play-t .feed-buyer, #play-t .feed-item, #play-t .feed-right, #play-t .feed-text {
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #play-t .feed-buyer { flex: 0 1 auto; }
+  #play-t .feed-verb, #play-t .feed-price { flex: none; white-space: nowrap; }
+  #play-t .feed-item { flex: 0 1000 auto; }
+  #play-t .feed-text { flex: 0 1 auto; min-width: 0; }
+  #play-t .feed-right { flex: 0 10 auto; white-space: nowrap; }
+}
+/* a text-spacing override: rows wrap and grow (the tracks grow with them) */
+[data-text-spacing="user"] #play-t .feed-row { height: auto; flex-wrap: wrap; }
+[data-text-spacing="user"] #play-t .feed-lead,
+[data-text-spacing="user"] #play-t .feed-buyer,
+[data-text-spacing="user"] #play-t .feed-item,
+[data-text-spacing="user"] #play-t .feed-right,
+[data-text-spacing="user"] #play-t .feed-text { white-space: normal; overflow: visible; flex-wrap: wrap; }
+
+/* stale data (design 0001 section 6): rows look frozen while the log is
+   idle or AshLight is lost (web/feed.js sets data-stale from game_idle) */
+#play-t[data-stale="yes"] .feed-row,
+#play-t[data-stale="yes"] .feed-buyer { color: var(--fk-text-muted); }
+
+@media (forced-colors: active) {
+  #play-t .feed-trade { border-left-color: Highlight; }
+}

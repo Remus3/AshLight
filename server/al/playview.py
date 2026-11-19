@@ -17,15 +17,17 @@ then is cut at a word with "...".
 
 Reading and kit state words come from server/al/statuswords.py (F-131);
 the build words are the four of design 0001 section 6 (TD-15), the same
-table as web/slots.js buildLine. play.context, play.item and play.kept are
-reserved for PLAY-TD-07B-PLAY-CARDS (None until it lands); play.map_ok
-stays False until PLAY-MAP-MODE-ON.
+table as web/slots.js buildLine. play.context (region C's available modes),
+play.item (the item card) and play.kept (the kept checks) come from
+server/al/playcards.py (PLAY-TD-07B); play.map_ok stays False until
+PLAY-MAP-MODE-ON.
 """
 
 import re
 import time
 
 from . import acts
+from . import playcards
 from . import statuswords
 
 # -- caps (plan 03 section 3.4, character budgets [D]) -----------------------
@@ -573,14 +575,15 @@ def build_view(snap):
 def view(snap):
     """The snapshot's `play` block."""
     snap = _dict(snap)
+    item, kept = playcards.check_view(snap)
     return {
         "strip": strip_view(snap),
         "feed": feed_view(snap),
         "notices": notices_view(snap),
         "build": build_view(snap),
         "map_ok": False,
-        # reserved for PLAY-TD-07B-PLAY-CARDS
-        "context": None,
-        "item": None,
-        "kept": None,
+        # PLAY-TD-07B: region C's available modes, the item card, kept checks
+        "context": playcards.context_view(snap),
+        "item": item,
+        "kept": kept,
     }

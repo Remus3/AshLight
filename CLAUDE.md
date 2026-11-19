@@ -605,7 +605,9 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
 - DIAG-SELF / LANG-GUARD: passive local checks, report copied only on a
   click and redacted; the non-English notice fires on 3 scene-name /
   non-ASCII system-line strikes, not on `You have entered` (PoE2 never
-  writes it) (decision 0040). Reverses if: a localised log sample shows
+  writes it) (decision 0040); the Checks tool also records the player's
+  Worked / Refused clicks for open in-game checks in a bounded local
+  file, never sent (0040 amendment 2026-11-18). Reverses if: a localised log sample shows
   the signals misfire, the zone snapshot is dropped, or a report field
   leaks a path or identifier.
 - DESKTOP-CLIENT: the Electron app with --client is the desktop client
