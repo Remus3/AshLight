@@ -187,12 +187,17 @@ def leased_port():
 
 
 def free_test_port():
-    """Compatibility for callers outside TEST-PORT-LEASE (tests/play_states.py):
-    a port no lease holds and 127.0.0.1 can bind now, NOT held afterwards.
-    New callers use lease_port() or the leased_port fixture."""
-    port, release = lease_port()
-    release()
-    return port
+    """Compatibility for callers outside TEST-PORT-LEASE (tests/play_states.py,
+    whose recipe audit forbids any file opened outside its tmp root): a port
+    of the lease block that this process does not hold and 127.0.0.1 can bind
+    now, by a bind probe only (no lock file, so no cross-run guard). New
+    callers use lease_port() or the leased_port fixture."""
+    mine = set(held_leases())
+    for port in lease_candidates():
+        if port not in mine and _bind_ok(port):
+            return port
+    pytest.skip(f"no free test port in {ports.TEST_LEASE_PORTS[0]}-"
+                f"{ports.TEST_LEASE_PORTS[1]}")
 
 
 class _PMC(ctypes.Structure):
