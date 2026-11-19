@@ -1,6 +1,6 @@
 AL NEXT SESSION
 ---------------
-SESSION: 10   (FLEET item 13 counter; /done writes n+1)
+SESSION: 11   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
@@ -28,29 +28,33 @@ FMT-1/2, SU-1/2, SRW-1 to SRW-3, ZR-1, OLD-1 to OLD-4, TWR-1 to TWR-3, TCS-2
 Wave 8 escape count and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 Waves 1 to 6 escape counts and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 
-Next action: wave 8 of docs/plan/07-execution-plan.md, run exactly as
-docs/plan/08-orchestration.md says, as waves 4 to 6 ran in session 8: ONE
-background orchestrator agent per wave with a real background watch on the
-progress files. Ask the operator nothing (every operator item has a default
-in force). The main session only dispatches; every command runs in a
-sub-agent, in the main checkout.
-1. Done (session 9): the 4 rows were tagged and AUTO-21 removed HALT
-   (5560fec; see Status). Wave 7 closed (0f30d9e).
-2. Dispatch one start agent (08 section 1, argument wave 8), then wave 8
-   (08 sections 2 to 7). Merge batches stay at 3 until TEST-SELECT (wave 8)
-   is on main. Wave 7 is closed (12 of 12 merged, session 9).
+Next action: wave 10 of docs/plan/07-execution-plan.md, run exactly as
+docs/plan/08-orchestration.md says: ONE background orchestrator agent for the
+wave with a real background watch on the progress files; merge batches of 4
+now that TEST-SELECT is on main (b1efb31). Ask the operator nothing (every
+operator item has a default in force). The main session only dispatches;
+every command runs in a sub-agent, in the main checkout.
+1. Dispatch one start agent (08 section 1, argument wave 10), then wave 10
+   (08 sections 2 to 7). Waves 8 and 9 are closed (session 10).
+2. First, at wave-10 start: fold the five rows tagged "BLOCKED: session
+   wave 9" that are in no package (bullet SESSION-10 ROWS below) into wave
+   10 packages by adjudicator ruling, or retag each to the earliest session
+   wave that owns its files; a stale wave-9 tag is never left behind.
 3. Go-public track: GP-10 (config/public_repo.json plus the leak_sweep
-   exception) is parked in wave 99 behind GP-06 (w8), PUB-README-PLAYERS
-   (w12) and PUB-SWEEP-OWN-ADDRESS (w17). The repository exists and is PRIVATE; it stays
-   private until the plan-04 flip gates hold (GP-12). Push main only through
-   fleet_gitlock, never force.
-Session-level lessons (session 8), keep in the orchestrator briefs: run a
+   exception) is parked in wave 99 behind PUB-README-PLAYERS (w12) and
+   PUB-SWEEP-OWN-ADDRESS (w17); GP-06 (w8) and GP-11 (w9) are done. The
+   repository exists and is PRIVATE; it stays private until the plan-04
+   flip gates hold (GP-12). Push main only through fleet_gitlock, never
+   force.
+Session-level lessons (sessions 8 to 10), keep in the orchestrator briefs: run a
 whole wave via one background orchestrator with a real background watch;
 never end an orchestrator turn on "Waiting" with nothing running; never tell
 a package agent "do not push" when CLAUDE.md authorizes the push; builders
 and verifiers always also run tests/test_test_layout.py; use a fresh
 integrator per batch; verify every builder's claimed commit sha against git
-before review.
+before review; a red batch suite is reverted and the package deferred (08
+section 4 step 6), not fixed forward on the package branch (session 10
+deviation, bullet below).
 
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
@@ -78,7 +82,31 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
-- REGION N OVERFLOW (session 9 /done): no wave 8 package owns web/notice.css or region N (packages.json: the notice.css owners are PLAY-TD-14-NOTICE wave 6, done, and PLAY-F-189A-SPACING-BADGE wave 33). The wave 8 start agent files a row tagged "BLOCKED: session wave <n>" for the N fix (G1 and G4 at 1024x700 and 1920x875, 20 overflow + 20 slack findings, tests/play_fit_pending/n.txt) in the earliest wave it fits, or the orchestrator folds it into a wave 8 package by an adjudicator ruling; until then n.txt stays. Ruled 2026-11-19 (adjudicator): filed as row PLAY-N-FIT, BLOCKED: session wave 9; no wave 9 package owned notice.css, so it stays open for the next session wave that takes it.
+- SESSION-10 ROWS (filed wave 8, tagged "BLOCKED: session wave 9", in NO
+  package of docs/plan/packages.json; row files under docs/roadmap/new, folded
+  into ROADMAP.md at session 10 /done): PLAY-N-FIT (region N overflow, owns
+  web/notice.css, web/notice.js only if needed; tests/play_fit_pending/n.txt
+  stays until it lands), RUN-UNREADABLE-WORD (SRW-1/2: status word for the
+  "Client.txt can't be read" state), TEST-PLAY-PORT-LEASE (tests/play_states.py
+  onto lease_port()), TEST-E2E-REPEAT-SELF (test_repeat_press_uses_cached_probes
+  self-contained), TEST-TIMING-ALONE (no -m timing tests beside busy xdist
+  workers). The brief named six; read back 2026-11-19: only these five carry
+  the tag (ROADMAP, row files, archived hand-off line "Rows filed"), no sixth
+  exists. The next session folds each into a package or retags it (Next
+  action step 2).
+- FIX-IDLE-WORD is retagged "BLOCKED: session wave 19" (session 10); g.txt
+  stays until it lands.
+- DESIGN FINDINGS OPEN (session 10, docs/design/reviews.log): SU-1, SU-2
+  (PLAY-TD-12), SRW-1 to SRW-3 (RUN-TAIL-HEAL-CORE), OLD-1, OLD-2 (medium);
+  plus FMT-1/2, ZR-1, OLD-3, OLD-4, TWR-1 to TWR-3, TCS-2 (WAVE POINTER above).
+- DEVIATION (session 10, waves 8 and 9): two red batch suites were fixed
+  forward on package branches by adjudicator ruling instead of revert and
+  defer (08 section 4 step 6): wave 9 batch 2 (OVL-SHELL-GUARDS fixture
+  URLs, tests/test_sidecar_paths.py) and batch 1 (TC-PRESS-STAGED-LIVE,
+  tests/test_marks.py). Recorded, not repeated.
+- DEVIATION (session 10, waves 8 and 9): worktree hook still not wired
+  (OA-12); builders ran tools/wt_sidecar_hook.py by hand.
+- REGION N OVERFLOW (session 9 /done): filed as row PLAY-N-FIT (adjudicator 2026-11-19), still open; see SESSION-10 ROWS. Region N fails G1 and G4 at 1024x700 and 1920x875 (20 overflow + 20 slack findings, tests/play_fit_pending/n.txt).
 - DEVIATION (session 9, wave 7): builders made their worktrees under the sidecar with the hook script by hand, not harness isolation, because decision 0012's hook entries are not wired into .claude/settings.json; OA-12 stays open (bullet below).
 - GP-10 is parked in wave 99 (deps GP-09 done, GP-06 wave 8, PUB-README-PLAYERS wave 12, PUB-SWEEP-OWN-ADDRESS wave 17); it is not next until those land.
 - Play-fit markers (W7-MARKERS, session 9): t, b, c-zone, i, u deleted (cfeca99) after a probe with them removed read test_play_fit green; n.txt stays (region N still fails G1 and G4 at 1024x700 and 1920x875, 20 + 20 findings; owner the next package that owns web/notice.css or the N track), g.txt stays (FIX-IDLE-WORD); c-setup and the tab-* markers wait for their own regions. Delete n.txt and g.txt when tests/test_play_fit.py is green without them.
@@ -295,6 +323,7 @@ Carried forward (not acted on yet):
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 9 /done, 2026-11-19): fleet_done.py reap --apply: 13 removed (the w7-* package and int worktrees, branches deleted, every commit on main by patch), 3 kept (lane-0, lane-1, lane-2; lane-0 and lane-1 hold the loop's verified OVL-CLIENT-ZOOM and AUTO-23 commits).
+- NOTE (session 10 /done, 2026-11-19): fleet_done.py reap --apply: the w8-* and w9-* package and integrator worktrees removed (branches deleted, every commit on main by patch); read back after: 0 removable, 3 kept (lane-0, lane-1, lane-2), 4 worktrees listed incl. main.
 - SESSION-7 FINDING (GP-04; for GP-05, wave 4): the CI Python 3.11 job
   must run on a real Python exe, not a venv launcher, or
   tests/test_procs.py fails.
@@ -347,10 +376,25 @@ before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, the core, the overlay or the
 loop (08, Rules).
 
-Acceptance: wave 8 is closed as 08 section 7 says (open-row command for
-wave 8 prints "none open", plan_check ok, git status --short empty on main,
+Acceptance: wave 10 is closed as 08 section 7 says (open-row command for
+wave 10 prints "none open", plan_check ok, git status --short empty on main,
 leak sweep clean, last batch suite and npm test green, git show
-HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 8 done, next wave 9").
+HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 10 done, next wave 11"),
+and no row still carries "BLOCKED: session wave 9".
+
+Do NOT redo (session 10, all on main and pushed; main = origin/main =
+a8fb7bf read back before this hand-off): waves 8 and 9 closed, pointer
+"wave 9 done, next wave 10". Wave 8 merges: TEST-WEB-FMT 1cb288f,
+RUN-TAIL-HEAL-CORE 84feeaa, TEST-SELECT b1efb31, TEST-XDIST-DIAG 4337798
+(verdict "XDIST: cleared"), PLAY-TD-12-CONTEXT-SETUP 0c92686, GP-06 1d1006f,
+DEP-03 d08a693, DEP-01 ad1e1ad, REL-SUBJECT-CHECK 9491712,
+DATA-WEBFETCH-GZIP 991a55e, OVL-ELECTRON-PIN 0f18d47, TEST-HTTP-ROUTES
+a5a3a7e. Wave 9: RUN-ZONE-RESET, REL-PINFETCH, OVL-LINKS-DOWNLOADS,
+OVL-SHELL-GUARDS, DEP-04, DEP-06, DEP-07, DATA-PRICE-POLITE,
+TC-PRESS-STAGED-LIVE, TEST-WAVE-GATE-POLICY, TEST-WEB-REGISTRY,
+TEST-SUITE-RUNNER, plus GP-11 (repository description, topics and feature
+switches set; still PRIVATE). Loop lane rows OVL-CLIENT-ZOOM and AUTO-23
+merged (done row files folded at session 10 /done).
 
 Do NOT redo (session 9, all on main and pushed): AUTO-21 (4 rows tagged
 5560fec, six checks green, HALT removed and read back absent; row closed
@@ -364,15 +408,17 @@ repository created, main pushed, decisions 0079 and 0080, gate 12 held on ci
 run 44488095493 attempts 1 and 2); the 0051 full bullet is in CLAUDE.md.
 Do NOT redo (sessions 6 and 7, waves 0 to 3, the ultraplan): docs/handoff-archive/AL-2026-11-19.txt.
 
-In flight: loop lane runs finished and verified (PASS) but held by the wave 7 hold (state wave-hold; their merge was deferred while the merge lock was busy): OVL-CLIENT-ZOOM (lane build, lane-0 commit bede4ef) and AUTO-23 (lane data, lane-1 commit eece9da); records ops/loop/control/loop_items/<id>.json, progress lane-0.json / lane-1.json / loop.json; the next loop tick (PT15M, about 15 min) merges them now that wave_owned.json is gone. Do not reap lane-0 / lane-1 before they merge. w5-watch progress set to failed (stale leftover). No session agent running.
+In flight: none. No session agent running; loop lanes lane-0, lane-1, lane-2 read done (fleet_checklist stale: none, 2026-11-19); HALT absent (loop live).
 
 AUTO-21 (session 9, 2026-11-19): six checks green, HALT removed 2026-11-19 (5560fec tagged the 4 rows first); the next tick's loop.json read status done, not halted (08:33). Read back again at wave-7 start: (1) roadmap lint ok 324 rows, test_roadmap_shape + test_roadmap_rows 7 passed; (2) rows --open --untagged lists 19 ids (16 owner:loop + UTIL-10-DATA/NOTES/LOG); (3) loop_preflight --handoff prints hand-off loop items: 0; (4) loop_preflight exit 0 in the AUTO-21 run (client state as found, not started); (5) usage_ledger gate used 2 cap 120; (6) the dry run listed only check-2 ids; HALT absent. Pause again with ops/loop/control/HALT.
 
-Status (session 9 /done, 2026-11-19, fresh runs read back): whole suite
-through the suite gate 3120 passed / 4 skipped (rc 0); npm test --prefix app
-439/439; leak sweep --tree no HALT (ARMED needles=44); main b96a8e8 plus this
-hand-off commit, pushed to origin (private repository); HALT absent (loop
-live); server health not probed. Inbox: 1 note (MAIN INFORMATION / TERMINAL,
-kit v32 join), already recorded, no reply.
+Status (session 10 /done, 2026-11-19, fresh runs read back): whole suite
+through the suite gate 3401 passed / 6 skipped (rc 0); npm test --prefix app
+495/495; leak sweep --tree no HALT (ARMED needles=44); main was a8fb7bf =
+origin/main at start, plus the roadmap fold 9248cbd and this hand-off
+commit, pushed to origin (private repository); HALT absent (loop live);
+server health not probed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit
+v32 join), already recorded, no reply. Operator acts: none new; optional
+list docs/plan/09-operator-acts.md (OA-12, OA-4, OA-33 notable).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
