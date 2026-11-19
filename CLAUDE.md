@@ -792,3 +792,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   Reverses if: a text blob over 2 MB appears (split it), MAIN orders a
   rewrite (then restore the uniform 500 KB), or a leak or accident is
   found hiding in a text blob under 2 MB.
+- CI timing: AL_CI=1 is set only in ci.yml; under it decision 0002's
+  timing budgets skip with the value printed (structural checks stay),
+  test waits widen 3x and the CDP page-live wait gets one bounded retry;
+  no rerun plugin; the core's listen backlog is 128; gate 12 = two
+  consecutive green ci runs with fleet-identity-guard green, a red run
+  resets the count (decision 0080). Reverses if: dedicated runners make
+  timing stable, an AL_CI skip hides a regression seen locally, or the
+  backlog fix shows no effect and failures persist (then a local-only
+  marker for the browser tests).

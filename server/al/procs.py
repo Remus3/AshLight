@@ -268,7 +268,10 @@ def stop(runtime=None, wait_s=10.0, edir=None):
     if olist:
         for pid in olist:
             _terminate(pid, ELECTRON_IMAGE)
-        _wait_gone(olist, 5.0)
+        # GP-09 (decision 0080): a loaded machine can take longer than 5 s
+        # to tear a terminated process down; the overlay gets the same wait
+        # as the supervisor (stop.ps1 -TimeoutSec), never less than 5 s.
+        _wait_gone(olist, max(5.0, wait_s))
         report["overlay"] = f"stopped ({len(olist)} process(es))"
     try:
         (runtime / OVERLAY_PID_FILE).unlink()

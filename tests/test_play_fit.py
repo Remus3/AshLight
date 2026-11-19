@@ -48,6 +48,7 @@ for _p in (ROOT / "tools", ROOT / "tests", ROOT):
         sys.path.insert(0, str(_p))
 
 import play_states as ps  # noqa: E402
+from ci_timing import ci_scale  # noqa: E402
 
 pytestmark = pytest.mark.server
 
@@ -404,7 +405,7 @@ class Driver:
                          daemon=True).start()
         threading.Thread(target=self._pump, args=(self.proc.stderr, self.err.append),
                          daemon=True).start()
-        self._read(60)
+        self._read(ci_scale(60))
 
     @staticmethod
     def _pump(stream, put):
@@ -425,7 +426,7 @@ class Driver:
     def call(self, cmd, timeout=90):
         self.proc.stdin.write(json.dumps(cmd) + "\n")
         self.proc.stdin.flush()
-        return self._read(timeout)
+        return self._read(ci_scale(timeout))  # decision 0080: 3x under AL_CI=1
 
     def close(self):
         try:

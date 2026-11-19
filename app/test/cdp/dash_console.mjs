@@ -16,12 +16,16 @@ const VIEWS = [
   { tag: "768-forced", w: 768, scheme: "dark", forced: "active" },
 ];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// GP-09 (decision 0080): on a CI runner (AL_CI=1, set only in ci.yml) the
+// page-live wait gets one bounded retry at 3x and the watchdog 3x; locally
+// both stay as they are.
+const CI = process.env.AL_CI === "1";
 const port = 9500 + Math.floor(Math.random() * 400);
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
   `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
-const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, 60000);
+const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000 : 60000);
 
 let targets = null;
 for (let i = 0; i < 100 && !targets; i++) {
@@ -76,16 +80,19 @@ for (const v of VIEWS) {
   await send("Emulation.setDeviceMetricsOverride", { width: v.w, height: 900, deviceScaleFactor: 1, mobile: false });
   await send("Emulation.setEmulatedMedia", { features: [
     { name: "prefers-color-scheme", value: v.scheme }, { name: "forced-colors", value: v.forced }] });
-  await send("Page.navigate", { url: "about:blank" });
-  await send("Page.navigate", { url });
   // the page is live once the bar status word leaves pending / failed
   let live = false;
-  for (let i = 0; i < 80 && !live; i++) {
-    await sleep(100);
-    const r = await send("Runtime.evaluate", { expression:
-      "!!document.getElementById('build-title') && /^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')",
-      returnByValue: true });
-    live = !!(r.result && r.result.result && r.result.result.value);
+  for (const tries of CI ? [80, 240] : [80]) {
+    if (live) { break; }
+    await send("Page.navigate", { url: "about:blank" });
+    await send("Page.navigate", { url });
+    for (let i = 0; i < tries && !live; i++) {
+      await sleep(100);
+      const r = await send("Runtime.evaluate", { expression:
+        "!!document.getElementById('build-title') && /^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')",
+        returnByValue: true });
+      live = !!(r.result && r.result.result && r.result.result.value);
+    }
   }
   const r = await send("Runtime.evaluate", { expression: PROBE, returnByValue: true, awaitPromise: true });
   views[v.tag] = Object.assign({ live }, (r.result && r.result.result && r.result.result.value) || {});

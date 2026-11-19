@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import synth_client  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
 import test_fullstack as fs  # noqa: E402
+from ci_timing import ci_scale  # noqa: E402
 from tc_live_util import lease_port  # noqa: E402
 
 from server.al import ninja  # noqa: E402
@@ -117,7 +118,7 @@ def test_dashboard_has_no_console_error_or_csp_violation(stack, tmp_path, monkey
 
     url = f"http://127.0.0.1:{st.port}/#token={TOKEN}"
     r = subprocess.run([node, str(SCRIPT), browser, str(tmp_path / "chrome"), url],
-                       capture_output=True, text=True, timeout=90)
+                       capture_output=True, text=True, timeout=ci_scale(90))
     assert r.returncode == 0, (r.returncode, r.stdout[-2000:], r.stderr[-2000:])
     out = json.loads(r.stdout.strip().splitlines()[-1])
     assert out["issues"] == [], out["issues"]

@@ -127,6 +127,11 @@ class ALServer(ThreadingHTTPServer):
     # SO_REUSEADDR on Windows lets another process bind the same port; use
     # SO_EXCLUSIVEADDRUSE there instead.
     allow_reuse_address = os.name != "nt"
+    # GP-09 (decision 0080): the listen backlog. socketserver's default of 5
+    # lets a page load's parallel connects (Chrome opens up to six at once,
+    # plus the SSE stream) overflow while the accept loop is stalled, and
+    # Windows answers an overflow with a reset (ERR_CONNECTION_REFUSED).
+    request_queue_size = 128
 
     def __init__(self, core, token, port=ports.AL_PORT, web_root=None, tokens_css=None):
         self.core = core

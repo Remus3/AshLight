@@ -1,6 +1,8 @@
 """Core budgets (docs/decisions/0002-stack.md): parse speed, tailer idle CPU,
 bounded memory. Timing budgets widen with fleet_test_guard.budget() while
-other suites share the box."""
+other suites share the box. Under AL_CI=1 (CI only) a timing assert skips
+with the measured value printed, after the structural checks (decision
+0080); the memory bound always holds."""
 
 import gc
 import os
@@ -11,6 +13,7 @@ from pathlib import Path
 import pytest
 
 import fleet_test_guard
+from ci_timing import skip_if_ci_timing
 from server.al import parser, resume
 from server.al.bus import EventBus
 from server.al.logfile import Tailer
@@ -31,6 +34,7 @@ def test_parse_10k_lines_under_250ms():
     events = parser.parse_lines(lines)
     elapsed = time.perf_counter() - t0
     assert len(events) > 8_000
+    skip_if_ci_timing("parse of 10k lines", f"{elapsed * 1000:.1f} ms")
     assert elapsed < fleet_test_guard.budget(0.25), f"{elapsed * 1000:.1f} ms"
 
 
@@ -46,6 +50,7 @@ def test_tail_1000_line_burst_under_50ms(tmp_path):
     n = t.poll_once()
     elapsed = time.perf_counter() - t0
     assert n == 1000
+    skip_if_ci_timing("tail of a 1000-line burst", f"{elapsed * 1000:.1f} ms")
     assert elapsed < fleet_test_guard.budget(0.05), f"{elapsed * 1000:.1f} ms"
 
 
@@ -62,6 +67,7 @@ def test_tailer_idle_cpu_under_2_percent(tmp_path):
     finally:
         t.stop()
     share = cpu / wall
+    skip_if_ci_timing("tailer idle CPU", f"{share * 100:.2f} percent")
     assert share < 0.02 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"
 
 
@@ -81,6 +87,7 @@ def test_resume_scan_of_full_32mb_cap_under_500ms(tmp_path):
     elapsed = time.perf_counter() - t0
     assert r["bytes_scanned"] > resume.DEFAULT_MAX_BYTES - 1024
     assert r["level"] is not None and r["zone"] is not None
+    skip_if_ci_timing("resume scan of the 32 MB cap", f"{elapsed * 1000:.1f} ms")
     assert elapsed < fleet_test_guard.budget(0.5), f"{elapsed * 1000:.1f} ms"
 
 
@@ -182,4 +189,5 @@ def test_core_idle_cpu_under_1_percent_with_dashboard_and_overlay_streams(tmp_pa
         core.close()
     share = cpu / wall
     print(f"core idle {share * 100:.3f} percent of one core")
+    skip_if_ci_timing("core idle CPU", f"{share * 100:.3f} percent")
     assert share < 0.01 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"

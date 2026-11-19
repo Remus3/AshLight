@@ -23,13 +23,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import synth_client  # noqa: E402
+from ci_timing import ci_scale  # noqa: E402
 from server.al import logfile, resume  # noqa: E402
 from server.al.core import Core  # noqa: E402
 from server.al.http import serve  # noqa: E402
 
 pytestmark = pytest.mark.server
 TOKEN = "e" * 48
-WAIT_S = 8.0
+WAIT_S = ci_scale(8.0)  # decision 0080: 3x under AL_CI=1
 
 
 class Live:
@@ -265,6 +266,9 @@ def test_partial_line_waits_for_its_newline(tmp_path, live_factory):
     log.write_bytes(b"")
     lv = live_factory(log)
     lv.consent()
+    # the tailer's first look (start_at_end) must come before the partial
+    # line, or the bytes it skips hold that line (seen on a CI runner)
+    lv.wait_for(lambda x: x["tailer"]["reading"], "tailer reading")
     s = synth_client.Session(seed=6, character="Halfline", klass="Mercenary")
     s.level_up()
     data = s.text().encode()

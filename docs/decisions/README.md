@@ -3,13 +3,16 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077, 0078 and 0079
+package uses the number in its new_files entry. 0077 to 0080
 are taken. A decision written outside a package takes the next free
-number: the next after the highest file here (0080, read back
+number: the next after the highest file here (0081, read back
 2026-11-19).
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0080: CI timing tolerance (AL_CI=1 in ci.yml only: timing budgets
+  skip, test waits 3x, one CDP page-live retry) and the core's listen
+  backlog of 128 (GP-09 ruling).
 - 0079: go-public gate 6: binary blobs 500 KB, text blobs 2 MB,
   tools/blob_gate.py; no history rewrite (GP-09 ruling).
 - 0078: ultraplan rulings ledger: Q-01 to Q-28, A-01 to A-03, the

@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from ci_timing import ci_scale
 from server.al import keepalive as ka
 from server.al import paths, ports, procs
 from tc_live_util import leased_port  # noqa: F401 (a fixture)
@@ -273,13 +274,14 @@ def test_stop_script_leaves_no_ashlight_process(tmp_path, leased_port):
                     os.environ[k] = v
 
         r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy",
-                            "Bypass", "-File", str(STOP), "-TimeoutSec", "15"],
+                            "Bypass", "-File", str(STOP), "-TimeoutSec",
+                            str(int(ci_scale(15)))],  # decision 0080: 3x under AL_CI=1
                            cwd=str(ROOT), env=env, capture_output=True, text=True,
-                           timeout=120)
+                           timeout=ci_scale(120))
         assert r.returncode == 0, r.stdout + r.stderr
-        assert sup.wait(timeout=15) == 0
+        assert sup.wait(timeout=ci_scale(15)) == 0
         for pid in (core, ovl.pid, child.pid):
-            assert _wait(lambda: not ka.pid_alive(pid), 10), f"pid {pid} left running"
+            assert _wait(lambda: not ka.pid_alive(pid), ci_scale(10)), f"pid {pid} left running"
         assert ka.pid_alive(other.pid), "an unrelated electron.exe was stopped"
         assert not (runtime / procs.OVERLAY_PID_FILE).exists()
         assert not (runtime / "core.alive").exists()

@@ -774,6 +774,16 @@ the sequence; nothing is skipped.
     `--tags` or `--force`. Read back: `git ls-remote --heads --tags
     origin` lists refs/heads/main (plus only `refs/heads/dependabot/*`
     once Dependabot runs); both workflows `success`.
+    Gate 12 holds on two consecutive green `ci` runs (on the same main
+    commit, via a full `gh run rerun <id>`, or on consecutive main
+    commits) with `fleet-identity-guard` green; a red run resets the
+    count (decision 0080). CI-only tolerance: ci.yml sets AL_CI=1 in
+    its job env and nowhere else; under it the timing budgets of
+    tests/test_budgets.py skip with the measured value printed (their
+    structural checks stay hard), test waits widen 3x (tests/ci_timing.py
+    `ci_scale`), and the two CDP scripts (dash_console.mjs,
+    play_fit.mjs) get one bounded page-live retry at 3x. No rerun
+    plugin; every budget stays hard in the local gate 11.
 
 The pre-push hook itself re-runs the identity check and the leak sweep
 over all 416-plus commits on this first push (a new remote ref gets no

@@ -171,6 +171,16 @@ def test_test_newest_is_the_only_floating_job():
         assert set(_all(block, "node-version")) <= {FIXED_NODE}, jid
 
 
+def test_every_job_sets_al_ci_and_nothing_else_does():
+    # decision 0080: AL_CI=1 (timing budgets skip, test waits widen) is set
+    # in the job env of ci.yml only; the guard workflow never sets it.
+    jobs = _jobs(_text(CI))
+    for jid, block in jobs.items():
+        assert _all(block, "AL_CI") == ['"1"'], jid
+    assert _text(CI).count("AL_CI") == len(jobs)
+    assert "AL_CI" not in _text(GUARD)
+
+
 def test_no_matrix_so_the_required_context_stays_test():
     text = _text(CI)
     assert not re.search(r"(?m)^\s*(strategy|matrix):", text)

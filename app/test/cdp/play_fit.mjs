@@ -22,6 +22,10 @@ import { createInterface } from "node:readline";
 const [chromePath, profile] = process.argv.slice(2);
 const REGIONS = ["g", "c", "t", "n", "b", "i", "u"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// GP-09 (decision 0080): on a CI runner (AL_CI=1, set only in ci.yml) the
+// page-live wait gets one bounded retry at 3x and the watchdog 3x; locally
+// both stay as they are.
+const CI = process.env.AL_CI === "1";
 const out = (o) => process.stdout.write(JSON.stringify(o) + "\n");
 const port = 9100 + Math.floor(Math.random() * 380);
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
@@ -30,7 +34,8 @@ const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-proce
   `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
 const quit = (code) => { try { chrome.kill(); } catch { /* gone */ } process.exit(code); };
-const killer = setTimeout(() => { out({ error: "watchdog: 300 s" }); quit(3); }, 300000);
+const killer = setTimeout(() => { out({ error: `watchdog: ${CI ? 900 : 300} s` }); quit(3); },
+  CI ? 900000 : 300000);
 
 let targets = null;
 for (let i = 0; i < 150 && !targets; i++) {
@@ -324,17 +329,19 @@ async function resize(w, h) {
 }
 
 async function load(url) {
-  await send("Page.navigate", { url: "about:blank" });
-  await send("Page.navigate", { url });
   // live once the feed is up and the first state has painted
-  for (let i = 0; i < 100; i++) {
-    await sleep(100);
-    let ok = false;
-    try {
-      ok = await evaluate("!!document.getElementById('panel-play') && " +
-        "/^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')");
-    } catch { ok = false; }
-    if (ok) { await sleep(350); return true; }
+  for (const tries of CI ? [100, 300] : [100]) {
+    await send("Page.navigate", { url: "about:blank" });
+    await send("Page.navigate", { url });
+    for (let i = 0; i < tries; i++) {
+      await sleep(100);
+      let ok = false;
+      try {
+        ok = await evaluate("!!document.getElementById('panel-play') && " +
+          "/^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')");
+      } catch { ok = false; }
+      if (ok) { await sleep(350); return true; }
+    }
   }
   return false;
 }
