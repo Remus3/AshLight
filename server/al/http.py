@@ -7,6 +7,13 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   EventSource cannot set headers; decision 0002 "API token");
 - the Host header must be 127.0.0.1:<port> or localhost:<port> (DNS
   rebinding guard); an Origin header, when present, must match;
+- SEC-CROSS-SITE: a request whose Sec-Fetch-Site is present and neither
+  same-origin nor none gets 403 on every route, before the token check
+  (one exception: GET /events from the file:// overlay, Origin null);
+  every reply carries Cross-Origin-Resource-Policy: same-origin and
+  Vary: Sec-Fetch-Site; the Server header names no version;
+- SEC-STATIC-MAP: /web/ answers by exact lookup in a map of AshLight's own
+  listing of web/ (static.py), so no file system call sees request text;
 - strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none'.
 """
 
@@ -24,7 +31,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, settingsio, webfetch
+from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, settingsio, static, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -61,10 +68,20 @@ REQUEST_TIMEOUT_S = 10.0
 # unbounded threads and bus subscriptions.
 MAX_SSE_CLIENTS = 16
 SSE_BUSY_RETRY_MS = 30000  # a stream refused for the cap reconnects after this
-# The overlay is a local file:// page; its EventSource / fetch carry
-# "Origin: null". Allowed for these read-only, token-gated GETs only.
-FILE_ORIGIN_PATHS = {"/events", "/api/state", "/api/health"}
+# The overlay is a local file:// page; its EventSource carries
+# "Origin: null". Allowed for this read-only, token-gated GET only
+# (SEC-CROSS-SITE: /api/state and /api/health no longer; the overlay never
+# fetched them).
+FILE_ORIGIN_PATHS = {"/events"}
 FILE_ORIGINS = {"null", "file://"}
+# SEC-CROSS-SITE: Sec-Fetch-Site values let through. same-site is refused
+# on purpose: a page on another loopback port is same-site.
+FETCH_SITE_OK = {"same-origin", "none"}
+# SEC-CROSS-SITE: fixed reply texts; the OS error detail goes to the log only
+LAYOUT_READ_FAILED = ("AshLight couldn't read its settings file, so the overlay "
+                      "layout wasn't saved.")
+SHARE_FETCH_FAILED = ("AshLight couldn't fetch that share link. Check the link, "
+                      "or paste the build code itself.")
 
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
          ".css": "text/css; charset=utf-8", ".json": "application/json",
@@ -86,6 +103,10 @@ class ALServer(ThreadingHTTPServer):
         self.core = core
         self.token = token
         self.web_root = Path(web_root).resolve() if web_root else None
+        # SEC-STATIC-MAP: the served names, listed once; rebuilt when the
+        # hot-reload scan bumps core.reload_web (decision 0042)
+        self.static = (static.StaticMap(self.web_root, getattr(core, "reload_web", 0))
+                       if self.web_root else None)
         self.tokens_css = Path(tokens_css) if tokens_css else None
         self.stopping = threading.Event()
         self.sse_slots = threading.BoundedSemaphore(MAX_SSE_CLIENTS)
@@ -119,7 +140,7 @@ class ALServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = f"{NAME}/{VERSION}"
+    server_version = NAME  # SEC-CROSS-SITE: no version in the Server header
     sys_version = ""
     # AUDIT-HTTP-HARDEN S2: a socket timeout, so an idle or stalled local
     # connection frees its thread.
@@ -129,6 +150,10 @@ class Handler(BaseHTTPRequestHandler):
     # TEST-HTTP: a malformed request line (garbage, a 64 KB+ URI) is logged
     # before command / path exist; reading them unguarded raised and the
     # client got no 400 / 414 at all.
+    def version_string(self):
+        """SEC-CROSS-SITE: the Server header is the name only."""
+        return NAME
+
     def log_message(self, fmt, *args):
         log.debug("%s %s", getattr(self, "command", None) or "-",
                   urlsplit(getattr(self, "path", "") or "").path)
@@ -144,7 +169,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")
-        for k, v in (extra or {}).items():
+        # SEC-CROSS-SITE: no other site may embed a reply; caches key on the
+        # fetch site (the Origin too where the reply depends on it)
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        extra = dict(extra or {})
+        vary = [v for v in (extra.pop("Vary", ""), "Sec-Fetch-Site") if v]
+        self.send_header("Vary", ", ".join(vary))
+        for k, v in extra.items():
             self.send_header(k, v)
 
     def _send(self, code, body=b"", ctype="text/plain; charset=utf-8", extra=None):
@@ -167,6 +198,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def _host_ok(self):
         return (self.headers.get("Host") or "").lower() in self.server.allowed_hosts
+
+    def _cross_site(self, path=None):
+        """SEC-CROSS-SITE: True when the browser says the request comes from
+        another site (Sec-Fetch-Site present and neither same-origin nor
+        none). The one exception is GET /events from the file:// overlay
+        (Origin null). No header = a non-browser client or an older
+        browser, judged by the other checks as before."""
+        site = self.headers.get("Sec-Fetch-Site")
+        if site is None or site.strip().lower() in FETCH_SITE_OK:
+            return False
+        return not (self.command == "GET" and path in FILE_ORIGIN_PATHS
+                    and self.headers.get("Origin") in FILE_ORIGINS)
 
     def _origin_extra(self, path):
         """(ok, extra headers). No Origin = same-origin navigation or a
@@ -201,6 +244,9 @@ class Handler(BaseHTTPRequestHandler):
         """Host, Origin and token checks. Returns extra headers or None (sent)."""
         if not self._host_ok():
             self._send(400, "bad host\n")
+            return None
+        if self._cross_site(path):
+            self._send(403, "cross-site request refused\n")
             return None
         ok, extra = self._origin_extra(path)
         if not ok:
@@ -397,14 +443,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_PUT(self):
         path, query = self._url()
         if path != "/api/weights":
-            return self._send(405, "method not allowed\n")
+            return self._not_allowed()
         extra = self._guard(path, query, self._needs_token(path))
         if extra is None:
             return None
         return self._put_weights()
 
     def _not_allowed(self):
-        self._send(405, "method not allowed\n")
+        if self._cross_site():  # SEC-CROSS-SITE: every route, 405 ones too
+            return self._send(403, "cross-site request refused\n")
+        return self._send(405, "method not allowed\n")
 
     do_DELETE = _not_allowed
     do_PATCH = _not_allowed
@@ -548,7 +596,16 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self.server.core.set_overlay_layout(body)
         except layout.LayoutError as e:
+            if e.__cause__ is not None:
+                # SEC-CROSS-SITE: config/local.json unreadable; the OS text
+                # (it names a path) goes to the log as its type only
+                log.warning("overlay layout not saved: config unreadable (%s)",
+                            type(e.__cause__).__name__)
+                return self._json(500, {"error": LAYOUT_READ_FAILED})
             return self._json(400, {"error": str(e)})
+        except OSError as e:
+            log.warning("overlay layout not saved (%s)", type(e).__name__)
+            return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._layout_doc())
 
     def _trade_dismiss(self):
@@ -620,7 +677,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(422, {"error": f"share link not supported: {e}",
                                     "kind": "url", "hosts": list(shareurl.ALLOWED_HOSTS)})
         except webfetch.FetchError as e:
-            return self._json(502, {"error": f"share link fetch failed: {e}", "kind": "url"})
+            # SEC-CROSS-SITE: a fixed sentence; the detail (it can hold OS
+            # text, a host or the query) goes to the log as types only
+            log.warning("share link fetch failed (%s%s)", type(e).__name__,
+                        f" from {type(e.__cause__).__name__}" if e.__cause__ else "")
+            return self._json(502, {"error": SHARE_FETCH_FAILED, "kind": "url"})
         except build_codec.ShareUrlError as e:
             return self._json(422, {"error": str(e), "kind": "url"})
         except (build_codec.CodeError, build_model.BuildError) as e:
@@ -680,11 +741,13 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {"consent": rec, "state": self.server.core.state.snapshot()})
 
     def _static(self, rel):
-        root = self.server.web_root
-        if root is None:
+        """SEC-STATIC-MAP: an exact name lookup in the listing of web/; the
+        request text never reaches a file system call."""
+        smap = self.server.static
+        if smap is None:
             return self._send(404, "no web root\n")
-        target = (root / rel).resolve()
-        if not target.is_relative_to(root):
+        target = smap.lookup(rel, getattr(self.server.core, "reload_web", 0))
+        if target is None:
             return self._send(404, "not found\n")
         return self._file(target)
 
