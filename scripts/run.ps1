@@ -109,12 +109,20 @@ function Get-AlToken {
 function Test-AlHealth {
     $token = Get-AlToken
     if (-not $token) { return $false }
+    # Loopback only: an explicit empty proxy (PowerShell 5.1 has no -NoProxy),
+    # so the token never reaches a proxy whatever the session or system names.
+    $r = $null
     try {
-        $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -UseBasicParsing `
-            -Headers @{ 'X-AL-Token' = $token } -TimeoutSec 2
-        return ($r.StatusCode -eq 200)
+        $req = [System.Net.WebRequest]::Create("http://127.0.0.1:$port/api/health")
+        $req.Proxy = New-Object System.Net.WebProxy
+        $req.Timeout = 2000
+        $req.Headers.Add('X-AL-Token', $token)
+        $r = $req.GetResponse()
+        return ([int]$r.StatusCode -eq 200)
     } catch {
         return $false
+    } finally {
+        if ($r) { $r.Close() }
     }
 }
 

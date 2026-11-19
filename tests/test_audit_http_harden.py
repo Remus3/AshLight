@@ -167,3 +167,22 @@ def test_consent_api_accepts_a_local_client_txt(srv, tmp_path):
                   {"X-AL-Token": TOKEN, "Content-Type": "application/json"}, body)
     assert r.status == 200, data
     assert Path(srv.core.log_path) == other
+
+
+def test_consent_api_refuses_a_file_not_named_client_txt(srv, tmp_path):
+    """SEC-NO-DISCOVERY: a dot-free name passes the lexical check as a
+    folder, but an existing FILE of that name is refused (400) and the
+    tailer path and consent stay as they were."""
+    before = srv.core.log_path
+    secret = tmp_path / "notes" / "secrets"
+    secret.parent.mkdir()
+    secret.write_bytes(b"not a log\n")
+    assert logfile.consent_path_ok(str(secret))
+    body = ('{"consent": true, "path": %s}' % __import__("json").dumps(str(secret))).encode()
+    r, data = req(srv, "POST", "/api/consent",
+                  {"X-AL-Token": TOKEN, "Content-Type": "application/json"}, body)
+    assert r.status == 400, data
+    assert b"path" in data
+    assert srv.core.log_path == before
+    assert not srv.core.consented()
+    assert srv.core.tailer is None or srv.core.tailer.path != secret

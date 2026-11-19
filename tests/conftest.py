@@ -60,8 +60,40 @@ def warm_bridge():
     bridge.shutdown_shared()
 
 
+@pytest.fixture(autouse=True)
+def _no_real_steam_scan(request, monkeypatch):
+    """SEC-NO-DISCOVERY: no test may look for the live Client.txt. Reading
+    Steam's registry key or the Program Files roots fails the test; a test
+    that passes steam_roots itself never reaches them. Opt out with
+    @pytest.mark.discovery (a test that stubs the lookup on purpose).
+    A lookup from a core thread, where the raise cannot reach the test,
+    fails the test at teardown. Yields the list of refused lookups."""
+    if request.node.get_closest_marker("discovery") is not None:
+        yield []
+        return
+    from server.al import logfile
+    hits = []
+
+    def guard(name):
+        def refuse(*_a, **_k):
+            hits.append(name)
+            pytest.fail(f"a test reached the real Steam library lookup ({name}); "
+                        "SEC-NO-DISCOVERY: pass steam_roots or a log path")
+        return refuse
+
+    monkeypatch.setattr(logfile, "_steam_roots_from_registry",
+                        guard("_steam_roots_from_registry"))
+    monkeypatch.setattr(logfile, "_steam_roots_from_env", guard("_steam_roots_from_env"))
+    yield hits
+    if hits:
+        pytest.fail(f"real Steam library lookup reached: {sorted(set(hits))} "
+                    "(SEC-NO-DISCOVERY)")
+
+
 def pytest_configure(config):
     for name, doc in (("slow", "call takes over about 1.5 s"),
                       ("server", "binds a socket on 127.0.0.1"),
-                      ("git", "spawns a real git process")):
+                      ("git", "spawns a real git process"),
+                      ("discovery", "may reach the real Steam library lookup "
+                                    "(SEC-NO-DISCOVERY guard off)")):
         config.addinivalue_line("markers", f"{name}: {doc}")
