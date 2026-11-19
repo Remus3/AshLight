@@ -26,50 +26,7 @@ tests/test_trade_refresh.py and tests/test_http_robust.py (SEC-SSE-TAP),
 app/test/cdp/dash_console.mjs and play_fit.mjs (09C-BAR); the 4 untagged
 rows above. Design fix rounds: PLAY-TD-15-BUILDLINE (BL-1, BL-5; round 1
 FAIL), PLAY-TD-13-FEED (FEED-1 to 3), PLAY-TD-14-NOTICE (N14-1 to 4).
-Wave 5 escape count: 1 of 4 merge batches needed a second suite (batch
-3: OVL-KEYS-CLIENT red on tests/test_sidecar_paths.py, a regex literal
-in app/test/hotkeys_live.test.js read as a drive path; reverted, test-only
-fix round, merged as batch 4); 1 of 12 worktree packages = 8 percent, not
-above 10 percent: the batch stays at 4. Batch suites 2903, 2969, 2981
-(after the revert; 2980 + 1 failed before), 2981 passed (3, 4, 4, 4
-skipped); npm 286, 287, 303, 313. Adjudicator rulings: RUN-SEAMS files
-extended with tests/test_tc_wire.py, PLAY-TD-09B-SKELETON files extended
-with tests/test_design_tokens.py (both test-only, wave 4 rule b1af8e7).
-Design fix rounds: PLAY-TD-07A (PV-1, PV-3, PV-4), PLAY-TD-09B (TD9B-2),
-TC-CAMPAIGN-KEEP (TCK-3, TCK-4). GP-09 done later in session 8 (decision 0080).
-Wave 4 escape count: 1 of 3 merge batches of this run (2 to 4) needed a
-second suite for an escape (batch 2: PLAY-TD-01B-FIT-HARNESS red on
-tests/test_test_layout.py, reverted, test-only fix round, merged in batch
-4); 1 of 13 worktree packages = 8 percent, not above 10 percent: the
-batch stays at 4. The merger's step-1 re-runs with test_test_layout.py
-caught the same guard on PLAY-TD-03-TOKENS, TC-PRESS-STAGED-EVAL and
-TC-FILTER-ONE-CONTROL (fix rounds, adjudicator ruling in b1af8e7).
-Batch 4 re-ran once: test_dash_console ERR_CONNECTION_REFUSED on its
-test core (green alone and on the re-run; port race, TEST-PORT-LEASE
-wave 5). Batch suites 2660, 2700, 2866, 2885 passed (3 skipped each);
-npm 270, 279, 285, 286. No package deferred.
-Wave 3 escape count: 0 of 4 merge batches needed a second suite; 0 of 12
-worktree packages = 0 percent: the batch stays at 4 (08 section 4).
-Batch suites 2584, 2607, 2643, 2643 passed (3 skipped each); npm 260,
-269, 270, 270. No package deferred. GP-04 fresh clone at 930770d (no
-local config, needles, hooks path or operator identity; scratch sidecar):
-py3.14 2590 passed, 56 skipped (all stated: calc component, PoB checkout,
-snapshots, reference build, overlay smoke opt-in, WT-SIDECAR hook); npm
-270/270; py3.11 found test_soak Reader._stop shadowing Thread._stop
-(fixed: renamed _halt, adjudicator ruling in eb148c9); test_procs is red
-only under a venv launcher, green on the real 3.11 exe.
-Wave 2 escape count: 0 of 3 merge batches needed a second suite; 0 of 12
-worktree packages = 0 percent: the batch stays at 4 (08 section 4).
-Batch suites 2503, 2522, 2561 passed (3 skipped each); npm 247, 247, 260.
-No package deferred.
-Wave 1 escape count: 1 of 3 merge batches needed a second suite (batch 2:
-SEC-XML-NUL red on test_fuzz, reverted, fixed, merged in batch 3); 1 of 11
-worktree packages = 9 percent, not above 10 percent: the batch stays at 4
-(08 section 4). GP-01 armed 44 needles, not 45 (adjudicator: the set
-owner's name was already a local needle; reverses if a non-upstream,
-non-fork identifier of the set is found).
-Escape rates so far: wave 1 1/11 (SEC-XML-NUL), wave 2 0/12, wave 3 0/4
-batches; batch size stays 4.
+Waves 1 to 5 escape counts (record in git history, commits at each wave close): wave 1 1/11, wave 2 0/12, wave 3 0/12, wave 4 1/13, wave 5 1/13 worktree packages; batch size stayed 4 until wave 6. GP-04 fresh clone at 930770d green (py3.14 2590 passed; py3.11 found test_soak Reader._stop shadowing, fixed; test_procs is red only under a venv launcher). GP-01 armed 44 needles. Wave 5 rulings: RUN-SEAMS files extended with tests/test_tc_wire.py, PLAY-TD-09B-SKELETON with tests/test_design_tokens.py. Wave 4: tests/test_test_layout.py caught test-to-test imports in four packages; test_dash_console once hit ERR_CONNECTION_REFUSED (port race, TEST-PORT-LEASE merged wave 5).
 
 Next action: wave 7 of docs/plan/07-execution-plan.md, run exactly as
 docs/plan/08-orchestration.md says, as waves 4 to 6 ran in session 8: ONE
