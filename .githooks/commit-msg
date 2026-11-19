@@ -3,7 +3,9 @@
 # AUDIT-LEAK-MSG (audit 2026-11-17): then the leak sweep over the message, so
 # a leak in a commit message is refused at commit time, not first at push.
 # 2 = HALT, 3 = FAULT.
+# REL-SUBJECT-CHECK: last, the subject must carry a type (tools/commit_subject.py).
 ROOT="$(git rev-parse --show-toplevel)"
 python "$ROOT/ops/fleet_kit/fleet_identity.py" commit-msg "$1" || exit 1
 python "$ROOT/tools/leak_sweep.py" --message "$1" || exit $?
+python "$ROOT/tools/commit_subject.py" "$1" || exit $?
 exit 0
