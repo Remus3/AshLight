@@ -6,11 +6,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const P = require("../../web/pager.js");
+const web = require("./_web.js");
+const P = web.load("pager.js");
 
-const SRC = fs.readFileSync(path.join(__dirname, "..", "..", "web", "pager.js"), "utf8");
+const SRC = web.source("pager.js");
 
 function fakeDoc() {
   const doc = { activeElement: null, created: 0 };

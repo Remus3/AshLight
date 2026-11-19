@@ -4,7 +4,8 @@
    tags, empty-state and trade text. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const v = require("../../web/status.js");
+const web = require("./_web.js");
+const v = web.load("status.js");
 
 test("link pill: first failure says what to do; later ones reconnect", () => {
   assert.deepEqual(v.linkView("notoken", false),

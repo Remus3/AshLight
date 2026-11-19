@@ -9,7 +9,8 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const about = require("../about.js");
-const dash = require("../../web/status.js");
+const web = require("./_web.js");
+const dash = web.load("status.js");
 
 const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way.";
 const CREDIT = "Game data (c) Grinding Gear Games. Item, mod and stat data comes from the " +
