@@ -3,6 +3,7 @@ progress files to archives. Fixtures live under tmp_path; nothing is deleted."""
 
 import datetime as _dt
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -237,3 +238,117 @@ def test_summary_line_and_cli_dry_run(tmp_path, capsys):
     assert ledger_rotate.summary({"headless_usage": 2, "timings": 0, "progress": 1,
                                   "skipped": ["claims"]}) == (
         "ledgers rotated: 2 row(s), 1 progress file(s) archived, skipped claims")
+
+
+# ---------------------------------------------------------------- AUTO-23
+
+def test_subagent_first_ledger_keeps_30_days(tmp_path):
+    live = control(tmp_path) / "subagent_first.jsonl"
+    rows = jl([{"at": local(NOW - d * DAY - 60), "tool": "Read", "decision": "allow"}
+               for d in range(39, -1, -1)] + ["torn"])  # 40 days of rows
+    write_lines(live, rows)
+    res = ledger_rotate.rotate(tmp_path, now=NOW)
+    assert res["subagent_first"] == 10
+    kept = [json.loads(r) for r in read_rows(live) if r != "torn"]
+    assert len(kept) == 30
+    assert all(NOW - ledger_rotate._epoch(r["at"]) <= 30 * DAY for r in kept)
+    assert read_rows(live)[-1] == "torn"
+    moved = [ln for f in (control(tmp_path) / "archive").glob("subagent_first-*.jsonl")
+             for ln in read_rows(f)]
+    assert sorted(moved) == sorted(rows[:10])
+
+
+def _aged(path, epoch, text="x\n"):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="ascii")
+    os.utime(path, (epoch, epoch))
+    return path
+
+
+def test_one_off_suite_logs_move_to_logs_dev(tmp_path):
+    side = tmp_path / "sidecar"
+    logs = side / "Logs"
+    old = NOW - 2 * DAY
+    for name in ("suite-run.log", "pytest-full.txt", "AUTO-23-suite.out", "npm-test-1.log"):
+        _aged(logs / name, old)
+    _aged(logs / "pytest-now.log", NOW - 60)  # may still be written: stays
+    for name in ("keepalive.log", "overlay.log", "tc-bridge.log", "events.jsonl"):
+        _aged(logs / name, old)  # app logs: never moved
+    _aged(logs / "dev" / "suite-run.log", old, "earlier\n")  # never overwritten
+    _aged(logs / "ggg_docs" / "suite-x.log", old)  # subfolders untouched
+    res = ledger_rotate.rotate(tmp_path, now=NOW, sidecar=side)
+    assert res["suite_logs"] == 4
+    dev = logs / "dev"
+    assert sorted(p.name for p in dev.iterdir()) == sorted([
+        "suite-run.log", "suite-run.1.log", "pytest-full.txt", "AUTO-23-suite.out",
+        "npm-test-1.log"])
+    assert (dev / "suite-run.log").read_text(encoding="ascii") == "earlier\n"
+    assert sorted(p.name for p in logs.iterdir() if p.is_file()) == [
+        "events.jsonl", "keepalive.log", "overlay.log", "pytest-now.log", "tc-bridge.log"]
+    assert (logs / "ggg_docs" / "suite-x.log").exists()
+    assert ledger_rotate.rotate(tmp_path, now=NOW, sidecar=side)["suite_logs"] == 0
+
+
+def test_suite_logs_dry_run_moves_nothing(tmp_path):
+    side = tmp_path / "sidecar"
+    _aged(side / "Logs" / "suite-run.log", NOW - 2 * DAY)
+    res = ledger_rotate.rotate(tmp_path, now=NOW, dry_run=True, sidecar=side)
+    assert res["suite_logs"] == 1
+    assert (side / "Logs" / "suite-run.log").exists()
+    assert not (side / "Logs" / "dev").exists()
+
+
+def docs_state(root, pages):
+    p = root / "sidecar" / "Cache" / "ggg_docs" / "state.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"status": "error", "pages": pages}), encoding="ascii")
+    return p
+
+
+def test_docs_watch_read_older_than_3_days_prints_stale(tmp_path, capsys):
+    docs_state(tmp_path, {"index": {"read": iso(NOW - 4 * DAY)},
+                          "changelog": {"read": iso(NOW - 5 * DAY)}})
+    res = ledger_rotate.rotate(tmp_path, now=NOW, sidecar=tmp_path / "sidecar")
+    stale = [ln for ln in ledger_rotate.lines(res) if ln.startswith("STALE")]
+    assert len(stale) == 1
+    assert "docs watch" in stale[0] and "4 day" in stale[0]
+    assert ledger_rotate.main(["--dry-run", "--root", str(tmp_path), "--now", str(NOW),
+                               "--sidecar", str(tmp_path / "sidecar")]) == 0
+    out = capsys.readouterr().out
+    assert len([ln for ln in out.splitlines() if ln.startswith("STALE")]) == 1
+
+
+def test_fresh_docs_watch_read_prints_nothing(tmp_path):
+    docs_state(tmp_path, {"index": {"read": iso(NOW - 4 * DAY)},
+                          "changelog": {"read": iso(NOW - 2 * DAY)}})
+    res = ledger_rotate.rotate(tmp_path, now=NOW, sidecar=tmp_path / "sidecar")
+    assert res["stale"] == []
+    assert ledger_rotate.lines(res) == [ledger_rotate.summary(res)]
+
+
+def test_no_docs_watch_state_and_no_sidecar_print_nothing(tmp_path):
+    res = ledger_rotate.rotate(tmp_path, now=NOW, sidecar=tmp_path / "sidecar")
+    assert res["stale"] == [] and res["suite_logs"] == 0
+    res = ledger_rotate.rotate(tmp_path, now=NOW)  # no sidecar given: skipped
+    assert res["stale"] == [] and res["suite_logs"] == 0
+
+
+def test_a_state_with_no_good_read_is_stale_once_3_days_old(tmp_path):
+    p = docs_state(tmp_path, {})
+    os.utime(p, (NOW - 4 * DAY, NOW - 4 * DAY))
+    res = ledger_rotate.rotate(tmp_path, now=NOW, sidecar=tmp_path / "sidecar")
+    assert len(res["stale"]) == 1 and "never" in res["stale"][0]
+    os.utime(p, (NOW - DAY, NOW - DAY))  # a first read under way: not yet stale
+    res = ledger_rotate.rotate(tmp_path, now=NOW, sidecar=tmp_path / "sidecar")
+    assert res["stale"] == []
+
+
+def test_only_the_real_tree_resolves_the_real_sidecar(tmp_path):
+    assert ledger_rotate.sidecar_for(tmp_path) is None
+    assert ledger_rotate.sidecar_for(ROOT) is not None
+
+
+def test_rotate_daily_on_a_fixture_root_reports_stale_from_its_sidecar(tmp_path):
+    docs_state(tmp_path, {"index": {"read": iso(NOW - 4 * DAY)}})
+    res = ledger_rotate.rotate_daily(tmp_path, now=NOW, sidecar=tmp_path / "sidecar")
+    assert len(res["stale"]) == 1
