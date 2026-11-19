@@ -28,6 +28,17 @@ floor is never self-edited by a lane or session of this tree.
    a `### Diff <date>` section listing old text, new text and the effect on
    the floor, plus a floor proposal for MAIN when the floor is affected.
 
+Amendment 2026-11-18 (decision 0050, package AUTO-04, ruling Q-07): no
+agent or tool reads GGG's forum, so the 1.0-notes trigger reads the patch
+notes from operator-pasted text only. Steps 1 and 2 read the changelog
+and the docs index, which are outside GGG's API Reference and Data
+Exports; under the stricter floor reading no agent or tool fetches them
+for this watch until operator decision A-01 allows it. Until then a
+re-read uses only what the settled decision 0044 watch already holds
+(its page hashes and diffs in the sidecar), and a research dive fetches
+GGG only at /developer/docs/reference and /developer/docs/data through
+tools/webfetch.py.
+
 ## Baseline (the 0001 verified quotes, carried verbatim)
 
 Source: https://www.pathofexile.com/developer/docs, verified 2026-11-16,
