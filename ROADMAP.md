@@ -28,6 +28,7 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
   the loop lands by itself. DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 7.
 - [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
+- [ ] FIX-IDLE-WORD (build) STATUS-IDLE-READING: the idle bar word (play state d, log quiet) carries the word "reading" so region G passes G9, then tests/play_fit_pending/g.txt is deleted; done by the next package that owns server/al/data/status_words.json (TEST-STATE-TEXT-PINS, wave 19) with web/status.js and the tests that pin the word, copy design-reviewed (wave-7 adjudicator ruling on PLAY-TD-10-STRIP). ACCEPT: tests/test_play_fit.py green without g.txt. ZERO-CLICK: The bar word updates by itself with the log state; no click. BLOCKED: session wave 8.
 
 ## Lane: data
 
@@ -211,90 +212,9 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 6: Play tab and dashboard, local security, reliability and observability
 
-- [ ] AUTO-21 (review) LOOP-RESUME: remove HALT after the six checks (no later than 2026-12-04).
-  ACCEPT: `python tools/al_loop.py tick --dry-run --ignore-halt` lists as 'would dispatch' only rows
-  without BLOCKED that the plan leaves to the loop, HALT is absent afterwards, and
-  ops/loop/control/progress/loop.json of the next tick does not read 'halted'. ZERO-CLICK: The tick
-  resumes by itself every 15 minutes; the scheduled task stays installed and nothing is reinstalled.
-  DEPENDS: AUTO-01, LOOP-HANDOFF-PREFIX, LOOP-PREFLIGHT-CMD, LOOP-FAILED-PARK, AUTO-02, AUTO-03,
-  LOOP-ROWFILES-MERGE, LOOP-ROWFILES-WORK, LOOP-DONE-FOLD, AUTO-04, AUTO-06, LOOP-WAVE-HOLD,
-  TEST-PLUGIN-PIN. BLOCKED: session wave 6.
 
 ### Wave 7: Play tab and dashboard, tests and code seams, reliability and observability
 
-- [ ] TEST-WEB-SRCPATHS-NODE (build) app/test/_web.js: one helper that knows where dashboard sources
-  live (node side). ACCEPT: npm test --prefix app passes and grep -l '\.\./\.\./web'
-  app/test/*.test.js prints nothing. ZERO-CLICK: Developer-side only; the player does nothing. The
-  helper is required by the tests; no flag. DEPENDS: TEST-LAYOUT-GUARD. BLOCKED: session wave 7.
-- [ ] TEST-WEB-SRCPATHS-PY (build) tests/srcpaths.py: one helper that knows where dashboard sources
-  live (Python side). ACCEPT: python -m pytest -q tests/test_srcpaths.py tests/test_a11y.py
-  tests/test_brand_assets.py tests/test_http_security.py tests/test_lootfilter_merge.py
-  tests/test_overlay_layout.py tests/test_price_text.py tests/test_tc_snap_ui.py
-  tests/test_trade_close.py tests/test_trade_expire.py tests/test_ux_b6.py tests/test_ux_b8.py
-  tests/test_ux_review.py tests/test_hot_reload.py tests/test_tc_code_real.py passes and grep -l
-  '"web" / "index.html"' tests/test_*.py prints nothing. ZERO-CLICK: Developer-side only; the player
-  does nothing. The helper is imported by the tests; no flag. DEPENDS: TEST-LAYOUT-GUARD. BLOCKED:
-  session wave 7.
-- [ ] RUN-DURABLE-STORES (build) Core saves retried from the tick with back-off; one Checks row
-  while unsaved. ACCEPT: python -m pytest -q tests/test_durable_stores.py
-  tests/test_ux_settings_io.py tests/test_util_run_history.py tests/test_zone_guide.py
-  tests/test_util_map_ladder.py passes. ZERO-CLICK: Automatic; one Checks row while a store is
-  unsaved; 'Settings were damaged and restored from the last good copy.'. DEPENDS:
-  RUN-DURABLE-JSONFILE, RUN-SEAMS, RUN-DURABLE-STORE-FILES. BLOCKED: session wave 7.
-- [ ] TEST-MARKS (build) Mark timing, calc and worker-group tests. ACCEPT: python -m pytest -q
-  tests/test_marks.py passes and python -m pytest --collect-only -q -m calc lists tests from the
-  eight live calc files only. ZERO-CLICK: Selection is automatic: the marks are read by
-  tools/test_select.py and by the suite runner; nobody passes a flag. DEPENDS: TEST-PORT-LEASE,
-  TEST-PLUGIN-PIN. BLOCKED: session wave 7.
-- [ ] PLAY-TD-11-CONTEXT (build) Context C: guide, town, map and none modes. ACCEPT: node --test
-  app/test/context.test.js and python -m pytest -q tests/test_play_fit.py pass with the c-zone
-  marker deleted: region C fits 228 px (212 compact) in guide, town and none modes, a replayed log
-  entering a town shows the search string row and leaving hides it, no build means no row, and Copy
-  writes the exact string of at most 250 characters. ZERO-CLICK: Shows and leaves with the zone;
-  Copy is the one optional click the clipboard rule requires. DEPENDS: PLAY-TD-09B-SKELETON,
-  PLAY-TD-07B-PLAY-CARDS, PLAY-TD-02-SLOTS. BLOCKED: session wave 7.
-- [ ] PLAY-TD-10-STRIP (build) Strip G, the bar words and the stale look. ACCEPT: node --test
-  app/test/strip.test.js and python -m pytest -q tests/test_play_fit.py pass with the g marker
-  deleted: region G fits its 100 px track in every state at the 5 cockpit sizes (G1, G4), zone 28
-  px, numbers 32 px, sub lines 20 px (G9), the strip values compute to rgb(153, 161, 170) in state d
-  and rgb(228, 232, 236) in state c, and the reading word is neutral while ok. ZERO-CLICK: Follows
-  the feed by itself; timers tick once a second. DEPENDS: PLAY-TD-09B-SKELETON,
-  PLAY-TD-07A-PLAY-VIEW, PLAY-F-131-STATUS-TABLE, PLAY-TD-02-SLOTS, PLAY-TD-09C-BAR. BLOCKED:
-  session wave 7.
-- [ ] PLAY-TD-16B-KEPT-CHECKS (build) Kept checks U: the 3 best checked items. ACCEPT: node --test
-  app/test/keptchecks.test.js and python -m pytest -q tests/test_play_fit.py pass with the u marker
-  deleted: region U fits 100 px with 3 rows (52 px with 1 row and 4 px padding in compact), rows are
-  at most 42 characters at 14 px, and a build change re-orders the rows from the next state push.
-  ZERO-CLICK: Re-ranks by itself on a build or weight change (decision 0045). DEPENDS:
-  PLAY-TD-09B-SKELETON, PLAY-TD-07B-PLAY-CARDS, PLAY-TD-02-SLOTS. BLOCKED: session wave 7.
-- [ ] PLAY-TD-16A-ITEMCARD (build) Item card I: verdict first, reserved rows. ACCEPT: node --test
-  app/test/itemcard.test.js and python -m pytest -q tests/test_play_fit.py pass with the i marker
-  deleted: region I fits 360 px (348 compact) with a full card, the verdict word is 28 px with its
-  glyph, at most 2 links and 2 actions show, the empty state teaches the press with the keys from
-  the snapshot, and its text says the dashboard card stays and the overlay card leaves after its
-  card time. ZERO-CLICK: Fills from the press the player already makes (one clipboard read per
-  manual press, unchanged); nothing else to press. DEPENDS: PLAY-TD-09B-SKELETON,
-  PLAY-TD-07B-PLAY-CARDS, PLAY-TD-02-SLOTS. BLOCKED: session wave 7.
-- [ ] OVL-PARTS-PAGE (build) Overlay page honours the parts switches: a part that is off drops out,
-  an empty HUD plate is absent. ACCEPT: node --test app/test/overlay_parts.test.js
-  app/test/layout.test.js app/test/overlay_gate.test.js app/test/shared.test.js
-  app/test/eval.test.js and python -m pytest -q tests/test_overlay_smoke.py tests/test_budgets.py
-  pass. ZERO-CLICK: Default stays Full; the choice is set once and saved; the page follows the
-  snapshot with no click. DEPENDS: OVL-OVERLAY-KEYS. BLOCKED: session wave 7.
-- [ ] PLAY-TD-08A-GUIDE-SHORT-FIELD (build) Zone guide short field: loader, cap and view key.
-  ACCEPT: python -m pytest -q tests/test_zone_guide.py passes: every entry's short is ASCII of at
-  most 34 characters or empty, the view carries the key short, and a 35-character short fails the
-  load. ZERO-CLICK: Published in the snapshot on each zone change; nothing to press. BLOCKED:
-  session wave 7.
-- [ ] DEP-05 (build) Installed-mode paths (Python side). ACCEPT: python -m pytest -q
-  tests/test_install_paths.py tests/test_sidecar_paths.py tests/test_port_resolve.py
-  tests/test_procs.py passes. ZERO-CLICK: Resolved from the marker by itself; nothing to set. In a
-  checkout nothing changes. DEPENDS: DEP-02, RUN-DURABLE-JSONFILE, SEC-DEMO-ENTRY. BLOCKED: session
-  wave 7.
-- [ ] TC-VERDICT-CAVEAT (build) Build caveat on the verdict; alerts name the item-key press. ACCEPT:
-  python -m pytest -q tests/test_eval_text.py tests/test_build_live.py tests/test_overlay_layout.py
-  passes. ZERO-CLICK: Appears and clears by itself with the alert; no click. DEPENDS: TC-CARD-PARTS,
-  TC-PRESS-BUILD. BLOCKED: session wave 7.
 - [ ] OVL-CLIENT-ZOOM (build) Probe and restore zoom in the desktop client. ACCEPT: node --test
   app/test/zoom.test.js app/test/parts.test.js and python -m pytest -q tests/test_client_zoom.py
   tests/test_overlay_smoke.py tests/test_floor_static.py pass (the probe test skips without Electron
