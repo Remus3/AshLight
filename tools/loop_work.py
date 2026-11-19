@@ -2,10 +2,13 @@
 WorkMixin (LOOP-SPLIT-TICK, the plan 107 pattern of tools/loop_merge.py;
 tools/al_loop.py re-exports every name here). Rows come through the loader
 tools/roadmap.py (ROADMAP.md plus docs/roadmap/new|done/ files) and wait on
-the `DEPENDS: <ids>` in their own text (LOOP-ROWFILES-WORK, F-029). Every
-side effect goes through self.d (Deps). Stdlib only."""
+the `DEPENDS: <ids>` in their own text (LOOP-ROWFILES-WORK, F-029). A row
+carrying BLOCKED is listed with its reason and never dispatched, and dispatch
+re-reads a row from HEAD right before it launches (AUTO-06, decision 0055).
+Every side effect goes through self.d (Deps). Stdlib only."""
 
 import datetime as _dt
+import re
 from pathlib import Path
 
 import al_lane
@@ -20,6 +23,55 @@ from loop_roadmap import (
     archived_rows, dependency_cycles, dispatchable, dive_backoff, dive_history, handoff_items,
     plan_titles, resolve_item, roadmap_flip_time,
 )
+
+
+# ---------------------------------------------------------------- BLOCKED reasons
+
+BLOCKED_REASON_RX = re.compile(r"\bBLOCKED\b:?([^.]*)")
+BLOCKED_REASON_MAX = 60
+BLOCKED_DEFAULT = "operator act (see ROADMAP)"
+
+
+def blocked_reason(text):
+    """'BLOCKED: <reason>' for a tagged row: the text after 'BLOCKED:' up to
+    the next full stop, at most BLOCKED_REASON_MAX characters (decision 0055:
+    session wave <n>, session, operator act, gate); a bare BLOCKED keeps the
+    old 'operator act (see ROADMAP)'. None for an untagged row."""
+    m = BLOCKED_REASON_RX.search(text or "")
+    if not m:
+        return None
+    why = " ".join(ascii_text(m.group(1)).split())
+    if len(why) > BLOCKED_REASON_MAX:
+        why = why[:BLOCKED_REASON_MAX - 3].rstrip() + "..."
+    return f"BLOCKED: {why or BLOCKED_DEFAULT}"
+
+
+def head_row(git, tree, iid):
+    """Row iid as committed at HEAD of tree: HEAD:ROADMAP.md, then its
+    docs/roadmap/new/<iid>.md file, with its docs/roadmap/done/<iid>.md mark
+    applied (the composition of roadmap.load_rows, read through git show).
+    None when HEAD cannot be read or holds no such row."""
+    def show(rel):
+        try:
+            r = git(["show", f"HEAD:{rel}"], tree)
+        except Exception:  # noqa: BLE001 - an unreadable HEAD is "no evidence"
+            return None
+        return r.stdout if r.returncode == 0 and isinstance(r.stdout, str) else None
+
+    texts = [show(roadmap.ROADMAP_REL)]
+    marks = {}
+    if roadmap.FILE_ID_RX.match(iid):
+        texts.append(show(f"{roadmap.NEW_REL}/{iid}.md"))
+        line = (show(f"{roadmap.DONE_REL}/{iid}.md") or "").rstrip("\n")
+        if roadmap.DONE_LINE_RX.match(line):
+            marks[iid] = line
+    for text in texts:
+        if not text:
+            continue
+        for row in roadmap.roadmap_rows(roadmap._apply_done(text, marks)):
+            if row["id"] == iid:
+                return row
+    return None
 
 
 # ---------------------------------------------------------------- work list and dispatch
@@ -160,7 +212,7 @@ class WorkMixin:
                 continue
             if BLOCKED_RX.search(r.get("text") or ""):
                 skipped.append({"id": r["id"], "text": r["title"], "skip": "blocked",
-                                "reason": "BLOCKED: operator act (see ROADMAP)"})
+                                "reason": blocked_reason(r.get("text"))})
                 continue
             wait, why = self.row_waits(r, rows)
             if wait:
@@ -250,6 +302,28 @@ class WorkMixin:
                 self.step(f"{rec['id']}: lane-dirty cleared, {Path(m.group(1)).name} clean")
             self.items.put(rec)
 
+    def row_taken(self, item):
+        """Decision 0055: why a plan row listed by the work list must not be
+        dispatched now, else None. Re-read under the tick lock right before
+        the dispatch: the row as committed at HEAD (a session claims a row by
+        committing its BLOCKED tag first), then the main tree's rows through
+        the loader; a BLOCKED tag or a close in either one wins. A HEAD that
+        cannot be read, or holds no such row, is no evidence either way."""
+        if item.get("kind") != "plan":
+            return None
+        iid = item["id"]
+        fresh = [head_row(self.d.git, self.d.main_tree, iid)]
+        fresh.append(next((r for r in self.load_rows() if r["id"] == iid), None))
+        for where, row in zip(("HEAD", "main tree"), fresh):
+            if row is None:
+                continue
+            why = blocked_reason(row.get("text"))
+            if why:
+                return f"{why} (at {where})"
+            if not row["open"]:
+                return f"closed (at {where})"
+        return None
+
     def dispatch(self, work):
         free = self.free_lanes()
         for item in work:
@@ -257,6 +331,10 @@ class WorkMixin:
                 break
             rec = self.items.get(item["id"])
             if not dispatchable(rec, self.open_ids):
+                continue
+            taken = self.row_taken(item)
+            if taken:  # tagged or closed since the work list: never worked twice
+                self.step(f"{item['id']}: not dispatched, {taken}")
                 continue
             pick = item.get("lane_hint") if item.get("lane_hint") in free else free[0]
             if self.dry:

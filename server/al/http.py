@@ -17,7 +17,10 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
 - strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none';
 - SEC-HELLO-CORE (decision 0054): GET /api/hello takes a proof of the token
   (hello.py), never the token value, as its token gate, so a client can
-  prove the core before it sends the token.
+  prove the core before it sends the token;
+- RUN-SEAMS (decision 0056): a GET or POST path no built-in route takes
+  falls through to plug.route (server/al/plug/), after _guard, and only
+  for an exact path under /api/, so a plug route always needs the token.
 """
 
 import contextlib
@@ -34,7 +37,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, gfx, hello, layout, ports, settingsio, static, webfetch
+from . import DISCLAIMER, NAME, VERSION, gfx, hello, layout, plug, ports, settingsio, static, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -390,7 +393,7 @@ class Handler(BaseHTTPRequestHandler):
                 # AUDIT-HTTP-HARDEN S1: HEAD never opens the endless stream.
                 return self._send(405, "use GET\n", extra={**extra, "Allow": "GET"})
             return self._sse(extra)
-        return self._send(404, "not found\n")
+        return self._plug("GET", path, query, extra)
 
     def do_HEAD(self):
         self.do_GET()
@@ -429,7 +432,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._price_watch()
         if path == "/api/hints":
             return self._hints()
-        return self._send(404, "not found\n")
+        return self._plug("POST", path, query, extra)
+
+    def _plug(self, verb, path, query, extra):
+        """RUN-SEAMS (decision 0056): the fall-through after the built-in
+        routes. _guard already ran (Host, Origin, Sec-Fetch-Site, token);
+        plug.route answers only an exact /api/ path, so nothing outside
+        /api/ (and nothing token-free) is ever a plug route."""
+        fn = plug.route(verb, path) if self._needs_token(path) else None
+        if fn is None:
+            return self._send(404, "not found\n")
+        return fn(self, query, extra)
 
     def _hints(self):
         """NEWBIE-HINTS: {"reset": true} shows the new-character tips
