@@ -54,6 +54,7 @@ class FakeNet:
     def __init__(self):
         self.calls = []
         self.status = {}
+        self.headers = {}  # per status key, e.g. a Retry-After
 
     def __call__(self, method, url, headers, body=None):
         self.calls.append((method, url, dict(headers)))
@@ -61,7 +62,7 @@ class FakeNet:
             return 200, {}, LEAGUES
         for key, code in self.status.items():
             if key in url:
-                return code, {}, b""
+                return code, dict(self.headers.get(key) or {}), b""
         etag = '"e-' + url.rsplit("type=", 1)[-1] + '"'
         if headers.get("If-None-Match") == etag:
             return 304, {"ETag": etag}, b""
@@ -82,13 +83,13 @@ class Clock:
         return self.t
 
 
-def _client(tmp_path, net, clock, on=True, league=None):
+def _client(tmp_path, net, clock, on=True, league=None, sleep=None):
     state = {"on": on, "league": league}
     d = tmp_path / "ninja"
     c = ninja.RatesClient(d, enabled=lambda: state["on"],
                           league=lambda: state["league"], fetch=net, clock=clock,
                           contact=lambda: "test-contact",
-                          book=pricebook.PriceBook(d))
+                          book=pricebook.PriceBook(d), sleep=sleep)
     return c, state
 
 
@@ -169,6 +170,101 @@ def test_one_failing_type_does_not_stop_the_others(tmp_path):
     s = c.book.summary()
     assert s["UniqueWeapons"]["last_error"] == "HTTP 500"
     assert s["UniqueArmours"]["entries"] == 4 and s["Essences"]["entries"] == 2
+
+
+# -- DATA-PRICE-POLITE: daily retry, spaced GETs, back-off ---------------------
+
+def _asked(net, key):
+    return sum(1 for _, u, _ in net.calls if key in u)
+
+
+def test_type_failing_three_times_waits_a_day(tmp_path):
+    net, clock = FakeNet(), Clock()
+    net.status["type=UniqueWeapons"] = 500
+    c, _ = _client(tmp_path, net, clock)
+    start = clock.t
+    for i in range(3):  # three hourly failures in a row
+        clock.t = start + i * (ninja.MIN_INTERVAL_S + 1)
+        c.refresh()
+    assert _asked(net, "type=UniqueWeapons") == 3
+    assert c.book.doc["types"]["UniqueWeapons"]["fails"] == 3
+    third = clock.t
+    # the other types keep their hourly round; the failing one waits a day,
+    # also after a restart on the same cache
+    for dt in (ninja.MIN_INTERVAL_S + 1, 12 * 3600, pricebook.DAILY_S - 1):
+        clock.t = third + dt
+        c, _ = _client(tmp_path, net, clock)
+        c.refresh()
+    assert _asked(net, "type=UniqueWeapons") == 3
+    assert _asked(net, "type=UniqueArmours") == 6
+    # a day later it is asked again; one success brings back the hourly gate
+    del net.status["type=UniqueWeapons"]
+    clock.t = third + pricebook.DAILY_S
+    c.refresh()
+    assert _asked(net, "type=UniqueWeapons") == 4
+    assert c.book.doc["types"]["UniqueWeapons"]["fails"] == 0
+    clock.t += ninja.MIN_INTERVAL_S + 1
+    c.refresh()
+    assert _asked(net, "type=UniqueWeapons") == 5
+    # a failure never brings a faster retry: two failures keep the hour
+    net.status["type=Essences"] = 500
+    for _ in range(2):
+        clock.t += ninja.MIN_INTERVAL_S + 1
+        c.refresh()
+    n = _asked(net, "type=Essences")
+    assert c.book.doc["types"]["Essences"]["fails"] == 2
+    clock.t += 60
+    assert c.refresh() == "fresh" and _asked(net, "type=Essences") == n
+
+
+def test_round_has_22_gaps_of_two_seconds(tmp_path):
+    events = []
+
+    class Net(FakeNet):
+        def __call__(self, method, url, headers, body=None):
+            events.append(("get", url))
+            return super().__call__(method, url, headers, body)
+
+    net, clock = Net(), Clock()
+    c, _ = _client(tmp_path, net, clock, sleep=lambda s: events.append(("sleep", s)))
+    assert c.refresh() == "fetched"
+    sleeps = [s for kind, s in events if kind == "sleep"]
+    gets = [u for kind, u in events if kind == "get" and not u.endswith(ninja.LEAGUES_PATH)]
+    assert len(gets) == 1 + N_TYPES == 23 and sleeps == [pricebook.GAP_S] * 22 == [2.0] * 22
+    # the league list, then the Currency GET, then every book GET follows
+    # one 2 s sleep
+    assert events[0] == ("get", ninja.BASE + ninja.LEAGUES_PATH)
+    assert events[1][0] == "get" and "type=Currency" in events[1][1]
+    assert [k for k, _ in events[2:]] == ["sleep", "get"] * 22
+
+
+def test_a_429_stops_the_round(tmp_path):
+    net, clock = FakeNet(), Clock()
+    net.status["type=UniqueArmours"] = 429
+    net.headers["type=UniqueArmours"] = {"Retry-After": "7200"}
+    c, _ = _client(tmp_path, net, clock)
+    assert c.refresh() == "fetched"  # the Currency rates came in first
+    asked = [u for _, u, _ in net.calls]
+    assert "type=UniqueArmours" in asked[-1]  # nothing after the 429
+    assert len(asked) == 1 + 1 + 2  # leagues, Currency, UniqueWeapons, UniqueArmours
+    assert c.doc["backoff_until"] == clock.t + 7200
+    t = c.book.doc["types"]["UniqueArmours"]
+    assert t["last_error"] == "HTTP 429" and not t.get("fails")  # not the type's fault
+    # nothing is sent for two hours, across a restart
+    n = len(net.calls)
+    clock.t += 7199
+    c2, _ = _client(tmp_path, net, clock)
+    assert c2.refresh() == "backoff" and c2.refresh_async() is False
+    assert len(net.calls) == n
+    # the book's own refresh stops on the same signal
+    book = pricebook.PriceBook(tmp_path / "other")
+    seen = []
+
+    def get(url, etag):
+        seen.append(url)
+        raise pricebook.StopRound("HTTP 503")
+    out = book.refresh(get, ninja.BASE, "Example League", clock.t)
+    assert out["stopped"] is True and len(seen) == 1 and out["errors"] == 0
 
 
 # -- lookup on the press ------------------------------------------------------

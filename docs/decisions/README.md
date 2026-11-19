@@ -21,6 +21,10 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0062: Changelog (plan 05 D7) (docs/decisions/0062-changelog.md)
+  (DEP-04).
+- 0061: Electron shell guards (docs/decisions/0061-electron-shell-guards.md)
+  (OVL-SHELL-GUARDS).
 - 0059: installed-mode home and layout (plan 05 D1, ruling Q-19)
   (DEP-05).
 - 0058: hotkeys: effective keys, rebind in the app, self-healing

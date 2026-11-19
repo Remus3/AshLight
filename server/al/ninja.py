@@ -36,6 +36,17 @@ stays the DISPLAY name (what Core.trade_league and the card label read),
 doc["league_id"] holds the id and doc["league_changed_at"] the time the
 priced league last changed. A configured league may be an id or a name and
 resolves through the cached list (never a list request of its own).
+
+DATA-PRICE-POLITE (F-045, research 0036 R5): a 429, 403 or 503 on any
+poe.ninja GET stops the round and sets doc["backoff_until"] = now +
+Retry-After (webfetch.retry_after_s, bounded to 1 h - 24 h; 1 h when the
+header is absent), saved in rates.json, so a restart honours it; while it
+holds, refresh() returns "backoff" and sends nothing, force included. Every
+GET asks for a gzip body (Accept-Encoding: gzip; webfetch.request inflates
+it with the size cap applied after inflation). The book's GETs are spaced
+2 s apart (pricebook.GAP_S, the injected sleep): the 23 GETs of a full
+round have 22 gaps. The User-Agent purpose says "prices", since 22 of the
+23 requests fetch other prices than currency.
 """
 
 import json
@@ -46,7 +57,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from . import jsonfile, leagues, num, paths, webfetch
+from . import jsonfile, leagues, num, paths, pricebook, webfetch
 
 log = logging.getLogger("al.ninja")
 
@@ -59,8 +70,11 @@ ALLOWED_HOSTS = ("poe.ninja",)
 LEAGUES_PATH = "/poe2/api/economy/leagues"
 OVERVIEW_PATH = "/poe2/api/economy/exchange/current/overview"
 OVERVIEW_TYPE = "Currency"
-UA_PURPOSE = "currency rates from poe.ninja"
+UA_PURPOSE = "prices from poe.ninja"
 USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; requests add the contact
+# DATA-PRICE-POLITE: these answers stop the round and start a back-off
+BACKOFF_STATUSES = (429, 403, 503)
+BACKOFF_DEFAULT_S = webfetch.RETRY_AFTER_LO_S  # no (readable) Retry-After: 1 h
 MIN_INTERVAL_S = 3600  # PoE2 data refreshes about hourly (research 0005)
 LEAGUE_INTERVAL_S = 6 * 3600
 STALE_AFTER_S = 2 * 3600
@@ -125,6 +139,15 @@ def parse_overview(body):
     return {"primary": primary, "rates": rates}
 
 
+class BackedOff(webfetch.FetchError, pricebook.StopRound):
+    """poe.ninja answered 429, 403 or 503: the round stops (the price book
+    sees it as its StopRound) and the back-off is already saved."""
+
+
+def _no_wait(_seconds):
+    return None
+
+
 class RatesClient:
     """Cached poe.ninja currency rates.
 
@@ -133,10 +156,14 @@ class RatesClient:
     fetch: injectable transport fetch(method, url, headers, body).
     contact: callable -> str or None, the User-Agent contact (UA-CONTACT);
     poe.ninja asks for one, so without it nothing is requested.
+    sleep: sleep(seconds), the wait between the book's GETs (DATA-PRICE-POLITE);
+    None = time.sleep with the real transport, no wait with an injected
+    fetch (a mock transport has no server to be polite to).
     """
 
     def __init__(self, directory=None, enabled=lambda: False, league=lambda: None,
-                 fetch=None, clock=time.time, contact=lambda: None, book=None):
+                 fetch=None, clock=time.time, contact=lambda: None, book=None,
+                 sleep=None):
         self.directory = Path(directory) if directory is not None else cache_dir()
         self.path = self.directory / CACHE_NAME
         self.enabled = enabled
@@ -145,6 +172,9 @@ class RatesClient:
         self.league = league
         self.fetch = fetch
         self.clock = clock
+        if sleep is None:
+            sleep = time.sleep if fetch is None else _no_wait
+        self.sleep = sleep
         self._lock = threading.Lock()
         self._busy = False
         self.doc = self._load()
@@ -171,14 +201,41 @@ class RatesClient:
     def any_due(self, now=None):
         """The currency overview or any price book type is due."""
         now = self.clock() if now is None else now
+        if self.backed_off(now):
+            return False
         return self.due(now) or (self.book is not None and self.book.due(now))
 
+    def backed_off(self, now=None):
+        """True while a saved poe.ninja back-off holds. A value further
+        ahead than the 24 h bound (a clock moved back, a bad cache) is
+        ignored rather than blocking for ever."""
+        now = self.clock() if now is None else now
+        until = _num(self.doc.get("backoff_until"))
+        return until is not None and 0 < until - now <= webfetch.RETRY_AFTER_HI_S
+
+    def _back_off(self, status, rh):
+        """Record the back-off of a 429 / 403 / 503 answer and raise BackedOff."""
+        now = self.clock()
+        wait = webfetch.retry_after_s(rh, now)
+        if wait is None:
+            wait = BACKOFF_DEFAULT_S
+        self.doc["backoff_until"] = now + wait
+        self.doc["last_error"] = f"HTTP {status}: poe.ninja asked to wait {int(wait)} s"
+        self._save()
+        raise BackedOff(f"HTTP {status}")
+
     def _get(self, url, etag=None):
-        headers = {"User-Agent": self._ua, "Accept": "application/json"}
+        """One GET (gzip accepted, inflated by webfetch.request); a 429,
+        403 or 503 answer saves the back-off and raises BackedOff."""
+        headers = {"User-Agent": self._ua, "Accept": "application/json",
+                   "Accept-Encoding": "gzip"}
         if etag:
             headers["If-None-Match"] = etag
-        return webfetch.request("GET", url, headers, ALLOWED_HOSTS, fetch=self.fetch,
-                                max_bytes=MAX_BYTES)
+        status, rh, body = webfetch.request("GET", url, headers, ALLOWED_HOSTS,
+                                            fetch=self.fetch, max_bytes=MAX_BYTES)
+        if status in BACKOFF_STATUSES:
+            self._back_off(status, rh)
+        return status, rh, body
 
     def _configured(self):
         configured = self.league() if callable(self.league) else self.league
@@ -223,6 +280,8 @@ class RatesClient:
             else:
                 raise webfetch.FetchError(f"leagues HTTP {status}")
             self._save()
+        except BackedOff:
+            raise  # DATA-PRICE-POLITE: the round stops, the cached league waits too
         except (ValueError, webfetch.FetchError) as e:
             if cached:
                 return self._named(cached)
@@ -232,7 +291,8 @@ class RatesClient:
     def refresh(self, force=False):
         """One refresh when due (or force=True ignores only the interval, never
         the opt-in or the contact). Returns 'off', 'off: contact not set',
-        'fresh' (not due), 'unchanged' (304), 'fetched' or 'error: ...'.
+        'fresh' (not due), 'unchanged' (304), 'fetched', 'backoff' (a saved
+        429 / 403 / 503 back-off holds or this round hit one) or 'error: ...'.
         Never raises for network trouble."""
         with self._lock:
             if self._busy:
@@ -254,12 +314,16 @@ class RatesClient:
             return "off: " + webfetch.REASON_CONTACT
         self._ua = webfetch.user_agent(UA_PURPOSE, contact)
         now = self.clock()
+        if self.backed_off(now):  # poe.ninja asked to wait; force never overrides it
+            return "backoff"
         rates_due = force or self.due(now)
         book_due = self.book is not None and (force or self.book.due(now))
         if not rates_due and not book_due:
             return "fresh"
         try:
             league_id, name = self._league_id(now)
+        except BackedOff:
+            return "backoff"
         except (ValueError, webfetch.FetchError) as e:
             self.doc["last_error"] = str(e)[:200]
             self._save()
@@ -267,9 +331,13 @@ class RatesClient:
         outcome = "fresh"
         if rates_due:
             outcome = self._refresh_rates(league_id, name, now)
+            if outcome == "backoff":
+                return outcome  # the Currency GET hit a 429 / 403 / 503
         if book_due:
+            # the Currency GET (when due) comes first; the book sleeps
+            # GAP_S before each of its GETs and stops on BackedOff
             self.book.refresh(lambda url, etag: self._get(url, etag), BASE, league_id,
-                              now, force=force, name=name)
+                              now, force=force, name=name, sleep=self.sleep)
         return outcome
 
     def _rollover(self, league_id):
@@ -319,6 +387,8 @@ class RatesClient:
                 outcome = "fetched"
             else:
                 raise webfetch.FetchError(f"HTTP {status}")
+        except BackedOff:
+            outcome = "backoff"  # last_error and backoff_until set by _back_off
         except (ValueError, webfetch.FetchError) as e:
             self.doc["last_error"] = str(e)[:200]
             outcome = f"error: {e}"
