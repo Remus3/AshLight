@@ -12,6 +12,7 @@ from loop_base import (
     GATE_TIMEOUT_S, MARKER_RX, MAX_ROUNDS, NEED_RX, NOTE_HEAD, ROADMAP_REL, VERDICT_RX,
     VERIFY_EXTRA, _norm_path, ascii_text, epoch_of, read_json,
 )
+from loop_gatefail import foreign_only
 from loop_inbox import missing_ordered
 from loop_prompts import fix_prompt, verify_prompt
 from loop_roadmap import commit_body, commit_subject, is_duplicate, plan_titles
@@ -40,12 +41,15 @@ class ReviewMixin:
             self.step(f"{rec['id']}: {rec['state']}")
             return
         rounds = rec.get("rounds", 0)
+        rec.pop("gate_foreign", None)
         while True:
             # plan 129: after fix round 3 the review is still labelled round 3
             rnd = min(rounds + 1, MAX_ROUNDS)
             ok, detail = self.gate(wt)
             findings = [] if ok else ["gates failed: " + detail]
             self.log_round(rec, rnd, "gates", findings)
+            if not ok and self.park_foreign(rec, detail, wt):
+                break
             extra = self.extra_checks(rec, wt)
             self.log_round(rec, rnd, "extra_checks", extra)
             findings += extra
@@ -106,6 +110,22 @@ class ReviewMixin:
                 return
         rec["rounds"] = rounds
         self.commit(rec, wt, ok)
+
+    def park_foreign(self, rec, detail, wt):
+        """LOOP-FAILED-PARK (F-024): a red gate whose failing tests all lie
+        outside the lane's diff ends the fix rounds where they stand (round 0
+        on the first gate): a fix round cannot repair a foreign break. The
+        item is parked for a session (state adjudicate, WIP kept under a keep
+        ref by commit()), never dropped. True when it parked."""
+        ids = foreign_only(detail, self.changed_names(wt))
+        if not ids:
+            return False
+        rec["gate_foreign"] = [ascii_text(i, 200) for i in ids[:20]]
+        rec["verdict"] = "adjudicate"
+        rec["error"] = ascii_text("gate failure outside the lane diff: " + ", ".join(ids), 300)
+        self.step(f"{rec['id']}: gate failure outside the lane diff, parked "
+                  f"after {rec.get('rounds', 0)} rounds")
+        return True
 
     @staticmethod
     def log_round(rec, rnd, source, findings, always=False):
@@ -219,7 +239,10 @@ class ReviewMixin:
         # the ROADMAP row is flipped in main at merge, never in the lane commit
         # (fix-0130: lane flips of adjacent rows collided on every parallel merge)
         # PUBREPO 1b: Conventional Commits subject; the label stays in the body
-        if not gates_ok:
+        foreign = not gates_ok and bool(rec.get("gate_foreign"))
+        if foreign:
+            head = commit_subject(rec, wip="gate failure outside the lane diff, adjudicate")
+        elif not gates_ok:
             head = commit_subject(rec, wip="gates failed, not merged")
         elif not passed:
             head = commit_subject(
@@ -237,7 +260,10 @@ class ReviewMixin:
             return self.commit_refused(rec, wt, r, msg)
         rec["commit"] = self.d.git(["rev-parse", "HEAD"], wt).stdout.strip()
         if not gates_ok or not passed:
-            rec["state"] = "failed" if not gates_ok else "adjudicate"
+            rec["state"] = "failed" if not gates_ok and not foreign else "adjudicate"
+            # LOOP-FAILED-PARK: the WIP commit survives a re-claimed lane
+            # worktree under refs/al/keep/<id> until a session rules on it
+            self.keep(rec)
             self.items.put(rec)
             self.step(f"{rec['id']}: {rec['state']} after {rounds} rounds, WIP kept unmerged")
             return
@@ -261,7 +287,8 @@ class ReviewMixin:
             self.step(f"{rec['id']}: commit refused, salvage failed, worktree left dirty")
             return
         ok = rec.get("gates_ok") and rec.get("verdict") == "PASS"
-        rec["state"] = "committed" if ok else "failed"
+        foreign = not rec.get("gates_ok") and bool(rec.get("gate_foreign"))
+        rec["state"] = "committed" if ok else "adjudicate" if foreign else "failed"
         self.items.put(rec)
         self.step(f"{rec['id']}: lane commit refused, work kept under {rec['keep_ref']}, "
                   f"lane worktree reset")
