@@ -21,6 +21,12 @@ checkout and never a game folder: a path with a game folder part or a
 link / junction is refused before any call. Off Windows every function
 is a no-op that returns None.
 
+SEC-ACL-CHECK: audit(runtime, repo, sidecar) only READS the three ACLs
+(Win32 API, no icacls) and names the folders anyone else can write to
+('runtime', 'app', 'sidecar'); the core runs it once per start on a
+background thread and the Checks card shows the row. The player's own
+checkout changes only when the player runs the CLI on it.
+
 CLI (SEC-ACL-SETUP): python -m server.al.acl apply <dir>
 Stdlib only.
 """
@@ -39,6 +45,7 @@ INHERIT_FLAGS = 0x1 | 0x2     # OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE
 ICACLS_TIMEOUT_S = 30.0
 
 _SE_FILE_OBJECT = 1
+_OWNER_SECURITY_INFORMATION = 0x1
 _DACL_SECURITY_INFORMATION = 0x4
 _SE_DACL_PROTECTED = 0x1000
 _TOKEN_QUERY = 0x0008
@@ -48,6 +55,19 @@ _REPARSE_POINT = 0x400
 # allowed, denied, allowed callback, denied callback
 _ALLOW_TYPES = (0x0, 0x9)
 _SIMPLE_TYPES = (0x0, 0x1, 0x9, 0xA)
+# denied, denied object, denied callback, denied callback object
+_DENY_TYPES = (0x1, 0x6, 0xA, 0xC)
+
+# SEC-ACL-CHECK: any of these rights lets a principal change what is in a
+# folder or who may: write / add file, append / add subfolder, write EA,
+# delete child, write attributes, DELETE, WRITE_DAC, WRITE_OWNER,
+# GENERIC_ALL, GENERIC_WRITE (inherit-only entries carry generic bits)
+WRITE_MASK = (0x2 | 0x4 | 0x10 | 0x40 | 0x100 | 0x10000 | 0x40000 | 0x80000
+              | 0x10000000 | 0x40000000)
+# CREATOR OWNER stands for whoever makes a child: that principal already
+# needed write access here, so it adds no writer of its own
+CREATOR_OWNER_SID = "S-1-3-0"
+AUDIT_NAMES = ("runtime", "app", "sidecar")
 
 _PLAYER_SID = None
 _API = None
@@ -197,6 +217,79 @@ def read_acl(path):
             k32.LocalFree(sd)
     except (OSError, AttributeError, ValueError):
         return None
+
+
+def read_owner(path):
+    """The owner SID of path, or None off Windows or when unknown."""
+    if not _is_windows():
+        return None
+    try:
+        api = _api()
+        ctypes, wintypes, adv, k32 = api
+        owner = ctypes.c_void_p()
+        sd = ctypes.c_void_p()
+        rc = adv.GetNamedSecurityInfoW(str(path), _SE_FILE_OBJECT, _OWNER_SECURITY_INFORMATION,
+                                       ctypes.byref(owner), None, None, None, ctypes.byref(sd))
+        if rc != 0:
+            return None
+        try:
+            return _sid_text(api, owner.value) if owner.value else None
+        finally:
+            k32.LocalFree(sd)
+    except (OSError, AttributeError, ValueError):
+        return None
+
+
+def others_can_write(path):
+    """SEC-ACL-CHECK: True when anyone besides the player, SYSTEM and the
+    local admins group can write to path (an allow entry with a write
+    right, inherit-only ones too since children take them; an allow entry
+    of a type not decoded here; a NULL DACL; another owner, who may rewrite
+    the ACL); False when only the three can; None off Windows or when
+    unknown. Deny entries are ignored (the stricter reading). Read only."""
+    sids = private_sids()
+    if sids is None:
+        return None
+    acl = read_acl(path)
+    if acl is None:
+        return None
+    _, entries = acl
+    if entries is None:
+        return True
+    owner = read_owner(path)
+    if owner is not None and owner not in sids:
+        return True
+    for ace_type, _, mask, sid in entries:
+        if ace_type in _DENY_TYPES:
+            continue
+        if sid is None:
+            return True
+        if sid in sids or sid == CREATOR_OWNER_SID:
+            continue
+        if mask & WRITE_MASK:
+            return True
+    return False
+
+
+def audit(runtime, repo, sidecar, check=None):
+    """SEC-ACL-CHECK: the names of the folders anyone else can write to,
+    in AUDIT_NAMES order ('runtime' the runtime dir, 'app' the AshLight
+    folder, 'sidecar' the sidecar root). A None or missing folder and an
+    unknown answer are left out. Reads only; never changes an ACL.
+    `check` (tests) replaces others_can_write."""
+    check = check or others_can_write
+    out = []
+    for name, path in zip(AUDIT_NAMES, (runtime, repo, sidecar)):
+        if path is None:
+            continue
+        try:
+            if not os.path.isdir(path):
+                continue
+            if check(path) is True:
+                out.append(name)
+        except (OSError, ValueError):
+            continue
+    return out
 
 
 def principals(path):

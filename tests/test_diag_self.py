@@ -132,6 +132,30 @@ def test_port():
     assert status({"port": None}, "port") == "unknown"
 
 
+def test_private_files_row():
+    # SEC-ACL-CHECK: no row while nothing is open or the audit has not run
+    ids = [r["id"] for r in diag.checks(GREEN, NOW)]
+    assert "private" not in ids
+    assert diag.check_private({"acl_open": None}) is None
+    assert diag.check_private({"acl_open": []}) is None
+    assert diag.check_private({"acl_open": ["elsewhere"]}) is None
+    r = row({"acl_open": ["app"]}, "private")
+    assert r["status"] == "fail" and r["label"] == "Private files"
+    assert r["detail"] == ("Other accounts on this computer can change files in "
+                           "the AshLight folder.")
+    assert r["fix"] == "In the AshLight folder, run: python -m server.al.acl apply ."
+    for name in ("runtime", "sidecar"):
+        r = row({"acl_open": [name]}, "private")
+        assert r["fix"] == diag.FIX_PRIVATE_SETUP and "setup.ps1" in r["fix"]
+    r = row({"acl_open": ["sidecar", "app", "runtime"]}, "private")
+    assert r["detail"].endswith("in AshLight's runtime folder, the AshLight folder "
+                                "and AshLight's sidecar folder.")
+    assert r["fix"] == diag.FIX_PRIVATE_BOTH
+    assert len(r["fix"].splitlines()) == 1
+    v = diag.view(dict(GREEN, acl_open=["runtime"]), "1", now=NOW)
+    assert v["failed"] == 1 and v["checks"][-1]["id"] == "private"
+
+
 def test_summary_counts_fixes():
     v = diag.view(dict(GREEN, overlay=False, reading=False), "1", now=NOW)
     assert v["failed"] == 2 and v["summary"] == "2 checks need a fix."
@@ -160,7 +184,7 @@ def test_report_redacts_a_seeded_state(tmp_path):
                  log_found=False, _repo=e + sep + "SecretRepo",
                  _sidecar=sep.join([e, "Sidecars", "AL"]),
                  _log_path=sep.join([home, "Games", "Client.txt"]), _contact=mail,
-                 _character="Cinderwisp")
+                 _character="Cinderwisp", acl_open=["runtime", "app", "sidecar"])
     env = {"USERPROFILE": home, "USERNAME": "SecretUser"}
     pairs = diag.secrets(facts, environ=env)
     rows = diag.checks(facts, NOW)
@@ -173,6 +197,10 @@ def test_report_redacts_a_seeded_state(tmp_path):
                  "Cinderwisp", c + sep, e + sep, e + "/"):
         assert leak not in text, leak
     assert "<character>" in text and "<repo>" in text
+    # SEC-ACL-CHECK: the private files row names folders, never a path
+    priv = [ln for ln in text.splitlines() if ln.startswith("[FIX] Private files:")]
+    assert len(priv) == 1 and "<path>" not in priv[0] and "<repo>" not in priv[0]
+    assert "<sidecar>" not in priv[0] and "<home>" not in priv[0]
     text.encode("ascii")
     assert "\r" not in text
 

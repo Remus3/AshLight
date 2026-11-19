@@ -288,6 +288,47 @@ class Core:
         for name in TICK_ORDER:
             self.add_tick(name)
         plug.attach_all(self)
+        # SEC-ACL-CHECK (F-011): one read-only ACL audit of the runtime dir,
+        # the AshLight folder and the sidecar root per start, on a
+        # background thread (never on the diag tick); real core only, a
+        # test core sets acl_open itself.
+        self.acl_open = None
+        self._acl_thread = None
+        self._acl_stop = threading.Event()
+        if self._real:
+            self.start_acl_audit()
+
+    # SEC-ACL-CHECK: the entry point makes the runtime dir private right
+    # after Core() (start_token); the audit waits this long so it reads the
+    # repaired ACL, not the one being replaced.
+    ACL_AUDIT_DELAY_S = 5.0
+
+    def start_acl_audit(self, audit=None, delay=None):
+        """Start the one ACL audit thread (a second call returns the same
+        thread). It sets acl_open to the folder names anyone else can write
+        to (acl.audit), or leaves None when the audit fails; the next diag
+        tick shows the row. `audit` (tests) replaces the real one."""
+        if self._acl_thread is not None:
+            return self._acl_thread
+        if audit is None:
+            def audit():
+                return acl.audit(self.runtime, paths.repo_root(), paths.sidecar_root())
+        wait_s = self.ACL_AUDIT_DELAY_S if delay is None else float(delay)
+
+        def run():
+            if wait_s > 0 and self._acl_stop.wait(wait_s):
+                return
+            try:
+                found = audit()
+            except Exception:  # noqa: BLE001 - an unreadable ACL reads unknown
+                found = None
+            if isinstance(found, list):
+                self.acl_open = [n for n in found if isinstance(n, str)]
+                self._next_diag = 0.0  # show the row on the next loop pass
+
+        self._acl_thread = threading.Thread(target=run, name="al-acl-audit", daemon=True)
+        self._acl_thread.start()
+        return self._acl_thread
 
     def add_tick(self, name, fn=None):
         """Append a tick to the loop list. fn None = the Core method `name`
@@ -1001,6 +1042,8 @@ class Core:
             "reload_notes": self.reload_notes(),
             # GGG-DOCS-WATCH (decision 0044): tools/ggg_docs_watch.py flag
             "ggg_reg_open": self._ggg_reg_open(),
+            # SEC-ACL-CHECK: folder names from the start-up audit, no path
+            "acl_open": list(self.acl_open) if self.acl_open is not None else None,
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": snap.get("character"),
         })
@@ -1027,5 +1070,8 @@ class Core:
         return self.state.set_diag(diag.view(self.diag_facts(now), VERSION, now=now))
 
     def close(self):
+        stop = getattr(self, "_acl_stop", None)
+        if stop is not None:
+            stop.set()  # SEC-ACL-CHECK: a pending audit never starts
         self.stop_tailing()
         self.tc_provider.close()  # AUDIT-TC-WIRE: stop the bridge if started

@@ -16,8 +16,28 @@ const SRC = fs.readFileSync(path.join(WEB, "regions.js"), "utf8");
 
 const STUB_JS = ["pager", "textspacing", "strip", "context", "setupcard", "feed",
   "notice", "buildline", "itemcard", "keptchecks"];
-const STUB_CSS = ["strip", "context", "setupcard", "feed", "notice", "buildline",
+// every pre-linked region sheet, in <link> order (they stay linked)
+const LINKED_CSS = ["strip", "context", "setupcard", "feed", "notice", "buildline",
   "itemcard", "keptchecks"];
+// the sheets still empty stubs: one per line, a comment line between each
+// pair, so a region package deletes only its own line
+const STUB_CSS = [
+  "strip",
+  // (one stub per line)
+  "context",
+  // (one stub per line)
+  "setupcard",
+  // (one stub per line)
+  "feed",
+  // (one stub per line)
+  "notice",
+  // (one stub per line)
+  "buildline",
+  // (one stub per line)
+  "itemcard",
+  // (one stub per line)
+  "keptchecks",
+];
 
 function node(attrs) {
   return {
@@ -200,7 +220,7 @@ test("the page loads slots, regions, the ten region files and app.js last", () =
   assert.deepEqual(scripts.slice(at), ["slots", "regions"].concat(STUB_JS, ["app"]));
   assert.equal(scripts[scripts.length - 1], "app");
   const sheets = [...HTML.matchAll(/<link rel="stylesheet" href="\/web\/([a-z]+)\.css">/g)].map((m) => m[1]);
-  assert.deepEqual(sheets, ["app"].concat(STUB_CSS));
+  assert.deepEqual(sheets, ["app"].concat(LINKED_CSS));
 });
 
 test("each pre-linked file is an empty stub until its package fills it", () => {
