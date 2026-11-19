@@ -28,6 +28,14 @@ re-read at most every LEAGUE_INTERVAL_S (6 h); after the current league's
 overview answers 404 or has no lines, the next hourly refresh re-reads it
 (within the hour, decision 0026 item 4; AREA-AUDIT P3-5), so a new league
 (PoE2 1.0, 2026-12-11) is picked up the same day.
+
+DATA-LEAGUE-IDENTITY (finding F-031): the leagues list is cached whole as
+id plus name (leagues.py) and re-read with If-None-Match, so an unchanged
+list costs no body. The id goes into every poe.ninja URL; doc["league"]
+stays the DISPLAY name (what Core.trade_league and the card label read),
+doc["league_id"] holds the id and doc["league_changed_at"] the time the
+priced league last changed. A configured league may be an id or a name and
+resolves through the cached list (never a list request of its own).
 """
 
 import json
@@ -38,7 +46,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from . import jsonfile, num, paths, webfetch
+from . import jsonfile, leagues, num, paths, webfetch
 
 log = logging.getLogger("al.ninja")
 
@@ -76,16 +84,9 @@ _num = num.finite  # FUZZ-4 / AREA-AUDIT P3-2: huge JSON ints read as None
 
 
 def parse_leagues(body):
-    """The first league id of the leagues list (the current challenge league)."""
-    doc = json.loads(body)
-    if isinstance(doc, dict):  # tolerate {"leagues": [...]} as well
-        doc = doc.get("leagues") or doc.get("result") or []
-    for entry in doc if isinstance(doc, list) else []:
-        if isinstance(entry, dict):
-            lid = entry.get("id") or entry.get("name")
-            if isinstance(lid, str) and lid.strip():
-                return lid.strip()[:80]
-    raise ValueError("no league in the leagues response")
+    """The first league id of the leagues list (the current challenge
+    league). A wrapper over leagues.parse_list, kept for its callers."""
+    return leagues.parse_list(body)[0]["id"]
 
 
 def parse_overview(body):
@@ -179,30 +180,54 @@ class RatesClient:
         return webfetch.request("GET", url, headers, ALLOWED_HOSTS, fetch=self.fetch,
                                 max_bytes=MAX_BYTES)
 
-    def _league_id(self, now):
+    def _configured(self):
         configured = self.league() if callable(self.league) else self.league
         if isinstance(configured, str) and configured.strip():
             return configured.strip()
+        return None
+
+    def _named(self, league_id):
+        """(id, display name) of a league id, the name from the cached list."""
+        return league_id, leagues.name_of(self.doc.get("leagues"), league_id) or league_id
+
+    def _league_id(self, now):
+        """(id, name) of the league to price: the configured one (an id or a
+        name, resolved through the cached list; unknown -> used as both),
+        else the first of poe.ninja's list, re-read every LEAGUE_INTERVAL_S
+        (hourly after a rollover hint) with If-None-Match."""
+        configured = self._configured()
+        if configured:
+            hit = leagues.entry_of(self.doc.get("leagues"), configured)
+            return (hit["id"], hit["name"]) if hit else (configured, configured)
         cached = self.doc.get("league_auto")
         # a rollover hint (404 / empty overview) shortens the wait to an hour
         wait = MIN_INTERVAL_S if self.doc.get("league_stale") else LEAGUE_INTERVAL_S
         if cached and not self._due("league_attempt_at", wait, now):
-            return cached
+            return self._named(cached)
         if cached is None and not self._due("league_attempt_at", MIN_INTERVAL_S, now):
             raise webfetch.FetchError("league lookup waits for its interval")
         self.doc["league_attempt_at"] = now
         self._save()
+        listed = self.doc.get("leagues")
+        etag = self.doc.get("league_list_etag") if cached and isinstance(listed, list) \
+            and listed else None
         try:
-            status, _rh, body = self._get(BASE + LEAGUES_PATH)
-            if status != 200:
+            status, rh, body = self._get(BASE + LEAGUES_PATH, etag)
+            if status == 304 and etag:
+                self.doc["league_stale"] = False  # the list is unchanged
+            elif status == 200:
+                listed = leagues.parse_list(body)
+                self.doc.update({"leagues": listed, "league_auto": listed[0]["id"],
+                                 "league_stale": False,
+                                 "league_list_etag": webfetch.header(rh, "ETag")})
+            else:
                 raise webfetch.FetchError(f"leagues HTTP {status}")
-            self.doc["league_auto"] = parse_leagues(body)
-            self.doc["league_stale"] = False
+            self._save()
         except (ValueError, webfetch.FetchError) as e:
             if cached:
-                return cached
+                return self._named(cached)
             raise webfetch.FetchError(f"league lookup failed: {e}") from e
-        return self.doc["league_auto"]
+        return self._named(self.doc["league_auto"])
 
     def refresh(self, force=False):
         """One refresh when due (or force=True ignores only the interval, never
@@ -234,48 +259,60 @@ class RatesClient:
         if not rates_due and not book_due:
             return "fresh"
         try:
-            league = self._league_id(now)
+            league_id, name = self._league_id(now)
         except (ValueError, webfetch.FetchError) as e:
             self.doc["last_error"] = str(e)[:200]
             self._save()
             return f"error: {e}"
         outcome = "fresh"
         if rates_due:
-            outcome = self._refresh_rates(league, now)
+            outcome = self._refresh_rates(league_id, name, now)
         if book_due:
-            self.book.refresh(lambda url, etag: self._get(url, etag), BASE, league,
-                              now, force=force)
+            self.book.refresh(lambda url, etag: self._get(url, etag), BASE, league_id,
+                              now, force=force, name=name)
         return outcome
 
-    def _rollover(self, league):
+    def _rollover(self, league_id):
         """The auto league's overview is gone or empty: re-read the
         leagues list on the next refresh (the hourly gate still applies)."""
-        configured = self.league() if callable(self.league) else self.league
-        if isinstance(configured, str) and configured.strip():
+        if self._configured():
             return
-        if self.doc.get("league_auto") == league:
+        if self.doc.get("league_auto") == league_id:
             self.doc["league_stale"] = True
 
-    def _refresh_rates(self, league, now):
+    def _set_league(self, league_id, name, now):
+        """Store the priced league (display name and id); a different id than
+        the last priced one records league_changed_at (F-031). The first
+        league ever priced is not a change. A cache from before the id was
+        kept holds the id in "league" (they were equal then)."""
+        before = self.doc.get("league_id") or self.doc.get("league")
+        if isinstance(before, str) and before and before != league_id:
+            self.doc["league_changed_at"] = now
+        self.doc["league"] = name
+        self.doc["league_id"] = league_id
+
+    def _refresh_rates(self, league_id, name, now):
         try:
-            query = urllib.parse.urlencode({"league": league, "type": OVERVIEW_TYPE})
+            query = urllib.parse.urlencode({"league": league_id, "type": OVERVIEW_TYPE})
             url = f"{BASE}{OVERVIEW_PATH}?{query}"
             same = self.doc.get("url") == url
             self.doc["overview_attempt_at"] = now
             self._save()
             status, rh, body = self._get(url, self.doc.get("etag") if same else None)
             if status == 404:
-                self._rollover(league)
+                self._rollover(league_id)
                 raise webfetch.FetchError("HTTP 404")
             if status == 304 and same and self.doc.get("rates") is not None:
                 self.doc["checked_at"] = now
                 self.doc["last_error"] = None
+                self._set_league(league_id, name, now)  # a renamed id keeps its rates
                 outcome = "unchanged"
             elif status == 200:
                 parsed = parse_overview(body)
                 if not parsed["rates"]:
-                    self._rollover(league)
-                self.doc.update({"url": url, "league": league, "primary": parsed["primary"],
+                    self._rollover(league_id)
+                self._set_league(league_id, name, now)
+                self.doc.update({"url": url, "primary": parsed["primary"],
                                  "rates": parsed["rates"], "fetched_at": now,
                                  "checked_at": now, "last_error": None,
                                  "etag": webfetch.header(rh, "ETag")})
@@ -311,11 +348,19 @@ class RatesClient:
             next_in = max(0, int(attempt + MIN_INTERVAL_S - now))
         enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
         blocked = webfetch.blocked_reason(enabled, self.contact)
+        changed = doc.get("league_changed_at")
+        listed = doc.get("leagues") if isinstance(doc.get("leagues"), list) else []
         return {"web_data": enabled, "source": "poe.ninja",
                 "contact_set": webfetch.contact_value(self.contact) is not None,
                 "blocked": blocked,
                 "attribution": ATTRIBUTION, "credit": SHORT_CREDIT,
-                "league": doc.get("league"), "primary": doc.get("primary"),
+                "league": doc.get("league"),
+                "league_id": doc.get("league_id") or doc.get("league"),
+                "leagues": [{"id": e["id"], "name": e["name"]}
+                            for e in leagues.entries(listed)],
+                "league_changed_at": (_utc(changed) if isinstance(changed, (int, float))
+                                      else None),
+                "primary": doc.get("primary"),
                 "rates": doc.get("rates") or {},
                 "fetched_at": _utc(fetched) if isinstance(fetched, (int, float)) else None,
                 "checked_at": _utc(checked) if isinstance(checked, (int, float)) else None,
@@ -339,7 +384,14 @@ class RatesClient:
         """PRICE-UNIQUE / PRICE-STACKABLES: the cached poe.ninja price for a
         parsed item, or None; currency from the rates, the rest from the
         book, current league only. Web data off -> None. Never a request:
-        the press reads the cache only."""
+        the press reads the cache only. A hit carries league_changed_at
+        (epoch seconds like checked_at, or None) for the card text."""
+        hit = self._lookup(item)
+        if hit is not None:
+            hit["league_changed_at"] = self.doc.get("league_changed_at")
+        return hit
+
+    def _lookup(self, item):
         enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
         league = self.doc.get("league")
         if not enabled or not league:

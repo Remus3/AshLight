@@ -343,3 +343,86 @@ def test_configured_league_never_rolls_over(tmp_path):
     c.refresh()
     assert not c.doc.get("league_stale")
     assert not any(u.endswith(ninja.LEAGUES_PATH) for _, u, _ in net.calls)
+
+
+# -- DATA-LEAGUE-IDENTITY (F-031): the list kept whole, conditional GET ------
+
+class ListNet(FakeNet):
+    """FakeNet whose leagues list carries an ETag and answers 304 to it."""
+
+    def __init__(self, body=LEAGUES, etag='"L1"'):
+        super().__init__()
+        self.list_body, self.list_etag = body, etag
+
+    def __call__(self, method, url, headers, body=None):
+        if url.endswith(ninja.LEAGUES_PATH):
+            self.calls.append((method, url, dict(headers)))
+            if headers.get("If-None-Match") == self.list_etag:
+                return 304, {"ETag": self.list_etag}, b""
+            return 200, {"ETag": self.list_etag}, self.list_body
+        return super().__call__(method, url, headers, body)
+
+
+def _list_calls(net):
+    return [h for _, u, h in net.calls if u.endswith(ninja.LEAGUES_PATH)]
+
+
+def test_league_get_sends_if_none_match_and_a_304_keeps_the_list(tmp_path):
+    net, clock = ListNet(), Clock()
+    c, _ = _client(tmp_path, net, clock)
+    assert c.refresh() == "fetched"
+    first = _list_calls(net)
+    assert len(first) == 1 and "If-None-Match" not in first[0]
+    whole = [{"id": "Example League", "name": "Example League"},
+             {"id": "Standard", "name": "Standard"}]
+    assert c.doc["leagues"] == whole and c.doc["league_list_etag"] == '"L1"'
+    assert c.snapshot()["leagues"] == whole
+    # 6 h later, and after a restart on the same cache: a conditional GET
+    clock.t += ninja.LEAGUE_INTERVAL_S + 1
+    c2, _ = _client(tmp_path, net, clock)
+    c2.refresh()
+    again = _list_calls(net)
+    assert len(again) == 2 and again[1]["If-None-Match"] == '"L1"'
+    assert c2.doc["leagues"] == whole and c2.doc["league_auto"] == "Example League"
+    assert c2.snapshot()["league"] == "Example League"
+    # a changed list (new ETag) answers 200 and replaces the cached one
+    net.list_body = json.dumps([{"id": "dawn", "name": "Dawn League"}]).encode()
+    net.list_etag = '"L2"'
+    clock.t += ninja.LEAGUE_INTERVAL_S + 1
+    c2.refresh()
+    assert c2.doc["leagues"] == [{"id": "dawn", "name": "Dawn League"}]
+    assert c2.doc["league_list_etag"] == '"L2"' and c2.doc["league_auto"] == "dawn"
+
+
+def test_league_change_time_is_recorded(tmp_path):
+    net, clock = ListNet(), Clock()
+    c, _ = _client(tmp_path, net, clock)
+    c.refresh()
+    veil = {"rarity": "UNIQUE", "name": "Ember Veil", "base": "Silk Robe"}
+    # the first league ever priced is not a change
+    assert c.doc.get("league_changed_at") is None
+    assert c.snapshot()["league_changed_at"] is None
+    assert c.lookup(veil)["league_changed_at"] is None
+    # 1.0 launches: the old overview 404s, the list names a new league whose
+    # id differs from its name
+    net.status["league=Example+League&type=Currency"] = 404
+    clock.t += ninja.MIN_INTERVAL_S + 1
+    assert c.refresh().startswith("error")
+    assert c.doc.get("league_changed_at") is None  # nothing priced yet
+    net.list_body = json.dumps([{"id": "dawn", "name": "Dawn League"}]).encode()
+    net.list_etag = '"L2"'
+    clock.t += ninja.MIN_INTERVAL_S + 1
+    changed = clock.t
+    assert c.refresh() == "fetched"
+    snap = c.snapshot()
+    assert c.doc["league_changed_at"] == changed
+    assert snap["league_changed_at"] == ninja._utc(changed)
+    assert (snap["league"], snap["league_id"]) == ("Dawn League", "dawn")
+    hit = c.lookup(veil)
+    assert hit["league"] == "Dawn League" and hit["league_changed_at"] == changed
+    ex = c.lookup({"rarity": "CURRENCY", "base": "Exalted Orb"})
+    assert ex["league"] == "Dawn League" and ex["league_changed_at"] == changed
+    # the same league an hour later keeps the time
+    clock.t += ninja.MIN_INTERVAL_S + 1
+    c.refresh()
+    assert c.doc["league_changed_at"] == changed
