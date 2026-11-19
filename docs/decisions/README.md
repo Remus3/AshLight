@@ -16,6 +16,10 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0050: research dive sources - no free web tools, one host allow-list,
+  GGG only at the API Reference and Data Exports pages (DIVE-FLOOR).
+- 0049: Demo mode: an isolated AshLight instance on a fixture folder
+  (SEC-DEMO-CORE).
 - 0048: AshLight's own GGG OAuth public client: scope, ports, token
   handling (TC-OAUTH-REG).
 - 0047: licence and NOTICE: Apache-2.0, holder The AshLight authors
