@@ -65,6 +65,8 @@ function fakeDoc(sizeClass, ids) {
   return {
     slot, byId,
     documentElement: {},
+    body: { tagName: "body" },
+    activeElement: null,
     defaultView: { getComputedStyle: () => ({ getPropertyValue: () => " " + sizeClass }) },
     createElement: el,
     createTextNode: text,
@@ -92,7 +94,7 @@ function fakeTabs() {
 
 function fresh(sizeClass, ctx, ids) {
   N._reset();
-  C._state.dismissed = undefined;
+  C._state.dismissed = null;
   const doc = fakeDoc(sizeClass, ids);
   N.wire(doc, ctx || { tabs: fakeTabs() });
   return doc;
@@ -139,7 +141,7 @@ test("empty reads Notices none with no action and no tone", () => {
     const m = N.model(snap, "full", null);
     assert.equal(m.empty, true);
     assert.equal(m.word, "Notices");
-    assert.equal(m.title, "none");
+    assert.equal(m.title, "none - tips and setup steps show here");
     assert.equal(m.action, null);
     assert.equal(m.tone, "");
   }
@@ -187,14 +189,21 @@ test("one polite live region in the slot, repainted only on a text change", () =
   const doc = fresh("full");
   assert.equal(doc.slot.children.length, 1);
   const box = doc.slot.children[0];
-  assert.equal(box.getAttribute("aria-live"), "polite");
-  assert.equal(box.textContent, "Noticesnone");
+  // N14-1: empty is silent, a notice is polite, and leaving says nothing
+  assert.equal(box.getAttribute("aria-live"), "off");
+  assert.equal(box.textContent, "Noticesnone - tips and setup steps show here");
   N.paint(doc, snapOf([SETUP]));
+  assert.equal(box.getAttribute("aria-live"), "polite");
   const head = box.children[0];
   N.paint(doc, snapOf([SETUP]));
   assert.equal(box.children[0], head, "same text, same nodes");
   assert.equal(doc.slot.children.length, 1);
   assert.equal(walk(doc.slot).filter((n) => n.getAttribute && n.getAttribute("aria-live")).length, 1);
+  N.paint(doc, snapOf([]));
+  assert.equal(box.getAttribute("aria-live"), "off", "set before the swap to empty");
+  // N14-4: the empty box keeps a neutral edge
+  assert.ok(box.className.split(" ").includes("edge"));
+  assert.equal(box.getAttribute("data-tone"), "");
 });
 
 test("full: head row with glyph, word, title, +N more and 1 button, then 2 rows", () => {
@@ -240,7 +249,8 @@ test("Setup: N steps left shows Settings; Open Checks opens the Checks fold", ()
 
 test("Hide goes through the checks.js handler and the note leaves", () => {
   const legacy = el("button");
-  const doc = fresh("full", { tabs: fakeTabs() }, { "lang-dismiss": legacy });
+  const heading = el("h2");
+  const doc = fresh("full", { tabs: fakeTabs() }, { "lang-dismiss": legacy, "play-n-h": heading });
   const lang = { verdict: "non_english", text: "Your game is not in English.", since: 7 };
   // the checks.js handler: reads #langbox data-key, stores it (its helpers)
   legacy.addEventListener("click", () => { C._state.dismissed = "7"; });
@@ -251,6 +261,38 @@ test("Hide goes through the checks.js handler and the note leaves", () => {
   hide.click();
   assert.equal(legacy.clicks, 1);
   assert.equal(doc.slot.children[0].getAttribute("data-kind"), "4", "Setup shows next");
+  // N14-2: the Hide button is gone, so focus goes to the region heading
+  assert.equal(heading.focused, true);
+  assert.equal(heading.getAttribute("tabindex"), "-1");
+});
+
+test("Hide leaves focus alone when it already moved elsewhere", () => {
+  const legacy = el("button");
+  const heading = el("h2");
+  const doc = fresh("full", { tabs: fakeTabs() }, { "lang-dismiss": legacy, "play-n-h": heading });
+  const other = el("input");
+  doc.activeElement = other;
+  legacy.addEventListener("click", () => { C._state.dismissed = "7"; });
+  const lang = { verdict: "non_english", text: "Not English.", since: 7 };
+  N.paint(doc, snapOf([LANG], { lang }));
+  walk(doc.slot).find((n) => n.tagName === "button").click();
+  assert.equal(heading.focused, false);
+});
+
+test("an unread stored key holds the language note back until it is known", () => {
+  const lang = { verdict: "non_english", text: "Not English.", since: 7 };
+  assert.equal(N.model(snapOf([LANG, SETUP], { lang }), "full", undefined).word, "Setup");
+  assert.equal(N.model(snapOf([LANG, SETUP], { lang }), "full", null).word, "Language");
+  // with the legacy #langbox on the page the page waits for checks.js to read it
+  const doc = fresh("full", null, { langbox: el("section") });
+  C._state.dismissed = undefined;
+  N.paint(doc, snapOf([LANG], { lang }));
+  assert.equal(doc.slot.children[0].getAttribute("data-kind"), "8");
+  // without it (after PLAY-LEGACY-OUT) nothing is hidden
+  const doc2 = fresh("full");
+  C._state.dismissed = undefined;
+  N.paint(doc2, snapOf([LANG], { lang }));
+  assert.equal(doc2.slot.children[0].getAttribute("data-kind"), "3");
 });
 
 test("tick repaints only when the size class changed", () => {

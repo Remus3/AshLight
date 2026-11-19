@@ -50,6 +50,8 @@
   var KIND_LANGUAGE = 3;
   var LABEL_CAP = 12;            // plan 03 3.4: an action label is at most 12 characters
   var HIDE = "Hide";
+  // N14-3: the empty state says what the slot is for (one 16 px line)
+  var EMPTY_TITLE = "none - tips and setup steps show here";
   /* Server action labels (server/al/playview.py) -> what the click does. */
   var ACTIONS = { "Open Checks": "checks", "Settings": "settings" };
   var TONES = { "needs-operator": "warn", "failed": "bad" };
@@ -88,7 +90,9 @@
   function queueOf(snap, dismissed) {
     var play = isObj(snap) && isObj(snap.play) ? snap.play : null;
     var list = play && Array.isArray(play.notices) ? play.notices : [];
-    var hidden = langHidden(snap, dismissed);
+    // undefined: the stored key is not read yet, so the language note waits
+    // (it never flashes back for a player who hid it) (N14-5)
+    var hidden = dismissed === undefined || langHidden(snap, dismissed);
     return list.filter(function (n) {
       return isObj(n) && !(hidden && n.kind === KIND_LANGUAGE);
     });
@@ -116,7 +120,7 @@
     var m;
     if (!pick.notice) {
       m = { empty: true, kind: 8, state: "idle", tone: "", glyph: "", word: pick.label,
-            title: pick.text, rows: [], action: null, more: 0, sizeClass: cls };
+            title: EMPTY_TITLE, rows: [], action: null, more: 0, sizeClass: cls };
     } else {
       var n = pick.notice;
       var rows = (Array.isArray(n.rows) ? n.rows : []).filter(function (r) {
@@ -178,12 +182,15 @@
     box.setAttribute("data-kind", String(m.kind));
     box.setAttribute("data-state", m.state);
     box.setAttribute("data-tone", m.tone);
-    box.className = "notice" + (m.empty ? " notice-empty" : " edge");
+    box.className = "notice edge" + (m.empty ? " notice-empty" : "");
+    // N14-1: the polite region says a notice that arrives, never "Notices
+    // none" when one leaves: it is off while empty, set before the swap
+    box.setAttribute("aria-live", m.empty ? "off" : "polite");
     box.textContent = "";
     var head = el(doc, "div", "notice-head");
     if (m.empty) {
       head.appendChild(el(doc, "p", "notice-label row-title muted", m.word));
-      head.appendChild(el(doc, "p", "notice-none row-title muted", m.title));
+      head.appendChild(el(doc, "p", "notice-none row-body one-line muted", m.title));
       box.appendChild(head);
       return true;
     }
@@ -218,10 +225,13 @@
     return true;
   }
 
-  function dismissedNow() {
+  function dismissedNow(doc) {
     var C = checksApi();
-    var d = C && isObj(C._state) ? C._state.dismissed : undefined;
-    return d === undefined ? null : d;
+    if (!C || !isObj(C._state)) { return null; }
+    var d = C._state.dismissed; // undefined: not read yet (N14-5)
+    // with no legacy #langbox, checks.js never reads the key: none hidden
+    var box = doc && doc.getElementById ? doc.getElementById("langbox") : null;
+    return d === undefined && !box ? null : d;
   }
 
   /* The click of the notice's one action. */
@@ -242,6 +252,15 @@
         }
       }
       paintNow(doc, state.snap);
+      // N14-2: the focused Hide button is gone; focus the region heading
+      var active = doc.activeElement;
+      if (!active || active === doc.body) {
+        var h = doc.getElementById ? doc.getElementById("play-n-h") : null;
+        if (h && typeof h.focus === "function") {
+          h.setAttribute("tabindex", "-1");
+          h.focus();
+        }
+      }
       return;
     }
     if (!tabs || typeof tabs.show !== "function") { return; }
@@ -261,7 +280,7 @@
     if (!box) { return; }
     state.snap = snap;
     state.cls = sizeClassOf(doc);
-    var m = model(snap, state.cls, dismissedNow());
+    var m = model(snap, state.cls, dismissedNow(doc));
     render(doc, box, m, function (does) { act(doc, does); });
   }
 
