@@ -22,7 +22,6 @@ const LINKED_CSS = ["strip", "context", "setupcard", "feed", "notice", "buildlin
 // the sheets still empty stubs: one per line, a comment line between each
 // pair, so a region package deletes only its own line
 const STUB_CSS = [
-  "strip",
   // (one stub per line)
   "context",
   // (one stub per line)
