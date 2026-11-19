@@ -181,7 +181,7 @@ test("the file shape: atomic, ASCII, LF, the documented keys", () => {
     const doc = JSON.parse(text);
     assert.deepStrictEqual(Object.keys(doc).sort(), ["keys", "overlay", "updated"]);
     assert.ok(!Number.isNaN(Date.parse(doc.updated)));
-    assert.match(doc.updated, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/);
+    assert.match(doc.updated, /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$/);
     assert.deepStrictEqual(Object.keys(doc.keys).sort(), ["eval", "toggle"]);
     for (const n of ["eval", "toggle"]) {
       assert.deepStrictEqual(Object.keys(doc.keys[n]).sort(),
