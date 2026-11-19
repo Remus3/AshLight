@@ -94,5 +94,6 @@ def test_endpoint_passes_the_cached_prices():
     from pathlib import Path
     src = (Path(__file__).resolve().parents[1] / "server" / "al" / "http.py").read_text(
         encoding="ascii")
-    block = src.split('if path == "/api/filter":', 1)[1].split("if path ==", 1)[0]
+    # TEST-HTTP-ROUTES: the route method's body, past its signature line
+    block = src.split("def _get_filter(", 1)[1].split("):\n", 1)[1].split("\n    def ", 1)[0]
     assert "filter_prices()" in block and "generate(core.builds.build, names, prices)" in block

@@ -18,6 +18,10 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
 - SEC-HELLO-CORE (decision 0054): GET /api/hello takes a proof of the token
   (hello.py), never the token value, as its token gate, so a client can
   prove the core before it sends the token;
+- TEST-HTTP-ROUTES (F-193): do_GET / do_POST / do_PUT split the path,
+  run _guard (PUT: after its 405 test) and then look the path up in one
+  table per verb (GET_ROUTES, POST_ROUTES, PUT_ROUTES); a new endpoint is
+  a table entry, never a new dispatch arm;
 - RUN-SEAMS (decision 0056): a GET or POST path no built-in route takes
   falls through to plug.route (server/al/plug/), after _guard, and only
   for an exact path under /api/, so a plug route always needs the token;
@@ -329,99 +333,18 @@ class Handler(BaseHTTPRequestHandler):
     def _needs_token(path):
         return path.startswith("/api/") or path == "/events"
 
-    # -- verbs
+    # -- verbs (TEST-HTTP-ROUTES, F-193): the path split and _guard first,
+    # then one lookup in the verb's route table (GET_ROUTES / POST_ROUTES /
+    # PUT_ROUTES, below the class). A new endpoint is a table entry and a
+    # route method; no dispatch function changes.
     def do_GET(self):
         path, query = self._url()
         extra = self._guard(path, query, self._needs_token(path))
         if extra is None:
             return
-        core = self.server.core
-        if path == "/" or path == "/index.html":
-            return self._static("index.html")
-        if path.startswith("/web/"):
-            return self._static(path[len("/web/"):])
-        if path == "/tokens.css":
-            return self._file(self.server.tokens_css)
-        if path == "/favicon.ico":
-            # BRAND-ICON: the local icon file (web/favicon.ico), no network.
-            return self._static("favicon.ico")
-        if path == "/api/hello":
-            # SEC-HELLO-CORE: the proof was checked by _guard; the answer
-            # binds the nonce and the port this server bound
-            return self._json(200, hello.answer(self.server.token,
-                                                self.headers.get(hello.NONCE_HEADER),
-                                                self.server.port), extra)
-        if path == "/api/health":
-            # DEP-05 (decision 0059): mode (checkout / installed) and the
-            # marker's previous version (null in a checkout)
-            return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
-                                    "port": self.server.port,
-                                    "tailing": bool(core.tailer and core.tailer.running),
-                                    **paths.install_info()},
-                              extra)
-        if path == "/api/version":
-            # TC-SNAP-UI: the snapshot attribution, only while snapshot data
-            # exists in the sidecar cache (decision 0009); else null.
-            return self._json(200, {"name": NAME, "version": VERSION,
-                                    "disclaimer": DISCLAIMER,
-                                    "data_credit": datacredit.credit_doc(),
-                                    **paths.install_info()}, extra)
-        if path == "/api/state":
-            return self._json(200, core.state.snapshot(), extra)
-        if path == "/api/overlay-layout":
-            return self._json(200, self._layout_doc(), extra)
-        if path == "/api/build":
-            return self._json(200, core.builds.snapshot(), extra)
-        if path == "/api/filter":
-            # UTIL-FILTER (decision 0031): a download the player saves; the
-            # core writes no file anywhere
-            hdr = dict(extra, **{"Content-Disposition":
-                                 f'attachment; filename="{lootfilter.FILE_NAME}"'})
-            names = getattr(core, "base_names", None)
-            names = names.get() if names is not None else None
-            # UTIL-FILTER-2 (decision 0032): value tiers from the cached
-            # poe.ninja prices; None while web data is off; never a request
-            rates = getattr(core, "rates", None)
-            prices = rates.filter_prices() if rates is not None else None
-            return self._send(200, lootfilter.generate(core.builds.build, names, prices),
-                              "text/plain; charset=utf-8", hdr)
-        if path == "/api/buildfile":
-            # TC-BUILDFILE (decision 0034): the game's .build JSON as a
-            # download the player saves; the core writes no file anywhere.
-            # The name comes from buildfile.filename (letters, digits, -).
-            out = core.builds.file_export()
-            if out is None:
-                return self._json(404, {"error": "no build loaded"}, extra)
-            hdr = dict(extra, **{"Content-Disposition":
-                                 f'attachment; filename="{out["filename"]}"'})
-            return self._send(200, out["text"], "application/json; charset=utf-8", hdr)
-        if path == "/api/settings-export":
-            # UX-SETTINGS-IO (ruling E): AshLight's own settings as a
-            # download the player saves; allow-list only (no contact,
-            # token, cookie or path); the core writes no file anywhere.
-            hdr = dict(extra, **{"Content-Disposition":
-                                 f'attachment; filename="{settingsio.FILE_NAME}"'})
-            text = json.dumps(core.export_settings(), indent=2, ensure_ascii=True) + "\n"
-            return self._send(200, text, "application/json; charset=utf-8", hdr)
-        if path == "/api/weights":
-            return self._json(200, core.weights.snapshot(), extra)
-        if path == "/api/gfx":
-            # GFX-ADVISOR: recommend only; never touches the game's files.
-            return self._json(200, self.server.gfx.get(), extra)
-        if path == "/api/rates":
-            # DATA-NINJA: cached rates with their age, never a blocking fetch;
-            # a due refresh (opt-in on, at most hourly) runs in the background.
-            started = core.rates.refresh_async()
-            doc = core.rates.snapshot()
-            doc["refreshing"] = bool(doc["refreshing"] or started)
-            return self._json(200, doc, extra)
-        if path == "/api/web-data":
-            return self._json(200, self._web_data_doc(), extra)
-        if path == "/events":
-            if self.command == "HEAD":
-                # AUDIT-HTTP-HARDEN S1: HEAD never opens the endless stream.
-                return self._send(405, "use GET\n", extra={**extra, "Allow": "GET"})
-            return self._sse(extra, query)
+        fn = route_for(GET_ROUTES, path)
+        if fn is not None:
+            return fn(self, path, query, extra)
         return self._plug("GET", path, query, extra)
 
     def do_HEAD(self):
@@ -432,36 +355,128 @@ class Handler(BaseHTTPRequestHandler):
         extra = self._guard(path, query, self._needs_token(path))
         if extra is None:
             return
-        if path == "/api/clipboard-read":
-            # Decision 0003: the clipboard is read ONLY once per manual press
-            # of an AshLight hotkey, never by a watcher or a timer, and
-            # AshLight never sends Ctrl+C or any other input to the game.
-            # Not implemented yet (ROADMAP); this stub stays a 501.
-            return self._json(501, {"error": "not implemented",
-                                    "policy": "docs/decisions/0003-read-policy.md"})
-        if path == "/api/consent":
-            return self._consent()
-        if path == "/api/overlay-layout":
-            return self._set_layout()
-        if path == "/api/trade-dismiss":
-            return self._trade_dismiss()
-        if path == "/api/build-code":
-            return self._build_code()
-        if path == "/api/eval":
-            return self._eval()
-        if path == "/api/web-data":
-            return self._set_web_data()
-        if path == "/api/filter-merge":
-            return self._filter_merge(query)
-        if path == "/api/settings-import":
-            return self._settings_import()
-        if path == "/api/run-history":
-            return self._run_history()
-        if path == "/api/price-watch":
-            return self._price_watch()
-        if path == "/api/hints":
-            return self._hints()
+        fn = route_for(POST_ROUTES, path)
+        if fn is not None:
+            return fn(self, path, query, extra)
         return self._plug("POST", path, query, extra)
+
+    # -- GET routes: fn(handler, path, query, extra), after _guard
+    def _get_index(self, path, query, extra):
+        return self._static("index.html")
+
+    def _get_web(self, path, query, extra):
+        return self._static(path[len("/web/"):])
+
+    def _get_tokens_css(self, path, query, extra):
+        return self._file(self.server.tokens_css)
+
+    def _get_favicon(self, path, query, extra):
+        # BRAND-ICON: the local icon file (web/favicon.ico), no network.
+        return self._static("favicon.ico")
+
+    def _get_hello(self, path, query, extra):
+        # SEC-HELLO-CORE: the proof was checked by _guard; the answer
+        # binds the nonce and the port this server bound
+        return self._json(200, hello.answer(self.server.token,
+                                            self.headers.get(hello.NONCE_HEADER),
+                                            self.server.port), extra)
+
+    def _get_health(self, path, query, extra):
+        # DEP-05 (decision 0059): mode (checkout / installed) and the
+        # marker's previous version (null in a checkout)
+        core = self.server.core
+        return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
+                                "port": self.server.port,
+                                "tailing": bool(core.tailer and core.tailer.running),
+                                **paths.install_info()},
+                          extra)
+
+    def _get_version(self, path, query, extra):
+        # TC-SNAP-UI: the snapshot attribution, only while snapshot data
+        # exists in the sidecar cache (decision 0009); else null.
+        return self._json(200, {"name": NAME, "version": VERSION,
+                                "disclaimer": DISCLAIMER,
+                                "data_credit": datacredit.credit_doc(),
+                                **paths.install_info()}, extra)
+
+    def _get_state(self, path, query, extra):
+        return self._json(200, self.server.core.state.snapshot(), extra)
+
+    def _get_layout(self, path, query, extra):
+        return self._json(200, self._layout_doc(), extra)
+
+    def _get_build(self, path, query, extra):
+        return self._json(200, self.server.core.builds.snapshot(), extra)
+
+    def _get_filter(self, path, query, extra):
+        # UTIL-FILTER (decision 0031): a download the player saves; the
+        # core writes no file anywhere
+        core = self.server.core
+        hdr = dict(extra, **{"Content-Disposition":
+                             f'attachment; filename="{lootfilter.FILE_NAME}"'})
+        names = getattr(core, "base_names", None)
+        names = names.get() if names is not None else None
+        # UTIL-FILTER-2 (decision 0032): value tiers from the cached
+        # poe.ninja prices; None while web data is off; never a request
+        rates = getattr(core, "rates", None)
+        prices = rates.filter_prices() if rates is not None else None
+        return self._send(200, lootfilter.generate(core.builds.build, names, prices),
+                          "text/plain; charset=utf-8", hdr)
+
+    def _get_buildfile(self, path, query, extra):
+        # TC-BUILDFILE (decision 0034): the game's .build JSON as a
+        # download the player saves; the core writes no file anywhere.
+        # The name comes from buildfile.filename (letters, digits, -).
+        out = self.server.core.builds.file_export()
+        if out is None:
+            return self._json(404, {"error": "no build loaded"}, extra)
+        hdr = dict(extra, **{"Content-Disposition":
+                             f'attachment; filename="{out["filename"]}"'})
+        return self._send(200, out["text"], "application/json; charset=utf-8", hdr)
+
+    def _get_settings_export(self, path, query, extra):
+        # UX-SETTINGS-IO (ruling E): AshLight's own settings as a
+        # download the player saves; allow-list only (no contact,
+        # token, cookie or path); the core writes no file anywhere.
+        hdr = dict(extra, **{"Content-Disposition":
+                             f'attachment; filename="{settingsio.FILE_NAME}"'})
+        text = json.dumps(self.server.core.export_settings(), indent=2,
+                          ensure_ascii=True) + "\n"
+        return self._send(200, text, "application/json; charset=utf-8", hdr)
+
+    def _get_weights(self, path, query, extra):
+        return self._json(200, self.server.core.weights.snapshot(), extra)
+
+    def _get_gfx(self, path, query, extra):
+        # GFX-ADVISOR: recommend only; never touches the game's files.
+        return self._json(200, self.server.gfx.get(), extra)
+
+    def _get_rates(self, path, query, extra):
+        # DATA-NINJA: cached rates with their age, never a blocking fetch;
+        # a due refresh (opt-in on, at most hourly) runs in the background.
+        rates = self.server.core.rates
+        started = rates.refresh_async()
+        doc = rates.snapshot()
+        doc["refreshing"] = bool(doc["refreshing"] or started)
+        return self._json(200, doc, extra)
+
+    def _get_web_data(self, path, query, extra):
+        return self._json(200, self._web_data_doc(), extra)
+
+    def _get_events(self, path, query, extra):
+        if self.command == "HEAD":
+            # AUDIT-HTTP-HARDEN S1: HEAD never opens the endless stream.
+            return self._send(405, "use GET\n", extra={**extra, "Allow": "GET"})
+        return self._sse(extra, query)
+
+    # -- POST routes
+    def _post_clipboard_read(self, path, query, extra):
+        # Decision 0003: the clipboard is read ONLY once per manual press
+        # of an AshLight hotkey, never by a watcher or a timer, and
+        # AshLight never sends Ctrl+C or any other input to the game.
+        # Not implemented yet (ROADMAP); this stub stays a 501.
+        return self._json(501, {"error": "not implemented",
+                                "policy": "docs/decisions/0003-read-policy.md"})
 
     def _plug(self, verb, path, query, extra):
         """RUN-SEAMS (decision 0056): the fall-through after the built-in
@@ -473,7 +488,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, "not found\n")
         return fn(self, query, extra)
 
-    def _hints(self):
+    def _hints(self, path, query, extra):
         """NEWBIE-HINTS: {"reset": true} shows the new-character tips
         again."""
         body = self._read_json()
@@ -483,7 +498,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "reset: true required"})
         return self._json(200, {"text": self.server.core.reset_hints()})
 
-    def _settings_import(self):
+    def _settings_import(self, path, query, extra):
         """UX-SETTINGS-IO: the settings file the player picked in the
         browser, as its JSON. Size-capped; allow-list keys only; nothing
         applied on a bad file; web data never switched on here."""
@@ -498,7 +513,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, report)
 
-    def _run_history(self):
+    def _run_history(self, path, query, extra):
         """UTIL-RUN-HISTORY: {"enabled": bool} turns it on or off,
         {"clear": true} deletes every saved run."""
         body = self._read_json()
@@ -515,7 +530,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, {"run_history": view})
 
-    def _price_watch(self):
+    def _price_watch(self, path, query, extra):
         """UTIL-PRICE-WATCH: {"clear": true} empties the watched list."""
         body = self._read_json()
         if body is None:
@@ -530,12 +545,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         path, query = self._url()
-        if path != "/api/weights":
+        # an unknown PUT path is 405 before the token check, as it always
+        # was; a known one runs only after _guard
+        fn = route_for(PUT_ROUTES, path)
+        if fn is None:
             return self._not_allowed()
         extra = self._guard(path, query, self._needs_token(path))
         if extra is None:
             return None
-        return self._put_weights()
+        return fn(self, path, query, extra)
 
     def _not_allowed(self):
         if self._cross_site():  # SEC-CROSS-SITE: every route, 405 ones too
@@ -631,7 +649,7 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return body
 
-    def _filter_merge(self, query):
+    def _filter_merge(self, path, query, extra):
         """UTIL-FILTER-MERGE (decision 0033): the filter the player picked in
         the browser, as raw bytes, comes back with AshLight's Show blocks
         prepended, as a download. Body in memory only; the name, path and
@@ -677,7 +695,7 @@ class Handler(BaseHTTPRequestHandler):
                            "opacity": [layout.OPACITY_MIN, layout.OPACITY_MAX],
                            "margin": [0, layout.MARGIN_MAX]}}
 
-    def _set_layout(self):
+    def _set_layout(self, path, query, extra):
         body = self._read_json()
         if body is None:
             return None
@@ -696,7 +714,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._layout_doc())
 
-    def _trade_dismiss(self):
+    def _trade_dismiss(self, path, query, extra):
         """Dismiss a trade card on the dashboard. Display state only: it
         sends nothing to the game (CLAUDE.md ToS floor)."""
         body = self._read_json()
@@ -724,7 +742,7 @@ class Handler(BaseHTTPRequestHandler):
                 "blocked": core.web_blocked_reason(),
                 "policy": "docs/decisions/0013-web-data.md"}
 
-    def _set_web_data(self):
+    def _set_web_data(self, path, query, extra):
         """The one web-data opt-in (decision 0013), default off."""
         body = self._read_json()
         if body is None:
@@ -737,7 +755,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._web_data_doc())
 
-    def _build_code(self):
+    def _build_code(self, path, query, extra):
         """TC-CODE / TC-JSON / TC-URL: load a pasted build (JSON {"code":
         text}, or a character object {"character": {...}}). The format (PoB
         code, share URL, character JSON) is auto-detected; codes decode
@@ -776,7 +794,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": str(e)})
         return self._json(200, core.builds.snapshot())
 
-    def _eval(self):
+    def _eval(self, path, query, extra):
         """TC-EVAL: score item text ({"item": text, "slot": optional}) against
         the loaded build with the stored weights. The text comes from the
         caller (the one per-press clipboard read, decision 0003); this
@@ -806,7 +824,7 @@ class Handler(BaseHTTPRequestHandler):
         result = self.server.core.eval_press(text, slot or None)
         return self._json(200, result)
 
-    def _put_weights(self):
+    def _put_weights(self, path, query, extra):
         body = self._read_json(MAX_WEIGHTS_BODY)
         if body is None:
             return None
@@ -817,7 +835,7 @@ class Handler(BaseHTTPRequestHandler):
         self.server.core.last_eval.rerun()  # TC-EVAL-UI: re-score at once
         return self._json(200, self.server.core.weights.snapshot())
 
-    def _consent(self):
+    def _consent(self, path, query, extra):
         body = self._read_json()
         if body is None:
             return None
@@ -966,6 +984,65 @@ class Handler(BaseHTTPRequestHandler):
     def _sse_write(self, text):
         self.wfile.write(text.encode("utf-8"))
         self.wfile.flush()
+
+
+def route_for(table, path):
+    """The route function for path in one verb table, or None. A key that
+    ends in "*" is a prefix route; an exact key wins over a prefix."""
+    fn = None if path.endswith("*") else table.get(path)
+    if fn is not None:
+        return fn
+    for key, prefix_fn in table.items():
+        if key.endswith("*") and path.startswith(key[:-1]):
+            return prefix_fn
+    return None
+
+
+# TEST-HTTP-ROUTES (F-193): the built-in routes, one table per verb. Each
+# function is called as fn(handler, path, query, extra) after _guard; HEAD
+# runs the GET table. A path no table holds falls through to plug.route
+# (GET / POST, decision 0056) or is 405 (PUT). tests/test_security_surface.py
+# reads these keys and pins them.
+GET_ROUTES = {
+    "/": Handler._get_index,
+    "/index.html": Handler._get_index,
+    "/web/*": Handler._get_web,
+    "/tokens.css": Handler._get_tokens_css,
+    "/favicon.ico": Handler._get_favicon,
+    "/api/hello": Handler._get_hello,
+    "/api/health": Handler._get_health,
+    "/api/version": Handler._get_version,
+    "/api/state": Handler._get_state,
+    "/api/overlay-layout": Handler._get_layout,
+    "/api/build": Handler._get_build,
+    "/api/filter": Handler._get_filter,
+    "/api/buildfile": Handler._get_buildfile,
+    "/api/settings-export": Handler._get_settings_export,
+    "/api/weights": Handler._get_weights,
+    "/api/gfx": Handler._get_gfx,
+    "/api/rates": Handler._get_rates,
+    "/api/web-data": Handler._get_web_data,
+    "/events": Handler._get_events,
+}
+
+POST_ROUTES = {
+    "/api/clipboard-read": Handler._post_clipboard_read,
+    "/api/consent": Handler._consent,
+    "/api/overlay-layout": Handler._set_layout,
+    "/api/trade-dismiss": Handler._trade_dismiss,
+    "/api/build-code": Handler._build_code,
+    "/api/eval": Handler._eval,
+    "/api/web-data": Handler._set_web_data,
+    "/api/filter-merge": Handler._filter_merge,
+    "/api/settings-import": Handler._settings_import,
+    "/api/run-history": Handler._run_history,
+    "/api/price-watch": Handler._price_watch,
+    "/api/hints": Handler._hints,
+}
+
+PUT_ROUTES = {
+    "/api/weights": Handler._put_weights,
+}
 
 
 def serve(core, token, port=ports.AL_PORT, web_root=None, tokens_css=None):

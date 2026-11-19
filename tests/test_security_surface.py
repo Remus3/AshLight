@@ -1,15 +1,16 @@
 """SEC-SURFACE-PIN: the local HTTP surface, pinned in one file.
 
 ROUTES below is the reviewed table of every route (method, path, token
-rule, body cap). routes_from_source() reads the routes of server/al/http.py
-with ast (no import side effect) and the two must match, so a new route or
-a dropped one cannot land without a table row. The reply header set is
+rule, body cap). routes_from_source() reads the per-verb route tables of
+server/al/http.py (GET_ROUTES, POST_ROUTES, PUT_ROUTES; F-193) with ast (no
+import side effect) and the two must match, so a new route or a dropped one
+cannot land without a table row. The reply header set is
 pinned by name and value, and one short case per P0 fix (SEC-STATIC-MAP,
 SEC-XML-NUL, SEC-CROSS-SITE, SEC-NO-DISCOVERY) sits here too.
 
-A package that adds a route adds its row to ROUTES. When the if-chains of
-do_GET / do_POST / do_PUT become per-verb tables (F-193), only
-routes_from_source() changes. RUN-SEAMS (decision 0056): a route a plug
+A package that adds a route adds its row to ROUTES and its entry to the
+verb's table in http.py (TEST-HTTP-ROUTES); do_GET / do_POST / do_PUT only
+look the path up there. RUN-SEAMS (decision 0056): a route a plug
 module adds (server/al/plug/, served by the handler's fall-through) is read
 by served_routes() from plug.all_routes(), so it needs its row here too.
 
@@ -120,6 +121,9 @@ BASE_HEADERS = {
 # -- the route reader -------------------------------------------------------
 
 ROUTE_VERBS = ("GET", "POST", "PUT")
+# TEST-HTTP-ROUTES (F-193): the module-level table of each routed verb
+TABLES = {verb: verb + "_ROUTES" for verb in ROUTE_VERBS}
+LOOKUP = "route_for"
 
 
 def _is_path(node):
@@ -130,21 +134,61 @@ def _str(node):
     return isinstance(node, ast.Constant) and isinstance(node.value, str)
 
 
-def routes_from_source(source):
-    """The set of (method, path) routes of the Handler class in the given
-    http.py source text, read with ast (nothing is imported or run).
+def _table_routes(tree):
+    """{verb: set of paths} from the module-level GET_ROUTES / POST_ROUTES /
+    PUT_ROUTES dict literals. Every key must be a string literal; a table
+    written any other way, assigned twice, or changed by a later statement
+    (item assignment, update(), setdefault(), ...) raises ValueError."""
+    names = {name: verb for verb, name in TABLES.items()}
+    out = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        for tgt in targets:
+            if not (isinstance(tgt, ast.Name) and tgt.id in names):
+                continue
+            verb = names[tgt.id]
+            if verb in out:
+                raise ValueError(f"{tgt.id} assigned twice")
+            if not isinstance(node.value, ast.Dict) or not all(
+                    k is not None and _str(k) for k in node.value.keys):
+                raise ValueError(f"{tgt.id} is not a dict of literal paths")
+            keys = [k.value for k in node.value.keys]
+            if len(keys) != len(set(keys)):
+                raise ValueError(f"{tgt.id} repeats a path")
+            out[verb] = set(keys)
+    for node in ast.walk(tree):
+        # a table changed after its literal: a route the reader cannot see
+        if isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del)) \
+                and isinstance(node.value, ast.Name) and node.value.id in names:
+            raise ValueError(f"{node.value.id} changed at line {node.lineno}")
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) \
+                and node.value.id in names:
+            raise ValueError(f"{node.value.id}.{node.attr} at line {node.lineno}")
+    gone = set(TABLES) - set(out)
+    if gone:
+        raise ValueError(f"route tables gone: {sorted(TABLES[v] for v in gone)}")
+    return out
 
-    - do_GET / do_POST / do_PUT: every `path == "<lit>"`, `path != "<lit>"`,
-      `path in (<lits>)` and `path.startswith("<lit>")` (as "<lit>*").
-      Any other comparison or method call on `path` raises ValueError, so
-      a route written in a shape this reader does not know cannot slip by.
+
+def routes_from_source(source):
+    """The set of (method, path) routes of the given http.py source text,
+    read with ast (nothing is imported or run).
+
+    - GET_ROUTES / POST_ROUTES / PUT_ROUTES: every key of the module-level
+      dict literal is a (verb, key) route; a key ending in "*" is a prefix
+      route ("/web/*").
+    - do_GET / do_POST / do_PUT: the one test on `path` is the lookup
+      route_for(<VERB>_ROUTES, path) in the verb's own table. Any
+      comparison or method call on `path` there raises ValueError, so a
+      route written outside the table cannot slip by.
     - do_HEAD must be exactly `self.do_GET()` (HEAD mirrors GET).
     - Any other do_<VERB> must be the refusal (_not_allowed) and reads as
       (VERB, "*").
-    This is the one place to change when F-193 turns the if-chains into
-    per-verb tables.
     """
     tree = ast.parse(source)
+    tables = _table_routes(tree)
     handler = next(n for n in tree.body
                    if isinstance(n, ast.ClassDef) and n.name == "Handler")
     found = set()
@@ -154,7 +198,8 @@ def routes_from_source(source):
             verb = item.name[3:]
             seen.add(verb)
             if verb in ROUTE_VERBS:
-                found |= _verb_routes(verb, item)
+                _check_dispatch(verb, item)
+                found |= {(verb, p) for p in tables[verb]}
             elif verb == "HEAD":
                 calls = [s for s in item.body if not (
                     isinstance(s, ast.Expr) and _str(s.value))]
@@ -178,35 +223,31 @@ def routes_from_source(source):
     return found
 
 
-def _verb_routes(verb, fn):
-    out = set()
+def _check_dispatch(verb, fn):
+    """do_<verb> looks the path up once, in its own table, and tests the
+    path no other way."""
+    lookups = 0
     for node in ast.walk(fn):
-        if isinstance(node, ast.Compare) and _is_path(node.left):
-            if len(node.ops) != 1:
-                raise ValueError(f"do_{verb}: chained comparison on path")
-            op, right = node.ops[0], node.comparators[0]
-            if isinstance(op, (ast.Eq, ast.NotEq)) and _str(right):
-                out.add((verb, right.value))
-            elif isinstance(op, ast.In) and isinstance(right, (ast.Tuple, ast.List, ast.Set)) \
-                    and all(_str(e) for e in right.elts):
-                out.update((verb, e.value) for e in right.elts)
-            else:
-                raise ValueError(f"do_{verb}: unknown path test at line {node.lineno}")
-        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
+        if isinstance(node, ast.Compare) and (
+                _is_path(node.left) or any(_is_path(c) for c in node.comparators)):
+            raise ValueError(f"do_{verb}: path test outside the table at line {node.lineno}")
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
                 and _is_path(node.func.value):
-            if node.func.attr == "startswith" and len(node.args) == 1 and _str(node.args[0]):
-                out.add((verb, node.args[0].value + "*"))
-            else:
-                raise ValueError(f"do_{verb}: unknown path call at line {node.lineno}")
-        elif isinstance(node, ast.Compare) and any(_is_path(c) for c in node.comparators):
-            raise ValueError(f"do_{verb}: reversed path test at line {node.lineno}")
-    if not out:
-        raise ValueError(f"do_{verb}: no route found")
-    return out
+            raise ValueError(f"do_{verb}: path call outside the table at line {node.lineno}")
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                and node.func.id == LOOKUP:
+            args = node.args
+            if not (len(args) == 2 and not node.keywords and isinstance(args[0], ast.Name)
+                    and args[0].id == TABLES[verb] and _is_path(args[1])):
+                raise ValueError(f"do_{verb}: lookup not in {TABLES[verb]} "
+                                 f"at line {node.lineno}")
+            lookups += 1
+    if lookups != 1:
+        raise ValueError(f"do_{verb}: {lookups} table lookups, want 1")
 
 
 def served_routes():
-    """Every route the server answers: the if-chain routes of http.py plus
+    """Every route the server answers: the route tables of http.py plus
     every plug module's route (plug.all_routes, RUN-SEAMS)."""
     return routes_from_source(HTTP_PY.read_text(encoding="utf-8")) | set(plug.all_routes())
 
@@ -313,8 +354,8 @@ def test_route_table_matches_http_py():
 
 
 def _with_branch(source, verb, path_lit):
-    """A copy of source with one more `if path == <lit>:` branch at the top
-    of do_<verb>."""
+    """A copy of source with an `if path == <lit>:` branch at the top of
+    do_<verb>: a route outside the table."""
     tree = ast.parse(source)
     handler = next(n for n in tree.body
                    if isinstance(n, ast.ClassDef) and n.name == "Handler")
@@ -325,24 +366,48 @@ def _with_branch(source, verb, path_lit):
     return ast.unparse(ast.fix_missing_locations(tree))
 
 
+def _with_entry(source, verb, path_lit):
+    """A copy of source with one more entry in the verb's route table."""
+    tree = ast.parse(source)
+    table = next(n for n in tree.body if isinstance(n, ast.Assign)
+                 and any(isinstance(t, ast.Name) and t.id == TABLES[verb]
+                         for t in n.targets))
+    table.value.keys.append(ast.Constant(path_lit))
+    table.value.values.append(ast.parse("Handler._get_state", mode="eval").body)
+    return ast.unparse(ast.fix_missing_locations(tree))
+
+
 def test_unlisted_route_fails_the_comparison():
     source = HTTP_PY.read_text(encoding="utf-8")
     plugged = set(plug.all_routes())  # RUN-SEAMS: plug routes have rows too
     # the unchanged copy round-trips clean
-    assert compare(ROUTES, routes_from_source(ast.unparse(ast.parse(source))) | plugged)         == (set(), set())
+    assert compare(ROUTES, routes_from_source(ast.unparse(ast.parse(source))) | plugged) \
+        == (set(), set())
     for verb in ROUTE_VERBS:
-        copy = _with_branch(source, verb, "/api/zzq-new")
+        # a new table entry is a new route
+        copy = _with_entry(source, verb, "/api/zzq-new")
         missing, extra = compare(ROUTES, routes_from_source(copy) | plugged)
         assert extra == {(verb, "/api/zzq-new")} and not missing, verb
+        # a route written in the dispatch function, past the table, is refused
+        with pytest.raises(ValueError):
+            routes_from_source(_with_branch(source, verb, "/api/zzq-new"))
     # a dropped route shows as a missing row
-    gone = source.replace('if path == "/api/hints":', 'if path == "/api/zzq-gone":', 1)
+    gone = source.replace('"/api/hints": Handler._hints,', '"/api/zzq-gone": Handler._hints,', 1)
     assert gone != source
     missing, extra = compare(ROUTES, routes_from_source(gone) | plugged)
     assert missing == {("POST", "/api/hints")} and extra == {("POST", "/api/zzq-gone")}
-    # a new verb, or a route in a shape the reader does not know, is refused
+    # a new verb, a lookup in the wrong table, a key the reader cannot read,
+    # a table changed after its literal or a route in an unknown shape is
+    # refused
     for bad in (source.replace("do_PATCH = _not_allowed", "do_PATCH = do_POST", 1),
-                source.replace('if path == "/api/hints":',
-                               'if path.endswith("/hints"):', 1),
+                source.replace("route_for(POST_ROUTES, path)", "route_for(GET_ROUTES, path)", 1),
+                source.replace('"/api/hints": Handler._hints,', 'HINTS: Handler._hints,', 1),
+                source + '\nPOST_ROUTES["/api/zzq"] = Handler._hints\n',
+                source + "\nPOST_ROUTES.update(GET_ROUTES)\n",
+                source.replace("        fn = route_for(POST_ROUTES, path)\n",
+                               "        fn = route_for(POST_ROUTES, path)\n"
+                               "        if path.endswith('/hints'):\n"
+                               "            return None\n", 1),
                 source.replace("    def do_HEAD(self):\n        self.do_GET()",
                                "    def do_HEAD(self):\n        self.do_POST()", 1),
                 source.replace("    do_OPTIONS = _not_allowed\n",
