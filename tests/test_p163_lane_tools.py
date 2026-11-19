@@ -47,7 +47,8 @@ def test_lane_tools_never_grant_a_bare_gh_or_git_or_commit():
 
 def test_deep_dive_gets_no_dependency_tools():
     tools = _tools(al_loop.DEEP_EXTRA)
-    assert "WebFetch" in tools and "Bash(python -m pytest:*)" in tools
+    assert "Bash(python tools/webfetch.py:*)" in tools and "Bash(python -m pytest:*)" in tools
+    assert "WebFetch" not in tools and "WebSearch" not in tools  # decision 0050
     assert "Bash(npm install:*)" not in tools and "Bash(git add:*)" not in tools
 
 

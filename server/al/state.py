@@ -22,6 +22,7 @@ from . import underlevel as underlevel_mod
 from . import zonenotes
 from . import zoneguide as zoneguide_mod
 from .theorycraft import buildlive as buildlive_mod
+from .theorycraft import cardparts
 
 RECENT_EVENTS = 30
 RECENT_WHISPERS = 10
@@ -495,8 +496,36 @@ def eval_card_text(card):
     for the 3-line overlay card, `sentence` for the dashboard, and per
     compared slot a sentence and its stat rows. Missing values read
     honestly; every template has an exact-output test
-    (tests/test_eval_text.py)."""
+    (tests/test_eval_text.py).
+    TC-CARD-PARTS: `word` is the word that pairs the verdict mark (Upgrade,
+    Sidegrade, Downgrade, Not checked, Risky, No risky mods), `tone` the
+    mark's tone (the overlay card's verdict), `notes` the card parts'
+    extra lines (at most 4) and `answers` True when a part answers without
+    a build; the parts in theorycraft/cardparts add their words last."""
     card = _dict(card)
+    out = _eval_lines(card)
+    ws = _dict(card.get("waystone"))
+    risky = bool(ws and _dicts(ws.get("risky")) and not ws.get("unidentified"))
+    if risky:
+        # UX-OVERLAY-WAYSTONE: a risky waystone takes the warn edge, as its
+        # dashboard pill does (never alone: the head says "Risky")
+        tone = "risky"
+    else:
+        tone = str(card.get("verdict") or "") if card.get("ok") else "note"
+    if ws:
+        word = ("Not checked" if ws.get("unidentified")
+                else "Risky" if risky else "No risky mods")
+    elif not card.get("ok"):
+        word = "Not checked"
+    else:
+        word = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
+    out.update(notes=[], word=word, tone=tone, answers=False)
+    cardparts.words(card, out)
+    return out
+
+
+def _eval_lines(card):
+    """eval_card_text's head, item, line, sentence, comparisons and calc."""
     item = _dict(card.get("item"))
     name = _text(item.get("name") or item.get("base"), "Unnamed item")
     if card.get("unidentified"):
@@ -763,19 +792,23 @@ def overlay_card(ev, price, now):
 
     ws = ev.get("waystone") if isinstance(ev, dict) and isinstance(ev.get("waystone"), dict) \
         else None
+    # TC-CARD-PARTS: the words at most once per call, only when the item
+    # card can show; the mark's tone (risky waystone included) and
+    # `answers` come from eval_card_text
+    words = []
+
+    def eval_text():
+        if not words:
+            words.append(eval_card_text(ev))
+        return words[0]
 
     def eval_part():
-        t = eval_card_text(ev)
-        verdict = str(ev.get("verdict") or "") if ev.get("ok") else "note"
-        # UX-OVERLAY-WAYSTONE: a risky waystone takes the warn edge, as its
-        # dashboard pill does (never alone: the head says "Risky")
-        if ws and _dicts(ws.get("risky")) and not ws.get("unidentified"):
-            verdict = "risky"
+        et = eval_text()
         # UTIL-WAYSTONE-REWARD: a waystone's reward totals take the item line
         # (as a price line does, design 0001 section 10); never a third line
-        line2 = t.get("reward_line") or t["item"]
-        return {"kind": "eval", "head": t["head"], "line2": line2, "line3": t["line"],
-                "verdict": verdict, "expires_at": ev["at"] + EVAL_CARD_S}
+        line2 = et.get("reward_line") or et["item"]
+        return {"kind": "eval", "head": et["head"], "line2": line2, "line3": et["line"],
+                "verdict": et["tone"], "expires_at": ev["at"] + EVAL_CARD_S}
 
     def price_part():
         t = price_card_text(price)
@@ -786,8 +819,10 @@ def overlay_card(ev, price, now):
     if ev_ok and pr_ok:
         if abs(price["at"] - ev["at"]) >= SAME_PRESS_S:
             return price_part() if price["at"] > ev["at"] else eval_part()
-        # a waystone's verdict needs no build (UX-OVERLAY-WAYSTONE): keep it
-        if not ev.get("ok") and ev.get("error") == "no build loaded" and not ws:
+        # a waystone's verdict needs no build (UX-OVERLAY-WAYSTONE): keep it;
+        # so does a card a part answers without a build (TC-CARD-PARTS)
+        if (not ev.get("ok") and ev.get("error") == "no build loaded" and not ws
+                and not eval_text()["answers"]):
             return price_part()
         if price.get("status") in ("off", "error"):
             return eval_part()

@@ -2765,7 +2765,9 @@
    ],
    "files": [
     "tools/loop_roadmap.py",
-    "tests/test_loop_handoff.py"
+    "tests/test_loop_handoff.py",
+    "tests/test_loop_preflight.py",
+    "tests/test_al_loop.py"
    ],
    "new_files": [],
    "integrator_edits": [
