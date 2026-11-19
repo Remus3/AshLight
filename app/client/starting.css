@@ -1,11 +1,9 @@
 /* DESKTOP-CLIENT: the companion window's local page while the core starts
-   (no core yet, so no /tokens.css; light / dark follow the system). */
-:root { color-scheme: light dark; --bg: #f6f6f4; --fg: #1d1f23; --muted: #4f5560; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #16181d; --fg: #e8e8e6; --muted: #a9adb5; }
-}
+   (no core yet, so no /tokens.css). TD-04: dark by default, the kit's dark
+   values (surface, text, muted text); the native theme is dark too. */
+:root { color-scheme: dark; --bg: #0f1216; --fg: #e4e8ec; --muted: #99a1aa; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
-body { font: 16px/1.5 "Segoe UI", system-ui, sans-serif; display: flex;
+body { font: 16px/1.5 system-ui, "Segoe UI", sans-serif; display: flex;
        align-items: center; justify-content: center; }
 main { max-width: 34rem; padding: 0 16px; }
 h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
