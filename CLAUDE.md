@@ -674,3 +674,8 @@ them. Pause: `ops/loop/control/HALT`.
   2026-11-18). Reverses if: the operator rules on A-03 that the Steam
   scan must go (the typed path is then the only route), or stale
   configured paths strand players in normal use.
+- Licence: Apache-2.0 for AshLight's own code; NOTICE names "The
+  AshLight authors"; the kit is described as a vendored development
+  kit; nothing third-party is bundled, data only as attributed sidecar
+  snapshots (decision 0047). Reverses if: the operator wants a named
+  holder, or a bundled dependency forces another licence.

@@ -1,16 +1,16 @@
 AshLight
-Copyright 2026 the operator
+Copyright 2026 The AshLight authors
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-ops/fleet_kit/ is the MAIN fleet kit, vendored unmodified under its own
-LICENSE and NOTICE in that directory.
+ops/fleet_kit/ is a vendored development kit (Apache-2.0), unmodified, under
+its own LICENSE and NOTICE in that directory.
 
 Third-party software fetched by the optional, opt-in setup step (Path of
 Building PoE2, LuaJIT; not bundled here): see THIRD-PARTY.md.
 
-ops/loop/slots.py is a shared, byte-identical concurrency governor from the
-same operator's fleet, Apache-2.0.
+ops/loop/slots.py is a shared concurrency helper from the same development
+kit family, Apache-2.0.
 
 Path of Exile is a trademark of Grinding Gear Games. AshLight is an
 unofficial companion tool; it is not affiliated with, endorsed by or

@@ -16,6 +16,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0047: licence and NOTICE: Apache-2.0, holder The AshLight authors
+  (GP-03).
 - 0046: go public: guarded push, private first, public on gates
   (GP-02).
 - 0045: per-character build, stale-build alert and upgrade notices
