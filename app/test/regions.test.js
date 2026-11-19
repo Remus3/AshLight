@@ -30,7 +30,6 @@ const STUB_CSS = [
   // (one stub per line)
   "feed",
   // (one stub per line)
-  "notice",
   // (one stub per line)
   "buildline",
   // (one stub per line)
