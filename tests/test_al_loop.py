@@ -806,7 +806,7 @@ class FakeGit:
 
 @pytest.mark.git
 def test_push_once_when_clean_green_and_leak_clean(tmp_path):
-    root = make_root(tmp_path, roadmap="", handoff="")
+    root = make_root(tmp_path, roadmap="", handoff="", local={"loop_push": True})
     g = FakeGit()
     leak = []
     d = deps(root, git=g, leak_pre_push=lambda cwd, line: leak.append(line) or True)
@@ -2064,7 +2064,7 @@ def test_busy_merge_lock_defers_the_merge(tmp_path):
 
 
 def test_tick_launches_one_push_worker_when_main_is_ahead(tmp_path):
-    root = make_root(tmp_path, roadmap="", handoff="")
+    root = make_root(tmp_path, roadmap="", handoff="", local={"loop_push": True})
     seen = {}
     gated = []
     d = deps(root, git=FakeGit(), launch_push=_recorder(seen, "push"),

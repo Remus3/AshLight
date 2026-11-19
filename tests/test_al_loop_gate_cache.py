@@ -169,8 +169,53 @@ def push_log(root):
     return json.loads((root / al_loop.PUSH_LAST_REL).read_text())["log"]
 
 
-def test_push_skips_an_already_gated_tree(tmp_path):
+def loop_push(root, value=True):
+    """OA-11: the operator's per-host switch in the gitignored
+    config/local.json. Excluded through .git/info/exclude so main stays
+    clean in every git world."""
+    (root / "config").mkdir(exist_ok=True)
+    (root / "config" / "local.json").write_text(json.dumps({"loop_push": value}),
+                                                newline="\n")
+    excl = root / ".git" / "info" / "exclude"
+    excl.parent.mkdir(parents=True, exist_ok=True)
+    with excl.open("a", newline="\n") as f:
+        f.write("config/local.json\n")
+    return root
+
+
+def tick_log(root):
+    return json.loads((root / "ops/loop/control/progress/loop.json")
+                      .read_text(encoding="utf-8"))["log"]
+
+
+@pytest.mark.parametrize("value", [None, False, "true", 1])
+def test_push_is_skipped_while_the_loop_push_switch_is_off(tmp_path, value):
+    """Ruling Q-23: with origin and main ahead, the loop still pushes nothing
+    unless config/local.json holds "loop_push": true (a real boolean)."""
     root = repo(tmp_path)
+    if value is not None:
+        loop_push(root, value)
+    gates, g = Counter(), HybridGit()
+    d = L.deps(root, git=g, gates=gates)
+    al_loop.tick(deps=d)
+    assert gates.calls == [] and g.pushes == 0
+    assert not (root / al_loop.PUSH_WORKER_REL).exists()  # no push worker launched
+    assert "push skipped: loop push is off" in tick_log(root)
+    assert al_loop.push_worker(deps=d) == 0 and g.pushes == 0
+
+
+def test_push_runs_with_a_fake_origin_and_the_switch_on(tmp_path):
+    root = loop_push(repo(tmp_path))
+    gates, g = Counter(), HybridGit()
+    d = L.deps(root, git=g, gates=gates)
+    al_loop.tick(deps=d)
+    assert len(gates.calls) == 1 and g.pushes == 1
+    assert "push skipped: loop push is off" not in tick_log(root)
+    assert any("push ok: 1 commit(s)" in s for s in push_log(root))
+
+
+def test_push_skips_an_already_gated_tree(tmp_path):
+    root = loop_push(repo(tmp_path))
     gates, g = Counter(), HybridGit()
     d = L.deps(root, git=g, gates=gates)
     al_loop.tick(deps=d)
@@ -181,7 +226,7 @@ def test_push_skips_an_already_gated_tree(tmp_path):
 
 
 def test_push_on_cached_red_tree_is_skipped_without_a_rerun(tmp_path):
-    root = repo(tmp_path)
+    root = loop_push(repo(tmp_path))
     gates, g = Counter((False, "python -m pytest -q rc=1\n1 failed")), HybridGit()
     d = L.deps(root, git=g, gates=gates)
     al_loop.tick(deps=d)
@@ -193,6 +238,7 @@ def test_push_on_cached_red_tree_is_skipped_without_a_rerun(tmp_path):
 
 def test_merged_plan_is_pushed_on_the_lane_verdict(tmp_path):
     root, wt = L.git_world(tmp_path)
+    loop_push(root)
     gates, g = Counter(), HybridGit()
     sp = L.FakeSpawn([{"rc": 0, "error": None, "result": "VERDICT: PASS"}])
     d = L.deps(root, spawn=sp, git=g, gates=gates, lane_state=running)
@@ -208,6 +254,7 @@ def test_merged_plan_is_pushed_on_the_lane_verdict(tmp_path):
 
 def test_moved_main_is_gated_again_before_push(tmp_path):
     root, wt = L.git_world(tmp_path)
+    loop_push(root)
     (root / "other.py").write_text("o = 1\n", newline="\n")
     L.git(root, "add", "-A")
     L.git(root, "commit", "-q", "-m", "main moved")
