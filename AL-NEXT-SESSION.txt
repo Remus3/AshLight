@@ -4,7 +4,13 @@ SESSION: 7   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 0 done, next wave 1
+WAVE POINTER: wave 1 done, next wave 2
+Wave 1 escape count: 1 of 3 merge batches needed a second suite (batch 2:
+SEC-XML-NUL red on test_fuzz, reverted, fixed, merged in batch 3); 1 of 11
+worktree packages = 9 percent, not above 10 percent: the batch stays at 4
+(08 section 4). GP-01 armed 44 needles, not 45 (adjudicator: the set
+owner's name was already a local needle; reverses if a non-upstream,
+non-fork identifier of the set is found).
 
 Next action: start wave 1 of docs/plan/07-execution-plan.md (session 1 =
 waves 1 to 3, 42 session packages, about 6 h 47 min) and run it exactly as
