@@ -22,6 +22,10 @@ MAX_CHARACTERS names, MAX_RUNS runs each; the name never leaves the
 machine), bests and deaths by zone are per character, and a schema 1 file
 (one flat list) is migrated in place on load. The player can turn it off ("run_history": false in the
 local config, or the dashboard switch) and clear it (dashboard button).
+
+RUN-DURABLE-STORE-FILES (F-014, decision 0036 amendment 2026-11-18): the
+file is written with one `.bak` of its last good copy and read with the
+.bak restore; clear() removes the .bak with the data.
 """
 
 from pathlib import Path
@@ -117,7 +121,7 @@ def flat(by):
 
 def _read(path):
     """(doc, schema) of the file, or (None, None)."""
-    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict)
+    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict, backup=True)
     if doc is None:
         return None, None
     return doc, doc.get("schema")
@@ -145,11 +149,22 @@ def load(path):
 
 
 def save(path, runs):
-    """Write the runs (a flat list, any characters) as schema 2."""
+    """Write the runs (a flat list, any characters) as schema 2, keeping
+    one .bak of the written copy (F-014)."""
     by = group(runs)
     doc = {"schema": SCHEMA,
            "characters": {k: {"runs": v} for k, v in by.items()}}
-    jsonfile.write_json(path, doc)
+    jsonfile.write_json(path, doc, backup=True)
+
+
+def drop_bak(path):
+    """Remove the .bak of `path` after a clear (privacy: a cleared store
+    keeps no copy). The caller wrote the empty document with backup=True
+    first, so a .bak that cannot be removed holds nothing old."""
+    try:
+        jsonfile.bak_path(path).unlink(missing_ok=True)
+    except OSError:
+        pass  # held open: it holds the empty document written just before
 
 
 def migrate(path):
@@ -208,8 +223,11 @@ class RunHistory:
         return True
 
     def clear(self):
+        """Forget every run: the file holds an empty list and its .bak
+        is removed."""
         self.runs = []
         save(self.path, self.runs)
+        drop_bak(self.path)
 
     def view(self, current=None, enabled=True, character=None):
         """The snapshot `run_history` part. current: the live run record

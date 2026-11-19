@@ -105,7 +105,8 @@ class Hints:
         """Keep the store in `path` (loaded now). A bad file reads as
         empty; the memory store of this session merges in."""
         self.path = Path(path)
-        loaded = _clean(jsonfile.read_json(self.path, max_bytes=MAX_BYTES, kind=dict))
+        loaded = _clean(jsonfile.read_json(self.path, max_bytes=MAX_BYTES, kind=dict,
+                                           backup=True))
         for key, c in self.chars.items():
             loaded[key] = c
         self.chars = loaded
@@ -115,7 +116,8 @@ class Hints:
             return
         try:
             jsonfile.write_json(self.path, {"schema": SCHEMA,
-                                            "chars": dict(self.chars)})
+                                            "chars": dict(self.chars)},
+                                backup=True)  # F-014: one .bak
         except OSError:
             self.path = None  # per-session fallback (ruling L)
 

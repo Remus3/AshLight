@@ -102,12 +102,16 @@ def from_config(cfg):
 
 
 def load(config_path):
-    return from_config(jsonfile.read_json(config_path, kind=dict, default={}))
+    """The stored layout; a half-written local.json is restored from the
+    .bak layout.save keeps (F-014)."""
+    return from_config(jsonfile.read_json(config_path, kind=dict, default={},
+                                          backup=True))
 
 
 def save(config_path, layout):
     """Write the layout into local.json under "overlay", keeping every other
-    key. ASCII + LF, atomic replace. Returns the normalized layout."""
+    key. ASCII + LF, atomic replace, one .bak of the written copy (F-014).
+    Returns the normalized layout."""
     layout = normalize(layout)
     path = Path(config_path)
     try:
@@ -120,7 +124,7 @@ def save(config_path, layout):
         # Never overwrite a config file the user broke by hand.
         raise LayoutError(f"config/local.json is unreadable: {e}") from e
     cfg[CONFIG_KEY] = layout
-    jsonfile.write_json(path, cfg, indent=2)
+    jsonfile.write_json(path, cfg, indent=2, backup=True)
     return layout
 
 
