@@ -16,6 +16,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0051: private runtime files: an explicit ACL on the runtime dir and
+  local config (SEC-ACL-APPLY).
 - 0050: research dive sources - no free web tools, one host allow-list,
   GGG only at the API Reference and Data Exports pages (DIVE-FLOOR).
 - 0049: Demo mode: an isolated AshLight instance on a fixture folder
