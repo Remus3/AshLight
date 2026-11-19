@@ -28,7 +28,6 @@ const STUB_CSS = [
   // (one stub per line)
   "setupcard",
   // (one stub per line)
-  "feed",
   // (one stub per line)
   "notice",
   // (one stub per line)
