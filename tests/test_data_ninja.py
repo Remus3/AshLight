@@ -3,6 +3,7 @@
 Mocked fetch only; no request ever reaches the network. Tmp cache / runtime.
 """
 
+import gzip
 import http.client
 import json
 import threading
@@ -43,11 +44,13 @@ OVERVIEW = json.dumps({
 
 
 class FakeNet:
-    def __init__(self, overview=OVERVIEW, etag='"v1"'):
+    def __init__(self, overview=OVERVIEW, etag='"v1"', gzip_body=False):
         self.calls = []
         self.overview = overview
         self.etag = etag
         self.down = False
+        self.gzip_body = gzip_body
+        self.answer = None  # (status, headers) for the overview, e.g. a 429
 
     def __call__(self, method, url, headers, body=None):
         self.calls.append((method, url, dict(headers)))
@@ -55,8 +58,13 @@ class FakeNet:
             raise webfetch.FetchError("network: offline")
         if url.endswith(ninja.LEAGUES_PATH):
             return 200, {}, LEAGUES
+        if self.answer is not None:
+            return self.answer[0], dict(self.answer[1]), b""
         if headers.get("If-None-Match") == self.etag:
             return 304, {"ETag": self.etag}, b""
+        if self.gzip_body and headers.get("Accept-Encoding") == "gzip":
+            return (200, {"ETag": self.etag, "Content-Encoding": "gzip"},
+                    gzip.compress(self.overview))
         return 200, {"ETag": self.etag}, self.overview
 
 
@@ -129,7 +137,8 @@ def test_no_request_without_opt_in(tmp_path):
 
 
 def test_fetch_parse_attribution_and_user_agent(tmp_path):
-    net, clock = FakeNet(), Clock()
+    # DATA-PRICE-POLITE: every GET asks for gzip; the gzip body decodes
+    net, clock = FakeNet(gzip_body=True), Clock()
     c, _ = _client(tmp_path, net, clock)
     assert c.refresh() == "fetched"
     urls = [u for _, u, _ in net.calls]
@@ -139,6 +148,7 @@ def test_fetch_parse_attribution_and_user_agent(tmp_path):
     for _, _, h in net.calls:
         assert h["User-Agent"].startswith(f"{NAME}/{VERSION} ")
         assert h["User-Agent"].endswith(f"(contact: {CONTACT})")
+        assert h["Accept-Encoding"] == "gzip"
         assert "Cookie" not in h
     snap = c.snapshot()
     assert snap["blocked"] is None and snap["contact_set"] is True
@@ -152,6 +162,84 @@ def test_fetch_parse_attribution_and_user_agent(tmp_path):
     assert snap["age_s"] == 0 and snap["stale"] is False
     assert "poe.ninja" in snap["attribution"] and "Grinding Gear Games" in snap["attribution"]
     assert ninja.ATTRIBUTION == snap["attribution"]
+
+
+def test_gzip_body_inflating_past_the_cap_is_refused(tmp_path):
+    net, clock = FakeNet(overview=b" " * (ninja.MAX_BYTES + 1), gzip_body=True), Clock()
+    c, _ = _client(tmp_path, net, clock)
+    out = c.refresh()
+    assert out.startswith("error") and "too large" in out
+    assert c.snapshot()["rates"] == {}
+
+
+def test_user_agent_purpose_says_prices():
+    assert ninja.UA_PURPOSE == "prices from poe.ninja"
+    assert "currency rates" not in ninja.USER_AGENT
+    assert ninja.USER_AGENT == (f"{NAME}/{VERSION} (local Path of Exile 2 companion; "
+                                "prices from poe.ninja)")
+
+
+def test_429_with_retry_after_7200_blocks_two_hours_across_a_restart(tmp_path):
+    net, clock = FakeNet(), Clock()
+    c, _ = _client(tmp_path, net, clock)
+    net.answer = (429, {"Retry-After": "7200"})
+    start = clock.t
+    assert c.refresh() == "backoff"
+    assert c.doc["backoff_until"] == start + 7200
+    assert "429" in c.snapshot()["last_error"]
+    saved = json.loads((tmp_path / "ninja" / ninja.CACHE_NAME).read_text(encoding="ascii"))
+    assert saved["backoff_until"] == start + 7200
+    n = len(net.calls)
+    net.answer = None
+    # past the hourly gate, forced, and after a restart on the same cache:
+    # nothing is sent until the two hours are over
+    for dt in (60, ninja.MIN_INTERVAL_S + 1, 7199):
+        clock.t = start + dt
+        c2, _ = _client(tmp_path, net, clock)
+        assert c2.refresh() == "backoff" and c2.refresh(force=True) == "backoff"
+        assert c2.refresh_async() is False and c2.any_due() is False
+    assert len(net.calls) == n
+    clock.t = start + 7200
+    c3, _ = _client(tmp_path, net, clock)
+    assert c3.refresh() == "fetched" and len(net.calls) == n + 1
+    assert c3.snapshot()["last_error"] is None
+
+
+@pytest.mark.parametrize("status", [403, 503])
+def test_403_and_503_back_off_an_hour_without_retry_after(tmp_path, status):
+    net, clock = FakeNet(), Clock()
+    c, _ = _client(tmp_path, net, clock)
+    net.answer = (status, {})
+    assert c.refresh() == "backoff"
+    assert c.doc["backoff_until"] == clock.t + ninja.BACKOFF_DEFAULT_S == clock.t + 3600
+    # a Retry-After past 24 h is bounded to 24 h
+    net.answer = (status, {"Retry-After": str(10 * 86400)})
+    clock.t += 3600
+    assert c.refresh() == "backoff"
+    assert c.doc["backoff_until"] == clock.t + 86400
+
+
+def test_backoff_on_the_league_list_stops_the_round(tmp_path):
+    def net(method, url, headers, body=None):
+        calls.append(url)
+        return 429, {"Retry-After": "7200"}, b""
+    calls, clock = [], Clock()
+    c, _ = _client(tmp_path, net, clock)
+    assert c.refresh() == "backoff" and len(calls) == 1
+    assert calls[0].endswith(ninja.LEAGUES_PATH)
+    assert c.doc["backoff_until"] == clock.t + 7200
+    # a cached league does not carry the round on past a back-off
+    c.doc["league_auto"] = "Example League"
+    c.doc["backoff_until"] = None
+    clock.t += ninja.LEAGUE_INTERVAL_S + 1
+    assert c.refresh() == "backoff" and len(calls) == 2
+
+
+def test_a_backoff_far_beyond_24_hours_is_ignored(tmp_path):
+    net, clock = FakeNet(), Clock()
+    c, _ = _client(tmp_path, net, clock)
+    c.doc["backoff_until"] = clock.t + 30 * 86400  # a clock moved back, a bad cache
+    assert c.backed_off() is False and c.refresh() == "fetched"
 
 
 def test_at_most_one_request_per_hour_and_survives_restart(tmp_path):
