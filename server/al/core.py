@@ -19,6 +19,7 @@ from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parse
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import hotreload  # HOT-RELOAD (decision 0042)
+from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import plug  # RUN-SEAMS (decision 0056)
 from . import summary as summary_mod
 from .bus import EventBus
@@ -38,19 +39,19 @@ def _utc_now():
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def write_private(path, text):
-    """Write text, then restrict to the owner where the OS allows (0600)."""
+def write_private(path, text, backup=False):
+    """Write text (ASCII, LF) through the hardened jsonfile helper (unique
+    temp, fsync, retried replace; F-014), then restrict it to the owner
+    where the OS allows (0600). backup=True also keeps one `.bak` of it
+    (the consent record); the token file keeps none (RUN-DURABLE-STORES:
+    a second copy of a secret buys nothing, a new one is made each start)."""
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="ascii", newline="\n") as fh:
-        fh.write(text)
-    try:
-        os.chmod(tmp, 0o600)
-    except OSError:
-        pass
-    os.replace(tmp, path)
+    jsonfile.write_text(path, text, backup=backup)
+    for p in ((path, jsonfile.bak_path(path)) if backup else (path,)):
+        try:
+            os.chmod(p, 0o600)
+        except OSError:
+            pass
 
 
 # TEST-E2E: how often a consented core without a running tailer looks for
@@ -253,6 +254,20 @@ class Core:
         # file; re-read from the cache on a price book refresh only.
         self.watch = pricewatch.PriceWatch(self.runtime / pricewatch.FILE_NAME)
         self._watch_key = None
+        # RUN-DURABLE-STORES (F-014): a store save that fails is not lost and
+        # not retried at 2 Hz; the store's Saver writes its in-memory state
+        # again from a later tick, after 1, 5, 30, then every 60 s. Saves
+        # run under self._lock (lock order: self._lock, then the Saver's).
+        # plug/stores.py shows one Checks row while any of them is dirty.
+        self.store_clock = time.monotonic  # tests replace it
+        self._summary_pending = []  # session cards not yet written
+        self.savers = {name: jsonfile.Saver(fn, clock=lambda: self.store_clock())
+                       for name, fn in (("history", self._save_history),
+                                        ("ladder", self._save_ladder),
+                                        ("watch", self._save_watch),
+                                        ("visits", self._save_visits),
+                                        ("summary", self._save_summaries))}
+        self.stores_restored = []  # plug/stores.py: store names restored from .bak
         # DIAG-SELF (ruling J): passive local checks, re-read every
         # DIAG_TICK_S from the core loop. The port is the served one (the
         # entry point sets it); a test core reads no process list or
@@ -406,11 +421,7 @@ class Core:
         flags = getattr(item_mod.parse(text), "flags", None) or {}
         item = dict(doc["item"], corrupted=bool(flags.get("corrupted")
                                                 or flags.get("twice_corrupted")))
-        try:
-            with self._lock:
-                saved = self.watch.record(item, ninja, at)
-        except OSError:
-            return False
+        saved = self._store_op("watch", lambda: self.watch.record(item, ninja, at))
         if saved:
             self._watch_key = None  # republish on the next tick
         return saved
@@ -428,23 +439,31 @@ class Core:
         try:
             cfg = json.loads(text)
         except ValueError as e:
-            raise ConfigUnreadable("config/local.json is unreadable") from e
+            cfg = self._config_from_bak()
+            if cfg is None:
+                raise ConfigUnreadable("config/local.json is unreadable") from e
         if not isinstance(cfg, dict):
-            raise ConfigUnreadable("config/local.json is not a JSON object")
+            cfg = self._config_from_bak()
+            if cfg is None:
+                raise ConfigUnreadable("config/local.json is not a JSON object")
         return cfg
+
+    def _config_from_bak(self):
+        """RUN-DURABLE-STORES: a damaged config/local.json restored from the
+        .bak of its last good write (jsonfile records the restore; Checks
+        then shows one note); None when there is no good .bak."""
+        return jsonfile.read_json(self.config_path, kind=dict, backup=True)
 
     def _write_config(self, update):
         """Merge `update` into the local config and persist it, keeping
         every other key (the contact included; never written here).
-        Raises ConfigUnreadable (an OSError) on a hand-broken file."""
+        Atomic, ASCII + LF, with one .bak of the written copy (F-014).
+        Raises ConfigUnreadable (an OSError) on a hand-broken file that
+        no .bak can restore."""
         with self._lock:
             cfg = self._read_config_strict()
             cfg.update(update)
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.config_path.with_name(self.config_path.name + ".tmp")
-            with open(tmp, "w", encoding="ascii", newline="\n") as fh:
-                fh.write(json.dumps(cfg, indent=2, ensure_ascii=True) + "\n")
-            tmp.replace(self.config_path)
+            jsonfile.write_json(self.config_path, cfg, indent=2, backup=True)
             self._private_config()
             return cfg
 
@@ -453,6 +472,10 @@ class Core:
         a write, real core only (decision 0051)."""
         if self.private_config:
             acl.make_private(self.config_path)
+            # RUN-DURABLE-STORES: its .bak holds the same keys (the contact)
+            bak = jsonfile.bak_path(self.config_path)
+            if bak.is_file():
+                acl.make_private(bak)
 
     # -- UX-SETTINGS-IO (ruling E)
     def export_settings(self):
@@ -470,6 +493,52 @@ class Core:
             self.state.set_overlay_layout(layout.load(self.config_path))
         return report
 
+    # -- RUN-DURABLE-STORES (F-014): store saves with retry and back-off
+    def _save_history(self):
+        """Saver callable: the run history as it is in memory."""
+        runhistory.save(self.history.path, self.history.runs)
+
+    def _save_ladder(self):
+        """Saver callable: the map ladder as it is in memory."""
+        self.ladder._save()
+
+    def _save_watch(self):
+        """Saver callable: the watched prices as they are in memory."""
+        self.watch._save()
+
+    def _save_visits(self):
+        """Saver callable: the visited zones as the state has them (an
+        empty book also removes the .bak, zoneguide.write_visits)."""
+        version, doc = self.state.visits_doc()
+        zoneguide.write_visits(self.visits_path, doc)
+        self._visits_saved = version
+
+    def _save_summaries(self):
+        """Saver callable: append the pending session cards, oldest first;
+        a card leaves the queue only once it is written."""
+        while self._summary_pending:
+            summary_mod.save(self.summary_path, self._summary_pending[0])
+            self._summary_pending.pop(0)
+
+    def _flush(self, name, force=False):
+        """Save store `name` when it has unsaved changes and its back-off
+        allows (force: a click, ignore the back-off). True when nothing of
+        it is left unsaved."""
+        with self._lock:
+            return self.savers[name].flush(force=force)
+
+    def _store_op(self, name, fn):
+        """Run one store change (its memory update and its own save) under
+        the lock. A failed save leaves the change in memory and marks the
+        store's Saver, which writes it from a later tick with back-off.
+        fn's result, or False after a failed save."""
+        with self._lock:
+            try:
+                return fn()
+            except OSError:
+                self.savers[name].mark()
+                return False
+
     # -- UTIL-RUN-HISTORY
     def history_enabled(self):
         return runhistory.enabled_setting(self._config().get(runhistory.CONFIG_KEY))
@@ -477,20 +546,25 @@ class Core:
     def tick_history(self):
         """From the core's loop: save the current run when an act split
         closed or the run finished (and history is on), then publish the
-        history view. No request. True when the file was written."""
+        history view. No request. True when the file was written.
+        RUN-DURABLE-STORES: an unsaved change is retried first; while it
+        stays unsaved new runs wait in the state (they are read again on
+        the next tick), so a failing disk costs one write per back-off
+        step, not one per tick."""
         rec = self.state.run_record()
         on = self.history_enabled()
         wrote = False
         key = None
         if rec is not None:
             key = (rec["started_at"], rec["closed"], rec["finished"])
-        if on and rec is not None and rec["closed"] and key != self._history_key:
-            try:
-                with self._lock:
-                    wrote = self.history.record(rec)
-                self._history_key = key
-            except OSError:
-                pass  # the view still shows; the next tick tries again
+        saver = self.savers["history"]
+        was_dirty = saver.dirty
+        if self._flush("history") and was_dirty:
+            wrote = True
+        if (not saver.dirty and on and rec is not None and rec["closed"]
+                and key != self._history_key):
+            wrote = self._store_op("history", lambda: self.history.record(rec)) or wrote
+            self._history_key = key
         # UTIL-MULTICHAR (decision 0038): the player's other characters'
         # runs (rebuilt at core start, or parked by a switch) are saved
         # too, each under its own name, and every character gets a view.
@@ -498,17 +572,13 @@ class Core:
         current = names[0] if names else None
         for name in names[1:]:
             prec = self.state.parked_record(name)
-            if not on or prec is None or not prec["closed"]:
+            if saver.dirty or not on or prec is None or not prec["closed"]:
                 continue
             pkey = (prec["started_at"], prec["closed"], prec["finished"])
             if self._parked_keys.get(name) == pkey:
                 continue
-            try:
-                with self._lock:
-                    wrote = self.history.record(prec) or wrote
-                self._parked_keys[name] = pkey
-            except OSError:
-                pass
+            wrote = self._store_op("history", lambda: self.history.record(prec)) or wrote
+            self._parked_keys[name] = pkey
         view = self.history.view(rec, enabled=on)
         # the selector also lists characters seen only in the saved file
         others = names[1:] + [n for n in reversed(self.history.characters())
@@ -525,48 +595,50 @@ class Core:
         """From the core's loop: re-read the guide file and the area graph
         when their files changed (one stat each), and save the visited
         zones when they changed and run history is on. No request. True
-        when the visits file was written."""
+        when the visits file was written. RUN-DURABLE-STORES: the save goes
+        through the visits Saver (a failed one is retried with back-off)."""
         self.state.set_zone_guide(guide=self.guide.get(), graph=self.area_graph.get())
-        version, doc = self.state.visits_doc()
-        if version == self._visits_saved or not self.history_enabled():
+        saver = self.savers["visits"]
+        version, _ = self.state.visits_doc()
+        if version != self._visits_saved and self.history_enabled():
+            saver.mark()
+        if not saver.dirty:
             return False
-        try:
-            with self._lock:
-                zoneguide.write_visits(self.visits_path, doc)
-            self._visits_saved = version
-            return True
-        except OSError:
-            return False  # the tracker still shows; the next tick tries again
+        return self._flush("visits")
 
     def _clear_visits(self):
-        """Caller holds self._lock."""
+        """Caller holds self._lock. The empty book is written at once (a
+        click; a failure is retried by the visits Saver) and the .bak is
+        removed even when that write fails: a cleared store keeps no copy
+        (decision 0036 amendment 2026-11-18)."""
         self.state.clear_visits()
-        try:
-            zoneguide.write_visits(self.visits_path, self.state.visits_doc()[1])
-        except OSError:
-            pass
-        self._visits_saved = self.state.visits_doc()[0]
+        saver = self.savers["visits"]
+        saver.mark()
+        saver.flush(force=True)
+        runhistory.drop_bak(self.visits_path)
 
     def tick_ladder(self, on=None):
         """UTIL-MAP-LADDER: save the session's finished maps (run history
         on) and publish the all-sessions ladder; off publishes none. True
-        when the file was written."""
+        when the file was written. RUN-DURABLE-STORES: an unsaved change
+        is retried first; new maps wait in the state while it fails."""
         if on is None:
             on = self.history_enabled()
+        saver = self.savers["ladder"]
+        was_dirty = saver.dirty
+        wrote = self._flush("ladder") and was_dirty
         if not on:
             self.state.set_map_ladder(None)
-            return False
+            return wrote
         character, rows = self.state.map_ladder_rows()
         since = self._ladder_since
         if since is not None:
             rows = [r for r in rows if isinstance(r.get("opened_at"), (int, float))
                     and r["opened_at"] > since]
-        wrote = False
-        try:
-            with self._lock:
-                wrote = self.ladder.record(character, [r for r in rows if r.get("done")])
-        except OSError:
-            pass  # the view still shows; the next tick tries again
+        if not saver.dirty:
+            done = [r for r in rows if r.get("done")]
+            wrote = self._store_op("ladder",
+                                   lambda: self.ladder.record(character, done)) or wrote
         with self._lock:
             view = self.ladder.view(character, rows)
         self.state.set_map_ladder(view)
@@ -619,13 +691,13 @@ class Core:
                             and isinstance(t.get("checked_at"), (int, float)))
         key = (on, tuple(stamps), self.rates.doc.get("checked_at"), len(self.watch.items))
         changed = False
+        # RUN-DURABLE-STORES: a refresh or press whose save failed is
+        # written again from here with back-off (the prices are in memory)
+        self._flush("watch")
         if key != self._watch_key:
             if on:
-                try:
-                    with self._lock:
-                        changed = self.watch.refresh(self.rates.lookup)
-                except OSError:
-                    pass
+                changed = self._store_op("watch",
+                                         lambda: self.watch.refresh(self.rates.lookup))
             self._watch_key = key
         self.state.set_price_watch(self.watch.view(on, self.watch_pct()))
         return changed
@@ -677,8 +749,15 @@ class Core:
         try:
             cfg = json.loads(raw.decode("utf-8"))
         except ValueError:
-            cfg = {}
-        self._config_cache = (key, cfg if isinstance(cfg, dict) else {}, digest, stable)
+            cfg = None
+        if not isinstance(cfg, dict):
+            # RUN-DURABLE-STORES: a damaged file comes back from its .bak
+            # (rewritten on disk, so the next call stats a new key; if that
+            # write failed, the damaged file's key keeps the restored copy
+            # cached, so the .bak is not re-read on every call)
+            restored = self._config_from_bak()
+            cfg = restored if restored is not None else {}
+        self._config_cache = (key, cfg, digest, stable)
         return dict(self._config_cache[1])
 
     def tc_calc_enabled(self):
@@ -753,10 +832,9 @@ class Core:
 
     # -- consent
     def consent_record(self):
-        try:
-            return json.loads(self.consent_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}
+        """The saved opt-in ({} when missing or bad). RUN-DURABLE-STORES: a
+        half-written consent.json is restored from its .bak."""
+        return jsonfile.read_json(self.consent_path, kind=dict, default={}, backup=True)
 
     def consented(self):
         return bool(self.consent_record().get("consented"))
@@ -775,7 +853,7 @@ class Core:
         rec = {"consented": bool(consented), "at": _utc_now(), "app_version": VERSION,
                "file": "Client.txt", "derives": ["zone", "level", "deaths",
                                                  "whispers", "session times"]}
-        write_private(self.consent_path, json.dumps(rec, indent=1) + "\n")
+        write_private(self.consent_path, json.dumps(rec, indent=1) + "\n", backup=True)
         self.state.set_tailer(consented=bool(consented))
         if consented:
             self.start_tailing()
@@ -912,14 +990,18 @@ class Core:
             if idle:
                 self.state.check_log_idle(now=now, movers=movers)
             self.state.check_session_end(now=now, movers=movers)
+        # RUN-DURABLE-STORES: a card whose save failed waits in the queue
+        # and is written from a later tick with back-off
+        self._flush("summary")
         card = self.state.session_summary
         if not card or card.get("id") == self._summary_saved:
             return None
         self._summary_saved = card.get("id")
-        try:
-            summary_mod.save(self.summary_path, card)
-        except OSError:
-            pass  # the card still shows; the next one tries again
+        with self._lock:
+            self._summary_pending.append(card)
+            del self._summary_pending[:-summary_mod.MAX_SAVED]
+            self.savers["summary"].mark()
+        self._flush("summary")
         return card
 
     def tick_sources(self, now=None):

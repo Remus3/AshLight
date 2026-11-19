@@ -24,6 +24,7 @@ import pytest
 from server.al import jsonfile
 from server.al.theorycraft import bridge, health, waystone
 from tests.test_waystone import LIFE_BUILD, WAYSTONE
+from tc_live_util import LIVE_CALC
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "tests" / "fixtures" / "tc_bridge"
@@ -46,6 +47,7 @@ def test_flask_and_charm_rows_are_asked_from_the_calc():
 
 @pytest.mark.skipif(not bridge.available(),
                     reason="optional calc component absent (setup.ps1 -TcCalc)")
+@LIVE_CALC
 @pytest.mark.slow
 def test_live_flask_and_charm_outputs_reach_the_build_view(warm_bridge):
     xml = (FIX / "minimal_build.xml").read_text(encoding="ascii")

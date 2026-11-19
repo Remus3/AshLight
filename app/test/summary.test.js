@@ -4,7 +4,8 @@
    Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const s = require("../../web/summary.js");
+const web = require("./_web.js");
+const s = web.load("summary.js");
 
 const CARD = { id: 2, reason: "idle", reason_text: "after 20 minutes with no game activity",
   ended_at: 1700000000, lines: ["Played 1:00:00 and reached level 70.", "Maps: 2.",

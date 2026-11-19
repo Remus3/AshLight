@@ -13,6 +13,7 @@ import math
 import pytest
 
 from server.al.theorycraft import calcwire, model, pobout, skillsplit
+from tc_live_util import LIVE_CALC
 
 
 def _xml(skills="", stats=""):
@@ -246,6 +247,7 @@ def test_live_reference_build_skill_split():
     assert [a["id"] for a in doc["ailments"]] == ["IgniteDPS", "TotalDotDPS"]
 
 
+@LIVE_CALC
 def test_live_calc_outputs_for_build_view():
     from tc_live_util import reference
     from server.al.theorycraft import bridge, health

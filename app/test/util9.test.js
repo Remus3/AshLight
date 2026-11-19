@@ -4,9 +4,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const h = require("../../web/history.js");
-const pw = require("../../web/pricewatch.js");
-const sio = require("../../web/settingsio.js");
+const web = require("./_web.js");
+const h = web.load("history.js");
+const pw = web.load("pricewatch.js");
+const sio = web.load("settingsio.js");
 
 test("history: delta text and rows", () => {
   assert.equal(h.deltaText(90), "1:30 slower");

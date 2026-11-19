@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 import math_live_items as items
-from tc_live_util import BUDGET, LIVE_REF, keep_warm, lease_port, reference
+from tc_live_util import BUDGET, CALC_MARKS, LIVE_REF, keep_warm, lease_port, reference
 
 from server.al.core import Core
 from server.al.http import serve
@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "m" * 48
 SIDE_BAND = delta.SIDEGRADE_PCT
 
-pytestmark = [pytest.mark.server, pytest.mark.slow, LIVE_REF]
+pytestmark = [pytest.mark.server, pytest.mark.slow, LIVE_REF, *CALC_MARKS]
 
 
 def _req(port, method, path, body=None, timeout=120):
