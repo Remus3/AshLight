@@ -204,7 +204,8 @@ class Core:
                                                       else self.tc_provider()),
                                         rates=lambda: self.rates.snapshot(),
                                         trade_ids=lambda: (self.trade_ids.get()
-                                                           if self.web_data_enabled() else {}))
+                                                           if self.web_data_enabled() else {}),
+                                        staged=True)
         # TC-CARD-PARTS: the card parts' ctx gets the config and the area
         self.last_eval.ctx_extra = {"config": self._config, "area_id": lambda: self.state.area_id}
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
@@ -405,7 +406,11 @@ class Core:
         TC-PRESS-BUILD (ruling Q-02): text that holds a PoB code, character
         JSON or share link loads that build for the character being played
         (theorycraft/press.py) and publishes a "Build loaded" card instead;
-        such a press asks for no price check and adds no price-watch row."""
+        such a press asks for no price check and adds no price-watch row.
+        TC-PRESS-STAGED-LIVE (decision 0024 amendment 2026-11-19): returns the
+        first stage's result (the stat-weight card, published at once); the
+        Path of Building stages follow on the LastEval worker as card
+        updates that keep this press's time."""
         try:
             self.tick_build()  # BUILD-LIVE: score against this character's build
         except Exception:  # noqa: BLE001 - the press must still be checked
@@ -1206,4 +1211,8 @@ class Core:
         if stop is not None:
             stop.set()  # SEC-ACL-CHECK: a pending audit never starts
         self.stop_tailing()
+        # TC-PRESS-STAGED-LIVE: no stage is published after close; the
+        # worker is joined once the bridge stop ends a calc call in flight
+        self.last_eval.close(timeout=0)
         self.tc_provider.close()  # AUDIT-TC-WIRE: stop the bridge if started
+        self.last_eval.close()

@@ -802,7 +802,11 @@ class Handler(BaseHTTPRequestHandler):
         TC-PRESS-BUILD (ruling Q-02): a PoB code, character JSON or share
         link in that text loads the build instead (core.eval_press, the
         paste box's rules: a share link only with web data on) and the
-        answer is the press doc (status "loaded" or "refused")."""
+        answer is the press doc (status "loaded" or "refused").
+        TC-PRESS-STAGED-LIVE (decision 0024 amendment 2026-11-19): the reply
+        is the first stage's result (the stat-weight card); with the calc on,
+        Path of Building's numbers reach the state card later as updates of
+        the same press, so the reply never waits on the calc."""
         body = self._read_json(MAX_EVAL_BODY)
         if body is None:
             return None
