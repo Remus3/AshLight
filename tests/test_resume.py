@@ -265,3 +265,24 @@ def test_no_marker_keeps_the_core_start(tmp_path):
     r = resume.scan(p)
     assert r["run_ts_local"] is None
     assert "session_started_at" not in resume.state_fields(r)
+
+
+def test_restore_is_a_zone_entry_and_keeps_the_replay_types():
+    """RUN-ZONE-RESET (F-088): a restored zone voids the cards of the zone
+    before it; LIVE-RESUME's replay order and event types are unchanged."""
+    st = SessionState(character="", clock=lambda: 1000.0)
+    assert st.schedule_zone_card({"kind": "zone", "text": "old"}) is True
+    gen = st.zone_gen
+    st.restore({"zone": "Shore", "in_hideout": False, "area_id": "G1_2",
+                "area_level": 4, "zone_entered_at": 900.0})
+    assert st.zone_gen == gen + 1 and st.zone_cards() == []
+    s = st.snapshot()
+    assert (s["zone"], s["area_id"], s["area_level"], s["zone_s"]) == (
+        "Shore", "G1_2", 4, 100.0)
+    # a restore with no zone fields is no zone entry
+    st.schedule_zone_card({"kind": "zone", "text": "kept"})
+    st.restore({"character": "Quill", "level": 3})
+    assert [c["text"] for c in st.zone_cards()] == ["kept"]
+    assert SessionState._REPLAY_TYPES == (
+        "scene_changed", "area_entered", "area_generated", "death", "level_up",
+        "player_joined_area", "player_left_area", "log_opened")

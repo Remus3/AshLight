@@ -8,7 +8,8 @@
    overlay's deny-everything session is untouched; this one allows only the
    clipboard write the dashboard's Copy buttons make on the player's click
    (decision 0014), only for the core's origin. Links leave for the default
-   browser (http(s) only); the window never navigates off 127.0.0.1.
+   browser (https to config/link_hosts.json only, on a click in the focused
+   window, rate limited); the window never navigates off 127.0.0.1.
 
    Created only in client mode (electron app --client, the Start Menu
    shortcut); the overlay-only start (scripts\run.ps1) never builds it, so
@@ -55,6 +56,7 @@ function createClient(opts) {
   let ses = null;
   let shownToken = "";
   let closedNoteShown = false;
+  let opened = []; // times of the links opened in the last minute (rate limit)
 
   function iconImage() {
     return Brand.trayImage(nativeImage);
@@ -63,16 +65,22 @@ function createClient(opts) {
   function clientSession() {
     if (ses) { return ses; }
     ses = session.fromPartition(PARTITION);
-    const origin = Link.coreOrigin(port);
     ses.setPermissionRequestHandler((wc, perm, cb, details) => {
       const from = (details && details.requestingUrl) || (wc && wc.getURL()) || "";
       cb(perm === ALLOWED_PERMISSION && Link.isCoreUrl(from, port));
     });
     ses.setPermissionCheckHandler((wc, perm, requestingOrigin) =>
-      perm === ALLOWED_PERMISSION && requestingOrigin === origin);
+      perm === ALLOWED_PERMISSION && Link.isCoreUrl(requestingOrigin, port));
     // Downloads (the .build file, the loot filter, a settings export) go to
-    // the user's Downloads folder, as the dashboard's own words say.
+    // the user's Downloads folder, as the dashboard's own words say. Only
+    // AshLight's own: from the core origin, a .build, .filter, .json or .txt
+    // name (OVL-LINKS-DOWNLOADS); anything else is cancelled.
     ses.on("will-download", (e, item) => {
+      if (!Link.downloadAllowed(item.getURL(), item.getFilename(), port)) {
+        item.cancel();
+        log("client: download refused");
+        return;
+      }
       const name = Link.safeFileName(item.getFilename()) || "ashlight-download";
       const dir = app.getPath("downloads");
       const ext = path.extname(name);
@@ -109,12 +117,18 @@ function createClient(opts) {
     saveTimer = setTimeout(() => { saveTimer = null; saveState(); }, SAVE_DELAY_MS);
   }
 
+  /* A link leaves only on the player's click in the focused companion,
+     to a listed https host, at most 1 a second and 5 a minute. */
   function route(e, url, isPopup) {
-    const r = Link.routeFor(url, port, isPopup);
+    const now = Date.now();
+    const focused = !!(win && !win.isDestroyed() && win.isFocused());
+    const r = Link.routeFor(url, port, isPopup, { focused: focused, now: now, history: opened });
     if (r === "stay") { return; }
     if (e && e.preventDefault) { e.preventDefault(); }
     if (r === "external") {
-      shell.openExternal(url).catch((err) => log("client: link not opened: " + err.message));
+      opened = Link.noteOpened(opened, now);
+      const parsed = new URL(url);
+      shell.openExternal(parsed.href).catch((err) => log("client: link not opened: " + err.message));
     } else {
       log("client: navigation refused");
     }
@@ -151,9 +165,19 @@ function createClient(opts) {
   }
 
   function createWindow() {
-    const areas = [screen.getPrimaryDisplay()].concat(screen.getAllDisplays())
-      .map((d) => d.workArea);
-    const placed = Link.windowBounds(readState(), areas);
+    const displays = [screen.getPrimaryDisplay()].concat(screen.getAllDisplays());
+    const areas = displays.map((d) => d.workArea);
+    // OVL-SECOND-DISPLAY: Electron's display list only; the overlay's
+    // display (opts.overlayBounds().displayId) is the one to avoid.
+    let avoid = null;
+    try {
+      const ob = typeof opts.overlayBounds === "function" ? opts.overlayBounds() : null;
+      const od = ob ? screen.getAllDisplays().find((d) => d.id === ob.displayId) : null;
+      avoid = od ? od.workArea : null;
+    } catch (e) {
+      avoid = null;
+    }
+    const placed = Link.windowBounds(readState(), areas, avoid);
     win = new BrowserWindow({
       x: placed.bounds.x, y: placed.bounds.y,
       width: placed.bounds.width, height: placed.bounds.height,
