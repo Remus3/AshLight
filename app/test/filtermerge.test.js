@@ -2,7 +2,8 @@
 /* UTIL-FILTER-MERGE (decision 0033): the dashboard half of the merge. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const m = require("../../web/filtermerge.js");
+const web = require("./_web.js");
+const m = web.load("filtermerge.js");
 
 function env(reply) {
   const out = { told: [], saved: [], calls: [] };
@@ -80,9 +81,7 @@ test("a dead core says so", async () => {
 
 test("one primary filter control: the file pick; the download is a link", () => {
   /* TC-FILTER-ONE-CONTROL (F-158) */
-  const fs = require("node:fs");
-  const path = require("node:path");
-  const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "ascii");
+  const html = web.source("index.html", "ascii");
   const start = html.indexOf('<details id="filter-more"');
   assert.ok(start >= 0);
   const fold = html.slice(start, html.indexOf("</details>", start));

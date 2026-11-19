@@ -4,7 +4,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const r = require("../../web/runs.js");
+const web = require("./_web.js");
+const r = web.load("runs.js");
 
 const MAPS = {
   count: 2, done: 1,

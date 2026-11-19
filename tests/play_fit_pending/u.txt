@@ -1,1 +1,1 @@
-Region U (#play-u) is not on Play yet; PLAY-TD-16B-KEPT-CHECKS lands the kept checks and deletes this marker.
+Region U is painted (PLAY-TD-16B); only its G2 position waits: its top moves with the pending C, T, N and I rows, and the last of those deletes this marker.

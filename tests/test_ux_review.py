@@ -9,14 +9,15 @@ from pathlib import Path
 
 import pytest
 
+import srcpaths
 from test_design_contrast import _hex, over, ratio
 
 ROOT = Path(__file__).resolve().parent.parent
-APP_CSS = ROOT / "web" / "app.css"
+APP_CSS = srcpaths.path("app.css")
 OVERLAY_CSS = ROOT / "app" / "overlay" / "overlay.css"
 LAYOUT_JS = ROOT / "app" / "shared" / "layout.js"
 TOKENS = ROOT / "ops" / "fleet_kit" / "tokens.json"
-WEB_JS = sorted((ROOT / "web").glob("*.js")) + sorted(
+WEB_JS = srcpaths.web_js() + sorted(
     (ROOT / "app" / "overlay").glob("*.js")) + sorted((ROOT / "app" / "shared").glob("*.js"))
 WHITE = (255, 255, 255)
 GLANCE = 7.0  # research 0008: "target 7:1 for glance text" (WCAG 2.2 SC 1.4.6)
@@ -208,7 +209,7 @@ def test_dashboard_type_floor_13px():
     token used as a font size under 13 px at root 16 px."""
     tokens = _al_font_tokens()
     assert len(tokens) == 6, tokens
-    sheets = sorted((ROOT / "web").glob("*.css"))
+    sheets = srcpaths.web_css()
     assert APP_CSS in sheets
     for sheet in sheets:
         css = re.sub(r"/\*.*?\*/", "", _css(sheet), flags=re.S)
@@ -267,7 +268,7 @@ def test_no_fixed_width_wider_than_a_phone_card():
 
 
 def test_viewport_meta_allows_zoom():
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     m = re.search(r'<meta name="viewport" content="([^"]+)"', html)
     assert m and "width=device-width" in m.group(1)
     assert "maximum-scale" not in m.group(1) and "user-scalable" not in m.group(1)
@@ -312,7 +313,7 @@ def test_overlay_forced_colours_card_edges_use_highlight():
 # -- UX-NEWEST / UX-DASH-LAYOUT (glance review 0004 U17, U18)
 
 def _main_order():
-    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    html = srcpaths.index_html(encoding="utf-8")
     main = html[html.index("<main>"):html.index("</main>")]
     ids = re.findall(r'<section(?: id="([a-z-]+)")?(?: class="([a-z -]+)")?', main)
     return [i or c.split()[-1] for i, c in ids], main
@@ -331,7 +332,7 @@ def test_last_session_card_sits_right_under_the_tiles():
 
 def test_last_session_card_has_a_steady_edge():
     """U17: a steady accent edge, never motion (design 0001 principle 3)."""
-    css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
+    css = srcpaths.read("app.css", encoding="utf-8")
     assert re.search(r"\.card\.session\s*\{[^}]*border-left\s*:\s*4px solid var\(--fk-accent\)", css)
 
 
@@ -347,7 +348,7 @@ def test_dashboard_card_order_glance_first():
             "deathsbox", "events", "buildbox", "pricesbox", "toolsbox"]
     seen = [x for x in order if x in want]
     assert seen == want, seen
-    css = (ROOT / "web" / "app.css").read_text(encoding="utf-8")
+    css = srcpaths.read("app.css", encoding="utf-8")
     assert not re.search(r"(^|[;{\s])order\s*:", css), "CSS order breaks Tab order"
 
 

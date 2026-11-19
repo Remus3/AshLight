@@ -6,16 +6,14 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const BL = require("../../web/buildline.js");
-const Tabs = require("../../web/tabs.js");
-const R = require("../../web/regions.js");
+const web = require("./_web.js");
+const BL = web.load("buildline.js");
+const Tabs = web.load("tabs.js");
+const R = web.load("regions.js");
 
-const WEB = path.join(__dirname, "..", "..", "web");
-const SRC = fs.readFileSync(path.join(WEB, "buildline.js"), "utf8");
-const CSS = fs.readFileSync(path.join(WEB, "buildline.css"), "utf8");
-const HTML = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
+const SRC = web.source("buildline.js");
+const CSS = web.source("buildline.css");
+const HTML = web.source("index.html");
 
 /* A small DOM: ids, parents, children, attributes, hidden, focus, click. */
 function makeDoc() {

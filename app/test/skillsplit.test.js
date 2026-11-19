@@ -5,12 +5,9 @@
    only list them. Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const sp = require("../../web/skillsplit.js");
-const h = require("../../web/health.js");
-
-const WEB = path.join(__dirname, "..", "..", "web");
+const web = require("./_web.js");
+const sp = web.load("skillsplit.js");
+const h = web.load("health.js");
 
 function doc(split) { return { loaded: true, skill_split: split }; }
 
@@ -84,7 +81,7 @@ test("AREA-AUDIT P7-5: no calc-off hint while the calc is on and pending", () =>
 });
 
 test("scripts load, blocks exist, no live region, no timers or network", () => {
-  const html = fs.readFileSync(path.join(WEB, "index.html"), "ascii");
+  const html = web.source("index.html", "ascii");
   assert.ok(html.indexOf("/web/skillsplit.js") > 0);
   const card = html.split("id=\"buildbox\"")[1].split("</section>")[0];
   for (const id of ["split-wrap", "split-list", "split-more", "split-ailments"]) {
@@ -96,7 +93,7 @@ test("scripts load, blocks exist, no live region, no timers or network", () => {
   }
   const split = html.split("id=\"split-wrap\"")[1].split("</div>")[0];
   assert.ok(split.indexOf("aria-live") < 0);
-  const src = fs.readFileSync(path.join(WEB, "skillsplit.js"), "ascii");
+  const src = web.source("skillsplit.js", "ascii");
   assert.ok(!/setInterval|setTimeout|fetch\(|XMLHttpRequest|aria-live|innerHTML/.test(src));
   assert.ok((html.match(/aria-live/g) || []).length <= 12);
 });

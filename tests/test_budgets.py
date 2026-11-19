@@ -20,6 +20,8 @@ from server.al.logfile import Tailer
 from server.al.state import SessionState
 
 FIXTURE = Path(__file__).parent / "fixtures" / "client_sample.txt"
+# TEST-MARKS: every budget here is wall-clock sensitive.
+pytestmark = pytest.mark.timing
 
 
 def _lines(n):
