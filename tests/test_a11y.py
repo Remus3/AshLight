@@ -253,6 +253,9 @@ def test_play_is_seven_regions_with_no_tab_stop_and_no_columns():
         kids = sec.children
         assert kids[0].tag == "h2" and kids[0].attrs["id"] == sec.attrs["aria-labelledby"]
         assert kids[0].all_text().strip(), r
+        # a screen reader never hears the region heading twice (review TD9B-2)
+        inner = {n.all_text().strip() for k in kids[1:] for n in k.walk() if n.tag == "h2"}
+        assert kids[0].all_text().strip() not in inner, r
         assert kids[1].attrs.get("class") == "slot" and not kids[1].children, r
         groups = {k.attrs.get("data-legacy"): k for k in kids[2:]}
         assert list(groups) == list(LEGACY[r]), (r, list(groups))
