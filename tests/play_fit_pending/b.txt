@@ -1,1 +1,1 @@
-Region B (#play-b) is not on Play yet; PLAY-TD-15-BUILDLINE lands the build line and deletes this marker.
+Region B has landed (PLAY-TD-15-BUILDLINE) and holds G1, G4, G5, G6, G7 and G9; only its box position (G2) moves with the unfixed track of region G, so delete this marker in the merge batch that lands PLAY-TD-10-STRIP.
