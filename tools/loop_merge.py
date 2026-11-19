@@ -11,10 +11,17 @@ from loop_base import (
     RED_TTL_S, RESOLVABLE, ROADMAP_REL, ascii_text, atomic_write, epoch_of, iso,
     read_json,
 )
+import roadmap
 from loop_roadmap import base_kind, commit_body, flip_roadmap, merge_subject, resolve_roadmap
 
 
 # ---------------------------------------------------------------- gate verdicts
+
+def _is_done_file(name):
+    """True for a docs/roadmap/done/<ID>.md row file path (repo-relative)."""
+    m = roadmap.PATH_RX.match(name)
+    return bool(m) and m.group(1) == "done"
+
 
 class GateCache:
     """Plan 096: gate verdicts by tree id, ops/loop/control/gate_verdicts.json
@@ -55,9 +62,10 @@ class GateCache:
         return e
 
     def carry(self, src, dst, git, cwd, now):
-        """Record dst green on src's green verdict when the two trees differ
-        only in the ROADMAP (the loop's own row flip at merge). True if
-        dst is green afterwards."""
+        """Record dst green on src's green verdict when every name the two
+        trees differ in is ROADMAP.md or a file under docs/roadmap/done/ (the
+        loop's own row close at merge; LOOP-ROWFILES-MERGE). True if dst is
+        green afterwards."""
         e = self.get(src, now) if src and dst else None
         if not e or not e["ok"]:
             return False
@@ -67,7 +75,7 @@ class GateCache:
         if r.returncode != 0:
             return False
         names = {n.strip() for n in (r.stdout or "").splitlines() if n.strip()}
-        if not names <= {ROADMAP_REL.as_posix()}:
+        if not all(n == ROADMAP_REL.as_posix() or _is_done_file(n) for n in names):
             return False
         self.put(dst, True, e.get("detail"), "carry", now, via=src)
         return True
@@ -105,22 +113,38 @@ class MergeMixin:
         why, flipped_row = None, False
         if r.returncode != 0 and not self.resolve_roadmap_conflict(main):
             why = "merge conflict"
+        done_rel = None
         if why is None and base_kind(rec) == "plan":
+            # LOOP-ROWFILES-MERGE (F-029): the row closes with a done file
+            # inside the merge commit; ROADMAP.md is never edited here (the
+            # fold at /done writes it). A refused write (no such row, row
+            # already done, done file already there) closes nothing and the
+            # merge goes on, as a no-op flip did. A legacy numeric id (\d{3})
+            # has no row-file form, so only it keeps the ROADMAP.md flip.
             rounds = rec.get("rounds", 0)
             date = _dt.datetime.fromtimestamp(self.d.clock()).strftime("%Y-%m-%d")
-            rm = main / ROADMAP_REL
-            try:
-                text = rm.read_text(encoding="utf-8")
-                flipped = flip_roadmap(text, rec["id"],
-                                       f"done {date} (loop; refute {rounds}/{MAX_ROUNDS} "
-                                       f"{rec.get('verdict', 'PASS')})")
-                if flipped != text:
-                    atomic_write(rm, flipped)
-                    if g(["add", ROADMAP_REL.as_posix()], main).returncode != 0:
-                        why = "roadmap stage refused"
+            note = f"loop; refute {rounds}/{MAX_ROUNDS} {rec.get('verdict', 'PASS')}"
+            if roadmap.FILE_ID_RX.match(str(rec["id"])):
+                try:
+                    done_rel = roadmap.write_done(main, rec["id"], note, date=date)
+                except (roadmap.RowFileError, OSError) as e:
+                    self.step(f"{rec['id']}: no done file ({ascii_text(str(e), 120)})")
+                if done_rel is not None:
                     flipped_row = True
-            except OSError:
-                pass
+                    if g(["add", "--", done_rel], main).returncode != 0:
+                        why = "done file stage refused"
+            else:
+                rm = main / ROADMAP_REL
+                try:
+                    text = rm.read_text(encoding="utf-8")
+                    flipped = flip_roadmap(text, rec["id"], f"done {date} ({note})")
+                    if flipped != text:
+                        atomic_write(rm, flipped)
+                        if g(["add", ROADMAP_REL.as_posix()], main).returncode != 0:
+                            why = "roadmap stage refused"
+                        flipped_row = True
+                except OSError:
+                    pass
         state = "merge-conflict"
         if why is None:
             # PUBREPO 1b: `merge: <topic>`, never the lane / worktree name
@@ -136,12 +160,19 @@ class MergeMixin:
                 rec["error"] = ascii_text(f"main merge commit refused: {out[-260:]}", 300)
         if why:
             g(["merge", "--abort"], main)
+            if done_rel is not None:
+                # the abort may leave the new done file behind: main stays clean
+                g(["rm", "-q", "--cached", "--ignore-unmatch", "--", done_rel], main)
+                try:
+                    (main / done_rel).unlink()
+                except OSError:
+                    pass
             rec["state"] = state
             self.keep(rec)
             self.step(f"{rec['id']}: {why}, aborted")
         else:
             rec["state"] = "merged"
-            if flipped_row:  # plan 019 4c: when this row became [x]
+            if flipped_row:  # plan 019 4c: when this row's done file was written
                 rec["merged_at"] = iso(self.d.clock())
             self.drop_keep(rec)
             self.step(f"{rec['id']}: merged")
