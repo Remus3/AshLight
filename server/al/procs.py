@@ -217,11 +217,7 @@ def record_overlay(runtime, pid):
         return False
     data = {"pid": pid, "created": ka.process_created(pid),
             "image": ka.image_name(pid), "recorded": time.time()}
-    runtime = Path(runtime)
-    runtime.mkdir(parents=True, exist_ok=True)
-    tmp = runtime / (OVERLAY_PID_FILE + ".tmp")
-    tmp.write_text(json.dumps(data) + "\n", encoding="ascii")
-    os.replace(tmp, runtime / OVERLAY_PID_FILE)
+    jsonfile.write_text(Path(runtime) / OVERLAY_PID_FILE, json.dumps(data) + "\n")
     return True
 
 
