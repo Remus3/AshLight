@@ -85,6 +85,11 @@ def test_token_file_inherits_the_private_acl(tmp_path):
 
 @WINDOWS
 def test_config_file_is_private_after_a_settings_write(tmp_path):
+    # one more inheritable writer on the folder, so the file does not start
+    # private by inheritance: a CI runner's profile Temp already grants
+    # exactly the three principals (GP-09 first CI run, Python 3.11 job)
+    (tmp_path / "rt").mkdir()
+    _add_writer(tmp_path / "rt")
     core = Core(runtime=tmp_path / "rt", tail=False)
     assert core.private_config is False  # a test core never changes an ACL
     core.set_web_data(False)
