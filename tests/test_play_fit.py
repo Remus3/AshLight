@@ -369,9 +369,26 @@ def today_layout(sweep):
 
 # -- the sweep ----------------------------------------------------------------------
 
+_BROWSERS = (r"Google\Chrome\Application\chrome.exe",
+             r"Microsoft\Edge\Application\msedge.exe")
+
+
 def find_browser():
-    from test_dash_console import find_browser as find
-    return find()
+    """A private copy of the dashboard console test's browser finder."""
+    env = os.environ.get("AL_CHROME", "").strip().strip('"')
+    if env and Path(env).is_file():
+        return env
+    for var in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
+        base = os.environ.get(var)
+        for rel in _BROWSERS if base else ():
+            p = Path(base) / rel
+            if p.is_file():
+                return str(p)
+    for name in ("chrome", "google-chrome", "chromium", "msedge"):
+        hit = shutil.which(name)
+        if hit:
+            return hit
+    return None
 
 
 class Driver:
