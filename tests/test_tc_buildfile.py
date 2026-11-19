@@ -126,7 +126,10 @@ def test_generator_has_no_file_or_path_code():
                 "import os", "pathlib", "subprocess"):
         assert bad not in src, bad
     http_src = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
-    block = http_src.split('if path == "/api/buildfile":', 1)[1].split("if path ==", 1)[0]
+    # TEST-HTTP-ROUTES: the route method's body, past its signature line (the
+    # route arguments are not a name from the request)
+    block = http_src.split("def _get_buildfile(", 1)[1].split("):\n", 1)[1].split(
+        "\n    def ", 1)[0]
     assert "_send(" in block and ".write" not in block and "open(" not in block
     assert "query" not in block and "q.get" not in block  # no name from the request
 

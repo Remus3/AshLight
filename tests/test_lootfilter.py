@@ -127,7 +127,8 @@ def test_no_code_path_writes_the_filter_to_disk():
                 "import os", "pathlib"):
         assert bad not in src, bad
     http = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
-    block = http.split('if path == "/api/filter":', 1)[1].split("if path ==", 1)[0]
+    # TEST-HTTP-ROUTES: the route method's body, past its signature line
+    block = http.split("def _get_filter(", 1)[1].split("):\n", 1)[1].split("\n    def ", 1)[0]
     assert "_send(" in block and ".write" not in block and "open(" not in block
 
 
