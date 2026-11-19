@@ -20,7 +20,7 @@ import re
 import time
 from pathlib import Path
 
-from . import langguard
+from . import langguard, plug
 from . import statuswords as words
 from .num import finite
 
@@ -243,14 +243,18 @@ def check_dev_docs(f):
 
 
 def checks(f, now):
-    """Every check, in reading order, from a facts dict (see Core.diag_facts)."""
+    """Every check, in reading order, from a facts dict (see Core.diag_facts).
+    RUN-SEAMS (decision 0056): plug modules' rows follow the built-in ones,
+    in module ORDER; web/checks.js paints any row, so a new row needs no
+    web edit."""
     rows = [check_log(f), check_consent(f), check_reading(f), check_last_line(f, now),
             check_character(f), check_language(f), check_web(f), check_prices(f, now),
             check_calc(f), check_snapshot(f, now),
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
             check_hotkey(f), check_port(f)]
-    return rows + [r for r in (check_reload(f), check_dev_docs(f)) if r]
+    rows += [r for r in (check_reload(f), check_dev_docs(f)) if r]
+    return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})
 
 
 # -- redaction (ruling J)

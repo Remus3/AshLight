@@ -9,7 +9,9 @@ SEC-XML-NUL, SEC-CROSS-SITE, SEC-NO-DISCOVERY) sits here too.
 
 A package that adds a route adds its row to ROUTES. When the if-chains of
 do_GET / do_POST / do_PUT become per-verb tables (F-193), only
-routes_from_source() changes.
+routes_from_source() changes. RUN-SEAMS (decision 0056): a route a plug
+module adds (server/al/plug/, served by the handler's fall-through) is read
+by served_routes() from plug.all_routes(), so it needs its row here too.
 
 The server binds an ephemeral port (0) so a running AshLight is never
 touched; runtime state goes to tmp_path. Source: research 0045 route
@@ -25,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from server.al import NAME, hello
+from server.al import NAME, hello, plug
 from server.al import http as al_http
 from server.al.core import Core
 from server.al.theorycraft import codec
@@ -200,6 +202,12 @@ def _verb_routes(verb, fn):
     return out
 
 
+def served_routes():
+    """Every route the server answers: the if-chain routes of http.py plus
+    every plug module's route (plug.all_routes, RUN-SEAMS)."""
+    return routes_from_source(HTTP_PY.read_text(encoding="utf-8")) | set(plug.all_routes())
+
+
 def compare(table, found):
     """(rows the source lacks, routes the table lacks)."""
     return set(table) - found, found - set(table)
@@ -274,7 +282,7 @@ def probe_path(path):
 # -- tests ------------------------------------------------------------------
 
 def test_route_table_matches_http_py():
-    found = routes_from_source(HTTP_PY.read_text(encoding="utf-8"))
+    found = served_routes()
     missing, extra = compare(ROUTES, found)
     assert not extra, f"route(s) in http.py without a table row: {sorted(extra)}"
     assert not missing, f"table row(s) http.py no longer serves: {sorted(missing)}"
