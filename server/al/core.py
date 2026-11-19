@@ -57,6 +57,11 @@ def write_private(path, text, backup=False):
 # TEST-E2E: how often a consented core without a running tailer looks for
 # Client.txt again (a few stat calls and one libraryfolders.vdf read).
 LOCATE_RETRY_S = 5.0
+# RUN-TAIL-HEAL-CORE (research 0050 R1, F10): a reader thread found dead is
+# restarted at once, then at most once per this many seconds while it keeps
+# dying, so a reader bug cannot spin the core's loop.
+RESTART_MIN_S = 5.0
+LOG = logging.getLogger("al.core")
 
 
 def discover_default(runtime, log_path):
@@ -127,6 +132,8 @@ class Core:
         self.log_path = None
         self.tailer = None
         self._next_locate = 0.0
+        self._next_restart = 0.0  # RUN-TAIL-HEAL-CORE
+        self.tailer_restarts = 0
         self._lock = threading.Lock()
         self.locate_log()
         self.state.set_tailer(consented=self.consented())
@@ -899,6 +906,10 @@ class Core:
         fixed = self.state.character if self.state.character_fixed else None
         result = resume.scan(path, end=end, character=fixed)
         if result is None:
+            # RUN-TAIL-HEAL-CORE: the counts are not recovered this time;
+            # say so in the log (the tailer reads on either way).
+            LOG.warning("the Client.txt resume scan could not read the file; "
+                        "counts are not recovered")
             return
         fields = resume.state_fields(result)
         self.state.restore(fields)
@@ -941,8 +952,16 @@ class Core:
         installed after the core started, a Steam library added), and follow
         a DISCOVERED log that vanished and shows up in another library. A
         configured path is never second-guessed. Rate limited to one look per
-        LOCATE_RETRY_S. True when a tailer was started."""
+        LOCATE_RETRY_S. True when a tailer was started.
+
+        RUN-TAIL-HEAL-CORE (research 0050 R1, F10): a reader whose thread
+        died is restarted on the first call that sees it (not rate limited
+        by the locate look), then at most once per RESTART_MIN_S; it goes
+        on from its own offset, so nothing is read twice."""
         now = time.monotonic() if now is None else now
+        restarted = self._heal_reader(now)
+        if restarted is not None:
+            return restarted
         if now < self._next_locate:
             return False
         self._next_locate = now + LOCATE_RETRY_S
@@ -961,6 +980,33 @@ class Core:
             self.log_path = Path(found)
         self.state.set_tailer(path=str(found))
         return self.start_tailing()
+
+    def reader_alive(self):
+        """True while a tailer exists and its thread runs."""
+        t = self.tailer
+        return bool(t is not None and t.running)
+
+    def _heal_reader(self, now):
+        """None when there is no dead reader; else True when it was
+        restarted now, False while the restart waits for RESTART_MIN_S."""
+        t = self.tailer
+        if t is None or t.running or not self.tail_enabled:
+            return None
+        if now < self._next_restart:
+            return False
+        self._next_restart = now + RESTART_MIN_S
+        with self._lock:
+            if self.tailer is not t:
+                return False  # stopped or replaced meanwhile
+            t.start()
+        self.tailer_restarts += 1
+        if self.tailer_restarts == 1:
+            LOG.warning("the Client.txt reader had stopped; restarted it")
+        else:
+            LOG.warning("the Client.txt reader had stopped again; restarted it "
+                        "(%d restarts)", self.tailer_restarts)
+        self._on_status({"type": "tailer_restarted", "restarts": self.tailer_restarts})
+        return True
 
     def stop_tailing(self):
         with self._lock:
@@ -1108,7 +1154,11 @@ class Core:
         built = dict(all_paths, **{
             "log_found": log_found, "log_configured": bool(self._configured_log),
             "consented": bool(tl.get("consented")),
-            "reading": bool(tl.get("reading")), "last_line_at": tl.get("last_line_at"),
+            # RUN-TAIL-HEAL-CORE: the flag follows the reader thread, so a
+            # dead reader never reads PASS before it is restarted
+            "reading": bool(tl.get("reading")) and self.reader_alive(),
+            "unreadable": bool(tl.get("unreadable")),
+            "last_line_at": tl.get("last_line_at"),
             "idle": bool(tl.get("idle")), "character_seen": bool(snap.get("character")),
             "lang": (snap.get("lang") or {}).get("verdict"),
             "web_data": self.web_data_enabled(), "contact_set": self.contact() is not None,
