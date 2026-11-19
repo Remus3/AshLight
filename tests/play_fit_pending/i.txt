@@ -1,1 +1,1 @@
-Region I (#play-i) is not on Play yet; PLAY-TD-16A-ITEMCARD lands the item card and deletes this marker.
+Region I has landed (PLAY-TD-16A-ITEMCARD); only its height and box (G2) still move with the unfixed tracks of regions G and C and the panel height that is definite once all seven land, so the integrator deletes this marker then.
