@@ -666,3 +666,11 @@ them. Pause: `ops/loop/control/HALT`.
   entry writes the lasting record (decision 0078). Reverses if: an
   entry's own Reverses-if is met, the operator answers an item of
   docs/plan/09, or a package's record lands and outranks the entry.
+- NO-DISCOVERY: only the real entry point with no configured log path
+  runs the Steam library scan; a core given a runtime dir or a log path
+  never scans; a configured Client.txt path that is missing stays
+  configured (Checks row), with no fall-through to the scan; a consent
+  path that is a file must be named Client.txt (decision 0003 amendment
+  2026-11-18). Reverses if: the operator rules on A-03 that the Steam
+  scan must go (the typed path is then the only route), or stale
+  configured paths strand players in normal use.
