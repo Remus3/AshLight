@@ -3,15 +3,16 @@ filter the player picks in the browser; the player's bytes stay identical."""
 
 import datetime
 import http.client
+import json
 import threading
 from pathlib import Path
 from urllib.parse import quote
 
 import pytest
 
+from server.al import ninja, pricebook
 from server.al.theorycraft import lootfilter
 from server.al.theorycraft.model import Build, Item
-from test_lootfilter_tiers import _prices
 
 ROOT = Path(__file__).resolve().parents[1]
 BOM = b"\xef\xbb\xbf"
@@ -23,6 +24,33 @@ BUILD = Build(raw_xml="", class_name="Ranger", ascendancy="Deadeye", gear={
 
 OWN_LF = b'# my filter\nShow\n    Rarity Unique\n    SetFontSize 45\n\nHide\n    AreaLevel > 70\n'
 OWN_CRLF = OWN_LF.replace(b"\n", b"\r\n")
+
+
+_CORE = {"items": [{"id": "divine", "name": "Divine Orb", "category": "Currency"}],
+         "rates": {"exalted": 531.0}, "primary": "divine", "secondary": "chaos"}
+_LEAGUES = json.dumps([{"id": "Example League", "name": "Example League"}]).encode()
+_CURRENCY = json.dumps({
+    "core": _CORE,
+    "lines": [{"id": "exalted", "primaryValue": 0.002, "volumePrimaryValue": 30.0},
+              {"id": "divine", "primaryValue": 1}],
+    "items": [{"id": "exalted", "name": "Exalted Orb"}]}).encode()
+
+
+def _prices(tmp_path):
+    """filter_prices() of a client that refreshed a canned poe.ninja cache
+    (a private copy: a test file never imports another test file)."""
+    def fetch(method, url, headers, body=None):
+        if url.endswith(ninja.LEAGUES_PATH):
+            return 200, {}, _LEAGUES
+        if "type=Currency" in url:
+            return 200, {}, _CURRENCY
+        return 200, {}, json.dumps({"core": _CORE, "lines": []}).encode()
+    d = tmp_path / "ninja"
+    c = ninja.RatesClient(d, enabled=lambda: True, league=lambda: None, fetch=fetch,
+                          clock=lambda: 1_800_000_000.0, contact=lambda: "test-contact",
+                          book=pricebook.PriceBook(d))
+    c.refresh()
+    return c.filter_prices()
 
 
 def split(out):
