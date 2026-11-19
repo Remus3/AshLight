@@ -475,12 +475,10 @@ class Keepalive:
 
 
 def core_command(port, extra=()):
-    exe = Path(sys.executable)
-    if os.name == "nt" and exe.name.lower() == "python.exe":
-        w = exe.with_name("pythonw.exe")
-        if w.exists():
-            exe = w
-    return [str(exe), "-m", "server.al", "--quiet", "--port", str(int(port))] + list(extra)
+    """The windowless core start, through the one command builder (DEP-06):
+    `-m server.al` in a checkout, `boot.py server.al` in an install."""
+    return paths.python_cmd("server.al", "--quiet", "--port", str(int(port)),
+                            *extra, windowless=True)
 
 
 _FILE_LINE = re.compile(r'File "([^"]+)", line (\d+)')
@@ -513,12 +511,11 @@ def run_preflight(root=None, timeout=PREFLIGHT_TIMEOUT_S, run=subprocess.run):
     changed code, else (False, one-line error). It runs in a child process,
     so the running core and this supervisor never import the new code."""
     root = Path(root) if root else paths.repo_root()
-    exe = Path(sys.executable)
-    if exe.name.lower() == "pythonw.exe" and exe.with_name("python.exe").exists():
-        exe = exe.with_name("python.exe")  # pipes need a console-subsystem python
+    # pipes need a console-subsystem python; the one command builder (DEP-06)
+    cmd = paths.python_cmd("server.al", "--check", windowless=False, root=root)
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     try:
-        r = run([str(exe), "-m", "server.al", "--check"], cwd=str(root),
+        r = run(cmd, cwd=str(root),
                 stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout,
                 creationflags=flags)
     except subprocess.TimeoutExpired:

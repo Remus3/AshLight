@@ -11,12 +11,16 @@
    OVL-MAIN-PARTS (decision 0053): later main-process features land as
    app/parts/NN-name.js files run by app/parts.js at the hooks below; this
    file keeps the two windows' creation, the IPC handlers and the one
-   clipboard read. */
+   clipboard read.
+   OVL-SHELL-GUARDS (decision 0061): app/parts/10-guards.js gives every
+   renderer the sandbox and default-deny navigation / popups / webview;
+   the IPC block below answers only the exact sender frame. */
 
 const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, nativeTheme, screen, session } = require("electron");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const url = require("url");
 const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
 const Hotkey = require("./hotkey.js");
@@ -26,6 +30,7 @@ const Link = require("./client/link.js");
 const Launcher = require("./client/launcher.js");
 const HotReload = require("./hotreload.js");
 const Parts = require("./parts.js");
+const Guards = require("./guards.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -33,6 +38,11 @@ const DISPLAYS_FILE = path.join(REPO, "ops", "runtime", "displays.json");
 const PORTS_PY = path.join(REPO, "server", "al", "ports.py");
 const LOCAL_CONFIG = path.join(REPO, "config", "local.json");
 const OVERLAY_HTML = path.join(__dirname, "overlay", "index.html");
+// OVL-SHELL-GUARDS: the one page al:config answers (app/guards.js compares
+// it in either file URL spelling).
+const OVERLAY_URL = url.pathToFileURL(OVERLAY_HTML).href;
+const RESTART_MIN_MS = 2000;
+const restartGate = Guards.throttle(RESTART_MIN_MS);
 // AUDIT-ELECTRON S6: the overlay is never packaged, so !app.isPackaged
 // would leave devTools always on; they open only with an explicit AL_DEV=1.
 const DEV_TOOLS = process.env.AL_DEV === "1";
@@ -320,6 +330,9 @@ function toggle() {
    player's show / hide choice carries over; the gate re-seeds from the
    new page's first report. */
 function restartOverlay() {
+  // OVL-SHELL-GUARDS: at most one rebuild per 2 s, whoever asks (the
+  // dashboard's al:restart-overlay, the tray, a part).
+  if (!restartGate()) { log("overlay restart skipped: asked again within 2 s"); return; }
   const wantsIt = !gate || gate.userWants();
   if (win) {
     const old = win;
@@ -367,10 +380,11 @@ function start() {
   // AUDIT-ELECTRON S7: permission checks (navigator.permissions, ...) too.
   session.defaultSession.setPermissionCheckHandler(() => false);
 
+  // OVL-SHELL-GUARDS: the token goes only to the overlay window's main
+  // frame (e.senderFrame === win.webContents.mainFrame) on exactly the
+  // overlay page, never to another file URL ending in /overlay/index.html.
   ipcMain.on("al:config", (e) => {
-    const url = (e.senderFrame && e.senderFrame.url) || "";
-    const ok = url.startsWith("file:") && decodeURIComponent(url).replace(/\\/g, "/")
-      .endsWith("/overlay/index.html");
+    const ok = Guards.frameIsOverlayPage(e.senderFrame, win, OVERLAY_URL);
     e.returnValue = ok ? { token: readToken(), port: port, credit: dataCredit } : {};
   });
   ipcMain.on("al:gate", (e, visible) => {

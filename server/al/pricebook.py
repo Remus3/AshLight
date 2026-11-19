@@ -22,6 +22,13 @@ The press never makes a request: lookup() reads the cache only (decision
 poe.ninja only, trade as a link). movers() builds the dashboard's price
 movers from the same cache, no extra request (UTIL-MOVERS).
 Cache: <sidecar>\\Cache\\ninja\\book.json (compact entries, never raw bodies).
+
+DATA-PRICE-POLITE (F-045, research 0036 R5): refresh() sleeps GAP_S before
+each of its GETs (after the rates' Currency GET, so a full round of 23 GETs
+has 22 gaps); a StopRound raised by the get callable (poe.ninja answered
+429, 403 or 503) ends the round at once. A type that failed FAILS_DAILY
+times in a row is asked only once per DAILY_S until it succeeds; a failure
+never brings a faster retry.
 """
 
 import json
@@ -49,6 +56,13 @@ FEW_LISTINGS = 10  # a unique with fewer listings is a thin market
 MOVERS_N = 5
 MOVERS_MIN_LISTINGS = 20  # movers ignore thin uniques (noise)
 MOVERS_MIN_VOLUME = 1.0  # and stackables with almost no trade volume
+GAP_S = 2.0  # DATA-PRICE-POLITE: the wait before each book GET
+FAILS_DAILY = 3  # failures in a row after which a type is asked daily
+DAILY_S = 24 * 3600
+
+
+class StopRound(Exception):
+    """Raised by the get callable to end the round now (a server back-off)."""
 
 
 _num = num.finite  # FUZZ-4 / AREA-AUDIT P3-2: huge JSON ints read as None
@@ -167,28 +181,36 @@ class PriceBook:
     def _type(self, name):
         return self.doc["types"].setdefault(name, {})
 
-    def due(self, now):
-        for name, _p, _k in _all_types():
-            last = self.doc["types"].get(name, {}).get("attempt_at")
-            if not isinstance(last, (int, float)) or not 0 <= now - last < self.interval_s:
-                return True
-        return False
+    def _type_due(self, t, now):
+        """A type is due once its interval passed: interval_s, or DAILY_S
+        after FAILS_DAILY failures in a row (until a success)."""
+        last = t.get("attempt_at")
+        fails = t.get("fails")
+        wait = (DAILY_S if isinstance(fails, int) and fails >= FAILS_DAILY
+                else self.interval_s)
+        return not isinstance(last, (int, float)) or not 0 <= now - last < wait
 
-    def refresh(self, get, base, league, now, force=False, name=None):
+    def due(self, now):
+        return any(self._type_due(self.doc["types"].get(name) or {}, now)
+                   for name, _p, _k in _all_types())
+
+    def refresh(self, get, base, league, now, force=False, name=None, sleep=None):
         """Request each due type once: get(url, etag) -> (status, headers,
-        body), the caller's GET. Returns {"fetched", "unchanged", "errors"}
-        counts. A league change drops the old league's entries.
+        body), the caller's GET. Returns {"fetched", "unchanged", "errors",
+        "stopped"}. A league change drops the old league's entries.
         DATA-LEAGUE-IDENTITY: `league` is poe.ninja's league id (the URL);
         `name` is the display name stored as each type's league (what
-        lookup() and movers() match); without it the id is stored."""
+        lookup() and movers() match); without it the id is stored.
+        DATA-PRICE-POLITE: sleep(GAP_S) runs before each GET (None = no
+        wait); a StopRound from get ends the round (not a type failure)."""
         stored = name if isinstance(name, str) and name else league
-        out = {"fetched": 0, "unchanged": 0, "errors": 0}
+        out = {"fetched": 0, "unchanged": 0, "errors": 0, "stopped": False}
         for name, path, kind in _all_types():
             t = self._type(name)
-            last = t.get("attempt_at")
-            if (not force and isinstance(last, (int, float))
-                    and 0 <= now - last < self.interval_s):
+            if not force and not self._type_due(t, now):
                 continue
+            if sleep is not None:
+                sleep(GAP_S)
             query = urllib.parse.urlencode({"league": league, "type": name})
             url = f"{base}{path}?{query}"
             same = t.get("url") == url
@@ -199,7 +221,7 @@ class PriceBook:
             try:
                 status, rh, body = get(url, t.get("etag") if same else None)
                 if status == 304 and same and t.get("entries") is not None:
-                    t.update(checked_at=now, last_error=None, league=stored)
+                    t.update(checked_at=now, last_error=None, league=stored, fails=0)
                     out["unchanged"] += 1
                 elif status == 200:
                     parse = parse_item_overview if kind == "unique" else parse_exchange_overview
@@ -211,12 +233,19 @@ class PriceBook:
                     t.update(url=url, league=stored, kind=kind, unit=p["unit"],
                              primary=p["primary"], entries=p["entries"],
                              fetched_at=now, checked_at=now, last_error=None,
-                             etag=etag)
+                             etag=etag, fails=0)
                     out["fetched"] += 1
                 else:
                     raise ValueError(f"HTTP {status}")
+            except StopRound as e:  # the server asked to wait: no more GETs now
+                t["last_error"] = str(e)[:200]
+                out["stopped"] = True
+                self._save()
+                break
             except Exception as e:  # noqa: BLE001 - one bad type never stops the rest
                 t["last_error"] = str(e)[:200]
+                fails = t.get("fails")
+                t["fails"] = (fails if isinstance(fails, int) and fails > 0 else 0) + 1
                 out["errors"] += 1
             # AREA-AUDIT P3-7: on disk per request, so a core killed mid-loop
             # (up to 22 GETs x 10 s) does not re-request these types early.

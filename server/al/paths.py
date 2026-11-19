@@ -310,6 +310,96 @@ def tc_pins_file(environ=None, modules=None):
     return repo_root() / "config" / "tc_pins.json"
 
 
+# DEP-06 (F-047, docs/plan/05 Design points 4 and 6, spike record
+# docs/ops/runtime-spike-record.md): the private runtimes of an installed
+# copy and the one command builder every Python re-spawn goes through.
+RUNTIME_FOLDER = "runtime"  # <home>/runtime/<name>-<ver>/, one folder per pin
+BOOT_NAME = "boot.py"       # the payload-root shim (spike ruling: boot.py, not ._pth)
+ELECTRON_EXE = "electron.exe"
+
+
+def runtime_pins_file():
+    """The TRACKED hash pins of the private runtimes (config/runtime_pins.json,
+    written by REL-RUNTIME-PINS); read by the installer, never at runtime."""
+    return repo_root() / "config" / "runtime_pins.json"
+
+
+def _marker_runtime(key, environ=None):
+    """<home>/runtime/<marker[key]> in an install, else None: also None when
+    the marker names no usable folder (one plain folder name, never a path
+    out of <home>/runtime). No stat of the runtime folder."""
+    home = install_home(environ)
+    if home is None:
+        return None
+    name = read_marker(environ).get(key)
+    if (not isinstance(name, str) or not name.strip(". ")
+            or any(c in name for c in "\\/:")):
+        return None
+    return home / RUNTIME_FOLDER / name
+
+
+def _running_python(windowless):
+    """The interpreter running now, as its console (python.exe) or windowless
+    (pythonw.exe) twin when that file lies beside it (Windows only)."""
+    exe = Path(sys.executable)
+    if os.name != "nt":
+        return exe
+    want, other = ("pythonw.exe", "python.exe") if windowless else ("python.exe", "pythonw.exe")
+    if exe.name.lower() == other:
+        twin = exe.with_name(want)
+        if twin.exists():
+            return twin
+    return exe
+
+
+def python_exe(windowless=False, environ=None):
+    """The Python a child process runs under. In an install:
+    <home>/runtime/<marker "python">/python.exe (pythonw.exe when windowless),
+    the pinned embeddable runtime; None when the marker names no usable
+    folder. In a checkout: the running interpreter (its pythonw / python
+    twin when one lies beside it)."""
+    env = os.environ if environ is None else environ
+    if install_home(env) is None:
+        return _running_python(windowless)
+    folder = _marker_runtime("python", env)
+    if folder is None:
+        return None
+    return folder / ("pythonw.exe" if windowless else "python.exe")
+
+
+def electron_exe(environ=None):
+    """The Electron the client runs under. In an install:
+    <home>/runtime/<marker "electron">/electron.exe, the pinned unmodified
+    zip; None when the marker names no usable folder. In a checkout:
+    app/node_modules/electron/dist/electron.exe (npm ci)."""
+    env = os.environ if environ is None else environ
+    if install_home(env) is None:
+        return repo_root() / "app" / "node_modules" / "electron" / "dist" / ELECTRON_EXE
+    folder = _marker_runtime("electron", env)
+    return folder / ELECTRON_EXE if folder is not None else None
+
+
+def python_cmd(module, *args, windowless=False, root=None, environ=None):
+    """The ONE command builder for a Python child (DEP-06). A checkout keeps
+    today's form, [<python>, "-m", module, *args]; an install starts
+    [<python>, <root>/boot.py, module, *args], because the embeddable
+    runtime's ._pth ignores the current directory and PYTHON* variables.
+    root is the payload root (default: this one); another version's root
+    lets it self-test while this one runs. When an install's marker names
+    no usable python folder, the running interpreter (the same private
+    runtime) stands in."""
+    env = os.environ if environ is None else environ
+    installed = install_home(env) is not None
+    exe = python_exe(windowless, env) if installed else _running_python(windowless)
+    if exe is None:
+        exe = _running_python(windowless)
+    tail = [str(module)] + [str(a) for a in args]
+    if not installed:
+        return [str(exe), "-m"] + tail
+    base = Path(root) if root is not None else repo_root()
+    return [str(exe), str(base / BOOT_NAME)] + tail
+
+
 _DEMO_CONFIG = None  # set only by demo.prepare (decision 0049)
 
 
