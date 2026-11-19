@@ -51,7 +51,7 @@
   var NEW_S = 60;         // the word "new" this long after arrival
   var ROWS = 5;
   var ELLIPSIS = "...";
-  var EMPTY = "Trades, deaths, level-ups and zones show up here.";
+  var EMPTY = "Nothing yet. Trades and events show up here as you play.";
   var NOT_DISMISSED = "Not dismissed. Try again.";
   var TAGS = { trade: "Trade", death: "Death", level: "Level", zone: "Zone" };
   var LADDER_TOP = 9;
@@ -311,7 +311,7 @@
       box.appendChild(list);
       box.appendChild(empty);
       slot.appendChild(box);
-      ui = { doc: doc, h: h, status: status, all: all, list: list, empty: empty };
+      ui = { doc: doc, region: region, h: h, status: status, all: all, list: list, empty: empty };
     }
 
     /* A click from Enter or Space has no pointer detail. */
@@ -438,6 +438,16 @@
       var m = model(snap, t, hide);
       var prev = shownIds;
       shownIds = tradeIds(m.open);
+      /* a shown "Not dismissed" goes once the open list changes */
+      if (ui.status.getAttribute("data-shown") === "yes" &&
+          (prev || []).join(",") !== shownIds.join(",")) {
+        setAttr(ui.status, "data-shown", null);
+        setText(ui.status, "");
+      }
+      /* design 0001 section 6: rows look frozen while the log is idle
+         (decision 0029 game_idle) or AshLight is lost (state.offline) */
+      setAttr(ui.region, "data-stale",
+        snap.game_idle === true || snap.offline === true ? "yes" : null);
       if (showStatus(ui.status, prev, m.open)) { setAttr(ui.status, "data-shown", null); }
       var v = view(snap, t, hide, ui.status.textContent);
       setText(ui.h, v.head);

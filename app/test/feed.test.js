@@ -502,6 +502,53 @@ test("a failed dismiss keeps the row and says so in the head line", async () => 
   assert.equal(ui.status().textContent, F.NOT_DISMISSED);
   assert.equal(ui.status().getAttribute("data-shown"), "yes");
   assert.equal(ui.doc.activeElement, null);
+  // a tick with the same open list keeps it
+  ui.paint(snapOf([trade(1, "A", "Ring", "1 exalted", NOW - 30)]), NOW + 1);
+  assert.equal(ui.status().textContent, F.NOT_DISMISSED);
+});
+
+test("the Not dismissed line goes when the open list changes or on the next Dismiss", async () => {
+  let fail = true;
+  const ui = setup(() => (fail ? Promise.reject(new Error("HTTP 500")) : Promise.resolve({})));
+  const warn = console.warn;
+  console.warn = () => {};
+  const one = [trade(1, "A", "Ring", "1 exalted", NOW - 30)];
+  try {
+    ui.paint(snapOf(one));
+    find(ui.rows()[0], "feed-dismiss")[0].click(1);
+    await flush();
+    assert.equal(ui.status().textContent, F.NOT_DISMISSED);
+    // the card expires: the open list changes
+    ui.paint(snapOf([]));
+    assert.equal(ui.status().textContent, "");
+    assert.equal(ui.status().getAttribute("data-shown"), null);
+    // fails again, then the next Dismiss click clears it at once
+    ui.paint(snapOf(one));
+    find(ui.rows()[0], "feed-dismiss")[0].click(1);
+    await flush();
+    assert.equal(ui.status().getAttribute("data-shown"), "yes");
+    fail = false;
+    find(ui.rows()[0], "feed-dismiss")[0].click(1);
+    assert.equal(ui.status().textContent, "");
+    assert.equal(ui.status().getAttribute("data-shown"), null);
+  } finally {
+    console.warn = warn;
+  }
+});
+
+test("rows look frozen while the log is idle or AshLight is lost", () => {
+  const ui = setup();
+  const s = snapOf([trade(1, "A", "Ring", "1 exalted", NOW - 30)]);
+  ui.paint(s);
+  assert.equal(ui.doc.region.getAttribute("data-stale"), null);
+  ui.paint(Object.assign({}, s, { game_idle: true }));
+  assert.equal(ui.doc.region.getAttribute("data-stale"), "yes");
+  ui.paint(Object.assign({}, s, { offline: true }));
+  assert.equal(ui.doc.region.getAttribute("data-stale"), "yes");
+  ui.paint(s);
+  assert.equal(ui.doc.region.getAttribute("data-stale"), null);
+  assert.ok(/#play-t\[data-stale="yes"\] \.feed-row/.test(CSS));
+  assert.ok(!/data-fresh/.test(CSS));
 });
 
 test("an empty feed shows one muted line", () => {
@@ -511,6 +558,7 @@ test("an empty feed shows one muted line", () => {
   const empty = find(ui.doc.slot, "feed-empty")[0];
   assert.equal(empty.hidden, false);
   assert.equal(empty.textContent, F.EMPTY);
+  assert.equal(F.EMPTY, "Nothing yet. Trades and events show up here as you play.");
   assert.equal(ui.doc.byId["play-t-h"].textContent, "Recent");
 });
 

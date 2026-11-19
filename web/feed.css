@@ -116,9 +116,10 @@
 [data-text-spacing="user"] #play-t .feed-right,
 [data-text-spacing="user"] #play-t .feed-text { white-space: normal; overflow: visible; flex-wrap: wrap; }
 
-/* stale data (design 0001 section 6): rows look frozen while the log is idle */
-body[data-fresh="no"] #play-t .feed-row,
-body[data-fresh="no"] #play-t .feed-buyer { color: var(--fk-text-muted); }
+/* stale data (design 0001 section 6): rows look frozen while the log is
+   idle or AshLight is lost (web/feed.js sets data-stale from game_idle) */
+#play-t[data-stale="yes"] .feed-row,
+#play-t[data-stale="yes"] .feed-buyer { color: var(--fk-text-muted); }
 
 @media (forced-colors: active) {
   #play-t .feed-trade { border-left-color: Highlight; }
