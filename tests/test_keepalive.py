@@ -373,3 +373,62 @@ def test_end_to_end_real_core_restart_and_user_stop(tmp_path):
         for pid in {first, data.get("pid")}:
             if pid and pid != 13388 and ka.pid_alive(pid):
                 subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True)
+
+
+def _counting_proxy():
+    """A listener on an ephemeral loopback port that counts connections."""
+    import socket
+    import threading
+    hits = []
+    sock = socket.socket()
+    sock.bind((ports.LOOPBACK, 0))
+    sock.listen(8)
+
+    def accept():
+        while True:
+            try:
+                conn, _ = sock.accept()
+            except OSError:
+                return
+            hits.append(1)
+            conn.close()
+    threading.Thread(target=accept, daemon=True).start()
+    return sock, hits
+
+
+def _test_core(token):
+    """A stand-in core on an ephemeral port that answers /api/health."""
+    import http.server
+    import threading
+
+    class Health(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            ok = self.path == "/api/health" and self.headers.get("X-AL-Token") == token
+            self.send_response(200 if ok else 403)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *args):
+            pass
+    srv = http.server.HTTPServer((ports.LOOPBACK, 0), Health)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+def test_health_check_ignores_proxy_settings(monkeypatch, tmp_path):
+    proxy, hits = _counting_proxy()
+    srv = _test_core("tok")
+    try:
+        url = f"http://{ports.LOOPBACK}:{proxy.getsockname()[1]}"
+        for name in ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY",
+                     "all_proxy", "ALL_PROXY"):
+            monkeypatch.setenv(name, url)
+        for name in ("no_proxy", "NO_PROXY"):
+            monkeypatch.delenv(name, raising=False)
+        (tmp_path / "token").write_text("tok\n", encoding="ascii")
+        assert ka.health_check(tmp_path, srv.server_address[1], timeout=5)
+        assert hits == []
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        proxy.close()
