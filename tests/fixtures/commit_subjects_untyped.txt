@@ -1,0 +1,4 @@
+# REL-SUBJECT-CHECK: untyped commit subjects of main's history that predate
+# the commit-msg subject check. One subject per line, exact text; '#' lines
+# are comments. tests/test_commit_subject.py lets exactly these through when
+# it walks the last 400 commits. Empty today: the last 400 commits are typed.
