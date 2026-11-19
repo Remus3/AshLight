@@ -420,7 +420,13 @@ Generation rules:
      `Loses: <mod>`); dashboard `Upgrade: <n> points more than your <slot>
      (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
      the same as your <slot> (<name>), <+n> points.`; errors `No build
-     loaded`, `Not an item`, `Can't compare this` with the next step
+     loaded`, `Not an item`, `Can't compare this` with the next step;
+     a press that held a copied build (TC-PRESS-BUILD) is a status card:
+     word and head `Build loaded` (edge tone note, never colour alone),
+     line 2 `<ascendancy or class>, level <n>`, line 3 `Item checks use it
+     now`, one dashboard note naming the build and character; a share link
+     not loaded reads `Build not loaded` (word `Not checked`), `See the
+     dashboard`, with the reason as the dashboard note
    - item check scoring source (TC-DELTA, decision 0024, `_calc_text`):
      when Path of Building scored the item the overlay third line is `DPS
      <+pct>%, EHP <+pct>%` (a 0 base reads `unknown`) and the dashboard adds

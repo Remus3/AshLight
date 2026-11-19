@@ -25,6 +25,7 @@ from .theorycraft import basetypes
 from .theorycraft import calcwire, health, pobout, skillsplit
 from .theorycraft import item as item_mod
 from .theorycraft import live as tc_live
+from .theorycraft import press as tc_press
 from .theorycraft import shareurl
 from .theorycraft import store as build_store
 from .theorycraft import treedata
@@ -277,12 +278,19 @@ class Core:
         one price check, both stamped with the same press time so the
         overlay merges them (decision 0016 Fork 2). The text is the app's one
         clipboard read for this press; nothing here reads the clipboard. The
-        price check is an offline trade-search link (decision 0017)."""
+        price check is an offline trade-search link (decision 0017).
+        TC-PRESS-BUILD (ruling Q-02): text that holds a PoB code, character
+        JSON or share link loads that build for the character being played
+        (theorycraft/press.py) and publishes a "Build loaded" card instead;
+        such a press asks for no price check and adds no price-watch row."""
         try:
             self.tick_build()  # BUILD-LIVE: score against this character's build
         except Exception:  # noqa: BLE001 - the press must still be checked
             pass
         at = self.state.now()
+        doc = tc_press.load(self, text, at=at)
+        if doc is not None:
+            return doc
         result = self.last_eval.run(text, slot, at=at)
         doc = self.price.request(text, at=at)
         self._watch_press(text, doc, at)

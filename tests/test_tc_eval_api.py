@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from server.al.core import Core
-from server.al.http import serve
+from server.al.http import MAX_EVAL_BODY, serve
 from server.al.theorycraft import codec
 from server.al.theorycraft import weights as wm
 from tc_eval_fixtures import ADVANCED_RING, EVAL_BUILD_XML, RARE_GLOVES
@@ -139,7 +139,8 @@ def test_eval_bad_inputs(env):
     assert req(srv, "POST", "/api/eval", {"item": 5})[0] == 400
     assert req(srv, "POST", "/api/eval", {"item": "x", "slot": 3})[0] == 400
     assert req(srv, "POST", "/api/eval", b"{}", ctype="text/plain")[0] == 415
-    big = b'{"item": "' + b"A" * (100 * 1024) + b'"}'
+    # TC-PRESS-BUILD: the cap is the build size (256 KB); past it, still 413
+    big = b'{"item": "' + b"A" * (MAX_EVAL_BODY + 1024) + b'"}'
     assert req(srv, "POST", "/api/eval", big)[0] == 413
     status, doc = req(srv, "POST", "/api/eval", {"item": "just some text"})
     assert status == 200 and doc["ok"] is False and doc["error"] == "not an item"
