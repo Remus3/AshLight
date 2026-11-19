@@ -29,6 +29,11 @@ remaining steps and repeats nothing destructive.
 - `python tools/leak_sweep.py --tree` - must print no HALT.
 - Run fresh this turn; never carry a sub-agent's green forward. RED: fix and
   re-run; a pre-existing unrelated red becomes the hand-off's first action.
+- Wave gate policy (decision 0060): a package agent runs only the files
+  `python tools/test_select.py` prints for its diff (the ungated list
+  file-named, the gated list through the suite gate); the whole suite runs
+  once per merge batch through the suite gate before main moves, and this
+  ritual's suite run above is that one whole suite for the session's batch.
 
 ### 2. Commit (batched, coherent), then push main when origin exists
 

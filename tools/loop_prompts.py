@@ -22,7 +22,10 @@ DESIGN_RULE = ("Design review: if your change touches web/, app/overlay/, app/sh
 # Plan 101: a headless lane works inline (nested background agents only added
 # waits).
 GATES = ("Gates before you finish: the test files your change touched or added green "
-         "(targeted, e.g. `python -m pytest -q tests/test_x.py`), `node --test` on the "
+         "(targeted, e.g. `python -m pytest -q tests/test_x.py`); run `python "
+         "tools/test_select.py` for your diff and run its run-ungated command as "
+         "printed (the ungated list, file-named), and leave its gated list to the "
+         "loop's own gates (decision 0060, wave gate policy); `node --test` on the "
          "app/ test files you touched if you changed app/, and `python "
          "tools/leak_sweep.py --staged` clean. Do NOT run the whole pytest suite: the "
          "loop runs the authoritative gates (ops/loop/gates.txt: whole pytest suite, "
