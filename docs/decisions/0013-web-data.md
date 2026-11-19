@@ -74,8 +74,14 @@ needed: every fork below follows from CLAUDE.md, decisions 0003 / 0004 /
 - poe.ninja names live in a top-level `items`, not core.items (verified
   2026-11-17, research 0013); parse_overview reads them since
   DATA-NINJA-NAMES.
+  Amendment 2026-11-18 (LOOP-DECISION-TIDY): resolved; verified live
+  2026-11-17 and fixed by DATA-NINJA-NAMES, it only sat under this heading.
 - trade2 filter names (misc_filters / corrupted) and real limit values
   (research 0004).
+  Amendment 2026-11-18 (LOOP-DECISION-TIDY): the limit values are moot
+  since decision 0017 (no trade2 call). The filter names stay open: they
+  still feed the ?q= trade link (server/al/trade.py type_filters, decision
+  0037), and a wrong name only drops that filter.
 - poe.ninja asks for a contact in the User-Agent; AshLight sends name,
   version and purpose only (no contact in tracked files, CLAUDE.md hygiene).
 
