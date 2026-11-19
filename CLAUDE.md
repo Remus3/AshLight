@@ -571,9 +571,11 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   untouched (0008 not reversed); price watch re-reads only the cached book,
   only on its refresh, only while web_data is on; settings export / import
   is an allow-list (never contact, token, cookie or paths) and an import
-  never turns web_data on (decision 0036). Reverses if: the operator rules
-  local history files unwanted, GGG restricts derived local records, or
-  decision 0013 changes.
+  never turns web_data on (decision 0036); each player-data file keeps one
+  .bak of its last good copy, removed by Clear run history (0036
+  amendment 2026-11-18). Reverses if: the operator rules local history
+  files unwanted, GGG restricts derived local records, or decision 0013
+  changes.
 - UTIL-MULTICHAR: level, deaths, pace, act splits and run history are
   keyed by the character name in the player's own Client.txt (switch only
   on the first level-up / death after a game start with no join / leave
