@@ -291,3 +291,68 @@ class PushCounter:
         if args[0] == "push":
             self.pushes += 1
         return L.real_git(args, cwd, input)
+
+
+# ---------------------------------------------------------------- red detail
+
+FAILED_IDS = ("tests/test_a.py::test_one", "tests/test_b.py::test_two",
+              "tests/test_c.py::test_three")
+COUNT_LINE = "3 failed, 120 passed, 40 warnings in 12.34s"
+
+
+def _red_pytest_output():
+    """A -q pytest run whose output STARTS with 40 warning lines."""
+    lines = [f"tests/test_w{i}.py:1: DeprecationWarning: noisy warning number {i}"
+             for i in range(40)]
+    lines += ["..F..F..F" * 8, "=" * 20 + " FAILURES " + "=" * 20]
+    lines += [f"E   AssertionError: detail line {i}" for i in range(30)]
+    lines += ["=" * 10 + " warnings summary " + "=" * 10]
+    lines += [f"  warning body {i}" for i in range(20)]
+    lines += ["=" * 28 + " short test summary info " + "=" * 28]
+    lines += [f"FAILED {t} - AssertionError: x" for t in FAILED_IDS]
+    lines += [COUNT_LINE]
+    return "\n".join(lines) + "\n"
+
+
+def test_gate_tail_keeps_the_summary_not_the_warning_head():
+    tail = al_loop.gate_tail(_red_pytest_output(), "")
+    assert tail.splitlines()[-1] == COUNT_LINE
+    assert all(t in tail for t in FAILED_IDS)
+    assert "noisy warning" not in tail and "warning body" not in tail
+    tail = al_loop.gate_tail(_red_pytest_output(), "some stderr line\n")
+    assert tail.splitlines()[-1] == COUNT_LINE  # stderr never hides the count
+    assert len(al_loop.gate_tail("x" * 5000 + "\nend", "")) <= al_loop.GATE_TAIL_MAX
+
+
+def test_red_verdict_after_a_warning_block_stores_ids_and_count(tmp_path):
+    root = repo(tmp_path)
+    gates_txt = root / al_loop.GATES_REL
+    gates_txt.parent.mkdir(parents=True, exist_ok=True)
+    gates_txt.write_text("python -m pytest -q\n", newline="\n")
+    script = tmp_path / "fake_gate.py"
+    script.write_text("import sys\nsys.stdout.write(%r)\nsys.exit(1)\n"
+                      % _red_pytest_output(), newline="\n")
+
+    def run(argv, cwd):  # the real _run_gate on a fake red pytest
+        return al_loop._run_gate([sys.executable, str(script)], cwd)
+
+    t = al_loop.Tick(L.deps(root, git=L.real_git,
+                            gates=lambda cwd: al_loop._gates(cwd, run=run)))
+    ok, _ = t.gate(root)
+    assert not ok
+    doc = json.loads((root / al_loop.GATE_CACHE_REL).read_text(encoding="utf-8"))
+    (entry,) = doc["trees"].values()
+    assert entry["ok"] is False
+    assert entry["detail"].splitlines()[-1] == COUNT_LINE
+    assert all(t_id in entry["detail"] for t_id in FAILED_IDS)
+    assert "noisy warning" not in entry["detail"]
+    assert len(entry["detail"]) <= 300
+
+
+def test_cache_put_keeps_the_last_lines(tmp_path):
+    head = "\n".join(f"warning {i}" for i in range(60))
+    e = al_loop.GateCache(tmp_path).put(
+        "k", False, head + "\nFAILED tests/x.py::t\n1 failed in 1s", "x", NOW)
+    assert e["detail"].endswith("FAILED tests/x.py::t\n1 failed in 1s")
+    assert len(e["detail"]) <= 300 and not e["detail"].startswith("warning 0\n")
+    assert al_loop.last_lines("y" * 400, 300) == "y" * 300
