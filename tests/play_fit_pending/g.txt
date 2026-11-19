@@ -1,1 +1,1 @@
-Region G (#play-g) is not on Play yet; PLAY-TD-10-STRIP lands the strip and deletes this marker.
+G9 reading in state d only; owner of status_words.json fixes the idle word.
