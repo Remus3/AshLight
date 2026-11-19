@@ -109,10 +109,19 @@ def test_p3_6_turning_tc_calc_off_stops_the_calc_process(tmp_path):
                                       "close": lambda self: None})()
     core.tick_calc()
     assert reaped == [1]
+    # RUN-SEAMS (decision 0056): the loop runs tick_calc through Core's
+    # tick list, in its old place, and __main__'s loop calls tick_all
+    assert [n for n, _ in core.ticks].index("tick_calc") == 3
+    core.tick_all()
+    assert reaped == [1, 1]
     core.close()
-    main = (Path(__file__).resolve().parents[1] / "server" / "al" / "__main__.py").read_text(
-        encoding="ascii")
-    assert "core.tick_calc()" in main
+    import ast
+    main = ast.parse((Path(__file__).resolve().parents[1] / "server" / "al"
+                      / "__main__.py").read_text(encoding="ascii"))
+    calls = [n.func.attr for n in ast.walk(main)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and isinstance(n.func.value, ast.Name) and n.func.value.id == "core"]
+    assert "tick_all" in calls and "tick_calc" not in calls
 
 
 def test_core_reads_the_opt_in(tmp_path):

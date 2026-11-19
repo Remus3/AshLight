@@ -225,3 +225,86 @@ def test_text_colours_are_measured_token_pairs():
     assert used <= measured, used - measured
     # no literal colour on text outside the token blocks (C3)
     assert not re.search(r"(?<![-\w])color:\s*(#|rgb)", CSS)
+
+
+# -- PLAY-TD-09B-SKELETON (F-025, F-096, F-086; plan 03 sections 3.2, 3.8, 3.9)
+
+REGIONS = "gctnbiu"
+LEGACY = {"g": {"g-tiles": ["zone", "level", "deaths", "session"]},
+          "c": {"c-guide": ["zone-note-box", "campaign-hints", "zone-guide"],
+                "c-setup": ["consent", "summarybox"]},
+          "t": {"t-trades": ["trades", "trade-status"]},
+          "n": {"n-legacy": ["langbox", "hintbox"]},
+          "b": {"b-alert": ["build-alert"]},
+          "i": {"i-eval": ["evalbox"]},
+          "u": {}}
+
+
+def test_play_is_seven_regions_with_no_tab_stop_and_no_columns():
+    ids = by_id()
+    play = ids["panel-play"]
+    assert "tabindex" not in play.attrs, play.attrs  # F-096: no panel tab stop
+    assert not any(c in n.attrs.get("class", "").split() for n in nodes()
+                   for c in ("play-main", "play-side"))
+    regions = [c for c in play.children if c.tag == "section"]
+    assert [c.attrs.get("id") for c in play.children] == ["play-" + r for r in REGIONS]
+    for r, sec in zip(REGIONS, regions):
+        assert sec.attrs.get("data-region") == r and "tabindex" not in sec.attrs, sec.attrs
+        kids = sec.children
+        assert kids[0].tag == "h2" and kids[0].attrs["id"] == sec.attrs["aria-labelledby"]
+        assert kids[0].all_text().strip(), r
+        # a screen reader never hears the region heading twice (review TD9B-2)
+        inner = {n.all_text().strip() for k in kids[1:] for n in k.walk() if n.tag == "h2"}
+        assert kids[0].all_text().strip() not in inner, r
+        assert kids[1].attrs.get("class") == "slot" and not kids[1].children, r
+        groups = {k.attrs.get("data-legacy"): k for k in kids[2:]}
+        assert list(groups) == list(LEGACY[r]), (r, list(groups))
+        for gid, cards in LEGACY[r].items():
+            inside = {n.attrs.get("id") for n in groups[gid].walk()}
+            assert set(cards) <= inside, (gid, set(cards) - inside)
+    # the guide box left the zone tile (it is region C's legacy group now)
+    tiles = {n.attrs.get("id") for n in regions[0].walk()}
+    assert "zone-guide" not in tiles
+
+
+def _media_blocks(css):
+    out = []
+    for m in re.finditer(r"@media \(min-width: ([\d.]+)em\) and \(min-height: ([\d.]+)em\) \{",
+                         css):
+        depth, k = 0, m.end() - 1
+        for n in range(k, len(css)):
+            depth += {"{": 1, "}": -1}.get(css[n], 0)
+            if depth == 0:
+                out.append((float(m.group(1)), float(m.group(2)), css[k + 1:n]))
+                break
+    return out
+
+
+def test_cockpit_classes_follow_the_token_block_queries():
+    css = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+    i = css.index(".panel-play {")
+    tokens = [(w, h, re.search(r"--al-size-class:\s*(\w+)", b).group(1))
+              for w, h, b in _media_blocks(css[:i]) if "--al-size-class" in b]
+    assert len(tokens) == 8, tokens
+    classes = []
+    for w, h, b in _media_blocks(css[i:]):
+        nine = re.search(r"--track-9:\s*([\d.]+)rem", b)
+        if nine and "grid-template-areas" not in b:
+            classes.append((w, h, {"3.25": "compact", "6": "full"}[nine.group(1)]))
+    assert classes == tokens, classes
+    # the cockpit starts at the lowest compact threshold; under it is flow
+    assert tokens[0][:2] == (64.0, 43.75)
+    assert re.search(r"@media \(min-width: 64em\) and \(min-height: 43\.75em\) \{\s*"
+                     r"main \{ max-width: 100rem;", css)
+
+
+def test_the_short_window_query_and_the_play_shell_are_gone():
+    """F-086: the 820px query and the Play half of the 900 x 560 shell go;
+    the shell stays for the other tabs, and Play is never a scroll box."""
+    assert "max-height: 820px" not in CSS
+    assert ".play-main" not in CSS and ".play-side" not in CSS
+    shell = CSS[CSS.index("@media (min-width: 900px) and (min-height: 560px)"):]
+    shell = shell[:shell.index("\n}\n")]
+    for sel in (".stat", ".stats", ".panel-play", ".trade", "#panel-play {"):
+        assert sel not in shell.replace("#panel-play:not", ""), sel
+    assert re.search(r"html \{ font-size: calc\(100% \* var\(--al-s\)\); \}", CSS)

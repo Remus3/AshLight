@@ -170,6 +170,23 @@ test("wide windows get the app shell; the page never uses CSS order", () => {
   assert.doesNotMatch(CSS, /(^|[\s;{])order\s*:/m);
 });
 
+test("Play is 7 regions with no panel tab stop; the shown tab keeps its regions", () => {
+  // PLAY-TD-09B-SKELETON (F-096): the tab is the stop, not the panel or a column
+  const open = HTML.match(/<div id="panel-play"[^>]*>/)[0];
+  assert.doesNotMatch(open, /tabindex/);
+  assert.doesNotMatch(HTML, /class="play-(main|side)"/);
+  const play = HTML.slice(HTML.indexOf('id="panel-play"'), HTML.indexOf('id="panel-run"'));
+  const regions = [...play.matchAll(/<section id="play-([a-z])" class="region" data-region="([a-z])"/g)];
+  assert.deepEqual(regions.map((m) => m[1]), ["g", "c", "t", "n", "b", "i", "u"]);
+  regions.forEach((m) => assert.equal(m[1], m[2]));
+  // the slots tabs.js fills stay inside Play, in their regions' legacy groups
+  ["zone-guide", "build-alert"].forEach((id) => {
+    const at = play.indexOf('id="' + id + '"');
+    assert.ok(at > 0, id);
+    assert.ok(play.lastIndexOf("data-legacy=", at) > play.lastIndexOf('<section id="play-', at), id);
+  });
+});
+
 test("modifier keys pass through the tab row (Alt+Left stays browser Back)", () => {
   const doc = fakeDoc();
   t.start(doc, null);

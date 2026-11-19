@@ -7,6 +7,7 @@ ops/runtime/consent.json. Revoking consent stops it.
 import datetime as _dt
 import hashlib
 import json
+import logging
 import os
 import threading
 import time
@@ -18,6 +19,7 @@ from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parse
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import hotreload  # HOT-RELOAD (decision 0042)
+from . import plug  # RUN-SEAMS (decision 0056)
 from . import summary as summary_mod
 from .bus import EventBus
 from .state import SessionState
@@ -66,6 +68,20 @@ def discover_default(runtime, log_path):
 class ConfigUnreadable(OSError):
     """AREA-AUDIT P5-1: config/local.json exists but is not a JSON object;
     nothing is written over it."""
+
+
+# RUN-SEAMS (decision 0056): the core loop's built-in ticks, in the order
+# the old __main__ loop called them; plug ticks (server/al/plug/) follow.
+TICK_ORDER = ("ensure_tailing",  # TEST-E2E: log found later / moved
+              "tick_build",      # BUILD-LIVE: this character's build, hot reload
+              "tick_summary",    # UTIL-SESSION-SUMMARY: idle -> card
+              "tick_calc",       # AREA-AUDIT P3-6: tc_calc off -> stop luajit
+              "tick_sources",    # TEST-FULLSTACK-SSE-IDLE: calc / prices
+              "tick_guide",      # ZONE-GUIDE: hot reload, save visits
+              "tick_history",    # UTIL-RUN-HISTORY: save closed acts
+              "tick_watch",      # UTIL-PRICE-WATCH: moves on book refresh
+              "tick_diag",       # DIAG-SELF: the Checks card (ruling J)
+              "tick_reload")     # HOT-RELOAD: data files, web/ (0042)
 
 
 class Core:
@@ -262,6 +278,46 @@ class Core:
                                              hotreload.load_json, name="Code reload",
                                              default=dict, registry=False)
         self._reload_notes = []
+        # RUN-SEAMS (decision 0056): the tick list tick_all runs, built-ins
+        # first (looked up by name at each pass, so a subclass or a test
+        # override is honoured), then each plug module's attach(core).
+        self.ticks = []
+        self.tick_ms = {}
+        self.loop_at = None
+        self._tick_errors = plug.ErrorThrottle(logging.getLogger("al"))
+        for name in TICK_ORDER:
+            self.add_tick(name)
+        plug.attach_all(self)
+
+    def add_tick(self, name, fn=None):
+        """Append a tick to the loop list. fn None = the Core method `name`
+        (looked up at each pass). A name already in the list is refused."""
+        if not isinstance(name, str) or not name:
+            raise ValueError("a tick needs a name")
+        if fn is not None and not callable(fn):
+            raise ValueError(f"tick {name}: not callable")
+        if any(n == name for n, _ in self.ticks):
+            raise ValueError(f"tick {name} is already in the list")
+        self.ticks.append((name, fn))
+
+    def tick_all(self, log=None, now=None):
+        """One pass of the core loop (every 0.5 s from __main__): each tick
+        in list order. A tick that raises never stops the loop or the ticks
+        after it; its first error is logged with the traceback, then one
+        line a minute with a count (C22). Records loop_at (monotonic, the
+        pass start) and tick_ms (the last duration of each tick, ms).
+        `now` (monotonic) is for tests of the throttle."""
+        if log is not None and self._tick_errors.log is not log:
+            self._tick_errors.log = log
+        self.loop_at = time.monotonic()
+        for name, fn in list(self.ticks):
+            t0 = time.monotonic()
+            try:
+                (fn if fn is not None else getattr(self, name))()
+            except Exception as exc:  # noqa: BLE001 - never stops the core loop
+                self._tick_errors.failed(name, exc,
+                                         now if now is not None else time.monotonic())
+            self.tick_ms[name] = round((time.monotonic() - t0) * 1000.0, 3)
 
     def _outputs_ready(self):
         """A new PoB output table for the loaded build: the build view is
@@ -894,7 +950,10 @@ class Core:
 
     def diag_facts(self, now=None):
         """The local facts the checks read (diag.checks). Keys starting
-        with "_" are the values the report must mask, never shown."""
+        with "_" are the values the report must mask, never shown.
+        RUN-SEAMS: plug modules' facts(core, now) are merged in; a
+        built-in key always wins."""
+        now = time.time() if now is None else now
         snap = self.state.snapshot()
         tl = snap.get("tailer") or {}
         log = self.log_path
@@ -923,7 +982,7 @@ class Core:
                              "_sidecar": str(paths.sidecar_root())}
             except Exception:  # noqa: BLE001
                 all_paths = {}
-        return dict(all_paths, **{
+        built = dict(all_paths, **{
             "log_found": log_found, "log_configured": bool(self._configured_log),
             "consented": bool(tl.get("consented")),
             "reading": bool(tl.get("reading")), "last_line_at": tl.get("last_line_at"),
@@ -945,6 +1004,7 @@ class Core:
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": snap.get("character"),
         })
+        return dict(plug.collect_facts(self, now), **built)
 
     def _ggg_reg_open(self):
         """True while the dev docs watch's REG_OPEN flag exists (a stat of a
@@ -963,7 +1023,8 @@ class Core:
         if not force and mono < self._next_diag:
             return False
         self._next_diag = mono + self.DIAG_TICK_S
-        return self.state.set_diag(diag.view(self.diag_facts(), VERSION, now=now))
+        now = time.time() if now is None else now
+        return self.state.set_diag(diag.view(self.diag_facts(now), VERSION, now=now))
 
     def close(self):
         self.stop_tailing()
