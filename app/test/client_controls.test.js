@@ -83,16 +83,25 @@ function fakeDoc(ids) {
 
 test("dashboard: the restart-overlay button shows only inside the client", () => {
   const html = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
-  assert.match(html, /<p id="restart-overlay-row" class="hint-reset" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay<\/button>\s*<span id="restart-overlay-said" class="muted"><\/span><\/p>/);
+  assert.match(html, /<p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay<\/button>\s*<span id="restart-overlay-said" class="muted"><\/span><\/p>/);
   const src = fs.readFileSync(path.join(WEB, "app.js"), "utf8");
   const start = src.indexOf("  function wireRestartOverlay()");
   const end = src.indexOf("\n  }\n", start) + 4;
   const fnSrc = src.slice(start, end);
+  // MERGE-SEAMS F5: render() clears the note on the next state push,
+  // before its same-version early return, so any push clears it
+  const rStart = src.indexOf("  function render(s) {");
+  const rBody = src.slice(rStart, src.indexOf("\n  }\n", rStart));
+  const clear = rBody.match(/\n {4}(if \(restartSaid\) \{[^\n]*\})\n/);
+  assert.ok(clear, "render() clears the restart note");
+  assert.ok(rBody.indexOf(clear[1]) < rBody.indexOf("s.version === renderedVersion"));
   function run(alClient) {
     const els = fakeDoc(["restart-overlay-row", "restart-overlay", "restart-overlay-said"]);
     const ctx = { window: { alClient: alClient }, els: els, snap: null };
     vm.runInNewContext("function $(id) { return els[id]; }\n" +
-      "function setText(n, t) { n.textContent = t; }\n" + fnSrc + "\nwireRestartOverlay();", ctx);
+      "function setText(n, t) { n.textContent = t; }\nvar restartSaid = false;\n" + fnSrc +
+      "\nwireRestartOverlay();\nfunction push() { " + clear[1] + " }", ctx);
+    els.push = ctx.push;
     return els;
   }
   const browser = run(undefined);
@@ -104,4 +113,22 @@ test("dashboard: the restart-overlay button shows only inside the client", () =>
   inClient["restart-overlay"].listeners.click();
   assert.equal(restarted, 1);
   assert.equal(inClient["restart-overlay-said"].textContent, "Restarting the overlay.");
+  inClient.push();
+  assert.equal(inClient["restart-overlay-said"].textContent, "");
+  // a later push without a new restart writes nothing
+  inClient["restart-overlay-said"].textContent = "x";
+  inClient.push();
+  assert.equal(inClient["restart-overlay-said"].textContent, "x");
+});
+
+test("MERGE-SEAMS F7: no file under web/ or app/test/ names the old hints class (it is tool-row)", () => {
+  for (const dir of [WEB, path.join(APP, "test")]) {
+    for (const name of fs.readdirSync(dir)) {
+      const full = path.join(dir, name);
+      if (!fs.statSync(full).isFile()) { continue; }
+      assert.ok(!fs.readFileSync(full, "utf8").includes("hint" + "-reset"), name);
+    }
+  }
+  const css = fs.readFileSync(path.join(WEB, "app.css"), "utf8");
+  assert.match(css, /\.tool-row \{ margin: 8px 0 0; \}/);
 });

@@ -56,7 +56,7 @@ ROUTES = {
     ("GET", "/favicon.ico"): (NONE, None),
     # token-proof GET (1): the client proves the core before it sends the token
     ("GET", "/api/hello"): (PROOF, None),
-    # token GET (13)
+    # token GET (14)
     ("GET", "/api/health"): (HEADER, None),
     ("GET", "/api/version"): (HEADER, None),
     ("GET", "/api/state"): (HEADER, None),
@@ -69,8 +69,10 @@ ROUTES = {
     ("GET", "/api/gfx"): (HEADER, None),
     ("GET", "/api/rates"): (HEADER, None),
     ("GET", "/api/web-data"): (HEADER, None),
+    # RUN-VERDICTS-CORE: the plug route (server/al/plug/verdicts.py)
+    ("GET", "/api/verdicts"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (12)
+    # token POST (13)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
@@ -83,6 +85,7 @@ ROUTES = {
     ("POST", "/api/run-history"): (HEADER, 4096),
     ("POST", "/api/price-watch"): (HEADER, 4096),
     ("POST", "/api/hints"): (HEADER, 4096),
+    ("POST", "/api/verdicts"): (HEADER, 4096),  # RUN-VERDICTS-CORE plug route
     # token PUT (1)
     ("PUT", "/api/weights"): (HEADER, 64 * 1024),
     # refused verbs
@@ -289,9 +292,9 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 12,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 13,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 12, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 13, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
@@ -324,16 +327,17 @@ def _with_branch(source, verb, path_lit):
 
 def test_unlisted_route_fails_the_comparison():
     source = HTTP_PY.read_text(encoding="utf-8")
+    plugged = set(plug.all_routes())  # RUN-SEAMS: plug routes have rows too
     # the unchanged copy round-trips clean
-    assert compare(ROUTES, routes_from_source(ast.unparse(ast.parse(source)))) == (set(), set())
+    assert compare(ROUTES, routes_from_source(ast.unparse(ast.parse(source))) | plugged)         == (set(), set())
     for verb in ROUTE_VERBS:
         copy = _with_branch(source, verb, "/api/zzq-new")
-        missing, extra = compare(ROUTES, routes_from_source(copy))
+        missing, extra = compare(ROUTES, routes_from_source(copy) | plugged)
         assert extra == {(verb, "/api/zzq-new")} and not missing, verb
     # a dropped route shows as a missing row
     gone = source.replace('if path == "/api/hints":', 'if path == "/api/zzq-gone":', 1)
     assert gone != source
-    missing, extra = compare(ROUTES, routes_from_source(gone))
+    missing, extra = compare(ROUTES, routes_from_source(gone) | plugged)
     assert missing == {("POST", "/api/hints")} and extra == {("POST", "/api/zzq-gone")}
     # a new verb, or a route in a shape the reader does not know, is refused
     for bad in (source.replace("do_PATCH = _not_allowed", "do_PATCH = do_POST", 1),

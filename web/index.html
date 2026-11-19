@@ -53,7 +53,9 @@
 </head>
 <body>
 <header class="bar">
-  <h1 class="brand">AshLight</h1>
+  <!-- PLAY-TD-09C-BAR (F-190): AshLight's own mark (docs/design/0005,
+       no GGG art) in a 20 px box left of the name; decorative, so empty alt -->
+  <h1 class="brand"><img class="brand-mark" src="/web/favicon.svg" alt="" width="20" height="20">AshLight</h1>
   <!-- UI-GLANCE: a few tabs instead of one long column; Play is the glance
        tab and fits one screen. web/tabs.js: remembered per viewer, arrow
        keys move between tabs, a new item card, trade or build alert shows
@@ -71,13 +73,15 @@
       aria-controls="panel-settings" tabindex="-1">Settings <span class="tab-mark" hidden></span></button>
   </div>
   <!-- UI-GLANCE: says once when news for Play arrives while another tab
-       is shown (Play itself is hidden then, so its regions are silent) -->
+       is shown (Play itself is hidden then, so its regions are silent).
+       PLAY-TD-09C-BAR: visually hidden; its visible twin is the tab mark. -->
   <p id="tab-news" class="tab-news" role="status" aria-live="polite"></p>
+  <!-- PLAY-TD-09C-BAR: the character name slot (painted by the strip) and
+       ONE status word: the worse of the Client.txt reading state and the
+       feed state (ALDash.barStatus). It is the visible reading indicator of
+       the ToS floor, on every tab (MERGE-SEAMS F2: the feed pill is gone). -->
+  <p id="bar-char" class="bar-char muted"></p>
   <p id="reading" class="pill" data-state="pending" role="status" aria-live="polite">
-    <span class="glyph" aria-hidden="true">[ ]</span>
-    <span class="word">Client.txt status unknown</span>
-  </p>
-  <p id="link" class="pill" data-state="pending" role="status">
     <span class="glyph" aria-hidden="true">[ ]</span>
     <span class="word">connecting</span>
   </p>
@@ -605,10 +609,10 @@
     <!-- DESKTOP-CLIENT (decision 0041): shown only inside the AshLight
          desktop client, which hands the page this one action; on the
          Settings tab outside the fold so it is one click away -->
-    <p id="restart-overlay-row" class="hint-reset" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay</button>
+    <p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay</button>
       <span id="restart-overlay-said" class="muted"></span></p>
     <!-- NEWBIE-HINTS: one click shows the new-character tips again -->
-    <p class="hint-reset"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
+    <p class="tool-row"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
       <span id="hints-said" class="muted"></span></p>
     <!-- DIAG-SELF (ruling J): computed by the core; folded when green, opens
          by itself on a failure; the copy is the only click -->

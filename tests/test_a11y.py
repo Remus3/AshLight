@@ -149,10 +149,35 @@ def test_live_regions_are_few_and_named():
     live = [n for n in nodes() if is_live(n)]
     for n in live:
         assert n.attrs.get("id"), n.attrs  # each is written by id, nowhere else
-    # pills (2), consent error, trade, item check, price, weights, build (2),
-    # web data, layout, graphics. The cap is 12 (design 0004, U16; AREA-AUDIT
-    # P8-2): a new one replaces one of these, never adds a thirteenth.
-    assert len(live) <= 12, [n.attrs.get("id") for n in live]
+    # tab news, the one bar status word, consent error, trade, item check,
+    # price, weights, build (2), web data, layout. The cap is 11 (design 0004,
+    # U16; AREA-AUDIT P8-2; PLAY-TD-09C-BAR / MERGE-SEAMS F2 dropped the feed
+    # pill): a new one replaces one of these, never adds a twelfth.
+    assert len(live) <= 11, [n.attrs.get("id") for n in live]
+
+
+def test_bar_has_one_status_word_on_every_tab():
+    # PLAY-TD-09C-BAR (MERGE-SEAMS F2, F-151): the bar holds the character
+    # slot and ONE status word; #reading is the visible reading indicator of
+    # the ToS floor on every tab (in the header, outside every panel), and
+    # the feed pill is gone. The word is the worse of the reading and the
+    # feed state, written only through ALDash.barStatus.
+    every = list(tree().walk())
+    head = [n for n in every if n.tag == "header"][0]
+    inside = [n for n in every if head in list(n.ancestors())]
+    live = [n.attrs.get("id") for n in inside if is_live(n)]
+    assert live == ["tab-news", "reading"], live
+    reading = [n for n in inside if n.attrs.get("id") == "reading"][0]
+    assert reading.attrs.get("aria-live") == "polite"
+    assert not any(a.attrs.get("role") == "tabpanel" for a in reading.ancestors())
+    assert [n for n in inside if n.attrs.get("id") == "bar-char"]
+    assert not [n for n in every if n.attrs.get("id") == "link"]
+    app = JS["app.js"]
+    assert 'showPill("link"' not in app and "D.linkView(" not in app
+    assert re.search(r'showPill\("reading", D\.barStatus\(', app)
+    assert len(re.findall(r'showPill\("reading"', app)) == 1
+    # the news line is a polite region that takes no room in the bar
+    assert re.search(r"\.tab-news \{ position: absolute; width: 1px; height: 1px;", CSS)
 
 
 def test_no_positive_tabindex():
