@@ -23,8 +23,21 @@
 
   var CORNERS = ["top-left", "top-center", "top-right",
                  "bottom-left", "bottom-center", "bottom-right"];
+  /* OVL-OVERLAY-KEYS (plan 03 section 5.4), mirror of server/al/layout.py:
+     the overlay parts the player can switch off, all on by default. A
+     failure word (offline, no Client.txt, not reading) is not a part and
+     can never be switched off. */
+  var PARTS = ["zone", "timer", "level", "deaths", "status", "trade", "item",
+               "moment", "hint"];
+  var ZONE_GUIDE = ["entry", "always", "never"];
+  function defaultParts() {
+    var out = {};
+    PARTS.forEach(function (name) { out[name] = true; });
+    return out;
+  }
   var DEFAULT = { display: "primary", corner: "top-right", scale: 1.0,
-                  opacity: 0.9, margin: 16 };
+                  opacity: 0.9, margin: 16, parts: defaultParts(),
+                  quiet_town: false, zone_guide: "entry" };
   /* Floors from design 0001 (DS-OPACITY, DS-SCALE): opacity under 0.9 drops
      overlay text under 4.5:1 over a white scene; scale under 0.95 renders
      13px text under 12px. Old saved layouts clamp to them on load. */
@@ -70,8 +83,26 @@
       corner: CORNERS.indexOf(l.corner) >= 0 ? l.corner : DEFAULT.corner,
       scale: num(l.scale, "scale"),
       opacity: num(l.opacity, "opacity"),
-      margin: Math.round(num(l.margin, "margin"))
+      margin: Math.round(num(l.margin, "margin")),
+      parts: parts(l.parts),
+      quiet_town: typeof l.quiet_town === "boolean" ? l.quiet_town : DEFAULT.quiet_town,
+      zone_guide: ZONE_GUIDE.indexOf(l.zone_guide) >= 0 ? l.zone_guide : DEFAULT.zone_guide
     };
+  }
+
+  /* Every part filled in; an unknown name or a non-boolean value is
+     dropped and that part keeps its default (on). A fresh object each
+     call, so a caller can never change DEFAULT. */
+  function parts(value) {
+    var out = defaultParts();
+    if (!value || typeof value !== "object" || Array.isArray(value)) { return out; }
+    PARTS.forEach(function (name) {
+      if (Object.prototype.hasOwnProperty.call(value, name)
+          && typeof value[name] === "boolean") {
+        out[name] = value[name];
+      }
+    });
+    return out;
   }
 
   /* Displays in index order: left to right, then top to bottom. */
@@ -142,6 +173,7 @@
   }
 
   return { CORNERS: CORNERS, LAYOUT_DEFAULT: DEFAULT, LAYOUT_LIMITS: LIMITS, BASE: BASE,
+           LAYOUT_PARTS: PARTS, ZONE_GUIDE: ZONE_GUIDE,
            opacityCss: opacityCss,
            normalizeLayout: normalize, orderDisplays: orderDisplays,
            pickDisplay: pickDisplay, autoScale: autoScale, computeBounds: computeBounds,
