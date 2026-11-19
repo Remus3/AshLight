@@ -5,3 +5,6 @@
 # Byte-pinned shared files: never normalised.
 ops/fleet_kit/** -text
 ops/loop/slots.py -text
+docs/design/reviews.log merge=union
+docs/decisions/README.md merge=union
+docs/research/README.md merge=union
