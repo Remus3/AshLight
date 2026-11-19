@@ -2049,7 +2049,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   ZERO-CLICK: Code change, nothing for the player; the map is rebuilt by itself when the hot-reload
   scan bumps core.reload_web. Also (folded SEC-CROSS-SITE): Code change; browsers set the header
   themselves and clients without it behave as today. BLOCKED: session wave 1.
-- [x] SEC-XML-NUL (build) Strict build XML intake: refuse an inflated payload holding a NUL byte. -- done 2026-11-18 (session wave 1; verified)
+- [ ] SEC-XML-NUL (build) Strict build XML intake: refuse an inflated payload holding a NUL byte.
   ACCEPT: python -m pytest -q tests/test_tc_code.py tests/test_tc_code_api.py
   tests/test_tc_code_real.py passes: share codes holding UTF-16 documents (both byte orders, with
   and without a byte order mark) with an entity get 400 from POST /api/build-code and no build file
