@@ -160,18 +160,19 @@ def summary_file():
 
 def save(path, card, keep=MAX_SAVED):
     """Append `card` to the saved list (newest last, at most `keep`).
-    Atomic replace; an unreadable file starts a new list."""
-    doc = jsonfile.read_json(path, kind=dict, default={})
+    Atomic replace with one .bak (F-014); a half-written file is restored
+    from its .bak first, an unreadable one starts a new list."""
+    doc = jsonfile.read_json(path, kind=dict, default={}, backup=True)
     rows = doc.get("summaries")
     rows = [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
     rows.append(card)
     rows = rows[-keep:]
-    jsonfile.write_json(path, {"summaries": rows})
+    jsonfile.write_json(path, {"summaries": rows}, backup=True)
 
 
 def load_last(path):
     """The newest saved card, or None."""
-    doc = jsonfile.read_json(path)
+    doc = jsonfile.read_json(path, kind=dict, backup=True)
     rows = doc.get("summaries") if isinstance(doc, dict) else None
     if not isinstance(rows, list) or not rows or not isinstance(rows[-1], dict):
         return None

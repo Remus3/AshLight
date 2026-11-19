@@ -18,7 +18,7 @@ new request of any kind: zero network. While web data is off (decision
 
 from pathlib import Path
 
-from . import jsonfile
+from . import jsonfile, runhistory
 
 FILE_NAME = "price_watch.json"
 CONFIG_KEY = "price_watch_pct"
@@ -95,12 +95,14 @@ class PriceWatch:
         self.items = self._load()
 
     def _load(self):
-        doc = jsonfile.read_json(self.path, max_bytes=MAX_BYTES)
+        doc = jsonfile.read_json(self.path, max_bytes=MAX_BYTES, kind=dict, backup=True)
         rows = doc.get("items") if isinstance(doc, dict) else None
         return [r for r in (_clean(x) for x in rows or ()) if r is not None][-MAX_ITEMS:]
 
     def _save(self):
-        jsonfile.write_json(self.path, {"schema": SCHEMA, "items": self.items})
+        """Write the watch file with one .bak of it (F-014)."""
+        jsonfile.write_json(self.path, {"schema": SCHEMA, "items": self.items},
+                            backup=True)
 
     @staticmethod
     def _same(a, b):
@@ -127,8 +129,10 @@ class PriceWatch:
         return True
 
     def clear(self):
+        """Forget every watched item; the .bak goes with the data."""
         self.items = []
         self._save()
+        runhistory.drop_bak(self.path)
 
     def refresh(self, lookup):
         """Re-read every watched item's price from the cache (lookup: the

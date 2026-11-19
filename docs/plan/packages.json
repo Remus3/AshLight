@@ -2914,7 +2914,9 @@
     "server/al/hints.py",
     "server/al/zoneguide.py",
     "server/al/layout.py",
-    "docs/decisions/0036-run-history-file.md"
+    "docs/decisions/0036-run-history-file.md",
+    "tests/test_util_run_history.py",
+    ".gitignore"
    ],
    "new_files": [
     "tests/test_durable_store_files.py"

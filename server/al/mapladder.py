@@ -20,7 +20,7 @@ run-history switch turns saving off and its clear button empties the file.
 
 from pathlib import Path
 
-from . import jsonfile, num
+from . import jsonfile, num, runhistory
 
 FILE_NAME = "map_ladder.json"
 SCHEMA = 1
@@ -131,7 +131,7 @@ def same_map(a, b):
 def load(path):
     """{character key: [records oldest first]} ({} when missing, oversized
     or bad)."""
-    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict)
+    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict, backup=True)
     chars = doc.get("characters") if isinstance(doc, dict) else None
     out = {}
     if not isinstance(chars, dict):
@@ -164,9 +164,11 @@ class MapLadder:
         self.by = load(self.path)
 
     def _save(self):
+        """Write the ladder file with one .bak of it (F-014)."""
         jsonfile.write_json(self.path, {
             "schema": SCHEMA,
-            "characters": {k: {"maps": v} for k, v in self.by.items()}})
+            "characters": {k: {"maps": v} for k, v in self.by.items()}},
+            backup=True)
 
     def record(self, character, maps):
         """Save the finished maps not saved yet under `character` (None is
@@ -189,8 +191,10 @@ class MapLadder:
         return True
 
     def clear(self):
+        """Forget every saved map; the .bak goes with the data."""
         self.by = {}
         self._save()
+        runhistory.drop_bak(self.path)
 
     def view(self, character, session_rows):
         """The all-sessions ladder of `character`: the saved maps plus this

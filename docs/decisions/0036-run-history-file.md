@@ -66,3 +66,30 @@ sections 3-6 (adjudicator rulings B, C, D, E), decisions 0008 (LIVE-RESUME),
 The operator rules local history files unwanted, GGG policy restricts
 derived local records, or decision 0013 changes so the cache may be read
 while web data is off.
+
+## Amendment 2026-11-18 (RUN-DURABLE-STORE-FILES, finding F-014)
+
+- Each player-data file keeps one `.bak` of its last good copy: run
+  history, map ladder, price watch, session summaries, the hint store, the
+  zone-guide visits file and the overlay layout in local.json are written
+  through jsonfile with backup=True (temp file, fsync, replace, then the
+  same bytes to `<name>.bak`) and read with the .bak restore: a main file
+  that exists but does not parse (empty, half written, wrong kind, over
+  its cap) is rewritten from its .bak. A missing main file is never
+  revived from a stray .bak.
+- Privacy: a clear keeps no copy. Clear run history removes the .bak of
+  the run history, map ladder and visits files with their data, and the
+  price watch Clear removes its .bak; each clear first writes the empty
+  document (main and .bak), then deletes the .bak, so a .bak that cannot
+  be deleted at that moment holds nothing old. A visits document with no
+  character (the cleared book) is written without a .bak.
+- The .bak files sit beside their main files (ops/runtime, gitignored;
+  local.json.bak beside config/local.json). Player builds
+  (theorycraft/store.py) keep their own writer.
+- Alternatives: no .bak (rejected: a crash mid-write on a disk that lost
+  the rename's data cost the player's history, F-014); keep the .bak
+  through a clear for undo (rejected: Clear must leave nothing behind);
+  remove the .bak in core's clear paths (rejected here: the store modules
+  own their files, and core's own writers are RUN-DURABLE-STORES).
+- Reverses if: the .bak doubles a file past its budget, a restore revives
+  data the player removed, or decision 0036 itself reverses.

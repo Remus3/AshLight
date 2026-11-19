@@ -33,7 +33,7 @@ import os
 from pathlib import Path
 
 from . import acts as acts_mod
-from . import hotreload, jsonfile
+from . import hotreload, jsonfile, runhistory
 
 PATH = Path(__file__).resolve().parent / "data" / "zone_guide.json"
 FILE_NAME = "zone_visits.json"
@@ -288,12 +288,21 @@ class VisitBook:
 
 
 def read_visits(path):
-    return jsonfile.read_json(path, max_bytes=1024 * 1024, kind=dict, default={})
+    """The saved visits document ({} when missing or bad; a half-written
+    file is restored from its .bak, F-014)."""
+    return jsonfile.read_json(path, max_bytes=1024 * 1024, kind=dict, default={},
+                              backup=True)
 
 
 def write_visits(path, doc):
-    """Save a VisitBook.to_doc() document (atomic, ASCII, LF)."""
-    jsonfile.write_json(path, doc)
+    """Save a VisitBook.to_doc() document (atomic, ASCII, LF) with one .bak
+    of it (F-014). A document with no character (VisitBook.clear(), the
+    Clear run history button) removes the .bak: a cleared store keeps no
+    copy (decision 0036 amendment 2026-11-18)."""
+    jsonfile.write_json(path, doc, backup=True)
+    chars = doc.get("characters") if isinstance(doc, dict) else None
+    if not chars:
+        runhistory.drop_bak(path)
 
 
 # -- the view -----------------------------------------------------------------
