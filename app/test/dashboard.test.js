@@ -13,6 +13,24 @@ test("link pill: first failure says what to do; later ones reconnect", () => {
   assert.deepEqual(v.linkView("error", false),
     { state: "failed", glyph: "[x]", word: "can't reach AshLight - restart it" });
   assert.deepEqual(v.linkView("error", true), { state: "pending", glyph: "[ ]", word: "reconnecting" });
+  // F-131: before the first event the pill says it is connecting
+  assert.deepEqual(v.linkView("connecting", false), { state: "pending", glyph: "[ ]", word: "connecting" });
+  assert.deepEqual(v.linkView(undefined, false), v.linkView("connecting", false));
+});
+
+test("F-131: the bar word and the strip's next step come from the one table", () => {
+  const read = { consented: true, reading: true, path: "logs/Client.txt" };
+  assert.deepEqual(v.barStatus(read, "open"),
+    { state: "running", glyph: "[>]", word: "reading Client.txt", id: "reading", next: "" });
+  const missing = v.barStatus({ consented: true, reading: false, path: null }, "open");
+  assert.equal(missing.word, "Client.txt not found - start the game once");
+  assert.equal(missing.next,
+    "Start Path of Exile 2 once so it writes Client.txt. AshLight finds it by itself.");
+  assert.equal(v.zoneNext({ consented: false }, "open"),
+    "Press \"Allow reading Client.txt\" on the Play tab.");
+  assert.equal(v.zoneNext(read, "error", false), "Start AshLight again from its Start Menu shortcut.");
+  // reconnecting by itself: nothing for the player to do
+  assert.equal(v.zoneNext(read, "error", true), "");
 });
 
 test("log pill: unknown while the feed is down, never a stale claim", () => {
@@ -37,6 +55,8 @@ test("TEST-LIVE-EXIT: a quiet log reads idle and freezes the clocks", () => {
   assert.equal(p.state, "blocked");
   assert.equal(p.glyph, "[#]");
   assert.equal(p.word, v.IDLE_WORD);
+  // F-131 (0042 F20 f): one root with the overlay's word, no fixed "20 min"
+  assert.equal(v.IDLE_WORD, "log quiet - game closed or AFK?");
   // the feed down still wins: no stale claim
   assert.equal(v.readingView(idle, false).word, "Client.txt status unknown");
   assert.equal(v.clockUntil(idle, 500), 100);

@@ -24,7 +24,8 @@ so the overlay merges it with the item check of that press.
 PRICE-UNIQUE / PRICE-STACKABLES: the same press also reads the cached
 poe.ninja price (`lookup`, the core passes RatesClient.lookup: cache only,
 never a request; None while web data is off) and the card carries it as
-`ninja` {kind, name, value, unit, listings, few, change, league}.
+`ninja` {kind, name, value, unit, listings, few, change, league, checked_at,
+league_changed_at}.
 """
 
 import threading
@@ -66,7 +67,11 @@ def card_of(doc):
     return card
 
 
-NINJA_KEYS = ("kind", "name", "value", "unit", "listings", "few", "change", "league")
+# DATA-PRICE-CARD-TEXT: checked_at (when the cache was read from poe.ninja)
+# and league_changed_at (when the priced league last changed), epoch
+# seconds or None; the card text ages the price and names a new league
+NINJA_KEYS = ("kind", "name", "value", "unit", "listings", "few", "change", "league",
+              "checked_at", "league_changed_at")
 
 
 def ninja_of(found):

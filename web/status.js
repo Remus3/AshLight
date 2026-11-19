@@ -14,7 +14,182 @@
 
   function pill(state, glyph, word) { return { state: state, glyph: glyph, word: word }; }
 
-  var IDLE_WORD = "quiet for 20 min - game closed or AFK?";
+  /* F-131: the one status vocabulary. The page serves web/ only, so this
+     is a copy of server/al/data/status_words.json (without _README);
+     tests/test_status_words.py and app/test/statuswords.test.js fail when
+     it differs. Edit the JSON, then paste `python -m server.al.statuswords`
+     here and in app/shared/render_gate.js. */
+  /* STATUS_WORDS BEGIN: copy of server/al/data/status_words.json */
+  var STATUS_WORDS = {
+    "schema": 1,
+    "overlay_beside_max": 15,
+    "overlay_alone_max": 27,
+    "states": {
+      "reading": {
+        "rank": 0,
+        "kit": "running",
+        "glyph": "[>]",
+        "bar": "reading Client.txt",
+        "overlay": "",
+        "overlay_alone": false,
+        "check_row": "reading",
+        "check": "Reading Client.txt.",
+        "next": "",
+        "fault": false
+      },
+      "live": {
+        "rank": 0,
+        "kit": "done",
+        "glyph": "[+]",
+        "bar": "live",
+        "overlay": "",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "unknown": {
+        "rank": 0,
+        "kit": "pending",
+        "glyph": "[ ]",
+        "bar": "Client.txt status unknown",
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "link_wait": {
+        "rank": 1,
+        "kit": "pending",
+        "glyph": "[ ]",
+        "bar": "connecting",
+        "overlay": "connecting",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "link_retry": {
+        "rank": 2,
+        "kit": "pending",
+        "glyph": "[ ]",
+        "bar": "reconnecting",
+        "overlay": "offline",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "off": {
+        "rank": 3,
+        "kit": "idle",
+        "glyph": "[-]",
+        "bar": "not reading Client.txt",
+        "overlay": "not reading - see dashboard",
+        "overlay_alone": true,
+        "check_row": "consent",
+        "check": "Not given yet. Allow it on the Play tab.",
+        "next": "Press \"Allow reading Client.txt\" on the Play tab.",
+        "fault": false
+      },
+      "waiting": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "waiting for Client.txt",
+        "overlay": "waiting for log",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "idle": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "log quiet - game closed or AFK?",
+        "overlay": "log quiet",
+        "overlay_alone": false,
+        "check_row": "last_line",
+        "check": "The game may be closed, or you are AFK.",
+        "next": "",
+        "fault": false
+      },
+      "missing": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "Client.txt not found - start the game once",
+        "overlay": "no Client.txt",
+        "overlay_alone": false,
+        "check_row": "log",
+        "check": "Not found yet.",
+        "next": "Start Path of Exile 2 once so it writes Client.txt. AshLight finds it by itself.",
+        "fault": true
+      },
+      "path_missing": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": null,
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": "log",
+        "check": "The Client.txt path in your settings is missing.",
+        "next": "Correct \"client_log\" in config\\local.json, or remove it so AshLight finds Client.txt by itself. Starting the game once may also create it.",
+        "fault": true
+      },
+      "stalled": {
+        "rank": 5,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": null,
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": "reading",
+        "check": "Not reading Client.txt.",
+        "next": "Run scripts\\run.ps1 to start AshLight's parts again.",
+        "fault": true
+      },
+      "link_down": {
+        "rank": 6,
+        "kit": "failed",
+        "glyph": "[x]",
+        "bar": "can't reach AshLight - restart it",
+        "overlay": "offline",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "Start AshLight again from its Start Menu shortcut.",
+        "fault": false
+      },
+      "link_token": {
+        "rank": 7,
+        "kit": "failed",
+        "glyph": "[x]",
+        "bar": "open AshLight from the link it showed at start",
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "Use the AshLight window, or open the link AshLight showed at start.",
+        "fault": false
+      }
+    }
+  };
+  /* STATUS_WORDS END */
+
+  var W = STATUS_WORDS.states;
+
+  function statePill(id) { var s = W[id]; return pill(s.kit, s.glyph, s.bar); }
+
+  var IDLE_WORD = W.idle.bar;
 
   /* TEST-LIVE-EXIT: the time the zone, act and map clocks count to. While
      the log is idle they stop at its last line instead of running on. */
@@ -25,31 +200,54 @@
     return now;
   }
 
-  /* The connection pill. event: "notoken" | "open" | "error". everLive:
-     the feed was live at least once on this page. A failure before that
-     says what to do; one after it is a reconnect. */
-  function linkView(event, everLive) {
-    if (event === "notoken") {
-      return pill("failed", "[x]", "open AshLight from the link it showed at start");
-    }
-    if (event === "open") { return pill("done", "[+]", "live"); }
-    return everLive ? pill("pending", "[ ]", "reconnecting")
-                    : pill("failed", "[x]", "can't reach AshLight - restart it");
+  /* The feed state id. event: "notoken" | "open" | "error" | "connecting"
+     (or none yet). everLive: the feed was live at least once on this
+     page. A failure before that says what to do; one after it is a
+     reconnect. */
+  function linkState(event, everLive) {
+    if (event === "notoken") { return "link_token"; }
+    if (event === "open") { return "live"; }
+    if (event === "connecting" || event == null) { return "link_wait"; }
+    return everLive ? "link_retry" : "link_down";
   }
 
-  /* The Client.txt pill. While the feed is down the page cannot know, so
-     it says so instead of repeating the last (possibly stale) state. */
-  function readingView(tailer, live) {
-    if (!live || !tailer) { return pill("pending", "[ ]", "Client.txt status unknown"); }
-    /* TEST-LIVE-EXIT (decision 0029): no line for 20 minutes - the game
-       may be closed, or the player is away. Never "closed": a guess. */
-    if (tailer.consented && tailer.idle) { return pill("blocked", "[#]", IDLE_WORD); }
-    if (tailer.reading) { return pill("running", "[>]", "reading Client.txt"); }
-    if (tailer.consented) {
-      return pill("blocked", "[#]", tailer.path ? "waiting for Client.txt"
-                                                : "Client.txt not found - start the game once");
-    }
-    return pill("idle", "[-]", "not reading Client.txt");
+  /* The Client.txt state id (server/al/statuswords.py reading_state is
+     the same rule). While the feed is down the page cannot know, so it
+     says so instead of repeating the last (possibly stale) state.
+     TEST-LIVE-EXIT (decision 0029): no line for 20 minutes - the game may
+     be closed, or the player is away. Never "closed": a guess. */
+  function readingState(tailer, live) {
+    if (!live || !tailer) { return "unknown"; }
+    if (tailer.consented && tailer.idle) { return "idle"; }
+    if (tailer.reading) { return "reading"; }
+    if (tailer.consented) { return tailer.path ? "waiting" : "missing"; }
+    return "off";
+  }
+
+  /* The connection pill. */
+  function linkView(event, everLive) { return statePill(linkState(event, everLive)); }
+
+  /* The Client.txt pill. */
+  function readingView(tailer, live) { return statePill(readingState(tailer, live)); }
+
+  /* The one bar status word: the worse of the reading and the feed state
+     (table rank; a tie goes to the reading state). link and everLive as
+     for linkView. {state, glyph, word, id, next}. */
+  function barStatus(tailer, link, everLive) {
+    var feed = linkState(link, everLive);
+    var read = readingState(tailer, feed === "live");
+    var id = W[feed].rank > W[read].rank ? feed : read;
+    var p = statePill(id);
+    p.id = id;
+    p.next = W[id].next;
+    return p;
+  }
+
+  /* The strip's zone sub line next step: the player's one act for the
+     bar state, or "" when there is none (then the strip shows its own
+     sub line). */
+  function zoneNext(tailer, link, everLive) {
+    return barStatus(tailer, link, everLive).next;
   }
 
   function kindOf(row) {
@@ -133,6 +331,8 @@
   }
 
   return { linkView: linkView, readingView: readingView, kindOf: kindOf,
+           linkState: linkState, readingState: readingState,
+           barStatus: barStatus, zoneNext: zoneNext, STATUS_WORDS: STATUS_WORDS,
            IDLE_WORD: IDLE_WORD, clockUntil: clockUntil,
            emptyText: emptyText, eventsKey: eventsKey, sessionSub: sessionSub, countsView: countsView, tradeLine: tradeLine, cornerLabel: cornerLabel,
            dataCreditText: dataCreditText };

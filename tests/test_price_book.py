@@ -226,7 +226,8 @@ def test_press_card_carries_the_ninja_price(tmp_path):
     card = st.snapshot()["price"]
     assert card["ninja"] == {"kind": "unique", "name": "Ember Veil", "value": 12.5,
                              "unit": "Divine Orb", "listings": 342, "few": False,
-                             "change": 8.2, "league": "Example League"}
+                             "change": 8.2, "league": "Example League",
+                             "checked_at": 1800000000.0, "league_changed_at": None}
     assert card["text"]["line"] == "About 12.5 Divine Orb"
     assert card["text"]["detail"] == "Up 8.2% over 7 days (poe.ninja)"
     assert card["text"]["sentence"] == (

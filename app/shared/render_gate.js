@@ -15,8 +15,181 @@
 }(typeof self !== "undefined" ? self : this, function (fmt) {
   "use strict";
 
+  /* F-131: the one status vocabulary. The overlay loads app/shared only,
+     so this is a copy of server/al/data/status_words.json (without
+     _README); tests/test_status_words.py and app/test/statuswords.test.js
+     fail when it differs. Edit the JSON, then paste
+     `python -m server.al.statuswords` here and in web/status.js. */
+  /* STATUS_WORDS BEGIN: copy of server/al/data/status_words.json */
+  var STATUS_WORDS = {
+    "schema": 1,
+    "overlay_beside_max": 15,
+    "overlay_alone_max": 27,
+    "states": {
+      "reading": {
+        "rank": 0,
+        "kit": "running",
+        "glyph": "[>]",
+        "bar": "reading Client.txt",
+        "overlay": "",
+        "overlay_alone": false,
+        "check_row": "reading",
+        "check": "Reading Client.txt.",
+        "next": "",
+        "fault": false
+      },
+      "live": {
+        "rank": 0,
+        "kit": "done",
+        "glyph": "[+]",
+        "bar": "live",
+        "overlay": "",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "unknown": {
+        "rank": 0,
+        "kit": "pending",
+        "glyph": "[ ]",
+        "bar": "Client.txt status unknown",
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "link_wait": {
+        "rank": 1,
+        "kit": "pending",
+        "glyph": "[ ]",
+        "bar": "connecting",
+        "overlay": "connecting",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "link_retry": {
+        "rank": 2,
+        "kit": "pending",
+        "glyph": "[ ]",
+        "bar": "reconnecting",
+        "overlay": "offline",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "off": {
+        "rank": 3,
+        "kit": "idle",
+        "glyph": "[-]",
+        "bar": "not reading Client.txt",
+        "overlay": "not reading - see dashboard",
+        "overlay_alone": true,
+        "check_row": "consent",
+        "check": "Not given yet. Allow it on the Play tab.",
+        "next": "Press \"Allow reading Client.txt\" on the Play tab.",
+        "fault": false
+      },
+      "waiting": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "waiting for Client.txt",
+        "overlay": "waiting for log",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "",
+        "fault": false
+      },
+      "idle": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "log quiet - game closed or AFK?",
+        "overlay": "log quiet",
+        "overlay_alone": false,
+        "check_row": "last_line",
+        "check": "The game may be closed, or you are AFK.",
+        "next": "",
+        "fault": false
+      },
+      "missing": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "Client.txt not found - start the game once",
+        "overlay": "no Client.txt",
+        "overlay_alone": false,
+        "check_row": "log",
+        "check": "Not found yet.",
+        "next": "Start Path of Exile 2 once so it writes Client.txt. AshLight finds it by itself.",
+        "fault": true
+      },
+      "path_missing": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": null,
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": "log",
+        "check": "The Client.txt path in your settings is missing.",
+        "next": "Correct \"client_log\" in config\\local.json, or remove it so AshLight finds Client.txt by itself. Starting the game once may also create it.",
+        "fault": true
+      },
+      "stalled": {
+        "rank": 5,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": null,
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": "reading",
+        "check": "Not reading Client.txt.",
+        "next": "Run scripts\\run.ps1 to start AshLight's parts again.",
+        "fault": true
+      },
+      "link_down": {
+        "rank": 6,
+        "kit": "failed",
+        "glyph": "[x]",
+        "bar": "can't reach AshLight - restart it",
+        "overlay": "offline",
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "Start AshLight again from its Start Menu shortcut.",
+        "fault": false
+      },
+      "link_token": {
+        "rank": 7,
+        "kit": "failed",
+        "glyph": "[x]",
+        "bar": "open AshLight from the link it showed at start",
+        "overlay": null,
+        "overlay_alone": false,
+        "check_row": null,
+        "check": null,
+        "next": "Use the AshLight window, or open the link AshLight showed at start.",
+        "fault": false
+      }
+    }
+  };
+  /* STATUS_WORDS END */
+
+  var W = STATUS_WORDS.states;
+
   /* TEST-LIVE-EXIT: the HUD status word for an idle log (<= 15 chars). */
-  var IDLE_WORD = "log quiet 20m";
+  var IDLE_WORD = W.idle.overlay;
 
   var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "under", "campaign", "log",
                 "status", "trades",
@@ -116,7 +289,7 @@
       /* DS-HUD-EMPTY: before the first snapshot the HUD reads "AshLight"
          and the status word; no lone separator. */
       return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
-               campaign: "", log: "", status: status || "connecting",
+               campaign: "", log: "", status: status || W.link_wait.overlay,
                tradeFrom: "", tradeItem: "", tradeWhere: "", tradeMore: "", anchor: "top" };
     }
     var open = snap.trade_requests || [];
@@ -130,7 +303,7 @@
     var elapsed = timerSeconds(snap, nowS);
     if (tl && !tl.consented) {
       return { zone: "AshLight", timer: "", level: "", deaths: "", sep: "", away: "", under: "",
-               campaign: "", log: "not reading - see dashboard", status: status || "live",
+               campaign: "", log: W.off.overlay, status: status || "live",
                tradeFrom: card.from, tradeItem: card.item, tradeWhere: card.where,
                tradeMore: open.length > 1 ? "+" + (open.length - 1) + " more" : "",
                anchor: anchorOf(snap) };
@@ -158,7 +331,7 @@
          it fits after "Lv 100 | 99 deaths" in the 258 px plate (design
          review F1: "waiting for Client.txt" clipped). */
       log: idle ? IDLE_WORD
-        : ((tl && !tl.reading) ? (tl.path ? "waiting for log" : "no Client.txt") : ""),
+        : ((tl && !tl.reading) ? (tl.path ? W.waiting.overlay : W.missing.overlay) : ""),
       status: status || "live"
     };
   }
@@ -218,5 +391,6 @@
   return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
            timerSeconds: timerSeconds, overlayWanted: overlayWanted,
            shouldRender: shouldRender,
-           changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD };
+           changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD,
+           STATUS_WORDS: STATUS_WORDS };
 }));
