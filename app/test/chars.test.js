@@ -3,7 +3,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const ch = require("../../web/chars.js");
+const web = require("./_web.js");
+const ch = web.load("chars.js");
 
 const SNAP = {
   character: "Sable", "class": "Witch", level: 4, deaths: 2, level_ups: 3,

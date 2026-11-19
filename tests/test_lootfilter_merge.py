@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 import pytest
 
+import srcpaths
 from server.al import ninja, pricebook
 from server.al.theorycraft import lootfilter
 from server.al.theorycraft.model import Build, Item
@@ -267,9 +268,9 @@ def test_merge_endpoint(tmp_path):
 
 
 def test_dashboard_merge_is_a_picked_file_with_no_live_region():
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
-    app = (ROOT / "web" / "app.js").read_text(encoding="ascii")
-    js = (ROOT / "web" / "filtermerge.js").read_text(encoding="ascii")
+    html = srcpaths.index_html()
+    app = srcpaths.read("app.js")
+    js = srcpaths.read("filtermerge.js")
     assert '<input id="filter-merge-file" type="file"' in html
     assert '<script src="/web/filtermerge.js" defer></script>' in html
     i = html.index('id="filter-merge-file"')
