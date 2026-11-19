@@ -420,8 +420,10 @@ class RatesClient:
         """UTIL-FILTER-2 (decision 0032): cached prices for the loot filter's
         value tiers, in Divine Orbs: {"uniques": [{base, value}] (the
         cheapest well-listed unique of each base), "stackables": [{name,
-        value}] (currency rates plus the book's exchange kinds)}. None while
-        web data is off, without a league or without a Divine Orb rate.
+        value}] (currency rates plus the book's exchange kinds), "league":
+        the cached league the prices are for (TC-FILTER-ONE-CONTROL: the
+        filter header names it)}. None while web data is off, without a
+        league or without a Divine Orb rate.
         Reads the cache only, never a request."""
         enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
         league = self.doc.get("league")
@@ -475,4 +477,5 @@ class RatesClient:
                     continue  # a thin market's price is noise
                 uniques[base] = min(v, uniques.get(base, v))
         return {"uniques": [{"base": b, "value": v} for b, v in sorted(uniques.items())],
-                "stackables": [{"name": n, "value": v} for n, v in sorted(stack.items())]}
+                "stackables": [{"name": n, "value": v} for n, v in sorted(stack.items())],
+                "league": league}

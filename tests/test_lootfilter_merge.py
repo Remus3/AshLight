@@ -1,6 +1,7 @@
 """UTIL-FILTER-MERGE (decision 0033): AshLight's Show blocks prepended to a
 filter the player picks in the browser; the player's bytes stay identical."""
 
+import datetime
 import http.client
 import threading
 from pathlib import Path
@@ -10,9 +11,11 @@ import pytest
 
 from server.al.theorycraft import lootfilter
 from server.al.theorycraft.model import Build, Item
+from test_lootfilter_tiers import _prices
 
 ROOT = Path(__file__).resolve().parents[1]
 BOM = b"\xef\xbb\xbf"
+DAY = datetime.date(2026, 11, 18)
 
 BUILD = Build(raw_xml="", class_name="Ranger", ascendancy="Deadeye", gear={
     "Weapon 1": Item(1, "", "RARE", "Grim Bite", "Expert Hunting Bow"),
@@ -69,13 +72,43 @@ def test_non_ascii_utf8_kept_byte_identical():
 
 
 def test_merging_a_merged_file_replaces_the_old_section_only():
-    once = lootfilter.merge(OWN_LF, BUILD)
-    twice = lootfilter.merge(once, None)
+    once = lootfilter.merge(OWN_LF, BUILD, today=DAY)
+    twice = lootfilter.merge(once, None, today=DAY)
     assert twice.count(lootfilter.MERGE_BEGIN.encode("ascii")) == 1
     assert split(twice)[1] == OWN_LF
-    crlf = lootfilter.merge(BOM + OWN_CRLF, BUILD)
-    again = lootfilter.merge(crlf, BUILD)
+    crlf = lootfilter.merge(BOM + OWN_CRLF, BUILD, today=DAY)
+    again = lootfilter.merge(crlf, BUILD, today=DAY)
     assert again == crlf
+    # a later day replaces the stamp too; the player's bytes stay identical
+    later = lootfilter.merge(crlf, BUILD, today=datetime.date(2026, 12, 1))
+    assert b"# Made on 2026-12-01." in later and b"2026-11-18" not in later
+    assert split(later[len(BOM):])[1] == OWN_CRLF
+
+
+def test_section_header_carries_date_and_league(tmp_path):
+    # TC-FILTER-ONE-CONTROL (F-158): the day and the prices' league, injected day
+    p = _prices(tmp_path)
+    assert p["league"] == "Example League"  # filter_prices names its league
+    out = lootfilter.merge(BOM + OWN_CRLF, BUILD, prices=p, today=DAY)
+    section, rest = split(out[len(BOM):])
+    assert rest == OWN_CRLF
+    lines = section.decode("ascii").split("\r\n")
+    assert lines[0] == lootfilter.MERGE_BEGIN
+    assert lines[1] == "# Made on 2026-11-18 for the Example League league."
+    # no prices (web data off): the day alone
+    section, _ = split(lootfilter.merge(OWN_LF, BUILD, today=DAY))
+    assert section.decode("ascii").split("\n")[1] == "# Made on 2026-11-18."
+    # a league name can never leave its comment line
+    bad = {"uniques": [], "stackables": [], "league": 'Odd\nShow\n    SetFontSize 1 "x"'}
+    section, rest = split(lootfilter.merge(OWN_LF, None, prices=bad, today=DAY))
+    assert rest == OWN_LF
+    assert section.decode("ascii").split("\n")[1] == \
+        "# Made on 2026-11-18 for the Odd Show SetFontSize 1 x league."
+    assert all(not ln or ln.startswith("#") for ln in section.decode("ascii").split("\n"))
+    long = {"league": "L" * 300}
+    assert len(lootfilter.stamp(long, DAY)) < 120
+    # the core passes no day: today's date
+    assert lootfilter.stamp(None) == "# Made on %s." % datetime.date.today().isoformat()
 
 
 def test_no_build_section_is_comments_only():

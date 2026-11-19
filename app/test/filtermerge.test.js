@@ -76,6 +76,28 @@ test("a dead core says so", async () => {
   assert.equal(e.told.at(-1), m.OFFLINE);
 });
 
+test("one primary filter control: the file pick; the download is a link", () => {
+  /* TC-FILTER-ONE-CONTROL (F-158) */
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "ascii");
+  const start = html.indexOf('<details id="filter-more"');
+  assert.ok(start >= 0);
+  const fold = html.slice(start, html.indexOf("</details>", start));
+  const controls = fold.match(/<(button|input|select|textarea)\b[^>]*>/g) || [];
+  const primary = controls.filter((c) => !/class="link"/.test(c));
+  assert.deepEqual(primary, ['<input id="filter-merge-file" type="file" accept=".filter,text/plain">']);
+  const dl = controls.filter((c) => /id="filter-download"/.test(c));
+  assert.equal(dl.length, 1);
+  assert.match(dl[0], /type="button"/);
+  assert.match(dl[0], /class="link"/);
+  assert.doesNotMatch(fold, /class="secondary"/);
+  /* the download sits in a small line, the merge is said once */
+  assert.match(fold, /<p class="muted small">[^<]*<button id="filter-download"/);
+  assert.equal((fold.match(/Pick your filter file/g) || []).length, 1);
+  assert.match(fold, /dated blocks at the top/);
+});
+
 test("file name: only the core's safe name, else a fallback", () => {
   assert.equal(m.fileName('attachment; filename="a b-ashlight.filter"'), "a b-ashlight.filter");
   assert.equal(m.fileName('attachment; filename="../x"'), "filter-ashlight.filter");
