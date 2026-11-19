@@ -161,7 +161,7 @@ function createClient(opts) {
       show: false,
       title: "AshLight",
       icon: iconImage(),
-      backgroundColor: "#16181d",
+      backgroundColor: "#0f1216", // kit dark surface (TD-04)
       autoHideMenuBar: true,
       frame: true, // the standard Windows title bar: minimize, maximize, X
       webPreferences: {
