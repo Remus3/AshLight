@@ -320,9 +320,13 @@ def _main_order():
 
 def test_last_session_card_sits_right_under_the_tiles():
     """U17: the Last session card has no live region, so it is noticed by its
-    place: directly after the glance tiles, before every other card."""
+    place: in region C, the region right under the strip, before every
+    other card but the consent card it shares the setup group with
+    (PLAY-TD-09B-SKELETON; consent and Last session never show together
+    after the first run)."""
     order, _ = _main_order()
-    assert order.index("stats") + 1 == order.index("summarybox"), order
+    i = order.index("stats")
+    assert order[i + 1:order.index("summarybox")] == ["play-c", "consent"], order
 
 
 def test_last_session_card_has_a_steady_edge():
@@ -333,9 +337,13 @@ def test_last_session_card_has_a_steady_edge():
 
 def test_dashboard_card_order_glance_first():
     """U18: glance first, then the run in progress, then reference and
-    settings. DOM order is the visual and Tab order (no CSS order)."""
+    settings. DOM order is the visual and Tab order (no CSS order). Since
+    PLAY-TD-09B-SKELETON the cards sit in the Play regions (G, C, T, N, B,
+    I, U), so the consent card follows the strip in region C."""
     order, _ = _main_order()
-    want = ["consent", "stats", "summarybox", "trades", "evalbox", "actsbox", "mapsbox",
+    regions = [x for x in order if x.startswith("play-")]
+    assert regions == ["play-%s" % r for r in "gctnbiu"], regions
+    want = ["stats", "consent", "summarybox", "trades", "evalbox", "actsbox", "mapsbox",
             "deathsbox", "events", "buildbox", "pricesbox", "toolsbox"]
     seen = [x for x in order if x in want]
     assert seen == want, seen
