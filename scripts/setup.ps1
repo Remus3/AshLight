@@ -202,31 +202,15 @@ if ((Test-Path $modules) -and (Test-Path $stamp) -and (Test-Path $electronExe)) 
     $upToDate = ((Get-Content -Path $stamp -Raw).Trim() -eq $hash)
 }
 # DESKTOP-CLIENT (decision 0041): the per-user Start Menu and desktop
-# shortcuts. Idempotent: a shortcut is rewritten only when its target,
-# arguments, folder or icon differ.
-function Set-AlShortcut([string]$LinkPath, [string]$Target, [string]$Arguments,
-                        [string]$WorkDir, [string]$Icon) {
-    $shell = New-Object -ComObject WScript.Shell
-    $want = $Icon + ',0'
-    if (Test-Path -LiteralPath $LinkPath) {
-        $old = $shell.CreateShortcut($LinkPath)
-        if ($old.TargetPath -eq $Target -and $old.Arguments -eq $Arguments -and
-            $old.WorkingDirectory -eq $WorkDir -and $old.IconLocation -eq $want) {
-            return $false
-        }
-    }
-    $lnk = $shell.CreateShortcut($LinkPath)
-    $lnk.TargetPath = $Target
-    $lnk.Arguments = $Arguments
-    $lnk.WorkingDirectory = $WorkDir
-    $lnk.IconLocation = $want
-    $lnk.Description = 'AshLight: a companion app for Path of Exile 2'
-    $lnk.WindowStyle = 1
-    $lnk.Save()
-    return $true
-}
+# shortcuts. DEP-07: written and read back by scripts/al_shell.ps1 (the one
+# place for AshLight's shortcuts and uninstall entry). Idempotent: a
+# shortcut is rewritten only when its target, arguments, folder or icon
+# differ; one whose target lies outside this checkout (an installed copy's,
+# another checkout's) is left alone. AL_SHELL_ROOT redirects the writes to
+# a scratch folder.
+. (Join-Path $PSScriptRoot 'al_shell.ps1')
 
-function Install-AlShortcuts {
+function Invoke-AlShortcutStep {
     if ($NoShortcut) {
         Write-AlLog 'setup: shortcuts skipped (-NoShortcut)'
         return
@@ -239,12 +223,12 @@ function Install-AlShortcuts {
     if (-not (Test-Path $icon)) { throw 'setup: app\assets\icon.ico is missing' }
     $iconState = 'app\assets\icon.ico'
     $linkArgs = '"' + $app + '" --client'
-    $made = @()
-    foreach ($folder in @([Environment]::GetFolderPath('Programs'),
-                          [Environment]::GetFolderPath('Desktop'))) {
-        if (-not $folder) { continue }
-        $link = Join-Path $folder 'AshLight.lnk'
-        if (Set-AlShortcut $link $electronExe $linkArgs $app $icon) { $made += $link }
+    $results = @(Install-AlShortcuts -Target $electronExe -Arguments $linkArgs -WorkDir $app `
+        -Icon $icon -OwnerRoot $Repo)
+    $made = @($results | Where-Object { $_.Status -eq 'written' })
+    $other = @($results | Where-Object { $_.Status -eq 'elsewhere' })
+    if ($other.Count -gt 0) {
+        Write-AlLog ("setup: " + $other.Count + " AshLight shortcut(s) point outside this checkout (left alone)")
     }
     if ($made.Count -gt 0) {
         Write-AlLog ("setup: AshLight shortcut written (" + $made.Count + "; icon " + $iconState + ")")
@@ -255,7 +239,7 @@ function Install-AlShortcuts {
 
 if ($upToDate -and -not $Force) {
     Write-AlLog 'setup: app/node_modules up to date (no-op)'
-    Install-AlShortcuts
+    Invoke-AlShortcutStep
     exit 0
 }
 
@@ -289,5 +273,5 @@ try {
 if (Test-Path $lock) { $hash = (Get-FileHash -Path $lock -Algorithm SHA256).Hash }
 Set-Content -Path $stamp -Value $hash -Encoding ASCII
 Write-AlLog 'setup: app/node_modules installed'
-Install-AlShortcuts
+Invoke-AlShortcutStep
 exit 0
