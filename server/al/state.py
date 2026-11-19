@@ -73,6 +73,13 @@ MAX_OTHERS = 64
 # set as attributes and parks the others' sets by name.
 CHAR_FIELDS = ("char_class", "level", "level_ups", "deaths", "acts", "pace",
                "run_deaths", "_run_start")
+# RUN-ZONE-RESET (F-088): the per-zone fields. SessionState._enter_zone()
+# is the one place they are reset (tests/test_bus_state.py lists them), and
+# every reset moves the zone generation (_zone_gen) on, so a per-zone card
+# or timer of the zone before never publishes.
+ZONE_FIELDS = ("zone", "area_id", "area_level", "zone_entered_at", "in_hideout",
+               "in_town", "_area_fresh", "_zone_cards")
+ZONE_CARDS = 4  # zone cards kept per zone; the oldest drops
 
 
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
@@ -840,6 +847,10 @@ class SessionState:
         # while the last area generation line still waits for its scene
         self.in_town = False
         self._area_fresh = False
+        # RUN-ZONE-RESET: the zone generation and the cards scheduled for
+        # the zone of that generation (schedule_zone_card / zone_cards)
+        self._zone_gen = 0
+        self._zone_cards = collections.deque(maxlen=ZONE_CARDS)
         self.deaths = 0
         self.level_ups = 0
         self.afk = False
@@ -1162,6 +1173,90 @@ class SessionState:
                     parser_mod.is_town_area(self.area_id))
         return bool(scene_word), False
 
+    # -- RUN-ZONE-RESET (F-088): the one per-zone reset
+    def _enter_zone(self, now, gen=None, scene=None):
+        """Reset the per-zone fields (ZONE_FIELDS) for a zone entry. Caller
+        holds the lock.
+        - gen=(area_id, area_level): an area generation line, a new area
+          instance; its scene line follows and names it.
+        - scene=(name, hideout_word): a real scene or area-entered line;
+          the flags come from _place_now. A scene with no fresh generation
+          line before it is a zone entry of its own; one naming the zone
+          the player is in (a new area under the same scene name) sets the
+          flags only.
+        - neither: no zone (a game start; the player is at the login
+          screen).
+        Every entry moves the zone generation on and drops the zone cards,
+        so a generation line and its scene line are one entry. Returns True
+        when a field changed."""
+        if gen is None and scene is None:
+            self.zone = self.area_id = self.area_level = None
+            self.zone_entered_at = None
+            self.in_hideout = self.in_town = self._area_fresh = False
+            self._next_zone_gen()
+            return True
+        if gen is not None:
+            self.area_id, self.area_level = gen
+            self._area_fresh = True
+            self._next_zone_gen()
+        if scene is None:
+            return True
+        name, word = scene
+        place = self._place_now(word)
+        paired, self._area_fresh = self._area_fresh, False
+        if name == self.zone:
+            # its generation line, if any, moved the generation on
+            if place == (self.in_hideout, self.in_town):
+                return gen is not None
+            self.in_hideout, self.in_town = place
+            return True
+        if not paired:
+            self._next_zone_gen()
+        self.in_hideout, self.in_town = place
+        self.zone = name
+        self.zone_entered_at = now
+        self.maps.on_scene(self.zone, now, self.in_hideout)
+        return True
+
+    def _next_zone_gen(self):
+        """A new zone generation: the old zone's cards never publish.
+        Caller holds the lock."""
+        self._zone_gen += 1
+        self._zone_cards = collections.deque(maxlen=ZONE_CARDS)
+
+    @property
+    def zone_gen(self):
+        """The zone generation (RUN-ZONE-RESET): it moves on at every zone
+        entry. A per-zone timer or card takes it when it starts and
+        publishes only while it is unchanged."""
+        with self._lock:
+            return self._zone_gen
+
+    def schedule_zone_card(self, card, at=None, gen=None):
+        """RUN-ZONE-RESET: schedule a card for the zone the player is in;
+        zone_cards() shows it from `at` (default now) while the player stays
+        in that zone, and any zone entry drops it. `gen`: the zone_gen the
+        producer took when it started (a slow producer); a card of an older
+        zone is refused. Returns True when the card was kept."""
+        with self._lock:
+            if gen is not None and gen != self._zone_gen:
+                return False
+            at = self._clock() if at is None else at
+            if not _is_time(at) or not isinstance(card, dict):
+                return False
+            self._zone_cards.append({"card": dict(card), "at": float(at),
+                                     "gen": self._zone_gen})
+            return True
+
+    def zone_cards(self, now=None):
+        """RUN-ZONE-RESET: the scheduled cards of the current zone that are
+        due at `now` (default the state clock), oldest first. A card checks
+        the zone generation before it publishes."""
+        with self._lock:
+            now = self._clock() if now is None else now
+            return [dict(c["card"]) for c in self._zone_cards
+                    if c["gen"] == self._zone_gen and c["at"] <= now]
+
     def _hint(self, shown, now):
         """List a hint that just started in the event list. Caller holds
         the lock."""
@@ -1458,29 +1553,16 @@ class SessionState:
             # timer and are not listed; only a real zone change is.
             listed = False
             real = not ev.get("is_null") and not ev.get("is_transient")
-            hideout, town = (self._place_now(ev.get("is_hideout")) if real
-                             else (self.in_hideout, self.in_town))
             if real:
-                self._area_fresh = False
-            if real and ev.get("scene") != self.zone:
-                self.zone = ev.get("scene")
-                self.in_hideout, self.in_town = hideout, town
-                self.zone_entered_at = now
-                self.maps.on_scene(self.zone, now, self.in_hideout)
-                listed = True
-                changed = True
-            elif real and (hideout, town) != (self.in_hideout, self.in_town):
-                # a new area under the same scene name: flags only
-                self.in_hideout, self.in_town = hideout, town
-                changed = True
+                listed = ev.get("scene") != self.zone
+                if self._enter_zone(now, scene=(ev.get("scene"), ev.get("is_hideout"))):
+                    changed = True
             # ZONE-GUIDE: the zone this character entered (quest tracker)
-            if real and not hideout and ev.get("scene"):
+            if real and not self.in_hideout and ev.get("scene"):
                 if self.visits.visit(self.character, self.area_id, ev.get("scene")):
                     changed = True
         elif t == "area_generated":
-            self.area_id = ev.get("area_id")
-            self.area_level = ev.get("area_level")
-            self._area_fresh = True
+            self._enter_zone(now, gen=(ev.get("area_id"), ev.get("area_level")))
             self.acts.fold(self.area_id, now, self.level)
             if self.area_id == acts_mod.FIRST_AREA:
                 self._first_gen_at = now
@@ -1491,12 +1573,8 @@ class SessionState:
             changed = True
         elif t == "area_entered":
             if ev.get("name") != self.zone:
-                self.zone = ev.get("name")
-                self.in_hideout, self.in_town = self._place_now(
-                    parser_mod.is_hideout(self.zone or ""))
-                self._area_fresh = False
-                self.zone_entered_at = now
-                self.maps.on_scene(self.zone, now, self.in_hideout)
+                self._enter_zone(now, scene=(ev.get("name"), parser_mod.is_hideout(
+                    ev.get("name") or "")))
                 changed = True
         elif t == "log_opened":
             # TEST-LIVE-RESTART: a new game run. The player is at the
@@ -1512,11 +1590,9 @@ class SessionState:
                     or self.area_level is not None or self.in_hideout
                     or self.zone_entered_at is not None
                     or self.afk or self.dnd):
-                self.zone = self.area_id = self.area_level = None
-                self.zone_entered_at = None
-                self.in_hideout = self.afk = self.dnd = False
                 changed = True
-            self.in_town = self._area_fresh = False
+            self._enter_zone(now)  # no zone: the login screen
+            self.afk = self.dnd = False
         elif t == "level_up":
             # The first level-up names the character unless one was
             # configured; other players' level-ups are listed, not counted.
@@ -1742,6 +1818,11 @@ class SessionState:
                 self._area_fresh = True
                 self.in_hideout, self.in_town = self._place_now(self.in_hideout)
                 self._area_fresh = False
+            # RUN-ZONE-RESET: the scanned zone is a new zone entry, so no
+            # card of the zone before it publishes
+            if any(k in fields for k in ("zone", "area_id", "area_level",
+                                         "zone_entered_at", "in_hideout")):
+                self._next_zone_gen()
             # HUD-ACT-RESUME: rebuild the act splits from the run's area
             # generations (decision 0023); none keeps the current splits.
             rebuilt = acts_mod.ActSplits()
