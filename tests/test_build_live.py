@@ -131,7 +131,9 @@ def test_core_tick_follows_the_log_character(tmp_path):
         alert = core.state.snapshot()["build_alert"]
         assert alert["kind"] == "missing"
         assert alert["text"] == ("No build saved for Sable yet. Paste a PoB code on the "
-                                 "Build tab to check items for Sable.")
+                                 "Build tab, or copy the code in Path of Building and "
+                                 "press the item key.")
+        assert alert["short"] == "No build for Sable"
         core.builds.load_code(RANGER)
         snap = core.state.snapshot()
         assert snap["build"]["character"] == "Sable" and snap["build_alert"] is None
@@ -180,14 +182,31 @@ def test_alert_kinds_and_words():
     assert buildlive.alert(info(level=90), "Sable", "Ranger", 51) is None  # planned ahead
     lv = buildlive.alert(info(level=42), "Sable", "Ranger", 51)
     assert lv == {"kind": "level", "character": "Sable", "build_level": 42, "level": 51}
-    assert state_mod.build_alert_text(lv)["text"] == (
-        "Build is from level 42; you are level 51. Paste a fresh PoB code to keep "
-        "item checks right.")
+    # TC-VERDICT-CAVEAT (F-042): every sentence names the item-key build load
+    assert state_mod.build_alert_text(lv) == {
+        "kind": "level", "head": "Build is from level 42",
+        "short": "Build is from level 42",
+        "text": ("Build is from level 42; you are level 51. Paste a fresh PoB code on "
+                 "the Build tab, or copy the code in Path of Building and press the "
+                 "item key.")}
     cl = buildlive.alert(info(), "Sable", "Witch", 40)
     assert cl["kind"] == "class"
-    assert state_mod.build_alert_text(cl)["text"] == (
-        "Build is for a Ranger, but Sable is a Witch. Paste Sable's own PoB code so "
-        "item checks fit.")
+    assert state_mod.build_alert_text(cl) == {
+        "kind": "class", "head": "Build is for a Ranger", "short": "Build is for a Ranger",
+        "text": ("Build is for a Ranger, but Sable is a Witch. Paste Sable's own PoB code "
+                 "on the Build tab, or copy the code in Path of Building and press the "
+                 "item key.")}
+    inv = buildlive.alert(info(cls="Witch", asc="Infernalist"), "Sable", "Monk", 40)
+    assert state_mod.build_alert_text(inv)["text"].startswith(
+        "Build is for an Infernalist, but Sable is a Monk. ")
+    assert state_mod.build_alert_text({"kind": "missing", "character": "Sable"}) == {
+        "kind": "missing", "head": "No build saved for Sable yet",
+        "short": "No build for Sable",
+        "text": ("No build saved for Sable yet. Paste a PoB code on the Build tab, or "
+                 "copy the code in Path of Building and press the item key.")}
+    for words in (state_mod.build_alert_text(a) for a in (lv, cl, inv)):
+        assert words["text"].endswith(
+            "or copy the code in Path of Building and press the item key.")
     assert buildlive.alert(info(loaded=False), None, None, None) is None
     assert buildlive.alert(info(character="Quill"), "Sable", "Witch", 60) is None
     assert state_mod.build_alert_text(None) is None
@@ -199,6 +218,37 @@ def test_snapshot_publishes_the_alert():
     st.apply(lvl("Sable", "Ranger", 51))
     a = st.snapshot()["build_alert"]
     assert a["kind"] == "level" and a["head"] == "Build is from level 42"
+
+
+def test_snapshot_card_carries_alert_head():
+    """TC-VERDICT-CAVEAT (F-043): a fresh item check under a build alert
+    has the short head in card.line3 and the sentence in eval.text.notes;
+    a fixed build clears both by itself, with no click."""
+    now = [1000.0]
+    st = state_mod.SessionState(clock=lambda: now[0])
+    st.set_build_info(info(level=42, character="Sable"))
+    st.apply(lvl("Sable", "Ranger", 51))
+    ev = {"ok": True, "error": None, "verdict": "upgrade", "slot": "Ring 1",
+          "score_delta": 12, "item": {"name": "Storm Loop"},
+          "comparisons": [{"slot": "Ring 1", "verdict": "upgrade", "score_delta": 12,
+                           "empty": False, "equipped": {"name": "Weak Loop"},
+                           "stats": [{"key": "+# to maximum Life", "delta": 12,
+                                      "score_delta": 12, "weighted": True}]}]}
+    st.set_eval(ev)
+    snap = st.snapshot()
+    sentence = snap["build_alert"]["text"]
+    assert snap["card"]["kind"] == "eval"
+    assert (snap["card"]["head"], snap["card"]["line2"], snap["card"]["line3"]) == (
+        "Upgrade +12 vs Ring 1", "Storm Loop", "Build is from level 42")
+    assert snap["eval"]["text"]["line"] == "Build is from level 42"
+    assert snap["eval"]["text"]["notes"] == [sentence]
+    # a fresh build for this level clears the alert, the head and the note
+    st.set_build_info(info(level=51, character="Sable"))
+    snap = st.snapshot()
+    assert snap["build_alert"] is None
+    assert snap["card"]["line3"] == "+12 to maximum Life"
+    assert snap["eval"]["text"]["line"] == "+12 to maximum Life"
+    assert snap["eval"]["text"]["notes"] == []
 
 
 # -- upgrade notices

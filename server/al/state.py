@@ -152,9 +152,11 @@ def trade_card_text(row):
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
 EVAL_ERROR_TEXT = {
     # error: (overlay head, overlay line, dashboard sentence)
+    # TC-VERDICT-CAVEAT (F-042): the sentence names the item-key build load
     "no build loaded": ("No build loaded", "Paste a build on the dashboard",
                         "No build loaded yet. Paste a Path of Building code under Build, "
-                        "then press the hotkey again."),
+                        "or copy the code in Path of Building and press the item key, "
+                        "then check the item again."),
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),
@@ -431,29 +433,52 @@ def _waystone_risk_text(ws):
 # BUILD-LIVE (decision 0045): the stale-build alert and the upgrade
 # notices for items checked earlier. Exact-output tests in
 # tests/test_build_live.py.
+# TC-VERDICT-CAVEAT (F-042, F-043): every alert sentence names both routes
+# (the Build tab paste and the item-key build load), and `short` is the
+# overlay card's third line while the alert lasts (CARD_LINE at most).
+ALERT_ROUTES = ("on the Build tab, or copy the code in Path of Building and press "
+                "the item key.")
+
+
+def _a_class(value):
+    """A class name with its article (a Ranger, an Invoker); a missing one
+    reads "another class"."""
+    word = _text(value, "")
+    if not word:
+        return "another class"
+    return ("an " if word[:1].lower() in "aeiou" else "a ") + word
+
+
+def _fit(text, fallback):
+    return text if len(text) <= CARD_LINE else fallback
 
 
 def build_alert_text(alert):
-    """The words of a buildlive.alert() finding, or None."""
+    """The words of a buildlive.alert() finding, or None: `head` (the alert
+    heading), `short` (the overlay card's line 3, at most CARD_LINE) and
+    `text` (the sentence, printed in the Your build card and as an item
+    check note)."""
     a = _dict(alert)
     kind = a.get("kind")
     who = _text(a.get("character"), "this character")
     if kind == "missing":
         return {"kind": kind, "head": f"No build saved for {who} yet",
-                "text": (f"No build saved for {who} yet. Paste a PoB code on the "
-                         f"Build tab to check items for {who}.")}
+                "short": _fit(f"No build for {who}", "No build for this character"),
+                "text": f"No build saved for {who} yet. Paste a PoB code " + ALERT_ROUTES}
     if kind == "class":
-        build_class = _text(a.get("build_class"), "another class")
-        log_class = _text(a.get("log_class"), "another class")
-        return {"kind": kind, "head": f"Build is for a {build_class}",
-                "text": (f"Build is for a {build_class}, but {who} is a {log_class}. "
-                         f"Paste {who}'s own PoB code so item checks fit.")}
+        build_class = _a_class(a.get("build_class"))
+        log_class = _a_class(a.get("log_class"))
+        return {"kind": kind, "head": f"Build is for {build_class}",
+                "short": _fit(f"Build is for {build_class}", "Build is for another class"),
+                "text": (f"Build is for {build_class}, but {who} is {log_class}. "
+                         f"Paste {who}'s own PoB code " + ALERT_ROUTES)}
     if kind == "level":
-        return {"kind": kind,
-                "head": f"Build is from level {_num_text(a.get('build_level'))}",
-                "text": (f"Build is from level {_num_text(a.get('build_level'))}; "
-                         f"you are level {_num_text(a.get('level'))}. Paste a fresh "
-                         "PoB code to keep item checks right.")}
+        built = _num_text(a.get("build_level"))
+        return {"kind": kind, "head": f"Build is from level {built}",
+                "short": _fit(f"Build is from level {built}", "Build is from a lower level"),
+                "text": (f"Build is from level {built}; you are level "
+                         f"{_num_text(a.get('level'))}. Paste a fresh PoB code "
+                         + ALERT_ROUTES)}
     return None
 
 
@@ -498,7 +523,7 @@ def upgrades_text(view):
     return f"{count} items you checked are upgrades now."
 
 
-def eval_card_text(card):
+def eval_card_text(card, alert=None):
     """The words for one item check (TC-EVAL-UI): `head`, `item` and `line`
     for the 3-line overlay card, `sentence` for the dashboard, and per
     compared slot a sentence and its stat rows. Missing values read
@@ -508,7 +533,15 @@ def eval_card_text(card):
     Sidegrade, Downgrade, Not checked, Risky, No risky mods), `tone` the
     mark's tone (the overlay card's verdict), `notes` the card parts'
     extra lines (at most 4) and `answers` True when a part answers without
-    a build; the parts in theorycraft/cardparts add their words last."""
+    a build; the parts in theorycraft/cardparts add their words last.
+    TC-VERDICT-CAVEAT (F-043): `alert` is the snapshot's build alert (a
+    buildlive.alert() finding, or None). While one is set, a compared
+    item's `line` (overlay line 3) is the alert's short head, so the
+    caveat travels with the verdict, and its sentence is the first note
+    on the dashboard. An unidentified item keeps its "identify it first"
+    line (the missing input it names comes first); error and waystone
+    cards are left as they are (their lines already name what is
+    missing, or do not compare gear)."""
     card = _dict(card)
     out = _eval_lines(card)
     ws = _dict(card.get("waystone"))
@@ -528,6 +561,11 @@ def eval_card_text(card):
         word = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
     out.update(notes=[], word=word, tone=tone, answers=False)
     cardparts.words(card, out)
+    caveat = build_alert_text(alert) if card.get("ok") and not ws else None
+    if caveat:
+        if not card.get("unidentified"):
+            out["line"] = caveat["short"]
+        out["notes"] = [caveat["text"]] + out["notes"][:cardparts.NOTES_MAX - 1]
     return out
 
 
@@ -834,14 +872,16 @@ def price_until(price):
     return last + float(min(wait, 600)) + PRICE_CARD_S
 
 
-def overlay_card(ev, price, now):
+def overlay_card(ev, price, now, alert=None):
     """The one overlay card (design 0001 section 10, decision 0016 fork 2):
     {kind, head, line2, line3, verdict, expires_at} or None.
     - eval and price both fresh and from one press: a merged card (eval
       head, price line, eval top stat); a price error or "off" leaves the
       eval card unchanged; a "no build loaded" eval gives the price card;
     - from different presses: the newest one;
-    - only one fresh: that one."""
+    - only one fresh: that one.
+    `alert` (TC-VERDICT-CAVEAT): the snapshot's build alert, passed to
+    eval_card_text so a compared item's line 3 carries its short head."""
     ev_ok = _fresh(ev, EVAL_CARD_S, now)
     pr_ok = (isinstance(price, dict) and _is_time(price.get("at"))
              and now < price_until(price))
@@ -857,7 +897,7 @@ def overlay_card(ev, price, now):
 
     def eval_text():
         if not words:
-            words.append(eval_card_text(ev))
+            words.append(eval_card_text(ev, alert))
         return words[0]
 
     def eval_part():
@@ -1957,6 +1997,9 @@ class SessionState:
         with self._lock:
             now = self._clock()
             self._expire_trades(now)
+            # BUILD-LIVE (decision 0045): the stale-build alert, once; the
+            # item check words carry its caveat (TC-VERDICT-CAVEAT, F-043)
+            alert = self._build_alert()
             snap = {
                 "version": self.version,
                 "now": now,
@@ -1990,17 +2033,17 @@ class SessionState:
                 # "game may be closed" state as one boolean; the overlay
                 # hides while it is true
                 "game_idle": bool(self.tailer.get("consented") and self.tailer.get("idle")),
-                "eval": (dict(self.eval, text=eval_card_text(self.eval),
+                "eval": (dict(self.eval, text=eval_card_text(self.eval, alert),
                               expires_at=self.eval["at"] + EVAL_CARD_S)
                          if self.eval else None),
                 "price": (dict(self.price, text=price_card_text(self.price),
                                expires_at=price_until(self.price))
                           if self.price else None),
                 # The one overlay card chosen at this moment (decision 0016).
-                "card": overlay_card(self.eval, self.price, now),
+                "card": overlay_card(self.eval, self.price, now, alert),
                 "build": dict(self.build_info) if self.build_info else None,
                 # BUILD-LIVE (decision 0045): stale build, upgrades now
-                "build_alert": self._build_alert(),
+                "build_alert": alert,
                 "upgrades": self._upgrades_view(),
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
