@@ -6,7 +6,6 @@ Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings
 
 WAVE POINTER: wave 6 done, next wave 7
 DEFERRED: AUTO-21 (wave 6): HALT kept, six-check run 2026-11-19: checks 1, 3, 4, 5 green, check 2 red (4 untagged rows no plan leaves to the loop: CORE-REGOPEN-ROOT, TC-CARD-PARTS-DOC, TC-EVAL-NOTES-STYLE, TC-OVL-CARD-TONE, filed in dcbe625), check 6 dry run would dispatch 3 of them; adjudicator: the wave-7 integrator appends " BLOCKED: session wave 7." to those 4 ROADMAP rows first, re-runs `python tools/roadmap.py rows --open --untagged` (only the 16 owner:loop packages and UTIL-10-DATA/NOTES/LOG may remain), then AUTO-21 runs again as the first act of wave 7; branch none (main-checkout act)
-DEFERRED: GP-09 (wave 5): the wave-5 orchestrator brief said "Do not push", so the act (create the private repository, first push, CI green; ruling R1) was not run; branch none (main-checkout act)
 Wave 6 escape count: 2 of 4 merge batches needed a second suite (batch 2:
 PLAY-TD-14-NOTICE red on tests/test_glance_rules.py, its floor test in
 app/test/notice.test.js spelled the banned words; batch 3: SEC-SSE-TAP red
@@ -37,7 +36,7 @@ skipped); npm 286, 287, 303, 313. Adjudicator rulings: RUN-SEAMS files
 extended with tests/test_tc_wire.py, PLAY-TD-09B-SKELETON files extended
 with tests/test_design_tokens.py (both test-only, wave 4 rule b1af8e7).
 Design fix rounds: PLAY-TD-07A (PV-1, PV-3, PV-4), PLAY-TD-09B (TD9B-2),
-TC-CAMPAIGN-KEEP (TCK-3, TCK-4). GP-09 not run (DEFERRED above).
+TC-CAMPAIGN-KEEP (TCK-3, TCK-4). GP-09 done later in session 8 (decision 0080).
 Wave 4 escape count: 1 of 3 merge batches of this run (2 to 4) needed a
 second suite for an escape (batch 2: PLAY-TD-01B-FIT-HARNESS red on
 tests/test_test_layout.py, reverted, test-only fix round, merged in batch
