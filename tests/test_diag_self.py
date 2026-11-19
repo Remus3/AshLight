@@ -48,8 +48,12 @@ def test_log_found():
 
 def test_consent():
     assert status({}, "consent") == "pass"
+    # F-131 (research 0042 F23): a choice not made yet is a note, not a fix
     r = row({"consented": False}, "consent")
-    assert r["status"] == "fail" and "Allow reading Client.txt" in r["fix"]
+    assert r["status"] == "note" and r["fix"] is None
+    assert r["detail"] == "Not given yet. Allow it on the Play tab."
+    v = diag.view(dict(GREEN, consented=False, reading=False), "1", now=NOW)
+    assert v["failed"] == 0 and v["summary"] == "All checks pass."
 
 
 def test_reading():
@@ -63,6 +67,8 @@ def test_last_line():
     assert status({"last_line_at": None}, "last_line") == "unknown"
     r = row({"last_line_at": NOW - 3600}, "last_line")
     assert r["status"] == "unknown" and "may be closed" in r["detail"]
+    assert r["detail"] == "60 min ago. The game may be closed, or you are AFK."
+    assert r["fix"] is None
 
 
 def test_character():

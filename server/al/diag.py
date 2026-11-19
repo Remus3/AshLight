@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 from . import langguard
+from . import statuswords as words
 from .num import finite
 
 # NOTE: worth knowing, nothing to fix (a non-English game client, ruling K)
@@ -33,12 +34,11 @@ LAST_LINE_QUIET_S = 1200.0  # summary.IDLE_S: the game may be closed
 BOOK_STALE_S = 2 * 3600     # ninja.STALE_AFTER_S
 SNAPSHOT_OLD_S = 60 * 86400  # older data may miss a new league's zones
 
-FIX_START_GAME = ("Start Path of Exile 2 once so it writes Client.txt. AshLight "
-                  "finds it by itself.")
-FIX_LOG_PATH = (r'Correct "client_log" in config\local.json, or remove it so AshLight '
-                "finds Client.txt by itself. Starting the game once may also create it.")
-FIX_CONSENT ='Press "Allow reading Client.txt" at the top of this page.'
-FIX_RUN = r"Run scripts\run.ps1 to start AshLight's parts again."
+# F-131: the reading-state wording and its next step come from the one
+# status table (server/al/data/status_words.json); "fix" only for faults.
+FIX_START_GAME = words.next_step("missing")
+FIX_LOG_PATH = words.next_step("path_missing")
+FIX_RUN = words.next_step("stalled")
 FIX_CONTACT = r'Add your contact as "contact" in config\local.json.'
 FIX_NET = ("Check this computer's internet connection. AshLight tries again "
            "by itself.")
@@ -67,30 +67,40 @@ def _check(cid, label, status, detail, fix=None):
             "fix": fix if status == FAIL else None}
 
 
+def _state_check(cid, label, sid, status=None, prefix=""):
+    """The Checks row that names table state `sid` (F-131): its detail is
+    the table's check text; only a fault state is a fix row, and its fix is
+    the table's next step."""
+    row = words.state(sid)
+    if status is None:
+        status = FAIL if row["fault"] else NOTE
+    return _check(cid, label, status, prefix + row["check"], row["next"])
+
+
 def check_log(f):
     if f.get("log_found"):
         return _check("log", "Client.txt", PASS, "Found.")
     if f.get("log_configured"):
         # SEC-NO-DISCOVERY: a configured path is kept, never replaced by a
         # Steam library scan; the player decides.
-        return _check("log", "Client.txt", FAIL,
-                      "The Client.txt path in your settings is missing.", FIX_LOG_PATH)
-    return _check("log", "Client.txt", FAIL, "Not found yet.", FIX_START_GAME)
+        return _state_check("log", "Client.txt", "path_missing")
+    return _state_check("log", "Client.txt", "missing")
 
 
 def check_consent(f):
     if f.get("consented"):
         return _check("consent", "Permission", PASS, "You allowed reading Client.txt.")
-    return _check("consent", "Permission", FAIL, "Not given yet.", FIX_CONSENT)
+    # F-131 (research 0042 F23): a choice not made yet is a note, not a fault.
+    return _state_check("consent", "Permission", "off")
 
 
 def check_reading(f):
     if f.get("reading"):
-        return _check("reading", "Reading", PASS, "Reading Client.txt.")
+        return _state_check("reading", "Reading", "reading", status=PASS)
     if not (f.get("consented") and f.get("log_found")):
         return _check("reading", "Reading", UNKNOWN,
                       "Starts once the two checks above pass.")
-    return _check("reading", "Reading", FAIL, "Not reading Client.txt.", FIX_RUN)
+    return _state_check("reading", "Reading", "stalled")
 
 
 def check_last_line(f, now):
@@ -99,8 +109,10 @@ def check_last_line(f, now):
         return _check("last_line", "Last log line", UNKNOWN, "None yet.")
     age = now - at
     if age >= LAST_LINE_QUIET_S or f.get("idle"):
-        return _check("last_line", "Last log line", UNKNOWN,
-                      f"{_ago(age).capitalize()}. The game may be closed.")
+        # decision 0029: a quiet log is not a fault; idle comes only from
+        # Client.txt staleness
+        return _state_check("last_line", "Last log line", "idle", status=UNKNOWN,
+                            prefix=f"{_ago(age).capitalize()}. ")
     return _check("last_line", "Last log line", PASS, _ago(age).capitalize() + ".")
 
 

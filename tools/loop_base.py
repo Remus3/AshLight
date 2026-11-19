@@ -32,6 +32,13 @@ DELIVERY_REL = CONTROL_REL / "delivery.jsonl"  # plan 093: one line per destinat
 # main serialize on MERGE_LOCK_REL; one push worker at a time (PUSH_WORKER_REL)
 MERGE_LOCK_REL = CONTROL_REL / "merge.lock"
 PUSH_WORKER_REL = CONTROL_REL / "push_worker.json"
+# LOOP-WAVE-HOLD (F-033, AUTO-06): {wave, prefixes, time} written by the
+# session at wave start, removed at wave end (docs/plan/08); a loop merge
+# whose diff touches a held prefix parks as wave-hold; a file older than
+# WAVE_HOLD_MAX_S is reported (one checklist row) and not obeyed
+WAVE_OWNED_REL = CONTROL_REL / "wave_owned.json"
+WAVE_HOLD_MAX_S = 48 * 3600
+WAVE_HOLD_NOTICE_ID = "wave-hold-file"
 PUSH_LAST_REL = CONTROL_REL / "push_last.json"
 REVIEW_START_S = 300  # a launched worker that wrote no pid by then never started
 TICK_TARGET_S = 60
@@ -89,10 +96,16 @@ DONE_STATES = ("merged", "no-change", "superseded")
 # until that worktree is clean and unheld, then retries (recover_lane_dirty);
 # gave-up: MAX_ATTEMPTS refused / lost dispatches, error kept; failed: red
 # gates or a refused commit, WIP kept unmerged, listed until a session rules.
+# LOOP-WAVE-HOLD (F-033): wave-hold = a committed item whose diff touches a
+# folder a session's wave holds (WAVE_OWNED_REL); it waits on the session, so
+# its checklist row carries no estimate. wave-hold-stale is the one checklist
+# row of a hold file older than WAVE_HOLD_MAX_S (WAVE_HOLD_NOTICE_ID).
 ATTENTION_STATES = ("merge-conflict", "merge-refused", "failed-dirty", "lane-dirty",
-                    "gave-up", "failed")
-# an item in these states holds its unmerged work in rec["worktree"]
-HOLD_STATES = ("ran", "committed")
+                    "gave-up", "failed", "wave-hold", "wave-hold-stale")
+# an item in these states holds its unmerged work in rec["worktree"]; a
+# wave-hold record is relaunched by Tick.finished every tick and merges once
+# the hold file is gone
+HOLD_STATES = ("ran", "committed", "wave-hold")
 IN_FLIGHT = ("dispatched",) + HOLD_STATES
 # plan 058: a conflicting lane commit is kept under this ref in the main
 # checkout (a re-claimed lane worktree can never orphan it) until it merges
@@ -311,6 +324,14 @@ class Items:
         rec["updated"] = iso(time.time())
         atomic_write(self.dir / f"{rec['id']}.json", json.dumps(rec, indent=1, sort_keys=True))
         return rec
+
+    def drop(self, iid):
+        """Remove one record file; True when it existed (LOOP-WAVE-HOLD notice)."""
+        try:
+            (self.dir / f"{iid}.json").unlink()
+        except FileNotFoundError:
+            return False
+        return True
 
     def all(self):
         out = {}

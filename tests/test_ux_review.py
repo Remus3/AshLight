@@ -195,10 +195,29 @@ def _sizes(css):
     return re.findall(r"font(?:-size)?\s*:[^;]*?([\d.]+)(rem|px)", css)
 
 
+def _al_font_tokens():
+    """--al-fs-* token values (rem) from the token block of web/app.css."""
+    root = re.search(r":root\s*\{(.*?)\}", _css(APP_CSS), re.S).group(1)
+    return {n: float(v) for n, v in
+            re.findall(r"--(al-fs-[\w-]+)\s*:\s*([\d.]+)rem\s*;", root)}
+
+
 def test_dashboard_type_floor_13px():
-    for value, unit in _sizes(_css(APP_CSS)):
-        px = float(value) * (16 if unit == "rem" else 1)
-        assert px >= 13, f"{value}{unit}"
+    """Every dashboard stylesheet (web/*.css, so a later region sheet is
+    covered with no test edit): no literal font size and no --al-fs-*
+    token used as a font size under 13 px at root 16 px."""
+    tokens = _al_font_tokens()
+    assert len(tokens) == 6, tokens
+    sheets = sorted((ROOT / "web").glob("*.css"))
+    assert APP_CSS in sheets
+    for sheet in sheets:
+        css = re.sub(r"/\*.*?\*/", "", _css(sheet), flags=re.S)
+        for value, unit in _sizes(css):
+            px = float(value) * (16 if unit == "rem" else 1)
+            assert px >= 13, f"{sheet.name}: {value}{unit}"
+        for name in re.findall(r"font(?:-size)?\s*:[^;]*?var\(--(al-fs-[\w-]+)\)", css):
+            assert name in tokens, f"{sheet.name}: unknown token --{name}"
+            assert tokens[name] * 16 >= 13, f"{sheet.name}: --{name}"
 
 
 def test_overlay_type_floor_12px_after_zoom():

@@ -31,7 +31,9 @@ class ReviewMixin:
 
     def process(self, rec):
         wt = Path(rec["worktree"])
-        if rec["state"] == "committed":
+        if rec["state"] in ("committed", "wave-hold"):
+            # LOOP-WAVE-HOLD: a wave-held record only merges (merge re-checks
+            # the hold and parks it again while the folder is still held)
             return self.merge(rec)
         if not wt.is_dir() or not self.dirty(wt):
             if rec.get("rc") == 0 and self.blocked_marker(rec, wt):

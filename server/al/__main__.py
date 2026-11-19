@@ -24,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import DISCLAIMER, NAME, VERSION, demo, hotreload, paths, ports
+from . import DISCLAIMER, NAME, VERSION, acl, demo, hotreload, paths, ports
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -153,6 +153,35 @@ def write_heartbeat(path, pid, port, now=None, created=None):
     os.replace(tmp, path)
 
 
+def start_token(runtime, token_file, log=None):
+    """SEC-ACL-APPLY (decision 0051): make the runtime dir private before
+    the token is written, then pick this start's token. HOT-RELOAD: a core
+    that exited for a code reload lets this start keep its token, so the
+    open dashboard and overlay reconnect on their own; a kept token is
+    reused only while the runtime dir is private. Its privacy is read
+    BEFORE the repair (a token that sat in a dir anyone else could read is
+    not reused) and after it; unknown (None, e.g. off Windows) keeps the
+    old behaviour."""
+    runtime = Path(runtime)
+    was_private = acl.is_private(runtime) if runtime.is_dir() else None
+    try:
+        runtime.mkdir(parents=True, exist_ok=True)
+        now_private = acl.make_private(runtime)
+    except OSError:
+        now_private = None
+    if now_private is False and log is not None:
+        log.warning("runtime dir could not be made private (decision 0051)")
+    if was_private is False or now_private is False:
+        if log is not None:
+            log.info("kept token not reused: the runtime dir was not private")
+        try:
+            (runtime / hotreload.TOKEN_REUSE_FILE).unlink()
+        except OSError:
+            pass
+        return new_token()
+    return hotreload.take_token_reuse(runtime, token_file) or new_token()
+
+
 def _say(text):
     """One line on stderr when there is one (pythonw has none)."""
     if sys.stderr is not None:
@@ -194,10 +223,7 @@ def main(argv=None):
         lines = Path(args.replay).read_text(encoding="utf-8", errors="replace").splitlines()
         log.info("replayed %d events from %s", core.replay(lines), Path(args.replay).name)
 
-    # HOT-RELOAD: a core that exited for a code reload lets this start keep
-    # its token, so the open dashboard and overlay reconnect on their own
-    token = (hotreload.take_token_reuse(paths.runtime_dir(), paths.token_file())
-             or new_token())
+    token = start_token(paths.runtime_dir(), paths.token_file(), log)
     root = paths.repo_root()
     try:
         server = serve(core, token, port=args.port, web_root=root / "web",
