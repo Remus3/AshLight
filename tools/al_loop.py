@@ -967,8 +967,8 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
         self.reap_lost()
         if not self.dry:  # plan 138: cap the control ledgers once a local day
             res = self.d.rotate(self.root, self.d.clock())
-            if res is not None:
-                self.step(ledger_rotate.summary(res))
+            for line in ledger_rotate.lines(res) if res is not None else ():
+                self.step(line)  # AUTO-23: summary, then any STALE line
             loop_steps.lines("work", self)  # AUTO-01: TC-DRIFT and later work steps
         self.stalls()
         if not self.blocked():

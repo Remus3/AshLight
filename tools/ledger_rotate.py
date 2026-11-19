@@ -10,13 +10,20 @@ Moves only, never deletes (FLEET item 9). Rules:
                          24 h governor window and MAIN's weekly split hold)
   timings.jsonl          keep the newest 200 ok rows per kind (eta.py reads
                          the last 5) plus every row younger than 30 days
-  claims / gitlock / identity.jsonl   rows older than 30 days
+  claims / gitlock / identity / subagent_first.jsonl   rows older than 30
+                         days (AUTO-23: the kit's subagent-first hook ledger)
   progress/*.json        status done / failed, updated over 7 days ago
                          (never loop.json, never a running or blocked file)
+AUTO-23, sidecar side (only the real tree's sidecar, or one passed in):
+  Logs/<one-off suite log>   a top-level suite / pytest / npm-test log or
+                         text file untouched for an hour moves to Logs/dev/
+  Cache/ggg_docs/state.json  read only: one STALE line when the docs
+                         watch's last good page read is over 3 days old
 Torn or timestamp-less lines always stay. A ledger that changed size while
 it was being rewritten is skipped and retried next run, so a kit append is
 never lost (the usage_ledger.backfill_kind guard). Idempotent. The tick runs
-rotate_daily once per local day after reap_lost. Stdlib only.
+rotate_daily once per local day after reap_lost and steps lines(res).
+Stdlib only.
 """
 
 import argparse
@@ -28,6 +35,8 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 CONTROL_REL = Path("ops/loop/control")
 ARCHIVE = "archive"
 MARKER = "ledger_rotate.json"
@@ -37,10 +46,16 @@ USAGE_MIN_KEEP_S = 8 * DAY_S
 TIMINGS_KEEP_DAYS = 30
 TIMINGS_KEEP_OK = 200
 KIT_LOG_KEEP_DAYS = 30
-KIT_LOGS = ("claims", "gitlock", "identity")
+KIT_LOGS = ("claims", "gitlock", "identity", "subagent_first")
 PROGRESS_KEEP_DAYS = 7
 PROGRESS_FINISHED = ("done", "failed")
 PROGRESS_NEVER = ("loop.json",)
+SUITE_LOG_WORDS = ("suite", "pytest", "npm-test")
+SUITE_LOG_SUFFIXES = (".log", ".txt", ".out")
+SUITE_LOG_IDLE_S = 3600
+SUITE_LOG_DIR = "dev"
+DOCS_STATE_REL = Path("Cache") / "ggg_docs" / "state.json"
+DOCS_STALE_DAYS = 3
 
 
 def _epoch(value):
@@ -200,8 +215,81 @@ def rotate_progress(progress_dir, now, dry_run=False):
     return n
 
 
-def rotate(root, now=None, dry_run=False):
-    """One pass over every ledger: {name: moved, "progress": n, "skipped": [...]}."""
+def sidecar_for(root):
+    """The AL sidecar of the real tree (paths.sidecar_root), None for any other
+    root, so a fixture root never moves or reads the live sidecar."""
+    try:
+        if Path(root).resolve() != ROOT:
+            return None
+    except OSError:
+        return None
+    from server.al import paths
+    return paths.sidecar_root()
+
+
+def is_suite_log(p):
+    name = p.name.lower()
+    return (p.suffix.lower() in SUITE_LOG_SUFFIXES
+            and any(w in name for w in SUITE_LOG_WORDS))
+
+
+def move_suite_logs(logs_dir, now, dry_run=False):
+    """One-off suite logs at the top of Logs/ moved to Logs/dev/ (never
+    overwritten); a file written in the last hour may be live and stays."""
+    logs_dir, n = Path(logs_dir), 0
+    try:
+        files = sorted(p for p in logs_dir.iterdir() if p.is_file() and is_suite_log(p))
+    except OSError:
+        return 0
+    for p in files:
+        try:
+            if now - p.stat().st_mtime <= SUITE_LOG_IDLE_S:
+                continue
+            if not dry_run:
+                dev = logs_dir / SUITE_LOG_DIR
+                dev.mkdir(parents=True, exist_ok=True)
+                os.replace(p, _free_name(dev, p.name))
+        except OSError:
+            continue
+        n += 1
+    return n
+
+
+def docs_watch_stale(state_path, now):
+    """One STALE line when the GGG docs watch's newest good page read (its
+    state.json pages[*].read) is over DOCS_STALE_DAYS old, else None. No
+    state file means the watch never ran here: nothing to flag. A state with
+    no good read at all is stale once the file itself is that old."""
+    state_path = Path(state_path)
+    try:
+        doc = json.loads(state_path.read_text(encoding="utf-8"))
+        mtime = state_path.stat().st_mtime
+    except (OSError, ValueError, UnicodeDecodeError):
+        return None
+    if not isinstance(doc, dict):
+        return None
+    pages = doc.get("pages") if isinstance(doc.get("pages"), dict) else {}
+    reads = [_epoch(v.get("read")) for v in pages.values() if isinstance(v, dict)]
+    reads = [e for e in reads if e is not None]
+    limit = DOCS_STALE_DAYS * DAY_S
+    status = doc.get("status") if isinstance(doc.get("status"), str) else "unknown"
+    if not reads:
+        if now - mtime <= limit:
+            return None
+        return (f"STALE docs watch: never a good read in {int((now - mtime) // DAY_S)} "
+                f"day(s) (status {status})")
+    last = max(reads)
+    if now - last <= limit:
+        return None
+    when = _dt.datetime.fromtimestamp(last).strftime("%Y-%m-%d %H:%M")
+    return (f"STALE docs watch: last good read {int((now - last) // DAY_S)} day(s) ago "
+            f"({when}, status {status})")
+
+
+def rotate(root, now=None, dry_run=False, sidecar=None):
+    """One pass over every ledger: {name: moved, "progress": n,
+    "suite_logs": n, "stale": [lines], "skipped": [...]}. The sidecar steps
+    (suite logs, docs watch) run only when sidecar is given."""
     now = time.time() if now is None else now
     ctl = Path(root) / CONTROL_REL
     arch = ctl / ARCHIVE
@@ -216,22 +304,43 @@ def rotate(root, now=None, dry_run=False):
             res["skipped"].append(name)
         res[name] = n or 0
     res["progress"] = rotate_progress(ctl / "progress", now, dry_run=dry_run)
+    res["suite_logs"], res["stale"] = 0, []
+    if sidecar is not None:
+        sidecar = Path(sidecar)
+        res["suite_logs"] = move_suite_logs(sidecar / "Logs", now, dry_run=dry_run)
+        line = docs_watch_stale(sidecar / DOCS_STATE_REL, now)
+        if line:
+            res["stale"].append(line)
     return res
 
 
+NOT_ROWS = ("skipped", "progress", "suite_logs", "stale")
+
+
 def total(res):
-    return sum(v for k, v in res.items() if k not in ("skipped", "progress")) + res["progress"]
+    return (sum(v for k, v in res.items() if k not in NOT_ROWS)
+            + res["progress"] + res.get("suite_logs", 0))
 
 
 def summary(res):
-    rows = sum(v for k, v in res.items() if k not in ("skipped", "progress"))
+    rows = sum(v for k, v in res.items() if k not in NOT_ROWS)
     line = f"ledgers rotated: {rows} row(s), {res['progress']} progress file(s) archived"
+    if res.get("suite_logs"):
+        line += f", {res['suite_logs']} suite log(s) to Logs/dev"
     if res["skipped"]:
         line += ", skipped " + ", ".join(res["skipped"])
     return line
 
 
-def rotate_daily(root, now=None):
+def lines(res):
+    """The summary, then one line per STALE flag (the tick steps each)."""
+    return [summary(res)] + list(res.get("stale") or [])
+
+
+_AUTO = object()
+
+
+def rotate_daily(root, now=None, sidecar=_AUTO):
     """rotate() at most once per local day (marker file); None when already
     done today. A day with a skipped ledger is not marked, so the next tick
     retries it."""
@@ -243,7 +352,9 @@ def rotate_daily(root, now=None):
             return None
     except (OSError, ValueError, AttributeError):
         pass
-    res = rotate(root, now)
+    if sidecar is _AUTO:
+        sidecar = sidecar_for(root)
+    res = rotate(root, now, sidecar=sidecar)
     if not res["skipped"]:
         marker.parent.mkdir(parents=True, exist_ok=True)
         tmp = marker.with_name(marker.name + ".tmp")
@@ -257,14 +368,19 @@ def main(argv=None):
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--root", default=str(ROOT))
     ap.add_argument("--now", type=float, default=None)
+    ap.add_argument("--sidecar", default=None,
+                    help="AL sidecar root (default: the real tree's own, else none)")
     a = ap.parse_args(argv)
-    res = rotate(Path(a.root), now=a.now, dry_run=a.dry_run)
+    sidecar = Path(a.sidecar) if a.sidecar else sidecar_for(Path(a.root))
+    res = rotate(Path(a.root), now=a.now, dry_run=a.dry_run, sidecar=sidecar)
     verb = "would move" if a.dry_run else "moved"
     for k, v in res.items():
-        if k != "skipped":
+        if k not in ("skipped", "stale"):
             print(f"{verb} {k}: {v}")
     if res["skipped"]:
         print("skipped (changed meanwhile): " + ", ".join(res["skipped"]))
+    for line in res["stale"]:
+        print(line)
     return 0
 
 
