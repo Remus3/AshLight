@@ -10,9 +10,40 @@ import pytest
 
 from server.al.theorycraft import delta
 from server.al.theorycraft import evaluate as tc_evaluate
+from server.al.theorycraft import item as item_parser
+from server.al.theorycraft import model
 from server.al.theorycraft import pobweights as pw
 from tc_eval_fixtures import ADVANCED_RING, EVAL_BUILD_XML, JEWEL, RARE_GLOVES
-from test_tc_delta import GLOVES_SLOT, FakeCalc, _build
+
+# private copies of the test_tc_delta fake calc (a test file never imports another)
+GLOVES_SLOT = '\t\t\t<Slot name="Gloves" itemId="1"/>\n'
+DPS_PER = {"adds # to # lightning damage to attacks": 2.0, "#% increased attack speed": 3.0}
+EHP_PER = {"+# to maximum life": 10.0, "+#% to cold resistance": 20.0,
+           "+#% to lightning resistance": 20.0, "+#% to fire resistance": 20.0}
+BASE_DPS, BASE_EHP = 100.0, 1000.0
+
+
+class FakeCalc:
+    """dps / ehp as a linear function of the summed stats of the gear after
+    the swaps; counts calls."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, build, swaps):
+        self.calls.append(dict(swaps))
+        gear = {slot: it.text for slot, it in build.gear.items()}
+        gear.update(swaps)
+        dps, ehp = BASE_DPS, BASE_EHP
+        for text in gear.values():
+            for key, value in tc_evaluate.stats_of(item_parser.parse(text)).items():
+                dps += DPS_PER.get(key.lower(), 0) * value
+                ehp += EHP_PER.get(key.lower(), 0) * value
+        return {"dps": dps, "ehp": ehp}
+
+
+def _build(xml=EVAL_BUILD_XML):
+    return model.parse(xml)
 
 
 def _run(item, build, **kw):
