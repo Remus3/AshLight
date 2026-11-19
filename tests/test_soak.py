@@ -44,7 +44,7 @@ from server.al import state as state_mod  # noqa: E402
 from server.al.core import Core  # noqa: E402
 from server.al.http import serve  # noqa: E402
 
-pytestmark = pytest.mark.server
+pytestmark = [pytest.mark.server, pytest.mark.timing]  # TEST-MARKS
 TOKEN = "s" * 48
 LONG = os.environ.get("AL_SOAK") == "1"
 HOURS = float(os.environ.get("AL_SOAK_HOURS", "500")) if LONG else 48.0

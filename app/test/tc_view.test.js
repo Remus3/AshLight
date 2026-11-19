@@ -3,9 +3,8 @@
    web/tc.js. Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const v = require("../../web/tc.js");
+const web = require("./_web.js");
+const v = web.load("tc.js");
 
 const BUILD = {
   loaded: true, code: "eNabc",
@@ -375,7 +374,7 @@ test("link recover: no code is posted unless the opt-in is saved", async () => {
 });
 
 test("link recover: the opt-in sentence is one constant, and index.html holds it", () => {
-  const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "ascii");
+  const html = web.source("index.html", "ascii");
   const m = /<p id="webdata-sentence"[^>]*>([\s\S]*?)<\/p>/.exec(html);
   assert.ok(m, "Settings sentence #webdata-sentence");
   assert.equal(m[1].replace(/\s+/g, " ").trim(), v.WEB_DATA_OPT_IN);

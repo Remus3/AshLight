@@ -19,11 +19,12 @@ import importlib
 import re
 from pathlib import Path
 
+import srcpaths
 from server.al import state
 from server.al.state import overlay_card
 
 ROOT = Path(__file__).resolve().parents[1]
-INDEX = ROOT / "web" / "index.html"
+INDEX = srcpaths.path("index.html")
 STATE_PY = ROOT / "server" / "al" / "state.py"
 RENDER_GATE = ROOT / "app" / "shared" / "render_gate.js"
 FORMAT_JS = ROOT / "app" / "shared" / "format.js"

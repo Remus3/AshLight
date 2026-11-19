@@ -12,11 +12,12 @@ import re
 from html.parser import HTMLParser
 from pathlib import Path
 
+import srcpaths
+
 ROOT = Path(__file__).resolve().parents[1]
-WEB = ROOT / "web"
-HTML = (WEB / "index.html").read_text(encoding="ascii")
-CSS = (WEB / "app.css").read_text(encoding="ascii")
-JS = {p.name: p.read_text(encoding="ascii") for p in sorted(WEB.glob("*.js"))}
+HTML = srcpaths.index_html()
+CSS = srcpaths.read("app.css")
+JS = {p.name: p.read_text(encoding="ascii") for p in srcpaths.web_js()}
 DESIGN = (ROOT / "docs" / "design" / "0001-design-system.md").read_text(encoding="ascii")
 
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
