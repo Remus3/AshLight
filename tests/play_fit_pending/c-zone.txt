@@ -1,1 +1,1 @@
-Region C (#play-c) guide, town, map and none modes are not on Play yet; PLAY-TD-11-CONTEXT lands them and deletes this marker.
+Region C zone modes have landed (PLAY-TD-11-CONTEXT); its height and box (G2) still follow the unfixed tracks of regions G and I, so the wave 7 integrator deletes this marker after PLAY-TD-10-STRIP and PLAY-TD-16A-ITEMCARD land.
