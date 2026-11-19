@@ -1,1 +1,35 @@
-/* AshLight dashboard: region N, the notice (stub, no rules yet; PLAY-TD-14-NOTICE fills it). */
+/* AshLight dashboard: region N, the notice (PLAY-TD-14-NOTICE; plan 03 sections
+   3.4, 3.8, 7 and 8). Track 96 px at s = 1: border 2 + padding 8 + 8 + head
+   row 32 + 2 body rows of 22 = 94, slack 2; the compact class keeps the
+   head row only (track 52: 50 of content). Line boxes are the shared row
+   classes of web/app.css (rem, so every figure scales with s). One amber
+   cue at most (F-159): a warn notice colours its word, and the 4 px edge
+   repeats it; the title, rows, count and button stay neutral. Nothing
+   moves (no animation, no transition). */
+.notice { min-width: 0; }
+.notice-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.5rem;
+  min-height: 2rem;
+  min-width: 0;
+}
+.notice-head > p { margin: 0; }
+.notice-word { flex: 0 0 auto; font-weight: 600; color: var(--fk-status-idle); }
+.notice-title { flex: 1 1 auto; font-weight: 600; color: var(--fk-text); }
+.notice-more { flex: 0 0 auto; }
+.notice-act { flex: 0 0 auto; margin-left: auto; }
+.notice-row { color: var(--al-text-body); }
+/* tone: the word and the edge say the same state; one colour per notice */
+.notice[data-tone="warn"] .notice-word { color: var(--fk-status-warn); }
+.notice[data-tone="warn"].edge { border-left-color: var(--fk-status-warn); }
+.notice[data-tone="bad"] .notice-word { color: var(--fk-status-bad); }
+.notice[data-tone="bad"].edge { border-left-color: var(--fk-status-bad); }
+/* compact and full: the head is one fixed 32 px row; a name or title takes
+   the ellipsis (full text in title). The flow class and a text-spacing
+   override let it wrap and grow instead (plan 03 3.9). */
+@media (min-width: 64em) and (min-height: 43.75em) {
+  .notice-head { flex-wrap: nowrap; height: 2rem; }
+}
+[data-text-spacing="user"] .notice-head { flex-wrap: wrap; height: auto; }
