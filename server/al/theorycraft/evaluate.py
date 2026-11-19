@@ -12,6 +12,7 @@ kind and the headline is the best swap. No game data snapshot is needed
 are compared only through the optional PoB calc (TC-DELTA, `calc=`).
 """
 
+import copy
 import math
 
 from . import delta as delta_mod
@@ -196,51 +197,95 @@ def _keys(new_stats, old_stats):
     return list(keys.values())
 
 
-def _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache=None):
-    """TC-DELTA (decision 0024): replace the hand-weight comparisons with
-    PoB deltas and PoB-derived per-mod weights. Raises delta.CalcError.
-    MATH-WEIGHTS: with a pobweights cache only unmeasured keys are probed."""
-    probe = cache.mod_weights if cache is not None else delta_mod.mod_weights
-    hand_weights = dict(out["mod_weights"]["weights"])
-    hand = weights_mod.lookup(hand_weights)
+def _pob_deltas(calc, build, slots, item_text, blend):
+    """TC-PRESS-STAGED-EVAL stage "pob" calls: the build's outputs once,
+    then PoB's DPS / EHP delta per slot. Returns [(slot, old_item, delta or
+    None, unusable skill)]; a slot whose weapon the main skill cannot use
+    (MATH-WEAPON-TYPE, decision 0032 amendment) has no delta. Raises
+    delta.CalcError."""
     base = delta_mod.outputs(calc, build)
-    comps, per_slot = [], {}
+    rows = []
     for s in slots:
         old_item = build.equipped(s)
-        old_parsed = item_parser.parse(old_item.text) if old_item is not None else None
-        old_stats = stats_of(old_parsed) if old_parsed is not None else {}
         try:
             d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=base)
         except delta_mod.CalcWeaponUnusable as e:
-            # MATH-WEAPON-TYPE (decision 0032 amendment): PoB says the main
-            # skill cannot use this weapon here; a real downgrade, shown in
-            # words, no PoB numbers and no probes for this slot
-            c = _compare(s, new_stats, score(new_stats, hand), old_item, hand, side)
-            c.update(verdict=delta_mod.DOWNGRADE, weapon_unusable={"skill": e.skill})
-            comps.append(c)
-            per_slot[s] = ({"weights": hand_weights, "detail": {}}, hand)
+            rows.append((s, old_item, None, e.skill))
             continue
-        carrier = old_item.text if old_item is not None else item_text
-        mw = probe(calc, build, s, carrier, _keys(new_stats, old_stats), blend=blend)
-        table = weights_mod.lookup(mw["weights"])
-        c = _compare(s, new_stats, score(new_stats, table), old_item, table, side)
+        rows.append((s, old_item, d, None))
+    return rows
+
+
+def _pob_comp(row, new_stats, table, side):
+    """One compared slot scored with `table`, its verdict from PoB."""
+    s, old_item, d, skill = row
+    c = _compare(s, new_stats, score(new_stats, table), old_item, table, side)
+    if d is None:
+        # PoB says the main skill cannot use this weapon here; a real
+        # downgrade, shown in words, no PoB numbers and no probes
+        c.update(verdict=delta_mod.DOWNGRADE, weapon_unusable={"skill": skill})
+    else:
         c.update(score_delta=_clean(d["score_delta"]),
                  verdict=delta_mod.verdict(d["score_delta"]), dps=d["dps"], ehp=d["ehp"])
-        comps.append(c)
-        per_slot[s] = (mw, table)
+    return c
+
+
+def _best_pob(comps):
     # a hand the main skill can use always beats one it cannot
-    best = max(comps, key=lambda c: (not c.get("weapon_unusable"), c["score_delta"]))
-    mw, table = per_slot[best["slot"]]
+    return max(comps, key=lambda c: (not c.get("weapon_unusable"), c["score_delta"]))
+
+
+def _pob_out(out, comps, best, new_stats, table, mod_weights):
+    """Fill `out` from PoB-verdict comparisons; `table` scores the item."""
     unusable = bool(best.get("weapon_unusable"))
     out.update(ok=True, comparisons=comps, slot=best["slot"], verdict=best["verdict"],
                score_delta=best["score_delta"], score=_clean(score(new_stats, table)),
                unweighted=sorted(k for k in new_stats if k.lower() not in table),
                calc={"source": delta_mod.SOURCE_POB,
                      "notice": delta_mod.NOTICE_WEAPON_TYPE if unusable else None},
-               mod_weights=({"source": "hand", "weights": hand_weights} if unusable else
-                            {"source": "pob", "slot": best["slot"],
-                             "weights": dict(mw["weights"]),
-                             "detail": dict(mw["detail"])}))
+               mod_weights=mod_weights)
+    return out
+
+
+def _pob_stage(out, rows, new_stats, side):
+    """Stage "pob" (TC-DELTA, decision 0024): PoB's DPS / EHP deltas and
+    verdicts; the per-mod rows still carry the hand weights. No calc call."""
+    hand_weights = dict(out["mod_weights"]["weights"])
+    hand = weights_mod.lookup(hand_weights)
+    comps = [_pob_comp(r, new_stats, hand, side) for r in rows]
+    return _pob_out(out, comps, _best_pob(comps), new_stats, hand,
+                    {"source": "hand", "weights": hand_weights})
+
+
+def _mods_stage(out, rows, item_text, new_stats, calc, build, blend, side, cache=None):
+    """Stage "mods": PoB-derived per-mod weights for every usable slot.
+    `out` is the hand-weight result. Raises delta.CalcError. MATH-WEIGHTS:
+    with a pobweights cache only unmeasured keys are probed."""
+    probe = cache.mod_weights if cache is not None else delta_mod.mod_weights
+    hand_weights = dict(out["mod_weights"]["weights"])
+    hand = weights_mod.lookup(hand_weights)
+    comps, per_slot = [], {}
+    for row in rows:
+        s, old_item, d, _skill = row
+        if d is None:
+            comps.append(_pob_comp(row, new_stats, hand, side))
+            per_slot[s] = ({"weights": hand_weights, "detail": {}}, hand)
+            continue
+        old_parsed = item_parser.parse(old_item.text) if old_item is not None else None
+        old_stats = stats_of(old_parsed) if old_parsed is not None else {}
+        carrier = old_item.text if old_item is not None else item_text
+        mw = probe(calc, build, s, carrier, _keys(new_stats, old_stats), blend=blend)
+        table = weights_mod.lookup(mw["weights"])
+        comps.append(_pob_comp(row, new_stats, table, side))
+        per_slot[s] = (mw, table)
+    best = _best_pob(comps)
+    mw, table = per_slot[best["slot"]]
+    if best.get("weapon_unusable"):
+        mod_weights = {"source": "hand", "weights": hand_weights}
+    else:
+        mod_weights = {"source": "pob", "slot": best["slot"],
+                       "weights": dict(mw["weights"]), "detail": dict(mw["detail"])}
+    return _pob_out(out, comps, best, new_stats, table, mod_weights)
 
 
 def _cached(out, build, slots, new_stats, cache, blend, side, notice):
@@ -271,6 +316,10 @@ def _cached(out, build, slots, new_stats, cache, blend, side, notice):
     return True
 
 
+STAGE_WEIGHTS, STAGE_POB, STAGE_MODS = "weights", "pob", "mods"
+STAGES = (STAGE_WEIGHTS, STAGE_POB, STAGE_MODS)
+
+
 def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
              cache=None):
     """Evaluate item text against a Build (or None). Never raises on input
@@ -284,16 +333,100 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
     `cache` (MATH-WEIGHTS): an optional pobweights.PobWeightCache; it
     saves calc probes, and with the calc off or failing it scores with the
     PoB weights measured earlier for this build (calc.source
-    "pob_cached")."""
-    out, parsed = _evaluate(item_text, build, weights, slot, calc, blend, cache)
-    # MATH-POTENTIAL: the roll-range potential under the weights that
-    # scored the item (hand, PoB or cached PoB); None without ranges
+    "pob_cached").
+
+    The result is the last stage of stages()."""
+    result = None
+    for _name, result in stages(item_text, build, weights, slot, calc, blend, cache):
+        pass
+    return result
+
+
+def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
+           cache=None):
+    """TC-PRESS-STAGED-EVAL: evaluate() in all-or-nothing stages. A
+    generator of (stage name, result) pairs; each result is a complete,
+    independent evaluate()-shaped result (same keys):
+
+    - "weights": no calc call; the hand weights (or, with a cache, the PoB
+      weights measured earlier for this build) score the item. With the
+      calc off, or without an item, a slot or a build, it is the only
+      stage.
+    - "pob": PoB's DPS / EHP deltas and verdicts per slot; the per-mod rows
+      still carry the hand weights.
+    - "mods": PoB-derived per-mod weights (the probes).
+
+    A calc error in stage "pob" or "mods" ends the generator with one more
+    "weights" result carrying its notice ("failed" / "implausible"). The
+    last stage always equals evaluate(). Closing the generator early makes
+    no further calc call. Same arguments as evaluate()."""
+    final, (base, parsed, new_stats, slots, side) = _evaluate(
+        item_text, build, weights, slot, calc)
+    if final is not None:
+        yield STAGE_WEIGHTS, _finish(final, parsed)
+        return
+    yield STAGE_WEIGHTS, _finish(_weights_result(
+        _copy(base), build, slots, new_stats, cache, blend, side), parsed)
+    if calc is None:
+        return
+    try:
+        rows = _pob_deltas(calc, build, slots, item_text, blend)
+    except delta_mod.CalcError as e:
+        yield STAGE_WEIGHTS, _finish(_failed(base, e, build, slots, new_stats, cache,
+                                             blend, side), parsed)
+        return
+    yield STAGE_POB, _finish(_pob_stage(_copy(base), rows, new_stats, side), parsed)
+    try:
+        # all or nothing: the stage is built only after every probe succeeded
+        out = _mods_stage(_copy(base), rows, item_text, new_stats, calc, build, blend,
+                          side, cache)
+    except delta_mod.CalcError as e:
+        yield STAGE_WEIGHTS, _finish(_failed(base, e, build, slots, new_stats, cache,
+                                             blend, side), parsed)
+        return
+    yield STAGE_MODS, _finish(out, parsed)
+
+
+def _copy(out):
+    return copy.deepcopy(out)
+
+
+def _finish(out, parsed):
+    """A stage result: an independent copy plus the MATH-POTENTIAL field,
+    the roll-range potential under the weights that scored the item (hand,
+    PoB or cached PoB); None without ranges."""
+    out = _copy(out)
     out["potential"] = (potential_mod.item_potential(
         parsed, out["mod_weights"].get("weights")) if parsed.is_item else None)
     return out
 
 
-def _evaluate(item_text, build, weights, slot, calc, blend, cache):
+def _weights_result(out, build, slots, new_stats, cache, blend, side):
+    """The weights result: with a cache, the PoB weights measured earlier
+    score it when every slot has some (MATH-WEIGHTS)."""
+    if cache is not None:
+        _cached(out, build, slots, new_stats, cache, blend, side, out["calc"]["notice"])
+    return out
+
+
+def _failed(base, err, build, slots, new_stats, cache, blend, side):
+    """The weights result after a calc error, with its notice."""
+    out = _copy(base)
+    if isinstance(err, delta_mod.CalcImplausible):
+        # MATH-DPS-SANITY (decision 0032): numbers that make no sense for
+        # the card are not shown; the weights score it
+        notice = delta_mod.NOTICE_IMPLAUSIBLE
+    else:
+        notice = delta_mod.NOTICE_FAILED
+    out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS, "notice": notice}
+    return _weights_result(out, build, slots, new_stats, cache, blend, side)
+
+
+def _evaluate(item_text, build, weights, slot, calc):
+    """(final, (base, parsed, new_stats, slots, side)). `final` is the
+    whole result when no stage can follow (not an item, no gear slot, no
+    build); else None and `base` is the hand-weight result the stages
+    start from."""
     stat_weights, side = _weights_of(weights)
     table = weights_mod.lookup(stat_weights)
     parsed = item_parser.parse(item_text)
@@ -310,7 +443,7 @@ def _evaluate(item_text, build, weights, slot, calc, blend, cache):
            "mod_weights": {"source": "hand", "weights": dict(stat_weights)}}
     if not parsed.is_item:
         out["error"] = "not an item"
-        return out, parsed
+        return out, (out, parsed, {}, (), side)
     if parsed.flags.get("unidentified"):
         out["warnings"].append("unidentified: its mods are hidden")
     new_stats = stats_of(parsed)
@@ -321,30 +454,16 @@ def _evaluate(item_text, build, weights, slot, calc, blend, cache):
     else:
         slots = slots_for_build(parsed, build)
     out["slots"] = list(slots)
+    ctx = (out, parsed, new_stats, slots, side)
     if not slots:
         out["error"] = "no gear slot for this item class"
-        return out, parsed
+        return out, ctx
     if build is None:
         out["error"] = "no build loaded"
-        return out, parsed
+        return out, ctx
     comps = [_compare(s, new_stats, out["score"], build.equipped(s), table, side)
              for s in slots]
     best = max(comps, key=lambda c: c["score_delta"])
     out.update(ok=True, comparisons=comps, slot=best["slot"], verdict=best["verdict"],
                score_delta=best["score_delta"])
-    if calc is not None:
-        try:
-            # _pob updates `out` only after every calc call succeeded
-            _pob(out, item_text, build, slots, new_stats, calc, blend, side, cache)
-            return out, parsed
-        except delta_mod.CalcImplausible:
-            # MATH-DPS-SANITY (decision 0032): numbers that make no sense
-            # for the card are not shown; the weights score it
-            out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
-                           "notice": delta_mod.NOTICE_IMPLAUSIBLE}
-        except delta_mod.CalcError:
-            out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS,
-                           "notice": delta_mod.NOTICE_FAILED}
-    if cache is not None:
-        _cached(out, build, slots, new_stats, cache, blend, side, out["calc"]["notice"])
-    return out, parsed
+    return None, ctx

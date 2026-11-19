@@ -335,7 +335,9 @@ E: root item that is not this repo.
   (every pushed object; fails closed without `config/leak_needles.json`)
   on every push; it has no override (decision 0046 amendment). A
   session pushes after its gated commit; the loop's push worker pushes
-  when main is clean, gated and ahead of `origin/main`.
+  when main is clean, gated and ahead of `origin/main` and only while
+  the gitignored config/local.json holds "loop_push": true (OA-11,
+  default off).
 - Nothing is merged on GitHub. A pull request (Dependabot's or a
   contributor's) is re-applied locally as an operator commit, pushed, and
   closed with a one-line comment (FLEET item 17). Dependabot alerts and
@@ -688,6 +690,36 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   pages; no agent or tool reads GGG's forum (decision 0050, ruling Q-07).
   Reverses if: the operator amends the floor or GGG documents the forum
   as a permitted source.
+- Private runtime files (core part): at every start the real core
+  gives its runtime dir, and after every write config/local.json, an
+  explicit ACL (the player, SYSTEM, the local admins group (SID
+  S-1-5-32-544); inheritance off) through System32 icacls by absolute
+  path, read back through the Win32 security API; a kept token
+  (decision 0042) is reused only while the runtime dir is private;
+  test and demo cores change no ACL; only AshLight-made paths, never
+  the player's checkout, a game folder or a link (decision 0051; the
+  Checks note and setup.ps1 sidecar parts land with SEC-ACL-CHECK and
+  SEC-ACL-SETUP). Reverses if: the ACL breaks a supported install
+  layout, a player shares the folder on purpose and objects, or the
+  installed per-user home makes the checkout case moot.
+- WORN-GEAR: the last checked item can be filed as the worn item of its
+  slot (button, or an optional wear key that is unset by default; no new
+  read: the text of that press); stored as parsed mod lines, base and
+  slot only in one bounded file under ops/runtime (16 slots x 12
+  characters), on by default, emptied by Clear run history; the item
+  check compares against the worn item first, the PoB plan second; the
+  checked list of decision 0045 stays memory-only (decision 0052, ruling
+  Q-26, bounds per 0036). Reverses if: the operator rules local
+  item-derived files unwanted, or a stored baseline is shown to leak
+  names or paths.
+- Main-process parts seam (app/parts/): Electron main-process features
+  live as app/parts/NN-name.js files that app/parts.js loads in
+  file-name order (hooks early, ready, overlayWindow, clientWindow,
+  configChanged, gate, toggled, quit; a throwing part is logged and
+  skipped); app/main.js keeps the two windows' creation, the IPC
+  handlers and the one clipboard read (decision 0053). Reverses if: a
+  part needs an order that file names cannot give, a packaged build
+  cannot list the directory, or the floor scan stops covering app/parts.
 - NO-DISCOVERY: only the real entry point with no configured log path
   runs the Steam library scan; a core given a runtime dir or a log path
   never scans; a configured Client.txt path that is missing stays

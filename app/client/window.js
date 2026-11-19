@@ -17,7 +17,13 @@
    restore, X). X closes the window to the tray: its renderer is freed, the
    overlay, tray and core keep running, and the first close of a run says
    so in a tray note; tray "Quit AshLight" closes everything (decision
-   0041). */
+   0041).
+
+   OVL-MAIN-PARTS (decision 0053): opts.onWindow(win, ses), when given, is
+   called once per created companion window (main.js runs the parts'
+   clientWindow hook from it); opts.overlayBounds() gives the overlay's
+   current bounds to the parts that place this window. The returned object
+   has window() and tray() getters for the parts. */
 
 const fs = require("fs");
 const path = require("path");
@@ -194,6 +200,7 @@ function createClient(opts) {
       if (placed.maximized) { win.maximize(); }
       win.show();
     });
+    if (typeof opts.onWindow === "function") { opts.onWindow(win, clientSession()); }
     win.loadFile(STARTING_HTML);
     connect();
   }
@@ -276,7 +283,8 @@ function createClient(opts) {
     if (tray) { tray.destroy(); tray = null; }
   }
 
-  return { open, reload, refresh, hasTray, dispose, isCompanion, toggleCompanion, quit };
+  return { open, reload, refresh, hasTray, dispose, isCompanion, toggleCompanion, quit,
+           window: () => win, tray: () => tray };
 }
 
 module.exports = { createClient, PARTITION, STATE_FILE };

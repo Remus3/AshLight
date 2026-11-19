@@ -4,13 +4,9 @@ Status: accepted 2026-11-16 (operator order 2026-11-16). Owner of reviews:
 the `design-reviewer` agent (`.claude/agents/design-reviewer.md`). First
 audit: `docs/design/0002-first-audit.md`.
 
-> **Interpretation note - "NLM" (operator, please correct if wrong).** The
-> order listed "NLM" without expanding it. This document reads it as
-> **natural-language messaging**: how AshLight phrases events, statuses and
-> notifications as short natural sentences, plus the rules for generating
-> that text from log events (section 9). If NLM meant something else (for
-> example a language model, or "no learning mode"), say so and section 9 is
-> rewritten; nothing else in this document depends on the reading.
+**NLM** means natural-language messaging: how AshLight phrases events,
+statuses and notifications as short natural sentences, and the rules for
+making that text from log events (section 9; ruling Q-15, 2026-11-18).
 
 ## 1. Scope and sources of truth
 
@@ -53,6 +49,8 @@ audit: `docs/design/0002-first-audit.md`.
 
 One family: `system-ui, "Segoe UI", sans-serif` (no web fonts, no CDN).
 Numbers use `font-variant-numeric: tabular-nums` so they do not jitter.
+Mono stack (`--al-font-mono`): `Consolas, monospace`, Consolas first
+because the target is Windows, where it ships with every release.
 
 Dashboard (root 16px; rem values are the source):
 
@@ -164,7 +162,8 @@ AshLight additions:
 | Token | Value | Why |
 |---|---|---|
 | `--al-plate` (overlay) | rgba(15, 18, 22, 0.92) | HUD plate; 0.92 keeps all overlay text >= 4.5:1 over a pure white scene |
-| control boundary | `var(--fk-text-muted)` | inputs, selects and secondary buttons; kit `border` is 1.3-1.6:1, too faint for SC 1.4.11 |
+| `--al-control-edge` | #7a828c light, #737c88 dark | control boundary: inputs, selects, textareas, secondary buttons, checkboxes; kit `border` is 1.3-1.6:1, too faint for SC 1.4.11, and `text-muted` is louder than the content; `--fk-text` under `prefers-contrast: more` |
+| `--al-text-body` | #30353c light, #c5ccd3 dark | sentences and rows inside cards; `--fk-text` stays on values, names, headings and verdict words |
 
 Overlay colours mirror the kit dark theme (`text`, `text-muted`, `border`,
 `status-warn`, `status-bad`). The overlay is always dark: it sits on a game
@@ -208,7 +207,7 @@ dark.status-unknown dark.surface-2 4.5 6.23
 dark.status-halted dark.surface-2 4.5 5.56
 dark.status-running dark.surface-2 4.5 6.60
 dark.status-idle dark.surface-2 4.5 5.43
-# control boundaries and focus ring (SC 1.4.11, 3:1)
+# non-text marks and focus ring (SC 1.4.11, 3:1); control edges: al-token-contrast below
 light.text-muted light.surface 3.0 6.68
 light.text light.surface-2 3.0 15.37
 dark.text-muted dark.surface 3.0 7.18
@@ -218,6 +217,24 @@ overlay.text overlay.plate-worst 4.5 12.50
 overlay.text-muted overlay.plate-worst 4.5 5.89
 overlay.status-warn overlay.plate-worst 4.5 6.13
 overlay.status-bad overlay.plate-worst 4.5 4.78
+```
+
+AshLight's own dashboard colours are measured the same way in the block
+below; `tests/test_design_tokens.py` reads each `al-*` value from the token
+block at the top of `web/app.css` (light from `:root`, dark from the kit's
+dark selectors) and each kit value from tokens.json.
+
+```al-token-contrast
+# control boundary (SC 1.4.11, 3:1): on the page and on a card
+light.al-control-edge light.surface 3.0 3.89
+light.al-control-edge light.surface-2 3.0 3.53
+dark.al-control-edge dark.surface 3.0 4.44
+dark.al-control-edge dark.surface-2 3.0 4.05
+# body text (SC 1.4.3, 4.5:1): on the page and on a card
+light.al-text-body light.surface 4.5 12.35
+light.al-text-body light.surface-2 4.5 11.22
+dark.al-text-body dark.surface 4.5 11.58
+dark.al-text-body dark.surface-2 4.5 10.55
 ```
 
 Not allowed as a boundary or text colour: kit `border` (light 1.43:1 on
