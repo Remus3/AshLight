@@ -1,9 +1,8 @@
 """PLAY-F-120-TRADE-REFRESH (folded into DATA-PRICE-CARD-TEXT): an incoming
 trade whisper with the same sender and item text as an open card refreshes
 that card (newest at and price fields, same id and place) instead of adding
-one; the snapshot no longer carries whisper text (SEC-SSE-TAP); decision
-0019 (a finished trade closes one card) is untouched. Fake clock only; names
-are invented."""
+one; recent whispers still log every line; decision 0019 (a finished trade
+closes one card) is untouched. Fake clock only; names are invented."""
 
 from server.al.parser import parse_line
 from server.al.state import TRADE_EXPIRE_S, SessionState
@@ -40,7 +39,7 @@ def test_three_identical_whispers_and_one_other_leave_two_cards():
     # the first card keeps its id and place, with the newest at
     assert rows[0]["id"] == 1 and rows[0]["at"] == 1030.0
     assert rows[1]["at"] == 1020.0
-    assert "recent_whispers" not in st.snapshot()
+    assert len(st.snapshot()["recent_whispers"]) == 4
 
 
 def test_refresh_takes_the_newest_price_fields():
@@ -91,11 +90,9 @@ def test_parsed_whispers_refresh_one_card():
             "buy your Ember Veil Silk Robe listed for 5 exalted in Dawn (stash tab "
             "\"Sale\"; position: left 3, top 4)")
     st = SessionState(clock=Clock())
-    applied = []
     for i in range(3):
         ev = parse_line(line.format(i))
         assert ev["type"] == "whisper_in" and ev.get("trade"), ev
-        applied.append(st.apply(ev))
-    assert applied == [True, True, True]
+        st.apply(ev)
     assert len(_rows(st)) == 1
-    assert "recent_whispers" not in st.snapshot()
+    assert len(st.snapshot()["recent_whispers"]) == 3

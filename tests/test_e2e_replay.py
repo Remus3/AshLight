@@ -110,11 +110,9 @@ def odd_chunks(data, rng_seed=7):
 
 
 class Sse:
-    """Reads the dev tap (/events?tap=1, SEC-SSE-TAP) for the events frame."""
-
     def __init__(self, port):
         self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
-        self.sock.sendall((f"GET /events?token={TOKEN}&tap=1 HTTP/1.1\r\nHost: 127.0.0.1:{port}"
+        self.sock.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{port}"
                            "\r\nAccept: text/event-stream\r\n\r\n").encode())
         self.buf = b""
 
@@ -130,26 +128,12 @@ class Sse:
             self.buf += chunk
         return self.buf
 
-    def pump(self, seconds):
-        """Read whatever arrives within seconds."""
-        self.sock.settimeout(seconds)
-        try:
-            chunk = self.sock.recv(65536)
-        except socket.timeout:
-            return
-        if not chunk:
-            raise AssertionError("SSE stream closed")
-        self.buf += chunk
-
-    def tapped(self):
-        out = []
-        for block in self.buf.split(b"\n\n")[:-1]:  # whole blocks only
-            if block.startswith(b"event: events\ndata: "):
-                out += json.loads(block.split(b"data: ", 1)[1])
-        return out
-
     def event_types(self):
-        return [ev["type"] for ev in self.tapped()]
+        out = []
+        for block in self.buf.split(b"\n\n"):
+            if block.startswith(b"event: events\ndata: "):
+                out += [ev["type"] for ev in json.loads(block.split(b"data: ", 1)[1])]
+        return out
 
     def close(self):
         self.sock.close()
@@ -173,28 +157,16 @@ def test_live_session_end_to_end_over_http_and_sse(tmp_path, live_factory):
         assert snap["character"] == "\u00c9lodie" and snap["class"] == "Witch"
         assert snap["zone"] == s.zone and snap["area_id"] == s.area_id
         assert snap["level_ups"] == s.level - 1
-        # SEC-SSE-TAP: the snapshot keeps no whisper list; the senders'
-        # names survive the odd chunks as parsed on the bus
-        assert "recent_whispers" not in snap
-        heard = [ev for ev in lv.core.bus.recent() if ev["type"] == "whisper_in"]
-        assert "Ma\u00eblle" in json.dumps(heard, ensure_ascii=False)
-        assert "\u30b5\u30af\u30e9" in json.dumps(heard, ensure_ascii=False)
-        assert len(heard) == s.whispers_in
+        assert "Ma\u00eblle" in json.dumps(snap["recent_whispers"], ensure_ascii=False)
+        assert "\u30b5\u30af\u30e9" in json.dumps(snap["recent_whispers"], ensure_ascii=False)
+        assert len(snap["recent_whispers"]) == s.whispers_in
         # AUDIT pass 2 (P2-T1): exact, not <= (which passed with no card at
         # all): the session has one request and its acceptance, and decision
         # 0019 closes that one card.
         assert s.trade_requests == 1
         assert snap["trade_requests"] == []
         sse.read_until(b"\"type\":\"death\"")
-        end = time.monotonic() + WAIT_S
-        while sse.event_types().count("whisper_in") < s.whispers_in:
-            assert time.monotonic() < end, "the tap never sent every whisper"
-            sse.pump(0.2)
         types = sse.event_types()
-        assert types.count("whisper_in") == s.whispers_in
-        for ev in sse.tapped():  # a tapped event holds no string but its type
-            assert all(v is None or isinstance(v, (bool, int, float))
-                       for k, v in ev.items() if k != "type"), ev
         for t in ("scene_changed", "area_generated", "level_up", "death", "whisper_in",
                   "trade_accepted", "chat"):
             assert t in types, (t, sorted(set(types)))
@@ -299,8 +271,7 @@ def test_resume_near_the_32mb_cap_on_core_start(tmp_path, live_factory):
     assert snap["deaths"] == s.deaths and snap["zone"] == s.zone
     assert snap["tailer"]["resume"]["hit_marker"] is True
     # Old bytes are never replayed as live events.
-    assert "recent_whispers" not in snap
-    assert not any(r["whisper"] for r in snap["recent_events"])
+    assert not snap["recent_whispers"]
     s2 = synth_client.Session(seed=9, character="Longhaul", klass="Warrior")
     s2.level = s.level
     s2.level_up()

@@ -27,6 +27,7 @@ from .theorycraft import buildlive as buildlive_mod
 from .theorycraft import cardparts
 
 RECENT_EVENTS = 30
+RECENT_WHISPERS = 10
 TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
 # DS-TRADE-EXPIRE (design 0001 N5): a card clears by itself this long after
 # it arrived; the dashboard states the rule and Dismiss stays.
@@ -984,6 +985,7 @@ class SessionState:
         self.afk = False
         self.dnd = False
         self.events_seen = 0
+        self.recent_whispers = collections.deque(maxlen=RECENT_WHISPERS)
         self.recent_events = collections.deque(maxlen=RECENT_EVENTS)
         self.trade_requests = collections.deque(maxlen=TRADE_REQUESTS)
         self.overlay_layout = None
@@ -1696,6 +1698,7 @@ class SessionState:
             self._note_other(ev.get("character"))
             self._party_since_start = True
         elif t in ("whisper_in", "whisper_out"):
+            self.recent_whispers.append(self._row(ev, now))
             if t == "whisper_in" and ev.get("trade"):
                 self._expire_trades(now)
                 if not self._refresh_trade(ev, now):
@@ -1981,6 +1984,7 @@ class SessionState:
                 "afk": self.afk,
                 "dnd": self.dnd,
                 "events_seen": self.events_seen,
+                "recent_whispers": list(self.recent_whispers),
                 "recent_events": list(self.recent_events),
                 "trade_requests": [dict(r, **trade_card_text(r))
                                    for r in self.trade_requests],
