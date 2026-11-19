@@ -622,7 +622,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   starts the client); X closes the window to the tray (tray Quit stops
   everything); tray Minimize-Restore / overlay toggle / Restart overlay /
   Quit; token in the URL fragment; one preload action (restart overlay);
-  only http(s) links leave via shell.openExternal; per-user Start Menu +
+  only https links to the hosts in config/link_hosts.json (or their
+  subdomains) leave via shell.openExternal, while the companion has focus,
+  at most 1 a second and 5 a minute; downloads are saved only from the core
+  origin with .build, .filter, .json or .txt; with no saved place the
+  companion opens on the largest display that is not the overlay's
+  (decision 0041 amendment 2026-11-19); per-user Start Menu +
   Desktop shortcut from setup.ps1; no packaged .exe (decision 0041).
   Reverses if:
   the overlay must run without the client, a release channel makes a
@@ -842,3 +847,24 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   (OVL-ELECTRON-SETUP). Reverses if: Electron stops publishing SHASUMS256.txt
   or release zips on GitHub, electron's npm package changes its dist/path.txt
   layout, or a signed release channel replaces the pin.
+- RUN-ZONE-RESET: SessionState._enter_zone() is the one per-zone reset
+  (state.ZONE_FIELDS, listed again in tests/test_bus_state.py), called from
+  the scene, area-generated, area-entered and log_opened arms. Each zone
+  entry moves a zone generation counter on: a generation line and its scene
+  line count as one entry, a scene with no generation line before it counts
+  as its own, and a game start is "no zone". Zone cards (schedule_zone_card
+  / zone_cards, at most 4) and slow producers that pass zone_gen publish
+  only while the generation is unchanged. restore() counts as a zone entry.
+  _REPLAY_TYPES is unchanged. The card and event text helpers live in
+  server/al/text/ (common.py, events.py), and state.py re-exports every
+  moved name as the same object. Reverses if: a per-zone field must survive
+  a zone entry, the generation-plus-scene pairing misfires on a real log,
+  or F-103's later steps reshape server/al/text/.
+- OVL-SHELL-GUARDS: Electron shell guards: app/parts/10-guards.js turns the
+  sandbox on for every renderer, denies navigation, popups and webview
+  attach on any webContents its creator did not register, keeps WebGL off
+  and quits on an inspect switch, a remote-debugging port or NODE_OPTIONS
+  unless AL_DEV=1; IPC answers only the exact sender frame; an overlay
+  restart runs at most once per 2 s (decision 0061). Reverses if: a needed
+  feature must navigate or open a window, the guards cost the overlay budget
+  (decision 0002), or Electron removes an API they rely on.
