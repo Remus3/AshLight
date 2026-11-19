@@ -5,7 +5,7 @@
    - row 1: the state glyph and word at 20 px / 600 ("[+] Build fits",
      "[?] Old build", "[?] Wrong class", "[ ] No build"), then the build
      name and level (16 px, ellipsis, full text in title). While no build
-     is loaded it carries the one button "Paste a build" (24 px).
+     is loaded it carries the one button "Paste a build" (28 px).
    - row 2 (16 px, muted): the source line or the one-line fix.
 
    The words come composed from the core: this file reads snap.play.build
@@ -118,7 +118,7 @@
     var r1 = el(doc, "p", "bl-row1 row-title");
     var word = el(doc, "span", "bl-word", "bl-word");
     var name = el(doc, "span", "bl-name row-body one-line", "bl-name");
-    var button = el(doc, "button", "bl-paste secondary btn-24", "bl-paste");
+    var button = el(doc, "button", "bl-paste secondary btn-28", "bl-paste");
     button.setAttribute("type", "button");
     button.textContent = PASTE_LABEL;
     button.hidden = true;

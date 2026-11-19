@@ -1,16 +1,17 @@
 /* AshLight dashboard: region B, the build line (PLAY-TD-15-BUILDLINE; plan 03
-   TD-15). Track 68 px at s = 1: border 2 + padding 6 + 6 + row 26 + row 22
-   = 62, slack 6. Row 1 is one 26 px flex row (the 20 px / 600 state word,
-   the 16 px name with the ellipsis, the 24 px button); row 2 is one 22 px
-   muted line. No gap between the rows. The line boxes come from the shared
-   row classes of web/app.css (.row-title, .row-body, .one-line, .btn-24). */
+   TD-15). Track 68 px at s = 1: border 2 + padding 6 + 6 + row 1 + row 2.
+   Row 1 is one flex row: the 20 px / 600 state word (26 px line box), the
+   16 px name with the ellipsis, and while no build is loaded the 28 px
+   button (row 1 is then 28 px). Row 2 is one 22 px muted line; no gap
+   between the rows. Content 48 px (50 with the button). The line boxes
+   come from the shared row classes of web/app.css (.row-title, .row-body,
+   .one-line, .btn-28). */
 #play-b .bl { display: grid; gap: 0; min-width: 0; }
 #play-b .bl-row1 {
   display: flex;
   align-items: center;
   gap: 0 0.5rem;
   min-width: 0;
-  min-height: var(--al-lh-title);
 }
 #play-b .bl-word { flex: 0 0 auto; font-weight: 600; white-space: nowrap; }
 /* "Old build" and "Wrong class" take status-warn; the glyph and word carry
@@ -19,9 +20,6 @@
 #play-b .bl-name { flex: 0 1 auto; }
 #play-b .bl-paste { flex: 0 0 auto; margin-left: auto; }
 #play-b .bl [hidden] { display: none; }
-/* B pads 6 px top and bottom (not 8): the rows keep 6 px of slack, so a
+/* B pads 6 px top and bottom (not 8): the rows keep 4 to 6 px of slack, so a
    fractional region top never eats the 2 px minimum (G4) */
 #play-b { --region-pad: 0.375rem; }
-/* the screen-reader heading of B: no box height (it neither scrolls nor
-   adds height) and the word's own type step (no new text style) */
-#play-b > .region-h { height: 0; font-size: var(--al-fs-title); font-weight: 600; }
