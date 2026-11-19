@@ -6,10 +6,12 @@
 - the overlay exists only while the client runs: main.js exits on a start
   without --client (bar the bounded smoke), run.ps1 starts the client with
   --client and never a bare overlay;
-- setup.ps1's shortcut writer is idempotent (PS 5.1, into tmp only);
+- the shortcut writer setup.ps1 uses (scripts/al_shell.ps1, DEP-07) is
+  idempotent (PS 5.1, into tmp only, effect root set);
 - docs: decision 0041, the 0029 amendment, the ROADMAP row, CLAUDE.md.
 """
 
+import os
 import re
 import shutil
 import subprocess
@@ -88,40 +90,42 @@ def test_run_ps1_starts_the_client_not_a_bare_overlay():
     assert '"-NoBrowser"' in launcher
 
 
-def _shortcut_fn():
-    text = (ROOT / "scripts" / "setup.ps1").read_text(encoding="ascii")
-    start = text.index("function Set-AlShortcut")
-    end = text.index("function Install-AlShortcuts")
-    return text[start:end]
+SHELL = ROOT / "scripts" / "al_shell.ps1"
 
 
 @pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
 def test_shortcut_writer_is_idempotent(tmp_path):
+    # DEP-07: the writer moved to scripts/al_shell.ps1 (setup.ps1 dot-sources it)
     target = tmp_path / "electron.exe"
     target.write_bytes(b"")
     icon = tmp_path / "ashlight.ico"
     icon.write_bytes(b"")
     link = tmp_path / "AshLight.lnk"
     call = (f"Set-AlShortcut '{link}' '{target}' '\"{tmp_path}\" --client' '{tmp_path}' "
-            f"'{icon}'")
-    script = _shortcut_fn() + f"\n{call}\n{call}\n" + (
+            f"'{icon}' '{tmp_path}'")
+    script = f". '{SHELL}'\n{call}\n{call}\n" + (
         f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{link}'); "
         "Write-Output ('ARGS=' + $s.Arguments)")
+    env = dict(os.environ, AL_SHELL_ROOT=str(tmp_path))  # effect root: writes only under tmp
     r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                        "-Command", script], capture_output=True, text=True, timeout=90)
+                        "-Command", script], capture_output=True, text=True, timeout=90,
+                       env=env)
     assert r.returncode == 0, r.stderr
     lines = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
-    assert lines[:2] == ["True", "False"], lines  # written, then a no-op
+    assert lines[:2] == ["written", "current"], lines  # written, then a no-op
     assert lines[2] == f'ARGS="{tmp_path}" --client'
     assert link.is_file()
 
 
 def test_setup_writes_per_user_shortcuts_only():
     text = (ROOT / "scripts" / "setup.ps1").read_text(encoding="ascii")
-    assert "GetFolderPath('Programs')" in text and "GetFolderPath('Desktop')" in text
-    assert "CommonPrograms" not in text and "CommonDesktop" not in text
+    shell = SHELL.read_text(encoding="ascii")
+    assert "GetFolderPath('Programs')" in shell and "GetFolderPath('Desktop')" in shell
+    for t in (text, shell):
+        assert "CommonPrograms" not in t and "CommonDesktop" not in t
+    assert ". (Join-Path $PSScriptRoot 'al_shell.ps1')" in text
     assert "assets\\icon.ico" in text and "client\\icon.js" not in text and "[switch]$NoShortcut" in text
-    assert text.count("Install-AlShortcuts\n") == 2  # both exits of the npm step
+    assert text.count("Invoke-AlShortcutStep\n") == 2  # both exits of the npm step
 
 
 def test_decision_and_records():
