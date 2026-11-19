@@ -11,6 +11,10 @@
   " Alt + D ": "Alt+D",
   "Shift+Alt+PageUp": "Alt+Shift+PageUp"
  },
+ "fallbacks": {
+  "eval": ["Alt+Shift+E", "Ctrl+Shift+F9", "Alt+Shift+F9", "Ctrl+Alt+F9"],
+  "toggle": ["Alt+Shift+A", "Ctrl+Shift+F10", "Alt+Shift+F10", "Ctrl+Alt+F10"]
+ },
  "bad": [
   "", "C", "Space", "F5", "Enter", "1", "Tab",
   "Shift+C", "Shift+Space", "Shift+1",
