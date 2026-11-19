@@ -1,18 +1,116 @@
 """AL loop merge: the gate-verdict cache and the Tick's merge into main as
 MergeMixin (plan 107 split of tools/al_loop.py, which re-exports every name
-here). Every side effect goes through self.d (Deps). Stdlib only."""
+here). Every side effect goes through self.d (Deps). Stdlib only.
+
+LOOP-WAVE-HOLD (F-033, AUTO-06): a merge whose diff touches a folder a
+session's wave holds (ops/loop/control/wave_owned.json) parks as wave-hold
+and merges once the file is gone; a hold file older than 48 h is one
+checklist row and is not obeyed. A wave's merge agent takes the loop's merge
+lock with
+
+    python tools/loop_merge.py hold [--root DIR] [--wait-s N] -- <command>
+
+which waits for the lock (exit 3 when it stays busy past --wait-s), runs the
+command under it and exits with the command's code."""
 
 import datetime as _dt
 import json
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 from loop_base import (
     GATE_CACHE_MAX, GATE_CACHE_REL, IN_FLIGHT, KEEP_REF, MAX_ROUNDS, MERGE_LOCK_REL,
-    RED_TTL_S, RESOLVABLE, ROADMAP_REL, ascii_text, atomic_write, epoch_of, iso,
-    read_json,
+    RED_TTL_S, RESOLVABLE, ROADMAP_REL, WAVE_HOLD_MAX_S, WAVE_HOLD_NOTICE_ID,
+    WAVE_OWNED_REL, ascii_text, atomic_write, epoch_of, iso, read_json,
 )
 import roadmap
 from loop_roadmap import base_kind, commit_body, flip_roadmap, merge_subject, resolve_roadmap
+
+
+# ---------------------------------------------------------------- wave hold
+
+def _norm_prefix(p):
+    """A held prefix as a repo-relative posix path without a trailing slash;
+    '' for anything that is not a usable path."""
+    if not isinstance(p, str):
+        return ""
+    p = p.strip().replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p.strip("/")
+
+
+def held_names(names, prefixes):
+    """The names that lie under a held prefix: the prefix itself or a path
+    below it (`tools` holds tools/x.py, never tools_extra/x.py)."""
+    return [n for n in names
+            if any(n == p or n.startswith(p + "/") for p in prefixes)]
+
+
+def read_wave_hold(root, now):
+    """None when no hold file exists, else {wave, prefixes, age_s, stale,
+    why}. stale is True for a file older than WAVE_HOLD_MAX_S, one with no
+    readable time (its age cannot be judged) or one that is not a hold
+    document; a stale hold is reported, never obeyed."""
+    path = Path(root) / WAVE_OWNED_REL
+    if not path.exists():
+        return None
+    doc = read_json(path, None)
+    if not isinstance(doc, dict) or not isinstance(doc.get("prefixes"), list):
+        return {"wave": None, "prefixes": [], "age_s": None, "stale": True,
+                "why": "unreadable"}
+    prefixes = [q for q in (_norm_prefix(p) for p in doc["prefixes"]) if q]
+    wave = doc.get("wave")
+    wave = wave if isinstance(wave, int) and not isinstance(wave, bool) else None
+    t = doc.get("time")
+    if isinstance(t, (int, float)) and not isinstance(t, bool):
+        ts = float(t)
+    else:
+        ts = epoch_of(t) if isinstance(t, str) else None
+    if ts is None:
+        return {"wave": wave, "prefixes": prefixes, "age_s": None, "stale": True,
+                "why": "no readable time"}
+    age = max(now - ts, 0.0)
+    stale = age > WAVE_HOLD_MAX_S
+    return {"wave": wave, "prefixes": prefixes, "age_s": age, "stale": stale,
+            "why": f"{int(age // 3600)} h old" if stale else ""}
+
+
+def _lock_path(root):
+    """The loop's merge lock in the MAIN checkout of root (a linked worktree
+    such as w<n>-int answers its main checkout's lock)."""
+    import al_lane
+    return al_lane.lanes().main_tree(root) / MERGE_LOCK_REL
+
+
+def hold(cmd, root, wait_s=1800.0, poll_s=5.0, lock=None, busy=None,
+         run=subprocess.call, sleep=time.sleep, clock=time.time, say=None):
+    """Run cmd under the loop's merge lock (MERGE_LOCK_REL of root's main
+    checkout) through the kit watch lock. A busy lock is retried every poll_s
+    until wait_s has passed, then 3 is returned and cmd never runs. Returns
+    cmd's exit code."""
+    path = _lock_path(root)
+    if lock is None or busy is None:
+        import al_lane
+        fw = al_lane._load("fleet_watch", "ops/fleet_kit/fleet_watch.py")
+        lock = lock or fw.watch_lock
+        busy = busy or fw.LockBusy
+    end, told = clock() + max(float(wait_s), 0.0), False
+    while True:
+        try:
+            with lock(path):
+                return run(list(cmd))
+        except busy as exc:
+            if clock() >= end:
+                if say:
+                    say(f"merge lock busy past {int(wait_s)} s: {exc}")
+                return 3
+            if say and not told:
+                say(f"merge lock busy ({exc}), waiting")
+                told = True
+            sleep(max(float(poll_s), 0.1))
 
 
 # ---------------------------------------------------------------- gate verdicts
@@ -108,9 +206,58 @@ class MergeMixin:
         merge and the item stays committed for the next worker."""
         try:
             with self.d.lock(self.root / MERGE_LOCK_REL):
+                if self.wave_held(rec):
+                    return None
                 return self._merge(rec)
         except self.d.watch.LockBusy:
             self.step(f"{rec['id']}: merge lock busy, merge deferred")
+
+    def wave_held(self, rec):
+        """LOOP-WAVE-HOLD: True (record parked as wave-hold) when a live hold
+        file names a prefix the item's diff touches. A stale hold is one
+        checklist row (wave_hold_notice) and is not obeyed. An unreadable diff
+        under a live hold parks too: the next tick re-checks."""
+        hold = read_wave_hold(self.root, self.d.clock())
+        self.wave_hold_notice(hold)
+        if hold is None or hold["stale"] or not hold["prefixes"] or not rec.get("commit"):
+            rec.pop("wave_hold", None)
+            return False
+        r = self.d.git(["diff", "--name-only", f"HEAD...{rec['commit']}"], self.d.main_tree)
+        if r.returncode != 0:
+            hit = ["(diff unreadable)"]
+        else:
+            names = [n.strip() for n in (r.stdout or "").splitlines() if n.strip()]
+            hit = held_names(names, hold["prefixes"])
+        if not hit:
+            rec.pop("wave_hold", None)
+            return False
+        first = rec.get("state") != "wave-hold"
+        rec["state"] = "wave-hold"
+        rec["wave_hold"] = {"wave": hold["wave"],
+                            "paths": [ascii_text(n, 120) for n in hit[:5]]}
+        self.items.put(rec)
+        if first:
+            w = hold["wave"] if hold["wave"] is not None else "?"
+            self.step(f"{rec['id']}: wave {w} holds {ascii_text(hit[0], 80)}, merge parked")
+        return True
+
+    def wave_hold_notice(self, hold):
+        """The one checklist row of a stale hold file: an item record
+        WAVE_HOLD_NOTICE_ID in state wave-hold-stale (no commit, no worktree,
+        no row, so only the checklist reads it); dropped by the next merge
+        that finds the file gone or fresh."""
+        items = self.items
+        cur = items.get(WAVE_HOLD_NOTICE_ID)
+        if hold is not None and hold["stale"]:
+            w = hold["wave"] if hold["wave"] is not None else "?"
+            title = f"Remove stale wave {w} hold file ({hold['why']}), not obeyed"
+            if not isinstance(cur, dict) or cur.get("title") != title:
+                items.put({"id": WAVE_HOLD_NOTICE_ID, "kind": "notice",
+                           "state": "wave-hold-stale", "title": title})
+                if not isinstance(cur, dict):
+                    self.step(f"wave hold file stale ({hold['why']}), not obeyed")
+        elif cur is not None and items.drop(WAVE_HOLD_NOTICE_ID):
+            self.step("stale wave hold notice cleared")
 
     def _merge(self, rec):
         main = self.d.main_tree
@@ -274,3 +421,41 @@ class MergeMixin:
             return False
         self.step("ROADMAP-only conflict auto-resolved by row")
         return True
+
+
+# ---------------------------------------------------------------- CLI
+
+def main(argv=None):
+    """`hold [--root DIR] [--wait-s N] [--poll-s N] -- <command...>`."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    usage = ("usage: loop_merge.py hold [--root DIR] [--wait-s N] [--poll-s N] "
+             "-- <command...>")
+    if not args or args[0] != "hold" or "--" not in args:
+        print(usage, file=sys.stderr)
+        return 2
+    i = args.index("--")
+    opts, cmd = args[1:i], args[i + 1:]
+    root, wait_s, poll_s = Path(__file__).resolve().parent.parent, 1800.0, 5.0
+    try:
+        while opts:
+            key, val = opts.pop(0), opts.pop(0)
+            if key == "--root":
+                root = Path(val)
+            elif key == "--wait-s":
+                wait_s = float(val)
+            elif key == "--poll-s":
+                poll_s = float(val)
+            else:
+                raise ValueError(key)
+    except (IndexError, ValueError):
+        print(usage, file=sys.stderr)
+        return 2
+    if not cmd:
+        print(usage, file=sys.stderr)
+        return 2
+    return hold(cmd, root, wait_s=wait_s, poll_s=poll_s,
+                say=lambda s: print(f"loop_merge hold: {s}", file=sys.stderr))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
