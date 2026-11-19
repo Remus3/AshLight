@@ -868,3 +868,22 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   restart runs at most once per 2 s (decision 0061). Reverses if: a needed
   feature must navigate or open a window, the guards cost the overlay budget
   (decision 0002), or Electron removes an API they rely on.
+- DEP-04 changelog: One changelog generator (tools/release.py notes):
+  per-version files in docs/releases/, CHANGELOG.md as their
+  concatenation, commit subject types enforced by the commit-msg hook,
+  Security grouped by commit type and row kind, never by id prefix
+  (decision 0062). Reverses if: the drafts need a rewrite every release.
+- DEP-06 runtimes and command builder: paths.python_exe / electron_exe
+  read the install marker's "python" / "electron" plain folder name under
+  <home>/runtime, with no stat of the runtime folder (None for an unusable
+  name; a checkout uses the running interpreter and
+  app/node_modules/electron/dist); paths.python_cmd is the one Python
+  spawn builder: today's `-m` form in a checkout, `<python>
+  <payload>/boot.py <module>` in an install, with an optional payload root
+  so version N+1 can self-test while N runs; keepalive core_command /
+  run_preflight and procs.electron_dir go through it; boot.py at the
+  payload root puts its own folder first on sys.path and runs the module
+  as `__main__`; the runtime's ._pth stays the publisher's file (spike
+  record docs/ops/runtime-spike-record.md). Reverses if: a boot.py start
+  breaks a module that relies on `-m` semantics, or a re-spawn site cannot
+  take the builder (then the ._pth line plus a `-c` self-test).
