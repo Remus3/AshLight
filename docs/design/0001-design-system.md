@@ -328,6 +328,15 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 - No modals: no `alert`, `confirm`, `prompt`, dialog or toast that blocks
   input or steals focus. The overlay window is non-focusable and
   click-through.
+- Notification policy (F-095): AshLight never pulls the eye off the game.
+  During play there is no Windows toast or notification, no sound or beep
+  and no taskbar or window flash; news is a change of text in place on the
+  overlay and the dashboard (section 9 rule 9). The one OS note is the
+  tray balloon that says once per run that AshLight is still in the tray,
+  shown only when the player closes the window with X, and silent
+  (decision 0041). `tests/test_glance_rules.py` scans app/, web/, server/
+  and scripts/ for notification, flash and sound APIs and fails on any
+  other hit.
 - Things that resolve themselves leave by themselves: a stale item (for
   example a trade request the player never answered) should expire after
   a stated time rather than wait for a click. Dismiss stays available.
@@ -649,6 +658,22 @@ Generation rules:
   same once-a-minute repaint, no marker.
 - Glance time target: each line readable in one fixation (< 1 s): <= 5
   words, number or name first, no wrapping (`nowrap` + ellipsis).
+- Glance rule (F-095): a card's first line starts with its answer, inside
+  the 34-character clip: the verdict word on an item check card (Upgrade,
+  Sidegrade, Downgrade, Risky, No risky mods), the price word on a price
+  card (`Price:`), the buyer on a trade card (`Trade: <buyer>`), or one of
+  the fixed status words of a card that has no verdict (No build loaded,
+  Not an item, Can't compare this, Build loaded, Build not loaded, Can't
+  check this item, Waystone unidentified). A merged card starts with its
+  item check head.
+- Every card that leaves the overlay by itself has a dashboard twin that
+  stays: the item check card and the price card (and the merged card) stay
+  in Play > Item check (`#eval-result`, `#price-result`), the trade card in
+  Trade requests (`#trade-list`) while it is open and in Recent (`#events`)
+  after it closes. `tests/test_glance_rules.py` walks every
+  card kind the core can publish and fails when a kind has no twin; a
+  later card holder declares its twin (or a reason it needs none) where it
+  is defined.
 - Placement: corners only, user-chosen; default top-right. In PoE2 that
   corner holds the game's corner map (with the quest tracker below it),
   so the 2-line HUD covers its top edge and a card covers more for its
