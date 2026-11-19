@@ -828,3 +828,17 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   registry read, library file or folder listing (decision 0059). Reverses if:
   the installed copy cannot serve daily dev use, or the override breaks the
   sidecar path test.
+- Electron pin: tracked config/electron_pin.json (version = the electron entry
+  of app/package.json, the line's end-of-life date, and for x64 and arm64 the
+  zip url, SHA-256 and size plus the electron.exe SHA-256 and size, every
+  value read from the public release) is used by tools/electron_pin.py
+  (stdlib; tc_pin's archive and hash helpers; AshLight User-Agent; github.com
+  and its release asset hosts only) to fetch into the sidecar Cache, refuse a
+  wrong zip before unpacking, unpack to app/node_modules/electron/dist plus
+  path.txt and check electron.exe; verify-exe hashes in full only when size or
+  mtime changed since the last good check (sidecar Build); an unknown
+  architecture warns and reports no client; it is a setup-time fetch, not
+  gated by web_data (Q-20), and is not yet wired into setup.ps1 / run.ps1
+  (OVL-ELECTRON-SETUP). Reverses if: Electron stops publishing SHASUMS256.txt
+  or release zips on GitHub, electron's npm package changes its dist/path.txt
+  layout, or a signed release channel replaces the pin.
