@@ -446,20 +446,20 @@
     <!-- UX-DASH-DENSITY: a rarely used tool, folded beside the strings it is made from -->
     <details id="filter-more" class="tool-fold">
     <summary>Loot filter add-on</summary>
-    <p class="muted">A small add-on for your own loot filter. It shows rare drops of the item
-      bases your build wears in larger text. The button sends ashlight.filter to your
-      browser's downloads. Move it yourself to the folder the game's own filter button
-      opens. Then add this line near the top of your own filter:</p>
-    <p><code class="filter-line">Import "ashlight.filter" Optional</code></p>
-    <p class="muted">AshLight writes nothing into your game folders. You move the file, and
-      you can delete it at any time.</p>
-    <div class="actions">
-      <button id="filter-download" type="button" class="secondary">Download ashlight.filter</button>
-      <span id="filter-said" class="muted"></span>
-    </div>
-    <p class="muted">Or add it to your own filter: pick your filter file. AshLight
-      puts its blocks at the top, hides nothing and leaves the rest as it is. Your browser
-      saves the combined copy as a new file; your own file is not changed.</p>
+    <!-- TC-FILTER-ONE-CONTROL (F-158): one primary control, the merge below;
+         the plain download is a small link. AshLight's part of the file is
+         dated and names the league of its prices. -->
+    <p class="muted">Add AshLight's highlights to your own loot filter. It shows rare
+      drops of the item bases your build wears in larger text. With web data on,
+      valuable uniques and currency stand out. Pick your filter file below. AshLight
+      puts its dated blocks at the top, hides nothing and leaves the rest as it is. The
+      combined copy goes to your browser's downloads as a new file; your own file is not
+      changed. Move it yourself to the folder the game's own filter button opens.
+      AshLight writes nothing into your game folders.</p>
+    <p class="muted small">Want the add-on as its own file instead?
+      <button id="filter-download" type="button" class="link">Download ashlight.filter</button>
+      and add <code class="filter-line">Import "ashlight.filter" Optional</code> near the
+      top of your own filter. <span id="filter-said"></span></p>
     <div class="actions">
       <label for="filter-merge-file">Your loot filter file</label>
       <input id="filter-merge-file" type="file" accept=".filter,text/plain">

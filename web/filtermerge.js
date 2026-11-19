@@ -6,7 +6,10 @@
    token header), which prepends AshLight's Show blocks and answers with the
    combined copy. The browser then saves it as a download. Nothing is
    written into a game folder, the player's own file is never changed, and
-   nothing runs without the player picking a file. No timers. */
+   nothing runs without the player picking a file. No timers.
+   TC-FILTER-ONE-CONTROL (F-158): this file pick is the card's one primary
+   filter control; the plain ashlight.filter download is a small link beside
+   it, and the core dates AshLight's section and names its prices' league. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -43,7 +46,7 @@
 
   function savedText(name) {
     return "Saved " + name + " to your downloads. Your own filter is unchanged. Move the " +
-      "new file to the game's filter folder, then pick it in the game's options.";
+      "new file to the game's filter folder.";
   }
 
   /* One merge for the picked file. env: {fetch, token, save(blob, name),

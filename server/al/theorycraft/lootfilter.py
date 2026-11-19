@@ -39,8 +39,14 @@ browser. The player's bytes after the section are byte-identical (CRLF and
 a leading UTF-8 BOM kept); the only part of their file read beyond the
 text checks is an AshLight section from an earlier merge at the very
 start, which is replaced. Bytes in, bytes out, in memory: no file, no path.
+
+TC-FILTER-ONE-CONTROL (F-158): the header of the file and of the merged
+section carries the day it was made and the league of the prices in it
+(the `league` key of filter_prices), so a stale copy shows as stale.
+`today` is injected in tests; the core passes nothing and gets today.
 """
 
+import datetime
 import re
 
 FILE_NAME = "ashlight.filter"
@@ -119,6 +125,25 @@ def tiers(prices, base_names=None):
     return out
 
 
+MAX_LEAGUE = 60
+
+
+def stamp(prices=None, today=None):
+    """The one header line: the day the text was made and, when the
+    prices name it, their league ("# Made on 2026-11-18 for the Standard
+    league."). The league is cut to the filter-safe letters so it can
+    never leave its comment line."""
+    if not isinstance(today, datetime.date):
+        today = datetime.date.today()
+    day = f"{today.year:04d}-{today.month:02d}-{today.day:02d}"
+    league = prices.get("league") if isinstance(prices, dict) else None
+    league = _clean(league)[:MAX_LEAGUE].strip() if isinstance(league, str) else ""
+    if league:
+        word = "" if league.lower().endswith("league") else " league"
+        return f"# Made on {day} for the {league}{word}."
+    return f"# Made on {day}."
+
+
 def _quoted(names):
     return " ".join(f'"{n}"' for n in names)
 
@@ -148,13 +173,15 @@ def _tier_lines(t):
     return lines
 
 
-def generate(build, base_names=None, prices=None):
+def generate(build, base_names=None, prices=None, today=None):
     """The filter text (ASCII, LF). With no build, no bases and no prices it
     is a valid filter made of comments only, so an Import of it changes
     nothing. `base_names` (optional, the cached snapshot base list) drops
     names the game data does not know. `prices` (optional,
-    ninja.RatesClient.filter_prices) adds the value tiers first."""
+    ninja.RatesClient.filter_prices) adds the value tiers first. `today`
+    (a date, tests only) is the day in the header line."""
     lines = ["# ashlight.filter - made by AshLight from your loaded build.",
+             stamp(prices, today),
              "# " + NOTICE,
              "# Save this file in your item filter folder, then add this line",
              "# near the top of your own filter:",
@@ -259,14 +286,16 @@ def _strip_old_section(body):
     return b"" if j < 0 else body[j + 1:]
 
 
-def merge(data, build, base_names=None, prices=None):
+def merge(data, build, base_names=None, prices=None, today=None):
     """The player's filter bytes with AshLight's Show blocks prepended in a
     marked section. A leading BOM stays first; the section uses CRLF when
-    the file does; everything after it is the player's bytes unchanged."""
+    the file does; everything after it is the player's bytes unchanged.
+    The section's second line is stamp(): the day and the prices' league."""
     body = _strip_old_section(check_text(data))
     bom = _BOM if data.startswith(_BOM) else b""
     nl = "\r\n" if b"\r\n" in body else "\n"
     lines = [MERGE_BEGIN,
+             stamp(prices, today),
              "# Added by AshLight: Show blocks only, nothing is hidden. Your own",
              "# filter follows the end line below, unchanged. To undo, delete",
              "# everything from the start line to the end line.",

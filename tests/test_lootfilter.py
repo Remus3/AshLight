@@ -1,5 +1,6 @@
 """UTIL-FILTER (decision 0031): the ashlight.filter snippet."""
 
+import datetime
 import http.client
 import re
 import threading
@@ -58,6 +59,18 @@ def test_generated_filter_follows_the_grammar():
     assert lootfilter.IMPORT_LINE == 'Import "ashlight.filter" Optional'
     assert lootfilter.IMPORT_LINE in text and lootfilter.NOTICE in text
     assert text.count("\nShow\n") == 1
+
+
+def test_generated_header_carries_date_and_league():
+    # TC-FILTER-ONE-CONTROL (F-158): the same stamp as the merged section
+    day = datetime.date(2026, 11, 18)
+    text = lootfilter.generate(BUILD, today=day)
+    check_grammar(text)
+    assert text.split("\n")[1] == "# Made on 2026-11-18."
+    text = lootfilter.generate(BUILD, prices={"uniques": [], "stackables": [],
+                                              "league": "Example League"}, today=day)
+    check_grammar(text)
+    assert text.split("\n")[1] == "# Made on 2026-11-18 for the Example League."
 
 
 def test_no_build_is_comments_only():
