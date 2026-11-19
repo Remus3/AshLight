@@ -7,9 +7,10 @@ fixtures, once with -m calc and once with -m timing:
 
 - -m calc lists only tests of the live calc files (tc_live_util.CALC_FILES),
   every one of them, and every test that requests warm_bridge;
-- -m timing lists all of test_budgets, test_soak and test_math_perf and the
-  per-call bound tests of test_fuzz (those that call _run or _timed), and
-  nothing else;
+- -m timing lists all of test_budgets, test_soak and test_math_perf, the
+  per-call bound tests of test_fuzz (those that call _run or _timed) and
+  the individually marked tests of mixed files (TIMING_TESTS, e.g. the
+  TC-PRESS-STAGED-LIVE first-card budget test), and nothing else;
 - a calc test is in the xdist group 'calc'; every test of the three
   supervisor files is in the xdist group 'supervisor';
 - the marks are registered (--strict-markers).
@@ -76,6 +77,10 @@ CALC_TESTS = {
     "tests/test_math_skill_split.py": {"test_live_calc_outputs_for_build_view"},
 }
 TIMING_WHOLE = {"tests/test_budgets.py", "tests/test_soak.py", "tests/test_math_perf.py"}
+# mixed files: only these tests carry the timing mark, the rest of the file not
+TIMING_TESTS = {
+    "tests/test_tc_press_staged.py": {"test_first_card_and_reply_within_budget_with_a_slow_calc"},
+}
 FUZZ = "tests/test_fuzz.py"
 SUPERVISOR = ("tests/test_keepalive.py", "tests/test_procs.py", "tests/test_supervisor.py")
 
@@ -165,10 +170,15 @@ def test_calc_tests_share_the_calc_worker_group(calc_rows):
 def test_minus_m_timing_lists_the_timing_files_and_fuzz_bounds(timing_rows):
     picked = [r for r in timing_rows if r["selected"]]
     files = {r["file"] for r in picked}
-    assert files == TIMING_WHOLE | {FUZZ}, sorted(files)
+    assert files == TIMING_WHOLE | {FUZZ} | set(TIMING_TESTS), sorted(files)
     for rel in TIMING_WHOLE:
         rows = [r for r in timing_rows if r["file"] == rel]
         assert rows and all(r["selected"] for r in rows), rel
+    for rel, names in TIMING_TESTS.items():
+        got = {r["name"] for r in picked if r["file"] == rel}
+        assert got == names, (rel, sorted(got ^ names))
+        # the file's other tests are not wall-clock sensitive
+        assert any(r["file"] == rel and not r["selected"] for r in timing_rows), rel
     bound = _fuzz_bound_tests()
     assert len(bound) >= 12
     got = {r["name"] for r in picked if r["file"] == FUZZ}
