@@ -11,7 +11,8 @@ import pytest
 
 from server.al.core import Core
 from server.al.http import serve
-from server.al.state import EVAL_CARD_S, SessionState, eval_card_text, stat_delta_text
+from server.al.state import (EVAL_CARD_S, SessionState, build_alert_text, eval_card_text,
+                             stat_delta_text)
 from server.al.theorycraft import codec, live
 from tc_eval_fixtures import ADVANCED_RING, EVAL_BUILD_XML, RARE_GLOVES
 
@@ -36,6 +37,20 @@ def comp(slot, verdict, delta, name="Weak Loop", empty=False, stats=()):
 
 LIFE = {"key": "+# to maximum Life", "delta": 35, "score_delta": 35, "weighted": True}
 ODD = {"key": "Some odd stat #", "delta": 4, "score_delta": 0, "weighted": False}
+
+
+# TC-VERDICT-CAVEAT (F-042): the no-build sentence names the item-key load
+NO_BUILD_SENTENCE = ("No build loaded yet. Paste a Path of Building code under Build, "
+                     "or copy the code in Path of Building and press the item key, "
+                     "then check the item again.")
+# the three build alerts (buildlive.alert findings) and their short heads
+ALERTS = (
+    ({"kind": "missing", "character": "Sable"}, "No build for Sable"),
+    ({"kind": "class", "character": "Sable", "build_class": "Ranger",
+      "log_class": "Witch"}, "Build is for a Ranger"),
+    ({"kind": "level", "character": "Sable", "build_level": 62, "level": 70},
+     "Build is from level 62"),
+)
 
 
 def card(**kw):
@@ -92,8 +107,7 @@ def test_error_card_text():
                         "item": {"name": "Grim Clutch"}})
     assert (t["head"], t["item"], t["line"]) == \
         ("No build loaded", "Grim Clutch", "Paste a build on the dashboard")
-    assert t["sentence"] == ("No build loaded yet. Paste a Path of Building code under "
-                             "Build, then press the hotkey again.")
+    assert t["sentence"] == NO_BUILD_SENTENCE
     assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
         [], "Not checked", "note", False)
     t = eval_card_text({"ok": False, "error": "not an item", "item": {}})
@@ -135,6 +149,52 @@ def test_overlay_lines_fit_the_card():
               {"ok": False, "error": "no gear slot for this item class"}):
         t = eval_card_text(c)
         assert len(t["head"]) <= 34 and len(t["line"]) <= 34, t
+        # TC-VERDICT-CAVEAT: with any build alert, worst cases included
+        long_name = "Q" * 23
+        for alert in [a for a, _short in ALERTS] + [
+                {"kind": "missing", "character": long_name},
+                {"kind": "class", "character": long_name,
+                 "build_class": "Acolyte of Chayula", "log_class": "Witch"},
+                {"kind": "class", "build_class": "X" * 40},
+                {"kind": "level", "build_level": 10 ** 40, "level": 1}]:
+            t = eval_card_text(c, alert)
+            assert len(t["head"]) <= 34 and len(t["line"]) <= 34, (t, alert)
+
+
+def test_alert_head_takes_line3():
+    """TC-VERDICT-CAVEAT (F-043): while a build alert is set, a compared
+    item's line 3 is the alert's short head (exact, at most 34) and the
+    alert sentence is the first dashboard note; the verdict stays."""
+    for alert, short in ALERTS:
+        words = build_alert_text(alert)
+        assert words["short"] == short and len(short) <= 34
+        t = eval_card_text(card(), alert)
+        assert (t["head"], t["item"], t["line"]) == (
+            "Upgrade +47.5 vs Ring 1", "Storm Loop", short)
+        assert t["notes"] == [words["text"]]
+        assert (t["word"], t["tone"]) == ("Upgrade", "upgrade")
+    assert eval_card_text(card(), None) == eval_card_text(card())
+    # articles and fallbacks for long names and classes
+    assert build_alert_text({"kind": "class", "build_class": "Invoker",
+                             "log_class": "Ranger"})["short"] == "Build is for an Invoker"
+    assert build_alert_text({"kind": "missing"})["short"] == "No build for this character"
+    assert build_alert_text({"kind": "missing", "character": "Q" * 23})["short"] ==         "No build for this character"
+    assert build_alert_text({"kind": "class", "build_class": "X" * 40})["short"] ==         "Build is for another class"
+    assert build_alert_text({"kind": "class"})["short"] == "Build is for another class"
+    assert build_alert_text({"kind": "level", "build_level": 10 ** 40})["short"] ==         "Build is from a lower level"
+    # an unidentified item keeps naming the input it lacks; the note stays
+    alert = ALERTS[0][0]
+    t = eval_card_text(card(unidentified=True), alert)
+    assert t["line"] == "Mods hidden - identify it first"
+    assert t["notes"] == [build_alert_text(alert)["text"]]
+    # error and waystone cards are left as they are
+    for c in ({"ok": False, "error": "no build loaded"},
+              {"ok": False, "error": "not an item"},
+              {"ok": True, "waystone": {"tier": 5, "risky": []}}):
+        assert eval_card_text(c, alert) == eval_card_text(c)
+    # junk alerts change nothing
+    for junk in ({}, {"kind": "new"}, "missing", 5):
+        assert eval_card_text(card(), junk) == eval_card_text(card())
 
 
 def test_state_eval_and_build_fields():
@@ -253,8 +313,7 @@ def test_no_build_keep_part_words():
     assert (t["word"], t["tone"], t["answers"]) == ("Keep", "upgrade", True)
     assert (t["head"], t["item"], t["line"]) == (
         "Keep - 2 of 5 met at level 24", "Grim Clutch", "Paste a build on the dashboard")
-    assert t["sentence"] == ("No build loaded yet. Paste a Path of Building code under "
-                             "Build, then press the hotkey again.")
+    assert t["sentence"] == NO_BUILD_SENTENCE
     assert t["notes"] == [
         "Worth keeping: it meets 2 of 5 levelling thresholds for level 24.",
         "Thresholds met: life 25+, fire res 12+."]
