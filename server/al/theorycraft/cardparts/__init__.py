@@ -33,6 +33,8 @@ A later feature adds ONE module to this package and edits nothing else
     becomes "<word> - <head>", clipped to HEAD_MAX.
   - answers: True when the card answers without a build, so the overlay
     keeps the item card even when no build is loaded.
+  - calc: the dashboard calc sentence; a part may replace it with a
+    non-empty string (TC-PRESS-STAGED-LIVE); any other value is put back.
   Every string is AshLight's own words (design 0001 section 9).
 
 Discovery is pkgutil.iter_modules over this package (stdlib); there is no
@@ -56,7 +58,7 @@ HEAD_MAX = 34  # design 0001 section 9 rule 6 (state.CARD_LINE)
 # the overlay card's verdict edges (app/overlay data-verdict)
 TONES = ("upgrade", "sidegrade", "downgrade", "risky", "note", "")
 # the keys a part's words() may change; every other key is put back
-WORD_KEYS = ("notes", "word", "tone", "head", "answers")
+WORD_KEYS = ("notes", "word", "tone", "head", "answers", "calc")
 
 _lock = threading.Lock()
 _PARTS = None  # the discovered parts, cached on first use
@@ -195,6 +197,11 @@ def _keep_contract(out, before):
     if new_word and isinstance(word, str) and isinstance(head, str) \
             and not head.startswith(word):
         head = _clip(f"{word} - {head}" if head else word)
+    if not _ok_word(out.get("calc")):
+        if "calc" in before:
+            out["calc"] = before["calc"]
+        else:
+            out.pop("calc", None)
     out.update(word=word, tone=tone, head=head, answers=out.get("answers") is True)
 
 

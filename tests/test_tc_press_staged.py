@@ -19,7 +19,10 @@ import pytest
 
 from server.al.core import Core
 from server.al.http import serve
+from server.al.state import CALC_CACHED_TEXT as STATE_CACHED_TEXT
+from server.al.state import CALC_NOTICE_TEXT as STATE_NOTICE_TEXT
 from server.al.state import eval_card_text
+from server.al.theorycraft import cardparts
 from server.al.theorycraft import codec
 from server.al.theorycraft import evaluate as tc_evaluate
 from server.al.theorycraft import item as item_parser
@@ -99,6 +102,72 @@ def _stage(card):
 
 
 # -- the stage part ----------------------------------------------------------
+
+def _cached_card(notice=None, pending=True):
+    return {"ok": True, "verdict": "upgrade", "slot": "Gloves", "score_delta": 5,
+            "item": {"name": "Grim Clutch"},
+            "calc": {"source": "pob_cached", "notice": notice}, "comparisons": [],
+            "parts": {"stage": {"stage": "weights"}} if pending else {}}
+
+
+def test_warm_cache_first_stage_says_numbers_are_coming(core):
+    """TCS-1: a pending card scored with this build's cached PoB weights
+    never says the calc is off."""
+    core.tc_calc = FakeCalc()
+    core.eval_press(RARE_GLOVES)  # measures this build's PoB weights
+    assert core.last_eval.wait(WAIT_S)
+    gate = threading.Event()
+    core.tc_calc = FakeCalc(gate=gate)
+    try:
+        first = core.eval_press(RARE_GLOVES)
+        assert first["calc"] == {"source": "pob_cached", "notice": None}
+        text = core.state.snapshot()["eval"]["text"]
+        assert "calc is off" not in text["calc"] and "coming" in text["calc"]
+        assert text["calc"] == stage_part.PENDING_CALC
+        assert stage_part.PENDING_NOTE in text["notes"]
+    finally:
+        gate.set()
+    assert core.last_eval.wait(WAIT_S)
+    assert core.state.snapshot()["eval"]["calc"]["source"] == "pob"
+
+
+def test_last_stage_keeps_the_calc_sentence():
+    done = eval_card_text(_cached_card(pending=False))
+    assert done["calc"] == STATE_CACHED_TEXT["off"]  # unchanged by the part
+    assert stage_part.PENDING_NOTE not in done["notes"]
+
+
+@pytest.mark.parametrize("notice", ["off", "failed", "implausible"])
+def test_a_notice_keeps_its_own_sentence_while_pending(notice):
+    t = eval_card_text(_cached_card(notice=notice))
+    assert t["calc"] == STATE_CACHED_TEXT[notice]
+    assert t["notes"][0] == stage_part.PENDING_NOTE
+    w = eval_card_text(dict(_cached_card(notice=notice),
+                            calc={"source": "weights", "notice": notice}))
+    assert w["calc"] == STATE_NOTICE_TEXT[notice]
+
+
+@pytest.mark.parametrize("bad", ["", "   ", None, 5, ["x"]])
+def test_a_part_cannot_blank_the_calc_sentence(bad):
+    class Probe:
+        NAME, ORDER = "probe", 1
+
+        @staticmethod
+        def compute(ctx):
+            return None
+
+        @staticmethod
+        def words(value, card, out):
+            out["calc"] = bad
+    out = {"calc": "Before.", "notes": [], "word": "Upgrade", "tone": "upgrade",
+           "head": "Upgrade +5 vs Gloves", "answers": False}
+    cardparts.words({"parts": {"probe": 1}}, out, found=[Probe])
+    assert out["calc"] == "Before."
+    bare = {"notes": [], "word": "Upgrade", "tone": "upgrade", "head": "Upgrade",
+            "answers": False}
+    cardparts.words({"parts": {"probe": 1}}, bare, found=[Probe])
+    assert "calc" not in bare
+
 
 def test_stage_part_value_and_note():
     assert stage_part.compute({"stage": {"name": "weights", "pending": True}}) == \

@@ -99,7 +99,10 @@ of the same card that keeps the press time (state.set_eval keep_time; the
 card id moves, its `at` does not), so the overlay does not show the card
 again. While a stage is pending the card part cardparts/stage.py adds the
 dashboard note "Path of Building numbers are coming."; the last stage
-drops it. One press in flight: a press generation counter, bumped by
+drops it. The stage part owns the pending calc sentence until a state.py
+pending key exists: a pending card scored with this build's cached PoB
+weights (source "pob_cached", no notice) says those numbers are coming,
+not that the calc is off (cardparts WORD_KEYS gains "calc"). One press in flight: a press generation counter, bumped by
 every press, every re-score (rerun) and Core.close(), cancels the older
 press's pending stages at the next stage boundary (its generator is
 closed, so no further calc call) and a stale stage is never published.
