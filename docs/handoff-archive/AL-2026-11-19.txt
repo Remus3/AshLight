@@ -1,0 +1,60 @@
+AL hand-off archive 2026-11-19 (session 9 /done): closed blocks moved out of AL-NEXT-SESSION.txt verbatim.
+
+Wave 6 escape count: 2 of 4 batches needed a second suite (PLAY-TD-14-NOTICE,
+SEC-SSE-TAP; test-only fix rounds, merged as batch 4); 17 percent, so the
+batch dropped to 3 until TEST-SELECT. Batch suites 3019 to 3059 passed;
+npm 314 to 371. Adjudicator rulings:
+.region-h.sr-only shared rule in web/app.css by PLAY-TD-09C-BAR;
+regions.test.js split LINKED_CSS / one-per-line STUB_CSS (09C-BAR), each
+region package deletes its own stub line; region markers n, t, b stay
+pending (accept deviation; legacy regions G, C, I, U land in wave 7); cdp
+harness live predicate = #reading data-state running|done|idle|blocked;
+test-only follow-the-change edits: tests/test_play_view.py (07B),
+tests/test_trade_refresh.py and tests/test_http_robust.py (SEC-SSE-TAP),
+app/test/cdp/dash_console.mjs and play_fit.mjs (09C-BAR); the 4 untagged
+rows above. Design fix rounds: PLAY-TD-15-BUILDLINE (BL-1, BL-5; round 1
+FAIL), PLAY-TD-13-FEED (FEED-1 to 3), PLAY-TD-14-NOTICE (N14-1 to 4).
+Waves 1 to 5 escape counts (record in git history, commits at each wave close): wave 1 1/11, wave 2 0/12, wave 3 0/12, wave 4 1/13, wave 5 1/13 worktree packages; batch size stayed 4 until wave 6. GP-04 fresh clone at 930770d green (py3.14 2590 passed; py3.11 found test_soak Reader._stop shadowing, fixed; test_procs is red only under a venv launcher). GP-01 armed 44 needles. Wave 5 rulings: RUN-SEAMS files extended with tests/test_tc_wire.py, PLAY-TD-09B-SKELETON with tests/test_design_tokens.py. Wave 4: tests/test_test_layout.py caught test-to-test imports in four packages; test_dash_console once hit ERR_CONNECTION_REFUSED (port race, TEST-PORT-LEASE merged wave 5).
+
+- NOTE (PLAN-LANDING, wave 0): closed in session 6: docs/plan/08 and 09,
+  one ROADMAP row per package, this hand-off, and its test file
+  tests/test_plan_operator_acts.py (added after the plan verification).
+  Read back 2026-11-18: every part of its accept line holds (the wave 0
+  gate of docs/plan/07: the five named test files green, plan_check ok,
+  396 of 396 row ids in ROADMAP.md exactly once, the pointer line 1, the
+  stale Next-action line 0, the three operator record lines 3) and row
+  PLAN-LANDING is flipped. Nothing of wave 0 is carried into wave 1.
+
+- NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
+  applied: 0 removed, 3 kept, 0 listed (base main); kept lane-0, lane-1,
+  lane-2 (fleet_lanes lane worktrees).
+
+- NOTE (session 8 /done, 2026-11-19): fleet_done.py reap --apply: the w4-*, w5-*
+  and w6-* package and int worktrees removed (branches deleted), 3 kept (lane-0,
+  lane-1, lane-2); re-run: 0 removed, 3 kept, 0 listed (base main).
+
+- NOTE (session 7 /done, 2026-11-18): fleet_done.py reap --apply: 38
+  removed (w1-*, w2-*, w3-* package and int worktrees, branches deleted),
+  3 kept (lane-0, lane-1, lane-2); dry run after: 0 removable, 3 kept, 0
+  listed (base main).
+
+Do NOT redo (session 7, all on main at fc599f6): waves 1, 2 and 3 of
+docs/plan/07 are closed. Merged packages: wave 1 SEC-NO-DISCOVERY
+SEC-STATIC-MAP SEC-XML-NUL RUN-DURABLE-JSONFILE SEC-NO-PROXY
+LOOP-SPLIT-TICK LOOP-TESTS-CARVE PLAY-TD-02-SLOTS AUTO-03 LOOP-LEDGERS
+LOOP-PREFLIGHT-CMD GP-01 GP-03 RUN-LIVE-CLICKS-STRIKE DATA-GGG-APPLICATION;
+wave 2 AUTO-01 AUTO-02 AUTO-04 AUTO-25 LOOP-HANDOFF-PREFIX
+LOOP-ROWFILES-MERGE LOOP-DECISION-TIDY PLAY-TD-09A-REGION-HOOK
+RUN-DURABLE-STORE-FILES RUN-TAIL-HEAL-READER SEC-CEIL-HTTP SEC-DEMO-CORE
+SEC-SURFACE-PIN TC-CARD-PARTS DATA-PRICE-FALLBACK-RUNBOOK; wave 3
+DATA-LEAGUE-IDENTITY GP-04 LOOP-DONE-FOLD LOOP-FAILED-PARK
+LOOP-ROWFILES-WORK OVL-HIDEOUT-AREA PLAY-TD-01A-PLAY-STATES SEC-DEMO-ENTRY
+TC-CARD-PARTS-WEB TC-PRESS-BUILD TEST-LAYOUT-GUARD TEST-PLUGIN-PIN. Their
+rows are flipped and archived by the session 7 /done fold. Isolated demo
+mode exists (python -m server.al --demo).
+Do NOT redo (session 6, the Fable ultraplan, all on main): research
+0035 to 0058, plan 01 to 09, findings.json, packages.json, decisions
+0046, 0077, 0078, the guarded pre-push hook, tools/push_guard.py, GP-02,
+PUB-GO-DECISION, tools/plan_check.py, wave 0 (PLAN-LANDING), the
+close-out 2 rulings and the worktree probe (it passed; do not repeat).
+Session 5 and earlier: see git log and docs/audit/2026-11-17-audit.md.
