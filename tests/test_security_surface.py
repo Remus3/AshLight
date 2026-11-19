@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from server.al import NAME
+from server.al import NAME, hello
 from server.al import http as al_http
 from server.al.core import Core
 from server.al.theorycraft import codec
@@ -38,7 +38,10 @@ TOKEN = "s" * 48
 # HEADER: X-AL-Token or Authorization: Bearer; ?token= is refused.
 # QUERY: the header, or ?token= (EventSource cannot set headers).
 # REFUSED: 405 on every path, no token read.
+# PROOF: a nonce + HMAC of the token in two headers, never the token itself
+# (SEC-HELLO-CORE, decision 0054); the token value alone is refused.
 NONE, HEADER, QUERY, REFUSED = "none", "header", "header or ?token=", "405"
+PROOF = "token proof"
 
 # (method, path): (token rule, body cap in bytes or None = no body read).
 # A path ending in "*" is a prefix route. HEAD mirrors every GET row.
@@ -49,6 +52,8 @@ ROUTES = {
     ("GET", "/web/*"): (NONE, None),
     ("GET", "/tokens.css"): (NONE, None),
     ("GET", "/favicon.ico"): (NONE, None),
+    # token-proof GET (1): the client proves the core before it sends the token
+    ("GET", "/api/hello"): (PROOF, None),
     # token GET (13)
     ("GET", "/api/health"): (HEADER, None),
     ("GET", "/api/version"): (HEADER, None),
@@ -258,6 +263,10 @@ def auth():
     return {"X-AL-Token": TOKEN}
 
 
+def hello_proof(nonce="0" * 32):
+    return {hello.NONCE_HEADER: nonce, hello.PROOF_HEADER: hello.client_proof(TOKEN, nonce)}
+
+
 def probe_path(path):
     return SAMPLE.get(path, path)
 
@@ -272,15 +281,18 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", HEADER): 12, ("GET", QUERY): 1,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 12,
+                      ("GET", QUERY): 1,
                       ("POST", HEADER): 12, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
     assert [al_http.Handler._needs_token(probe_path(p)) for (m, p), (rule, _)
-            in ROUTES.items() if rule in (NONE, HEADER, QUERY)] == \
+            in ROUTES.items() if rule in (NONE, PROOF, HEADER, QUERY)] == \
         [rule != NONE for (m, p), (rule, _) in ROUTES.items()
-         if rule in (NONE, HEADER, QUERY)]
+         if rule in (NONE, PROOF, HEADER, QUERY)]
+    # the one proof route is the hello route
+    assert [p for (_, p), (rule, _) in ROUTES.items() if rule == PROOF] == [hello.PATH]
     # the named caps in http.py are the pinned numbers
     assert al_http.MAX_BODY == 4096
     assert al_http.MAX_BUILD_BODY == 256 * 1024
@@ -342,8 +354,15 @@ def test_every_token_route_answers_401_without_the_token(srv):
                 r, _ = req(srv, m, target)
                 assert r.status == 405, (m, target)
                 continue
-            for h in ({}, {"X-AL-Token": "wrong"}, {"Authorization": "Bearer wrong"},
-                      {"Authorization": "Basic " + TOKEN}):
+            probes = [{}, {"X-AL-Token": "wrong"}, {"Authorization": "Bearer wrong"},
+                      {"Authorization": "Basic " + TOKEN}]
+            if rule == PROOF:
+                # the token value is not the proof route's credential
+                probes += [auth(), {"Authorization": "Bearer " + TOKEN}]
+            else:
+                # a hello proof opens no other route
+                probes.append(hello_proof())
+            for h in probes:
                 r, data = req(srv, m, target, h)
                 assert r.status == 401, (m, target, h)
                 if m != "HEAD":
@@ -418,6 +437,8 @@ def test_reply_header_set_is_pinned(srv):
         ("GET", "/web/app.js", {}, None, 200, {}),
         ("HEAD", "/", {}, None, 200, {}),
         ("GET", "/api/health", auth(), None, 200, {}),
+        ("GET", "/api/hello", hello_proof(), None, 200, {}),
+        ("GET", "/api/hello", auth(), None, 401, {}),
         ("GET", "/api/state", {}, None, 401, {}),
         ("GET", "/zzq-nope", {}, None, 404, {}),
         ("DELETE", "/api/state", {}, None, 405, {}),

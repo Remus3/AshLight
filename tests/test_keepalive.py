@@ -397,16 +397,27 @@ def _counting_proxy():
 
 
 def _test_core(token):
-    """A stand-in core on an ephemeral port that answers /api/health."""
+    """A stand-in core on an ephemeral port that answers /api/health and,
+    SEC-HELLO-CORE, the /api/hello proof (the supervisor checks it first)."""
     import http.server
     import threading
 
+    from server.al import hello
+
     class Health(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            ok = self.path == "/api/health" and self.headers.get("X-AL-Token") == token
+            body = b"{}"
+            if self.path == hello.PATH:
+                nonce = self.headers.get(hello.NONCE_HEADER)
+                ok = hello.check_client(token, nonce, self.headers.get(hello.PROOF_HEADER))
+                if ok:
+                    port = self.server.server_address[1]
+                    body = json.dumps(hello.answer(token, nonce, port)).encode("ascii")
+            else:
+                ok = self.path == "/api/health" and self.headers.get("X-AL-Token") == token
             self.send_response(200 if ok else 403)
             self.end_headers()
-            self.wfile.write(b"{}")
+            self.wfile.write(body)
 
         def log_message(self, *args):
             pass
@@ -426,6 +437,7 @@ def test_health_check_ignores_proxy_settings(monkeypatch, tmp_path):
         for name in ("no_proxy", "NO_PROXY"):
             monkeypatch.delenv(name, raising=False)
         (tmp_path / "token").write_text("tok\n", encoding="ascii")
+        ka.hello.forget()
         assert ka.health_check(tmp_path, srv.server_address[1], timeout=5)
         assert hits == []
     finally:

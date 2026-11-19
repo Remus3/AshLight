@@ -14,7 +14,10 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   Vary: Sec-Fetch-Site; the Server header names no version;
 - SEC-STATIC-MAP: /web/ answers by exact lookup in a map of AshLight's own
   listing of web/ (static.py), so no file system call sees request text;
-- strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none'.
+- strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none';
+- SEC-HELLO-CORE (decision 0054): GET /api/hello takes a proof of the token
+  (hello.py), never the token value, as its token gate, so a client can
+  prove the core before it sends the token.
 """
 
 import contextlib
@@ -31,7 +34,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import DISCLAIMER, NAME, VERSION, gfx, layout, ports, settingsio, static, webfetch
+from . import DISCLAIMER, NAME, VERSION, gfx, hello, layout, ports, settingsio, static, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -279,10 +282,20 @@ class Handler(BaseHTTPRequestHandler):
         if not ok:
             self._send(403, "bad origin\n")
             return None
-        if needs_token and not self._token_ok(query, path):
+        if needs_token and not self._credential_ok(query, path):
             self._json(401, {"error": "token required"}, extra)
             return None
         return extra
+
+    def _credential_ok(self, query, path):
+        """The token gate. SEC-HELLO-CORE (decision 0054): /api/hello takes
+        only the client proof (nonce + HMAC of the token, two headers),
+        never the token value; every other token route takes the token."""
+        if path == hello.PATH:
+            return hello.check_client(self.server.token,
+                                      self.headers.get(hello.NONCE_HEADER),
+                                      self.headers.get(hello.PROOF_HEADER))
+        return self._token_ok(query, path)
 
     @staticmethod
     def _needs_token(path):
@@ -304,6 +317,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/favicon.ico":
             # BRAND-ICON: the local icon file (web/favicon.ico), no network.
             return self._static("favicon.ico")
+        if path == "/api/hello":
+            # SEC-HELLO-CORE: the proof was checked by _guard; the answer
+            # binds the nonce and the port this server bound
+            return self._json(200, hello.answer(self.server.token,
+                                                self.headers.get(hello.NONCE_HEADER),
+                                                self.server.port), extra)
         if path == "/api/health":
             return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
                                     "port": self.server.port,

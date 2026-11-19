@@ -32,7 +32,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import hotreload, paths, ports
+from . import hello, hotreload, paths, ports
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -197,18 +197,28 @@ _NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def health_check(runtime, port, timeout=3.0):
-    """True when the core answers /api/health with the current token."""
+    """True when the core answers /api/health with the current token.
+
+    SEC-HELLO-CORE (decision 0054): the listener first proves it is the
+    core (hello.verify, once per token value); the token is sent only after
+    that. Any request error clears the verification, so the next check
+    proves the listener again."""
     try:
         token = (Path(runtime) / "token").read_text(encoding="ascii").strip()
-    except OSError:
+    except (OSError, ValueError):
+        return False
+    if not hello.verify(port, token, opener=_NO_PROXY_OPENER, timeout=timeout):
         return False
     req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}/api/health",
                                  headers={"X-AL-Token": token})
     try:
         with _NO_PROXY_OPENER.open(req, timeout=timeout) as r:
-            return r.status == 200
+            if r.status == 200:
+                return True
     except (OSError, ValueError):
-        return False
+        pass
+    hello.forget(port)
+    return False
 
 
 class Keepalive:
@@ -269,7 +279,12 @@ class Keepalive:
     def step(self):
         now = self._now()
         hb = read_heartbeat(self.runtime / HEARTBEAT_FILE)
-        if hb and self._alive(hb["pid"]) and self._same_process(hb):
+        live = bool(hb) and self._alive(hb["pid"]) and self._same_process(hb)
+        if not live:
+            # SEC-HELLO-CORE: the core that proved itself is gone, so the
+            # listener on the port is proven again before it gets the token
+            hello.forget(self.port)
+        if live:
             if hb["pid"] != self.pid:
                 self.pid = hb["pid"]
                 self._log(f"watching core pid {self.pid} on port {hb['port']}")
