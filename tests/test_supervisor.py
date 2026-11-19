@@ -22,13 +22,14 @@ import pytest
 from server.al import __main__ as entry
 from server.al import keepalive as ka
 from server.al import paths, ports
+from tc_live_util import leased_port  # noqa: F401 (a fixture)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = sorted((ROOT / "scripts").glob("*.ps1"))
 STOP = ROOT / "scripts" / "stop.ps1"
 RUN = ROOT / "scripts" / "run.ps1"
 PS51 = shutil.which("powershell.exe") if sys.platform == "win32" else None
-TEST_PORT = ports.PORT_BLOCK[1] - 2  # never the live core's port
+TEST_PORT = ports.PORT_BLOCK[1] - 2  # a number in fake heartbeats only; real starts lease
 FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 WIN51 = pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
 
@@ -205,11 +206,11 @@ def test_clean_exit_then_stop_request_exit_once(tmp_path):
     assert w.launches == []
 
 
-def test_second_supervisor_exits_at_once(tmp_path):
+def test_second_supervisor_exits_at_once(tmp_path, leased_port):
     held = ka.acquire_lock(tmp_path)
     try:
         r = subprocess.run([sys.executable, "-m", "server.al.keepalive", "--runtime",
-                            str(tmp_path), "--port", str(TEST_PORT)], cwd=str(ROOT),
+                            str(tmp_path), "--port", str(leased_port)], cwd=str(ROOT),
                            env={**os.environ, paths.SIDECAR_ENV: str(tmp_path / "AL")},
                            capture_output=True, timeout=30, creationflags=FLAGS)
         assert r.returncode == 0
