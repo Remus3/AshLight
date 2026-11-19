@@ -143,7 +143,7 @@
     return out;
   }
 
-  function pad(list, n, blank) {
+  function padList(list, n, blank) {
     var out = list.slice(0, n);
     while (out.length < n) { out.push(blank); }
     return out;
@@ -171,10 +171,10 @@
       glyph: str(it.glyph) || "[-]",
       word: str(it.word) || "Checked",
       name: str(it.name),
-      sentence: pad(sentence, SENTENCE_ROWS, ""),
+      sentence: padList(sentence, SENTENCE_ROWS, ""),
       full: str(it.full) || sentence.join(" "),
       label: str(cmp.label),
-      rows: pad(rows, COMPARE_ROWS, { text: "", value: "" }),
+      rows: padList(rows, COMPARE_ROWS, { text: "", value: "" }),
       price: asking ? { value: asking, source: "" }
         : { value: str(price.value), source: str(price.source) },
       links: safeLinks(it.links),

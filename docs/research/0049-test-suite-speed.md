@@ -620,6 +620,8 @@ R12. Shared server fixture.
    1 can measure it; record red batch suites per batch.
 4. Why the loop's xdist runs were red 24 times in 37. Unknown until R6
    restores the failure records and R3's 10-run check is done.
+   Answered for today's suite in the 2026-11-19 addendum (TEST-XDIST-DIAG):
+   three reds, all test-side; the 24 historic reds left no test ids.
 
 ## Verification
 
@@ -680,3 +682,82 @@ UNVERIFIED: F12's race mechanism (inferred from timing, not reproduced);
 the escape rate e (assumed 5 percent); the cause of the red xdist runs;
 F6's subset timings (scratch prototype, not re-run); PROBE's per-cause
 splits (git, sleep, thread waits) beyond its summary line.
+
+## Addendum 2026-11-19 - three diagnosed parallel runs (TEST-XDIST-DIAG)
+
+Answers Open question 4 for the suite as it stands on main b6ab91e (wave 8;
+TEST-PLUGIN-PIN, TEST-PORT-LEASE and TEST-MARKS merged). No new research
+number. Method: in a clean package worktree, three runs one after the other,
+each `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m
+pytest -q -n 4 --dist loadgroup --junitxml=<sidecar Scratch>/up-xdist/run<k>.xml`,
+started from a below-normal priority parent (pytest-xdist 3.8.0). Hold and
+wait seconds are the gate's own durations.jsonl rows for the three runs.
+Failing ids and messages come from the junit files.
+
+Run 1: 4 failed, 3128 passed, 5 skipped in 403.45 s; gate hold 405.4 s,
+wait 0.0 s, peak commit 3273 MB. Failing:
+- tests/test_budgets.py::test_resume_scan_of_full_32mb_cap_under_500ms
+  (581.8 ms against 500 ms)
+- tests/test_math_e2e_live.py::test_repeat_press_uses_cached_probes
+  (16.6 s against the 10 s repeat budget)
+- tests/test_play_cards.py::test_pack_states_compose_the_cards[d]
+  (OSError WinError 10048, address in use)
+- tests/test_play_view.py::test_pack_state_rows_are_exact[c2]
+  (OSError WinError 10048)
+
+Run 2: 3 failed, 3129 passed, 5 skipped in 114.84 s; gate hold 115.3 s,
+wait 0.0 s, peak commit 3460 MB. Failing:
+- tests/test_math_e2e_live.py::test_repeat_press_uses_cached_probes (15.7 s)
+- tests/test_play_cards.py::test_pack_states_compose_the_cards[c]
+  (WinError 10048)
+- tests/test_play_states.py::test_recipe_builds_pinned_and_yields_its_fields[d]
+  (WinError 10048)
+
+Run 3: 2 failed, 3130 passed, 5 skipped in 116.04 s; gate hold 116.4 s,
+wait 10.2 s, peak commit 3191 MB. Failing:
+- tests/test_math_e2e_live.py::test_repeat_press_uses_cached_probes (16.8 s)
+- tests/test_play_states.py::test_recipe_builds_pinned_and_yields_its_fields[f]
+  (WinError 10048)
+
+No worker was lost (no crashed or replaced node in any log) and no run
+printed the third-party warning block of F8 (TEST-PLUGIN-PIN removed it).
+
+Serial check (same worktree, same day): tests/test_math_e2e_live.py,
+tests/test_play_cards.py, tests/test_play_view.py and
+tests/test_play_states.py by file name: 80 passed in 41.01 s;
+tests/test_budgets.py through the gate: 6 passed in 7.51 s. No red
+reproduces serially; each is traced to a test defect:
+
+1. Port race in the play recipes. tests/play_states.py `_start` takes
+   `free_test_port()` (tests/tc_live_util.py), a bind probe with no lease
+   lock, so two workers can pick the same port of 8962-8969 between probe
+   and `serve`; the second bind fails with 10048. Row to file:
+   TEST-PLAY-PORT-LEASE - play_states binds port 0 (its recipe audit
+   forbids a file opened outside its tmp root, so the lease lock file is
+   out), or the audit allows the lease lock dir and it takes `lease_port()`.
+2. Hidden order dependency. test_repeat_press_uses_cached_probes presses
+   RING_UPGRADE and asserts the cached-probe budget, which holds only when
+   the ring_upgrade case of test_item_check_deltas_come_from_pob ran
+   earlier on the same module fixture. Under `--dist loadgroup` the
+   calc group stays on one worker but its order changes: the junit order
+   shows the repeat test before ring_upgrade in all three runs, so its
+   press was a cold one (15.7-16.8 s, against 18.3 s for the cold
+   ring_upgrade press in run 1). Row to file: TEST-E2E-REPEAT-SELF - the
+   repeat test presses the ring twice itself and times the second press.
+3. Timing assert under sibling load. The `timing` test passed serially
+   and failed once (run 1, the slow run: 403 s against 115 s, other wave
+   work on the box) with three other workers busy. Row to file:
+   TEST-TIMING-ALONE - a parallel run deselects `-m timing` and runs it
+   in a serial pass after the workers (or one `xdist_group("timing")`).
+
+XDIST: cleared
+
+Reading: every red of the three runs is a named test defect, none appears
+without a test-side cause and no worker was lost, so the verdict rule of
+TEST-XDIST-DIAG gives 'cleared'; TEST-SUITE-RUNNER may take xdist when it
+is importable once the three rows land (until then a parallel gate stays
+red on rows 1 and 2). Limits: the 24 historic loop-gate reds of F7 left no
+test ids and cannot be re-attributed; the runs were `-n 4 --dist
+loadgroup`, not the loop's `-n 8 --dist loadfile`. Green parallel holds
+were about 115 s against the 237 s serial RUN of F1 (different suite
+size: 3137 tests against 2319).
