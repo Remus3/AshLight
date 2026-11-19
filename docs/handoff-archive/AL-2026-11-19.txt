@@ -82,3 +82,39 @@ Rows filed (all BLOCKED: session wave 9): PLAY-N-FIT, RUN-UNREADABLE-WORD
 chosen; 7 spawn sites for DEP-06). Open design findings: SU-1, SU-2
 (PLAY-TD-12), SRW-1 to SRW-3, FMT-1, FMT-2 (docs/design/reviews.log).
 Builders made sidecar worktrees with the hand-run hook (not wired).
+
+Session 10 /done (2026-11-19): closed blocks moved out of AL-NEXT-SESSION.txt verbatim.
+
+Wave 9 escape count: 2 of 3 merge batches needed a second suite (batch 2:
+tests/test_sidecar_paths.py flagged drive-rooted fixture URLs in
+OVL-SHELL-GUARDS's app/test/guards.test.js; fixed forward by adjudicator
+ruling instead of revert+defer, a deviation from 08 s4 step 6; batch 1:
+tests/test_marks.py rejected TC-PRESS-STAGED-LIVE's timing-marked test,
+fixed forward with a per-test TIMING_TESTS rule, mark kept); 12 of 12
+worktree packages plus act GP-11 merged, none deferred. Batches ran in the
+order 2, 3, 1 (batch 1 waited on fix rounds): RUN-ZONE-RESET / REL-PINFETCH
+/ OVL-LINKS-DOWNLOADS / OVL-SHELL-GUARDS (+ GP-11 row); DEP-04 / DEP-06 /
+DEP-07 / DATA-PRICE-POLITE; TC-PRESS-STAGED-LIVE / TEST-WAVE-GATE-POLICY /
+TEST-WEB-REGISTRY / TEST-SUITE-RUNNER. Batch suites 3314+1 failed then 3315,
+3360, 3400+1 failed then 3401 passed; npm 480, 480, 495. GP-11: repository
+description, 10 topics and switches set by gh and read back (still PRIVATE).
+Wave 9 rulings (adjudicator, 2026-11-19): TEST-WEB-REGISTRY widened to
+app/test/regions.test.js (one regex); TC-PRESS-STAGED-LIVE widened to
+tests/test_fullstack.py and server/al/theorycraft/cardparts/__init__.py
+(WORD_KEYS gains calc) and tests/test_marks.py to fix design S2 TCS-1 inside
+the package (state.py was RUN-ZONE-RESET's this wave). Open design findings:
+FMT-1/2, SU-1/2, SRW-1 to SRW-3, ZR-1, OLD-1 to OLD-4, TWR-1 to TWR-3, TCS-2
+(docs/design/reviews.log).
+
+AUTO-21 (session 9, 2026-11-19): six checks green, HALT removed 2026-11-19 (5560fec tagged the 4 rows first); the next tick's loop.json read status done, not halted (08:33). Read back again at wave-7 start: (1) roadmap lint ok 324 rows, test_roadmap_shape + test_roadmap_rows 7 passed; (2) rows --open --untagged lists 19 ids (16 owner:loop + UTIL-10-DATA/NOTES/LOG); (3) loop_preflight --handoff prints hand-off loop items: 0; (4) loop_preflight exit 0 in the AUTO-21 run (client state as found, not started); (5) usage_ledger gate used 2 cap 120; (6) the dry run listed only check-2 ids; HALT absent. Pause again with ops/loop/control/HALT.
+
+Do NOT redo (session 9, all on main and pushed): AUTO-21 (4 rows tagged
+5560fec, six checks green, HALT removed and read back absent; row closed
+8edd586); wave 7 closed (12 of 12 merged in 4 green batches of 3, last suite
+3120 passed / 4 skipped, npm 439, origin/main 0f30d9e); docs/plan/06 says
+tools/loop_preflight.py; markers t, b, c-zone, i, u removed (cfeca99);
+wave_owned.json removed; the session 9 roadmap fold (b96a8e8).
+Do NOT redo (session 8, all on main): waves 4, 5 and 6 are closed (13 + 13 +
+12 packages, pointer `wave 6 done, next wave 7`); GP-09 is done (private
+repository created, main pushed, decisions 0079 and 0080, gate 12 held on ci
+run 44488095493 attempts 1 and 2); the 0051 full bullet is in CLAUDE.md.
