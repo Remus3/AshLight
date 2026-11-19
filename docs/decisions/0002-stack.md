@@ -196,3 +196,31 @@ every 2 s: 60 s idle, then 30 s with 150 log events (one SSE push each,
 - Reverses if: the in-process network service crashes the overlay, or
   Electron drops the feature (then the utility process comes back and
   the smoke test fails on the process count).
+
+## Test plugins (Q-16, 2026-11-18)
+
+Clarified (ruling Q-16; research 0049 R3, R7 and its 2026-11-19 addendum,
+verdict "XDIST: cleared"; TEST-SUITE-RUNNER):
+
+- `pytest` stays the one test dependency. An optional dev-only test plugin
+  may speed the suite: `pytest-xdist` (3.8.0, with `execnet` 2.1.2), pinned
+  exactly with `--hash` lines in `requirements-dev.txt`, installed by hand.
+  No AshLight script runs pip; `setup.ps1` and `build.ps1` never install
+  it. `server/`, `tools/` and app code never import it (`tools/suite_run.py`
+  only asks `importlib.util.find_spec` whether it is present).
+- `tools/suite_run.py` is the one whole-suite command, always started under
+  the kit suite gate (`python ops/fleet_kit/fleet_suite_gate.py run --owner
+  <id> -- python tools/suite_run.py`; `suite_run.py argv --owner <id>`
+  prints it) and refused without the gate's `FLEET_SUITE_SLOT`. Phase 1 runs
+  every test except `timing` on 4 workers with `--dist loadgroup` when xdist
+  is importable, serially otherwise (the serial path stays the default on a
+  machine without the plugin); phase 2 runs the `timing` tests alone,
+  serially, after phase 1. The exit code is the worst phase's; children run
+  at below-normal priority. Callers pass no flag.
+- Alternatives: stdlib file shards (4 pytest processes, largest-first; the
+  plan if xdist had been rejected, more code for the same pins); the loop's
+  `-n 8 --dist loadfile` (two gate slots share the box, 4 leaves room and
+  loadgroup keeps the calc and fixed-port groups together); serial only
+  (237 s and more, past lane eligibility).
+- Reverses if: the diagnosed runs show xdist caused flakes or lost workers,
+  or the operator rules tests must be stdlib-only.
