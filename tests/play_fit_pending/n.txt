@@ -1,0 +1,1 @@
+Region N is painted; its box waits for regions C, T, B, I and U to land (top and compact row 9 move) and the sr-only heading check (G1, G7).
