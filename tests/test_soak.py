@@ -81,11 +81,12 @@ class Reader(threading.Thread):
         self.bytes = 0
         self.closed = False
         self._tail = b""
-        self._stop = threading.Event()
+        # Not "_stop": that shadows threading.Thread._stop, which join() calls on 3.11.
+        self._halt = threading.Event()
 
     def run(self):
         self.sock.settimeout(0.5)
-        while not self._stop.is_set():
+        while not self._halt.is_set():
             try:
                 chunk = self.sock.recv(65536)
             except socket.timeout:
@@ -101,7 +102,7 @@ class Reader(threading.Thread):
         self.closed = True
 
     def stop(self):
-        self._stop.set()
+        self._halt.set()
         self.sock.close()
         self.join(3)
 
