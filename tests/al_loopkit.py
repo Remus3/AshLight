@@ -74,11 +74,12 @@ class FakeSpawn:
 
 def make_root(tmp_path, roadmap=ROADMAP, handoff=HANDOFF, local=None):
     root = tmp_path / "repo"
-    (root / "docs" / "plans").mkdir(parents=True)
+    # LOOP-ROWFILES-WORK: a row's optional brief is docs/plan/briefs/<ID>.md
+    (root / "docs" / "plan" / "briefs").mkdir(parents=True)
     (root / "docs" / "research").mkdir(parents=True)
     (root / "ROADMAP.md").write_text(roadmap, newline="\n")
-    (root / "docs" / "plans" / "012-grind-spots.md").write_text(
-        "# Plan 012 - Grind spot recommender by AP/DP\n", newline="\n")
+    (root / "docs" / "plan" / "briefs" / "012.md").write_text(
+        "# Brief 012 - Grind spot recommender by AP/DP\n", newline="\n")
     (root / "AL-NEXT-SESSION.txt").write_text(handoff, newline="\n")
     if local is not None:
         (root / "config").mkdir()

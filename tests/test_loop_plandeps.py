@@ -1,9 +1,10 @@
-"""LOOP-TESTS-CARVE: the tools/al_loop.py tests of plan docs, plan_depends
-and blocked-on-dependency records (the plan 019 dependency gate section),
-moved unchanged from tests/test_al_loop.py. Owner later: LOOP-ROWFILES-WORK,
-which edits this file and never tests/test_al_loop.py. progress, _lane,
-_two_lane_world and T0 are copied unchanged; they stay in tests/test_al_loop.py
-too."""
+"""LOOP-TESTS-CARVE: the tools/al_loop.py tests of plan_depends and
+blocked-on-dependency records (the plan 019 dependency gate section), moved
+from tests/test_al_loop.py. LOOP-ROWFILES-WORK rewrote the dependency tests
+to DEPENDS rows: a row waits on the `DEPENDS: <ids>` in its own text (F-029),
+plan docs are no longer read, and an unknown id is a visible wait, not a
+fail-open dispatch. progress, _lane, _two_lane_world and T0 are copied
+unchanged; they stay in tests/test_al_loop.py too."""
 
 import datetime as _dt
 import json
@@ -17,6 +18,8 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import al_loop  # noqa: E402
+import loop_roadmap  # noqa: E402
+import roadmap  # noqa: E402
 
 from al_loopkit import (  # noqa: E402
     GIT_TIMEOUT_S, FakeSpawn, deps, git, git_world, isolate_git, make_root, real_git)
@@ -72,17 +75,21 @@ ALL_RUNNING = [{"index": i, "state": "RUNNING", "lane": n}
                for i, n in enumerate(("build", "data", "review"))]
 
 
+def with_depends(text, deps_of):
+    """ROADMAP text with a `  DEPENDS: <line>` continuation line under the row
+    of each id in deps_of (None: no line)."""
+    out = []
+    for line in text.split("\n"):
+        out.append(line)
+        m = al_loop.ROW_RX.match(line)
+        if m and deps_of.get(m.group(2)) is not None:
+            out.append(f"  DEPENDS: {deps_of[m.group(2)]}")
+    return "\n".join(out)
+
+
 def dep_root(tmp_path, deps_of, roadmap=DEP_ROADMAP):
-    """make_root plus one plan doc per id in deps_of with its Depends-on line."""
-    root = make_root(tmp_path, roadmap=roadmap, handoff="")
-    for iid, line in deps_of.items():
-        body = f"# Plan {iid} - t\n\nText mentioning 099 here.\n\n"
-        if line is not None:
-            body += f"Depends on: {line}\n"
-        (root / "docs" / "plans" / f"{iid}-x.md").write_text(body, newline="\n")
-    if "012" in deps_of:
-        (root / "docs" / "plans" / "012-grind-spots.md").unlink()
-    return root
+    """make_root with a DEPENDS: line in the row of each id in deps_of."""
+    return make_root(tmp_path, roadmap=with_depends(roadmap, deps_of), handoff="")
 
 
 def test_plan_depends_parser():
@@ -134,14 +141,17 @@ def test_dependency_cycle_leaves_both_skipped_and_is_logged(tmp_path):
 
 
 @pytest.mark.git
-def test_missing_doc_or_unknown_dependency_fails_open(tmp_path):
-    root = dep_root(tmp_path, {"012": "077.", "014": "none."})  # 013 has no doc
+def test_unknown_dependency_waits_and_a_plan_doc_gates_nothing(tmp_path):
+    root = dep_root(tmp_path, {"012": "077.", "014": "none."})  # 013 has no line
+    # a legacy plan doc's Depends-on line is no longer read (F-029)
+    (root / "docs" / "plans").mkdir()
+    (root / "docs" / "plans" / "013-x.md").write_text("Depends on: 012.\n", newline="\n")
     d = deps(root)
     doc = al_loop.tick(deps=d, no_push=True)
-    assert d.seen["launch"] == ["012", "013", "014"]
-    assert any("012" in s and "077" in s and "no ROADMAP row" in s for s in doc["log"])
-    # AL rows rarely have a plan doc: a missing doc gates nothing and logs nothing
-    assert not any("no plan doc" in s for s in doc["log"])
+    assert d.seen["launch"] == ["013", "014"]
+    row = next(r for r in doc["checklist"] if r["id"] == "012")
+    assert row["state"] == "waits on 077 (no such row)"
+    assert not any("no ROADMAP row" in s for s in doc["log"])
 
 
 # -- 4a blocked markers
@@ -389,20 +399,27 @@ def test_flip_time_fallback_finds_the_no_ff_merge_commit(tmp_path):
 
 
 def test_current_roadmap_dispatches_only_ready_rows(tmp_path):
-    # acceptance on the real ROADMAP + plan docs (read-only): every open row is
-    # either ready (no open Depends-on row) or waiting on exactly its open ones
+    # acceptance on the real ROADMAP + row files (read-only): every open row is
+    # either ready (no open or unknown DEPENDS id) or waits on exactly those
     d = deps(make_root(tmp_path), main_tree=ROOT)
     rows, work, skipped = al_loop.Tick(d, dry_run=True).work_list()
     open_ids = {r["id"] for r in rows if r["open"]}
+    known = {r["id"] for r in rows} | {r["id"] for r in loop_roadmap.archived_rows(ROOT)}
+    by_id = {r["id"]: r for r in rows}
+
+    def expected(iid):
+        dep = roadmap.depends(by_id[iid]["text"])
+        why = [x for x in dep if x in open_ids]
+        out = ["waits on " + ", ".join(why)] if why else []
+        return out + [f"waits on {x} (no such row)" for x in dep if x not in known]
+
     for w in work:
         if w["kind"] == "plan":
-            text = al_loop.plan_doc(ROOT, w["id"]) or ""
-            assert not set(al_loop.plan_depends(text)) & open_ids, w["id"]
+            assert expected(w["id"]) == [], w["id"]
     for s in skipped:
         if s.get("reason") and s.get("skip") != "blocked":
-            want = [x for x in al_loop.plan_depends(al_loop.plan_doc(ROOT, s["id"]))
-                    if x in open_ids]
-            assert want and s["reason"] == "waits on " + ", ".join(want)
+            want = expected(s["id"])
+            assert want and s["reason"] == "; ".join(want)
     plans = [w["id"] for w in work if w["kind"] == "plan"]
     waits = [s["id"] for s in skipped if s.get("reason")]
     assert sorted(plans + waits) == sorted(open_ids)

@@ -669,16 +669,17 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   entry writes the lasting record (decision 0078). Reverses if: an
   entry's own Reverses-if is met, the operator answers an item of
   docs/plan/09, or a package's record lands and outranks the entry.
-- Demo mode core: a demo core runs only from a fixture folder holding a
-  marker and a Client.txt, never a game folder; scratch lives under the
-  sidecar Temp folder; config/local.json and live runtime are never read
-  or written; the Steam scan is off and the fetcher refuses; the port is
-  the first free of 8970-8975 (ports.DEMO_BLOCK), never 8960; a log
-  outside the fixture exits 97; consent covers the fixture file only
-  (decision 0049; the --demo entry point and shipped fixture land with
-  SEC-DEMO-ENTRY, wave 3). Reverses if: a demo core is ever seen opening
-  a file outside its fixture and scratch dirs, or the operator rules a
-  demo instance unwanted.
+- Demo mode: 'python -m server.al --demo <fixture dir>' is the one
+  supported isolated instance: the dir must hold AshLight's demo marker
+  and a Client.txt; runtime, config, logs and caches live in a scratch
+  folder under the sidecar Temp dir; config/local.json and the live
+  runtime dir are never read or written; the Steam scan is off; web data
+  is off (the fetcher refuses); the port is the first free one of
+  8970-8975 (ports.DEMO_BLOCK), never 8960; the process exits 97 if a log
+  outside the fixture dir would be opened; the demo consent record covers
+  the fixture file only (decision 0049). Reverses if: a demo core is ever
+  seen opening a file outside its fixture and scratch dirs, or the
+  operator rules a demo instance unwanted.
 - Research dives have no free web tools: every fetch goes through
   tools/webfetch.py behind one host allow-list with the AshLight
   User-Agent; GGG is read only at the API Reference and Data Exports
