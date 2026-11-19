@@ -50,7 +50,16 @@ remaining steps and repeats nothing destructive.
 
 ### 4. Paperwork
 
-- `ROADMAP.md`: flip finished rows, add new open rows as lanes.
+- `ROADMAP.md` (one writer, once a session): run
+  `python tools/roadmap_fold.py fold --write`. It appends each
+  `docs/roadmap/new/<ID>.md` row under its lane, flips each
+  `docs/roadmap/done/<ID>.md` row, git-rms the applied row files and
+  prunes every done row into `docs/roadmap/archive/<YYYY-MM>.md`. Then
+  commit ROADMAP.md, the archive file and the removed row files in one
+  commit through the git lock. Never hand-edit ROADMAP.md rows here; file a
+  new row with `python tools/roadmap.py new` and close one with
+  `python tools/roadmap.py done <ID> <who>`. Exit 1 (a bad row file)
+  changes nothing: its stderr line becomes a hand-off `NOTE:` bullet.
 - New settled decisions: `docs/decisions/` plus one CLAUDE.md "Settled" line.
 
 ### 5. Reap finished worktrees (kit v22)
@@ -64,13 +73,20 @@ Record its summary line in the hand-off as a `NOTE:` bullet.
 1. READ the current `AL-NEXT-SESSION.txt`.
 2. Every unacted item is copied forward verbatim or tighter. Never drop one.
 3. Add this session's items from ground truth.
+4. Under `Carried forward`, a `- ` bullet is loop work ONLY when its text
+   starts with `LOOP:` (tools/loop_roadmap.py handoff_items); every other
+   bullet is for a session and the loop never takes it.
+5. Keep the counter line shape `SESSION: <n+1>   (...)` exactly: the
+   word, a colon, the number first (tools/al_loop.py handoff_session).
 
 ```
 AL NEXT SESSION
 ---------------
 SESSION: <n+1>   (FLEET item 13 counter: the previous SESSION line plus one)
 Next action: <the one thing "continue" should work on>
-Carried forward (not acted on yet): <every unacted item>
+Carried forward (not acted on yet):
+- LOOP: <an item the loop may work unattended>
+- <an item for a session: no LOOP: prefix>
 Context: <files / live state to probe first>
 Acceptance: <how the next session knows it is done>
 Do NOT redo: <shipped this session that still looks open>
