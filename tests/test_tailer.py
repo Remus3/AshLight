@@ -98,35 +98,88 @@ def test_partial_line_held_back(tmp_path):
 
 
 def test_truncation_resets(tmp_path):
+    """Cleared in place and rewritten with new text of at most 64 KB: read
+    from its first line, no resume scan (RUN-TAIL-HEAL-READER). A log seen
+    empty after the clear is read in full as it grows."""
     p = tmp_path / "Client.txt"
     p.write_bytes(b"x" * 100 + b"\n")
-    t, sink = _tail(p)
+    asked = []
+    t, sink = _tail(p, on_resume=lambda path, end: asked.append(end))
     t.poll_once()
+    asked.clear()
     with open(p, "r+b") as fh:
         fh.truncate(0)
         fh.write(b"fresh\n")
     t.poll_once()
-    assert any(s.get("reason") == "truncated" for s in sink.status)
+    assert _resets(sink) == ["truncated"]
+    assert sink.status[-1]["read"] == "start"
     assert sink.lines == ["fresh"]
+    assert asked == []
+    with open(p, "r+b") as fh:
+        fh.truncate(0)
+    t.poll_once()
+    assert _resets(sink) == ["truncated", "truncated"]
+    big = _log(1000, start=5000)
+    _append(p, big)
+    t.poll_once()
+    assert sink.lines == ["fresh"] + [x.decode() for x in big.splitlines()]
+    assert asked == []
+    t.stop()
+
+
+def test_truncation_to_new_big_text_jumps_to_the_end(tmp_path):
+    """Cut in place below the read offset and refilled with more than 64 KB
+    of text the reader never saw: skipped to its end, resume scan asked."""
+    p = tmp_path / "Client.txt"
+    p.write_bytes(_log(2000))
+    asked = []
+    t, sink = _tail(p, on_resume=lambda path, end: asked.append(end))
+    t.poll_once()
+    asked.clear()
+    big = _log(1000, start=9000)
+    with open(p, "r+b") as fh:
+        fh.truncate(0)
+        fh.write(big)
+    assert t.poll_once() == 0
+    assert sink.lines == []
+    assert _resets(sink) == ["truncated"]
+    assert sink.status[-1]["read"] == "end"
+    assert asked == [len(big)]
     t.stop()
 
 
 def test_replacement_reopens(tmp_path):
+    """Replaced by another file: one of at most 64 KB is read from its first
+    line; one past 64 KB is skipped to its end and handed to the resume
+    scan."""
     p = tmp_path / "Client.txt"
     p.write_bytes(b"one\n")
-    t, sink = _tail(p)
+    asked = []
+    t, sink = _tail(p, on_resume=lambda path, end: asked.append(end))
     t.poll_once()
+    asked.clear()
     new = tmp_path / "Client.new"
     new.write_bytes(b"line from the new file which is long enough\n")
     os.replace(new, p)
     t.poll_once()
-    reasons = [s.get("reason") for s in sink.status if s["type"] == "tailer_reset"]
-    assert reasons and reasons[0] in ("replaced", "truncated")
+    assert _resets(sink) == ["replaced"]
+    assert sink.lines == ["line from the new file which is long enough"]
+    assert asked == []
+    big = _log(1000)
+    new.write_bytes(big)
+    os.replace(new, p)
+    assert t.poll_once() == 0
+    assert _resets(sink) == ["replaced", "replaced"]
+    assert asked == [len(big)]
+    started = [s for s in sink.status if s["type"] == "tailer_started"]
+    assert started[-1]["offset"] == len(big)
     assert sink.lines == ["line from the new file which is long enough"]
     t.stop()
 
 
 def test_missing_then_back(tmp_path):
+    """Missing, then a file shows up: at most 64 KB is read from its first
+    line; a bigger one (C4 covers it) starts at its end."""
     p = tmp_path / "Client.txt"
     t, sink = _tail(p)
     t.poll_once()
@@ -135,6 +188,14 @@ def test_missing_then_back(tmp_path):
     assert len(missing) == 1  # reported once, not every poll
     p.write_bytes(b"born\n")
     t.poll_once()
+    assert sink.lines == ["born"]
+    new = tmp_path / "Client.new"
+    new.write_bytes(_log(1000, start=7000))  # made first: another file id
+    p.unlink()
+    t.poll_once()
+    assert _resets(sink) == ["missing", "missing"]
+    os.replace(new, p)
+    assert t.poll_once() == 0
     assert sink.lines == ["born"]
     t.stop()
 
@@ -193,7 +254,6 @@ def test_libraryfolders_discovery(tmp_path):
 
 # ---------------------------------------------------------------- chaos (R1)
 
-@pytest.mark.xfail(strict=True, reason="RUN-TAIL-HEAL-READER: lands before the fix")
 def test_listener_error_keeps_thread_alive(tmp_path):
     """C1: a listener raises on one line -> thread alive, next line
     delivered."""
@@ -220,7 +280,6 @@ def test_listener_error_keeps_thread_alive(tmp_path):
         t.stop()
 
 
-@pytest.mark.xfail(strict=True, reason="RUN-TAIL-HEAL-READER: lands before the fix")
 def test_renamed_away_and_back_reemits_nothing(tmp_path):
     """C3: a 1,000-line file renamed away and back -> 0 lines re-emitted;
     the reader continues from its old offset."""
@@ -242,7 +301,6 @@ def test_renamed_away_and_back_reemits_nothing(tmp_path):
     t.stop()
 
 
-@pytest.mark.xfail(strict=True, reason="RUN-TAIL-HEAL-READER: lands before the fix")
 def test_late_old_file_emits_nothing_and_asks_resume(tmp_path):
     """C4: the path is missing, then an old 1,000-line file appears (a late
     drive, a logon start) -> 0 lines, the reader starts at its end and asks
@@ -267,7 +325,6 @@ def test_late_old_file_emits_nothing_and_asks_resume(tmp_path):
     t.stop()
 
 
-@pytest.mark.xfail(strict=True, reason="RUN-TAIL-HEAL-READER: lands before the fix")
 def test_trim_in_place_replays_nothing(tmp_path):
     """C5: the file is trimmed in place to its newest half -> no line is
     replayed, whether the kept half is under the 64 KB new-file limit (the
@@ -315,7 +372,6 @@ def _lock_exclusive(path):
 
 
 @pytest.mark.skipif(os.name != "nt", reason="share modes are Windows only")
-@pytest.mark.xfail(strict=True, reason="RUN-TAIL-HEAL-READER: lands before the fix")
 def test_locked_file_reports_unreadable_then_clears(tmp_path):
     """C6: the file is held with share mode 0 -> "unreadable" after 20
     failed polls (5 s at the default poll), once; cleared on the first good
