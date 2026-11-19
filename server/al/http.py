@@ -67,6 +67,10 @@ REQUEST_TIMEOUT_S = 10.0
 # one more gets 503 with Retry-After, so a runaway client cannot spawn
 # unbounded threads and bus subscriptions.
 MAX_SSE_CLIENTS = 16
+# SEC-CEIL-HTTP (F-173): at most this many handler threads at once, SSE
+# streams included. One more connection is closed at once, before a thread
+# starts; slots free as idle connections hit REQUEST_TIMEOUT_S.
+MAX_HANDLER_THREADS = 64
 SSE_BUSY_RETRY_MS = 30000  # a stream refused for the cap reconnects after this
 # The overlay is a local file:// page; its EventSource carries
 # "Origin: null". Allowed for this read-only, token-gated GET only
@@ -110,6 +114,7 @@ class ALServer(ThreadingHTTPServer):
         self.tokens_css = Path(tokens_css) if tokens_css else None
         self.stopping = threading.Event()
         self.sse_slots = threading.BoundedSemaphore(MAX_SSE_CLIENTS)
+        self.handler_slots = threading.BoundedSemaphore(MAX_HANDLER_THREADS)
         # GFX-ADVISOR: hardware read once, on the first GET /api/gfx.
         self.gfx = gfx.Advisor()
         super().__init__((ports.LOOPBACK, int(port)), Handler)
@@ -126,6 +131,26 @@ class ALServer(ThreadingHTTPServer):
         self.stopping.set()
         self.shutdown()
         self.server_close()
+
+    def process_request(self, request, client_address):
+        """SEC-CEIL-HTTP: take a handler slot before the thread starts; with
+        none free the connection is closed at once (no reply, no thread)."""
+        if not self.handler_slots.acquire(blocking=False):
+            log.debug("handler thread ceiling reached; connection closed")
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            # the thread never started, so it will not release the slot
+            self.handler_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.handler_slots.release()
 
     def handle_error(self, request, client_address):
         """TEST-HTTP: a dropped or timed-out client is routine (debug); any
