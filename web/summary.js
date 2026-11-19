@@ -6,26 +6,19 @@
    end time and fills the card with textContent. No timers, no network. */
 (function (root, factory) {
   "use strict";
-  var api = factory();
-  if (typeof module === "object" && module.exports) {
+  var common = typeof module === "object" && module.exports;
+  var api = factory(common ? require("./fmt.js") : root.ALFmt);
+  if (common) {
     module.exports = api;
   } else {
     root.ALSummary = api;
   }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (F) {
   "use strict";
 
-  function pad(n) { return n < 10 ? "0" + n : String(n); }
-
   /* "14:05" today, "2026-11-16 14:05" for an older card (a saved card
-     shows after a restart, so its age is stated). */
-  function clock(ts, nowMs) {
-    var d = new Date(ts * 1000);
-    var now = new Date(typeof nowMs === "number" ? nowMs : Date.now());
-    var hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
-    if (d.toDateString() === now.toDateString()) { return hm; }
-    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + hm;
-  }
+     shows after a restart, so its age is stated; web/fmt.js). */
+  var clock = F.clockDated;
 
   /* card: the snapshot's session_summary (or null). fmt: (ts) -> "14:05". */
   function view(card, fmt) {

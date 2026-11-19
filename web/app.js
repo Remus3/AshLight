@@ -7,6 +7,7 @@
   "use strict";
 
   var D = window.ALDash; // web/status.js: pure view helpers
+  var F = window.ALFmt; // web/fmt.js: pad, duration, clock
   var KEY = "al.token";
   var token = readToken();
   var snap = null;
@@ -35,21 +36,8 @@
     return t;
   }
 
-  function pad(n) { return n < 10 ? "0" + n : String(n); }
-
-  function duration(s) {
-    if (s === null || s === undefined || !isFinite(s)) { return "--:--"; }
-    s = Math.max(0, Math.floor(s));
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = s % 60;
-    return h > 0 ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
-  }
-
-  function clock(ts) {
-    var d = new Date(ts * 1000);
-    return pad(d.getHours()) + ":" + pad(d.getMinutes());
-  }
+  var duration = F.duration;
+  var clock = F.clock;
 
   /* UX-A11Y: write only a changed string. The pills sit in polite live
      regions and are re-set on every state push; rewriting the same words
