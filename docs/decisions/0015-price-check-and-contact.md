@@ -51,6 +51,8 @@ research 0004 / 0011.
 
 - trade2 `/data/stats`, `/data/leagues` and `/fetch` response shapes and the
   league list order (research 0004); parsers are defensive.
+  Amendment 2026-11-18 (LOOP-DECISION-TIDY): moot since decision 0017;
+  the app calls no trade2 endpoint, so none of these shapes is read.
 
 ## Reverses if
 
