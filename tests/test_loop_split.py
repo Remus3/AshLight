@@ -2,8 +2,9 @@
 
 The constants / small helpers, prompts, roadmap work list, inbox and merge
 code live in tools/loop_*.py; al_loop still exposes every name it had (the
-same object), and the Tick keeps every method (inbox and merge ones through
-mixins). The seams tests monkeypatch stay defined in al_loop itself."""
+same object), and the Tick keeps every method (inbox, merge, review and work
+ones through mixins; LOOP-SPLIT-TICK moved the review / commit and work-list /
+dispatch methods). The seams tests monkeypatch stay defined in al_loop itself."""
 
 import sys
 from pathlib import Path
@@ -71,11 +72,20 @@ MOVED = {
                    "order_prompt", "queued_orders", "session_orders", "session_done",
                    "FLOORS_IN_HOOKS", "triage_spawn_kwargs"),
     "loop_merge": ("GateCache",),
+    "loop_review": ("ReviewMixin", "ROUND_LOG_CAP", "ROUND_LOG_MAX_FINDINGS"),
+    "loop_work": ("WorkMixin",),
 }
 INBOX_METHODS = ("inbox", "handled", "answer", "send_batches", "dest_inbox", "deliver_note",
                  "redeliver", "write_note", "answer_order", "orders", "queue_order")
 MERGE_METHODS = ("merge", "_merge", "carry_verdict", "keep", "drop_keep", "settle_conflicts",
                  "resolve_roadmap_conflict")
+REVIEW_METHODS = ("process", "log_round", "blocked_marker", "extra_checks", "changed_names",
+                  "order_checks", "marker_checks", "commit", "commit_refused", "salvage",
+                  "retry_refused")
+WORK_METHODS = ("rearm", "plan_deps", "work_list", "held_worktrees", "worktree_unusable",
+                "free_lanes", "recover_lane_dirty", "dispatch", "deep_dive_item")
+# Tick methods that stay in al_loop.py itself
+STAY_METHODS = ("dirty", "gate", "spawn", "step", "finished", "checklist", "write", "run")
 # monkeypatched on al_loop by tests (and called through al_loop globals)
 SEAMS = ("ROOT", "_git_run", "_git", "_xdist_available", "_gate_argv")
 
@@ -103,6 +113,27 @@ def test_tick_keeps_every_method_inbox_and_merge_via_mixins():
         assert m in vars(loop_inbox.InboxMixin) and m not in vars(al_loop.Tick), m
     for m in MERGE_METHODS:
         assert m in vars(loop_merge.MergeMixin) and m not in vars(al_loop.Tick), m
+    import loop_review
+    import loop_work
+    assert issubclass(al_loop.Tick, loop_review.ReviewMixin)
+    assert issubclass(al_loop.Tick, loop_work.WorkMixin)
+
+
+def test_review_and_work_methods_live_in_their_mixins():
+    import loop_review
+    import loop_work
+    for m in REVIEW_METHODS:
+        assert m in vars(loop_review.ReviewMixin) and m not in vars(al_loop.Tick), m
+    for m in WORK_METHODS:
+        assert m in vars(loop_work.WorkMixin) and m not in vars(al_loop.Tick), m
+    for m in STAY_METHODS:
+        assert m in vars(al_loop.Tick), m
+    # every Tick method lives in exactly one place
+    homes = (vars(al_loop.Tick), vars(loop_review.ReviewMixin), vars(loop_work.WorkMixin))
+    for m in TICK_METHODS:
+        if m in INBOX_METHODS or m in MERGE_METHODS:
+            continue
+        assert sum(m in h for h in homes) == 1, m
 
 
 def test_patched_seams_stay_defined_in_al_loop():
@@ -123,4 +154,4 @@ def test_new_modules_never_import_al_loop():
 
 def test_al_loop_is_smaller():
     n = len((ROOT / "tools" / "al_loop.py").read_text(encoding="utf-8").splitlines())
-    assert n < 1760, n  # AL: + gates.txt source and the local-only push
+    assert n < 1300, n  # LOOP-SPLIT-TICK: review and work methods moved out
