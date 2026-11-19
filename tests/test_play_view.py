@@ -182,10 +182,9 @@ def test_notices_every_kind_in_pick_order():
             _check("snapshot", "Game data", "fail", "Not fetched yet.",
                    r"Run scripts\build.ps1 -Snapshot to fetch it."),
         ]},
-        lang={"verdict": "non_english", "works": "zone, act and map times"},
-        hint={"id": "campaign_death", "text": "Deaths in the campaign cost no experience."})
+        lang={"verdict": "non_english", "works": "zone, act and map times"})
     got = pv.notices_view(snap)
-    assert [n["kind"] for n in got] == [1, 3, 4, 5, 6]
+    assert [n["kind"] for n in got] == [1, 3, 4, 5]
     assert got[0] == {"kind": 1, "state": "failed", "glyph": "[x]", "word": "Broken",
                       "title": "Item check hotkey",
                       "rows": ["Not registered. Another app holds the shortcut."],
@@ -200,12 +199,37 @@ def test_notices_every_kind_in_pick_order():
                       "rows": ["Still to set: your build and prices.",
                                "All optional; Settings has the controls."],
                       "action": "Settings"}
-    assert got[3]["word"] == "Note" and got[3]["title"] == "Game data"
+    assert (got[3]["state"], got[3]["glyph"], got[3]["word"], got[3]["title"]) == (
+        "idle", "[-]", "Note", "Game data")
     assert got[3]["rows"] == ["Not fetched yet. Run scripts\\build.ps1 -Snapshot to",
                               "fetch it."]
-    assert got[4] == {"kind": 6, "state": "pending", "glyph": "[ ]", "word": "Tip",
-                      "title": "Campaign deaths",
-                      "rows": ["Deaths in the campaign cost no experience."], "action": ""}
+
+
+def test_a_new_character_tip_outranks_setup_for_its_window():
+    # PV-1: web data off by default and no build would hold Setup forever;
+    # while the tip is on show Setup is not queued, then it comes back
+    base = dict(build={"loaded": False},
+                diag={"checks": [_check("web_data", "Web data", "off", "Off.")]})
+    tip = {"id": "campaign_death", "text": "Deaths in the campaign cost no experience."}
+    got = pv.notices_view(_snap(hint=tip, **base))
+    assert got == [{"kind": 6, "state": "idle", "glyph": "[-]", "word": "Tip",
+                    "title": "Campaign deaths",
+                    "rows": ["Deaths in the campaign cost no experience."], "action": ""}]
+    after = pv.notices_view(_snap(hint=None, **base))
+    assert [(n["kind"], n["word"], n["title"]) for n in after] == [(4, "Setup", "2 steps left")]
+    # a real fault still outranks the tip
+    broken = dict(base, diag={"checks": [_check("calc", "Calc component", "fail", "Missing.")]})
+    assert [n["kind"] for n in pv.notices_view(_snap(hint=tip, **broken))] == [1, 6]
+
+
+def test_death_sentence_keeps_the_character_before_the_zone():
+    # PV-4: subject first; the zone goes before the character name
+    snap = _snap(character="Emberwhisperofthe", zone="Clearfell",
+                 death_recap={"recent": [{"zone": "The Grelwood Outskirts Far",
+                                          "level": 12, "at": NOW}]})
+    ev = pv.feed_view(snap)["events"]["death"]
+    assert ev["text"] == "Emberwhisperofthe died at level 12"
+    assert ev["title"] == "Emberwhisperofthe died in The Grelwood Outskirts Far at level 12"
 
 
 def test_no_broken_part_notice_while_reading_is_down():
@@ -285,10 +309,7 @@ EXPECT = {
         "trades": [],
         "events": {"death": "Emberdemo died in Clearfell", "level": "Emberdemo reached level 4",
                    "zone": "Entered Clearfell"},
-        "notices": [(4, "[ ]", "Setup", "1 step left",
-                     ["Still to set: your build.", "It is optional; Settings has the control."],
-                     "Settings"),
-                    (6, "[ ]", "Tip", "Campaign deaths",
+        "notices": [(6, "[-]", "Tip", "Campaign deaths",
                      ["Deaths in the campaign cost no experience. The Death",
                       "recap card shows where each one happened."], "")],
         "build": ("none", "No build", "", "Copy a PoB code, press the item key."),
@@ -297,7 +318,7 @@ EXPECT = {
 C_TRADES = [("Secondbuyer_WithALongAccountName wants Example Unique Quarterstaff of Many Words"
              " - 40 exalted", "new, tab Sale (1,10)"),
             ("Firstbuyer wants Grim Bane Ruby Ring - 5 exalted", "new, tab Sale (11,11)")]
-CAMPAIGN_TIP = (6, "[ ]", "Tip", "Campaign deaths",
+CAMPAIGN_TIP = (6, "[-]", "Tip", "Campaign deaths",
                 ["Deaths in the campaign cost no experience. The Death",
                  "recap card shows where each one happened."], "")
 WRONG_CLASS = ("wrong_class", "Wrong class", "Ranger, level 80",
@@ -320,17 +341,14 @@ MAP_STRIP = {"zone": "Sun Temple", "sub": "area level 66", "level_sub": "56 lv u
              "deaths_sub": "0 this map", "session_sub": "2 maps", "fresh": True}
 MAP_EVENTS = {"death": "Ashdemo died in Crypt", "level": "Ashdemo reached level 10",
               "zone": "Entered Sun Temple"}
-MAP_TIP = (6, "[ ]", "Tip", "First map",
+MAP_TIP = (6, "[-]", "Tip", "First map",
            ["Your first map. Unlike the campaign, deaths in", "endgame maps cost experience."],
            "")
 FITS = ("fits", "Build fits", "Ranger, level 80", "Checks use your stat weights.")
 EXPECT["f"] = {"strip": MAP_STRIP, "events": MAP_EVENTS, "build": FITS,
                "trades": [("Secondbuyer wants Example Unique - 40 exalted",
                            "new, tab Sale (6,8)")],
-               "notices": [(4, "[ ]", "Setup", "1 step left",
-                            ["Still to set: prices.",
-                             "It is optional; Settings has the control."], "Settings"),
-                           MAP_TIP]}
+               "notices": [MAP_TIP]}
 EXPECT["g"] = dict(EXPECT["f"], notices=[MAP_TIP])
 EXPECT["map"] = dict(EXPECT["g"], trades=[
     ("Secondbuyer wants Example Unique - 40 exalted", "new, tab Sale (6,8)"),

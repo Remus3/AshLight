@@ -383,13 +383,14 @@ def _death_event(snap, now):
     lvl = _int(d.get("level"))
     at_level = f" at level {lvl}" if lvl is not None else ""
     title = (f"{who} died" if who else "Died") + (f" in {zone}" if zone else "") + at_level
+    # subject first: over the cap the zone goes before the character name
     cands = []
     if who and zone:
         cands.append(f"{who} died in {zone}")
+    if who:
+        cands += [f"{who} died{at_level}", f"{who} died"]
     if zone:
         cands.append(f"Died in {zone}")
-    if who:
-        cands.append(f"{who} died{at_level}")
     cands += [f"Died{at_level}", "Died"]
     return _event("death", first_fit(cands, CAP_EVENT_SENTENCE), title, _num(d.get("at")), now)
 
@@ -480,8 +481,19 @@ def _join_and(items):
 
 def notices_view(snap):
     """Every queued notice, in pick order (kind, then arrival); region N
-    shows the first and counts the others (web/slots.js noticePick)."""
+    shows the first and counts the others (web/slots.js noticePick).
+
+    Order: 1 broken part (only while reading works), 2 build question
+    (no source yet), 3 game language, 4 Setup, 5 data notes, 6 new-
+    character tip, 7 key reminder (no source yet). One exception: while a
+    new-character tip is on show (its 10-minute window, the snapshot
+    `hint`), Setup is not queued, so the tip outranks it for that window
+    and Setup comes back by itself after it (design review PV-1: Setup
+    may never retire for a player who keeps web data off and pastes no
+    build). TD-14 renders this list in this order."""
     out = []
+    hint = _dict(snap.get("hint"))
+    tip = isinstance(hint.get("text"), str) and bool(hint.get("text"))
     tailer = _dict(snap.get("tailer"))
     reading = statuswords.reading_state(tailer) in ("reading", "idle")
     checks = _checks(snap)
@@ -500,7 +512,9 @@ def notices_view(snap):
             rows.append(clip(works[:1].upper() + works[1:] + " still work.", CAP_NOTICE_ROW))
         out.append(_notice(KIND_LANGUAGE, "needs-operator", "Language", LANGUAGE_TITLE,
                            "", ACTION_CHECKS, rows=rows))
-    if tailer.get("consented") is True:
+    if tailer.get("consented") is True and not tip:
+        # web data off counts as a step left: the snapshot cannot tell a
+        # player's choice from the default
         left = _setup_left(snap, checks)
         if left:
             names = dict(SETUP_STEPS)
@@ -514,12 +528,12 @@ def notices_view(snap):
     for cid in DATA_CHECKS:
         c = _dict(checks.get(cid))
         if c.get("status") in ("fail", "note"):
-            out.append(_notice(KIND_DATA, "needs-operator", "Note",
+            out.append(_notice(KIND_DATA, "idle", "Note",
                                _name(c.get("label")) or "Data", _check_text(c), ACTION_CHECKS))
-    hint = _dict(snap.get("hint"))
-    if isinstance(hint.get("text"), str) and hint.get("text"):
+    if tip:
+        # Note and Tip are neutral: the kit idle row, no tone (PV-3)
         title = TIP_TITLES.get(hint.get("id"), TIP_TITLE)
-        out.append(_notice(KIND_TIP, "pending", "Tip", title, hint["text"], ""))
+        out.append(_notice(KIND_TIP, "idle", "Tip", title, hint["text"], ""))
     out.sort(key=lambda e: e["kind"])  # stable: arrival order within a kind
     return out
 
