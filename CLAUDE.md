@@ -283,7 +283,11 @@ the E: root except the repo itself. `server/al/paths.py` is the one resolver
 `fleet_lanes.worktree_path`), setup / build / run output under `Build\` and
 `Logs\`. `tests/test_sidecar_paths.py` fails if any runtime path resolves
 outside the repo or the AL sidecar. Never touch another tree's sidecar or any
-E: root item that is not this repo.
+E: root item that is not this repo. An installed player copy lives in its
+own per-user home (default
+%LOCALAPPDATA%\Programs\AshLight, state in data\); on this machine the
+installed copy uses -InstallDir under the AL sidecar (Install\) and the
+checkout runs on the dev port.
 
 ## Minimal interaction (operator order 2026-11-16)
 
@@ -310,7 +314,9 @@ E: root item that is not this repo.
   No ToS floor change.
 - Ports: block 8960-8979 (assigned by MAIN 2026-11-16). 8960 = core server
   (API, dashboard assets, SSE). Constants in `server/al/ports.py`; a port
-  literal at a bind site is a defect.
+  literal at a bind site is a defect. 8961 = checkout dev port
+  (AL_DEV_PORT); 8970-8975 = installer self-test (SELFTEST_PORTS, the same
+  block as DEMO_BLOCK).
 - Bind 127.0.0.1 only; every API / SSE call needs the per-start token; keep
   the Host / Origin checks and the CSP. LAN access stays off.
 - Setup / build / run: `scripts/setup.ps1`, `scripts/build.ps1`,
@@ -629,12 +635,15 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   broken code (decision 0042). Reverses if: the polls cost overlay budget,
   token reuse is ruled unsafe, or a restart loses unrebuildable state.
 - ZONE-GUIDE: per-zone guide in AshLight's own words (facts from public
-  sources, nothing copied, unsure facts left out), waypoints from the
-  snapshot graph, quest tracker from entered zones per character (never
-  claims a reward was taken), visits file under the run-history switch,
-  guide file hot reloaded via hotreload.register (decisions 0043, 0042).
-  Reverses if: a licence objection, verified PoE2 quest log lines, or the
-  operator rules the file unwanted.
+  sources, nothing copied, unsure facts left out), waypoints from the snapshot
+  graph, quest tracker from entered zones per character (never claims a reward
+  was taken), visits file under the run-history switch, guide file hot
+  reloaded via hotreload.register (decisions 0043, 0042); each guide entry may
+  carry an authored short (at most 34 characters, own words, empty when
+  unsure) that the view publishes as `short` and the overlay shows instead of
+  `line`, and a bad short makes the file malformed (decision 0043 amendment
+  2026-11-19). Reverses if: a licence objection, verified PoE2 quest log
+  lines, or the operator rules the file unwanted.
 - BUILD-LIVE: one build per decision 0038 character, swapped by the loop
   tick and hot-reloaded on mtime; stale-build alert; checked items kept in
   memory only and re-scored on build / weight change into upgrade notices;
@@ -812,3 +821,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   store and never a path (RUN-DURABLE-STORES, F-014). Reverses if: back-off
   delays hide a lasting save failure from players, or the restore note
   misfires on files that were not damaged.
+- Installed copies live in a per-user home (%LOCALAPPDATA%\Programs\AshLight;
+  -InstallDir or AL_HOME moves it): code in app\<version>\ plus the marker
+  install.json, all player state in data\; the resolver refuses a home with a
+  steamapps or "Path of Exile 2" path component by path text only, with no
+  registry read, library file or folder listing (decision 0059). Reverses if:
+  the installed copy cannot serve daily dev use, or the override breaks the
+  sidecar path test.
