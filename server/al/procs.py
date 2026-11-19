@@ -279,7 +279,13 @@ def stop(runtime=None, wait_s=10.0, edir=None):
         pass
     _wait_gone([spid] if spid else [], 3.0)
     left = status(runtime, edir)
+    # GP-09 (decision 0080): an overlay pid the process scan still lists
+    # after it has exited (its exit code is set) is not left running.
+    alive = [p for p in left["overlay"]["pids"] if ka.pid_alive(p)]
+    left["overlay"]["live"] = bool(alive)
     report["left"] = [c for c in COMPONENTS if left[c]["live"]]
+    if alive:
+        report["overlay_left"] = alive
     return report
 
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from ci_timing import ci_scale
 from server.al import __main__ as entry
 from server.al import acts, diag, hotreload, paths, ports
 from server.al import keepalive as ka
@@ -232,13 +233,13 @@ def test_web_change_sends_sse_reload(tmp_path):
     t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
                          daemon=True)
     t.start()
-    sock = socket.create_connection(("127.0.0.1", server.port), timeout=5)
+    sock = socket.create_connection(("127.0.0.1", server.port), timeout=ci_scale(5))
     try:
         core.tick_reload()                            # baseline
         sock.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:"
                       f"{server.port}\r\n\r\n").encode())
         buf = b""
-        end = time.monotonic() + 10
+        end = time.monotonic() + ci_scale(10)  # decision 0080: 3x under AL_CI=1
         while b"event: state" not in buf and time.monotonic() < end:
             buf += sock.recv(65536)
         _bump(web / "app.js", "22")

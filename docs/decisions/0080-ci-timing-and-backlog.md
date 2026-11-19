@@ -46,7 +46,12 @@ red with failures that are green on the player's PC:
    first look before it writes the partial line (a start_at_end tailer
    that looks after the write skips those bytes, so no timeout could
    help); `procs.stop` waits for a terminated overlay as long as for the
-   supervisor (`max(5.0, wait_s)`, stop.ps1 -TimeoutSec), not a fixed 5 s.
+   supervisor (`max(5.0, wait_s)`, stop.ps1 -TimeoutSec), not a fixed 5 s,
+   and its final "left running" check counts only overlay pids that are
+   still alive (the full rerun of the first green run still saw "still
+   running: overlay" with the 3x wait on windows-2025, so the process scan
+   there can list an exited process; the stop test now prints what the
+   scan sees when it fails). test_hot_reload's SSE wait is 3x under AL_CI.
 5. Gate 12 of docs/plan/04 is two consecutive green `ci` runs (same or
    consecutive main commits) with fleet-identity-guard green; a red run
    resets the count.

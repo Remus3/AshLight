@@ -201,6 +201,17 @@ def _spawn_fake(exe, env):
     return p
 
 
+def _left_report(runtime, edir):
+    """Failure detail only: what the registry and the process scan still see."""
+    try:
+        st = procs.status(runtime, edir)
+        rows = [(p, n, ka.pid_alive(p), ka.image_path(p))
+                for p, n in procs.list_processes() if n.lower() == procs.ELECTRON_IMAGE]
+        return f"\nstatus: {st}\nelectron.exe in the scan: {rows}"
+    except Exception as exc:  # noqa: BLE001 - a report never hides the failure
+        return f"\nno report: {exc!r}"
+
+
 def _wait(pred, timeout):
     end = time.time() + timeout
     while time.time() < end:
@@ -278,7 +289,7 @@ def test_stop_script_leaves_no_ashlight_process(tmp_path, leased_port):
                             str(int(ci_scale(15)))],  # decision 0080: 3x under AL_CI=1
                            cwd=str(ROOT), env=env, capture_output=True, text=True,
                            timeout=ci_scale(120))
-        assert r.returncode == 0, r.stdout + r.stderr
+        assert r.returncode == 0, r.stdout + r.stderr + _left_report(runtime, edir)
         assert sup.wait(timeout=ci_scale(15)) == 0
         for pid in (core, ovl.pid, child.pid):
             assert _wait(lambda: not ka.pid_alive(pid), ci_scale(10)), f"pid {pid} left running"
