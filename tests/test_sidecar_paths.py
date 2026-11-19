@@ -3,6 +3,7 @@ repo or inside the AL sidecar root, and no tracked app file spells a drive
 path."""
 
 import importlib.util
+import os
 import re
 from pathlib import Path
 
@@ -33,7 +34,11 @@ def _inside(p, root):
 def test_default_paths_inside_repo_or_al_sidecar(monkeypatch):
     monkeypatch.delenv(paths.SIDECAR_ENV, raising=False)
     default = _kit_default()
-    sidecar = Path(default) / "AL" if default else ROOT / "ops" / "runtime" / "sidecar"
+    # DEP-02: the kit default counts only while its folder exists
+    if default and Path(default).is_dir():
+        sidecar = Path(default) / "AL"
+    else:
+        sidecar = ROOT / "ops" / "runtime" / "sidecar"
     assert paths.sidecar_root() == sidecar
     for name, p in paths.all_runtime_paths().items():
         assert _inside(p, ROOT) or _inside(p, sidecar), (name, str(p))
@@ -48,6 +53,49 @@ def test_env_override_points_everything_at_tmp(tmp_path, monkeypatch):
     paths.ensure_dirs()
     for sub in paths.SIDECAR_SUBDIRS:
         assert (tmp_path / "AL" / sub).is_dir()
+
+
+def _missing_drive_dir(tmp_path):
+    """A folder on a drive letter that does not exist here (Windows), or
+    a missing folder under tmp (elsewhere): a stranger's machine without
+    the kit's sidecar folder."""
+    if os.name == "nt":
+        for letter in "QRSTUVWXYZJKLMNOP":
+            drive = letter + ":" + os.sep
+            if not Path(drive).exists():
+                return str(Path(drive) / "Sidecars")
+    return str(tmp_path / "no-such-drive" / "Sidecars")
+
+
+def test_kit_default_on_a_missing_drive_falls_back_inside_the_tree(tmp_path, monkeypatch):
+    """DEP-02 (F-019): with the kit default pointed at a missing drive and
+    AL_SIDECAR_ROOT unset, sidecar_root() lies inside the tree (the kit's own
+    rule: its default counts only when the folder exists) and ensure_dirs()
+    passes."""
+    missing = _missing_drive_dir(tmp_path)
+    assert not Path(missing).exists()
+    monkeypatch.delenv(paths.SIDECAR_ENV, raising=False)
+    monkeypatch.delenv(paths.RUNTIME_ENV, raising=False)
+    monkeypatch.setattr(paths, "_KIT_DEFAULT", missing)
+    assert paths._kit_sidecar_default() == missing
+    assert paths.sidecar_root() == ROOT / "ops" / "runtime" / "sidecar"
+    assert _inside(paths.sidecar_root(), ROOT)
+    for name, p in paths.all_runtime_paths().items():
+        assert _inside(p, ROOT), (name, str(p))
+    # ensure_dirs() against a scratch runtime dir (never the tree's own
+    # ops/runtime): the same fallback, created without an error.
+    monkeypatch.setenv(paths.RUNTIME_ENV, str(tmp_path / "runtime"))
+    assert paths.sidecar_root() == (tmp_path / "runtime" / "sidecar").resolve()
+    paths.ensure_dirs()
+    for sub in paths.SIDECAR_SUBDIRS:
+        assert (tmp_path / "runtime" / "sidecar" / sub).is_dir()
+    assert not Path(missing).exists()
+
+
+def test_kit_default_counts_when_its_folder_exists(tmp_path, monkeypatch):
+    monkeypatch.delenv(paths.SIDECAR_ENV, raising=False)
+    monkeypatch.setattr(paths, "_KIT_DEFAULT", str(tmp_path))
+    assert paths.sidecar_root() == tmp_path / "AL"
 
 
 def test_runtime_state_is_gitignored():

@@ -208,7 +208,7 @@ $clientShown = $false
 if (-not $wantOverlay) {
     Write-AlLog 'run: client not requested (-NoOverlay / -NoBrowser / -Browser)'
 } elseif (-not (Test-Path $electron)) {
-    Write-AlLog 'run: client not installed - run scripts\setup.ps1 with Node 20+'
+    Write-AlLog 'run: client not installed - run scripts\setup.ps1 with Node 22.12.0 or newer'
 } else {
     $clientArgs = @('"' + (Join-Path $Repo 'app') + '"', '--client')
     $ovlPid = Start-AlDetached -FilePath $electron -ArgumentList $clientArgs `

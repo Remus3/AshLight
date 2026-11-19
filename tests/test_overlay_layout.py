@@ -4,6 +4,7 @@ tmp_path; the real config/local.json is never read or written."""
 
 import http.client
 import json
+import re
 import threading
 from pathlib import Path
 
@@ -42,6 +43,105 @@ def test_normalize_lenient_never_raises():
     got = layout.normalize({"corner": "middle", "scale": "big", "extra": 1}, strict=False)
     assert got == layout.DEFAULT
     assert layout.normalize("garbage", strict=False) == layout.DEFAULT
+
+
+# OVL-OVERLAY-KEYS (plan 03 section 5.4): parts switches, quiet town and the
+# zone-guide choice. Defaults keep today's overlay: every part on, zone line
+# shown in town, zone guide on entry.
+
+def test_new_keys_default_to_todays_overlay():
+    got = layout.normalize({})
+    assert got["parts"] == {name: True for name in layout.PARTS}
+    assert layout.PARTS == ("zone", "timer", "level", "deaths", "status",
+                            "trade", "item", "moment", "hint")
+    assert got["quiet_town"] is False and got["zone_guide"] == "entry"
+    assert layout.ZONE_GUIDE == ("entry", "always", "never")
+
+
+def test_normalize_never_shares_the_default_parts():
+    got = layout.normalize({})
+    got["parts"]["zone"] = False
+    assert layout.DEFAULT["parts"]["zone"] is True
+    assert layout.normalize({})["parts"]["zone"] is True
+
+
+def test_new_keys_strict_accepts_and_fills():
+    got = layout.normalize({"parts": {"zone": False, "hint": False},
+                            "quiet_town": True, "zone_guide": "never"})
+    assert got["parts"]["zone"] is False and got["parts"]["hint"] is False
+    assert all(got["parts"][n] for n in layout.PARTS if n not in ("zone", "hint"))
+    assert got["quiet_town"] is True and got["zone_guide"] == "never"
+    assert layout.normalize({"zone_guide": "always"})["zone_guide"] == "always"
+
+
+@pytest.mark.parametrize("bad", [
+    {"parts": {"offline": False}}, {"parts": {"failure": False}},
+    {"parts": {"zone": 0}}, {"parts": {"zone": "off"}}, {"parts": ["zone"]},
+    {"parts": None}, {"quiet_town": 1}, {"quiet_town": "yes"},
+    {"zone_guide": "sometimes"}, {"zone_guide": None}, {"zone_guide": True},
+])
+def test_new_keys_strict_rejects(bad):
+    with pytest.raises(layout.LayoutError):
+        layout.normalize(bad)
+
+
+def test_failure_words_are_not_parts():
+    # A failure word can never be switched off: it is no part at all.
+    for word in ("offline", "no_client_txt", "not_reading", "failure", "error"):
+        assert word not in layout.PARTS
+
+
+def test_new_keys_lenient_never_raises():
+    got = layout.normalize({"parts": {"zone": False, "bogus": False, "level": 3},
+                            "quiet_town": "yes", "zone_guide": "sometimes"},
+                           strict=False)
+    assert got["parts"] == dict(layout.DEFAULT["parts"], zone=False)
+    assert got["quiet_town"] is False and got["zone_guide"] == "entry"
+    for junk in (None, 5, "all", ["zone"], {}):
+        assert layout.normalize({"parts": junk}, strict=False)["parts"] ==             layout.DEFAULT["parts"]
+
+
+def test_new_keys_survive_save_and_merge(tmp_path):
+    core = Core(runtime=tmp_path / "rt", tail=False)
+    try:
+        core.set_overlay_layout({"parts": dict(layout.DEFAULT["parts"], trade=False),
+                                 "quiet_town": True})
+        got = core.set_overlay_layout({"corner": "bottom-left", "zone_guide": "always"})
+        assert got["parts"]["trade"] is False and got["quiet_town"] is True
+        assert got["zone_guide"] == "always" and got["corner"] == "bottom-left"
+        stored = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert stored["overlay"] == got
+        assert core.state.snapshot()["overlay_layout"] == got
+    finally:
+        core.close()
+
+
+def _js_shared_fixture():
+    """The fixture in app/test/layout.test.js between the SHARED-FIXTURE
+    markers: rows of {"in", "out"} both sides must agree on."""
+    src = (ROOT / "app" / "test" / "layout.test.js").read_text(encoding="ascii")
+    m = re.search(r"/\* SHARED-FIXTURE \*/(.*?)/\* END-SHARED-FIXTURE \*/", src, re.S)
+    assert m, "shared fixture markers in layout.test.js"
+    return json.loads(m.group(1))
+
+
+def test_python_agrees_with_the_js_shared_fixture():
+    rows = _js_shared_fixture()
+    assert len(rows) >= 4
+    for row in rows:
+        assert layout.normalize(row["in"], strict=False) == row["out"], row["in"]
+
+
+def test_overlay_js_keys_match_python():
+    js = (ROOT / "app" / "shared" / "layout.js").read_text(encoding="ascii")
+    m = re.search(r"var PARTS = \[(.*?)\];", js, re.S)
+    assert m and re.findall(r'"([a-z_]+)"', m.group(1)) == list(layout.PARTS)
+    m = re.search(r"var ZONE_GUIDE = \[(.*?)\];", js, re.S)
+    assert m and re.findall(r'"([a-z_]+)"', m.group(1)) == list(layout.ZONE_GUIDE)
+    m = re.search(r"var DEFAULT = \{(.*?)\};", js, re.S)
+    keys = re.findall(r"([a-z_]+):", m.group(1))
+    assert keys == list(layout.DEFAULT), keys
+    assert 'quiet_town: false, zone_guide: "entry"' in js
 
 
 # DS-OPACITY / DS-SCALE (design 0001 5.2 and O3): opacity floor 0.9 keeps
