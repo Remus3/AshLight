@@ -264,6 +264,22 @@ Carried forward (not acted on yet):
   decision 0076 (AUTO-19, parked behind GP-09), the ls-remote read-back
   (GP-13, parked). Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
   packages (four batches, each with its own suite; ceiling 16).
+- NOTE (wave 4, same rule as the wave 2 adjudicator ruling on 0049):
+  CLAUDE.md holds a core-only Settled bullet for decision 0051
+  (tests/test_audit_batch4.py needs one per decision); the integrator
+  of the batch that merges the later of SEC-ACL-CHECK and
+  SEC-ACL-SETUP replaces it with the full packages.json wording of
+  SEC-ACL-APPLY.
+- NOTE (wave 4, DATA-PRICE-CARD-TEXT DPC-2): design 0001 section 9 needs
+  a bullet for the new price-age templates; owner: the next package that
+  owns docs/design/0001 (PLAY-TD-23-RECORDS at the latest).
+- NOTE (wave 4, DPC-1 follow-up for DATA-CONTACT-FIELD, wave 17): its
+  tests must confirm the contact field sits on the "Prices and web data"
+  card (packages.json is not an integrator file, so the note lives here).
+- NOTE (wave 4, PLAY-TD-01B-FIT-HARNESS builder): tests/play_states.py
+  TOKEN "p"*48 is not hex, so the dashboard rejects it (the fit harness
+  swaps in a hex token); fix in the next package that owns
+  tests/play_states.py.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
