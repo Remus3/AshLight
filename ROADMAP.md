@@ -28,7 +28,7 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
   the loop lands by itself. DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 7.
 - [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
-- [ ] FIX-IDLE-WORD (build) STATUS-IDLE-READING: the idle bar word (play state d, log quiet) carries the word "reading" so region G passes G9, then tests/play_fit_pending/g.txt is deleted; done by the next package that owns server/al/data/status_words.json (TEST-STATE-TEXT-PINS, wave 19) with web/status.js and the tests that pin the word, copy design-reviewed (wave-7 adjudicator ruling on PLAY-TD-10-STRIP). ACCEPT: tests/test_play_fit.py green without g.txt. ZERO-CLICK: The bar word updates by itself with the log state; no click. BLOCKED: session wave 8.
+- [ ] FIX-IDLE-WORD (build) STATUS-IDLE-READING: the idle bar word (play state d, log quiet) carries the word "reading" so region G passes G9, then tests/play_fit_pending/g.txt is deleted; done by the next package that owns server/al/data/status_words.json (TEST-STATE-TEXT-PINS, wave 19) with web/status.js and the tests that pin the word, copy design-reviewed (wave-7 adjudicator ruling on PLAY-TD-10-STRIP). ACCEPT: tests/test_play_fit.py green without g.txt. ZERO-CLICK: The bar word updates by itself with the log state; no click. BLOCKED: session wave 19.
 
 ## Lane: data
 
@@ -1989,8 +1989,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   and `gh repo view "$R" --json
   description,hasIssuesEnabled,hasWikiEnabled,hasProjectsEnabled,hasDiscussionsEnabled` shows the 04
   description, issues on, wiki / projects / discussions off. ZERO-CLICK: Agent step with gh; no
-  click. DEPENDS: GP-09. BLOCKED: the repository exists (first push done); unblocks when `gh repo
-  view` succeeds for the repository (package GP-09).
+  click. DEPENDS: GP-09. BLOCKED: session wave 9.
 - [ ] GP-13 (review) Apply protection and security settings, read back. ACCEPT: `gh api
   "repos/$R/rules/branches/main" --jq '[.[].type] | sort | join(",")'` prints
   deletion,non_fast_forward,required_status_checks and, after one ordinary push of a fresh commit

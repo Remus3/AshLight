@@ -53,7 +53,8 @@ TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
 # pushed deaths and whispers out of the 30-row list sooner.
 LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
           "whisper_out", "afk_changed", "dnd_changed", "player_joined_area",
-          "player_left_area", "trade_accepted", "tailer_started", "tailer_reset"}
+          "player_left_area", "trade_accepted", "tailer_started", "tailer_reset",
+          "tailer_unreadable", "tailer_readable", "tailer_restarted"}
 
 
 FALLBACK_TEXT = "Something happened in the log"
@@ -76,6 +77,17 @@ RESET_TEXT = {
     "missing": "Client.txt is missing - waiting for the game",
     "replaced": "Client.txt was replaced - reading the new file",
     "truncated": "Client.txt was cleared - reading from the start",
+    "continued": "Client.txt is back - reading on from where it stopped",
+}
+# RUN-TAIL-HEAL-CORE: after a break the reader says where it reads on
+# (the event's "read": start, kept or end; logfile.Tailer._after_break),
+# so the sentence is true for each: only "start" reads the file's first
+# line again; "end" skips the old lines (the resume scan counts them).
+RESET_READ_TEXT = {
+    ("replaced", "kept"): "Client.txt was replaced - reading on from where it stopped",
+    ("replaced", "end"): "Client.txt was replaced - reading new lines only",
+    ("truncated", "kept"): "Client.txt got shorter - reading on from where it stopped",
+    ("truncated", "end"): "Client.txt got shorter - reading new lines only",
 }
 
 
@@ -980,7 +992,15 @@ def summarize(ev):
     if t == "tailer_started":
         return "Reading Client.txt"
     if t == "tailer_reset":
-        return RESET_TEXT.get(ev.get("reason"), "Client.txt was reset")
+        reason = ev.get("reason")
+        return RESET_READ_TEXT.get((reason, ev.get("read")),
+                                   RESET_TEXT.get(reason, "Client.txt was reset"))
+    if t == "tailer_unreadable":
+        return "Client.txt can't be read right now - trying again"
+    if t == "tailer_readable":
+        return "Client.txt can be read again"
+    if t == "tailer_restarted":
+        return "AshLight restarted its log reader"
     return FALLBACK_TEXT
 
 
@@ -1060,7 +1080,11 @@ class SessionState:
         # game writes no line). Log staleness only, no process check.
         self.tailer = {"consented": False, "reading": False, "path": None,
                        "last_reset": None, "idle": False,
-                       "last_line_at": None}
+                       "last_line_at": None, "unreadable": False}
+        # RUN-TAIL-HEAL-CORE: the file is gone (a "missing" reset and no
+        # start or other reset since); with "unreadable" it decides the
+        # reading flag on the tailer's later status events.
+        self._tail_missing = False
         self._idle_paused_map = False  # AREA-AUDIT P3-4
         # UTIL-UNDERLEVEL: the gap threshold ("underlevel_gap" setting).
         self.underlevel_gap = underlevel_mod.DEFAULT_GAP
@@ -1752,13 +1776,28 @@ class SessionState:
             self.dnd = bool(ev.get("on"))
             changed = True
         elif t == "tailer_started":
-            self.tailer["reading"] = True
+            self._tail_missing = False
+            self.tailer["reading"] = not self.tailer.get("unreadable")
             self.tailer["path"] = ev.get("path")
             changed = True
         elif t == "tailer_reset":
             self.tailer["last_reset"] = ev.get("reason")
-            if ev.get("reason") == "missing":
-                self.tailer["reading"] = False
+            self._tail_missing = ev.get("reason") == "missing"
+            self.tailer["reading"] = self._tail_can_read()
+            changed = True
+        elif t == "tailer_unreadable":
+            # RUN-TAIL-HEAL-CORE: the file exists but every open or read
+            # failed for UNREADABLE_POLLS polls (a lock, rights, a mount)
+            self.tailer["unreadable"] = True
+            self.tailer["reading"] = False
+            changed = True
+        elif t == "tailer_readable":
+            self.tailer["unreadable"] = False
+            self.tailer["reading"] = self._tail_can_read()
+            changed = True
+        elif t == "tailer_restarted":
+            # the core restarted a dead reader thread on its own offset
+            self.tailer["reading"] = self._tail_can_read()
             changed = True
         if listed:
             self.recent_events.append(self._row(ev, now))
@@ -1980,6 +2019,11 @@ class SessionState:
         for f in ("char_class", "level", "level_ups", "deaths"):
             setattr(self, f, getattr(tmp, f))
         self.pace = pace_mod.Pace()
+
+    def _tail_can_read(self):
+        """RUN-TAIL-HEAL-CORE: the reading flag the tailer's status events
+        leave: the file is there and readable."""
+        return not self._tail_missing and not self.tailer.get("unreadable")
 
     @staticmethod
     def _row(ev, now):
