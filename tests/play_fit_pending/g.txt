@@ -1,0 +1,1 @@
+G9 reading in state d only; owner of status_words.json fixes the idle word.
