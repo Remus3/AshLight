@@ -22,8 +22,8 @@ ROOT = Path(__file__).resolve().parent.parent
 # Tokens (split on '_' and '.') that mark a batch name.
 _NUMBERED = re.compile(r"^(batch|pass|plan|wave|kit|session|pkg|p|b|v|util)\d+$")
 _LABEL = {"batch", "pass", "plan", "wave", "kit"}
-# Bare tokens that only ever name a sweep of fixes, never a subject.
-_BARE = {"sweep"}
+# Whole stems that name a sweep of fixes, not a subject.
+_BARE_STEMS = {"ux_sweep"}
 
 NAME_RULE = (
     "test files are named after their subject, not after a batch, pass, "
@@ -79,9 +79,11 @@ IMPORT_ALLOW = frozenset({
 def batch_named(filename):
     """True when the file name carries a batch / pass / plan / kit number."""
     stem = filename.split(".")[0]
+    if stem in _BARE_STEMS:
+        return True
     toks = [t for t in stem.split("_") if t]
     for i, t in enumerate(toks):
-        if t in _BARE or _NUMBERED.match(t):
+        if _NUMBERED.match(t):
             return True
         if t in _LABEL and i + 1 < len(toks) and toks[i + 1].isdigit():
             return True
