@@ -199,6 +199,9 @@
         <p class="eval-head"><span id="eval-word" class="verdict"></span>
           <span id="eval-item" class="eval-item"></span></p>
         <p id="eval-sentence"></p>
+        <!-- TC-CARD-PARTS-WEB: the card parts' notes (a build caveat, F-043) under
+             the verdict, read with it -->
+        <ul id="eval-notes" hidden></ul>
         <!-- UTIL-WAYSTONE-REWARD: reward totals under the risk sentence -->
         <p id="eval-rewards" hidden></p>
         <p id="eval-calc" class="muted" hidden></p>
@@ -389,6 +392,21 @@
     <textarea id="build-paste" class="paste-box" rows="3" spellcheck="false" autocomplete="off"
       placeholder="Path of Building code"></textarea>
     <p id="build-status" class="muted" role="status" aria-live="polite"></p>
+    <!-- TC-LINK-RECOVER (decision 0013): a link refused while web data is off.
+         The first click only shows the opt-in sentence; web data turns on only
+         on the confirm click, which then loads the same link once. -->
+    <div id="link-recover" hidden>
+      <div id="link-offer-row" class="actions">
+        <button id="link-offer" type="button" class="secondary">Turn on web data and load this link</button>
+      </div>
+      <div id="link-confirm" hidden>
+        <p id="link-sentence"></p>
+        <div class="actions">
+          <button id="link-yes" type="button" aria-describedby="link-sentence">Turn on web data</button>
+          <button id="link-no" type="button" class="secondary">Not now</button>
+        </div>
+      </div>
+    </div>
     <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
   </section>
 
@@ -461,7 +479,9 @@
       <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
         Use web data</label>
     </form>
-    <p class="muted">Off unless you turn it on. When on, AshLight asks for two things only.
+    <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
+         text the build link recovery shows before its confirm click) -->
+    <p id="webdata-sentence" class="muted">Off unless you turn it on. When on, AshLight asks for two things only.
       It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
       paste, once. It never asks the trade site anything; the trade link after an item check
       opens only when you click it. It sends no account, password or cookie, and never touches

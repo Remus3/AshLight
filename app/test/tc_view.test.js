@@ -3,6 +3,8 @@
    web/tc.js. Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const v = require("../../web/tc.js");
 
 const BUILD = {
@@ -77,13 +79,13 @@ test("build view: empty and hostile values", () => {
 
 test("paste answers are plain and say what to do", () => {
   assert.deepEqual(v.pasteResult(200, { loaded: true, build: { class_name: "Monk", level: 87 } }),
-    { ok: true, text: "Loaded: Monk, level 87." });
+    { ok: true, offer: "", text: "Loaded: Monk, level 87." });
   assert.match(v.pasteResult(400, { error: "bad base64" }).text, /Your last build stays loaded\.$/);
   assert.match(v.pasteResult(422, {}).text, /^AshLight can't open that link\./);
   assert.equal(v.pasteResult(422, { hosts: ["pobb.in", "pastebin.com"] }).text,
     "AshLight can't open that link. It opens links from pobb.in and pastebin.com only. Or paste the build code instead.");
   assert.equal(v.pasteResult(422, { web_data: false }).text,
-    "Build links need web data, which is off. Turn it on under Prices and web data, or paste the build code instead.");
+    "Build links need web data, which is off. Use the button below to turn it on, or paste the build code instead.");
   assert.match(v.pasteResult(502, {}).text, /^The build link isn't loading\./);
   assert.equal(v.pasteResult(500, null).text, "Not loaded. Try again.");
   for (const s of [400, 413, 422, 500, 502]) {
@@ -233,4 +235,158 @@ test("buildFileView summarises the .build download and keeps the core's notes", 
   const empty = v.buildFileView({ loaded: true, build_file: { filename: "a.build" } });
   assert.equal(empty.summary, "Holds the build's name only.");
   assert.deepEqual(empty.notes, []);
+});
+
+/* TC-CARD-PARTS-WEB: the core's notes, word and tone (state.eval_card_text). */
+test("eval view: notes are strings only, at most 4, in the core's order", () => {
+  const m = v.evalView({ id: 20, ok: true, verdict: "upgrade", at: 0,
+    text: { sentence: "s", item: "i", comparisons: [],
+            notes: ["One.", 7, null, "", "  ", { a: 1 }, "Two.", "Three.", "Four.", "Five."] } });
+  assert.deepEqual(m.notes, ["One.", "Two.", "Three.", "Four."]);
+  assert.deepEqual(v.evalView({ id: 21, ok: true, verdict: "upgrade", at: 0,
+    text: { sentence: "s", notes: "not a list" } }).notes, []);
+});
+
+test("eval view: the core's word and tone override the local word", () => {
+  const m = v.evalView({ id: 22, ok: true, verdict: "upgrade", at: 0,
+    text: { sentence: "s", item: "i", comparisons: [], word: "Not checked", tone: "note" } });
+  assert.equal(m.word, "Not checked");
+  assert.equal(m.verdict, "note");
+  assert.equal(m.state, "pending");
+  const ws = v.evalView({ id: 23, ok: false, at: 0, waystone: { risky: [] },
+    text: { sentence: "s", word: "Risky", tone: "risky" } });
+  assert.equal(ws.word, "Risky");
+  assert.equal(ws.verdict, "risky");
+  assert.equal(ws.state, "blocked");
+  // a word alone keeps the local tone; an unknown or empty tone is ignored
+  const w = v.evalView({ id: 24, ok: true, verdict: "sidegrade", at: 0,
+    text: { sentence: "s", word: "Sidegrade", tone: "glow" } });
+  assert.equal(w.verdict, "sidegrade");
+  assert.equal(v.evalView({ id: 25, ok: true, verdict: "upgrade", at: 0,
+    text: { sentence: "s", tone: "" } }).verdict, "upgrade");
+  // a blank or non-string word keeps the local word
+  for (const bad of ["", "   ", 5, null]) {
+    assert.equal(v.evalView({ id: 26, ok: true, verdict: "downgrade", at: 0,
+      text: { sentence: "s", word: bad } }).word, "Downgrade", String(bad));
+  }
+});
+
+test("eval view: an eval without notes, word or tone renders as before", () => {
+  const ev = { id: 27, ok: true, verdict: "upgrade", at: 0, unweighted: [],
+               text: { sentence: "Upgrade: 47.5 points more.", item: "Storm Loop", comparisons: [] } };
+  const m = v.evalView(ev, () => "14:05");
+  assert.deepEqual(m.notes, []);
+  assert.equal(m.word, "Upgrade");
+  assert.equal(m.verdict, "upgrade");
+  assert.equal(m.state, "done");
+  assert.equal(m.sentence, "Upgrade: 47.5 points more.");
+  assert.equal(m.when, "Checked at 14:05");
+});
+
+/* TC-LINK-RECOVER (F-117, decision 0013): two clicks, nothing without the confirm. */
+function fakePost(answers) {
+  const calls = [];
+  const post = (p, body) => {
+    calls.push([p, body]);
+    const a = answers[p];
+    return a instanceof Error ? Promise.reject(a) : Promise.resolve(a);
+  };
+  return { calls, post };
+}
+
+const tick = () => new Promise((r) => setImmediate(r));
+
+test("link recover: the web-data refusal carries the button; others do not", () => {
+  const r = v.pasteResult(422, { web_data: false });
+  assert.equal(r.ok, false);
+  assert.equal(r.offer, "Turn on web data and load this link");
+  assert.match(r.offer, /web data/); // the label names the switch (floor audit L3)
+  for (const [s, b] of [[422, {}], [422, { hosts: ["pobb.in"] }], [502, {}], [400, {}],
+                        [413, {}], [500, null], [200, { loaded: true, build: {} }]]) {
+    assert.equal(v.pasteResult(s, b).offer, "", String(s));
+  }
+});
+
+test("link recover: the first click posts nothing and shows the opt-in sentence", async () => {
+  const f = fakePost({});
+  const rec = v.linkRecover("https://pobb.in/abc", f.post);
+  assert.equal(rec.step(), "offer");
+  assert.equal(rec.confirm(), null); // no confirm before the sentence is shown
+  const shown = rec.open();
+  assert.equal(shown.sentence, v.WEB_DATA_OPT_IN);
+  assert.equal(shown.confirm, "Turn on web data");
+  assert.equal(shown.cancel, "Not now");
+  assert.equal(rec.step(), "confirm");
+  assert.equal(rec.open(), null);
+  await tick();
+  assert.deepEqual(f.calls, []);
+  rec.cancel();
+  assert.equal(rec.step(), "offer");
+  await tick();
+  assert.deepEqual(f.calls, []);
+});
+
+test("link recover: the confirm click posts the opt-in, then the same code once", async () => {
+  const f = fakePost({ "/api/web-data": { status: 200, body: { web_data: true } },
+                       "/api/build-code": { status: 200,
+                         body: { loaded: true, build: { class_name: "Monk", level: 87 } } } });
+  const rec = v.linkRecover("https://pobb.in/abc", f.post);
+  rec.open();
+  const going = rec.confirm();
+  assert.equal(rec.confirm(), null); // a second click while busy does nothing
+  const out = await going;
+  assert.deepEqual(f.calls, [["/api/web-data", { enabled: true }],
+                             ["/api/build-code", { code: "https://pobb.in/abc" }]]);
+  assert.equal(out.saved, true);
+  assert.deepEqual(out.web, { web_data: true });
+  assert.deepEqual(out.result, { ok: true, offer: "", text: "Loaded: Monk, level 87." });
+  assert.equal(rec.step(), "done");
+  assert.equal(rec.confirm(), null);
+  assert.equal(rec.open(), null);
+  await tick();
+  assert.equal(f.calls.length, 2);
+});
+
+test("link recover: a refused load after the opt-in is not offered again", async () => {
+  const f = fakePost({ "/api/web-data": { status: 200, body: { web_data: true } },
+                       "/api/build-code": { status: 422, body: { web_data: false } } });
+  const rec = v.linkRecover("https://pobb.in/abc", f.post);
+  rec.open();
+  const out = await rec.confirm();
+  assert.equal(out.result.offer, "");
+  assert.equal(out.result.ok, false);
+  assert.equal(f.calls.length, 2);
+});
+
+test("link recover: no code is posted unless the opt-in is saved", async () => {
+  for (const ans of [{ status: 500, body: null }, { status: 200, body: { web_data: false } },
+                     new Error("offline")]) {
+    const f = fakePost({ "/api/web-data": ans });
+    const rec = v.linkRecover("https://pobb.in/abc", f.post);
+    rec.open();
+    const out = await rec.confirm();
+    assert.equal(out.saved, false);
+    assert.equal(out.web, null);
+    assert.match(out.result.text, /^Web data is still off/);
+    assert.ok(!/HTTP|token|core|!/.test(out.result.text));
+    assert.deepEqual(f.calls, [["/api/web-data", { enabled: true }]]);
+    assert.equal(rec.step(), "confirm"); // the player may confirm again
+  }
+});
+
+test("link recover: the opt-in sentence is one constant, and index.html holds it", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "ascii");
+  const m = /<p id="webdata-sentence"[^>]*>([\s\S]*?)<\/p>/.exec(html);
+  assert.ok(m, "Settings sentence #webdata-sentence");
+  assert.equal(m[1].replace(/\s+/g, " ").trim(), v.WEB_DATA_OPT_IN);
+  // the button labels in the page are the controller's labels
+  for (const [id, label] of [["link-offer", v.LINK_OFFER], ["link-yes", v.LINK_CONFIRM],
+                             ["link-no", v.LINK_CANCEL]]) {
+    const b = new RegExp("<button id=\"" + id + "\"[^>]*>([^<]*)</button>").exec(html);
+    assert.ok(b, id);
+    assert.equal(b[1].trim(), label);
+  }
+  // the notes list sits inside #eval-body, read with the verdict
+  const body = /<div id="eval-body"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+  assert.ok(body && /<ul id="eval-notes"/.test(body[1]));
 });

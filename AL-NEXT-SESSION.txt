@@ -285,10 +285,6 @@ Carried forward (not acted on yet):
   decision 0076 (AUTO-19, parked behind GP-09), the ls-remote read-back
   (GP-13, parked). Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
   packages (four batches, each with its own suite; ceiling 16).
-- NOTE (wave 2, adjudicator ruling 2026-11-18): CLAUDE.md holds a
-  core-only Settled bullet for decision 0049 (tests/test_audit_batch4.py
-  needs one per decision); the wave 3 integrator replaces it with the
-  full packages.json wording of SEC-DEMO-CORE when SEC-DEMO-ENTRY merges.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
