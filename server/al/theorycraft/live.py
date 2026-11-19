@@ -11,14 +11,23 @@
   change). The item text stays in memory only and comes from the caller
   (the one per-press clipboard read, decision 0003); nothing here reads the
   clipboard or sends anything to the game.
+- TC-PRESS-STAGED-LIVE (decision 0024 amendment 2026-11-19): a staged
+  LastEval (the core's) publishes the weights card at once, inside the
+  press, and the Path of Building stages (DPS / EHP, then the per-mod rows)
+  later from one daemon worker, each an update that keeps the card's time.
+  A press generation counter keeps one press in flight: a newer press or a
+  re-score cancels the pending stages of the older one, and a stale stage
+  is never published.
 """
 
+import logging
 import threading
 
 from .. import campaign as campaign_mod
 from .. import upgrade as upgrade_mod
 from . import buildlive
 from . import cardparts
+from . import delta as delta_mod
 from . import evaluate as tc_evaluate
 from . import item as item_parser
 from . import pobweights
@@ -28,6 +37,9 @@ from . import waystone as waystone_mod
 MAX_COMPARISONS = 3
 MAX_STATS = 8
 MAX_LIST = 12
+JOIN_S = 10.0  # LastEval.close(): how long the stage worker is waited for
+
+LOG = logging.getLogger("al.live")
 
 
 def build_info(build, rev=0, character=None):
@@ -89,7 +101,7 @@ class LastEval:
     it at once. One per core."""
 
     def __init__(self, builds, weights, state, league=None, calc=None, rates=None,
-                 trade_ids=None):
+                 trade_ids=None, staged=False):
         self.builds = builds
         self.weights = weights
         self.state = state
@@ -118,6 +130,21 @@ class LastEval:
         # TC-CARD-PARTS: what the core adds to every part's ctx ("config":
         # the local config callable; "area_id": a callable read per press)
         self.ctx_extra = {}
+        # TC-PRESS-STAGED-LIVE: staged True (the core) publishes the weights
+        # card inside the press and the PoB stages from one daemon worker;
+        # False runs every stage inline and publishes the last one only.
+        # `_gen` is the press generation: a stage is published only while
+        # its press is still the newest (checked under `_publish`).
+        self.staged = bool(staged)
+        self._gen = 0
+        self._publish = threading.Lock()
+        self._cond = threading.Condition()
+        self._job = None
+        self._worker = None
+        self._closed = False
+        self._busy = False
+        # the result of the last published stage (wait() then read it)
+        self.last_result = None
 
     def _who(self):
         """(character, level) from the state: the player's own log facts."""
@@ -127,31 +154,132 @@ class LastEval:
     def run(self, text, slot=None, keep_time=False, at=None):
         """`at`: the press time (PRICE-1-WIRE shares it with the price
         check of the same press); None stamps now. The card gains
-        `upgrade`: the offline upgrade-search link doc, or None (TC-UPGRADE)."""
+        `upgrade`: the offline upgrade-search link doc, or None (TC-UPGRADE).
+
+        TC-PRESS-STAGED-LIVE: staged, it returns the first stage's result
+        (the weights card; no calc call) and the worker publishes the later
+        stages as updates that keep this card's time. Not staged, it
+        returns the last stage (evaluate()'s result), as before."""
         calc = self.calc() if callable(self.calc) else None
-        result = tc_evaluate.evaluate(text, self.builds.build, self.weights.get(), slot=slot,
-                                      calc=calc, cache=self.pob_weights)
+        with self._publish:
+            self._gen += 1
+            gen = self._gen
         with self._lock:
             self._input = (text, slot)
-        league = self.league() if callable(self.league) else self.league
-        ids = self.trade_ids() if callable(self.trade_ids) else None
-        parsed = item_parser.parse(text) if isinstance(text, str) else None
-        card = dict(compact(result), upgrade=upgrade_mod.link(result, league, ids),
-                    value=self._value(parsed, result))
-        # UTIL-WAYSTONE (decision 0030): the same press on a waystone flags
-        # its mods risky for the loaded build; None for any other item
-        card["waystone"] = waystone_mod.check(text, self.builds.build)
-        # TC-CARD-PARTS: every card part computes its value on this press
-        # and on every re-score; the words come later (state.eval_card_text)
-        card["parts"] = cardparts.compute(self._part_ctx(text, parsed, result))
-        self.state.set_eval(card, keep_time=keep_time, at=at)
-        if not keep_time and result.get("ok") and card["waystone"] is None:
+        stages = tc_evaluate.stages(text, self.builds.build, self.weights.get(), slot=slot,
+                                    calc=calc, cache=self.pob_weights)
+        press = _Press(self, text, slot, gen)
+        if not self.staged:
+            result = None
+            for _name, result in stages:
+                pass
+            press.publish(tc_evaluate.STAGE_MODS, result, False, keep_time, at, force=True)
+        else:
+            name, result = next(stages)
+            # more stages follow only with the calc on and a compared item
+            pending = calc is not None and bool(result.get("ok"))
+            press.publish(name, result, pending, keep_time, at)
+            if pending:
+                self._queue(press, stages, name)
+            else:
+                stages.close()
+        if not keep_time and result.get("ok") and press.waystone is None:
             # BUILD-LIVE: a press adds the item to this character's list
             with self._lock:
                 self.candidates.add(self._who()[0], text, slot, result.get("verdict"),
                                     at if at is not None else _now(self.state))
             self.rescore(fresh=False)
         return result
+
+    # -- TC-PRESS-STAGED-LIVE: the stage worker ------------------------------
+
+    def current(self, gen):
+        """True while press generation `gen` is the newest one."""
+        return gen == self._gen and not self._closed
+
+    def _queue(self, press, stages, last):
+        """Hand a press's remaining stages to the worker; the pending job of
+        an older press is dropped (its generator closed: no calc call)."""
+        with self._cond:
+            old, self._job = self._job, None
+            closed = self._closed
+            if not closed:
+                self._job = (press, stages, last)
+                if self._worker is None:
+                    self._worker = threading.Thread(target=self._work,
+                                                    name="al-eval-stages", daemon=True)
+                    self._worker.start()
+                self._cond.notify_all()
+        if old is not None:
+            old[1].close()
+        if closed:
+            stages.close()
+
+    def _work(self):
+        while True:
+            with self._cond:
+                while self._job is None and not self._closed:
+                    self._cond.wait()
+                if self._job is None:
+                    return
+                job, self._job = self._job, None
+                self._busy = True
+            try:
+                self._drain(*job)
+            finally:
+                with self._cond:
+                    self._busy = False
+                    self._cond.notify_all()
+
+    def _drain(self, press, stages, last):
+        """Run a press's later stages; stop at the first stage boundary
+        after a newer press (or close()) and publish nothing stale."""
+        try:
+            for name, result in stages:
+                if not self.current(press.gen):
+                    return
+                # "pob" has the probes still to come; a "weights" stage
+                # after the first is a calc error's fallback, the last one
+                pending = name == tc_evaluate.STAGE_POB
+                if not press.publish(name, result, pending, True, None) or not pending:
+                    return
+                last = name
+        except Exception as exc:  # noqa: BLE001 - the card must not stay pending
+            LOG.warning("item check stage failed (%s)", type(exc).__name__)
+            result = dict(press.result or {})
+            if last == tc_evaluate.STAGE_WEIGHTS:
+                result["calc"] = dict(result.get("calc") or {},
+                                      notice=delta_mod.NOTICE_FAILED)
+            press.publish(last, result, False, True, None)
+        finally:
+            stages.close()
+
+    def wait(self, timeout=None):
+        """True once no stage is queued or running (tests and the live e2e
+        check wait for the last stage); False on timeout."""
+        with self._cond:
+            return self._cond.wait_for(lambda: self._job is None and not self._busy,
+                                       timeout)
+
+    def close(self, timeout=JOIN_S):
+        """Stop the stage worker: pending stages are dropped and none is
+        published after this; waits up to `timeout` s for a stage that is
+        mid calc call (0: do not wait). Returns True when the worker is
+        gone. Idempotent."""
+        with self._publish:
+            self._closed = True
+            self._gen += 1
+        with self._cond:
+            old, self._job = self._job, None
+            worker = self._worker
+            self._cond.notify_all()
+        if old is not None:
+            old[1].close()
+        if worker is None:
+            return True
+        if timeout and worker is not threading.current_thread():
+            worker.join(timeout)
+        return not worker.is_alive()
 
     def rescore(self, fresh=True):
         """BUILD-LIVE: re-score the current character's checked items with
@@ -187,10 +315,12 @@ class LastEval:
             setter(view)
         return view
 
-    def _part_ctx(self, text, parsed, result):
+    def _part_ctx(self, text, parsed, result, stage=None):
         """TC-CARD-PARTS: the ctx every card part's compute() gets: text,
         parsed, result, build, character, level, area_id and config (a
-        callable), plus any other key the core put in ctx_extra."""
+        callable), plus any other key the core put in ctx_extra.
+        TC-PRESS-STAGED-LIVE: `stage` {"name", "pending"}: the evaluate
+        stage this card shows and whether later stages are still coming."""
         extra = self.ctx_extra if isinstance(self.ctx_extra, dict) else {}
         ctx = dict(extra)
         area = extra.get("area_id")
@@ -202,7 +332,8 @@ class LastEval:
         ctx["config"] = config if callable(config) else dict
         character, level = self._who()
         ctx.update(text=text, parsed=parsed, result=result, build=self.builds.build,
-                   character=character, level=level)
+                   character=character, level=level,
+                   stage=dict(stage) if isinstance(stage, dict) else None)
         return ctx
 
     def _value(self, parsed, result):
@@ -224,13 +355,57 @@ class LastEval:
 
     def rerun(self):
         """Re-score the last item (weights or build changed). The card keeps
-        its time, so the overlay does not show it again."""
+        its time, so the overlay does not show it again. Staged, it is a new
+        press generation: the older press's pending stages are cancelled."""
         with self._lock:
             last = self._input
         self.rescore()  # BUILD-LIVE: the checked items too
         if last is None:
             return None
         return self.run(last[0], last[1], keep_time=True)
+
+
+class _Press:
+    """TC-PRESS-STAGED-LIVE: one press (or re-score) of a LastEval: the
+    per-press inputs every stage's card reuses, and the publish guard."""
+
+    def __init__(self, last, text, slot, gen):
+        self.last = last
+        self.text = text
+        self.slot = slot
+        self.gen = gen
+        self.parsed = item_parser.parse(text) if isinstance(text, str) else None
+        self.league = last.league() if callable(last.league) else last.league
+        self.ids = last.trade_ids() if callable(last.trade_ids) else None
+        # UTIL-WAYSTONE (decision 0030): the same press on a waystone flags
+        # its mods risky for the loaded build; None for any other item
+        self.waystone = waystone_mod.check(text, last.builds.build)
+        self.result = None
+
+    def card(self, name, result, pending):
+        last = self.last
+        card = dict(compact(result), upgrade=upgrade_mod.link(result, self.league, self.ids),
+                    value=last._value(self.parsed, result))
+        card["waystone"] = self.waystone
+        # TC-CARD-PARTS: every card part computes its value on this press,
+        # on each later stage and on every re-score; the words come later
+        # (state.eval_card_text)
+        card["parts"] = cardparts.compute(last._part_ctx(
+            self.text, self.parsed, result, {"name": name, "pending": bool(pending)}))
+        return card
+
+    def publish(self, name, result, pending, keep_time, at, force=False):
+        """Publish one stage's card while this press is the newest (force:
+        the inline path, not staged). Returns False for a stale press."""
+        last = self.last
+        card = self.card(name, result, pending)
+        with last._publish:
+            if not force and not last.current(self.gen):
+                return False
+            last.state.set_eval(card, keep_time=keep_time, at=at)
+            self.result = result
+            last.last_result = result
+        return True
 
 
 def _now(state):
@@ -245,11 +420,13 @@ def _campaign_facts(state, build):
         setter(facts=campaign_mod.build_facts(build))
 
 
-def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids=None):
+def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids=None,
+           staged=False):
     """Wire the live views into a core: build summary now and on every load,
-    and a LastEval that re-runs on a build change. Returns the LastEval."""
+    and a LastEval that re-runs on a build change. Returns the LastEval.
+    `staged` (TC-PRESS-STAGED-LIVE): publish the item check in stages."""
     last = LastEval(builds, weights, state, league=league, calc=calc, rates=rates,
-                    trade_ids=trade_ids)
+                    trade_ids=trade_ids, staged=staged)
     rev = [0]
 
     def on_build(build):

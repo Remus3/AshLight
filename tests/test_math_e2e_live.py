@@ -86,11 +86,19 @@ def live(tmp_path_factory, warm_bridge):
 
 
 def _press(ctx, text, label):
+    """One press; TC-PRESS-STAGED-LIVE: the reply is the first stage (the
+    stat-weight card), so this waits for the last stage the core publishes
+    and returns its result; `took` runs to that last stage."""
     t0 = time.perf_counter()
-    status, result = _req(ctx["port"], "POST", "/api/eval", {"item": text})
+    status, first = _req(ctx["port"], "POST", "/api/eval", {"item": text})
+    assert status == 200, first
+    ctx["times"][label + "_reply"] = time.perf_counter() - t0
+    last = ctx["core"].last_eval
+    assert last.wait(BUDGET["first_press_s"] + 60), "the last stage never came"
     took = time.perf_counter() - t0
     ctx["times"][label] = took
-    assert status == 200, result
+    result = last.last_result
+    assert result is not None and result["item"]["name"] == first["item"]["name"], result
     return result, took
 
 
@@ -116,6 +124,8 @@ ORDER = ["ring_upgrade", "amulet_sidegrade", "bow_downgrade", "body_upgrade"]
 
 @pytest.mark.parametrize("name", ORDER)
 def test_item_check_deltas_come_from_pob(live, name):
+    """Waits for the last stage (TC-PRESS-STAGED-LIVE): PoB's numbers reach
+    the card after the press reply."""
     first = not live["times"]
     result, took = _press(live, items.ITEMS[name], name)
     assert result["ok"], result

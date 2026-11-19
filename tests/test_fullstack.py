@@ -514,6 +514,9 @@ def test_fullstack_calc_on_leg(env, warm_bridge):
     # the first press starts the calc process (decision 0028 budget)
     status, result = st.req("POST", "/api/eval", {"item": items.RING_UPGRADE},
                             timeout=BUDGET["first_press_s"])
-    assert status == 200 and result["calc"]["source"] == "pob", result["calc"]
+    assert status == 200 and result["ok"], result
+    # TC-PRESS-STAGED-LIVE: the reply is the stat-weight stage; wait() returns
+    # only once the last (PoB) stage is published, so PoB's numbers follow
+    assert st.core.last_eval.wait(BUDGET["first_press_s"])
     assert st.state()["eval"]["calc"]["source"] == "pob"
     assert env["fetch"].calls == [] and env["mock"].requests == []

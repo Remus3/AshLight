@@ -85,4 +85,45 @@ positive per-mod weights of the compared stats}.
 
 ## Reverses if
 
-See R1-R5 and R7.
+See R1-R5, R7 and the 2026-11-19 amendment.
+
+## Amendment 2026-11-19 (TC-PRESS-STAGED-LIVE, F-059)
+
+Decision: the item check is published in stages. The press answers at
+once with the stat-weight card (evaluate.stages() stage "weights": no calc
+call; this build's cached PoB weights score it when every slot has some);
+POST /api/eval returns that first stage. Path of Building's DPS / EHP
+change (stage "pob") and then its per-mod rows (stage "mods") follow from
+one daemon worker per core (theorycraft/live.py LastEval), each an update
+of the same card that keeps the press time (state.set_eval keep_time; the
+card id moves, its `at` does not), so the overlay does not show the card
+again. While a stage is pending the card part cardparts/stage.py adds the
+dashboard note "Path of Building numbers are coming."; the last stage
+drops it. The stage part owns the pending calc sentence until a state.py
+pending key exists: a pending card scored with this build's cached PoB
+weights (source "pob_cached", no notice) says those numbers are coming,
+not that the calc is off (cardparts WORD_KEYS gains "calc"). One press in flight: a press generation counter, bumped by
+every press, every re-score (rerun) and Core.close(), cancels the older
+press's pending stages at the next stage boundary (its generator is
+closed, so no further calc call) and a stale stage is never published.
+A calc error still ends on the weights card with the "failed" /
+"implausible" notice (the stages() contract); an unexpected error in a
+later stage republishes the last card without the pending note. Core.close()
+stops the worker and joins it. A LastEval built without `staged` (tests,
+direct callers) runs every stage inline and publishes the last one, as
+before.
+
+Alternatives: (a) one synchronous press, as before - rejected: a first
+press on the real bridge took 12.4 s (R7) before the card showed anything;
+(b) a worker per press - rejected: two presses would race the one shared
+calc process and could publish out of order; (c) cancelling inside a
+stage (between probes) - not done: stage "mods" is all-or-nothing in
+evaluate.py, so cancellation waits for the stage boundary.
+
+Why: the key press must answer within budget B15 (first card under 0.5 s)
+with what is already known, and fill in by itself (ZERO-CLICK: same one
+press; the card fills in by itself).
+
+Reverses if: the staged updates make the overlay card flicker or re-show
+in play, a stage boundary is too coarse to cancel a stale press in time,
+or the calc gets fast enough that the first press is under budget whole.
