@@ -232,8 +232,8 @@ test("app.js reaches the regions only through the three hook calls", () => {
   const calls = [...APP.matchAll(/window\.ALRegions\.([a-z]+)\(/g)].map((m) => m[1]);
   assert.deepEqual(calls, ["tick", "paint", "start"]);
   assert.match(APP, /ALRegions\.start\(document, \{\s*api: api,\s*getSnap: function \(\) \{ return snap; \},\s*serverNow: serverNow,\s*tabs: window\.ALTabs \|\| null\s*\}\)/);
-  // render(): the regions paint after the last legacy painter, before tick()
-  assert.match(APP, /ALZoneGuide\.paint\(document, s\); \}\n[^\n]*\n\s*if \(window\.ALRegions\) \{ window\.ALRegions\.paint\(document, s, serverNow\(\)\); \}\n\s*tick\(\);/);
+  // render(): the regions paint after the registered panels, before tick()
+  assert.match(APP, /A\.render\(s, charView\(s\)\);\n[^\n]*\n\s*if \(window\.ALRegions\) \{ window\.ALRegions\.paint\(document, s, serverNow\(\)\); \}\n\s*tick\(\);/);
   for (const name of ["ALStrip", "ALContext", "ALSetupCard", "ALFeed", "ALNotice", "ALBuildLine",
     "ALItemCard", "ALKeptChecks", "ALPager", "ALTextSpacing"]) {
     assert.ok(!APP.includes(name), "app.js names no region: " + name);
