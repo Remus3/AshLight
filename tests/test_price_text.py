@@ -60,9 +60,11 @@ def test_searching_and_waiting():
 
 def test_off_and_errors_say_what_to_do():
     off = price_card_text(price("off"))
-    assert (off["line"], off["detail"]) == ("Web data is off", "Switch it on in the dashboard")
-    assert off["sentence"] == ("Price checks need web data, which is off. Turn it on under "
-                               "Prices and web data on this page.")
+    # DATA-PRICE-CARD-TEXT (F-018): names poe.ninja and the card, not a file
+    assert (off["line"], off["detail"]) == ("Web data is off",
+                                            "Turn it on in Prices and web data")
+    assert off["sentence"] == ("poe.ninja prices need web data, which is off. Turn it on "
+                               "in the Prices and web data card on this page.")
     nai = price_card_text(price("error", error="not an item", item={}))
     assert nai["head"] == "Price: Unnamed item"
     assert (nai["line"], nai["detail"]) == ("Not an item", "Copy an item in game first")
@@ -81,11 +83,13 @@ def test_off_and_errors_say_what_to_do():
 def test_off_contact_not_set_says_what_to_do():
     # F2 (PRICE-1-COPY): off because no contact is set must not say web data is off
     t = price_card_text(price("off", error="contact not set"))
-    assert (t["line"], t["detail"]) == ("Contact not set", "Add it in config/local.json")
-    assert t["sentence"] == ("Price checks need a contact for the trade site, such as an "
-                             "email or a name. Add it as \"contact\" in config/local.json, "
-                             "then press the hotkey again.")
+    # DATA-PRICE-CARD-TEXT (F-018): names poe.ninja and the card, not a file
+    assert (t["line"], t["detail"]) == ("Contact not set", "Add it in Prices and web data")
+    assert t["sentence"] == ("poe.ninja prices need a contact, such as an email or a name. "
+                             "Add it in the Prices and web data card on this page, then "
+                             "press the hotkey again.")
     assert "Web data is off" not in str(t)
+    assert "config/local.json" not in str(t) and "trade site" not in str(t)
     # the generic error key never borrows the contact text
     e = price_card_text(price("error", error="contact not set"))
     assert e["line"] == "Price check failed"
@@ -140,7 +144,8 @@ def test_missing_values_read_honestly():
 
 def test_overlay_lines_fit_the_card():
     for c in (price(count=5, listings=FIVE), price("searching"), price("waiting", wait_s=99),
-              price("off"), price("error", error="x"), price("error", error="no league"),
+              price("off"), price("off", error="contact not set"),
+              price("error", error="x"), price("error", error="no league"),
               price(count=0), price("link", url=LINK)):
         t = price_card_text(c)
         assert len(t["line"]) <= 34 and len(t["detail"]) <= 34, t

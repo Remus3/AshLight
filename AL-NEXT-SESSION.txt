@@ -105,10 +105,8 @@ Carried forward (not acted on yet):
   application file comes with row DATA-GGG-APPLICATION, wave 1); (e) logon
   autostart scripts\autostart.ps1 -Enable (OA-7; decision 0011, OFF by
   default); (g) UA contact in config/local.json + web_data on (OA-8;
-  poe.ninja / share-URL features only); (h) confirm "NLM" =
-  natural-language messaging (OA-30; docs/design/0001 top; row
-  PLAY-TD-03-TOKENS, wave 4, drops it under ruling Q-15); (k) review
-  decision 0017 (trade link only) and say if it should be reversed (OA-9).
+  poe.ninja / share-URL features only); (k) review decision 0017 (trade
+  link only) and say if it should be reversed (OA-9).
   Act (d), create the GitHub remote, is no operator act any more: the go
   is recorded above and row GP-09 (wave 5) creates the repository and
   pushes. Act (f), dropped unacted at commit a3bf44c, is OA-12 above.
@@ -270,6 +268,16 @@ Carried forward (not acted on yet):
   of the batch that merges the later of SEC-ACL-CHECK and
   SEC-ACL-SETUP replaces it with the full packages.json wording of
   SEC-ACL-APPLY.
+- NOTE (wave 4, DATA-PRICE-CARD-TEXT DPC-2): design 0001 section 9 needs
+  a bullet for the new price-age templates; owner: the next package that
+  owns docs/design/0001 (PLAY-TD-23-RECORDS at the latest).
+- NOTE (wave 4, DPC-1 follow-up for DATA-CONTACT-FIELD, wave 17): its
+  tests must confirm the contact field sits on the "Prices and web data"
+  card (packages.json is not an integrator file, so the note lives here).
+- NOTE (wave 4, PLAY-TD-01B-FIT-HARNESS builder): tests/play_states.py
+  TOKEN "p"*48 is not hex, so the dashboard rejects it (the fit harness
+  swaps in a hex token); fix in the next package that owns
+  tests/play_states.py.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
