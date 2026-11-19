@@ -1,6 +1,6 @@
 """TEST-FULLSTACK: one synthetic session through every feature at once.
 
-A real core and its HTTP / SSE server on a free port in 8961-8979, a temp
+A real core and its HTTP / SSE server on a leased test port (8962-8969), a temp
 runtime and a temp config (never the operator's), Client.txt lines from
 tools/synth_client.py, and a LOCAL mock poe.ninja (stdlib HTTP server on
 127.0.0.1) behind the core's injectable web transport: the core still
@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import synth_client  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
-from tc_live_util import BUDGET, free_test_port  # noqa: E402
+from tc_live_util import BUDGET, lease_port  # noqa: E402
 
 from server.al import VERSION, http as al_http, ninja, pricebook, summary, webfetch  # noqa: E402
 from server.al.core import Core  # noqa: E402
@@ -63,7 +63,7 @@ class Stack:
         self.core = Core(runtime=rt, log_path=str(log), poll_s=0.02, config_path=cfg,
                          web_fetch=fetch)
         assert self.core.config_path == cfg  # never the operator's config
-        self.port = free_test_port()
+        self.port, self._release = lease_port()
         self.server = serve(self.core, TOKEN, port=self.port)
         threading.Thread(target=self.server.serve_forever,
                          kwargs={"poll_interval": 0.05}, daemon=True).start()
@@ -99,6 +99,7 @@ class Stack:
 
     def close(self):
         self.server.stop()
+        self._release()
         self.core.close()
 
 

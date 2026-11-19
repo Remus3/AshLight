@@ -383,9 +383,8 @@ the work list, runs cap from `~/.fleet/lanes.json`, progress files
 checklist). ARMED 2026-11-17 (ROADMAP LOOP-ARM): per-user scheduled task
 `\AshLightOps\LaneLoop` from `tools/loop_task.py install` (PT15M, IgnoreNew,
 pythonw, interactive token, no stored password); read it back with
-`tools/loop_task.py status`, remove with `tools/loop_task.py remove`. Rows
-whose remaining work is an operator act carry `BLOCKED:` so the tick skips
-them. A hand-off bullet is loop work only when it starts with LOOP:; BLOCKED
+`tools/loop_task.py status`, remove with `tools/loop_task.py remove`. A row
+carrying `BLOCKED: <reason>` is listed and never dispatched. A hand-off bullet is loop work only when it starts with LOOP:; BLOCKED
 applies to it as to a row. Pause: `ops/loop/control/HALT`.
 
 ## Session workflow
@@ -752,3 +751,21 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   (decision 0048, amends 0004 item 4). Reverses if: GGG requires
   account:profile for consent or the User-Agent, refuses the loopback
   ports, or the operator drops live import.
+- Loop and wave contract: BLOCKED in a row means not for the loop, with a
+  reason the checklist echoes (session wave <n>, session, operator act,
+  gate); a hand-off bullet is loop work only with LOOP:; a session claims
+  an untagged row by committing the tag first and the loop's item record
+  wins; a wave holds folders with ops/loop/control/wave_owned.json and
+  merges under the loop's merge lock; HALT is removed only after the six
+  checks (decision 0055). Reverses if: a row is worked twice in practice,
+  or the tag traffic on ROADMAP.md causes merge conflicts.
+- Plug-in folder for ticks, Checks rows and routes: a new core tick,
+  Checks row or token-gated /api/ route is one new module under
+  server/al/plug/ (attach / facts / rows / ROUTES, discovered by name);
+  Core.tick_all runs the tick list in a fixed order and throttles a
+  repeating tick error; plug routes run only after the handler guard and
+  only under /api/ (decision 0056). Reverses if: the F-193 route table
+  replaces the lookup, discovery fails in the installed layout, or a plug
+  module is found to bypass the token, Host / Origin or CSP checks.
+- CAMPAIGN-KEEP: with no build the item check answers keep or vendor from AshLight's own level-band rule table (server/al/data/level_rules.json, JSON conditions never run as code, hot reloaded, entries carry src and checked); nothing copied from another tool; a loaded build or a worn item wins (decision 0057). Reverses if: the thresholds misfire in levelling play, a licence objection to a fact source appears, or the worn-gear baseline makes the table unused.
+index: 0057 - Keep-or-vendor levelling rules: own table, hot reloaded, used only with no build (docs/decisions/0057-tc-campaign-keep.md)

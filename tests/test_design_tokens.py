@@ -388,12 +388,16 @@ def test_scale_queries_follow_the_rule_in_em():
     assert base["al-s"] == "1" and base["al-size-class"] == "flow"
 
 
-def test_scale_is_declared_but_not_applied_to_the_root():
+def test_scale_is_applied_to_the_root():
+    """PLAY-TD-09B-SKELETON applies the step: html takes 100% x s, and the
+    token block's :root sets no font of its own."""
     css = _nocomment(_src())
+    html = [b for sel, b in _rules(css) if sel == "html" and re.search(r"font-size", b)]
+    assert len(html) == 1, html
+    assert re.search(r"(?<![-\w])font-size\s*:\s*calc\(100% \* var\(--al-s\)\)\s*;", html[0]), html
     for sel, body in _rules(css):
-        if sel in (":root", "html"):
+        if sel == ":root":
             assert not re.search(r"(?<![-\w])font(-size)?\s*:", body), (sel, body)
-    assert "var(--al-s)" not in css
 
 
 # --- distance rule (Q-14 reference setup) ------------------------------------
