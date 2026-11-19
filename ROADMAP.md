@@ -19,11 +19,22 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
   this write-up need no further act. DEPENDS: OVL-CHECK, RUN-BUDGET-LOG-CORE. BLOCKED: one normally
   played map with tools/ovl_check.py armed (Q-18, budget B19); unblocks when the sidecar Logs dir
   holds an ovl_check report JSON that includes the operator's same / dropped answer (operator).
+- [ ] CORE-REGOPEN-ROOT (build) A test core's Checks stat of the docs-watch flag (core.py, REG_OPEN under paths.runtime_dir()) reads the real ops/runtime folder; it must use the core's own runtime root so a test or demo core never touches live runtime (found by PLAY-TD-01A-PLAY-STATES). ACCEPT: python -m pytest -q tests/test_play_states.py passes with a test that a core on a tmp runtime root never stats the live ops/runtime path. ZERO-CLICK: No click: a code fix the loop lands by itself.
+- [ ] TC-CARD-PARTS-DOC (build) Item card words in design 0001 section 9 (TCP-8 of the TC-CARD-PARTS
+  review): one line naming the mark words (Upgrade, Sidegrade, Downgrade, Not checked, Risky, No risky
+  mods), the tones of cardparts.TONES and the rule that a part changes only WORD_KEYS, plus a doc
+  test that the section 9 list matches the module. ACCEPT: python -m pytest -q
+  tests/test_tc_cardparts.py passes with that doc test. ZERO-CLICK: No click: a doc and test edit
+  the loop lands by itself. DEPENDS: TC-CARD-PARTS.
+- [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB.
+- [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB.
 
 ## Lane: data
 
 
 ## Lane: review
+
+- [ ] WT-SIDECAR-WIRE (review) Reopened WT-SIDECAR: agent worktrees must land under the AL sidecar through the decision 0012 hooks, not only by the hand-run hook. ACCEPT: python -m pytest -q tests/test_wt_sidecar_hook.py -rs reports no skip and git worktree list after one isolated agent spawn shows its path under the sidecar Worktree folder. ZERO-CLICK: One paste by the operator, once; every later wave spawn lands in the sidecar by itself. BLOCKED: operator act (paste the two hook entries of decision 0012 into .claude/settings.json); AUTO-26 flips it when its proof passes.
 
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
@@ -185,211 +196,12 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 1: loop and watchers, local security, reliability and observability
 
-- [ ] SEC-XML-NUL (build) Strict build XML intake: refuse an inflated payload holding a NUL byte.
-  ACCEPT: python -m pytest -q tests/test_tc_code.py tests/test_tc_code_api.py
-  tests/test_tc_code_real.py passes: share codes holding UTF-16 documents (both byte orders, with
-  and without a byte order mark) with an entity get 400 from POST /api/build-code and no build file
-  is written, and the real-export fixtures still round-trip byte exact. ZERO-CLICK: Code change; a
-  refused paste shows the existing error line by itself. BLOCKED: session wave 1.
-- [ ] LOOP-TESTS-CARVE (build) Carve the loop tests that later packages rewrite into four owner
-  files. ACCEPT: `python -m pytest -q tests/test_al_loop.py tests/test_loop_handoff.py
-  tests/test_loop_dive.py tests/test_loop_flip.py tests/test_loop_plandeps.py` passes and collects
-  the same tests that tests/test_al_loop.py alone collects today (153 test functions), none lost and
-  none changed. ZERO-CLICK: Developer-side only: a mechanical move of test code; nothing runs in
-  play. BLOCKED: session wave 1.
-- [ ] PLAY-TD-02-SLOTS (build) Slot tables: pure priority and eviction functions for Play and the
-  overlay. ACCEPT: node --test app/test/slots.test.js passes: it enumerates context mode (7) x open
-  trades (0-5) x item card kind (5) x notice kind (8) x build state (4) x size class (compact, full)
-  and proves every region's row count fits its track, every open trade has a row and the summed
-  tracks equal 652 and 592 px (G3), plus the hudLine2 and cardHolder tables (table half of G11).
-  ZERO-CLICK: Pure functions pick what each fixed slot shows on every state push; the player presses
-  nothing. BLOCKED: session wave 1.
-- [ ] AUTO-03 (build) ROW-FILES tool: tools/roadmap.py with rows, lint, new and done. ACCEPT:
-  `python -m pytest -q tests/test_roadmap_rows.py tests/test_roadmap_shape.py` passes on the tree
-  after the integrator's ROADMAP.md edit (the tree test lints the open bullets). ZERO-CLICK: Rows
-  appear and close as new files with no hand edit of ROADMAP.md; the loop and the watcher call the
-  tool, the operator never does. BLOCKED: session wave 1.
-- [ ] LOOP-LEDGERS (build) FS-LEDGERS: union merge for one-line ledgers and a ledger shape test.
-  ACCEPT: `python -m pytest -q tests/test_ledger_files.py` passes, and in its scratch clone two
-  branches that each append one line to docs/design/reviews.log merge with no conflict and both
-  lines present. ZERO-CLICK: Developer-side only: git applies the attribute at every merge by
-  itself; the player does nothing. BLOCKED: session wave 1.
-- [ ] LOOP-PREFLIGHT-CMD (build) Loop preflight command: gates once on unchanged main, hand-off
-  count. ACCEPT: `python -m pytest -q tests/test_loop_preflight.py` passes and `python
-  tools/loop_preflight.py --handoff` prints one line 'hand-off loop items: <n>'. ZERO-CLICK: A dev
-  step that runs itself: the session that removes HALT calls it once (AUTO-21); nothing for the
-  player. BLOCKED: session wave 1.
-- [ ] GP-01 (review) Arm the set-name needles and re-run every scan. ACCEPT: `python
-  tools/leak_sweep.py --tree` and `python tools/leak_sweep.py --history` both exit 0 and print
-  `ARMED needles=<N>` with N >= 45 on stderr, `python ops/fleet_kit/fleet_identity.py check
-  --history --by-class main` prints 0 for all 9 classes, and `git status --short` is empty.
-  ZERO-CLICK: An agent step; afterwards the armed needles run by themselves in pre-commit,
-  commit-msg and pre-push. Nothing in play is touched. BLOCKED: session wave 1.
-- [ ] GP-03 (build) NOTICE as a public file and the licence record. ACCEPT: `git grep -n "the
-  operator\|MAIN" -- NOTICE` prints nothing and `python -m pytest -q tests/test_ascii_lf.py
-  tests/test_leak_sweep.py tests/test_research_numbers.py` is green. ZERO-CLICK: Documentation only;
-  nothing for the player to do. BLOCKED: session wave 1.
-- [ ] RUN-LIVE-CLICKS-STRIKE (review) Strike the tool-click unblock path from TEST-LIVE-CLICKS.
-  ACCEPT: `grep -c -i -E 'desktop-(tool|control)' ROADMAP.md AL-NEXT-SESSION.txt` prints 0 for both
-  files and `python -m pytest -q tests/test_floor_static.py` passes. ZERO-CLICK: No operator act;
-  docs step run by the integrator. BLOCKED: session wave 1.
-- [ ] DATA-GGG-APPLICATION (review) Prepare the GGG OAuth application note and its decision. ACCEPT:
-  python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py
-  tests/test_audit_pass2.py passes; the note's scope list is exactly account:characters and the
-  three questions (refresh tokens and where they may be stored; API reads triggered by the player's
-  own Client.txt lines or by core start; the public Currency Exchange endpoint) are present.
-  ZERO-CLICK: The settled docs watch (decision 0044) raises REG_OPEN by itself; its index-page read
-  is under operator decision A-01, so the operator's own report that registration is open counts as
-  the same signal. Sending is one operator act because a registration belongs to the operator's
-  account. BLOCKED: session wave 1.
 
 ### Wave 2: loop and watchers, local security, reliability and observability
 
-- [ ] TC-CARD-PARTS (build) Item card parts registry (server side seam). ACCEPT: python -m pytest -q
-  tests/test_tc_cardparts.py tests/test_eval_text.py tests/test_overlay_layout.py
-  tests/test_price_text.py passes. ZERO-CLICK: No click: parts run inside the existing item-check
-  press and re-score. BLOCKED: session wave 2.
-- [ ] SEC-DEMO-CORE (build) Demo mode core: an isolated instance on a fixture folder. ACCEPT: python
-  -m pytest -q tests/test_demo_mode.py tests/test_sidecar_paths.py tests/test_port_resolve.py
-  passes: a prepared demo core reads and writes only under its fixture and scratch dirs (a spy on
-  the real config path is never called), a missing fixture is an error, and a log path outside the
-  fixture ends in exit code 97. ZERO-CLICK: Dev only, scripted; no player interaction. Reads only a
-  fixture copy: no live log, no network, nothing sent to the game. DEPENDS: SEC-NO-DISCOVERY.
-  BLOCKED: session wave 2.
-- [ ] AUTO-01 (build) LOOP-PREFLIGHT core: session line, dry run past HALT, tick step seam. ACCEPT:
-  `python -m pytest -q tests/test_loop_steps.py tests/test_al_loop.py tests/test_loop_split.py`
-  passes and `python tools/al_loop.py tick --ignore-halt` exits non-zero. ZERO-CLICK: The operator
-  never has to notice a stall or a missing session number; every step of the tick runs by itself
-  every 15 minutes. DEPENDS: LOOP-SPLIT-TICK. BLOCKED: session wave 2.
-- [ ] AUTO-04 (build) DIVE-FLOOR: dives lose free web tools and read GGG only at the two docs pages.
-  ACCEPT: `python -m pytest -q tests/test_dive_fetch.py tests/test_loop_dive.py
-  tests/test_p163_lane_tools.py` passes, with the dive spawn arguments holding neither WebFetch nor
-  WebSearch. ZERO-CLICK: Unattended: the floor is enforced by the allow-list in code and the spawn
-  arguments, never by a reminder. DEPENDS: LOOP-TESTS-CARVE. BLOCKED: session wave 2.
-- [ ] LOOP-ROWFILES-MERGE (build) The loop merge closes a row with a done file, not a ROADMAP.md
-  edit. ACCEPT: `python -m pytest -q tests/test_loop_flip.py tests/test_al_loop_gate_cache.py`
-  passes, with a merged plan item leaving ROADMAP.md byte-identical and one new file under
-  docs/roadmap/done/. ZERO-CLICK: Rows close with no hand edit; the fold at /done writes ROADMAP.md
-  once. DEPENDS: LOOP-TESTS-CARVE, AUTO-03. BLOCKED: session wave 2.
-- [ ] LOOP-HANDOFF-PREFIX (build) Hand-off bullets are loop work only with a LOOP: prefix. ACCEPT:
-  `python -m pytest -q tests/test_loop_handoff.py` passes and `python tools/loop_preflight.py
-  --handoff` prints 'hand-off loop items: 0' on the live hand-off. ZERO-CLICK: The loop stops
-  spending a run on every carried-forward paragraph; the operator writes nothing new. DEPENDS:
-  LOOP-TESTS-CARVE, LOOP-PREFLIGHT-CMD. BLOCKED: session wave 2.
-- [ ] AUTO-02 (build) ROADMAP-PRUNE: tools/roadmap_fold.py with prune and fold, first prune run.
-  ACCEPT: `python -m pytest -q tests/test_roadmap_fold.py tests/test_desktop_client.py` passes
-  before and after the integrator runs `python tools/roadmap_fold.py prune --write`. ZERO-CLICK:
-  /done prunes and folds by itself (LOOP-DONE-FOLD wires the step); no operator step. BLOCKED:
-  session wave 2.
-- [ ] SEC-SURFACE-PIN (build) One test file that pins the local HTTP surface. ACCEPT: python -m
-  pytest -q tests/test_security_surface.py passes, and its self-check proves that a route added to a
-  copy of the http.py source without a table row fails the comparison. ZERO-CLICK: Runs in the suite
-  by itself. DEPENDS: SEC-NO-DISCOVERY, SEC-STATIC-MAP, SEC-XML-NUL. BLOCKED: session wave 2.
-- [ ] RUN-DURABLE-STORE-FILES (build) Store modules save with one .bak and clear it with the data.
-  ACCEPT: python -m pytest -q tests/test_durable_store_files.py tests/test_util_run_history.py
-  tests/test_util_map_ladder.py tests/test_zone_guide.py tests/test_util_price_watch.py
-  tests/test_newbie_hints.py passes. ZERO-CLICK: Automatic; no setting. DEPENDS:
-  RUN-DURABLE-JSONFILE. BLOCKED: session wave 2.
-- [ ] RUN-TAIL-HEAL-READER (build) Tailer never dies and never replays a backlog (logfile.py).
-  ACCEPT: python -m pytest -q tests/test_tailer.py tests/test_fuzz.py tests/test_budgets.py passes
-  with C1 and C3 to C6 present. ZERO-CLICK: Automatic. DEPENDS: SEC-NO-DISCOVERY. BLOCKED: session
-  wave 2.
-- [ ] PLAY-TD-09A-REGION-HOOK (build) Region hook: one registry, pre-linked region files. ACCEPT:
-  npm test --prefix app and python -m pytest -q tests/test_dash_console.py tests/test_a11y.py
-  tests/test_ux_review.py tests/test_floor_static.py pass: ALRegions.register, start, paint, tick
-  and retire work in a node test (order kept, a throwing painter is isolated) and the page loads
-  every new tag with no console error. ZERO-CLICK: No visible change; later regions fill from the
-  state push by themselves. DEPENDS: PLAY-TD-02-SLOTS. BLOCKED: session wave 2.
-- [ ] SEC-CEIL-HTTP (build) Ceiling on handler threads. ACCEPT: python -m pytest -q
-  tests/test_http_ceilings.py tests/test_http_robust.py tests/test_soak.py passes: connection 65 is
-  closed while 64 idle ones are open, and GET / answers 200 again once they time out. ZERO-CLICK:
-  Code change; nothing for the player. BLOCKED: session wave 2.
-- [ ] AUTO-25 (review) KIT-REPORT: draft the one note for the fleet owner. ACCEPT: `python -c
-  "import pathlib;t=pathlib.Path('ops/runtime/notes/kit-gate-report.md').read_bytes();assert
-  t.isascii() and b'\r' not in t and b'fleet_suite_gate' in t and b'fleet_identity' in t"` and
-  `python tools/leak_sweep.py --message ops/runtime/notes/kit-gate-report.md` both exit 0.
-  ZERO-CLICK: The draft waits; the tick's note path sends it once a destination exists
-  (LOOP-KIT-REPORT-SEND), with no reminder. BLOCKED: session wave 2.
-- [ ] DATA-PRICE-FALLBACK-RUNBOOK (review) Write down the price source fallback order. ACCEPT:
-  python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py
-  tests/test_audit_pass2.py passes and the note names the 4 fallbacks, each with a terms date.
-  ZERO-CLICK: The dev step runs itself: a review-lane agent writes the note from research 0036 with
-  no operator step and no web read; nothing changes for the player. BLOCKED: session wave 2.
-- [ ] LOOP-DECISION-TIDY (review) Housekeeping: stale 'Open (UNVERIFIED)' entries and the duplicate
-  pin log. ACCEPT: `grep -c "^## Pin log" docs/decisions/0004-scope-theorycraft.md` prints 1 and
-  `python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
-  tests/test_leak_sweep.py tests/test_tc_drift.py` passes. ZERO-CLICK: Developer-side only: later
-  sessions read the amended decisions instead of re-researching moot entries; nothing for the player
-  and no operator act. BLOCKED: session wave 2.
 
 ### Wave 3: loop and watchers, tests and code seams, theorycraft
 
-- [ ] SEC-DEMO-ENTRY (build) Demo mode entry: python -m server.al --demo <fixture dir>. ACCEPT:
-  python -m pytest -q tests/test_demo_entry.py tests/test_demo_mode.py passes: 'python -m server.al
-  --demo <missing dir>' exits non-zero, a demo start on tests/fixtures/demo answers /api/health, its
-  tailer path lies inside the fixture dir, its token, heartbeat and logs exist only under its
-  scratch dir, and the live token file and config/local.json (where present) keep their size and
-  mtime. ZERO-CLICK: Dev only: one command starts the demo, no click; the dev step runs itself from
-  the test. DEPENDS: SEC-DEMO-CORE. BLOCKED: session wave 3.
-- [ ] TEST-PLUGIN-PIN (build) Pin the pytest plugin set; register markers; keep the end of the gate
-  output. ACCEPT: python -m pytest -q tests/test_pytest_config.py tests/test_al_loop_gate_cache.py
-  passes and python -m pytest -q tests/test_ascii_lf.py --trace-config names no anyio or asyncio
-  plugin and prints no warnings summary. ZERO-CLICK: Config only: every later pytest run picks it up
-  by itself. BLOCKED: session wave 3.
-- [ ] LOOP-FAILED-PARK (build) A failed item is parked visibly; a foreign gate failure ends the fix
-  rounds. ACCEPT: `python -m pytest -q tests/test_loop_failed_park.py tests/test_al_loop.py
-  tests/test_loop_split.py` passes. ZERO-CLICK: The operator never has to find a silently failed
-  item: it is in every checklist until a session rules on it. DEPENDS: LOOP-SPLIT-TICK, AUTO-01,
-  AUTO-04. BLOCKED: session wave 3.
-- [ ] LOOP-ROWFILES-WORK (build) The loop work list reads rows through the loader: DEPENDS and
-  exact-id briefs. ACCEPT: `python -m pytest -q tests/test_loop_rowfiles.py
-  tests/test_loop_plandeps.py tests/test_al_loop.py` passes, with a row that depends on an unknown
-  id listed as waiting and never dispatched. ZERO-CLICK: Filed rows are picked up and dependent rows
-  open by themselves on the next tick; no hand edit. DEPENDS: LOOP-SPLIT-TICK, LOOP-TESTS-CARVE,
-  AUTO-03, LOOP-HANDOFF-PREFIX, LOOP-ROWFILES-MERGE. BLOCKED: session wave 3.
-- [ ] LOOP-DONE-FOLD (build) /done folds row files and prunes done rows; the fold round trip is
-  tested. ACCEPT: `python -m pytest -q tests/test_roadmap_fold_e2e.py` passes and `grep -c
-  "roadmap_fold.py fold" .claude/commands/done.md` prints 1. ZERO-CLICK: /done folds and prunes by
-  itself every session; no operator step. DEPENDS: AUTO-02, AUTO-03, LOOP-HANDOFF-PREFIX. BLOCKED:
-  session wave 3.
-- [ ] TEST-LAYOUT-GUARD (build) Guard test for test naming and test-to-test imports. ACCEPT: python
-  -m pytest -q tests/test_test_layout.py passes, and its self-checks show a planted
-  tests/test_audit_pass9.py and a planted 'from test_x import' line both fail. ZERO-CLICK: Runs in
-  the suite; a new file with a batch name fails at once with the rule text. BLOCKED: session wave 3.
-- [ ] TC-CARD-PARTS-WEB (build) Dashboard renders card notes, word and tone from the core + Recover
-  a refused share link in two clicks. ACCEPT: npm test --prefix app passes and python -m pytest -q
-  tests/test_ux_review.py tests/test_a11y.py passes. Also (folded TC-LINK-RECOVER): npm test
-  --prefix app passes and python -m pytest -q tests/test_ux_review.py tests/test_a11y.py passes.
-  ZERO-CLICK: No click: notes paint with the state frame. Also (folded TC-LINK-RECOVER): Two clicks
-  replace four acts; web data is never turned on without the confirm click on the full sentence
-  (decision 0013). DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 3.
-- [ ] DATA-LEAGUE-IDENTITY (build) League identity for launch day: id and name, conditional league
-  GET. ACCEPT: python -m pytest -q tests/test_leagues.py tests/test_price_book.py
-  tests/test_util_10_ready.py tests/test_data_ninja.py tests/test_fuzz.py passes and git grep -n
-  "within 6 h" -- docs/ops/1.0-launch-runbook.md matches step 8. ZERO-CLICK: Automatic: the 1.0
-  league (2026-12-11) is followed with no setting. BLOCKED: session wave 3.
-- [ ] PLAY-TD-01A-PLAY-STATES (build) Play state recipes and the long-string fixture. ACCEPT: python
-  -m pytest -q tests/test_play_states.py passes: each recipe (a, a2, b, c, c2, d, e, f, g, c plus 3
-  whispers, map, long strings) builds on a core pinned to a temp log, yields the snapshot fields its
-  docstring names, and opens no path outside tmp_path. ZERO-CLICK: Dev step; runs in the test gates
-  with a synthetic log, no game and no live Client.txt. DEPENDS: SEC-NO-DISCOVERY. BLOCKED: session
-  wave 3.
-- [ ] TC-PRESS-BUILD (build) The item key loads a copied build. ACCEPT: python -m pytest -q
-  tests/test_tc_press_build.py tests/test_tc_eval_api.py tests/test_tc_code_api.py
-  tests/test_floor_static.py passes and npm test --prefix app passes. ZERO-CLICK: One press, the
-  floor minimum: the same single clipboard read on the same manual AshLight key; nothing new read,
-  nothing sent to the game. DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 3.
-- [ ] OVL-HIDEOUT-AREA (build) in_hideout from the area id of the generation line, not an English
-  scene-name substring. ACCEPT: python -m pytest -q tests/test_parser.py tests/test_bus_state.py
-  tests/test_resume.py tests/test_util_maprun.py tests/test_newbie_hints.py tests/test_lang_guard.py
-  passes. ZERO-CLICK: Automatic from the opted-in Client.txt tail; nothing to set. BLOCKED: session
-  wave 3.
-- [ ] GP-04 (build) Fresh-clone proof of the suite. ACCEPT: The suite run through `python
-  ops/fleet_kit/fleet_suite_gate.py run --owner <ID> -- <scratch runner: cwd = the fresh clone,
-  python -m pytest -q>` exits 0 with the main checkout's pass count minus the documented skips, and
-  `npm test --prefix app` exits 0 in the clone. ZERO-CLICK: An agent step: clone, run, fix, re-run.
-  Test cores replay fixtures only; no core is pointed at the live game log. DEPENDS:
-  SEC-NO-DISCOVERY. BLOCKED: session wave 3.
 
 ### Wave 4: go-public, Play tab and dashboard, theorycraft
 
