@@ -6,16 +6,30 @@ touches the game process. It starts at the END of the file by default, so an
 old session is never replayed; state is recovered from the skipped bytes by
 the on_resume hook (server/al/resume.py, LIVE-RESUME).
 
+RUN-TAIL-HEAL-READER (research 0050 R1): the reader never dies and never
+replays a backlog. Each line and status callback is guarded (the first
+error is logged, the rest counted) and so is the whole poll. When the same
+file comes back after a break it continues from its old offset. After any
+other break (another file, a file cut shorter in place, a file that shows
+up late) it reads from byte 0 only when the file is new and at most
+NEW_FILE_MAX bytes, else it jumps to the end and asks for the resume scan
+(decision 0008 stands: scan only). After UNREADABLE_POLLS failed polls in a
+row it publishes tailer_unreadable, and tailer_readable on the next good
+poll.
+
 Discovery reads Steam's libraryfolders.vdf (read only) and looks for
 steamapps/common/Path of Exile 2/logs/Client.txt in every library. It runs
 only when no path is configured; the core runs it only from the real entry
 point (SEC-NO-DISCOVERY).
 """
 
+import logging
 import os
 import re
 import threading
 from pathlib import Path
+
+LOG = logging.getLogger("al.logfile")
 
 GAME_DIR = "Path of Exile 2"
 LOG_REL = Path("steamapps") / "common" / GAME_DIR / "logs" / "Client.txt"
@@ -26,6 +40,18 @@ _BOM = b"\xef\xbb\xbf"
 # well under 2 KB; a longer run with no newline (NUL padding after a crash,
 # garbage) is dropped up to its next newline instead of growing without bound.
 MAX_PARTIAL = 64 * 1024
+# RUN-TAIL-HEAL-READER: after a break, a file of at most this many bytes that
+# does not hold the bytes last read is new (a log recreated by a game
+# restart is seen within one poll) and is read from its first line; a bigger
+# one is skipped to its end and handed to the resume scan.
+NEW_FILE_MAX = 64 * 1024
+# Failed polls in a row (a sharing violation, no rights, a broken mount)
+# before tailer_unreadable: 20 x DEFAULT_POLL_S = 5 s.
+UNREADABLE_POLLS = 20
+# The last bytes read, kept to find the old position in a file of at most
+# NEW_FILE_MAX bytes after a trim or a copy; a shorter mark is not trusted.
+MARK_LEN = 256
+MARK_MIN = 16
 
 
 # ---------------------------------------------------------------- discovery
@@ -208,8 +234,13 @@ class Tailer:
     """Polls the file size every poll_s seconds and emits complete lines.
 
     on_line(str) gets each complete line (no terminator); on_status(dict) gets
-    tailer_started / tailer_reset events. No busy loop: the thread sleeps on an
-    Event between polls. poll_once() is the synchronous step (tests use it).
+    tailer_started / tailer_reset (reasons missing, replaced, truncated,
+    continued) and tailer_unreadable / tailer_readable events. No busy loop:
+    the thread sleeps on an Event between polls. poll_once() is the
+    synchronous step (tests use it).
+
+    Counters (read by the core, never reset): lines, bytes, resets,
+    failed_polls, dropped_lines, listener_errors.
     """
 
     def __init__(self, path, on_line, on_status=None, poll_s=DEFAULT_POLL_S,
@@ -219,22 +250,30 @@ class Tailer:
         self.on_status = on_status or (lambda ev: None)
         self.poll_s = float(poll_s)
         self.start_at_end = start_at_end
-        # LIVE-RESUME: on_resume(path, end_offset) runs once, before the
-        # first start at the end, so state can be recovered from the bytes
-        # the tailer skips (server/al/resume.py). Its errors never stop
-        # the tailer.
+        # LIVE-RESUME: on_resume(path, end_offset) runs before every start at
+        # the end (the first one, and each jump to the end after a break), so
+        # state can be recovered from the bytes the tailer skips
+        # (server/al/resume.py). Its errors are logged and never stop the
+        # tailer.
         self.on_resume = on_resume
         self._fh = None
         self._ident = None
         self._offset = 0
         self._partial = b""
         self._skipping = False  # inside an oversized line, until its newline
-        self.dropped_lines = 0
+        self._mark = b""  # the last bytes read, ending at _offset
         self._opened_once = False
         self._missing = False
+        self._fail_streak = 0
+        self._unreadable = False
         self._stop = threading.Event()
         self._thread = None
         self.lines = 0
+        self.bytes = 0
+        self.resets = 0
+        self.failed_polls = 0
+        self.dropped_lines = 0
+        self.listener_errors = 0
 
     # -- lifecycle
     def start(self):
@@ -258,38 +297,123 @@ class Tailer:
         while not self._stop.is_set():
             try:
                 self.poll_once()
-            except OSError:
-                self._close()
+            except Exception as exc:  # noqa: BLE001 - the reader never dies
+                self._failed(exc)
             self._stop.wait(self.poll_s)
+
+    # -- guarded callbacks
+    def _listener_failed(self, what):
+        self.listener_errors += 1
+        if self.listener_errors == 1:
+            LOG.exception("a Client.txt %s listener failed; reading goes on", what)
+
+    def _status(self, ev):
+        try:
+            self.on_status(ev)
+        except Exception:  # noqa: BLE001 - a listener bug never stops reading
+            self._listener_failed("status")
+
+    def _ask_resume(self, end):
+        try:
+            self.on_resume(self.path, end)
+        except Exception:  # noqa: BLE001 - recovery is best effort
+            LOG.warning("the Client.txt resume scan failed", exc_info=True)
+
+    # -- poll health
+    def _failed(self, exc):
+        self.failed_polls += 1
+        self._fail_streak += 1
+        if self._fail_streak == 1:
+            LOG.warning("Client.txt could not be read (%s); retrying", _why(exc))
+        if self._fail_streak >= UNREADABLE_POLLS and not self._unreadable:
+            self._unreadable = True
+            self._status({"type": "tailer_unreadable", "path": str(self.path),
+                          "failed_polls": self._fail_streak, "error": _why(exc)})
+
+    def _healthy(self):
+        self._fail_streak = 0
+        if self._unreadable:
+            self._unreadable = False
+            self._status({"type": "tailer_readable", "path": str(self.path)})
 
     # -- internals
     def _close(self):
         """Kept for API symmetry: no handle is held between polls."""
         self._fh = None
 
-    def _started(self, st, at_end):
-        if at_end and not self._opened_once and self.on_resume is not None:
-            try:
-                self.on_resume(self.path, st.st_size)
-            except Exception:  # noqa: BLE001 - recovery is best effort
-                pass
+    def _read(self, start, size):
+        fh = _open_shared(self.path)
+        try:
+            fh.seek(start)
+            return fh.read(size)
+        finally:
+            fh.close()
+
+    def _started(self, st, at, resume, announce=True, keep=False):
+        """Read on from byte `at` of the file `st` describes. resume: the
+        bytes before `at` are skipped, so the resume scan is asked for.
+        keep: `at` is the old position found again; the held partial line
+        and mark stay."""
+        if resume and self.on_resume is not None:
+            self._ask_resume(at)
+        if not keep:
+            self._partial = b""
+            self._skipping = False
+            self._mark = b""
+            if at:
+                try:
+                    self._mark = self._read(max(0, at - MARK_LEN), min(at, MARK_LEN))
+                except OSError:
+                    pass  # no mark: a later trim is judged by size alone
         self._ident = _identity(st)
-        self._offset = st.st_size if at_end else 0
-        self._partial = b""
-        self._skipping = False
+        self._offset = at
         resumed = self._opened_once
         self._opened_once = True
-        self.on_status({"type": "tailer_started", "path": str(self.path),
-                        "offset": self._offset, "file_size": st.st_size,
-                        "resumed": resumed})
+        if announce:
+            self._status({"type": "tailer_started", "path": str(self.path),
+                          "offset": at, "file_size": st.st_size,
+                          "resumed": resumed})
 
-    def _reset(self, reason):
-        self.on_status({"type": "tailer_reset", "reason": reason})
+    def _reset(self, reason, **extra):
+        self.resets += 1
+        ev = {"type": "tailer_reset", "reason": reason}
+        ev.update(extra)
+        self._status(ev)
+
+    def _after_break(self, st, reason):
+        """Any break but the same file back at or past the old offset. A file
+        of at most NEW_FILE_MAX bytes holding the bytes last read goes on
+        right after them; one without them is new and read from byte 0; a
+        bigger one is skipped to its end and handed to the resume scan."""
+        size = st.st_size
+        found = None
+        if size <= NEW_FILE_MAX:
+            if len(self._mark) >= MARK_MIN and size:
+                idx = self._read(0, size).rfind(self._mark)
+                if idx >= 0:
+                    found = idx + len(self._mark)
+            at, read = (found, "kept") if found is not None else (0, "start")
+        else:
+            at, read = size, "end"
+        if reason:
+            self._reset(reason, read=read, offset=at)
+        self._started(st, at, resume=(read == "end"),
+                      announce=(reason != "truncated"), keep=(read == "kept"))
 
     def poll_once(self):
         """One poll step: one stat, and an open/read/close only when the file
         grew. No handle is held while idle, so the game can rotate, replace or
-        delete the file at any time. Returns the number of lines emitted."""
+        delete the file at any time. A failed stat or read is counted, never
+        raised. Returns the number of lines emitted."""
+        try:
+            n = self._poll()
+        except OSError as exc:
+            self._failed(exc)
+            return 0
+        self._healthy()
+        return n
+
+    def _poll(self):
         try:
             st = os.stat(self.path)
         except FileNotFoundError:
@@ -297,30 +421,33 @@ class Tailer:
                 self._missing = True
                 self._reset("missing")
             return 0
+        same = self._ident is not None and _identity(st) == self._ident
         if self._ident is None:
-            # The first sighting honours start_at_end, unless the file was
-            # missing first: then it is new and is read from its start.
-            self._started(st, at_end=self.start_at_end and not self._missing)
-        elif self._missing or _identity(st) != self._ident:
-            if not self._missing:
-                self._reset("replaced")
-            self._started(st, at_end=False)
-        elif st.st_size < self._offset:
-            self._reset("truncated")
-            self._offset = 0
-            self._partial = b""
-            self._skipping = False
+            if self._missing:
+                # Missing at the first look: whatever shows up later may be
+                # an old log on a late drive, so the break rule decides.
+                self._after_break(st, None)
+            else:
+                # The first sighting honours start_at_end.
+                at = st.st_size if self.start_at_end else 0
+                self._started(st, at, resume=self.start_at_end)
+        elif same and st.st_size >= self._offset:
+            if self._missing:
+                # The same file is back (renamed away and back, a drive
+                # back): go on from the old offset, nothing re-read.
+                self._reset("continued", offset=self._offset)
+        elif same:
+            self._after_break(st, "truncated")
+        else:
+            self._after_break(st, None if self._missing else "replaced")
         self._missing = False
         if st.st_size <= self._offset:
             return 0
-        fh = _open_shared(self.path)
-        try:
-            fh.seek(self._offset)
-            data = fh.read(min(st.st_size - self._offset, MAX_READ))
-        finally:
-            fh.close()
+        data = self._read(self._offset, min(st.st_size - self._offset, MAX_READ))
         if not data:
             return 0
+        self.bytes += len(data)
+        self._mark = (self._mark + data)[-MARK_LEN:]
         if self._offset == 0 and data.startswith(_BOM):
             data = data[len(_BOM):]
             self._offset += len(_BOM)
@@ -352,7 +479,18 @@ class Tailer:
                 # terminated, so no parser regex ever sees one.
                 self.dropped_lines += 1
                 continue
-            self.on_line(raw.decode("utf-8", errors="replace"))
+            try:
+                self.on_line(raw.decode("utf-8", errors="replace"))
+            except Exception:  # noqa: BLE001 - one bad line never stops reading
+                self._listener_failed("line")
             n += 1
         self.lines += n
         return n
+
+
+def _why(exc):
+    """A short cause for the log and the unreadable status: the error class
+    and its OS code, never the path."""
+    code = getattr(exc, "winerror", None) or getattr(exc, "errno", None)
+    name = type(exc).__name__
+    return "%s %s" % (name, code) if code else name
