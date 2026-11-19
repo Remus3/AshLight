@@ -19,15 +19,15 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
   this write-up need no further act. DEPENDS: OVL-CHECK, RUN-BUDGET-LOG-CORE. BLOCKED: one normally
   played map with tools/ovl_check.py armed (Q-18, budget B19); unblocks when the sidecar Logs dir
   holds an ovl_check report JSON that includes the operator's same / dropped answer (operator).
-- [ ] CORE-REGOPEN-ROOT (build) A test core's Checks stat of the docs-watch flag (core.py, REG_OPEN under paths.runtime_dir()) reads the real ops/runtime folder; it must use the core's own runtime root so a test or demo core never touches live runtime (found by PLAY-TD-01A-PLAY-STATES). ACCEPT: python -m pytest -q tests/test_play_states.py passes with a test that a core on a tmp runtime root never stats the live ops/runtime path. ZERO-CLICK: No click: a code fix the loop lands by itself.
+- [ ] CORE-REGOPEN-ROOT (build) A test core's Checks stat of the docs-watch flag (core.py, REG_OPEN under paths.runtime_dir()) reads the real ops/runtime folder; it must use the core's own runtime root so a test or demo core never touches live runtime (found by PLAY-TD-01A-PLAY-STATES). ACCEPT: python -m pytest -q tests/test_play_states.py passes with a test that a core on a tmp runtime root never stats the live ops/runtime path. ZERO-CLICK: No click: a code fix the loop lands by itself. BLOCKED: session wave 7.
 - [ ] TC-CARD-PARTS-DOC (build) Item card words in design 0001 section 9 (TCP-8 of the TC-CARD-PARTS
   review): one line naming the mark words (Upgrade, Sidegrade, Downgrade, Not checked, Risky, No risky
   mods), the tones of cardparts.TONES and the rule that a part changes only WORD_KEYS, plus a doc
   test that the section 9 list matches the module. ACCEPT: python -m pytest -q
   tests/test_tc_cardparts.py passes with that doc test. ZERO-CLICK: No click: a doc and test edit
-  the loop lands by itself. DEPENDS: TC-CARD-PARTS.
-- [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB.
-- [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB.
+  the loop lands by itself. DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 7.
+- [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
+- [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 
 ## Lane: data
 
