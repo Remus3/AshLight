@@ -19,7 +19,9 @@ from pathlib import Path
 
 CODE = "AL"
 SIDECAR_ENV = "AL_SIDECAR_ROOT"
-RUNTIME_ENV = "AL_RUNTIME_DIR"  # tests only: a tmp runtime dir for a test core
+# Tests and demo mode only: a tmp runtime dir for a test core, or the scratch
+# runtime of a demo instance (server/al/demo.py prepare, decision 0049).
+RUNTIME_ENV = "AL_RUNTIME_DIR"
 # Every sidecar folder CLAUDE.md "Sidecar" lists except Worktree (made by the
 # worktree hook, see worktree_dir) - AUDIT-HYGIENE H4.
 SIDECAR_SUBDIRS = ("Scratch", "Temp", "Build", "Logs", "Cache", "ClaudeHistory")
@@ -116,8 +118,22 @@ def tc_pins_file(environ=None, modules=None):
     return repo_root() / "config" / "tc_pins.json"
 
 
+_DEMO_CONFIG = None  # set only by demo.prepare (decision 0049)
+
+
+def set_demo_config(path):
+    """Demo mode (decision 0049): point local_config_file at the demo's
+    scratch config. Called only by server/al/demo.py prepare; a demo
+    process never reads or writes config/local.json. None clears it."""
+    global _DEMO_CONFIG
+    _DEMO_CONFIG = Path(path) if path else None
+
+
 def local_config_file():
-    """Per-host config (gitignored). Read only by the core."""
+    """Per-host config (gitignored). Read only by the core. In a demo
+    process, the scratch config demo.prepare set (decision 0049)."""
+    if _DEMO_CONFIG is not None:
+        return _DEMO_CONFIG
     return repo_root() / "config" / "local.json"
 
 
