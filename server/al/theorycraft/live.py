@@ -18,6 +18,7 @@ import threading
 from .. import campaign as campaign_mod
 from .. import upgrade as upgrade_mod
 from . import buildlive
+from . import cardparts
 from . import evaluate as tc_evaluate
 from . import item as item_parser
 from . import pobweights
@@ -114,6 +115,9 @@ class LastEval:
         # BUILD-LIVE (decision 0045): the items checked per character, in
         # memory only, re-scored when the build or the weights change
         self.candidates = buildlive.Candidates()
+        # TC-CARD-PARTS: what the core adds to every part's ctx ("config":
+        # the local config callable; "area_id": a callable read per press)
+        self.ctx_extra = {}
 
     def _who(self):
         """(character, level) from the state: the player's own log facts."""
@@ -131,11 +135,15 @@ class LastEval:
             self._input = (text, slot)
         league = self.league() if callable(self.league) else self.league
         ids = self.trade_ids() if callable(self.trade_ids) else None
+        parsed = item_parser.parse(text) if isinstance(text, str) else None
         card = dict(compact(result), upgrade=upgrade_mod.link(result, league, ids),
-                    value=self._value(text, result))
+                    value=self._value(parsed, result))
         # UTIL-WAYSTONE (decision 0030): the same press on a waystone flags
         # its mods risky for the loaded build; None for any other item
         card["waystone"] = waystone_mod.check(text, self.builds.build)
+        # TC-CARD-PARTS: every card part computes its value on this press
+        # and on every re-score; the words come later (state.eval_card_text)
+        card["parts"] = cardparts.compute(self._part_ctx(text, parsed, result))
         self.state.set_eval(card, keep_time=keep_time, at=at)
         if not keep_time and result.get("ok") and card["waystone"] is None:
             # BUILD-LIVE: a press adds the item to this character's list
@@ -179,11 +187,30 @@ class LastEval:
             setter(view)
         return view
 
-    def _value(self, text, result):
+    def _part_ctx(self, text, parsed, result):
+        """TC-CARD-PARTS: the ctx every card part's compute() gets: text,
+        parsed, result, build, character, level, area_id and config (a
+        callable), plus any other key the core put in ctx_extra."""
+        extra = self.ctx_extra if isinstance(self.ctx_extra, dict) else {}
+        ctx = dict(extra)
+        area = extra.get("area_id")
+        try:
+            ctx["area_id"] = area() if callable(area) else area
+        except Exception:  # noqa: BLE001 - a part then sees no area
+            ctx["area_id"] = None
+        config = extra.get("config")
+        ctx["config"] = config if callable(config) else dict
+        character, level = self._who()
+        ctx.update(text=text, parsed=parsed, result=result, build=self.builds.build,
+                   character=character, level=level)
+        return ctx
+
+    def _value(self, parsed, result):
         """MATH-VALUE: the item's own Note price in the primary currency and
         score per primary unit, from cached rates; None without a note
-        price. A failing rates source gives a value doc with no rate."""
-        note = item_parser.parse(text).note if isinstance(text, str) else None
+        price. A failing rates source gives a value doc with no rate.
+        `parsed`: the press's item_parser.parse() result (None: no text)."""
+        note = parsed.note if parsed is not None else None
         if value_mod.parse_note_price(note) is None:
             return None
         snap = None

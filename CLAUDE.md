@@ -381,7 +381,8 @@ checklist). ARMED 2026-11-17 (ROADMAP LOOP-ARM): per-user scheduled task
 pythonw, interactive token, no stored password); read it back with
 `tools/loop_task.py status`, remove with `tools/loop_task.py remove`. Rows
 whose remaining work is an operator act carry `BLOCKED:` so the tick skips
-them. Pause: `ops/loop/control/HALT`.
+them. A hand-off bullet is loop work only when it starts with LOOP:; BLOCKED
+applies to it as to a row. Pause: `ops/loop/control/HALT`.
 
 ## Session workflow
 
@@ -666,6 +667,22 @@ them. Pause: `ops/loop/control/HALT`.
   entry writes the lasting record (decision 0078). Reverses if: an
   entry's own Reverses-if is met, the operator answers an item of
   docs/plan/09, or a package's record lands and outranks the entry.
+- Demo mode core: a demo core runs only from a fixture folder holding a
+  marker and a Client.txt, never a game folder; scratch lives under the
+  sidecar Temp folder; config/local.json and live runtime are never read
+  or written; the Steam scan is off and the fetcher refuses; the port is
+  the first free of 8970-8975 (ports.DEMO_BLOCK), never 8960; a log
+  outside the fixture exits 97; consent covers the fixture file only
+  (decision 0049; the --demo entry point and shipped fixture land with
+  SEC-DEMO-ENTRY, wave 3). Reverses if: a demo core is ever seen opening
+  a file outside its fixture and scratch dirs, or the operator rules a
+  demo instance unwanted.
+- Research dives have no free web tools: every fetch goes through
+  tools/webfetch.py behind one host allow-list with the AshLight
+  User-Agent; GGG is read only at the API Reference and Data Exports
+  pages; no agent or tool reads GGG's forum (decision 0050, ruling Q-07).
+  Reverses if: the operator amends the floor or GGG documents the forum
+  as a permitted source.
 - NO-DISCOVERY: only the real entry point with no configured log path
   runs the Steam library scan; a core given a runtime dir or a log path
   never scans; a configured Client.txt path that is missing stays

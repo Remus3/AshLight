@@ -61,5 +61,8 @@ def test_lane_worker_refusal_and_deep_dive_tools(tmp_path):
         raise RuntimeError("lanes_full")
 
     assert al_loop.lane_worker("DD-1", deps=deps(root, spawn=sp), run_lane=run_lane) == 1
-    assert "WebFetch" in sp.calls[0]["extra"][3]
+    tools = sp.calls[0]["extra"][3].split(",")
+    # DIVE-FLOOR (decision 0050): no free web tools, only the allow-listed fetch
+    assert not [a for a in sp.calls[0]["extra"] if "WebFetch" in a or "WebSearch" in a]
+    assert "Bash(python tools/webfetch.py:*)" in tools
     assert items.get("DD-1")["state"] == "refused"

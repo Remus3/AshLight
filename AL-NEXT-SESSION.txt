@@ -105,6 +105,7 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- a bullet is loop work only when it starts with 'LOOP:'; none today.
 - OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
 - OPERATOR before the first push (OA-1; rows GP-05, GP-09; conditional): gh auth login only if gh auth status fails (read back 2026-11-18: exit 0).
 - OPERATOR before the first push (OA-5; rows GP-03, GP-09; optional): name another holder, owner or repository name; default: the gh account and AshLight.
@@ -280,9 +281,10 @@ Carried forward (not acted on yet):
   decision 0076 (AUTO-19, parked behind GP-09), the ls-remote read-back
   (GP-13, parked). Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
   packages (four batches, each with its own suite; ceiling 16).
-- NOTE: a live lane writing ops/loop/control/loop_items/*.json mid-suite
-  can trip fleet_test_guard (false error at a random teardown); re-run the
-  suite when it happens. (Row AUTO-01, wave 2, re-checks and drops this.)
+- NOTE (wave 2, adjudicator ruling 2026-11-18): CLAUDE.md holds a
+  core-only Settled bullet for decision 0049 (tests/test_audit_batch4.py
+  needs one per decision); the wave 3 integrator replaces it with the
+  full packages.json wording of SEC-DEMO-CORE when SEC-DEMO-ENTRY merges.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
