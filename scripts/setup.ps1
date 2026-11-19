@@ -90,6 +90,37 @@ function Write-AlLog([string]$Message) {
 
 Write-AlLog "setup: python $pyVer ok"
 
+# SEC-ACL-SETUP (F-011, decision 0051): AshLight's own folders and the
+# per-host config get the private ACL (the player, SYSTEM, the local admins
+# group; inheritance off) through 'python -m server.al.acl apply', which
+# runs System32 icacls by its absolute path and is a no-op on a path that
+# is already private. Every line goes to setup.log; a failure is a warning
+# line and never stops setup.
+function Invoke-AlAcl([string]$Target) {
+    $ErrorActionPreference = 'Continue'
+    $out = @()
+    $rc = 1
+    Push-Location $Repo
+    try {
+        $out = @(& $py -m server.al.acl apply $Target 2>&1 | ForEach-Object { [string]$_ })
+        $rc = $LASTEXITCODE
+    } catch {
+        $out = @([string]$_)
+        $rc = 1
+    } finally {
+        Pop-Location
+    }
+    foreach ($line in $out) {
+        if ($line) { Write-AlLog "setup: $line" }
+    }
+    if ($rc -ne 0) {
+        Write-AlLog "setup: WARNING acl not applied (exit $rc), setup goes on: $Target"
+    }
+}
+
+Invoke-AlAcl $paths.sidecar
+Invoke-AlAcl $paths.runtime
+
 # TEST-CLEAN-CLONE: build.ps1 runs the test suite with pytest (a dev tool,
 # never imported by the app). Say so here instead of failing in build.ps1.
 $ErrorActionPreference = 'Continue'
@@ -112,6 +143,9 @@ if ((Test-Path $example) -and -not (Test-Path $local)) {
     Write-AlLog 'setup: config/local.json present (kept)'
 } else {
     Write-AlLog 'setup: no config example yet (skipped)'
+}
+if (Test-Path $local) {
+    Invoke-AlAcl $local
 }
 
 # Optional calc component (TC-PIN). Off unless -TcCalc or tc_calc: true.

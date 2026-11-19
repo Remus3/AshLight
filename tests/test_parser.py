@@ -254,3 +254,67 @@ def test_live_restart_fixture_events():
     types = [e["type"] for e in evs]
     assert types.count("log_opened") == 2
     assert types[-2:] == ["log_opened", "scene_changed"]
+
+
+# --- RUN-LEDGER-CORE: the parse ledger reads the scene operation and the
+# trade template kind from the event (fields only, no pattern change).
+
+def test_scene_op_set_and_load():
+    assert _one("[SCENE] Set Source [The Riverbank]")["scene_op"] == "set"
+    assert _one("[SCENE] Load Source [Clearfell]")["scene_op"] == "load"
+    assert _one("[SCENE] Set Source [(null)]")["scene_op"] == "set"
+    assert _one("[SCENE] Load Source [(unknown)]")["scene_op"] == "load"
+
+
+def test_trade_template_kind():
+    priced = parser.parse_trade('Hi, I would like to buy your Ring listed for 5 exalted '
+                                'in Standard (stash tab "S"; position: left 3, top 7)')
+    unpriced = parser.parse_trade('Hi, I would like to buy your Belt in Standard '
+                                  '(stash tab "D"; position: left 1, top 2)')
+    exchange = parser.parse_trade("Hi, I'd like to buy your 10 Chaos Orb for my 1 "
+                                  "Divine Orb in Standard.")
+    assert [t["template"] for t in (priced, unpriced, exchange)] == list(
+        parser.TRADE_TEMPLATES)
+    assert priced["kind"] == unpriced["kind"] == "item" and exchange["kind"] == "exchange"
+
+
+# --- C26 (research 0050 R11): lines that carry a known anchor but match no
+# pattern are counted by the ledger's drift counter; the live shapes never.
+
+def test_c26_anchor_lines_in_their_known_shape_parse():
+    for body, kind in (('Generating level 3 area "G1_2" with seed 5', "area_generated"),
+                       ("[SCENE] Set Source [The Riverbank]", "scene_changed"),
+                       (": Emberwright (Witch) is now level 3", "level_up"),
+                       (": Emberwright has been slain.", "death")):
+        assert _one(body)["type"] == kind, body
+
+
+def test_c26_changed_anchor_lines_are_counted_once_each():
+    from server.al import logshapes
+    drift = logshapes.Drift()
+    changed = ["Generating level 3 area G1_2 seed 5",
+               "[SCENE] Set Zone [The Riverbank]",
+               ": Emberwright is now level 3",
+               ": Emberwright has been slain by a Zombie."]
+    for body in changed:
+        ev = _one(body)
+        assert ev is None or ev["type"] == "unknown_system_line", body
+        assert drift.observe(P + body, ev), body
+    assert drift.run == 4 and drift.due
+    # chat that quotes an anchor phrase is never a miss
+    for body in ("%Pal: Emberwright (Witch) is now level 99", "#Pal: x has been slain"):
+        assert not drift.observe(P + body, _one(body))
+    # a new game run starts a fresh count
+    drift.observe("2026/11/17 10:00:03 ***** LOG FILE OPENING *****",
+                  parser.parse_line("2026/11/17 10:00:03 ***** LOG FILE OPENING *****"))
+    assert drift.run == 0 and not drift.due and drift.total == 4
+
+
+def test_c26_live_shapes_fixture_counts_no_miss():
+    from server.al import logshapes
+    drift = logshapes.Drift()
+    for ln in LIVE.read_text(encoding="ascii").splitlines():
+        drift.observe(ln, parser.parse_line(ln))
+    for ln in RESTART.read_text(encoding="ascii").splitlines():
+        drift.observe(ln, parser.parse_line(ln))
+    assert drift.total == 0
