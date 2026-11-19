@@ -55,7 +55,7 @@ def plan_prompt(item):
     brief = item.get("text") or item["title"]
     return (f"You are an AshLight (AL) build lane in a detached git worktree. Read "
             f"CLAUDE.md first. Task: ROADMAP.md row {item['id']} - {brief} "
-            f"(an optional longer brief: docs/plans/{item['id']}-*.md). Meet its ACCEPT "
+            f"(an optional longer brief: docs/plan/briefs/{item['id']}.md). Meet its ACCEPT "
             "line - TDD, stdlib only for Python. End your final reply with one line "
             "`RESULT: <what you did; for a bug, the root cause and the fix>` - it goes "
             "into the commit body (AUDIT-LOOP-COMMIT-MSG). "
@@ -69,6 +69,21 @@ def handoff_prompt(item):
             + NO_ROADMAP + GATES.format(task=item["id"]))
 
 
+# DIVE-FLOOR (decision 0050, ruling Q-07): a dive has no WebFetch or
+# WebSearch; its only sources are these, and every fetch is the allow-listed
+# tools/webfetch.py.
+DIVE_SOURCES = ("Sources, and no others: (1) text the operator pasted into the repo; "
+                "(2) public non-GGG repositories through the documented GitHub API "
+                "(https://api.github.com/repos/...); (3) GGG's API Reference and Data "
+                "Exports pages only (https://www.pathofexile.com/developer/docs/reference "
+                "and /developer/docs/data). You have no WebFetch or WebSearch tool: fetch "
+                "every page with `python tools/webfetch.py get <url>` (check a URL first "
+                "with `python tools/webfetch.py check <url>`); it refuses every other "
+                "GGG page, the trade site, poe2db and wiki hosts, and it sends nothing "
+                "while web data is off - then write the research from sources already in "
+                "the repo and say so. Never work around a refusal. ")
+
+
 def deep_dive_prompt(root, date, max_plans, today_titles):
     """Idle mode: Path of Exile 2 research, read-only. New work is proposed as
     ROADMAP.md rows (the one exception to NO_ROADMAP)."""
@@ -78,11 +93,11 @@ def deep_dive_prompt(root, date, max_plans, today_titles):
             "worktree. Read CLAUDE.md and docs/research/0001-ggg-tool-policy.md first. "
             "Research, read-only and unauthenticated, robots.txt respected, a truthful "
             "User-Agent, no login and no POESESSID: Path of Exile 2 changes since the "
-            "last deep-dive - GGG patch notes and the developer docs / third-party tool "
-            "policy (any change to what an overlay may read), poe.ninja and official "
-            "trade API changes (endpoints, X-Rate-Limit rules), Client.txt log format "
-            "changes, and community tools worth learning from (ideas only; GPL / AGPL / "
-            "NC code is never copied). Write "
+            "last deep-dive. " + DIVE_SOURCES + "Topics: changes to GGG's API "
+            "Reference and Data Exports (endpoints, fields, X-Rate-Limit rules), "
+            "Client.txt log format changes found in public repositories or "
+            "operator-pasted text, and community tools worth learning from (ideas only; "
+            "GPL / AGPL / NC code is never copied). Write "
             f"docs/research/{rn:04d}-deep-dive-{date}.md (every claim with its source URL "
             "and access date) and add it to docs/research/README.md. Propose "
             f"AT MOST {max_plans} new ROADMAP.md rows, each ONE line "
