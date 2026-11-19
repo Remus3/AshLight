@@ -1932,7 +1932,8 @@
     "server/al/theorycraft/codec.py",
     "server/al/theorycraft/model.py",
     "tests/test_tc_code.py",
-    "tests/test_tc_code_api.py"
+    "tests/test_tc_code_api.py",
+    "tests/test_fuzz.py"
    ],
    "new_files": [],
    "integrator_edits": [

@@ -86,6 +86,17 @@ def test_paste_code_then_reload_on_start(env):
     assert status == 200 and doc["loaded"] and doc["build"]["ascendancy"] == "Invoker"
 
 
+def test_utf16_entity_code_gets_400_and_nothing_is_saved(env, tmp_path):
+    srv = env()
+    xml = '<!DOCTYPE x [<!ENTITY a "aaaa">]><PathOfBuilding2/>'
+    for enc in ("utf-16-le", "utf-16-be", "utf-16"):
+        code = codec.encode_bytes(xml.encode(enc))
+        assert req(srv, "POST", "/api/build-code", {"code": code})[0] == 400
+    status, doc = req(srv, "GET", "/api/build")
+    assert status == 200 and doc["loaded"] is False
+    assert not list((tmp_path / "rt").rglob("build*"))
+
+
 def test_bad_inputs(env):
     srv = env()
     req(srv, "POST", "/api/build-code", {"code": codec.encode(MINIMAL_XML)})

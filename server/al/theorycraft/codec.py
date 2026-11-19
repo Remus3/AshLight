@@ -138,6 +138,10 @@ def decode_bytes(text):
             data = _inflate(raw, "raw")
         else:
             raise
+    if b"\x00" in data:
+        # UTF-16 / UTF-32 markup always holds NUL bytes; the XML parser would
+        # sniff those encodings and skip the text search for DTD / ENTITY.
+        raise CodeError("payload is not XML (NUL byte)")
     if not data.lstrip().startswith(b"<"):
         raise CodeError("payload is not XML")
     return data

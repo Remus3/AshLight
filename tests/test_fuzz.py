@@ -260,7 +260,9 @@ def test_fuzz_share_code_codec_raises_only_code_error():
 def test_fuzz_share_code_round_trip_is_exact():
     # the codec's claim: any UTF-8 text plus surrogate escapes (bytes that
     # are not UTF-8, U+DC80-U+DCFF) round-trips exactly
-    alphabet = ALPHABET.replace(chr(0xD800), chr(0xDC80)).replace(chr(0xDFFF), chr(0xDCFF))
+    # NUL is left out on purpose: SEC-XML-NUL refuses it (asserted below)
+    alphabet = (ALPHABET.replace(chr(0xD800), chr(0xDC80)).replace(chr(0xDFFF), chr(0xDCFF))
+                .replace("\x00", ""))
 
     def gen(rng):
         body = "".join(rng.choice(alphabet) for _ in range(rng.randint(0, 200)))
@@ -270,6 +272,11 @@ def test_fuzz_share_code_round_trip_is_exact():
         assert codec.decode(codec.encode(xml)) == xml
 
     _run("codec.roundtrip", target, gen)
+
+
+def test_codec_refuses_a_nul_byte_in_the_inflated_payload():
+    with pytest.raises(codec.CodeError):
+        codec.decode(codec.encode("<PathOfBuilding2>a\x00b"))
 
 
 def test_fuzz_build_xml_and_code_raise_only_value_errors():
