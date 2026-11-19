@@ -191,6 +191,11 @@ def release_lock(fh):
     fh.close()
 
 
+# Loopback only: an empty ProxyHandler ignores http_proxy and the system proxy,
+# so the token never reaches a proxy and a healthy core is never judged hung.
+_NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def health_check(runtime, port, timeout=3.0):
     """True when the core answers /api/health with the current token."""
     try:
@@ -200,7 +205,7 @@ def health_check(runtime, port, timeout=3.0):
     req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}/api/health",
                                  headers={"X-AL-Token": token})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with _NO_PROXY_OPENER.open(req, timeout=timeout) as r:
             return r.status == 200
     except (OSError, ValueError):
         return False
