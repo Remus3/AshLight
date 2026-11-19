@@ -255,3 +255,5 @@ its code (license notes: 0006).
 - Whether PoE2 "Fullscreen" is exclusive (0007); test the overlay in each mode.
 - poe2db proper-noun check and a direct USPTO / EUIPO search for "Ashlight"
   before publishing (poe2wiki / poewiki done in 0009: 0 hits).
+- 0059 Deep dive 2026-11-19 - offline run (web data off), no floor change, no
+  new rows ([0059-deep-dive-20261119.md](0059-deep-dive-20261119.md))
