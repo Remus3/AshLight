@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+import srcpaths
 from ci_timing import ci_scale
 from server.al import __main__ as entry
 from server.al import acts, diag, hotreload, paths, ports
@@ -254,7 +255,7 @@ def test_web_change_sends_sse_reload(tmp_path):
 
 
 def test_dashboard_reloads_on_the_event():
-    js = (ROOT / "web" / "app.js").read_text(encoding="ascii")
+    js = srcpaths.read("app.js")
     assert 'es.addEventListener("reload"' in js and "location.reload()" in js
 
 

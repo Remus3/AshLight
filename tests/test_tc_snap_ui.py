@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+import srcpaths
 from server.al import DISCLAIMER
 from server.al.core import Core
 from server.al.http import serve
@@ -131,7 +132,7 @@ def test_version_credit_is_token_protected(srv, sidecar):
 
 
 def test_disclaimer_lines_stay_in_footer_and_overlay():
-    page = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    page = srcpaths.index_html()
     assert f"<p>{DISCLAIMER}</p>" in page
     assert '<p id="data-credit" class="muted" hidden></p>' in page
     ov = (ROOT / "app" / "overlay" / "index.html").read_text(encoding="ascii")

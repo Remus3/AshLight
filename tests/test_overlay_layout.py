@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+import srcpaths
 from server.al import layout
 from server.al.core import Core
 from server.al.http import serve
@@ -186,7 +187,7 @@ def test_load_clamps_saved_config(tmp_path):
 
 
 def test_dashboard_sliders_match_floors():
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     assert 'id="layout-scale" name="scale" type="range" min="0.95"' in html
     assert 'id="layout-opacity" name="opacity" type="range" min="0.9"' in html
 

@@ -8,14 +8,12 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const F = require("../../web/feed.js");
-const S = require("../../web/slots.js");
+const web = require("./_web.js");
+const F = web.load("feed.js");
+const S = web.load("slots.js");
 
-const WEB = path.join(__dirname, "..", "..", "web");
-const SRC = fs.readFileSync(path.join(WEB, "feed.js"), "utf8");
-const CSS = fs.readFileSync(path.join(WEB, "feed.css"), "utf8");
+const SRC = web.source("feed.js");
+const CSS = web.source("feed.css");
 
 /* ---- fixtures --------------------------------------------------------- */
 
@@ -576,7 +574,7 @@ test("registers as region t, retires t-trades, and leaves the legacy helpers alo
   assert.ok(!/setInterval|setTimeout|clipboard|fetch\(/.test(code), "no timers, clipboard or own fetch");
   assert.ok(/^[\x00-\x7f]*$/.test(SRC) && SRC.indexOf("\r") < 0);
   // registered with a fresh region registry it wires and retires its group
-  const R = require("../../web/regions.js").create({ warn: () => {} });
+  const R = web.load("regions.js").create({ warn: () => {} });
   R.register(F.create().spec);
   assert.deepEqual(R.names(), ["feed"]);
 });

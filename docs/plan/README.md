@@ -104,10 +104,7 @@ What is still open of the landing itself is carried in
 
 ## Loop
 
-The headless loop stays paused (`ops/loop/control/HALT`, operator
-wind-down 2026-11-17) through waves 1 to 5, so lanes do not race the
-plan's ROADMAP edits. HALT is removed only by package AUTO-21, the last
-act of wave 6, after its six checks (07, HALT removal and the headless
-loop; 08 section 8); no session removes it by hand. After that the loop
+HALT was removed on 2026-11-19 by AUTO-21 after the six checks; pause
+again with ops/loop/control/HALT. Since then the loop
 takes the rows `packages.json` marks `owner: loop` and the other rows 08
 section 8 lists, never a row tagged BLOCKED.

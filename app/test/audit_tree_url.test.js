@@ -4,7 +4,8 @@
    a port, user info or a non-https scheme gives no link. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const v = require("../../web/tc.js");
+const web = require("./_web.js");
+const v = web.load("tc.js");
 
 function treeUrl(url) {
   const doc = { loaded: true, code: "", build: { class_name: "Monk", level: 1, stats: {},
