@@ -11,9 +11,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const TrayMenu = require("../client/tray_menu.js");
+const web = require("./_web.js");
 
 const APP = path.join(__dirname, "..");
-const WEB = path.join(APP, "..", "web");
 
 function code(js) {
   return js.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
@@ -82,9 +82,9 @@ function fakeDoc(ids) {
 }
 
 test("dashboard: the restart-overlay button shows only inside the client", () => {
-  const html = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
+  const html = web.source("index.html");
   assert.match(html, /<p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay<\/button>\s*<span id="restart-overlay-said" class="muted"><\/span><\/p>/);
-  const src = fs.readFileSync(path.join(WEB, "app.js"), "utf8");
+  const src = web.source("app.js");
   const start = src.indexOf("  function wireRestartOverlay()");
   const end = src.indexOf("\n  }\n", start) + 4;
   const fnSrc = src.slice(start, end);
@@ -122,13 +122,13 @@ test("dashboard: the restart-overlay button shows only inside the client", () =>
 });
 
 test("MERGE-SEAMS F7: no file under web/ or app/test/ names the old hints class (it is tool-row)", () => {
-  for (const dir of [WEB, path.join(APP, "test")]) {
+  for (const dir of [web.dir, path.join(APP, "test")]) {
     for (const name of fs.readdirSync(dir)) {
       const full = path.join(dir, name);
       if (!fs.statSync(full).isFile()) { continue; }
       assert.ok(!fs.readFileSync(full, "utf8").includes("hint" + "-reset"), name);
     }
   }
-  const css = fs.readFileSync(path.join(WEB, "app.css"), "utf8");
+  const css = web.source("app.css");
   assert.match(css, /\.tool-row \{ margin: 8px 0 0; \}/);
 });

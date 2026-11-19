@@ -5,14 +5,12 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const R = require("../../web/regions.js");
+const web = require("./_web.js");
+const R = web.load("regions.js");
 
-const WEB = path.join(__dirname, "..", "..", "web");
-const HTML = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
-const APP = fs.readFileSync(path.join(WEB, "app.js"), "utf8");
-const SRC = fs.readFileSync(path.join(WEB, "regions.js"), "utf8");
+const HTML = web.source("index.html");
+const APP = web.source("app.js");
+const SRC = web.source("regions.js");
 
 const STUB_JS = ["pager", "textspacing", "strip", "context", "setupcard", "feed",
   "notice", "buildline", "itemcard", "keptchecks"];
@@ -22,18 +20,14 @@ const LINKED_CSS = ["strip", "context", "setupcard", "feed", "notice", "buildlin
 // the sheets still empty stubs: one per line, a comment line between each
 // pair, so a region package deletes only its own line
 const STUB_CSS = [
-  "strip",
   // (one stub per line)
-  "context",
   // (one stub per line)
   "setupcard",
   // (one stub per line)
   // (one stub per line)
   // (one stub per line)
   // (one stub per line)
-  "itemcard",
   // (one stub per line)
-  "keptchecks",
 ];
 
 function node(attrs) {
@@ -222,15 +216,14 @@ test("the page loads slots, regions, the ten region files and app.js last", () =
 
 test("each pre-linked file is an empty stub until its package fills it", () => {
   STUB_JS.forEach((name) => {
-    const file = path.join(WEB, name + ".js");
-    const mod = require(file);
+    const mod = web.load(name + ".js");
     assert.equal(typeof mod, "object", name);
-    const src = fs.readFileSync(file, "utf8");
+    const src = web.source(name + ".js");
     assert.match(src, /module\.exports = api;/, name);
     assert.doesNotMatch(src, /[^\x0a\x20-\x7e]/, name + " ASCII and LF");
   });
   STUB_CSS.forEach((name) => {
-    const css = fs.readFileSync(path.join(WEB, name + ".css"), "utf8");
+    const css = web.source(name + ".css");
     assert.equal(css.replace(/\/\*[\s\S]*?\*\//g, "").trim(), "", name + " has no rules yet");
     assert.doesNotMatch(css, /[^\x0a\x20-\x7e]/, name + " ASCII and LF");
   });

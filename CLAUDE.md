@@ -799,3 +799,16 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   timing stable, an AL_CI skip hides a regression seen locally, or the
   backlog fix shows no effect and failures persist (then a local-only
   marker for the browser tests).
+- Durable core stores: write_private and _write_config go through jsonfile
+  (config/local.json and consent.json keep one .bak, private like the main
+  file; the token file keeps none); config and consent reads restore a damaged
+  file from its .bak, and a config with no good .bak still raises
+  ConfigUnreadable; a failed run history, map ladder, price watch, zone visits
+  or session summary save stays in memory and is retried from the core tick by
+  a per-store jsonfile.Saver (1, 5, 30, then every 60 s); while one is
+  unsaved, new changes wait in the state; Clear removes the visits .bak even
+  when its write fails; plug/stores.py shows one Checks row while a store is
+  unsaved and one note after a restore, for the life of the core, naming the
+  store and never a path (RUN-DURABLE-STORES, F-014). Reverses if: back-off
+  delays hide a lasting save failure from players, or the restore note
+  misfires on files that were not damaged.

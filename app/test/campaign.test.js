@@ -6,8 +6,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const gate = require("../shared/render_gate.js");
-const h = require("../../web/history.js");
-const ch = require("../../web/chars.js");
+const web = require("./_web.js");
+const h = web.load("history.js");
+const ch = web.load("chars.js");
 
 const snap = {
   zone: "Ogham Manor", in_hideout: false, zone_entered_at: 1000,

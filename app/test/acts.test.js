@@ -3,7 +3,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const a = require("../../web/acts.js");
+const web = require("./_web.js");
+const a = web.load("acts.js");
 
 const ACTS = {
   splits: [
