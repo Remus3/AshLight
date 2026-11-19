@@ -1,1 +1,0 @@
-Region B has landed (PLAY-TD-15-BUILDLINE); its box position (G2) still moves with the unfixed track of region G, so the wave 7 integrator deletes this marker after PLAY-TD-10-STRIP lands.
