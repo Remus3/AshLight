@@ -210,7 +210,7 @@ def test_core_restart_recovers_state_straight_away(tmp_path):
         assert s["class"] == "Mercenary" and s["level"] == 6 and s["deaths"] == 1
         # Old events are not re-listed and old whispers do not come back.
         assert [r["type"] for r in s["recent_events"]] == ["tailer_started"]
-        assert s["recent_whispers"] == [] and s["trade_requests"] == []
+        assert "recent_whispers" not in s and s["trade_requests"] == []
         assert "deaths" in s["tailer"]["resume"]["recovered"]
         assert s["tailer"]["resume"]["bytes"] == log.stat().st_size
         # New lines still flow live on top of the restored state.
