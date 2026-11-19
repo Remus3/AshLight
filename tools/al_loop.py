@@ -127,7 +127,7 @@ from loop_inbox import (  # noqa: E402
     triage_spawn_kwargs,  # noqa: F401
     missing_ordered, order_prompt, order_settled, session_needs, settled_notes,  # noqa: F401
 )
-from loop_merge import GateCache, MergeMixin  # noqa: E402
+from loop_merge import GateCache, MergeMixin, last_lines  # noqa: E402
 from loop_review import ReviewMixin  # noqa: E402
 from loop_review import ROUND_LOG_CAP, ROUND_LOG_MAX_FINDINGS  # noqa: E402,F401
 from loop_work import WorkMixin  # noqa: E402
@@ -235,11 +235,29 @@ def ci_gate_commands(text):
     return [c for c in cmds if not CI_SETUP_RX.search(c)]
 
 
+SUMMARY_RX = re.compile(r"^=+ short test summary info =+\s*$", re.M)
+GATE_TAIL_MAX = 1500
+
+
+def gate_tail(stdout, stderr=""):
+    """TEST-PLUGIN-PIN: the part of a gate's output a red verdict needs. The
+    pytest short test summary (FAILED ids, then the count line) when present,
+    else the last lines of stdout; a short stderr tail goes first so the
+    output still ENDS with the ids and the count line."""
+    out = stdout or ""
+    hits = list(SUMMARY_RX.finditer(out))
+    if hits:
+        out = out[hits[-1].end():]
+    err = last_lines(stderr, 500)
+    body = last_lines(out, GATE_TAIL_MAX)
+    return (err + "\n" + body) if err else body
+
+
 def _run_gate(argv, cwd):
     r = subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True,
                        timeout=GATE_TIMEOUT_S, creationflags=_NO_WINDOW,
                        encoding="utf-8", errors="replace")
-    return r.returncode, (r.stdout or "")[-1500:] + (r.stderr or "")[-500:]
+    return r.returncode, gate_tail(r.stdout, r.stderr)
 
 
 SHELL_OPERATOR_CHARS = set("();<>|&")

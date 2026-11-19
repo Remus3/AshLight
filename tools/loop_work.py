@@ -1,21 +1,24 @@
 """AL loop work: the Tick's work list, lane choice and dispatch methods as
 WorkMixin (LOOP-SPLIT-TICK, the plan 107 pattern of tools/loop_merge.py;
-tools/al_loop.py re-exports every name here). Every side effect goes through
-self.d (Deps). Stdlib only."""
+tools/al_loop.py re-exports every name here). Rows come through the loader
+tools/roadmap.py (ROADMAP.md plus docs/roadmap/new|done/ files) and wait on
+the `DEPENDS: <ids>` in their own text (LOOP-ROWFILES-WORK, F-029). Every
+side effect goes through self.d (Deps). Stdlib only."""
 
 import datetime as _dt
 from pathlib import Path
 
 import al_lane
+import roadmap
 from loop_base import (
-    BLOCKED_RX, CODE, DIRTY_WT_RX, HOLD_STATES, MAX_ATTEMPTS, ROADMAP_REL, _norm_path,
+    BLOCKED_RX, CODE, DIRTY_WT_RX, HOLD_STATES, MAX_ATTEMPTS, _norm_path,
     ascii_text, epoch_of, iso,
 )
 from loop_inbox import order_prompt, order_settled, session_needs, settled_notes
 from loop_prompts import deep_dive_prompt, handoff_prompt, plan_prompt
 from loop_roadmap import (
-    dependency_cycles, dispatchable, dive_backoff, dive_history, handoff_items, plan_depends,
-    plan_doc, plan_titles, resolve_item, roadmap_flip_time, roadmap_rows,
+    archived_rows, dependency_cycles, dispatchable, dive_backoff, dive_history, handoff_items,
+    plan_titles, resolve_item, roadmap_flip_time,
 )
 
 
@@ -28,20 +31,23 @@ class WorkMixin:
 
     def rearm(self, rows):
         """Plan 019 4c, once per record: a no-change plan whose own row is
-        still open and one of whose Depends-on rows flipped [x] after its
-        dispatch ran against code that was not on main yet: blocked again."""
+        still open and one of whose DEPENDS rows closed after its dispatch
+        ran against code that was not on main yet: blocked again. The close
+        time is the record's merged_at, else the commit that flipped the row
+        or added its done file (roadmap_flip_time). A dependency with no row
+        is pending."""
         row_open = {r["id"]: r["open"] for r in rows}
         for rec in self.items.all().values():
             iid = rec["id"]
             if rec.get("state") != "no-change" or "rearmed" in rec or not row_open.get(iid):
                 continue
-            deps = self.plan_deps(iid, row_open)
+            deps = self.plan_deps(iid, row_open, rows=rows)
             if not deps:
                 continue
             since = epoch_of(rec.get("dispatched"))
             late, pending = [], []
             for dep in deps:
-                if row_open[dep]:
+                if row_open.get(dep, dep not in self.closed_ids(rows)):
                     pending.append(dep)
                     continue
                 flip = epoch_of((self.items.get(dep) or {}).get("merged_at"))
@@ -61,28 +67,58 @@ class WorkMixin:
                 rec["rearmed"] = False  # genuine no-change: never reconsidered
             self.items.put(rec)
 
-    def plan_deps(self, iid, row_open, log=False):
-        """Depends-on ids of plan iid that have a ROADMAP row; a missing doc or
-        an unknown id is no dependency (fail open: a typo never wedges the
-        queue)."""
-        text = plan_doc(self.d.main_tree, iid)
-        if text is None:  # AL: a row's plan doc is optional; no doc, no gate, no log
+    def plan_deps(self, iid, row_open, log=False, rows=None):
+        """The DEPENDS: ids in row iid's own text (F-029: the row, never a
+        plan doc or brief, is read), every one of them: an id with no row is
+        a dependency too (it waits, visibly; the old fail-open rule ended
+        with LOOP-ROWFILES-WORK). rows: the loaded rows (default: loaded
+        through tools/roadmap.py from the main tree). row_open and log are
+        kept for the call shape; a wait is shown by the work list."""
+        if rows is None:
+            rows = self.load_rows()
+        row = next((r for r in rows if r["id"] == iid), None)
+        if row is None:
             return []
-        out = []
-        for dep in plan_depends(text):
-            if dep in row_open:
-                out.append(dep)
-            elif log:
-                self.step(f"{iid}: depends on {dep}: no ROADMAP row, ignored")
-        return out
+        return list(row.get("depends") or roadmap.depends(row.get("text") or ""))
+
+    def load_rows(self):
+        """The main tree's rows through the loader (ROADMAP.md plus the
+        docs/roadmap/new|done/ files); [] when they cannot be read."""
+        try:
+            return roadmap.load_rows(self.d.main_tree)
+        except OSError:
+            return []
+
+    def closed_ids(self, rows):
+        """Ids that count as done for a DEPENDS wait: the done rows, plus the
+        rows tools/roadmap_fold.py archived (cached per tick)."""
+        cached = getattr(self, "_archived_ids", None)
+        if cached is None:
+            try:
+                cached = {r["id"] for r in archived_rows(self.d.main_tree)}
+            except OSError:
+                cached = set()
+            self._archived_ids = cached
+        return cached | {r["id"] for r in rows if not r["open"]}
+
+    def row_waits(self, row, rows):
+        """The wait reasons of an open row: one 'waits on <ids>' for its
+        DEPENDS rows that are still open, one 'waits on <id> (no such row)'
+        for each DEPENDS id that names no row (open, done or archived)."""
+        row_open = {r["id"]: r["open"] for r in rows}
+        closed = self.closed_ids(rows)
+        deps = self.plan_deps(row["id"], row_open, rows=rows)
+        open_deps = [d for d in deps if row_open.get(d)]
+        unknown = [d for d in deps if d not in row_open and d not in closed]
+        why = [f"waits on {', '.join(open_deps)}"] if open_deps else []
+        why += [f"waits on {d} (no such row)" for d in unknown]
+        return open_deps, why
 
     # -- c. work list
     def work_list(self):
         main = self.d.main_tree
-        try:
-            rows = roadmap_rows((main / ROADMAP_REL).read_text(encoding="utf-8"))
-        except OSError:
-            rows = []
+        self._archived_ids = None  # re-read once per work list
+        rows = self.load_rows()
         try:
             hand = handoff_items((main / f"{CODE}-NEXT-SESSION.txt").read_text(encoding="utf-8"))
         except OSError:
@@ -114,7 +150,8 @@ class WorkMixin:
             work.append({"id": o["id"], "kind": "order", "title": o["title"],
                          "note": o["note"], "label": f"order {o['id']}: {o['title']}",
                          "prompt": order_prompt(o)})
-        # plan 019: a row whose plan doc depends on an open row waits (skipped)
+        # plan 019 / F-029: a row whose DEPENDS: names an open row, or an id
+        # with no row at all, waits (skipped, shown, never dispatched)
         row_open = {r["id"]: r["open"] for r in rows}
         self.open_ids = {iid for iid, is_open in row_open.items() if is_open}
         waiting = {}
@@ -125,12 +162,12 @@ class WorkMixin:
                 skipped.append({"id": r["id"], "text": r["title"], "skip": "blocked",
                                 "reason": "BLOCKED: operator act (see ROADMAP)"})
                 continue
-            wait = [dep for dep in self.plan_deps(r["id"], row_open, log=True)
-                    if row_open[dep]]
+            wait, why = self.row_waits(r, rows)
             if wait:
                 waiting[r["id"]] = wait
+            if why:
                 skipped.append({"id": r["id"], "text": r["title"], "skip": "waits",
-                                "reason": f"waits on {', '.join(wait)}"})
+                                "reason": "; ".join(why)})
             else:
                 work.append({"id": r["id"], "kind": "plan", "title": r["title"],
                              "text": r.get("text") or r["title"],

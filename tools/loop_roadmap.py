@@ -1,6 +1,8 @@
-"""AL loop work list: ROADMAP rows, optional plan docs, dependencies and
+"""AL loop work list: ROADMAP rows, optional briefs, dependencies and
 hand-off items (plan 107 split of tools/al_loop.py, which re-exports every
-name here). Stdlib only.
+name here). Rows are read through tools/roadmap.py (ROADMAP.md plus row
+files, LOOP-ROWFILES-WORK); a row waits on the `DEPENDS: <ids>` in its own
+text and its brief is docs/plan/briefs/<ID>.md (exact id). Stdlib only.
 
 AL ROADMAP.md (repo root) rows are bullets, not table rows:
     - [ ] ID (lane) title. ACCEPT: ...
@@ -9,6 +11,7 @@ AL ROADMAP.md (repo root) rows are bullets, not table rows:
 done note to the row's first line."""
 
 import contextlib
+import datetime as _dt
 import hashlib
 import re
 from pathlib import Path
@@ -71,7 +74,9 @@ def flip_roadmap(text, plan_id, note):
 
 def plan_depends(text):
     """The row ids named by the first `Depends on:` line, in order ("none" or
-    no such line -> [])."""
+    no such line -> []). Legacy parser only: the work list no longer reads
+    `Depends on:` lines (LOOP-ROWFILES-WORK, F-029); `DEPENDS: <ids>` in the
+    row text is the one machine-read form (tools/roadmap.py depends)."""
     m = DEPENDS_RX.search(text or "")
     out = []
     for dep in DEP_ID_RX.findall(m.group(1)) if m else ():
@@ -81,12 +86,37 @@ def plan_depends(text):
 
 
 def plan_doc(root, plan_id):
-    """Optional docs/plans/<id>-*.md text (a row's longer brief and its
-    `Depends on:` line), or None when there is none."""
-    for p in sorted((Path(root) / "docs" / "plans").glob(f"{plan_id}-*.md")):
-        with contextlib.suppress(OSError):
-            return p.read_text(encoding="utf-8", errors="replace")
+    """Optional brief docs/plan/briefs/<ID>.md text, matched on the exact id
+    (tools/roadmap.py brief_path; a prefix glob would hand TC-OAUTH-REG's
+    brief to TC-OAUTH-REG-OPEN), or None when there is none. A brief is
+    prose for the lane; it gates nothing."""
+    import roadmap  # lazy: roadmap imports this module
+    p = roadmap.brief_path(root, plan_id)
+    if p is None:
+        return None
+    with contextlib.suppress(OSError):
+        return p.read_text(encoding="utf-8", errors="replace")
     return None
+
+
+def archived_rows(root):
+    """The roadmap_rows of every docs/roadmap/archive/*.md file (done rows
+    tools/roadmap_fold.py pruned out of ROADMAP.md), each marked done; the
+    first row of an id wins. [] when there is no archive."""
+    import roadmap  # lazy: roadmap imports this module
+    rows, seen = [], set()
+    for p in roadmap._row_files(root, roadmap.ARCHIVE_REL):
+        try:
+            text = p.read_bytes().decode("utf-8", errors="replace")
+        except OSError:
+            continue
+        for r in roadmap_rows(text):
+            if r["id"] in seen:
+                continue
+            seen.add(r["id"])
+            r.update(open=False, status="[x] done")
+            rows.append(r)
+    return rows
 
 
 def base_kind(rec):
@@ -216,13 +246,27 @@ def dependency_cycles(graph):
 
 
 def roadmap_flip_time(git, main, dep):
-    """ISO commit time of the first-parent commit on main that introduced row
-    dep's `[x]` line (the --no-ff merge commit for a loop merge), or None.
-    Fallback for dependencies merged before merge() recorded merged_at."""
-    r = git(["log", "-m", "--first-parent", "-1", "--format=%cI",
-             f"-G^- \\[x\\] {re.escape(dep)}( |$)", "--", ROADMAP_REL.as_posix()], main)
-    out = (r.stdout or "").strip() if r.returncode == 0 else ""
-    return out.splitlines()[0] if out else None
+    """ISO commit time of the first-parent commit on main that closed row
+    dep: the one that introduced its `[x]` line in ROADMAP.md (the --no-ff
+    merge commit for a loop merge) or the one that added its done file
+    docs/roadmap/done/<ID>.md (AUTO-03), whichever is earlier; None when
+    neither is found. Fallback for dependencies merged before merge()
+    recorded merged_at."""
+    def first(args):
+        r = git(["log", "-m", "--first-parent", "-1", "--format=%cI", *args], main)
+        out = (r.stdout or "").strip() if r.returncode == 0 else ""
+        return out.splitlines()[0] if out else None
+
+    found = [t for t in (
+        first([f"-G^- \\[x\\] {re.escape(dep)}( |$)", "--", ROADMAP_REL.as_posix()]),
+        first(["--diff-filter=A", "--", f"docs/roadmap/done/{dep}.md"]),
+    ) if t]
+    if len(found) < 2:
+        return found[0] if found else None
+    try:
+        return min(found, key=lambda t: _dt.datetime.fromisoformat(t).timestamp())
+    except ValueError:
+        return found[0]
 
 
 def resolve_roadmap(base, ours, theirs):
@@ -320,12 +364,20 @@ def is_duplicate(title, existing, threshold=0.6):
 
 
 def plan_titles(root):
-    """{row id: title} of every ROADMAP row (open or done) in tree root."""
+    """{row id: title} of every row (open or done) in tree root, read through
+    the loader (tools/roadmap.py load_rows: ROADMAP.md plus row files), plus
+    the archived rows of docs/roadmap/archive/, so the dive duplicate check
+    still sees done rows the fold pruned. A loaded row wins over an archived
+    one of the same id."""
+    import roadmap  # lazy: roadmap imports this module
+    out = {}
+    with contextlib.suppress(OSError):
+        out.update((r["id"], r["title"]) for r in archived_rows(root))
     try:
-        text = (Path(root) / ROADMAP_REL).read_text(encoding="utf-8", errors="replace")
+        out.update((r["id"], r["title"]) for r in roadmap.load_rows(Path(root)))
     except OSError:
-        return {}
-    return {r["id"]: r["title"] for r in roadmap_rows(text)}
+        pass
+    return out
 
 
 def dispatchable(rec, open_ids=()):
