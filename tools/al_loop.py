@@ -57,6 +57,9 @@ One tick, under ops/loop/control/loop.lock (fleet_watch.watch_lock):
   098), which under the merge lock needs gates green and leak_sweep
   --pre-push clean, then runs `git push origin main`; .githooks/pre-push
   re-checks the ref rule, the identity gate and the leak sweep on every push.
+  The loop pushes only while the gitignored config/local.json holds
+  "loop_push": true (OA-11, default off; ruling Q-23); else it logs "push
+  skipped: loop push is off" and a session pushes. No tool writes that key.
   Gates: ops/loop/gates.txt (one argv per line, no shell), else the ci.yml
   `run:` lines; neither = fail closed. Plan 096: Tick.gate runs once per tree
   state (verdicts cached by git tree id); a merge that only adds the ROADMAP
@@ -366,6 +369,14 @@ def _leak_pre_push(cwd, ref_line):
                        input=ref_line + "\n", capture_output=True, text=True, timeout=600,
                        creationflags=_NO_WINDOW)
     return r.returncode == 0
+
+
+def loop_push_on(main):
+    """OA-11 / ruling Q-23: the loop pushes only while the operator's
+    gitignored config/local.json holds "loop_push": true (a real boolean);
+    absent, false, or an unreadable file means off."""
+    doc = read_json(Path(main) / "config" / "local.json", {})
+    return isinstance(doc, dict) and doc.get("loop_push") is True
 
 
 def tree_key(cwd):
@@ -766,13 +777,16 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
     # -- push
     def push_needed(self):
         """Commits main is ahead of origin/main (git only, no gates), 0 when
-        there is nothing to push, main is not clean on main, or no remote
-        named origin exists."""
+        there is nothing to push, main is not clean on main, no remote
+        named origin exists, or the operator's loop_push switch is off."""
         if self.no_push or self.dry:
             return 0
         main, g = self.d.main_tree, self.d.git
         if g(["remote", "get-url", "origin"], main).returncode != 0:
             self.step("push skipped: local only")
+            return 0
+        if not loop_push_on(main):
+            self.step("push skipped: loop push is off")
             return 0
         if g(["rev-parse", "--abbrev-ref", "HEAD"], main).stdout.strip() != "main" or \
                 self.dirty(main):
