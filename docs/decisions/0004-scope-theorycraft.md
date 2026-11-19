@@ -136,3 +136,12 @@ One dated line per drift check that changed nothing or moved the pin;
   PoE2 releases. LuaJIT `v2.1` branch head read back as 63c8f1a9 (committed
   2026-11-11), equal to the pin. No bridge tests exist yet (TC-BRIDGE open),
   so nothing to re-run. Next check: the next PoB-PoE2 release tag `v0.*`.
+
+## Amendment 2026-11-18 (decision 0048)
+
+- Item 4: AshLight's own GGG OAuth public client asks for
+  `account:characters` only (not `account:profile`, not
+  `account:item_filter`), with loopback redirects on 8979 and 8978 and
+  the access token in memory only until GGG answers the refresh question
+  in writing; scope, ports and token handling are in decision 0048, the
+  ready application in docs/ops/ggg-oauth-application.md.

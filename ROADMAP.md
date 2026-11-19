@@ -241,6 +241,8 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   For AREA-MATH: at the next tag (likely by PoE2 1.0, 2026-12-11) test the
   bridge for cache state leaking across build loads before moving the pin.
 - [ ] TC-OAUTH-REG (review) Send the GGG application when registration reopens, record the answer.
+  The application is ready: docs/ops/ggg-oauth-application.md (decision 0048); scopes:
+  account:characters only.
   ACCEPT: python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
   tests/test_leak_sweep.py tests/test_audit_pass2.py passes; the decision holds a dated line for the
   send and, when it comes, GGG's reply to each of the three questions. ZERO-CLICK: No reminder: the
@@ -249,7 +251,8 @@ and the row's own dev / test steps run unattended. ZERO-CLICK states how.
   ops/runtime/ggg_docs/REG_OPEN exists (the settled decision 0044 watch; its index-page read is
   under operator decision A-01), or the hand-off holds the operator's own line 'REG OPEN (operator)'
   (GGG).
-- [ ] TC-IMPORT (build) Character import through GGG's OAuth. ACCEPT: python -m pytest -q
+- [ ] TC-IMPORT (build) Character import through GGG's OAuth, one browser approval per 7 days at
+  most (decision 0048). ACCEPT: python -m pytest -q
   tests/test_tc_import.py tests/test_gggapi.py tests/test_floor_static.py passes. ZERO-CLICK: One
   Connect click per session and one Refresh click per re-read until GGG's written yes; after it no
   click between approvals. A lapse shows the last import with its age on the dashboard, never the
@@ -582,7 +585,8 @@ recorded in research 0018 section 3.
   operator or MAIN allows a conditional third HUD line; the prototype is
   kept as util-overlay-map.patch in the AL sidecar Scratch folder.
 - [ ] TC-CURX (build) Hourly exchange history from GGG's documented public Currency Exchange API
-  (`web.poecdn.com/api/currency-exchange/poe2/<hour>`, research 0018). BLOCKED: no AshLight OAuth
+  (`web.poecdn.com/api/currency-exchange/poe2/<hour>`, research 0018). Deferred (F-206): opens on
+  GGG's written answer to question 3 or an own client. BLOCKED: no AshLight OAuth
   client (adjudicator ruling 2026-11-17: standalone executables must use a public OAuth client);
   unblocks when GGG grants AshLight a public OAuth client (TC-OAUTH-REG done) or exempts scope-less
   endpoints in writing (question 3 of DATA-GGG-APPLICATION) (GGG; a session records it). No package

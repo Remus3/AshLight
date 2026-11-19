@@ -679,3 +679,11 @@ them. Pause: `ops/loop/control/HALT`.
   kit; nothing third-party is bundled, data only as attributed sidecar
   snapshots (decision 0047). Reverses if: the operator wants a named
   holder, or a bundled dependency forces another licence.
+- GGG OAuth application prepared: public client, authorization code
+  with PKCE, scope account:characters only (account:profile and
+  account:item_filter not requested), loopback redirects on 8979 and
+  8978, access token in memory only until GGG answers the refresh
+  question in writing; the operator sends it when REG_OPEN appears
+  (decision 0048, amends 0004 item 4). Reverses if: GGG requires
+  account:profile for consent or the User-Agent, refuses the loopback
+  ports, or the operator drops live import.

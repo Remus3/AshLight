@@ -72,7 +72,8 @@ dispatches; every command runs in a sub-agent, in the main checkout):
 
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
-apply act in the batched operator ask (OA-36). Read back 2026-11-18: the
+apply act in the batched operator ask (OA-36); the ready application is
+docs/ops/ggg-oauth-application.md (decision 0048). Read back 2026-11-18: the
 flag is absent, registration is closed. Session-5 agent worktree reap:
 DONE in session 6 (2026-11-17, fleet_done.py reap --apply); read back
 2026-11-18: git worktree list shows main plus lane-0 / lane-1 / lane-2
