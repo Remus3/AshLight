@@ -767,3 +767,5 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   only under /api/ (decision 0056). Reverses if: the F-193 route table
   replaces the lookup, discovery fails in the installed layout, or a plug
   module is found to bypass the token, Host / Origin or CSP checks.
+- CAMPAIGN-KEEP: with no build the item check answers keep or vendor from AshLight's own level-band rule table (server/al/data/level_rules.json, JSON conditions never run as code, hot reloaded, entries carry src and checked); nothing copied from another tool; a loaded build or a worn item wins (decision 0057). Reverses if: the thresholds misfire in levelling play, a licence objection to a fact source appears, or the worn-gear baseline makes the table unused.
+index: 0057 - Keep-or-vendor levelling rules: own table, hot reloaded, used only with no build (docs/decisions/0057-tc-campaign-keep.md)
