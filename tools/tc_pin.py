@@ -35,13 +35,9 @@ import hashlib
 import json
 import os
 import re
-import shutil
-import stat
 import subprocess
 import sys
 import urllib.error
-import urllib.parse
-import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -50,6 +46,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from server.al import exepin, paths, webfetch  # noqa: E402
+# REL-PINFETCH: the shared hash-pinned fetch / verify / extract helpers; the
+# names stay importable from this module (tests and tools/electron_pin.py).
+from server.al.pinfetch import (  # noqa: E402,F401
+    HashMismatch, UnsafeArchive, _NoRedirect, check_members, file_matches)
+from server.al import pinfetch  # noqa: E402
 
 COMPONENTS = ("pob2", "luajit")
 ALLOWED_HOSTS = ("github.com", "codeload.github.com")
@@ -58,9 +59,9 @@ TOOLCHAIN = "toolchain"
 TOOLCHAIN_HOSTS = ALLOWED_HOSTS + ("release-assets.githubusercontent.com",
                                    "objects.githubusercontent.com")
 TOOLCHAIN_TOP = "mingw64"
-MAX_REDIRECTS = 3
-TIMEOUT_S = 60.0
-CHUNK = 1024 * 1024
+MAX_REDIRECTS = pinfetch.MAX_REDIRECTS
+TIMEOUT_S = pinfetch.TIMEOUT_S
+CHUNK = pinfetch.CHUNK
 UA_PURPOSE = "setup: theorycraft calc component download"
 OPT_IN_KEY = "tc_calc"
 MARKER = ".al-extracted.json"
@@ -81,14 +82,6 @@ _ASSET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+-]{0,200}\.zip$")
 
 class PinError(Exception):
     """A pin is missing or malformed: setup refuses rather than guess."""
-
-
-class HashMismatch(Exception):
-    """A downloaded or cached archive does not match its pin: refused."""
-
-
-class UnsafeArchive(Exception):
-    """An archive member would land outside its pinned top dir: refused."""
 
 
 def log(msg):
@@ -236,64 +229,17 @@ def layout(doc, environ=None):
 
 # --- download and verify ------------------------------------------------
 
-def file_matches(path, sha256, size):
-    """True when the file exists with exactly this size and SHA-256."""
-    try:
-        if path.stat().st_size != size:
-            return False
-        h = hashlib.sha256()
-        with open(path, "rb") as f:
-            for block in iter(lambda: f.read(CHUNK), b""):
-                h.update(block)
-        return h.hexdigest() == sha256
-    except OSError:
-        return False
-
-
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
 def http_stream(url, max_bytes, hosts=ALLOWED_HOSTS):
-    """Yield the body of url in chunks. Redirects are followed by hand, each
-    hop checked against hosts (default ALLOWED_HOSTS) (https, no userinfo, port 443); the
-    body is cut off past max_bytes. No cookie is ever sent."""
-    headers = {"User-Agent": webfetch.user_agent(UA_PURPOSE), "Accept": "*/*"}
-    opener = urllib.request.build_opener(_NoRedirect())
-    for _ in range(MAX_REDIRECTS + 1):
-        webfetch.check_url(url, hosts)
-        req = urllib.request.Request(url, headers=headers, method="GET")
-        try:
-            resp = opener.open(req, timeout=TIMEOUT_S)
-        except urllib.error.HTTPError as e:
-            if e.code in webfetch.REDIRECT_CODES:
-                loc = e.headers.get("Location") or ""
-                e.close()
-                url = urllib.parse.urljoin(url, loc)
-                continue
-            raise
-        with resp:
-            got = 0
-            while True:
-                block = resp.read(CHUNK)
-                if not block:
-                    return
-                got += len(block)
-                if got > max_bytes:
-                    raise HashMismatch(f"download larger than the pinned {max_bytes} bytes")
-                yield block
-    raise webfetch.FetchError("too many redirects")
+    """Yield the body of url in chunks (pinfetch.http_stream): each redirect
+    hop checked against hosts (default ALLOWED_HOSTS), at most MAX_REDIRECTS,
+    the body cut off past max_bytes, this step's User-Agent purpose."""
+    return pinfetch.http_stream(url, max_bytes, hosts, UA_PURPOSE,
+                                max_redirects=MAX_REDIRECTS, timeout=TIMEOUT_S)
 
 
 def _quarantine(path):
-    """Move a bad archive aside (replaceable data; kept for inspection)."""
-    bad = path.with_name(path.name + ".rejected")
-    try:
-        os.replace(path, bad)
-    except OSError:
-        pass
-    return bad
+    """Move a bad archive aside (pinfetch.quarantine)."""
+    return pinfetch.quarantine(path)
 
 
 def ensure_archive(name, spec, archive, fetch=None):
@@ -336,21 +282,6 @@ def ensure_archive(name, spec, archive, fetch=None):
 
 # --- extract ------------------------------------------------------------
 
-def check_members(zf, top_dir):
-    """Raise UnsafeArchive unless every member sits under top_dir/ and is a
-    plain file or directory with a relative, forward-slash path."""
-    prefix = top_dir + "/"
-    for info in zf.infolist():
-        n = info.filename
-        parts = n.split("/")
-        mode = (info.external_attr >> 16) & 0o170000
-        if (not n.startswith(prefix) and n != prefix) or "\\" in n or ":" in n \
-                or n.startswith("/") or ".." in parts or "\0" in n:
-            raise UnsafeArchive(f"unsafe member path: {n!r}")
-        if mode == stat.S_IFLNK:
-            raise UnsafeArchive(f"symlink member refused: {n!r}")
-
-
 def read_marker(target):
     try:
         return json.loads((target / MARKER).read_text(encoding="ascii"))
@@ -391,17 +322,7 @@ def ensure_extracted(name, spec, archive, parent, force=False):
     if not force and marker and marker.get("archive_sha256") == spec["archive_sha256"]:
         log(f"{name}: extracted tree present (no-op)")
         return target, False
-    parent.mkdir(parents=True, exist_ok=True)
-    tmp = parent / f".{top}.tmp"
-    if tmp.exists():
-        shutil.rmtree(tmp)  # our own half-made extract, replaceable from the archive
-    with zipfile.ZipFile(archive) as zf:
-        check_members(zf, top)
-        zf.extractall(tmp)
-    if target.exists():
-        shutil.rmtree(target)  # stale tree without a matching marker, replaceable
-    os.replace(tmp / top, target)
-    shutil.rmtree(tmp, ignore_errors=True)
+    pinfetch.extract_safe(archive, top, parent)
     (target / MARKER).write_text(json.dumps({
         "component": name, "commit": spec.get("commit") or spec.get("tag"),
         "archive_sha256": spec["archive_sha256"], "tree_sha256": tree_digest(target)},

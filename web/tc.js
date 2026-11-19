@@ -36,7 +36,10 @@
     return (r < 0 ? "-" : "") + parts.join(".");
   }
 
-  /* Link-out only (decision 0009): poe2db and the PoE2 wiki pages by name. */
+  /* Link-out only (decision 0009): poe2db and the PoE2 wiki pages by name.
+     LINK_HOSTS names the hosts links() emits (OVL-LINKS-DOWNLOADS: the
+     companion's config/link_hosts.json must hold them). */
+  var LINK_HOSTS = ["poe2db.tw", "www.poe2wiki.net"];
   function links(name) {
     if (!name || typeof name !== "string") { return []; }
     var slug = encodeURIComponent(name.trim().replace(/ /g, "_"));
@@ -397,5 +400,6 @@
            LINK_OFFER: LINK_OFFER, LINK_CONFIRM: LINK_CONFIRM, LINK_CANCEL: LINK_CANCEL,
            buildFileView: buildFileView,
            weightRows: weightRows, weightsDoc: weightsDoc, toKey: toKey, gfxView: gfxView,
-           links: links, num: num, safeTreeUrl: safeTreeUrl };
+           links: links, num: num, safeTreeUrl: safeTreeUrl,
+           LINK_HOSTS: LINK_HOSTS.slice(), TREE_HOSTS: TREE_HOSTS.slice() };
 }));
