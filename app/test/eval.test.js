@@ -143,7 +143,9 @@ test("hotkey: empty or huge clipboard, failures are logged, never thrown", async
   assert.deepEqual(empty.posts[0][1], { item: "" });
   const big = fakeDeps("A".repeat(hk.MAX_ITEM_CHARS + 10));
   await hk.createEvalHotkey(big)();
-  assert.equal(big.posts[0][1].item.length, hk.MAX_ITEM_CHARS);
+  assert.equal(big.reads, 1);
+  assert.ok(big.posts[0][1].item.length <= hk.MAX_ITEM_CHARS);
+  assert.ok(Buffer.byteLength(JSON.stringify(big.posts[0][1])) <= hk.MAX_BODY_BYTES);
   const bad = fakeDeps("x", true);
   assert.equal(await hk.createEvalHotkey(bad)(), false);
   assert.match(bad.logs[0], /item check not sent: HTTP 401/);
@@ -158,4 +160,27 @@ test("hotkey module has no timer and no watcher", () => {
   for (const word of ["setInterval", "setTimeout", "fs.watch", "watchFile", "sendInput", "keyTap"]) {
     assert.ok(!src.includes(word), word);
   }
+});
+
+test("hotkey: a copied build fits whole, still one read and one post (TC-PRESS-BUILD)", async () => {
+  // the cap is the build size now (a PoB code is about 5-60 KB); no retry
+  assert.equal(hk.MAX_ITEM_CHARS, 256 * 1024);
+  assert.equal(hk.MAX_BODY_BYTES, 256 * 1024);
+  const code = "eNrtWVtv2zYU".padEnd(60 * 1024, "AbC-_9");
+  const d = fakeDeps(code);
+  assert.equal(await hk.createEvalHotkey(d)(), true);
+  assert.equal(d.reads, 1);
+  assert.deepEqual(d.posts, [["/api/eval", { item: code }]]);
+  // an over-long text is clipped once, never read again, never refused
+  const json = "{\"character\": " + "\"q\"".repeat(100 * 1024) + "}";
+  const j = fakeDeps(json);
+  assert.equal(await hk.createEvalHotkey(j)(), true);
+  assert.equal(j.reads, 1);
+  assert.equal(j.posts.length, 1);
+  assert.ok(Buffer.byteLength(JSON.stringify(j.posts[0][1])) <= hk.MAX_BODY_BYTES);
+  assert.ok(json.startsWith(j.posts[0][1].item));
+  // non-ASCII takes more bytes than characters
+  const wide = hk.fitText("\u00e9".repeat(hk.MAX_ITEM_CHARS));
+  assert.ok(Buffer.byteLength(JSON.stringify({ item: wide })) <= hk.MAX_BODY_BYTES);
+  assert.equal(hk.fitText(""), "");
 });

@@ -69,7 +69,7 @@ ROUTES = {
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
     ("POST", "/api/trade-dismiss"): (HEADER, 4096),
     ("POST", "/api/build-code"): (HEADER, 256 * 1024),
-    ("POST", "/api/eval"): (HEADER, 80 * 1024),
+    ("POST", "/api/eval"): (HEADER, 256 * 1024),  # TC-PRESS-BUILD: the build size
     ("POST", "/api/web-data"): (HEADER, 4096),
     ("POST", "/api/filter-merge"): (HEADER, 2 * 1024 * 1024),  # octet-stream
     ("POST", "/api/settings-import"): (HEADER, 16 * 1024),
@@ -284,7 +284,8 @@ def test_route_table_matches_http_py():
     # the named caps in http.py are the pinned numbers
     assert al_http.MAX_BODY == 4096
     assert al_http.MAX_BUILD_BODY == 256 * 1024
-    assert al_http.MAX_EVAL_BODY == 80 * 1024
+    # TC-PRESS-BUILD: the item key may carry a copied build (the build size)
+    assert al_http.MAX_EVAL_BODY == 256 * 1024
     assert al_http.MAX_WEIGHTS_BODY == 64 * 1024
 
 

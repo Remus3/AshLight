@@ -142,3 +142,25 @@ One dated line per drift check that changed nothing or moved the pin;
   the access token in memory only until GGG answers the refresh question
   in writing; scope, ports and token handling are in decision 0048, the
   ready application in docs/ops/ggg-oauth-application.md.
+
+## Amendment 2026-11-18 (TC-PRESS-BUILD, ruling Q-02, press half)
+
+- Item 4: build text the player supplies is either pasted (the paste
+  box) or copied and loaded by the item-key press: a PoB code, character
+  JSON or share link in the text of that press's ONE clipboard read
+  (decision 0003) loads the build for the character being played, with
+  the paste box's rules (a share link only with web data on, decision
+  0013; else the existing refusal words and no request). Any other text
+  is the item check as before. No second read, no new read path, nothing
+  sent to the game; the build card uses the one overlay card slot and
+  says "Build loaded"; the replaced build file is kept as one undo copy
+  (`<stem>.undo`, one per character). The optional calc component still
+  gets only player-supplied build text and hotkey-read item text.
+- Alternatives: the paste box only (Q-02 "no"); the press and a save
+  file the player picks in the browser (Q-02 "yes for both": the file
+  half waits on the operator's read-list line, F-058).
+- Why: the press is the player's own act, the bytes are the same as a
+  paste, and the one-read-per-manual-press floor is kept.
+- Reverses if: GGG's tool rules or decision 0003 restrict what a press
+  may carry, or loads by accident (the card names the build; the undo
+  copy holds the old one) prove common in play.

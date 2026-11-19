@@ -160,6 +160,12 @@ EVAL_ERROR_TEXT = {
     "no gear slot for this item class": ("Can't compare this", "Only gear is compared",
                                          "Only gear is compared, and this item has no "
                                          "gear slot."),
+    # TC-PRESS-BUILD (F-042): the item key held a build, not an item; the
+    # card part theorycraft/cardparts/buildload.py adds the class and level
+    "build loaded": ("Build loaded", "Item checks use it now",
+                     "Item checks now score against the build you copied."),
+    "share link not loaded": ("Build not loaded", "See the dashboard",
+                              "AshLight did not load a build from the copied share link."),
 }
 
 

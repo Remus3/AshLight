@@ -55,7 +55,9 @@ MAX_BODY = 4096
 # not writable); nothing was changed
 SAVE_FAILED = "AshLight couldn't save the settings."
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
-MAX_EVAL_BODY = 80 * 1024  # POST /api/eval: one item text (64 KB cap, research 0003)
+# POST /api/eval: the item key's one clipboard text, an item or a copied
+# build (TC-PRESS-BUILD: the build size, app/eval_hotkey.js caps 256 KB)
+MAX_EVAL_BODY = MAX_BUILD_BODY
 MAX_WEIGHTS_BODY = 64 * 1024  # PUT /api/weights
 DRAIN_MAX = 1024 * 1024  # a rejected body up to this is read and dropped (413 / 415)
 DRAIN_TIMEOUT_S = 2.0  # ... within this time, else the connection just closes
@@ -717,7 +719,11 @@ class Handler(BaseHTTPRequestHandler):
         """TC-EVAL: score item text ({"item": text, "slot": optional}) against
         the loaded build with the stored weights. The text comes from the
         caller (the one per-press clipboard read, decision 0003); this
-        endpoint never reads the clipboard and sends nothing to the game."""
+        endpoint never reads the clipboard and sends nothing to the game.
+        TC-PRESS-BUILD (ruling Q-02): a PoB code, character JSON or share
+        link in that text loads the build instead (core.eval_press, the
+        paste box's rules: a share link only with web data on) and the
+        answer is the press doc (status "loaded" or "refused")."""
         body = self._read_json(MAX_EVAL_BODY)
         if body is None:
             return None

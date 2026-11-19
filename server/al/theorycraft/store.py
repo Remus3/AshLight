@@ -17,6 +17,10 @@ file when its mtime / size / bytes change (hot reload), so a new paste in
 another tab or a dropped file applies live. A bad code never replaces a
 good one; a character with no file has no build.
 
+TC-PRESS-BUILD: a load that replaces a build file keeps the replaced bytes
+as `<stem>.undo` beside it (one copy per character, overwritten by the next
+replacing load, at most MAX_FILE_BYTES; never listed as a character).
+
 Character names stay on this computer (file names under the runtime dir).
 """
 
@@ -36,6 +40,7 @@ log = logging.getLogger("al.theorycraft")
 CHARS_DIR = "chars"
 ACTIVE_FILE = "active-character.txt"
 MIGRATED_SUFFIX = ".migrated"
+UNDO_SUFFIX = ".undo"  # TC-PRESS-BUILD: the one copy of a replaced build file
 MAX_FILE_BYTES = 4 * 1024 * 1024  # a code or a character JSON (charjson caps 2 MB)
 MAX_LISTED = 64  # characters with a saved build, listed in the snapshot
 # AREA-AUDIT P5-4 (as core._config): a coarse mtime can hide a same-size
@@ -102,6 +107,9 @@ class BuildStore:
         self.build = None
         self.load_error = None
         self.loaded_at = None
+        # TC-PRESS-BUILD: whether the last load_code replaced another build
+        # (its bytes are the undo copy)
+        self.replaced = False
         self._file_key = None
         self._lock = threading.RLock()
         self._listeners = []
@@ -282,13 +290,17 @@ class BuildStore:
         character JSON, auto-detected; TC-JSON) for the character being
         played (BUILD-LIVE). Raises codec.CodeError (ShareUrlError
         included) or model.BuildError; the previous build stays on error. A
-        JSON paste persists as its PoB share code."""
+        JSON paste persists as its PoB share code. TC-PRESS-BUILD: the file
+        it replaces is kept as one undo copy (undo_path)."""
         self.sync()
         build = paste.parse(text)
         code = build.to_code() if paste.detect(text) != "code" else "".join(text.split())
+        data = (code + "\n").encode("ascii")
         with self._lock:
             path = self.active_path()
-            jsonfile.write_text(path, code + "\n")
+            replaced = self._keep_undo(path, data)
+            jsonfile.write_bytes(path, data)
+            self.replaced = replaced
             self._file_key = self._read_key(path)
             self.build = build
             self.load_error = None
@@ -296,6 +308,32 @@ class BuildStore:
             self.loaded_at = time.time()
         self._fire(build)
         return build
+
+    @staticmethod
+    def undo_path(path):
+        """The undo copy of a build file: `<stem>.undo` beside it."""
+        return Path(path).with_suffix(UNDO_SUFFIX)
+
+    def _keep_undo(self, path, data):
+        """TC-PRESS-BUILD: before `path` is replaced by `data`, copy its
+        bytes to undo_path(path) (one per character). No file, an empty or
+        too large one, or the same bytes keep the undo copy as it was.
+        Caller holds the lock; a failed copy never stops the load."""
+        key = self._stat_key(path)
+        if key is None or key[1] > MAX_FILE_BYTES:
+            return False
+        try:
+            old = path.read_bytes()
+        except OSError:
+            return False
+        if not old.strip() or old == data:
+            return False
+        try:
+            jsonfile.write_bytes(self.undo_path(path), old)
+        except OSError:
+            log.warning("replaced build not kept as an undo copy")
+            return False
+        return True
 
     def _read_key(self, path):
         key = self._stat_key(path)

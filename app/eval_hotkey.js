@@ -7,9 +7,16 @@
    The player copies the item in game themselves, then presses the hotkey.
    The text goes to the local core's POST /api/eval; the verdict comes back
    through the state feed (dashboard and overlay card). Pure apart from the
-   injected readText / post, so node --test covers it without Electron. */
+   injected readText / post, so node --test covers it without Electron.
+   TC-PRESS-BUILD (ruling Q-02): the same single read may hold a build the
+   player copied in Path of Building (code, character JSON or share link);
+   the core loads it and shows "Build loaded". No second read, no retry. */
 
-const MAX_ITEM_CHARS = 64 * 1024; // the core caps one item text at 64 KB
+// TC-PRESS-BUILD: the build size (a PoB code is about 5-60 KB); an item
+// text is far smaller. A JSON over this still goes through the paste box.
+const MAX_ITEM_CHARS = 256 * 1024;
+// the core's POST /api/eval body cap (server/al/http.py MAX_EVAL_BODY)
+const MAX_BODY_BYTES = 256 * 1024;
 // AUDIT-HOTKEY-REPEAT (audit 2026-11-17): a held global shortcut re-fires
 // with Windows keyboard auto-repeat (first repeat after 250-1000 ms, then
 // about every 30 ms). Every event within this gap of the PREVIOUS event
@@ -37,7 +44,7 @@ function createEvalHotkey(deps) {
     } catch (e) {
       text = "";
     }
-    if (text.length > MAX_ITEM_CHARS) { text = text.slice(0, MAX_ITEM_CHARS); }
+    text = fitText(text);
     return Promise.resolve()
       .then(() => deps.post("/api/eval", { item: text }))
       .then(() => true, (e) => {
@@ -46,6 +53,20 @@ function createEvalHotkey(deps) {
       })
       .then((ok) => { busy = false; return ok; });
   };
+}
+
+/* The text clipped to MAX_ITEM_CHARS, then until its JSON body fits the
+   core's byte cap (escapes and non-ASCII take more bytes than characters),
+   so an over-long clipboard still gets a card instead of an HTTP 413. Each
+   pass cuts at least the overflow, so it ends. */
+function fitText(text) {
+  let out = text.length > MAX_ITEM_CHARS ? text.slice(0, MAX_ITEM_CHARS) : text;
+  let over = Buffer.byteLength(JSON.stringify({ item: out }), "utf8") - MAX_BODY_BYTES;
+  while (over > 0 && out.length > 0) {
+    out = out.slice(0, Math.max(0, out.length - over));
+    over = Buffer.byteLength(JSON.stringify({ item: out }), "utf8") - MAX_BODY_BYTES;
+  }
+  return out;
 }
 
 /* A JSON POST to the local core with the per-start token (Node http). */
@@ -69,4 +90,5 @@ function makePost(http, port, getToken) {
   };
 }
 
-module.exports = { createEvalHotkey, makePost, MAX_ITEM_CHARS, REPEAT_GAP_MS };
+module.exports = { createEvalHotkey, makePost, fitText, MAX_ITEM_CHARS, MAX_BODY_BYTES,
+                   REPEAT_GAP_MS };
