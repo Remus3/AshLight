@@ -4,17 +4,27 @@ SESSION: 9   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 6 done, next wave 7
-Wave 6 escape count: 2 of 4 merge batches needed a second suite (batch 2:
-PLAY-TD-14-NOTICE red on tests/test_glance_rules.py, its floor test in
-app/test/notice.test.js spelled the banned words; batch 3: SEC-SSE-TAP red
-on tests/test_http_robust.py, the slow-reader test filled the socket with
-chat events the default stream no longer sends); both reverted, test-only
-fix rounds, merged as batch 4; 2 of 12 worktree packages = 17 percent,
-above 10 percent: the batch drops to 3 (width 9) until TEST-SELECT is on
-main (wave 8; 08 section 4). Batch suites 3019, 3023 + 1 failed, 3024
-(after the revert), 3058 + 1 failed, 3056 (after the revert), 3059 passed
-(4 skipped each); npm 314, 368, 352, 355, 355, 371. Adjudicator rulings:
+WAVE POINTER: wave 7 done, next wave 8
+Wave 7 escape count: 0 of 4 merge batches needed a second suite; 0 of 12
+worktree packages (batches of 3: SRCPATHS-NODE, SRCPATHS-PY,
+DURABLE-STORES / MARKS, 11-CONTEXT, 16B / 10-STRIP, 16A, OVL-PARTS-PAGE /
+08A, DEP-05, TC-VERDICT-CAVEAT; PLAY-TD-10 swapped with 16B while in its
+fix round). Batch suites 3088, 3096, 3096, 3120 passed (4 skipped each);
+npm 378, 402, 439, 439. Batch stays 3 until TEST-SELECT is on main (wave
+8). Wave 7 rulings (adjudicator): SRCPATHS-PY files widened by
+tests/test_glance_rules.py and SRCPATHS-NODE by 7 app/test files added in
+waves 4-6 (accept grep is the contract, test-only, files disjoint);
+PLAY-TD-10-STRIP merged with g.txt kept for G9 'reading' in state d (the
+idle bar word is status_words.json copy; row FIX-IDLE-WORD filed BLOCKED:
+session wave 8); region packages deleted their own STUB_CSS line in
+app/test/regions.test.js and 16A changed one line of
+tests/test_play_fit.py (answers_for prefers play.item.word), both ruling Q1
+follow-the-change. Builders made their own sidecar worktrees with the
+hand-run hook (08 section 2, not wired), not harness isolation.
+Wave 6 escape count: 2 of 4 batches needed a second suite (PLAY-TD-14-NOTICE,
+SEC-SSE-TAP; test-only fix rounds, merged as batch 4); 17 percent, so the
+batch dropped to 3 until TEST-SELECT. Batch suites 3019 to 3059 passed;
+npm 314 to 371. Adjudicator rulings:
 .region-h.sr-only shared rule in web/app.css by PLAY-TD-09C-BAR;
 regions.test.js split LINKED_CSS / one-per-line STUB_CSS (09C-BAR), each
 region package deletes its own stub line; region markers n, t, b stay
@@ -27,7 +37,7 @@ rows above. Design fix rounds: PLAY-TD-15-BUILDLINE (BL-1, BL-5; round 1
 FAIL), PLAY-TD-13-FEED (FEED-1 to 3), PLAY-TD-14-NOTICE (N14-1 to 4).
 Waves 1 to 5 escape counts (record in git history, commits at each wave close): wave 1 1/11, wave 2 0/12, wave 3 0/12, wave 4 1/13, wave 5 1/13 worktree packages; batch size stayed 4 until wave 6. GP-04 fresh clone at 930770d green (py3.14 2590 passed; py3.11 found test_soak Reader._stop shadowing, fixed; test_procs is red only under a venv launcher). GP-01 armed 44 needles. Wave 5 rulings: RUN-SEAMS files extended with tests/test_tc_wire.py, PLAY-TD-09B-SKELETON with tests/test_design_tokens.py. Wave 4: tests/test_test_layout.py caught test-to-test imports in four packages; test_dash_console once hit ERR_CONNECTION_REFUSED (port race, TEST-PORT-LEASE merged wave 5).
 
-Next action: wave 7 of docs/plan/07-execution-plan.md, run exactly as
+Next action: wave 8 of docs/plan/07-execution-plan.md, run exactly as
 docs/plan/08-orchestration.md says, as waves 4 to 6 ran in session 8: ONE
 background orchestrator agent per wave with a real background watch on the
 progress files. Ask the operator nothing (every operator item has a default
@@ -35,11 +45,9 @@ in force). The main session only dispatches; every command runs in a
 sub-agent, in the main checkout.
 1. Done (session 9): the 4 rows were tagged and AUTO-21 removed HALT
    (5560fec; see Status).
-2. Dispatch one start agent (08 section 1, argument wave 7, session 9),
-   then wave 7 (08 sections 2 to 7). Wave 7 merge batches drop to 3 (escape
-   rate 17 percent in wave 6) until TEST-SELECT lands in wave 8: regroup
-   07's 4/4/4 into batches of 3. Legacy regions G, C, I, U land in wave 7;
-   see the Carried forward bullets for the region-marker cleanup.
+2. Dispatch one start agent (08 section 1, argument wave 8), then wave 8
+   (08 sections 2 to 7). Merge batches stay at 3 until TEST-SELECT (wave 8)
+   is on main. Wave 7 is closed (12 of 12 merged, session 9).
 3. Go-public track: GP-10 is next (config/public_repo.json plus the
    leak_sweep exception). The repository exists and is PRIVATE; it stays
    private until the plan-04 flip gates hold (GP-12). Push main only through
@@ -78,8 +86,8 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
-- Wave-7 integrator: delete tests/play_fit_pending/n.txt, t.txt and b.txt on the integration tree once PLAY-TD-10-STRIP and the other legacy-region packages have merged; full tests/test_play_fit.py green with no region markers is the gate (adjudicator ruling Q2, wave 6).
-- Design findings left OPEN in docs/design/reviews.log: BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (PLAY-TD-10 renderer), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper), DPC-2 (note below), F1 (PLAY-TD-23-RECORDS), F2 (PLAY-TD-10-STRIP).
+- Play-fit markers (W7-MARKERS, session 9): t, b, c-zone, i, u deleted (cfeca99) after a probe with them removed read test_play_fit green; n.txt stays (region N still fails G1 and G4 at 1024x700 and 1920x875, 20 + 20 findings; owner the next package that owns web/notice.css or the N track), g.txt stays (FIX-IDLE-WORD); c-setup and the tab-* markers wait for their own regions. Delete n.txt and g.txt when tests/test_play_fit.py is green without them.
+- Design findings left OPEN in docs/design/reviews.log: BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (folded by PLAY-TD-11 as .edge; see CTX-3), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper), DPC-2 (note below), F1 (PLAY-TD-23-RECORDS); F2 closed (barStatus used since PLAY-TD-09C-BAR). Wave 7 (all PASS WITH FINDINGS, no S1 or S2): PH-1 to PH-3 (OVL-PARTS-PAGE; PH-1 parts.item off drops press status cards), TVC-1 to TVC-3 (alert sentence lengths, design 0001 section 9 alert templates owed), DS-1, DS-2, DS-4 (stores Checks copy), KC-1, KC-2, CTX-1 to CTX-6 (Copy fallback cause and announce, .edge contrast), IC-1 to IC-4 (empty head announced; I wear this posts to /api/wear before TC-WORN-WIRE, latent; literal key until F-026), STRIP-1 (20 px bar word worsens BAR-1 at 320 px), STRIP-2.
 - Review folds must file new rows already tagged "BLOCKED: session wave <n>" (06 line 39); an untagged fold row is what kept HALT in wave 6.
 - a bullet is loop work only when it starts with 'LOOP:'; none today.
 - OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
@@ -391,7 +399,7 @@ PUB-GO-DECISION, tools/plan_check.py, wave 0 (PLAN-LANDING), the
 close-out 2 rulings and the worktree probe (it passed; do not repeat).
 Session 5 and earlier: see git log and docs/audit/2026-11-17-audit.md.
 
-In flight: wave 7 (session 9 orchestrator); the loop is live (HALT removed by AUTO-21); lane worktrees lane-0..2 kept.
+In flight: none from the wave (wave 7 closed in session 9; w7-* worktrees kept for /done reap); the loop is live (HALT removed by AUTO-21); lane worktrees lane-0..2 kept.
 
 AUTO-21 (session 9, 2026-11-19): six checks green, HALT removed 2026-11-19 (5560fec tagged the 4 rows first); the next tick's loop.json read status done, not halted (08:33). Read back again at wave-7 start: (1) roadmap lint ok 324 rows, test_roadmap_shape + test_roadmap_rows 7 passed; (2) rows --open --untagged lists 19 ids (16 owner:loop + UTIL-10-DATA/NOTES/LOG); (3) loop_preflight --handoff prints hand-off loop items: 0; (4) loop_preflight exit 0 in the AUTO-21 run (client state as found, not started); (5) usage_ledger gate used 2 cap 120; (6) the dry run listed only check-2 ids; HALT absent. Pause again with ops/loop/control/HALT.
 
