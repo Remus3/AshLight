@@ -1,0 +1,52 @@
+2026/11/16 21:00:01 ***** LOG FILE OPENING *****
+2026/11/16 21:00:02 3420 1f2e3d4c [INFO Client 5150] [WINDOW] Gained focus
+2026/11/16 21:00:03 4533 1f2e3d4c [INFO Client 5150] Connecting to instance server at 192.0.2.107:21360
+2026/11/16 21:00:04 6100 52d09515 [DEBUG Client 5150] Generating level 1 area "G1_1" with seed 807573533
+2026/11/16 21:00:05 7623 52d09515 [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:06 9450 52d09515 [INFO Client 5150] [SCENE] Set Source [The Riverbank]
+2026/11/16 21:00:06 9500 52d09515 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:06 10196 52d09515 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:07 11241 52d09515 [INFO Client 5150] : Demowisp (Sorceress) is now level 2
+2026/11/16 21:00:08 13017 52d09515 [INFO Client 5150] #Chatterbox: anyone know a good leveling build
+2026/11/16 21:00:09 14299 52d09515 [INFO Client 5150] Connecting to instance server at 192.0.2.190:21360
+2026/11/16 21:00:10 16050 27837704 [DEBUG Client 5150] Generating level 15 area "G1_town" with seed 488360310
+2026/11/16 21:00:11 17096 27837704 [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:12 18741 27837704 [INFO Client 5150] [SCENE] Set Source [Clearfell Encampment]
+2026/11/16 21:00:12 19300 27837704 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:12 19816 27837704 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:13 21040 27837704 [INFO Client 5150] : Demowisp (Sorceress) is now level 3
+2026/11/16 21:00:14 22916 27837704 [INFO Client 5150] #Chatterbox: anyone know a good leveling build
+2026/11/16 21:00:15 24533 27837704 [INFO Client 5150] Connecting to instance server at 192.0.2.230:21360
+2026/11/16 21:00:16 25913 49346aab [DEBUG Client 5150] Generating level 2 area "G1_2" with seed 615637036
+2026/11/16 21:00:17 27322 49346aab [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:18 28353 49346aab [INFO Client 5150] [SCENE] Set Source [Clearfell]
+2026/11/16 21:00:18 28607 49346aab [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:18 29350 49346aab [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:19 30491 49346aab [INFO Client 5150] : Demowisp (Sorceress) is now level 4
+2026/11/16 21:00:20 31589 49346aab [INFO Client 5150] #Chatterbox: anyone know a good leveling build
+2026/11/16 21:00:21 33335 49346aab [INFO Client 5150] Connecting to instance server at 192.0.2.110:21360
+2026/11/16 21:00:22 35125 604585c6 [DEBUG Client 5150] Generating level 3 area "G1_3" with seed 350627148
+2026/11/16 21:00:23 36491 604585c6 [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:24 37765 604585c6 [INFO Client 5150] [SCENE] Set Source [Mud Burrow]
+2026/11/16 21:00:24 38436 604585c6 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:24 38844 604585c6 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:25 40473 604585c6 [INFO Client 5150] : Demowisp (Sorceress) is now level 5
+2026/11/16 21:00:26 42108 604585c6 [INFO Client 5150] #Chatterbox: anyone know a good leveling build
+2026/11/16 21:00:27 43785 604585c6 [INFO Client 5150] Connecting to instance server at 192.0.2.15:21360
+2026/11/16 21:00:28 45342 69b0d174 [DEBUG Client 5150] Generating level 4 area "G1_4" with seed 738628149
+2026/11/16 21:00:29 46970 69b0d174 [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:30 48181 69b0d174 [INFO Client 5150] [SCENE] Set Source [The Grelwood]
+2026/11/16 21:00:30 48846 69b0d174 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:30 49634 69b0d174 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:31 50701 69b0d174 [INFO Client 5150] : Demowisp (Sorceress) is now level 6
+2026/11/16 21:00:32 52277 69b0d174 [INFO Client 5150] #Chatterbox: anyone know a good leveling build
+2026/11/16 21:00:33 53538 69b0d174 [INFO Client 5150] : Demowisp has been slain.
+2026/11/16 21:00:34 55091 69b0d174 [INFO Client 5150] @From Wanderer: hello there, nice build
+2026/11/16 21:00:35 56417 69b0d174 [INFO Client 5150] @From Tradewind: Hi, I would like to buy your Grim Bane Ruby Ring listed for 5 exalted in Standard (stash tab "Sale"; position: left 10, top 9)
+2026/11/16 21:00:36 57555 69b0d174 [INFO Client 5150] : Trade accepted.
+2026/11/16 21:00:37 59054 69b0d174 [INFO Client 5150] @To Tradewind: thanks, have fun
+2026/11/16 21:00:38 60281 69b0d174 [INFO Client 5150] Connecting to instance server at 192.0.2.242:21360
+2026/11/16 21:00:39 61877 5380b6cc [DEBUG Client 5150] Generating level 2 area "G1_2" with seed 273995008
+2026/11/16 21:00:40 63324 5380b6cc [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:41 64950 5380b6cc [INFO Client 5150] [SCENE] Set Source [Clearfell]
+2026/11/16 21:00:42 66451 5380b6cc [INFO Client 5150] : Demowisp has been slain.
