@@ -29,7 +29,6 @@ const STUB_CSS = [
   "setupcard",
   // (one stub per line)
   // (one stub per line)
-  "notice",
   // (one stub per line)
   // (one stub per line)
   "itemcard",
