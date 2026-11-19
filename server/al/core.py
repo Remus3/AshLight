@@ -55,6 +55,13 @@ def write_private(path, text):
 LOCATE_RETRY_S = 5.0
 
 
+def discover_default(runtime, log_path):
+    """SEC-NO-DISCOVERY: may a core built with these arguments run the Steam
+    library scan? Only the real entry point: no runtime dir and no log
+    path. A configured "client_log" still wins over the scan (locate_log)."""
+    return runtime is None and not log_path
+
+
 class ConfigUnreadable(OSError):
     """AREA-AUDIT P5-1: config/local.json exists but is not a JSON object;
     nothing is written over it."""
@@ -62,7 +69,13 @@ class ConfigUnreadable(OSError):
 
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
-                 character=None, start_at_end=True, config_path=None, web_fetch=None):
+                 character=None, start_at_end=True, config_path=None, web_fetch=None,
+                 discover=None):
+        # SEC-NO-DISCOVERY: only the real entry point with no log path looks
+        # for the live Client.txt in the Steam libraries. A core given a
+        # runtime dir (a test or demo core) or a log path never scans,
+        # unless a test passes discover=True on purpose.
+        self.discover = discover_default(runtime, log_path) if discover is None else bool(discover)
         self.runtime = Path(runtime) if runtime else paths.runtime_dir()
         self.consent_path = self.runtime / "consent.json"
         # A test core (runtime given) never reads or writes the real config.
@@ -606,9 +619,16 @@ class Core:
 
     # -- Client.txt location
     def locate_log(self):
-        found = logfile.discover_client_log(self._configured_log)
-        if found is None and self._configured_log:
-            found = Path(self._configured_log)  # may appear later
+        """A configured path is used as is, existing or not (it may appear
+        later; Checks says when it is missing) and never falls through to
+        the Steam scan. Without one, the scan runs only when self.discover
+        (SEC-NO-DISCOVERY)."""
+        if self._configured_log:
+            found = logfile.discover_client_log(self._configured_log)
+        elif self.discover:
+            found = logfile.discover_client_log(None)
+        else:
+            found = None
         self.log_path = found
         self.state.set_tailer(path=str(found) if found else None)
         return found
@@ -626,6 +646,10 @@ class Core:
     def record_consent(self, consented, path=None):
         if path and not logfile.consent_path_ok(path):
             # AUDIT-HTTP-HARDEN S4: checked before any file system access.
+            raise ValueError("path must be a local Client.txt or the folder holding it")
+        if path and Path(path).name.lower() != logfile.LOG_NAME and Path(path).is_file():
+            # SEC-NO-DISCOVERY: an existing file must be named Client.txt;
+            # nothing is changed (the API answers 400).
             raise ValueError("path must be a local Client.txt or the folder holding it")
         if path:
             self._configured_log = path
@@ -730,7 +754,7 @@ class Core:
         t = self.tailer
         if t is None:
             return self.start_tailing()
-        if self._configured_log or not t._missing:
+        if self._configured_log or not t._missing or not self.discover:
             return False
         found = logfile.discover_client_log(None)
         if found is None or Path(found) == t.path:
@@ -878,7 +902,8 @@ class Core:
             except Exception:  # noqa: BLE001
                 all_paths = {}
         return dict(all_paths, **{
-            "log_found": log_found, "consented": bool(tl.get("consented")),
+            "log_found": log_found, "log_configured": bool(self._configured_log),
+            "consented": bool(tl.get("consented")),
             "reading": bool(tl.get("reading")), "last_line_at": tl.get("last_line_at"),
             "idle": bool(tl.get("idle")), "character_seen": bool(snap.get("character")),
             "lang": (snap.get("lang") or {}).get("verdict"),

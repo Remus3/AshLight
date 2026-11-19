@@ -2028,7 +2028,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 1: loop and watchers, local security, reliability and observability
 
-- [ ] SEC-NO-DISCOVERY (build) A pointed, test or demo core never looks for the live Client.txt.
+- [x] SEC-NO-DISCOVERY (build) A pointed, test or demo core never looks for the live Client.txt. -- done 2026-11-18 (session wave 1; verified)
   ACCEPT: python -m pytest -q tests/test_no_discovery.py tests/test_e2e_replay.py
   tests/test_tailer.py tests/test_audit_http_harden.py tests/test_diag_self.py passes, and python
   ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q is green with the
