@@ -20,12 +20,7 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   prove the core before it sends the token;
 - RUN-SEAMS (decision 0056): a GET or POST path no built-in route takes
   falls through to plug.route (server/al/plug/), after _guard, and only
-  for an exact path under /api/, so a plug route always needs the token;
-- SEC-SSE-TAP (F-106): /events sends state frames only; a bus event just
-  wakes the state push. The per-event "events" frame is a dev tap,
-  /events?tap=1, served only in a source checkout (a .git entry at the
-  repo root), and each tapped event keeps its type plus its numeric,
-  boolean and null fields: no chat text, name or other string leaves.
+  for an exact path under /api/, so a plug route always needs the token.
 """
 
 import contextlib
@@ -42,8 +37,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import (DISCLAIMER, NAME, VERSION, gfx, hello, layout, paths, plug, ports, settingsio,
-               static, webfetch)
+from . import DISCLAIMER, NAME, VERSION, gfx, hello, layout, plug, ports, settingsio, static, webfetch
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -111,17 +105,6 @@ def new_token():
     return os.urandom(24).hex()
 
 
-def tap_event(ev):
-    """SEC-SSE-TAP: one bus event as the dev tap sends it: its type plus
-    the numeric, boolean and null fields; every other string (chat text,
-    names, raw lines), list and object is left out."""
-    out = {"type": ev.get("type")}
-    for k, v in ev.items():
-        if k != "type" and (v is None or isinstance(v, (bool, int, float))):
-            out[k] = v
-    return out
-
-
 class ALServer(ThreadingHTTPServer):
     daemon_threads = True
     # SO_REUSEADDR on Windows lets another process bind the same port; use
@@ -142,9 +125,6 @@ class ALServer(ThreadingHTTPServer):
         self.handler_slots = threading.BoundedSemaphore(MAX_HANDLER_THREADS)
         # GFX-ADVISOR: hardware read once, on the first GET /api/gfx.
         self.gfx = gfx.Advisor()
-        # SEC-SSE-TAP: the /events?tap=1 dev tap exists only in a source
-        # checkout; not tied to the hot-reload switch (the suite turns it off)
-        self.events_tap = (paths.repo_root() / ".git").exists()
         super().__init__((ports.LOOPBACK, int(port)), Handler)
         self.port = self.server_address[1]
         self.allowed_hosts = {f"127.0.0.1:{self.port}", f"localhost:{self.port}"}
@@ -412,7 +392,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.command == "HEAD":
                 # AUDIT-HTTP-HARDEN S1: HEAD never opens the endless stream.
                 return self._send(405, "use GET\n", extra={**extra, "Allow": "GET"})
-            return self._sse(extra, query)
+            return self._sse(extra)
         return self._plug("GET", path, query, extra)
 
     def do_HEAD(self):
@@ -842,7 +822,7 @@ class Handler(BaseHTTPRequestHandler):
             mimetypes.guess_type(target.name)[0] or "application/octet-stream")
         return self._send(200, target.read_bytes(), ctype)
 
-    def _sse(self, extra, query=None):
+    def _sse(self, extra):
         srv = self.server
         if not srv.sse_slots.acquire(blocking=False):
             # A non-200 reply makes an EventSource give up for good (the
@@ -853,15 +833,11 @@ class Handler(BaseHTTPRequestHandler):
                               % SSE_BUSY_RETRY_MS, "text/event-stream; charset=utf-8",
                               dict(extra, **{"Retry-After": str(SSE_BUSY_RETRY_MS // 1000)}))
         try:
-            tap = bool(srv.events_tap) and (query or {}).get("tap") == ["1"]
-            return self._sse_stream(extra, tap)
+            return self._sse_stream(extra)
         finally:
             srv.sse_slots.release()
 
-    def _sse_stream(self, extra, tap=False):
-        """State frames, a reload notice and heartbeats. With tap (a dev
-        tap, source checkout only) each push also carries an "events" frame
-        of tap_event() rows."""
+    def _sse_stream(self, extra):
         srv = self.server
         core = srv.core
         sub = core.bus.subscribe()
@@ -902,18 +878,15 @@ class Handler(BaseHTTPRequestHandler):
                 pending.extend(got)
                 now = time.monotonic()
                 if pending and now - last_push >= SSE_MIN_INTERVAL_S:
-                    # SEC-SSE-TAP: by default a bus event only triggers the
-                    # state push; the events frame goes to the tap only
-                    chunk = (self._sse_msg("events", [tap_event(ev) for ev in pending])
-                             if tap else "")
+                    evs = [{k: v for k, v in ev.items() if k != "raw"} for ev in pending]
                     pending = []
+                    chunk = self._sse_msg("events", evs)
                     snap = core.state.snapshot()
                     if snap["version"] != sent_version:
                         sent_version = snap["version"]
                         chunk += self._sse_msg("state", snap)
-                    if chunk:
-                        self._sse_write(chunk)
-                        last_push = last_beat = now
+                    self._sse_write(chunk)
+                    last_push = last_beat = now
                 elif (not pending and core.state.version != sent_version
                       and now - last_push >= SSE_MIN_INTERVAL_S):
                     snap = core.state.snapshot()

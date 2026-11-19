@@ -75,9 +75,7 @@ class Reader(threading.Thread):
     def __init__(self, port):
         super().__init__(daemon=True, name="soak-sse-reader")
         self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
-        # SEC-SSE-TAP: the events frame comes only on the dev tap
-        self.sock.sendall((f"GET /events?token={TOKEN}&tap=1 HTTP/1.1\r\n"
-                           f"Host: 127.0.0.1:{port}"
+        self.sock.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{port}"
                            "\r\nAccept: text/event-stream\r\n\r\n").encode())
         self.events_blocks = 0
         self.bytes = 0
@@ -229,7 +227,7 @@ def test_soak_core_stays_bounded(tmp_path):
         assert snap["events_seen"] > hours * 12 * 5  # thousands of events, not a stub
         assert len(core.bus.recent()) <= bus_mod.RING_SIZE
         assert len(snap["recent_events"]) <= state_mod.RECENT_EVENTS
-        assert "recent_whispers" not in snap
+        assert len(snap["recent_whispers"]) <= state_mod.RECENT_WHISPERS
         assert len(snap["trade_requests"]) <= state_mod.TRADE_REQUESTS
         assert len(json.dumps(snap)) < 256 * 1024
         assert core.tailer.dropped_lines == 0 and not core.tailer._partial

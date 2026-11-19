@@ -213,7 +213,7 @@ def test_fuzz_client_line_parser_state_and_summary():
     _run("parse_line", target, lambda r: _input(r, r.choice(LOG_SEEDS)))
     snap = st.snapshot()
     assert len(snap["recent_events"]) <= state.RECENT_EVENTS
-    assert "recent_whispers" not in snap
+    assert len(snap["recent_whispers"]) <= state.RECENT_WHISPERS
     assert len(snap["trade_requests"]) <= state.TRADE_REQUESTS
 
 

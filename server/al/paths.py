@@ -44,7 +44,10 @@ def runtime_dir():
 
 
 def _kit_sidecar_default():
-    """SIDECAR_DEFAULT from the vendored fleet kit, loaded once by file path."""
+    """SIDECAR_DEFAULT from the vendored fleet kit, loaded once by file path.
+    The value is only a candidate: sidecar_root() uses it only while its
+    folder exists (DEP-02, the kit's own rule), so a stranger's machine
+    without that folder never gets a drive path made for it."""
     global _KIT_DEFAULT
     if _KIT_DEFAULT is None:
         kit = repo_root() / "ops" / "fleet_kit" / "fleet_lanes.py"
@@ -61,15 +64,24 @@ def _kit_sidecar_default():
 
 
 def sidecar_root(environ=None):
-    """The AL sidecar root. Without a kit default (non-Windows) it falls back
-    to ops/runtime/sidecar inside the repo, so nothing ever lands elsewhere."""
+    """The AL sidecar root: AL_SIDECAR_ROOT when set, else the kit default +
+    AL when the kit default folder exists (DEP-02: the kit's own rule, so a
+    source install off the operator's machine never creates a folder at a
+    drive root), else ops/runtime/sidecar inside the repo (no kit default on
+    non-Windows, or its folder or drive is absent), so nothing ever lands
+    elsewhere."""
     env = os.environ if environ is None else environ
     value = (env.get(SIDECAR_ENV) or "").strip().strip('"')
     if value:
         return Path(value).resolve()
     default = _kit_sidecar_default()
     if default:
-        return Path(default) / CODE
+        try:
+            present = Path(default).is_dir()
+        except OSError:
+            present = False
+        if present:
+            return Path(default) / CODE
     return runtime_dir() / "sidecar"
 
 

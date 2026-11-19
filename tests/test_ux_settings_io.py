@@ -18,7 +18,12 @@ FULL = {"character": "Ash", "poll_ms": 300, "overlay_toggle": "Alt+Shift+A",
         "tc_calc": False, "underlevel_gap": 4, "run_history": False,
         "price_watch_pct": 30, "boots_speed_level": 20,
         "overlay": {"display": "primary", "corner": "top-left", "scale": 1.2,
-                    "opacity": 0.95, "margin": 20},
+                    "opacity": 0.95, "margin": 20,
+                    # OVL-OVERLAY-KEYS: the new keys round trip too
+                    "parts": {"zone": True, "timer": False, "level": True,
+                              "deaths": True, "status": True, "trade": False,
+                              "item": True, "moment": True, "hint": False},
+                    "quiet_town": True, "zone_guide": "never"},
         # never exported
         "contact": "someone-at-example", "client_log": "somewhere/logs/Client.txt",
         "port": 8961, "loop": {"inbox_dir": ""}, "token": "t" * 48}

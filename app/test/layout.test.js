@@ -27,6 +27,88 @@ test("normalizeLayout fills defaults and clamps", () => {
   assert.equal(n.display, "primary");
 });
 
+/* OVL-OVERLAY-KEYS: parts switches, quiet town, zone-guide choice. The
+   rows between the SHARED-FIXTURE markers are plain JSON; the Python side
+   (tests/test_overlay_layout.py) reads them and checks layout.normalize
+   (strict=False) gives the same "out" for every "in". */
+const ALL_ON = { zone: true, timer: true, level: true, deaths: true, status: true,
+                 trade: true, item: true, moment: true, hint: true };
+const SHARED = /* SHARED-FIXTURE */ [
+  {"in": {},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.9,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry"}},
+  {"in": {"corner": "bottom-left", "scale": 1.5, "display": 2, "opacity": 1.0,
+          "margin": 30, "parts": {"zone": false, "trade": false},
+          "quiet_town": true, "zone_guide": "never"},
+   "out": {"display": 2, "corner": "bottom-left", "scale": 1.5, "opacity": 1.0,
+           "margin": 30,
+           "parts": {"zone": false, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": false, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": true, "zone_guide": "never"}},
+  {"in": {"parts": {"offline": false, "hint": 0, "moment": false, "item": "no"},
+          "quiet_town": "yes", "zone_guide": "sometimes"},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.9,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": false,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry"}},
+  {"in": {"parts": ["zone"], "quiet_town": 1, "zone_guide": "always",
+          "scale": 0.5, "opacity": 3, "margin": 999, "display": 40},
+   "out": {"display": "primary", "corner": "top-right", "scale": 0.95, "opacity": 1.0,
+           "margin": 400,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "always"}},
+  {"in": {"parts": null, "zone_guide": null, "quiet_town": null},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.9,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry"}}
+] /* END-SHARED-FIXTURE */;
+
+test("OVL-OVERLAY-KEYS: defaults keep today's overlay", () => {
+  assert.deepEqual(L.LAYOUT_PARTS, ["zone", "timer", "level", "deaths", "status",
+                                    "trade", "item", "moment", "hint"]);
+  assert.deepEqual(L.ZONE_GUIDE, ["entry", "always", "never"]);
+  const n = L.normalizeLayout(undefined);
+  assert.deepEqual(n.parts, ALL_ON);
+  assert.equal(n.quiet_town, false);
+  assert.equal(n.zone_guide, "entry");
+  // a failure word is not a part: it can never be switched off
+  for (const word of ["offline", "no_client_txt", "not_reading", "failure"]) {
+    assert.ok(L.LAYOUT_PARTS.indexOf(word) < 0, word);
+  }
+});
+
+test("OVL-OVERLAY-KEYS: normalizeLayout fills the new keys and never shares DEFAULT", () => {
+  const n = L.normalizeLayout({ parts: { level: false } });
+  assert.deepEqual(n.parts, { ...ALL_ON, level: false });
+  n.parts.zone = false;
+  assert.equal(L.LAYOUT_DEFAULT.parts.zone, true);
+  assert.equal(L.normalizeLayout({}).parts.zone, true);
+  assert.notEqual(L.normalizeLayout({}).parts, L.LAYOUT_DEFAULT.parts);
+  for (const junk of [null, 5, "all", ["zone"], {}]) {
+    assert.deepEqual(L.normalizeLayout({ parts: junk }).parts, ALL_ON);
+  }
+});
+
+test("OVL-OVERLAY-KEYS: Python and JS agree on the shared fixture", () => {
+  assert.ok(SHARED.length >= 4);
+  for (const row of SHARED) {
+    assert.deepEqual(L.normalizeLayout(row.in), row.out, JSON.stringify(row.in));
+  }
+  assert.deepEqual(SHARED[0].out, L.LAYOUT_DEFAULT);
+});
+
 test("DS-OPACITY / DS-SCALE: old layouts clamp to the floors", () => {
   assert.deepEqual(L.LAYOUT_LIMITS.opacity, [0.9, 1.0]);
   assert.deepEqual(L.LAYOUT_LIMITS.scale, [0.95, 2.0]);
