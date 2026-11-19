@@ -69,3 +69,42 @@ A localised Client.txt sample shows the LANG-GUARD signals misfire or stay
 silent; the zone snapshot is dropped (decisions 0009, 0020); PoE2 starts
 writing `You have entered`; decision 0003 or 0013 changes; or a report
 field is found to leak a path or identifier.
+
+## Amendment 2026-11-18 (RUN-VERDICTS-CORE, plan units F-062, OPEN-27)
+
+- Decision: the Checks tool also records the player's verdict on the
+  checks only the player can make in game ("Tried in game"). The check
+  ids are a fixed list: TC-BUILDFILE-LIVE, LIVE-SEARCHSTR, LIVE-FILTER,
+  LIVE-FILTER-MERGE and OVL-FPS; any other id is refused (400). A
+  verdict is "worked" or "refused" plus an optional note of printable
+  ASCII, at most 200 characters after trimming; a longer or non-ASCII
+  note is refused, never cut. The store (`server/al/verdicts.py`) keeps
+  the newest 50 rows in one bounded local file,
+  `ops/runtime/verdicts.json` (gitignored; written through jsonfile,
+  atomic, one .bak); the newest row of a check is its verdict. GET and
+  POST `/api/verdicts` are a plug module (`server/al/plug/verdicts.py`,
+  decision 0056) behind the handler's Host / Origin / Sec-Fetch-Site /
+  token guard, the POST body capped at 4096 bytes; both are pinned in
+  tests/test_security_surface.py. `tools/live_verdicts.py` reads the
+  file back and prints the drafts: the done line of each ROADMAP row
+  whose checks all worked (TC-BUILDFILE-LIVE closes
+  RUN-BUILDFILE-LIVE-CLOSE; the three LIVE- checks together close
+  RUN-VERDICTS-CLOSE; OVL-FPS its own row) and a fix row for each
+  refusal. It writes nothing; the integrator flips the rows. Nothing is
+  sent to the game or anywhere else; nothing of the game is read. The
+  card that shows the checks is RUN-VERDICTS-UI.
+- Alternatives: (a) a free-text check id - rejected: an unbounded key
+  space and a route that stores anything a page posts; (b) cut an
+  over-long or non-ASCII note to fit - rejected: the player would not
+  see what was dropped, and the stricter reading refuses; (c) the script
+  edits ROADMAP.md itself - rejected: ROADMAP.md has one writer, the
+  integrator; (d) one row per check, overwritten - rejected: a refusal
+  followed by a fixed try keeps both in the history the fix row needs;
+  (e) a built-in route in http.py - rejected: RUN-SEAMS (decision 0056)
+  makes a new token route one plug module.
+- Why: the in-game tries are the last open part of four rows; one click
+  each records them where the session can read them back, with no typed
+  report.
+- Reverses if: a check needs more than worked / refused to close its
+  row, the 50-row bound drops a verdict a row still needs, or the
+  operator rules the verdict file unwanted.

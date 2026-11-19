@@ -1,1 +1,1 @@
-Region T (#play-t) is not on Play yet; PLAY-TD-13-FEED lands the feed and deletes this marker.
+Region T has landed (PLAY-TD-13-FEED); its box top still moves with regions G and C above it until they land.
