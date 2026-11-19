@@ -759,8 +759,8 @@
     8,
     9
    ],
-   "est_wall_min": 408,
-   "session_packages": 36,
+   "est_wall_min": 418,
+   "session_packages": 37,
    "milestones": [
     "the wave gate policy is recorded and the test selector picks each package's subset"
    ]
@@ -1228,7 +1228,8 @@
     "DEP-04",
     "DEP-06",
     "DEP-07",
-    "DATA-PRICE-POLITE"
+    "DATA-PRICE-POLITE",
+    "GP-11"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1725,7 +1726,6 @@
     "PLAY-F-204B-SR-RUN",
     "GP-12",
     "RUN-LIVE-CLICKS-CLOSE",
-    "GP-11",
     "GP-13",
     "RUN-OVL-BUDGET-CLOSE",
     "TC-OAUTH-REG",
@@ -7672,6 +7672,41 @@
    "owner": "session",
    "tier": "P1",
    "cluster": "DATA"
+  },
+  {
+   "id": "GP-11",
+   "title": "Description, topics and feature switches",
+   "goal": "The repository page carries the honest description, the 10 topics and the planned feature switches before the flip.",
+   "units": [
+    "F-079",
+    "GP-11",
+    "F-021"
+   ],
+   "files": [],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "read-back only (no test file): the two gh repo view commands of 04 'Repository settings' B"
+   ],
+   "accept": "`gh repo view \"$R\" --json repositoryTopics --jq '[.repositoryTopics[].name] | sort | join(\",\")'` prints companion-app,dashboard,electron,loot-filter,overlay,path-of-building,path-of-exile-2,poe2,python,windows and `gh repo view \"$R\" --json description,hasIssuesEnabled,hasWikiEnabled,hasProjectsEnabled,hasDiscussionsEnabled` shows the 04 description, issues on, wiki / projects / discussions off.",
+   "zero_click": "Agent step with gh; no click.",
+   "size": "S",
+   "est_min": 10,
+   "deps": [
+    "GP-09"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "none",
+   "lane": "review",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "Optional (OA-4): upload assets/brand/social-preview.png as the social preview in the repository settings page (no write command is known); default in force without it: GitHub's generated text card, which carries no art.",
+   "notes": "Tier P1. No tracked file. Commands: 04 section 'Repository settings' B (gh repo edit with the description 'Unofficial second-screen dashboard and click-through overlay for Path of Exile 2 on Windows. Reads the game's log file; never touches the game process. Not affiliated with Grinding Gear Games.', issues on, wiki / projects / discussions off, squash only, auto-merge off, delete-branch-on-merge; then --add-topic with the 10 topics). No homepage until a release page exists. The game's name is used only descriptively; no funding link. isolation none: settings only.",
+   "wave": 9,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
   },
   {
    "id": "TC-WORN-BASELINE",
@@ -20633,45 +20668,6 @@
    "owner": "session",
    "tier": "P0",
    "cluster": "RUN"
-  },
-  {
-   "id": "GP-11",
-   "title": "Description, topics and feature switches",
-   "goal": "The repository page carries the honest description, the 10 topics and the planned feature switches before the flip.",
-   "units": [
-    "F-079",
-    "GP-11",
-    "F-021"
-   ],
-   "files": [],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "read-back only (no test file): the two gh repo view commands of 04 'Repository settings' B"
-   ],
-   "accept": "`gh repo view \"$R\" --json repositoryTopics --jq '[.repositoryTopics[].name] | sort | join(\",\")'` prints companion-app,dashboard,electron,loot-filter,overlay,path-of-building,path-of-exile-2,poe2,python,windows and `gh repo view \"$R\" --json description,hasIssuesEnabled,hasWikiEnabled,hasProjectsEnabled,hasDiscussionsEnabled` shows the 04 description, issues on, wiki / projects / discussions off.",
-   "zero_click": "Agent step with gh; no click.",
-   "size": "S",
-   "est_min": 10,
-   "deps": [
-    "GP-09"
-   ],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "none",
-   "lane": "review",
-   "design_review": false,
-   "blocked": {
-    "on": "the repository exists (first push done)",
-    "who": "package GP-09",
-    "unblock": "`gh repo view` succeeds for the repository"
-   },
-   "operator_act": "Optional (OA-4): upload assets/brand/social-preview.png as the social preview in the repository settings page (no write command is known); default in force without it: GitHub's generated text card, which carries no art.",
-   "notes": "Tier P1. No tracked file. Commands: 04 section 'Repository settings' B (gh repo edit with the description 'Unofficial second-screen dashboard and click-through overlay for Path of Exile 2 on Windows. Reads the game's log file; never touches the game process. Not affiliated with Grinding Gear Games.', issues on, wiki / projects / discussions off, squash only, auto-merge off, delete-branch-on-merge; then --add-topic with the 10 topics). No homepage until a release page exists. The game's name is used only descriptively; no funding link. isolation none: settings only.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
   },
   {
    "id": "GP-13",
