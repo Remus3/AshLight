@@ -78,8 +78,7 @@ def test_state_from_fixture():
     assert s["zone"] == "Clearfell" and s["in_hideout"] is False
     assert s["area_level"] == 2
     assert s["afk"] is False and s["dnd"] is False
-    assert len(s["recent_whispers"]) == 5
-    assert any(w["trade"] for w in s["recent_whispers"])
+    assert "recent_whispers" not in s
     assert s["zone_s"] == clock[0] - s["zone_entered_at"]
     assert s["session_s"] > 0
 
@@ -110,7 +109,7 @@ def test_buffers_bounded():
     for i in range(1000):
         st.apply({"type": "whisper_in", "from": "x", "text": str(i)})
     s = st.snapshot()
-    assert len(s["recent_whispers"]) <= 10 and len(s["recent_events"]) <= 30
+    assert "recent_whispers" not in s and len(s["recent_events"]) <= 30
 
 
 def test_zone_change_is_one_recent_row():
