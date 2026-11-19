@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AUTOSTART = ROOT / "scripts" / "autostart.ps1"
 LAUNCHER = ROOT / "scripts" / "autostart_launch.vbs"
 RUN = ROOT / "scripts" / "run.ps1"
+SETUP = ROOT / "scripts" / "setup.ps1"
 PS51 = shutil.which("powershell.exe") if sys.platform == "win32" else None
 
 needs_ps = pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
@@ -121,6 +122,11 @@ def test_launcher_is_hidden_and_relative():
     assert "run.ps1" in text and "-NoBrowser -Autostart" in text
     assert "-WindowStyle Hidden" in text
     assert "sh.Run cmd, 0, False" in text
+    # SEC-ACL-SETUP: PowerShell by its System32 path from %SystemRoot%,
+    # never by a bare name a PATH entry or the current folder could shadow
+    assert 'sh.ExpandEnvironmentStrings("%SystemRoot%")' in text
+    assert r"\System32\WindowsPowerShell\v1.0\powershell.exe" in text
+    assert '"powershell.exe ' not in text and '"powershell ' not in text
 
 
 def test_optin_lives_in_gitignored_runtime():
@@ -131,7 +137,7 @@ def test_optin_lives_in_gitignored_runtime():
 
 
 @needs_ps
-@pytest.mark.parametrize("script", [AUTOSTART, RUN])
+@pytest.mark.parametrize("script", [AUTOSTART, RUN, SETUP])
 def test_scripts_parse_in_powershell_51(script, tmp_path):
     r = _ps("$e=$null; [System.Management.Automation.Language.Parser]::ParseFile("
             f"'{script}', [ref]$null, [ref]$e) | Out-Null; $e.Count", tmp_path)
