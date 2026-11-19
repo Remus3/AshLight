@@ -1,0 +1,1 @@
+Region I (#play-i) is not on Play yet; PLAY-TD-16A-ITEMCARD lands the item card and deletes this marker.
