@@ -174,10 +174,14 @@ class PriceBook:
                 return True
         return False
 
-    def refresh(self, get, base, league, now, force=False):
+    def refresh(self, get, base, league, now, force=False, name=None):
         """Request each due type once: get(url, etag) -> (status, headers,
         body), the caller's GET. Returns {"fetched", "unchanged", "errors"}
-        counts. A league change drops the old league's entries."""
+        counts. A league change drops the old league's entries.
+        DATA-LEAGUE-IDENTITY: `league` is poe.ninja's league id (the URL);
+        `name` is the display name stored as each type's league (what
+        lookup() and movers() match); without it the id is stored."""
+        stored = name if isinstance(name, str) and name else league
         out = {"fetched": 0, "unchanged": 0, "errors": 0}
         for name, path, kind in _all_types():
             t = self._type(name)
@@ -195,7 +199,7 @@ class PriceBook:
             try:
                 status, rh, body = get(url, t.get("etag") if same else None)
                 if status == 304 and same and t.get("entries") is not None:
-                    t.update(checked_at=now, last_error=None)
+                    t.update(checked_at=now, last_error=None, league=stored)
                     out["unchanged"] += 1
                 elif status == 200:
                     parse = parse_item_overview if kind == "unique" else parse_exchange_overview
@@ -204,7 +208,7 @@ class PriceBook:
                     for k, v in (rh or {}).items():
                         if k.lower() == "etag":
                             etag = v
-                    t.update(url=url, league=league, kind=kind, unit=p["unit"],
+                    t.update(url=url, league=stored, kind=kind, unit=p["unit"],
                              primary=p["primary"], entries=p["entries"],
                              fetched_at=now, checked_at=now, last_error=None,
                              etag=etag)

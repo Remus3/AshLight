@@ -490,29 +490,90 @@
       });
   }
 
+  /* A token POST that resolves to { status, body } on any HTTP answer
+     (the paste box words every status); rejects only when unreachable. */
+  function postJson(path, body) {
+    var opts = { method: "POST", cache: "no-store",
+                 headers: { "X-AL-Token": token, "Content-Type": "application/json" },
+                 body: JSON.stringify(body) };
+    return fetch(path, opts).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (b) {
+        return { status: r.status, body: b };
+      });
+    });
+  }
+
+  /* The paste box's answer: the status line, a loaded build, and the
+     TC-LINK-RECOVER offer when the core refused a link for web data. */
+  function showPaste(res, body, code) {
+    $("build-status").textContent = res.text;
+    linkRecover = res.offer ? T.linkRecover(code, postJson) : null;
+    $("link-recover").hidden = !linkRecover;
+    $("link-offer-row").hidden = false;
+    $("link-confirm").hidden = true;
+    if (res.ok) {
+      $("build-paste").value = "";
+      buildDoc = body;
+      renderBuild();
+    } else {
+      lastPaste = ""; // the same text may be pasted again after a fix
+    }
+  }
+
   function pasteBuild() {
     var text = $("build-paste").value.trim();
     if (!text || text === lastPaste) { return; }
     lastPaste = text;
+    linkRecover = null;
+    $("link-recover").hidden = true;
     $("build-status").textContent = "Loading the build...";
-    var opts = { method: "POST", cache: "no-store",
-                 headers: { "X-AL-Token": token, "Content-Type": "application/json" },
-                 body: JSON.stringify({ code: text }) };
-    fetch("/api/build-code", opts).then(function (r) {
-      return r.json().catch(function () { return null; }).then(function (body) {
-        var res = T.pasteResult(r.status, body);
-        $("build-status").textContent = res.text;
-        if (res.ok) {
-          $("build-paste").value = "";
-          buildDoc = body;
-          renderBuild();
-        } else {
-          lastPaste = ""; // the same text may be pasted again after a fix
-        }
-      });
+    postJson("/api/build-code", { code: text }).then(function (r) {
+      showPaste(T.pasteResult(r.status, r.body), r.body, text);
     }).catch(function () {
       lastPaste = "";
       $("build-status").textContent = "Not loaded. Can't reach AshLight - is it running?";
+    });
+  }
+
+  /* TC-LINK-RECOVER (F-117, decision 0013): first click shows the full
+     opt-in sentence and posts nothing; only the confirm click saves the
+     opt-in and loads the same link once. */
+  var linkRecover = null;
+
+  function linkOffer() {
+    var shown = linkRecover ? linkRecover.open() : null;
+    if (!shown) { return; }
+    $("link-sentence").textContent = shown.sentence;
+    $("link-offer-row").hidden = true;
+    $("link-confirm").hidden = false;
+    $("link-yes").focus();
+  }
+
+  function linkCancel() {
+    if (!linkRecover) { return; }
+    linkRecover.cancel();
+    $("link-confirm").hidden = true;
+    $("link-offer-row").hidden = false;
+    $("link-offer").focus();
+  }
+
+  function linkConfirm() {
+    var rec = linkRecover;
+    var going = rec ? rec.confirm() : null;
+    if (!going) { return; }
+    $("link-yes").disabled = true;
+    $("build-status").textContent = "Turning on web data, then loading the link...";
+    going.then(function (out) {
+      $("link-yes").disabled = false;
+      if (out.web) { webDataSaved(out.web); }
+      if (rec !== linkRecover) { return; } // a new paste took the box meanwhile
+      if (!out.saved) {
+        $("build-status").textContent = out.result.text;
+        $("link-yes").focus(); // re-enabled; the panel stays for another try
+        return;
+      }
+      showPaste(out.result, out.body, "");
+      $("build-paste").focus(); // the buttons are gone; stay in this card
     });
   }
 
@@ -656,6 +717,11 @@
       });
     }
     $("eval-comps").replaceChildren(comps);
+    // TC-CARD-PARTS-WEB: the card parts' notes, painted with the verdict
+    var notes = document.createDocumentFragment();
+    (v ? v.notes : []).forEach(function (n) { notes.appendChild(el("li", "", n)); });
+    $("eval-notes").replaceChildren(notes);
+    $("eval-notes").hidden = !(v && v.notes.length);
     $("eval-unweighted").hidden = !(v && v.unweighted);
     $("eval-unweighted").textContent = v ? v.unweighted : "";
     // MATH-POTENTIAL-UI: the core's worst / now / best roll scores
@@ -822,16 +888,22 @@
     });
   }
 
+  /* After a saved web-data choice (the Settings switch or the
+     TC-LINK-RECOVER confirm): the switch, its status and the prices. */
+  function webDataSaved(doc) {
+    fillWebData(doc);
+    $("webdata-status").textContent = P.savedText(webOn);
+    renderPrice(snap ? snap.price : null, true);
+    loadRates();
+  }
+
   function saveWebData() {
     if (webBusy) { return; }
     var want = $("webdata-on").checked;
     webBusy = true;
     $("webdata-status").textContent = "Saving...";
     api("POST", "/api/web-data", { enabled: want }).then(function (doc) {
-      fillWebData(doc);
-      $("webdata-status").textContent = P.savedText(webOn);
-      renderPrice(snap ? snap.price : null, true);
-      loadRates();
+      webDataSaved(doc);
     }).catch(function () {
       $("webdata-on").checked = webOn; // back to what is really saved
       $("webdata-status").textContent = "Not saved. Try again.";
@@ -1156,6 +1228,11 @@
     });
     $("build-paste").addEventListener("paste", function () { setTimeout(pasteBuild, 0); });
     $("build-paste").addEventListener("change", pasteBuild);
+    $("link-offer").addEventListener("click", linkOffer);
+    $("link-yes").addEventListener("click", linkConfirm);
+    $("link-no").addEventListener("click", linkCancel);
+    // TC-LINK-RECOVER: Settings shows the one opt-in sentence the confirm shows
+    $("webdata-sentence").textContent = T.WEB_DATA_OPT_IN;
     $("build-copy").addEventListener("click", copyBuild);
     $("buildfile-save").addEventListener("click", saveBuildFile);
     $("filter-download").addEventListener("click", downloadFilter);

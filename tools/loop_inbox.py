@@ -377,7 +377,8 @@ PARKED_SHOWN = 5
 def parked_items(root, inbox_dir, now):
     """What waits on an interactive session, oldest first: session-routed orders
     and items the loop will not self-accept (state adjudicate, CLAUDE.md loop
-    rule 4). [{"id", "why", "age_h"}]; an unknown start is left out, never age 0."""
+    rule 4) or that failed (LOOP-FAILED-PARK: WIP kept, never silent).
+    [{"id", "why", "age_h"}]; an unknown start is left out, never age 0."""
     rows = []
     for o in session_orders(root):
         note = Path(inbox_dir) / str(o.get("note") or "") if inbox_dir else None
@@ -385,10 +386,10 @@ def parked_items(root, inbox_dir, now):
         if isinstance(since, (int, float)) and not isinstance(since, bool):
             rows.append((since, o["id"], ", ".join(o["needs"])))
     for rec in Items(root).all().values():
-        if rec.get("state") == "adjudicate":
+        if rec.get("state") in ("adjudicate", "failed"):
             since = epoch_of(rec.get("finished") or rec.get("dispatched"))
             if since is not None:
-                rows.append((since, rec.get("id"), "adjudicate"))
+                rows.append((since, rec.get("id"), rec["state"]))
     return [{"id": ascii_text(i, 40), "why": ascii_text(w, 80),
              "age_h": round(max(now - s, 0) / 3600, 1)} for s, i, w in sorted(rows, key=lambda r: r[0])]
 
@@ -688,7 +689,7 @@ class InboxMixin:
         # plan 091: a session-routed order closes only on the session's mark
         done = (bool(rec) and bool(rec.get("session_done"))) \
             if session_needs({"note": name, "text": text}, rec) \
-            else bool(rec) and rec.get("state") in DONE_STATES + ("adjudicate",)
+            else bool(rec) and rec.get("state") in DONE_STATES + ("adjudicate", "failed")
         roadmap = self.root / ROADMAP_REL
         if done and not rec.get("session_done") and roadmap.is_file() and all_blocked(
                 roadmap.read_text(encoding="utf-8", errors="replace"), oid):

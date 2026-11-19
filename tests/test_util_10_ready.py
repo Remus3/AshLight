@@ -137,3 +137,51 @@ def test_press_card_uses_the_rollover_league(tmp_path):
         assert "/trade2/search/poe2/Conquerors%20of%20Wraeclast?" in card["url"]
     finally:
         core.close()
+
+
+# -- DATA-LEAGUE-IDENTITY (F-031): id to poe.ninja, name to the trade link --
+
+ID_LIST = json.dumps([{"id": "conquerors", "name": "Conquerors of Wraeclast"},
+                      {"id": "Standard", "name": "Standard"}]).encode()
+EMPTY_OVERVIEW = json.dumps({"core": {"primary": "divine", "items": []},
+                             "lines": [{"id": "divine", "primaryValue": 1}],
+                             "items": [{"id": "divine", "name": "Divine Orb"}]}).encode()
+
+
+def test_id_goes_to_poe_ninja_and_name_to_the_trade_link(tmp_path):
+    calls = []
+
+    def net(method, url, headers, body=None):  # mocked: never the network
+        calls.append(url)
+        if url.endswith("/poe2/api/economy/leagues"):
+            return 200, {}, ID_LIST
+        return 200, {}, EMPTY_OVERVIEW
+
+    p = tmp_path / "local.json"
+    p.write_text(json.dumps({"web_data": True, "contact": "test-contact"}),
+                 encoding="ascii")
+    core = Core(runtime=tmp_path / "rt", tail=False, config_path=p, web_fetch=net)
+    try:
+        assert core.rates.refresh() == "fetched"
+        overviews = [u for u in calls if "/overview?" in u]
+        assert overviews and all("league=conquerors&" in u for u in overviews)
+        assert not any("Conquerors" in u for u in overviews)
+        snap = core.rates.snapshot()
+        assert (snap["league"], snap["league_id"]) == ("Conquerors of Wraeclast",
+                                                      "conquerors")
+        assert core.trade_league() == "Conquerors of Wraeclast"
+        core.eval_press(UNIQUE_TEXT)
+        card = core.state.snapshot()["price"]
+        assert card["league"] == "Conquerors of Wraeclast"
+        assert "/trade2/search/poe2/Conquerors%20of%20Wraeclast?" in card["url"]
+        # a configured league given by its name still prices by the id
+        p.write_text(json.dumps({"web_data": True, "contact": "test-contact",
+                                 "league": "Conquerors of Wraeclast"}),
+                     encoding="ascii")
+        assert core.configured_league() == "Conquerors of Wraeclast"
+        del calls[:]
+        assert core.rates.refresh(force=True) in ("fetched", "unchanged")
+        assert calls and all("league=conquerors&" in u for u in calls)  # no list GET
+        assert core.trade_league() == "Conquerors of Wraeclast"
+    finally:
+        core.close()

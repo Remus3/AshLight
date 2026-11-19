@@ -82,12 +82,15 @@ ROUTE_EFFORTS = ("low", "medium", "high", "xhigh", "max")  # the kit's EFFORTS
 _ROUTE_MODEL = re.compile(r"^(?:opus|sonnet|haiku|claude-[a-z0-9][a-z0-9.-]*)(?:\[1m\])?$")
 NOTE_HEAD = 600
 NOTE_MAX = 20000
-DONE_STATES = ("merged", "no-change", "failed")
+# LOOP-FAILED-PARK: superseded = a failed plan record whose ROADMAP row is no
+# longer open (tools/loop_steps/failed_supersede.py); failed is not done.
+DONE_STATES = ("merged", "no-change", "superseded")
 # lane-dirty: the kit refused the claim on a dirty lane worktree; it waits
 # until that worktree is clean and unheld, then retries (recover_lane_dirty);
-# gave-up: MAX_ATTEMPTS refused / lost dispatches, error kept.
+# gave-up: MAX_ATTEMPTS refused / lost dispatches, error kept; failed: red
+# gates or a refused commit, WIP kept unmerged, listed until a session rules.
 ATTENTION_STATES = ("merge-conflict", "merge-refused", "failed-dirty", "lane-dirty",
-                    "gave-up")
+                    "gave-up", "failed")
 # an item in these states holds its unmerged work in rec["worktree"]
 HOLD_STATES = ("ran", "committed")
 IN_FLIGHT = ("dispatched",) + HOLD_STATES

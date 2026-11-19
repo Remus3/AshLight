@@ -127,17 +127,39 @@
              code: doc.code || "" };
   }
 
-  /* The paste box's answer for a POST /api/build-code result. */
+  /* TC-LINK-RECOVER (F-117, decision 0013): the one web-data opt-in
+     sentence. The Settings card (web/index.html, #webdata-sentence) and the
+     link-recovery confirm both show exactly this text, so a player turns on
+     only what they have read in full. */
+  var WEB_DATA_OPT_IN = "Off unless you turn it on. When on, AshLight asks for two " +
+    "things only. It fetches currency and item prices from poe.ninja about once an " +
+    "hour. It opens a build link you paste, once. It never asks the trade site " +
+    "anything; the trade link after an item check opens only when you click it. It " +
+    "sends no account, password or cookie, and never touches the game.";
+  /* The offer names the switch it turns on (floor audit L3), not only the link. */
+  var LINK_OFFER = "Turn on web data and load this link";
+  var LINK_CONFIRM = "Turn on web data";
+  var LINK_CANCEL = "Not now";
+
+  /* The paste box's answer for a POST /api/build-code result. `offer` is
+     the recovery button's label, or "" when there is nothing to offer. */
   function pasteResult(status, body) {
     if (status === 200 && body && body.loaded) {
       var b = body.build || {};
-      return { ok: true, text: "Loaded: " + (b.class_name || "a build") +
+      return { ok: true, offer: "", text: "Loaded: " + (b.class_name || "a build") +
                (b.level ? ", level " + b.level : "") + "." };
     }
     if (status === 422 && body && body.web_data === false) {
-      return { ok: false, text: "Build links need web data, which is off. Turn it on under " +
-               "Prices and web data, or paste the build code instead." };
+      return { ok: false, offer: LINK_OFFER,
+               text: "Build links need web data, which is off. Use the button below to " +
+               "turn it on, or paste the build code instead." };
     }
+    var res = pasteFailure(status, body);
+    res.offer = "";
+    return res;
+  }
+
+  function pasteFailure(status, body) {
     if (status === 422) {
       var hosts = body && Array.isArray(body.hosts) && body.hosts.length
         ? body.hosts.filter(function (h) { return typeof h === "string"; }).join(" and ")
@@ -160,8 +182,65 @@
     return { ok: false, text: "Not loaded. Try again." };
   }
 
+  /* TC-LINK-RECOVER: two clicks for a link refused because web data is
+     off. `post(path, body)` resolves to { status, body } (the page's fetch;
+     a fake in tests). open() is the first click: it only returns the
+     opt-in sentence to show and posts nothing. confirm() is the second
+     click on that sentence: it saves the opt-in, then posts the same code
+     once. Each step runs at most once; a failed opt-in save may be
+     confirmed again, and nothing is loaded without it. */
+  function linkRecover(code, post) {
+    var step = "offer"; // offer -> confirm -> busy -> done
+    function failed(text) { return { saved: false, web: null, result: { ok: false, offer: "", text: text } }; }
+    return {
+      step: function () { return step; },
+      open: function () {
+        if (step !== "offer") { return null; }
+        step = "confirm";
+        return { sentence: WEB_DATA_OPT_IN, confirm: LINK_CONFIRM, cancel: LINK_CANCEL };
+      },
+      cancel: function () {
+        if (step === "confirm") { step = "offer"; }
+      },
+      confirm: function () {
+        if (step !== "confirm") { return null; }
+        step = "busy";
+        return Promise.resolve().then(function () {
+          return post("/api/web-data", { enabled: true });
+        }).then(function (r) {
+          if (!r || r.status !== 200 || !r.body || r.body.web_data !== true) {
+            step = "confirm";
+            return failed("Web data is still off: the setting was not saved. Try again, " +
+                          "or paste the build code instead.");
+          }
+          var web = r.body;
+          return Promise.resolve().then(function () {
+            return post("/api/build-code", { code: code });
+          }).then(function (b) {
+            step = "done";
+            var res = pasteResult(b ? b.status : 0, b ? b.body : null);
+            res.offer = ""; // the load is repeated once, never offered again
+            return { saved: true, web: web, body: b ? b.body : null, result: res };
+          }, function () {
+            step = "done";
+            return { saved: true, web: web, body: null, result: { ok: false, offer: "",
+              text: "Web data is on now, but the link did not load. Can't reach AshLight - " +
+                    "is it running?" } };
+          });
+        }, function () {
+          step = "confirm";
+          return failed("Web data is still off: can't reach AshLight - is it running?");
+        });
+      }
+    };
+  }
+
   var VERDICT_STATE = { upgrade: "done", sidegrade: "idle", downgrade: "idle",
                         risky: "blocked", waystone: "idle" };
+  /* the core's mark tones (server/al/theorycraft/cardparts TONES) and its
+     notes cap (NOTES_MAX) */
+  var TONES = ["upgrade", "sidegrade", "downgrade", "risky", "note"];
+  var NOTES_MAX = 4;
 
   /* MATH-POTENTIAL-UI: the item's score now against its score at the worst
      and best rolls of its ranged mods; "" when there is no spread to tell. */
@@ -203,9 +282,19 @@
       word = ws.unidentified ? "Unidentified" : (risky ? "Risky" : "No risky mods");
       unweighted = [];
     }
+    /* TC-CARD-PARTS-WEB: the core's word and tone (state.eval_card_text,
+       its card parts included) win when given, so a new card part needs no
+       web edit; the local words above stay for a core without them */
+    if (typeof t.word === "string" && t.word.trim()) { word = t.word.trim(); }
+    if (typeof t.tone === "string" && TONES.indexOf(t.tone) >= 0 && t.tone) { verdict = t.tone; }
     return {
       verdict: verdict, state: VERDICT_STATE[verdict] || "pending", word: word,
       sentence: t.sentence || "", item: t.item || "",
+      /* TC-CARD-PARTS-WEB: the card parts' extra lines (a build caveat,
+         F-043), plain strings only, at most NOTES_MAX, in the core's order */
+      notes: (Array.isArray(t.notes) ? t.notes : []).filter(function (s) {
+        return typeof s === "string" && s.trim() !== "";
+      }).slice(0, NOTES_MAX),
       when: typeof ev.at === "number" && clock ? "Checked at " + clock(ev.at) : "",
       comparisons: ev.ok ? (t.comparisons || []) : [],
       /* TC-DELTA: Path of Building DPS / EHP, or why the stat weights scored it */
@@ -304,6 +393,8 @@
   }
 
   return { buildView: buildView, pasteResult: pasteResult, evalView: evalView,
+           linkRecover: linkRecover, WEB_DATA_OPT_IN: WEB_DATA_OPT_IN,
+           LINK_OFFER: LINK_OFFER, LINK_CONFIRM: LINK_CONFIRM, LINK_CANCEL: LINK_CANCEL,
            buildFileView: buildFileView,
            weightRows: weightRows, weightsDoc: weightsDoc, toKey: toKey, gfxView: gfxView,
            links: links, num: num, safeTreeUrl: safeTreeUrl };
