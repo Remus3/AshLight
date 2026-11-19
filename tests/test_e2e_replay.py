@@ -288,7 +288,7 @@ def test_log_found_later_starts_tailing_without_a_click(tmp_path, monkeypatch):
     rt = tmp_path / "rt"
     rt.mkdir()
     (rt / "consent.json").write_text('{"consented": true}\n', encoding="ascii")
-    core = Core(runtime=rt, poll_s=0.02)
+    core = Core(runtime=rt, poll_s=0.02, discover=True)  # SEC-NO-DISCOVERY: opt in
     try:
         assert core.log_path is None and not core.start_tailing()
         assert core.ensure_tailing(now=100.0) is False
@@ -323,7 +323,7 @@ def test_discovered_log_moving_library_follows_it(tmp_path, monkeypatch):
     rt = tmp_path / "rt"
     rt.mkdir()
     (rt / "consent.json").write_text('{"consented": true}\n', encoding="ascii")
-    core = Core(runtime=rt, poll_s=0.02)
+    core = Core(runtime=rt, poll_s=0.02, discover=True)  # SEC-NO-DISCOVERY: opt in
     try:
         assert core.start_tailing() and core.log_path == old
         old.unlink()

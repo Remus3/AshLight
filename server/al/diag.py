@@ -35,7 +35,9 @@ SNAPSHOT_OLD_S = 60 * 86400  # older data may miss a new league's zones
 
 FIX_START_GAME = ("Start Path of Exile 2 once so it writes Client.txt. AshLight "
                   "finds it by itself.")
-FIX_CONSENT = 'Press "Allow reading Client.txt" at the top of this page.'
+FIX_LOG_PATH = (r'Correct "client_log" in config\local.json, or remove it so AshLight '
+                "finds Client.txt by itself. Starting the game once may also create it.")
+FIX_CONSENT ='Press "Allow reading Client.txt" at the top of this page.'
 FIX_RUN = r"Run scripts\run.ps1 to start AshLight's parts again."
 FIX_CONTACT = r'Add your contact as "contact" in config\local.json.'
 FIX_NET = ("Check this computer's internet connection. AshLight tries again "
@@ -68,6 +70,11 @@ def _check(cid, label, status, detail, fix=None):
 def check_log(f):
     if f.get("log_found"):
         return _check("log", "Client.txt", PASS, "Found.")
+    if f.get("log_configured"):
+        # SEC-NO-DISCOVERY: a configured path is kept, never replaced by a
+        # Steam library scan; the player decides.
+        return _check("log", "Client.txt", FAIL,
+                      "The Client.txt path in your settings is missing.", FIX_LOG_PATH)
     return _check("log", "Client.txt", FAIL, "Not found yet.", FIX_START_GAME)
 
 
