@@ -165,3 +165,32 @@ ALTERNATIVES: a new card kind beside `price`; keep `done` with the link in
 it. WHY: one card slot and one contract field; `done` implied prices the
 app no longer has. REVERSES IF: decision 0017 reverses (then `url` stays
 null and the enum is unchanged).
+
+AMENDMENT 2026-11-18 (DATA-PRICE-CARD-TEXT; findings F-036, F-031, F-018).
+DECISION: the card's `ninja` part gains two keys, `checked_at` (when the
+cached price was read from poe.ninja) and `league_changed_at` (when the
+priced league last changed; decision 0026, DATA-LEAGUE-IDENTITY), both
+epoch seconds or null, passed by `price.ninja_of` (`NINJA_KEYS`). The
+words in `state.py` read them against the press time `at`: a price more
+than 2 h old says "Price from N h ago" on the detail line ("Rough price
+from N h ago" for few listings) and "This price is from N h ago." in the
+sentence; more than 24 h old, the card is the link card alone and the
+sentence says the poe.ninja price is over a day old; for 24 h after a
+league change the overlay price line reads "About <price> in <league>",
+or, past the 34-character line, the detail line reads "League:
+<league>"; a non-ASCII league name stays in the sentence only. A stamp
+after the press (a clock step) or a missing one ages nothing. The `off`
+and `contact not set` words name poe.ninja and the Prices and web data
+card instead of config/local.json (the card's contact field lands with
+DATA-CONTACT-FIELD; until then decision 0017's amendment means neither
+state is produced, so no player meets the pointer early). Exact tests: tests/test_price_card_age.py,
+tests/test_price_text.py.
+ALTERNATIVES: (B) the age as a top-level card field; (C) hide every price
+over 2 h old; (D) a league tag on every price line.
+WHY: the age belongs to the cached price, so it rides with it; a 3 h old
+price is still useful when it says its age, a day-old one misleads after
+a reset; the league only needs naming while a change is fresh, and a
+permanent tag costs the glance line.
+REVERSES IF: poe.ninja's refresh cadence makes a 2 h price normal, the
+core gains a refresh that keeps the cache under 2 h in play, or decision
+0026 drops league_changed_at.
