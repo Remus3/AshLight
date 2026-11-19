@@ -589,13 +589,15 @@ PRICE_TEXT = {
              "see who sells it."),
     "searching": ("Searching prices...", "On the official trade site",
                   "Searching the official trade site for this item..."),
-    "off": ("Web data is off", "Switch it on in the dashboard",
-            "Price checks need web data, which is off. Turn it on under Prices and web "
-            "data on this page."),
-    "contact not set": ("Contact not set", "Add it in config/local.json",
-                        "Price checks need a contact for the trade site, such as an email "
-                        "or a name. Add it as \"contact\" in config/local.json, then press "
-                        "the hotkey again."),
+    # DATA-PRICE-CARD-TEXT (F-018): the blocked copy names poe.ninja and the
+    # dashboard card, never a file
+    "off": ("Web data is off", "Turn it on in Prices and web data",
+            "poe.ninja prices need web data, which is off. Turn it on in the Prices and "
+            "web data card on this page."),
+    "contact not set": ("Contact not set", "Add it in Prices and web data",
+                        "poe.ninja prices need a contact, such as an email or a name. Add "
+                        "it in the Prices and web data card on this page, then press the "
+                        "hotkey again."),
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),
@@ -613,7 +615,20 @@ PRICE_TEXT = {
                 "see who sells it.",
     "none": ("No listings found", "Nobody sells this now",
              "Nobody lists this item in {league} right now, so AshLight can't price it."),
+    # DATA-PRICE-CARD-TEXT (F-036): a cached poe.ninja price by its age at
+    # the press; over PRICE_OLD_S the card is the link alone
+    "aged": "This price is from {hours} h ago.",
+    "aged_detail": "Price from {hours} h ago",
+    "aged_rough": "Rough price from {hours} h ago",
+    "too_old": "The poe.ninja price for it is over a day old, so AshLight does not show "
+               "it.",
 }
+
+# DATA-PRICE-CARD-TEXT: ages are press time minus the cache's checked_at
+# (F-036) and press time minus the league change (F-031), in seconds
+PRICE_AGED_S = 2 * 3600  # older than this: the card says how old
+PRICE_OLD_S = 24 * 3600  # older than this: the link only
+LEAGUE_NEW_S = 24 * 3600  # the overlay line names the league this long
 
 
 def _price_amount(value):
@@ -649,10 +664,21 @@ def _ninja_amount(v):
     return f"{v:.3g}"
 
 
-def ninja_text(ninja):
+def _age_s(at, then):
+    """Seconds from `then` to the press `at`, or None when either is not a
+    usable time or `then` lies after the press (a clock step)."""
+    if not (_is_time(at) and _is_time(then)) or then > at:
+        return None
+    return float(at) - float(then)
+
+
+def ninja_text(ninja, at=None):
     """PRICE-UNIQUE / PRICE-STACKABLES: {line, detail, sentence} for the
-    card's cached poe.ninja price, or None. Exact tests in
-    tests/test_price_book.py."""
+    card's cached poe.ninja price, or None. `at` is the press time: a price
+    older than PRICE_AGED_S says its age (F-036), and for LEAGUE_NEW_S
+    after a league change the overlay line names the league (F-031); the
+    caller drops a price older than PRICE_OLD_S. Exact tests in
+    tests/test_price_book.py and tests/test_price_card_age.py."""
     if not isinstance(ninja, dict):
         return None
     v = ninja.get("value")
@@ -690,6 +716,24 @@ def ninja_text(ninja):
             sentence += f", from {listings} listing{'' if listings == 1 else 's'}"
         sentence += f"; {trend}." if trend else "."
     line = f"Under {money}" if dust else f"About {money}"
+    age = _age_s(at, ninja.get("checked_at"))
+    if age is not None and age > PRICE_AGED_S:
+        hours = int(age // 3600)
+        detail = PRICE_TEXT["aged_rough" if ninja.get("few") else "aged_detail"].format(
+            hours=hours)
+        sentence += " " + PRICE_TEXT["aged"].format(hours=hours)
+    changed = _age_s(at, ninja.get("league_changed_at"))
+    named = ninja.get("league")
+    # the league on the price line; a long name takes the detail line; a
+    # non-ASCII name stays in the sentence only (design 0001 overlay text)
+    if (changed is not None and changed < LEAGUE_NEW_S and isinstance(named, str)
+            and named.strip() and named.isascii()):
+        if len(f"{line} in {named}") <= CARD_LINE:
+            line = f"{line} in {named}"
+        else:
+            detail = f"League: {named}"
+            if len(detail) > CARD_LINE:
+                detail = detail[:CARD_LINE - 3].rstrip() + "..."
     return {"line": line, "detail": detail, "sentence": sentence}
 
 
@@ -736,7 +780,14 @@ def price_card_text(card):
     if status == "link":
         line, detail, sentence = PRICE_TEXT["link"]
         out.update(line=line, detail=detail, sentence=sentence.format(league=league))
-        ninja = ninja_text(card.get("ninja"))
+        raw = _dict(card.get("ninja"))
+        age = _age_s(card.get("at"), raw.get("checked_at"))
+        if age is not None and age > PRICE_OLD_S:
+            # F-036: a day-old price is left out; the link stands alone
+            if ninja_text(raw) is not None:
+                out["sentence"] += " " + PRICE_TEXT["too_old"]
+            return out
+        ninja = ninja_text(raw, card.get("at"))
         if ninja:
             out.update(line=ninja["line"], detail=ninja["detail"],
                        sentence=ninja["sentence"] + " " + PRICE_TEXT["link_too"].format(
@@ -1387,6 +1438,29 @@ class SessionState:
                 row[k] = trade[k]
         return row
 
+    def _refresh_trade(self, ev, now):
+        """PLAY-F-120-TRADE-REFRESH: an incoming trade whisper with the same
+        sender and item text as an open card refreshes that card (its at and
+        the TRADE_FIELDS of the newest whisper) instead of adding one; the
+        card keeps its id and place. Caller holds the lock. Returns True when
+        a card was refreshed."""
+        sender = ev.get("from")
+        trade = ev.get("trade") or {}
+        item = trade.get("item")
+        if not isinstance(sender, str) or not sender or not isinstance(item, str):
+            return False
+        row = next((r for r in self.trade_requests
+                    if r.get("from") == sender and r.get("item") == item), None)
+        if row is None:
+            return False
+        row["at"] = now
+        for k in TRADE_FIELDS:
+            if k in trade:
+                row[k] = trade[k]
+            else:
+                row.pop(k, None)
+        return True
+
     def _is_me(self, name):
         return self.character is None or name == self.character
 
@@ -1626,7 +1700,8 @@ class SessionState:
             self.recent_whispers.append(self._row(ev, now))
             if t == "whisper_in" and ev.get("trade"):
                 self._expire_trades(now)
-                self.trade_requests.append(self._trade_row(ev, now))
+                if not self._refresh_trade(ev, now):
+                    self.trade_requests.append(self._trade_row(ev, now))
             changed = True
         elif t in ("trade_accepted", "trade_cancelled"):
             self._expire_trades(now)
