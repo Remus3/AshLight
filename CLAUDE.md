@@ -787,3 +787,8 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   literal (decision 0058). Reverses if: a fallback key clashes with a game
   bind in play, GGG's overlay rules change (decision 0003), or the operator
   orders fixed keys.
+- Go-public gate 6 limits binary blobs to 500 KB and text blobs to 2 MB,
+  checked by tools/blob_gate.py; no history rewrite (decision 0079).
+  Reverses if: a text blob over 2 MB appears (split it), MAIN orders a
+  rewrite (then restore the uniform 500 KB), or a leak or accident is
+  found hiding in a text blob under 2 MB.

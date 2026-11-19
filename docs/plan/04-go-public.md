@@ -160,7 +160,7 @@ All read-only; no tracked or local config file was changed.
   "repo A to repo G": a diff against the verified note finds no owner or
   repository name removed.
 - Binaries: the two hero PNGs re-read (above); 0057 found all 12 tracked
-  PNGs free of metadata chunks and no blob at HEAD over 500 KB.
+  PNGs free of metadata chunks and no binary blob at HEAD over 500 KB.
 - Re-run by the verifier at HEAD 23cc518 (2026-11-18): identity
   `check --history --by-class main` 416 commits, 0 in all 9 classes;
   `check --all` 430 commits clean; leak sweep `--tree` and `--history`
@@ -750,10 +750,11 @@ the sequence; nothing is skipped.
    GitHub noreply domain.
 5. Leaks: `python tools/leak_sweep.py --tree` and `--history` both rc 0
    with `ARMED needles=<N>`, N the GP-01 count (45 or more).
-6. Binaries: `python -m pytest -q tests/test_brand_assets.py` green; the
-   largest blob reachable from main is under 500 KB (`git rev-list
-   --objects main | git cat-file --batch-check="%(objecttype)
-   %(objectsize) %(rest)"`, largest `blob` line).
+6. Binaries: `python -m pytest -q tests/test_brand_assets.py` green. No
+   binary blob reachable from main is over 500 KB, and no text blob is
+   over 2 MB (`python tools/blob_gate.py`). Amended 2026-11-18, decision
+   0079: docs/plan/packages.json is 1.29 MB of text and every one of its
+   history versions is over 500 KB.
 7. Hook: `python -m pytest -q tests/test_pre_push_hook.py
    tests/test_fleet_kit_conformance.py` green; `git config
    core.hooksPath` prints a path ending in `.githooks` (the local config
