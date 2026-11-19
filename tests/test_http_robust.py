@@ -153,7 +153,8 @@ def test_host_and_origin_edge_cases(srv):
              (f"Host: [::1]:{p}\r\n", 400),
              (f"Host: LOCALHOST:{p}\r\n", 200),
              (f"Host: 127.0.0.1:{p}\r\nOrigin: http://127.0.0.1:{p}.evil\r\n", 403),
-             (f"Host: 127.0.0.1:{p}\r\nOrigin: null\r\n", 200),  # overlay, read-only GET
+             # SEC-CROSS-SITE: Origin null opens only GET /events (the overlay)
+             (f"Host: 127.0.0.1:{p}\r\nOrigin: null\r\n", 403),
              ]
     for hdr, want in cases:
         out, _ = raw(srv, f"GET /api/health HTTP/1.1\r\n{hdr}{t}\r\n".encode())
