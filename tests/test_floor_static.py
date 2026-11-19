@@ -102,6 +102,11 @@ ALLOW = [
     ("app/test/eval.test.js", "keyTap", 1, "for (const word of [",
      "Same banned-word list as above: asserts eval_hotkey.js never "
      "contains keyTap; the word is the check, not a call."),
+    ("app/test/electron/zoom_probe.js", "sendInputEvent", 1,
+     "function toOwnHiddenWindow(win, ev) {",
+     "OVL-CLIENT-ZOOM opt-in probe (F-145): Ctrl+= / Ctrl+wheel go only to "
+     "the probe's own hidden test window through its own webContents, never "
+     "the OS input queue, never the game; not shipped code."),
 ]
 
 MAX_BYTES = 4 * 1024 * 1024
