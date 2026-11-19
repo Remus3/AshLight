@@ -53,31 +53,3 @@ test("FOLLOWUP11: Windows system combinations are refused and all in the table",
   }
   for (const k of Hotkey.GAME_KEYS) { assert.ok(CASES.bad.includes(k), k); }
 });
-
-test("HOTKEYS-LIVE: every fallback is safe, canonical and not a game key", () => {
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(Hotkey.FALLBACKS)), CASES.fallbacks);
-  const seen = new Set();
-  for (const name of ["eval", "toggle"]) {
-    const list = Hotkey.FALLBACKS[name];
-    assert.ok(list.length >= 1 && list.length <= 4, name);
-    for (const k of list) {
-      assert.strictEqual(Hotkey.safeAccelerator(k), k, k);
-      assert.ok(!Hotkey.GAME_KEYS.has(k), k);
-      assert.ok(!CASES.bad.includes(k), k);
-      assert.ok(!/^Ctrl\+Alt\+[A-Z0-9]$/.test(k), "AltGr letter " + k);
-      assert.ok(!seen.has(k), "shared " + k);
-      seen.add(k);
-    }
-  }
-  assert.strictEqual(Hotkey.FALLBACKS.eval[0], "Alt+Shift+E");
-  assert.strictEqual(Hotkey.FALLBACKS.toggle[0], "Alt+Shift+A");
-});
-
-test("HOTKEYS-LIVE: alternates skip the wanted key and the other shortcut's key", () => {
-  assert.deepStrictEqual(Hotkey.alternates("eval", "alt+shift+e"),
-    ["Ctrl+Shift+F9", "Alt+Shift+F9", "Ctrl+Alt+F9"]);
-  assert.deepStrictEqual(Hotkey.alternates("toggle", "Ctrl+Alt+K", ["Alt+Shift+A"]),
-    ["Ctrl+Shift+F10", "Alt+Shift+F10", "Ctrl+Alt+F10"]);
-  assert.deepStrictEqual(Hotkey.alternates("other", "Alt+Shift+E"), []);
-  assert.deepStrictEqual(Hotkey.alternates("__proto__", "Alt+Shift+E"), []);
-});

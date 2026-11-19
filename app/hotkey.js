@@ -69,24 +69,4 @@ function pick(candidates, fallback, log) {
   return fallback;
 }
 
-/* HOTKEYS-LIVE (decision 0058): the short safe lists a taken key falls
-   back to, in order. Each is canonical, passes safeAccelerator and is not
-   a game key; the lists share no key. The first entry is the built-in
-   default. Ctrl+Alt+letter is left out: on many keyboard layouts that is
-   AltGr and types a character. Mirrored in test/hotkey_cases.json
-   ("fallbacks"), and in server/al/hotkeys.py from OVL-KEYS-CORE. */
-const FALLBACKS = Object.freeze({
-  eval: Object.freeze(["Alt+Shift+E", "Ctrl+Shift+F9", "Alt+Shift+F9", "Ctrl+Alt+F9"]),
-  toggle: Object.freeze(["Alt+Shift+A", "Ctrl+Shift+F10", "Alt+Shift+F10", "Ctrl+Alt+F10"])
-});
-
-/* The fallback keys for name ("eval" or "toggle") to try after want, in
-   order: want itself and any key in avoid (held by the other shortcut)
-   left out. An unknown name has none. */
-function alternates(name, want, avoid) {
-  const list = Object.prototype.hasOwnProperty.call(FALLBACKS, name) ? FALLBACKS[name] : [];
-  const skip = new Set([safeAccelerator(want)].concat(avoid || []));
-  return list.filter((k) => !skip.has(k));
-}
-
-module.exports = { safeAccelerator, pick, alternates, FALLBACKS, GAME_KEYS, MAX_CHARS };
+module.exports = { safeAccelerator, pick, GAME_KEYS, MAX_CHARS };
