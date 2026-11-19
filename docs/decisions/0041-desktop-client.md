@@ -137,3 +137,43 @@ dependencies; Electron drops the fragment-in-file-URL / sessionStorage
 path the token rides on; or the companion window's renderer pushes the
 client past the decision 0002 RAM budget in normal play (then close it
 by default to the tray).
+
+## Amendment 2026-11-19 (OVL-LINKS-DOWNLOADS, plan units F-112, F-110, F-099)
+
+Links, downloads and the first-run place of the companion window.
+- Decision: a link leaves the companion for the default browser only
+  (a) on a navigation or popup while the companion window has focus,
+  (b) as https on the default port with no user info, (c) to a host of
+  the one tracked list `config/link_hosts.json` or a subdomain of one,
+  and (d) at most 1 a second and 5 a minute (a pure limiter in
+  `app/client/link.js`, `routeFor(url, port, isPopup, ctx)`; no ctx
+  means no link). The browser gets the parsed, normalised href. The list
+  holds exactly the hosts the dashboard can emit (web/tc.js link builders
+  and tree hosts, the trade search URL of `server/al/trade.py`, any https
+  host literal in web/), checked both ways by
+  `app/test/link_hosts.test.js`; a missing or broken list refuses every
+  link. A download is saved only from the core origin (its page or a
+  blob: URL the page made) with a .build, .filter, .json or .txt name;
+  anything else is cancelled (`item.cancel()`) and logged. The clipboard
+  permission check compares the requesting origin with
+  `Link.isCoreUrl`. With no usable saved place, two or more displays and
+  a known overlay display (`opts.overlayBounds().displayId`, mapped to
+  its work area through Electron's display list only), the companion is
+  centred on the largest work area that is not the overlay's; with one
+  display, or the overlay's display unknown, it is centred on the primary
+  as before; a saved place on a connected display still wins.
+- Alternatives: exact host match only - rejected: the tree link already
+  accepts subdomains of its hosts (www.pathofexile2.com), so an exact
+  list would emit links the window refuses; a per-feature host list in
+  each web/ file - rejected: two places to drift; a confirm prompt before
+  each link - rejected: the click is the player's own act (zero-click);
+  the largest area even when the overlay's display is unknown - rejected:
+  with no overlay place the safe default is today's primary.
+- Why: a compromised or buggy dashboard page cannot use the companion
+  to open arbitrary sites, spam the browser or drop executables into the
+  Downloads folder; nothing new is read and nothing is sent to the game
+  (the trade link stays a URL the player's browser opens, decision 0017).
+- Reverses if: the dashboard needs a host the enumeration test cannot
+  see, a subdomain of a listed host is shown to serve untrusted content,
+  players hit the rate limit in normal use, or the overlay's display id
+  stops matching Electron's display list.

@@ -297,3 +297,109 @@ def test_restore_takes_hideout_from_area_id():
     st.restore({"zone": "Lager", "in_hideout": False, "area_id": "G2_town"})
     s = st.snapshot()
     assert s["in_town"] is True and s["in_hideout"] is False
+
+
+# -- RUN-ZONE-RESET (F-088): one _enter_zone() resets the per-zone fields
+
+# The zone-scoped fields, listed here on purpose: a new per-zone field goes
+# into state.ZONE_FIELDS and this list, and _enter_zone() resets it.
+ZONE_SCOPED = ("zone", "area_id", "area_level", "zone_entered_at", "in_hideout",
+               "in_town", "_area_fresh", "_zone_cards")
+
+
+def _gen(area_id, level, ts):
+    return {"type": "area_generated", "area_id": area_id, "area_level": level,
+            "seed": 1, "recv_ts": ts}
+
+
+def test_card_scheduled_in_zone_1_never_publishes_after_zone_2():
+    clk = [100.0]
+    st = SessionState(character="Quill", clock=lambda: clk[0])
+    st.apply(_gen("G1_1", 1, 100.0))
+    st.apply(_scene("The Riverbank", 100.5))
+    gen1 = st.zone_gen
+    # one card due now, one due later; both belong to zone 1
+    assert st.schedule_zone_card({"kind": "zone", "text": "now"}) is True
+    assert st.schedule_zone_card({"kind": "zone", "text": "later"}, at=130.0) is True
+    assert [c["text"] for c in st.zone_cards()] == ["now"]
+    # a null or transient scene, and the same zone again, are no zone entry
+    st.apply({"type": "scene_changed", "scene": "(null)", "is_null": True,
+              "is_hideout": False, "is_transient": False, "recv_ts": 101.0})
+    st.apply(_scene("The Riverbank", 101.5))
+    assert st.zone_gen == gen1
+    assert [c["text"] for c in st.zone_cards(now=131.0)] == ["now", "later"]
+    # the zone 2 generation line voids every zone 1 card, the due one and
+    # the one scheduled for later, before its scene line arrives
+    st.apply(_gen("G1_2", 2, 110.0))
+    assert st.zone_gen == gen1 + 1
+    assert st.zone_cards(now=10_000.0) == []
+    st.apply(_scene("Clearfell", 110.5))
+    assert st.zone_gen == gen1 + 1  # the generation and its scene: one entry
+    clk[0] = 200.0
+    assert st.zone_cards() == [] and st.zone_cards(now=10_000.0) == []
+    # a slow producer that took the zone 1 generation is refused in zone 2
+    assert st.schedule_zone_card({"kind": "zone", "text": "stale"}, gen=gen1) is False
+    assert st.schedule_zone_card({"kind": "zone", "text": "fresh"},
+                                 gen=st.zone_gen) is True
+    assert [c["text"] for c in st.zone_cards()] == ["fresh"]
+    # a scene with no generation line before it is a zone entry of its own,
+    # and so are area_entered and a game start
+    for ev in (_scene("Riverside Hideout", 201.0),
+               {"type": "area_entered", "name": "Ogham", "recv_ts": 202.0},
+               {"type": "log_opened", "recv_ts": 203.0}):
+        before = st.zone_gen
+        st.schedule_zone_card({"kind": "zone", "text": "x"})
+        st.apply(ev)
+        assert st.zone_gen == before + 1, ev["type"]
+        assert st.zone_cards(now=10_000.0) == [], ev["type"]
+    # the cards never reach the snapshot by another path
+    assert "zone_cards" not in st.snapshot()
+
+
+def test_zone_scoped_field_list_is_reset_by_enter_zone():
+    from server.al import state as state_mod
+    assert state_mod.ZONE_FIELDS == ZONE_SCOPED
+    sentinel = object()
+    # each way in: a generation line and its scene, a scene alone, and a
+    # game start (no zone)
+    for calls in ((("gen", ("G1_2", 2)), ("scene", ("Clearfell", False))),
+                  (("scene", ("Riverside Hideout", True)),),
+                  ((None, None),)):
+        st = SessionState(character="Quill", clock=lambda: 50.0)
+        st.apply(_gen("G1_1", 1, 10.0))
+        st.apply(_scene("The Riverbank", 10.5))
+        for f in ZONE_SCOPED:
+            setattr(st, f, sentinel)
+        if calls[0][0] == "scene":
+            st._area_fresh = False  # no generation line came first
+        before = dict(vars(st))
+        gen0 = st._zone_gen
+        with st._lock:
+            for kind, arg in calls:
+                st._enter_zone(60.0, **({kind: arg} if kind else {}))
+        after = vars(st)
+        # every listed field is reset (a new field that skips the reset
+        # keeps the sentinel and fails here)
+        # (a scene alone keeps the area id and level of the last generation
+        # line: _area_fresh, now False, says they are not this zone's)
+        keeps = ("area_id", "area_level") if calls[0][0] == "scene" else ()
+        left = [f for f in ZONE_SCOPED if after[f] is sentinel and f not in keeps]
+        assert not left, (calls, left)
+        assert st._zone_gen == gen0 + 1
+        # every field _enter_zone() rebinds is listed (a reset of an
+        # unlisted field fails here)
+        rebound = {k for k in after if after[k] is not before.get(k)}
+        assert rebound <= set(ZONE_SCOPED) | {"_zone_gen"}, rebound - set(ZONE_SCOPED)
+    # the values each way in leaves
+    st = SessionState(clock=lambda: 50.0)
+    with st._lock:
+        st._enter_zone(60.0, gen=("G1_town", 15))
+        st._enter_zone(60.5, scene=("Clearfell Encampment", False))
+    assert (st.zone, st.area_id, st.area_level, st.zone_entered_at) == (
+        "Clearfell Encampment", "G1_town", 15, 60.5)
+    assert (st.in_hideout, st.in_town, st._area_fresh) == (False, True, False)
+    with st._lock:
+        st._enter_zone(70.0)
+    assert (st.zone, st.area_id, st.area_level, st.zone_entered_at, st.in_hideout,
+            st.in_town, st._area_fresh, list(st._zone_cards)) == (
+        None, None, None, None, False, False, False, [])
