@@ -268,6 +268,8 @@ def test_checkbox_is_an_empty_box_and_filled_when_checked():
     assert re.search(r"border-color\s*:\s*var\(--fk-accent\)", checked)
     forced = _block(_src(), "@media (forced-colors: active)")
     assert forced and re.search(r"\.check input\s*\{\s*appearance\s*:\s*auto", forced)
+    # the data-URI tick must not draw under the native one
+    assert re.search(r"\.check input:checked\s*\{\s*background-image\s*:\s*none", forced)
 
 
 @pytest.mark.parametrize("theme,stroke", [("light", "ffffff"), ("dark", "0f1216")])

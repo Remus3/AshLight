@@ -502,6 +502,7 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
    checked state keeps the system colours (F-160). */
 @media (forced-colors: active) {
   .check input { appearance: auto; }
+  .check input:checked { background-image: none; }
 }
 
 /* No animation anywhere; this also stops any user-agent smooth scrolling. */

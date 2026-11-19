@@ -49,6 +49,8 @@ making that text from log events (section 9; ruling Q-15, 2026-11-18).
 
 One family: `system-ui, "Segoe UI", sans-serif` (no web fonts, no CDN).
 Numbers use `font-variant-numeric: tabular-nums` so they do not jitter.
+Mono stack (`--al-font-mono`): `Consolas, monospace`, Consolas first
+because the target is Windows, where it ships with every release.
 
 Dashboard (root 16px; rem values are the source):
 
