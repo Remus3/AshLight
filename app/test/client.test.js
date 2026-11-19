@@ -29,26 +29,96 @@ test("dashboard URL carries the token in the fragment only", () => {
   assert.equal(Link.dashboardUrl("8960", TOKEN), "");
 });
 
-test("the window stays on the local core; only http(s) links leave", () => {
+const T0 = 1000000;
+const TRADE = "https://www.pathofexile.com/trade2/search/poe2/Standard?q=%7B%7D";
+function ctx(extra) { return Object.assign({ focused: true, now: T0, history: [] }, extra || {}); }
+
+test("the window stays on the local core; only listed https links leave", () => {
+  assert.equal(Link.routeFor("http://127.0.0.1:8960/", PORT, false, ctx()), "stay");
+  assert.equal(Link.routeFor("http://127.0.0.1:8960/#token=x", PORT, false, ctx()), "stay");
+  // the core stays even without focus or ctx (its own navigations)
   assert.equal(Link.routeFor("http://127.0.0.1:8960/", PORT, false), "stay");
-  assert.equal(Link.routeFor("http://127.0.0.1:8960/#token=x", PORT, false), "stay");
-  assert.equal(Link.routeFor("http://127.0.0.1:8960/", PORT, true), "deny"); // no popups
-  assert.equal(Link.routeFor("http://127.0.0.1:8961/", PORT, false), "external");
-  assert.equal(Link.routeFor("http://localhost:8960/", PORT, false), "external");
-  assert.equal(Link.routeFor("https://www.pathofexile.com/trade2/search/poe2/Standard?q=%7B%7D",
-                             PORT, true), "external");
-  assert.equal(Link.routeFor("https://poe.ninja/", PORT, false), "external");
+  assert.equal(Link.routeFor("http://127.0.0.1:8960/", PORT, true, ctx()), "deny"); // no popups
+  assert.equal(Link.routeFor("http://127.0.0.1:8961/", PORT, false, ctx()), "deny");
+  assert.equal(Link.routeFor("http://localhost:8960/", PORT, false, ctx()), "deny");
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx()), "external");
+  assert.equal(Link.routeFor("https://poe2db.tw/us/Iron_Ring", PORT, false, ctx()), "external");
+  assert.equal(Link.routeFor("https://www.pathofexile2.com/passive-skill-tree/A", PORT, true, ctx()),
+               "external"); // a subdomain of a listed host
   for (const bad of ["file:///etc/hosts", "javascript:alert(1)", "data:text/html,x",
                      "ms-settings:display", "steam://run/1", "about:blank", "",
+                     "http://www.pathofexile.com/trade2/", // http, even to a listed host
+                     "https://poe.ninja/", "https://example.org/", // hosts off the list
+                     "https://poe2db.tw.evil.example/", "https://www.pathofexile.com:8443/x",
                      // userinfo URLs built from parts (the leak sweep reads
                      // a literal "name@host" as an email address)
-                     "https://u:p" + AT + "example.com/", "http://127.0.0.1:8960" + AT + "evil.example/x"]) {
-    assert.notEqual(Link.routeFor(bad, PORT, false), "stay", bad);
-    if (!/^https?:/.test(bad) || bad.includes("@")) {
-      assert.equal(Link.routeFor(bad, PORT, false), "deny", bad);
-    }
+                     "https://u:p" + AT + "poe2db.tw/", "http://127.0.0.1:8960" + AT + "evil.example/x"]) {
+    assert.equal(Link.routeFor(bad, PORT, false, ctx()), "deny", bad);
+    assert.equal(Link.routeFor(bad, PORT, true, ctx()), "deny", bad);
   }
   assert.equal(Link.isCoreUrl("https://127.0.0.1:8960/", PORT), false);
+});
+
+test("a link leaves only from the focused companion, at a human rate", () => {
+  // no focus, or no ctx at all: denied
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ focused: false })), "deny");
+  assert.equal(Link.routeFor(TRADE, PORT, true), "deny");
+  // the second link inside 1 s
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ history: [T0 - 999] })), "deny");
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ history: [T0 - 1000] })), "external");
+  // the sixth link in a minute
+  const five = [T0 - 50000, T0 - 40000, T0 - 30000, T0 - 20000, T0 - 10000];
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ history: five })), "deny");
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ history: five.slice(1) })), "external");
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ now: T0 + 10001, history: five })),
+               "external"); // the oldest left the minute
+  assert.equal(Link.routeFor(TRADE, PORT, true, ctx({ now: NaN })), "deny");
+  // the history keeps the last minute only
+  assert.deepEqual(Link.noteOpened([T0 - 70000, T0 - 59000], T0), [T0 - 59000, T0]);
+  let h = [];
+  let opened = 0;
+  for (let t = T0; t < T0 + 60000; t += 1000) {
+    if (Link.routeFor(TRADE, PORT, true, ctx({ now: t, history: h })) === "external") {
+      opened += 1;
+      h = Link.noteOpened(h, t);
+    }
+  }
+  assert.equal(opened, 5);
+});
+
+test("the browser gets the parsed href", () => {
+  assert.equal(Link.externalHref("https://POE2DB.tw/us/Iron Ring"), "https://poe2db.tw/us/Iron%20Ring");
+  assert.equal(Link.externalHref(TRADE), TRADE);
+  assert.equal(Link.externalHref("not a url"), "");
+  const c = code(WIN_SRC);
+  assert.ok(c.includes("const parsed = new URL(url);"));
+  assert.ok(c.includes("shell.openExternal(parsed.href)"));
+  assert.ok(!c.includes("shell.openExternal(url)"));
+  assert.ok(c.includes("focused: focused, now: now, history: opened"));
+  assert.ok(c.includes("win.isFocused()"));
+});
+
+test("only AshLight's own downloads are saved", () => {
+  const blob = "blob:http://127.0.0.1:8960/0f0e1d2c-aaaa-bbbb-cccc-111122223333";
+  for (const name of ["ashlight.build", "ashlight.filter", "filter-My Filter.filter",
+                      "ashlight-settings.json", "report.txt", "ASHLIGHT.BUILD"]) {
+    assert.equal(Link.downloadAllowed(blob, name, PORT), true, name);
+    assert.equal(Link.downloadAllowed("http://127.0.0.1:8960/api/filter", name, PORT), true, name);
+  }
+  for (const name of ["x.exe", "ashlight.build.exe", "x.bat", "x.html", "x", ".build", "",
+                      "..\\..\\x.ps1"]) {
+    assert.equal(Link.downloadAllowed(blob, name, PORT), false, name);
+  }
+  for (const url of ["blob:http://127.0.0.1:8961/abc", "http://127.0.0.1:8961/x",
+                     "https://poe2db.tw/x.json", "blob:https://poe2db.tw/abc",
+                     "data:text/plain,x", "file:///etc/x.txt", "", "nonsense"]) {
+    assert.equal(Link.downloadAllowed(url, "ashlight.json", PORT), false, url);
+  }
+  const c = code(WIN_SRC);
+  assert.ok(c.includes("Link.downloadAllowed(item.getURL(), item.getFilename(), port)"));
+  assert.ok(c.indexOf("item.cancel();") < c.indexOf("item.setSavePath("));
+  assert.ok(c.includes('log("client: download refused")'));
+  assert.ok(c.includes("Link.isCoreUrl(requestingOrigin, port)"));
 });
 
 test("--client is read from the command line", () => {
@@ -77,6 +147,40 @@ test("saved bounds are kept only while a display shows them", () => {
                    { x: 0, y: 0, width: 1024, height: 700 });
   assert.deepEqual(Link.stateDoc({ x: 1, y: 2, width: 3, height: 4 }, 1),
                    { x: 1, y: 2, width: 3, height: 4, maximized: false });
+});
+
+test("first run with two displays: the companion avoids the overlay's display", () => {
+  const primary = { x: 0, y: 0, width: 1920, height: 1080 };
+  const second = { x: 1920, y: 0, width: 2560, height: 1440 };
+  // createWindow passes the primary first, then every display (a repeat)
+  const areas = [primary, primary, second];
+  const inside = (b, a) => b.x >= a.x && b.y >= a.y && b.x + b.width <= a.x + a.width &&
+    b.y + b.height <= a.y + a.height;
+  // overlay on the primary, no saved state -> centred on the second
+  const onSecond = Link.windowBounds(null, areas, primary);
+  assert.deepEqual(onSecond.bounds, { x: 1920 + 640, y: 290, width: 1280, height: 860 });
+  assert.ok(inside(onSecond.bounds, second));
+  assert.equal(onSecond.maximized, false);
+  // overlay on the second -> the primary
+  assert.deepEqual(Link.windowBounds(null, areas, { x: 1920, y: 0, width: 2560, height: 1440 }).bounds,
+                   { x: 320, y: 110, width: 1280, height: 860 });
+  // one area -> today's centred bounds
+  assert.deepEqual(Link.windowBounds(null, [primary], primary).bounds,
+                   { x: 320, y: 110, width: 1280, height: 860 });
+  // the overlay's display unknown -> today's centred bounds on the primary
+  assert.deepEqual(Link.windowBounds(null, areas, null).bounds,
+                   { x: 320, y: 110, width: 1280, height: 860 });
+  // the largest of the others wins
+  const third = { x: -1280, y: 0, width: 1280, height: 1024 };
+  assert.ok(inside(Link.windowBounds(null, [primary, third, second], primary).bounds, second));
+  // saved visible bounds still win
+  const saved = { x: 100, y: 100, width: 1000, height: 700, maximized: true };
+  assert.deepEqual(Link.windowBounds(saved, areas, primary),
+                   { bounds: { x: 100, y: 100, width: 1000, height: 700 }, maximized: true });
+  const c = code(WIN_SRC);
+  assert.ok(c.includes("opts.overlayBounds()"));
+  assert.ok(c.includes("d.id === ob.displayId"));
+  assert.ok(c.includes("Link.windowBounds(readState(), areas, avoid)"));
 });
 
 test("download names are reduced to a safe base name", () => {
@@ -170,7 +274,7 @@ test("the companion window is a normal, sandboxed window on its own session", ()
   for (const needle of ["contextIsolation: true", "nodeIntegration: false", "sandbox: true",
                         "session: clientSession()", 'session.fromPartition(PARTITION)',
                         "setWindowOpenHandler(", 'return { action: "deny" }',
-                        '"will-navigate"', '"will-redirect"', "shell.openExternal(url)",
+                        '"will-navigate"', '"will-redirect"', "shell.openExternal(parsed.href)",
                         "Link.routeFor(", "setPermissionRequestHandler(",
                         "setPermissionCheckHandler(", "minWidth"]) {
     assert.ok(c.includes(needle), needle);
