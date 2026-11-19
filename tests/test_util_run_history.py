@@ -3,7 +3,7 @@
 
 import json
 
-from server.al import runhistory
+from server.al import jsonfile, runhistory
 from server.al.core import Core
 from server.al.state import SessionState
 
@@ -135,11 +135,20 @@ def test_file_is_bounded_and_survives_reload(tmp_path):
                                 "splits": []})
     assert len(run["character"]) == runhistory.MAX_TEXT
     assert len(run["deaths"]) == runhistory.MAX_ZONES
-    # an oversized or broken file reads as empty
+    # RUN-DURABLE-STORE-FILES (F-014): an oversized or broken file is
+    # restored from its .bak and the main file is healed
+    good = p.read_bytes()
+    p.write_text("x" * (runhistory.MAX_BYTES + 1), encoding="ascii")
+    assert runhistory.load(p) == h.runs and p.read_bytes() == good
+    p.write_text("{bad", encoding="ascii")
+    assert runhistory.load(p) == h.runs and p.read_bytes() == good
+    # without a .bak an oversized or broken file reads as empty
+    jsonfile.bak_path(p).unlink()
     p.write_text("x" * (runhistory.MAX_BYTES + 1), encoding="ascii")
     assert runhistory.load(p) == []
     p.write_text("{bad", encoding="ascii")
     assert runhistory.load(p) == []
+    assert not jsonfile.bak_path(p).exists()
 
 
 def test_clear_and_off(tmp_path):

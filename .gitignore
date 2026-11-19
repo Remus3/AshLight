@@ -1,6 +1,8 @@
 # Secrets and per-host config - NEVER commit (secrets live in user env vars,
 # referenced through fleet_secrets from config/local.json).
 config/local.json
+# RUN-DURABLE-STORE-FILES: the .bak of local.json (layout.save, F-014)
+config/local.json.bak
 config/leak_needles.json
 .env
 .env.*
