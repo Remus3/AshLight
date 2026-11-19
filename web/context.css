@@ -1,1 +1,40 @@
-/* AshLight dashboard: region C, the context card (stub, no rules yet; PLAY-TD-11-CONTEXT fills it). */
+/* AshLight dashboard: region C, the context card (PLAY-TD-11-CONTEXT; plan 03
+   TD-11, sections 3.4 and 3.8). Track 228 px at s = 1 (212 compact):
+   border 2 + padding 12 + 12, then the title (20 px / 600, a 26 px line
+   box), at most 7 body rows of 22 (6 compact; a Copy row is 32 with its
+   28 px button) and one 20 px facts row, no gap between them: guide
+   content 200 px in the full class, 178 in the compact one. The line boxes
+   come from the shared row classes of web/app.css (.row-title, .row-body,
+   .row-meta, .one-line, .edge, .btn-28). */
+#play-c .ctx, #play-c .ctx-pane, #play-c .ctx-rows {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+}
+#play-c .ctx-title { font-weight: 600; }
+#play-c .ctx-copy {
+  display: flex;
+  align-items: center;
+  gap: 0 0.5rem;
+  min-height: 2rem;
+  min-width: 0;
+}
+#play-c .ctx-copy-label { flex: 0 1 auto; }
+#play-c .ctx-copy-btn, #play-c .ctx-said { flex: 0 0 auto; white-space: nowrap; }
+#play-c .ctx [hidden] { display: none; }
+/* the compact class shows 6 body rows: the row marked to leave first is
+   hidden there (the same scale-step cascade as the track tokens of
+   web/app.css; the last match wins) */
+@media (min-width: 64em) and (min-height: 43.75em) { #play-c .ctx-drop { display: none; } }
+@media (min-width: 75em) and (min-height: 47.5em) { #play-c .ctx-drop { display: block; } }
+@media (min-width: 80em) and (min-height: 54.6875em) { #play-c .ctx-drop { display: none; } }
+@media (min-width: 93.75em) and (min-height: 59.375em) { #play-c .ctx-drop { display: block; } }
+@media (min-width: 96em) and (min-height: 65.625em) { #play-c .ctx-drop { display: none; } }
+@media (min-width: 112.5em) and (min-height: 71.25em) { #play-c .ctx-drop { display: block; } }
+@media (min-width: 128em) and (min-height: 87.5em) { #play-c .ctx-drop { display: none; } }
+@media (min-width: 150em) and (min-height: 95em) { #play-c .ctx-drop { display: block; } }
+/* C pads 10 px top and bottom (not the 12 of web/app.css): a full guide
+   (26 + 7 x 22 + 20 = 200 px) then keeps 4 to 6 px of slack in the 228 px
+   track, so a fractional region top never eats the 2 px minimum (G4) */
+#play-c { --region-pad: 0.625rem; }

@@ -4,7 +4,8 @@
    trade ids grows; never on first paint, a dismiss or an expiry. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const t = require("../../web/trades.js");
+const web = require("./_web.js");
+const t = web.load("trades.js");
 
 const row = (id, from) => ({ id: id, from: from });
 

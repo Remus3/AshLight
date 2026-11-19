@@ -1,13 +1,11 @@
 /* UI-GLANCE: the dashboard tabs (web/tabs.js) and their page markup. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const t = require("../../web/tabs.js");
+const web = require("./_web.js");
+const t = web.load("tabs.js");
 
-const WEB = path.join(__dirname, "..", "..", "web");
-const HTML = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
-const CSS = fs.readFileSync(path.join(WEB, "app.css"), "utf8");
+const HTML = web.source("index.html");
+const CSS = web.source("app.css");
 
 function el(id) {
   const node = {
@@ -228,6 +226,6 @@ test("grace: a recent click in the shown tab holds it; the header line says the 
 
 test("a build alert node carries its own words, not only the warn edge", () => {
   const before = HTML.slice(HTML.indexOf('id="build-alert"') - 400, HTML.indexOf('id="build-alert"'));
-  assert.match(fs.readFileSync(path.join(WEB, "tabs.js"), "utf8"), /must\s+carry its own words/);
+  assert.match(web.source("tabs.js"), /must\s+carry its own words/);
   assert.ok(before.includes("ALTabs.fill"), before);
 });

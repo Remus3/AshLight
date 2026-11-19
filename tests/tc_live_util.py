@@ -41,6 +41,32 @@ LIVE_REF = pytest.mark.skipif(not bridge.available() or reference() is None,
                               "(sidecar Cache\\tc_bridge\\gui_expected.json)")
 
 
+# TEST-MARKS (research 0049 R4, R9): every test that starts the live calc
+# carries the 'calc' mark and the xdist group 'calc' (one worker owns the
+# session's warm bridge), so a subset or the parallel suite can select or
+# group it. A module lists CALC_MARKS in its pytestmark; a single test takes
+# the LIVE_CALC decorator. CALC_FILES are the test files that hold such a test
+# (tests/test_marks.py checks the -m calc selection against it).
+CALC_MARKS = (pytest.mark.calc, pytest.mark.xdist_group("calc"))
+CALC_FILES = (
+    "tests/test_audit_pass7.py",
+    "tests/test_fullstack.py",
+    "tests/test_math_e2e_live.py",
+    "tests/test_math_perf.py",
+    "tests/test_math_skill_split.py",
+    "tests/test_math_weapon_type.py",
+    "tests/test_tc_bridge.py",
+    "tests/test_tc_pob_drift_guard.py",
+)
+
+
+def LIVE_CALC(obj):  # noqa: N802 (a mark decorator, named like LIVE)
+    """Apply CALC_MARKS to one test function."""
+    for mark in CALC_MARKS:
+        obj = mark(obj)
+    return obj
+
+
 # TEST-PORT-LEASE (finding F-022): a test that binds a real port leases it.
 # A lease = an OS lock on <sidecar Temp>/port-leases/<port>.lock held for the
 # test's life AND a 127.0.0.1 bind probe that succeeds, so two runs of this

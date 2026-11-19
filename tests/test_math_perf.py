@@ -12,11 +12,11 @@ import time
 
 import pytest
 
-from tc_live_util import BUDGET, LIVE_REF, process_memory_mb, reference
+from tc_live_util import BUDGET, CALC_MARKS, LIVE_REF, process_memory_mb, reference
 
 from server.al.theorycraft import bridge, calcwire
 
-pytestmark = [pytest.mark.slow, LIVE_REF]
+pytestmark = [pytest.mark.slow, pytest.mark.timing, LIVE_REF, *CALC_MARKS]
 
 RING = """Item Class: Rings
 Rarity: Rare
