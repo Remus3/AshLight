@@ -15,6 +15,7 @@ from . import campaign as campaign_mod
 from . import hints as hints_mod
 from . import langguard as langguard_mod
 from . import num as num_mod
+from . import parser as parser_mod
 from . import pace as pace_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
@@ -923,6 +924,10 @@ class SessionState:
         self.area_level = None
         self.zone_entered_at = None
         self.in_hideout = False
+        # OVL-HIDEOUT-AREA: town flag from the area id; _area_fresh is True
+        # while the last area generation line still waits for its scene
+        self.in_town = False
+        self._area_fresh = False
         self.deaths = 0
         self.level_ups = 0
         self.afk = False
@@ -1230,6 +1235,18 @@ class SessionState:
             self.version += 1
             return hints_mod.RESET_TEXT
 
+    def _place_now(self, scene_word):
+        """OVL-HIDEOUT-AREA (F-118): (in_hideout, in_town) for the zone a
+        real scene line names. The area id of the generation line that
+        came before it decides, the same in every client language; the
+        English scene word is only the hideout fallback when no generation
+        line was seen for this zone (then in_town is False). Caller holds
+        the lock."""
+        if self._area_fresh and isinstance(self.area_id, str) and self.area_id:
+            return (parser_mod.is_hideout_area(self.area_id),
+                    parser_mod.is_town_area(self.area_id))
+        return bool(scene_word), False
+
     def _hint(self, shown, now):
         """List a hint that just started in the event list. Caller holds
         the lock."""
@@ -1502,22 +1519,30 @@ class SessionState:
             # Null and transient scenes (LIVE-1) keep the zone and its
             # timer and are not listed; only a real zone change is.
             listed = False
-            if (not ev.get("is_null") and not ev.get("is_transient")
-                    and ev.get("scene") != self.zone):
+            real = not ev.get("is_null") and not ev.get("is_transient")
+            hideout, town = (self._place_now(ev.get("is_hideout")) if real
+                             else (self.in_hideout, self.in_town))
+            if real:
+                self._area_fresh = False
+            if real and ev.get("scene") != self.zone:
                 self.zone = ev.get("scene")
-                self.in_hideout = bool(ev.get("is_hideout"))
+                self.in_hideout, self.in_town = hideout, town
                 self.zone_entered_at = now
                 self.maps.on_scene(self.zone, now, self.in_hideout)
                 listed = True
                 changed = True
+            elif real and (hideout, town) != (self.in_hideout, self.in_town):
+                # a new area under the same scene name: flags only
+                self.in_hideout, self.in_town = hideout, town
+                changed = True
             # ZONE-GUIDE: the zone this character entered (quest tracker)
-            if (not ev.get("is_null") and not ev.get("is_transient")
-                    and not ev.get("is_hideout") and ev.get("scene")):
+            if real and not hideout and ev.get("scene"):
                 if self.visits.visit(self.character, self.area_id, ev.get("scene")):
                     changed = True
         elif t == "area_generated":
             self.area_id = ev.get("area_id")
             self.area_level = ev.get("area_level")
+            self._area_fresh = True
             self.acts.fold(self.area_id, now, self.level)
             if self.area_id == acts_mod.FIRST_AREA:
                 self._first_gen_at = now
@@ -1529,7 +1554,9 @@ class SessionState:
         elif t == "area_entered":
             if ev.get("name") != self.zone:
                 self.zone = ev.get("name")
-                self.in_hideout = "hideout" in (self.zone or "").lower()
+                self.in_hideout, self.in_town = self._place_now(
+                    parser_mod.is_hideout(self.zone or ""))
+                self._area_fresh = False
                 self.zone_entered_at = now
                 self.maps.on_scene(self.zone, now, self.in_hideout)
                 changed = True
@@ -1551,6 +1578,7 @@ class SessionState:
                 self.zone_entered_at = None
                 self.in_hideout = self.afk = self.dnd = False
                 changed = True
+            self.in_town = self._area_fresh = False
         elif t == "level_up":
             # The first level-up names the character unless one was
             # configured; other players' level-ups are listed, not counted.
@@ -1754,6 +1782,13 @@ class SessionState:
                     continue
                 if key in fields:
                     setattr(self, attr, fields[key])
+            # OVL-HIDEOUT-AREA: the scanned area id (the run's newest
+            # generation line) decides the flags like the live arms; the
+            # scanned scene word is the hideout fallback.
+            if "area_id" in fields or "in_hideout" in fields:
+                self._area_fresh = True
+                self.in_hideout, self.in_town = self._place_now(self.in_hideout)
+                self._area_fresh = False
             # HUD-ACT-RESUME: rebuild the act splits from the run's area
             # generations (decision 0023); none keeps the current splits.
             rebuilt = acts_mod.ActSplits()
@@ -1865,6 +1900,9 @@ class SessionState:
                 "zone_s": (max(0.0, self._zone_until(now) - self.zone_entered_at)
                            if self.zone_entered_at else None),
                 "in_hideout": self.in_hideout,
+                # OVL-HIDEOUT-AREA: a town by the area id (a hideout is
+                # in_hideout, not in_town)
+                "in_town": self.in_town,
                 "deaths": self.deaths,
                 "level_ups": self.level_ups,
                 "afk": self.afk,

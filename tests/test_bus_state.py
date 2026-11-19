@@ -230,3 +230,71 @@ def test_log_opened_on_fresh_state_is_quiet():
     v = st.version
     assert st.apply({"type": "log_opened", "recv_ts": 1.0}) is False
     assert st.version == v and st.snapshot()["recent_events"] == []
+
+
+def _scene(name, ts):
+    return {"type": "scene_changed", "scene": name, "is_null": False,
+            "is_hideout": parser.is_hideout(name), "is_transient": False,
+            "recv_ts": ts}
+
+
+def test_in_hideout_follows_the_area_id():
+    """OVL-HIDEOUT-AREA (F-118): the area id decides, in any language."""
+    st = SessionState(character="Me", clock=lambda: 10.0)
+    # no generation line yet: the English scene word is the fallback
+    st.apply(_scene("Felled Hideout", 1.0))
+    assert st.snapshot()["in_hideout"] is True
+    # a translated hideout name: the area id says hideout
+    st.apply({"type": "area_generated", "area_id": "HideoutFelled",
+              "area_level": 2, "recv_ts": 2.0})
+    st.apply(_scene("Versteck der Gefallenen", 3.0))
+    s = st.snapshot()
+    assert s["in_hideout"] is True and s["in_town"] is False
+    # a null scene keeps it
+    assert st.apply({"type": "scene_changed", "scene": None, "is_null": True,
+                     "is_hideout": False, "recv_ts": 4.0}) is False
+    assert st.snapshot()["in_hideout"] is True
+    # a zone whose name holds the word but whose id is no hideout
+    st.apply({"type": "area_generated", "area_id": "G1_2", "area_level": 3,
+              "recv_ts": 5.0})
+    st.apply(_scene("Hideout Road", 6.0))
+    s = st.snapshot()
+    assert s["in_hideout"] is False and s["in_town"] is False
+    # a translated town: in_town from the id, not a hideout
+    st.apply({"type": "area_generated", "area_id": "G1_town", "area_level": 15,
+              "recv_ts": 7.0})
+    st.apply(_scene("Lager von Lehmfeld", 8.0))
+    s = st.snapshot()
+    assert s["in_town"] is True and s["in_hideout"] is False
+    # area_entered takes the flag from the area id too
+    st.apply({"type": "area_generated", "area_id": "HideoutCanal",
+              "area_level": 2, "recv_ts": 9.0})
+    st.apply({"type": "area_entered", "name": "Kanalversteck", "recv_ts": 10.0})
+    assert st.snapshot()["in_hideout"] is True
+    # a scene with no generation line before it: the old id is stale,
+    # the scene word decides
+    st.apply(_scene("Verfallene Strasse", 10.5))
+    s = st.snapshot()
+    assert s["in_hideout"] is False and s["in_town"] is False
+    # a game start clears the area id: the scene word decides again
+    st.apply({"type": "log_opened", "recv_ts": 11.0})
+    s = st.snapshot()
+    assert s["in_hideout"] is False and s["in_town"] is False
+    st.apply(_scene("Versteck der Gefallenen", 12.0))
+    assert st.snapshot()["in_hideout"] is False
+
+
+def test_restore_takes_hideout_from_area_id():
+    st = SessionState(character="", clock=lambda: 1000.0)
+    st.restore({"zone": "Versteck der Gefallenen", "in_hideout": False,
+                "area_id": "HideoutFelled", "area_level": 2})
+    s = st.snapshot()
+    assert s["in_hideout"] is True and s["in_town"] is False
+    st = SessionState(character="", clock=lambda: 1000.0)
+    st.restore({"zone": "Riverside Hideout", "in_hideout": True,
+                "area_id": None})
+    assert st.snapshot()["in_hideout"] is True
+    st = SessionState(character="", clock=lambda: 1000.0)
+    st.restore({"zone": "Lager", "in_hideout": False, "area_id": "G2_town"})
+    s = st.snapshot()
+    assert s["in_town"] is True and s["in_hideout"] is False

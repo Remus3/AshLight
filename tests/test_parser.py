@@ -47,6 +47,20 @@ def test_scene_changed_null_and_hideout():
     assert ev["scene"] == "The Riverbank" and not ev["is_hideout"]
     assert _one("[SCENE] Load Source [Clearfell]")["scene"] == "Clearfell"
     assert _one("[RENDER] Shader uses incorrect vertex layout") is None
+    # OVL-HIDEOUT-AREA (F-118): the area id of the generation line decides;
+    # the scene word is only the English fallback. A translated hideout
+    # scene name misses the word but its area id is still a hideout.
+    gen = _one('Generating level 2 area "HideoutFelled" with seed 1')
+    assert gen["type"] == "area_generated" and gen["area_id"] == "HideoutFelled"
+    assert parser.is_hideout_area(gen["area_id"])
+    assert not parser.is_town_area(gen["area_id"])
+    ev = _one("[SCENE] Set Source [Versteck der Gefallenen]")
+    assert ev["scene"] == "Versteck der Gefallenen" and not ev["is_hideout"]
+    town = _one('Generating level 15 area "G1_town" with seed 1')
+    assert parser.is_town_area(town["area_id"])
+    assert not parser.is_hideout_area(town["area_id"])
+    for aid in ("G1_2", "MapCrypt", "", None, 7):
+        assert not parser.is_hideout_area(aid) and not parser.is_town_area(aid)
 
 
 def test_area_generated():
