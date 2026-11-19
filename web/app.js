@@ -8,6 +8,7 @@
 
   var D = window.ALDash; // web/status.js: pure view helpers
   var F = window.ALFmt; // web/fmt.js: pad, duration, clock
+  var A = window.ALApp; // web/registry.js: the panel loops of render, tick, start
   var KEY = "al.token";
   var token = readToken();
   var snap = null;
@@ -76,25 +77,16 @@
   function serverNow() { return Date.now() / 1000 - offset; }
 
   /* While the feed is down the timers stop, so a stale page never looks
-     like it is still counting (UI-REVIEW-2). */
+     like it is still counting (UI-REVIEW-2). TEST-WEB-REGISTRY: the
+     panels' ticks run in their order (web/registry.js); one that throws no
+     longer stops the timers after it. */
   function tick() {
     if (!snap || document.hidden || !linkLive) { return; }
     var now = serverNow();
     // TEST-LIVE-EXIT: an idle log stops the zone and act clocks at its
     // last line (the game may be closed; decision 0029).
     var until = D.clockUntil(snap.tailer, now);
-    $("zone-time").textContent = snap.zone_entered_at ? duration(until - snap.zone_entered_at) : "--:--";
-    // Before the Client.txt opt-in there is no play session to time.
-    // UX-REGRESSION-SWEEP: it stops with them while the log is idle, so it
-    // never counts on under a Last session card that says the session ended.
-    $("session").textContent = snap.tailer && snap.tailer.consented
-      ? duration(until - snap.session_started_at) : "--:--";
-    // HUD-ACT: the open act split counts up with the zone timer.
-    if (window.ALActs) { window.ALActs.paint(document, snap.acts, until, false); }
-    // UTIL-MAPS: the open map's time counts up while the player is in it.
-    if (window.ALRuns) { window.ALRuns.paint(document, snap, now, false); }
-    // NEWBIE-HINTS: the tip hides by itself at its end time.
-    if (window.ALHints) { window.ALHints.paint(document, snap, now); }
+    A.tick(snap, now, until);
     // TD-09 region hook: every registered Play region's tick (web/regions.js)
     if (window.ALRegions) { window.ALRegions.tick(document, snap, now); }
   }
@@ -1049,6 +1041,323 @@
     });
   }
 
+  /* ---- TEST-WEB-REGISTRY (F-135): the dashboard panels. Each paint, tick
+     and wire that render(), tick() and start() called in one sequence is
+     one registered entry; the explicit order keeps today's paint order and
+     so the order of the live-region announcements. render() calls
+     paint(s, c) (the state push and the picked character's view), tick()
+     calls tick(snap, now, until), start() calls wire(). A throwing panel
+     is caught and said once on the console; the panels after it still
+     run. A new card registers its own entry; no shared function changes. */
+  A.register({
+    name: "build",
+    order: 10,
+    paint: function (s) {
+      // MATH-NEXT-LOOK: a new PoB-scored item check may add PoB stat weights
+      // for a slot, so the build view is read again (no click)
+      var pobEval = s.eval && s.eval.calc && s.eval.calc.source === "pob" ? s.eval.id : null;
+      var newWeights = pobEval !== null && pobEval !== pobEvalId;
+      if (pobEval !== null) { pobEvalId = pobEval; }
+      var newCalc = !!(s.build && s.build.calc_rev && s.build.calc_rev !== calcRev);
+      if (s.build) { calcRev = s.build.calc_rev || null; }
+      if (s.build && s.build.rev !== buildRev) {
+        buildRev = s.build.rev;
+        loadBuild();
+      } else if (newCalc && buildDoc) {
+        loadBuild();
+      } else if (newWeights && buildDoc) {
+        loadBuild();
+      } else {
+        renderBuildYou();
+      }
+    },
+    wire: function () {
+      $("build-paste").addEventListener("paste", function () { setTimeout(pasteBuild, 0); });
+      $("build-paste").addEventListener("change", pasteBuild);
+      $("link-offer").addEventListener("click", linkOffer);
+      $("link-yes").addEventListener("click", linkConfirm);
+      $("link-no").addEventListener("click", linkCancel);
+      $("build-copy").addEventListener("click", copyBuild);
+      $("buildfile-save").addEventListener("click", saveBuildFile);
+    }
+  });
+  A.register({
+    name: "eval",
+    order: 20,
+    paint: function (s) {
+      renderEval(s.eval || null);
+      evalPainted = true;
+    }
+  });
+  A.register({
+    name: "buildlive",
+    order: 30,
+    paint: function (s) {
+      if (window.ALBuildLive) { window.ALBuildLive.paint(document, s); } // BUILD-LIVE
+    }
+  });
+  A.register({
+    name: "price",
+    order: 40,
+    paint: function (s) { renderPrice(s.price || null, false); }
+  });
+  A.register({
+    name: "chars",
+    order: 50,
+    paint: function (s) {
+      if (window.ALChars) { window.ALChars.paint(document, s, charPick); }
+    },
+    wire: function () {
+      if (window.ALChars) {
+        window.ALChars.wire(document, function (name) {
+          charPick = name;
+          if (snap) { renderedVersion = -1; render(snap); }
+        });
+      }
+    }
+  });
+  A.register({
+    name: "glance",
+    order: 60,
+    paint: function (s, c) {
+      $("zone").textContent = s.zone || "No zone yet";
+      $("hideout").hidden = !s.in_hideout;
+      $("zone-stale").hidden = !(s.zone && s.tailer && s.tailer.consented && s.tailer.idle);
+      $("level").textContent = c.level === null || c.level === undefined ? "-" : String(c.level);
+      $("who").textContent = c.character
+        ? c.character + (c["class"] ? " (" + c["class"] + ")" : "") + (c.who_note || "")
+        : "character unknown";
+      // UTIL-PACE: the core's pace sentence, shown once there is one.
+      var paceText = (c.pace && c.pace.text) || "";
+      $("pace").textContent = paceText;
+      $("pace").hidden = !paceText;
+      var counts = D.countsView(c.deaths, c.level_ups, !!(s.tailer && s.tailer.consented));
+      setDeaths($("deaths"), counts.deaths);
+      $("levelups").textContent = counts.levelups;
+      $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
+    },
+    tick: function (s, now, until) {
+      $("zone-time").textContent = s.zone_entered_at ? duration(until - s.zone_entered_at) : "--:--";
+      // Before the Client.txt opt-in there is no play session to time.
+      // UX-REGRESSION-SWEEP: it stops with them while the log is idle, so it
+      // never counts on under a Last session card that says the session ended.
+      $("session").textContent = s.tailer && s.tailer.consented
+        ? duration(until - s.session_started_at) : "--:--";
+    }
+  });
+  A.register({
+    name: "consent",
+    order: 70,
+    paint: function (s) {
+      var tl = s.tailer || {};
+      $("consent").hidden = !!tl.consented;
+      $("consent-no").hidden = !tl.consented;
+      $("consent-path").textContent = tl.path || "Client.txt (not found yet - start the game once)";
+      $("events-empty").textContent = D.emptyText(!!tl.consented);
+    },
+    wire: function () {
+      $("consent-yes").addEventListener("click", function () { consent(true); });
+      $("consent-no").addEventListener("click", function () { consent(false); });
+    }
+  });
+  A.register({
+    name: "reading",
+    order: 80,
+    paint: function () { showReading(); }
+  });
+  A.register({
+    name: "events",
+    order: 90,
+    paint: function (s) { renderEvents(s.recent_events || []); }
+  });
+  A.register({
+    name: "trades",
+    order: 100,
+    paint: function (s) { renderTrades(s.trade_requests || []); },
+    wire: function () {
+      $("trade-clear").addEventListener("click", function () { dismissTrade(null); });
+    }
+  });
+  A.register({
+    name: "acts",
+    order: 110,
+    paint: function (s, c) {
+      if (window.ALActs) { window.ALActs.paint(document, c.acts || null, D.clockUntil(s.tailer, serverNow()), true); }
+    },
+    // HUD-ACT: the open act split counts up with the zone timer.
+    tick: function (s, now, until) {
+      if (window.ALActs) { window.ALActs.paint(document, s.acts, until, false); }
+    }
+  });
+  A.register({
+    name: "runs",
+    order: 120,
+    paint: function (s) {
+      if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
+    },
+    // UTIL-MAPS: the open map's time counts up while the player is in it.
+    tick: function (s, now) {
+      if (window.ALRuns) { window.ALRuns.paint(document, s, now, false); }
+    }
+  });
+  A.register({
+    name: "summary",
+    order: 130,
+    // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
+    paint: function (s) {
+      if (window.ALSummary) { window.ALSummary.paint(document, s); }
+    }
+  });
+  A.register({
+    name: "zonenote",
+    order: 140,
+    // UX-ZONE-NOTES: the core's own note for this campaign zone
+    paint: function (s) {
+      var zn = s.zone_note && typeof s.zone_note.text === "string" ? s.zone_note.text : "";
+      $("zone-note-box").hidden = !zn;
+      if ($("zone-note").textContent !== zn) { $("zone-note").textContent = zn; }
+    }
+  });
+  A.register({
+    name: "history",
+    order: 150,
+    // UTIL-UNDERLEVEL / UTIL-RUN-HISTORY: the core's sentences, by themselves
+    paint: function (s, c) {
+      if (window.ALHistory) { window.ALHistory.paint(document, c); }
+    },
+    // UTIL-RUN-HISTORY: the player's clicks
+    wire: function () {
+      if (window.ALHistory) { window.ALHistory.wire(document, api); }
+    }
+  });
+  A.register({
+    name: "pricewatch",
+    order: 160,
+    // UTIL-PRICE-WATCH: moved prices of the items the player checked
+    paint: function (s) {
+      if (window.ALPriceWatch) { window.ALPriceWatch.paint(document, s); }
+    },
+    wire: function () {
+      if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
+    }
+  });
+  A.register({
+    name: "hints",
+    order: 170,
+    paint: function (s) {
+      if (window.ALHints) { window.ALHints.paint(document, s, serverNow()); }
+    },
+    // NEWBIE-HINTS: the tip hides by itself at its end time.
+    tick: function (s, now) {
+      if (window.ALHints) { window.ALHints.paint(document, s, now); }
+    },
+    wire: function () {
+      if (window.ALHints) { window.ALHints.wire(document, api); }
+    }
+  });
+  A.register({
+    name: "checks",
+    order: 180,
+    // DIAG-SELF / LANG-GUARD: the core's checks and language notice
+    paint: function (s) {
+      if (window.ALChecks) { window.ALChecks.paint(document, s); }
+    },
+    wire: function () {
+      if (window.ALChecks) {
+        var store = null;
+        try { store = window.localStorage; } catch (e) { store = null; }
+        window.ALChecks.wire(document, function () { return snap; }, navigator, store);
+      }
+    }
+  });
+  A.register({
+    name: "zoneguide",
+    order: 190,
+    paint: function (s) {
+      if (window.ALZoneGuide) { window.ALZoneGuide.paint(document, s); }
+    }
+  });
+  // the tools and settings that only wire the player's clicks
+  A.register({
+    name: "layout",
+    order: 200,
+    wire: function () {
+      $("layout-form").addEventListener("change", saveLayout);
+      $("layout-form").addEventListener("submit", function (e) { e.preventDefault(); });
+      ["layout-scale", "layout-opacity"].forEach(function (id) {
+        $(id).addEventListener("input", function () {
+          $(id + "-out").textContent = Math.round(parseFloat($(id).value) * 100) + "%";
+        });
+      });
+    }
+  });
+  A.register({
+    name: "filter",
+    order: 210,
+    wire: function () {
+      $("filter-download").addEventListener("click", downloadFilter);
+      $("filter-merge-file").addEventListener("change", mergeFilter);
+    }
+  });
+  A.register({
+    name: "weights",
+    order: 220,
+    wire: function () {
+      $("weights-form").addEventListener("change", saveWeights);
+      $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
+    }
+  });
+  A.register({
+    name: "gfx",
+    order: 230,
+    wire: function () { $("gfx").addEventListener("toggle", openGfx); }
+  });
+  A.register({
+    name: "restart-overlay",
+    order: 240,
+    wire: function () { wireRestartOverlay(); }
+  });
+  A.register({
+    name: "webdata",
+    order: 250,
+    wire: function () {
+      // TC-LINK-RECOVER: Settings shows the one opt-in sentence the confirm shows
+      $("webdata-sentence").textContent = T.WEB_DATA_OPT_IN;
+      $("webdata-form").addEventListener("change", saveWebData);
+      $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
+    }
+  });
+  A.register({
+    name: "settingsio",
+    order: 260,
+    // UX-SETTINGS-IO: the player's clicks
+    wire: function () {
+      if (!window.ALSettingsIO) { return; }
+      window.ALSettingsIO.wire(document, {
+        fetch: function (url, opts) { return fetch(url, opts); },
+        token: token,
+        save: function (blob, name) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        }
+      });
+    }
+  });
+
+  /* UTIL-MULTICHAR: level, pace, deaths, act times and run history of the
+     picked character (the one playing unless the player picks); the
+     playing one's numbers when the view cannot be made. */
+  function charView(s) {
+    if (!window.ALChars) { return s; }
+    try { return window.ALChars.view(s, charPick); } catch (e) { return s; }
+  }
+
   function render(s) {
     snap = s;
     // MERGE-SEAMS F5: the restart-overlay note clears on the next state push
@@ -1058,74 +1367,8 @@
     offset = Date.now() / 1000 - s.now;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
-    // MATH-NEXT-LOOK: a new PoB-scored item check may add PoB stat weights
-    // for a slot, so the build view is read again (no click)
-    var pobEval = s.eval && s.eval.calc && s.eval.calc.source === "pob" ? s.eval.id : null;
-    var newWeights = pobEval !== null && pobEval !== pobEvalId;
-    if (pobEval !== null) { pobEvalId = pobEval; }
-    var newCalc = !!(s.build && s.build.calc_rev && s.build.calc_rev !== calcRev);
-    if (s.build) { calcRev = s.build.calc_rev || null; }
-    if (s.build && s.build.rev !== buildRev) {
-      buildRev = s.build.rev;
-      loadBuild();
-    } else if (newCalc && buildDoc) {
-      loadBuild();
-    } else if (newWeights && buildDoc) {
-      loadBuild();
-    } else {
-      renderBuildYou();
-    }
-    renderEval(s.eval || null);
-    evalPainted = true;
-    if (window.ALBuildLive) { window.ALBuildLive.paint(document, s); } // BUILD-LIVE
-    renderPrice(s.price || null, false);
-    // UTIL-MULTICHAR: level, pace, deaths, act times and run history of
-    // the picked character (the one playing unless the player picks)
-    if (window.ALChars) { window.ALChars.paint(document, s, charPick); }
-    var c = window.ALChars ? window.ALChars.view(s, charPick) : s;
-
-    $("zone").textContent = s.zone || "No zone yet";
-    $("hideout").hidden = !s.in_hideout;
-    $("zone-stale").hidden = !(s.zone && s.tailer && s.tailer.consented && s.tailer.idle);
-    $("level").textContent = c.level === null || c.level === undefined ? "-" : String(c.level);
-    $("who").textContent = c.character
-      ? c.character + (c["class"] ? " (" + c["class"] + ")" : "") + (c.who_note || "")
-      : "character unknown";
-    // UTIL-PACE: the core's pace sentence, shown once there is one.
-    var paceText = (c.pace && c.pace.text) || "";
-    $("pace").textContent = paceText;
-    $("pace").hidden = !paceText;
-    var counts = D.countsView(c.deaths, c.level_ups, !!(s.tailer && s.tailer.consented));
-    setDeaths($("deaths"), counts.deaths);
-
-    $("levelups").textContent = counts.levelups;
-    $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
-
-    var tl = s.tailer || {};
-    $("consent").hidden = !!tl.consented;
-    $("consent-no").hidden = !tl.consented;
-    $("consent-path").textContent = tl.path || "Client.txt (not found yet - start the game once)";
-    $("events-empty").textContent = D.emptyText(!!tl.consented);
-    showReading();
-    renderEvents(s.recent_events || []);
-    renderTrades(s.trade_requests || []);
-    if (window.ALActs) { window.ALActs.paint(document, c.acts || null, D.clockUntil(s.tailer, serverNow()), true); }
-    if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
-    // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
-    if (window.ALSummary) { window.ALSummary.paint(document, s); }
-    // UX-ZONE-NOTES: the core's own note for this campaign zone
-    var zn = s.zone_note && typeof s.zone_note.text === "string" ? s.zone_note.text : "";
-    $("zone-note-box").hidden = !zn;
-    if ($("zone-note").textContent !== zn) { $("zone-note").textContent = zn; }
-    // UTIL-UNDERLEVEL / UTIL-RUN-HISTORY: the core's sentences, by themselves
-    if (window.ALHistory) { window.ALHistory.paint(document, c); }
-    // UTIL-PRICE-WATCH: moved prices of the items the player checked
-    if (window.ALPriceWatch) { window.ALPriceWatch.paint(document, s); }
-    if (window.ALHints) { window.ALHints.paint(document, s, serverNow()); }
-    // DIAG-SELF / LANG-GUARD: the core's checks and language notice
-    if (window.ALChecks) { window.ALChecks.paint(document, s); }
-    if (window.ALZoneGuide) { window.ALZoneGuide.paint(document, s); }
-    // TD-09 region hook: every registered Play region paints after the rest
+    A.render(s, charView(s));
+    // TD-09 region hook: every registered Play region paints after the panels
     if (window.ALRegions) { window.ALRegions.paint(document, s, serverNow()); }
     tick();
   }
@@ -1210,65 +1453,9 @@
   }
 
   function start() {
-    $("consent-yes").addEventListener("click", function () { consent(true); });
-    $("consent-no").addEventListener("click", function () { consent(false); });
     document.addEventListener("visibilitychange", tick);
-    $("trade-clear").addEventListener("click", function () { dismissTrade(null); });
-    $("layout-form").addEventListener("change", saveLayout);
-    $("layout-form").addEventListener("submit", function (e) { e.preventDefault(); });
-    ["layout-scale", "layout-opacity"].forEach(function (id) {
-      $(id).addEventListener("input", function () {
-        $(id + "-out").textContent = Math.round(parseFloat($(id).value) * 100) + "%";
-      });
-    });
-    $("build-paste").addEventListener("paste", function () { setTimeout(pasteBuild, 0); });
-    $("build-paste").addEventListener("change", pasteBuild);
-    $("link-offer").addEventListener("click", linkOffer);
-    $("link-yes").addEventListener("click", linkConfirm);
-    $("link-no").addEventListener("click", linkCancel);
-    // TC-LINK-RECOVER: Settings shows the one opt-in sentence the confirm shows
-    $("webdata-sentence").textContent = T.WEB_DATA_OPT_IN;
-    $("build-copy").addEventListener("click", copyBuild);
-    $("buildfile-save").addEventListener("click", saveBuildFile);
-    $("filter-download").addEventListener("click", downloadFilter);
-    $("filter-merge-file").addEventListener("change", mergeFilter);
-    $("weights-form").addEventListener("change", saveWeights);
-    $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
-    $("gfx").addEventListener("toggle", openGfx);
-    wireRestartOverlay();
-    $("webdata-form").addEventListener("change", saveWebData);
-    $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
-    // UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO: the player's clicks
-    if (window.ALHistory) { window.ALHistory.wire(document, api); }
-    if (window.ALChars) {
-      window.ALChars.wire(document, function (name) {
-        charPick = name;
-        if (snap) { renderedVersion = -1; render(snap); }
-      });
-    }
-    if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
-    if (window.ALHints) { window.ALHints.wire(document, api); }
-    if (window.ALChecks) {
-      var store = null;
-      try { store = window.localStorage; } catch (e) { store = null; }
-      window.ALChecks.wire(document, function () { return snap; }, navigator, store);
-    }
-    if (window.ALSettingsIO) {
-      window.ALSettingsIO.wire(document, {
-        fetch: function (url, opts) { return fetch(url, opts); },
-        token: token,
-        save: function (blob, name) {
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement("a");
-          a.href = url;
-          a.download = name;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        }
-      });
-    }
+    // TEST-WEB-REGISTRY: every panel's wire, in its order (web/registry.js)
+    A.start();
     // TD-09 region hook: wire every registered Play region before the first push
     if (window.ALRegions) {
       window.ALRegions.start(document, {
