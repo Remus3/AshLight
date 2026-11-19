@@ -279,9 +279,10 @@ def read_code_error(doc):
 def mark_token_reuse(runtime, now=None):
     """The old core, exiting for a code reload, lets the next start keep
     its token so the open dashboard and overlay reconnect on their own."""
+    from . import jsonfile
     try:
-        (Path(runtime) / TOKEN_REUSE_FILE).write_text(
-            json.dumps({"at": time.time() if now is None else now}) + "\n", encoding="ascii")
+        jsonfile.write_text(Path(runtime) / TOKEN_REUSE_FILE,
+                            json.dumps({"at": time.time() if now is None else now}) + "\n")
     except OSError:
         pass
 
