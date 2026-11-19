@@ -1,1 +1,25 @@
-/* AshLight dashboard: region B, the build line (stub, no rules yet; PLAY-TD-15-BUILDLINE fills it). */
+/* AshLight dashboard: region B, the build line (PLAY-TD-15-BUILDLINE; plan 03
+   TD-15). Track 68 px at s = 1: border 2 + padding 6 + 6 + row 1 + row 2.
+   Row 1 is one flex row: the 20 px / 600 state word (26 px line box), the
+   16 px name with the ellipsis, and while no build is loaded the 28 px
+   button (row 1 is then 28 px). Row 2 is one 22 px muted line; no gap
+   between the rows. Content 48 px (50 with the button). The line boxes
+   come from the shared row classes of web/app.css (.row-title, .row-body,
+   .one-line, .btn-28). */
+#play-b .bl { display: grid; gap: 0; min-width: 0; }
+#play-b .bl-row1 {
+  display: flex;
+  align-items: center;
+  gap: 0 0.5rem;
+  min-width: 0;
+}
+#play-b .bl-word { flex: 0 0 auto; font-weight: 600; white-space: nowrap; }
+/* "Old build" and "Wrong class" take status-warn; the glyph and word carry
+   the state, so the colour is never alone (design 0001 section 6) */
+#play-b .bl[data-tone="warn"] .bl-word { color: var(--fk-status-warn); }
+#play-b .bl-name { flex: 0 1 auto; }
+#play-b .bl-paste { flex: 0 0 auto; margin-left: auto; }
+#play-b .bl [hidden] { display: none; }
+/* B pads 6 px top and bottom (not 8): the rows keep 4 to 6 px of slack, so a
+   fractional region top never eats the 2 px minimum (G4) */
+#play-b { --region-pad: 0.375rem; }
