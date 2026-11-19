@@ -239,3 +239,31 @@ def test_rerun_without_an_item_is_a_no_op(core):
     assert core.state.snapshot()["eval"] is None
     core.last_eval.run(RARE_GLOVES, "Gloves")
     assert core.state.snapshot()["eval"]["slot"] is None  # no build yet
+
+
+def test_no_build_keep_part_words():
+    """TC-CAMPAIGN-KEEP (decision 0057): with no build, the keep part of a
+    gear card gives the Keep / Vendor word, head and notes; the overlay
+    line keeps the build next step and the dashboard sentence stays."""
+    keep = {"status": "keep", "level": 24, "need": 2, "of": 5, "count": 2, "missed": [],
+            "met": [{"label": "life", "min": 25, "have": 31},
+                    {"label": "fire res", "min": 12, "have": 14}]}
+    base = {"ok": False, "error": "no build loaded", "item": {"name": "Grim Clutch"}}
+    t = eval_card_text(dict(base, parts={"keep": keep}))
+    assert (t["word"], t["tone"], t["answers"]) == ("Keep", "upgrade", True)
+    assert (t["head"], t["item"], t["line"]) == (
+        "Keep - 2 of 5 met at level 24", "Grim Clutch", "Paste a build on the dashboard")
+    assert t["sentence"] == ("No build loaded yet. Paste a Path of Building code under "
+                             "Build, then press the hotkey again.")
+    assert t["notes"] == [
+        "Worth keeping: it meets 2 of 5 levelling thresholds for level 24.",
+        "Thresholds met: life 25+, fire res 12+."]
+    vendor = dict(keep, status="vendor", count=0, met=[])
+    t = eval_card_text(dict(base, parts={"keep": vendor}))
+    assert (t["word"], t["tone"], t["head"]) == ("Vendor", "note",
+                                                 "Vendor - 0 of 5 met at level 24")
+    assert t["notes"] == [
+        "Vendor: it meets 0 of 5 levelling thresholds for level 24, and 2 are needed."]
+    t = eval_card_text(dict(base, parts={"keep": {"status": "no_level"}}))
+    assert (t["word"], t["head"], t["answers"]) == ("Not checked", "No build loaded", False)
+    assert t["notes"] == ["Keep or vendor needs your character level from Client.txt."]
