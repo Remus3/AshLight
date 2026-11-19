@@ -4,29 +4,28 @@ SESSION: 10   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 8 done, next wave 9
-Wave 8 escape count: 0 of 4 merge batches needed a second suite; 12 of 12
-worktree packages merged, none deferred (batches: TEST-WEB-FMT /
-RUN-TAIL-HEAL-CORE / TEST-SELECT; TEST-XDIST-DIAG / PLAY-TD-12-CONTEXT-SETUP
-/ GP-06 / DEP-03; DEP-01 / REL-SUBJECT-CHECK / DATA-WEBFETCH-GZIP /
-OVL-ELECTRON-PIN; TEST-HTTP-ROUTES). Batch suites 3169, 3193, 3277, 3283
-passed (5 skipped each); npm 454, 463, 463, 463. TEST-SELECT is on main:
-batches are 4 from wave 9 on. REL-SUBJECT-CHECK is on main: every commit
-subject needs a known type. Wave 8 rulings (adjudicator, 2026-11-19):
-region N overflow filed as row PLAY-N-FIT, BLOCKED: session wave 9 (no
-wave-8 owner of web/notice.css; n.txt stays until test_play_fit is green
-without it); TEST-WEB-FMT files widened to web/strip.js and web/itemcard.js
-(accept grep is the contract); TEST-HTTP-ROUTES files widened to
-tests/test_lootfilter.py, test_lootfilter_tiers.py, test_tc_buildfile.py
-(source splits re-anchored, assertion strength kept); PLAY-TD-12 deleted its
-own STUB_CSS line (ruling Q1). GP-11 moved from wave 99 into wave 9 (08
-section 9 step 3; dep GP-09 done). FIX-IDLE-WORD retagged session wave 19.
-Rows filed (all BLOCKED: session wave 9): PLAY-N-FIT, RUN-UNREADABLE-WORD
-(SRW-1/2), TEST-PLAY-PORT-LEASE, TEST-E2E-REPEAT-SELF, TEST-TIMING-ALONE
-(TEST-XDIST-DIAG verdict "XDIST: cleared"). DEP-01 spike PASS (boot.py
-chosen; 7 spawn sites for DEP-06). Open design findings: SU-1, SU-2
-(PLAY-TD-12), SRW-1 to SRW-3, FMT-1, FMT-2 (docs/design/reviews.log).
-Builders made sidecar worktrees with the hand-run hook (not wired).
+WAVE POINTER: wave 9 done, next wave 10
+Wave 9 escape count: 2 of 3 merge batches needed a second suite (batch 2:
+tests/test_sidecar_paths.py flagged drive-rooted fixture URLs in
+OVL-SHELL-GUARDS's app/test/guards.test.js; fixed forward by adjudicator
+ruling instead of revert+defer, a deviation from 08 s4 step 6; batch 1:
+tests/test_marks.py rejected TC-PRESS-STAGED-LIVE's timing-marked test,
+fixed forward with a per-test TIMING_TESTS rule, mark kept); 12 of 12
+worktree packages plus act GP-11 merged, none deferred. Batches ran in the
+order 2, 3, 1 (batch 1 waited on fix rounds): RUN-ZONE-RESET / REL-PINFETCH
+/ OVL-LINKS-DOWNLOADS / OVL-SHELL-GUARDS (+ GP-11 row); DEP-04 / DEP-06 /
+DEP-07 / DATA-PRICE-POLITE; TC-PRESS-STAGED-LIVE / TEST-WAVE-GATE-POLICY /
+TEST-WEB-REGISTRY / TEST-SUITE-RUNNER. Batch suites 3314+1 failed then 3315,
+3360, 3400+1 failed then 3401 passed; npm 480, 480, 495. GP-11: repository
+description, 10 topics and switches set by gh and read back (still PRIVATE).
+Wave 9 rulings (adjudicator, 2026-11-19): TEST-WEB-REGISTRY widened to
+app/test/regions.test.js (one regex); TC-PRESS-STAGED-LIVE widened to
+tests/test_fullstack.py and server/al/theorycraft/cardparts/__init__.py
+(WORD_KEYS gains calc) and tests/test_marks.py to fix design S2 TCS-1 inside
+the package (state.py was RUN-ZONE-RESET's this wave). Open design findings:
+FMT-1/2, SU-1/2, SRW-1 to SRW-3, ZR-1, OLD-1 to OLD-4, TWR-1 to TWR-3, TCS-2
+(docs/design/reviews.log).
+Wave 8 escape count and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 Waves 1 to 6 escape counts and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 
 Next action: wave 8 of docs/plan/07-execution-plan.md, run exactly as
@@ -79,7 +78,7 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
-- REGION N OVERFLOW (session 9 /done): no wave 8 package owns web/notice.css or region N (packages.json: the notice.css owners are PLAY-TD-14-NOTICE wave 6, done, and PLAY-F-189A-SPACING-BADGE wave 33). The wave 8 start agent files a row tagged "BLOCKED: session wave <n>" for the N fix (G1 and G4 at 1024x700 and 1920x875, 20 overflow + 20 slack findings, tests/play_fit_pending/n.txt) in the earliest wave it fits, or the orchestrator folds it into a wave 8 package by an adjudicator ruling; until then n.txt stays.
+- REGION N OVERFLOW (session 9 /done): no wave 8 package owns web/notice.css or region N (packages.json: the notice.css owners are PLAY-TD-14-NOTICE wave 6, done, and PLAY-F-189A-SPACING-BADGE wave 33). The wave 8 start agent files a row tagged "BLOCKED: session wave <n>" for the N fix (G1 and G4 at 1024x700 and 1920x875, 20 overflow + 20 slack findings, tests/play_fit_pending/n.txt) in the earliest wave it fits, or the orchestrator folds it into a wave 8 package by an adjudicator ruling; until then n.txt stays. Ruled 2026-11-19 (adjudicator): filed as row PLAY-N-FIT, BLOCKED: session wave 9; no wave 9 package owned notice.css, so it stays open for the next session wave that takes it.
 - DEVIATION (session 9, wave 7): builders made their worktrees under the sidecar with the hook script by hand, not harness isolation, because decision 0012's hook entries are not wired into .claude/settings.json; OA-12 stays open (bullet below).
 - GP-10 is parked in wave 99 (deps GP-09 done, GP-06 wave 8, PUB-README-PLAYERS wave 12, PUB-SWEEP-OWN-ADDRESS wave 17); it is not next until those land.
 - Play-fit markers (W7-MARKERS, session 9): t, b, c-zone, i, u deleted (cfeca99) after a probe with them removed read test_play_fit green; n.txt stays (region N still fails G1 and G4 at 1024x700 and 1920x875, 20 + 20 findings; owner the next package that owns web/notice.css or the N track), g.txt stays (FIX-IDLE-WORD); c-setup and the tab-* markers wait for their own regions. Delete n.txt and g.txt when tests/test_play_fit.py is green without them.

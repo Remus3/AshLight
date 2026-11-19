@@ -58,3 +58,27 @@ Do NOT redo (session 6, the Fable ultraplan, all on main): research
 PUB-GO-DECISION, tools/plan_check.py, wave 0 (PLAN-LANDING), the
 close-out 2 rulings and the worktree probe (it passed; do not repeat).
 Session 5 and earlier: see git log and docs/audit/2026-11-17-audit.md.
+
+Wave 8 escape count and rulings (moved 2026-11-19 at wave 9 close):
+Wave 8 escape count: 0 of 4 merge batches needed a second suite; 12 of 12
+worktree packages merged, none deferred (batches: TEST-WEB-FMT /
+RUN-TAIL-HEAL-CORE / TEST-SELECT; TEST-XDIST-DIAG / PLAY-TD-12-CONTEXT-SETUP
+/ GP-06 / DEP-03; DEP-01 / REL-SUBJECT-CHECK / DATA-WEBFETCH-GZIP /
+OVL-ELECTRON-PIN; TEST-HTTP-ROUTES). Batch suites 3169, 3193, 3277, 3283
+passed (5 skipped each); npm 454, 463, 463, 463. TEST-SELECT is on main:
+batches are 4 from wave 9 on. REL-SUBJECT-CHECK is on main: every commit
+subject needs a known type. Wave 8 rulings (adjudicator, 2026-11-19):
+region N overflow filed as row PLAY-N-FIT, BLOCKED: session wave 9 (no
+wave-8 owner of web/notice.css; n.txt stays until test_play_fit is green
+without it); TEST-WEB-FMT files widened to web/strip.js and web/itemcard.js
+(accept grep is the contract); TEST-HTTP-ROUTES files widened to
+tests/test_lootfilter.py, test_lootfilter_tiers.py, test_tc_buildfile.py
+(source splits re-anchored, assertion strength kept); PLAY-TD-12 deleted its
+own STUB_CSS line (ruling Q1). GP-11 moved from wave 99 into wave 9 (08
+section 9 step 3; dep GP-09 done). FIX-IDLE-WORD retagged session wave 19.
+Rows filed (all BLOCKED: session wave 9): PLAY-N-FIT, RUN-UNREADABLE-WORD
+(SRW-1/2), TEST-PLAY-PORT-LEASE, TEST-E2E-REPEAT-SELF, TEST-TIMING-ALONE
+(TEST-XDIST-DIAG verdict "XDIST: cleared"). DEP-01 spike PASS (boot.py
+chosen; 7 spawn sites for DEP-06). Open design findings: SU-1, SU-2
+(PLAY-TD-12), SRW-1 to SRW-3, FMT-1, FMT-2 (docs/design/reviews.log).
+Builders made sidecar worktrees with the hand-run hook (not wired).
