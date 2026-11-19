@@ -104,11 +104,12 @@ class Stack:
 
 
 class Sse:
-    """A raw SSE client that keeps every frame as (event, data)."""
+    """A raw SSE client that keeps every frame as (event, data). It reads
+    the dev tap (/events?tap=1, SEC-SSE-TAP), so "events" frames come too."""
 
     def __init__(self, port):
         self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
-        self.sock.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{port}"
+        self.sock.sendall((f"GET /events?token={TOKEN}&tap=1 HTTP/1.1\r\nHost: 127.0.0.1:{port}"
                            "\r\nAccept: text/event-stream\r\n\r\n").encode())
         self.buf = b""
         self.frames = []
@@ -146,8 +147,11 @@ class Sse:
                 raise AssertionError(f"SSE never sent {what}")
             self._pump(end)
 
+    def tapped(self):
+        return [e for ev, data in self.frames if ev == "events" for e in data]
+
     def event_types(self):
-        return {e["type"] for ev, data in self.frames if ev == "events" for e in data}
+        return {e["type"] for e in self.tapped()}
 
     def last_state(self):
         return next((d for ev, d in reversed(self.frames) if ev == "state"), None)
@@ -242,9 +246,15 @@ def test_fullstack_session_through_http_and_sse(env, monkeypatch):
         s.trade_accepted()
         append(log, s)
         snap = st.wait_for(lambda x: not x["trade_requests"], "the accept")
-        assert len(snap["recent_whispers"]) == 3
+        assert "recent_whispers" not in snap
         sse.wait(lambda e, d: e == "events" and any(x["type"] == "trade_accepted" for x in d),
                  "trade_accepted")
+        tapped = sse.tapped()
+        assert sum(e["type"] in ("whisper_in", "whisper_out") for e in tapped) == 3
+        # SEC-SSE-TAP: a tapped event holds no string but its type
+        for e in tapped:
+            assert all(v is None or isinstance(v, (bool, int, float))
+                       for k, v in e.items() if k != "type"), e
         types = sse.event_types()
         for t in ("log_opened", "scene_changed", "area_generated", "level_up", "death",
                   "whisper_in", "whisper_out", "trade_cancelled", "trade_accepted"):
@@ -379,7 +389,8 @@ def test_fullstack_session_through_http_and_sse(env, monkeypatch):
     assert snap["death_recap"]["earlier_text"] == ""
     assert snap["session_summary"]["id"] == saved["id"]  # the saved card shows
     assert snap["zone"] == "Sun Temple"
-    assert not snap["recent_whispers"] and not snap["trade_requests"]  # never replayed
+    assert "recent_whispers" not in snap and not snap["trade_requests"]  # never replayed
+    assert not any(r["whisper"] for r in snap["recent_events"])
     # a restart never refetches early (attempt times persisted)
     st2.req("GET", "/api/rates")
     time.sleep(0.1)

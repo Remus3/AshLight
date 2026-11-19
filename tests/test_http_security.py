@@ -6,15 +6,17 @@ runtime state goes to tmp_path.
 
 import http.client
 import json
+import re
 import socket
 import threading
+import time
 from pathlib import Path
 
 import pytest
 
-from server.al import ports
+from server.al import http as al_http, ports
 from server.al.core import Core
-from server.al.http import CSP, serve
+from server.al.http import CSP, serve, tap_event
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "t" * 48
@@ -475,18 +477,154 @@ def test_clipboard_read_is_a_501_stub(srv):
     assert r.status == 501
 
 
-def test_sse_stream_sends_state_then_events(srv):
-    s = socket.create_connection(("127.0.0.1", srv.port), timeout=5)
-    s.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{srv.port}\r\n"
+def _sse_open(server, query=""):
+    s = socket.create_connection(("127.0.0.1", server.port), timeout=5)
+    s.sendall((f"GET /events?token={TOKEN}{query} HTTP/1.1\r\n"
+               f"Host: 127.0.0.1:{server.port}\r\n"
                "Accept: text/event-stream\r\n\r\n").encode())
     buf = b""
     while b"event: state" not in buf:
         buf += s.recv(65536)
-    assert b"text/event-stream" in buf and b"Content-Security-Policy" in buf
-    srv.core.bus.publish({"type": "death", "character": "Me", "suicide": False})
-    while b"event: events" not in buf:
-        buf += s.recv(65536)
-    s.close()
+    return s, buf
+
+
+def _sse_read_for(s, seconds):
+    """Every byte the stream sends within seconds."""
+    buf = b""
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        s.settimeout(max(0.01, end - time.monotonic()))
+        try:
+            chunk = s.recv(65536)
+        except socket.timeout:
+            break
+        if not chunk:
+            break
+        buf += chunk
+    return buf
+
+
+def _sse_frames(buf, name):
+    out = []
+    head = b"event: " + name.encode() + b"\ndata: "
+    for block in buf.split(b"\n\n"):
+        if block.startswith(head):
+            out.append(json.loads(block[len(head):]))
+    return out
+
+
+def _tap_events(buf):
+    return [e for frame in _sse_frames(buf, "events") for e in frame]
+
+
+# SEC-SSE-TAP: a fixture replay with chat-bearing events among the rest
+TAP_FIXTURE = (
+    {"type": "whisper_in", "from": "Buyer", "text": "hi, secret words",
+     "raw": "@From Buyer: hi, secret words", "trade": False},
+    {"type": "chat", "channel": "global", "from": "Someone", "text": "party talk"},
+    {"type": "level_up", "character": "Me", "class": "Monk", "level": 7},
+    {"type": "death", "character": "Me", "suicide": False},
+)
+
+
+def test_sse_stream_sends_state_then_events(srv):
+    # SEC-SSE-TAP: the default stream sends state frames only; each bus
+    # event still makes a state push arrive within 250 ms (events spaced
+    # past the 4 Hz coalescing window, so the push is due at once).
+    s, buf = _sse_open(srv)
+    try:
+        assert b"text/event-stream" in buf and b"Content-Security-Policy" in buf
+        for ev in TAP_FIXTURE:
+            buf += _sse_read_for(s, al_http.SSE_MIN_INTERVAL_S + 0.05)
+            v = srv.core.state.version
+            t0 = time.monotonic()
+            srv.core.bus.publish(dict(ev))
+            if srv.core.state.version == v:
+                continue  # chat lines change no state: nothing to push
+            got = b""
+            while b"event: state" not in got:
+                left = 0.25 - (time.monotonic() - t0)
+                assert left > 0, ("no state push within 250 ms", ev["type"])
+                got += _sse_read_for(s, min(left, 0.05))
+            buf += got
+        buf += _sse_read_for(s, 0.4)
+        assert b"event: events" not in buf and _tap_events(buf) == []
+        assert {f for f in re.findall(rb"^event: (\w+)$", buf, re.M)} == {b"state"}
+        assert _sse_frames(buf, "state")[-1]["deaths"] == 1
+    finally:
+        s.close()
+
+
+def _tap_read(s, n, timeout=5.0):
+    buf = b""
+    end = time.monotonic() + timeout
+    while len(_tap_events(buf)) < n and time.monotonic() < end:
+        buf += _sse_read_for(s, 0.1)
+    return buf
+
+
+def test_events_tap_only_in_a_source_checkout(srv):
+    # SEC-SSE-TAP: the tap is on only where the repo root holds .git (the
+    # suite runs in a source checkout or a worktree of one).
+    assert srv.events_tap is (ROOT / ".git").exists()
+    death = {"type": "death", "character": "Me", "suicide": False}
+    srv.events_tap = True
+    s, _ = _sse_open(srv, "&tap=1")
+    try:
+        srv.core.bus.publish(dict(death))
+        assert [e["type"] for e in _tap_events(_tap_read(s, 1))] == ["death"]
+    finally:
+        s.close()
+    # an installed copy (no .git): ?tap=1 is the default stream
+    srv.events_tap = False
+    for query in ("&tap=1", ""):
+        s, _ = _sse_open(srv, query)
+        try:
+            srv.core.bus.publish(dict(death))
+            buf = _sse_read_for(s, 0.5)
+            assert b"event: state" in buf and b"event: events" not in buf, query
+        finally:
+            s.close()
+    # in a source checkout, only tap=1 opens the tap
+    srv.events_tap = True
+    for query in ("&tap=yes", "&tap=0", "&tap=", ""):
+        s, _ = _sse_open(srv, query)
+        try:
+            srv.core.bus.publish(dict(death))
+            buf = _sse_read_for(s, 0.5)
+            assert b"event: state" in buf and b"event: events" not in buf, query
+        finally:
+            s.close()
+
+
+def test_tap_frames_hold_no_text_field(srv):
+    srv.events_tap = True
+    s, _ = _sse_open(srv, "&tap=1")
+    try:
+        for ev in TAP_FIXTURE:
+            srv.core.bus.publish(dict(ev))
+        buf = _tap_read(s, len(TAP_FIXTURE))
+    finally:
+        s.close()
+    evs = _tap_events(buf)
+    assert [e["type"] for e in evs] == [e["type"] for e in TAP_FIXTURE]
+    for e in evs:
+        assert all(v is None or isinstance(v, (bool, int, float))
+                   for k, v in e.items() if k != "type"), e
+    assert evs[0]["trade"] is False and evs[2]["level"] == 7
+    assert evs[3]["suicide"] is False and all(isinstance(e["seq"], int) for e in evs)
+    for word in (b"secret words", b"party talk", b"Buyer", b"Someone", b"Monk",
+                 b'"Me"', b"global", b"raw"):
+        assert word not in json.dumps(evs).encode(), word
+    assert tap_event({"type": "x", "a": 1, "b": 2.5, "c": True, "d": None, "e": "s",
+                      "f": [1], "g": {"h": 1}}) == {"type": "x", "a": 1, "b": 2.5,
+                                                     "c": True, "d": None}
+
+
+def test_snapshot_has_no_recent_whispers(srv):
+    srv.core.bus.publish({"type": "whisper_in", "from": "Buyer", "text": "hi"})
+    r, body = req(srv, "GET", "/api/state", auth())
+    assert r.status == 200 and "recent_whispers" not in json.loads(body)
 
 
 def test_favicon_is_the_local_brand_icon(srv):
