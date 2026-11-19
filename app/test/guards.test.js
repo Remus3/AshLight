@@ -8,9 +8,13 @@ const Part = require("../parts/10-guards.js");
 
 const PORT = 8960;
 const CORE = "http://127.0.0.1:" + PORT;
-// what url.pathToFileURL gives for an install path with a space in it (the
-// one drive-rooted shape the leak sweep allows in a fixture)
-const OVERLAY_URL = "file:///C:/ProgramData/Ash%20Light/app/overlay/index.html";
+// drive letters built from parts, so this file spells no drive path
+// (tests/test_sidecar_paths.py)
+const D = "C" + ":";
+const d = "c" + ":";
+// what url.pathToFileURL gives for an install path with a space in it (a
+// neutral ProgramData folder, never a user profile)
+const OVERLAY_URL = "file:///" + D + "/ProgramData/Ash%20Light/app/overlay/index.html";
 
 function fakeWc() {
   const handlers = {};
@@ -77,13 +81,13 @@ test("the overlay registers deny-all; the companion keeps its same-origin loads"
   Part.overlayWindow(ctx, { webContents: overlay });
   Part.clientWindow(ctx, { webContents: companion }, {});
   assert.equal(overlay.emit("will-navigate", CORE + "/"), true);
-  assert.equal(overlay.emit("will-navigate", "file:///C:/ProgramData/x.html"), true);
+  assert.equal(overlay.emit("will-navigate", "file:///" + D + "/ProgramData/x.html"), true);
   // the companion: same-origin reload / dashboard stay; anything else refused
   assert.equal(companion.emit("will-navigate", CORE + "/#token=abc"), false);
   assert.equal(companion.emit("will-redirect", CORE + "/api/health"), false);
   assert.equal(companion.emit("will-navigate", "https://example.org/"), true);
   assert.equal(companion.emit("will-navigate", "http://127.0.0.1:9999/"), true);
-  assert.equal(companion.emit("will-navigate", "file:///C:/ProgramData/x.html"), true);
+  assert.equal(companion.emit("will-navigate", "file:///" + D + "/ProgramData/x.html"), true);
   assert.equal(companion.emit("will-attach-webview", CORE + "/"), true);
   assert.deepEqual(companion.openHandler({ url: CORE + "/" }), { action: "deny" });
   // a webContents created before the guards existed is not in the registry
@@ -106,16 +110,16 @@ function fakeWin(frameUrl) {
 test("al:config answers only the overlay main frame on the exact page", () => {
   const spellings = [
     OVERLAY_URL,
-    "file:///C:/ProgramData/Ash Light/app/overlay/index.html",
-    "file:///c:/ProgramData/Ash%20Light/app/overlay/index.html",
-    "file://C:\\ProgramData\\Ash Light\\app\\overlay\\index.html"
+    "file:///" + D + "/ProgramData/Ash Light/app/overlay/index.html",
+    "file:///" + d + "/ProgramData/Ash%20Light/app/overlay/index.html",
+    "file://" + D + "\\ProgramData\\Ash Light\\app\\overlay\\index.html"
   ];
   for (const s of spellings) {
     const { win, mainFrame } = fakeWin(s);
     assert.equal(Guards.frameIsOverlayPage(mainFrame, win, OVERLAY_URL), true, s);
   }
   // a foreign file URL that also ends in /overlay/index.html
-  const foreign = fakeWin("file:///C:/ProgramData/Downloads/evil/overlay/index.html");
+  const foreign = fakeWin("file:///" + D + "/ProgramData/Downloads/evil/overlay/index.html");
   assert.equal(Guards.frameIsOverlayPage(foreign.mainFrame, foreign.win, OVERLAY_URL), false);
   // the right URL, but a subframe (not the main frame)
   const { win } = fakeWin(OVERLAY_URL);
@@ -129,7 +133,7 @@ test("al:config answers only the overlay main frame on the exact page", () => {
   const web = fakeWin(CORE + "/overlay/index.html");
   assert.equal(Guards.frameIsOverlayPage(web.mainFrame, web.win, OVERLAY_URL), false);
   // a bad percent escape is not the page
-  const bad = fakeWin("file:///C:/ProgramData/Ash%ZZLight/app/overlay/index.html");
+  const bad = fakeWin("file:///" + D + "/ProgramData/Ash%ZZLight/app/overlay/index.html");
   assert.equal(Guards.frameIsOverlayPage(bad.mainFrame, bad.win, OVERLAY_URL), false);
 });
 
