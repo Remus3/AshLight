@@ -702,6 +702,24 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   SEC-ACL-SETUP). Reverses if: the ACL breaks a supported install
   layout, a player shares the folder on purpose and objects, or the
   installed per-user home makes the checkout case moot.
+- WORN-GEAR: the last checked item can be filed as the worn item of its
+  slot (button, or an optional wear key that is unset by default; no new
+  read: the text of that press); stored as parsed mod lines, base and
+  slot only in one bounded file under ops/runtime (16 slots x 12
+  characters), on by default, emptied by Clear run history; the item
+  check compares against the worn item first, the PoB plan second; the
+  checked list of decision 0045 stays memory-only (decision 0052, ruling
+  Q-26, bounds per 0036). Reverses if: the operator rules local
+  item-derived files unwanted, or a stored baseline is shown to leak
+  names or paths.
+- Main-process parts seam (app/parts/): Electron main-process features
+  live as app/parts/NN-name.js files that app/parts.js loads in
+  file-name order (hooks early, ready, overlayWindow, clientWindow,
+  configChanged, gate, toggled, quit; a throwing part is logged and
+  skipped); app/main.js keeps the two windows' creation, the IPC
+  handlers and the one clipboard read (decision 0053). Reverses if: a
+  part needs an order that file names cannot give, a packaged build
+  cannot list the directory, or the floor scan stops covering app/parts.
 - NO-DISCOVERY: only the real entry point with no configured log path
   runs the Steam library scan; a core given a runtime dir or a log path
   never scans; a configured Client.txt path that is missing stays

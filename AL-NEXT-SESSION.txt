@@ -105,10 +105,8 @@ Carried forward (not acted on yet):
   application file comes with row DATA-GGG-APPLICATION, wave 1); (e) logon
   autostart scripts\autostart.ps1 -Enable (OA-7; decision 0011, OFF by
   default); (g) UA contact in config/local.json + web_data on (OA-8;
-  poe.ninja / share-URL features only); (h) confirm "NLM" =
-  natural-language messaging (OA-30; docs/design/0001 top; row
-  PLAY-TD-03-TOKENS, wave 4, drops it under ruling Q-15); (k) review
-  decision 0017 (trade link only) and say if it should be reversed (OA-9).
+  poe.ninja / share-URL features only); (k) review decision 0017 (trade
+  link only) and say if it should be reversed (OA-9).
   Act (d), create the GitHub remote, is no operator act any more: the go
   is recorded above and row GP-09 (wave 5) creates the repository and
   pushes. Act (f), dropped unacted at commit a3bf44c, is OA-12 above.
