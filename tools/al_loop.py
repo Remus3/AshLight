@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AL loop tick (plan 015, operator order 2026-10-05).
 
-    al_loop.py tick [--dry-run] [--no-push]   one self-monitoring, idempotent pass
+    al_loop.py tick [--dry-run [--ignore-halt]] [--no-push]   one idempotent pass
     al_loop.py checklist                      print the last tick's checklist
     al_loop.py lane <ID>                      (internal) run one dispatched item
     al_loop.py review <ID>                    (internal, plan 098) review / fix / merge one item
@@ -10,7 +10,9 @@
     al_loop.py session-done <ID> [--commit S] the session marks a routed order done
 
 One tick, under ops/loop/control/loop.lock (fleet_watch.watch_lock):
-  a. HALT file -> status "halted", exit 0. A busy lock -> exit 0, nothing written.
+  a. pre_halt steps (tools/loop_steps: the seam, phases and rules), then HALT ->
+     "halted", exit 0 (--dry-run --ignore-halt goes on, writes nothing, prints
+     the would-dispatch lines). A busy lock -> exit 0, nothing written.
   b. Inbox (config loop.inbox_dir / loop.outbox_dir): new notes by mtime through
      fleet_watch.run_source (baseline first), then kit v8 fleet_inbox (FLEET
      item 14): classify() free; skip / ack = a seen-ledger line, no note;
@@ -55,13 +57,10 @@ One tick, under ops/loop/control/loop.lock (fleet_watch.watch_lock):
   098), which under the merge lock needs gates green and leak_sweep
   --pre-push clean, then runs `git push origin main`; .githooks/pre-push
   re-checks the ref rule, the identity gate and the leak sweep on every push.
-  Gates: the commands of ops/loop/gates.txt (one per line, run as argv, no
-  shell), else the `run:` lines of .github/workflows/ci.yml; neither = fail
-  closed.
-  Plan 096: every gate call goes through Tick.gate - one authoritative run per
-  tree state (verdicts cached by git tree id in gate_verdicts.json); a merge
-  that only adds the ROADMAP flip carries the lane tree's verdict to main, so
-  the push worker does not re-gate it. The verifier runs no pytest.
+  Gates: ops/loop/gates.txt (one argv per line, no shell), else the ci.yml
+  `run:` lines; neither = fail closed. Plan 096: Tick.gate runs once per tree
+  state (verdicts cached by git tree id); a merge that only adds the ROADMAP
+  flip carries the lane tree's verdict to main. The verifier runs no pytest.
 
 Every side effect goes through Deps, so tests never spawn, never touch a git
 remote and never call schtasks. Paths are resolved at run time.
@@ -89,13 +88,10 @@ import al_lane  # noqa: E402
 import lane_samples  # noqa: E402,F401
 import ledger_rotate  # noqa: E402
 import usage_ledger  # noqa: E402
-# Plan 107: constants + small helpers + item records (loop_base), lane prompts
-# (loop_prompts), the ROADMAP rows (loop_roadmap), the inbox pass (loop_inbox),
-# the merge into main (loop_merge), and (LOOP-SPLIT-TICK) the review / commit
-# (loop_review) and the work list / dispatch (loop_work) live in their own
-# modules. Every moved name is re-exported here, the same object: tests and
-# tools/al_tests.py read al_loop.X. Names this file does not use itself are
-# marked F401 (re-export).
+import loop_steps  # noqa: E402  AUTO-01: every tick step is a tools/loop_steps/ file
+# Plan 107 / LOOP-SPLIT-TICK: helpers (loop_base), prompts, ROADMAP rows, inbox,
+# merge, review and work-list code live in tools/loop_*.py, re-exported here as
+# the same objects (tests and tools/al_tests.py read al_loop.X; unused = F401).
 from loop_base import (  # noqa: E402
     ATTENTION_STATES, BACKOFF_BASE_S, BACKOFF_CAP_S, BACKOFF_REL, CODE, DEEP_EXTRA,
     DONE_STATES, GATE_TIMEOUT_S, HALT_REL, HEADROOM, HOLD_STATES, INFRA_RX,
@@ -206,8 +202,7 @@ def hooks_path_problem(root, git):
 
 CI_WORKFLOW_REL = Path(".github/workflows/ci.yml")
 CI_SETUP_RX = re.compile(r"\bpip\s+install\b")
-# The loop's gates are the tracked list (CI runs the same commands):
-# ops/loop/gates.txt, one command per line, `#` comments; ci.yml is the fallback.
+# The loop's gates: ops/loop/gates.txt (CI runs the same; `#` comments), else ci.yml.
 GATES_REL = Path("ops/loop/gates.txt")
 
 
@@ -270,10 +265,9 @@ def _whole_suite(argv):
     return not any(a.endswith(".py") or "::" in a for a in rest)
 
 
-# Plan 097: the whole suite runs on 8 xdist workers when pytest-xdist (an
-# optional dev-only accelerator, never imported by AL code) is importable;
-# loadfile keeps each module - every real-git module included - on one worker.
-# 8, not auto (16): two gate slots share the box (MAIN order N6e995b).
+# Plan 097: the whole suite runs on 8 xdist workers when pytest-xdist (optional,
+# dev only) is importable; loadfile keeps each module (real-git ones included) on
+# one worker. 8, not auto (16): two gate slots share the box (MAIN order N6e995b).
 XDIST_ARGS = ("-n", "8", "--dist", "loadfile")
 
 
@@ -448,16 +442,14 @@ class Deps:
         self.rotate = ledger_rotate.rotate_daily  # plan 138
         self.drift = _drift_check  # TC-DRIFT: daily PoB-PoE2 release check
         self.docs_watch = lambda r, now: __import__("ggg_docs_watch").safe_check(r, now)
-        # plan 093: the machine fleet roster ({"repos": [{code, root, inbox?}]}),
-        # the same FLEET_ROSTER the kit statusline reads; tests pass None.
+        # plan 093: the machine roster FLEET_ROSTER the kit statusline reads; tests pass None
         self.roster_path = os.environ.get("FLEET_ROSTER") or None
         for key, val in over.items():
             setattr(self, key, val)
 
 
 def _drift_check(root, now):
-    """TC-DRIFT: the daily PoB-PoE2 release check (tools/tc_drift.py); one
-    summary line when a check ran, None otherwise. Never fails the tick."""
+    """TC-DRIFT (tools/tc_drift.py): one line when a check ran, else None; never raises."""
     try:
         import tc_drift
         return tc_drift.loop_check(root, now)
@@ -532,6 +524,8 @@ def stall_of(doc, now, floor_s=STALL_FLOOR_S):
 # ---------------------------------------------------------------- the tick
 
 class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
+    halted = ignore_halt = False  # AUTO-01: set by tick()
+
     def __init__(self, deps, dry_run=False, no_push=False):
         self.d, self.dry, self.no_push = deps, dry_run, no_push
         self.root = deps.root
@@ -906,6 +900,8 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
             self.step(extra["parked_warning"])
 
     def write(self, state, task, lines, started):
+        if self.ignore_halt:  # AUTO-01: a dry run past HALT writes no record
+            return {"state": state, "task": task, "log": self.log, "checklist": lines}
         now = self.d.clock()
         try:
             self.d.write_status(self.root, CODE, state, task, started, self.d.budget,
@@ -941,9 +937,7 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
             res = self.d.rotate(self.root, self.d.clock())
             if res is not None:
                 self.step(ledger_rotate.summary(res))
-            line = self.d.drift(self.root, self.d.clock())  # TC-DRIFT
-            if line:
-                self.step(line)
+            loop_steps.lines("work", self)  # AUTO-01: TC-DRIFT and later work steps
         self.stalls()
         if not self.blocked():
             self.inbox()
@@ -969,8 +963,9 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
                 self.step("idle: deep-dive backed off to weekly (3 dives, 0 plans)")
             else:
                 self.step("idle: deep-dive already done today")
+        loop_steps.lines("post_work", self, rows, work, skipped)
         self.launch_push()
-        lines = self.checklist(rows, work, skipped)
+        lines = loop_steps.rows(self, self.checklist(rows, work, skipped))
         why = self.blocked()
         state = {"halted": "halted", "backoff": "backoff", "runs cap": "limit",
                  "budget unreadable": "refused"}.get(why, "running" if in_flight else "idle")
@@ -997,7 +992,7 @@ def fire_count(prev):
 
 def handoff_session(text):
     """The `SESSION: <n>` counter of a hand-off file (CLAUDE.md loop rule 5), or None."""
-    m = re.search(r"^SESSION:\s*(\d+)\s*$", text or "", re.M)
+    m = re.search(r"^SESSION:\s*(\d+)\b", text or "", re.M)  # AUTO-01: `SESSION: 7   (...)`
     return int(m.group(1)) if m else None
 
 
@@ -1013,15 +1008,16 @@ def render_checklist(doc, session=None):
     return cl.render(n, rows)
 
 
-def tick(dry_run=False, no_push=False, deps=None):
+def tick(dry_run=False, no_push=False, deps=None, ignore_halt=False):
+    if ignore_halt and not dry_run:  # AUTO-01: past HALT only as a dry run
+        raise ValueError("ignore_halt needs dry_run")
     d = deps or Deps()
     t = Tick(d, dry_run, no_push)
-    t0 = d.clock()
-    if not dry_run and (line := d.docs_watch(d.root, d.clock())):  # 0044: even HALTed
-        t.step(line)
-    if (d.root / HALT_REL).exists():
+    t0, t.halted, t.ignore_halt = d.clock(), (d.root / HALT_REL).exists(), ignore_halt
+    loop_steps.lines("pre_halt", t)  # 0044 docs watch: even HALTed, never dry
+    if t.halted and not ignore_halt:
         t.step("HALT file present")
-        return t.write("halted", "Halted", [], t0)
+        return t.write("halted", "Halted", loop_steps.rows(t), t0)
     try:
         with d.lock(d.root / LOCK_REL):
             doc = t.run()
@@ -1186,6 +1182,7 @@ def main(argv=None):
     t = sub.add_parser("tick")
     t.add_argument("--dry-run", action="store_true")
     t.add_argument("--no-push", action="store_true")
+    t.add_argument("--ignore-halt", action="store_true", help="AUTO-01: with --dry-run only")
     sub.add_parser("checklist")
     ln = sub.add_parser("lane")
     ln.add_argument("item")
@@ -1207,8 +1204,11 @@ def main(argv=None):
         print(f"{a.item}: {'session-done' if rec else 'not a queued order'}")
         return 0 if rec else 2
     if a.cmd == "tick":
-        doc = tick(a.dry_run, a.no_push)
-        print(f"loop: {doc.get('state')}")
+        if a.ignore_halt and not a.dry_run:
+            ap.error("--ignore-halt is valid only with --dry-run")  # exit 2
+        doc = tick(a.dry_run, a.no_push, ignore_halt=a.ignore_halt)
+        print(ascii_text("\n".join([*(x for x in doc.get("log") or [] if ": would " in x),
+                                    f"loop: {doc.get('state')}"]), 4000))
         return 0
     if a.cmd == "lane":
         return lane_worker(a.item)
