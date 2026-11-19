@@ -17,7 +17,7 @@ import re
 
 import pytest
 
-from tc_live_util import LIVE_REF, reference
+from tc_live_util import LIVE_CALC, LIVE_REF, reference
 
 from server.al.theorycraft import bridge, calcwire
 
@@ -115,6 +115,7 @@ def test_pinned_checkout_is_the_pin():
         f"PoB checkout {SRC.parent.name} is not the pin {pins['pob2']['top_dir']}")
 
 
+@LIVE_CALC
 @LIVE_REF
 @pytest.mark.slow
 def test_live_launch_object_and_output_keys(warm_bridge):
