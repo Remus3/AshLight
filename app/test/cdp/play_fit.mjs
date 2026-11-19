@@ -1,0 +1,380 @@
+// PLAY-TD-01B: the Play fit harness driver. One headless Chrome, one page;
+// tests/test_play_fit.py swaps the play state under the page (same port,
+// same token, a fresh core per state) and this driver resizes the page
+// through the 5 cockpit and 2 flow sizes and measures what the glance
+// budgets of plan 03 section 11 need (G1, G2, G4, G5, G6, G7, G9). It only
+// measures: every verdict is made in Python. Not a node --test file.
+//
+//   node play_fit.mjs <chrome.exe> <profile dir>
+//
+// Reads one JSON command per stdin line and answers one JSON line each:
+//   {"cmd": "state", "url", "name", "sizes": [[w, h], ...], "answers": [...]}
+//   {"cmd": "placeholder", "sizes": [[w, h], ...]}   data-fit forced on
+//                                                    every region, legacy
+//                                                    groups hidden
+//   {"cmd": "metrics", "rows": [{"key", "text", "px", "weight"}]}
+//   {"cmd": "quit"}
+// Node's global WebSocket (Node 22+) is the only client; no npm package.
+// The page is a loopback test core; nothing is sent to the game.
+import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
+
+const [chromePath, profile] = process.argv.slice(2);
+const REGIONS = ["g", "c", "t", "n", "b", "i", "u"];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const out = (o) => process.stdout.write(JSON.stringify(o) + "\n");
+const port = 9100 + Math.floor(Math.random() * 380);
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
+  "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+  "--hide-scrollbars", "--force-device-scale-factor=1",
+  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
+  { stdio: "ignore" });
+const quit = (code) => { try { chrome.kill(); } catch { /* gone */ } process.exit(code); };
+const killer = setTimeout(() => { out({ error: "watchdog: 300 s" }); quit(3); }, 300000);
+
+let targets = null;
+for (let i = 0; i < 150 && !targets; i++) {
+  try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
+  catch { await sleep(100); }
+}
+if (!targets) { out({ error: "no DevTools endpoint" }); quit(2); }
+const page = targets.find((t) => t.type === "page");
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((r) => ws.addEventListener("open", r));
+let seq = 0;
+const pending = new Map();
+ws.addEventListener("message", (e) => {
+  const m = JSON.parse(e.data);
+  if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
+});
+const send = (method, params = {}) => new Promise((r) => {
+  const i = ++seq; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params }));
+});
+const evaluate = async (expression) => {
+  const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+  if (r.result && r.result.exceptionDetails) {
+    const d = r.result.exceptionDetails;
+    throw new Error((d.exception && d.exception.description) || d.text || "evaluate failed");
+  }
+  return r.result && r.result.result ? r.result.result.value : undefined;
+};
+await send("Page.enable");
+await send("Runtime.enable");
+await send("Emulation.setEmulatedMedia", { features: [
+  { name: "prefers-color-scheme", value: "dark" }, { name: "forced-colors", value: "none" },
+  { name: "prefers-reduced-motion", value: "reduce" }] });
+
+// -- in-page measurement (runs in the page; returns plain data) -------------
+function measure(args) {
+  const REG = args.regions;
+  const doc = document;
+  const de = doc.documentElement;
+  const root = parseFloat(getComputedStyle(de).fontSize) || 16;
+  const rendered = (el) => el.getClientRects().length > 0 &&
+    getComputedStyle(el).visibility !== "hidden";
+  const regionOf = (el) => {
+    for (const r of REG) {
+      const n = doc.getElementById("play-" + r);
+      if (n && (n === el || n.contains(el))) { return r; }
+    }
+    return null;
+  };
+  const label = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") +
+    (el.classList.length ? "." + Array.from(el.classList).slice(0, 2).join(".") : "");
+  const words = (t) => (t || "").split(/\s+/).filter((w) => /[A-Za-z0-9]/.test(w));
+  const ownText = (el) => Array.from(el.childNodes)
+    .filter((n) => n.nodeType === 3).map((n) => n.nodeValue).join(" ").trim();
+  const FORM = new Set(["INPUT", "SELECT", "TEXTAREA", "OPTION", "OPTGROUP"]);
+  const CONTROL = "a[href], button, input:not([type=hidden]), select, textarea, summary, " +
+    "[tabindex]:not([tabindex='-1'])";
+
+  // G1: overflow on the block axis (cockpit) and nested scroll boxes (flow)
+  function scrollIssues(scope) {
+    const over = [];
+    const scrollers = [];
+    let overMax = 0;
+    for (const el of scope.querySelectorAll("*")) {
+      if (FORM.has(el.tagName) || !rendered(el)) { continue; }
+      const sh = el.scrollHeight, ch = el.clientHeight, sw = el.scrollWidth, cw = el.clientWidth;
+      if (ch > 0 && sh > ch) { overMax = Math.max(overMax, sh - ch); }
+      if (ch > 0 && sh > ch + 1) {
+        over.push({ region: regionOf(el), el: label(el), sh, ch });
+      }
+      const cs = getComputedStyle(el);
+      const sx = /auto|scroll/.test(cs.overflowX), sy = /auto|scroll/.test(cs.overflowY);
+      if ((sy && ch > 0 && sh > ch + 1) || (sx && cw > 0 && sw > cw + 1)) {
+        scrollers.push({ region: regionOf(el), el: label(el), sh, ch, sw, cw });
+      }
+    }
+    return { over: over.slice(0, 40), overCount: over.length, overMax,
+      scrollers: scrollers.slice(0, 40), scrollerCount: scrollers.length };
+  }
+
+  // G7: (ratio, weight) of every rendered element that holds its own text
+  function typeStyles(scope) {
+    const seen = new Map();
+    for (const el of scope.querySelectorAll("*")) {
+      if (!ownText(el) || !rendered(el)) { continue; }
+      const cs = getComputedStyle(el);
+      const px = parseFloat(cs.fontSize);
+      const weight = parseInt(cs.fontWeight, 10) || 400;
+      const ratio = Math.round((px / root) * 10000) / 10000;
+      const key = [regionOf(el), ratio, weight].join("|");
+      if (!seen.has(key)) {
+        seen.set(key, { region: regionOf(el), ratio, weight, px,
+          el: label(el), text: ownText(el).slice(0, 40) });
+      }
+    }
+    return Array.from(seen.values());
+  }
+
+  function docBox() {
+    return { sh: de.scrollHeight, ch: de.clientHeight, sw: de.scrollWidth, cw: de.clientWidth };
+  }
+
+  function box(el) {
+    const r = el.getBoundingClientRect();
+    const sy = window.scrollY, sx = window.scrollX;
+    return { top: r.top + sy, left: r.left + sx, width: r.width, height: r.height,
+      bottom: r.bottom + sy };
+  }
+
+  // G2 / G4: the region box, its inner bottom and its content bottom
+  function region(r) {
+    const n = doc.getElementById("play-" + r);
+    if (!n || !rendered(n)) { return null; }
+    const b = box(n);
+    const cs = getComputedStyle(n);
+    const inner = b.bottom - (parseFloat(cs.borderBottomWidth) || 0) -
+      (parseFloat(cs.paddingBottom) || 0);
+    let content = b.top + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.paddingTop) || 0);
+    const sy = window.scrollY;
+    for (const el of n.querySelectorAll("*")) {
+      if (!rendered(el)) { continue; }
+      const rr = el.getBoundingClientRect();
+      if (rr.height > 0) { content = Math.max(content, rr.bottom + sy); }
+    }
+    const walker = doc.createTreeWalker(n, NodeFilter.SHOW_TEXT);
+    const range = doc.createRange();
+    for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+      if (!t.nodeValue.trim() || !t.parentElement || !rendered(t.parentElement)) { continue; }
+      range.selectNodeContents(t);
+      for (const rr of range.getClientRects()) { content = Math.max(content, rr.bottom + sy); }
+    }
+    const controls = [];
+    for (const el of n.querySelectorAll(CONTROL)) {
+      if (!rendered(el)) { continue; }
+      const rr = el.getBoundingClientRect();
+      controls.push({ el: label(el), w: rr.width, h: rr.height });
+    }
+    return { top: b.top, left: b.left, width: b.width, height: b.height, inner,
+      content, words: words(n.innerText).length, controls,
+      fit: n.getAttribute("data-fit") || "" };
+  }
+
+  // G9: an answer is found in its region, at its step, in the first 6 words
+  function blockText(el) {
+    let p = el;
+    while (p && p !== doc.body) {
+      const d = getComputedStyle(p).display;
+      if (d !== "inline" && d !== "contents") { return p.innerText || p.textContent || ""; }
+      p = p.parentElement;
+    }
+    return el.textContent || "";
+  }
+  function answer(a) {
+    const scope = a.scope === "bar" ? doc.querySelector("header") :
+      doc.getElementById("play-" + a.region);
+    if (!scope || !rendered(scope)) { return { id: a.id, ok: false, why: "region missing" }; }
+    const re = a.re ? new RegExp(a.re, a.flags || "") : null;
+    const match = (t) => (re ? (t.match(re) || [null])[0] : (t.indexOf(a.text) >= 0 ? a.text : null));
+    const hits = [];
+    for (const el of scope.querySelectorAll("*")) {
+      if (!rendered(el)) { continue; }
+      if (a.kind === "first") {
+        const rr = el.getBoundingClientRect();
+        if (ownText(el) && rr.width > 1 && rr.height > 1) { hits.push(el); break; }
+        continue;
+      }
+      const t = el.textContent || "";
+      if (a.kind === "exact") {
+        if (match(t.trim()) === t.trim() && t.trim()) { hits.push(el); }
+      } else if (match(t) && !Array.from(el.children).some((c) => match(c.textContent || ""))) {
+        hits.push(el);
+      }
+    }
+    if (!hits.length) { return { id: a.id, ok: false, why: "not found" }; }
+    let best = null;
+    for (const el of hits) {
+      const ratio = parseFloat(getComputedStyle(el).fontSize) / root;
+      let pos = 0;
+      if (a.kind !== "first") {
+        const text = blockText(el);
+        const all = words(text);
+        const want = words(match(text) || match(el.textContent || "") || "");
+        pos = want.length ? -1 : 0;
+        for (let i = 0; i + want.length <= all.length && pos < 0; i++) {
+          if (want.every((w, j) => all[i + j].indexOf(w) >= 0)) { pos = i; }
+        }
+        if (pos < 0) { pos = 99; }
+      }
+      const small = ratio < a.min - 0.001;
+      const cand = { id: a.id, ok: !small && pos < 6, ratio: Math.round(ratio * 1000) / 1000,
+        pos, el: label(el), why: small ? "too small" : (pos < 6 ? "" : "past word 6") };
+      if (!best || (cand.ok && !best.ok) || (!best.ok && cand.ratio > best.ratio)) { best = cand; }
+      if (best.ok) { break; }
+    }
+    return best;
+  }
+
+  function frame() {
+    const bar = doc.querySelector("header");
+    const foot = doc.querySelector("footer");
+    const main = doc.querySelector("main");
+    const play = doc.getElementById("panel-play");
+    const ms = main ? getComputedStyle(main) : null;
+    const cols = play ? Array.from(play.children).filter(rendered).map((el) => ({
+      el: label(el), height: el.getBoundingClientRect().height, sh: el.scrollHeight })) : [];
+    return { bar: bar ? bar.getBoundingClientRect().height : null,
+      foot: foot ? foot.getBoundingClientRect().height : null,
+      mainPad: ms ? [parseFloat(ms.paddingTop), parseFloat(ms.paddingBottom)] : null,
+      play: play ? play.getBoundingClientRect().height : null, cols };
+  }
+
+  function playBlock() {
+    const play = doc.getElementById("panel-play");
+    if (!play) { return null; }
+    let elements = 0;
+    const controls = [];
+    for (const el of play.querySelectorAll("*")) {
+      if (!rendered(el)) { continue; }
+      elements += 1;
+      if (el.matches(CONTROL)) {
+        const rr = el.getBoundingClientRect();
+        controls.push({ region: regionOf(el), el: label(el), w: rr.width, h: rr.height });
+      }
+    }
+    const regions = {};
+    for (const r of REG) { regions[r] = region(r); }
+    return { words: words(play.innerText).length, elements, controls,
+      type: typeStyles(play), scroll: scrollIssues(play), regions,
+      answers: (args.answers || []).map(answer), frame: frame() };
+  }
+
+  const tabs = Array.from(doc.querySelectorAll("[role=tab]"));
+  const playTab = tabs.find((t) => t.getAttribute("aria-controls") === "panel-play");
+  const res = { vw: window.innerWidth, vh: window.innerHeight, root, panels: {} };
+  if (playTab) { playTab.click(); }
+  window.scrollTo(0, 0);
+  res.doc = docBox();
+  res.play = playBlock();
+  if (args.tabs) {
+    for (const t of tabs) {
+      const id = t.getAttribute("aria-controls");
+      const p = id && doc.getElementById(id);
+      if (!p || id === "panel-play") { continue; }
+      t.click();
+      window.scrollTo(0, 0);
+      res.panels[id] = { doc: docBox(), scroll: scrollIssues(p), type: typeStyles(p) };
+    }
+    if (playTab) { playTab.click(); }
+  }
+  return res;
+}
+
+function placeholder() {
+  for (const n of document.querySelectorAll("[data-legacy]")) { n.hidden = true; }
+  for (const r of ["g", "c", "t", "n", "b", "i", "u"]) {
+    const n = document.getElementById("play-" + r);
+    if (n) { n.setAttribute("data-fit", "yes"); }
+  }
+  return true;
+}
+
+function metrics(rows) {
+  const host = document.createElement("div");
+  host.style.cssText = "position:absolute;left:-10000px;top:0;white-space:nowrap";
+  document.body.appendChild(host);
+  const res = [];
+  for (const r of rows) {
+    const width = (extra) => {
+      const s = document.createElement("span");
+      s.textContent = r.text;
+      s.style.cssText = `font-size:${r.px}px;font-weight:${r.weight};white-space:nowrap;` + extra;
+      host.appendChild(s);
+      const w = s.getBoundingClientRect().width;
+      s.remove();
+      return Math.round(w * 10) / 10;
+    };
+    res.push({ key: r.key, chars: r.text.length, px: r.px, weight: r.weight,
+      width: width(""), spaced: width("letter-spacing:0.12em;word-spacing:0.16em") });
+  }
+  host.remove();
+  return res;
+}
+
+const call = (fn, arg) => evaluate(`(${fn.toString()})(${JSON.stringify(arg)})`);
+const frames = () => evaluate(
+  "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
+
+async function resize(w, h) {
+  await send("Emulation.setDeviceMetricsOverride",
+    { width: w, height: h, deviceScaleFactor: 1, mobile: false });
+  await frames();
+}
+
+async function load(url) {
+  await send("Page.navigate", { url: "about:blank" });
+  await send("Page.navigate", { url });
+  // live once the feed is up and the first state has painted
+  for (let i = 0; i < 100; i++) {
+    await sleep(100);
+    let ok = false;
+    try {
+      ok = await evaluate("!!document.getElementById('panel-play') && " +
+        "/live/.test((document.querySelector('header') || {}).textContent || '')");
+    } catch { ok = false; }
+    if (ok) { await sleep(350); return true; }
+  }
+  return false;
+}
+
+async function run(cmd) {
+  if (cmd.cmd === "state") {
+    const live = await load(cmd.url);
+    const sizes = {};
+    for (const [w, h] of cmd.sizes) {
+      await resize(w, h);
+      sizes[`${w}x${h}`] = await call(measure,
+        { regions: REGIONS, answers: cmd.answers || [], tabs: true });
+    }
+    return { name: cmd.name, live, sizes };
+  }
+  if (cmd.cmd === "placeholder") {
+    await call(placeholder, null);
+    const sizes = {};
+    for (const [w, h] of cmd.sizes) {
+      await resize(w, h);
+      sizes[`${w}x${h}`] = await call(measure, { regions: REGIONS, answers: [], tabs: false });
+    }
+    return { name: "placeholder", sizes };
+  }
+  if (cmd.cmd === "metrics") {
+    await resize(1280, 760);
+    return { name: "metrics", rows: await call(metrics, cmd.rows) };
+  }
+  return { error: `unknown command ${cmd.cmd}` };
+}
+
+const rl = createInterface({ input: process.stdin });
+out({ ready: true });
+for await (const line of rl) {
+  if (!line.trim()) { continue; }
+  let cmd;
+  try { cmd = JSON.parse(line); } catch (e) { out({ error: "bad json: " + e.message }); continue; }
+  if (cmd.cmd === "quit") { break; }
+  try { out(await run(cmd)); } catch (e) { out({ error: String((e && e.stack) || e) }); }
+}
+clearTimeout(killer);
+ws.close();
+quit(0);

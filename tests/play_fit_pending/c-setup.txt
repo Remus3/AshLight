@@ -1,0 +1,1 @@
+Region C (#play-c) setup, idle and error modes are not on Play yet; PLAY-TD-12-CONTEXT-SETUP lands them and deletes this marker.
