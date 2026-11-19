@@ -73,7 +73,9 @@ TRADE_EXCHANGE = re.compile(
 MAX_LINE_CHARS = 8192
 MAX_TRADE_TEXT = 1024
 
-HIDEOUT_WORD = "hideout"  # substring match on the scene name - UNVERIFIED
+# Substring match on the scene name - UNVERIFIED and English only; the
+# fallback when no area id is known (is_hideout_area below decides first).
+HIDEOUT_WORD = "hideout"
 
 # Scenes that are not zones (LIVE-1, live PoE2 log 2026-11-16): "(unknown)"
 # is the login / character select / full-screen panel scene, and "Act <N>"
@@ -118,7 +120,22 @@ def parse_trade(text):
 
 
 def is_hideout(scene):
+    """The English scene-word fallback, used only while no area generation
+    line has been seen (OVL-HIDEOUT-AREA); the area id decides otherwise."""
     return HIDEOUT_WORD in scene.lower()
+
+
+# OVL-HIDEOUT-AREA (F-118): town and hideout from the internal area id of
+# the "Generating level N area" line, which is the same for every client
+# language (scene names are translated). Hideout ids start with "Hideout"
+# (HideoutFelled); town ids hold "_town" (G1_town). The same rule as
+# hints.is_town, which counts a hideout as a town too.
+def is_hideout_area(area_id):
+    return isinstance(area_id, str) and area_id.lower().startswith("hideout")
+
+
+def is_town_area(area_id):
+    return isinstance(area_id, str) and "_town" in area_id.lower()
 
 
 def _system(body):
