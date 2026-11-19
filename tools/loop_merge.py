@@ -23,6 +23,22 @@ def _is_done_file(name):
     return bool(m) and m.group(1) == "done"
 
 
+def last_lines(text, limit):
+    """TEST-PLUGIN-PIN: the longest run of whole LAST lines of text within
+    limit chars (the last limit chars when even the final line is longer).
+    A red gate's ids and count line sit at the end of its output."""
+    text = (text or "").rstrip()
+    if len(text) <= limit:
+        return text
+    keep, size = [], -1
+    for line in reversed(text.splitlines()):
+        if size + 1 + len(line) > limit:
+            break
+        keep.append(line)
+        size += 1 + len(line)
+    return "\n".join(reversed(keep)) if keep else text[-limit:]
+
+
 class GateCache:
     """Plan 096: gate verdicts by tree id, ops/loop/control/gate_verdicts.json
     in the main checkout, newest GATE_CACHE_MAX kept. Plan 098: written by
@@ -52,7 +68,8 @@ class GateCache:
     def put(self, key, ok, detail, where, now, via=None):
         trees = self._trees()
         trees.pop(key, None)  # re-insert: dict order is recency
-        e = {"ok": bool(ok), "detail": ascii_text(detail or "", 300), "ts": iso(now),
+        e = {"ok": bool(ok), "detail": last_lines(ascii_text(detail or ""), 300),
+             "ts": iso(now),
              "where": ascii_text(where, 80)}
         if via:
             e["via"] = via

@@ -1,9 +1,16 @@
 """AshLight core entry point.
 
     python -m server.al [--log PATH] [--port N] [--no-tail] [--replay FILE]
+    python -m server.al --demo DIR [--port N] [--no-tail]
 
 Prints the dashboard URL with the per-start token in the fragment
 (#token=...), so it never reaches the server log or a Referer.
+
+--demo DIR (decision 0049) starts an isolated demo instance on a fixture
+folder: demo.prepare points the runtime, sidecar and config at a scratch
+folder before logging starts, the port is the first free one of the demo
+block (or --port, 0 allowed), config/local.json is never read, and the core
+is a demo.DemoCore that can read only the folder's Client.txt.
 """
 
 import argparse
@@ -17,7 +24,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import DISCLAIMER, NAME, VERSION, hotreload, paths, ports
+from . import DISCLAIMER, NAME, VERSION, demo, hotreload, paths, ports
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -38,6 +45,10 @@ def build_parser():
     p.add_argument("--check", action="store_true",
                    help="HOT-RELOAD preflight: import the core and compile every "
                         "server .py file, then exit (0 = loadable)")
+    p.add_argument("--demo", metavar="DIR",
+                   help="demo mode (decision 0049): an isolated instance on a "
+                        "fixture folder holding ashlight-demo.json and Client.txt; "
+                        "never the live log, runtime or config")
     return p
 
 
@@ -142,10 +153,30 @@ def write_heartbeat(path, pid, port, now=None, created=None):
     os.replace(tmp, path)
 
 
+def _say(text):
+    """One line on stderr when there is one (pythonw has none)."""
+    if sys.stderr is not None:
+        print(text, file=sys.stderr, flush=True)
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.check:
         return check_code()
+    inst = None
+    if args.demo is not None:
+        # SEC-DEMO-ENTRY: prepared before logging, so core.log lands in the
+        # scratch folder; nothing is made when the folder is unusable
+        if args.log or args.replay:
+            _say("AshLight demo: --log and --replay cannot be used with --demo")
+            return 2
+        try:
+            inst = demo.prepare(args.demo)
+            if args.port is None:
+                args.port = demo.pick_port()
+        except demo.DemoError as exc:
+            _say(f"AshLight demo: {exc}")
+            return 2
     setup_logging(args.quiet)
     log = logging.getLogger("al")
     install_crash_logging(log)
@@ -154,7 +185,11 @@ def main(argv=None):
     if args.port and not ports.in_block(args.port):
         log.warning("port %s is outside the assigned block", args.port)
 
-    core = Core(log_path=args.log, tail=not args.no_tail, character=args.character)
+    if inst is not None:
+        log.info("demo mode: fixture %s, scratch %s", inst.fixture, inst.scratch)
+        core = demo.DemoCore(inst, tail=not args.no_tail, character=args.character)
+    else:
+        core = Core(log_path=args.log, tail=not args.no_tail, character=args.character)
     if args.replay:
         lines = Path(args.replay).read_text(encoding="utf-8", errors="replace").splitlines()
         log.info("replayed %d events from %s", core.replay(lines), Path(args.replay).name)
@@ -176,6 +211,8 @@ def main(argv=None):
     url = f"http://{ports.LOOPBACK}:{server.port}/#token={token}"
     if not args.quiet and sys.stdout is not None:
         print(f"{NAME} {VERSION} on {url}", flush=True)
+        if inst is not None:
+            print(f"demo mode: fixture {inst.fixture}; scratch {inst.scratch}", flush=True)
         print(DISCLAIMER, flush=True)
     log.info("listening on %s:%s", ports.LOOPBACK, server.port)
     core.port = server.port  # DIAG-SELF: the served port
