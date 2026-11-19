@@ -24,7 +24,6 @@ const LINKED_CSS = ["strip", "context", "setupcard", "feed", "notice", "buildlin
 const STUB_CSS = [
   "strip",
   // (one stub per line)
-  "context",
   // (one stub per line)
   "setupcard",
   // (one stub per line)
