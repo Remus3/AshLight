@@ -166,6 +166,8 @@ test("UI-REVIEW-2: the HUD says when Client.txt is not being read", () => {
   assert.equal(idle.timer, "1m");
   assert.equal(idle.zone, "Crypt");
   assert.equal(gate.statusText(idle), gate.IDLE_WORD);
+  // F-131: the overlay's short form of the dashboard's "log quiet" word
+  assert.equal(gate.IDLE_WORD, "log quiet");
   const words = [quiet, wait, idle].map((m) => gate.statusText(m))
     .concat(["offline", "connecting", "9 trades", "AFK", "DND"]);
   words.forEach((w) => assert.ok(w.length <= 15, w));
