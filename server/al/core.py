@@ -12,7 +12,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import (VERSION, acts, campaign, diag, layout, logfile, ninja, parser, paths, ports,
+from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parser, paths, ports,
                price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
                zoneguide,
                webfetch)
@@ -86,6 +86,10 @@ class Core:
             self.config_path = paths.local_config_file()
         else:
             self.config_path = self.runtime / "local.json"
+        # SEC-ACL-APPLY (decision 0051): only the real core's config/local.json
+        # gets the private ACL after a write (a replaced file takes the
+        # folder's ACL); a test or demo core never changes an ACL
+        self.private_config = runtime is None and config_path is None
         cfg = paths.load_local_config() if runtime is None else {}
         self.poll_s = float(poll_s or cfg.get("poll_ms", 250) / 1000.0)
         self.tail_enabled = tail
@@ -344,7 +348,14 @@ class Core:
             with open(tmp, "w", encoding="ascii", newline="\n") as fh:
                 fh.write(json.dumps(cfg, indent=2, ensure_ascii=True) + "\n")
             tmp.replace(self.config_path)
+            self._private_config()
             return cfg
+
+    def _private_config(self):
+        """SEC-ACL-APPLY: re-apply the private ACL to the config file after
+        a write, real core only (decision 0051)."""
+        if self.private_config:
+            acl.make_private(self.config_path)
 
     # -- UX-SETTINGS-IO (ruling E)
     def export_settings(self):
@@ -688,6 +699,7 @@ class Core:
         merged.update(changes)
         with self._lock:
             saved = layout.save(self.config_path, merged)
+            self._private_config()
         self.state.set_overlay_layout(saved)
         return saved
 
