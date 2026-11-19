@@ -381,7 +381,8 @@ checklist). ARMED 2026-11-17 (ROADMAP LOOP-ARM): per-user scheduled task
 pythonw, interactive token, no stored password); read it back with
 `tools/loop_task.py status`, remove with `tools/loop_task.py remove`. Rows
 whose remaining work is an operator act carry `BLOCKED:` so the tick skips
-them. Pause: `ops/loop/control/HALT`.
+them. A hand-off bullet is loop work only when it starts with LOOP:; BLOCKED
+applies to it as to a row. Pause: `ops/loop/control/HALT`.
 
 ## Session workflow
 
