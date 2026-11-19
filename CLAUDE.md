@@ -692,18 +692,16 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   pages; no agent or tool reads GGG's forum (decision 0050, ruling Q-07).
   Reverses if: the operator amends the floor or GGG documents the forum
   as a permitted source.
-- Private runtime files (core part): at every start the real core
-  gives its runtime dir, and after every write config/local.json, an
-  explicit ACL (the player, SYSTEM, the local admins group (SID
-  S-1-5-32-544); inheritance off) through System32 icacls by absolute
-  path, read back through the Win32 security API; a kept token
-  (decision 0042) is reused only while the runtime dir is private;
-  test and demo cores change no ACL; only AshLight-made paths, never
-  the player's checkout, a game folder or a link (decision 0051; the
-  Checks note and setup.ps1 sidecar parts land with SEC-ACL-CHECK and
-  SEC-ACL-SETUP). Reverses if: the ACL breaks a supported install
-  layout, a player shares the folder on purpose and objects, or the
-  installed per-user home makes the checkout case moot.
+- Private runtime files: the core gives its runtime dir and config/local.json an
+  explicit ACL (the player, SYSTEM, the local admins group (SID S-1-5-32-544);
+  inheritance off) through System32 icacls by absolute path, setup.ps1 does the
+  same for the sidecar, a kept token (decision 0042) is reused only while the
+  runtime dir is private, and a Checks note with a one-line fix shows when the
+  AshLight folder, the sidecar or the runtime dir lets anyone else write; only
+  AshLight-made folders are changed, never the player's checkout and never a game
+  folder (decision 0051). Reverses if: the ACL breaks a supported install
+  layout, a player shares the folder on purpose and objects, or the installed
+  per-user home makes the checkout case moot.
 - WORN-GEAR: the last checked item can be filed as the worn item of its
   slot (button, or an optional wear key that is unset by default; no new
   read: the text of that press); stored as parsed mod lines, base and

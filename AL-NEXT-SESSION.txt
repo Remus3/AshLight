@@ -1,6 +1,6 @@
 AL NEXT SESSION
 ---------------
-SESSION: 8   (FLEET item 13 counter; /done writes n+1)
+SESSION: 9   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
@@ -71,39 +71,32 @@ non-fork identifier of the set is found).
 Escape rates so far: wave 1 1/11 (SEC-XML-NUL), wave 2 0/12, wave 3 0/4
 batches; batch size stays 4.
 
-Next action: start wave 4 of docs/plan/07-execution-plan.md (session 2 =
-waves 4, 5 and 6; wave 4 about 139 min, wave 5 about 179 min, wave 6
-about 129 min) and run it exactly as docs/plan/08-orchestration.md says,
-the same way session 7 ran waves 1 to 3. Ask the operator nothing: every
-operator item has a default in force. The main session only dispatches;
-every command runs in a sub-agent, in the main checkout:
-1. Dispatch ONE start agent (background, sonnet, effort low, task
-   w-start; 08 section 1 steps 1 to 7) with arguments wave 4, session 8.
-   Read back 2026-11-18 at fc599f6: plan_check prints "ok 396 packages,
-   39 waves"; step 5 prints [4, 5, 6]; step 4 with argument 4 prints 15
-   ids, but PUB-GO-DECISION and GP-02 are DONE (session 6; their [x] rows
-   sit in docs/roadmap/archive/2026-11.md, which the step-4 command does
-   not read): treat them as flipped. The 13 open wave-4 packages:
-   PUB-LOCAL-ONLY-TEXT LOOP-WAVE-HOLD SEC-ACL-APPLY GP-05
-   DATA-PRICE-CARD-TEXT PLAY-F-131-STATUS-TABLE PLAY-TD-01B-FIT-HARNESS
-   PLAY-TD-03-TOKENS TC-PRESS-STAGED-EVAL TC-WORN-STORE OVL-MAIN-PARTS
-   SEC-HELLO-CORE TC-FILTER-ONE-CONTROL. No DEFERRED line (none carried).
-   The main session prints the returned checklist verbatim.
-2. Dispatch wave 4 (08 section 2): builders per open worktree package,
-   main-checkout acts as one serial chain in merge order, one watcher (08
-   section 3). Worktrees: hand-made sidecar worktrees through
-   tools/wt_sidecar_hook.py (WIRED = no; the decision 0012 hooks are
-   still not pasted, row WT-SIDECAR-WIRE BLOCKED); named w4-<ID> and
-   w4-int. Model and effort per 08 "Model and effort".
-3. Review and verify (08 section 5), merge in the batches of 07 "Wave 4"
-   on w4-int (08 section 4; batch size 4), integrator per batch (08
-   section 6), whole suite through the suite gate plus npm test per
-   batch, main fast-forwards; close the wave (08 section 7: pointer "wave
-   4 done, next wave 5"). From wave 5 on, LOOP-WAVE-HOLD is on main: write
-   and remove the folder hold (08 sections 1 step 6, 7 step 6, 8). GP-09
-   (wave 5) runs alone and holds main to its read-back (ruling R1). Then
-   waves 5 and 6 the same way; AUTO-21 (last act of wave 6) removes HALT
-   after its six checks. Then /done unprompted.
+Next action: wave 7 of docs/plan/07-execution-plan.md, run exactly as
+docs/plan/08-orchestration.md says, as waves 4 to 6 ran in session 8: ONE
+background orchestrator agent per wave with a real background watch on the
+progress files. Ask the operator nothing (every operator item has a default
+in force). The main session only dispatches; every command runs in a
+sub-agent, in the main checkout.
+1. First act: the wave-7 integrator tags CORE-REGOPEN-ROOT,
+   TC-CARD-PARTS-DOC, TC-EVAL-NOTES-STYLE and TC-OVL-CARD-TONE as
+   `BLOCKED: session wave 7.` in ROADMAP.md, then re-runs AUTO-21 (see the
+   DEFERRED line): remove ops/loop/control/HALT only if all six checks pass.
+2. Dispatch one start agent (08 section 1, argument wave 7, session 9),
+   then wave 7 (08 sections 2 to 7). Wave 7 merge batches drop to 3 (escape
+   rate 17 percent in wave 6) until TEST-SELECT lands in wave 8: regroup
+   07's 4/4/4 into batches of 3. Legacy regions G, C, I, U land in wave 7;
+   see the Carried forward bullets for the region-marker cleanup.
+3. Go-public track: GP-10 is next (config/public_repo.json plus the
+   leak_sweep exception). The repository exists and is PRIVATE; it stays
+   private until the plan-04 flip gates hold (GP-12). Push main only through
+   fleet_gitlock, never force.
+Session-level lessons (session 8), keep in the orchestrator briefs: run a
+whole wave via one background orchestrator with a real background watch;
+never end an orchestrator turn on "Waiting" with nothing running; never tell
+a package agent "do not push" when CLAUDE.md authorizes the push; builders
+and verifiers always also run tests/test_test_layout.py; use a fresh
+integrator per batch; verify every builder's claimed commit sha against git
+before review.
 
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
@@ -132,7 +125,7 @@ stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
 - Wave-7 integrator: delete tests/play_fit_pending/n.txt, t.txt and b.txt on the integration tree once PLAY-TD-10-STRIP and the other legacy-region packages have merged; full tests/test_play_fit.py green with no region markers is the gate (adjudicator ruling Q2, wave 6).
-- Design findings left OPEN in docs/design/reviews.log (wave 6): BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (PLAY-TD-10 renderer), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper).
+- Design findings left OPEN in docs/design/reviews.log: BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (PLAY-TD-10 renderer), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper), DPC-2 (note below), F1 (PLAY-TD-23-RECORDS), F2 (PLAY-TD-10-STRIP).
 - Review folds must file new rows already tagged "BLOCKED: session wave <n>" (06 line 39); an untagged fold row is what kept HALT in wave 6.
 - a bullet is loop work only when it starts with 'LOOP:'; none today.
 - OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
@@ -252,14 +245,12 @@ Carried forward (not acted on yet):
   LOOP-HANDOFF-PREFIX (wave 2) lands, a tick without HALT would dispatch
   the untagged bullets of this list as work (01 L3). GGG-DOCS-WATCH runs
   before the HALT check, so it keeps running.
-- NOTE (01 OPERATOR GitHub remote; old act d): rows GP-02 and
-  PUB-GO-DECISION are done (session 6); PUB-LOCAL-ONLY-TEXT is reopened
-  (ruling R2, 2026-11-18: wording landed, loop_push switch not built; wave
-  4); open: GP-01 and GP-03 (wave 1), GP-05 (wave 4), GP-09 (wave 5:
-  private repository, first push, CI green; it runs alone and holds main
-  to its read-back, ruling R1), then the parked rows behind GP-09 (07,
-  Operator go for publishing). Read back 2026-11-18: git remote -v prints
-  nothing.
+- NOTE (01 OPERATOR GitHub remote; old act d): GP-01 to GP-09 and
+  PUB-LOCAL-ONLY-TEXT are done (GP-09 in session 8: private repository
+  created, main pushed, gate 6 amended by decision 0079, CI timing and
+  backlog by decision 0080, gate 12 held on ci run 44488095493 attempts 1
+  and 2); the rows behind it (GP-10 next, GP-12 the public flip) follow
+  07 "Operator go for publishing".
 - NOTE (01 LIVE-VERDICTS): a "Tried in game" card with Worked / Refused
   for the player checks; rows RUN-VERDICTS-CORE wave 6, RUN-VERDICTS-UI
   wave 19.
@@ -301,12 +292,7 @@ Carried forward (not acted on yet):
   decision 0076 (AUTO-19, parked behind GP-09), the ls-remote read-back
   (GP-13, parked). Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
   packages (four batches, each with its own suite; ceiling 16).
-- NOTE (wave 4, same rule as the wave 2 adjudicator ruling on 0049):
-  CLAUDE.md holds a core-only Settled bullet for decision 0051
-  (tests/test_audit_batch4.py needs one per decision); the integrator
-  of the batch that merges the later of SEC-ACL-CHECK and
-  SEC-ACL-SETUP replaces it with the full packages.json wording of
-  SEC-ACL-APPLY.
+- NOTE (session 8 /done): decision 0051's full Settled bullet is in CLAUDE.md (SEC-ACL-SETUP and SEC-ACL-CHECK merged); test_audit_batch4 green.
 - NOTE (wave 4, DATA-PRICE-CARD-TEXT DPC-2): design 0001 section 9 needs
   a bullet for the new price-age templates; owner: the next package that
   owns docs/design/0001 (PLAY-TD-23-RECORDS at the latest).
@@ -317,10 +303,11 @@ Carried forward (not acted on yet):
   TOKEN "p"*48 is not hex, so the dashboard rejects it (the fit harness
   swaps in a hex token); fix in the next package that owns
   tests/play_states.py.
-- NOTE (wave 4, same rule as for 0051): CLAUDE.md holds a core-only
-  Settled bullet for decision 0054 (SEC-HELLO-CORE); the integrator of
-  the batch that merges the later of SEC-HELLO-PS and SEC-HELLO-CLIENT
-  replaces it with the full packages.json wording of SEC-HELLO-CORE.
+- NOTE (wave 4): CLAUDE.md holds a core-only Settled bullet for decision
+  0054 (SEC-HELLO-CORE); the integrator of the batch that merges the later
+  of SEC-HELLO-PS and SEC-HELLO-CLIENT (both still open) replaces it with
+  the full packages.json wording of SEC-HELLO-CORE, then runs
+  tests/test_audit_batch4.py.
 - NOTE (wave 4, TC-FILTER-ONE-CONTROL builder):
   tests/test_audit_pass5_low.py::test_p5_5_terminated_section_still_re_merges_once
   uses today's date and could flake across midnight.
@@ -361,7 +348,7 @@ Carried forward (not acted on yet):
   only. The watcher agent returned after each slice; the orchestrator's
   own background watch on the progress files did its job.
 - NOTE (wave 5): tests/test_ux_review.py imports test_design_contrast, a
-  test-to-test import that tests/test_test_layout.py does not flag (seen
+  test-to-test import that tests/test_test_layout.py does not flag (the guard misses it) (seen
   by the PLAY-TD-09B verifier; pre-existing); check the guard's
   allow-list in the next package that owns either file.
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
@@ -369,6 +356,9 @@ Carried forward (not acted on yet):
 - NOTE (session 6 /done, 2026-11-18): fleet_done.py reap --apply: reap
   applied: 0 removed, 3 kept, 0 listed (base main); kept lane-0, lane-1,
   lane-2 (fleet_lanes lane worktrees).
+- NOTE (session 8 /done, 2026-11-19): fleet_done.py reap --apply: the w4-*, w5-*
+  and w6-* package and int worktrees removed (branches deleted), 3 kept (lane-0,
+  lane-1, lane-2); re-run: 0 removed, 3 kept, 0 listed (base main).
 - NOTE (session 7 /done, 2026-11-18): fleet_done.py reap --apply: 38
   removed (w1-*, w2-*, w3-* package and int worktrees, branches deleted),
   3 kept (lane-0, lane-1, lane-2); dry run after: 0 removable, 3 kept, 0
@@ -396,8 +386,8 @@ Carried forward (not acted on yet):
   CORE-REGOPEN-ROOT, WT-SIDECAR-WIRE (BLOCKED: operator paste of decision
   0012's hook entries).
 
-Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078),
-docs/plan/07-execution-plan.md ("Wave 4" to "Wave 6"),
+Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078 to 0080),
+docs/plan/07-execution-plan.md ("Wave 7" on),
 docs/plan/08-orchestration.md, docs/plan/09-operator-acts.md,
 docs/plan/packages.json (the plan of record; tools/plan_check.py check /
 wave <n> / rows), ROADMAP.md (open rows only; done rows are pruned into
@@ -425,15 +415,16 @@ before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, the core, the overlay or the
 loop (08, Rules).
 
-Acceptance: wave 4 is closed as 08 section 7 says (open-row command for
-wave 4 prints "none open" apart from the archived PUB-GO-DECISION and
-GP-02, plan_check ok, git status --short empty on main, leak sweep clean,
-last batch suite and npm test green, git show HEAD:AL-NEXT-SESSION.txt
-holds "WAVE POINTER: wave 4 done, next wave 5"). Session 2 of the plan is
-done when waves 5 and 6 close the same way: the Play skeleton is on the
-page, the private repository exists and the first push is green (GP-09),
-HALT is removed by AUTO-21 and the loop takes the loop-owned rows.
+Acceptance: wave 7 is closed as 08 section 7 says (open-row command for
+wave 7 prints "none open", plan_check ok, git status --short empty on main,
+leak sweep clean, last batch suite and npm test green, git show
+HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 7 done, next wave 8").
+AUTO-21 has been re-run first: HALT removed only if its six checks pass.
 
+Do NOT redo (session 8, all on main): waves 4, 5 and 6 are closed (13 + 13 +
+12 packages, pointer `wave 6 done, next wave 7`); GP-09 is done (private
+repository created, main pushed, decisions 0079 and 0080, gate 12 held on ci
+run 44488095493 attempts 1 and 2); the 0051 full bullet is in CLAUDE.md.
 Do NOT redo (session 7, all on main at fc599f6): waves 1, 2 and 3 of
 docs/plan/07 are closed. Merged packages: wave 1 SEC-NO-DISCOVERY
 SEC-STATIC-MAP SEC-XML-NUL RUN-DURABLE-JSONFILE SEC-NO-PROXY
@@ -455,14 +446,14 @@ PUB-GO-DECISION, tools/plan_check.py, wave 0 (PLAN-LANDING), the
 close-out 2 rulings and the worktree probe (it passed; do not repeat).
 Session 5 and earlier: see git log and docs/audit/2026-11-17-audit.md.
 
-In flight: none (no lane or agent running; loop paused by HALT).
+In flight: none (no lane or agent running; loop paused by HALT; lane worktrees lane-0..2 kept).
 
-Status (session 7 /done, 2026-11-18, read back): main at dcbe625 (session 7 roadmap fold) before the hand-off commit;
-whole suite through the suite gate 2643 passed / 3 skipped; npm test
---prefix app 270/270; leak sweep --tree exit 0 (ARMED needles=44);
-plan_check ok 396 packages, 39 waves; no git remote, nothing pushed;
-HALT untouched; no lane or agent running; server health not probed (a
-/done never touches the app). Inbox: 1 note (MAIN INFORMATION /
-TERMINAL, kit v32 join), classify -> skip terminal, no reply.
+Status (session 8 /done, 2026-11-19, fresh runs read back): main at 329163a
+before the /done commits; whole suite through the suite gate 3074 passed / 4
+skipped; npm test --prefix app 371/371; leak sweep --tree no HALT (ARMED
+needles=44); main local == origin/main read back before the /done commits
+(private repository); HALT untouched; no lane or agent running; server
+health not probed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32
+join), no reply.
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
