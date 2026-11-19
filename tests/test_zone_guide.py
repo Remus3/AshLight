@@ -146,6 +146,40 @@ def test_guide_file_hot_reloads_on_mtime_change(tmp_path):
     assert cache.get() == {}
 
 
+def test_short_cap_and_view_key(tmp_path):
+    """TD-08: an optional authored short (at most 34 characters) rides the
+    view as `short`; a missing one reads as ""; a 35-character short fails
+    the load and a hot reload keeps the last good guide."""
+    assert zoneguide.MAX_SHORT == 34
+    doc = json.loads(json.dumps(DOC))
+    doc["acts"]["G1"]["zones"]["The Riverbank"]["short"] = "Boss at the river's end"
+    doc["endgame"]["short"] = "x" * 34
+    v = zoneguide.view(doc, GRAPH, "G1_1", "The Riverbank", False, 1, 1, None)
+    assert v["short"] == "Boss at the river's end"
+    v = zoneguide.view(doc, GRAPH, "G1_2", "Clearfell", False, 1, 1, None)
+    assert v["short"] == ""
+    v = zoneguide.view(doc, GRAPH, "MapAlpineRidge", "Alpine Ridge", False, 70, 70, None)
+    assert v["kind"] == "endgame" and v["short"] == "x" * 34
+    assert zoneguide.short_problem(doc) is None
+    path = tmp_path / "guide.json"
+    path.write_text(json.dumps(doc), encoding="ascii")
+    assert zoneguide.load(path) == doc
+    cache = zoneguide.guide_cache(path)
+    assert cache.get() == doc
+    bad = json.loads(json.dumps(doc))
+    bad["acts"]["G1"]["zones"]["Clearfell"]["short"] = "y" * 35
+    assert "Clearfell" in zoneguide.short_problem(bad)
+    path.write_text(json.dumps(bad), encoding="ascii")
+    st = os.stat(path)
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 2_000_000_000))
+    assert zoneguide.load(path) == {}
+    assert cache.get() == doc and "over 34" in cache.error
+    bad["acts"]["G1"]["zones"]["Clearfell"]["short"] = 7
+    assert zoneguide.short_problem(bad)
+    bad["acts"]["G1"]["zones"]["Clearfell"]["short"] = None
+    assert zoneguide.short_problem(bad) is None
+
+
 def test_resume_replays_entered_zones():
     st = _state()
     st.restore({"character": "Ash", "run_events": [
@@ -183,6 +217,10 @@ def test_shipped_guide_shape_and_text():
             for field in ("objective", "layout", "next"):
                 v = z.get(field)
                 assert v is None or (isinstance(v, str) and 3 <= len(v) <= 160), (zone, field)
+            short = z.get("short")
+            assert short is None or short == "" or (
+                isinstance(short, str) and short.isascii()
+                and len(short) <= zoneguide.MAX_SHORT), (zone, "short")
             for o in z.get("optional", []):
                 assert o["kind"] in zoneguide.KINDS, (zone, o)
                 assert 5 <= len(o["text"]) <= 120, (zone, o)
@@ -191,6 +229,9 @@ def test_shipped_guide_shape_and_text():
                 assert any(nxt in e.get("zones", {}) for e in SHIPPED["acts"].values()), \
                     (zone, nxt)
     assert SHIPPED["endgame"]["objective"]
+    short = SHIPPED["endgame"].get("short")
+    assert short is None or (isinstance(short, str) and short.isascii()
+                             and len(short) <= zoneguide.MAX_SHORT)
 
 
 @pytest.mark.skipif(not acts.default_path().is_file(), reason="world_areas snapshot not fetched")

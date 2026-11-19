@@ -87,3 +87,13 @@ of the game and no copied text.
 GGG's tool rules change, a source's licence objection appears, a live log
 shows quest / NPC lines worth tracking (then mark steps from them), or the
 operator rules the visits file unwanted.
+
+## Amendment 2026-11-19 (PLAY-TD-08A-GUIDE-SHORT-FIELD, unit TD-08)
+
+Each guide entry (a zone, or `endgame`) may carry an authored `short`
+field of at most 34 characters (`MAX_SHORT`): AshLight's own words, left
+empty when unsure, never cut from `objective`; the view publishes it as
+`short` ("" when missing), and the overlay shows `short` and never reads
+`line`. A short that is not ASCII text or is over 34 characters makes the
+file malformed: `load` returns {} and a hot reload keeps the last good
+guide with a Checks note.

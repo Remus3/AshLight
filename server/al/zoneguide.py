@@ -44,6 +44,9 @@ MAX_ACTS = 16
 MAX_ZONES = 48
 MAX_TEXT = 64
 MAX_LINE = 120
+# TD-08: an entry's optional authored `short` (the overlay's one-line zone
+# note; the overlay never reads `line`). Own words, left empty when unsure.
+MAX_SHORT = 34
 WAYPOINT_HOPS = 6
 
 KINDS = ("spirit", "resist", "passive", "life", "mana", "gem", "charm",
@@ -90,10 +93,46 @@ def _clean(text, limit=None):
 
 # -- the guide file -----------------------------------------------------------
 
+def short_problem(doc):
+    """Why a guide document's `short` fields are bad (a short that is not
+    an ASCII string of at most MAX_SHORT characters once whitespace is
+    collapsed), else None. A missing or null short is fine."""
+    if not isinstance(doc, dict):
+        return None
+    entries = []
+    table = doc.get("acts") if isinstance(doc.get("acts"), dict) else {}
+    for key, act in table.items():
+        for zone, z in _zones(act).items():
+            entries.append((f"{key} {zone}", z))
+    entries.append(("endgame", doc.get("endgame")))
+    for where, z in entries:
+        if not isinstance(z, dict) or z.get("short") is None:
+            continue
+        v = z["short"]
+        if not isinstance(v, str) or not v.isascii():
+            return f"{where}: short is not ASCII text"
+        if len(" ".join(v.split())) > MAX_SHORT:
+            return f"{where}: short is over {MAX_SHORT} characters"
+    return None
+
+
 def load(path=PATH):
-    """The guide document ({} when missing, oversized or malformed)."""
-    return jsonfile.read_json(path, max_bytes=MAX_GUIDE_BYTES, encoding="ascii",
-                              kind=dict, default={})
+    """The guide document ({} when missing, oversized or malformed; a bad
+    `short` field makes it malformed)."""
+    doc = jsonfile.read_json(path, max_bytes=MAX_GUIDE_BYTES, encoding="ascii",
+                             kind=dict, default={})
+    return {} if short_problem(doc) else doc
+
+
+def check_guide(path):
+    """The hot reload check: valid JSON within MAX_GUIDE_BYTES and every
+    short within MAX_SHORT; raises ValueError so a bad edit keeps the last
+    good guide and shows a Checks note."""
+    doc = hotreload.check_json(MAX_GUIDE_BYTES)(path)
+    problem = short_problem(doc)
+    if problem:
+        raise ValueError(problem)
+    return doc
 
 
 class FileCache:
@@ -124,7 +163,7 @@ def guide_cache(path=PATH):
     """HOT-RELOAD (decision 0042): the guide file joins the hot reload
     registry; a removed file reads as {}."""
     return hotreload.register(path, load, name="Zone guide", default=dict,
-                              check=hotreload.check_json(MAX_GUIDE_BYTES))
+                              check=check_guide)
 
 
 # -- the snapshot graph -------------------------------------------------------
@@ -456,14 +495,15 @@ def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
     if acts_mod.is_endgame(area_id):
         e = doc.get("endgame") if isinstance(doc.get("endgame"), dict) else {}
         entry = {"objective": _clean(e.get("objective")), "layout": _clean(e.get("layout")),
-                 "optional": _optional(e), "next": None}
+                 "optional": _optional(e), "next": None,
+                 "short": _clean(e.get("short"), MAX_SHORT) or ""}
         if not entry["objective"]:
             return None
         return {"kind": "endgame", "zone": zone, "act": ENDGAME_LABEL,
                 "objective": entry["objective"], "optional": entry["optional"],
                 "layout": entry["layout"], "next": None, "waypoint": None,
                 "advice": adv, "quest": None, "line": _line(zone, entry, adv),
-                "source": SOURCE_TEXT}
+                "short": entry["short"], "source": SOURCE_TEXT}
     info = acts_mod.act_of(area_id)
     if info is None:
         return None
@@ -472,7 +512,8 @@ def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
     z = z if isinstance(z, dict) else {}
     entry = {"objective": _clean(z.get("objective")) or _clean((act or {}).get("default")),
              "layout": _clean(z.get("layout")), "optional": _optional(z),
-             "next": _clean(z.get("next"))}
+             "next": _clean(z.get("next")),
+             "short": _clean(z.get("short"), MAX_SHORT) or ""}
     aid, node = _graph_node(graph, area_id, zone.strip())
     waypoint = None
     if node is not None:
@@ -487,7 +528,8 @@ def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
             "objective": entry["objective"], "optional": entry["optional"],
             "layout": entry["layout"], "next": entry["next"], "waypoint": waypoint,
             "advice": adv, "quest": quest_view(doc, info["key"], visits),
-            "line": _line(zone, entry, adv), "source": SOURCE_TEXT}
+            "line": _line(zone, entry, adv), "short": entry["short"],
+            "source": SOURCE_TEXT}
 
 
 def replay(events, book, name):
