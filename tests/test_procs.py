@@ -22,6 +22,9 @@ from server.al import keepalive as ka
 from server.al import paths, ports, procs
 from tc_live_util import leased_port  # noqa: F401 (a fixture)
 
+# TEST-MARKS (research 0049 R3): the three supervisor files share one
+# xdist worker (they start real cores and supervisors).
+pytestmark = pytest.mark.xdist_group("supervisor")
 ROOT = Path(__file__).resolve().parents[1]
 STOP = ROOT / "scripts" / "stop.ps1"
 RUN = ROOT / "scripts" / "run.ps1"

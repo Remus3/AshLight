@@ -5,14 +5,14 @@ Static reads of web/ plus the core's waystone template; stdlib only."""
 import re
 from pathlib import Path
 
+import srcpaths
 from server.al.state import overlay_card, waystone_text
 
 ROOT = Path(__file__).resolve().parents[1]
-WEB = ROOT / "web"
-HTML = (WEB / "index.html").read_text(encoding="ascii")
-CSS = (WEB / "app.css").read_text(encoding="ascii")
-SEARCH = (WEB / "search.js").read_text(encoding="ascii")
-APP = (WEB / "app.js").read_text(encoding="ascii")
+HTML = srcpaths.index_html()
+CSS = srcpaths.read("app.css")
+SEARCH = srcpaths.read("search.js")
+APP = srcpaths.read("app.js")
 DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way."
 CARD_MAX = 34  # design 0001 section 9 rule 6
 

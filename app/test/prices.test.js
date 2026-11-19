@@ -5,7 +5,8 @@
    Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const p = require("../../web/prices.js");
+const web = require("./_web.js");
+const p = web.load("prices.js");
 
 const RATES = {
   web_data: true, source: "poe.ninja", credit: "Prices: poe.ninja",

@@ -23,6 +23,7 @@ import tc_pin  # noqa: E402
 
 from server.al import exepin, paths  # noqa: E402
 from server.al.theorycraft import bridge  # noqa: E402
+from tc_live_util import LIVE_CALC  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures" / "tc_bridge"
 FAKE = FIX / "fake_bridge.py"
@@ -255,6 +256,7 @@ def live_bridge():
     b.close()
 
 
+@LIVE_CALC
 @LIVE
 @pytest.mark.slow
 def test_live_minimal_build_returns_numeric_outputs(warm_bridge):
@@ -266,6 +268,7 @@ def test_live_minimal_build_returns_numeric_outputs(warm_bridge):
     assert out.get("Life", 0) > 0
 
 
+@LIVE_CALC
 @LIVE
 @pytest.mark.slow
 def test_live_reload_does_not_leak_state(live_bridge):
@@ -285,6 +288,7 @@ def test_live_reload_does_not_leak_state(live_bridge):
     assert live_bridge.outputs() == first
 
 
+@LIVE_CALC
 @LIVE
 @pytest.mark.slow
 @pytest.mark.skipif(not EXPECTED, reason="no PoB GUI reference values recorded "

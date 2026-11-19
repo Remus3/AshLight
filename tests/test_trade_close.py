@@ -3,8 +3,7 @@ cancelled." close one open trade card. The log lines carry no name, so the
 oldest card goes; a counterparty name, if a future line carries one, picks
 the matching card instead. Fake clock only."""
 
-from pathlib import Path
-
+import srcpaths
 from server.al.parser import parse_line
 from server.al.state import SessionState
 
@@ -93,8 +92,7 @@ def test_accepted_line_stays_in_recent_events():
 def test_dashboard_loads_the_trade_helper():
     # UX-REVIEW F6: web/trades.js is loaded before app.js and drives the
     # polite #trade-status sentence.
-    root = Path(__file__).resolve().parents[1]
-    html = (root / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     tag = '<script src="/web/trades.js" defer></script>'
     assert tag in html
     assert html.index(tag) < html.index('<script src="/web/app.js" defer></script>')
@@ -103,5 +101,5 @@ def test_dashboard_loads_the_trade_helper():
     # outside the #trades section, which is hidden while no request is open
     section = html[html.index('<section id="trades"'):]
     assert section.index("</section>") < section.index(region)
-    app = (root / "web" / "app.js").read_text(encoding="ascii")
+    app = srcpaths.read("app.js")
     assert 'TR.showStatus($("trade-status"), prevIds, rows)' in app

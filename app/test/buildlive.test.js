@@ -4,7 +4,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const bl = require("../../web/buildlive.js");
+const web = require("./_web.js");
+const bl = web.load("buildlive.js");
 
 function fakeDoc() {
   const byId = new Map();

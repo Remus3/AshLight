@@ -35,6 +35,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FUZZ_S = float(os.environ.get("AL_FUZZ_S", "0.6"))
 SEED = int(os.environ.get("AL_FUZZ_SEED", "20261117"))
 CALL_S = 1.0  # per-call bound; real inputs parse in well under 10 ms
+# TEST-MARKS: a test that runs _run (per-call bound) or _timed carries it.
+TIMING = pytest.mark.timing
 
 LOG_SEEDS = [ln for ln in (ROOT / "tests" / "fixtures" / "client_sample.txt")
              .read_text(encoding="utf-8").splitlines() if ln.strip()]
@@ -193,6 +195,7 @@ def _json(obj):
 
 # ------------------------------------------------------------------ parsers
 
+@TIMING
 def test_fuzz_client_line_parser_state_and_summary():
     st = state.SessionState()
     seq = [0]
@@ -217,6 +220,7 @@ def test_fuzz_client_line_parser_state_and_summary():
     assert len(snap["trade_requests"]) <= state.TRADE_REQUESTS
 
 
+@TIMING
 def test_fuzz_parse_lines_bytes_in_any_encoding():
     def target(raw):
         for enc in ("utf-8", "latin-1", "utf-16-le"):
@@ -228,6 +232,7 @@ def test_fuzz_parse_lines_bytes_in_any_encoding():
                                                                           "surrogatepass"))
 
 
+@TIMING
 def test_fuzz_item_text_parser_and_trade_link():
     pc = price.PriceChecker(league=lambda: "Standard")
 
@@ -244,6 +249,7 @@ def test_fuzz_item_text_parser_and_trade_link():
     _run("item.parse", target, lambda r: _input(r, ITEM_SEED))
 
 
+@TIMING
 def test_fuzz_share_code_codec_raises_only_code_error():
     good = codec.encode(POB_XML)
 
@@ -257,6 +263,7 @@ def test_fuzz_share_code_codec_raises_only_code_error():
     _run("codec.decode", target, lambda r: _input(r, good))
 
 
+@TIMING
 def test_fuzz_share_code_round_trip_is_exact():
     # the codec's claim: any UTF-8 text plus surrogate escapes (bytes that
     # are not UTF-8, U+DC80-U+DCFF) round-trips exactly
@@ -279,6 +286,7 @@ def test_codec_refuses_a_nul_byte_in_the_inflated_payload():
         codec.decode(codec.encode("<PathOfBuilding2>a\x00b"))
 
 
+@TIMING
 def test_fuzz_build_xml_and_code_raise_only_value_errors():
     good = codec.encode(POB_XML)
     # documented contract: codec.CodeError or BuildError, nothing else
@@ -288,11 +296,13 @@ def test_fuzz_build_xml_and_code_raise_only_value_errors():
          allowed=(codec.CodeError, model.BuildError))
 
 
+@TIMING
 def test_fuzz_character_json_raises_only_value_errors():
     _run("charjson", charjson.from_json, lambda r: _input(r, CHAR_JSON),
          allowed=(model.BuildError,))
 
 
+@TIMING
 def test_fuzz_ninja_parsers_yield_finite_rates():
     def overview(body):
         doc = ninja.parse_overview(body)
@@ -310,6 +320,7 @@ def test_fuzz_ninja_parsers_yield_finite_rates():
 
 # ------------------------------------------------------- snapshot builders
 
+@TIMING
 def test_fuzz_card_text_builders_never_raise():
     def target(d):
         for fn in (price.card_of, state.price_card_text, state.eval_card_text,
@@ -321,6 +332,7 @@ def test_fuzz_card_text_builders_never_raise():
     _run("card_text", target, _rdict)
 
 
+@TIMING
 def test_fuzz_published_cards_never_break_the_snapshot():
     st = state.SessionState(clock=lambda: 1000.0)
 
@@ -350,6 +362,7 @@ def _timed(fn, *args):
 PREFIX = "2026/11/16 21:00:00 1000 1f2e3d4c [INFO Client 5150] "
 
 
+@TIMING
 @pytest.mark.parametrize("body", [
     "@From X: Hi, I would like to buy your " + "listed for 1 in " * 600,
     "@From X: Hi, I would like to buy your " + "a listed for 1 b in c " * 400,
@@ -380,6 +393,7 @@ def test_overlong_line_is_ignored_and_long_trade_text_is_plain_whisper():
     assert ev is not None and ev["type"] == "whisper_in" and "trade" not in ev
 
 
+@TIMING
 def test_item_mod_tag_after_long_whitespace_is_fast():
     # FUZZ-2: _TAG_RE's leading \s* made re.search quadratic on a run of
     # spaces (60 000 spaces took 7 s on the press handler).

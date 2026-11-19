@@ -204,7 +204,11 @@ def answers_for(snap):
                     "text": "reading", "min": STEP_TITLE})
     ev = snap.get("eval")
     if ev:
-        word = (ev.get("text") or {}).get("word") or (snap.get("card") or {}).get("head")
+        # the Play card's own word once region I has it ("Not an item" for
+        # a press error, where eval.text.word says "Not checked")
+        item = (snap.get("play") or {}).get("item") or {}
+        word = (item.get("word") or (ev.get("text") or {}).get("word")
+                or (snap.get("card") or {}).get("head"))
         if word:
             out.append({"id": "upgrade", "region": "i", "kind": "contains", "text": word,
                         "min": STEP_GLANCE})

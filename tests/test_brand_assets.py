@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 import make_icons as mi  # noqa: E402
+import srcpaths  # noqa: E402
 
 
 def test_check_mode_is_clean():
@@ -66,7 +67,7 @@ def test_readme_hero_and_disclaimer():
 
 
 def test_dashboard_links_local_favicon():
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     assert 'rel="icon" href="/web/favicon.svg"' in html
     assert 'href="/favicon.ico"' in html
     assert "http" not in html.split("<title>")[0].replace("http-equiv", "")
@@ -75,13 +76,13 @@ def test_dashboard_links_local_favicon():
 def test_header_shows_the_mark_left_of_the_name():
     # PLAY-TD-09C-BAR (F-190): AshLight's own small mark from the dashboard's
     # own files (no GGG art), decorative (empty alt), in a 20 px box
-    html = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    html = srcpaths.index_html()
     head = html[html.index('<header class="bar">'):html.index("</header>")]
     h1 = head[head.index("<h1"):head.index("</h1>")]
     img = '<img class="brand-mark" src="/web/favicon.svg" alt="" width="20" height="20">'
     assert img in h1
     assert h1.index(img) < h1.index("AshLight")
     assert head.count("<img") == 1
-    css = (ROOT / "web" / "app.css").read_text(encoding="ascii")
+    css = srcpaths.read("app.css")
     assert ".brand-mark { display: block; flex: 0 0 auto; width: 20px; height: 20px; }" in css
-    assert mi.FAVICON_SVG == ROOT / "web" / "favicon.svg"
+    assert mi.FAVICON_SVG == srcpaths.path("favicon.svg")

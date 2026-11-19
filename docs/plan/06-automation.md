@@ -707,9 +707,9 @@ Then the six checks of F-078, each with its read-back:
    tests/test_roadmap_rows.py` is green.
 2. `python tools/roadmap.py rows --open --untagged` prints only ids that
    packages.json marks `owner: loop`.
-3. `python tools/al_loop.py preflight --handoff` prints `hand-off loop
+3. `python tools/loop_preflight.py --handoff` prints `hand-off loop
    items: 0`.
-4. `python tools/al_loop.py preflight` exits 0 with the client running
+4. `python tools/loop_preflight.py` exits 0 with the client running
    (the gates of ops/loop/gates.txt once, in a lane worktree on
    unchanged main, the suite through the suite gate).
 5. `python tools/usage_ledger.py gate` reads under 60 used.

@@ -720,7 +720,8 @@ OA-10, OA-12, OA-19, OA-8, OA-20, OA-21, OA-22, OA-23.
   (OA-2, optional since 2026-11-18) and pastes the reply; silence is not
   consent.
 - Sessions (not operator acts): removing HALT (AUTO-21, no later than
-  2026-12-04), setting tc_calc on the dev host (Q-10, the integrator of
+  2026-12-04; done 2026-11-19 in session 9 after the six checks read
+  green, 5560fec; no operator act was needed), setting tc_calc on the dev host (Q-10, the integrator of
   TC-PRESS-STAGED-LIVE), creating the repository, pushing with gh and
   the public flip (GP-09, GP-12; OA-10 is recorded), every build, stage
   and tag after the release phrase, unmarking a bad release as latest.

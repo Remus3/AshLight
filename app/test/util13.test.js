@@ -4,9 +4,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const hints = require("../../web/hints.js");
-const runs = require("../../web/runs.js");
-const status = require("../../web/status.js");
+const web = require("./_web.js");
+const hints = web.load("hints.js");
+const runs = web.load("runs.js");
+const status = web.load("status.js");
 
 test("hints: tip shows until its end time, then hides", () => {
   const hint = { id: "start", text: "New character: hello.", at: 100, expires_at: 700 };

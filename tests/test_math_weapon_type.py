@@ -12,7 +12,7 @@ from server.al.state import eval_card_text
 from server.al.theorycraft import calcwire, delta
 from server.al.theorycraft import evaluate as tc_evaluate
 from server.al.theorycraft import model
-from tc_live_util import LIVE, reference
+from tc_live_util import LIVE, LIVE_CALC, reference
 from test_math_compare import ONE_HAND, _weapons_xml
 
 MAIN_HAND = "Main Hand weapon is not usable with this skill"
@@ -187,6 +187,7 @@ Item Level: 70
 """
 
 
+@LIVE_CALC
 @LIVE
 @pytest.mark.slow
 def test_live_bow_build_cannot_use_a_wand(warm_bridge):

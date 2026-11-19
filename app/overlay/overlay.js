@@ -30,6 +30,10 @@
           nodes.evalCard.hidden = !model.evalHead;
         } else if (f === "evalVerdict") {
           nodes.evalCard.setAttribute("data-verdict", model.evalVerdict);
+        } else if (f === "hudShown") {
+          /* OVL-PARTS-PAGE: with every part off and no failure word the
+             HUD plate is absent (overlay.css [hidden]). */
+          nodes.hud.hidden = !model.hudShown;
         } else if (f === "status" || f === "away" || f === "under" || f === "campaign" ||
                    f === "log" || f === "trades") {
           nodes.hud.setAttribute("data-status", model.status);
@@ -49,8 +53,10 @@
     if (timer) { clearTimeout(timer); timer = null; }
     if (!snap) { return; }
     var now = Date.now() / 1000 - offset;
-    /* UTIL-MAPRUN-OVL: the row-1 timer's own clock (map time inside a map) */
-    var ms = S.msUntilNextChange(S.timerSeconds(snap, now));
+    /* UTIL-MAPRUN-OVL: the row-1 timer's own clock (map time inside a map).
+       OVL-PARTS-PAGE: a timer that is off (or quiet in town) wakes nothing;
+       only a new snapshot can bring it back, and that paints anyway. */
+    var ms = (shown && !shown.timer) ? null : S.msUntilNextChange(S.timerSeconds(snap, now));
     var evalMs = S.msUntilEvalExpires(snap, now);
     if (evalMs !== null && (ms === null || evalMs < ms)) { ms = evalMs; }
     if (ms !== null) { timer = setTimeout(paint, ms); }

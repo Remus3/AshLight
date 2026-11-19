@@ -1,1 +1,88 @@
-/* AshLight dashboard: region G, the strip (stub, no rules yet; PLAY-TD-10-STRIP fills it). */
+/* AshLight dashboard: region G, the strip (PLAY-TD-10-STRIP; plan 03 TD-10,
+   section 3.4; F-087, F-159). Track 100 px at s = 1: border 2 + padding
+   2 + 2 + label 26 + value 36 + sub 26 = 94; slack 6 (G pads 2 px, not
+   the 4 of web/app.css, so a fractional region top never eats the 2 px
+   minimum of G4). The line boxes come from the shared row classes of
+   web/app.css (.row-title 20 / 26, .row-glance 28 / 32, .row-hero
+   32 / 36, .one-line). Empty rows keep their line box, so nothing moves
+   when a value arrives. */
+#play-g { --region-pad: 0.125rem; }
+#play-g .st {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  min-width: 0;
+}
+/* flow: the Zone cell takes a full row, Level, Deaths and Session share
+   the next one (plan 03 section 3.9) */
+#play-g .st-zone { grid-column: 1 / -1; }
+#play-g .st-cell { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+#play-g .st-label, #play-g .st-sub { min-height: var(--al-lh-title); }
+#play-g .st-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  min-width: 0;
+  min-height: var(--al-lh-hero);
+}
+#play-g .st-value { flex: 0 1 auto; }
+/* the numbers are short and never clipped. The 32 px glyphs reach about
+   3 px under their 36 px line box (font ascent + descent): 4 px of bottom
+   padding taken back by a negative margin hold them inside the value and
+   its row (no scroll height, G1) while the row stays 36 px in the layout
+   (the 4 px overlap the top half-leading of the sub line) */
+#play-g .st-num { white-space: nowrap; }
+#play-g .st-num,
+#play-g .st-row:has(> .st-num) { padding-bottom: 0.25rem; margin-bottom: -0.25rem; }
+/* the zone name takes the ellipsis (full text in title); its 28 px glyphs
+   sit in the 36 px value box so its clipping box adds no scroll height */
+#play-g .st-name { line-height: var(--al-lh-hero); }
+/* an empty cell's words for screen readers: visually hidden without a
+   clipping box, so it adds no scroll height (as .region-h.sr-only) */
+#play-g .st-said {
+  position: absolute;
+  width: 1px;
+  overflow: visible;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  font-size: var(--al-fs-body);
+  line-height: var(--al-lh-body);
+}
+/* the zone or map timer, right-aligned in the value row, never clipped */
+#play-g .st-time {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* compact and full: one row of four cells; the Zone cell is the widest
+   (452 px at 1024 px wide: the 34-character sub line at 20 px fits) */
+@media (min-width: 64em) and (min-height: 43.75em) {
+  #play-g .st {
+    grid-template-columns: minmax(0, 14fr) repeat(3, minmax(0, 5fr));
+    gap: 0 0.75rem;
+  }
+  #play-g .st-zone { grid-column: auto; }
+  /* the bar keeps one row: the tabs never wrap, the character name takes
+     the room that is left (ellipsis, full text in title) */
+  .bar { grid-template-columns: auto max-content minmax(0, 1fr) auto; }
+  .bar > .bar-char { justify-self: stretch; text-align: right; }
+}
+/* F-087: a cell with no value and every value while the data is stale
+   (log idle or feed down: body[data-fresh=no]) use the muted text token;
+   the words stay, so colour never works alone */
+#play-g [data-empty] .st-value,
+#play-g .st-time[data-empty],
+body[data-fresh="no"] #play-g .st-value,
+body[data-fresh="no"] #play-g .st-time { color: var(--fk-text-muted); }
+/* the one amber cue of G: "[?] N lv under" (act when you can) */
+#play-g .st-sub[data-tone="warn"] { color: var(--fk-status-warn); }
+
+/* The bar's one status word (the ToS floor reading indicator, painted by
+   web/app.js through ALDash.barStatus): 20 px in a 32 px pill, neutral
+   while ok; only blocked and failed keep their colour (F-159). */
+#reading.pill { font-size: var(--al-fs-title); line-height: var(--al-lh-title); }
+#reading.pill:not([data-state="blocked"]):not([data-state="failed"]) {
+  color: var(--fk-text-muted);
+  border-color: var(--fk-border);
+}
