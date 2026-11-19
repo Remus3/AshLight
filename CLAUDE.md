@@ -301,7 +301,10 @@ checkout runs on the dev port.
 ## Stack and ports
 
 - Python 3.11+ standard library only for `server/`, `tools/`, `tests/`
-  (decision 0002). Electron `45.3.3` (exact pin) for the overlay in `app/`;
+  (decision 0002); pytest is the one test dependency; an optional dev-only
+  test plugin (pytest-xdist, pinned exactly with --hash lines in
+  requirements-dev.txt, installed by hand) may speed the suite and is never
+  imported by server/, tools/ or app code. Electron `45.3.3` (exact pin) for the overlay in `app/`;
   npm deps pinned exactly (`--save-exact`), `npm ci` from the lockfile. No CDN
   at runtime.
 - Stdlib-only binds AshLight's own code. Optional external tools (LuaJIT and
@@ -377,6 +380,10 @@ checkout runs on the dev port.
 - A push runs through
   `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git push origin main`;
   never a bare push.
+- A package agent runs the files python tools/test_select.py prints for its
+  diff (the ungated list file-named, the gated list through the suite gate);
+  the whole suite runs once per merge batch through the gate before main
+  moves (decision 0060).
 - No AI or bot attribution trailer (FLEET item 17; the commit-msg hook strips).
 
 ## Loop (headless lanes, copied from the fleet's lane pattern) - ARMED
@@ -414,6 +421,16 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   collision or a GGG proper noun "Ashlight" is confirmed.
 - Python stdlib core + web dashboard + Electron overlay (decision 0002).
   Reverses if: the overlay misses its RAM / FPS budget on the target machine.
+  Clarified 2026-11-18: optional dev-only test plugins allowed, serial path
+  stays the default; reverses if the diagnosed runs show xdist caused flakes
+  or lost workers, or the operator rules tests must be stdlib-only.
+- Wave gate: a package runs the test files tools/test_select.py names for
+  its diff, file-named, outside the suite gate (no timing tests, at most
+  90 s per subset; timing and budget tests go through the gate); main moves
+  only after one whole green suite through the gate per merge batch
+  (decision 0060). Reverses if: subset runs cause machine contention or
+  missed regressions, or MAIN's kit changes item 16c to forbid ungated
+  file-named runs.
 - Clipboard / screen only per AshLight hotkey press, never a watcher, never
   input to the game (decision 0003). Reverses if: GGG's overlay rules change.
 - Theorycraft via Path of Building PoE2 interop (codes first, then an
@@ -522,9 +539,16 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   without patching PoB, or the stdout prefix framing proves unreliable.
 - TC-DELTA: PoB-backed DPS / EHP deltas and per-mod weights, fixed 50/50
   blend and 1 percent sidegrade band, stat weights when the calc is off
-  (decision 0024). Reverses if: TC-BRIDGE needs another calc contract, a
-  user asks for an offence / defence lean, TC-UPGRADE-STATS finds a stat id
-  source, or uncached probes make a press feel slow.
+  (decision 0024, amended 2026-11-19: the item check is published in
+  stages, the stat-weight card at once and the PoB DPS / EHP and per-mod
+  stages from one daemon worker as updates keeping the press time; a press
+  generation counter keeps one press in flight, a newer press or re-score
+  cancels pending stages and no stale stage is published; the stage card
+  part owns the pending calc sentence until a state.py pending key
+  exists). Reverses if: TC-BRIDGE needs another calc contract, a user asks
+  for an offence / defence lean, TC-UPGRADE-STATS finds a stat id source,
+  uncached probes make a press feel slow, or the staged updates make the
+  overlay card flicker or re-show in play.
 - TC-DRIFT: one read-only GitHub releases check per 24 h from the loop tick,
   a detached trial per new tag, the pin moves only via `tc_drift.py apply`
   after a live-green trial, committed by a session (decision 0025). The

@@ -25,6 +25,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
   (DEP-04).
 - 0061: Electron shell guards (docs/decisions/0061-electron-shell-guards.md)
   (OVL-SHELL-GUARDS).
+- 0060: wave gate policy - named-file subset per package, one whole suite
+  per merge batch (Q-17).
 - 0059: installed-mode home and layout (plan 05 D1, ruling Q-19)
   (DEP-05).
 - 0058: hotkeys: effective keys, rebind in the app, self-healing
