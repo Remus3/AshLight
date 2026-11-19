@@ -78,7 +78,8 @@ def test_no_nested_fold_for_the_overlay_layout():
 def test_live_regions_stay_within_the_cap():
     live = re.findall(r'aria-live="polite"|role="status"|role="alert"', HTML)
     ids = set(re.findall(r'<[^>]*(?:aria-live="polite"|role="status")[^>]*>', HTML))
-    assert len(ids) <= 12, len(ids)
+    # PLAY-TD-09C-BAR (MERGE-SEAMS F2): one bar status word, cap 12 to 11
+    assert len(ids) <= 11, len(ids)
     assert live
 
 

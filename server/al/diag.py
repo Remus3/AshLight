@@ -223,6 +223,37 @@ def check_reload(f):
     return _check("reload", "Live reload", FAIL, notes[0] + more, FIX_RELOAD)
 
 
+# SEC-ACL-CHECK (F-011): which folder, never its path. The runtime dir and
+# the sidecar are AshLight-made and setup.ps1 makes them private; the
+# player's own checkout changes only on the player's command.
+PRIVATE_WHAT = {"runtime": "AshLight's runtime folder", "app": "the AshLight folder",
+                "sidecar": "AshLight's sidecar folder"}
+FIX_PRIVATE_SETUP = r"Run scripts\setup.ps1."
+FIX_PRIVATE_APP = "In the AshLight folder, run: python -m server.al.acl apply ."
+FIX_PRIVATE_BOTH = (r"Run scripts\setup.ps1, then in the AshLight folder run: "
+                    "python -m server.al.acl apply .")
+
+
+def check_private(f):
+    """SEC-ACL-CHECK: one row while someone else can write to one of
+    AshLight's folders (acl_open from the core's start-up audit); None
+    otherwise (no row), like check_reload. Names the folder, never a path."""
+    names = [n for n in PRIVATE_WHAT if n in (f.get("acl_open") or ())]
+    if not names:
+        return None
+    what = [PRIVATE_WHAT[n] for n in names]
+    if len(what) > 1:
+        what = [", ".join(what[:-1]) + " and " + what[-1]]
+    fixes = []
+    if "runtime" in names or "sidecar" in names:
+        fixes.append(FIX_PRIVATE_SETUP)
+    if "app" in names:
+        fixes.append(FIX_PRIVATE_APP)
+    fix = fixes[0] if len(fixes) == 1 else FIX_PRIVATE_BOTH
+    return _check("private", "Private files", FAIL,
+                  f"Other accounts on this computer can change files in {what[0]}.", fix)
+
+
 def check_port(f):
     port = f.get("port")
     if isinstance(port, int) and not isinstance(port, bool):
@@ -253,7 +284,7 @@ def checks(f, now):
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
             check_hotkey(f), check_port(f)]
-    rows += [r for r in (check_reload(f), check_dev_docs(f)) if r]
+    rows += [r for r in (check_reload(f), check_dev_docs(f), check_private(f)) if r]
     return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})
 
 
