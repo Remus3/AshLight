@@ -4,11 +4,8 @@
    and copies a search string only on a click. Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const h = require("../../web/health.js");
-
-const WEB = path.join(__dirname, "..", "..", "web");
+const web = require("./_web.js");
+const h = web.load("health.js");
 
 const DOC = {
   loaded: true,
@@ -60,8 +57,7 @@ test("UX-U25: no saved stats is said once, on the Build card, not in Build healt
     slots: [{ slot: "Ring 1", line: "Look for", text: "res" }] } });
   assert.equal(h.view(withNext).show, true);
   assert.equal(h.view(withNext).message, "");
-  const html = require("node:fs").readFileSync(
-    require("node:path").join(__dirname, "..", "..", "web", "index.html"), "utf8");
+  const html = web.source("index.html");
   assert.match(html.split("id=\"buildbox\"")[1].split("</section>")[0], /No stats saved in this build/);
 });
 
@@ -83,7 +79,7 @@ test("nextView lists valid rows, notes dropped terms, hints without PoB weights"
 });
 
 test("the clipboard is written only inside the Copy click handler", () => {
-  const src = fs.readFileSync(path.join(WEB, "health.js"), "ascii");
+  const src = web.source("health.js", "ascii");
   const body = src.split("addEventListener(\"click\"");
   assert.equal(body.length, 2, "one click handler");
   assert.equal(src.split("copyText(r.text").length - 1, 1);
@@ -92,7 +88,7 @@ test("the clipboard is written only inside the Copy click handler", () => {
 });
 
 test("the page loads the script and has the card without a live region", () => {
-  const html = fs.readFileSync(path.join(WEB, "index.html"), "ascii");
+  const html = web.source("index.html", "ascii");
   assert.ok(html.indexOf("/web/health.js") > 0);
   const card = html.split("id=\"healthbox\"")[1].split("</section>")[0];
   assert.ok(card.indexOf("aria-live") < 0 && card.indexOf("role=\"status\"") < 0);

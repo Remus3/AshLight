@@ -4,7 +4,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const zg = require("../../web/zoneguide.js");
+const web = require("./_web.js");
+const zg = web.load("zoneguide.js");
 
 const GUIDE = {
   kind: "campaign", zone: "Clearfell", act: "Act 1",

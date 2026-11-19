@@ -3,8 +3,9 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const tc = require("../../web/tc.js");
-const hist = require("../../web/history.js");
+const web = require("./_web.js");
+const tc = web.load("tc.js");
+const hist = web.load("history.js");
 
 test("a not-checked item (no build) has no 'not counted' note", () => {
   const m = tc.evalView({ ok: false, error: "no build loaded", unweighted: ["Cannot be Frozen"],
