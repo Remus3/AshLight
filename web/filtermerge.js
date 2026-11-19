@@ -46,7 +46,7 @@
 
   function savedText(name) {
     return "Saved " + name + " to your downloads. Your own filter is unchanged. Move the " +
-      "new file to the game's filter folder, then pick it in the game's options.";
+      "new file to the game's filter folder.";
   }
 
   /* One merge for the picked file. env: {fetch, token, save(blob, name),

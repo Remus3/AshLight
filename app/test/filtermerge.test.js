@@ -41,6 +41,8 @@ test("a picked file is posted raw with the token, saved under the core's name", 
   assert.deepEqual(e.saved, [["BLOB", "My Filter-ashlight.filter"]]);
   assert.equal(e.told.at(-1), m.savedText("My Filter-ashlight.filter"));
   assert.match(e.told.at(-1), /unchanged/);
+  /* no unverified claim about the game's own options (TC-FILTER-ONE-CONTROL) */
+  assert.doesNotMatch(e.told.at(-1), /options/);
 });
 
 test("over 2 MB is refused in the browser, nothing sent", async () => {
