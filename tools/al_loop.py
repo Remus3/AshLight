@@ -86,20 +86,22 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import eta  # noqa: E402
 import al_lane  # noqa: E402
-import lane_samples  # noqa: E402
+import lane_samples  # noqa: E402,F401
 import ledger_rotate  # noqa: E402
 import usage_ledger  # noqa: E402
 # Plan 107: constants + small helpers + item records (loop_base), lane prompts
-# (loop_prompts), the work list (loop_roadmap), the inbox pass (loop_inbox) and
-# the merge into main (loop_merge) live in their own modules. Every moved name
-# is re-exported here, the same object: tests and tools/al_tests.py read
-# al_loop.X. Names this file does not use itself are marked F401 (re-export).
+# (loop_prompts), the ROADMAP rows (loop_roadmap), the inbox pass (loop_inbox),
+# the merge into main (loop_merge), and (LOOP-SPLIT-TICK) the review / commit
+# (loop_review) and the work list / dispatch (loop_work) live in their own
+# modules. Every moved name is re-exported here, the same object: tests and
+# tools/al_tests.py read al_loop.X. Names this file does not use itself are
+# marked F401 (re-export).
 from loop_base import (  # noqa: E402
     ATTENTION_STATES, BACKOFF_BASE_S, BACKOFF_CAP_S, BACKOFF_REL, CODE, DEEP_EXTRA,
-    DIRTY_WT_RX, DONE_STATES, GATE_TIMEOUT_S, HALT_REL, HEADROOM, HOLD_STATES, INFRA_RX,
-    IN_FLIGHT, Items, LOCK_REL, MARKER_RX, MAX_ATTEMPTS, MAX_ROUNDS, MERGE_LOCK_REL,
-    NEED_RX, PROGRESS_TASK, PUSH_LAST_REL, PUSH_WORKER_REL, REVIEW_LOG_KEEP,
-    REVIEW_START_S, TICK_TARGET_S, VERDICT_RX, VERIFY_EXTRA, _BREAKAWAY, _DETACHED,
+    DONE_STATES, GATE_TIMEOUT_S, HALT_REL, HEADROOM, HOLD_STATES, INFRA_RX,
+    IN_FLIGHT, Items, LOCK_REL, MAX_ATTEMPTS, MERGE_LOCK_REL,
+    PROGRESS_TASK, PUSH_LAST_REL, PUSH_WORKER_REL, REVIEW_LOG_KEEP,
+    REVIEW_START_S, TICK_TARGET_S, _BREAKAWAY, _DETACHED,
     _NO_WINDOW, _norm_path, ascii_text, atomic_write, epoch_of, is_limit, iso,
     load_config, read_json, route_kind, route_kw,
     CONTROL_REL, DEFAULT_MAX_NOTES, DEFAULT_MAX_PLANS, DELIVERY_REL, DEPENDS_RX,  # noqa: F401
@@ -108,26 +110,31 @@ from loop_base import (  # noqa: E402
     ORDERS_REL, OUTBOX_REL, RED_TTL_S, RESOLVABLE, ROADMAP_REL, ROUTES, ROUTE_EFFORTS,  # noqa: F401
     BLOCKED_RX, ROW_RX, SKIP_TAGS, STOP, TICK_S, WATCH_REL, _ROUTE_MODEL, eta_label,  # noqa: F401
     load_routes, next_number, read_jsonl, with_hop,  # noqa: F401
+    DIRTY_WT_RX, MARKER_RX, MAX_ROUNDS, NEED_RX, VERDICT_RX, VERIFY_EXTRA,  # noqa: F401
 )
 from loop_prompts import (  # noqa: E402
-    deep_dive_prompt, fix_prompt, handoff_prompt, plan_prompt, verify_prompt,
     GATES, NO_ROADMAP, resolve_prompt,  # noqa: F401
+    deep_dive_prompt, fix_prompt, handoff_prompt, plan_prompt, verify_prompt,  # noqa: F401
 )
 from loop_roadmap import (  # noqa: E402
-    commit_body, commit_subject, dependency_cycles, dispatchable, handoff_items, is_duplicate,
+    dispatchable,
     merge_subject,  # noqa: F401
-    plan_depends, plan_doc, plan_titles, resolve_item, roadmap_flip_time, roadmap_rows,
     RUN_FIELDS, _norm_words, base_kind, flip_roadmap,  # noqa: F401
     resolve_roadmap, result_line, title_tokens,  # noqa: F401
-    dive_backoff, dive_history,
+    commit_body, commit_subject, dependency_cycles, handoff_items, is_duplicate,  # noqa: F401
+    plan_depends, plan_doc, plan_titles, resolve_item, roadmap_flip_time,  # noqa: F401
+    roadmap_rows, dive_backoff, dive_history,  # noqa: F401
 )
 from loop_inbox import (  # noqa: E402
-    InboxMixin, missing_ordered, order_prompt, order_settled, session_done, session_needs,
-    parked_items, parked_status, session_orders, settled_notes,
+    InboxMixin, session_done, parked_items, parked_status, session_orders,
     session_paths, FLOORS_IN_HOOKS, SESSION_TARGETS, inbox_prompt, order_id, queued_orders,  # noqa: F401
     triage_spawn_kwargs,  # noqa: F401
+    missing_ordered, order_prompt, order_settled, session_needs, settled_notes,  # noqa: F401
 )
 from loop_merge import GateCache, MergeMixin  # noqa: E402
+from loop_review import ReviewMixin  # noqa: E402
+from loop_review import ROUND_LOG_CAP, ROUND_LOG_MAX_FINDINGS  # noqa: E402,F401
+from loop_work import WorkMixin  # noqa: E402
 
 
 # ---------------------------------------------------------------- dependencies
@@ -135,8 +142,6 @@ from loop_merge import GateCache, MergeMixin  # noqa: E402
 # Kit v12 race guards (FLEET-COMMON 16): every commit / push takes the tree's
 # git lock; every whole pytest suite holds a machine-wide suite-gate slot.
 LOOP_OWNER = "al-loop.main"
-ROUND_LOG_CAP = 2000  # plan 129: chars kept per finding in a round_log entry
-ROUND_LOG_MAX_FINDINGS = 10
 SUITE_GATE_REL = Path("ops/fleet_kit/fleet_suite_gate.py")
 
 
@@ -526,7 +531,7 @@ def stall_of(doc, now, floor_s=STALL_FLOOR_S):
 
 # ---------------------------------------------------------------- the tick
 
-class Tick(InboxMixin, MergeMixin):
+class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
     def __init__(self, deps, dry_run=False, no_push=False):
         self.d, self.dry, self.no_push = deps, dry_run, no_push
         self.root = deps.root
@@ -745,538 +750,6 @@ class Tick(InboxMixin, MergeMixin):
     def dirty(self, wt):
         r = self.d.git(["status", "--porcelain"], wt)
         return r.returncode != 0 or bool(r.stdout.strip())
-
-    def process(self, rec):
-        wt = Path(rec["worktree"])
-        if rec["state"] == "committed":
-            return self.merge(rec)
-        if not wt.is_dir() or not self.dirty(wt):
-            if rec.get("rc") == 0 and self.blocked_marker(rec, wt):
-                return
-            rec["state"] = "no-change" if rec.get("rc") == 0 else "lost"
-            self.items.put(rec)
-            self.step(f"{rec['id']}: {rec['state']}")
-            return
-        rounds = rec.get("rounds", 0)
-        while True:
-            # plan 129: after fix round 3 the review is still labelled round 3
-            rnd = min(rounds + 1, MAX_ROUNDS)
-            ok, detail = self.gate(wt)
-            findings = [] if ok else ["gates failed: " + detail]
-            self.log_round(rec, rnd, "gates", findings)
-            extra = self.extra_checks(rec, wt)
-            self.log_round(rec, rnd, "extra_checks", extra)
-            findings += extra
-            if not findings:
-                # plan 129: a clean tree after fix round 3 still gets one
-                # review-only verifier pass; no producer answer follows it
-                if self.blocked():
-                    return  # retry next tick
-                note = f"lane-review-{rec['id']}"
-                line = self.spawn(verify_prompt(rec, rnd, self.last_tree),
-                                  note=note, **self.route("verify", note),
-                                  writes_code=False, cwd=wt, extra=VERIFY_EXTRA, kind="build",
-                                  governor="queued", governor_timeout=GATE_TIMEOUT_S,
-                                  timeout=GATE_TIMEOUT_S)
-                if not line:
-                    return  # refused or usage limit: backoff / next tick retries
-                if line.get("rc") != 0:
-                    # a crashed verifier is no verdict, but it is counted: after
-                    # MAX_ROUNDS of them the item waits for the adjudicator
-                    rec["verify_errors"] = rec.get("verify_errors", 0) + 1
-                    rec["error"] = ascii_text(f"verifier rc={line.get('rc')} "
-                                              f"{line.get('error') or ''}", 300)
-                    self.log_round(rec, rnd, "verifier", [rec["error"]], always=True)
-                    self.items.put(rec)
-                    self.step(f"{rec['id']}: verifier failed "
-                              f"{rec['verify_errors']}/{MAX_ROUNDS}")
-                    if rec["verify_errors"] < MAX_ROUNDS:
-                        return
-                    rec["verdict"] = "adjudicate"
-                    break
-                m = VERDICT_RX.findall(line.get("result") or "")
-                if m and m[-1].upper() == "PASS":
-                    rec["verdict"] = "PASS"
-                    self.log_round(rec, rnd, "verifier", [], always=True)
-                    break
-                findings = [(line.get("result") or "no verdict line")[-6000:]]
-                self.log_round(rec, rnd, "verifier", findings)
-            if rounds >= MAX_ROUNDS:
-                # after round 3 the adjudicator rules (CLAUDE.md rule 7): the
-                # loop never self-accepts; the item waits unmerged for a session
-                rec["verdict"] = "adjudicate"
-                break
-            if self.blocked():
-                return
-            rounds += 1
-            rec["rounds"] = rounds
-            self.items.put(rec)
-            note = f"lane-build-{rec['id']}"
-            # Order Nd11eb1 item 6: a fix round is a retry after a failure, sampled
-            sampled = lane_samples.begin(self.d.main_tree, retry=True)
-            line = self.spawn(fix_prompt(rec, rounds, findings), note=note,
-                              **self.route("fix", note), writes_code=True, cwd=wt, extra=al_lane.CODE_EXTRA, kind="build",
-                              governor="queued", governor_timeout=self.cfg["lane_timeout_s"],
-                              timeout=self.cfg["lane_timeout_s"],
-                              **({"session_id": sampled} if sampled else {}))
-            lane_samples.finish(self.d.main_tree, sampled, rec["id"])
-            if not line:
-                return
-        rec["rounds"] = rounds
-        self.commit(rec, wt, ok)
-
-    @staticmethod
-    def log_round(rec, rnd, source, findings, always=False):
-        """Plan 129: keep what each refute round found on the loop item, so an
-        adjudicator reads it instead of reconstructing it. ASCII, each finding
-        capped (its tail: a verifier's verdict and findings end its reply)."""
-        if not findings and not always:
-            return
-        entry = {"round": rnd, "source": source,
-                 "findings": [ascii_text(f)[-ROUND_LOG_CAP:]
-                              for f in findings[:ROUND_LOG_MAX_FINDINGS]]}
-        if rec.get("rounds", 0) >= MAX_ROUNDS:
-            entry["final"] = True  # the review-only pass after fix round 3
-        rec.setdefault("round_log", []).append(entry)
-
-    def blocked_marker(self, rec, wt):
-        """Plan 019 4a: True when this run's lane left a fresh `"status":
-        "blocked"` progress marker (worktree first, then the main checkout)
-        and the record is now blocked. Lane worktrees are reused, never
-        cleaned, so a marker older than this run's dispatch is stale."""
-        if rec.get("kind") != "plan":  # a resolve run is never a blocked plan
-            return False
-        rel = self.d.kit.PROGRESS_REL / f"p{rec['id']}-build.json"
-        since = epoch_of(rec.get("dispatched"))
-        for tree in (wt, self.d.main_tree):
-            doc = read_json(Path(tree) / rel)
-            if not isinstance(doc, dict) or doc.get("status") != "blocked":
-                continue
-            updated, needs = epoch_of(doc.get("updated")), doc.get("needs")
-            if updated is None or not isinstance(needs, list) or not needs or \
-                    not all(isinstance(n, str) and NEED_RX.match(n) for n in needs):
-                self.step(f"{rec['id']}: malformed blocked marker ignored "
-                          "(needs a row-id 'needs' list and a parsable 'updated')")
-                continue
-            if since is None or updated < since:
-                self.step(f"{rec['id']}: stale blocked marker ignored")
-                continue
-            needs = list(dict.fromkeys(needs))
-            rec.update(state="blocked", needs=needs,
-                       blocked_runs=rec.get("blocked_runs", 0) + 1)
-            self.items.put(rec)
-            self.step(f"{rec['id']}: blocked on {', '.join(needs)}")
-            return True
-        return False
-
-    def rearm(self, rows):
-        """Plan 019 4c, once per record: a no-change plan whose own row is
-        still open and one of whose Depends-on rows flipped [x] after its
-        dispatch ran against code that was not on main yet: blocked again."""
-        row_open = {r["id"]: r["open"] for r in rows}
-        for rec in self.items.all().values():
-            iid = rec["id"]
-            if rec.get("state") != "no-change" or "rearmed" in rec or not row_open.get(iid):
-                continue
-            deps = self.plan_deps(iid, row_open)
-            if not deps:
-                continue
-            since = epoch_of(rec.get("dispatched"))
-            late, pending = [], []
-            for dep in deps:
-                if row_open[dep]:
-                    pending.append(dep)
-                    continue
-                flip = epoch_of((self.items.get(dep) or {}).get("merged_at"))
-                if flip is None:
-                    flip = epoch_of(roadmap_flip_time(self.d.git, self.d.main_tree, dep))
-                if since is not None and flip is not None and flip > since:
-                    late.append(dep)
-            if pending and not late:
-                continue  # decided once those rows flip
-            if self.dry:
-                self.step(f"{iid}: would {'re-arm' if late else 'settle no-change'}")
-                continue
-            if late:
-                rec.update(state="blocked", needs=late + pending, rearmed=True)
-                self.step(f"{iid}: re-armed, blocked on {', '.join(late + pending)}")
-            else:
-                rec["rearmed"] = False  # genuine no-change: never reconsidered
-            self.items.put(rec)
-
-    def plan_deps(self, iid, row_open, log=False):
-        """Depends-on ids of plan iid that have a ROADMAP row; a missing doc or
-        an unknown id is no dependency (fail open: a typo never wedges the
-        queue)."""
-        text = plan_doc(self.d.main_tree, iid)
-        if text is None:  # AL: a row's plan doc is optional; no doc, no gate, no log
-            return []
-        out = []
-        for dep in plan_depends(text):
-            if dep in row_open:
-                out.append(dep)
-            elif log:
-                self.step(f"{iid}: depends on {dep}: no ROADMAP row, ignored")
-        return out
-
-    def extra_checks(self, rec, wt):
-        if rec.get("kind") == "resolve":
-            return self.marker_checks(wt)
-        if rec.get("kind") == "order":
-            return self.order_checks(rec, wt)
-        if rec.get("kind") != "deep-dive":
-            return []
-        main_titles = plan_titles(self.d.main_tree)
-        new = {k: v for k, v in plan_titles(wt).items() if k not in main_titles}
-        out = []
-        cap = self.cfg["max_new_plans_per_day"]
-        if len(new) > cap:
-            out.append(f"{len(new)} new ROADMAP rows, cap is {cap} per day: "
-                       f"keep the best {cap}")
-        for k, title in sorted(new.items()):
-            dup = is_duplicate(title, main_titles.values())
-            if dup:
-                out.append(f"row {k} '{title}' duplicates existing '{dup}': drop it")
-        if not list((wt / "docs" / "research").glob(f"*-deep-dive-{rec['date']}.md")):
-            out.append(f"missing docs/research/NNNN-deep-dive-{rec['date']}.md")
-        return out
-
-    def changed_names(self, wt):
-        """Tracked changes vs HEAD plus untracked files of the lane worktree."""
-        names = set()
-        for args in (["diff", "HEAD", "--name-only", "-z"],
-                     ["ls-files", "--others", "--exclude-standard", "-z"]):
-            r = self.d.git(args, wt)
-            if r.returncode == 0:
-                names.update(n.replace("\\", "/") for n in r.stdout.split("\0") if n)
-        return names
-
-    def order_checks(self, rec, wt):
-        """Plan 163: a FIX order whose ordered files are missing from the diff
-        never reaches the verifier (keep-ref 9e52b0e passed with an empty app/
-        diff). A file marked BLOCKED / NOT-APPLICABLE by path is exempt."""
-        order = next((o for o in self.orders() if o["id"] == rec.get("id")), None)
-        if order is None:
-            return []
-        name, text = order.get("note", ""), order.get("text", "")
-        if self.fi.note_class(name, text[:NOTE_HEAD]) != "FIX":
-            return []
-        roadmap = Path(wt) / ROADMAP_REL
-        road = roadmap.read_text(encoding="utf-8", errors="replace") \
-            if roadmap.is_file() else ""
-        miss = missing_ordered(text, self.changed_names(wt), road, order["id"],
-                               lambda p: (Path(wt) / p).exists())
-        return [f"FIX {order['id']}: ordered files missing from the diff: "
-                f"{', '.join(miss)} - change them or mark each BLOCKED / "
-                "NOT-APPLICABLE by path in the order's blocked-items section"] if miss else []
-
-    def marker_checks(self, wt):
-        """Plan 058: a resolve run must leave no conflict marker in any file it
-        changed (the commit's `git add -A` would stage a marker as resolved)."""
-        bad = []
-        for name in sorted(self.changed_names(wt)):
-            with contextlib.suppress(OSError):
-                if MARKER_RX.search((Path(wt) / name).read_text(encoding="utf-8",
-                                                                errors="replace")):
-                    bad.append(name)
-        return [f"conflict marker left in {', '.join(bad)}: resolve it"] if bad else []
-
-    def commit(self, rec, wt, gates_ok):
-        rounds = rec.get("rounds", 0)
-        passed = rec.get("verdict") == "PASS"
-        # the ROADMAP row is flipped in main at merge, never in the lane commit
-        # (fix-0130: lane flips of adjacent rows collided on every parallel merge)
-        # PUBREPO 1b: Conventional Commits subject; the label stays in the body
-        if not gates_ok:
-            head = commit_subject(rec, wip="gates failed, not merged")
-        elif not passed:
-            head = commit_subject(
-                rec, wip=f"no verifier PASS after {MAX_ROUNDS}/{MAX_ROUNDS}, adjudicate")
-        else:
-            head = commit_subject(rec)
-        msg = (f"{head}{commit_body(rec)}"
-               f"refute-rounds: {rounds}/{MAX_ROUNDS}\n"
-               f"verifier: {rec.get('verdict', 'none')}\nloop item: {rec['id']}\n")
-        rec["gates_ok"] = gates_ok  # a refused commit is salvaged with the same verdict
-        r = self.d.git(["add", "-A"], wt)
-        if r.returncode == 0:
-            r = self.d.git(["commit", "-q", "-F", "-"], wt, input=msg)
-        if r.returncode != 0:
-            return self.commit_refused(rec, wt, r, msg)
-        rec["commit"] = self.d.git(["rev-parse", "HEAD"], wt).stdout.strip()
-        if not gates_ok or not passed:
-            rec["state"] = "failed" if not gates_ok else "adjudicate"
-            self.items.put(rec)
-            self.step(f"{rec['id']}: {rec['state']} after {rounds} rounds, WIP kept unmerged")
-            return
-        rec["state"] = "committed"
-        self.items.put(rec)
-        self.merge(rec)
-
-    def commit_refused(self, rec, wt, r, msg):
-        """fix-loop-stall: a refused lane commit (a pre-commit hook in the lane
-        worktree, which runs the lane's own possibly stale tools) no longer
-        parks staged work in the lane: the tree is kept as a commit under
-        refs/al/keep/<id> and the worktree reset, so the dirty lowest lane
-        index stops wedging every dispatch. Verified work then goes through
-        merge(), whose main-side commit runs main's hooks over the same lines;
-        anything else is failed, kept unmerged for a session."""
-        why = ((r.stderr or "") + (r.stdout or "")).strip()
-        rec["error"] = ascii_text(f"lane commit refused: {why[-260:]}", 300)
-        if not self.salvage(rec, wt, msg):
-            rec["state"] = "failed-dirty"
-            self.items.put(rec)
-            self.step(f"{rec['id']}: commit refused, salvage failed, worktree left dirty")
-            return
-        ok = rec.get("gates_ok") and rec.get("verdict") == "PASS"
-        rec["state"] = "committed" if ok else "failed"
-        self.items.put(rec)
-        self.step(f"{rec['id']}: lane commit refused, work kept under {rec['keep_ref']}, "
-                  f"lane worktree reset")
-        if ok:
-            self.merge(rec)
-
-    def salvage(self, rec, wt, msg):
-        g = self.d.git
-        if g(["add", "-A"], wt).returncode != 0:
-            return False
-        tree = g(["write-tree"], wt)
-        if tree.returncode != 0:
-            return False
-        parents = ["-p", "HEAD"]
-        mh = g(["rev-parse", "-q", "--verify", "MERGE_HEAD"], wt)
-        if mh.returncode == 0 and mh.stdout.strip():
-            parents += ["-p", mh.stdout.strip()]
-        c = g(["commit-tree", tree.stdout.strip(), *parents, "-F", "-"], wt,
-              input="salvaged (lane commit refused by hook): " + msg)
-        if c.returncode != 0:
-            return False
-        rec["commit"] = c.stdout.strip()
-        self.keep(rec)
-        if not rec.get("keep_ref"):
-            return False
-        if mh.returncode == 0:
-            g(["merge", "--abort"], wt)  # a resolve run's merge in progress
-        return g(["reset", "-q", "--hard", "HEAD"], wt).returncode == 0
-
-    def retry_refused(self):
-        """fix-loop-stall backfill, idempotent: a failed-dirty record whose
-        worktree still holds its staged work (and no other item's) re-runs
-        commit(), which salvages it when the lane hook refuses again."""
-        recs = self.items.all()
-        for rec in recs.values():
-            if rec.get("state") != "failed-dirty" or not rec.get("worktree"):
-                continue
-            wt = Path(rec["worktree"])
-            others = self.held_worktrees({k: v for k, v in recs.items() if k != rec["id"]})
-            if not wt.is_dir() or _norm_path(wt) in others or not self.dirty(wt):
-                continue
-            if self.dry:
-                self.step(f"{rec['id']}: would retry the refused commit")
-                continue
-            self.commit(rec, wt, rec.get("gates_ok", rec.get("verdict") == "PASS"))
-
-
-    # -- c. work list
-    def work_list(self):
-        main = self.d.main_tree
-        try:
-            rows = roadmap_rows((main / ROADMAP_REL).read_text(encoding="utf-8"))
-        except OSError:
-            rows = []
-        try:
-            hand = handoff_items((main / f"{CODE}-NEXT-SESSION.txt").read_text(encoding="utf-8"))
-        except OSError:
-            hand = []
-        # orders first, then ROADMAP rows whose status says "priority", then the rest
-        open_rows = sorted((r for r in rows if r["open"]),
-                           key=lambda r: "priority" not in r["status"].lower())
-        # plan 058: resolve runs first, so a conflicting change is folded into
-        # main before more lanes build on stale main; each replaces its own row
-        work = [resolve_item(rec) for rec in self.items.all().values()
-                if rec.get("keep_ref") and (rec.get("state") == "merge-conflict" or (
-                    rec.get("kind") == "resolve"
-                    and rec.get("state") in ("refused", "lost", "paused")))]
-        resolving = {w["id"] for w in work}
-        skipped = []
-        settled = settled_notes(self.root)
-        for o in self.orders():
-            if o["id"] in resolving:
-                continue
-            rec = self.items.get(o["id"])
-            if order_settled(o, rec, settled) and not rec:
-                continue  # answered by hand: never re-run, never listed
-            hits = session_needs(o, rec)
-            if hits:  # plan 091 / 161: never a lane item; the session carries it out
-                if not order_settled(o, rec, settled):
-                    skipped.append({"id": o["id"], "text": o["title"], "skip": "session",
-                                    "reason": "session: needs " + ", ".join(hits)})
-                continue
-            work.append({"id": o["id"], "kind": "order", "title": o["title"],
-                         "note": o["note"], "label": f"order {o['id']}: {o['title']}",
-                         "prompt": order_prompt(o)})
-        # plan 019: a row whose plan doc depends on an open row waits (skipped)
-        row_open = {r["id"]: r["open"] for r in rows}
-        self.open_ids = {iid for iid, is_open in row_open.items() if is_open}
-        waiting = {}
-        for r in open_rows:
-            if r["id"] in resolving:
-                continue
-            if BLOCKED_RX.search(r.get("text") or ""):
-                skipped.append({"id": r["id"], "text": r["title"], "skip": "blocked",
-                                "reason": "BLOCKED: operator act (see ROADMAP)"})
-                continue
-            wait = [dep for dep in self.plan_deps(r["id"], row_open, log=True)
-                    if row_open[dep]]
-            if wait:
-                waiting[r["id"]] = wait
-                skipped.append({"id": r["id"], "text": r["title"], "skip": "waits",
-                                "reason": f"waits on {', '.join(wait)}"})
-            else:
-                work.append({"id": r["id"], "kind": "plan", "title": r["title"],
-                             "text": r.get("text") or r["title"],
-                             "lane_hint": r.get("lane"),
-                             "label": f"row {r['id']}: {r['title']}"})
-        for cycle in dependency_cycles(waiting):
-            self.step(f"dependency cycle: {' -> '.join(cycle)}")
-        for h in hand:
-            if h["skip"]:
-                skipped.append(h)
-            elif h["id"] not in resolving:
-                work.append({"id": h["id"], "kind": "handoff", "text": h["text"],
-                             "title": h["text"], "label": f"hand-off {h['id']}"})
-        return rows, work, skipped
-
-    @staticmethod
-    def held_worktrees(recs):
-        return {_norm_path(r["worktree"]) for r in recs.values()
-                if r.get("state") in HOLD_STATES and r.get("worktree")}
-
-    def worktree_unusable(self, wt, held):
-        """A lane worktree the kit would refuse (dirty) or that holds another
-        item's unmerged work. A missing one is usable: the kit creates it."""
-        return _norm_path(wt) in held or (Path(wt).is_dir() and self.dirty(wt))
-
-    def free_lanes(self):
-        """Lane names safe to dispatch now. Read fresh at dispatch time, lane
-        locks first, then records: a worker that finished mid-tick is "ran"
-        and still holds its worktree (fix 2026-10-05). The kit claims the
-        LOWEST non-RUNNING index, not a named one, so slots stop at the first
-        such index whose worktree is dirty or held (the claim would refuse)."""
-        by_index = {r.get("index"): r for r in self.d.lane_state()}
-        rows = [by_index.get(i) or {"index": i, "state": "FREE", "lane": None}
-                for i in range(self.d.lane_cap())]  # no lock row: a FREE index
-        recs = self.items.all()
-        running = {r["lane"] for r in rows if r["state"] == "RUNNING"}
-        busy = running | {r.get("lane") for r in recs.values()
-                          if r.get("state") in ("dispatched",) + HOLD_STATES}
-        names = [n for n in al_lane.LANES if n not in busy]
-        held = self.held_worktrees(recs)
-        # dispatched but not yet claimed: those take the lowest free indexes
-        unclaimed = sum(1 for r in recs.values()
-                        if r.get("state") == "dispatched" and r.get("lane") not in running)
-        slots = 0
-        for row in rows:
-            if row["state"] == "RUNNING":
-                continue
-            if unclaimed:
-                unclaimed -= 1
-                continue
-            if self.worktree_unusable(self.d.lane_worktree(row["index"]), held):
-                break
-            slots += 1
-        return names[:slots]
-
-    def recover_lane_dirty(self):
-        """A lane-dirty record whose refused worktree (named in its error) is
-        now clean and holds no ran / committed item's work goes back to
-        "refused": dispatchable, attempts kept, so MAX_ATTEMPTS still bounds
-        it (out of attempts: gave-up). A still-dirty tree (a crashed run) keeps
-        it waiting; no worktree in the error keeps it as is. Idempotent."""
-        recs = self.items.all()
-        held = self.held_worktrees(recs)
-        for rec in recs.values():
-            if rec.get("state") != "lane-dirty":
-                continue
-            m = DIRTY_WT_RX.search(rec.get("error") or "")
-            if not m or self.worktree_unusable(Path(m.group(1)), held):
-                continue
-            if self.dry:
-                self.step(f"{rec['id']}: would clear lane-dirty")
-                continue
-            if rec.get("attempts", 0) >= MAX_ATTEMPTS:
-                rec["state"] = "gave-up"
-                self.step(f"{rec['id']}: gave up after {rec.get('attempts', 0)} attempts: "
-                          f"{rec.get('error')}")
-            else:
-                rec.update(state="refused",
-                           error=ascii_text(f"lane-dirty cleared: {rec.get('error')}", 300))
-                self.step(f"{rec['id']}: lane-dirty cleared, {Path(m.group(1)).name} clean")
-            self.items.put(rec)
-
-    def dispatch(self, work):
-        free = self.free_lanes()
-        for item in work:
-            if not free:
-                break
-            rec = self.items.get(item["id"])
-            if not dispatchable(rec, self.open_ids):
-                continue
-            pick = item.get("lane_hint") if item.get("lane_hint") in free else free[0]
-            if self.dry:
-                free.remove(pick)
-                self.step(f"{item['id']}: would dispatch to lane {pick}")
-                continue
-            why = self.blocked()
-            if why:
-                self.step(f"dispatch paused: {why}")
-                return
-            if self.d.should_yield():  # kit v25: cycle boundary, never a kill
-                self.step("dispatch paused: should_yield (another tree waits for a slot)")
-                return
-            lane = pick
-            free.remove(lane)
-            prompt = {"plan": plan_prompt, "handoff": handoff_prompt}.get(item["kind"])
-            prompt = item.get("prompt") or prompt(item)
-            # plan 019: the blocked-run count and the one-time re-arm survive a dispatch
-            keep = {k: rec[k] for k in ("blocked_runs", "rearmed") if rec and k in rec}
-            # plan 058: a resolve run starts its own attempt count at a conflict
-            attempts = 0 if rec and rec.get("state") == "merge-conflict" else \
-                (rec or {}).get("attempts", 0)
-            new = dict(item, **keep, state="dispatched", lane=lane, prompt=prompt,
-                       attempts=attempts + 1, rounds=0, dispatched=iso(self.d.clock()))
-            if item["kind"] == "resolve":
-                new["resolve_runs"] = item.get("resolve_runs", 0) + 1
-            self.items.put(new)
-            try:
-                new["pid"] = self.d.launch(item["id"])
-            except Exception as exc:  # noqa: BLE001 - OSError, ValueError: retryable
-                new.update(state="lost", error=ascii_text(f"launch: {type(exc).__name__}: "
-                                                          f"{exc}", 300))
-                self.items.put(new)
-                free.insert(0, lane)
-                self.step(f"{item['id']}: launch failed ({type(exc).__name__})")
-                continue
-            self.items.put(new)
-            self.step(f"{item['id']}: dispatched to lane {lane}")
-
-    # -- e. idle mode
-    def deep_dive_item(self):
-        date = _dt.datetime.fromtimestamp(self.d.clock()).strftime("%Y%m%d")
-        iid = f"DD-{date}"
-        if self.items.get(iid) and not dispatchable(self.items.get(iid)):
-            return None
-        if list((self.d.main_tree / "docs" / "research").glob(f"*-deep-dive-{date}.md")):
-            return None
-        # W44: weekly after 3 dives in a row proposed 0 plans; any plan resets
-        today = _dt.datetime.fromtimestamp(self.d.clock()).date()
-        if dive_backoff(dive_history(self.d.main_tree, self.d.git), today):
-            self.dive_backed_off = True
-            return None
-        prompt = deep_dive_prompt(self.d.main_tree, date, self.cfg["max_new_plans_per_day"],
-                                  plan_titles(self.d.main_tree))
-        return {"id": iid, "kind": "deep-dive", "date": date, "title": "idle deep-dive",
-                "label": f"deep-dive {date}", "prompt": prompt}
 
     # -- push
     def push_needed(self):

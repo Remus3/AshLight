@@ -37,6 +37,13 @@ def test_log_found():
     assert status({}, "log") == "pass"
     r = row({"log_found": False}, "log")
     assert r["status"] == "fail" and "Start Path of Exile 2" in r["fix"]
+    # SEC-NO-DISCOVERY: a configured path that is missing stays configured
+    # and says so, with its own fix (no Steam scan replaces it).
+    r = row({"log_found": False, "log_configured": True}, "log")
+    assert r["status"] == "fail"
+    assert r["detail"] == "The Client.txt path in your settings is missing."
+    assert "client_log" in r["fix"] and r["fix"] == diag.FIX_LOG_PATH
+    assert status({"log_configured": True}, "log") == "pass"
 
 
 def test_consent():

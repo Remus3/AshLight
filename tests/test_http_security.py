@@ -85,9 +85,12 @@ def test_origin_checked(srv):
     r, _ = req(srv, "GET", "/api/health",
                {**auth(), "Origin": f"http://127.0.0.1:{srv.port}"})
     assert r.status == 200
-    # The file:// overlay may read state; it may never POST.
-    r, _ = req(srv, "GET", "/api/state", {**auth(), "Origin": "null"})
-    assert r.status == 200 and r.getheader("Access-Control-Allow-Origin") == "null"
+    # SEC-CROSS-SITE: the file:// overlay opens only GET /events; the null
+    # origin no longer reads /api/state or /api/health, and never POSTs.
+    for path in ("/api/state", "/api/health"):
+        r, _ = req(srv, "GET", path, {**auth(), "Origin": "null"})
+        assert r.status == 403, path
+        assert r.getheader("Access-Control-Allow-Origin") is None, path
     r, _ = req(srv, "POST", "/api/consent",
                {**auth(), "Origin": "null", "Content-Type": "application/json"},
                body=json.dumps({"consent": True}))
@@ -124,6 +127,324 @@ def test_static_traversal_blocked(srv):
     assert r.status == 404
     r, _ = req(srv, "GET", "/web/%2e%2e/README.md")
     assert r.status == 404
+    # SEC-STATIC-MAP: more shapes; every one misses the name map
+    for path in ("/web/..%2fREADME.md", "/web/..\\README.md", "/web/./index.html",
+                 "/web//index.html", "/web/INDEX.HTML", "/web/", "/web/%69ndex.html",
+                 "/web/" + str(ROOT / "README.md"), "/web/" + str(ROOT / "web" / "app.js")):
+        r, _ = req(srv, "GET", path)
+        assert r.status == 404, path
+
+
+# A drive name, built at run time so no tracked line holds a drive path.
+DRIVE = chr(67) + ":"
+SEP = chr(92)
+
+# SEC-STATIC-MAP: tails that reached the file system before the map. Each
+# one carries "zzq" or is matched by its own name in the spy records.
+ODD_TAILS = ("//zzqhost/share/x.js",       # two slashes: a UNC path
+             "\\\\zzqhost\\share\\x.js",   # the same with backslashes
+             DRIVE + "/zzq/win.ini", DRIVE + "zzq.js",  # a drive name
+             "index.html::$DATA", "zzq.js:stream",  # a stream suffix
+             "index.html.", "app.js. ",    # a trailing dot / space
+             "CON", "nul.zzq", "COM1", "web/AUX.js")  # device names
+
+
+def _spied(monkeypatch):
+    """Spies on Path.resolve, os.stat and open (builtins and io); returns
+    the list of the string forms of their path arguments."""
+    import builtins
+    import io
+    import os
+    import pathlib
+    seen = []
+    real_resolve, real_stat, real_open = pathlib.Path.resolve, os.stat, builtins.open
+
+    def resolve(self, *a, **k):
+        seen.append(str(self))
+        return real_resolve(self, *a, **k)
+
+    def stat(path, *a, **k):
+        seen.append(str(path))
+        return real_stat(path, *a, **k)
+
+    def opener(file, *a, **k):
+        seen.append(str(file))
+        return real_open(file, *a, **k)
+
+    monkeypatch.setattr(pathlib.Path, "resolve", resolve)
+    monkeypatch.setattr(os, "stat", stat)
+    monkeypatch.setattr(builtins, "open", opener)
+    monkeypatch.setattr(io, "open", opener)
+    return seen
+
+
+def _touched(seen, tail):
+    t = tail.replace("\\", "/").strip("/")
+    for s in seen:
+        n = s.replace("\\", "/")
+        if "zzq" in n or n == t or n.endswith("/" + t):
+            return True
+    return False
+
+
+def test_static_path_shapes_get_404_without_a_file_system_call(srv, monkeypatch):
+    from urllib.parse import quote
+    seen = _spied(monkeypatch)
+    # the spies are live: the old code shape would be caught
+    (srv.web_root / "CON").resolve()
+    assert _touched(seen, "CON")
+    seen.clear()
+    for tail in ODD_TAILS:
+        raw = ("/web/" + tail,) if " " not in tail else ()  # http.client refuses a space
+        for path in raw + ("/web/" + quote(tail, safe="/:"),):
+            r, _ = req(srv, "GET", path)
+            assert r.status == 404, path
+        assert not _touched(seen, tail), (tail, [s for s in seen if "zzq" in s][:3])
+    monkeypatch.undo()
+    r, _ = req(srv, "GET", "/web/index.html")
+    assert r.status == 200
+
+
+def test_every_web_file_loads(srv):
+    files = sorted(p for p in (ROOT / "web").rglob("*") if p.is_file())
+    assert len(files) >= 10
+    assert set(srv.static.names()) == {p.relative_to(ROOT / "web").as_posix() for p in files}
+    for p in files:
+        rel = p.relative_to(ROOT / "web").as_posix()
+        r, body = req(srv, "GET", "/web/" + rel)
+        assert r.status == 200, rel
+        assert body == p.read_bytes(), rel
+    for path in ("/", "/index.html", "/favicon.ico"):
+        r, _ = req(srv, "GET", path)
+        assert r.status == 200, path
+
+
+def test_new_web_file_is_served_after_the_next_scan(tmp_path):
+    web = tmp_path / "web"
+    (web / "sub").mkdir(parents=True)
+    (web / "index.html").write_bytes(b"<!doctype html>\n")
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), poll_s=0.05)
+    server = serve(core, TOKEN, port=0, web_root=web)
+    t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True)
+    t.start()
+    try:
+        assert req(server, "GET", "/web/sub/new.js")[0].status == 404
+        (web / "sub" / "new.js").write_bytes(b"var x = 1;\n")
+        # not listed yet: no scan happened, the request text made none
+        assert req(server, "GET", "/web/sub/new.js")[0].status == 404
+        core.reload_web = getattr(core, "reload_web", 0) + 1  # the hot-reload scan
+        r, body = req(server, "GET", "/web/sub/new.js")
+        assert r.status == 200 and body == b"var x = 1;\n"
+        assert "javascript" in r.getheader("Content-Type")
+        # a file gone after the scan is a 404, never an error
+        (web / "sub" / "new.js").unlink()
+        assert req(server, "GET", "/web/sub/new.js")[0].status == 404
+        assert req(server, "GET", "/")[0].status == 200
+    finally:
+        server.stop()
+        core.close()
+
+
+def test_static_map_lists_only_files_inside_the_root(tmp_path):
+    from server.al.static import StaticMap
+    web = tmp_path / "web"
+    (web / "a" / "b").mkdir(parents=True)
+    (web / "a" / "b" / "c.css").write_bytes(b"x")
+    (web / "top.js").write_bytes(b"y")
+    (tmp_path / "secret.txt").write_bytes(b"s")
+    m = StaticMap(web)
+    assert m.names() == ["a/b/c.css", "top.js"]
+    assert m.lookup("a/b/c.css") == (web / "a" / "b" / "c.css").resolve()
+    for bad in ("../secret.txt", "a\\b\\c.css", "/top.js", "TOP.JS", "", None, 5):
+        assert m.lookup(bad) is None, bad
+    assert StaticMap(tmp_path / "missing").names() == []
+
+
+# SEC-CROSS-SITE: every route, by method; bodies are valid JSON objects
+GET_ROUTES = ("/", "/index.html", "/web/app.js", "/tokens.css", "/favicon.ico",
+              "/api/health", "/api/version", "/api/state", "/api/overlay-layout",
+              "/api/build", "/api/filter", "/api/buildfile", "/api/settings-export",
+              "/api/weights", "/api/gfx", "/api/rates", "/api/web-data", "/events",
+              "/no-such-route")
+POST_ROUTES = ("/api/clipboard-read", "/api/consent", "/api/overlay-layout",
+               "/api/trade-dismiss", "/api/build-code", "/api/eval", "/api/web-data",
+               "/api/filter-merge", "/api/settings-import", "/api/run-history",
+               "/api/price-watch", "/api/hints", "/no-such-route")
+
+
+def _every_request():
+    for path in GET_ROUTES:
+        yield "GET", path
+        if path != "/events":
+            yield "HEAD", path
+    for path in POST_ROUTES:
+        yield "POST", path
+    yield "PUT", "/api/weights"
+    yield "PUT", "/api/state"
+    for method in ("DELETE", "PATCH", "OPTIONS"):
+        yield method, "/api/state"
+
+
+def test_cross_site_is_refused_on_every_route(srv):
+    for site in ("cross-site", "same-site", "Cross-Site", "bogus"):
+        for method, path in _every_request():
+            for origin in (None, "null", "http://evil.example"):
+                h = {**auth(), "Sec-Fetch-Site": site, "Content-Type": "application/json"}
+                if origin:
+                    h["Origin"] = origin
+                if method == "GET" and path == "/events" and origin == "null":
+                    continue  # the one exception, below
+                r, _ = req(srv, method, path, h,
+                           body=b'{"consent": true}' if method in ("POST", "PUT") else None)
+                assert r.status == 403, (site, method, path, origin)
+    # before the token check: no token still reads 403, not 401
+    r, _ = req(srv, "GET", "/api/state", {"Sec-Fetch-Site": "cross-site"})
+    assert r.status == 403
+    assert srv.core.tailer is None and not srv.core.consented()
+
+
+def test_same_origin_none_and_no_header_pass(srv):
+    for site in ("same-origin", "none", "Same-Origin", None):
+        h = {"Sec-Fetch-Site": site} if site else {}
+        for path in ("/", "/web/app.js", "/tokens.css", "/favicon.ico"):
+            r, _ = req(srv, "GET", path, h)
+            assert r.status == 200, (site, path)
+        for path in ("/api/health", "/api/state", "/api/version"):
+            r, _ = req(srv, "GET", path, {**h, **auth()})
+            assert r.status == 200, (site, path)
+            r, _ = req(srv, "GET", path, h)
+            assert r.status == 401, (site, path)
+        r, _ = req(srv, "POST", "/api/trade-dismiss",
+                   {**h, **auth(), "Content-Type": "application/json"},
+                   body=json.dumps({"all": True}))
+        assert r.status == 200, site
+        r, _ = req(srv, "DELETE", "/api/state", {**h, **auth()})
+        assert r.status == 405, site
+        r, _ = req(srv, "GET", "/api/health",
+                   {**h, **auth(), "Origin": "http://evil.example"})
+        assert r.status == 403, site
+
+
+def _raw_events(server, headers):
+    s = socket.create_connection(("127.0.0.1", server.port), timeout=5)
+    s.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\nHost: 127.0.0.1:{server.port}\r\n"
+               + "".join(f"{k}: {v}\r\n" for k, v in headers.items()) + "\r\n").encode())
+    buf = b""
+    try:
+        while b"\r\n\r\n" not in buf:
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            buf += chunk
+        if buf.startswith(b"HTTP/1.0 200") or buf.startswith(b"HTTP/1.1 200"):
+            while b"event: state" not in buf:
+                buf += s.recv(65536)
+    finally:
+        s.close()
+    return buf
+
+
+def test_null_origin_events_is_the_one_exception(srv):
+    for site in ("cross-site", "same-site", None):
+        h = {"Origin": "null"}
+        if site:
+            h["Sec-Fetch-Site"] = site
+        out = _raw_events(srv, h)
+        assert out.split(b"\r\n")[0].endswith(b"200 OK"), (site, out[:60])
+        assert b"Access-Control-Allow-Origin: null" in out
+        assert b"event: state" in out
+    # only that one: no token, another method, another origin or route
+    r, _ = req(srv, "GET", "/events", {"Origin": "null", "Sec-Fetch-Site": "cross-site"})
+    assert r.status == 401
+    out = _raw_events(srv, {"Origin": "http://evil.example", "Sec-Fetch-Site": "cross-site"})
+    assert out.split(b"\r\n")[0].endswith(b"403 Forbidden")
+    out = _raw_events(srv, {"Sec-Fetch-Site": "cross-site"})
+    assert out.split(b"\r\n")[0].endswith(b"403 Forbidden")
+    for method, path in (("HEAD", "/events"), ("POST", "/events"), ("GET", "/api/state"),
+                         ("GET", "/api/health"), ("GET", "/")):
+        r, _ = req(srv, method, path,
+                   {**auth(), "Origin": "null", "Sec-Fetch-Site": "cross-site"})
+        assert r.status == 403, (method, path)
+
+
+def test_corp_and_vary_on_every_reply(srv):
+    cases = [("GET", "/", {}, 200), ("GET", "/web/app.js", {}, 200),
+             ("GET", "/tokens.css", {}, 200), ("GET", "/favicon.ico", {}, 200),
+             ("GET", "/web/missing.js", {}, 404), ("GET", "/api/health", auth(), 200),
+             ("GET", "/api/state", {}, 401), ("DELETE", "/api/state", {}, 405),
+             ("PUT", "/api/state", {}, 405), ("GET", "/api/state",
+                                               {"Sec-Fetch-Site": "cross-site"}, 403),
+             ("GET", "/api/state", {"Origin": "http://evil.example"}, 403),
+             ("HEAD", "/", {}, 200)]
+    for method, path, h, want in cases:
+        r, _ = req(srv, method, path, h)
+        assert r.status == want, (method, path)
+        assert r.getheader("Cross-Origin-Resource-Policy") == "same-origin", (method, path)
+        assert r.getheader("Vary") == "Sec-Fetch-Site", (method, path)
+    r, _ = req(srv, "GET", "/", host="evil.example")
+    assert r.status == 400 and r.getheader("Cross-Origin-Resource-Policy") == "same-origin"
+    out = _raw_events(srv, {"Origin": "null", "Sec-Fetch-Site": "cross-site"})
+    head = out.split(b"\r\n\r\n")[0].decode("ascii").split("\r\n")
+    assert [x for x in head if x.lower().startswith("vary:")] == ["Vary: Origin, Sec-Fetch-Site"]
+    assert "Cross-Origin-Resource-Policy: same-origin" in head
+
+
+def test_server_header_has_no_version(srv):
+    from server.al import NAME, VERSION
+    for method, path, h in (("GET", "/", {}), ("GET", "/api/health", auth()),
+                            ("GET", "/nope", {}), ("DELETE", "/", {})):
+        r, _ = req(srv, method, path, h)
+        assert r.getheader("Server") == NAME, path
+        assert VERSION not in r.getheader("Server") and "Python" not in r.getheader("Server")
+    out = _raw_events(srv, {})
+    assert f"\r\nServer: {NAME}\r\n".encode() in out
+
+
+def test_api_errors_carry_no_os_text(srv, monkeypatch):
+    from server.al import layout, webfetch
+    core = srv.core
+    where = SEP.join((DRIVE, "zzq", "config", "local.json"))
+    secret = f"[Errno 13] Permission denied: {where!r}"
+
+    def unreadable(changes):
+        try:
+            raise PermissionError(13, "Permission denied", where)
+        except OSError as e:
+            raise layout.LayoutError(f"config/local.json is unreadable: {secret}") from e
+
+    def unwritable(changes):
+        raise PermissionError(13, "Permission denied", where)
+
+    def fetch_fails(url):
+        try:
+            raise ConnectionRefusedError(10061, "[WinError 10061] zzq refused")
+        except OSError as e:
+            raise webfetch.FetchError(f"network: {e} at {DRIVE}{SEP}zzq?token=zzq") from e
+
+    h = {**auth(), "Content-Type": "application/json"}
+    for fn, want in ((unreadable, 500), (unwritable, 500)):
+        monkeypatch.setattr(core, "set_overlay_layout", fn)
+        r, body = req(srv, "POST", "/api/overlay-layout", h, body=json.dumps({"scale": 1}))
+        assert r.status == want
+        text = body.decode("utf-8")
+        assert json.loads(text)["error"]
+        for bad in ("zzq", "Errno", "Permission", DRIVE + SEP):
+            assert bad not in text, (fn.__name__, text)
+    monkeypatch.undo()
+    # a field the player got wrong still says which one
+    r, body = req(srv, "POST", "/api/overlay-layout", h, body=json.dumps({"scale": "x"}))
+    assert r.status == 400 and "scale" in json.loads(body)["error"]
+    monkeypatch.setattr(core, "load_share_url", fetch_fails)
+    r, body = req(srv, "POST", "/api/build-code", h,
+                  body=json.dumps({"code": "https://pobb.in/abc123"}))
+    assert r.status == 502
+    doc = json.loads(body)
+    assert doc["kind"] == "url" and doc["error"]
+    for bad in ("zzq", "WinError", "network", "token", DRIVE + SEP):
+        assert bad not in body.decode("utf-8"), body
 
 
 def test_consent_gate(srv):
