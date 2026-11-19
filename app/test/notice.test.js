@@ -7,15 +7,13 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const N = require("../../web/notice.js");
-const S = require("../../web/slots.js");
-const C = require("../../web/checks.js");
+const web = require("./_web.js");
+const N = web.load("notice.js");
+const S = web.load("slots.js");
+const C = web.load("checks.js");
 
-const WEB = path.join(__dirname, "..", "..", "web");
-const SRC = fs.readFileSync(path.join(WEB, "notice.js"), "utf8");
-const CSS = fs.readFileSync(path.join(WEB, "notice.css"), "utf8");
+const SRC = web.source("notice.js");
+const CSS = web.source("notice.css");
 
 /* ---- notices as server/al/playview.py composes them ---------------------- */
 

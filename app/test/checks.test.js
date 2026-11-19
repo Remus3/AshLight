@@ -4,7 +4,8 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const ck = require("../../web/checks.js");
+const web = require("./_web.js");
+const ck = web.load("checks.js");
 
 const DIAG = {
   summary: "1 check needs a fix.", failed: 1, report: "AshLight 1 self-check\n[FIX] X\n",

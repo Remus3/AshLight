@@ -4,9 +4,8 @@
    are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const s = require("../../web/search.js");
+const web = require("./_web.js");
+const s = web.load("search.js");
 
 const DOC = { loaded: true, search_strings: [
   { id: "resists", label: "Resistances you still need", why: "Finds gear.",
@@ -36,7 +35,7 @@ test("copy writes only through the clipboard API it is handed", async () => {
 });
 
 test("the clipboard is written only inside a click handler", () => {
-  const src = fs.readFileSync(path.join(__dirname, "..", "..", "web", "search.js"), "ascii");
+  const src = web.source("search.js", "ascii");
   const calls = src.split("copy(r.text").length - 1;
   assert.equal(calls, 1);
   const at = src.indexOf("copy(r.text");

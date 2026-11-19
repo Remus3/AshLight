@@ -8,7 +8,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const dash = require("../../web/status.js");
+const web = require("./_web.js");
+const dash = web.load("status.js");
 const gate = require("../shared/render_gate.js");
 
 const ROOT = path.join(__dirname, "..", "..");

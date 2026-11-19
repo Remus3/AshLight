@@ -20,13 +20,14 @@ from pathlib import Path
 import pytest
 
 from server.al.theorycraft import codec, model
+import srcpaths
 from tc_fixtures import FULL_XML
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "pob2_real"
 LOCAL_DIR = ROOT / "ops" / "runtime" / "tc_real"
 ENV = "AL_TC_REAL_CODE"
-TC_JS = ROOT / "web" / "tc.js"
+TC_JS = srcpaths.path("tc.js")
 
 # Stats PoB computes for every character, whatever the build.
 REQUIRED_STATS = ("Life", "Mana", "FireResist", "ColdResist", "LightningResist",
