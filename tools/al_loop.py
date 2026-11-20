@@ -97,7 +97,8 @@ import loop_steps  # noqa: E402  AUTO-01: every tick step is a tools/loop_steps/
 # the same objects (tests and tools/al_tests.py read al_loop.X; unused = F401).
 from loop_base import (  # noqa: E402
     ATTENTION_STATES, BACKOFF_BASE_S, BACKOFF_CAP_S, BACKOFF_REL, CODE, DEEP_EXTRA,
-    DONE_STATES, GATE_TIMEOUT_S, HALT_REL, HEADROOM, HOLD_STATES, INFRA_RX,
+    DONE_STATES, GATE_RETRY, GATE_TIMEOUT_S, HALT_REL, HEADROOM, HOLD_STATES, INFRA_RX,
+    KIT_CRASH_RX,
     IN_FLIGHT, Items, LOCK_REL, MAX_ATTEMPTS, MERGE_LOCK_REL,
     PROGRESS_TASK, PUSH_LAST_REL, PUSH_WORKER_REL, REVIEW_LOG_KEEP,
     REVIEW_START_S, TICK_TARGET_S, _BREAKAWAY, _DETACHED,
@@ -278,48 +279,30 @@ def _shell_operator(cmd):
     return None
 
 
+SUITE_RUN_REL = "tools/suite_run.py"
+
+
 def _whole_suite(argv):
-    """True for a pytest run that names no test FILE (the kit's whole suite)."""
+    """True for the whole suite: the one runner `python tools/suite_run.py`
+    (TEST-GATE-CALLERS), or a pytest run that names no test FILE."""
+    if len(argv) == 2 and argv[1].replace("\\", "/") == SUITE_RUN_REL:
+        return True
     if "pytest" not in argv:
         return False
     rest = argv[argv.index("pytest") + 1:]
     return not any(a.endswith(".py") or "::" in a for a in rest)
 
 
-# Plan 097: the whole suite runs on 8 xdist workers when pytest-xdist (optional,
-# dev only) is importable; loadfile keeps each module (real-git ones included) on
-# one worker. 8, not auto (16): two gate slots share the box (MAIN order N6e995b).
-XDIST_ARGS = ("-n", "8", "--dist", "loadfile")
-
-
-def _xdist_available():
-    import importlib.util
-    try:
-        return importlib.util.find_spec("xdist") is not None
-    except (ImportError, ValueError):
-        return False
-
-
-def _names_workers(argv):
-    """True when a pytest argv already decides xdist itself."""
-    for i, a in enumerate(argv):
-        if a == "-n" or a.startswith("--numprocesses") or re.match(r"-n(\d|auto|logical)", a):
-            return True
-        if a == "-pno:xdist" or (a == "-p" and argv[i + 1:i + 2] == ["no:xdist"]):
-            return True
-    return False
-
-
-def _gate_argv(cmd, xdist=None):
+def _gate_argv(cmd):
+    """argv of one gate command; a whole suite runs under the kit suite gate.
+    No worker flags are added: tools/suite_run.py picks the mode itself
+    (TEST-GATE-CALLERS; plan 097's XDIST_ARGS left with it)."""
     argv = shlex.split(cmd)
     if argv[0] == "python":
         argv[0] = _python()
     elif argv[0] == "npm" and sys.platform == "win32":
         argv[0] = "npm.cmd"
     if _whole_suite(argv):
-        use = _xdist_available() if xdist is None else xdist
-        if use and not _names_workers(argv):
-            argv = [*argv, *XDIST_ARGS]
         argv = [_python(), str(ROOT / SUITE_GATE_REL), "run", "--owner", _owner(), "--", *argv]
     return argv
 
@@ -354,14 +337,22 @@ def _gates(cwd, run=_run_gate):
         op = _shell_operator(cmd)
         if op is not None:
             return False, f"{cmd}: shell operator {op!r} unsupported by loop gates: fail closed"
+    retries = []
     for cmd in cmds:
-        try:
-            rc, tail = run(_gate_argv(cmd), cwd)
-        except (OSError, subprocess.SubprocessError, ValueError) as exc:
-            return False, f"{cmd}: {type(exc).__name__}"
+        for attempt in (1, 2):
+            try:
+                rc, tail = run(_gate_argv(cmd), cwd)
+            except (OSError, subprocess.SubprocessError, ValueError) as exc:
+                return False, "".join(retries) + f"{cmd}: {type(exc).__name__}"
+            # TEST-GATE-CALLERS: a kit traceback is infrastructure, not a red
+            # verdict: one retry, logged (Tick.gate steps each GATE_RETRY line)
+            if rc != 0 and attempt == 1 and KIT_CRASH_RX.search(tail or ""):
+                retries.append(f"{GATE_RETRY} {cmd} rc={rc}: kit traceback, retried once\n")
+                continue
+            break
         if rc != 0:
-            return False, f"{cmd} rc={rc}\n{tail}"
-    return True, f"gates green ({len(cmds)}, {src})"
+            return False, "".join(retries) + f"{cmd} rc={rc}\n{tail}"
+    return True, "".join(retries) + f"gates green ({len(cmds)}, {src})"
 
 
 def _leak_pre_push(cwd, ref_line):
@@ -588,6 +579,9 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
             self.step(f"gates cached {'green' if e['ok'] else 'red'} {key[:12]}")
             return e["ok"], e.get("detail") or ""
         ok, detail = self.d.gates(cwd)
+        for line in (detail or "").splitlines():
+            if line.startswith(GATE_RETRY):
+                self.step(line)
         if key and not self.dry and (ok or not INFRA_RX.search(detail or "")) \
                 and self.d.tree_key(cwd) == key:
             cache.put(key, ok, detail, Path(cwd).name, self.d.clock())

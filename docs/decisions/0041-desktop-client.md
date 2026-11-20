@@ -177,3 +177,38 @@ Links, downloads and the first-run place of the companion window.
   see, a subdomain of a listed host is shown to serve untrusted content,
   players hit the rate limit in normal use, or the overlay's display id
   stops matching Electron's display list.
+
+## Amendment 2026-11-19 (OVL-WAKE-COMPANION, plan unit F-167)
+
+- Decision: when the log goes from idle to a fresh line (the overlay
+  gate of decision 0029 turns from false to true, seen by the part
+  `app/parts/40-wake.js`), a companion that is closed to the tray or
+  minimised comes back with `showInactive()`, never `focus()`, `show()`,
+  `restore()` or `maximize()` (each of those activates the window on
+  Windows), and only when `Link.wakeAction` finds its saved bounds
+  (client-window.json) wholly on one display (Electron display bounds,
+  with an 8 px allowance for Windows' invisible resize border) that is
+  not the overlay's display (`opts.overlayBounds().displayId`). Same
+  display, straddling bounds, no saved bounds, an unknown overlay
+  display, a shown window or the switch off: it stays as it is. A closed
+  window reopens at its saved normal size, not maximised, for that one
+  open. The tray checkbox "Open AshLight when the game wakes" is the
+  switch, default on, kept in client-prefs.json in the runtime dir (the
+  client never writes config/local.json). An overlay-only start has no
+  companion and does nothing.
+- Alternatives: show on any display - rejected: the game's display must
+  never get a window over it; move the window to another display before
+  showing - rejected: it would override where the player put it; a
+  watcher of the game process or its window - rejected: decision 0029
+  allows Client.txt freshness only; restore a maximised window
+  maximised - rejected: maximize() activates the window and so steals
+  focus from the game; a config/local.json key - rejected: the client
+  never writes the player's config.
+- Why: the player alt-tabs back to a game that just woke and finds
+  AshLight already on the second screen, with no click and no focus
+  change in the game; nothing is read beyond the log freshness the
+  overlay already uses and nothing is sent to the game.
+- Reverses if: showInactive() is seen taking focus from the game in
+  play, players find the window coming back unwanted with the switch on
+  by default, the 8 px allowance lets a window show on the game's
+  display, or decision 0029 changes its idle signal.

@@ -1,7 +1,7 @@
 # AL loop gates (tools/al_loop.py): one command per line, run in order as argv
 # (no shell, no && or |). The loop runs them once per tree state on a lane's
-# finished tree and on main before a push. A whole pytest suite runs through
-# the kit suite gate automatically. Same list as the CLAUDE.md Gates section.
-python -m pytest -q
+# finished tree and on main before a push. The whole suite (tools/suite_run.py)
+# runs through the kit suite gate automatically. Same list as CLAUDE.md Gates.
+python tools/suite_run.py
 npm test --prefix app
 python tools/leak_sweep.py --tree
