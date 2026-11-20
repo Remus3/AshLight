@@ -155,6 +155,28 @@ test("hotkey: empty or huge clipboard, failures are logged, never thrown", async
   assert.deepEqual(throws.posts[0][1], { item: "" });
 });
 
+test("hotkey: an empty clipboard and an item each cost exactly one read (OVL-COPY-FIRST)", async () => {
+  // a press before the game wrote the clipboard posts the blank text once
+  // (the core answers "Copy the item first"); no retry, no wait for a
+  // change: the player copies and presses again
+  for (const text of ["", "  \r\n", null, "Item Class: Rings\nRarity: Rare\nStorm Loop\n"]) {
+    const d = fakeDeps(text);
+    let t = 20000;
+    d.now = () => t;
+    const press = hk.createEvalHotkey(d);
+    assert.equal(await press(), true);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(d.reads, 1, JSON.stringify(text));
+    assert.equal(d.posts.length, 1);
+    assert.deepEqual(d.posts[0], ["/api/eval", { item: text === null ? "" : text }]);
+    // the next manual press reads once more, never on its own
+    t += hk.REPEAT_GAP_MS + 1;
+    assert.equal(await press(), true);
+    assert.equal(d.reads, 2);
+    assert.equal(d.posts.length, 2);
+  }
+});
+
 test("hotkey module has no timer and no watcher", () => {
   const src = require("fs").readFileSync(require.resolve("../eval_hotkey.js"), "utf8");
   for (const word of ["setInterval", "setTimeout", "fs.watch", "watchFile", "sendInput", "keyTap"]) {

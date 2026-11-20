@@ -85,8 +85,16 @@ ZONE_CARDS = 4  # zone cards kept per zone; the oldest drops
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
 # the overlay print these; neither builds verdict wording itself.
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
+# OVL-COPY-FIRST (F-054): the press found a blank clipboard (the game had not
+# written the item yet); core.eval_press publishes this error and asks for no
+# price check. The player copies the item and presses again: no retry.
+EMPTY_CLIPBOARD = "empty clipboard"
+EMPTY_CLIPBOARD_TEXT = ("Copy the item first", "Hover it in game, press Ctrl+C",
+                        "The clipboard was empty when you pressed the hotkey. Hover an "
+                        "item in game, press Ctrl+C, then press the hotkey again.")
 EVAL_ERROR_TEXT = {
     # error: (overlay head, overlay line, dashboard sentence)
+    EMPTY_CLIPBOARD: EMPTY_CLIPBOARD_TEXT,
     # TC-VERDICT-CAVEAT (F-042): the sentence names the item-key build load
     "no build loaded": ("No build loaded", "Paste a build on the dashboard",
                         "No build loaded yet. Paste a Path of Building code under Build, "
@@ -527,6 +535,7 @@ PRICE_TEXT = {
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),
+    EMPTY_CLIPBOARD: EMPTY_CLIPBOARD_TEXT,
     "no base type": ("Can't price this item", "Try a different item",
                      "AshLight can't make a trade search for this item. Try a different "
                      "one."),

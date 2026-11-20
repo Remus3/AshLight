@@ -133,6 +133,15 @@ def test_link_merges_with_the_item_check():
     assert only["line3"] == ""
 
 
+def test_empty_clipboard_price_error_says_copy_first():
+    """OVL-COPY-FIRST: PRICE_TEXT handles the eval's "empty clipboard" key."""
+    t = price_card_text(price("error", error="empty clipboard", item={}))
+    assert (t["line"], t["detail"]) == ("Copy the item first",
+                                        "Hover it in game, press Ctrl+C")
+    assert t["sentence"] == ("The clipboard was empty when you pressed the hotkey. Hover "
+                             "an item in game, press Ctrl+C, then press the hotkey again.")
+
+
 def test_missing_values_read_honestly():
     for t in (price_card_text(None), price_card_text({}),
               price_card_text({"status": "done", "listings": [{"amount": None}]})):
