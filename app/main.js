@@ -7,7 +7,10 @@
    process, never reads game memory, never sends any key or mouse input.
    Global shortcuts: the show/hide toggle, and the item check (TC-EVAL-UI),
    which reads the clipboard once per press (eval_hotkey.js); the keys are
-   picked here and registered by app/parts/20-hotkeys.js.
+   picked here and registered by app/parts/20-hotkeys.js. TC-WORN-KEY: an
+   optional wear key (config wear_hotkey, no default, so never a third
+   default global key) is picked and bound here; it shares the item
+   check's one clipboard read site and posts to /api/wear.
    OVL-MAIN-PARTS (decision 0053): later main-process features land as
    app/parts/NN-name.js files run by app/parts.js at the hooks below; this
    file keeps the two windows' creation, the IPC handlers and the one
@@ -60,6 +63,9 @@ let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let versionText = ""; // RUN-BUILD-STAMP-UI: the version line, "" until the core answers
 let logStream = null;
 let metrics = null; // RUN-BUDGET-LOG-CLIENT: the once-a-minute own-process sampler
+let onWear = null; // TC-WORN-KEY: the wear key's press handler (built in start())
+let wearRaw; // TC-WORN-KEY: the config value last bound (undefined before the first bind)
+let wearBound = null; // TC-WORN-KEY: the wear accelerator really bound, null when none
 
 function log(msg) {
   const line = new Date().toISOString() + " " + msg + "\n";
@@ -107,6 +113,27 @@ const toggleKey = Hotkey.pick([process.env.AL_OVERLAY_TOGGLE, config.overlay_tog
   DEFAULT_TOGGLE, log);
 const evalKey = Hotkey.pick([process.env.AL_EVAL_HOTKEY, config.eval_hotkey],
   DEFAULT_EVAL_KEY, log);
+
+/* TC-WORN-KEY: (re)bind the optional wear key from config wear_hotkey,
+   through the same Hotkey.pick rule with NO default: unset or refused
+   binds nothing. Runs after the parts bound the two default keys, so it
+   never takes theirs; a config save that leaves the value alone changes
+   nothing. */
+function bindWearKey() {
+  const raw = readJson(LOCAL_CONFIG).wear_hotkey;
+  const seen = JSON.stringify(raw === undefined ? null : raw);
+  if (seen === wearRaw) { return; }
+  wearRaw = seen;
+  if (wearBound) {
+    try { globalShortcut.unregister(wearBound); } catch (e) { /* already gone */ }
+    wearBound = null;
+  }
+  const want = Hotkey.pick([raw], null, log);
+  const cfg = readJson(LOCAL_CONFIG);
+  const taken = [Hotkey.pick([process.env.AL_OVERLAY_TOGGLE, cfg.overlay_toggle], DEFAULT_TOGGLE),
+    Hotkey.pick([process.env.AL_EVAL_HOTKEY, cfg.eval_hotkey], DEFAULT_EVAL_KEY)];
+  wearBound = EvalKey.registerWearKey(globalShortcut, want, onWear, taken, log);
+}
 
 // DESKTOP-CLIENT (decision 0041): "--client" (the Start Menu shortcut,
 // scripts\run.ps1) runs the companion window, tray and overlay. Started
@@ -432,6 +459,7 @@ function start() {
   fs.watchFile(LOCAL_CONFIG, { interval: 1000, persistent: false }, () => {
     applyLayout(false);
     runParts("configChanged");
+    bindWearKey();
   });
 
   // The core writes a fresh token on every start: reload when it changes.
@@ -456,21 +484,27 @@ function start() {
   }
 
   // TC-EVAL-UI: one clipboard read per press, posted to the core.
-  const onEval = EvalKey.createEvalHotkey({
+  // TC-WORN-KEY: the wear key shares this one read site (still one read
+  // per manual press of either key), posting to /api/wear instead.
+  const pressDeps = { // the item keys' one clipboard read site
     readText: () => clipboard.readText(),
     post: EvalKey.makePost(http, port, readToken),
     log: log
-  });
+  };
+  const onEval = EvalKey.createEvalHotkey(pressDeps, EvalKey.POST_EVAL);
+  onWear = EvalKey.createEvalHotkey(pressDeps, EvalKey.POST_WEAR);
   ctx.actions.onEval = onEval;
   // The parts' ready hook (the two shortcuts, app/parts/20-hotkeys.js) runs
   // before the start line: server/al/diag.py reads a shortcut failure only
-  // in the lines before it.
+  // in the lines before it. The optional wear key binds after them.
   runParts("ready");
+  bindWearKey();
   // RUN-BUDGET-LOG-CLIENT (F-032): once a minute, Electron's own process
   // tree (app.getAppMetrics, never the game) into ops/runtime/overlay-state.json.
   metrics = Metrics.startSampler({ getMetrics: () => app.getAppMetrics(), dir: path.dirname(TOKEN_FILE),
     overlay: () => win, companion: () => (client ? client.window() : null), log: log });
-  log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey);
+  log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey +
+    "; worn item " + (wearBound || "unset"));
 
   if (SMOKE_S > 0) { setTimeout(() => app.quit(), SMOKE_S * 1000); }
 }

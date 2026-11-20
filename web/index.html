@@ -660,6 +660,15 @@
     <button id="consent-no" type="button" class="link" hidden
       aria-describedby="consent-said">Stop reading Client.txt</button>
     <span id="consent-said"></span></p>
+  <!-- RUN-LEDGER-CONSENT (decision 0071): the log record's own consent line
+       beside the Client.txt opt-out, with its own Allow control; shown only
+       while Client.txt is read; never implied by the Client.txt opt-in; its
+       failure line is not a live region (the button points at it) -->
+  <p id="ledger-line" class="muted" hidden>
+    <span id="ledger-text">Log record: off.</span>
+    <button id="ledger-allow" type="button" class="link"
+      aria-describedby="ledger-text ledger-said">Allow the log record</button>
+    <span id="ledger-said"></span></p>
 </footer>
 </body>
 </html>

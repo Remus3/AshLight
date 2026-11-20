@@ -22,6 +22,9 @@ from . import summary as summary_mod
 from . import underlevel as underlevel_mod
 from . import zoneguide as zoneguide_mod
 from .theorycraft import buildlive as buildlive_mod
+from .text.buildlive import (  # noqa: F401 - re-exported, state.<name> stays
+    ALERT_ROUTES, _a_class, _fit, _upgrade_delta, build_alert_text, upgrade_notice_text,
+    upgrades_text)
 from .text.common import (  # noqa: F401 - re-exported, state.<name> stays
     CARD_LINE, _amount, _dict, _dicts, _is_time, _key, _num_text, _points,
     _short_list, _signed, _signed_points, _text)
@@ -33,6 +36,8 @@ from .text.itemcheck import (  # noqa: F401 - re-exported, state.<name> stays
     WEAPON_TYPE_LINE, _calc_text, _comp_calc, _compare_sentence, _equipped_name,
     _eval_lines, _has_pob, _pct_text, _stat_rows, _swap_where, _weapon_skill,
     _weapon_type_calc, eval_card_text, stat_delta_text)
+from .text.overlaycard import (  # noqa: F401 - re-exported, state.<name> stays
+    EVAL_CARD_S, PRICE_CARD_S, SAME_PRESS_S, _fresh, overlay_card, price_until)
 from .text.price import (  # noqa: F401 - re-exported, state.<name> stays
     EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT, LEAGUE_NEW_S, PRICE_AGED_S, PRICE_LISTINGS,
     PRICE_OLD_S, PRICE_STATUSES, PRICE_TEXT, _age_s, _listing_text, _ninja_amount,
@@ -46,15 +51,6 @@ TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
 # DS-TRADE-EXPIRE (design 0001 N5): a card clears by itself this long after
 # it arrived; the dashboard states the rule and Dismiss stays.
 TRADE_EXPIRE_S = 600
-# TC-EVAL-UI: the overlay shows the item check card this long after the
-# hotkey press, then the card leaves by itself (design 0001 N5); the
-# dashboard keeps the last result.
-EVAL_CARD_S = 20
-# PRICE-1-UI (decision 0016): the price check result rides the same card
-# slot for this long after the press; an eval and a price stamped within
-# SAME_PRESS_S of each other came from one press and share one card.
-PRICE_CARD_S = 20
-SAME_PRESS_S = 2.0
 TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
                 "league", "stash_tab", "left", "top")
 
@@ -85,187 +81,6 @@ CHAR_FIELDS = ("char_class", "level", "level_ups", "deaths", "acts", "pace",
 ZONE_FIELDS = ("zone", "area_id", "area_level", "zone_entered_at", "in_hideout",
                "in_town", "_area_fresh", "_zone_cards")
 ZONE_CARDS = 4  # zone cards kept per zone; the oldest drops
-
-
-# BUILD-LIVE (decision 0045): the stale-build alert and the upgrade
-# notices for items checked earlier. Exact-output tests in
-# tests/test_build_live.py.
-# TC-VERDICT-CAVEAT (F-042, F-043): every alert sentence names both routes
-# (the Build tab paste and the item-key build load), and `short` is the
-# overlay card's third line while the alert lasts (CARD_LINE at most).
-ALERT_ROUTES = ("on the Build tab, or copy the code in Path of Building and press "
-                "the item key.")
-
-
-def _a_class(value):
-    """A class name with its article (a Ranger, an Invoker); a missing one
-    reads "another class"."""
-    word = _text(value, "")
-    if not word:
-        return "another class"
-    return ("an " if word[:1].lower() in "aeiou" else "a ") + word
-
-
-def _fit(text, fallback):
-    return text if len(text) <= CARD_LINE else fallback
-
-
-def build_alert_text(alert):
-    """The words of a buildlive.alert() finding, or None: `head` (the alert
-    heading), `short` (the overlay card's line 3, at most CARD_LINE) and
-    `text` (the sentence, printed in the Your build card and as an item
-    check note)."""
-    a = _dict(alert)
-    kind = a.get("kind")
-    who = _text(a.get("character"), "this character")
-    if kind == "missing":
-        return {"kind": kind, "head": f"No build saved for {who} yet",
-                "short": _fit(f"No build for {who}", "No build for this character"),
-                "text": f"No build saved for {who} yet. Paste a PoB code " + ALERT_ROUTES}
-    if kind == "class":
-        build_class = _a_class(a.get("build_class"))
-        log_class = _a_class(a.get("log_class"))
-        return {"kind": kind, "head": f"Build is for {build_class}",
-                "short": _fit(f"Build is for {build_class}", "Build is for another class"),
-                "text": (f"Build is for {build_class}, but {who} is {log_class}. "
-                         f"Paste {who}'s own PoB code " + ALERT_ROUTES)}
-    if kind == "level":
-        built = _num_text(a.get("build_level"))
-        return {"kind": kind, "head": f"Build is from level {built}",
-                "short": _fit(f"Build is from level {built}", "Build is from a lower level"),
-                "text": (f"Build is from level {built}; you are level "
-                         f"{_num_text(a.get('level'))}. Paste a fresh PoB code "
-                         + ALERT_ROUTES)}
-    return None
-
-
-def _upgrade_delta(n):
-    d = n.get("score_delta") or 0
-    if n.get("source") in ("pob", "pob_cached"):
-        return _signed(d) + "%"
-    return _signed_points(d)
-
-
-def upgrade_notice_text(n):
-    """One upgrade notice: `head` (new or not, slot, item), `line` (what it
-    replaces and by how much) and `fit` (class / level fit)."""
-    n = _dict(n)
-    name = _text(n.get("name") or n.get("base"), "Unnamed item")
-    slot = _text(n.get("slot"), "its slot")
-    head = ("New upgrade" if n.get("new") else "Upgrade") + f" for {slot}: {name}"
-    delta = _upgrade_delta(n)
-    if n.get("empty") or not n.get("replaces"):
-        line = f"Goes in your empty {slot} slot, {delta}."
-    else:
-        line = f"Replaces {_text(n.get('replaces'), 'your item')}, {delta}."
-    fit = _dict(n.get("fit"))
-    if fit.get("kind") == "level" and not fit.get("ok", True):
-        fit_text = (f"Needs level {_num_text(fit.get('need'))}; you are level "
-                    f"{_num_text(fit.get('level'))}.")
-    elif fit.get("build_class"):
-        fit_text = f"Fits your {_text(fit.get('build_class'), 'current')} build."
-    else:
-        fit_text = "Fits your build."
-    return {"head": head, "line": line, "fit": fit_text}
-
-
-def upgrades_text(view):
-    """The heading line of the upgrade list ("" with none: the dashboard
-    then hides the list)."""
-    count = len(_dicts(_dict(view).get("items")))
-    if count == 0:
-        return ""
-    if count == 1:
-        return "1 item you checked is an upgrade now."
-    return f"{count} items you checked are upgrades now."
-
-
-def _fresh(part, life_s, now):
-    return (isinstance(part, dict) and _is_time(part.get("at"))
-            and now < part["at"] + life_s)
-
-
-def price_until(price):
-    """When the price card leaves: 20 s from the press, and never sooner
-    than 20 s after its last update, so a result that waited on the trade
-    site's limit still shows for the full time (design 0001 N5)."""
-    at = price["at"]
-    upd = price.get("updated_at")
-    last = upd if _is_time(upd) and upd > at else at
-    wait = price.get("wait_s") if price.get("status") == "waiting" else 0
-    if not isinstance(wait, (int, float)) or isinstance(wait, bool) or not wait >= 0:
-        wait = 0
-    # a long wait keeps the card until the result can arrive (review N4);
-    # min() before float(): a huge int would overflow (FUZZ-3)
-    return last + float(min(wait, 600)) + PRICE_CARD_S
-
-
-def overlay_card(ev, price, now, alert=None):
-    """The one overlay card (design 0001 section 10, decision 0016 fork 2):
-    {kind, head, line2, line3, verdict, expires_at} or None.
-    - eval and price both fresh and from one press: a merged card (eval
-      head, price line, eval top stat); a price error or "off" leaves the
-      eval card unchanged; a "no build loaded" eval gives the price card;
-    - from different presses: the newest one;
-    - only one fresh: that one.
-    `alert` (TC-VERDICT-CAVEAT): the snapshot's build alert, passed to
-    eval_card_text so a compared item's line 3 carries its short head."""
-    ev_ok = _fresh(ev, EVAL_CARD_S, now)
-    pr_ok = (isinstance(price, dict) and _is_time(price.get("at"))
-             and now < price_until(price))
-    if not ev_ok and not pr_ok:
-        return None
-
-    ws = ev.get("waystone") if isinstance(ev, dict) and isinstance(ev.get("waystone"), dict) \
-        else None
-    # TC-CARD-PARTS: the words at most once per call, only when the item
-    # card can show; the mark's tone (risky waystone included) and
-    # `answers` come from eval_card_text
-    words = []
-
-    def eval_text():
-        if not words:
-            words.append(eval_card_text(ev, alert))
-        return words[0]
-
-    def eval_part():
-        et = eval_text()
-        # UTIL-WAYSTONE-REWARD: a waystone's reward totals take the item line
-        # (as a price line does, design 0001 section 10); never a third line
-        line2 = et.get("reward_line") or et["item"]
-        return {"kind": "eval", "head": et["head"], "line2": line2, "line3": et["line"],
-                "verdict": et["tone"], "expires_at": ev["at"] + EVAL_CARD_S}
-
-    def price_line():
-        # OVL-CARD-NAME (decision 0016 amendment 2026-11-19): a trade link
-        # with no poe.ninja value keeps the item name on line 2; the link
-        # itself is on the dashboard
-        t = price_card_text(price)
-        if price.get("status") != "link" or ninja_text(price.get("ninja")):
-            return t["line"]
-        return t["item"]
-
-    def price_part():
-        t = price_card_text(price)
-        return {"kind": "price", "head": t["head"], "line2": price_line(),
-                "line3": t["detail"], "verdict": "price",
-                "expires_at": price_until(price)}
-
-    if ev_ok and pr_ok:
-        if abs(price["at"] - ev["at"]) >= SAME_PRESS_S:
-            return price_part() if price["at"] > ev["at"] else eval_part()
-        # a waystone's verdict needs no build (UX-OVERLAY-WAYSTONE): keep it;
-        # so does a card a part answers without a build (TC-CARD-PARTS)
-        if (not ev.get("ok") and ev.get("error") == "no build loaded" and not ws
-                and not eval_text()["answers"]):
-            return price_part()
-        if price.get("status") in ("off", "error"):
-            return eval_part()
-        card = eval_part()
-        card.update(kind="merged", line2=price_line(),
-                    expires_at=max(card["expires_at"], price_until(price)))
-        return card
-    return eval_part() if ev_ok else price_part()
 
 
 class SessionState:

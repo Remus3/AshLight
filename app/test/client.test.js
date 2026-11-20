@@ -237,7 +237,12 @@ test("launcher runs the repo's own scripts, hidden, never detached", () => {
   assert.equal(Launcher.startCore("R", 8961, fake), 42);
   assert.equal(Launcher.stopAll("R", fake), 42);
   const [run, stop] = calls;
-  assert.equal(run.exe, "powershell.exe");
+  // OVL-LAUNCH-ENV: never a bare name (it would be looked up in the repo)
+  for (const c of calls) {
+    assert.ok(path.win32.isAbsolute(c.exe), c.exe);
+    assert.match(c.exe, /^[A-Za-z]:\\.*\\System32\\WindowsPowerShell\\v1\.0\\powershell\.exe$/i);
+    assert.equal(c.exe, Launcher.psExe());
+  }
   assert.ok(run.args.includes("-File"));
   assert.match(run.args[run.args.indexOf("-File") + 1], /scripts[\\/]run\.ps1$/);
   assert.deepEqual(run.args.slice(-3), ["-NoBrowser", "-Port", "8961"]);
@@ -251,18 +256,87 @@ test("launcher runs the repo's own scripts, hidden, never detached", () => {
   assert.equal(Launcher.startCore("R", 0, () => { throw new Error("no ps"); }), 0);
 });
 
-test("the sidecar comes from server.al.paths, else empty", () => {
+/* A temp folder with a python.exe and a py.exe; PATH and PATHEXT for it. */
+function pyDirs(t) {
+  const root = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "al-launch-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const bin = path.join(root, "bin");
+  const cwd = path.join(root, "repo");
+  fs.mkdirSync(bin);
+  fs.mkdirSync(cwd);
+  for (const n of ["python.exe", "py.exe"]) {
+    fs.writeFileSync(path.join(bin, n), "");
+    fs.writeFileSync(path.join(cwd, n), "planted");
+  }
+  return { root, bin, cwd };
+}
+
+test("the sidecar comes from server.al.paths, else empty", (t) => {
+  const { bin } = pyDirs(t);
+  const env = { PATH: bin, PATHEXT: ".COM;.EXE" };
   const seen = [];
   const exec = (py, args) => {
     seen.push(py);
-    if (py === "python") { throw new Error("missing"); }
+    if (path.basename(py).toLowerCase() === "python.exe") { throw new Error("missing"); }
     assert.deepEqual(args, ["-m", "server.al.paths"]);
     return JSON.stringify({ sidecar: "side-root" });
   };
-  assert.equal(Launcher.resolveSidecar("R", exec), "side-root");
-  assert.deepEqual(seen, ["python", "py"]);
-  assert.equal(Launcher.resolveSidecar("R", () => { throw new Error("x"); }), "");
-  assert.equal(Launcher.resolveSidecar("R", () => "{}"), "");
+  assert.equal(Launcher.resolveSidecar("R", exec, env), "side-root");
+  assert.deepEqual(seen.map((x) => x.toLowerCase()),
+                   [path.join(bin, "python.exe"), path.join(bin, "py.exe")].map((x) => x.toLowerCase()));
+  assert.equal(Launcher.resolveSidecar("R", () => { throw new Error("x"); }, env), "");
+  assert.equal(Launcher.resolveSidecar("R", () => "{}", env), "");
+});
+
+test("OVL-LAUNCH-ENV: Python only from an absolute PATH entry, never the current directory", (t) => {
+  const { bin, cwd } = pyDirs(t);
+  const saved = process.cwd();
+  process.chdir(cwd);
+  try {
+    checkPythonLookup(saved, bin, cwd);
+  } finally {
+    process.chdir(saved);
+  }
+});
+
+function checkPythonLookup(saved, bin, cwd) {
+  const seen = [];
+  const exec = (py) => { seen.push(py); return JSON.stringify({ sidecar: "s" }); };
+  // the current directory, ".", empty, relative and UNC entries are skipped
+  const rel = path.relative(saved, bin);
+  for (const p of ["", ".", ";;", "repo", rel, "\\\\server\\share", "//server/share"]) {
+    const env = { PATH: p, PATHEXT: ".EXE" };
+    assert.equal(Launcher.whichAbs("python", env), "", p);
+    assert.equal(Launcher.resolveSidecar(cwd, exec, env), "", p);
+  }
+  assert.deepEqual(seen, [], "no bare or relative python was ever run");
+  // an absolute entry (quoted or not) after a bad one is used
+  const env = { PATH: ['.', '"' + bin + '"'].join(";"), PATHEXT: ".EXE" };
+  assert.equal(Launcher.whichAbs("python", env).toLowerCase(), path.join(bin, "python.exe").toLowerCase());
+  assert.equal(Launcher.resolveSidecar(cwd, exec, env), "s");
+  assert.ok(path.isAbsolute(seen[0]) && path.dirname(seen[0]) === bin, seen[0]);
+  // a folder named like the tool is not a match
+  fs.mkdirSync(path.join(bin, "python3.exe"));
+  assert.equal(Launcher.whichAbs("python3", env), "");
+}
+
+test("OVL-LAUNCH-ENV: powershell.exe from an absolute SystemRoot, else SystemDrive\\Windows", () => {
+  const tail = "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+  // drive paths are built, never written out (tools/leak_sweep.py)
+  const at = (d, rest) => d + ":" + "\\" + rest;
+  assert.equal(Launcher.psExe({ SystemRoot: at("D", "Win"), SystemDrive: "C:" }), at("D", "Win") + tail);
+  for (const bad of ["", "Windows", ".\\Windows", "\\\\host\\share", "D:", "D:Windows"]) {
+    assert.equal(Launcher.psExe({ SystemRoot: bad, SystemDrive: "E:" }), at("E", "Windows") + tail, bad);
+  }
+  assert.equal(Launcher.psExe({ SystemRoot: "rel", SystemDrive: "bad" }), at("C", "Windows") + tail);
+  assert.equal(Launcher.psExe({}), at("C", "Windows") + tail);
+  // startCore / stopAll pass it to spawn
+  const seen = [];
+  const fake = (exe) => { seen.push(exe); return { pid: 1, unref() {} }; };
+  const env = { SystemRoot: at("F", "WINDOWS") };
+  Launcher.startCore("R", 8961, fake, env);
+  Launcher.stopAll("R", fake, env);
+  assert.deepEqual(seen, [at("F", "WINDOWS") + tail, at("F", "WINDOWS") + tail]);
 });
 
 function code(js) {

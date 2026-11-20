@@ -930,19 +930,32 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, self.server.core.weights.snapshot())
 
     def _consent(self, path, query, extra):
+        """POST /api/consent: {"consent": bool, "path"?} records the
+        Client.txt opt-in; {"ledger": bool} (decision 0071) records the
+        parse ledger's own opt-in, alone or after "consent" in one body.
+        At least one of the two is required and each must be a bool."""
         body = self._read_json()
         if body is None:
             return None
-        if not isinstance(body.get("consent"), bool):
+        has_consent = "consent" in body
+        has_ledger = "ledger" in body
+        if not (has_consent or has_ledger) or (
+                has_consent and not isinstance(body.get("consent"), bool)):
             return self._json(400, {"error": "consent: true|false required"})
+        if has_ledger and not isinstance(body.get("ledger"), bool):
+            return self._json(400, {"error": "ledger: true|false required"})
         path = body.get("path")
         if path is not None and not isinstance(path, str):
             return self._json(400, {"error": "path must be a string"})
+        core = self.server.core
         try:
-            rec = self.server.core.record_consent(body["consent"], path or None)
+            if has_consent:
+                rec = core.record_consent(body["consent"], path or None)
+            if has_ledger:
+                rec = core.record_ledger_consent(body["ledger"])
         except ValueError as e:
             return self._json(400, {"error": str(e)})
-        return self._json(200, {"consent": rec, "state": self.server.core.state.snapshot()})
+        return self._json(200, {"consent": rec, "state": core.state.snapshot()})
 
     def _static(self, rel):
         """SEC-STATIC-MAP: an exact name lookup in the listing of web/; the
