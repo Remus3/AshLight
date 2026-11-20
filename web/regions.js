@@ -10,7 +10,16 @@
    DOMContentLoaded, so every region has registered before start().
 
    No timers, no network, no clipboard, no live region: the registry only
-   calls the regions' own functions and hides retired legacy groups.
+   calls the regions' own functions, hides retired legacy groups and runs
+   the one news hook below.
+
+   The news hook (PLAY-LEGACY-OUT-1, UI-GLANCE ZERO-CLICK): after the
+   painters of each state push, two consecutive snapshots are compared. A
+   trade request id that was not open before, or a build alert whose words
+   changed to new non-empty words, is news for Play: ctx.tabs.notify(doc,
+   what) shows Play by itself or marks it "new" (web/tabs.js decides). The
+   first snapshot only sets the baseline; a dismiss, an expiry or a cleared
+   alert is no news. The region files never call notify themselves.
 
    Exports (one shared registry; create() makes a fresh one for tests):
    - register(spec): spec = {name, region, retires, paint, tick, wire}.
@@ -28,7 +37,11 @@
      console per cause (at most 20 lines); the regions after it still run.
    - retire(doc, legacyId): hides every [data-legacy=legacyId] node; a
      no-op when there is none. A region node ([data-region=<letter>]) gets
-     data-fit=yes once every legacy group of its regions is retired. */
+     data-fit=yes once every legacy group of its regions is retired.
+   - seen(snap) -> {trades: [open trade ids], alert: build alert words};
+     news(before, after) -> the news words for Play ("trade request",
+     "build alert", both joined by " and ", or "" for none); pure, for the
+     hook and its tests. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -45,6 +58,32 @@
   function isFn(v) { return typeof v === "function"; }
   function isName(v) { return typeof v === "string" && v.length > 0; }
 
+  /* What the news hook compares in one snapshot: the open trade request
+     ids (snap.trade_requests) and the build alert's words
+     (snap.build_alert.text, decision 0045). */
+  function seen(snap) {
+    var rows = snap && Array.isArray(snap.trade_requests) ? snap.trade_requests : [];
+    var trades = [];
+    rows.forEach(function (r) {
+      if (r && (typeof r.id === "string" || typeof r.id === "number")) { trades.push(String(r.id)); }
+    });
+    var a = snap && snap.build_alert;
+    var alert = a && typeof a === "object" && isName(a.text) ? a.text : "";
+    return { trades: trades, alert: alert };
+  }
+
+  /* The news between two consecutive snapshots' seen() values; "" when
+     there is no earlier one (the first push is the baseline). */
+  function news(before, after) {
+    if (!before || !after) { return ""; }
+    var open = {};
+    before.trades.forEach(function (id) { open[id] = true; });
+    var out = [];
+    if (after.trades.some(function (id) { return !open[id]; })) { out.push("trade request"); }
+    if (after.alert && after.alert !== before.alert) { out.push("build alert"); }
+    return out.join(" and ");
+  }
+
   function defaultWarn(text) {
     if (typeof console !== "undefined" && console && isFn(console.warn)) { console.warn(text); }
   }
@@ -58,6 +97,8 @@
     var started = false;
     var startDoc = null;
     var startCtx = null;
+    var lastSeen = null; // seen() of the last painted snapshot
+    var HOOK = { name: "news" };
 
     function clean(spec) {
       if (!spec || typeof spec !== "object" || !isName(spec.name)) {
@@ -165,7 +206,19 @@
       });
     }
 
-    function paint(doc, snap, now) { each("paint", doc, snap, now); }
+    /* The news hook: one notify per push at most, after the painters. */
+    function tellNews(doc, snap) {
+      var now = seen(snap);
+      var what = news(lastSeen, now);
+      lastSeen = now;
+      var tabs = startCtx && startCtx.tabs;
+      if (what && tabs && isFn(tabs.notify)) { tabs.notify(doc, what); }
+    }
+
+    function paint(doc, snap, now) {
+      each("paint", doc, snap, now);
+      guard(HOOK, "paint", tellNews, [doc, snap]);
+    }
     function tick(doc, snap, now) { each("tick", doc, snap, now); }
 
     function retire(doc, legacyId) {
@@ -183,5 +236,7 @@
 
   var api = create();
   api.create = create;
+  api.seen = seen;
+  api.news = news;
   return api;
 }));
