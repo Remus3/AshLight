@@ -945,7 +945,16 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   confined is killed and raises BridgeUnavailable (decision 0022 amendment
   2026-11-19). Reverses if: PoB needs another environment name or a helper
   process, a real build needs more than the memory limit, or job objects are
-  refused in a supported install layout.
+  refused in a supported install layout. TC-CALC-CONFINE-LUA: after the
+  HeadlessWrapper load bridge.lua removes os.execute, io.popen,
+  os.tmpname, package.loadlib and the ffi require route, empties
+  package.cpath, makes os.remove / os.rename / write-mode io.open return
+  nil plus a reason and io.output to a file raise, and drops the debug
+  functions that reach the kept originals; PoB stays unmodified; a
+  test-only probe proves each call fails (listed in CALC_TESTS of
+  tests/test_marks.py) and the drift guard fails if PoB starts using a
+  dropped entry point. Reverses if: PoB's headless path needs a dropped
+  entry point, or a pin moves its start out of the HeadlessWrapper load.
 - RUN-ZONE-RESET: SessionState._enter_zone() is the one per-zone reset
   (state.ZONE_FIELDS, listed again in tests/test_bus_state.py), called from
   the scene, area-generated, area-entered and log_opened arms. Each zone
