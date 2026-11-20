@@ -94,3 +94,31 @@ the player needs or the fr sharing makes the pager flicker; the
 collapse state must follow the player across machines; decision 0075
 rules otherwise for Build and items or Run; or the operator rules the
 title text should stay.
+
+## Amendment 2026-11-19 (operator follow-up: collapse, "app not browser, app only")
+
+Ruled by an adjudicator agent the same day. Replaces the state lines of
+part 3; the layout lines (title button, fr tracks, pager, alerts expand,
+Play and Settings never collapse) stand.
+
+- Reading: the state belongs to the app, and the collapse feature is an
+  app feature. The collapse buttons render only inside the desktop
+  client's companion window (window.alClient present, decision 0041); a
+  plain browser shows every card open, with no button and no state.
+- State lives in the core: ops/runtime/ui_layout.json, schema 1, a
+  card-id allow-list mapped to a collapsed boolean (0036-style bounds:
+  unknown ids dropped), one .bak, a jsonfile Saver retry like the other
+  stores; served by a token-gated plug route GET / PUT /api/ui/layout
+  (decision 0056). Every AshLight window reads the same state. No
+  localStorage for this.
+- Not in the settings export in slice 1; not emptied by Clear run
+  history (a view preference, not run data). A missing or unreadable
+  file means all open.
+
+Alternatives: per-viewer localStorage (the browser storage the operator
+rejected); buttons in every window with shared state (contradicts "app
+only"); include the file in the export (deferred, cheap to add later).
+
+Reverses if: the operator wants the browser to collapse cards or the
+layout exported; or players ask for the layout to be cleared with run
+history.

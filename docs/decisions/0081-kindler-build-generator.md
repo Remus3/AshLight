@@ -81,3 +81,85 @@ PoB drift makes route XML unreliable; 12 candidates in 60 s breach the
 0024 / 0028 budgets; players want automatic regeneration and it is shown
 to cost no FPS; 6 tabs prove too few; a name collision or GGG use of the
 word is found; or the operator rules generated builds out of scope.
+
+## Amendment 2026-11-19 (operator follow-ups: tabs, determinism, detail, gems, follow)
+
+Ruled by an adjudicator agent the same day. Points 1 to 10 stand except
+where changed here. Plan: docs/plan/10 section 3 (KINDLER-* split into
+seven packages).
+
+11. Tabs. The Pasted build sub-tab is fixed first and cannot be closed,
+    renamed or moved. Kindler tabs: order is the list order in
+    gen_builds.json; Move left / Move right buttons (keyboard reachable,
+    no drag in slice 1); rename in place, player text capped at 32
+    characters, control characters stripped, empty means the default
+    label; close needs an inline confirm ("Close <label>? Close / Keep",
+    focus on Keep; never window.confirm). The 6-tab cap and the 0036
+    bounds stand.
+12. Determinism. Same inputs give the same result. Result key = sha256
+    of (class, toggle values, archetypes.json sha256, PoB pin, tree
+    export version, level band). Candidates are ranked by PoB outputs
+    only, using the fixed 50/50 DPS / EHP blend of decision 0024; ties
+    break by template id ascending, then variant index ascending. No
+    random source, no clock input. A partial result (point 3, 60 s cut)
+    is labelled and never cached as final. With the calc off (point 5)
+    the one template shown is picked by toggle-match count, then template
+    id; it carries no DPS or EHP number.
+13. Correctness checks (tests): two runs on one key are byte-identical;
+    the 0028 reference build composed through Kindler's XML path scores
+    within 0.1 percent of the bridge's direct numbers; every route prefix
+    is connected from the class start and inside the point budget at its
+    stage's level (a breadth-first connectivity check in the validator
+    and tests only); node ids exist in the cached tree export (0034); gem
+    names exist in the cached repoe-fork gems snapshot (else
+    checked=false); a support that PoB reports as not applying to its
+    skill fails the template check. Live checks skip when the calc
+    component is off.
+14. Passive order. Each stage holds an authored, ordered node list,
+    ascendancy nodes listed apart in their own order. No runtime
+    pathfinding (point 6 and the rejected free search stand).
+15. Stages (levelling to maps). A template is a list of stages. A
+    trigger is a character level band (decision 0038's character), an
+    act or zone id from the snapshot world_areas, or for the endgame an
+    area level band from the log's area generation line; a waystone
+    tier name is shown only where a sourced mapping exists. Each stage
+    carries: the skills in use; per skill its support gems (the link
+    setup, support count bounded by the sockets the stage authors);
+    gems to pick up, swap or drop at this stage, with the trigger; the
+    passive prefix; per-slot item focus (the stats to aim for, ranked by
+    PoB per-mod weights of decision 0024 when the calc is on, by the
+    authored priority otherwise; the mods are opened in the item info
+    popover); ascendancy points as "after your Nth Ascendancy trial",
+    never a claim that the trial was done.
+16. Gem timing. The level a gem can be used at comes from the cached
+    gems snapshot; else the template's authored level with
+    checked=false. Skill numbers per gem come only from PoB through the
+    bridge; no own gem calc.
+17. Follow Play guidance. A per-tab boolean in gen_builds.json, on by
+    default. While on, the result card highlights the stage whose
+    trigger matches the zone, act and level the snapshot already
+    publishes (ZONE-GUIDE, decision 0043; 0038): no new read, no new log
+    parse. It never claims a step was done.
+18. Trimmed, plainly: a free optimiser or own tree search (0004); drop
+    locations, vendor shopping and crafting steps for levelling items,
+    uniques by where they drop, and which quest gives which gem (no
+    permitted source, decision 0083 and its amendment); any DPS or EHP
+    claim with the calc off; automatic regeneration (point 4); drag and
+    drop reorder (slice 2 at most); any input to the game (ToS floor);
+    the .build file stays a download on the player's click (decision
+    0034), never a write into the game's folder; waystone tier names
+    without a sourced mapping.
+
+Alternatives: shortest-path fill between authored waypoint nodes (edges
+toward an own search); follow off by default (against the zero-click
+aim); fewer, larger packages (the 90-minute package cap).
+
+Why: authored stages plus PoB numbers give a full levelling-to-maps plan
+without an own calc or search; a fixed key and a fixed tie order make
+the output reproducible and testable; following the Play guidance reuses
+state already published.
+
+Reverses if: authored node lists prove too costly to keep (then rule a
+waypoint fill again); a real PoB output makes the repeat-run test
+non-identical; the follow default annoys players in play; or PoB stops
+reporting support applicability through the bridge.

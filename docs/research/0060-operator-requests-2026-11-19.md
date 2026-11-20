@@ -159,3 +159,74 @@ Honestly unknown from every permitted source:
 
 See docs/plan/10-operator-requests-2026-11-19.md (packages ITEM-INFO-*,
 KINDLER-*, UI-HEADER-VERSION, UI-CARD-COLLAPSE).
+
+## 7. Follow-up 2026-11-19: licence of poe2wiki and poe2db
+
+Question: "non-commercial licence - explain; if AshLight uses a different
+licence, will that allow it?" No new fetch was possible:
+`python tools/webfetch.py check` refuses poe2db.tw and www.poe2wiki.net
+for every path tried (General_disclaimer, the Copyrights page,
+robots.txt, api.php), reason "poe2db and wiki hosts are never read by a
+dive (decision 0050)" (2026-11-19). Everything below is what is already
+recorded, with its age.
+
+- poe2db: "Wikis Content is available under CC BY-NC-SA 3.0 unless
+  otherwise noted", (c) 2014-2026 PoE2DB, GGG holds the game copyright,
+  some articles adapted from the Project PoE Wiki
+  (https://poe2db.tw/General_disclaimer, read first-hand 2026-11-16,
+  research 0005, 0011; decision 0009 line 9). The page has no scraping,
+  crawling or API terms at all: an absence, not a prohibition. No public
+  API exists. Licence version: CC BY-NC-SA 3.0 (unported not stated).
+- poe2wiki: CC BY-NC-SA 3.0 Unported for content the wiki may lawfully
+  license; game assets GGG copyright (search summary of
+  https://www.poe2wiki.net/wiki/Path_of_Exile_2_Wiki:Copyrights,
+  2026-11-16; the page itself, General_disclaimer and COPYING returned an
+  Anubis bot wall, research 0011). UNVERIFIED first-hand. The PoE1 wiki
+  data query API was also bot-walled (research 0005); poe2wiki api.php
+  answered name searches on 2026-11-16 (research 0009), so its
+  reachability is mixed. robots.txt and any API terms: UNREAD (refused
+  by the allow-list).
+- What the terms mean. BY: credit the source. NC: no use primarily
+  intended for commercial advantage. SA: an adaptation of the material
+  must carry the same licence (3.0 Unported section 4(b) also allows a
+  later version with the same elements). SA binds adaptations of the
+  licensed material, not separate code that reads it at run time.
+  CC 3.0 does not license sui-generis database rights (CC 4.0 does).
+  Creative Commons advises against its licences for software.
+- Would relicensing AshLight help? No. Relicensing does not grant the
+  missing permission to fetch (no poe2db API, a wiki bot wall). An NC
+  licence would make AshLight not OSI open source and clash with the
+  Apache-2.0 vendored kit (decision 0047), and the ToS floor already
+  bars revenue, so NC gains nothing practical. SA would only matter if
+  AshLight shipped an adaptation of the data, which decision 0009 already
+  forbids.
+- The other route (decision 0009 pattern): a build-time, opt-in,
+  attributed fetch into the player's own sidecar cache, never in the repo
+  or a release. Then NC / SA stay on the player's local copy and do not
+  reach AshLight's Apache-2.0 code. It is closed today only because 0009
+  item 4 refuses poe2db / wiki fetches until a source publishes an API
+  or app-use terms.
+- Is the data there? From research 0060 section 3 S7 and the recorded
+  page summaries (not re-read): the wiki's Cargo item tables and poe2db
+  item pages carry vendor values, salvage / disenchant results and wider
+  drop sources; any drop "rate" there is a community estimate or a
+  datamined weight, since GGG publishes none (research 0060 section 3).
+  Reliability: community-written, unknown freshness per patch. If ever
+  shown, every such field is labelled "community estimate" with source
+  and snapshot date.
+
+Ruling: decision 0083 amendment 2026-11-19 (keep Apache-2.0, link only,
+the 0009 snapshot route only once a source permits app use).
+
+## 8. Follow-up 2026-11-19: Kindler and collapse
+
+- Kindler: tabs reorder, rename and close with a confirm; deterministic
+  ranking by PoB numbers with a fixed tie order; stages from levelling to
+  maps carrying gems, links, gem timing, passive order, ascendancy and
+  per-slot item focus; a per-tab "follow Play guidance" toggle reading
+  the zone, act and level the snapshot already publishes. Decision 0081
+  amendment 2026-11-19.
+- Collapse ("app not browser, app only"): state in the core
+  (ops/runtime/ui_layout.json via GET / PUT /api/ui/layout), buttons only
+  inside the desktop client's companion window. Decision 0082 amendment
+  2026-11-19.
