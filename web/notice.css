@@ -33,3 +33,16 @@
   .notice-head { flex-wrap: nowrap; height: 2rem; }
 }
 [data-text-spacing="user"] .notice-head { flex-wrap: wrap; height: auto; }
+/* PLAY-N-FIT: the compact class keeps the head row only, in CSS too, so a
+   resize from full to compact reflows at once instead of waiting for the
+   next repaint (web/notice.js repaints on the state push or its 1 s tick);
+   each scale step's compact range hides the body rows, its full range
+   shows them (the em thresholds of the token block in web/app.css). */
+@media (min-width: 64em) and (min-height: 43.75em) { .notice-row { display: none; } }
+@media (min-width: 75em) and (min-height: 47.5em) { .notice-row { display: block; } }
+@media (min-width: 80em) and (min-height: 54.6875em) { .notice-row { display: none; } }
+@media (min-width: 93.75em) and (min-height: 59.375em) { .notice-row { display: block; } }
+@media (min-width: 96em) and (min-height: 65.625em) { .notice-row { display: none; } }
+@media (min-width: 112.5em) and (min-height: 71.25em) { .notice-row { display: block; } }
+@media (min-width: 128em) and (min-height: 87.5em) { .notice-row { display: none; } }
+@media (min-width: 150em) and (min-height: 95em) { .notice-row { display: block; } }
