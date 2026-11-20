@@ -276,9 +276,19 @@ def test_viewport_meta_allows_zoom():
 
 def test_stat_tile_sub_line_wraps_long_names():
     """UX-U7 (live 320 px pass): an unbroken character name under the level
-    overflowed its tile into the deaths tile; the sub line must wrap."""
-    bodies = [b for s, b in _rules(_strip_media(_css(APP_CSS))) if s == ".stat .sub"]
-    assert bodies and any(re.search(r"overflow-wrap\s*:\s*anywhere", b) for b in bodies)
+    overflowed its tile into the deaths tile. PLAY-LEGACY-OUT-1: the old
+    tiles are gone; the strip's sub lines are .one-line rows, which wrap
+    anywhere in the flow sizes (ellipsis, with the full text in title, only
+    in the cockpit sizes), and the moved pace line wraps."""
+    rules = _rules(_strip_media(_css(APP_CSS)))
+    assert not [s for s, _ in rules if ".stat .sub" in s or s.startswith(".stats")]
+    one = [b for s, b in rules if s == ".one-line"]
+    assert one and any(re.search(r"overflow-wrap\s*:\s*anywhere", b) for b in one)
+    strip = srcpaths.read("strip.js", encoding="utf-8")
+    assert '"st-sub row-title muted one-line"' in strip
+    assert 'setAttr(c.sub, "title", sub)' in strip
+    moved = [b for s, b in rules if s == "#actsbox > .sub"]
+    assert moved and re.search(r"overflow-wrap\s*:\s*anywhere", moved[0])
 
 
 def test_overlay_forced_colours_keeps_window_transparent():
@@ -326,7 +336,7 @@ def test_last_session_card_sits_right_under_the_tiles():
     (PLAY-TD-09B-SKELETON; consent and Last session never show together
     after the first run)."""
     order, _ = _main_order()
-    i = order.index("stats")
+    i = order.index("play-g")
     assert order[i + 1:order.index("summarybox")] == ["play-c", "consent"], order
 
 
@@ -344,7 +354,7 @@ def test_dashboard_card_order_glance_first():
     order, _ = _main_order()
     regions = [x for x in order if x.startswith("play-")]
     assert regions == ["play-%s" % r for r in "gctnbiu"], regions
-    want = ["stats", "consent", "summarybox", "trades", "evalbox", "actsbox", "mapsbox",
+    want = ["consent", "summarybox", "evalbox", "actsbox", "mapsbox",
             "deathsbox", "events", "buildbox", "pricesbox", "toolsbox"]
     seen = [x for x in order if x in want]
     assert seen == want, seen

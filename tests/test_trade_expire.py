@@ -72,9 +72,14 @@ def test_dismiss_still_works_before_expiry():
 
 
 def test_dashboard_states_the_rule():
+    # PLAY-LEGACY-OUT-1: the old #trades card and its rule sentence are
+    # gone; region T (web/feed.js) shows each request's age in minutes and
+    # keeps Dismiss all, which asks the core to clear every open request.
     html = srcpaths.index_html()
-    assert "Requests clear after 10 minutes." in html
-    assert 'id="trade-clear"' in html  # Dismiss all stays
+    assert 'id="trade-clear"' not in html
+    feed = srcpaths.read("feed.js")
+    assert '"Dismiss all"' in feed
+    assert '"/api/trade-dismiss", id === null ? { all: true } : { id: id }' in feed
 
 
 def test_sse_heartbeat_pushes_a_changed_state(tmp_path, monkeypatch):
