@@ -248,6 +248,13 @@ its code (license notes: 0006).
   screenshot/changelog/docs freshness, and the loop/wave contract.
   Verified 2026-11-18
   ([0058-automation-watchers.md](0058-automation-watchers.md))
+- 0060 Operator requests 2026-11-19 - item info popover sources and fields
+  (drop rates, NPC prices and disenchant yields have no permitted source;
+  poe2db / wiki are CC BY-NC-SA, link only), the Kindler build generator
+  within PoB interop, header text, version line and card collapse;
+  follow-ups on licence and Kindler detail. Feeds decisions 0081 to 0083
+  and docs/plan/10
+  ([0060-operator-requests-2026-11-19.md](0060-operator-requests-2026-11-19.md))
 
 ## Open research (feeds ROADMAP)
 

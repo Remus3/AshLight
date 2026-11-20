@@ -329,15 +329,19 @@ def _main_order():
     return [i or c.split()[-1] for i, c in ids], main
 
 
-def test_last_session_card_sits_right_under_the_tiles():
+def test_last_session_card_opens_run_and_history():
     """U17: the Last session card has no live region, so it is noticed by its
-    place: in region C, the region right under the strip, before every
-    other card but the consent card it shares the setup group with
-    (PLAY-TD-09B-SKELETON; consent and Last session never show together
-    after the first run)."""
-    order, _ = _main_order()
-    i = order.index("play-g")
-    assert order[i + 1:order.index("summarybox")] == ["play-c", "consent"], order
+    place. PLAY-LEGACY-OUT-2 moved it as it is from Play to the first card
+    of the Run and history tab, where the run is looked back on; the
+    consent card it shared region C with is gone (region C's setup card
+    asks instead)."""
+    order, main = _main_order()
+    run = main[main.index('id="panel-run"'):main.index('id="panel-build"')]
+    first = re.search(r'<section id="([a-z-]+)"', run).group(1)
+    assert first == "summarybox", first
+    assert "consent" not in order
+    play = main[main.index('id="panel-play"'):main.index('id="panel-run"')]
+    assert 'id="summarybox"' not in play
 
 
 def test_last_session_card_has_a_steady_edge():
@@ -350,12 +354,15 @@ def test_dashboard_card_order_glance_first():
     """U18: glance first, then the run in progress, then reference and
     settings. DOM order is the visual and Tab order (no CSS order). Since
     PLAY-TD-09B-SKELETON the cards sit in the Play regions (G, C, T, N, B,
-    I, U), so the consent card follows the strip in region C."""
+    I, U). PLAY-LEGACY-OUT-2: Play holds only the regions; the Last session
+    card opens Run and history and the full item check opens Items and
+    prices, ahead of the price tools."""
     order, _ = _main_order()
     regions = [x for x in order if x.startswith("play-")]
     assert regions == ["play-%s" % r for r in "gctnbiu"], regions
-    want = ["consent", "summarybox", "evalbox", "actsbox", "mapsbox",
-            "deathsbox", "events", "buildbox", "pricesbox", "toolsbox"]
+    assert order[:7] == regions, order
+    want = ["summarybox", "actsbox", "mapsbox", "deathsbox", "events", "buildbox",
+            "evalbox", "pricesbox", "toolsbox"]
     seen = [x for x in order if x in want]
     assert seen == want, seen
     css = srcpaths.read("app.css", encoding="utf-8")

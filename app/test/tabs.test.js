@@ -1,6 +1,6 @@
 /* UI-GLANCE: the dashboard tabs (web/tabs.js) and their page markup, and
-   the news hook of web/regions.js that tells them about a new trade request
-   or build alert (PLAY-LEGACY-OUT-1). */
+   the news hook of web/regions.js that tells them about a new item check,
+   trade request or build alert (PLAY-LEGACY-OUT-1 and -2). */
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const web = require("./_web.js");
@@ -125,7 +125,7 @@ test("a mark stays while its tab is shown and comes back after", () => {
   assert.equal(doc.ids["tab-settings"].markNode.hidden, true);
 });
 
-test("fill: the one Play slot; filling it is not news", () => {
+test("fill: the one slot (the zone guide in Run and history); filling it is not news", () => {
   assert.deepEqual(t.SLOTS, ["zone-guide"]);
   const doc = fakeDoc();
   t.start(doc, memStore({ [t.STORE_KEY]: "run" }));
@@ -155,14 +155,33 @@ test("the page has a tablist with one tab and one panel per id, Play first", () 
   assert.ok(HTML.indexOf("/web/tabs.js") < HTML.indexOf("/web/app.js"));
 });
 
-test("Play holds the regions and the guide slot; tools live in other tabs", () => {
+test("Play holds only the regions; tools and the full cards live in other tabs", () => {
   const play = HTML.slice(HTML.indexOf('id="panel-play"'), HTML.indexOf('id="panel-run"'));
-  ["play-g", "play-t", "play-b", "consent", "zone-guide", "hintbox", "evalbox", "pricebox",
-    "zone-note-box"].forEach((id) => {
+  ["play-g", "play-c", "play-t", "play-n", "play-b", "play-i", "play-u"].forEach((id) => {
     assert.ok(play.includes('id="' + id + '"'), id);
   });
-  ["buildbox", "pricesbox", "toolsbox", "actsbox", "weights"].forEach((id) => {
+  ["buildbox", "pricesbox", "toolsbox", "actsbox", "weights", "summarybox", "zone-guide",
+    "evalbox", "pricebox"].forEach((id) => {
     assert.ok(!play.includes('id="' + id + '"'), id);
+  });
+  // PLAY-LEGACY-OUT-2: no legacy group is left; the consent, language, tip
+  // and Zone tip cards are gone (regions C and N carry them)
+  assert.ok(!HTML.includes("data-legacy"));
+  ["consent", "consent-yes", "consent-path", "consent-error", "langbox", "lang-dismiss",
+    "hintbox", "hint-text", "zone-note-box", "zone-note", "campaign-hints"].forEach((id) => {
+    assert.ok(!HTML.includes('id="' + id + '"'), id);
+  });
+  // the opt-out stays in the footer until PLAY-TD-21A-SETTINGS-RAIL
+  const foot = HTML.slice(HTML.indexOf("<footer"));
+  assert.ok(foot.includes('id="consent-no"') && foot.includes('aria-describedby="consent-said"'));
+  // moved as they were: Last session first in Run, the zone guide in Act
+  // times, the full last check first in Items and prices (ids unchanged)
+  const run = HTML.slice(HTML.indexOf('id="panel-run"'), HTML.indexOf('id="panel-build"'));
+  assert.match(run, /^id="panel-run"[^>]*>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="summarybox"/);
+  const items = HTML.slice(HTML.indexOf('id="panel-items"'), HTML.indexOf('id="panel-settings"'));
+  assert.match(items, /^id="panel-items"[^>]*>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="evalbox"/);
+  ["eval-result", "price-result", "pricebox", "valuebox", "upgradebox"].forEach((id) => {
+    assert.ok(items.includes('id="' + id + '"'), id);
   });
   // PLAY-LEGACY-OUT-1: the old strip tiles, trade card and build alert slot are gone
   ["zone", "zone-time", "level", "who", "deaths", "levelups", "session", "flags", "underlevel",
@@ -173,10 +192,11 @@ test("Play holds the regions and the guide slot; tools live in other tabs", () =
     assert.ok(!HTML.includes('data-legacy="' + g + '"'), g);
   });
   assert.ok(!HTML.includes("/web/trades.js") && !HTML.includes("/web/buildlive.js"));
-  // the character picker and the pace line moved, as they were, to Act times
+  // the character picker, the pace line and the zone guide moved, as they
+  // were, to Act times
   const at = HTML.indexOf('id="actsbox"');
   const acts = HTML.slice(at, HTML.indexOf("</section>", at));
-  ["char-pick-box", "char-pick", "pace"].forEach((id) => {
+  ["char-pick-box", "char-pick", "pace", "zone-guide"].forEach((id) => {
     assert.ok(acts.includes('id="' + id + '"'), id);
   });
 });
@@ -196,11 +216,13 @@ test("Play is 7 regions with no panel tab stop; the shown tab keeps its regions"
   const regions = [...play.matchAll(/<section id="play-([a-z])" class="region" data-region="([a-z])"/g)];
   assert.deepEqual(regions.map((m) => m[1]), ["g", "c", "t", "n", "b", "i", "u"]);
   regions.forEach((m) => assert.equal(m[1], m[2]));
-  // the slot tabs.js fills stays inside Play, in its region's legacy group
-  ["zone-guide"].forEach((id) => {
-    const at = play.indexOf('id="' + id + '"');
-    assert.ok(at > 0, id);
-    assert.ok(play.lastIndexOf("data-legacy=", at) > play.lastIndexOf('<section id="play-', at), id);
+  // each region is its heading and one slot, nothing else
+  const sections = play.split('<section id="play-').slice(1);
+  assert.equal(sections.length, 7);
+  sections.forEach((sec) => {
+    const body = sec.slice(0, sec.indexOf("</section>"));
+    assert.equal((body.match(/<(div|section|p|ul) /g) || []).length, 1, body);
+    assert.match(body, /<div class="slot" data-slot="[a-z]"><\/div>/);
   });
 });
 
@@ -244,7 +266,7 @@ test("grace: a recent click in the shown tab holds it; the header line says the 
 });
 
 test("a filled slot node carries its own words, not only an edge", () => {
-  const at = HTML.indexOf('class="zone-guide-box"');
+  const at = HTML.indexOf('<div id="zone-guide"');
   const before = HTML.slice(at - 400, at);
   assert.match(web.source("tabs.js"), /must\s+carry its own words/);
   assert.ok(before.includes("ALTabs.fill"), before);
@@ -255,10 +277,11 @@ test("a filled slot node carries its own words, not only an edge", () => {
 test("news: a new trade id or new build alert words, never on the first push", () => {
   const seen = regions.seen;
   const news = regions.news;
-  assert.deepEqual(seen({}), { trades: [], alert: "" });
-  assert.deepEqual(seen(null), { trades: [], alert: "" });
+  assert.deepEqual(seen({}), { check: "", trades: [], alert: "" });
+  assert.deepEqual(seen(null), { check: "", trades: [], alert: "" });
   assert.deepEqual(seen({ trade_requests: [{ id: 3, from: "A" }, null, { id: "x" }],
-    build_alert: { kind: "stale", text: "Old build." } }), { trades: ["3", "x"], alert: "Old build." });
+    build_alert: { kind: "stale", text: "Old build." } }),
+  { check: "", trades: ["3", "x"], alert: "Old build." });
   assert.equal(seen({ build_alert: { text: 5 } }).alert, "");
   const one = seen({ trade_requests: [{ id: 1 }] });
   const two = seen({ trade_requests: [{ id: 1 }, { id: 2 }] });
@@ -274,6 +297,40 @@ test("news: a new trade id or new build alert words, never on the first push", (
   assert.equal(news(alertA, one), "", "a cleared alert is no news");
   const both = seen({ trade_requests: [{ id: 1 }, { id: 9 }], build_alert: { text: "Old build." } });
   assert.equal(news(one, both), "trade request and build alert");
+});
+
+test("news: a new item check (PLAY-LEGACY-OUT-2 moved it from app.js to the hook)", () => {
+  const seen = regions.seen;
+  const news = regions.news;
+  assert.equal(seen({ eval: { id: 7 } }).check, "7");
+  assert.equal(seen({ eval: { id: "a1" } }).check, "a1");
+  assert.equal(seen({ eval: { id: null } }).check, "");
+  assert.equal(seen({ eval: "x" }).check, "");
+  const none = seen({});
+  const a = seen({ eval: { id: "a" } });
+  const b = seen({ eval: { id: "b" } });
+  assert.equal(news(null, a), "", "a check already there at the first push is the baseline");
+  assert.equal(news(none, a), "item check");
+  assert.equal(news(a, a), "", "the same check pushed again is no news");
+  assert.equal(news(a, b), "item check");
+  assert.equal(news(a, none), "", "a cleared check is no news");
+  const all = seen({ eval: { id: "c" }, trade_requests: [{ id: 2 }], build_alert: { text: "Old." } });
+  assert.equal(news(none, all), "item check, trade request and build alert");
+  const two = seen({ eval: { id: "c" }, trade_requests: [{ id: 2 }] });
+  assert.equal(news(none, two), "item check and trade request");
+});
+
+test("the hook shows Play for a new item check after the first push", () => {
+  const reg = regions.create({ warn: () => {} });
+  const told = [];
+  const doc = { querySelectorAll: () => [] };
+  reg.start(doc, { tabs: { notify: (d, what) => told.push(what) } });
+  reg.paint(doc, { eval: { id: 1 } }, 0);
+  assert.deepEqual(told, [], "baseline");
+  reg.paint(doc, { eval: { id: 1 } }, 0);
+  assert.deepEqual(told, []);
+  reg.paint(doc, { eval: { id: 2 } }, 0);
+  assert.deepEqual(told, ["item check"]);
 });
 
 test("the hook tells the tabs once per push, after the painters", () => {
@@ -320,8 +377,9 @@ test("the hook marks Play new while another tab is in use, else shows Play", () 
   t.setClock(() => Date.now());
 });
 
-test("no other dashboard file tells the tabs about trades or build alerts", () => {
+test("no other dashboard file tells the tabs about checks, trades or build alerts", () => {
   const app = web.source("app.js");
+  assert.doesNotMatch(app, /\.notify\(/);
   assert.doesNotMatch(app, /notify\(document, "trade request"\)|notify\(document, "build alert"\)/);
   assert.doesNotMatch(app, /ALTrades|ALBuildLive|renderTrades|dismissTrade/);
   assert.match(web.source("regions.js"), /tabs\.notify\(doc, what\)/);

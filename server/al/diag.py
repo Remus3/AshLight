@@ -42,7 +42,11 @@ FIX_RUN = words.next_step("stalled")
 FIX_CONTACT = r'Add your contact as "contact" in config\local.json.'
 FIX_NET = ("Check this computer's internet connection. AshLight tries again "
            "by itself.")
-FIX_CALC = r"Run scripts\setup.ps1 -TcCalc to install it again."
+# TC-CALC-OPTIN (F-132): one run of the switch installs the calc and turns
+# it on (tools/tc_pin.py writes "tc_calc"); no second edit of the config.
+CALC_STEP = r"scripts\setup.ps1 -TcCalc"
+FIX_CALC = (f"Run {CALC_STEP}. That one step installs the calc again and "
+            "turns it on.")
 FIX_SNAPSHOT = r"Run scripts\build.ps1 -Snapshot to fetch it."
 FIX_HOTKEY = ("Another app holds the shortcut. Set a different item check key in "
               r"AshLight's settings file, then run scripts\run.ps1.")
@@ -170,7 +174,8 @@ def check_prices(f, now):
 def check_calc(f):
     if not f.get("calc_on"):
         return _check("calc", "Calc component", OFF,
-                      "Off. Item checks use your stat weights.")
+                      "Off. Item checks use your stat weights. To use the calc, "
+                      f"run {CALC_STEP}.")
     st = f.get("calc_status")
     if not isinstance(st, dict):
         return _check("calc", "Calc component", UNKNOWN, "Not checked yet.")
