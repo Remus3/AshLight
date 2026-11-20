@@ -97,3 +97,19 @@ empty when unsure, never cut from `objective`; the view publishes it as
 `line`. A short that is not ASCII text or is over 34 characters makes the
 file malformed: `load` returns {} and a hot reload keeps the last good
 guide with a Checks note.
+
+## Amendment 2026-11-19 (DATA-GUIDE-MERGE, F-122, OPEN-42)
+
+- One authored zone file: the zone notes of decision 0030 point 3 moved
+  into `zone_guide.json`. A zone note became its entry's `layout` where
+  the entry had none (59 zones), and was dropped where the entry already
+  had a layout tendency (6 zones); every changed entry carries its own
+  `src` / `checked` pair, the one the note had (F-097). The notes file,
+  `server/al/zonenotes.py` and the snapshot key `zone_note` are removed;
+  the guide's act defaults stay.
+- One level-gap rule (point 4 amended): `advice(level, zone_level, gap)`
+  leans "clear" when the zone is at least `gap` levels above the player,
+  where `gap` is the player's "underlevel_gap" setting (default 3, the
+  same threshold as the under-level line, server/al/underlevel.py). The
+  old fixed rule (more than 2 levels under) equals the default. The
+  "push" band is unchanged.

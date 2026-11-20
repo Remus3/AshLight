@@ -17,7 +17,9 @@
      gets the window (OVL-SECOND-DISPLAY);
    - the companion comes back on its own (shown inactive, never focused)
      when the log wakes only while it sits wholly on a display other than
-     the overlay's (OVL-WAKE-COMPANION, wakeAction). */
+     the overlay's (OVL-WAKE-COMPANION, wakeAction);
+   - a --client --tray start (the logon task) opens tray-only: no window
+     until the player asks for one (REL-AUTOSTART-TRAY, wantsTray). */
 
 const fs = require("fs");
 const path = require("path");
@@ -26,6 +28,7 @@ const HEX_TOKEN = /^[0-9a-fA-F]{16,256}$/;
 const DEFAULT_SIZE = { width: 1280, height: 860 };
 const MIN_SIZE = { width: 560, height: 420 };
 const CLIENT_FLAG = "--client";
+const TRAY_FLAG = "--tray";
 const HOSTS_FILE = path.join(__dirname, "..", "..", "config", "link_hosts.json");
 const RATE = { gapMs: 1000, windowMs: 60000, perWindow: 5 };
 const DOWNLOAD_EXT = [".build", ".filter", ".json", ".txt"];
@@ -119,6 +122,15 @@ function routeFor(url, port, isPopup, ctx) {
 /* Is --client among these command-line args? */
 function wantsClient(argv) {
   return Array.isArray(argv) && argv.some((a) => String(a).toLowerCase() === CLIENT_FLAG);
+}
+
+/* REL-AUTOSTART-TRAY (decision 0041 amendment 2026-11-18): is this a
+   tray-only client start (--client together with --tray, the opt-in logon
+   task through scripts\run.ps1 -Autostart)? The first open then builds the
+   tray and connects the core but makes no companion window; --tray alone
+   (no --client) is not a client start at all. */
+function wantsTray(argv) {
+  return wantsClient(argv) && argv.some((a) => String(a).toLowerCase() === TRAY_FLAG);
 }
 
 function intersects(a, b) {
@@ -293,6 +305,7 @@ function makeHealthCheck(http, port, getToken) {
 
 module.exports = { dashboardUrl, isCoreUrl, isExternalUrl, externalHref, routeFor,
                    rateAllows, noteOpened, readHosts, downloadAllowed, wantsClient,
+                   wantsTray, TRAY_FLAG,
                    windowBounds, wakeAction, stateDoc, safeFileName, waitFor, makeHealthCheck,
                    coreOrigin, CLIENT_FLAG, DEFAULT_SIZE, MIN_SIZE, LINK_HOSTS, HOSTS_FILE,
                    RATE, DOWNLOAD_EXT, WAKE_EDGE_PX, loadPrefs, savePrefs, PREFS_FILE };

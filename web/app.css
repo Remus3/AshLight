@@ -155,14 +155,22 @@ main {
 }
 .card h2 { font-size: 1rem; margin: 0 0 8px; }
 
+/* F-159: the bare button is quiet (text colour, no fill, the control
+   edge); button.primary is the one filled style, used once, by the setup
+   card's consent button (web/setupcard.js). Colour is for that one act. */
 button {
   font: inherit;
-  color: var(--fk-surface);
-  background: var(--fk-accent);
-  border: 1px solid var(--fk-accent);
+  color: var(--fk-text);
+  background: transparent;
+  border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
   border-radius: 6px;
   padding: 8px 14px;
   cursor: pointer;
+}
+button.primary {
+  color: var(--fk-surface);
+  background: var(--fk-accent);
+  border-color: var(--fk-accent);
 }
 button:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 button.link {

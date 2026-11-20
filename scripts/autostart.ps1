@@ -7,8 +7,10 @@
   (trigger: at this user's logon, 30 s delay; run level Limited, no admin
   rights) whose action runs pythonw.exe -m server.al.autostart_entry from
   the checkout root (REL-AUTOSTART-ENTRY). pythonw has no console, and the
-  entry point starts scripts\run.ps1 -NoBrowser -Autostart with no window
-  (no console flash). The opt-in is recorded in the gitignored
+  entry point starts scripts\run.ps1 -Autostart with no window (no console
+  flash), which starts the desktop client tray-only (--client --tray: tray
+  and overlay, no companion window; REL-AUTOSTART-TRAY) when it is
+  installed, else the core alone. The opt-in is recorded in the gitignored
   ops\runtime\autostart.json; the entry point and run.ps1 -Autostart both
   honour it (a task left behind after -Disable is a no-op).
   -Disable removes the task and records the opt-out. -Status prints both.
@@ -49,7 +51,7 @@ $Repo = Split-Path -Parent $PSScriptRoot
 $TaskName = 'AshLight Autostart'
 $TaskPath = (Get-AlShellPlaces).TaskPath
 $Delay = 'PT30S'
-$Description = 'AshLight: start the local core at logon (opt-in; scripts\autostart.ps1 -Disable removes it).'
+$Description = 'AshLight: start AshLight in the tray at logon (opt-in; scripts\autostart.ps1 -Disable removes it).'
 $UserId = $env:USERNAME
 if ($env:USERDOMAIN) { $UserId = $env:USERDOMAIN + '\' + $env:USERNAME }
 
@@ -91,7 +93,9 @@ function Get-AlDefinition {
         arguments         = [string]$taskAction.arguments
         working_directory = [string]$taskAction.working_directory
         launcher          = [string]$taskAction.launcher
-        run_ps1_args      = @('-NoBrowser', '-Autostart')
+        run_ps1_args      = @('-Autostart')
+        client_args       = @('--client', '--tray')
+        logon_start       = 'tray client (core only without the client)'
         window            = $window
         optin_file        = $OptinFile
     }

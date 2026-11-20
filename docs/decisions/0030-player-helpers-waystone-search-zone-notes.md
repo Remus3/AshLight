@@ -35,7 +35,8 @@ UTIL-WAYSTONE, UTIL-SEARCHSTR, UX-ZONE-NOTES.
    (`server/al/data/zone_notes.json`), keyed by act and zone name, with an
    act default so every campaign area id has a note. Shown in the
    dashboard act card on zone entry; no wiki or poe2db prose (decision
-   0009). Notes are general guidance and not yet checked in play.
+   0009). Notes are general guidance with a source and a check date
+   each; superseded by the one guide file (Amendment 2026-11-19).
 
 ## Amendment 2026-11-17 (AREA-UTIL batch 6, research 0025)
 
@@ -47,6 +48,24 @@ UTIL-WAYSTONE, UTIL-SEARCHSTR, UX-ZONE-NOTES.
 - The 250-character search limit is GGG's own since PoE2 0.5.0 (patch
   notes), no longer "reported".
 - Three Act 2 zone-note names were corrected to the snapshot area names.
+
+## Amendment 2026-11-19 (DATA-GUIDE-MERGE, F-122, OPEN-42)
+
+- Point 3 is superseded: the zone notes were folded into the one guide
+  file, `server/al/data/zone_guide.json` (decision 0043, amendment
+  2026-11-19). Each campaign zone note became its guide entry's `layout`
+  where that was empty; where the guide already had a layout tendency,
+  the note was dropped. `server/al/zonenotes.py`,
+  `server/al/data/zone_notes.json` and the snapshot key `zone_note` are
+  gone; the dashboard and Play tab read the guide only.
+- The sentence "Notes are general guidance and not yet checked in play"
+  is replaced: every moved note carries its own source and check date
+  (`src` / `checked`, F-097; `tools/provenance.py` lists them, and the
+  re-verify list before the 1.0 launch names them). They are AshLight's
+  general guidance, checked against the snapshot area names, not in play.
+- The act defaults of the notes file are not carried: the guide's own act
+  defaults (Acts 1-4, Interludes) stand, and Cruel acts get no default
+  until the guide has an entry for them.
 
 ## Alternatives
 

@@ -32,7 +32,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import hello, hotreload, jsonfile, paths, ports
+from . import exitrecord, hello, hotreload, jsonfile, paths, ports
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -293,6 +293,10 @@ class Keepalive:
             self.blocked = False
             if now - hb["updated"] > self.stale_s and not self._health():
                 ok = self._terminate(hb["pid"])
+                if ok:  # OBS-CRASH: the killed core cannot write its own record
+                    exitrecord.write(self.runtime, exitrecord.SUPERVISOR_KILL,
+                                     f"heartbeat {now - hb['updated']:.0f} s old",
+                                     now=now, pid=hb["pid"])
                 return self._crashed(now, f"core hung (pid {hb['pid']}, heartbeat "
                                      f"{now - hb['updated']:.0f} s old, "
                                      f"terminated={bool(ok)})")
