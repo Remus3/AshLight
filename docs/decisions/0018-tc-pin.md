@@ -122,3 +122,13 @@ hotkey-read item text).
   local build.
 - The pin moves: only by a commit with the bridge tests green (decision
   0004 item 3), re-recording the values above.
+
+## Amendment 2026-11-19 (DEP-16, decision 0065)
+
+Item 6 wording: "which still fetches nothing from GitHub" now reads
+"which fetches no component from GitHub". The running core makes one
+GitHub read: the daily `releases/latest` check of the project's own
+repository (decision 0065), inside the web-data opt-in and only after
+the player has acknowledged the wording that names it. That read never
+downloads PoB, LuaJIT or any runtime; component and runtime fetches stay
+in setup and in the installer's own process (plan 05 design point 13).

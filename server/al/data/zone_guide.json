@@ -4,6 +4,8 @@
  "acts": {
   "G1": {
    "default": "Act 1: push north through the woods to Ogham Manor and its count.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "zones": {
     "The Riverbank": {
      "objective": "Beat the swollen miller boss at the far end of the river.",
@@ -147,6 +149,8 @@
   },
   "G2": {
    "default": "Act 2: travel by caravan; the map marks the next quest zone.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "zones": {
     "Vastiri Outskirts": {
      "objective": "Beat Rathbreaker and reach the caravan.",
@@ -265,6 +269,8 @@
   },
   "G3": {
    "default": "Act 3: jungle and Vaal ruins; clear toward Utzaal and the act boss.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "zones": {
     "Sandswept Marsh": {
      "objective": "Walk on to the Ziggurat Encampment.",
@@ -384,6 +390,8 @@
   },
   "G4": {
    "default": "Act 4: sail from Kingsmarch to the islands in any order.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "any_order": true,
    "zones": {
     "Kingsmarch": {
@@ -497,6 +505,8 @@
   },
   "P1": {
    "default": "Interlude 1: from the Refuge to Holten Estate.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "zones": {
     "The Refuge": {
      "objective": "Town: leave for the Scorched Farmlands.",
@@ -535,6 +545,8 @@
   },
   "P2": {
    "default": "Interlude 2: from the Khari Bazaar to Qimah Reservoir.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "zones": {
     "The Khari Bazaar": {
      "objective": "Town: any exit leads to the Khari Crossing.",
@@ -583,6 +595,8 @@
   },
   "P3": {
    "default": "Interlude 3: from the Glade up to the Cuachic Vault.",
+   "src": "research:0034",
+   "checked": "2026-11-17",
    "zones": {
     "The Glade": {
      "objective": "Town: leave for the Ashen Forest.",
@@ -638,6 +652,8 @@
  },
  "endgame": {
   "objective": "Kill the map boss to complete the map; the other rares are optional.",
-  "layout": "Layouts are random: read the map's mods before you go in."
+  "layout": "Layouts are random: read the map's mods before you go in.",
+  "src": "research:0034",
+  "checked": "2026-11-17"
  }
 }

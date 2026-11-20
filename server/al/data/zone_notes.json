@@ -1,6 +1,40 @@
 {
  "about": "UX-ZONE-NOTES (decision 0030): AshLight-written levelling notes, one per campaign zone, keyed by act key and zone name as the log names it. Own words only: no wiki or poe2db prose (decision 0009). General guidance, not yet checked in play.",
  "version": 1,
+ "provenance": {
+  "G1": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "G2": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "G3": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "G4": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "P1": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "P2": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "P3": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  },
+  "C": {
+   "src": "research:0025",
+   "checked": "2026-11-17"
+  }
+ },
  "acts": {
   "G1": {
    "default": "Act 1: follow the road north and clear toward the act boss; keep your resistances in mind.",

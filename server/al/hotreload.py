@@ -8,7 +8,11 @@ never an OS file-change API, stat calls only):
   snapshot). get() stats the file and re-reads it only when its (mtime,
   size) moved. A file that fails to parse keeps the LAST GOOD value and
   sets `error`, a one-line health note; a removed file reads as the
-  default (as the old per-module caches did). Every Watched joins the
+  default (as the old per-module caches did). A read that hits an OSError
+  (a lock, a share violation) is tried 3 times and, if still failing,
+  leaves the signature unmoved so the next poll tries again; a bad content
+  is not re-read until the file moves; a stat error other than "missing"
+  keeps the last good value with a note. Every Watched joins the
   module REGISTRY (weakly), whose poll() the core runs on its 0.5 s tick
   and whose notes() the Checks card shows.
 
@@ -107,10 +111,17 @@ def load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+RETRY_TRIES = 3          # reads of one changed file on an OSError
+RETRY_GAP_S = 0.05       # pause between those reads (at most 0.1 s)
+
+
 def _stat_sig(path):
+    """(mtime_ns, size), or None when the file is missing. Any other stat
+    error (a denied or locked path) raises OSError: that is not a removed
+    file, so the caller keeps its last good copy."""
     try:
         st = os.stat(path)
-    except OSError:
+    except (FileNotFoundError, NotADirectoryError):
         return None
     return (st.st_mtime_ns, st.st_size)
 
@@ -129,30 +140,72 @@ class Watched:
         self.error = None
         self.loads = 0           # successful (re)loads, for tests and notes
         self._sig = None
+        self._stat_failed = False
+        self._held_error = None  # the note a stat error covers, restored after
+        self.retry_gap_s = RETRY_GAP_S
+        self._sleep = time.sleep
         self._value = self._default()
         self._lock = threading.RLock()
         reg = REGISTRY if registry is None else registry
         if reg is not False:
             reg.add(self)
 
-    def get(self):
-        sig = _stat_sig(self.path)
-        with self._lock:
-            if sig == self._sig:
-                return self._value
-            self._sig = sig
-            if sig is None:
-                self._value, self.error = self._default(), None
-                return self._value
+    def _note(self, text):
+        """Set the note; log it only when its text changes, so a file that
+        stays unreadable does not log on every poll."""
+        if text != self.error:
+            LOG.warning("hot reload: %s", text)
+        self.error = text
+
+    def _load(self):
+        """(value, None, False) on success, (None, reason, False) when the
+        content is bad, (None, reason, True) when every read hit an
+        OSError. Reasons are short_error text: no exception object is kept,
+        so no traceback cycle holds this Watched past its last user."""
+        reason = None
+        for attempt in range(RETRY_TRIES):
+            if attempt:
+                self._sleep(min(self.retry_gap_s, 0.1))
             try:
                 if self.check is not None:
                     self.check(self.path)
-                value = self.loader(self.path)
+                return self.loader(self.path), None, False
+            except OSError as exc:  # a transient lock or share violation
+                reason = short_error(exc)
             except Exception as exc:  # noqa: BLE001 - keep the last good copy
-                self.error = (f"{self.name} did not load ({short_error(exc)}). "
-                              f"The last good copy stays in use.")
-                LOG.warning("hot reload: %s", self.error)
+                return None, short_error(exc), False
+        return None, reason, True
+
+    def get(self):
+        try:
+            sig = _stat_sig(self.path)
+        except OSError:
+            with self._lock:
+                if not self._stat_failed:
+                    self._stat_failed = True
+                    self._held_error = self.error
+                self._note(f"{self.name} could not be checked for changes. "
+                           f"The last good copy stays in use.")
                 return self._value
+        with self._lock:
+            if self._stat_failed:
+                self._stat_failed = False
+                self.error, self._held_error = self._held_error, None
+            if sig == self._sig:
+                return self._value
+            if sig is None:
+                self._sig = sig
+                self._value, self.error = self._default(), None
+                return self._value
+            value, reason, transient = self._load()
+            if reason is not None:
+                if not transient:
+                    self._sig = sig      # bad content: no re-read until it moves
+                # transient: the signature stays old, so the next poll retries
+                self._note(f"{self.name} did not load ({reason}). "
+                           f"The last good copy stays in use.")
+                return self._value
+            self._sig = sig
             self._value, self.error = value, None
             self.loads += 1
         if self.on_change is not None and self.loads > 1:

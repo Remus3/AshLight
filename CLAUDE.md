@@ -1014,3 +1014,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   registration, PoB relicenses or a Source line proves wrong in play,
   poe2db objects to deep links or leaves config/link_hosts.json, or the
   operator asks for drop_level.
+- Updates: one read of the project's releases/latest per 24 h inside the
+  web-data opt-in; verified by size, SHA-256 against SHA256SUMS and the API
+  digest; staged, applied at the next client start after a 24 h hold, rolled
+  back by itself; a Settings switch gives click-only; the attestation is
+  verified by CI and people, not by the installed updater (decision 0065,
+  amends decision 0013 and decision 0018 item 6). Reverses if: GitHub or GGG
+  terms bar the daily read, a bad release auto-applies in practice, the
+  operator wants click-only, or a stdlib-verifiable signature becomes
+  available.
