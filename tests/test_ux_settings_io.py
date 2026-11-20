@@ -17,6 +17,7 @@ FULL = {"character": "Ash", "poll_ms": 300, "overlay_toggle": "Alt+Shift+A",
         "eval_hotkey": "Alt+Shift+E", "league": "Standard", "web_data": True,
         "tc_calc": False, "underlevel_gap": 4, "run_history": False,
         "price_watch_pct": 30, "boots_speed_level": 20, "worn_gear": False,
+        "wear_hotkey": "Ctrl+Shift+F7",
         "overlay": {"display": "primary", "corner": "top-left", "scale": 1.2,
                     "opacity": 0.95, "margin": 20,
                     # OVL-OVERLAY-KEYS: the new keys round trip too
@@ -82,10 +83,31 @@ def test_unknown_and_secret_keys_are_not_applied():
     {"kind": settingsio.KIND, "schema": 1, "settings": {"overlay": {"evil": 1}}},
     {"kind": settingsio.KIND, "schema": 1, "settings": {"eval_hotkey": "Alt+\n;rm"}},
     {"kind": settingsio.KIND, "schema": 1, "settings": {"league": "x" * 65}},
+    {"kind": settingsio.KIND, "schema": 1, "settings": {"wear_hotkey": "Ctrl+C"}},
+    {"kind": settingsio.KIND, "schema": 1, "settings": {"wear_hotkey": "W"}},
 ])
 def test_bad_files_refused(doc):
     with pytest.raises(settingsio.SettingsError):
         settingsio.parse_import(doc, {})
+
+
+def test_wear_hotkey_validated_by_the_hotkey_rule():
+    """TC-WORN-KEY: the optional wear key goes through settingsio._hotkey
+    (Ctrl or Alt held, never a game key), stored canonical; it has no
+    default, so an export without it leaves it out."""
+    assert settingsio.ALLOWED["wear_hotkey"] is settingsio._hotkey
+    assert settingsio.LABELS["wear_hotkey"] == "wear item hotkey"
+    doc = {"kind": settingsio.KIND, "schema": 1, "settings": {"wear_hotkey": "ctrl+shift+f7"}}
+    update, _ = settingsio.parse_import(doc, {})
+    assert update == {"wear_hotkey": "Ctrl+Shift+F7"}
+    for bad in ("Ctrl+C", "W", "Shift+W", "", 7, None):
+        with pytest.raises(settingsio.SettingsError):
+            settingsio._hotkey(bad)
+    bad = {"kind": settingsio.KIND, "schema": 1, "settings": {"wear_hotkey": "Ctrl+V"}}
+    with pytest.raises(settingsio.SettingsError, match="wear item hotkey"):
+        settingsio.parse_import(bad, {})
+    assert "wear_hotkey" not in settingsio.export_doc({"league": "L"}, "v")["settings"]
+    assert "wear_hotkey" not in settingsio.export_doc({"wear_hotkey": "Ctrl+C"}, "v")["settings"]
 
 
 def _post(port, path, body, token="f" * 48, ctype="application/json"):
