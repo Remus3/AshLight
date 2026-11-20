@@ -21,6 +21,10 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0063: Installed-copy runtimes and launch (plan 05 D2, ruling Q-20; amends
+  0002, 0010, 0041 point 8; holds the licence record for fetching CPython
+  and Electron) (docs/decisions/0063-installed-runtimes.md)
+  (REL-RUNTIME-PINS).
 - 0062: Changelog (plan 05 D7) (docs/decisions/0062-changelog.md)
   (DEP-04).
 - 0061: Electron shell guards (docs/decisions/0061-electron-shell-guards.md)
