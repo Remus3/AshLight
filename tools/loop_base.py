@@ -51,7 +51,13 @@ NOTE_STAMP = "%Y-%m-%d-%H%M"  # the fleet's dashed note stamp (kit batch_note)
 GATE_CACHE_REL = CONTROL_REL / "gate_verdicts.json"
 GATE_CACHE_MAX = 200
 RED_TTL_S = 2 * 3600
-INFRA_RX = re.compile(r"SUITE-GATE:|TimeoutExpired|OSError|SubprocessError|fail closed")
+# TEST-GATE-CALLERS: a traceback frame in the kit suite gate itself is an
+# infrastructure crash: the gate command is retried once and never cached red.
+KIT_CRASH_PAT = r'File "[^"\n]*fleet_suite_gate\.py", line \d+'
+KIT_CRASH_RX = re.compile(KIT_CRASH_PAT)
+GATE_RETRY = "gate retry:"
+INFRA_RX = re.compile(r"SUITE-GATE:|TimeoutExpired|OSError|SubprocessError|fail closed|"
+                      + KIT_CRASH_PAT)
 # Responder diet (operator 2026-10-05) + kit v8 item 14: an ORDER / FIX /
 # RULING note escalates to a lane work item (a lane does the work, the loop
 # answers after merge); any other note is classified for free and only what
