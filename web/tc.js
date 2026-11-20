@@ -309,7 +309,7 @@
         : pob ? "Not counted (the mod has no number): " + labels + "."
         : cached ? "Not counted (Path of Building has not measured these for this build yet): " +
           labels + "."
-        : "Not counted (no weight yet): " + labels + ". Add a weight under Stat weights (Items and prices tab) to count them."
+        : "Not counted (no weight yet): " + labels + ". Add a weight under Stat weights (Build and items tab) to count them."
     };
   }
 

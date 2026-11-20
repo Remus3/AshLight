@@ -10,9 +10,12 @@
    news hook of web/regions.js), unless the player is working in another
    tab (focus inside it); then the Play tab carries a "new" word instead.
    Nothing moves focus and nothing animates (design 0001 rule 3).
+   PLAY-TD-19B-FOUR-TABS (TD-19, F-067): four tabs, Play, Build and items,
+   Run, Settings; Items and prices merged into Build and items, and a
+   remembered "items" opens Build and items (then "build" is remembered).
    The slot other code fills: fill(doc, "zone-guide", node), the zone
-   guide in the Run and history tab's Act times card (PLAY-LEGACY-OUT-2
-   moved it off Play); see the comment in web/index.html.
+   guide in the Run tab's Act times card (PLAY-LEGACY-OUT-2 moved it off
+   Play); see the comment in web/index.html.
    UMD: CommonJS for node --test (app/test/tabs.test.js), window.ALTabs
    for the page. No timers, no network. */
 (function (root, factory) {
@@ -38,14 +41,21 @@
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var TABS = ["play", "run", "build", "items", "settings"];
+  var TABS = ["play", "build", "run", "settings"];
   var PRIMARY = "play";
   var STORE_KEY = "ashlight.tab";
   var SLOTS = ["zone-guide"];
   var GRACE_MS = 10000; // a click, key or scroll in the shown tab holds it
+  /* retired tab ids -> the tab that now holds their cards */
+  var MOVED = { items: "build" };
 
-  /* A stored value -> a known tab id (anything else gives Play). */
+  /* A stored value -> a known tab id (anything else gives Play). A retired
+     id gives the tab its cards moved to; show() then stores that id, so
+     the old value is mapped once. */
   function pick(stored) {
+    if (typeof stored === "string" && Object.prototype.hasOwnProperty.call(MOVED, stored)) {
+      return MOVED[stored];
+    }
     return TABS.indexOf(stored) >= 0 ? stored : PRIMARY;
   }
 
