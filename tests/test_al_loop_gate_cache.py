@@ -141,6 +141,76 @@ def test_infrastructure_red_is_never_cached(tmp_path):
         assert len(gates.calls) == 2, detail
 
 
+KIT_TRACEBACK = (
+    "Traceback (most recent call last):\n"
+    '  File "/tree/ops/fleet_kit/fleet_suite_gate.py", line 812, in <module>\n'
+    "    sys.exit(main())\n"
+    '  File "/tree/ops/fleet_kit/fleet_suite_gate.py", line 640, in run\n'
+    "    slot = _admit(owner)\n"
+    "KeyError: 'slots'\n")
+
+
+def _gates_with(root, tmp_path, outcomes):
+    """A gates.txt with the whole-suite runner and a fake gate whose runs
+    exit as `outcomes` says ("crash" = the kit traceback on stderr, rc 1;
+    "red" = a plain failing pytest tail, rc 1; "green" = rc 0)."""
+    gates_txt = root / al_loop.GATES_REL
+    gates_txt.parent.mkdir(parents=True, exist_ok=True)
+    gates_txt.write_text("python tools/suite_run.py\n", newline="\n")
+    scripts = {}
+    for kind, body in (("crash", "sys.stderr.write(%r)\nsys.exit(1)\n" % KIT_TRACEBACK),
+                       ("red", "sys.stdout.write('1 failed in 1s\\n')\nsys.exit(1)\n"),
+                       ("green", "sys.exit(0)\n")):
+        scripts[kind] = tmp_path / f"fake_{kind}.py"
+        scripts[kind].write_text("import sys\n" + body, newline="\n")
+    seen = []
+
+    def run(argv, cwd):  # the real _run_gate on a fake gate process
+        assert "fleet_suite_gate.py" in argv[1] and argv[-1] == "tools/suite_run.py"
+        kind = outcomes[min(len(seen), len(outcomes) - 1)]
+        seen.append(kind)
+        return al_loop._run_gate([sys.executable, str(scripts[kind])], cwd)
+    return seen, (lambda cwd: al_loop._gates(cwd, run=run))
+
+
+def test_kit_traceback_is_retried_once_and_never_cached_red(tmp_path):
+    root = repo(tmp_path)
+    seen, gates = _gates_with(root, tmp_path, ["crash"])
+    t = al_loop.Tick(L.deps(root, git=L.real_git, gates=gates))
+    ok, detail = t.gate(root)
+    assert not ok and len(seen) == 2, seen  # one retry, then the red stands
+    assert al_loop.INFRA_RX.search(detail)
+    assert not (root / al_loop.GATE_CACHE_REL).exists() or \
+        not json.loads((root / al_loop.GATE_CACHE_REL).read_text())["trees"]
+    retries = [s for s in t.log if al_loop.GATE_RETRY in s]
+    assert len(retries) == 1 and "kit traceback" in retries[0]
+    assert not t.gate(root)[0] and len(seen) == 4  # not cached: runs again
+    assert len([s for s in t.log if al_loop.GATE_RETRY in s]) == 2  # every retry logged
+
+
+def test_kit_traceback_then_green_is_green_and_logged(tmp_path):
+    root = repo(tmp_path)
+    seen, gates = _gates_with(root, tmp_path, ["crash", "green"])
+    t = al_loop.Tick(L.deps(root, git=L.real_git, gates=gates))
+    ok, detail = t.gate(root)
+    assert ok and seen == ["crash", "green"] and "gates green" in detail
+    assert len([s for s in t.log if al_loop.GATE_RETRY in s]) == 1
+    assert t.gate(root)[0] and len(seen) == 2  # the green is cached
+
+
+def test_plain_red_is_not_retried_and_kit_crash_then_red_is_cached(tmp_path):
+    root = repo(tmp_path)
+    seen, gates = _gates_with(root, tmp_path, ["red"])
+    t = al_loop.Tick(L.deps(root, git=L.real_git, gates=gates))
+    assert not t.gate(root)[0] and seen == ["red"]
+    assert not any(al_loop.GATE_RETRY in s for s in t.log)
+    root2 = repo(tmp_path / "two")
+    seen2, gates2 = _gates_with(root2, tmp_path / "two", ["crash", "red"])
+    t2 = al_loop.Tick(L.deps(root2, git=L.real_git, gates=gates2))
+    assert not t2.gate(root2)[0] and seen2 == ["crash", "red"]
+    assert not t2.gate(root2)[0] and len(seen2) == 2  # a real red after the retry is cached
+
+
 def test_no_tree_key_runs_uncached(tmp_path):
     root = L.make_root(tmp_path, roadmap="", handoff="")  # not a git repo
     gates = Counter()

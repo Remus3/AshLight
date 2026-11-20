@@ -22,7 +22,6 @@
 <script src="/web/status.js" defer></script>
 <script src="/web/tc.js" defer></script>
 <script src="/web/prices.js" defer></script>
-<script src="/web/trades.js" defer></script>
 <script src="/web/acts.js" defer></script>
 <script src="/web/runs.js" defer></script>
 <script src="/web/summary.js" defer></script>
@@ -38,7 +37,6 @@
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
-<script src="/web/buildlive.js" defer></script>
 <script src="/web/slots.js" defer></script>
 <script src="/web/regions.js" defer></script>
 <script src="/web/pager.js" defer></script>
@@ -61,7 +59,8 @@
   <!-- UI-GLANCE: a few tabs instead of one long column; Play is the glance
        tab and fits one screen. web/tabs.js: remembered per viewer, arrow
        keys move between tabs, a new item card, trade or build alert shows
-       Play again by itself. -->
+       Play again by itself (trades and build alerts: the news hook of
+       web/regions.js). -->
   <div id="tabs" class="tabs" role="tablist" aria-label="Dashboard sections">
     <button id="tab-play" class="tab" type="button" role="tab" aria-selected="true"
       aria-controls="panel-play" tabindex="0">Play <span class="tab-mark" hidden></span></button>
@@ -102,40 +101,6 @@
   <section id="play-g" class="region" data-region="g" aria-labelledby="play-g-h">
     <h2 id="play-g-h" class="region-h sr-only">At a glance</h2>
     <div class="slot" data-slot="g"></div>
-    <div class="legacy" data-legacy="g-tiles">
-      <section class="stats" aria-label="Session at a glance">
-        <div class="stat stat-zone">
-          <h2 class="label">Zone</h2>
-          <p id="zone" class="value">No zone yet</p>
-          <p class="sub"><span id="zone-time" class="mono">--:--</span>
-            <span id="hideout" class="tag" hidden>hideout</span>
-            <span id="zone-stale" class="tag" hidden>frozen - log quiet</span></p>
-        </div>
-        <div class="stat">
-          <h2 class="label">Level</h2>
-          <p id="level" class="value mono">-</p>
-          <p id="who" class="sub">character unknown</p>
-          <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region. -->
-          <p id="char-pick-box" class="sub char-pick" hidden>
-            <label for="char-pick">Show numbers for</label>
-            <select id="char-pick"></select></p>
-          <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
-          <p id="pace" class="sub" hidden></p>
-          <!-- UTIL-UNDERLEVEL: not a live region; the overlay word carries it. -->
-          <p id="underlevel" class="sub underlevel" hidden></p>
-        </div>
-        <div class="stat">
-          <h2 class="label">Deaths this session</h2>
-          <p id="deaths" class="value mono" data-count="-"><span aria-hidden="true">-</span><span class="sr-only">Not counted yet</span></p>
-          <p id="levelups" class="sub">Counts once reading starts</p>
-        </div>
-        <div class="stat">
-          <h2 class="label">Session</h2>
-          <p id="session" class="value mono">--:--</p>
-          <p id="flags" class="sub">&nbsp;</p>
-        </div>
-      </section>
-    </div>
   </section>
   <!-- C: the context (setup, error, idle, map, town, guide or none) -->
   <section id="play-c" class="region" data-region="c" aria-labelledby="play-c-h">
@@ -185,18 +150,6 @@
   <section id="play-t" class="region" data-region="t" aria-labelledby="play-t-h">
     <h2 id="play-t-h" class="region-h sr-only">Trades and events</h2>
     <div class="slot" data-slot="t"></div>
-    <div class="legacy" data-legacy="t-trades">
-      <section id="trades" class="card trades" hidden aria-labelledby="trades-title">
-        <h2 id="trades-title">Trade requests <span class="muted">(shown on the overlay)</span></h2>
-        <p class="muted">Requests clear after 10 minutes.</p>
-        <ol id="trade-list" class="trade-list"></ol>
-        <div class="actions">
-          <button id="trade-clear" type="button" class="secondary">Dismiss all</button>
-        </div>
-      </section>
-      <!-- F6: outside #trades so the live region exists before the first request -->
-      <p id="trade-status" class="muted trade-status" role="status" aria-live="polite"></p>
-    </div>
   </section>
   <!-- N: one notice -->
   <section id="play-n" class="region" data-region="n" aria-labelledby="play-n-h">
@@ -224,12 +177,6 @@
   <section id="play-b" class="region" data-region="b" aria-labelledby="play-b-h">
     <h2 id="play-b-h" class="region-h sr-only">Your build</h2>
     <div class="slot" data-slot="b"></div>
-    <div class="legacy" data-legacy="b-alert">
-      <!-- UI-GLANCE: build alert slot, empty and hidden until filled with
-           ALTabs.fill(document, "build-alert", node); a new alert shows Play.
-           Not a live region (the dashboard keeps at most 12, design N6). -->
-      <div id="build-alert" class="card build-alert" role="group" aria-labelledby="build-alert-title" hidden></div>
-    </div>
   </section>
   <!-- I: the item check -->
   <section id="play-i" class="region" data-region="i" aria-labelledby="play-i-h">
@@ -307,6 +254,13 @@
   <div class="col">
   <section id="actsbox" class="card acts" aria-labelledby="acts-title">
     <h2 id="acts-title">Act times</h2>
+    <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region.
+         PLAY-LEGACY-OUT-1: moved here from the old Level tile. -->
+    <p id="char-pick-box" class="sub char-pick" hidden>
+      <label for="char-pick">Show numbers for</label>
+      <select id="char-pick"></select></p>
+    <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
+    <p id="pace" class="sub" hidden></p>
     <p id="acts-empty" class="muted"></p>
     <table id="acts-table" class="acts-table" hidden>
       <thead><tr><th scope="col">Act</th><th scope="col">Time in act</th>
