@@ -180,3 +180,30 @@ def test_build_script_runs_snapshot_opt_out_safe():
     ps = (ROOT / "scripts" / "build.ps1").read_text(encoding="ascii")
     assert "server.al.theorycraft.snapshot" in ps
     assert "NoSnapshot" in ps and "AL_NO_SNAPSHOT" in ps
+
+
+def test_a_changed_file_keeps_one_previous_copy(tmp_path):
+    """DATA-TREE-HOLD: before a changed body replaces <name>.json the current
+    file is kept as <name>.prev.json; one copy, the older one overwritten;
+    an unchanged body leaves the previous copy alone."""
+    fake = Fake(_bodies(), etag=None)
+    t0 = 1_800_000_000
+    prev = tmp_path / "mods.prev.json"
+    snapshot.run(tmp_path, fetch=fake, sources=SRC, now=t0)
+    assert not prev.exists()  # first fetch: nothing to keep
+    v1 = _bodies()[SRC["mods"]]
+    fake.bodies[SRC["mods"]] = b'{"ExampleMod2": {}}'
+    out = snapshot.run(tmp_path, fetch=fake, sources=SRC, force=True, now=t0 + 5)
+    assert out["mods"] == "fetched" and out["stats"] == "unchanged"
+    assert prev.read_bytes() == v1
+    assert (tmp_path / "mods.json").read_bytes() == b'{"ExampleMod2": {}}'
+    assert not (tmp_path / "stats.prev.json").exists()
+    out = snapshot.run(tmp_path, fetch=fake, sources=SRC, force=True, now=t0 + 10)
+    assert out["mods"] == "unchanged" and prev.read_bytes() == v1
+    fake.bodies[SRC["mods"]] = b'{"ExampleMod3": {}}'
+    snapshot.run(tmp_path, fetch=fake, sources=SRC, force=True, now=t0 + 15)
+    assert prev.read_bytes() == b'{"ExampleMod2": {}}'  # one copy only
+    assert sorted(p.name for p in tmp_path.glob("mods*.json")) == [
+        "mods.json", "mods.prev.json"]
+    assert snapshot.previous_path(tmp_path / "skilltree.json").name == "skilltree.prev.json"
+    assert snapshot.keep_previous(tmp_path / "missing.json") is False

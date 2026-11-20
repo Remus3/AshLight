@@ -20,25 +20,35 @@ POB_COMMIT = "a" * 40
 LJ_COMMIT = "b" * 40
 
 
-def _zip(top, files):
+def _zip(top, files, compression=zipfile.ZIP_STORED, order=None):
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
+    with zipfile.ZipFile(buf, "w", compression=compression) as zf:
         zf.writestr(top + "/", "")
-        for name, data in files.items():
-            zf.writestr(f"{top}/{name}", data)
+        for name in (order or list(files)):
+            zf.writestr(f"{top}/{name}", files[name])
     return buf.getvalue()
 
 
-def _spec(repo, commit, blob, **extra):
+def _spec(repo, commit, blob, lua=False, **extra):
+    top = f"{repo.split('/')[1]}-{commit}"
+    digests = tc_pin.archive_digests(io.BytesIO(blob), top)
     spec = {
         "repo": repo, "commit": commit,
         "archive_url": f"https://github.com/{repo}/archive/{commit}.zip",
         "archive_sha256": hashlib.sha256(blob).hexdigest(),
         "archive_size": len(blob),
-        "top_dir": f"{repo.split('/')[1]}-{commit}",
+        "content_sha256": digests[tc_pin.CONTENT_KEY],
+        "top_dir": top,
     }
+    if lua:
+        spec["lua_sha256"] = digests[tc_pin.LUA_KEY]
     spec.update(extra)
     return spec
+
+
+POB_FILES = {"LICENSE.md": "MIT", "src/HeadlessWrapper.lua": "-- x",
+             "src/Modules/Calcs.lua": "-- calcs"}
+LJ_FILES = {"COPYRIGHT": "MIT", "src/msvcbuild.bat": "rem x"}
 
 
 @pytest.fixture
@@ -46,13 +56,13 @@ def world(tmp_path):
     pob_top = f"PathOfBuilding-PoE2-{POB_COMMIT}"
     lj_top = f"LuaJIT-{LJ_COMMIT}"
     blobs = {
-        "pob2": _zip(pob_top, {"LICENSE.md": "MIT", "src/HeadlessWrapper.lua": "-- x"}),
-        "luajit": _zip(lj_top, {"COPYRIGHT": "MIT", "src/msvcbuild.bat": "rem x"}),
+        "pob2": _zip(pob_top, POB_FILES),
+        "luajit": _zip(lj_top, LJ_FILES),
     }
     doc = {
         "schema": 1,
         "pob2": _spec("PathOfBuildingCommunity/PathOfBuilding-PoE2", POB_COMMIT,
-                      blobs["pob2"], tag="v0.23.1"),
+                      blobs["pob2"], lua=True, tag="v0.23.1"),
         "luajit": _spec("LuaJIT/LuaJIT", LJ_COMMIT, blobs["luajit"], version="2.1.1"),
     }
     calls = []
@@ -92,6 +102,12 @@ def test_real_pin_file_is_complete_and_well_formed():
     assert doc["pob2"]["tag"] == "v0.23.1"
     assert doc["luajit"]["version"].startswith("2.1.")
     assert tc_pin.validate_pins(doc) == []
+    # TC-CALC-VERIFY-PIN: a content digest per component, PoB's Lua digest
+    for name in tc_pin.COMPONENTS:
+        assert tc_pin._HEX64.match(doc[name]["content_sha256"])
+    assert tc_pin._HEX64.match(doc["pob2"]["lua_sha256"])
+    assert doc["pob2"]["lua_sha256"] != doc["pob2"]["content_sha256"]
+    assert "content_sha256" not in doc["toolchain"]  # a release asset: byte-strict
     text = paths.tc_pins_file().read_text(encoding="ascii")
     assert ":\\" not in text and "Users" not in text  # no absolute paths
     assert tc_pin.main(["check"]) == 0
@@ -107,6 +123,10 @@ def test_real_pin_file_is_complete_and_well_formed():
     lambda d: d["pob2"].pop("tag"),
     lambda d: d.pop("luajit"),
     lambda d: d["pob2"].__setitem__("top_dir", "../escape"),
+    lambda d: d["pob2"].pop("content_sha256"),
+    lambda d: d["pob2"].pop("lua_sha256"),
+    lambda d: d["luajit"].__setitem__("content_sha256", "0" * 63),
+    lambda d: d["luajit"].__setitem__("content_sha256", "A" * 64),
 ])
 def test_missing_or_malformed_pin_refuses(world, tmp_path, monkeypatch, mutate):
     doc = json.loads(json.dumps(world["doc"]))
@@ -123,6 +143,7 @@ def test_missing_or_malformed_pin_refuses(world, tmp_path, monkeypatch, mutate):
 def test_download_hash_mismatch_refuses_and_quarantines(world):
     doc = world["doc"]
     doc["pob2"]["archive_sha256"] = "f" * 64
+    doc["pob2"]["content_sha256"] = "e" * 64  # the contents differ too
     with pytest.raises(tc_pin.HashMismatch):
         tc_pin.run_setup(doc, environ=world["env"], fetch=world["fetch"], which=_no_compiler)
     lay = tc_pin.layout(doc, world["env"])
@@ -134,7 +155,14 @@ def test_download_hash_mismatch_refuses_and_quarantines(world):
 
 def test_oversize_download_refuses(world):
     doc = world["doc"]
+    content = doc["luajit"].pop("content_sha256")  # without one: byte-strict
     doc["luajit"]["archive_size"] -= 1
+    with pytest.raises(tc_pin.HashMismatch):
+        tc_pin.run_setup(doc, environ=world["env"], fetch=world["fetch"], which=_no_compiler)
+    assert not tc_pin.layout(doc, world["env"])["luajit_archive"].exists()
+    # with one, a body past CONTENT_SLACK x the pinned size is still cut off
+    doc["luajit"]["content_sha256"] = content
+    doc["luajit"]["archive_size"] = len(world["blobs"]["luajit"]) // (tc_pin.CONTENT_SLACK + 1)
     with pytest.raises(tc_pin.HashMismatch):
         tc_pin.run_setup(doc, environ=world["env"], fetch=world["fetch"], which=_no_compiler)
     assert not tc_pin.layout(doc, world["env"])["luajit_archive"].exists()
@@ -146,9 +174,8 @@ def test_tampered_cached_archive_refuses(world):
     tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_which_cl,
                      run=_fake_build(lay))
     lay["stamp"].unlink()  # force a re-check of the cache
-    blob = bytearray(lay["luajit_archive"].read_bytes())
-    blob[-1] ^= 0xFF
-    lay["luajit_archive"].write_bytes(bytes(blob))
+    planted = dict(LJ_FILES, **{"src/msvcbuild.bat": "rem planted"})
+    lay["luajit_archive"].write_bytes(_zip(doc["luajit"]["top_dir"], planted))
     (lay["luajit_source"] / tc_pin.MARKER).unlink()  # tree no longer vouched for
     with pytest.raises(tc_pin.HashMismatch):
         tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_which_cl,
@@ -450,6 +477,7 @@ def test_hash_mismatch_leaves_flag_as_it_was(sandbox, world):
     before = json.dumps({"contact": "c-1", "tc_calc": False}).encode("ascii")
     cfg.write_bytes(before)
     world["doc"]["pob2"]["archive_sha256"] = "f" * 64
+    world["doc"]["pob2"]["content_sha256"] = "e" * 64
     assert tc_pin.main(["setup", "--opt-in"],
                        config_writer=sandbox["writer"]) == tc_pin.RC_REFUSED
     assert sandbox["writes"] == []
@@ -507,3 +535,151 @@ def test_setup_ps1_says_the_switch_turns_the_calc_on():
     head = text.split("#>", 1)[0]
     assert "turns it on" in head and "-TcCalc" in head
     assert "unchanged" in text  # the refusal line says the setting stayed
+
+
+# --- TC-CALC-VERIFY-PIN (F-139): pin contents, not bytes ---------------------
+
+def _rezip(world, name, files):
+    """The same top dir re-packed: other compression and member order, so
+    other archive bytes and size."""
+    top = world["doc"][name]["top_dir"]
+    return _zip(top, files, compression=zipfile.ZIP_DEFLATED,
+                order=sorted(files, reverse=True))
+
+
+def test_rezipped_archive_with_identical_contents_installs(world):
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+    blob = _rezip(world, "pob2", POB_FILES)
+    assert hashlib.sha256(blob).hexdigest() != doc["pob2"]["archive_sha256"]
+    assert len(blob) != doc["pob2"]["archive_size"]
+    world["blobs"]["pob2"] = blob  # GitHub re-generated the archive
+    assert tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_which_cl,
+                            run=_fake_build(lay)) == "ready"
+    assert lay["pob2_archive"].read_bytes() == blob
+    co = lay["pob2_checkout"]
+    assert (co / "src" / "Modules" / "Calcs.lua").read_text() == "-- calcs"
+    assert tc_pin.tree_digest(co) == doc["pob2"]["content_sha256"]
+    assert tc_pin.tree_digest(co, select=tc_pin.is_lua) == doc["pob2"]["lua_sha256"]
+    marker = tc_pin.read_marker(co)
+    assert marker["archive_sha256"] == doc["pob2"]["archive_sha256"]
+    assert marker["tree_sha256"] == doc["pob2"]["content_sha256"]
+    assert tc_pin.is_noop(doc, lay)
+    # the cached re-generated archive is accepted again by its contents, no fetch
+    lay["stamp"].unlink()
+    (co / tc_pin.MARKER).unlink()
+
+    def no_net(url, max_bytes):
+        raise AssertionError("the cached archive is accepted by its contents")
+    assert tc_pin.run_setup(doc, environ=env, fetch=no_net, which=_which_cl,
+                            run=_fake_build(lay)) == "ready"
+    assert tc_pin.read_marker(co)["tree_sha256"] == doc["pob2"]["content_sha256"]
+    # a pin without a content digest (toolchain, Electron) stays byte-strict
+    strict = dict(doc["luajit"])
+    strict.pop("content_sha256")
+    other = _rezip(world, "luajit", LJ_FILES)
+    with pytest.raises(tc_pin.HashMismatch):
+        tc_pin.ensure_archive("luajit", strict, lay["luajit_cache"] / "strict.zip",
+                              fetch=lambda url, n: iter([other]))
+
+
+def test_content_digest_mismatch_refuses(world):
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+    planted = dict(POB_FILES, **{"src/HeadlessWrapper.lua": "-- planted"})
+    world["blobs"]["pob2"] = _rezip(world, "pob2", planted)
+    with pytest.raises(tc_pin.HashMismatch) as e:
+        tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler)
+    assert "contents differ" in str(e.value)
+    assert not lay["pob2_archive"].exists()
+    assert lay["pob2_archive"].with_name(lay["pob2_archive"].name + ".part.rejected").exists()
+    assert not lay["pob2_checkout"].exists() and not lay["stamp"].exists()
+    # an added file is a different content digest too
+    world["blobs"]["pob2"] = _rezip(world, "pob2", dict(POB_FILES, **{"src/x.lua": "--"}))
+    with pytest.raises(tc_pin.HashMismatch):
+        tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler)
+    # a cached archive with other contents is quarantined, not extracted
+    lay["pob2_archive"].parent.mkdir(parents=True, exist_ok=True)
+    lay["pob2_archive"].write_bytes(_rezip(world, "pob2", planted))
+    with pytest.raises(tc_pin.HashMismatch):
+        tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler)
+    assert lay["pob2_archive"].with_name(lay["pob2_archive"].name + ".rejected").exists()
+    assert not lay["pob2_checkout"].exists()
+    # the bytes match but the pinned content digest does not: the extract is
+    # refused, removed and never marked
+    world["blobs"]["pob2"] = _zip(doc["pob2"]["top_dir"], POB_FILES)
+    doc["pob2"]["content_sha256"] = "e" * 64
+    with pytest.raises(tc_pin.HashMismatch) as e:
+        tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler)
+    assert "extracted tree" in str(e.value)
+    assert not lay["pob2_checkout"].exists() and not lay["stamp"].exists()
+
+
+def test_luajit_source_is_rehashed_before_a_build(world):
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+    assert tc_pin.run_setup(doc, environ=env, fetch=world["fetch"],
+                            which=_no_compiler) == "source-only"
+    src = lay["luajit_source"] / "src"
+    (src / "msvcbuild.bat").write_text("rem planted")  # changed after extraction
+    (src / "extra.h").write_text("x")  # an added file counts too
+    seen = {}
+
+    def run(cmd, cwd=None, env=None, capture_output=None, timeout=None):
+        seen["bat"] = (Path(cwd) / "msvcbuild.bat").read_text()
+        seen["extra"] = (Path(cwd) / "extra.h").exists()
+        lay["luajit_exe"].write_bytes(b"fake")
+
+        class R:
+            returncode = 0
+        return R()
+
+    def no_net(url, max_bytes):
+        raise AssertionError("the cached archive is re-verified; no fetch")
+    assert tc_pin.run_setup(doc, environ=env, fetch=no_net, which=_which_cl,
+                            run=run) == "ready"
+    assert seen == {"bat": "rem x", "extra": False}  # built from the verified source
+    marker = tc_pin.read_marker(lay["luajit_source"])
+    assert marker["archive_sha256"] == doc["luajit"]["archive_sha256"]
+    # no build, no source re-hash: a verified luajit.exe is a no-op
+    calls = []
+    assert tc_pin.ensure_luajit(lay, which=_which_cl, run=run,
+                                source_check=lambda: calls.append(1)) == "ready"
+    assert calls == []
+
+
+def test_pob_lua_files_are_rehashed_on_a_rerun(world):
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+    tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_which_cl,
+                     run=_fake_build(lay))
+    co = lay["pob2_checkout"]
+    (co / "LICENSE.md").write_text("changed")  # not runnable Lua: no-op stays
+    assert tc_pin.is_noop(doc, lay)
+    (co / "src" / "Modules" / "Calcs.lua").write_text("-- planted")
+    assert not tc_pin.is_noop(doc, lay)
+    calls = len(world["calls"])
+    assert tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_which_cl,
+                            run=_fake_build(lay)) == "ready"
+    assert len(world["calls"]) == calls  # re-extracted from the cached archive
+    assert (co / "src" / "Modules" / "Calcs.lua").read_text() == "-- calcs"
+    assert tc_pin.is_noop(doc, lay)
+
+
+def test_archive_digests_refuse_an_unsafe_or_duplicate_member(world):
+    import warnings
+    top = world["doc"]["pob2"]["top_dir"]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(f"{top}/a.lua", "1")
+        zf.writestr("../evil.lua", "2")
+    with pytest.raises(tc_pin.UnsafeArchive):
+        tc_pin.archive_digests(io.BytesIO(buf.getvalue()), top)
+    buf = io.BytesIO()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr(f"{top}/a.lua", "1")
+            zf.writestr(f"{top}/a.lua", "2")
+    with pytest.raises(tc_pin.UnsafeArchive):
+        tc_pin.archive_digests(io.BytesIO(buf.getvalue()), top)

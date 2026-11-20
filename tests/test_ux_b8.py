@@ -82,7 +82,7 @@ def test_live_regions_stay_within_the_cap():
     assert live
     # Play's markup holds none; its live regions (verdict, trade status,
     # notice) are built by the region files, the reading word is the bar's
-    play = MAIN[MAIN.index('id="panel-play"'):MAIN.index('id="panel-run"')]
+    play = MAIN[MAIN.index('id="panel-play"'):MAIN.index('id="panel-build"')]
     assert not re.findall(r'aria-live="polite"|role="status"|role="alert"', play)
 
 
@@ -90,9 +90,15 @@ def test_dom_order_is_tab_order():
     css = srcpaths.read("app.css", encoding="utf-8")
     assert not re.search(r"(^|[;{\s])order\s*:", css)
     assert "tabindex=\"1" not in HTML and "tabindex=\"2" not in HTML
+    # PLAY-TD-19B-FOUR-TABS (TD-19): four tabs, and the panels follow the
+    # tab row in DOM order
+    tabs = re.findall(r'<button id="tab-([a-z]+)"[^>]*role="tab"', HTML)
+    assert tabs == ["play", "build", "run", "settings"], tabs
+    panels = re.findall(r'<div id="panel-([a-z]+)"[^>]*role="tabpanel"', MAIN)
+    assert panels == tabs, panels
     # PLAY-TD-09B-SKELETON: the Play regions are placed by grid-area only,
     # so their DOM order (G, C, T, N, B, I, U) is the Tab order in every class
-    play = MAIN[MAIN.index('id="panel-play"'):MAIN.index('id="panel-run"')]
+    play = MAIN[MAIN.index('id="panel-play"'):MAIN.index('id="panel-build"')]
     assert re.findall(r'<section id="play-([a-z])"', play) == list("gctnbiu")
     for r in "gctnbiu":
         assert re.search(r"#play-%s \{ grid-area: %s; \}" % (r, r), css), r

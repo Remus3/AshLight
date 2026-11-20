@@ -23,6 +23,16 @@ What it does, all under the AL sidecar (server/al/paths.py):
   "source-only" and the core keeps working (the component is optional);
 - writes Build\\tc-pins-stamp.json; a re-run with the same pins and the
   outputs present is a no-op with no network request;
+- TC-CALC-VERIFY-PIN (F-139, decision 0018 amendment 2026-11-20): the pin
+  carries a content digest per component (content_sha256: the tree_digest
+  form over every file under the top dir) and, for PoB, a digest of its
+  runnable Lua files (lua_sha256). A re-generated archive whose bytes differ
+  from archive_sha256 is accepted only when its contents give the pinned
+  content digest (read from the zip under the path guard, never run; at most
+  CONTENT_SLACK x the pinned size); every extract is checked against the
+  content digest before its marker is written; PoB's Lua files are re-hashed
+  on every re-run (no-op included) and the LuaJIT source tree right before
+  each build, and a mismatch re-extracts from the verified archive;
 - TC-CALC-OPTIN (F-132): with --opt-in (setup.ps1 -TcCalc) and a verified
   install (status 'ready', or 'noop' for one already verified), turns the
   calc on: set_opt_in_flag() merges "tc_calc": true into config/local.json,
@@ -41,6 +51,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -72,6 +83,12 @@ UA_PURPOSE = "setup: theorycraft calc component download"
 OPT_IN_KEY = "tc_calc"
 MARKER = ".al-extracted.json"
 STAMP_SCHEMA = 1
+# TC-CALC-VERIFY-PIN: the content digests (decision 0018 amendment 2026-11-20)
+CONTENT_KEY = "content_sha256"
+LUA_KEY = "lua_sha256"
+LUA_COMPONENT = "pob2"  # the component whose runnable Lua files are pinned
+# a re-generated archive is read up to this many times its pinned size
+CONTENT_SLACK = 2
 
 RC_OK = 0
 RC_FAIL = 1
@@ -191,6 +208,11 @@ def _validate_spec(name, spec):
         ver = spec.get("version")
         if not isinstance(ver, str) or not _LJVER.match(ver):
             out.append("version must look like 2.1.<commit epoch>")
+    keys = (CONTENT_KEY, LUA_KEY) if name == LUA_COMPONENT else (CONTENT_KEY,)
+    for key in keys:
+        val = spec.get(key)
+        if not isinstance(val, str) or not _HEX64.match(val):
+            out.append(f"{key} must be 64 lower-case hex")
     url = spec.get("archive_url")
     if repo and commit:
         want = f"https://github.com/{repo}/archive/{commit}.zip"
@@ -253,14 +275,38 @@ def _quarantine(path):
     return pinfetch.quarantine(path)
 
 
+def content_matches(name, spec, archive):
+    """True when the archive's contents (archive_digests) give the pinned
+    content digest. Only for a spec that carries one; an unreadable or
+    unsafe archive is no match."""
+    want = spec.get(CONTENT_KEY)
+    if not want:
+        return False
+    try:
+        got = archive_digests(archive, spec["top_dir"])[CONTENT_KEY]
+    except (OSError, UnsafeArchive, zipfile.BadZipFile, ValueError) as e:
+        log(f"{name}: archive contents unreadable ({type(e).__name__})")
+        return False
+    return got == want
+
+
 def ensure_archive(name, spec, archive, fetch=None):
     """The verified archive path and whether it was downloaded now.
     A cached file that no longer matches is refused (quarantined); the next
-    run downloads afresh."""
+    run downloads afresh. TC-CALC-VERIFY-PIN: for a spec with a content
+    digest, an archive whose bytes differ from the pin (GitHub re-generated
+    it) is accepted only when its contents give that digest; a spec without
+    one (the toolchain, the Electron zip) stays byte-strict."""
     sha, size = spec["archive_sha256"], spec["archive_size"]
+    has_content = bool(spec.get(CONTENT_KEY))
     if archive.exists():
         if file_matches(archive, sha, size):
             log(f"{name}: cached archive verified (sha256 ok)")
+            return archive, False
+        if has_content and archive.stat().st_size <= size * CONTENT_SLACK \
+                and content_matches(name, spec, archive):
+            log(f"{name}: cached archive bytes differ from the pin; contents match "
+                "the pinned content digest (accepted)")
             return archive, False
         bad = _quarantine(archive)
         raise HashMismatch(f"{name}: cached archive does not match its pin; moved to "
@@ -268,27 +314,35 @@ def ensure_archive(name, spec, archive, fetch=None):
     archive.parent.mkdir(parents=True, exist_ok=True)
     part = archive.with_name(archive.name + ".part")
     fetch = fetch or http_stream
+    cap = size * CONTENT_SLACK if has_content else size
     log(f"{name}: downloading {spec['archive_url']} ({size} bytes)")
     h = hashlib.sha256()
     got = 0
     next_pct = 25
     with open(part, "wb") as out:
-        for block in fetch(spec["archive_url"], size):
+        for block in fetch(spec["archive_url"], cap):
             got += len(block)
-            if got > size:
+            if got > cap:
                 break
             h.update(block)
             out.write(block)
             while next_pct <= 100 and got * 100 >= next_pct * size:
                 log(f"{name}: {next_pct}%")
                 next_pct += 25
-    if got != size or h.hexdigest() != sha:
-        bad = _quarantine(part)
-        raise HashMismatch(f"{name}: download does not match its pin (size {got} vs {size}, "
-                           f"sha256 {h.hexdigest()} vs {sha}); moved to {bad.name}; refusing")
-    os.replace(part, archive)
-    log(f"{name}: archive verified (sha256 ok)")
-    return archive, True
+    if got == size and h.hexdigest() == sha:
+        os.replace(part, archive)
+        log(f"{name}: archive verified (sha256 ok)")
+        return archive, True
+    if has_content and got <= cap and content_matches(name, spec, part):
+        os.replace(part, archive)
+        log(f"{name}: archive bytes differ from the pin (size {got}, sha256 "
+            f"{h.hexdigest()}); contents match the pinned content digest (accepted)")
+        return archive, True
+    bad = _quarantine(part)
+    raise HashMismatch(f"{name}: download does not match its pin (size {got} vs {size}, "
+                       f"sha256 {h.hexdigest()} vs {sha}"
+                       + (", contents differ from the content digest" if has_content else "")
+                       + f"); moved to {bad.name}; refusing")
 
 
 # --- extract ------------------------------------------------------------
@@ -300,27 +354,83 @@ def read_marker(target):
         return None
 
 
-def tree_digest(target):
-    """SHA-256 over every file under target (sorted relative path, size and
-    content hash; the marker itself excluded). AREA-AUDIT P3-10: the
-    toolchain tree is re-hashed against its marker before each build."""
+def is_lua(rel):
+    """A runnable Lua file of a PoB checkout (lua_sha256 covers these)."""
+    return rel.lower().endswith(".lua")
+
+
+def _digest(entries):
+    """The outer SHA-256 over (relative path, size, sha256) entries, sorted
+    by path: the one form of tree_digest and archive_digests."""
+    outer = hashlib.sha256()
+    for rel, size, sha in sorted(entries):
+        outer.update(f"{rel}\0{size}\0{sha}\n".encode("utf-8"))
+    return outer.hexdigest()
+
+
+def _hash_stream(f):
+    h, size = hashlib.sha256(), 0
+    for block in iter(lambda: f.read(CHUNK), b""):
+        h.update(block)
+        size += len(block)
+    return size, h.hexdigest()
+
+
+def _tree_entries(target, select=None):
     target = Path(target)
-    files = []
+    out = []
     for dirpath, dirnames, filenames in os.walk(target):
         dirnames.sort()
         for fn in filenames:
             p = Path(dirpath) / fn
             rel = p.relative_to(target).as_posix()
-            if rel != MARKER:
-                files.append((rel, p))
-    outer = hashlib.sha256()
-    for rel, p in sorted(files):
-        h = hashlib.sha256()
-        with open(p, "rb") as f:
-            for block in iter(lambda: f.read(1024 * 1024), b""):
-                h.update(block)
-        outer.update(f"{rel}\0{p.stat().st_size}\0{h.hexdigest()}\n".encode("utf-8"))
-    return outer.hexdigest()
+            if rel == MARKER or (select is not None and not select(rel)):
+                continue
+            with open(p, "rb") as f:
+                size, sha = _hash_stream(f)
+            out.append((rel, size, sha))
+    return out
+
+
+def tree_digest(target, select=None):
+    """SHA-256 over every file under target (sorted relative path, size and
+    content hash; the marker itself excluded); `select(rel)` narrows it to
+    some files (is_lua). AREA-AUDIT P3-10: the toolchain tree is re-hashed
+    against its marker before each build. TC-CALC-VERIFY-PIN: the same value
+    over an extracted component is its pinned content_sha256."""
+    return _digest(_tree_entries(target, select))
+
+
+def archive_digests(archive, top_dir):
+    """{content_sha256, lua_sha256} of a zip's contents under top_dir, in
+    the tree_digest form, so they equal tree_digest of a faithful extract.
+    Members are read as data only, after check_members (path guard); a
+    duplicate member path is refused (UnsafeArchive)."""
+    prefix = top_dir + "/"
+    entries, seen = [], set()
+    with zipfile.ZipFile(archive) as zf:
+        check_members(zf, top_dir)
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            rel = info.filename[len(prefix):]
+            if not rel or rel == MARKER:
+                continue
+            if rel in seen:
+                raise UnsafeArchive(f"duplicate member path: {info.filename!r}")
+            seen.add(rel)
+            with zf.open(info) as f:
+                size, sha = _hash_stream(f)
+            entries.append((rel, size, sha))
+    return {CONTENT_KEY: _digest(entries),
+            LUA_KEY: _digest(e for e in entries if is_lua(e[0]))}
+
+
+def lua_ok(spec, checkout):
+    """True when PoB's runnable Lua files under checkout give the pinned
+    lua_sha256 (always True for a spec without one)."""
+    want = spec.get(LUA_KEY)
+    return not want or tree_digest(checkout, select=is_lua) == want
 
 
 def ensure_extracted(name, spec, archive, parent, force=False):
@@ -334,12 +444,37 @@ def ensure_extracted(name, spec, archive, parent, force=False):
         log(f"{name}: extracted tree present (no-op)")
         return target, False
     pinfetch.extract_safe(archive, top, parent)
+    tree = tree_digest(target)
+    want = spec.get(CONTENT_KEY)
+    if want and tree != want:
+        # our own extract of a refused archive: replaceable, never vouched for
+        shutil.rmtree(target, ignore_errors=True)
+        raise HashMismatch(f"{name}: extracted tree does not match the pinned content "
+                           f"digest ({tree} vs {want}); refusing")
     (target / MARKER).write_text(json.dumps({
         "component": name, "commit": spec.get("commit") or spec.get("tag"),
-        "archive_sha256": spec["archive_sha256"], "tree_sha256": tree_digest(target)},
+        "archive_sha256": spec["archive_sha256"], "tree_sha256": tree},
         sort_keys=True) + "\n", encoding="ascii")
     log(f"{name}: extracted")
     return target, True
+
+
+def ensure_source(name, spec, lay, keys, fetch=None):
+    """TC-CALC-VERIFY-PIN: re-hash an extracted source tree against its
+    pinned content digest (the marker must name the pinned archive too); a
+    mismatch, an added or changed file, or a missing marker re-extracts it
+    from the verified archive. keys = (archive, parent, tree) layout keys."""
+    archive, parent, tree = keys
+    marker = read_marker(lay[tree])
+    want = spec.get(CONTENT_KEY)
+    if marker and marker.get("archive_sha256") == spec["archive_sha256"] \
+            and (not want or tree_digest(lay[tree]) == want):
+        log(f"{name}: source tree re-hashed (content digest ok)")
+        return lay[tree]
+    log(f"{name}: source tree does not match its content digest; re-extracting")
+    path, _ = ensure_archive(name, spec, lay[archive], fetch)
+    target, _ = ensure_extracted(name, spec, path, lay[parent], force=True)
+    return target
 
 
 # --- LuaJIT build -------------------------------------------------------
@@ -408,11 +543,14 @@ def ensure_toolchain(doc, lay, fetch=None):
     return lay["toolchain_bin"]
 
 
-def ensure_luajit(lay, which=None, run=subprocess.run, environ=None, toolchain=None):
+def ensure_luajit(lay, which=None, run=subprocess.run, environ=None, toolchain=None,
+                  source_check=None):
     """'ready' when luajit.exe exists AND matches the SHA-256 recorded when
     this step built it (built now or before), 'source-only' when no compiler
     is available. An existing luajit.exe without a matching record is not
     trusted (AUDIT-EXE-PATH): it is rebuilt when a compiler exists.
+    TC-CALC-VERIFY-PIN: `source_check()` runs right before the build (the
+    LuaJIT source re-hashed against its content digest, ensure_source).
     Raises RuntimeError on a failed build."""
     exe = lay["luajit_exe"]
     if exepin.verified(exe):
@@ -436,6 +574,8 @@ def ensure_luajit(lay, which=None, run=subprocess.run, environ=None, toolchain=N
     if env is None:
         env = dict(os.environ if environ is None else environ)
         env["TEMP"] = env["TMP"] = str(lay["temp"])
+    if source_check is not None:
+        source_check()
     log(f"luajit: building with {Path(plan[0]).name}")
     r = run(plan, cwd=str(lay["luajit_source"] / "src"), env=env,
             capture_output=True, timeout=1800)
@@ -467,6 +607,10 @@ def is_noop(doc, lay):
         m = read_marker(lay[key])
         if not m or m.get("archive_sha256") != doc[name]["archive_sha256"]:
             return False
+    # TC-CALC-VERIFY-PIN: PoB's runnable Lua files re-hashed on every re-run
+    if not lua_ok(doc[LUA_COMPONENT], lay["pob2_checkout"]):
+        log("pob2: Lua files do not match the pinned lua digest")
+        return False
     return exepin.verified(lay["luajit_exe"])
 
 
@@ -566,16 +710,22 @@ def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run,
         spec = doc[name]
         marker = read_marker(lay[tree])
         if marker and marker.get("archive_sha256") == spec["archive_sha256"]:
-            log(f"{name}: extracted tree present (no-op)")
-            continue
+            if name != LUA_COMPONENT or lua_ok(spec, lay[tree]):
+                log(f"{name}: extracted tree present (no-op)")
+                continue
+            log(f"{name}: Lua files do not match the pinned lua digest; re-extracting")
         path, _ = ensure_archive(name, spec, lay[archive], fetch)
-        ensure_extracted(name, spec, path, lay[parent])
+        ensure_extracted(name, spec, path, lay[parent], force=True)
     toolchain = None
     if TOOLCHAIN in doc:
         def toolchain():
             return ensure_toolchain(doc, lay, toolchain_fetch)
+
+    def source_check():
+        ensure_source("luajit", doc["luajit"], lay,
+                      ("luajit_archive", "luajit_build", "luajit_source"), fetch)
     status = ensure_luajit(lay, which=which, run=run, environ=environ,
-                           toolchain=toolchain)
+                           toolchain=toolchain, source_check=source_check)
     write_stamp(doc, lay, status)
     log(f"tc calc component: {status} (PoB-PoE2 {doc['pob2']['tag']}, "
         f"LuaJIT {doc['luajit']['version']})")
