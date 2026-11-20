@@ -49,6 +49,10 @@
 <script src="/web/buildline.js" defer></script>
 <script src="/web/itemcard.js" defer></script>
 <script src="/web/keptchecks.js" defer></script>
+<!-- TEST-WEB-ASSEMBLE (F-194): the core links every web/panels/*.css and
+     *.js after the next line (server/al/webpage.py); a new panel edits no
+     shared file. Keep it before app.js. -->
+<!-- al:panels -->
 <script src="/web/app.js" defer></script>
 </head>
 <body>
