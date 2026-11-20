@@ -152,6 +152,17 @@ def test_snapshot():
     assert status({"snapshot": False}, "snapshot") == "fail"
     assert status({"snapshot": False, "web_data": False}, "snapshot") == "off"
     assert status({"snapshot_at": NOW - 90 * 86400}, "snapshot") == "fail"
+    # DATA-SNAP-AT-START: AshLight fetches the data by itself, so no fix
+    # text names a script
+    fixes = [row({"snapshot": False}, "snapshot")["fix"],
+             row({"snapshot_at": NOW - 90 * 86400}, "snapshot")["fix"],
+             row({"snapshot_at": NOW - 90 * 86400, "web_data": False}, "snapshot")["fix"]]
+    assert fixes[0] == fixes[1] == diag.FIX_SNAPSHOT
+    assert fixes[2] == diag.FIX_SNAPSHOT_OFF and "Use web data" in fixes[2]
+    for fix in fixes:
+        assert "by itself" in fix
+        assert ".ps1" not in fix and "scripts" not in fix and "build" not in fix
+    assert row({"snapshot": False, "web_data": False}, "snapshot")["fix"] is None
 
 
 def test_overlay_and_supervisor():
