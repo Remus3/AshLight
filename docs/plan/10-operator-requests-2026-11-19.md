@@ -2,9 +2,14 @@
 
 Date: 2026-11-19. Status: DRAFT for a later wave, revised the same day
 for the operator follow-ups (decision 0081, 0082 and 0083 amendments
-2026-11-19; research 0060 sections 7 and 8). Nothing here is in
-ROADMAP.md or docs/plan/packages.json yet: the wave integrator lands it
-(it is the only writer of those files, decision 0077). Research: 0060.
+2026-11-19; research 0060 sections 7 and 8). LANDED 2026-11-19 by the
+wave 11 pre-batch integrator: the section 5 packages are in
+docs/plan/packages.json (waves 38 to 42, session 11), their rows in
+ROADMAP.md, and section 4 widened RUN-BUILD-STAMP-UI. One change from the
+draft: UI-CARD-COLLAPSE runs in wave 41, not 38 (in wave 38 it shared
+serial group web-shell, web/index.html and web/app.css with
+UI-HEADER-TEXT and server/al/plug/stores.py with KINDLER-STORE, which
+tools/plan_check.py refuses). Research: 0060.
 Rulings: decisions 0081 (Kindler), 0082 (UI), 0083 (item info data).
 
 ## 1. Requests and rulings, one line each

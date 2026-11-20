@@ -1603,6 +1603,64 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_floor_static.py tests/test_run_detach.py tests/test_ascii_lf.py passes. ZERO-CLICK: The
   sentence shows itself. DEPENDS: RUN-FEED-TRUTH, RUN-STOP-RACE. BLOCKED: session wave 37.
 
+### Wave 38: operator requests 2026-11-19, cores
+
+- [ ] ITEM-INFO-CORE (build) Item info lookup: token-gated GET /api/iteminfo over local caches.
+  ACCEPT: python -m pytest -q tests/test_iteminfo.py passes. ZERO-CLICK: Answers from what is
+  already cached; no setting. BLOCKED: session wave 38.
+- [ ] UI-HEADER-TEXT (build) Drop the visible AshLight text left of the tabs; sr-only h1 kept.
+  ACCEPT: python -m pytest -q tests/test_brand_assets.py tests/test_a11y.py passes. ZERO-CLICK:
+  Automatic. BLOCKED: session wave 38.
+- [ ] KINDLER-DATA (data) Kindler template schema and checked loader. ACCEPT: python -m pytest -q
+  tests/test_kindler_data.py passes. ZERO-CLICK: Reloads by itself on change. BLOCKED: session wave
+  38.
+- [ ] KINDLER-STORE (build) Kindler tabs store ops/runtime/gen_builds.json. ACCEPT: python -m pytest
+  -q tests/test_kindler_store.py tests/test_settingsio.py passes. ZERO-CLICK: Saved on every change.
+  BLOCKED: session wave 38.
+
+### Wave 39: operator requests 2026-11-19, popover and templates
+
+- [ ] ITEM-INFO-POB-TEXT (data) Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines
+  under sha256 pins. ACCEPT: python -m pytest -q tests/test_tc_pobtext.py
+  tests/test_tc_pob_drift_guard.py passes. ZERO-CLICK: Read once per pin; no setting. DEPENDS:
+  ITEM-INFO-CORE. BLOCKED: session wave 39.
+- [ ] ITEM-INFO-UI (build) Item names as link-like buttons with the shared item info popover.
+  ACCEPT: python -m pytest -q tests/test_iteminfo_ui.py tests/test_a11y.py tests/test_ux_review.py
+  passes. ZERO-CLICK: One click to look; it closes by itself on any other click. DEPENDS:
+  ITEM-INFO-CORE. BLOCKED: session wave 39.
+- [ ] KINDLER-TEMPLATES (data) First authored Kindler templates, act 1 to maps. ACCEPT: python -m
+  pytest -q tests/test_kindler_templates.py passes. ZERO-CLICK: Reloads by itself on change.
+  DEPENDS: KINDLER-DATA. BLOCKED: session wave 39.
+
+### Wave 40: operator requests 2026-11-19, engine and tabs
+
+- [ ] KINDLER-ENGINE (build) Kindler candidates, PoB scoring and deterministic ranking on the
+  Generate route. ACCEPT: python -m pytest -q tests/test_kindler_engine.py
+  tests/test_kindler_live.py passes. ZERO-CLICK: One Generate click; results stay until the toggles
+  change. DEPENDS: KINDLER-DATA, KINDLER-TEMPLATES, KINDLER-STORE. BLOCKED: session wave 40.
+- [ ] KINDLER-UI-TABS (build) Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename
+  and close. ACCEPT: python -m pytest -q tests/test_kindler_tabs_ui.py tests/test_a11y.py
+  tests/test_ux_review.py and npm test --prefix app pass. ZERO-CLICK: The tabs come back by
+  themselves; one Generate click per new idea. DEPENDS: KINDLER-STORE. BLOCKED: session wave 40.
+
+### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
+
+- [ ] UI-CARD-COLLAPSE (build) Collapsible cards on Build and items and Run in the desktop client;
+  state in the core. ACCEPT: python -m pytest -q tests/test_card_collapse.py tests/test_ui_layout.py
+  tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: Remembered by the app;
+  nothing to set. BLOCKED: session wave 41.
+- [ ] KINDLER-PLAN (build) Kindler result plan: stages, links, gem timing, passives, ascendancy,
+  item focus. ACCEPT: python -m pytest -q tests/test_kindler_plan.py passes. ZERO-CLICK: Follows the
+  Play guidance by itself while the tab toggle is on. DEPENDS: KINDLER-ENGINE. BLOCKED: session wave
+  41.
+
+### Wave 42: operator requests 2026-11-19, Kindler result card
+
+- [ ] KINDLER-UI-RESULT (build) Kindler result card with stages and follow Play guidance. ACCEPT:
+  python -m pytest -q tests/test_kindler_result_ui.py tests/test_a11y.py tests/test_ux_review.py and
+  npm test --prefix app pass. ZERO-CLICK: The current step moves with the Play guidance by itself.
+  DEPENDS: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI. BLOCKED: session wave 42.
+
 ### Parked
 
 - [ ] GP-10 (build) The project's own address in tracked files. ACCEPT: `python tools/leak_sweep.py
