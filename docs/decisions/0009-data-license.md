@@ -162,6 +162,12 @@ counted. Nothing found forbids the fetch-only ruling.
      `<AL sidecar>\Cache\gamedata\` resolved by `server/al/paths.py`;
    - never at runtime by the core, never committed, never uploaded,
      never redistributed from the cache;
+   - amended 2026-11-18 (DATA-SNAP-AT-START, ruling Q-04): build time or
+     start time, always by the snapshot tool as its own process
+     (`scripts/build.ps1`, or the keepalive supervisor through
+     `server/al/snapstart.py`); the core still never fetches. poe2db /
+     wiki data stay build-time attributed snapshots only (item 4);
+     see the amendment at the end;
    - a manifest per file (URL, fetch date, SHA-256, size, ETag);
    - a truthful User-Agent naming AshLight and its version; conditional
      requests (ETag / Last-Modified) and at most one network check per
@@ -241,3 +247,39 @@ Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
   degrade, the operator rules that a build-time fetch is not "web data",
   or first-run use shows users missing the data and not finding the switch.
 - Tests: tests/test_audit_snapshot_optin.py.
+
+## Amendment 2026-11-18 (DATA-SNAP-AT-START, plan unit F-072, ruling Q-04)
+
+- Decision: the game-data snapshot may also run at start time. With web
+  data on (decision 0013, the same strict `"web_data": true`) and the
+  cache manifest missing, empty or with a file checked more than 24 h
+  ago, the keepalive supervisor starts the existing tool
+  (`python -m server.al.theorycraft.snapshot`, no `--opt-in`) as its own
+  hidden, detached, below-normal-priority process: at most one at a time
+  and at most one start per 24 h (a pid file under the runtime dir),
+  checked at most once per supervisor poll, never while a user stop is
+  pending. The tool's output goes to the sidecar Logs dir. The core never
+  imports the tool and never fetches; `server/al/snapstart.py` reads only
+  the local config and the cache manifest. A supervisor given its runtime
+  dir (`--runtime` or `AL_RUNTIME_DIR`: tests and isolated instances)
+  starts nothing. Sources, User-Agent, contact, conditional requests,
+  the 24 h per-file gate and `AL_NO_SNAPSHOT` are unchanged; nothing hits
+  the network while web data is off. poe2db / wiki data stay
+  build-time attributed snapshots only (item 4).
+- Alternatives: (b) the core fetches at start through webfetch -
+  rejected: the core would carry game-data fetch code
+  (test_core_never_imports_snapshot) and its process would do slow
+  downloads; (c) keep build time only and tell the player to run
+  `scripts\build.ps1 -Snapshot` - rejected: a manual step after the
+  opt-in breaks the minimal-interaction rule and the Checks fix line was
+  a script name; (d) start the tool from run.ps1 - rejected: an
+  installed copy or a core restarted by the supervisor would not refresh,
+  and a tick of "Use web data" while AshLight runs would wait for the
+  next start.
+- Why: one opt-in and zero clicks; the same tool with the same rules
+  runs, only its trigger moves; a separate hidden low-priority process
+  keeps network and parsing work out of the core and away from game FPS.
+- Reverses if: a source objects to start-time fetches, the hidden
+  process costs overlay budget in play, or the operator rules a fetch
+  outside a build is not covered by the web_data opt-in.
+- Tests: tests/test_snap_start.py, tests/test_diag_self.py::test_snapshot.

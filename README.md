@@ -183,7 +183,14 @@ There is no uninstall script yet; these are the steps by hand:
   With it on, AshLight fetches currency and item prices from poe.ninja at most
   once an hour and a build share link (pobb.in, pastebin) once when you paste
   it; every request names AshLight and its version and carries no cookie or
-  account id. It never asks the trade site anything: the trade link after an
+  account id.
+- Game data (zone levels, item bases and mods, the passive tree) also needs
+  web data. Once it is on, AshLight downloads that data by itself when it
+  starts, and again when the copy is a day old: a small hidden helper at low
+  priority fetches the public community export (repoe-fork) and, with your
+  contact set, GGG's passive tree export into AshLight's own folder on this
+  computer. You do
+  nothing else, and nothing is fetched while web data is off. It never asks the trade site anything: the trade link after an
   item check opens in your own browser only when you click it.
 - The server binds `127.0.0.1` only; every API call needs the per-start token;
   the Host and Origin headers are checked; the dashboard runs under a strict
