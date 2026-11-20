@@ -10,7 +10,10 @@ that have an explicit trade id in the cached repoe-fork snapshot
 (server/al/tradestats.py) become one weighted stat group; a stat without an
 id gets no filter, and with no snapshot (or web data off) the link stays
 base type and rarity only. trade.upgrade_query checks the complexity cap. The URL comes from trade.link_for, the
-same builder as the price link (PRICE-TRADE-LINK).
+same builder as the price link (PRICE-TRADE-LINK). TC-UPGRADE-PER-SLOT:
+`slot_link(base, slot, weights, league, ids)` is the per-slot core of
+link(), also used for each "look for next" row of the build view, so a
+search for any slot needs no item press first.
 
 Pure: no network, no clipboard, nothing sent to the game. The core never
 opens the URL; the dashboard shows it as a link the player may click. It
@@ -93,6 +96,36 @@ def _filters(top, ids, slot=None):
     return out
 
 
+def slot_link(base, slot, weights=None, league=None, ids=None):
+    """TC-UPGRADE-PER-SLOT: the upgrade link doc for rare items of `base`
+    in gear `slot`, or None with no base type (or a link the trade site
+    would refuse). `weights`: [{key, weight}] in rank order (the first
+    MAX_TOP positive ones are used); `ids`: the trade id index (tradestats),
+    None or {} for no filters. Doc: slot, base, rarity, league, url,
+    filters ([{key, id, weight}] put in the URL). Shared by the item check
+    link (link()) and the build view's "look for next" rows. Pure; never
+    raises on input content."""
+    if not (isinstance(base, str) and base.strip()):
+        return None
+    top = []
+    for row in weights if isinstance(weights, (list, tuple)) else ():
+        w = row.get("weight") if isinstance(row, dict) else None
+        if isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0 \
+                and isinstance(row.get("key"), str):
+            top.append({"key": row["key"], "weight": w})
+    league = trade.league_or_default(league)
+    filters = _filters(top[:MAX_TOP], ids, slot) if ids else []
+    try:
+        url = trade.upgrade_link(base, league,
+                                 [(f["id"], f["weight"]) for f in filters])
+    except ValueError:
+        return None
+    if not trade.is_search_link(url):
+        return None
+    return {"slot": slot, "base": base.strip(), "rarity": RARITY,
+            "league": league, "url": url, "filters": filters}
+
+
 def link(result, league=None, ids=None):
     """The upgrade link doc for an evaluate() result, or None when there is
     no slot to search (not an item, no gear slot, no build loaded) or no base
@@ -111,18 +144,10 @@ def link(result, league=None, ids=None):
     base, source = equipped.get("base"), "equipped"
     if not (isinstance(base, str) and base.strip()):
         base, source = item.get("base"), "item"
-    if not (isinstance(base, str) and base.strip()):
-        return None
-    league = trade.league_or_default(league)
     weights = _weights(result, comp)
-    filters = _filters(weights["top"], ids, result.get("slot")) if ids else []
-    try:
-        url = trade.upgrade_link(base, league,
-                                 [(f["id"], f["weight"]) for f in filters])
-    except ValueError:
+    doc = slot_link(base, result["slot"], weights["top"], league, ids)
+    if doc is None:
         return None
-    if not trade.is_search_link(url):
-        return None
-    return {"slot": result["slot"], "base": base.strip(), "source": source,
-            "rarity": RARITY, "league": league, "url": url,
-            "weights": weights, "filters": filters}
+    return {"slot": doc["slot"], "base": doc["base"], "source": source,
+            "rarity": doc["rarity"], "league": doc["league"], "url": doc["url"],
+            "weights": weights, "filters": doc["filters"]}

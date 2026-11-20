@@ -216,6 +216,44 @@ def test_next_look_weights_source_failure_is_ignored():
     assert health.next_look(b, boom)["slots"][0]["terms"] == ["cold res"]
 
 
+def test_next_look_rows_carry_the_slot_link():
+    """TC-UPGRADE-PER-SLOT: each row gets the url link_for builds from the
+    equipped base and the row's stats; none without a base, a link source
+    or when the source fails."""
+    nobase = "+40 to maximum Life\n"
+    b = _build(dict(CAPPED, ColdResist=60), {"Gloves": GLOVES, "Ring 1": nobase})
+    seen = []
+
+    def link_for(base, slot, weights):
+        seen.append((base, slot, weights))
+        return {"url": "https://example.invalid/" + slot}
+
+    rows = health.next_look(b, _weights({"Gloves": {"#% increased Attack Speed": 2.0}}),
+                            link_for)["slots"]
+    gloves, ring = rows
+    assert gloves["base"] == "Example Gloves" and gloves["url"] == "https://example.invalid/Gloves"
+    assert seen == [("Example Gloves", "Gloves",
+                     [{"key": "+#% to Cold Resistance", "weight": 2.0},
+                      {"key": "#% increased Attack Speed", "weight": 2.0}])]
+    assert ring["slot"] == "Ring 1" and ring["base"] is None and ring["url"] is None
+    assert all(r["url"] is None for r in health.next_look(b)["slots"])
+
+    def boom(base, slot, weights):
+        raise RuntimeError("link broke")
+    assert [r["url"] for r in health.next_look(b, None, boom)["slots"]] == [None, None]
+    assert health.next_look(b, None, lambda *a: None)["slots"][0]["url"] is None
+    assert health.next_look(b, None, lambda *a: "u")["slots"][0]["url"] == "u"
+
+
+def test_next_look_magic_item_link_uses_its_true_base():
+    magic = "Rarity: MAGIC\nExample Gloves of the Whale\n+40 to maximum Life\n"
+    b = _build(dict(CAPPED, ColdResist=60), {"Gloves": magic})
+    got = []
+    health.next_look(b, None, lambda base, slot, w: got.append(base))
+    # MATH-MAGIC-BASE: the name line's affix words are not the base
+    assert got == ["Example Gloves"]
+
+
 def test_term_for_keys():
     assert health.term_for("+# to maximum Life") == "maximum life"
     assert health.term_for("+#% to all Elemental Resistances") == "all elemental res"
@@ -235,6 +273,9 @@ def test_store_snapshot_next_look_uses_weights_source(tmp_path):
     s.load_code(codec.encode(_xml(CAPPED, {"Gloves": GLOVES})))
     row = s.snapshot()["next_look"]["slots"][0]
     assert row["terms"] == ["increased attack speed"]
+    assert row["url"] is None  # no link source set
+    s.link_for = lambda base, slot, weights: {"url": "u:" + base}
+    assert s.snapshot()["next_look"]["slots"][0]["url"] == "u:Example Gloves"
 
 
 def test_core_wires_pob_weight_cache(tmp_path):
@@ -242,6 +283,12 @@ def test_core_wires_pob_weight_cache(tmp_path):
     core = Core(runtime=tmp_path, tail=False)
     try:
         assert core.builds.weights_for == core.last_eval.pob_weights.fallback
+        # TC-UPGRADE-PER-SLOT: an offline trade-search link, no stat
+        # filters while web data is off (decision 0037)
+        from server.al import trade
+        doc = core.builds.link_for("Example Gloves", "Gloves",
+                                   [{"key": "+# to maximum Life", "weight": 1}])
+        assert trade.is_search_link(doc["url"]) and doc["filters"] == []
     finally:
         core.close()
 

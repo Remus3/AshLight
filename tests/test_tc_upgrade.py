@@ -19,7 +19,7 @@ from server.al import trade, upgrade
 from server.al.core import Core
 from server.al.theorycraft import codec
 from server.al.theorycraft import evaluate as tc_evaluate
-from server.al.theorycraft import model
+from server.al.theorycraft import health, model
 from tc_eval_fixtures import ADVANCED_RING, EVAL_BUILD_XML, JEWEL, RARE_GLOVES
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -143,6 +143,84 @@ def test_link_none_without_a_slot_to_search():
     assert upgrade.link(tc_evaluate.evaluate(JEWEL, _build())) is None
     for junk in (None, {}, {"ok": True}, {"ok": True, "slot": "Gloves"}, "x"):
         assert upgrade.link(junk) is None
+
+
+# -- TC-UPGRADE-PER-SLOT: the same builder on every "look for next" row -----
+
+NEXT_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding2>
+<Build level="80" className="Monk" ascendClassName="Invoker">
+<PlayerStat stat="ColdResist" value="60"/>
+<PlayerStat stat="FireResist" value="75"/>
+<PlayerStat stat="LightningResist" value="75"/>
+</Build>
+<Items activeItemSet="1">
+<Item id="1">
+Rarity: RARE
+Doom Grip
+Example Gloves
++40 to maximum Life
+</Item>
+<Item id="2">
+Rarity: RARE
+Loop Band
+Example Ring
++30 to maximum Life
+</Item>
+<ItemSet id="1">
+<Slot name="Gloves" itemId="1"/>
+<Slot name="Ring 1" itemId="2"/>
+</ItemSet>
+</Items>
+</PathOfBuilding2>
+"""
+COLD_ID = "explicit.stat_4220027924"
+SPEED_ID = "explicit.stat_681332047"
+
+
+def test_slot_link_for_a_next_look_row():
+    b = model.parse(NEXT_XML)
+    ids = {"#% to cold resistance": COLD_ID, "#% increased attack speed": SPEED_ID}
+    weights = {"Gloves": {"#% increased Attack Speed": 2.5}}
+
+    def rows(index):
+        def link_for(base, slot, top):
+            return upgrade.slot_link(base, slot, top, "Example League", index)
+        return health.next_look(b, lambda build, slot: dict(weights.get(slot, {})),
+                                link_for)["slots"]
+
+    got = rows(ids)
+    assert [r["slot"] for r in got] == ["Gloves", "Ring 1"]
+    for r in got:
+        assert r["terms"] and trade.is_search_link(r["url"])
+    gloves, ring = got
+    assert gloves["base"] == "Example Gloves" and ring["base"] == "Example Ring"
+    league, q = _decode(gloves["url"])
+    assert league == "Example League" and q["query"]["type"] == "Example Gloves"
+    # the row's stats in its order: the cold gap takes the row's top PoB weight
+    assert q["query"]["stats"] == [{"type": "weight", "filters": [
+        {"id": COLD_ID, "value": {"weight": 2.5}},
+        {"id": SPEED_ID, "value": {"weight": 2.5}}]}]
+    # a row with no PoB weight at all weights its gaps evenly
+    assert _decode(ring["url"])[1]["query"]["stats"] == [{"type": "weight", "filters": [
+        {"id": COLD_ID, "value": {"weight": 1.0}}]}]
+    # no trade id index: the same rows, links with base type and rarity only
+    for r in rows({}) + rows(None):
+        assert trade.is_search_link(r["url"])
+        assert _decode(r["url"])[1] == trade.upgrade_query(r["base"])
+
+
+def test_slot_link_matches_the_item_check_link():
+    result = tc_evaluate.evaluate(RARE_GLOVES, _build())
+    doc = upgrade.link(result, "Example League")
+    per_slot = upgrade.slot_link(doc["base"], doc["slot"], doc["weights"]["top"],
+                                 "Example League")
+    assert per_slot["url"] == doc["url"]
+    assert upgrade.slot_link(None, "Gloves") is None
+    assert upgrade.slot_link("  ", "Gloves", [{"key": "x", "weight": 1}]) is None
+    for junk in (None, "x", [None, {"key": 1, "weight": 2}, {"key": "k", "weight": True}]):
+        assert upgrade.slot_link("Example Ring", "Ring 1", junk, None, {"k": COLD_ID})[
+            "filters"] == []
 
 
 def test_upgrade_module_imports_only_trade():

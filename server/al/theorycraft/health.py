@@ -15,7 +15,10 @@ Nothing is recomputed (decision 0004, research 0028 ruling A):
   first) then the stats with the highest PoB-measured weight that the
   equipped item does not carry, as one line and one search string built
   by the UTIL-SEARCHSTR builder (250 characters, copied only on the
-  player's click, decision 0014 / 0030).
+  player's click, decision 0014 / 0030). TC-UPGRADE-PER-SLOT: each row
+  also carries the offline trade-search link for its slot (upgrade.slot_link
+  through the `link_for` callable the core sets), so a search for any slot
+  needs no item press first; the player's click opens it (decision 0017).
 
 The build XML stats need no calc run, so this works with the optional
 calc component off: it shows PoB's numbers from the last build load.
@@ -303,20 +306,51 @@ def label_for(term):
     return re.sub(r"\bres\b", "resistance", term)
 
 
-def _item_keys(item):
+def _item_info(item):
+    """(stat keys the equipped item carries, its base type or None). The
+    base is the parsed one (a magic item's true base, MATH-MAGIC-BASE),
+    else the base PoB's item header names."""
+    header = getattr(item, "base", None)
+    header = header.strip() if isinstance(header, str) and header.strip() else None
     text = getattr(item, "text", None)
     if not isinstance(text, str):
-        return set()
+        return set(), header
     try:
         parsed = item_parser.parse(text)
     except Exception:  # noqa: BLE001 - a bad item text is no keys
-        return set()
+        return set(), header
     out = set()
     for mod in parsed.mods:
         key, _ = weights_mod.stat_key(mod.text)
         if key:
             out.add(key.lower())
-    return out
+    base = parsed.base.strip() if isinstance(parsed.base, str) and parsed.base.strip() else None
+    return out, base or header
+
+
+def _link_weights(keys, table):
+    """TC-UPGRADE-PER-SLOT: [{key, weight}] for the stats a row names, in
+    the row's order. A stat keeps the weight PoB measured for it; a health
+    gap PoB gave no weight gets the row's largest weight (gaps rank first
+    in the row), or 1 when the row has no PoB weight at all."""
+    low = {k.lower(): w for k, w in table.items()
+           if isinstance(k, str) and _num(w) is not None and w > 0}
+    known = [low[k.lower()] for k in keys if k.lower() in low]
+    fill = max(known) if known else 1
+    return [{"key": k, "weight": low.get(k.lower(), fill)} for k in keys]
+
+
+def _row_url(link_for, base, slot, weights):
+    """The row's trade-search URL from `link_for(base, slot, weights)` (a
+    link doc with a "url", or a URL), or None. Never raises."""
+    if not callable(link_for) or base is None:
+        return None
+    try:
+        doc = link_for(base, slot, weights)
+    except Exception:  # noqa: BLE001 - the link is optional
+        return None
+    url = doc.get("url") if isinstance(doc, dict) else doc
+    return url if isinstance(url, str) and url else None
 
 
 def _gear(build):
@@ -327,11 +361,15 @@ def _gear(build):
     return sorted(names, key=lambda s: (order.get(str(s).lower(), len(SLOTS)), str(s)))
 
 
-def next_look(build, weights_for=None):
-    """{"slots": [{"slot", "terms", "line", "text", "dropped"}],
-    "pob_weights": bool}. `weights_for(build, slot)` returns the stat
-    weights PoB measured for this build and slot (pobweights fallback);
-    without one, or when it fails, only the health gaps are used."""
+def next_look(build, weights_for=None, link_for=None):
+    """{"slots": [{"slot", "terms", "line", "text", "dropped", "base",
+    "url"}], "pob_weights": bool}. `weights_for(build, slot)` returns the
+    stat weights PoB measured for this build and slot (pobweights
+    fallback); without one, or when it fails, only the health gaps are
+    used. `link_for(base, slot, weights)` (TC-UPGRADE-PER-SLOT;
+    upgrade.slot_link with the league and trade ids bound) gives the row's
+    offline trade-search link; `url` is None without one, without a base
+    type or when it fails. `base`: the equipped item's base type or None."""
     out = {"slots": [], "pob_weights": False}
     if build is None:
         return out
@@ -340,9 +378,11 @@ def next_look(build, weights_for=None):
     gaps += [(ATTR_KEY.format(name), name.lower()) for _, _, _, name in attr_gaps(stats)]
     gap_slots = {s.lower() for s in GAP_SLOTS}
     for slot in _gear(build):
-        terms = []
+        terms, key_of = [], {}
         if slot.lower() in gap_slots:
-            terms.extend(t for _, t in gaps)
+            for k, t in gaps:
+                terms.append(t)
+                key_of.setdefault(t, k)
         table = {}
         if callable(weights_for):
             try:
@@ -351,7 +391,7 @@ def next_look(build, weights_for=None):
                 table = {}
         if table:
             out["pob_weights"] = True
-        have = _item_keys(build.gear.get(slot))
+        have, base = _item_info(build.gear.get(slot))
         gap_keys = {k.lower() for k, _ in gaps}
         ranked = sorted(((k, w) for k, w in table.items()
                          if _num(w) is not None and w > 0 and k.lower() not in have
@@ -361,6 +401,7 @@ def next_look(build, weights_for=None):
             t = term_for(k)
             if t and t not in terms:
                 terms.append(t)
+                key_of[t] = k
         terms = terms[:MAX_TERMS]
         if not terms:
             continue
@@ -369,7 +410,10 @@ def next_look(build, weights_for=None):
             continue
         dropped = len(terms) - kept
         terms = terms[:kept]
+        url = _row_url(link_for, base, slot,
+                       _link_weights([key_of[t] for t in terms], table))
         out["slots"].append({"slot": slot, "terms": terms,
                              "line": ", then ".join(label_for(t) for t in terms),
-                             "text": text, "dropped": dropped})
+                             "text": text, "dropped": dropped,
+                             "base": base, "url": url})
     return out

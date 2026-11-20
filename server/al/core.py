@@ -15,7 +15,7 @@ from pathlib import Path
 
 from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parser, paths, ports,
                price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
-               zoneguide,
+               upgrade, zoneguide,
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import exitrecord  # OBS-CRASH: last-exit.json, client-exit.json
@@ -224,6 +224,12 @@ class Core:
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
         # weights PoB measured for this build (never another build's)
         self.builds.weights_for = self.last_eval.pob_weights.fallback
+        # TC-UPGRADE-PER-SLOT: each "look for next" row carries the offline
+        # upgrade-search link (decision 0017) in the trade league, with trade
+        # stat ids only while web data is on (decision 0037); never a request
+        self.builds.link_for = lambda base, slot, top: upgrade.slot_link(
+            base, slot, top, self.trade_league(),
+            self.trade_ids.get() if self.web_data_enabled() else {})
         # MATH-SKILL-SPLIT / MATH-DEF-BREAKDOWN: PoB's calc-only outputs for
         # the loaded build, fetched in the background when the calc is on;
         # a ready table bumps the build view (no click)

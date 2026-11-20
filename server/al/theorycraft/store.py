@@ -97,6 +97,11 @@ class BuildStore:
         # PoB measured for this build (core sets the MATH-WEIGHTS cache's
         # fallback); None uses the health gaps only
         self.weights_for = None
+        # TC-UPGRADE-PER-SLOT: callable(base, slot, weights) -> the offline
+        # trade-search link doc for a "look for next" row (core binds
+        # upgrade.slot_link to the league and the trade id index); None
+        # leaves the rows without a link
+        self.link_for = None
         # MATH-SKILL-SPLIT / MATH-DEF-BREAKDOWN: callable(build) -> PoB's
         # output table for the loaded build when the optional calc is on
         # and has answered (pobout.OutputsCache.get), else None
@@ -400,7 +405,7 @@ class BuildStore:
                 # every build XML; the calc's values win when it is on)
                 "skill_split": _safe(skillsplit.split, b, calc_out,
                                      fallback=skillsplit.split(None)),
-                "next_look": _safe(health.next_look, b, self.weights_for,
+                "next_look": _safe(health.next_look, b, self.weights_for, self.link_for,
                                    fallback={"slots": [], "pob_weights": False}),
                 # TC-BUILDFILE (decision 0034): what the .build download
                 # holds; the text itself comes from GET /api/buildfile
