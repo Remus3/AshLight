@@ -50,6 +50,22 @@ The first overlay-off baseline taken before this ruling arrived also summed
 the 3D-engine counter instances of the game's PID; that column was discarded
 unused. Only system-wide totals and nvidia-smi are reported in decision 0002.
 
+Note 2026-11-18 (RUN-BUDGET-LOG-CORE, landed 2026-11-20): AshLight's own-process
+counters (method 3) are a Checks-class self-diagnostic and ship: the core's
+budget log (server/al/budgetlog.py) records once a minute its own working set
+and CPU (own handle), luajit's (its own Popen child handle, never a pid) and the
+client's figures from overlay-state.json, tagged from AshLight's own state, in
+a 1 MB capped file; the game process and window are never listed or opened. The
+overlay on / off FPS measurement still never ships. Rulings, recorded: B9 is
+checked only on a row that carries a supervisor figure (the core opens no other
+process; alternative, a pid open of the supervisor, rejected by the floor); B12
+is split out only while the companion is closed (one renderer = the overlay;
+alternative, attributing renderer CPU by window, needs a per-window read the
+client file does not carry); B18 is checked only on rows with fresh client
+figures and the calc tag off; client figures older than 150 s are dropped.
+Reverses if: the floor or decision 0029 changes, or the client file gains
+per-window renderer figures (then B12 also with the companion open).
+
 ## Reverses if
 
 GGG's tool policy or an official GGG statement explicitly permits ETW /
