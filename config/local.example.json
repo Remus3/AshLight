@@ -8,10 +8,9 @@
     "max_notes_per_day": 12,
     "max_new_plans_per_day": 2
   },
-  "_doc_core": "server.al and the overlay read these top-level keys. client_log: blank = auto-discover the Steam install's logs/Client.txt (read only, after consent). character: optional name filter. poll_ms: tail poll interval. overlay_toggle: Electron accelerator for show/hide. eval_hotkey: Electron accelerator for the item check (reads the clipboard once per press). port: null = 8960 (block 8960-8979).",
+  "_doc_core": "server.al and the overlay read these top-level keys. client_log: blank = auto-discover the Steam install's logs/Client.txt (read only, after consent). character: optional name filter. overlay_toggle: Electron accelerator for show/hide. eval_hotkey: Electron accelerator for the item check (reads the clipboard once per press). port: null = 8960 (block 8960-8979).",
   "client_log": "",
   "character": "",
-  "poll_ms": 250,
   "overlay_toggle": "Alt+Shift+A",
   "eval_hotkey": "Alt+Shift+E",
   "port": null,
