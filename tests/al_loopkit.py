@@ -11,6 +11,7 @@ the test's own git calls and in the al_loop code under test alike."""
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -142,14 +143,49 @@ def real_git(args, cwd, input=None):
                           capture_output=True, text=True, input=input, timeout=GIT_TIMEOUT_S)
 
 
-def git_world(tmp_path, kind="plan"):
-    root = make_root(tmp_path, handoff="")
-    git(root, "init", "-q", "-b", "main")
+# TEST-LOOP-GIT-TEMPLATE: git_world's committed main repo is built ONCE per
+# test session (this process) and copied per test, so a world costs one
+# `worktree add` instead of init + add + commit. The template sits next to the
+# first caller's tmp_path (pytest's session basetemp) and is rebuilt only when
+# it is gone. Built under GIT_ENV, so no host config shapes it.
+_TEMPLATE = {"dir": None, "builds": 0}
+
+
+def template_builds():
+    """How many times this session built the git_world template (tests)."""
+    return _TEMPLATE["builds"]
+
+
+def _git_template(tmp_path):
+    tdir = _TEMPLATE["dir"]
+    if tdir is not None and (tdir / "repo" / ".git" / "HEAD").is_file():
+        return tdir / "repo"
+    tdir = Path(tmp_path).parent / f"al-git-template-{os.getpid()}-{_TEMPLATE['builds']}"
+    if tdir.exists():
+        shutil.rmtree(tdir)
+    tdir.mkdir(parents=True)
+    root = make_root(tdir, handoff="")
+    env = dict(os.environ, **GIT_ENV)
+
+    def tgit(*args):
+        r = subprocess.run(["git", "-c", "core.hooksPath=/dev/null", *args], cwd=str(root),
+                           capture_output=True, text=True, env=env, timeout=GIT_TIMEOUT_S)
+        assert r.returncode == 0, r.stderr
+
+    tgit("init", "-q", "-b", "main")
     # LF on every host: al_loop.tree_key drops GIT_* env, so it alone reads the
     # host config; a CRLF file would hash differently under a host autocrlf
     (root / ".gitignore").write_text("ops/\n", newline="\n")
-    git(root, "add", "-A")
-    git(root, "commit", "-q", "-m", "init")
+    tgit("add", "-A")
+    tgit("commit", "-q", "-m", "init")
+    _TEMPLATE["dir"] = tdir
+    _TEMPLATE["builds"] += 1
+    return root
+
+
+def git_world(tmp_path, kind="plan"):
+    root = Path(tmp_path) / "repo"
+    shutil.copytree(_git_template(tmp_path), root)
     wt = tmp_path / "al-worktrees" / "lane-1"
     git(root, "worktree", "add", "-q", "--detach", str(wt))
     (wt / "feature.txt").write_text("work\n", newline="\n")
