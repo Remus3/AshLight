@@ -5,7 +5,14 @@
   Checks Python >= 3.11 and Node >= 22.12.0, creates the sidecar dirs, copies
   config/local.example.json to config/local.json only when it is missing, and
   installs the overlay's npm packages only when app/node_modules is missing
-  or the lockfile changed (hash stamp in the sidecar Build dir).
+  or the lockfile changed (hash stamp in the sidecar Build dir), always as
+  `npm ci --ignore-scripts` from the lockfile (a missing lockfile refuses).
+  OVL-ELECTRON-SETUP (decision 0068): the install override variables are
+  cleared first, the Electron binary comes only from tools/electron_pin.py
+  (AshLight's own fetch, checked against config/electron_pin.json; never
+  electron's own installer script), and electron.exe is verified against
+  the pin after the install and on every up-to-date run (a changed exe
+  makes setup install the packages again from the verified zip).
   Every path comes from `python -m server.al.paths` (the one resolver).
   Node is optional: without it the core and the dashboard still work.
 
@@ -239,15 +246,88 @@ function Invoke-AlShortcutStep {
     }
 }
 
-if ($upToDate -and -not $Force) {
-    Write-AlLog 'setup: app/node_modules up to date (no-op)'
-    Invoke-AlShortcutStep
-    exit 0
+# OVL-ELECTRON-SETUP (F-044, decision 0068): tools/electron_pin.py is the
+# one route for the Electron binary (AshLight User-Agent, size and SHA-256
+# from config/electron_pin.json, nothing unpacked before the zip matches)
+# and the one check of electron.exe. Exit 0 = ok (or no pin for this
+# architecture: no client), 2 = refused, 1 = failed. Every line goes to
+# setup.log. verify-exe counts as ok only with its "electron.exe ok" line:
+# a machine no pin covers has no trusted exe.
+function Invoke-AlElectronPin([string]$Command) {
+    $ErrorActionPreference = 'Continue'
+    $out = @()
+    $rc = 1
+    Push-Location $Repo
+    try {
+        $out = @(& $py (Join-Path $Repo 'tools\electron_pin.py') $Command '--app-dir' $app 2>&1 |
+            ForEach-Object { [string]$_ })
+        $rc = $LASTEXITCODE
+    } catch {
+        $out = @([string]$_)
+        $rc = 1
+    } finally {
+        Pop-Location
+    }
+    foreach ($line in $out) {
+        if ($line) { Write-AlLog "setup: electron: $line" }
+    }
+    if ($Command -eq 'verify-exe' -and $rc -eq 0 -and -not (@($out) -match '^electron\.exe ok')) {
+        Write-AlLog 'setup: electron: no pin covers this machine, so electron.exe is not trusted'
+        $rc = 2
+    }
+    return $rc
 }
+
+function Assert-AlElectronPin([int]$Rc) {
+    if ($Rc -eq 2) {
+        throw 'setup: Electron REFUSED (the download or electron.exe does not match config/electron_pin.json; nothing unverified was kept); see setup.log, then run setup again'
+    }
+    if ($Rc -ne 0) { throw "setup: Electron step failed (rc $Rc); see setup.log, then run setup again" }
+}
+
+# The install override variables (research 0046 F2 / R4): electron's
+# installer and @electron/get read them to skip the packaged checksums,
+# move the download host or redirect the dist folder. AshLight's fetch
+# reads none of them; they are removed from this process (and so from
+# npm) anyway, so nothing below can be steered by them. The player's own
+# environment is left as it is.
+function Clear-AlElectronOverrides {
+    $names = @(
+        'electron_use_remote_checksums', 'ELECTRON_USE_REMOTE_CHECKSUMS',
+        'npm_config_electron_use_remote_checksums',
+        'ELECTRON_MIRROR', 'electron_mirror', 'npm_config_electron_mirror',
+        'ELECTRON_NIGHTLY_MIRROR', 'electron_nightly_mirror', 'npm_config_electron_nightly_mirror',
+        'ELECTRON_CUSTOM_DIR', 'electron_custom_dir', 'npm_config_electron_custom_dir',
+        'ELECTRON_CUSTOM_FILENAME', 'electron_custom_filename', 'npm_config_electron_custom_filename',
+        'ELECTRON_CUSTOM_VERSION', 'electron_custom_version', 'npm_config_electron_custom_version',
+        'ELECTRON_OVERRIDE_DIST_PATH',
+        'ELECTRON_INSTALL_PLATFORM', 'ELECTRON_INSTALL_ARCH',
+        'npm_config_platform', 'npm_config_arch',
+        'electron_config_cache', 'npm_config_electron_config_cache',
+        'force_no_cache', 'npm_config_force_no_cache'
+    )
+    foreach ($name in $names) {
+        Remove-Item -LiteralPath ('Env:\' + $name) -ErrorAction SilentlyContinue
+    }
+}
+
+if ($upToDate -and -not $Force) {
+    # The fast path still checks electron.exe (a stat when unchanged since
+    # the last good check); a changed exe is never kept: the packages are
+    # installed again and the exe unpacked again from the verified zip.
+    $verifyRc = Invoke-AlElectronPin 'verify-exe'
+    if ($verifyRc -eq 0) {
+        Write-AlLog 'setup: app/node_modules up to date (no-op)'
+        Invoke-AlShortcutStep
+        exit 0
+    }
+    Write-AlLog 'setup: electron.exe is not the pinned one; installing the overlay packages again'
+}
+
+Clear-AlElectronOverrides
 
 # Caches and temp stay in the sidecar, never in the drive root.
 $env:npm_config_cache = $paths.npm_cache
-$env:electron_config_cache = $paths.electron_cache
 $env:npm_config_update_notifier = 'false'
 $env:npm_config_fund = 'false'
 $env:TEMP = $paths.temp
@@ -256,21 +336,24 @@ $env:TMP = $paths.temp
 $npmLog = Join-Path $paths.logs 'npm-install.log'
 Push-Location $app
 try {
-    if (Test-Path $lock) {
-        Write-AlLog 'setup: npm ci'
-        $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('ci', '--no-audit') -Append
-    } else {
-        Write-AlLog 'setup: npm install --save-exact (no lockfile)'
-        $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('install', '--save-exact', '--no-audit') -Append
+    # OVL-NPM-LOCK (F-037): the lockfile is the only install route and no
+    # package script runs (app/.npmrc says the same); a missing lockfile
+    # refuses instead of resolving fresh versions.
+    if (-not (Test-Path $lock)) {
+        throw 'setup: app/package-lock.json is missing; restore it from the repository (no install without the lockfile)'
     }
+    Write-AlLog 'setup: npm ci --ignore-scripts'
+    $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('ci', '--ignore-scripts', '--no-audit') -Append
     if ($npmRc -ne 0) { throw "npm failed (rc $npmRc); see $npmLog" }
-    if (-not (Test-Path $electronExe)) {
-        Write-AlLog 'setup: fetching the Electron binary'
-        $elRc = Invoke-AlLogged $npmLog $node.Source @('node_modules\electron\install.js') -Append
-        if ($elRc -ne 0) { throw "Electron download failed (rc $elRc); see $npmLog" }
-    }
 } finally {
     Pop-Location
+}
+# npm ci (scripts off) leaves the electron package without its binary:
+# fetch (or reuse the cached, verified zip), unpack, check electron.exe.
+Write-AlLog 'setup: fetching the Electron binary (tools/electron_pin.py)'
+Assert-AlElectronPin (Invoke-AlElectronPin 'setup')
+if (Test-Path $electronExe) {
+    Assert-AlElectronPin (Invoke-AlElectronPin 'verify-exe')
 }
 if (Test-Path $lock) { $hash = (Get-FileHash -Path $lock -Algorithm SHA256).Hash }
 Set-Content -Path $stamp -Value $hash -Encoding ASCII

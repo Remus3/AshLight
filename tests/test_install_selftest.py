@@ -16,6 +16,7 @@ the test binds no port itself.
 """
 
 import ast
+import io
 import json
 import os
 import re
@@ -113,6 +114,35 @@ class FakeSpawn:
         return FakeProc(self.check_code if "--check" in cmd else self.demo_code)
 
 
+class LiveDemo:
+    """A demo core that printed its token line and keeps running."""
+
+    def __init__(self, token="tok123"):
+        self.stdout = io.BytesIO(f"http://127.0.0.1:8970/#token={token}\n".encode("ascii"))
+        self.returncode = None
+        self.pid = 0
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        return self.returncode
+
+    def terminate(self):
+        self.returncode = 0
+
+    def kill(self):
+        self.returncode = 0
+
+
+class HermeticSpawn(Recorder):
+    """--check exits 0; the demo core stays up and answers health (faked)."""
+
+    def __call__(self, cmd, **kw):
+        self.calls.append((list(cmd), dict(kw)))
+        return FakeProc(0) if "--check" in cmd else LiveDemo()
+
+
 def leftovers(home):
     temp = Path(home) / "temp"
     return sorted(os.listdir(temp)) if temp.is_dir() else []
@@ -124,8 +154,10 @@ def test_new_version_passes_and_runs_hidden_below_normal(tmp_path, clean_env):
     home = tmp_path / "home"
     root = lay_out(home)
     marker = with_marker(home)
-    spawn = Recorder()
-    res = selftest.run(home, NEW, clicked=True, spawn=spawn)
+    spawn = HermeticSpawn()
+    clean_env.setattr(selftest, "_health",
+                      lambda port, token, timeout=2.0: {"name": selftest.NAME, "version": NEW})
+    res = selftest.run(home, NEW, clicked=True, spawn=spawn, probe=lambda p: True)
     assert res.status == selftest.PASSED, res
     assert res.ok and res.stage == "health"
     assert ports.SELFTEST_PORTS[0] <= res.port <= ports.SELFTEST_PORTS[1]
@@ -153,6 +185,34 @@ def test_new_version_passes_and_runs_hidden_below_normal(tmp_path, clean_env):
     assert root.is_dir()
     assert leftovers(home) == []
     assert not (home / "logs" / "reports").exists()
+
+
+def test_port_taken_respawns_the_demo_core_on_the_next_port(tmp_path, clean_env):
+    home = tmp_path / "home"
+    lay_out(home)
+    with_marker(home)
+    taken = set()
+    demos = []
+
+    class Spawn(HermeticSpawn):
+        def __call__(self, cmd, **kw):
+            if "--demo" in cmd:
+                port = int(cmd[cmd.index("--port") + 1])
+                demos.append(port)
+                if len(demos) == 1:
+                    taken.add(port)  # another run grabbed it: bind fails, exit 2
+                    self.calls.append((list(cmd), dict(kw)))
+                    return FakeProc(2)
+            return super().__call__(cmd, **kw)
+
+    spawn = Spawn()
+    clean_env.setattr(selftest, "_health",
+                      lambda port, token, timeout=2.0: {"name": selftest.NAME, "version": NEW})
+    res = selftest.run(home, NEW, clicked=True, spawn=spawn, probe=lambda p: p not in taken)
+    assert res.status == selftest.PASSED, res
+    assert len(spawn.calls) == 3  # --check, demo (port taken), demo again
+    assert len(demos) == 2 and demos[0] != demos[1] and res.port == demos[1]
+    assert leftovers(home) == []
 
 
 def test_wrong_version_answer_fails_moves_and_reports(tmp_path, clean_env):

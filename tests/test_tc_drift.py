@@ -236,8 +236,45 @@ def test_parse_junit_counts_live_cases():
     assert r["failures"] == 1 and r["errors"] == 1 and r["live_ran"] == 1
 
 
-def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None, live=True):
-    seen = {"setup": [], "tests": [], "live": []}
+FAKE_LUA = """-- fake data file for tests
+return {
+\t{
+\t\t["id"] = "explicit.stat_1001",
+\t\t["text"] = "+# to maximum Life",
+\t\t["type"] = "explicit",
+\t},
+\t{
+\t\t["id"] = "explicit.stat_1002",
+\t\t["text"] = "#% increased Armour",
+\t\t["type"] = "explicit",
+\t},
+\t{
+\t\t["id"] = "implicit.stat_1003",
+\t\t["text"] = "#% increased Evasion",
+\t\t["type"] = "implicit",
+\t},
+}
+"""
+POB_REL = "src/Data/TradeSiteStats.lua"
+
+
+def _fake_checkout(doc, environ, text=FAKE_LUA, marker_sha=None):
+    """What tc_pin.run_setup leaves: the extracted candidate checkout with its
+    marker (data only; nothing here is ever run)."""
+    co = tc_pin.layout(doc, environ)["pob2_checkout"]
+    co.mkdir(parents=True, exist_ok=True)
+    (co / tc_pin.MARKER).write_text(json.dumps(
+        {"archive_sha256": marker_sha or doc["pob2"]["archive_sha256"]}), encoding="ascii")
+    if text is not None:
+        f = co.joinpath(*POB_REL.split("/"))
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(text.encode("ascii"))
+    return co
+
+
+def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None, live=True,
+           checkout=_fake_checkout, recycle=None):
+    seen = {"setup": [], "tests": [], "live": [], "cand": [], "recycled": []}
     it = iter(sizes)
 
     def download(url, dest):
@@ -246,15 +283,24 @@ def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None, live
 
     def setup(doc, environ):
         seen["setup"].append(doc["pob2"]["tag"])
+        if checkout is not None:
+            checkout(doc, environ)
 
     def run_tests(cand_path, junit_path, environ, live=False):
         seen["tests"].append(cand_path)
         seen["live"].append(live)
-        assert json.loads(Path(cand_path).read_text(encoding="ascii"))["pob2"]["tag"] == "v0.24.0"
+        cand = json.loads(Path(cand_path).read_text(encoding="ascii"))
+        seen["cand"].append(cand)
+        assert cand["pob2"]["tag"] == "v0.24.0"
         return tc_drift.parse_junit(junit)
+
+    def fake_recycle(path):
+        seen["recycled"].append(Path(path).name)
+        return False  # never a real Recycle Bin call from a test
     env = {"AL_SIDECAR_ROOT": str(tmp or root / "sidecar")}
     res = tc_drift.trial(root, "v0.24.0", environ=env, fetch=_fake(), download=download,
-                         setup=setup, run_tests=run_tests, today="2026-12-11", live=live)
+                         setup=setup, run_tests=run_tests, today="2026-12-11", live=live,
+                         recycle=recycle or fake_recycle)
     return res, seen
 
 
@@ -286,6 +332,145 @@ def test_trial_refuses_unstable_archive(tmp_path):
     res, seen = _trial(root, JUNIT_GREEN, sizes=((400, "c" * 64), (400, "d" * 64)))
     assert res["verdict"] == "error" and "differ" in res["detail"]
     assert seen["setup"] == [] and seen["tests"] == []
+
+
+# --- AUTO-12 (F-064): pob2_files re-hash and candidate prune ------------------
+
+def test_trial_rehashes_pob2_files_and_records_old_new_and_rows(tmp_path):
+    import hashlib
+    from server.al import tradestats
+    root = _root(tmp_path)
+    pins_before = (root / "config" / "tc_pins.json").read_bytes()
+    pin = json.loads(pins_before)["pob2_files"][POB_REL]
+    res, seen = _trial(root, JUNIT_GREEN)
+    assert res["verdict"] == "live-green", res
+    new_sha = hashlib.sha256(FAKE_LUA.encode("ascii")).hexdigest()
+    row = res["pob2_files"][POB_REL]
+    assert row == {"old_sha256": pin["sha256"], "old_size": pin["size"],
+                   "new_sha256": new_sha, "new_size": len(FAKE_LUA),
+                   "rows": 2, "changed": True}
+    assert row["rows"] == len(tradestats.parse_pob_trade_stats(FAKE_LUA))
+    # the tests ran against a candidate whose pob2_files carry the new hash
+    entry = seen["cand"][0]["pob2_files"][POB_REL]
+    assert entry == {"sha256": new_sha, "size": len(FAKE_LUA), "commit": NEW_SHA}
+    assert seen["cand"][0]["pob2_files"]["_doc"] == json.loads(pins_before)["pob2_files"]["_doc"]
+    st = tc_drift.load_state(root)
+    assert st["trial"]["pob2_files"][POB_REL]["new_sha256"] == new_sha
+    cand = json.loads(Path(st["trial"]["candidate"]).read_text(encoding="ascii"))
+    assert cand["pob2_files"][POB_REL]["sha256"] == new_sha
+    assert tc_pin.validate_pins(cand) == []
+    # the pin is untouched until apply; apply carries the new hash and the
+    # review lines name old, new and the parsed row count
+    assert (root / "config" / "tc_pins.json").read_bytes() == pins_before
+    lines = tc_drift.pob2_files_review(st["trial"])
+    assert len(lines) == 1 and pin["sha256"] in lines[0] and new_sha in lines[0]
+    assert "2 rows parsed" in lines[0]
+    assert tc_drift.apply(root) == "v0.24.0"
+    moved = json.loads((root / "config" / "tc_pins.json").read_text(encoding="ascii"))
+    assert moved["pob2_files"][POB_REL]["sha256"] == new_sha
+
+    # an unchanged file reads "unchanged"; a missing one keeps the old entry
+    # so the static guard reports it, and the review says MISSING
+    same = {"pob2_files": {POB_REL: dict(row, old_sha256=new_sha, changed=False)}}
+    assert "unchanged" in tc_drift.pob2_files_review(same)[0]
+    (tmp_path / "b").mkdir()
+    root2 = _root(tmp_path / "b")
+    res, seen = _trial(root2, JUNIT_GREEN,
+                       checkout=lambda d, e: _fake_checkout(d, e, text=None))
+    row = res["pob2_files"][POB_REL]
+    assert row["new_sha256"] is None and row["rows"] is None and row["changed"] is True
+    assert seen["cand"][0]["pob2_files"][POB_REL]["sha256"] == pin["sha256"]
+    assert "MISSING" in tc_drift.pob2_files_review(res)[0]
+
+    # a checkout not extracted from the candidate archive is an error, not a pass
+    (tmp_path / "c").mkdir()
+    root3 = _root(tmp_path / "c")
+    res, seen = _trial(root3, JUNIT_GREEN,
+                       checkout=lambda d, e: _fake_checkout(d, e, marker_sha="e" * 64))
+    assert res["verdict"] == "error" and "not re-hashed" in res["detail"]
+    assert seen["tests"] == []
+
+
+def test_rehash_refuses_a_path_outside_the_checkout(tmp_path):
+    env = {"AL_SIDECAR_ROOT": str(tmp_path / "sidecar")}
+    cand = tc_drift.candidate(tc_pin.load_pins(), "v0.24.0", NEW_SHA, "c" * 64, 400,
+                              "2026-12-11")
+    _fake_checkout(cand, env)
+    for bad in ("../outside.lua", "/abs.lua", "src/a:b.lua", "src\\x.lua", ""):
+        cand["pob2_files"] = {bad: {"sha256": "0" * 64, "size": 1}}
+        with pytest.raises(tc_drift.DriftError):
+            tc_drift.rehash_pob2_files(cand, env)
+
+
+def test_candidates_other_than_pin_and_newest_are_pruned(tmp_path):
+    root = _root(tmp_path)
+    side = tmp_path / "sidecar"
+    env = {"AL_SIDECAR_ROOT": str(side)}
+    rt = paths.all_runtime_paths(env)
+    pin = tc_pin.load_pins()["pob2"]
+    name = pin["repo"].split("/")[1]
+    old = "b" * 40
+    cache, work = rt["pob2_cache"], rt["build"] / "tc-drift"
+    work.mkdir(parents=True)
+    keep, gone = [], []
+    for commit, bucket in ((pin["commit"], keep), (old, gone), (NEW_SHA, keep)):
+        (cache / f"{name}-{commit}" / "src").mkdir(parents=True)
+        (cache / f"{name}-{commit}.zip").write_bytes(b"zip")
+        bucket += [f"{name}-{commit}", f"{name}-{commit}.zip"]
+    for tag, bucket in ((pin["tag"], keep), ("v0.23.5", gone)):
+        for suffix in ("pins.json", "junit.xml"):
+            (work / f"{tag}-{suffix}").write_text("{}", encoding="ascii")
+            bucket.append(f"{tag}-{suffix}")
+    # look-alikes that are not candidates stay untouched
+    others = [f"{name}-{old}.zip.rejected", "notes.txt", f"{name}-{old}.zip.part"]
+    for o in others:
+        (cache / o).write_bytes(b"x")
+    (work / "v0.23.5-other.json").write_text("{}", encoding="ascii")
+    others.append("v0.23.5-other.json")
+
+    recycled = []
+
+    def recycle(path):
+        recycled.append(Path(path).name)
+        p = Path(path)
+        if p.is_dir():
+            import shutil
+            shutil.rmtree(p)
+        else:
+            p.unlink()
+        return True
+    res, _ = _trial(root, JUNIT_GREEN, tmp=side, recycle=recycle)
+    assert res["verdict"] == "live-green", res
+    assert sorted(recycled) == sorted(gone)
+    assert sorted(res["prune"]["pruned"]) == sorted(gone) and res["prune"]["left"] == []
+    present = {p.name for p in cache.iterdir()} | {p.name for p in work.iterdir()}
+    assert set(keep) <= present and set(others) <= present
+    assert not (set(gone) & present)
+    assert "v0.24.0-pins.json" in present  # the newest candidate stays
+    assert tc_drift.load_state(root)["trial"]["prune"]["pruned"] == res["prune"]["pruned"]
+
+    # a recycle that fails leaves the item in place (no direct unlink)
+    (cache / f"{name}-{old}.zip").write_bytes(b"zip")
+    res, seen = _trial(root, JUNIT_GREEN, tmp=side)
+    assert seen["recycled"] == [f"{name}-{old}.zip"]
+    assert res["prune"] == {"pruned": [], "left": [f"{name}-{old}.zip"]}
+    assert (cache / f"{name}-{old}.zip").is_file()
+
+
+def test_prune_skipped_before_a_commit_is_known_and_recycle_off_windows(tmp_path, monkeypatch):
+    root = _root(tmp_path)
+    env = {"AL_SIDECAR_ROOT": str(tmp_path / "sidecar")}
+    called = []
+    res = tc_drift.trial(root, "v0.24.0", environ=env, fetch=_fake(sha="not-a-sha"),
+                         download=lambda u, d: ("c" * 64, 1), setup=lambda d, e: None,
+                         run_tests=lambda *a, **k: {}, recycle=lambda p: called.append(p))
+    assert res["verdict"] == "error" and "prune" not in res and called == []
+    monkeypatch.setattr(tc_drift.os, "name", "posix")
+    monkeypatch.setattr(tc_drift.subprocess, "run",
+                        lambda *a, **k: pytest.fail("no recycle subprocess off Windows"))
+    f = tmp_path / "keep.txt"
+    f.write_text("x", encoding="ascii")
+    assert tc_drift.recycle_path(f) is False and f.is_file()
 
 
 # --- apply --------------------------------------------------------------------
@@ -380,8 +565,15 @@ def test_decision_0004_carries_a_dated_pin_log_line_for_the_current_pin():
 
 
 def test_floor_no_trade_or_cookie_paths_in_module():
+    import re
     text = (ROOT / "tools" / "tc_drift.py").read_text(encoding="ascii")
-    assert "POESESSID" not in text and "trade" not in text.lower()
+    assert "POESESSID" not in text
+    # AUTO-12: the one "trade" word allowed is the local data parser module
+    # that counts pob2_files rows (decision 0037 amendment); no trade host,
+    # path or endpoint
+    words = set(re.findall(r"\w*trade\w*", text, re.I))
+    assert words <= {"tradestats", "parse_pob_trade_stats"}, words
+    assert "pathofexile.com" not in text.lower() and "/trade" not in text.lower()
     assert tc_drift.API_HOSTS == ("api.github.com",)
 
 

@@ -3,7 +3,7 @@ answers "is AshLight healthy, and what do I do if not".
 
 Every check is a passive local read the core already has (tailer state,
 the local config, the cached price book, the calc component's files, the
-build-time data snapshot, server/al/procs.py, AshLight's own overlay log).
+game-data snapshot, server/al/procs.py, AshLight's own overlay log).
 No network (this module never imports webfetch), no probe of the game
 process, no window scan. The hotkey reads "registered" from the overlay's
 own log, never "pressed".
@@ -47,7 +47,13 @@ FIX_NET = ("Check this computer's internet connection. AshLight tries again "
 CALC_STEP = r"scripts\setup.ps1 -TcCalc"
 FIX_CALC = (f"Run {CALC_STEP}. That one step installs the calc again and "
             "turns it on.")
-FIX_SNAPSHOT = r"Run scripts\build.ps1 -Snapshot to fetch it."
+# DATA-SNAP-AT-START (F-072): the supervisor fetches game data by itself
+# while web data is on, so no fix line names a script
+FIX_SNAPSHOT = ("AshLight fetches it by itself while web data is on, at most "
+                "once a day. If it stays missing or old, check this computer's "
+                "internet connection.")
+FIX_SNAPSHOT_OFF = ('Tick "Use web data" under Prices and web data. AshLight '
+                    "then fetches it by itself.")
 FIX_HOTKEY = ("Another app holds the shortcut. Set a different item check key in "
               r"AshLight's settings file, then run scripts\run.ps1.")
 
@@ -200,7 +206,7 @@ def check_snapshot(f, now):
     age = now - at
     if age > SNAPSHOT_OLD_S:
         return _check("snapshot", "Game data", FAIL, f"Present, fetched {_ago(age)}.",
-                      FIX_SNAPSHOT)
+                      FIX_SNAPSHOT if f.get("web_data") else FIX_SNAPSHOT_OFF)
     return _check("snapshot", "Game data", PASS, f"Present, fetched {_ago(age)}.")
 
 
