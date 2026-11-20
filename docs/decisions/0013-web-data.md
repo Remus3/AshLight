@@ -121,3 +121,17 @@ Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
   degrade, the operator rules that a build-time fetch is not "web data",
   or first-run use shows users missing the data and not finding the switch.
 - Tests: tests/test_audit_snapshot_optin.py.
+
+## Amendment 2026-11-18 (DATA-SNAP-AT-START, plan unit F-072, ruling Q-04)
+
+- Decision: the one `web_data` opt-in now also covers a start-time run of
+  the game-data snapshot: while it is on and the cache is missing or over
+  24 h old, the keepalive supervisor starts the snapshot tool as its own
+  hidden below-normal process (server/al/snapstart.py; full record in
+  decision 0009, amendment 2026-11-18). The tool still reads the opt-in
+  itself, so nothing hits the network while it is off. The core gains no
+  fetch path: webfetch.py stays its only outbound HTTP code.
+- Alternatives and why: decision 0009, amendment 2026-11-18 (no second
+  switch; a second setting would contradict the single opt-in).
+- Reverses if: the operator rules web data must be per feature, or a
+  source objects to start-time fetches.
