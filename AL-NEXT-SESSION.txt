@@ -1,11 +1,11 @@
 AL NEXT SESSION
 ---------------
-SESSION: 11   (FLEET item 13 counter; /done writes n+1)
+SESSION: 12   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
 WAVE POINTER: wave 13 done, next wave 14
-DEFERRED: RUN-METRICS-CORE (wave 13): batch 1 suite red on tests/test_marks.py::test_minus_m_timing_lists_the_timing_files_and_fuzz_bounds (tests/test_metrics.py adds a timing-marked test not in TIMING_TESTS of tests/test_marks.py, outside the package files; retry widens to tests/test_marks.py and adds tests/test_metrics.py to TIMING_TESTS); merge 15c4fb2 reverted b375f82, edits out 6d7cdd3; branch worktree-w13-RUN-METRICS-CORE
+DEFERRED: RUN-METRICS-CORE (wave 13): batch 1 suite red on tests/test_marks.py::test_minus_m_timing_lists_the_timing_files_and_fuzz_bounds (tests/test_metrics.py adds a timing-marked test not in TIMING_TESTS of tests/test_marks.py, outside the package files; retry widens to tests/test_marks.py and adds tests/test_metrics.py to TIMING_TESTS); merge 15c4fb2 reverted b375f82, edits out 6d7cdd3; branch worktree-w13-RUN-METRICS-CORE removed by the session 11 reap, its tip 9d9d448 kept as local ref refs/al/keep/RUN-METRICS-CORE
 Wave 13 (session 11): 12 plan packages plus the carried OVL-NPM-LOCK and fold FIX-SELFTEST-PORT-HERMETIC; 13 merged in 4 batches (batch 0 OVL-NPM-LOCK alone so OVL-ELECTRON-SETUP could build from main; batch 1 widened to 5), RUN-METRICS-CORE deferred (batch 1 culprit); second suites 2 (batch 0 flake, batch 1 culprit), escapes 1; suites 3842 + 1 failed then 3843 / 3857 + 1 failed then 3850 / 3867 / 3899 passed, 6 skipped, timing 30 / 30 / 31 / 30 / 30 / 30; npm 503 / 503 / 512 / 512 / 515; main 0558752.
 Wave 12 (session 11): 12 plan packages plus fold FIX-SHELL-WRAP and the two loop leftovers TEST-LOOP-SPLIT-MERGE and REL-INSTALL-CALC; 14 merged in 4 batches (batch 1 widened to 5 merges), OVL-NPM-LOCK deferred (batch 2 culprit; one second suite, escapes 1); suites 3738 / 3745 + 2 failed, then 3737 / 3817 / 3833 passed, 6 skipped, timing 30 each; npm 499 / 503 / 503 / 503; main fe2e307.
 Wave 11 (session 11): 13 plan packages plus 3 fold packages merged in 4 batches (batch 1 widened to 6 merges), no deferral, no second suite (one infrastructure retry in batch 1: a 36-column PowerShell console wrapped an expected error text); suites 3546 / 3658 / 3688 / 3688 passed, 6 skipped, timing 30 each; npm 497 / 497 / 497 / 499; main 6da7ea6.
@@ -14,27 +14,26 @@ Wave 9 escape count, rulings and open design findings: docs/handoff-archive/AL-2
 Wave 8 escape count and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 Waves 1 to 6 escape counts and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 
-Next action: wave 12 of docs/plan/07-execution-plan.md, run exactly as
-docs/plan/08-orchestration.md says: ONE background orchestrator agent for the
-wave with a real background watch on the progress files; merge batches of 4
-now that TEST-SELECT is on main (b1efb31). Ask the operator nothing (every
+Next action: wave 14 of docs/plan/07-execution-plan.md (then onward per
+07's session grouping), run exactly as docs/plan/08-orchestration.md says:
+ONE background orchestrator agent for the wave with a real background watch
+on the progress files; merge batches of 4. Ask the operator nothing (every
 operator item has a default in force). The main session only dispatches;
 every command runs in a sub-agent, in the main checkout.
-1. Dispatch one start agent (08 section 1, argument wave 12), then wave 12
-   (08 sections 2 to 7). Waves 8 and 9 are closed (session 10).
-2. First, at wave-10 start: fold the five rows tagged "BLOCKED: session
-   wave 9" that are in no package (bullet SESSION-10 ROWS below) into wave
-   10 packages by adjudicator ruling, or retag each to the earliest session
-   wave that owns its files; a stale wave-9 tag is never left behind.
-3. Go-public track: GP-10 (config/public_repo.json plus the leak_sweep
-   exception) is parked in wave 99 behind PUB-README-PLAYERS (w12) and
-   PUB-SWEEP-OWN-ADDRESS (w17); GP-06 (w8) and GP-11 (w9) are done. The
-   repository exists and is PRIVATE; it stays private until the plan-04
-   flip gates hold (GP-12). Push main only through fleet_gitlock, never
-   force.
-Session-level lessons (sessions 8 to 10), keep in the orchestrator briefs: run a
+1. Dispatch one start agent (08 section 1, argument wave 14), then wave 14
+   (08 sections 2 to 7). Waves 10 to 13 are closed (session 11).
+2. Wave 14 retries the deferred RUN-METRICS-CORE (DEFERRED line above):
+   widen its files to tests/test_marks.py and add tests/test_metrics.py to
+   TIMING_TESTS; the old edits are on refs/al/keep/RUN-METRICS-CORE.
+3. Go-public track: the repository exists and is PRIVATE; it stays private
+   until the plan-04 flip gates hold (GP-12). Push main only through
+   fleet_gitlock, never force. Status bullet GO-PUBLIC STATUS below.
+Session-level lessons (sessions 8 to 11), keep in the orchestrator briefs: run a
 whole wave via one background orchestrator with a real background watch;
-never end an orchestrator turn on "Waiting" with nothing running; never tell
+never end an orchestrator turn on "Waiting" with nothing running (session
+11: it happened twice and the orchestrator had to be resumed; the brief must
+say never end a turn without a live background child, and to stop verifier
+watcher leftovers before closing); never tell
 a package agent "do not push" when CLAUDE.md authorizes the push; builders
 and verifiers always also run tests/test_test_layout.py; use a fresh
 integrator per batch; verify every builder's claimed commit sha against git
@@ -68,9 +67,35 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- DEV PORT (session 11): the dev checkout's core listens on 8960 (read back
+  2026-11-19) because config/local.json has "port": null, so it takes
+  ports.AL_PORT 8960; CLAUDE.md says the checkout uses AL_DEV_PORT 8961 and
+  8960 is the installed copy's (no installed copy exists yet). Decide or fix
+  (set the checkout to 8961 at the install cutover, or amend CLAUDE.md).
+- ACL (session 11): the AshLight checkout folder ACL was made private
+  2026-11-19 with `python -m server.al.acl apply .`; restorable backup in the
+  AL sidecar Logs folder, acl-before-20261119-185409 (icacls save). The
+  dashboard "Private files" Checks row clears on the next core start; read it
+  back then.
+- GO-PUBLIC STATUS (2026-11-19): NOT ready. Open gates: GP-10
+  (config/public_repo.json, waits PUB-SWEEP-OWN-ADDRESS wave 17),
+  DATA-PRICE-CADENCE (wave 18), PUB-HOOK-RELEASE-CHECK (wave 22).
+  PUB-README-PLAYERS landed wave 12; ci green on consecutive runs. Flip only
+  on the operator's word: `gh repo edit <public repo> --visibility public
+  --accept-visibility-change-consequences` (<public repo> = the
+  config/public_repo.json value once GP-10 lands).
+- OPERATOR REQUESTS 2026-11-19 (item tooltip, Kindler build generator,
+  header / version line, collapsible panels): planned in
+  docs/plan/10-operator-requests-2026-11-19.md and decisions 0081 to 0083;
+  12 packages in waves 38 to 42.
+- OWED LIVE CHECKS (session 11): tray tooltip / About / footer version line
+  (RUN-BUILD-STAMP-UI); real `npm ci --ignore-scripts` (OVL-NPM-LOCK); real
+  setup.ps1 / run.ps1 with the Electron fetch and client start
+  (OVL-ELECTRON-SETUP); tray-only memory <= 250 MB (RUN-BUDGET-LOG-CLIENT,
+  wave 14).
 - WAVE-13 RULINGS (2026-11-19; records in the batch 0, 1, 2, 3 integrator commit bodies and the close commit): R4 (orchestrator, carried deferral): OVL-NPM-LOCK rebuilt on a fresh branch from main, f60fe2e reverts the wave-12 revert 8adb83a (restores defbb1f, no rewrite), files widened to config/ship_list.json which excludes the dev-only app/.npmrc (app/** stays); batch 0 = OVL-NPM-LOCK alone, then OVL-ELECTRON-SETUP built from acdb293 (serial group setup-ps1). W13-1 (adjudicator): batch 0 suite red only on tests/test_install_selftest.py::test_new_version_passes_and_runs_hidden_below_normal (3 spawns, xdist port contention in 8970-8975; passes alone 3/3) = flake, one more suite (green), no revert; fold package FIX-SELFTEST-PORT-HERMETIC (tests/test_install_selftest.py only; row file docs/roadmap/new/FIX-SELFTEST-PORT-HERMETIC.md, done). W13-2 (orchestrator, wave 11/12 precedent): batch 1 held 5 merges (the fold). RUN-METRICS-CORE deferred per 08 section 4 step 6, row retagged "BLOCKED: session wave 14", stays wave 13 in packages.json (DEFERRED line carries it). No row carries "BLOCKED: session wave 13".
 - WAVE-13 DEVIATIONS / OWED (recorded): no live Electron, core or setup run in the wave (floor): owed RUN-BUILD-STAMP-UI live tray tooltip / About / footer check; OVL-NPM-LOCK real npm ci --ignore-scripts against the regenerated lockfile; OVL-ELECTRON-SETUP live setup.ps1 / run.ps1 run (npm ci, Electron zip fetch and unpack, client start). FIX-SELFTEST-PORT-HERMETIC builder first edited the main checkout by mistake, reverted it itself (main read back clean). Batch 2 suite ran at normal priority (not BelowNormal).
-- KIT NOTE (for the AUTO-25 kit report, not a note): during the batch 0 suite the loop's own suite_run (owner al-loop.main) held the gate's second slot at the same time, so two whole suites ran in the AshLight tree at once (item 16c says one per tree); that is the likely cause of the selftest port collision.
+- KIT NOTE (for the AUTO-25 kit report, not a note): during the batch 0 suite the loop's own suite_run (owner al-loop.main) held the gate's second slot at the same time, so two whole suites ran in the AshLight tree at once (item 16c says one per tree); that is the likely cause of the selftest port collision. Session 11 /done: no outbound note path for AL exists yet (see KIT DEFECT bullet), so this is recorded here, not sent; it goes in the same MAIN note.
 - WAVE-13 FOLLOW-UPS: DATA-SNAP-AT-START: server/al/plug/dataage.py FIX still says "Run scriptsuild.ps1 -Snapshot" (pinned by tests/test_diag_data_age.py); datacredit ATTRIBUTION / ZONE_LEVELS_CREDIT still say "when AshLight was built"; the snapshot child is not in procs.py (stop.ps1 does not stop it; short-lived). TEST-STATE-TEXT-3: itemcheck._alert_text is a call-time import of state.build_alert_text (cycle) until TEST-STATE-TEXT-4, whose files should add server/al/text/itemcheck.py. RUN-BUILD-STAMP-UI: its tests live in app/test/about.test.js (not client_controls.test.js / test_ux_review.py); version text is written twice (app/about.js, web/app.js) held equal by a vm test; the overlay page About shows no version (app/overlay outside files). TC-UPGRADE-PER-SLOT: health.js keeps its own TRADE_SEARCH copy (one host list with F-112). TC-CALC-CONFINE-PROC: a venv python.exe launcher breaks the one-process job limit in fake-child tests (CI and this machine use a real python.exe).
 - DESIGN FINDINGS OPEN (wave 13, docs/design/reviews.log): TST3-1 (S4, design 0001 section 9 still names state.py as card text home; folds with TSM2-1); BS-1, BS-2 (S4, RUN-BUILD-STAMP-UI Settings About fold copy, ", dev"); TUP-1 (S3), TUP-2 (S4) (TC-UPGRADE-PER-SLOT row link wording / layout). ZGS-1 to ZGS-3 FIXED in the fix round (0e3836c).
 - WAVE-12 RULINGS (adjudicator, 2026-11-19; records in the batch 1, 2 and 4 integrator commit bodies): FIX-SHELL-WRAP ran as a fold package (tests/test_shell_integration.py only, whitespace-insensitive match of PowerShell error text; no row, precedent FIX-CI-MARKS; batch 1 widened to 5); the loop leftovers TEST-LOOP-SPLIT-MERGE and REL-INSTALL-CALC (kept refs refs/al/keep/*, failed only on that flake) were rebuilt on main and merged as batch 4, their failed loop records left for the loop's own LOOP-FAILED-PARK step to mark superseded once the rows are done (no hand edit of loop_items); TEST-LOOP-SPLIT-LANES was held with a temporary close tag during the wave, removed at close; new loop-owned row LOOP-GATE-RERUN filed as docs/roadmap/new/LOOP-GATE-RERUN.md (no packages.json entry); OVL-NPM-LOCK deferred, row retagged "BLOCKED: session wave 13", stays wave 12 in packages.json (DEFERRED line carries it). The extra items were an operator-side order relayed by the coordinator.
@@ -317,6 +342,7 @@ Carried forward (not acted on yet):
 - NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
   at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
 - NOTE (session 9 /done, 2026-11-19): fleet_done.py reap --apply: 13 removed (the w7-* package and int worktrees, branches deleted, every commit on main by patch), 3 kept (lane-0, lane-1, lane-2; lane-0 and lane-1 hold the loop's verified OVL-CLIENT-ZOOM and AUTO-23 commits).
+- NOTE (session 11 /done, 2026-11-19): fleet_done.py reap --apply removed the w10-* to w13-* package and integrator worktrees (branches deleted, every commit on main by patch; RUN-METRICS-CORE tip kept as refs/al/keep/RUN-METRICS-CORE first); read back after: 4 worktrees listed (main, lane-0, lane-1, lane-2), 0 worktree-* branches. roadmap_fold: 61 row files applied, 57 done rows archived (02d5cc1).
 - NOTE (session 10 /done, 2026-11-19): fleet_done.py reap --apply: the w8-* and w9-* package and integrator worktrees removed (branches deleted, every commit on main by patch); read back after: 0 removable, 3 kept (lane-0, lane-1, lane-2), 4 worktrees listed incl. main.
 - SESSION-7 FINDING (GP-04; for GP-05, wave 4): the CI Python 3.11 job
   must run on a real Python exe, not a venv launcher, or
@@ -370,11 +396,18 @@ before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, the core, the overlay or the
 loop (08, Rules).
 
-Acceptance: wave 12 is closed as 08 section 7 says (open-row command for
-wave 12 prints "none open", plan_check ok, git status --short empty on main,
+Acceptance: wave 14 is closed as 08 section 7 says (open-row command for
+wave 14 prints "none open", plan_check ok, git status --short empty on main,
 leak sweep clean, last batch suite and npm test green, git show
-HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 12 done, next wave 13"),
-and no row still carries "BLOCKED: session wave 9".
+HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 14 done, next wave 15"),
+RUN-METRICS-CORE merged or re-deferred with a ruling, and no row still
+carries "BLOCKED: session wave 14".
+
+Do NOT redo (session 11, all on main and pushed): waves 10, 11, 12 and 13
+closed (records in the Wave 10 to 13 lines and RULINGS bullets above; main
+3c73cb3 pushed with ci and fleet-identity-guard green); the loop then merged
+TEST-LOOP-SPLIT-LANES (6293409), pushed at /done; roadmap fold 02d5cc1;
+plan 10 (operator requests) with decisions 0081 to 0083 landed in wave 11.
 
 Do NOT redo (session 10, all on main and pushed; main = origin/main =
 a8fb7bf read back before this hand-off): waves 8 and 9 closed, pointer
@@ -392,7 +425,16 @@ merged (done row files folded at session 10 /done).
 
 Do NOT redo (sessions 6 to 9, waves 0 to 7, the ultraplan, AUTO-21): docs/handoff-archive/AL-2026-11-19.txt.
 
-In flight: none. No session agent running; loop lanes lane-0, lane-1, lane-2 read done (fleet_checklist stale: none, 2026-11-19); HALT absent (loop live).
+In flight: none. No session agent running; loop.json and lanes lane-0, lane-1, lane-2 read done (fleet_checklist stale: none, 2026-11-19 22:4x); HALT absent (loop live); REG_OPEN absent (registration closed).
+
+Status (session 11 /done, 2026-11-19, fresh runs read back): whole suite
+through the suite gate 3899 passed / 6 skipped, timing phase 30 passed
+(rc 0); npm test --prefix app 515/515; leak sweep --tree no HALT (ARMED
+needles=44); main 6293409 pushed to origin (read back origin/main =
+6293409), then the roadmap fold 02d5cc1 and this hand-off commit pushed.
+Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip
+terminal, no reply. Core listening on 127.0.0.1:8960. Operator acts: none
+new.
 
 Status (session 10 /done, 2026-11-19, fresh runs read back): whole suite
 through the suite gate 3401 passed / 6 skipped (rc 0); npm test --prefix app
