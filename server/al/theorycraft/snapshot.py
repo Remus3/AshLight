@@ -1,10 +1,12 @@
-"""Build-time game-data snapshot (ROADMAP TC-SNAP, decision 0009).
+"""Game-data snapshot (ROADMAP TC-SNAP, decision 0009).
 
 Fetches the permitted public game-data files into the AL sidecar cache
 (`<sidecar>\\Cache\\gamedata\\`, resolved by server/al/paths.py) and writes
 `manifest.json` (URL, fetch date, SHA-256, size, ETag / Last-Modified per
-file). Run by scripts/build.ps1; the core never imports this module, so
-there is no runtime fetch.
+file). Run at build time by scripts/build.ps1, or at start time by the
+keepalive supervisor (server/al/snapstart.py, DATA-SNAP-AT-START), always
+as this tool's own process; the core never imports this module, so the
+core itself never fetches game data.
 
 Idempotent: a file checked within MIN_AGE_S is skipped with no request;
 otherwise a conditional request (If-None-Match / If-Modified-Since) is sent

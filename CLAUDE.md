@@ -453,9 +453,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
 - LIVE-RESUME scans Client.txt backwards at start, no persisted state
   (decision 0008). Reverses if: GGG drops the marker / level-up lines or the
   32 MB cap misses the current run's deaths in normal play.
-- Bundle no game / repoe-fork / poe2db / wiki data; build-time fetch into
-  the sidecar cache only, with attribution (decision 0009). Reverses if: a
-  source's license forbids that use or permits redistribution.
+- Bundle no game / repoe-fork / poe2db / wiki data; build-time or start-time
+  fetch into the sidecar cache only, by the snapshot tool as its own process;
+  the core never fetches; with attribution (decision 0009). Reverses if: a
+  source's license forbids that use or permits redistribution, a source
+  objects to start-time fetches, or the hidden process costs overlay budget in
+  play.
 - server/al/procs.py is the one process registry; stop.ps1 stops core,
   supervisor and overlay; run.ps1 is idempotent per component (decision
   0010). Reverses if: the overlay gains a clean-exit channel or Electron
@@ -534,7 +537,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   Reverses if: decision 0008 reverses or GGG drops the area generation line.
 - The build-time game-data snapshot follows the one web_data opt-in, default
   OFF; build.ps1 fetches only when web_data is true or -Snapshot is passed
-  (decisions 0009 and 0013, amendments 2026-11-17). Reverses if: a core
+  (decisions 0009 and 0013, amendments 2026-11-17); the supervisor starts the
+  same tool hidden at below-normal priority when web data is on and the cache
+  is missing or over 24 h old (0009 item 2 and 0013 amended 2026-11-18, Q-04).
+  Reverses if: a core
   feature needs snapshot data and cannot degrade, the operator rules a
   build-time fetch is not "web data", or users miss the data and the switch.
 - TC-CODE-REAL: real PoB2 exports checked by fixture, XML round trip byte
