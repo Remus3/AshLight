@@ -1075,3 +1075,11 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   source's owner asks tools not to read it automatically, the metadata-only
   rule hides a break only a data read shows, or the operator exempts a
   source from the web-data gate in writing.
+- Observability records: AshLight records only its own behaviour: in-memory
+  counters behind the token-gated /api/debug and the probe command, a 1 MB
+  budget log of its own processes, a typed event log with no free-text field,
+  and a report built on the player's click from an allow-list of fields; never
+  the game process or window, no Client.txt text, nothing uploaded (decision
+  0067; decision 0006 method 3, decision 0040 class). Reverses if: a record is
+  found to hold a path, name, chat or item text, the sampler costs overlay
+  budget, or GGG restricts derived local records.

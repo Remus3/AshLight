@@ -32,6 +32,7 @@ const Launcher = require("./client/launcher.js");
 const HotReload = require("./hotreload.js");
 const Parts = require("./parts.js");
 const Guards = require("./guards.js");
+const Metrics = require("./metrics.js");
 
 const REPO = path.resolve(__dirname, "..");
 const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
@@ -58,6 +59,7 @@ let stopHotReload = null; // HOT-RELOAD: stops the overlay page file watch
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let versionText = ""; // RUN-BUILD-STAMP-UI: the version line, "" until the core answers
 let logStream = null;
+let metrics = null; // RUN-BUDGET-LOG-CLIENT: the once-a-minute own-process sampler
 
 function log(msg) {
   const line = new Date().toISOString() + " " + msg + "\n";
@@ -464,6 +466,10 @@ function start() {
   // before the start line: server/al/diag.py reads a shortcut failure only
   // in the lines before it.
   runParts("ready");
+  // RUN-BUDGET-LOG-CLIENT (F-032): once a minute, Electron's own process
+  // tree (app.getAppMetrics, never the game) into ops/runtime/overlay-state.json.
+  metrics = Metrics.startSampler({ getMetrics: () => app.getAppMetrics(), dir: path.dirname(TOKEN_FILE),
+    overlay: () => win, companion: () => (client ? client.window() : null), log: log });
   log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey);
 
   if (SMOKE_S > 0) { setTimeout(() => app.quit(), SMOKE_S * 1000); }
@@ -471,6 +477,7 @@ function start() {
 
 app.on("will-quit", () => {
   runParts("quit");
+  if (metrics) { metrics.stop(); }
   globalShortcut.unregisterAll();
   if (client) { client.dispose(); }
   fs.unwatchFile(TOKEN_FILE);
