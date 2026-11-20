@@ -101,6 +101,54 @@ def is_endgame(area_id):
     return isinstance(area_id, str) and bool(_ENDGAME.match(area_id))
 
 
+# RUN-DIAG-DATA-AGE (F-114): the area kinds the cached world_areas file
+# must list; an id of these kinds it lacks means the game data is older
+# than the game. Hideouts and other ids never count (a hideout id is not
+# needed for zone levels and its naming varies).
+DATA_AGE_KINDS = ("campaign", "cruel", "interlude", "map")
+_KIND_OF_PREFIX = {"G": "campaign", "C": "cruel", "P": "interlude"}
+
+
+def area_kind(area_id, known=None):
+    """{"kind", "known"} for an area id. kind: campaign, cruel, interlude,
+    map, hideout or other (a hideout id wins over the other shapes).
+    known: True / False whether `known` (the id set of the cached
+    world_areas file, load_ids) lists it; None when that set is empty or
+    not given (no snapshot: nothing to compare)."""
+    if not isinstance(area_id, str) or not area_id:
+        kind = "other"
+    elif "hideout" in area_id.lower():
+        kind = "hideout"
+    else:
+        info = act_of(area_id)
+        if info is not None:
+            kind = _KIND_OF_PREFIX[info["key"][0]]
+        elif is_endgame(area_id):
+            kind = "map"
+        else:
+            kind = "other"
+    has = None
+    if known and isinstance(area_id, str):
+        has = area_id in known
+    return {"kind": kind, "known": has}
+
+
+def load_ids(path):
+    """frozenset of every area id (the object's keys) in a cached
+    world_areas.json; a missing, oversized or malformed file gives an
+    empty set. Read only, like load_table."""
+    try:
+        p = Path(path)
+        if p.stat().st_size > MAX_BYTES:
+            return frozenset()
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return frozenset()
+    if not isinstance(doc, dict):
+        return frozenset()
+    return frozenset(k for k in doc if isinstance(k, str) and k)
+
+
 class ActSplits:
     """Per-act timer splits of the current run. Not thread-safe: the
     SessionState lock guards it."""
