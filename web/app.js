@@ -568,16 +568,14 @@
   }
 
   /* ---- TC-EVAL-UI: the last item check (from the hotkey press). */
+  // PLAY-LEGACY-OUT-2: a new check showing Play is the news hook of
+  // web/regions.js now (UI-GLANCE ZERO-CLICK); this only fills the card
   var evalShown = null;
-  var evalPainted = false; // false until the first state paint
 
   function renderEval(ev) {
     var key = ev ? ev.id : null;
     if (key === evalShown) { return; }
-    // UI-GLANCE ZERO-CLICK: a new card (not the first paint) shows Play
-    var fresh = evalPainted && key !== null;
     evalShown = key;
-    if (fresh && window.ALTabs) { window.ALTabs.notify(document, "item check"); }
     var v = T.evalView(ev, clock);
     $("eval-empty").hidden = !!v;
     $("eval-body").hidden = !v;
@@ -996,10 +994,7 @@
   A.register({
     name: "eval",
     order: 20,
-    paint: function (s) {
-      renderEval(s.eval || null);
-      evalPainted = true;
-    }
+    paint: function (s) { renderEval(s.eval || null); }
   });
   A.register({
     name: "price",
@@ -1035,16 +1030,15 @@
   A.register({
     name: "consent",
     order: 70,
+    // the opt-in is region C's setup card (web/setupcard.js); the footer
+    // keeps the opt-out until PLAY-TD-21A-SETTINGS-RAIL moves it
     paint: function (s) {
       var tl = s.tailer || {};
-      $("consent").hidden = !!tl.consented;
       $("consent-no").hidden = !tl.consented;
-      $("consent-path").textContent = tl.path || "Client.txt (not found yet - start the game once)";
       $("events-empty").textContent = D.emptyText(!!tl.consented);
     },
     wire: function () {
-      $("consent-yes").addEventListener("click", function () { consent(true); });
-      $("consent-no").addEventListener("click", function () { consent(false); });
+      $("consent-no").addEventListener("click", stopReading);
     }
   });
   A.register({
@@ -1090,12 +1084,11 @@
   A.register({
     name: "zonenote",
     order: 140,
-    // UX-ZONE-NOTES: the core's own note for this campaign zone
-    paint: function (s) {
-      var zn = s.zone_note && typeof s.zone_note.text === "string" ? s.zone_note.text : "";
-      $("zone-note-box").hidden = !zn;
-      if ($("zone-note").textContent !== zn) { $("zone-note").textContent = zn; }
-    }
+    // PLAY-LEGACY-OUT-2: the zone note is region C's (town mode) and the old
+    // Zone tip box is gone, so this panel paints nothing. It stays only
+    // while app/test/registry.test.js pins today's panel list; the package
+    // that widens to that test deletes this entry.
+    paint: function () {}
   });
   A.register({
     name: "history",
@@ -1123,13 +1116,11 @@
   A.register({
     name: "hints",
     order: 170,
-    paint: function (s) {
-      if (window.ALHints) { window.ALHints.paint(document, s, serverNow()); }
-    },
-    // NEWBIE-HINTS: the tip hides by itself at its end time.
-    tick: function (s, now) {
-      if (window.ALHints) { window.ALHints.paint(document, s, now); }
-    },
+    // NEWBIE-HINTS: the tip itself is a region N notice (PLAY-LEGACY-OUT-2);
+    // this keeps only the Settings click "Show new-character tips again".
+    // The empty tick stays only while app/test/registry.test.js pins the
+    // tick order; the package that widens to that test deletes it.
+    tick: function () {},
     wire: function () {
       if (window.ALHints) { window.ALHints.wire(document, api); }
     }
@@ -1279,13 +1270,15 @@
     });
   }
 
-  function consent(yes) {
-    var err = $("consent-error"); // a polite live region; empty hides nothing
-    err.textContent = "";
-    api("POST", "/api/consent", { consent: yes }).then(function (res) {
+  /* "Stop reading Client.txt": the opt-out click. The failure line is not
+     a live region; the button points at it (aria-describedby). */
+  function stopReading() {
+    var said = $("consent-said");
+    said.textContent = "";
+    api("POST", "/api/consent", { consent: false }).then(function (res) {
       render(res.state);
     }).catch(function (e) {
-      err.textContent = "Your choice was not saved. Try again.";
+      said.textContent = "Your choice was not saved. Try again.";
       console.warn("consent failed: " + e.message);
     });
   }

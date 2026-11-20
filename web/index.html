@@ -93,10 +93,11 @@
   <!-- PLAY-TD-09B-SKELETON (plan 03 sections 3.2, 3.8, 3.9): Play is 7 fixed
        regions in this DOM order, placed by grid placement only (no CSS
        order), so screen, focus and DOM order agree in every size class.
-       Each region has its heading, a .slot its painter fills (web/regions.js)
-       and the legacy groups (data-legacy) that hold today's cards, ids
-       unchanged, until the region lands and retires them. Regions are not
-       scroll containers and have no tab stop. -->
+       Each region has its heading and one .slot its painter fills
+       (web/regions.js). PLAY-LEGACY-OUT-2: the old cards left Play; the
+       Last session card and the zone guide sit in Run and history, the
+       full last item check in Items and prices. Regions are not scroll
+       containers and have no tab stop. -->
   <!-- G: the strip (zone, level, deaths, session) -->
   <section id="play-g" class="region" data-region="g" aria-labelledby="play-g-h">
     <h2 id="play-g-h" class="region-h sr-only">At a glance</h2>
@@ -106,72 +107,16 @@
   <section id="play-c" class="region" data-region="c" aria-labelledby="play-c-h">
     <h2 id="play-c-h" class="region-h sr-only">Right now</h2>
     <div class="slot" data-slot="c"></div>
-    <div class="legacy" data-legacy="c-guide">
-      <!-- UI-GLANCE: the zone's guide sits with the zone. #zone-guide is a
-           slot for a fuller guide: ALTabs.fill(document, "zone-guide", node)
-           fills it (null empties and hides it). Not a live region. -->
-      <div class="zone-guide-box">
-        <p id="zone-note-box" class="zone-note" hidden><strong>Zone tip:</strong>
-          <span id="zone-note"></span></p>
-        <!-- UTIL-CAMPAIGN-CHECKS: not a live region; the overlay word carries it. -->
-        <ul id="campaign-hints" class="campaign-hints" hidden></ul>
-        <div id="zone-guide" class="zone-guide" role="group" aria-label="Zone guide" hidden></div>
-      </div>
-    </div>
-    <div class="legacy" data-legacy="c-setup">
-      <section id="consent" class="card consent" hidden aria-labelledby="consent-title">
-        <h2 id="consent-title">Allow AshLight to read Client.txt?</h2>
-        <p>AshLight reads the game's log file, read only, while it runs:</p>
-        <p class="path"><code id="consent-path">Client.txt (not found yet)</code></p>
-        <p>AshLight shows your zone, time in the zone, level, deaths, whispers
-          and trade requests. Nothing leaves this
-          computer, and AshLight never touches the game or sends it any input.
-          You can stop it at any time with "Stop reading Client.txt" at the
-          bottom of this page.</p>
-        <div class="actions">
-          <button id="consent-yes" type="button">Allow reading Client.txt</button>
-        </div>
-        <p id="consent-error" class="error" role="status" aria-live="polite"></p>
-      </section>
-
-      <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
-           the game closes; hidden until the first card. Not a live region
-           (polite regions are capped), so it sits in region C, right under
-           the strip where the eye lands first (UX-NEWEST N1; design 0001 N6
-           exemption) -->
-      <section id="summarybox" class="card session" hidden aria-labelledby="summary-title">
-        <h2 id="summary-title">Last session</h2>
-        <ul id="summary-lines" class="event-list"></ul>
-        <p id="summary-ended" class="muted"></p>
-      </section>
-    </div>
   </section>
   <!-- T: the feed (open trades first, then the latest events) -->
   <section id="play-t" class="region" data-region="t" aria-labelledby="play-t-h">
     <h2 id="play-t-h" class="region-h sr-only">Trades and events</h2>
     <div class="slot" data-slot="t"></div>
   </section>
-  <!-- N: one notice -->
+  <!-- N: one notice (the game-language note and the new-character tip too) -->
   <section id="play-n" class="region" data-region="n" aria-labelledby="play-n-h">
     <h2 id="play-n-h" class="region-h sr-only">Notices</h2>
     <div class="slot" data-slot="n"></div>
-    <div class="legacy" data-legacy="n-legacy">
-      <!-- LANG-GUARD (ruling K): shown and cleared by itself from Client.txt;
-           hiding it is optional -->
-      <section id="langbox" class="card lang-note" hidden aria-labelledby="lang-title">
-        <h2 id="lang-title">Game language</h2>
-        <p id="lang-text"></p>
-        <button id="lang-dismiss" type="button">Hide this notice</button>
-      </section>
-
-      <!-- NEWBIE-HINTS (ruling L): a new character's one-time tip, shown and
-           hidden by itself (10 minutes). Not a live region (polite regions are
-           capped); the same text is listed in Recent events. -->
-      <section id="hintbox" class="card hint" hidden aria-labelledby="hint-title">
-        <h2 id="hint-title">Tip for your new character</h2>
-        <p id="hint-text"></p>
-      </section>
-    </div>
   </section>
   <!-- B: the build line -->
   <section id="play-b" class="region" data-region="b" aria-labelledby="play-b-h">
@@ -182,66 +127,6 @@
   <section id="play-i" class="region" data-region="i" aria-labelledby="play-i-h">
     <h2 id="play-i-h" class="region-h sr-only">Checks on this item</h2>
     <div class="slot" data-slot="i"></div>
-    <div class="legacy" data-legacy="i-eval">
-      <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
-        <h2 id="eval-title">Item check</h2>
-        <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
-          <p id="eval-empty" class="muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
-            then press Alt+Shift+E. AshLight reads the clipboard once per press and shows the
-            verdict here and on the overlay for 20 seconds. You can change the key in AshLight's
-            settings file.</p>
-          <div id="eval-body" hidden>
-            <p class="eval-head"><span id="eval-word" class="verdict"></span>
-              <span id="eval-item" class="eval-item"></span></p>
-            <p id="eval-sentence"></p>
-            <!-- TC-CARD-PARTS-WEB: the card parts' notes (a build caveat, F-043) under
-                 the verdict, read with it -->
-            <ul id="eval-notes" hidden></ul>
-            <!-- UTIL-WAYSTONE-REWARD: reward totals under the risk sentence -->
-            <p id="eval-rewards" hidden></p>
-            <p id="eval-calc" class="muted" hidden></p>
-          </div>
-        </div>
-        <div id="eval-comps" class="eval-comps"></div>
-        <p id="eval-unweighted" class="muted" hidden></p>
-        <!-- MATH-POTENTIAL-UI: score now vs the worst / best rolls -->
-        <p id="eval-rolls" class="muted" hidden></p>
-        <p id="eval-when" class="muted"></p>
-        <!-- TC-UPGRADE: outside the live region on purpose; the verdict above
-             already announces the check, this is a static link (review UP-5) -->
-        <div id="upgradebox" class="price-box" hidden>
-          <h3 class="sub-h">Upgrade search</h3>
-          <p id="upgrade-sentence"></p>
-          <p id="upgrade-link" class="price-link"></p>
-        </div>
-        <div id="pricebox" class="price-box">
-          <h3 class="sub-h">Price</h3>
-          <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
-            <p id="price-empty" class="muted">Nothing checked yet. After you check an item with
-              Alt+Shift+E, a link to search for it on the official trade site shows here.</p>
-            <div id="price-body" hidden>
-              <p class="eval-head"><span id="price-badge" class="pill" data-state="pending"><span
-                class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
-                <span id="price-item" class="eval-item"></span></p>
-              <p id="price-sentence"></p>
-              <p id="price-link" class="price-link" hidden></p>
-            </div>
-          </div>
-          <ol id="price-list" class="price-list" aria-label="Cheapest listings"></ol>
-          <p id="price-when" class="muted"></p>
-        </div>
-        <!-- MATH-VALUE-UI: the item's own listed price against its points;
-             outside the live region, the verdict above already announces;
-             after Price so the price words sit together (UX-NEWEST N2) -->
-        <div id="valuebox" class="price-box" hidden>
-          <h3 class="sub-h">Price and points</h3>
-          <p id="value-sentence"></p>
-          <p id="value-per" hidden></p>
-          <p id="value-stale" class="muted" hidden></p>
-          <p id="value-credit" class="muted" hidden></p>
-        </div>
-      </section>
-    </div>
   </section>
   <!-- U: the kept checks -->
   <section id="play-u" class="region" data-region="u" aria-labelledby="play-u-h">
@@ -252,6 +137,17 @@
 
   <div id="panel-run" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
   <div class="col">
+  <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
+       the game closes; hidden until the first card. Not a live region
+       (polite regions are capped). PLAY-LEGACY-OUT-2: moved as it is from
+       Play to the top of Run and history, where the run is looked back on
+       (UX-NEWEST N1; design 0001 N6 exemption) -->
+  <section id="summarybox" class="card session" hidden aria-labelledby="summary-title">
+    <h2 id="summary-title">Last session</h2>
+    <ul id="summary-lines" class="event-list"></ul>
+    <p id="summary-ended" class="muted"></p>
+  </section>
+
   <section id="actsbox" class="card acts" aria-labelledby="acts-title">
     <h2 id="acts-title">Act times</h2>
     <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region.
@@ -261,6 +157,12 @@
       <select id="char-pick"></select></p>
     <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
     <p id="pace" class="sub" hidden></p>
+    <!-- ZONE-GUIDE (decision 0043): the guide and quest tracker of the zone
+         the player is in. PLAY-LEGACY-OUT-2: moved from Play, where region C
+         carries the short guide line. #zone-guide is a slot for the fuller
+         guide: ALTabs.fill(document, "zone-guide", node) fills it (null
+         empties and hides it). Not a live region. -->
+    <div id="zone-guide" class="zone-guide" role="group" aria-label="Zone guide" hidden></div>
     <p id="acts-empty" class="muted"></p>
     <table id="acts-table" class="acts-table" hidden>
       <thead><tr><th scope="col">Act</th><th scope="col">Time in act</th>
@@ -480,6 +382,68 @@
 
   <div id="panel-items" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-items" tabindex="0" hidden>
   <div class="col">
+  <!-- PLAY-LEGACY-OUT-2: the full last item check, moved as it is from
+       Play (ids unchanged); region I on Play shows the short card and its
+       Details button opens this tab -->
+  <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
+    <h2 id="eval-title">Item check</h2>
+    <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
+      <p id="eval-empty" class="muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
+        then press Alt+Shift+E. AshLight reads the clipboard once per press and shows the
+        verdict here and on the overlay for 20 seconds. You can change the key in AshLight's
+        settings file.</p>
+      <div id="eval-body" hidden>
+        <p class="eval-head"><span id="eval-word" class="verdict"></span>
+          <span id="eval-item" class="eval-item"></span></p>
+        <p id="eval-sentence"></p>
+        <!-- TC-CARD-PARTS-WEB: the card parts' notes (a build caveat, F-043) under
+             the verdict, read with it -->
+        <ul id="eval-notes" hidden></ul>
+        <!-- UTIL-WAYSTONE-REWARD: reward totals under the risk sentence -->
+        <p id="eval-rewards" hidden></p>
+        <p id="eval-calc" class="muted" hidden></p>
+      </div>
+    </div>
+    <div id="eval-comps" class="eval-comps"></div>
+    <p id="eval-unweighted" class="muted" hidden></p>
+    <!-- MATH-POTENTIAL-UI: score now vs the worst / best rolls -->
+    <p id="eval-rolls" class="muted" hidden></p>
+    <p id="eval-when" class="muted"></p>
+    <!-- TC-UPGRADE: outside the live region on purpose; the verdict above
+         already announces the check, this is a static link (review UP-5) -->
+    <div id="upgradebox" class="price-box" hidden>
+      <h3 class="sub-h">Upgrade search</h3>
+      <p id="upgrade-sentence"></p>
+      <p id="upgrade-link" class="price-link"></p>
+    </div>
+    <div id="pricebox" class="price-box">
+      <h3 class="sub-h">Price</h3>
+      <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
+        <p id="price-empty" class="muted">Nothing checked yet. After you check an item with
+          Alt+Shift+E, a link to search for it on the official trade site shows here.</p>
+        <div id="price-body" hidden>
+          <p class="eval-head"><span id="price-badge" class="pill" data-state="pending"><span
+            class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
+            <span id="price-item" class="eval-item"></span></p>
+          <p id="price-sentence"></p>
+          <p id="price-link" class="price-link" hidden></p>
+        </div>
+      </div>
+      <ol id="price-list" class="price-list" aria-label="Cheapest listings"></ol>
+      <p id="price-when" class="muted"></p>
+    </div>
+    <!-- MATH-VALUE-UI: the item's own listed price against its points;
+         outside the live region, the verdict above already announces;
+         after Price so the price words sit together (UX-NEWEST N2) -->
+    <div id="valuebox" class="price-box" hidden>
+      <h3 class="sub-h">Price and points</h3>
+      <p id="value-sentence"></p>
+      <p id="value-per" hidden></p>
+      <p id="value-stale" class="muted" hidden></p>
+      <p id="value-credit" class="muted" hidden></p>
+    </div>
+  </section>
+
   <section id="pricesbox" class="card prices" aria-labelledby="prices-title">
     <h2 id="prices-title">Prices and web data</h2>
     <form id="webdata-form" class="webdata-form">
@@ -678,8 +642,12 @@
     <summary>Game data credits</summary>
   <p id="data-credit" class="muted" hidden></p>
   </details>
+  <!-- the opt-out stays here until PLAY-TD-21A-SETTINGS-RAIL moves it; its
+       failure line is not a live region (the button points at it) -->
   <p class="muted">Path of Exile is a trademark of Grinding Gear Games.
-    <button id="consent-no" type="button" class="link" hidden>Stop reading Client.txt</button></p>
+    <button id="consent-no" type="button" class="link" hidden
+      aria-describedby="consent-said">Stop reading Client.txt</button>
+    <span id="consent-said"></span></p>
 </footer>
 </body>
 </html>
