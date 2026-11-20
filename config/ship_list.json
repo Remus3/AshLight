@@ -1,5 +1,5 @@
 {
- "about": "Release ship list (DEP-08, decision 0064): tools/rel_build.py zips the paths of 'git ls-tree' at the ref that match an include pattern and no exclude pattern. A shipped path that matches a cache_deny pattern refuses the build. '*' stays inside one path segment, '**' spans segments.",
+ "about": "Release ship list (DEP-08, decision 0064): tools/rel_build.py zips the paths of 'git ls-tree' at the ref that match an include pattern and no exclude pattern. A shipped path that matches a cache_deny pattern, or that safe_path refuses (a dotfile such as app/.npmrc, the dev-only npm config), refuses the build, so such a path is excluded here. '*' stays inside one path segment, '**' spans segments.",
  "schema": 1,
  "name": "AshLight",
  "top": "AshLight-{version}",
@@ -28,6 +28,7 @@
   "**/*.example.json",
   "**/*.pyc",
   "**/__pycache__/**",
+  "app/.npmrc",
   "app/test/**",
   "config/ship_list.json"
  ],
