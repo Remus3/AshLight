@@ -4,19 +4,20 @@ SESSION: 11   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 10 done, next wave 11
+WAVE POINTER: wave 11 done, next wave 12
+Wave 11 (session 11): 13 plan packages plus 3 fold packages merged in 4 batches (batch 1 widened to 6 merges), no deferral, no second suite (one infrastructure retry in batch 1: a 36-column PowerShell console wrapped an expected error text); suites 3546 / 3658 / 3688 / 3688 passed, 6 skipped, timing 30 each; npm 497 / 497 / 497 / 499; main 6da7ea6.
 Wave 10 (session 11): 12 of 12 merged in 3 batches of 4, no deferral, no second suite (escapes 0); suites 3427 / 3472 / 3550 passed, 6 skipped, npm 482 / 494 / 495; main 7f60e6c.
 Wave 9 escape count, rulings and open design findings: docs/handoff-archive/AL-2026-11-19.txt (session 10 /done).
 Wave 8 escape count and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 Waves 1 to 6 escape counts and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 
-Next action: wave 10 of docs/plan/07-execution-plan.md, run exactly as
+Next action: wave 12 of docs/plan/07-execution-plan.md, run exactly as
 docs/plan/08-orchestration.md says: ONE background orchestrator agent for the
 wave with a real background watch on the progress files; merge batches of 4
 now that TEST-SELECT is on main (b1efb31). Ask the operator nothing (every
 operator item has a default in force). The main session only dispatches;
 every command runs in a sub-agent, in the main checkout.
-1. Dispatch one start agent (08 section 1, argument wave 10), then wave 10
+1. Dispatch one start agent (08 section 1, argument wave 12), then wave 12
    (08 sections 2 to 7). Waves 8 and 9 are closed (session 10).
 2. First, at wave-10 start: fold the five rows tagged "BLOCKED: session
    wave 9" that are in no package (bullet SESSION-10 ROWS below) into wave
@@ -64,6 +65,12 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- WAVE-11 RULINGS (adjudicator, 2026-11-19; records in the batch 1 and batch 4 integrator commit bodies): TC-EVAL-CLEAR-API folded into TC-WORN-WIRE (+server/al/theorycraft/live.py; LastEval.clear(), Core._empty_press uses it); TEST-E2E-REPEAT-SELF and TEST-PLAY-PORT-LEASE folded into fold package TEST-LEASE-TIDY (tests/test_math_e2e_live.py, tests/play_states.py; also fixed tests/test_play_states.py recipe e, red on main when run alone since RUN-BUILD-STAMP-CORE reads .git: outside() now allows read-only opens of the git metadata); PLAY-CAMPAIGN-HINTS-C and PLAY-N-FIT ran as own wave-11 packages (batch 4, after PLAY-LEGACY-OUT-2); REL-AUTOSTART-ENTRY widened by tests/test_shell_integration.py (only "ScheduledTask" left the banned tuple, a DEP-07 placeholder; asserts for the three *-AlLogonTask functions, no -RunLevel Highest, no SYSTEM principal). No row carries "BLOCKED: session wave 11"; all five are flipped by done files (the ROADMAP.md / row-file text is folded at /done).
+- WAVE-11 DEVIATIONS (recorded, not repeated): (1) a separate pre-batch integrator commit efcefcc on w11-int landed plan 10 (coordinator order; main was red on test_audit_batch4 after 88494aa / ba12986): CLAUDE.md Settled bullets for 0081-0083, 12 packages in waves 38-42 (UI-CARD-COLLAPSE moved to wave 41 for a web-shell / stores.py clash; KINDLER chain needs 5 waves; one session 11 of about 9 h), ROADMAP rows, 07 sections, index lines for research 0060 and decisions 0081-0083; plan_check ok 408 packages, 44 waves. (2) batch 1 held 6 merges: the 4 planned plus TEST-LEASE-TIDY (fixes a red-alone test that made batch suites order-dependent) and FIX-CI-MARKS (coordinator CI fix 86f8153, stable bad-gzip parametrize ids, tests/test_webfetch_gzip.py only; no row). (3) PLAY-CAMPAIGN-HINTS-C and PLAY-N-FIT were built from main after batch 1 (base bac5a08), not from the wave base.
+- INCIDENT (REL-AUTOSTART-ENTRY builder, 2026-11-19): the first test run registered a real task in a scratch Task Scheduler folder \AshLightShellScratch\<id>\ (never the live task; ScheduledTasks is a CDXML module whose load replaced the test doubles); the same test's -Disable removed it at once, the empty scratch folders were deleted, the tests now double all 7 ScheduledTasks commands, check them before any task code runs and read the scheduler back before and after (verifier read back: no scratch folder, no AshLight Autostart task). Hand-off note only (adjudicator).
+- FRAGILE TEST (file a row in the next package that owns it): tests/test_shell_integration.py::test_shortcut_outside_the_effect_root_is_refused matches PowerShell 5.1 error text that wraps at console width (failed once from a 36-column background PowerShell window, batch 1 run 1); widen the buffer or match without line breaks. Logs E:/Sidecars/AL/Logs/w11-b1-suite.log, w11-b1-suite-2.log.
+- WAVE-11 FOLLOW-UPS: PLAY-LEGACY-OUT-2 kept shims pinned by tests outside its files (app.js empty zonenote panel and tick, regions.retire(), three dead CSS rules .zone-note / .campaign-hints / .card.hint p; pins app/test/registry.test.js, app/test/regions.test.js, tests/test_design_tokens.py) - delete in the package that widens to those tests; web/zoneguide.js comments still say "Play tab"; test_play_fit.py comment about the non-hex TOKEN is stale and it could use tests/browser_util.py find_browser; tests/test_floor_static_cache.py still loads test_floor_static.py by path (move scan/tables to a non-test helper); app/test/cdp dash_console.mjs and play_fit.mjs could use --remote-debugging-port=0; TEST-CAPTURE-HELPER asks for a demo flag over HTTP (F-034 or later); REL-INSTALL-PAYLOAD expects release.json {"version","runtimes":{...}} (REL-BUILD-ASSETS); DEP-16 updates.load_repo duplicates the owner/name rule until leak_sweep gains a shared loader; DATA-PROVENANCE put zone_notes pairs in a top-level provenance table because tests/test_zone_notes.py limits act keys.
+- DESIGN FINDINGS OPEN (wave 11, docs/design/reviews.log): TSM2-1, TSM2-2 (TEST-STATE-TEXT-2, doc pointers); TCO-1, TCO-2 (S3), TCO-3, TCO-4 (TC-CALC-OPTIN copy); PLO2-1, PLO2-2 (S3), PLO2-4, PLO2-5, PLO2-6 (PLAY-LEGACY-OUT-2); CH-1, CH-2 (S3), CH-3, CH-4 (PLAY-CAMPAIGN-HINTS-C); PNF-1 (PLAY-N-FIT). CLOSED: LO-1, PLO2-3. tests/play_fit_pending/n.txt deleted (PLAY-N-FIT); g.txt stays (FIX-IDLE-WORD, wave 19).
 - WAVE-10 RULINGS (adjudicator, 2026-11-19, records in commits 2c5753e and the merge bodies): wave-9 rows retagged PLAY-N-FIT, TEST-E2E-REPEAT-SELF, TEST-PLAY-PORT-LEASE to wave 11, RUN-UNREADABLE-WORD to wave 20; TEST-TIMING-ALONE folded into TEST-GATE-CALLERS (flipped). OVL-COPY-FIRST widened to tests/test_price_check.py, test_glance_rules.py, test_tc_press_staged.py; PLAY-LEGACY-OUT-1 widened to app/test strip/registry/fmt and test_glance_rules.py (shared file, batch order). New rows filed: PLAY-CAMPAIGN-HINTS-C, TC-EVAL-CLEAR-API (both BLOCKED: session wave 11). OVL-CARD-NAME had no own row (folded in OVL-COPY-FIRST).
 - WAVE-10 NOTES: test_glance_rules.py DESIGN_TEXT_PENDING skips "Copy the item first" until PLAY-TD-23-RECORDS writes design 0001 section 10 (empty it then); tests/test_floor_static_cache.py loads test_floor_static.py by path via importlib (move to a shared helper when TEST-CAPTURE-HELPER lands); TEST-WEB-PANELS-C (w30) rebases on the new registry PANELS list. Design findings OPEN (reviews.log): TWB-1/2, LO-1 to LO-4, DA-1/2, OCF-1/2.
 - SESSION-10 ROWS (filed wave 8, tagged "BLOCKED: session wave 9", in NO
@@ -77,7 +84,7 @@ Carried forward (not acted on yet):
   workers). The brief named six; read back 2026-11-19: only these five carry
   the tag (ROADMAP, row files, archived hand-off line "Rows filed"), no sixth
   exists. The next session folds each into a package or retags it (Next
-  action step 2).
+  action step 2). Resolved in wave 11 (see WAVE-11 RULINGS).
 - FIX-IDLE-WORD is retagged "BLOCKED: session wave 19" (session 10); g.txt
   stays until it lands.
 - DESIGN FINDINGS OPEN (session 10, docs/design/reviews.log): SU-1, SU-2
@@ -90,7 +97,7 @@ Carried forward (not acted on yet):
   tests/test_marks.py). Recorded, not repeated.
 - DEVIATION (session 10, waves 8 and 9): worktree hook still not wired
   (OA-12); builders ran tools/wt_sidecar_hook.py by hand.
-- REGION N OVERFLOW (session 9 /done): filed as row PLAY-N-FIT (adjudicator 2026-11-19), still open; see SESSION-10 ROWS. Region N fails G1 and G4 at 1024x700 and 1920x875 (20 overflow + 20 slack findings, tests/play_fit_pending/n.txt).
+- REGION N OVERFLOW (session 9 /done): filed as row PLAY-N-FIT (adjudicator 2026-11-19), still open; see SESSION-10 ROWS. Region N fails G1 and G4 at 1024x700 and 1920x875 (20 overflow + 20 slack findings, tests/play_fit_pending/n.txt). Resolved in wave 11 (see WAVE-11 RULINGS).
 - DEVIATION (session 9, wave 7): builders made their worktrees under the sidecar with the hook script by hand, not harness isolation, because decision 0012's hook entries are not wired into .claude/settings.json; OA-12 stays open (bullet below).
 - GP-10 is parked in wave 99 (deps GP-09 done, GP-06 wave 8, PUB-README-PLAYERS wave 12, PUB-SWEEP-OWN-ADDRESS wave 17); it is not next until those land.
 - Play-fit markers (W7-MARKERS, session 9): t, b, c-zone, i, u deleted (cfeca99) after a probe with them removed read test_play_fit green; n.txt stays (region N still fails G1 and G4 at 1024x700 and 1920x875, 20 + 20 findings; owner the next package that owns web/notice.css or the N track), g.txt stays (FIX-IDLE-WORD); c-setup and the tab-* markers wait for their own regions. Delete n.txt and g.txt when tests/test_play_fit.py is green without them.
@@ -360,10 +367,10 @@ before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, the core, the overlay or the
 loop (08, Rules).
 
-Acceptance: wave 10 is closed as 08 section 7 says (open-row command for
-wave 10 prints "none open", plan_check ok, git status --short empty on main,
+Acceptance: wave 12 is closed as 08 section 7 says (open-row command for
+wave 12 prints "none open", plan_check ok, git status --short empty on main,
 leak sweep clean, last batch suite and npm test green, git show
-HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 10 done, next wave 11"),
+HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 12 done, next wave 13"),
 and no row still carries "BLOCKED: session wave 9".
 
 Do NOT redo (session 10, all on main and pushed; main = origin/main =
