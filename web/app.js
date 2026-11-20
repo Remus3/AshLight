@@ -1036,9 +1036,11 @@
       var tl = s.tailer || {};
       $("consent-no").hidden = !tl.consented;
       $("events-empty").textContent = D.emptyText(!!tl.consented);
+      paintLedger(tl);
     },
     wire: function () {
       $("consent-no").addEventListener("click", stopReading);
+      $("ledger-allow").addEventListener("click", toggleLedger);
     }
   });
   A.register({
@@ -1280,6 +1282,51 @@
     }).catch(function (e) {
       said.textContent = "Your choice was not saved. Try again.";
       console.warn("consent failed: " + e.message);
+    });
+  }
+
+  /* LEDGER-VIEW:begin (app/test/dashboard.test.js runs this function alone;
+     keep it self-contained ES5)
+     RUN-LEDGER-CONSENT (decision 0071): the log record's consent line from
+     the snapshot's tailer block. Shown only while Client.txt is read; the
+     record is on only when the core says ledger === true (the Client.txt
+     opt-in alone never turns it on). `send` is what the button posts. */
+  function ledgerView(tl) {
+    tl = tl || {};
+    var shown = tl.consented === true;
+    var on = shown && tl.ledger === true;
+    var what = " AshLight counts the kinds of log lines it reads and keeps " +
+      "their shapes on this computer. Names, chat and item words are blanked " +
+      "out. Nothing is sent.";
+    if (on) {
+      return { shown: true, on: true, send: false, button: "Stop the log record",
+               text: "Log record: on." + what + " Stopping it deletes the file." };
+    }
+    return { shown: shown, on: false, send: true, button: "Allow the log record",
+             text: "Log record: off. When on," + what };
+  }
+  /* LEDGER-VIEW:end */
+
+  var ledgerSend = true;
+
+  function paintLedger(tl) {
+    var v = ledgerView(tl);
+    ledgerSend = v.send;
+    $("ledger-line").hidden = !v.shown;
+    setText($("ledger-text"), v.text);
+    setText($("ledger-allow"), v.button);
+  }
+
+  /* The log record's own Allow / Stop click (decision 0071): posts only the
+     ledger flag; the failure line is not a live region. */
+  function toggleLedger() {
+    var said = $("ledger-said");
+    said.textContent = "";
+    api("POST", "/api/consent", { ledger: ledgerSend }).then(function (res) {
+      render(res.state);
+    }).catch(function (e) {
+      said.textContent = "Your choice was not saved. Try again.";
+      console.warn("ledger consent failed: " + e.message);
     });
   }
 

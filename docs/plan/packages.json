@@ -11172,7 +11172,8 @@
    ],
    "files": [
     "server/al/state.py",
-    "server/al/text/itemcheck.py"
+    "server/al/text/itemcheck.py",
+    "tests/test_glance_rules.py"
    ],
    "new_files": [
     "server/al/text/buildlive.py",
@@ -11448,8 +11449,8 @@
    "new_files": [
     "tools/watch_sources/ggg_docs.py",
     "tools/watch_sources/pob_release.py",
-    "ops/loop/watch_rows/ggg_docs.json",
-    "ops/loop/watch_rows/pob_release.json",
+    "ops/loop/watch_rows/ggg-docs.json",
+    "ops/loop/watch_rows/pob-release.json",
     "tests/test_watch_settled.py"
    ],
    "integrator_edits": [

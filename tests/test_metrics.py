@@ -290,3 +290,131 @@ def test_route_label_never_echoes_request_text():
     assert al_http.route_label(debug.PATH) == debug.PATH
     for odd in ("/api/zzq-Name", "/" + DRIVE + "/zzqhome/x", "/zzq", "", None):
         assert al_http.route_label(odd) == "other"
+
+
+# -- RUN-METRICS-SITES: the fetch, calc bridge and press call sites ----------
+
+NINJA_URL = "https://poe.ninja/api/data/zzq?league=Zzq+Name"
+
+
+class FakeOpener:
+    """What webfetch._open_once asks of urllib's opener: open() raises the
+    next prepared error (no socket)."""
+
+    def __init__(self, errors):
+        self.errors = list(errors)
+
+    def open(self, req, timeout=None):
+        raise self.errors.pop(0)
+
+
+def test_304_and_network_error_land_in_the_right_counters(core, monkeypatch):
+    import urllib.error
+
+    from server.al import webfetch
+    got = []
+    metrics.subscribe(got.append)
+    not_modified = urllib.error.HTTPError(NINJA_URL, 304, "Not Modified",
+                                          {"ETag": "x"}, io.BytesIO(b""))
+    opener = FakeOpener([not_modified, urllib.error.URLError("zzq refused")])
+    monkeypatch.setattr(webfetch.urllib.request, "build_opener", lambda *a: opener)
+    fetch = webfetch.make_transport()
+    status, _, body = fetch("GET", NINJA_URL, {"User-Agent": "AshLight test"})
+    assert (status, body) == (304, b"")
+    with pytest.raises(webfetch.FetchError):
+        fetch("GET", NINJA_URL, {"User-Agent": "AshLight test"})
+    assert metrics.counter("fetch|poe.ninja|3xx") == 1
+    assert metrics.counter("fetch|poe.ninja|error") == 1
+    assert metrics.counters("fetch|") == {"fetch|poe.ninja|3xx": 1,
+                                          "fetch|poe.ninja|error": 1}
+    assert len(metrics.REGISTRY.ring("fetch_ms")) == 2 and metrics.counter("emit|fetch") == 2
+    assert [(r["host"], r["cls"]) for r in got] == [("poe.ninja", "3xx"),
+                                                   ("poe.ninja", "error")]
+    for rec in got:  # typed values only: never the path, query or error text
+        assert set(rec) == {"kind", "t", "host", "cls", "ms"}
+        assert "zzq" not in json.dumps(rec)
+    # an odd host is never a counter name of its own
+    assert webfetch.host_word("https://" + "x" * 70 + ".com/") == "other"
+    assert webfetch.status_class(503) == "5xx" and webfetch.status_class(None) == "error"
+    doc, raw = get_debug(core)
+    assert doc["counters"]["fetch|poe.ninja|3xx"] == 1
+    assert doc["timings"]["fetch_ms"]["n"] == 2 and b"zzq" not in raw
+
+
+def _quiet_bridge(monkeypatch, send):
+    """A Bridge whose process parts are stubs: nothing is spawned."""
+    from server.al.theorycraft import bridge
+    b = bridge.Bridge(["zzq-not-run"], timeout=0.1)
+    monkeypatch.setattr(b, "running", lambda: False)
+    monkeypatch.setattr(b, "_start", lambda: None)
+    monkeypatch.setattr(b, "_replay", lambda timeout: None)
+    monkeypatch.setattr(b, "_send", send)
+    return bridge, b
+
+
+def test_calc_timeout_is_counted(core, monkeypatch):
+    got = []
+    metrics.subscribe(got.append)
+
+    def timed_out(cmd, args, timeout):
+        raise bridge.BridgeTimeout("bridge call timed out after 0.1 s")
+
+    bridge, b = _quiet_bridge(monkeypatch, timed_out)
+    with pytest.raises(bridge.BridgeTimeout):
+        b.request("outputs")
+    assert metrics.counter("calc.start") == 1
+    assert metrics.counter("calc.timeout") == 1
+    assert metrics.counter("calc|timeout") == 1
+    assert len(metrics.REGISTRY.ring("calc_ms")) == 1
+    assert got[-1]["cmd"] == "outputs" and got[-1]["outcome"] == "timeout"
+
+    def crashed(cmd, args, timeout):
+        raise bridge._Crashed("bridge exited (code 1)")
+
+    monkeypatch.setattr(b, "_send", crashed)
+    with pytest.raises(bridge.BridgeError):
+        b.request("set_item", text="Zzq Name's Item")
+    # a crash restarts once, then gives up
+    assert metrics.counter("calc.start") == 2 and metrics.counter("calc.restart") == 1
+    assert metrics.counter("calc|crash") == 1
+
+    monkeypatch.setattr(b, "_send", lambda cmd, args, timeout: {"pong": True})
+    assert b.request("ping") == {"pong": True}
+    assert metrics.counter("calc|ok") == 1 and len(metrics.REGISTRY.ring("calc_ms")) == 3
+    for rec in got:  # the command only, never the item or build text
+        assert set(rec) == {"kind", "t", "cmd", "outcome", "ms"}
+        assert "zzq" not in json.dumps(rec).lower()
+    doc, _ = get_debug(core)
+    assert doc["counters"]["calc.timeout"] == 1 and doc["timings"]["calc_ms"]["n"] == 3
+
+
+def test_press_outcome_and_ms_are_counted(core, monkeypatch):
+    got = []
+    metrics.subscribe(got.append)
+    core.eval_press("  ")
+    core.eval_press("Item Class: Gloves\nRarity: Rare\nZzq Grip\nSuede Bracers\n")
+    real = core.last_eval.run
+
+    def broken(*a, **kw):
+        raise RuntimeError("zzq")
+
+    monkeypatch.setattr(core.last_eval, "run", broken)
+    with pytest.raises(RuntimeError):
+        core.eval_press("Item Class: Gloves\nRarity: Rare\nZzq Grip\nSuede Bracers\n")
+    monkeypatch.setattr(core.last_eval, "run",
+                        lambda text, slot=None, at=None: dict(real(text, slot, at=at),
+                                                              ok=True))
+    core.eval_press("Item Class: Gloves\nRarity: Rare\nZzq Grip\nSuede Bracers\n")
+    assert metrics.counter("press|empty") == 1
+    assert metrics.counter("press|unscored") == 1
+    assert metrics.counter("press|error") == 1
+    assert metrics.counter("press|item") == 1
+    ring = metrics.REGISTRY.ring("press_ms")
+    assert len(ring) == 4 and all(ms >= 0 for ms in ring)
+    assert [r["outcome"] for r in got] == ["empty", "unscored", "error", "item"]
+    for rec in got:  # outcome and ms only: never the item text
+        assert set(rec) == {"kind", "t", "outcome", "ms"}
+        assert "zzq" not in json.dumps(rec).lower()
+    doc, raw = get_debug(core)
+    assert doc["counters"]["press|empty"] == 1 and doc["timings"]["press_ms"]["n"] == 4
+    assert b"zzq" not in raw.lower()

@@ -10,7 +10,14 @@
    injected readText / post, so node --test covers it without Electron.
    TC-PRESS-BUILD (ruling Q-02): the same single read may hold a build the
    player copied in Path of Building (code, character JSON or share link);
-   the core loads it and shows "Build loaded". No second read, no retry. */
+   the core loads it and shows "Build loaded". No second read, no retry.
+   TC-WORN-KEY (decision 0052): the optional wear key is the same handler
+   with the post path /api/wear (the copied item is filed as worn). It has
+   no default binding: an unset key registers nothing (decision 0058 keeps
+   two default global keys), and both keys share main.js's one read site. */
+
+const POST_EVAL = "/api/eval";
+const POST_WEAR = "/api/wear";
 
 // TC-PRESS-BUILD: the build size (a PoB code is about 5-60 KB); an item
 // text is far smaller. A JSON over this still goes through the paste box.
@@ -25,9 +32,12 @@ const MAX_BODY_BYTES = 256 * 1024;
 const REPEAT_GAP_MS = 1200;
 
 /* deps: { readText(): string, post(path, body): Promise, log(msg),
-   now(): ms (optional, default Date.now) }.
+   now(): ms (optional, default Date.now) }; postPath: the core route the
+   text goes to (default /api/eval; the wear key passes /api/wear).
    Returns the press handler. Creating it reads nothing. */
-function createEvalHotkey(deps) {
+function createEvalHotkey(deps, postPath) {
+  const route = postPath === POST_WEAR ? POST_WEAR : POST_EVAL;
+  const what = route === POST_WEAR ? "worn item" : "item check";
   let busy = false;
   let lastEvent = null;
   const now = typeof deps.now === "function" ? deps.now : Date.now;
@@ -46,13 +56,40 @@ function createEvalHotkey(deps) {
     }
     text = fitText(text);
     return Promise.resolve()
-      .then(() => deps.post("/api/eval", { item: text }))
+      .then(() => deps.post(route, { item: text }))
       .then(() => true, (e) => {
-        deps.log("item check not sent: " + (e && e.message ? e.message : e));
+        deps.log(what + " not sent: " + (e && e.message ? e.message : e));
         return false;
       })
       .then((ok) => { busy = false; return ok; });
   };
+}
+
+/* TC-WORN-KEY: bind the optional wear key. key is what Hotkey.pick gave
+   (null when unset or refused); taken lists the keys the other two
+   shortcuts want or hold. An unset key, a key equal to one of them, or a
+   key Electron cannot bind registers nothing (no fallback: the player
+   chose this key). Returns the bound accelerator or null. gs is Electron's
+   globalShortcut or a test fake. */
+function registerWearKey(gs, key, handler, taken, log) {
+  const say = typeof log === "function" ? log : () => {};
+  if (!key || typeof handler !== "function") { return null; }
+  if ((taken || []).includes(key)) {
+    say("worn item shortcut " + key + " is already an AshLight key; not bound");
+    return null;
+  }
+  let ok = false;
+  try {
+    ok = !(typeof gs.isRegistered === "function" && gs.isRegistered(key)) &&
+      gs.register(key, handler) === true;
+  } catch (e) {
+    ok = false;
+  }
+  if (!ok) {
+    say("worn item shortcut not available: " + key);
+    return null;
+  }
+  return key;
 }
 
 /* The text clipped to MAX_ITEM_CHARS, then until its JSON body fits the
@@ -90,5 +127,5 @@ function makePost(http, port, getToken) {
   };
 }
 
-module.exports = { createEvalHotkey, makePost, fitText, MAX_ITEM_CHARS, MAX_BODY_BYTES,
-                   REPEAT_GAP_MS };
+module.exports = { createEvalHotkey, registerWearKey, makePost, fitText, MAX_ITEM_CHARS,
+                   MAX_BODY_BYTES, REPEAT_GAP_MS, POST_EVAL, POST_WEAR };
