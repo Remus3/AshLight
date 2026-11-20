@@ -115,6 +115,13 @@ def test_error_card_text():
         ("Not an item", "Unnamed item", "Copy an item in game first")
     t = eval_card_text({"ok": False, "error": "no gear slot for this item class"})
     assert (t["head"], t["line"]) == ("Can't compare this", "Only gear is compared")
+    # OVL-COPY-FIRST (F-054): a press before the game wrote the clipboard
+    t = eval_card_text({"ok": False, "error": "empty clipboard", "item": {}})
+    assert (t["head"], t["item"], t["line"]) ==         ("Copy the item first", "Unnamed item", "Hover it in game, press Ctrl+C")
+    assert t["sentence"] == ("The clipboard was empty when you pressed the hotkey. Hover "
+                             "an item in game, press Ctrl+C, then press the hotkey again.")
+    assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
+        [], "Not checked", "note", False)
     t = eval_card_text({"ok": False, "error": "something new"})
     assert (t["head"], t["line"]) == ("Can't check this item", "See the dashboard")
     for t in (eval_card_text(None), eval_card_text({})):
@@ -146,7 +153,8 @@ def test_overlay_lines_fit_the_card():
     """Section 9 rule 6: the head and line of the common cases fit 34."""
     for c in (card(), card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade"),
               {"ok": False, "error": "no build loaded"},
-              {"ok": False, "error": "no gear slot for this item class"}):
+              {"ok": False, "error": "no gear slot for this item class"},
+              {"ok": False, "error": "empty clipboard"}):
         t = eval_card_text(c)
         assert len(t["head"]) <= 34 and len(t["line"]) <= 34, t
         # TC-VERDICT-CAVEAT: with any build alert, worst cases included
@@ -278,10 +286,12 @@ def test_api_eval_publishes_and_put_weights_rescores(tmp_path):
         conn.close()
         return r.status, data
     try:
-        # an empty clipboard at the hotkey press reads "Not an item"
+        # OVL-COPY-FIRST: an empty clipboard at the hotkey press reads "Copy
+        # the item first" and asks for no price check
         status, doc = call("POST", "/api/eval", {"item": ""})
-        assert status == 200 and doc["error"] == "not an item"
-        assert c.state.snapshot()["eval"]["text"]["head"] == "Not an item"
+        assert status == 200 and doc["error"] == "empty clipboard"
+        assert c.state.snapshot()["eval"]["text"]["head"] == "Copy the item first"
+        assert c.state.snapshot()["price"] is None
         call("POST", "/api/build-code", {"code": codec.encode(EVAL_BUILD_XML)})
         call("POST", "/api/eval", {"item": RARE_GLOVES})
         before = c.state.snapshot()["eval"]["score"]
@@ -292,6 +302,38 @@ def test_api_eval_publishes_and_put_weights_rescores(tmp_path):
     finally:
         srv.stop()
         c.close()
+
+
+def test_blank_press_is_the_copy_first_card_and_asks_no_price(core):
+    """OVL-COPY-FIRST (F-054): a blank or whitespace-only press publishes
+    the "empty clipboard" status card, asks for no price check and leaves
+    no item to re-score; an item press after it is checked as usual."""
+    prices = []
+    real = core.price.request
+    core.price.request = lambda text, at=None: prices.append(text) or real(text, at=at)
+    for blank in ("", "  \r\n\t "):
+        doc = core.eval_press(blank)
+        assert (doc["ok"], doc["error"]) == (False, "empty clipboard")
+        ev = core.state.snapshot()["eval"]
+        assert ev["error"] == "empty clipboard"
+        assert (ev["text"]["head"], ev["text"]["line"]) == (
+            "Copy the item first", "Hover it in game, press Ctrl+C")
+        assert core.state.snapshot()["card"]["head"] == "Copy the item first"
+    assert prices == [] and core.state.price is None
+    assert core.last_eval.rerun() is None  # nothing to re-score
+    assert core.state.snapshot()["eval"]["error"] == "empty clipboard"
+    core.eval_press(RARE_GLOVES)
+    assert prices == [RARE_GLOVES]
+    assert core.state.snapshot()["eval"]["error"] == "no build loaded"
+
+
+def test_blank_press_cancels_an_older_press_s_pending_stages(core):
+    """OVL-COPY-FIRST: the blank press is a new press generation, so an
+    older press's later stages publish nothing over its card."""
+    gen = core.last_eval._gen
+    core.eval_press("")
+    assert core.last_eval._gen == gen + 1
+    assert not core.last_eval.current(gen)
 
 
 def test_rerun_without_an_item_is_a_no_op(core):

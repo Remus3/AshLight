@@ -23,7 +23,7 @@ from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import plug  # RUN-SEAMS (decision 0056)
 from . import summary as summary_mod
 from .bus import EventBus
-from .state import SessionState
+from .state import EMPTY_CLIPBOARD, SessionState
 from .theorycraft import basetypes
 from .theorycraft import calcwire, health, pobout, skillsplit
 from .theorycraft import item as item_mod
@@ -416,6 +416,8 @@ class Core:
         except Exception:  # noqa: BLE001 - the press must still be checked
             pass
         at = self.state.now()
+        if isinstance(text, str) and not text.strip():
+            return self._empty_press(slot, at)
         doc = tc_press.load(self, text, at=at)
         if doc is not None:
             return doc
@@ -423,6 +425,27 @@ class Core:
         doc = self.price.request(text, at=at)
         self._watch_press(text, doc, at)
         return result
+
+    def _empty_press(self, slot, at):
+        """OVL-COPY-FIRST (F-054): the press found a blank clipboard (it
+        landed before the game wrote the item). The item check publishes
+        the "empty clipboard" status card ("Copy the item first") and no
+        price check is asked for. The player copies the item and presses
+        again: no retry, no wait for a change, no timer (decision 0003).
+        As a new press it cancels an older press's pending Path of
+        Building stages (the LastEval press generation, under its publish
+        lock, as LastEval.run does) and leaves no item to re-score."""
+        last = self.last_eval
+        result = {"ok": False, "error": EMPTY_CLIPBOARD, "slot": slot or None,
+                  "build_loaded": self.builds.build is not None}
+        card = dict(tc_live.compact(result), upgrade=None, value=None, waystone=None)
+        with last._lock:
+            last._input = None
+        with last._publish:
+            last._gen += 1
+            self.state.set_eval(card, at=at)
+            last.last_result = result
+        return dict(card)
 
     def _watch_press(self, text, doc, at):
         """UTIL-PRICE-WATCH: remember what this press already priced (the

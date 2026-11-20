@@ -85,8 +85,16 @@ ZONE_CARDS = 4  # zone cards kept per zone; the oldest drops
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
 # the overlay print these; neither builds verdict wording itself.
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
+# OVL-COPY-FIRST (F-054): the press found a blank clipboard (the game had not
+# written the item yet); core.eval_press publishes this error and asks for no
+# price check. The player copies the item and presses again: no retry.
+EMPTY_CLIPBOARD = "empty clipboard"
+EMPTY_CLIPBOARD_TEXT = ("Copy the item first", "Hover it in game, press Ctrl+C",
+                        "The clipboard was empty when you pressed the hotkey. Hover an "
+                        "item in game, press Ctrl+C, then press the hotkey again.")
 EVAL_ERROR_TEXT = {
     # error: (overlay head, overlay line, dashboard sentence)
+    EMPTY_CLIPBOARD: EMPTY_CLIPBOARD_TEXT,
     # TC-VERDICT-CAVEAT (F-042): the sentence names the item-key build load
     "no build loaded": ("No build loaded", "Paste a build on the dashboard",
                         "No build loaded yet. Paste a Path of Building code under Build, "
@@ -527,6 +535,7 @@ PRICE_TEXT = {
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),
+    EMPTY_CLIPBOARD: EMPTY_CLIPBOARD_TEXT,
     "no base type": ("Can't price this item", "Try a different item",
                      "AshLight can't make a trade search for this item. Try a different "
                      "one."),
@@ -789,9 +798,18 @@ def overlay_card(ev, price, now, alert=None):
         return {"kind": "eval", "head": et["head"], "line2": line2, "line3": et["line"],
                 "verdict": et["tone"], "expires_at": ev["at"] + EVAL_CARD_S}
 
+    def price_line():
+        # OVL-CARD-NAME (decision 0016 amendment 2026-11-19): a trade link
+        # with no poe.ninja value keeps the item name on line 2; the link
+        # itself is on the dashboard
+        t = price_card_text(price)
+        if price.get("status") != "link" or ninja_text(price.get("ninja")):
+            return t["line"]
+        return t["item"]
+
     def price_part():
         t = price_card_text(price)
-        return {"kind": "price", "head": t["head"], "line2": t["line"],
+        return {"kind": "price", "head": t["head"], "line2": price_line(),
                 "line3": t["detail"], "verdict": "price",
                 "expires_at": price_until(price)}
 
@@ -806,7 +824,7 @@ def overlay_card(ev, price, now, alert=None):
         if price.get("status") in ("off", "error"):
             return eval_part()
         card = eval_part()
-        card.update(kind="merged", line2=price_card_text(price)["line"],
+        card.update(kind="merged", line2=price_line(),
                     expires_at=max(card["expires_at"], price_until(price)))
         return card
     return eval_part() if ev_ok else price_part()

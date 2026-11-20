@@ -233,8 +233,20 @@ def test_calc_off_publishes_once_with_no_pending_note(core):
 def test_not_an_item_has_no_later_stage(core):
     rec = Recorder(core.state)
     core.tc_calc = FakeCalc()
-    result = core.eval_press("")
+    result = core.eval_press("Just some chat text, not an item.")
     assert result["error"] == "not an item"
+    assert core.last_eval.wait(WAIT_S)
+    assert len(rec.cards) == 1 and _stage(rec.cards[0]) is None
+    assert core.tc_calc.calls == []
+
+
+def test_blank_press_is_empty_clipboard_with_no_later_stage(core):
+    """OVL-COPY-FIRST (F-054): a blank press is the "empty clipboard" card,
+    one publish, no stage and no calc call."""
+    rec = Recorder(core.state)
+    core.tc_calc = FakeCalc()
+    result = core.eval_press("")
+    assert result["error"] == "empty clipboard"
     assert core.last_eval.wait(WAIT_S)
     assert len(rec.cards) == 1 and _stage(rec.cards[0]) is None
     assert core.tc_calc.calls == []

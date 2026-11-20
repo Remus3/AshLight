@@ -259,8 +259,8 @@ def test_eval_press_publishes_the_link_and_sends_nothing_to_the_trade_site(api):
     assert q["query"]["type"] == "Example Ring"
     assert card["text"]["line"] == "Trade link ready"
     oc = state_mod.overlay_card(snap["eval"], card, card["at"] + 1)
-    assert oc is not None and "Trade link ready" in (oc["line2"], oc["line3"]) \
-        or oc["kind"] == "eval"
+    # OVL-CARD-NAME: no poe.ninja value, so line 2 is the item name
+    assert oc is not None and oc["line2"] == card["text"]["item"] or oc["kind"] == "eval"
     assert net.non_ninja() == []  # no trade request, whatever the settings
     wd = _req(srv, "GET", "/api/web-data")[1]
     assert CONTACT not in json.dumps(wd)  # the value is never echoed
