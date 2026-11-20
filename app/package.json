@@ -9,7 +9,7 @@
     "start": "electron .",
     "test": "node --test \"test/**/*.test.js\""
   },
-  "devDependencies": {
+  "dependencies": {
     "electron": "45.3.3"
   }
 }
