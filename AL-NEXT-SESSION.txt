@@ -4,7 +4,8 @@ SESSION: 11   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 9 done, next wave 10
+WAVE POINTER: wave 10 done, next wave 11
+Wave 10 (session 11): 12 of 12 merged in 3 batches of 4, no deferral, no second suite (escapes 0); suites 3427 / 3472 / 3550 passed, 6 skipped, npm 482 / 494 / 495; main 7f60e6c.
 Wave 9 escape count, rulings and open design findings: docs/handoff-archive/AL-2026-11-19.txt (session 10 /done).
 Wave 8 escape count and rulings: docs/handoff-archive/AL-2026-11-19.txt.
 Waves 1 to 6 escape counts and rulings: docs/handoff-archive/AL-2026-11-19.txt.
@@ -63,6 +64,8 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- WAVE-10 RULINGS (adjudicator, 2026-11-19, records in commits 2c5753e and the merge bodies): wave-9 rows retagged PLAY-N-FIT, TEST-E2E-REPEAT-SELF, TEST-PLAY-PORT-LEASE to wave 11, RUN-UNREADABLE-WORD to wave 20; TEST-TIMING-ALONE folded into TEST-GATE-CALLERS (flipped). OVL-COPY-FIRST widened to tests/test_price_check.py, test_glance_rules.py, test_tc_press_staged.py; PLAY-LEGACY-OUT-1 widened to app/test strip/registry/fmt and test_glance_rules.py (shared file, batch order). New rows filed: PLAY-CAMPAIGN-HINTS-C, TC-EVAL-CLEAR-API (both BLOCKED: session wave 11). OVL-CARD-NAME had no own row (folded in OVL-COPY-FIRST).
+- WAVE-10 NOTES: test_glance_rules.py DESIGN_TEXT_PENDING skips "Copy the item first" until PLAY-TD-23-RECORDS writes design 0001 section 10 (empty it then); tests/test_floor_static_cache.py loads test_floor_static.py by path via importlib (move to a shared helper when TEST-CAPTURE-HELPER lands); TEST-WEB-PANELS-C (w30) rebases on the new registry PANELS list. Design findings OPEN (reviews.log): TWB-1/2, LO-1 to LO-4, DA-1/2, OCF-1/2.
 - SESSION-10 ROWS (filed wave 8, tagged "BLOCKED: session wave 9", in NO
   package of docs/plan/packages.json; row files under docs/roadmap/new, folded
   into ROADMAP.md at session 10 /done): PLAY-N-FIT (region N overflow, owns
