@@ -9,6 +9,39 @@ upstream projects, at the exact versions and SHA-256 hashes pinned in
 (decisions 0004 and 0018). The license check is recorded in
 `docs/decisions/0018-tc-pin.md`.
 
+An installed copy (not a source checkout) also runs on two runtimes that
+are fetched at install, not bundled: the embeddable CPython and the
+unmodified Electron zip, each at the exact version, size and SHA-256 of its
+pin (`config/runtime_pins.json`, `config/electron_pin.json`), downloaded
+by the installer's own process from the publisher and unpacked unmodified
+into the install's `runtime\` folder. No AshLight artifact carries either.
+The licence record is `docs/decisions/0063-installed-runtimes.md`.
+
+## CPython (embeddable package)
+
+- Source: https://www.python.org/downloads/windows/ (the
+  `python-<version>-embed-amd64.zip` release file)
+- Pinned: see `config/runtime_pins.json` (version, url, size, sha256)
+- Fetched at install, not bundled.
+- License: Python Software Foundation License Version 2 (PSF-2.0). The
+  full text, with the notices of the components CPython includes (for
+  example OpenSSL, libffi, zlib, bzip2, xz, SQLite, expat, mpdecimal),
+  arrives as `LICENSE.txt` inside the fetched zip and is not repeated
+  here.
+
+## Electron
+
+- Source: https://github.com/electron/electron (the
+  `electron-v<version>-win32-<arch>.zip` release asset)
+- Pinned: see `config/electron_pin.json` (version, url, size, sha256 per
+  architecture)
+- Fetched at install, not bundled. A source checkout gets the same pinned
+  zip through `tools/electron_pin.py`.
+- License: MIT (Copyright (c) Electron contributors, Copyright (c) 2013-2020
+  GitHub Inc.). The full text arrives as `LICENSE` inside the fetched zip;
+  the licences of Chromium and its components arrive as
+  `LICENSES.chromium.html` beside it and are not repeated here.
+
 ## Path of Building Community (PoE2)
 
 - Source: https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2

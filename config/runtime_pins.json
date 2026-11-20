@@ -1,0 +1,20 @@
+{
+  "_doc": "REL-RUNTIME-PINS (F-047, DEP-06, decision 0063). Hash pins for the runtimes of an installed copy, fetched at install time by the installer's own process (server/al/pinfetch.py ensure_runtime) from their publishers, never bundled, never vendored and never fetched by the running core. python: the embeddable CPython zip at the exact version, size and SHA-256 below; url, size and sha256 were re-read from www.python.org (the zip downloaded with the AshLight User-Agent and hashed) on the verified date. electron: one source, the pin of config/electron_pin.json (OVL-ELECTRON-PIN); only its licence is recorded here. A missing or malformed value makes the fetch refuse; never guess one. No absolute paths here.",
+  "schema": 1,
+  "verified": "2026-11-19",
+  "runtimes": {
+    "python": {
+      "version": "3.14.10",
+      "arch": "amd64",
+      "file": "python-3.14.10-embed-amd64.zip",
+      "url": "https://www.python.org/ftp/python/3.14.10/python-3.14.10-embed-amd64.zip",
+      "sha256": "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea4159",
+      "size": 12619664,
+      "licence": "PSF-2.0"
+    },
+    "electron": {
+      "pin_file": "config/electron_pin.json",
+      "licence": "MIT"
+    }
+  }
+}
