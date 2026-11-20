@@ -251,17 +251,17 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_ux_b8.py tests/test_dash_console.py pass: the page has exactly 4 role=tab elements
   named Play, Build and items, Run, Settings, a stored items tab maps once to build, and news still
   shows Play with no act. ZERO-CLICK: Play still shows by itself; nothing new to press. DEPENDS:
-  PLAY-LEGACY-OUT-2, PLAY-F-159-QUIET-BUTTON. BLOCKED: session wave 14.
+  PLAY-LEGACY-OUT-2, PLAY-F-159-QUIET-BUTTON.
 - [ ] OVL-KEYS-CORE (build) Hotkeys in the core: effective keys in the snapshot, POST /api/hotkeys,
   Checks rows for both chords. ACCEPT: python -m pytest -q tests/test_hotkeys_live.py
   tests/test_diag_self.py tests/test_audit_pass5_low.py tests/test_http_security.py
   tests/test_ux_settings_io.py passes. ZERO-CLICK: The core reads the client's runtime file by
   itself (stat-gated, inside tick_diag); changing a key is optional. DEPENDS: OVL-KEYS-CLIENT,
-  SEC-SURFACE-PIN. BLOCKED: session wave 14.
+  SEC-SURFACE-PIN.
 - [ ] RUN-BUDGET-LOG-CORE (build) Budget log: the core records its own footprint once a minute.
   ACCEPT: python -m pytest -q tests/test_budget_log.py tests/test_floor_static.py
   tests/test_sidecar_paths.py passes. ZERO-CLICK: Automatic; the operator only plays. DEPENDS:
-  RUN-METRICS-CORE. BLOCKED: session wave 14.
+  RUN-METRICS-CORE.
 - [ ] RUN-BUDGET-LOG-CLIENT (build) Client samples its own Electron processes once a minute. ACCEPT:
   npm test --prefix app passes and python -m pytest -q tests/test_floor_static.py
   tests/test_overlay_layout.py passes. ZERO-CLICK: Automatic. DEPENDS: RUN-BUILD-STAMP-UI. BLOCKED:
@@ -272,11 +272,10 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   then the app opens; no elevation prompt, no second step; the floor's Client.txt opt-in (with its
   visible indicator) and the web-data switch stay the player's own clicks on the first window.
   DEPENDS: REL-INSTALL-PAYLOAD, REL-INSTALL-SELFTEST, REL-INSTALL-SHELL, DATA-SNAP-AT-START.
-  BLOCKED: session wave 14.
 - [ ] REL-AUTOSTART-SWITCH (build) 'Start with Windows' in the tray menu. ACCEPT: npm test --prefix
   app passes and python -m pytest -q tests/test_overlay_smoke.py tests/test_floor_static.py passes.
   ZERO-CLICK: One tick once in the tray menu; no terminal, no typed command. DEPENDS:
-  REL-AUTOSTART-TRAY. BLOCKED: session wave 14.
+  REL-AUTOSTART-TRAY.
 - [ ] AUTO-14 (build) DOCS-FRESH: tools/docs_fresh.py check, with the code-pin facts. ACCEPT: python
   -m pytest -q tests/test_docs_fresh.py tests/test_brand_assets.py passes and python
   tools/docs_fresh.py check exits 0 on the tree and exits 1 naming app/main.js and
@@ -286,15 +285,15 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   session wave 14.
 - [ ] TC-CALC-VERIFY-PIN (build) Pin contents, not bytes. ACCEPT: python -m pytest -q
   tests/test_tc_pin.py tests/test_tc_drift.py passes. ZERO-CLICK: Automatic; the one manual act
-  stays the -TcCalc opt-in. DEPENDS: TC-CALC-OPTIN, AUTO-12. BLOCKED: session wave 14.
+  stays the -TcCalc opt-in. DEPENDS: TC-CALC-OPTIN, AUTO-12.
 - [ ] TC-CALC-CONFINE-LUA (build) Drop dangerous Lua entry points after PoB loads. ACCEPT: python -m
   pytest -q -rs tests/test_tc_bridge.py tests/test_tc_pob_drift_guard.py passes on the dev host
   (calc component installed) and its -rs summary lists no skipped live row. ZERO-CLICK: Automatic:
   every calc start runs the lockdown; the player does nothing. DEPENDS: TC-BRIDGE-NEXT,
-  TC-CALC-CONFINE-PROC. BLOCKED: session wave 14.
+  TC-CALC-CONFINE-PROC. BLOCKED: session wave 15.
 - [ ] AUTO-11 (build) DOCS-SHAPE: a 'shape' topic in the GGG docs watch. ACCEPT: `python -m pytest
   -q tests/test_ggg_docs_watch.py` passes. ZERO-CLICK: Runs on the loop tick, also while HALTed; no
-  new request. BLOCKED: session wave 14.
+  new request.
 - [ ] DATA-TREE-HOLD (build) Keep the previous passive tree and resolve each build against the best
   match. ACCEPT: python -m pytest -q tests/test_tc_tree.py tests/test_tc_tree_ids.py
   tests/test_tc_snap.py tests/test_tc_buildfile.py tests/test_audit_buildfile.py passes. ZERO-CLICK:
@@ -304,7 +303,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   while the client runs. ACCEPT: `python -m pytest -q tests/test_setup_client_guard.py
   tests/test_ascii_lf.py` passes. ZERO-CLICK: A dev step that guards itself: while AshLight's client
   is live, setup.ps1 ends with a one-line reason before npm runs; the bump row stays open and a
-  later tick's lane run retries it; the player sees nothing. BLOCKED: session wave 14.
+  later tick's lane run retries it; the player sees nothing.
 - [ ] REL-UNINSTALL-CHECKOUT (build) Uninstall: checkout mode. ACCEPT: python -m pytest -q
   tests/test_uninstall.py tests/test_sidecar_paths.py passes. ZERO-CLICK: One command; -Purge is the
   only consent asked. DEPENDS: REL-UNINSTALL-SHELL.
