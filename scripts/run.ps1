@@ -11,7 +11,11 @@
   client runs (operator order 2026-11-17): there is no overlay-only start.
   Without the client installed (or with -Browser) the dashboard opens in the
   browser with the per-start token in the URL fragment. Logs go to the
-  sidecar Logs dir.
+  sidecar Logs dir. OVL-ELECTRON-SETUP (decision 0068): electron.exe is
+  checked against config/electron_pin.json (tools/electron_pin.py
+  verify-exe; a full hash only when its size or mtime changed) before the
+  client starts; a changed exe is refused, the dashboard opens in the
+  browser instead and the log names the fix (run scripts\setup.ps1 again).
 .PARAMETER Overlay
   Accepted for compatibility; the client (with its overlay) starts by
   default when installed (scripts\setup.ps1 with Node).
@@ -166,6 +170,33 @@ function Get-AlPlan {
 }
 
 $electron = Join-Path $Repo 'app\node_modules\electron\dist\electron.exe'
+
+# OVL-ELECTRON-SETUP (F-044, decision 0068): the client starts only from
+# an electron.exe that matches its pin. tools/electron_pin.py verify-exe
+# hashes the exe in full only when its size or mtime changed since the
+# last good check (sidecar Build\electron-exe-check.json, shared with
+# setup.ps1); ok only with exit 0 and its "electron.exe ok" line (a
+# machine no pin covers has no trusted exe).
+function Test-AlElectronExe {
+    $ErrorActionPreference = 'Continue'
+    $out = @()
+    $rc = 1
+    Push-Location $Repo
+    try {
+        $out = @(& $py (Join-Path $Repo 'tools\electron_pin.py') 'verify-exe' '--exe' $electron 2>&1 |
+            ForEach-Object { [string]$_ })
+        $rc = $LASTEXITCODE
+    } catch {
+        $out = @([string]$_)
+        $rc = 1
+    } finally {
+        Pop-Location
+    }
+    foreach ($line in $out) {
+        if ($line) { Write-AlLog "run: electron: $line" }
+    }
+    return ($rc -eq 0 -and [bool](@($out) -match '^electron\.exe ok'))
+}
 # DESKTOP-CLIENT (decision 0041): the "overlay" component is the client
 # process; it is wanted only when a window is wanted and the browser is not.
 $wantOverlay = -not ($NoOverlay -or $NoBrowser -or $Browser -or $EdgeApp)
@@ -229,6 +260,9 @@ if (-not $wantOverlay) {
 } elseif ($trayOnly -and -not (@($plan.start) -contains 'overlay')) {
     # a live client is left alone: a second --client start would show its window
     Write-AlLog "run: client already running (pid $($plan.status.overlay.pid)); logon start leaves it alone"
+} elseif (-not (Test-AlElectronExe)) {
+    # refused: never start an exe that is not the pinned one
+    Write-AlLog 'run: client NOT started - electron.exe is not the pinned one; run scripts\setup.ps1 again to restore it'
 } else {
     $clientArgs = @('"' + (Join-Path $Repo 'app') + '"', '--client')
     if ($trayOnly) { $clientArgs += '--tray' }
