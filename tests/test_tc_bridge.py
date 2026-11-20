@@ -36,7 +36,7 @@ def _fake(tmp_path, **kw):
     env["ALB_FAKE_MARKER"] = str(marker)
     kw.setdefault("timeout", 10.0)
     b = bridge.Bridge([sys.executable, "-I", str(FAKE)], cwd=str(tmp_path),
-                      env=env, **kw)
+                      env=env, env_allow=("ALB_FAKE_MARKER",), **kw)
     return b, marker
 
 
@@ -159,6 +159,116 @@ def test_missing_executable_is_bridge_unavailable(tmp_path):
     b = bridge.Bridge([str(tmp_path / "no-such-luajit.exe")], cwd=str(tmp_path))
     with pytest.raises(bridge.BridgeUnavailable):
         b.request("ping")
+
+
+# --- confinement (TC-CALC-CONFINE-PROC, decision 0022 amendment) -----------
+
+# A fake child: the bridge protocol plus "env" (its environment names) and
+# "spawn" (tries to start a second process that would write a marker file).
+CHILD = r"""
+import json, os, subprocess, sys
+def send(o):
+    sys.stdout.write("ALB1 " + json.dumps(o) + "\n")
+    sys.stdout.flush()
+send({"id": 0, "ok": True, "result": {"ready": True}})
+for line in sys.stdin:
+    req = json.loads(line)
+    rid, cmd = req["id"], req["cmd"]
+    if cmd == "env":
+        send({"id": rid, "ok": True, "result": {"names": sorted(os.environ)}})
+    elif cmd == "spawn":
+        mark = os.path.join(os.getcwd(), "grandchild.txt")
+        code = "open(%r, 'w').write('ran')" % mark
+        try:
+            rc = subprocess.run([sys.executable, "-I", "-c", code], timeout=20).returncode
+            err = None
+        except Exception as exc:
+            rc, err = None, str(exc)
+        send({"id": rid, "ok": True, "result": {"rc": rc, "error": err}})
+    elif cmd == "quit":
+        send({"id": rid, "ok": True, "result": {}})
+        break
+"""
+WINDOWS = pytest.mark.skipif(os.name != "nt", reason="job objects are Windows only")
+
+
+def _child(tmp_path, env=None, **kw):
+    script = tmp_path / "child.py"
+    script.write_text(CHILD, encoding="ascii")
+    return bridge.Bridge([sys.executable, "-I", str(script)], cwd=str(tmp_path),
+                         env=env, timeout=30.0, **kw)
+
+
+def test_child_environment_holds_only_allowed_names(tmp_path):
+    env = dict(os.environ)
+    env.update({"LUA_INIT": "os.exit(1)", "AL_PROBE_SECRET": "x",
+                "TEMP": str(tmp_path), "TMP": str(tmp_path)})
+    b = _child(tmp_path, env=env)
+    try:
+        names = {n.upper() for n in b.request("env")["names"] if not n.startswith("=")}
+    finally:
+        b.close()
+    assert names <= set(bridge.ENV_ALLOW)
+    assert {"TEMP", "TMP"} <= names
+    assert "LUA_INIT" not in names and "AL_PROBE_SECRET" not in names
+    assert "PATH" not in names
+    # the component's own environment is built from the same allow-list
+    assert set(bridge.child_env(env)) <= set(env)
+    assert {n.upper() for n in bridge.child_env(env)} <= set(bridge.ENV_ALLOW)
+    assert "X_EXTRA" in bridge.child_env({"X_EXTRA": "1"}, extra=("x_extra",))
+
+
+@WINDOWS
+def test_child_cannot_start_a_second_process(tmp_path):
+    b = _child(tmp_path)
+    try:
+        b.request("env")  # starts the child inside its job
+        limits = b._job.limits()
+        assert limits["active_processes"] == 1
+        assert limits["process_memory"] == bridge.JOB_MEMORY_LIMIT > 384 << 20
+        assert limits["flags"] & 0x2000  # kill on job close
+        got = b.request("spawn")
+        assert got["rc"] != 0 or got["error"]  # refused or killed at birth
+        assert not (tmp_path / "grandchild.txt").exists()
+        assert b.request("env")["names"]  # the child itself lives on
+    finally:
+        b.close()
+
+
+def test_confinement_failure_refuses_the_start(tmp_path, monkeypatch):
+    class BadJob:
+        closed = False
+
+        def adopt(self, pid):
+            raise OSError("assign refused")
+
+        def close(self):
+            BadJob.closed = True
+
+    monkeypatch.setattr(bridge, "open_job", BadJob)
+    b = _child(tmp_path)
+    with pytest.raises(bridge.BridgeUnavailable, match="confine"):
+        b.request("env")
+    assert BadJob.closed and not b.running() and b._job is None
+
+
+@WINDOWS
+def test_job_closes_with_the_bridge(tmp_path):
+    b = _child(tmp_path)
+    try:
+        b.request("env")
+        job, proc = b._job, b._proc
+        assert job is not None and not job.closed
+        job.close()  # what the kernel does when the core dies
+        assert proc.wait(10) is not None  # kill on job close
+    finally:
+        b.close()
+    b.request("env")  # a fresh start gets a fresh job
+    job, proc = b._job, b._proc
+    assert job is not None and not job.closed
+    b.close()
+    assert job.closed and b._job is None
+    assert proc.poll() is not None and not b.running()
 
 
 # --- component discovery (core runs without it) -----------------------------

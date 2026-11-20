@@ -25,6 +25,7 @@ const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
 const Hotkey = require("./hotkey.js");
 const About = require("./about.js");
+const TrayMenu = require("./client/tray_menu.js");
 const OverlayGate = require("./overlay_gate.js");
 const Link = require("./client/link.js");
 const Launcher = require("./client/launcher.js");
@@ -55,6 +56,7 @@ let client = null; // DESKTOP-CLIENT companion window + tray (client mode only)
 let gate = null; // overlay visibility (app/overlay_gate.js)
 let stopHotReload = null; // HOT-RELOAD: stops the overlay page file watch
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
+let versionText = ""; // RUN-BUILD-STAMP-UI: the version line, "" until the core answers
 let logStream = null;
 
 function log(msg) {
@@ -299,18 +301,30 @@ function createWindow() {
   runParts("overlayWindow", win);
 }
 
-/* TC-SNAP-UI: the game-data credit in the About panel and (through
-   al:config) the page's About. */
-function setCredit(c) {
-  dataCredit = c;
-  app.setAboutPanelOptions({ applicationName: "AshLight overlay",
-                             credits: About.aboutText(DISCLAIMER, dataCredit) });
+/* RUN-BUILD-STAMP-UI (F-027): the tray tooltip carries the version line
+   once the core has said it (TrayMenu.tooltipFor; the plain words before). */
+function setTrayTooltip() {
+  const t = client ? client.tray() : null;
+  if (t) { t.setToolTip(TrayMenu.tooltipFor(versionText)); }
 }
 
-/* On a core restart: re-read the credit, then reload the page (the token
-   changed, so the page reloads anyway; one reload, not two). */
+/* TC-SNAP-UI: the game-data credit in the About panel and (through
+   al:config) the page's About. RUN-BUILD-STAMP-UI: the version line from
+   the same /api/version document joins the About text and the tray
+   tooltip; a doc that could not be read keeps the last version line. */
+function setAbout(doc) {
+  dataCredit = About.creditOf(doc);
+  versionText = About.versionLine(doc) || versionText;
+  app.setAboutPanelOptions({ applicationName: "AshLight overlay",
+                             credits: About.aboutText(DISCLAIMER, dataCredit, versionText) });
+  setTrayTooltip();
+}
+
+/* On a core restart: re-read the credit and the version (a new core may
+   be a new build), then reload the page (the token changed, so the page
+   reloads anyway; one reload, not two). */
 function refreshAboutAndReload(getVersion) {
-  getVersion().then((doc) => setCredit(About.creditOf(doc)), (e) => {
+  getVersion().then((doc) => setAbout(doc), (e) => {
     log("about: version not read: " + e.message);
   }).then(() => {
     if (win) { win.webContents.reload(); }
@@ -370,6 +384,7 @@ function openClient() {
     });
   }
   client.open();
+  setTrayTooltip();
 }
 
 function start() {
@@ -404,8 +419,8 @@ function start() {
   // TC-SNAP-UI: the credit is read before the page loads (at most
   // About.START_WAIT_MS), so the window never reloads just to show it.
   const getVersion = About.makeGetVersion(http, port, readToken);
-  About.firstCredit(getVersion, About.START_WAIT_MS).then((c) => {
-    setCredit(c);
+  About.firstDoc(getVersion, About.START_WAIT_MS).then((doc) => {
+    setAbout(doc);
     createWindow();
   });
   screen.on("display-added", onDisplaysChanged);
