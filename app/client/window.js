@@ -24,7 +24,15 @@
    called once per created companion window (main.js runs the parts'
    clientWindow hook from it); opts.overlayBounds() gives the overlay's
    current bounds to the parts that place this window. The returned object
-   has window() and tray() getters for the parts. */
+   has window() and tray() getters for the parts.
+
+   OVL-WAKE-COMPANION (decision 0041 amendment 2026-11-19): wake() is asked
+   by the wake part (app/parts/40-wake.js) when the log goes from idle to a
+   fresh line. A companion in the tray or minimised comes back with
+   showInactive() (never focus()), only when Link.wakeAction says its saved
+   bounds lie wholly on a display other than the overlay's. The tray
+   checkbox "Open AshLight when the game wakes" switches it (client-prefs.json
+   in the runtime dir, default on). */
 
 const fs = require("fs");
 const path = require("path");
@@ -57,6 +65,7 @@ function createClient(opts) {
   let shownToken = "";
   let closedNoteShown = false;
   let opened = []; // times of the links opened in the last minute (rate limit)
+  let prefs = null; // client-prefs.json, read on first use
 
   function iconImage() {
     return Brand.trayImage(nativeImage);
@@ -164,7 +173,9 @@ function createClient(opts) {
     return starting;
   }
 
-  function createWindow() {
+  /* inactive: the wake path. The window shows without taking focus and at
+     its saved normal size (maximize() would activate it). */
+  function createWindow(inactive) {
     const displays = [screen.getPrimaryDisplay()].concat(screen.getAllDisplays());
     const areas = displays.map((d) => d.workArea);
     // OVL-SECOND-DISPLAY: Electron's display list only; the overlay's
@@ -221,6 +232,7 @@ function createClient(opts) {
     });
     for (const ev of ["minimize", "restore", "show", "hide"]) { win.on(ev, refresh); }
     win.once("ready-to-show", () => {
+      if (inactive === true) { win.showInactive(); return; }
       if (placed.maximized) { win.maximize(); }
       win.show();
     });
@@ -245,11 +257,28 @@ function createClient(opts) {
     app.quit();
   }
 
+  function currentPrefs() {
+    if (!prefs) { prefs = Link.loadPrefs(opts.runtimeDir); }
+    return prefs;
+  }
+
+  /* Tray "Open AshLight when the game wakes": flip and keep the switch. */
+  function toggleWake() {
+    prefs = { wake: !currentPrefs().wake };
+    try {
+      Link.savePrefs(opts.runtimeDir, prefs);
+    } catch (e) {
+      log("client: preferences not saved: " + e.message);
+    }
+    refresh();
+  }
+
   function trayMenu() {
     return Menu.buildFromTemplate(TrayMenu.trayTemplate(
-      { overlayOn: opts.overlayVisible(), companionShown: companionShown() },
+      { overlayOn: opts.overlayVisible(), companionShown: companionShown(),
+        wakeOn: currentPrefs().wake },
       { toggleCompanion: toggleCompanion, toggleOverlay: () => opts.toggleOverlay(),
-        restart: () => opts.restartOverlay(), quit: quit }));
+        toggleWake: toggleWake, restart: () => opts.restartOverlay(), quit: quit }));
   }
 
   /* X closed the window: say once per run that AshLight is still here. */
@@ -289,6 +318,38 @@ function createClient(opts) {
     createWindow();
   }
 
+  /* The overlay's display rect (its layout's displayId), or null. */
+  function overlayArea() {
+    try {
+      const ob = typeof opts.overlayBounds === "function" ? opts.overlayBounds() : null;
+      const od = ob ? screen.getAllDisplays().find((d) => d.id === ob.displayId) : null;
+      return od ? od.bounds : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* The log woke (w: {wasIdle, fresh}, from the wake part): bring a hidden
+     companion back without focus, only on a display that is not the
+     overlay's. Returns the action taken ("showInactive" or "stay"). */
+  function wake(w) {
+    const hidden = !companionShown();
+    const action = Link.wakeAction({
+      wasIdle: !!(w && w.wasIdle === true), fresh: !!(w && w.fresh === true),
+      hidden: hidden, bounds: readState(), overlayArea: overlayArea(),
+      areas: screen.getAllDisplays().map((d) => d.bounds), enabled: currentPrefs().wake === true
+    });
+    if (action !== "showInactive") { return "stay"; }
+    ensureTray();
+    if (win && !win.isDestroyed()) {
+      win.showInactive(); // restores a minimised window without activating it
+    } else {
+      createWindow(true);
+    }
+    log("client: companion shown again (the game woke)");
+    return action;
+  }
+
   /* The core restarted with a new token: show the dashboard again. */
   function reload() {
     if (win && !win.isDestroyed() && !starting && opts.readToken() !== shownToken) {
@@ -308,7 +369,7 @@ function createClient(opts) {
   }
 
   return { open, reload, refresh, hasTray, dispose, isCompanion, toggleCompanion, quit,
-           window: () => win, tray: () => tray };
+           wake, toggleWake, window: () => win, tray: () => tray };
 }
 
 module.exports = { createClient, PARTITION, STATE_FILE };

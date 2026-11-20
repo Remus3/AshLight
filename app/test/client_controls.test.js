@@ -4,12 +4,16 @@
    Minimize / Restore, Show in-game overlay (reflects state), Restart
    overlay, Quit (everything); left-click restores; "Restart overlay" is
    one IPC action the dashboard reaches only inside the client
-   (button id restart-overlay). */
+   (button id restart-overlay). OVL-WAKE-COMPANION: the tray checkbox
+   "Open AshLight when the game wakes" switches the companion's return and
+   is kept in client-prefs.json (default on). */
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const os = require("node:os");
+const Link = require("../client/link.js");
 const TrayMenu = require("../client/tray_menu.js");
 const web = require("./_web.js");
 
@@ -22,13 +26,18 @@ function code(js) {
 const WIN = code(fs.readFileSync(path.join(APP, "client", "window.js"), "utf8"));
 const MAIN = code(fs.readFileSync(path.join(APP, "main.js"), "utf8"));
 
-test("tray menu: the four actions, labels follow the state", () => {
+test("tray menu: the five actions, labels follow the state", () => {
   const calls = [];
   const acts = { toggleCompanion: () => calls.push("c"), toggleOverlay: () => calls.push("o"),
+                 toggleWake: () => calls.push("w"),
                  restart: () => calls.push("r"), quit: () => calls.push("q") };
-  const shown = TrayMenu.trayTemplate({ overlayOn: true, companionShown: true }, acts);
+  const shown = TrayMenu.trayTemplate({ overlayOn: true, companionShown: true, wakeOn: true },
+                                      acts);
   const byId = Object.fromEntries(shown.filter((i) => i.id).map((i) => [i.id, i]));
-  assert.deepEqual(Object.keys(byId), ["companion", "overlay", "restart", "quit"]);
+  assert.deepEqual(Object.keys(byId), ["companion", "overlay", "wake", "restart", "quit"]);
+  assert.equal(byId.wake.label, "Open AshLight when the game wakes");
+  assert.equal(byId.wake.type, "checkbox");
+  assert.equal(byId.wake.checked, true);
   assert.equal(byId.companion.label, "Minimize AshLight");
   assert.equal(byId.overlay.type, "checkbox");
   assert.equal(byId.overlay.checked, true);
@@ -37,8 +46,9 @@ test("tray menu: the four actions, labels follow the state", () => {
   const hidden = TrayMenu.trayTemplate({ overlayOn: false, companionShown: false }, acts);
   assert.equal(hidden[0].label, "Restore AshLight");
   assert.equal(hidden[1].checked, false);
+  assert.equal(hidden[2].checked, false);
   for (const item of shown) { if (item.click) { item.click(); } }
-  assert.deepEqual(calls, ["c", "o", "r", "q"]);
+  assert.deepEqual(calls, ["c", "o", "w", "r", "q"]);
   assert.match(TrayMenu.TOOLTIP, /Right-click for the menu/);
   assert.match(TrayMenu.CLOSED_NOTE, /keeps running/);
 });
@@ -131,4 +141,29 @@ test("MERGE-SEAMS F7: no file under web/ or app/test/ names the old hints class 
   }
   const css = web.source("app.css");
   assert.match(css, /\.tool-row \{ margin: 8px 0 0; \}/);
+});
+
+test("the wake switch persists in client-prefs.json, default on", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "al-prefs-"));
+  try {
+    assert.deepEqual(Link.loadPrefs(dir), { wake: true }); // no file: on
+    Link.savePrefs(dir, { wake: false });
+    const file = path.join(dir, Link.PREFS_FILE);
+    assert.equal(fs.readFileSync(file, "ascii"), '{"wake":false}\n');
+    assert.deepEqual(Link.loadPrefs(dir), { wake: false });
+    assert.ok(!fs.existsSync(file + ".tmp"));
+    Link.savePrefs(dir, { wake: true });
+    assert.deepEqual(Link.loadPrefs(dir), { wake: true });
+    fs.writeFileSync(file, "{broken", "ascii");
+    assert.deepEqual(Link.loadPrefs(dir), { wake: true }); // broken: the default
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  // the window reads and writes it in the runtime dir, never config/local.json
+  assert.equal(Link.PREFS_FILE, "client-prefs.json");
+  assert.match(WIN, /Link\.loadPrefs\(opts\.runtimeDir\)/);
+  assert.match(WIN, /Link\.savePrefs\(opts\.runtimeDir, prefs\)/);
+  assert.match(WIN, /wakeOn: currentPrefs\(\)\.wake/);
+  assert.match(WIN, /toggleWake: toggleWake/);
+  assert.ok(!/local\.json/.test(WIN));
 });
