@@ -9,17 +9,23 @@
    "zones": {
     "The Riverbank": {
      "objective": "Beat the swollen miller boss at the far end of the river.",
+     "layout": "First zone: grab a weapon, follow the river and beat the boss at its end.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut skill gem - in a chest partway along the river."
       }
      ],
-     "next": "Clearfell Encampment"
+     "next": "Clearfell Encampment",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Clearfell Encampment": {
      "objective": "Town: talk to Renly for a gem, sell, then head into Clearfell.",
-     "next": "Clearfell"
+     "layout": "Town: sell junk, check the vendors for a better weapon, then head out.",
+     "next": "Clearfell",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Clearfell": {
      "objective": "Find the Grelwood exit; the Mud Burrow cave is a short detour.",
@@ -38,57 +44,78 @@
     },
     "Mud Burrow": {
      "objective": "Beat the Devourer at the bottom, then report back to Renly.",
+     "layout": "Short cave with a boss at the bottom; worth it early for the experience.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut skill gem - from the Devourer; Renly adds a support gem."
       }
      ],
-     "next": "The Grelwood"
+     "next": "The Grelwood",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Grelwood": {
      "objective": "Hub: take the runes from the Red Vale to the Tree of Souls here.",
+     "layout": "Big forest hub: several paths branch off here; take the main road first.",
      "optional": [
       {
        "kind": "gem",
        "text": "Flasks and an uncut support gem - from a witch's hut cauldron."
       }
      ],
-     "next": "The Red Vale"
+     "next": "The Red Vale",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Red Vale": {
      "objective": "Activate three rust obelisks, survive each wave, then beat the Rust King.",
-     "next": "The Grim Tangle"
+     "layout": "Optional side zone: a tougher fight with a reward; skip it if you are rushing.",
+     "next": "The Grim Tangle",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Grim Tangle": {
      "objective": "Pass through to the Cemetery of the Eternals.",
+     "layout": "Dense, dark thicket: move steadily and look for the way down to the cemetery.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut support gem - beat the Rotten Druid, an optional boss."
       }
      ],
-     "next": "Cemetery of the Eternals"
+     "next": "Cemetery of the Eternals",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Cemetery of the Eternals": {
      "objective": "Clear both tombs, open the memorial gate and beat Lachlann.",
+     "layout": "Hub for two tombs: both side zones hold what you need to go on.",
      "optional": [
       {
        "kind": "item",
        "text": "A random ring - from a grave at the zone edge."
       }
      ],
-     "next": "Hunting Grounds"
+     "next": "Hunting Grounds",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Mausoleum of the Praetor": {
      "objective": "Beat Draven, the Eternal Praetor, at the end.",
+     "layout": "Side tomb: clear to the end for the item that opens the way on.",
      "next": "Tomb of the Consort",
-     "main": false
+     "main": false,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Tomb of the Consort": {
      "objective": "Beat Asinia, the Praetor's Consort, at the end.",
+     "layout": "Side tomb: clear to the end for the second item that opens the way on.",
      "next": "Cemetery of the Eternals",
-     "main": false
+     "main": false,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Hunting Grounds": {
      "objective": "Head on to Ogham Farmlands; Freythorn is a worthwhile side trip.",
@@ -103,47 +130,62 @@
     },
     "Freythorn": {
      "objective": "Optional: light the three small ritual altars, then the big one.",
+     "layout": "Optional side zone with a ritual fight; the reward is worth the detour.",
      "optional": [
       {
        "kind": "spirit",
        "text": "+30 spirit - beat the King in the Mists at the big altar."
       }
      ],
-     "main": false
+     "main": false,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Ogham Farmlands": {
      "objective": "Push through the farms to Ogham Village.",
+     "layout": "Farms before the village: look around for a quest item along the way.",
      "optional": [
       {
        "kind": "passive",
        "text": "A book of 2 skill points - bring Una's lute, found in a hut, back to Una."
       }
      ],
-     "next": "Ogham Village"
+     "next": "Ogham Village",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Ogham Village": {
      "objective": "Beat the Executioner and free Leitis; grab Renly's tools.",
-     "next": "The Manor Ramparts"
+     "layout": "Burning village: push through to the manor gates.",
+     "next": "The Manor Ramparts",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Manor Ramparts": {
      "objective": "Climb the walls to the manor door; no boss here.",
+     "layout": "Walls of the manor: clear the ramparts to reach the door.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut support gem - cut down the hanged man at the gallows."
       }
      ],
-     "next": "Ogham Manor"
+     "next": "Ogham Manor",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Ogham Manor": {
      "objective": "Act boss: Count Geonor on the top floor.",
+     "layout": "Act boss inside: check resistances and flasks before you go in.",
      "optional": [
       {
        "kind": "life",
        "text": "+20 maximum life - beat Candlemass on the first floor."
       }
      ],
-     "next": "Vastiri Outskirts"
+     "next": "Vastiri Outskirts",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     }
    }
   },
@@ -154,33 +196,51 @@
    "zones": {
     "Vastiri Outskirts": {
      "objective": "Beat Rathbreaker and reach the caravan.",
-     "next": "The Ardura Caravan"
+     "layout": "Desert edge: follow the road to the caravan.",
+     "next": "The Ardura Caravan",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Ardura Caravan": {
      "objective": "Town: use the desert map to travel; follow the quest marker.",
-     "next": "Mawdun Quarry"
+     "layout": "Moving town: vendors and travel to the next zone are here.",
+     "next": "Mawdun Quarry",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Mawdun Quarry": {
      "objective": "Fight down to the mine entrance.",
-     "next": "Mawdun Mine"
+     "layout": "Quarry: fight down toward the mine.",
+     "next": "Mawdun Mine",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Mawdun Mine": {
      "objective": "Beat Rudja and free Risu.",
-     "next": "The Halani Gates"
+     "layout": "Mine with a boss at the end; it unlocks the way forward.",
+     "next": "The Halani Gates",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Halani Gates": {
      "objective": "First visit: face Jamanra. Later: sound the horn to open the gates.",
+     "layout": "Gate fight: clear the way through to continue the act.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut skill gem - beat L'im, an optional boss."
       }
      ],
-     "next": "Traitor's Passage"
+     "next": "Traitor's Passage",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Traitor's Passage": {
      "objective": "Open the ancient seal and beat Balbala.",
-     "next": "Trial of the Sekhemas"
+     "layout": "Cave passage with a boss; it opens the way deeper into the desert.",
+     "next": "Trial of the Sekhemas",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Trial of the Sekhemas": {
      "objective": "Clear the trial and beat Rattlecage for your ascendancy.",
@@ -199,71 +259,104 @@
     },
     "The Lost City": {
      "objective": "Find the way down to the Buried Shrines.",
-     "next": "Buried Shrines"
+     "layout": "Underground ruins: push through to the shrines.",
+     "next": "Buried Shrines",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Buried Shrines": {
      "objective": "Beat Azarian and bring the cinders to the water goddess.",
+     "layout": "Shrine boss at the end; take your time with its attacks.",
      "optional": [
       {
        "kind": "item",
        "text": "A resistance ring - from an elemental offering before the boss."
       }
      ],
-     "next": "Mastodon Badlands"
+     "next": "Mastodon Badlands",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Mastodon Badlands": {
      "objective": "Find the way into the Bone Pits.",
-     "next": "The Bone Pits"
+     "layout": "Open badlands: find the way down into the Bone Pits.",
+     "next": "The Bone Pits",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Bone Pits": {
      "objective": "Beat the two pit bosses; a sun clan relic drops here.",
-     "next": "Valley of the Titans"
+     "layout": "Pit boss at the bottom; its drop moves the act on.",
+     "next": "Valley of the Titans",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Valley of the Titans": {
      "objective": "Touch the three ancient seals to open the Titan Grotto.",
+     "layout": "Large valley: look for the item that opens the way to the grotto.",
      "optional": [
       {
        "kind": "charm",
        "text": "A charm bonus of your choice - set both clan relics on the altar near the waypoint."
       }
      ],
-     "next": "The Titan Grotto"
+     "next": "The Titan Grotto",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Titan Grotto": {
      "objective": "Beat Zalmarath.",
-     "next": "Deshar"
+     "layout": "Cave with a boss; check your life flask before the fight.",
+     "next": "Deshar",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Deshar": {
      "objective": "Clear on to the Path of Mourning.",
+     "layout": "Ruined city on the way to the spires; clear forward.",
      "optional": [
       {
        "kind": "passive",
        "text": "A book of 2 skill points - take a fallen soldier's last letter to Shambrin."
       }
      ],
-     "next": "Path of Mourning"
+     "next": "Path of Mourning",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Path of Mourning": {
      "objective": "Keep climbing toward the spires.",
-     "next": "The Spires of Deshar"
+     "layout": "Long climb: keep moving toward the spires.",
+     "next": "The Spires of Deshar",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Spires of Deshar": {
      "objective": "Beat Tor Gul at the top.",
+     "layout": "High spires: clear to the top to move the act on.",
      "optional": [
       {
        "kind": "resist",
        "text": "+10% lightning resistance - pray at the sisters' shrine."
       }
      ],
-     "next": "The Dreadnought's Wake"
+     "next": "The Dreadnought's Wake",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Dreadnought's Wake": {
      "objective": "Follow the war machine's trail to it.",
-     "next": "Dreadnought"
+     "layout": "The trail of the great war machine: clear through to it.",
+     "next": "Dreadnought",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Dreadnought": {
      "objective": "Act boss: Jamanra. Cap your resistances first.",
-     "next": "Sandswept Marsh"
+     "layout": "Act boss aboard the war machine: cap your resistances and refill flasks first.",
+     "next": "Sandswept Marsh",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     }
    }
   },
@@ -274,13 +367,16 @@
    "zones": {
     "Sandswept Marsh": {
      "objective": "Walk on to the Ziggurat Encampment.",
+     "layout": "Marsh path: follow it to the next camp.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut skill gem - beat Rootdredge, an optional boss."
       }
      ],
-     "next": "Ziggurat Encampment"
+     "next": "Ziggurat Encampment",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Ziggurat Encampment": {
      "objective": "Town: head out to the Jungle Ruins.",
@@ -299,65 +395,95 @@
      "next": "Infested Barrens"
     },
     "The Venom Crypts": {
+     "layout": "Poison crypt: chaos resistance helps; look for the quest item.",
      "optional": [
       {
        "kind": "other",
        "text": "A permanent bonus of your choice - bring the venom vial to Servi."
       }
      ],
-     "main": false
+     "main": false,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Infested Barrens": {
      "objective": "Take the outer exit to the Chimeral Wetlands.",
-     "next": "Chimeral Wetlands"
+     "layout": "Barren ground: clear forward toward the waterways.",
+     "next": "Chimeral Wetlands",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Chimeral Wetlands": {
      "objective": "Beat Xyclucian at the Machinarium entrance.",
-     "next": "Jiquani's Machinarium"
+     "layout": "Wetlands with a boss; it opens the way to the temple.",
+     "next": "Jiquani's Machinarium",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Jiquani's Machinarium": {
      "objective": "Carry soul cores through to the Sanctum.",
+     "layout": "Old machine halls: power the way through to the sanctum.",
      "optional": [
       {
        "kind": "resist",
        "text": "+10% fire resistance - beat Blackjaw behind a two-core door."
       }
      ],
-     "next": "Jiquani's Sanctum"
+     "next": "Jiquani's Sanctum",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Jiquani's Sanctum": {
      "objective": "Power the generators, beat Zicoatl and take the large soul core.",
-     "next": "The Matlan Waterways"
+     "layout": "Sanctum with a fight at the end; it moves the act on.",
+     "next": "The Matlan Waterways",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Matlan Waterways": {
      "objective": "Work the levers to drain the water; the last lever opens the city.",
-     "next": "The Drowned City"
+     "layout": "Waterways: open the flow to reach the drowned city.",
+     "next": "The Drowned City",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Azak Bog": {
+     "layout": "Optional bog with a ritual fight; the reward is worth the detour.",
      "optional": [
       {
        "kind": "spirit",
        "text": "+30 spirit - beat Ignagduk, the bog witch."
       }
      ],
-     "main": false
+     "main": false,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Drowned City": {
      "objective": "Two exits: Apex of Filth is the main path.",
-     "next": "Apex of Filth"
+     "layout": "Sunken city: clear through toward the vault.",
+     "next": "Apex of Filth",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Molten Vault": {
+     "layout": "Hot vault: watch fire damage, then push to the end.",
      "optional": [
       {
        "kind": "gem",
        "text": "Uncut skill gem and a reforging bench - beat Mektul in a timed fight."
       }
      ],
-     "main": false
+     "main": false,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Apex of Filth": {
      "objective": "Beat the Queen of Filth in the centre.",
-     "next": "Temple of Kopec"
+     "layout": "Boss at the top of the filth: take it slowly.",
+     "next": "Temple of Kopec",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Temple of Kopec": {
      "objective": "Climb the temple and beat Ketzuli.",
@@ -370,21 +496,30 @@
     },
     "Utzaal": {
      "objective": "Beat Viper Napuatzi.",
-     "next": "Aggorat"
+     "layout": "The old city: clear through toward Aggorat.",
+     "next": "Aggorat",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Aggorat": {
      "objective": "Push through to the Black Chambers.",
+     "layout": "City heart: push on to the black chambers.",
      "optional": [
       {
        "kind": "passive",
        "text": "A book of 2 skill points - sacrifice a Vaal heart at the altar."
       }
      ],
-     "next": "The Black Chambers"
+     "next": "The Black Chambers",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Black Chambers": {
      "objective": "Act boss: Doryani.",
-     "next": "Kingsmarch"
+     "layout": "Act boss below: cap resistances and refill flasks before you go.",
+     "next": "Kingsmarch",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     }
    }
   },
@@ -396,81 +531,117 @@
    "zones": {
     "Kingsmarch": {
      "objective": "Town: sail from the dock to the next island.",
-     "town": true
+     "layout": "Port town: vendors and the ship to the islands.",
+     "town": true,
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Isle of Kin": {
      "objective": "Fight on to the Volcanic Warrens.",
-     "next": "Volcanic Warrens"
+     "layout": "First island: clear it and look for the cave inside.",
+     "next": "Volcanic Warrens",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Volcanic Warrens": {
      "objective": "Beat Krutog in the throne room.",
-     "next": "Kingsmarch"
+     "layout": "Volcanic caves: watch fire damage on the way through.",
+     "next": "Kingsmarch",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Kedge Bay": {
      "objective": "Head on to Journey's End.",
-     "next": "Journey's End"
+     "layout": "Bay island: clear it and move on.",
+     "next": "Journey's End",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Journey's End": {
      "objective": "Beat Captain Hartlin, then use the spikes to clear the dark mists.",
+     "layout": "Island with a fight at its end; it moves the act on.",
      "optional": [
       {
        "kind": "passive",
        "text": "A book of 2 skill points - beat Omniphobia in the dark mists."
       }
      ],
-     "next": "Kingsmarch"
+     "next": "Kingsmarch",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Whakapanu Island": {
      "objective": "Head on to the Singing Caverns.",
+     "layout": "Island with caves; clear through to the inner cave.",
      "optional": [
       {
        "kind": "other",
        "text": "A defence bonus of your choice - bring the great white's fin to Kaimana."
       }
      ],
-     "next": "Singing Caverns"
+     "next": "Singing Caverns",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Singing Caverns": {
      "objective": "Beat Diamora.",
-     "next": "Kingsmarch"
+     "layout": "Cave with a boss at the end.",
+     "next": "Kingsmarch",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Shrike Island": {
      "objective": "Beat the Scourge of the Skies for a torn map piece.",
-     "next": "Kingsmarch"
+     "layout": "Bird island: clear it and look for its fight.",
+     "next": "Kingsmarch",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Abandoned Prison": {
      "objective": "Head down to Solitary Confinement.",
+     "layout": "Prison island: clear down toward the cells.",
      "optional": [
       {
        "kind": "flask",
        "text": "A flask recovery bonus of your choice - from the goddess of justice."
       }
      ],
-     "next": "Solitary Confinement"
+     "next": "Solitary Confinement",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Solitary Confinement": {
      "objective": "Beat the Prisoner below.",
-     "next": "Kingsmarch"
+     "layout": "Prison depths with a boss; check flasks first.",
+     "next": "Kingsmarch",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Eye of Hinekora": {
      "objective": "Head on to the Halls of the Dead.",
+     "layout": "Sacred island: follow the path inward.",
      "optional": [
       {
        "kind": "mana",
        "text": "+5% maximum mana - in the silent hall past a checkpoint near the end."
       }
      ],
-     "next": "Halls of the Dead"
+     "next": "Halls of the Dead",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Halls of the Dead": {
      "objective": "Do the three tattoo trials; the way on is at the far end.",
+     "layout": "Halls with trials; take them one at a time.",
      "optional": [
       {
        "kind": "other",
        "text": "Three permanent bonuses of your choice - one per tattoo trial."
       }
      ],
-     "next": "Trial of the Ancestors"
+     "next": "Trial of the Ancestors",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Trial of the Ancestors": {
      "objective": "Beat Yama the White, then speak to Hinekora.",
@@ -484,11 +655,17 @@
     },
     "Arastas": {
      "objective": "Reach Torvian at the end.",
-     "next": "The Excavation"
+     "layout": "Ruins on the way to the end of the act; clear forward.",
+     "next": "The Excavation",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "The Excavation": {
      "objective": "Beat Benedictus.",
-     "next": "Ngakanu"
+     "layout": "Dig site: push down to its end.",
+     "next": "Ngakanu",
+     "src": "research:0025",
+     "checked": "2026-11-17"
     },
     "Ngakanu": {
      "objective": "Push on to the Heart of the Tribe.",
