@@ -48,12 +48,27 @@ test("pick: a stored tab id comes back, anything else gives Play", () => {
   assert.equal(t.pick("build"), "build");
   assert.equal(t.pick(null), "play");
   assert.equal(t.pick("nope"), "play");
+  assert.equal(t.pick("constructor"), "play");
   assert.equal(t.PRIMARY, "play");
   assert.equal(t.TABS[0], "play");
 });
 
+test("four tabs (PLAY-TD-19B-FOUR-TABS); a stored items maps to build once", () => {
+  assert.deepEqual(t.TABS, ["play", "build", "run", "settings"]);
+  assert.equal(t.pick("items"), "build");
+  const doc = fakeDoc();
+  const store = memStore({ [t.STORE_KEY]: "items" });
+  t.start(doc, store);
+  assert.equal(t.current(), "build");
+  assert.equal(doc.ids["panel-build"].hidden, false);
+  assert.equal(store.m[t.STORE_KEY], "build", "the old value is replaced at once");
+  t.mark(doc, "items", "new"); // a retired id carries no mark
+  assert.deepEqual(Object.keys(doc.ids).filter((k) => k.endsWith("-items")), []);
+});
+
 test("step: arrows wrap, Home and End jump, other keys do nothing", () => {
-  assert.equal(t.step("ArrowRight", "play"), "run");
+  assert.equal(t.step("ArrowRight", "play"), "build");
+  assert.equal(t.step("ArrowRight", "build"), "run");
   assert.equal(t.step("ArrowLeft", "play"), "settings");
   assert.equal(t.step("ArrowRight", "settings"), "play");
   assert.equal(t.step("Home", "items"), "play");
@@ -70,13 +85,13 @@ test("shouldSwitch: only when Play is hidden and the player is not working elsew
 
 test("start restores the remembered tab, a click switches and is remembered", () => {
   const doc = fakeDoc();
-  const store = memStore({ [t.STORE_KEY]: "items" });
+  const store = memStore({ [t.STORE_KEY]: "run" });
   t.start(doc, store);
-  assert.equal(t.current(), "items");
-  assert.equal(doc.ids["panel-items"].hidden, false);
+  assert.equal(t.current(), "run");
+  assert.equal(doc.ids["panel-run"].hidden, false);
   assert.equal(doc.ids["panel-play"].hidden, true);
-  assert.equal(doc.ids["tab-items"].attrs["aria-selected"], "true");
-  assert.equal(doc.ids["tab-items"].attrs.tabindex, "0");
+  assert.equal(doc.ids["tab-run"].attrs["aria-selected"], "true");
+  assert.equal(doc.ids["tab-run"].attrs.tabindex, "0");
   assert.equal(doc.ids["tab-play"].attrs.tabindex, "-1");
   doc.ids["tab-build"].listeners.click();
   assert.equal(t.current(), "build");
@@ -91,8 +106,8 @@ test("arrow keys move and focus the tab; storage that throws is ignored", () => 
   let prevented = false;
   doc.ids.tabs.listeners.keydown({ key: "ArrowRight", preventDefault() { prevented = true; } });
   assert.ok(prevented);
-  assert.equal(t.current(), "run");
-  assert.equal(doc.ids["tab-run"].focused, true);
+  assert.equal(t.current(), "build");
+  assert.equal(doc.ids["tab-build"].focused, true);
 });
 
 test("notify shows Play when the game has focus, else marks Play new", () => {
@@ -125,7 +140,7 @@ test("a mark stays while its tab is shown and comes back after", () => {
   assert.equal(doc.ids["tab-settings"].markNode.hidden, true);
 });
 
-test("fill: the one slot (the zone guide in Run and history); filling it is not news", () => {
+test("fill: the one slot (the zone guide in Run); filling it is not news", () => {
   assert.deepEqual(t.SLOTS, ["zone-guide"]);
   const doc = fakeDoc();
   t.start(doc, memStore({ [t.STORE_KEY]: "run" }));
@@ -153,10 +168,19 @@ test("the page has a tablist with one tab and one panel per id, Play first", () 
   });
   assert.match(HTML, /<script src="\/web\/tabs.js" defer><\/script>/);
   assert.ok(HTML.indexOf("/web/tabs.js") < HTML.indexOf("/web/app.js"));
+  // PLAY-TD-19B-FOUR-TABS (TD-19, F-067): exactly four tabs, these names
+  const names = [...HTML.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1].trim());
+  assert.deepEqual(names, ["Play", "Build and items", "Run", "Settings"]);
+  assert.ok(!HTML.includes("panel-items") && !HTML.includes("tab-items"));
+  // the hidden bold copies (F-161) follow the names
+  names.forEach((n, i) => {
+    assert.ok(CSS.includes("#tab-" + t.TABS[i] + '::after { content: "' + n + '"; }'), n);
+  });
+  assert.doesNotMatch(CSS, /#tab-items/);
 });
 
 test("Play holds only the regions; tools and the full cards live in other tabs", () => {
-  const play = HTML.slice(HTML.indexOf('id="panel-play"'), HTML.indexOf('id="panel-run"'));
+  const play = HTML.slice(HTML.indexOf('id="panel-play"'), HTML.indexOf('id="panel-build"'));
   ["play-g", "play-c", "play-t", "play-n", "play-b", "play-i", "play-u"].forEach((id) => {
     assert.ok(play.includes('id="' + id + '"'), id);
   });
@@ -175,14 +199,18 @@ test("Play holds only the regions; tools and the full cards live in other tabs",
   const foot = HTML.slice(HTML.indexOf("<footer"));
   assert.ok(foot.includes('id="consent-no"') && foot.includes('aria-describedby="consent-said"'));
   // moved as they were: Last session first in Run, the zone guide in Act
-  // times, the full last check first in Items and prices (ids unchanged)
-  const run = HTML.slice(HTML.indexOf('id="panel-run"'), HTML.indexOf('id="panel-build"'));
+  // times; PLAY-TD-19B-FOUR-TABS: the Items and prices columns, the full
+  // last check first, follow the build columns in Build and items
+  const run = HTML.slice(HTML.indexOf('id="panel-run"'), HTML.indexOf('id="panel-settings"'));
   assert.match(run, /^id="panel-run"[^>]*>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="summarybox"/);
-  const items = HTML.slice(HTML.indexOf('id="panel-items"'), HTML.indexOf('id="panel-settings"'));
-  assert.match(items, /^id="panel-items"[^>]*>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="evalbox"/);
-  ["eval-result", "price-result", "pricebox", "valuebox", "upgradebox"].forEach((id) => {
-    assert.ok(items.includes('id="' + id + '"'), id);
+  const build = HTML.slice(HTML.indexOf('id="panel-build"'), HTML.indexOf('id="panel-run"'));
+  assert.match(build, /^id="panel-build"[^>]*>\s*<div class="col">\s*<section id="buildbox"/);
+  assert.match(build, /<\/div>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="evalbox"/);
+  ["buildbox", "healthbox", "searchbox", "evalbox", "eval-result", "price-result", "pricebox",
+    "valuebox", "upgradebox", "pricesbox", "watchbox", "weightsbox"].forEach((id) => {
+    assert.ok(build.includes('id="' + id + '"'), id);
   });
+  assert.ok(build.indexOf('id="searchbox"') < build.indexOf('id="evalbox"'));
   // PLAY-LEGACY-OUT-1: the old strip tiles, trade card and build alert slot are gone
   ["zone", "zone-time", "level", "who", "deaths", "levelups", "session", "flags", "underlevel",
     "trades", "trade-list", "trade-clear", "trade-status", "build-alert"].forEach((id) => {
@@ -212,7 +240,7 @@ test("Play is 7 regions with no panel tab stop; the shown tab keeps its regions"
   const open = HTML.match(/<div id="panel-play"[^>]*>/)[0];
   assert.doesNotMatch(open, /tabindex/);
   assert.doesNotMatch(HTML, /class="play-(main|side)"/);
-  const play = HTML.slice(HTML.indexOf('id="panel-play"'), HTML.indexOf('id="panel-run"'));
+  const play = HTML.slice(HTML.indexOf('id="panel-play"'), HTML.indexOf('id="panel-build"'));
   const regions = [...play.matchAll(/<section id="play-([a-z])" class="region" data-region="([a-z])"/g)];
   assert.deepEqual(regions.map((m) => m[1]), ["g", "c", "t", "n", "b", "i", "u"]);
   regions.forEach((m) => assert.equal(m[1], m[2]));
