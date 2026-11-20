@@ -14,6 +14,9 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   Vary: Sec-Fetch-Site; the Server header names no version;
 - SEC-STATIC-MAP: /web/ answers by exact lookup in a map of AshLight's own
   listing of web/ (static.py), so no file system call sees request text;
+- TEST-WEB-ASSEMBLE (F-194): / and /index.html serve index.html with one
+  same-origin tag per web/panels/*.js and *.css inserted at its marker
+  (webpage.py); no inline script, no remote origin, the same CSP;
 - strict CSP (no inline script), nosniff, no-referrer, frame-ancestors 'none';
 - SEC-HELLO-CORE (decision 0054): GET /api/hello takes a proof of the token
   (hello.py), never the token value, as its token gate, so a client can
@@ -47,7 +50,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, paths, plug, ports,
-               settingsio, static, webfetch)
+               settingsio, static, webfetch, webpage)
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -147,6 +150,7 @@ class ALServer(ThreadingHTTPServer):
         # hot-reload scan bumps core.reload_web (decision 0042)
         self.static = (static.StaticMap(self.web_root, getattr(core, "reload_web", 0))
                        if self.web_root else None)
+        self.panels_synced = ()  # TEST-WEB-ASSEMBLE: panel set last listed
         self.tokens_css = Path(tokens_css) if tokens_css else None
         self.stopping = threading.Event()
         self.sse_slots = threading.BoundedSemaphore(MAX_SSE_CLIENTS)
@@ -364,7 +368,26 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- GET routes: fn(handler, path, query, extra), after _guard
     def _get_index(self, path, query, extra):
-        return self._static("index.html")
+        """TEST-WEB-ASSEMBLE (F-194): index.html with one tag per
+        web/panels/ file inserted at its marker (webpage.py); the request
+        text never reaches a file system call."""
+        srv = self.server
+        smap = srv.static
+        if smap is None:
+            return self._send(404, "no web root\n")
+        seq = getattr(srv.core, "reload_web", 0)
+        if smap.lookup("index.html", seq) is None:
+            return self._send(404, "not found\n")
+        built = webpage.page(srv.web_root)
+        if built is None:
+            return self._send(404, "not found\n")
+        body, names = built
+        if names != srv.panels_synced and any(smap.lookup(n, seq) is None for n in names):
+            # a panel added since the last /web/ listing: list again once
+            # for this set, so its tag and its file arrive together
+            srv.static = static.StaticMap(srv.web_root, seq)
+        srv.panels_synced = names
+        return self._send(200, body, TYPES[".html"])
 
     def _get_web(self, path, query, extra):
         return self._static(path[len("/web/"):])
