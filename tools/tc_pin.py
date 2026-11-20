@@ -22,7 +22,13 @@ What it does, all under the AL sidecar (server/al/paths.py):
   on PATH only inside the build subprocess); without either it reports
   "source-only" and the core keeps working (the component is optional);
 - writes Build\\tc-pins-stamp.json; a re-run with the same pins and the
-  outputs present is a no-op with no network request.
+  outputs present is a no-op with no network request;
+- TC-CALC-OPTIN (F-132): with --opt-in (setup.ps1 -TcCalc) and a verified
+  install (status 'ready', or 'noop' for one already verified), turns the
+  calc on: set_opt_in_flag() merges "tc_calc": true into config/local.json,
+  keeping every other key (never seeding defaults). A refusal, a failure or
+  a 'source-only' result leaves the file exactly as it was. One run of the
+  switch is the whole opt-in; no second edit of the config.
 
 Nothing from an archive is imported or executed by this module, except the
 LuaJIT build script of the hash-verified source on the user's opt-in.
@@ -45,7 +51,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from server.al import exepin, paths, webfetch  # noqa: E402
+from server.al import acl, exepin, jsonfile, paths, webfetch  # noqa: E402
 # REL-PINFETCH: the shared hash-pinned fetch / verify / extract helpers; the
 # names stay importable from this module (tests and tools/electron_pin.py).
 from server.al.pinfetch import (  # noqa: E402,F401
@@ -82,6 +88,11 @@ _ASSET = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+-]{0,200}\.zip$")
 
 class PinError(Exception):
     """A pin is missing or malformed: setup refuses rather than guess."""
+
+
+class ConfigError(Exception):
+    """config/local.json cannot be read as a JSON object: the opt-in flag
+    is not written and the file is left as it was."""
 
 
 def log(msg):
@@ -477,6 +488,70 @@ def opted_in(switch, local_cfg):
     return bool(switch) or local_cfg.get(OPT_IN_KEY) is True
 
 
+# TC-CALC-OPTIN: the statuses that mean a verified install ('noop' is a
+# previous 'ready' run whose outputs and luajit.exe record still verify).
+VERIFIED = ("ready", "noop")
+
+
+def write_config(path, cfg):
+    """The default config writer: atomic, ASCII + LF, one .bak (the core's
+    _write_config shape, F-014), then the private ACL on both copies
+    (decision 0051; a no-op off Windows or on a refused path)."""
+    path = Path(path)
+    jsonfile.write_json(path, cfg, indent=2, backup=True)
+    for p in (path, jsonfile.bak_path(path)):
+        if p.is_file():
+            acl.make_private(p)
+
+
+def set_opt_in_flag(path=None, write=None):
+    """Turn the calc on: "tc_calc": true merged into the local config with
+    every other key kept. A missing file gets that one key only (no
+    defaults are seeded). Returns True when written, False when the flag
+    was already a real true (no write). Raises ConfigError, file untouched,
+    when the file exists but is not a JSON object. `write(path, cfg)` is
+    the injected writer (default write_config). DEP-09's installer calls
+    this same function: keep the name."""
+    path = Path(path) if path else paths.local_config_file()
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        cfg = {}
+    except (OSError, UnicodeDecodeError) as e:
+        raise ConfigError(f"{path.name} is unreadable ({type(e).__name__})") from e
+    else:
+        try:
+            cfg = json.loads(raw)
+        except ValueError as e:
+            raise ConfigError(f"{path.name} is not valid JSON") from e
+        if not isinstance(cfg, dict):
+            raise ConfigError(f"{path.name} is not a JSON object")
+    if cfg.get(OPT_IN_KEY) is True:
+        return False
+    cfg[OPT_IN_KEY] = True
+    (write or write_config)(path, cfg)
+    return True
+
+
+def turn_on(status, config_path=None, write=None):
+    """After an --opt-in run: write the flag only for a verified install.
+    Returns the exit code (RC_OK, or RC_FAIL when the flag could not be
+    written)."""
+    if status not in VERIFIED:
+        log(f"tc calc: not turned on ({status}: luajit.exe was not built); "
+            "config/local.json left as it was")
+        return RC_OK
+    try:
+        wrote = set_opt_in_flag(config_path, write)
+    except (ConfigError, OSError) as e:
+        log(f"failed: calc installed but not turned on: {e}; "
+            "config/local.json left as it was")
+        return RC_FAIL
+    log("tc calc: turned on (\"tc_calc\": true in config/local.json)" if wrote
+        else "tc calc: already on in config/local.json")
+    return RC_OK
+
+
 def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run,
               toolchain_fetch=None):
     """Fetch, verify, extract and (when possible) build. Returns the status
@@ -507,12 +582,16 @@ def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run,
     return status
 
 
-def main(argv=None):
+def main(argv=None, config_writer=None):
+    """`config_writer(path, cfg)` is the injected writer for the opt-in
+    flag (default write_config); it runs only for --opt-in with a
+    verified install."""
     ap = argparse.ArgumentParser(prog="tc_pin", description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("setup", help="fetch and verify (only when opted in)")
     s.add_argument("--opt-in", action="store_true",
-                   help="the setup.ps1 -TcCalc switch (else config/local.json tc_calc)")
+                   help="the setup.ps1 -TcCalc switch (else config/local.json tc_calc); "
+                        "after a verified install it also turns the calc on")
     sub.add_parser("check", help="validate the pin file only")
     args = ap.parse_args(argv)
     try:
@@ -529,7 +608,7 @@ def main(argv=None):
             "\"tc_calc\": true in config/local.json); nothing fetched")
         return RC_OK
     try:
-        run_setup(doc)
+        status = run_setup(doc)
     except (HashMismatch, UnsafeArchive, webfetch.UrlNotAllowed) as e:
         log(f"refused: {e}")
         return RC_REFUSED
@@ -537,6 +616,8 @@ def main(argv=None):
             urllib.error.URLError) as e:
         log(f"failed: {e}")
         return RC_FAIL
+    if args.opt_in:
+        return turn_on(status, write=config_writer)
     return RC_OK
 
 

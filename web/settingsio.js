@@ -33,9 +33,11 @@
     "\"Use web data\" under Prices and web data.";
   /* FOLLOWUP11: the dashboard has no switch for the calc (it is set up
      with setup.ps1 -TcCalc, decision 0018), so the sentence names that
-     step instead of a tick box. */
+     step instead of a tick box. TC-CALC-OPTIN: that one run installs the
+     calc and turns it on (no second edit of the config). */
   var CALC_OFFER = " The file had the optional Path of Building calc on. It stays " +
-    "off here. Set it up with the AshLight setup script to use it.";
+    "off here. To use it, run scripts\\setup.ps1 -TcCalc. That one step installs " +
+    "the calc and turns it on.";
 
   /* The sentence after an import, from the core's report. */
   function importedText(report) {
