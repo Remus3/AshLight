@@ -3,8 +3,10 @@ bridge tests against it unattended, and moves the pin only on a green trial
 (decision 0004 item 3, decision 0018, decision 0025). No network: every
 request goes through an injected fake transport."""
 
+import io
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -27,6 +29,20 @@ def _root(tmp_path):
     (tmp_path / "config" / "tc_pins.json").write_bytes(
         (ROOT / "config" / "tc_pins.json").read_bytes())
     return tmp_path
+
+
+CAND_FILES = {"LICENSE.md": "MIT", "src/HeadlessWrapper.lua": "-- new",
+              "src/Data/TradeSiteStats.lua": "return {}"}
+
+
+def _cand_zip(commit=NEW_SHA, files=None):
+    """A candidate commit archive (data only; nothing in it is ever run)."""
+    top = f"{REPO.split('/')[1]}-{commit}"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, data in (files or CAND_FILES).items():
+            zf.writestr(f"{top}/{name}", data)
+    return buf.getvalue()
 
 
 def _fake(latest="v0.24.0", status=200, headers=None, sha=NEW_SHA, calls=None):
@@ -97,10 +113,22 @@ def test_resolve_commit_requires_a_full_sha():
 
 # --- candidate pins -----------------------------------------------------------
 
-def test_candidate_pins_validate_and_keep_luajit():
+def test_candidate_pins_validate_and_keep_luajit(tmp_path):
     doc = tc_pin.load_pins()
-    cand = tc_drift.candidate(doc, "v0.24.0", NEW_SHA, "b" * 64, 400_000_000, "2026-12-11")
+    archive = tmp_path / "cand.zip"
+    archive.write_bytes(_cand_zip())
+    cand = tc_drift.candidate(doc, "v0.24.0", NEW_SHA, "b" * 64, 400_000_000, "2026-12-11",
+                              archive=archive)
     assert tc_pin.validate_pins(cand) == []
+    # TC-CALC-VERIFY-PIN: the candidate carries its own archive's digests
+    want = tc_pin.archive_digests(archive, f"PathOfBuilding-PoE2-{NEW_SHA}")
+    assert cand["pob2"]["content_sha256"] == want["content_sha256"]
+    assert cand["pob2"]["lua_sha256"] == want["lua_sha256"]
+    assert cand["pob2"]["content_sha256"] != doc["pob2"]["content_sha256"]
+    # without an archive the old digests are dropped, never carried over
+    bare = tc_drift.candidate(doc, "v0.24.0", NEW_SHA, "b" * 64, 400, "2026-12-11")
+    assert "content_sha256" not in bare["pob2"] and "lua_sha256" not in bare["pob2"]
+    assert any("content_sha256" in p for p in tc_pin.validate_pins(bare))
     pob = cand["pob2"]
     assert pob["tag"] == "v0.24.0" and pob["commit"] == NEW_SHA
     assert pob["archive_url"].endswith(f"/archive/{NEW_SHA}.zip")
@@ -279,6 +307,8 @@ def _trial(root, junit, sizes=((400, "c" * 64), (400, "c" * 64)), tmp=None, live
 
     def download(url, dest):
         size, sha = next(it)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(_cand_zip())  # the digests are read from these bytes
         return sha, size
 
     def setup(doc, environ):
@@ -313,6 +343,24 @@ def test_trial_green_records_ready_candidate(tmp_path):
     assert st["trial"]["verdict"] == "live-green" and st["trial"]["tag"] == "v0.24.0"
     cand = json.loads(Path(st["trial"]["candidate"]).read_text(encoding="ascii"))
     assert cand["pob2"]["archive_sha256"] == "c" * 64 and cand["pob2"]["archive_size"] == 400
+    digests = tc_pin.archive_digests(io.BytesIO(_cand_zip()), cand["pob2"]["top_dir"])
+    assert cand["pob2"]["content_sha256"] == digests["content_sha256"]
+    assert cand["pob2"]["lua_sha256"] == digests["lua_sha256"]
+
+
+def test_trial_with_an_unreadable_archive_is_an_error(tmp_path):
+    root = _root(tmp_path)
+    env = {"AL_SIDECAR_ROOT": str(tmp_path / "sidecar")}
+
+    def download(url, dest):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"not a zip")
+        return "c" * 64, 9
+    res = tc_drift.trial(root, "v0.24.0", environ=env, fetch=_fake(), download=download,
+                         setup=lambda d, e: pytest.fail("no setup without digests"),
+                         run_tests=lambda *a, **k: pytest.fail("no tests"),
+                         today="2026-12-11", recycle=lambda p: False)
+    assert res["verdict"] == "error" and "BadZipFile" in res["detail"]
 
 
 def test_trial_holds_when_live_tests_skipped(tmp_path):
