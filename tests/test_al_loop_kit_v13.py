@@ -26,14 +26,23 @@ def test_whole_suite_detection():
     assert not al_loop._whole_suite(["py", "-m", "pytest", "tests/test_x.py::t"])
     assert not al_loop._whole_suite(["npm", "test", "--prefix", "app"])
     assert not al_loop._whole_suite(["py", "-m", "ruff", "check", "tools"])
+    assert al_loop._whole_suite(["py", "tools/suite_run.py"])
+    assert al_loop._whole_suite(["py", "tools\\suite_run.py"])
+    assert not al_loop._whole_suite(["py", "tools/suite_run.py", "plan"])
+    assert not al_loop._whole_suite(["py", "tools/other.py"])
 
 
 def test_gate_argv_routes_whole_pytest_through_suite_gate():
-    argv = al_loop._gate_argv("python -m pytest -q", xdist=False)  # xdist: test_tiers.py
-    i = argv.index("--")
-    assert argv[1].replace("\\", "/").endswith("ops/fleet_kit/fleet_suite_gate.py")
-    assert argv[2:5] == ["run", "--owner", al_loop._owner()]
-    assert argv[i + 1:][1:] == ["-m", "pytest", "-q"]
+    # TEST-GATE-CALLERS: the one runner and a bare pytest both go through the
+    # gate, unchanged: no worker flags are added (suite_run.py picks the mode)
+    for cmd, rest in (("python -m pytest -q", ["-m", "pytest", "-q"]),
+                      ("python tools/suite_run.py", ["tools/suite_run.py"])):
+        argv = al_loop._gate_argv(cmd)
+        i = argv.index("--")
+        assert argv[1].replace("\\", "/").endswith("ops/fleet_kit/fleet_suite_gate.py")
+        assert argv[2:5] == ["run", "--owner", al_loop._owner()]
+        assert argv[i + 1] == al_loop._python() and argv[i + 2:] == rest, cmd
+        assert "-n" not in argv and "--dist" not in argv
     assert al_loop._gate_argv("python -m ruff check server tools tests")[1:] == \
         ["-m", "ruff", "check", "server", "tools", "tests"]
 

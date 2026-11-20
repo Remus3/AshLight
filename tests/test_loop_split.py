@@ -14,7 +14,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import al_loop  # noqa: E402
 
 # Every module-level name of al_loop before the split (imported modules aside;
-# the upstream data verdict items are not ported).
+# the upstream data verdict items are not ported; TEST-GATE-CALLERS dropped
+# XDIST_ARGS, _names_workers and _xdist_available: tools/suite_run.py picks the mode).
 NAMES = (
     'ATTENTION_STATES', 'BACKOFF_BASE_S', 'BACKOFF_CAP_S', 'BACKOFF_REL', 'CI_SETUP_RX',
     'CI_WORKFLOW_REL', 'CODE', 'CONTROL_REL', 'DEEP_EXTRA', 'DEFAULT_MAX_NOTES',
@@ -29,11 +30,11 @@ NAMES = (
     'REVIEW_START_S', 'ROADMAP_REL', 'ROOT', 'ROUTES', 'ROUTE_EFFORTS', 'ROW_RX',
     'RUN_FIELDS', 'SESSION_TARGETS', 'SHELL_OPERATOR_CHARS', 'SKIP_TAGS', 'STOP',
     'SUITE_GATE_REL', 'TICK_S', 'TICK_TARGET_S', 'Tick', 'VERDICT_RX',
-    'VERIFY_EXTRA', 'WATCH_REL', 'XDIST_ARGS', '_BREAKAWAY', '_DETACHED',
+    'VERIFY_EXTRA', 'WATCH_REL', '_BREAKAWAY', '_DETACHED',
     '_NO_WINDOW', '_ROUTE_MODEL', '_gate_argv', '_gates', '_git', '_git_run',
-    '_gitlock', '_launch', '_leak_pre_push', '_load_watch', '_names_workers', '_norm_path',
+    '_gitlock', '_launch', '_leak_pre_push', '_load_watch', '_norm_path',
     '_norm_words', '_owner', '_python', '_pythonw', '_run_gate', '_shell_operator',
-    '_whole_suite', '_xdist_available', 'ascii_text', 'atomic_write', 'backoff_clear',
+    '_whole_suite', 'ascii_text', 'atomic_write', 'backoff_clear',
     'backoff_hit', 'backoff_until', 'base_kind', 'ci_gate_commands',
     'deep_dive_prompt', 'dependency_cycles', 'dispatchable', 'epoch_of', 'eta_label',
     'fix_prompt', 'flip_roadmap', 'handoff_items', 'handoff_prompt', 'hooks_path_problem',
@@ -87,7 +88,7 @@ WORK_METHODS = ("rearm", "plan_deps", "work_list", "held_worktrees", "worktree_u
 # Tick methods that stay in al_loop.py itself
 STAY_METHODS = ("dirty", "gate", "spawn", "step", "finished", "checklist", "write", "run")
 # monkeypatched on al_loop by tests (and called through al_loop globals)
-SEAMS = ("ROOT", "_git_run", "_git", "_xdist_available", "_gate_argv")
+SEAMS = ("ROOT", "_git_run", "_git", "_gate_argv")
 
 
 def test_every_pre_split_name_is_still_on_al_loop():

@@ -38,7 +38,7 @@ TWINS = {
     "eval": ("eval-result",),
     "price": ("price-result",),
     "merged": ("eval-result", "price-result"),
-    "trade": ("trade-list", "events"),
+    "trade": ("play-t", "events"),
 }
 
 # Fixed status words of a card that has no verdict (design 0001 section 10).

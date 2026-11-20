@@ -1,10 +1,10 @@
-/* AshLight dashboard: the under-level line in the Act times card
-   (UTIL-UNDERLEVEL) and the Run history card (UTIL-RUN-HISTORY, decision
+/* AshLight dashboard: the Run history card (UTIL-RUN-HISTORY, decision
    0036). UMD: CommonJS for node --test (app/test/history.test.js),
    window.ALHistory for the page. The core sends every sentence in the
-   snapshot (`underlevel`, `run_history`); this file only formats times and
-   fills the card. No timers, no network except the player's own clicks
-   (switch, clear). */
+   snapshot (`run_history`); this file only formats times and fills the
+   card. The under-level words are the strip's sub line (web/strip.js)
+   since PLAY-LEGACY-OUT-1. No timers, no network except the player's own
+   clicks (switch, clear). */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
@@ -28,19 +28,6 @@
     if (d === null || d === undefined || !isFinite(d)) { return ""; }
     if (Math.abs(d) < 1) { return "same as best"; }
     return d > 0 ? duration(d) + " slower" : duration(d) + " faster";
-  }
-
-  function underlevelText(snap) {
-    var u = snap && snap.underlevel;
-    return u && typeof u.text === "string" ? u.text : "";
-  }
-
-  /* UTIL-CAMPAIGN-CHECKS: the core's hint sentences (at most a few). */
-  function campaignHints(snap) {
-    var c = snap && snap.campaign;
-    var rows = c && Array.isArray(c.hints) ? c.hints : [];
-    return rows.map(function (h) { return h && typeof h.text === "string" ? h.text : ""; })
-      .filter(function (t) { return t; }).slice(0, 3);
   }
 
   /* Display rows of the best-times table. */
@@ -70,22 +57,6 @@
   }
 
   function paint(doc, snap) {
-    var ul = doc.getElementById("underlevel");
-    if (ul) {
-      var t = underlevelText(snap);
-      setText(ul, t);
-      ul.hidden = !t;
-    }
-    var ch = doc.getElementById("campaign-hints");
-    if (ch) {
-      var hints = campaignHints(snap);
-      var key = hints.join("\n");
-      if (ch.getAttribute("data-key") !== key) {
-        ch.setAttribute("data-key", key);
-        ch.replaceChildren.apply(ch, hints.map(function (t) { return cell(doc, "li", t); }));
-      }
-      ch.hidden = !hints.length;
-    }
     var box = doc.getElementById("historybox");
     if (!box) { return; }
     var h = (snap && snap.run_history) || null;
@@ -148,8 +119,7 @@
     });
   }
 
-  return { duration: duration, deltaText: deltaText, underlevelText: underlevelText,
-    campaignHints: campaignHints,
+  return { duration: duration, deltaText: deltaText,
     bestRows: bestRows, deathRows: deathRows, paint: paint, wire: wire,
     CLEARED: CLEARED, FAILED: FAILED };
 }));

@@ -29,6 +29,7 @@ harmless mention gets an allow entry with its reason instead.
 
 import re
 import shutil
+import time
 from pathlib import Path
 
 import pytest
@@ -113,6 +114,21 @@ MAX_BYTES = 4 * 1024 * 1024
 ANCHOR_LINES = 3
 
 
+# Memo of per-file hits (TEST-FLOOR-MEMO, research 0049 R2): the plants and
+# mutation tests rescan the same tree ~34 times, so each file's hit list is
+# kept and served again only while its key still matches. Key: resolved path
+# plus (size, mtime_ns, st_ino) and the BANNED signature, so a changed file, a
+# deleted and re-made file, or an edited pattern table always rescans. A file
+# whose mtime is within RACY_NS of the scan is never stored ("racy" mtime, as
+# in git's index): a same-size rewrite inside one clock tick cannot hide.
+_SCAN_CACHE = {}
+RACY_NS = 2_000_000_000
+
+
+def _banned_sig():
+    return tuple((bid, rx.pattern, rx.flags) for bid, rx in BANNED)
+
+
 def _files(root):
     for top in SCAN_DIRS:
         base = root / top
@@ -131,18 +147,45 @@ def _files(root):
                 yield p, rel.as_posix()
 
 
+def _file_hits(path, st, sig, now_ns):
+    """[(banned id, line no, line)] for one file, from the memo when its key
+    still matches, else from a fresh read (None when the file vanished)."""
+    key = str(path.absolute())
+    stamp = (st.st_size, st.st_mtime_ns, st.st_ino, sig)
+    got = _SCAN_CACHE.get(key)
+    if got is not None and got[0] == stamp:
+        return got[1]
+    _SCAN_CACHE.pop(key, None)
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:  # a file another test removed mid-walk
+        return None
+    found = []
+    lines = None
+    for bid, rx in BANNED:
+        for m in rx.finditer(text):
+            if lines is None:
+                lines = text.splitlines()
+            lno = text.count("\n", 0, m.start()) + 1
+            found.append((bid, lno, lines[lno - 1].strip()))
+    if now_ns - st.st_mtime_ns > RACY_NS:
+        _SCAN_CACHE[key] = (stamp, tuple(found))
+    return found
+
+
 def scan(root):
     """All hits under root: list of (relpath, banned id, line no, line)."""
     hits = []
+    sig = _banned_sig()
+    now_ns = time.time_ns()
     for path, rel in _files(root):
         try:
-            text = path.read_text(encoding="utf-8", errors="replace")
+            st = path.stat()
         except OSError:  # a file another test removed mid-walk
             continue
-        for bid, rx in BANNED:
-            for m in rx.finditer(text):
-                lno = text.count("\n", 0, m.start()) + 1
-                hits.append((rel, bid, lno, text.splitlines()[lno - 1].strip()))
+        found = _file_hits(path, st, sig, now_ns)
+        if found:
+            hits.extend((rel, bid, lno, line) for bid, lno, line in found)
     return hits
 
 

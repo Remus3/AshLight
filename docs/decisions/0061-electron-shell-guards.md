@@ -86,3 +86,39 @@ any local program; development keeps them with AL_DEV=1.
 
 A needed feature must navigate or open a window, the guards cost the
 overlay budget (decision 0002), or Electron removes an API they rely on.
+
+## Amendment 2026-11-19 (OVL-EGRESS-LOCK, plan unit F-111)
+
+Both Electron sessions, the overlay's default session and the
+companion's persist:client partition, cancel every request that is not
+an app page (a file: URL under the app folder), the loopback core
+(http://127.0.0.1 on the configured port, no user name or password),
+blob: or data:, or, with AL_DEV=1 only, devtools:. Any other scheme,
+host or port is cancelled, the trade site and poe.ninja included, so
+"the trade site is never called by the app" and "nothing hits the
+network while web data is off" are properties of the process, not of
+each page's code. The rule is app/egress.js (pure: allow and the
+onBeforeRequest filter); app/parts/15-egress.js puts it on both sessions
+at ready, and on a window's own session at overlayWindow and
+clientWindow, because those windows may start loading before ready
+runs; a session is locked once. Each refused origin (scheme and host,
+never a path or query) is logged once, at most 64 per start. Links that
+leave go through shell.openExternal, which is not a session request,
+and the main process's own Node http calls to the core are not session
+requests either, so neither is affected. One callback per request, no
+timer. The icon render page of scripts/brand_render.js (a data: page,
+javascript already off) gets the CSP "default-src 'none'; style-src
+'unsafe-inline'; img-src data:".
+
+Ruled here: the window hooks lock as well as ready (alternative: ready
+only, as the package text says; a window loading before ready would
+then go unfiltered for its first requests). Loopback is 127.0.0.1 only,
+never localhost (the core binds 127.0.0.1; a name could resolve
+elsewhere). The opt-in live smoke check of an external image on the
+overlay test page was not added: tests/test_overlay_smoke.py is outside
+this package's files; the unit test covers the cancel path.
+
+Reverses if: a page needs a request outside these origins (then it is
+added to allow with its reason), Electron drops webRequest
+onBeforeRequest, or the per-request callback costs the overlay budget
+(decision 0002).
