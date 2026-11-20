@@ -1,0 +1,30 @@
+{
+ "kinds": {
+  "regopen": {
+   "act": "row",
+   "id": "TC-OAUTH-REG-OPEN",
+   "lane": "review",
+   "priority": false,
+   "blocked": "operator act (send the application, row TC-OAUTH-REG)",
+   "text": "GGG OAuth registration reads open: put the application send into the batched operator ask. ACCEPT: the hand-off's operator ask names it. SOURCE: watch ggg-docs reg-open, filed <YYYY-MM-DD>.",
+   "tokens": {},
+   "sample": {}
+  },
+  "gggshape": {
+   "act": "row",
+   "id": "GGG-SHAPE-<YYYYMMDD>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session",
+   "text": "GGG docs page <page> changed near <n> field names the readers use: read the diff in the sidecar Logs and file one fix row per reader. ACCEPT: each named field has a row or a written \"no change needed\". SOURCE: watch ggg-docs shape <page>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "page": "reference|data",
+    "n": "[1-9][0-9]?"
+   },
+   "sample": {
+    "page": "reference",
+    "n": "3"
+   }
+  }
+ }
+}
