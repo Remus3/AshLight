@@ -21,8 +21,17 @@ core, which never imports this module, runs unchanged.
 
 Inputs are only user-pasted build XML and hotkey-read item text; nothing
 here touches the game (CLAUDE.md ToS floor).
+
+TC-CALC-CONFINE-PROC (decision 0022 amendment 2026-11-19): every start
+hands the child only the allow-listed environment names (ENV_ALLOW) and,
+on Windows, starts it suspended inside its own job object (kill on job
+close, one active process, a per-process memory limit of JOB_MEMORY_LIMIT)
+before it runs a single instruction; a start that cannot be confined is
+killed and refused.
 """
 
+import ctypes
+import functools
 import json
 import os
 import queue
@@ -46,6 +55,200 @@ MAX_REPLAY_ITEMS = 32
 # a runaway print cannot grow the client's memory without bound.
 MAX_LINE_BYTES = 1 << 20
 _EOF = object()
+# TC-CALC-CONFINE-PROC: the only environment names the child gets (matched
+# case-insensitively, as Windows does). LUA_INIT, the user's PATH and every
+# other inherited name are dropped. Windows needs SYSTEMROOT / WINDIR for its
+# own DLLs; TEMP / TMP point at the sidecar Temp; LUA_PATH / LUA_CPATH find
+# PoB's runtime.
+ENV_ALLOW = ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LUA_PATH", "LUA_CPATH")
+# Per-process committed memory cap of the job: well above the 384 MB Lua heap
+# ceiling (decision 0028: peak working set 511 MB with it, ~900 MB without).
+JOB_MEMORY_LIMIT = 1536 << 20
+
+
+def child_env(env=None, extra=()):
+    """The child's environment: only ENV_ALLOW (plus `extra`) names of `env`
+    (default os.environ)."""
+    allow = {n.upper() for n in ENV_ALLOW} | {n.upper() for n in extra}
+    src = os.environ if env is None else env
+    return {k: v for k, v in src.items() if k.upper() in allow}
+
+
+# --- job object (Windows; stdlib ctypes) --------------------------------------
+
+_JOB_LIMIT_ACTIVE_PROCESS = 0x0008
+_JOB_LIMIT_PROCESS_MEMORY = 0x0100
+_JOB_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+_JOB_EXTENDED_LIMIT_INFORMATION = 9
+_PROCESS_SET_QUOTA = 0x0100
+_PROCESS_TERMINATE = 0x0001
+_THREAD_SUSPEND_RESUME = 0x0002
+_TH32CS_SNAPTHREAD = 0x0004
+_CREATE_SUSPENDED = 0x0004
+_K32 = None
+
+
+def _kernel32():
+    """A private kernel32 handle with typed prototypes (never the shared
+    ctypes.windll one, whose prototypes other code may set)."""
+    global _K32
+    if _K32 is None:
+        from ctypes import wintypes as w
+        k = ctypes.WinDLL("kernel32", use_last_error=True)
+        protos = {
+            "CreateJobObjectW": (w.HANDLE, [w.LPVOID, w.LPCWSTR]),
+            "SetInformationJobObject": (w.BOOL, [w.HANDLE, ctypes.c_int, w.LPVOID, w.DWORD]),
+            "QueryInformationJobObject": (w.BOOL, [w.HANDLE, ctypes.c_int, w.LPVOID,
+                                                   w.DWORD, w.LPVOID]),
+            "OpenProcess": (w.HANDLE, [w.DWORD, w.BOOL, w.DWORD]),
+            "AssignProcessToJobObject": (w.BOOL, [w.HANDLE, w.HANDLE]),
+            "CreateToolhelp32Snapshot": (w.HANDLE, [w.DWORD, w.DWORD]),
+            "Thread32First": (w.BOOL, [w.HANDLE, w.LPVOID]),
+            "Thread32Next": (w.BOOL, [w.HANDLE, w.LPVOID]),
+            "OpenThread": (w.HANDLE, [w.DWORD, w.BOOL, w.DWORD]),
+            "ResumeThread": (w.DWORD, [w.HANDLE]),
+            "CloseHandle": (w.BOOL, [w.HANDLE]),
+        }
+        for name, (res, args) in protos.items():
+            fn = getattr(k, name)
+            fn.restype, fn.argtypes = res, args
+        _K32 = k
+    return _K32
+
+
+def _winerror():
+    return ctypes.WinError(ctypes.get_last_error())
+
+
+@functools.lru_cache(maxsize=None)
+def _structs():
+    from ctypes import wintypes as w
+
+    class Basic(ctypes.Structure):
+        _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64),
+                    ("PerJobUserTimeLimit", ctypes.c_int64),
+                    ("LimitFlags", w.DWORD),
+                    ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t),
+                    ("ActiveProcessLimit", w.DWORD),
+                    ("Affinity", ctypes.c_size_t),
+                    ("PriorityClass", w.DWORD),
+                    ("SchedulingClass", w.DWORD)]
+
+    class Io(ctypes.Structure):
+        _fields_ = [(n, ctypes.c_uint64) for n in (
+            "ReadOperationCount", "WriteOperationCount", "OtherOperationCount",
+            "ReadTransferCount", "WriteTransferCount", "OtherTransferCount")]
+
+    class Extended(ctypes.Structure):
+        _fields_ = [("BasicLimitInformation", Basic), ("IoInfo", Io),
+                    ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t),
+                    ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+    class ThreadEntry(ctypes.Structure):
+        _fields_ = [("dwSize", w.DWORD), ("cntUsage", w.DWORD),
+                    ("th32ThreadID", w.DWORD), ("th32OwnerProcessID", w.DWORD),
+                    ("tpBasePri", w.LONG), ("tpDeltaPri", w.LONG),
+                    ("dwFlags", w.DWORD)]
+
+    return Extended, ThreadEntry
+
+
+class Job:
+    """One Windows job object for one bridge process: kill on job close,
+    one active process, a per-process memory limit. The handle is not
+    inheritable; closing it (close(), or the core exiting) kills the child."""
+
+    def __init__(self, memory_limit=JOB_MEMORY_LIMIT):
+        k = _kernel32()
+        self._handle = k.CreateJobObjectW(None, None)
+        if not self._handle:
+            self._handle = None
+            raise _winerror()
+        extended, _ = _structs()
+        info = extended()
+        info.BasicLimitInformation.LimitFlags = (
+            _JOB_LIMIT_KILL_ON_JOB_CLOSE | _JOB_LIMIT_ACTIVE_PROCESS
+            | _JOB_LIMIT_PROCESS_MEMORY)
+        info.BasicLimitInformation.ActiveProcessLimit = 1
+        info.ProcessMemoryLimit = int(memory_limit)
+        if not k.SetInformationJobObject(self._handle, _JOB_EXTENDED_LIMIT_INFORMATION,
+                                         ctypes.byref(info), ctypes.sizeof(info)):
+            err = _winerror()
+            self.close()
+            raise err
+
+    @property
+    def closed(self):
+        return self._handle is None
+
+    def adopt(self, pid):
+        """Put the suspended process `pid` in the job, then resume it."""
+        k = _kernel32()
+        proc = k.OpenProcess(_PROCESS_SET_QUOTA | _PROCESS_TERMINATE, False, pid)
+        if not proc:
+            raise _winerror()
+        try:
+            if not k.AssignProcessToJobObject(self._handle, proc):
+                raise _winerror()
+        finally:
+            k.CloseHandle(proc)
+        self._resume(pid)
+
+    @staticmethod
+    def _resume(pid):
+        k = _kernel32()
+        _, thread_entry = _structs()
+        snap = k.CreateToolhelp32Snapshot(_TH32CS_SNAPTHREAD, 0)
+        if not snap or snap == ctypes.c_void_p(-1).value:
+            raise _winerror()
+        resumed = 0
+        try:
+            entry = thread_entry()
+            entry.dwSize = ctypes.sizeof(entry)
+            ok = k.Thread32First(snap, ctypes.byref(entry))
+            while ok:
+                if entry.th32OwnerProcessID == pid:
+                    th = k.OpenThread(_THREAD_SUSPEND_RESUME, False, entry.th32ThreadID)
+                    if not th:
+                        raise _winerror()
+                    try:
+                        if k.ResumeThread(th) == 0xFFFFFFFF:
+                            raise _winerror()
+                        resumed += 1
+                    finally:
+                        k.CloseHandle(th)
+                ok = k.Thread32Next(snap, ctypes.byref(entry))
+        finally:
+            k.CloseHandle(snap)
+        if not resumed:
+            raise OSError(f"no thread of process {pid} to resume")
+
+    def limits(self):
+        """{"flags", "active_processes", "process_memory"} as set on the job."""
+        k = _kernel32()
+        extended, _ = _structs()
+        info = extended()
+        if not k.QueryInformationJobObject(self._handle, _JOB_EXTENDED_LIMIT_INFORMATION,
+                                           ctypes.byref(info), ctypes.sizeof(info), None):
+            raise _winerror()
+        basic = info.BasicLimitInformation
+        return {"flags": basic.LimitFlags,
+                "active_processes": basic.ActiveProcessLimit,
+                "process_memory": info.ProcessMemoryLimit}
+
+    def close(self):
+        """Close the handle (once); the kernel kills what is still inside."""
+        handle, self._handle = self._handle, None
+        if handle:
+            _kernel32().CloseHandle(handle)
+
+
+def open_job():
+    """A fresh Job on Windows, None elsewhere (no job objects there)."""
+    return Job() if os.name == "nt" else None
 
 
 class BridgeError(RuntimeError):
@@ -108,8 +311,13 @@ class Bridge:
     a lock serialises calls so the core may share one instance."""
 
     def __init__(self, argv, cwd=None, env=None, timeout=DEFAULT_TIMEOUT,
-                 start_timeout=DEFAULT_START_TIMEOUT, log_path=None, exe_check=None):
+                 start_timeout=DEFAULT_START_TIMEOUT, log_path=None, exe_check=None,
+                 env_allow=()):
         self.argv = list(argv)
+        # TC-CALC-CONFINE-PROC: names kept in the child's environment beyond
+        # ENV_ALLOW (tests only; the component passes none)
+        self.env_allow = tuple(env_allow)
+        self._job = None
         # AUDIT-EXE-PATH: when set, argv[0] must match its recorded SHA-256
         # before every exec (first start and every restart).
         self.exe_check = Path(exe_check) if exe_check else None
@@ -133,7 +341,7 @@ class Bridge:
             raise BridgeUnavailable("calc component absent: "
                                     + ", ".join(st["missing"]))
         comp = component_paths(environ)
-        env = dict(os.environ)
+        env = child_env()  # TC-CALC-CONFINE-PROC: allow-listed names only
         for name in ("TEMP", "TMP"):
             env[name] = str(comp["temp"])
         runtime = comp["pob_src"].parent / "runtime"
@@ -169,14 +377,33 @@ class Bridge:
             except OSError:
                 pass
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        # TC-CALC-CONFINE-PROC: the job exists before the child, which starts
+        # suspended and runs only once it is inside the job.
+        try:
+            job = open_job()
+        except OSError as exc:
+            self._close_log()
+            raise BridgeUnavailable(f"cannot confine bridge: {exc}") from exc
+        if job is not None:
+            flags |= _CREATE_SUSPENDED
         try:
             self._proc = subprocess.Popen(
-                self.argv, cwd=self.cwd, env=self.env, stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE, stderr=stderr, creationflags=flags)
+                self.argv, cwd=self.cwd, env=child_env(self.env, self.env_allow),
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr,
+                creationflags=flags)
         except OSError as exc:
+            if job is not None:
+                job.close()
             self._close_log()
             self._proc = None
             raise BridgeUnavailable(f"cannot start bridge: {exc}") from exc
+        self._job = job
+        if job is not None:
+            try:
+                job.adopt(self._proc.pid)
+            except OSError as exc:
+                self._stop(kill=True)
+                raise BridgeUnavailable(f"cannot confine bridge: {exc}") from exc
         self._lines = queue.Queue()
         threading.Thread(target=self._reader, args=(self._proc, self._lines),
                          daemon=True, name="al-tc-bridge-reader").start()
@@ -252,6 +479,9 @@ class Bridge:
                         stream.close()
                 except OSError:
                     pass
+        job, self._job = self._job, None
+        if job is not None:
+            job.close()  # TC-CALC-CONFINE-PROC: kills anything left inside
         self._close_log()
 
     def _close_log(self):

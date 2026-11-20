@@ -609,12 +609,22 @@
       </details>
     </div>
     </details>
+    <!-- RUN-BUILD-STAMP-UI (decision 0082 part 2): the Settings About fold,
+         until the Settings rail's About and data (TD-21) holds the version;
+         the same words as the footer line -->
+    <details id="about-fold">
+      <summary>About AshLight</summary>
+      <p id="about-version" class="muted">Reading the version...</p>
+    </details>
   </section>
   </div>
 </main>
 
 <footer class="foot">
   <p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
+  <!-- RUN-BUILD-STAMP-UI (decision 0082 part 2): the version and build the
+       core reports, read on every connect; hidden until it has answered -->
+  <p id="build-line" class="muted" hidden></p>
   <!-- UX-ONBOARD-COPY: the ToS-floor promises in plain words (CLAUDE.md
        "Game ToS floor", decision 0003); folded, always on the page -->
   <details id="promises" class="promises">

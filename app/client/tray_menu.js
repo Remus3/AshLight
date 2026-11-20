@@ -10,6 +10,17 @@
 const TOOLTIP = "AshLight is running. Click to open it. Right-click for the menu.";
 const CLOSED_NOTE = "AshLight keeps running here. Right-click this icon to quit.";
 const WAKE_LABEL = "Open AshLight when the game wakes";
+// Windows keeps at most 127 characters of a tray tooltip (NOTIFYICONDATA)
+const TOOLTIP_MAX = 127;
+
+/* RUN-BUILD-STAMP-UI (F-027): the tooltip with the core's version line
+   (app/about.js versionLine) on its own line; the plain TOOLTIP without
+   one, and never past what Windows shows. */
+function tooltipFor(versionLine) {
+  const line = typeof versionLine === "string" ? versionLine.trim() : "";
+  if (!line) { return TOOLTIP; }
+  return (TOOLTIP + "\n" + line).slice(0, TOOLTIP_MAX);
+}
 
 function trayTemplate(state, actions) {
   const s = state || {};
@@ -26,4 +37,4 @@ function trayTemplate(state, actions) {
   ];
 }
 
-module.exports = { trayTemplate, TOOLTIP, CLOSED_NOTE, WAKE_LABEL };
+module.exports = { trayTemplate, tooltipFor, TOOLTIP, TOOLTIP_MAX, CLOSED_NOTE, WAKE_LABEL };

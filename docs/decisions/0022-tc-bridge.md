@@ -110,3 +110,43 @@ build XML and hotkey-read item text; nothing reaches the game).
 - Reverses if: a pinned LuaJIT release binary with a published hash
   becomes available (then pin it in config/tc_pins.json and verify against
   that, decision 0018's own reversal).
+
+## Amendment 2026-11-19 (TC-CALC-CONFINE-PROC, F-138)
+
+- Decision: every bridge start is confined in `Bridge._start`. The child
+  gets only the allow-listed environment names `ENV_ALLOW` (SYSTEMROOT,
+  WINDIR, TEMP, TMP, LUA_PATH, LUA_CPATH; matched case-insensitively, the
+  component path builds its env from the same list), so LUA_INIT, the
+  user's PATH and every other inherited name never reach luajit or PoB
+  (PoB reads `CI` and `REGENERATE_MOD_CACHE`; both are now unset). On
+  Windows the child starts with CREATE_SUSPENDED, is assigned to its own
+  job object through stdlib ctypes (OpenProcess, AssignProcessToJobObject)
+  and only then resumed (its thread found by a Toolhelp32 snapshot). The
+  job sets kill on job close, an active process limit of 1 and a
+  per-process memory limit of 1536 MB (`JOB_MEMORY_LIMIT`). `_stop` /
+  `close` close the job handle after the process is reaped; a core that
+  dies closes it too, so no luajit outlives the core. Job objects nest
+  since Windows 8, so a core that already runs inside a job still works.
+  A start whose job cannot be created or assigned kills the child and
+  raises `BridgeUnavailable` (fail closed: no unconfined calc runs).
+  Elsewhere than Windows no job is made (the env allow-list still holds).
+- Alternatives: assign the job after a normal start (the child could
+  start a process before the assignment); resume with the undocumented
+  NtResumeProcess (one call, but not a documented API); keep the full
+  environment and drop only LUA_INIT (a deny-list misses names added
+  later); a memory limit at the 384 MB heap ceiling or the 768 MB budget
+  (decision 0028 measured a 511 MB peak working set with the ceiling and
+  ~900 MB without it, and committed memory runs above the working set, so
+  either would kill normal calcs); run unconfined when the job fails
+  (silent loss of the guard). Rejected.
+- Why: PoB is third-party Lua fed with player text; the job bounds what a
+  bug or a hostile build could do (no second process, bounded memory, no
+  orphan after a core crash) at no runtime cost, and the allow-list keeps
+  the child's behaviour independent of the user's shell environment.
+- Tests: tests/test_tc_bridge.py (env names, a fake child refused a second
+  process with ERROR_NOT_ENOUGH_QUOTA, kill on job close, confinement
+  failure refuses the start); the live calc tests pass under the job.
+- Reverses if: PoB-PoE2 needs another environment name or a helper
+  process, a real build needs more than the memory limit, or job objects
+  are refused in a supported install layout (then a Checks note and a
+  per-user opt-out, never a silent unconfined start).
