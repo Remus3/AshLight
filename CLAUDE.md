@@ -476,7 +476,11 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
 - Price check shares the item-check hotkey; contact only from gitignored
   config/local.json; the core publishes `price` in the snapshot, no own
   endpoint; prices from poe.ninja only, trade as a link (decisions 0015,
-  0016, amended by 0017). Reverses if: GGG / poe.ninja drop the contact
+  0016, amended by 0017). On the overlay card, line 2 of the price card
+  and of the merged card is the price line only when the card is not a
+  trade link or carries a usable poe.ninja value, otherwise the item
+  name; an empty clipboard press shows "Copy the item first" (decision
+  0016 amendment 2026-11-19, OVL-CARD-NAME / OVL-COPY-FIRST). Reverses if: GGG / poe.ninja drop the contact
   ask, price check needs its own hotkey, or the overlay may fetch.
 - The app calls no trade2 endpoint; it only builds a trade-search URL the
   user opens in their own browser (decision 0017). Reverses if: GGG
@@ -938,3 +942,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   plus one command builder (paths.python_cmd); no Electron fuse flipped
   (decision 0063). Reverses if: the spike fails, a publisher drops
   hash-verifiable assets, or a licence objection appears.
+- A release is the app zip, install.ps1, release.json, SHA256SUMS.txt, the
+  notes file and an SBOM, built reproducibly by tools/release.py build from
+  one git ref; no installer framework, no packaged .exe, no signing at
+  first; no Electron, CPython, game data, PoB source or LuaJIT in any
+  artifact (decision 0064; 0041 point 9 stands). Reverses if: the operator
+  gets a signing identity, or SmartScreen friction measurably blocks
+  installs.
