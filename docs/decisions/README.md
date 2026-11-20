@@ -35,6 +35,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0066: Uninstall consent (plan 05 D6) (docs/decisions/0066-uninstall-consent.md)
+  (DEP-10).
 - 0065: Update policy (plan 05 D5, ruling Q-21; amends 0013 and the 0018
   item 6 wording) (docs/decisions/0065-update-policy.md) (DEP-16).
 - 0064: Release artifact and tool (plan 05 D3, ruling Q-22)

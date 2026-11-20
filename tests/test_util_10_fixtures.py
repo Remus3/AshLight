@@ -2,8 +2,8 @@
 sanitized, synthetic PoE2 1.0-shaped log (tests/fixtures/client_10_shapes.txt,
 research 0021). Act 5 / 6 ids in the G5_ / G6_ style, an unknown-prefix
 return-to-Oriath id, an unknown ascendancy, invented league system lines and
-endgame maps; every 1.0 id is a GUESS (marked in the fixture). Acts, zone
-notes, maps, deaths, pace, the session summary and the core-start backward
+endgame maps; every 1.0 id is a GUESS (marked in the fixture). Acts, the
+zone guide, maps, deaths, pace, the session summary and the core-start backward
 scan must degrade gracefully: no crash, no act given to an id that is not one,
 and a sensible message where the data predates 1.0. The price league
 rollover is in tests/test_util_10_ready.py. No network, no game."""
@@ -13,7 +13,7 @@ import json
 import time
 from pathlib import Path
 
-from server.al import acts, parser
+from server.al import acts, parser, zoneguide
 from server.al.core import Core
 from server.al.state import SessionState
 
@@ -30,11 +30,13 @@ def index_of(needle):
     return next(i for i, ln in enumerate(log_lines()) if needle in ln)
 
 
-def replay(lines, now_s, table=None):
+def replay(lines, now_s, table=None, guide=None):
     clock = [0.0]
     st = SessionState(clock=lambda: clock[0])
     if table is not None:
         st.set_zone_table(table)
+    if guide is not None:
+        st.set_zone_guide(guide=guide)
     for ln in lines:
         ev = parser.parse_line(ln)
         if ev is None:
@@ -83,7 +85,7 @@ def test_whole_run_degrades_gracefully():
     assert s["class"] == "Assassin" and s["level"] == 51
     assert s["pace"]["text"] == ("Pace: about 7:51 a level over the last 7, "
                                  "7.8 levels an hour.")
-    assert s["zone_note"] is None  # in a map
+    assert "zone_note" not in s  # one guide file (DATA-GUIDE-MERGE)
 
 
 def test_unknown_prefix_after_act_6_opens_no_act():
@@ -95,18 +97,25 @@ def test_unknown_prefix_after_act_6_opens_no_act():
     assert [r["key"] for r in a["splits"]] == ["G4", "G5", "G6"]
     assert a["current"] == "G6" and a["splits"][-1]["current"] is True
     assert s["zone"] == "Return to Oriath"
-    assert s["zone_note"] is None
+    assert s["zone_guide"] is None
     assert acts.act_of("Oriath_Return_1") is None
 
 
 def test_zone_notes_fall_back_and_stay_empty_for_new_acts():
+    """DATA-GUIDE-MERGE: the one guide file. A zone it does not name gets
+    its act default; an act it has no table for (Acts 5-6 before 1.0) gets
+    no guide and no crash; the snapshot has no zone_note key."""
+    guide = zoneguide.load()
     lines = log_lines()
-    s = replay(lines[:index_of('"G4_4"') + 2], 10.0).snapshot()
-    assert s["zone_note"]["source"] == "act"   # Act 4 default note
-    s = replay(lines[:index_of('"G5_1"') + 2], 610.0).snapshot()
-    assert s["zone_note"] is None              # no Act 5 notes yet: none, no crash
-    s = replay(lines[:index_of('"G6_1"') + 2], 1810.0).snapshot()
-    assert s["zone_note"] is None
+    s = replay(lines[:index_of('"G4_4"') + 2], 10.0, guide=guide).snapshot()
+    g = s["zone_guide"]
+    assert "zone_note" not in s
+    assert g["kind"] == "campaign" and g["zone"] == "Shore of Echoes"
+    assert g["objective"] == guide["acts"]["G4"]["default"]   # Act 4 default
+    s = replay(lines[:index_of('"G5_1"') + 2], 610.0, guide=guide).snapshot()
+    assert s["zone_guide"] is None             # no Act 5 entries yet: none, no crash
+    s = replay(lines[:index_of('"G6_1"') + 2], 1810.0, guide=guide).snapshot()
+    assert s["zone_guide"] is None
 
 
 OLD_AREAS = {  # a pre-1.0 world_areas snapshot: Acts 1-4 only
@@ -186,7 +195,7 @@ def test_core_start_mid_run_in_an_unknown_zone_claims_no_act(tmp_path):
         a = s["acts"]
         assert a["splits"] == [] and a["current"] is None
         assert a["zones"] == [] and a["act_levels_text"] == ""
-        assert s["zone"] == "Return to Oriath" and s["zone_note"] is None
+        assert s["zone"] == "Return to Oriath" and s["zone_guide"] is None
         assert s["death_recap"]["recent"][0]["text"].startswith(
             "Died in Return to Oriath (area level 52)")
         assert s["maps"]["count"] == 0
