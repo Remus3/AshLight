@@ -20,8 +20,16 @@ Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
   config/local.json has "tc_drift_live_unattended": true (default off; no
   env var enables it). Live verdict: live-green (every test passed and live
   tests ran), red, untested (live tests skipped: no luajit.exe) or error.
+  Decision 0025 amendment 2026-11-18 (AUTO-12, F-064): after setup the trial
+  re-hashes every pob2_files entry from the extracted candidate checkout
+  (read as data, never run), moves the candidate pin's entries to the new
+  hashes and records old hash, new hash and parsed row count in the trial
+  state for review at apply; then it prunes candidate archives, checkouts
+  and trial files other than the pin's and this trial's (Recycle Bin only,
+  left in place when no safe method exists, FLEET item 9).
 - `apply`: writes the live-green candidate into config/tc_pins.json (the pin
-  moves in one commit by whoever commits it); refuses anything else.
+  moves in one commit by whoever commits it); refuses anything else; prints
+  the recorded pob2_files review lines.
 - `note`: the dated HOLD line for decision 0004 when the pin stays.
 
 Nothing from an archive is imported here; the bridge tests run in a
@@ -38,7 +46,7 @@ import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -48,7 +56,7 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 import tc_pin  # noqa: E402
-from server.al import paths, webfetch  # noqa: E402
+from server.al import exepin, paths, tradestats, webfetch  # noqa: E402
 
 API_HOSTS = ("api.github.com",)
 API = "https://api.github.com/repos/{repo}"
@@ -72,6 +80,20 @@ STATE_REL = Path("ops") / "runtime" / "tc_drift.json"
 
 _TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 _HEX40 = re.compile(r"^[0-9a-f]{40}$")
+# AUTO-12: the per-tag files a trial leaves in Build\tc-drift\
+_TRIAL_FILE = re.compile(r"^(v\d+\.\d+\.\d+)-(pins\.json|junit\.xml)$")
+# pob2_files entries with a known data parser: the parsed row count is
+# recorded beside the hashes (decision 0037 amendment parser, read as text)
+ROW_PARSERS = {tradestats.POB_REL: tradestats.parse_pob_trade_stats}
+RECYCLE_TIMEOUT_S = 600
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+_RECYCLE_PS = ("Add-Type -AssemblyName Microsoft.VisualBasic; "
+               "$p = $env:AL_RECYCLE_PATH; "
+               "if (Test-Path -LiteralPath $p -PathType Container) { "
+               "[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($p, "
+               "'OnlyErrorDialogs', 'SendToRecycleBin') } else { "
+               "[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p, "
+               "'OnlyErrorDialogs', 'SendToRecycleBin') }")
 
 RC_OK, RC_FAIL, RC_REFUSED = 0, 1, 2
 
@@ -404,10 +426,146 @@ def _verdict(res, live=True):
     return "live-green", f"{res['tests']} tests, {res['live_ran']} live, all passed"
 
 
+# --- AUTO-12: pob2_files re-hash and candidate prune --------------------
+
+def _file_sha256(path):
+    h, size = hashlib.sha256(), 0
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(block)
+            size += len(block)
+    return h.hexdigest(), size
+
+
+def _rel_parts(rel):
+    """The parts of a pob2_files key: a plain relative posix path only."""
+    p = PurePosixPath(rel) if isinstance(rel, str) else None
+    if (p is None or not p.parts or p.is_absolute() or ".." in p.parts
+            or "\\" in rel or ":" in rel):
+        raise DriftError(f"pob2_files path refused: {rel!r}")
+    return p.parts
+
+
+def rehash_pob2_files(cand, environ=None):
+    """Re-hash every pob2_files entry from the candidate's extracted checkout
+    (after setup) and move the candidate's entries to the new hash, size and
+    commit. Returns {rel: {old_sha256, old_size, new_sha256, new_size, rows,
+    changed}} for review at apply. Files are read as data, never run; rows is
+    the parsed row count where ROW_PARSERS knows the file, else None. A file
+    the candidate lacks keeps its old entry (new_sha256 None), so the static
+    guard reports it. The checkout must carry the candidate archive's marker."""
+    files = cand.get("pob2_files")
+    if not isinstance(files, dict):
+        return {}
+    checkout = tc_pin.layout(cand, environ)["pob2_checkout"]
+    marker = tc_pin.read_marker(checkout)
+    if not marker or marker.get("archive_sha256") != cand["pob2"]["archive_sha256"]:
+        raise DriftError("candidate checkout missing or not extracted from the "
+                         "candidate archive; pob2_files not re-hashed")
+    out = {}
+    for rel, spec in files.items():
+        if rel.startswith("_") or not isinstance(spec, dict):
+            continue
+        path = checkout.joinpath(*_rel_parts(rel))
+        row = {"old_sha256": spec.get("sha256"), "old_size": spec.get("size"),
+               "new_sha256": None, "new_size": None, "rows": None}
+        if path.is_file() and not path.is_symlink():
+            row["new_sha256"], row["new_size"] = _file_sha256(path)
+            parse = ROW_PARSERS.get(rel)
+            if parse is not None and row["new_size"] <= tradestats.POB_MAX_BYTES:
+                try:
+                    row["rows"] = len(parse(path.read_bytes().decode("utf-8")))
+                except UnicodeDecodeError:
+                    row["rows"] = 0
+            spec.update({"sha256": row["new_sha256"], "size": row["new_size"],
+                         "commit": cand["pob2"]["commit"]})
+        row["changed"] = (row["new_sha256"], row["new_size"]) != (row["old_sha256"],
+                                                                 row["old_size"])
+        out[rel] = row
+    return out
+
+
+def pob2_files_review(tr):
+    """One review line per re-hashed pob2_files entry of a trial record."""
+    lines = []
+    for rel, row in sorted((tr.get("pob2_files") or {}).items()):
+        if not isinstance(row, dict):
+            continue
+        old, new = row.get("old_sha256") or "none", row.get("new_sha256")
+        rows = row.get("rows")
+        rows_text = "" if rows is None else f", {rows} rows parsed"
+        if new is None:
+            lines.append(f"review pob2_files {rel}: MISSING in the candidate "
+                         f"(pin sha256 {old})")
+        elif not row.get("changed"):
+            lines.append(f"review pob2_files {rel}: unchanged sha256 {new}{rows_text}")
+        else:
+            lines.append(f"review pob2_files {rel}: sha256 {old} -> {new} "
+                         f"(size {row.get('old_size')} -> {row.get('new_size')}"
+                         f"{rows_text})")
+    return lines
+
+
+def recycle_path(path):
+    """Send one file or folder to the Recycle Bin (FLEET item 9). True when it
+    left. Off Windows there is no safe method: the path stays (False)."""
+    if os.name != "nt":
+        return False
+    env = dict(os.environ, AL_RECYCLE_PATH=str(path))
+    ps = str(exepin.system_tool("WindowsPowerShell", "v1.0", "powershell.exe"))
+    try:
+        subprocess.run([ps, "-NoProfile", "-NonInteractive", "-Command", _RECYCLE_PS],
+                       env=env, creationflags=_NO_WINDOW, capture_output=True,
+                       timeout=RECYCLE_TIMEOUT_S, check=False, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return not Path(path).exists()
+
+
+def prune_candidates(doc, keep_commit, keep_tag, environ=None, recycle=None):
+    """Recycle trial leftovers other than the pin's and the newest (this
+    trial's): PoB-PoE2 archives `<name>-<commit>.zip` and checkouts
+    `<name>-<commit>` in the sidecar pob2 cache, and `<tag>-pins.json` /
+    `<tag>-junit.xml` in Build\\tc-drift. Only exact name shapes, never a
+    link, nothing outside the sidecar. Returns {"pruned": [...], "left":
+    [...]} (names); a recycle that fails leaves the item in place."""
+    recycle = recycle or recycle_path
+    rt = paths.all_runtime_paths(environ)
+    pob = doc["pob2"]
+    keep_commits = {pob["commit"], keep_commit}
+    keep_tags = {pob["tag"], keep_tag}
+    name = pob["repo"].split("/")[1]
+    shape = re.compile(rf"^{re.escape(name)}-([0-9a-f]{{40}})(\.zip)?$")
+    targets = []
+    cache = rt["pob2_cache"]
+    if cache.is_dir():
+        for e in sorted(cache.iterdir()):
+            m = shape.match(e.name)
+            if not m or e.is_symlink() or m.group(1) in keep_commits:
+                continue
+            if (e.is_file() if m.group(2) else e.is_dir()):
+                targets.append(e)
+    work = rt["build"] / "tc-drift"
+    if work.is_dir():
+        for e in sorted(work.iterdir()):
+            m = _TRIAL_FILE.match(e.name)
+            if m and e.is_file() and not e.is_symlink() and m.group(1) not in keep_tags:
+                targets.append(e)
+    out = {"pruned": [], "left": []}
+    for t in targets:
+        try:
+            gone = bool(recycle(t))
+        except OSError:
+            gone = False
+        out["pruned" if gone else "left"].append(t.name)
+    return out
+
+
 def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
-          run_tests=None, today=None, live=False):
+          run_tests=None, today=None, live=False, recycle=None):
     """Trial `tag`: the static guard only, or the live bridge tests when
-    `live` (P3-9); records and returns the result."""
+    `live` (P3-9); records and returns the result. AUTO-12: the candidate's
+    pob2_files are re-hashed after setup, and other candidates are pruned."""
     download = download or download_measure
     setup = setup or (lambda doc, env: tc_pin.run_setup(doc, environ=env))
     run_tests = run_tests or run_bridge_tests
@@ -415,6 +573,7 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
     doc = _pins(root)
     work = paths.all_runtime_paths(environ)["build"] / "tc-drift"
     res = {"tag": tag, "state": "done", "at": iso(time.time()), "live": bool(live)}
+    commit = None
     try:
         commit = resolve_commit(doc["pob2"]["repo"], tag, fetch=fetch)
         name = doc["pob2"]["repo"].split("/")[1]
@@ -438,6 +597,9 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
         cand_path.write_text(json.dumps(cand, indent=2) + "\n", encoding="ascii")
         res["candidate"] = str(cand_path)
         setup(cand, environ)
+        # AUTO-12: the candidate's own pob2_files hashes, recorded for apply
+        res["pob2_files"] = rehash_pob2_files(cand, environ)
+        cand_path.write_text(json.dumps(cand, indent=2) + "\n", encoding="ascii")
         tests = run_tests(cand_path, work / f"{tag}-junit.xml", environ, live=live)
         res["tests"] = tests
         res["verdict"], res["detail"] = _verdict(tests, live)
@@ -445,6 +607,11 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
             OSError, RuntimeError, ValueError, ET.ParseError,
             subprocess.SubprocessError) as e:
         res["verdict"], res["detail"] = "error", f"{type(e).__name__}: {e}"
+    if commit is not None:
+        try:
+            res["prune"] = prune_candidates(doc, commit, tag, environ, recycle=recycle)
+        except OSError as e:
+            res["prune"] = {"pruned": [], "left": [], "error": f"{type(e).__name__}: {e}"}
     st = load_state(root)
     prev = st.get("trial") or {}
     if prev.get("tag") == tag:
@@ -516,7 +683,10 @@ def main(argv=None):
             print(f"trial {args.tag}: {res['verdict']}: {res['detail']}")
             return RC_OK if res["verdict"] in ("live-green", "static-green") else RC_FAIL
         if args.cmd == "apply":
-            print(f"pin moved to PoB-PoE2 {apply(root)}; commit config/tc_pins.json")
+            tag = apply(root)
+            for line in pob2_files_review(load_state(root).get("trial") or {}):
+                print(line)
+            print(f"pin moved to PoB-PoE2 {tag}; commit config/tc_pins.json")
             return RC_OK
         if args.cmd == "note":
             print(hold_note(load_state(root)))
