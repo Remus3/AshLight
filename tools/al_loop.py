@@ -131,6 +131,7 @@ from loop_inbox import (  # noqa: E402
     triage_spawn_kwargs,  # noqa: F401
     missing_ordered, order_prompt, order_settled, session_needs, settled_notes,  # noqa: F401
 )
+from loop_gatefail import foreign_only  # noqa: E402  LOOP-GATE-RERUN
 from loop_merge import GateCache, MergeMixin, last_lines  # noqa: E402
 from loop_review import ReviewMixin  # noqa: E402
 from loop_review import ROUND_LOG_CAP, ROUND_LOG_MAX_FINDINGS  # noqa: E402,F401
@@ -566,16 +567,28 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
         return route_kw(self.cfg["routes"], kind, note, self.d.pick_effort)
 
     # -- plan 096: one authoritative gate run per tree state
-    def gate(self, cwd):
+    def gate(self, cwd, changed=None):
         """(ok, detail) of the ci gates on cwd's tree, from the verdict cache
         when this exact tree was gated; else one run, recorded when the tree
-        did not change under it and the verdict is not an infrastructure red."""
+        did not change under it and the verdict is not an infrastructure red.
+        LOOP-GATE-RERUN: `changed` (a callable giving the lane diff's names)
+        lets a cached red whose failing ids all lie outside that diff run
+        again ONCE per tree (an unrelated flake or infrastructure red must not
+        park a good item); the re-run's verdict is cached marked `rerun`."""
         now = self.d.clock()
         key = self.d.tree_key(cwd)
         self.last_tree = key
         cache = GateCache(self.root)
         e = cache.get(key, now) if key else None
-        if e:
+        rerun = False
+        if e and not e["ok"] and changed is not None and not e.get("rerun") \
+                and foreign_only(e.get("detail") or "", changed()):
+            rerun = True
+            if not self.dry:  # spend the once now, so an uncached re-run red keeps it spent
+                cache.put(key, False, e.get("detail"), e.get("where") or Path(cwd).name,
+                          epoch_of(e.get("ts")) or now, via=e.get("via"), rerun=True)
+            self.step(f"gates cached red {key[:12]} outside the diff: re-run once")
+        elif e:
             self.step(f"gates cached {'green' if e['ok'] else 'red'} {key[:12]}")
             return e["ok"], e.get("detail") or ""
         ok, detail = self.d.gates(cwd)
@@ -584,7 +597,7 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
                 self.step(line)
         if key and not self.dry and (ok or not INFRA_RX.search(detail or "")) \
                 and self.d.tree_key(cwd) == key:
-            cache.put(key, ok, detail, Path(cwd).name, self.d.clock())
+            cache.put(key, ok, detail, Path(cwd).name, self.d.clock(), rerun=rerun and not ok)
         return ok, detail
 
     # -- gates on spawning (item f)

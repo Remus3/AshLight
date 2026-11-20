@@ -163,7 +163,7 @@ class GateCache:
                 return None
         return e
 
-    def put(self, key, ok, detail, where, now, via=None):
+    def put(self, key, ok, detail, where, now, via=None, rerun=False):
         trees = self._trees()
         trees.pop(key, None)  # re-insert: dict order is recency
         e = {"ok": bool(ok), "detail": last_lines(ascii_text(detail or ""), 300),
@@ -171,6 +171,8 @@ class GateCache:
              "where": ascii_text(where, 80)}
         if via:
             e["via"] = via
+        if rerun:
+            e["rerun"] = True  # LOOP-GATE-RERUN: this tree's one re-run is spent
         trees[key] = e
         keep = dict(list(trees.items())[-GATE_CACHE_MAX:])
         atomic_write(self.path, json.dumps({"trees": keep}, indent=1))

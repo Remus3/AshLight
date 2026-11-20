@@ -47,7 +47,8 @@ class ReviewMixin:
         while True:
             # plan 129: after fix round 3 the review is still labelled round 3
             rnd = min(rounds + 1, MAX_ROUNDS)
-            ok, detail = self.gate(wt)
+            # LOOP-GATE-RERUN: the lane diff lets a cached foreign red run once more
+            ok, detail = self.gate(wt, changed=lambda: self.changed_names(wt))
             findings = [] if ok else ["gates failed: " + detail]
             self.log_round(rec, rnd, "gates", findings)
             if not ok and self.park_foreign(rec, detail, wt):
