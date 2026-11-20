@@ -238,8 +238,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] RUN-METRICS-CORE (build) Own counters: metrics.py and the token-gated GET /api/debug. ACCEPT:
   python -m pytest -q tests/test_metrics.py tests/test_http_security.py tests/test_budgets.py
   passes. ZERO-CLICK: Counted by the core by itself; nothing for the player. The probe command is
-  RUN-METRICS-PROBE. DEPENDS: RUN-SEAMS, RUN-BUILD-STAMP-CORE, RUN-TAIL-HEAL-READER. BLOCKED:
-  session wave 14.
+  RUN-METRICS-PROBE. DEPENDS: RUN-SEAMS, RUN-BUILD-STAMP-CORE, RUN-TAIL-HEAL-READER.
 - [ ] TEST-LOOP-GIT-TEMPLATE (build) git_world from a session-scoped template copy. ACCEPT: python
   -m pytest -q tests/test_al_loop.py tests/test_al_loop_merge.py tests/test_al_loop_lanes.py
   tests/test_al_loop_gate_cache.py tests/test_al_loop_routes.py passes with the same collected ids

@@ -11,7 +11,10 @@ Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
   tag it launches ONE detached `trial` for that tag and reports one line.
 - `trial --tag vX.Y.Z`: resolves the tag's commit, downloads the commit
   archive twice (both SHA-256 and sizes must agree, as decision 0018 requires
-  for a pin), writes a candidate pin file in the sidecar, runs the opt-in
+  for a pin), computes the candidate's content digests from the downloaded
+  archive (TC-CALC-VERIFY-PIN: content_sha256 and PoB's lua_sha256, read as
+  data under the path guard, never run), writes a candidate pin file in the
+  sidecar, runs the opt-in
   setup step on it (tools/tc_pin.py) and then, by default, ONLY the static
   drift guard against it (AL_TC_PINS_FILE; reads the candidate's Lua, runs
   none of it): verdict static-green, static-red, untested (nothing ran) or
@@ -46,6 +49,7 @@ import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -342,15 +346,27 @@ def launch_trial(root, tag, live=False):
 
 # --- trial --------------------------------------------------------------
 
-def candidate(doc, tag, commit, sha256, size, today):
-    """The pin document with PoB-PoE2 moved to tag / commit (LuaJIT kept)."""
+def candidate(doc, tag, commit, sha256, size, today, archive=None):
+    """The pin document with PoB-PoE2 moved to tag / commit (LuaJIT kept).
+    TC-CALC-VERIFY-PIN: the content digests (content_sha256, lua_sha256) are
+    computed from `archive`, the downloaded candidate zip (tc_pin.
+    archive_digests: path guard, data only). Without an archive the old
+    digests are dropped, so the candidate does not validate (never carried
+    over from another commit, never guessed)."""
     out = copy.deepcopy(doc)
     pob = out["pob2"]
     name = pob["repo"].split("/")[1]
+    top = f"{name}-{commit}"
     pob.update({"tag": tag, "commit": commit,
                 "archive_url": f"https://github.com/{pob['repo']}/archive/{commit}.zip",
                 "archive_sha256": sha256, "archive_size": size,
-                "top_dir": f"{name}-{commit}", "verified": today})
+                "top_dir": top, "verified": today})
+    pob.pop(tc_pin.CONTENT_KEY, None)
+    pob.pop(tc_pin.LUA_KEY, None)
+    if archive is not None:
+        digests = tc_pin.archive_digests(archive, top)
+        pob[tc_pin.CONTENT_KEY] = digests[tc_pin.CONTENT_KEY]
+        pob[tc_pin.LUA_KEY] = digests[tc_pin.LUA_KEY]
     return out
 
 
@@ -588,7 +604,7 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
             pass
         if first != second:
             raise DriftError(f"two downloads of {tag} differ: {first} vs {second}")
-        cand = candidate(doc, tag, commit, first[0], first[1], today)
+        cand = candidate(doc, tag, commit, first[0], first[1], today, archive=archive)
         problems = tc_pin.validate_pins(cand)
         if problems:
             raise DriftError("candidate pins invalid: " + "; ".join(problems))
@@ -604,7 +620,7 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
         res["tests"] = tests
         res["verdict"], res["detail"] = _verdict(tests, live)
     except (DriftError, webfetch.FetchError, tc_pin.HashMismatch, tc_pin.UnsafeArchive,
-            OSError, RuntimeError, ValueError, ET.ParseError,
+            OSError, RuntimeError, ValueError, ET.ParseError, zipfile.BadZipFile,
             subprocess.SubprocessError) as e:
         res["verdict"], res["detail"] = "error", f"{type(e).__name__}: {e}"
     if commit is not None:

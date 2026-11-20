@@ -89,3 +89,36 @@ GGG asks tools not to read the docs pages automatically or blocks them
 format without `<main>`, the operator rules the watch must respect HALT,
 or registration reopens and TC-OAUTH-REG is done (then the watch may drop
 to the changelog page only).
+
+## Amendment 2026-11-20 (DOCS-SHAPE, AUTO-11, unit F-115)
+
+Additive; the six-page read, the 24 h gate, the HALT rule and the flag
+are unchanged, and no request is added.
+
+- A computed topic `shape` joins the word topics: a changed line of the
+  API Reference (`reference`) or Data Exports (`data`) page that names a
+  field AshLight's readers use, as a whole case-sensitive word, tags the
+  change `shape`. The field names live in one tuple, `SHAPE_FIELDS` in
+  `tools/ggg_docs_watch.py` (the character JSON fields read by
+  `server/al/theorycraft/charjson.py` and the tree export fields read by
+  `server/al/theorycraft/treedata.py`); a test fails when a name no
+  longer appears in those readers.
+- The note line gains `shape_fields=<names>`; the change record carries
+  `shape_fields`, and the state keeps `last_shape` (time, and per page
+  the fields and their count) until the next shape change, for the
+  ggg_docs source of LOOP-WATCH-WIRE.
+- Operator decision A-01 is open: the topic does not run on the index,
+  authorization, changelog or game pages while the constant
+  `SHAPE_ALL_PAGES` is False (its default). Only the operator's A-01
+  line turns it on.
+
+Alternatives: a word list like the other topics (lower-case substring
+matching would tag prose such as "skills" in any sentence and miss the
+field-name sense); reading the field names live from the reader modules
+(an import of the theorycraft package into a dev tool for a word list;
+the tuple plus a test is cheaper and catches drift). Why: a retyped or
+renamed field the readers use is the change that breaks AshLight, and it
+should stand out among the daily diffs. Reverses if: the shape tag
+fires on prose often enough to be noise, the readers move to another
+source of field names, or the operator rules A-01 either way (then the
+constant follows the ruling).

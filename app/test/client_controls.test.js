@@ -26,15 +26,19 @@ function code(js) {
 const WIN = code(fs.readFileSync(path.join(APP, "client", "window.js"), "utf8"));
 const MAIN = code(fs.readFileSync(path.join(APP, "main.js"), "utf8"));
 
-test("tray menu: the five actions, labels follow the state", () => {
+test("tray menu: the six actions, labels follow the state", () => {
   const calls = [];
   const acts = { toggleCompanion: () => calls.push("c"), toggleOverlay: () => calls.push("o"),
-                 toggleWake: () => calls.push("w"),
+                 toggleWake: () => calls.push("w"), toggleAutostart: () => calls.push("a"),
                  restart: () => calls.push("r"), quit: () => calls.push("q") };
-  const shown = TrayMenu.trayTemplate({ overlayOn: true, companionShown: true, wakeOn: true },
-                                      acts);
+  const shown = TrayMenu.trayTemplate({ overlayOn: true, companionShown: true, wakeOn: true,
+                                        autostartOn: true }, acts);
   const byId = Object.fromEntries(shown.filter((i) => i.id).map((i) => [i.id, i]));
-  assert.deepEqual(Object.keys(byId), ["companion", "overlay", "wake", "restart", "quit"]);
+  assert.deepEqual(Object.keys(byId), ["companion", "overlay", "wake", "autostart", "restart",
+                                     "quit"]);
+  assert.equal(byId.autostart.label, "Start with Windows");
+  assert.equal(byId.autostart.type, "checkbox");
+  assert.equal(byId.autostart.checked, true);
   assert.equal(byId.wake.label, "Open AshLight when the game wakes");
   assert.equal(byId.wake.type, "checkbox");
   assert.equal(byId.wake.checked, true);
@@ -47,8 +51,9 @@ test("tray menu: the five actions, labels follow the state", () => {
   assert.equal(hidden[0].label, "Restore AshLight");
   assert.equal(hidden[1].checked, false);
   assert.equal(hidden[2].checked, false);
+  assert.equal(hidden[3].checked, false);
   for (const item of shown) { if (item.click) { item.click(); } }
-  assert.deepEqual(calls, ["c", "o", "w", "r", "q"]);
+  assert.deepEqual(calls, ["c", "o", "w", "a", "r", "q"]);
   assert.match(TrayMenu.TOOLTIP, /Right-click for the menu/);
   assert.match(TrayMenu.CLOSED_NOTE, /keeps running/);
 });
@@ -69,8 +74,12 @@ test("companion: standard title bar, X closes to the tray, left-click restores",
 test("restart overlay: one IPC action, honoured from the companion's core page only", () => {
   const pre = code(fs.readFileSync(path.join(APP, "client", "preload.js"), "utf8"));
   assert.match(pre, /restartOverlay: \(\) => ipcRenderer\.send\("al:restart-overlay"\)/);
-  assert.equal((pre.match(/ipcRenderer\./g) || []).length, 1);
-  assert.ok(!/token|require\("fs"\)|invoke|sendSync/.test(pre));
+  // ruling Q-08: a small fixed set of argument-free actions (restart
+  // overlay, autostart on / off / state; app/test/autostart_switch.test.js)
+  assert.equal((pre.match(/ipcRenderer\./g) || []).length, 4);
+  assert.equal((pre.match(/ipcRenderer\.invoke\(/g) || []).length, 1);
+  assert.match(pre, /autostartState: \(\) => ipcRenderer\.invoke\("al:autostart-state"\)/);
+  assert.ok(!/token|require\("fs"\)|sendSync/.test(pre));
   assert.match(MAIN, /ipcMain\.on\("al:restart-overlay", \(e\) => \{\s*if \(client && client\.isCompanion\(e\)\) \{ restartOverlay\(\); \}/);
   assert.match(WIN, /e\.senderFrame === win\.webContents\.mainFrame/);
   assert.match(WIN, /Link\.isCoreUrl\(e\.senderFrame\.url, port\)/);
