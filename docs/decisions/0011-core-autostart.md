@@ -57,3 +57,42 @@ Date: 2026-11-17. Trigger: ROADMAP row CORE-AUTOSTART (filed by decision
 Register-ScheduledTask is refused for a standard user on the target
 machine (then the HKCU Run key with the same pythonw entry point), or logon
 autostart is no longer wanted (then -Disable and remove the row).
+
+## Amendment 2026-11-18 (REL-AUTOSTART-TRAY, plan unit F-073, ruling Q-08)
+
+- Decision: when the opt-in is on, the logon start is the desktop client
+  tray-only, not the core alone. The pythonw entry point
+  (`server.al.autostart_entry`, no VBScript) starts `scripts\run.ps1
+  -Autostart` only (no `-NoBrowser`). run.ps1 -Autostart checks the
+  opt-in as before; with the client installed
+  (`app\node_modules\electron\dist\electron.exe`) it converges the core
+  and supervisor and starts the client as `electron app --client --tray`;
+  without the client it stays core-only. A logon start never opens the
+  browser, and a client that is already live is left alone (a second
+  `--client` start would show its window). In tray-only mode the client
+  builds the tray and connects the core, creates no companion window and
+  takes no focus; the overlay is gated by the log as always (decision
+  0029, Client.txt freshness only, never a process check). A tray click
+  or the Start Menu shortcut's `--client` start shows the window. The
+  task description now reads "start AshLight in the tray at logon"
+  (an existing task is rewritten once on the next -Enable).
+- Alternatives: core-only at logon (the old behaviour) - kept only as
+  the no-client path and the memory fallback: it gives no tray and no
+  overlay until the player opens the client, which is a click per
+  logon; start the full client with its window - rejected: a window
+  popping up at logon, possibly over the game; start the tray client
+  on the first fresh log line (the F-073 fallback) - not taken: it
+  needs a new core tick that spawns Electron, and the measured footprint
+  below does not call for it.
+- Why: zero-click after the one opt-in: every logon brings up the tray,
+  the overlay (hidden while the game is idle) and the core with no click
+  and no window. Memory: tray-only is the client process without the
+  companion renderer, the same process set the overlay smoke measures
+  (decision 0002, UX-OVL-RAM: 2 processes, about 180 MB summed working
+  set, under the 250 MB budget). The live tray-only idle measurement
+  (`<sidecar>/Logs/tray_idle.json`) is cross-checked by the budget-log
+  package (RUN) once it lands; a package build never starts Electron.
+- Reverses if: the task is refused for a standard user, autostart is no
+  longer wanted, or idle tray-mode memory exceeds the decision 0002
+  budget (then core-only at logon, and the tray client starts on the
+  first fresh log line).
