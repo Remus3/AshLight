@@ -10974,7 +10974,8 @@
     "tests/test_metrics.py",
     "server/al/http.py",
     "web/index.html",
-    "web/app.js"
+    "web/app.js",
+    "app/test/dashboard.test.js"
    ],
    "new_files": [
     "tests/test_ledger_consent.py",
@@ -11169,7 +11170,8 @@
     "CARRY-08"
    ],
    "files": [
-    "server/al/state.py"
+    "server/al/state.py",
+    "server/al/text/itemcheck.py"
    ],
    "new_files": [
     "server/al/text/buildlive.py",
