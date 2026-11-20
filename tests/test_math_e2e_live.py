@@ -153,10 +153,17 @@ def test_item_check_deltas_come_from_pob(live, name):
 
 
 def test_repeat_press_uses_cached_probes(live):
-    first, _ = _press(live, items.RING_UPGRADE, "ring_repeat")
-    assert live["times"]["ring_repeat"] <= BUDGET["repeat_press_s"]
-    assert first["calc"]["source"] == "pob"
-    assert _best(first)["dps"]["pct"] > 0
+    """TEST-E2E-REPEAT-SELF: self-contained in any order. The ring is pressed
+    twice here: the first press fills the probe cache (a cold one may pay
+    the build's first probes, under the first-press budget), and only the
+    second press is held to the repeat budget."""
+    warm, took = _press(live, items.RING_UPGRADE, "ring_repeat_warm")
+    assert took <= BUDGET["first_press_s"], took
+    assert warm["calc"]["source"] == "pob", warm["calc"]
+    again, took = _press(live, items.RING_UPGRADE, "ring_repeat")
+    assert took <= BUDGET["repeat_press_s"], took
+    assert again["calc"]["source"] == "pob", again["calc"]
+    assert _best(again)["dps"]["pct"] > 0
 
 
 def test_killed_calc_falls_back_then_recovers(live):

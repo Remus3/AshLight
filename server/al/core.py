@@ -33,6 +33,7 @@ from .theorycraft import shareurl
 from .theorycraft import store as build_store
 from .theorycraft import treedata
 from .theorycraft import weights as weights_mod
+from .theorycraft import worngear
 
 
 def _utc_now():
@@ -62,6 +63,11 @@ LOCATE_RETRY_S = 5.0
 # dying, so a reader bug cannot spin the core's loop.
 RESTART_MIN_S = 5.0
 LOG = logging.getLogger("al.core")
+# TC-WORN-WIRE (decision 0052): the local config switch (on by default) and
+# the two "nothing filed" answers of POST /api/wear
+WORN_KEY = "worn_gear"
+WORN_OFF = "worn gear off"
+WORN_NOTHING = "nothing to wear"
 
 
 def discover_default(runtime, log_path):
@@ -198,6 +204,10 @@ class Core:
         # `tc_calc`, when set (tests), overrides the provider.
         self.tc_calc = None
         self.tc_provider = calcwire.Provider(self.tc_calc_enabled)
+        # TC-WORN-WIRE (decision 0052): the worn-gear store, one bounded file
+        # under the runtime dir; filed by POST /api/wear (wear()), emptied by
+        # Clear run history, used while the worn_gear switch is on (default)
+        self.worn = worngear.WornGear(worngear.default_path(self.runtime))
         self.last_eval = tc_live.attach(self.builds, self.weights, self.state,
                                         league=self.trade_league,
                                         calc=lambda: (self.tc_calc if self.tc_calc is not None
@@ -205,7 +215,9 @@ class Core:
                                         rates=lambda: self.rates.snapshot(),
                                         trade_ids=lambda: (self.trade_ids.get()
                                                            if self.web_data_enabled() else {}),
-                                        staged=True)
+                                        staged=True, worn=self.worn)
+        # TC-WORN-WIRE: the worn_gear switch is read at every use
+        self.last_eval.worn_on = self.worn_enabled
         # TC-CARD-PARTS: the card parts' ctx gets the config and the area
         self.last_eval.ctx_extra = {"config": self._config, "area_id": lambda: self.state.area_id}
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the
@@ -433,19 +445,32 @@ class Core:
         price check is asked for. The player copies the item and presses
         again: no retry, no wait for a change, no timer (decision 0003).
         As a new press it cancels an older press's pending Path of
-        Building stages (the LastEval press generation, under its publish
-        lock, as LastEval.run does) and leaves no item to re-score."""
-        last = self.last_eval
+        Building stages and leaves no item to re-score (LastEval.clear,
+        TC-EVAL-CLEAR-API)."""
         result = {"ok": False, "error": EMPTY_CLIPBOARD, "slot": slot or None,
                   "build_loaded": self.builds.build is not None}
         card = dict(tc_live.compact(result), upgrade=None, value=None, waystone=None)
-        with last._lock:
-            last._input = None
-        with last._publish:
-            last._gen += 1
-            self.state.set_eval(card, at=at)
-            last.last_result = result
+        self.last_eval.clear(card=card, result=result, at=at)
         return dict(card)
+
+    # -- TC-WORN-WIRE (decision 0052)
+    def worn_enabled(self):
+        """The worn_gear switch: on unless the local config says false."""
+        return self._config().get(WORN_KEY) is not False
+
+    def wear(self, slot=None, text=None):
+        """POST /api/wear: file the last checked item (or `text`, the item
+        text the optional wear key's own press sends) as the current
+        character's worn item of its slot (`slot`: an explicit slot, else
+        the store's choice). Nothing here reads the clipboard (decision
+        0003). Returns {"ok", "slot", "error"}; with the switch off nothing
+        is stored."""
+        if not self.worn_enabled():
+            return {"ok": False, "slot": None, "error": WORN_OFF}
+        filed = self.last_eval.wear_last(slot=slot, text=text)
+        if filed is None:
+            return {"ok": False, "slot": None, "error": WORN_NOTHING}
+        return {"ok": True, "slot": filed, "error": None}
 
     def _watch_press(self, text, doc, at):
         """UTIL-PRICE-WATCH: remember what this press already priced (the
@@ -694,6 +719,13 @@ class Core:
                 self._ladder_since = self.state.now()
                 self._history_key = ((rec["started_at"], rec["closed"], rec["finished"])
                                      if rec else None)
+                # TC-WORN-WIRE (decision 0052): the worn set, same button;
+                # a failed write leaves it empty in memory (the next wear
+                # writes the file again)
+                try:
+                    self.worn.clear()
+                except OSError:
+                    LOG.warning("worn gear clear: the file was not written")
                 # UTIL-MULTICHAR: the parked characters' runs likewise
                 self._parked_keys = {}
                 for name in self.state.character_names()[1:]:

@@ -1,0 +1,29 @@
+2026/11/16 21:00:01 ***** LOG FILE OPENING *****
+2026/11/16 21:00:02 4349 1f2e3d4c [INFO Client 5150] [WINDOW] Gained focus
+2026/11/16 21:00:03 6226 1f2e3d4c [INFO Client 5150] Connecting to instance server at 192.0.2.145:21360
+2026/11/16 21:00:04 7702 ec99108d [DEBUG Client 5150] Generating level 1 area "G1_1" with seed 838826498
+2026/11/16 21:00:05 9164 ec99108d [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:06 10684 ec99108d [INFO Client 5150] [SCENE] Set Source [The Riverbank]
+2026/11/16 21:00:06 11559 ec99108d [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:06 12160 ec99108d [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:07 13354 ec99108d [INFO Client 5150] : Emberquill (Witch) is now level 2
+2026/11/16 21:00:08 15177 ec99108d [INFO Client 5150] Connecting to instance server at 192.0.2.49:21360
+2026/11/16 21:00:09 16821 830c71c2 [DEBUG Client 5150] Generating level 15 area "G1_town" with seed 510846882
+2026/11/16 21:00:10 18449 830c71c2 [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:11 20261 830c71c2 [INFO Client 5150] [SCENE] Set Source [Clearfell Encampment]
+2026/11/16 21:00:11 20451 830c71c2 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:11 20547 830c71c2 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:12 22004 830c71c2 [INFO Client 5150] : Emberquill (Witch) is now level 3
+2026/11/16 21:00:13 23149 830c71c2 [INFO Client 5150] Connecting to instance server at 192.0.2.79:21360
+2026/11/16 21:00:14 24978 17362f25 [DEBUG Client 5150] Generating level 2 area "G1_2" with seed 578417752
+2026/11/16 21:00:15 26688 17362f25 [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:16 28337 17362f25 [INFO Client 5150] [SCENE] Set Source [Clearfell]
+2026/11/16 21:00:16 28379 17362f25 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:16 28988 17362f25 [INFO Client 5150] [ENGINE] synthetic engine noise line
+2026/11/16 21:00:17 30393 17362f25 [INFO Client 5150] : Emberquill (Witch) is now level 4
+2026/11/16 21:00:18 31856 17362f25 [INFO Client 5150] : Emberquill has been slain.
+2026/11/16 21:00:19 33612 17362f25 [INFO Client 5150] Connecting to instance server at 192.0.2.169:21360
+2026/11/16 21:00:20 34773 9d95847e [DEBUG Client 5150] Generating level 3 area "G1_3" with seed 698008399
+2026/11/16 21:00:21 36411 9d95847e [INFO Client 5150] [SCENE] Set Source [(null)]
+2026/11/16 21:00:22 37426 9d95847e [INFO Client 5150] [SCENE] Set Source [Mud Burrow]
+2026/11/16 21:00:23 39277 9d95847e [INFO Client 5150] : Emberquill (Witch) is now level 5

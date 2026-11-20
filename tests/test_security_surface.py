@@ -73,7 +73,7 @@ ROUTES = {
     # RUN-VERDICTS-CORE: the plug route (server/al/plug/verdicts.py)
     ("GET", "/api/verdicts"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (13)
+    # token POST (14)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
@@ -87,6 +87,7 @@ ROUTES = {
     ("POST", "/api/price-watch"): (HEADER, 4096),
     ("POST", "/api/hints"): (HEADER, 4096),
     ("POST", "/api/verdicts"): (HEADER, 4096),  # RUN-VERDICTS-CORE plug route
+    ("POST", "/api/wear"): (HEADER, 256 * 1024),  # TC-WORN-WIRE: the eval body cap
     # token PUT (1)
     ("PUT", "/api/weights"): (HEADER, 64 * 1024),
     # refused verbs
@@ -335,7 +336,7 @@ def test_route_table_matches_http_py():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
     assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 13,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 13, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 14, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
