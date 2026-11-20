@@ -10286,7 +10286,11 @@
     "web/app.css",
     "app/test/tabs.test.js",
     "tests/test_ux_review.py",
-    "tests/test_ux_b8.py"
+    "tests/test_ux_b8.py",
+    "tests/test_a11y.py",
+    "app/test/buildline.test.js",
+    "web/tc.js",
+    "app/test/tc_view.test.js"
    ],
    "new_files": [],
    "integrator_edits": [
