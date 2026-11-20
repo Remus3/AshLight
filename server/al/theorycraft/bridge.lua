@@ -13,14 +13,21 @@
 -- client ignores it). One ready frame with id 0 is sent after start.
 --
 -- Commands: "ping", "load_build" {xml}, "set_item" {text, slot?},
--- "outputs" {keys?}, "main_skill", "quit".
+-- "outputs" {keys?}, "main_skill", "quit"; "probe_confinement" is for the
+-- tests only.
 --
 -- This script reads only its stdin and PoB's own files; it runs no shell,
--- opens no network connection and writes no file.
+-- opens no network connection and writes no file. Once PoB has loaded,
+-- the lockdown block below takes the shell, process, file-write, native
+-- library and FFI entry points away from PoB and any data it parses
+-- (TC-CALC-CONFINE-LUA); PoB itself stays unmodified.
 
 local PREFIX = "ALB1 "
 local out_handle = io.stdout
 local in_handle = io.stdin
+-- Kept as a local: the lockdown takes debug.getupvalue away from PoB, and
+-- pob_main() still needs it to find the launch object.
+local getupvalue = type(debug) == "table" and debug.getupvalue or nil
 
 -- ---------------------------------------------------------------- JSON --
 
@@ -263,9 +270,9 @@ io.read = real_read
 local function pob_main()
   if type(mainObject) == "table" then return mainObject end
   if type(__mainObject__) == "table" then return __mainObject__ end
-  if type(runCallback) == "function" and debug and debug.getupvalue then
+  if type(runCallback) == "function" and getupvalue then
     for i = 1, 64 do
-      local name, value = debug.getupvalue(runCallback, i)
+      local name, value = getupvalue(runCallback, i)
       if name == nil then break end
       if name == "mainObject" and type(value) == "table" then return value end
     end
@@ -292,6 +299,48 @@ end
 if pob_main() and pob_main().promptMsg then
   send(0, false, "PoB start-up message: " .. tostring(pob_main().promptMsg))
   return
+end
+
+-- ------------------------------------------------------------ lockdown --
+
+-- TC-CALC-CONFINE-LUA (F-138): PoB has loaded, so the entry points a calc
+-- never needs are taken away before the first request: no shell or child
+-- process, no native library, no FFI, no file write, rename or delete.
+-- Checked against the pinned checkout: PoB's headless path calls none of
+-- them (os.remove / os.rename only in build-list and update code, ffi and
+-- debug nowhere). The removed calls raise; os.remove, os.rename and a
+-- write-mode open return nil plus a reason, the shape of a failed file op,
+-- so a stray PoB call degrades instead of breaking the calc. The job object
+-- (TC-CALC-CONFINE-PROC) still stops a second process if this is bypassed.
+local REFUSED = "refused by the AshLight calc bridge (read-only)"
+os.execute = nil
+io.popen = nil
+os.tmpname = nil
+os.remove = function() return nil, "os.remove " .. REFUSED end
+os.rename = function() return nil, "os.rename " .. REFUSED end
+package.loadlib = nil
+package.cpath = ""
+package.loaded["ffi"] = nil
+if type(package.preload) == "table" then package.preload["ffi"] = nil end
+rawset(_G, "ffi", nil)
+local real_open = io.open
+io.open = function(name, mode)
+  if mode == nil or mode == "r" or mode == "rb" then return real_open(name, mode or "r") end
+  return nil, tostring(name) .. ": mode " .. tostring(mode) .. " " .. REFUSED
+end
+local real_output = io.output
+io.output = function(file)
+  if type(file) == "string" then error("io.output to a file " .. REFUSED, 2) end
+  return real_output(file)
+end
+-- The originals above live on as upvalues and locals; without these debug
+-- functions no Lua code can reach them again.
+if type(debug) == "table" then
+  for _, k in ipairs({ "debug", "getlocal", "setlocal", "getupvalue", "setupvalue",
+                       "upvalueid", "upvaluejoin", "getregistry", "setmetatable",
+                       "setfenv" }) do
+    debug[k] = nil
+  end
 end
 
 -- ------------------------------------------------------------ commands --
@@ -418,6 +467,48 @@ handlers["main_skill"] = function()
   return { found = true, disabled = disabled,
            reason = type(reason) == "string" and reason or nil,
            name = type(name) == "string" and name or nil }
+end
+
+-- TC-CALC-CONFINE-LUA: test-only (tests/test_tc_bridge.py); the core never
+-- sends it. It tries each locked entry point with harmless arguments and
+-- reports what happened: os.execute() with no command, a write-mode open
+-- of a probe file under TEMP, a read of PoB's own HeadlessWrapper.lua.
+handlers["probe_confinement"] = function()
+  local function attempt(f)
+    local ok, a, b = pcall(f)
+    if not ok then return { ok = false, error = tostring(a) } end
+    return { ok = a ~= nil, error = b ~= nil and tostring(b) or nil }
+  end
+  local probe = (os.getenv("TEMP") or ".") .. "/alb-confine-probe.txt"
+  local writes = {}
+  for _, mode in ipairs({ "w", "wb", "a", "a+", "r+", "w+b" }) do
+    writes[mode] = attempt(function()
+      local f, err = io.open(probe, mode)
+      if f then f:close() end
+      return f, err
+    end)
+  end
+  local reads = attempt(function()
+    local f, err = io.open("HeadlessWrapper.lua", "r")
+    if f then f:close() end
+    return f, err
+  end)
+  local ffi_ok = pcall(require, "ffi")
+  return {
+    execute = attempt(function() return os.execute() end),
+    popen = type(io.popen),
+    tmpname = type(os.tmpname),
+    loadlib = type(package.loadlib),
+    cpath = package.cpath,
+    ffi = ffi_ok,
+    remove = attempt(function() return os.remove(probe) end),
+    rename = attempt(function() return os.rename(probe, probe .. ".x") end),
+    output = attempt(function() return io.output(probe) end),
+    getupvalue = type(debug) == "table" and type(debug.getupvalue) or "nil",
+    getlocal = type(debug) == "table" and type(debug.getlocal) or "nil",
+    writes = writes,
+    read = reads,
+  }
 end
 
 -- ---------------------------------------------------------------- loop --

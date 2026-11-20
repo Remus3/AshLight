@@ -9,7 +9,9 @@
    build alert shows Play again by itself (notify, called only by the
    news hook of web/regions.js), unless the player is working in another
    tab (focus inside it); then the Play tab carries a "new" word instead.
-   Nothing moves focus and nothing animates (design 0001 rule 3).
+   Nothing animates (design 0001 rule 3); a card, trade or notice never
+   moves focus, and the automatic return moves it only from the tab row
+   to the Play tab (notify, G-13).
    PLAY-TD-19B-FOUR-TABS (TD-19, F-067): four tabs, Play, Build and items,
    Run, Settings; Items and prices merged into Build and items, and a
    remembered "items" opens Build and items (then "build" is remembered).
@@ -156,7 +158,27 @@
     return null;
   }
 
-  /* The header's polite line: said once when Play is not shown. */
+  /* Focus sits on the tab row (one of the tab buttons): the only place the
+     automatic return may move focus from (G-13, F-096). */
+  function focusOnRow(doc) {
+    var a = doc.activeElement;
+    if (!a) { return false; }
+    for (var i = 0; i < TABS.length; i++) {
+      if (tab(doc, TABS[i]) === a) { return true; }
+    }
+    var row = doc.getElementById("tabs");
+    return !!(row && row.contains && row !== a && row.contains(a));
+  }
+
+  /* "trade request" -> "Trade request" (the start of a sentence). */
+  function said(what) {
+    return what ? what.charAt(0).toUpperCase() + what.slice(1) : "";
+  }
+
+  /* The header's polite line (visually hidden): "New on Play: <what>."
+     while Play stays hidden, "Showing Play. <What>." once on the
+     automatic return. The same text twice is cleared and written again,
+     so it is said again. */
   function news(doc, text) {
     var n = doc.getElementById("tab-news");
     if (!n) { return; }
@@ -167,7 +189,14 @@
   /* Something new for Play arrived. what: the news words of
      web/regions.js ("item check", "trade request", "build alert", or
      several joined, e.g. "trade request and build alert"), said in the
-     header line when Play stays hidden. */
+     header line.
+     PLAY-TD-22B-TAB-FOCUS (TD-22, F-096, design G-13): the automatic
+     return never fires within GRACE_MS of a click, key press or scroll in
+     the shown tab or the tab row, whether or not the page has focus, so a
+     player arrowing across the tabs is never pulled away. When it fires,
+     focus moves to the Play tab only if it sat on the tab row; a focus
+     inside a panel is never moved. The return is said once in the polite
+     header line: "Showing Play. <What>." */
   function notify(doc, what) {
     doc = doc || state.doc;
     if (!doc) { return false; }
@@ -177,8 +206,9 @@
       pageFocused: typeof doc.hasFocus === "function" ? doc.hasFocus() : false,
       recent: state.clock() - state.touched < GRACE_MS
     };
-    if (shouldSwitch(ctx)) {
-      show(doc, PRIMARY, false);
+    if (!ctx.recent && shouldSwitch(ctx)) {
+      show(doc, PRIMARY, focusOnRow(doc));
+      news(doc, what ? "Showing Play. " + said(what) + "." : "Showing Play.");
       return true;
     }
     if (state.current !== PRIMARY) {
