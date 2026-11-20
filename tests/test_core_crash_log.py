@@ -80,7 +80,7 @@ def test_record_is_atomic_ascii_lf_and_bounded(tmp_path, monkeypatch):
     monkeypatch.setattr(jsonfile, "write_json", spy)
     # built at run time so the leak sweep sees no machine path
     drive = "C" + ":" + "\\".join(["", "Users", "someone", "x.py"])
-    detail = ("café failed at " + drive + " and /home/u/a/b.py "
+    detail = ("caf\u00e9 failed at " + drive + " and /home/u/a/b.py "
               "and \\\\host\\share\\f\nsecond line " + "y" * 400)
     assert exitrecord.write(tmp_path, exitrecord.CRASH, detail, now=1000.0, pid=42)
     assert calls == [tmp_path / exitrecord.FILE]  # through the atomic helper
