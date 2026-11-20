@@ -96,3 +96,80 @@ test("the page loads the script and has the card without a live region", () => {
     assert.ok(card.indexOf("id=\"" + id + "\"") > 0, id);
   }
 });
+
+/* TC-UPGRADE-PER-SLOT: each "look for next" row may link to the official
+   trade site's search for its slot (built offline by the core, decision
+   0017); the player's click opens it. */
+const URL_OK = "https://www.pathofexile.com/trade2/search/poe2/Standard?q=%7B%22query%22%3A1%7D";
+
+function linkDoc(url, base) {
+  return { loaded: true, health: DOC.health, next_look: { pob_weights: true, slots: [
+    { slot: "Ring 1", terms: ["cold res"], line: "cold resistance", text: "\"cold res\"",
+      dropped: 0, base: base === undefined ? "Example Ring" : base, url: url }] } };
+}
+
+function fakeDoc(ids) {
+  function node(tag) {
+    const n = { tagName: tag.toUpperCase(), children: [], dataset: {}, attrs: {}, hidden: false,
+      textContent: "", className: "",
+      appendChild(c) { this.children.push(c); return c; },
+      replaceChildren() { this.children = []; },
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      addEventListener() {},
+      querySelector() { return null; },
+      querySelectorAll() { return []; } };
+    return n;
+  }
+  const els = {};
+  ids.forEach((id) => { els[id] = node("div"); });
+  return { els, getElementById: (id) => els[id] || null, createElement: node,
+    createTextNode: (t) => ({ tagName: "#text", textContent: t, children: [] }) };
+}
+
+function anchors(n, out) {
+  out = out || [];
+  if (n.tagName === "A") { out.push(n); }
+  (n.children || []).forEach((c) => anchors(c, out));
+  return out;
+}
+
+test("nextView links a row only for an https trade2 search url and a base", () => {
+  const link = h.nextView(linkDoc(URL_OK)).rows[0].link;
+  assert.deepEqual(link, { href: URL_OK,
+    text: "Search the official trade site for rare Example Ring (Ring 1)",
+    label: "Search the official trade site for rare Example Ring (Ring 1) (opens in a new tab)" });
+  for (const bad of [undefined, null, "", "http://www.pathofexile.com/trade2/search/poe2/Standard?q=1",
+    "https://evil.example/trade2/search/poe2/Standard?q=1",
+    "https://www.pathofexile.com/trade2/search/poe2/Standard?q=1&x=2",
+    "javascript:alert(1)", "https://www.pathofexile.com/trade2/search/poe2/Standard?q=" + "a".repeat(5000)]) {
+    assert.equal(h.nextView(linkDoc(bad)).rows[0].link, null, String(bad).slice(0, 60));
+  }
+  assert.equal(h.nextView(linkDoc(URL_OK, null)).rows[0].link, null);
+  assert.equal(h.nextView(DOC).rows[0].link, null);
+  assert.equal(h.tradeLink(URL_OK), URL_OK);
+});
+
+test("paint renders the trade link as a new-tab anchor, and none for a bad url", () => {
+  const ids = ["healthbox", "health-msg", "health-list", "health-values", "next-wrap", "next-list",
+    "next-hint"];
+  const doc = fakeDoc(ids);
+  h.paint(doc, linkDoc(URL_OK), {});
+  const got = anchors(doc.els["next-list"]);
+  assert.equal(got.length, 1);
+  assert.equal(got[0].href, URL_OK);
+  assert.equal(got[0].target, "_blank");
+  assert.equal(got[0].rel, "noopener noreferrer");
+  assert.equal(got[0].textContent, "Search the official trade site for rare Example Ring (Ring 1)");
+  assert.match(got[0].attrs["aria-label"], /\(opens in a new tab\)$/);
+  const doc2 = fakeDoc(ids);
+  h.paint(doc2, linkDoc("https://evil.example/trade2/search/poe2/Standard?q=1"), {});
+  assert.equal(anchors(doc2.els["next-list"]).length, 0);
+  assert.equal(doc2.els["next-list"].children.length, 1, "the row itself still shows");
+});
+
+test("the trade link rule matches the price card's and nothing fetches it", () => {
+  const src = web.source("health.js", "ascii");
+  const re = (s) => s.match(/var TRADE_SEARCH = (\/.*\/);/)[1];
+  assert.equal(re(src), re(web.source("prices.js", "ascii")));
+  assert.ok(!/window\.open|location\s*=|\.click\(\)/.test(src));
+});

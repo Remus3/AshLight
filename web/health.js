@@ -5,8 +5,11 @@
    health.py) and sends them in GET /api/build as `health` and `next_look`;
    this file only lists them. Each "look for next" row has a Copy button
    that writes its search string to the clipboard inside that click only
-   (decision 0014, via ALSearch.copy). No live region (the page keeps its
-   12), no timers, no network. */
+   (decision 0014, via ALSearch.copy). TC-UPGRADE-PER-SLOT: a row also
+   links to the official trade site's search for that slot when the core
+   sent a trade2 search URL (built offline, decision 0017); the player's
+   click opens it in their browser, AshLight never opens or fetches it.
+   No live region (the page keeps its 12), no timers, no network. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -33,7 +36,24 @@
   var FALLBACK = "Can't copy here. The text is selected: press Ctrl+C.";
   var FALLBACK_SAID = "can't copy here, the text is selected, press Ctrl+C";
 
+  /* TC-UPGRADE-PER-SLOT: the same rule as ALPrices.tradeLink (web/prices.js):
+     only a trade2 search page on the official site, else "". */
+  var TRADE_SEARCH = /^https:\/\/www\.pathofexile\.com\/trade2\/search\/poe2\/[^\s?#\/]+\?q=[^\s&#]+$/;
+
   function str(v) { return typeof v === "string" ? v : ""; }
+
+  function tradeLink(u) {
+    return (typeof u === "string" && u.length <= 4096 && TRADE_SEARCH.test(u)) ? u : "";
+  }
+
+  /* row -> {href, text, label} for its trade-search link, or null */
+  function rowLink(r) {
+    var href = tradeLink(r.url);
+    var base = str(r.base).trim();
+    if (!href || !base) { return null; }
+    var text = "Search the official trade site for rare " + base + " (" + r.slot + ")";
+    return { href: href, text: text, label: text + " (opens in a new tab)" };
+  }
   function isNum(v) { return typeof v === "number" && isFinite(v); }
 
   function fmt(n) {
@@ -112,7 +132,8 @@
     });
   }
 
-  /* doc -> {rows: [{slot, line, text, note}], hint} for "look for next". */
+  /* doc -> {rows: [{slot, line, text, note, link}], hint} for "look for
+     next"; link is null without a valid trade2 search URL. */
   function nextView(doc) {
     var n = doc && doc.loaded && doc.next_look && typeof doc.next_look === "object"
       ? doc.next_look : null;
@@ -123,7 +144,8 @@
       var dropped = isNum(r.dropped) && r.dropped > 0 ? r.dropped : 0;
       return { slot: r.slot, line: r.line, text: r.text,
         note: dropped ? "Shortened to fit the search box: " + dropped +
-          (dropped === 1 ? " term" : " terms") + " left out." : "" };
+          (dropped === 1 ? " term" : " terms") + " left out." : "",
+        link: rowLink(r) };
     });
     return { rows: rows, hint: n.pob_weights ? "" : NO_WEIGHTS };
   }
@@ -193,6 +215,17 @@
       li.appendChild(btn);
       li.appendChild(said);
       if (r.note) { li.appendChild(el(doc, "p", "muted", r.note)); }
+      if (r.link) {
+        // decision 0017: the player's click opens it; nothing is fetched
+        var lp = el(doc, "p");
+        var a = el(doc, "a", "out", r.link.text);
+        a.href = r.link.href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.setAttribute("aria-label", r.link.label);
+        lp.appendChild(a);
+        li.appendChild(lp);
+      }
       list.appendChild(li);
     });
   }
@@ -233,6 +266,7 @@
     paintNext(doc, buildDoc, nav);
   }
 
-  return { view: view, nextView: nextView, defView: defView, paint: paint, SEVERITY: SEVERITY,
+  return { view: view, nextView: nextView, defView: defView, paint: paint, tradeLink: tradeLink,
+    SEVERITY: SEVERITY,
     ALL_CLEAR: ALL_CLEAR, NO_CALC: NO_CALC, NO_STATS: NO_STATS, NO_WEIGHTS: NO_WEIGHTS, COPIED: COPIED };
 }));
