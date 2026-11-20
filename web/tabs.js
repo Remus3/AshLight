@@ -5,14 +5,14 @@
    ARIA tablist (WAI-ARIA APG "tabs with automatic activation"): Left /
    Right / Home / End move between tabs, one Tab stop for the row.
    The picked tab is remembered per viewer in localStorage (try/catch; the
-   page works without it). ZERO-CLICK: a new item card, trade request or
-   build alert shows Play again by itself (notify: the item check from
-   web/app.js, trades and build alerts from the news hook of
-   web/regions.js), unless the player is working in another tab (focus
-   inside it); then the Play tab carries a "new" word instead. Nothing
-   moves focus and nothing animates (design 0001 rule 3).
-   The slot other code fills: fill(doc, "zone-guide", node); see the
-   comment in web/index.html.
+   page works without it). ZERO-CLICK: a new item check, trade request or
+   build alert shows Play again by itself (notify, called only by the
+   news hook of web/regions.js), unless the player is working in another
+   tab (focus inside it); then the Play tab carries a "new" word instead.
+   Nothing moves focus and nothing animates (design 0001 rule 3).
+   The slot other code fills: fill(doc, "zone-guide", node), the zone
+   guide in the Run and history tab's Act times card (PLAY-LEGACY-OUT-2
+   moved it off Play); see the comment in web/index.html.
    UMD: CommonJS for node --test (app/test/tabs.test.js), window.ALTabs
    for the page. No timers, no network. */
 (function (root, factory) {
@@ -154,9 +154,10 @@
     if (n.textContent !== text) { n.textContent = text; }
   }
 
-  /* Something new for Play arrived. what: "item check", "trade request",
-     "build alert" or "trade request and build alert" (said in the header
-     line when Play stays hidden). */
+  /* Something new for Play arrived. what: the news words of
+     web/regions.js ("item check", "trade request", "build alert", or
+     several joined, e.g. "trade request and build alert"), said in the
+     header line when Play stays hidden. */
   function notify(doc, what) {
     doc = doc || state.doc;
     if (!doc) { return false; }
@@ -177,7 +178,8 @@
     return false;
   }
 
-  /* Fill a Play slot (zone-guide) with a node, or empty it with null.
+  /* Fill a slot (zone-guide) with a node, or empty it with null; filling
+     it is never news for Play.
      The node must carry its own words: an edge or colour of the slot only
      repeats them (design 0001, never colour alone). */
   function fill(doc, id, node) {

@@ -949,3 +949,68 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   artifact (decision 0064; 0041 point 9 stands). Reverses if: the operator
   gets a signing identity, or SmartScreen friction measurably blocks
   installs.
+- KINDLER: the build generator "Kindler" ranks AshLight-authored
+  archetype templates (server/al/data/archetypes.json, JSON never run as
+  code, src and checked, hot reloaded, nothing copied) scored only by
+  Path of Building through the bridge: at most 12 candidates in 60 s on
+  the Generate click only, a partial labelled; calc off shows one
+  unscored template with no DPS or EHP; tree node ids checked against the
+  cached tree export, never guessed; up to 6 tabs in
+  ops/runtime/gen_builds.json (0036 bounds, cleared by Clear run history,
+  exported, no item text); tri-state toggles; no own calc, tree search or
+  optimiser (decision 0081, amends 0004; amended 2026-11-19: Pasted build
+  tab fixed, Kindler tabs move left / right, rename (32 characters) and
+  close with an inline confirm; one result key, PoB-ranked by the 0024
+  blend, ties by template id then variant, byte-identical repeats, a
+  partial never cached as final; stages from levelling to maps with
+  skills, support links, gem timing from the gems snapshot, ordered
+  passives, ascendancy and per-slot item focus; per-tab "follow Play
+  guidance" on by default, reading only published zone, act and level,
+  never claiming a step done). Reverses if: PoB drift makes route XML
+  unreliable, 12 candidates in 60 s breach the 0024 / 0028 budgets,
+  automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
+  too few, a name collision or GGG use of the word is found, the operator
+  rules generated builds out of scope, authored node lists prove too
+  costly to keep, a real PoB output makes the repeat-run test
+  non-identical, the follow default annoys players in play, or PoB stops
+  reporting support applicability through the bridge.
+- UI 0082: item names are link-like buttons opening one shared,
+  fixed-position item info popover (web/iteminfo.js, one open, Escape
+  returns focus, never resizes a card) over a cache-only token-gated GET
+  /api/iteminfo; the visible "AshLight" header text goes (mark
+  decorative, sr-only h1, document.title kept) and "Version <x.y.z>,
+  build <12 hex>" shows in the footer and Settings > About and data by
+  widening RUN-BUILD-STAMP-UI; cards on Build and items and Run collapse
+  to their title row, open cards share the freed height by grid fr
+  tracks, Play and Settings never collapse, an alert expands its card
+  (decision 0082; amended 2026-11-19: collapse buttons only in the
+  desktop client window (window.alClient), state in the core in
+  ops/runtime/ui_layout.json behind token-gated GET / PUT /api/ui/layout,
+  card-id allow-list, one .bak, Saver retry, no localStorage, not
+  exported, not cleared by Clear run history). Reverses if: the popover
+  covers Play regions in play or native popover misbehaves in Electron,
+  item names stop being unique cache keys, plain-browser users miss a
+  visible name or a screen-reader check fails the heading order, the
+  build format stops splitting at "+", a collapsed card hides a needed
+  alert or the fr sharing makes the pager flicker, decision 0075 rules
+  otherwise, the operator rules the title text should stay, or the
+  operator wants the browser to collapse cards, the layout exported or
+  cleared with run history.
+- Item info data: the popover reads local caches only (repoe-fork
+  base_items and uniques, the poe.ninja price book while web_data is on),
+  unknown fields omitted, never guessed; no drop_level, drop rates,
+  monster drop lists, NPC prices or disenchant yields (no permitted
+  source); "where found" only from PoB-PoE2's CurrencyNames.lua,
+  WorldAreas.lua and Uniques Source lines, text-parsed under sha256 pins
+  while the calc component is installed, never run as Lua, repoe-fork
+  wins (amends 0037); no GGG exchange call; a "More on poe2db" link
+  opens only on the player's click (decision 0083; amended 2026-11-19:
+  AshLight keeps Apache-2.0, link only to poe2db / wiki, no text or
+  data fetched, bundled or snapshotted until a source permits app use,
+  then only by decision 0009's opt-in sidecar route with any community
+  figure labelled "community estimate"). Reverses if: a permitted source
+  for drops, vendor or disenchant data appears, a source publishes an
+  API or app-use terms or gives written permission, GGG opens
+  registration, PoB relicenses or a Source line proves wrong in play,
+  poe2db objects to deep links or leaves config/link_hosts.json, or the
+  operator asks for drop_level.

@@ -138,6 +138,12 @@ def test_calc():
     assert status({"calc_on": False}, "calc") == "off"
     r = row({"calc_status": {"available": False, "missing": ["luajit"]}}, "calc")
     assert r["status"] == "fail" and "-TcCalc" in r["fix"] and "luajit" in r["detail"]
+    # TC-CALC-OPTIN: the fix names the one step, which also turns the calc on
+    assert r["fix"] == diag.FIX_CALC
+    assert r"scripts\setup.ps1 -TcCalc." in r["fix"] and "turns it on" in r["fix"]
+    assert "config" not in r["fix"]  # no second edit of local.json asked for
+    off = row({"calc_on": False}, "calc")
+    assert off["fix"] is None and off["detail"].endswith(r"run scripts\setup.ps1 -TcCalc.")
     assert status({"calc_status": None}, "calc") == "unknown"
 
 
