@@ -306,7 +306,10 @@ checkout runs on the dev port.
   requirements-dev.txt, installed by hand) may speed the suite and is never
   imported by server/, tools/ or app code. Electron `45.3.3` (exact pin) for the overlay in `app/`;
   npm deps pinned exactly (`--save-exact`), `npm ci` from the lockfile. No CDN
-  at runtime.
+  at runtime. An installed copy runs on a hash-pinned private embeddable
+  CPython and the unmodified hash-pinned Electron zip, fetched at install
+  time from their publishers, never bundled or vendored and never fetched
+  by the running core; the checkout keeps npm ci and the system Python.
 - Stdlib-only binds AshLight's own code. Optional external tools (LuaJIT and
   a Path of Building PoE2 source checkout, for build calcs) run only as
   hash-pinned, unmodified subprocesses fetched at setup into the AL sidecar
@@ -374,7 +377,7 @@ checkout runs on the dev port.
 
 ## Gates
 
-- `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q`
+- `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py`
   and `npm test --prefix app` green before any commit to main.
 - Commits only via `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git commit ...`.
 - A push runs through
@@ -653,6 +656,13 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   companion opens on the largest display that is not the overlay's
   (decision 0041 amendment 2026-11-19); per-user Start Menu +
   Desktop shortcut from setup.ps1; no packaged .exe (decision 0041).
+  The companion returns without focus (showInactive, never focus / show /
+  restore / maximize) when the log wakes (overlay gate false -> true,
+  app/parts/40-wake.js), only when its saved bounds sit wholly on a display
+  other than the overlay's (8 px allowance for the invisible window
+  border); tray switch "Open AshLight when the game wakes", default on,
+  kept in client-prefs.json in the runtime dir (decision 0041 amendment
+  2026-11-19).
   Reverses if:
   the overlay must run without the client, a release channel makes a
   signed .exe worth its build deps, or the companion renderer breaks the
@@ -889,7 +899,13 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   attach on any webContents its creator did not register, keeps WebGL off
   and quits on an inspect switch, a remote-debugging port or NODE_OPTIONS
   unless AL_DEV=1; IPC answers only the exact sender frame; an overlay
-  restart runs at most once per 2 s (decision 0061). Reverses if: a needed
+  restart runs at most once per 2 s (decision 0061). Both sessions (the
+  default one and persist:client) cancel every request that is not an app
+  page (file: under the app folder), the loopback core on the configured
+  port, blob: / data: or (AL_DEV=1) devtools (app/egress.js,
+  app/parts/15-egress.js; refused origins logged once each, at most 64);
+  the icon render page carries a no-network CSP (decision 0061 amendment
+  2026-11-19). Reverses if: a needed
   feature must navigate or open a window, the guards cost the overlay budget
   (decision 0002), or Electron removes an API they rely on.
 - DEP-04 changelog: One changelog generator (tools/release.py notes):
@@ -911,3 +927,14 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   record docs/ops/runtime-spike-record.md). Reverses if: a boot.py start
   breaks a module that relies on `-m` semantics, or a re-spawn site cannot
   take the builder (then the ._pth line plus a `-c` self-test).
+- Installed-copy runtimes: CPython at the exact version and sha256 in
+  config/runtime_pins.json (the embeddable amd64 zip) and the unmodified
+  Electron zip at the exact version and sha256 in config/electron_pin.json,
+  fetched at install by the installer's own process
+  (pinfetch.ensure_runtime: hosts www.python.org, github.com,
+  release-assets.githubusercontent.com, objects.githubusercontent.com;
+  AshLight User-Agent, no cookie; a wrong hash leaves nothing in the
+  target), never bundled and never fetched by the running core; boot.py
+  plus one command builder (paths.python_cmd); no Electron fuse flipped
+  (decision 0063). Reverses if: the spike fails, a publisher drops
+  hash-verifiable assets, or a licence objection appears.

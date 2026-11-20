@@ -1193,7 +1193,9 @@ jobs:
 
 def test_tracked_gate_list_matches_the_claude_md_gates():
     cmds = al_loop.gate_file_commands(GATES_TXT.read_text(encoding="utf-8"))
-    assert "python -m pytest -q" in cmds and "npm test --prefix app" in cmds
+    # TEST-GATE-CALLERS: the first gate is the one whole-suite runner
+    assert cmds[0] == "python tools/suite_run.py" and "npm test --prefix app" in cmds
+    assert "python -m pytest -q" not in cmds
     assert "python tools/leak_sweep.py --tree" in cmds
     assert not any(c.startswith("#") for c in cmds)
     assert all(al_loop._shell_operator(c) is None for c in cmds)
@@ -1222,9 +1224,7 @@ def _gates_tree(tmp_path, text=None):
     return tmp_path
 
 
-def test_loop_gates_run_exactly_the_gate_list(tmp_path, monkeypatch):
-    # plan 097: xdist args are covered elsewhere; serial here
-    monkeypatch.setattr(al_loop, "_xdist_available", lambda: False)
+def test_loop_gates_run_exactly_the_gate_list(tmp_path):
     cwd, ran = _gates_tree(tmp_path), []
     _ci_tree(tmp_path, "jobs:\n  chk:\n    steps:\n      - run: python other.py\n")
 

@@ -46,8 +46,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import (DISCLAIMER, NAME, VERSION, gfx, hello, layout, paths, plug, ports, settingsio,
-               static, webfetch)
+from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, paths, plug, ports,
+               settingsio, static, webfetch)
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -383,9 +383,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _get_health(self, path, query, extra):
         # DEP-05 (decision 0059): mode (checkout / installed) and the
-        # marker's previous version (null in a checkout)
+        # marker's previous version (null in a checkout).
+        # RUN-BUILD-STAMP-CORE (F-027): "build" is buildinfo's one string
         core = self.server.core
         return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
+                                "build": buildinfo.build_id(getattr(core, "hot", None)),
                                 "port": self.server.port,
                                 "tailing": bool(core.tailer and core.tailer.running),
                                 **paths.install_info()},
@@ -394,7 +396,10 @@ class Handler(BaseHTTPRequestHandler):
     def _get_version(self, path, query, extra):
         # TC-SNAP-UI: the snapshot attribution, only while snapshot data
         # exists in the sidecar cache (decision 0009); else null.
+        # RUN-BUILD-STAMP-CORE: the same build string as /api/health
         return self._json(200, {"name": NAME, "version": VERSION,
+                                "build": buildinfo.build_id(
+                                    getattr(self.server.core, "hot", None)),
                                 "disclaimer": DISCLAIMER,
                                 "data_credit": datacredit.credit_doc(),
                                 **paths.install_info()}, extra)

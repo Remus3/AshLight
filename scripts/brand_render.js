@@ -22,7 +22,11 @@ app.commandLine.appendSwitch("in-process-gpu");
 
 function page(svgText, w, h) {
   const svg = svgText.replace(/^<\?xml[^>]*>\s*/, "");
+  /* OVL-EGRESS-LOCK: the page may load nothing (javascript is off too);
+     only its inline style and data: images. */
   return "<!doctype html><html><head><meta charset=\"utf-8\">" +
+    "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; " +
+    "style-src 'unsafe-inline'; img-src data:\">" +
     "<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}" +
     "svg{display:block;width:" + w + "px;height:" + h + "px}</style>" +
     "</head><body>" + svg + "</body></html>";

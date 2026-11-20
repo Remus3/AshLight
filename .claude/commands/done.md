@@ -23,7 +23,7 @@ remaining steps and repeats nothing destructive.
 ### 1. Local gate - commit only when green
 
 - `git status -s` - identify this session's files.
-- `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q`
+- `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py`
   (`<id>` = this agent's claims owner id `<session_id>.<agent_id>`).
 - `npm test --prefix app` when `app/node_modules` exists.
 - `python tools/leak_sweep.py --tree` - must print no HALT.

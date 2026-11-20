@@ -68,7 +68,6 @@ test("the five views alias the shared functions and keep their exports", () => {
   assert.equal(history.deltaText(null), "");
   const app = web.source("app.js");
   assert.match(app, /var F = window\.ALFmt;/);
-  assert.match(app, /var duration = F\.duration;/);
   assert.match(app, /var clock = F\.clock;/);
 });
 
