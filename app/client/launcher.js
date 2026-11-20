@@ -3,7 +3,8 @@
    It never starts a process of its own design: it runs the repo's own
    scripts (scripts\run.ps1 converges core + supervisor + overlay, decision
    0010; scripts\stop.ps1 stops them) and the one path resolver
-   (python -m server.al.paths). Nothing here touches the game (ToS floor).
+   (python -m server.al.paths) and REL-AUTOSTART-SWITCH's scripts\autostart.ps1
+   (decision 0011). Nothing here touches the game (ToS floor).
    This is the one app/ file allowed to load child_process
    (tests/test_overlay_smoke.py P4-6). */
 
@@ -70,4 +71,49 @@ function stopAll(repo, spawn) {
   }
 }
 
-module.exports = { resolveSidecar, startCore, stopAll, psArgs };
+/* REL-AUTOSTART-SWITCH (decision 0011, ruling Q-08): tray "Start with
+   Windows". Runs scripts\autostart.ps1 -Enable or -Disable hidden, with no
+   other script argument; the script registers or removes the logon task and
+   records the choice in <runtime>\autostart.json. done(code), when given,
+   is called once the script exits (code null when it could not start).
+   Returns the child pid or 0. */
+function setAutostart(repo, on, spawn, done) {
+  const run = spawn || childProcess.spawn;
+  const flag = on === true ? "-Enable" : "-Disable";
+  const finish = typeof done === "function" ? done : () => {};
+  try {
+    const child = run("powershell.exe", psArgs(path.join(repo, "scripts", "autostart.ps1"), [flag]), {
+      cwd: repo, detached: false, windowsHide: true, stdio: "ignore"
+    });
+    if (child && typeof child.on === "function") {
+      let called = false;
+      const once = (code) => { if (!called) { called = true; finish(code); } };
+      child.on("exit", (code) => once(code));
+      child.on("error", () => once(null));
+    }
+    if (child && typeof child.unref === "function") { child.unref(); }
+    return (child && child.pid) || 0;
+  } catch (e) {
+    finish(null);
+    return 0;
+  }
+}
+
+/* The recorded autostart choice: true only when AshLight's own
+   <runtime>\autostart.json (written by scripts\autostart.ps1) says
+   "enabled": true. A missing or broken file reads as off (the default). */
+const AUTOSTART_FILE = "autostart.json";
+
+function readAutostart(home, fsMod) {
+  const f = fsMod || require("fs");
+  try {
+    const doc = JSON.parse(String(f.readFileSync(path.join(home, AUTOSTART_FILE), "utf8"))
+      .replace(/^\uFEFF/, ""));
+    return !!(doc && doc.enabled === true);
+  } catch (e) {
+    return false;
+  }
+}
+
+module.exports = { resolveSidecar, startCore, stopAll, psArgs, setAutostart, readAutostart,
+                   AUTOSTART_FILE };
