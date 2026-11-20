@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import al_loop  # noqa: E402
 
+import al_loopkit  # noqa: E402
 from al_loopkit import (  # noqa: E402 (plan 156: shared with the sibling loop tests)
     HANDOFF, ROADMAP, FakeSpawn, _inbox_root, deps, git, git_world, isolate_git, make_root,
     progress, real_git)
@@ -32,6 +33,9 @@ from al_loopkit import (  # noqa: E402 (plan 156: shared with the sibling loop t
 @pytest.fixture(autouse=True)
 def _isolated_git(monkeypatch):
     isolate_git(monkeypatch)  # TESTS-A-19
+    # TEST-LOOP-STUB-GIT: deps() without git= / tree_key= spawns no git for a
+    # non-repo root and keys the gate cache in Python (tests/al_loopkit.py)
+    al_loopkit.stub_git(monkeypatch)
 
 
 # ---------------------------------------------------------------- parsing
