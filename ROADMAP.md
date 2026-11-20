@@ -413,7 +413,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   in dependencies. ACCEPT: python -m pytest -q tests/test_npm_lock.py tests/test_desktop_client.py
   tests/test_loop_inbox_p161.py tests/test_loop_inbox_p164.py passes and powershell.exe 5.1
   ParseFile accepts scripts/setup.ps1. ZERO-CLICK: No change for the player; setup stays one
-  idempotent script. BLOCKED: session wave 13.
+  idempotent script.
 - [ ] PUB-README-PLAYERS (build) README quick start for players: shortcut, Stop, Update, Uninstall,
   Troubleshooting + README, SECURITY, CONTRIBUTING: how the repository is run. ACCEPT: `python -m
   pytest -q tests/test_public_docs.py tests/test_brand_assets.py tests/test_ascii_lf.py
@@ -455,22 +455,21 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] RUN-BUILD-STAMP-UI (build) Build id in the dashboard footer, overlay About and tray tooltip.
   ACCEPT: npm test --prefix app passes and python -m pytest -q tests/test_ux_review.py
   tests/test_a11y.py passes. ZERO-CLICK: Shown by itself; no setting. DEPENDS: RUN-BUILD-STAMP-CORE.
-  BLOCKED: session wave 13.
 - [ ] RUN-METRICS-CORE (build) Own counters: metrics.py and the token-gated GET /api/debug. ACCEPT:
   python -m pytest -q tests/test_metrics.py tests/test_http_security.py tests/test_budgets.py
   passes. ZERO-CLICK: Counted by the core by itself; nothing for the player. The probe command is
   RUN-METRICS-PROBE. DEPENDS: RUN-SEAMS, RUN-BUILD-STAMP-CORE, RUN-TAIL-HEAL-READER. BLOCKED:
-  session wave 13.
+  session wave 14.
 - [ ] DATA-SNAP-AT-START (build) Game data arrives at start: the supervisor runs the snapshot tool
   hidden. ACCEPT: python -m pytest -q tests/test_snap_start.py tests/test_supervisor.py
   tests/test_keepalive.py tests/test_tc_snap.py tests/test_diag_self.py passes. ZERO-CLICK: Nothing
   beyond the one 'Use web data' tick: the data is there at the next start, and within one supervisor
-  poll when the tick happens while AshLight runs. BLOCKED: session wave 13.
+  poll when the tick happens while AshLight runs.
 - [ ] PLAY-TD-08B-GUIDE-SHORT-TEXT (data) Zone guide short lines: author the 93 entries. ACCEPT:
   python -m pytest -q tests/test_zone_guide.py passes with every non-empty short at most 34 ASCII
   characters; the package result lists the filled and empty counts. ZERO-CLICK: Data only; the guide
   file hot-reloads on a new mtime (decision 0042). DEPENDS: PLAY-TD-08A-GUIDE-SHORT-FIELD,
-  DATA-GUIDE-MERGE. BLOCKED: session wave 13.
+  DATA-GUIDE-MERGE.
 - [ ] TEST-STATE-TEXT-3 (build) State text move 3: text/itemcheck.py. ACCEPT: python
   tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
   tests/test_summarize.py tests/test_eval_text.py tests/test_price_text.py tests/test_trade_text.py
@@ -478,37 +477,35 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_design_gate.py tests/test_audit_pass2.py tests/test_math_compare.py
   tests/test_math_dps_sanity.py tests/test_math_weights.py tests/test_tc_delta.py passes.
   ZERO-CLICK: Developer-side only; the player does nothing. A running core in a source checkout
-  reloads itself after the merge (decision 0042). DEPENDS: TEST-STATE-TEXT-2. BLOCKED: session wave
-  13.
+  reloads itself after the merge (decision 0042). DEPENDS: TEST-STATE-TEXT-2.
 - [ ] OVL-ELECTRON-SETUP (build) Electron pin wired into setup and run: override variables cleared,
   install.js replaced, electron.exe verified. ACCEPT: python -m pytest -q tests/test_electron_pin.py
   tests/test_npm_lock.py tests/test_desktop_client.py tests/test_run_detach.py passes and
   powershell.exe 5.1 ParseFile accepts scripts/setup.ps1 and scripts/run.ps1. ZERO-CLICK: Runs
   inside setup and run with no prompt; a failed check names the fix (run setup again). DEPENDS:
-  OVL-NPM-LOCK, OVL-ELECTRON-PIN. BLOCKED: session wave 13.
+  OVL-NPM-LOCK, OVL-ELECTRON-PIN.
 - [ ] AUTO-12 (build) TC-DRIFT-TRIAL-FIX (part 1): re-hash pob2_files from the candidate; prune old
   candidates. ACCEPT: `python -m pytest -q tests/test_tc_drift.py` passes with fakes proving both
   parts. ZERO-CLICK: The static tier is unattended; the live tier and the pin move stay session acts
-  (decision 0025). DEPENDS: TC-BRIDGE-NEXT. BLOCKED: session wave 13.
+  (decision 0025). DEPENDS: TC-BRIDGE-NEXT.
 - [ ] TC-CALC-CONFINE-PROC (build) Confine the calc child process. ACCEPT: python -m pytest -q
   tests/test_tc_bridge.py tests/test_tc_wire.py passes. ZERO-CLICK: Automatic: every calc start is
-  confined; the player does nothing. DEPENDS: TC-BRIDGE-NEXT. BLOCKED: session wave 13.
+  confined; the player does nothing. DEPENDS: TC-BRIDGE-NEXT.
 - [ ] AUTO-05 (build) WATCH-CORE frame: tools/upstream_watch.py registry, state, cadence, web-data
   gate. ACCEPT: `python -m pytest -q tests/test_upstream_watch.py` passes, with a gated source
   making 0 requests on the injected transport while web_data is off. ZERO-CLICK: Fully unattended:
   the tick calls it every 15 minutes (LOOP-WATCH-WIRE); nothing is ever remembered by a person.
-  DEPENDS: LOOP-WATCH-GATE. BLOCKED: session wave 13.
+  DEPENDS: LOOP-WATCH-GATE.
 - [ ] LOOP-WATCH-ROWS (build) Watcher row templates: one validated table folder and a renderer.
   ACCEPT: `python -m pytest -q tests/test_watch_rows.py` passes. ZERO-CLICK: Unattended: templates
-  are data; a new source adds a file and the tick reads it. BLOCKED: session wave 13.
+  are data; a new source adds a file and the tick reads it.
 - [ ] REL-UNINSTALL-SHELL (build) Uninstall: logon task, shortcuts and the uninstall key. ACCEPT:
   python -m pytest -q tests/test_uninstall.py tests/test_supervisor.py passes. ZERO-CLICK: Same
-  single click; nothing asked. DEPENDS: DEP-10, REL-AUTOSTART-ENTRY. BLOCKED: session wave 13.
+  single click; nothing asked. DEPENDS: DEP-10, REL-AUTOSTART-ENTRY.
 - [ ] TC-UPGRADE-PER-SLOT (build) Trade-search link on every 'Look for next' row. ACCEPT: python -m
   pytest -q tests/test_tc_upgrade.py tests/test_math_build_health.py tests/test_trade_link.py
   tests/test_floor_static.py passes and npm test --prefix app passes. ZERO-CLICK: Links rebuild with
-  the build; opening one is the player's click (decision 0017). DEPENDS: TC-WORN-WIRE. BLOCKED:
-  session wave 13.
+  the build; opening one is the player's click (decision 0017). DEPENDS: TC-WORN-WIRE.
 - [ ] TEST-LOOP-GIT-TEMPLATE (build) git_world from a session-scoped template copy. ACCEPT: python
   -m pytest -q tests/test_al_loop.py tests/test_al_loop_merge.py tests/test_al_loop_lanes.py
   tests/test_al_loop_gate_cache.py tests/test_al_loop_routes.py passes with the same collected ids
