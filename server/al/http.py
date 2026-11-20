@@ -33,11 +33,6 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   /events?tap=1, served only in a source checkout (a .git entry at the
   repo root), and each tapped event keeps its type plus its numeric,
   boolean and null fields: no chat text, name or other string leaves.
-- RUN-METRICS-CORE (decision 0067): _send counts each reply by route key
-  and status class plus the 401s, _sse_write counts SSE frames and bytes
-  (server/al/metrics.py); read only through the token-gated GET /api/debug
-  (server/al/plug/debug.py). A route is a table key or "other", never
-  request text.
 """
 
 import contextlib
@@ -54,8 +49,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, metrics, paths, plug,
-               ports, settingsio, static, webfetch, webpage)
+from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, paths, plug, ports,
+               settingsio, static, webfetch, webpage)
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -254,24 +249,12 @@ class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body=b"", ctype="text/plain; charset=utf-8", extra=None):
         if isinstance(body, str):
             body = body.encode("utf-8")
-        self._count_reply(code)
         self._discard_unread()
         self.send_response(code)
         self._common_headers(ctype, len(body), extra)
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
-
-    def _count_reply(self, code):
-        """RUN-METRICS-CORE: one reply by route key and status class, and
-        the 401s (decision 0067). Never raises into a reply."""
-        try:
-            path = urlsplit(getattr(self, "path", "") or "").path
-            metrics.inc(f"http|{route_label(path)}|{int(code) // 100}xx")
-            if code == 401:
-                metrics.inc("http.401")
-        except Exception:  # noqa: BLE001 - a counter never breaks a reply
-            log.debug("reply counter failed", exc_info=True)
 
     def _json(self, code, obj, extra=None):
         self._send(code, json.dumps(obj, separators=(",", ":")),
@@ -968,7 +951,6 @@ class Handler(BaseHTTPRequestHandler):
         sub = core.bus.subscribe()
         try:
             self.send_response(200)
-            self._count_reply(200)
             self._common_headers("text/event-stream; charset=utf-8", None, extra)
             self.send_header("Connection", "close")
             self.end_headers()
@@ -1057,27 +1039,8 @@ class Handler(BaseHTTPRequestHandler):
         return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
 
     def _sse_write(self, text):
-        data = text.encode("utf-8")
-        self.wfile.write(data)
+        self.wfile.write(text.encode("utf-8"))
         self.wfile.flush()
-        metrics.inc("sse.frames")  # RUN-METRICS-CORE (decision 0067)
-        metrics.inc("sse.bytes", len(data))
-
-
-def route_label(path):
-    """RUN-METRICS-CORE: the counter key of a request path: a built-in
-    route key, a plug route path, or "other". Never request text."""
-    if not isinstance(path, str):
-        return "other"
-    for table in (GET_ROUTES, POST_ROUTES, PUT_ROUTES):
-        if path in table and not path.endswith("*"):
-            return path
-        for key in table:
-            if key.endswith("*") and path.startswith(key[:-1]):
-                return key
-    if plug.route("GET", path) is not None or plug.route("POST", path) is not None:
-        return path
-    return "other"
 
 
 def route_for(table, path):

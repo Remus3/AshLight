@@ -72,8 +72,6 @@ ROUTES = {
     ("GET", "/api/web-data"): (HEADER, None),
     # RUN-VERDICTS-CORE: the plug route (server/al/plug/verdicts.py)
     ("GET", "/api/verdicts"): (HEADER, None),
-    # RUN-METRICS-CORE: the plug route (server/al/plug/debug.py, decision 0067)
-    ("GET", "/api/debug"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
     # token POST (14)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
@@ -336,7 +334,7 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 14,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 13,
                       ("GET", QUERY): 1,
                       ("POST", HEADER): 14, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
