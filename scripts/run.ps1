@@ -155,6 +155,7 @@ Remove-Item -LiteralPath (Join-Path $paths.runtime 'stop.request') -Force -Error
 $pyw = Get-Command pythonw -ErrorAction SilentlyContinue
 $exe = if ($pyw) { $pyw.Source } else { $py }
 $detachEnv = @{ TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar; AL_PORT = [string]$port }
+$clientUnset = @('ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS')
 
 function Get-AlPlan {
     # Which of core / supervisor / overlay must start (server\al\procs.py).
@@ -266,8 +267,11 @@ if (-not $wantOverlay) {
 } else {
     $clientArgs = @('"' + (Join-Path $Repo 'app') + '"', '--client')
     if ($trayOnly) { $clientArgs += '--tray' }
+    # OVL-LAUNCH-ENV (F-110): an inherited ELECTRON_RUN_AS_NODE or
+    # NODE_OPTIONS would turn electron.exe into a Node script host before any
+    # app code runs; the client never gets either.
     $ovlPid = Start-AlDetached -FilePath $electron -ArgumentList $clientArgs `
-        -WorkingDirectory (Join-Path $Repo 'app') -Environment $detachEnv
+        -WorkingDirectory (Join-Path $Repo 'app') -Environment $detachEnv -Unset $clientUnset
     $clientShown = $true
     if (@($plan.start) -contains 'overlay') {
         Push-Location $Repo
