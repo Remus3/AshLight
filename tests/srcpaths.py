@@ -31,8 +31,12 @@ def read_bytes(name):
 
 
 def index_html(encoding="ascii"):
-    """The dashboard page text."""
-    return read(PAGE, encoding=encoding)
+    """The dashboard page text as the core serves it: index.html with the
+    web/panels/ tags inserted at its marker (TEST-WEB-ASSEMBLE,
+    server/al/webpage.py); the same bytes as index.html while there is no
+    panel file."""
+    from server.al import webpage
+    return webpage.assemble(WEB).decode(encoding)
 
 
 def _listed(pattern):

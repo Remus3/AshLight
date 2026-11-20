@@ -287,6 +287,59 @@ def check_dev_docs(f):
                   "are closed. AshLight's own sign-in may be possible now.")
 
 
+# OBS-CRASH (F-105): an exit record belongs to this start when it is newer
+# than the start, or is the exit (up to this long before it) that led to it:
+# a crash or a keepalive kill is followed by a restart within minutes.
+EXIT_WINDOW_S = 3600.0
+CORE_EXIT_WORDS = {
+    "crash": "AshLight stopped {ago} after an unexpected error",
+    # a worker thread's crash (exitrecord.exc_detail names the thread); the
+    # core itself may still run, and a later exit overwrites the record
+    "crash-thread": "Part of AshLight stopped {ago} after an unexpected error",
+    "signal": "AshLight was closed from outside {ago}",
+    "supervisor-kill": ("AshLight stopped responding {ago}, so the keepalive "
+                        "restarted it"),
+}
+CLIENT_EXIT_WORDS = {
+    "crash": "The desktop app stopped {ago} after an unexpected error",
+    "relaunch": "The desktop app restarted itself {ago} after repeated errors",
+}
+
+
+def _exit_row(rec, words, started, now, cid, label):
+    if not isinstance(rec, dict) or rec.get("reason") not in words:
+        return None
+    at = finite(rec.get("at"))
+    if at is None:
+        return None
+    if started is not None and at < started - EXIT_WINDOW_S:
+        return None  # an old exit, not why this start happened
+    detail = rec.get("detail")
+    key = rec["reason"]
+    if (key + "-thread") in words and isinstance(detail, str) and detail.startswith("thread "):
+        key += "-thread"
+    text = words[key].format(ago=_ago(now - at))
+    if isinstance(detail, str) and detail.strip():
+        text += f" ({' '.join(detail.split())})"
+    return _check(cid, label, NOTE, text + ".")
+
+
+def check_last_exit(f, now):
+    """OBS-CRASH: up to two notes, the core's last unclean exit
+    (last-exit.json: crash, signal or a keepalive kill) and the desktop
+    client's (client-exit.json: crash or relaunch), each shown only when
+    it is newer than this start or led to it (EXIT_WINDOW_S). A clean stop,
+    a hot reload or a quit shows nothing. Nothing to fix: both come back
+    by themselves, so the rows are notes; the detail is redacted with the
+    rest of the view."""
+    started = finite(f.get("started_at"))
+    rows = [_exit_row(f.get("last_exit"), CORE_EXIT_WORDS, started, now,
+                      "last_exit", "Last stop"),
+            _exit_row(f.get("client_exit"), CLIENT_EXIT_WORDS, started, now,
+                      "client_exit", "Desktop app")]
+    return [r for r in rows if r]
+
+
 def checks(f, now):
     """Every check, in reading order, from a facts dict (see Core.diag_facts).
     RUN-SEAMS (decision 0056): plug modules' rows follow the built-in ones,
@@ -299,6 +352,7 @@ def checks(f, now):
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
             check_hotkey(f), check_port(f)]
     rows += [r for r in (check_reload(f), check_dev_docs(f), check_private(f)) if r]
+    rows += check_last_exit(f, now)
     return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})
 
 
