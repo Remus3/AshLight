@@ -62,6 +62,10 @@ test("settings io: import sentences", () => {
     "No settings in that file were changed. Skipped 1 setting that AshLight doesn't " +
     "take from a file.");
   assert.match(sio.CALC_OFFER, /^ [^\n]+\.$/);
+  // TC-CALC-OPTIN: the sentence names the one setup step, which turns it on
+  assert.ok(sio.CALC_OFFER.includes("run scripts\\setup.ps1 -TcCalc."));
+  assert.ok(sio.CALC_OFFER.includes("turns it on"));
+  assert.ok(!/local\.json|config/.test(sio.CALC_OFFER));
   assert.equal(sio.refusedText(413, null), sio.TOO_BIG);
   assert.equal(sio.refusedText(400, { error: "Bad." }), "Bad. Nothing changed.");
   assert.equal(sio.refusedText(500, null), sio.FAILED);

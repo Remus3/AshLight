@@ -73,7 +73,7 @@ test("zone guide: paints the #zone-guide slot, folding the extra rows", () => {
   assert.equal(doc.slot.hidden, true);
 });
 
-test("zone guide: uses ALTabs.fill when the Play tab provides it", () => {
+test("zone guide: uses ALTabs.fill when the page provides it (the Run tab slot)", () => {
   const doc = fakeDoc();
   const calls = [];
   global.self = { ALTabs: { fill: (d, id, node) => calls.push([id, node.className]) } };

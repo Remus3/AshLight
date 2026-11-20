@@ -108,6 +108,10 @@ class LastEval:
         # worngear.WornGear, injected; None: no worn baseline). The item
         # check compares against the worn item first, the PoB plan second
         self.worn = worn
+        # TC-WORN-WIRE: a callable read at use time (the core's worn_gear
+        # switch); False: no item is filed and no worn item is compared
+        # against (the stored set stays as it is). None: always on.
+        self.worn_on = None
         self.weights = weights
         self.state = state
         # TC-UPGRADE: a callable read at run time (the configured league or
@@ -156,14 +160,26 @@ class LastEval:
         return (getattr(self.state, "character", None),
                 getattr(self.state, "level", None))
 
+    def _store(self):
+        """TC-WORN-WIRE: the worn-gear store while the switch is on, else
+        None (a failing switch reads as on: the default)."""
+        if self.worn is None or not callable(self.worn_on):
+            return self.worn
+        try:
+            on = self.worn_on()
+        except Exception:  # noqa: BLE001 - the default is on
+            on = True
+        return self.worn if on is not False else None
+
     def baseline(self, build=None):
         """TC-WORN-BASELINE: the worngear.Baseline of the current character
         and `build` (default the loaded one), or None without a worn
-        store."""
-        if self.worn is None:
+        store (or with the worn_gear switch off)."""
+        store = self._store()
+        if store is None:
             return None
         build = self.builds.build if build is None else build
-        return worngear.Baseline(self.worn, self._who()[0], build)
+        return worngear.Baseline(store, self._who()[0], build)
 
     def wear_last(self, slot=None, text=None):
         """TC-WORN-BASELINE: file the last checked item (or `text`) as the
@@ -171,7 +187,8 @@ class LastEval:
         slot, else the store's choice). Returns the slot, or None (no worn
         store, nothing checked yet, or not gear). The checked items are
         re-scored against the new baseline."""
-        if self.worn is None:
+        store = self._store()
+        if store is None:
             return None
         if text is None:
             with self._lock:
@@ -179,7 +196,7 @@ class LastEval:
             text = last[0] if last is not None else None
         if not isinstance(text, str):
             return None
-        filed = self.worn.wear(self._who()[0], text, slot=slot, build=self.builds.build)
+        filed = store.wear(self._who()[0], text, slot=slot, build=self.builds.build)
         if filed is not None:
             self.rescore()
         return filed
@@ -224,12 +241,36 @@ class LastEval:
             with self._lock:
                 self.candidates.add(self._who()[0], text, slot, result.get("verdict"),
                                     at if at is not None else _now(self.state))
-            if self.worn is not None:
+            store = self._store()
+            if store is not None:
                 # TC-WORN-BASELINE: wear_last() files it in the slot it was
                 # compared against (memory only)
-                self.worn.note_compared(self._who()[0], result.get("slot"), text)
+                store.note_compared(self._who()[0], result.get("slot"), text)
             self.rescore(fresh=False)
         return result
+
+    def clear(self, card=None, result=None, at=None):
+        """TC-EVAL-CLEAR-API: start a new press that has no item (the blank
+        clipboard press of OVL-COPY-FIRST). The press generation moves on
+        under the publish lock, so no stage of an older press is published
+        after this; a queued stage job is dropped (its generator closed: no
+        calc call); rerun() then has no item to re-score. `card`: published
+        with set_eval(card, at=at) under the same lock, and `result` kept as
+        last_result. Returns the new press generation."""
+        with self._lock:
+            self._input = None
+        with self._publish:
+            self._gen += 1
+            gen = self._gen
+            if card is not None:
+                self.state.set_eval(card, at=at)
+                self.last_result = result
+        with self._cond:
+            old, self._job = self._job, None
+            self._cond.notify_all()
+        if old is not None:
+            old[1].close()
+        return gen
 
     # -- TC-PRESS-STAGED-LIVE: the stage worker ------------------------------
 
