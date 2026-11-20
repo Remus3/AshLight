@@ -4,9 +4,7 @@ One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
 package uses the number in its new_files entry. 0077 to 0083
-are taken. A decision written outside a package takes the next free
-number: the next after the highest file here (0084, read back
-2026-11-19).
+are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
@@ -102,5 +100,56 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
   (UTIL-WAYSTONE-REWARD, UTIL-CAMPAIGN-CHECKS).
 - 0038: per-character run history, pace, act splits and deaths
   (UTIL-MULTICHAR).
+- 0037: Trade stat ids from the repoe-fork snapshot (TC-UPGRADE-STATS).
+- 0036: Run history and price watch files; settings export / import
+  (UTIL-RUN-HISTORY, UTIL-PRICE-WATCH, UX-SETTINGS-IO).
 - 0035: intentionally unused. It was reserved by a lane draft that never
   merged; do not reuse it (AREA-AUDIT P5-7, 2026-11-17).
+- 0034: The game's `.build` file as a download only (TC-BUILDFILE,
+  AUDIT-BUILDFILE).
+- 0033: Loot filter merge into the player's own filter
+  (UTIL-FILTER-MERGE).
+- 0032: Swap compare on the card, PoB sanity guard, filter value tiers.
+- 0031: Loot filter snippet as a download only (UTIL-FILTER).
+- 0030: Player helpers: waystone check, search strings, zone notes.
+- 0029: Game exit detection (TEST-LIVE-EXIT): Client.txt staleness only.
+- 0028: Theorycraft on real data: end-to-end proof, calc budgets, PoB
+  drift guard.
+- 0027: TC-LIVE: pinned portable C toolchain for the LuaJIT build.
+- 0026: Price book: unique and stackable poe.ninja prices, movers,
+  league rollover.
+- 0025: TC-DRIFT: unattended PoB-PoE2 release check and pin trial.
+- 0024: TC-DELTA: PoB-backed item deltas and per-mod weights.
+- 0023: HUD-ACT-RESUME: act splits rebuild from Client.txt at core
+  start.
+- 0022: TC-BRIDGE: own stdio JSON bridge to the pinned PoB-PoE2
+  checkout.
+- 0021: TC-CODE-REAL: real PoB2 export check, fixture sources,
+  round-trip scope.
+- 0020: HUD-ACT: act splits from the log, zone levels from repoe-fork
+  world_areas.
+- 0019: A finished trade closes one open trade card (OVL-TRADE-CANCEL).
+- 0018: TC-PIN: pinned PoB-PoE2 and LuaJIT, license check, opt-in setup.
+- 0017: No app calls to trade2; trade-search link only; floor wording
+  (PRICE-1, TC-UPGRADE, RES-POLICY).
+- 0016: Price check result contract, overlay card slot, rates panel
+  (PRICE-1-UI, DATA-NINJA-UI).
+- 0015: Price check per press and the User-Agent contact (PRICE-1,
+  UA-CONTACT).
+- 0014: Build view, item check UI and graphics advisor (TC-VIEW,
+  TC-EVAL-UI, GFX-ADVISOR).
+- 0013: Web data: one opt-in, one fetch path (DATA-NINJA, TC-URL,
+  PRICE-1).
+- 0012: Agent worktrees under the sidecar via a WorktreeCreate hook.
+- 0011: Core autostart at logon: opt-in current-user scheduled task.
+- 0010: Process registry: one of each, stop all of ours, nothing else.
+- 0009: DATA-LICENSE: game-data sources, what is bundled vs fetched.
+- 0008: Live resume: bounded backward scan of Client.txt.
+- 0007: TC-CODE: PoB2 share-code codec, build model, paste API.
+- 0006: Game FPS measurement method (OVL-FPS): no ETW present tracing.
+- 0005: Core keepalive: detached stdlib supervisor.
+- 0004: Scope: theorycraft and item optimization; PoB2 interop path.
+- 0003: What AshLight reads, and when.
+- 0002: Stack: Python stdlib core + browser dashboard + Electron overlay
+  shell.
+- 0001: Name: AshLight (code AL).
