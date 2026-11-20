@@ -16,7 +16,12 @@ Rules (CLAUDE.md "Game ToS floor", decision 0013):
   says (decision 0017, `is_trade_url`);
 - a gzip body is inflated through `inflate` with the same size cap applied
   AFTER inflation (a small compressed body cannot blow up in memory);
-- `retry_after_s` is the one Retry-After parser, bounded to [lo, hi].
+- `retry_after_s` is the one Retry-After parser, bounded to [lo, hi];
+- RUN-METRICS-SITES (decision 0067): every real hop (`_open_once`) is
+  counted in AshLight's own metrics as `fetch|<host>|<class>` (the host
+  from the caller's allow-list, the class `2xx` .. `5xx` or `error`), its
+  milliseconds in the `fetch_ms` ring and one typed `fetch` emit; no URL
+  path, query or body is ever recorded.
 
 `http_request` is the real transport; every client takes an injectable
 `fetch(method, url, headers, body)` -> (status, headers dict, body bytes) so
@@ -28,12 +33,13 @@ import email.utils
 import http.client
 import ipaddress
 import math
+import time
 import zlib
 import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import NAME, VERSION
+from . import NAME, VERSION, metrics
 
 TIMEOUT_S = 10.0
 MAX_REDIRECTS = 3
@@ -157,25 +163,58 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def host_word(url):
+    """RUN-METRICS-SITES: the URL's host as a metrics WORD (lower-case, the
+    host of the caller's allow-list), else "other"; never a path or query."""
+    try:
+        host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    except (ValueError, AttributeError, TypeError):
+        host = ""
+    return host if host and metrics.WORD_RE.match(host) else "other"
+
+
+def status_class(status):
+    """"2xx" .. "5xx" for an HTTP status, else "error" (no reply)."""
+    if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:
+        return f"{status // 100}xx"
+    return "error"
+
+
+def _count_fetch(url, status, t0):
+    """One fetch in AshLight's own counters (decision 0067): typed values only."""
+    host = host_word(url)
+    cls = status_class(status)
+    ms = round((time.monotonic() - t0) * 1000.0, 1)
+    metrics.inc(f"fetch|{host}|{cls}")
+    metrics.timing("fetch_ms", ms)
+    metrics.emit("fetch", host=host, cls=cls, ms=ms)
+
+
 def _open_once(method, url, headers, body, max_bytes, timeout):
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
     opener = urllib.request.build_opener(_NoRedirect())
+    t0 = time.monotonic()
+    status = None  # stays None (class "error") unless a reply is returned
     try:
         with opener.open(req, timeout=timeout) as resp:
             data = resp.read(max_bytes + 1)
             if len(data) > max_bytes:
                 raise FetchError("response too large")
-            return resp.status, dict(resp.headers.items()), data
+            status = resp.status
+            return status, dict(resp.headers.items()), data
     except urllib.error.HTTPError as e:
         try:
             data = e.read(max_bytes + 1) if e.fp is not None else b""
         except (OSError, http.client.HTTPException):
             data = b""
+        status = e.code
         return e.code, dict((e.headers or {}).items()), data[:max_bytes]
     except (urllib.error.URLError, OSError, ValueError, http.client.HTTPException) as e:
         # F-036: IncompleteRead, BadStatusLine, LineTooLong and the rest of
         # http.client's family are network failures too, never a crash
         raise FetchError(f"network: {type(e).__name__}: {e}") from e
+    finally:
+        _count_fetch(url, status, t0)
 
 
 def header(headers, name):
