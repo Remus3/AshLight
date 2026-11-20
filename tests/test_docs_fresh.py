@@ -24,6 +24,10 @@ def _copy(tmp_path):
         shutil.copyfile(ROOT / rel, dst)
     for src in (ROOT / "scripts").glob("*.ps1"):  # names README quotes
         shutil.copyfile(src, tmp_path / "scripts" / src.name)
+    for rel_dir in df.INDEX_DIRS:  # the index fact lists these folders
+        (tmp_path / rel_dir).mkdir(parents=True, exist_ok=True)
+        for src in (ROOT / rel_dir).glob("*.md"):
+            shutil.copyfile(src, tmp_path / rel_dir / src.name)
     return tmp_path
 
 
@@ -186,6 +190,30 @@ def test_missing_doc_file_is_named(tmp_path):
     root = _copy(tmp_path)
     (root / df.MAIN_JS_REL).unlink()
     assert _named(df.check(root)) == {df.MAIN_JS_REL}
+
+
+def test_index_fact_joins_the_table():
+    assert df.fact_index in df.FACTS
+
+
+def test_unindexed_decision_names_its_readme(tmp_path):
+    root = _copy(tmp_path)
+    (root / df.DECISIONS_DIR / "0999-planted.md").write_bytes(
+        b"# 0999 - Planted decision\n")
+    (root / df.RESEARCH_DIR / "0998-planted.md").write_bytes(
+        b"# 0998 - Planted research\n")
+    problems = df.check(root)
+    assert _named(problems) == {"docs/decisions/README.md",
+                                "docs/research/README.md"}
+    assert all("index" in p for p in problems)
+    assert any("0999-planted.md" in p for p in problems)
+    assert any("0998-planted.md" in p for p in problems)
+
+
+def test_missing_index_readme_is_named(tmp_path):
+    root = _copy(tmp_path)
+    (root / df.RESEARCH_DIR / "README.md").unlink()
+    assert _named(df.check(root)) == {"docs/research/README.md"}
 
 
 def test_cli_bad_root_exits_2(tmp_path):

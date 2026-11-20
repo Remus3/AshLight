@@ -945,7 +945,16 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   confined is killed and raises BridgeUnavailable (decision 0022 amendment
   2026-11-19). Reverses if: PoB needs another environment name or a helper
   process, a real build needs more than the memory limit, or job objects are
-  refused in a supported install layout.
+  refused in a supported install layout. TC-CALC-CONFINE-LUA: after the
+  HeadlessWrapper load bridge.lua removes os.execute, io.popen,
+  os.tmpname, package.loadlib and the ffi require route, empties
+  package.cpath, makes os.remove / os.rename / write-mode io.open return
+  nil plus a reason and io.output to a file raise, and drops the debug
+  functions that reach the kept originals; PoB stays unmodified; a
+  test-only probe proves each call fails (listed in CALC_TESTS of
+  tests/test_marks.py) and the drift guard fails if PoB starts using a
+  dropped entry point. Reverses if: PoB's headless path needs a dropped
+  entry point, or a pin moves its start out of the HeadlessWrapper load.
 - RUN-ZONE-RESET: SessionState._enter_zone() is the one per-zone reset
   (state.ZONE_FIELDS, listed again in tests/test_bus_state.py), called from
   the scene, area-generated, area-entered and log_opened arms. Each zone
@@ -1109,6 +1118,14 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   0067; decision 0006 method 3, decision 0040 class). Reverses if: a record is
   found to hold a path, name, chat or item text, the sampler costs overlay
   budget, or GGG restricts derived local records.
+- OBS-PARSE-LEDGER: per-pattern hit counts and masked log shapes (allow-list
+  mask, 200 shapes, 64 KB, hour-grain times, two-sighting rule) in
+  ops/runtime/logshapes.json only under their own consent line beside the
+  Client.txt opt-in; revoking deletes the file; no raw line, name, chat or
+  item text is ever stored or sent; in-memory class counters need no extra
+  consent (decision 0071). Reverses if: a mask gap stores a name or a chat
+  word, GGG restricts derived local records, or the operator rules the
+  ledger unwanted.
 - DOCS-FRESH: tools/docs_fresh.py check is a list of small fact functions
   (FACTS); each reads a value from tracked files and matches where docs quote
   it (Electron pin in app/main.js and decision 0002; VERSION in

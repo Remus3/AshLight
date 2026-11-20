@@ -25,7 +25,7 @@ from server.al.state import overlay_card
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = srcpaths.path("index.html")
-STATE_PY = ROOT / "server" / "al" / "state.py"
+STATE_PY = ROOT / "server" / "al" / "text" / "overlaycard.py"
 RENDER_GATE = ROOT / "app" / "shared" / "render_gate.js"
 FORMAT_JS = ROOT / "app" / "shared" / "format.js"
 DESIGN = ROOT / "docs" / "design" / "0001-design-system.md"

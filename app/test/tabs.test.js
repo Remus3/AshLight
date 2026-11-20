@@ -289,7 +289,107 @@ test("grace: a recent click in the shown tab holds it; the header line says the 
   now += t.GRACE_MS + 1;
   assert.equal(t.notify(doc, "item check"), true);
   assert.equal(t.current(), "play");
-  assert.equal(doc.ids["tab-news"].textContent, "");
+  assert.equal(doc.ids["tab-news"].textContent, "Showing Play. Item check.");
+  t.setClock(() => Date.now());
+});
+
+/* ---- PLAY-TD-22B-TAB-FOCUS (TD-22, F-096, design G-13) ------------------ */
+
+function graceDoc(storedTab) {
+  const doc = fakeDoc();
+  const handlers = {};
+  doc.addEventListener = (k, f) => { handlers[k] = f; };
+  doc.ids["tab-news"] = el("tab-news");
+  t.TABS.forEach((x) => doc.ids.tabs.children.push(doc.ids["tab-" + x]));
+  const writes = [];
+  let cur = "";
+  Object.defineProperty(doc.ids["tab-news"], "textContent", {
+    get() { return cur; }, set(v) { writes.push(v); cur = v; }, configurable: true });
+  t.start(doc, memStore({ [t.STORE_KEY]: storedTab }));
+  return { doc, handlers, writes };
+}
+
+test("the automatic return never fires within 10 s of a key press in the tab row", () => {
+  let now = 5000;
+  t.setClock(() => now);
+  const { doc, handlers } = graceDoc("play");
+  doc.focused = true;
+  // the player arrows from Play to Run in the tab row
+  handlers.keydown({ target: doc.ids["tab-play"] });
+  doc.ids.tabs.listeners.keydown({ key: "ArrowRight", preventDefault() {} });
+  doc.ids.tabs.listeners.keydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(t.current(), "run");
+  doc.activeElement = doc.ids["tab-run"];
+  doc.ids["tab-run"].focused = false;
+  [0, 1, 5000, t.GRACE_MS - 1].forEach((d) => {
+    now = 5000 + d;
+    assert.equal(t.notify(doc, "trade request"), false, "at +" + d + " ms");
+    assert.equal(t.current(), "run");
+    assert.equal(doc.ids["tab-run"].focused, false, "focus stays where the player is");
+  });
+  // the game took focus right after the key press: still held by the grace
+  doc.focused = false;
+  now = 5000 + t.GRACE_MS - 1;
+  assert.equal(t.notify(doc, "item check"), false);
+  assert.equal(t.current(), "run");
+  assert.equal(doc.ids["tab-play"].focused, false);
+  t.setClock(() => Date.now());
+});
+
+test("after the grace, focus on the tab row moves to the Play tab, said once", () => {
+  let now = 1000;
+  t.setClock(() => now);
+  const { doc, handlers, writes } = graceDoc("build");
+  doc.focused = true;
+  handlers.keydown({ target: doc.ids["tab-build"] });
+  doc.activeElement = doc.ids["tab-build"];
+  now += t.GRACE_MS + 1;
+  writes.length = 0;
+  assert.equal(t.notify(doc, "trade request"), true);
+  assert.equal(t.current(), "play");
+  assert.equal(doc.ids["tab-play"].focused, true, "focus follows to the Play tab");
+  assert.equal(doc.ids["tab-play"].attrs.tabindex, "0");
+  assert.equal(doc.ids["tab-news"].textContent, "Showing Play. Trade request.");
+  assert.equal(writes.filter((w) => w.startsWith("Showing Play")).length, 1, writes.join("|"));
+  // Play is shown now: more news writes nothing more
+  writes.length = 0;
+  assert.equal(t.notify(doc, "build alert"), false);
+  assert.deepEqual(writes, []);
+  t.setClock(() => Date.now());
+});
+
+test("a focus inside a panel is never moved by the automatic return", () => {
+  let now = 1000;
+  t.setClock(() => now);
+  const { doc } = graceDoc("settings");
+  const field = el("field");
+  field.focus = () => { throw new Error("a panel focus is not moved"); };
+  doc.ids["panel-settings"].children.push(field);
+  doc.activeElement = field;
+  now += t.GRACE_MS + 1;
+  // the page has focus and the player sits in the panel: Play only gets its word
+  doc.focused = true;
+  assert.equal(t.notify(doc, "trade request"), false);
+  assert.equal(t.current(), "settings");
+  assert.equal(doc.ids["tab-play"].markNode.textContent, "new");
+  // the game has focus: Play shows, but no element is focused
+  doc.focused = false;
+  assert.equal(t.notify(doc, "item check"), true);
+  assert.equal(t.current(), "play");
+  t.TABS.forEach((x) => assert.equal(doc.ids["tab-" + x].focused, false, x));
+  assert.equal(doc.ids["tab-news"].textContent, "Showing Play. Item check.");
+  t.setClock(() => Date.now());
+});
+
+test("a return with no focus anywhere moves none; empty news still says Showing Play", () => {
+  let now = 1000;
+  t.setClock(() => now);
+  const { doc } = graceDoc("run");
+  doc.focused = false;
+  now += t.GRACE_MS + 1;
+  assert.equal(t.notify(doc, ""), true);
+  t.TABS.forEach((x) => assert.equal(doc.ids["tab-" + x].focused, false, x));
+  assert.equal(doc.ids["tab-news"].textContent, "Showing Play.");
   t.setClock(() => Date.now());
 });
 
