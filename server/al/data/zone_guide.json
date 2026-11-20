@@ -61,7 +61,7 @@
     },
     "The Grelwood": {
      "objective": "Hub: take the runes from the Red Vale to the Tree of Souls here.",
-     "short": "Hub: runes to the Tree of Souls",
+     "short": "Runes to the Tree of Souls",
      "layout": "Big forest hub: several paths branch off here; take the main road first.",
      "optional": [
       {
@@ -305,7 +305,7 @@
     },
     "Mastodon Badlands": {
      "objective": "Find the way into the Bone Pits.",
-     "short": "Way down into the Bone Pits",
+     "short": "Look for the drop to the pits",
      "layout": "Open badlands: find the way down into the Bone Pits.",
      "next": "The Bone Pits",
      "src": "research:0025",
@@ -422,7 +422,7 @@
     },
     "Jungle Ruins": {
      "objective": "Hub: the Venom Crypts and the Infested Barrens start here.",
-     "short": "Hub: Crypts and Barrens branch off",
+     "short": "Crypts and Barrens branch off here",
      "layout": "The Venom Crypts entrance tends to be by the waypoint.",
      "optional": [
       {
@@ -682,7 +682,7 @@
     },
     "Eye of Hinekora": {
      "objective": "Head on to the Halls of the Dead.",
-     "short": "Silent hall: +5% mana",
+     "short": "To Halls of the Dead; +5% mana",
      "layout": "Sacred island: follow the path inward.",
      "optional": [
       {
@@ -825,7 +825,7 @@
     },
     "Pools of Khatal": {
      "objective": "No boss: go on to the sanctuary.",
-     "short": "Bossless; next is the sanctuary",
+     "short": "No boss; on to the sanctuary",
      "next": "Sel Khari Sanctuary"
     },
     "Sel Khari Sanctuary": {
