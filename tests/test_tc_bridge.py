@@ -338,11 +338,54 @@ def test_lua_script_is_our_own_and_stays_inside_the_floor():
     assert bridge.FRAME_PREFIX == "ALB1 "
     for cmd in ("ping", "load_build", "set_item", "outputs", "quit"):
         assert f'"{cmd}"' in text, cmd
-    # no shell-out, no network, no file writes from the bridge
+    # no shell-out, no network, no file writes from the bridge; the names
+    # appear only where the lockdown takes them away and the test-only probe
+    # tries them (TC-CALC-CONFINE-LUA)
+    lock, probe, rest = _lua_parts(text)
     for bad in ("os.execute", "io.popen", "socket", "lcurl", 'io.open(', "os.remove"):
-        assert bad not in text, bad
+        assert bad not in rest, bad
     assert "HeadlessWrapper.lua" in text  # drives the unmodified checkout
     assert not re.search(r"pob-?mcp|pob2-?mcp", text, re.I)
+    assert lock and probe
+
+
+LOCK_START = "-- " + "-" * 60 + " lockdown --"
+LOCK_END = "-- " + "-" * 60 + " commands --"
+
+
+def _lua_parts(text):
+    """(lockdown block, probe handler, the rest) of bridge.lua."""
+    a, b = text.index(LOCK_START), text.index(LOCK_END)
+    p = text.index("-- TC-CALC-CONFINE-LUA: test-only")
+    q = text.index("-- " + "-" * 64 + " loop --")
+    assert a < b < p < text.index('handlers["probe_confinement"]') < q
+    return text[a:b], text[p:q], text[:a] + text[b:p] + text[q:]
+
+
+def test_lockdown_runs_after_pob_loads_and_drops_each_entry_point():
+    """TC-CALC-CONFINE-LUA: one lockdown block after the HeadlessWrapper
+    load and the start-up checks, before any command; it removes the shell,
+    process, native library and FFI entry points, refuses file deletes and
+    renames, keeps io.open read-only and hides the originals from debug."""
+    text = LUA.read_text(encoding="ascii")
+    lock, _, _ = _lua_parts(text)
+    load = text.index('pcall(dofile, "HeadlessWrapper.lua")')
+    prompt = text.index("PoB start-up message")
+    assert load < prompt < text.index(LOCK_START) < text.index("handlers = {}")
+    for line in ("os.execute = nil", "io.popen = nil", "os.tmpname = nil",
+                 "package.loadlib = nil", 'package.cpath = ""',
+                 'package.loaded["ffi"] = nil', 'package.preload["ffi"] = nil',
+                 'rawset(_G, "ffi", nil)', "os.remove = function() return nil",
+                 "os.rename = function() return nil", "io.open = function(name, mode)",
+                 "io.output = function(file)"):
+        assert line in lock, line
+    assert re.search(r'mode == nil or mode == "r" or mode == "rb" then return real_open',
+                     lock)
+    for name in ("getlocal", "setlocal", "getupvalue", "setupvalue", "upvalueid",
+                 "upvaluejoin", "getregistry"):
+        assert f'"{name}"' in lock, name
+    # pob_main() keeps its own copy of getupvalue from before the lockdown
+    assert text.index("local getupvalue = ") < text.index("local function pob_main()")
 
 
 # --- live: real luajit.exe + pinned PoB (skip when absent) -------------------
@@ -376,6 +419,32 @@ def test_live_minimal_build_returns_numeric_outputs(warm_bridge):
     out = live_bridge.outputs()
     assert out and all(isinstance(v, (int, float, bool)) for v in out.values())
     assert out.get("Life", 0) > 0
+
+
+@LIVE_CALC
+@LIVE
+@pytest.mark.slow
+def test_live_confined_calls_fail(warm_bridge):
+    """TC-CALC-CONFINE-LUA: inside the running bridge (PoB loaded) a shell
+    call, a write-mode open, a delete, a rename, an io.output redirect, FFI
+    and the native loader all fail; reading PoB's own files still works."""
+    temp = Path(warm_bridge.env["TEMP"])
+    probe_file = temp / "alb-confine-probe.txt"
+    before = probe_file.exists()
+    got = warm_bridge.request("probe_confinement")
+    assert got["execute"]["ok"] is False and "nil value" in got["execute"]["error"]
+    assert got["popen"] == "nil" and got["tmpname"] == "nil"
+    assert got["loadlib"] == "nil" and got["cpath"] == "" and got["ffi"] is False
+    for op in ("remove", "rename"):
+        assert got[op]["ok"] is False and "refused" in got[op]["error"], op
+    assert got["output"]["ok"] is False and "refused" in got["output"]["error"]
+    assert set(got["writes"]) == {"w", "wb", "a", "a+", "r+", "w+b"}
+    for mode, res in got["writes"].items():
+        assert res["ok"] is False and "refused" in res["error"], mode
+    assert got["read"]["ok"] is True
+    assert got["getupvalue"] == "nil" and got["getlocal"] == "nil"
+    assert probe_file.exists() == before  # nothing created
+    assert warm_bridge.request("ping") == {"pong": True}  # the bridge lives on
 
 
 @LIVE_CALC

@@ -123,8 +123,8 @@ so the overlay can sit on top of the game.
 Optional per-computer settings live in `config/local.json` (not tracked;
 `setup.ps1` copies `config/local.example.json` once):
 `client_log` (path to Client.txt or the game folder), `character` (the name to
-track), `poll_ms` (log poll interval, default 250), `overlay_toggle` and
-`eval_hotkey` (the overlay and item check shortcuts), `port` (default 8960),
+track), `overlay_toggle` and `eval_hotkey` (the overlay and item check
+shortcuts), `port` (default 8960),
 `web_data` (the web-data opt-in, default `false`), `league` (optional league
 for prices), `contact` (how poe.ninja and GGG can reach you, sent in the
 User-Agent; without it price fetches stay off) and `tc_calc` (the optional

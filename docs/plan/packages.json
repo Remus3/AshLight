@@ -1360,7 +1360,6 @@
     "REL-AUTOSTART-SWITCH",
     "AUTO-14",
     "TC-CALC-VERIFY-PIN",
-    "TC-CALC-CONFINE-LUA",
     "AUTO-11",
     "DATA-TREE-HOLD",
     "LOOP-ELECTRON-POLICY",
@@ -1375,6 +1374,7 @@
    "title": "Wave 15: loop and watchers, reliability and observability, theorycraft",
    "goal": "Leads: Counter call sites: fetches per host, calc starts and time-outs, press outcome; Optional wear key (unset by default); Update from a local zip: verify, build beside, self-test, stage.",
    "merge_order": [
+    "TC-CALC-CONFINE-LUA",
     "RUN-METRICS-SITES",
     "TC-WORN-KEY",
     "DEP-11",
@@ -10673,7 +10673,8 @@
    "files": [
     "server/al/theorycraft/bridge.lua",
     "tests/test_tc_bridge.py",
-    "tests/test_tc_pob_drift_guard.py"
+    "tests/test_tc_pob_drift_guard.py",
+    "tests/test_marks.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -10703,7 +10704,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. bridge.lua only: one lockdown block after the HeadlessWrapper load (after line 289) and a test-only command. Whether PoB's headless path needs ffi or native modules is settled by the live bridge tests first; whatever it needs stays and the commit says so. Run the live rows at below-normal priority.",
-   "wave": 14,
+   "wave": 15,
    "owner": "session",
    "tier": "P2",
    "cluster": "TC"
@@ -11171,7 +11172,8 @@
    ],
    "files": [
     "server/al/state.py",
-    "server/al/text/itemcheck.py"
+    "server/al/text/itemcheck.py",
+    "tests/test_glance_rules.py"
    ],
    "new_files": [
     "server/al/text/buildlive.py",
@@ -11447,8 +11449,8 @@
    "new_files": [
     "tools/watch_sources/ggg_docs.py",
     "tools/watch_sources/pob_release.py",
-    "ops/loop/watch_rows/ggg_docs.json",
-    "ops/loop/watch_rows/pob_release.json",
+    "ops/loop/watch_rows/ggg-docs.json",
+    "ops/loop/watch_rows/pob-release.json",
     "tests/test_watch_settled.py"
    ],
    "integrator_edits": [
