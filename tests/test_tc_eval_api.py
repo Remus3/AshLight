@@ -152,9 +152,15 @@ def test_weights_get_put_persist(env):
     status, doc = req(srv, "GET", "/api/weights")
     assert status == 200 and doc["weights"] == wm.DEFAULT_WEIGHTS and doc["load_error"] is None
     assert wm.default_path(rt).is_file()
+    # TC-WEIGHTS-DELTA-STORE: GET also carries the defaults and the changes
+    assert doc["defaults"] == wm.defaults()
+    assert doc["changed"] == {"weights": {}, "sidegrade": {}}
     new = {"weights": {"+# to maximum Life": 5}, "sidegrade": {"abs": 0, "pct": 0}}
     status, doc = req(srv, "PUT", "/api/weights", new)
     assert status == 200 and doc["weights"] == {"+# to maximum Life": 5}
+    assert doc["changed"]["weights"]["+# to maximum Life"] == 5
+    assert doc["changed"]["weights"]["+# to maximum Mana"] is None
+    assert doc["changed"]["sidegrade"] == {"abs": 0, "pct": 0}
     assert req(srv, "PUT", "/api/weights", {"weights": {"a": "x"}})[0] == 400
     assert req(srv, "PUT", "/api/weights", {"weights": {"a": 1}}, ctype="text/plain")[0] == 415
     # the score uses the stored weights at once, and a fresh core reloads them
