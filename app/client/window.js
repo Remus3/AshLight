@@ -306,9 +306,24 @@ function createClient(opts) {
       Link.isCoreUrl(e.senderFrame.url, port));
   }
 
-  /* Show the window (create it when closed) and the tray. */
+  /* Show the window (create it when closed) and the tray.
+     REL-AUTOSTART-TRAY (decision 0041 amendment 2026-11-18): the FIRST
+     open of a --client --tray start (the opt-in logon task) builds the
+     tray and connects the core (starting it through the launcher when it
+     does not answer) but creates no window and takes no focus; the overlay
+     follows the log as always (decision 0029). Any later open (a tray
+     click, the Start Menu shortcut's --client start) shows the window. */
+  let firstOpen = true;
   function open() {
     ensureTray();
+    const trayOnly = firstOpen &&
+      Link.wantsTray(Array.isArray(opts.argv) ? opts.argv : process.argv);
+    firstOpen = false;
+    if (trayOnly) {
+      log("client: tray-only start (logon); no window until asked");
+      connect();
+      return;
+    }
     if (win && !win.isDestroyed()) {
       if (win.isMinimized()) { win.restore(); }
       win.show();

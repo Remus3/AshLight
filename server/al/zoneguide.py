@@ -5,14 +5,17 @@ guidance, shown by itself on every zone change (zero clicks):
 - the zone's objective, the optional content worth doing (permanent
   rewards such as spirit, resistances and passive points), a layout
   tendency and the next zone on the main path, all AshLight's own words
-  in the tracked file `server/al/data/zone_guide.json` (decision 0009: no
+  in the one tracked zone file `server/al/data/zone_guide.json` (the zone
+  notes of decision 0030 live in its `layout` fields; decision 0009: no
   wiki or poe2db prose; a fact we are not sure of is left out, never
   guessed);
 - waypoint and the nearest waypoint from the build-time world_areas
   snapshot's `has_waypoint` / `connections` fields (decision 0020; read
   only, never fetched here, and the guide works without it);
 - a clear-or-push lean from the player's level against the zone level
-  (the log's area level, else the snapshot's);
+  (the log's area level, else the snapshot's), "clear" by the one
+  under-level gap rule (the "underlevel_gap" setting, decision 0043
+  amendment 2026-11-19);
 - a quest tracker per character (decision 0038 keying): the zones the
   character entered, from the `[SCENE]` lines already tailed. A main-path
   step counts as done once the character entered the zone after it; an
@@ -34,6 +37,7 @@ from pathlib import Path
 
 from . import acts as acts_mod
 from . import hotreload, jsonfile, runhistory
+from . import underlevel as underlevel_mod
 
 PATH = Path(__file__).resolve().parent / "data" / "zone_guide.json"
 FILE_NAME = "zone_visits.json"
@@ -414,12 +418,15 @@ def _steps(doc, key, visits):
     return out
 
 
-def advice(level, zone_level):
-    """{"mode": "clear"|"push"|"fit", "text"} or None."""
+def advice(level, zone_level, gap=underlevel_mod.DEFAULT_GAP):
+    """{"mode": "clear"|"push"|"fit", "text"} or None. "clear" once the
+    zone is at least `gap` levels above the player: the same threshold as
+    the under-level line (the "underlevel_gap" setting; a bad value reads
+    as the default, underlevel.gap_setting)."""
     if not isinstance(level, int) or not isinstance(zone_level, int) or zone_level < 1:
         return None
-    if level < zone_level - 2:
-        n = zone_level - level
+    n = zone_level - level
+    if n >= underlevel_mod.gap_setting(gap):
         return {"mode": "clear", "text": CLEAR_TEXT.format(n=n, lv=_lv(n))}
     over = level - zone_level
     if over > 3 + level // 16:
@@ -483,15 +490,15 @@ def _line(zone, entry, adv):
 
 
 def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
-         zone_level=None):
+         zone_level=None, gap=underlevel_mod.DEFAULT_GAP):
     """The `zone_guide` part of the snapshot, or None outside a campaign
-    zone or map."""
+    zone or map. `gap` is the "underlevel_gap" setting."""
     if in_hideout or not zone:
         return None
     doc = doc if isinstance(doc, dict) else {}
     graph = graph if isinstance(graph, dict) else {}
     zl = area_level if isinstance(area_level, int) and area_level > 0 else zone_level
-    adv = advice(level, zl)
+    adv = advice(level, zl, gap)
     if acts_mod.is_endgame(area_id):
         e = doc.get("endgame") if isinstance(doc.get("endgame"), dict) else {}
         entry = {"objective": _clean(e.get("objective")), "layout": _clean(e.get("layout")),

@@ -61,33 +61,52 @@ On the dashboard (the overlay shows the first three in a small corner box):
 
 Needs Python 3.11 or newer (take 3.13 or newer for a new install: python.org
 has no Windows installer for 3.11 or 3.12 any more). Node.js 22.12.0 or newer
-is only needed for the optional overlay. Two calls install and start it:
+is only needed for the optional overlay. Releases: none yet, so AshLight runs
+from a copy of this repository's source. One command sets it up:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # checks, folders, overlay packages
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1     # core, supervisor, overlay (if installed), dashboard
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoOverlay   # same, without the overlay
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoBrowser   # same, prints the dashboard link instead
-powershell -ExecutionPolicy Bypass -File scripts\stop.ps1    # stops every AshLight process
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # checks, folders, desktop client packages, shortcut
+```
+
+Then start AshLight from its shortcut: setup puts an "AshLight" shortcut in
+the Start Menu and on the desktop (when Node.js is installed; `-NoShortcut`
+skips it). Starting it is one click. It starts the core and opens the
+AshLight desktop client: the companion window with the dashboard, a tray icon
+and the in-game overlay. Closing the window with X keeps AshLight running in
+the tray; click the tray icon to bring the window back. Right-click the tray
+icon for the menu: Minimize or Restore AshLight, Show in-game overlay, Open
+AshLight when the game wakes, Restart overlay and Quit AshLight.
+
+With the opt-in logon autostart (below), AshLight starts in the tray at
+logon with no window and no click; the overlay appears once the game is
+running.
+
+The same starts from a terminal, also without Node.js:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1              # core, supervisor and the desktop client (the browser dashboard without the client)
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoOverlay   # no client, so no overlay: the dashboard opens in the browser
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoBrowser   # no window at all: the core and supervisor only
 ```
 
 Every script is safe to run again: a finished step is skipped, and `run.ps1`
 starts only the parts of AshLight that are not already running. A keepalive
-supervisor restarts the core if it dies; `stop.ps1` is a stop it respects.
-`run.ps1 -Port 8961` (or `"port"` in `config/local.json`, or the `AL_PORT`
-environment variable) moves AshLight to another port in 8960-8979.
+supervisor restarts the core if it dies; a stop from the tray or `stop.ps1`
+is one it respects.
 
 Optional extras:
 
 - `scripts\setup.ps1 -TcCalc` (or `"tc_calc": true`) fetches the optional
   calc component (Path of Building PoE2 source and LuaJIT, hash-pinned) for
   full build numbers in item checks. Off by default.
-- `scripts\autostart.ps1 -Enable` starts AshLight at logon (a current-user
-  scheduled task); `-Disable` removes it. Off by default.
+- `scripts\autostart.ps1 -Enable` starts AshLight in the tray at logon (a
+  current-user scheduled task; no window, and the overlay appears once the
+  game is running); `-Disable` removes it. Off by default.
 
 Logs, caches and build output go to the AshLight sidecar folder (printed by
-`python -m server.al.paths`; the `AL_SIDECAR_ROOT` environment variable moves
-it), never into the repository's tracked files or the drive root.
+`python -m server.al.paths` as `sidecar`; the `AL_SIDECAR_ROOT` environment
+variable moves it), never into the repository's tracked files or the drive
+root.
 
 Without the scripts:
 
@@ -98,8 +117,8 @@ python -m server.al --no-tail --replay tests/fixtures/client_sample.txt   # demo
 ```
 
 Open the printed link (it carries a one-time access token after `#token=`).
-The overlay toggles with Alt+Shift+A. Play in Windowed Fullscreen so the
-overlay can sit on top of the game.
+The overlay toggles with Alt+Shift+A by default. Play in Windowed Fullscreen
+so the overlay can sit on top of the game.
 
 Optional per-computer settings live in `config/local.json` (not tracked;
 `setup.ps1` copies `config/local.example.json` once):
@@ -110,6 +129,51 @@ track), `poll_ms` (log poll interval, default 250), `overlay_toggle` and
 for prices), `contact` (how poe.ninja and GGG can reach you, sent in the
 User-Agent; without it price fetches stay off) and `tc_calc` (the optional
 calc component).
+
+### Stop
+
+Right-click the AshLight tray icon and choose Quit AshLight: it stops the
+core, the supervisor and the overlay. Closing the window with X does not
+stop AshLight. Without the client, or from a terminal:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\stop.ps1    # stops every AshLight process
+```
+
+### Update
+
+Releases: none yet, so an update is a source update. Quit AshLight, run
+`git pull` in your copy of the repository, run the setup command above again
+(it redoes only what changed and keeps your settings), then start AshLight
+from its shortcut.
+
+### Uninstall
+
+There is no uninstall script yet; these are the steps by hand:
+
+1. If you turned on the logon autostart, turn it off:
+   `scripts\autostart.ps1 -Disable`.
+2. Stop AshLight (tray Quit AshLight, or `scripts\stop.ps1`).
+3. Note the sidecar folder: `python -m server.al.paths` prints it as
+   `sidecar` (run it before you delete the repository folder).
+4. Delete the two AshLight shortcuts, in the Start Menu and on the desktop.
+5. Delete the repository folder (your settings in `config/local.json` and
+   your run history in `ops/runtime/` go with it) and the sidecar folder.
+
+### Troubleshooting
+
+- Something missing or wrong: open the dashboard's Settings tab and the
+  Checks list. Each failing check names its fix. Copy report copies a short
+  plain-text report with no file paths, names, contact or chat in it; paste
+  it where you ask for help.
+- Port 8960 taken by another program: set `"port"` in `config/local.json`
+  to another port in 8960-8979 (the shortcut and the scripts both read it),
+  or start once with `scripts\run.ps1 -Port 8961`. The `AL_PORT` environment
+  variable works too.
+- The overlay does not show over the game: play in Windowed Fullscreen,
+  check that Show in-game overlay is ticked in the tray menu, and try
+  Restart overlay there. The overlay hides itself after 20 minutes with no
+  game activity and comes back with the next log line.
 
 ## Privacy and consent
 
@@ -156,6 +220,26 @@ click-through and never takes focus; it shows the same feed in a tiny corner
 box. Build numbers come from Path of Building PoE2: the ones saved in your
 build code, and more when the optional calc component runs it unmodified as a
 separate process. AshLight has no damage calculator of its own.
+
+## How this repository is run
+
+AshLight is built by one maintainer with AI coding assistants. The files
+`CLAUDE.md`, `AL-NEXT-SESSION.txt` and `ROADMAP.md` and the folders `ops/` and
+`docs/` are that development process: the assistants' rules, the hand-off
+between work sessions, the work list, research notes and decision records. You
+can ignore them to use AshLight or to read its code.
+
+The process is AI-assisted and operator-reviewed: the maintainer reviews every
+change, and every commit is gated by the test suite, an identity check (no bot
+author and no AI co-author line) and a leak sweep (no machine path, account id
+or e-mail address in any tracked file).
+
+The development loop, not the app, reads a few public web pages unattended:
+once a day the Path of Building PoE2 releases list (decision 0025) and GGG's
+developer documentation pages (decision 0044). The app itself fetches nothing
+unless you turn web data on.
+
+Releases: none yet, install from source (see the quick start above).
 
 ## Disclaimer
 

@@ -281,3 +281,94 @@ def test_diag_module_makes_no_request():
             names |= {node.module or ""} | {a.name for a in node.names}
     for bad in ("webfetch", "urllib", "http", "socket", "ninja", "subprocess"):
         assert not any(bad in n for n in names), bad
+
+
+# -- OBS-CRASH (F-105): the last unclean exit of the core and the client
+
+START = NOW - 120
+
+
+def _exit_ids(facts):
+    return [r["id"] for r in diag.checks(dict(GREEN, started_at=START, **facts), NOW)
+            if r["id"] in ("last_exit", "client_exit")]
+
+
+def test_unclean_core_exit_row():
+    for reason, word in (("crash", "unexpected error"), ("signal", "closed from outside"),
+                         ("supervisor-kill", "stopped responding")):
+        rec = {"at": START - 30, "pid": 7, "reason": reason, "detail": "ValueError: x"}
+        r = row({"started_at": START, "last_exit": rec}, "last_exit")
+        assert r["status"] == "note" and r["fix"] is None
+        assert word in r["detail"] and "(ValueError: x)" in r["detail"]
+        assert r["label"] == "Last stop"
+    # a worker thread's crash: the core may still run
+    rec = {"at": NOW - 30, "reason": "crash", "detail": "thread al-tail: KeyError: x"}
+    r = row({"started_at": START, "last_exit": rec}, "last_exit")
+    assert r["detail"].startswith("Part of AshLight stopped")
+    # a note, never a fix: the summary still says all pass
+    v = diag.view(dict(GREEN, started_at=START,
+                       last_exit={"at": START - 5, "reason": "crash", "detail": None}),
+                  "1", now=NOW)
+    assert v["failed"] == 0 and "[note] Last stop: AshLight stopped" in v["report"]
+
+
+def test_client_crash_or_relaunch_row():
+    for reason, word in (("crash", "unexpected error"), ("relaunch", "restarted itself")):
+        rec = {"at": NOW - 60, "pid": None, "reason": reason, "detail": None}
+        r = row({"started_at": START, "client_exit": rec}, "client_exit")
+        assert r["status"] == "note" and word in r["detail"]
+        assert r["detail"].startswith("The desktop app") and "()" not in r["detail"]
+
+
+def test_no_exit_row_after_a_clean_stop():
+    assert _exit_ids({}) == []
+    for reason in ("stop", "reload"):
+        assert _exit_ids({"last_exit": {"at": START - 5, "reason": reason}}) == []
+    assert _exit_ids({"client_exit": {"at": NOW - 5, "reason": "quit"}}) == []
+    # an unclean exit long before this start did not lead to it
+    old = START - diag.EXIT_WINDOW_S - 1
+    assert _exit_ids({"last_exit": {"at": old, "reason": "crash"},
+                      "client_exit": {"at": old, "reason": "crash"}}) == []
+    both = _exit_ids({"last_exit": {"at": START - 5, "reason": "crash"},
+                      "client_exit": {"at": NOW - 5, "reason": "relaunch"}})
+    assert both == ["last_exit", "client_exit"]
+
+
+def test_exit_detail_is_redacted_in_the_report(monkeypatch):
+    c, sep = "C" + ":", "\\"
+    home = sep.join([c, "Users", "SecretUser"])
+    monkeypatch.setenv("USERNAME", "SecretUser")
+    monkeypatch.setenv("USERPROFILE", home)
+    facts = dict(GREEN, started_at=START, _character="Cinderwisp",
+                 last_exit={"at": START - 5, "reason": "crash",
+                            "detail": "KeyError: Cinderwisp in " + home + sep + "x.py"},
+                 client_exit={"at": NOW - 5, "reason": "crash",
+                              "detail": "Error: SecretUser"})
+    v = diag.view(facts, "1", now=NOW)
+    blob = json.dumps(v)
+    for leak in ("Cinderwisp", "SecretUser", c + sep):
+        assert leak not in v["report"], leak
+    assert "Cinderwisp" not in blob
+    assert "<character>" in v["report"]
+
+
+def test_core_facts_read_both_exit_records(tmp_path):
+    from server.al import exitrecord
+    core = Core(runtime=tmp_path, tail=False)
+    f = core.diag_facts()
+    assert f["last_exit"] is None and f["client_exit"] is None
+    assert f["started_at"] == core.started_at
+    exitrecord.write(tmp_path, "crash", "ValueError: boom", now=core.started_at - 10)
+    (tmp_path / exitrecord.CLIENT_FILE).write_text(
+        json.dumps({"at": core.started_at + 1, "reason": "relaunch", "detail": None}),
+        encoding="ascii")
+    core.tick_diag(force=True)
+    ids = {r["id"]: r for r in core.state.snapshot()["diag"]["checks"]}
+    assert "ValueError: boom" in ids["last_exit"]["detail"]
+    assert "restarted itself" in ids["client_exit"]["detail"]
+    exitrecord.write(tmp_path, "stop", now=core.started_at - 10)
+    (tmp_path / exitrecord.CLIENT_FILE).write_text(
+        json.dumps({"at": core.started_at + 1, "reason": "quit"}), encoding="ascii")
+    core.tick_diag(force=True)
+    ids = {r["id"] for r in core.state.snapshot()["diag"]["checks"]}
+    assert "last_exit" not in ids and "client_exit" not in ids

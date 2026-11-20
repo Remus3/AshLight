@@ -89,6 +89,41 @@ def test_level_advice():
     assert zoneguide.advice(13, 10)["mode"] == "fit"        # over by 3
     assert zoneguide.advice(40, 33)["mode"] == "push"       # 7 > 3 + 2
     assert zoneguide.advice(37, 33)["mode"] == "fit"
+    # DATA-GUIDE-MERGE (M3): one level-gap rule, the "underlevel_gap"
+    # setting; the default is underlevel's and a bad value reads as it
+    assert zoneguide.advice(7, 10)["mode"] == "clear"       # 3 under, default 3
+    assert zoneguide.advice(6, 10, 5)["mode"] == "fit"      # setting 5: silent at 4
+    assert zoneguide.advice(5, 10, 5)["mode"] == "clear"
+    assert zoneguide.advice(9, 10, 1)["mode"] == "clear"
+    for bad in (None, 0, 21, "5", True):
+        assert zoneguide.advice(7, 10, bad)["mode"] == "clear", bad
+    st = _state(level=6)
+    assert _enter(st, "G1_1", "The Riverbank", 10)["advice"]["mode"] == "clear"
+    st.set_underlevel_gap(5)
+    assert st.snapshot()["zone_guide"]["advice"]["mode"] == "fit"
+    assert st.snapshot()["underlevel"] is None              # the same rule: both silent
+    st.set_underlevel_gap(4)
+    assert st.snapshot()["zone_guide"]["advice"]["mode"] == "clear"
+    assert st.snapshot()["underlevel"]["gap"] == 4
+
+
+def test_one_data_file_and_no_zone_note_in_the_snapshot():
+    """DATA-GUIDE-MERGE (F-122): zone_guide.json is the only authored zone
+    file; the notes module, its data file, its hot reload watch and the
+    snapshot key are gone."""
+    import importlib.util
+    from pathlib import Path
+    from server.al import hotreload
+    root = Path(zoneguide.__file__).resolve().parent
+    assert not (root / "zonenotes.py").exists()
+    assert not (root / "data" / "zone_notes.json").exists()
+    assert importlib.util.find_spec("server.al.zonenotes") is None
+    assert sorted(p.name for p in (root / "data").glob("zone_*.json")) == ["zone_guide.json"]
+    assert not any(w.name == "Zone notes" for w in hotreload.REGISTRY.watches())
+    st = _state()
+    assert "zone_note" not in st.snapshot()
+    _enter(st, "G1_1", "The Riverbank")
+    assert "zone_note" not in st.snapshot()
 
 
 def test_quest_tracker_steps_and_skipped_bonus_per_character():
@@ -232,6 +267,59 @@ def test_shipped_guide_shape_and_text():
     short = SHIPPED["endgame"].get("short")
     assert short is None or (isinstance(short, str) and short.isascii()
                              and len(short) <= zoneguide.MAX_SHORT)
+
+
+# The campaign zones that had a zone note (zone_notes.json, decision 0030)
+# before DATA-GUIDE-MERGE folded the notes into the guide.
+NOTE_ZONES = {
+    "G1": ["The Riverbank", "Clearfell Encampment", "Clearfell", "Mud Burrow",
+           "The Grelwood", "The Red Vale", "The Grim Tangle", "Cemetery of the Eternals",
+           "Mausoleum of the Praetor", "Tomb of the Consort", "Hunting Grounds",
+           "Freythorn", "Ogham Farmlands", "Ogham Village", "The Manor Ramparts",
+           "Ogham Manor"],
+    "G2": ["Vastiri Outskirts", "The Ardura Caravan", "Traitor's Passage",
+           "The Halani Gates", "Keth", "The Lost City", "Buried Shrines",
+           "Mastodon Badlands", "The Bone Pits", "Valley of the Titans",
+           "The Titan Grotto", "Deshar", "Path of Mourning", "The Spires of Deshar",
+           "Mawdun Quarry", "Mawdun Mine", "The Dreadnought's Wake", "Dreadnought"],
+    "G3": ["Sandswept Marsh", "Ziggurat Encampment", "Jungle Ruins", "The Venom Crypts",
+           "Infested Barrens", "Chimeral Wetlands", "Jiquani's Machinarium",
+           "Jiquani's Sanctum", "The Azak Bog", "The Matlan Waterways", "The Drowned City",
+           "The Molten Vault", "Apex of Filth", "Temple of Kopec", "Utzaal", "Aggorat",
+           "The Black Chambers"],
+    "G4": ["Kingsmarch", "Isle of Kin", "Volcanic Warrens", "Kedge Bay", "Journey's End",
+           "Whakapanu Island", "Singing Caverns", "Abandoned Prison",
+           "Solitary Confinement", "Eye of Hinekora", "Halls of the Dead", "Shrike Island",
+           "Arastas", "The Excavation"],
+}
+# Zones whose guide entry already had a layout tendency: the note was dropped.
+KEPT_LAYOUT = {("G1", "Clearfell"), ("G1", "Hunting Grounds"), ("G2", "Keth"),
+               ("G3", "Ziggurat Encampment"), ("G3", "Jungle Ruins"),
+               ("G3", "Temple of Kopec")}
+
+
+def test_every_campaign_zone_note_text_survives_in_the_guide():
+    """DATA-GUIDE-MERGE: every zone that had a note still has tip text in
+    its guide entry: the note itself as `layout` (with the note's own src /
+    checked pair, F-097), or the guide's own layout where it had one."""
+    assert sum(len(v) for v in NOTE_ZONES.values()) == 65
+    for key, zones in NOTE_ZONES.items():
+        table = SHIPPED["acts"][key]["zones"]
+        for zone in zones:
+            z = table[zone]
+            layout = z.get("layout")
+            assert isinstance(layout, str) and layout.endswith("."), (key, zone)
+            assert layout.isascii() and "!" not in layout, (key, zone)
+            if (key, zone) in KEPT_LAYOUT:
+                assert "src" not in z, (key, zone)     # unchanged entry
+                assert " tend" in layout, (key, zone)   # a layout tendency
+            else:
+                assert len(layout) <= 110, (key, zone)   # the old MAX_NOTE
+                assert (z.get("src"), z.get("checked")) == ("research:0025", "2026-11-17"),                     (key, zone)
+    # the moved notes show on the guide view
+    v = zoneguide.view(SHIPPED, {}, "G1_1", "The Riverbank", False, 1, 1, None)
+    assert v["layout"] == SHIPPED["acts"]["G1"]["zones"]["The Riverbank"]["layout"]
+    assert v["layout"].startswith("First zone")
 
 
 @pytest.mark.skipif(not acts.default_path().is_file(), reason="world_areas snapshot not fetched")

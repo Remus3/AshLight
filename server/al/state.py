@@ -19,7 +19,6 @@ from . import playview as playview_mod
 from . import runs as runs_mod
 from . import summary as summary_mod
 from . import underlevel as underlevel_mod
-from . import zonenotes
 from . import zoneguide as zoneguide_mod
 from .theorycraft import buildlive as buildlive_mod
 from .theorycraft import cardparts
@@ -1403,14 +1402,6 @@ class SessionState:
         return changed
 
     # -- UTIL-SESSION-SUMMARY
-    def _zone_note(self):
-        """UX-ZONE-NOTES: {"text", "source", "zone"} for the campaign zone
-        the player is in, else None. Caller holds the lock."""
-        if self.in_hideout:
-            return None
-        note = zonenotes.note_for(self.area_id, self.zone)
-        return dict(note, zone=self.zone) if note else None
-
     def _zone_guide_view(self):
         """ZONE-GUIDE: the guide for the zone the player is in. Caller
         holds the lock."""
@@ -1424,7 +1415,8 @@ class SessionState:
                   if self.visits.by_name else None)
         return zoneguide_mod.view(self.zone_guide, self.area_graph, self.area_id,
                                   self.zone, self.in_hideout, self.level,
-                                  self.area_level, visits, zone_level)
+                                  self.area_level, visits, zone_level,
+                                  self.underlevel_gap)
 
     def _counters(self):
         return {"level": self.level, "level_ups": self.level_ups,
@@ -1697,8 +1689,6 @@ class SessionState:
                 "underlevel": underlevel_mod.view(
                     self.level, self.area_level, self.area_id, self.zone,
                     self.in_hideout, self.zone_table, self.underlevel_gap),
-                # UX-ZONE-NOTES (decision 0030): our own note for this zone
-                "zone_note": self._zone_note(),
                 # ZONE-GUIDE (decision 0043): the live zone guide and tracker
                 "zone_guide": self._zone_guide_view(),
                 # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039)

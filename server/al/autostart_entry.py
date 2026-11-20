@@ -8,9 +8,13 @@ with the checkout root as its working directory (scripts/autostart.ps1
 registers it through scripts/al_shell.ps1). pythonw has no console, so
 nothing flashes at logon. This module checks the recorded opt-in
 (<runtime>/autostart.json, written by autostart.ps1) and, only when it is
-on, starts scripts/run.ps1 -NoBrowser -Autostart with CREATE_NO_WINDOW and
-does not wait. run.ps1 -Autostart checks the opt-in again, so a task left
-behind after -Disable never starts anything.
+on, starts scripts/run.ps1 -Autostart with CREATE_NO_WINDOW and does not
+wait. run.ps1 -Autostart checks the opt-in again, so a task left behind
+after -Disable never starts anything; it then starts the desktop client
+tray-only (--client --tray: tray and overlay, no companion window, the
+overlay gated by the log) when the client is installed, else the core
+alone, and never opens the browser (REL-AUTOSTART-TRAY, decision 0011
+amendment 2026-11-18).
 
 Windows PowerShell is started by its System32 path built from %SystemRoot%
 at run time (SEC-ACL-SETUP, decision 0051), never by a bare name a PATH
@@ -34,7 +38,7 @@ from server.al import paths
 
 MODULE = "server.al.autostart_entry"
 OPTIN_NAME = "autostart.json"
-RUN_ARGS = ("-NoBrowser", "-Autostart")
+RUN_ARGS = ("-Autostart",)
 PS_REL = ("System32", "WindowsPowerShell", "v1.0", "powershell.exe")
 LOG_NAME = "run.log"
 
@@ -77,7 +81,8 @@ def run_script(root=None):
 
 def launch_command(root=None, environ=None):
     """The hidden run.ps1 start: [powershell, flags, -File, run.ps1,
-    -NoBrowser, -Autostart]; None when %SystemRoot% is unset."""
+    -Autostart]; None when %SystemRoot% is unset. run.ps1 -Autostart picks
+    the tray-only client or the core alone."""
     ps = powershell_exe(environ)
     if ps is None:
         return None

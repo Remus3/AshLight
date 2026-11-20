@@ -19,7 +19,6 @@ from ci_timing import ci_scale
 from server.al import __main__ as entry
 from server.al import acts, diag, hotreload, paths, ports
 from server.al import keepalive as ka
-from server.al import zonenotes
 from server.al.core import Core
 from server.al.http import serve
 
@@ -230,12 +229,6 @@ def test_existing_caches_keep_last_good(tmp_path):
     assert good["G1"][0]["name"] == "Riverbank"
     _bump(f, "{half written")
     assert cache.get() is good and "Zone level table" in cache.error
-
-
-def test_zone_notes_are_watched():
-    assert zonenotes._watch in hotreload.REGISTRY.watches()
-    assert zonenotes.load() is zonenotes._watch.get()
-    assert zonenotes.load()  # the tracked file loads
 
 
 # ---- TreeWatch / dev_enabled ----------------------------------------------
