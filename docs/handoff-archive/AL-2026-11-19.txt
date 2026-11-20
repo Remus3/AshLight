@@ -118,3 +118,139 @@ Do NOT redo (session 8, all on main): waves 4, 5 and 6 are closed (13 + 13 +
 12 packages, pointer `wave 6 done, next wave 7`); GP-09 is done (private
 repository created, main pushed, decisions 0079 and 0080, gate 12 held on ci
 run 44488095493 attempts 1 and 2); the 0051 full bullet is in CLAUDE.md.
+
+*** SESSION 11 /done (2026-11-19): closed records moved from AL-NEXT-SESSION.txt ***
+Wave 12 (session 11): 12 plan packages plus fold FIX-SHELL-WRAP and the two loop leftovers TEST-LOOP-SPLIT-MERGE and REL-INSTALL-CALC; 14 merged in 4 batches (batch 1 widened to 5 merges), OVL-NPM-LOCK deferred (batch 2 culprit; one second suite, escapes 1); suites 3738 / 3745 + 2 failed, then 3737 / 3817 / 3833 passed, 6 skipped, timing 30 each; npm 499 / 503 / 503 / 503; main fe2e307.
+Wave 11 (session 11): 13 plan packages plus 3 fold packages merged in 4 batches (batch 1 widened to 6 merges), no deferral, no second suite (one infrastructure retry in batch 1: a 36-column PowerShell console wrapped an expected error text); suites 3546 / 3658 / 3688 / 3688 passed, 6 skipped, timing 30 each; npm 497 / 497 / 497 / 499; main 6da7ea6.
+Wave 10 (session 11): 12 of 12 merged in 3 batches of 4, no deferral, no second suite (escapes 0); suites 3427 / 3472 / 3550 passed, 6 skipped, npm 482 / 494 / 495; main 7f60e6c.
+- WAVE-12 RULINGS (adjudicator, 2026-11-19; records in the batch 1, 2 and 4 integrator commit bodies): FIX-SHELL-WRAP ran as a fold package (tests/test_shell_integration.py only, whitespace-insensitive match of PowerShell error text; no row, precedent FIX-CI-MARKS; batch 1 widened to 5); the loop leftovers TEST-LOOP-SPLIT-MERGE and REL-INSTALL-CALC (kept refs refs/al/keep/*, failed only on that flake) were rebuilt on main and merged as batch 4, their failed loop records left for the loop's own LOOP-FAILED-PARK step to mark superseded once the rows are done (no hand edit of loop_items); TEST-LOOP-SPLIT-LANES was held with a temporary close tag during the wave, removed at close; new loop-owned row LOOP-GATE-RERUN filed as docs/roadmap/new/LOOP-GATE-RERUN.md (no packages.json entry); OVL-NPM-LOCK deferred, row retagged "BLOCKED: session wave 13", stays wave 12 in packages.json (DEFERRED line carries it). The extra items were an operator-side order relayed by the coordinator.
+- WAVE-12 DEVIATIONS (recorded): REL-AUTOSTART-TRAY did not run its live tray-only idle memory check (tray_idle.json <= 250 MB): the wave floor bars starting Electron; basis decision 0002 UX-OVL-RAM, recorded in the 0011 amendment; the measurement is owed by RUN-BUDGET-LOG-CLIENT (wave 14). PUB-README-PLAYERS took one fix round to word logon autostart as REL-AUTOSTART-TRAY's tray-only start.
+- WAVE-11 RULINGS (adjudicator, 2026-11-19; records in the batch 1 and batch 4 integrator commit bodies): TC-EVAL-CLEAR-API folded into TC-WORN-WIRE (+server/al/theorycraft/live.py; LastEval.clear(), Core._empty_press uses it); TEST-E2E-REPEAT-SELF and TEST-PLAY-PORT-LEASE folded into fold package TEST-LEASE-TIDY (tests/test_math_e2e_live.py, tests/play_states.py; also fixed tests/test_play_states.py recipe e, red on main when run alone since RUN-BUILD-STAMP-CORE reads .git: outside() now allows read-only opens of the git metadata); PLAY-CAMPAIGN-HINTS-C and PLAY-N-FIT ran as own wave-11 packages (batch 4, after PLAY-LEGACY-OUT-2); REL-AUTOSTART-ENTRY widened by tests/test_shell_integration.py (only "ScheduledTask" left the banned tuple, a DEP-07 placeholder; asserts for the three *-AlLogonTask functions, no -RunLevel Highest, no SYSTEM principal). No row carries "BLOCKED: session wave 11"; all five are flipped by done files (the ROADMAP.md / row-file text is folded at /done).
+- WAVE-11 DEVIATIONS (recorded, not repeated): (1) a separate pre-batch integrator commit efcefcc on w11-int landed plan 10 (coordinator order; main was red on test_audit_batch4 after 88494aa / ba12986): CLAUDE.md Settled bullets for 0081-0083, 12 packages in waves 38-42 (UI-CARD-COLLAPSE moved to wave 41 for a web-shell / stores.py clash; KINDLER chain needs 5 waves; one session 11 of about 9 h), ROADMAP rows, 07 sections, index lines for research 0060 and decisions 0081-0083; plan_check ok 408 packages, 44 waves. (2) batch 1 held 6 merges: the 4 planned plus TEST-LEASE-TIDY (fixes a red-alone test that made batch suites order-dependent) and FIX-CI-MARKS (coordinator CI fix 86f8153, stable bad-gzip parametrize ids, tests/test_webfetch_gzip.py only; no row). (3) PLAY-CAMPAIGN-HINTS-C and PLAY-N-FIT were built from main after batch 1 (base bac5a08), not from the wave base.
+- INCIDENT (REL-AUTOSTART-ENTRY builder, 2026-11-19): the first test run registered a real task in a scratch Task Scheduler folder \AshLightShellScratch\<id>\ (never the live task; ScheduledTasks is a CDXML module whose load replaced the test doubles); the same test's -Disable removed it at once, the empty scratch folders were deleted, the tests now double all 7 ScheduledTasks commands, check them before any task code runs and read the scheduler back before and after (verifier read back: no scratch folder, no AshLight Autostart task). Hand-off note only (adjudicator).
+- WAVE-10 RULINGS (adjudicator, 2026-11-19, records in commits 2c5753e and the merge bodies): wave-9 rows retagged PLAY-N-FIT, TEST-E2E-REPEAT-SELF, TEST-PLAY-PORT-LEASE to wave 11, RUN-UNREADABLE-WORD to wave 20; TEST-TIMING-ALONE folded into TEST-GATE-CALLERS (flipped). OVL-COPY-FIRST widened to tests/test_price_check.py, test_glance_rules.py, test_tc_press_staged.py; PLAY-LEGACY-OUT-1 widened to app/test strip/registry/fmt and test_glance_rules.py (shared file, batch order). New rows filed: PLAY-CAMPAIGN-HINTS-C, TC-EVAL-CLEAR-API (both BLOCKED: session wave 11). OVL-CARD-NAME had no own row (folded in OVL-COPY-FIRST).
+- SESSION-10 ROWS (filed wave 8, tagged "BLOCKED: session wave 9", in NO
+  package of docs/plan/packages.json; row files under docs/roadmap/new, folded
+  into ROADMAP.md at session 10 /done): PLAY-N-FIT (region N overflow, owns
+  web/notice.css, web/notice.js only if needed; tests/play_fit_pending/n.txt
+  stays until it lands), RUN-UNREADABLE-WORD (SRW-1/2: status word for the
+  "Client.txt can't be read" state), TEST-PLAY-PORT-LEASE (tests/play_states.py
+  onto lease_port()), TEST-E2E-REPEAT-SELF (test_repeat_press_uses_cached_probes
+  self-contained), TEST-TIMING-ALONE (no -m timing tests beside busy xdist
+  workers). The brief named six; read back 2026-11-19: only these five carry
+  the tag (ROADMAP, row files, archived hand-off line "Rows filed"), no sixth
+  exists. The next session folds each into a package or retags it (Next
+  action step 2). Resolved in wave 11 (see WAVE-11 RULINGS).
+- DEVIATION (session 10, waves 8 and 9): two red batch suites were fixed
+  forward on package branches by adjudicator ruling instead of revert and
+  defer (08 section 4 step 6): wave 9 batch 2 (OVL-SHELL-GUARDS fixture
+  URLs, tests/test_sidecar_paths.py) and batch 1 (TC-PRESS-STAGED-LIVE,
+  tests/test_marks.py). Recorded, not repeated.
+- DEVIATION (session 10, waves 8 and 9): worktree hook still not wired
+  (OA-12); builders ran tools/wt_sidecar_hook.py by hand.
+- REGION N OVERFLOW (session 9 /done): filed as row PLAY-N-FIT (adjudicator 2026-11-19), still open; see SESSION-10 ROWS. Region N fails G1 and G4 at 1024x700 and 1920x875 (20 overflow + 20 slack findings, tests/play_fit_pending/n.txt). Resolved in wave 11 (see WAVE-11 RULINGS).
+- DEVIATION (session 9, wave 7): builders made their worktrees under the sidecar with the hook script by hand, not harness isolation, because decision 0012's hook entries are not wired into .claude/settings.json; OA-12 stays open (bullet below).
+- S5-FOLLOWUP (replaced by rows DATA-GUIDE-MERGE, DATA-GUIDE-BOSS,
+  DATA-GUIDE-ONE-BLOCK, DATA-GUIDE-FACTS, DATA-GUIDE-GAP-TUNE).
+- NOTE (01 OPERATOR GitHub remote; old act d): GP-01 to GP-09 and
+  PUB-LOCAL-ONLY-TEXT are done (GP-09 in session 8: private repository
+  created, main pushed, gate 6 amended by decision 0079, CI timing and
+  backlog by decision 0080, gate 12 held on ci run 44488095493 attempts 1
+  and 2); the rows behind it (GP-10 next, GP-12 the public flip) follow
+  07 "Operator go for publishing".
+- NOTE (01 LOOP-PARSER-FIX, L1 to L4): row ids with a dot or a colon are
+  invisible to the loop (AUTO-03, wave 1); handoff_session() misses the
+  SESSION line above because of its trailing comment (AUTO-01, wave 2);
+  hand-off bullets become loop work without a LOOP: prefix
+  (LOOP-HANDOFF-PREFIX, wave 2); 12 stale failed loop_items records
+  (LOOP-FAILED-PARK, wave 3).
+- NOTE (01 CORE-LOG-NO-FALLBACK, L13): a configured but missing log path
+  falls back to the live Client.txt; row SEC-NO-DISCOVERY (wave 1, merges
+  first and alone).
+- NOTE (01 CORE-DEMO-MODE, L14): no isolated instance is possible; rows
+  SEC-DEMO-CORE wave 2, SEC-DEMO-ENTRY wave 3.
+- NOTE (01 DOC-DECISION-TIDY, L9): stale "Open (UNVERIFIED)" entries in
+  decisions 0013 and 0015; row LOOP-DECISION-TIDY wave 2.
+- NOTE (close-out 2, 2026-11-18; 07 Rulings 2026-11-18 (close-out 2),
+  decision 0078): the six rulings that had been ruled but not applied
+  (LE-69, LE-76, LE-92, LE-99, LE-100, LE-96) and six new ones (R1 to R6)
+  are applied; nothing of them waits for a ruling. Left for their
+  packages: the loop_push switch (PUB-LOCAL-ONLY-TEXT, wave 4), the kit
+  report (AUTO-25 wave 2, LOOP-KIT-REPORT-SEND on OA-21), the B19 pointer
+  line in decision 0002 (OVL-FPS, parked on OA-33), the Scope sentence of
+  decision 0076 (AUTO-19, parked behind GP-09), the ls-remote read-back
+  (GP-13, parked). Waves 4, 18, 19 and 22 keep 14, 14, 13 and 13 worktree
+  packages (four batches, each with its own suite; ceiling 16).
+- NOTE (session 8 /done): decision 0051's full Settled bullet is in CLAUDE.md (SEC-ACL-SETUP and SEC-ACL-CHECK merged); test_audit_batch4 green.
+- NOTE (session 9 /done, 2026-11-19): fleet_done.py reap --apply: 13 removed (the w7-* package and int worktrees, branches deleted, every commit on main by patch), 3 kept (lane-0, lane-1, lane-2; lane-0 and lane-1 hold the loop's verified OVL-CLIENT-ZOOM and AUTO-23 commits).
+- NOTE (session 10 /done, 2026-11-19): fleet_done.py reap --apply: the w8-* and w9-* package and integrator worktrees removed (branches deleted, every commit on main by patch); read back after: 0 removable, 3 kept (lane-0, lane-1, lane-2), 4 worktrees listed incl. main.
+Do NOT redo (session 10, all on main and pushed; main = origin/main =
+a8fb7bf read back before this hand-off): waves 8 and 9 closed, pointer
+"wave 9 done, next wave 10". Wave 8 merges: TEST-WEB-FMT 1cb288f,
+RUN-TAIL-HEAL-CORE 84feeaa, TEST-SELECT b1efb31, TEST-XDIST-DIAG 4337798
+(verdict "XDIST: cleared"), PLAY-TD-12-CONTEXT-SETUP 0c92686, GP-06 1d1006f,
+DEP-03 d08a693, DEP-01 ad1e1ad, REL-SUBJECT-CHECK 9491712,
+DATA-WEBFETCH-GZIP 991a55e, OVL-ELECTRON-PIN 0f18d47, TEST-HTTP-ROUTES
+a5a3a7e. Wave 9: RUN-ZONE-RESET, REL-PINFETCH, OVL-LINKS-DOWNLOADS,
+OVL-SHELL-GUARDS, DEP-04, DEP-06, DEP-07, DATA-PRICE-POLITE,
+TC-PRESS-STAGED-LIVE, TEST-WAVE-GATE-POLICY, TEST-WEB-REGISTRY,
+TEST-SUITE-RUNNER, plus GP-11 (repository description, topics and feature
+switches set; still PRIVATE). Loop lane rows OVL-CLIENT-ZOOM and AUTO-23
+merged (done row files folded at session 10 /done).
+Status (session 10 /done, 2026-11-19, fresh runs read back): whole suite
+through the suite gate 3401 passed / 6 skipped (rc 0); npm test --prefix app
+495/495; leak sweep --tree no HALT (ARMED needles=44); main was a8fb7bf =
+origin/main at start, plus the roadmap fold 9248cbd and this hand-off
+commit, pushed to origin (private repository); HALT absent (loop live);
+server health not probed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit
+v32 join), already recorded, no reply. Operator acts: none new; optional
+list docs/plan/09-operator-acts.md (OA-12, OA-4, OA-33 notable).
+- GP-10 is parked in wave 99 (deps GP-09 done, GP-06 wave 8, PUB-README-PLAYERS wave 12, PUB-SWEEP-OWN-ADDRESS wave 17); it is not next until those land.
+- OPERATOR before the first push (OA-1; rows GP-05, GP-09; conditional): gh auth login only if gh auth status fails (read back 2026-11-18: exit 0).
+- NOTE (01 L10): the zone notes of decision 0030 are not yet checked in
+  play; rows DATA-PROVENANCE wave 11, DATA-GUIDE-MERGE wave 12.
+- NOTE (wave 4 escape): four packages (PLAY-TD-01B-FIT-HARNESS,
+  PLAY-TD-03-TOKENS, TC-PRESS-STAGED-EVAL, TC-FILTER-ONE-CONTROL) passed
+  builder and verifier with a test-to-test import that
+  tests/test_test_layout.py refuses (none named it); builder and
+  verifier prompts (08 section 2 step 7, section 5) should add
+  tests/test_test_layout.py to every package's run.
+- NOTE (wave 5, process): a resumed integrator refused a CLAUDE.md edit
+  sent by message as not authorised; dispatch a fresh integrator per
+  batch. The batch 2 integrator pasted a stray "index: 0057" line into
+  CLAUDE.md (removed in 9e9d846): integrator briefs give the bullet text
+  only. The watcher agent returned after each slice; the orchestrator's
+  own background watch on the progress files did its job.
+- SESSION-7 ROWS FILED (open, folded into ROADMAP.md at session 7 /done):
+  TC-CARD-PARTS-DOC, TC-EVAL-NOTES-STYLE, TC-OVL-CARD-TONE,
+  CORE-REGOPEN-ROOT, WT-SIDECAR-WIRE (BLOCKED: operator paste of decision
+  0012's hook entries).
+Live at the session-5 /done (not probed again since): setup.ps1 created
+the Desktop and Start Menu AshLight shortcuts (electron.exe app --client,
+icon app\assets\icon.ico); the client was running (core 127.0.0.1:8960
+/api/health ok, tailing true). Probe /api/health and the process list
+before touching them; other pythonw processes belong to other trees. A
+wave agent never starts or stops the app, the core, the overlay or the
+loop (08, Rules).
+- NOTE: tree created 2026-11-16 by MAIN (operator order NEW-TREE-ASHLIGHT)
+  at kit v32; MAIN roster code AL, ports 8960-8979, sidecar <sidecar>.
+- NOTE (wave 4, PLAY-TD-01B-FIT-HARNESS builder): tests/play_states.py
+  TOKEN "p"*48 is not hex, so the dashboard rejects it (the fit harness
+  swaps in a hex token); fix in the next package that owns
+  tests/play_states.py.
+- NOTE (wave 5, TEST-PORT-LEASE): tests/play_states.py still uses
+  free_test_port() (a bind-only probe, no lease lock); move it onto
+  lease_port() and allow the lease folder in its recipe audit in the next
+  package that owns tests/play_states.py (with the hex TOKEN note above).
+- Play-fit markers (W7-MARKERS, session 9): t, b, c-zone, i, u deleted (cfeca99) after a probe with them removed read test_play_fit green; n.txt stays (region N still fails G1 and G4 at 1024x700 and 1920x875, 20 + 20 findings; owner the next package that owns web/notice.css or the N track), g.txt stays (FIX-IDLE-WORD); c-setup and the tab-* markers wait for their own regions. Delete n.txt and g.txt when tests/test_play_fit.py is green without them.
+- FIX-IDLE-WORD is retagged "BLOCKED: session wave 19" (session 10); g.txt
+  stays until it lands.
+- SESSION-7 FINDING (GP-04; for GP-05, wave 4): the CI Python 3.11 job
+  must run on a real Python exe, not a venv launcher, or
+  tests/test_procs.py fails.
+- SESSION-7 FINDING (for TEST-PORT-LEASE): tests/test_hot_reload.py uses
+  PORT_BLOCK[1]-1 = 8978, now an OAuth redirect port; harmless today.
+- SESSION-7 FINDING (for RUN-TAIL-HEAL-CORE): add state.py text for reset
+  reason 'continued' and events tailer_unreadable / tailer_readable, and
+  fix the "truncated ... reading from the start" sentence; the reader
+  already calls on_resume on every jump to the end.
