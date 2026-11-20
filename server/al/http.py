@@ -70,6 +70,8 @@ MAX_BODY = 4096
 # AREA-AUDIT P5-1: a config write refused (config/local.json unreadable or
 # not writable); nothing was changed
 SAVE_FAILED = "AshLight couldn't save the settings."
+# TC-WORN-WIRE: the worn-gear file could not be written
+WEAR_SAVE_FAILED = "AshLight couldn't save the worn item."
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
 # POST /api/eval: the item key's one clipboard text, an item or a copied
 # build (TC-PRESS-BUILD: the build size, app/eval_hotkey.js caps 256 KB)
@@ -833,6 +835,29 @@ class Handler(BaseHTTPRequestHandler):
         result = self.server.core.eval_press(text, slot or None)
         return self._json(200, result)
 
+    def _wear(self, path, query, extra):
+        """TC-WORN-WIRE (decision 0052): file the last checked item as the
+        worn item of its slot ({} or {"slot": optional}), or the item text
+        the optional wear key's own press sends ({"item": text}). The text
+        comes from the caller (the one per-press clipboard read of decision
+        0003); this endpoint never reads the clipboard. The reply is
+        {"worn": {"ok", "slot", "error"}}; nothing is stored while the
+        worn_gear switch is off."""
+        body = self._read_json(MAX_EVAL_BODY)
+        if body is None:
+            return None
+        text = body.get("item")
+        if text is not None and not isinstance(text, str):
+            return self._json(400, {"error": "item must be a string"})
+        slot = body.get("slot")
+        if slot is not None and (not isinstance(slot, str) or len(slot) > 40):
+            return self._json(400, {"error": "slot must be a short string"})
+        try:
+            doc = self.server.core.wear(slot=slot or None, text=text)
+        except OSError:  # the worn file could not be written
+            return self._json(500, {"error": WEAR_SAVE_FAILED})
+        return self._json(200, {"worn": doc})
+
     def _put_weights(self, path, query, extra):
         body = self._read_json(MAX_WEIGHTS_BODY)
         if body is None:
@@ -1047,6 +1072,7 @@ POST_ROUTES = {
     "/api/run-history": Handler._run_history,
     "/api/price-watch": Handler._price_watch,
     "/api/hints": Handler._hints,
+    "/api/wear": Handler._wear,  # TC-WORN-WIRE
 }
 
 PUT_ROUTES = {

@@ -1,6 +1,6 @@
 /* NEWBIE-HINTS / UTIL-MAP-LADDER: exact output of the dashboard helpers
-   (web/hints.js, web/runs.js ladderRows). The core sends the sentences and
-   numbers; these only format, show and hide. */
+   (web/hints.js wire, web/runs.js ladderRows). The core sends the
+   sentences and numbers; these only format, show and hide. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,14 +9,29 @@ const hints = web.load("hints.js");
 const runs = web.load("runs.js");
 const status = web.load("status.js");
 
-test("hints: tip shows until its end time, then hides", () => {
-  const hint = { id: "start", text: "New character: hello.", at: 100, expires_at: 700 };
-  assert.equal(hints.tipText(hint, 100), "New character: hello.");
-  assert.equal(hints.tipText(hint, 699.9), "New character: hello.");
-  assert.equal(hints.tipText(hint, 700), "");
-  assert.equal(hints.tipText(null, 100), "");
-  assert.equal(hints.tipText({ text: "" }, 100), "");
-  assert.equal(hints.tipText({ text: "No end." }, 100), "No end.");
+test("hints: only the Settings click is left; region N shows the tip", () => {
+  // PLAY-LEGACY-OUT-2: the old tip card and its painter are gone
+  assert.equal(hints.paint, undefined);
+  assert.equal(hints.tipText, undefined);
+  const said = { textContent: "x" };
+  let click = null;
+  const doc = { getElementById: (id) => (id === "hints-reset"
+    ? { addEventListener: (k, f) => { click = f; } } : id === "hints-said" ? said : null) };
+  const calls = [];
+  let answer = Promise.resolve({ text: "Tips will show again." });
+  hints.wire(doc, (m, path, body) => { calls.push([m, path, body]); return answer; });
+  click();
+  assert.equal(said.textContent, "");
+  assert.deepEqual(calls, [["POST", "/api/hints", { reset: true }]]);
+  return answer.then(() => {
+    assert.equal(said.textContent, "Tips will show again.");
+    answer = Promise.reject(new Error("HTTP 500"));
+    click();
+    return answer.catch(() => {});
+  }).then(() => new Promise((r) => setImmediate(r))).then(() => {
+    assert.equal(said.textContent, hints.FAILED);
+    hints.wire({ getElementById: () => null }, () => answer); // no button: nothing wired
+  });
 });
 
 test("hints: the event list labels a tip", () => {

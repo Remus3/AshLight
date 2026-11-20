@@ -3,13 +3,27 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0080
+package uses the number in its new_files entry. 0077 to 0083
 are taken. A decision written outside a package takes the next free
-number: the next after the highest file here (0081, read back
+number: the next after the highest file here (0084, read back
 2026-11-19).
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0083: item info popover data: local caches only, unknown fields
+  omitted, no drop rates or vendor / disenchant data, PoB Source lines
+  under sha256 pins (amends 0037), a "More on poe2db" link on click;
+  amended 2026-11-19: Apache-2.0 kept, link only until a source permits
+  app use (operator requests 2026-11-19).
+- 0082: UI: item info popover, header text (sr-only h1) and version
+  line, collapsible cards on Build and items and Run; amended 2026-11-19:
+  collapse state in the core, buttons in the client window only
+  (operator requests 2026-11-19).
+- 0081: Kindler build generator: authored archetype templates scored by
+  Path of Building on the Generate click, at most 12 candidates in 60 s,
+  up to 6 tabs (amends 0004); amended 2026-11-19: tab move / rename /
+  close, deterministic ranking, stages from levelling to maps, follow
+  Play guidance (operator requests 2026-11-19).
 - 0080: CI timing tolerance (AL_CI=1 in ci.yml only: timing budgets
   skip, test waits 3x, one CDP page-live retry) and the core's listen
   backlog of 128 (GP-09 ruling).

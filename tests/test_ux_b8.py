@@ -76,9 +76,14 @@ def test_no_nested_fold_for_the_overlay_layout():
 def test_live_regions_stay_within_the_cap():
     live = re.findall(r'aria-live="polite"|role="status"|role="alert"', HTML)
     ids = set(re.findall(r'<[^>]*(?:aria-live="polite"|role="status")[^>]*>', HTML))
-    # PLAY-TD-09C-BAR (MERGE-SEAMS F2): one bar status word, cap 12 to 11
-    assert len(ids) <= 11, len(ids)
+    # PLAY-TD-09C-BAR (MERGE-SEAMS F2): one bar status word, cap 12 to 11;
+    # PLAY-LEGACY-OUT-2: the consent error left with the old card, 11 to 9
+    assert len(ids) <= 9, len(ids)
     assert live
+    # Play's markup holds none; its live regions (verdict, trade status,
+    # notice) are built by the region files, the reading word is the bar's
+    play = MAIN[MAIN.index('id="panel-play"'):MAIN.index('id="panel-run"')]
+    assert not re.findall(r'aria-live="polite"|role="status"|role="alert"', play)
 
 
 def test_dom_order_is_tab_order():
