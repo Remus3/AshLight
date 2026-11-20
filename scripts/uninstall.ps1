@@ -42,11 +42,28 @@
   9. Exit 0 only when nothing but the kept data remains; else exit 1 with
      the one line "uninstall incomplete: <n> items remain" and a report in
      the user's temp folder.
-  Checkout mode comes with REL-UNINSTALL-CHECKOUT.
+  Checkout mode (-Checkout, REL-UNINSTALL-CHECKOUT): run as
+  scripts\uninstall.ps1 -Checkout in a source checkout (no install.json;
+  server, scripts and app folders present). It stops the checkout's
+  processes (pid files in ops\runtime with a matching creation time, or an
+  electron image under the checkout's app Electron dist folder), removes
+  the logon task and the two links only when they point into the checkout
+  (no uninstall key: a checkout registers none) and prints what stays. With
+  -Purge: ops\runtime and config\local.json go to the Recycle Bin (an
+  in-checkout sidecar folder in ops\runtime is kept), the AL sidecar's
+  Cache, Logs and Build are deleted, and in its Temp only AshLight's own
+  run folders (fixed name prefixes). Every other sidecar folder (dev
+  history, worktrees, the installed copy, agent temp folders) is never
+  named, and no other tree's sidecar is resolved. The sidecar is
+  AL_SIDECAR_ROOT, else the fleet kit default (read as text from the
+  checkout's vendored kit) plus AL, plus the in-checkout fallback. The dev
+  loop task is never looked at: the last lines name its own remove command.
+  Reads stay in the checkout and the AL sidecar.
 
   Every file probe, listing and delete goes through the Test-AlHomePath,
   Get-AlHomeChildren and Remove-AlHomeItem helpers, which refuse any path
-  outside the home.
+  outside the home (in checkout mode: outside the checkout and the AL
+  sidecar).
 
   Effect root (as scripts/al_shell.ps1): the env AL_SHELL_ROOT moves the
   Start Menu and Desktop to <root>\Programs and <root>\Desktop, the
@@ -68,9 +85,13 @@
   Print the plan and change nothing.
 .PARAMETER Quiet
   Print only the last lines (never asks: -Purge then needs -Yes).
+.PARAMETER Checkout
+  Uninstall a source checkout (the folder above this script's folder)
+  instead of an installed copy.
 #>
 [CmdletBinding()]
 param(
+    [switch]$Checkout,
     [switch]$Purge,
     [switch]$Yes,
     [switch]$DryRun,
@@ -107,6 +128,21 @@ $script:Shell = $null
 $script:LinkPaths = @()
 $script:ShellLeft = New-Object System.Collections.ArrayList
 $script:HomeDir = ''
+# the guarded roots: the home, or in checkout mode the checkout and the AL
+# sidecar candidates
+$script:Roots = @()
+# where the pid files and stop.request live, and the image folder that
+# proves a process ours
+$script:RunDir = ''
+$script:ImageRoot = ''
+# checkout mode: the sidecar folders deleted on -Purge and the name
+# prefixes of AshLight's own run folders in the sidecar Temp
+$script:SidecarDeleteNames = @('Cache', 'Logs', 'Build')
+$script:TempPrefixes = @('demo-', 'al-brand-', 'state_equiv-')
+$script:FallbackSidecar = 'sidecar'
+$script:Sidecars = @()
+$script:LoopLine = ('The dev loop task is not touched; if it is armed, remove it with: ' +
+    'python tools/loop_task.py remove')
 $script:Fake = [string]$env:AL_UNINSTALL_FAKE
 
 function Write-AlStep([string]$Message) {
@@ -143,8 +179,16 @@ function Test-AlUnder {
     return $p.StartsWith($r + '\', [System.StringComparison]::OrdinalIgnoreCase)
 }
 
+function Test-AlInRoots([string]$Path) {
+    # True when Path lies in one of the guarded roots.
+    foreach ($root in @($script:Roots)) {
+        if ($root -and (Test-AlUnder -Path $Path -Root $root)) { return $true }
+    }
+    return $false
+}
+
 function Assert-AlInHome([string]$Path) {
-    if (-not $script:HomeDir -or -not (Test-AlUnder -Path $Path -Root $script:HomeDir)) {
+    if (-not $script:HomeDir -or -not (Test-AlInRoots $Path)) {
         throw "uninstall: $Path is outside the home; refused"
     }
 }
@@ -251,7 +295,7 @@ function Get-AlProcessTable {
     $out = @()
     if ($script:Fake) {
         $doc = Read-AlFake
-        $stopRequested = Test-AlHomePath (Join-Path (Join-Path $script:HomeDir 'data') 'stop.request')
+        $stopRequested = Test-AlHomePath (Join-Path $script:RunDir 'stop.request')
         foreach ($p in @($doc.processes)) {
             if ($null -eq $p) { continue }
             if ($stopRequested -and [bool]$p.graceful) { continue }
@@ -277,8 +321,9 @@ function Get-AlProcessTable {
 }
 
 function Get-AlPidRecords {
-    # {pid, created} from the pid files in data\ (unreadable ones skipped).
-    $data = Join-Path $script:HomeDir 'data'
+    # {pid, created} from the pid files in data\ (in checkout mode
+    # ops\runtime); unreadable ones skipped.
+    $data = $script:RunDir
     $out = @()
     foreach ($name in $script:PidFiles) {
         $file = Join-Path $data $name
@@ -295,9 +340,10 @@ function Get-AlPidRecords {
 
 function Get-AlOurProcesses {
     # The processes proven ours: a pid-file pid whose recorded creation time
-    # (never 0) matches, or an image under <home>\runtime\.
+    # (never 0) matches, or an image under <home>\runtime\ (in checkout
+    # mode the checkout's Electron dist folder).
     $records = @(Get-AlPidRecords)
-    $runtime = Join-Path $script:HomeDir 'runtime'
+    $runtime = $script:ImageRoot
     $ours = @()
     foreach ($proc in @(Get-AlProcessTable -Pids @($records | ForEach-Object { $_.Pid }))) {
         $byFile = $false
@@ -333,7 +379,7 @@ function Stop-AlOurProcess($Proc) {
 }
 
 function Invoke-AlStop {
-    $data = Join-Path $script:HomeDir 'data'
+    $data = $script:RunDir
     if (Test-AlHomePath $data) {
         try {
             Set-Content -LiteralPath (Join-Path $data 'stop.request') -Value 'stop' -Encoding ASCII
@@ -624,18 +670,29 @@ function Get-AlDeletePlan {
 }
 
 function Send-AlDataToRecycleBin([string]$Data) {
+    # One folder or file in the guarded roots to the Recycle Bin (FLEET item
+    # 9): the home's data\, or in checkout mode ops\runtime (or its items)
+    # and config\local.json.
     Assert-AlInHome $Data
     if (-not (Test-AlHomePath $Data)) { return }
+    $isFile = Test-AlHomePath $Data -Leaf
     try {
         if ($script:Fake) {
             $bin = [string](Read-AlFake).recycle
-            if (-not $bin -or (Test-AlUnder -Path $bin -Root $script:HomeDir)) {
+            if (-not $bin -or (Test-AlInRoots $bin)) {
                 throw 'the fake recycle folder is not set or lies in the home'
             }
-            Move-Item -LiteralPath $Data -Destination (Join-Path $bin ('data-' + [guid]::NewGuid().ToString('N')))
+            $leaf = Split-Path -Leaf $Data
+            Move-Item -LiteralPath $Data -Destination (Join-Path $bin ($leaf + '-' + [guid]::NewGuid().ToString('N')))
             return
         }
         Add-Type -AssemblyName Microsoft.VisualBasic
+        if ($isFile) {
+            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($Data,
+                [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+                [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
+            return
+        }
         [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($Data,
             [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
             [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)
@@ -684,6 +741,216 @@ function Get-AlTempDir {
     return (Get-AlFullPath $t)
 }
 
+# --- checkout mode -----------------------------------------------------------------
+
+function Set-AlShellLinks {
+    # The fake needs the effect root; then the two fixed AshLight.lnk paths.
+    if ($script:Fake -and -not $script:Shell.Scratch) {
+        Stop-AlRefused 'AL_UNINSTALL_FAKE needs AL_SHELL_ROOT (no real shell entry is read in a test)'
+    }
+    foreach ($folder in @($script:Shell.Programs, $script:Shell.Desktop)) {
+        if ($folder) { $script:LinkPaths += (Get-AlFullPath (Join-Path $folder $script:LinkName)) }
+    }
+}
+
+function Get-AlCheckoutRefusal([string]$Root) {
+    # '' when Root is a source checkout this script belongs to, else the
+    # reason. Fixed names in the checkout only.
+    if ((Split-Path -Leaf $PSScriptRoot) -ne 'scripts') {
+        return '-Checkout runs only from the scripts folder of a checkout'
+    }
+    if (Test-AlHomePath (Join-Path $Root $script:MarkerName)) {
+        return 'this folder is an installed copy; run its own uninstall.ps1 without -Checkout'
+    }
+    $need = @((Join-Path (Join-Path (Join-Path $Root 'server') 'al') 'paths.py'),
+        (Join-Path (Join-Path $Root 'scripts') 'run.ps1'),
+        (Join-Path (Join-Path $Root 'app') 'package.json'))
+    foreach ($p in $need) {
+        if (-not (Test-AlHomePath $p -Leaf)) {
+            return 'this is not an AshLight checkout (no ' + (Split-Path -Leaf $p) + ')'
+        }
+    }
+    return ''
+}
+
+function Get-AlKitSidecar([string]$Root) {
+    # The fleet kit default sidecar plus AL, read as text from the
+    # checkout's vendored kit (never run); '' when the kit names none.
+    $kit = Join-Path (Join-Path (Join-Path $Root 'ops') 'fleet_kit') 'fleet_lanes.py'
+    if (-not (Test-AlHomePath $kit -Leaf)) { return '' }
+    try {
+        $text = Get-Content -LiteralPath $kit -Raw -Encoding UTF8
+    } catch {
+        return ''
+    }
+    $drive = [regex]::Match($text, '(?m)^_SIDECAR_DRIVE = "([A-Za-z]:)"')
+    $folder = [regex]::Match($text, '(?m)^_SIDECAR_FOLDER = "([A-Za-z0-9_ .-]+)"')
+    if (-not $drive.Success -or -not $folder.Success) { return '' }
+    return (Join-Path (Join-Path ($drive.Groups[1].Value + '\') $folder.Groups[1].Value) 'AL')
+}
+
+function Get-AlSidecarRoots([string]$Root) {
+    # AL_SIDECAR_ROOT alone when set; else the kit default plus AL and the
+    # in-checkout fallback (ops\runtime\sidecar). Path text only: a
+    # candidate that does not exist just has nothing to remove.
+    $sideEnv = ([string]$env:AL_SIDECAR_ROOT).Trim().Trim('"')
+    if ($sideEnv) {
+        if (-not [System.IO.Path]::IsPathRooted($sideEnv)) {
+            throw 'AL_SIDECAR_ROOT is not an absolute path'
+        }
+        return @(Get-AlFullPath $sideEnv)
+    }
+    if ($script:Fake) {
+        throw 'AL_UNINSTALL_FAKE needs AL_SIDECAR_ROOT in checkout mode (no real sidecar is touched in a test)'
+    }
+    $out = @()
+    $kit = Get-AlKitSidecar $Root
+    if ($kit) { $out += (Get-AlFullPath $kit) }
+    $out += (Get-AlFullPath (Join-Path (Join-Path (Join-Path $Root 'ops') 'runtime') $script:FallbackSidecar))
+    return $out
+}
+
+function Get-AlCheckoutPlan {
+    # The -Purge items that exist now: the sidecar's own run folders in
+    # Temp, its Cache, Logs and Build (deleted), then ops\runtime (or its
+    # items but the in-checkout sidecar) and config\local.json (Recycle Bin).
+    $delete = @()
+    $recycle = @()
+    foreach ($side in $script:Sidecars) {
+        $temp = Join-Path $side 'Temp'
+        foreach ($item in @(Get-AlHomeChildren -Path $temp)) {
+            foreach ($prefix in $script:TempPrefixes) {
+                if ($item.Name.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $delete += (Get-AlFullPath $item.FullName)
+                    break
+                }
+            }
+        }
+        foreach ($name in $script:SidecarDeleteNames) {
+            $p = Join-Path $side $name
+            if (Test-AlHomePath $p) { $delete += (Get-AlFullPath $p) }
+        }
+    }
+    $runtime = $script:RunDir
+    if (Test-AlHomePath $runtime) {
+        $kept = @($script:Sidecars | Where-Object { Test-AlUnder -Path $_ -Root $runtime })
+        if ($kept.Count -eq 0) {
+            $recycle += $runtime
+        } else {
+            foreach ($item in @(Get-AlHomeChildren -Path $runtime)) {
+                $full = Get-AlFullPath $item.FullName
+                $holds = @($kept | Where-Object { Test-AlUnder -Path $_ -Root $full })
+                if ($holds.Count -eq 0) { $recycle += $full }
+            }
+        }
+    }
+    $local = Join-Path (Join-Path $script:HomeDir 'config') 'local.json'
+    if (Test-AlHomePath $local -Leaf) { $recycle += (Get-AlFullPath $local) }
+    return [pscustomobject]@{ Delete = $delete; Recycle = $recycle }
+}
+
+function Invoke-AlCheckout {
+    $root = Get-AlFullPath (Split-Path -Parent $PSScriptRoot)
+    $why = Get-AlHomeRefusal $root
+    if ($why) { Stop-AlRefused $why }
+    $script:HomeDir = $root
+    $script:Roots = @($root)
+    $script:RunDir = Join-Path (Join-Path $root 'ops') 'runtime'
+    $script:ImageRoot = Join-Path (Join-Path (Join-Path (Join-Path $root 'app') 'node_modules') 'electron') 'dist'
+    $why = Get-AlCheckoutRefusal $root
+    if ($why) { Stop-AlRefused $why }
+    try {
+        $sides = @(Get-AlSidecarRoots $root)
+        $script:Shell = Get-AlShellPlaces
+    } catch {
+        Stop-AlRefused $_.Exception.Message
+    }
+    foreach ($side in $sides) {
+        $sw = Get-AlHomeRefusal $side
+        if ($sw) { Stop-AlRefused ('the sidecar: ' + $sw) }
+        foreach ($name in @($script:SidecarDeleteNames + @('Temp'))) {
+            if (Test-AlUnder -Path $root -Root (Join-Path $side $name)) {
+                Stop-AlRefused ('the checkout lies in the sidecar ' + $name + ' folder')
+            }
+        }
+    }
+    $script:Sidecars = $sides
+    $script:Roots = @($root) + $sides
+    Set-AlShellLinks
+    $tempDir = Get-AlTempDir
+
+    if ($DryRun) {
+        Write-AlStep ('dry run for the checkout ' + $root + '; nothing is changed')
+        foreach ($proc in @(Get-AlOurProcesses)) {
+            Write-AlStep ('would stop AshLight process ' + $proc.Pid)
+        }
+        Invoke-AlTaskStep -Plan
+        Invoke-AlLinkStep -Plan
+        if ($Purge) {
+            $plan = Get-AlCheckoutPlan
+            foreach ($p in $plan.Delete) { Write-AlStep ('would delete ' + $p) }
+            foreach ($p in $plan.Recycle) { Write-AlStep ('would move ' + $p + ' to the Recycle Bin') }
+        }
+        exit 0
+    }
+    if ($Purge -and -not $Yes) {
+        if ($Quiet -or [Console]::IsInputRedirected) {
+            Stop-AlRefused '-Purge needs -Yes when no one can type PURGE'
+        }
+        $typed = Read-Host 'This also removes your AshLight settings, history, caches and logs (settings to the Recycle Bin). Type PURGE to go on'
+        if ($typed -cne 'PURGE') { Stop-AlRefused 'PURGE was not typed; nothing was changed' }
+    }
+
+    Invoke-AlStop
+    Invoke-AlTaskStep
+    Invoke-AlLinkStep
+    $left = @()
+    if ($Purge) {
+        $plan = Get-AlCheckoutPlan
+        foreach ($p in $plan.Delete) {
+            Write-AlStep ('deleting ' + $p)
+            Remove-AlHomeItem $p
+        }
+        foreach ($p in $plan.Recycle) {
+            Write-AlStep ('moving ' + $p + ' to the Recycle Bin')
+            Send-AlDataToRecycleBin $p
+        }
+        $after = Get-AlCheckoutPlan
+        $left += @($after.Delete) + @($after.Recycle)
+    }
+    $left += @($script:ShellLeft)
+    if ($left.Count -gt 0) {
+        $report = Join-Path $tempDir $script:ReportName
+        $lines = @('AshLight uninstall report', ('checkout: ' + $root), 'items that remain:')
+        $lines += @($left | ForEach-Object { '  ' + $_ })
+        if ($script:Problems.Count -gt 0) {
+            $lines += 'problems:'
+            $lines += @($script:Problems | ForEach-Object { '  ' + $_ })
+        }
+        try {
+            [System.IO.File]::WriteAllText($report, (($lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+            Write-AlStep ('report: ' + $report)
+        } catch {
+            Write-AlStep 'the report could not be written'
+        }
+        Write-AlLast ('uninstall incomplete: ' + $left.Count + ' items remain')
+        exit 1
+    }
+    if ($Purge) {
+        Write-AlLast ('AshLight is stopped and its settings, caches and logs are removed. Kept: ' +
+            $root + ' (the checkout; delete it yourself) and the other sidecar folders.')
+    } else {
+        Write-AlLast ('AshLight is stopped. Kept: ' + $root + ' (the checkout, with your settings ' +
+            'and history in ' + $script:RunDir + ') and the sidecar ' + ($script:Sidecars -join ', ') +
+            '. Run again with -Purge to remove the settings, caches and logs.')
+    }
+    Write-AlLast $script:LoopLine
+    Write-AlLast $script:CopiedSentence
+    exit 0
+}
+
+if ($Checkout) { Invoke-AlCheckout }
+
 # --- step 1: validate ------------------------------------------------------------
 
 $homeArg = $FromHome
@@ -691,6 +958,9 @@ if (-not $homeArg) { $homeArg = $PSScriptRoot }
 $why = Get-AlHomeRefusal $homeArg
 if ($why) { Stop-AlRefused $why }
 $script:HomeDir = Get-AlFullPath $homeArg
+$script:Roots = @($script:HomeDir)
+$script:RunDir = Join-Path $script:HomeDir 'data'
+$script:ImageRoot = Join-Path $script:HomeDir 'runtime'
 $why = Test-AlMarker $script:HomeDir
 if ($why) { Stop-AlRefused $why }
 $tempDir = Get-AlTempDir
@@ -702,12 +972,7 @@ try {
 } catch {
     Stop-AlRefused $_.Exception.Message
 }
-if ($script:Fake -and -not $script:Shell.Scratch) {
-    Stop-AlRefused 'AL_UNINSTALL_FAKE needs AL_SHELL_ROOT (no real shell entry is read in a test)'
-}
-foreach ($folder in @($script:Shell.Programs, $script:Shell.Desktop)) {
-    if ($folder) { $script:LinkPaths += (Get-AlFullPath (Join-Path $folder $script:LinkName)) }
-}
+Set-AlShellLinks
 if ($script:Fake) {
     $fakeDoc = Read-AlFake
     if (-not $DryRun -and $FromHome) {

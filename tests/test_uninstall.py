@@ -32,7 +32,15 @@ AshLight.lnk before and after a run and assert nothing changed. Checked:
   loop task is never named;
 - static: no game-folder path, every listing / probe / delete sits in a
   home-guarded helper, the only names outside the home are the fixed shell
-  names, no dot-sourcing, PowerShell 5.1 parse.
+  names, no dot-sourcing, PowerShell 5.1 parse;
+- REL-UNINSTALL-CHECKOUT (-Checkout, on a scratch checkout with
+  AL_SIDECAR_ROOT at a scratch sidecar): stops only the checkout's
+  processes, removes the task and links only when they point into the
+  checkout, -Purge recycles ops\\runtime and config\\local.json and deletes
+  the sidecar's Cache, Logs, Build and AshLight's own Temp run folders,
+  never the dev history, worktree, install or agent temp folders; it prints
+  the loop task's own remove command and reads only in the checkout and the
+  AL sidecar.
 """
 
 import hashlib
@@ -440,6 +448,8 @@ OUTSIDE_LITERALS = {
     "'\\Uninstall\\AshLight'", "'\\'", "'HKCU\\'",
     "'System32\\WindowsPowerShell\\v1.0\\powershell.exe'",
     "'[\\\\/]+'",  # the path-shape guard's split pattern, not a place
+    # checkout mode: the dev loop task's own remove command, printed only
+    "'python tools/loop_task.py remove'",
 }
 
 
@@ -460,7 +470,7 @@ def test_reads_outside_the_home_are_only_the_fixed_shell_names():
         assert not re.search(pat, text), pat
     # the two path-shape guard words appear once, as bare words
     assert text.count("'steamapps'") == 1 and text.count("'path of exile 2'") == 1
-    # checkout mode is not here; the dev folders are never named at all
+    # the dev folders are never named at all, not even by checkout mode
     for word in ("Worktree", "ClaudeHistory", "LaneLoop", "AshLightOps"):
         assert word not in text
     # the outside names, each defined once
@@ -509,7 +519,7 @@ ALLOWED = {
     "move-item": {"Send-AlDataToRecycleBin"},
     "copy-item": {"<script>"},
     "set-content": {"Invoke-AlStop"},
-    "get-content": {"Test-AlMarker", "Read-AlFake", "Get-AlPidRecords"},
+    "get-content": {"Test-AlMarker", "Read-AlFake", "Get-AlPidRecords", "Get-AlKitSidecar"},
     "get-process": {"Get-AlProcessTable"},
     "stop-process": {"Stop-AlOurProcess"},
     "wait-process": {"Stop-AlOurProcess"},
@@ -854,3 +864,329 @@ def test_dev_loop_task_is_never_named(world):
     assert doc["tasks"] == tasks
     assert doc["task_queries"] == [sc["task_path"] + TASK]
     assert not any("LaneLoop" in ln for ln in lines)
+
+
+# --- REL-UNINSTALL-CHECKOUT: -Checkout ----------------------------------------
+
+LOOP_LINE = ("The dev loop task is not touched; if it is armed, remove it with: "
+             "python tools/loop_task.py remove")
+CO_PLAYER_FILES = ["consent.json", "run_history.json", "price_watch.json", "zone_visits.json"]
+CO_RUN_FILES = {"core.alive": {"pid": 201, "port": 8961, "created": 4242},
+                "keepalive.json": {"pid": 203, "created": 0},
+                "overlay.pid": {"pid": 202, "created": 9}}
+# sidecar folders and Temp items that are never AshLight's to remove
+DEV_FOLDERS = ["Scratch", "ClaudeHistory", "Worktree", "Install"]
+AGENT_TEMP = ["claude-1234", "tmpabcd", "headless-run-7", "AshLight-demo-notes"]
+OWN_TEMP = ["demo-x1y2", "al-brand-q9", "state_equiv-zz"]
+
+
+def make_checkout(base, name="checkout"):
+    co = base / name
+    (co / "scripts").mkdir(parents=True)
+    shutil.copyfile(SCRIPT, co / "scripts" / "uninstall.ps1")
+    _write(co / "scripts" / "run.ps1", "# run\n")
+    _write(co / "server" / "al" / "paths.py", "x = 1\n")
+    _write(co / "app" / "package.json", "{}\n")
+    _write(co / "app" / "node_modules" / "electron" / "dist" / "electron.exe", "exe\n")
+    _write(co / "config" / "local.json", '{"web_data": false}\n')
+    _write(co / "config" / "link_hosts.json", "{}\n")
+    _write(co / "ops" / "fleet_kit" / "fleet_lanes.py",
+           '_SIDECAR_DRIVE = "Q:"\n_SIDECAR_FOLDER = "NoSuchSidecars"\n')
+    rt = co / "ops" / "runtime"
+    for n in CO_PLAYER_FILES:
+        _write(rt / n, '{"keep": true}\n')
+    for n, doc in CO_RUN_FILES.items():
+        _write(rt / n, json.dumps(doc) + "\n")
+    _write(rt / "token", "secret\n")
+    return co
+
+
+def make_sidecar(base, sidecar=None):
+    side = sidecar or (base / "sidecar" / "AL")
+    for n in ("Cache", "Logs", "Build"):
+        _write(side / n / "f.txt", n + "\n")
+    for n in DEV_FOLDERS:
+        _write(side / n / "keep.txt", n + "\n")
+    _write(side / "Worktree" / "lane-1" / "README.md", "wt\n")
+    for n in OWN_TEMP + AGENT_TEMP:
+        _write(side / "Temp" / n / "f.txt", n + "\n")
+    _write(side / "Temp" / "tmp9.txt", "loose\n")
+    return side
+
+
+def make_co_fake(base, co):
+    other = base / "elsewhere"
+    dist = co / "app" / "node_modules" / "electron" / "dist"
+    procs = [
+        # ours by pid file: core.alive 201 with the recorded creation time
+        {"pid": 201, "path": str(other / "py" / "python.exe"), "created": 4242, "graceful": False},
+        # ours by image: the checkout's Electron
+        {"pid": 202, "path": str(dist / "electron.exe"), "created": 1, "graceful": False},
+        # keepalive.json without a creation time proves nothing
+        {"pid": 203, "path": str(other / "py" / "pythonw.exe"), "created": 5, "graceful": False},
+        # another checkout's Electron and the game: never ours
+        {"pid": 204, "path": str(base / "other-checkout" / "app" / "node_modules" / "electron"
+                                 / "dist" / "electron.exe"), "created": 2, "graceful": False},
+        {"pid": 205, "path": str(other / "game" / "PathOfExile.exe"), "created": 3,
+         "graceful": False},
+    ]
+    bin_dir = base / "recycle"
+    bin_dir.mkdir(exist_ok=True)
+    fake = base / "fake.json"
+    fake.write_text(json.dumps({"processes": procs, "stopped": [], "recycle": str(bin_dir)},
+                               indent=1) + "\n", encoding="ascii")
+    return fake
+
+
+@pytest.fixture
+def co_world(tmp_path):
+    temp = tmp_path / "usertemp"
+    temp.mkdir()
+    co = make_checkout(tmp_path)
+    side = make_sidecar(tmp_path)
+    return {"base": tmp_path, "co": co, "side": side, "temp": temp,
+            "fake": make_co_fake(tmp_path, co), "home": co}
+
+
+def run_co(w, *args, sidecar=True, shell_root=True):
+    env = dict(os.environ)
+    for name in ("AL_HOME", "AL_RUNTIME_DIR", "AL_SIDECAR_ROOT", "AL_SHELL_ROOT"):
+        env.pop(name, None)
+    env["TEMP"] = str(w["temp"])
+    env["TMP"] = str(w["temp"])
+    env["AL_UNINSTALL_FAKE"] = str(w["fake"])
+    if sidecar:
+        env["AL_SIDECAR_ROOT"] = str(w["side"])
+    if shell_root:
+        env["AL_SHELL_ROOT"] = str(w["base"] / "shell")
+    cmd = [PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+           "-File", str(w["co"] / "scripts" / "uninstall.ps1"), "-Checkout",
+           "-WaitSec", "1"] + list(args)
+    r = subprocess.run(cmd, capture_output=True, timeout=180, env=env,
+                       cwd=str(w["base"]), stdin=subprocess.DEVNULL)
+    out = r.stdout.decode("ascii")
+    lines = [ln for ln in out.splitlines() if ln.strip()]
+    return r.returncode, lines, r.stdout, r.stderr.decode("utf-8", "replace")
+
+
+def _co_source(co):
+    """The checkout minus ops\\runtime and config\\local.json."""
+    rt = str(co / "ops" / "runtime")
+    return [row for row in snapshot(co)
+            if not row[0].startswith(rt) and row[0] != str(co / "config" / "local.json")]
+
+
+@pytest.fixture
+def co_shell_world(co_world):
+    co_world["sc"] = _scratch(co_world)
+    co_world["state_dir"] = co_world["base"] / "state"
+    co_world["state_dir"].mkdir()
+    before = real_state(co_world, co_world["state_dir"])
+    yield co_world
+    assert real_state(co_world, co_world["state_dir"]) == before
+
+
+@needs_shell
+def test_checkout_mode_stops_and_removes_only_its_own(co_shell_world):
+    w = co_shell_world
+    co, side, sc = w["co"], w["side"], w["sc"]
+    make_links(w, [co / "app" / "node_modules" / "electron" / "dist" / "electron.exe",
+                   w["base"] / "other-checkout" / "app" / "electron.exe"])
+    tasks = [{"path": sc["task_path"], "name": TASK, "execute": "pythonw.exe",
+              "working_directory": str(co)}]
+    set_shell_fake(w, tasks=tasks, keys={sc["key"]: {"InstallLocation": str(co)}})
+    source_before = _co_source(co)
+    side_before = snapshot(side)
+    rc, lines, _, err = run_co(w)
+    assert rc == 0, (lines, err)
+    doc = _fake(w)
+    # only 201 (pid file + creation time) and 202 (the checkout's Electron)
+    assert sorted(doc["stopped"]) == [201, 202]
+    assert sorted(p["pid"] for p in doc["processes"]) == [203, 204, 205]
+    # the task and the link that point into the checkout go; the other link stays
+    assert doc["tasks"] == [] and doc["removed_tasks"] == [sc["task_path"] + TASK]
+    assert not sc["links"][0].exists() and sc["links"][1].is_file()
+    assert "uninstall: leaving " + str(sc["links"][1]) + ": it points elsewhere" in lines
+    # a checkout has no uninstall key: it is never asked for nor removed
+    assert "key_queries" not in doc and "removed_keys" not in doc
+    assert sc["key"] in doc["keys"]
+    # without -Purge nothing else changes: the stop request is the one new file
+    assert _co_source(co) == source_before
+    assert sorted(p.name for p in (co / "ops" / "runtime").iterdir()) == sorted(
+        CO_PLAYER_FILES + list(CO_RUN_FILES) + ["token", "stop.request"])
+    assert (co / "config" / "local.json").is_file()
+    assert snapshot(side) == side_before
+    assert list((w["base"] / "recycle").iterdir()) == []
+    assert list(w["temp"].iterdir()) == []
+    # the last lines say what stays
+    assert lines[-3].startswith("AshLight is stopped. Kept: " + str(co) + " (the checkout")
+    assert str(side) in lines[-3]
+    assert lines[-2:] == [LOOP_LINE, COPIED]
+
+
+@needs_ps
+@pytest.mark.parametrize("where", ["own sidecar", "sidecar in the checkout"])
+def test_checkout_purge_keeps_dev_history_folders(co_world, where):
+    w = co_world
+    co = w["co"]
+    if where == "sidecar in the checkout":
+        w["side"] = make_sidecar(w["base"], co / "ops" / "runtime" / "sidecar")
+    side = w["side"]
+    keep_roots = ([side / n for n in DEV_FOLDERS] + [side / "Temp" / n for n in AGENT_TEMP]
+                  + [side / "Temp" / "tmp9.txt"])
+    kept = snapshot(*keep_roots)
+    source_before = _co_source(co)
+    rc, lines, _, err = run_co(w, "-Purge", "-Yes")
+    assert rc == 0, (lines, err)
+    # deleted: Cache, Logs, Build and AshLight's own Temp run folders
+    for n in ("Cache", "Logs", "Build"):
+        assert not (side / n).exists(), n
+    for n in OWN_TEMP:
+        assert not (side / "Temp" / n).exists(), n
+    # kept as they were: the dev history, worktrees, the installed copy and
+    # the agent temp folders
+    assert snapshot(*keep_roots) == kept
+    assert sorted(p.name for p in side.iterdir()) == sorted(DEV_FOLDERS + ["Temp"])
+    # recycled: ops\runtime (all but an in-checkout sidecar) and local.json
+    binned = sorted(p.name.rsplit("-", 1)[0] for p in (w["base"] / "recycle").iterdir())
+    rt = co / "ops" / "runtime"
+    if where == "own sidecar":
+        assert binned == ["local.json", "runtime"]
+        assert not rt.exists()
+    else:
+        assert binned == sorted(CO_PLAYER_FILES + list(CO_RUN_FILES)
+                                + ["token", "stop.request", "local.json"])
+        assert [p.name for p in rt.iterdir()] == ["sidecar"]
+    assert not (co / "config" / "local.json").exists()
+    # the checkout's own files stay
+    assert _co_source(co) == source_before
+    assert sorted(_fake(w)["stopped"]) == [201, 202]
+    assert lines[-3].startswith("AshLight is stopped and its settings, caches and logs are removed.")
+    assert lines[-2:] == [LOOP_LINE, COPIED]
+    # no delete or recycle line ever names a dev folder
+    for ln in lines:
+        if ln.startswith(("uninstall: deleting", "uninstall: moving")):
+            assert not any(("\\" + n) in ln for n in DEV_FOLDERS + AGENT_TEMP), ln
+
+
+def test_checkout_purge_names_are_the_fixed_lists():
+    text = _text()
+    m = re.search(r"\$script:SidecarDeleteNames = @\(([^)]*)\)", text)
+    assert m and re.findall(r"'([^']+)'", m.group(1)) == ["Cache", "Logs", "Build"]
+    m = re.search(r"\$script:TempPrefixes = @\(([^)]*)\)", text)
+    assert m and re.findall(r"'([^']+)'", m.group(1)) == ["demo-", "al-brand-", "state_equiv-"]
+    for word in ("'Scratch'", "'Install'", "'Worktree'", "'ClaudeHistory'"):
+        assert word not in text
+
+
+@needs_ps
+def test_checkout_mode_names_the_loop_task_remove_command(co_world):
+    w = co_world
+    co = w["co"]
+    sc = _scratch(w)
+    tasks = [{"path": "\\AshLightOps\\", "name": "LaneLoop", "execute": "pythonw.exe",
+              "working_directory": str(co)},
+             {"path": sc["task_path"], "name": "LaneLoop", "execute": "pythonw.exe",
+              "working_directory": str(co)}]
+    set_shell_fake(w, tasks=tasks)
+    for args in ((), ("-Quiet",), ("-Purge", "-Yes")):
+        rc, lines, _, err = run_co(w, *args)
+        assert rc == 0, (args, lines, err)
+        assert lines[-2:] == [LOOP_LINE, COPIED]
+        if args == ("-Quiet",):
+            assert len(lines) == 3, lines
+        doc = _fake(w)
+        assert doc["tasks"] == tasks  # the loop task is never touched
+        assert set(doc["task_queries"]) == {sc["task_path"] + TASK}
+
+
+@needs_ps
+def test_checkout_reads_stay_in_the_checkout_and_the_al_sidecar(co_world):
+    # static: the guarded roots are the home, or the checkout plus the
+    # sidecar candidates (AL_SIDECAR_ROOT, else the kit default + AL and the
+    # in-checkout fallback); never another tree's sidecar
+    text = _text()
+    assigns = re.findall(r"\$script:Roots = (.*)", text)
+    assert assigns == ["@()", "@($root)", "@($root) + $sides", "@($script:HomeDir)"], assigns
+    body = text[text.index("function Get-AlKitSidecar"):text.index("function Get-AlSidecarRoots")]
+    assert "'AL')" in body and "Test-AlHomePath $kit -Leaf" in body
+    # live: a dry run names only paths in the checkout or the sidecar
+    w = co_world
+    roots = (w["co"], w["side"], w["temp"], w["base"] / "recycle")
+    before = snapshot(*roots)
+    fake_before = w["fake"].read_bytes()
+    rc, lines, _, err = run_co(w, "-DryRun", "-Purge")
+    assert rc == 0, (lines, err)
+    assert snapshot(*roots) == before and w["fake"].read_bytes() == fake_before
+    named = []
+    for ln in lines:
+        if ln.startswith("uninstall: would delete "):
+            named.append(ln[len("uninstall: would delete "):])
+        elif ln.startswith("uninstall: would move "):
+            named.append(ln[len("uninstall: would move "):-len(" to the Recycle Bin")])
+    assert named
+    for n in named:
+        p = Path(n)
+        assert w["co"] in p.parents or w["side"] in p.parents, n
+    assert "uninstall: would stop AshLight process 201" in lines
+    assert "uninstall: would delete " + str(w["side"] / "Cache") in lines
+    assert ("uninstall: would move " + str(w["co"] / "ops" / "runtime")
+            + " to the Recycle Bin") in lines
+
+
+@needs_ps
+def test_checkout_refusals_touch_nothing(co_world):
+    w = co_world
+    roots = (w["co"], w["side"], w["temp"], w["base"] / "recycle")
+    fake_before = w["fake"].read_bytes()
+
+    def refused(expect, *args, **kw):
+        before = snapshot(*roots)
+        rc, lines, _, err = run_co(w, *args, **kw)
+        assert rc == 2, (lines, err)
+        assert lines[-1].startswith("uninstall refused: "), lines
+        assert expect in lines[-1], lines
+        assert snapshot(*roots) == before
+        assert w["fake"].read_bytes() == fake_before
+
+    # the fake needs a scratch sidecar and a scratch shell root
+    refused("AL_UNINSTALL_FAKE needs AL_SIDECAR_ROOT", sidecar=False)
+    refused("AL_UNINSTALL_FAKE needs AL_SHELL_ROOT", shell_root=False)
+    # -Purge with no one to type PURGE
+    refused("-Purge needs -Yes", "-Purge")
+    # an installed copy is not a checkout
+    (w["co"] / "install.json").write_text(json.dumps(MARKER), encoding="ascii")
+    refused("installed copy")
+    (w["co"] / "install.json").unlink()
+    # a folder that is not a checkout
+    (w["co"] / "server" / "al" / "paths.py").unlink()
+    refused("not an AshLight checkout")
+
+
+@needs_ps
+def test_checkout_inside_the_sidecar_cache_is_refused(tmp_path):
+    temp = tmp_path / "usertemp"
+    temp.mkdir()
+    side = make_sidecar(tmp_path)
+    co = make_checkout(side / "Cache", "nested")
+    w = {"base": tmp_path, "co": co, "side": side, "temp": temp,
+         "fake": make_co_fake(tmp_path, co)}
+    before = snapshot(side, temp)
+    rc, lines, _, err = run_co(w, "-Purge", "-Yes")
+    assert rc == 2, (lines, err)
+    assert lines[-1] == "uninstall refused: the checkout lies in the sidecar Cache folder"
+    assert snapshot(side, temp) == before
+
+
+@needs_ps
+def test_checkout_purge_with_a_held_file_gives_exit_1(co_world):
+    w = co_world
+    held = w["side"] / "Logs" / "f.txt"
+    with open(held, "rb"):
+        rc, lines, _, err = run_co(w, "-Purge", "-Yes")
+    assert rc == 1, (lines, err)
+    m = INCOMPLETE.match(lines[-1])
+    assert m and int(m.group(1)) >= 1, lines
+    assert COPIED not in lines and LOOP_LINE not in lines
+    report = (w["temp"] / "AshLight-uninstall-report.txt").read_text(encoding="utf-8")
+    assert str(w["side"] / "Logs") in report
