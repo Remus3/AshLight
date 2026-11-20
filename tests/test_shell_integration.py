@@ -312,8 +312,16 @@ def test_helper_only_defines_functions_and_stays_per_user():
     code_text = "\n".join(code_lines)
     assert "GetFolderPath('Programs')" in code_text and "GetFolderPath('Desktop')" in code_text
     for banned in ("CommonPrograms", "CommonDesktop", "HKLM", "LocalMachine",
-                   "ScheduledTask", "Set-StrictMode", "$ErrorActionPreference"):
+                   "Set-StrictMode", "$ErrorActionPreference"):
         assert banned not in code_text, banned
+    # REL-AUTOSTART-ENTRY: the per-user logon task lives here, never an
+    # elevated or machine-wide one
+    for name in ("Register-AlLogonTask", "Unregister-AlLogonTask", "Get-AlLogonTask"):
+        assert re.search(r"^function %s\b" % re.escape(name), text, re.MULTILINE), name
+    assert not re.search(r"-RunLevel\s+Highest", code_text, re.IGNORECASE)
+    for banned in ("NT AUTHORITY", "S-1-5-18", "'SYSTEM'", '"SYSTEM"', "ServiceAccount"):
+        assert banned.lower() not in code_text.lower(), banned
+    assert not re.search(r"-UserId\s+['\"]?SYSTEM\b", code_text, re.IGNORECASE)
     assert "AL_SHELL_ROOT" in text and "Software\\AshLightShellScratch" in text
     setup = SETUP.read_text(encoding="ascii")
     assert ". (Join-Path $PSScriptRoot 'al_shell.ps1')" in setup

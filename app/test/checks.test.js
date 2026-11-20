@@ -35,7 +35,7 @@ function el(tag) {
 
 function fakeDoc() {
   const ids = {};
-  ["langbox", "lang-text", "lang-dismiss", "checksbox", "checks", "checks-summary",
+  ["checksbox", "checks", "checks-summary",
     "checks-list", "checks-copy", "checks-said"].forEach((id) => { ids[id] = el("x"); });
   return {
     ids,
@@ -83,23 +83,34 @@ test("checks: copy writes the core's report only in the click", async () => {
   assert.equal(doc.ids["checks-said"].textContent, ck.COPY_FAILED);
 });
 
-test("language notice: shows, hides on click, returns only when it begins again", () => {
-  ck._state.dismissed = undefined;
-  const doc = fakeDoc();
-  const store = { v: {}, getItem(k) { return this.v[k] || null; },
+test("language notice: region N owns it; the Hide key is read at wire and stored at once", () => {
+  // PLAY-LEGACY-OUT-2: the old #langbox card is gone; checks.js keeps only
+  // the stored Hide key that web/notice.js reads with langModel
+  assert.equal(ck.paintLang, undefined);
+  const store = { v: { "al.lang.dismissed": "100" }, getItem(k) { return this.v[k] || null; },
     setItem(k, v) { this.v[k] = v; } };
+  const doc = fakeDoc();
+  const asked = [];
+  const getById = doc.getElementById;
+  doc.getElementById = (id) => { asked.push(id); return getById(id); };
   ck.wire(doc, () => null, {}, store);
+  assert.equal(ck._state.dismissed, "100");
   const lang = { verdict: "non_english", since: 100, text: "Your game seems to use..." };
+  assert.equal(ck.langModel(lang, ck._state.dismissed).show, false);
   ck.paint(doc, { lang });
-  assert.equal(doc.ids.langbox.hidden, false);
-  assert.equal(doc.ids["lang-text"].textContent, lang.text);
-  doc.ids["lang-dismiss"].listeners.click();
-  assert.equal(doc.ids.langbox.hidden, true);
-  ck.paint(doc, { lang });
-  assert.equal(doc.ids.langbox.hidden, true);
-  ck.paint(doc, { lang: Object.assign({}, lang, { since: 200 }) });
-  assert.equal(doc.ids.langbox.hidden, false);
-  ck.paint(doc, { lang: { verdict: "english", text: null } });
-  assert.equal(doc.ids.langbox.hidden, true);
+  assert.ok(!asked.some((id) => /^lang/.test(id)), asked.join(","));
+  // a newer notice shows again; region N's Hide stores its key at once
+  const later = Object.assign({}, lang, { since: 200 });
+  assert.equal(ck.langModel(later, ck._state.dismissed).show, true);
+  ck._state.dismissed = "200";
+  assert.equal(store.v["al.lang.dismissed"], "200");
+  assert.equal(ck.langModel(later, ck._state.dismissed).show, false);
+  assert.equal(ck.langModel({ verdict: "english", text: null }, "200").show, false);
   assert.deepEqual(ck.langModel(null, null), { show: false, text: "", key: "" });
+  // nothing stored: none hidden; a store that throws is ignored
+  ck.wire(doc, () => null, {}, { getItem() { throw new Error("blocked"); },
+    setItem() { throw new Error("blocked"); } });
+  assert.equal(ck._state.dismissed, null);
+  ck._state.dismissed = "300";
+  assert.equal(ck._state.dismissed, "300");
 });
