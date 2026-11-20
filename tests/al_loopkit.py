@@ -20,6 +20,30 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import al_loop  # noqa: E402
 
+# TEST-LOOP-STUB-GIT: with AL_GIT_COUNT=1 every real git process this test
+# process starts is counted (subprocess.Popen with argv[0] "git") and the
+# total is printed once at exit as "git spawns: <n>".
+GIT_SPAWNS = {"n": 0}
+
+
+def _install_git_counter():
+    import atexit
+    orig = subprocess.Popen.__init__
+
+    def counting(self, args, *a, **kw):
+        first = args[0] if isinstance(args, (list, tuple)) and args else args
+        if isinstance(first, str) and Path(first).stem.lower() == "git":
+            GIT_SPAWNS["n"] += 1
+        return orig(self, args, *a, **kw)
+
+    subprocess.Popen.__init__ = counting
+    atexit.register(lambda: print(f"\ngit spawns: {GIT_SPAWNS['n']}", flush=True))
+
+
+if os.environ.get("AL_GIT_COUNT") == "1" and not getattr(subprocess, "_al_git_count", False):
+    subprocess._al_git_count = True
+    _install_git_counter()
+
 GIT_TIMEOUT_S = 60  # plan 150: a git stuck on a lock / prompt fails, never hangs
 GIT_ENV = {
     "GIT_CONFIG_GLOBAL": os.devnull,
@@ -88,8 +112,85 @@ def make_root(tmp_path, roadmap=ROADMAP, handoff=HANDOFF, local=None):
     return root
 
 
+# TEST-LOOP-STUB-GIT: the tick tests that do not test git opt in (stub_git)
+# and then deps() defaults to two no-spawn stand-ins; a test that passes its
+# own git= or tree_key= keeps it. Off for every other user of deps().
+_STUB = {"on": False}
+NOT_A_REPO = "fatal: not a git repository (al_loopkit stub)"
+
+
+def stub_git(monkeypatch):
+    """Opt this test into the no-spawn git defaults of deps()."""
+    monkeypatch.setitem(_STUB, "on", True)
+
+
+def stub_default_git(args, cwd, input=None, lock=None):
+    """The default tick git runner without a process for a root that is not a
+    repo (what real git answers there: rc 128, no output; `config <key>` is
+    rc 1, the key unset, as with no host global config); a repo root goes to
+    the real runner unchanged."""
+    if not (Path(cwd) / ".git").exists():
+        if args and args[0] == "config":
+            return subprocess.CompletedProcess(["git", *args], 1, "", "")
+        return subprocess.CompletedProcess(["git", *args], 128, "", NOT_A_REPO)
+    return al_loop._git(args, cwd, input, lock)
+
+
+def _ignore_rules(top):
+    try:
+        text = (top / ".gitignore").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [ln.strip() for ln in text.splitlines()
+            if ln.strip() and not ln.strip().startswith(("#", "!"))]
+
+
+def _ignored(rel, rules):
+    import fnmatch
+    parts = rel.split("/")
+    for rule in rules:
+        pat = rule.strip("/")
+        if "/" in pat:
+            if rel == pat or rel.startswith(pat + "/") or fnmatch.fnmatch(rel, pat):
+                return True
+        elif any(fnmatch.fnmatch(p, pat) for p in parts[:-1]) or (
+                not rule.endswith("/") and fnmatch.fnmatch(parts[-1], pat)):
+            return True
+    return False
+
+
+def py_tree_key(cwd):
+    """A no-spawn stand-in for al_loop.tree_key with the same equality: None
+    unless cwd is a work tree root (holds .git), else one hash over every
+    non-ignored file's path and bytes, so a clean and a dirty tree with the same
+    content share a key and any content change makes a new one (the top-level
+    .gitignore's plain and glob lines are honoured; the git_world trees ignore
+    ops/ only). Not git's tree id, and never compared with one."""
+    import hashlib
+    top = Path(cwd)
+    if not (top / ".git").exists():
+        return None
+    rules = _ignore_rules(top)
+    h = hashlib.sha1()
+    for dirpath, dirnames, filenames in os.walk(top):
+        base = Path(dirpath).relative_to(top).as_posix()
+        pre = "" if base == "." else base + "/"
+        dirnames[:] = sorted(n for n in dirnames if not (pre == "" and n == ".git")
+                             and not _ignored(pre + n + "/x", rules))
+        for name in sorted(filenames):
+            p = Path(dirpath) / name
+            rel = p.relative_to(top).as_posix()
+            if rel == ".git" or _ignored(rel, rules):
+                continue
+            h.update(rel.encode() + b"\0" + p.read_bytes() + b"\0")
+    return "py" + h.hexdigest()
+
+
 def deps(root, **over):
     seen = {"launch": [], "record": []}
+    if _STUB["on"]:
+        over.setdefault("git", stub_default_git)
+        over.setdefault("tree_key", py_tree_key)
     base = dict(
         spawn=FakeSpawn(),
         lane_state=lambda: [{"index": i, "state": "FREE", "lane": None} for i in range(3)],

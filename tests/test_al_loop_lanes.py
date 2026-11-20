@@ -20,7 +20,7 @@ import al_loop  # noqa: E402
 
 from al_loopkit import (  # noqa: E402 (shared with the sibling loop tests)
     ROADMAP, FakeGit, FakeSpawn, _two_lane_world, deps, git, git_world, isolate_git,
-    make_root, progress, real_git)
+    make_root, progress, real_git, stub_git)
 
 # Plan 097 / 156 (TESTS-A-18): only the tests that build a real git world under
 # tmp_path are marked git, one by one, so the fast tier runs the pure ones.
@@ -29,6 +29,7 @@ from al_loopkit import (  # noqa: E402 (shared with the sibling loop tests)
 @pytest.fixture(autouse=True)
 def _isolated_git(monkeypatch):
     isolate_git(monkeypatch)  # TESTS-A-19
+    stub_git(monkeypatch)  # TEST-LOOP-STUB-GIT: no-spawn deps() defaults
 
 
 # ---------------------------------------------------------------- lane worker
