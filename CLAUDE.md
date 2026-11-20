@@ -1029,3 +1029,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   terms bar the daily read, a bad release auto-applies in practice, the
   operator wants click-only, or a stdlib-verifiable signature becomes
   available.
+- Uninstall: uninstall.ps1 needs no Python, removes only items proven
+  AshLight's own, keeps <home>\data unless -Purge (Recycle Bin), asks
+  nothing by default, never reads a game folder and ends with one fixed
+  sentence about files the player may have copied; checkout mode never
+  removes Worktree, Scratch or ClaudeHistory (decision 0066). Reverses if:
+  players lose data they wanted kept or keep data they wanted gone, in
+  practice.
