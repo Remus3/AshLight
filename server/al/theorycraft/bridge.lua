@@ -258,8 +258,11 @@ io.read = real_read
 -- TC-LIVE: the pinned HeadlessWrapper keeps its launch object in a LOCAL
 -- (`local mainObject`, set by SetMainObject), not a global. Read it from
 -- runCallback's upvalue (read-only introspection), else the old global.
+-- TC-BRIDGE-NEXT: a later PoB may publish it as the global __mainObject__;
+-- that shape is read first, the upvalue path stays for the current pin.
 local function pob_main()
   if type(mainObject) == "table" then return mainObject end
+  if type(__mainObject__) == "table" then return __mainObject__ end
   if type(runCallback) == "function" and debug and debug.getupvalue then
     for i = 1, 64 do
       local name, value = debug.getupvalue(runCallback, i)

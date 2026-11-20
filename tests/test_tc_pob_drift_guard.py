@@ -37,16 +37,24 @@ FIX_HINT = ("Update server/al/theorycraft/bridge.lua (and this guard) before "
 
 # (file under src/, regex that must match, what it is, the bridge.lua token
 # that relies on it)
+# A rel of "A.lua|B.lua" passes when any one of those files matches.
+# TC-BRIDGE-NEXT: the launch object rows accept either launch shape: the
+# pinned `local mainObject` read through runCallback's upvalue, or a global
+# `__mainObject__` (the expected 1.0-era shape), set in HeadlessWrapper.lua
+# or Launch.lua.
+LAUNCH_FILES = "HeadlessWrapper.lua|Launch.lua"
+MAIN_OBJ = r"(?:mainObject|__mainObject__)"
 SHAPE = [
-    ("HeadlessWrapper.lua", r"^\s*(local\s+)?mainObject\b", "the launch object "
-     "variable `mainObject` (local or global)", "mainObject"),
-    ("HeadlessWrapper.lua", r"function\s+SetMainObject\s*\(", "SetMainObject()",
+    (LAUNCH_FILES, r"^\s*(local\s+)?" + MAIN_OBJ + r"\b", "the launch object "
+     "variable `mainObject` (local or global) or the global `__mainObject__`",
      "mainObject"),
+    (LAUNCH_FILES, r"function\s+SetMainObject\s*\(|^\s*__mainObject__\s*=",
+     "SetMainObject() or a `__mainObject__ =` assignment", "__mainObject__"),
     ("HeadlessWrapper.lua", r"function\s+runCallback\s*\(", "runCallback()",
      "runCallback"),
-    ("HeadlessWrapper.lua", r"runCallback[\s\S]*mainObject\[name\]",
-     "runCallback() calling mainObject[name] (bridge.lua reads mainObject "
-     "from its upvalue)", "getupvalue"),
+    ("HeadlessWrapper.lua", r"runCallback[\s\S]*" + MAIN_OBJ + r"\[name\]",
+     "runCallback() calling mainObject[name] or __mainObject__[name] (bridge.lua "
+     "reads mainObject from its upvalue, else the global)", "getupvalue"),
     ("HeadlessWrapper.lua", r"function\s+loadBuildFromXML\s*\(", "loadBuildFromXML()",
      "loadBuildFromXML"),
     ("HeadlessWrapper.lua", r"dofile\(\s*\"Launch\.lua\"\s*\)", "dofile(\"Launch.lua\")",
@@ -98,14 +106,74 @@ def test_guard_covers_what_bridge_lua_uses():
 @pytest.mark.parametrize("rel,pattern,what,token", SHAPE,
                          ids=[f"{r[0]}:{r[3]}" for r in SHAPE])
 def test_pinned_pob_api_shape(rel, pattern, what, token):
-    path = SRC / rel
-    assert path.is_file(), (
+    texts = {n: (SRC / n).read_text(encoding="utf-8", errors="replace")
+             for n in rel.split("|") if (SRC / n).is_file()}
+    assert texts, (
         f"PoB API drift: {rel} is gone from the pinned checkout; bridge.lua "
         f"relies on {what}. {FIX_HINT}")
-    text = path.read_text(encoding="utf-8", errors="replace")
-    assert re.search(pattern, text, re.M), (
+    assert row_matches(texts, rel, pattern), (
         f"PoB API drift: {rel} no longer has {what} (pattern {pattern!r}); "
         f"bridge.lua relies on it via {token!r}. {FIX_HINT}")
+
+
+def row_matches(texts, rel, pattern):
+    """True when any file named in rel ("A.lua|B.lua") is in texts and
+    matches pattern."""
+    return any(re.search(pattern, texts[n], re.M)
+               for n in rel.split("|") if n in texts)
+
+
+# Synthetic launch sources (shape only, written for this test, not PoB code).
+_UPVALUE_WRAPPER = """local mainObject
+function SetMainObject(object)
+  mainObject = object
+end
+function runCallback(name, ...)
+  if mainObject[name] then
+    return mainObject[name](mainObject, ...)
+  end
+end
+dofile("Launch.lua")
+"""
+_GLOBAL_WRAPPER = """function runCallback(name, ...)
+  if __mainObject__ and __mainObject__[name] then
+    return __mainObject__[name](__mainObject__, ...)
+  end
+end
+dofile("Launch.lua")
+"""
+_GLOBAL_LAUNCH = """local launch = {}
+__mainObject__ = launch
+"""
+_NEITHER_WRAPPER = """local launcher
+function runCallback(name, ...)
+  return launcher[name](launcher, ...)
+end
+"""
+LAUNCH_ROWS = [r for r in SHAPE if r[3] in ("mainObject", "__mainObject__",
+                                             "runCallback", "getupvalue")]
+
+
+@pytest.mark.parametrize("shape,texts", [
+    ("upvalue", {"HeadlessWrapper.lua": _UPVALUE_WRAPPER, "Launch.lua": ""}),
+    ("global", {"HeadlessWrapper.lua": _GLOBAL_WRAPPER, "Launch.lua": _GLOBAL_LAUNCH}),
+])
+def test_main_object_either_shape(shape, texts):
+    """TC-BRIDGE-NEXT: the launch rows accept the local mainObject upvalue
+    shape and the global __mainObject__ shape, refuse a source with
+    neither, and pob_main() in bridge.lua reads both."""
+    assert len(LAUNCH_ROWS) == 4
+    for rel, pattern, what, _ in LAUNCH_ROWS:
+        assert row_matches(texts, rel, pattern), f"{shape} shape fails the row for {what}"
+    neither = {"HeadlessWrapper.lua": _NEITHER_WRAPPER, "Launch.lua": ""}
+    assert not all(row_matches(neither, r[0], r[1]) for r in LAUNCH_ROWS)
+    body = re.search(r"local function pob_main\(\)([\s\S]*?)\nend\n", BRIDGE_LUA)
+    assert body, "bridge.lua lost pob_main()"
+    body = body.group(1)
+    glob = body.index('type(__mainObject__) == "table" then return __mainObject__')
+    upv = body.index("debug.getupvalue(runCallback")
+    assert glob < upv, "the global __mainObject__ is read before the upvalue scan"
+    assert 'name == "mainObject"' in body, "the upvalue path stays"
 
 
 @STATIC
