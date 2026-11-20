@@ -35,6 +35,10 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0067: Observability records (docs/decisions/0067-observability-records.md): AshLight
+  records only its own behaviour (counters behind /api/debug, budget log, typed
+  event log, report on click); no game process, no Client.txt text, nothing
+  uploaded (RUN-METRICS-CORE).
 - 0066: Uninstall consent (plan 05 D6) (docs/decisions/0066-uninstall-consent.md)
   (DEP-10).
 - 0065: Update policy (plan 05 D5, ruling Q-21; amends 0013 and the 0018
