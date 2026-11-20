@@ -81,6 +81,7 @@ TIMING_WHOLE = {"tests/test_budgets.py", "tests/test_soak.py", "tests/test_math_
 TIMING_TESTS = {
     "tests/test_tc_press_staged.py": {"test_first_card_and_reply_within_budget_with_a_slow_calc"},
     "tests/test_metrics.py": {"test_100000_updates_under_50_ms"},
+    "tests/test_budget_log.py": {"test_sampler_cost_under_budget"},
 }
 FUZZ = "tests/test_fuzz.py"
 SUPERVISOR = ("tests/test_keepalive.py", "tests/test_procs.py", "tests/test_supervisor.py")

@@ -248,6 +248,7 @@ def test_no_row_holds_a_path_name_or_pid(core, monkeypatch):
     assert core.budget_log.path.parent == core.runtime
 
 
+@pytest.mark.timing
 def test_sampler_cost_under_budget(core):
     """research 0048 R4: the sampler adds under 0.01 percent CPU, i.e.
     under 6 ms of CPU per one-minute row; between rows a tick is a compare."""
