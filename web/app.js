@@ -1283,8 +1283,34 @@
     });
   }
 
+  /* BUILD-STAMP:begin (app/test/about.test.js runs this function alone and
+     holds it to app/about.js versionLine; keep it self-contained ES5)
+     RUN-BUILD-STAMP-UI (F-027, decision 0082 part 2): the version line
+     from the core's build string '<x.y.z>[+<12 hex>][.dev]':
+     "Version 0.1.0, build 0123456789ab", ", dev" while hot reload is on;
+     "" for anything else. */
+  function versionText(doc) {
+    var raw = doc && (typeof doc.build === "string" ? doc.build : doc.version);
+    if (typeof raw !== "string" || raw.length > 100) { return ""; }
+    var plus = raw.indexOf("+");
+    var ver = plus < 0 ? raw : raw.slice(0, plus);
+    if (!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(ver)) { return ""; }
+    var meta = plus < 0 ? [] : raw.slice(plus + 1).split(".");
+    var commit = "";
+    var dev = false;
+    for (var i = 0; i < meta.length; i++) {
+      if (meta[i] === "dev" && !dev) { dev = true; continue; }
+      if (/^[0-9a-f]{12}$/.test(meta[i]) && !commit && !dev) { commit = meta[i]; continue; }
+      return "";
+    }
+    return "Version " + ver + (commit ? ", build " + commit : "") + (dev ? ", dev" : "");
+  }
+  /* BUILD-STAMP:end */
+
   /* TC-SNAP-UI: the game-data credit in the footer, read on every connect,
-     so a snapshot made by the build shows up without a click. */
+     so a snapshot made by the build shows up without a click.
+     RUN-BUILD-STAMP-UI: the same read fills the footer's version line and
+     the Settings About fold, so a core restart on a new build shows it. */
   function loadDataCredit() {
     api("GET", "/api/version").then(function (doc) {
       var text = D.dataCreditText(doc);
@@ -1292,6 +1318,12 @@
       p.textContent = text;
       p.hidden = !text;
       $("credits").hidden = !text; // UI-GLANCE: the footer fold around it
+      var ver = versionText(doc);
+      if (ver) {
+        $("build-line").textContent = ver;
+        $("build-line").hidden = false;
+        $("about-version").textContent = ver;
+      }
     }).catch(function () { /* keep the last line; the next connect retries */ });
   }
 
