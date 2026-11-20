@@ -151,3 +151,36 @@ def test_test_core_reads_tree_from_its_runtime_only(tmp_path):
     core = core_mod.Core(runtime=rt, log_path=str(tmp_path / "Client.txt"), tail=False)
     assert core.builds.tree.path == rt / "gamedata" / "skilltree.json"
     assert core.builds.snapshot()["loaded"] is False
+
+
+def _write_tree(path, doc):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc), encoding="ascii")
+
+
+def test_cache_picks_the_tree_with_the_best_id_match(tmp_path):
+    """DATA-TREE-HOLD: TreeCache watches skilltree.prev.json beside its path;
+    best_for(node_ids) returns the tree with the highest id_match share,
+    the newest on a tie."""
+    p = tmp_path / "gamedata" / "skilltree.json"
+    c = treedata.TreeCache(p)
+    assert c.prev_path == p.with_name("skilltree.prev.json")
+    assert c.best_for([1, 2]) is None  # nothing cached
+    new = {"nodes": {"1": {"skill": 1, "name": "New One"},
+                     "2": {"skill": 2, "name": "New Two"},
+                     "3": {"skill": 3, "name": "New Three"}}}
+    old = {"nodes": {"1": {"skill": 1, "name": "Old One"},
+                     "7": {"skill": 7, "name": "Old Seven"},
+                     "8": {"skill": 8, "name": "Old Eight"}}}
+    _write_tree(c.prev_path, old)
+    assert c.get() is None  # only the previous copy exists
+    assert c.best_for([1, 7]).name(7) == "Old Seven"
+    _write_tree(p, new)
+    assert c.best_for([1, 2, 3]).name(1) == "New One"
+    assert c.best_for([1, 7, 8]).name(1) == "Old One"
+    assert c.best_for([1, 2, 7, 8]).name(1) == "Old One"  # 1.0 beats 0.5
+    assert c.best_for([1]).name(1) == "New One"  # tie: newest wins
+    assert c.best_for([]).name(1) == "New One"
+    assert c.best_for([99]).name(1) == "New One"  # nothing matches: newest
+    c.prev_path.write_text("not json", encoding="ascii")
+    assert c.best_for([1, 7, 8]).name(1) == "New One"  # broken previous skipped
