@@ -23,11 +23,19 @@
     the root's path), and a shortcut path outside the root is refused.
     Tests and the release stage round trip use it, so the player's real
     Start Menu, Desktop and uninstall entry are never written or removed.
-  The logon task functions come with REL-AUTOSTART-ENTRY.
+  Logon task (REL-AUTOSTART-ENTRY, decision 0011): Register-AlLogonTask,
+  Unregister-AlLogonTask and Get-AlLogonTask own the opt-in "AshLight
+  Autostart" scheduled task. A task is ours when its action's working
+  directory (else its program) lies under the owner root; one that points
+  elsewhere is left alone ('elsewhere'). Every write is read back. With an
+  effect root the task folder moves to \AshLightShellScratch\<id>\, so the
+  real task folder is never written; tests also shadow the ScheduledTasks
+  cmdlets, so no test ever registers a task on the machine.
 #>
 
 $script:AlShellRealUninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AshLight'
 $script:AlShellScratchBase = 'HKCU:\Software\AshLightShellScratch'
+$script:AlShellTaskScratch = '\AshLightShellScratch\'
 $script:AlShellLinkName = 'AshLight.lnk'
 $script:AlShellDescription = 'AshLight: a companion app for Path of Exile 2'
 
@@ -77,6 +85,7 @@ function Get-AlShellPlaces {
             Desktop      = Join-Path $root 'Desktop'
             ScratchKey   = $script:AlShellScratchBase + '\' + $id
             UninstallKey = $script:AlShellScratchBase + '\' + $id + '\Uninstall\AshLight'
+            TaskPath     = $script:AlShellTaskScratch + $id + '\'
         }
     }
     return [pscustomobject]@{
@@ -86,6 +95,7 @@ function Get-AlShellPlaces {
         Desktop      = [Environment]::GetFolderPath('Desktop')
         ScratchKey   = ''
         UninstallKey = $script:AlShellRealUninstallKey
+        TaskPath     = '\'
     }
 }
 
@@ -279,6 +289,118 @@ function Remove-AlUninstallEntry {
     Remove-Item -LiteralPath $key -Recurse -Force
     if (Test-Path -LiteralPath $key) {
         throw "al_shell: uninstall entry still present after removal: $key"
+    }
+    return 'removed'
+}
+
+function Get-AlLogonTask {
+    # The scheduled task TaskName in the task folder of the effect root
+    # ('\' without one), or $null. Read only.
+    param([string]$TaskName, [string]$EffectRoot = '')
+    $path = (Get-AlShellPlaces -EffectRoot $EffectRoot).TaskPath
+    try {
+        return Get-ScheduledTask -TaskName $TaskName -TaskPath $path -ErrorAction Stop
+    } catch {
+        return $null
+    }
+}
+
+function Get-AlTaskField {
+    # A property of a task or task action as text ('' when absent).
+    param($Object, [string]$Name)
+    if ($null -eq $Object) { return '' }
+    $prop = $Object.PSObject.Properties[$Name]
+    if ($null -eq $prop -or $null -eq $prop.Value) { return '' }
+    return [string]$prop.Value
+}
+
+function Get-AlTaskAction {
+    # The first action of a task, or $null.
+    param($Task)
+    if ($null -eq $Task) { return $null }
+    $prop = $Task.PSObject.Properties['Actions']
+    if ($null -eq $prop -or $null -eq $prop.Value) { return $null }
+    $acts = @($prop.Value)
+    if ($acts.Count -lt 1) { return $null }
+    return $acts[0]
+}
+
+function Test-AlTaskOurs {
+    # A task is ours when its action's working directory lies under
+    # OwnerRoot, or (no working directory) its program does.
+    param($Task, [string]$OwnerRoot)
+    $act = Get-AlTaskAction -Task $Task
+    if ($null -eq $act) { return $false }
+    $wd = Get-AlTaskField -Object $act -Name 'WorkingDirectory'
+    if ($wd) { return (Test-AlOurs -Path $wd -Root $OwnerRoot) }
+    return (Test-AlOurs -Path (Get-AlTaskField -Object $act -Name 'Execute') -Root $OwnerRoot)
+}
+
+function Test-AlTaskCurrent {
+    param($Task, [string]$Execute, [string]$Arguments, [string]$WorkDir, [string]$Description)
+    $act = Get-AlTaskAction -Task $Task
+    if ($null -eq $act) { return $false }
+    if ((Get-AlTaskField -Object $act -Name 'Execute') -ne $Execute) { return $false }
+    if ((Get-AlTaskField -Object $act -Name 'Arguments') -ne $Arguments) { return $false }
+    if ((Get-AlTaskField -Object $act -Name 'WorkingDirectory') -ne $WorkDir) { return $false }
+    if ((Get-AlTaskField -Object $Task -Name 'Description') -ne $Description) { return $false }
+    return $true
+}
+
+function Register-AlLogonTask {
+    # The current-user logon task: at UserId's logon after Delay, run level
+    # Limited (no admin rights), 10 min limit, IgnoreNew. 'written' (read
+    # back), 'current' (nothing to change) or 'elsewhere' (a task of that
+    # name whose action points outside OwnerRoot; left alone).
+    param([string]$TaskName, [string]$Execute, [string]$Arguments, [string]$WorkDir,
+          [string]$UserId, [string]$Delay = 'PT30S', [string]$Description = '',
+          [string]$OwnerRoot, [string]$EffectRoot = '')
+    if (-not $TaskName) { throw 'al_shell: a task name is required' }
+    if (-not $Execute -or -not [System.IO.Path]::IsPathRooted($Execute)) {
+        throw "al_shell: the task program must be an absolute path: $Execute"
+    }
+    if (-not $UserId) { throw 'al_shell: a user id is required' }
+    if (-not (Test-AlOurs -Path $WorkDir -Root $OwnerRoot)) {
+        throw "al_shell: the task working directory is not under the owner root: $WorkDir"
+    }
+    $path = (Get-AlShellPlaces -EffectRoot $EffectRoot).TaskPath
+    $existing = Get-AlLogonTask -TaskName $TaskName -EffectRoot $EffectRoot
+    if ($null -ne $existing) {
+        if (-not (Test-AlTaskOurs -Task $existing -OwnerRoot $OwnerRoot)) { return 'elsewhere' }
+        if (Test-AlTaskCurrent -Task $existing -Execute $Execute -Arguments $Arguments `
+                -WorkDir $WorkDir -Description $Description) {
+            return 'current'
+        }
+    }
+    $action = New-ScheduledTaskAction -Execute $Execute -Argument $Arguments -WorkingDirectory $WorkDir
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $UserId
+    $trigger.Delay = $Delay
+    $principal = New-ScheduledTaskPrincipal -UserId $UserId -LogonType Interactive -RunLevel Limited
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+        -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew
+    Register-ScheduledTask -TaskName $TaskName -TaskPath $path -Action $action `
+        -Trigger $trigger -Principal $principal -Settings $settings `
+        -Description $Description -Force | Out-Null
+    $back = Get-AlLogonTask -TaskName $TaskName -EffectRoot $EffectRoot
+    if (-not (Test-AlTaskCurrent -Task $back -Execute $Execute -Arguments $Arguments `
+            -WorkDir $WorkDir -Description $Description)) {
+        throw "al_shell: logon task read-back mismatch: $path$TaskName"
+    }
+    return 'written'
+}
+
+function Unregister-AlLogonTask {
+    # 'removed' (gone, read back), 'absent' or 'elsewhere' (a task of that
+    # name whose action points outside OwnerRoot; left alone).
+    param([string]$TaskName, [string]$OwnerRoot, [string]$EffectRoot = '')
+    if (-not $TaskName) { throw 'al_shell: a task name is required' }
+    $path = (Get-AlShellPlaces -EffectRoot $EffectRoot).TaskPath
+    $existing = Get-AlLogonTask -TaskName $TaskName -EffectRoot $EffectRoot
+    if ($null -eq $existing) { return 'absent' }
+    if (-not (Test-AlTaskOurs -Task $existing -OwnerRoot $OwnerRoot)) { return 'elsewhere' }
+    Unregister-ScheduledTask -TaskName $TaskName -TaskPath $path -Confirm:$false
+    if ($null -ne (Get-AlLogonTask -TaskName $TaskName -EffectRoot $EffectRoot)) {
+        throw "al_shell: logon task still present after removal: $path$TaskName"
     }
     return 'removed'
 }

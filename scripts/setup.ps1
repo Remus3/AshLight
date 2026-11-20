@@ -11,10 +11,12 @@
 
   TC-PIN (decision 0004 item 3, decision 0018): the optional theorycraft
   calc component (Path of Building PoE2 source + LuaJIT) is OFF by default.
-  Opt in with -TcCalc or "tc_calc": true in config/local.json; then
-  tools/tc_pin.py fetches the hash-pinned archives (config/tc_pins.json)
-  into the sidecar Cache / Build dirs, verifies SHA-256, refuses on a
-  mismatch (setup fails) and is a no-op on a re-run.
+  One run of -TcCalc installs the calc and turns it on: tools/tc_pin.py
+  fetches the hash-pinned archives (config/tc_pins.json) into the sidecar
+  Cache / Build dirs, verifies SHA-256 and, after a verified install,
+  writes "tc_calc": true into config/local.json (every other key kept).
+  A mismatch refuses (setup fails) and leaves the setting unchanged; a
+  re-run is a no-op. "tc_calc": true already in the file also opts in.
 
   DESKTOP-CLIENT (decision 0041): with the overlay packages installed, a
   per-user "AshLight" shortcut goes to the Start Menu and the desktop
@@ -167,7 +169,7 @@ try {
 } finally {
     Pop-Location
 }
-if ($tcRc -eq 2) { throw 'setup: calc component REFUSED (pin or hash mismatch); see setup.log' }
+if ($tcRc -eq 2) { throw 'setup: calc component REFUSED (pin or hash mismatch); the calc setting is unchanged; see setup.log' }
 if ($tcRc -ne 0) { throw "setup: calc component step failed (rc $tcRc); see setup.log" }
 
 # Overlay packages (optional).
