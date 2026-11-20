@@ -128,6 +128,68 @@ def test_red_verdict_is_reused_until_its_ttl(tmp_path):
     assert len(gates.calls) == 2
 
 
+FOREIGN_RED = ("python tools/suite_run.py rc=1\n"
+               "FAILED tests/test_other.py::test_flaky - AssertionError: x\n"
+               "1 failed, 10 passed in 1.00s")
+OWN_RED = FOREIGN_RED.replace("test_other.py", "test_mine.py")
+
+
+@pytest.mark.parametrize("detail, runs", [(FOREIGN_RED, 2), (OWN_RED, 1)])
+def test_cached_red_outside_the_diff_is_rerun_exactly_once(tmp_path, detail, runs):
+    """LOOP-GATE-RERUN: a red cached on an unchanged tree whose failing ids
+    all lie outside the diff (an unrelated flake or infrastructure) is re-run
+    once instead of reused; a red inside the diff is reused as before."""
+    root = repo(tmp_path)
+    gates = Counter((False, detail))
+    changed = {"a.py", "tests/test_mine.py"}
+    t = al_loop.Tick(L.deps(root, git=L.real_git, gates=gates))
+    for _ in range(4):  # first run, then fix rounds that leave the tree as it was
+        assert not t.gate(root, changed=lambda: changed)[0]
+    assert len(gates.calls) == runs
+    reruns = [s for s in t.log if "re-run" in s]
+    assert len(reruns) == runs - 1
+    # a fresh tick (next fire) keeps the once: the re-run red is reused
+    t2 = al_loop.Tick(L.deps(root, git=L.real_git, gates=gates))
+    assert not t2.gate(root, changed=lambda: changed)[0] and len(gates.calls) == runs
+    # without a diff to compare (push / merge gates) the cached red is reused
+    root2 = repo(tmp_path / "two")
+    g2 = Counter((False, FOREIGN_RED))
+    t3 = al_loop.Tick(L.deps(root2, git=L.real_git, gates=g2))
+    t3.gate(root2)
+    t3.gate(root2)
+    assert len(g2.calls) == 1
+
+
+def test_foreign_red_rerun_green_is_cached_green(tmp_path):
+    root = repo(tmp_path)
+    results = [(False, FOREIGN_RED), (True, "gates green (1, x)")]
+    calls = []
+
+    def gates(cwd):
+        calls.append(cwd)
+        return results[min(len(calls), len(results)) - 1]
+    t = al_loop.Tick(L.deps(root, git=L.real_git, gates=gates))
+    assert not t.gate(root, changed=lambda: {"a.py"})[0]
+    assert t.gate(root, changed=lambda: {"a.py"})[0]
+    assert t.gate(root, changed=lambda: {"a.py"})[0] and len(calls) == 2
+
+
+def test_lane_review_passes_the_lane_diff_to_the_gate(tmp_path, monkeypatch):
+    root, wt = L.git_world(tmp_path)
+    seen = []
+    real = al_loop.Tick.gate
+
+    def gate(self, cwd, changed=None):
+        seen.append((Path(cwd), changed() if callable(changed) else changed))
+        return real(self, cwd, changed=changed)
+    monkeypatch.setattr(al_loop.Tick, "gate", gate)
+    sp = L.FakeSpawn([{"rc": 0, "error": None, "result": "VERDICT: PASS"}])
+    d = L.deps(root, spawn=sp, git=L.real_git, lane_state=running)
+    al_loop.tick(deps=d, no_push=True)
+    lane = [c for w, c in seen if w == wt]
+    assert lane and lane[0]  # the lane worktree's own changed names
+
+
 def test_infrastructure_red_is_never_cached(tmp_path):
     root = repo(tmp_path)
     for detail in ("python -m pytest -q rc=3\nSUITE-GATE: no suite slot free after 3600s",
