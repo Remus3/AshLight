@@ -16,8 +16,9 @@ app/ and web/ (node_modules and caches skipped) for:
 - DXGI / Direct3D hooks and present tracing (dxgi, d3d11, Present hooks,
   PresentMon, MinHook, Detours; decision 0006),
 - packet capture (WinDivert, pcap),
-- clipboard READS anywhere except the one item-check hotkey handler
-  (clipboard writes on a player's click are allowed, decision 0014).
+- clipboard READS anywhere except the one item-key hotkey read site that
+  the item check and the optional wear key share (clipboard writes on a
+  player's click are allowed, decision 0014).
 
 A hit fails unless an ALLOW entry names the file, the pattern, how many hits
 are expected, an anchor that must sit on or just above each hit, and a
@@ -95,10 +96,12 @@ BANNED = [
 # above it, so the allowance stays pinned to the place it was reasoned about.
 ALLOW = [
     ("app/main.js", "clipboard read", 1,
-     "EvalKey.createEvalHotkey({",
+     "the item keys' one clipboard read site",
      "The one clipboard read: readText handed to the item-check hotkey "
      "handler (eval_hotkey.js), called once per manual press, never at "
-     "start, by a timer or a watcher (decision 0003)."),
+     "start, by a timer or a watcher (decision 0003). TC-WORN-KEY: the "
+     "optional wear key's handler shares this same site (one read per "
+     "press of either key)."),
     ("scripts/brand_render.js", "capturePage", 1,
      "offscreen page only, never the screen",
      "BRAND-ICON build tool: captures its own offscreen window holding "
@@ -353,6 +356,24 @@ def test_moved_clipboard_read_fails(tree_copy):
     finally:
         main.write_bytes(original)
     assert any("outside its allowed place" in f for f in found), found
+
+
+def test_both_item_keys_share_the_one_read():
+    """TC-WORN-KEY: the optional wear key adds no clipboard read. main.js
+    keeps exactly one readText site, in the one deps object both press
+    handlers (item check and wear) are built from; eval_hotkey.js reads
+    only through that injected readText."""
+    main = (ROOT / "app" / "main.js").read_text(encoding="utf-8")
+    assert len(re.findall(r"clipboard\s*\.\s*read\w*\s*\(", main)) == 1
+    site = main.index("readText: () => clipboard.readText(),")
+    deps = main.rfind("const pressDeps = {", 0, site)
+    assert deps != -1 and site - deps < 200
+    for route in ("EvalKey.POST_EVAL", "EvalKey.POST_WEAR"):
+        assert f"EvalKey.createEvalHotkey(pressDeps, {route})" in main, route
+    assert len(re.findall(r"createEvalHotkey\(", main)) == 2
+    hk = (ROOT / "app" / "eval_hotkey.js").read_text(encoding="utf-8")
+    assert not re.search(r"clipboard\s*\.", hk)
+    assert "deps.readText()" in hk
 
 
 def test_stale_allow_entry_fails(tree_copy):

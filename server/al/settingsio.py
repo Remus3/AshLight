@@ -95,6 +95,7 @@ ALLOWED = {
     "price_watch_pct": _int(5, 500),
     "boots_speed_level": _int(1, 100),
     "worn_gear": _bool,  # TC-WORN-WIRE (decision 0052): on by default
+    "wear_hotkey": _hotkey,  # TC-WORN-KEY: the optional wear key, unset by default
 }
 # Player words for each key, for the import error sentence (design 0001 P2).
 LABELS = {
@@ -104,6 +105,7 @@ LABELS = {
     "overlay": "overlay position", "underlevel_gap": "under-level gap",
     "run_history": "run history switch", "price_watch_pct": "price watch threshold",
     "boots_speed_level": "boots speed level", "worn_gear": "worn gear switch",
+    "wear_hotkey": "wear item hotkey",
 }
 # Never exported or imported, even if a later key list grows (tests pin it).
 NEVER = ("contact", "client_log", "port", "loop", "token", "poesessid")
