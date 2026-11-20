@@ -237,87 +237,9 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 14: reliability and observability, install and release, theorycraft
 
-- [ ] TC-CALC-CONFINE-LUA (build) Drop dangerous Lua entry points after PoB loads. ACCEPT: python -m
-  pytest -q -rs tests/test_tc_bridge.py tests/test_tc_pob_drift_guard.py passes on the dev host
-  (calc component installed) and its -rs summary lists no skipped live row. ZERO-CLICK: Automatic:
-  every calc start runs the lockdown; the player does nothing. DEPENDS: TC-BRIDGE-NEXT,
-  TC-CALC-CONFINE-PROC. BLOCKED: session wave 15.
 
 ### Wave 15: loop and watchers, reliability and observability, theorycraft
 
-- [ ] RUN-METRICS-SITES (build) Counter call sites: fetches per host, calc starts and time-outs,
-  press outcome + Own consent line for the parse ledger (consent key, route flag, dashboard line).
-  ACCEPT: python -m pytest -q tests/test_metrics.py tests/test_data_ninja.py tests/test_tc_bridge.py
-  tests/test_tc_eval_api.py passes. Also (folded RUN-LEDGER-CONSENT): python -m pytest -q
-  tests/test_ledger_consent.py tests/test_http_security.py tests/test_a11y.py passes and npm test
-  --prefix app passes. ZERO-CLICK: Automatic. Also (folded RUN-LEDGER-CONSENT): One Allow click on
-  the new consent line, once, in the dashboard outside play; nothing in play. DEPENDS:
-  RUN-METRICS-CORE, RUN-TAIL-HEAL-CORE, RUN-LEDGER-CORE, RUN-BUILD-STAMP-UI. BLOCKED: session wave
-  15.
-- [ ] TC-WORN-KEY (build) Optional wear key (unset by default). ACCEPT: npm test --prefix app passes
-  and python -m pytest -q tests/test_floor_static.py tests/test_ux_settings_io.py passes.
-  ZERO-CLICK: One manual press per equipped item, only for a player who sets the key; the floor
-  minimum for a clipboard read. DEPENDS: TC-WORN-WIRE, TC-PRESS-BUILD, OVL-KEYS-CORE. BLOCKED:
-  session wave 15.
-- [ ] DEP-11 (build) Update from a local zip: verify, build beside, self-test, stage. ACCEPT: python
-  -m pytest -q tests/test_updater.py tests/test_installer.py passes. ZERO-CLICK: With web data off:
-  a re-run of the pasted line or 'install.ps1 -Zip' upgrades in place; no other step. DEPENDS:
-  REL-INSTALL-CMD. BLOCKED: session wave 15.
-- [ ] PLAY-TD-22B-TAB-FOCUS (build) Auto-return to Play keeps focus where the user is. ACCEPT: node
-  --test app/test/tabs.test.js passes: the automatic return never fires within 10 s of a key press
-  in the tab row, moves focus to the Play tab only when focus sat on the tab row, never moves a
-  focus inside a panel, and writes Showing Play. <what>. once to the polite header line. ZERO-CLICK:
-  News for Play still shows Play with no act; a card, trade or notice never moves focus. DEPENDS:
-  PLAY-TD-19B-FOUR-TABS. BLOCKED: session wave 15.
-- [ ] TEST-STATE-TEXT-4 (build) State text move 4: text/buildlive.py and text/overlaycard.py.
-  ACCEPT: python tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and
-  python -m pytest -q tests/test_summarize.py tests/test_eval_text.py tests/test_price_text.py
-  tests/test_trade_text.py tests/test_waystone.py tests/test_waystone_reward.py
-  tests/test_build_live.py tests/test_ux_b6.py tests/test_design_gate.py tests/test_audit_pass2.py
-  tests/test_math_compare.py tests/test_math_dps_sanity.py tests/test_math_weights.py
-  tests/test_tc_delta.py passes. ZERO-CLICK: Developer-side only; the player does nothing. A running
-  core in a source checkout reloads itself after the merge (decision 0042). DEPENDS:
-  TEST-STATE-TEXT-3. BLOCKED: session wave 15.
-- [ ] OVL-LAUNCH-ENV (build) Launcher runs tools by absolute path; the client starts without
-  ELECTRON_RUN_AS_NODE and NODE_OPTIONS. ACCEPT: node --test app/test/client.test.js and python -m
-  pytest -q tests/test_audit_exe_path.py tests/test_run_detach.py tests/test_desktop_client.py pass,
-  and powershell.exe 5.1 ParseFile accepts scripts/run.ps1 and scripts/al_detach.ps1. ZERO-CLICK:
-  Nothing for the player; the launcher still starts only the repo's own scripts. DEPENDS:
-  OVL-ELECTRON-SETUP. BLOCKED: session wave 15.
-- [ ] TEST-DOCS-INDEX (build) docs_fresh.py: stale markers, index --write, every decision and
-  research file indexed. ACCEPT: python -m pytest -q tests/test_docs_index.py
-  tests/test_docs_fresh.py passes and python tools/docs_fresh.py index --check exits 0 on the tree.
-  ZERO-CLICK: Unattended: the check is a test; the REL-PREP lane and the refresh watcher (AUTO-17)
-  run index --write and stale by themselves. DEPENDS: AUTO-14, LOOP-LEDGERS. BLOCKED: session wave
-  15.
-- [ ] LOOP-WATCH-FILE (build) The two row primitives and the unattended add-only commit path (Q-12).
-  ACCEPT: `python -m pytest -q tests/test_watch_file.py` passes in a scratch repository, with every
-  commit made through the injected kit git lock and naming exactly one path under docs/roadmap/new/
-  or docs/roadmap/done/. ZERO-CLICK: Fully unattended: a watcher finding becomes a row the loop
-  works, with no reminder and no hand edit. DEPENDS: AUTO-03, AUTO-05, LOOP-WATCH-ROWS. BLOCKED:
-  session wave 15.
-- [ ] DEP-13 (build) Cut-over tooling: migrate player data from a checkout. ACCEPT: python -m pytest
-  -q tests/test_migrate.py tests/test_install_home.py passes. ZERO-CLICK: One command inside the
-  cut-over; no player step (players start fresh). DEPENDS: REL-INSTALL-CMD. BLOCKED: session wave
-  15.
-- [ ] LOOP-WATCH-META (build) Watch sources: repoe-fork data and the GGG passive tree export
-  (metadata only). ACCEPT: `python -m pytest -q tests/test_watch_meta.py` passes. ZERO-CLICK:
-  Unattended: the snapshot itself still refreshes only at build or client start (decision 0009 as
-  amended), never from the loop. DEPENDS: AUTO-05. BLOCKED: session wave 15.
-- [ ] LOOP-WATCH-SETTLED (build) The GGG docs watch and the PoB release check as registry sources.
-  ACCEPT: `python -m pytest -q tests/test_watch_settled.py tests/test_watch_rows.py
-  tests/test_tc_drift.py tests/test_ggg_docs_watch.py` passes. ZERO-CLICK: Unattended: the two
-  settled reads keep running every tick with their own throttle; their findings become rows with no
-  hand edit. DEPENDS: AUTO-05, LOOP-WATCH-ROWS, AUTO-11. BLOCKED: session wave 15.
-- [ ] TC-GGG-RATELIMIT (build) Header-driven rate limiter. ACCEPT: python -m pytest -q
-  tests/test_ratelimit.py passes. ZERO-CLICK: Dev step: a pure module proven by its unit tests; it
-  makes no request and nothing runs in play until TC-GGG-CLIENT-CORE uses it. BLOCKED: session wave
-  15.
-- [ ] RUN-SETTINGS-TRIM-DOCS (review) Drop four tuning keys from the player docs. ACCEPT: grep -c -E
-  'poll_ms|underlevel_gap|price_watch_pct|boots_speed_level' README.md config/local.example.json
-  prints 0 for both and python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
-  tests/test_leak_sweep.py passes. ZERO-CLICK: Docs-only edit applied by the lane; the player reads
-  four keys fewer; nothing to click. DEPENDS: PUB-README-PLAYERS. BLOCKED: session wave 15.
 
 ### Wave 16: theorycraft, loop and watchers, reliability and observability
 
