@@ -27,7 +27,7 @@ def test_tc_delta_code_cites_its_own_decision():
     """P2-D1: TC-DELTA code and tests name decision 0024, not the bridge's."""
     for rel in ("server/al/theorycraft/delta.py", "server/al/theorycraft/evaluate.py",
                 "server/al/theorycraft/live.py", "server/al/upgrade.py",
-                "server/al/state.py", "server/al/core.py", "tests/test_tc_delta.py"):
+                "server/al/text/itemcheck.py", "server/al/core.py", "tests/test_tc_delta.py"):
         text = (ROOT / rel).read_text(encoding="ascii")
         assert "TC-DELTA (decision 0022)" not in text, rel
         assert "decision 0024" in text, rel
