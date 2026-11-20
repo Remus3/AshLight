@@ -2,6 +2,8 @@
 """Docs fresh (AUTO-14, F-146): facts the docs quote, computed from the tree.
 
     docs_fresh.py check [--root DIR]
+    docs_fresh.py index (--check | --write) [--root DIR]
+    docs_fresh.py stale [--root DIR] [--days N] [--today YYYY-MM-DD]
 
 Each fact reads its source value from the tree (a code pin, a constant, a
 manifest field) and matches it where a doc quotes it. A quote that differs,
@@ -31,15 +33,35 @@ Facts today (source -> docs matched):
   scripts\\<name>.ps1 README.md names exists.
 - not-affiliated statement: server/al/__init__.py DISCLAIMER verbatim in
   README.md.
+- index (TEST-DOCS-INDEX, F-195 c): every NNNN-<topic>.md under
+  docs/decisions/ and docs/research/ has its index line in that folder's
+  README.md ('- NNNN:' for decisions, '- NNNN ' for research). Files in
+  EXPECTED_STALE (the lines missing at the package base) are let through
+  while missing; the list is shrink-only and empties once the integrator
+  has run 'index --write'.
 
-Reads named tracked files only; makes no request and writes nothing.
+index --check: exit 0 when no line is missing (beyond EXPECTED_STALE),
+else 1 with one line per missing file. index --write: inserts every
+missing line (title from the file's '# NNNN - <title>' heading, wrapped
+at 72 columns) at its place in the list's own number order and changes
+nothing else; it is the one subcommand that writes, and only the two
+README files.
+
+stale: lists every line of docs/**/*.md holding a PENDING or UNVERIFIED
+marker and a YYYY-MM-DD date whose newest date on that line is more than
+--days (default 30) days before --today (default the local date). Prints
+nothing and exits 0 when there is none; else one line per marker, exit 1.
+
+Reads tracked files only and makes no request; only index --write writes.
 Stdlib only.
 """
 import argparse
 import ast
+import datetime
 import json
 import re
 import sys
+import textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -56,6 +78,36 @@ MANIFEST_REL = "ops/fleet_kit/MANIFEST.json"
 CLAUDE_REL = "CLAUDE.md"
 DESIGN_REL = "docs/design/0001-design-system.md"
 SCRIPTS = ("setup.ps1", "build.ps1", "run.ps1")
+DECISIONS_DIR = "docs/decisions"
+RESEARCH_DIR = "docs/research"
+# Folders whose NNNN-<topic>.md files each need an index line in README.md.
+INDEX_DIRS = (DECISIONS_DIR, RESEARCH_DIR)
+
+# Index lines missing at the TEST-DOCS-INDEX base. Shrink-only: an entry is
+# let through only while its line is still missing; the integrator's
+# 'index --write' adds them all, after which this tuple should be emptied.
+EXPECTED_STALE = tuple(
+    f"{DECISIONS_DIR}/{name}" for name in (
+        "0001-name-ashlight.md", "0002-stack.md", "0003-read-policy.md",
+        "0004-scope-theorycraft.md", "0005-core-keepalive.md",
+        "0006-fps-measurement-method.md", "0007-tc-code.md",
+        "0008-live-resume-backward-scan.md", "0009-data-license.md",
+        "0010-process-registry.md", "0011-core-autostart.md",
+        "0012-worktree-sidecar-hook.md", "0013-web-data.md",
+        "0014-ui-build-eval-gfx.md", "0015-price-check-and-contact.md",
+        "0016-price-ui-contract.md",
+        "0017-trade-no-app-calls-and-floor-wording.md", "0018-tc-pin.md",
+        "0019-trade-close-on-accept-cancel.md", "0020-act-zone-levels.md",
+        "0021-tc-code-real.md", "0022-tc-bridge.md",
+        "0023-act-splits-resume.md", "0024-tc-delta.md",
+        "0025-tc-drift.md", "0026-price-book-and-league-rollover.md",
+        "0027-tc-toolchain.md", "0028-tc-live-proof-and-budgets.md",
+        "0029-game-exit-log-staleness.md",
+        "0030-player-helpers-waystone-search-zone-notes.md",
+        "0031-loot-filter-download.md",
+        "0032-swap-compare-sanity-filter-tiers.md",
+        "0033-loot-filter-merge.md", "0034-build-file-download.md",
+        "0036-run-history-file.md", "0037-trade-stat-ids-source.md"))
 
 # Every file a fact reads (the test copies these into a fixture root).
 INPUTS = (INIT_REL, PORTS_REL, PKG_REL, LOCK_REL, MAIN_JS_REL, STACK_REL,
@@ -63,6 +115,7 @@ INPUTS = (INIT_REL, PORTS_REL, PKG_REL, LOCK_REL, MAIN_JS_REL, STACK_REL,
           *(f"scripts/{name}" for name in SCRIPTS))
 
 _DOTTED = r"(\d+(?:\.\d+)+)"
+_NUMBERED = re.compile(r"^(\d{4})-[\w.-]+\.md$")
 
 
 class Tree:
@@ -110,6 +163,14 @@ class Tree:
 
     def exists(self, rel):
         return (self.root / rel).is_file()
+
+    def numbered(self, rel_dir):
+        """Sorted names of the NNNN-<topic>.md files directly in rel_dir."""
+        folder = self.root / rel_dir
+        if not folder.is_dir():
+            return []
+        return sorted(p.name for p in folder.iterdir()
+                      if p.is_file() and _NUMBERED.match(p.name))
 
 
 def _missing(rel, fact, what="file missing"):
@@ -288,6 +349,161 @@ def fact_disclaimer(tree):
     return []
 
 
+# ------------------------------------------------------------------ index
+
+_INDEX_LINE = {DECISIONS_DIR: r"^- (\d{4}):", RESEARCH_DIR: r"^- (\d{4})\b"}
+_WRAP = 72
+
+
+def _readme(rel_dir):
+    return f"{rel_dir}/README.md"
+
+
+def index_missing(tree, rel_dir):
+    """The files of rel_dir (rel paths) with no index line in its README;
+    None when the README is missing or unreadable."""
+    text = tree.text(_readme(rel_dir))
+    if text is None:
+        return None
+    have = set(re.findall(_INDEX_LINE[rel_dir], text, re.M))
+    return [f"{rel_dir}/{name}" for name in tree.numbered(rel_dir)
+            if name[:4] not in have]
+
+
+def index_problems(tree, expected=EXPECTED_STALE):
+    """One problem per missing index line, minus the expected-stale ones."""
+    problems = []
+    for rel_dir in INDEX_DIRS:
+        missing = index_missing(tree, rel_dir)
+        if missing is None:
+            problems.append(_missing(_readme(rel_dir), "index"))
+            continue
+        problems += [f"{_readme(rel_dir)}: index: no index line for {rel}"
+                     for rel in missing if rel not in expected]
+    return problems
+
+
+def _title(tree, rel):
+    text = tree.text(rel) or ""
+    first = text.splitlines()[0] if text else ""
+    m = re.match(r"^#\s+\d{4}\s*[-:]\s*(.+?)\s*$", first)
+    if m:
+        return m.group(1)
+    m = re.match(r"^#\s+(.+?)\s*$", first)
+    return m.group(1) if m else Path(rel).stem[5:].replace("-", " ")
+
+
+def index_entry(tree, rel):
+    """The index entry for one file, as wrapped lines (no newlines)."""
+    name = Path(rel).name
+    title = _title(tree, rel)
+    if rel.startswith(RESEARCH_DIR + "/"):
+        body = f"- {name[:4]} {title} ([{name}]({name}))"
+    else:
+        body = f"- {name[:4]}: {title}"
+        if not body.endswith("."):
+            body += "."
+    return textwrap.wrap(body, _WRAP, subsequent_indent="  ",
+                         break_long_words=False, break_on_hyphens=False)
+
+
+def _entries(lines):
+    """[(number, start, end)] of the '- NNNN' entries; end is exclusive and
+    covers the entry's indented continuation lines."""
+    out = []
+    i = 0
+    while i < len(lines):
+        m = re.match(r"^- (\d{4})\b", lines[i])
+        if not m:
+            i += 1
+            continue
+        j = i + 1
+        while j < len(lines) and lines[j].startswith("  ") and lines[j].strip():
+            j += 1
+        out.append((int(m.group(1)), i, j))
+        i = j
+    return out
+
+
+def _insert_at(lines, num):
+    """Where an entry numbered num goes: before the first entry it precedes
+    in the list's own order (descending when the first number is above the
+    last), else after the last entry."""
+    entries = _entries(lines)
+    nums = [n for n, _s, _e in entries]
+    descending = len(nums) > 1 and nums[0] > nums[-1]
+    for n, start, _end in entries:
+        if (n < num) if descending else (n > num):
+            return start
+    if entries:
+        return entries[-1][2]
+    at = len(lines)
+    while at > 0 and lines[at - 1] == "":
+        at -= 1
+    return at
+
+
+def index_write(root):
+    """Insert every missing index line into the two READMEs; returns the rel
+    paths of the files that got a line. Nothing else in a README changes."""
+    tree = Tree(root)
+    added = []
+    for rel_dir in INDEX_DIRS:
+        missing = index_missing(tree, rel_dir)
+        if not missing:
+            continue
+        lines = tree.text(_readme(rel_dir)).split("\n")
+        for rel in missing:
+            at = _insert_at(lines, int(Path(rel).name[:4]))
+            lines[at:at] = index_entry(tree, rel)
+            added.append(rel)
+        (Path(root) / _readme(rel_dir)).write_bytes(
+            "\n".join(lines).encode("utf-8"))
+    return added
+
+
+def fact_index(tree):
+    return index_problems(tree)
+
+
+# ------------------------------------------------------------------ stale
+
+_MARKER = re.compile(r"\b(?:PENDING|UNVERIFIED)\b")
+_DATE = re.compile(r"\b(20\d{2})-(\d{2})-(\d{2})\b")
+
+
+def stale_markers(root, today, days=30):
+    """[(rel, line number, newest date, age in days, text)] for each line of
+    docs/**/*.md with a PENDING / UNVERIFIED marker whose newest date is
+    more than `days` days before `today`."""
+    out = []
+    docs = Path(root) / "docs"
+    if not docs.is_dir():
+        return out
+    for path in sorted(docs.rglob("*.md")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for no, line in enumerate(text.splitlines(), 1):
+            if not _MARKER.search(line):
+                continue
+            dates = []
+            for y, m, d in _DATE.findall(line):
+                try:
+                    dates.append(datetime.date(int(y), int(m), int(d)))
+                except ValueError:
+                    continue
+            if not dates:
+                continue
+            newest = max(dates)
+            age = (today - newest).days
+            if age > days:
+                out.append((path.relative_to(root).as_posix(), no,
+                            newest.isoformat(), age, line.strip()))
+    return out
+
+
 FACTS = [
     fact_electron_pin,
     fact_version,
@@ -297,6 +513,7 @@ FACTS = [
     fact_kit_version,
     fact_script_names,
     fact_disclaimer,
+    fact_index,
 ]
 
 
@@ -319,17 +536,74 @@ def stale_files(problems):
     return seen
 
 
+def _cmd_index(root, args):
+    if args.write:
+        added = index_write(root)
+        for rel in added:
+            print(f"docs_fresh: index line added for {rel}")
+        print(f"docs_fresh: index --write added {len(added)} line(s)")
+        return 0
+    tree = Tree(root)
+    problems = index_problems(tree)
+    for line in problems:
+        print(line)
+    still = set()
+    for rel_dir in INDEX_DIRS:
+        still.update(index_missing(tree, rel_dir) or [])
+    resolved = [rel for rel in EXPECTED_STALE if rel not in still]
+    if resolved:
+        print(f"docs_fresh: note: {len(resolved)} EXPECTED_STALE "
+              f"entr{'y is' if len(resolved) == 1 else 'ies are'} indexed "
+              f"now; drop them from the list")
+    if problems:
+        print(f"docs_fresh: {len(problems)} missing index line(s)")
+        return 1
+    print("docs_fresh: index ok")
+    return 0
+
+
+def _cmd_stale(root, args):
+    if args.today:
+        try:
+            today = datetime.date.fromisoformat(args.today)
+        except ValueError:
+            print(f"docs_fresh: bad --today: {args.today}", file=sys.stderr)
+            return 2
+    else:
+        today = datetime.date.today()
+    found = stale_markers(root, today, args.days)
+    for rel, no, date, age, text in found:
+        print(f"{rel}:{no}: {date} ({age} days): {text[:160]}")
+    return 1 if found else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     chk = sub.add_parser("check", help="match every fact against the docs")
-    chk.add_argument("--root", default=str(ROOT),
-                     help="tree to check (default: this checkout)")
+    idx = sub.add_parser("index", help="decision and research index lines")
+    mode = idx.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check", action="store_true",
+                      help="exit 1 when a file has no index line")
+    mode.add_argument("--write", action="store_true",
+                      help="insert every missing index line")
+    stl = sub.add_parser("stale", help="dated PENDING / UNVERIFIED markers")
+    stl.add_argument("--days", type=int, default=30,
+                     help="older than this many days (default 30)")
+    stl.add_argument("--today", default="",
+                     help="reference date YYYY-MM-DD (default: today)")
+    for p in (chk, idx, stl):
+        p.add_argument("--root", default=str(ROOT),
+                       help="tree to read (default: this checkout)")
     args = ap.parse_args(argv)
     root = Path(args.root)
     if not root.is_dir():
         print(f"docs_fresh: no such folder: {root}", file=sys.stderr)
         return 2
+    if args.cmd == "index":
+        return _cmd_index(root, args)
+    if args.cmd == "stale":
+        return _cmd_stale(root, args)
     problems = check(root)
     if not problems:
         print(f"docs_fresh: ok ({len(FACTS)} facts)")
