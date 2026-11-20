@@ -209,8 +209,8 @@ function appRegistry() {
 
 // today's paint sequence (the live regions announce in this order), then
 // the wire-only tools and settings
-const PANELS = ["build", "eval", "buildlive", "price", "chars", "glance", "consent", "reading",
-  "events", "trades", "acts", "runs", "summary", "zonenote", "history", "pricewatch", "hints",
+const PANELS = ["build", "eval", "price", "chars", "pace", "consent", "reading",
+  "events", "acts", "runs", "summary", "zonenote", "history", "pricewatch", "hints",
   "checks", "zoneguide", "layout", "filter", "weights", "gfx", "restart-overlay", "webdata",
   "settingsio"];
 
@@ -223,7 +223,7 @@ test("app.js keeps today's tick order: clocks, act split, map time, tip", () => 
   const reg = appRegistry();
   const order = [...APP.matchAll(/A\.register\(\{\s*name: "([a-z-]+)",\s*order: (\d+),([\s\S]*?)\n  \}\);/g)]
     .filter((m) => /\n    tick: function/.test(m[3])).map((m) => m[1]);
-  assert.deepEqual(order, ["glance", "acts", "runs", "hints"]);
+  assert.deepEqual(order, ["acts", "runs", "hints"]);
   assert.deepEqual(reg.names().filter((n) => order.includes(n)), order);
 });
 

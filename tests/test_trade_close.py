@@ -90,16 +90,18 @@ def test_accepted_line_stays_in_recent_events():
 
 
 def test_dashboard_loads_the_trade_helper():
-    # UX-REVIEW F6: web/trades.js is loaded before app.js and drives the
-    # polite #trade-status sentence.
+    # UX-REVIEW F6, PLAY-LEGACY-OUT-1: region T (web/feed.js) carries the
+    # new-trade sentence in its own polite region; web/trades.js, the old
+    # #trades card and its #trade-status region are gone.
     html = srcpaths.index_html()
-    tag = '<script src="/web/trades.js" defer></script>'
+    assert "/web/trades.js" not in html
+    for gone in ('id="trades"', 'id="trade-status"', 'id="trade-list"', 'id="trade-clear"'):
+        assert gone not in html, gone
+    tag = '<script src="/web/feed.js" defer></script>'
     assert tag in html
     assert html.index(tag) < html.index('<script src="/web/app.js" defer></script>')
-    region = '<p id="trade-status" class="muted trade-status" role="status" aria-live="polite">'
-    assert region in html
-    # outside the #trades section, which is hidden while no request is open
-    section = html[html.index('<section id="trades"'):]
-    assert section.index("</section>") < section.index(region)
+    feed = srcpaths.read("feed.js")
+    assert 'status.setAttribute("aria-live", "polite")' in feed
+    assert "showStatus(ui.status, prev, m.open)" in feed
     app = srcpaths.read("app.js")
-    assert 'TR.showStatus($("trade-status"), prevIds, rows)' in app
+    assert "showStatus" not in app and "ALTrades" not in app

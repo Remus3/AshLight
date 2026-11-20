@@ -24,8 +24,9 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
         "source", "track", "wbr"}
 LIVE_ROLES = {"status", "log", "alert", "marquee", "timer"}
 # Rewritten by the 1 s tick or on every state push: never inside a live region.
-TICKING = ["zone", "zone-time", "level", "who", "pace", "deaths", "levelups", "session",
-           "flags", "acts-rows", "maps-rows", "deaths-list", "events", "trade-list"]
+# PLAY-LEGACY-OUT-1: the old tiles and trade list are gone; region G and T
+# build their own nodes (web/strip.js, web/feed.js) and are not live regions.
+TICKING = ["pace", "acts-rows", "maps-rows", "deaths-list", "events"]
 
 
 class Node:
@@ -219,9 +220,16 @@ def test_aria_label_only_where_it_is_allowed():
 
 
 def test_deaths_dash_has_screen_reader_text():
-    d = by_id()["deaths"]
-    assert [c.attrs for c in d.children] == [{"aria-hidden": "true"}, {"class": "sr-only"}]
-    assert d.children[1].all_text() == "Not counted yet"
+    # PLAY-LEGACY-OUT-1: the old #deaths tile is gone; the strip's Deaths
+    # cell (web/strip.js) hides its dash from screen readers and gives them
+    # words instead, in a visually hidden span (web/strip.css .st-said).
+    assert 'id="deaths"' not in HTML
+    strip = JS["strip.js"]
+    assert '{ key: "deaths", label: "Deaths", sr: "not counted yet" }' in strip
+    assert re.search(r'if \(empty\) \{ setAttr\(c\.shown, "aria-hidden", "true"\); \}', strip)
+    assert "c.said.hidden = !empty;" in strip
+    css = srcpaths.read("strip.css")
+    assert re.search(r"#play-g \.st-said \{[^}]*clip-path: inset\(50%\)", css)
     assert re.search(r"\.sr-only \{[^}]*clip: rect\(0 0 0 0\)", CSS)
 
 
@@ -256,12 +264,13 @@ def test_text_colours_are_measured_token_pairs():
 # -- PLAY-TD-09B-SKELETON (F-025, F-096, F-086; plan 03 sections 3.2, 3.8, 3.9)
 
 REGIONS = "gctnbiu"
-LEGACY = {"g": {"g-tiles": ["zone", "level", "deaths", "session"]},
+# PLAY-LEGACY-OUT-1 removed the g-tiles, t-trades and b-alert groups.
+LEGACY = {"g": {},
           "c": {"c-guide": ["zone-note-box", "campaign-hints", "zone-guide"],
                 "c-setup": ["consent", "summarybox"]},
-          "t": {"t-trades": ["trades", "trade-status"]},
+          "t": {},
           "n": {"n-legacy": ["langbox", "hintbox"]},
-          "b": {"b-alert": ["build-alert"]},
+          "b": {},
           "i": {"i-eval": ["evalbox"]},
           "u": {}}
 

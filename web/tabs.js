@@ -1,16 +1,18 @@
 /* AshLight dashboard: tabs (UI-GLANCE). The page is a few tabs instead of
    one long column, so nothing needs a scroll at 1080p or in the ~1280x800
-   desktop window. Play is the primary tab: zone and its guide, level,
-   deaths, session, trades, the build alert, the tip and the item card.
+   desktop window. Play is the primary tab: the 7 Play regions (strip,
+   context, feed, notice, build line, item check, kept checks).
    ARIA tablist (WAI-ARIA APG "tabs with automatic activation"): Left /
    Right / Home / End move between tabs, one Tab stop for the row.
    The picked tab is remembered per viewer in localStorage (try/catch; the
    page works without it). ZERO-CLICK: a new item card, trade request or
-   build alert shows Play again by itself, unless the player is working in
-   another tab (focus inside it); then the Play tab carries a "new" word
-   instead. Nothing moves focus and nothing animates (design 0001 rule 3).
-   Slots other code fills: fill(doc, "zone-guide", node) and
-   fill(doc, "build-alert", node); see the comments in web/index.html.
+   build alert shows Play again by itself (notify: the item check from
+   web/app.js, trades and build alerts from the news hook of
+   web/regions.js), unless the player is working in another tab (focus
+   inside it); then the Play tab carries a "new" word instead. Nothing
+   moves focus and nothing animates (design 0001 rule 3).
+   The slot other code fills: fill(doc, "zone-guide", node); see the
+   comment in web/index.html.
    UMD: CommonJS for node --test (app/test/tabs.test.js), window.ALTabs
    for the page. No timers, no network. */
 (function (root, factory) {
@@ -39,7 +41,7 @@
   var TABS = ["play", "run", "build", "items", "settings"];
   var PRIMARY = "play";
   var STORE_KEY = "ashlight.tab";
-  var SLOTS = ["zone-guide", "build-alert"];
+  var SLOTS = ["zone-guide"];
   var GRACE_MS = 10000; // a click, key or scroll in the shown tab holds it
 
   /* A stored value -> a known tab id (anything else gives Play). */
@@ -152,8 +154,9 @@
     if (n.textContent !== text) { n.textContent = text; }
   }
 
-  /* Something new for Play arrived. what: "item check", "trade request"
-     or "build alert" (said in the header line when Play stays hidden). */
+  /* Something new for Play arrived. what: "item check", "trade request",
+     "build alert" or "trade request and build alert" (said in the header
+     line when Play stays hidden). */
   function notify(doc, what) {
     doc = doc || state.doc;
     if (!doc) { return false; }
@@ -174,17 +177,15 @@
     return false;
   }
 
-  /* Fill a Play slot (zone-guide, build-alert) with a node, or empty it
-     with null. A new build alert counts as news for Play. The node must
-     carry its own words (for example "Build alert: ..."): the slot's warn
-     edge only repeats them (design 0001, never colour alone). */
+  /* Fill a Play slot (zone-guide) with a node, or empty it with null.
+     The node must carry its own words: an edge or colour of the slot only
+     repeats them (design 0001, never colour alone). */
   function fill(doc, id, node) {
     if (SLOTS.indexOf(id) < 0) { return; }
     var box = doc.getElementById(id);
     if (!box) { return; }
     if (node) { box.replaceChildren(node); } else { box.replaceChildren(); }
     box.hidden = !node;
-    if (node && id === "build-alert") { notify(doc, "build alert"); }
   }
 
   function start(doc, store) {

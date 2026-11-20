@@ -165,9 +165,13 @@ if (-not $hasPytest) {
 $gate = Join-Path $Repo 'ops\fleet_kit\fleet_suite_gate.py'
 Push-Location $Repo
 try {
+    # TEST-GATE-CALLERS: the one whole-suite command (tools\suite_run.py picks
+    # xdist or serial and runs the timing tests alone). It refuses to run
+    # outside the suite gate, so the no-kit branch keeps the plain serial call.
     if (Test-Path $gate) {
         $owner = 'al-build.' + $PID
-        $pyRc = Invoke-AlLogged $pyLog $py @($gate, 'run', '--owner', $owner, '--', $py, '-m', 'pytest', '-q', 'tests')
+        $runner = Join-Path $Repo 'tools\suite_run.py'
+        $pyRc = Invoke-AlLogged $pyLog $py @($gate, 'run', '--owner', $owner, '--', $py, $runner)
     } else {
         $pyRc = Invoke-AlLogged $pyLog $py @('-m', 'pytest', '-q', 'tests')
     }

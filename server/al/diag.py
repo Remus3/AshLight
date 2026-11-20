@@ -20,7 +20,7 @@ import re
 import time
 from pathlib import Path
 
-from . import langguard, plug
+from . import buildinfo, langguard, plug
 from . import statuswords as words
 from .num import finite
 
@@ -343,9 +343,11 @@ def redact(text, pairs):
 
 
 def report(rows, version, now, pairs):
-    """The plain-text report the player copies (ASCII, LF)."""
+    """The plain-text report the player copies (ASCII, LF). The header
+    names the build (RUN-BUILD-STAMP-CORE): `version` plus buildinfo's
+    commit and dev mark, the string /api/health and /api/version show."""
     stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(now))
-    lines = [f"AshLight {version} self-check, {stamp}"]
+    lines = [f"AshLight {buildinfo.build_id(version=version)} self-check, {stamp}"]
     for r in rows:
         line = f"[{MARK[r['status']]}] {r['label']}: {r['detail']}"
         if r.get("fix"):
