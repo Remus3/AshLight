@@ -12,7 +12,10 @@ Idempotent: a file checked within MIN_AGE_S is skipped with no request;
 otherwise a conditional request (If-None-Match / If-Modified-Since) is sent
 and a 304 or an unchanged SHA-256 leaves the file and its entry untouched.
 Offline or failing sources are reported, never fatal (exit 0 unless
---strict). Nothing here is bundled in the repo (decision 0009 item 1).
+--strict). Before a changed body replaces `<name>.json` the current file is
+copied to `<name>.prev.json` (`keep_previous`, DATA-TREE-HOLD): one previous
+copy per source, so a reader (treedata.TreeCache) can fall back to it.
+Nothing here is bundled in the repo (decision 0009 item 1).
 
     python -m server.al.theorycraft.snapshot [--force] [--strict] [--dir D] [--opt-in]
 
@@ -143,6 +146,30 @@ def _header(headers, name):
     return None
 
 
+PREV_SUFFIX = ".prev.json"
+
+
+def previous_path(target):
+    """`<name>.prev.json` beside `<name>.json` (DATA-TREE-HOLD)."""
+    target = Path(target)
+    return target.with_name(target.name[:-len(".json")] + PREV_SUFFIX
+                            if target.name.endswith(".json")
+                            else target.name + PREV_SUFFIX)
+
+
+def keep_previous(target):
+    """Copy the current `<name>.json` to `<name>.prev.json` before it is
+    replaced; one previous copy, the older one is overwritten. True when a
+    copy was made; a missing file is not an error (False)."""
+    target = Path(target)
+    try:
+        body = target.read_bytes()
+    except FileNotFoundError:
+        return False
+    jsonfile.write_bytes(previous_path(target), body)
+    return True
+
+
 def load_manifest(directory):
     return jsonfile.read_json(Path(directory) / MANIFEST, encoding="ascii", kind=dict,
                               default={})
@@ -196,6 +223,10 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
                 if have and sha == entry.get("sha256"):
                     out[name] = "unchanged"
                 else:
+                    try:
+                        keep_previous(target)
+                    except OSError as e:
+                        raise FetchError(f"cannot keep previous copy: {e}") from e
                     jsonfile.write_bytes(target, body)
                     entry = {"url": url, "fetched_at": _utc(now), "sha256": sha,
                              "bytes": len(body)}

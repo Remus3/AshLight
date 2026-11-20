@@ -369,6 +369,12 @@ class BuildStore:
         if b is None or self.tree is None:
             return None
         try:
+            # DATA-TREE-HOLD: the cached tree (newest or the kept previous
+            # one) that best matches this build's active spec nodes
+            best_for = getattr(self.tree, "best_for", None)
+            if callable(best_for):
+                spec = b.active_spec
+                return best_for(spec.nodes if spec is not None else ())
             return self.tree.get()
         except Exception:  # optional data must never break the view
             log.exception("tree data unavailable")

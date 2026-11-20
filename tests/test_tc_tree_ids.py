@@ -124,3 +124,52 @@ def test_id_match_edges():
                                                     "ok": True}
     assert tree.id_match([4739, 1]) == {"known": 1, "total": 2, "ok": True}
     assert treedata.MIN_ID_MATCH == 0.5
+
+
+# DATA-TREE-HOLD: a newer export in another id space (or a far-off version)
+# replaced the cached tree; the build still resolves against the kept
+# previous file. Invented ids and names only.
+FOREIGN_NEW = {
+    "classes": [{"name": "Synth Warrior", "ascendancies": [
+        {"id": "SynthWarrior2", "name": "Synth Ascent Two"}]}],
+    "nodes": {str(i): {"skill": i, "id": f"synth_new_{i}", "name": f"New {i}"}
+              for i in range(1, 41)},
+}
+
+
+def _store_with_trees(tmp_path, newest, previous):
+    import json
+
+    from server.al.theorycraft import store
+    tp = tmp_path / "gamedata" / "skilltree.json"
+    tp.parent.mkdir(parents=True)
+    tp.write_text(json.dumps(newest), encoding="ascii")
+    treedata.previous_path(tp).write_text(json.dumps(previous), encoding="ascii")
+    s = store.BuildStore(tmp_path / "last-code.txt", tree=treedata.TreeCache(tp))
+    return s
+
+
+def test_foreign_version_newest_tree_falls_back_to_the_previous_file(tmp_path):
+    s = _store_with_trees(tmp_path, FOREIGN_NEW, EXPORT)
+    s.load_code(model.parse(_xml(SPEC_IDS)).to_code())
+    view = s.snapshot()["build"]["tree"]
+    assert view["tree_match"] == {"known": 6, "total": 6, "ok": True}
+    names = {r["id"]: r["name"] for r in view["named_nodes"]}
+    assert names[4739] == "Synth Strength" and names[61834] == "Synth Keystone"
+    # a build in the new tree's id space still resolves against the newest
+    s.load_code(model.parse(_xml(range(1, 11))).to_code())
+    view = s.snapshot()["build"]["tree"]
+    assert view["tree_match"]["ok"] and view["named_nodes"][0]["name"] == "New 1"
+
+
+def test_build_file_ids_come_from_the_matching_tree(tmp_path):
+    s = _store_with_trees(tmp_path, FOREIGN_NEW, EXPORT)
+    s.load_code(model.parse(_xml(SPEC_IDS)).to_code())
+    out = s.file_export()
+    assert out["passives"]["ok"] is True
+    # only nodes with a string id slug in the previous (matching) tree
+    assert out["doc"]["passives"] == ["synth_start_warrior", "synth_notable"]
+    assert out["doc"].get("ascendancy") == "SynthWarrior2"
+    s.load_code(model.parse(_xml((1, 2, 3))).to_code())
+    assert s.file_export()["doc"]["passives"] == ["synth_new_1", "synth_new_2",
+                                                  "synth_new_3"]
