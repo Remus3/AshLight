@@ -51,12 +51,15 @@ def test_body_inflating_past_the_cap_is_refused():
                             gzip.compress(b"a" * 100), 100)[1] == b"a" * 100
 
 
+# mtime=0 and explicit ids: gzip.compress stamps the current time into the
+# header, so a raw-bytes id changes between two collections a second apart
+# (tests/test_marks.py compares two collections node id for node id).
 @pytest.mark.parametrize("body", [
     b"not gzip at all",
-    gzip.compress(b"hello world")[:-6],          # truncated
-    gzip.compress(b"hello") + b"junk",           # trailing data
+    gzip.compress(b"hello world", mtime=0)[:-6],
+    gzip.compress(b"hello", mtime=0) + b"junk",
     b"",
-])
+], ids=["not-gzip", "truncated", "trailing-data", "empty"])
 def test_bad_gzip_stream_is_a_fetch_error(body):
     with pytest.raises(webfetch.FetchError):
         webfetch.request("GET", URL, UA, HOSTS,
