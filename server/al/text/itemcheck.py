@@ -7,6 +7,7 @@ same object. Pure functions and constants; stdlib only.
 """
 
 from ..theorycraft import cardparts
+from .buildlive import build_alert_text
 from .common import _dict, _dicts, _key, _num_text, _points, _signed, _signed_points, _text
 from .price import EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT
 from .waystone import waystone_text
@@ -224,7 +225,7 @@ def eval_card_text(card, alert=None):
         word = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
     out.update(notes=[], word=word, tone=tone, answers=False)
     cardparts.words(card, out)
-    caveat = _alert_text(alert) if card.get("ok") and not ws else None
+    caveat = build_alert_text(alert) if card.get("ok") and not ws else None
     if caveat:
         if not card.get("unidentified"):
             out["line"] = caveat["short"]
@@ -275,11 +276,3 @@ def _eval_lines(card):
                            "calc": _comp_calc(c, pob), "stats": _stat_rows(c)}
                           for c in comps]
     return out
-
-
-def _alert_text(alert):
-    """state.build_alert_text, imported at call time: it still lives in
-    server/al/state.py (TEST-STATE-TEXT-4 moves it), and state.py imports
-    this module, so a module-level import would be a cycle."""
-    from ..state import build_alert_text
-    return build_alert_text(alert)
