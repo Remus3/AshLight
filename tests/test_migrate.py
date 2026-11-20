@@ -90,7 +90,9 @@ def test_migrate_is_a_copy_the_checkout_stays_byte_for_byte(tmp_path):
     home = laid_out_home(tmp_path)
     before = snapshot(tmp_path / "checkout")
     results = migrate.run(migrate.plan(rt, cfg, home), home=home)
-    assert results and all(s == "copied" for _n, s in results), results
+    files = [(n, s) for n, s in results if n != "web_data"]
+    assert files and all(s == "copied" for _n, s in files), results
+    assert ("web_data", "offered") in results
     assert snapshot(tmp_path / "checkout") == before
 
 
@@ -110,9 +112,11 @@ def test_player_data_reads_the_same_in_the_home(tmp_path):
     # settings read the same: every allow-listed key and value
     src = json.loads(cfg.read_text(encoding="ascii"))
     got = json.loads((data / "local.json").read_text(encoding="ascii"))
-    for key in ("character", "league", "web_data", "tc_calc", "poll_ms", "eval_hotkey",
+    for key in ("character", "league", "tc_calc", "poll_ms", "eval_hotkey",
                 "contact", "client_log"):
         assert got[key] == src[key], key
+    # web_data never moves (decisions 0013, 0036): the home keeps it off
+    assert src["web_data"] is True and got["web_data"] is False
 
 
 def test_token_pids_heartbeat_stop_and_dev_keys_never_move(tmp_path):
@@ -186,7 +190,43 @@ def test_first_run_local_json_counts_as_fresh(tmp_path):
     res = dict(migrate.run(migrate.plan(rt, cfg, home), home=home))
     assert res["local.json"] == "copied"
     doc = json.loads((home / "data" / "local.json").read_text())
-    assert doc["character"] == "Ash" and doc["web_data"] is True
+    assert doc["character"] == "Ash" and doc["web_data"] is not True
+    assert res["web_data"] == "offered"
+
+
+def test_checkout_web_data_on_never_turns_the_home_on(tmp_path):
+    rt, cfg = checkout(tmp_path)
+    assert json.loads(cfg.read_text(encoding="ascii"))["web_data"] is True
+    assert "web_data" not in migrate.CONFIG_KEYS and "web_data" in migrate.HELD_KEYS
+    assert "web_data" not in migrate.config_keys({"web_data": True, "character": "Ash"})
+    for prep in ("fresh", "first_run", "existing_off"):
+        home = laid_out_home(tmp_path / prep)
+        local = home / "data" / "local.json"
+        if prep == "first_run":
+            firstrun.write_first_run(home)
+        elif prep == "existing_off":
+            _write(local, json.dumps({"character": "Other", "web_data": False}) + "\n")
+        for force in (False, True):
+            res = migrate.run(migrate.plan(rt, cfg, home), force=force, home=home)
+            assert ("web_data", "offered") in res, (prep, force)
+            doc = json.loads(local.read_text(encoding="ascii"))
+            assert doc.get("web_data") is not True, (prep, force)
+    # a home whose player already turned it on keeps it on, and nothing is offered
+    home = laid_out_home(tmp_path / "on")
+    _write(home / "data" / "local.json", json.dumps({"web_data": True}) + "\n")
+    res = migrate.run(migrate.plan(rt, cfg, home), force=True, home=home)
+    assert ("web_data", "offered") not in res
+    assert json.loads((home / "data" / "local.json").read_text())["web_data"] is True
+
+
+def test_cli_reports_web_data_offered_with_no_path(tmp_path, capsys):
+    rt, cfg = checkout(tmp_path)
+    home = laid_out_home(tmp_path)
+    assert migrate.main(["--home", str(home), "--from-runtime", str(rt),
+                         "--from-config", str(cfg)], environ={}) == 0
+    out = capsys.readouterr().out
+    assert "migrate: offered web_data" in out and str(tmp_path) not in out
+    assert json.loads((home / "data" / "local.json").read_text())["web_data"] is False
 
 
 def test_invalid_setting_value_is_left_out(tmp_path):

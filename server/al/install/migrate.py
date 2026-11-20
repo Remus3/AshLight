@@ -18,12 +18,15 @@ validator (server/al/settingsio.py ALLOWED) where it has one, and written
 into <home>/data/local.json (gitignored player state, decision 0059). The
 dev-only keys (loop, loop_push, hot_reload, tc_drift_live_unattended,
 port) and any key not in CONFIG_KEYS never reach the home. The contact is
-written only into that local.json. A home local.json that still equals
+written only into that local.json. web_data never moves (decisions 0013
+and 0036: nothing but the player's own click turns it on, as a settings
+import): the home keeps its own value (off on a fresh home), and a
+checkout that had it on is reported as `offered web_data`. A home local.json that still equals
 the first-run document (install/firstrun.py, untouched by the player)
 counts as fresh and takes the migrated keys; any other existing one is
 kept unless force, which merges the migrated keys over it.
 
-Exit codes: 0 done (copied or kept), 1 a copy failed, 2 usage, a refused
+Exit codes: 0 done (copied, kept or offered), 1 a copy failed, 2 usage, a refused
 home, a home that is not laid out, or no checkout to read. Prints
 `migrate: <state> <name>` lines with names relative to the data folder and
 no path. No game folder is read or written, nothing is sent anywhere, and
@@ -62,9 +65,13 @@ RUNTIME_FILES = (
 RUNTIME_TREES = (
     "build",                   # the loaded builds, one per character (decision 0045)
 )
-# local.json keys: the settings allow-list plus the two per-host player
-# values a cut-over keeps (contact and the configured Client.txt path)
-CONFIG_KEYS = tuple(settingsio.ALLOWED) + ("contact", "client_log")
+# local.json keys never moved by a cut-over: web_data stays the player's own
+# switch in the home (decisions 0013, 0036; settingsio never turns it on)
+HELD_KEYS = ("web_data",)
+# local.json keys: the settings allow-list (less HELD_KEYS) plus the two
+# per-host player values a cut-over keeps (contact and the Client.txt path)
+CONFIG_KEYS = tuple(k for k in settingsio.ALLOWED if k not in HELD_KEYS) + (
+    "contact", "client_log")
 # never copied, even if a later table edit names them (tests pin it)
 NEVER_FILES = ("token", "token.reuse", "core.alive", "stop.request",
                "restart.request", "keepalive.json", "keepalive.lock",
@@ -192,7 +199,7 @@ def config_keys(doc):
     if not isinstance(doc, dict):
         return out
     for key in CONFIG_KEYS:
-        if key in NEVER_KEYS or key not in doc:
+        if key in NEVER_KEYS or key in HELD_KEYS or key not in doc:
             continue
         value = doc[key]
         check = settingsio.ALLOWED.get(key)
@@ -222,9 +229,17 @@ def _read_capped(path):
     return data
 
 
+def web_data_offered(src_doc, home_doc):
+    """True when the checkout had web data on and the home does not: the
+    switch is offered to the player, never moved."""
+    on = isinstance(src_doc, dict) and src_doc.get("web_data") is True
+    return on and not (isinstance(home_doc, dict) and home_doc.get("web_data") is True)
+
+
 def _copy_config(src, target, force):
-    """Write the moving keys of src into target; returns the state."""
-    moving = config_keys(_read_json(src))
+    """Write the moving keys of src into target; returns (state, offered)."""
+    src_doc = _read_json(src)
+    moving = config_keys(src_doc)
     if os.path.lexists(target):
         current = _read_json(target) if _plain_file(target) else None
         if current == firstrun.first_run_config():
@@ -232,7 +247,7 @@ def _copy_config(src, target, force):
         elif force:
             doc = dict(current) if isinstance(current, dict) else firstrun.first_run_config()
         else:
-            return "kept"
+            return "kept", web_data_offered(src_doc, current)
     else:
         doc = firstrun.first_run_config()
     doc.update(moving)
@@ -240,7 +255,7 @@ def _copy_config(src, target, force):
     back = _read_json(target)
     if back != doc:
         raise OSError("read-back differs")
-    return "copied"
+    return "copied", web_data_offered(src_doc, back)
 
 
 def _copy_file(src, target, force):
@@ -260,7 +275,9 @@ def run(pairs, force=False, home=None):
     """Copy every (source, target) pair. Returns a list of (name, state)
     with state "copied", "kept", "refused" (a target outside the data
     folder) or "failed: <reason>"; name is the target relative to the data
-    folder (or its file name). The sources are only read."""
+    folder (or its file name). A checkout with web data on that the home
+    does not have on adds ("web_data", "offered"). The sources are only
+    read."""
     results = []
     for src, target in pairs:
         target = Path(os.path.abspath(str(target)))
@@ -270,14 +287,17 @@ def run(pairs, force=False, home=None):
         if data is None or not _inside(target, data) or _never(name):
             results.append((name, "refused"))
             continue
+        offered = False
         try:
             if target == data / CONFIG_TARGET:
-                state = _copy_config(src, target, force)
+                state, offered = _copy_config(src, target, force)
             else:
                 state = _copy_file(src, target, force)
         except (OSError, ValueError) as exc:
             state = f"failed: {exc.__class__.__name__}"
         results.append((name, state))
+        if offered:
+            results.append(("web_data", "offered"))
     return results
 
 
@@ -346,6 +366,9 @@ def main(argv=None, out=None, environ=None):
     results = run(pairs, force=args.force, home=home)
     for name, state in results:
         out.write(f"migrate: {state} {name}\n")
-    failed = [s for _n, s in results if s != "copied" and s != "kept"]
+        if state == "offered":
+            out.write("migrate: web data stays off here; turn it on in Settings "
+                      "if you want it\n")
+    failed = [s for _n, s in results if s not in ("copied", "kept", "offered")]
     out.write(f"migrate: {len(results) - len(failed)} of {len(results)} done\n")
     return EXIT_FAIL if failed else EXIT_OK
