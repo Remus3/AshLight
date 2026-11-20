@@ -14,6 +14,7 @@ started.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -56,7 +57,14 @@ def _guarded(call, marker):
     wires = "Import-Module ScheduledTasks -ErrorAction Stop; " + "".join(
         f"function {name} {{ Add-Content -LiteralPath '{marker}' -Value '{name}'; "
         f"throw 'tripwire {name}' }}; " for name in TRIPWIRES)
-    return wires + call + "; exit $LASTEXITCODE"
+    # every tripwire is checked to be the command that resolves before the
+    # call runs (a throw here stops the whole -Command string)
+    check = ("foreach ($n in @(" + ", ".join(f"'{n}'" for n in TRIPWIRES) + ")) { "
+             "$c = Get-Command $n -ErrorAction Stop; "
+             "if ($c.CommandType -ne 'Function' -or $c.ModuleName -or "
+             "$c.ScriptBlock.ToString() -notmatch 'tripwire') "
+             "{ throw ('double not in force: ' + $n) } }; ")
+    return wires + check + call + "; exit $LASTEXITCODE"
 
 
 def _json_line(stdout):
@@ -261,14 +269,62 @@ _FAKES = (
 )
 
 
+def test_every_task_command_is_doubled():
+    # The shell tests fake every ScheduledTasks command the scripts call:
+    # a new command, a module-qualified call, a re-import of the module or a
+    # COM / schtasks route would slip past the doubles, so each is refused.
+    used = set()
+    for script in (SHELL, AUTOSTART):
+        text = script.read_text(encoding="ascii")
+        used |= set(re.findall(r"\b[A-Za-z]+-ScheduledTask[A-Za-z]*\b", text))
+        low = text.lower()
+        assert "scheduledtasks\\" not in low, script.name
+        assert "schedule.service" not in low and "schtasks" not in low, script.name
+        assert not re.search(r"import-module\s+[^\n]*scheduledtasks", low), script.name
+    assert used and used <= set(_FAKE_NAMES), sorted(used - set(_FAKE_NAMES))
+    defined = re.findall(r"function global:([A-Za-z-]+)", _FAKES)
+    assert sorted(defined) == sorted(_FAKE_NAMES)
+    assert len(_FAKE_NAMES) == 7
+
+
 def _real_scratch_folder():
     """Read only, in a fresh process with no doubles: the real Task
-    Scheduler's \\AshLightShellScratch folder listing ('' when absent)."""
+    Scheduler's \\AshLightShellScratch folder ('' when absent). Only the
+    folder-not-found HRESULT (0x80070002) counts as absent; any other
+    outcome is returned as 'unreadable: ...' so a failed read-back never
+    passes as 'absent'."""
     r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-Command",
                         "$s = New-Object -ComObject Schedule.Service; $s.Connect(); "
-                        "try { $s.GetFolder('\\AshLightShellScratch').Path } catch { '' }"],
+                        "try { 'FOLDER=' + $s.GetFolder('\\AshLightShellScratch').Path } "
+                        "catch { $e = $_.Exception; "
+                        "while ($e.InnerException) { $e = $e.InnerException }; "
+                        "if ($e.HResult -eq -2147024894) { 'ABSENT' } "
+                        "else { 'ERROR=' + $e.HResult } }"],
                        capture_output=True, text=True, timeout=60)
-    return r.stdout.strip()
+    out = r.stdout.strip()
+    if r.returncode == 0 and out == "ABSENT":
+        return ""
+    if r.returncode == 0 and out.startswith("FOLDER="):
+        return out[len("FOLDER="):] or "\\"
+    return "unreadable: rc=%s %s %s" % (r.returncode, out, r.stderr.strip()[:200])
+
+
+def _require_no_real_scratch_folder():
+    """Before a test that runs the logon task code: the real scheduler must
+    read back with no scratch folder. If it cannot be read, skip: the test
+    must never run when its after-check could not prove anything."""
+    state = _real_scratch_folder()
+    if state.startswith("unreadable"):
+        pytest.skip("real Task Scheduler not readable for the read-back: " + state)
+    assert state == "", state
+
+
+def _skip_if_doubles_missing(text):
+    # The doubles check (or the module import) failed before anything ran:
+    # nothing was called, but the test cannot prove its point, so it skips.
+    flat = "".join(text.split())
+    if "doublenotinforce" in flat or "ScheduledTasks'wasnotloaded" in flat:
+        pytest.skip("ScheduledTasks doubles not in force; nothing was run")
 
 
 def _plant(execute, workdir):
@@ -284,6 +340,8 @@ def _shell(script, tmp_path, shell_root):
     full = ("$ErrorActionPreference = 'Stop'; Set-StrictMode -Version 2; "
             + _FAKES + f". {_q(SHELL)}; $p = (Get-AlShellPlaces).TaskPath; " + script)
     r = _ps(full, tmp_path, shell_root=shell_root)
+    if r.returncode != 0:
+        _skip_if_doubles_missing(r.stdout + r.stderr)
     assert r.returncode == 0, r.stdout + r.stderr
     return [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
 
@@ -296,7 +354,7 @@ def test_task_pointing_elsewhere_is_left_alone(tmp_path):
     other = tmp_path / "other-copy"
     for d in (scratch, owner, other):
         d.mkdir()
-    assert _real_scratch_folder() == ""
+    _require_no_real_scratch_folder()
     exe = tmp_path / "py" / "pythonw.exe"
     reg = (f"Register-AlLogonTask -TaskName '{TASK}' -Execute {_q(exe)} "
            f"-Arguments '-m server.al.autostart_entry' -WorkDir {_q(owner)} -UserId 'U' "
@@ -341,13 +399,15 @@ def test_enable_and_disable_go_through_the_helper(tmp_path):
     # root and the cmdlet doubles; the opt-in lands in the tmp runtime dir.
     scratch = tmp_path / "shell"
     scratch.mkdir()
-    assert _real_scratch_folder() == ""
+    _require_no_real_scratch_folder()
     call = (f"& {_q(AUTOSTART)} -Enable; 'RC=' + $LASTEXITCODE; "
             f"& {_q(AUTOSTART)} -Enable; 'RC=' + $LASTEXITCODE; "
             f"& {_q(AUTOSTART)} -Status; "
             f"& {_q(AUTOSTART)} -Disable; 'RC=' + $LASTEXITCODE; "
             "'C=' + ($global:AlFakeCalls -join ',')")
     r = _ps(_FAKES + call, tmp_path, shell_root=scratch)
+    if r.returncode != 0:
+        _skip_if_doubles_missing(r.stdout + r.stderr)
     assert r.returncode == 0, r.stdout + r.stderr
     out = r.stdout
     assert "registered (at logon" in out and "already registered (no-op)" in out
