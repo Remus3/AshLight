@@ -5,8 +5,9 @@ Every check is a passive local read the core already has (tailer state,
 the local config, the cached price book, the calc component's files, the
 game-data snapshot, server/al/procs.py, AshLight's own overlay log).
 No network (this module never imports webfetch), no probe of the game
-process, no window scan. The hotkey reads "registered" from the overlay's
-own log, never "pressed".
+process, no window scan. The hotkeys read "registered" from the client's
+own runtime file (ops/runtime/hotkeys.json, HOTKEYS-LIVE), else from the
+overlay's own log, never "pressed".
 
 The report is plain text the player copies on a click (the dashboard
 writes the clipboard inside that click only, decision 0014). It carries
@@ -54,8 +55,13 @@ FIX_SNAPSHOT = ("AshLight fetches it by itself while web data is on, at most "
                 "internet connection.")
 FIX_SNAPSHOT_OFF = ('Tick "Use web data" under Prices and web data. AshLight '
                     "then fetches it by itself.")
-FIX_HOTKEY = ("Another app holds the shortcut. Set a different item check key in "
-              r"AshLight's settings file, then run scripts\run.ps1.")
+# HOTKEYS-LIVE (OVL-KEYS-CORE): the fix names the in-app field (Tools >
+# Overlay position and size); the client re-registers with no restart.
+FIX_HOTKEY = ("Another app holds the key. Pick a different item check key under "
+              "Overlay position and size in AshLight's Tools. No restart needed.")
+FIX_TOGGLE_KEY = ("Another app holds the key. Pick a different overlay key under "
+                  "Overlay position and size in AshLight's Tools. No restart needed.")
+HOTKEY_UNKNOWN = "Known once the overlay is running."
 
 
 def _ago(seconds):
@@ -219,14 +225,55 @@ def _live(f, key, cid, label, what):
     return _check(cid, label, FAIL, f"{what} is not running.", FIX_RUN)
 
 
+# HOTKEYS-LIVE (OVL-KEYS-CORE): one row per shortcut; id, label, fix
+HOTKEY_ROWS = (("eval", "hotkey", "Item check hotkey", FIX_HOTKEY),
+               ("toggle", "hotkey_toggle", "Overlay hotkey", FIX_TOGGLE_KEY))
+
+
+def _hotkey_row(entry, cid, label, fix):
+    """One shortcut row from its hotkeys.view entry."""
+    e = entry if isinstance(entry, dict) else {}
+    key, want = e.get("key"), e.get("want")
+    if e.get("registered") is True and key:
+        if e.get("fallback") is True:
+            asked = want or "Your key"
+            return _check(cid, label, NOTE, f"{asked} is taken by another app, "
+                                            f"so AshLight uses {key}.")
+        return _check(cid, label, PASS, f"Registered: {key}.")
+    if e.get("registered") is False:
+        held = f" {want}" if want else " the key"
+        return _check(cid, label, FAIL, f"Not registered: another app holds{held}.", fix)
+    return _check(cid, label, UNKNOWN, HOTKEY_UNKNOWN)
+
+
 def check_hotkey(f):
-    v = f.get("hotkey")
-    if v is True:
-        return _check("hotkey", "Item check hotkey", PASS, "Registered.")
-    if v is False:
-        return _check("hotkey", "Item check hotkey", FAIL, "Not registered.", FIX_HOTKEY)
-    return _check("hotkey", "Item check hotkey", UNKNOWN,
-                  "Known once the overlay is running.")
+    """Two rows (item check key, overlay key) and one NOTE row while the
+    player switched the overlay off. With the client's keys view
+    (f["hotkeys"]) each row says what is bound, a fallback or a failure;
+    without it the item check row reads the overlay log's verdict
+    (f["hotkey"]) and the overlay key row is unknown. While the overlay
+    process is not running the keys are unknown."""
+    hk = f.get("hotkeys") if isinstance(f.get("hotkeys"), dict) else None
+    legacy = f.get("hotkey")
+    if f.get("overlay") is False:
+        hk = legacy = None
+    rows = []
+    for name, cid, label, fix in HOTKEY_ROWS:
+        if hk is not None:
+            rows.append(_hotkey_row(hk.get(name), cid, label, fix))
+        elif name == "eval" and legacy is True:
+            rows.append(_check(cid, label, PASS, "Registered."))
+        elif name == "eval" and legacy is False:
+            rows.append(_check(cid, label, FAIL, "Not registered.", fix))
+        else:
+            rows.append(_check(cid, label, UNKNOWN, HOTKEY_UNKNOWN))
+    if hk is not None and hk.get("overlay_on") is False:
+        tog = hk.get("toggle") if isinstance(hk.get("toggle"), dict) else {}
+        key = tog.get("key") if tog.get("registered") is True else None
+        how = f"Press {key} to show it." if key else "Show it again from the tray icon."
+        rows.append(_check("overlay_off", "Overlay switched off", NOTE,
+                           f"You switched the overlay off. {how}"))
+    return rows
 
 
 FIX_RELOAD = ("Fix the file and save it again. AshLight keeps the last working "
@@ -356,7 +403,7 @@ def checks(f, now):
             check_calc(f), check_snapshot(f, now),
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
-            check_hotkey(f), check_port(f)]
+            *check_hotkey(f), check_port(f)]
     rows += [r for r in (check_reload(f), check_dev_docs(f), check_private(f)) if r]
     rows += check_last_exit(f, now)
     return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})

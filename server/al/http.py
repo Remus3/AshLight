@@ -802,6 +802,26 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._web_data_doc())
 
+    def _set_hotkey(self, path, query, extra):
+        """HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE): {"name": "eval" |
+        "toggle", "key": str} stores one shortcut in config/local.json; the
+        desktop client re-registers it by itself. A game key or the other
+        shortcut's key is refused (400, settingsio's sentence). The core
+        registers nothing and sends nothing to the game."""
+        body = self._read_json()
+        if body is None:
+            return None
+        name, key = body.get("name"), body.get("key")
+        if not isinstance(name, str) or not isinstance(key, str):
+            return self._json(400, {"error": 'name: "eval"|"toggle" and key: text required'})
+        try:
+            view = self.server.core.set_hotkey(name, key)
+        except ValueError as e:
+            return self._json(400, {"error": str(e)})
+        except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
+            return self._json(500, {"error": SAVE_FAILED})
+        return self._json(200, {"hotkeys": view})
+
     def _build_code(self, path, query, extra):
         """TC-CODE / TC-JSON / TC-URL: load a pasted build (JSON {"code":
         text}, or a character object {"character": {...}}). The format (PoB
@@ -1133,6 +1153,7 @@ POST_ROUTES = {
     "/api/price-watch": Handler._price_watch,
     "/api/hints": Handler._hints,
     "/api/wear": Handler._wear,  # TC-WORN-WIRE
+    "/api/hotkeys": Handler._set_hotkey,  # HOTKEYS-LIVE (OVL-KEYS-CORE)
 }
 
 PUT_ROUTES = {
