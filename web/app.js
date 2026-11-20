@@ -37,7 +37,6 @@
     return t;
   }
 
-  var duration = F.duration;
   var clock = F.clock;
 
   /* UX-A11Y: write only a changed string. The pills sit in polite live
@@ -51,27 +50,6 @@
     if (el.getAttribute("data-state") !== state) { el.setAttribute("data-state", state); }
     setText(el.querySelector(".glyph"), glyph);
     setText(el.querySelector(".word"), word);
-  }
-
-  /* UX-A11Y: before the opt-in the deaths tile shows "-" and screen readers
-     hear "Not counted yet" (hidden text: aria-label is not allowed on a
-     paragraph, so it was not reliably read). */
-  function setDeaths(node, text) {
-    if (node.getAttribute("data-count") === text) { return; }
-    node.setAttribute("data-count", text);
-    node.textContent = "";
-    if (text === "-") {
-      var dash = document.createElement("span");
-      dash.setAttribute("aria-hidden", "true");
-      dash.textContent = "-";
-      var said = document.createElement("span");
-      said.className = "sr-only";
-      said.textContent = "Not counted yet";
-      node.appendChild(dash);
-      node.appendChild(said);
-    } else {
-      node.textContent = text;
-    }
   }
 
   function serverNow() { return Date.now() / 1000 - offset; }
@@ -124,70 +102,6 @@
     }
     list.replaceChildren(frag);
     $("events-empty").hidden = rows.length > 0;
-  }
-
-  var renderedTrades = "";
-  var TR = window.ALTrades; // web/trades.js: pure trade list helpers
-  var shownTradeIds = null; // null until the first paint (F6)
-
-  function renderTrades(rows) {
-    var ids = TR.tradeIds(rows);
-    var key = JSON.stringify(ids);
-    if (key === renderedTrades) { return; }
-    renderedTrades = key;
-    var prevIds = shownTradeIds;
-    shownTradeIds = ids;
-    var frag = document.createDocumentFragment();
-    for (var i = rows.length - 1; i >= 0; i--) {
-      var t = rows[i];
-      var line = D.tradeLine(t);
-      var li = document.createElement("li");
-      var tm = document.createElement("span");
-      tm.className = "time mono";
-      tm.textContent = clock(t.at);
-      var what = document.createElement("span");
-      what.className = "what";
-      what.textContent = line.what;
-      var where = document.createElement("span");
-      where.className = "where";
-      where.textContent = line.where;
-      var worth = P.tradeAbout(t, ratesDoc); // DATA-NINJA-UI: "about N <primary>"
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "secondary";
-      btn.textContent = "Dismiss";
-      btn.setAttribute("aria-label", "Dismiss trade request from " + (t.from || "unknown player"));
-      btn.addEventListener("click", dismissTrade.bind(null, t.id));
-      li.appendChild(tm);
-      li.appendChild(what);
-      li.appendChild(where);
-      if (worth.text) {
-        var ab = document.createElement("span");
-        ab.className = "about";
-        ab.textContent = worth.text;
-        ab.title = worth.title;
-        li.appendChild(ab);
-      }
-      li.appendChild(btn);
-      frag.appendChild(li);
-    }
-    $("trade-list").replaceChildren(frag);
-    $("trades").hidden = rows.length === 0;
-    /* UX-REVIEW F6: a new request is said once in the polite region. */
-    TR.showStatus($("trade-status"), prevIds, rows);
-    // UI-GLANCE ZERO-CLICK: a new trade request shows Play by itself
-    if (window.ALTabs && TR.newTradeSentence(prevIds, rows)) { window.ALTabs.notify(document, "trade request"); }
-  }
-
-  /* Dashboard-only: dismissing never sends anything to the game. */
-  function dismissTrade(id) {
-    $("trade-status").textContent = "";
-    api("POST", "/api/trade-dismiss", id === null ? { all: true } : { id: id })
-      .then(function (res) { render(res.state); })
-      .catch(function (e) {
-        $("trade-status").textContent = "Not dismissed. Try again.";
-        console.warn("dismiss failed: " + e.message);
-      });
   }
 
   /* OVL-POS: overlay layout editor. Saved to config/local.json by the core;
@@ -945,8 +859,6 @@
         fillWebData({ web_data: doc.web_data });
       }
       renderRates();
-      renderedTrades = ""; // conversions may have changed
-      if (snap) { renderTrades(snap.trade_requests || []); }
       renderPrice(snap ? snap.price : null, true);
       // a refresh the core just started finishes in a few seconds
       if (doc.refreshing) { ratesAgain = setTimeout(loadRates, 3000); }
@@ -1090,13 +1002,6 @@
     }
   });
   A.register({
-    name: "buildlive",
-    order: 30,
-    paint: function (s) {
-      if (window.ALBuildLive) { window.ALBuildLive.paint(document, s); } // BUILD-LIVE
-    }
-  });
-  A.register({
     name: "price",
     order: 40,
     paint: function (s) { renderPrice(s.price || null, false); }
@@ -1117,32 +1022,14 @@
     }
   });
   A.register({
-    name: "glance",
+    name: "pace",
     order: 60,
+    // UTIL-PACE: the core's pace sentence in the Act times card, shown once
+    // there is one (the picked character's, UTIL-MULTICHAR)
     paint: function (s, c) {
-      $("zone").textContent = s.zone || "No zone yet";
-      $("hideout").hidden = !s.in_hideout;
-      $("zone-stale").hidden = !(s.zone && s.tailer && s.tailer.consented && s.tailer.idle);
-      $("level").textContent = c.level === null || c.level === undefined ? "-" : String(c.level);
-      $("who").textContent = c.character
-        ? c.character + (c["class"] ? " (" + c["class"] + ")" : "") + (c.who_note || "")
-        : "character unknown";
-      // UTIL-PACE: the core's pace sentence, shown once there is one.
       var paceText = (c.pace && c.pace.text) || "";
-      $("pace").textContent = paceText;
+      setText($("pace"), paceText);
       $("pace").hidden = !paceText;
-      var counts = D.countsView(c.deaths, c.level_ups, !!(s.tailer && s.tailer.consented));
-      setDeaths($("deaths"), counts.deaths);
-      $("levelups").textContent = counts.levelups;
-      $("flags").textContent = D.sessionSub(s.afk, s.dnd, !!(s.tailer && s.tailer.consented));
-    },
-    tick: function (s, now, until) {
-      $("zone-time").textContent = s.zone_entered_at ? duration(until - s.zone_entered_at) : "--:--";
-      // Before the Client.txt opt-in there is no play session to time.
-      // UX-REGRESSION-SWEEP: it stops with them while the log is idle, so it
-      // never counts on under a Last session card that says the session ended.
-      $("session").textContent = s.tailer && s.tailer.consented
-        ? duration(until - s.session_started_at) : "--:--";
     }
   });
   A.register({
@@ -1169,14 +1056,6 @@
     name: "events",
     order: 90,
     paint: function (s) { renderEvents(s.recent_events || []); }
-  });
-  A.register({
-    name: "trades",
-    order: 100,
-    paint: function (s) { renderTrades(s.trade_requests || []); },
-    wire: function () {
-      $("trade-clear").addEventListener("click", function () { dismissTrade(null); });
-    }
   });
   A.register({
     name: "acts",

@@ -33,6 +33,7 @@ from . import item as item_parser
 from . import pobweights
 from . import value as value_mod
 from . import waystone as waystone_mod
+from . import worngear
 
 MAX_COMPARISONS = 3
 MAX_STATS = 8
@@ -101,8 +102,12 @@ class LastEval:
     it at once. One per core."""
 
     def __init__(self, builds, weights, state, league=None, calc=None, rates=None,
-                 trade_ids=None, staged=False):
+                 trade_ids=None, staged=False, worn=None):
         self.builds = builds
+        # TC-WORN-BASELINE (decision 0052): the worn-gear store (a
+        # worngear.WornGear, injected; None: no worn baseline). The item
+        # check compares against the worn item first, the PoB plan second
+        self.worn = worn
         self.weights = weights
         self.state = state
         # TC-UPGRADE: a callable read at run time (the configured league or
@@ -151,6 +156,34 @@ class LastEval:
         return (getattr(self.state, "character", None),
                 getattr(self.state, "level", None))
 
+    def baseline(self, build=None):
+        """TC-WORN-BASELINE: the worngear.Baseline of the current character
+        and `build` (default the loaded one), or None without a worn
+        store."""
+        if self.worn is None:
+            return None
+        build = self.builds.build if build is None else build
+        return worngear.Baseline(self.worn, self._who()[0], build)
+
+    def wear_last(self, slot=None, text=None):
+        """TC-WORN-BASELINE: file the last checked item (or `text`) as the
+        current character's worn item of its slot (`slot`: an explicit
+        slot, else the store's choice). Returns the slot, or None (no worn
+        store, nothing checked yet, or not gear). The checked items are
+        re-scored against the new baseline."""
+        if self.worn is None:
+            return None
+        if text is None:
+            with self._lock:
+                last = self._input
+            text = last[0] if last is not None else None
+        if not isinstance(text, str):
+            return None
+        filed = self.worn.wear(self._who()[0], text, slot=slot, build=self.builds.build)
+        if filed is not None:
+            self.rescore()
+        return filed
+
     def run(self, text, slot=None, keep_time=False, at=None):
         """`at`: the press time (PRICE-1-WIRE shares it with the price
         check of the same press); None stamps now. The card gains
@@ -166,8 +199,10 @@ class LastEval:
             gen = self._gen
         with self._lock:
             self._input = (text, slot)
-        stages = tc_evaluate.stages(text, self.builds.build, self.weights.get(), slot=slot,
-                                    calc=calc, cache=self.pob_weights)
+        build = self.builds.build
+        stages = tc_evaluate.stages(text, build, self.weights.get(), slot=slot,
+                                    calc=calc, cache=self.pob_weights,
+                                    baseline=self.baseline(build))
         press = _Press(self, text, slot, gen)
         if not self.staged:
             result = None
@@ -176,8 +211,9 @@ class LastEval:
             press.publish(tc_evaluate.STAGE_MODS, result, False, keep_time, at, force=True)
         else:
             name, result = next(stages)
-            # more stages follow only with the calc on and a compared item
-            pending = calc is not None and bool(result.get("ok"))
+            # more stages follow only with the calc on, a build and a
+            # compared item (a worn item alone is scored by the weights)
+            pending = calc is not None and build is not None and bool(result.get("ok"))
             press.publish(name, result, pending, keep_time, at)
             if pending:
                 self._queue(press, stages, name)
@@ -188,6 +224,10 @@ class LastEval:
             with self._lock:
                 self.candidates.add(self._who()[0], text, slot, result.get("verdict"),
                                     at if at is not None else _now(self.state))
+            if self.worn is not None:
+                # TC-WORN-BASELINE: wear_last() files it in the slot it was
+                # compared against (memory only)
+                self.worn.note_compared(self._who()[0], result.get("slot"), text)
             self.rescore(fresh=False)
         return result
 
@@ -291,13 +331,15 @@ class LastEval:
         character, level = self._who()
         build = self.builds.build
         weights = self.weights.get()
+        baseline = self.baseline(build)
         with self._lock:
             rows = self.candidates.rows(character)
         items = []
         for entry in rows:
             try:
                 res = tc_evaluate.evaluate(entry["text"], build, weights, slot=entry["slot"],
-                                           calc=None, cache=self.pob_weights)
+                                           calc=None, cache=self.pob_weights,
+                                           baseline=baseline)
             except Exception:  # noqa: BLE001 - one bad row never stops the list
                 continue
             with self._lock:
@@ -421,12 +463,13 @@ def _campaign_facts(state, build):
 
 
 def attach(builds, weights, state, league=None, calc=None, rates=None, trade_ids=None,
-           staged=False):
+           staged=False, worn=None):
     """Wire the live views into a core: build summary now and on every load,
     and a LastEval that re-runs on a build change. Returns the LastEval.
-    `staged` (TC-PRESS-STAGED-LIVE): publish the item check in stages."""
+    `staged` (TC-PRESS-STAGED-LIVE): publish the item check in stages.
+    `worn` (TC-WORN-BASELINE): the worn-gear store, or None."""
     last = LastEval(builds, weights, state, league=league, calc=calc, rates=rates,
-                    trade_ids=trade_ids, staged=staged)
+                    trade_ids=trade_ids, staged=staged, worn=worn)
     rev = [0]
 
     def on_build(build):

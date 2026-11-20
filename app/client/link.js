@@ -14,7 +14,10 @@
      .json or .txt name;
    - the saved size and position are used only when they still land on a
      connected display; with none, a display that is not the overlay's
-     gets the window (OVL-SECOND-DISPLAY). */
+     gets the window (OVL-SECOND-DISPLAY);
+   - the companion comes back on its own (shown inactive, never focused)
+     when the log wakes only while it sits wholly on a display other than
+     the overlay's (OVL-WAKE-COMPANION, wakeAction). */
 
 const fs = require("fs");
 const path = require("path");
@@ -167,6 +170,66 @@ function windowBounds(saved, workAreas, avoid) {
   };
 }
 
+/* Windows counts an invisible resize border of about 7 px into a window's
+   bounds, so a window snapped to a display edge reaches that far past it. */
+const WAKE_EDGE_PX = 8;
+
+function rectOk(r) {
+  return !!r && typeof r === "object" &&
+    [r.x, r.y, r.width, r.height].every(Number.isFinite) && r.width > 0 && r.height > 0;
+}
+
+/* Is rect b wholly inside area a (a widened by the invisible border)? */
+function within(b, a) {
+  const t = WAKE_EDGE_PX;
+  return b.x >= a.x - t && b.y >= a.y - t && b.x + b.width <= a.x + a.width + t &&
+    b.y + b.height <= a.y + a.height + t;
+}
+
+/* OVL-WAKE-COMPANION (decision 0041 amendment 2026-11-19): what the
+   companion does when the overlay gate turns. "showInactive" only when
+   all hold: the switch is on (enabled === true), the log went from idle
+   (wasIdle) to a fresh line (fresh), the window is hidden (closed to the
+   tray or minimised), the saved bounds lie wholly on one display (areas:
+   the displays' rects) and that display is not the overlay's
+   (overlayArea, known). Anything else, or anything unknown: "stay". The
+   game's display never gets the window. */
+function wakeAction(input) {
+  const a = input && typeof input === "object" ? input : {};
+  if (a.enabled !== true || a.wasIdle !== true || a.fresh !== true || a.hidden !== true) {
+    return "stay";
+  }
+  if (!rectOk(a.bounds) || !rectOk(a.overlayArea) || !Array.isArray(a.areas)) { return "stay"; }
+  const home = a.areas.filter(rectOk).find((r) => within(a.bounds, r));
+  if (!home || sameRect(home, a.overlayArea)) { return "stay"; }
+  return "showInactive";
+}
+
+/* The client's own preferences (OVL-WAKE-COMPANION): client-prefs.json in
+   the runtime dir, never config/local.json. {wake: true|false}; a missing
+   or broken file is the defaults (wake on). */
+const PREFS_FILE = "client-prefs.json";
+const PREFS_DEFAULT = Object.freeze({ wake: true });
+
+function loadPrefs(dir) {
+  try {
+    const doc = JSON.parse(fs.readFileSync(path.join(dir, PREFS_FILE), "ascii"));
+    return { wake: !(doc && doc.wake === false) };
+  } catch (e) {
+    return { wake: PREFS_DEFAULT.wake };
+  }
+}
+
+/* Write the prefs (tmp file, then rename). Throws on a write error. */
+function savePrefs(dir, prefs) {
+  const file = path.join(dir, PREFS_FILE);
+  const doc = { wake: !(prefs && prefs.wake === false) };
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(file + ".tmp", JSON.stringify(doc) + "\n", "ascii");
+  fs.renameSync(file + ".tmp", file);
+  return doc;
+}
+
 /* The state document saved on move / resize / close. */
 function stateDoc(bounds, maximized) {
   return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
@@ -230,6 +293,6 @@ function makeHealthCheck(http, port, getToken) {
 
 module.exports = { dashboardUrl, isCoreUrl, isExternalUrl, externalHref, routeFor,
                    rateAllows, noteOpened, readHosts, downloadAllowed, wantsClient,
-                   windowBounds, stateDoc, safeFileName, waitFor, makeHealthCheck,
+                   windowBounds, wakeAction, stateDoc, safeFileName, waitFor, makeHealthCheck,
                    coreOrigin, CLIENT_FLAG, DEFAULT_SIZE, MIN_SIZE, LINK_HOSTS, HOSTS_FILE,
-                   RATE, DOWNLOAD_EXT };
+                   RATE, DOWNLOAD_EXT, WAKE_EDGE_PX, loadPrefs, savePrefs, PREFS_FILE };

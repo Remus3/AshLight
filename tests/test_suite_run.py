@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
@@ -98,6 +100,58 @@ def test_run_outside_the_gate_is_refused_with_the_gate_command():
     assert "refused" in text
     assert ("python ops/fleet_kit/fleet_suite_gate.py run --owner <owner> -- "
             "python tools/suite_run.py") in text
+
+
+PROBE_INI = ("[pytest]\naddopts = -p no:cacheprovider\n"
+             "markers =\n    timing: wall-clock sensitive\n")
+PROBE_TEST = "\n".join((
+    "import os",
+    "import pytest",
+    "",
+    "",
+    "def _mark(name):",
+    "    with open(os.environ['AL_PROBE_OUT'], 'a', encoding='ascii') as fh:",
+    "        fh.write(name + chr(10))",
+    "",
+    "",
+    "def test_plain():",
+    "    _mark('plain')",
+    "",
+    "",
+    "@pytest.mark.timing",
+    "def test_timed():",
+    "    _mark('timed')",
+    ""))
+
+
+@pytest.mark.parametrize("xdist", [False, True])
+def test_real_phases_keep_timing_tests_out_of_the_parallel_pass(tmp_path, xdist):
+    """TEST-TIMING-ALONE: run the real phase commands on a probe project:
+    phase 1 (parallel when xdist is present) deselects -m timing, phase 2
+    runs the timing test alone, serially."""
+    if xdist and not suite_run.xdist_available():
+        pytest.skip("pytest-xdist not installed (optional dev-only plugin)")
+    proj = tmp_path / "probe"
+    proj.mkdir()
+    (proj / "pytest.ini").write_text(PROBE_INI, newline="\n")
+    (proj / "test_probe.py").write_text(PROBE_TEST, newline="\n")
+    ran = {}
+    for name, argv in suite_run.phases(xdist=xdist):
+        out = tmp_path / f"{name}.txt"
+        env = dict(os.environ, AL_PROBE_OUT=str(out))
+        env.pop("PYTEST_XDIST_WORKER", None)
+        p = subprocess.run(argv, cwd=str(proj), env=env, capture_output=True,
+                           text=True, timeout=120)
+        assert p.returncode == 0, p.stdout + p.stderr
+        ran[name] = out.read_text(encoding="ascii").split() if out.exists() else []
+        if name != "timing":
+            assert ("-n" in argv) is xdist
+    first = "parallel" if xdist else "serial"
+    assert list(ran) == [first, "timing"]
+    assert ran[first] == ["plain"], ran  # timing deselected beside the workers
+    assert ran["timing"] == ["timed"], ran  # and run alone afterwards
+    timing_argv = suite_run.phases(xdist=xdist)[1][1]
+    assert "-n" not in timing_argv and "--dist" not in timing_argv
 
 
 def test_script_refuses_outside_the_gate():

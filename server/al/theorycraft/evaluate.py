@@ -22,6 +22,7 @@ from . import potential as potential_mod
 from . import weights as weights_mod
 
 UPGRADE, SIDEGRADE, DOWNGRADE = "upgrade", "sidegrade", "downgrade"
+SOURCE_WORN = "worn"  # worngear.SOURCE_WORN: a baseline slot answered by the worn item
 
 _ONE_HAND = ("wand", "sceptre", "one hand mace", "one hand sword", "one hand axe",
              "claw", "dagger", "spear", "flail")
@@ -197,28 +198,52 @@ def _keys(new_stats, old_stats):
     return list(keys.values())
 
 
-def _pob_deltas(calc, build, slots, item_text, blend):
+def _worn_at(ref, slot):
+    """True when `ref` is a baseline whose `slot` answer is the worn item."""
+    source = getattr(ref, "source", None)
+    return callable(source) and source(slot) == SOURCE_WORN
+
+
+def _rebase(base, d, blend):
+    """TC-WORN-BASELINE: a swap delta measured against the worn item,
+    measured again against the build's own outputs (the plan); no calc
+    call."""
+    out = {k: delta_mod.change(base[k], d[k]["new"]) for k in delta_mod.OUTPUTS}
+    out["score_delta"] = round(delta_mod.combined(
+        {k: out[k]["pct"] for k in delta_mod.OUTPUTS}, blend), 4)
+    return out
+
+
+def _pob_deltas(calc, build, slots, item_text, blend, ref=None):
     """TC-PRESS-STAGED-EVAL stage "pob" calls: the build's outputs once,
     then PoB's DPS / EHP delta per slot. Returns [(slot, old_item, delta or
-    None, unusable skill)]; a slot whose weapon the main skill cannot use
-    (MATH-WEAPON-TYPE, decision 0032 amendment) has no delta. Raises
+    None, unusable skill, plan delta or None)]; a slot whose weapon the
+    main skill cannot use (MATH-WEAPON-TYPE, decision 0032 amendment) has
+    no delta. TC-WORN-BASELINE: `ref` answers equipped(slot) (a baseline;
+    default the build); a slot holding a worn item is measured from the
+    build with that item swapped in (one more calc call), and its plan
+    delta is the same swap against the build itself. Raises
     delta.CalcError."""
+    ref = build if ref is None else ref
     base = delta_mod.outputs(calc, build)
     rows = []
     for s in slots:
-        old_item = build.equipped(s)
+        old_item = ref.equipped(s)
+        worn = old_item is not None and _worn_at(ref, s)
+        s_base = delta_mod.outputs(calc, build, {s: old_item.text}) if worn else base
         try:
-            d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=base)
+            d = delta_mod.item_delta(calc, build, s, item_text, blend=blend, base=s_base)
         except delta_mod.CalcWeaponUnusable as e:
-            rows.append((s, old_item, None, e.skill))
+            rows.append((s, old_item, None, e.skill, None))
             continue
-        rows.append((s, old_item, d, None))
+        plan = _rebase(base, d, blend) if worn and build.equipped(s) is not None else None
+        rows.append((s, old_item, d, None, plan))
     return rows
 
 
 def _pob_comp(row, new_stats, table, side):
     """One compared slot scored with `table`, its verdict from PoB."""
-    s, old_item, d, skill = row
+    s, old_item, d, skill = row[:4]
     c = _compare(s, new_stats, score(new_stats, table), old_item, table, side)
     if d is None:
         # PoB says the main skill cannot use this weapon here; a real
@@ -266,7 +291,7 @@ def _mods_stage(out, rows, item_text, new_stats, calc, build, blend, side, cache
     hand = weights_mod.lookup(hand_weights)
     comps, per_slot = [], {}
     for row in rows:
-        s, old_item, d, _skill = row
+        s, old_item, d = row[:3]
         if d is None:
             comps.append(_pob_comp(row, new_stats, hand, side))
             per_slot[s] = ({"weights": hand_weights, "detail": {}}, hand)
@@ -288,11 +313,15 @@ def _mods_stage(out, rows, item_text, new_stats, calc, build, blend, side, cache
     return _pob_out(out, comps, best, new_stats, table, mod_weights)
 
 
-def _cached(out, build, slots, new_stats, cache, blend, side, notice):
+def _cached(out, build, slots, new_stats, cache, blend, side, notice, ref=None):
     """MATH-WEIGHTS: with the calc off or failing, score with the weights PoB
     measured earlier for this same build, when every slot has some. The
     score is then PoB's blended percent per point, so the verdict uses
-    delta.verdict's band. Returns True when it scored."""
+    delta.verdict's band. Returns True when it scored. `ref` answers
+    equipped(slot) (TC-WORN-BASELINE; default the build)."""
+    ref = build if ref is None else ref
+    if build is None:
+        return False
     tables = {}
     for s in slots:
         w = cache.fallback(build, s, blend)
@@ -302,7 +331,7 @@ def _cached(out, build, slots, new_stats, cache, blend, side, notice):
     comps = []
     for s in slots:
         table = tables[s][1]
-        c = _compare(s, new_stats, score(new_stats, table), build.equipped(s), table, side)
+        c = _compare(s, new_stats, score(new_stats, table), ref.equipped(s), table, side)
         c["verdict"] = delta_mod.verdict(c["score_delta"])
         comps.append(c)
     best = max(comps, key=lambda c: c["score_delta"])
@@ -316,12 +345,46 @@ def _cached(out, build, slots, new_stats, cache, blend, side, notice):
     return True
 
 
+def _marks(out, ref, new_stats, side, rows=None):
+    """TC-WORN-BASELINE: with a baseline, each comparison gains "source"
+    ("worn" / "plan" / None) and the result gains "plan": the headline
+    slot's item checked against the build's planned item, when that slot's
+    answer is the worn item and the plan has an item there; else None.
+    Its verdict follows the stage (PoB's delta in the "pob" / "mods"
+    stages, the stage's weights otherwise). Without a baseline, or for a
+    result that is not ok, `out` is unchanged."""
+    if not out.get("ok") or not callable(getattr(ref, "source", None)):
+        return out
+    for c in out["comparisons"]:
+        c["source"] = ref.source(c["slot"])
+    out["plan"] = None
+    best = next((c for c in out["comparisons"] if c["slot"] == out["slot"]), None)
+    plan_item = ref.plan(out["slot"]) if best is not None else None
+    if plan_item is None or best["source"] != SOURCE_WORN or best.get("weapon_unusable"):
+        return out
+    table = weights_mod.lookup(out["mod_weights"].get("weights") or {})
+    p = _compare(best["slot"], new_stats, score(new_stats, table), plan_item, table, side)
+    source = out["calc"]["source"]
+    if source == delta_mod.SOURCE_POB:
+        d = next((r[4] for r in rows or () if r[0] == best["slot"]), None)
+        if d is None:
+            return out
+        p.update(score_delta=_clean(d["score_delta"]),
+                 verdict=delta_mod.verdict(d["score_delta"]), dps=d["dps"], ehp=d["ehp"])
+    elif source == pobweights.SOURCE_CACHED:
+        p["verdict"] = delta_mod.verdict(p["score_delta"])
+    out["plan"] = {"slot": p["slot"], "equipped": p["equipped"], "verdict": p["verdict"],
+                   "score_delta": p["score_delta"], "source": source,
+                   **{k: p[k] for k in ("dps", "ehp") if k in p}}
+    return out
+
+
 STAGE_WEIGHTS, STAGE_POB, STAGE_MODS = "weights", "pob", "mods"
 STAGES = (STAGE_WEIGHTS, STAGE_POB, STAGE_MODS)
 
 
 def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
-             cache=None):
+             cache=None, baseline=None):
     """Evaluate item text against a Build (or None). Never raises on input
     content; problems come back as `error` / `warnings`.
 
@@ -335,15 +398,25 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
     PoB weights measured earlier for this build (calc.source
     "pob_cached").
 
+    `baseline` (TC-WORN-BASELINE, decision 0052): an optional
+    worngear.Baseline; equipped(slot) then answers from the worn item first
+    and the build's plan second, so an item checks with no build once a
+    worn item exists for its slot (the stat weights score it; the calc
+    needs a build). With no build only slots with a worn item are
+    compared; "no build loaded" stays when the baseline has nothing for
+    every slot. With a baseline each comparison carries "source" and the
+    result "plan" (see _marks). None: unchanged.
+
     The result is the last stage of stages()."""
     result = None
-    for _name, result in stages(item_text, build, weights, slot, calc, blend, cache):
+    for _name, result in stages(item_text, build, weights, slot, calc, blend, cache,
+                                baseline):
         pass
     return result
 
 
 def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
-           cache=None):
+           cache=None, baseline=None):
     """TC-PRESS-STAGED-EVAL: evaluate() in all-or-nothing stages. A
     generator of (stage name, result) pairs; each result is a complete,
     independent evaluate()-shaped result (same keys):
@@ -360,31 +433,36 @@ def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
     "weights" result carrying its notice ("failed" / "implausible"). The
     last stage always equals evaluate(). Closing the generator early makes
     no further calc call. Same arguments as evaluate()."""
+    ref = build if baseline is None else baseline
     final, (base, parsed, new_stats, slots, side) = _evaluate(
-        item_text, build, weights, slot, calc)
+        item_text, build, weights, slot, calc, baseline)
     if final is not None:
         yield STAGE_WEIGHTS, _finish(final, parsed)
         return
-    yield STAGE_WEIGHTS, _finish(_weights_result(
-        _copy(base), build, slots, new_stats, cache, blend, side), parsed)
-    if calc is None:
+
+    def done(out, rows=None):
+        return _finish(_marks(out, ref, new_stats, side, rows), parsed)
+
+    yield STAGE_WEIGHTS, done(_weights_result(
+        _copy(base), build, slots, new_stats, cache, blend, side, ref))
+    if calc is None or build is None:
         return
     try:
-        rows = _pob_deltas(calc, build, slots, item_text, blend)
+        rows = _pob_deltas(calc, build, slots, item_text, blend, ref)
     except delta_mod.CalcError as e:
-        yield STAGE_WEIGHTS, _finish(_failed(base, e, build, slots, new_stats, cache,
-                                             blend, side), parsed)
+        yield STAGE_WEIGHTS, done(_failed(base, e, build, slots, new_stats, cache,
+                                          blend, side, ref))
         return
-    yield STAGE_POB, _finish(_pob_stage(_copy(base), rows, new_stats, side), parsed)
+    yield STAGE_POB, done(_pob_stage(_copy(base), rows, new_stats, side), rows)
     try:
         # all or nothing: the stage is built only after every probe succeeded
         out = _mods_stage(_copy(base), rows, item_text, new_stats, calc, build, blend,
                           side, cache)
     except delta_mod.CalcError as e:
-        yield STAGE_WEIGHTS, _finish(_failed(base, e, build, slots, new_stats, cache,
-                                             blend, side), parsed)
+        yield STAGE_WEIGHTS, done(_failed(base, e, build, slots, new_stats, cache,
+                                          blend, side, ref))
         return
-    yield STAGE_MODS, _finish(out, parsed)
+    yield STAGE_MODS, done(out, rows)
 
 
 def _copy(out):
@@ -401,15 +479,16 @@ def _finish(out, parsed):
     return out
 
 
-def _weights_result(out, build, slots, new_stats, cache, blend, side):
+def _weights_result(out, build, slots, new_stats, cache, blend, side, ref=None):
     """The weights result: with a cache, the PoB weights measured earlier
     score it when every slot has some (MATH-WEIGHTS)."""
     if cache is not None:
-        _cached(out, build, slots, new_stats, cache, blend, side, out["calc"]["notice"])
+        _cached(out, build, slots, new_stats, cache, blend, side, out["calc"]["notice"],
+                ref)
     return out
 
 
-def _failed(base, err, build, slots, new_stats, cache, blend, side):
+def _failed(base, err, build, slots, new_stats, cache, blend, side, ref=None):
     """The weights result after a calc error, with its notice."""
     out = _copy(base)
     if isinstance(err, delta_mod.CalcImplausible):
@@ -419,14 +498,16 @@ def _failed(base, err, build, slots, new_stats, cache, blend, side):
     else:
         notice = delta_mod.NOTICE_FAILED
     out["calc"] = {"source": delta_mod.SOURCE_WEIGHTS, "notice": notice}
-    return _weights_result(out, build, slots, new_stats, cache, blend, side)
+    return _weights_result(out, build, slots, new_stats, cache, blend, side, ref)
 
 
-def _evaluate(item_text, build, weights, slot, calc):
+def _evaluate(item_text, build, weights, slot, calc, baseline=None):
     """(final, (base, parsed, new_stats, slots, side)). `final` is the
     whole result when no stage can follow (not an item, no gear slot, no
-    build); else None and `base` is the hand-weight result the stages
-    start from."""
+    build and nothing worn); else None and `base` is the hand-weight result
+    the stages start from. `baseline` (TC-WORN-BASELINE) answers
+    equipped(slot) in place of the build."""
+    ref = build if baseline is None else baseline
     stat_weights, side = _weights_of(weights)
     table = weights_mod.lookup(stat_weights)
     parsed = item_parser.parse(item_text)
@@ -452,16 +533,22 @@ def _evaluate(item_text, build, weights, slot, calc):
     if slot:
         slots = (slot,)
     else:
-        slots = slots_for_build(parsed, build)
+        slots = slots_for_build(parsed, ref)
     out["slots"] = list(slots)
     ctx = (out, parsed, new_stats, slots, side)
     if not slots:
         out["error"] = "no gear slot for this item class"
         return out, ctx
     if build is None:
-        out["error"] = "no build loaded"
-        return out, ctx
-    comps = [_compare(s, new_stats, out["score"], build.equipped(s), table, side)
+        # TC-WORN-BASELINE: with no build only a worn item is something to
+        # compare against (an unknown slot is not an empty one)
+        slots = tuple(s for s in slots if baseline is not None
+                      and baseline.equipped(s) is not None)
+        ctx = (out, parsed, new_stats, slots, side)
+        if not slots:
+            out["error"] = "no build loaded"
+            return out, ctx
+    comps = [_compare(s, new_stats, out["score"], ref.equipped(s), table, side)
              for s in slots]
     best = max(comps, key=lambda c: c["score_delta"])
     out.update(ok=True, comparisons=comps, slot=best["slot"], verdict=best["verdict"],
