@@ -54,6 +54,14 @@ def _ps(script, effect_root=None, timeout=90):
     return r
 
 
+def _says(r, needle):
+    """True when the child's output holds needle, ignoring all whitespace:
+    PowerShell wraps error text at the console width, so a line can split
+    anywhere."""
+    squash = lambda t: "".join(t.split())
+    return squash(needle) in squash(r.stdout + r.stderr)
+
+
 def _ok(script, effect_root=None):
     r = _ps(script, effect_root)
     assert r.returncode == 0, r.stdout + r.stderr
@@ -165,7 +173,7 @@ def test_effect_root_redirects_every_place(eroot, tmp_path):
     assert not real[1].startswith("P=" + str(tmp_path)) and real[1] != "P="
     # a relative effect root is refused
     r = _ps("Get-AlShellPlaces -EffectRoot 'relative\\dir'")
-    assert r.returncode != 0 and "absolute" in (r.stdout + r.stderr)
+    assert r.returncode != 0 and _says(r, "absolute")
 
 
 @needs_ps
@@ -217,13 +225,13 @@ def test_shortcut_outside_the_effect_root_is_refused(eroot, tmp_path):
     outside = tmp_path / "outside" / "AshLight.lnk"
     r = _ps(f"Set-AlShortcut -LinkPath {_q(outside)} -Target {_q(exe)} -Arguments '' "
             f"-WorkDir {_q(app)} -Icon {_q(icon)} -OwnerRoot {_q(owner)}", effect_root=eroot)
-    assert r.returncode != 0 and "outside the effect root" in (r.stdout + r.stderr)
+    assert r.returncode != 0 and _says(r, "outside the effect root")
     assert not outside.exists() and not outside.parent.exists()
     # a target outside the owner root is refused too
     r = _ps(f"Set-AlShortcut -LinkPath {_q(eroot / 'Desktop' / 'AshLight.lnk')} "
             f"-Target {_q(exe)} -Arguments '' -WorkDir {_q(app)} -Icon {_q(icon)} "
             f"-OwnerRoot {_q(tmp_path / 'elsewhere')}", effect_root=eroot)
-    assert r.returncode != 0 and "not under the owner root" in (r.stdout + r.stderr)
+    assert r.returncode != 0 and _says(r, "not under the owner root")
 
 
 @needs_ps
