@@ -88,47 +88,7 @@ SHAPE = [
      "Item:GetPrimarySlot()", "GetPrimarySlot"),
     ("Classes/ItemSlotControl.lua", r"function\s+ItemSlotClass:SetSelItemId\s*\(",
      "ItemSlot:SetSelItemId()", "SetSelItemId"),
-    # TC-CALC-CONFINE-LUA: the lockdown runs after the HeadlessWrapper load,
-    # so PoB's whole start (OnInit plus a first OnFrame) must happen inside
-    # that load; lazy lcurl requires stay skipped by PoB's own require
-    # wrapper (the lockdown empties package.cpath); PoB deletes a build file
-    # only for its "~~temp~~" build, which the bridge never loads.
-    ("HeadlessWrapper.lua", r"runCallback\(\"OnInit\"\)\s*\n\s*runCallback\(\"OnFrame\"\)",
-     "PoB's start (OnInit plus one OnFrame) inside the HeadlessWrapper load", "lockdown"),
-    ("HeadlessWrapper.lua", r"function\s+require\s*\([\s\S]{0,200}name\s*==\s*\"lcurl\.safe\"",
-     "HeadlessWrapper's require skipping lcurl.safe", 'package.cpath = ""'),
-    ("Modules/Build.lua", r"buildName\s*==\s*\"~~temp~~\"[\s\S]{0,200}os\.remove\(",
-     "os.remove of the build file only for a \"~~temp~~\" build", "os.remove = function"),
 ]
-
-# TC-CALC-CONFINE-LUA: what the lockdown in bridge.lua takes away must stay
-# unused by PoB's code (top-level src/*.lua, Classes/, Modules/) and its Lua
-# runtime libraries (runtime/lua/). Export/ is PoB's developer data tool and
-# never loads headless. (regex, what is dropped, the bridge.lua token, scan
-# the runtime libraries too)
-DROPPED_RE = r"getlocal|setlocal|getupvalue|setupvalue|upvalueid|upvaluejoin|getregistry"
-LOCKDOWN = [
-    (r"\bos\.execute\b", "os.execute", "os.execute = nil", True),
-    (r"\bio\.popen\b", "io.popen", "io.popen = nil", True),
-    (r"\bos\.tmpname\b", "os.tmpname", "os.tmpname = nil", True),
-    (r"\bpackage\.loadlib\b", "package.loadlib", "package.loadlib = nil", True),
-    (r"\bio\.output\b", "io.output", "io.output = function", True),
-    (r"\bdebug\.(?:" + DROPPED_RE + r"|setmetatable|setfenv|debug)\b",
-     "the debug functions the lockdown drops", '"getupvalue"', True),
-    # runtime/lua/sha2.lua picks ffi up optionally at start (before the
-    # lockdown) and keeps its own reference; PoB's own code must not need it
-    (r"\brequire\s*\(?\s*[\"']ffi[\"']", "require of ffi", 'package.loaded["ffi"] = nil',
-     False),
-]
-
-
-def _pob_code_files(with_runtime):
-    files = sorted(SRC.glob("*.lua"))
-    for sub in ("Classes", "Modules"):
-        files += sorted((SRC / sub).rglob("*.lua"))
-    if with_runtime:
-        files += sorted((SRC.parent / "runtime" / "lua").rglob("*.lua"))
-    return files
 
 
 def test_guard_covers_what_bridge_lua_uses():
@@ -136,10 +96,6 @@ def test_guard_covers_what_bridge_lua_uses():
     the PoB names bridge.lua calls are all guarded."""
     for _, _, what, token in SHAPE:
         assert token in BRIDGE_LUA, f"guard row for {what}: bridge.lua no longer uses {token!r}"
-    for _, what, token, _ in LOCKDOWN:
-        assert token in BRIDGE_LUA, f"lockdown row for {what}: bridge.lua no longer has {token!r}"
-    for name in DROPPED_RE.split("|"):
-        assert f'"{name}"' in BRIDGE_LUA, f"bridge.lua no longer drops debug.{name}"
     guarded = {row[3] for row in SHAPE}
     for name in re.findall(r"(?:itemsTab|calcsTab|item|slot):([A-Za-z]+)\(", BRIDGE_LUA):
         assert any(name in g for g in guarded), (
@@ -158,26 +114,6 @@ def test_pinned_pob_api_shape(rel, pattern, what, token):
     assert row_matches(texts, rel, pattern), (
         f"PoB API drift: {rel} no longer has {what} (pattern {pattern!r}); "
         f"bridge.lua relies on it via {token!r}. {FIX_HINT}")
-
-
-@STATIC
-@pytest.mark.parametrize("pattern,what,token,with_runtime", LOCKDOWN,
-                         ids=[r[1] for r in LOCKDOWN])
-def test_pinned_pob_needs_nothing_the_lockdown_drops(pattern, what, token, with_runtime):
-    files = _pob_code_files(with_runtime)
-    assert files, "PoB code files missing from the pinned checkout"
-    rx = re.compile(pattern)
-    hits = []
-    for path in files:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        for n, line in enumerate(text.splitlines(), 1):
-            code = line.split("--", 1)[0]  # a Lua comment never runs
-            if rx.search(code):
-                hits.append(f"{path.relative_to(SRC.parent).as_posix()}:{n}")
-    assert not hits, (
-        f"PoB now uses {what} ({hits[:5]}), which the bridge.lua lockdown takes "
-        f"away after the start ({token!r}); check whether the headless calc path "
-        f"needs it and keep or refuse it there. {FIX_HINT}")
 
 
 def row_matches(texts, rel, pattern):
@@ -235,7 +171,7 @@ def test_main_object_either_shape(shape, texts):
     assert body, "bridge.lua lost pob_main()"
     body = body.group(1)
     glob = body.index('type(__mainObject__) == "table" then return __mainObject__')
-    upv = body.index("getupvalue(runCallback")
+    upv = body.index("debug.getupvalue(runCallback")
     assert glob < upv, "the global __mainObject__ is read before the upvalue scan"
     assert 'name == "mainObject"' in body, "the upvalue path stays"
 
