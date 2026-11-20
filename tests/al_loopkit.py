@@ -1,7 +1,7 @@
 """Shared tools/al_loop.py test helpers (plan 156, TESTS-A-17 / -19).
 
-test_al_loop, test_al_loop_routes, test_al_loop_gate_cache and
-test_usage_ledger import these from here instead of from test_al_loop.
+test_al_loop, test_al_loop_merge, test_al_loop_routes, test_al_loop_gate_cache
+and test_usage_ledger import these from here instead of from test_al_loop.
 
 TESTS-A-19: `isolate_git(monkeypatch)` hides the machine's git global and
 system config (GIT_CONFIG_GLOBAL -> os.devnull, GIT_CONFIG_NOSYSTEM=1) and
@@ -158,3 +158,43 @@ def git_world(tmp_path, kind="plan"):
            "worktree": str(wt), "rc": 0, "lane": "build", "rounds": 0}
     al_loop.Items(root).put(rec)
     return root, wt
+
+
+# TEST-LOOP-SPLIT-MERGE: shared by tests/test_al_loop.py and
+# tests/test_al_loop_merge.py, moved here verbatim.
+
+class FakeGit:
+    def __init__(self, ahead="1", dirty=""):
+        self.calls, self.ahead, self.dirty = [], ahead, dirty
+
+    def __call__(self, args, cwd, input=None):
+        self.calls.append(list(args))
+        out = {"rev-parse": "main" if "--abbrev-ref" in args else "abc",
+               "status": self.dirty, "rev-list": self.ahead}.get(args[0], "")
+        return subprocess.CompletedProcess(args, 0, out, "")
+
+
+def _lane(root, tmp_path, name, iid, edit):
+    wt = tmp_path / "al-worktrees" / name
+    git(root, "worktree", "add", "-q", "--detach", str(wt))
+    edit(wt)
+    al_loop.Items(root).put({"id": iid, "kind": "plan", "title": f"plan {iid}",
+                             "label": f"plan {iid}: t", "state": "ran", "worktree": str(wt),
+                             "rc": 0, "lane": name, "rounds": 0})
+    return wt
+
+
+def _two_lane_world(tmp_path, edit_a, edit_b):
+    root = make_root(tmp_path, handoff="")
+    git(root, "init", "-q", "-b", "main")
+    (root / ".gitignore").write_text("ops/\n")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
+    _lane(root, tmp_path, "lane-0", "012", edit_a)
+    _lane(root, tmp_path, "lane-1", "013", edit_b)
+    sp = FakeSpawn([{"rc": 0, "error": None, "result": "VERDICT: PASS"}] * 2)
+    d = deps(root, spawn=sp, git=real_git,
+             lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
+                                 for i, n in enumerate(("build", "data", "review"))])
+    al_loop.tick(deps=d, no_push=True)
+    return root
