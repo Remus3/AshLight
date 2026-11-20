@@ -9,6 +9,7 @@ Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
   gitignored ops/runtime/tc_drift.json.
 - `loop_check`: the al_loop tick hook. Silent until a check is due; on a new
   tag it launches ONE detached `trial` for that tag and reports one line.
+  `halted=True` (the loop is HALTed) makes that launch static only.
 - `trial --tag vX.Y.Z`: resolves the tag's commit, downloads the commit
   archive twice (both SHA-256 and sizes must agree, as decision 0018 requires
   for a pin), computes the candidate's content digests from the downloaded
@@ -296,10 +297,13 @@ def live_opted_in(root):
     return isinstance(cfg, dict) and cfg.get(LIVE_OPT_IN_KEY) is True
 
 
-def loop_check(root, now, fetch=None, launch=None):
+def loop_check(root, now, fetch=None, launch=None, halted=False):
     """The al_loop tick hook: None when no check is due (or no pin file);
     else one summary line. A new tag launches one detached trial: static
-    only unless the host opted in to unattended live trials (P3-9)."""
+    only unless the host opted in to unattended live trials (P3-9). While
+    the loop is HALTed (`halted`, LOOP-WATCH-SETTLED, ruling Q-13) the read,
+    the record and the launch still happen, but the launch is static only
+    whatever live_opted_in says."""
     if not (Path(root) / "config" / "tc_pins.json").is_file():
         return None
     st = load_state(root)
@@ -314,7 +318,7 @@ def loop_check(root, now, fetch=None, launch=None):
         n = int(prev.get("launches") or 0) + 1 if prev.get("tag") == st["latest"] else 1
         launch = launch or launch_trial
         try:
-            pid = launch(root, st["latest"], live=live_opted_in(root))
+            pid = launch(root, st["latest"], live=not halted and live_opted_in(root))
         except OSError as e:
             return f"tc drift: {st['latest']} released, trial launch failed: {e}"
         st["trial"] = {"tag": st["latest"], "state": "launched", "at": iso(now),

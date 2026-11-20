@@ -1,0 +1,24 @@
+{
+ "kinds": {
+  "pobrelease": {
+   "act": "row",
+   "id": "POB-<VTAG>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session (decision 0025: the live trial and the pin move are session acts)",
+   "text": "PoB-PoE2 <tag> is out (pin <pin>), static trial <verdict>: run the live trial, then apply or record a HOLD. ACCEPT: tc_drift.py status shows the pin at <tag>, or a HOLD line names the failing rows. SOURCE: watch pob-release <tag>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "VTAG": "V[0-9]+-[0-9]+-[0-9]+",
+    "tag": "v[0-9]+\\.[0-9]+\\.[0-9]+",
+    "pin": "v[0-9]+\\.[0-9]+\\.[0-9]+",
+    "verdict": "green|red"
+   },
+   "sample": {
+    "VTAG": "V0-24-0",
+    "tag": "v0.24.0",
+    "pin": "v0.23.1",
+    "verdict": "green"
+   }
+  }
+ }
+}
