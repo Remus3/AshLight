@@ -1,9 +1,13 @@
-/* AshLight dashboard: the Checks tool (DIAG-SELF, ruling J) and the game
-   language notice (LANG-GUARD, ruling K). UMD: CommonJS for node --test
-   (app/test/checks.test.js), window.ALChecks for the page. The core makes
-   every check, sentence and the redacted report (server/al/diag.py,
-   server/al/langguard.py); this file only shows them. The clipboard is
-   written only inside the "Copy report" click (decision 0014). No timers. */
+/* AshLight dashboard: the Checks tool (DIAG-SELF, ruling J) and the stored
+   Hide of the game language notice (LANG-GUARD, ruling K). UMD: CommonJS
+   for node --test (app/test/checks.test.js), window.ALChecks for the page.
+   The core makes every check, sentence and the redacted report
+   (server/al/diag.py, server/al/langguard.py); this file only shows them.
+   Region N (web/notice.js) owns the language note itself since
+   PLAY-LEGACY-OUT-2 removed the old card: its Hide sets _state.dismissed,
+   and this file reads the stored key at wire time and stores a changed
+   key on the next paint (key al.lang.dismissed). The clipboard is written
+   only inside the "Copy report" click (decision 0014). No timers. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -61,18 +65,21 @@
     return { show: dismissed !== key, text: lang.text, key: key };
   }
 
-  var state = { dismissed: undefined, store: null };
-
-  function paintLang(doc, snap) {
-    var box = doc.getElementById("langbox");
-    if (!box) { return; }
-    if (state.dismissed === undefined) { state.dismissed = readDismissed(state.store); }
-    var m = langModel(snap && snap.lang, state.dismissed);
-    box.hidden = !m.show;
-    box.setAttribute("data-key", m.key);
-    var text = doc.getElementById("lang-text");
-    if (text.textContent !== m.text) { text.textContent = m.text; }
-  }
+  /* state.dismissed: the hidden notice's key; undefined until wire()
+     reads the store, null for none. Region N's Hide sets it, and once
+     wired a new key is stored at once, so a hidden note stays hidden after
+     a reload until it clears and begins again. */
+  var held = { dismissed: undefined, wired: false };
+  var state = { store: null };
+  Object.defineProperty(state, "dismissed", {
+    enumerable: true,
+    get: function () { return held.dismissed; },
+    set: function (v) {
+      var changed = v !== held.dismissed;
+      held.dismissed = v;
+      if (held.wired && changed && typeof v === "string") { writeDismissed(state.store, v); }
+    }
+  });
 
   function paintChecks(doc, snap) {
     var box = doc.getElementById("checksbox");
@@ -131,7 +138,6 @@
   }
 
   function paint(doc, snap) {
-    paintLang(doc, snap);
     paintChecks(doc, snap);
   }
 
@@ -139,6 +145,9 @@
      a stub); `store` is localStorage or null. */
   function wire(doc, getSnap, nav, store) {
     state.store = store || null;
+    held.wired = false;
+    state.dismissed = readDismissed(state.store);
+    held.wired = true;
     var copy = doc.getElementById("checks-copy");
     var said = doc.getElementById("checks-said");
     if (copy) {
@@ -152,15 +161,6 @@
         } else {
           fail();
         }
-      });
-    }
-    var hide = doc.getElementById("lang-dismiss");
-    if (hide) {
-      hide.addEventListener("click", function () {
-        var box = doc.getElementById("langbox");
-        state.dismissed = box.getAttribute("data-key") || "";
-        writeDismissed(state.store, state.dismissed);
-        box.hidden = true;
       });
     }
   }
