@@ -33,6 +33,11 @@ RES_STAT = {"fire": "FireResist", "cold": "ColdResist",
 GROUND = {"ignited": "fire", "chilled": "cold", "shocked": "lightning"}
 MAX_MODS = 24
 MAX_LINE = 200
+# DATA-PROVENANCE (F-097): every RULES and REWARDS entry carries `src` (the
+# repoe-fork mods snapshot, by its manifest name) and `checked` (the date of
+# that snapshot check, below). Data only; the checks ignore both keys.
+SNAPSHOT_SRC = "snapshot:mods"
+RULES_CHECKED = "2026-11-17"
 
 # AREA-UTIL b6: every pattern below was checked against the waystone mod
 # pool (area-domain prefixes / suffixes with map_key spawn weights) of the
@@ -43,43 +48,54 @@ MAX_LINE = 200
 # added. tests/test_waystone.py holds one real-shaped line per rule.
 RULES = (
     {"id": "extra_element", "short": "Extra {el} dmg",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"(?:as extra|extra damage as) (fire|cold|lightning|chaos)\b",
      "when": {"res": "$1", "below": RES_CAP},
      "label": "extra {el} damage ({el} resistance {res})", "avoid": "extra {el}"},
     {"id": "ground", "short": "{El} ground",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"patches of (ignited|chilled|shocked) ground",
      "when": {"res": "$1", "below": RES_CAP}, "elements": GROUND,
      "label": "{el} ground ({el} resistance {res})", "avoid": "{word} ground"},
     {"id": "max_res", "short": "Lower max res",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"maximum player resistances|-\d+% to (?:all )?maximum resistances",
      "when": "always", "label": "lower maximum resistances", "avoid": "maximum player"},
     {"id": "penetration", "short": "Res penetration",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"monsters?\b.*penetrates? .*elemental resistances",
      "when": "always", "label": "monsters penetrate elemental resistances",
      "avoid": "penetrates"},
     {"id": "less_recovery", "short": "Less recovery",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"(?:less|reduced) recovery rate of life",
      "when": "always", "label": "less life and energy shield recovery",
      "avoid": "rate of life"},
     {"id": "monster_crit", "short": "Monster crits",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"monsters? have .*critical (?:hit chance|damage bonus)",
      "when": "always", "label": "monster critical hits",
      "avoid": ("critical hit chance", "critical damage bonus")},
     {"id": "speed", "short": "Fast monsters",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"monsters? have .*increased attack, cast and movement speed",
      "when": "always", "label": "faster monsters", "avoid": "cast and movement"},
     {"id": "poison", "short": "Poison",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"monsters? have .*chance to poison",
      "when": {"res": "chaos", "below": 0},
      "label": "monster poison (chaos resistance {res})", "avoid": "to poison"},
     {"id": "bleed", "short": "Bleeding",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"monsters? have .*chance to inflict bleeding",
      "when": "always", "label": "monster bleeding", "avoid": "bleeding"},
     {"id": "ailments", "short": "Strong ailments",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"monsters? have .*increased elemental ailment application",
      "when": "always", "label": "stronger monster elemental ailments",
      "avoid": "ailment application"},
     {"id": "flasks", "short": "Weak flasks",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "match": r"(?:less|reduced) flask charges|(?:less|reduced) (?:flask|charm) "
               r"(?:effect|recovery)",
      "when": "always", "label": "fewer flask charges", "avoid": "flask charges"},
@@ -186,21 +202,27 @@ def _check_rule(rule, m, stats):
 # game's sum) wins; mod lines add up only for a kind with no property.
 REWARDS = (
     {"id": "quantity", "key": r"item quantity",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "line": r"increased quantity of items found", "label": "item quantity",
      "short": "quantity"},
     {"id": "rarity", "key": r"item rarity",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "line": r"increased rarity of items found", "label": "item rarity",
      "short": "rarity"},
     {"id": "pack", "key": r"(?:monster )?pack size",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "line": r"increased (?:monster )?pack size", "label": "pack size",
      "short": "pack"},
     {"id": "magic", "key": r"magic monsters|number of magic monsters",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "line": r"increased number of magic monsters", "label": "magic monsters",
      "short": "magic"},
     {"id": "rare", "key": r"rare monsters|number of rare monsters",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "line": r"increased number of rare monsters", "label": "rare monsters",
      "short": "rare"},
     {"id": "waystones", "key": r"waystone drop chance|waystones found",
+     "src": SNAPSHOT_SRC, "checked": RULES_CHECKED,
      "line": r"increased (?:chance|quantity) of waystones", "label": "waystone drops",
      "short": "waystones"},
 )
