@@ -379,43 +379,41 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   ACCEPT: python -m pytest -q tests/test_webpage.py tests/test_http_security.py tests/test_a11y.py
   tests/test_dash_console.py tests/test_hot_reload.py tests/test_floor_static.py passes. ZERO-CLICK:
   Developer-side only; the player does nothing. A new panel file is picked up by the core by itself,
-  with no restart in a source checkout. DEPENDS: TEST-WEB-REGISTRY, TEST-WEB-SRCPATHS-PY. BLOCKED:
-  session wave 12.
+  with no restart in a source checkout. DEPENDS: TEST-WEB-REGISTRY, TEST-WEB-SRCPATHS-PY.
 - [ ] PLAY-F-159-QUIET-BUTTON (build) Quiet base button, one filled button. ACCEPT: python -m pytest
   -q tests/test_ux_review.py tests/test_a11y.py tests/test_play_fit.py and npm test --prefix app
   pass: app.css has exactly one filled button rule (button.primary), the base button rule has a
   transparent background with a var(--al-control-edge) border, and the only button.primary in web/
   is the setup card's (web/setupcard.js). ZERO-CLICK: Styling only; nothing to press. DEPENDS:
-  PLAY-LEGACY-OUT-2. BLOCKED: session wave 12.
+  PLAY-LEGACY-OUT-2.
 - [ ] OVL-OBS-CRASH (build) OBS-CRASH: the core writes ops/runtime/last-exit.json on every exit
   path; Checks reads the core and client exit records. ACCEPT: python -m pytest -q
   tests/test_core_crash_log.py tests/test_diag_self.py tests/test_keepalive.py
   tests/test_supervisor.py tests/test_hot_reload.py passes. ZERO-CLICK: Automatic; the record is
-  read by Checks with no click. BLOCKED: session wave 12.
+  read by Checks with no click.
 - [ ] REL-INSTALL-SHELL (build) Installer package: shell entries and the first-run config. ACCEPT:
   python -m pytest -q tests/test_install_shell.py tests/test_shell_integration.py passes.
   ZERO-CLICK: No player step; the Client.txt opt-in and the web-data switch stay the player's own
   clicks on the first window (the floor's opt-in with its visible indicator). DEPENDS:
-  REL-INSTALL-HOME, DEP-07, REL-AUTOSTART-ENTRY. BLOCKED: session wave 12.
+  REL-INSTALL-HOME, DEP-07, REL-AUTOSTART-ENTRY.
 - [ ] DATA-GUIDE-MERGE (data) One guide file: fold zone notes into zone_guide.json. ACCEPT: python
   -m pytest -q tests/test_zone_guide.py tests/test_util_campaign.py tests/test_util_10_fixtures.py
   tests/test_hot_reload.py tests/test_provenance.py tests/test_bus_state.py
   tests/test_floor_static.py passes and server/al/zonenotes.py and server/al/data/zone_notes.json no
   longer exist. ZERO-CLICK: Data only; the file hot-reloads (decision 0042) and the guide updates
-  from the log. DEPENDS: DATA-PROVENANCE, DATA-PRICE-CARD-TEXT, DATA-LEAGUE-IDENTITY. BLOCKED:
-  session wave 12.
+  from the log. DEPENDS: DATA-PROVENANCE, DATA-PRICE-CARD-TEXT, DATA-LEAGUE-IDENTITY.
 - [ ] REL-AUTOSTART-TRAY (build) Autostart starts the client tray-only. ACCEPT: npm test --prefix
   app passes, python -m pytest -q tests/test_autostart.py tests/test_desktop_client.py passes, and a
   hidden tray-only run on a free port of the test lease range (ports.TEST_LEASE_PORTS, never
   AL_DEV_PORT 8961) with a fixture log writes its idle working set to <sidecar>/Logs/tray_idle.json
   at or under the 250 MB budget (else the fallback in notes is taken). ZERO-CLICK: One tick once
   (the opt-in); after that every logon starts AshLight with no click and no window. DEPENDS:
-  REL-AUTOSTART-ENTRY, DEP-02. BLOCKED: session wave 12.
+  REL-AUTOSTART-ENTRY, DEP-02.
 - [ ] OVL-NPM-LOCK (build) Lock npm down: tracked app/.npmrc, npm ci --ignore-scripts only, electron
   in dependencies. ACCEPT: python -m pytest -q tests/test_npm_lock.py tests/test_desktop_client.py
   tests/test_loop_inbox_p161.py tests/test_loop_inbox_p164.py passes and powershell.exe 5.1
   ParseFile accepts scripts/setup.ps1. ZERO-CLICK: No change for the player; setup stays one
-  idempotent script. BLOCKED: session wave 12.
+  idempotent script. BLOCKED: session wave 13.
 - [ ] PUB-README-PLAYERS (build) README quick start for players: shortcut, Stop, Update, Uninstall,
   Troubleshooting + README, SECURITY, CONTRIBUTING: how the repository is run. ACCEPT: `python -m
   pytest -q tests/test_public_docs.py tests/test_brand_assets.py tests/test_ascii_lf.py
@@ -426,29 +424,27 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   quick start it documents is two typed commands shorter: setup.ps1 writes the shortcut (starting
   from it is one click, said plainly), and the opt-in logon autostart of decision 0011 then starts
   AshLight with no click. Also (folded GP-07): Documentation only; nothing in play depends on it.
-  DEPENDS: DEP-02. BLOCKED: session wave 12.
+  DEPENDS: DEP-02.
 - [ ] TC-BRIDGE-NEXT (build) Bridge accepts the next PoB main-object shape. ACCEPT: python -m pytest
   -q tests/test_tc_pob_drift_guard.py tests/test_tc_bridge.py passes, and the new test proves both
   the local mainObject upvalue shape and the global __mainObject__ shape are accepted. ZERO-CLICK:
-  Nothing for the player; the calc keeps working across the pin move. BLOCKED: session wave 12.
+  Nothing for the player; the calc keeps working across the pin move.
 - [ ] TC-WEIGHTS-DELTA-STORE (build) Weights stored as the player's changes only. ACCEPT: python -m
   pytest -q tests/test_tc_weights_delta.py tests/test_tc_eval.py tests/test_tc_eval_api.py
   tests/test_eval_text.py passes. ZERO-CLICK: Migration and merge run at load; nothing to click.
-  BLOCKED: session wave 12.
 - [ ] LOOP-WATCH-GATE (build) Watcher web-data gate and URL check: tools/watch_gate.py. ACCEPT:
   `python -m pytest -q tests/test_watch_gate.py` passes, with 0 calls on the injected transport
   while web_data is off. ZERO-CLICK: Unattended: the gate is code in front of every watcher request;
-  nobody switches it per run. BLOCKED: session wave 12.
+  nobody switches it per run.
 - [ ] DEP-10 (build) Uninstall: stop, delete by fixed name, keep data unless -Purge. ACCEPT: python
   -m pytest -q tests/test_uninstall.py tests/test_supervisor.py tests/test_floor_static.py passes.
   ZERO-CLICK: One click in Apps and features; no question by default (data is kept). DEPENDS:
-  DEP-05, DEP-07. BLOCKED: session wave 12.
+  DEP-05, DEP-07.
 - [ ] TEST-LOOP-SPLIT-LANES (build) Loop tests split 2: lane themes to tests/test_al_loop_lanes.py.
   ACCEPT: python -m pytest -q tests/test_al_loop.py tests/test_al_loop_merge.py
   tests/test_al_loop_lanes.py tests/test_test_layout.py passes and the three files together collect
   exactly the test ids the two files collected at the package base. ZERO-CLICK: Test-only; the suite
   picks the new file up by itself. DEPENDS: TEST-LOOP-SPLIT-MERGE.
-  BLOCKED: session wave 12 close (tests held).
 - [ ] REL-INSTALL-CALC (build) Installer package: calc opt-in in an installed copy. ACCEPT: python
   -m pytest -q tests/test_install_calc.py tests/test_tc_pin.py passes. ZERO-CLICK: One command
   (later one button from the calc opt-in package); off by default (decision 0018). DEPENDS:
