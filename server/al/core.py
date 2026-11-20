@@ -19,6 +19,7 @@ from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parse
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import exitrecord  # OBS-CRASH: last-exit.json, client-exit.json
+from . import hotkeys  # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE)
 from . import hotreload  # HOT-RELOAD (decision 0042)
 from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import plug  # RUN-SEAMS (decision 0056)
@@ -308,6 +309,12 @@ class Core:
                             else self.runtime / "overlay.log")
         self.calc_status = calcwire.component_status if self._real else (lambda: None)
         self._next_diag = 0.0
+        # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE): the client's
+        # ops/runtime/hotkeys.json, re-read only when its stat changed
+        # (tick_diag); the effective keys go to the snapshot and Checks.
+        self.hotkeys_path = self.runtime / hotkeys.FILE_NAME
+        self._hotkeys_stat = None
+        self._hotkeys_runtime = None
         # HOT-RELOAD (decision 0042): data files re-read on change (always,
         # hotreload.REGISTRY); web/ edits reload the open dashboard through
         # an SSE "reload" event only in a source checkout (dev_enabled); the
@@ -1208,6 +1215,7 @@ class Core:
         def live(name):
             return bool(((st or {}).get(name) or {}).get("live")) if st else None
         overlay = live("overlay")
+        hk_file = self.hotkeys_runtime()
         try:
             zones_at = self._zones_path.stat().st_mtime
         except OSError:
@@ -1237,7 +1245,11 @@ class Core:
             "snapshot": bool((snap.get("acts") or {}).get("levels")),
             "snapshot_at": zones_at,
             "overlay": overlay, "supervisor": live("supervisor"),
-            "hotkey": diag.hotkey_registered(self.overlay_log) if overlay else None,
+            # HOTKEYS-LIVE (OVL-KEYS-CORE): the keys view from the client's
+            # runtime file; the overlay log is read only while there is none
+            "hotkeys": self.hotkeys_view() if hk_file is not None else None,
+            "hotkey": (diag.hotkey_registered(self.overlay_log)
+                       if overlay and hk_file is None else None),
             "port": self.port,
             "reload_notes": self.reload_notes(),
             # GGG-DOCS-WATCH (decision 0044): tools/ggg_docs_watch.py flag
@@ -1264,9 +1276,49 @@ class Core:
         except OSError:
             return False
 
+    def hotkeys_runtime(self):
+        """The client's hotkeys file (hotkeys.read_runtime), re-read only
+        when its (mtime, size) changed; None while it is missing."""
+        try:
+            st = self.hotkeys_path.stat()
+            key = (st.st_mtime_ns, st.st_size)
+        except OSError:
+            key = None
+        if key != self._hotkeys_stat:
+            self._hotkeys_stat = key
+            self._hotkeys_runtime = (hotkeys.read_runtime(self.runtime)
+                                     if key is not None else None)
+        return self._hotkeys_runtime
+
+    def hotkeys_view(self):
+        """The effective keys view (hotkeys.view) from the config and the
+        client's runtime file."""
+        return hotkeys.view(self._config(), self.hotkeys_runtime())
+
+    def publish_hotkeys(self):
+        """Publish the keys view; True when it changed."""
+        return self.state.set_hotkeys(self.hotkeys_view())
+
+    def set_hotkey(self, name, key):
+        """POST /api/hotkeys: store one shortcut ("eval" or "toggle") in
+        config/local.json (eval_hotkey / overlay_toggle), canonical. The
+        client re-registers on its config change hook (decision 0058); the
+        core registers nothing and sends nothing anywhere. Raises
+        ValueError with the refusal sentence (a game key, the other
+        shortcut's key) and ConfigUnreadable (an OSError) on a broken file;
+        returns the published view."""
+        ok = hotkeys.check_new(name, key, self._config(), self.hotkeys_view())
+        self._write_config({hotkeys.CONFIG_KEYS[name]: ok})
+        view = self.hotkeys_view()
+        self.state.set_hotkeys(view)
+        return view
+
     def tick_diag(self, now=None, force=False):
         """DIAG-SELF, ZERO-CLICK: from the core's loop, at most once per
-        DIAG_TICK_S, publish the checks view. No request, no game probe."""
+        DIAG_TICK_S, publish the checks view. No request, no game probe.
+        HOTKEYS-LIVE: the keys view is published on every pass (a stat of
+        the client's runtime file; read only when it changed)."""
+        self.publish_hotkeys()
         mono = time.monotonic()
         if not force and mono < self._next_diag:
             return False

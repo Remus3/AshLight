@@ -169,3 +169,21 @@ def test_followup11_windows_system_combos_refused():
 
 def test_followup11_every_blocked_combo_is_in_the_table():
     assert hotkeys.GAME_KEYS <= set(CASES["bad"])
+
+
+# HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE): the fallback lists agree on
+# both sides: hotkeys.py == the case table == app/hotkey.js (its own test,
+# app/test/hotkey.test.js, holds the JS side to the table; this one reads
+# the JS source too, so a one-sided edit fails here as well).
+def test_hotkeys_live_fallbacks_agree_on_both_sides():
+    table = CASES["fallbacks"]
+    assert {k: list(v) for k, v in hotkeys.FALLBACKS.items()} == table
+    src = (ROOT / "app" / "hotkey.js").read_text(encoding="ascii")
+    for name, keys in table.items():
+        quoted = ", ".join(json.dumps(k) for k in keys)
+        assert f"{name}: Object.freeze([{quoted}])" in src, name
+    for name, keys in table.items():
+        assert keys[0] == hotkeys.wanted({}, name)
+        for k in keys:
+            assert hotkeys.safe_accelerator(k) == k, k
+    assert not set(table["eval"]) & set(table["toggle"])

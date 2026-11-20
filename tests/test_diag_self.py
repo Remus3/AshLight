@@ -173,10 +173,84 @@ def test_overlay_and_supervisor():
         assert status({cid: None}, cid) == "unknown"
 
 
+def _hk(eval_=None, toggle=None, overlay_on=True):
+    off = {"key": None, "want": None, "registered": None, "fallback": None}
+    return {"eval": dict(off, **(eval_ or {})), "toggle": dict(off, **(toggle or {})),
+            "overlay_on": overlay_on}
+
+
 def test_hotkey():
+    # no runtime file: the item check row reads the overlay log verdict
     assert status({}, "hotkey") == "pass"
     assert status({"hotkey": False}, "hotkey") == "fail"
     assert status({"hotkey": None}, "hotkey") == "unknown"
+    assert status({}, "hotkey_toggle") == "unknown"
+    # HOTKEYS-LIVE (OVL-KEYS-CORE): two rows, one per shortcut
+    ok = {"key": "Alt+Shift+E", "want": "Alt+Shift+E", "registered": True,
+          "fallback": False}
+    tog = {"key": "Alt+Shift+A", "want": "Alt+Shift+A", "registered": True,
+           "fallback": False}
+    hk = _hk(ok, tog)
+    rows = [r for r in diag.checks(dict(GREEN, hotkeys=hk), NOW)
+            if r["id"] in ("hotkey", "hotkey_toggle", "overlay_off")]
+    assert [(r["id"], r["label"], r["status"]) for r in rows] == [
+        ("hotkey", "Item check hotkey", "pass"),
+        ("hotkey_toggle", "Overlay hotkey", "pass")]
+    assert rows[0]["detail"] == "Registered: Alt+Shift+E."
+    # the view wins over the log verdict
+    assert status({"hotkeys": hk, "hotkey": False}, "hotkey") == "pass"
+    # a fallback: a note naming both keys, nothing to fix
+    fb = row({"hotkeys": _hk(dict(ok, key="Ctrl+Shift+F9", fallback=True), tog)}, "hotkey")
+    assert fb["status"] == "note" and fb["fix"] is None
+    assert fb["detail"] == "Alt+Shift+E is taken by another app, so AshLight uses Ctrl+Shift+F9."
+    # nothing bound: a fix naming the in-app field, never a script
+    bad = row({"hotkeys": _hk(ok, {"want": "Alt+Shift+A", "registered": False,
+                                   "fallback": False})}, "hotkey_toggle")
+    assert bad["status"] == "fail" and bad["fix"] == diag.FIX_TOGGLE_KEY
+    assert bad["detail"] == "Not registered: another app holds Alt+Shift+A."
+    assert "overlay key" in bad["fix"] and ".ps1" not in bad["fix"]
+    bad = row({"hotkeys": _hk({"want": "Alt+Shift+E", "registered": False}, tog)}, "hotkey")
+    assert bad["fix"] == diag.FIX_HOTKEY and "item check key" in bad["fix"]
+    assert "Overlay position and size" in diag.FIX_HOTKEY
+    # unknown parts read unknown
+    assert status({"hotkeys": _hk()}, "hotkey") == "unknown"
+    # the overlay process is not running: keys unknown, no note
+    assert status({"hotkeys": hk, "overlay": False}, "hotkey") == "unknown"
+    assert status({"hotkey": True, "overlay": False}, "hotkey") == "unknown"
+    ids = [r["id"] for r in diag.checks(dict(GREEN, overlay=False,
+                                             hotkeys=_hk(ok, tog, overlay_on=False)), NOW)]
+    assert "overlay_off" not in ids
+
+
+def test_hotkey_overlay_off_note():
+    tog = {"key": "Ctrl+Shift+F10", "want": "Alt+Shift+A", "registered": True,
+           "fallback": True}
+    r = row({"hotkeys": _hk(None, tog, overlay_on=False)}, "overlay_off")
+    assert r["status"] == "note" and r["fix"] is None
+    assert r["detail"] == "You switched the overlay off. Press Ctrl+Shift+F10 to show it."
+    r = row({"hotkeys": _hk(None, {"registered": False}, overlay_on=False)}, "overlay_off")
+    assert r["detail"] == "You switched the overlay off. Show it again from the tray icon."
+    for on in (True, None):
+        ids = [x["id"] for x in diag.checks(dict(GREEN, hotkeys=_hk(overlay_on=on)), NOW)]
+        assert "overlay_off" not in ids
+    v = diag.view(dict(GREEN, hotkeys=_hk(None, tog, overlay_on=False)), "1", now=NOW)
+    assert v["failed"] == 0 and "[note] Overlay switched off:" in v["report"]
+
+
+def test_core_facts_take_the_runtime_file(tmp_path):
+    core = Core(runtime=tmp_path, tail=False)
+    (tmp_path / "overlay.log").write_text("t overlay started\n", encoding="ascii")
+    core.procs_status = lambda: {"overlay": {"live": True}}
+    f = core.diag_facts()
+    assert f["hotkeys"] is None and f["hotkey"] is True  # no file: the log
+    (tmp_path / "hotkeys.json").write_text(json.dumps(
+        {"keys": {"eval": {"want": "Alt+Shift+E", "bound": "Ctrl+Shift+F9",
+                           "registered": True, "fallback": True}},
+         "overlay": {"user_on": False}}), encoding="ascii")
+    f = core.diag_facts()
+    assert f["hotkey"] is None and f["hotkeys"]["eval"]["key"] == "Ctrl+Shift+F9"
+    assert f["hotkeys"]["overlay_on"] is False
+    core.close()
 
 
 def test_port():

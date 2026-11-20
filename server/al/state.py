@@ -6,6 +6,7 @@ bounded.
 """
 
 import collections
+import copy
 import threading
 import time
 
@@ -396,6 +397,9 @@ class SessionState:
         # verdict from the log; DIAG-SELF (ruling J): the core's checks view.
         self.lang = langguard_mod.LangGuard()
         self.diag = None
+        # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE): the effective keys
+        # view the core publishes (hotkeys.view), None until its first tick.
+        self.hotkeys = None
 
     @property
     def version(self):
@@ -800,6 +804,16 @@ class SessionState:
         with self._lock:
             if view != self.diag:
                 self.diag = dict(view) if view else None
+                self.version += 1
+                return True
+            return False
+
+    def set_hotkeys(self, view):
+        """HOTKEYS-LIVE (OVL-KEYS-CORE): the effective keys view (core
+        tick_diag and set_hotkey); bumps only on a change."""
+        with self._lock:
+            if view != self.hotkeys:
+                self.hotkeys = copy.deepcopy(view) if view else None
                 self.version += 1
                 return True
             return False
@@ -1451,6 +1465,8 @@ class SessionState:
                 # LANG-GUARD / DIAG-SELF (rulings K, J; decision 0040)
                 "lang": self.lang.view(),
                 "diag": dict(self.diag) if self.diag else None,
+                # HOTKEYS-LIVE (decision 0058): the keys really bound
+                "hotkeys": copy.deepcopy(self.hotkeys) if self.hotkeys else None,
             }
             # PLAY-TD-07A: the Play rows, composed and capped at the source
             snap["play"] = playview_mod.view(snap)
