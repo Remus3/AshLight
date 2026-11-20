@@ -13,6 +13,11 @@
   electron's own installer script), and electron.exe is verified against
   the pin after the install and on every up-to-date run (a changed exe
   makes setup install the packages again from the verified zip).
+  LOOP-ELECTRON-POLICY (decision 0070): while AshLight's own client is live
+  (its pid record in the runtime folder, or this checkout's electron.exe
+  held open), setup ends with one line and exit 3 before npm runs, so a
+  bump never swaps files under a running overlay; nothing is changed and a
+  later run retries.
   Every path comes from `python -m server.al.paths` (the one resolver).
   Node is optional: without it the core and the dashboard still work.
 
@@ -322,6 +327,61 @@ if ($upToDate -and -not $Force) {
         exit 0
     }
     Write-AlLog 'setup: electron.exe is not the pinned one; installing the overlay packages again'
+}
+
+# LOOP-ELECTRON-POLICY (F-130, decision 0070): npm ci wipes node_modules
+# and the pin step unpacks a new dist, so neither may run under a live
+# client. Two signals, both about AshLight's own files only:
+# - the process registry: <runtime>\overlay.pid read through
+#   server.al.procs.overlay_main_pid (that one pid: alive, image
+#   electron.exe, creation time matching); never the game, never a
+#   system-wide scan of processes by name;
+# - this checkout's own electron.exe opened with no sharing: Windows holds a
+#   running image open, so the open fails while any client started from it
+#   lives (a shortcut start writes no pid record).
+# Returns '' when the client is not live, else the one-line reason. A
+# registry read that fails counts as live (fail closed).
+function Test-AlClientLive([string]$Python, [string]$RepoRoot, [string]$Runtime, [string]$Exe) {
+    $ErrorActionPreference = 'Continue'
+    $out = ''
+    $rc = 1
+    Push-Location $RepoRoot
+    try {
+        $out = (@(& $Python -c 'import sys; from server.al import procs; print(procs.overlay_main_pid(sys.argv[1]))' $Runtime 2>$null) -join '').Trim()
+        $rc = $LASTEXITCODE
+    } catch {
+        $rc = 1
+    } finally {
+        Pop-Location
+    }
+    if ($rc -ne 0 -or $out -notmatch '^\d+$') {
+        return 'the process registry could not be read'
+    }
+    if ([int64]$out -gt 0) {
+        return "the AshLight client is running (pid $out)"
+    }
+    if ($Exe -and (Test-Path -LiteralPath $Exe)) {
+        $fh = $null
+        try {
+            $fh = [System.IO.File]::Open($Exe, [System.IO.FileMode]::Open,
+                [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        } catch [System.IO.IOException] {
+            return 'the AshLight client is running (its electron.exe is in use)'
+        } catch {
+            # no write access to the file (read-only, ACL): not a live-client
+            # signal; the registry answered above
+            $fh = $null
+        } finally {
+            if ($fh) { $fh.Dispose() }
+        }
+    }
+    return ''
+}
+
+$clientLive = Test-AlClientLive $py $Repo $paths.runtime $electronExe
+if ($clientLive) {
+    Write-AlLog "setup: overlay packages NOT changed - $clientLive; quit it from its tray icon, then run setup again"
+    exit 3
 }
 
 Clear-AlElectronOverrides
