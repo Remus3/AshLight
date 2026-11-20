@@ -19,6 +19,18 @@
      recorded creation time matches, or a python, pythonw or electron
      process whose full image path lies under <home>\runtime\ (decision
      0010). Any other process is never touched.
+  3. Logon task: the opt-in task "AshLight Autostart" (decision 0011) is
+     unregistered only when its action's working directory (else its
+     program) lies in the home. No other task name is ever asked for.
+  4. Shortcuts: the two "AshLight.lnk" files (this user's Start Menu
+     Programs and Desktop) are removed only when their target lies in the
+     home.
+  5. Uninstall key: the per-user Uninstall\AshLight key (HKCU) is removed
+     only when its InstallLocation lies in the home.
+     An item of steps 3 to 5 that points elsewhere is left alone and
+     named; one that is ours but stays after its removal is counted in
+     step 9. These fixed names are the only places outside the home the
+     script reads: no listing, no other key and no other task.
   6. Delete by fixed name only: app, runtime, cache, logs, temp, build,
      staged, install.json, install.json.bak, and inside data the per-run
      files (token, pid files, stop.request, heartbeat, locks).
@@ -30,16 +42,23 @@
   9. Exit 0 only when nothing but the kept data remains; else exit 1 with
      the one line "uninstall incomplete: <n> items remain" and a report in
      the user's temp folder.
-  Steps 3 to 5 (logon task, shortcuts, uninstall key) come with
-  REL-UNINSTALL-SHELL; checkout mode with REL-UNINSTALL-CHECKOUT.
+  Checkout mode comes with REL-UNINSTALL-CHECKOUT.
 
   Every file probe, listing and delete goes through the Test-AlHomePath,
   Get-AlHomeChildren and Remove-AlHomeItem helpers, which refuse any path
   outside the home.
 
+  Effect root (as scripts/al_shell.ps1): the env AL_SHELL_ROOT moves the
+  Start Menu and Desktop to <root>\Programs and <root>\Desktop, the
+  uninstall key to HKCU Software\AshLightShellScratch\<id>\Uninstall\AshLight
+  and the task folder to \AshLightShellScratch\<id>\ (<id> from the root's
+  path), for tests and the release stage round trip.
+
   Tests only: the env AL_UNINSTALL_FAKE names a JSON file that stands in
-  for the process table and the Recycle Bin, so a test never lists, stops
-  or recycles anything real.
+  for the process table, the Recycle Bin, the task scheduler ("tasks") and
+  the registry ("keys"), so a test never lists, stops, recycles,
+  unregisters or deletes anything real. It is refused without an effect
+  root, so the only shortcuts a test run sees are its own scratch files.
 .PARAMETER Purge
   Also remove <home>\data (to the Recycle Bin). Run by hand without -Yes it
   asks once for the typed word PURGE.
@@ -78,6 +97,15 @@ $script:CopiedSentence = ("AshLight hands out ashlight.filter and its .build fil
     "downloads; if you copied them into the game's filter or planner folder, " +
     "they are still there.")
 $script:Problems = New-Object System.Collections.ArrayList
+# steps 3 to 5: the only names outside the home the script ever uses
+$script:LinkName = 'AshLight.lnk'
+$script:TaskName = 'AshLight Autostart'
+$script:RealKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\AshLight'
+$script:ScratchKeyBase = 'Software\AshLightShellScratch'
+$script:ScratchTaskBase = '\AshLightShellScratch\'
+$script:Shell = $null
+$script:LinkPaths = @()
+$script:ShellLeft = New-Object System.Collections.ArrayList
 $script:HomeDir = ''
 $script:Fake = [string]$env:AL_UNINSTALL_FAKE
 
@@ -329,6 +357,255 @@ function Invoke-AlStop {
     }
 }
 
+# --- shell entries (steps 3 to 5) ----------------------------------------------
+
+function Get-AlShellPlaces {
+    # The Start Menu and Desktop folders, the uninstall key (under HKCU) and
+    # the task folder: real, or redirected by AL_SHELL_ROOT exactly as
+    # scripts/al_shell.ps1 Get-AlShellPlaces does. Path text only.
+    $root = [string]$env:AL_SHELL_ROOT
+    if ($root) {
+        if (-not [System.IO.Path]::IsPathRooted($root)) {
+            throw 'AL_SHELL_ROOT is not an absolute path'
+        }
+        $root = [System.IO.Path]::GetFullPath($root).TrimEnd('\')
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $bytes = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($root.ToLowerInvariant()))
+        } finally {
+            $sha.Dispose()
+        }
+        $id = (($bytes[0..7] | ForEach-Object { $_.ToString('x2') }) -join '')
+        return [pscustomobject]@{
+            Scratch  = $true
+            Programs = Join-Path $root 'Programs'
+            Desktop  = Join-Path $root 'Desktop'
+            Key      = $script:ScratchKeyBase + '\' + $id + '\Uninstall\AshLight'
+            TaskPath = $script:ScratchTaskBase + $id + '\'
+        }
+    }
+    return [pscustomobject]@{
+        Scratch  = $false
+        Programs = [Environment]::GetFolderPath('Programs')
+        Desktop  = [Environment]::GetFolderPath('Desktop')
+        Key      = $script:RealKey
+        TaskPath = '\'
+    }
+}
+
+function Get-AlFakeList($Doc, [string]$Name) {
+    $prop = $Doc.PSObject.Properties[$Name]
+    if ($null -eq $prop -or $null -eq $prop.Value) { return @() }
+    return @($prop.Value | Where-Object { $null -ne $_ })
+}
+
+function Add-AlFakeNote($Doc, [string]$Name, [string]$Text) {
+    # A trace line in the fake (what was asked for or removed), so a test
+    # can prove which names the script used.
+    $list = @(Get-AlFakeList $Doc $Name) + @($Text)
+    $Doc | Add-Member -NotePropertyName $Name -NotePropertyValue $list -Force
+}
+
+function Assert-AlShellLink([string]$Path) {
+    # Only the two fixed AshLight.lnk paths of step 4 pass.
+    $full = Get-AlFullPath $Path
+    foreach ($link in $script:LinkPaths) {
+        if ($full -and $full.Equals($link, [System.StringComparison]::OrdinalIgnoreCase)) { return }
+    }
+    throw "uninstall: $Path is not an AshLight shortcut path; refused"
+}
+
+function Test-AlShellLink([string]$Path) {
+    Assert-AlShellLink $Path
+    return (Test-Path -LiteralPath $Path -PathType Leaf)
+}
+
+function Get-AlLinkTarget([string]$Path) {
+    # The target of one fixed shortcut, read only (the link is never saved).
+    Assert-AlShellLink $Path
+    $shell = New-Object -ComObject WScript.Shell
+    try {
+        return [string]$shell.CreateShortcut($Path).TargetPath
+    } finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+    }
+}
+
+function Remove-AlShellLink([string]$Path) {
+    Assert-AlShellLink $Path
+    Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+}
+
+function Get-AlTaskRecord {
+    # {Execute, WorkDir} of the task $script:TaskName in the task folder
+    # of the places, or $null. No other task name is ever asked for.
+    $where = $script:Shell.TaskPath + $script:TaskName
+    if ($script:Fake) {
+        $doc = Read-AlFake
+        if (-not $DryRun) {
+            Add-AlFakeNote $doc 'task_queries' $where
+            Save-AlFake $doc
+        }
+        $found = $null
+        foreach ($t in @(Get-AlFakeList $doc 'tasks')) {
+            if ([string]$t.path -eq $script:Shell.TaskPath -and [string]$t.name -eq $script:TaskName) {
+                $found = [pscustomobject]@{ Execute = [string]$t.execute; WorkDir = [string]$t.working_directory }
+            }
+        }
+        return $found
+    }
+    try {
+        $task = Get-ScheduledTask -TaskName $script:TaskName -TaskPath $script:Shell.TaskPath -ErrorAction Stop
+    } catch {
+        return $null
+    }
+    if ($null -eq $task) { return $null }
+    $exe = ''
+    $wd = ''
+    $acts = @($task.Actions)
+    if ($acts.Count -gt 0 -and $null -ne $acts[0]) {
+        $p = $acts[0].PSObject.Properties['Execute']
+        if ($null -ne $p -and $null -ne $p.Value) { $exe = [string]$p.Value }
+        $p = $acts[0].PSObject.Properties['WorkingDirectory']
+        if ($null -ne $p -and $null -ne $p.Value) { $wd = [string]$p.Value }
+    }
+    return [pscustomobject]@{ Execute = $exe; WorkDir = $wd }
+}
+
+function Test-AlTaskInHome($Task) {
+    # As scripts/al_shell.ps1 Test-AlTaskOurs: the working directory, else
+    # the program, must lie in the home.
+    if ($null -eq $Task) { return $false }
+    $wd = $Task.WorkDir.Trim('"')
+    if ($wd) { return (Test-AlUnder -Path $wd -Root $script:HomeDir) }
+    return (Test-AlUnder -Path $Task.Execute.Trim('"') -Root $script:HomeDir)
+}
+
+function Remove-AlTask {
+    if ($script:Fake) {
+        $doc = Read-AlFake
+        $keep = @(Get-AlFakeList $doc 'tasks' | Where-Object {
+            -not ([string]$_.path -eq $script:Shell.TaskPath -and [string]$_.name -eq $script:TaskName) })
+        $doc | Add-Member -NotePropertyName tasks -NotePropertyValue $keep -Force
+        Add-AlFakeNote $doc 'removed_tasks' ($script:Shell.TaskPath + $script:TaskName)
+        Save-AlFake $doc
+        return
+    }
+    Unregister-ScheduledTask -TaskName $script:TaskName -TaskPath $script:Shell.TaskPath -Confirm:$false -ErrorAction Stop
+}
+
+function Get-AlKeyLocation {
+    # $null when the uninstall key of the places is absent, else its
+    # InstallLocation text ('' when it has none). HKCU only, read only.
+    if ($script:Fake) {
+        $doc = Read-AlFake
+        if (-not $DryRun) {
+            Add-AlFakeNote $doc 'key_queries' $script:Shell.Key
+            Save-AlFake $doc
+        }
+        $keys = $doc.PSObject.Properties['keys']
+        if ($null -eq $keys -or $null -eq $keys.Value) { return $null }
+        $entry = $keys.Value.PSObject.Properties[$script:Shell.Key]
+        if ($null -eq $entry) { return $null }
+        $loc = $null
+        if ($null -ne $entry.Value) { $loc = $entry.Value.PSObject.Properties['InstallLocation'] }
+        if ($null -eq $loc -or $null -eq $loc.Value) { return '' }
+        return [string]$loc.Value
+    }
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($script:Shell.Key, $false)
+    if ($null -eq $key) { return $null }
+    try {
+        return [string]$key.GetValue('InstallLocation', '')
+    } finally {
+        $key.Close()
+    }
+}
+
+function Remove-AlKey {
+    if ($script:Fake) {
+        $doc = Read-AlFake
+        $keys = $doc.PSObject.Properties['keys']
+        if ($null -ne $keys -and $null -ne $keys.Value) {
+            $keys.Value.PSObject.Properties.Remove($script:Shell.Key)
+        }
+        Add-AlFakeNote $doc 'removed_keys' $script:Shell.Key
+        Save-AlFake $doc
+        return
+    }
+    [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($script:Shell.Key, $false)
+}
+
+function Invoke-AlTaskStep {
+    # Step 3; -Plan only prints what would happen.
+    param([switch]$Plan)
+    $where = $script:Shell.TaskPath + $script:TaskName
+    $task = Get-AlTaskRecord
+    if ($null -eq $task) { return }
+    if (-not (Test-AlTaskInHome $task)) {
+        Write-AlStep ('leaving the logon task ' + $where + ': it points elsewhere')
+        return
+    }
+    if ($Plan) {
+        Write-AlStep ('would remove the logon task ' + $where)
+        return
+    }
+    Write-AlStep ('removing the logon task ' + $where)
+    try {
+        Remove-AlTask
+    } catch {
+        [void]$script:Problems.Add("could not remove the logon task ${where}: " + $_.Exception.Message)
+    }
+    if ($null -ne (Get-AlTaskRecord)) { [void]$script:ShellLeft.Add('logon task ' + $where) }
+}
+
+function Invoke-AlLinkStep {
+    # Step 4; -Plan only prints what would happen.
+    param([switch]$Plan)
+    foreach ($link in $script:LinkPaths) {
+        if (-not (Test-AlShellLink $link)) { continue }
+        $target = ''
+        try { $target = Get-AlLinkTarget $link } catch { $target = '' }
+        if (-not (Test-AlUnder -Path $target -Root $script:HomeDir)) {
+            Write-AlStep ('leaving ' + $link + ': it points elsewhere')
+            continue
+        }
+        if ($Plan) {
+            Write-AlStep ('would remove ' + $link)
+            continue
+        }
+        Write-AlStep ('removing ' + $link)
+        try {
+            Remove-AlShellLink $link
+        } catch {
+            [void]$script:Problems.Add("could not remove ${link}: " + $_.Exception.Message)
+        }
+        if (Test-AlShellLink $link) { [void]$script:ShellLeft.Add($link) }
+    }
+}
+
+function Invoke-AlKeyStep {
+    # Step 5; -Plan only prints what would happen.
+    param([switch]$Plan)
+    $where = 'HKCU\' + $script:Shell.Key
+    $loc = Get-AlKeyLocation
+    if ($null -eq $loc) { return }
+    if (-not (Test-AlUnder -Path $loc -Root $script:HomeDir)) {
+        Write-AlStep ('leaving the uninstall entry ' + $where + ': it points elsewhere')
+        return
+    }
+    if ($Plan) {
+        Write-AlStep ('would remove the uninstall entry ' + $where)
+        return
+    }
+    Write-AlStep ('removing the uninstall entry ' + $where)
+    try {
+        Remove-AlKey
+    } catch {
+        [void]$script:Problems.Add("could not remove the uninstall entry ${where}: " + $_.Exception.Message)
+    }
+    if ($null -ne (Get-AlKeyLocation)) { [void]$script:ShellLeft.Add('uninstall entry ' + $where) }
+}
+
 # --- delete (steps 6 and 7) ----------------------------------------------------
 
 function Get-AlDeletePlan {
@@ -420,6 +697,17 @@ $tempDir = Get-AlTempDir
 if (-not $tempDir -or (Test-AlUnder -Path $tempDir -Root $script:HomeDir)) {
     Stop-AlRefused 'the temp folder lies in the home'
 }
+try {
+    $script:Shell = Get-AlShellPlaces
+} catch {
+    Stop-AlRefused $_.Exception.Message
+}
+if ($script:Fake -and -not $script:Shell.Scratch) {
+    Stop-AlRefused 'AL_UNINSTALL_FAKE needs AL_SHELL_ROOT (no real shell entry is read in a test)'
+}
+foreach ($folder in @($script:Shell.Programs, $script:Shell.Desktop)) {
+    if ($folder) { $script:LinkPaths += (Get-AlFullPath (Join-Path $folder $script:LinkName)) }
+}
 if ($script:Fake) {
     $fakeDoc = Read-AlFake
     if (-not $DryRun -and $FromHome) {
@@ -433,6 +721,9 @@ if ($DryRun) {
     foreach ($proc in @(Get-AlOurProcesses)) {
         Write-AlStep ('would stop AshLight process ' + $proc.Pid)
     }
+    Invoke-AlTaskStep -Plan
+    Invoke-AlLinkStep -Plan
+    Invoke-AlKeyStep -Plan
     foreach ($p in @(Get-AlDeletePlan)) { Write-AlStep ('would delete ' + $p) }
     $data = Join-Path $script:HomeDir 'data'
     if ($Purge -and (Test-AlHomePath $data)) {
@@ -480,6 +771,11 @@ Set-Location -LiteralPath $tempDir
 # step 2
 Invoke-AlStop
 
+# steps 3 to 5
+Invoke-AlTaskStep
+Invoke-AlLinkStep
+Invoke-AlKeyStep
+
 # step 6
 foreach ($p in @(Get-AlDeletePlan)) {
     Write-AlStep ('deleting ' + $p)
@@ -499,7 +795,7 @@ Remove-AlHomeItem (Join-Path $script:HomeDir 'uninstall.ps1')
 if (-not $keep) { Remove-AlHomeItem -Path $script:HomeDir -Empty }
 
 # steps 8 and 9
-$left = @(Get-AlRemaining -KeepData $keep)
+$left = @(Get-AlRemaining -KeepData $keep) + @($script:ShellLeft)
 if ($left.Count -gt 0) {
     $report = Join-Path $tempDir $script:ReportName
     $lines = @('AshLight uninstall report', ('home: ' + $script:HomeDir), 'items that remain:')

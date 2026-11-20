@@ -1,12 +1,19 @@
-"""DEP-10: scripts/uninstall.ps1, the uninstaller of an installed copy.
+"""DEP-10 and REL-UNINSTALL-SHELL: scripts/uninstall.ps1, the uninstaller
+of an installed copy.
 
 Every run here is on a scratch home built by hand from the plan 05
 marker field list (docs/plan/05-deployment.md, "Installed-mode layout"),
-with TEMP / TMP pointed at a scratch folder and AL_UNINSTALL_FAKE naming a
-JSON file that stands in for the process table and the Recycle Bin. So no
-test lists, stops or recycles anything real, and no real install, Start
-Menu, Desktop, registry key or scheduled task is read or written (steps 3
-to 5 are not part of this package). Checked:
+with TEMP / TMP pointed at a scratch folder, AL_SHELL_ROOT pointed at a
+scratch effect root (so the two AshLight.lnk paths are scratch files) and
+AL_UNINSTALL_FAKE naming a JSON file that stands in for the process table,
+the Recycle Bin, the task scheduler ("tasks") and the registry ("keys").
+The script refuses the fake without an effect root, and its real
+scheduler and registry calls sit after the fake branch has returned
+(checked statically), so no test lists, stops, recycles, unregisters or
+deletes anything real. The shell tests also read the real per-user
+uninstall key, the real "AshLight Autostart" task, this run's scratch
+task folder and registry key and the real Start Menu / Desktop
+AshLight.lnk before and after a run and assert nothing changed. Checked:
 - a valid marker is required, else exit 2 with nothing touched;
 - the script re-runs from a temp copy, which removes itself;
 - stop.request first, then only processes proven ours are stopped (a pid
@@ -19,8 +26,13 @@ to 5 are not part of this package). Checked:
 - -DryRun changes nothing;
 - the output is byte-identical with and without ashlight.filter or a
   .build file elsewhere on the machine;
+- steps 3 to 5: the logon task "AshLight Autostart", the two
+  AshLight.lnk shortcuts and the per-user Uninstall\\AshLight key are
+  removed only when they point into the home, else left and named; the dev
+  loop task is never named;
 - static: no game-folder path, every listing / probe / delete sits in a
-  home-guarded helper, no dot-sourcing, PowerShell 5.1 parse.
+  home-guarded helper, the only names outside the home are the fixed shell
+  names, no dot-sourcing, PowerShell 5.1 parse.
 """
 
 import hashlib
@@ -33,6 +45,11 @@ import sys
 from pathlib import Path
 
 import pytest
+
+try:
+    import winreg
+except ImportError:  # not Windows: the shell tests skip with PS51
+    winreg = None
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "uninstall.ps1"
@@ -59,6 +76,10 @@ COPIED = ("AshLight hands out ashlight.filter and its .build files as downloads;
           "if you copied them into the game's filter or planner folder, they are "
           "still there.")
 INCOMPLETE = re.compile(r"^uninstall incomplete: (\d+) items remain$")
+TASK = "AshLight Autostart"
+LINK = "AshLight.lnk"
+REAL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\AshLight"
+SCRATCH_KEY_BASE = r"Software\AshLightShellScratch"
 
 
 # --- scratch world ---------------------------------------------------------
@@ -144,13 +165,15 @@ def world(tmp_path):
     return {"base": tmp_path, "home": home, "temp": temp, "fake": fake}
 
 
-def run(world, *args, script=None, stdin=None, wait=1):
+def run(world, *args, script=None, stdin=None, wait=1, shell_root=True):
     env = dict(os.environ)
-    for name in ("AL_HOME", "AL_RUNTIME_DIR", "AL_SIDECAR_ROOT"):
+    for name in ("AL_HOME", "AL_RUNTIME_DIR", "AL_SIDECAR_ROOT", "AL_SHELL_ROOT"):
         env.pop(name, None)
     env["TEMP"] = str(world["temp"])
     env["TMP"] = str(world["temp"])
     env["AL_UNINSTALL_FAKE"] = str(world["fake"])
+    if shell_root:
+        env["AL_SHELL_ROOT"] = str(world["base"] / "shell")
     target = script or (world["home"] / "uninstall.ps1")
     cmd = [PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
            "-File", str(target), "-WaitSec", str(wait)] + list(args)
@@ -408,19 +431,61 @@ def test_script_is_ascii_lf_and_self_contained():
     assert not re.search(r"(?i)\bpython\s+-m\b|server\.al|boot\.py", text)
 
 
-def test_script_names_no_game_folder_and_no_registry():
+# Every single-quoted literal of the script that names a place outside the
+# home (a path separator, a link, a key or a task): exactly these.
+OUTSIDE_LITERALS = {
+    "'AshLight.lnk'", "'AshLight Autostart'",
+    "'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AshLight'",
+    "'Software\\AshLightShellScratch'", "'\\AshLightShellScratch\\'",
+    "'\\Uninstall\\AshLight'", "'\\'", "'HKCU\\'",
+    "'System32\\WindowsPowerShell\\v1.0\\powershell.exe'",
+    "'[\\\\/]+'",  # the path-shape guard's split pattern, not a place
+}
+
+
+def test_reads_outside_the_home_are_only_the_fixed_shell_names():
+    # DEP-10's static test, narrowed by REL-UNINSTALL-SHELL: no game-folder
+    # path and no listing outside the home; the only places outside the
+    # home are the two AshLight.lnk paths, the per-user Uninstall\AshLight
+    # key and the task 'AshLight Autostart' (each with its effect-root
+    # scratch twin).
     text = _text()
     for pat in (r"(?i)my games", r"(?i)\bsteam\b", r"(?i)steamapps[\\/]", r"(?i)valve",
                 r"(?i)libraryfolders", r"(?i)client\.txt", r"(?i)grinding gear",
                 r"(?i)path of exile 2[\\/]", r"(?i)[\\/]path of exile 2",
                 r"(?i)\bfilter\b[^.;]*\bfolder\b.*[\\/]", r"(?i)hklm", r"(?i)registry::",
-                r"(?i)Get-ItemProperty", r"(?i)PathOfExile"):
+                r"(?i)Get-ItemProperty", r"(?i)PathOfExile", r"(?i)LocalMachine",
+                r"(?i)\bHKLM\b", r"(?i)Common(Programs|Desktop|StartMenu)",
+                r"(?i)\bschtasks\b", r"(?i)\breg(\.exe)?\s+(delete|query|add)\b"):
         assert not re.search(pat, text), pat
     # the two path-shape guard words appear once, as bare words
     assert text.count("'steamapps'") == 1 and text.count("'path of exile 2'") == 1
     # checkout mode is not here; the dev folders are never named at all
-    for word in ("Worktree", "Scratch", "ClaudeHistory", "LaneLoop"):
+    for word in ("Worktree", "ClaudeHistory", "LaneLoop", "AshLightOps"):
         assert word not in text
+    # the outside names, each defined once
+    for line in ("$script:LinkName = 'AshLight.lnk'",
+                 "$script:TaskName = 'AshLight Autostart'",
+                 "$script:RealKey = 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AshLight'"):
+        assert text.count(line) == 1, line
+    # no other place-like literal anywhere
+    found = set(re.findall(r"'[^'\n]*'", text))
+    placey = {lit for lit in found
+              if "\\" in lit or "/" in lit or ".lnk" in lit.lower()
+              or "autostart" in lit.lower() or "uninstall\\" in lit.lower()}
+    assert placey == OUTSIDE_LITERALS, placey ^ OUTSIDE_LITERALS
+    # the shell folders: only this user's Programs and Desktop
+    assert sorted(set(re.findall(r"GetFolderPath\('([^']+)'\)", text))) == ["Desktop", "Programs"]
+    # the registry: HKCU only, and only the one key of the places
+    assert re.findall(r"\[Microsoft\.Win32\.Registry\]::(\w+)\.(\w+)\(([^,)]*)", text) == [
+        ("CurrentUser", "OpenSubKey", "$script:Shell.Key"),
+        ("CurrentUser", "DeleteSubKeyTree", "$script:Shell.Key")]
+    # the task scheduler: only the one task name, in the one task folder
+    for call in re.findall(r"(?m)^.*-ScheduledTask\b.*$", text):
+        assert "-TaskName $script:TaskName -TaskPath $script:Shell.TaskPath" in call, call
+    # the link paths are built from the fixed name only
+    assert re.findall(r"\$script:LinkPaths \+= .*", text) == [
+        "$script:LinkPaths += (Get-AlFullPath (Join-Path $folder $script:LinkName)) }"]
 
 
 def test_delete_names_are_the_fixed_list():
@@ -437,9 +502,10 @@ def test_delete_names_are_the_fixed_list():
 # Where each file system cmdlet may sit (the enclosing function; <script>
 # is the top level). Every listed helper refuses a path outside the home.
 ALLOWED = {
-    "test-path": {"Test-AlHomePath", "Get-AlHomeChildren", "Remove-AlHomeItem"},
+    "test-path": {"Test-AlHomePath", "Get-AlHomeChildren", "Remove-AlHomeItem",
+                  "Test-AlShellLink"},
     "get-childitem": {"Get-AlHomeChildren", "Remove-AlHomeItem"},
-    "remove-item": {"Remove-AlHomeItem", "Remove-AlOwnCopy"},
+    "remove-item": {"Remove-AlHomeItem", "Remove-AlOwnCopy", "Remove-AlShellLink"},
     "move-item": {"Send-AlDataToRecycleBin"},
     "copy-item": {"<script>"},
     "set-content": {"Invoke-AlStop"},
@@ -447,9 +513,13 @@ ALLOWED = {
     "get-process": {"Get-AlProcessTable"},
     "stop-process": {"Stop-AlOurProcess"},
     "wait-process": {"Stop-AlOurProcess"},
+    "get-scheduledtask": {"Get-AlTaskRecord"},
+    "unregister-scheduledtask": {"Remove-AlTask"},
 }
 GUARDED = ("Test-AlHomePath", "Get-AlHomeChildren", "Remove-AlHomeItem",
            "Send-AlDataToRecycleBin")
+# the shortcut helpers accept only the two fixed AshLight.lnk paths
+LINK_GUARDED = ("Test-AlShellLink", "Get-AlLinkTarget", "Remove-AlShellLink")
 NEVER = ("get-item", "gi", "gci", "ls", "dir", "resolve-path", "get-psdrive",
          "get-itemproperty", "get-wmiobject", "get-ciminstance", "test-connection",
          "invoke-webrequest", "invoke-restmethod", "start-process", "new-item")
@@ -507,15 +577,280 @@ def test_every_probe_listing_and_delete_sits_in_a_home_guarded_helper(ast_dump):
             assert fn in ALLOWED[name], (name, fn)
     for fn in GUARDED:
         assert "Assert-AlInHome" in bodies[fn], fn
-    # the real process table, process stop and Recycle Bin are only reached
-    # after the fake branch has returned
+    for fn in LINK_GUARDED:
+        body = bodies[fn]
+        assert body.index("Assert-AlShellLink") < min(
+            body.index(w) for w in ("Test-Path", "CreateShortcut", "Remove-Item") if w in body), fn
+    # the real process table, process stop, Recycle Bin, task scheduler and
+    # registry are only reached after the fake branch has returned
     for fn, real in (("Get-AlProcessTable", "Get-Process"), ("Stop-AlOurProcess", "Stop-Process"),
-                     ("Send-AlDataToRecycleBin", "DeleteDirectory")):
+                     ("Send-AlDataToRecycleBin", "DeleteDirectory"),
+                     ("Get-AlTaskRecord", "Get-ScheduledTask"),
+                     ("Remove-AlTask", "Unregister-ScheduledTask"),
+                     ("Get-AlKeyLocation", "OpenSubKey"), ("Remove-AlKey", "DeleteSubKeyTree")):
         body = bodies[fn]
         fake_at = body.index("if ($script:Fake)")
         ret_at = body.index("return", fake_at)
         assert fake_at < ret_at < body.index(real), fn
+    # the one COM object is the shortcut reader, behind the link guard
+    assert _text().count("-ComObject") == 1 and "-ComObject WScript.Shell" in bodies["Get-AlLinkTarget"]
     # no .NET file probe or listing either
     text = _text()
     assert not re.search(r"(?i)::(Exists|GetFiles|GetDirectories|Enumerate\w*)\s*\(", text)
     assert not re.search(r"(?i)\bDirectoryInfo\b|\bFileInfo\b", text)
+
+
+# --- steps 3 to 5: logon task, shortcuts, uninstall key -----------------------
+
+def _q(text):
+    return "'" + str(text).replace("'", "''") + "'"
+
+
+def _scratch(world):
+    """The scratch places the effect root gives (as al_shell.ps1)."""
+    root = world["base"] / "shell"
+    sid = hashlib.sha256(str(root).lower().encode("utf-8")).digest()[:8].hex()
+    return {
+        "root": root,
+        "id": sid,
+        "task_path": "\\AshLightShellScratch\\" + sid + "\\",
+        "key": SCRATCH_KEY_BASE + "\\" + sid + "\\Uninstall\\AshLight",
+        "links": [root / "Programs" / LINK, root / "Desktop" / LINK],
+    }
+
+
+def make_links(world, targets):
+    """Real .lnk files, only under the scratch effect root of this test."""
+    sc = _scratch(world)
+    lines = ["$s = New-Object -ComObject WScript.Shell"]
+    for link, target in zip(sc["links"], targets):
+        assert world["base"] in link.parents
+        link.parent.mkdir(parents=True, exist_ok=True)
+        Path(target).parent.mkdir(parents=True, exist_ok=True)
+        Path(target).touch()
+        lines.append(f"$l = $s.CreateShortcut({_q(link)}); $l.TargetPath = {_q(target)}; $l.Save()")
+    r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-Command", "; ".join(lines)],
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    for link in sc["links"]:
+        assert link.is_file()
+
+
+def set_shell_fake(world, tasks=(), keys=None):
+    doc = _fake(world)
+    doc["tasks"] = list(tasks)
+    doc["keys"] = dict(keys or {})
+    world["fake"].write_text(json.dumps(doc, indent=1) + "\n", encoding="ascii")
+
+
+_REAL_STATE = r"""
+$t = @(Get-ScheduledTask -TaskName 'AshLight Autostart' -ErrorAction SilentlyContinue)
+$t += @(Get-ScheduledTask -TaskPath $args[0] -ErrorAction SilentlyContinue)
+$rows = @($t | Where-Object { $_ } | ForEach-Object {
+    $_.TaskPath + $_.TaskName + '|' + (@($_.Actions | ForEach-Object {
+        [string]$_.Execute + ' ' + [string]$_.Arguments + ' ' + [string]$_.WorkingDirectory }) -join ';') })
+foreach ($f in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
+    $p = Join-Path $f 'AshLight.lnk'
+    $i = Get-Item -LiteralPath $p -ErrorAction SilentlyContinue
+    if ($i) { $rows += ('LINK ' + $p + '|' + $i.Length + '|' + $i.LastWriteTimeUtc.Ticks) }
+    else { $rows += ('LINK ' + $p + '|absent') }
+}
+$rows | ForEach-Object { 'ROW ' + $_ }
+"""
+
+
+def _reg_state(sub):
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub)
+    except OSError:
+        return None
+    with key:
+        nsub, nval, stamp = winreg.QueryInfoKey(key)
+        return (nsub, stamp, sorted(winreg.EnumValue(key, i)[:2] for i in range(nval)))
+
+
+def real_state(world, tmp_dir):
+    """Read only: the real 'AshLight Autostart' task, this run's scratch task
+    folder, the real Start Menu / Desktop AshLight.lnk, the real per-user
+    uninstall key and this run's scratch keys."""
+    sc = _scratch(world)
+    helper = tmp_dir / "real_state.ps1"
+    helper.write_text(_REAL_STATE, encoding="ascii")
+    r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                        "-File", str(helper), sc["task_path"]],
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    rows = sorted(ln[4:] for ln in r.stdout.splitlines() if ln.startswith("ROW "))
+    assert len([x for x in rows if x.startswith("LINK ")]) == 2, rows
+    return {"tasks_and_links": rows, "real_key": _reg_state(REAL_KEY),
+            "scratch_key": _reg_state(sc["key"]),
+            "scratch_id": _reg_state(SCRATCH_KEY_BASE + "\\" + sc["id"])}
+
+
+needs_shell = pytest.mark.skipif(PS51 is None or winreg is None, reason="Windows only")
+
+
+@pytest.fixture
+def shell_world(world):
+    world["sc"] = _scratch(world)
+    world["state_dir"] = world["base"] / "state"
+    world["state_dir"].mkdir()
+    before = real_state(world, world["state_dir"])
+    yield world
+    # read back: nothing real changed, whatever the test did
+    assert real_state(world, world["state_dir"]) == before
+
+
+@needs_shell
+def test_task_link_and_key_pointing_into_the_home_are_removed(shell_world):
+    w = shell_world
+    home, sc = w["home"], w["sc"]
+    make_links(w, [home / "runtime" / "electron-45.3.3" / "electron.exe",
+                   home / "app" / "0.1.1" / "AshLight.exe"])
+    set_shell_fake(w, tasks=[{"path": sc["task_path"], "name": TASK,
+                              "execute": str(home / "runtime" / "python-3.14.10" / "pythonw.exe"),
+                              "working_directory": str(home / "app" / "0.1.1")}],
+                   keys={sc["key"]: {"InstallLocation": str(home)}})
+    where_task = sc["task_path"] + TASK
+    where_key = "HKCU\\" + sc["key"]
+    # the plan printer: everything named, nothing changed
+    fake_before = w["fake"].read_bytes()
+    rc, lines, _, err = run(w, "-DryRun")
+    assert rc == 0, (lines, err)
+    assert "uninstall: would remove the logon task " + where_task in lines
+    for link in sc["links"]:
+        assert "uninstall: would remove " + str(link) in lines
+        assert link.is_file()
+    assert "uninstall: would remove the uninstall entry " + where_key in lines
+    assert w["fake"].read_bytes() == fake_before
+    # the run: all three removed and read back
+    rc, lines, _, err = run(w)
+    assert rc == 0, (lines, err)
+    assert "uninstall: removing the logon task " + where_task in lines
+    assert "uninstall: removing the uninstall entry " + where_key in lines
+    for link in sc["links"]:
+        assert "uninstall: removing " + str(link) in lines
+        assert not link.exists()
+        assert link.parent.is_dir()  # only the link goes
+    doc = _fake(w)
+    assert doc["tasks"] == [] and doc["removed_tasks"] == [where_task]
+    assert doc["keys"] == {} and doc["removed_keys"] == [sc["key"]]
+    # the read-back asks for the same one name again, nothing else
+    assert doc["task_queries"] == [where_task, where_task]
+    assert doc["key_queries"] == [sc["key"], sc["key"]]
+    assert _left_in(home) == ["data"]
+    assert lines[-2:] == [LAST_KEPT.format(data=str(home / "data")), COPIED]
+
+
+@needs_shell
+@pytest.mark.parametrize("task_form", ["workdir elsewhere", "program elsewhere"])
+def test_task_link_and_key_pointing_elsewhere_are_left(shell_world, task_form):
+    w = shell_world
+    home, sc = w["home"], w["sc"]
+    other = w["base"] / "elsewhere"
+    # a sibling whose name starts like the home is not the home
+    make_links(w, [other / "AshLight" / "electron.exe",
+                   home.parent / (home.name + "Old") / "electron.exe"])
+    if task_form == "workdir elsewhere":
+        task = {"execute": str(home / "runtime" / "python-3.14.10" / "pythonw.exe"),
+                "working_directory": str(other / "checkout")}
+    else:
+        task = {"execute": '"' + str(other / "py" / "pythonw.exe") + '"', "working_directory": ""}
+    tasks = [dict(task, path=sc["task_path"], name=TASK),
+             # the real task folder and key are never looked at under an
+             # effect root, even when they point into the home
+             {"path": "\\", "name": TASK, "execute": str(home / "x.exe"),
+              "working_directory": str(home)}]
+    keys = {sc["key"]: {"InstallLocation": str(home) + "Old"},
+            REAL_KEY: {"InstallLocation": str(home)}}
+    set_shell_fake(w, tasks=tasks, keys=keys)
+    links_before = snapshot(*(ln.parent for ln in sc["links"]))
+    rc, lines, _, err = run(w)
+    assert rc == 0, (lines, err)
+    assert ("uninstall: leaving the logon task " + sc["task_path"] + TASK
+            + ": it points elsewhere") in lines
+    assert ("uninstall: leaving the uninstall entry HKCU\\" + sc["key"]
+            + ": it points elsewhere") in lines
+    for link in sc["links"]:
+        assert "uninstall: leaving " + str(link) + ": it points elsewhere" in lines
+    assert not any(ln.startswith("uninstall: removing") for ln in lines)
+    assert snapshot(*(ln.parent for ln in sc["links"])) == links_before
+    doc = _fake(w)
+    assert doc["tasks"] == tasks and doc["keys"] == keys
+    assert "removed_tasks" not in doc and "removed_keys" not in doc
+    assert doc["task_queries"] == [sc["task_path"] + TASK]
+    assert doc["key_queries"] == [sc["key"]]
+    # the home's own files went as usual; the left items are not ours
+    assert _left_in(home) == ["data"]
+    assert lines[-1] == COPIED
+
+
+@needs_shell
+def test_shell_effects_are_redirected_in_tests(shell_world):
+    w = shell_world
+    home = w["home"]
+    make_links(w, [home / "runtime" / "electron-45.3.3" / "electron.exe"] * 2)
+    set_shell_fake(w, tasks=[{"path": "\\", "name": TASK, "execute": str(home / "x.exe"),
+                              "working_directory": str(home)}],
+                   keys={REAL_KEY: {"InstallLocation": str(home)}})
+    roots = (home, w["temp"], w["sc"]["root"], w["base"] / "recycle")
+    before = snapshot(*roots)
+    fake_before = w["fake"].read_bytes()
+    # the doubles must be in force before any code runs: the fake without
+    # an effect root is refused at validation, with nothing touched
+    for args in ((), ("-DryRun",)):
+        rc, lines, _, err = run(w, *args, shell_root=False)
+        assert rc == 2, (lines, err)
+        assert lines[-1] == ("uninstall refused: AL_UNINSTALL_FAKE needs AL_SHELL_ROOT "
+                             "(no real shell entry is read in a test)")
+        assert snapshot(*roots) == before
+        assert w["fake"].read_bytes() == fake_before
+    # a relative effect root is refused too
+    env = dict(os.environ, TEMP=str(w["temp"]), TMP=str(w["temp"]),
+               AL_UNINSTALL_FAKE=str(w["fake"]), AL_SHELL_ROOT="relative\\root")
+    for name in ("AL_HOME", "AL_RUNTIME_DIR", "AL_SIDECAR_ROOT"):
+        env.pop(name, None)
+    r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                        "-File", str(home / "uninstall.ps1"), "-WaitSec", "1"],
+                       capture_output=True, timeout=180, env=env, cwd=str(w["base"]),
+                       stdin=subprocess.DEVNULL)
+    assert r.returncode == 2, r.stdout
+    assert b"uninstall refused: AL_SHELL_ROOT is not an absolute path" in r.stdout
+    assert snapshot(*roots) == before
+    assert w["fake"].read_bytes() == fake_before
+    # with the effect root, the real-place entries of the fake are never
+    # asked for: only the scratch task folder and scratch key
+    rc, lines, _, err = run(w)
+    assert rc == 0, (lines, err)
+    doc = _fake(w)
+    assert doc["task_queries"] == [w["sc"]["task_path"] + TASK]
+    assert doc["key_queries"] == [w["sc"]["key"]]
+    assert len(doc["tasks"]) == 1 and REAL_KEY in doc["keys"]
+    # the real scheduler and registry calls sit after the fake branch
+    # (test_every_probe_listing_and_delete_sits_in_a_home_guarded_helper);
+    # shell_world reads the real task, keys and links back after the test.
+
+
+@needs_ps
+def test_dev_loop_task_is_never_named(world):
+    text = _text()
+    for word in ("LaneLoop", "AshLightOps", "laneloop"):
+        assert word not in text
+    # the one task name, in the one call shape
+    assert set(re.findall(r"-TaskName (\S+)", text)) == {"$script:TaskName"}
+    assert text.count("'AshLight Autostart'") == 1
+    # live: a dev loop task in the fake, even one pointing into the home,
+    # is never asked for and stays
+    sc = _scratch(world)
+    home = world["home"]
+    tasks = [{"path": "\\AshLightOps\\", "name": "LaneLoop", "execute": str(home / "x.exe"),
+              "working_directory": str(home)},
+             {"path": sc["task_path"], "name": "LaneLoop", "execute": str(home / "x.exe"),
+              "working_directory": str(home)}]
+    set_shell_fake(world, tasks=tasks)
+    rc, lines, _, err = run(world)
+    assert rc == 0, (lines, err)
+    doc = _fake(world)
+    assert doc["tasks"] == tasks
+    assert doc["task_queries"] == [sc["task_path"] + TASK]
+    assert not any("LaneLoop" in ln for ln in lines)
