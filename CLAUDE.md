@@ -571,7 +571,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   unattended trial runs only the static drift guard; candidate Lua runs
   under luajit only on `trial --live` or local.json
   "tc_drift_live_unattended": true; AL_TC_PINS_FILE is honoured only in a
-  pytest run (0025 amendment, AREA-AUDIT P3-9 / P3-8). Reverses if:
+  pytest run (0025 amendment, AREA-AUDIT P3-9 / P3-8; 0025 amendment
+  2026-11-18: a trial re-hashes pob2_files from the candidate and records
+  old and new hash for review at apply; candidates other than the pin and
+  the newest are pruned). Reverses if:
   GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
   releases or ships a headless API, the loop gains safe auto-commit, PoB
   releases become verifiable (signed), a no-admin OS sandbox exists, or
@@ -893,10 +896,30 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   path.txt and check electron.exe; verify-exe hashes in full only when size or
   mtime changed since the last good check (sidecar Build); an unknown
   architecture warns and reports no client; it is a setup-time fetch, not
-  gated by web_data (Q-20), and is not yet wired into setup.ps1 / run.ps1
-  (OVL-ELECTRON-SETUP). Reverses if: Electron stops publishing SHASUMS256.txt
+  gated by web_data (Q-20), and is wired into setup.ps1 and run.ps1
+  (decision 0068). Reverses if: Electron stops publishing SHASUMS256.txt
   or release zips on GitHub, electron's npm package changes its dist/path.txt
   layout, or a signed release channel replaces the pin.
+- Electron and npm supply chain: npm runs only as npm ci --ignore-scripts
+  from the lockfile under the tracked app/.npmrc (which also sets an
+  AshLight User-Agent); the Electron zip is fetched only by
+  tools/electron_pin.py (AshLight User-Agent, SHA-256 from
+  config/electron_pin.json), never by electron's install.js; setup and
+  run.ps1 verify electron.exe against the pin (decision 0068). Reverses if:
+  the operator rules the User-Agent bullet binds only AshLight's own
+  requests (decision A-02: the .npmrc user-agent line may go), Electron
+  stops publishing hash-verifiable zips, or a packager needs electron as a
+  dev entry.
+- TC-CALC-CONFINE-PROC: Calc child confinement: every bridge start passes
+  the child only the allow-listed environment names (SYSTEMROOT, WINDIR,
+  TEMP, TMP, LUA_PATH, LUA_CPATH). On Windows the child starts suspended and
+  is resumed only once it is inside its own job object (stdlib ctypes): kill
+  on job close, one active process, 1536 MB per-process memory limit. The
+  job handle closes with the bridge or the core. A start that cannot be
+  confined is killed and raises BridgeUnavailable (decision 0022 amendment
+  2026-11-19). Reverses if: PoB needs another environment name or a helper
+  process, a real build needs more than the memory limit, or job objects are
+  refused in a supported install layout.
 - RUN-ZONE-RESET: SessionState._enter_zone() is the one per-zone reset
   (state.ZONE_FIELDS, listed again in tests/test_bus_state.py), called from
   the scene, area-generated, area-entered and log_opened arms. Each zone
