@@ -1100,6 +1100,26 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   removes Worktree, Scratch or ClaudeHistory (decision 0066). Reverses if:
   players lose data they wanted kept or keep data they wanted gone, in
   practice.
+- Cut-over migrate: `installer migrate` (server/al/install/migrate.py)
+  copies a checkout's player data into <home>/data using one allow-list
+  table in code: consent, run history, map ladder, price watch, zone
+  visits, session summaries, hints, verdicts, worn gear, gen_builds,
+  ui_layout, theorycraft/weights.json and the build/ tree (plain files
+  only, no links). A never-list removes the token, token.reuse, pid files,
+  core.alive, stop.request, keepalive, hot reload, .tmp and .bak files even
+  if the table names them. From local.json only the settingsio ALLOWED keys
+  (each validated) plus contact and client_log move. web_data never moves
+  (decisions 0013 and 0036): the home keeps its own value, and a checkout
+  that had it on is reported as `offered web_data`, with no path. The dev
+  keys (loop, loop_push, hot_reload, tc_drift_live_unattended) and port
+  never move. The contact goes only into the home's local.json. The
+  checkout is only read. A file the home already has is kept unless
+  --force. A home local.json that still equals the first-run document
+  counts as fresh. Every target must be inside the data folder, and a home
+  that is not laid out is refused. The output names files relative to the
+  data folder and prints no path. Reverses if: a player-data store is added
+  outside the table, the cut-over must also carry dev keys, or copying
+  client_log is ruled out.
 - Upstream watcher frame: One tool and one state file run every upstream
   source on the dev loop (tools/upstream_watch.py); new sources read
   repository metadata or the exact public metadata and docs pages they list,
