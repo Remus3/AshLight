@@ -222,6 +222,67 @@ def test_only_the_docs_host_is_fetched():
         g.fetch_page("https://api.pathofexile.com/character", NOW, fetch=FakeWeb({}))
 
 
+# --- DOCS-SHAPE (AUTO-11) ----------------------------------------------
+
+ITEM_DOC = ("<ul><li>typeLine: string</li><li>explicitMods: ?array of string</li>"
+            "<li>flavourText: ?array of string</li></ul>\n</article>")
+
+
+def with_items(page_html, retyped=False):
+    body = ITEM_DOC.replace("explicitMods: ?array of string",
+                            "explicitMods: ?array of ItemMod") if retyped else ITEM_DOC
+    return page_html.replace("</article>", body, 1)
+
+
+def test_reference_diff_retyping_explicitmods_gets_topic_shape(dirs):
+    run(dirs, FakeWeb(pages(reference=with_items(html("plain")))))
+    st = run(dirs, FakeWeb(pages(reference=with_items(html("plain"), retyped=True))),
+             now=NOW + 90000)
+    (c,) = st["changes"]
+    assert c["page"] == "reference" and "shape" in c["topics"]
+    assert c["shape_fields"] == ["explicitMods"]
+    assert st["last_shape"]["pages"] == [
+        {"page": "reference", "fields": ["explicitMods"], "count": 1}]
+    assert "reference(shape)" in g.summary(st)
+
+
+def test_shape_note_names_the_field(dirs):
+    run(dirs, FakeWeb(pages(data=with_items(html("plain")))))
+    st = run(dirs, FakeWeb(pages(data=with_items(html("plain"), retyped=True))),
+             now=NOW + 90000)
+    assert st["changes"][0]["page"] == "data"
+    (line,) = [ln for ln in notes(dirs).splitlines() if "CHANGED page=data" in ln]
+    assert "topics=shape" in line and "shape_fields=explicitMods" in line
+    # an unread field (flavourText) or a field name inside another word is no shape
+    assert g.shape_fields("reference", ["flavourText: string", "myexplicitModsX"]) == []
+
+
+def test_changelog_diff_gets_no_shape_tag_while_a01_is_off(dirs, monkeypatch):
+    assert g.SHAPE_ALL_PAGES is False and g.SHAPE_PAGES == ("reference", "data")
+    run(dirs, FakeWeb(pages()))
+    new = html("changelog").replace(
+        '<article id="3-30-0">',
+        '<article id="3-31-0"><h3>3.31.0:</h3><ul><li>explicitMods is now an array '
+        'of objects.</li></ul></article>\n<article id="3-30-0">')
+    st = run(dirs, FakeWeb(pages(changelog=new)), now=NOW + 90000)
+    (c,) = st["changes"]
+    assert c["page"] == "changelog" and "shape" not in c["topics"]
+    assert "shape_fields" not in c and "last_shape" not in st
+    assert "shape_fields=" not in notes(dirs)
+    for page in ("index", "authorization", "changelog", "game"):
+        assert g.shape_fields(page, ["explicitMods"]) == []
+    monkeypatch.setattr(g, "SHAPE_ALL_PAGES", True)  # the operator's A-01 line
+    assert g.shape_fields("changelog", ["explicitMods"]) == ["explicitMods"]
+
+
+def test_shape_fields_still_appear_in_the_readers():
+    src = "".join((ROOT / "server" / "al" / "theorycraft" / f).read_text(encoding="utf-8")
+                  for f in ("charjson.py", "treedata.py"))
+    missing = [f for f in g.SHAPE_FIELDS if f'"{f}"' not in src]
+    assert missing == [], f"fields no reader uses any more: {missing}"
+    assert len(set(g.SHAPE_FIELDS)) == len(g.SHAPE_FIELDS)
+
+
 # --- loop and dashboard wiring -----------------------------------------
 
 def test_tick_runs_the_watch_even_while_halted(tmp_path):

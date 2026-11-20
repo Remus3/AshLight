@@ -75,7 +75,33 @@ TOPICS = (
     ("poe2", ("poe2", "path of exile 2", "realm")),
     ("rate-limit", ("rate limit", "x-rate-limit", "retry-after")),
     ("policy", ("overlay", "macro", "clipboard", "screen", "terms of use")),
+    ("shape", None),  # computed by shape_fields(), not a word list
 )
+
+# DOCS-SHAPE (AUTO-11, decision 0044 amendment 2026-11-20): the GGG field
+# names AshLight's readers use (server/al/theorycraft/charjson.py for the
+# character JSON, server/al/theorycraft/treedata.py for the tree export). A
+# changed docs line naming one, as a whole case-sensitive word, tags the
+# change "shape" and the note names the fields. tests/test_ggg_docs_watch.py
+# checks that every name still appears in those readers.
+SHAPE_FIELDS = (
+    # character JSON (charjson.py)
+    "equipment", "jewels", "passives", "hashes", "specialisations", "skills",
+    "socketedItems", "inventoryId", "typeLine", "baseType", "frameType",
+    "rarity", "ilvl", "properties", "implicitMods", "explicitMods",
+    "craftedMods", "enchantMods", "fracturedMods", "runeMods",
+    "desecratedMods",
+    # passive tree export (treedata.py)
+    "ascendancyId", "ascendancyName", "isNotable", "isKeystone",
+    "isJewelSocket", "classStartIndex", "classesStart",
+)
+# The shape topic runs on these pages only (the API Reference and the Data
+# Exports). SHAPE_ALL_PAGES stays False while operator decision A-01 is open:
+# no new topic on the index, authorization, changelog or game pages.
+SHAPE_PAGES = ("reference", "data")
+SHAPE_ALL_PAGES = False
+_SHAPE_RE = re.compile(r"(?<![A-Za-z0-9_])(" + "|".join(SHAPE_FIELDS)
+                       + r")(?![A-Za-z0-9_])")
 
 _BLOCK = {"p", "div", "li", "ul", "ol", "dl", "dt", "dd", "article", "section",
           "header", "footer", "table", "tr", "td", "th", "pre", "blockquote",
@@ -243,9 +269,30 @@ def reg_section(page):
     return out
 
 
-def topics(lines):
+def shape_fields(name, lines):
+    """The SHAPE_FIELDS names the changed lines of page `name` carry, in
+    SHAPE_FIELDS order ([] on a page outside SHAPE_PAGES while
+    SHAPE_ALL_PAGES is off)."""
+    if name not in SHAPE_PAGES and not SHAPE_ALL_PAGES:
+        return []
+    seen = set()
+    for ln in lines:
+        seen.update(_SHAPE_RE.findall(ln))
+    return [f for f in SHAPE_FIELDS if f in seen]
+
+
+def topics(lines, name=None):
+    """Topic names of the changed lines; "shape" only when `name` (the page)
+    is given and shape_fields() finds a field."""
     low = " ".join(lines).lower()
-    return [name for name, words in TOPICS if any(w in low for w in words)]
+    out = []
+    for topic, words in TOPICS:
+        if words is None:
+            if name is not None and shape_fields(name, lines):
+                out.append(topic)
+        elif any(w in low for w in words):
+            out.append(topic)
+    return out
 
 
 def changelog_entries(page):
@@ -357,7 +404,10 @@ def _compare(name, old_text, new, now, logs):
     fname = time.strftime("%Y%m%d-%H%M%S", time.gmtime(now)) + f"-{name}.diff"
     _write(Path(logs) / fname, "\n".join(diff) + "\n")
     rec = {"page": name, "added": len(added), "removed": len(removed),
-           "topics": topics(added + removed), "diff": fname}
+           "topics": topics(added + removed, name), "diff": fname}
+    fields = shape_fields(name, added + removed)
+    if fields:
+        rec["shape_fields"] = fields
     if name == "changelog":
         before = set(changelog_entries({"lines": old_lines}))
         rec["new_entries"] = [e for e in changelog_entries(new) if e not in before]
@@ -415,8 +465,15 @@ def run(root, now, fetch=None, sleep=time.sleep, cache=None, logs=None):
         _registration_update(root, now, st, index)
     if changes:
         st["last_change"] = {"at": iso(now), "changes": changes}
+        shaped = [{"page": c["page"], "fields": c["shape_fields"],
+                   "count": len(c["shape_fields"])}
+                  for c in changes if c.get("shape_fields")]
+        if shaped:  # kept until the next shape change (LOOP-WATCH-WIRE reads it)
+            st["last_shape"] = {"at": iso(now), "pages": shaped}
         for c in changes:
             extra = f" new_entries={','.join(c['new_entries'])}" if c.get("new_entries") else ""
+            if c.get("shape_fields"):
+                extra += f" shape_fields={','.join(c['shape_fields'])}"
             note(root, now, f"CHANGED page={c['page']} +{c['added']} -{c['removed']} "
                             f"topics={','.join(c['topics']) or 'none'}{extra} diff={c['diff']}")
     st["changes"] = changes
