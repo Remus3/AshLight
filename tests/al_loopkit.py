@@ -1,7 +1,7 @@
 """Shared tools/al_loop.py test helpers (plan 156, TESTS-A-17 / -19).
 
-test_al_loop, test_al_loop_merge, test_al_loop_routes, test_al_loop_gate_cache
-and test_usage_ledger import these from here instead of from test_al_loop.
+test_al_loop, test_al_loop_merge, test_al_loop_lanes, test_al_loop_routes,
+test_al_loop_gate_cache and test_usage_ledger import these from here instead of from test_al_loop.
 
 TESTS-A-19: `isolate_git(monkeypatch)` hides the machine's git global and
 system config (GIT_CONFIG_GLOBAL -> os.devnull, GIT_CONFIG_NOSYSTEM=1) and
@@ -198,3 +198,10 @@ def _two_lane_world(tmp_path, edit_a, edit_b):
                                  for i, n in enumerate(("build", "data", "review"))])
     al_loop.tick(deps=d, no_push=True)
     return root
+
+
+# TEST-LOOP-SPLIT-LANES: shared by tests/test_al_loop.py and
+# tests/test_al_loop_lanes.py, moved here verbatim.
+
+def progress(root):
+    return json.loads((root / "ops/loop/control/progress/loop.json").read_text())
