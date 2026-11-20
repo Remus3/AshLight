@@ -237,7 +237,7 @@ button.link {
 .event-list li.death .kind { color: var(--fk-status-bad); }
 
 /* UX-NEWEST N1: the Last session card is silent (no live region), so it
-   shows by position (first in Run and history, PLAY-LEGACY-OUT-2) and a
+   shows by position (first in Run, PLAY-LEGACY-OUT-2) and a
    steady accent edge, no motion; the edge is decorative, the heading
    carries the meaning */
 .card.session { border-left: 4px solid var(--fk-accent); }
@@ -542,9 +542,8 @@ button.tab[aria-selected="true"] { border-bottom-color: var(--fk-accent); font-w
 button.tab::after { display: block; height: 0; overflow: hidden; visibility: hidden;
   font-weight: 600; content: ""; }
 #tab-play::after { content: "Play"; }
-#tab-run::after { content: "Run and history"; }
-#tab-build::after { content: "Build"; }
-#tab-items::after { content: "Items and prices"; }
+#tab-build::after { content: "Build and items"; }
+#tab-run::after { content: "Run"; }
 #tab-settings::after { content: "Settings"; }
 button.tab:hover { background: var(--fk-surface); }
 button.tab:focus-visible { outline-offset: -3px; }
