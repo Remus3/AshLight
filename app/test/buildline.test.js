@@ -202,7 +202,7 @@ test("the floor: no clipboard, no ALBuildLive, no notify, no timer, no network",
 
 test("the page holds the paste box inside the Build panel and pre-links the file", () => {
   const panel = HTML.indexOf('id="panel-build"');
-  const next = HTML.indexOf('id="panel-items"');
+  const next = HTML.indexOf('id="panel-run"');
   const box = HTML.indexOf('id="build-paste"');
   assert.ok(panel > 0 && box > panel && box < next, "#build-paste is in panel-build");
   assert.match(HTML, /<script src="\/web\/buildline\.js" defer><\/script>/);
