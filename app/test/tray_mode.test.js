@@ -84,7 +84,6 @@ function fakeWorld() {
     constructor() { Object.assign(this, fakeEmitter()); trays.push(this); calls.push("tray"); }
     setToolTip() {}
     setContextMenu() {}
-    displayBalloon() {}
     destroy() {}
   }
 

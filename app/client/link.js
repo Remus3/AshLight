@@ -126,7 +126,7 @@ function wantsClient(argv) {
 
 /* REL-AUTOSTART-TRAY (decision 0041 amendment 2026-11-18): is this a
    tray-only client start (--client together with --tray, the opt-in logon
-   task through scriptsun.ps1 -Autostart)? The first open then builds the
+   task through scripts\run.ps1 -Autostart)? The first open then builds the
    tray and connects the core but makes no companion window; --tray alone
    (no --client) is not a client start at all. */
 function wantsTray(argv) {
