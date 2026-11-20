@@ -32,7 +32,15 @@
    showInactive() (never focus()), only when Link.wakeAction says its saved
    bounds lie wholly on a display other than the overlay's. The tray
    checkbox "Open AshLight when the game wakes" switches it (client-prefs.json
-   in the runtime dir, default on). */
+   in the runtime dir, default on).
+
+   REL-AUTOSTART-SWITCH (decision 0011, ruling Q-08): the tray checkbox
+   "Start with Windows" shows the recorded choice (<runtime>\autostart.json,
+   default off) and a click runs scripts\autostart.ps1 -Enable / -Disable
+   hidden through the launcher; the menu is rebuilt when the script exits.
+   The same three fixed, argument-free actions reach the dashboard through
+   the preload (al:autostart-on, al:autostart-off, al:autostart-state); the
+   handlers are registered here and answer only isCompanion() senders. */
 
 const fs = require("fs");
 const path = require("path");
@@ -51,7 +59,8 @@ const SAVE_DELAY_MS = 500;
 const ALLOWED_PERMISSION = "clipboard-sanitized-write";
 
 function createClient(opts) {
-  const { BrowserWindow, Menu, Tray, nativeImage, session, shell, screen, app } = opts.electron;
+  const { BrowserWindow, Menu, Tray, nativeImage, session, shell, screen, app,
+          ipcMain } = opts.electron;
   const http = opts.http;
   const log = opts.log || (() => {});
   const port = opts.port;
@@ -66,6 +75,7 @@ function createClient(opts) {
   let closedNoteShown = false;
   let opened = []; // times of the links opened in the last minute (rate limit)
   let prefs = null; // client-prefs.json, read on first use
+  let autostartBusy = false; // scripts\autostart.ps1 is running
 
   function iconImage() {
     return Brand.trayImage(nativeImage);
@@ -201,7 +211,7 @@ function createClient(opts) {
       frame: true, // the standard Windows title bar: minimize, maximize, X
       webPreferences: {
         session: clientSession(), // the PARTITION session, never the overlay's
-        preload: PRELOAD, // one action only: alClient.restartOverlay()
+        preload: PRELOAD, // fixed argument-free actions only (ruling Q-08)
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
@@ -273,12 +283,38 @@ function createClient(opts) {
     refresh();
   }
 
+  /* The recorded "Start with Windows" choice (autostart.json). */
+  function currentAutostart() {
+    return Launcher.readAutostart(opts.runtimeDir);
+  }
+
+  /* Run scripts\autostart.ps1 -Enable / -Disable hidden; one run at a
+     time; the tray checkbox follows the record once the script exits. */
+  function setAutostart(on) {
+    if (autostartBusy) { return 0; }
+    autostartBusy = true;
+    const pid = Launcher.setAutostart(opts.repo, on === true, undefined, (code) => {
+      autostartBusy = false;
+      log("client: autostart " + (on === true ? "-Enable" : "-Disable") + " exited (" + code + ")");
+      refresh();
+    });
+    log("client: scripts\\autostart.ps1 " + (on === true ? "-Enable" : "-Disable") +
+        " started (pid " + pid + ")");
+    return pid;
+  }
+
+  /* Tray "Start with Windows": flip the recorded choice. */
+  function toggleAutostart() {
+    return setAutostart(!currentAutostart());
+  }
+
   function trayMenu() {
     return Menu.buildFromTemplate(TrayMenu.trayTemplate(
       { overlayOn: opts.overlayVisible(), companionShown: companionShown(),
-        wakeOn: currentPrefs().wake },
+        wakeOn: currentPrefs().wake, autostartOn: currentAutostart() },
       { toggleCompanion: toggleCompanion, toggleOverlay: () => opts.toggleOverlay(),
-        toggleWake: toggleWake, restart: () => opts.restartOverlay(), quit: quit }));
+        toggleWake: toggleWake, toggleAutostart: toggleAutostart,
+        restart: () => opts.restartOverlay(), quit: quit }));
   }
 
   /* X closed the window: say once per run that AshLight is still here. */
@@ -377,6 +413,16 @@ function createClient(opts) {
     if (tray) { tray.setContextMenu(trayMenu()); }
   }
 
+  /* The preload's autostart actions (ruling Q-08): fixed channels, no
+     data read from the message, honoured only from the companion window's
+     main frame on the local core. */
+  if (ipcMain) {
+    ipcMain.on("al:autostart-on", (e) => { if (isCompanion(e)) { setAutostart(true); } });
+    ipcMain.on("al:autostart-off", (e) => { if (isCompanion(e)) { setAutostart(false); } });
+    ipcMain.handle("al:autostart-state", (e) =>
+      (isCompanion(e) ? { enabled: currentAutostart() } : null));
+  }
+
   function hasTray() { return tray !== null; }
 
   function dispose() {
@@ -384,7 +430,8 @@ function createClient(opts) {
   }
 
   return { open, reload, refresh, hasTray, dispose, isCompanion, toggleCompanion, quit,
-           wake, toggleWake, window: () => win, tray: () => tray };
+           wake, toggleWake, toggleAutostart, setAutostart, window: () => win,
+           tray: () => tray };
 }
 
 module.exports = { createClient, PARTITION, STATE_FILE };
