@@ -300,3 +300,98 @@ test("main.js opens the client only in client mode, after ready", () => {
   assert.ok(c.indexOf("resolveSidecar(REPO)") < c.indexOf('app.setPath("userData"'));
   assert.ok(c.indexOf("resolveSidecar(REPO)") < c.indexOf("requestSingleInstanceLock()"));
 });
+
+/* OVL-WAKE-COMPANION (decision 0041 amendment 2026-11-19): the companion
+   comes back without focus when the log wakes, only on another display. */
+const D1 = { x: 0, y: 0, width: 1920, height: 1080 };
+const D2 = { x: 1920, y: 0, width: 2560, height: 1440 };
+
+function wakeIn(extra) {
+  return Object.assign({ wasIdle: true, fresh: true, hidden: true,
+                         bounds: { x: 2200, y: 100, width: 1280, height: 860 },
+                         overlayArea: D1, areas: [D1, D2], enabled: true }, extra || {});
+}
+
+test("wake: idle to fresh, hidden, wholly on display 2 with the overlay on 1 -> showInactive", () => {
+  assert.equal(Link.wakeAction(wakeIn()), "showInactive");
+  // Windows' invisible resize border of a window snapped to display 2's edge
+  assert.equal(Link.wakeAction(wakeIn({ bounds: { x: 1913, y: -7, width: 1294, height: 1447 } })),
+               "showInactive");
+  // the overlay on display 2, the window on display 1
+  assert.equal(Link.wakeAction(wakeIn({ overlayArea: D2,
+                                        bounds: { x: 100, y: 100, width: 900, height: 700 } })),
+               "showInactive");
+});
+
+test("wake: same display, straddling, switch off, not hidden, no wake -> stay", () => {
+  // the overlay's (the game's) display: never
+  assert.equal(Link.wakeAction(wakeIn({ bounds: { x: 100, y: 100, width: 900, height: 700 } })),
+               "stay");
+  // bounds straddling the two displays
+  assert.equal(Link.wakeAction(wakeIn({ bounds: { x: 1500, y: 100, width: 1280, height: 860 } })),
+               "stay");
+  assert.equal(Link.wakeAction(wakeIn({ bounds: { x: 1900, y: 100, width: 1280, height: 860 } })),
+               "stay");
+  // the tray switch is off (or unknown)
+  assert.equal(Link.wakeAction(wakeIn({ enabled: false })), "stay");
+  assert.equal(Link.wakeAction(wakeIn({ enabled: undefined })), "stay");
+  // the window is already shown
+  assert.equal(Link.wakeAction(wakeIn({ hidden: false })), "stay");
+  // no idle-to-fresh change
+  assert.equal(Link.wakeAction(wakeIn({ wasIdle: false })), "stay");
+  assert.equal(Link.wakeAction(wakeIn({ fresh: false })), "stay");
+  // unknown: no saved bounds, no overlay display, off every display, junk
+  assert.equal(Link.wakeAction(wakeIn({ bounds: null })), "stay");
+  assert.equal(Link.wakeAction(wakeIn({ overlayArea: null })), "stay");
+  assert.equal(Link.wakeAction(wakeIn({ areas: [D1] })), "stay");
+  assert.equal(Link.wakeAction(wakeIn({ bounds: { x: 9000, y: 0, width: 900, height: 700 } })),
+               "stay");
+  assert.equal(Link.wakeAction(wakeIn({ bounds: { x: "a", y: 0, width: 900, height: 700 } })),
+               "stay");
+  assert.equal(Link.wakeAction(null), "stay");
+  assert.equal(Link.wakeAction("x"), "stay");
+});
+
+test("wake part: only a false -> true gate change asks the client, once", () => {
+  const Wake = require("../parts/40-wake.js");
+  const calls = [];
+  const client = { wake: (w) => { calls.push(w); return "showInactive"; } };
+  const ctx = { getClient: () => client, log: () => {} };
+  Wake.gate(ctx, true); // first value: no change seen yet
+  Wake.gate(ctx, true);
+  assert.deepEqual(calls, []);
+  Wake.gate(ctx, false); // the log went idle
+  Wake.gate(ctx, false);
+  assert.deepEqual(calls, []);
+  Wake.gate(ctx, true); // a fresh line
+  assert.deepEqual(calls, [{ wasIdle: true, fresh: true }]);
+  Wake.gate(ctx, true);
+  assert.equal(calls.length, 1);
+  // an overlay-only start has no client: nothing happens, nothing throws
+  const bare = { getClient: () => null };
+  Wake.gate(bare, false);
+  Wake.gate(bare, true);
+  Wake.gate(null, true);
+  assert.equal(calls.length, 1);
+});
+
+test("wake in the window: showInactive only, never focus, saved state and overlay display", () => {
+  const c = code(WIN_SRC);
+  const body = c.slice(c.indexOf("function wake(w)"), c.indexOf("function reload()"));
+  assert.ok(body.length > 0);
+  assert.ok(body.includes("Link.wakeAction("));
+  assert.ok(body.includes("bounds: readState()"));
+  assert.ok(body.includes("overlayArea: overlayArea()"));
+  assert.ok(body.includes("win.showInactive()"));
+  assert.ok(body.includes("createWindow(true)"));
+  for (const banned of ["focus(", ".show()", ".restore()", ".maximize()", "moveTop", "setAlwaysOnTop"]) {
+    assert.ok(!body.includes(banned), banned);
+  }
+  assert.ok(c.includes("if (inactive === true) { win.showInactive(); return; }"));
+  assert.ok(c.includes("opts.overlayBounds()"));
+  // the part reads no game process or window and sends nothing
+  const part = code(fs.readFileSync(path.join(__dirname, "..", "parts", "40-wake.js"), "utf8"));
+  for (const banned of ["process", "exec", "globalShortcut", "require("]) {
+    assert.ok(!part.includes(banned), banned);
+  }
+});
