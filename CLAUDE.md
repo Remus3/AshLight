@@ -1065,3 +1065,13 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   removes Worktree, Scratch or ClaudeHistory (decision 0066). Reverses if:
   players lose data they wanted kept or keep data they wanted gone, in
   practice.
+- Upstream watcher frame: One tool and one state file run every upstream
+  source on the dev loop (tools/upstream_watch.py); new sources read
+  repository metadata or the exact public metadata and docs pages they list,
+  and only while the dev host's web_data is on; the docs watch and the
+  release check keep their settled reads; CI reads GitHub and public
+  registries only, never a GGG host or poe.ninja, and never commits; row
+  text comes only from tracked templates (decision 0069). Reverses if: a
+  source's owner asks tools not to read it automatically, the metadata-only
+  rule hides a break only a data read shows, or the operator exempts a
+  source from the web-data gate in writing.
