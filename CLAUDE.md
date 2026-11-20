@@ -232,8 +232,8 @@ edit. Tree-specific rules go BELOW this block, never inside it.
 
 # AL rules (tree-specific)
 
-AL channel code: `AL`. Kit: v32, vendored at `ops/fleet_kit/` (never edit;
-MAIN ships new versions). Hand-off: `AL-NEXT-SESSION.txt` (tracked; its
+AL channel code: `AL`. Kit: the version in `ops/fleet_kit/MANIFEST.json`, vendored at
+`ops/fleet_kit/` (never edit; MAIN ships new versions). Hand-off: `AL-NEXT-SESSION.txt` (tracked; its
 `SESSION: <n>` line is the item-13 session counter, /done writes n+1).
 Kit conformance: `tests/test_fleet_kit_conformance.py`.
 Status board: opt-out (operator order 2026-11-17); render only when the operator asks.
@@ -304,7 +304,7 @@ checkout runs on the dev port.
   (decision 0002); pytest is the one test dependency; an optional dev-only
   test plugin (pytest-xdist, pinned exactly with --hash lines in
   requirements-dev.txt, installed by hand) may speed the suite and is never
-  imported by server/, tools/ or app code. Electron `45.3.3` (exact pin) for the overlay in `app/`;
+  imported by server/, tools/ or app code. Electron (pinned exactly in app/package.json) for the overlay in `app/`;
   npm deps pinned exactly (`--save-exact`), `npm ci` from the lockfile. No CDN
   at runtime. An installed copy runs on a hash-pinned private embeddable
   CPython and the unmodified hash-pinned Electron zip, fetched at install
@@ -665,7 +665,8 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   process; the overlay exists only inside it (no bare-overlay start; run.ps1
   starts the client); X closes the window to the tray (tray Quit stops
   everything); tray Minimize-Restore / overlay toggle / Restart overlay /
-  Quit; token in the URL fragment; one preload action (restart overlay);
+  Quit; token in the URL fragment; a small fixed set of named, argument-free preload actions (restart
+  overlay, autostart on / off / state);
   only https links to the hosts in config/link_hosts.json (or their
   subdomains) leave via shell.openExternal, while the companion has focus,
   at most 1 a second and 5 a minute; downloads are saved only from the core
@@ -1083,3 +1084,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   0067; decision 0006 method 3, decision 0040 class). Reverses if: a record is
   found to hold a path, name, chat or item text, the sampler costs overlay
   budget, or GGG restricts derived local records.
+- DOCS-FRESH: tools/docs_fresh.py check is a list of small fact functions
+  (FACTS); each reads a value from tracked files and matches where docs quote
+  it (Electron pin in app/main.js and decision 0002; VERSION in
+  app/package.json and the lockfile; the setup.ps1 Python / Node floors,
+  AL_PORT / PORT_BLOCK and the scripts named in README; the kit version in
+  CLAUDE.md while quoted and design 0001; the disclaimer word for word in
+  README); a stale quote fails tests/test_docs_fresh.py naming the file; no
+  request, no write. Reverses if: a fact's pattern misfires on a legitimate
+  rewording, or the later fact packages need a different table shape.
