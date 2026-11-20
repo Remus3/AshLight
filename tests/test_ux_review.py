@@ -386,3 +386,62 @@ def test_overlay_settings_fold_but_hotkey_hint_stays_open():
     assert 'id="layout-form"' in fold and 'id="layout-status"' in fold
     assert fold.index('id="layout-form"') < fold.index('id="layout-status"')
     assert "Alt+Shift+A" in tools[:tools.index('<details id="tools-more">')]
+
+
+# --- F-159: colour only for exceptions; one filled button --------------------
+
+_FILL = re.compile(r"(?<![-\w])background(?:-color)?\s*:\s*([^;]+)")
+_LOUD = re.compile(r"var\(--fk-(?:accent|status-[\w-]+)\)")
+
+
+def _button_rules():
+    """(selector, body) of every app.css rule, @media blocks included,
+    whose selector names a button element."""
+    css = re.sub(r"/\*.*?\*/", "", _css(APP_CSS), flags=re.S)
+    pairs = re.findall(r"([^{}]+)\{([^{}]*)\}", css)
+    out = []
+    for sel, body in pairs:
+        sel = sel.strip()
+        if sel.startswith("@"):
+            continue
+        if any(re.match(r"button(?![-\w])", s.strip().split()[-1])
+               for s in sel.split(",") if s.strip()):
+            out.append((sel, body))
+    return out
+
+
+def test_one_filled_button_rule():
+    """F-159: app.css has exactly one filled button rule, button.primary;
+    a fill is a background in the accent or a status colour."""
+    filled = [sel for sel, body in _button_rules()
+              for v in _FILL.findall(body) if _LOUD.search(v)]
+    assert filled == ["button.primary"], filled
+
+
+def test_base_button_is_quiet():
+    """F-159: the bare button has no fill and the control edge as border."""
+    base = [body for sel, body in _rules(_strip_media(_css(APP_CSS))) if sel == "button"]
+    assert len(base) == 1, base
+    body = base[0]
+    assert re.search(r"(?<![-\w])background\s*:\s*transparent\s*;", body), body
+    assert re.search(r"(?<![-\w])border\s*:\s*1px solid var\(--al-control-edge\)", body), body
+    assert re.search(r"(?<![-\w])color\s*:\s*var\(--fk-text\)\s*;", body), body
+
+
+def test_only_the_setup_card_uses_button_primary():
+    """F-159: the one button.primary in web/ is the setup card's consent
+    button (web/setupcard.js); no other script or the page sets it."""
+    html = srcpaths.index_html()
+    assert not re.search(r'class="[^"]*(?<![-\w])primary(?![-\w])', html)
+    hits = []
+    for path in srcpaths.web_js():
+        src = path.read_text(encoding="ascii")
+        for pat in (r'"button"[^;\n]*\bprimary\b',
+                    r'className\s*=[^;\n]*["\' ]primary["\' ]',
+                    r'classList\.(?:add|toggle|replace)\([^)]*["\']primary["\']'):
+            if re.search(pat, src):
+                hits.append(path.name)
+                break
+    assert hits == ["setupcard.js"], hits
+    setup = srcpaths.read("setupcard.js")
+    assert re.search(r'r\.action === "consent" \? "primary" : "secondary"', setup)

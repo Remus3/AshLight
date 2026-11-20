@@ -24,7 +24,8 @@ import threading
 import time
 from pathlib import Path
 
-from . import DISCLAIMER, NAME, VERSION, acl, demo, hotreload, jsonfile, paths, ports
+from . import (DISCLAIMER, NAME, VERSION, acl, demo, exitrecord, hotreload, jsonfile,
+               paths, ports)
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -123,11 +124,16 @@ def clear_stop_request(path):
         pass
 
 
-def install_crash_logging(log):
+def install_crash_logging(log, runtime=None):
     """Log any unhandled exception (main or worker thread) to core.log.
-    pythonw has no stderr, so without this a crash leaves no trace."""
+    pythonw has no stderr, so without this a crash leaves no trace.
+    OBS-CRASH: with a runtime dir, each hook also writes last-exit.json
+    (reason crash, the exception type and message, the thread name for a
+    worker thread)."""
     def _sys_hook(exc_type, exc, tb):
         log.critical("unhandled exception; core exiting", exc_info=(exc_type, exc, tb))
+        if runtime is not None:
+            exitrecord.write(runtime, exitrecord.CRASH, exitrecord.exc_detail(exc_type, exc))
 
     def _thread_hook(hook_args):
         if hook_args.exc_type is SystemExit:
@@ -136,9 +142,31 @@ def install_crash_logging(log):
         log.error("unhandled exception in thread %s", name,
                   exc_info=(hook_args.exc_type, hook_args.exc_value,
                             hook_args.exc_traceback))
+        if runtime is not None:
+            exitrecord.write(runtime, exitrecord.CRASH,
+                             exitrecord.exc_detail(hook_args.exc_type,
+                                                   hook_args.exc_value, thread=name))
 
     sys.excepthook = _sys_hook
     threading.excepthook = _thread_hook
+
+
+def exit_reason(signalled, restarting):
+    """OBS-CRASH: the last-exit.json reason of a core loop that ended:
+    reload (hot reload restart), signal, else stop (stop.request or a
+    normal return)."""
+    if restarting:
+        return exitrecord.RELOAD
+    if signalled:
+        return exitrecord.SIGNAL
+    return exitrecord.STOP
+
+
+def signal_name(signum):
+    try:
+        return signal.Signals(signum).name
+    except (ValueError, TypeError):
+        return f"signal {signum}"
 
 
 def write_heartbeat(path, pid, port, now=None, created=None):
@@ -216,7 +244,7 @@ def main(argv=None):
     info = paths.install_info()  # decision 0059: the mode is the first log line
     log.info("%s %s starting: mode %s, previous %s", NAME, VERSION, info["mode"],
              info["previous"] or "none")
-    install_crash_logging(log)
+    install_crash_logging(log, paths.runtime_dir())  # OBS-CRASH: crash records
     if args.port is None:
         args.port = ports.resolve(os.environ, paths.load_local_config())
     if args.port and not ports.in_block(args.port):
@@ -239,6 +267,8 @@ def main(argv=None):
     except OSError as exc:
         log.error("cannot bind %s:%s (%s) - is AshLight already running?",
                   ports.LOOPBACK, args.port, exc)
+        exitrecord.write(paths.runtime_dir(), exitrecord.STOP,
+                         f"port {args.port} could not be bound")
         return 2
     token_file = paths.token_file()
     write_private(token_file, token + "\n")
@@ -257,8 +287,13 @@ def main(argv=None):
         log.info("Client.txt tailing waits for consent (dashboard)")
 
     stop = threading.Event()
+    signalled = []  # OBS-CRASH: the signal that ended the loop, if any
 
     def _signal(signum, frame):
+        if not signalled:
+            signalled.append(signal_name(signum))
+            # written at once: a console close leaves only seconds to exit
+            exitrecord.write(paths.runtime_dir(), exitrecord.SIGNAL, signalled[0])
         stop.set()
 
     for sig in (signal.SIGINT, getattr(signal, "SIGTERM", None),
@@ -286,12 +321,14 @@ def main(argv=None):
         while not stop.wait(0.5):
             if stop_requested(stop_file):
                 log.info("stop requested (%s); exiting cleanly", STOP_FILE)
+                exitrecord.write(paths.runtime_dir(), exitrecord.STOP, STOP_FILE)
                 break
             if stop_requested(restart_file):
                 # HOT-RELOAD: the supervisor saw a code change that passed
                 # its preflight; exit cleanly and it starts the new code
                 clear_stop_request(restart_file)
                 log.info("code changed; exiting for a hot reload")
+                exitrecord.write(paths.runtime_dir(), exitrecord.RELOAD, "code changed")
                 restarting = True
                 break
             core.tick_all(log)  # RUN-SEAMS: one pass of Core.ticks (decision 0056)
@@ -302,7 +339,8 @@ def main(argv=None):
                 except OSError:
                     pass
     except KeyboardInterrupt:
-        pass
+        if not signalled:
+            signalled.append("SIGINT")
     log.info("shutting down")
     server.stop()
     core.close()
@@ -318,6 +356,12 @@ def main(argv=None):
         heartbeat.unlink()  # a leftover core.alive means the core did not exit cleanly
     except OSError:
         pass
+    # OBS-CRASH: the final record, after the shutdown work (its own detail)
+    reason = exit_reason(bool(signalled), restarting)
+    detail = {exitrecord.RELOAD: "code changed",
+              exitrecord.SIGNAL: signalled[0] if signalled else None,
+              exitrecord.STOP: STOP_FILE if stop_requested(stop_file) else None}[reason]
+    exitrecord.write(paths.runtime_dir(), reason, detail)
     return 0
 
 
