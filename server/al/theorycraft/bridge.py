@@ -28,6 +28,13 @@ on Windows, starts it suspended inside its own job object (kill on job
 close, one active process, a per-process memory limit of JOB_MEMORY_LIMIT)
 before it runs a single instruction; a start that cannot be confined is
 killed and refused.
+
+RUN-METRICS-SITES (decision 0067): every start is counted in AshLight's own
+metrics as `calc.start` (a restart after a crash as `calc.restart`), every
+time-out as `calc.timeout`, and every request as `calc|<outcome>` (ok,
+error, timeout, crash, unavailable) with its milliseconds in the `calc_ms`
+ring and one typed `calc` emit naming the command; no build or item text is
+ever recorded.
 """
 
 import ctypes
@@ -40,7 +47,7 @@ import threading
 import time
 from pathlib import Path
 
-from server.al import exepin, paths
+from server.al import exepin, metrics, paths
 
 FRAME_PREFIX = "ALB1 "
 SCRIPT = Path(__file__).resolve().with_name("bridge.lua")
@@ -532,17 +539,32 @@ class Bridge:
     def request(self, cmd, timeout=None, **args):
         """Send one command; start (or restart after a crash) on demand."""
         timeout = self.timeout if timeout is None else float(timeout)
+        t0 = time.monotonic()
         with self._lock:
             for attempt in (1, 2):
                 try:
                     if not self.running():
+                        metrics.inc("calc.restart" if attempt == 2 else "calc.start")
                         self._start()
                         if cmd != "load_build":  # a new build replaces it
                             self._replay(timeout)
-                    return self._send(cmd, args, timeout)
+                    result = self._send(cmd, args, timeout)
+                    _count_call(cmd, "ok", t0)
+                    return result
                 except _Crashed as exc:
                     if attempt == 2:
+                        _count_call(cmd, "crash", t0)
                         raise BridgeError(str(exc)) from None
+                except BridgeTimeout:
+                    metrics.inc("calc.timeout")
+                    _count_call(cmd, "timeout", t0)
+                    raise
+                except BridgeUnavailable:
+                    _count_call(cmd, "unavailable", t0)
+                    raise
+                except BridgeError:
+                    _count_call(cmd, "error", t0)
+                    raise
             raise BridgeError("unreachable")  # pragma: no cover
 
     def ping(self):
@@ -603,6 +625,17 @@ class Bridge:
 
 class _Crashed(BridgeError):
     """Internal: the process exited; request() restarts once."""
+
+
+def _count_call(cmd, outcome, t0):
+    """One bridge request in AshLight's own counters (decision 0067): the
+    command name (a protocol constant, else "other"), the outcome word and
+    the milliseconds; never an argument."""
+    word = cmd if isinstance(cmd, str) and metrics.WORD_RE.match(cmd) else "other"
+    ms = round((time.monotonic() - t0) * 1000.0, 1)
+    metrics.inc(f"calc|{outcome}")
+    metrics.timing("calc_ms", ms)
+    metrics.emit("calc", cmd=word, outcome=outcome, ms=ms)
 
 
 # --- one shared instance for the core (started on first need) ----------------
