@@ -67,6 +67,52 @@ Steps 3 to 5 of the plan (logon task, shortcuts, uninstall key) come with
 REL-UNINSTALL-SHELL and `-Checkout` with REL-UNINSTALL-CHECKOUT; checkout
 mode never removes `Worktree`, `Scratch`, `ClaudeHistory` or `Install`.
 
+## Checkout mode, added 2026-11-19 (REL-UNINSTALL-CHECKOUT)
+
+Heading record (refute round 1): this section is not headed "Amendment
+<date>" because tests/test_audit_batch4.py then requires a Settled line
+naming "amend", and a producer may not edit CLAUDE.md. Alternative: edit
+the Settled entry (barred for a producer). Reverses if: the integrator adds
+"amended 2026-11-19" to the Settled uninstall entry; the heading may then
+return to Amendment.
+
+`scripts\uninstall.ps1 -Checkout` treats the folder above `scripts` as the
+checkout (refused when it holds `install.json` or lacks `server\al\paths.py`,
+`scripts\run.ps1` or `app\package.json`). Guarded roots: the checkout and
+the AL sidecar candidates only: `AL_SIDECAR_ROOT` when set, else the fleet
+kit default read as text from the checkout's vendored `fleet_lanes.py` plus
+`AL`, and the in-checkout fallback `ops\runtime\sidecar`. No folder outside
+those is probed, so the kit default is used whether or not it exists (a
+missing one just has nothing to remove).
+
+1. Default run: stop (stop.request in `ops\runtime`; ours = a pid-file pid
+   with a matching non-zero creation time, or an electron image under the
+   checkout's `app\node_modules\electron\dist`), the logon task and the two
+   links only when they point into the checkout, then the last lines. No
+   file is deleted: everything in a checkout is the player's or rebuildable
+   by setup, and run.ps1 clears the stop.request. No uninstall key step: a
+   checkout registers none.
+2. `-Purge` (typed PURGE, or `-Yes`): delete the sidecar's `Cache`, `Logs`,
+   `Build` and, in `Temp`, only top-level items with AshLight's own prefixes
+   (`demo-`, `al-brand-`, `state_equiv-`); `ops\runtime` and
+   `config\local.json` go to the Recycle Bin. When a sidecar candidate lies
+   in `ops\runtime`, its items but that folder are recycled, so a worktree
+   kept there is never taken.
+3. The dev folders, the installed copy's folder and agent temp folders are
+   never named (the script text holds none of their names); the dev loop
+   task is never looked at, and the last lines print
+   `python tools/loop_task.py remove`.
+4. Refused (exit 2, nothing touched): the checkout inside the sidecar's
+   Cache, Logs, Build or Temp; a sidecar failing the path-shape guard; in a
+   test, the fake without `AL_SIDECAR_ROOT`.
+
+Alternatives: delete the run files in `ops\runtime` by default (rejected:
+nothing is gained, and the token is reused by the next start); probe the kit
+default folder before use as paths.py does (rejected: a probe outside the
+checkout and the AL sidecar). Reverses if: a checkout-run feature writes a
+new Temp prefix (add it to the list), or players expect the default run to
+remove caches.
+
 ## Alternatives
 
 - A question on every uninstall (keep or remove data): rejected, it
