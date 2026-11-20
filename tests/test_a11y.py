@@ -147,15 +147,41 @@ def test_live_pills_are_written_only_when_they_change():
     assert re.search(r"function setText\(node, text\) \{\s*if \(node\.textContent !== text\)", src)
 
 
+# PLAY-LEGACY-OUT-2 (plan 03 section 9, 4.1.3): Play's live regions are the
+# verdict (region I), the trade status (region T), the notice (region N) and
+# the bar's reading word; the region files build the first three.
+PLAY_LIVE_FILES = {"itemcard.js": "verdict", "feed.js": "trade status",
+                   "notice.js": "notice"}
+REGION_FILES = ("strip.js", "context.js", "setupcard.js", "feed.js", "notice.js",
+                "buildline.js", "itemcard.js", "keptchecks.js")
+
+
 def test_live_regions_are_few_and_named():
     live = [n for n in nodes() if is_live(n)]
     for n in live:
         assert n.attrs.get("id"), n.attrs  # each is written by id, nowhere else
-    # tab news, the one bar status word, consent error, trade, item check,
-    # price, weights, build (2), web data, layout. The cap is 11 (design 0004,
-    # U16; AREA-AUDIT P8-2; PLAY-TD-09C-BAR / MERGE-SEAMS F2 dropped the feed
-    # pill): a new one replaces one of these, never adds a twelfth.
-    assert len(live) <= 11, [n.attrs.get("id") for n in live]
+    # tab news, the one bar status word, item check, price, weights, build
+    # (2), web data, layout. The cap was 11 (design 0004, U16; AREA-AUDIT
+    # P8-2; PLAY-TD-09C-BAR / MERGE-SEAMS F2 dropped the feed pill);
+    # PLAY-LEGACY-OUT-2 removed the consent error with the old consent card,
+    # so it is 9: a new one replaces one of these, never adds a tenth.
+    assert len(live) <= 9, [n.attrs.get("id") for n in live]
+    # Play's own markup holds none: its regions build their own
+    play = by_id()["panel-play"]
+    assert not [n.attrs for n in play.walk() if is_live(n)]
+
+
+def test_play_has_at_most_four_live_regions():
+    """Plan 03 4.1.3: at most 4 live regions on Play: verdict, trade
+    status, notice and the bar's reading word (PLAY-LEGACY-OUT-2)."""
+    for name in REGION_FILES:
+        src = JS[name]
+        polite = re.search(r"""setAttribute\("aria-live", "polite"\)""", src)
+        assert bool(polite) == (name in PLAY_LIVE_FILES), name
+    head = [n for n in tree().walk() if n.tag == "header"][0]
+    bar = [n.attrs.get("id") for n in head.walk() if is_live(n)]
+    assert "reading" in bar
+    assert len(PLAY_LIVE_FILES) + 1 <= 4
 
 
 def test_bar_has_one_status_word_on_every_tab():
@@ -264,15 +290,14 @@ def test_text_colours_are_measured_token_pairs():
 # -- PLAY-TD-09B-SKELETON (F-025, F-096, F-086; plan 03 sections 3.2, 3.8, 3.9)
 
 REGIONS = "gctnbiu"
-# PLAY-LEGACY-OUT-1 removed the g-tiles, t-trades and b-alert groups.
-LEGACY = {"g": {},
-          "c": {"c-guide": ["zone-note-box", "campaign-hints", "zone-guide"],
-                "c-setup": ["consent", "summarybox"]},
-          "t": {},
-          "n": {"n-legacy": ["langbox", "hintbox"]},
-          "b": {},
-          "i": {"i-eval": ["evalbox"]},
-          "u": {}}
+# PLAY-LEGACY-OUT-1 removed the g-tiles, t-trades and b-alert groups;
+# PLAY-LEGACY-OUT-2 the rest: the consent, language, tip and Zone tip cards
+# are gone, the Last session card and the zone guide moved to Run and
+# history, the full item check to Items and prices.
+GONE = ("consent", "consent-yes", "consent-path", "consent-error", "langbox",
+        "lang-dismiss", "hintbox", "hint-text", "zone-note-box", "zone-note",
+        "campaign-hints")
+MOVED = {"summarybox": "panel-run", "zone-guide": "panel-run", "evalbox": "panel-items"}
 
 
 def test_play_is_seven_regions_with_no_tab_stop_and_no_columns():
@@ -292,14 +317,15 @@ def test_play_is_seven_regions_with_no_tab_stop_and_no_columns():
         inner = {n.all_text().strip() for k in kids[1:] for n in k.walk() if n.tag == "h2"}
         assert kids[0].all_text().strip() not in inner, r
         assert kids[1].attrs.get("class") == "slot" and not kids[1].children, r
-        groups = {k.attrs.get("data-legacy"): k for k in kids[2:]}
-        assert list(groups) == list(LEGACY[r]), (r, list(groups))
-        for gid, cards in LEGACY[r].items():
-            inside = {n.attrs.get("id") for n in groups[gid].walk()}
-            assert set(cards) <= inside, (gid, set(cards) - inside)
-    # the guide box left the zone tile (it is region C's legacy group now)
-    tiles = {n.attrs.get("id") for n in regions[0].walk()}
-    assert "zone-guide" not in tiles
+        assert len(kids) == 2, (r, [k.attrs for k in kids[2:]])  # no legacy group
+    assert not [n.attrs for n in nodes() if "data-legacy" in n.attrs]
+    ids = by_id()
+    for gone in GONE:
+        assert gone not in ids, gone
+    for card, panel in MOVED.items():
+        assert ids[panel] in list(ids[card].ancestors()), (card, panel)
+    # the zone guide sits in the Act times card
+    assert ids["actsbox"] in list(ids["zone-guide"].ancestors())
 
 
 def _media_blocks(css):

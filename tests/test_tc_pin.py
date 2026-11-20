@@ -394,3 +394,116 @@ def test_setup_ps1_wires_the_opt_in_step():
     text = (ROOT / "scripts" / "setup.ps1").read_text(encoding="ascii")
     assert "[switch]$TcCalc" in text
     assert "tools\\tc_pin.py" in text
+
+
+# --- TC-CALC-OPTIN (F-132): one run of setup.ps1 -TcCalc turns the calc on
+
+@pytest.fixture
+def sandbox(world, tmp_path, monkeypatch):
+    """main() against the fake world: the pins, the fetch and the build are
+    the world's, the config is a tmp file (never config/local.json)."""
+    cfg = tmp_path / "cfg" / "local.json"
+    cfg.parent.mkdir()
+    monkeypatch.setattr(paths, "local_config_file", lambda: cfg)
+    monkeypatch.setattr(tc_pin, "load_pins", lambda path=None: world["doc"])
+    lay = tc_pin.layout(world["doc"], world["env"])
+    which = {"tool": _which_cl}
+    real = tc_pin.run_setup
+
+    def run_setup(doc):
+        return real(doc, environ=world["env"], fetch=world["fetch"],
+                    which=which["tool"], run=_fake_build(lay))
+
+    monkeypatch.setattr(tc_pin, "run_setup", run_setup)
+    writes = []
+
+    def writer(path, doc):
+        writes.append((Path(path), dict(doc)))
+        Path(path).write_text(json.dumps(doc, indent=2) + "\n", encoding="ascii")
+
+    return {"cfg": cfg, "writes": writes, "writer": writer, "which": which}
+
+
+def test_opt_in_switch_sets_flag_after_verified_install(sandbox):
+    cfg = sandbox["cfg"]
+    cfg.write_text(json.dumps({"contact": "c-1", "league": "L", "tc_calc": False}),
+                   encoding="ascii")
+    assert tc_pin.main(["setup", "--opt-in"], config_writer=sandbox["writer"]) == 0
+    assert [p for p, _ in sandbox["writes"]] == [cfg]
+    assert json.loads(cfg.read_text(encoding="ascii")) == {
+        "contact": "c-1", "league": "L", "tc_calc": True}
+    # a re-run (no-op install) with the flag already on writes nothing
+    assert tc_pin.main(["setup", "--opt-in"], config_writer=sandbox["writer"]) == 0
+    assert len(sandbox["writes"]) == 1
+
+
+def test_opt_in_after_an_earlier_install_still_turns_it_on(sandbox):
+    cfg = sandbox["cfg"]
+    assert tc_pin.run_setup(tc_pin.load_pins()) == "ready"  # installed earlier, flag never set
+    cfg.write_text(json.dumps({"league": "L"}), encoding="ascii")
+    assert tc_pin.main(["setup", "--opt-in"], config_writer=sandbox["writer"]) == 0
+    assert json.loads(cfg.read_text(encoding="ascii")) == {"league": "L", "tc_calc": True}
+
+
+def test_hash_mismatch_leaves_flag_as_it_was(sandbox, world):
+    cfg = sandbox["cfg"]
+    before = json.dumps({"contact": "c-1", "tc_calc": False}).encode("ascii")
+    cfg.write_bytes(before)
+    world["doc"]["pob2"]["archive_sha256"] = "f" * 64
+    assert tc_pin.main(["setup", "--opt-in"],
+                       config_writer=sandbox["writer"]) == tc_pin.RC_REFUSED
+    assert sandbox["writes"] == []
+    assert cfg.read_bytes() == before
+
+
+def test_source_only_or_no_switch_leaves_flag_as_it_was(sandbox, monkeypatch):
+    cfg = sandbox["cfg"]
+    before = json.dumps({"league": "L"}).encode("ascii")
+    cfg.write_bytes(before)
+    sandbox["which"]["tool"] = _no_compiler
+    assert tc_pin.main(["setup", "--opt-in"], config_writer=sandbox["writer"]) == 0
+    assert sandbox["writes"] == [] and cfg.read_bytes() == before
+    # opted in by the file itself, no switch: the file is never written
+    monkeypatch.setattr(paths, "load_local_config", lambda: {"tc_calc": True})
+    sandbox["which"]["tool"] = _which_cl
+    assert tc_pin.main(["setup"], config_writer=sandbox["writer"]) == 0
+    assert sandbox["writes"] == []
+
+
+def test_broken_config_is_left_as_it_was_and_fails(sandbox):
+    cfg = sandbox["cfg"]
+    for bad in (b"{not json", b"[1, 2]"):
+        cfg.write_bytes(bad)
+        assert tc_pin.main(["setup", "--opt-in"],
+                           config_writer=sandbox["writer"]) == tc_pin.RC_FAIL
+        assert sandbox["writes"] == [] and cfg.read_bytes() == bad
+
+
+def test_set_opt_in_flag_default_writer_keeps_every_key(tmp_path, monkeypatch):
+    made_private = []
+    monkeypatch.setattr(tc_pin.acl, "make_private", lambda p: made_private.append(Path(p)))
+    cfg = tmp_path / "local.json"
+    cfg.write_text(json.dumps({"contact": "c-1", "web_data": True, "nested": {"a": [1]}}),
+                   encoding="ascii")
+    assert tc_pin.set_opt_in_flag(cfg) is True
+    assert json.loads(cfg.read_text(encoding="ascii")) == {
+        "contact": "c-1", "web_data": True, "nested": {"a": [1]}, "tc_calc": True}
+    bak = tc_pin.jsonfile.bak_path(cfg)
+    assert json.loads(bak.read_text(encoding="ascii"))["tc_calc"] is True
+    assert made_private == [cfg, bak]
+    assert b"\r" not in cfg.read_bytes()
+    assert tc_pin.set_opt_in_flag(cfg) is False  # already on: no write
+
+
+def test_set_opt_in_flag_never_seeds_defaults(tmp_path):
+    cfg = tmp_path / "local.json"
+    writes = []
+    assert tc_pin.set_opt_in_flag(cfg, write=lambda p, d: writes.append(dict(d))) is True
+    assert writes == [{"tc_calc": True}]
+
+
+def test_setup_ps1_says_the_switch_turns_the_calc_on():
+    text = (ROOT / "scripts" / "setup.ps1").read_text(encoding="ascii")
+    head = text.split("#>", 1)[0]
+    assert "turns it on" in head and "-TcCalc" in head
+    assert "unchanged" in text  # the refusal line says the setting stayed

@@ -5,11 +5,16 @@
 .DESCRIPTION
   -Enable registers a current-user scheduled task "AshLight Autostart"
   (trigger: at this user's logon, 30 s delay; run level Limited, no admin
-  rights) whose action runs scripts\autostart_launch.vbs through wscript.exe,
-  which starts scripts\run.ps1 -NoBrowser -Autostart hidden (no console
-  flash). The opt-in is recorded in the gitignored ops\runtime\autostart.json;
-  run.ps1 -Autostart honours it (a task left behind after -Disable is a no-op).
+  rights) whose action runs pythonw.exe -m server.al.autostart_entry from
+  the checkout root (REL-AUTOSTART-ENTRY). pythonw has no console, and the
+  entry point starts scripts\run.ps1 -NoBrowser -Autostart with no window
+  (no console flash). The opt-in is recorded in the gitignored
+  ops\runtime\autostart.json; the entry point and run.ps1 -Autostart both
+  honour it (a task left behind after -Disable is a no-op).
   -Disable removes the task and records the opt-out. -Status prints both.
+  The task itself is written, read back and removed by scripts\al_shell.ps1
+  (Register-AlLogonTask / Unregister-AlLogonTask / Get-AlLogonTask); a task
+  of the same name whose action points outside this checkout is left alone.
   Every action is idempotent. Enabling is a deliberate operator act.
 .PARAMETER Enable
   Register the task and record the opt-in.
@@ -38,12 +43,13 @@ if (@($picked).Count -ne 1) {
     exit 2
 }
 
+. (Join-Path $PSScriptRoot 'al_shell.ps1')
+
 $Repo = Split-Path -Parent $PSScriptRoot
 $TaskName = 'AshLight Autostart'
-$TaskPath = '\'
+$TaskPath = (Get-AlShellPlaces).TaskPath
 $Delay = 'PT30S'
-$Launcher = Join-Path $PSScriptRoot 'autostart_launch.vbs'
-$Wscript = Join-Path $env:SystemRoot 'System32\wscript.exe'
+$Description = 'AshLight: start the local core at logon (opt-in; scripts\autostart.ps1 -Disable removes it).'
 $UserId = $env:USERNAME
 if ($env:USERDOMAIN) { $UserId = $env:USERDOMAIN + '\' + $env:USERNAME }
 
@@ -55,42 +61,39 @@ function Get-AlPython {
     throw 'Python 3.11 or newer was not found on PATH.'
 }
 
-# The one path resolver (server\al\paths.py; AL_RUNTIME_DIR moves it in tests).
+# The one path resolver (server\al\paths.py; AL_RUNTIME_DIR moves it in
+# tests) and the task action from the entry point itself (paths.python_cmd).
 $py = Get-AlPython
 Push-Location $Repo
 try {
     $paths = ((& $py -m server.al.paths) -join "`n") | ConvertFrom-Json
+    $taskAction = ((& $py -m server.al.autostart_entry --task-action) -join "`n") | ConvertFrom-Json
 } finally {
     Pop-Location
 }
 $OptinFile = Join-Path $paths.runtime 'autostart.json'
 
 function Get-AlDefinition {
+    $exe = [string]$taskAction.execute
+    $window = 'console'
+    if ((Split-Path -Leaf $exe) -ieq 'pythonw.exe') { $window = 'hidden' }
     return [ordered]@{
         task_name         = $TaskName
         task_path         = $TaskPath
-        description       = 'AshLight: start the local core at logon (opt-in; scripts\autostart.ps1 -Disable removes it).'
+        description       = $Description
         user              = $UserId
         logon_type        = 'Interactive'
         run_level         = 'Limited'
         trigger           = 'AtLogOn'
         trigger_user      = $UserId
         delay             = $Delay
-        execute           = $Wscript
-        arguments         = '//B //NoLogo "' + $Launcher + '"'
-        working_directory = $Repo
-        launcher          = $Launcher
+        execute           = $exe
+        arguments         = [string]$taskAction.arguments
+        working_directory = [string]$taskAction.working_directory
+        launcher          = [string]$taskAction.launcher
         run_ps1_args      = @('-NoBrowser', '-Autostart')
-        window            = 'hidden'
+        window            = $window
         optin_file        = $OptinFile
-    }
-}
-
-function Get-AlTask {
-    try {
-        return Get-ScheduledTask -TaskName $TaskName -TaskPath $TaskPath -ErrorAction Stop
-    } catch {
-        return $null
     }
 }
 
@@ -116,11 +119,12 @@ function Write-AlOptin([bool]$On) {
 }
 
 if ($Status) {
-    $task = Get-AlTask
+    $task = Get-AlLogonTask -TaskName $TaskName
     $out = [ordered]@{
         optin           = (Read-AlOptin)
         task_registered = ($null -ne $task)
-        task_state      = $(if ($task) { [string]$task.State } else { '' })
+        task_ours       = ($null -ne $task -and (Test-AlTaskOurs -Task $task -OwnerRoot $Repo))
+        task_state      = $(if ($task) { Get-AlTaskField -Object $task -Name 'State' } else { '' })
         optin_file      = $OptinFile
     }
     $out | ConvertTo-Json -Compress
@@ -137,27 +141,21 @@ if ($Enable) {
         Write-Host 'autostart: DRYRUN - nothing registered, opt-in not recorded'
         exit 0
     }
-    if (-not (Test-Path -LiteralPath $Launcher)) { throw "launcher missing: $Launcher" }
-    $existing = Get-AlTask
-    $same = $false
-    if ($existing) {
-        $act = @($existing.Actions)[0]
-        $same = ($act.Execute -eq $def.execute -and $act.Arguments -eq $def.arguments)
+    if (-not (Test-Path -LiteralPath $def.launcher)) { throw "launcher missing: $($def.launcher)" }
+    if ($def.window -ne 'hidden') {
+        throw "pythonw.exe was not found beside $($def.execute); nothing registered"
     }
-    if (-not $same) {
-        $action = New-ScheduledTaskAction -Execute $def.execute -Argument $def.arguments `
-            -WorkingDirectory $def.working_directory
-        $trigger = New-ScheduledTaskTrigger -AtLogOn -User $UserId
-        $trigger.Delay = $Delay
-        $principal = New-ScheduledTaskPrincipal -UserId $UserId -LogonType Interactive -RunLevel Limited
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-            -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew
-        Register-ScheduledTask -TaskName $TaskName -TaskPath $TaskPath -Action $action `
-            -Trigger $trigger -Principal $principal -Settings $settings `
-            -Description $def.description -Force | Out-Null
-        Write-Host "autostart: task '$TaskName' registered (at logon of $UserId, delay $Delay)"
-    } else {
+    $res = Register-AlLogonTask -TaskName $TaskName -Execute $def.execute -Arguments $def.arguments `
+        -WorkDir $def.working_directory -UserId $UserId -Delay $Delay -Description $Description `
+        -OwnerRoot $Repo
+    if ($res -eq 'elsewhere') {
+        Write-Host "autostart: a task '$TaskName' of another AshLight folder exists; left alone, opt-in not recorded"
+        exit 3
+    }
+    if ($res -eq 'current') {
         Write-Host "autostart: task '$TaskName' already registered (no-op)"
+    } else {
+        Write-Host "autostart: task '$TaskName' registered (at logon of $UserId, delay $Delay)"
     }
     Write-AlOptin $true
     Write-Host "autostart: opt-in recorded in $OptinFile"
@@ -165,23 +163,27 @@ if ($Enable) {
 }
 
 if ($Disable) {
-    $existing = Get-AlTask
     if ($DryRun) {
+        $existing = Get-AlLogonTask -TaskName $TaskName
+        $ours = ($null -ne $existing -and (Test-AlTaskOurs -Task $existing -OwnerRoot $Repo))
         $plan = [ordered]@{
-            dry_run      = $true
-            task_name    = $TaskName
-            task_path    = $TaskPath
-            would_remove = ($null -ne $existing)
-            optin_file   = $OptinFile
-            registered   = $false
+            dry_run        = $true
+            task_name      = $TaskName
+            task_path      = $TaskPath
+            would_remove   = $ours
+            task_elsewhere = ($null -ne $existing -and -not $ours)
+            optin_file     = $OptinFile
+            registered     = $false
         }
         $plan | ConvertTo-Json -Compress
         Write-Host 'autostart: DRYRUN - nothing removed, opt-out not recorded'
         exit 0
     }
-    if ($existing) {
-        Unregister-ScheduledTask -TaskName $TaskName -TaskPath $TaskPath -Confirm:$false
+    $res = Unregister-AlLogonTask -TaskName $TaskName -OwnerRoot $Repo
+    if ($res -eq 'removed') {
         Write-Host "autostart: task '$TaskName' removed"
+    } elseif ($res -eq 'elsewhere') {
+        Write-Host "autostart: the task '$TaskName' belongs to another AshLight folder; left alone"
     } else {
         Write-Host "autostart: no task '$TaskName' registered (no-op)"
     }

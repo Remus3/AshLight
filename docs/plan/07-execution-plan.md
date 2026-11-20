@@ -99,6 +99,12 @@ carry.
 - Input units: 387 (4 added by the review: A-02, A-03, RG-0056, RG-0055);
   every one is mapped (section Coverage).
 - HALT is removed in wave 6 (session 2), by AUTO-21.
+- Added 2026-11-19 (docs/plan/10, landed by the wave 11 pre-batch
+  integrator): 12 session packages in waves 38 to 42 (session 11);
+  UI-CARD-COLLAPSE moved from the drafted wave 38 to wave 41 (it shared
+  serial group web-shell, web/index.html and web/app.css with UI-HEADER-TEXT
+  and server/al/plug/stores.py with KINDLER-STORE); RUN-BUILD-STAMP-UI
+  widened by decision 0082 part 2.
 
 ## Wave width and expected time
 
@@ -206,6 +212,11 @@ sessions rises (three waves a session: 13 sessions). Nothing else changes.
 - Session 9: waves 30 to 33, 12 session packages, about 7 h 27 min.
   Delivers: design 0001 and the cockpit decision are rewritten (records).
 - Session 10: waves 34 to 37, 7 session packages, about 6 h 07 min.
+
+- Session 11: waves 38 to 42, 12 session packages, about 9 h 00 min. Added
+  2026-11-19 from docs/plan/10 (operator requests 2026-11-19, decisions 0081
+  to 0083). Delivers: the item info popover and Kindler build generator are
+  on the Build tab.
 
 Sessions 8 to 10 are narrow on purpose: what is left there is the tail of
 the file chains (one editor of web/index.html a wave), so they cost
@@ -391,6 +402,24 @@ named.
   guide block, no separate Zone tip.
 - Wave 37 (session 10): width 1 + 0; about 48 min. Leads: Small leftovers:
   Windowed Fullscreen sentence, the dead 501 stub, the no-op switch.
+- Wave 38 (session 11): width 4 + 0; about 88 min. Leads: Item info lookup:
+  token-gated GET /api/iteminfo over local caches; Drop the visible AshLight
+  text left of the tabs; sr-only h1 kept; Kindler template schema and
+  checked loader.
+- Wave 39 (session 11): width 3 + 0; about 118 min. Leads: Text-parse PoB
+  CurrencyNames, WorldAreas and Uniques Source lines under sha256 pins; Item
+  names as link-like buttons with the shared item info popover; First
+  authored Kindler templates, act 1 to maps.
+- Wave 40 (session 11): width 2 + 0; about 118 min. Leads: Kindler
+  candidates, PoB scoring and deterministic ranking on the Generate route;
+  Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and
+  close.
+- Wave 41 (session 11): width 2 + 0; about 108 min. Leads: Collapsible cards
+  on Build and items and Run in the desktop client; state in the core;
+  Kindler result plan: stages, links, gem timing, passives, ascendancy, item
+  focus.
+- Wave 42 (session 11): width 1 + 0; about 108 min. Leads: Kindler result
+  card with stages and follow Play guidance.
 - Wave 99 (parked): 41 packages; no gate; see Parked packages.
 
 ## Gate commands
@@ -2014,6 +2043,121 @@ stub, the no-op switch.
   is flipped and main is clean.
 
 - RUN-LEFTOVERS-CORE [session, M 30m, build, P3, DR] Small leftovers: Windowed Fullscreen sentence, the dead 501 stub, the no-op switch. Files: web/index.html, server/al/http.py, tests/test_http_security.py, scripts/run.ps1, docs/ops/1.0-launch-runbook.md (+3 more). Deps: RUN-FEED-TRUTH, RUN-STOP-RACE.
+
+### Wave 38: operator requests 2026-11-19, cores
+
+Goal: Leads: Item info lookup: token-gated GET /api/iteminfo over local
+caches; Drop the visible AshLight text left of the tabs; sr-only h1 kept;
+Kindler template schema and checked loader.
+
+- Session 11; width 4 worktree + 0 main-checkout, 0 loop rows released;
+  about 88 minutes.
+- Hotspots: web/index.html (UI-HEADER-TEXT); web/app.css (UI-HEADER-TEXT);
+  tests/test_a11y.py (UI-HEADER-TEXT); server/al/settingsio.py
+  (KINDLER-STORE); server/al/pricebook.py (ITEM-INFO-CORE).
+- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log: 1
+  lines.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- ITEM-INFO-CORE [session, M 45m, build, P2] Item info lookup: token-gated GET /api/iteminfo over local caches. Files: server/al/theorycraft/snapshot.py, server/al/pricebook.py, server/al/iteminfo.py, server/al/plug/iteminfo.py, tests/test_iteminfo.py. Deps: none.
+- UI-HEADER-TEXT [session, S 20m, build, P2, DR] Drop the visible AshLight text left of the tabs; sr-only h1 kept. Files: web/index.html, web/app.css, tests/test_brand_assets.py, tests/test_a11y.py. Deps: none.
+- KINDLER-DATA [session, M 60m, data, P2] Kindler template schema and checked loader. Files: server/al/theorycraft/archetypes.py, tests/kindler_fixtures.py, tests/test_kindler_data.py. Deps: none.
+- KINDLER-STORE [session, M 55m, build, P2] Kindler tabs store ops/runtime/gen_builds.json. Files: server/al/settingsio.py, server/al/runhistory.py, server/al/plug/stores.py, tests/test_settingsio.py, server/al/theorycraft/genstore.py (+2 more). Deps: none.
+
+### Wave 39: operator requests 2026-11-19, popover and templates
+
+Goal: Leads: Text-parse PoB CurrencyNames, WorldAreas and Uniques Source
+lines under sha256 pins; Item names as link-like buttons with the shared
+item info popover; First authored Kindler templates, act 1 to maps.
+
+- Session 11; width 3 worktree + 0 main-checkout, 0 loop rows released;
+  about 118 minutes.
+- Hotspots: web/index.html (ITEM-INFO-UI); web/app.js (ITEM-INFO-UI);
+  web/prices.js (ITEM-INFO-UI).
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log: 1
+  lines.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- ITEM-INFO-POB-TEXT [session, M 60m, data, P3] Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines under sha256 pins. Files: config/tc_pins.json, server/al/iteminfo.py, tests/test_tc_pob_drift_guard.py, server/al/theorycraft/pobtext.py, tests/test_tc_pobtext.py. Deps: ITEM-INFO-CORE.
+- ITEM-INFO-UI [session, M 60m, build, P2, DR] Item names as link-like buttons with the shared item info popover. Files: web/index.html, web/prices.js, web/pricewatch.js, web/app.js, web/iteminfo.js (+2 more). Deps: ITEM-INFO-CORE.
+- KINDLER-TEMPLATES [session, L 90m, data, P2] First authored Kindler templates, act 1 to maps. Files: server/al/data/archetypes.json, tests/test_kindler_templates.py. Deps: KINDLER-DATA.
+
+### Wave 40: operator requests 2026-11-19, engine and tabs
+
+Goal: Leads: Kindler candidates, PoB scoring and deterministic ranking on
+the Generate route; Build tab sub-tabs: Pasted build plus Kindler tabs with
+move, rename and close.
+
+- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released;
+  about 118 minutes.
+- Hotspots: web/index.html (KINDLER-UI-TABS); web/app.css (KINDLER-UI-TABS);
+  server/al/theorycraft/bridge.py (KINDLER-ENGINE).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log: 1
+  lines.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- KINDLER-ENGINE [session, L 90m, build, P2] Kindler candidates, PoB scoring and deterministic ranking on the Generate route. Files: server/al/theorycraft/bridge.py, server/al/theorycraft/kindler.py, server/al/plug/kindler.py, tests/test_kindler_engine.py, tests/test_kindler_live.py. Deps: KINDLER-DATA, KINDLER-TEMPLATES, KINDLER-STORE.
+- KINDLER-UI-TABS [session, M 60m, build, P2, DR] Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and close. Files: web/index.html, web/tc.js, web/app.css, web/kindler.js, web/kindler.css (+1 more). Deps: KINDLER-STORE.
+
+### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
+
+Goal: Leads: Collapsible cards on Build and items and Run in the desktop
+client; state in the core; Kindler result plan: stages, links, gem timing,
+passives, ascendancy, item focus.
+
+- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released;
+  about 108 minutes.
+- Hotspots: web/index.html (UI-CARD-COLLAPSE); web/app.css
+  (UI-CARD-COLLAPSE).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log: 1
+  lines.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- UI-CARD-COLLAPSE [session, L 80m, build, P2, DR] Collapsible cards on Build and items and Run in the desktop client; state in the core. Files: web/index.html, web/app.css, web/pager.js, server/al/plug/stores.py, web/collapse.js (+4 more). Deps: none.
+- KINDLER-PLAN [session, L 80m, build, P2] Kindler result plan: stages, links, gem timing, passives, ascendancy, item focus. Files: server/al/plug/kindler.py, server/al/theorycraft/kindlerplan.py, tests/test_kindler_plan.py. Deps: KINDLER-ENGINE.
+
+### Wave 42: operator requests 2026-11-19, Kindler result card
+
+Goal: Leads: Kindler result card with stages and follow Play guidance.
+
+- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released;
+  about 108 minutes.
+- Hotspots: web/index.html (KINDLER-UI-RESULT).
+- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log: 1
+  lines.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- KINDLER-UI-RESULT [session, L 90m, build, P2, DR] Kindler result card with stages and follow Play guidance. Files: web/index.html, web/kindler.js, web/kindler.css, tests/test_kindler_result_ui.py. Deps: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI.
 
 ## Hotspot schedule
 

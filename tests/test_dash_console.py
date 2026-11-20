@@ -12,7 +12,6 @@ issue it reports. Skips when Chrome (or Edge) or node is missing.
 """
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -26,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import synth_client  # noqa: E402
+from browser_util import find_browser  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
 import test_fullstack as fs  # noqa: E402
 from ci_timing import ci_scale  # noqa: E402
@@ -39,25 +39,6 @@ from server.al.theorycraft import codec  # noqa: E402
 pytestmark = pytest.mark.server
 SCRIPT = ROOT / "app" / "test" / "cdp" / "dash_console.mjs"
 TOKEN = "c" * 48
-BROWSERS = (r"Google\Chrome\Application\chrome.exe",
-            r"Microsoft\Edge\Application\msedge.exe")
-
-
-def find_browser():
-    env = os.environ.get("AL_CHROME", "").strip().strip('"')
-    if env and Path(env).is_file():
-        return env
-    for var in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
-        base = os.environ.get(var)
-        for rel in BROWSERS if base else ():
-            p = Path(base) / rel
-            if p.is_file():
-                return str(p)
-    for name in ("chrome", "google-chrome", "chromium", "msedge"):
-        hit = shutil.which(name)
-        if hit:
-            return hit
-    return None
 
 
 @pytest.fixture

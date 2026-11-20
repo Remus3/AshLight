@@ -13,8 +13,12 @@ server (the stack fixture of tests/test_dash_console.py):
   starts and the core is pinned to it (discover=False, SEC-NO-DISCOVERY):
   a recipe can never find or tail the live Client.txt (evidence pack
   incident, plan 03 risk R12);
-- a free test port in 8961-8979 (tests/tc_live_util.free_test_port) or
-  the port the caller names; 8960 is refused;
+- a leased test port of 8962-8969 (tests/tc_live_util.lease_port: an OS
+  lock in the sidecar lease folder plus a bind probe, released on close,
+  so two xdist workers or two worktrees never share one), or the port the
+  caller names (leased too when it is a lease port; OSError when another
+  holder keeps it); 8960 is refused. The lease folder is the one path
+  outside the caller's root a recipe may write (outside() allows it);
 - web data stays off, except state g, which turns it on against the
   loopback mock poe.ninja of tests/fullstack_mocks.py (no external request);
 - lines come from tools/synth_client.py, builds and items from
@@ -51,15 +55,19 @@ for _p in (ROOT / "tools", ROOT / "tests", ROOT):
 import synth_client  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
 import fullstack_mocks as fs  # noqa: E402
-from tc_live_util import free_test_port  # noqa: E402
+import tc_live_util  # noqa: E402
+import pytest  # noqa: E402
 
-from server.al import acts, ninja, ports, summary, zoneguide  # noqa: E402
+from server.al import acts, buildinfo, ninja, ports, summary, zoneguide  # noqa: E402
 from server.al import state as state_mod  # noqa: E402
 from server.al.core import Core  # noqa: E402
 from server.al.http import serve  # noqa: E402
 from server.al.theorycraft import codec  # noqa: E402
 
-TOKEN = "p" * 48
+# Hex: web/app.js reads the fragment token as hex only (the fit harness
+# used to swap one in for its pages).
+TOKEN = "0123456789abcdef" * 3
+NAMED_PORT_WAIT_S = 10.0  # a named lease port another holder keeps
 WAIT_S = 8.0
 HOLD_CARD_S = 6 * 3600  # the item card stays up while a harness measures
 
@@ -208,6 +216,7 @@ class PlayStack:
             write_world_areas(self.rt / "gamedata" / acts.FILE_NAME)
         self.notes = []
         self.server = self.core = None
+        self._release = None
         self.mock = fs.MockNinja()
         self.fetch = fs.Transport(self.mock)
         self._card_s = state_mod.EVAL_CARD_S
@@ -226,10 +235,9 @@ class PlayStack:
         # never looks there (tick_diag reads it through this method).
         self.core._ggg_reg_open = lambda: False
         self.pinned()
-        if port is None:
-            port = free_test_port()
-        if int(port) == ports.AL_PORT:
+        if port is not None and int(port) == ports.AL_PORT:
             raise RecipeError(f"port {ports.AL_PORT} is the running AshLight's")
+        port = self._lease(port)
         self.server = serve(self.core, TOKEN, port=port, web_root=ROOT / "web",
                             tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
         self.port = self.server.port
@@ -237,6 +245,24 @@ class PlayStack:
         threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05},
                          daemon=True).start()
         self.url = f"http://127.0.0.1:{self.port}/#token={TOKEN}"
+
+    def _lease(self, port):
+        """The port to bind, leased for the life of the stack: a fresh lease
+        when none is named; a named lease port is leased as named (OSError
+        when another holder keeps it past NAMED_PORT_WAIT_S, so a caller can
+        fall back to a fresh one); any other named port is bound as is."""
+        if port is None:
+            port, self._release = tc_live_util.lease_port()
+            return port
+        port = int(port)
+        if port in tc_live_util.held_leases() or port not in tc_live_util.lease_candidates():
+            return port
+        try:
+            port, self._release = tc_live_util.lease_port(candidates=[port],
+                                                          wait_s=NAMED_PORT_WAIT_S)
+        except pytest.skip.Exception:
+            raise OSError(f"test port {port} is leased or bound elsewhere") from None
+        return port
 
     def pinned(self):
         """The core's log and its tailer's are this stack's Client.txt."""
@@ -308,6 +334,9 @@ class PlayStack:
             finally:
                 self.mock.close()
                 state_mod.EVAL_CARD_S = self._card_s
+                if self._release is not None:
+                    self._release()
+                    self._release = None
 
 
 def write_world_areas(path):
@@ -819,15 +848,28 @@ def _under(path, root):
     return path == root or path.startswith(root.rstrip(os.sep) + os.sep)
 
 
+def _git_read_roots():
+    """The checkout's own git metadata that buildinfo reads for the build id
+    (RUN-BUILD-STAMP-CORE): the .git entry and its gitdir / commondir."""
+    out = [ROOT / ".git"]
+    dirs = buildinfo._git_dirs(ROOT)
+    if dirs:
+        out.extend(dirs)
+    return out
+
+
 def outside(events, tmp_root):
     """The events that touch a path outside tmp_root, except read-only
     opens of AshLight's own code and bundled data (server/, web/, tools/,
-    tests/, ops/fleet_kit/) and of the Python installation, and the
-    bytecode cache. Any write outside tmp_root, any repo live state
+    tests/, ops/fleet_kit/), of the checkout's own git metadata (the build
+    id, server/al/buildinfo.py) and of the Python installation, the bytecode
+    cache, and the test port lease folder (tc_live_util.LEASE_DIR: its
+    <port>.lock files and the folder itself). Any write outside tmp_root, any repo live state
     (ops/runtime, ops/loop, config/local.json, the inbox / outbox) and any
     other Client.txt is reported."""
     bad = []
     py_roots = {sys.prefix, sys.base_prefix, sys.exec_prefix}
+    git_roots = _git_read_roots()
     for event, path, mode, flags in events:
         if isinstance(path, int) or path is None:
             continue
@@ -837,6 +879,9 @@ def outside(events, tmp_root):
             bad.append((event, repr(path), mode))
             continue
         if _under(p, tmp_root):
+            continue
+        if _under(p, tc_live_util.LEASE_DIR) and (
+                p == _norm(tc_live_util.LEASE_DIR) or p.endswith(".lock")):
             continue
         if os.path.basename(os.path.dirname(p)) == "__pycache__" and _under(p, ROOT):
             continue
@@ -854,6 +899,8 @@ def outside(events, tmp_root):
             bad.append((event, p, mode))
             continue
         if any(_under(p, ROOT / rel) for rel in _READ_ONLY_ROOTS):
+            continue
+        if any(_under(p, r) for r in git_roots):
             continue
         if any(_under(p, r) for r in py_roots):
             continue

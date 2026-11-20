@@ -17,6 +17,18 @@ Date: 2026-11-17. Trigger: ROADMAP row CORE-AUTOSTART (filed by decision
   time from the script's own location (no machine path tracked).
 - The launcher starts `scripts\run.ps1 -NoBrowser -Autostart` with window
   style 0, so no console flashes at logon.
+- Amended 2026-11-19 (REL-AUTOSTART-ENTRY, findings F-170 / DEP-07): the
+  action is no longer wscript. It is `pythonw.exe -m
+  server.al.autostart_entry` (built by paths.python_cmd) with the checkout
+  root as working directory; the entry point checks the opt-in and starts
+  `scripts\run.ps1 -NoBrowser -Autostart` through Windows PowerShell by
+  its System32 path with CREATE_NO_WINDOW and does not wait.
+  `scripts\autostart_launch.vbs` is deleted (Windows is retiring VBScript).
+  The task is written, read back and removed by `scripts\al_shell.ps1`
+  (Register-AlLogonTask / Unregister-AlLogonTask / Get-AlLogonTask, the
+  DEP-07 effect-root rule); a task of the same name whose action's working
+  directory lies outside the checkout is left alone, and -Enable then
+  records no opt-in.
 - The opt-in is recorded in the gitignored `ops/runtime/autostart.json`
   ({enabled, task, updated}). `run.ps1 -Autostart` reads it and is a
   logged no-op unless enabled, so a task left behind (e.g. after a manual
@@ -43,5 +55,5 @@ Date: 2026-11-17. Trigger: ROADMAP row CORE-AUTOSTART (filed by decision
 ## Reverses if
 
 Register-ScheduledTask is refused for a standard user on the target
-machine (then the HKCU Run key with the same vbs launcher), or logon
+machine (then the HKCU Run key with the same pythonw entry point), or logon
 autostart is no longer wanted (then -Disable and remove the row).
