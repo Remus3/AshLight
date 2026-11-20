@@ -1118,6 +1118,14 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   0067; decision 0006 method 3, decision 0040 class). Reverses if: a record is
   found to hold a path, name, chat or item text, the sampler costs overlay
   budget, or GGG restricts derived local records.
+- OBS-PARSE-LEDGER: per-pattern hit counts and masked log shapes (allow-list
+  mask, 200 shapes, 64 KB, hour-grain times, two-sighting rule) in
+  ops/runtime/logshapes.json only under their own consent line beside the
+  Client.txt opt-in; revoking deletes the file; no raw line, name, chat or
+  item text is ever stored or sent; in-memory class counters need no extra
+  consent (decision 0071). Reverses if: a mask gap stores a name or a chat
+  word, GGG restricts derived local records, or the operator rules the
+  ledger unwanted.
 - DOCS-FRESH: tools/docs_fresh.py check is a list of small fact functions
   (FACTS); each reads a value from tracked files and matches where docs quote
   it (Electron pin in app/main.js and decision 0002; VERSION in
