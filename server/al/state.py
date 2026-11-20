@@ -798,9 +798,18 @@ def overlay_card(ev, price, now, alert=None):
         return {"kind": "eval", "head": et["head"], "line2": line2, "line3": et["line"],
                 "verdict": et["tone"], "expires_at": ev["at"] + EVAL_CARD_S}
 
+    def price_line():
+        # OVL-CARD-NAME (decision 0016 amendment 2026-11-19): a trade link
+        # with no poe.ninja value keeps the item name on line 2; the link
+        # itself is on the dashboard
+        t = price_card_text(price)
+        if price.get("status") != "link" or ninja_text(price.get("ninja")):
+            return t["line"]
+        return t["item"]
+
     def price_part():
         t = price_card_text(price)
-        return {"kind": "price", "head": t["head"], "line2": t["line"],
+        return {"kind": "price", "head": t["head"], "line2": price_line(),
                 "line3": t["detail"], "verdict": "price",
                 "expires_at": price_until(price)}
 
@@ -815,7 +824,7 @@ def overlay_card(ev, price, now, alert=None):
         if price.get("status") in ("off", "error"):
             return eval_part()
         card = eval_part()
-        card.update(kind="merged", line2=price_card_text(price)["line"],
+        card.update(kind="merged", line2=price_line(),
                     expires_at=max(card["expires_at"], price_until(price)))
         return card
     return eval_part() if ev_ok else price_part()

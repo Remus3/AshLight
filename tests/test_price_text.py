@@ -127,10 +127,40 @@ def test_link_merges_with_the_item_check():
     ev = dict(ev_card(), at=100.0)
     pr = dict(price("link", url=LINK), at=100.0)
     card = overlay_card(ev, pr, 101.0)
-    assert card["kind"] == "merged" and card["line2"] == "Trade link ready"
+    # OVL-CARD-NAME (decision 0016 amendment 2026-11-19): with no poe.ninja
+    # value, line 2 stays the item name; the link is on the dashboard
+    assert (card["kind"], card["head"], card["line2"], card["line3"], card["verdict"]) == (
+        "merged", "Upgrade +12 vs Gloves", "Doom Grip", "+35 to maximum Life", "upgrade")
     only = overlay_card(None, pr, 101.0)
-    assert only["kind"] == "price" and only["line2"] == "Trade link ready"
-    assert only["line3"] == ""
+    assert (only["kind"], only["head"], only["line2"], only["line3"], only["verdict"]) == (
+        "price", "Price: Doom Grip", "Doom Grip", "", "price")
+    # the dashboard words are unchanged
+    assert price_card_text(pr)["line"] == "Trade link ready"
+
+
+NINJA = {"value": 12.5, "unit": "Divine Orb", "league": "Dawn", "listings": 342,
+         "few": False, "change": None, "checked_at": 99.0, "league_changed_at": None}
+
+
+def test_link_with_a_poe_ninja_value_keeps_the_price_line():
+    """OVL-CARD-NAME: with a cached poe.ninja value line 2 is the price
+    line, on the price card and on the merged card, as before."""
+    ev = dict(ev_card(), at=100.0)
+    pr = dict(price("link", url=LINK, ninja=NINJA), at=100.0)
+    only = overlay_card(None, pr, 101.0)
+    assert (only["kind"], only["head"], only["line2"], only["line3"]) == (
+        "price", "Price: Doom Grip", "About 12.5 Divine Orb", "From poe.ninja")
+    card = overlay_card(ev, pr, 101.0)
+    assert (card["kind"], card["head"], card["line2"], card["line3"]) == (
+        "merged", "Upgrade +12 vs Gloves", "About 12.5 Divine Orb", "+35 to maximum Life")
+    # a broken value is no value: the item name again
+    bad = dict(pr, ninja=dict(NINJA, value="lots"))
+    assert overlay_card(None, bad, 101.0)["line2"] == "Doom Grip"
+    assert overlay_card(ev, bad, 101.0)["line2"] == "Doom Grip"
+    # other statuses keep their price line
+    done = dict(price(count=5, listings=FIVE), at=100.0)
+    assert overlay_card(None, done, 101.0)["line2"] == "5 listed, ~12 exalted"
+    assert overlay_card(ev, done, 101.0)["line2"] == "5 listed, ~12 exalted"
 
 
 def test_empty_clipboard_price_error_says_copy_first():

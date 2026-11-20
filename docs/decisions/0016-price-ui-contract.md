@@ -206,3 +206,28 @@ REVERSES IF: DATA-CONTACT-FIELD is dropped or moved out of the Prices and
 web data card, or any code path emits status "off" / "contact not set"
 before wave 17 (then DPC-1 reopens as S2 and the copy becomes "Contact
 not set - turn on Use web data in Prices and web data").
+
+AMENDMENT 2026-11-19 (OVL-CARD-NAME, folded into OVL-COPY-FIRST; finding
+F-163, ruling Q-06). DECISION: on the overlay card (`state.py
+overlay_card`), line 2 of the price card and of the merged card is the
+price line only when the card's status is not `link` or a usable
+poe.ninja value is on it (`ninja_text(card.ninja)` is not None);
+otherwise line 2 is the item name (`price_card_text(...)["item"]`), so a
+press with no cached price shows what the item is, not "Trade link
+ready". A day-old poe.ninja value (24 h, amendment 2026-11-18) still
+counts as a value there, so that card keeps its "Trade link ready" line.
+`price_card_text()`, the dashboard sentence and the link stay as they
+are; decision 0017 is unchanged. Also (OVL-COPY-FIRST, F-054): the
+machine string `empty clipboard` joins `error`'s words (`PRICE_TEXT`
+shares the eval's "Copy the item first" words), though the core asks for
+no price check on a blank press. Exact tests: tests/test_price_text.py,
+tests/test_price_check.py.
+ALTERNATIVES: (B) keep "Trade link ready" on line 2; (C) move "Trade
+link ready" to line 3 and the name to line 2; (D) a shorter "Link on
+dashboard" line.
+WHY: the overlay is a glance surface and the link opens only from the
+dashboard, so "Trade link ready" told the player nothing they can act on
+in game, while the item name confirms which item the press read; C adds
+a line for the same non-action; D still spends the line on a pointer.
+REVERSES IF: the overlay gains a way to act on the link, players miss
+the link notice in play, or decision 0017 reverses.
