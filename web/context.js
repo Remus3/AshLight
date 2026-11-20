@@ -20,7 +20,9 @@
 
    Modes: guide, town and map are painted from their block; none (and a
    painted mode whose block is missing) shows the zone name with one plain
-   row. map shows only once the core sets play.map_ok (PLAY-MAP-MODE-ON);
+   row. Campaign hints (snap.campaign.hints, at most 3; design finding
+   LO-1) are hint rows: a core guide block carries them already, every
+   other painted view adds them from the snapshot, none when it has none. map shows only once the core sets play.map_ok (PLAY-MAP-MODE-ON);
    until then a map zone is mode none. setup, error and idle belong to
    PLAY-TD-12-CONTEXT-SETUP, which registers them with mode(name, painter);
    a mode with no painter hides this slot and leaves the legacy c-setup
@@ -67,6 +69,7 @@
   var ROWS_COMPACT = 6;  // the compact class hides the .ctx-drop row
   var WORD_CAP = 52;     // G5: region C, its hidden heading included
   var SEARCH_MAX = 250;  // decision 0030: the game's search box limit
+  var HINTS = 3;         // campaign hint rows (snap.campaign.hints)
   var COPY_LABEL = "Copy";
   var COPIED = "Copied";
   var FALLBACK = "Press Ctrl+C";
@@ -144,6 +147,33 @@
     return n;
   }
 
+  /* The boss hint in one row, as the core words it in a guide block
+     (playcards._boss_text): the element and the build's resistance from
+     the hint's own sentence; the sentence stays the row's full text. */
+  function bossText(text) {
+    var el = /mostly (\w+) damage/.exec(text);
+    if (!el) { return text; }
+    var res = /has (-?\d+)% /.exec(text);
+    return "Boss: " + el[1] + " damage. Your " + el[1] + " res: " +
+      (res ? res[1] + "%." : "unknown.");
+  }
+
+  /* snap.campaign.hints (server/al/campaign.py view): at most HINTS rows
+     of kind "hint", none when the snapshot carries none. */
+  function hintRows(snap) {
+    var camp = snap && isObj(snap.campaign) ? snap.campaign : null;
+    var list = camp && Array.isArray(camp.hints) ? camp.hints : [];
+    var out = [];
+    list.forEach(function (h) {
+      if (out.length >= HINTS || !isObj(h)) { return; }
+      var full = str(h.text).trim();
+      if (!full) { return; }
+      var text = h.id === "boss" ? bossText(full) : full;
+      out.push({ kind: "hint", text: text, full: full });
+    });
+    return out;
+  }
+
   /* The zone name with one plain row: mode none, and a painted mode whose
      block did not come. */
   function noneView(snap) {
@@ -170,7 +200,8 @@
       return { mode: mode, own: false, block: block };
     }
     var v;
-    if (mode === "none" || !block || !str(block.title)) {
+    var fromBlock = !(mode === "none" || !block || !str(block.title));
+    if (!fromBlock) {
       v = noneView(s || {});
       v.mode = mode;
     } else {
@@ -180,7 +211,18 @@
     v.own = true;
     v.block = block;
     v.rows = v.rows.slice(0, ROWS);
+    /* LO-1: the campaign hints come as hint rows. A guide block from the
+       core already holds them (playcards.guide_block ranks and drops them
+       itself); every other painted view takes them from the snapshot. */
+    if (!(mode === "guide" && fromBlock)) {
+      v.rows = v.rows.concat(hintRows(s));
+    }
     var cap = WORD_CAP - (isNum(headWords) ? headWords : 2);
+    while (v.rows.length > ROWS) {
+      var over = dropAt(v.rows);
+      if (over < 0) { break; }
+      v.rows.splice(over, 1);
+    }
     while (v.rows.length && viewWords(v) > cap) {
       var at = dropAt(v.rows);
       if (at < 0) { break; }

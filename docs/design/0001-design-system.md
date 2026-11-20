@@ -100,9 +100,9 @@ current 0.75 floor.
 - Tabs (UI-GLANCE, 2026-11-17; replaces the UX-NARROW fold): the
   dashboard is five tabs in the header (ARIA tablist, web/tabs.js): Play,
   Run and history, Build, Items and prices, Settings. Play is the glance
-  tab: zone tile with its guide (zone tip, campaign hints, the
-  `#zone-guide` slot), level / deaths / session, the `#build-alert` slot,
-  trades, the new-character tip, and the item card (verdict, upgrade
+  tab: zone tile with its guide (zone tip, the `#zone-guide` slot;
+  campaign hints are hint rows of context region C), level / deaths /
+  session, the `#build-alert` slot, trades, the new-character tip, and the item card (verdict, upgrade
   search, price). Both slots are filled only through
   `ALTabs.fill(document, id, node)`. The picked tab is remembered per
   viewer (localStorage, try/catch). ZERO-CLICK: a new item card, trade
@@ -359,7 +359,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | Died (UTIL-DEATHS) | no change | Death recap card: newest first, local time, zone and level |
 | In a campaign act (HUD-ACT) | no change | Act times card (Run and history tab): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Waystone check (UTIL-WAYSTONE-REWARD) | reward line (`+38% rarity, +12% pack`) replaces the item name in that card | `Rewards: ...` sentence under the risk sentence in the Item check card |
-| Campaign hint (UTIL-CAMPAIGN-CHECKS) | status word, last in the slot order (`Cold res 32%`, `Better flask`, `Boots: no speed`, `Boss: cold`) | Hint list under the zone tip in the Play tab's Zone tile |
+| Campaign hint (UTIL-CAMPAIGN-CHECKS) | status word, last in the slot order (`Cold res 32%`, `Better flask`, `Boots: no speed`, `Boss: cold`) | Up to 3 hint rows in the Play tab's context region C (web/context.js): the boss row as `Boss: <element> damage. Your <element> res: N%.`, the gear rows as their sentence, each sentence in the row's title; a guide block carries its own (PLAY-CAMPAIGN-HINTS-C) |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
 | Item check from the same press | none on the overlay | Upgrade search sub-section under the item check (TC-UPGRADE) |
 

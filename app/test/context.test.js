@@ -437,3 +437,74 @@ test("context.js: no timer, network, clipboard read, live region or notify", () 
   assert.doesNotMatch(CSS, /color:/, "no colour of its own: the shared tokens and classes");
   assert.match(HTML, /<script src="\/web\/search\.js" defer><\/script>/);
 });
+
+/* PLAY-CAMPAIGN-HINTS-C (design finding LO-1): snap.campaign.hints come as
+   context hint rows, at most 3, none when absent; a core guide block keeps
+   its own hint rows. Not a live region. */
+const HINTS = {
+  word: "Boss: cold",
+  hints: [
+    { id: "boss", word: "Boss: cold",
+      text: "This zone's boss deals mostly cold damage. Your build has 32% cold " +
+        "resistance (the cap is 75%)." },
+    { id: "flask-life", word: "Better flask",
+      text: "A Medium Life Flask can drop at your level; your build has a Small Life Flask." },
+    { id: "boots", word: "Boots: no speed",
+      text: "Your build's boots have no movement speed. Boots with it help in the campaign." },
+    { id: "extra", word: "Extra", text: "A fourth hint that never shows." }
+  ]
+};
+
+function hintRowsOf(doc) {
+  return byClass(doc, "ctx-row").filter((n) => n.getAttribute("data-kind") === "hint");
+}
+
+test("campaign hints show as up to 3 context hint rows, none when absent", () => {
+  const doc = fresh();
+  const plain = zoneSnap({ zone: "Clearfell", zone_guide: { kind: "campaign" },
+    play: { map_ok: false, context: null } });
+  C.paint(doc, plain, 0);
+  assert.equal(hintRowsOf(doc).length, 0, "no hints in the snapshot: no hint rows");
+  C.paint(doc, Object.assign({}, plain, { campaign: { hints: [] } }), 0);
+  assert.equal(hintRowsOf(doc).length, 0);
+  C.paint(doc, Object.assign({}, plain, { campaign: null }), 0);
+  assert.equal(hintRowsOf(doc).length, 0);
+
+  const m = C.paint(doc, Object.assign({}, plain, { campaign: HINTS }), 0);
+  const rows = hintRowsOf(doc);
+  assert.equal(rows.length, 3, "at most 3 hint rows");
+  assert.equal(rows[0].textContent, "Boss: cold damage. Your cold res: 32%.");
+  assert.equal(rows[0].getAttribute("title"), HINTS.hints[0].text, "the full sentence");
+  assert.equal(rows[1].textContent, HINTS.hints[1].text);
+  assert.equal(rows[2].textContent, HINTS.hints[2].text);
+  assert.ok(m.rows.length <= C.ROWS);
+  assert.ok(C.words(m.title) + m.rows.reduce((a, r) => a + C.words(r.text), 0) <= C.WORD_CAP - 2);
+  assert.equal(byClass(doc, "ctx-row")[0].textContent, "Area level 3.", "the zone row stays first");
+  for (const r of rows) {
+    assert.equal(r.getAttribute("aria-live"), null, "not a live region");
+    assert.equal(r.getAttribute("role"), null);
+  }
+  // an unknown resistance, and the hints leave with the snapshot
+  const unk = { hints: [{ id: "boss", text: "This zone's boss deals mostly fire damage. " +
+    "Your build's fire resistance is unknown." }] };
+  C.paint(doc, Object.assign({}, plain, { campaign: unk }), 0);
+  assert.deepEqual(hintRowsOf(doc).map((n) => n.textContent),
+    ["Boss: fire damage. Your fire res: unknown."]);
+  C.paint(doc, plain, 0);
+  assert.equal(hintRowsOf(doc).length, 0);
+});
+
+test("campaign hints: a core guide block keeps its own hint rows, town adds them", () => {
+  const doc = fresh();
+  C.paint(doc, zoneSnap({ campaign: HINTS }), 0);
+  assert.deepEqual(hintRowsOf(doc).map((n) => n.textContent),
+    GUIDE_BLOCK.rows.filter((r) => r.kind === "hint").map((r) => r.text),
+    "the guide block's hint rows, never doubled");
+  const town = Object.assign(townSnap(true), { campaign: HINTS });
+  const m = C.paint(doc, town, 0);
+  assert.equal(m.mode, "town");
+  assert.ok(m.rows.length <= C.ROWS);
+  assert.ok(m.rows.some((r) => r.kind === "copy"), "the Copy row stays");
+  assert.ok(m.rows.some((r) => r.kind === "next"), "the next zone outranks the hints");
+  assert.ok(hintRowsOf(doc).length >= 1, "a hint row shows in town");
+});
