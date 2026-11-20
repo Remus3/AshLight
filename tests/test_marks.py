@@ -80,6 +80,7 @@ TIMING_WHOLE = {"tests/test_budgets.py", "tests/test_soak.py", "tests/test_math_
 # mixed files: only these tests carry the timing mark, the rest of the file not
 TIMING_TESTS = {
     "tests/test_tc_press_staged.py": {"test_first_card_and_reply_within_budget_with_a_slow_calc"},
+    "tests/test_metrics.py": {"test_100000_updates_under_50_ms"},
 }
 FUZZ = "tests/test_fuzz.py"
 SUPERVISOR = ("tests/test_keepalive.py", "tests/test_procs.py", "tests/test_supervisor.py")

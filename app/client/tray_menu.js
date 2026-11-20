@@ -1,15 +1,19 @@
 "use strict";
 /* DESKTOP-CLIENT (decision 0041): the tray menu, as plain data so node
-   --test covers it. state: {overlayOn, companionShown, wakeOn}; actions:
-   {restart, toggleOverlay, toggleCompanion, toggleWake, quit}. Left-click on
+   --test covers it. state: {overlayOn, companionShown, wakeOn, autostartOn};
+   actions: {restart, toggleOverlay, toggleCompanion, toggleWake,
+   toggleAutostart, quit}. Left-click on
    the icon restores the companion (window.js); this is the right-click menu.
    OVL-WAKE-COMPANION: the "Open AshLight when the game wakes" checkbox is
    the one switch for the companion's return (saved in client-prefs.json
-   under the runtime dir, default on). */
+   under the runtime dir, default on). REL-AUTOSTART-SWITCH: the "Start with
+   Windows" checkbox shows the recorded autostart choice (autostart.json,
+   default off) and its click runs scripts\autostart.ps1 hidden. */
 
 const TOOLTIP = "AshLight is running. Click to open it. Right-click for the menu.";
 const CLOSED_NOTE = "AshLight keeps running here. Right-click this icon to quit.";
 const WAKE_LABEL = "Open AshLight when the game wakes";
+const AUTOSTART_LABEL = "Start with Windows";
 // Windows keeps at most 127 characters of a tray tooltip (NOTIFYICONDATA)
 const TOOLTIP_MAX = 127;
 
@@ -31,10 +35,13 @@ function trayTemplate(state, actions) {
       checked: s.overlayOn === true, click: actions.toggleOverlay },
     { id: "wake", label: WAKE_LABEL, type: "checkbox",
       checked: s.wakeOn === true, click: actions.toggleWake },
+    { id: "autostart", label: AUTOSTART_LABEL, type: "checkbox",
+      checked: s.autostartOn === true, click: actions.toggleAutostart },
     { id: "restart", label: "Restart overlay", click: actions.restart },
     { type: "separator" },
     { id: "quit", label: "Quit AshLight", click: actions.quit }
   ];
 }
 
-module.exports = { trayTemplate, tooltipFor, TOOLTIP, TOOLTIP_MAX, CLOSED_NOTE, WAKE_LABEL };
+module.exports = { trayTemplate, tooltipFor, TOOLTIP, TOOLTIP_MAX, CLOSED_NOTE, WAKE_LABEL,
+                   AUTOSTART_LABEL };

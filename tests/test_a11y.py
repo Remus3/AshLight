@@ -293,11 +293,12 @@ REGIONS = "gctnbiu"
 # PLAY-LEGACY-OUT-1 removed the g-tiles, t-trades and b-alert groups;
 # PLAY-LEGACY-OUT-2 the rest: the consent, language, tip and Zone tip cards
 # are gone, the Last session card and the zone guide moved to Run and
-# history, the full item check to Items and prices.
+# history, the full item check to Items and prices (merged into Build and
+# items by PLAY-TD-19B-FOUR-TABS).
 GONE = ("consent", "consent-yes", "consent-path", "consent-error", "langbox",
         "lang-dismiss", "hintbox", "hint-text", "zone-note-box", "zone-note",
         "campaign-hints")
-MOVED = {"summarybox": "panel-run", "zone-guide": "panel-run", "evalbox": "panel-items"}
+MOVED = {"summarybox": "panel-run", "zone-guide": "panel-run", "evalbox": "panel-build"}
 
 
 def test_play_is_seven_regions_with_no_tab_stop_and_no_columns():
