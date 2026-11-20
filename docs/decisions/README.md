@@ -35,6 +35,7 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0070: Electron upgrade policy - line, waiting periods, advisory fast path, end-of-life rule (ELECTRON-WATCH).
 - 0069: upstream watcher frame (docs/decisions/0069-upstream-watch-frame.md): one tool, one state file, metadata-only sources behind the web-data gate, templated rows (AUTO-05).
 - 0068: Electron and npm supply chain (docs/decisions/0068-electron-npm-supply-chain.md)
   (OVL-ELECTRON-SETUP).

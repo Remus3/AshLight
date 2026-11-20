@@ -1638,8 +1638,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   shown, and python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
   tests/test_leak_sweep.py passes. ZERO-CLICK: The operator only plays one map with the client
   running. DEPENDS: RUN-BUDGET-LOG-CORE, RUN-BUDGET-LOG-CLIENT, RUN-BUDGET-TESTS-LIVE. BLOCKED:
-  budget-log rows from normal in-map play; unblocks when python -m server.al.budgetlog check prints
-  10 or more rows tagged in map with the overlay shown (operator).
+  normal play with the budget log on (no operator act); closes from the log.
 - (TC-OAUTH-REG: its row is replaced in place under '## Theorycraft and item optimization (decision 0004, research 0010)'.)
 - (OVL-FPS: its row is replaced in place under '## Lane: build'.)
 - [ ] PUB-DEPBOT-FIRST-RUN (data) First live run of the Dependabot re-apply tool. ACCEPT: After

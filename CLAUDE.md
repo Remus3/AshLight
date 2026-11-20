@@ -445,8 +445,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   supervisor proves unreliable, logon survival is wanted, or the stale
   heartbeat kill false-fires on slow machines.
 - OVL-FPS never uses PresentMon or ETW Present tracing of the game, not even
-  dev-only (decision 0006). Reverses if: GGG explicitly permits it or the
-  operator rules OS performance telemetry is allowed.
+  dev-only (decision 0006). AshLight's own-process counters (budget log)
+  are a Checks-class self-diagnostic and ship; the on / off FPS measurement
+  still never ships (0006 note 2026-11-18). Reverses if: GGG explicitly
+  permits it or the operator rules OS performance telemetry is allowed.
 - PoB2 share codes: stdlib codec, share-URL fetch deferred to TC-URL, no
   clipboard read in the codec (decision 0007). Reverses if: a real PoB2
   export fails to decode, or the operator orders TC-URL.
@@ -858,7 +860,14 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   key of a short safe list (Ctrl or Alt held, never a game key); the results
   and the player's overlay on / off go to ops/runtime/hotkeys.json, the core
   publishes the effective keys and every surface prints those, never a
-  literal (decision 0058). Reverses if: a fallback key clashes with a game
+  literal (decision 0058). OVL-KEYS-CORE (2026-11-20): the core reads the
+  client's ops/runtime/hotkeys.json only on a stat change (8 KB cap, every
+  key through safe_accelerator), publishes snapshot hotkeys (eval / toggle:
+  key, want, registered, fallback; overlay_on), and the token-gated POST
+  /api/hotkeys writes eval_hotkey / overlay_toggle to config/local.json,
+  refusing a game key or the other chord's key; Checks shows hotkey and
+  hotkey_toggle rows plus an overlay_off note; the core registers no key and
+  sends nothing. Reverses if: a fallback key clashes with a game
   bind in play, GGG's overlay rules change (decision 0003), or the operator
   orders fixed keys.
 - Go-public gate 6 limits binary blobs to 500 KB and text blobs to 2 MB,
@@ -866,6 +875,14 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   Reverses if: a text blob over 2 MB appears (split it), MAIN orders a
   rewrite (then restore the uniform 500 KB), or a leak or accident is
   found hiding in a text blob under 2 MB.
+- Electron upgrade policy: Electron stays on the newest stable major: patch
+  and minor weekly to the newest release at least 3 days old, within 24 h on
+  an npm audit advisory; major N+1 between 14 and 42 days after its .0.0, one
+  major at a time; never past end of life; bumps are loop rows filed by the
+  dev-loop watcher, the app itself never checks versions; setup.ps1 refuses
+  the npm step while the client runs (decision 0070). Reverses if: a bad
+  upstream release passes the waiting period and the gates, Electron changes
+  its release schedule, or the operator rules bumps must be manual.
 - CI timing: AL_CI=1 is set only in ci.yml; under it decision 0002's
   timing budgets skip with the value printed (structural checks stay),
   test waits widen 3x and the CDP page-live wait gets one bounded retry;
