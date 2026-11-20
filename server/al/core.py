@@ -2,6 +2,11 @@
 
 Decision 0003: the tailer never starts until the user's opt-in is recorded in
 ops/runtime/consent.json. Revoking consent stops it.
+
+Decision 0071 (RUN-LEDGER-CONSENT): the parse ledger has its own opt-in, the
+"ledger" key of the same file, never implied by the Client.txt opt-in; it
+can be given only while the Client.txt opt-in is on, and revoking either
+one turns it off and deletes ops/runtime/logshapes.json.
 """
 
 import datetime as _dt
@@ -17,6 +22,7 @@ from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parse
                price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
                upgrade, zoneguide,
                webfetch)
+from . import metrics  # RUN-METRICS-SITES (decision 0067): press counters
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import exitrecord  # OBS-CRASH: last-exit.json, client-exit.json
 from . import hotkeys  # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE)
@@ -70,6 +76,10 @@ LOG = logging.getLogger("al.core")
 WORN_KEY = "worn_gear"
 WORN_OFF = "worn gear off"
 WORN_NOTHING = "nothing to wear"
+# RUN-LEDGER-CONSENT (decision 0071): the parse ledger's file under the
+# runtime dir and what its own consent line says it keeps
+LEDGER_FILE = "logshapes.json"
+LEDGER_KEEPS = ["pattern hit counts", "masked line shapes"]
 
 
 def discover_default(runtime, log_path):
@@ -144,7 +154,8 @@ class Core:
         self.tailer_restarts = 0
         self._lock = threading.Lock()
         self.locate_log()
-        self.state.set_tailer(consented=self.consented())
+        self.state.set_tailer(consented=self.consented(),
+                              ledger=self.ledger_consented())
         self.state.set_overlay_layout(layout.load(self.config_path))
         # TC-CODE: the last loaded PoB build reloads on start (no click).
         # DATA-TREE-SRC: node names from the cached GGG tree export when the
@@ -437,21 +448,35 @@ class Core:
         TC-PRESS-STAGED-LIVE (decision 0024 amendment 2026-11-19): returns the
         first stage's result (the stat-weight card, published at once); the
         Path of Building stages follow on the LastEval worker as card
-        updates that keep this press's time."""
+        updates that keep this press's time.
+        RUN-METRICS-SITES (decision 0067): each press is counted as
+        `press|<outcome>` (item, unscored, build, empty or error) with its
+        milliseconds in the `press_ms` ring; never the item text."""
+        t0 = time.monotonic()
+        outcome = "error"
         try:
-            self.tick_build()  # BUILD-LIVE: score against this character's build
-        except Exception:  # noqa: BLE001 - the press must still be checked
-            pass
-        at = self.state.now()
-        if isinstance(text, str) and not text.strip():
-            return self._empty_press(slot, at)
-        doc = tc_press.load(self, text, at=at)
-        if doc is not None:
-            return doc
-        result = self.last_eval.run(text, slot, at=at)
-        doc = self.price.request(text, at=at)
-        self._watch_press(text, doc, at)
-        return result
+            try:
+                self.tick_build()  # BUILD-LIVE: score against this character's build
+            except Exception:  # noqa: BLE001 - the press must still be checked
+                pass
+            at = self.state.now()
+            if isinstance(text, str) and not text.strip():
+                outcome = "empty"
+                return self._empty_press(slot, at)
+            doc = tc_press.load(self, text, at=at)
+            if doc is not None:
+                outcome = "build"
+                return doc
+            result = self.last_eval.run(text, slot, at=at)
+            outcome = "item" if isinstance(result, dict) and result.get("ok") else "unscored"
+            doc = self.price.request(text, at=at)
+            self._watch_press(text, doc, at)
+            return result
+        finally:
+            ms = round((time.monotonic() - t0) * 1000.0, 1)
+            metrics.inc(f"press|{outcome}")
+            metrics.timing("press_ms", ms)
+            metrics.emit("press", outcome=outcome, ms=ms)
 
     def _empty_press(self, slot, at):
         """OVL-COPY-FIRST (F-054): the press found a blank clipboard (it
@@ -921,6 +946,46 @@ class Core:
     def consented(self):
         return bool(self.consent_record().get("consented"))
 
+    def ledger_consented(self):
+        """RUN-LEDGER-CONSENT (decision 0071): the parse ledger's own opt-in,
+        the "ledger" key of consent.json. Only an explicit {"consented":
+        true} there counts, and only while the Client.txt opt-in is on; the
+        Client.txt opt-in alone never grants it."""
+        rec = self.consent_record()
+        led = rec.get("ledger")
+        return (bool(rec.get("consented")) and isinstance(led, dict)
+                and led.get("consented") is True)
+
+    def ledger_path(self):
+        return self.runtime / LEDGER_FILE
+
+    def _delete_ledger(self):
+        """Revoking the ledger deletes its file (and a .bak of it): the
+        player's choice to stop keeping it removes what was kept."""
+        for p in (self.ledger_path(), jsonfile.bak_path(self.ledger_path())):
+            try:
+                p.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                LOG.warning("could not delete the parse ledger file")
+
+    def record_ledger_consent(self, consented):
+        """POST /api/consent {"ledger": bool}: record the parse ledger's own
+        opt-in. Allowing it needs the Client.txt opt-in first (ValueError,
+        nothing changed); revoking it deletes ops/runtime/logshapes.json.
+        Returns the whole consent record."""
+        rec = dict(self.consent_record())
+        if consented and not rec.get("consented"):
+            raise ValueError("the parse record needs the Client.txt opt-in first")
+        rec["ledger"] = {"consented": bool(consented), "at": _utc_now(),
+                         "file": LEDGER_FILE, "keeps": list(LEDGER_KEEPS)}
+        write_private(self.consent_path, json.dumps(rec, indent=1) + "\n", backup=True)
+        if not consented:
+            self._delete_ledger()
+        self.state.set_tailer(ledger=bool(consented))
+        return rec
+
     def record_consent(self, consented, path=None):
         if path and not logfile.consent_path_ok(path):
             # AUDIT-HTTP-HARDEN S4: checked before any file system access.
@@ -935,8 +1000,19 @@ class Core:
         rec = {"consented": bool(consented), "at": _utc_now(), "app_version": VERSION,
                "file": "Client.txt", "derives": ["zone", "level", "deaths",
                                                  "whispers", "session times"]}
+        # RUN-LEDGER-CONSENT (decision 0071): the ledger's own key is kept
+        # while the Client.txt opt-in stays on; revoking the Client.txt
+        # opt-in turns the ledger off too and deletes its file
+        old = self.consent_record().get("ledger")
+        if consented and isinstance(old, dict):
+            rec["ledger"] = old
+        elif not consented and isinstance(old, dict) and old.get("consented") is True:
+            rec["ledger"] = dict(old, consented=False, at=_utc_now())
         write_private(self.consent_path, json.dumps(rec, indent=1) + "\n", backup=True)
-        self.state.set_tailer(consented=bool(consented))
+        if not consented:
+            self._delete_ledger()
+        self.state.set_tailer(consented=bool(consented),
+                              ledger=self.ledger_consented())
         if consented:
             self.start_tailing()
         else:

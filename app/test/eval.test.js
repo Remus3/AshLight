@@ -206,3 +206,93 @@ test("hotkey: a copied build fits whole, still one read and one post (TC-PRESS-B
   assert.ok(Buffer.byteLength(JSON.stringify({ item: wide })) <= hk.MAX_BODY_BYTES);
   assert.equal(hk.fitText(""), "");
 });
+
+// TC-WORN-KEY: the optional wear key (decision 0052, no default binding).
+
+function fakeGs(taken) {
+  const g = { bound: [], held: new Set(taken || []) };
+  g.isRegistered = (k) => g.held.has(k);
+  g.register = (k, fn) => {
+    if (g.held.has(k)) { return false; }
+    g.held.add(k);
+    g.bound.push([k, fn]);
+    return true;
+  };
+  return g;
+}
+
+test("wear key: one clipboard read per press, posted to /api/wear", async () => {
+  const d = fakeDeps("Item Class: Rings\nRarity: Rare\nStorm Loop\n");
+  let t = 30000;
+  d.now = () => t;
+  const press = hk.createEvalHotkey(d, hk.POST_WEAR);
+  assert.equal(d.reads, 0); // creating it reads nothing
+  assert.equal(await press(), true);
+  assert.equal(d.reads, 1);
+  assert.deepEqual(d.posts, [["/api/wear", { item: "Item Class: Rings\nRarity: Rare\nStorm Loop\n" }]]);
+  t += hk.REPEAT_GAP_MS + 1;
+  assert.equal(await press(), true);
+  assert.equal(d.reads, 2);
+  assert.equal(d.posts.length, 2);
+  // the default path stays the item check; an unknown path never leaves
+  const e = fakeDeps("x");
+  await hk.createEvalHotkey(e)();
+  assert.equal(e.posts[0][0], "/api/eval");
+  const o = fakeDeps("x");
+  await hk.createEvalHotkey(o, "/api/settings/import")();
+  assert.equal(o.posts[0][0], "/api/eval");
+  // a failure names the wear key and is never thrown
+  const bad = fakeDeps("x", true);
+  assert.equal(await hk.createEvalHotkey(bad, hk.POST_WEAR)(), false);
+  assert.match(bad.logs[0], /worn item not sent: HTTP 401/);
+});
+
+test("wear key: a held key (auto-repeat) reads the clipboard once", async () => {
+  const d = fakeDeps("x");
+  let t = 40000;
+  d.now = () => t;
+  const press = hk.createEvalHotkey(d, hk.POST_WEAR);
+  assert.equal(await press(), true);
+  t += 1000;
+  assert.equal(await press(), false);
+  for (let i = 0; i < 50; i++) {
+    t += 33;
+    assert.equal(await press(), false);
+  }
+  assert.equal(d.reads, 1);
+  assert.deepEqual(d.posts, [["/api/wear", { item: "x" }]]);
+});
+
+test("wear key: unset registers nothing; a set key binds, never a taken one", () => {
+  const fn = () => {};
+  for (const unset of [null, undefined, ""]) {
+    const g = fakeGs();
+    assert.equal(hk.registerWearKey(g, unset, fn, ["Alt+Shift+A", "Alt+Shift+E"]), null);
+    assert.deepEqual(g.bound, []);
+  }
+  const g = fakeGs(["Alt+Shift+A", "Alt+Shift+E"]);
+  assert.equal(hk.registerWearKey(g, "Ctrl+Shift+F7", fn, ["Alt+Shift+A", "Alt+Shift+E"]),
+    "Ctrl+Shift+F7");
+  assert.deepEqual(g.bound, [["Ctrl+Shift+F7", fn]]);
+  // the item check's key (wanted or held) is never taken, and no fallback is tried
+  const logs = [];
+  const h = fakeGs(["Ctrl+Shift+F9"]);
+  assert.equal(hk.registerWearKey(h, "Alt+Shift+E", fn, ["Alt+Shift+A", "Alt+Shift+E"],
+    (m) => logs.push(m)), null);
+  assert.equal(hk.registerWearKey(h, "Ctrl+Shift+F9", fn, [], (m) => logs.push(m)), null);
+  assert.deepEqual(h.bound, []);
+  assert.equal(logs.length, 2);
+  assert.ok(logs.every((m) => !m.includes("item check shortcut not available")));
+  // a throwing register is a refusal, not a crash
+  const t = { register: () => { throw new Error("bad key"); } };
+  assert.equal(hk.registerWearKey(t, "Ctrl+Shift+F7", fn, []), null);
+});
+
+test("wear key: main.js picks it with no default and shares the one read", () => {
+  const src = require("fs").readFileSync(require.resolve("../main.js"), "utf8");
+  assert.ok(src.includes("Hotkey.pick([raw], null, log)"));
+  assert.ok(!/DEFAULT_WEAR/.test(src));
+  assert.equal((src.match(/clipboard\.readText\(/g) || []).length, 1);
+  assert.ok(src.includes("EvalKey.createEvalHotkey(pressDeps, EvalKey.POST_EVAL)"));
+  assert.ok(src.includes("EvalKey.createEvalHotkey(pressDeps, EvalKey.POST_WEAR)"));
+});

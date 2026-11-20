@@ -9,8 +9,11 @@ by tc_pin before a no-op, by bridge.status and before every bridge exec.
 
 import ast
 import os
+import re
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -164,3 +167,103 @@ def test_bridge_checks_hash_before_every_exec(tmp_path, monkeypatch):
     with pytest.raises(bridge.BridgeUnavailable, match="hash"):
         b._start()
     assert spawned == []
+
+
+# -- OVL-LAUNCH-ENV (F-110): the launcher and the client start
+APP = ROOT / "app"
+SPAWN_CALL = re.compile(
+    r"\b(?:spawn|spawnSync|execFile|execFileSync|exec|execSync|fork|run)\(\s*"
+    r"([\"'`])([^\"'`]*)\1")
+# Known open item, not part of this package: setAutostart still names
+# powershell.exe bare because app/test/autostart_switch.test.js pins that
+# literal. The list may only shrink; a fixed line must be removed from it.
+BARE_SPAWN_KNOWN = {
+    ("app/client/launcher.js",
+     'const child = run("powershell.exe", psArgs(path.join(repo, "scripts", '
+     '"autostart.ps1"), [flag]), {'),
+}
+
+
+def _app_js():
+    for path in sorted(APP.rglob("*.js")):
+        rel = path.relative_to(ROOT).as_posix()
+        if "/node_modules/" in rel or rel.startswith("app/test/"):
+            continue
+        yield rel, path.read_text(encoding="utf-8")
+
+
+def test_no_bare_spawn_names_in_app():
+    """A spawn whose program is a bare name (no folder) is also looked up in
+    the child's working directory on Windows: a planted exe there would run."""
+    bad, known = [], set()
+    for rel, text in _app_js():
+        for n, line in enumerate(text.splitlines(), 1):
+            for m in SPAWN_CALL.finditer(line):
+                name = m.group(2)
+                if not name or "/" in name or "\\" in name:
+                    continue
+                if (rel, line.strip()) in BARE_SPAWN_KNOWN:
+                    known.add((rel, line.strip()))
+                    continue
+                bad.append(f"{rel}:{n}: {name}")
+    assert bad == []
+    assert known == BARE_SPAWN_KNOWN, "a fixed line must leave BARE_SPAWN_KNOWN"
+
+
+def test_launcher_runs_powershell_and_python_by_absolute_path():
+    text = (APP / "client" / "launcher.js").read_text(encoding="utf-8")
+    for fn in ("function startCore", "function stopAll"):
+        body = text[text.index(fn):]
+        body = body[:body.index("\n}\n")]
+        assert "run(psExe(env)," in body, fn
+    body = text[text.index("function resolveSidecar"):]
+    body = body[:body.index("\n}\n")]
+    assert "whichAbs(name, env, fsMod)" in body and "run(py," in body
+    assert '"WindowsPowerShell", "v1.0", "powershell.exe"' in text
+
+
+def test_run_ps1_clears_node_switches_for_the_client():
+    run = (ROOT / "scripts" / "run.ps1").read_text(encoding="ascii")
+    assert "$clientUnset = @('ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS')" in run
+    lines = run.splitlines()
+    i = next(k for k, ln in enumerate(lines) if "Start-AlDetached -FilePath $electron" in ln)
+    call = lines[i] + lines[i + 1]
+    assert "-Unset $clientUnset" in call
+    # the core and supervisor starts keep their own environment
+    for k, ln in enumerate(lines):
+        if "Start-AlDetached -FilePath $exe" in ln:
+            assert "-Unset" not in ln + lines[k + 1]
+    detach = (ROOT / "scripts" / "al_detach.ps1").read_text(encoding="ascii")
+    assert "[string[]]$Unset = @()" in detach
+    assert "$vars.Remove($have)" in detach
+    assert "OrdinalIgnoreCase" in detach
+
+
+PS51 = shutil.which("powershell.exe") if sys.platform == "win32" else None
+
+
+@pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
+@pytest.mark.slow
+def test_detached_child_does_not_get_unset_variables(tmp_path):
+    out = tmp_path / "child.txt"
+    child_py = tmp_path / "child.py"
+    child_py.write_text(
+        "import os, sys\n"
+        "with open(sys.argv[1], 'w') as fh:\n"
+        "    fh.write('|'.join(os.environ.get(k, '-') for k in\n"
+        "             ('ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS', 'AL_KEEP')))\n",
+        encoding="ascii")
+    detach = ROOT / "scripts" / "al_detach.ps1"
+    script = (f". '{detach}'; "
+              "$env:ELECTRON_RUN_AS_NODE = '1'; $env:Node_Options = '--inspect'; "
+              f"$p = Start-AlDetached -FilePath '{sys.executable}' "
+              f"-ArgumentList @('\"{child_py}\"', '\"{out}\"') "
+              f"-WorkingDirectory '{tmp_path}' -Environment @{{AL_KEEP='k'}} "
+              "-Unset @('ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS'); \"$p\"")
+    r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                        "-Command", script], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    deadline = time.time() + 15
+    while not (out.exists() and out.read_text()) and time.time() < deadline:
+        time.sleep(0.2)
+    assert out.read_text() == "-|-|k"

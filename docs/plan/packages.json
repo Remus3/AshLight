@@ -11449,8 +11449,8 @@
    "new_files": [
     "tools/watch_sources/ggg_docs.py",
     "tools/watch_sources/pob_release.py",
-    "ops/loop/watch_rows/ggg_docs.json",
-    "ops/loop/watch_rows/pob_release.json",
+    "ops/loop/watch_rows/ggg-docs.json",
+    "ops/loop/watch_rows/pob-release.json",
     "tests/test_watch_settled.py"
    ],
    "integrator_edits": [

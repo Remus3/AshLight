@@ -130,3 +130,70 @@ test("corner names are sentence case", () => {
   assert.equal(v.cornerLabel("top-right"), "Top right");
   assert.equal(v.cornerLabel("bottom-center"), "Bottom center");
 });
+
+/* RUN-LEDGER-CONSENT (decision 0071): the log record's consent line, with
+   its own Allow control beside the Client.txt opt-out. web/app.js
+   ledgerView runs alone (LEDGER-VIEW markers); the markup is read as text. */
+function webLedgerView() {
+  const vm = require("node:vm");
+  const src = web.source("app.js");
+  const m = /\/\* LEDGER-VIEW:begin[\s\S]*?\*\/([\s\S]*?)\/\* LEDGER-VIEW:end \*\//.exec(src);
+  assert.ok(m, "LEDGER-VIEW markers in web/app.js");
+  const box = {};
+  vm.runInNewContext(m[1] + "\nout.f = ledgerView;", { out: box });
+  return (tl) => JSON.parse(JSON.stringify(box.f(tl)));
+}
+
+test("ledger consent line with its own Allow control", () => {
+  const html = web.source("index.html");
+  const foot = /<footer[^>]*>([\s\S]*?)<\/footer>/.exec(html)[1];
+  const line = /<p id="ledger-line"[^>]*>([\s\S]*?)<\/p>/.exec(foot);
+  assert.ok(line, "the ledger line sits in the footer, beside the Client.txt opt-out");
+  assert.match(line[0], /<p id="ledger-line"[^>]*\bhidden\b/);
+  assert.ok(foot.indexOf('id="consent-no"') < foot.indexOf('id="ledger-line"'));
+  // its own control: a plain button, never the app's one primary button
+  const btn = /<button id="ledger-allow"([^>]*)>([^<]*)<\/button>/.exec(line[1]);
+  assert.ok(btn, "the line has its own button");
+  assert.match(btn[1], /type="button"/);
+  assert.doesNotMatch(btn[1], /primary/);
+  assert.match(btn[1], /aria-describedby="ledger-text ledger-said"/);
+  assert.equal(btn[2], "Allow the log record");
+  assert.notEqual(btn[2], "Allow reading Client.txt");
+
+  const view = webLedgerView();
+  // hidden until Client.txt is read; the Client.txt opt-in alone allows nothing
+  assert.equal(view({}).shown, false);
+  assert.equal(view({ consented: false, ledger: true }).shown, false);
+  const off = view({ consented: true });
+  assert.deepEqual(off, view({ consented: true, ledger: false }));
+  assert.equal(off.shown, true);
+  assert.equal(off.on, false);
+  assert.equal(off.send, true);
+  assert.equal(off.button, "Allow the log record");
+  assert.match(off.text, /^Log record: off\. /);
+  // plain words for what is kept, where, and what is not
+  assert.match(off.text, /counts the kinds of log lines/);
+  assert.match(off.text, /on this computer/);
+  assert.match(off.text, /Names, chat and item words are blanked out/);
+  assert.match(off.text, /Nothing is sent\./);
+  // only ledger === true is on (a truthy non-bool is not)
+  assert.equal(view({ consented: true, ledger: "yes" }).on, false);
+  const on = view({ consented: true, ledger: true });
+  assert.equal(on.on, true);
+  assert.equal(on.send, false);
+  assert.equal(on.button, "Stop the log record");
+  assert.match(on.text, /^Log record: on\. /);
+  assert.match(on.text, /Stopping it deletes the file\.$/);
+  for (const s of [off.text, on.text, off.button, on.button]) {
+    assert.match(s, /^[\x20-\x7e]+$/, "ASCII");
+    for (const sentence of s.split(/(?<=\.) /)) {
+      assert.ok(sentence.split(" ").length <= 20, sentence);
+    }
+    assert.doesNotMatch(s, /\b(core|token|tailer|ledger|consent)\b/i);
+  }
+
+  // the click posts only the ledger flag, through the token-carrying api()
+  const app = web.source("app.js");
+  assert.match(app, /api\("POST", "\/api\/consent", \{ ledger: ledgerSend \}\)/);
+  assert.match(app, /\$\("ledger-allow"\)\.addEventListener\("click", toggleLedger\)/);
+});
