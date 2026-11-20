@@ -7,9 +7,17 @@ Resistance" share "+#% to Fire Resistance"), and "reduced" / "less" read as
 
 The weights live in a per-host JSON file under the runtime dir
 (`<runtime>/theorycraft/weights.json`, gitignored ops/runtime/ by default;
-`paths.weights_file()`), written with the defaults on first use so the user
-can edit it. A bad file never crashes the core: the defaults are used and
-the file is left alone for the user to fix.
+`paths.weights_file()`). A bad file never crashes the core: the defaults are
+used and the file is left alone for the user to fix.
+
+TC-WEIGHTS-DELTA-STORE (F-134): the file (version 2) holds only the player's
+changes over the defaults: a row whose weight differs, a row the player
+added, a default row the player removed (stored as null), and the band parts
+(sidegrade abs / pct) that differ. The full document is merged at load, so a
+default AshLight changes reaches every row the player did not touch. A
+version 1 file (the old full document) migrates at load with no score
+change, after one backup of its bytes beside it (weights.v1.json, never
+overwritten). get() still returns the merged full document.
 """
 
 import json
@@ -24,7 +32,8 @@ from . import item as item_mod
 
 log = logging.getLogger("al.theorycraft")
 
-VERSION = 1
+VERSION = 2
+V1_BACKUP = "weights.v1.json"
 MAX_KEYS = 500
 MAX_KEY_LEN = 200
 MAX_WEIGHT = 1e6
@@ -178,12 +187,90 @@ def validate(doc):
     return {"version": VERSION, "weights": clean, "sidegrade": sg}
 
 
+def _row_default(key):
+    """(canonical default key, default weight) for a key, or (None, None)."""
+    low = key.lower()
+    for k, v in DEFAULT_WEIGHTS.items():
+        if k.lower() == low:
+            return k, v
+    return None, None
+
+
+def overrides_of(doc):
+    """The player's changes in a clean full document, as the version 2 file.
+
+    weights: rows that differ from the defaults (added or changed, under the
+    player's key) and default rows the document lacks (null); sidegrade: the
+    band parts that differ. Keys compare case-insensitively."""
+    rows = {}
+    seen = set()
+    for k, v in doc["weights"].items():
+        dk, dv = _row_default(k)
+        if dk is not None:
+            seen.add(dk.lower())
+            if dk == k and float(dv) == float(v):
+                continue
+            if dk != k:
+                rows[dk] = None
+        rows[k] = v
+    for dk in DEFAULT_WEIGHTS:
+        if dk.lower() not in seen:
+            rows[dk] = None
+    side = {n: v for n, v in doc["sidegrade"].items()
+            if float(v) != float(DEFAULT_SIDEGRADE[n])}
+    return {"version": VERSION, "weights": rows, "sidegrade": side}
+
+
+def merge(over):
+    """The full document: the defaults with a version 2 file applied."""
+    rows = dict(DEFAULT_WEIGHTS)
+    for k, v in over.get("weights", {}).items():
+        if v is None:
+            rows.pop(k, None)
+    for k, v in over.get("weights", {}).items():
+        if v is None:
+            continue
+        dk, _ = _row_default(k)
+        if dk is not None and dk != k:
+            rows.pop(dk, None)
+        rows[k] = v
+    side = dict(DEFAULT_SIDEGRADE)
+    side.update(over.get("sidegrade", {}))
+    return validate({"weights": rows, "sidegrade": side})
+
+
+def validate_overrides(doc):
+    """A clean version 2 file. Raises WeightsError."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("weights"), dict):
+        raise WeightsError("weights (object of stat key -> number or null) required")
+    raw = doc["weights"]
+    if len(raw) > MAX_KEYS + len(DEFAULT_WEIGHTS):
+        raise WeightsError(f"at most {MAX_KEYS} weights")
+    rows = {}
+    for k, v in raw.items():
+        if v is None:
+            dk = _row_default(k)[0] if isinstance(k, str) else None
+            if dk is None:
+                raise WeightsError(f"null is only for a default row: {str(k)[:40]!r}")
+            rows[dk] = None
+    kept = validate({"weights": {k: v for k, v in raw.items() if v is not None},
+                     "sidegrade": {}})["weights"]
+    rows.update(kept)
+    side = doc.get("sidegrade", {})
+    if not isinstance(side, dict) or set(side) - set(DEFAULT_SIDEGRADE):
+        raise WeightsError("sidegrade must be an object {abs, pct}")
+    sg = validate({"weights": {}, "sidegrade": dict(DEFAULT_SIDEGRADE, **side)})["sidegrade"]
+    return {"version": VERSION, "weights": rows,
+            "sidegrade": {n: sg[n] for n in side}}
+
+
 def default_path(runtime_dir):
     return Path(runtime_dir) / "theorycraft" / "weights.json"
 
 
 class WeightsStore:
-    """The weights file: read on make, defaults written when missing."""
+    """The weights file: the player's changes, merged over the defaults at
+    load; an empty change file is written when missing."""
 
     def __init__(self, path):
         self.path = Path(path)
@@ -191,13 +278,16 @@ class WeightsStore:
         self._lock = threading.Lock()
         self.doc = self._load()
 
+    def _write(self, over):
+        jsonfile.write_json(self.path, over, sort_keys=True)
+
     def _load(self):
         try:
             text = self.path.read_text(encoding="utf-8")
         except FileNotFoundError:
             doc = defaults()
             try:
-                jsonfile.write_json(self.path, doc, sort_keys=True)
+                self._write(overrides_of(doc))
             except OSError as e:
                 log.warning("default weights not written: %s", e)
             return doc
@@ -205,26 +295,67 @@ class WeightsStore:
             self.load_error = f"unreadable: {type(e).__name__}"
             return defaults()
         try:
-            return validate(json.loads(text))
+            raw = json.loads(text)
+            version = raw.get("version", 1) if isinstance(raw, dict) else None
+            if version == VERSION:
+                return merge(validate_overrides(raw))
+            if version != 1:
+                raise WeightsError(f"unknown weights file version {version!r}")
+            doc = validate(raw)
         except (ValueError, WeightsError) as e:
             self.load_error = str(e)
             log.warning("weights file not used, defaults instead: %s", e)
             return defaults()
+        self._migrate(text, doc)
+        return doc
+
+    def _migrate(self, text, doc):
+        """A good version 1 file: back its bytes up once, then rewrite it as
+        the player's changes. A failed step leaves the old file as it was;
+        the merged document is the same either way."""
+        backup = self.path.with_name(V1_BACKUP)
+        try:
+            if not backup.exists():
+                jsonfile.write_text(backup, text)
+            self._write(overrides_of(doc))
+        except OSError as e:
+            log.warning("weights file not migrated: %s", e)
 
     def get(self):
         with self._lock:
             return json.loads(json.dumps(self.doc))
 
     def put(self, doc):
-        """Validate, persist and use a new document. Raises WeightsError."""
+        """Validate, persist (as changes) and use a new full document.
+        Raises WeightsError."""
         clean = validate(doc)
         with self._lock:
-            jsonfile.write_json(self.path, clean, sort_keys=True)
+            self._write(overrides_of(clean))
             self.doc = clean
             self.load_error = None
         return self.get()
 
+    def reset(self, key=None):
+        """Back to the defaults: one row (key, case-insensitive) or, with no
+        key, every row and the band."""
+        if key is None:
+            return self.put(defaults())
+        doc = self.get()
+        low = key.lower()
+        rows = {k: v for k, v in doc["weights"].items() if k.lower() != low}
+        dk, dv = _row_default(key)
+        if dk is not None:
+            rows[dk] = dv
+        doc["weights"] = rows
+        return self.put(doc)
+
     def snapshot(self):
+        """The merged document plus load_error, the defaults and the
+        player's changes (null = a removed default row)."""
         out = self.get()
         out["load_error"] = self.load_error
+        changed = overrides_of(out)
+        out["defaults"] = defaults()
+        out["changed"] = {"weights": changed["weights"],
+                          "sidegrade": changed["sidegrade"]}
         return out

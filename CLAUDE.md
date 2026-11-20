@@ -460,9 +460,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   supervisor and overlay; run.ps1 is idempotent per component (decision
   0010). Reverses if: the overlay gains a clean-exit channel or Electron
   moves out of app/node_modules.
-- Logon autostart is an opt-in scheduled task, OFF by default (decision
-  0011). Reverses if: the task is refused for a standard user or autostart
-  is no longer wanted.
+- Logon autostart is an opt-in scheduled task, OFF by default; when on it
+  starts the client tray-only (no companion window, overlay gated by the
+  log) through a pythonw entry point, no VBScript (decision 0011, amended
+  2026-11-18 and 2026-11-19). Reverses if: the task is refused for a
+  standard user, autostart is no longer wanted, or idle tray-mode memory
+  exceeds the decision 0002 budget (then core-only at logon).
 - Agent worktrees go under the sidecar via tools/wt_sidecar_hook.py
   (decision 0012). Reverses if: the harness gains a worktree base-dir
   setting or the hook breaks isolated spawns.
@@ -587,9 +590,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   the budgets, or the GC ceiling costs more than it saves.
 - Waystone risk check on the item-check press from an own rule table and
   the build's PoB numbers; search strings (<= 250 chars) copied only on
-  the player's click; own zone notes with an act default (decision 0030,
-  amended 2026-11-17: rules checked against the snapshot waystone pool,
-  250 is GGG's limit since 0.5.0). Reverses if: GGG's tool rules change, the search limit differs, or a
+  the player's click; zone notes folded into the one guide file (decision
+  0043, amended 2026-11-19) (decision 0030, amended 2026-11-17 and
+  2026-11-19: rules checked against the snapshot waystone pool, 250 is
+  GGG's limit since 0.5.0). Reverses if: GGG's tool rules change, the search limit differs, or a
   note proves copied.
 - The ashlight.filter snippet is only a download on the player's click
   (GET /api/filter); AshLight never writes it into a game folder
@@ -658,7 +662,9 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   at most 1 a second and 5 a minute; downloads are saved only from the core
   origin with .build, .filter, .json or .txt; with no saved place the
   companion opens on the largest display that is not the overlay's
-  (decision 0041 amendment 2026-11-19); per-user Start Menu +
+  (decision 0041 amendment 2026-11-19); the logon task may start it
+  tray-only; the preload action set is fixed and argument-free (decision
+  0041 amendment 2026-11-18); per-user Start Menu +
   Desktop shortcut from setup.ps1; no packaged .exe (decision 0041).
   The companion returns without focus (showInactive, never focus / show /
   restore / maximize) when the log wakes (overlay gate false -> true,
@@ -1023,3 +1029,10 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   terms bar the daily read, a bad release auto-applies in practice, the
   operator wants click-only, or a stdlib-verifiable signature becomes
   available.
+- Uninstall: uninstall.ps1 needs no Python, removes only items proven
+  AshLight's own, keeps <home>\data unless -Purge (Recycle Bin), asks
+  nothing by default, never reads a game folder and ends with one fixed
+  sentence about files the player may have copied; checkout mode never
+  removes Worktree, Scratch or ClaudeHistory (decision 0066). Reverses if:
+  players lose data they wanted kept or keep data they wanted gone, in
+  practice.

@@ -105,10 +105,44 @@ def test_enable_dryrun_prints_definition_and_registers_nothing(tmp_path):
     # action paths resolved at run time from the script's own location
     assert Path(d["launcher"]).resolve() == LAUNCHER.resolve()
     assert Path(d["working_directory"]).resolve() == ROOT.resolve()
-    assert d["run_ps1_args"] == ["-NoBrowser", "-Autostart"]
+    assert d["run_ps1_args"] == ["-Autostart"]  # REL-AUTOSTART-TRAY: run.ps1 picks the mode
     # opt-in not recorded by a dry run
     assert not (tmp_path / "runtime" / "autostart.json").exists()
     assert Path(d["optin_file"]).resolve() == (tmp_path / "runtime" / "autostart.json").resolve()
+
+
+@needs_ps
+@pytest.mark.slow
+def test_enable_dryrun_shows_the_tray_client_action(tmp_path):
+    # REL-AUTOSTART-TRAY (decision 0011 amendment 2026-11-18): the logon
+    # start is the desktop client tray-only (--client --tray), still through
+    # the pythonw entry point and run.ps1 -Autostart; nothing is registered.
+    marker = tmp_path / "tripwire.txt"
+    r = _ps(_guarded(f"& '{AUTOSTART}' -Enable -DryRun", marker), tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert not marker.exists(), marker.read_text()
+    d = _json_line(r.stdout)
+    assert d["dry_run"] is True and d["registered"] is False
+    assert d["arguments"] == "-m server.al.autostart_entry"
+    assert d["run_ps1_args"] == ["-Autostart"]
+    assert d["client_args"] == ["--client", "--tray"]
+    assert "tray" in d["logon_start"] and "tray" in d["description"]
+    assert not (tmp_path / "runtime" / "autostart.json").exists()
+    # the entry point hands run.ps1 -Autostart only: -NoBrowser would keep
+    # the client from starting
+    assert autostart_entry.RUN_ARGS == ("-Autostart",)
+    # run.ps1: -Autostart with the client installed starts it tray-only and
+    # never opens the browser; a live client is left alone
+    text = RUN.read_text(encoding="ascii")
+    block = text[text.index("if ($Autostart) {"):text.index("function Write-AlLog")]
+    assert "$NoBrowser = [switch]$true" in block and "$trayOnly = $true" in block
+    assert "electron.exe" in block
+    assert "if ($trayOnly) { $wantOverlay = $true }" in text
+    assert "if ($trayOnly) { $clientArgs += '--tray' }" in text
+    assert "$trayOnly -and -not (@($plan.start) -contains 'overlay')" in text
+    # the client knows the flag (app/client/link.js wantsTray)
+    link = (ROOT / "app" / "client" / "link.js").read_text(encoding="ascii")
+    assert 'const TRAY_FLAG = "--tray";' in link and "function wantsTray(argv)" in link
 
 
 @needs_ps
@@ -159,7 +193,7 @@ def test_launcher_is_hidden_and_relative(tmp_path, monkeypatch):
     assert Path(cmd[0]) == win / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     assert cmd[cmd.index("-WindowStyle") + 1] == "Hidden"
     assert cmd[cmd.index("-File") + 1] == str(root / "scripts" / "run.ps1")
-    assert cmd[-2:] == ["-NoBrowser", "-Autostart"]
+    assert cmd[-1] == "-Autostart" and "-NoBrowser" not in cmd  # REL-AUTOSTART-TRAY
     assert autostart_entry.launch_command(root, {}) is None  # no guessed drive
 
     calls = []

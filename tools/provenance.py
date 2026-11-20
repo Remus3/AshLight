@@ -8,7 +8,7 @@ Lists every entry of AshLight's authored data, one line each:
     <checked> <src> <where>
 
 where <where> names the entry (`zone_guide G1 The Riverbank`,
-`zone_notes C default`, `boss G1_15`, `waystone rule ground`,
+`zone_guide G1 default`, `boss G1_15`, `waystone rule ground`,
 `waystone reward rarity`, ...). With --before only the entries checked
 before that date are listed: the re-verify list (for example the 1.0
 launch, 2026-12-11). The last line is a count. An entry with no source
@@ -16,9 +16,9 @@ or date, or with a malformed one, prints `MISSING` and the exit code is 1.
 
 Where an entry's pair comes from (the first one found):
 - zone_guide.json: the zone entry's own `src` / `checked`, else its act
-  table's pair; the act default and the endgame entry carry their own;
-- zone_notes.json: the notes are plain strings, so every note of an act
-  takes the pair in the document's `provenance` table under that act key;
+  table's pair; the act default and the endgame entry carry their own
+  (the one authored zone file since DATA-GUIDE-MERGE: the zone notes
+  became `layout` fields, decision 0043 amendment 2026-11-19);
 - campaign.BOSS_ZONES: campaign.BOSS_PROVENANCE under the same area id;
 - theorycraft.waystone RULES and REWARDS: each entry's own pair.
 
@@ -30,7 +30,7 @@ snapshot holds the address):
 - log                     the player's own Client.txt observation
 - operator                text the operator pasted
 
-Stdlib only, read-only: reads the tracked data files and imports the two
+Stdlib only, read-only: reads the tracked guide file and imports the two
 modules, writes nothing, fetches nothing.
 """
 
@@ -44,7 +44,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "server" / "al" / "data"
 GUIDE = DATA / "zone_guide.json"
-NOTES = DATA / "zone_notes.json"
 
 SRC_RE = re.compile(r"^(?:research:\d{4}|snapshot:[a-z0-9_-]+|ggg-export:[a-z0-9_-]+"
                     r"|log|operator)$")
@@ -100,21 +99,6 @@ def guide_entries(doc):
     return out
 
 
-def notes_entries(doc):
-    out = []
-    acts = doc.get("acts") if isinstance(doc.get("acts"), dict) else {}
-    table = doc.get("provenance") if isinstance(doc.get("provenance"), dict) else {}
-    for key, act in acts.items():
-        act = act if isinstance(act, dict) else {}
-        src, checked = _pair(table.get(key))
-        out.append({"where": f"zone_notes {key} default", "src": src, "checked": checked})
-        zones = act.get("zones") if isinstance(act.get("zones"), dict) else {}
-        for zone in zones:
-            out.append({"where": f"zone_notes {key} {zone}", "src": src,
-                        "checked": checked})
-    return out
-
-
 def code_entries():
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
@@ -133,9 +117,9 @@ def code_entries():
     return out
 
 
-def entries(guide=GUIDE, notes=NOTES):
+def entries(guide=GUIDE):
     """Every authored entry as {"where", "src", "checked", "ok"}."""
-    out = guide_entries(_read(guide)) + notes_entries(_read(notes)) + code_entries()
+    out = guide_entries(_read(guide)) + code_entries()
     for e in out:
         e["ok"] = valid_src(e["src"]) and valid_checked(e["checked"])
     return out

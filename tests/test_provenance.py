@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import provenance  # noqa: E402
-from server.al import campaign, zoneguide, zonenotes  # noqa: E402
+from server.al import campaign, zoneguide  # noqa: E402
 from server.al.theorycraft import waystone  # noqa: E402
 
 
@@ -19,16 +19,14 @@ def test_every_authored_entry_resolves_src_and_checked():
     assert bad == []
     where = {e["where"] for e in items}
     guide = json.loads(provenance.GUIDE.read_text(encoding="ascii"))
-    notes = json.loads(provenance.NOTES.read_text(encoding="ascii"))
     for key, act in guide["acts"].items():
         assert f"zone_guide {key} default" in where
         for zone in act.get("zones", {}):
             assert f"zone_guide {key} {zone}" in where
     assert "zone_guide endgame" in where
-    for key, act in notes["acts"].items():
-        assert f"zone_notes {key} default" in where
-        for zone in act.get("zones", {}):
-            assert f"zone_notes {key} {zone}" in where
+    # DATA-GUIDE-MERGE: one authored zone file; no zone_notes entry is left
+    assert not any(w.startswith("zone_notes ") for w in where)
+    assert not hasattr(provenance, "NOTES")
     for area_id in campaign.BOSS_ZONES:
         assert f"boss {area_id}" in where
     assert set(campaign.BOSS_PROVENANCE) == set(campaign.BOSS_ZONES)
@@ -36,8 +34,8 @@ def test_every_authored_entry_resolves_src_and_checked():
         assert f"waystone rule {r['id']}" in where
     for r in waystone.REWARDS:
         assert f"waystone reward {r['id']}" in where
-    # the fields are data only: the readers still load both files
-    assert zoneguide.load()["acts"] and zonenotes.load()["acts"]
+    # the fields are data only: the reader still loads the guide
+    assert zoneguide.load()["acts"]
 
 
 def test_an_entry_without_a_pair_is_missing(tmp_path):

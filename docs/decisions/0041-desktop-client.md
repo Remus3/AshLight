@@ -212,3 +212,43 @@ Links, downloads and the first-run place of the companion window.
   play, players find the window coming back unwanted with the switch on
   by default, the 8 px allowance lets a window show on the game's
   display, or decision 0029 changes its idle signal.
+
+## Amendment 2026-11-18 (REL-AUTOSTART-TRAY, plan unit F-073, ruling Q-08)
+
+- Decision (point 2, the logon start): the logon autostart (decision
+  0011 amendment 2026-11-18) may start the client tray-only:
+  `electron app --client --tray` (`Link.wantsTray(argv)`: `--client`
+  and `--tray` together; `--tray` alone is no client start). The FIRST
+  `open()` of such a start builds the tray and connects the core (the
+  usual health check, then `scripts\run.ps1 -NoBrowser` through the
+  launcher when it does not answer) and creates no companion window and
+  makes no focus call; the overlay follows the log gate (decision 0029).
+  Any later `open()` - a tray left-click, tray "Minimize / Restore", or
+  a second `--client` start (the Start Menu shortcut, the
+  single-instance hand-off) - shows the window as before. app/main.js is
+  unchanged: the flag is read in `app/client/window.js`. The sentence
+  "-NoBrowser (and the logon autostart, decision 0011) starts the core
+  and supervisor only, so no overlay at logon" now holds for
+  `-NoBrowser` only.
+- Decision (point 7, the preload actions): the companion's sandboxed
+  preload hands the page a FIXED, closed set of actions, each a fixed
+  IPC message with no data that main honours only from the companion
+  window's main frame on the core (`isCompanion`): `restartOverlay()`,
+  plus the argument-free autostart actions the tray / dashboard
+  "Start with Windows" switch needs (REL-AUTOSTART-SWITCH: read the
+  opt-in, turn it on, turn it off; each runs the existing
+  `scripts\autostart.ps1` hidden) and the one calc opt-in action of the
+  TC package under the same ruling. No action takes an argument, a
+  path, a command or the token; adding one is a dated amendment here.
+- Alternatives: a separate `--tray` code path in app/main.js - rejected:
+  main.js is shared by every package and already hands open() the
+  start; a hidden companion window created at logon - rejected: a
+  second renderer for nothing (decision 0002 RAM budget); a generic
+  "run script" preload action - rejected: the page could then pick the
+  script or its arguments.
+- Why: logon brings AshLight up with no click and no window, and the
+  companion appears only when the player asks for it; the preload stays
+  an allow-list a reviewer can read in one file.
+- Reverses if: idle tray-mode memory exceeds the decision 0002 budget
+  (then core-only at logon, decision 0011), a tray-only start is seen
+  showing or focusing a window, or an action needs data from the page.
