@@ -32,8 +32,11 @@
   Open the dashboard in an Edge --app window instead of the default browser.
 .PARAMETER Autostart
   Set only by the opt-in logon task (scripts\autostart.ps1, decision 0011):
-  implies -NoBrowser and starts nothing unless the recorded opt-in
-  (ops\runtime\autostart.json) says enabled.
+  starts nothing unless the recorded opt-in (ops\runtime\autostart.json)
+  says enabled; then, with the client installed, the client starts
+  tray-only (--client --tray: tray and overlay, no companion window,
+  REL-AUTOSTART-TRAY), without it the core and supervisor only. Never
+  opens the browser.
 #>
 [CmdletBinding()]
 param(
@@ -79,6 +82,11 @@ $log = Join-Path $paths.logs 'run.log'
 
 # CORE-AUTOSTART (decision 0011): the logon task passes -Autostart; the
 # recorded opt-in decides, so a task left behind after -Disable is a no-op.
+# REL-AUTOSTART-TRAY (decision 0011 amendment 2026-11-18): with the client
+# installed the logon start is the client tray-only (--client --tray: tray
+# and overlay, the overlay gated by the log, no companion window); without
+# it the core stays alone. A logon start never opens the browser.
+$trayOnly = $false
 if ($Autostart) {
     $NoBrowser = [switch]$true
     $optin = $false
@@ -93,6 +101,13 @@ if ($Autostart) {
     $state = if ($optin) { 'on' } else { 'off (no-op)' }
     Add-Content -Path $log -Value ((Get-Date -Format 's') + " run: logon autostart, opt-in $state") -Encoding ASCII
     if (-not $optin) { exit 0 }
+    if (Test-Path -LiteralPath (Join-Path $Repo 'app\node_modules\electron\dist\electron.exe')) {
+        $trayOnly = $true
+        $mode = 'client tray-only'
+    } else {
+        $mode = 'core only (client not installed)'
+    }
+    Add-Content -Path $log -Value ((Get-Date -Format 's') + " run: logon start, $mode") -Encoding ASCII
 }
 
 function Write-AlLog([string]$Message) {
@@ -154,6 +169,8 @@ $electron = Join-Path $Repo 'app\node_modules\electron\dist\electron.exe'
 # DESKTOP-CLIENT (decision 0041): the "overlay" component is the client
 # process; it is wanted only when a window is wanted and the browser is not.
 $wantOverlay = -not ($NoOverlay -or $NoBrowser -or $Browser -or $EdgeApp)
+# REL-AUTOSTART-TRAY: the logon start wants the client (tray-only), no browser
+if ($trayOnly) { $wantOverlay = $true }
 $plan = Get-AlPlan
 
 if (Test-AlHealth) {
@@ -209,8 +226,12 @@ if (-not $wantOverlay) {
     Write-AlLog 'run: client not requested (-NoOverlay / -NoBrowser / -Browser)'
 } elseif (-not (Test-Path $electron)) {
     Write-AlLog 'run: client not installed - run scripts\setup.ps1 with Node 22.12.0 or newer'
+} elseif ($trayOnly -and -not (@($plan.start) -contains 'overlay')) {
+    # a live client is left alone: a second --client start would show its window
+    Write-AlLog "run: client already running (pid $($plan.status.overlay.pid)); logon start leaves it alone"
 } else {
     $clientArgs = @('"' + (Join-Path $Repo 'app') + '"', '--client')
+    if ($trayOnly) { $clientArgs += '--tray' }
     $ovlPid = Start-AlDetached -FilePath $electron -ArgumentList $clientArgs `
         -WorkingDirectory (Join-Path $Repo 'app') -Environment $detachEnv
     $clientShown = $true
@@ -233,7 +254,9 @@ if (-not $wantOverlay) {
     }
 }
 
-if ($clientShown) {
+if ($clientShown -and $trayOnly) {
+    Write-AlLog 'run: AshLight client started in the tray (logon; no window)'
+} elseif ($clientShown) {
     Write-AlLog 'run: dashboard shown in the AshLight client'
 } elseif (-not $NoBrowser) {
     if ($EdgeApp) {
