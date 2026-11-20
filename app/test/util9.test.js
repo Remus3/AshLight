@@ -24,11 +24,12 @@ test("history: delta text and rows", () => {
   assert.deepEqual(h.bestRows(null), []);
 });
 
-test("history: under-level text from the core", () => {
-  assert.equal(h.underlevelText({ underlevel: { text: "4 levels under this zone." } }),
-    "4 levels under this zone.");
-  assert.equal(h.underlevelText({ underlevel: null }), "");
-  assert.equal(h.underlevelText(null), "");
+test("history: the under-level line left with the old Level tile", () => {
+  // PLAY-LEGACY-OUT-1: the strip's sub line carries the under-level words
+  assert.equal(h.underlevelText, undefined);
+  const ids = [];
+  h.paint({ getElementById: (id) => { ids.push(id); return null; } }, { underlevel: { text: "x" } });
+  assert.deepEqual(ids, ["historybox"]);
 });
 
 test("price watch: model", () => {

@@ -1,7 +1,8 @@
 /* UTIL-CAMPAIGN-CHECKS: the campaign hint word in the overlay status slot
-   (app/shared/render_gate.js) and the dashboard hint rows (web/history.js),
-   plus UTIL-WAYSTONE-REWARD's overlay line (the core picks it). The core
-   sends the words; these only place them. */
+   (app/shared/render_gate.js), plus UTIL-WAYSTONE-REWARD's overlay line
+   (the core picks it). The core sends the words; these only place them.
+   PLAY-LEGACY-OUT-1: web/history.js no longer paints the hint rows (their
+   legacy group is retired by region C). */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -33,12 +34,11 @@ test("campaign word fills the status slot last", () => {
   assert.ok(gate.FIELDS.includes("campaign"));
 });
 
-test("campaign hints on the dashboard", () => {
-  assert.deepEqual(h.campaignHints({ campaign: camp }),
-    ["This zone's boss deals mostly cold damage.", "Your build's boots have no movement speed."]);
-  assert.deepEqual(h.campaignHints({ campaign: null }), []);
-  assert.deepEqual(h.campaignHints({ campaign: { hints: [{ text: 5 }, null] } }), []);
-  assert.deepEqual(h.campaignHints(null), []);
+test("the history painter no longer writes the campaign hint rows", () => {
+  assert.equal(h.campaignHints, undefined);
+  const ids = [];
+  h.paint({ getElementById: (id) => { ids.push(id); return null; } }, { campaign: camp });
+  assert.ok(!ids.includes("campaign-hints"), ids.join(","));
 });
 
 test("another character's view drops the campaign hints", () => {

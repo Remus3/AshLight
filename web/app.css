@@ -153,12 +153,6 @@ main {
   background: var(--fk-surface-2);
   padding: 16px;
 }
-/* F6: the trade live region sits in the main grid; while empty it takes
-   no space but stays in the accessibility tree (not display: none). */
-.trade-status { margin: 0; }
-.trade-status:empty { position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
-
 .card h2 { font-size: 1rem; margin: 0 0 8px; }
 
 .consent { border-color: var(--fk-accent); }
@@ -185,42 +179,7 @@ button.link {
   min-height: 24px;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-.stat {
-  border: 1px solid var(--fk-border);
-  border-radius: 8px;
-  padding: 12px 16px;
-  min-width: 0;
-}
-.stat .label {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--fk-text-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--al-track-caps);
-}
-.stat .value {
-  margin: 4px 0;
-  font-size: clamp(2rem, 6vw, 3.25rem);
-  font-weight: 700;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-}
-/* The zone is the main glance value: it gets the whole first row, and a
-   long name wraps between words, never mid-word (UI-REVIEW-2). */
-.stat-zone { grid-column: 1 / -1; }
-/* Glance numbers (level, deaths, timers) never break inside a number. */
-.stat .value.mono { white-space: nowrap; overflow-wrap: normal; }
-.stat-zone .value { font-size: clamp(1.5rem, 4.5vw, 2.4rem); overflow-wrap: break-word; }
-/* A long character name under the level wraps inside its tile at 320 px
-   instead of running into the next tile (UX-U7, live 320 px pass). */
-.stat .sub { margin: 0; color: var(--fk-text-muted); overflow-wrap: anywhere; }
-/* UTIL-MULTICHAR: the per-character selector under the Level tile */
+/* UTIL-MULTICHAR: the per-character selector in the Act times card */
 .char-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; }
 .char-pick select {
   font: inherit;
@@ -233,7 +192,9 @@ button.link {
   max-width: 100%;
 }
 .char-pick select:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
-.stat-zone .sub .mono { font-size: 1.6rem; color: var(--fk-text); font-weight: 600; }
+/* PLAY-LEGACY-OUT-1: the picker and the pace line keep the muted sub line
+   look they had under the old Level tile */
+#actsbox > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
 
 .tag {
   display: inline-block;
@@ -272,25 +233,10 @@ button.link {
 .event-list li.trade .kind { color: var(--fk-status-warn); }
 .event-list li.death .kind { color: var(--fk-status-bad); }
 
-.trades { border-color: var(--fk-status-warn); }
 /* UX-NEWEST N1: the Last session card is silent (no live region), so it
    shows by position (under the tiles) and a steady accent edge, no motion;
    the edge is decorative, the heading carries the meaning */
 .card.session { border-left: 4px solid var(--fk-accent); }
-.trade-list { list-style: none; margin: 0 0 8px; padding: 0; }
-.trade-list li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  padding: 8px;
-  border-top: 1px solid var(--fk-border);
-  border-left: 4px solid var(--fk-status-warn);
-  min-width: 0;
-}
-.trade-list li:first-child { border-top: none; }
-.trade-list .what { flex: 1 1 14em; min-width: 0; overflow-wrap: anywhere; }
-.trade-list .where { color: var(--fk-text-muted); }
 button.secondary {
   color: var(--fk-text);
   background: var(--fk-surface);
@@ -408,7 +354,6 @@ textarea, .weights-form input {
 .rates-list .rate-per { white-space: nowrap; }
 #rates-pill { margin: 0 0 8px; }
 #rates-unit { margin: 0 0 4px; }
-.trade-list .about { color: var(--fk-text-muted); }
 .webdata-form { margin: 0 0 8px; }
 .check { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-weight: 600; cursor: pointer; }
 .check input { width: 20px; height: 20px; margin: 0; flex: none; cursor: pointer;
@@ -506,9 +451,6 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .promises li { margin: 2px 0; }
 
 @media (max-width: 600px) {
-  .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stats .stat:last-child { grid-column: 1 / -1; }
-  .stat { padding: 8px 10px; }
   .event-list .time { display: none; }
   .rates-list .rate-name { flex-basis: 100%; }
 }
@@ -532,8 +474,7 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
-/* UTIL-UNDERLEVEL / UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO */
-.underlevel { padding-left: 8px; border-left: 4px solid var(--fk-status-warn); overflow-wrap: anywhere; }
+/* UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO */
 .history-controls, .settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
 .history .slower { color: var(--fk-status-warn); }
 .watch-list li { overflow-wrap: anywhere; }
@@ -619,10 +560,6 @@ button.tab:focus-visible { outline-offset: -3px; }
 /* a column whose cards are all hidden (no build yet) takes no track */
 .panel-grid > .col:not(:has(> section:not([hidden]))) { display: none; }
 .zone-guide-box > * { margin: 8px 0 0; }
-.build-alert { border-left: 4px solid var(--fk-status-warn); overflow-wrap: anywhere; }
-.build-alert p { margin: 0; }
-.build-alert h3 { font-size: 0.9rem; margin: 8px 0 4px; color: var(--fk-text-muted); }
-.upgrade-list { margin: 0; padding-left: 20px; }
 .panel-grid > .col:focus-visible {
   outline: 3px solid var(--fk-text); outline-offset: 2px; }
 /* the header news line: a polite live region that is always visually

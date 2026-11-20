@@ -297,5 +297,4 @@ test("the page pre-links the files and keeps the bar word and character slot", (
   assert.match(HTML, /<link rel="stylesheet" href="\/web\/strip\.css">/);
   assert.match(HTML, /id="bar-char"/);
   assert.match(HTML, /id="reading"/);
-  assert.match(HTML, /data-legacy="g-tiles"/);
 });

@@ -374,7 +374,7 @@ checkout runs on the dev port.
 
 ## Gates
 
-- `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python -m pytest -q`
+- `python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py`
   and `npm test --prefix app` green before any commit to main.
 - Commits only via `python ops/fleet_kit/fleet_gitlock.py run --owner <id> -- git commit ...`.
 - A push runs through
