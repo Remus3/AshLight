@@ -229,10 +229,19 @@ def default_path(environ=None):
     return paths.sidecar_dir("Cache", environ) / "gamedata" / FILE_NAME
 
 
-class TreeCache:
-    """Lazy, mtime-checked holder of the cached tree. `get()` returns the
-    TreeData, or None when the file is missing or unreadable (never raises),
-    and re-reads only when the file's mtime or size changes."""
+PREV_FILE_SUFFIX = ".prev.json"
+
+
+def previous_path(path):
+    """`skilltree.prev.json` beside `skilltree.json`: the copy snapshot.py
+    keeps of the replaced export (DATA-TREE-HOLD)."""
+    path = Path(path)
+    stem = path.name[:-len(".json")] if path.name.endswith(".json") else path.name
+    return path.with_name(stem + PREV_FILE_SUFFIX)
+
+
+class _FileHolder:
+    """Lazy, mtime-checked reader of one tree file; never raises."""
 
     def __init__(self, path):
         self.path = Path(path)
@@ -254,3 +263,56 @@ class TreeCache:
             except (OSError, ValueError) as e:
                 self._data, self.error = None, f"{type(e).__name__}: {e}"
         return self._data
+
+
+def _share(tree, node_ids):
+    m = tree.id_match(node_ids)
+    return m["known"] / m["total"] if m["total"] else 0.0
+
+
+class TreeCache:
+    """Lazy, mtime-checked holder of the cached tree. `get()` returns the
+    TreeData, or None when the file is missing or unreadable (never raises),
+    and re-reads only when the file's mtime or size changes.
+
+    DATA-TREE-HOLD: it also watches the previous export kept beside it
+    (`skilltree.prev.json`, written by snapshot.keep_previous). `best_for`
+    picks, per build, the cached tree whose id_match share for the build's
+    node ids is highest; the newest wins a tie, so a build made on the
+    previous tree version keeps its names and .build ids after GGG ships a
+    new export."""
+
+    def __init__(self, path):
+        self._cur = _FileHolder(path)
+        self._prev = _FileHolder(previous_path(path))
+
+    @property
+    def path(self):
+        return self._cur.path
+
+    @property
+    def prev_path(self):
+        return self._prev.path
+
+    @property
+    def error(self):
+        return self._cur.error
+
+    def get(self):
+        return self._cur.get()
+
+    def get_previous(self):
+        return self._prev.get()
+
+    def best_for(self, node_ids):
+        """The cached TreeData with the highest id_match share for these
+        node ids (newest first on a tie), or None when no tree is cached.
+        With no node ids the newest readable tree is returned."""
+        best, best_share = None, -1.0
+        for tree in (self.get(), self.get_previous()):
+            if tree is None:
+                continue
+            share = _share(tree, node_ids)
+            if share > best_share:
+                best, best_share = tree, share
+        return best

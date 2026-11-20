@@ -493,7 +493,9 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   documents trade endpoints or permits third-party use in writing, the
   operator rules otherwise, or the ?q= URL form proves unstable.
 - Optional calc component: PoB-PoE2 and LuaJIT hash-pinned in
-  config/tc_pins.json, fetched by setup.ps1 -TcCalc only on opt-in, never
+  config/tc_pins.json (archive hash and content digest; a re-generated
+  archive is accepted only on an equal content digest; amendment
+  2026-11-20), fetched by setup.ps1 -TcCalc only on opt-in, never
   vendored (decision 0018). Reverses if: GitHub archives stop being
   byte-stable, either license leaves MIT / permissive, or LuaJIT ships
   hashed release binaries.
@@ -652,6 +654,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   gone, shown as a Checks note; no toast (decision 0044). Reverses if: GGG
   asks tools not to read the docs automatically, the docs leave `<main>`,
   or the operator rules the watch must respect HALT.
+  Amended 2026-11-20 (DOCS-SHAPE, AUTO-11): a changed API Reference or
+  Data Exports line naming a field in SHAPE_FIELDS (the fields charjson.py
+  and treedata.py read; a test checks each is still read) tags the change
+  'shape', the note names the fields and the state keeps last_shape; the
+  topic does not run on the other four pages while SHAPE_ALL_PAGES
+  (operator decision A-01) is off; the six-page read is unchanged.
 - DIAG-SELF / LANG-GUARD: passive local checks, report copied only on a
   click and redacted; the non-English notice fires on 3 scene-name /
   non-ASCII system-line strikes, not on `You have entered` (PoE2 never
