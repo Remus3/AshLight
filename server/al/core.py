@@ -18,6 +18,7 @@ from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parse
                zoneguide,
                webfetch)
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
+from . import exitrecord  # OBS-CRASH: last-exit.json, client-exit.json
 from . import hotreload  # HOT-RELOAD (decision 0042)
 from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import plug  # RUN-SEAMS (decision 0056)
@@ -293,6 +294,7 @@ class Core:
         # entry point sets it); a test core reads no process list or
         # sidecar log unless it injects them.
         self.port = ports.AL_PORT
+        self.started_at = time.time()  # OBS-CRASH: exit records newer than this start
         self._real = runtime is None
         self.procs_status = ((lambda: procs.status(self.runtime)) if self._real
                              else (lambda: None))
@@ -1236,6 +1238,11 @@ class Core:
             "ggg_reg_open": self._ggg_reg_open(),
             # SEC-ACL-CHECK: folder names from the start-up audit, no path
             "acl_open": list(self.acl_open) if self.acl_open is not None else None,
+            # OBS-CRASH: why the core and the desktop client last exited
+            # (this core's runtime dir; missing file = None)
+            "last_exit": exitrecord.read(self.runtime),
+            "client_exit": exitrecord.read_client(self.runtime),
+            "started_at": self.started_at,
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": snap.get("character"),
         })

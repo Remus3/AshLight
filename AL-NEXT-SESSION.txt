@@ -130,17 +130,8 @@ Carried forward (not acted on yet):
 - OPERATOR DECISION: phone view needs LAN access; CLAUDE.md keeps LAN off
   (OA-27, ruling Q-11; default P0, no network path; units CARRY-19,
   OPEN-18, F-205; no package until the operator names a design).
-- S5-FOLLOWUP (folded into rows DATA-GUIDE-FACTS wave 18,
-  DATA-GUIDE-GAP-TUNE parked, OVL-ZONE-CARD wave 21, OVL-LINE2-GUIDE wave
-  22): overlay zone-guide line (overlay has no slot yet; OVL-ZONE-CARD,
-  OVL-LINE2-GUIDE); BUILD-LIVE item upgrade list is memory-only (lost on
-  restart): it stays so, ruling Q-26 b, decision 0045 (07 Coverage,
-  OPEN-48); zone guide "+2 point books" wording unverified (passive vs
-  weapon-set; DATA-GUIDE-FACTS); clear-or-push threshold is a rule of
-  thumb (DATA-GUIDE-GAP-TUNE, needs play data); no packaged .exe
-  (electron-builder not offline): docs/plan/05, row DEP-08 wave 10; 4
-  blank zone-guide zones (Root Hollow, Library of Kamasa, Isle of Decay,
-  Brinerot Cove; DATA-GUIDE-FACTS).
+- S5-FOLLOWUP (replaced by rows DATA-GUIDE-MERGE, DATA-GUIDE-BOSS,
+  DATA-GUIDE-ONE-BLOCK, DATA-GUIDE-FACTS, DATA-GUIDE-GAP-TUNE).
 - TC-OAUTH-REG (row TC-OAUTH-REG, parked; row DATA-GGG-APPLICATION, wave
   1, prepares the application and decision 0048 and narrows the scope to
   account:characters): BLOCKED until GGG reopens OAuth app registration

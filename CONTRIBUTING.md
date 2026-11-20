@@ -18,3 +18,17 @@ Thanks for your interest in AshLight.
 - Do not copy code from other projects without a license check; projects
   under GPL, AGPL or non-commercial licenses are studied for ideas only.
 - By contributing you agree your contribution is licensed under Apache-2.0.
+
+## How a pull request is handled
+
+- A pull request is a proposal. Nothing is merged on GitHub: when a change
+  is accepted, the maintainer re-applies it locally as their own commit, so
+  it passes the same gates as every other commit, and the pull request is
+  closed with a link to that commit. You are credited in the release notes.
+- The git hooks in `.githooks/` (tests, identity check, leak sweep) are the
+  maintainer's gates. A clone does not install them and you do not need
+  them: CI runs the same checks on every pull request.
+- `.claude/settings.json` holds hooks for the maintainer's AI coding
+  assistant. They apply only to Claude Code users, and only after Claude
+  Code's trust prompt for this folder is accepted; otherwise nothing reads
+  them.
