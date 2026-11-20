@@ -132,3 +132,52 @@ repository (decision 0065), inside the web-data opt-in and only after
 the player has acknowledged the wording that names it. That read never
 downloads PoB, LuaJIT or any runtime; component and runtime fetches stay
 in setup and in the installer's own process (plan 05 design point 13).
+
+## Amendment 2026-11-20 (TC-CALC-VERIFY-PIN, plan unit F-139)
+
+Pin contents, not bytes. GitHub generates commit archives on request and
+does not promise byte-stable zips; a re-generated archive with the same
+files would fail the archive SHA-256 and strand the calc. The Reverses-if
+on byte stability is prepared for here, not met: no mismatch has been
+seen on the current pin.
+
+1. `config/tc_pins.json` gains, per component (pob2, luajit), a
+   `content_sha256`: the `tools/tc_pin.py` `tree_digest` form (sorted
+   relative path, size and SHA-256 of every file under the pinned top
+   dir, the extract marker excluded) and, for PoB, a `lua_sha256`: the
+   same digest over its runnable `.lua` files only. Both are required;
+   a missing or malformed digest makes setup refuse. The values for the
+   current pin were computed on 2026-11-20 from the cached pinned
+   archives (their bytes still matched `archive_sha256`), and the
+   zip-side digest equalled the digest of the extracted PoB checkout.
+2. An archive whose bytes differ from `archive_sha256` (download or
+   cache) is accepted only when its contents, read from the zip as data
+   under the same member path guard (duplicate member paths refused),
+   give the pinned `content_sha256`; the download is cut off at 2x the
+   pinned size. Anything else is quarantined and refused as before.
+3. Every extract is re-hashed before its marker is written; a tree that
+   does not give `content_sha256` is removed and refused.
+4. PoB's Lua files are re-hashed against `lua_sha256` on every setup
+   re-run, the no-op included; the LuaJIT source tree is re-hashed
+   against `content_sha256` right before each build. A mismatch
+   re-extracts from the verified archive (no network when the cached
+   archive verifies).
+5. `tools/tc_drift.py` `candidate()` computes both digests from the
+   downloaded candidate archive; a candidate without them does not
+   validate, so `apply` cannot move the pin without them.
+6. The toolchain (decision 0027) and the Electron zip (decision 0068) are
+   GitHub release assets stored as uploaded, so they stay byte-strict
+   with no content digest.
+
+Alternatives: a git checkout verified by tree hash (the Reverses-if
+route): needs git on the player's machine and a clone of the full
+history; held until archives actually drift. Content digest only, no
+archive hash: loses the cheap byte check and the record of what was
+verified on the pin date. Rejected. Hash only the Lua files: misses
+data files PoB reads (fonts, tree JSON). Rejected; the Lua digest is
+the extra re-run check, the content digest the acceptance rule.
+
+Reverses if: the content digest accepts a tree that later proves
+different from the pinned commit, re-hashing PoB's Lua on each re-run
+makes setup measurably slow on the target machine, or GitHub publishes
+signed or digest-stable source archives.
