@@ -30,7 +30,6 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] FIX-IDLE-WORD (build) STATUS-IDLE-READING: the idle bar word (play state d, log quiet) carries the word "reading" so region G passes G9, then tests/play_fit_pending/g.txt is deleted; done by the next package that owns server/al/data/status_words.json (TEST-STATE-TEXT-PINS, wave 19) with web/status.js and the tests that pin the word, copy design-reviewed (wave-7 adjudicator ruling on PLAY-TD-10-STRIP). ACCEPT: tests/test_play_fit.py green without g.txt. ZERO-CLICK: The bar word updates by itself with the log state; no click. BLOCKED: session wave 19.
 - [ ] RUN-UNREADABLE-WORD (build): give the "Client.txt can't be read" state one status word: add an unreadable state to server/al/data/status_words.json with copies in web/status.js and app/shared/render_gate.js (kit blocked, bar "can't read Client.txt", overlay at most 15 characters), make diag.check_reading use _state_check, and add the new log-state sentences (five reset sentences, restarted / unreadable / readable lines, the two Reading-row strings) to docs/design/0001-design-system.md section 9 (review SRW-1, SRW-2). ACCEPT: bar, overlay and Checks name the same state; status-word tests green. ZERO-CLICK: the word follows the reader state by itself; no click. BLOCKED: session wave 20 (retagged at wave 10 start by adjudicator: status.js, render_gate.js and design 0001 are first owned by TEST-STATE-TEXT-PINS in wave 19, diag.py by PUB-GUIDE-PAGES in 19; wave 20 owns none).
-- [ ] LOOP-GATE-RERUN (build): when a fix round leaves the tree unchanged and every failing test lies outside the diff, tools/al_loop.py re-runs the whole-suite gate once instead of reusing the cached red verdict (the GateCache keyed on tree_key in Tick.gate); an infrastructure or unrelated-flake red then no longer parks a good item as failed. ACCEPT: python -m pytest -q tests/test_al_loop.py tests/test_al_loop_gate_cache.py passes with a new test that a red cached on an unchanged tree whose failing ids are outside the diff is re-run exactly once, and a red inside the diff is not. ZERO-CLICK: loop-internal; the loop re-runs the gate by itself. DEPENDS: TEST-LOOP-SPLIT-LANES.
 
 ## Lane: data
 
@@ -235,87 +234,14 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 13: loop and watchers, reliability and observability, theorycraft
 
-- [ ] RUN-METRICS-CORE (build) Own counters: metrics.py and the token-gated GET /api/debug. ACCEPT:
-  python -m pytest -q tests/test_metrics.py tests/test_http_security.py tests/test_budgets.py
-  passes. ZERO-CLICK: Counted by the core by itself; nothing for the player. The probe command is
-  RUN-METRICS-PROBE. DEPENDS: RUN-SEAMS, RUN-BUILD-STAMP-CORE, RUN-TAIL-HEAL-READER.
-- [ ] TEST-LOOP-GIT-TEMPLATE (build) git_world from a session-scoped template copy. ACCEPT: python
-  -m pytest -q tests/test_al_loop.py tests/test_al_loop_merge.py tests/test_al_loop_lanes.py
-  tests/test_al_loop_gate_cache.py tests/test_al_loop_routes.py passes with the same collected ids
-  as the package base. ZERO-CLICK: Test-only. DEPENDS: TEST-LOOP-SPLIT-LANES.
 
 ### Wave 14: reliability and observability, install and release, theorycraft
 
-- [ ] PLAY-TD-19B-FOUR-TABS (build) Four tabs: Play, Build and items, Run, Settings. ACCEPT: npm
-  test --prefix app and python -m pytest -q tests/test_a11y.py tests/test_ux_review.py
-  tests/test_ux_b8.py tests/test_dash_console.py pass: the page has exactly 4 role=tab elements
-  named Play, Build and items, Run, Settings, a stored items tab maps once to build, and news still
-  shows Play with no act. ZERO-CLICK: Play still shows by itself; nothing new to press. DEPENDS:
-  PLAY-LEGACY-OUT-2, PLAY-F-159-QUIET-BUTTON.
-- [ ] OVL-KEYS-CORE (build) Hotkeys in the core: effective keys in the snapshot, POST /api/hotkeys,
-  Checks rows for both chords. ACCEPT: python -m pytest -q tests/test_hotkeys_live.py
-  tests/test_diag_self.py tests/test_audit_pass5_low.py tests/test_http_security.py
-  tests/test_ux_settings_io.py passes. ZERO-CLICK: The core reads the client's runtime file by
-  itself (stat-gated, inside tick_diag); changing a key is optional. DEPENDS: OVL-KEYS-CLIENT,
-  SEC-SURFACE-PIN.
-- [ ] RUN-BUDGET-LOG-CORE (build) Budget log: the core records its own footprint once a minute.
-  ACCEPT: python -m pytest -q tests/test_budget_log.py tests/test_floor_static.py
-  tests/test_sidecar_paths.py passes. ZERO-CLICK: Automatic; the operator only plays. DEPENDS:
-  RUN-METRICS-CORE.
-- [ ] RUN-BUDGET-LOG-CLIENT (build) Client samples its own Electron processes once a minute. ACCEPT:
-  npm test --prefix app passes and python -m pytest -q tests/test_floor_static.py
-  tests/test_overlay_layout.py passes. ZERO-CLICK: Automatic. DEPENDS: RUN-BUILD-STAMP-UI. BLOCKED:
-  session wave 14.
-- [ ] REL-INSTALL-CMD (build) Installer package: install and repair commands. ACCEPT: python -m
-  pytest -q tests/test_installer.py tests/test_install_home.py tests/test_install_payload.py
-  tests/test_install_selftest.py tests/test_install_shell.py passes. ZERO-CLICK: One pasted line,
-  then the app opens; no elevation prompt, no second step; the floor's Client.txt opt-in (with its
-  visible indicator) and the web-data switch stay the player's own clicks on the first window.
-  DEPENDS: REL-INSTALL-PAYLOAD, REL-INSTALL-SELFTEST, REL-INSTALL-SHELL, DATA-SNAP-AT-START.
-- [ ] REL-AUTOSTART-SWITCH (build) 'Start with Windows' in the tray menu. ACCEPT: npm test --prefix
-  app passes and python -m pytest -q tests/test_overlay_smoke.py tests/test_floor_static.py passes.
-  ZERO-CLICK: One tick once in the tray menu; no terminal, no typed command. DEPENDS:
-  REL-AUTOSTART-TRAY.
-- [ ] AUTO-14 (build) DOCS-FRESH: tools/docs_fresh.py check, with the code-pin facts. ACCEPT: python
-  -m pytest -q tests/test_docs_fresh.py tests/test_brand_assets.py passes and python
-  tools/docs_fresh.py check exits 0 on the tree and exits 1 naming app/main.js and
-  docs/decisions/0002-stack.md when run with --root on a copy whose app/package.json Electron pin
-  was changed. ZERO-CLICK: Unattended: the check runs as a test in every suite; a bump lane sees the
-  stale file named and fixes it in the same change. DEPENDS: DEP-03, PUB-README-PLAYERS. BLOCKED:
-  session wave 14.
-- [ ] TC-CALC-VERIFY-PIN (build) Pin contents, not bytes. ACCEPT: python -m pytest -q
-  tests/test_tc_pin.py tests/test_tc_drift.py passes. ZERO-CLICK: Automatic; the one manual act
-  stays the -TcCalc opt-in. DEPENDS: TC-CALC-OPTIN, AUTO-12.
 - [ ] TC-CALC-CONFINE-LUA (build) Drop dangerous Lua entry points after PoB loads. ACCEPT: python -m
   pytest -q -rs tests/test_tc_bridge.py tests/test_tc_pob_drift_guard.py passes on the dev host
   (calc component installed) and its -rs summary lists no skipped live row. ZERO-CLICK: Automatic:
   every calc start runs the lockdown; the player does nothing. DEPENDS: TC-BRIDGE-NEXT,
   TC-CALC-CONFINE-PROC. BLOCKED: session wave 15.
-- [ ] AUTO-11 (build) DOCS-SHAPE: a 'shape' topic in the GGG docs watch. ACCEPT: `python -m pytest
-  -q tests/test_ggg_docs_watch.py` passes. ZERO-CLICK: Runs on the loop tick, also while HALTed; no
-  new request.
-- [ ] DATA-TREE-HOLD (build) Keep the previous passive tree and resolve each build against the best
-  match. ACCEPT: python -m pytest -q tests/test_tc_tree.py tests/test_tc_tree_ids.py
-  tests/test_tc_snap.py tests/test_tc_buildfile.py tests/test_audit_buildfile.py passes. ZERO-CLICK:
-  The choice is made per build with no setting. DEPENDS: DATA-SNAP-AT-START. BLOCKED: session wave
-  14.
-- [ ] LOOP-ELECTRON-POLICY (build) Electron upgrade policy decision; setup refuses the npm step
-  while the client runs. ACCEPT: `python -m pytest -q tests/test_setup_client_guard.py
-  tests/test_ascii_lf.py` passes. ZERO-CLICK: A dev step that guards itself: while AshLight's client
-  is live, setup.ps1 ends with a one-line reason before npm runs; the bump row stays open and a
-  later tick's lane run retries it; the player sees nothing.
-- [ ] REL-UNINSTALL-CHECKOUT (build) Uninstall: checkout mode. ACCEPT: python -m pytest -q
-  tests/test_uninstall.py tests/test_sidecar_paths.py passes. ZERO-CLICK: One command; -Purge is the
-  only consent asked. DEPENDS: REL-UNINSTALL-SHELL.
-- [ ] RUN-METRICS-PROBE (build) python -m server.al.probe: one line per item, exit 0 live, 1
-  stopped. ACCEPT: python -m pytest -q tests/test_probe.py tests/test_sidecar_paths.py passes.
-  ZERO-CLICK: A session or a lane runs the one command; nothing for the player. Wiring it into
-  session start and the lanes is the LOOP cluster's. DEPENDS: RUN-METRICS-CORE.
-- [ ] TEST-LOOP-STUB-GIT (build) Stub git runner for the tick tests that do not test git. ACCEPT:
-  python -m pytest -q --durations=0 tests/test_al_loop.py tests/test_al_loop_merge.py
-  tests/test_al_loop_lanes.py passes with the same collected ids, each file's total under 20 s, and
-  with AL_GIT_COUNT=1 the run prints a git spawn count under 700. ZERO-CLICK: Test-only. DEPENDS:
-  TEST-LOOP-GIT-TEMPLATE.
 
 ### Wave 15: loop and watchers, reliability and observability, theorycraft
 
