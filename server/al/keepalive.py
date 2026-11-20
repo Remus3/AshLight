@@ -20,6 +20,12 @@ polls every POLL_S seconds:
 
 It only ever looks at, starts or stops AshLight's own python core; it never
 touches the game process (ToS floor). Decision: docs/decisions/0005.
+
+DATA-SNAP-AT-START (decisions 0009 / 0013, amendments 2026-11-18): at most
+once per SNAPSHOT_EVERY_S the injected `snapshot` callable (snapstart.Starter
+from main()) starts the game-data snapshot tool as its own hidden,
+below-normal process when web data is on and the cache is missing or over
+24 h old. This module never fetches and never imports the tool.
 """
 
 import argparse
@@ -32,7 +38,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import exitrecord, hello, hotreload, jsonfile, paths, ports
+from . import exitrecord, hello, hotreload, jsonfile, paths, ports, snapstart
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -49,6 +55,9 @@ DEV_POLL_S = 1.0           # poll cadence while code reload is on (stat only)
 RELOAD_DEBOUNCE_S = 1.5    # a burst of saves settles before the preflight
 RELOAD_EXIT_S = 20.0       # the old core's clean exit, then it is terminated
 PREFLIGHT_TIMEOUT_S = 60.0
+# DATA-SNAP-AT-START: the snapshot check runs at most once per normal poll,
+# also while the dev poll is faster (it reads two small local files)
+SNAPSHOT_EVERY_S = POLL_S
 RELOAD_DEAD_NOTE = ("A code change passed the check, but the new version did not "
                     "start. AshLight tries again after your next save.")
 
@@ -228,7 +237,13 @@ class Keepalive:
                  terminate=terminate_core, now=time.time, log=None, created=None,
                  stale_s=STALE_S, start_grace_s=START_GRACE_S, backoff=BACKOFF_S,
                  cap=CAP, window_s=WINDOW_S, code_watch=None, preflight=None,
-                 reload_debounce_s=RELOAD_DEBOUNCE_S, reload_exit_s=RELOAD_EXIT_S):
+                 reload_debounce_s=RELOAD_DEBOUNCE_S, reload_exit_s=RELOAD_EXIT_S,
+                 snapshot=None, snapshot_every_s=SNAPSHOT_EVERY_S):
+        # DATA-SNAP-AT-START: snapshot(now) -> pid or None starts the
+        # game-data snapshot tool when it is due. None: never (tests).
+        self._snapshot = snapshot
+        self.snapshot_every_s = float(snapshot_every_s)
+        self._snapshot_at = None
         # HOT-RELOAD (decision 0042): code_watch has signature() (the
         # server/ *.py stat set); preflight() -> (ok, error line). None:
         # no code reload (tests, and outside a source checkout).
@@ -276,6 +291,7 @@ class Keepalive:
 
     def step(self):
         now = self._now()
+        self._snapshot_step(now)
         hb = read_heartbeat(self.runtime / HEARTBEAT_FILE)
         live = bool(hb) and self._alive(hb["pid"]) and self._same_process(hb)
         if not live:
@@ -361,6 +377,25 @@ class Keepalive:
         else:
             reason = "no core running"
         return self._crashed(now, reason)
+
+    def _snapshot_step(self, now):
+        """DATA-SNAP-AT-START: one rate-limited call of the snapshot starter;
+        never while a user stop is pending, never fatal to the supervisor."""
+        if self._snapshot is None:
+            return
+        last = self._snapshot_at
+        if last is not None and 0 <= now - last < self.snapshot_every_s:
+            return
+        self._snapshot_at = now
+        if (self.runtime / STOP_FILE).exists():
+            return
+        try:
+            pid = self._snapshot(now)
+        except Exception as exc:  # noqa: BLE001 - the core watch goes on
+            self._log(f"game data snapshot did not start ({type(exc).__name__})")
+            return
+        if pid:
+            self._log(f"game data snapshot started (pid {pid}, hidden, below normal)")
 
     def _same_process(self, hb):
         """SUP-1: the heartbeat's pid is still the core that wrote it. A
@@ -580,6 +615,17 @@ def build_parser():
     return p
 
 
+def snapshot_starter(runtime, runtime_arg=None, environ=None):
+    """DATA-SNAP-AT-START: the snapshot starter for the live runtime dir.
+    A supervisor given its runtime dir (--runtime or AL_RUNTIME_DIR: tests
+    and other isolated instances) gets None and never starts a fetch, as a
+    core given a runtime dir never scans (decision 0003 amendment)."""
+    env = os.environ if environ is None else environ
+    if runtime_arg or (env.get(paths.RUNTIME_ENV) or "").strip():
+        return None
+    return snapstart.Starter(runtime, pid_alive, created=process_created)
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.port is None:
@@ -604,7 +650,8 @@ def main(argv=None):
         sup = Keepalive(runtime, args.port, _Launcher(core_command(args.port, args.core_args)),
                         log=log, stale_s=args.stale, backoff=backoff, cap=args.cap,
                         window_s=args.window, code_watch=code_watch,
-                        preflight=run_preflight if code_watch is not None else None)
+                        preflight=run_preflight if code_watch is not None else None,
+                        snapshot=snapshot_starter(runtime, args.runtime))
         sup._write_state("started")  # records this supervisor's pid for stop.ps1
         log(f"supervisor started (port {args.port}, poll {poll:g} s, code reload "
             f"{'on' if code_watch is not None else 'off'})")
