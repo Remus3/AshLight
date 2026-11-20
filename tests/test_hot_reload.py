@@ -89,6 +89,139 @@ def test_error_note_carries_no_path(tmp_path):
     assert str(tmp_path) not in w.error and "could not be read" in w.error
 
 
+def _flaky_loader(fails):
+    """A JSON loader whose first `fails` calls raise PermissionError (an
+    editor or AV scanner holding the file)."""
+    calls = []
+
+    def load(path):
+        calls.append(path)
+        if len(calls) <= fails:
+            raise PermissionError(13, "locked", str(path))
+        return hotreload.load_json(path)
+    return load, calls
+
+
+def test_permission_error_once_then_same_mtime_loads_new_value(tmp_path):
+    f = tmp_path / "d.json"
+    _bump(f, '{"a": 1}')
+    load, calls = _flaky_loader(0)
+    w = hotreload.Watched(f, load, name="Test data", default=dict, registry=False)
+    assert w.get() == {"a": 1}
+    # every read of the next edit is locked: all tries fail, last good stays
+    load2, calls2 = _flaky_loader(hotreload.RETRY_TRIES)
+    w.loader = load2
+    slept = []
+    w._sleep = slept.append
+    _bump(f, '{"a": 2}')
+    assert w.get() == {"a": 1}
+    assert len(calls2) == hotreload.RETRY_TRIES
+    assert len(slept) == hotreload.RETRY_TRIES - 1
+    assert all(0 < s <= 0.1 for s in slept)
+    assert w.error == ("Test data did not load (could not be read). "
+                       "The last good copy stays in use.")
+    assert str(tmp_path) not in w.error
+    # the lock is gone, the mtime has not moved: the next poll loads it
+    assert w.get() == {"a": 2} and w.error is None and w.loads == 2
+    # a single locked read is absorbed by the retry inside one get()
+    w.loader, calls3 = _flaky_loader(1)
+    _bump(f, '{"a": 3}')
+    assert w.get() == {"a": 3} and len(calls3) == 2 and w.error is None
+
+
+def test_json_syntax_error_keeps_last_good_without_retry_storm(tmp_path):
+    f = tmp_path / "d.json"
+    calls = []
+
+    def load(path):
+        calls.append(path)
+        return hotreload.load_json(path)
+    w = hotreload.Watched(f, load, name="Test data", default=dict, registry=False)
+    slept = []
+    w._sleep = slept.append
+    _bump(f, '{"a": 1}')
+    assert w.get() == {"a": 1}
+    _bump(f, '{"a": ')
+    for _ in range(5):
+        assert w.get() == {"a": 1}
+    assert len(calls) == 2 and slept == []          # one read of the bad edit
+    assert "not valid JSON at line 1" in w.error
+    _bump(f, '{"a": 4}')
+    assert w.get() == {"a": 4} and w.error is None
+
+
+def _deny_stat(monkeypatch, target):
+    real = os.stat
+
+    def fake(path, *a, **k):
+        if Path(path) == target:
+            raise PermissionError(13, "denied", str(path))
+        return real(path, *a, **k)
+    monkeypatch.setattr(hotreload.os, "stat", fake)
+    return real
+
+
+def test_stat_error_keeps_last_good_and_adds_a_note(tmp_path, monkeypatch):
+    reg = hotreload.Registry()
+    f = tmp_path / "d.json"
+    _bump(f, '{"a": 1}')
+    w = hotreload.Watched(f, hotreload.load_json, name="Test data",
+                          default=dict, registry=reg)
+    assert w.get() == {"a": 1}
+    real = _deny_stat(monkeypatch, f)
+    assert w.get() == {"a": 1}                        # not reset to the default
+    assert w.error == ("Test data could not be checked for changes. "
+                       "The last good copy stays in use.")
+    assert reg.notes() == [w.error] and str(tmp_path) not in w.error
+    monkeypatch.setattr(hotreload.os, "stat", real)
+    assert w.get() == {"a": 1} and w.error is None and w.loads == 1
+    # a content note from before the stat error comes back after it
+    _bump(f, "{bad")
+    w.get()
+    content_note = w.error
+    _deny_stat(monkeypatch, f)
+    w.get()
+    assert "could not be checked" in w.error
+    monkeypatch.setattr(hotreload.os, "stat", real)
+    assert w.get() == {"a": 1} and w.error == content_note
+    # a really removed file still reads as the default
+    f.unlink()
+    assert w.get() == {} and w.error is None
+
+
+def test_note_text_is_stable_across_polls(tmp_path, monkeypatch, caplog):
+    reg = hotreload.Registry()
+    f = tmp_path / "d.json"
+    _bump(f, '{"a": 1}')
+    w = hotreload.Watched(f, hotreload.load_json, name="Test data",
+                          default=dict, registry=reg)
+    w._sleep = lambda s: None
+    reg.poll()
+    caplog.set_level("WARNING", logger="al.hotreload")
+    # a file that stays locked: same note, logged once
+    w.loader, _ = _flaky_loader(10 ** 6)
+    _bump(f, '{"a": 2}')
+    seen = set()
+    for _ in range(4):
+        reg.poll()
+        seen.add(tuple(reg.notes()))
+    assert len(seen) == 1 and len(next(iter(seen))) == 1
+    assert len([r for r in caplog.records if "did not load" in r.getMessage()]) == 1
+    # a stat error that stays: same note, logged once
+    real = _deny_stat(monkeypatch, f)
+    stat_notes = set()
+    for _ in range(4):
+        reg.poll()
+        stat_notes.add(tuple(reg.notes()))
+    assert len(stat_notes) == 1
+    assert len([r for r in caplog.records
+                if "could not be checked" in r.getMessage()]) == 1
+    monkeypatch.setattr(hotreload.os, "stat", real)
+    w.loader = hotreload.load_json
+    reg.poll()
+    assert reg.notes() == [] and w.get() == {"a": 2}
+
+
 def test_existing_caches_keep_last_good(tmp_path):
     f = tmp_path / acts.FILE_NAME
     cache = acts.TableCache(f)
