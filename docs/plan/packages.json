@@ -11172,7 +11172,8 @@
    ],
    "files": [
     "server/al/state.py",
-    "server/al/text/itemcheck.py"
+    "server/al/text/itemcheck.py",
+    "tests/test_glance_rules.py"
    ],
    "new_files": [
     "server/al/text/buildlive.py",
