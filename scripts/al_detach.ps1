@@ -9,6 +9,10 @@
   Start-Process would make it a child of the caller instead.
   Win32_ProcessStartup.EnvironmentVariables REPLACES the whole environment,
   so the caller's environment is copied and the overrides applied on top.
+  -Unset names variables the child must not get at all (removed after the
+  copy, any case; OVL-LAUNCH-ENV: ELECTRON_RUN_AS_NODE and NODE_OPTIONS for
+  the Electron client). An empty value would still be set, so removal is
+  the only way to keep a variable out of the block.
   Returns the new process id; throws when WMI refuses.
 #>
 
@@ -18,12 +22,20 @@ function Start-AlDetached {
         [Parameter(Mandatory = $true)][string]$FilePath,
         [string[]]$ArgumentList = @(),
         [Parameter(Mandatory = $true)][string]$WorkingDirectory,
-        [hashtable]$Environment = @{}
+        [hashtable]$Environment = @{},
+        [string[]]$Unset = @()
     )
     $vars = @{}
     $all = [System.Environment]::GetEnvironmentVariables()
     foreach ($k in $all.Keys) { $vars[[string]$k] = [string]$all[$k] }
     foreach ($k in $Environment.Keys) { $vars[[string]$k] = [string]$Environment[$k] }
+    foreach ($k in $Unset) {
+        foreach ($have in @($vars.Keys)) {
+            if ([string]::Equals([string]$have, [string]$k, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $vars.Remove($have)
+            }
+        }
+    }
     $block = [string[]]@($vars.Keys | Sort-Object | ForEach-Object { $_ + '=' + $vars[$_] })
 
     $cmd = '"' + $FilePath + '"'
