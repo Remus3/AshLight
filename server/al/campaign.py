@@ -40,6 +40,11 @@ RES_STAT = {"fire": "FireResist", "cold": "ColdResist",
 # with cold, Rudja mostly with fire. Keyed by the area ids whose boss the
 # world_areas snapshot lists (G1_15 Ogham Manor, G2_10_2 Mawdun Mine).
 BOSS_ZONES = {"G1_15": "cold", "G2_10_2": "fire"}
+# DATA-PROVENANCE (F-097): where each BOSS_ZONES fact comes from and when it
+# was last checked (src forms: tools/provenance.py). Data only; nothing
+# reads it at run time.
+BOSS_PROVENANCE = {"G1_15": {"src": "research:0031", "checked": "2026-11-17"},
+                   "G2_10_2": {"src": "research:0031", "checked": "2026-11-17"}}
 _CAMPAIGN_RE = re.compile(r"^(?:C_)?G\d+_")
 
 
