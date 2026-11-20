@@ -448,6 +448,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_al_loop_lanes.py tests/test_test_layout.py passes and the three files together collect
   exactly the test ids the two files collected at the package base. ZERO-CLICK: Test-only; the suite
   picks the new file up by itself. DEPENDS: TEST-LOOP-SPLIT-MERGE.
+  BLOCKED: session wave 12 close (tests held).
 - [ ] REL-INSTALL-CALC (build) Installer package: calc opt-in in an installed copy. ACCEPT: python
   -m pytest -q tests/test_install_calc.py tests/test_tc_pin.py passes. ZERO-CLICK: One command
   (later one button from the calc opt-in package); off by default (decision 0018). DEPENDS:
