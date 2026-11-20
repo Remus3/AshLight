@@ -5,7 +5,8 @@
   Checks Python >= 3.11 and Node >= 22.12.0, creates the sidecar dirs, copies
   config/local.example.json to config/local.json only when it is missing, and
   installs the overlay's npm packages only when app/node_modules is missing
-  or the lockfile changed (hash stamp in the sidecar Build dir).
+  or the lockfile changed (hash stamp in the sidecar Build dir), always as
+  `npm ci --ignore-scripts` from the lockfile (a missing lockfile refuses).
   Every path comes from `python -m server.al.paths` (the one resolver).
   Node is optional: without it the core and the dashboard still work.
 
@@ -256,13 +257,14 @@ $env:TMP = $paths.temp
 $npmLog = Join-Path $paths.logs 'npm-install.log'
 Push-Location $app
 try {
-    if (Test-Path $lock) {
-        Write-AlLog 'setup: npm ci'
-        $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('ci', '--no-audit') -Append
-    } else {
-        Write-AlLog 'setup: npm install --save-exact (no lockfile)'
-        $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('install', '--save-exact', '--no-audit') -Append
+    # OVL-NPM-LOCK (F-037): the lockfile is the only install route and no
+    # package script runs (app/.npmrc says the same); a missing lockfile
+    # refuses instead of resolving fresh versions.
+    if (-not (Test-Path $lock)) {
+        throw 'setup: app/package-lock.json is missing; restore it from the repository (no install without the lockfile)'
     }
+    Write-AlLog 'setup: npm ci --ignore-scripts'
+    $npmRc = Invoke-AlLogged $npmLog 'npm.cmd' @('ci', '--ignore-scripts', '--no-audit') -Append
     if ($npmRc -ne 0) { throw "npm failed (rc $npmRc); see $npmLog" }
     if (-not (Test-Path $electronExe)) {
         Write-AlLog 'setup: fetching the Electron binary'
