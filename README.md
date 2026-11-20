@@ -77,8 +77,9 @@ the tray; click the tray icon to bring the window back. Right-click the tray
 icon for the menu: Minimize or Restore AshLight, Show in-game overlay, Open
 AshLight when the game wakes, Restart overlay and Quit AshLight.
 
-With the opt-in logon autostart (below), the core starts at logon with no
-window and no click, so it is already reading the log when you play.
+With the opt-in logon autostart (below), AshLight starts in the tray at
+logon with no window and no click; the overlay appears once the game is
+running.
 
 The same starts from a terminal, also without Node.js:
 
@@ -98,9 +99,9 @@ Optional extras:
 - `scripts\setup.ps1 -TcCalc` (or `"tc_calc": true`) fetches the optional
   calc component (Path of Building PoE2 source and LuaJIT, hash-pinned) for
   full build numbers in item checks. Off by default.
-- `scripts\autostart.ps1 -Enable` starts AshLight's core at logon (a
-  current-user scheduled task, no window); `-Disable` removes it. Off by
-  default.
+- `scripts\autostart.ps1 -Enable` starts AshLight in the tray at logon (a
+  current-user scheduled task; no window, and the overlay appears once the
+  game is running); `-Disable` removes it. Off by default.
 
 Logs, caches and build output go to the AshLight sidecar folder (printed by
 `python -m server.al.paths` as `sidecar`; the `AL_SIDECAR_ROOT` environment
