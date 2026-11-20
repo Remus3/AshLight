@@ -69,6 +69,13 @@ BANNED = [
     ("desktopCapturer", re.compile(r"\bdesktopCapturer\b|\bgetDisplayMedia\b", _I)),
     ("capturePage", re.compile(r"\bcapturePage\b", _I)),
     ("mss", re.compile(r"^\s*(import mss|from mss\b)", re.MULTILINE)),
+    # page capture through a browser's DevTools protocol, its command line or
+    # a browser driver (TEST-CAPTURE-HELPER, F-147): app/test/cdp/capture.mjs
+    # holds the one allowed call
+    ("DevTools capture", re.compile(
+        r"\bcaptureScreenshot\b|\bstartScreencast\b|\bscreencastFrame\b"
+        r"|\bprintToPDF\b|--print-to-pdf\b|--screenshot\b"
+        r"|\.screenshot\s*\(|\bsave_screenshot\b|\bget_screenshot_as\w*", _I)),
     # DXGI / Direct3D hooks, present tracing (decision 0006)
     ("DXGI", re.compile(r"\bI?DXGI\w*|\bdxgi\.dll\b|\bd3d1[12]\w*\b|\bd3d9\b", _I)),
     ("Present hook", re.compile(r"\bPresentMon\b|\bMinHook\b|\bDetours\b|\bDetourAttach\b", _I)),
@@ -97,6 +104,12 @@ ALLOW = [
      "BRAND-ICON build tool: captures its own offscreen window holding "
      "AshLight's brand SVG to write the icon PNGs; never the screen, never "
      "the game, never at run time (docs/design/0005-brand-mark.md)."),
+    ("app/test/cdp/capture.mjs", "DevTools capture", 1,
+     "the one capture call of the repo",
+     "TEST-CAPTURE-HELPER (F-147, AUTO-15): the one capture path. It renders "
+     "AshLight's own page in a headless browser only after it has checked "
+     "that the target is a demo core on 127.0.0.1 (never port 8960, the demo "
+     "marker beside the core's log); never the screen, never the game."),
     ("app/test/eval.test.js", "SendInput", 1, "for (const word of [",
      "A banned-word list: the node test asserts eval_hotkey.js never "
      "contains sendInput; the word is the check, not a call."),
@@ -276,6 +289,14 @@ PLANTS = [
     ("app/pfloor_plant.js", "const { desktopCapturer } = require('electron');\n"),
     ("app/pfloor_plant.js", "win.webContents.capturePage().then(save);\n"),
     ("tools/pfloor_plant.py", "import mss\n"),
+    ("app/test/cdp/pfloor_plant.mjs",
+     "await send(\"Page.captureScreenshot\", { format: \"png\" });\n"),
+    ("tools/pfloor_plant.py", "cdp.send('Page.startScreencast', {'format': 'png'})\n"),
+    ("app/pfloor_plant.js", "await page.screenshot({ path: 'shot.png' });\n"),
+    ("scripts/pfloor_plant.ps1", "& $chrome --headless --screenshot=x.png $url\n"),
+    ("web/pfloor_plant.js", "navigator.mediaDevices.getDisplayMedia({ video: true });\n"),
+    ("server/al/pfloor_plant.py", "user32.PrintWindow(hwnd, hdc, 2)\n"),
+    ("server/al/pfloor_plant.py", "gdi32.GetDIBits(hdc, bmp, 0, h, bits, info, 0)\n"),
     ("server/al/pfloor_plant.py", "dxgi = ctypes.WinDLL('dxgi.dll')\n"),
     ("server/al/pfloor_plant.py", "hook(IDXGISwapChain_Present, mine)\n"),
     ("tools/pfloor_plant.ps1", "& PresentMon.exe --process_name game.exe\n"),
