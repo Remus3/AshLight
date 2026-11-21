@@ -10,6 +10,7 @@ exist; everywhere else they skip with the reason.
 import ctypes
 import json
 import os
+import re
 import socket
 import sys
 import threading
@@ -22,23 +23,134 @@ from server.al import paths, ports
 from server.al.theorycraft import bridge
 
 
+# LOOP-DRIFT-REF (decision 0025 / 0028 amendment 2026-11-18): the PoB GUI
+# reference is keyed by tag. A folder may hold gui_expected.json and any
+# number of gui_expected-<tag>.json; each names its PoB tag in "pob". The
+# tag under test is the pin's (AL_TC_PINS_FILE during a drift trial; a
+# rehearsal candidate is "ref-<12 hex of its commit>"). The same tag
+# compares the recorded numbers within 0.1 percent; another tag reports
+# per-key deltas and passes only with a session's written acceptance in the
+# reference: "accepted": {"<tag>": "<YYYY-MM-DD> <why>"}.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+GUI_REF_NAME = "gui_expected.json"
+GUI_REF_GLOB = "gui_expected-*.json"
+_TAG_PARTS = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+_ACCEPT = re.compile(r"^\d{4}-\d{2}-\d{2} \S")
+
+
+def reference_dirs():
+    """The folders a GUI reference may live in, in preference order: the
+    tracked fixtures (owner-allowed builds only), the gitignored runtime
+    folder, the AL sidecar Cache (paths key tc_bridge_ref)."""
+    return [REPO_ROOT / "tests" / "fixtures" / "tc_bridge",
+            REPO_ROOT / "ops" / "runtime" / "tc_bridge",
+            paths.all_runtime_paths()["tc_bridge_ref"].parent]
+
+
+def tested_tag(pins_path=None):
+    """The PoB tag the live tests run against: the pin file's pob2 tag, or
+    ref-<12 hex> for a rehearsal candidate; None when unreadable."""
+    try:
+        doc = json.loads(Path(pins_path or paths.tc_pins_file()).read_text(encoding="ascii"))
+        pob = doc["pob2"]
+        if pob.get("rehearsal_ref"):
+            return f"ref-{pob['commit'][:12]}"
+        return pob["tag"] if isinstance(pob["tag"], str) else None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def gui_references(dirs=None):
+    """[(path, ref)] of every readable GUI reference (gui_expected.json, then
+    gui_expected-*.json by name, folder by folder) whose "pob" is a string,
+    "outputs" an object and build_xml a file beside it."""
+    out = []
+    for d in reference_dirs() if dirs is None else dirs:
+        d = Path(d)
+        if not d.is_dir():
+            continue
+        for p in [d / GUI_REF_NAME, *sorted(d.glob(GUI_REF_GLOB))]:
+            if not p.is_file():
+                continue
+            try:
+                ref = json.loads(p.read_text(encoding="ascii"))
+            except (OSError, ValueError):
+                continue
+            if (isinstance(ref, dict) and isinstance(ref.get("pob"), str)
+                    and isinstance(ref.get("outputs"), dict)
+                    and isinstance(ref.get("build_xml"), str)
+                    and (p.parent / ref["build_xml"]).is_file()):
+                out.append((p, ref))
+    return out
+
+
+def _tag_key(tag):
+    m = _TAG_PARTS.match(tag or "")
+    return tuple(int(x) for x in m.groups()) if m else (-1, -1, -1)
+
+
+def pick_reference(tag, refs):
+    """("same" | "other", path, ref) for the tag under test, or None. The
+    first reference recorded for `tag` wins; else the newest other tag."""
+    if not refs:
+        return None
+    for p, ref in refs:
+        if tag is not None and ref["pob"] == tag:
+            return "same", p, ref
+    p, ref = max(refs, key=lambda pr: _tag_key(pr[1]["pob"]))
+    return "other", p, ref
+
+
+def reference_deltas(want, got):
+    """{key: {"want", "got", "rel"}} per recorded output; rel is the
+    relative delta (None when the key is missing or not a number)."""
+    out = {}
+    for key in sorted(want):
+        w, g = want[key], got.get(key)
+        rel = None
+        if isinstance(w, (int, float)) and isinstance(g, (int, float)):
+            rel = 0.0 if w == g else abs(g - w) / max(abs(w), 1e-12)
+        out[key] = {"want": w, "got": g, "rel": rel}
+    return out
+
+
+def delta_lines(deltas):
+    """One readable line per key, e.g. 'Life: 1234 -> 1240 (+0.486%)'."""
+    lines = []
+    for key, d in deltas.items():
+        if d["rel"] is None:
+            lines.append(f"{key}: {d['want']} -> {d['got']} (not comparable)")
+        else:
+            sign = "-" if (d["got"] or 0) < (d["want"] or 0) else "+"
+            lines.append(f"{key}: {d['want']} -> {d['got']} ({sign}{d['rel'] * 100:.3f}%)")
+    return lines
+
+
+def accepted_for(ref, tag):
+    """The session's written acceptance of `ref` for another `tag` (a
+    "<YYYY-MM-DD> <why>" string under "accepted"), or None."""
+    acc = ref.get("accepted") if isinstance(ref, dict) else None
+    text = acc.get(tag) if isinstance(acc, dict) and tag else None
+    return text if isinstance(text, str) and _ACCEPT.match(text) else None
+
+
 def reference():
-    """(ref dict, build xml) of the recorded PoB GUI reference, or None."""
-    ref_path = paths.all_runtime_paths()["tc_bridge_ref"]
-    if not ref_path.is_file():
+    """(ref dict, build xml) of the recorded PoB GUI reference in the sidecar
+    Cache, chosen by the tag under test (another tag when none is recorded
+    for it), or None."""
+    pick = pick_reference(tested_tag(),
+                          gui_references([paths.all_runtime_paths()["tc_bridge_ref"].parent]))
+    if pick is None:
         return None
-    ref = json.loads(ref_path.read_text(encoding="ascii"))
-    xml_path = ref_path.parent / ref["build_xml"]
-    if not xml_path.is_file():
-        return None
-    return ref, xml_path.read_text(encoding="utf-8")
+    _mode, ref_path, ref = pick
+    return ref, (ref_path.parent / ref["build_xml"]).read_text(encoding="utf-8")
 
 
 LIVE = pytest.mark.skipif(not bridge.available(),
                           reason="optional calc component absent (setup.ps1 -TcCalc)")
 LIVE_REF = pytest.mark.skipif(not bridge.available() or reference() is None,
                               reason="calc component or PoB GUI reference absent "
-                              "(sidecar Cache\\tc_bridge\\gui_expected.json)")
+                              "(sidecar Cache\\tc_bridge\\gui_expected*.json)")
 
 
 # TEST-MARKS (research 0049 R4, R9): every test that starts the live calc

@@ -58,24 +58,23 @@ Set-StrictMode -Version 2
 
 $Repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'al_detach.ps1')
-
-function Get-AlPython {
-    foreach ($name in @('python', 'py')) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
-    }
-    throw 'Python 3.11 or newer was not found on PATH.'
-}
+# REL-RUNTIME-SCRIPTS (F-047, DEP-06): Python, Electron and the paths come
+# from scripts\al_env.ps1 only; in an installed copy that is the private
+# runtime and <payload>\boot.py, in a checkout PATH Python and -m.
+. (Join-Path $PSScriptRoot 'al_env.ps1')
 
 $py = Get-AlPython
 if ($Port -ne 0) {
     if ($Port -lt 8960 -or $Port -gt 8979) { throw "-Port $Port is outside AshLight's port block 8960-8979." }
     $env:AL_PORT = [string]$Port
 }
-Push-Location $Repo
+$paths = Get-AlPaths
+# The port rule (server\al\ports.py resolve). -c with the root put first on
+# sys.path: the same line works under the private runtime, whose ._pth
+# ignores the current folder.
+Push-Location -LiteralPath $AlEnvRoot
 try {
-    $paths = ((& $py -m server.al.paths) -join "`n") | ConvertFrom-Json
-    $port = [int]((& $py -c "import os; from server.al import paths, ports; print(ports.resolve(os.environ, paths.load_local_config()))").Trim())
+    $port = [int]((& $py -c "import os, sys; sys.path.insert(0, sys.argv[1]); from server.al import paths, ports; print(ports.resolve(os.environ, paths.load_local_config()))" $AlEnvRoot) -join '').Trim()
 } finally {
     Pop-Location
 }
@@ -83,6 +82,11 @@ foreach ($dir in @($paths.runtime, $paths.logs, $paths.temp)) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
 }
 $log = Join-Path $paths.logs 'run.log'
+
+# The client's Electron (Get-AlElectron): the checkout's npm ci dist, or the
+# installed copy's private runtime; '' when the install marker names none.
+$electron = [string](Get-AlElectron)
+$haveElectron = [bool]($electron -and (Test-Path -LiteralPath $electron -PathType Leaf))
 
 # CORE-AUTOSTART (decision 0011): the logon task passes -Autostart; the
 # recorded opt-in decides, so a task left behind after -Disable is a no-op.
@@ -105,7 +109,8 @@ if ($Autostart) {
     $state = if ($optin) { 'on' } else { 'off (no-op)' }
     Add-Content -Path $log -Value ((Get-Date -Format 's') + " run: logon autostart, opt-in $state") -Encoding ASCII
     if (-not $optin) { exit 0 }
-    if (Test-Path -LiteralPath (Join-Path $Repo 'app\node_modules\electron\dist\electron.exe')) {
+    # the client is installed when its electron.exe (Get-AlElectron) is there
+    if ($haveElectron) {
         $trayOnly = $true
         $mode = 'client tray-only'
     } else {
@@ -152,25 +157,37 @@ $env:AL_SIDECAR_ROOT = $paths.sidecar
 # A stop.request left by scripts\stop.ps1 must not stop this start.
 Remove-Item -LiteralPath (Join-Path $paths.runtime 'stop.request') -Force -ErrorAction SilentlyContinue
 
-$pyw = Get-Command pythonw -ErrorAction SilentlyContinue
-$exe = if ($pyw) { $pyw.Source } else { $py }
+# The core and the supervisor run windowless (pythonw when there is one):
+# Get-AlPythonCmd -Windowless gives the exe and the -m / boot.py form.
+$exe = Get-AlPython -Windowless
 $detachEnv = @{ TEMP = $paths.temp; TMP = $paths.temp; AL_SIDECAR_ROOT = $paths.sidecar; AL_PORT = [string]$port }
 $clientUnset = @('ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS')
 
+# The arguments after the exe of a windowless Python child, quoted for one
+# command line (scripts\al_detach.ps1).
+function Get-AlDetachArgs([string]$Module, [string[]]$ArgList) {
+    $cmd = Get-AlPythonCmd -Module $Module -ArgList $ArgList -Windowless
+    return (Format-AlArgs $cmd[1..($cmd.Count - 1)])
+}
+
 function Get-AlPlan {
     # Which of core / supervisor / overlay must start (server\al\procs.py).
-    $planArgs = @('-m', 'server.al.procs', 'plan')
+    # The script passes the command from Get-AlPythonCmd (boot.py under the
+    # private runtime in an install); the default is the checkout form, for
+    # a caller that loads this function alone with $py and $Repo set.
+    param([string[]]$PlanCmd = @($py, '-m', 'server.al.procs', 'plan'))
+    $planArgs = @($PlanCmd | Select-Object -Skip 1)
     if (-not $wantOverlay) { $planArgs += '--no-overlay' }
-    if (-not (Test-Path $electron)) { $planArgs += '--overlay-missing' }
-    Push-Location $Repo
+    if (-not ($electron -and (Test-Path -LiteralPath $electron -PathType Leaf))) {
+        $planArgs += '--overlay-missing'
+    }
+    Push-Location -LiteralPath $Repo
     try {
-        return ((& $py @planArgs) -join "`n") | ConvertFrom-Json
+        return ((& $PlanCmd[0] @planArgs) -join "`n") | ConvertFrom-Json
     } finally {
         Pop-Location
     }
 }
-
-$electron = Join-Path $Repo 'app\node_modules\electron\dist\electron.exe'
 
 # OVL-ELECTRON-SETUP (F-044, decision 0068): the client starts only from
 # an electron.exe that matches its pin. tools/electron_pin.py verify-exe
@@ -203,7 +220,7 @@ function Test-AlElectronExe {
 $wantOverlay = -not ($NoOverlay -or $NoBrowser -or $Browser -or $EdgeApp)
 # REL-AUTOSTART-TRAY: the logon start wants the client (tray-only), no browser
 if ($trayOnly) { $wantOverlay = $true }
-$plan = Get-AlPlan
+$plan = Get-AlPlan -PlanCmd (Get-AlPythonCmd -Module 'server.al.procs' -ArgList @('plan'))
 
 if (Test-AlHealth) {
     Write-AlLog "run: core already running on 127.0.0.1:$port (no-op)"
@@ -220,8 +237,9 @@ if (Test-AlHealth) {
 } else {
     # Detached via WMI (scripts\al_detach.ps1): the core must outlive this
     # script and whatever shell started it. --quiet: core.log is the record.
-    $corePid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al', '--quiet', '--port', [string]$port) `
-        -WorkingDirectory $Repo -Environment $detachEnv
+    $coreArgs = Get-AlDetachArgs 'server.al' @('--quiet', '--port', [string]$port)
+    $corePid = Start-AlDetached -FilePath $exe -ArgumentList $coreArgs `
+        -WorkingDirectory $AlEnvRoot -Environment $detachEnv
     Write-AlLog "run: core launched detached (pid $corePid)"
     $deadline = (Get-Date).AddSeconds(15)
     while (-not (Test-AlHealth)) {
@@ -239,8 +257,9 @@ if (Test-AlHealth) {
 # supervisor holds its single-instance lock (OPS-RUN-IDEMP), so a re-run
 # never spawns a second one. Log: Logs\keepalive.log.
 if (@($plan.start) -contains 'supervisor') {
-    $supPid = Start-AlDetached -FilePath $exe -ArgumentList @('-m', 'server.al.keepalive', '--port', [string]$port) `
-        -WorkingDirectory $Repo -Environment $detachEnv
+    $supArgs = Get-AlDetachArgs 'server.al.keepalive' @('--port', [string]$port)
+    $supPid = Start-AlDetached -FilePath $exe -ArgumentList $supArgs `
+        -WorkingDirectory $AlEnvRoot -Environment $detachEnv
     Write-AlLog "run: keepalive supervisor launched (pid $supPid; stop with scripts\stop.ps1)"
 } else {
     Write-AlLog "run: keepalive supervisor already running (no-op)"
@@ -256,7 +275,7 @@ $url = "http://127.0.0.1:$port/#token=" + (Get-AlToken)
 $clientShown = $false
 if (-not $wantOverlay) {
     Write-AlLog 'run: client not requested (-NoOverlay / -NoBrowser / -Browser)'
-} elseif (-not (Test-Path $electron)) {
+} elseif (-not $haveElectron) {
     Write-AlLog 'run: client not installed - run scripts\setup.ps1 with Node 22.12.0 or newer'
 } elseif ($trayOnly -and -not (@($plan.start) -contains 'overlay')) {
     # a live client is left alone: a second --client start would show its window
@@ -265,22 +284,21 @@ if (-not $wantOverlay) {
     # refused: never start an exe that is not the pinned one
     Write-AlLog 'run: client NOT started - electron.exe is not the pinned one; run scripts\setup.ps1 again to restore it'
 } else {
-    $clientArgs = @('"' + (Join-Path $Repo 'app') + '"', '--client')
+    # The app folder (<root>\app: the repository's app\ or the payload's) is
+    # the first argument in both modes, never a resources\app folder: the
+    # installed Electron is the unmodified zip (decision 0063).
+    $appDir = Join-Path $AlEnvRoot 'app'
+    $clientArgs = @(Format-AlArgs @($appDir, '--client'))
     if ($trayOnly) { $clientArgs += '--tray' }
     # OVL-LAUNCH-ENV (F-110): an inherited ELECTRON_RUN_AS_NODE or
     # NODE_OPTIONS would turn electron.exe into a Node script host before any
     # app code runs; the client never gets either.
     $ovlPid = Start-AlDetached -FilePath $electron -ArgumentList $clientArgs `
-        -WorkingDirectory (Join-Path $Repo 'app') -Environment $detachEnv -Unset $clientUnset
+        -WorkingDirectory $appDir -Environment $detachEnv -Unset $clientUnset
     $clientShown = $true
     if (@($plan.start) -contains 'overlay') {
-        Push-Location $Repo
-        try {
-            & $py -m server.al.procs record-overlay ([string]$ovlPid)
-            $recRc = $LASTEXITCODE
-        } finally {
-            Pop-Location
-        }
+        Invoke-AlPython server.al.procs record-overlay ([string]$ovlPid)
+        $recRc = $LASTEXITCODE
         if ($recRc -ne 0) {
             Write-AlLog "run: client pid $ovlPid exited at once (see the overlay log)"
             $clientShown = $false

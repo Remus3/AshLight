@@ -1,0 +1,30 @@
+{
+ "kinds": {
+  "pobnextmove": {
+   "act": "note",
+   "text": "PoB master moved <n> commits past the pin",
+   "tokens": {
+    "n": "[1-9][0-9]{0,3}"
+   },
+   "sample": {
+    "n": "12"
+   }
+  },
+  "pobnext": {
+   "act": "row",
+   "id": "TC-NEXT-<YYYYMMDD>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session",
+   "text": "PoB-PoE2 master is <n> commits past the pin with no release for 28 days: run the static rehearsal on <sha> and list failing guard rows. ACCEPT: a static verdict in tc_drift.py status for that ref. SOURCE: watch pob-next <sha>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "sha": "[0-9a-f]{40}",
+    "n": "[1-9][0-9]{0,3}"
+   },
+   "sample": {
+    "sha": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41",
+    "n": "12"
+   }
+  }
+ }
+}

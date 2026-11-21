@@ -132,3 +132,35 @@ unattended" with an opt-in switch.
   tokens fail validation, GitHub limits bar the daily read, or the
   operator rules unattended commits or HALT-time reads unwanted.
 - Tests: tests/test_watch_wire.py.
+
+## Amendment 2026-11-18 (LOOP-DRIFT-REF, TC-DRIFT-TRIAL-FIX part 2, F-064; with decision 0028)
+
+- Decision: `tc_drift.py trial --ref <branch or commit>` rehearses a
+  non-release ref (for example the next release branch): the same steps as
+  a tag trial (two downloads, content digests, setup, pob2_files re-hash,
+  prune), static by default (`--live` is the same manual trigger). The ref
+  must be a plain branch name or commit (git ref characters, no "..",
+  "//" or trailing "/"), resolved by the same read-only GitHub commits
+  call. The candidate keeps the pinned tag and carries `rehearsal_ref`;
+  its files are `ref-<12 hex>-pins.json` / `-junit.xml`; the record goes
+  to the state's `rehearsal` key, so a release trial awaiting apply is
+  never overwritten and a rehearsal's prune keeps that trial's candidate.
+  `apply` refuses a rehearsal record and any candidate carrying
+  `rehearsal_ref`, even live-green. Live-green changes with decision 0028:
+  the PoB GUI reference is keyed by tag (tests/tc_live_util.py), so the
+  same tag compares the recorded numbers and another tag reports per-key
+  deltas and fails until a reference for that tag is recorded or a session
+  writes its acceptance into the reference.
+- Alternatives: let apply accept a live-green rehearsal (moves the pin to
+  an unreleased commit no release note describes); record rehearsals in
+  the trial record (a rehearsal would overwrite a release candidate
+  awaiting apply); a separate rehearsal tool (a second copy of the
+  download, digest and prune steps).
+- Why: the next release can be rehearsed before it ships, with nothing
+  that could move the pin; the session reads it back (static-green after
+  F-039 lets the bridge accept the next PoB main-object shape).
+- Reverses if: PoB-PoE2 ships releases off a branch the rehearsal cannot
+  name, a rehearsal is ever applied in practice, or the GitHub commits
+  call stops resolving branch names.
+- Tests: tests/test_tc_drift.py test_trial_ref_is_static_by_default_and_apply_refuses_it,
+  test_rehearsal_prune_keeps_the_release_candidate.

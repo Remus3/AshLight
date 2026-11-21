@@ -589,6 +589,160 @@ def test_p3_9_loop_launches_live_only_with_local_opt_in(tmp_path, monkeypatch):
     assert got == [False, True]
 
 
+# --- LOOP-DRIFT-REF: trial --ref rehearsal, GUI reference keyed by tag ------
+
+def _rehearse(root, junit, live=False, ref="release-0.24", side=None, recycle=None):
+    seen = {"live": [], "cand": [], "calls": []}
+
+    def download(url, dest):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(_cand_zip())
+        return "e" * 64, 500
+
+    def run_tests(cand_path, junit_path, environ, live=False):
+        seen["live"].append(live)
+        seen["cand"].append(json.loads(Path(cand_path).read_text(encoding="ascii")))
+        seen["junit"] = Path(junit_path).name
+        return tc_drift.parse_junit(junit)
+    env = {"AL_SIDECAR_ROOT": str(side or root / "sidecar")}
+    kw = {} if not live else {"live": True}
+    res = tc_drift.trial(root, ref=ref, environ=env, fetch=_fake(calls=seen["calls"]),
+                         download=download,
+                         setup=lambda doc, e: _fake_checkout(doc, e), run_tests=run_tests,
+                         today="2026-12-11", recycle=recycle or (lambda p: False), **kw)
+    return res, seen
+
+
+def test_trial_ref_is_static_by_default_and_apply_refuses_it(tmp_path):
+    root = _root(tmp_path)
+    pin = tc_pin.load_pins()["pob2"]
+    # a green release trial awaiting apply is kept through a rehearsal
+    _trial(root, JUNIT_GREEN)
+    release = dict(tc_drift.load_state(root)["trial"])
+    assert release["verdict"] == "live-green"
+    res, seen = _rehearse(root, JUNIT_STATIC)
+    assert seen["live"] == [False]  # static by default
+    assert res["verdict"] == "static-green" and res["live"] is False, res
+    assert res["rehearsal"] is True and res["ref"] == "release-0.24"
+    assert res["commit"] == NEW_SHA and "apply never accepts" in res["detail"]
+    assert seen["calls"][0][1].endswith("/commits/release-0.24")
+    cand = seen["cand"][0]
+    assert cand["pob2"]["rehearsal_ref"] == "release-0.24"
+    assert cand["pob2"]["tag"] == pin["tag"] and cand["pob2"]["commit"] == NEW_SHA
+    assert tc_pin.validate_pins(cand) == []
+    assert seen["junit"] == f"ref-{NEW_SHA[:12]}-junit.xml"
+    st = tc_drift.load_state(root)
+    assert st["rehearsal"]["ref"] == "release-0.24"
+    assert st["trial"] == release  # the release record is never overwritten
+    # apply ignores the rehearsal and still moves to the release candidate
+    assert Path(st["rehearsal"]["candidate"]).name == f"ref-{NEW_SHA[:12]}-pins.json"
+
+    # even a live-green rehearsal is never accepted, wherever it is recorded
+    res, seen = _rehearse(root, JUNIT_GREEN, live=True)
+    assert seen["live"] == [True] and res["verdict"] == "live-green"
+    st = tc_drift.load_state(root)
+    st["trial"] = st["rehearsal"]
+    tc_drift.save_state(root, st)
+    with pytest.raises(tc_drift.DriftError, match="rehearsal"):
+        tc_drift.apply(root)
+    st["trial"] = dict(st["rehearsal"], rehearsal=None, ref=None)  # record stripped
+    tc_drift.save_state(root, st)
+    with pytest.raises(tc_drift.DriftError, match="rehearsal"):
+        tc_drift.apply(root)  # the candidate itself carries rehearsal_ref
+    assert json.loads((root / "config" / "tc_pins.json").read_text(
+        encoding="ascii"))["pob2"]["tag"] == pin["tag"]  # the pin never moved
+    st["trial"] = release
+    tc_drift.save_state(root, st)
+    assert tc_drift.apply(root) == "v0.24.0"  # the real release still applies
+
+    # refs that could bend the API path are refused before any request
+    for bad in ("../x", "a//b", "-x", "x/", "x.lock", "a b", "", "x?y=1"):
+        res, seen = _rehearse(root, JUNIT_STATIC, ref=bad)
+        assert res["verdict"] == "error" and seen["calls"] == [], bad
+    # the CLI takes exactly one of --tag / --ref
+    with pytest.raises(SystemExit):
+        tc_drift.main(["trial", "--tag", "v0.24.0", "--ref", "main"])
+    with pytest.raises(ValueError):
+        tc_drift.trial(root, environ={}, fetch=_fake())
+
+
+def test_rehearsal_prune_keeps_the_release_candidate(tmp_path):
+    root = _root(tmp_path)
+    side = tmp_path / "sidecar"
+    env = {"AL_SIDECAR_ROOT": str(side)}
+    rt = paths.all_runtime_paths(env)
+    name = tc_pin.load_pins()["pob2"]["repo"].split("/")[1]
+    rel = "c" * 40
+    tc_drift.save_state(root, {"trial": {"tag": "v0.24.0", "commit": rel,
+                                         "verdict": "live-green"}})
+    cache, work = rt["pob2_cache"], rt["build"] / "tc-drift"
+    work.mkdir(parents=True)
+    cache.mkdir(parents=True)
+    (cache / f"{name}-{rel}.zip").write_bytes(b"zip")
+    (work / "v0.24.0-pins.json").write_text("{}", encoding="ascii")
+    (work / "ref-bbbbbbbbbbbb-pins.json").write_text("{}", encoding="ascii")
+    recycled = []
+    res, _ = _rehearse(root, JUNIT_STATIC, side=side,
+                       recycle=lambda p: recycled.append(Path(p).name) or False)
+    assert recycled == ["ref-bbbbbbbbbbbb-pins.json"], recycled
+    assert res["prune"]["left"] == ["ref-bbbbbbbbbbbb-pins.json"]
+
+
+def _gui_ref(folder, name, pob, outputs, accepted=None):
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "build.xml").write_text("<PathOfBuilding2/>", encoding="ascii")
+    doc = {"pob": pob, "build_xml": "build.xml", "items": [], "outputs": outputs}
+    if accepted is not None:
+        doc["accepted"] = accepted
+    (folder / name).write_text(json.dumps(doc), encoding="ascii")
+    return folder / name
+
+
+def test_gui_reference_is_keyed_by_tag(tmp_path):
+    import tc_live_util as tlu
+    cache = tmp_path / "cache"
+    _gui_ref(cache, "gui_expected.json", "v0.23.1", {"Life": 1000, "TotalDPS": 500.0})
+    _gui_ref(cache, "gui_expected-v0.24.0.json", "v0.24.0", {"Life": 1010, "TotalDPS": 520.0},
+             accepted={"v0.25.0": "2026-12-20 deltas read by the session, life tree change",
+                       "v0.26.0": "looks fine"})
+    (cache / "gui_expected-broken.json").write_text("{", encoding="ascii")
+    (cache / "gui_expected-noxml.json").write_text(json.dumps(
+        {"pob": "v0.30.0", "build_xml": "missing.xml", "outputs": {}}), encoding="ascii")
+    refs = tlu.gui_references([cache, tmp_path / "absent"])
+    assert [r["pob"] for _p, r in refs] == ["v0.23.1", "v0.24.0"]
+
+    # the same tag compares its own recorded numbers
+    for tag in ("v0.23.1", "v0.24.0"):
+        mode, path, ref = tlu.pick_reference(tag, refs)
+        assert mode == "same" and ref["pob"] == tag, tag
+    # another tag gets the newest recorded reference, reported as deltas
+    mode, path, ref = tlu.pick_reference("v0.25.0", refs)
+    assert mode == "other" and ref["pob"] == "v0.24.0"
+    deltas = tlu.reference_deltas(ref["outputs"], {"Life": 1020, "TotalDPS": 520.0})
+    assert deltas["Life"]["want"] == 1010 and deltas["Life"]["got"] == 1020
+    assert deltas["Life"]["rel"] == pytest.approx(10 / 1010)
+    assert deltas["TotalDPS"]["rel"] == 0.0
+    assert tlu.reference_deltas({"Life": 1}, {})["Life"]["rel"] is None
+    lines = tlu.delta_lines(deltas)
+    assert lines[0].startswith("Life: 1010 -> 1020 (+0.99") and "TotalDPS" in lines[1]
+    # passing on another tag needs a dated written acceptance for that tag
+    assert tlu.accepted_for(ref, "v0.25.0").startswith("2026-12-20")
+    assert tlu.accepted_for(ref, "v0.26.0") is None  # undated: not an acceptance
+    assert tlu.accepted_for(ref, "v0.27.0") is None
+    assert tlu.pick_reference("v0.25.0", []) is None
+
+    # the tag under test: the pin's tag, or ref-<12 hex> for a rehearsal
+    pins = json.loads((ROOT / "config" / "tc_pins.json").read_text(encoding="ascii"))
+    p = tmp_path / "pins.json"
+    p.write_text(json.dumps(pins), encoding="ascii")
+    assert tlu.tested_tag(p) == pins["pob2"]["tag"]
+    pins["pob2"]["rehearsal_ref"] = "release-0.24"
+    p.write_text(json.dumps(pins), encoding="ascii")
+    assert tlu.tested_tag(p) == "ref-" + pins["pob2"]["commit"][:12]
+    assert tlu.pick_reference(tlu.tested_tag(p), refs)[0] == "other"
+    assert tlu.tested_tag(tmp_path / "none.json") is None
+
+
 def test_hold_note_is_dated():
     st = {"checked": "2026-12-11T09:00:00", "pinned": "v0.23.1", "latest": "v0.24.0",
           "trial": {"tag": "v0.24.0", "verdict": "red", "detail": "1 failed"}}

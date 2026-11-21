@@ -29,6 +29,7 @@ from . import hotkeys  # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE)
 from . import hotreload  # HOT-RELOAD (decision 0042)
 from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import plug  # RUN-SEAMS (decision 0056)
+from . import diag_data, leagues  # DATA-DIAG-SEAM, DATA-LEAGUE-PICKER-API
 from . import pricerefresh  # DATA-PRICE-REFRESH-CORE (F-036)
 from . import summary as summary_mod
 from .bus import EventBus
@@ -367,6 +368,7 @@ class Core:
         self._acl_stop = threading.Event()
         if self._real:
             self.start_acl_audit()
+        diag_data.attach(self)  # DATA-DIAG-SEAM: the data modules' attach(core), once
 
     # SEC-ACL-CHECK: the entry point makes the runtime dir private right
     # after Core() (start_token); the audit waits this long so it reads the
@@ -908,9 +910,71 @@ class Core:
         "contact not set") or None."""
         return webfetch.blocked_reason(self.web_data_enabled, self.contact)
 
-    def configured_league(self):
+    def league_setting(self):
+        """The "league" key of the local config as the player set it (the
+        picker or a hand edit), or None."""
         value = self._config().get("league")
         return value if isinstance(value, str) and value.strip() else None
+
+    def configured_league(self):
+        """The configured league to price and link: league_setting(), with
+        a solo league mapped to its trade league from the cached list
+        (DATA-LEAGUE-PICKER-API, leagues.trade_league_of), so RatesClient
+        and the trade links both use the trade league. None when unset."""
+        value = self.league_setting()
+        rates = getattr(self, "rates", None)  # None while __init__ builds it
+        if value is None or rates is None:
+            return value
+        return leagues.trade_league_of(value, rates.doc.get("leagues"))
+
+    def league_names(self):
+        """The display names of poe.ninja's cached leagues list, in its
+        order (newest first); [] while none is cached. Never a request."""
+        return [e["name"] for e in leagues.entries(self.rates.doc.get("leagues"))]
+
+    def league_auto(self):
+        """The display name of the auto league (the first of the cached
+        list, decision 0026), or None. Never a request."""
+        auto = self.rates.doc.get("league_auto")
+        if not (isinstance(auto, str) and auto.strip()):
+            return None
+        return leagues.name_of(self.rates.doc.get("leagues"), auto) or auto
+
+    def league_choice(self, value):
+        """DATA-LEAGUE-PICKER-API: the value set_league would store for
+        `value`: the cached entry's display name, or '' for '' / blank
+        (clears the key). Raises ValueError (settingsio.SettingsError) for a
+        value settingsio.ALLOWED["league"] refuses or one outside the
+        cached leagues list. Writes nothing."""
+        if not isinstance(value, str):
+            raise ValueError("the league must be text")
+        if not value.strip():
+            return ""
+        checked = settingsio.ALLOWED["league"](value)
+        hit = leagues.entry_of(self.rates.doc.get("leagues"), checked)
+        if hit is None:
+            raise ValueError("not a league in the cached list")
+        return hit["name"]
+
+    def set_league(self, value):
+        """DATA-LEAGUE-PICKER-API (F-141): store the league picked in the
+        dashboard as "league" in the local config; '' (or blank) removes
+        the key, so the auto league is followed again (decision 0026).
+        Checked by league_choice first, nothing written on a refusal.
+        Makes no request: the next due refresh prices the new league
+        (the hourly gates decide). Raises ValueError for a refused value
+        and ConfigUnreadable (an OSError) on a hand-broken file. Returns
+        the stored name or None."""
+        stored = self.league_choice(value)
+        with self._lock:
+            cfg = self._read_config_strict()
+            if stored:
+                cfg["league"] = stored
+            else:
+                cfg.pop("league", None)
+            jsonfile.write_json(self.config_path, cfg, indent=2, backup=True)
+            self._private_config()
+        return stored or None
 
     def trade_league(self):
         """UTIL-1.0-READY: the league for the offline trade links and the
@@ -1430,7 +1494,7 @@ class Core:
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": snap.get("character"),
         })
-        return dict(plug.collect_facts(self, now), **built)
+        return dict(diag_data.facts(self, plug.collect_facts(self, now)), **built)
 
     def _ggg_reg_open(self):
         """True while the dev docs watch's REG_OPEN flag exists (a stat of a
