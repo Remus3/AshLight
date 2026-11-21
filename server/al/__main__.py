@@ -14,6 +14,8 @@ is a demo.DemoCore that can read only the folder's Client.txt.
 """
 
 import argparse
+import errno
+import http.client
 import json
 import logging
 import os
@@ -24,7 +26,7 @@ import time
 from pathlib import Path
 
 from . import (DISCLAIMER, NAME, VERSION, acl, demo, exitrecord, hotreload, jsonfile,
-               logs, paths, ports)
+               logs, oplog, paths, ports)
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -221,10 +223,78 @@ def _say(text):
         print(text, file=sys.stderr, flush=True)
 
 
+START_ERROR_FILE = "start-error.json"  # F-091: why the last start could not bind
+PROBE_TIMEOUT_S = 1.0
+_IN_USE = {errno.EADDRINUSE, 10048}  # 10048 = WSAEADDRINUSE
+_REFUSED = {errno.EACCES, 10013}  # 10013 = WSAEACCES (a reserved port range)
+
+
+def probe_core(port, timeout=PROBE_TIMEOUT_S):
+    """F-091: True when an AshLight core answers on 127.0.0.1:port. One GET
+    of /api/health with NO token: every /api/ path needs the per-start
+    token, so a core answers 401 with {"error": "token required"} and its
+    CSP header. No token is read or sent; loopback only."""
+    if not port:
+        return False
+    conn = http.client.HTTPConnection(ports.LOOPBACK, int(port), timeout=timeout)
+    try:
+        conn.request("GET", "/api/health")
+        resp = conn.getresponse()
+        body = resp.read(4096)
+        csp = resp.getheader("Content-Security-Policy")
+        if resp.status != 401 or not csp:
+            return False
+        return json.loads(body.decode("utf-8")) == {"error": "token required"}
+    except (OSError, ValueError, http.client.HTTPException):
+        return False
+    finally:
+        conn.close()
+
+
+def bind_failure(port, exc):
+    """F-091: {"reason", "port", "errno", "fix"} for a bind that failed
+    with exc. The fix is one line; AshLight never moves to another port."""
+    code = getattr(exc, "winerror", None) or getattr(exc, "errno", None)
+    lo, hi = ports.PORT_BLOCK
+    move = (f"give AshLight a free port of {lo}-{hi} with the {ports.PORT_ENV} "
+            f"setting or the \"port\" setting")
+    if code in _IN_USE:
+        reason, fix = "port_in_use", f"Port {port} is used by another program; {move}."
+    elif code in _REFUSED:
+        reason, fix = ("port_refused",
+                       f"Windows refused port {port} (often a reserved port range); "
+                       f"{move}.")
+    else:
+        reason, fix = ("bind_error",
+                       f"Port {port} could not be opened ({type(exc).__name__}); {move}.")
+    return {"reason": reason, "port": int(port),
+            "errno": code if isinstance(code, int) else None, "fix": fix}
+
+
+def write_start_error(runtime, doc):
+    try:
+        write_private(Path(runtime) / START_ERROR_FILE,
+                      json.dumps(dict(doc, at=round(time.time(), 3))) + "\n")
+    except OSError:
+        pass
+
+
+def clear_start_error(runtime):
+    """A good start removes the record of an earlier failed one."""
+    try:
+        (Path(runtime) / START_ERROR_FILE).unlink()
+    except OSError:
+        pass
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.check:
         return check_code()
+    refusal = ports.flag_refusal(args.port)  # P8-4: --port stays in the block (0 allowed)
+    if refusal:
+        _say(f"AshLight: {refusal}")
+        return 2
     # DEP-05 (decision 0059): a home in a Steam library or the game's folder
     # is refused by its path text before anything is made or logged there
     refusal = paths.check_home()
@@ -253,8 +323,6 @@ def main(argv=None):
     install_crash_logging(log, paths.runtime_dir())  # OBS-CRASH: crash records
     if args.port is None:
         args.port = ports.resolve(os.environ, paths.load_local_config())
-    if args.port and not ports.in_block(args.port):
-        log.warning("port %s is outside the assigned block", args.port)
 
     if inst is not None:
         log.info("demo mode: fixture %s, scratch %s", inst.fixture, inst.scratch)
@@ -271,11 +339,21 @@ def main(argv=None):
         server = serve(core, token, port=args.port, web_root=root / "web",
                        tokens_css=root / "ops" / "fleet_kit" / "tokens.css")
     except OSError as exc:
-        log.error("cannot bind %s:%s (%s) - is AshLight already running?",
-                  ports.LOOPBACK, args.port, exc)
+        # F-091: probe the port once; an AshLight core answering is not an error
+        if probe_core(args.port):
+            log.info("AshLight is already running on %s:%s", ports.LOOPBACK, args.port)
+            _say(f"AshLight is already running on {ports.LOOPBACK}:{args.port}.")
+            exitrecord.write(paths.runtime_dir(), exitrecord.STOP, "already running")
+            return 2
+        doc = bind_failure(args.port, exc)
+        log.error("cannot bind %s:%s (%s): %s", ports.LOOPBACK, args.port,
+                  type(exc).__name__, doc["fix"])
+        _say(f"AshLight: {doc['fix']}")
+        write_start_error(paths.runtime_dir(), doc)
         exitrecord.write(paths.runtime_dir(), exitrecord.STOP,
                          f"port {args.port} could not be bound")
         return 2
+    clear_start_error(paths.runtime_dir())
     token_file = paths.token_file()
     write_private(token_file, token + "\n")
     url = f"http://{ports.LOOPBACK}:{server.port}/#token={token}"
@@ -286,6 +364,7 @@ def main(argv=None):
         print(DISCLAIMER, flush=True)
     log.info("listening on %s:%s", ports.LOOPBACK, server.port)
     core.port = server.port  # DIAG-SELF: the served port
+    oplog.record_start(core)  # RUN-OPLOG: one typed start line
 
     if core.consented():
         core.start_tailing()
@@ -371,6 +450,7 @@ def main(argv=None):
     detail = {exitrecord.RELOAD: "code changed",
               exitrecord.SIGNAL: signalled[0] if signalled else None,
               exitrecord.STOP: STOP_FILE if stop_requested(stop_file) else None}[reason]
+    oplog.record_stop(core, reason, detail)  # RUN-OPLOG: the stop reason line
     exitrecord.write(paths.runtime_dir(), reason, detail)
     return 0
 
