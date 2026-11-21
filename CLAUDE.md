@@ -445,7 +445,10 @@ of the HALT check.
 - A detached stdlib keepalive supervisor restarts a dead or hung core;
   stop.ps1's stop.request is honoured (decision 0005); a stale kill needs
   two failed health checks and the loop age; intervals use the monotonic
-  clock (0005 amendment 2026-11-18). Reverses if: the supervisor proves
+  clock (0005 amendment 2026-11-18); run.ps1 hands the supervisor the core
+  pid, the core restarts a missing supervisor and the client restarts a
+  missing core, each with its own cap; stop.request wins; no new watchdog
+  process (0005 amendment 2026-11-18). Reverses if: the supervisor proves
   unreliable, logon survival is wanted, or the stale heartbeat kill
   false-fires on slow machines.
 - OVL-FPS never uses PresentMon or ETW Present tracing of the game, not even
@@ -1238,3 +1241,21 @@ of the HALT check.
   request, no write. Reverses if: a fact's pattern misfires on a legitimate
   rewording, or the later fact packages need a different table shape.
 - CI issue protocol: The CI watcher writes one labelled issue per finding with a one-line key body from the workflow's bot account and never commits; never a GGG or poe.ninja host; outside decision 0013's scope; the tick trusts only that account and the key pattern and files the row from its own template; failover to the dev loop when the workflow is not active or 48 h silent; npm-audit stays a dev-loop source (CI never sets web_data); .github/workflows/watch.yml holds exactly permissions contents: read and issues: write (GITHUB_TOKEN, no secret, persist-credentials false, actions pinned by full SHA), opens no pull request and writes no contents (decision 0076; adjudicator ruling 2026-11-21). Reverses if: anonymous issue reads are refused, issue spam makes the label unusable, issue writes expose more than labelled issues, the tick accepts a forged key, or the operator rules no write scope is allowed.
+- RUN-VERDICTS-UI: the Checks tool's 'Tried in game' card (web/verdicts.js;
+  the #verdicts mount with its h4 sits after #checks-list) reads GET
+  /api/verdicts once at wire time and lists the fixed checks. A check stays
+  open, with Worked and Refused buttons, until its newest verdict is worked.
+  One click posts the verdict with the optional note typed above the list;
+  the note is printable ASCII of at most 200 characters, and a bad note is
+  refused, never cut. No timer, no clipboard, no modal, text only through
+  textContent. GET /api/report (server/al/plug/report.py, a token-gated plug
+  route) returns {"report": diag.report()} built from fresh diag_facts on
+  the click. The player's click that opens the Checks fold builds the
+  read-only preview (#checks-preview), and Copy report writes exactly the
+  previewed text, synchronously inside its own click. With no preview yet
+  (the fold opened by itself, or the build failed) that click builds the
+  preview and the next click copies. The clipboard is never written after a
+  wait; nothing is uploaded (decisions 0014, 0040, 0056). Reverses if: a
+  browser or Electron refuses the synchronous copy, the summary click proves
+  unreliable as the build trigger, players re-record worked checks often
+  enough to need a retry control, or RUN-QUIET-FEED reshapes the report.

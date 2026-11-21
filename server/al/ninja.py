@@ -67,6 +67,12 @@ usable rate, or fewer than half of 5 or more lines kept, keeps the last
 good rates and ETag and sets last_error "shape: ...". snapshot()["types"]
 publishes every type's state (Currency first, then the book's), counts and
 errors only; the Checks row is the book's DATA-DIAG-SEAM hook.
+
+DATA-NINJA-SHAPE-WATCH (F-140 layers 1 and 3): _league_id hands the league
+list's 200 body and _refresh_rates the Currency body, parsed or not, to
+ninjashape.observe through self.shape_watch (set by ninjashape.attach;
+None checks nothing). No request is added and the league is not re-read
+more often; the "League changed to X" note reads league_changed_at.
 """
 
 import json
@@ -77,7 +83,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from . import jsonfile, leagues, num, paths, pricebook, webfetch
+from . import jsonfile, leagues, ninjashape, num, paths, pricebook, webfetch
 
 log = logging.getLogger("al.ninja")
 
@@ -220,6 +226,7 @@ class RatesClient:
         self._busy = False
         self.doc = self._load()
         self.book = book  # pricebook.PriceBook or None
+        self.shape_watch = None  # DATA-NINJA-SHAPE-WATCH: set by ninjashape.attach
         self.installed = installed if installed is not None else _installed_default
 
     def _load(self):
@@ -336,7 +343,13 @@ class RatesClient:
             if status == 304 and etag:
                 self.doc["league_stale"] = False  # the list is unchanged
             elif status == 200:
-                listed = leagues.parse_list(body)
+                listed = None
+                try:
+                    listed = leagues.parse_list(body)
+                finally:  # DATA-NINJA-SHAPE-WATCH: the league list body, parsed or not
+                    n = len(listed) if listed is not None else None
+                    ninjashape.observe(self.shape_watch, "leagues", "leagues", status, rh,
+                                       body, n, n)
                 self.doc.update({"leagues": listed, "league_auto": listed[0]["id"],
                                  "league_stale": False,
                                  "league_list_etag": webfetch.header(rh, "ETag")})
@@ -444,7 +457,15 @@ class RatesClient:
                 self._set_league(league_id, name, now)  # a renamed id keeps its rates
                 outcome = "unchanged"
             elif status == 200:
-                parsed = parse_overview(body)
+                parsed = None
+                try:
+                    parsed = parse_overview(body)
+                finally:  # DATA-NINJA-SHAPE-WATCH: the Currency body, parsed or not
+                    ninjashape.observe(
+                        self.shape_watch, "exchange", OVERVIEW_TYPE, status, rh, body,
+                        len(parsed["rates"]) if parsed is not None else None,
+                        (sum(1 for e in parsed["rates"].values() if "name" in e)
+                         if parsed is not None else None))
                 if not parsed["rates"]:
                     self._rollover(league_id)
                 bad = pricebook.shape_error(parsed["lines"], len(parsed["rates"]))

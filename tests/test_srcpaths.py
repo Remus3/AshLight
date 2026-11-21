@@ -12,7 +12,11 @@ def test_index_html_is_the_dashboard_page():
     html = srcpaths.index_html()
     assert html.lstrip().lower().startswith("<!doctype html>")
     assert '<script src="/web/app.js" defer></script>' in html
-    assert html == srcpaths.read("index.html")
+    # TEST-WEB-PANELS-A: the real tree has panel files, so the page is
+    # index.html with their tags at the marker (server/al/webpage.py)
+    from server.al import webpage
+    assert html == webpage.assemble(srcpaths.WEB).decode("ascii")
+    assert html.count('<script src="/web/panels/build.js" defer></script>') == 1
     assert srcpaths.index_html("utf-8") == html
 
 
