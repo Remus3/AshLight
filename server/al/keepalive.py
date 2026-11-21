@@ -306,15 +306,19 @@ class Keepalive:
                  stale_s=STALE_S, start_grace_s=START_GRACE_S, backoff=BACKOFF_S,
                  cap=CAP, window_s=WINDOW_S, code_watch=None, preflight=None,
                  reload_debounce_s=RELOAD_DEBOUNCE_S, reload_exit_s=RELOAD_EXIT_S,
-                 snapshot=None, snapshot_every_s=SNAPSHOT_EVERY_S, wall=time.time,
+                 snapshot=None, snapshot_every_s=SNAPSHOT_EVERY_S, wall=None,
                  recheck_s=RECHECK_S, loop_stale_s=LOOP_STALE_S,
                  poll_gap_s=POLL_GAP_S, gap_grace_s=GAP_GRACE_S, poll_s=POLL_S):
         # RUN-SUPERVISOR-CLOCK (F-136): `now` is the monotonic clock every
         # interval uses; `wall` only stamps records other processes read
         # (keepalive.json, last-exit.json, the code reload status, the
         # snapshot starter's file ages) and corrects a fresh heartbeat's
-        # sighting by at most one poll.
+        # sighting by at most one poll. A caller that injects only `now`
+        # (a test's fake clock) gets it as the wall clock too.
+        if wall is None:
+            wall = time.time if now is time.monotonic else now
         self._wall = wall
+        self._loop_age = None      # loop_age_s of the last default check
         self.recheck_s = float(recheck_s)
         self.loop_stale_s = float(loop_stale_s)
         self.poll_gap_s = float(poll_gap_s)
@@ -350,7 +354,7 @@ class Keepalive:
         self.port = int(port)
         self._launch = launch
         self._alive = pid_alive
-        self._health = health or (lambda: health_check(self.runtime, self.port, detail=True))
+        self._health = health or self._default_health
         self._terminate = terminate
         self._created_of = created or process_created
         self._now = now
@@ -507,11 +511,22 @@ class Keepalive:
             reason = "no core running"
         return self._crashed(now, reason, code=code)
 
+    def _default_health(self):
+        """health_check's answer as a bool (as before); its loop_age_s is
+        kept for the stale verdict (RUN-SUPERVISOR-CLOCK)."""
+        d = health_check(self.runtime, self.port, detail=True)
+        self._loop_age = d["loop_age_s"]
+        return d["ok"]
+
     def _stale_verdict(self, now):
         """With a stale heartbeat: "ok" (a check passed), "checking" (the
         first failed check, or the second came too soon) or "hung" (a
         second failed check at least recheck_s after the first)."""
-        if check_passed(self._health(), self.loop_stale_s):
+        self._loop_age = None
+        result = self._health()
+        if not isinstance(result, dict):
+            result = {"ok": bool(result), "loop_age_s": self._loop_age}
+        if check_passed(result, self.loop_stale_s):
             self._failed_at = None
             return "ok"
         if self._failed_at is None:

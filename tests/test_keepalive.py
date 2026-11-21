@@ -594,6 +594,10 @@ def test_health_check_detail_reads_loop_age(tmp_path, body, age):
         got = ka.health_check(tmp_path, port, timeout=5, detail=True)
         assert got == {"ok": True, "loop_age_s": age}
         assert ka.health_check(tmp_path, port, timeout=5) is True
+        # the supervisor's default check stays a bool and keeps the loop age
+        sup = ka.Keepalive(runtime=tmp_path, port=port, launch=lambda: 1,
+                           pid_alive=lambda p: False)
+        assert sup._health() is True and sup._loop_age == age
         (tmp_path / "token").unlink()
         got = ka.health_check(tmp_path, port, timeout=5, detail=True)
         assert got == {"ok": False, "loop_age_s": None}
