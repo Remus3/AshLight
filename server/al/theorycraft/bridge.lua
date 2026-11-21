@@ -220,6 +220,28 @@ end
 
 -- --------------------------------------------------------- PoB start --
 
+-- TC-CALC-VERIFY-USE (F-139): package loader guard. The native (C) loaders
+-- of require answer only for NATIVE_ALLOW, and only until the lockdown
+-- below; any other native module (a network or archive DLL) is refused, so
+-- PoB or parsed data can never pull a DLL into the calc. Lua modules load
+-- as before. The real loaders live on only as upvalues, which the lockdown
+-- hides from debug.
+local NATIVE_ALLOW = { ["lua-utf8"] = true }
+local native_open = true
+do
+  local loaders = package.loaders or package.searchers
+  if type(loaders) == "table" then
+    for i = 3, #loaders do
+      local real = loaders[i]
+      loaders[i] = function(name)
+        if native_open and NATIVE_ALLOW[name] then return real(name) end
+        return "\n\tno native module '" .. tostring(name)
+          .. "' (refused by the AshLight calc bridge)"
+      end
+    end
+  end
+end
+
 -- A native module PoB requires may be missing from a plain luajit.exe run;
 -- fall back to the string library for lua-utf8 (ASCII-safe subset).
 if not pcall(require, "lua-utf8") then
@@ -320,6 +342,7 @@ os.remove = function() return nil, "os.remove " .. REFUSED end
 os.rename = function() return nil, "os.rename " .. REFUSED end
 package.loadlib = nil
 package.cpath = ""
+native_open = false -- TC-CALC-VERIFY-USE: no native require from here on
 package.loaded["ffi"] = nil
 if type(package.preload) == "table" then package.preload["ffi"] = nil end
 rawset(_G, "ffi", nil)
@@ -494,7 +517,14 @@ handlers["probe_confinement"] = function()
     return f, err
   end)
   local ffi_ok = pcall(require, "ffi")
+  -- TC-CALC-VERIFY-USE: native requires (both DLLs sit in PoB's runtime)
+  local native = {}
+  for _, name in ipairs({ "socket", "lzip" }) do
+    local ok, err = pcall(require, name)
+    native[name] = { ok = ok, error = not ok and tostring(err) or nil }
+  end
   return {
+    native = native,
     execute = attempt(function() return os.execute() end),
     popen = type(io.popen),
     tmpname = type(os.tmpname),
