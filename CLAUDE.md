@@ -357,7 +357,7 @@ checkout runs on the dev port.
 - Server side: `.github/workflows/fleet-identity-guard.yml` is a byte
   copy of `ops/fleet_kit/fleet_identity_guard.yml`; the checks
   `fleet-identity-guard` and `test` are required on main. Workflows pin
-  every action by full commit SHA, use a read-only token and no secret,
+  every action by full commit SHA, use a read-only token (no `contents`, `pull-requests` or `actions` write; the one exception is `watch.yml`, which also holds `issues: write` for the CI issue protocol, decision 0076) and no secret,
   never turn web data on and never call a GGG or poe.ninja host.
 - No absolute machine path, account id, email or sibling tree name in any
   tracked file outside `ops/fleet_kit/`; per-host values live in
@@ -1235,3 +1235,4 @@ of the HALT check.
   README names a tab); a stale quote fails tests/test_docs_fresh.py naming the file; no
   request, no write. Reverses if: a fact's pattern misfires on a legitimate
   rewording, or the later fact packages need a different table shape.
+- CI issue protocol: The CI watcher writes one labelled issue per finding with a one-line key body from the workflow's bot account and never commits; never a GGG or poe.ninja host; outside decision 0013's scope; the tick trusts only that account and the key pattern and files the row from its own template; failover to the dev loop when the workflow is not active or 48 h silent; npm-audit stays a dev-loop source (CI never sets web_data); .github/workflows/watch.yml holds exactly permissions contents: read and issues: write (GITHUB_TOKEN, no secret, persist-credentials false, actions pinned by full SHA), opens no pull request and writes no contents (decision 0076; adjudicator ruling 2026-11-21). Reverses if: anonymous issue reads are refused, issue spam makes the label unusable, issue writes expose more than labelled issues, the tick accepts a forged key, or the operator rules no write scope is allowed.
