@@ -759,6 +759,18 @@ of the HALT check.
   `line`, and a bad short makes the file malformed (decision 0043 amendment
   2026-11-19). Reverses if: a licence objection, verified PoE2 quest log
   lines, or the operator rules the file unwanted.
+  DATA-GUIDE-FACTS: every campaign area id of the cached world_areas snapshot
+  has a guide entry with a goal (an objective, or a bonus for a side zone) or
+  `"skip": true` (no permitted source for a goal; such an entry carries only
+  skip, src and checked; it shows no act default, only its waypoint; a bad
+  skip makes the file malformed). New or changed entries cite only snapshot:,
+  ggg-export:, log or operator, never a research note, checked against a
+  frozen baseline in tests/test_provenance.py. Root Hollow, Library of Kamasa,
+  Isle of Decay and Brinerot Cove are skips until OA-37 pastes text. The point
+  books read 'A book of 2 points' (kind other), with no passive or weapon-set
+  claim. Reverses if: the operator pastes the reward or zone text (OA-37), an
+  allowed source settles the kind of point, or a skipped area proves to need a
+  guide in play.
 - BUILD-LIVE: one build per decision 0038 character, swapped by the loop
   tick and hot-reloaded on mtime; stale-build alert; checked items kept in
   memory only and re-scored on build / weight change into upgrade notices;
