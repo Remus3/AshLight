@@ -647,6 +647,21 @@ class SessionState:
                 return True
             return False
 
+    def checks_facts(self):
+        """RUN-QUIET-FEED (F-093): the few state facts the Checks rows read
+        (Core.diag_facts), without building a snapshot: the tailer flags,
+        whether a character is known and its name (masked in the report,
+        never shown), the language verdict, the price book / rates check
+        times and whether zone levels are loaded. No event text."""
+        with self._lock:
+            src = self.sources
+            return {"tailer": dict(self.tailer),
+                    "character": self.character,
+                    "lang": self.lang.verdict(),
+                    "book_checked_at": src.get("book_checked_at"),
+                    "rates_checked_at": src.get("rates_checked_at"),
+                    "levels": bool(isinstance(self.zone_table, dict) and self.zone_table)}
+
     def set_hotkeys(self, view):
         """HOTKEYS-LIVE (OVL-KEYS-CORE): the effective keys view (core
         tick_diag and set_hotkey); bumps only on a change."""

@@ -81,19 +81,45 @@ def _ago(seconds):
     return f"{int(round(s / 86400.0))} days ago"
 
 
-def _check(cid, label, status, detail, fix=None):
-    return {"id": cid, "label": label, "status": status, "detail": detail,
-            "fix": fix if status == FAIL else None}
+# RUN-QUIET-FEED (F-093): a row whose words carry an age keeps the age out
+# of its detail: the detail holds AGO where the age goes and the row's "at"
+# holds the absolute time (epoch s). The published view therefore changes
+# only when a fact changes, never because a minute went by; the dashboard
+# (web/checks.js) writes the age in, stepped at 5 minutes, and the report
+# writes it in when it is made (render_detail).
+AGO = "{ago}"
 
 
-def _state_check(cid, label, sid, status=None, prefix=""):
+def _check(cid, label, status, detail, fix=None, at=None):
+    row = {"id": cid, "label": label, "status": status, "detail": detail,
+           "fix": fix if status == FAIL else None}
+    if at is not None:
+        row["at"] = at
+    return row
+
+
+def render_detail(row, now):
+    """The row's detail with its age written in (AGO replaced by _ago of
+    now - at; capitalised at the start of the detail). A row with no "at"
+    is returned as it is."""
+    detail = row.get("detail")
+    at = finite(row.get("at"))
+    if not isinstance(detail, str) or at is None or AGO not in detail:
+        return detail
+    ago = _ago(now - at)
+    if detail.startswith(AGO):
+        detail = ago[:1].upper() + ago[1:] + detail[len(AGO):]
+    return detail.replace(AGO, ago)
+
+
+def _state_check(cid, label, sid, status=None, prefix="", at=None):
     """The Checks row that names table state `sid` (F-131): its detail is
     the table's check text; only a fault state is a fix row, and its fix is
     the table's next step."""
     row = words.state(sid)
     if status is None:
         status = FAIL if row["fault"] else NOTE
-    return _check(cid, label, status, prefix + row["check"], row["next"])
+    return _check(cid, label, status, prefix + row["check"], row["next"], at=at)
 
 
 def check_log(f):
@@ -140,8 +166,8 @@ def check_last_line(f, now):
         # decision 0029: a quiet log is not a fault; idle comes only from
         # Client.txt staleness
         return _state_check("last_line", "Last log line", "idle", status=UNKNOWN,
-                            prefix=f"{_ago(age).capitalize()}. ")
-    return _check("last_line", "Last log line", PASS, _ago(age).capitalize() + ".")
+                            prefix=AGO + ". ", at=at)
+    return _check("last_line", "Last log line", PASS, AGO + ".", at=at)
 
 
 def check_character(f):
@@ -182,8 +208,8 @@ def check_prices(f, now):
         return _check("prices", "Price book", UNKNOWN, "No prices fetched yet.")
     age = now - at
     if age > BOOK_STALE_S:
-        return _check("prices", "Price book", FAIL, f"Updated {_ago(age)}.", FIX_NET)
-    return _check("prices", "Price book", PASS, f"Updated {_ago(age)}.")
+        return _check("prices", "Price book", FAIL, f"Updated {AGO}.", FIX_NET, at=at)
+    return _check("prices", "Price book", PASS, f"Updated {AGO}.", at=at)
 
 
 def check_calc(f):
@@ -214,9 +240,9 @@ def check_snapshot(f, now):
         return _check("snapshot", "Game data", PASS, "Present.")
     age = now - at
     if age > SNAPSHOT_OLD_S:
-        return _check("snapshot", "Game data", FAIL, f"Present, fetched {_ago(age)}.",
-                      FIX_SNAPSHOT if f.get("web_data") else FIX_SNAPSHOT_OFF)
-    return _check("snapshot", "Game data", PASS, f"Present, fetched {_ago(age)}.")
+        return _check("snapshot", "Game data", FAIL, f"Present, fetched {AGO}.",
+                      FIX_SNAPSHOT if f.get("web_data") else FIX_SNAPSHOT_OFF, at=at)
+    return _check("snapshot", "Game data", PASS, f"Present, fetched {AGO}.", at=at)
 
 
 def _live(f, key, cid, label, what):
@@ -374,10 +400,11 @@ def _exit_row(rec, words, started, now, cid, label):
     key = rec["reason"]
     if (key + "-thread") in words and isinstance(detail, str) and detail.startswith("thread "):
         key += "-thread"
-    text = words[key].format(ago=_ago(now - at))
+    text = words[key].format(ago=AGO)
     if isinstance(detail, str) and detail.strip():
-        text += f" ({' '.join(detail.split())})"
-    return _check(cid, label, NOTE, text + ".")
+        # a brace in the record's own words must never read as the age mark
+        text += f" ({' '.join(detail.split()).replace(AGO, '(ago)')})"
+    return _check(cid, label, NOTE, text + ".", at=at)
 
 
 def check_last_exit(f, now):
@@ -466,7 +493,7 @@ def report(rows, version, now, pairs):
     stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(now))
     lines = [f"AshLight {buildinfo.build_id(version=version)} self-check, {stamp}"]
     for r in rows:
-        line = f"[{MARK[r['status']]}] {r['label']}: {r['detail']}"
+        line = f"[{MARK[r['status']]}] {r['label']}: {render_detail(r, now)}"
         if r.get("fix"):
             line += f" Fix: {r['fix']}"
         lines.append(line)
@@ -481,15 +508,24 @@ def summary(rows):
     return "1 check needs a fix." if n == 1 else f"{n} checks need a fix."
 
 
-def view(facts, version, now=None):
-    """{"checks", "failed", "summary", "report"} for the snapshot."""
+def view(facts, version, now=None, with_report=True):
+    """{"checks", "failed", "summary", "report"}. RUN-QUIET-FEED (F-093,
+    F-109): the snapshot's copy is made with with_report=False and holds
+    no report text (the page builds the report on the click through GET
+    /api/report, server/al/plug/report.py) and no age: rows that carry one
+    hold AGO in the detail and the absolute time in "at", so the view only
+    changes when a fact does. With the report, the report writes the ages
+    in at `now`."""
     now = time.time() if now is None else now
     pairs = secrets(facts)
     rows = checks(facts, now)
     for r in rows:
         r["detail"] = redact(r["detail"], pairs)
-    return {"checks": rows, "failed": sum(1 for r in rows if r["status"] == FAIL),
-            "summary": summary(rows), "report": report(rows, version, now, pairs)}
+    out = {"checks": rows, "failed": sum(1 for r in rows if r["status"] == FAIL),
+           "summary": summary(rows)}
+    if with_report:
+        out["report"] = report(rows, version, now, pairs)
+    return out
 
 
 # -- the hotkey, from AshLight's own overlay log

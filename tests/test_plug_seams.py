@@ -173,7 +173,10 @@ def test_plug_module_adds_tick_row_and_route_without_shared_edits(plugs, tmp_pat
     checks = core.state.snapshot()["diag"]["checks"]
     assert checks[-1] == {"id": "zzq-probe", "label": "Probe", "status": "note",
                           "detail": "Probe ran 2 time(s).", "fix": None}
-    assert "[note] Probe: Probe ran 2 time(s)." in core.state.snapshot()["diag"]["report"]
+    # RUN-QUIET-FEED: the snapshot holds no report; it is built on the click
+    # (plug/report.py build: diag.view's report of the same facts)
+    assert "[note] Probe: Probe ran 2 time(s)." in core_mod.diag.view(
+        core.diag_facts(), core_mod.VERSION)["report"]
     # the route: served with the token; listed for the surface pin
     srv = serve_core(core)
     r, data = req(srv, "GET", "/api/zzq-probe", auth())

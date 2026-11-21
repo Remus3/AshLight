@@ -11,7 +11,7 @@ const web = require("./_web.js");
 const ck = web.load("checks.js");
 
 const DIAG = {
-  summary: "1 check needs a fix.", failed: 1, report: "AshLight 1 self-check\n[FIX] X\n",
+  summary: "1 check needs a fix.", failed: 1,
   checks: [
     { id: "log", label: "Client.txt", status: "pass", detail: "Found.", fix: null },
     { id: "overlay", label: "Overlay", status: "fail", detail: "Not running.",
@@ -55,7 +55,7 @@ test("checks: model maps every status to a glyph and a word", () => {
   assert.deepEqual(m.rows.map((r) => [r.glyph, r.word]), [
     ["[+]", "ok"], ["[#]", "needs a fix"], ["[-]", "off"], ["[ ]", "not known yet"]]);
   assert.equal(m.rows[1].fix, "Run scripts\\run.ps1.");
-  assert.deepEqual(ck.model(null), { summary: ck.WAITING, failed: 0, rows: [], report: "" });
+  assert.deepEqual(ck.model(null), { summary: ck.WAITING, failed: 0, rows: [] });
 });
 
 test("checks: paint opens the fold on a new failure only", () => {
@@ -68,7 +68,7 @@ test("checks: paint opens the fold on a new failure only", () => {
   doc.ids.checks.open = false; // the player closed it
   ck.paint(doc, { diag: Object.assign({}, DIAG, { summary: "same, new text" }) });
   assert.equal(doc.ids.checks.open, false);
-  ck.paint(doc, { diag: { summary: "All checks pass.", failed: 0, report: "r", checks: [] } });
+  ck.paint(doc, { diag: { summary: "All checks pass.", failed: 0, checks: [] } });
   assert.equal(doc.ids.checks.open, false);
 });
 
@@ -86,7 +86,7 @@ const tickle = () => new Promise((r) => setImmediate(r));
 
 test("checks: the copy button waits only for the first checks", () => {
   const doc = fakeDoc();
-  ck.paint(doc, { diag: Object.assign({}, DIAG, { report: undefined }) });
+  ck.paint(doc, { diag: DIAG });
   assert.equal(doc.ids["checks-copy"].disabled, false, "the route builds it, not the snapshot");
   const empty = fakeDoc();
   ck.paint(empty, { diag: { summary: "x", failed: 0, checks: [] } });
@@ -130,8 +130,8 @@ test("checks: preview equals the copied text byte for byte", async () => {
   assert.equal(wrote.length, 1);
   assert.equal(wrote[0], doc.ids["checks-preview"].value);
   assert.equal(Buffer.compare(Buffer.from(wrote[0], "utf8"), Buffer.from(REPORT, "utf8")), 0);
-  // the snapshot's own report is not what is copied
-  assert.notEqual(wrote[0], DIAG.report);
+  // RUN-QUIET-FEED: the snapshot carries no report of its own
+  assert.equal("report" in DIAG, false);
   await tickle();
   assert.equal(doc.ids["checks-said"].textContent, ck.COPIED);
   assert.equal(calls.length, 1, "the copy click builds nothing");
@@ -513,4 +513,48 @@ test("calc button: a click runs the client's one action, then pending, then ok o
   assert.match(ck.CALC_PENDING, /You can keep playing\.$/);
   assert.match(ck.CALC_FAILED, /calc_setup\.log in the Logs folder\.$/);
   assert.equal(ck.CALC_OK, "Calc set up. This row will change to ok soon.");
+});
+
+/* RUN-QUIET-FEED (F-093): age rows carry an absolute "at" and the AGO mark;
+   the page writes the age in, stepped at 5 minutes. */
+test("checks: ages step at 5 minutes", () => {
+  assert.equal(ck.AGE_STEP_S, 300);
+  assert.equal(ck.ageText(0), "just now");
+  assert.equal(ck.ageText(89), "just now");
+  assert.equal(ck.ageText(90), "under 5 min ago");
+  assert.equal(ck.ageText(299), "under 5 min ago");
+  assert.equal(ck.ageText(300), "5 min ago");
+  assert.equal(ck.ageText(599), "5 min ago");
+  assert.equal(ck.ageText(600), "10 min ago");
+  assert.equal(ck.ageText(89 * 60), "85 min ago");
+  assert.equal(ck.ageText(3 * 3600 + 5), "3 h ago");
+  assert.equal(ck.ageText(3 * 86400), "3 days ago");
+  assert.equal(ck.ageText(-5), "just now");
+  assert.equal(ck.ageText(NaN), "just now");
+  const T = 1795200000;
+  const d = { summary: "All checks pass.", failed: 0, checks: [
+    { id: "last_line", label: "Last log line", status: "pass", detail: ck.AGO + ".",
+      fix: null, at: T - 30 },
+    { id: "prices", label: "Price book", status: "pass", detail: "Updated " + ck.AGO + ".",
+      fix: null, at: T - 600 },
+    { id: "port", label: "Dashboard address", status: "pass", detail: "127.0.0.1:8960",
+      fix: null }] };
+  const at = (now) => ck.model(d, now).rows.map((r) => r.detail);
+  assert.deepEqual(at(T), ["Just now.", "Updated 10 min ago.", "127.0.0.1:8960"]);
+  // the same 5-minute step: the same model, so the list is not rebuilt
+  assert.deepEqual(ck.model(d, T + 60), ck.model(d, T + 239));
+  assert.deepEqual(at(T + 300), ["5 min ago.", "Updated 15 min ago.", "127.0.0.1:8960"]);
+  // paint takes the snapshot's own clock and rebuilds only on a new step
+  const doc = fakeDoc();
+  ck.paint(doc, { diag: d, now: T + 60 });
+  const key = doc.ids.checksbox.getAttribute("data-key");
+  ck.paint(doc, { diag: d, now: T + 200 });
+  assert.equal(doc.ids.checksbox.getAttribute("data-key"), key);
+  ck.paint(doc, { diag: d, now: T + 300 });
+  assert.notEqual(doc.ids.checksbox.getAttribute("data-key"), key);
+  const detail = doc.ids["checks-list"].children[1].children[1].textContent;
+  assert.equal(detail, "Updated 15 min ago.");
+  // no "at": the AGO mark is never written in (shown as sent)
+  assert.equal(ck.model({ checks: [{ id: "x", status: "note", detail: "a " + ck.AGO }] }, T)
+    .rows[0].detail, "a " + ck.AGO);
 });

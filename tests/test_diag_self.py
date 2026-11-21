@@ -102,8 +102,39 @@ def test_last_line():
     assert status({"last_line_at": None}, "last_line") == "unknown"
     r = row({"last_line_at": NOW - 3600}, "last_line")
     assert r["status"] == "unknown" and "may be closed" in r["detail"]
-    assert r["detail"] == "60 min ago. The game may be closed, or you are AFK."
+    # RUN-QUIET-FEED: the age is written in from "at" (report, dashboard)
+    assert r["detail"] == diag.AGO + ". The game may be closed, or you are AFK."
+    assert r["at"] == NOW - 3600
+    assert diag.render_detail(r, NOW) == "60 min ago. The game may be closed, or you are AFK."
     assert r["fix"] is None
+
+
+def test_age_rows_carry_an_absolute_time():
+    # RUN-QUIET-FEED (F-093): every row with an age holds the absolute time
+    # in "at" and the AGO mark in a detail with no time text; the rest have
+    # no "at"
+    facts = dict(GREEN, started_at=NOW - 120,
+                 last_exit={"at": NOW - 200, "reason": "crash", "detail": None},
+                 client_exit={"at": NOW - 90, "reason": "relaunch", "detail": None})
+    rows = {r["id"]: r for r in diag.checks(facts, NOW)}
+    want = {"last_line": NOW - 30, "prices": NOW - 600, "snapshot": NOW - 86400,
+            "last_exit": NOW - 200, "client_exit": NOW - 90}
+    assert {k: r["at"] for k, r in rows.items() if "at" in r} == want
+    for cid in want:
+        d = rows[cid]["detail"]
+        assert d.count(diag.AGO) == 1, cid
+        assert "ago" not in d.replace(diag.AGO, "") and "just now" not in d, cid
+    assert diag.render_detail(rows["prices"], NOW) == "Updated 10 min ago."
+    assert diag.render_detail(rows["snapshot"], NOW) == "Present, fetched 24 h ago."
+    assert diag.render_detail(rows["last_line"], NOW) == "Just now."
+    assert diag.render_detail(rows["last_exit"], NOW).startswith(
+        "AshLight stopped 3 min ago after")
+    # the same facts later: the same rows (no minute in the published view)
+    assert diag.checks(facts, NOW + 240) == list(rows.values())
+    # the snapshot's copy has no report; the click's copy writes ages in
+    assert "report" not in diag.view(facts, "1", now=NOW, with_report=False)
+    text = diag.view(facts, "1", now=NOW)["report"]
+    assert "[ok] Price book: Updated 10 min ago." in text and diag.AGO not in text
 
 
 def test_character():
