@@ -85,6 +85,16 @@ overlay gate amendment to decision 0029 was adjudicated separately.
    `app\assets\icon.ico` and the tray PNGs from `app/brand/index.js`
    (BRAND-ICON, docs/design/0005-brand-mark.md; at merge 2026-11-17 this
    replaced the first code-drawn `app/client/icon.js`).
+   Amended 2026-11-21 (REL-RUNTIME-SCRIPTS, plan units F-047, DEP-06):
+   the target above is a checkout's. In an installed copy the shortcut
+   targets the private Electron of decision 0063 (installed runtimes),
+   `<home>\runtime\<marker "electron">\electron.exe`, with
+   `"<home>\app\<version>\app" --client` (written by the installer's
+   shell step, server/al/install/shell.py); setup.ps1 is the checkout's
+   setup only and refuses an installed home. Both forms pass the app
+   folder itself, never a `resources\app` folder, and the client's own
+   children get the environment of `app/client/home.js` childEnv()
+   (ELECTRON_RUN_AS_NODE and NODE_OPTIONS dropped).
 9. No packaged .exe for now. `electron-builder` / `@electron/packager`
    would add a large exact-pinned devDependency tree whose build step
    downloads further binaries (NSIS, winCodeSign, rcedit) at build time, so

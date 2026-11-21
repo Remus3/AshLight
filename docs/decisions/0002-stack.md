@@ -22,6 +22,16 @@ transparent click-through Electron overlay).
   transparent, always-on-top, click-through (`setIgnoreMouseEvents(true)`),
   non-focusable window; toggled by an Electron `globalShortcut`. It renders
   the same SSE feed and draws nothing when nothing changes.
+- Amended 2026-11-21 (REL-RUNTIME-SCRIPTS, plan units F-047, DEP-06):
+  the stack note above describes a checkout (system Python 3.11+ from
+  PATH, Electron from `npm ci`). An installed copy runs the hash-pinned
+  private embeddable CPython and the unmodified Electron zip of decision
+  0063 (installed runtimes). The scripts find either through
+  `scripts/al_env.ps1` only (Get-AlPython, Get-AlPythonCmd, Get-AlPaths,
+  Get-AlElectron: `<python> -m <module>` in a checkout,
+  `<python> <payload>\boot.py <module>` in an install) and the client
+  through `app/client/home.js` pythonCmd(); no script holds its own Python
+  lookup (`tests/test_al_env.py`).
 
 ## Alternatives
 

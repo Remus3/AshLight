@@ -145,8 +145,8 @@
        one page at a time, a list longer than its page pages (Prev / Next,
        Full text), and a rarer tool is a further page of the same card, so no
        fold can grow a card. A page changes only on a press (web/app.js
-       cardPages). The other three cells keep today's markup until
-       PLAY-TD-19D-ITEMS-GRID. -->
+       cardPages). PLAY-TD-19D-ITEMS-GRID: Last item, Prices and Item
+       scoring are the other three cells. -->
   <div id="panel-build" class="panel panel-grid panel-cards" role="tabpanel" aria-labelledby="tab-build" tabindex="0" hidden>
   <div class="col">
   <section id="buildbox" class="card build grid-card" aria-labelledby="build-title" data-home="main">
@@ -288,13 +288,12 @@
       </div>
     </div>
     <!-- UX-DASH-DENSITY / PLAY-TD-19C-BUILD-GRID: the loot filter add-on is a
-         page of this card; the details element is kept open and only the
-         card's page buttons show or hide it (its summary is not drawn).
+         page of this card; only the card's page buttons show or hide it
+         (PLAY-TD-19D-ITEMS-GRID, review BG-10: a plain div, no fold).
          TC-FILTER-ONE-CONTROL (F-158): one primary control, the merge below;
          the plain download is a small link. AshLight's part of the file is
          dated and names the league of its prices. -->
-    <details id="filter-more" class="card-page tool-page" data-page="filter" data-label="Loot filter add-on" open hidden>
-    <summary>Loot filter add-on</summary>
+    <div id="filter-more" class="card-page tool-page" data-page="filter" data-label="Loot filter add-on" hidden>
     <p class="row-meta">Pick your filter file. AshLight adds its dated blocks at the top and hides
       nothing. Your own file is not changed. The copy goes to your downloads. Move it to the
       game's filter folder yourself.</p>
@@ -307,147 +306,159 @@
     <p class="muted small">Or <button id="filter-download" type="button" class="link">Download ashlight.filter</button>
       and add <code class="filter-line">Import "ashlight.filter" Optional</code> to your
       filter.</p>
-    </details>
+    </div>
   </section>
 
   </div>
   <div class="col">
-  <!-- PLAY-LEGACY-OUT-2: the full last item check, moved as it is from
-       Play (ids unchanged); region I on Play shows the short card and its
-       Details button opens this tab. PLAY-TD-19B-FOUR-TABS: these item and
-       price cards moved as they are from the Items and prices tab (gone)
-       to here, after the build cards. -->
-  <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
-    <h2 id="eval-title">Item check</h2>
-    <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
-      <!-- OVL-KEYS-WEB: web/hotkeys.js puts the bound key in each data-hotkey
-           span; its own words stay while no key is bound -->
-      <p id="eval-empty" class="muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
-        then press <span data-hotkey="eval">the item check key</span>. AshLight reads the
-        clipboard once per press and shows the verdict here and on the overlay for 20 seconds.
-        You can change the key under Settings, Tools.</p>
-      <div id="eval-body" hidden>
-        <p class="eval-head"><span id="eval-word" class="verdict"></span>
-          <span id="eval-item" class="eval-item"></span></p>
-        <p id="eval-sentence"></p>
-        <!-- TC-CARD-PARTS-WEB: the card parts' notes (a build caveat, F-043) under
-             the verdict, read with it -->
-        <ul id="eval-notes" hidden></ul>
-        <!-- UTIL-WAYSTONE-REWARD: reward totals under the risk sentence -->
-        <p id="eval-rewards" hidden></p>
-        <p id="eval-calc" class="muted" hidden></p>
-      </div>
+  <!-- PLAY-LEGACY-OUT-2 / PLAY-TD-19D-ITEMS-GRID: the full last item check
+       behind Play's card; region I on Play shows the short card and its
+       Details button opens this tab. One page: the verdict and the price
+       state (the two live regions; their sentences are read there and
+       shown as the first rows), then every slot, the calc line, the rolls,
+       price and points and the links as one-line rows that page (Full
+       text), then the time of the check. -->
+  <section id="evalbox" class="card evalbox grid-card" aria-labelledby="eval-title" data-home="main">
+    <div class="card-head">
+      <h2 id="eval-title" tabindex="-1">Last item</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
-    <div id="eval-comps" class="eval-comps"></div>
-    <p id="eval-unweighted" class="muted" hidden></p>
-    <!-- MATH-POTENTIAL-UI: score now vs the worst / best rolls -->
-    <p id="eval-rolls" class="muted" hidden></p>
-    <p id="eval-when" class="muted"></p>
-    <!-- TC-UPGRADE: outside the live region on purpose; the verdict above
-         already announces the check, this is a static link (review UP-5) -->
-    <div id="upgradebox" class="price-box" hidden>
-      <h3 class="sub-h">Upgrade search</h3>
-      <p id="upgrade-sentence"></p>
-      <p id="upgrade-link" class="price-link"></p>
-    </div>
-    <div id="pricebox" class="price-box">
-      <h3 class="sub-h">Price</h3>
-      <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
-        <p id="price-empty" class="muted">Nothing checked yet. After you check an item with
-          <span data-hotkey="eval">the item check key</span>, a link to search for it on the
-          official trade site shows here.</p>
-        <div id="price-body" hidden>
-          <p class="eval-head"><span id="price-badge" class="pill" data-state="pending"><span
-            class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
-            <span id="price-item" class="eval-item"></span></p>
-          <p id="price-sentence"></p>
-          <p id="price-link" class="price-link" hidden></p>
+    <div class="card-page" data-page="main" data-label="">
+      <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
+        <!-- OVL-KEYS-WEB: web/hotkeys.js puts the bound key in each data-hotkey
+             span; its own words stay while no key is bound -->
+        <p id="eval-empty" class="row-meta muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
+          then press <span data-hotkey="eval">the item check key</span>. AshLight reads the
+          clipboard once per press and shows the verdict here and on the overlay for 20 seconds.
+          You can change the key under Settings, Tools.</p>
+        <div id="eval-body" hidden>
+          <p class="eval-head"><span id="eval-word" class="verdict"></span>
+            <span id="eval-item" class="eval-item one-line"></span></p>
+          <!-- read with the verdict; the same words are the first rows below -->
+          <p id="eval-sentence" class="sr-only"></p>
+          <!-- TC-CARD-PARTS-WEB: the card parts' notes (a build caveat, F-043) -->
+          <ul id="eval-notes" class="sr-only" hidden></ul>
+          <!-- UTIL-WAYSTONE-REWARD: reward totals under the risk sentence -->
+          <p id="eval-rewards" class="sr-only" hidden></p>
+          <p id="eval-calc" class="sr-only" hidden></p>
         </div>
       </div>
-      <ol id="price-list" class="price-list" aria-label="Cheapest listings"></ol>
-      <p id="price-when" class="muted"></p>
+      <!-- PRICE-1-UI: the price state word; the price sentence is read here
+           and shown as a row below -->
+      <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
+        <p id="price-body" class="price-head" hidden><span class="row-meta muted">Price</span>
+          <span id="price-badge" class="pill" data-state="pending"><span
+            class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
+          <span id="price-sentence" class="sr-only"></span></p>
+      </div>
+      <div id="eval-rows" class="pager-slot"></div>
+      <p id="eval-when" class="row-meta one-line muted"></p>
     </div>
-    <!-- MATH-VALUE-UI: the item's own listed price against its points;
-         outside the live region, the verdict above already announces;
-         after Price so the price words sit together (UX-NEWEST N2) -->
-    <div id="valuebox" class="price-box" hidden>
-      <h3 class="sub-h">Price and points</h3>
-      <p id="value-sentence"></p>
-      <p id="value-per" hidden></p>
-      <p id="value-stale" class="muted" hidden></p>
-      <p id="value-credit" class="muted" hidden></p>
-    </div>
-  </section>
-
-  <section id="pricesbox" class="card prices" aria-labelledby="prices-title">
-    <h2 id="prices-title">Prices and web data</h2>
-    <form id="webdata-form" class="webdata-form">
-      <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
-        Use web data</label>
-    </form>
-    <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
-         text the build link recovery shows before its confirm click) -->
-    <p id="webdata-sentence" class="muted">Off unless you turn it on. When on, AshLight asks for two things only.
-      It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
-      paste, once. It never asks the trade site anything; the trade link after an item check
-      opens only when you click it. It sends no account, password or cookie, and never touches
-      the game.</p>
-    <p id="webdata-status" class="muted" role="status" aria-live="polite"></p>
-    <h3 class="sub-h">Currency values</h3>
-    <p id="rates-pill" class="pill" data-state="pending"><span class="glyph"
-      aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></p>
-    <p id="rates-unit" class="muted" hidden></p>
-    <ul id="rates-list" class="rates-list"></ul>
-    <div id="movers" hidden>
-      <h3 class="sub-h">Price movers this week</h3>
-      <p id="movers-empty" class="muted" hidden></p>
-      <h4 id="movers-up-h" class="sub-h4">Rising</h4>
-      <ul id="movers-up" class="rates-list" aria-labelledby="movers-up-h"></ul>
-      <h4 id="movers-down-h" class="sub-h4">Falling</h4>
-      <ul id="movers-down" class="rates-list" aria-labelledby="movers-down-h"></ul>
-    </div>
-    <p class="muted small"><span id="rates-credit">Prices: poe.ninja</span>.
-      <span id="rates-attrib"></span></p>
-  </section>
-
-  <section id="watchbox" class="card watch" aria-labelledby="watch-title">
-    <h2 id="watch-title">Price watch</h2>
-    <p id="watch-text" class="muted"></p>
-    <ul id="watch-moved" class="rates-list watch-list" hidden></ul>
-    <button id="watch-clear" type="button" class="secondary" hidden>Clear watched items</button>
-    <p id="watch-said" class="muted"></p>
-    <p class="muted small">Uses the poe.ninja prices AshLight already has. It asks the web
-      nothing new.</p>
   </section>
 
   </div>
   <div class="col">
-  <!-- UI-GLANCE: the item check's stat weights, moved out of the Play
-       card; the verdict on Play adds them up -->
-  <section id="weightsbox" class="card weightsbox" aria-labelledby="weightsbox-title">
-    <h2 id="weightsbox-title">Item check scoring</h2>
-    <details id="weights" class="weights" open>
-      <summary>Stat weights</summary>
-      <p class="muted">How much each point of a stat is worth. The verdict adds them up for the new
-        item and for yours. Changes save at once and the last item is checked again. Set 0
-        to ignore a stat. N stands for the number on the item.</p>
-      <form id="weights-form" class="weights-form">
+  <!-- PLAY-TD-19D-ITEMS-GRID (F-056): one Prices card. Your checked items
+       first, then the currency values (top 6) and the week's movers (3),
+       one list that pages; it reads only the cached poe.ninja book, only
+       while web data is on (decisions 0026, 0036), and asks the web nothing
+       new. The separate price watch card is gone. -->
+  <section id="pricesbox" class="card prices grid-card" aria-labelledby="prices-title" data-home="main">
+    <div class="card-head">
+      <h2 id="prices-title">Prices and web data</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <div class="card-page" data-page="main" data-label="">
+      <p id="rates-pill" class="pill" data-state="pending"><span class="glyph"
+        aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></p>
+      <div id="prices-list" class="pager-slot"></div>
+      <p id="rates-credit-line" class="row-meta one-line muted"><span
+        id="rates-credit">Prices: poe.ninja</span><span id="rates-unit"></span></p>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="watch">Checked items</button>
+        <button type="button" class="secondary btn-24" data-card-open="web">Web data</button>
+        <button type="button" class="secondary btn-24" data-card-open="source">Source</button>
+      </div>
+    </div>
+    <div class="card-page" data-page="watch" data-label="Your checked items" hidden>
+      <p id="watch-text" class="row-meta"></p>
+      <p class="card-act"><button id="watch-clear" type="button" class="secondary btn-28" hidden>Clear checked items</button><span
+        id="watch-said" class="row-meta one-line muted"></span></p>
+      <p class="row-meta muted">Uses the poe.ninja prices AshLight already has. It asks the web
+        nothing new.</p>
+    </div>
+    <div class="card-page" data-page="web" data-label="Web data" hidden>
+      <form id="webdata-form" class="webdata-form card-act">
+        <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
+          Use web data</label>
+        <span id="webdata-status" class="row-meta one-line muted" role="status" aria-live="polite"></span>
+      </form>
+      <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
+           text the build link recovery shows before its confirm click) -->
+      <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for two things only.
+        It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
+        paste, once. It never asks the trade site anything; the trade link after an item check
+        opens only when you click it. It sends no account, password or cookie, and never touches
+        the game.</p>
+    </div>
+    <div class="card-page" data-page="source" data-label="Where prices come from" hidden>
+      <p id="rates-attrib" class="row-meta"></p>
+    </div>
+  </section>
+
+  </div>
+  <div class="col">
+  <!-- UI-GLANCE / PLAY-TD-19D-ITEMS-GRID: the item check's stat weights.
+       The first page lists only the weights changed from the defaults; the
+       Stat weights page edits every weight, a page at a time; adding a stat, the
+       sidegrade range and the reset are pages of the same card. -->
+  <section id="weightsbox" class="card weightsbox grid-card" aria-labelledby="weightsbox-title" data-home="main">
+    <div class="card-head">
+      <h2 id="weightsbox-title" tabindex="-1">Item scoring</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <div class="card-page" data-page="main" data-label="">
+      <p class="row-meta one-line muted">Points per stat; the verdict adds them up.</p>
+      <div id="weights-changed" class="pager-slot"></div>
+      <p id="weights-band-line" class="row-meta one-line muted"></p>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="edit">Edit weights</button>
+        <button type="button" class="secondary btn-24" data-card-open="add">Add a stat</button>
+        <button type="button" class="secondary btn-24" data-card-open="reset">Reset</button>
+      </div>
+    </div>
+    <form id="weights-form" class="weights-form">
+      <!-- every weight, 9 a page (6 compact); a page shows its rows and
+           hides the rest, so a save always sends every weight -->
+      <div id="weights" class="card-page" data-page="edit" data-label="Stat weights" hidden>
         <ul id="weights-list" class="weights-list"></ul>
+        <div id="weights-pager" class="al-pager"></div>
+      </div>
+      <div class="card-page" data-page="add" data-label="Add a stat, sidegrade range" hidden>
         <fieldset class="weights-add">
           <legend>Add a stat</legend>
-          <label>Stat, with N for the number
+          <label>Stat, N for the number
             <input id="weights-new-key" type="text" maxlength="200" placeholder="+N% to Fire Resistance" autocomplete="off"></label>
           <label>Points
             <input id="weights-new-value" type="number" step="any" inputmode="decimal"></label>
         </fieldset>
         <fieldset class="weights-band">
-          <legend>Sidegrade range (counts as about the same)</legend>
+          <legend>Sidegrade range (about the same)</legend>
           <label>Points <input id="weights-abs" type="number" min="0" step="any"></label>
           <label>Percent of your item's score <input id="weights-pct" type="number" min="0" step="any"></label>
         </fieldset>
-      </form>
-      <p id="weights-status" class="muted" role="status" aria-live="polite"></p>
-    </details>
+      </div>
+    </form>
+    <div class="card-page" data-page="reset" data-label="Reset" hidden>
+      <p id="weights-reset-q" class="row-meta">Put every weight and the sidegrade range back to the
+        defaults? Your changes are lost.</p>
+      <p class="card-act"><button id="weights-reset" type="button" class="secondary btn-28"
+        aria-describedby="weights-reset-q">Reset to defaults</button></p>
+    </div>
+    <p id="weights-status" class="row-meta one-line muted" role="status" aria-live="polite"></p>
   </section>
   </div>
   </div>

@@ -55,8 +55,10 @@ batch on an integration worktree.
   overlay or the loop, reads the live Client.txt or sends input anywhere.
   The stricter reading wins; a doubt goes to the adjudicator, which cannot
   lift the floor.
-- Git: never force, never rewrite. No `--amend`, `--no-verify`, `push`,
-  `rebase`, `reset`, `stash`, `clean`, `git add -A` or `commit -a`; no
+- Git: never force, never rewrite. A package agent never pushes; only the
+  wave integrator or merger, for the session, pushes main after a gated
+  batch commit, via fleet_gitlock to origin, never `--no-verify`. No
+  `--amend`, `--no-verify`, `rebase`, `reset`, `stash`, `clean`, `git add -A` or `commit -a`; no
   branch switch in the main checkout, which stays on main. Commits name
   their paths. Exit 3 from a kit helper or an index.lock error: wait 30 to
   60 s and retry. No AI or bot attribution (FLEET item 17).

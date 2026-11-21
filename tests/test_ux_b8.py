@@ -20,7 +20,7 @@ def test_clear_buttons_are_not_primary():
     """A button that throws data away is never the filled primary style."""
     for bid in ("history-clear", "watch-clear"):
         m = re.search(r'<button id="%s"[^>]*>' % bid, MAIN)
-        assert m and 'class="secondary"' in m.group(0), bid
+        assert m and re.search(r'class="secondary(?: btn-\d+)?"', m.group(0)), bid
 
 
 def test_price_watch_off_and_empty_still_says_how_it_fills(tmp_path):
@@ -72,17 +72,17 @@ def test_build_file_and_loot_filter_fold_in_their_own_cards():
     their own cards. PLAY-TD-19C-BUILD-GRID (TD-19, plan 03 section 4):
     folds become pages of those cards, so no fold can grow a card. The
     .build file is the Build card's More page; the loot filter add-on is the
-    Search strings card's filter page, a details element kept open whose
-    summary is not drawn (the card's page buttons show it)."""
+    Search strings card's filter page, a plain div the card's page buttons
+    show (PLAY-TD-19D-ITEMS-GRID, review BG-10: no details, no summary)."""
     build = _between('id="buildbox"', "</section>")
     assert "<details" not in build
     assert '<div id="buildfile-more" class="card-page" data-page="more"' in build
     assert build.index('id="buildfile-more"') < build.index('id="buildfile-save"')
     assert 'data-card-open="more"' in build
     search = _between('id="searchbox"', "</section>")
-    assert search.count("<details") == 1
-    assert re.search(r'<details id="filter-more" class="card-page tool-page" data-page="filter"'
-                     r'[^>]* open hidden>', search)
+    assert "<details" not in search and "<summary" not in search
+    assert re.search(r'<div id="filter-more" class="card-page tool-page" data-page="filter"'
+                     r'[^>]* hidden>', search)
     i = search.index('id="filter-more"')
     # TC-FILTER-ONE-CONTROL: the merge is the page's one primary control;
     # the plain download follows it as the small "Or" line
@@ -91,13 +91,15 @@ def test_build_file_and_loot_filter_fold_in_their_own_cards():
     # the search strings themselves are on the card's first page
     assert search.index('id="search-list"') < i
     css = srcpaths.read("app.css", encoding="utf-8")
-    assert re.search(r"\.tool-page > summary \{ display: none; \}", css)
+    assert "summary" not in css[css.index(".tool-page"):css.index("/* The pager")]
 
 
 def test_build_and_items_is_a_fixed_three_by_two_grid():
     """PLAY-TD-19C-BUILD-GRID (TDF-1): the panel is 3 x 2 fixed cells in the
     cockpit classes, not auto-fit columns; Build, Health and next and Search
-    strings are its first three cells, cards with pages and no fold."""
+    strings are its first three cells, cards with pages and no fold.
+    PLAY-TD-19D-ITEMS-GRID: Last item, Prices and Item scoring are the other
+    three, cards the same way; every column is a cell."""
     css = srcpaths.read("app.css", encoding="utf-8")
     m = re.search(r"@media \(min-width: 64em\) and \(min-height: 43\.75em\) \{\s*"
                   r"\.panel-cards \{([^}]*)\}", css)
@@ -107,8 +109,11 @@ def test_build_and_items_is_a_fixed_three_by_two_grid():
     panel = MAIN[MAIN.index('id="panel-build"'):MAIN.index('id="panel-run"')]
     assert re.match(r'id="panel-build" class="panel panel-grid panel-cards"', panel)
     cells = re.findall(r'<div class="col">\s*(?:<!--.*?-->\s*)?<section id="([a-z]+)"', panel, re.S)
-    assert cells[:3] == ["buildbox", "healthbox", "searchbox"], cells
-    for card in cells[:3]:
+    assert cells == ["buildbox", "healthbox", "searchbox", "evalbox", "pricesbox",
+                     "weightsbox"], cells
+    assert panel.count('<div class="col">') == 6
+    assert ".panel-cards > .col { display: grid;" in css
+    for card in cells:
         sec = _between('id="%s"' % card, "</section>")
         assert "grid-card" in sec.split(">")[0] and " hidden" not in sec.split(">")[0], card
         assert 'class="card-head"' in sec and "data-card-back" in sec, card
@@ -116,6 +121,11 @@ def test_build_and_items_is_a_fixed_three_by_two_grid():
     # no element inside the three cards holds a live region (page-wide cap)
     three = panel[:panel.index('id="evalbox"')]
     assert not re.findall(r'aria-live="polite"|role="status"|role="alert"', three)
+    # the last three keep their four (verdict, price state, web data and
+    # weights status) and add none; the tab mark is no live region
+    rest = panel[panel.index('id="evalbox"'):]
+    assert len(re.findall(r'aria-live="polite"', rest)) == 4
+    assert "<details" not in panel
 
 
 def test_no_nested_fold_for_the_overlay_layout():

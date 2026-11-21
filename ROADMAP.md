@@ -340,7 +340,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   runs of the one gate command with their hold seconds (median under 75 s), one green run with xdist
   hidden, and one command hash for all of them in the gate's duration log. ZERO-CLICK: The agent
   runs the eleven gated runs itself, one at a time, at below-normal priority; no operator step.
-  DEPENDS: TEST-GATE-CALLERS. BLOCKED: session wave 18.
+  DEPENDS: TEST-GATE-CALLERS. BLOCKED: session wave 20.
 - [ ] DATA-GUIDE-FACTS (data) Guide facts from allowed sources: 4 blank zones, point-books wording,
   coverage. ACCEPT: python -m pytest -q tests/test_zone_guide.py tests/test_provenance.py
   tests/test_hot_reload.py passes (the snapshot coverage test runs where the world_areas cache

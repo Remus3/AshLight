@@ -126,6 +126,7 @@ Carried forward (not acted on yet):
   ACTS bullet).
 - OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
 - OPERATOR before the first push (OA-5; rows GP-03, GP-09; optional): name another holder, owner or repository name; default: the gh account and AshLight.
+- OA-2 (message to poe.ninja) is skipped in writing (operator order 2026-11-18); optional later; it unlocks release polling only on a written yes (decision 0072); not a flip gate.
 - OPERATOR ACTS (one batched ask, docs/plan/09-operator-acts.md, OA-1 to
   OA-37; all optional, defaults in force, no wave waits; letters are the
   old hand-off acts): (a) in-map FPS test, Windowed Fullscreen, one normal

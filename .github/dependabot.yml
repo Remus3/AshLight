@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 3
+      semver-major-days: 14
+    groups:
+      npm-all:
+        patterns: ["*"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 3
+    exclude-paths:
+      - ".github/workflows/fleet-identity-guard.yml"
+    groups:
+      actions-all:
+        patterns: ["*"]

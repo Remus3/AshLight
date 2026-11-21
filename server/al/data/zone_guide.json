@@ -1,5 +1,5 @@
 {
- "about": "ZONE-GUIDE (decision 0043): AshLight's own per-zone guide, keyed by act key and zone name as the log names it. Facts from public sources (research 0034), never their wording; unsure facts are left out. Reloads by itself when saved.",
+ "about": "ZONE-GUIDE (decision 0043): AshLight's own per-zone guide, keyed by act key and zone name as the log names it. Facts in own words, never a source's wording; unsure facts are left out. New or changed entries cite only the cached snapshots, GGG Data Exports, the player's own log or operator text. \"skip\": true marks an area with no guide. Reloads by itself when saved.",
  "version": 1,
  "acts": {
   "G1": {
@@ -129,12 +129,12 @@
     },
     "Hunting Grounds": {
      "objective": "Head on to Ogham Farmlands; Freythorn is a worthwhile side trip.",
-     "short": "Crowbell pit: 2 skill points",
+     "short": "Crowbell pit: book of 2 points",
      "layout": "Points of interest tend to sit near the corners.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - beat the Crowbell in a gated pit arena."
+       "kind": "other",
+       "text": "A book of 2 points - beat the Crowbell in a gated pit arena."
       }
      ],
      "next": "Ogham Farmlands"
@@ -155,12 +155,12 @@
     },
     "Ogham Farmlands": {
      "objective": "Push through the farms to Ogham Village.",
-     "short": "Lute back to Una: 2 skill points",
+     "short": "Lute back to Una: book of 2 points",
      "layout": "Farms before the village: look around for a quest item along the way.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - bring Una's lute, found in a hut, back to Una."
+       "kind": "other",
+       "text": "A book of 2 points - bring Una's lute, found in a hut, back to Una."
       }
      ],
      "next": "Ogham Village",
@@ -207,6 +207,16 @@
      },
      "src": "research:0025",
      "checked": "2026-11-17"
+    },
+    "Act 1": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "Root Hollow": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
     }
    }
   },
@@ -281,12 +291,12 @@
     },
     "Keth": {
      "objective": "Cross the city to the Lost City.",
-     "short": "Kabala pit: 2 skill points",
+     "short": "Kabala pit: book of 2 points",
      "layout": "The exit tends to be across a large bridge, opposite the entrance.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - beat Kabala, the Constrictor Queen, in a central pit."
+       "kind": "other",
+       "text": "A book of 2 points - beat Kabala, the Constrictor Queen, in a central pit."
       }
      ],
      "next": "The Lost City"
@@ -357,8 +367,8 @@
      "layout": "Ruined city on the way to the spires; clear forward.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - take a fallen soldier's last letter to Shambrin."
+       "kind": "other",
+       "text": "A book of 2 points - take a fallen soldier's last letter to Shambrin."
       }
      ],
      "next": "Path of Mourning",
@@ -402,6 +412,11 @@
      "next": "Sandswept Marsh",
      "src": "research:0025",
      "checked": "2026-11-17"
+    },
+    "Act 2": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
     }
    }
   },
@@ -436,8 +451,8 @@
      "layout": "The Venom Crypts entrance tends to be by the waypoint.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - beat Mighty Silverfist, an optional boss."
+       "kind": "other",
+       "text": "A book of 2 points - beat Mighty Silverfist, an optional boss."
       }
      ],
      "next": "Infested Barrens"
@@ -568,8 +583,8 @@
      "layout": "City heart: push on to the black chambers.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - sacrifice a Vaal heart at the altar."
+       "kind": "other",
+       "text": "A book of 2 points - sacrifice a Vaal heart at the altar."
       }
      ],
      "next": "The Black Chambers",
@@ -583,6 +598,21 @@
      "next": "Kingsmarch",
      "src": "research:0025",
      "checked": "2026-11-17"
+    },
+    "Act 3": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "The Temple of Chaos": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "Library of Kamasa": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
     }
    }
   },
@@ -630,8 +660,8 @@
      "layout": "Island with a fight at its end; it moves the act on.",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - beat Omniphobia in the dark mists."
+       "kind": "other",
+       "text": "A book of 2 points - beat Omniphobia in the dark mists."
       }
      ],
      "next": "Kingsmarch",
@@ -723,8 +753,8 @@
      "short": "Yama, then talk to Hinekora",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - for finishing the trial."
+       "kind": "other",
+       "text": "A book of 2 points - for finishing the trial."
       }
      ],
      "next": "Kingsmarch"
@@ -758,6 +788,47 @@
      "objective": "Optional: opens once you hold four torn map pieces.",
      "short": "Opens with 4 torn map pieces",
      "main": false
+    },
+    "Act 4": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "[DNT] Ship": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "[DNT-UNUSED] Vahi Loa": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "Isle of Decay": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "[DNT-UNUSED] Precursor Forge": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    },
+    "Brinerot Cove": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
+    }
+   }
+  },
+  "G6": {
+   "src": "snapshot:world_areas",
+   "checked": "2026-11-21",
+   "zones": {
+    "Interlude": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
     }
    }
   },
@@ -793,11 +864,11 @@
      "next": "Holten Estate"
     },
     "Wolvenhold": {
-     "short": "Oswin's ledger: 2 skill points",
+     "short": "Oswin's ledger: book of 2 points",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - beat Oswin, the Dread Warden, for his ledger."
+       "kind": "other",
+       "text": "A book of 2 points - beat Oswin, the Dread Warden, for his ledger."
       }
      ],
      "main": false
@@ -827,8 +898,8 @@
        "text": "+5% maximum life - at the molten shrine up the north stairway."
       },
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - beat the two bosses in the east arena, then see Risu."
+       "kind": "other",
+       "text": "A book of 2 points - beat the two bosses in the east arena, then see Risu."
       }
      ],
      "next": "Pools of Khatal"
@@ -862,6 +933,11 @@
     "Qimah Reservoir": {
      "objective": "Final fight: Azmadi, the Faridun Prince.",
      "short": "Last fight: Prince Azmadi"
+    },
+    "[DNT] River Barrens": {
+     "skip": true,
+     "src": "snapshot:world_areas",
+     "checked": "2026-11-21"
     }
    }
   },
@@ -901,8 +977,8 @@
      "short": "Yeti tusks to Hilda: 2 points",
      "optional": [
       {
-       "kind": "passive",
-       "text": "A book of 2 skill points - bring the yeti's tusks to Hilda."
+       "kind": "other",
+       "text": "A book of 2 points - bring the yeti's tusks to Hilda."
       }
      ],
      "main": false
