@@ -9,10 +9,11 @@ tracked file - the flask base names and drop levels are read from the
 cache at start). No screen or memory read, nothing sent to the game.
 
 Hints, at most one per kind, in this order:
-- boss: on entering a zone in BOSS_ZONES, the build's resistance to that
-  boss's main element. The table is AshLight-authored, a restated fact
-  (guide source credited in docs/research/0031 only, no guide text here);
-  zone ids are the ones whose boss the world_areas snapshot names;
+- boss: on entering a boss zone, the build's resistance to that boss's
+  main element. The element comes from the caller: the zone's `boss` entry
+  in the guide file (zoneguide.view's `boss`, DATA-GUIDE-BOSS), an
+  AshLight-authored restated fact (guide source credited in
+  docs/research/0031 only, no guide text here; decision 0039);
 - flask: a higher life / mana flask base can drop at the player's level
   than the one the build has equipped (base drop levels from the snapshot);
 - boots: the build's boots have no movement speed at or past a level
@@ -36,15 +37,6 @@ FLASK_CLASSES = {"LifeFlask": "life", "ManaFlask": "mana"}
 FLASK_SLOTS = ("Flask 1", "Flask 2")
 RES_STAT = {"fire": "FireResist", "cold": "ColdResist",
             "lightning": "LightningResist", "chaos": "ChaosResist"}
-# Restated facts (research 0031 section 1): Act 1's final boss hits mostly
-# with cold, Rudja mostly with fire. Keyed by the area ids whose boss the
-# world_areas snapshot lists (G1_15 Ogham Manor, G2_10_2 Mawdun Mine).
-BOSS_ZONES = {"G1_15": "cold", "G2_10_2": "fire"}
-# DATA-PROVENANCE (F-097): where each BOSS_ZONES fact comes from and when it
-# was last checked (src forms: tools/provenance.py). Data only; nothing
-# reads it at run time.
-BOSS_PROVENANCE = {"G1_15": {"src": "research:0031", "checked": "2026-11-17"},
-                   "G2_10_2": {"src": "research:0031", "checked": "2026-11-17"}}
 _CAMPAIGN_RE = re.compile(r"^(?:C_)?G\d+_")
 
 
@@ -154,15 +146,17 @@ def _flask_hints(level, facts, table):
     return out
 
 
-def view(level, area_id, facts, flasks=None, boots_level=DEFAULT_BOOTS_LEVEL):
+def view(level, area_id, facts, flasks=None, boots_level=DEFAULT_BOOTS_LEVEL, boss=None):
     """The snapshot `campaign` part: {"hints": [{"id", "text", "word"}],
-    "word"} or None when there is nothing to say."""
+    "word"} or None when there is nothing to say. `boss` is the zone boss's
+    element the guide passes in (zoneguide.view's `boss`); an element
+    RES_STAT does not know reads as no boss."""
     if not _is_level(level) or not isinstance(facts, dict):
         return None
     if not isinstance(area_id, str) or not _CAMPAIGN_RE.match(area_id):
         return None
     hints = []
-    element = BOSS_ZONES.get(area_id)
+    element = boss if isinstance(boss, str) and boss in RES_STAT else None
     if element:
         res = _num((facts.get("res") or {}).get(element))
         if res is None:
