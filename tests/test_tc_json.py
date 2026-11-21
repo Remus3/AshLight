@@ -5,12 +5,14 @@ use an ephemeral port and a tmp runtime.
 """
 
 import json
+import xml.etree.ElementTree as ET
 
 import pytest
 
 from server.al.theorycraft import charjson, codec, model, paste
 from server.al.theorycraft.store import BuildStore
-from tc_fixtures import CHAR_JSON, FULL_XML, JSON_TWIN_XML
+from tc_fixtures import (CHAR_JSON, CURRENT_SHAPE_JSON, FULL_XML, JSON_TWIN_XML,
+                         OLD_SHAPE_JSON, SHAPES_WEAPON_TEXT)
 from test_tc_code_api import env, req  # noqa: F401  (pytest fixture reuse)
 
 
@@ -95,3 +97,92 @@ def test_api_auto_detects_json_paste(env):  # noqa: F811
     assert doc["build"]["class_name"] == "Monk"
     # token check untouched
     assert req(srv, "POST", "/api/build-code", {"code": _text()}, token=None)[0] == 401
+
+
+# TC-CHARJSON-SHAPES (research 0035 F7 / F9): the item shapes GGG documents
+# today, the old shape still read.
+
+def test_itemmod_objects_give_mod_lines():
+    cur = charjson.from_json(_text(CURRENT_SHAPE_JSON))
+    assert cur.gear["Weapon 1"].text == SHAPES_WEAPON_TEXT
+    assert "10% increased Attack Speed" in cur.gear["Weapon 1 Swap"].text
+    # the old string shape (with the removed lists) gives the same build
+    old = charjson.from_json(_text(OLD_SHAPE_JSON))
+    assert old.gear["Weapon 1"].text == SHAPES_WEAPON_TEXT
+    assert cur.to_dict() == old.to_dict()
+    assert set(charjson.LEGACY_MOD_FIELDS) <= set(charjson.MOD_FIELDS)
+    # an ItemMod without a usable description adds no line and is not fatal
+    item = {"rarity": "Magic", "typeLine": "Example Ring",
+            "implicitMods": [{"description": "+5 to Intelligence"}, {}, None,
+                             {"description": ["x"]}],
+            "explicitMods": "not-a-list"}
+    assert charjson.item_text(item).splitlines() == [
+        "Rarity: MAGIC", "Example Ring", "+5 to Intelligence"]
+
+
+def test_bonded_mods_are_read():
+    for doc in (CURRENT_SHAPE_JSON, OLD_SHAPE_JSON):
+        lines = charjson.from_json(_text(doc)).gear["Weapon 1"].text.splitlines()
+        assert "+6 to Dexterity" in lines
+        # rune and bonded lines come before the implicit
+        assert (lines.index("+8% to Lightning Resistance") < lines.index("+6 to Dexterity")
+                < lines.index("+12% to Critical Hit Chance"))
+    only = {"rarity": "Normal", "typeLine": "Example Boots",
+            "bondedMods": [{"description": "+3% to Example Bond"}, "+1 to Example Bond"]}
+    assert charjson.mod_lines(only) == ["+3% to Example Bond", "+1 to Example Bond"]
+
+
+def test_internal_and_display_class_names_give_same_build():
+    display = charjson.from_json(_text(CURRENT_SHAPE_JSON))
+    internal_doc = json.loads(_text(CURRENT_SHAPE_JSON))
+    internal_doc["character"]["class"] = "Monk3"
+    calls = []
+
+    def names():
+        calls.append(1)
+        return {"Monk3": "Acolyte of Chayula", "Monk1": "Invoker"}
+
+    mapped = charjson.from_json(_text(internal_doc), class_names=names)
+    assert mapped.to_dict() == display.to_dict()
+    assert mapped.class_name == "Monk" and mapped.ascendancy == "Acolyte of Chayula"
+    # a display name never asks the map
+    calls.clear()
+    charjson.from_json(_text(CURRENT_SHAPE_JSON), class_names=names)
+    assert calls == []
+    # no map, a failing map or a wrong-typed map: the id passes through
+    for cn in (None, lambda: 1 / 0, lambda: ["Monk3"], "not-callable"):
+        b = charjson.from_json(_text(internal_doc), class_names=cn)
+        assert b.class_name == "Monk3" and b.ascendancy is None
+    # an internal id that maps to a base class gives that class
+    base = charjson.from_json('{"class": "MonkBase", "level": 2}',
+                              class_names=lambda: {"MonkBase": "Monk"})
+    assert base.class_name == "Monk" and base.ascendancy is None
+
+
+def test_flask_positions_above_one_are_charms():
+    gear = charjson.from_json(_text(CURRENT_SHAPE_JSON)).gear
+    assert gear["Flask 1"].base == "Example Life Flask"
+    assert gear["Flask 2"].base == "Example Mana Flask"
+    assert gear["Charm 1"].base == "Example Thawing Charm"
+    assert gear["Charm 2"].base == "Example Staunching Charm"
+    assert "Flask 3" not in gear and "Flask 4" not in gear
+    # a Charm inventory id keeps its own x numbering
+    doc = {"class": "Monk", "equipment": [
+        {"rarity": "Normal", "typeLine": "Example Charm", "inventoryId": "Charm", "x": 1}]}
+    assert "Charm 2" in charjson.from_json(json.dumps(doc)).gear
+
+
+def test_weapon_set_membership_kept():
+    b = charjson.from_json(_text(CURRENT_SHAPE_JSON))
+    assert b.active_spec.nodes == (101, 102, 103, 201, 202, 301)
+    spec = ET.fromstring(b.raw_xml).find("Tree/Spec")
+    sets = {el.tag: el.get("nodes") for el in spec}
+    assert sets == {"WeaponSet1": "201,202", "WeaponSet2": "301"}  # empty set3 left out
+    assert b.gear["Weapon 1"].name == "Storm Branch"
+    assert b.gear["Weapon 1 Swap"].base == "Example Spear of Haste"
+    # the old fixture keeps a node that is in hashes and set2 in both
+    old = ET.fromstring(charjson.to_xml(CHAR_JSON)).find("Tree/Spec")
+    assert {el.tag: el.get("nodes") for el in old} == {"WeaponSet1": "50",
+                                                         "WeaponSet2": "60,20"}
+    # the generated XML is still a lossless share code
+    assert codec.decode(b.to_code()) == b.raw_xml

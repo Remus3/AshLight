@@ -1203,6 +1203,7 @@ class SessionState:
             # BUILD-LIVE (decision 0045): the stale-build alert, once; the
             # item check words carry its caveat (TC-VERDICT-CAVEAT, F-043)
             alert = self._build_alert()
+            guide = self._zone_guide_view()
             snap = {
                 "version": self.version,
                 "now": now,
@@ -1258,11 +1259,13 @@ class SessionState:
                     self.level, self.area_level, self.area_id, self.zone,
                     self.in_hideout, self.zone_table, self.underlevel_gap),
                 # ZONE-GUIDE (decision 0043): the live zone guide and tracker
-                "zone_guide": self._zone_guide_view(),
-                # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039)
+                "zone_guide": guide,
+                # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039); the boss
+                # element comes from the guide entry (DATA-GUIDE-BOSS)
                 "campaign": campaign_mod.view(self.level, self.area_id,
                                               self.campaign_facts, self.flask_table,
-                                              self.boots_level),
+                                              self.boots_level,
+                                              boss=(guide or {}).get("boss")),
                 "death_recap": self.death_log.view(self.deaths),
                 # NEWBIE-HINTS: the first-hours hint on show, or None
                 "hint": self.hints.view(now),

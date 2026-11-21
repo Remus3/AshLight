@@ -6,7 +6,7 @@ events; no real snapshot data is copied here."""
 
 import json
 
-from server.al import campaign, settingsio
+from server.al import acts, campaign, settingsio, zoneguide
 from server.al.state import SessionState
 from server.al.theorycraft import live
 from server.al.theorycraft.model import Build, Item
@@ -109,29 +109,84 @@ def test_boots_hint_from_the_level_setting(tmp_path):
     assert campaign.view(40, "G1_5", fast) is None
 
 
+GUIDE = zoneguide.load()
+
+
+def guide_boss(key, zone):
+    """The boss element the shipped guide file gives a zone (DATA-GUIDE-BOSS)."""
+    return zoneguide._boss(GUIDE["acts"][key]["zones"][zone])
+
+
 def test_boss_zone_line(tmp_path):
+    """DATA-GUIDE-BOSS (F-122): the element comes from the guide file's
+    `boss` entry, passed in by the caller; campaign.py keeps no table."""
+    assert not hasattr(campaign, "BOSS_ZONES") and not hasattr(campaign, "BOSS_PROVENANCE")
+    cold, fire = guide_boss("G1", "Ogham Manor"), guide_boss("G2", "Mawdun Mine")
+    assert (cold, fire) == ("cold", "fire")
     facts = campaign.build_facts(make_build(life=None, mana=None, boots_text=None))
-    v = campaign.view(15, "G1_15", facts)
+    v = campaign.view(15, "G1_15", facts, boss=cold)
     assert v["hints"] == [{"id": "boss", "word": "Cold res 32%",
                            "text": "This zone's boss deals mostly cold damage. Your build "
                                    "has 32% cold resistance (the cap is 75%)."}]
-    v = campaign.view(30, "G2_10_2", facts)
+    v = campaign.view(30, "G2_10_2", facts, boss=fire)
     assert v["word"] == "Fire res -10%"
     capped = campaign.build_facts(make_build(life=None, mana=None, boots_text=None, cold=80))
-    assert campaign.view(15, "G1_15", capped)["hints"][0]["text"].endswith(
+    assert campaign.view(15, "G1_15", capped, boss=cold)["hints"][0]["text"].endswith(
         "has 80% cold resistance (at the cap).")
     unknown = campaign.build_facts(make_build(life=None, mana=None, boots_text=None, cold=None))
-    v = campaign.view(15, "G1_15", unknown)
+    v = campaign.view(15, "G1_15", unknown, boss=cold)
     assert v["word"] == "Boss: cold"
     assert v["hints"][0]["text"].endswith("Your build's cold resistance is unknown.")
-    assert campaign.view(15, "G1_14", facts) is None
-    assert campaign.view(15, "G1_15", {"res": {"cold": -100}})["word"] == "Cold res -100%"
+    # no element passed in, or one RES_STAT does not know: no boss hint
+    assert campaign.view(15, "G1_15", facts) is None
+    assert campaign.view(15, "G1_15", facts, boss="physical") is None
+    assert campaign.view(15, "G1_15", facts, boss=["cold"]) is None
+    assert campaign.view(15, "G1_15", {"res": {"cold": -100}},
+                         boss=cold)["word"] == "Cold res -100%"
 
 
-def test_long_element_word_falls_back(monkeypatch):
-    monkeypatch.setitem(campaign.BOSS_ZONES, "G9_1", "lightning")
-    v = campaign.view(50, "G9_1", {"res": {"lightning": -100}})
+def test_long_element_word_falls_back():
+    v = campaign.view(50, "G9_1", {"res": {"lightning": -100}}, boss="lightning")
     assert v["word"] == "Boss: lightning" and len(v["word"]) <= campaign.WORD_MAX
+
+
+def test_boss_hint_fires_for_every_zone_with_a_boss_element():
+    """Every shipped guide zone with a `boss` entry gives the boss hint
+    through the state: guide file -> zone_guide view -> campaign view."""
+    zones = [(key, zone, zoneguide._boss(z))
+             for key, act in GUIDE["acts"].items()
+             for zone, z in act.get("zones", {}).items() if isinstance(z, dict) and "boss" in z]
+    assert len(zones) >= 2
+    facts = campaign.build_facts(make_build(life=None, mana=None, boots_text=None))
+    for key, zone, element in zones:
+        assert element in campaign.RES_STAT, (key, zone)
+        area_id = f"{key}_1"
+        assert acts.act_of(area_id)["key"] == key
+        st = SessionState(clock=lambda: 200.0)
+        st.set_zone_guide(guide=GUIDE)
+        st.set_campaign(facts=facts)
+        st.apply({"type": "level_up", "character": "Ash", "class": "Witch", "level": 20,
+                  "recv_ts": 50.0})
+        st.apply({"type": "area_generated", "area_id": area_id, "area_level": 20,
+                  "seed": "1", "recv_ts": 100.0})
+        st.apply({"type": "scene_changed", "scene": zone, "is_hideout": False,
+                  "recv_ts": 100.0})
+        snap = st.snapshot()
+        assert snap["zone_guide"]["boss"] == element, (key, zone)
+        hint = snap["campaign"]["hints"][0]
+        assert hint["id"] == "boss" and f"mostly {element} damage" in hint["text"], (key, zone)
+    # a zone without a boss entry gives no boss hint
+    st = SessionState(clock=lambda: 200.0)
+    st.set_zone_guide(guide=GUIDE)
+    st.set_campaign(facts=facts)
+    st.apply({"type": "level_up", "character": "Ash", "class": "Witch", "level": 20,
+              "recv_ts": 50.0})
+    st.apply({"type": "area_generated", "area_id": "G1_14", "area_level": 20, "seed": "1",
+              "recv_ts": 100.0})
+    st.apply({"type": "scene_changed", "scene": "The Manor Ramparts", "is_hideout": False,
+              "recv_ts": 100.0})
+    assert st.snapshot()["zone_guide"]["boss"] is None
+    assert st.snapshot()["campaign"] is None
 
 
 def test_unknown_level_no_build_and_endgame_give_nothing(tmp_path):
@@ -163,9 +218,12 @@ def test_state_snapshot_and_live_wiring(tmp_path):
 
     builds = Builds()
     live.attach(builds, Weights(), st)
+    st.set_zone_guide(guide=GUIDE)
     st.apply({"type": "level_up", "character": "Ash", "class": "Witch", "level": 15,
               "recv_ts": 50.0})
     st.apply({"type": "area_generated", "area_id": "G1_15", "area_level": 15, "seed": "1",
+              "recv_ts": 100.0})
+    st.apply({"type": "scene_changed", "scene": "Ogham Manor", "is_hideout": False,
               "recv_ts": 100.0})
     v = st.snapshot()["campaign"]
     assert [h["id"] for h in v["hints"]] == ["boss", "flask-life"]
