@@ -361,15 +361,25 @@
         if (!fold.open) { buildReport(doc, api, said); }
       });
     }
+    /* W-1: #checks-said is not a live region, so a Copy click that had to
+       (re)build the preview moves the focus there once the preview shows,
+       unless the player has since moved it somewhere else. */
+    var rebuild = function (ready) {
+      buildReport(doc, api, said, ready).then(function (ok) {
+        if (!ok || typeof said.focus !== "function") { return; }
+        var a = doc.activeElement;
+        if (!a || a === copy || a === doc.body) { said.focus(); }
+      });
+    };
     if (copy) {
       copy.addEventListener("click", function () {
         var text = report.text;
         if (!text) { // no preview yet: this click builds it, the next copies
-          buildReport(doc, api, said, READY_AGAIN);
+          rebuild(READY_AGAIN);
           return;
         }
         if (report.builtGen !== report.checksGen) { // V-5: a check moved since
-          buildReport(doc, api, said, READY_CHANGED);
+          rebuild(READY_CHANGED);
           return;
         }
         said.textContent = "";

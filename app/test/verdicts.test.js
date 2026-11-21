@@ -286,6 +286,16 @@ test("verdicts V-3: each open check has its own note field, sent only with that 
   assert.equal(bad.getAttribute("aria-invalid"), "true");
   assert.equal(bad.getAttribute("aria-describedby"), "verdicts-said");
   assert.ok(!/goes with your next click/.test(SRC));
+  // W-2: another check's click rebuilds the list; the refused note stays marked
+  btn(d, "LIVE-SEARCHSTR", "worked").listeners.click();
+  await tickle();
+  const again = byId(d, "verdicts-note-OVL-FPS");
+  assert.notEqual(again, bad, "the list was rebuilt");
+  assert.equal(again.value, "tab\there");
+  assert.equal(again.getAttribute("aria-invalid"), "true");
+  assert.equal(again.getAttribute("aria-describedby"), "verdicts-said");
+  // a field never marked carries nothing over
+  assert.equal(byId(d, "verdicts-note-LIVE-FILTER").getAttribute("aria-invalid"), null);
 });
 
 test("verdicts: no timer, no clipboard, text set with textContent", () => {

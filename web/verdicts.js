@@ -180,6 +180,11 @@
       if (r.open) {
         var f = noteField(doc, r, m.maxNote);
         f.note.value = kept[r.id] ? kept[r.id].value : "";
+        // W-2: a refused note stays marked across a rebuild
+        if (kept[r.id] && kept[r.id].getAttribute("aria-invalid") === "true") {
+          f.note.setAttribute("aria-invalid", "true");
+          f.note.setAttribute("aria-describedby", "verdicts-said");
+        }
         state.notes[r.id] = f.note;
         li.appendChild(f.wrap);
         var row = make(doc, "p", "settings-controls");
@@ -221,9 +226,11 @@
     var note = cleanNote(field ? field.value : "", m.maxNote);
     if (note === null) {
       n.said.textContent = NOTE_BAD;
-      field.setAttribute("aria-invalid", "true");
-      field.setAttribute("aria-describedby", "verdicts-said");
-      if (typeof field.focus === "function") { field.focus(); }
+      if (field) { // W-4
+        field.setAttribute("aria-invalid", "true");
+        field.setAttribute("aria-describedby", "verdicts-said");
+        if (typeof field.focus === "function") { field.focus(); }
+      }
       return;
     }
     if (field && field.getAttribute("aria-invalid") === "true") {

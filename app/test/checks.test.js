@@ -251,6 +251,49 @@ test("checks V-5: a preview older than the checks' states is made again before a
   assert.equal(calls.length, 2);
 });
 
+test("checks W-1: a Copy click that builds the preview moves the focus to the said line", async () => {
+  const setup = (text) => {
+    const doc = fakeDoc();
+    doc.activeElement = null;
+    Object.values(doc.ids).forEach((n) => { n.focus = () => { doc.activeElement = n; }; });
+    const nav = { clipboard: { writeText: () => Promise.resolve() } };
+    ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(text, []));
+    return doc;
+  };
+  // V-4 path: no preview yet
+  let doc = setup(REPORT);
+  doc.ids["checks-copy"].focus();
+  doc.ids["checks-copy"].listeners.click();
+  assert.equal(doc.activeElement, doc.ids["checks-copy"], "focus stays while it builds");
+  await tickle();
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY_AGAIN);
+  assert.equal(doc.activeElement, doc.ids["checks-said"]);
+  // V-5 path: a check changed state since the preview was made
+  doc.ids["checks-copy"].focus();
+  ck.paint(doc, { diag: Object.assign({}, DIAG, {
+    checks: DIAG.checks.map((c) => (c.id === "hotkey" ? Object.assign({}, c, { status: "pass" }) : c)) }) });
+  doc.ids["checks-copy"].listeners.click();
+  await tickle();
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY_CHANGED);
+  assert.equal(doc.activeElement, doc.ids["checks-said"]);
+  // focus moved elsewhere during the build is left alone
+  doc = setup(REPORT);
+  doc.ids["checks-copy"].focus();
+  doc.ids["checks-copy"].listeners.click();
+  doc.ids["checks-summary"].focus();
+  await tickle();
+  assert.equal(doc.activeElement, doc.ids["checks-summary"]);
+  // a failed build moves nothing
+  doc = setup(null);
+  doc.ids["checks-copy"].focus();
+  doc.ids["checks-copy"].listeners.click();
+  await tickle();
+  assert.equal(doc.ids["checks-said"].textContent, ck.BUILD_FAILED);
+  assert.equal(doc.activeElement, doc.ids["checks-copy"]);
+  // the said line can take the focus
+  assert.match(web.source("index.html"), /<p id="checks-said" class="muted" tabindex="-1"><\/p>/);
+});
+
 test("checks V-6: the preview is 6 rows, full width, inside the Checks fold", () => {
   const html = web.source("index.html");
   assert.match(html, /<textarea id="checks-preview" class="code-out" readonly rows="6" spellcheck="false"><\/textarea>/);
