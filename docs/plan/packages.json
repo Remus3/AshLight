@@ -14580,7 +14580,8 @@
     "server/al/procs.py",
     "tests/test_supervisor.py",
     "tests/test_procs.py",
-    "docs/decisions/0005-core-keepalive.md"
+    "docs/decisions/0005-core-keepalive.md",
+    "app/test/applog.test.js"
    ],
    "new_files": [
     "server/al/plug/secondline.py"
