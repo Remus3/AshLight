@@ -61,7 +61,7 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 import tc_pin  # noqa: E402
-from server.al import exepin, paths, tradestats, webfetch  # noqa: E402
+from server.al import exepin, paths, prio, tradestats, webfetch  # noqa: E402
 
 API_HOSTS = ("api.github.com",)
 API = "https://api.github.com/repos/{repo}"
@@ -339,6 +339,7 @@ def launch_trial(root, tag, live=False):
     if os.name == "nt":
         flags = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
                  | subprocess.CREATE_NO_WINDOW)
+    flags = prio.below_normal(flags)  # RUN-CALC-PRIORITY (F-107): a batch child
     with open(logs / "tc-drift.log", "ab") as out:
         proc = subprocess.Popen([str(exe), str(Path(root) / "tools" / "tc_drift.py"),
                                  "trial", "--tag", tag, *(["--live"] if live else [])],
@@ -422,8 +423,10 @@ def run_bridge_tests(cand_path, junit_path, environ, live=False):
     env.update(environ or {})
     env[PINS_ENV] = str(cand_path)
     argv = trial_argv(junit_path, live)
+    # RUN-CALC-PRIORITY (F-107): the trial's test run is a batch child too
     subprocess.run(argv, cwd=str(ROOT), env=env, timeout=TRIAL_TIMEOUT_S,
-                   stdin=subprocess.DEVNULL, capture_output=True)
+                   stdin=subprocess.DEVNULL, capture_output=True,
+                   creationflags=prio.below_normal(_NO_WINDOW))
     return parse_junit(Path(junit_path).read_text(encoding="utf-8"))
 
 

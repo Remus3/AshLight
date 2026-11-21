@@ -449,3 +449,54 @@ def test_health_check_ignores_proxy_settings(monkeypatch, tmp_path):
         srv.shutdown()
         srv.server_close()
         proxy.close()
+
+
+# -- RUN-CALC-PRIORITY (F-107): the preflight child runs below normal ---------
+
+_OWN_CLASS = ("import ctypes, sys\n"
+              "k = ctypes.WinDLL('kernel32')\n"
+              "k.GetCurrentProcess.restype = ctypes.c_void_p\n"
+              "k.GetPriorityClass.argtypes = (ctypes.c_void_p,)\n"
+              "print(k.GetPriorityClass(k.GetCurrentProcess()))\n")
+
+
+def test_preflight_child_has_below_normal_priority(tmp_path, monkeypatch):
+    """run_preflight starts its child with the below-normal class: a real
+    child started with the same flags reads its own class back. The core
+    launcher (_Launcher) stays at normal."""
+    seen = {}
+
+    class R:
+        returncode = 0
+        stdout = b""
+        stderr = b""
+
+    def run(cmd, **kw):
+        seen.update(kw)
+        if os.name == "nt":
+            got = subprocess.run([sys.executable, "-I", "-c", _OWN_CLASS],
+                                 stdin=subprocess.DEVNULL, capture_output=True,
+                                 timeout=60, creationflags=kw["creationflags"])
+            seen["class"] = int(got.stdout.strip())
+        return R()
+    assert ka.run_preflight(tmp_path, run=run) == (True, None)
+    if os.name == "nt":
+        assert seen["creationflags"] & ka.prio.BELOW_NORMAL
+        assert seen["class"] == ka.prio.BELOW_NORMAL
+    else:
+        assert seen["creationflags"] == 0
+
+    launched = {}
+
+    class Child:
+        pid = 99
+
+        def poll(self):
+            return None
+
+    def popen(cmd, **kw):
+        launched.update(kw)
+        return Child()
+    monkeypatch.setattr(ka.subprocess, "Popen", popen)
+    assert ka._Launcher(["core"])() == 99
+    assert not launched["creationflags"] & ka.prio.BELOW_NORMAL  # core stays normal

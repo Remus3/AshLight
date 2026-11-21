@@ -35,6 +35,13 @@ time-out as `calc.timeout`, and every request as `calc|<outcome>` (ok,
 error, timeout, crash, unavailable) with its milliseconds in the `calc_ms`
 ring and one typed `calc` emit naming the command; no build or item text is
 ever recorded.
+
+RUN-OBS-LOGS-PY (F-090): tc-bridge.log (the child's stderr) rotates when it
+is over 1 MB at a calc start (one old file kept; a held file keeps
+appending), and every calc start writes one banner line first (build id,
+pid of the core) in the one log format of server/al/logs.py.
+RUN-CALC-PRIORITY (F-107): luajit starts with the below-normal priority
+class (server/al/prio.py), so a calc never competes with the game.
 """
 
 import ctypes
@@ -47,7 +54,7 @@ import threading
 import time
 from pathlib import Path
 
-from server.al import exepin, metrics, paths
+from server.al import exepin, logs, metrics, paths, prio
 
 FRAME_PREFIX = "ALB1 "
 SCRIPT = Path(__file__).resolve().with_name("bridge.lua")
@@ -374,16 +381,21 @@ class Bridge:
         if self.log_path is not None:
             try:
                 Path(self.log_path).parent.mkdir(parents=True, exist_ok=True)
+                logs.rotate_at_start(self.log_path)
                 self._log = open(self.log_path, "ab")
+                line = logs.format_line("tc-bridge", "INFO", logs.banner("calc bridge"))
+                self._log.write((line + "\n").encode("ascii", "replace"))
+                self._log.flush()
                 stderr = self._log
             except OSError:
-                self._log = None
+                self._close_log()
         if self.env is not None and self.env.get("TEMP"):
             try:
                 Path(self.env["TEMP"]).mkdir(parents=True, exist_ok=True)
             except OSError:
                 pass
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        flags = prio.below_normal(flags)  # RUN-CALC-PRIORITY (F-107)
         # TC-CALC-CONFINE-PROC: the job exists before the child, which starts
         # suspended and runs only once it is inside the job.
         try:
