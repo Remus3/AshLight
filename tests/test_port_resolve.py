@@ -67,3 +67,14 @@ def test_bind_stays_loopback():
     assert ports.LOOPBACK == "127.0.0.1"
     text = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
     assert "(ports.LOOPBACK, int(port))" in text
+
+
+def test_oauth_redirect_ports_lie_in_the_block_and_differ_from_the_core():
+    # TC-GGG-LISTENER (decision 0048): 8979 first, 8978 the fallback.
+    redirect = ports.OAUTH_REDIRECT_PORTS
+    assert tuple(redirect) == (8979, 8978)
+    assert len(set(redirect)) == 2
+    for port in redirect:
+        assert ports.in_block(port)
+        assert port != ports.AL_PORT
+        assert port != ports.AL_DEV_PORT
