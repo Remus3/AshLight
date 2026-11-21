@@ -33,6 +33,23 @@ Facts today (source -> docs matched):
   scripts\\<name>.ps1 README.md names exists.
 - not-affiliated statement: server/al/__init__.py DISCLAIMER verbatim in
   README.md.
+- default hotkeys (TEST-DOCS-FACTS-UI): the built-in default of each
+  shortcut, the first entry of server/al/hotkeys.py FALLBACKS (the core's
+  copy; app/hotkey.js mirrors it), -> the README.md item check and overlay
+  toggle quotes, and the config/local.example.json value when it is set.
+  Read from the core, never from web/ text (the dashboard prints the keys
+  the snapshot carries).
+- budget numbers: the numbers tests/test_budgets.py asserts (the literal
+  in fleet_test_guard.budget(<s>) or <share> * load_factor() of each named
+  test) -> the README.md 'Budgets' section and the 'Budgets' section of
+  docs/decisions/0002-stack.md.
+- settings keys: the player keys of config/local.example.json (every
+  top-level key not starting with '_', minus server/al/install/firstrun.py
+  DEV_KEYS) -> each is read by the core (a quoted literal in a
+  server/al .py file) and named in the README.md config/local.json
+  paragraph; a key that paragraph names must be one of them.
+- tab names: the dashboard tabs (web/tabs.js TABS, each label read from its
+  tab button in web/index.html) -> every '<Label> tab' quote of README.md.
 - index (TEST-DOCS-INDEX, F-195 c): every NNNN-<topic>.md under
   docs/decisions/ and docs/research/ has its index line in that folder's
   README.md ('- NNNN:' for decisions, '- NNNN ' for research). Files in
@@ -77,6 +94,14 @@ README_REL = "README.md"
 MANIFEST_REL = "ops/fleet_kit/MANIFEST.json"
 CLAUDE_REL = "CLAUDE.md"
 DESIGN_REL = "docs/design/0001-design-system.md"
+HOTKEYS_REL = "server/al/hotkeys.py"
+BUDGETS_REL = "tests/test_budgets.py"
+EXAMPLE_REL = "config/local.example.json"
+FIRSTRUN_REL = "server/al/install/firstrun.py"
+TABS_REL = "web/tabs.js"
+INDEX_HTML_REL = "web/index.html"
+# The core's Python sources: a settings key is read there.
+CORE_DIR = "server/al"
 SCRIPTS = ("setup.ps1", "build.ps1", "run.ps1")
 DECISIONS_DIR = "docs/decisions"
 RESEARCH_DIR = "docs/research"
@@ -109,10 +134,12 @@ EXPECTED_STALE = tuple(
         "0033-loot-filter-merge.md", "0034-build-file-download.md",
         "0036-run-history-file.md", "0037-trade-stat-ids-source.md"))
 
-# Every file a fact reads (the test copies these into a fixture root).
+# Every file a fact reads (the test copies these into a fixture root, plus
+# the .py files under CORE_DIR).
 INPUTS = (INIT_REL, PORTS_REL, PKG_REL, LOCK_REL, MAIN_JS_REL, STACK_REL,
           SETUP_REL, README_REL, MANIFEST_REL, CLAUDE_REL, DESIGN_REL,
-          *(f"scripts/{name}" for name in SCRIPTS))
+          HOTKEYS_REL, BUDGETS_REL, EXAMPLE_REL, FIRSTRUN_REL, TABS_REL,
+          INDEX_HTML_REL, *(f"scripts/{name}" for name in SCRIPTS))
 
 _DOTTED = r"(\d+(?:\.\d+)+)"
 _NUMBERED = re.compile(r"^(\d{4})-[\w.-]+\.md$")
@@ -172,6 +199,14 @@ class Tree:
         return sorted(p.name for p in folder.iterdir()
                       if p.is_file() and _NUMBERED.match(p.name))
 
+    def py_files(self, rel_dir):
+        """Sorted rel paths of the .py files under rel_dir, recursively."""
+        folder = self.root / rel_dir
+        if not folder.is_dir():
+            return []
+        return sorted(p.relative_to(self.root).as_posix()
+                      for p in folder.rglob("*.py") if p.is_file())
+
 
 def _missing(rel, fact, what="file missing"):
     return f"{rel}: {fact}: {what}"
@@ -201,9 +236,13 @@ def _first_block_comment(text):
     return text[start:end] if start >= 0 and end > start else ""
 
 
-def _md_section(heading):
+def _md_section(heading, prefix=False):
+    """The body of the '## <heading>' section; with prefix, of the first
+    section whose heading starts with that word."""
+    tail = r"\b[^\n]*$" if prefix else r"\s*$"
+
     def region(text):
-        m = re.search(rf"^## {re.escape(heading)}\s*$", text, re.M)
+        m = re.search(rf"^## {re.escape(heading)}{tail}", text, re.M)
         if not m:
             return ""
         nxt = re.search(r"^## ", text[m.end():], re.M)
@@ -347,6 +386,223 @@ def fact_disclaimer(tree):
         return [f"{README_REL}: {fact}: the statement is not there verbatim "
                 f"({disclaimer!r})"]
     return []
+
+
+def _ws(pattern):
+    """A doc pattern whose spaces also match a line wrap."""
+    return pattern.replace(" ", r"\s+")
+
+
+# shortcut name (hotkeys.FALLBACKS) -> its README.md quote pattern.
+_HOTKEY_QUOTES = {
+    "eval": _ws(r"the item check hotkey \(([A-Za-z0-9+]+)\)"),
+    "toggle": _ws(r"overlay toggles with ([A-Za-z0-9+]+) by default"),
+}
+
+
+def fact_default_hotkeys(tree):
+    fact = "default hotkey"
+    consts = tree.py_constants(HOTKEYS_REL) or {}
+    chains, keys = consts.get("FALLBACKS"), consts.get("CONFIG_KEYS")
+    if not (isinstance(chains, dict) and isinstance(keys, dict)):
+        return [_missing(HOTKEYS_REL, fact, "no FALLBACKS / CONFIG_KEYS")]
+    problems = []
+    example = tree.json(EXAMPLE_REL)
+    if not isinstance(example, dict):
+        problems.append(_missing(EXAMPLE_REL, fact, "unreadable"))
+    for name, pattern in _HOTKEY_QUOTES.items():
+        chain = chains.get(name)
+        if not (isinstance(chain, (tuple, list)) and chain
+                and isinstance(chain[0], str) and name in keys):
+            problems.append(_missing(HOTKEYS_REL, fact, f"no {name} default"))
+            continue
+        default = chain[0]
+        problems += _match(tree, README_REL, fact, pattern, default,
+                           what=f"{name} hotkey")
+        got = example.get(keys[name]) if isinstance(example, dict) else None
+        if isinstance(got, str) and got and got != default:
+            problems.append(f"{EXAMPLE_REL}: {fact}: \"{keys[name]}\" reads "
+                            f"{got!r}, the tree has {default!r}")
+    return problems
+
+
+def _budget_literal(fn):
+    """The budget number a test function asserts: the literal argument of a
+    budget(...) call, else the literal of '<n> * ...load_factor()'."""
+    def num(node):
+        return (node.value if isinstance(node, ast.Constant)
+                and isinstance(node.value, (int, float))
+                and not isinstance(node.value, bool) else None)
+
+    def called(node, attr):
+        if not isinstance(node, ast.Call):
+            return False
+        f = node.func
+        return ((isinstance(f, ast.Attribute) and f.attr == attr)
+                or (isinstance(f, ast.Name) and f.id == attr))
+
+    scaled = None
+    for node in ast.walk(fn):
+        if called(node, "budget") and node.args and num(node.args[0]) is not None:
+            return num(node.args[0])
+        if (scaled is None and isinstance(node, ast.BinOp)
+                and isinstance(node.op, ast.Mult)):
+            for a, b in ((node.left, node.right), (node.right, node.left)):
+                if num(a) is not None and called(b, "load_factor"):
+                    scaled = num(a)
+    return scaled
+
+
+def budget_values(tree):
+    """{test function name: asserted budget number} of tests/test_budgets.py;
+    None when the file is missing or does not parse."""
+    text = tree.text(BUDGETS_REL)
+    if text is None:
+        return None
+    try:
+        module = ast.parse(text)
+    except SyntaxError:
+        return None
+    out = {}
+    for node in module.body:
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+            value = _budget_literal(node)
+            if value is not None:
+                out[node.name] = value
+    return out
+
+
+# budget -> (test function name prefix, unit scale). The number in the doc
+# is the asserted literal times the scale (seconds -> ms, share -> percent).
+_BUDGET_TESTS = {
+    "parse 10k lines": ("test_parse_10k_lines", 1000),
+    "tail burst": ("test_tail_1000_line_burst", 1000),
+    "tailer idle": ("test_tailer_idle_cpu", 100),
+    "core idle": ("test_core_idle_cpu", 100),
+}
+# (doc, region, budget, pattern with the number as group 1).
+_BUDGET_QUOTES = (
+    (README_REL, _md_section("Budgets"), "parse 10k lines",
+     _ws(r"parses 10,000 log lines in under (\d+) ms")),
+    (README_REL, _md_section("Budgets"), "tail burst",
+     _ws(r"a 1,000-line burst in under (\d+) ms")),
+    (README_REL, _md_section("Budgets"), "core idle",
+     _ws(r"idle tailing under (\d+) to \d+ percent")),
+    (README_REL, _md_section("Budgets"), "tailer idle",
+     _ws(r"idle tailing under \d+ to (\d+) percent")),
+    (STACK_REL, _md_section("Budgets", prefix=True), "core idle",
+     _ws(r"Core idle: under (\d+) percent")),
+    (STACK_REL, _md_section("Budgets", prefix=True), "tail burst",
+     _ws(r"1,000-line burst parsed in under (\d+) ms")),
+)
+
+
+def _plain(number):
+    value = round(number, 6)
+    return str(int(value)) if value == int(value) else f"{value:g}"
+
+
+def fact_budgets(tree):
+    fact = "budget"
+    values = budget_values(tree)
+    if values is None:
+        return [_missing(BUDGETS_REL, fact, "missing or unreadable")]
+    expected, problems = {}, []
+    for label, (prefix, scale) in _BUDGET_TESTS.items():
+        hits = [v for name, v in values.items() if name.startswith(prefix)]
+        if len(hits) != 1:
+            problems.append(_missing(BUDGETS_REL, fact,
+                                     f"no single {prefix}* budget"))
+            continue
+        expected[label] = _plain(hits[0] * scale)
+    for rel, region, label, pattern in _BUDGET_QUOTES:
+        if label in expected:
+            problems += _match(tree, rel, fact, pattern, expected[label],
+                               region=region, what=f"{label} budget")
+    return problems
+
+
+_KEY_TOKEN = re.compile(r"`([a-z][a-z0-9_]*)`")
+_KEY_VALUES = ("true", "false", "null")
+
+
+def _settings_paragraph(text):
+    """The README.md paragraph that lists the config/local.json keys."""
+    m = re.search(r"^Optional per-computer settings live in `config/local\.json`",
+                  text, re.M)
+    if not m:
+        return None
+    end = text.find("\n\n", m.start())
+    return text[m.start():] if end < 0 else text[m.start():end]
+
+
+def fact_settings_keys(tree):
+    fact = "settings keys"
+    example = tree.json(EXAMPLE_REL)
+    if not isinstance(example, dict):
+        return [_missing(EXAMPLE_REL, fact, "unreadable")]
+    dev = (tree.py_constants(FIRSTRUN_REL) or {}).get("DEV_KEYS")
+    if not isinstance(dev, (tuple, list)):
+        return [_missing(FIRSTRUN_REL, fact, "no DEV_KEYS")]
+    keys = [k for k in example if not k.startswith("_") and k not in dev]
+    problems = []
+    core = "\n".join(tree.text(rel) or "" for rel in tree.py_files(CORE_DIR))
+    for key in keys:
+        if f'"{key}"' not in core and f"'{key}'" not in core:
+            problems.append(f"{EXAMPLE_REL}: {fact}: \"{key}\" is not read by "
+                            f"the core ({CORE_DIR})")
+    text = tree.text(README_REL)
+    if text is None:
+        return problems + [_missing(README_REL, fact)]
+    para = _settings_paragraph(text)
+    if para is None:
+        return problems + [_missing(README_REL, fact,
+                                    "no config/local.json settings paragraph")]
+    named = [k for k in _KEY_TOKEN.findall(para) if k not in _KEY_VALUES]
+    problems += [f"{README_REL}: {fact}: `{key}` is not listed (the tree has "
+                 f"it in {EXAMPLE_REL})" for key in keys if key not in named]
+    problems += [f"{README_REL}: {fact}: names `{key}`, which is not a "
+                 f"setting in {EXAMPLE_REL}" for key in dict.fromkeys(named)
+                 if key not in keys]
+    return problems
+
+
+def tab_labels(tree):
+    """[(tab id, label or None)] of the dashboard in web/tabs.js order;
+    None when web/tabs.js has no TABS list."""
+    js = tree.text(TABS_REL)
+    m = re.search(r"\bvar\s+TABS\s*=\s*\[([^\]]*)\]", js or "")
+    if not m:
+        return None
+    html = tree.text(INDEX_HTML_REL) or ""
+    out = []
+    for tab in re.findall(r"[\"']([\w-]+)[\"']", m.group(1)):
+        b = re.search(rf"<button\b[^>]*\bid=\"tab-{re.escape(tab)}\"[^>]*>"
+                      r"\s*([^<]*?)\s*<", html)
+        out.append((tab, b.group(1) if b and b.group(1) else None))
+    return out
+
+
+def fact_tab_names(tree):
+    fact = "tab names"
+    tabs = tab_labels(tree)
+    if tabs is None:
+        return [_missing(TABS_REL, fact, "no TABS list")]
+    if tree.text(INDEX_HTML_REL) is None:
+        return [_missing(INDEX_HTML_REL, fact)]
+    problems = [f"{INDEX_HTML_REL}: {fact}: no tab button for {tab!r}"
+                for tab, label in tabs if label is None]
+    labels = {label for _tab, label in tabs if label}
+    text = tree.text(README_REL)
+    if text is None:
+        return problems + [_missing(README_REL, fact)]
+    quoted = re.findall(r"\b([A-Z][a-z]+(?:\s+and\s+[a-z]+)?)\s+tab\b", text)
+    problems += [f"{README_REL}: {fact}: names the {got!r} tab, the "
+                 f"dashboard has {sorted(labels)!r}"
+                 for got in dict.fromkeys(re.sub(r"\s+", " ", q)
+                                          for q in quoted)
+                 if got not in labels]
+    return problems
 
 
 # ------------------------------------------------------------------ index
@@ -513,6 +769,10 @@ FACTS = [
     fact_kit_version,
     fact_script_names,
     fact_disclaimer,
+    fact_default_hotkeys,
+    fact_budgets,
+    fact_settings_keys,
+    fact_tab_names,
     fact_index,
 ]
 
