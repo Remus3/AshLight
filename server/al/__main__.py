@@ -338,6 +338,10 @@ def main(argv=None):
                 restarting = True
                 break
             core.tick_all(log)  # RUN-SEAMS: one pass of Core.ticks (decision 0056)
+            try:  # DATA-PRICE-REFRESH-CORE: a due price refresh, once a minute
+                core.tick_prices()
+            except Exception:  # noqa: BLE001 - never stops the core loop
+                log.exception("price refresh tick failed")
             if time.monotonic() >= next_beat:
                 next_beat = time.monotonic() + beat_s
                 try:

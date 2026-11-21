@@ -40,7 +40,10 @@ SNAPSHOT_OLD_S = 60 * 86400  # older data may miss a new league's zones
 FIX_START_GAME = words.next_step("missing")
 FIX_LOG_PATH = words.next_step("path_missing")
 FIX_RUN = words.next_step("stalled")
-FIX_CONTACT = r'Add your contact as "contact" in config\local.json.'
+# DATA-CONTACT-FIELD (F-018): the contact is typed in the dashboard card
+# (web/index.html h2), never a file path in the fix text
+CONTACT_CARD = "Prices and web data"
+FIX_CONTACT = f"Type your contact in the {CONTACT_CARD} card."
 FIX_NET = ("Check this computer's internet connection. AshLight tries again "
            "by itself.")
 # TC-CALC-OPTIN (F-132): one run of the switch installs the calc and turns
@@ -164,8 +167,8 @@ def check_web(f):
         return _check("web_data", "Web data", OFF,
                       "Off. Prices stay off until you turn it on.")
     if not f.get("contact_set"):
-        return _check("web_data", "Web data", FAIL, "On, but no contact is set.",
-                      FIX_CONTACT)
+        return _check("web_data", "Web data", FAIL,
+                      f"On, but no contact is set in {CONTACT_CARD}.", FIX_CONTACT)
     return _check("web_data", "Web data", PASS, "On, contact set.")
 
 

@@ -66,3 +66,15 @@ poe.ninja asks clients to poll less or blocks the pattern; decision 0013
 changes to per-feature opt-in; the overview shapes break the parsers every
 release (then fall back to Currency only); or GGG documents a trade price
 API that decision 0017 would allow.
+
+## Amendment 2026-11-20
+
+DATA-PRICE-REFRESH-CORE (F-036): the refresh trigger. Besides a read of
+GET /api/rates, the core loop (server/al/pricerefresh.py, Core.tick_prices)
+checks at most once a minute and starts a due refresh while web data is on
+and either the game log is active (consented and not idle; decision 0029,
+Client.txt staleness, never a process check) or /api/rates was read in the
+last 10 minutes. The hourly gates, the back-off and the contact rule still
+decide whether any request is made, so overlay-only play keeps fresh prices
+and nothing is asked while nobody plays. Reverses if: poe.ninja asks for
+less polling, or the idle rule misfires in play (then page reads only).

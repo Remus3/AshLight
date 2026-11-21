@@ -89,3 +89,16 @@ guards), or the overlay is allowed to fetch.
 Amended by 0017 (2026-11-17): item 3 (trade2 search queue): removed; the
 press builds a trade-search URL offline. See docs/decisions/0017-trade-no-
 app-calls-and-floor-wording.md.
+
+## Amendment 2026-11-20
+
+DATA-CONTACT-FIELD (F-018): the contact can be typed in the dashboard's
+"Prices and web data" card. POST /api/web-data takes "contact" (text,
+cleaned by webfetch.clean_contact; '' removes it; an unusable value is a
+400 with a plain sentence and nothing written) and Core.set_contact writes
+the same gitignored config/local.json key, still its only store. The value
+is write-only: every read-back (GET /api/web-data, GET /api/rates, the
+Checks report, the settings export) says only contact_set, and the Checks
+fix names the card, never a file path. A set contact starts a due price
+refresh at once. Reverses if: a second store for the contact is wanted, or
+a read-back must show the value.
