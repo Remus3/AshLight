@@ -50,24 +50,13 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
 $Repo = Split-Path -Parent $PSScriptRoot
-
-function Get-AlPython {
-    foreach ($name in @('python', 'py')) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
-    }
-    throw 'Python 3.11 or newer was not found on PATH.'
-}
-
-function Get-AlPaths([string]$Python) {
-    Push-Location $Repo
-    try {
-        $json = (& $Python -m server.al.paths) -join "`n"
-        if ($LASTEXITCODE -ne 0) { throw 'server.al.paths failed' }
-    } finally {
-        Pop-Location
-    }
-    return $json | ConvertFrom-Json
+# REL-RUNTIME-SCRIPTS (F-047): Get-AlPython and Get-AlPaths come from
+# scripts\al_env.ps1, the one Python lookup. setup.ps1 is the checkout's
+# setup (an installed copy is laid out by the installer), so its own module
+# calls below keep the checkout form of Get-AlPythonCmd: <python> -m <module>.
+. (Join-Path $PSScriptRoot 'al_env.ps1')
+if (Get-AlInstallHome) {
+    throw 'setup.ps1 sets up a source checkout; an installed copy is set up and repaired by its installer.'
 }
 
 # TEST-CLEAN-CLONE: under $ErrorActionPreference 'Stop', Windows PowerShell
@@ -90,7 +79,7 @@ if ([version]$pyVer -lt [version]'3.11') {
     throw "Python $pyVer found; AshLight needs 3.11 or newer."
 }
 
-$paths = Get-AlPaths $py
+$paths = Get-AlPaths
 foreach ($dir in @($paths.runtime, $paths.temp, $paths.build, $paths.logs, $paths.cache)) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
 }

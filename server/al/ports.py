@@ -30,6 +30,20 @@ def in_block(port):
     return PORT_BLOCK[0] <= int(port) <= PORT_BLOCK[1]
 
 
+def flag_refusal(port):
+    """P8-4: the refusal text for a --port value outside the block, else
+    None. None (no flag) and 0 (an OS-picked port, tests) pass; every other
+    value must lie in PORT_BLOCK. AshLight never moves to another port by
+    itself, so the text names the one fix."""
+    if port is None or (not isinstance(port, bool) and port == 0):
+        return None
+    if not isinstance(port, bool) and isinstance(port, int) and in_block(port):
+        return None
+    return (f"--port {port} is outside the AshLight port block "
+            f"{PORT_BLOCK[0]}-{PORT_BLOCK[1]}; pick a port in the block "
+            f"(0 lets the system pick one)")
+
+
 def _block_port(value):
     """value as an int inside the block, else None (bool, junk, out of block)."""
     if isinstance(value, bool):

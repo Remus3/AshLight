@@ -31,9 +31,16 @@ Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
   state for review at apply; then it prunes candidate archives, checkouts
   and trial files other than the pin's and this trial's (Recycle Bin only,
   left in place when no safe method exists, FLEET item 9).
+- `trial --ref <branch or commit>` (LOOP-DRIFT-REF, decision 0025 / 0028
+  amendment 2026-11-18): a rehearsal of a non-release ref (for example the
+  next release branch). Same steps as a tag trial, static by default
+  (`--live` is the same manual trigger); the candidate keeps the pinned tag
+  and carries `rehearsal_ref`, the record goes to the state's `rehearsal`
+  key (a release trial record awaiting apply is never overwritten and its
+  candidate is never pruned by a rehearsal), and `apply` never accepts it.
 - `apply`: writes the live-green candidate into config/tc_pins.json (the pin
-  moves in one commit by whoever commits it); refuses anything else; prints
-  the recorded pob2_files review lines.
+  moves in one commit by whoever commits it); refuses anything else (a
+  rehearsal included); prints the recorded pob2_files review lines.
 - `note`: the dated HOLD line for decision 0004 when the pin stays.
 
 Nothing from an archive is imported here; the bridge tests run in a
@@ -85,8 +92,13 @@ STATE_REL = Path("ops") / "runtime" / "tc_drift.json"
 
 _TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 _HEX40 = re.compile(r"^[0-9a-f]{40}$")
-# AUTO-12: the per-tag files a trial leaves in Build\tc-drift\
-_TRIAL_FILE = re.compile(r"^(v\d+\.\d+\.\d+)-(pins\.json|junit\.xml)$")
+# LOOP-DRIFT-REF: a branch name or commit sha a rehearsal may name (plain
+# git ref characters only; no "..", no "//", no leading or trailing "/")
+_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$")
+REHEARSAL_KEY = "rehearsal_ref"  # pob2 key of a rehearsal candidate pin
+# AUTO-12: the per-tag files a trial leaves in Build\tc-drift\ (a
+# rehearsal's label is ref-<12 hex of its commit>)
+_TRIAL_FILE = re.compile(r"^(v\d+\.\d+\.\d+|ref-[0-9a-f]{12})-(pins\.json|junit\.xml)$")
 # pob2_files entries with a known data parser: the parsed row count is
 # recorded beside the hashes (decision 0037 amendment parser, read as text)
 ROW_PARSERS = {tradestats.POB_REL: tradestats.parse_pob_trade_stats}
@@ -190,6 +202,32 @@ def resolve_commit(repo, tag, fetch=None, now=None):
     if not _HEX40.match(sha):
         raise webfetch.FetchError(f"tag {tag} did not resolve to a commit sha")
     return sha
+
+
+def check_ref(ref):
+    """The rehearsal ref when it is a plain branch name or commit sha, else
+    ValueError (never a URL piece the API path could be bent with)."""
+    if (not isinstance(ref, str) or not _REF.match(ref) or ".." in ref
+            or "//" in ref or ref.endswith(("/", ".lock", "."))):
+        raise ValueError(f"not a branch name or commit: {ref!r}")
+    return ref
+
+
+def resolve_ref(repo, ref, fetch=None, now=None):
+    """The full commit sha a branch or commit points at (a rehearsal)."""
+    check_ref(ref)
+    now = time.time() if now is None else now
+    body = _get(API.format(repo=repo) + f"/commits/{ref}",
+                "application/vnd.github.sha", fetch, now)
+    sha = body.decode("ascii", "replace").strip()
+    if not _HEX40.match(sha):
+        raise webfetch.FetchError(f"ref {ref} did not resolve to a commit sha")
+    return sha
+
+
+def rehearsal_label(commit):
+    """The file label of a rehearsal: ref-<first 12 hex of its commit>."""
+    return f"ref-{commit[:12]}"
 
 
 # --- state --------------------------------------------------------------
@@ -351,13 +389,15 @@ def launch_trial(root, tag, live=False):
 
 # --- trial --------------------------------------------------------------
 
-def candidate(doc, tag, commit, sha256, size, today, archive=None):
+def candidate(doc, tag, commit, sha256, size, today, archive=None, ref=None):
     """The pin document with PoB-PoE2 moved to tag / commit (LuaJIT kept).
     TC-CALC-VERIFY-PIN: the content digests (content_sha256, lua_sha256) are
     computed from `archive`, the downloaded candidate zip (tc_pin.
     archive_digests: path guard, data only). Without an archive the old
     digests are dropped, so the candidate does not validate (never carried
-    over from another commit, never guessed)."""
+    over from another commit, never guessed). LOOP-DRIFT-REF: a rehearsal
+    (`ref`) keeps the pinned tag and records the ref under REHEARSAL_KEY,
+    which apply refuses."""
     out = copy.deepcopy(doc)
     pob = out["pob2"]
     name = pob["repo"].split("/")[1]
@@ -368,6 +408,9 @@ def candidate(doc, tag, commit, sha256, size, today, archive=None):
                 "top_dir": top, "verified": today})
     pob.pop(tc_pin.CONTENT_KEY, None)
     pob.pop(tc_pin.LUA_KEY, None)
+    pob.pop(REHEARSAL_KEY, None)
+    if ref is not None:
+        pob[REHEARSAL_KEY] = ref
     if archive is not None:
         digests = tc_pin.archive_digests(archive, top)
         pob[tc_pin.CONTENT_KEY] = digests[tc_pin.CONTENT_KEY]
@@ -545,18 +588,24 @@ def recycle_path(path):
     return not Path(path).exists()
 
 
-def prune_candidates(doc, keep_commit, keep_tag, environ=None, recycle=None):
+def prune_candidates(doc, keep_commit, keep_tag, environ=None, recycle=None,
+                     also_keep=()):
     """Recycle trial leftovers other than the pin's and the newest (this
     trial's): PoB-PoE2 archives `<name>-<commit>.zip` and checkouts
     `<name>-<commit>` in the sidecar pob2 cache, and `<tag>-pins.json` /
     `<tag>-junit.xml` in Build\\tc-drift. Only exact name shapes, never a
-    link, nothing outside the sidecar. Returns {"pruned": [...], "left":
-    [...]} (names); a recycle that fails leaves the item in place."""
+    link, nothing outside the sidecar. `also_keep` holds more (commit,
+    label) pairs to keep (a rehearsal keeps the release trial awaiting
+    apply). Returns {"pruned": [...], "left": [...]} (names); a recycle that
+    fails leaves the item in place."""
     recycle = recycle or recycle_path
     rt = paths.all_runtime_paths(environ)
     pob = doc["pob2"]
     keep_commits = {pob["commit"], keep_commit}
     keep_tags = {pob["tag"], keep_tag}
+    for commit, label in also_keep:
+        keep_commits.add(commit)
+        keep_tags.add(label)
     name = pob["repo"].split("/")[1]
     shape = re.compile(rf"^{re.escape(name)}-([0-9a-f]{{40}})(\.zip)?$")
     targets = []
@@ -584,21 +633,54 @@ def prune_candidates(doc, keep_commit, keep_tag, environ=None, recycle=None):
     return out
 
 
-def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
-          run_tests=None, today=None, live=False, recycle=None):
+def _record_keep(tr):
+    """(commit, label) of a trial record's candidate, or None (a rehearsal
+    keeps the release trial awaiting apply out of its prune)."""
+    if not isinstance(tr, dict) or not tr.get("tag"):
+        return None
+    commit = tr.get("commit")
+    if not (isinstance(commit, str) and _HEX40.match(commit)) and tr.get("candidate"):
+        try:
+            commit = json.loads(Path(tr["candidate"]).read_text(
+                encoding="ascii"))["pob2"]["commit"]
+        except (OSError, ValueError, KeyError, TypeError):
+            commit = None
+    if not (isinstance(commit, str) and _HEX40.match(commit)):
+        return None
+    return commit, tr["tag"]
+
+
+def trial(root, tag=None, environ=None, fetch=None, download=None, setup=None,
+          run_tests=None, today=None, live=False, recycle=None, ref=None):
     """Trial `tag`: the static guard only, or the live bridge tests when
     `live` (P3-9); records and returns the result. AUTO-12: the candidate's
-    pob2_files are re-hashed after setup, and other candidates are pruned."""
+    pob2_files are re-hashed after setup, and other candidates are pruned.
+    LOOP-DRIFT-REF: `ref` (a branch or commit, instead of `tag`) runs the
+    same steps as a rehearsal: static unless `live`, recorded under the
+    state's `rehearsal` key, never accepted by apply."""
+    if (tag is None) == (ref is None):
+        raise ValueError("trial needs exactly one of a tag or a ref")
     download = download or download_measure
     setup = setup or (lambda doc, env: tc_pin.run_setup(doc, environ=env))
     run_tests = run_tests or run_bridge_tests
     today = today or time.strftime("%Y-%m-%d")
     doc = _pins(root)
     work = paths.all_runtime_paths(environ)["build"] / "tc-drift"
+    rehearsal = ref is not None
+    if rehearsal:
+        tag = doc["pob2"]["tag"]  # a rehearsal candidate keeps the pinned tag
     res = {"tag": tag, "state": "done", "at": iso(time.time()), "live": bool(live)}
+    if rehearsal:
+        res.update({"rehearsal": True, "ref": ref})
+    label = tag
     commit = None
     try:
-        commit = resolve_commit(doc["pob2"]["repo"], tag, fetch=fetch)
+        if rehearsal:
+            commit = resolve_ref(doc["pob2"]["repo"], ref, fetch=fetch)
+            label = rehearsal_label(commit)
+        else:
+            commit = resolve_commit(doc["pob2"]["repo"], tag, fetch=fetch)
+        res["commit"] = commit
         name = doc["pob2"]["repo"].split("/")[1]
         url = f"https://github.com/{doc['pob2']['repo']}/archive/{commit}.zip"
         archive = paths.all_runtime_paths(environ)["pob2_cache"] / f"{name}-{commit}.zip"
@@ -611,35 +693,43 @@ def trial(root, tag, environ=None, fetch=None, download=None, setup=None,
             pass
         if first != second:
             raise DriftError(f"two downloads of {tag} differ: {first} vs {second}")
-        cand = candidate(doc, tag, commit, first[0], first[1], today, archive=archive)
+        cand = candidate(doc, tag, commit, first[0], first[1], today, archive=archive,
+                         ref=ref)
         problems = tc_pin.validate_pins(cand)
         if problems:
             raise DriftError("candidate pins invalid: " + "; ".join(problems))
         work.mkdir(parents=True, exist_ok=True)
-        cand_path = work / f"{tag}-pins.json"
+        cand_path = work / f"{label}-pins.json"
         cand_path.write_text(json.dumps(cand, indent=2) + "\n", encoding="ascii")
         res["candidate"] = str(cand_path)
         setup(cand, environ)
         # AUTO-12: the candidate's own pob2_files hashes, recorded for apply
         res["pob2_files"] = rehash_pob2_files(cand, environ)
         cand_path.write_text(json.dumps(cand, indent=2) + "\n", encoding="ascii")
-        tests = run_tests(cand_path, work / f"{tag}-junit.xml", environ, live=live)
+        tests = run_tests(cand_path, work / f"{label}-junit.xml", environ, live=live)
         res["tests"] = tests
         res["verdict"], res["detail"] = _verdict(tests, live)
+        if rehearsal:
+            res["detail"] += "; rehearsal of a non-release ref, apply never accepts it"
     except (DriftError, webfetch.FetchError, tc_pin.HashMismatch, tc_pin.UnsafeArchive,
             OSError, RuntimeError, ValueError, ET.ParseError, zipfile.BadZipFile,
             subprocess.SubprocessError) as e:
         res["verdict"], res["detail"] = "error", f"{type(e).__name__}: {e}"
+    st = load_state(root)
     if commit is not None:
+        keep = _record_keep(st.get("trial")) if rehearsal else None
         try:
-            res["prune"] = prune_candidates(doc, commit, tag, environ, recycle=recycle)
+            res["prune"] = prune_candidates(doc, commit, label, environ, recycle=recycle,
+                                            also_keep=[keep] if keep else ())
         except OSError as e:
             res["prune"] = {"pruned": [], "left": [], "error": f"{type(e).__name__}: {e}"}
-    st = load_state(root)
-    prev = st.get("trial") or {}
-    if prev.get("tag") == tag:
-        res["launches"] = prev.get("launches", 1)
-    st["trial"] = res
+    if rehearsal:
+        st["rehearsal"] = res  # never the trial record apply reads
+    else:
+        prev = st.get("trial") or {}
+        if prev.get("tag") == tag:
+            res["launches"] = prev.get("launches", 1)
+        st["trial"] = res
     save_state(root, st)
     return res
 
@@ -650,10 +740,15 @@ def apply(root):
     """Move config/tc_pins.json to the green trial's candidate; the tag."""
     st = load_state(root)
     tr = st.get("trial") or {}
+    if tr.get("rehearsal") or tr.get("ref"):
+        raise DriftError("a --ref trial is a rehearsal; apply never accepts it")
     if tr.get("verdict") != "live-green" or not tr.get("live") or not tr.get("candidate"):
         raise DriftError("no live-green trial to apply "
                          f"(trial: {tr.get('verdict') or 'none'})")
     cand = json.loads(Path(tr["candidate"]).read_text(encoding="ascii"))
+    if REHEARSAL_KEY in (cand.get("pob2") or {}):
+        raise DriftError("the candidate is a rehearsal of a non-release ref; "
+                         "apply never accepts it")
     problems = tc_pin.validate_pins(cand)
     if problems or cand["pob2"]["tag"] != tr["tag"]:
         raise DriftError("candidate pins invalid: " + "; ".join(problems or ["tag mismatch"]))
@@ -687,8 +782,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="tc_drift", description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check", help="one release check now (ignores the daily throttle)")
-    t = sub.add_parser("trial", help="trial the bridge tests on a release tag")
-    t.add_argument("--tag", required=True)
+    t = sub.add_parser("trial", help="trial the bridge tests on a release tag, or "
+                       "rehearse a non-release ref (--ref, never applied)")
+    which = t.add_mutually_exclusive_group(required=True)
+    which.add_argument("--tag")
+    which.add_argument("--ref", help="a branch or commit to rehearse (static unless "
+                       "--live; apply never accepts it)")
     t.add_argument("--live", action="store_true",
                    help="also run the candidate's Lua under luajit (manual trigger, P3-9)")
     sub.add_parser("apply", help="move the pin to the green trial's candidate")
@@ -702,8 +801,12 @@ def main(argv=None):
             print(summary(st))
             return RC_FAIL if st.get("status") in ("error", "rate-limited") else RC_OK
         if args.cmd == "trial":
-            res = trial(root, args.tag, live=args.live)
-            print(f"trial {args.tag}: {res['verdict']}: {res['detail']}")
+            if args.ref is not None:
+                res = trial(root, ref=args.ref, live=args.live)
+                print(f"rehearsal {args.ref}: {res['verdict']}: {res['detail']}")
+            else:
+                res = trial(root, args.tag, live=args.live)
+                print(f"trial {args.tag}: {res['verdict']}: {res['detail']}")
             return RC_OK if res["verdict"] in ("live-green", "static-green") else RC_FAIL
         if args.cmd == "apply":
             tag = apply(root)

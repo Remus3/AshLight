@@ -321,43 +321,9 @@ textarea, .weights-form input {
 /* UTIL-WAYSTONE: a waystone with mods risky for the loaded build */
 .verdict[data-verdict="risky"] { color: var(--fk-status-warn); border-color: var(--fk-status-warn); }
 .eval-item { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
-.eval-comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px 16px; }
-.eval-comp .sub-h { margin-top: 8px; }
-.eval-comp p { margin: 0 0 6px; }
-.eval-stats { list-style: none; margin: 0; padding: 0; }
-.eval-stats li {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 2px 12px;
-  padding: 4px 0;
-  border-top: 1px solid var(--fk-border);
-}
-.eval-stats .stat-text { overflow-wrap: anywhere; min-width: 0; }
-.eval-stats .stat-points { color: var(--fk-text-muted); white-space: nowrap; }
 
 /* PRICE-1-UI / DATA-NINJA-UI (decision 0016). The state is a word with a
    glyph (kit pill); colour only repeats it. Prices are never red. */
-.price-box { margin-top: 12px; }
-.price-box .pill { font-weight: 600; }
-/* PRICE-TRADE-LINK (decision 0017): the trade search link, opened by a click */
-.price-link { margin: 4px 0 0; overflow-wrap: anywhere; }
-.price-link a { display: inline-block; min-height: 24px; padding: 2px 0; }
-.price-list, .rates-list { list-style: none; margin: 0; padding: 0; }
-.price-list li, .rates-list li {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 12px;
-  padding: 4px 0;
-  border-top: 1px solid var(--fk-border);
-  min-width: 0;
-}
-.price-list li:first-child, .rates-list li:first-child { border-top: none; }
-.rates-list .rate-name { flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; }
-.rates-list .rate-value { font-weight: 600; white-space: nowrap; }
-.rates-list .rate-per { white-space: nowrap; }
-#rates-pill { margin: 0 0 8px; }
-#rates-unit { margin: 0 0 4px; }
 .webdata-form { margin: 0 0 8px; }
 .check { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-weight: 600; cursor: pointer; }
 .check input { width: 20px; height: 20px; margin: 0; flex: none; cursor: pointer;
@@ -369,7 +335,6 @@ textarea, .weights-form input {
 .check input:checked { background: var(--fk-accent) var(--al-check-tick) center / 16px 16px no-repeat;
   border-color: var(--fk-accent); }
 .check input:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
-.weights { margin-top: 12px; }
 .weights-form { display: grid; gap: 12px; }
 .weights-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px;
   grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
@@ -438,7 +403,6 @@ textarea, .weights-form input {
 
 @media (max-width: 600px) {
   .event-list .time { display: none; }
-  .rates-list .rate-name { flex-basis: 100%; }
 }
 
 /* High-contrast mode (UX-REVIEW U3, research 0008): follows the Windows /
@@ -463,7 +427,6 @@ textarea, .weights-form input {
 /* UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO */
 .history-controls, .settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
 .history .slower { color: var(--fk-status-warn); }
-.watch-list li { overflow-wrap: anywhere; }
 /* UX-DASH-DENSITY: set-once tools in one folded group (the .build file and
    the loot filter add-on are card pages since PLAY-TD-19C-BUILD-GRID).
    Separators only, no motion. */
@@ -771,15 +734,62 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 .grid-card p { margin: 0; }
 .grid-card .row-meta + .card-act, .grid-card .card-act + .row-meta { margin-top: 0.25rem; }
 #link-recover { margin-top: 0.25rem; }
-/* the loot filter page: the details element stays open and its summary is
-   not drawn; the card's page buttons show it (web/app.js cardPages) */
-.tool-page > summary { display: none; }
+/* the loot filter page: a plain page of its card (review BG-10); the
+   card's page buttons show it (web/app.js cardPages) */
 .tool-page .small { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); margin: 0.25rem 0 0; }
 .tool-page .link { min-height: 1.5rem; padding: 0; font-size: var(--al-fs-meta); }
 .card-notes { margin: 0; padding-left: 1rem; overflow-wrap: anywhere; }
 .grid-card a.out { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 .tool-page input[type="file"] { width: 13rem; font-size: var(--al-fs-meta); }
 .tool-page .card-act > .one-line:empty { display: none; }
+/* every Build and items column is a card cell: never a scroll box, in the
+   flow class too (the panel is the one scroll path there) */
+.panel-cards > .col { max-height: none; overflow: visible; padding-right: 0; }
+
+/* Last item, Prices, Item scoring (PLAY-TD-19D-ITEMS-GRID; plan 03 section
+   4). Head rows are one line of 24 px: the verdict and the price state
+   pill, then rows that page, then the time of the check. Pills and
+   legends take the meta step, so the tab keeps its type styles. */
+.grid-card .pill { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); padding: 0 0.5rem;
+  font-weight: 600; }
+.grid-card .eval-head, .grid-card .price-head { display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.25rem 0.5rem; min-width: 0; min-height: 1.5rem; margin: 0; }
+.grid-card .verdict { padding: 0 0.5rem; font-size: var(--al-fs-body); line-height: 1.25rem;
+  font-weight: 600; flex: none; }
+.grid-card .eval-item { flex: 1 1 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
+.grid-card #rates-pill { margin: 0; align-self: flex-start; }
+/* the verdict and price sentences are read in their live regions and
+   shown as the first rows: visually hidden at the top of the one-line head
+   (one line of the type token, so they never overflow their box) */
+#eval-body, #price-body { position: relative; }
+.grid-card .sr-only { top: 0; left: 0; height: auto; font-size: var(--al-fs-body);
+  line-height: var(--al-lh-body); }
+.grid-card ul.sr-only { list-style: none; padding: 0; }
+.grid-card ul.sr-only li { display: inline; }
+.grid-card .card-act > .check { min-height: 1.75rem; }
+.grid-card .webdata-form { margin: 0 0 0.25rem; }
+/* Item scoring: the form only groups its pages (each page is a card
+   page); a weight row is 24 px, label and number box on one line */
+.grid-card .weights-form { display: contents; }
+.grid-card .weights-list { display: flex; flex-direction: column; gap: 0; }
+.grid-card .weights-list li { min-height: 1.5rem; gap: 0.5rem; }
+.grid-card .weights-list label { font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
+.grid-card .weights-form input { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
+  padding: 1px 6px; border-radius: var(--al-radius-control); }
+.grid-card .weights-list input { width: 6em; }
+/* the Add a stat page: two groups of two 24 px rows, label and box on one
+   row, no frame (the legend names the group) */
+.grid-card .weights-form fieldset { border: 0; padding: 0; margin: 0; flex-direction: column;
+  flex-wrap: nowrap; gap: 0.25rem; min-width: 0; }
+.grid-card .weights-form fieldset + fieldset { margin-top: 0.5rem; }
+.grid-card .weights-form legend { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
+  font-weight: 600; padding: 0; }
+.grid-card .weights-form fieldset label { flex-direction: row; align-items: center; gap: 0.5rem;
+  min-height: 1.5rem; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
+.grid-card .weights-add label:first-of-type { flex: none; }
+.grid-card .weights-add input[type="text"] { flex: 1 1 auto; min-width: 0; }
+.grid-card .weights-band input, .grid-card .weights-add input[type="number"] { width: 6em;
+  margin-left: auto; flex: none; }
 
 /* The pager (web/pager.js CLS names, and ALSearch.rowPager's control rows) */
 .al-pager-list { list-style: none; margin: 0; padding: 0; min-width: 0; }
@@ -796,22 +806,38 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
   min-height: 1.75rem; margin-top: auto; }
 .al-pager-count { margin-right: auto; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
   color: var(--fk-text-muted); }
-button.al-pager-btn { min-height: 1.5rem; padding: 0 0.5rem; font-size: var(--al-fs-meta);
-  line-height: var(--al-lh-meta); background: var(--fk-surface); }
-button.al-pager-btn[aria-disabled="true"] { color: var(--fk-text-muted); cursor: default; }
+button.al-pager-btn { min-height: 1.5rem; min-width: 1.5rem; padding: 0 0.5rem;
+  font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); background: var(--fk-surface); }
+/* PGR-1..3 (PLAY-TD-19D-ITEMS-GRID): an end button says so without colour:
+   a dashed edge and the not-allowed cursor. Its text stays the muted token
+   (6.1:1 light, 6.5:1 dark on the card) and its edge the control edge
+   (3.5:1 light, 4.1:1 dark), so no opacity; the target stays 24 px. */
+button.al-pager-btn[aria-disabled="true"] { color: var(--fk-text-muted);
+  border-style: dashed; border-color: var(--al-control-edge); cursor: not-allowed; }
+button.al-pager-btn[hidden] { display: none; }
 li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
 
 @media (min-width: 64em) and (min-height: 43.75em) {
   .panel-cards { align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; }
-  .panel-cards > .col:nth-child(-n+3) { display: grid; grid-template-rows: minmax(0, 1fr);
-    max-height: none; overflow: visible; padding-right: 0; }
+  .panel-cards > .col { display: grid; grid-template-rows: minmax(0, 1fr); }
   .grid-card { min-height: 0; padding: 0.75rem; }
   .al-row1, .al-pager-line, .card-sub, .card-kv dt { white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; }
   .al-row-ctl { height: 1.5rem; }
+  .grid-card .eval-head, .grid-card .price-head { flex-wrap: nowrap; }
+  .grid-card .weights-list li { height: 1.5rem; }
+  /* the Build card's first page fits the 256 px compact card (PLAY-TD-19D-
+     ITEMS-GRID): key stat rows of 20 px and a 24 px Copy button */
+  #buildbox .card-kv > div { line-height: 1.25rem; }
+  #build-copy { min-height: 1.5rem; }
+  .grid-card .weights-list label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 [data-text-spacing="user"] .al-row1, [data-text-spacing="user"] .al-pager-line,
 [data-text-spacing="user"] .card-sub, [data-text-spacing="user"] .card-kv dt {
   white-space: normal; overflow: visible; }
 [data-text-spacing="user"] .al-row-ctl { height: auto; }
+[data-text-spacing="user"] .grid-card .eval-head, [data-text-spacing="user"] .grid-card .price-head {
+  flex-wrap: wrap; }
+[data-text-spacing="user"] .grid-card .weights-list li { height: auto; }
+[data-text-spacing="user"] .grid-card .weights-list label { white-space: normal; overflow: visible; }
