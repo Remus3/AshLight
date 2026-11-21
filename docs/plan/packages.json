@@ -12589,7 +12589,9 @@
     "F-116",
     "OPEN-06"
    ],
-   "files": [],
+   "files": [
+    "tests/test_trade_link.py"
+   ],
    "new_files": [
     "server/al/gggapi.py",
     "tests/test_gggapi.py"
