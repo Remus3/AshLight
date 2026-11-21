@@ -789,6 +789,13 @@ class Handler(BaseHTTPRequestHandler):
                 "contact_set": core.contact() is not None,
                 "needs_contact": ["poe.ninja currency rates", "poe.ninja unique and stackable item values"],
                 "blocked": core.web_blocked_reason(),
+                # DATA-LEAGUE-PICKER-API (F-141): the league picker reads the
+                # setting, the auto league, the league prices come from (a
+                # solo league maps to its trade league) and the cached names
+                "league": core.league_setting(),
+                "league_auto": core.league_auto(),
+                "prices_from": core.trade_league(),
+                "leagues": core.league_names(),
                 "policy": "docs/decisions/0013-web-data.md"}
 
     def _set_web_data(self, path, query, extra):
@@ -796,21 +803,35 @@ class Handler(BaseHTTPRequestHandler):
         DATA-CONTACT-FIELD (F-018): the body holds "enabled" (bool) and / or
         "contact" (text; '' removes it). Both are checked before anything is
         written; the contact is stored only in config/local.json and the
-        answer says only contact_set, never the value."""
+        answer says only contact_set, never the value.
+        DATA-LEAGUE-PICKER-API (F-141): an optional "league" (text) sets
+        the "league" key to a league of the cached list ('' clears it, so
+        the auto league is followed again); checked first like the rest."""
         refused = ("AshLight can't use that contact. Use up to 120 plain "
                    "characters, without brackets or a backslash.")
+        league_refused = ("AshLight can't price that league. Pick one from the "
+                          "list, or the automatic league.")
         body = self._read_json()
         if body is None:
             return None
         has_on, has_contact = "enabled" in body, "contact" in body
-        if not (has_on or has_contact) or (has_on and not isinstance(body["enabled"], bool)):
+        has_league = "league" in body
+        if not (has_on or has_contact or has_league) or (
+                has_on and not isinstance(body["enabled"], bool)):
             return self._json(400, {"error": "enabled: true|false required"})
         contact = body.get("contact")
         if has_contact and not (isinstance(contact, str) and (
                 not contact.strip() or webfetch.clean_contact(contact) is not None)):
             return self._json(400, {"error": refused})
         core = self.server.core
+        if has_league:
+            try:
+                core.league_choice(body["league"])
+            except ValueError:
+                return self._json(400, {"error": league_refused})
         try:
+            if has_league:
+                core.set_league(body["league"])
             if has_contact:
                 core.set_contact(contact)
             if has_on:
