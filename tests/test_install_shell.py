@@ -15,6 +15,7 @@ statement is executed). Homes live under pytest tmp folders.
 """
 
 import base64
+import hashlib
 import json
 import os
 import shutil
@@ -31,6 +32,7 @@ from server.al.install import home as homemod
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL_SRC = ROOT / "server" / "al" / "install" / "shell.py"
+RUN_PS1 = ROOT / "scripts" / "run.ps1"
 PS51 = shutil.which("powershell.exe") if sys.platform == "win32" else None
 WHEN = datetime(2026, 11, 19, 12, 0, 0, tzinfo=timezone.utc)
 PY_RT = "python-3.12.7"
@@ -378,3 +380,185 @@ def test_first_run_document_is_a_fresh_copy():
     doc = firstrun.first_run_config()
     doc["web_data"] = True
     assert firstrun.first_run_config()["web_data"] is False
+
+
+# --- REL-INSTALLED-RUN-CHECK: run.ps1's electron.exe check in an install ------
+#
+# An installed copy ships no tools/electron_pin.py (config/ship_list.json), so
+# run.ps1 checks the private runtime's electron.exe itself against the
+# shipped config/electron_pin.json. These tests lay out a scratch install
+# (pytest tmp, under the sidecar Temp), dot-source the payload's copy of
+# al_env.ps1 and run only run.ps1's check functions (cut out by the 5.1
+# parser): no core, client or Python starts; $py and $Repo stay undefined
+# under StrictMode, so any Python or tool call would fail the run.
+
+EXE_BYTES = b"MZ fake electron for the installed run check\n" * 7
+ZIP_SHA = hashlib.sha256(b"the pinned zip").hexdigest()
+CHECK_FUNCS = ("Test-AlElectronExe", "Test-AlInstalledElectronExe",
+               "Read-AlSmallJson", "Get-AlJsonField", "Write-AlLog")
+
+
+def _q(value):
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _installed_client(home):
+    """The private Electron runtime, its install marker and the payload's
+    al_env.ps1 and electron_pin.json; returns (payload, exe)."""
+    payload = home / "app" / NEW
+    shutil.copyfile(ROOT / "scripts" / "al_env.ps1", payload / "scripts" / "al_env.ps1")
+    rt = home / "runtime" / EL_RT
+    rt.mkdir(parents=True, exist_ok=True)
+    exe = rt / "electron.exe"
+    exe.write_bytes(EXE_BYTES)
+    url = ("https://github.com/electron/electron/releases/download/v45.3.3/"
+           "electron-v45.3.3-win32-x64.zip")
+    (rt / "ashlight-runtime.json").write_text(json.dumps(
+        {"name": "electron", "version": "45.3.3", "url": url, "sha256": ZIP_SHA,
+         "size": 1234}, indent=1) + "\n", encoding="ascii")
+    pin = {"schema": 1, "version": "45.3.3", "arch": {
+        "arm64": {"zip_sha256": "0" * 64, "exe_sha256": "1" * 64, "exe_size": 5},
+        "x64": {"zip_sha256": ZIP_SHA,
+                "exe_sha256": hashlib.sha256(EXE_BYTES).hexdigest(),
+                "exe_size": len(EXE_BYTES)}}}
+    (payload / "config").mkdir(exist_ok=True)
+    (payload / "config" / "electron_pin.json").write_text(
+        json.dumps(pin, indent=1) + "\n", encoding="ascii")
+    return payload, exe
+
+
+def _ps_env():
+    return {k: v for k, v in os.environ.items()
+            if k.upper() not in ("AL_HOME", "AL_SIDECAR_ROOT", "AL_RUNTIME_DIR")}
+
+
+def _ps_run(prog):
+    r = subprocess.run([PS51, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                        "-Command", prog], capture_output=True, text=True, timeout=90,
+                       env=_ps_env(), stdin=subprocess.DEVNULL)
+    assert r.returncode == 0, r.stdout + r.stderr
+    return [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+
+
+def _run_check(home, payload, log):
+    """'OK=True' / 'OK=False' from run.ps1's Test-AlElectronExe in the
+    installed layout, plus the log lines it wrote."""
+    names = ", ".join(_q(n) for n in CHECK_FUNCS)
+    out = _ps_run(
+        "$ErrorActionPreference = 'Stop'\n"
+        "Set-StrictMode -Version 2\n"
+        ". " + _q(payload / "scripts" / "al_env.ps1") + "\n"
+        "$__names = @(" + names + ")\n"
+        "$__ast = [System.Management.Automation.Language.Parser]::ParseFile("
+        + _q(RUN_PS1) + ", [ref]$null, [ref]$null)\n"
+        "$__fns = $__ast.FindAll({ param($n) $n -is "
+        "[System.Management.Automation.Language.FunctionDefinitionAst] -and "
+        "$__names -contains $n.Name }, $true)\n"
+        "if (@($__fns).Count -ne $__names.Count) { throw 'function missing' }\n"
+        "foreach ($__f in $__fns) { . ([scriptblock]::Create($__f.Extent.Text)) }\n"
+        "$alInstallHome = Get-AlInstallHome\n"
+        "$electron = [string](Get-AlElectron)\n"
+        "$paths = [pscustomobject]@{ build = " + _q(home / "build") + " }\n"
+        "$log = " + _q(log) + "\n"
+        "'HOME=' + $alInstallHome\n"
+        "'OK=' + (Test-AlElectronExe)\n")
+    assert ("HOME=" + str(home)) in out, out
+    lines = log.read_text(encoding="ascii").splitlines() if log.exists() else []
+    log.unlink(missing_ok=True)
+    return [ln for ln in out if ln.startswith("OK=")][-1], lines
+
+
+def test_the_install_ships_no_pin_tool():
+    ship = json.loads((ROOT / "config" / "ship_list.json").read_text(encoding="ascii"))
+    tools = [p for p in ship["include"] if p.startswith("tools/")]
+    assert tools == ["tools/tc_pin.py"]
+    assert "config/*.json" in ship["include"]  # electron_pin.json ships
+
+
+@pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
+def test_installed_run_verifies_electron_exe_without_the_pin_tool(home, tmp_path):
+    payload, exe = _installed_client(home)
+    assert not (payload / "tools" / "electron_pin.py").exists()
+    log = tmp_path / "run.log"
+    ok, lines = _run_check(home, payload, log)
+    assert ok == "OK=True", lines
+    assert any(ln.endswith("run: electron: electron.exe ok (hashed)") for ln in lines), lines
+    rec = json.loads((home / "build" / "electron-exe-installed.json").read_text(encoding="ascii"))
+    assert rec["sha256"] == hashlib.sha256(EXE_BYTES).hexdigest()
+    assert rec["size"] == len(EXE_BYTES)
+    # the fast path: size and mtime unchanged, no full hash
+    ok, lines = _run_check(home, payload, log)
+    assert ok == "OK=True"
+    assert any("electron.exe ok (unchanged since last check)" in ln for ln in lines), lines
+    # same size, other bytes (a new mtime): hashed again and refused
+    exe.write_bytes(b"X" * len(EXE_BYTES))
+    st = exe.stat()
+    os.utime(exe, ns=(st.st_atime_ns, st.st_mtime_ns + 10 ** 9))
+    ok, lines = _run_check(home, payload, log)
+    assert ok == "OK=False"
+    assert any("refused: electron.exe sha256 differs" in ln for ln in lines), lines
+    for ln in lines:
+        assert "setup.ps1" not in ln and "electron_pin.py" not in ln
+
+
+@pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
+@pytest.mark.parametrize("damage, word", [
+    ("size", "size"),
+    ("marker", "no valid install marker"),
+    ("zip", "no pinned Electron zip matches"),
+    ("version", "not the version this release pins"),
+    ("pin", "electron_pin.json is missing"),
+])
+def test_installed_run_refuses_an_unproven_electron_exe(home, tmp_path, damage, word):
+    payload, exe = _installed_client(home)
+    marker = home / "runtime" / EL_RT / "ashlight-runtime.json"
+    doc = json.loads(marker.read_text(encoding="ascii"))
+    if damage == "size":
+        exe.write_bytes(EXE_BYTES + b"!")
+    elif damage == "marker":
+        marker.unlink()
+    elif damage == "zip":
+        doc["sha256"] = "f" * 64
+        marker.write_text(json.dumps(doc), encoding="ascii")
+    elif damage == "version":
+        doc["version"] = "45.3.2"
+        marker.write_text(json.dumps(doc), encoding="ascii")
+    else:
+        (payload / "config" / "electron_pin.json").unlink()
+    ok, lines = _run_check(home, payload, tmp_path / "run.log")
+    assert ok == "OK=False"
+    assert any("run: electron: refused: " in ln and word in ln for ln in lines), lines
+    assert not (home / "build" / "electron-exe-installed.json").exists()
+
+
+def _branch(text, head):
+    """The statements of one run.ps1 elseif branch (head line to the next
+    branch line)."""
+    start = text.index(head) + len(head)
+    return text[start:text.index("\n} ", start)]
+
+
+@pytest.mark.skipif(PS51 is None, reason="Windows PowerShell 5.1 only")
+@pytest.mark.parametrize("installed", [True, False])
+def test_client_failure_lines_name_the_installer_in_an_install(tmp_path, installed):
+    text = RUN_PS1.read_bytes().decode("ascii")
+    refused = _branch(text, "} elseif (-not (Test-AlElectronExe)) {")
+    missing = _branch(text, "} elseif (-not $haveElectron) {")
+    assert "Start-AlDetached" not in refused + missing
+    log = tmp_path / "run.log"
+    _ps_run(
+        "$ErrorActionPreference = 'Stop'\n"
+        "Set-StrictMode -Version 2\n"
+        "$log = " + _q(log) + "\n"
+        "function Write-AlLog([string]$Message) { Add-Content -Path $log -Value $Message }\n"
+        "$alInstallHome = " + (_q(tmp_path / "AshLight") if installed else "$null") + "\n"
+        + refused + "\n" + missing + "\n")
+    lines = log.read_text(encoding="ascii").splitlines()
+    assert len(lines) == 2, lines
+    assert lines[0].startswith("run: client NOT started - electron.exe is not the pinned one; ")
+    assert lines[1].startswith("run: client not installed - ")
+    for ln in lines:
+        if installed:
+            assert "installer repair" in ln and "setup.ps1" not in ln, ln
+        else:
+            assert "setup.ps1" in ln and "installer" not in ln, ln
