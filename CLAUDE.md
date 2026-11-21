@@ -1156,6 +1156,11 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   app/package.json and the lockfile; the setup.ps1 Python / Node floors,
   AL_PORT / PORT_BLOCK and the scripts named in README; the kit version in
   CLAUDE.md while quoted and design 0001; the disclaimer word for word in
-  README); a stale quote fails tests/test_docs_fresh.py naming the file; no
+  README; TEST-DOCS-FACTS-UI: the default item-check and show / hide keys
+  from server/al/hotkeys.py FALLBACKS (never web/ text) where README quotes
+  them, the decision 0002 budget numbers from tests/test_budgets.py where
+  README and decision 0002 quote them, every core-read settings key of
+  config/local.example.json named in README, and the tab labels where
+  README names a tab); a stale quote fails tests/test_docs_fresh.py naming the file; no
   request, no write. Reverses if: a fact's pattern misfires on a legitimate
   rewording, or the later fact packages need a different table shape.
