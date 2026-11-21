@@ -49,6 +49,11 @@ type in the worst one. diag_facts / diag_rows below are the DATA-DIAG-SEAM
 hooks: a failing Checks row names poe.ninja and the worst type, only while
 a type (Currency included, ninja.py applies the same guard) is in shape
 state. All of it is local: no request is added.
+
+DATA-NINJA-SHAPE-WATCH (F-140 layer 1): refresh() hands every 200 body,
+parsed or not, to ninjashape.observe (family "item" for the unique types,
+"exchange" for the rest) through self.shape_watch, which ninjashape.attach
+sets; None (the default) checks nothing. No request is added.
 """
 
 import threading
@@ -58,7 +63,7 @@ import logging
 import urllib.parse
 from pathlib import Path
 
-from . import jsonfile, num
+from . import jsonfile, ninjashape, num
 
 log = logging.getLogger("al.pricebook")
 
@@ -241,6 +246,7 @@ class PriceBook:
         self.path = Path(directory) / CACHE_NAME
         self.interval_s = interval_s
         self.pressed_interval_s = pressed_interval_s
+        self.shape_watch = None  # DATA-NINJA-SHAPE-WATCH: set by ninjashape.attach
         self.doc = self._load()
         # DATA-PRICE-CADENCE: {type: last press time}, memory first; the
         # refresh thread alone copies it into doc["pressed"] and saves it
@@ -363,7 +369,14 @@ class PriceBook:
                     out["unchanged"] += 1
                 elif status == 200:
                     parse = parse_item_overview if kind == "unique" else parse_exchange_overview
-                    p = parse(body)
+                    p = None
+                    try:
+                        p = parse(body)
+                    finally:  # DATA-NINJA-SHAPE-WATCH: every 200 body, parsed or not
+                        kept = len(p["entries"]) if p is not None else None
+                        ninjashape.observe(self.shape_watch,
+                                           "item" if kind == "unique" else "exchange",
+                                           name, status, rh, body, kept, kept)
                     bad = shape_error(p.get("lines"), len(p["entries"]))
                     if bad is not None:
                         raise ValueError(bad)  # the last good entries stay
