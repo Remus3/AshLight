@@ -130,6 +130,17 @@ function resolve(appDir, env, fsMod) {
   };
 }
 
+/* REL-HOME-REFUSAL-UI: show the refusal sentence once through the injected
+   show(text) (main.js passes Electron's dialog.showErrorBox, which works
+   before app ready), so a Start Menu launch is not silent. Only a
+   HomeRefused error shows, and only its own sentence (paths.home_refusal):
+   no path, no other text. Returns true when show was called. */
+function refusalNotice(err, show) {
+  if (!(err instanceof HomeRefused) || typeof show !== "function") { return false; }
+  show(err.message);
+  return true;
+}
+
 /* A home object from a resolve() result or a bare repository root (the
    launcher's older callers pass the root text: a checkout). */
 function asHome(home, env) {
@@ -188,6 +199,7 @@ function childEnv(env) {
 
 module.exports = {
   resolve, asHome, checkout, profileDir, pythonCmd, childEnv, homeRefusal, HomeRefused,
+  refusalNotice,
   HOME_ENV, SIDECAR_ENV, MARKER_NAME, MARKER_MAX_BYTES, APP_FOLDER, DATA_DIR, CACHE_DIR,
   RUNTIME_FOLDER, BOOT_NAME, REFUSED_COMPONENTS, DROPPED_ENV
 };
