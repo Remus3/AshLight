@@ -13888,7 +13888,10 @@
     "app/shared/render_gate.js",
     "app/test/price.test.js",
     "web/prices.js",
-    "web/status.js"
+    "web/status.js",
+    "server/al/data/status_words.json",
+    "app/test/dashboard.test.js",
+    "tests/play_fit_pending/g.txt"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -13903,6 +13906,10 @@
     {
      "file": "docs/design/reviews.log",
      "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
+    },
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip row FIX-IDLE-WORD (done by TEST-STATE-TEXT-PINS, ruling A, session 17) with the same done line."
     }
    ],
    "tests": [
@@ -13911,9 +13918,13 @@
     "tests/test_a11y.py",
     "tests/test_design_contrast.py",
     "app/test/price.test.js",
-    "app/test/shared.test.js"
+    "app/test/shared.test.js",
+    "tests/test_status_words.py",
+    "app/test/statuswords.test.js",
+    "app/test/dashboard.test.js",
+    "tests/test_play_fit.py (green without tests/play_fit_pending/g.txt)"
    ],
-   "accept": "python -m pytest -q tests/test_design_gate.py tests/test_a11y.py tests/test_design_contrast.py tests/test_al_loop_gate_cache.py passes, npm test --prefix app passes, and grep -c 'server/al/state.py' tools/design_gate.py tools/loop_prompts.py .claude/agents/design-reviewer.md prints 0 for each.",
+   "accept": "python -m pytest -q tests/test_design_gate.py tests/test_a11y.py tests/test_design_contrast.py tests/test_al_loop_gate_cache.py passes, npm test --prefix app passes, and grep -c 'server/al/state.py' tools/design_gate.py tools/loop_prompts.py .claude/agents/design-reviewer.md prints 0 for each; FIX-IDLE-WORD: the idle bar word in server/al/data/status_words.json and its copies in web/status.js and app/shared/render_gate.js carries the word \"reading\", tests/play_fit_pending/g.txt is git rm'd, and python -m pytest -q tests/test_play_fit.py tests/test_status_words.py passes without it.",
    "zero_click": "Developer-side only; the player does nothing. The gate and the lane prompt apply the new path by themselves from the next commit on.",
    "size": "M",
    "est_min": 45,
@@ -13928,7 +13939,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Step 8 of research 0047 R3; a session agent does it, never a headless lane (.claude/ write). Exact sites: tools/design_gate.py UI_FILES (line 16) becomes empty and the docstring line 5 names server/al/text/; tests/test_design_gate.py lines 17-22; tools/loop_prompts.py DESIGN_RULE (lines 12-18) and the FAIL rule inside verify_prompt (lines 111-112) - the GATES string was edited by TEST-WAVE-GATE-POLICY (dep edge); .claude/agents/design-reviewer.md lines 3 and 19; docs/design/0001-design-system.md lines 17-19, 390-393 and 460-462; comments at app/shared/format.js 106 and 117, app/shared/render_gate.js 27, app/test/price.test.js 3, web/prices.js 5, web/status.js 111; docs/audit/code-health-2026-11-17.md gets one dated line under its follow-up list. Dated records stay as written: design 0002 and 0003, decisions 0014, 0016, 0019, 0029, 0032. The comment edits touch web/ and app/shared/, so the design-reviewer runs on the diff; its PASS line for docs/design/reviews.log is returned in the result. The whole suite runs once through the gate before this merges (batch rule). CODE-HEALTH-FOLLOWUP item 3 (CRLF runtime writers) is delivered by F-014 in another cluster (cross). TD-23 and other design 0001 edits share serial_group design-0001.",
+   "notes": "Step 8 of research 0047 R3; a session agent does it, never a headless lane (.claude/ write). Exact sites: tools/design_gate.py UI_FILES (line 16) becomes empty and the docstring line 5 names server/al/text/; tests/test_design_gate.py lines 17-22; tools/loop_prompts.py DESIGN_RULE (lines 12-18) and the FAIL rule inside verify_prompt (lines 111-112) - the GATES string was edited by TEST-WAVE-GATE-POLICY (dep edge); .claude/agents/design-reviewer.md lines 3 and 19; docs/design/0001-design-system.md lines 17-19, 390-393 and 460-462; comments at app/shared/format.js 106 and 117, app/shared/render_gate.js 27, app/test/price.test.js 3, web/prices.js 5, web/status.js 111; docs/audit/code-health-2026-11-17.md gets one dated line under its follow-up list. Dated records stay as written: design 0002 and 0003, decisions 0014, 0016, 0019, 0029, 0032. The comment edits touch web/ and app/shared/, so the design-reviewer runs on the diff; its PASS line for docs/design/reviews.log is returned in the result. The whole suite runs once through the gate before this merges (batch rule). CODE-HEALTH-FOLLOWUP item 3 (CRLF runtime writers) is delivered by F-014 in another cluster (cross). TD-23 and other design 0001 edits share serial_group design-0001. FIX-IDLE-WORD (ROADMAP row, adjudicator ruling A as in commit 5787074, session 17): this package is the next owner of server/al/data/status_words.json, so it also gives the idle state's bar word the word \"reading\" (play state d, log quiet; region G passes G9), keeps the copies in web/status.js and app/shared/render_gate.js identical (tests/test_status_words.py, app/test/statuswords.test.js), updates the pin in app/test/dashboard.test.js (IDLE_WORD), adds the new bar sentence to docs/design/0001-design-system.md section 9, and git rm's tests/play_fit_pending/g.txt (tracked, recoverable from git). The overlay word stays within overlay_beside_max. Copy is design-reviewed with the rest of the diff.",
    "wave": 19,
    "owner": "session",
    "tier": "P2",
