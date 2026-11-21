@@ -26,6 +26,11 @@ needles to the file, never replaces it. LEAK-WT: a linked worktree without its
 own config reads the main checkout's (parent of `git rev-parse
 --git-common-dir`); the run line names the source, never a needle.
 
+OWN ADDRESS (ruling Q-24): the exact `<owner>/<name>` of tracked
+`config/public_repo.json` (and `github.com/` before it) is blanked on each
+line before either arm runs; nothing else of the owner is allowed, and a
+missing or malformed file allows nothing.
+
 Escape rate is above zero: `--no-verify` bypasses the hooks, and a needle
 spelled in a shape nobody listed passes. A clean run is not proof.
 Accepted limits and their backstops: decision 0046, amendment 2026-11-18
@@ -43,6 +48,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config" / "leak_needles.json"
 ZERO = "0" * 40
+# Ruling Q-24: the project's own repository address is the one string of its
+# owner the sweep allows (PUB-SWEEP-OWN-ADDRESS); missing file = no exception.
+PUBLIC_REPO = ROOT / "config" / "public_repo.json"
+_REPO_RX = re.compile(
+    r"^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}/[A-Za-z0-9._-]{1,100}$")
 
 # Byte-pinned shared files that legitimately carry a drive-rooted DEFAULT path.
 STRUCT_ALLOW_FILES = {"ops/loop/slots.py"}
@@ -156,10 +166,69 @@ def compile_needles(needles):
             for i, n in enumerate(needles)]
 
 
-def scan_text(text, where, needles_rx, rel_path=""):
-    """Findings for one blob of text: list of (where, line_no, kind)."""
+def load_public_repo(path=None):
+    """The project's own `<owner>/<name>` from config/public_repo.json (ruling
+    Q-24), or '' when the file is missing, unreadable, not JSON, not an object,
+    or its `repo` value is not a GitHub-shaped owner/name."""
+    p = Path(PUBLIC_REPO if path is None else path)
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    repo = doc.get("repo") if isinstance(doc, dict) else None
+    if not isinstance(repo, str) or not _REPO_RX.match(repo):
+        return ""
+    if repo.split("/", 1)[1] in (".", ".."):
+        return ""
+    return repo
+
+
+_OWN_CACHE = {}
+
+
+def _own_repo_rx(own_repo):
+    """Compiled blanking pattern for one repo value, None for ''. Exact and
+    case-sensitive; an optional github.com/ prefix and .git suffix ride along.
+    Bounded on both sides by characters GitHub never puts in an owner or repo
+    name (a trailing '.' only when no name character follows it), so the login
+    with another repository name ('<owner>/<name>-fork', '<owner>/<name>.x',
+    'x-<owner>/<name>') is never blanked."""
+    if not own_repo:
+        return None
+    key = ("rx", own_repo)
+    if key not in _OWN_CACHE:
+        _OWN_CACHE[key] = re.compile(
+            r"(?<![A-Za-z0-9_.-])(?:github\.com/)?" + re.escape(own_repo)
+            + r"(?:\.git)?(?![A-Za-z0-9_-]|\.[A-Za-z0-9_-])")
+    return _OWN_CACHE[key]
+
+
+def _default_own_repo():
+    """load_public_repo() of the current PUBLIC_REPO, read once per path."""
+    key = ("file", str(PUBLIC_REPO))
+    if key not in _OWN_CACHE:
+        _OWN_CACHE[key] = load_public_repo()
+    return _OWN_CACHE[key]
+
+
+def blank_own_repo(line, own_repo):
+    """`line` with each allowed occurrence of the own address replaced by
+    spaces of the same length; unchanged when own_repo is ''."""
+    rx = _own_repo_rx(own_repo)
+    if rx is None:
+        return line
+    return rx.sub(lambda m: " " * len(m.group(0)), line)
+
+
+def scan_text(text, where, needles_rx, rel_path="", own_repo=None):
+    """Findings for one blob of text: list of (where, line_no, kind).
+    own_repo None reads config/public_repo.json (PUB-SWEEP-OWN-ADDRESS); its
+    exact address is blanked before either arm runs on a line."""
+    if own_repo is None:
+        own_repo = _default_own_repo()
     findings = []
     for ln, line in enumerate(text.splitlines(), 1):
+        line = blank_own_repo(line, own_repo)
         for slot, rx in needles_rx:
             if rx.search(line):
                 findings.append((where, ln, f"needle-slot-{slot}"))

@@ -125,9 +125,30 @@ def test_no_pathofexile_host_in_any_webfetch_allowlist():
             if "ALLOWED_HOSTS" in name and isinstance(value, (tuple, list, set, frozenset)):
                 found[f"{mod.__name__}.{name}"] = list(value)
     assert found, "no allowlists found: the scan is broken"
+    # TC-GGG-CLIENT-CORE (decision 0048): the GGG OAuth client may name
+    # exactly the two API Reference hosts, and no other module any host
+    ggg = "server.al.gggapi.ALLOWED_HOSTS"
+    assert ggg in found, "gggapi allow-list missing: the scan is broken"
+    assert set(found[ggg]) == {"www.pathofexile.com", "api.pathofexile.com"}
     for where, hosts in found.items():
+        if where == ggg:
+            continue
         for h in hosts:
             assert not str(h).lower().rstrip(".").endswith("pathofexile.com"), (where, h)
+    # trade paths stay refused on both hosts, by webfetch and by gggapi
+    from server.al import gggapi, webfetch
+    client = gggapi.Client("ashlight-test", "contact placeholder",
+                           lambda *a, **k: pytest.fail("a trade request was sent"),
+                           sleep=lambda s: None)
+    for host in sorted(found[ggg]):
+        for path in ("/trade", "/trade/search/poe2/Standard", "/api/trade",
+                     "/api/trade/search/x", "/api/trade2", "/api/trade2/search/poe2/x",
+                     "/trade2/search/poe2/Standard"):
+            url = f"https://{host}{path}"
+            with pytest.raises(webfetch.UrlNotAllowed):
+                webfetch.check_url(url, found[ggg])
+            with pytest.raises(webfetch.UrlNotAllowed):
+                client._send("GET", url, {"User-Agent": "x"}, None, "trade")
 
 
 def test_trade_module_has_no_network_code():

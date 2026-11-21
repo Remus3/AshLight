@@ -103,3 +103,32 @@ unattended" with an opt-in switch.
 ## Amendment 2026-11-18 (AUTO-12, TC-DRIFT-TRIAL-FIX part 1, F-064)
 
 - Decision: after setup a trial re-hashes every `pob2_files` entry from the extracted candidate checkout (read as data, never run; the checkout must carry the candidate archive's marker), moves the candidate pin's entries to the new sha256, size and commit, and records old hash, new hash and the parsed row count (decision 0037 amendment parser) in the trial state for review at apply (`apply` prints one review line per file; a file the candidate lacks keeps its old entry so the static guard reports it); candidates other than the pin and the newest (this trial's) are pruned: `<repo name>-<commit>` checkouts and `.zip` archives in the sidecar pob2 cache and `<tag>-pins.json` / `<tag>-junit.xml` in the sidecar `Build\tc-drift\`, by the Recycle Bin only (FLEET item 9), left in place when the recycle fails or no safe method exists (off Windows). Alternatives: keep the pin's old hashes in the candidate (the static guard can never end green after an upstream data change); prune by direct unlink or by newest tag number (a manual trial of an older tag would drop the candidate apply needs). Why: a trial that can end green, the reviewer sees what data changed before the pin moves, and the sidecar keeps at most two PoB-PoE2 trees. Reverses if: the guard stops reading pob2_files, a pruned candidate is needed for a rollback in practice, or the Recycle Bin call proves unreliable for large trees. Candidate Lua still runs only on the manual trigger. Tests: tests/test_tc_drift.py test_trial_rehashes_pob2_files_and_records_old_new_and_rows, test_candidates_other_than_pin_and_newest_are_pruned.
+
+## Amendment 2026-11-18 (LOOP-WATCH-WIRE, rulings Q-12 and Q-13; cross-reference 0044)
+
+- Decision: the tick may commit add-only row files
+  (`docs/roadmap/new|done/<ID>.md`) built from tracked templates and
+  validated tokens, at most 3 of each kind a local day, with the operator
+  identity, only through the kit git lock, never while HALT exists; the
+  release check reads in front of the HALT return and acts on nothing
+  while HALTed; pin moves stay session commits. The release check is now
+  the pob-release source of tools/upstream_watch.py (decision 0069), run
+  from the tick's one step module tools/loop_steps/upstream_watch.py in
+  front of the HALT test beside the decision 0044 docs watch; the read
+  still goes through the tick's drift seam, its line is still one tick
+  line, and its 24 h throttle and User-Agent are unchanged. While HALTed
+  the read, the record and the static trial happen (Q-13: no live trial,
+  no row file, no pin move, no commit); on the live checkout a drift seam
+  without a `halted` argument is replaced for that tick by
+  `tc_drift.loop_check(halted=True)`. Queued findings are filed after the
+  work list by tools/watch_file.py on the first tick without HALT.
+- Alternatives: edit ROADMAP.md in place (merge conflicts with waves);
+  report only (rows wait for a human); keep the release check in the work
+  phase (no read while HALTed, so drift is seen only after HALT goes).
+- Why: an unattended commit that can only add a file cannot break a row or
+  a wave merge, and a HALT-time read lets drift be seen while HALT stands
+  and acted on the first tick after it goes.
+- Reverses if: a tick commit ever touches a non-row path, a bad row lands,
+  tokens fail validation, GitHub limits bar the daily read, or the
+  operator rules unattended commits or HALT-time reads unwanted.
+- Tests: tests/test_watch_wire.py.

@@ -50,7 +50,7 @@ SEED_CONFIG = ("config/leak_needles.json", "config/local.json")
 # file edits land in the lane worktree. Bash stays on the project allow list
 # plus the gate commands below; commits and merges are done by the main session.
 GATE_TOOLS = ("Bash(python -m pytest:*),Bash(npm test:*),Bash(node --test:*),"
-              "Bash(python tools/leak_sweep.py:*)")
+              "Bash(python tools/leak_sweep.py:*),Bash(python tools/shots.py:*)")
 # A dependency-bump item needs npm and git add of a regenerated lockfile.
 # Dependabot bumps are re-applied in the main checkout by
 # tools/dependabot_reapply.py, so no gh is granted to a lane.

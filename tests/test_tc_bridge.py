@@ -336,7 +336,15 @@ def test_absent_component_is_reported_and_never_spawns(tmp_path):
         bridge.Bridge.from_component(environ=env)
 
 
-def test_present_component_builds_luajit_command(tmp_path):
+def _pin_fake_lua(monkeypatch, comp):
+    """Pin the fake checkout's own Lua digest (the real pin names the real
+    PoB tree, which a fake never matches)."""
+    want = bridge.lua_digest(comp["pob_src"].parent)
+    monkeypatch.setattr(bridge, "pinned_lua_digest", lambda: want)
+    return want
+
+
+def test_present_component_builds_luajit_command(tmp_path, monkeypatch):
     env = {"AL_SIDECAR_ROOT": str(tmp_path)}
     comp = bridge.component_paths(environ=env)
     comp["luajit"].parent.mkdir(parents=True)
@@ -344,6 +352,8 @@ def test_present_component_builds_luajit_command(tmp_path):
     exepin.record(comp["luajit"])  # AUDIT-EXE-PATH: setup records the hash
     comp["pob_src"].mkdir(parents=True)
     (comp["pob_src"] / "HeadlessWrapper.lua").write_text("", encoding="ascii")
+    assert bridge.status(environ=env)["missing"] == [bridge.LUA_MISSING]
+    _pin_fake_lua(monkeypatch, comp)
     assert bridge.available(environ=env) is True
     b = bridge.Bridge.from_component(environ=env)
     assert b.argv == [str(comp["luajit"]), str(LUA)]
@@ -367,6 +377,109 @@ def test_shared_bridge_is_lazy_and_reused(tmp_path, monkeypatch):
     assert bridge.shared(environ=env) is first
     assert not first.running()
     bridge.shutdown_shared()
+
+
+# --- TC-CALC-VERIFY-USE: PoB's Lua files against their pinned digest -------
+
+def _lua_component(tmp_path):
+    """A fake component whose checkout holds a few Lua files and one data
+    file, luajit.exe recorded as setup does."""
+    env = {"AL_SIDECAR_ROOT": str(tmp_path)}
+    comp = bridge.component_paths(environ=env)
+    comp["luajit"].parent.mkdir(parents=True)
+    comp["luajit"].write_bytes(b"lj")
+    exepin.record(comp["luajit"])
+    top = comp["pob_src"].parent
+    (top / "runtime" / "lua").mkdir(parents=True)
+    comp["pob_src"].mkdir(parents=True)
+    (comp["pob_src"] / "HeadlessWrapper.lua").write_text("-- wrapper\n", encoding="ascii")
+    (comp["pob_src"] / "Launch.lua").write_text("-- launch\n", encoding="ascii")
+    (top / "runtime" / "lua" / "xml.lua").write_text("-- xml\n", encoding="ascii")
+    (comp["pob_src"] / "notes.txt").write_text("data\n", encoding="ascii")
+    return env, comp
+
+
+def test_edited_lua_file_makes_from_component_unavailable(tmp_path, monkeypatch):
+    env, comp = _lua_component(tmp_path)
+    top = comp["pob_src"].parent
+    # the bridge's digest is tools/tc_pin.py's lua_sha256 form, byte for byte
+    assert bridge.lua_digest(top) == tc_pin.tree_digest(top, select=tc_pin.is_lua)
+    want = _pin_fake_lua(monkeypatch, comp)
+    assert bridge.status(environ=env) == {"available": True, "missing": []}
+    b = bridge.Bridge.from_component(environ=env)
+    assert b.lua_check == (top, want)
+    # a data file is not runnable Lua: no change
+    (comp["pob_src"] / "notes.txt").write_text("other\n", encoding="ascii")
+    assert bridge.available(environ=env) is True
+    spawned = []
+    monkeypatch.setattr(bridge.subprocess, "Popen",
+                        lambda *a, **k: spawned.append(a) or pytest.fail("spawned"))
+    for change in (lambda: (comp["pob_src"] / "Launch.lua").write_text(
+                       "os.execute('x')\n", encoding="ascii"),
+                   lambda: (top / "runtime" / "lua" / "extra.lua").write_text(
+                       "-- added\n", encoding="ascii")):
+        change()
+        st = bridge.status(environ=env)
+        assert st == {"available": False, "missing": [bridge.LUA_MISSING]}
+        with pytest.raises(bridge.BridgeUnavailable) as err:
+            b.request("ping")
+        assert str(err.value) == bridge.LUA_CHANGED == "calc component changed, re-run setup"
+        assert not b.running()
+        (comp["pob_src"] / "Launch.lua").write_text("-- launch\n", encoding="ascii")
+        extra = top / "runtime" / "lua" / "extra.lua"
+        if extra.exists():
+            extra.unlink()
+    assert spawned == []
+    assert bridge.available(environ=env) is True  # restored files verify again
+    # a pin file without a well-formed digest verifies nothing (fail closed)
+    monkeypatch.setattr(bridge, "pinned_lua_digest", lambda: None)
+    assert bridge.status(environ=env)["missing"] == ["pins"]
+    assert bridge.lua_verified(top, None) is False
+
+
+def test_digest_check_is_cached_by_mtime_and_size(tmp_path, monkeypatch):
+    _, comp = _lua_component(tmp_path)
+    top = comp["pob_src"].parent
+    want = bridge.lua_digest(top)
+    hashed = []
+    real = bridge._hash_file
+    monkeypatch.setattr(bridge, "_hash_file", lambda p: hashed.append(p) or real(p))
+    monkeypatch.setattr(bridge, "_LUA_CACHE", {})
+    assert bridge.lua_verified(top, want) is True
+    assert len(hashed) == 3  # every Lua file read once
+    hashed.clear()
+    assert bridge.lua_verified(top, want) is True
+    assert hashed == []  # unchanged sizes and mtimes: stat only
+    launch = comp["pob_src"] / "Launch.lua"
+    st = launch.stat()
+    os.utime(launch, ns=(st.st_atime_ns, st.st_mtime_ns + 10_000_000))
+    assert bridge.lua_verified(top, want) is True  # same bytes, new mtime
+    assert len(hashed) == 3
+    hashed.clear()
+    assert bridge.lua_verified(top, want) is True
+    assert hashed == []
+    launch.write_text("-- launch, longer\n", encoding="ascii")  # size changes
+    assert bridge.lua_verified(top, want) is False
+    assert len(hashed) == 3
+    hashed.clear()
+    assert bridge.lua_verified(top, want) is False  # a mismatch is never cached
+    assert len(hashed) == 3
+    hashed.clear()
+    assert bridge.lua_verified(top, "0" * 64) is False  # another pin: no cache hit
+
+
+def test_lua_loader_guard_refuses_native_modules():
+    """TC-CALC-VERIFY-USE: the C loaders of require answer only for the
+    allow-listed lua-utf8 and only until the lockdown; the guard is set up
+    before PoB loads."""
+    text = LUA.read_text(encoding="ascii")
+    lock, _, _ = _lua_parts(text)
+    guard = text.index("local NATIVE_ALLOW = ")
+    assert guard < text.index('pcall(dofile, "HeadlessWrapper.lua")')
+    assert 'local NATIVE_ALLOW = { ["lua-utf8"] = true }' in text
+    assert "for i = 3, #loaders do" in text
+    assert "if native_open and NATIVE_ALLOW[name] then return real(name) end" in text
+    assert "native_open = false" in lock
 
 
 def test_core_does_not_import_the_bridge():
@@ -488,6 +601,14 @@ def test_live_confined_calls_fail(warm_bridge):
         assert res["ok"] is False and "refused" in res["error"], mode
     assert got["read"]["ok"] is True
     assert got["getupvalue"] == "nil" and got["getlocal"] == "nil"
+    # TC-CALC-VERIFY-USE (the package's test_live_native_require_fails, kept
+    # in this test: tests/test_marks.py CALC_TESTS pins this file's live
+    # calc tests): a native require fails, even one whose DLL sits in PoB's
+    # runtime
+    assert set(got["native"]) == {"socket", "lzip"}
+    for name, res in got["native"].items():
+        assert res["ok"] is False, name
+        assert "refused by the AshLight calc bridge" in res["error"], name
     assert probe_file.exists() == before  # nothing created
     assert warm_bridge.request("ping") == {"pong": True}  # the bridge lives on
 

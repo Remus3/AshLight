@@ -246,7 +246,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 @pytest.fixture
 def loopback():
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
-    th = threading.Thread(target=srv.serve_forever, daemon=True)
+    th = threading.Thread(target=srv.serve_forever,
+                          kwargs={"poll_interval": 0.05}, daemon=True)
     th.start()
     yield f"http://127.0.0.1:{srv.server_address[1]}"
     srv.shutdown()

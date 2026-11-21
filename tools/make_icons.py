@@ -6,10 +6,12 @@ Sources (tracked, the source of truth):
   assets/brand/ashlight-mark.svg        48 px and up
   assets/brand/ashlight-mark-small.svg  16, 24, 32 px (tray, favicon)
   assets/brand/readme-hero.svg          README hero, light and dark
+  assets/brand/social-preview.svg       repository social preview card
 
 Outputs (tracked, so a clone needs no Electron to show them):
   assets/brand/png/ashlight-<n>.png     n = 16 24 32 48 64 128 256
   assets/brand/readme-hero-light.png, readme-hero-dark.png  (1280 x 400)
+  assets/brand/social-preview.png       (1280 x 640, dark; PUB-SOCIAL-CARD)
   app/assets/icon.ico                   16 24 32 48 64 128 256 (PNG entries)
   app/assets/icon-256.png, tray-16.png, tray-32.png
   web/favicon.ico (16 32 48), web/favicon.svg (copy of the small mark)
@@ -43,10 +45,12 @@ PNG_DIR = BRAND / "png"
 MARK = BRAND / "ashlight-mark.svg"
 SMALL = BRAND / "ashlight-mark-small.svg"
 HERO = BRAND / "readme-hero.svg"
+SOCIAL = BRAND / "social-preview.svg"
 SIZES = (16, 24, 32, 48, 64, 128, 256)
 SMALL_SIZES = (16, 24, 32)
 FAVICON_SIZES = (16, 32, 48)
 HERO_SIZE = (1280, 400)
+SOCIAL_SIZE = (1280, 640)
 APP_ASSETS = ROOT / "app" / "assets"
 ICO = APP_ASSETS / "icon.ico"
 FAVICON = ROOT / "web" / "favicon.ico"
@@ -60,6 +64,10 @@ def png_path(n):
 
 def hero_path(theme):
     return BRAND / ("readme-hero-%s.png" % theme)
+
+
+def social_path():
+    return BRAND / "social-preview.png"
 
 
 def copies():
@@ -161,6 +169,8 @@ def jobs(outdir):
     for theme in ("light", "dark"):
         out.append({"svg": str(HERO), "out": str(outdir / hero_path(theme).name),
                     "size": list(HERO_SIZE), "theme": theme, "dest": hero_path(theme)})
+    out.append({"svg": str(SOCIAL), "out": str(outdir / social_path().name),
+                "size": list(SOCIAL_SIZE), "theme": "dark", "dest": social_path()})
     return out
 
 
@@ -217,7 +227,7 @@ def pack():
 
 def check():
     problems = []
-    for src in (MARK, SMALL, HERO):
+    for src in (MARK, SMALL, HERO, SOCIAL):
         if not src.is_file():
             problems.append("missing " + src.name)
     pngs = {}
@@ -233,6 +243,9 @@ def check():
         p = hero_path(theme)
         if not p.is_file() or png_size(p.read_bytes()) != HERO_SIZE:
             problems.append("hero " + theme)
+    p = social_path()
+    if not p.is_file() or png_size(p.read_bytes()) != SOCIAL_SIZE:
+        problems.append("social preview")
     for ico, sizes in ((ICO, SIZES), (FAVICON, FAVICON_SIZES)):
         if not ico.is_file():
             problems.append("missing " + ico.name)
