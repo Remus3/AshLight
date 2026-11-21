@@ -200,6 +200,11 @@
       }
      ],
      "next": "Vastiri Outskirts",
+     "boss": {
+      "element": "cold",
+      "src": "research:0031",
+      "checked": "2026-11-17"
+     },
      "src": "research:0025",
      "checked": "2026-11-17"
     }
@@ -239,6 +244,11 @@
      "short": "Free Risu from Rudja",
      "layout": "Mine with a boss at the end; it unlocks the way forward.",
      "next": "The Halani Gates",
+     "boss": {
+      "element": "fire",
+      "src": "research:0031",
+      "checked": "2026-11-17"
+     },
      "src": "research:0025",
      "checked": "2026-11-17"
     },

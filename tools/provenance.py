@@ -8,7 +8,7 @@ Lists every entry of AshLight's authored data, one line each:
     <checked> <src> <where>
 
 where <where> names the entry (`zone_guide G1 The Riverbank`,
-`zone_guide G1 default`, `boss G1_15`, `waystone rule ground`,
+`zone_guide G1 default`, `boss G1 Ogham Manor`, `waystone rule ground`,
 `waystone reward rarity`, ...). With --before only the entries checked
 before that date are listed: the re-verify list (for example the 1.0
 launch, 2026-12-11). The last line is a count. An entry with no source
@@ -19,7 +19,9 @@ Where an entry's pair comes from (the first one found):
   table's pair; the act default and the endgame entry carry their own
   (the one authored zone file since DATA-GUIDE-MERGE: the zone notes
   became `layout` fields, decision 0043 amendment 2026-11-19);
-- campaign.BOSS_ZONES: campaign.BOSS_PROVENANCE under the same area id;
+- a zone's `boss` {element} entry in zone_guide.json: the boss entry's
+  own pair only, never inherited (DATA-GUIDE-BOSS: the boss elements moved
+  out of campaign.py into the guide file);
 - theorycraft.waystone RULES and REWARDS: each entry's own pair.
 
 Allowed `src` forms (never a URL or a host name; the research note or
@@ -30,8 +32,8 @@ snapshot holds the address):
 - log                     the player's own Client.txt observation
 - operator                text the operator pasted
 
-Stdlib only, read-only: reads the tracked guide file and imports the two
-modules, writes nothing, fetches nothing.
+Stdlib only, read-only: reads the tracked guide file and imports the
+waystone module, writes nothing, fetches nothing.
 """
 
 import argparse
@@ -93,6 +95,11 @@ def guide_entries(doc):
             src, checked = _pair(z, act)
             out.append({"where": f"zone_guide {key} {zone}", "src": src,
                         "checked": checked})
+            boss = z.get("boss") if isinstance(z, dict) else None
+            if boss is not None:
+                src, checked = _pair(boss)
+                out.append({"where": f"boss {key} {zone}", "src": src,
+                            "checked": checked})
     if "endgame" in doc:
         src, checked = _pair(doc.get("endgame"))
         out.append({"where": "zone_guide endgame", "src": src, "checked": checked})
@@ -102,13 +109,8 @@ def guide_entries(doc):
 def code_entries():
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
-    from server.al import campaign
     from server.al.theorycraft import waystone
     out = []
-    table = getattr(campaign, "BOSS_PROVENANCE", {})
-    for area_id in campaign.BOSS_ZONES:
-        src, checked = _pair(table.get(area_id))
-        out.append({"where": f"boss {area_id}", "src": src, "checked": checked})
     for kind, rules in (("rule", waystone.RULES), ("reward", waystone.REWARDS)):
         for r in rules:
             src, checked = _pair(r)
