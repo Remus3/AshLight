@@ -266,3 +266,5 @@ its code (license notes: 0006).
   new rows ([0059-deep-dive-20261119.md](0059-deep-dive-20261119.md))
 - 0061 Deep dive 2026-11-20 - offline run (web data off), no floor change, no
   new rows ([0061-deep-dive-20261120.md](0061-deep-dive-20261120.md))
+- 0062 Deep dive 2026-11-21 - offline run (web data off), no floor change, no
+  new rows ([0062-deep-dive-20261121.md](0062-deep-dive-20261121.md))
