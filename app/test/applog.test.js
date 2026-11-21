@@ -13,7 +13,7 @@ const A = require("../applog.js");
 
 const MB = 1024 * 1024;
 const ROOT = path.resolve(__dirname, "..", "..");
-const STAMP = "\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z";
+const STAMP = "\\d{4}-\\d\\d-\\d\\dT" + ["\\d\\d", "\\d\\d", "\\d\\d"].join("[:]") + "\\.\\d{3}Z";
 const LINE = new RegExp("^" + STAMP + " (DEBUG|INFO|WARNING|ERROR|CRITICAL) [\\w.-]+\\[\\d+\\] ");
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 
