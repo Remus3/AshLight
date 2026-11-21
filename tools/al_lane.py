@@ -350,7 +350,7 @@ def run_lane(lane, prompt, writes_code=False, timeout=3600, dry_run=False, root=
                              clock, t0, eta_s, heartbeat_s).start()
             try:
                 with sidecar_temp_env():  # SIDECAR: TEMP / TMP under <sidecar>/AL/Temp
-                    line = spawn(root, CODE, prompt, note=run_id, writes_code=writes_code,
+                    line = spawn(root, CODE, prompt, note=sample_label or run_id, writes_code=writes_code,
                                  timeout=timeout, cwd=wt, stdin=True,
                                  extra=CODE_EXTRA if writes_code else (),
                                  governor="queued", governor_timeout=timeout, kind="build",
