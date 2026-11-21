@@ -21,6 +21,13 @@
 
 const DEBUG_SWITCHES = ["remote-debugging-port", "remote-debugging-pipe"];
 
+/* The environment names no child of the client gets (OVL-LAUNCH-ENV, F-110;
+   REL-RUNTIME-SCRIPTS): either one turns electron.exe into a Node script
+   host or a debug target before any app code runs. Kept here, the one place
+   that names the debug variables; app/client/home.js childEnv() strips
+   them (any case) and scripts/run.ps1 unsets the same two ($clientUnset). */
+const STRIPPED_ENV = Object.freeze(["ELECTRON_RUN_AS_NODE", "NODE_OPTIONS"]);
+
 /* The switch name of one command-line argument, or "" when it is none. */
 function switchName(arg) {
   const s = String(arg == null ? "" : arg).trim();
@@ -135,4 +142,4 @@ function attachDefaults(wc, registry, say) {
 }
 
 module.exports = { isDebugStart, frameIsOverlayPage, throttle, createRegistry, attachDefaults,
-                   denyAll, fileUrlKey, switchName, DEBUG_SWITCHES };
+                   denyAll, fileUrlKey, switchName, DEBUG_SWITCHES, STRIPPED_ENV };

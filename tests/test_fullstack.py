@@ -310,15 +310,21 @@ def test_fullstack_session_through_http_and_sse(env, monkeypatch):
         price = st.state()["price"]
         assert price["ninja"]["value"] == 42 and price["ninja"]["league"] == LEAGUE
         assert price["league"] == LEAGUE  # the trade link follows the ninja league
-        # an hour later: conditional requests, the mock answers 304
+        # DATA-PRICE-CADENCE (decision 0072): the press matched one book type
+        pressed = [n for n in pricebook.UNIQUE_TYPES + pricebook.EXCHANGE_TYPES
+                   if st.core.rates.book.pressed(n, time.time())]
+        assert len(pressed) == 1
+        # an hour later: conditional requests, the mock answers 304; Currency
+        # and the pressed type are hourly, the other 21 types wait their 3 h
         st.core.rates.clock = time.time
         st.req("GET", "/api/rates")
         end = time.monotonic() + WAIT_S
-        while time.monotonic() < end and (len(mock.requests) < len(first_round) + 1 + N_BOOK
+        while time.monotonic() < end and (len(mock.requests) < len(first_round) + 2
                                           or st.core.rates._busy):
             time.sleep(0.02)
         second = mock.requests[len(first_round):]
-        assert len(second) == 1 + N_BOOK  # no leagues re-read inside 6 h
+        assert len(second) == 2  # no leagues re-read inside 6 h
+        assert [r["query"].get("type") for r in second] == ["Currency"] + pressed
         assert all(r["path"] != ninja.LEAGUES_PATH for r in second)
         for r in second:
             assert r["headers"].get("if-none-match", "").startswith('"v1-'), r
