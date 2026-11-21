@@ -1,6 +1,7 @@
 """OVL-CARD-SLOT (F-118): the overlay view seam (server/al/overlayview.py).
 
-- the card-slot holder order: sample, then the press card;
+- the card-slot holder order: the press card, then the sample (a live
+  press card always wins; the sample shows only while the slot is free);
 - the 10 s sample card shows, leaves by itself and never enters the recent
   events, the item check, the price check or run history;
 - POST /api/overlay-sample needs the token;
@@ -95,28 +96,43 @@ PRICES = [
 
 # -- the holder table ---------------------------------------------------------
 
-def test_holder_order_is_sample_then_press():
-    assert [h["kind"] for h in CARD_HOLDERS] == ["sample", "press"]
+def test_holder_order_is_press_then_sample():
+    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample"]
     for h in CARD_HOLDERS:
         assert isinstance(h["life_s"], (int, float)) and h["life_s"] > 0, h
         exempt, twin = h.get("exempt"), h.get("twin")
         assert (isinstance(exempt, str) and exempt.strip()) or twin, h
-    assert CARD_HOLDERS[0]["life_s"] == SAMPLE_S == 10
+    assert CARD_HOLDERS[1]["life_s"] == SAMPLE_S == 10
 
 
-def test_sample_wins_over_a_fresh_press_card():
+def test_a_live_press_card_beats_the_sample():
     st, clock = _state()
     st.set_eval(EVALS[0], at=T0)
     press = st.snapshot()["card"]
     assert press["kind"] == "eval"
     clock.t = T0 + 1
+    assert st.set_overlay_sample() == press  # the press card keeps the slot
+    clock.t = T0 + 5
+    assert st.snapshot()["card"] == press
+    # a press during a sample takes the slot at once
+    st2, clock2 = _state()
+    assert st2.set_overlay_sample()["kind"] == "sample"
+    clock2.t = T0 + 3
+    st2.set_eval(EVALS[1], at=T0 + 3)
+    assert st2.snapshot()["card"]["kind"] == "eval"
+
+
+def test_the_sample_shows_when_the_slot_is_free():
+    st, clock = _state()
+    st.set_eval(EVALS[0], at=T0)
+    # the press card has left (20 s): the slot is free, the sample shows
+    clock.t = T0 + 30
     card = st.set_overlay_sample()
     assert card["kind"] == "sample"
-    clock.t = T0 + 5
-    assert st.snapshot()["card"]["kind"] == "sample"
-    # the sample leaves after its 10 s; the press card is back while fresh
-    clock.t = T0 + 1 + SAMPLE_S
-    assert st.snapshot()["card"] == press
+    clock.t = T0 + 30 + SAMPLE_S - 0.01
+    assert st.snapshot()["card"] == card
+    clock.t = T0 + 30 + SAMPLE_S
+    assert st.snapshot()["card"] is None
 
 
 def test_sample_shows_10_s_and_leaves_by_itself():
@@ -125,7 +141,7 @@ def test_sample_shows_10_s_and_leaves_by_itself():
     card = st.set_overlay_sample()
     assert st.version == v0 + 1  # pushed at once
     assert card == {"kind": "sample", "head": "Sample card",
-                    "line2": "This is how a card looks", "line3": "It leaves by itself",
+                    "line2": "This is how a card looks", "line3": "It leaves in 10 s",
                     "verdict": "note", "expires_at": T0 + SAMPLE_S}
     clock.t = T0 + SAMPLE_S - 0.01
     assert st.snapshot()["card"] == card

@@ -4,12 +4,14 @@ The overlay shows at most one card (design 0001 section 10). Which card
 holds the slot at a given moment is decided here, in the fixed order of
 CARD_HOLDERS: the first holder with a card wins.
 
-- sample: the 10 s sample card the Settings "show a sample card" button
-  asks for (POST /api/overlay-sample). It is display state only: it never
-  enters the recent events, the item check, the price check or run history,
-  and it leaves by itself after SAMPLE_S.
 - press: the item-check / price card of the last hotkey press
-  (text.overlaycard.overlay_card, unchanged).
+  (text.overlaycard.overlay_card, unchanged). A live press card always
+  wins (design 0001 section 7.2: the press card comes first).
+- sample: the 10 s sample card the Settings "show a sample card" button
+  asks for (POST /api/overlay-sample), shown only while no press card
+  holds the slot. It is display state only: it never enters the recent
+  events, the item check, the price check or run history, and it leaves
+  by itself SAMPLE_S after the click.
 
 OverlayView also carries a small bounded store (to_doc / load_doc, a dirty
 flag) that the core loads from ops/runtime/overlay-view.json at start and
@@ -34,7 +36,7 @@ STORE_KEYS = ()
 SAMPLE_S = 10
 SAMPLE_HEAD = "Sample card"
 SAMPLE_LINE2 = "This is how a card looks"
-SAMPLE_LINE3 = "It leaves by itself"
+SAMPLE_LINE3 = "It leaves in %d s" % SAMPLE_S
 
 # The card-slot holders, first match wins. Each entry: kind, life_s (how
 # long its card shows), and twin = the id(s) of its dashboard twin in
@@ -42,10 +44,10 @@ SAMPLE_LINE3 = "It leaves by itself"
 # reads both). The press card's own kinds (eval, price, merged) keep their
 # twins in that test's TWINS table.
 CARD_HOLDERS = (
-    {"kind": "sample", "life_s": SAMPLE_S,
-     "exempt": "shown only on its Settings button, which is its own twin"},
     {"kind": "press", "life_s": EVAL_CARD_S,
      "twin": ("eval-result", "price-result")},
+    {"kind": "sample", "life_s": SAMPLE_S,
+     "exempt": "shown only on its Settings button, which is its own twin"},
 )
 
 
