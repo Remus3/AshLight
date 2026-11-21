@@ -31,10 +31,9 @@ import json
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
-from server.al import paths
+from server.al import logs, paths
 
 MODULE = "server.al.autostart_entry"
 OPTIN_NAME = "autostart.json"
@@ -104,13 +103,14 @@ def task_action(environ=None):
     }
 
 
-def _log(message, environ=None):
-    """One line in the sidecar Logs/run.log (best effort; pythonw has no
+def _log(message, environ=None, level="INFO"):
+    """One line in the sidecar Logs/run.log in the RUN-OBS-LOGS-SHELL format
+    (UTC ISO stamp, LEVEL, name[pid], message; as run.ps1) (best effort; pythonw has no
     console to report to)."""
     try:
         folder = paths.sidecar_dir("Logs", environ)
         folder.mkdir(parents=True, exist_ok=True)
-        line = time.strftime("%Y-%m-%dT%H:%M:%S") + " autostart entry: " + message + "\n"
+        line = logs.format_line("autostart", level, "autostart entry: " + message) + "\n"
         with open(folder / LOG_NAME, "a", encoding="ascii", errors="replace") as fh:
             fh.write(line)
     except (OSError, ValueError):
@@ -140,10 +140,10 @@ def start(root=None, environ=None, popen=None):
         _log("opt-in off (no-op)", environ)
         return 0
     if p["command"] is None:
-        _log("SystemRoot is not set; nothing started", environ)
+        _log("SystemRoot is not set; nothing started", environ, "ERROR")
         return 1
     if not p["run_script_present"]:
-        _log("scripts/run.ps1 is missing; nothing started", environ)
+        _log("scripts/run.ps1 is missing; nothing started", environ, "ERROR")
         return 1
     flags = 0
     if os.name == "nt":
@@ -154,7 +154,7 @@ def start(root=None, environ=None, popen=None):
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      close_fds=True, creationflags=flags)
     except OSError as exc:
-        _log("start failed: " + type(exc).__name__, environ)
+        _log("start failed: " + type(exc).__name__, environ, "ERROR")
         return 1
     _log("run.ps1 started (pid %s)" % getattr(proc, "pid", "?"), environ)
     return 0
