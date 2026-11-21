@@ -99,8 +99,8 @@
   },
   {
    "file": "web/app.js",
-   "packages_in": 35,
-   "packages_planned": 29,
+   "packages_in": 36,
+   "packages_planned": 30,
    "waves": [
     2,
     3,
@@ -117,6 +117,7 @@
     18,
     19,
     20,
+    21,
     22,
     23,
     24,
@@ -277,8 +278,8 @@
   },
   {
    "file": "app/main.js",
-   "packages_in": 14,
-   "packages_planned": 12,
+   "packages_in": 15,
+   "packages_planned": 13,
    "waves": [
     4,
     5,
@@ -290,6 +291,7 @@
     17,
     19,
     20,
+    21,
     23,
     24
    ]
@@ -405,7 +407,7 @@
   {
    "file": "README.md",
    "packages_in": 10,
-   "packages_planned": 9,
+   "packages_planned": 10,
    "waves": [
     6,
     12,
@@ -413,6 +415,7 @@
     14,
     15,
     16,
+    18,
     21,
     23,
     24
@@ -823,7 +826,7 @@
     21
    ],
    "est_wall_min": 511,
-   "session_packages": 51,
+   "session_packages": 56,
    "milestones": [
     "the bootstrap installer exists",
     "the release stage round trip (install, update, rollback, uninstall) passes"
@@ -838,7 +841,7 @@
     24
    ],
    "est_wall_min": 458,
-   "session_packages": 37,
+   "session_packages": 38,
    "milestones": []
   },
   {
@@ -1451,7 +1454,9 @@
     "TEST-SUITE-SOAK",
     "DATA-GUIDE-FACTS",
     "PUB-DEPBOT-ACTIONS",
-    "PUB-DEPBOT-TICK"
+    "PUB-DEPBOT-TICK",
+    "GP-10",
+    "AUTO-19"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1495,7 +1500,8 @@
     "SEC-HELLO-CLIENT",
     "AUTO-10",
     "TC-PRESS-SAMPLES",
-    "AUTO-18"
+    "AUTO-18",
+    "TEST-SHOTS-TABS"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1515,7 +1521,9 @@
     "OVL-CONTRAST-PIXELS",
     "DEP-14",
     "AUTO-08",
-    "AUTO-17"
+    "AUTO-17",
+    "PLAY-TD-19E-ITEM-TEXT",
+    "REL-HOME-REFUSAL-UI"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1536,7 +1544,8 @@
     "REL-STAGE-SANDBOX",
     "DEP-19",
     "RUN-SECOND-LINE-CLIENT",
-    "PUB-HOOK-RELEASE-CHECK"
+    "PUB-HOOK-RELEASE-CHECK",
+    "LOOP-CI-ISSUES"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1777,7 +1786,6 @@
    "title": "Parked",
    "goal": "Blocked packages with their unblock conditions; a package joins the next open wave once its condition reads true.",
    "merge_order": [
-    "GP-10",
     "TC-IMPORT",
     "DATA-LOOT-TALLY",
     "TC-WAYSTONE-TUNE",
@@ -1796,9 +1804,7 @@
     "PLAY-MAP-MODE-ON",
     "DATA-GUIDE-ACTS-5-6",
     "TC-PRESS-FIXTURES",
-    "AUTO-19",
     "AUTO-20",
-    "LOOP-CI-ISSUES",
     "PUB-GUIDE-DOWNLOAD-PLACE",
     "DATA-GUIDE-GAP-TUNE",
     "TC-TREE-URL",
@@ -19147,14 +19153,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "the repository exists (first push done)",
-    "who": "package GP-09",
-    "unblock": "`git remote get-url origin` prints the repository address and `gh repo view` succeeds for it"
-   },
+   "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. config/public_repo.json = {\"repo\": \"<owner>/AshLight\"}, the value read from the checkout's own origin remote; it is the single source also read by the update check (F-055 / DEP-16) and must be the same value as any repository field of plan 05's config/release.json (see cross). README.md: the clone address in the quick start (the lines PUB-README-PLAYERS wrote). SECURITY.md: the Security tab's private report link. config.yml: one contact_links entry to the private report page; blank_issues_enabled stays false. After the edit `git grep -i` for the owner login finds only lines holding the full address. The integrator pushes main through fleet_gitlock after the gated commit (a session push; the loop pushes nothing while its per-host switch loop_push is off). .github/ISSUE_TEMPLATE/config.yml exists once GP-06 lands (a dep).",
-   "wave": 99,
+   "notes": "Tier P1. config/public_repo.json = {\"repo\": \"<owner>/AshLight\"}, the value read from the checkout's own origin remote; it is the single source also read by the update check (F-055 / DEP-16) and must be the same value as any repository field of plan 05's config/release.json (see cross). README.md: the clone address in the quick start (the lines PUB-README-PLAYERS wrote). SECURITY.md: the Security tab's private report link. config.yml: one contact_links entry to the private report page; blank_issues_enabled stays false. After the edit `git grep -i` for the owner login finds only lines holding the full address. The integrator pushes main through fleet_gitlock after the gated commit (a session push; the loop pushes nothing while its per-host switch loop_push is off). .github/ISSUE_TEMPLATE/config.yml exists once GP-06 lands (a dep). Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped, PUB-SWEEP-OWN-ADDRESS flipped).",
+   "wave": 18,
    "owner": "session",
    "tier": "P1",
    "cluster": "PUB"
@@ -20213,14 +20215,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "the remote does not exist yet (no git remote is configured; GP-09 creates the repository and makes the first push)",
-    "who": "package GP-09",
-    "unblock": "`git remote get-url origin` exits 0 and the first push is green (GP-09 done)"
-   },
+   "blocked": null,
    "operator_act": "",
-   "notes": "0076 is the decision number the orchestrator reserves for this package (F-017; next free is 0046, 0035 stays unused). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE). New files only: never edit tools/upstream_watch.py or a source. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. docs/plan/06 AUTO-19. .github/workflows/watch.yml: schedule once a day off the hour plus manual dispatch, a standard runner, permissions contents: read and issues: write, actions pinned by full commit id, no secret; it runs `python tools/watch_ci.py --sources <names>` (the entry takes registry source names, so AUTO-20 adds its own workflow without editing this one) for the sources with home ci or both (the PoB tag read, pob_next, repoe_fork, ggg_tree, electron, npm_audit), compares with the tracked pins and a tracked baseline and writes issues labelled al-watch whose body is exactly 'AL-WATCH key=<source>:<key> v=1'. No CI job reads poe.ninja or a GGG host, and CI downloads no repoe-fork or tree file. The tick side (source ci_issues, failover) is LOOP-CI-ISSUES (split by the verifier: size). The web-data opt-in is the dev host's setting and a runner is no user host: tools/watch_ci.py calls the sources' check functions with its own fetch (watch_gate.check_url plus webfetch.request, no web_data read) and refuses to run unless GITHUB_ACTIONS is 'true'. User-Agent contact is the project's issues page (Q-03). The lint test for workflows of the go-public cluster (tests/test_ci_workflow.py, unit F-013) is not edited: this package's workflow asserts live in tests/test_watch_ci.py. The fixture-driven parts can be prepared before the remote; the package is merged with the first commit after the push. PLAN 07 (adjudicator LE-76, applied at the close-out 2 of 2026-11-18): accepted as designed, outside the scope of decision 0013. Decision 0076 does not exist until this package writes it, so the sentence the ruling adds is carried here and in the accept (which greps the words 'not a web_data path'; they stand on one line of the file): 0076 holds one 'Scope' sentence, word for word: 'Decision 0013 governs the app and the dev host; the CI watcher runs only on a GitHub runner (GITHUB_ACTIONS true, else it refuses), reads only URLs that pass watch_gate.check_url, never a GGG or poe.ninja host, and is not a web_data path (adjudicator LE-76).' Tests unchanged: test_ci_entry_refuses_to_run_off_a_github_runner and test_workflow_holds_no_ggg_host_and_no_poe_ninja_host already cover it.",
-   "wave": 99,
+   "notes": "0076 is the decision number the orchestrator reserves for this package (F-017; next free is 0046, 0035 stays unused). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE). New files only: never edit tools/upstream_watch.py or a source. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. docs/plan/06 AUTO-19. .github/workflows/watch.yml: schedule once a day off the hour plus manual dispatch, a standard runner, permissions contents: read and issues: write, actions pinned by full commit id, no secret; it runs `python tools/watch_ci.py --sources <names>` (the entry takes registry source names, so AUTO-20 adds its own workflow without editing this one) for the sources with home ci or both (the PoB tag read, pob_next, repoe_fork, ggg_tree, electron, npm_audit), compares with the tracked pins and a tracked baseline and writes issues labelled al-watch whose body is exactly 'AL-WATCH key=<source>:<key> v=1'. No CI job reads poe.ninja or a GGG host, and CI downloads no repoe-fork or tree file. The tick side (source ci_issues, failover) is LOOP-CI-ISSUES (split by the verifier: size). The web-data opt-in is the dev host's setting and a runner is no user host: tools/watch_ci.py calls the sources' check functions with its own fetch (watch_gate.check_url plus webfetch.request, no web_data read) and refuses to run unless GITHUB_ACTIONS is 'true'. User-Agent contact is the project's issues page (Q-03). The lint test for workflows of the go-public cluster (tests/test_ci_workflow.py, unit F-013) is not edited: this package's workflow asserts live in tests/test_watch_ci.py. The fixture-driven parts can be prepared before the remote; the package is merged with the first commit after the push. PLAN 07 (adjudicator LE-76, applied at the close-out 2 of 2026-11-18): accepted as designed, outside the scope of decision 0013. Decision 0076 does not exist until this package writes it, so the sentence the ruling adds is carried here and in the accept (which greps the words 'not a web_data path'; they stand on one line of the file): 0076 holds one 'Scope' sentence, word for word: 'Decision 0013 governs the app and the dev host; the CI watcher runs only on a GitHub runner (GITHUB_ACTIONS true, else it refuses), reads only URLs that pass watch_gate.check_url, never a GGG or poe.ninja host, and is not a web_data path (adjudicator LE-76).' Tests unchanged: test_ci_entry_refuses_to_run_off_a_github_runner and test_workflow_holds_no_ggg_host_and_no_poe_ninja_host already cover it. Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped).",
+   "wave": 18,
    "owner": "session",
    "tier": "P2",
    "cluster": "LOOP"
@@ -20315,14 +20313,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "the remote does not exist yet (no git remote is configured; GP-09 creates the repository and makes the first push)",
-    "who": "package GP-09",
-    "unblock": "`git remote get-url origin` exits 0 and the first push is green (GP-09 done)"
-   },
+   "blocked": null,
    "operator_act": "",
-   "notes": "Split out of AUTO-19 by the verifier (size). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. ci_issues reads the open issues labelled al-watch once per 6 h and the workflow state once a day through the documented GitHub API; the address comes from the checkout's own remote, never a tracked constant; only issues by the workflow's bot account whose body is exactly 'AL-WATCH key=<source>:<key> v=1' count. Failover: when the workflow is disabled, inactive or 48 h silent, the ci-home sources run on the dev loop again; 7 days of failover file WATCH-BROKEN-CI once (health template of AUTO-08). Gated on web_data like every new source.",
-   "wave": 99,
+   "notes": "Split out of AUTO-19 by the verifier (size). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. ci_issues reads the open issues labelled al-watch once per 6 h and the workflow state once a day through the documented GitHub API; the address comes from the checkout's own remote, never a tracked constant; only issues by the workflow's bot account whose body is exactly 'AL-WATCH key=<source>:<key> v=1' count. Failover: when the workflow is disabled, inactive or 48 h silent, the ci-home sources run on the dev loop again; 7 days of failover file WATCH-BROKEN-CI once (health template of AUTO-08). Gated on web_data like every new source. Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped). Placement ruled by the adjudicator at the wave 18 start (session 16): wave 22, not 18, because dep AUTO-08 is in wave 21 and plan_check needs every dep in a strictly earlier wave.",
+   "wave": 22,
    "owner": "session",
    "tier": "P2",
    "cluster": "LOOP"
@@ -21718,6 +21712,126 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "TC"
+  },
+  {
+   "id": "PLAY-TD-19E-ITEM-TEXT",
+   "title": "Build card: each worn item's raw item text on a Full text page",
+   "goal": "The Health and next card's gear page gives each gear row that has item text its raw item text on the pager's Full text page, reached by one press, with no scroll at the 5 cockpit sizes (the 19C fixed card dropped the per-gear item-text fold).",
+   "units": [
+    "PLAY-TD-19E-ITEM-TEXT"
+   ],
+   "files": [
+    "web/app.js"
+   ],
+   "new_files": [
+    "tests/test_build_item_text.py"
+   ],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_build_item_text.py (new, static: renderBuild's build-gear pager rows carry each gear row's g.text as their full text; a row without text keeps its one-line text; no details fold comes back)",
+    "tests/test_play_fit.py (stays green: no scroll at the 5 cockpit sizes)",
+    "app/test/pager.test.js (stays green)"
+   ],
+   "accept": "`python -m pytest -q tests/test_build_item_text.py tests/test_play_fit.py` is green and `npm test --prefix app` passes.",
+   "zero_click": "None needed: the text is already in the build view; one press on the gear row's page opens it.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [
+    "PLAY-TD-19C-BUILD-GRID",
+    "PLAY-TD-19D-ITEMS-GRID"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Filed session 15 (wave-17 follow-up). Placement ruled by the adjudicator at the wave 18 start (session 16): wave 21, the first wave after PLAY-TD-19D-ITEMS-GRID (wave 18) with no other web/app.js editor (waves 19 and 20 have one). app.js: the build-gear linkPager call inside renderBuild only (about lines 398-406 at filing): each row with g.text hands that text to the pager as the row's full text, so ALPager's Full text page (web/pager.js, not edited) shows the whole raw text; the visible row line stays slot, name, base, rarity. The text is the player's own build text already in the build view; nothing new is read or fetched. No details fold (a fold can grow a card, 19C). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "wave": 21,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "PLAY"
+  },
+  {
+   "id": "REL-HOME-REFUSAL-UI",
+   "title": "Show the refused-home sentence before the client exits",
+   "goal": "When the client refuses a home inside a Steam library or the game folder it shows the exact paths.home_refusal sentence in one error dialog before exit code 2 (today it goes to stderr only, so a Start Menu launch shows nothing); no window otherwise.",
+   "units": [
+    "REL-HOME-REFUSAL-UI"
+   ],
+   "files": [
+    "app/main.js",
+    "app/client/home.js",
+    "app/test/home.test.js"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "app/test/home.test.js (a refused home calls the injected notice once with exactly the refusal sentence and nothing else; an accepted home never calls it)",
+    "tests/test_install_paths.py::test_js_and_python_resolvers_agree (stays green)"
+   ],
+   "accept": "`npm test --prefix app` passes with the new app/test/home.test.js cases and `python -m pytest -q tests/test_install_paths.py` is green.",
+   "zero_click": "Shown once, no prompt beyond the dialog's OK; nothing shows on an accepted home.",
+   "size": "S",
+   "est_min": 30,
+   "deps": [
+    "REL-CLIENT-HOME",
+    "REL-RUNTIME-SCRIPTS"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Filed session 15. Placement ruled by the adjudicator at the wave 18 start (session 16): wave 21: it shares app/client/home.js with REL-RUNTIME-SCRIPTS (wave 18), and app/main.js (a hotspot) has editors in waves 19 and 20. app/main.js: only the Home.resolve catch block (about lines 44-51 at filing): keep the stderr line and exit code 2; before the exit show the sentence through Electron's dialog.showErrorBox (usable before app ready) via the helper. app/client/home.js: one exported helper (for example refusalNotice(err, show)) with the show function injected, so node tests cover it without Electron; it shows only the fixed refusal sentence, adding no path or other text; home.js stays pure (no child_process, tests/test_overlay_smoke.py).",
+   "wave": 21,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "REL"
+  },
+  {
+   "id": "TEST-SHOTS-TABS",
+   "title": "Screenshots of the Build, Run and Settings tabs and the overlay page",
+   "goal": "tools/shots.py render covers every tab and the overlay page: capture.mjs gains an argument-checked --tab option and may load the overlay page as an app file page, so PENDING is empty.",
+   "units": [
+    "TEST-SHOTS-TABS"
+   ],
+   "files": [
+    "app/test/cdp/capture.mjs",
+    "tools/shots.py",
+    "tests/test_shots.py",
+    "tests/test_capture_helper.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_shots.py (SHOTS covers play, build, run and settings, dark and light, 1440 and 360 wide, plus the overlay page on a plain ground; PENDING is empty; check starts no browser)",
+    "tests/test_capture_helper.py (--tab is argument-checked; a target that is not a demo core page and a file URL outside app/overlay are refused without connecting and write no file; the overlay file URL is accepted only after the demo marker is read)",
+    "tests/test_floor_static.py (stays green)"
+   ],
+   "accept": "`python -m pytest -q tests/test_shots.py tests/test_capture_helper.py tests/test_floor_static.py` is green and `npm test --prefix app` passes.",
+   "zero_click": "The lane or AUTO-17 runs render and check; no window appears.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "AUTO-15",
+    "TEST-CAPTURE-HELPER"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Filed session 15. Placement ruled by the adjudicator at the wave 18 start (session 16): wave 20, option B (the helper loads the overlay as an app file page; option A, the demo core serving app/overlay, was rejected: it needs server/al/http.py, a hotspot, and adds a serving surface). capture.mjs: --tab=<play|build|run|settings> is argument-checked like --scheme; the one extra target is the file URL of app/overlay/index.html resolved under the repository's app folder, and every other file or network target is still refused; the demo marker of the demo core is read first, as today; the overlay page gets the demo core's port and token injected only from that demo core, or renders its plain-ground state if injection is awkward. Floor: only AshLight's own pages in a headless browser on a demo core; no game window, no input, never port 8960. tools/shots.py: SHOTS and PENDING (lines 59-76 at filing) and the render loop. TEST-SHOTS-RENDER (wave 23) then commits the full set.",
+   "wave": 20,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "TEST"
   }
  ],
  "coverage": {
@@ -23292,6 +23406,15 @@
   ],
   "OPREQ-1119-4": [
    "UI-CARD-COLLAPSE"
+  ],
+  "PLAY-TD-19E-ITEM-TEXT": [
+   "PLAY-TD-19E-ITEM-TEXT"
+  ],
+  "REL-HOME-REFUSAL-UI": [
+   "REL-HOME-REFUSAL-UI"
+  ],
+  "TEST-SHOTS-TABS": [
+   "TEST-SHOTS-TABS"
   ]
  }
 }

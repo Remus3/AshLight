@@ -295,8 +295,8 @@ Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
 list before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, core, overlay or loop (08, Rules).
 
-Acceptance: GP-10, AUTO-19 and LOOP-CI-ISSUES are listed by
-`python tools/plan_check.py wave 18` (plan_check ok), and wave 18 is
+Acceptance: GP-10 and AUTO-19 are listed by `python tools/plan_check.py
+wave 18` (LOOP-CI-ISSUES: wave 22; plan_check ok), and wave 18 is
 closed as 08 section 7 says (open-row command for wave 18 prints "none
 open", git status --short empty on main, leak sweep clean, last batch
 suite and npm test green, git show HEAD:AL-NEXT-SESSION.txt holds "WAVE

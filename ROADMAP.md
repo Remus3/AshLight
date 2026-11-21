@@ -30,9 +30,21 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] FIX-IDLE-WORD (build) STATUS-IDLE-READING: the idle bar word (play state d, log quiet) carries the word "reading" so region G passes G9, then tests/play_fit_pending/g.txt is deleted; done by the next package that owns server/al/data/status_words.json (TEST-STATE-TEXT-PINS, wave 19) with web/status.js and the tests that pin the word, copy design-reviewed (wave-7 adjudicator ruling on PLAY-TD-10-STRIP). ACCEPT: tests/test_play_fit.py green without g.txt. ZERO-CLICK: The bar word updates by itself with the log state; no click. BLOCKED: session wave 19.
 - [ ] RUN-UNREADABLE-WORD (build): give the "Client.txt can't be read" state one status word: add an unreadable state to server/al/data/status_words.json with copies in web/status.js and app/shared/render_gate.js (kit blocked, bar "can't read Client.txt", overlay at most 15 characters), make diag.check_reading use _state_check, and add the new log-state sentences (five reset sentences, restarted / unreadable / readable lines, the two Reading-row strings) to docs/design/0001-design-system.md section 9 (review SRW-1, SRW-2). ACCEPT: bar, overlay and Checks name the same state; status-word tests green. ZERO-CLICK: the word follows the reader state by itself; no click. BLOCKED: session wave 20 (retagged at wave 10 start by adjudicator: status.js, render_gate.js and design 0001 are first owned by TEST-STATE-TEXT-PINS in wave 19, diag.py by PUB-GUIDE-PAGES in 19; wave 20 owns none).
-- [ ] PLAY-TD-19E-ITEM-TEXT (build) Restore each worn item's raw item text as a paged Full text page in the Build card (the 19C fixed card dropped the per-gear item-text fold). ACCEPT: one page per gear row reached by one press, no scroll at the 5 cockpit sizes, test_play_fit green. ZERO-CLICK: none needed. DEPENDS: PLAY-TD-19C-BUILD-GRID, PLAY-TD-19D-ITEMS-GRID. BLOCKED: session wave 18.
-- [ ] REL-HOME-REFUSAL-UI (build) Show the refused-home sentence to the player when the client exits on a home inside a Steam library or the game folder (today it goes to stderr only, so a Start Menu launch shows nothing). ACCEPT: a dialog or tray balloon with the exact paths.home_refusal sentence before exit code 2, no window otherwise; app/test/home.test.js covers it. ZERO-CLICK: shown once, no prompt. DEPENDS: REL-CLIENT-HOME. BLOCKED: session wave 18.
-- [ ] TEST-SHOTS-TABS (build) Extend shots.py render to the Build, Run and Settings tabs and the overlay page. ACCEPT: app/test/cdp/capture.mjs gains a --tab option (argument-checked) and the demo core serves the overlay page (or the helper loads it as an app file page); tools/shots.py SHOTS covers play, build, run and settings, dark and light, at 1440 and 360 wide, plus the overlay on a plain ground; PENDING is empty; tests/test_shots.py, tests/test_capture_helper.py and tests/test_floor_static.py pass. ZERO-CLICK: the lane or AUTO-17 runs render and check; no window appears. DEPENDS: AUTO-15, TEST-CAPTURE-HELPER. BLOCKED: session wave 18.
+- [ ] PLAY-TD-19E-ITEM-TEXT (build) Build card: each worn item's raw item text on a Full text page.
+  ACCEPT: `python -m pytest -q tests/test_build_item_text.py tests/test_play_fit.py` is green and
+  `npm test --prefix app` passes. ZERO-CLICK: None needed: the text is already in the build view;
+  one press on the gear row's page opens it. DEPENDS: PLAY-TD-19C-BUILD-GRID,
+  PLAY-TD-19D-ITEMS-GRID. BLOCKED: session wave 21.
+- [ ] REL-HOME-REFUSAL-UI (build) Show the refused-home sentence before the client exits. ACCEPT:
+  `npm test --prefix app` passes with the new app/test/home.test.js cases and `python -m pytest -q
+  tests/test_install_paths.py` is green. ZERO-CLICK: Shown once, no prompt beyond the dialog's OK;
+  nothing shows on an accepted home. DEPENDS: REL-CLIENT-HOME, REL-RUNTIME-SCRIPTS. BLOCKED: session
+  wave 21.
+- [ ] TEST-SHOTS-TABS (build) Screenshots of the Build, Run and Settings tabs and the overlay page.
+  ACCEPT: `python -m pytest -q tests/test_shots.py tests/test_capture_helper.py
+  tests/test_floor_static.py` is green and `npm test --prefix app` passes. ZERO-CLICK: The lane or
+  AUTO-17 runs render and check; no window appears. DEPENDS: AUTO-15, TEST-CAPTURE-HELPER. BLOCKED:
+  session wave 20.
 
 ## Lane: data
 
@@ -1122,8 +1134,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_leak_sweep.py tests/test_community_files.py tests/test_public_docs.py
   tests/test_ascii_lf.py` is green. ZERO-CLICK: One config value written by an agent from the
   existing remote; no player types an address. DEPENDS: GP-09, PUB-SWEEP-OWN-ADDRESS, GP-06,
-  PUB-README-PLAYERS. BLOCKED: the repository exists (first push done); unblocks when `git remote
-  get-url origin` prints the repository address and `gh repo view` succeeds for it (package GP-09).
+  PUB-README-PLAYERS. BLOCKED: session wave 18.
 - (TC-IMPORT: its row is replaced in place under '## Theorycraft and item optimization (decision 0004, research 0010)'.)
 - [ ] DATA-LOOT-TALLY (build) Loot tally from the items the player checked. ACCEPT: python -m pytest
   -q tests/test_loot_tally.py tests/test_util_price_watch.py tests/test_util_maprun.py passes and
@@ -1265,9 +1276,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   path" -- docs/decisions/0076-ci-issue-protocol.md` prints a count of 1 and, after the first push,
   the workflow's manual run ends green. ZERO-CLICK: Unattended: the watch survives a dev host that
   is off; standard runners are free on a public repository. DEPENDS: AUTO-05, LOOP-WATCH-GATE,
-  GP-09, GP-05. BLOCKED: the remote does not exist yet (no git remote is configured; GP-09 creates
-  the repository and makes the first push); unblocks when `git remote get-url origin` exits 0 and
-  the first push is green (GP-09 done) (package GP-09).
+  GP-09, GP-05. BLOCKED: session wave 18.
 - [ ] AUTO-20 (build) DEPBOT-WATCH: Dependabot alerts and pull requests become rows. ACCEPT: `python
   -m pytest -q tests/test_watch_dependabot.py tests/test_watch_rows.py` passes. ZERO-CLICK: The lane
   runs from the tick and re-applies the bump locally as an operator commit; nothing is merged on
@@ -1279,9 +1288,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   ACCEPT: `python -m pytest -q tests/test_watch_ci_issues.py tests/test_watch_rows.py` passes.
   ZERO-CLICK: Unattended: the watch survives a dev host that is off, and the dev loop takes over by
   itself when CI goes quiet. DEPENDS: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08. BLOCKED:
-  the remote does not exist yet (no git remote is configured; GP-09 creates the repository and makes
-  the first push); unblocks when `git remote get-url origin` exits 0 and the first push is green
-  (GP-09 done) (package GP-09).
+  session wave 22.
 - [ ] PUB-GUIDE-DOWNLOAD-PLACE (build) One download place in README, FAQ and About. ACCEPT: `python
   -m pytest -q tests/test_download_place.py tests/test_player_guide.py tests/test_leak_sweep.py
   tests/test_ascii_lf.py` and `npm test --prefix app` are green. ZERO-CLICK: No click: About shows

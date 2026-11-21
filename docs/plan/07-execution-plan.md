@@ -203,10 +203,12 @@ sessions rises (three waves a session: 13 sessions). Nothing else changes.
   Delivers: four tabs: Play, Build and items, Run, Settings; the dashboard
   prints the real keys and can change them; the parse ledger is wired
   (LIVE-1 read-back starts).
-- Session 6: waves 18 to 21, 51 session packages, about 8 h 31 min.
+- Session 6: waves 18 to 21, 56 session packages (51 planned; 5 joined at
+  the wave 18 start, session 16), about 8 h 31 min before they joined.
   Delivers: the bootstrap installer exists; the release stage round trip
   (install, update, rollback, uninstall) passes.
-- Session 7: waves 22 to 24, 37 session packages, about 7 h 38 min.
+- Session 7: waves 22 to 24, 38 session packages (LOOP-CI-ISSUES joined
+  at the wave 18 start, session 16), about 7 h 38 min before it joined.
 - Session 8: waves 25 to 29, 15 session packages, about 8 h 10 min.
   Delivers: the Settings rail is complete.
 - Session 9: waves 30 to 33, 12 session packages, about 7 h 27 min.
@@ -1366,8 +1368,9 @@ Goal: Leads: Build and items grid 2: Last item, Prices with checked items,
 Item scoring; One hook for data checks: diag_data (attach, facts, rows); A
 bind failure names its cause; --port stays in the block (P8-4).
 
-- Session 6; width 14 worktree + 0 main-checkout, 0 loop rows released;
-  about 133 minutes.
+- Session 6; width 16 worktree + 0 main-checkout, 0 loop rows released;
+  about 133 minutes (GP-10 and AUTO-19 joined at the wave 18 start,
+  session 16).
 - Hotspots: web/index.html (PLAY-TD-19D-ITEMS-GRID); server/al/core.py
   (DATA-DIAG-SEAM); web/app.js (PLAY-TD-19D-ITEMS-GRID); server/al/http.py
   (DATA-DIAG-SEAM); web/app.css (PLAY-TD-19D-ITEMS-GRID); server/al/diag.py
@@ -1379,17 +1382,18 @@ bind failure names its cause; --port stays in the block (P8-4).
   (PLAY-TD-19D-ITEMS-GRID); server/al/ninja.py (DATA-PRICE-CADENCE);
   server/al/pricebook.py (DATA-PRICE-CADENCE); server/al/zoneguide.py
   (DATA-GUIDE-FACTS); tests/test_tc_bridge.py (LOOP-DRIFT-REF);
-  tools/tc_drift.py (LOOP-DRIFT-REF).
-- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
-  DATA-PRICE-CADENCE, LOOP-DRIFT-REF; docs/decisions/README.md:
-  DATA-PRICE-CADENCE; AL-NEXT-SESSION.txt: DATA-PRICE-CADENCE;
+  tools/tc_drift.py (LOOP-DRIFT-REF); README.md (GP-10).
+- Integrator: ROADMAP.md rows of all 16 packages; CLAUDE.md:
+  DATA-PRICE-CADENCE, LOOP-DRIFT-REF, AUTO-19; docs/decisions/README.md:
+  DATA-PRICE-CADENCE, AUTO-19; AL-NEXT-SESSION.txt: DATA-PRICE-CADENCE;
   docs/design/reviews.log: 1 lines.
 - Watch: tests/test_port_resolve.py (RUN-START-REASON-CORE edits,
   REL-RUNTIME-SCRIPTS runs).
 - Batches: 1: PLAY-TD-19D-ITEMS-GRID, DATA-DIAG-SEAM, RUN-START-REASON-CORE,
   DATA-PRICE-CADENCE; 2: REL-RUNTIME-SCRIPTS, LOOP-DRIFT-REF,
   LOOP-WATCH-POBNEXT, RUN-LEDGER-REPORT; 3: PUB-SETTINGS-FILES, GP-08,
-  TEST-SUITE-SOAK, DATA-GUIDE-FACTS; 4: PUB-DEPBOT-ACTIONS, PUB-DEPBOT-TICK.
+  TEST-SUITE-SOAK, DATA-GUIDE-FACTS; 4: PUB-DEPBOT-ACTIONS, PUB-DEPBOT-TICK,
+  GP-10, AUTO-19.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1412,6 +1416,8 @@ bind failure names its cause; --port stays in the block (P8-4).
 - DATA-GUIDE-FACTS [session, M 60m, data, P2] Guide facts from allowed sources: 4 blank zones, point-books wording, coverage. Files: server/al/data/zone_guide.json, server/al/zoneguide.py, tests/test_zone_guide.py, tests/test_provenance.py. Deps: DATA-GUIDE-MERGE, DATA-GUIDE-BOSS.
 - PUB-DEPBOT-ACTIONS [session, M 50m, data, P1] Dependabot re-apply tool: actions bumps and the commit, push and close path. Files: tools/dependabot_reapply.py, tests/test_dependabot_reapply.py, tests/fixtures/dependabot/pr_actions.json. Deps: GP-14, GP-02, GP-05.
 - PUB-DEPBOT-TICK [session, M 45m, build, P1] Loop tick launches the Dependabot re-apply worker once a day. Files: tools/al_loop.py, tools/loop_depbot.py, tests/test_loop_depbot.py. Deps: GP-14, PUB-LOCAL-ONLY-TEXT.
+- GP-10 [session, S 20m, build, P1] The project's own address in tracked files. Files: README.md, SECURITY.md, .github/ISSUE_TEMPLATE/config.yml, config/public_repo.json. Deps: GP-09, PUB-SWEEP-OWN-ADDRESS, GP-06, PUB-README-PLAYERS.
+- AUTO-19 [session, M 55m, build, P2] CI-WATCH (workflow half): a daily workflow that writes one key issue per finding. Files: .github/workflows/watch.yml, tools/watch_ci.py, tests/test_watch_ci.py, docs/decisions/0076-ci-issue-protocol.md. Deps: AUTO-05, LOOP-WATCH-GATE, GP-09, GP-05.
 
 ### Wave 19: reliability and observability, web data, install and release
 
@@ -1473,8 +1479,9 @@ the plate alpha only: limits 0.80 to 1.0, default 0.86, saved layou...;
 Overlay view seam (server/al/overlayview.py) with the card-slot holder order
 and the 10...; Release stage: the PASS / FAIL report (static gates).
 
-- Session 6; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 110 minutes.
+- Session 6; width 13 worktree + 0 main-checkout, 0 loop rows released;
+  about 110 minutes (TEST-SHOTS-TABS joined at the wave 18 start, session
+  16).
 - Hotspots: web/index.html (OVL-TD05-PLATE); server/al/core.py
   (OVL-CARD-SLOT); web/app.js (TEST-WEB-PANELS-A); server/al/http.py
   (OVL-CARD-SLOT); server/al/state.py (OVL-CARD-SLOT);
@@ -1484,11 +1491,11 @@ and the 10...; Release stage: the PASS / FAIL report (static gates).
   app/test/client.test.js (SEC-HELLO-CLIENT); tests/test_ux_settings_io.py
   (OVL-TD05-PLATE); server/al/ninja.py (DATA-NINJA-SHAPE-WATCH);
   server/al/pricebook.py (DATA-NINJA-SHAPE-WATCH).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
   RUN-SECOND-LINE-PY, TC-PRESS-SAMPLES; docs/design/reviews.log: 3 lines.
 - Batches: 1: OVL-TD05-PLATE, OVL-CARD-SLOT, DEP-12, TEST-WEB-PANELS-A; 2:
   DEP-09, RUN-SECOND-LINE-PY, DATA-NINJA-SHAPE-WATCH, TEST-STRUCTURE-GUARD;
-  3: SEC-HELLO-CLIENT, AUTO-10, TC-PRESS-SAMPLES, AUTO-18.
+  3: SEC-HELLO-CLIENT, AUTO-10, TC-PRESS-SAMPLES, AUTO-18; 4: TEST-SHOTS-TABS.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1509,6 +1516,7 @@ and the 10...; Release stage: the PASS / FAIL report (static gates).
 - AUTO-10 [session, M 55m, build, P2] NINJA-WATCH: the poe.ninja docs page and the shape-drift flag. Files: tools/watch_sources/ninja_docs.py, tools/watch_sources/ninja_shape.py, ops/loop/watch_rows/ninja.json, tests/test_watch_ninja.py. Deps: AUTO-05, LOOP-WATCH-ROWS.
 - TC-PRESS-SAMPLES [session, M 55m, build, P2] Dev-host capture of sanitized item-press samples. Files: docs/decisions/0045-per-character-build.md, server/al/theorycraft/cardparts/sample.py, tools/press_samples.py, tests/test_press_samples.py. Deps: TC-CARD-PARTS.
 - AUTO-18 [session, M 55m, build] LEDGER-SOURCE: live log shapes and snapshot probe results become rows. Files: tools/al_lane.py, tools/watch_sources/ledger.py, ops/loop/watch_rows/ledger.json, tests/test_watch_ledger.py. Deps: AUTO-05, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, LOOP-ROWFILES-WORK, LOOP-USAGE-LABEL.
+- TEST-SHOTS-TABS [session, M 60m, build, P2] Screenshots of the Build, Run and Settings tabs and the overlay page. Files: app/test/cdp/capture.mjs, tools/shots.py, tests/test_shots.py, tests/test_capture_helper.py. Deps: AUTO-15, TEST-CAPTURE-HELPER.
 
 ### Wave 21: overlay and client, install and release, reliability and observability
 
@@ -1518,20 +1526,23 @@ feed: no minute stamp or report text in the snapshot, ages stepped at 5
 minutes; Zone moment card in the one card slot, and the guide-line fields
 for HUD line 2.
 
-- Session 6; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 125 minutes.
+- Session 6; width 14 worktree + 0 main-checkout, 0 loop rows released;
+  about 125 minutes (PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI joined
+  at the wave 18 start, session 16).
 - Hotspots: web/index.html (PLAY-TD-20A-RUN-GRID); server/al/core.py
   (RUN-QUIET-FEED); server/al/state.py (RUN-QUIET-FEED); web/app.css
   (PLAY-TD-20A-RUN-GRID); server/al/diag.py (RUN-QUIET-FEED);
   tests/test_diag_self.py (RUN-QUIET-FEED); README.md (DEP-14);
   app/shared/render_gate.js (OVL-LINE2-RULE); app/test/checks.test.js
-  (RUN-QUIET-FEED); web/checks.js (RUN-QUIET-FEED).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
+  (RUN-QUIET-FEED); web/checks.js (RUN-QUIET-FEED); web/app.js
+  (PLAY-TD-19E-ITEM-TEXT); app/main.js (REL-HOME-REFUSAL-UI).
+- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
   REL-PUBLISH-GATES; docs/decisions/README.md: REL-PUBLISH-GATES;
-  docs/design/reviews.log: 4 lines.
+  docs/design/reviews.log: 5 lines.
 - Batches: 1: PLAY-TD-20A-RUN-GRID, RUN-QUIET-FEED, OVL-ZONE-CARD,
   OVL-LINE2-RULE; 2: REL-PUBLISH-GATES, REL-STAGE-ROUNDTRIP, RUN-STOP-RACE,
-  OVL-CHECK; 3: OVL-CONTRAST-PIXELS, DEP-14, AUTO-08, AUTO-17.
+  OVL-CHECK; 3: OVL-CONTRAST-PIXELS, DEP-14, AUTO-08, AUTO-17; 4:
+  PLAY-TD-19E-ITEM-TEXT, REL-HOME-REFUSAL-UI.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1552,6 +1563,8 @@ for HUD line 2.
 - DEP-14 [session, M 50m, build, P2] Player docs: install, update, uninstall, verify, 'Windows may warn'. Files: README.md, SECURITY.md, THIRD-PARTY.md, tests/test_readme.py. Deps: DEP-02, DEP-03, REL-RUNTIME-PINS, DEP-09, REL-UNINSTALL-SHELL, PUB-README-PLAYERS.
 - AUTO-08 [session, M 45m, build, P2] WATCH-HEALTH: a broken watcher is itself a finding. Files: tools/watch_sources/health.py, ops/loop/watch_rows/health.json, tools/loop_steps/watch_health.py, tests/test_watch_health.py. Deps: AUTO-01, AUTO-05, LOOP-WATCH-ROWS.
 - AUTO-17 [session, M 45m, build] REFRESH-SOURCE: stale docs, screenshots and an unplanned release become rows. Files: tools/watch_sources/refresh.py, ops/loop/watch_rows/refresh.json, tests/test_watch_refresh.py. Deps: AUTO-05, LOOP-WATCH-ROWS, LOOP-WAVE-HOLD.
+- PLAY-TD-19E-ITEM-TEXT [session, M 45m, build, P2, DR] Build card: each worn item's raw item text on a Full text page. Files: web/app.js, tests/test_build_item_text.py. Deps: PLAY-TD-19C-BUILD-GRID, PLAY-TD-19D-ITEMS-GRID.
+- REL-HOME-REFUSAL-UI [session, S 30m, build, P2] Show the refused-home sentence before the client exits. Files: app/main.js, app/client/home.js, app/test/home.test.js. Deps: REL-CLIENT-HOME, REL-RUNTIME-SCRIPTS.
 
 ### Wave 22: install and release, reliability and observability, overlay and client
 
@@ -1559,8 +1572,9 @@ Goal: Leads: Run grid 2: Recent, Last session and Characters cards; The
 report from an allow-list of structured fields, with a hardened redactor
 (P8-7); Overlay HUD line 2: the opt-in guide line and the fixed card anchor.
 
-- Session 7; width 13 worktree + 0 main-checkout, 0 loop rows released;
-  about 143 minutes.
+- Session 7; width 14 worktree + 0 main-checkout, 0 loop rows released;
+  about 143 minutes (LOOP-CI-ISSUES joined at the wave 18 start, session
+  16).
 - Hotspots: web/index.html (PLAY-TD-20B-RUN-CARDS); server/al/core.py
   (REL-UPDATE-WIRE); web/app.js (PLAY-TD-20B-RUN-CARDS); server/al/http.py
   (REL-UPDATE-WIRE); server/al/state.py (REL-UPDATE-WIRE); web/app.css
@@ -1569,12 +1583,12 @@ report from an allow-list of structured fields, with a hardened redactor
   (RUN-SECOND-LINE-CLIENT); app/shared/render_gate.js (OVL-LINE2-GUIDE);
   app/test/checks.test.js (RUN-REPORT-FIELDS); web/checks.js
   (RUN-REPORT-FIELDS); server/al/settingsio.py (REL-UPDATE-WIRE).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
   REL-UPDATE-WIRE; docs/design/reviews.log: 5 lines.
 - Batches: 1: PLAY-TD-20B-RUN-CARDS, RUN-REPORT-FIELDS, OVL-LINE2-GUIDE,
   OVL-ACT-CARD; 2: RUN-BUDGET-TESTS-DET, OVL-TD06-AUTOSCALE, DEP-15,
   REL-UPDATE-WIRE; 3: REL-PUBLISH-READBACK, REL-STAGE-SANDBOX, DEP-19,
-  RUN-SECOND-LINE-CLIENT; 4: PUB-HOOK-RELEASE-CHECK.
+  RUN-SECOND-LINE-CLIENT; 4: PUB-HOOK-RELEASE-CHECK, LOOP-CI-ISSUES.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1596,6 +1610,7 @@ report from an allow-list of structured fields, with a hardened redactor
 - DEP-19 [session, M 45m, build] CPython pin watch. Files: tools/upstream_watch.py, tests/test_upstream_watch.py, ops/loop/watch_rows/cpython.json. Deps: REL-RUNTIME-PINS, AUTO-05, LOOP-WATCH-ROWS, AUTO-09.
 - RUN-SECOND-LINE-CLIENT [session, M 30m, build, P2] The client restarts a core that stays down. Files: app/client/window.js, app/client/launcher.js, app/test/client.test.js. Deps: RUN-OBS-LOGS-SHELL, RUN-SECOND-LINE-PY.
 - PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py. Deps: GP-02, REL-PUBLISH-GATES.
+- LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json, tests/test_watch_ci_issues.py. Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08.
 
 ### Wave 23: install and release, overlay and client, tests and code seams
 
@@ -2540,8 +2555,7 @@ that has no other editor of its files; docs/plan/08 section 9 step 3 is the
 move and its check. The same test fails when a line here falls out of step
 with packages.json.
 
-- README.md: GP-10, REL-RC-LIVE, OVL-ITEM-KEY-CTRL,
-  PUB-GUIDE-DOWNLOAD-PLACE.
+- README.md: REL-RC-LIVE, OVL-ITEM-KEY-CTRL, PUB-GUIDE-DOWNLOAD-PLACE.
 - server/al/core.py: TC-IMPORT, DATA-LOOT-TALLY, SEC-STEAM-SCAN-A03,
   AUTO-24, DATA-CONTACT-DEFAULT.
 - server/al/state.py: DATA-LOOT-TALLY, TC-WAYSTONE-TUNE.
@@ -2555,7 +2569,6 @@ with packages.json.
 - app/main.js: OVL-ITEM-KEY-CTRL, PUB-GUIDE-DOWNLOAD-PLACE.
 - tests/test_zone_guide.py: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
 - docs/decisions/0002-stack.md: RUN-OVL-BUDGET-CLOSE, OVL-FPS.
-- Serial group readme: GP-10, PUB-GUIDE-DOWNLOAD-PLACE.
 - Serial group item-press: TC-IMPORT, TC-WAYSTONE-TUNE.
 - Serial group data-core: DATA-LOOT-TALLY, DATA-CONTACT-DEFAULT.
 - Serial group web-tc: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
@@ -2701,11 +2714,9 @@ Unblocked by GGG or poe.ninja (4):
   hand-off holds the operator's own line 'REG OPEN (operator)'. Joins wave 2
   or later.
 
-Unblocked by another package (16):
+Unblocked by another package (13; GP-10 and AUTO-19 joined wave 18 and
+LOOP-CI-ISSUES wave 22 at the wave 18 start, session 16):
 
-- GP-10: waits on the repository exists (first push done). Who: package
-  GP-09. Unblock: `git remote get-url origin` prints the repository address
-  and `gh repo view` succeeds for it. Joins wave 18 or later.
 - TC-WAYSTONE-TUNE: waits on a real waystone sample as a fixture. Who:
   package TC-PRESS-FIXTURES. Unblock: tests/fixtures/press holds a reviewed
   waystone fixture. Joins wave 26 or later; also behind parked
@@ -2721,20 +2732,11 @@ Unblocked by another package (16):
   itself behind the repository and first push (GP-09). Unblock: GP-10 is
   merged to main, so the address constant and its leak-sweep allow-list
   entry are in the tree. Joins wave 37 or later; also behind parked GP-10.
-- AUTO-19: waits on the remote does not exist yet (no git remote is
-  configured; GP-09 creates the repository and makes the first push). Who:
-  package GP-09. Unblock: `git remote get-url origin` exits 0 and the first
-  push is green (GP-09 done). Joins wave 14 or later.
 - AUTO-20: waits on Dependabot alerts and pull requests exist only after the
   public flip. Who: package GP-12. Unblock: the repository is public (GP-12
   done) and .github/dependabot.yml and tools/dependabot_reapply.py are on
   main. Joins wave 19 or later; also behind parked AUTO-19, LOOP-CI-ISSUES,
   GP-12.
-- LOOP-CI-ISSUES: waits on the remote does not exist yet (no git remote is
-  configured; GP-09 creates the repository and makes the first push). Who:
-  package GP-09. Unblock: `git remote get-url origin` exits 0 and the first
-  push is green (GP-09 done). Joins wave 22 or later; also behind parked
-  AUTO-19.
 - PUB-GUIDE-DOWNLOAD-PLACE: waits on the project's address is in tracked
   config/public_repo.json. Who: package GP-10. Unblock: `python -c "import
   json;print(json.load(open('config/public_repo.json'))['repo'])"` prints
@@ -3036,7 +3038,7 @@ go-public decision kept 0046 while its package was parked and keeps it in wave
 - 0073-versioning-release-trigger.md: REL-PUBLISH-GATES (wave 21)
 - 0074-player-notes.md: PLAY-F-186A-PLAYER-NOTES-STORE (wave 29)
 - 0075-fixed-cockpit-play.md: PLAY-TD-23-RECORDS (wave 31)
-- 0076-ci-issue-protocol.md: AUTO-19 (wave 99)
+- 0076-ci-issue-protocol.md: AUTO-19 (wave 18)
 
 Taken outside a package (not reserved, listed so the next number is plain):
 
