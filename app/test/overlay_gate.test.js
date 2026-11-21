@@ -90,3 +90,57 @@ test("the overlay page reports the gate on change only, via the preload", () => 
   const main = code(fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8"));
   assert.equal((main.match(/gate\.setGate\(/g) || []).length, 1); // one hook
 });
+
+/* RUN-EXPLAIN-OVERLAY-STATE (F-129): the gate names why the overlay is
+   shown or hidden, from its own flags only. */
+test("gate exposes one of four states", () => {
+  assert.deepEqual(Gate.STATES, ["shown", "hidden_user", "hidden_idle", "starting"]);
+  const v = fakeView();
+  const g = Gate.createOverlayGate(v);
+  const seen = [];
+  const note = () => { const s = g.state(); assert.ok(Gate.STATES.includes(s), s); seen.push(s); };
+  note(); // a new window: starting
+  g.ready(); note(); // ready, no report yet: still starting
+  g.setGate(true); note(); // shown
+  g.setGate(false); note(); // the game looks closed
+  g.toggleUser(); note(); // the player's off wins over the idle gate
+  g.setGate(true); note();
+  g.toggleUser(); note(); // back on, gate open: shown
+  g.reset(); note(); // a new window re-seeds: starting
+  assert.deepEqual(seen, ["starting", "starting", "shown", "hidden_idle", "hidden_user",
+                          "hidden_user", "shown", "starting"]);
+  // the state always agrees with what the gate did to the window
+  const w = fakeView();
+  const h = Gate.createOverlayGate(w);
+  h.ready();
+  h.graceOver();
+  assert.equal(h.state(), "shown");
+  assert.equal(w.visible, true);
+  h.toggleUser();
+  assert.equal(h.state(), "hidden_user");
+  assert.equal(w.visible, false);
+  // the player's off before the page is ready already reads hidden_user
+  const x = Gate.createOverlayGate(fakeView());
+  x.toggleUser();
+  assert.equal(x.state(), "hidden_user");
+  // one fixed hint per state; exclusive fullscreen is only named, never detected
+  for (const s of Gate.STATES) {
+    assert.equal(typeof Gate.HINTS[s], "string");
+    assert.ok(/^[\x20-\x7e]+$/.test(Gate.HINTS[s]) && Gate.HINTS[s].length < 200, s);
+  }
+  assert.match(Gate.HINTS.shown, /exclusive fullscreen/);
+  assert.match(Gate.HINTS.shown, /Windowed Fullscreen/);
+  const mod = code(fs.readFileSync(path.join(__dirname, "..", "overlay_gate.js"), "utf8"));
+  for (const word of ["require(", "screen.", "getAllDisplays", "getAllWindows", "getFocusedWindow", "FindWindow",
+                      "process", "child_process"]) {
+    assert.ok(!mod.includes(word), word);
+  }
+  // main.js asks for a state write after a toggle and after a gate report
+  const main = code(fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8"));
+  const toggleFn = main.slice(main.indexOf("function toggle()"), main.indexOf("function restartOverlay()"));
+  assert.match(toggleFn, /gate\.toggleUser\(\);\s*noteOverlayState\(\);/);
+  const gateFn = main.slice(main.indexOf("function setOverlayGate(visible)"));
+  assert.match(gateFn.slice(0, gateFn.indexOf("\n}\n")), /gate\.setGate\(visible === true\); \}\s*noteOverlayState\(\);/);
+  assert.match(main, /function overlayState\(\) \{\s*return gate \? gate\.state\(\) : "starting";\s*\}/);
+  assert.match(main, /overlayState: overlayState, log: log \}\);/);
+});
