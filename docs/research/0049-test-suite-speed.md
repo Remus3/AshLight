@@ -934,3 +934,73 @@ Limits: one box, one morning, five runs (the brief's cap); the
 `--durations` sums are worker time, not wall time, and hide entries
 under 0.01 s (69 setup, call or teardown entries in phase 2 of run 1); a
 box with fewer CPUs gets fewer workers by the cap and a longer hold.
+
+## Addendum 2026-11-21 (3) - soak after HOLD-75 (TEST-SUITE-SOAK)
+
+Re-checks the F-089 acceptance of the parallel gate after
+TEST-SUITE-HOLD-75 (12 workers) against the re-set bound of decision 0060
+amendment 2026-11-21 (median gated hold under 125 s, target 120 s), on
+the tree at main 7ecdaf3 (wave 20 batch 5 plus the 120 s ruling) and on a
+quiet tree: no wave merging, the gate at 0 of 2 slots before run 1, and
+no other row in the gate's durations log from 11:00 to 11:28 local
+(this package's eleven runs only, every wait 0.004 or 0.005 s). No new
+research number. Method: in a clean package worktree, eleven runs one
+after the other of the one gate command
+
+    python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py
+
+started by a below-normal priority stdlib driver (its children inherit
+the class; suite_run.py sets below normal too). Python 3.14.4, pytest
+9.2.0, pytest-xdist 3.8.0, 16 logical CPUs, so phase 1 is `-m "not
+timing" -n 12 --dist loadgroup`. Hold, wait, peak commit and the command
+hash are the gate's own rows in `%LOCALAPPDATA%\fleet\suite\durations.jsonl`;
+test counts and phase times are the pytest summary lines of each log,
+`<sidecar>\Logs\w20-TEST-SUITE-SOAK\run<k>.log` (the AL sidecar). The suite
+is 4797 tests.
+
+Runs 1 to 10 (parallel; phase 1: 4758 passed, 6 skipped; phase 2: 33
+passed, 4764 deselected; every run exit 0; start time local):
+
+- run 1, 11:00: hold 123.2 s, phase 1 84.65 s, phase 2 37.72 s, peak commit 5820 MB
+- run 2, 11:02: hold 116.2 s, phase 1 77.00 s, phase 2 38.40 s, peak commit 5414 MB
+- run 3, 11:04: hold 117.0 s, phase 1 78.69 s, phase 2 37.46 s, peak commit 6188 MB
+- run 4, 11:06: hold 116.4 s, phase 1 76.98 s, phase 2 38.54 s, peak commit 6948 MB
+- run 5, 11:08: hold 117.8 s, phase 1 77.85 s, phase 2 39.06 s, peak commit 5808 MB
+- run 6, 11:09: hold 117.5 s, phase 1 77.23 s, phase 2 39.41 s, peak commit 6141 MB
+- run 7, 11:11: hold 116.6 s, phase 1 77.45 s, phase 2 38.29 s, peak commit 5688 MB
+- run 8, 11:13: hold 118.8 s, phase 1 78.81 s, phase 2 38.96 s, peak commit 5825 MB
+- run 9, 11:15: hold 117.6 s, phase 1 78.99 s, phase 2 37.74 s, peak commit 6217 MB
+- run 10, 11:17: hold 114.9 s, phase 1 75.52 s, phase 2 38.59 s, peak commit 5920 MB
+
+10 consecutive green runs; median hold 117.3 s (range 114.9 to 123.2 s;
+gate rows 114.899 to 123.165 s), under the 125 s bound and under the
+120 s target; no worker lost, no red. Run 1's longer phase 1 is the first
+run after a quiet spell (not profiled; a cold file cache is the likely
+cause); runs 2 to 10 sit within 114.9 to 118.8 s.
+
+Run 11 (xdist hidden), 11:19: exit 0; phase 1 serial: 4757 passed, 7
+skipped, 33 deselected in 444.51 s; phase 2: 33 passed in 38.29 s; hold
+484.0 s, peak commit 1030 MB. The one extra skip is the xdist-present
+case of tests/test_suite_run.py. Method as in the first soak addendum:
+suite_run.py still has no serial switch of its own (it picks serial when
+importlib finds no xdist or execnet), so the run put a scratch folder
+holding a sitecustomize.py on PYTHONPATH whose meta path finder refuses
+the names xdist and execnet, plus PYTEST_ADDOPTS="-p no:xdist -p
+no:xdist.looponfail"; the runner itself then chose its serial path
+(its log line reads `phase serial`); nothing was uninstalled and the gate
+command was unchanged.
+
+One command hash for all eleven runs: a9a73e2a48a6e29b (the gate's cmd
+of ["python", "tools/suite_run.py"]), the same hash as the first soak and
+the HOLD-75 runs.
+
+Verdict against F-089 with the re-set bound: 10 green parallel runs -
+met; serial run with xdist hidden - met; one spelling in the gate log -
+met; median hold under 125 s (target 120 s) - met (117.3 s). Parallel is
+4.1 times faster than serial on the same tree (median 117.3 s against
+484.0 s). The callers stay as they are.
+
+Limits: one box, one late morning, eleven runs; the median sits 2.7 s
+under the 120 s target, so the HOLD-75 advice stands: re-measure when the
+suite grows by a quarter, and the next cuts are the calc group split and
+phase 2's heaviest timing files.
