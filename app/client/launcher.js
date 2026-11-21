@@ -4,7 +4,8 @@
    scripts (scripts\run.ps1 converges core + supervisor + overlay, decision
    0010; scripts\stop.ps1 stops them) and the one path resolver
    (python -m server.al.paths) and REL-AUTOSTART-SWITCH's scripts\autostart.ps1
-   (decision 0011). Nothing here touches the game (ToS floor).
+   (decision 0011) and TC-CALC-OPTIN-BUTTON's scripts\calc_setup.ps1
+   (decision 0018 opt-in). Nothing here touches the game (ToS floor).
    This is the one app/ file allowed to load child_process
    (tests/test_overlay_smoke.py P4-6).
    OVL-LAUNCH-ENV (F-110, audit S5): a bare name would also be looked up in
@@ -154,6 +155,38 @@ function setAutostart(repo, on, spawn, done) {
   }
 }
 
+/* TC-CALC-OPTIN-BUTTON (decision 0041 amendment 2026-11-20, rulings Q-08,
+   W16-1, W16-2): the Checks "Set up the calc" button. Runs the fixed
+   scripts\calc_setup.ps1 hidden, with no script argument, by the absolute
+   System32 PowerShell (psExe); not detached, as startCore. The script sets
+   its own priority to BelowNormal first and runs the decision 0018 opt-in
+   (tools/tc_pin.py setup --opt-in in a checkout, installer calc --opt-in
+   in an installed copy; never setup.ps1). done(code), when given, is
+   called once the script exits (code null when it could not start).
+   Returns the child pid or 0. */
+const CALC_SETUP_PS1 = "calc_setup.ps1";
+
+function setupCalc(repo, spawn, done, env) {
+  const run = spawn || childProcess.spawn;
+  const finish = typeof done === "function" ? done : () => {};
+  try {
+    const child = run(psExe(env), psArgs(path.join(repo, "scripts", CALC_SETUP_PS1)), {
+      cwd: repo, detached: false, windowsHide: true, stdio: "ignore"
+    });
+    if (child && typeof child.on === "function") {
+      let called = false;
+      const once = (code) => { if (!called) { called = true; finish(code); } };
+      child.on("exit", (code) => once(code));
+      child.on("error", () => once(null));
+    }
+    if (child && typeof child.unref === "function") { child.unref(); }
+    return (child && child.pid) || 0;
+  } catch (e) {
+    finish(null);
+    return 0;
+  }
+}
+
 /* The recorded autostart choice: true only when AshLight's own
    <runtime>\autostart.json (written by scripts\autostart.ps1) says
    "enabled": true. A missing or broken file reads as off (the default). */
@@ -171,4 +204,4 @@ function readAutostart(home, fsMod) {
 }
 
 module.exports = { resolveSidecar, startCore, stopAll, psArgs, psExe, whichAbs, setAutostart,
-                   readAutostart, AUTOSTART_FILE };
+                   readAutostart, AUTOSTART_FILE, setupCalc, CALC_SETUP_PS1 };

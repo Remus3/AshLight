@@ -114,3 +114,178 @@ test("language notice: region N owns it; the Hide key is read at wire and stored
   ck._state.dismissed = "300";
   assert.equal(ck._state.dismissed, "300");
 });
+
+/* TC-CALC-OPTIN-BUTTON (decision 0018 opt-in, decision 0041 amendment
+   2026-11-20): the calc row's "Set up the calc" button. */
+function focusDoc() {
+  const doc = fakeDoc();
+  doc.activeElement = null;
+  const make = doc.createElement;
+  doc.createElement = (t) => {
+    const node = make(t);
+    node.focus = () => { doc.activeElement = node; };
+    return node;
+  };
+  return doc;
+}
+
+function calcLi(doc) {
+  return doc.ids["checks-list"].children.find((li) =>
+    li.children.some((c) => c.children && c.children.some((n) => n.textContent === "Calc component")));
+}
+
+function calcButtonNode(doc) {
+  const li = calcLi(doc);
+  return li ? li.children.find((c) => c.tagName === "button") || null : null;
+}
+
+function calcButton(doc) { // the button when it shows, else null
+  const b = calcButtonNode(doc);
+  return b && !b.hidden ? b : null;
+}
+
+function calcStatus(doc) {
+  const li = calcLi(doc);
+  return li ? li.children.find((c) => c.attrs && c.attrs.role === "status") || null : null;
+}
+
+function calcSaid(doc) {
+  const p = calcStatus(doc);
+  return p ? p.textContent : "";
+}
+
+function withCalc(status, summary) {
+  const diag = Object.assign({}, DIAG, { checks: DIAG.checks.map((c) =>
+    (c.id === "calc" ? Object.assign({}, c, { status: status }) : c)) });
+  if (summary) { diag.summary = summary; }
+  return { diag: diag };
+}
+
+function resetCalc() {
+  ck._state.client = undefined;
+  ck._state.calc = "";
+  ck._state.calcRow = null;
+  ck._state.calcNodes = null;
+}
+
+test("calc button: only in the client, only while the calc row is off or needs a fix", (t) => {
+  resetCalc();
+  t.after(resetCalc);
+  // a plain browser (no window.alClient): never a button, no region
+  let doc = focusDoc();
+  ck.paint(doc, withCalc("off"));
+  assert.equal(calcButtonNode(doc), null);
+  assert.equal(calcStatus(doc), null);
+  // a client without the action: none either
+  ck._state.client = { restartOverlay() {} };
+  doc = focusDoc();
+  ck.paint(doc, withCalc("off"));
+  assert.equal(calcButtonNode(doc), null);
+  ck._state.client = { setupCalc: () => new Promise(() => {}) };
+  for (const [status, shown] of [["off", true], ["fail", true], ["pass", false],
+                                 ["unknown", false], ["note", false]]) {
+    doc = focusDoc();
+    ck.paint(doc, withCalc(status));
+    const b = calcButton(doc);
+    assert.equal(!!b, shown, status);
+    if (b) {
+      assert.equal(b.textContent, ck.CALC_BUTTON);
+      assert.equal(b.textContent, "Set up the calc");
+      assert.equal(b.type, "button");
+      assert.equal(b.getAttribute("aria-disabled"), "false");
+    }
+  }
+  // no other row ever gets it
+  doc = focusDoc();
+  ck.paint(doc, withCalc("off"));
+  const withButton = doc.ids["checks-list"].children.filter((li) =>
+    li.children.some((c) => c.tagName === "button"));
+  assert.equal(withButton.length, 1);
+  // the model on its own
+  assert.deepEqual(ck.calcModel({ id: "calc", word: "off" }, false, ""), { button: false, said: "" });
+  assert.deepEqual(ck.calcModel({ id: "log", word: "off" }, true, ""), { button: false, said: "" });
+});
+
+test("calc row: one persistent, empty polite live region, kept across rebuilds", (t) => {
+  resetCalc();
+  t.after(resetCalc);
+  ck._state.client = { setupCalc: () => new Promise(() => {}) };
+  const doc = focusDoc();
+  ck.paint(doc, withCalc("off"));
+  const region = calcStatus(doc);
+  assert.ok(region);
+  assert.equal(region.id, "checks-calc-status");
+  assert.equal(region.attrs["aria-live"], "polite");
+  assert.equal(region.attrs.tabindex, "-1");
+  assert.equal(region.textContent, "", "empty until a click");
+  const button = calcButtonNode(doc);
+  // a new snapshot rebuilds the list: the same two nodes come back
+  ck.paint(doc, withCalc("off", "new words"));
+  assert.equal(calcStatus(doc), region);
+  assert.equal(calcButtonNode(doc), button);
+});
+
+test("calc button: a click runs the client's one action, then pending, then ok or failed", async (t) => {
+  resetCalc();
+  t.after(resetCalc);
+  let finish = null;
+  const asked = [];
+  ck._state.client = { setupCalc: (...a) => { asked.push(a); return new Promise((r) => { finish = r; }); } };
+  const doc = focusDoc();
+  ck.paint(doc, withCalc("off"));
+  const region = calcStatus(doc);
+  const button = calcButton(doc);
+  button.focus();
+  button.listeners.click();
+  assert.deepEqual(asked, [[]], "the action takes no argument");
+  // pending: the region speaks, the focused button stays in place, aria-disabled
+  assert.equal(calcStatus(doc), region);
+  assert.equal(region.textContent, ck.CALC_PENDING);
+  assert.equal(calcButton(doc), button);
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+  assert.equal(doc.activeElement, button, "focus stays on the button");
+  button.listeners.click(); // a second click while it runs does nothing
+  assert.equal(asked.length, 1);
+  ck.paint(doc, withCalc("off", "a new snapshot"));
+  assert.equal(region.textContent, ck.CALC_PENDING);
+  assert.equal(calcButton(doc), button);
+  assert.equal(doc.activeElement, button, "a rebuild keeps the focus on the button");
+  finish({ ok: true });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(region.textContent, ck.CALC_OK);
+  assert.equal(calcButton(doc), null, "no button after a good setup");
+  assert.equal(doc.activeElement, region, "focus moves to the status line, never to body");
+  // the core's row moves on: the line clears and the row speaks for itself
+  ck.paint(doc, withCalc("pass"));
+  assert.equal(calcSaid(doc), "");
+  assert.equal(calcButton(doc), null);
+
+  // a failed setup says so and offers the button again, focus kept on it
+  ck.paint(doc, withCalc("fail"));
+  calcButton(doc).focus();
+  calcButton(doc).listeners.click();
+  assert.equal(calcSaid(doc), ck.CALC_PENDING);
+  finish({ ok: false });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  assert.equal(calcButton(doc), button);
+  assert.equal(button.getAttribute("aria-disabled"), "false");
+  assert.equal(doc.activeElement, button);
+  // a refused or throwing action reads as failed too
+  ck._state.client = { setupCalc: () => Promise.reject(new Error("x")) };
+  calcButton(doc).listeners.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  ck._state.client = { setupCalc: () => { throw new Error("y"); } };
+  calcButton(doc).listeners.click();
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  // a stranger answer (null: not the companion) is a failure, never ok
+  ck._state.client = { setupCalc: () => Promise.resolve(null) };
+  calcButton(doc).listeners.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  // the copy says play goes on and where to look on a failure
+  assert.match(ck.CALC_PENDING, /You can keep playing\.$/);
+  assert.match(ck.CALC_FAILED, /calc_setup\.log in the Logs folder\.$/);
+  assert.equal(ck.CALC_OK, "Calc set up. This row will change to ok soon.");
+});

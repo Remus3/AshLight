@@ -4,7 +4,8 @@
    (<runtime>/autostart.json, default off); a click runs the existing
    scripts\autostart.ps1 -Enable or -Disable hidden through the launcher
    (spawn injected here: the script never runs); the preload hands the
-   dashboard exactly four fixed, argument-free actions; the IPC handlers
+   dashboard exactly five fixed, argument-free actions (the fifth,
+   setupCalc, is TC-CALC-OPTIN-BUTTON's, ruling W16-1); the IPC handlers
    answer only the companion window's main frame on the local core. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -133,7 +134,7 @@ function code(js) {
   return js.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
-test("preload: exactly restartOverlay, autostartOn, autostartOff, autostartState, no arguments", () => {
+test("preload: exactly restartOverlay, autostartOn, autostartOff, autostartState, setupCalc, no arguments", () => {
   const src = fs.readFileSync(path.join(APP, "client", "preload.js"), "utf8");
   const sent = [];
   let exposed = null;
@@ -147,7 +148,7 @@ test("preload: exactly restartOverlay, autostartOn, autostartOff, autostartState
   vm.runInNewContext(src, { require: (m) => { assert.equal(m, "electron"); return electron; } });
   assert.equal(exposed.name, "alClient");
   assert.deepEqual(Object.keys(exposed.api).sort(),
-    ["autostartOff", "autostartOn", "autostartState", "restartOverlay"]);
+    ["autostartOff", "autostartOn", "autostartState", "restartOverlay", "setupCalc"]);
   assert.ok(Object.isFrozen(exposed.api));
   for (const k of Object.keys(exposed.api)) {
     assert.equal(exposed.api[k].length, 0, k + " takes no argument");
@@ -157,11 +158,13 @@ test("preload: exactly restartOverlay, autostartOn, autostartOff, autostartState
   exposed.api.autostartOn({ evil: 1 });
   exposed.api.autostartOff(1);
   exposed.api.autostartState("y");
+  exposed.api.setupCalc("powershell", ["-c"]);
   assert.deepEqual(sent, [["send", "al:restart-overlay"], ["send", "al:autostart-on"],
-                          ["send", "al:autostart-off"], ["invoke", "al:autostart-state"]]);
+                          ["send", "al:autostart-off"], ["invoke", "al:autostart-state"],
+                          ["invoke", "al:setup-calc"]]);
   // statically: every ipcRenderer call names one fixed channel and nothing else
   const calls = code(src).match(/ipcRenderer\.\w+\([^)]*\)/g);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 5);
   for (const c of calls) { assert.match(c, /^ipcRenderer\.(send|invoke)\("al:[a-z-]+"\)$/); }
   assert.ok(!/token|require\("fs"\)|sendSync|process\./.test(code(src)));
 });

@@ -389,6 +389,26 @@ function restartOverlay() {
   if (client) { client.refresh(); }
 }
 
+/* TC-CALC-OPTIN-BUTTON (decision 0018 opt-in, decision 0041 amendment
+   2026-11-20): one calc setup at a time. A click while one runs gets the
+   same outcome; the promise settles to {ok} when the script exits (ok only
+   on exit code 0). The launcher holds the one spawn (no child_process
+   here). */
+let calcRun = null;
+function setupCalc() {
+  if (calcRun) { return calcRun; }
+  let settle = null;
+  const run = new Promise((resolve) => { settle = resolve; });
+  calcRun = run;
+  log("calc setup started from the client");
+  Launcher.setupCalc(REPO, undefined, (code) => {
+    if (calcRun === run) { calcRun = null; }
+    log("calc setup ended; exit code " + code);
+    settle({ ok: code === 0 });
+  });
+  return run;
+}
+
 /* The ONE overlay gate hook (decision 0029 amendment 2026-11-17): false
    hides the overlay while the core reports the 0029 idle "game may be
    closed" state, true shows it again on the next fresh log line. Fed by
@@ -439,6 +459,13 @@ function start() {
   // window's main frame on the local core only (app/client/preload.js).
   ipcMain.on("al:restart-overlay", (e) => {
     if (client && client.isCompanion(e)) { restartOverlay(); }
+  });
+  // TC-CALC-OPTIN-BUTTON (decision 0041 amendment 2026-11-20): the Checks
+  // "Set up the calc" button, from the companion's main frame only; the
+  // launcher runs the fixed scripts\calc_setup.ps1. Data is ignored.
+  ipcMain.handle("al:setup-calc", (e) => {
+    if (!client || !client.isCompanion(e)) { return null; }
+    return setupCalc();
   });
 
   writeDisplays();
