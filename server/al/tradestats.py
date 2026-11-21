@@ -31,6 +31,14 @@ extraction marker names the pinned archive sha256 AND the file's own sha256
 equals the pin in config/tc_pins.json ("pob2_files"); it is read as bounded
 text by `parse_pob_trade_stats` (never run as Lua), matched by the same
 exact `norm`, and repoe-fork wins any conflict (logged).
+
+DATA-TRADESTAT-COVERAGE (F-155): at each index load IndexCache counts the
+default weight keys and their " (Local)" twins (LOCAL_SUFFIX, used by
+upgrade.py) per source: repoe-fork alone and merged with the PoB fallback
+(`local_coverage`). While web data is on, `diag_facts` / `diag_rows` (the
+DATA-DIAG-SEAM hooks) show it as one Checks line and note when repoe-fork
+starts to carry the twins, the signal that the PoB fallback could retire.
+A diagnostic only: counts over the cached files, no request.
 """
 
 import hashlib
@@ -50,6 +58,9 @@ FILE_NAME = "stat_translations.json"
 MAX_BYTES = 64 * 1024 * 1024
 MAX_TEXT = 200
 KIND = "explicit"
+# the trade site's "(Local)" twin of a stat (AREA-AUDIT P6-1); upgrade.py
+# aliases it (upgrade imports this module, so the constant lives here)
+LOCAL_SUFFIX = " (Local)"
 # \Z, not $: "$" also matches before a trailing newline (AREA-AUDIT P6-2)
 _ID_RE = re.compile(r"^explicit\.stat_[0-9]{1,10}\Z")
 _SPACE_RE = re.compile(r"\s+")
@@ -222,6 +233,31 @@ def coverage(index, keys):
     return {"mapped": mapped, "unmapped": unmapped}
 
 
+def local_coverage(primary, merged, keys):
+    """DATA-TRADESTAT-COVERAGE: counts of `keys` (weights keys) with a
+    trade id in the repoe-fork index `primary` and in the `merged` index,
+    and of their LOCAL_SUFFIX twins: "twins" is the number of keys whose
+    twin any source holds (the merged index is the union), "twins_primary"
+    / "twins_merged" how many of those each index maps. Never guesses."""
+    keys = [k for k in (keys if isinstance(keys, (list, tuple, dict)) else ())
+            if isinstance(k, str)]
+    twins = [k + LOCAL_SUFFIX for k in keys]
+
+    def count(index, names):
+        return sum(1 for k in names if lookup(index, k) is not None)
+
+    have = [t for t in twins if lookup(merged, t) is not None
+            or lookup(primary, t) is not None]
+    return {"keys": len(keys), "mapped_primary": count(primary, keys),
+            "mapped_merged": count(merged, keys), "twins": len(have),
+            "twins_primary": count(primary, have), "twins_merged": count(merged, have)}
+
+
+def _default_keys():
+    from .theorycraft import weights  # lazy: keeps this module's import light
+    return list(weights.DEFAULT_WEIGHTS)
+
+
 def default_path(environ=None):
     return datacredit.cache_dir(environ) / FILE_NAME
 
@@ -248,6 +284,11 @@ class IndexCache:
         self._sig = None
         self._index = {}
         self.conflicts = []
+        # DATA-TRADESTAT-COVERAGE: the per-source indexes of the last load
+        # and their local_coverage over the default weight keys
+        self.primary = {}
+        self.fallback = {}
+        self.local = local_coverage({}, {}, _default_keys())
         self._lock = threading.Lock()
 
     def get(self):
@@ -258,9 +299,60 @@ class IndexCache:
                 fallback = (load_pob_index(self.pob_path, self.pob_pins)
                             if sig[1] and self.pob_pins else {})
                 self._index, self.conflicts = merge(primary, fallback)
+                self.primary, self.fallback = primary, fallback
+                self.local = local_coverage(primary, self._index, _default_keys())
                 if self.conflicts:
                     LOG.warning("trade stat ids: %d PoB ids differ from repoe-fork; "
                                 "repoe-fork kept: %s", len(self.conflicts),
                                 ", ".join(self.conflicts[:5]))
                 self._sig = sig
             return self._index
+
+
+# --- DATA-DIAG-SEAM hooks (DATA-TRADESTAT-COVERAGE, F-155) ----------------
+
+FACT = "trade_ids_cover"
+_COVER_FIELDS = ("keys", "mapped_primary", "mapped_merged", "twins",
+                 "twins_primary", "twins_merged")
+
+
+def diag_facts(core):
+    """{FACT: local_coverage of the core's IndexCache} while web data is on
+    (the ids are used only then, decision 0037); {} otherwise. get() is the
+    index load, so the counts follow a changed file."""
+    cache = getattr(core, "trade_ids", None)
+    on = getattr(core, "web_data_enabled", None)
+    if not isinstance(cache, IndexCache) or not callable(on) or on() is not True:
+        return {}
+    cache.get()
+    return {FACT: dict(cache.local)}
+
+
+def _cover_text(c):
+    text = (f"{c['mapped_merged']} of {c['keys']} weight keys have a trade id "
+            f"({c['mapped_primary']} from repoe-fork).")
+    n = c["twins"]
+    if not n:
+        return text + " No source has a local twin id."
+    text += (f" Local twins: {c['twins_primary']} of {n} in repoe-fork, "
+             f"{c['twins_merged']} of {n} with the PoB fallback.")
+    if c["twins_primary"] >= n:
+        text += " repoe-fork carries every local twin; the PoB fallback can retire."
+    elif c["twins_primary"]:
+        text += (f" repoe-fork now carries {c['twins_primary']} of the {n} local "
+                 "twins; the PoB fallback stays until it carries all of them.")
+    return text
+
+
+def diag_rows(f, now):
+    """One Checks note counting trade stat ids per source, only while web
+    data is on and the fact is well formed; [] otherwise."""
+    if not isinstance(f, dict) or f.get("web_data") is not True:
+        return []
+    c = f.get(FACT)
+    if not isinstance(c, dict) or not all(
+            isinstance(c.get(k), int) and not isinstance(c.get(k), bool)
+            and c[k] >= 0 for k in _COVER_FIELDS):
+        return []
+    from . import diag  # lazy: diag imports much of the core
+    return [diag._check("trade_ids", "Trade stat ids", diag.NOTE, _cover_text(c))]

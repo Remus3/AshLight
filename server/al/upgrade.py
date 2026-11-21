@@ -62,7 +62,7 @@ def _best(result):
 ARMOUR_SLOTS = frozenset({"Helmet", "Body Armour", "Gloves", "Boots"})
 WEAPON_SLOTS = frozenset({"Weapon 1"})
 GLOBAL_SLOTS = frozenset({"Amulet", "Ring 1", "Ring 2", "Belt"})
-LOCAL_SUFFIX = " (Local)"
+LOCAL_SUFFIX = tradestats.LOCAL_SUFFIX  # DATA-TRADESTAT-COVERAGE: one constant
 _DEFENCE = ("armour", "evasion", "energy shield")
 
 
