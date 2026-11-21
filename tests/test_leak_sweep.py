@@ -333,3 +333,85 @@ def test_binary_blob_gets_needle_arm_only():
 def test_tree_names_parse():
     raw = b"100644 a.txt\0" + b"\x01" * 20 + b"40000 sub dir\0" + b"\x02" * 20
     assert ls.tree_names(raw, 20) == ["a.txt", "sub dir"]
+
+
+# --- PUB-SWEEP-OWN-ADDRESS (ruling Q-24): the project's own address passes ---
+# Made-up login and repository only; config/public_repo.json is never created.
+
+OWNER = "zorblaxdev"
+OWN = OWNER + "/glimmer-lamp"
+
+
+def _own_kinds(text, own=OWN, needles=(OWNER,), rel="README.md"):
+    rx = ls.compile_needles(list(needles))
+    return [k for _, _, k in ls.scan_text(text, rel, rx, rel, own_repo=own)]
+
+
+def test_own_repo_address_passes_both_arms():
+    for line in ("Source: https://github.com/" + OWN,
+                 "clone https://github.com/" + OWN + ".git now",
+                 "repo " + OWN + ", see (" + OWN + ").",
+                 '{"repo": "' + OWN + '"}'):
+        assert _own_kinds(line) == [], line
+    # without the allowance the same line halts on the owner's needle slot
+    assert _own_kinds("https://github.com/" + OWN, own="") == ["needle-slot-0"]
+    # structural arm: an address shaped like a profile path is blanked too
+    own2 = "Users/glimmer-lamp"
+    line = "see https://github.com/" + own2
+    assert _own_kinds(line, own="", needles=()) == ["user-profile"]
+    assert _own_kinds(line, own=own2, needles=()) == []
+    # the config file itself is scanned the same way
+    cfg = '{"repo": "' + OWN + '"}\n'
+    assert _own_kinds(cfg, rel="config/public_repo.json") == []
+    # the rest of the line is still swept
+    assert _own_kinds(OWN + " and " + "C" + ":" + "\\" + "Secret\\x") == ["drive-path"]
+    assert _own_kinds(OWN + " by acct-0000-fake",
+                      needles=(OWNER, "acct-0000-fake")) == ["needle-slot-1"]
+
+
+def test_owner_login_alone_still_halts():
+    for line in ("maintained by " + OWNER,
+                 "https://github.com/" + OWNER,
+                 "mail " + OWNER + " today",
+                 OWN.upper(),  # exact and case-sensitive only
+                 "https://github.com/" + OWNER + "/"):
+        assert _own_kinds(line) == ["needle-slot-0"], line
+    # the login next to the allowed address still halts once
+    assert _own_kinds(OWN + " by " + OWNER) == ["needle-slot-0"]
+
+
+def test_owner_login_with_another_repo_still_halts():
+    for line in ("https://github.com/" + OWNER + "/other",
+                 OWN + "-fork",
+                 OWN + "2",
+                 OWN + ".wiki",
+                 OWN + "_x",
+                 "x-" + OWN,
+                 "https://github.com/" + OWNER + "/glimmer"):
+        assert _own_kinds(line) == ["needle-slot-0"], line
+
+
+def test_missing_or_malformed_public_repo_changes_nothing(tmp_path, monkeypatch):
+    assert ls.load_public_repo(tmp_path / "none.json") == ""
+    bad = tmp_path / "bad.json"
+    for raw in ("not json", "[]", "{}", '{"repo": 7}', '{"repo": ""}',
+                '{"repo": "' + OWNER + '"}', '{"repo": "' + OWN + '/extra"}',
+                '{"repo": "-' + OWN + '"}', '{"repo": "a b/c"}',
+                '{"repo": "' + OWNER + '/.."}', '{"repo": "' + OWNER + '/"}'):
+        bad.write_text(raw, newline="\n")
+        assert ls.load_public_repo(bad) == "", raw
+    good = tmp_path / "good.json"
+    good.write_text('{"repo": "' + OWN + '"}\n', newline="\n")
+    assert ls.load_public_repo(good) == OWN
+    # '' allows nothing: every line scans exactly as before
+    line = "https://github.com/" + OWN
+    assert _own_kinds(line, own="") == ["needle-slot-0"]
+    assert ls.blank_own_repo(line, "") == line
+    # the default reads PUBLIC_REPO: missing and malformed allow nothing
+    rx = ls.compile_needles([OWNER])
+    monkeypatch.setattr(ls, "PUBLIC_REPO", tmp_path / "absent.json")
+    assert [k for _, _, k in ls.scan_text(line, "x", rx)] == ["needle-slot-0"]
+    monkeypatch.setattr(ls, "PUBLIC_REPO", bad)
+    assert [k for _, _, k in ls.scan_text(line, "x", rx)] == ["needle-slot-0"]
+    monkeypatch.setattr(ls, "PUBLIC_REPO", good)
+    assert ls.scan_text(line, "x", rx) == []

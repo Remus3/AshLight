@@ -56,6 +56,7 @@ def test_tail_1000_line_burst_under_50ms(tmp_path):
     assert elapsed < fleet_test_guard.budget(0.05), f"{elapsed * 1000:.1f} ms"
 
 
+@pytest.mark.slow
 def test_tailer_idle_cpu_under_2_percent(tmp_path):
     p = tmp_path / "Client.txt"
     p.write_bytes(b"x\n" * 1000)

@@ -344,9 +344,9 @@ def test_end_to_end_real_core_restart_and_user_stop(tmp_path, leased_port):
     env = dict(os.environ)
     env[paths.RUNTIME_ENV] = str(runtime)
     env[paths.SIDECAR_ENV] = str(tmp_path / "AL")
-    env["AL_HEARTBEAT_S"] = "0.5"
+    env["AL_HEARTBEAT_S"] = "0.2"
     cmd = [sys.executable, "-m", "server.al.keepalive", "--port", str(leased_port),
-           "--poll", "0.5", "--backoff", "0.5,1,2", "--core-args", "--no-tail"]
+           "--poll", "0.1", "--backoff", "0.1,0.2,0.4", "--core-args", "--no-tail"]
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     sup = subprocess.Popen(cmd, cwd=str(ROOT), env=env, stdin=subprocess.DEVNULL,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -376,7 +376,7 @@ def test_end_to_end_real_core_restart_and_user_stop(tmp_path, leased_port):
             sup.kill()
         data = _read_hb(hb) or {}
         for pid in {first, data.get("pid")}:
-            if pid and pid != 13388 and ka.pid_alive(pid):
+            if pid and ka.pid_alive(pid):
                 subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True)
 
 
