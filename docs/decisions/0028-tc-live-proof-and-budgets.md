@@ -78,3 +78,31 @@ machine changes; a breach on unchanged code means PoB got slower or
 heavier and decision 0024 R5 (per-swap reload) is revisited. The GC
 ceiling reverses if LuaJIT or PoB changes make it cost more than it saves.
 The drift guard rows change only together with bridge.lua.
+
+## Amendment 2026-11-18 (LOOP-DRIFT-REF, F-064; with decision 0025)
+
+- Decision: the PoB GUI reference is keyed by tag. A reference folder
+  (tracked fixtures, gitignored ops/runtime/tc_bridge, the sidecar
+  Cache	c_bridge) may hold `gui_expected.json` and any number of
+  `gui_expected-<tag>.json`, each naming its tag in `"pob"`. The tag under
+  test is the pin's (the candidate's during a drift trial; a rehearsal is
+  `ref-<12 hex>`). The same tag compares the recorded numbers within 0.1
+  percent, as before. Another tag takes the newest recorded reference,
+  reports per-key deltas (want, got, relative delta) and fails unless that
+  reference carries a session's written acceptance for the tag under test:
+  `"accepted": {"<tag>": "<YYYY-MM-DD> <why>"}`. So a live trial of a new
+  tag is live-green only with a reference recorded for it or a dated
+  acceptance of the deltas.
+- Alternatives: compare any recorded reference within 0.1 percent (a new
+  PoB that changes numbers on purpose can never be live-green, or a wrong
+  one is masked by a widened band); skip the comparison on a tag mismatch
+  (live-green without any GUI check); a per-key tolerance table (guesses
+  which outputs may move).
+- Why: a pin move either proves the bridge against the GUI of the new tag
+  or leaves a dated, readable record that a session read the deltas and
+  accepted them.
+- Reverses if: the acceptance becomes a rubber stamp in practice, PoB
+  changes the sidebar outputs every release, or a scripted GUI read
+  becomes possible.
+- Tests: tests/test_tc_drift.py test_gui_reference_is_keyed_by_tag,
+  tests/test_tc_bridge.py test_live_outputs_match_pob_gui_within_0_1_percent.
