@@ -167,12 +167,12 @@ function pythonCmd(home, module, args, opts) {
   };
 }
 
-/* The variables no child of the client gets (OVL-LAUNCH-ENV, F-110): either
-   one turns electron.exe into a Node script host before any app code runs,
-   and run.ps1 starts the client again on a re-run. Matched in any case, as
-   Windows matches environment names. scripts/run.ps1 drops the same two
+/* The variables no child of the client gets (OVL-LAUNCH-ENV, F-110): the
+   list lives in app/guards.js STRIPPED_ENV, the one place that names the
+   debug variables (OVL-SHELL-GUARDS). Matched in any case, as Windows
+   matches environment names. scripts/run.ps1 drops the same two
    ($clientUnset). */
-const DROPPED_ENV = ["ELECTRON_RUN_AS_NODE", "NODE_OPTIONS"];
+const DROPPED_ENV = require("../guards.js").STRIPPED_ENV;
 
 /* The environment a child gets: a copy of env without DROPPED_ENV. The one
    place the launcher's child environment is narrowed. */
