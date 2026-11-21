@@ -28,6 +28,7 @@ from . import exitrecord  # OBS-CRASH: last-exit.json, client-exit.json
 from . import hotkeys  # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE)
 from . import hotreload  # HOT-RELOAD (decision 0042)
 from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
+from . import overlayview  # OVL-CARD-SLOT (F-118)
 from . import plug  # RUN-SEAMS (decision 0056)
 from . import diag_data, leagues  # DATA-DIAG-SEAM, DATA-LEAGUE-PICKER-API
 from . import pricerefresh  # DATA-PRICE-REFRESH-CORE (F-036)
@@ -313,6 +314,15 @@ class Core:
                                         ("visits", self._save_visits),
                                         ("summary", self._save_summaries))}
         self.stores_restored = []  # plug/stores.py: store names restored from .bak
+        # OVL-CARD-SLOT (F-118): the overlay view's small bounded store,
+        # loaded once here and saved from tick_guide() when dirty (its own
+        # Saver: a failed write is retried with the same back-off). A
+        # missing, broken or oversized file loads as empty.
+        self.overlay_view_path = self.runtime / overlayview.FILE_NAME
+        self.state.overlay.load_doc(jsonfile.read_json(
+            self.overlay_view_path, max_bytes=overlayview.MAX_BYTES, kind=dict))
+        self._overlay_saver = jsonfile.Saver(self._save_overlay_view,
+                                             clock=lambda: self.store_clock())
         # DIAG-SELF (ruling J): passive local checks, re-read every
         # DIAG_TICK_S from the core loop. The port is the served one (the
         # entry point sets it); a test core reads no process list or
@@ -724,6 +734,7 @@ class Core:
         when the visits file was written. RUN-DURABLE-STORES: the save goes
         through the visits Saver (a failed one is retried with back-off)."""
         self.state.set_zone_guide(guide=self.guide.get(), graph=self.area_graph.get())
+        self._tick_overlay_view()
         saver = self.savers["visits"]
         version, _ = self.state.visits_doc()
         if version != self._visits_saved and self.history_enabled():
@@ -731,6 +742,30 @@ class Core:
         if not saver.dirty:
             return False
         return self._flush("visits")
+
+    # -- OVL-CARD-SLOT (F-118)
+    def _save_overlay_view(self):
+        """The overlay view store, atomic, ASCII and LF (jsonfile); raises
+        on a failed write (the Saver retries it)."""
+        doc = self.state.overlay_doc()
+        try:
+            jsonfile.write_json(self.overlay_view_path, doc)
+        except OSError:
+            self.state.overlay_doc(failed=True)
+            raise
+
+    def _tick_overlay_view(self):
+        """Save the overlay view store when it changed (from tick_guide;
+        no tick of its own). True when nothing is left unsaved."""
+        if self.state.overlay.dirty:
+            self._overlay_saver.mark()
+        return self._overlay_saver.flush()
+
+    def show_overlay_sample(self):
+        """OVL-CARD-SLOT: the Settings button's sample card, on the overlay
+        for overlayview.SAMPLE_S, then gone by itself. Display state only:
+        nothing is recorded and nothing is sent to the game."""
+        return self.state.set_overlay_sample()
 
     def _clear_visits(self):
         """Caller holds self._lock. The empty book is written at once (a
