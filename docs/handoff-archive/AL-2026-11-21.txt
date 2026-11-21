@@ -1,4 +1,27 @@
 ========================================
+SESSION 17 /done (2026-11-21): moved from AL-NEXT-SESSION.txt
+========================================
+WAVE-18 RULINGS (2026-11-21): LOOP-CI-ISSUES -> wave 22; PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI -> wave 21; TEST-SHOTS-TABS -> wave 20 option B; AUTO-19 ruling A: .github/workflows/watch.yml keeps an issues: write exception to the read-only token; runbook docs/plan/08 line 58 amended: the wave integrator or merger may push main after a gated batch. New rows filed session 16: TEST-SUITE-HOLD-75 (wave 20), PLAY-PAGER-SCALE-24 and REL-INSTALLED-RUN-CHECK (wave 21). Loop-owned wave-19 row DATA-TRADESTAT-COVERAGE merged by the loop (89b99c8) and folded at session 16 /done.
+- SESSION 14: builders ran in hand-made sidecar worktrees (OA-12 hook,
+  decision 0012, still not wired). Orchestrator briefs: also check that
+  the merged branch tip is the reviewed tip (the f204f99 miss; merged
+  session 15 as a791895).
+- NOTE (session 16 /done, 2026-11-21): reap --apply removed the 17 w18 worktrees (16 packages plus w18-int, branches deleted), kept lanes 0 to 2; read back: 4 worktrees (main, lanes 0 to 2), 0 worktree-* branches. roadmap_fold: 1 row file applied (DATA-TRADESTAT-COVERAGE), 1 done row archived (fd3163b).
+- RELEASE HOLD (session 15), closed session 17: do not cut a release between wave 17 and OVL-TD05-PLATE (wave 20): app/main.js still inserted the old 0.9-1.0 page opacity over the new overlay plate. OVL-TD05-PLATE merged in wave 20 (session 17).
+- FIX-IDLE-WORD was tagged "BLOCKED: session wave 19"; merged wave 19, row folded session 17 (793678f).
+Acceptance (session 16): wave 19 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 19 done, next wave 20"), no row carries "BLOCKED: session wave 19".
+Do NOT redo (session 16, on main and pushed): wave 18 (closed 2026-11-21, fold 3cb8905, hand-off 5020288); loop row DATA-TRADESTAT-COVERAGE (89b99c8, folded); w18 worktrees reaped at /done.
+In flight (session 16 /done): no wave agent. Loop live (HALT absent, fire 391 at 08:03; lanes 0 to 2 idle, lane-0 done 07:51); fleet_checklist stale: none (read 2026-11-21 at session 16 /done); REG_OPEN absent (registration closed).
+Status (session 16 /done, 2026-11-21, fresh runs read back): whole suite
+through the suite gate 4523 passed / 6 skipped, timing phase 32 passed
+(rc 0); npm test --prefix app 581/581; leak sweep --tree no HALT (ARMED
+needles=44); before /done main 89b99c8 (loop merge on top of origin/main
+3cb8905), then the session fold fd3163b and this hand-off commit pushed.
+Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip
+terminal, no reply. Operator acts: OA-19 / OA-20 actionable (optional).
+Status board skipped (opt-out, not asked).
+
+========================================
 SESSION 16 /done (2026-11-21): moved from AL-NEXT-SESSION.txt
 ========================================
 - NOTE (session 15 /done, 2026-11-20): reap --apply printed "reap applied: 0
