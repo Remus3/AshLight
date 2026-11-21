@@ -63,3 +63,34 @@ GGG explicitly permits tools to write into the planner folder; the
 operator rules a click-triggered write acceptable; a file made this way
 fails to load in game (then the mapping is re-researched, research 0027);
 GGG's page names another passive id source.
+
+## Addendum 2026-11-21 (TC-BUILDFILE-EXIT-WATCH, F-187): the exit trigger
+
+Recorded as an addendum, not an amendment: it adds a watch and changes
+no rule of the Settled line (CLAUDE.md is not edited by this row).
+
+- Decision: the download is planned to retire once Path of Building
+  PoE2 exports `.build` itself. `tools/tc_drift.py` reads the body of the
+  one daily releases reply it already fetches (decision 0025; no extra
+  request, the body is read as text and never stored); a line naming an
+  export together with `.build` records a sticky `build_export` {tag,
+  seen} in ops/runtime/tc_drift.json, and every loop-tick summary and
+  `tc_drift.py note` HOLD line then carries "PoB exports .build itself:
+  retire AshLight's .build download by an amendment of decision 0034".
+  The note fires the review; nothing is removed automatically. The
+  retirement itself lands as a further dated amendment here (the
+  section above does not cover a retirement), which also clears the
+  state key.
+- Alternatives: retire automatically when the note fires (rejected: a
+  release-note word match is a hint, not proof the export works in
+  game); a separate watch or a read of PoB's changelog file (rejected:
+  a new request, decision 0025 allows one releases read per 24 h);
+  re-raise only for the release that says it (rejected: the next
+  release's notes would silence it before anyone acted, so the flag
+  stays until the amendment).
+- Why: ZERO-CLICK, the loop tick's existing check raises the exit with
+  no reminder; players who paste a share link and have no PoB keep the
+  route until a person confirms PoB's export.
+- Reverses if: the word match misfires on real release notes (then a
+  tighter phrase), PoB announces the export somewhere other than its
+  release notes, or the operator rules the download stays regardless.

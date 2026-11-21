@@ -45,7 +45,8 @@ def _cand_zip(commit=NEW_SHA, files=None):
     return buf.getvalue()
 
 
-def _fake(latest="v0.24.0", status=200, headers=None, sha=NEW_SHA, calls=None):
+def _fake(latest="v0.24.0", status=200, headers=None, sha=NEW_SHA, calls=None,
+          notes=None):
     calls = [] if calls is None else calls
 
     def fetch(method, url, hdrs, body=None):
@@ -55,6 +56,8 @@ def _fake(latest="v0.24.0", status=200, headers=None, sha=NEW_SHA, calls=None):
         if url.endswith("/releases/latest"):
             doc = {"tag_name": latest, "published_at": "2026-12-10T12:00:00Z",
                    "draft": False, "prerelease": False}
+            if notes is not None:
+                doc["body"] = notes
             return 200, {}, json.dumps(doc).encode("ascii")
         if "/commits/" in url:
             return 200, {}, sha.encode("ascii")
@@ -89,6 +92,63 @@ def test_latest_release_sends_truthful_ua_no_cookie_and_only_api_host():
     assert ua.startswith("AshLight/") and "drift" in ua
     assert webfetch.header(hdrs, "Cookie") is None
     assert webfetch.header(hdrs, "Authorization") is None
+
+
+EXPORT_NOTES = ("## What's Changed\r\n"
+                "* Fix Ice Nova damage by @someone\r\n"
+                "* Add export to the game's .build format by @someone in #1234\r\n")
+QUIET_NOTES = ("## What's Changed\n* Import builds from .build files\n"
+               "* Export to pastebin fixed\n* Rebuild the tree cache\n")
+
+
+def test_build_export_named_reads_only_an_export_line_with_dot_build():
+    assert tc_drift.build_export_named(EXPORT_NOTES)
+    assert tc_drift.build_export_named("- Export builds as `.build` files")
+    assert tc_drift.build_export_named("Builds can now be exported to .BUILD")
+    assert not tc_drift.build_export_named(QUIET_NOTES)
+    assert not tc_drift.build_export_named("")
+    assert not tc_drift.build_export_named(None)
+    assert not tc_drift.build_export_named("Export the tree; see foo.builder.js")
+
+
+def test_release_body_naming_build_export_raises_note(tmp_path):
+    """F-187: the daily release read raises the .build exit note itself."""
+    root = _root(tmp_path)
+    f = _fake(latest="v0.24.0", notes=EXPORT_NOTES)
+    line = tc_drift.loop_check(root, NOW, fetch=f,
+                               launch=lambda r, tag, live=False: 777)
+    st = tc_drift.load_state(root)
+    assert st["build_export"] == {"tag": "v0.24.0", "seen": tc_drift.iso(NOW)[:10]}
+    assert "body" not in st and "notes" not in st
+    assert tc_drift.BUILD_EXPORT_NOTE in line and "v0.24.0" in line
+    assert "0034" in tc_drift.BUILD_EXPORT_NOTE
+    assert "0034" in tc_drift.hold_note(st) and "v0.24.0" in tc_drift.hold_note(st)
+    # one request only: the body rides the same releases read (decision 0025)
+    assert [c[1] for c in f.calls] == [f"https://api.github.com/repos/{REPO}/releases/latest"]
+    # sticky: a later release whose notes do not repeat it keeps the note
+    tc_drift.save_state(root, dict(st, next_check=0))
+    line = tc_drift.loop_check(root, NOW + 60, fetch=_fake(latest="v0.23.1",
+                                                           notes=QUIET_NOTES))
+    assert "current" in line and tc_drift.BUILD_EXPORT_NOTE in line
+    assert tc_drift.load_state(root)["build_export"]["tag"] == "v0.24.0"
+
+
+def test_release_body_without_build_export_raises_no_note(tmp_path):
+    root = _root(tmp_path)
+    line = tc_drift.loop_check(root, NOW, fetch=_fake(latest="v0.23.1",
+                                                      notes=QUIET_NOTES))
+    assert "build_export" not in tc_drift.load_state(root)
+    assert tc_drift.BUILD_EXPORT_NOTE not in line
+    assert ".build" not in tc_drift.hold_note(tc_drift.load_state(root))
+    # a reply with no body at all is fine too
+    rel = tc_drift.latest_release(REPO, fetch=_fake())
+    assert rel["build_export"] is False
+
+
+def test_decision_0034_carries_the_exit_clause():
+    text = (ROOT / "docs" / "decisions" / "0034-build-file-download.md").read_text(
+        encoding="ascii")
+    assert "TC-BUILDFILE-EXIT-WATCH" in text and "tc_drift" in text
 
 
 def test_rate_limit_headers_are_obeyed():
