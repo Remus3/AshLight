@@ -18,12 +18,21 @@
        "processes": n, "working_set_kb": n, "private_kb": n, "cpu_pct": n,
        "by_type": { "<browser|tab|gpu|utility|other>":
                     { "count", "working_set_kb", "private_kb", "cpu_pct" } },
-       "overlay_shown": bool, "companion_open": bool }
+       "overlay_shown": bool, "companion_open": bool,
+       "overlay_state": "<shown|hidden_user|hidden_idle|starting>" }
    Memory is in KB as Electron reports it; cpu_pct is percent of one core
-   since the previous sample (Electron's percentCPUUsage). */
+   since the previous sample (Electron's percentCPUUsage).
+   RUN-EXPLAIN-OVERLAY-STATE (F-129): overlay_state is why the overlay is
+   shown or hidden, read from AshLight's own overlay gate
+   (app/overlay_gate.js state(); opts.overlayState), never from a screen
+   read or a look at any other window. noteState() writes the file at once
+   when that state changed since the last write (main.js calls it after a
+   toggle, a gate report and the window's first show); otherwise the field
+   rides the once-a-minute sample. */
 
 const fs = require("fs");
 const path = require("path");
+const Gate = require("./overlay_gate.js");
 
 const FILE_NAME = "overlay-state.json";
 const PERIOD_MS = 60 * 1000;
@@ -85,6 +94,11 @@ function windowShown(w) {
   return windowUp(w) && typeof w.isVisible === "function" && w.isVisible() === true;
 }
 
+/* One of the gate's STATES; anything else reads "starting". */
+function stateWord(s) {
+  return Gate.STATES.indexOf(s) >= 0 ? s : "starting";
+}
+
 /* The overlay-state.json document. */
 function snapshot(rows, view, now) {
   const s = summarize(rows);
@@ -99,7 +113,8 @@ function snapshot(rows, view, now) {
     cpu_pct: s.total.cpu_pct,
     by_type: s.byType,
     overlay_shown: v.overlay_shown === true,
-    companion_open: v.companion_open === true
+    companion_open: v.companion_open === true,
+    overlay_state: stateWord(v.overlay_state)
   };
 }
 
@@ -121,7 +136,8 @@ function writeState(dir, doc, fsi) {
 }
 
 /* The sampler. opts: getMetrics (app.getAppMetrics), overlay / companion
-   (getters of AshLight's own two windows), dir (the runtime dir), log;
+   (getters of AshLight's own two windows), overlayState (the gate's
+   state(), a getter), dir (the runtime dir), log;
    injectable for tests: fs, setInterval, clearInterval, now, processType
    (default process.type: "browser" in Electron's main process). */
 function createSampler(opts) {
@@ -133,10 +149,20 @@ function createSampler(opts) {
   const getWin = (g) => (typeof g === "function" ? g() : null);
   let timer = null;
   let failing = false;
+  let lastState = null; // the overlay_state of the last file written
+
+  function currentState() {
+    try {
+      return stateWord(typeof o.overlayState === "function" ? o.overlayState() : null);
+    } catch (e) {
+      return "starting";
+    }
+  }
 
   function view() {
     return { overlay_shown: windowShown(getWin(o.overlay)),
-             companion_open: windowUp(getWin(o.companion)) };
+             companion_open: windowUp(getWin(o.companion)),
+             overlay_state: currentState() };
   }
 
   /* One sample: read, sum, write. A failure is logged once until a write
@@ -147,6 +173,7 @@ function createSampler(opts) {
       writeState(o.dir, doc, o.fs);
       if (failing) { say("metrics: overlay state written again"); }
       failing = false;
+      lastState = doc.overlay_state;
       return doc;
     } catch (e) {
       if (!failing) { say("metrics: overlay state not written: " + e.message); }
@@ -172,7 +199,20 @@ function createSampler(opts) {
     if (timer !== null) { clearI(timer); timer = null; }
   }
 
-  return { start: start, stop: stop, sample: sample, running: () => timer !== null };
+  /* The overlay's state may have changed: write the file now when it did
+     (a running sampler only); true when a write was asked. The gate's
+     state is read first; nothing else is looked at when it is unchanged. */
+  function noteState() {
+    if (timer === null) { return false; }
+    const s = currentState();
+    if (s === lastState) { return false; }
+    say("overlay state " + s + ": " + Gate.HINTS[s]);
+    sample();
+    return true;
+  }
+
+  return { start: start, stop: stop, sample: sample, noteState: noteState,
+           running: () => timer !== null };
 }
 
 /* main.js's one call: build the sampler and start it. */
@@ -183,4 +223,4 @@ function startSampler(opts) {
 }
 
 module.exports = { FILE_NAME, PERIOD_MS, MAX_BYTES, SCHEMA, TYPE_KEYS, summarize, snapshot,
-                   writeState, windowUp, windowShown, createSampler, startSampler };
+                   stateWord, writeState, windowUp, windowShown, createSampler, startSampler };

@@ -87,7 +87,8 @@ class World:
                             pid_alive=lambda p: p in self.procs,
                             health=lambda: self.health_ok, terminate=self.terminate,
                             created=lambda p: self.procs.get(p, 0),
-                            now=self.now, log=self.lines.append, **kw)
+                            now=self.now, wall=kw.pop("wall", self.now),
+                            log=self.lines.append, **kw)
 
     def run_until(self, sup, pred, limit_s=600.0, step=ka.POLL_S):
         end = self.t + limit_s
@@ -153,8 +154,8 @@ def test_hung_core_that_cannot_be_terminated_is_never_duplicated(tmp_path):
     s = w.sup()
     s.step()
     w.can_terminate = False  # e.g. access denied
-    for _ in range(100):
-        w.t += ka.STALE_S
+    for _ in range(400):  # every poll (a 90 s jump is a poll gap: no kill)
+        w.t += ka.POLL_S
         s.step()
     assert w.launches == [], "a second core was started next to a live one"
     assert core in w.procs and w.terminated
@@ -207,6 +208,150 @@ def test_clean_exit_then_stop_request_exit_once(tmp_path):
     (w.runtime / "core.alive").unlink()  # clean exit
     assert s.run(poll_s=0, sleep=lambda _: None) == "user-stop"
     assert w.launches == []
+
+
+# ------------------------------------- RUN-SUPERVISOR-CLOCK: last restart
+
+def _state(w):
+    return json.loads((w.runtime / ka.STATE_FILE).read_text("ascii"))
+
+
+def test_restart_is_recorded_with_its_reason(tmp_path):
+    w = World(tmp_path)
+    s = w.sup()
+    w.run_until(s, lambda r: r == "launched")  # a first start: not a restart
+    assert _state(w)["last_restart"] is None
+    pid = w.launches[-1][1]
+    w.beat(pid)
+    w.t += 1
+    assert s.step() == "ok"
+    del w.procs[pid]  # crash, core.alive left behind
+    w.run_until(s, lambda r: r == "launched")
+    rec = _state(w)["last_restart"]
+    assert rec == {"at": w.t, "reason": "crash"}
+    # a hang: two failed checks, terminate, relaunch
+    pid = w.launches[-1][1]
+    w.beat(pid)
+    w.t += 1
+    assert s.step() == "ok"
+    w.run_until(s, lambda r: r == "launched")
+    assert pid in w.terminated
+    assert _state(w)["last_restart"]["reason"] == "hung"
+    # a new supervisor (run.ps1 again) keeps the record
+    s2 = w.sup()
+    assert s2.last_restart == _state(w)["last_restart"]
+    s2._write_state("started")
+    assert _state(w)["last_restart"]["reason"] == "hung"
+
+
+def test_start_timeout_and_gave_up_records(tmp_path):
+    w = World(tmp_path)
+    s = w.sup(start_grace_s=30.0)
+    w.run_until(s, lambda r: r == "launched")
+    w.run_until(s, lambda r: len(w.launches) == 2)
+    assert _state(w)["last_restart"]["reason"] == "start-timeout"
+    # a launch that fails records nothing new
+    (tmp_path / "b").mkdir()
+    w2 = World(tmp_path / "b")
+    w2.launch_error = OSError("python not found")
+    s2 = w2.sup(cap=2, backoff=(1.0,))
+    assert w2.run_until(s2, lambda r: r == "gave-up", limit_s=600) == "gave-up"
+    assert _state(w2)["last_restart"] is None
+
+
+def test_read_last_restart_rejects_bad_records(tmp_path):
+    f = tmp_path / ka.STATE_FILE
+    assert ka.read_last_restart(f) is None  # no file
+    for bad in ('{"last_restart": {"at": 1, "reason": "reload"}}',
+                '{"last_restart": {"at": true, "reason": "hung"}}',
+                '{"last_restart": {"at": "1", "reason": "hung"}}',
+                '{"last_restart": [1]}', '[1]', 'not json'):
+        f.write_text(bad, encoding="ascii")
+        assert ka.read_last_restart(f) is None, bad
+    f.write_text('{"last_restart": {"at": 12, "reason": "hung"}}', encoding="ascii")
+    assert ka.read_last_restart(f) == {"at": 12.0, "reason": "hung"}
+
+
+def test_last_restart_row_shows_for_10_minutes(tmp_path):
+    from server.al import diag, plug
+    from server.al.plug import supervisor as sp
+
+    class FakeCore:
+        runtime = tmp_path
+
+    core = FakeCore()
+    assert sp.facts(core, 0.0) == {"supervisor_restart": None}  # no file
+    at = 1_800_000_000.0
+    (tmp_path / ka.STATE_FILE).write_text(json.dumps(
+        {"pid": 1, "status": "starting", "last_restart": {"at": at, "reason": "hung"}}),
+        encoding="ascii")
+    f = sp.facts(core, at)
+    assert f == {"supervisor_restart": {"at": at, "reason": "hung"}}
+    clock = time.strftime("%H:%M", time.localtime(at))
+    want = f"AshLight restarted its core at {clock} (it had stopped answering)."
+    for age in (0.0, 1.0, 300.0, 599.0):
+        row = sp.rows(f, at + age)
+        assert row == {"id": "supervisor_restart", "label": "Keepalive",
+                       "status": "note", "detail": want}, age
+    for age in (600.0, 601.0, 3600.0, -3600.0):
+        assert sp.rows(f, at + age) is None, age
+    for reason, words in sp.REASON_WORDS.items():
+        assert sp.rows({"supervisor_restart": {"at": at, "reason": reason}}, at)[
+            "detail"].endswith(f"({words}).")
+    assert set(sp.REASON_WORDS) == set(ka.RESTART_REASONS)
+    assert sp.rows({"supervisor_restart": None}, at) is None
+    assert sp.rows({}, at) is None
+    # discovered through the plug seam and shown in Checks
+    assert "supervisor" in [n for _, n, _ in plug.modules()]
+    ids = [r["id"] for r in diag.checks({"supervisor_restart": f["supervisor_restart"]},
+                                        at + 60.0)]
+    assert "supervisor_restart" in ids
+    ids = [r["id"] for r in diag.checks({"supervisor_restart": f["supervisor_restart"]},
+                                        at + 601.0)]
+    assert "supervisor_restart" not in ids
+
+
+def test_health_reports_loop_age(tmp_path):
+    # /api/health gains loop_age_s from core.loop_at (monotonic), null
+    # before the first loop pass; the supervisor fails a check over 60 s
+    import http.client
+    import threading
+
+    from server.al.core import Core
+    from server.al.http import serve
+
+    token = "k" * 48
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), poll_s=0.05)
+    server = serve(core, token, port=0, web_root=ROOT / "web",
+                   tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
+    t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True)
+    t.start()
+
+    def health():
+        conn = http.client.HTTPConnection("127.0.0.1", server.port, timeout=5)
+        conn.request("GET", "/api/health", headers={
+            "Host": f"127.0.0.1:{server.port}", "X-AL-Token": token})
+        r = conn.getresponse()
+        body = json.loads(r.read())
+        conn.close()
+        assert r.status == 200
+        return body
+
+    try:
+        core.loop_at = None
+        assert health()["loop_age_s"] is None
+        core.loop_at = time.monotonic() - 300.0
+        age = health()["loop_age_s"]
+        assert 300.0 <= age < 330.0
+        assert not ka.check_passed({"ok": True, "loop_age_s": age})
+        core.loop_at = time.monotonic()
+        assert ka.check_passed({"ok": True, "loop_age_s": health()["loop_age_s"]})
+    finally:
+        server.stop()
+        core.close()
 
 
 def test_second_supervisor_exits_at_once(tmp_path, leased_port):

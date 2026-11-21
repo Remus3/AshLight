@@ -57,7 +57,7 @@ ROUTES = {
     ("GET", "/favicon.ico"): (NONE, None),
     # token-proof GET (1): the client proves the core before it sends the token
     ("GET", "/api/hello"): (PROOF, None),
-    # token GET (14)
+    # token GET (15)
     ("GET", "/api/health"): (HEADER, None),
     ("GET", "/api/version"): (HEADER, None),
     ("GET", "/api/state"): (HEADER, None),
@@ -74,6 +74,9 @@ ROUTES = {
     ("GET", "/api/verdicts"): (HEADER, None),
     # RUN-METRICS-CORE: the plug route (server/al/plug/debug.py, decision 0067)
     ("GET", "/api/debug"): (HEADER, None),
+    # RUN-VERDICTS-UI (folded RUN-REPORT-ROUTE): the plug route
+    # (server/al/plug/report.py); the report built on the click
+    ("GET", "/api/report"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
     # token POST (15)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
@@ -337,7 +340,7 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 14,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 15,
                       ("GET", QUERY): 1,
                       ("POST", HEADER): 15, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,

@@ -578,6 +578,66 @@ R8. Bring the companion back when the game wakes, only on another display.
 - Game Bar widget sizes (GB-MODES 240 to 600 epx) confirm AshLight's 280
   DIP base width (app/shared/layout.js:35); no change.
 
+## Adopted patterns
+
+Register added 2026-11-21 by plan package DATA-RESEARCH-GAPS (gap 0055 of
+docs/plan/02-findings.md). One line per pattern AshLight adopts or keeps:
+pattern - where it goes in AshLight - source - access date. Source keys
+are those of Sources above; every source there was accessed 2026-11-18.
+Where a pattern has a plan package, the package id names it (plan of
+record docs/plan/packages.json); no row here claims the package landed.
+
+Adopted (new work)
+- A1 A second-screen window opens by itself on the largest display the
+  game (here: the overlay) is not on and remembers its place - companion
+  first-run placement, R1 (plan package OVL-LINKS-DOWNLOADS; decision 0041
+  amendment 2026-11-19) - OW-SS - 2026-11-18.
+- A2 Text a player reads at a glance subtends at least 16 arcmin, critical
+  text 20 - design 0001 section 3 type floor and the Play tokens, R2
+  (plan package PLAY-TD-03-TOKENS) - FHWA - 2026-11-18.
+- A3 One notice per thing, never repeated while unanswered - one trade
+  card per sender and item, refreshed in place, R3 (plan package
+  DATA-PRICE-CARD-TEXT) - AP-NOTIF - 2026-11-18.
+- A4 Remind the player of the hotkey where the window is, then stop - a
+  muted item-check key hint in the empty card slot that retires itself,
+  R4 (plan package OVL-KEY-HINT) - OW-OVL, OW-HK - 2026-11-18.
+- A5 A message that leaves by itself is fine only when the same
+  information stays findable elsewhere - every self-leaving overlay card
+  has a dashboard twin, a design rule plus a test, R5 (plan package
+  OVL-GLANCE-RULES) - WCAG-221, AP-NOTIF, NNG-IND - 2026-11-18.
+- A6 Glances of 2 s or less and no automatically scrolling text - the card
+  head leads with the answer, no scroll or marquee, design 0001 section
+  10, R6 (plan package OVL-GLANCE-RULES) - NHTSA - 2026-11-18.
+- A7 No noisy OS notices while the user is busy; the foreground app puts
+  the item in its own view - no Windows toast, sound or taskbar flash in
+  play, design 0001 section 7.1, R6 (plan package OVL-GLANCE-RULES) -
+  MS-NOTIF, AP-NOTIF - 2026-11-18.
+- A8 Dense content before and after the match, little during it - the
+  post-map moment as the third Play context, R7 (merged into note 0038 R6;
+  plan package PLAY-TD-11-CONTEXT) - BLITZ - 2026-11-18.
+- A9 The second-screen window comes back at game start, without focus and
+  never on the game display - companion shown inactive when the log
+  wakes, tray switch, R8 (plan package OVL-WAKE-COMPANION; decision 0041
+  amendment 2026-11-19) - OW-SS - 2026-11-18.
+
+Kept (already in AshLight, confirmed by this review; no work)
+- K1 Short look and long look: a brief card in play, the full record on
+  the dashboard - overlay card slot plus the Play tab (F1) - AP-WATCH,
+  AP-NOTIF - 2026-11-18.
+- K2 Click-through as the default, placed first and then locked - the
+  overlay is always click-through and is placed from the dashboard
+  (design 0001 section 10, F7b) -
+  OP-SETUP, CB-README - 2026-11-18.
+- K3 A solid plate behind text over bright video, not a shadow alone -
+  the overlay's 92 percent plate (F9) - BBC-W3C, RTSS-FILL - 2026-11-18.
+- K4 Context-loaded visibility: a display shows only while its condition
+  holds - the Client.txt context of design 0001 section 7.2 and the
+  decision 0029 hide on idle (F7) -
+  OP-REL, WA-LOAD (UNVERIFIED) - 2026-11-18.
+- K5 Settings inferred from data the app already has, not asked -
+  character, league and the monitor-height overlay scale (F12) -
+  AP-WATCH, BLITZ - 2026-11-18.
+
 ## Rejected
 
 - Run on an overlay platform (Overwolf or similar) for in-game windows:

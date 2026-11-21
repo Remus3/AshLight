@@ -194,3 +194,48 @@ def test_core_idle_cpu_under_1_percent_with_dashboard_and_overlay_streams(tmp_pa
     print(f"core idle {share * 100:.3f} percent of one core")
     skip_if_ci_timing("core idle CPU", f"{share * 100:.3f} percent")
     assert share < 0.01 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"
+
+
+def test_ladder_tick_200_plus_500_under_2_ms(tmp_path):
+    """RUN-LADDER-TICK (AUDIT-P8-LOW P8-5, B2): with 500 saved maps and 200
+    session maps plus an open one, a 0.5 s core tick in which only the open
+    map's clock moved costs under 2 ms (no matching, no view rebuild)."""
+    from server.al import runs
+    from server.al.core import Core
+
+    core = Core(runtime=tmp_path / "rt", config_path=tmp_path / "local.json", tail=False)
+    clock = [1000.0]
+    core.state._clock = lambda: clock[0]
+
+    def feed(ev):
+        clock[0] = ev["recv_ts"]
+        core.state.apply(ev)
+
+    feed({"type": "level_up", "character": "Quill", "level": 80, "class": "Witch",
+          "recv_ts": 1000.0})
+    old = [{"area_id": f"MapOld{i % 40}", "seed": i, "opened_at": float(i),
+            "area_level": 60 + i % 20, "time_s": 300.0, "deaths": i % 3,
+            "level_ups": 0} for i in range(500)]
+    core.ladder.record("Quill", old)
+    at = 2000.0
+    for i in range(runs.MAX_MAPS + 1):  # the last one stays open
+        feed({"type": "area_generated", "area_id": f"MapNew{i % 30}",
+              "area_level": 65 + i % 15, "seed": 10_000 + i, "recv_ts": at})
+        feed({"type": "scene_changed", "scene": f"New{i % 30}", "is_hideout": False,
+              "recv_ts": at + 1})
+        at += 400.0
+    core.tick_ladder(on=True)  # records the 200 finished maps, builds the view
+    view = core.state.snapshot()["maps"]["ladder_all"]
+    assert view["maps"] == len(core.ladder.by["Quill"]) + 1
+    assert len(core.ladder.by["Quill"]) == 500
+    times = []
+    for _ in range(50):
+        clock[0] += 0.5
+        t0 = time.perf_counter()
+        core.tick_ladder(on=True)
+        times.append(time.perf_counter() - t0)
+    times.sort()
+    med = times[len(times) // 2]
+    assert core.state.snapshot()["maps"]["ladder_all"] == view
+    skip_if_ci_timing("ladder tick at 200 + 500 maps", f"{med * 1000:.3f} ms")
+    assert med < fleet_test_guard.budget(0.002), f"{med * 1000:.3f} ms"

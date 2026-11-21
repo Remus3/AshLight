@@ -40,7 +40,14 @@
    hidden through the launcher; the menu is rebuilt when the script exits.
    The same three fixed, argument-free actions reach the dashboard through
    the preload (al:autostart-on, al:autostart-off, al:autostart-state); the
-   handlers are registered here and answer only isCompanion() senders. */
+   handlers are registered here and answer only isCompanion() senders.
+
+   RUN-START-REASON-CLIENT (F-091): when the core did not answer, the
+   starting page shows the one line of <runtime>\start-error.json (the
+   core's "fix" sentence for a port it could not bind) when that record is
+   from this start attempt (startErrorLine): printable ASCII, at most
+   REASON_MAX characters, never a path or a script name; it reaches the
+   page as a query value and is shown as text only. */
 
 const fs = require("fs");
 const path = require("path");
@@ -57,6 +64,39 @@ const CORE_WAIT_MS = 30000;
 const CORE_STEP_MS = 500;
 const SAVE_DELAY_MS = 500;
 const ALLOWED_PERMISSION = "clipboard-sanitized-write";
+const START_ERROR_FILE = "start-error.json";
+const START_ERROR_MAX = 4096;
+const REASON_MAX = 300;
+const REASON_SLACK_MS = 60000; // a record up to 1 min before the attempt counts
+const NO_PATH = /[A-Za-z]:[\/]|\\|\.(ps1|psm1|py|pyw|exe|bat|cmd|js)\b/i;
+
+/* The core's one-line reason for a failed start, or "": the "fix" of
+   <runtimeDir>/start-error.json when the file is small, its "at" (UNIX
+   seconds) is no older than sinceMs minus REASON_SLACK_MS, and the line is
+   printable ASCII without a path or a script name. Never throws. */
+function startErrorLine(runtimeDir, sinceMs, fsi) {
+  const f = fsi || fs;
+  try {
+    const file = path.join(runtimeDir, START_ERROR_FILE);
+    const st = f.statSync(file);
+    if (!st.isFile() || st.size > START_ERROR_MAX) { return ""; }
+    const doc = JSON.parse(f.readFileSync(file, "utf8"));
+    if (!doc || typeof doc !== "object" || typeof doc.fix !== "string") { return ""; }
+    if (typeof doc.at !== "number" || !isFinite(doc.at)) { return ""; }
+    if (typeof sinceMs === "number" && doc.at * 1000 < sinceMs - REASON_SLACK_MS) { return ""; }
+    const line = doc.fix.trim();
+    if (!line || line.length > REASON_MAX || !/^[\x20-\x7e]+$/.test(line)) { return ""; }
+    return NO_PATH.test(line) ? "" : line;
+  } catch (e) {
+    return "";
+  }
+}
+
+/* The loadFile options of the failed page: #failed, plus the reason line
+   as the one query value when there is one. */
+function failedPage(line) {
+  return line ? { hash: "failed", query: { reason: line } } : { hash: "failed" };
+}
 
 function createClient(opts) {
   const { BrowserWindow, Menu, Tray, nativeImage, session, shell, screen, app,
@@ -153,18 +193,27 @@ function createClient(opts) {
     }
   }
 
-  function showDashboard() {
+  /* The failed page, with the core's reason when this attempt left one. */
+  function showFailed(sinceMs) {
+    if (!win || win.isDestroyed()) { return; }
+    const line = startErrorLine(opts.runtimeDir, sinceMs);
+    if (line) { log("client: start error: " + line); }
+    win.loadFile(STARTING_HTML, failedPage(line));
+  }
+
+  function showDashboard(sinceMs) {
     if (!win || win.isDestroyed()) { return; }
     const token = opts.readToken();
     const url = Link.dashboardUrl(port, token);
     shownToken = url ? token : "";
-    if (url) { win.loadURL(url); } else { win.loadFile(STARTING_HTML, { hash: "failed" }); }
+    if (url) { win.loadURL(url); } else { showFailed(sinceMs); }
   }
 
   /* Load the dashboard once the core answers; start it (scripts\run.ps1)
      when it does not. One start attempt per window open. */
   function connect() {
     if (starting) { return starting; }
+    const since = Date.now();
     starting = healthy().then((ok) => {
       if (ok) { return true; }
       const pid = Launcher.startCore(opts.repo, port);
@@ -174,10 +223,10 @@ function createClient(opts) {
       starting = null;
       if (!win || win.isDestroyed()) { return; }
       if (ok) {
-        showDashboard();
+        showDashboard(since);
       } else {
         log("client: core did not answer within " + CORE_WAIT_MS / 1000 + " s");
-        win.loadFile(STARTING_HTML, { hash: "failed" });
+        showFailed(since);
       }
     });
     return starting;
@@ -434,4 +483,5 @@ function createClient(opts) {
            tray: () => tray };
 }
 
-module.exports = { createClient, PARTITION, STATE_FILE };
+module.exports = { createClient, startErrorLine, failedPage, PARTITION, STATE_FILE,
+                   START_ERROR_FILE, REASON_MAX };

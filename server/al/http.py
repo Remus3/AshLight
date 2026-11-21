@@ -427,11 +427,17 @@ class Handler(BaseHTTPRequestHandler):
         # DEP-05 (decision 0059): mode (checkout / installed) and the
         # marker's previous version (null in a checkout).
         # RUN-BUILD-STAMP-CORE (F-027): "build" is buildinfo's one string
+        # RUN-SUPERVISOR-CLOCK (F-136): loop_age_s, seconds since the core
+        # loop's last pass (core.loop_at, monotonic; null before the first);
+        # the supervisor counts a check with a loop over 60 s old as failed
         core = self.server.core
+        loop_at = getattr(core, "loop_at", None)
+        loop_age = None if loop_at is None else round(max(time.monotonic() - loop_at, 0.0), 2)
         return self._json(200, {"ok": True, "name": NAME, "version": VERSION,
                                 "build": buildinfo.build_id(getattr(core, "hot", None)),
                                 "port": self.server.port,
                                 "tailing": bool(core.tailer and core.tailer.running),
+                                "loop_age_s": loop_age,
                                 **paths.install_info()},
                           extra)
 
