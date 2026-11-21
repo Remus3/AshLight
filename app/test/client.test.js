@@ -345,6 +345,78 @@ function code(js) {
   return js.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
+/* TC-CALC-OPTIN-BUTTON (decision 0041 amendment 2026-11-20, rulings
+   W16-1, W16-2): the calc setup is one fixed script, run hidden. */
+test("calc setup: only the fixed scripts/calc_setup.ps1, hidden, by absolute PowerShell, no argument", () => {
+  const calls = [];
+  const handlers = {};
+  const fake = (exe, args, opts) => {
+    calls.push({ exe, args, opts });
+    return { pid: 51, on(ev, fn) { handlers[ev] = fn; return this; }, unref() { calls.push("unref"); } };
+  };
+  const done = [];
+  assert.equal(Launcher.setupCalc("R", fake, (c) => done.push(c)), 51);
+  const run = calls[0];
+  assert.equal(run.exe, Launcher.psExe());
+  assert.ok(path.win32.isAbsolute(run.exe), run.exe);
+  assert.match(run.exe, /\\System32\\WindowsPowerShell\\v1\.0\\powershell\.exe$/i);
+  assert.deepEqual(run.args, Launcher.psArgs(path.join("R", "scripts", "calc_setup.ps1")));
+  assert.equal(run.args[run.args.length - 1], path.join("R", "scripts", Launcher.CALC_SETUP_PS1));
+  assert.equal(run.args.indexOf("-File"), run.args.length - 2, "the script gets no argument");
+  assert.ok(run.args.includes("Hidden"));
+  assert.deepEqual(run.opts, { cwd: "R", detached: false, windowsHide: true, stdio: "ignore" });
+  assert.equal(calls[1], "unref");
+  // the outcome is reported once, on exit (an error after exit is ignored)
+  handlers.exit(0);
+  handlers.error(new Error("late"));
+  assert.deepEqual(done, [0]);
+  // a start that fails reports null; a throwing spawn returns 0
+  const done2 = [];
+  Launcher.setupCalc("R", fake, (c) => done2.push(c));
+  handlers.error(new Error("ENOENT"));
+  assert.deepEqual(done2, [null]);
+  const done3 = [];
+  assert.equal(Launcher.setupCalc("R", () => { throw new Error("no ps"); }, (c) => done3.push(c)), 0);
+  assert.deepEqual(done3, [null]);
+  // an absolute SystemRoot is honoured, as for startCore
+  const at = "F" + ":" + "\\" + "WINDOWS";
+  const seen = [];
+  Launcher.setupCalc("R", (exe) => { seen.push(exe); return { pid: 1 }; }, null, { SystemRoot: at });
+  assert.deepEqual(seen, [at + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"]);
+});
+
+test("calc setup script: no parameter, BelowNormal first, the 0018 opt-in step, never setup.ps1", () => {
+  const ps = fs.readFileSync(path.join(__dirname, "..", "..", "scripts", "calc_setup.ps1"), "ascii");
+  const body = ps.replace(/<#[\s\S]*?#>/g, "").replace(/^\s*#[^\n]*$/gm, "");
+  assert.match(body, /\[CmdletBinding\(\)\]\s*param\(\)/, "no parameter");
+  // the first statement after param() lowers the script's own priority
+  const after = body.slice(body.indexOf("param()") + "param()".length).trim();
+  assert.ok(after.startsWith("try {\n    (Get-Process -Id $PID).PriorityClass = " +
+    "[System.Diagnostics.ProcessPriorityClass]::BelowNormal"), after.slice(0, 120));
+  // checkout: tools\tc_pin.py setup --opt-in; installed: installer calc --opt-in
+  assert.match(body, /Join-Path \$Repo 'tools\\tc_pin\.py'\), 'setup', '--opt-in'/);
+  assert.match(body, /'boot\.py'\), 'server\.al\.install', 'calc', '--opt-in'/);
+  assert.match(body, /foreach \(\$name in @\('python', 'py'\)\)/);
+  assert.match(body, /Join-Path \$AlHome 'runtime'/);
+  assert.ok(!/setup\.ps1|npm|Start-Process|Invoke-Expression/i.test(body));
+  assert.ok(/^[\x09\x0a\x20-\x7e]*$/.test(ps) && !ps.includes("\r"), "ASCII and LF");
+});
+
+test("calc setup: one sender-checked handler in main.js, one run at a time, no child_process there", () => {
+  const main = code(MAIN_SRC);
+  assert.equal((main.match(/"al:setup-calc"/g) || []).length, 1);
+  assert.match(main, /ipcMain\.handle\("al:setup-calc", \(e\) => \{\s*if \(!client \|\| !client\.isCompanion\(e\)\) \{ return null; \}/);
+  const fn = main.slice(main.indexOf("function setupCalc()"));
+  const body = fn.slice(0, fn.indexOf("\n}\n"));
+  assert.match(body, /if \(calcRun\) \{ return calcRun; \}/);
+  assert.match(body, /Launcher\.setupCalc\(REPO, undefined, \(code\) => \{/);
+  assert.match(body, /settle\(\{ ok: code === 0 \}\);/);
+  assert.ok(!/child_process/.test(main));
+  // the preload's fifth action passes nothing on
+  const pre = code(fs.readFileSync(path.join(__dirname, "..", "client", "preload.js"), "utf8"));
+  assert.match(pre, /setupCalc: \(\) => ipcRenderer\.invoke\("al:setup-calc"\)/);
+});
+
 test("the companion window is a normal, sandboxed window on its own session", () => {
   const c = code(WIN_SRC);
   for (const needle of ["contextIsolation: true", "nodeIntegration: false", "sandbox: true",

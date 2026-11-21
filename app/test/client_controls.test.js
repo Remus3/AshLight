@@ -75,10 +75,14 @@ test("restart overlay: one IPC action, honoured from the companion's core page o
   const pre = code(fs.readFileSync(path.join(APP, "client", "preload.js"), "utf8"));
   assert.match(pre, /restartOverlay: \(\) => ipcRenderer\.send\("al:restart-overlay"\)/);
   // ruling Q-08: a small fixed set of argument-free actions (restart
-  // overlay, autostart on / off / state; app/test/autostart_switch.test.js)
-  assert.equal((pre.match(/ipcRenderer\./g) || []).length, 4);
-  assert.equal((pre.match(/ipcRenderer\.invoke\(/g) || []).length, 1);
+  // overlay, autostart on / off / state, set up the calc (ruling W16-1);
+  // app/test/autostart_switch.test.js)
+  assert.equal((pre.match(/ipcRenderer\./g) || []).length, 5);
+  assert.equal((pre.match(/ipcRenderer\.invoke\(/g) || []).length, 2);
   assert.match(pre, /autostartState: \(\) => ipcRenderer\.invoke\("al:autostart-state"\)/);
+  assert.match(pre, /setupCalc: \(\) => ipcRenderer\.invoke\("al:setup-calc"\)/);
+  // its one handler answers the companion's main frame only
+  assert.match(MAIN, /ipcMain\.handle\("al:setup-calc", \(e\) => \{\s*if \(!client \|\| !client\.isCompanion\(e\)\) \{ return null; \}\s*return setupCalc\(\);/);
   assert.ok(!/token|require\("fs"\)|sendSync/.test(pre));
   assert.match(MAIN, /ipcMain\.on\("al:restart-overlay", \(e\) => \{\s*if \(client && client\.isCompanion\(e\)\) \{ restartOverlay\(\); \}/);
   assert.match(WIN, /e\.senderFrame === win\.webContents\.mainFrame/);

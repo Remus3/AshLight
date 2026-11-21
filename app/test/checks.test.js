@@ -114,3 +114,113 @@ test("language notice: region N owns it; the Hide key is read at wire and stored
   ck._state.dismissed = "300";
   assert.equal(ck._state.dismissed, "300");
 });
+
+/* TC-CALC-OPTIN-BUTTON (decision 0018 opt-in, decision 0041 amendment
+   2026-11-20): the calc row's "Set up the calc" button. */
+function calcLi(doc) {
+  return doc.ids["checks-list"].children.find((li) =>
+    li.children.some((c) => c.children && c.children.some((n) => n.textContent === "Calc component")));
+}
+
+function calcButton(doc) {
+  const li = calcLi(doc);
+  return li ? li.children.find((c) => c.tagName === "button") || null : null;
+}
+
+function calcSaid(doc) {
+  const li = calcLi(doc);
+  const p = li ? li.children.find((c) => c.attrs && c.attrs.role === "status") : null;
+  return p ? p.textContent : "";
+}
+
+function withCalc(status) {
+  return { diag: Object.assign({}, DIAG, { checks: DIAG.checks.map((c) =>
+    (c.id === "calc" ? Object.assign({}, c, { status: status }) : c)) }) };
+}
+
+test("calc button: only in the client, only while the calc row is off or needs a fix", (t) => {
+  t.after(() => { ck._state.client = undefined; ck._state.calc = ""; ck._state.calcRow = null; });
+  // a plain browser (no window.alClient): never a button
+  ck._state.client = undefined;
+  let doc = fakeDoc();
+  ck.paint(doc, withCalc("off"));
+  assert.equal(calcButton(doc), null);
+  // a client without the action: none either
+  ck._state.client = { restartOverlay() {} };
+  doc = fakeDoc();
+  ck.paint(doc, withCalc("off"));
+  assert.equal(calcButton(doc), null);
+  ck._state.client = { setupCalc: () => new Promise(() => {}) };
+  for (const [status, shown] of [["off", true], ["fail", true], ["pass", false],
+                                 ["unknown", false], ["note", false]]) {
+    doc = fakeDoc();
+    ck.paint(doc, withCalc(status));
+    const b = calcButton(doc);
+    assert.equal(!!b, shown, status);
+    if (b) {
+      assert.equal(b.textContent, ck.CALC_BUTTON);
+      assert.equal(b.textContent, "Set up the calc");
+      assert.equal(b.type, "button");
+    }
+  }
+  // no other row ever gets it
+  doc = fakeDoc();
+  ck.paint(doc, withCalc("off"));
+  const withButton = doc.ids["checks-list"].children.filter((li) =>
+    li.children.some((c) => c.tagName === "button"));
+  assert.equal(withButton.length, 1);
+  // the model on its own
+  assert.deepEqual(ck.calcModel({ id: "calc", word: "off" }, false, ""), { button: false, said: "" });
+  assert.deepEqual(ck.calcModel({ id: "log", word: "off" }, true, ""), { button: false, said: "" });
+});
+
+test("calc button: a click runs the client's one action, then pending, then ok or failed", async (t) => {
+  t.after(() => { ck._state.client = undefined; ck._state.calc = ""; ck._state.calcRow = null; });
+  ck._state.calc = "";
+  ck._state.calcRow = null;
+  let finish = null;
+  const asked = [];
+  ck._state.client = { setupCalc: (...a) => { asked.push(a); return new Promise((r) => { finish = r; }); } };
+  const doc = fakeDoc();
+  ck.paint(doc, withCalc("off"));
+  calcButton(doc).listeners.click();
+  assert.deepEqual(asked, [[]], "the action takes no argument");
+  // pending: the line says it works in the background, no second button
+  assert.equal(calcSaid(doc), ck.CALC_PENDING);
+  assert.equal(calcButton(doc), null);
+  ck.paint(doc, withCalc("off")); // a new snapshot while it runs
+  assert.equal(calcSaid(doc), ck.CALC_PENDING);
+  assert.equal(calcButton(doc), null);
+  finish({ ok: true });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_OK);
+  assert.equal(calcButton(doc), null, "no button after a good setup");
+  // the core's row moves on: the line clears and the row speaks for itself
+  ck.paint(doc, withCalc("pass"));
+  assert.equal(calcSaid(doc), "");
+  assert.equal(calcButton(doc), null);
+
+  // a failed setup says so and offers the button again
+  ck.paint(doc, withCalc("fail"));
+  calcButton(doc).listeners.click();
+  assert.equal(calcSaid(doc), ck.CALC_PENDING);
+  finish({ ok: false });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  assert.ok(calcButton(doc));
+  // a refused or throwing action reads as failed too
+  ck._state.client = { setupCalc: () => Promise.reject(new Error("x")) };
+  ck.paint(doc, withCalc("fail"));
+  calcButton(doc).listeners.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  ck._state.client = { setupCalc: () => { throw new Error("y"); } };
+  ck.paint(doc, withCalc("fail"));
+  calcButton(doc).listeners.click();
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+  // a stranger answer (null: not the companion) is a failure, never ok
+  ck._state.client = { setupCalc: () => Promise.resolve(null) };
+  calcButton(doc).listeners.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(calcSaid(doc), ck.CALC_FAILED);
+});

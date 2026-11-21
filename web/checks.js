@@ -7,7 +7,12 @@
    PLAY-LEGACY-OUT-2 removed the old card: its Hide sets _state.dismissed,
    and this file reads the stored key at wire time and stores a changed
    key on the next paint (key al.lang.dismissed). The clipboard is written
-   only inside the "Copy report" click (decision 0014). No timers. */
+   only inside the "Copy report" click (decision 0014). No timers.
+   TC-CALC-OPTIN-BUTTON (decision 0018 opt-in, decision 0041 amendment
+   2026-11-20): inside the desktop client only (window.alClient.setupCalc,
+   app/client/preload.js) the calc row carries a "Set up the calc" button
+   while that row is off or needs a fix; a click runs the client's fixed
+   setup script and the row says it is working, then done or not done. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -23,6 +28,11 @@
   var COPY_FAILED = "Couldn't copy the report. Try again.";
   var WAITING = "Checking AshLight...";
   var DISMISS_KEY = "al.lang.dismissed";
+  // TC-CALC-OPTIN-BUTTON: the calc row's button and its three lines
+  var CALC_BUTTON = "Set up the calc";
+  var CALC_PENDING = "Setting up the calc. This runs in the background and can take a few minutes.";
+  var CALC_OK = "Calc set up. This row updates by itself.";
+  var CALC_FAILED = "Calc setup didn't finish. Try again.";
   // design 0001 section 6: kit state glyph and word, never colour alone
   var MARK = {
     pass: { glyph: "[+]", word: "ok", state: "done" },
@@ -70,7 +80,7 @@
      wired a new key is stored at once, so a hidden note stays hidden after
      a reload until it clears and begins again. */
   var held = { dismissed: undefined, wired: false };
-  var state = { store: null };
+  var state = { store: null, client: undefined, calc: "", calcRow: null, doc: null, snap: null };
   Object.defineProperty(state, "dismissed", {
     enumerable: true,
     get: function () { return held.dismissed; },
@@ -81,11 +91,90 @@
     }
   });
 
+  /* TC-CALC-OPTIN-BUTTON: the client's argument-free action, or null in a
+     plain browser. state.client stands in for window.alClient in tests. */
+  function calcClient() {
+    var c = state.client;
+    if (c === undefined) {
+      c = typeof window !== "undefined" && window ? window.alClient : null;
+    }
+    return c && typeof c.setupCalc === "function" ? c : null;
+  }
+
+  /* What the calc row adds: {button, said}. The button shows only in the
+     client, only while the row is off or needs a fix, never while a setup
+     runs or after one finished well; said is the setup's own line ("" before
+     the first click). */
+  function calcModel(row, inClient, calc) {
+    var out = { button: false, said: "" };
+    if (!row || row.id !== "calc" || !inClient) { return out; }
+    if (calc === "pending") {
+      out.said = CALC_PENDING;
+      return out;
+    }
+    out.said = calc === "ok" ? CALC_OK : (calc === "failed" ? CALC_FAILED : "");
+    out.button = calc !== "ok" &&
+      (row.word === MARK.off.word || row.word === MARK.fail.word);
+    return out;
+  }
+
+  function startCalc() {
+    var c = calcClient();
+    if (!c || state.calc === "pending") { return; }
+    state.calc = "pending";
+    repaint();
+    var done = function (r) {
+      state.calc = r && r.ok === true ? "ok" : "failed";
+      repaint();
+    };
+    var p = null;
+    try { p = c.setupCalc(); } catch (e) { p = null; }
+    if (p && typeof p.then === "function") {
+      p.then(done, function () { done(null); });
+    } else {
+      done(null);
+    }
+  }
+
+  function repaint() {
+    if (state.doc) { paintChecks(state.doc, state.snap); }
+  }
+
+  function addCalc(doc, li, r, inClient) {
+    var cm = calcModel(r, inClient, state.calc);
+    if (cm.said) {
+      var said = doc.createElement("p");
+      said.className = "check-detail";
+      said.setAttribute("role", "status");
+      said.textContent = cm.said;
+      li.appendChild(said);
+    }
+    if (cm.button) {
+      var b = doc.createElement("button");
+      b.type = "button";
+      b.id = "checks-calc-setup";
+      b.textContent = CALC_BUTTON;
+      b.addEventListener("click", startCalc);
+      li.appendChild(b);
+    }
+  }
+
   function paintChecks(doc, snap) {
+    state.doc = doc;
+    state.snap = snap;
     var box = doc.getElementById("checksbox");
     if (!box) { return; }
     var m = model(snap && snap.diag);
-    var key = JSON.stringify(m);
+    var client = calcClient();
+    // a finished setup's line clears once the core's calc row changes
+    var calcRow = "";
+    m.rows.forEach(function (r) { if (r.id === "calc") { calcRow = r.word; } });
+    if (state.calcRow !== null && calcRow !== state.calcRow &&
+        (state.calc === "ok" || state.calc === "failed")) {
+      state.calc = "";
+    }
+    state.calcRow = calcRow;
+    var key = JSON.stringify([m, !!client, state.calc]);
     if (box.getAttribute("data-key") === key) { return; }
     box.setAttribute("data-key", key);
     doc.getElementById("checks-summary").textContent = m.summary;
@@ -132,6 +221,7 @@
         fix.textContent = "Fix: " + r.fix;
         li.appendChild(fix);
       }
+      addCalc(doc, li, r, !!client);
       list.appendChild(li);
     });
     doc.getElementById("checks-copy").disabled = !m.report;
@@ -165,7 +255,8 @@
     }
   }
 
-  return { model: model, langModel: langModel, paint: paint, wire: wire,
+  return { model: model, langModel: langModel, calcModel: calcModel, paint: paint, wire: wire,
            COPIED: COPIED, COPY_FAILED: COPY_FAILED, WAITING: WAITING, MARK: MARK,
-           _state: state };
+           CALC_BUTTON: CALC_BUTTON, CALC_PENDING: CALC_PENDING, CALC_OK: CALC_OK,
+           CALC_FAILED: CALC_FAILED, _state: state };
 }));

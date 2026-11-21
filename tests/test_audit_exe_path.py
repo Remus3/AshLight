@@ -212,7 +212,8 @@ def test_no_bare_spawn_names_in_app():
 
 def test_launcher_runs_powershell_and_python_by_absolute_path():
     text = (APP / "client" / "launcher.js").read_text(encoding="utf-8")
-    for fn in ("function startCore", "function stopAll"):
+    # TC-CALC-OPTIN-BUTTON (ruling W16-2): the calc setup spawn too
+    for fn in ("function startCore", "function stopAll", "function setupCalc"):
         body = text[text.index(fn):]
         body = body[:body.index("\n}\n")]
         assert "run(psExe(env)," in body, fn

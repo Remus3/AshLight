@@ -252,3 +252,56 @@ Links, downloads and the first-run place of the companion window.
 - Reverses if: idle tray-mode memory exceeds the decision 0002 budget
   (then core-only at logon, decision 0011), a tray-only start is seen
   showing or focusing a window, or an action needs data from the page.
+
+## Amendment 2026-11-20 (TC-CALC-OPTIN-BUTTON, plan unit F-132, rulings Q-08, W16-1, W16-2)
+
+- Decision (point 5 of the plan's numbering: the preload's fixed action
+  set, written as the point 7 list of the 2026-11-18 amendment): the
+  set is now five named, argument-free actions: `restartOverlay()`,
+  `autostartOn()`, `autostartOff()`, `autostartState()` and
+  `setupCalc()`. `setupCalc()` is the one calc opt-in action that list
+  reserved: a fixed `al:setup-calc` invoke with no data. app/main.js
+  answers it from one `ipcMain.handle` that accepts only the exact
+  companion sender frame on the core (`isCompanion`) and holds one run at
+  a time (a click while it runs gets the same outcome); the promise
+  settles to `{ok}` when the script exits (ok only on exit code 0).
+  main.js loads no child_process: `app/client/launcher.js setupCalc()` is
+  the one spawn. It runs `scripts\calc_setup.ps1` with no script
+  argument through `psExe` (the absolute System32 Windows PowerShell,
+  never a bare name), hidden (`-WindowStyle Hidden`, `windowsHide`), not
+  detached, stdio ignored. The script takes no parameter, first sets its
+  own priority class to BelowNormal (the Python child and the LuaJIT
+  build inherit it), then runs the decision 0018 opt-in: in a checkout
+  `tools\tc_pin.py setup --opt-in` with Python found as
+  `scripts\autostart.ps1` finds it (python, else py, from PATH); in an
+  installed copy (`<home>\install.json` two levels above the payload
+  root, or AL_HOME) `installer calc --opt-in` (`boot.py
+  server.al.install calc --opt-in`) under the marker's private runtime
+  (`<home>\runtime\<marker "python">\python.exe`, one plain folder
+  name). It never runs `setup.ps1` (decision 0070 refuses its npm step
+  while the client runs). Its lines go to `calc_setup.log` in
+  AshLight's Logs folder. tc_pin turns the calc on only after a verified
+  install, as `setup.ps1 -TcCalc` does.
+- The dashboard (`web/checks.js`) shows a "Set up the calc" button on the
+  Checks calc row only inside the client (`window.alClient.setupCalc`)
+  and only while that row is off or needs a fix; a click shows a working
+  line, then "set up" or "didn't finish" (the button returns after a
+  failure); the line clears once the core's calc row changes. A plain
+  browser never sees the button.
+- Alternatives: run `setup.ps1 -TcCalc` (rejected: decision 0070 refuses
+  its npm step while the client runs, and it does far more than the
+  calc); resolve Python in the launcher and spawn tc_pin directly
+  (rejected by ruling W16-2: the installed copy needs the marker runtime
+  and boot.py, which the existing script pattern already handles, and
+  one fixed script keeps the spawn an allow-list entry); a generic "run
+  setup step" action with a name argument (rejected: the page could then
+  pick the step).
+- Why: one click gives the decision 0018 opt-in the player already has
+  through setup.ps1, without a console, and the result shows where the
+  calc's state already lives (Checks).
+- Reverses if: the 0041 action set is ruled closed at four,
+  `tools/tc_pin.py` or `installer calc` changes its command line, a
+  client run of the script fails where `setup.ps1 -TcCalc` succeeds, the
+  install marker cannot give a Python path to the script, the
+  BelowNormal setup is seen costing game FPS, or the operator wants
+  Python resolved in JS.
