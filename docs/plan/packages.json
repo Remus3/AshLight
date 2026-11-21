@@ -12287,7 +12287,8 @@
     "app/overlay/index.html",
     "tests/test_design_contrast.py",
     "tests/test_ux_review.py",
-    "docs/design/0001-design-system.md"
+    "docs/design/0001-design-system.md",
+    "app/test/layout.test.js"
    ],
    "new_files": [],
    "integrator_edits": [

@@ -483,9 +483,12 @@ of the HALT check.
   on a dashboard click, Copy-code clipboard write on the player's click
   (decision 0014). Reverses if: design section 10 allows two cards or
   decision 0003 restricts clipboard writes.
-- Price check shares the item-check hotkey; contact only from gitignored
-  config/local.json; the core publishes `price` in the snapshot, no own
-  endpoint; prices from poe.ninja only, trade as a link (decisions 0015,
+- Price check shares the item-check hotkey; contact stored only in
+  gitignored config/local.json (typed in the dashboard's Prices and web
+  data card through POST /api/web-data, write-only, never echoed;
+  read-backs say only contact_set; Checks names the card, never a file
+  path; decision 0015 amendment 2026-11-20); the core publishes `price` in
+  the snapshot, no own endpoint; prices from poe.ninja only, trade as a link (decisions 0015,
   0016, amended by 0017). On the overlay card, line 2 of the price card
   and of the merged card is the price line only when the card is not a
   trade link or carries a usable poe.ninja value, otherwise the item
@@ -601,7 +604,10 @@ of the HALT check.
   validation, or the operator rules unattended commits or HALT-time reads
   unwanted.
 - Price book: unique and stackable poe.ninja overviews ride the rates
-  refresh (same opt-in, contact, UA, league; per-type hourly gate + ETag),
+  refresh, started by the core loop while the log is active or /api/rates
+  was read in the last 10 min (at most one check a minute, web data on;
+  the hourly gates still decide; decision 0026 amended 2026-11-20) (same
+  opt-in, contact, UA, league; per-type hourly gate + ETag),
   the press reads the cache only, movers from the same cache, auto league
   re-read every 6 h or after a 404, trade links follow the cached league
   while web data is on (decision 0026). Reverses if: poe.ninja asks for
