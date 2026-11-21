@@ -16,6 +16,10 @@ and saves it as a PNG. These tests pin that it refuses everything else:
 - the browser command is headless only, with an OS-chosen DevTools port;
 - with a browser and node present it writes a PNG of a real demo core page
   (python -m server.al --demo on the tracked synthetic fixture, port 0).
+- TEST-SHOTS-TABS: --tab is argument-checked; a file URL other than this
+  repo's app/overlay/index.html is refused without connecting and writes no
+  file; the overlay file URL needs --core and is accepted only after the
+  demo marker of that core is read; a real overlay and Settings tab capture.
 
 The capture never targets the live core: every target here is a fake
 listener on a leased test port or a demo process on an ephemeral port.
@@ -233,6 +237,132 @@ def test_the_helper_source_starts_one_headless_browser_only():
     assert text.rindex("location.origin", 0, cap) > start
 
 
+# ------------------------------------------------------------ tabs and overlay
+
+OVERLAY_URL = (ROOT / "app" / "overlay" / "index.html").resolve().as_uri()
+CORE_URL = f"http://127.0.0.1:{OFFLINE_PORT}/#token={TOKEN}"
+
+
+@needs_node
+@pytest.mark.parametrize("extra", [["--tab=items"], ["--tab="], ["--tab=Play"],
+                                   ["--tab=play;x"], ["--tab"], ["--core="]])
+def test_tab_and_core_options_are_argument_checked(extra, preloads, tmp_path):
+    out, profile = tmp_path / "shot.png", tmp_path / "profile"
+    r, doc = run_helper([sys.executable, str(profile), CORE_URL, str(out), *extra],
+                        preloads["no_net"])
+    assert_refused(r, doc, out, profile)
+
+
+def _file_urls(tmp_path):
+    stray = tmp_path / "index.html"
+    stray.write_text("<p>x</p>\n", encoding="ascii")
+    other = tmp_path / "app" / "overlay"
+    other.mkdir(parents=True)
+    (other / "index.html").write_text("<p>x</p>\n", encoding="ascii")
+    return [
+        (ROOT / "app" / "overlay" / "overlay.js").resolve().as_uri(),
+        (ROOT / "web" / "index.html").resolve().as_uri(),
+        (ROOT / "app" / "index.html").resolve().as_uri(),
+        stray.as_uri(),
+        (other / "index.html").as_uri(),
+        OVERLAY_URL + "#token=" + TOKEN,
+        OVERLAY_URL + "?x=1",
+        OVERLAY_URL.replace("file:///", "file://host/"),
+        OVERLAY_URL.replace("index.html", "sub/../../index.html"),
+        "file:///demo/page.html",
+    ]
+
+
+@needs_node
+def test_a_file_url_other_than_the_overlay_page_is_refused_with_no_network(
+        preloads, tmp_path):
+    for i, url in enumerate(_file_urls(tmp_path)):
+        out, profile = tmp_path / f"shot{i}.png", tmp_path / f"profile{i}"
+        r, doc = run_helper([sys.executable, str(profile), url, str(out),
+                             f"--core={CORE_URL}"], preloads["no_net"])
+        assert_refused(r, doc, out, profile)
+
+
+@needs_node
+@pytest.mark.parametrize("case", ["no_core", "with_tab", "core_live_port", "core_on_page",
+                                  "core_file"])
+def test_overlay_page_options_are_checked_with_no_network(case, preloads, tmp_path):
+    out, profile = tmp_path / "shot.png", tmp_path / "profile"
+    page, extra = OVERLAY_URL, [f"--core={CORE_URL}"]
+    if case == "no_core":
+        extra = []
+    elif case == "with_tab":
+        extra.append("--tab=play")
+    elif case == "core_live_port":
+        extra = [f"--core=http://127.0.0.1:{ports.AL_PORT}/#token={TOKEN}"]
+    elif case == "core_on_page":
+        page = CORE_URL
+    elif case == "core_file":
+        extra = [f"--core={OVERLAY_URL}"]
+    r, doc = run_helper([sys.executable, str(profile), page, str(out), *extra],
+                        preloads["no_net"])
+    assert_refused(r, doc, out, profile)
+
+
+@needs_node
+def test_the_overlay_page_is_refused_when_the_core_has_no_demo_marker(preloads,
+                                                                      tmp_path):
+    fake = FakeCore(tmp_path, "no_marker")
+    out, profile = tmp_path / "shot.png", tmp_path / "profile"
+    try:
+        r, doc = run_helper(["--plan", sys.executable, str(profile), OVERLAY_URL, str(out),
+                             f"--core={fake.url}"], preloads["no_spawn"])
+    finally:
+        fake.close()
+    assert_refused(r, doc, out, profile)
+    assert "demo marker" in doc["refused"], doc
+    assert [p for p, _ in fake.seen][0] == "/api/hello"
+
+
+@needs_node
+def test_the_overlay_page_passes_only_after_the_demo_marker_is_read(preloads, tmp_path):
+    fake = FakeCore(tmp_path, "ok")
+    out, profile = tmp_path / "shot.png", tmp_path / "profile"
+    try:
+        r, doc = run_helper(["--plan", sys.executable, str(profile), OVERLAY_URL, str(out),
+                             f"--core={fake.url}", "--scheme=light"], preloads["no_spawn"])
+    finally:
+        fake.close()
+    assert r.returncode == 0, (r.stdout, r.stderr)
+    plan = doc["plan"]
+    assert Path(plan["url"].replace("file:///", "")).resolve() == (
+        ROOT / "app" / "overlay" / "index.html").resolve()
+    assert plan["core"] == f"http://127.0.0.1:{fake.port}" and plan["tab"] is None
+    assert plan["args"][0] == "--headless=new" and plan["args"][-1] == "about:blank"
+    assert [p for p, _ in fake.seen] == ["/api/hello", "/api/health", "/api/state"]
+    assert not out.exists() and not profile.exists()
+
+
+@needs_node
+def test_a_tab_plan_names_the_tab(preloads, tmp_path):
+    fake = FakeCore(tmp_path, "ok")
+    out, profile = tmp_path / "shot.png", tmp_path / "profile"
+    try:
+        r, doc = run_helper(["--plan", sys.executable, str(profile), fake.url, str(out),
+                             "--tab=settings"], preloads["no_spawn"])
+    finally:
+        fake.close()
+    assert r.returncode == 0, (r.stdout, r.stderr)
+    assert doc["plan"]["tab"] == "settings"
+    assert doc["plan"]["url"] == f"http://127.0.0.1:{fake.port}"
+
+
+def test_the_helper_source_shows_a_tab_only_from_its_frozen_list():
+    text = HELPER.read_text(encoding="utf-8")
+    tabs = re.search(r"export const TABS = Object\.freeze\(\[(.*?)\]\)", text, re.S)
+    assert tabs and re.findall(r'"([^"]+)"', tabs.group(1)) == [
+        "play", "build", "run", "settings"]
+    assert "if (!TABS.includes(m[2]))" in text
+    # the overlay page is the one file target, matched to this repo's app folder
+    assert '"app", "overlay", "index.html"' in text
+    assert text.count("Page.navigate") == 1
+
+
 # ------------------------------------------------------------ a fake listener
 
 class FakeCore:
@@ -444,3 +574,23 @@ def test_writes_a_png_of_a_demo_core_page(demo_core, tmp_path):
     assert len(data) == doc["bytes"] > 1000
     assert (int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")) == (800, 600)
     assert (doc["width"], doc["height"]) == (800, 600)
+
+
+@pytest.mark.server
+@needs_node
+def test_writes_png_of_a_tab_and_of_the_overlay_page(demo_core, tmp_path):
+    browser = find_browser()
+    if not browser:
+        pytest.skip("headless Chrome / Edge not found")
+    port, token = demo_core
+    core = f"http://127.0.0.1:{port}/#token={token}"
+    runs = [("tab", [core, "--tab=settings"]),
+            ("overlay", [OVERLAY_URL, f"--core={core}", "--scheme=light"])]
+    for name, (page, *extra) in runs:
+        out, profile = tmp_path / f"{name}.png", tmp_path / f"profile-{name}"
+        r, doc = run_helper([browser, str(profile), page, str(out), "--width=640",
+                             "--height=480", *extra], timeout=120)
+        assert r.returncode == 0, (name, r.returncode, r.stdout[-2000:], r.stderr[-2000:])
+        data = out.read_bytes()
+        assert data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) == doc["bytes"] > 1000
+        assert (doc["width"], doc["height"]) == (640, 480)

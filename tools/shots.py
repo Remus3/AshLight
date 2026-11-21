@@ -59,22 +59,25 @@ HELPER = Path("app") / "test" / "cdp" / "capture.mjs"
 UI_SOURCES = ("web", "app/overlay", "app/shared", "ops/fleet_kit/tokens.css",
               "app/test/cdp/capture.mjs", "tools/shots.py")
 
-# The shot plan: what the helper can render truthfully today. capture.mjs
-# opens each page in a new, empty browser profile, so the dashboard shows
-# its opening tab (Play); it has no tab option, and the core serves web/
-# only (the overlay is a file:// page of the client). PENDING names the
-# shots that wait for those two seams.
+# The shot plan (TEST-SHOTS-TABS): every dashboard tab, through
+# capture.mjs --tab, in both schemes at both widths, and the overlay page,
+# which the helper loads as the app file page app/overlay/index.html (the
+# demo core passes the helper's checks through --core) on a plain dark or
+# light ground. The overlay gets no port or token, so it shows its own
+# waiting state. PENDING names shots the helper cannot render yet: none.
 SIZES = ((1440, 900), (360, 800))
 SCHEMES = ("dark", "light")
-SHOTS = tuple({"file": f"play-{scheme}-{w}.png", "page": "/", "tab": "play",
+TABS = ("play", "build", "run", "settings")
+OVERLAY_PAGE = "app/overlay/index.html"
+OVERLAY_SIZE = (1440, 900)
+SHOTS = tuple({"file": f"{tab}-{scheme}-{w}.png", "page": "/", "tab": tab,
                "scheme": scheme, "width": w, "height": h}
-              for scheme in SCHEMES for (w, h) in SIZES)
-PENDING = (
-    {"shot": "build, run and settings tabs",
-     "needs": "a tab option in app/test/cdp/capture.mjs"},
-    {"shot": "overlay page on a plain ground",
-     "needs": "the overlay page served by the demo core"},
-)
+              for tab in TABS for scheme in SCHEMES for (w, h) in SIZES) + tuple(
+    {"file": f"overlay-{scheme}-{OVERLAY_SIZE[0]}.png", "page": OVERLAY_PAGE,
+     "ground": "plain", "scheme": scheme, "width": OVERLAY_SIZE[0],
+     "height": OVERLAY_SIZE[1]}
+    for scheme in SCHEMES)
+PENDING = ()
 
 URL_RE = re.compile(r"http://127\.0\.0\.1:(\d+)/#token=([0-9A-Za-z_\-]+)")
 SCRATCH_RE = re.compile(r"^demo mode: fixture .+; scratch (.+)$")
@@ -341,12 +344,25 @@ def wait_loaded(child, timeout=LOAD_S):
 
 # ------------------------------------------------------------------ capture
 
+def overlay_url(root):
+    """The file URL of the overlay page under root's app folder."""
+    return (Path(root) / OVERLAY_PAGE).resolve().as_uri()
+
+
 def capture_cmd(node, root, browser, profile, url, out_png, shot):
-    """The helper command for one shot. The browser flags are capture.mjs's
-    own frozen headless set; nothing here adds or changes one."""
-    return [node, str(Path(root) / HELPER), browser, str(profile), url, str(out_png),
-            f"--width={shot['width']}", f"--height={shot['height']}",
-            f"--scheme={shot['scheme']}"]
+    """The helper command for one shot. url is the demo core page; an
+    overlay shot opens the overlay file page and hands url to --core. The
+    browser flags are capture.mjs's own frozen headless set; nothing here
+    adds or changes one."""
+    page = overlay_url(root) if shot["page"] == OVERLAY_PAGE else url
+    cmd = [node, str(Path(root) / HELPER), browser, str(profile), page, str(out_png),
+           f"--width={shot['width']}", f"--height={shot['height']}",
+           f"--scheme={shot['scheme']}"]
+    if shot["page"] == OVERLAY_PAGE:
+        cmd.append(f"--core={url}")
+    else:
+        cmd.append(f"--tab={shot['tab']}")
+    return cmd
 
 
 def run_capture(cmd, root):

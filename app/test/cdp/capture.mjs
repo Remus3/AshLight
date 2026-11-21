@@ -8,10 +8,22 @@
 //
 //   node capture.mjs <browser exe> <profile dir> <page url> <out.png>
 //        [--width=1440] [--height=900] [--scheme=dark|light] [--wait-ms=800]
+//        [--tab=play|build|run|settings]
+//   node capture.mjs <browser exe> <profile dir> <overlay file url> <out.png>
+//        --core=<demo core url> [--width=..] [--height=..] [--scheme=..]
 //   node capture.mjs --plan <browser exe> <profile dir> <page url> <out.png>
 //
-// <page url> is http://127.0.0.1:<port>/<page>#token=<token>. Before any
-// browser starts, every check below must pass, in this order:
+// <page url> is http://127.0.0.1:<port>/<page>#token=<token>. --tab shows
+// that dashboard tab (web/tabs.js ALTabs.show, AshLight's own page code)
+// before the capture and checks it is the selected tab.
+// TEST-SHOTS-TABS: the one other page is the file URL of
+// app/overlay/index.html under this repository's app folder (no query, no
+// fragment); it needs --core=<demo core url>, which passes every check
+// below in place of the page url, and takes no --tab. Any other file URL or
+// target is refused. The overlay page gets no port or token (it renders its
+// own waiting state and opens no connection); --scheme picks a plain dark or
+// light ground behind its transparent body.
+// Before any browser starts, every check below must pass, in this order:
 //   1. no network: the url is plain http to exactly 127.0.0.1 with an
 //      explicit port that is not the core port or the dev port (both read
 //      from server/al/ports.py; unreadable = refused), no user info, not an
@@ -40,7 +52,7 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "..", "..", "..");
@@ -49,6 +61,10 @@ export const MARKER = "ashlight-demo.json";
 export const MARKER_MAX_BYTES = 64 * 1024;
 export const LOG_NAME = "Client.txt";
 const GAME_PARTS = ["steamapps", "path of exile 2"];
+export const TABS = Object.freeze(["play", "build", "run", "settings"]);
+// the plain ground behind the transparent overlay page, per --scheme
+const GROUND = Object.freeze({ dark: { r: 30, g: 32, b: 36, a: 1 },
+  light: { r: 226, g: 228, b: 232, a: 1 } });
 const MAX_ANSWER = 4 * 1024 * 1024;
 const CI = process.env.AL_CI === "1";
 
@@ -103,6 +119,44 @@ export function checkUrl(raw, livePorts) {
   const tm = /(?:^#|&)token=([0-9A-Za-z_-]+)(?:&|$)/.exec(u.hash);
   if (!tm) { refuse("the page url carries no #token="); }
   return { port, token: tm[1], origin: `http://${LOOPBACK}:${port}`, href: u.href };
+}
+
+/** The file URL of app/overlay/index.html under root's app folder. */
+export function overlayUrl(root = ROOT) {
+  return pathToFileURL(path.join(root, "app", "overlay", "index.html")).href;
+}
+
+/** True when raw is exactly the overlay page's file URL (no query or
+    fragment; case ignored on Windows). Text only, no stat. */
+export function isOverlayUrl(raw, root = ROOT) {
+  if (typeof raw !== "string" || !raw.startsWith("file:")) { return false; }
+  let u;
+  try { u = new URL(raw); } catch { return false; }
+  if (u.search || u.hash || u.username || u.password) { return false; }
+  const want = new URL(overlayUrl(root));
+  if (u.host !== want.host) { return false; }
+  let a;
+  let b;
+  try { a = decodeURIComponent(u.pathname); b = decodeURIComponent(want.pathname); }
+  catch { return false; }
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+/** {target, page}: target is the checked demo core (the url check of the
+    page, or of --core for the overlay page); page is {href, overlay}. */
+export function checkTarget(opts, livePorts, root = ROOT) {
+  if (typeof opts.url === "string" && opts.url.startsWith("file:")) {
+    if (!isOverlayUrl(opts.url, root)) {
+      refuse("the only file page is app/overlay/index.html of this repository");
+    }
+    if (!opts.core) { refuse("the overlay page needs --core=<demo core url>"); }
+    if (opts.tab) { refuse("--tab is for the dashboard page, not the overlay page"); }
+    return { target: checkUrl(opts.core, livePorts),
+      page: { href: overlayUrl(root), overlay: true } };
+  }
+  if (opts.core) { refuse("--core goes only with the overlay page"); }
+  const target = checkUrl(opts.url, livePorts);
+  return { target, page: { href: target.href, overlay: false } };
 }
 
 /** The resolved out path, or Refused: a .png in an existing folder. */
@@ -219,15 +273,22 @@ export async function checkDemoCore(target) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function parseArgs(argv) {
-  const opts = { width: 1440, height: 900, scheme: "dark", waitMs: 800, plan: false };
+  const opts = { width: 1440, height: 900, scheme: "dark", waitMs: 800, plan: false,
+    tab: null, core: null };
   const pos = [];
   for (const a of argv) {
-    const m = /^--(width|height|scheme|wait-ms)=(.*)$/.exec(a);
+    const m = /^--(width|height|scheme|wait-ms|tab|core)=(.*)$/.exec(a);
     if (a === "--plan") { opts.plan = true; }
     else if (m) {
       if (m[1] === "scheme") {
         if (!["dark", "light"].includes(m[2])) { refuse("--scheme is dark or light"); }
         opts.scheme = m[2];
+      } else if (m[1] === "tab") {
+        if (!TABS.includes(m[2])) { refuse(`--tab is one of ${TABS.join(", ")}`); }
+        opts.tab = m[2];
+      } else if (m[1] === "core") {
+        if (!m[2]) { refuse("--core needs a demo core url"); }
+        opts.core = m[2];
       } else {
         const n = Number(m[2]);
         const [lo, hi] = m[1] === "wait-ms" ? [0, 10000] : [200, 4000];
@@ -260,6 +321,7 @@ async function devtoolsPort(profile, child) {
 }
 
 async function capture(opts, target) {
+  const want = opts.page; // {href, overlay}: the checked page to open
   below(process.pid); // the browser inherits below-normal from this process
   const args = [...BROWSER_FLAGS, `--user-data-dir=${opts.profile}`, "about:blank"];
   const child = spawn(opts.browser, args, { stdio: "ignore", windowsHide: true });
@@ -293,18 +355,38 @@ async function capture(opts, target) {
       { width: opts.width, height: opts.height, deviceScaleFactor: 1, mobile: false });
     await send("Emulation.setEmulatedMedia",
       { features: [{ name: "prefers-color-scheme", value: opts.scheme }] });
-    await send("Page.navigate", { url: target.href });
+    if (want.overlay) {
+      await send("Emulation.setDefaultBackgroundColorOverride", { color: GROUND[opts.scheme] });
+    }
+    await send("Page.navigate", { url: want.href });
     let ready = false;
     for (let i = 0; i < (CI ? 450 : 150) && !ready; i++) {
       await sleep(100);
       ready = (await evaluate("document.readyState")) === "complete";
     }
     if (!ready) { throw new Error("the page never finished loading"); }
+    const tabShown = opts.tab ? `(function () {
+        var b = document.getElementById("tab-" + ${JSON.stringify(opts.tab)});
+        return !!b && b.getAttribute("aria-selected") === "true";
+      })()` : "true";
+    if (opts.tab) {
+      // the tab comes from the frozen TABS list; AshLight's own tab code shows it
+      await evaluate(`window.ALTabs && window.ALTabs.show(document, ${JSON.stringify(opts.tab)}, false)`);
+      if ((await evaluate(tabShown)) !== true) {
+        throw new Error(`the ${opts.tab} tab could not be shown`);
+      }
+    }
     await sleep(opts.waitMs);
-    // the page is still AshLight's own page on the checked demo core
-    const where = await evaluate("({o: location.origin, t: document.contentType})");
-    if (!where || where.o !== target.origin || where.t !== "text/html") {
-      refuse("the browser left the demo core page; nothing captured");
+    // the page is still AshLight's own page (the demo core page, or the
+    // overlay file page) and the demo core still holds
+    const where = await evaluate(
+      "({o: location.origin, h: location.href, t: document.contentType})");
+    const home = !!where && (want.overlay ? isOverlayUrl(where.h) : where.o === target.origin);
+    if (!home || where.t !== "text/html") {
+      refuse("the browser left AshLight's page; nothing captured");
+    }
+    if ((await evaluate(tabShown)) !== true) {
+      throw new Error(`the ${opts.tab} tab is no longer shown`);
     }
     await checkDemoCore(target);
     // the one capture call of the repo: AshLight's own page, demo core, headless
@@ -326,9 +408,10 @@ export async function main(argv) {
   const say = (o) => process.stdout.write(JSON.stringify(o) + "\n");
   let opts;
   let target;
+  let page;
   try {
     opts = parseArgs(argv);
-    target = checkUrl(opts.url, readPorts());
+    ({ target, page } = checkTarget(opts, readPorts()));
     opts.outAbs = checkOut(opts.out);
     opts.profile = checkProfile(opts.profile);
     let st;
@@ -342,7 +425,8 @@ export async function main(argv) {
   if (opts.plan) {
     say({ plan: { browser: opts.browser,
       args: [...BROWSER_FLAGS, `--user-data-dir=${opts.profile}`, "about:blank"],
-      url: target.origin, out: opts.outAbs } });
+      url: page.overlay ? page.href : target.origin, core: target.origin,
+      tab: opts.tab, out: opts.outAbs } });
     return 0;
   }
   const watchdog = setTimeout(() => {
@@ -352,6 +436,7 @@ export async function main(argv) {
   },
     CI ? 180000 : 60000);
   try {
+    opts.page = page;
     say(await capture(opts, target));
     return 0;
   } catch (e) {

@@ -12,6 +12,9 @@
   Client.txt (an audit hook records every open);
 - the live runtime folder's mtime is unchanged;
 - the browser command is capture.mjs's own headless set, nothing added;
+- TEST-SHOTS-TABS: SHOTS covers play, build, run and settings, dark and
+  light, 1440 and 360 wide, plus the overlay page (the app file page, the
+  demo core handed to --core) on a plain ground; PENDING is empty;
 - with node and a browser present, one real render from a real demo core.
 """
 
@@ -179,6 +182,22 @@ def test_manifest_holds_no_machine_path_or_time(tmp_path):
         ("dark", 1440), ("light", 1440), ("dark", 360), ("light", 360)}
 
 
+def test_shots_cover_every_tab_and_the_overlay_page():
+    dash = [s for s in shots.SHOTS if s["page"] == "/"]
+    over = [s for s in shots.SHOTS if s["page"] == shots.OVERLAY_PAGE]
+    assert len(dash) + len(over) == len(shots.SHOTS)
+    assert {(s["tab"], s["scheme"], s["width"]) for s in dash} == {
+        (t, sc, w) for t in ("play", "build", "run", "settings")
+        for sc in ("dark", "light") for w in (1440, 360)}
+    assert len(dash) == 16
+    assert shots.OVERLAY_PAGE == "app/overlay/index.html"
+    assert {s["scheme"] for s in over} == {"dark", "light"}
+    assert all(s["ground"] == "plain" and "tab" not in s for s in over)
+    assert len({s["file"] for s in shots.SHOTS}) == len(shots.SHOTS)
+    assert shots.PENDING == ()
+    assert shots.manifest(ROOT, FIXTURE)["pending"] == []
+
+
 # ------------------------------------------------------------ render (fake core)
 
 def test_two_renders_of_the_same_inputs_give_the_same_manifest(tmp_path, fake_world):
@@ -204,7 +223,9 @@ def test_render_takes_its_port_from_the_demo_block(tmp_path, fake_world, monkeyp
     port = FakeChild.started[0]
     assert port in ports.block_range(ports.DEMO_BLOCK)
     assert port not in (ports.AL_PORT, ports.AL_DEV_PORT)
-    assert all(f"http://127.0.0.1:{port}/#token=" in c[4] for c in cap.cmds)
+    core = f"http://127.0.0.1:{port}/#token="
+    assert all(core in c[4] or any(a.startswith("--core=" + core) for a in c)
+               for c in cap.cmds)
     # every port taken: nothing starts
     FakeChild.started = []
     monkeypatch.setattr(demo, "_port_free", lambda port: False)
@@ -271,12 +292,22 @@ def test_the_browser_command_is_the_helpers_headless_set(tmp_path, fake_world):
     flags = flags[:flags.index("]);")]
     assert '"--headless=new"' in flags and '"--disable-gpu"' in flags
     assert '"--remote-debugging-port=0"' in flags
-    for cmd in cap.cmds:
+    overlay = (ROOT / shots.OVERLAY_PAGE).resolve().as_uri()
+    for cmd, shot in zip(cap.cmds, shots.SHOTS):
         assert cmd[0] == "node" and Path(cmd[1]) == ROOT / shots.HELPER
         assert cmd[2] == "browser.exe"
         opts = [c for c in cmd if c.startswith("--")]
-        assert [o.split("=")[0] for o in opts] == ["--width", "--height", "--scheme"]
+        last = "--core" if shot["page"] == shots.OVERLAY_PAGE else "--tab"
+        assert [o.split("=")[0] for o in opts] == ["--width", "--height", "--scheme", last]
         assert "--plan" not in cmd and not any("headless" in c for c in cmd)
+        if last == "--tab":
+            assert opts[-1] == f"--tab={shot['tab']}"
+            assert cmd[4].startswith("http://127.0.0.1:")
+        else:
+            # the overlay file page of this repo; the demo core goes to --core
+            assert cmd[4] == overlay and cmd[4].startswith("file:")
+            assert opts[-1].startswith("--core=http://127.0.0.1:")
+            assert "#token=" + TOKEN in opts[-1]
     # the helper and the core run hidden at below-normal priority
     if os.name == "nt":
         assert shots.FLAGS & NO_WINDOW and shots.FLAGS & 0x00004000
