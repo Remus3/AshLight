@@ -108,9 +108,14 @@ def test_p4_6_ram_budget_static_guard():
             if pat in DEBUG_NAMES and name == "guards.js":
                 continue  # OVL-SHELL-GUARDS: the one place that detects them
             assert not re.search(pat, c), (name, pat)
-    # the guards part is loaded and runs first (file-name order)
+    # the guards part loads before every window-creating part: first, or second
+    # after the crash-guard part (05, which creates no window or webContents)
     parts = sorted(k for k in code if k.startswith("parts/"))
-    assert parts and parts[0] == "parts/10-guards.js", parts
+    assert parts and parts[0] in ("parts/10-guards.js", "parts/05-crashguard.js"), parts
+    if parts[0] == "parts/05-crashguard.js":
+        assert parts[1] == "parts/10-guards.js", parts
+        assert not re.search(r"new\s+(BrowserWindow|BrowserView|WebContentsView)|webContents\.create",
+                             code["parts/05-crashguard.js"])
     main = code["main.js"]
     # the companion window module loads lazily, inside openClient() only
     assert 'require("./client/window.js")' not in main.split("function openClient")[0]
