@@ -300,11 +300,16 @@
     return pg;
   }
 
+  /* opts.full(row), when given, is the row's whole text (title and the
+     Full text page) while opts.text(row) stays the one-line list row
+     (PLAY-TD-19E-ITEM-TEXT: a gear row's raw item text) */
   function linkPager(slotId, label, size, opts) {
     var pg = buildPagers[slotId];
     if (!pg) {
+      var full = typeof opts.full === "function" ? opts.full : null;
       pg = window.ALSearch.rowPager(document, {
-        label: label, size: size, sizeClass: sizeClass, text: opts.text,
+        label: label, size: size, sizeClass: sizeClass, text: full || opts.text,
+        parts: full ? function (r) { return [{ text: opts.text(r) }]; } : undefined,
         rowClass: opts.rowClass,
         controls: function (d, r) { return r.link ? [linkOut(r.link, r.linkName)] : []; }
       });

@@ -110,6 +110,26 @@
 
   var KEY_STATS_SHOWN = 6; // plan 03 section 4: key stats (6)
 
+  /* PLAY-TD-19E-ITEM-TEXT: a gear row's whole text for the Full text page
+     (3 lines of 47 characters): the item text's own lines, minus what the
+     list row already says (rarity, name, base) and PoB's bookkeeping lines,
+     so the first mods fit before any "...". Text only, nothing parsed into
+     numbers; no item text -> the row's one line. */
+  var ITEM_META = new RegExp("^(rarity|unique id|item level|levelreq|implicits|prefix|" +
+    "suffix|selected variant|variant|has variants|catalyst|league)\\s*:", "i");
+
+  function gearFull(g, line) {
+    var seen = {};
+    var mods = String(g.text || "").split(/\r?\n/).map(function (x) {
+      return x.replace(/^(\{[^}]*\})+/, "").trim();
+    }).filter(function (x) {
+      if (!x || /^-+$/.test(x) || ITEM_META.test(x)) { return false; }
+      if ((x === g.name || x === g.base) && !seen[x]) { seen[x] = true; return false; }
+      return true;
+    });
+    return mods.length ? g.slot + ": " + g.name + " - " + mods.join("; ") : line;
+  }
+
   function renderBuild() {
     var v = T.buildView(buildDoc, getSnap());
     $("build-view").hidden = !v.loaded;
@@ -135,14 +155,19 @@
     $("build-copy").setAttribute("aria-label", "Copy the build code for Path of Building");
 
     // the Health and next card's gear, gems and notes pages: rows through
-    // the pagers (one line each; the Full text page holds the whole text)
+    // the pagers (one line each; the Full text page holds the whole text).
+    // PLAY-TD-19E-ITEM-TEXT: a gear row with item text has that text
+    // (gearFull) on the Full text page and in title; the list row stays
+    // slot, name, base, rarity. No fold: a fold can grow the card (19C).
     linkPager("build-gear", "gear", { full: 9, compact: 7 }, {
       rows: v.gear.length ? v.gear.map(function (g) {
-        return { text: g.slot + ": " + g.name + (g.base ? ", " + g.base : "") +
-          (g.rarity ? " (" + g.rarity + ")" : ""),
+        var line = g.slot + ": " + g.name + (g.base ? ", " + g.base : "") +
+          (g.rarity ? " (" + g.rarity + ")" : "");
+        return { text: line, full: gearFull(g, line),
           link: g.links[0] || null, linkName: g.name };
       }) : [{ text: "No gear in this build." }],
-      text: function (r) { return r.text; }
+      text: function (r) { return r.text; },
+      full: function (r) { return r.full || r.text; }
     });
     var gems = [];
     v.skills.forEach(function (g) {
