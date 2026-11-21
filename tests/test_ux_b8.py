@@ -62,15 +62,54 @@ def test_tools_group_is_last_and_holds_the_set_once_tools():
 
 
 def test_build_file_and_loot_filter_fold_in_their_own_cards():
+    """UX-DASH-DENSITY kept the .build file and the loot filter add-on in
+    their own cards. PLAY-TD-19C-BUILD-GRID (TD-19, plan 03 section 4):
+    folds become pages of those cards, so no fold can grow a card. The
+    .build file is the Build card's More page; the loot filter add-on is the
+    Search strings card's filter page, a details element kept open whose
+    summary is not drawn (the card's page buttons show it)."""
     build = _between('id="buildbox"', "</section>")
-    assert '<details id="buildfile-more" class="tool-fold">' in build
+    assert "<details" not in build
+    assert '<div id="buildfile-more" class="card-page" data-page="more"' in build
     assert build.index('id="buildfile-more"') < build.index('id="buildfile-save"')
+    assert 'data-card-open="more"' in build
     search = _between('id="searchbox"', "</section>")
-    assert '<details id="filter-more" class="tool-fold">' in search
+    assert search.count("<details") == 1
+    assert re.search(r'<details id="filter-more" class="card-page tool-page" data-page="filter"'
+                     r'[^>]* open hidden>', search)
     i = search.index('id="filter-more"')
-    assert i < search.index('id="filter-download"') < search.index('id="filter-merge-file"')
-    # the search strings themselves stay open
+    # TC-FILTER-ONE-CONTROL: the merge is the page's one primary control;
+    # the plain download follows it as the small "Or" line
+    assert i < search.index('id="filter-merge-file"') < search.index('id="filter-download"')
+    assert 'data-card-open="filter"' in search
+    # the search strings themselves are on the card's first page
     assert search.index('id="search-list"') < i
+    css = srcpaths.read("app.css", encoding="utf-8")
+    assert re.search(r"\.tool-page > summary \{ display: none; \}", css)
+
+
+def test_build_and_items_is_a_fixed_three_by_two_grid():
+    """PLAY-TD-19C-BUILD-GRID (TDF-1): the panel is 3 x 2 fixed cells in the
+    cockpit classes, not auto-fit columns; Build, Health and next and Search
+    strings are its first three cells, cards with pages and no fold."""
+    css = srcpaths.read("app.css", encoding="utf-8")
+    m = re.search(r"@media \(min-width: 64em\) and \(min-height: 43\.75em\) \{\s*"
+                  r"\.panel-cards \{([^}]*)\}", css)
+    assert m, "the card grid rule in the cockpit query"
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in m.group(1)
+    assert "grid-template-rows: repeat(2, minmax(0, 1fr))" in m.group(1)
+    panel = MAIN[MAIN.index('id="panel-build"'):MAIN.index('id="panel-run"')]
+    assert re.match(r'id="panel-build" class="panel panel-grid panel-cards"', panel)
+    cells = re.findall(r'<div class="col">\s*(?:<!--.*?-->\s*)?<section id="([a-z]+)"', panel, re.S)
+    assert cells[:3] == ["buildbox", "healthbox", "searchbox"], cells
+    for card in cells[:3]:
+        sec = _between('id="%s"' % card, "</section>")
+        assert "grid-card" in sec.split(">")[0] and " hidden" not in sec.split(">")[0], card
+        assert 'class="card-head"' in sec and "data-card-back" in sec, card
+        assert re.search(r'class="card-page" data-page="main"', sec), card
+    # no element inside the three cards holds a live region (page-wide cap)
+    three = panel[:panel.index('id="evalbox"')]
+    assert not re.findall(r'aria-live="polite"|role="status"|role="alert"', three)
 
 
 def test_no_nested_fold_for_the_overlay_layout():

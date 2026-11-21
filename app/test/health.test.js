@@ -79,11 +79,13 @@ test("nextView lists valid rows, notes dropped terms, hints without PoB weights"
 });
 
 test("the clipboard is written only inside the Copy click handler", () => {
+  /* PLAY-TD-19C-BUILD-GRID: the Copy button of a look-for-next row is
+     ALSearch.copyButton (web/search.js), whose click handler is the one
+     place that writes; this file adds no handler and no clipboard call */
   const src = web.source("health.js", "ascii");
-  const body = src.split("addEventListener(\"click\"");
-  assert.equal(body.length, 2, "one click handler");
-  assert.equal(src.split("copyText(r.text").length - 1, 1);
-  assert.ok(body[1].indexOf("copyText(r.text") >= 0);
+  assert.ok(src.indexOf("addEventListener(") < 0);
+  assert.ok(src.indexOf("writeText") < 0 && src.indexOf(".clipboard") < 0);
+  assert.equal(src.split("S.copyButton(d, r.text,").length - 1, 1);
   assert.ok(!/setInterval|setTimeout|fetch\(|XMLHttpRequest|aria-live/.test(src));
 });
 
@@ -92,9 +94,79 @@ test("the page loads the script and has the card without a live region", () => {
   assert.ok(html.indexOf("/web/health.js") > 0);
   const card = html.split("id=\"healthbox\"")[1].split("</section>")[0];
   assert.ok(card.indexOf("aria-live") < 0 && card.indexOf("role=\"status\"") < 0);
-  for (const id of ["health-msg", "health-list", "health-values", "next-wrap", "next-list"]) {
+  for (const id of ["health-msg", "health-list", "next-wrap", "next-list", "def-wrap", "def-list",
+    "def-hint", "build-gear", "build-skills", "build-notes"]) {
     assert.ok(card.indexOf("id=\"" + id + "\"") > 0, id);
   }
+  /* PLAY-TD-19C-BUILD-GRID: a card of the grid, always shown, with the
+     pages of plan 03 section 4 (gear, gems, notes) and Numbers */
+  assert.match(html, /<section id="healthbox" class="card health grid-card"[^>]*>/);
+  assert.doesNotMatch(card.split(">")[0], /hidden/);
+  for (const page of ["main", "numbers", "gear", "gems", "notes"]) {
+    assert.match(card, new RegExp("class=\"card-page\" data-page=\"" + page + "\""), page);
+  }
+  for (const page of ["numbers", "gear", "gems", "notes"]) {
+    assert.match(card, new RegExp("data-card-open=\"" + page + "\""), page);
+  }
+  assert.ok(card.indexOf("<details") < 0, "no fold can grow the card");
+});
+
+const PAINT_IDS = ["healthbox", "health-msg", "health-list", "next-wrap", "next-title", "next-list",
+  "next-hint", "def-hint", "def-list"];
+
+test("PLAY-TD-19C-BUILD-GRID: the top 3 health rows on the card, the rest on Numbers", () => {
+  const many = { loaded: true, health: { loaded: true, has_stats: true, values: DOC.health.values,
+    warnings: [1, 2, 3, 4, 5].map((i) => ({ id: "w" + i, severity: "medium", text: "Warning " + i })),
+    defence: [{ label: "Stun threshold", value: 512, unit: "", digits: 0 }] } };
+  const doc = fakeDoc(PAINT_IDS);
+  h.paint(doc, many, {});
+  const top = doc.els["health-list"].children;
+  assert.equal(top.length, h.TOP);
+  assert.equal(top[0].attrs.title, "Check: Warning 1");
+  assert.match(top[0].className, /one-line/);
+  assert.deepEqual(h.numberRows(many), ["Check: Warning 4", "Check: Warning 5", "Life: 2,410",
+    "Block chance: 25.3%", "Stun threshold: 512"]);
+  const nums = doc.els["def-list"].children[0];
+  assert.deepEqual(nums.children[0].children.map((li) => li.textContent), h.numberRows(many));
+  assert.equal(doc.els.healthbox.hidden, false);
+});
+
+test("PLAY-TD-19C-BUILD-GRID: no build still shows the card, saying so in one row", () => {
+  const doc = fakeDoc(PAINT_IDS);
+  h.paint(doc, null, {});
+  assert.equal(doc.els.healthbox.hidden, false);
+  assert.equal(doc.els["health-msg"].textContent, h.EMPTY);
+  assert.equal(doc.els["health-list"].hidden, true);
+  assert.equal(doc.els["next-wrap"].hidden, true);
+  const nums = doc.els["def-list"].children[0].children[0];
+  assert.deepEqual(nums.children.map((li) => li.textContent), [h.EMPTY]);
+});
+
+test("PLAY-TD-19C-BUILD-GRID: a build with no PoB numbers says why the card is empty", () => {
+  const none = { loaded: true, health: { loaded: true, has_stats: false, warnings: [], values: [] } };
+  const doc = fakeDoc(PAINT_IDS);
+  h.paint(doc, none, {});
+  assert.equal(doc.els["health-msg"].textContent, h.NO_HEALTH);
+  assert.ok(h.NO_HEALTH.indexOf("copy") < 0, "the fix is said once, on the Build card (UX-U25)");
+});
+
+test("PLAY-TD-19C-BUILD-GRID: look for next pages 4 rows (2 compact) with Copy and Trade", () => {
+  const slots = Array.from({ length: 6 }, (_, i) => ({ slot: "Slot " + i, line: "life",
+    text: "\"life " + i + "\"", base: "Base " + i, url: URL_OK }));
+  const doc = fakeDoc(PAINT_IDS);
+  h.paint(doc, { loaded: true, health: DOC.health, next_look: { pob_weights: true, slots } }, {});
+  assert.deepEqual(h.NEXT_SIZE, { full: 4, compact: 2 });
+  const host = doc.els["next-list"].children[0];
+  const list = host.children[0];
+  assert.equal(list.children.length, 4);
+  const row = list.children[0];
+  assert.equal(row.className, "al-row-ctl");
+  assert.equal(row.children[0].attrs.title, "Slot 0: life - \"life 0\"");
+  assert.equal(row.children[1].textContent, "Copy");
+  assert.equal(row.children[1].attrs["aria-label"], "Copy Slot 0 search string");
+  assert.equal(row.children[2].tagName, "A");
+  assert.equal(row.children[2].textContent, "Trade");
+  assert.equal(host.children[1].children[0].textContent, "1-4 of 6");
 });
 
 /* TC-UPGRADE-PER-SLOT: each "look for next" row may link to the official
@@ -108,14 +180,23 @@ function linkDoc(url, base) {
       dropped: 0, base: base === undefined ? "Example Ring" : base, url: url }] } };
 }
 
+/* a small fake DOM: enough for web/health.js and the pagers of
+   web/search.js and web/pager.js (no browser, no timers) */
 function fakeDoc(ids) {
   function node(tag) {
     const n = { tagName: tag.toUpperCase(), children: [], dataset: {}, attrs: {}, hidden: false,
-      textContent: "", className: "",
-      appendChild(c) { this.children.push(c); return c; },
-      replaceChildren() { this.children = []; },
+      className: "", parentNode: null, listeners: {}, _text: "",
+      get firstChild() { return this.children[0] || null; },
+      get textContent() { return this._text + this.children.map((c) => c.textContent).join(""); },
+      set textContent(v) { this.children = []; this._text = String(v); },
+      appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+      removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
+      replaceChildren(...kids) { this.children = []; this._text = ""; kids.forEach((k) => this.appendChild(k)); },
       setAttribute(k, v) { this.attrs[k] = String(v); },
-      addEventListener() {},
+      getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+      removeAttribute(k) { delete this.attrs[k]; },
+      addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
+      click() { (this.listeners.click || []).forEach((fn) => fn({ target: this })); },
       querySelector() { return null; },
       querySelectorAll() { return []; } };
     return n;
@@ -150,8 +231,7 @@ test("nextView links a row only for an https trade2 search url and a base", () =
 });
 
 test("paint renders the trade link as a new-tab anchor, and none for a bad url", () => {
-  const ids = ["healthbox", "health-msg", "health-list", "health-values", "next-wrap", "next-list",
-    "next-hint"];
+  const ids = PAINT_IDS;
   const doc = fakeDoc(ids);
   h.paint(doc, linkDoc(URL_OK), {});
   const got = anchors(doc.els["next-list"]);
@@ -159,12 +239,14 @@ test("paint renders the trade link as a new-tab anchor, and none for a bad url",
   assert.equal(got[0].href, URL_OK);
   assert.equal(got[0].target, "_blank");
   assert.equal(got[0].rel, "noopener noreferrer");
-  assert.equal(got[0].textContent, "Search the official trade site for rare Example Ring (Ring 1)");
-  assert.match(got[0].attrs["aria-label"], /\(opens in a new tab\)$/);
+  assert.equal(got[0].textContent, "Trade");
+  assert.equal(got[0].attrs.title, "Search the official trade site for rare Example Ring (Ring 1)");
+  assert.match(got[0].attrs["aria-label"], /^Search the official trade site .*\(opens in a new tab\)$/);
   const doc2 = fakeDoc(ids);
   h.paint(doc2, linkDoc("https://evil.example/trade2/search/poe2/Standard?q=1"), {});
   assert.equal(anchors(doc2.els["next-list"]).length, 0);
-  assert.equal(doc2.els["next-list"].children.length, 1, "the row itself still shows");
+  assert.equal(doc2.els["next-list"].children[0].children[0].children.length, 1,
+    "the row itself still shows");
 });
 
 test("the trade link rule matches the price card's and nothing fetches it", () => {

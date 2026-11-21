@@ -28,9 +28,11 @@ def _flat(s):
 
 
 def test_search_strings_wrap_instead_of_a_one_line_input():
+    """UX-B5-CARDS: no one-line input. PLAY-TD-19C-BUILD-GRID: a string is a
+    one-line pager row (full text in title) whose Full text page is the
+    keyboard-reachable twin; the import line still breaks anywhere."""
     assert 'createElement("input")' not in SEARCH
-    m = re.search(r"\.search-row \.search-text \{([^}]*)\}", CSS)
-    assert m and "overflow-wrap: anywhere" in m.group(1)
+    assert "P.rowRule(span, t)" in SEARCH and "P.wrap(t, shape.cols, shape.lines)" in SEARCH
     assert re.search(r"\.filter-line \{[^}]*overflow-wrap: anywhere", CSS)
 
 
@@ -45,7 +47,7 @@ def test_copy_feedback_adds_no_live_region():
 
 
 def test_copy_buttons_are_real_buttons():
-    assert 'btn = doc.createElement("button")' in SEARCH
+    assert 'var btn = el(doc, "button", "secondary btn-24", "Copy");' in SEARCH
     assert 'btn.type = "button"' in SEARCH
 
 
