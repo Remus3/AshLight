@@ -48,7 +48,8 @@ in `CLAUDE.md` (no GGG trademarks, art, logos, fonts or game imagery).
 Sources: `assets/brand/ashlight-mark.svg`, `ashlight-mark-small.svg`,
 `readme-hero.svg`. Renders: `assets/brand/png/ashlight-<n>.png`
 (n = 16 24 32 48 64 128 256), `assets/brand/readme-hero-{light,dark}.png`
-(1280 x 400). App: `app/assets/icon.ico`, `icon-256.png`, `tray-16.png`,
+(1280 x 400), social-preview.svg and social-preview.png (1280 x 640, dark only,
+hero strokes, no font). App: `app/assets/icon.ico`, `icon-256.png`, `tray-16.png`,
 `tray-32.png`, found through `app/brand/index.js` (`ICO`, `TRAY_16`,
 `TRAY_32`, `ICON_256`, `trayImage(nativeImage)`). Dashboard:
 `web/favicon.ico` (16 32 48) served at `/favicon.ico`, `web/favicon.svg`.

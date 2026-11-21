@@ -403,6 +403,8 @@ pythonw, interactive token, no stored password); read it back with
 carrying `BLOCKED: <reason>` is listed and never dispatched. A hand-off bullet
 is loop work only when it starts with LOOP:; BLOCKED
 applies to it as to a row. Pause: `ops/loop/control/HALT`.
+`tools/upstream_watch.py` runs every upstream source from the tick, in front
+of the HALT check.
 
 ## Session workflow
 
@@ -584,11 +586,20 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   pytest run (0025 amendment, AREA-AUDIT P3-9 / P3-8; 0025 amendment
   2026-11-18: a trial re-hashes pob2_files from the candidate and records
   old and new hash for review at apply; candidates other than the pin and
-  the newest are pruned). Reverses if:
+  the newest are pruned) (0025 amendment 2026-11-18, rulings Q-12 and
+  Q-13: the tick may commit add-only row files docs/roadmap/new|done/<ID>.md
+  built from tracked templates and validated tokens, at most 3 of each kind
+  a local day, with the operator identity, only through the kit git lock,
+  never while HALT exists; the release check reads in front of the HALT
+  return and acts on nothing while HALTed; pin moves stay session commits).
+  Reverses if:
   GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
   releases or ships a headless API, the loop gains safe auto-commit, PoB
-  releases become verifiable (signed), a no-admin OS sandbox exists, or
-  the operator rules unattended live trials acceptable by default.
+  releases become verifiable (signed), a no-admin OS sandbox exists,
+  the operator rules unattended live trials acceptable by default, a tick
+  commit ever touches a non-row path, a bad row lands, tokens fail
+  validation, or the operator rules unattended commits or HALT-time reads
+  unwanted.
 - Price book: unique and stackable poe.ninja overviews ride the rates
   refresh (same opt-in, contact, UA, league; per-type hourly gate + ETag),
   the press reads the cache only, movers from the same cache, auto league
