@@ -673,3 +673,70 @@ Independent verifier, 2026-11-18, at HEAD 5ec96b8.
   the set withheld; one Q2 phrase made generic.
 - Still UNVERIFIED: the set size (39) and idea count (58), from the review
   data only; PoE2 solo league naming.
+
+## Addendum 2026-11-21: triage of the repositories not deep-reviewed
+
+Added by plan package DATA-RESEARCH-GAPS (docs/plan/02-findings.md, gap
+0056). Identity of the set stays withheld: classes and counts only, no
+repository, owner or plugin name.
+
+Sources (this addendum)
+- TP-LIST: the review data kept in the AL sidecar from the 2026-11-18
+  review: one structured listing of the set's public repositories (name,
+  description, language, fork flag, licence field, last push, a
+  relevance grade and a one-line reason per repository) and a second,
+  independent name-and-fork listing taken later the same day. Both list
+  39 repositories with the same names. Accessed 2026-11-21 (read from
+  the sidecar; nothing fetched for it).
+- TP-META: the public GitHub API record, top-level file listing, readme
+  and project file of the one repository the review data left
+  unclassified ("game unknown"), read through tools/webfetch.py (decision
+  0050 allow-list, AshLight User-Agent) on 2026-11-21. No source file
+  beyond the project file was read, nothing was cloned or run.
+
+Result
+- Set size: 39, now confirmed by two listings (TP-LIST); 7 deep-reviewed
+  (repo A to repo G), 32 not. The idea count (58) is not re-derived here:
+  the per-repository idea logs are not in the kept review data, so it
+  stays UNVERIFIED.
+- Why the 32 were skipped: every one carried the relevance grade "low" in
+  TP-LIST; the 7 deep-reviewed are exactly the repositories graded "high"
+  (2) or "medium" (5). The review cap therefore removed none: the
+  "not reviewed: cap" list is empty, and the Summary's "for low relevance
+  or the review cap" reads, after this check, "for low relevance".
+- The one unknown repository is now classed (TP-META): its project file
+  references a third-party HUD framework's assembly and a game-offsets
+  assembly, and its file names match the map-icon plugin already reviewed;
+  it is a memory-host display plugin, outside the floor.
+- Floor-safe and relevant candidates among the 32: none. Every repository
+  about the game is a memory-host framework or plugin, an input
+  automation tool or a connection tool; the rest are about other games,
+  other platforms or nothing. So this addendum deep-reviews none (the
+  package allows at most three) and the Recommendations stand unchanged.
+
+Triage table (counts from TP-LIST; data path class from the description,
+the reason line and, for the one unknown, TP-META):
+
+| Class | Count | Forks | Data path class | Floor status | Why not deep-reviewed |
+|---|---|---|---|---|---|
+| HUD framework (host) for the game | 2 | 2 | memory host plugin (the host itself) | outside (memory read, in-game drawing) | low: the approach is barred; stale since 2019-2020 |
+| Display plugin for a HUD host | 4 | 2 | memory host plugin | outside (memory read) | low: little transferable beyond repo B to G; one for a retired league |
+| Input automation for the game (bots, flask routines, inventory movers, input humanisers, cursor libraries) | 12 | 5 | memory host plugin plus synthesized input | outside (input to the game) | low: barred outright |
+| Connection tool for the game (auto-logout, empty fork) | 1 | 1 | other (connection interference) | outside | low: barred, empty |
+| General library or tool, not game-facing (behaviour tree, input remapper) | 2 | 1 | other | not applicable | low: no use in AshLight |
+| Speedrun timer scripts, trackers and readers for other games | 8 | 4 | other (another game) | not applicable | low: another game; split timing is already covered by HUD-ACT |
+| Stream chat bots | 2 | 0 | other (a streaming platform) | not applicable | low: unrelated |
+| Empty repository | 1 | 0 | none | not applicable | low: no content |
+| Total | 32 | 15 | | | |
+
+- No skipped repository is a game-file reader or a log, clipboard or
+  public-web tool; the one game-file reader of the set is repo A, already
+  deep-reviewed.
+- Licence fields of the 32 (TP-LIST): 26 none (all rights reserved, L1),
+  3 GPL-3.0, 2 MIT, 1 Apache-2.0. None is relevant, so no licence check
+  is owed (CLAUDE.md, third-party code).
+- Last push years of the 32 run from 2017 to 2026; 24 of 32 were last
+  pushed in 2023 or earlier.
+
+The Verification section's "Still UNVERIFIED: the set size (39)" is
+closed by this addendum; the idea count (58) stays UNVERIFIED.
