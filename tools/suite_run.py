@@ -12,9 +12,11 @@ The gate sets FLEET_SUITE_SLOT for its child; a run without it is refused
 with the command above (exit 2), so the gate is never hidden from.
 
 Two phases, always both, in this order:
-1. every test except the `timing` ones: on 4 pytest-xdist workers with
+1. every test except the `timing` ones: on pytest-xdist workers with
    `--dist loadgroup` when xdist (and execnet) is importable, serial
-   otherwise. The mode is picked here; callers pass no flag.
+   otherwise. The mode is picked here; callers pass no flag. Workers:
+   WORKERS (12), at most the logical CPU count less SPARE_CPUS (4) and
+   never under 2 (TEST-SUITE-HOLD-75, research 0049 addendum 2026-11-21).
 2. the `timing` tests alone, serial, after phase 1 (research 0049 R3,
    row TEST-TIMING-ALONE); "no tests collected" (5) counts as green.
 The exit code is the worst phase's. Children run at below-normal priority.
@@ -34,8 +36,9 @@ ROOT = Path(__file__).resolve().parent.parent
 GATE_REL = "ops/fleet_kit/fleet_suite_gate.py"
 SELF_REL = "tools/suite_run.py"
 SLOT_ENV = "FLEET_SUITE_SLOT"
-WORKERS = 4
-XDIST_ARGS = ("-n", str(WORKERS), "--dist", "loadgroup")
+WORKERS = 12  # research 0049 addendum 2026-11-21 (TEST-SUITE-HOLD-75)
+SPARE_CPUS = 4  # logical CPUs left free for the player's own work
+MIN_WORKERS = 2
 PYTEST = ("-m", "pytest", "-q")
 NO_TESTS = 5
 BELOW_NORMAL = 0x00004000  # BELOW_NORMAL_PRIORITY_CLASS
@@ -54,13 +57,24 @@ def xdist_available():
         return False
 
 
-def phases(xdist=None, python=None):
+def workers(cpus=None):
+    """The phase 1 worker count: WORKERS, capped at the logical CPU count
+    less SPARE_CPUS, never under MIN_WORKERS."""
+    n = os.cpu_count() if cpus is None else cpus
+    return max(MIN_WORKERS, min(WORKERS, (n or 0) - SPARE_CPUS))
+
+
+def xdist_args(cpus=None):
+    return ("-n", str(workers(cpus)), "--dist", "loadgroup")
+
+
+def phases(xdist=None, python=None, cpus=None):
     """[(name, argv)] of the two phases, in run order."""
     py = python or sys.executable
     use = xdist_available() if xdist is None else bool(xdist)
     one = [py, *PYTEST, "-m", "not timing"]
     if use:
-        one += list(XDIST_ARGS)
+        one += list(xdist_args(cpus))
     two = [py, *PYTEST, "-m", "timing"]
     return [("parallel" if use else "serial", one), ("timing", two)]
 
