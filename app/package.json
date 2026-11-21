@@ -10,6 +10,6 @@
     "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
-    "electron": "45.3.3"
+    "electron": "45.3.4"
   }
 }
