@@ -1,0 +1,7 @@
+2026/11/21 22:01:00 100000 1a2b3c4d [INFO Client 5150] [Render Device] (Primary Adapter) memory 4096 MB
+2026/11/21 22:01:05 105000 1a2b3c4d [INFO Client 5150] Got Instance Details from login server
+2026/11/21 22:01:05 105100 1a2b3c4d [INFO Client 5150] Connecting to instance server at 192.0.2.10:21360
+2026/11/21 22:01:05 105200 1a2b3c4d [DEBUG Client 5150] Connect time to instance server was 31ms
+2026/11/21 22:01:05 105300 1a2b3c4d [INFO Client 5150] Client-Safe Instance ID = 1234567890
+2026/11/21 22:01:05 105400 1a2b3c4d [DEBUG Client 5150] Sequence 42
+2026/11/21 22:01:05 105500 1a2b3c4d [DEBUG Client 5150] Ready
