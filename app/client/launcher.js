@@ -16,7 +16,18 @@
    REL-CLIENT-HOME (F-049): resolveSidecar(), startCore() and stopAll() take
    their script path, cwd, Python command and child environment from the
    one client resolver (app/client/home.js); a bare repository root still
-   works (a checkout home). */
+   works (a checkout home).
+   REL-UPDATE-LAUNCH (F-077, DEP-11): in an installed copy startCore() first
+   runs the installer's own 'apply-staged --if-due' (applyStaged, one hidden
+   process when nothing is staged). Exit 10 means the marker moved
+   (switched, or rolled back at the second start without a confirm): the
+   client is started again from the marker's version (relaunch) and this
+   process exits, so the new version's core serves its own web files
+   (research 0050 F31). While pending_confirm is true the installer counts
+   the start before anything else; after run.ps1 the installer's hidden,
+   detached 'confirm --wait' (startConfirm) polls this home's /api/health
+   for the marker version. A missing Python or a failing installer never
+   blocks the start. A checkout changes nothing. */
 
 const childProcess = require("child_process");
 const path = require("path");
@@ -103,25 +114,180 @@ function resolveSidecar(home, exec, env, fsMod) {
   return "";
 }
 
-/* Start scripts\run.ps1 -NoBrowser hidden. Not detached: a detached
-   powershell got no console and exited at once without running; run.ps1
-   detaches the core and supervisor itself (WMI). It converges to one
-   core, one supervisor and (this process already being the overlay) no
-   second overlay. Returns the child pid or 0. */
-function startCore(home, port, spawn, env) {
-  const run = spawn || childProcess.spawn;
-  const root = Home.asHome(home, env).root;
-  const extra = ["-NoBrowser"];
-  if (Number.isInteger(port) && port > 0) { extra.push("-Port", String(port)); }
+/* REL-UPDATE-LAUNCH: the installer's exit code that means "the marker
+   moved, start again from it" (server/al/install/switch.py EXIT_SWITCHED). */
+const EXIT_SWITCHED = 10;
+const INSTALLER_MODULE = "server.al.install";
+const APPLY_TIMEOUT_MS = 120000;
+const MARKER_MAX_BYTES = 64 * 1024;
+
+/* A home object for startCore: the given resolve() result, else the
+   resolve() of a repository / payload root (window.js passes the root
+   text, the same root main.js resolved its HOME from), else a checkout. */
+function resolvedHome(home, env, fsMod) {
+  if (home && typeof home === "object" && typeof home.root === "string") { return home; }
+  const root = String(home || "");
+  // the marker alone decides here: a bare root stays a checkout even when
+  // AL_HOME is set (an installed payload always has the marker at
+  // <home>/install.json two levels above it)
+  const e = Object.assign({}, env || process.env);
+  for (const k of Object.keys(e)) { if (k.toUpperCase() === Home.HOME_ENV) { delete e[k]; } }
   try {
-    const child = run(psExe(env), psArgs(path.join(root, "scripts", "run.ps1"), extra), {
-      cwd: root, env: Home.childEnv(env), detached: false, windowsHide: true, stdio: "ignore"
+    const h = Home.resolve(path.join(root, "app"), e, fsMod || require("fs"));
+    if (h.mode === "installed") { return h; }
+  } catch (e) { /* a refused home starts as before: a checkout */ }
+  return Home.checkout(root, env);
+}
+
+/* <home>/install.json as an object; {} when missing, too big or broken. */
+function readMarker(home, fsMod) {
+  const f = fsMod || require("fs");
+  const file = path.join(home, Home.MARKER_NAME);
+  try {
+    if (f.statSync(file).size > MARKER_MAX_BYTES) { return {}; }
+    const doc = JSON.parse(String(f.readFileSync(file, "utf8")).replace(/^\uFEFF/, ""));
+    return doc && typeof doc === "object" && !Array.isArray(doc) ? doc : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+/* One plain folder name (no separator or colon, not dots / spaces only), else null. */
+function plainName(name) {
+  if (typeof name !== "string" || !name.replace(/^[. ]+|[. ]+$/g, "") || /[\\/:]/.test(name)) {
+    return null;
+  }
+  return name;
+}
+
+/* Run 'installer apply-staged --if-due --home <home>' hidden and wait for
+   it. Returns {code, line}: code is the installer's exit code (null when
+   it could not run or timed out; the start goes on), line its last output
+   line ("" when none). A checkout, or an install whose marker names no
+   usable Python, runs nothing and returns null. */
+function applyStaged(home, exec, env) {
+  const h = Home.asHome(home, env);
+  if (h.mode !== "installed" || !h.home) { return null; }
+  const cmd = Home.pythonCmd(h, INSTALLER_MODULE, ["apply-staged", "--if-due", "--home", h.home]);
+  if (!cmd.exe) { return null; }
+  const run = exec || childProcess.execFileSync;
+  let code = 0;
+  let out = "";
+  try {
+    out = run(cmd.exe, cmd.args, {
+      cwd: h.root, env: Home.childEnv(env), windowsHide: true, timeout: APPLY_TIMEOUT_MS,
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"]
     });
+  } catch (e) {
+    code = e && Number.isInteger(e.status) ? e.status : null;
+    out = (e && e.stdout) || "";
+  }
+  const lines = String(out || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  return { code: code, line: lines.length ? lines[lines.length - 1] : "" };
+}
+
+/* Start the client again from the marker's version:
+   <home>/runtime/<electron>/electron.exe "<home>/app/<version>/app" --client,
+   detached and hidden, as the Start Menu shortcut does
+   (server/al/install/shell.py). Returns the child pid, or 0 when the marker
+   names no usable version / runtime or the start failed (the caller then
+   goes on in this process). */
+function relaunch(home, spawn, env, fsMod) {
+  const f = fsMod || require("fs");
+  const h = Home.asHome(home, env);
+  if (h.mode !== "installed" || !h.home) { return 0; }
+  const marker = readMarker(h.home, f);
+  const version = plainName(marker.version);
+  const electron = plainName(marker.electron);
+  if (!version || !electron) { return 0; }
+  const exe = path.join(h.home, Home.RUNTIME_FOLDER, electron, "electron.exe");
+  const appDir = path.join(h.home, Home.APP_FOLDER, version, "app");
+  if (!isFile(f, exe)) { return 0; }
+  const run = spawn || childProcess.spawn;
+  try {
+    const child = run(exe, [appDir, "--client"], {
+      cwd: appDir, env: Home.childEnv(env), detached: true, windowsHide: true, stdio: "ignore"
+    });
+    if (child && typeof child.on === "function") { child.on("error", () => {}); }
     if (child && typeof child.unref === "function") { child.unref(); }
     return (child && child.pid) || 0;
   } catch (e) {
     return 0;
   }
+}
+
+/* Start 'installer confirm --wait --home <home>' hidden and detached
+   (pythonw): it polls this home's own /api/health until the marker's
+   version answers, then clears pending_confirm. Only while the marker's
+   pending_confirm is true. Returns the child pid or 0. */
+function startConfirm(home, spawn, env, fsMod) {
+  const h = Home.asHome(home, env);
+  if (h.mode !== "installed" || !h.home) { return 0; }
+  if (readMarker(h.home, fsMod).pending_confirm !== true) { return 0; }
+  const cmd = Home.pythonCmd(h, INSTALLER_MODULE, ["confirm", "--wait", "--home", h.home],
+                             { windowless: true });
+  if (!cmd.exe) { return 0; }
+  const run = spawn || childProcess.spawn;
+  try {
+    const child = run(cmd.exe, cmd.args, {
+      cwd: h.root, env: Home.childEnv(env), detached: true, windowsHide: true, stdio: "ignore"
+    });
+    if (child && typeof child.on === "function") { child.on("error", () => {}); }
+    if (child && typeof child.unref === "function") { child.unref(); }
+    return (child && child.pid) || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/* This process ends after a relaunch: Electron's app.exit when running in
+   Electron (the single-instance lock is freed for the new client), else
+   process.exit. */
+function exitNow() {
+  let app = null;
+  try { app = require("electron").app; } catch (e) { app = null; }
+  if (app && typeof app.exit === "function") { app.exit(0); } else { process.exit(0); }
+}
+
+/* Start scripts\run.ps1 -NoBrowser hidden. Not detached: a detached
+   powershell got no console and exited at once without running; run.ps1
+   detaches the core and supervisor itself (WMI). It converges to one
+   core, one supervisor and (this process already being the overlay) no
+   second overlay. Returns the child pid or 0.
+   REL-UPDATE-LAUNCH: in an installed copy applyStaged runs first; on exit
+   10 the client is relaunched from the marker and this process exits
+   (0 is returned when exit is injected); after run.ps1 startConfirm runs.
+   opts (tests): {exec, fs, exit, log}; log gets the installer's one line
+   that names the version. */
+function startCore(home, port, spawn, env, opts) {
+  const o = opts || {};
+  const run = spawn || childProcess.spawn;
+  const h = resolvedHome(home, env, o.fs);
+  const root = h.root;
+  const say = typeof o.log === "function" ? o.log
+    : (m) => { try { process.stderr.write("AshLight: " + m + "\n"); } catch (e) { /* none */ } };
+  if (h.mode === "installed") {
+    const res = applyStaged(h, o.exec, env);
+    if (res && res.line) { say("update: " + res.line); }
+    if (res && res.code === EXIT_SWITCHED && relaunch(h, run, env, o.fs)) {
+      (typeof o.exit === "function" ? o.exit : exitNow)();
+      return 0;
+    }
+  }
+  const extra = ["-NoBrowser"];
+  if (Number.isInteger(port) && port > 0) { extra.push("-Port", String(port)); }
+  let pid = 0;
+  try {
+    const child = run(psExe(env), psArgs(path.join(root, "scripts", "run.ps1"), extra), {
+      cwd: root, env: Home.childEnv(env), detached: false, windowsHide: true, stdio: "ignore"
+    });
+    if (child && typeof child.unref === "function") { child.unref(); }
+    pid = (child && child.pid) || 0;
+  } catch (e) {
+    pid = 0;
+  }
+  if (h.mode === "installed") { startConfirm(h, run, env, o.fs); }
+  return pid;
 }
 
 /* Stop everything (scripts\stop.ps1: core, supervisor, overlay). */
@@ -216,4 +382,5 @@ function readAutostart(home, fsMod) {
 }
 
 module.exports = { resolveSidecar, startCore, stopAll, psArgs, psExe, whichAbs, setAutostart,
-                   readAutostart, AUTOSTART_FILE, setupCalc, CALC_SETUP_PS1 };
+                   readAutostart, AUTOSTART_FILE, setupCalc, CALC_SETUP_PS1,
+                   applyStaged, relaunch, startConfirm, EXIT_SWITCHED };
