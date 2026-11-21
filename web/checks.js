@@ -26,7 +26,10 @@
    2026-11-20): inside the desktop client only (window.alClient.setupCalc,
    app/client/preload.js) the calc row carries a "Set up the calc" button
    while that row is off or needs a fix; a click runs the client's fixed
-   setup script and the row says it is working, then done or not done. */
+   setup script and the row says it is working, then done or not done.
+   RUN-QUIET-FEED (findings F-093, F-109): the snapshot holds no report
+   text and no age words; age rows carry an absolute "at" and this file
+   writes the age in, stepped at 5 minutes (ageText). */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -68,19 +71,59 @@
     off: { glyph: "[-]", word: "off", state: "idle" }
   };
 
-  /* {summary, failed, rows: [{id, glyph, word, state, label, detail, fix}],
-     report} for the Checks tool. */
-  function model(d) {
-    if (!d || !Array.isArray(d.checks)) {
-      return { summary: WAITING, failed: 0, rows: [], report: "" };
+  /* RUN-QUIET-FEED (F-093): a row with an age carries its absolute time in
+     "at" (epoch s) and AGO where the age goes in its detail
+     (server/al/diag.py); the snapshot holds no age text, so an idle minute
+     pushes nothing. The age is written in here, stepped at 5 minutes, so
+     the list is rebuilt at most once per step. */
+  var AGO = "{ago}";
+  var AGE_STEP_S = 300;
+
+  /* The age words for `s` seconds: "just now" under 90 s (as the report
+     says it), "under 5 min ago" up to 5 minutes, then whole 5-minute steps
+     (rounded down) below 90 minutes, then hours, then days (from 2 days).
+     Coarser than the price ages of web/prices.js on purpose: this list is
+     repainted only when a snapshot comes (design review RQF-1, RQF-2). A
+     rebuild keeps the calc button's focus (addCalc); the rows hold no
+     other focusable control (RQF-3). */
+  function ageText(s) {
+    s = typeof s === "number" && isFinite(s) ? Math.max(0, s) : 0;
+    if (s < 90) { return "just now"; }
+    if (s < AGE_STEP_S) { return "under 5 min ago"; }
+    if (s < 5400) { return Math.floor(s / AGE_STEP_S) * 5 + " min ago"; }
+    // hours and days round as the report's words do (server/al/diag.py _ago)
+    if (s < 2 * 86400) { return Math.round(s / 3600) + " h ago"; }
+    return Math.round(s / 86400) + " days ago";
+  }
+
+  /* The row's detail with its age written in at `now` (epoch s); a row
+     with no "at" or no AGO is shown as sent. */
+  function ageDetail(c, now) {
+    var detail = typeof c.detail === "string" ? c.detail : "";
+    if (typeof c.at !== "number" || !isFinite(c.at) || detail.indexOf(AGO) < 0) {
+      return detail;
     }
+    var ago = ageText(now - c.at);
+    if (detail.indexOf(AGO) === 0) {
+      detail = ago.charAt(0).toUpperCase() + ago.slice(1) + detail.slice(AGO.length);
+    }
+    return detail.split(AGO).join(ago);
+  }
+
+  /* {summary, failed, rows: [{id, glyph, word, state, label, detail, fix}]}
+     for the Checks tool; `now` (epoch s, the snapshot's own clock) writes
+     the ages in. */
+  function model(d, now) {
+    if (!d || !Array.isArray(d.checks)) {
+      return { summary: WAITING, failed: 0, rows: [] };
+    }
+    if (typeof now !== "number" || !isFinite(now)) { now = Date.now() / 1000; }
     var rows = d.checks.map(function (c) {
       var m = MARK[c.status] || MARK.unknown;
       return { id: c.id, glyph: m.glyph, word: m.word, state: m.state,
-               label: c.label || "", detail: c.detail || "", fix: c.fix || "" };
+               label: c.label || "", detail: ageDetail(c, now), fix: c.fix || "" };
     });
-    return { summary: d.summary || "", failed: d.failed || 0, rows: rows,
-             report: typeof d.report === "string" ? d.report : "" };
+    return { summary: d.summary || "", failed: d.failed || 0, rows: rows };
   }
 
   function readDismissed(store) {
@@ -219,7 +262,7 @@
   function paintChecks(doc, snap) {
     var box = doc.getElementById("checksbox");
     if (!box) { return; }
-    var m = model(snap && snap.diag);
+    var m = model(snap && snap.diag, snap && snap.now);
     var client = calcClient();
     // a finished setup's line clears once the core's calc row changes
     var calcRow = "";
@@ -229,8 +272,8 @@
       state.calc = "";
     }
     state.calcRow = calcRow;
-    // V-5: the checks' states (not their wording, which ages by the
-    // minute); a change makes an open preview stale
+    // V-5: the checks' states (not their wording, whose ages step every
+    // 5 minutes); a change makes an open preview stale
     var states = JSON.stringify(m.rows.map(function (r) { return [r.id, r.word]; }));
     if (states !== report.states) {
       report.states = states;
@@ -290,8 +333,9 @@
       list.appendChild(li);
     });
     // RUN-REPORT-ROUTE: the core builds the report on the click; the
-    // button waits only for the first checks
-    doc.getElementById("checks-copy").disabled = !(m.report || m.rows.length);
+    // button waits only for the first checks (RUN-QUIET-FEED: the
+    // snapshot carries no report)
+    doc.getElementById("checks-copy").disabled = !m.rows.length;
   }
 
   function paint(doc, snap) {
@@ -399,6 +443,7 @@
   }
 
   return { model: model, langModel: langModel, calcModel: calcModel, paint: paint, wire: wire,
+           ageText: ageText, AGO: AGO, AGE_STEP_S: AGE_STEP_S,
            COPIED: COPIED, COPY_FAILED: COPY_FAILED, WAITING: WAITING, MARK: MARK,
            REPORT_PATH: REPORT_PATH, BUILDING: BUILDING, READY: READY,
            READY_AGAIN: READY_AGAIN, READY_CHANGED: READY_CHANGED,

@@ -1090,7 +1090,7 @@ class Core:
         idle = True
         if web_on:
             # read the way diag_facts reads it, once a minute at most
-            tl = self.state.snapshot().get("tailer") or {}
+            tl = self.state.checks_facts()["tailer"]
             idle = not tl.get("consented") or bool(tl.get("idle"))
         if not gate.due(now, web_on, idle, self.rates_read_at):
             return False
@@ -1474,8 +1474,9 @@ class Core:
         RUN-SEAMS: plug modules' facts(core, now) are merged in; a
         built-in key always wins."""
         now = time.time() if now is None else now
-        snap = self.state.snapshot()
-        tl = snap.get("tailer") or {}
+        # RUN-QUIET-FEED (F-093): the light accessor, never a whole snapshot
+        sf = self.state.checks_facts()
+        tl = sf["tailer"]
         log = self.log_path
         try:
             log_found = bool(log) and Path(log).is_file()
@@ -1511,14 +1512,13 @@ class Core:
             "reading": bool(tl.get("reading")) and self.reader_alive(),
             "unreadable": bool(tl.get("unreadable")),
             "last_line_at": tl.get("last_line_at"),
-            "idle": bool(tl.get("idle")), "character_seen": bool(snap.get("character")),
-            "lang": (snap.get("lang") or {}).get("verdict"),
+            "idle": bool(tl.get("idle")), "character_seen": bool(sf["character"]),
+            "lang": sf["lang"],
             "web_data": self.web_data_enabled(), "contact_set": self.contact() is not None,
-            "book_checked_at": (snap.get("sources") or {}).get("book_checked_at")
-                               or (snap.get("sources") or {}).get("rates_checked_at"),
+            "book_checked_at": sf["book_checked_at"] or sf["rates_checked_at"],
             "book_error": rates.get("last_error"),
             "calc_on": calc_on, "calc_status": self.calc_status() if calc_on else None,
-            "snapshot": bool((snap.get("acts") or {}).get("levels")),
+            "snapshot": sf["levels"],
             "snapshot_at": zones_at,
             "overlay": overlay, "supervisor": live("supervisor"),
             # HOTKEYS-LIVE (OVL-KEYS-CORE): the keys view from the client's
@@ -1538,7 +1538,7 @@ class Core:
             "client_exit": exitrecord.read_client(self.runtime),
             "started_at": self.started_at,
             "_log_path": str(log) if log else None,
-            "_contact": self.contact(), "_character": snap.get("character"),
+            "_contact": self.contact(), "_character": sf["character"],
         })
         return dict(diag_data.facts(self, plug.collect_facts(self, now)), **built)
 
@@ -1600,7 +1600,10 @@ class Core:
             return False
         self._next_diag = mono + self.DIAG_TICK_S
         now = time.time() if now is None else now
-        return self.state.set_diag(diag.view(self.diag_facts(now), VERSION, now=now))
+        # RUN-QUIET-FEED (F-093, F-109): no report text and no age in the
+        # snapshot's copy, so an idle minute publishes nothing
+        return self.state.set_diag(diag.view(self.diag_facts(now), VERSION, now=now,
+                                             with_report=False))
 
     def close(self):
         stop = getattr(self, "_acl_stop", None)

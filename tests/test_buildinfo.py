@@ -150,7 +150,7 @@ def test_health_version_and_report_show_the_same_string(srv, monkeypatch):
     assert build == version["build"] == f"{VERSION}+{SHA_A[:12]}"
     assert health["version"] == version["version"] == VERSION
     srv.core.tick_diag(force=True)
-    report = srv.core.state.snapshot()["diag"]["report"]
+    report = __import__("server.al.plug.report", fromlist=["build"]).build(srv.core)
     header = report.splitlines()[0]
     assert header.startswith(f"AshLight {build} self-check, ")
     # the same string from diag.view directly, and with no commit known
