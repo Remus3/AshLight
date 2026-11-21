@@ -21,10 +21,20 @@ one report line:
 Dispatch: a pull request that touches .github/workflows/fleet-identity-guard.yml
 (a byte copy of the kit's file) yields no commit; it is closed with
 GUARD_COMMENT and listed as `upstream: #<n>` for the note to MAIN. An actions
-bump goes to the apply_actions seam (PUB-DEPBOT-ACTIONS fills it), an npm bump
-to the apply_npm seam (PUB-DEPBOT-NPM). A seam that returns None is empty: the
-pull request stays open and one line `needs <package id>` is reported. Any
-other pull request stays open with one `needs review` line.
+bump goes to apply_actions (PUB-DEPBOT-ACTIONS), an npm bump to the apply_npm
+seam (PUB-DEPBOT-NPM). A seam that returns None is empty: the pull request
+stays open and one line `needs <package id>` is reported. Any other pull
+request stays open with one `needs review` line.
+
+apply_actions: re-read the new tag's commit with
+`gh api repos/<owner>/<name>/commits/v<tag> --jq .sha`, rewrite the `uses:`
+SHA and its `# v<tag>` comment in the workflow files the pull request
+touches, run the gates of ops/loop/gates.txt (a red gate restores the files,
+commits nothing, leaves the pull request open and reports one line), make
+one commit as the operator through the kit git lock (no trailer; the subject
+names the dependency and both versions), push main through the git lock (the
+guarded pre-push hook applies) and close the pull request with
+'Applied locally as <sha>.'. The gate runner is injected like git and gh.
 
 The repository is read from the checkout's own origin remote, never from a
 tracked constant. With no origin remote every sub-command is a no-op that
@@ -38,6 +48,7 @@ the pull request is not an open Dependabot one, 2 usage.
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -71,8 +82,37 @@ def _run(cmd, cwd):
     return p.returncode, p.stdout
 
 
+GITLOCK_REL = "ops/fleet_kit/fleet_gitlock.py"
+OWNER_DEFAULT = "al-dependabot.main"
+
+
+def owner_id():
+    """The git-lock owner: FLEET_CLAIM_OWNER when set (a session passes its
+    own id), else a fixed id like the loop's."""
+    return os.environ.get("FLEET_CLAIM_OWNER") or OWNER_DEFAULT
+
+
+def git_argv(args, root):
+    """argv of one git call; a commit or push runs through the kit git lock
+    (FLEET item 16a), so the guarded hooks of the checkout apply to it."""
+    args = list(args)
+    if args and args[0] in ("commit", "push"):
+        return [sys.executable, str(Path(root) / GITLOCK_REL), "run", "--owner",
+                owner_id(), "--", "git"] + args
+    return ["git"] + args
+
+
 def default_git(root):
-    return lambda args: _run(["git"] + list(args), root)
+    return lambda args: _run(git_argv(args, root), root)
+
+
+def default_gates(root):
+    """[(cmd, ok, detail)]: every command of ops/loop/gates.txt run once, in
+    order, the whole suite through the kit suite gate (loop_preflight's
+    runner, imported only when a bump is applied)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import loop_preflight
+    return loop_preflight.run_gates(root)
 
 
 def default_gh(root):
@@ -118,10 +158,117 @@ def kind(pr):
     return "other"
 
 
+# "Bump <owner>/<name>[/<path>] from <old> to <new>[ in <dir>]", optionally
+# behind a conventional prefix ("build(deps): bump ...").
+_BUMP = re.compile(
+    r"(?:^|:\s*)[Bb]ump ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_./-]+)?) "
+    r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?\s*$")
+_SHA = re.compile(r"^[0-9a-f]{40}$")
+WORKFLOWS = ".github/workflows/"
+
+
+def parse_bump(title):
+    """(dependency, old, new) of a Dependabot bump title, else None. Versions
+    lose a leading 'v'; the pin comment always writes 'v<version>'."""
+    m = _BUMP.search((title or "").strip())
+    if not m:
+        return None
+    dep = m.group(1).rstrip("/")
+    if ".." in dep:
+        return None
+    return dep, m.group(2), m.group(3)
+
+
+def rewrite_uses(text, dep, sha, new):
+    """(text, count): every `uses: <dep>@<40 hex>[ # v<tag>]` line re-pinned
+    to `<dep>@<sha> # v<new>`, the line's indent and '- ' kept."""
+    rx = re.compile(r"^(\s*(?:-\s+)?uses:\s+)" + re.escape(dep)
+                    + r"@[0-9a-f]{40}(?:[ \t]+#[^\n]*)?[ \t]*$", re.M)
+    return rx.subn(lambda m: "%s%s@%s # v%s" % (m.group(1), dep, sha, new), text)
+
+
 def apply_actions(ctx, pr):
-    """Seam for an actions bump (PUB-DEPBOT-ACTIONS fills it). Returns the
-    one result line when it handled the pull request, None while empty."""
-    return None
+    """Re-apply one github-actions bump as one operator commit on main, push
+    it through the guarded hook and close the pull request with
+    'Applied locally as <sha>.'. Returns the one result line. A red gate, a
+    refused commit or push, or anything it cannot do safely leaves the pull
+    request open (ctx.left_open); a failed git or gh call sets ctx.seam_rc 1."""
+    n = pr["number"]
+
+    def leave(why, rc=0):
+        ctx.left_open.append(n)
+        ctx.seam_rc = max(getattr(ctx, "seam_rc", 0), rc)
+        return "left open, " + why
+
+    bump = parse_bump(pr.get("title"))
+    if bump is None:
+        return leave("needs review (title names no bump)")
+    dep, old, new = bump
+    paths = sorted({p for p in pr_paths(pr)
+                    if p.startswith(WORKFLOWS) and p != GUARD_PATH
+                    and "/../" not in "/" + p + "/"})
+    if not paths:
+        return leave("needs review (no workflow file)")
+    rc, out = ctx.git(["rev-parse", "--abbrev-ref", "HEAD"])
+    if rc != 0 or out.strip() != "main":
+        return leave("checkout is not on main", 1 if rc else 0)
+    rc, out = ctx.git(["status", "--porcelain", "--"] + paths)
+    if rc != 0:
+        return leave("git status failed (rc %d)" % rc, 1)
+    if out.strip():
+        return leave("local edits in the workflow files")
+    owner_name = "/".join(dep.split("/")[:2])
+    rc, out = ctx.gh(["api", "repos/%s/commits/v%s" % (owner_name, new),
+                      "--jq", ".sha"])
+    sha = (out or "").strip()
+    if rc != 0 or not _SHA.match(sha):
+        return leave("gh api gave no commit for %s v%s (rc %d)" % (dep, new, rc), 1)
+    originals, changed = {}, 0
+    for rel in paths:
+        f = ctx.root / rel
+        try:
+            raw = f.read_bytes()
+        except OSError:
+            continue
+        text, count = rewrite_uses(raw.decode("utf-8"), dep, sha, new)
+        if count:
+            originals[f] = raw
+            f.write_bytes(text.encode("utf-8"))
+            changed += count
+    edited = sorted(rel for rel in paths if (ctx.root / rel) in originals)
+
+    def restore():
+        for f, raw in originals.items():
+            f.write_bytes(raw)
+
+    if not changed:
+        return leave("no pinned uses line for %s" % dep)
+    rc, out = ctx.git(["status", "--porcelain", "--"] + edited)
+    if rc == 0 and not out.strip():
+        restore()
+        return leave("%s v%s is already pinned" % (dep, new))
+    for cmd, ok, detail in ctx.gates(ctx.root):
+        if not ok:
+            restore()
+            return leave("gate red: %s (%s)" % (cmd, detail))
+    subject = "deps(actions): bump %s from v%s to v%s" % (dep, old, new)
+    rc, _out = ctx.git(["commit", "-q", "-m", subject, "--"] + edited)
+    if rc != 0:
+        restore()
+        return leave("commit refused (rc %d)" % rc, 1)
+    rc, out = ctx.git(["rev-parse", "HEAD"])
+    head = (out or "").strip()
+    if rc != 0 or not _SHA.match(head):
+        return leave("committed, HEAD unreadable (rc %d)" % rc, 1)
+    rc, _out = ctx.git(["push", "origin", "main"])
+    if rc != 0:
+        return leave("committed %s, push refused (rc %d)" % (head, rc), 1)
+    rc, _out = ctx.gh(["pr", "close", str(n), "--repo", ctx.repo, "--comment",
+                       "Applied locally as %s." % head])
+    if rc != 0:
+        return leave("applied as %s and pushed, gh pr close failed (rc %d)"
+                     % (head, rc), 1)
+    return "applied locally as %s, pushed, closed" % head
 
 
 def apply_npm(ctx, pr):
@@ -138,13 +285,16 @@ SEAMS = {
 
 class Reapply:
     """One run against one checkout. git(args) and gh(args) return
-    (rc, stdout); clock() returns epoch seconds; say(line) reports."""
+    (rc, stdout); clock() returns epoch seconds; say(line) reports;
+    gates(root) returns [(cmd, ok, detail)]."""
 
     def __init__(self, root=ROOT, git=None, gh=None, clock=time.time, say=print,
-                 seams=None):
+                 seams=None, gates=None):
         self.root = Path(root)
         self.git = git or default_git(self.root)
         self.gh = gh or default_gh(self.root)
+        self.gates = gates or default_gates
+        self.seam_rc = 0
         self.clock = clock
         self.say = say
         self.seams = seams if seams is not None else {
@@ -210,13 +360,14 @@ class Reapply:
         if k in SEAMS:
             pkg = SEAMS[k][0]
             fn = self.seams.get(k)
+            self.seam_rc = 0
             line = fn(self, pr) if fn else None
             if line is None:
                 self.left_open.append(n)
                 self.say("#%d: left open, needs %s" % (n, pkg))
                 return 0
             self.say("#%d: %s" % (n, line))
-            return 0
+            return self.seam_rc
         self.left_open.append(n)
         self.say("#%d: left open, needs review (mixed or unknown paths)" % n)
         return 0
