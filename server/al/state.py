@@ -14,6 +14,7 @@ from . import acts as acts_mod
 from . import campaign as campaign_mod
 from . import hints as hints_mod
 from . import langguard as langguard_mod
+from . import overlayview as overlayview_mod
 from . import parser as parser_mod
 from . import pace as pace_mod
 from . import playview as playview_mod
@@ -130,6 +131,8 @@ class SessionState:
         self.recent_events = collections.deque(maxlen=RECENT_EVENTS)
         self.trade_requests = collections.deque(maxlen=TRADE_REQUESTS)
         self.overlay_layout = None
+        # OVL-CARD-SLOT (F-118): the one owner of the overlay card slot
+        self.overlay = overlayview_mod.OverlayView()
         self._trade_ids = 0
         # TC-EVAL-UI / TC-VIEW (server/al/theorycraft/live.py).
         self.eval = None
@@ -279,7 +282,28 @@ class SessionState:
                     at = self.eval["at"]
             self._eval_ids += 1
             self.eval = dict(card, id=self._eval_ids, at=at)
+            if not keep_time:  # OVL-CARD-SLOT: a real press, not a re-score
+                self.overlay.on_press(at)
             self.version += 1
+
+    def set_overlay_sample(self):
+        """OVL-CARD-SLOT: the Settings button's 10 s sample card. Display
+        state only: no event, eval, price or run history entry."""
+        with self._lock:
+            now = self._clock()
+            self.overlay.set_sample(now)
+            self.version += 1
+            return self.overlay.card(self, now)
+
+    def overlay_doc(self, failed=False):
+        """OVL-CARD-SLOT: the overlay view store document to save, clearing
+        its dirty flag; failed=True marks it unsaved again (a failed write)."""
+        with self._lock:
+            if failed:
+                self.overlay.dirty = True
+                return None
+            self.overlay.dirty = False
+            return self.overlay.to_doc()
 
     def set_price(self, card, at=None, keep_time=False):
         """PRICE-1-UI (decision 0016): publish the last price check. `card`
@@ -965,6 +989,8 @@ class SessionState:
             changed = True
         if active:
             self.stretch.touch(now, self._counters())
+        if self.overlay.on_event(ev, self, now):
+            changed = True
         if changed:
             self.version += 1
         return changed
@@ -1243,8 +1269,10 @@ class SessionState:
                 "price": (dict(self.price, text=price_card_text(self.price),
                                expires_at=price_until(self.price))
                           if self.price else None),
-                # The one overlay card chosen at this moment (decision 0016).
-                "card": overlay_card(self.eval, self.price, now, alert),
+                # The one overlay card chosen at this moment (decision 0016),
+                # by the card-slot holder order (OVL-CARD-SLOT)
+                "card": self.overlay.card(self, now, alert),
+                "overlay": self.overlay.view(now),
                 "build": dict(self.build_info) if self.build_info else None,
                 # BUILD-LIVE (decision 0045): stale build, upgrades now
                 "build_alert": alert,

@@ -35,13 +35,19 @@
     PARTS.forEach(function (name) { out[name] = true; });
     return out;
   }
+  /* OVL-TD05-PLATE (TD-05 part 2): "opacity" is the HUD plate alpha only
+     (opacityCss sets --al-plate-a); text stays opaque. "v": 2 marks that
+     meaning; a stored layout without it migrates its value once. */
+  var SCHEMA = 2;
   var DEFAULT = { display: "primary", corner: "top-right", scale: 1.0,
-                  opacity: 0.9, margin: 16, parts: defaultParts(),
-                  quiet_town: false, zone_guide: "entry" };
-  /* Floors from design 0001 (DS-OPACITY, DS-SCALE): opacity under 0.9 drops
-     overlay text under 4.5:1 over a white scene; scale under 0.95 renders
-     13px text under 12px. Old saved layouts clamp to them on load. */
-  var LIMITS = { scale: [0.95, 2.0], opacity: [0.9, 1.0], margin: [0, 400] };
+                  opacity: 0.86, margin: 16, parts: defaultParts(),
+                  quiet_town: false, zone_guide: "entry", v: SCHEMA };
+  /* Floors from design 0001 (DS-OPACITY, DS-SCALE): a plate alpha under
+     0.80 drops overlay text under 4.5:1 over a white scene; scale under
+     0.95 renders 13px text under 12px. Old saved layouts clamp on load. */
+  var LIMITS = { scale: [0.95, 2.0], opacity: [0.8, 1.0], margin: [0, 400] };
+  /* Schema 1: "opacity" faded the whole page within 0.9 to 1.0. */
+  var V1_OPACITY = [0.9, 1.0];
   /* Base HUD window at scale 1, in DIPs: the status box plus room for one
      trade card below it. The window is transparent and click-through, so
      the unused part costs nothing. */
@@ -71,6 +77,21 @@
     return clamp(v, LIMITS[key][0], LIMITS[key][1]);
   }
 
+  /* Mirror of server/al/layout.py migrate_opacity: a schema 1 page
+     opacity (0.9 to 1.0) as the plate alpha, 0.9 -> 0.86 and 1.0 -> 1.0,
+     linear between, in whole hundredths. Math.floor(x + 0.5) is spelled
+     the same on both sides, so both get one number from one double. */
+  function migrateOpacity(old) {
+    return Math.floor(140 * old - 40 + 0.5) / 100;
+  }
+
+  function opacity(l) {
+    var v = l.opacity;
+    if (l.v === SCHEMA) { return num(v, "opacity"); }
+    if (typeof v !== "number" || !isFinite(v)) { return DEFAULT.opacity; }
+    return num(migrateOpacity(clamp(v, V1_OPACITY[0], V1_OPACITY[1])), "opacity");
+  }
+
   /* Mirror of server/al/layout.py normalize(strict=False): never throws. */
   function normalize(layout) {
     var l = (layout && typeof layout === "object") ? layout : {};
@@ -82,11 +103,12 @@
       display: display,
       corner: CORNERS.indexOf(l.corner) >= 0 ? l.corner : DEFAULT.corner,
       scale: num(l.scale, "scale"),
-      opacity: num(l.opacity, "opacity"),
+      opacity: opacity(l),
       margin: Math.round(num(l.margin, "margin")),
       parts: parts(l.parts),
       quiet_town: typeof l.quiet_town === "boolean" ? l.quiet_town : DEFAULT.quiet_town,
-      zone_guide: ZONE_GUIDE.indexOf(l.zone_guide) >= 0 ? l.zone_guide : DEFAULT.zone_guide
+      zone_guide: ZONE_GUIDE.indexOf(l.zone_guide) >= 0 ? l.zone_guide : DEFAULT.zone_guide,
+      v: SCHEMA
     };
   }
 
@@ -163,18 +185,21 @@
     return normalize(layout).corner.indexOf("bottom") === 0 ? "bottom" : "top";
   }
 
-  /* UX-REAL-OVERLAY: the overlay opacity as page CSS (main.js insertCSS).
-     BrowserWindow.setOpacity left the transparent software-composited
-     window invisible on the real desktop, so the window alpha is never
-     used. The value is clamped to LIMITS like every other field. */
+  /* UX-REAL-OVERLAY, OVL-TD05-PLATE: the layout's "opacity" as page CSS
+     (main.js insertCSS; BrowserWindow.setOpacity left the transparent
+     window invisible on the real desktop). It sets only the plate alpha
+     knob of app/overlay/overlay.css, never a page opacity, so text stays
+     opaque. Under prefers-contrast: more and forced-colors the overlay
+     CSS replaces --al-plate itself (opaque), so the knob has no effect
+     there. Clamped to LIMITS like every other field. */
   function opacityCss(value) {
     var v = num(value, "opacity");
-    return "html { opacity: " + (Math.round(v * 100) / 100) + " !important; }";
+    return ":root { --al-plate-a: " + (Math.round(v * 100) / 100) + "; }";
   }
 
   return { CORNERS: CORNERS, LAYOUT_DEFAULT: DEFAULT, LAYOUT_LIMITS: LIMITS, BASE: BASE,
            LAYOUT_PARTS: PARTS, ZONE_GUIDE: ZONE_GUIDE,
-           opacityCss: opacityCss,
+           LAYOUT_SCHEMA: SCHEMA, opacityCss: opacityCss, migrateOpacity: migrateOpacity,
            normalizeLayout: normalize, orderDisplays: orderDisplays,
            pickDisplay: pickDisplay, autoScale: autoScale, computeBounds: computeBounds,
            describeDisplays: describeDisplays, anchor: anchor };

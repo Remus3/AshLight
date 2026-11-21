@@ -354,6 +354,186 @@ def test_health_reports_loop_age(tmp_path):
         core.close()
 
 
+# --------------------- RUN-SECOND-LINE-PY (F-127): adopt and second line
+
+def test_slow_core_start_gives_one_core_and_a_supervisor(tmp_path):
+    # C16: run.ps1 used to start the supervisor only after the core answered
+    # within 15 s; a slow start left a core and no supervisor. Now the
+    # supervisor starts first and adopts the core's pid while it starts.
+    w = World(tmp_path)
+    core = w.spawn()  # launched by run.ps1, no heartbeat yet
+    s = w.sup(adopt_pid=core)
+    assert s.pid == core and s.launch_grace_s == ka.ADOPT_GRACE_S
+    assert _state(w)["status"] == "starting" and _state(w)["core_pid"] == core
+    for _ in range(8):  # 40 s without a heartbeat: still starting
+        w.t += ka.POLL_S
+        assert s.step() == "starting"
+    w.beat(core)
+    w.t += ka.POLL_S
+    assert s.step() == "ok" and s.pid == core
+    assert w.launches == [] and w.terminated == []
+    # without the pid the same start would get a second core next to it
+    (tmp_path / "b").mkdir()
+    w2 = World(tmp_path / "b")
+    w2.spawn()
+    s2 = w2.sup()
+    w2.run_until(s2, lambda r: r == "launched", limit_s=30)
+    assert len(w2.launches) == 1
+
+
+def test_adopted_core_that_never_beats_is_retried_once_after_the_grace(tmp_path):
+    w = World(tmp_path)
+    core = w.spawn()
+    s = w.sup(adopt_pid=core)
+    w.run_until(s, lambda r: bool(w.launches), limit_s=ka.ADOPT_GRACE_S * 3)
+    assert w.terminated == [core] and len(w.launches) == 1
+    assert w.launches[0][0] - 1000.0 > ka.ADOPT_GRACE_S
+    assert _state(w)["last_restart"]["reason"] == "start-timeout"
+
+
+def test_adopted_pid_reused_before_its_heartbeat_is_never_terminated(tmp_path):
+    w = World(tmp_path)
+    core = w.spawn(created=111)
+    s = w.sup(adopt_pid=core)
+    w.procs[core] = 222  # the core died and another process got its pid
+    w.run_until(s, lambda r: bool(w.launches), limit_s=ka.ADOPT_GRACE_S * 3)
+    assert w.terminated == [] and len(w.launches) == 1
+
+
+def test_dead_pid_is_not_adopted(tmp_path):
+    w = World(tmp_path)
+    s = w.sup(adopt_pid=4242)
+    assert s.pid is None and s.launched_at is None
+    assert any("not running" in x for x in w.lines)
+    assert ka.build_parser().parse_args(["--adopt-pid", "77"]).adopt_pid == 77
+    assert ka.build_parser().parse_args([]).adopt_pid == 0
+
+
+def test_run_script_starts_the_supervisor_before_the_health_wait():
+    text = RUN.read_text(encoding="ascii")
+    sup = text.index("Get-AlDetachArgs 'server.al.keepalive'")
+    core = text.index("Get-AlDetachArgs 'server.al' @('--quiet'")
+    wait = text.index("Wait-AlCore $waitSince")
+    assert core < sup < wait
+    assert "'--adopt-pid', [string]$corePid" in text
+    assert text.count("Wait-AlCore") == 2  # the function and its one call
+
+
+class _Child:
+    def __init__(self, pid):
+        self.pid = pid
+
+    def poll(self):
+        return None
+
+
+def _line(tmp_path, live=False, fail=None):
+    from server.al.plug import secondline as sl
+    clock = {"t": 50.0}
+    started = []
+
+    def start(port):
+        if fail:
+            raise fail
+        started.append(port)
+        return _Child(9000 + len(started))
+
+    line = sl.SecondLine(tmp_path, lambda: TEST_PORT, live=lambda: live,
+                         start=start, now=lambda: clock["t"],
+                         wall=lambda: 1_800_000_000.0 + clock["t"])
+    return sl, line, clock, started
+
+
+def _ticks(line, clock, n, step=5.0):
+    out = []
+    for _ in range(n):
+        out.append(line.tick())
+        clock["t"] += step
+    return out
+
+
+def test_killed_supervisor_is_restarted_by_the_core(tmp_path):
+    # C17: the supervisor restarts the core, the core restarts the supervisor
+    sl, line, clock, started = _line(tmp_path)
+    assert _ticks(line, clock, 3) == ["missing", "missing", "started"]
+    assert started == [TEST_PORT]
+    clock["t"] -= 4.0
+    assert line.tick() is None  # not due before the next Checks tick
+    f = {"supervisor_started": line.started_at}
+    row = sl.rows(f, line.started_at + 30.0)
+    assert row == {"id": "supervisor_started", "label": "Keepalive", "status": "note",
+                   "detail": "Keepalive was not running; AshLight started it again."}
+    assert sl.rows(f, line.started_at + sl.SHOW_S) is None
+    assert sl.rows({"supervisor_started": None}, 0.0) is None
+    # a live supervisor resets the count
+    _, line2, clock2, started2 = _line(tmp_path, live=True)
+    assert _ticks(line2, clock2, 5) == ["live"] * 5 and started2 == []
+
+
+def test_killed_supervisor_is_restarted_by_the_core_on_a_real_lock(tmp_path):
+    # the liveness signal is the real one: the supervisor's lock in the runtime
+    from server.al import procs
+    from server.al.plug import secondline as sl
+    clock = {"t": 0.0}
+    started = []
+    line = sl.SecondLine(tmp_path, lambda: TEST_PORT, start=started.append,
+                         now=lambda: clock["t"])
+    held = ka.acquire_lock(tmp_path)
+    try:
+        assert procs.supervisor_live(tmp_path)
+        assert _ticks(line, clock, 4) == ["live"] * 4
+    finally:
+        ka.release_lock(held)  # the supervisor was killed
+    assert _ticks(line, clock, 3) == ["missing", "missing", "started"]
+    assert started == [TEST_PORT]
+
+
+def test_no_supervisor_restart_under_stop_request(tmp_path):
+    sl, line, clock, started = _line(tmp_path)
+    (tmp_path / ka.STOP_FILE).write_text("stop", encoding="ascii")
+    assert _ticks(line, clock, 10) == ["stop"] * 10
+    assert started == [] and line.started_at is None
+    (tmp_path / ka.STOP_FILE).unlink()  # the count starts over
+    assert _ticks(line, clock, 3) == ["missing", "missing", "started"]
+
+
+def test_supervisor_restart_at_most_once_per_5_min(tmp_path):
+    sl, line, clock, started = _line(tmp_path)
+    got = _ticks(line, clock, int(sl.EVERY_S / 5.0) + 3)
+    assert got.count("started") == 2 and len(started) == 2
+    first, second = [i for i, r in enumerate(got) if r == "started"]
+    assert (second - first) * 5.0 >= sl.EVERY_S
+    # a start that fails counts against the cap too
+    _, bad, bclock, _ = _line(tmp_path, fail=OSError("no python"))
+    out = _ticks(bad, bclock, 30)
+    assert out.count("failed") == 1 and "started" not in out
+    assert bad.started_at is None
+
+
+def test_second_line_runs_only_in_the_real_core(tmp_path):
+    from server.al.plug import secondline as sl
+
+    class FakeCore:
+        runtime = tmp_path
+        port = TEST_PORT
+        DIAG_TICK_S = 5.0
+
+        def __init__(self, real):
+            self._real = real
+            self.ticks = []
+
+        def add_tick(self, name, fn):
+            self.ticks.append(name)
+
+    for real, env, want in ((True, {}, True), (False, {}, False),
+                            (True, {paths.RUNTIME_ENV: str(tmp_path)}, False)):
+        assert sl.enabled(FakeCore(real), environ=env) is want
+    test_core = FakeCore(False)
+    sl.attach(test_core)
+    assert test_core.ticks == []
+    assert sl.facts(test_core, 0.0) == {"supervisor_started": None}
+
+
 def test_second_supervisor_exits_at_once(tmp_path, leased_port):
     held = ka.acquire_lock(tmp_path)
     try:
