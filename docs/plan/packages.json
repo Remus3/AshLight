@@ -12874,6 +12874,9 @@
     "web/pricewatch.js",
     "app/test/prices.test.js",
     "app/test/util9.test.js",
+    "app/test/tabs.test.js",
+    "app/test/search.test.js",
+    "app/test/filtermerge.test.js",
     "tests/test_ux_review.py",
     "tests/test_ux_b8.py",
     "tests/play_fit_pending/tab-build.txt"
@@ -12992,6 +12995,7 @@
    "files": [
     "server/al/__main__.py",
     "server/al/ports.py",
+    "tests/test_hot_reload.py",
     "tests/test_port_resolve.py"
    ],
    "new_files": [
@@ -13216,7 +13220,7 @@
    "files": [],
    "new_files": [
     "tools/watch_sources/pob_next.py",
-    "ops/loop/watch_rows/pob_next.json",
+    "ops/loop/watch_rows/pob-next.json",
     "tests/test_watch_pob_next.py"
    ],
    "integrator_edits": [],
@@ -13241,7 +13245,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. Floor: a new source reads repository metadata only (commit id, tag, release title, date through the documented GitHub API), never a data file, sends webfetch.user_agent(<purpose>) and no cookie, and makes 0 requests while 'web_data' in the dev host's gitignored config/local.json is not true (decisions 0009, 0013; floor audit L3). W3 of docs/plan/06. The repository is the one in config/tc_pins.json (pob2.repo), read through tools/tc_pin.py helpers, never a tracked constant of its own. Template kind pob_next: id TC-NEXT-<YYYYMMDD>, lane review, 'BLOCKED: session', tokens <sha> (40 hex) and <n> (1 to 9999), text as docs/plan/06 W3.",
+   "notes": "Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. Floor: a new source reads repository metadata only (commit id, tag, release title, date through the documented GitHub API), never a data file, sends webfetch.user_agent(<purpose>) and no cookie, and makes 0 requests while 'web_data' in the dev host's gitignored config/local.json is not true (decisions 0009, 0013; floor audit L3). W3 of docs/plan/06. The repository is the one in config/tc_pins.json (pob2.repo), read through tools/tc_pin.py helpers, never a tracked constant of its own. Template kind pob-next: id TC-NEXT-<YYYYMMDD>, lane review, 'BLOCKED: session', tokens <sha> (40 hex) and <n> (1 to 9999), text as docs/plan/06 W3.",
    "wave": 18,
    "owner": "session",
    "tier": "P1",
@@ -19651,7 +19655,7 @@
    ],
    "new_files": [
     "tools/watch_sources/policy_quotes.py",
-    "ops/loop/watch_rows/policy_quotes.json"
+    "ops/loop/watch_rows/policy-quotes.json"
    ],
    "integrator_edits": [],
    "tests": [
@@ -19680,7 +19684,7 @@
     "unblock": "the operator writes that floor line in CLAUDE.md and it allows the index page"
    },
    "operator_act": "OA-18 (docs/plan/09): A-01: write one floor line saying whether GGG's developer-docs pages outside the API Reference and Data Exports (index, authorization, changelog, game) may be read. Default until then: no new work reads those four pages; this package is not built; the settled decision 0044 watch is left as it is. An explicit no files a session row that narrows the 0044 watch to the two pages.",
-   "notes": "W15 of docs/plan/06. Compare whitespace-normalised. Template kind policy_quote: id POLICY-QUOTE-<YYYYMMDD>, lane review, 'BLOCKED: session', token <qid>. The tool never edits the floor. server/al/diag.py and server/al/core.py (diag_facts) carry the dev-host note beside check_dev_docs; both are hot files of many other units, so this package needs its own wave slot on them.",
+   "notes": "W15 of docs/plan/06. Compare whitespace-normalised. Template kind policy-quote: id POLICY-QUOTE-<YYYYMMDD>, lane review, 'BLOCKED: session', token <qid>. The tool never edits the floor. server/al/diag.py and server/al/core.py (diag_facts) carry the dev-host note beside check_dev_docs; both are hot files of many other units, so this package needs its own wave slot on them.",
    "wave": 99,
    "owner": "session",
    "tier": "P1",
