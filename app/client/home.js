@@ -151,27 +151,43 @@ function profileDir(home, env) {
 
 /* The command for a Python child (paths.python_cmd): {exe, args}. A
    checkout keeps the "-m" form and exe null (the launcher looks python up
-   in an absolute PATH entry); an install runs <root>/boot.py with the
-   marker's private runtime, exe null when the marker names no usable
-   python folder. */
-function pythonCmd(home, module, args) {
+   in an absolute PATH entry); an install prefers the marker's private
+   runtime (REL-RUNTIME-SCRIPTS, decision 0063): <runtime>/python.exe, or
+   pythonw.exe when opts.windowless, running <root>/boot.py, because the
+   embeddable runtime's ._pth ignores the current folder; exe null when the
+   marker names no usable python folder. No stat of the runtime folder. */
+function pythonCmd(home, module, args, opts) {
   const h = asHome(home);
   const tail = [String(module)].concat((args || []).map(String));
   if (h.mode !== "installed") { return { exe: null, args: ["-m"].concat(tail) }; }
+  const name = opts && opts.windowless ? "pythonw.exe" : "python.exe";
   return {
-    exe: h.pythonDir ? path.join(h.pythonDir, "python.exe") : null,
+    exe: h.pythonDir ? path.join(h.pythonDir, name) : null,
     args: [path.join(h.root, BOOT_NAME)].concat(tail)
   };
 }
 
-/* The environment a child gets: a copy of env. It drops nothing yet; the
-   later runtime packages narrow it here, in one place. */
+/* The variables no child of the client gets (OVL-LAUNCH-ENV, F-110): either
+   one turns electron.exe into a Node script host before any app code runs,
+   and run.ps1 starts the client again on a re-run. Matched in any case, as
+   Windows matches environment names. scripts/run.ps1 drops the same two
+   ($clientUnset). */
+const DROPPED_ENV = ["ELECTRON_RUN_AS_NODE", "NODE_OPTIONS"];
+
+/* The environment a child gets: a copy of env without DROPPED_ENV. The one
+   place the launcher's child environment is narrowed. */
 function childEnv(env) {
-  return Object.assign({}, env || process.env);
+  const src = env || process.env;
+  const drop = DROPPED_ENV.map((n) => n.toUpperCase());
+  const out = {};
+  for (const key of Object.keys(src)) {
+    if (!drop.includes(String(key).toUpperCase())) { out[key] = src[key]; }
+  }
+  return out;
 }
 
 module.exports = {
   resolve, asHome, checkout, profileDir, pythonCmd, childEnv, homeRefusal, HomeRefused,
   HOME_ENV, SIDECAR_ENV, MARKER_NAME, MARKER_MAX_BYTES, APP_FOLDER, DATA_DIR, CACHE_DIR,
-  RUNTIME_FOLDER, BOOT_NAME, REFUSED_COMPONENTS
+  RUNTIME_FOLDER, BOOT_NAME, REFUSED_COMPONENTS, DROPPED_ENV
 };
