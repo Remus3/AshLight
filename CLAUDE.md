@@ -594,7 +594,9 @@ of the HALT check.
   built from tracked templates and validated tokens, at most 3 of each kind
   a local day, with the operator identity, only through the kit git lock,
   never while HALT exists; the release check reads in front of the HALT
-  return and acts on nothing while HALTed; pin moves stay session commits).
+  return and acts on nothing while HALTed; pin moves stay session commits)
+  (0025 / 0028 amendment 2026-11-18: trial --ref is a rehearsal apply never
+  accepts; the GUI reference is keyed by tag).
   Reverses if:
   GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
   releases or ships a headless API, the loop gains safe auto-commit, PoB
@@ -1054,8 +1056,17 @@ of the HALT check.
   AshLight User-Agent, no cookie; a wrong hash leaves nothing in the
   target), never bundled and never fetched by the running core; boot.py
   plus one command builder (paths.python_cmd); no Electron fuse flipped
-  (decision 0063). Reverses if: the spike fails, a publisher drops
-  hash-verifiable assets, or a licence objection appears.
+  (decision 0063). Scripts find Python, Electron and the paths only through
+  scripts/al_env.ps1 (Get-AlPython, Get-AlPythonCmd, Invoke-AlPython,
+  Get-AlPaths, Get-AlElectron: `<python> -m` in a checkout, `<python>
+  <payload>oot.py <module>` with the private runtime in an install);
+  setup.ps1 and build.ps1 refuse an installed home; build.ps1 -Package runs
+  tools/release.py build alone; the client's children get home.js
+  childEnv(), which strips app/guards.js STRIPPED_ENV (ELECTRON_RUN_AS_NODE,
+  NODE_OPTIONS) (REL-RUNTIME-SCRIPTS). Reverses if: the spike fails, a
+  publisher drops hash-verifiable assets, a licence objection appears, a
+  script needs a lookup al_env.ps1 cannot give, or calc_setup.ps1 must keep
+  its own.
 - A release is the app zip, install.ps1, release.json, SHA256SUMS.txt, the
   notes file and an SBOM, built reproducibly by tools/release.py build from
   one git ref; no installer framework, no packaged .exe, no signing at
