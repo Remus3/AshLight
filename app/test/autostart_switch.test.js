@@ -16,6 +16,8 @@ const vm = require("node:vm");
 const Launcher = require("../client/launcher.js");
 const TrayMenu = require("../client/tray_menu.js");
 const Client = require("../client/window.js");
+const Hello = require("../hello.js");
+const crypto = require("node:crypto");
 
 const APP = path.join(__dirname, "..");
 const PORT = 8961;
@@ -178,6 +180,18 @@ function emitter() {
   };
 }
 
+/* SEC-HELLO-CLIENT (decision 0054): the fake core answers the hello
+   handshake with a real proof (app/hello.js) for the nonce it got and the
+   dialled port, so the client's health check sees a proven core. */
+function helloReply(o, cb) {
+  const res = emitter();
+  res.statusCode = 200;
+  res.resume = noop;
+  const nonce = o.headers[Hello.NONCE_HEADER];
+  const body = JSON.stringify({ port: o.port, proof: Hello.serverProof(crypto, TOKEN, nonce, o.port) });
+  setImmediate(() => { cb(res); res.emit("data", Buffer.from(body)); res.emit("end"); });
+}
+
 function fakeWorld() {
   const windows = [];
   const menus = [];
@@ -236,7 +250,10 @@ function fakeWorld() {
     request(o, cb) {
       const req = emitter();
       req.destroy = noop;
-      req.end = () => { setImmediate(() => cb({ statusCode: 200, resume() {} })); };
+      req.end = () => {
+        if (o.path === Hello.PATH) { helloReply(o, cb); return; }
+        setImmediate(() => cb({ statusCode: 200, resume() {} }));
+      };
       return req;
     }
   };

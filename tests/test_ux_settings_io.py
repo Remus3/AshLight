@@ -24,7 +24,9 @@ FULL = {"character": "Ash", "poll_ms": 300, "overlay_toggle": "Alt+Shift+A",
                     "parts": {"zone": True, "timer": False, "level": True,
                               "deaths": True, "status": True, "trade": False,
                               "item": True, "moment": True, "hint": False},
-                    "quiet_town": True, "zone_guide": "never"},
+                    "quiet_town": True, "zone_guide": "never",
+                    # OVL-TD05-PLATE: the schema marker round trips
+                    "v": 2},
         # never exported
         "contact": "someone-at-example", "client_log": "somewhere/logs/Client.txt",
         "port": 8961, "loop": {"inbox_dir": ""}, "token": "t" * 48}
@@ -53,6 +55,28 @@ def test_round_trip():
     assert update == want
     assert report == {"applied": sorted(want), "ignored": [], "web_data_offered": False,
                       "tc_calc_offered": False}
+
+
+def test_overlay_export_import_keeps_v2():
+    """OVL-TD05-PLATE: export and import keep the "v": 2 layout as is; an
+    old stored layout or an old export (no "v") migrates its 0.9 to 1.0
+    opacity onto the 0.86 to 1.0 plate alpha once and carries v 2 after."""
+    doc = json.loads(json.dumps(settingsio.export_doc(FULL, "v")))
+    assert doc["settings"]["overlay"]["v"] == 2
+    assert doc["settings"]["overlay"]["opacity"] == 0.95
+    update, _report = settingsio.parse_import(doc, {})
+    assert update["overlay"] == FULL["overlay"]
+    old = {"display": "primary", "corner": "top-left", "scale": 1.2,
+           "opacity": 0.95, "margin": 20}
+    doc = settingsio.export_doc({"overlay": old}, "v")
+    assert doc["settings"]["overlay"]["v"] == 2
+    assert doc["settings"]["overlay"]["opacity"] == 0.93
+    old_file = {"kind": settingsio.KIND, "schema": 1, "settings": {"overlay": old}}
+    update, _report = settingsio.parse_import(old_file, {})
+    assert update["overlay"]["v"] == 2 and update["overlay"]["opacity"] == 0.93
+    again, _report = settingsio.parse_import(
+        {"kind": settingsio.KIND, "schema": 1, "settings": update}, {})
+    assert again["overlay"] == update["overlay"]  # once, never mapped twice
 
 
 def test_web_data_never_switched_on_by_import():

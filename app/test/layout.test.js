@@ -22,8 +22,9 @@ test("normalizeLayout fills defaults and clamps", () => {
   const n = L.normalizeLayout({ corner: "nope", scale: 9, opacity: 0, margin: -5, display: "x" });
   assert.equal(n.corner, "top-right");
   assert.equal(n.scale, 2);
-  assert.equal(n.opacity, 0.9);
+  assert.equal(n.opacity, 0.86); // schema 1 floor 0.9, migrated
   assert.equal(n.margin, 0);
+  assert.equal(n.v, 2);
   assert.equal(n.display, "primary");
 });
 
@@ -35,12 +36,12 @@ const ALL_ON = { zone: true, timer: true, level: true, deaths: true, status: tru
                  trade: true, item: true, moment: true, hint: true };
 const SHARED = /* SHARED-FIXTURE */ [
   {"in": {},
-   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.9,
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.86,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
-           "quiet_town": false, "zone_guide": "entry"}},
+           "quiet_town": false, "zone_guide": "entry", "v": 2}},
   {"in": {"corner": "bottom-left", "scale": 1.5, "display": 2, "opacity": 1.0,
           "margin": 30, "parts": {"zone": false, "trade": false},
           "quiet_town": true, "zone_guide": "never"},
@@ -49,15 +50,15 @@ const SHARED = /* SHARED-FIXTURE */ [
            "parts": {"zone": false, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": false, "item": true, "moment": true,
                      "hint": true},
-           "quiet_town": true, "zone_guide": "never"}},
+           "quiet_town": true, "zone_guide": "never", "v": 2}},
   {"in": {"parts": {"offline": false, "hint": 0, "moment": false, "item": "no"},
           "quiet_town": "yes", "zone_guide": "sometimes"},
-   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.9,
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.86,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": false,
                      "hint": true},
-           "quiet_town": false, "zone_guide": "entry"}},
+           "quiet_town": false, "zone_guide": "entry", "v": 2}},
   {"in": {"parts": ["zone"], "quiet_town": 1, "zone_guide": "always",
           "scale": 0.5, "opacity": 3, "margin": 999, "display": 40},
    "out": {"display": "primary", "corner": "top-right", "scale": 0.95, "opacity": 1.0,
@@ -65,14 +66,42 @@ const SHARED = /* SHARED-FIXTURE */ [
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
-           "quiet_town": false, "zone_guide": "always"}},
+           "quiet_town": false, "zone_guide": "always", "v": 2}},
   {"in": {"parts": null, "zone_guide": null, "quiet_town": null},
-   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.9,
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.86,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
-           "quiet_town": false, "zone_guide": "entry"}}
+           "quiet_town": false, "zone_guide": "entry", "v": 2}},
+  {"in": {"opacity": 0.95},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.93,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry", "v": 2}},
+  {"in": {"opacity": 0.5, "v": 1},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.86,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry", "v": 2}},
+  {"in": {"opacity": 0.85, "v": 2},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.85,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry", "v": 2}},
+  {"in": {"opacity": 0.3, "v": 2},
+   "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.8,
+           "margin": 16,
+           "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
+                     "status": true, "trade": true, "item": true, "moment": true,
+                     "hint": true},
+           "quiet_town": false, "zone_guide": "entry", "v": 2}}
 ] /* END-SHARED-FIXTURE */;
 
 test("OVL-OVERLAY-KEYS: defaults keep today's overlay", () => {
@@ -110,12 +139,40 @@ test("OVL-OVERLAY-KEYS: Python and JS agree on the shared fixture", () => {
 });
 
 test("DS-OPACITY / DS-SCALE: old layouts clamp to the floors", () => {
-  assert.deepEqual(L.LAYOUT_LIMITS.opacity, [0.9, 1.0]);
+  assert.deepEqual(L.LAYOUT_LIMITS.opacity, [0.8, 1.0]);
   assert.deepEqual(L.LAYOUT_LIMITS.scale, [0.95, 2.0]);
+  assert.equal(L.LAYOUT_DEFAULT.opacity, 0.86);
+  assert.equal(L.LAYOUT_DEFAULT.v, 2);
   const n = L.normalizeLayout({ scale: 0.75, opacity: 0.3 });
   assert.equal(n.scale, 0.95);
-  assert.equal(n.opacity, 0.9);
+  assert.equal(n.opacity, 0.86); // schema 1: clamped to 0.9, then migrated
   assert.ok(13 * n.scale >= 12);
+  assert.equal(L.normalizeLayout({ opacity: 0.3, v: 2 }).opacity, 0.8);
+  assert.equal(L.normalizeLayout({ opacity: 7, v: 2 }).opacity, 1);
+});
+
+/* OVL-TD05-PLATE: a layout saved without "v": 2 held a page opacity in
+   0.9 to 1.0; it maps linearly onto the plate alpha 0.86 to 1.0, once. */
+test("OVL-TD05-PLATE: saved 0.9 to 1.0 maps linearly onto 0.86 to 1.0 once", () => {
+  assert.equal(L.normalizeLayout({ opacity: 0.9 }).opacity, 0.86);
+  assert.equal(L.normalizeLayout({ opacity: 0.95 }).opacity, 0.93);
+  assert.equal(L.normalizeLayout({ opacity: 1.0 }).opacity, 1);
+  assert.equal(L.normalizeLayout({}).opacity, 0.86); // the old default 0.9
+  for (let i = 0; i <= 100; i++) {
+    const old = 0.9 + i / 1000;
+    const got = L.normalizeLayout({ opacity: old }).opacity;
+    assert.ok(Math.abs(got - (0.86 + (old - 0.9) * 1.4)) <= 0.005 + 1e-9, old + " -> " + got);
+    assert.equal(got, Math.round(got * 100) / 100, "whole hundredths");
+  }
+  // once: a migrated layout carries v 2 and reads back unchanged
+  for (const old of [0.9, 0.91, 0.95, 0.99, 1.0]) {
+    const first = L.normalizeLayout({ opacity: old, corner: "top-left" });
+    assert.equal(first.v, 2);
+    assert.deepEqual(L.normalizeLayout(first), first);
+  }
+  // a non-number keeps the default, never NaN
+  assert.equal(L.normalizeLayout({ opacity: "x" }).opacity, 0.86);
+  assert.equal(L.normalizeLayout({ opacity: NaN, v: 2 }).opacity, 0.86);
 });
 
 test("displays are indexed left to right", () => {
@@ -237,13 +294,30 @@ test("hudModel shows the newest open trade and repaints only on change", () => {
 });
 
 /* UX-REAL-OVERLAY: on the real desktop a transparent, software-composited
-   window with BrowserWindow.setOpacity drew nothing at all. The opacity is
-   page CSS instead. */
-test("opacityCss clamps to the layout limits", () => {
-  assert.equal(L.opacityCss(0.9), "html { opacity: 0.9 !important; }");
-  assert.equal(L.opacityCss(1), "html { opacity: 1 !important; }");
-  assert.equal(L.opacityCss(0.2), "html { opacity: 0.9 !important; }");
-  assert.equal(L.opacityCss("x"), "html { opacity: " + L.LAYOUT_DEFAULT.opacity + " !important; }");
+   window with BrowserWindow.setOpacity drew nothing at all. The value is
+   page CSS instead; OVL-TD05-PLATE: only the plate alpha knob, never a
+   page opacity, so text stays opaque. */
+test("opacityCss sets the plate alpha only, clamped to the layout limits", () => {
+  assert.equal(L.opacityCss(0.86), ":root { --al-plate-a: 0.86; }");
+  assert.equal(L.opacityCss(1), ":root { --al-plate-a: 1; }");
+  assert.equal(L.opacityCss(0.8), ":root { --al-plate-a: 0.8; }");
+  assert.equal(L.opacityCss(0.2), ":root { --al-plate-a: 0.8; }");
+  assert.equal(L.opacityCss("x"), ":root { --al-plate-a: 0.86; }");
+  for (const v of [0.8, 0.86, 0.93, 1, 0.2, "x"]) {
+    assert.ok(!/(?<![-\w])opacity\s*:/.test(L.opacityCss(v)), "no page opacity");
+    assert.ok(!/html/.test(L.opacityCss(v)));
+  }
+});
+
+test("OVL-TD05-PLATE: high-contrast modes replace the plate the knob feeds", () => {
+  const css = require("fs").readFileSync(
+    require("path").join(__dirname, "..", "overlay", "overlay.css"), "utf8");
+  for (const q of ["prefers-contrast: more", "forced-colors: active"]) {
+    const at = css.indexOf("@media (" + q + ")");
+    assert.ok(at > 0, q);
+    const end = css.indexOf(";", css.indexOf("--al-plate:", at));
+    assert.ok(/--al-plate:\s*(#[0-9a-fA-F]{6}|Canvas)\s*;$/.test(css.slice(at, end + 1)), q);
+  }
 });
 
 test("main.js never uses the window-level opacity", () => {

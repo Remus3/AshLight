@@ -1,0 +1,52 @@
+{
+ "kinds": {
+  "ninjadocs": {
+   "act": "row",
+   "id": "NINJA-DOCS-<YYYYMMDD>",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "poe.ninja docs changed (<topic>, <n> lines): compare the diff in the sidecar Logs with the tracked read-key baseline and update the type lists or the parser. ACCEPT: the baseline test passes on the new shape; no route outside the documented page is added. ZERO-CLICK: the loop works it. SOURCE: watch ninja-docs <topic>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "topic": "types|routes",
+    "n": "[1-9][0-9]{0,2}"
+   },
+   "sample": {
+    "topic": "types",
+    "n": "12"
+   }
+  },
+  "ninjapolicy": {
+   "act": "row",
+   "id": "NINJA-POLICY-<YYYYMMDD>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session",
+   "text": "poe.ninja docs changed a policy line (<n> lines): re-read decisions 0013 and 0026 against it. ACCEPT: a dated note in both decisions. SOURCE: watch ninja-docs policy, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "n": "[1-9][0-9]{0,2}"
+   },
+   "sample": {
+    "n": "2"
+   }
+  },
+  "ninjashape": {
+   "act": "row",
+   "id": "NINJA-SHAPE-<YYYYMMDD>",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "poe.ninja <family> bodies miss <n> read keys since <since>: adapt the parser and the tracked baseline from the recorded key sets. ACCEPT: the shape tests pass on a fixture cut from the recorded key sets; prices show again. ZERO-CLICK: the loop works it. SOURCE: watch ninja-shape <family>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "family": "league|exchange|item",
+    "n": "[1-9][0-9]?",
+    "since": "[0-9]{4}-[0-9]{2}-[0-9]{2}"
+   },
+   "sample": {
+    "family": "item",
+    "n": "3",
+    "since": "2026-11-20"
+   }
+  }
+ }
+}

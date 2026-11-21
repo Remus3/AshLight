@@ -95,17 +95,15 @@ def _plate(v):
     return plate(v)
 
 
-def overlay_ratio(fg_hex, window_opacity, plate_alpha=None):
-    """Text over the plate over a white scene, the whole window at
-    `window_opacity`; every composite rounded to 8 bits a channel. Until
-    OVL-TD05-PLATE, main.js still inserts a page opacity from layout.js
-    (floor 0.9), so this interim worst case stays checked here."""
+def overlay_ratio(fg_hex, plate_alpha=None):
+    """Opaque text over the plate over a white scene, the plate at
+    `plate_alpha` (its CSS default when None); every composite rounded to
+    8 bits a channel. OVL-TD05-PLATE: the layout's "opacity" sets only
+    --al-plate-a (layout.js opacityCss), so text is never faded."""
     v = _overlay_vars()
     rgb, alpha = _plate(v)
     plate = over(rgb, alpha if plate_alpha is None else plate_alpha, WHITE)
-    bg = over(plate, window_opacity, WHITE)
-    fg = over(_hex(fg_hex), window_opacity, WHITE)
-    return ratio(fg, bg)
+    return ratio(_hex(fg_hex), plate)
 
 
 def _overlay_text_colours():
@@ -119,6 +117,24 @@ def _overlay_text_colours():
 
 # --- U1: overlay contrast at the opacity floor, not only at 1.0 ------------
 
+def test_opacity_floor_is_the_plate_floor():
+    """OVL-TD05-PLATE: the slider's floor is the plate alpha floor 0.80,
+    and the page CSS it drives sets that knob, never a page opacity."""
+    assert _opacity_floor() == 0.8
+    js = LAYOUT_JS.read_text(encoding="ascii")
+    assert '":root { --al-plate-a: "' in js
+    assert not re.search(r"html\s*\{\s*opacity", js)
+
+
+def test_overlay_slider_is_labelled_background():
+    """The slider sets the plate behind the text, so it reads 'Background',
+    not 'Opacity' (the text never fades)."""
+    html = srcpaths.index_html()
+    m = re.search(r"<label>\s*([A-Za-z ]+?)\s*<span id=\"layout-opacity-out\"", html)
+    assert m and m.group(1) == "Background", m and m.group(1)
+    assert re.search(r'id="layout-opacity"[^>]*min="%s"' % _opacity_floor(), html)
+
+
 def test_overlay_has_text_colours():
     assert "fk-text" in _overlay_text_colours()
 
@@ -127,7 +143,7 @@ def test_overlay_has_text_colours():
 def test_overlay_text_meets_4_5_at_opacity_floor(name):
     v = _overlay_vars()
     got = overlay_ratio(v[name], _opacity_floor())
-    assert got >= TEXT, f"{name} at opacity {_opacity_floor()}: {got:.2f}"
+    assert got >= TEXT, f"{name} at plate alpha {_opacity_floor()}: {got:.2f}"
 
 
 # --- U2: glance text 7:1 (research 0008) -----------------------------------
@@ -181,7 +197,7 @@ def test_overlay_high_contrast_plate_is_opaque():
 
 def test_overlay_high_contrast_text_at_opacity_floor():
     v = _overlay_vars()
-    got = overlay_ratio(v["fk-text"], _opacity_floor(), plate_alpha=1.0)
+    got = overlay_ratio(v["fk-text"], plate_alpha=1.0)
     assert got >= GLANCE, got
 
 

@@ -8,6 +8,12 @@
     python -m server.al.procs stop [--wait S]   stop supervisor and overlay
                                                 (after stop.ps1 stopped the core)
 
+RUN-SECOND-LINE-PY (decision 0005 amendment 2026-11-18): supervisor_command
+builds the one supervisor start (the one command builder, windowless) and
+start_supervisor starts it hidden and detached; the core uses it when no
+supervisor is live (plug/secondline.py). It starts only AshLight's own
+python supervisor, never Electron (decision 0041).
+
 A process counts as AshLight's only when it is proven ours (decision 0010):
 
 - core: the pid in <runtime>/core.alive, image python*, and its recorded
@@ -30,6 +36,7 @@ that is not one of the above, and it only ever terminates proven-ours pids.
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -211,6 +218,38 @@ def plan(state, overlay_wanted=True, overlay_installed=True):
     if overlay_wanted and overlay_installed and not state["overlay"]["live"]:
         todo.append("overlay")
     return todo
+
+
+SUPERVISOR_MODULE = "server.al.keepalive"
+
+
+def supervisor_command(port, adopt_pid=0):
+    """The windowless supervisor start through the one command builder
+    (DEP-06): `-m server.al.keepalive` in a checkout, boot.py in an
+    install; --adopt-pid only for a core that has no heartbeat yet."""
+    args = ["--port", str(int(port))]
+    if int(adopt_pid or 0) > 0:
+        args += ["--adopt-pid", str(int(adopt_pid))]
+    return paths.python_cmd(SUPERVISOR_MODULE, *args, windowless=True)
+
+
+def start_supervisor(port, adopt_pid=0, popen=subprocess.Popen):
+    """Start one supervisor hidden and detached from the caller (no
+    window, its own process group, no inherited handles); returns the
+    child (a Popen). A second supervisor exits at once on the lock, so a
+    racing start is harmless. Raises OSError when it cannot start."""
+    flags = 0
+    if os.name == "nt":
+        flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+    return popen(supervisor_command(port, adopt_pid), cwd=str(paths.repo_root()),
+                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                 stderr=subprocess.DEVNULL, close_fds=True, creationflags=flags)
+
+
+def supervisor_live(runtime):
+    """A supervisor watches runtime: its recorded pid is provably ours
+    (read first: no lock is touched), else it holds keepalive.lock."""
+    return bool(supervisor_pid(runtime)) or supervisor_locked(runtime)
 
 
 def record_overlay(runtime, pid):
