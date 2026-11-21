@@ -283,3 +283,20 @@ Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
   process costs overlay budget in play, or the operator rules a fetch
   outside a build is not covered by the web_data opt-in.
 - Tests: tests/test_snap_start.py, tests/test_diag_self.py::test_snapshot.
+
+## Amendment 2026-11-21 (DATA-SNAP-SETUP)
+
+- Decision: `scripts/setup.ps1` also runs the snapshot tool (through
+  server.al.prio, below normal) when config/local.json already holds
+  "web_data": true, strictly a JSON true; it never passes --opt-in, so the
+  tool re-checks the setting; -NoSnapshot / AL_NO_SNAPSHOT=1 skip it; a
+  failing source is logged and never fails setup.
+- Alternatives: (a) keep it in build.ps1 and the supervisor only -
+  rejected: a fresh checkout needs a second command before the data shows;
+  (b) force it in setup like build.ps1 -Snapshot - rejected: setup must
+  not fetch while web data is off (decision 0013).
+- Why: one setup command, no second command for game data once web data
+  is ticked (ZERO-CLICK); same tool, same gate.
+- Reverses if: decision 0013 changes, or setup time with the fetch
+  becomes a problem for players.
+- Tests: tests/test_setup_snapshot.py.
