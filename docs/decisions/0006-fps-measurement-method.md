@@ -66,6 +66,52 @@ figures and the calc tag off; client figures older than 150 s are dropped.
 Reverses if: the floor or decision 0029 changes, or the client file gains
 per-window renderer figures (then B12 also with the companion open).
 
+## Note 2026-11-21 (OVL-CHECK, F-128, ruling Q-18): budget B19
+
+OVL-FPS is accepted on budget B19, documented as a proxy, not a frame-time
+measure: (1) no change on the game's own FPS display with the HUD on, read
+by the operator (method 1) and given as one answer, same or dropped;
+(2) AshLight's own CPU (core plus client) under 1 percent of one core in
+the shown and updating blocks (method 3); (3) system-wide CPU totals of the
+shown and updating blocks within the noise of the hidden blocks (the larger
+of their spread and 2 percentage points; method 2). B19 passes only when
+all three hold; a missing answer leaves it pending, a 'dropped' answer
+fails it. The numbers are recorded here (the OVL-FPS row), not in decision
+0002, which is unchanged.
+
+Method: tools/ovl_check.py, developer-only, stdlib, never started by the
+shipped app; nothing under server/ or app/ exists for it
+(tests/test_ovl_check.py scans for that). A session arms it (a flag in the
+sidecar Logs dir, 24 h) and it starts one hidden runner. The runner waits
+until the core's GET /api/state shows an open map for 20 s, then plays nine
+30 s blocks (hidden, shown, updating, three times) through calls the core
+already has: hidden = POST /api/overlay-layout with every overlay part off,
+shown = the player's parts back, updating = POST /api/overlay-sample every
+10 s plus an opacity nudge of 0.02 inside the layout limits every 5 s. The
+player's layout is copied first and put back at the end, on any error, and
+by the next run or `restore` if the runner died. Each second it reads the
+core's own CPU and working set from the token-gated GET /api/debug (the
+core's own handle), the client's figures from overlay-state.json (once a
+minute, so the client part is coarse) and the system-wide CPU totals
+(GetSystemTimes, never per process). It writes ovl_check-<stamp>.json and a
+15-line ovl_check-<stamp>.txt in the sidecar Logs dir and clears the flag.
+The answer comes from one console prompt, else the 'Tried in game' card
+(OVL-FPS: Worked = same, Refused = dropped, read through GET /api/verdicts
+for 15 min), else `python tools/ovl_check.py answer same|dropped`.
+
+Rulings, recorded: the tool opens no process by pid and lists no process
+(alternative, the pids of server/al/procs.py, rejected: overlay_pids walks
+the system process list, which the floor and the budget log decline; the
+client's own figure file carries the same numbers once a minute); no screen
+capture and no input (Q-18 b); the hidden block keeps the failure words
+that can never be switched off (they are part of the product); the check
+is blind at a saturated GPU or an FPS cap and the display mode is not
+detected, so the write-up names the operator's display mode by hand.
+Reverses if: the client figure file gains a per-second rate (then client
+CPU per block), the operator rules a pid-keyed read of AshLight's own
+processes acceptable, or the existing calls stop producing an updating
+load (then the question returns to the adjudicator with the evidence).
+
 ## Reverses if
 
 GGG's tool policy or an official GGG statement explicitly permits ETW /
