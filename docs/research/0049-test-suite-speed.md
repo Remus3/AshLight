@@ -836,3 +836,101 @@ tree waited 20 to 31 minutes as "tree-busy" while each new suite_run
 ticket of this package took the freed slot at once (wait 0.0 s), so the
 gate's queue order did not hold across tree-busy re-polls; the
 orchestrator paused further soak runs after run 11 for that reason.
+
+## Addendum 2026-11-21 (2) - gated hold under the target? (TEST-SUITE-HOLD-75)
+
+Profiles phase 1 by test file, raises the worker count and re-measures the
+gated hold on the tree at main 44aa48d (wave 20 batch 4). Every number
+below cites its run: five gated runs of this package on 2026-11-21, one
+after the other, each the one gate command
+
+    python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py
+
+with PYTEST_ADDOPTS="--durations=0 --durations-min=0.01" (per-test setup,
+call and teardown times; it does not change the gate's cmd_hash
+a9a73e2a48a6e29b). Logs: `<sidecar>\Logs\w20-TEST-SUITE-HOLD-75\run<k>-*.log`
+(the AL sidecar). Hold, wait and peak commit are the gate's own rows in
+`%LOCALAPPDATA%\fleet\suite\durations.jsonl`; test counts and phase times
+are the pytest summary lines of each log. The gate showed 0 of 2 slots
+held before every run and every wait was 0.0 s; no other heavy work ran.
+Python 3.14.4, pytest 9.2.0, pytest-xdist 3.8.0, 16 logical CPUs, 32 GB.
+
+Runs (start time local, log file, workers, hold, phase 1, phase 2):
+
+- run 1, 10:36, run1-w4-profile.log, 4 workers: hold 180.4 s, exit 0;
+  phase 1 4757 passed, 6 skipped in 142.60 s; phase 2 33 passed in
+  37.05 s; peak commit 3614 MB.
+- run 2, 10:40, run2-w8.log, 8 workers: hold 128.6 s, exit 1; phase 1
+  1 failed, 4756 passed, 6 skipped in 89.85 s; phase 2 33 passed in
+  37.85 s; peak commit 5069 MB. The one red was this package's own pin
+  of "-n 4" in tests/test_suite_run.py (fixed before run 3), not a
+  load effect.
+- run 3, 10:43, run3-w12.log, 12 workers: hold 117.9 s, exit 0; phase 1
+  4757 passed, 6 skipped in 78.37 s; phase 2 33 passed in 38.73 s; peak
+  commit 6177 MB.
+- run 4, 10:46, run4-w12.log, 12 workers: hold 118.8 s, exit 0; phase 1
+  4758 passed, 6 skipped in 80.75 s; phase 2 33 passed in 37.26 s; peak
+  commit 5655 MB.
+- run 5, 10:47, run5-w12.log, 12 workers: hold 118.7 s, exit 0; phase 1
+  4758 passed, 6 skipped in 78.51 s; phase 2 33 passed in 39.35 s; peak
+  commit 6059 MB.
+
+The suite is 4796 tests at main 44aa48d (runs 1 to 3) and 4797 with this
+package's new test (runs 4 and 5), against 4437 in the soak addendum.
+
+Phase 1 profile by test file (run 1, 4 workers; per-test durations of at
+least 0.01 s summed by file: 226 files, 523.5 s of worker time in a
+142.6 s phase, so the 4 workers were nearly always busy):
+
+- tests/test_pre_push_hook.py 52.7 s (10.1 percent; git subprocesses)
+- tests/test_math_e2e_live.py 52.7 s (10.1 percent; the `calc` xdist
+  group, so all of it runs on ONE worker)
+- tests/test_uninstall.py 43.9 s (8.4 percent; PowerShell starts)
+- tests/test_play_fit.py 24.3 s, tests/test_shots.py 24.1 s (one test,
+  test_real_render_from_a_real_demo_core, 23.7 s)
+- tests/test_fullstack.py 15.3 s, tests/test_floor_static.py 14.4 s,
+  tests/test_http_ceilings.py 10.2 s, tests/test_marks.py 10.2 s,
+  tests/test_keepalive.py 9.3 s; the other 216 files 266.4 s together.
+
+Phase 2 (run 1): 7 files, 35.5 s summed in a 37.05 s phase:
+tests/test_math_perf.py 11.9 s, tests/test_fuzz.py 7.9 s,
+tests/test_budgets.py 7.4 s, tests/test_tc_press_staged.py 4.9 s,
+tests/test_soak.py 3.3 s, the rest under 0.1 s.
+
+The same sums at 12 workers (run 3): 751.8 s of worker time in a 78.4 s
+phase; tests/test_math_e2e_live.py grew to 81.6 s under the heavier load
+(run 4 81.1 s, run 5 80.3 s). That file is the calc group's one worker,
+so at 12 workers it IS phase 1's critical path: phase 1 (78.4 to 80.8 s)
+now ends when the calc group ends, and more workers only slow that group
+further. At 8 workers (run 2) the group took 68.2 s in an 89.9 s phase.
+
+Change (tools/suite_run.py): WORKERS 4 -> 12, capped at the logical CPU
+count less 4 (SPARE_CPUS, left for the player's own work) and never under
+2; on this 16-CPU box that is 12 (`-n 12 --dist loadgroup`). Phase 2, the
+serial fallback without xdist and the gate command are unchanged
+(decision 0060 and the 2026-11-18 Clarified bullet hold). 12 rather than
+8: hold 118.7 s against 128.6 s, peak commit 6.2 GB of 32 GB; going past
+12 cannot help while the calc group is the critical path.
+
+Result: gated median hold at 12 workers 118.7 s (runs 3, 4 and 5: 117.9,
+118.8 and 118.7 s; all green), against 180.4 s at 4 workers (run 1) and
+the soak median 181.3 s: 34.2 percent shorter. The 75 s target is NOT
+met.
+
+Target: re-set it. The hold is phase 1 plus a fixed phase 2 of 37.1 to
+39.4 s (runs 1 to 5). A 75 s hold leaves phase 1 at most about 37 s, but
+the calc group alone needs 52.7 s on an almost idle box (run 1, 4
+workers) and 80 to 82 s beside 11 busy workers (runs 3 to 5), and loadgroup
+keeps it on one worker by design (shared warm bridge). No worker count
+reaches 75 s on this suite. Recommended target: a gated median hold of
+120 s at 12 workers on the 16-CPU dev box for today's suite of about
+4800 tests (measured 118.7 s), re-measured when the suite grows by a
+quarter. Ways below it, each its own row and out of this package's
+files: split the calc group so the e2e presses spread over two warm
+bridges (the 52.7 s floor), or shorten the heaviest serial timing files
+of phase 2 (test_math_perf 11.9 s, test_fuzz 7.9 s).
+
+Limits: one box, one morning, five runs (the brief's cap); the
+`--durations` sums are worker time, not wall time, and hide entries
+under 0.01 s (69 setup, call or teardown entries in phase 2 of run 1); a
+box with fewer CPUs gets fewer workers by the cap and a longer hold.

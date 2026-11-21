@@ -1,7 +1,8 @@
 """tools/suite_run.py - the one whole-suite command (TEST-SUITE-RUNNER).
 
-Phase 1 is every non-timing test, on 4 xdist workers with loadgroup when
-xdist is importable and serial otherwise; phase 2 is the timing tests
+Phase 1 is every non-timing test, on 12 xdist workers (capped at the
+logical CPU count less 4, never under 2) with loadgroup when xdist is
+importable and serial otherwise; phase 2 is the timing tests
 alone, after phase 1; the exit code is the worst phase's; a run outside the
 suite gate is refused with the gate command. xdist stays an optional
 dev-only plugin: nothing under server/, tools/ or app/ imports it and no
@@ -29,11 +30,23 @@ def _args(argv):
     return argv[1:]
 
 
-def test_phase_one_with_xdist_is_four_loadgroup_workers_without_timing():
-    (name, one), _ = suite_run.phases(xdist=True, python="py")
+def test_phase_one_with_xdist_is_twelve_loadgroup_workers_without_timing():
+    (name, one), _ = suite_run.phases(xdist=True, python="py", cpus=16)
     assert name == "parallel"
     assert _args(one) == ["-m", "pytest", "-q", "-m", "not timing",
-                          "-n", "4", "--dist", "loadgroup"]
+                          "-n", "12", "--dist", "loadgroup"]
+
+
+def test_worker_count_leaves_four_cpus_and_never_drops_under_two():
+    """TEST-SUITE-HOLD-75: 12 workers on the 16-CPU dev box; a smaller box
+    keeps 4 logical CPUs free; 2 is the floor; an unknown count gives 2."""
+    assert suite_run.WORKERS == 12
+    for cpus, want in ((64, 12), (16, 12), (12, 8), (8, 4), (6, 2), (4, 2),
+                       (1, 2), (0, 2)):
+        assert suite_run.workers(cpus) == want, cpus
+    assert suite_run.workers(None) == suite_run.workers(os.cpu_count())
+    _, (_, two) = suite_run.phases(xdist=True, python="py", cpus=64)
+    assert "-n" not in two
 
 
 def test_phase_one_without_xdist_is_serial():
