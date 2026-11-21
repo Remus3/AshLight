@@ -194,12 +194,17 @@ def _fake_electron(folder):
 
 
 def _spawn_fake(exe, env):
-    p = subprocess.Popen([str(exe), "-c", "import time; time.sleep(120)"],
+    # The child marks itself started, so the caller waits for a running
+    # interpreter (its image loaded, its code running) instead of a fixed settle.
+    ready = exe.parent.parent / f"ready-{os.urandom(4).hex()}"
+    p = subprocess.Popen([str(exe), "-c",
+                          "import sys, time; open(sys.argv[1], 'w').close(); time.sleep(120)",
+                          str(ready)],
                          env={**env, "PYTHONHOME": sys.base_prefix},
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, creationflags=FLAGS)
-    time.sleep(0.5)
-    if p.poll() is not None:
+    _wait(lambda: p.poll() is not None or ready.exists(), ci_scale(10))
+    if p.poll() is not None or not ready.exists():
         pytest.skip("renamed interpreter does not start here")
     return p
 
