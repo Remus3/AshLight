@@ -552,6 +552,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "reset: true required"})
         return self._json(200, {"text": self.server.core.reset_hints()})
 
+    def _overlay_sample(self, path, query, extra):
+        """OVL-CARD-SLOT: the Settings button's sample card. A JSON object
+        body (empty is fine); the card shows on the overlay for 10 s and
+        leaves by itself. Display state only: nothing is recorded and
+        nothing is sent to the game."""
+        body = self._read_json()
+        if body is None:
+            return None
+        card = self.server.core.show_overlay_sample()
+        return self._json(200, {"card": card})
+
     def _settings_import(self, path, query, extra):
         """UX-SETTINGS-IO: the settings file the player picked in the
         browser, as its JSON. Size-capped; allow-list keys only; nothing
@@ -1213,6 +1224,7 @@ POST_ROUTES = {
     "/api/hints": Handler._hints,
     "/api/wear": Handler._wear,  # TC-WORN-WIRE
     "/api/hotkeys": Handler._set_hotkey,  # HOTKEYS-LIVE (OVL-KEYS-CORE)
+    "/api/overlay-sample": Handler._overlay_sample,  # OVL-CARD-SLOT
 }
 
 PUT_ROUTES = {
