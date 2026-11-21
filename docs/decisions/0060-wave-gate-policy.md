@@ -47,3 +47,24 @@ subset misses.
 
 Subset runs cause machine contention or missed regressions, or MAIN's
 kit changes item 16c to forbid ungated file-named runs.
+
+## Amendment 2026-11-21 (TEST-SUITE-HOLD-75, adjudicator)
+
+- Target: the gated whole-suite hold target is a 120 s gated median
+  (was 75 s); the soak bound (TEST-SUITE-SOAK) is a median under 125 s.
+- Workers: phase 1 runs with min(12, CPUs - 4) workers, never under 2;
+  phase 2 (the `timing` tests) stays serial.
+- Evidence: TEST-SUITE-HOLD-75, third addendum of
+  docs/research/0049-test-suite-speed.md: 3 green gated runs at 12
+  workers held 117.9, 118.8 and 118.7 s; phase 2 is a fixed 37 to 39 s;
+  the one-worker calc group needs 52.7 s on an almost idle box.
+- Why 75 s is unreachable: a 75 s hold leaves phase 1 about 37 s, but
+  loadgroup keeps the calc group on one worker by design (shared warm
+  bridge) and that group alone needs 52.7 s, so no worker count reaches
+  75 s on this suite. The target is a suite performance budget, not a
+  floor.
+- Alternatives: keep 75 s and defer TEST-SUITE-SOAK until the calc group
+  is split. Rejected: it blocks the soak proof on a row not yet planned
+  while the 120 s gate is already measured green.
+- Reverses if: a soak median exceeds 125 s, or a calc group split makes
+  under 90 s demonstrable (then tighten).
