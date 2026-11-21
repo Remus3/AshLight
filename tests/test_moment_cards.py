@@ -308,3 +308,13 @@ def test_the_moment_card_survives_a_store_round_trip_untouched():
     _feed(st, clock, OPEN, LEVEL, at=T0)
     _enter(st, clock, "The Riverbank", at=T0)
     assert st.overlay.to_doc() == {"schema": overlayview.SCHEMA}
+
+
+def test_card_copy_lives_in_the_text_module_and_is_re_exported():
+    # OVL-ZONE-CARD fix round: the copy and pure builders sit under the
+    # design gate (server/al/text/); overlayview re-exports the same objects
+    from server.al.text import overlaycard
+    for name in ("MOMENT_CARD_S", "BONUS_TEXT", "NEXT_TEXT", "CLEAR_LINE",
+                 "PUSH_LINE", "FIT_LINE", "BOSS_LINE", "_LEVELS", "clip",
+                 "clip_words", "_lv", "_plain", "zone_lines"):
+        assert getattr(overlayview, name) is getattr(overlaycard, name), name

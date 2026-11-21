@@ -2,11 +2,15 @@
 
 Moved byte for byte out of server/al/state.py (TEST-STATE-TEXT-4): the
 card timers, price_until and overlay_card. state.py re-exports every name,
-so state.<name> is the same object. Pure functions and constants; stdlib
-only.
+so state.<name> is the same object. OVL-ZONE-CARD: the zone moment card's
+timer, copy and pure line builders (zone_lines and its helpers) live here
+too; server/al/overlayview.py re-exports them. Pure functions and
+constants; stdlib only.
 """
 
-from .common import _is_time
+import re
+
+from .common import CARD_LINE, _is_time
 from .itemcheck import eval_card_text
 from .price import ninja_text, price_card_text
 
@@ -108,3 +112,99 @@ def overlay_card(ev, price, now, alert=None):
                     expires_at=max(card["expires_at"], price_until(price)))
         return card
     return eval_part() if ev_ok else price_part()
+
+
+# OVL-ZONE-CARD: the zone moment card (server/al/overlayview.py owns its slot)
+MOMENT_CARD_S = 12
+# Card copy (design 0001 section 9); every line is clipped to CARD_LINE.
+BONUS_TEXT = "Bonus: {text}"
+NEXT_TEXT = "Next: {zone}"
+CLEAR_LINE = "You are {n} {lv} under: clear it"
+PUSH_LINE = "You are {n} {lv} over: move on"
+FIT_LINE = "Your level fits this zone"
+BOSS_LINE = "Boss deals mostly {element} damage"
+
+_LEVELS = re.compile(r"\D*(\d+)")
+
+
+def clip(text, width=CARD_LINE):
+    """format.js clip(): over the width, cut to width - 3 plus "..."."""
+    text = text or ""
+    return text if len(text) <= width else text[:width - 3] + "..."
+
+
+def clip_words(text, width=CARD_LINE):
+    """Like clip(), but cut at the last whole word that fits before "...",
+    so a cut line never ends mid-word."""
+    text = text or ""
+    if len(text) <= width:
+        return text
+    cut = text[:width - 3]
+    if " " in cut and text[width - 3] != " ":
+        cut = cut[:cut.rindex(" ")]
+    return cut.rstrip(" ,;:-") + "..."
+
+
+def _lv(n):
+    return "level" if n == 1 else "levels"
+
+
+def zone_lines(guide):
+    """(head, line2, line3) of the zone card for a zoneguide.view() dict,
+    or None (not a campaign zone, no short, or nothing to add to the short:
+    a card that repeats its first line only is not worth the slot). Every
+    line is at most CARD_LINE; an empty line 2 takes line 3's text."""
+    if not isinstance(guide, dict) or guide.get("kind") != "campaign":
+        return None
+    head = guide.get("short")
+    if not isinstance(head, str) or not head.strip():
+        return None
+    head = head.strip()
+    said = _plain(head)
+    optional = guide.get("optional") or ()
+    first = optional[0] if optional and isinstance(optional[0], dict) else {}
+    nxt = guide.get("next").strip() if isinstance(guide.get("next"), str) else ""
+    bonus = ""
+    if isinstance(first.get("text"), str) and first["text"].strip():
+        # the reward before its " - where" part: "+10% cold resistance"
+        bonus = first["text"].split(" - ")[0].strip().rstrip(".")
+    # line 2: the bonus, else the next zone; a text the short already says,
+    # or a bonus that would be cut, gives way to the next zone
+    line2 = ""
+    bonus_line = BONUS_TEXT.format(text=bonus) if bonus else ""
+    next_line = NEXT_TEXT.format(zone=nxt) if nxt and _plain(nxt) not in said else ""
+    if bonus and _plain(bonus) in said:
+        bonus_line = ""
+    if bonus_line and (len(bonus_line) <= CARD_LINE or not next_line):
+        line2 = clip_words(bonus_line)
+    else:
+        line2 = next_line
+    adv = guide.get("advice") if isinstance(guide.get("advice"), dict) else {}
+    mode = adv.get("mode")
+    m = _LEVELS.match(adv.get("text") or "")
+    boss = guide.get("boss")
+    # line 3: the boss element first (only the guide knows it; the HUD
+    # already shows an under-level word), then the level advice
+    line3 = ""
+    if isinstance(boss, str) and boss:
+        line3 = BOSS_LINE.format(element=boss)
+    elif mode in ("clear", "push") and m:
+        n = int(m.group(1))
+        line3 = (CLEAR_LINE if mode == "clear" else PUSH_LINE).format(n=n, lv=_lv(n))
+    elif mode == "fit":
+        line3 = FIT_LINE
+    if not line2:
+        line2, line3 = line3, ""
+    if not line2:
+        return None
+    return clip(head), clip(line2), clip(line3)
+
+
+def _plain(text):
+    """Lower case without a leading article, to see whether the short
+    already says a line's text."""
+    text = text.strip().lower()
+    for article in ("a ", "an ", "the "):
+        if text.startswith(article):
+            return text[len(article):]
+    return text
