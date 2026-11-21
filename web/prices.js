@@ -15,7 +15,8 @@
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var TOP_RATES = 8;
+  var TOP_RATES = 6; // PLAY-TD-19D-ITEMS-GRID: the Prices card shows the top 6
+  var TREND_ROWS = 3; // and the week's 3 biggest moves
 
   function pill(state, glyph, word) { return { state: state, glyph: glyph, word: word }; }
 
@@ -195,6 +196,29 @@
     };
   }
 
+  /* PLAY-TD-19D-ITEMS-GRID (F-056): the week's 3 biggest moves of either
+     direction, each worded as a trend in one line ("X is rising: up 61%
+     this week (0.35 Divine Orb)"); the empty sentence while web data is on
+     and there is none; nothing while web data is off. */
+  function trendRows(doc) {
+    var m = moversView(doc);
+    if (!m.show) { return []; }
+    if (m.empty) { return [m.empty]; }
+    var all = m.up.map(function (r, i) { return { r: r, raw: doc.movers.up[i] }; })
+      .concat(m.down.map(function (r, i) { return { r: r, raw: doc.movers.down[i] }; }));
+    var size = function (x) {
+      var c = x.raw && typeof x.raw.change === "number" && isFinite(x.raw.change) ? x.raw.change : 0;
+      return Math.abs(c);
+    };
+    all.sort(function (a, b) { return size(b) - size(a); });
+    return all.slice(0, TREND_ROWS).map(function (x) {
+      var r = x.r;
+      var word = r.change === "no change" ? " has not moved" :
+        (r.change.indexOf("up ") === 0 ? " is rising: " : " is falling: ") + r.change + " this week";
+      return r.name + word + (r.value ? " (" + r.value + ")" : "");
+    });
+  }
+
   /* ---- PRICE-1-UI: the snapshot's price (decision 0016 contract). */
   var PRICE_BADGE = {
     // PRICE-TRADE-LINK (decision 0017): the trade search link is ready
@@ -316,18 +340,9 @@
     };
   }
 
-  /* The trade link needs no web data (it is built offline), so the empty
-     state reads the same either way. OVL-KEYS-WEB: `key` is the bound item
-     key (web/hotkeys.js shown); with none bound the sentence names no key. */
-  function priceEmpty(webOn, key) {
-    var press = typeof key === "string" && key ? key : "the item check key";
-    return "Nothing checked yet. After you check an item with " + press + ", a link to " +
-      "search for it on the official trade site shows here.";
-  }
-
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
            ratesView: ratesView, convert: convert, aboutText: aboutText,
-           tradeAbout: tradeAbout, priceView: priceView, priceEmpty: priceEmpty,
+           tradeAbout: tradeAbout, priceView: priceView, trendRows: trendRows,
            tradeLink: tradeLink, upgradeView: upgradeView, moversView: moversView,
            valueView: valueView };
 }));

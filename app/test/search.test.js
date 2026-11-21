@@ -179,6 +179,8 @@ test("the page keeps the card markup: no live region, filter page, intro words",
   assert.doesNotMatch(card.split(">")[0], /hidden/);
   assert.match(card, /class="card-page" data-page="main"/);
   assert.match(card, /data-card-open="filter"/);
-  assert.match(card, /<details id="filter-more" class="card-page tool-page" data-page="filter"[^>]*open hidden>/);
+  // PLAY-TD-19D-ITEMS-GRID (review BG-10): the filter page is a plain div, no fold
+  assert.match(card, /<div id="filter-more" class="card-page tool-page" data-page="filter"[^>]*hidden>/);
+  assert.ok(card.indexOf("<details") < 0 && card.indexOf("<summary") < 0);
   assert.match(card, />Copy one, paste it in game\.</);
 });
