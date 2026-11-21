@@ -30,6 +30,9 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] FIX-IDLE-WORD (build) STATUS-IDLE-READING: the idle bar word (play state d, log quiet) carries the word "reading" so region G passes G9, then tests/play_fit_pending/g.txt is deleted; done by the next package that owns server/al/data/status_words.json (TEST-STATE-TEXT-PINS, wave 19) with web/status.js and the tests that pin the word, copy design-reviewed (wave-7 adjudicator ruling on PLAY-TD-10-STRIP). ACCEPT: tests/test_play_fit.py green without g.txt. ZERO-CLICK: The bar word updates by itself with the log state; no click. BLOCKED: session wave 19.
 - [ ] RUN-UNREADABLE-WORD (build): give the "Client.txt can't be read" state one status word: add an unreadable state to server/al/data/status_words.json with copies in web/status.js and app/shared/render_gate.js (kit blocked, bar "can't read Client.txt", overlay at most 15 characters), make diag.check_reading use _state_check, and add the new log-state sentences (five reset sentences, restarted / unreadable / readable lines, the two Reading-row strings) to docs/design/0001-design-system.md section 9 (review SRW-1, SRW-2). ACCEPT: bar, overlay and Checks name the same state; status-word tests green. ZERO-CLICK: the word follows the reader state by itself; no click. BLOCKED: session wave 20 (retagged at wave 10 start by adjudicator: status.js, render_gate.js and design 0001 are first owned by TEST-STATE-TEXT-PINS in wave 19, diag.py by PUB-GUIDE-PAGES in 19; wave 20 owns none).
+- [ ] PLAY-TD-19E-ITEM-TEXT (build) Restore each worn item's raw item text as a paged Full text page in the Build card (the 19C fixed card dropped the per-gear item-text fold). ACCEPT: one page per gear row reached by one press, no scroll at the 5 cockpit sizes, test_play_fit green. ZERO-CLICK: none needed. DEPENDS: PLAY-TD-19C-BUILD-GRID, PLAY-TD-19D-ITEMS-GRID. BLOCKED: session wave 18.
+- [ ] REL-HOME-REFUSAL-UI (build) Show the refused-home sentence to the player when the client exits on a home inside a Steam library or the game folder (today it goes to stderr only, so a Start Menu launch shows nothing). ACCEPT: a dialog or tray balloon with the exact paths.home_refusal sentence before exit code 2, no window otherwise; app/test/home.test.js covers it. ZERO-CLICK: shown once, no prompt. DEPENDS: REL-CLIENT-HOME. BLOCKED: session wave 18.
+- [ ] TEST-SHOTS-TABS (build) Extend shots.py render to the Build, Run and Settings tabs and the overlay page. ACCEPT: app/test/cdp/capture.mjs gains a --tab option (argument-checked) and the demo core serves the overlay page (or the helper loads it as an app file page); tools/shots.py SHOTS covers play, build, run and settings, dark and light, at 1440 and 360 wide, plus the overlay on a plain ground; PENDING is empty; tests/test_shots.py, tests/test_capture_helper.py and tests/test_floor_static.py pass. ZERO-CLICK: the lane or AUTO-17 runs render and check; no window appears. DEPENDS: AUTO-15, TEST-CAPTURE-HELPER. BLOCKED: session wave 18.
 
 ## Lane: data
 
@@ -259,79 +262,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 17: go-public, theorycraft, tests and code seams
 
-- [ ] PLAY-TD-19C-BUILD-GRID (build) Build and items grid 1: Build, Health and next, Search strings.
-  ACCEPT: npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py
-  tests/test_ux_b6.py tests/test_ux_b8.py tests/test_dash_console.py pass: the Build, Health and
-  next and Search strings cards are 3 cells of the 3 x 2 grid, each list pages at 10 rows (8
-  compact), and no element inside the three cards has scrollHeight above clientHeight at the 5
-  cockpit sizes. ZERO-CLICK: Cards fill when a build loads; paging is optional and outside play.
-  DEPENDS: PLAY-TD-19B-FOUR-TABS, PLAY-TD-19A-PAGER. BLOCKED: session wave 17.
-- [ ] OVL-TD05-LEGIBILITY (build) Overlay legibility recipe and two type sizes in the overlay CSS
-  (TD-05, part 1). ACCEPT: python -m pytest -q tests/test_design_contrast.py tests/test_ux_review.py
-  tests/test_overlay_smoke.py tests/test_design_gate.py and node --test
-  app/test/overlay_gate.test.js pass, and git grep -n -E "html *[{] *opacity" --
-  app/overlay/overlay.css prints nothing. ZERO-CLICK: Applies at the next overlay start; nothing
-  reads the screen to adapt the plate. DEPENDS: OVL-KEYS-WEB, OVL-GLANCE-RULES, PLAY-TD-03-TOKENS,
-  PLAY-TD-04A-DARK-CLIENT. BLOCKED: session wave 17.
-- [ ] DATA-CONTACT-FIELD (build) Contact value: a write-only POST and its core setter + Prices
-  refresh from the core loop, not the visible page. ACCEPT: python -m pytest -q
-  tests/test_contact_field.py tests/test_diag_self.py tests/test_data_ninja.py
-  tests/test_ux_settings_io.py tests/test_http_security.py passes. Also (folded
-  DATA-PRICE-REFRESH-CORE): python -m pytest -q tests/test_price_refresh.py tests/test_data_ninja.py
-  tests/test_price_book.py tests/test_sse_idle_push.py passes. ZERO-CLICK: One typed value, once per
-  install (an identity cannot be guessed); after it the price refresh starts by itself (set_contact
-  calls rates.refresh_async). Also (folded DATA-PRICE-REFRESH-CORE): Automatic: right prices in
-  overlay-only play, no request while nobody plays. BLOCKED: session wave 17.
-- [ ] REL-CLIENT-HOME (build) Installed-mode paths in the Electron client. ACCEPT: npm test --prefix
-  app passes and python -m pytest -q tests/test_install_paths.py tests/test_overlay_smoke.py
-  tests/test_port_resolve.py passes. ZERO-CLICK: Resolved by itself at client start; no setting, no
-  click. DEPENDS: DEP-05. BLOCKED: session wave 17.
-- [ ] TC-CALC-VERIFY-USE (build) Verify the calc component at each start. ACCEPT: python -m pytest
-  -q tests/test_tc_bridge.py tests/test_tc_wire.py passes; tests/test_math_perf.py passes on a host
-  with the component. ZERO-CLICK: Automatic; a changed component shows one Checks line naming the
-  fix. DEPENDS: TC-CALC-VERIFY-PIN, TC-CALC-CONFINE-LUA, TC-CALC-CONFINE-PROC. BLOCKED: session wave
-  17.
-- [ ] AUTO-15 (build) SHOTS: tools/shots.py render and check, the manifest, the lane tool grant.
-  ACCEPT: python -m pytest -q tests/test_shots.py tests/test_p163_lane_tools.py
-  tests/test_sidecar_paths.py tests/test_floor_static.py passes and python tools/shots.py check
-  exits 0 or 1 without starting a browser. ZERO-CLICK: Unattended, hidden, below-normal priority:
-  the lane or the refresh source (AUTO-17) runs render and check; no window appears and the player
-  does nothing. DEPENDS: TEST-CAPTURE-HELPER, SEC-DEMO-ENTRY. BLOCKED: session wave 17.
-- [ ] TEST-TIMER-FIXES (build) Small timer fixes in five test files. ACCEPT: python -m pytest -q
-  tests/test_keepalive.py tests/test_procs.py tests/test_audit_pass5.py tests/test_cover_gaps.py
-  passes three times in a row, python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
-  -m pytest -q tests/test_budgets.py passes, and grep -c 13388 tests/test_keepalive.py prints 0.
-  ZERO-CLICK: Test-only; runs in the suite. DEPENDS: TEST-PORT-LEASE, TEST-MARKS. BLOCKED: session
-  wave 17.
-- [ ] TC-GGG-CLIENT-CORE (build) Offline core of a GGG OAuth client. ACCEPT: python -m pytest -q
-  tests/test_gggapi.py tests/test_floor_static.py passes. ZERO-CLICK: Dev step: offline module
-  proven by its tests with an injected transport; nothing runs in play until TC-IMPORT wires it, and
-  no request is possible without a client id. DEPENDS: TC-GGG-RATELIMIT, TC-GGG-LISTENER,
-  DATA-GGG-APPLICATION. BLOCKED: session wave 17.
-- [ ] LOOP-WATCH-WIRE (build) Wire the watcher into the tick in front of HALT; file pending findings
-  after the work list. ACCEPT: `python -m pytest -q tests/test_watch_wire.py tests/test_al_loop.py
-  tests/test_loop_steps.py tests/test_watch_settled.py` passes. ZERO-CLICK: Fully unattended: drift
-  is seen while HALT stands and acted on the first tick after it goes. DEPENDS: AUTO-01, AUTO-05,
-  LOOP-WATCH-FILE, LOOP-WATCH-SETTLED. BLOCKED: session wave 17.
-- [ ] GP-14 (data) Dependabot re-apply tool: list, close and the run loop. ACCEPT: `python -m pytest
-  -q tests/test_dependabot_reapply.py tests/test_p163_lane_tools.py tests/test_ascii_lf.py
-  tests/test_leak_sweep.py` is green. ZERO-CLICK: `python tools/dependabot_reapply.py run` handles
-  every open bump with no prompt; a session runs it until the loop resumes (F-078), then the tick
-  does (PUB-DEPBOT-TICK). BLOCKED: session wave 17.
-- [ ] PUB-SWEEP-OWN-ADDRESS (build) Leak sweep: allow exactly the project's own repository address.
-  ACCEPT: `python -m pytest -q tests/test_leak_sweep.py` is green and `python tools/leak_sweep.py
-  --tree` exits 0 with no config/public_repo.json in the tree. ZERO-CLICK: Runs by itself in
-  pre-commit, commit-msg, pre-push and CI; no value is typed until GP-10 writes the address once.
-  BLOCKED: session wave 17.
-- [ ] PUB-SOCIAL-CARD (build) Own-art social preview card. ACCEPT: `python -m pytest -q
-  tests/test_brand_assets.py tests/test_ascii_lf.py` is green and `python tools/make_icons.py check`
-  exits 0 printing `make_icons: check ok`. ZERO-CLICK: A dev step that runs itself (the icon tool
-  renders and checks); the card holds only AshLight's own drawn strokes, no font, no game art.
-  BLOCKED: session wave 17.
-- [ ] TC-ASC-FROM-TREE (build) Ascendancy names from the cached tree export. ACCEPT: python -m
-  pytest -q tests/test_build_live.py tests/test_util_10_ready.py tests/test_tc_tree.py passes.
-  ZERO-CLICK: Follows the tree file by itself. DEPENDS: TC-CHARJSON-SHAPES, TC-VERDICT-CAVEAT,
-  DATA-TREE-HOLD, DATA-LEAGUE-IDENTITY.
 
 ### Wave 18: go-public, web data, reliability and observability
 
