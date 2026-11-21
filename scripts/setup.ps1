@@ -38,12 +38,20 @@
   docs/design/0005-brand-mark.md; no game art). A re-run changes nothing
   when both are current;
   -NoShortcut skips the step.
+
+  DATA-SNAP-SETUP (decisions 0009 / 0013): when config/local.json already
+  holds "web_data": true (strictly a JSON true), setup also refreshes the
+  game-data snapshot in the sidecar Cache, so one setup command is enough
+  once 'Use web data' is ticked. Web data off: no request, no process, and
+  setup never forces it (build.ps1 -Snapshot does). -NoSnapshot or
+  AL_NO_SNAPSHOT=1 skips it. A failing source never fails setup.
 #>
 [CmdletBinding()]
 param(
     [switch]$Force,
     [switch]$TcCalc,
-    [switch]$NoShortcut
+    [switch]$NoShortcut,
+    [switch]$NoSnapshot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -172,6 +180,49 @@ try {
 }
 if ($tcRc -eq 2) { throw 'setup: calc component REFUSED (pin or hash mismatch); the calc setting is unchanged; see setup.log' }
 if ($tcRc -ne 0) { throw "setup: calc component step failed (rc $tcRc); see setup.log" }
+
+# DATA-SNAP-SETUP (decisions 0009 / 0013, AUDIT-SNAPSHOT-OPTIN): the
+# game-data snapshot runs here only when web data is already on, read as
+# strictly as the core and build.ps1 read it. No --opt-in is ever passed,
+# so the snapshot tool re-checks the same setting itself. server.al.prio
+# starts it as a below-normal priority child; it skips files checked in the
+# last 24 h, so a re-run is a no-op. Returns a one-line status; an offline
+# or failing source is logged, never thrown.
+function Test-AlWebDataOn([string]$ConfigFile) {
+    if (-not (Test-Path -LiteralPath $ConfigFile)) { return $false }
+    try {
+        $cfg = Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
+        return ($null -ne $cfg) -and ($cfg.PSObject.Properties.Name -contains 'web_data') -and
+            ($cfg.web_data -is [bool]) -and ($cfg.web_data -eq $true)
+    } catch {
+        return $false
+    }
+}
+
+function Invoke-AlSnapshotStep([string]$Python, [string]$RepoRoot, [string]$LogFile, [bool]$Skip) {
+    $ErrorActionPreference = 'Continue'
+    if ($Skip -or ($env:AL_NO_SNAPSHOT -and $env:AL_NO_SNAPSHOT -ne '0')) {
+        return 'skipped (NoSnapshot)'
+    }
+    if (-not (Test-AlWebDataOn (Join-Path $RepoRoot 'config\local.json'))) {
+        return "skipped (web_data off; tick 'Use web data', then run setup again)"
+    }
+    $snapArgs = @('-m', 'server.al.prio', 'server.al.theorycraft.snapshot')
+    Push-Location $RepoRoot
+    try {
+        & $Python @snapArgs 2>&1 | ForEach-Object { [string]$_ } |
+            Set-Content -Path $LogFile -Encoding ASCII
+        $rc = $LASTEXITCODE
+        return "rc $rc (log $LogFile)"
+    } catch {
+        return 'failed (ignored)'
+    } finally {
+        Pop-Location
+    }
+}
+
+$snapStatus = Invoke-AlSnapshotStep $py $Repo (Join-Path $paths.logs 'setup-snapshot.log') ([bool]$NoSnapshot)
+Write-AlLog "setup: game-data snapshot $snapStatus"
 
 # Overlay packages (optional).
 $node = Get-Command node -ErrorAction SilentlyContinue
