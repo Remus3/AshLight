@@ -34,11 +34,55 @@ $log = Join-Path $paths.logs 'run.log'
 $alive = Join-Path $paths.runtime 'core.alive'
 $request = Join-Path $paths.runtime 'stop.request'
 
-function Write-AlLog([string]$Message) {
-    $line = (Get-Date -Format 's') + ' ' + $Message
+# RUN-OBS-LOGS-SHELL (F-090): run.log in the one line format of AshLight's
+# logs (server\al\logs.py), as scripts\run.ps1 writes it: over 1 MB at
+# start it moves to run.log.1 (one old file kept; a failed move keeps
+# appending), every line is '<UTC ISO stamp> <LEVEL> stop[<pid>] <message>'
+# and each start opens with the build banner.
+function Write-AlLog([string]$Message, [string]$Level = 'INFO') {
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+        [System.Globalization.CultureInfo]::InvariantCulture)
+    $line = $stamp + ' ' + $Level + ' stop[' + $PID + '] ' + $Message
     Add-Content -Path $log -Value $line -Encoding ASCII
     Write-Host $Message
 }
+
+function Get-AlBuildId {
+    $ErrorActionPreference = 'Continue'
+    $b = ''
+    $py = Get-AlPython
+    Push-Location -LiteralPath $AlEnvRoot
+    try {
+        $b = ((& $py -c "import sys; sys.path.insert(0, sys.argv[1]); from server.al import buildinfo; print(buildinfo.build_id())" $AlEnvRoot 2>$null) -join '').Trim()
+    } catch {
+        $b = ''
+    } finally {
+        Pop-Location
+    }
+    if ($b -match '^[0-9A-Za-z.+-]{1,64}$') { return $b }
+    return 'unknown'
+}
+
+function Start-AlStopLog([string]$Build) {
+    $old = $log + '.1'
+    try {
+        if ((Test-Path -LiteralPath $log -PathType Leaf) -and ((Get-Item -LiteralPath $log).Length -gt 1048576)) {
+            if (Test-Path -LiteralPath $old -PathType Leaf) {
+                [System.IO.File]::Replace($log, $old, [NullString]::Value)
+            } else {
+                [System.IO.File]::Move($log, $old)
+            }
+        }
+    } catch {
+        # held open elsewhere: keep appending to the old file
+    }
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+        [System.Globalization.CultureInfo]::InvariantCulture)
+    Add-Content -Path $log -Value ($stamp + ' INFO stop[' + $PID + '] AshLight ' + $Build +
+        ' stop start (pid ' + $PID + ', powershell ' + [string]$PSVersionTable.PSVersion + ')') -Encoding ASCII
+}
+
+Start-AlStopLog (Get-AlBuildId)
 
 function Get-AlCorePid {
     if (-not (Test-Path -LiteralPath $alive)) { return 0 }

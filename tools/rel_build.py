@@ -14,6 +14,10 @@ It writes, to <sidecar>/Build/release/<version>/ (or --out):
                                  blobs, sorted, every time field = the ref's
                                  commit time, plus the generated BUILD and
                                  MANIFEST.json
+    install.ps1, release.json, AshLight-<version>-notes.md,
+    AshLight-<version>.sbom.json  from tools/rel_assets.py (REL-BUILD-ASSETS),
+                                 with its leak sweep and poe.ninja release
+                                 switch refusals of the staged tree
     SHA256SUMS.txt               one '<sha256>  <name>' line per asset,
                                  sorted
 
@@ -69,12 +73,15 @@ class BuildError(Exception):
     """A refusal; nothing has been written."""
 
 
-def _load_version():
-    spec = importlib.util.spec_from_file_location(
-        "rel_version", str(TOOLS / "rel_version.py"))
+def _load_tool(name):
+    spec = importlib.util.spec_from_file_location(name, str(TOOLS / (name + ".py")))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_version():
+    return _load_tool("rel_version")
 
 
 rv = _load_version()
@@ -539,16 +546,25 @@ def build(root=ROOT, ref=None, tag=None, out=None, cache_dir=_DEFAULT,
     <sidecar>/Build/release/<version>/). Returns a result dict."""
     ready = prepare(root, ref=ref, tag=tag, cache_dir=cache_dir,
                     check_clean=check_clean)
+    # REL-BUILD-ASSETS: the other assets and the staged-tree refusals, all
+    # in memory, so a refusal still writes nothing (tools/rel_assets.py).
+    ra = _load_tool("rel_assets")
+    try:
+        staged = ra.stage(Path(root), ready)
+    except ra.AssetError as exc:
+        raise BuildError(str(exc))
     out = Path(out) if out is not None else default_out(ready["version"])
     out.mkdir(parents=True, exist_ok=True)
     _write_atomic(out / ready["zip_name"], ready["zip"])
-    assets = [ready["zip_name"]]
-    _write_atomic(out / SUMS_NAME, sums_text(out, assets))
+    for name in staged["order"]:
+        _write_atomic(out / name, staged["assets"][name])
+    assets = sorted([ready["zip_name"]]
+                    + [n for n in staged["order"] if n != SUMS_NAME])
     return {"version": ready["version"], "commit": ready["commit"],
             "created": ready["created"], "out": out, "assets": assets,
             "zip": out / ready["zip_name"],
             "sha256": hashlib.sha256(ready["zip"]).hexdigest(),
-            "files": len(ready["files"])}
+            "files": len(ready["files"]), "notes": staged["notes"]}
 
 
 def _parser():

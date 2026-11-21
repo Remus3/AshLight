@@ -37,6 +37,18 @@ PRESSED_INTERVAL_S (1 h) while a press matched it in the last PRESSED_FOR_S
 the press path); the next refresh copies it into the cache doc and saves it
 with the round. With Currency hourly in RatesClient that is at most
 24 + 22 x 8 = 200 overview GETs a day while nobody presses.
+
+DATA-PRICE-SHAPE-GUARD (F-085): a 200 answer whose lines are present but
+yield no usable entry, or whose kept entries are fewer than half of 5 or
+more lines, is a shape error (shape_error): poe.ninja renamed or moved a
+field. The type keeps its last good entries and ETag, last_error starts
+with SHAPE_PREFIX and it counts as a failure (the FAILS_DAILY rule
+applies). Zero lines is never an error: an empty type at league start
+stays quiet. summary() gives each type a state word (STATES); worst() the
+type in the worst one. diag_facts / diag_rows below are the DATA-DIAG-SEAM
+hooks: a failing Checks row names poe.ninja and the worst type, only while
+a type (Currency included, ninja.py applies the same guard) is in shape
+state. All of it is local: no request is added.
 """
 
 import threading
@@ -72,6 +84,12 @@ DAILY_S = 24 * 3600
 INTERVAL_S = 3 * 3600  # DATA-PRICE-CADENCE: a type nobody pressed lately
 PRESSED_INTERVAL_S = 3600  # a type a press matched in the last PRESSED_FOR_S
 PRESSED_FOR_S = 24 * 3600
+# DATA-PRICE-SHAPE-GUARD: the shape rule and the per-type state words
+SHAPE_PREFIX = "shape: "
+SHAPE_MIN_LINES = 5  # below this many lines a low keep share is no signal
+OK, SHAPE, ERROR, EMPTY = "ok", "shape", "error", "empty"
+STATES = (OK, SHAPE, ERROR, EMPTY)
+_RANK = {OK: 0, EMPTY: 1, ERROR: 2, SHAPE: 3}  # worst() picks the highest
 
 
 class StopRound(Exception):
@@ -106,6 +124,41 @@ def _unit(core):
     return pid, name or pid
 
 
+def shape_error(lines, kept):
+    """The shape error text for an overview with `lines` dict lines of
+    which `kept` gave an entry, or None. Lines present but nothing kept, or
+    fewer than half kept of SHAPE_MIN_LINES or more lines, is a shape
+    error; zero lines never is (a new league starts empty)."""
+    if not isinstance(lines, int) or not isinstance(kept, int) or lines <= 0:
+        return None
+    if kept <= 0:
+        return f"{SHAPE_PREFIX}{lines} lines but no usable entry"
+    if lines >= SHAPE_MIN_LINES and kept * 2 < lines:
+        return f"{SHAPE_PREFIX}kept {kept} of {lines} lines"
+    return None
+
+
+def state_of(entries, last_error):
+    """The state word of one type: SHAPE or ERROR from its last error,
+    else EMPTY with no entries, else OK."""
+    if isinstance(last_error, str) and last_error:
+        return SHAPE if last_error.startswith(SHAPE_PREFIX) else ERROR
+    return OK if isinstance(entries, int) and entries > 0 else EMPTY
+
+
+def worst_of(types):
+    """{"type", "state", "last_error"} of the type in the worst state of
+    `types` ({name: {"state", "last_error", ...}}), the first one on a tie;
+    None for no types."""
+    pick = None
+    for name, t in (types.items() if isinstance(types, dict) else ()):
+        if not isinstance(t, dict) or t.get("state") not in _RANK:
+            continue
+        if pick is None or _RANK[t["state"]] > _RANK[pick["state"]]:
+            pick = {"type": name, "state": t["state"], "last_error": t.get("last_error")}
+    return pick
+
+
 def _doc(body):
     doc = json.loads(body)
     if not isinstance(doc, dict) or not isinstance(doc.get("lines"), list):
@@ -116,14 +169,17 @@ def _doc(body):
 
 def parse_item_overview(body):
     """{"primary", "unit", "entries": [{name, base, corrupted, value,
-    listings, change}]} from a stash item overview (uniques). Defensive:
-    a line without a name or a number is skipped."""
+    listings, change}], "lines"} from a stash item overview (uniques).
+    Defensive: a line without a name or a number is skipped; "lines" counts
+    the dict lines read (DATA-PRICE-SHAPE-GUARD)."""
     doc, core = _doc(body)
     pid, unit = _unit(core)
     entries = []
+    lines = 0
     for line in doc["lines"][:MAX_LINES]:
         if not isinstance(line, dict):
             continue
+        lines += 1
         name = line.get("name")
         value = _num(line.get("primaryValue"))
         if not isinstance(name, str) or not name.strip() or value is None:
@@ -135,13 +191,14 @@ def parse_item_overview(body):
                         "value": value,
                         "listings": int(listings) if listings is not None else None,
                         "change": _change(line)})
-    return {"primary": pid, "unit": unit, "entries": entries}
+    return {"primary": pid, "unit": unit, "entries": entries, "lines": lines}
 
 
 def parse_exchange_overview(body):
-    """{"primary", "unit", "entries": [{name, value, volume, change}]} from
-    an exchange overview; names from the top-level `items` (then
-    `core.items`). A line with no name is skipped: it cannot match an item."""
+    """{"primary", "unit", "entries": [{name, value, volume, change}],
+    "lines"} from an exchange overview; names from the top-level `items`
+    (then `core.items`). A line with no name is skipped: it cannot match an
+    item. "lines" counts the dict lines read (DATA-PRICE-SHAPE-GUARD)."""
     doc, core = _doc(body)
     pid, unit = _unit(core)
     names = {}
@@ -152,9 +209,11 @@ def parse_exchange_overview(body):
                 if isinstance(nm, str) and nm.strip() and it["id"] not in names:
                     names[it["id"]] = nm.strip()[:120]
     entries = []
+    lines = 0
     for line in doc["lines"][:MAX_LINES]:
         if not isinstance(line, dict):
             continue
+        lines += 1
         lid = line.get("id") or line.get("itemId")
         value = _num(line.get("primaryValue"))
         if not isinstance(lid, str) or lid not in names or value is None:
@@ -162,7 +221,7 @@ def parse_exchange_overview(body):
         entries.append({"name": names[lid], "value": value,
                         "volume": _num(line.get("volumePrimaryValue")),
                         "change": _change(line)})
-    return {"primary": pid, "unit": unit, "entries": entries}
+    return {"primary": pid, "unit": unit, "entries": entries, "lines": lines}
 
 
 def _all_types():
@@ -278,7 +337,9 @@ class PriceBook:
         `name` is the display name stored as each type's league (what
         lookup() and movers() match); without it the id is stored.
         DATA-PRICE-POLITE: sleep(GAP_S) runs before each GET (None = no
-        wait); a StopRound from get ends the round (not a type failure)."""
+        wait); a StopRound from get ends the round (not a type failure).
+        DATA-PRICE-SHAPE-GUARD: a 200 body with a shape error keeps the
+        type's entries, ETag and times and counts as a failure."""
         stored = name if isinstance(name, str) and name else league
         out = {"fetched": 0, "unchanged": 0, "errors": 0, "stopped": False}
         self._keep_presses(now)
@@ -303,6 +364,9 @@ class PriceBook:
                 elif status == 200:
                     parse = parse_item_overview if kind == "unique" else parse_exchange_overview
                     p = parse(body)
+                    bad = shape_error(p.get("lines"), len(p["entries"]))
+                    if bad is not None:
+                        raise ValueError(bad)  # the last good entries stay
                     etag = None
                     for k, v in (rh or {}).items():
                         if k.lower() == "etag":
@@ -398,11 +462,62 @@ class PriceBook:
         return {"up": up, "down": down}
 
     def summary(self):
-        """Per-type state for the rates snapshot (counts and errors only)."""
+        """Per-type state for the rates snapshot (counts and errors only):
+        {name: {"entries", "league", "last_error", "state"}}, state one of
+        STATES (DATA-PRICE-SHAPE-GUARD)."""
         out = {}
         for name, _p, _k in _all_types():
             t = self.doc["types"].get(name) or {}
-            out[name] = {"entries": len(t.get("entries") or []),
-                         "league": t.get("league"),
-                         "last_error": t.get("last_error")}
+            n = len(t.get("entries") or [])
+            out[name] = {"entries": n, "league": t.get("league"),
+                         "last_error": t.get("last_error"),
+                         "state": state_of(n, t.get("last_error"))}
         return out
+
+    def worst(self):
+        """{"type", "state", "last_error"} of the book type in the worst
+        state (shape, then error, then empty), the first on a tie."""
+        return worst_of(self.summary())
+
+
+# --- DATA-DIAG-SEAM hooks (DATA-PRICE-SHAPE-GUARD, F-085) -----------------
+
+FACT = "price_types"
+SHAPE_FIX = ("Nothing to do: AshLight keeps the last good prices and asks "
+             "again by itself. An AshLight update reads the new shape.")
+
+
+def diag_facts(core):
+    """{FACT: {"worst": {type, state, last_error}, "shape": [type names in
+    shape state]}} from the core's rates (Currency and the book types,
+    RatesClient.types()); {} without them. Local reads only."""
+    rates = getattr(core, "rates", None)
+    types = getattr(rates, "types", None)
+    if not callable(types):
+        return {}
+    got = types()
+    if not isinstance(got, dict) or not got:
+        return {}
+    shape = [n for n, t in got.items() if isinstance(t, dict) and t.get("state") == SHAPE]
+    return {FACT: {"worst": worst_of(got), "shape": shape}}
+
+
+def diag_rows(f, now):
+    """One failing Checks row while a price type is in shape state (web data
+    on, contact set): it names poe.ninja and the worst type. [] otherwise."""
+    if not isinstance(f, dict) or f.get("web_data") is not True or not f.get("contact_set"):
+        return []
+    fact = f.get(FACT)
+    worst = fact.get("worst") if isinstance(fact, dict) else None
+    if not isinstance(worst, dict) or worst.get("state") != SHAPE \
+            or not isinstance(worst.get("type"), str):
+        return []
+    shape = [n for n in (fact.get("shape") or ()) if isinstance(n, str)]
+    others = len([n for n in shape if n != worst["type"]])
+    detail = (f"poe.ninja changed the shape of its {worst['type'][:40]} prices. "
+              "AshLight keeps the last good prices for it.")
+    if others:
+        detail += (f" {others} other price type{'s' if others != 1 else ''} "
+                   "changed the same way.")
+    from . import diag  # lazy: diag imports much of the core
+    return [diag._check("price_shape", "Price data shape", diag.FAIL, detail, SHAPE_FIX)]

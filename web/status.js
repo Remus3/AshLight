@@ -113,7 +113,7 @@
         "rank": 4,
         "kit": "blocked",
         "glyph": "[#]",
-        "bar": "log quiet - game closed or AFK?",
+        "bar": "log quiet, still reading - game closed or AFK?",
         "overlay": "log quiet",
         "overlay_alone": false,
         "check_row": "last_line",
@@ -306,8 +306,8 @@
              levelups: n + (n === 1 ? " level-up" : " level-ups") };
   }
 
-  /* The core sends each open card's sentence (state.py trade_card_text);
-     an older core without it gets a plain, honest line. */
+  /* The core sends each open card's sentence (server/al/text/events.py
+     trade_card_text); an older core without it gets a plain, honest line. */
   function tradeLine(t) {
     if (t && typeof t.text === "string" && t.text) {
       return { what: t.text, where: typeof t.where === "string" ? t.where : "" };

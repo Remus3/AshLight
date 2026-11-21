@@ -37,6 +37,12 @@ const HotReload = require("./hotreload.js");
 const Parts = require("./parts.js");
 const Guards = require("./guards.js");
 const Metrics = require("./metrics.js");
+const AppLog = require("./applog.js");
+
+// RUN-OBS-LOGS-SHELL (F-090): overlay.log in the one line format, rotated
+// at start over 1 MB, the build banner first (app/applog.js). Lines before
+// start() opens the file go to stderr.
+const log = AppLog.createLog({ electron: process.versions.electron });
 
 // REL-CLIENT-HOME (F-049, decision 0059): every runtime path comes from the
 // one client resolver (app/client/home.js, the mirror of paths.install_mode):
@@ -73,43 +79,53 @@ let gate = null; // overlay visibility (app/overlay_gate.js)
 let stopHotReload = null; // HOT-RELOAD: stops the overlay page file watch
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let versionText = ""; // RUN-BUILD-STAMP-UI: the version line, "" until the core answers
-let logStream = null;
 let metrics = null; // RUN-BUDGET-LOG-CLIENT: the once-a-minute own-process sampler
 let onWear = null; // TC-WORN-KEY: the wear key's press handler (built in start())
 let wearRaw; // TC-WORN-KEY: the config value last bound (undefined before the first bind)
 let wearBound = null; // TC-WORN-KEY: the wear accelerator really bound, null when none
 
-function log(msg) {
-  const line = new Date().toISOString() + " " + msg + "\n";
-  if (logStream) { logStream.write(line); } else { process.stderr.write(line); }
-}
-
 function openLog() {
   // run.ps1 sets AL_SIDECAR_ROOT from server.al.paths (the one resolver).
   const root = process.env.AL_SIDECAR_ROOT;
-  if (!root) { return; }
-  try {
-    const dir = path.join(root, "Logs");
-    fs.mkdirSync(dir, { recursive: true });
-    logStream = fs.createWriteStream(path.join(dir, "overlay.log"), { flags: "a" });
-  } catch (e) {
-    logStream = null;
-  }
+  if (root) { log.open(path.join(root, "Logs")); }
 }
 
 function readJson(file) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch (e) { return {}; }
 }
 
-/* The core port has ONE source: server/al/ports.py. */
-function corePort(cfg) {
-  if (process.env.AL_PORT && /^\d+$/.test(process.env.AL_PORT)) { return Number(process.env.AL_PORT); }
-  if (Number.isInteger(cfg.port)) { return cfg.port; }
-  try {
-    const m = /^AL_PORT\s*=\s*(\d+)/m.exec(fs.readFileSync(PORTS_PY, "utf8"));
-    if (m) { return Number(m[1]); }
-  } catch (e) { /* fall through */ }
-  return 0;
+function readPortsPy() {
+  try { return fs.readFileSync(PORTS_PY, "utf8"); } catch (e) { return ""; }
+}
+
+/* The core port has ONE source: server/al/ports.py (resolve: env AL_PORT,
+   then config "port", then AL_PORT). P8-3 (RUN-START-REASON-CLIENT): only
+   a whole number inside the block 8960-8979 is taken; any other value
+   (out of the block, 0, a fraction, true, junk text) is refused with a
+   warning and the next source is read, as the core's own rule does, so
+   the client never talks to a port the core would not bind. 0 when none
+   is usable (no dashboard URL is built for it). Pure: the call passes the
+   env value, the config and the ports.py text. */
+function corePort(envPort, cfg, portsText, warn) {
+  const LO = 8960;
+  const HI = 8979;
+  const say = typeof warn === "function" ? warn : () => {};
+  function inBlock(v) {
+    let n = NaN;
+    if (typeof v === "number") { n = Number.isInteger(v) ? v : NaN; }
+    if (typeof v === "string" && /^\s*\d{1,5}\s*$/.test(v)) { n = Number(v.trim()); }
+    return (n >= LO && n <= HI) ? n : 0;
+  }
+  const sources = [["env AL_PORT", envPort], ['config "port"', cfg ? cfg.port : undefined]];
+  for (const [name, value] of sources) {
+    if (value === undefined || value === null || value === "") { continue; }
+    const p = inBlock(value);
+    if (p) { return p; }
+    say(name + " " + JSON.stringify(value) + " is not a port in the block " + LO + "-" + HI +
+        "; ignored");
+  }
+  const m = /^AL_PORT\s*=\s*(\d+)/m.exec(typeof portsText === "string" ? portsText : "");
+  return m ? inBlock(Number(m[1])) : 0;
 }
 
 function readToken() {
@@ -117,7 +133,9 @@ function readToken() {
 }
 
 const config = readJson(LOCAL_CONFIG);
-const port = corePort(config);
+// P8-3: a refused port value is logged once the log file is open (start()).
+const portNotes = [];
+const port = corePort(process.env.AL_PORT, config, readPortsPy(), (m) => portNotes.push(m));
 // AREA-AUDIT P5-3: a bare key (or a game key like Ctrl+C) from the env or a
 // hand-edited / imported config is refused before globalShortcut.register,
 // which would otherwise take that key from the game system-wide.
@@ -339,7 +357,8 @@ function createWindow() {
   }, log);
   win.once("ready-to-show", () => {
     gate.ready();
-    setTimeout(() => { if (gate) { gate.graceOver(); } }, OverlayGate.GRACE_MS);
+    noteOverlayState();
+    setTimeout(() => { if (gate) { gate.graceOver(); noteOverlayState(); } }, OverlayGate.GRACE_MS);
   });
   win.loadFile(OVERLAY_HTML);
   runParts("overlayWindow", win);
@@ -376,9 +395,21 @@ function refreshAboutAndReload(getVersion) {
   });
 }
 
+/* RUN-EXPLAIN-OVERLAY-STATE (F-129): the overlay's state (the gate's
+   state(), AshLight's own flags) goes into overlay-state.json at once when
+   it changed (app/metrics.js noteState); "starting" while no window. */
+function overlayState() {
+  return gate ? gate.state() : "starting";
+}
+
+function noteOverlayState() {
+  if (metrics) { metrics.noteState(); }
+}
+
 function toggle() {
   if (!win || !gate) { return; }
   gate.toggleUser();
+  noteOverlayState();
   if (client) { client.refresh(); }
   runParts("toggled");
 }
@@ -400,6 +431,7 @@ function restartOverlay() {
   }
   createWindow();
   if (!wantsIt) { gate.toggleUser(); }
+  noteOverlayState();
   log("overlay restarted");
   if (client) { client.refresh(); }
 }
@@ -430,6 +462,7 @@ function setupCalc() {
    the overlay page (al:gate) from the snapshot's game_idle. */
 function setOverlayGate(visible) {
   if (gate) { gate.setGate(visible === true); }
+  noteOverlayState();
   runParts("gate", visible === true);
 }
 
@@ -453,6 +486,7 @@ function openClient() {
 
 function start() {
   openLog();
+  for (const note of portNotes) { log.warn(note); }
   app.setAboutPanelOptions({ applicationName: "AshLight overlay", credits: DISCLAIMER });
   // No permission is ever granted to the page (camera, clipboard, ...).
   session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(false));
@@ -544,7 +578,8 @@ function start() {
   // RUN-BUDGET-LOG-CLIENT (F-032): once a minute, Electron's own process
   // tree (app.getAppMetrics, never the game) into ops/runtime/overlay-state.json.
   metrics = Metrics.startSampler({ getMetrics: () => app.getAppMetrics(), dir: path.dirname(TOKEN_FILE),
-    overlay: () => win, companion: () => (client ? client.window() : null), log: log });
+    overlay: () => win, companion: () => (client ? client.window() : null),
+    overlayState: overlayState, log: log });
   log("overlay started; port " + port + "; toggle " + toggleKey + "; item check " + evalKey +
     "; worn item " + (wearBound || "unset"));
 
@@ -559,6 +594,7 @@ app.on("will-quit", () => {
   fs.unwatchFile(TOKEN_FILE);
   fs.unwatchFile(LOCAL_CONFIG);
   if (stopHotReload) { stopHotReload(); }
+  log.close();
 });
 
 // With the tray up (client mode) closing windows does not quit; the tray's

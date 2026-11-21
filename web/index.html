@@ -37,6 +37,7 @@
 <script src="/web/hints.js" defer></script>
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
+<script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
 <script src="/web/slots.js" defer></script>
 <script src="/web/regions.js" defer></script>
@@ -597,17 +598,27 @@
     <p class="tool-row"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
       <span id="hints-said" class="muted"></span></p>
     <!-- DIAG-SELF (ruling J): computed by the core; folded when green, opens
-         by itself on a failure; the copy is the only click -->
+         by itself on a failure; the copy is the only click. RUN-REPORT-ROUTE:
+         opening the fold builds the report (GET /api/report) into the
+         read-only preview; Copy report copies exactly that text -->
     <div id="checksbox" class="tool checks" role="group" aria-labelledby="checks-title">
       <h3 id="checks-title" class="sub-h">Checks</h3>
       <details id="checks">
         <summary id="checks-summary">Checking AshLight...</summary>
         <ul id="checks-list" class="checks-list"></ul>
+        <!-- RUN-VERDICTS-UI: the 'Tried in game' card (web/verdicts.js fills it) -->
+        <div id="verdicts" class="tool verdicts" role="group" aria-labelledby="verdicts-title" hidden>
+          <h4 id="verdicts-title" class="sub-h">Tried in game</h4>
+        </div>
         <div class="settings-controls">
           <button id="checks-copy" type="button" disabled>Copy report</button>
         </div>
         <p class="muted small">The report holds no file paths, names, contact or chat.
           Paste it where you ask for help.</p>
+        <div id="checks-preview-box" hidden>
+          <label class="row-meta muted small" for="checks-preview">The report, as Copy report copies it</label>
+          <textarea id="checks-preview" class="code-out" readonly rows="8" spellcheck="false"></textarea>
+        </div>
         <!-- not a live region: the dashboard keeps at most 12 (design N6) -->
         <p id="checks-said" class="muted"></p>
       </details>

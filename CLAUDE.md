@@ -443,9 +443,11 @@ of the HALT check.
   0004). Reverses if: PoB drift breaks the bridge every release, PoB ships
   an official headless API, or its license changes.
 - A detached stdlib keepalive supervisor restarts a dead or hung core;
-  stop.ps1's stop.request is honoured (decision 0005). Reverses if: the
-  supervisor proves unreliable, logon survival is wanted, or the stale
-  heartbeat kill false-fires on slow machines.
+  stop.ps1's stop.request is honoured (decision 0005); a stale kill needs
+  two failed health checks and the loop age; intervals use the monotonic
+  clock (0005 amendment 2026-11-18). Reverses if: the supervisor proves
+  unreliable, logon survival is wanted, or the stale heartbeat kill
+  false-fires on slow machines.
 - OVL-FPS never uses PresentMon or ETW Present tracing of the game, not even
   dev-only (decision 0006). AshLight's own-process counters (budget log)
   are a Checks-class self-diagnostic and ship; the on / off FPS measurement

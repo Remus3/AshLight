@@ -8,6 +8,15 @@
    and this file reads the stored key at wire time and stores a changed
    key on the next paint (key al.lang.dismissed). The clipboard is written
    only inside the "Copy report" click (decision 0014). No timers.
+   RUN-REPORT-ROUTE (finding F-109, folded into RUN-VERDICTS-UI): the
+   report is built on the player's click by GET /api/report
+   (server/al/plug/report.py) and shown first in a read-only preview
+   (#checks-preview). The click that opens the Checks fold builds it, so
+   the preview costs no extra click; "Copy report" then writes exactly the
+   previewed text, synchronously inside its own click. When no preview is
+   there yet (the fold opened by itself on a failure, or the build
+   failed), that click builds and shows it and the next one copies; the
+   clipboard is never written after a wait. No upload, ever.
    TC-CALC-OPTIN-BUTTON (decision 0018 opt-in, decision 0041 amendment
    2026-11-20): inside the desktop client only (window.alClient.setupCalc,
    app/client/preload.js) the calc row carries a "Set up the calc" button
@@ -26,6 +35,11 @@
 
   var COPIED = "Report copied. Paste it where you ask for help.";
   var COPY_FAILED = "Couldn't copy the report. Try again.";
+  // RUN-REPORT-ROUTE: the preview's own lines
+  var REPORT_PATH = "/api/report";
+  var BUILDING = "Making the report...";
+  var READY = "This is the report. Press Copy report to copy it.";
+  var BUILD_FAILED = "Couldn't make the report. Try again.";
   var WAITING = "Checking AshLight...";
   var DISMISS_KEY = "al.lang.dismissed";
   // TC-CALC-OPTIN-BUTTON: the calc row's button and its three lines
@@ -258,30 +272,88 @@
       addCalc(doc, li, r, !!client);
       list.appendChild(li);
     });
-    doc.getElementById("checks-copy").disabled = !m.report;
+    // RUN-REPORT-ROUTE: the core builds the report on the click; the
+    // button waits only for the first checks
+    doc.getElementById("checks-copy").disabled = !(m.report || m.rows.length);
   }
 
   function paint(doc, snap) {
     paintChecks(doc, snap);
   }
 
+  /* RUN-REPORT-ROUTE: the preview. report.text is the text on show ("" for
+     none), report.gen counts builds so a late answer of an older build
+     never overwrites a newer one. */
+  var report = { text: "", gen: 0 };
+
+  function showPreview(doc, text) {
+    var pre = doc.getElementById("checks-preview");
+    var box = doc.getElementById("checks-preview-box");
+    report.text = text;
+    if (pre) { pre.value = text; }
+    if (box) { box.hidden = !text; }
+  }
+
+  /* GET /api/report, then the preview. Resolves to true when it shows. */
+  function buildReport(doc, api, said) {
+    if (typeof api !== "function") {
+      said.textContent = BUILD_FAILED;
+      return Promise.resolve(false);
+    }
+    var gen = ++report.gen;
+    said.textContent = BUILDING;
+    var p;
+    try { p = api("GET", REPORT_PATH); } catch (e) { p = Promise.reject(e); }
+    return Promise.resolve(p).then(function (res) {
+      if (gen !== report.gen) { return false; }
+      var text = res && typeof res.report === "string" ? res.report : "";
+      showPreview(doc, text);
+      said.textContent = text ? READY : BUILD_FAILED;
+      return !!text;
+    }, function () {
+      if (gen !== report.gen) { return false; }
+      said.textContent = BUILD_FAILED;
+      return false;
+    });
+  }
+
   /* `getSnap` returns the latest snapshot; `nav` is navigator (tests pass
-     a stub); `store` is localStorage or null. */
-  function wire(doc, getSnap, nav, store) {
+     a stub); `store` is localStorage or null; `api` is app.js api(method,
+     path) -> promise of the JSON reply (RUN-REPORT-ROUTE). */
+  function wire(doc, getSnap, nav, store, api) {
     state.store = store || null;
     held.wired = false;
     state.dismissed = readDismissed(state.store);
     held.wired = true;
+    report.text = "";
+    report.gen = 0;
     var copy = doc.getElementById("checks-copy");
     var said = doc.getElementById("checks-said");
+    var fold = doc.getElementById("checks");
+    var head = doc.getElementById("checks-summary");
+    // the player's click that opens the fold builds the preview (a fold
+    // that opens by itself on a failure builds nothing)
+    if (head && fold) {
+      head.addEventListener("click", function () {
+        if (!fold.open) { buildReport(doc, api, said); }
+      });
+    }
     if (copy) {
       copy.addEventListener("click", function () {
-        var snap = getSnap();
-        var text = model(snap && snap.diag).report;
+        var text = report.text;
+        if (!text) { // no preview yet: this click builds it, the next copies
+          buildReport(doc, api, said);
+          return;
+        }
         said.textContent = "";
         var fail = function () { said.textContent = COPY_FAILED; };
-        if (text && nav && nav.clipboard && nav.clipboard.writeText) {
-          nav.clipboard.writeText(text).then(function () { said.textContent = COPIED; }, fail);
+        var p = null;
+        if (nav && nav.clipboard && nav.clipboard.writeText) {
+          // synchronous inside the click: the previewed text, byte for byte
+          try { p = nav.clipboard.writeText(text); } catch (e) { p = null; }
+        }
+        if (p && typeof p.then === "function") {
+          p.then(function () { said.textContent = COPIED; }, fail);
         } else {
           fail();
         }
@@ -291,6 +363,8 @@
 
   return { model: model, langModel: langModel, calcModel: calcModel, paint: paint, wire: wire,
            COPIED: COPIED, COPY_FAILED: COPY_FAILED, WAITING: WAITING, MARK: MARK,
+           REPORT_PATH: REPORT_PATH, BUILDING: BUILDING, READY: READY,
+           BUILD_FAILED: BUILD_FAILED, _report: report,
            CALC_BUTTON: CALC_BUTTON, CALC_PENDING: CALC_PENDING, CALC_OK: CALC_OK,
            CALC_FAILED: CALC_FAILED, _state: state };
 }));

@@ -105,6 +105,9 @@ tools/design_gate.py, the design-reviewer agent, loop_prompts and design
 docs 0001 / 0002 key the UI-copy review on the path server/al/state.py.
 Moving the text out needs those updated together; filed as a follow-up
 rather than done in a behaviour-preserving pass.
+2026-11-21 (TEST-STATE-TEXT-PINS): done; the text lives in server/al/text/
+and the gate, the reviewer agent, the lane prompts and design 0001 key the
+review on that package (design 0002 and 0003 stay as dated records).
 
 ## 3. Bugs found
 

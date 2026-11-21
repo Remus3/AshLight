@@ -168,13 +168,6 @@ Carried forward (not acted on yet):
   character / contact name; P8-8 "This session" ladder and Maps card mix
   characters after a switch (a map open across a game restart is saved
   under neither).
-- CODE-HEALTH-FOLLOWUP (rows TEST-STATE-EQUIV, RUN-DURABLE-CRLF w6,
-  TEST-WEB-FMT w8, RUN-ZONE-RESET w9, TEST-STATE-TEXT-2 w11, -3 w13, -4
-  w15, TEST-STATE-TEXT-PINS w19; docs/audit/code-health-2026-11-17.md):
-  state.py split (card / event text out; design_gate, design-reviewer,
-  loop_prompts, design 0001-0002 together); web/ pad / duration / clock
-  helper dedup; runtime pid / state / heartbeat files still CRLF (switch to
-  LF, re-test stop.ps1 / run.ps1).
 - LIVE rows (all BLOCKED, need the operator or the live game): LIVE-1
   unseen lines (RUN-LEDGER-CORE w5, -WIRE w16, -REPORT w18,
   RUN-LIVE1-FIXTURES parked); TEST-LIVE-CLICKS, one operator login while

@@ -2,8 +2,8 @@
    and the price check result (PRICE-1-UI), decision 0016. UMD: CommonJS for
    node --test (app/test/prices.test.js), window.ALPrices for the page. No
    DOM, no timers, no network. Price check sentences come from the core
-   (state.py price_card_text); these helpers add only numbers converted with
-   poe.ninja rates and the plain state words. */
+   (server/al/text/price.py price_card_text); these helpers add only numbers
+   converted with poe.ninja rates and the plain state words. */
 (function (root, factory) {
   "use strict";
   var api = factory();

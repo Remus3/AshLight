@@ -56,8 +56,9 @@ test("TEST-LIVE-EXIT: a quiet log reads idle and freezes the clocks", () => {
   assert.equal(p.state, "blocked");
   assert.equal(p.glyph, "[#]");
   assert.equal(p.word, v.IDLE_WORD);
-  // F-131 (0042 F20 f): one root with the overlay's word, no fixed "20 min"
-  assert.equal(v.IDLE_WORD, "log quiet - game closed or AFK?");
+  // F-131 (0042 F20 f): one root with the overlay's word, no fixed "20 min";
+  // FIX-IDLE-WORD: the log is still being read, so the bar says "reading" (G9)
+  assert.equal(v.IDLE_WORD, "log quiet, still reading - game closed or AFK?");
   // the feed down still wins: no stale claim
   assert.equal(v.readingView(idle, false).word, "Client.txt status unknown");
   assert.equal(v.clockUntil(idle, 500), 100);
