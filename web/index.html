@@ -579,25 +579,26 @@
           <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
         </label>
       </form>
+      <!-- OVL-KEYS-WEB (decision 0058): one optional field per key, saved on
+           change (POST /api/hotkeys); the desktop client switches by itself.
+           The Checks fix sentences (diag.py) send the player here. Each
+           field's note (a taken key) sits beside it; the answer to a save
+           goes to this group's one polite region, #layout-status below
+           (the dashboard keeps at most 9). -->
+      <div id="hotkeysbox" class="hotkeys" role="group" aria-labelledby="hotkeys-title">
+        <h4 id="hotkeys-title" class="sub-h">Keys</h4>
+        <p class="muted">Type the key as words, for example Ctrl+Alt+K. It needs Ctrl or
+          Alt. The game's own keys are refused. It saves when you leave the field.</p>
+        <p class="tool-row"><label for="hotkey-eval">Item check key</label>
+          <input id="hotkey-eval" type="text" maxlength="40" autocomplete="off"
+            spellcheck="false" aria-describedby="hotkey-eval-said">
+          <span id="hotkey-eval-said" class="muted"></span></p>
+        <p class="tool-row"><label for="hotkey-toggle">Show or hide the overlay</label>
+          <input id="hotkey-toggle" type="text" maxlength="40" autocomplete="off"
+            spellcheck="false" aria-describedby="hotkey-toggle-said">
+          <span id="hotkey-toggle-said" class="muted"></span></p>
+      </div>
       <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
-    </div>
-
-    <!-- OVL-KEYS-WEB (decision 0058): one optional field per key, saved on
-         change (POST /api/hotkeys); the desktop client switches by itself.
-         Not a live region (the dashboard keeps at most 12): each field
-         points at its answer. -->
-    <div id="hotkeysbox" class="tool hotkeys" role="group" aria-labelledby="hotkeys-title">
-      <h3 id="hotkeys-title" class="sub-h">Keys</h3>
-      <p class="muted">Type a key with Ctrl or Alt held, for example Ctrl+Alt+K. It is saved
-        when you leave the field. Keys the game uses are refused.</p>
-      <p class="tool-row"><label for="hotkey-eval">Item check key</label>
-        <input id="hotkey-eval" type="text" maxlength="40" autocomplete="off"
-          spellcheck="false" aria-describedby="hotkey-eval-said">
-        <span id="hotkey-eval-said" class="muted"></span></p>
-      <p class="tool-row"><label for="hotkey-toggle">Show or hide the overlay</label>
-        <input id="hotkey-toggle" type="text" maxlength="40" autocomplete="off"
-          spellcheck="false" aria-describedby="hotkey-toggle-said">
-        <span id="hotkey-toggle-said" class="muted"></span></p>
     </div>
 
     <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">
