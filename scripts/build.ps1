@@ -6,27 +6,30 @@
   stamp (sidecar Build\build-stamp.json). A re-run with unchanged sources and
   a green stamp is a no-op; -Force rebuilds. The whole Python suite goes
   through the fleet suite gate when the vendored kit is present.
+.PARAMETER Package
+  Build the release package instead (REL-RUNTIME-SCRIPTS): runs only
+  tools\release.py build (decision 0064: the app zip and SHA256SUMS from a
+  git ref, into the sidecar Build\release folder) and exits with its code:
+  0 ok, 1 refused (a dirty tree, a bad tag), 2 while the build sub-command
+  is not built. No tests run; the release gate runs them on the ref.
 #>
 [CmdletBinding()]
 param(
     [switch]$Force,
     [switch]$Snapshot,
     [switch]$NoSnapshot,
-    [switch]$Icons
+    [switch]$Icons,
+    [switch]$Package
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
 $Repo = Split-Path -Parent $PSScriptRoot
-
-function Get-AlPython {
-    foreach ($name in @('python', 'py')) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
-    }
-    throw 'Python 3.11 or newer was not found on PATH.'
-}
+# REL-RUNTIME-SCRIPTS (F-047): Get-AlPython and Get-AlPaths come from
+# scripts\al_env.ps1, the one Python lookup. build.ps1 builds a source
+# checkout, so its own calls below keep the checkout form <python> -m.
+. (Join-Path $PSScriptRoot 'al_env.ps1')
 
 # TEST-CLEAN-CLONE: under $ErrorActionPreference 'Stop', Windows PowerShell
 # 5.1 turns the first stderr line of a redirected native command (a pytest
@@ -42,13 +45,11 @@ function Invoke-AlLogged([string]$LogFile, [string]$Exe, [string[]]$ArgList, [sw
     return $LASTEXITCODE
 }
 
-$py = Get-AlPython
-Push-Location $Repo
-try {
-    $paths = ((& $py -m server.al.paths) -join "`n") | ConvertFrom-Json
-} finally {
-    Pop-Location
+if (Get-AlInstallHome) {
+    throw 'build.ps1 builds a source checkout; an installed copy has nothing to build.'
 }
+$py = Get-AlPython
+$paths = Get-AlPaths
 foreach ($dir in @($paths.build, $paths.logs, $paths.temp)) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
 }
@@ -58,6 +59,26 @@ function Write-AlLog([string]$Message) {
     $line = (Get-Date -Format 's') + ' ' + $Message
     Add-Content -Path $log -Value $line -Encoding ASCII
     Write-Host $Message
+}
+
+# REL-RUNTIME-SCRIPTS: -Package runs the release build tool alone
+# (tools/release.py build; release.py exits 2 while rel_build is not built).
+if ($Package) {
+    $relLog = Join-Path $paths.logs 'build-release.log'
+    Push-Location $Repo
+    try {
+        $relRc = Invoke-AlLogged $relLog $py @((Join-Path $Repo 'tools\release.py'), 'build')
+    } finally {
+        Pop-Location
+    }
+    if ($relRc -eq 0) {
+        Write-AlLog "build: release package ok (log $relLog)"
+    } elseif ($relRc -eq 2) {
+        Write-AlLog "build: release package not built (rc 2: the build sub-command is missing or refused its arguments; log $relLog)"
+    } else {
+        Write-AlLog "build: release package FAILED (rc $relRc; log $relLog)"
+    }
+    exit $relRc
 }
 
 # TC-SNAP (decision 0009, AUDIT-SNAPSHOT-OPTIN): refresh the game-data

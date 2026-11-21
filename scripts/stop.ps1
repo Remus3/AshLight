@@ -24,22 +24,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
 $Repo = Split-Path -Parent $PSScriptRoot
+# REL-RUNTIME-SCRIPTS: Python and the paths from scripts\al_env.ps1 only
+# (the private runtime in an installed copy, PATH Python in a checkout).
+. (Join-Path $PSScriptRoot 'al_env.ps1')
 
-function Get-AlPython {
-    foreach ($name in @('python', 'py')) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
-    }
-    throw 'Python 3.11 or newer was not found on PATH.'
-}
-
-$py = Get-AlPython
-Push-Location $Repo
-try {
-    $paths = ((& $py -m server.al.paths) -join "`n") | ConvertFrom-Json
-} finally {
-    Pop-Location
-}
+$paths = Get-AlPaths
 New-Item -ItemType Directory -Force -Path $paths.runtime, $paths.logs | Out-Null
 $log = Join-Path $paths.logs 'run.log'
 $alive = Join-Path $paths.runtime 'core.alive'
@@ -63,14 +52,11 @@ function Get-AlCorePid {
 function Get-AlOwnCorePid {
     # server\al\procs.py core_pid: the core.alive pid only when its image is
     # python* and its creation time matches the recorded one; else 0.
-    Push-Location $Repo
     try {
-        $st = ((& $py -m server.al.procs status) -join "`n") | ConvertFrom-Json
+        $st = ((Invoke-AlPython server.al.procs status) -join "`n") | ConvertFrom-Json
         return [int]$st.core.pid
     } catch {
         return 0
-    } finally {
-        Pop-Location
     }
 }
 
@@ -101,13 +87,8 @@ if (-not (Test-Path -LiteralPath $alive)) {
 # forced after the wait) and the Electron overlay, each only by a pid proven
 # ours (server\al\procs.py: recorded pid + creation time, or an electron.exe
 # inside this checkout's app\node_modules). Never the game, never another app.
-Push-Location $Repo
-try {
-    $out = (& $py -m server.al.procs stop --wait $TimeoutSec) -join "`n"
-    $procRc = $LASTEXITCODE
-} finally {
-    Pop-Location
-}
+$out = (Invoke-AlPython server.al.procs stop '--wait' $TimeoutSec) -join "`n"
+$procRc = $LASTEXITCODE
 try {
     $report = $out | ConvertFrom-Json
     Write-AlLog ("stop: supervisor " + $report.supervisor + '; overlay ' + $report.overlay)

@@ -55,24 +55,12 @@ $Description = 'AshLight: start AshLight in the tray at logon (opt-in; scripts\a
 $UserId = $env:USERNAME
 if ($env:USERDOMAIN) { $UserId = $env:USERDOMAIN + '\' + $env:USERNAME }
 
-function Get-AlPython {
-    foreach ($name in @('python', 'py')) {
-        $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
-    }
-    throw 'Python 3.11 or newer was not found on PATH.'
-}
-
-# The one path resolver (server\al\paths.py; AL_RUNTIME_DIR moves it in
+# REL-RUNTIME-SCRIPTS: Python from scripts\al_env.ps1 only. The one path
+# resolver (server.al.paths through Get-AlPaths; AL_RUNTIME_DIR moves it in
 # tests) and the task action from the entry point itself (paths.python_cmd).
-$py = Get-AlPython
-Push-Location $Repo
-try {
-    $paths = ((& $py -m server.al.paths) -join "`n") | ConvertFrom-Json
-    $taskAction = ((& $py -m server.al.autostart_entry --task-action) -join "`n") | ConvertFrom-Json
-} finally {
-    Pop-Location
-}
+. (Join-Path $PSScriptRoot 'al_env.ps1')
+$paths = Get-AlPaths
+$taskAction = ((Invoke-AlPython server.al.autostart_entry '--task-action') -join "`n") | ConvertFrom-Json
 $OptinFile = Join-Path $paths.runtime 'autostart.json'
 
 function Get-AlDefinition {

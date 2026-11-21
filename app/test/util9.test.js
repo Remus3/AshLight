@@ -42,6 +42,59 @@ test("price watch: model", () => {
            { text: "B: 4 -> 2 Divine Orb (down 50%)", up: false }] });
 });
 
+/* PLAY-TD-19D-ITEMS-GRID (F-056): a fake page for the Prices card's
+   checked items page and the tab mark */
+function watchDoc() {
+  const nodes = {};
+  ["pricesbox", "watch-text", "watch-clear"].forEach((id) => {
+    const attrs = {};
+    nodes[id] = { id, hidden: false, textContent: "",
+      getAttribute: (k) => (k in attrs ? attrs[k] : null),
+      setAttribute: (k, v) => { attrs[k] = String(v); } };
+  });
+  return { getElementById: (id) => nodes[id] || null, nodes };
+}
+
+test("price watch: a moved item is a first row of the Prices list and marks the tab", () => {
+  const moved = { count: 2, text: "", moved: [
+    { text: "Ember Veil: up 30%, from 1 to 1.3 Divine Orb", change_pct: 30 }] };
+  assert.deepEqual(pw.rows(moved), ["You checked Ember Veil: up 30%, from 1 to 1.3 Divine Orb"]);
+  assert.deepEqual(pw.rows({ count: 1, text: "Watching 1 item. No price moved.", moved: [] }),
+    ["Watching 1 item. No price moved."]);
+  assert.deepEqual(pw.rows(null), []);
+  const marks = [];
+  const saved = globalThis.self;
+  globalThis.self = { ALTabs: { mark: (d, id, word) => { marks.push([id, word]); } } };
+  try {
+    const doc = watchDoc();
+    assert.equal(pw.paint(doc, { price_watch: moved }), true);
+    assert.equal(doc.nodes["watch-text"].textContent, pw.MOVED_PAGE);
+    assert.equal(doc.nodes["watch-clear"].hidden, false);
+    assert.equal(pw.paint(doc, { price_watch: moved }), false); // same data: no repaint
+    assert.equal(pw.paint(doc, { price_watch: { count: 0, text: "None yet.", moved: [] } }), true);
+    assert.equal(doc.nodes["watch-text"].textContent, "None yet.");
+    assert.equal(doc.nodes["watch-clear"].hidden, true);
+    assert.deepEqual(marks, [["build", "moved"], ["build", ""]]);
+  } finally {
+    globalThis.self = saved;
+  }
+  assert.equal(pw.paint({ getElementById: () => null }, {}), false);
+});
+
+test("the Prices card renders a moved checked item above the currency values and movers", () => {
+  const js = require("./_web.js").source("app.js", "ascii");
+  const at = js.indexOf("function paintPricesList()");
+  const body = js.slice(at, js.indexOf("\n  }\n", at));
+  assert.match(body, /watch\.concat\(rateRows, trendRows\)/);
+  // the separate price watch card is gone; the tab mark adds no live region
+  const html = require("./_web.js").source("index.html", "ascii");
+  assert.ok(html.indexOf('id="watchbox"') < 0 && html.indexOf('id="watch-moved"') < 0);
+  const box = html.split('id="pricesbox"')[1].split("</section>")[0];
+  assert.match(box, /id="watch-text"/);
+  assert.match(box, /<button id="watch-clear" type="button" class="secondary btn-28"/);
+  assert.match(box, /<span\s+id="rates-credit">Prices: poe\.ninja<\/span>/);
+});
+
 test("settings io: import sentences", () => {
   assert.equal(sio.importedText({ applied: ["league"], ignored: [], web_data_offered: false }),
     "Imported 1 setting.");

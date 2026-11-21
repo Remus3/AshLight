@@ -446,9 +446,16 @@ def test_dashboard_card_order_glance_first():
 
 
 def test_price_and_points_follows_price():
-    """U17: the item's own price against its points reads next to Price."""
+    """U17: the item's own price against its points reads next to Price.
+    PLAY-TD-19D-ITEMS-GRID: both are rows of the Last item card's one list,
+    the price rows first and price and points right after them, before the
+    Item scoring card's weights."""
     _, main = _main_order()
-    assert main.index('id="pricebox"') < main.index('id="valuebox"') < main.index('id="weights"')
+    assert main.index('id="price-result"') < main.index('id="eval-rows"') < main.index('id="weights"')
+    js = srcpaths.read("app.js", encoding="utf-8")
+    assert "evalRows.check.concat(evalRows.price, evalRows.after)" in js
+    ev = js[js.index("  function renderEval(ev) {"):js.index("  function fillBand(doc) {")]
+    assert ev.index("P.valueView(ev.value)") < ev.index("P.upgradeView(ev.upgrade)")
 
 
 def test_overlay_settings_fold_but_hotkey_hint_stays_open():
