@@ -1,0 +1,39 @@
+name: watch
+
+# AUTO-19 CI-WATCH (decision 0076): once a day, run the upstream watcher
+# sources on a GitHub runner and keep one labelled key issue per finding.
+# It never commits and opens no pull request. It reads repository
+# metadata and public registries only, never a game or price host.
+
+on:
+  schedule:
+    - cron: "37 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: watch
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22.12.0"
+      - name: upstream watch (key issues only)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/watch_ci.py --sources pob-release,repoe-fork,ggg-tree,electron,npm-audit
