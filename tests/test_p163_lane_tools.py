@@ -45,6 +45,18 @@ def test_lane_tools_never_grant_a_bare_gh_or_git_or_commit():
     assert not any("dependabot/alerts" in t and "PATCH" in t for t in tools)
 
 
+def test_code_lanes_may_run_the_shots_tool_only_by_name():
+    # AUTO-15: the lane renders and checks screenshots through tools/shots.py
+    tools = _tools(al_lane.CODE_EXTRA)
+    assert "Bash(python tools/shots.py:*)" in tools
+    assert "Bash(python tools/shots.py:*)" in al_lane.GATE_TOOLS.split(",")
+    for bad in ("Bash(gh:*)", "Bash(git:*)", "Bash(git commit:*)", "Bash(python:*)",
+                "Bash(node:*)", "Bash(python tools:*)"):
+        assert bad not in tools, bad
+    assert not any(t.startswith("Bash(gh") for t in tools)
+    assert not any("commit" in t for t in tools)
+
+
 def test_deep_dive_gets_no_dependency_tools():
     tools = _tools(al_loop.DEEP_EXTRA)
     assert "Bash(python tools/webfetch.py:*)" in tools and "Bash(python -m pytest:*)" in tools

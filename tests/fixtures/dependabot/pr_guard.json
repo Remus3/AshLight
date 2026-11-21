@@ -1,0 +1,35 @@
+[
+ {
+  "number": 41,
+  "title": "Bump example-org/guard-step from 2.0.0 to 2.1.0",
+  "headRefOid": "0a1b2c3d4e5f60718293a4b5c6d7e8f901234567",
+  "files": [
+   {"path": ".github/workflows/fleet-identity-guard.yml", "additions": 1, "deletions": 1},
+   {"path": ".github/workflows/ci.yml", "additions": 1, "deletions": 1}
+  ]
+ },
+ {
+  "number": 42,
+  "title": "Bump example-org/setup-thing from 1.0.0 to 1.1.0",
+  "headRefOid": "1b2c3d4e5f60718293a4b5c6d7e8f9012345678a",
+  "files": [
+   {"path": ".github/workflows/ci.yml", "additions": 1, "deletions": 1}
+  ]
+ },
+ {
+  "number": 43,
+  "title": "Bump made-up-lib from 3.2.1 to 3.2.2 in /app",
+  "headRefOid": "2c3d4e5f60718293a4b5c6d7e8f9012345678ab1",
+  "files": [
+   {"path": "app/package-lock.json", "additions": 4, "deletions": 4}
+  ]
+ },
+ {
+  "number": 44,
+  "title": "Bump made-up-tool from 0.1.0 to 0.2.0",
+  "headRefOid": "3d4e5f60718293a4b5c6d7e8f9012345678ab1c2",
+  "files": [
+   {"path": "requirements-dev.txt", "additions": 2, "deletions": 2}
+  ]
+ }
+]

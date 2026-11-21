@@ -70,7 +70,8 @@ def test_p5_1_good_and_missing_configs_still_save(tmp_path):
 def broken_server(tmp_path):
     core, cfg = _core(tmp_path, BROKEN)
     srv = serve(core, "tok", port=0)
-    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t = threading.Thread(target=srv.serve_forever,
+                         kwargs={"poll_interval": 0.05}, daemon=True)
     t.start()
     yield srv, cfg
     srv.stop()
@@ -104,7 +105,8 @@ def test_p5_1_clear_buttons_answer_500_when_the_runtime_file_cannot_be_written(
         tmp_path, monkeypatch):
     core, _cfg = _core(tmp_path, '{"contact": "c"}\n')
     srv = serve(core, "tok", port=0)
-    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t = threading.Thread(target=srv.serve_forever,
+                         kwargs={"poll_interval": 0.05}, daemon=True)
     t.start()
     try:
         def fail():
