@@ -14488,7 +14488,9 @@
     "F-135"
    ],
    "files": [
-    "web/app.js"
+    "web/app.js",
+    "tests/test_webpage.py",
+    "tests/test_srcpaths.py"
    ],
    "new_files": [
     "web/panels/build.js",
