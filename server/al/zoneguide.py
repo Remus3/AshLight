@@ -9,6 +9,9 @@ guidance, shown by itself on every zone change (zero clicks):
   notes of decision 0030 live in its `layout` fields; decision 0009: no
   wiki or poe2db prose; a fact we are not sure of is left out, never
   guessed);
+- the zone boss's main damage element (a boss zone's `boss` {element,
+  src, checked}, AshLight-authored, decision 0039), published as `boss`
+  for the campaign boss hint (campaign.view);
 - waypoint and the nearest waypoint from the build-time world_areas
   snapshot's `has_waypoint` / `connections` fields (decision 0020; read
   only, never fetched here, and the guide works without it);
@@ -59,6 +62,9 @@ KINDS = ("spirit", "resist", "passive", "life", "mana", "gem", "charm",
 # one-off find, shown but not counted).
 LASTING = ("spirit", "resist", "passive", "life", "mana", "charm", "flask",
            "skill", "other")
+# DATA-GUIDE-BOSS (F-122): the elements a `boss` entry may name (the
+# resistances campaign.RES_STAT reads); any other value reads as no boss.
+ELEMENTS = ("fire", "cold", "lightning", "chaos")
 KIND_WORD = {"spirit": "spirit", "resist": "resistance", "passive": "passive points",
              "life": "life", "mana": "mana", "gem": "gem", "charm": "charm slot",
              "flask": "flask", "item": "item", "skill": "skill", "other": "bonus"}
@@ -370,6 +376,13 @@ def _optional(z):
     return out
 
 
+def _boss(z):
+    """The zone's boss element from its `boss` {element} entry, else None."""
+    b = z.get("boss") if isinstance(z, dict) else None
+    element = b.get("element") if isinstance(b, dict) else None
+    return element if element in ELEMENTS else None
+
+
 def act_rewards(doc, key):
     """[(zone, [lasting optional...]), ...] for an act, in file order."""
     out = []
@@ -510,7 +523,7 @@ def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
                 "objective": entry["objective"], "optional": entry["optional"],
                 "layout": entry["layout"], "next": None, "waypoint": None,
                 "advice": adv, "quest": None, "line": _line(zone, entry, adv),
-                "short": entry["short"], "source": SOURCE_TEXT}
+                "short": entry["short"], "boss": None, "source": SOURCE_TEXT}
     info = acts_mod.act_of(area_id)
     if info is None:
         return None
@@ -536,7 +549,7 @@ def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
             "layout": entry["layout"], "next": entry["next"], "waypoint": waypoint,
             "advice": adv, "quest": quest_view(doc, info["key"], visits),
             "line": _line(zone, entry, adv), "short": entry["short"],
-            "source": SOURCE_TEXT}
+            "boss": _boss(z), "source": SOURCE_TEXT}
 
 
 def replay(events, book, name):

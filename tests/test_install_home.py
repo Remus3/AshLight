@@ -327,15 +327,12 @@ def test_unknown_command_exits_2(argv, capsys):
 
 
 def test_not_yet_built_command_exits_2(capsys, monkeypatch):
-    missing = [c for c, m in cli.COMMANDS.items() if not (PKG / f"{m}.py").exists()]
-    assert missing, "every command is built; pick a fake one"
-    for command in missing:
+    # every command in the table has a module now (REL-UPDATE-SWITCH,
+    # ruling W16-3), so each one is pointed at a module that does not exist
+    for command in list(cli.COMMANDS):
+        monkeypatch.setitem(cli.COMMANDS, command, "no_such_module")
         assert cli.main([command]) == 2
         assert "not available in this build" in capsys.readouterr().err
-    # also when the table names a module that does not exist
-    monkeypatch.setitem(cli.COMMANDS, "status", "no_such_module")
-    assert cli.main(["status"]) == 2
-    assert "not available in this build" in capsys.readouterr().err
 
 
 def test_cli_status_runs_the_status_module(capsys, clean_env):
