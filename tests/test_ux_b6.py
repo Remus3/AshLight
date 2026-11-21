@@ -54,10 +54,13 @@ def test_copy_buttons_are_real_buttons():
 def test_filter_words_say_what_it_does_and_that_nothing_is_written():
     m = re.search(r'<section id="searchbox".*?</section>', HTML, re.S)
     text = _flat(m.group(0))
-    assert "rare drops of the item bases your build wears" in text
-    assert "browser's downloads" in text
-    assert "Move it yourself" in text
-    assert "AshLight writes nothing into your game folders." in text
+    # PLAY-TD-19C-BUILD-GRID (review BG-3): the loot filter page's words
+    assert "AshLight adds its dated blocks at the top and hides nothing." in text
+    assert "Your own file is not changed." in text
+    assert "The copy goes to your downloads." in text
+    assert "Move it to the game's filter folder yourself." in text
+    # the Build file page keeps the promise for the planner folder
+    assert "AshLight writes nothing into your game folders." in _flat(HTML)
 
 
 def test_footer_keeps_the_disclaimer_and_folds_the_promises():

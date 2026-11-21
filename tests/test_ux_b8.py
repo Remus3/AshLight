@@ -38,9 +38,15 @@ def test_underlevel_sentence_does_not_repeat_the_level_tile():
 
 def test_look_for_next_hint_has_no_jargon():
     js = srcpaths.read("health.js")
-    m = re.search(r'var NO_WEIGHTS = ((?:"[^"]*"\s*\+?\s*)+);', js)
-    text = "".join(re.findall(r'"([^"]*)"', m.group(1)))
-    assert "build calc" not in text and "Path of Building calc" in text
+
+    def const(name):
+        m = re.search(r'var %s = ((?:"[^"]*"\s*\+?\s*)+);' % name, js)
+        return "".join(re.findall(r'"([^"]*)"', m.group(1)))
+    # PLAY-TD-19C-BUILD-GRID (review BG-1): the card's short hint, and the
+    # calc sentence as a Numbers row naming the optional calc in full
+    hint, calc = const("NO_WEIGHTS"), const("NO_WEIGHTS_CALC")
+    assert hint == "Check items to see more stats per slot."
+    assert "build calc" not in calc and "Path of Building calc" in calc
 
 
 # -- U26 UX-DASH-DENSITY

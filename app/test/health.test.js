@@ -68,6 +68,10 @@ test("view hides the card with no build", () => {
 });
 
 test("nextView lists valid rows, notes dropped terms, hints without PoB weights", () => {
+  /* review BG-1: the short hint on the card; its calc sentence is the last
+     Numbers row */
+  assert.equal(h.NO_WEIGHTS, "Check items to see more stats per slot.");
+  assert.equal(h.numberRows(DOC).at(-1), h.NO_WEIGHTS_CALC);
   const v = h.nextView(DOC);
   assert.equal(v.rows.length, 2);
   assert.equal(v.rows[0].slot, "Ring 1");
@@ -114,7 +118,7 @@ test("the page loads the script and has the card without a live region", () => {
 const PAINT_IDS = ["healthbox", "health-msg", "health-list", "next-wrap", "next-title", "next-list",
   "next-hint", "def-hint", "def-list"];
 
-test("PLAY-TD-19C-BUILD-GRID: the top 3 health rows on the card, the rest on Numbers", () => {
+test("PLAY-TD-19C-BUILD-GRID: the top 3 health rows on the card, every one on Numbers", () => {
   const many = { loaded: true, health: { loaded: true, has_stats: true, values: DOC.health.values,
     warnings: [1, 2, 3, 4, 5].map((i) => ({ id: "w" + i, severity: "medium", text: "Warning " + i })),
     defence: [{ label: "Stun threshold", value: 512, unit: "", digits: 0 }] } };
@@ -124,7 +128,8 @@ test("PLAY-TD-19C-BUILD-GRID: the top 3 health rows on the card, the rest on Num
   assert.equal(top.length, h.TOP);
   assert.equal(top[0].attrs.title, "Check: Warning 1");
   assert.match(top[0].className, /one-line/);
-  assert.deepEqual(h.numberRows(many), ["Check: Warning 4", "Check: Warning 5", "Life: 2,410",
+  assert.deepEqual(h.numberRows(many), ["Check: Warning 1", "Check: Warning 2", "Check: Warning 3",
+    "Check: Warning 4", "Check: Warning 5", "Life: 2,410",
     "Block chance: 25.3%", "Stun threshold: 512"]);
   const nums = doc.els["def-list"].children[0];
   assert.deepEqual(nums.children[0].children.map((li) => li.textContent), h.numberRows(many));
@@ -150,7 +155,7 @@ test("PLAY-TD-19C-BUILD-GRID: a build with no PoB numbers says why the card is e
   assert.ok(h.NO_HEALTH.indexOf("copy") < 0, "the fix is said once, on the Build card (UX-U25)");
 });
 
-test("PLAY-TD-19C-BUILD-GRID: look for next pages 4 rows (2 compact) with Copy and Trade", () => {
+test("PLAY-TD-19C-BUILD-GRID: look for next pages 4 rows (2 compact) with Copy and Trade site", () => {
   const slots = Array.from({ length: 6 }, (_, i) => ({ slot: "Slot " + i, line: "life",
     text: "\"life " + i + "\"", base: "Base " + i, url: URL_OK }));
   const doc = fakeDoc(PAINT_IDS);
@@ -165,7 +170,7 @@ test("PLAY-TD-19C-BUILD-GRID: look for next pages 4 rows (2 compact) with Copy a
   assert.equal(row.children[1].textContent, "Copy");
   assert.equal(row.children[1].attrs["aria-label"], "Copy Slot 0 search string");
   assert.equal(row.children[2].tagName, "A");
-  assert.equal(row.children[2].textContent, "Trade");
+  assert.equal(row.children[2].textContent, "Trade site");
   assert.equal(host.children[1].children[0].textContent, "1-4 of 6");
 });
 
@@ -239,7 +244,7 @@ test("paint renders the trade link as a new-tab anchor, and none for a bad url",
   assert.equal(got[0].href, URL_OK);
   assert.equal(got[0].target, "_blank");
   assert.equal(got[0].rel, "noopener noreferrer");
-  assert.equal(got[0].textContent, "Trade");
+  assert.equal(got[0].textContent, "Trade site");
   assert.equal(got[0].attrs.title, "Search the official trade site for rare Example Ring (Ring 1)");
   assert.match(got[0].attrs["aria-label"], /^Search the official trade site .*\(opens in a new tab\)$/);
   const doc2 = fakeDoc(ids);

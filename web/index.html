@@ -159,6 +159,7 @@
       <div id="build-view" hidden>
         <p class="row-body one-line"><strong id="build-name"></strong></p>
         <p id="build-level" class="row-body one-line muted"></p>
+        <p id="build-you" class="row-body one-line muted" hidden></p>
         <p id="build-source" class="row-body one-line muted"></p>
         <dl id="build-stats" class="card-kv"></dl>
         <p id="build-stats-empty" class="row-meta muted" hidden>No stats saved in this build. Open it in
@@ -172,7 +173,7 @@
         <button type="button" class="secondary btn-24" data-card-open="paste">Paste</button>
         <button type="button" class="secondary btn-24" data-card-open="chars">Characters</button>
         <button type="button" class="secondary btn-24" data-card-open="split" id="split-open" hidden>Damage</button>
-        <button type="button" class="secondary btn-24" data-card-open="more">More</button>
+        <button type="button" class="secondary btn-24" data-card-open="more">Build file</button>
       </div>
     </div>
     <div class="card-page" data-page="paste" data-label="Paste a build" hidden>
@@ -182,6 +183,7 @@
         <p id="build-empty" class="row-meta muted">No build yet.</p>
         <label class="paste row-body" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
         <textarea id="build-paste" class="paste-box" rows="3" spellcheck="false" autocomplete="off"
+          aria-describedby="build-status"
           placeholder="Path of Building code"></textarea>
       </div>
       <p id="build-status" class="row-meta one-line muted"></p>
@@ -213,15 +215,14 @@
       </div>
     </div>
     <div id="buildfile-more" class="card-page" data-page="more" data-label="Build file for the game" hidden>
-      <p class="row-meta">The game can load this build as a guide. Save it as a .build file to your
-        browser's downloads, then move it yourself to the game's planner folder in your Documents.
-        AshLight writes nothing into your game folders.</p>
+      <p class="row-meta">Save it, then move it yourself to the game's planner folder in your
+        Documents. AshLight writes nothing into your game folders.</p>
       <p class="card-act">
         <button id="buildfile-save" type="button" class="secondary btn-28">Save .build file</button>
         <span id="buildfile-said" class="row-meta one-line muted"></span>
       </p>
       <p id="buildfile-summary" class="row-meta one-line muted"></p>
-      <p id="buildfile-notes" class="row-meta one-line muted" hidden></p>
+      <ul id="buildfile-notes" class="card-notes row-meta muted" hidden></ul>
     </div>
     <!-- the copy fallback: shown only when the clipboard refused the Copy click -->
     <div class="card-page" data-page="code" data-label="Build code" hidden>
@@ -239,23 +240,24 @@
       <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
     <div class="card-page" data-page="main" data-label="">
-      <p id="health-msg" class="row-body one-line"></p>
+      <p id="health-msg" class="row-body"></p>
       <ul id="health-list" class="health-list" hidden></ul>
       <div id="next-wrap" hidden>
-        <h3 id="next-title" class="card-h3 one-line">Look for next <span id="next-hint" class="muted" hidden></span></h3>
+        <h3 id="next-title" class="card-h3">Look for next</h3>
+        <p id="next-hint" class="row-meta one-line muted" hidden></p>
         <div id="next-list" class="pager-slot"></div>
       </div>
       <div class="card-foot" data-card-foot>
-        <button type="button" class="secondary btn-24" data-card-open="numbers">Numbers</button>
-        <button type="button" class="secondary btn-24" data-card-open="gear">Gear</button>
-        <button type="button" class="secondary btn-24" data-card-open="gems">Gems</button>
-        <button type="button" class="secondary btn-24" data-card-open="notes">Notes</button>
+        <button type="button" class="secondary btn-24" data-card-open="numbers" aria-label="Build numbers">Numbers</button>
+        <button type="button" class="secondary btn-24" data-card-open="gear" aria-label="Build gear">Gear</button>
+        <button type="button" class="secondary btn-24" data-card-open="gems" aria-label="Build gems">Gems</button>
+        <button type="button" class="secondary btn-24" data-card-open="notes" aria-label="Build notes">Notes</button>
       </div>
     </div>
     <!-- MATH-DEF-BREAKDOWN: Path of Building's defence and sustain numbers,
          with the plain values and any warning past the top 3 -->
     <div id="def-wrap" class="card-page" data-page="numbers" data-label="Numbers from Path of Building" hidden>
-      <p id="def-hint" class="row-meta one-line muted" hidden></p>
+      <p id="def-hint" class="row-meta muted" hidden></p>
       <div id="def-list" class="pager-slot"></div>
     </div>
     <div class="card-page" data-page="gear" data-label="Gear" hidden>
@@ -279,7 +281,7 @@
       <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
     <div class="card-page" data-page="main" data-label="">
-      <p id="search-intro" class="row-meta one-line muted">Paste one into a stash or vendor search. AshLight copies only on your click.</p>
+      <p id="search-intro" class="row-meta one-line muted">Copy one, paste it in game. Copies only on your click.</p>
       <div id="search-list" class="pager-slot"></div>
       <div class="card-foot" data-card-foot>
         <button type="button" class="secondary btn-24" data-card-open="filter">Loot filter</button>
@@ -293,10 +295,9 @@
          dated and names the league of its prices. -->
     <details id="filter-more" class="card-page tool-page" data-page="filter" data-label="Loot filter add-on" open hidden>
     <summary>Loot filter add-on</summary>
-    <p class="row-meta">Pick your filter file: AshLight puts its dated blocks at the top, which
-      show rare drops of the item bases your build wears in larger text, and hides nothing.
-      The copy goes to your browser's downloads. Move it yourself to the game's filter folder.
-      AshLight writes nothing into your game folders.</p>
+    <p class="row-meta">Pick your filter file. AshLight adds its dated blocks at the top and hides
+      nothing. Your own file is not changed. The copy goes to your downloads. Move it to the
+      game's filter folder yourself.</p>
     <div class="card-act">
       <label for="filter-merge-file" class="row-meta">Filter file</label>
       <input id="filter-merge-file" type="file" accept=".filter,text/plain">

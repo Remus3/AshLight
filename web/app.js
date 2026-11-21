@@ -363,7 +363,9 @@
     if (!buildDoc) { return; }
     var v = T.buildView(buildDoc, snap);
     if (!v.loaded) { return; }
-    setLine($("build-level"), v.levelLine + (v.you ? " " + v.you : ""));
+    setLine($("build-level"), v.levelLine);
+    setLine($("build-you"), v.you);
+    $("build-you").hidden = !v.you;
     setLine($("build-source"), sourceLine(buildDoc));
   }
 
@@ -455,8 +457,10 @@
     $("buildfile-save").disabled = !f.ready;
     setLine($("buildfile-summary"), f.ready ? f.summary
       : "The build file isn't available for this build.");
+    /* each left-out note on its own wrapping row: the whole text shows */
     var notes = $("buildfile-notes");
-    setLine(notes, f.notes.length ? "Left out: " + f.notes.join(" ") : "");
+    notes.replaceChildren();
+    f.notes.forEach(function (s) { notes.appendChild(el("li", "", s)); });
     notes.hidden = !f.notes.length;
   }
 

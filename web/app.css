@@ -757,7 +757,7 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
   margin: 0; min-width: 0; }
 .card-foot { min-height: 1.75rem; }
 .card-act > .one-line { flex: 1 1 0; }
-.card-h3 { margin: 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); font-weight: 600; }
+.card-h3 { margin: 0.25rem 0 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); font-weight: 600; }
 .card-h3 .muted { font-weight: 400; }
 .card-kv { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 0.75rem; }
 .card-kv-1 { grid-template-columns: minmax(0, 1fr); }
@@ -776,6 +776,7 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 .tool-page > summary { display: none; }
 .tool-page .small { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); margin: 0.25rem 0 0; }
 .tool-page .link { min-height: 1.5rem; padding: 0; font-size: var(--al-fs-meta); }
+.card-notes { margin: 0; padding-left: 1rem; overflow-wrap: anywhere; }
 .grid-card a.out { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 .tool-page input[type="file"] { width: 13rem; font-size: var(--al-fs-meta); }
 .tool-page .card-act > .one-line:empty { display: none; }

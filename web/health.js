@@ -34,8 +34,11 @@
   var NO_STATS = "This build has no Path of Building numbers. Open it in Path of Building, " +
     "then copy its code again.";
   // UX-B9-CARDS: name the optional calc, not "build calc"
-  var NO_WEIGHTS = "More stats show here for each slot once you check items. This " +
-    "needs the optional Path of Building calc, which is off by default.";
+  var NO_WEIGHTS = "Check items to see more stats per slot.";
+  // PLAY-TD-19C-BUILD-GRID (review BG-1): the calc half of that hint is a
+  // row of the Numbers page, where the Full text page shows it whole
+  var NO_WEIGHTS_CALC = "More stats per slot need the optional Path of Building calc, " +
+    "which is off by default.";
   // MATH-DEF-BREAKDOWN: the calc-only rows (CalcDefence / CalcPerform)
   var NO_CALC = "Ailment and stun avoidance, flask and charm numbers show here once the " +
     "optional Path of Building calc is on. It is off by default.";
@@ -140,13 +143,14 @@
   var EMPTY = "No build yet. Load one on the Build card.";
   // UX-U25: the Build card says how to add saved stats; this card only says
   // why it is empty, so a fixed card never shows a blank page
-  var NO_HEALTH = "Health shows once the build has Path of Building numbers.";
+  var NO_HEALTH = "Health shows when the build has PoB numbers.";
   var TOP = 3; // health rows on the card's first page (plan 03 section 4)
   // look for next: control rows of 24 px under 3 health rows and the
   // heading (66 + 22 + 4 x 24 + 28 = 212 of 220; compact 2: 164 of 176)
   var NEXT_SIZE = { full: 4, compact: 2 };
-  // Numbers: one hint row above the pager (22 + 9 x 22 + 28 = 248)
-  var NUM_SIZE = { full: 9, compact: 7 };
+  // Numbers: a wrapping hint (up to 3 meta lines) above the pager
+  // (60 + 8 x 22 + 28 = 264 of 270; compact 60 + 6 x 22 + 28 = 220 of 240)
+  var NUM_SIZE = { full: 8, compact: 6 };
 
   function el(doc, tag, cls, text) {
     var e = doc.createElement(tag);
@@ -160,13 +164,16 @@
     return typeof require === "function" ? require("./search.js") : null;
   }
 
-  /* doc -> the rows of the Numbers page: warnings past the top 3, the
-     plain values, then the defence and sustain rows; strings only. */
+  /* doc -> the rows of the Numbers page: every warning (the top 3 too, so
+     the Full text page is the whole-text twin of the card's one-line
+     rows), the plain values, the defence and sustain rows, then the calc
+     sentence of the look-for-next hint; strings only. */
   function numberRows(doc) {
     var v = view(doc);
-    var out = v.warnings.slice(TOP).map(function (w) { return w.word + ": " + w.text; });
+    var out = v.warnings.map(function (w) { return w.word + ": " + w.text; });
     v.values.forEach(function (x) { out.push(x.label + ": " + x.text); });
     defView(doc).rows.forEach(function (x) { out.push(x.label + ": " + x.text); });
+    if (nextView(doc).hint) { out.push(NO_WEIGHTS_CALC); }
     return out;
   }
 
@@ -197,7 +204,7 @@
         var out = [S.copyButton(d, r.text, "Copy " + r.slot + " search string", null, list, nav)];
         if (r.link) {
           // decision 0017: the player's click opens it; nothing is fetched
-          var a = el(d, "a", "out", "Trade");
+          var a = el(d, "a", "out", "Trade site");
           a.href = r.link.href;
           a.target = "_blank";
           a.rel = "noopener noreferrer";
@@ -252,13 +259,7 @@
     var wrap = doc.getElementById("next-wrap");
     if (wrap) { wrap.hidden = !nv.rows.length && !nv.hint; }
     var hint = doc.getElementById("next-hint");
-    if (hint) { oneLine(hint, nv.hint ? "- " + nv.hint : ""); }
-    var head = doc.getElementById("next-title");
-    if (head) {
-      if (nv.hint) { head.setAttribute("title", "Look for next - " + nv.hint); } else if (head.removeAttribute) {
-        head.removeAttribute("title");
-      }
-    }
+    if (hint) { oneLine(hint, nv.hint); }
     c.next.set(nv.rows);
     var dh = doc.getElementById("def-hint");
     if (dh) { oneLine(dh, dv.hint); }
@@ -268,5 +269,6 @@
   return { view: view, nextView: nextView, defView: defView, numberRows: numberRows, paint: paint,
     tradeLink: tradeLink, EMPTY: EMPTY, NO_HEALTH: NO_HEALTH, TOP: TOP, NEXT_SIZE: NEXT_SIZE, NUM_SIZE: NUM_SIZE,
     SEVERITY: SEVERITY,
-    ALL_CLEAR: ALL_CLEAR, NO_CALC: NO_CALC, NO_STATS: NO_STATS, NO_WEIGHTS: NO_WEIGHTS, COPIED: COPIED };
+    ALL_CLEAR: ALL_CLEAR, NO_CALC: NO_CALC, NO_STATS: NO_STATS, NO_WEIGHTS: NO_WEIGHTS,
+    NO_WEIGHTS_CALC: NO_WEIGHTS_CALC, COPIED: COPIED };
 }));
