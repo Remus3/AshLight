@@ -13121,6 +13121,7 @@
     "scripts/build.ps1",
     "scripts/autostart.ps1",
     "app/client/home.js",
+    "app/guards.js",
     "docs/decisions/0002-stack.md",
     "docs/decisions/0010-process-registry.md",
     "docs/decisions/0041-desktop-client.md"
