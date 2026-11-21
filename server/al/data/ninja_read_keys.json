@@ -1,0 +1,25 @@
+{
+  "_README": "DATA-NINJA-SHAPE-WATCH (F-140 layer 1): the poe.ninja key names AshLight's parsers READ, per route family, for server/al/ninjashape.py. Key names only: no price, no item name, no league name. A path is dot separated; a list on the path (lines, items, core.items, or the leagues list itself) is checked element by element, and the share is the part of its elements that carry a usable value at the rest of the path. A key in `read` on under half of the elements is a break; a key also in `soft` is recorded but only reports a change (the item family until a real item body confirms it, research 0036). Hot reloaded (decision 0042): a bad edit keeps the last good baseline and shows a Checks note.",
+  "schema": 1,
+  "src": "research 0036 shape-watch design (leagues and exchange cut from the real bodies of 2026-11-18)",
+  "checked": "2026-11-21",
+  "families": {
+    "leagues": {
+      "read": ["id", "name"],
+      "soft": []
+    },
+    "exchange": {
+      "read": ["lines.id", "lines.primaryValue", "lines.volumePrimaryValue",
+               "lines.sparkline.totalChange", "items.id", "items.name",
+               "core.primary", "core.items.id", "core.items.name"],
+      "soft": []
+    },
+    "item": {
+      "read": ["lines.name", "lines.baseType", "lines.corrupted", "lines.primaryValue",
+               "lines.listingCount", "lines.sparkLine.totalChange", "core.primary",
+               "core.items"],
+      "soft": ["lines.baseType", "lines.corrupted", "lines.listingCount",
+               "lines.sparkLine.totalChange", "core.items"]
+    }
+  }
+}

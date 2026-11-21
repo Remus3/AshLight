@@ -81,3 +81,31 @@ measured gain); a loop-age-only verdict without the heartbeat (an older
 core reports no loop age). Reverses if: a real hang takes longer than the
 budget to recover, the grace hides a real hang in play, or the loop age
 misfires on a slow tick.
+
+## Amendment 2026-11-18 (RUN-SECOND-LINE-PY, plan unit F-127)
+
+Nothing stays down. `scripts/run.ps1` starts the supervisor right after it
+launches the core and before its 15 s health wait, and hands it the new
+core's pid (`--adopt-pid`): the supervisor watches that pid as a starting
+core for 60 s (`ADOPT_GRACE_S`), so a slow start no longer ends with a core
+and no supervisor, and never with a second core. Only a live python process
+is adopted; its creation time is read at adoption and must still match
+before a start timeout terminates it (decision 0010). The core starts a
+missing supervisor itself (`server/al/plug/secondline.py`,
+`procs.start_supervisor`: hidden, detached, the one command builder): after
+3 Checks ticks in a row (5 s each) with no live supervisor (its recorded pid
+proven by pid and creation time, else the single-instance lock), never while
+stop.request exists, at most once per 5 minutes, only in the real core (a
+test, demo or AL_RUNTIME_DIR core starts nothing). A start shows a Checks
+note for 10 minutes: "Keepalive was not running; AshLight started it
+again." The supervisor never starts Electron (decision 0041); the client
+restarting a missing core is its own package. No new watchdog process.
+
+Alternatives: a third watchdog process (one more thing that can die, and
+the same question one level up); run.ps1 waiting longer before starting the
+supervisor (a slow start past any wait still loses it); the supervisor
+starting without a pid and waiting for the first heartbeat (it would launch
+a second core when none is seen). Reverses if: a core and its supervisor
+restart each other in a loop in play, the adopted grace hides a core that
+never starts, or the 5 minute cap leaves a machine without a supervisor too
+long.

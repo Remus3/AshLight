@@ -2,12 +2,19 @@
 
     python -m server.al.keepalive [--port N] [--runtime DIR] [--poll S]
         [--stale S] [--backoff 2,10,30] [--cap N] [--window S]
-        [--core-args ARG ...]
+        [--adopt-pid PID] [--core-args ARG ...]
 
 scripts/run.ps1 starts it detached (Start-AlDetached, pythonw) on every run;
 a second copy exits at once (single-instance lock in the runtime dir). It
 adopts a core that is already running (pid from <runtime>/core.alive) and
-polls every POLL_S seconds:
+polls every POLL_S seconds. RUN-SECOND-LINE-PY (F-127, decision 0005
+amendment 2026-11-18): run.ps1 starts it right after the core, before its
+health wait, with --adopt-pid <the core's pid>: a core that has not written
+its first heartbeat yet is watched as a starting core for ADOPT_GRACE_S
+(never a second core next to it); the pid must be a live python process and
+its creation time, read at adoption, must still match before it is
+terminated. A core that finds no live supervisor starts one itself
+(plug/secondline.py, procs.start_supervisor).
 
 - core pid gone, core.alive left behind -> crash -> relaunch after backoff
 - core pid alive, heartbeat older than STALE_S and two /api/health checks
@@ -49,6 +56,7 @@ from . import exitrecord, hello, hotreload, jsonfile, logs, paths, ports, prio, 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
 START_GRACE_S = 60.0    # a fresh core must write its first heartbeat by then
+ADOPT_GRACE_S = 60.0    # RUN-SECOND-LINE-PY: the same for a core run.ps1 started
 # RUN-SUPERVISOR-CLOCK (F-136, decision 0005 amendment 2026-11-18): every
 # interval is measured on the monotonic clock. A stale kill needs two failed
 # health checks at least RECHECK_S apart; a check fails when nothing answers
@@ -308,7 +316,8 @@ class Keepalive:
                  reload_debounce_s=RELOAD_DEBOUNCE_S, reload_exit_s=RELOAD_EXIT_S,
                  snapshot=None, snapshot_every_s=SNAPSHOT_EVERY_S, wall=None,
                  recheck_s=RECHECK_S, loop_stale_s=LOOP_STALE_S,
-                 poll_gap_s=POLL_GAP_S, gap_grace_s=GAP_GRACE_S, poll_s=POLL_S):
+                 poll_gap_s=POLL_GAP_S, gap_grace_s=GAP_GRACE_S, poll_s=POLL_S,
+                 adopt_pid=None, adopt_grace_s=ADOPT_GRACE_S):
         # RUN-SUPERVISOR-CLOCK (F-136): `now` is the monotonic clock every
         # interval uses; `wall` only stamps records other processes read
         # (keepalive.json, last-exit.json, the code reload status, the
@@ -361,6 +370,12 @@ class Keepalive:
         self._log = log or (lambda line: None)
         self.stale_s = float(stale_s)
         self.start_grace_s = float(start_grace_s)
+        # RUN-SECOND-LINE-PY: the grace of the core being started (ours:
+        # start_grace_s; one adopted from run.ps1: adopt_grace_s) and the
+        # creation time of an adopted pid (None: no check, our own launch)
+        self.adopt_grace_s = float(adopt_grace_s)
+        self.launch_grace_s = self.start_grace_s
+        self._launch_created = None
         self.backoff = tuple(float(x) for x in backoff) or BACKOFF_S
         self.cap = int(cap)
         self.window_s = float(window_s)
@@ -372,6 +387,38 @@ class Keepalive:
         self._created = process_created(os.getpid())
         # the last restart survives a supervisor restart (run.ps1 re-run)
         self.last_restart = read_last_restart(self.runtime / STATE_FILE)
+        if adopt_pid:
+            self.adopt(adopt_pid)
+
+    def adopt(self, pid):
+        """RUN-SECOND-LINE-PY: watch pid (a core run.ps1 just started, no
+        heartbeat yet) as a starting core for adopt_grace_s, so no second
+        core is launched next to it. Its creation time is read now; a pid
+        that dies or is reused before its first heartbeat reads as a crash
+        while starting. False (nothing adopted) when pid is not alive."""
+        pid = int(pid or 0)
+        if pid <= 0 or not self._alive(pid):
+            self._log(f"core pid {pid} to adopt is not running; watching as usual")
+            return False
+        self.pid = pid
+        self._launch_created = self._created_of(pid) or None
+        self.launched_at = self._now()
+        self.launch_grace_s = self.adopt_grace_s
+        self._log(f"adopted starting core pid {pid} ({self.adopt_grace_s:g} s to "
+                  f"write its first heartbeat)")
+        self._write_state("starting")
+        return True
+
+    def _starting_alive(self):
+        """The core being started is still the process launched or adopted
+        (pid alive and, for an adopted pid, the same creation time)."""
+        if not self.pid or not self._alive(self.pid):
+            return False
+        want = self._launch_created
+        if not want:
+            return True
+        got = self._created_of(self.pid)
+        return not got or got == want
 
     def _write_state(self, status):
         data = {"pid": os.getpid(), "created": self._created, "status": status,
@@ -453,8 +500,8 @@ class Keepalive:
                     self.reloading_since = now  # one terminate per window
                 return "reloading"
             return self._code_step(now) or "ok"
-        if self.launched_at is not None and self.pid and self._alive(self.pid):
-            if (now - self.launched_at > self.start_grace_s and not self._no_kill(now)
+        if self.launched_at is not None and self._starting_alive():
+            if (now - self.launched_at > self.launch_grace_s and not self._no_kill(now)
                     and not answered(self._health())):
                 ok = self._terminate(self.pid)
                 return self._crashed(now, f"core start timed out (pid {self.pid}, "
@@ -573,6 +620,7 @@ class Keepalive:
         self.pid = None
         self.seen_beat = False
         self.launched_at = None
+        self._launch_created = None
         self._failed_at = None
         self._restart_reason = code  # recorded when the relaunch happens
         if self.hot_launch and self._code_watch is not None:
@@ -653,6 +701,8 @@ class Keepalive:
     def _launch_core(self, now, hot=False):
         self.next_launch = None
         self.hot_launch = bool(hot)
+        self.launch_grace_s = self.start_grace_s
+        self._launch_created = None
         if not hot:
             self.restarts.append(now)  # a code reload is not a crash restart
         try:
@@ -789,6 +839,9 @@ def build_parser():
     p.add_argument("--backoff", default=",".join(f"{x:g}" for x in BACKOFF_S))
     p.add_argument("--cap", type=int, default=CAP)
     p.add_argument("--window", type=float, default=WINDOW_S)
+    p.add_argument("--adopt-pid", type=int, default=0,
+                   help="a core pid run.ps1 just started (watched as starting "
+                        f"for {ADOPT_GRACE_S:g} s)")
     p.add_argument("--core-args", nargs=argparse.REMAINDER, default=[],
                    help="extra arguments for the core (must be last)")
     return p
@@ -832,6 +885,12 @@ def main(argv=None):
                         preflight=run_preflight if code_watch is not None else None,
                         snapshot=snapshot_starter(runtime, args.runtime))
         sup._write_state("started")  # records this supervisor's pid for stop.ps1
+        if args.adopt_pid > 0:
+            # RUN-SECOND-LINE-PY: only AshLight's own python core (decision 0010)
+            if image_name(args.adopt_pid).lower().startswith("python"):
+                sup.adopt(args.adopt_pid)
+            else:
+                log(f"pid {args.adopt_pid} is not a python process; not adopted")
         log(f"supervisor started (port {args.port}, poll {poll:g} s, code reload "
             f"{'on' if code_watch is not None else 'off'})")
         result = sup.run(poll_s=poll)

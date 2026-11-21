@@ -21,8 +21,10 @@
    - a --client --tray start (the logon task) opens tray-only: no window
      until the player asks for one (REL-AUTOSTART-TRAY, wantsTray). */
 
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const Hello = require("../hello.js");
 
 const HEX_TOKEN = /^[0-9a-fA-F]{16,256}$/;
 const DEFAULT_SIZE = { width: 1280, height: 860 };
@@ -283,23 +285,19 @@ function waitFor(check, timeoutMs, stepMs, sleep, now) {
   return round();
 }
 
-/* GET /api/health with the token; resolves true on 200, false otherwise. */
+/* SEC-HELLO-CLIENT (decision 0054): "is the core up" is the hello
+   handshake (app/hello.js): the listener must prove it holds the token and
+   bound this port, and the token itself is never sent, so a foreign
+   listener answering 200 to everything is not the core. getToken is the
+   verifier's verifiedToken (main.js; its verifier is shared, so a passed
+   check also releases the token there) or a plain token reader (a verifier
+   of its own). Resolves true / false. */
 function makeHealthCheck(http, port, getToken) {
+  const shared = getToken && getToken.hello;
+  const verifier = shared && shared.port === port && typeof shared.check === "function"
+    ? shared : Hello.makeVerifier(http, crypto, port, getToken);
   return function healthy() {
-    return new Promise((resolve) => {
-      const token = getToken();
-      if (!token || !port) { resolve(false); return; }
-      const req = http.request({
-        host: "127.0.0.1", port: port, path: "/api/health", method: "GET", timeout: 2000,
-        headers: { "X-AL-Token": token }
-      }, (res) => {
-        res.resume();
-        resolve(res.statusCode === 200);
-      });
-      req.on("timeout", () => req.destroy(new Error("timeout")));
-      req.on("error", () => resolve(false));
-      req.end();
-    });
+    return verifier.check();
   };
 }
 
