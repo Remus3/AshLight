@@ -82,9 +82,10 @@ test("a dead core says so", async () => {
 test("one primary filter control: the file pick; the download is a link", () => {
   /* TC-FILTER-ONE-CONTROL (F-158) */
   const html = web.source("index.html", "ascii");
-  const start = html.indexOf('<details id="filter-more"');
+  // PLAY-TD-19D-ITEMS-GRID (review BG-10): the filter page is a plain div
+  const start = html.indexOf('<div id="filter-more"');
   assert.ok(start >= 0);
-  const fold = html.slice(start, html.indexOf("</details>", start));
+  const fold = html.slice(start, html.indexOf("</section>", start));
   const controls = fold.match(/<(button|input|select|textarea)\b[^>]*>/g) || [];
   const primary = controls.filter((c) => !/class="link"/.test(c));
   assert.deepEqual(primary, ['<input id="filter-merge-file" type="file" accept=".filter,text/plain">']);
