@@ -21,7 +21,7 @@ import re
 import time
 from pathlib import Path
 
-from . import buildinfo, langguard, plug
+from . import buildinfo, diag_data, langguard, plug
 from . import statuswords as words
 from .num import finite
 
@@ -400,13 +400,15 @@ def checks(f, now):
     """Every check, in reading order, from a facts dict (see Core.diag_facts).
     RUN-SEAMS (decision 0056): plug modules' rows follow the built-in ones,
     in module ORDER; web/checks.js paints any row, so a new row needs no
-    web edit."""
+    web edit. DATA-DIAG-SEAM: the data modules' diag_rows come before the
+    reload and dev-docs rows (diag_data.py)."""
     rows = [check_log(f), check_consent(f), check_reading(f), check_last_line(f, now),
             check_character(f), check_language(f), check_web(f), check_prices(f, now),
             check_calc(f), check_snapshot(f, now),
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
             *check_hotkey(f), check_port(f)]
+    rows += diag_data.rows(f, now, taken={r["id"] for r in rows})  # DATA-DIAG-SEAM
     rows += [r for r in (check_reload(f), check_dev_docs(f), check_private(f)) if r]
     rows += check_last_exit(f, now)
     return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})
