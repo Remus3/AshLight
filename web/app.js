@@ -1381,7 +1381,8 @@
       if (window.ALChecks) {
         var store = null;
         try { store = window.localStorage; } catch (e) { store = null; }
-        window.ALChecks.wire(document, function () { return snap; }, navigator, store);
+        // RUN-REPORT-ROUTE: api builds the report on the click (GET /api/report)
+        window.ALChecks.wire(document, function () { return snap; }, navigator, store, api);
       }
     }
   });
@@ -1660,6 +1661,8 @@
     document.addEventListener("visibilitychange", tick);
     // TEST-WEB-REGISTRY: every panel's wire, in its order (web/registry.js)
     A.start();
+    // RUN-VERDICTS-UI: the 'Tried in game' card (one read, then clicks only)
+    if (window.ALVerdicts) { window.ALVerdicts.wire(document, api); }
     // TD-09 region hook: wire every registered Play region before the first push
     if (window.ALRegions) {
       window.ALRegions.start(document, {
