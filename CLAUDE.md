@@ -554,7 +554,13 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
 - TC-BRIDGE: own stdio JSON bridge (bridge.lua via PoB's unmodified
   HeadlessWrapper, `ALB1 <json>` replies), core imports nothing from it
   (decision 0022; amendment 2026-11-17: the luajit.exe hash record stops a
-  stale or foreign exe, not a same-user tamper). Reverses if: PoB reshapes HeadlessWrapper every release
+  stale or foreign exe, not a same-user tamper). Amendment 2026-11-20
+  (TC-CALC-VERIFY-USE): the bridge checks the pinned lua_sha256 of PoB's Lua
+  files before each start (cached by size and mtime; a mismatch refuses with
+  'calc component changed, re-run setup' and status() reports pob-lua); a
+  native require answers only for lua-utf8 before the lockdown and for
+  nothing after; the child runs confined (job object, short environment, no
+  process or file writes from Lua). Reverses if: PoB reshapes HeadlessWrapper every release
   or ships an official headless API, the live 0.1 percent test fails
   without patching PoB, or the stdout prefix framing proves unreliable.
 - TC-DELTA: PoB-backed DPS / EHP deltas and per-mod weights, fixed 50/50
