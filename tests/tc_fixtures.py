@@ -151,7 +151,10 @@ JSON_TWIN_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <PathOfBuilding2>
 \t<Build level="87" className="Monk" ascendClassName="Invoker"/>
 \t<Tree activeSpec="1">
-\t\t<Spec title="Imported" nodes="10,20,30,40,50,60"/>
+\t\t<Spec title="Imported" nodes="10,20,30,40,50,60">
+\t\t\t<WeaponSet1 nodes="50"/>
+\t\t\t<WeaponSet2 nodes="60,20"/>
+\t\t</Spec>
 \t</Tree>
 \t<Skills>
 \t\t<Skill enabled="true">
@@ -189,3 +192,102 @@ Example Jewel of the Test
 \t</Items>
 </PathOfBuilding2>
 """
+
+# TC-CHARJSON-SHAPES (research 0035 F7 / F9): one synthetic character in
+# both item shapes. CURRENT_SHAPE_JSON uses the shape of API entry 3.29.0
+# (implicitMods / explicitMods as ItemMod objects, fractured and crafted
+# mods inside explicitMods, PoE2 bondedMods); OLD_SHAPE_JSON is the same
+# character with string mods and the since-removed fracturedMods /
+# craftedMods / desecratedMods lists. Both must read as the same build.
+# Every value is invented; the ItemMod flag spellings are placeholders
+# (the reader needs only `description`).
+_SHAPES_COMMON = {
+    "id": "0456cdef",
+    "name": "ShapeHero",
+    "realm": "pc",
+    "class": "Acolyte of Chayula",
+    "league": "Example League",
+    "level": 90,
+    "passives": {
+        "hashes": [101, 102, 103],
+        "specialisations": {"set1": [201, 202], "set2": [301], "set3": []},
+        "skill_overrides": {"101": {"name": "ignored"}},
+        "quest_stats": ["ignored"],
+    },
+    "skills": [
+        {"typeLine": "Example Palm", "support": False,
+         "properties": [{"name": "Level", "values": [["20", 0]]}]},
+    ],
+}
+
+_FLASKS = [
+    {"id": "f0", "rarity": "Magic", "typeLine": "Example Life Flask",
+     "inventoryId": "Flask", "x": 0, "y": 0},
+    {"id": "f1", "rarity": "Normal", "typeLine": "Example Mana Flask",
+     "inventoryId": "Flask", "x": 1, "y": 0},
+    {"id": "c1", "rarity": "Magic", "typeLine": "Example Thawing Charm",
+     "inventoryId": "Flask", "x": 2, "y": 0},
+    {"id": "c2", "rarity": "Normal", "typeLine": "Example Staunching Charm",
+     "inventoryId": "Flask", "x": 3, "y": 0},
+]
+
+CURRENT_SHAPE_JSON = {"character": dict(_SHAPES_COMMON, equipment=[
+    {"id": "w1", "rarity": "Rare", "name": "Storm Branch",
+     "typeLine": "Example Quarterstaff", "baseType": "Example Quarterstaff",
+     "ilvl": 81, "inventoryId": "Weapon", "x": 0, "y": 0,
+     "enchantMods": ["+1 to Level of all Example Skills"],
+     "runeMods": ["+8% to Lightning Resistance"],
+     "bondedMods": [{"description": "+6 to Dexterity", "flags": {}}],
+     "implicitMods": [{"description": "+12% to Critical Hit Chance",
+                       "flags": {}}],
+     "explicitMods": [
+         {"description": "+20 to Strength", "flags": {"fractured": True},
+          "fractured": True},
+         {"description": "Adds 5 to 10 Physical Damage", "flags": {},
+          "rareonly": False},
+         {"description": "+30 to maximum Mana\n+5% to Chaos Resistance",
+          "flags": {}},
+         {"description": "+15% to Cold Resistance", "flags": {"crafted": True},
+          "crafted": True},
+         {"description": "+9% increased Attack Speed",
+          "flags": {"desecrated": True}},
+         {"flags": {}}, {"description": 7}, "  ",
+     ]},
+    {"id": "w2", "rarity": "Magic", "typeLine": "Example Spear of Haste",
+     "inventoryId": "Weapon2", "x": 0, "y": 0,
+     "explicitMods": [{"description": "10% increased Attack Speed"}]},
+] + _FLASKS)}
+
+OLD_SHAPE_JSON = {"character": dict(_SHAPES_COMMON, equipment=[
+    {"id": "w1", "rarity": "Rare", "name": "Storm Branch",
+     "typeLine": "Example Quarterstaff", "baseType": "Example Quarterstaff",
+     "ilvl": 81, "inventoryId": "Weapon", "x": 0, "y": 0,
+     "enchantMods": ["+1 to Level of all Example Skills"],
+     "runeMods": ["+8% to Lightning Resistance"],
+     "bondedMods": ["+6 to Dexterity"],
+     "implicitMods": ["+12% to Critical Hit Chance"],
+     "fracturedMods": ["+20 to Strength"],
+     "explicitMods": ["Adds 5 to 10 Physical Damage",
+                      "+30 to maximum Mana\n+5% to Chaos Resistance"],
+     "craftedMods": ["+15% to Cold Resistance"],
+     "desecratedMods": ["+9% increased Attack Speed"]},
+    {"id": "w2", "rarity": "Magic", "typeLine": "Example Spear of Haste",
+     "inventoryId": "Weapon2", "x": 0, "y": 0,
+     "explicitMods": ["10% increased Attack Speed"]},
+] + _FLASKS)}
+
+# The item text both shapes must give for the weapon (MOD_FIELDS order).
+SHAPES_WEAPON_TEXT = """Rarity: RARE
+Storm Branch
+Example Quarterstaff
+Item Level: 81
++1 to Level of all Example Skills
++8% to Lightning Resistance
++6 to Dexterity
++12% to Critical Hit Chance
++20 to Strength
+Adds 5 to 10 Physical Damage
++30 to maximum Mana
++5% to Chaos Resistance
++15% to Cold Resistance
++9% increased Attack Speed"""

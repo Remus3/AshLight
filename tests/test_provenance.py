@@ -27,9 +27,13 @@ def test_every_authored_entry_resolves_src_and_checked():
     # DATA-GUIDE-MERGE: one authored zone file; no zone_notes entry is left
     assert not any(w.startswith("zone_notes ") for w in where)
     assert not hasattr(provenance, "NOTES")
-    for area_id in campaign.BOSS_ZONES:
-        assert f"boss {area_id}" in where
-    assert set(campaign.BOSS_PROVENANCE) == set(campaign.BOSS_ZONES)
+    # DATA-GUIDE-BOSS: boss entries are read from the guide file, each with
+    # its own pair; campaign.py keeps no boss table
+    bosses = {f"boss {key} {zone}" for key, act in guide["acts"].items()
+              for zone, z in act.get("zones", {}).items() if "boss" in z}
+    assert {"boss G1 Ogham Manor", "boss G2 Mawdun Mine"} <= bosses
+    assert bosses == {w for w in where if w.startswith("boss ")}
+    assert not hasattr(campaign, "BOSS_ZONES") and not hasattr(campaign, "BOSS_PROVENANCE")
     for r in waystone.RULES:
         assert f"waystone rule {r['id']}" in where
     for r in waystone.REWARDS:
@@ -53,6 +57,18 @@ def test_an_entry_without_a_pair_is_missing(tmp_path):
     assert f"zone_guide G1 {zone}" not in missing
     assert any(w.startswith("zone_guide G1 ") for w in missing)
     assert all(w.startswith("zone_guide G1 ") for w in missing)
+
+
+def test_a_boss_entry_never_inherits_the_zone_pair(tmp_path):
+    """DATA-GUIDE-BOSS: a `boss` entry must carry its own src and checked."""
+    guide = json.loads(provenance.GUIDE.read_text(encoding="ascii"))
+    boss = guide["acts"]["G1"]["zones"]["Ogham Manor"]["boss"]
+    boss.pop("src")
+    boss.pop("checked")
+    g = tmp_path / "g.json"
+    g.write_text(json.dumps(guide), encoding="ascii")
+    missing = {e["where"] for e in provenance.entries(guide=g) if not e["ok"]}
+    assert missing == {"boss G1 Ogham Manor"}
 
 
 def test_src_is_one_of_the_allowed_forms_and_never_a_host():
@@ -85,7 +101,8 @@ def test_script_lists_entries_checked_before_a_date():
     assert lines[-1] == (f"provenance: {len(items)} of {len(items)} entries "
                          "checked before 2026-12-11, 0 missing")
     assert len(lines) == len(items) + 1
-    assert "2026-11-17 research:0031 boss G1_15" in lines
+    assert "2026-11-17 research:0031 boss G1 Ogham Manor" in lines
+    assert "2026-11-17 research:0031 boss G2 Mawdun Mine" in lines
     assert "2026-11-17 snapshot:mods waystone rule ground" in lines
     run = subprocess.run([sys.executable, str(ROOT / "tools" / "provenance.py"),
                           "--before", "2026-11-17"], capture_output=True, text=True,
