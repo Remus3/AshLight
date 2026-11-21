@@ -346,6 +346,11 @@ class Core:
         self.tick_ms = {}
         self.loop_at = None
         self._tick_errors = plug.ErrorThrottle(logging.getLogger("al"))
+        # RUN-LEDGER-WIRE (F-061): plug/ledger.py sets the wire feed_line and
+        # eval_press hand their lines and presses to; its write and the
+        # ledger delete (revoking the consent) share ledger_lock
+        self.ledger_wire = None
+        self.ledger_lock = threading.Lock()
         for name in TICK_ORDER:
             self.add_tick(name)
         plug.attach_all(self)
@@ -469,6 +474,7 @@ class Core:
                 return doc
             result = self.last_eval.run(text, slot, at=at)
             outcome = "item" if isinstance(result, dict) and result.get("ok") else "unscored"
+            self._ledger_press(text)  # RUN-LEDGER-WIRE: a waystone's masked block
             doc = self.price.request(text, at=at)
             self._watch_press(text, doc, at)
             return result
@@ -477,6 +483,19 @@ class Core:
             metrics.inc(f"press|{outcome}")
             metrics.timing("press_ms", ms)
             metrics.emit("press", outcome=outcome, ms=ms)
+
+    def _ledger_press(self, text):
+        """RUN-LEDGER-WIRE (LIVE-WAYSTONE): the press text goes to the parse
+        ledger, which keeps only a waystone's masked property-block shape
+        and only while the ledger consent is on. Never fails the press."""
+        wire = self.ledger_wire
+        if wire is None:
+            return None
+        try:
+            return wire.press(text)
+        except Exception:  # noqa: BLE001 - the press must still be answered
+            LOG.warning("the parse ledger could not look at an item press")
+            return None
 
     def _empty_press(self, slot, at):
         """OVL-COPY-FIRST (F-054): the press found a blank clipboard (it
@@ -961,14 +980,20 @@ class Core:
 
     def _delete_ledger(self):
         """Revoking the ledger deletes its file (and a .bak of it): the
-        player's choice to stop keeping it removes what was kept."""
-        for p in (self.ledger_path(), jsonfile.bak_path(self.ledger_path())):
-            try:
-                p.unlink()
-            except FileNotFoundError:
-                pass
-            except OSError:
-                LOG.warning("could not delete the parse ledger file")
+        player's choice to stop keeping it removes what was kept.
+        RUN-LEDGER-WIRE: under ledger_lock, so a write in flight finishes
+        first, and the in-memory ledger is emptied too."""
+        with self.ledger_lock:
+            wire = self.ledger_wire
+            if wire is not None:
+                wire.reset()
+            for p in (self.ledger_path(), jsonfile.bak_path(self.ledger_path())):
+                try:
+                    p.unlink()
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    LOG.warning("could not delete the parse ledger file")
 
     def record_ledger_consent(self, consented):
         """POST /api/consent {"ledger": bool}: record the parse ledger's own
@@ -1041,9 +1066,19 @@ class Core:
 
     # -- tailing
     def feed_line(self, line):
+        """One tailed line: parse, publish, then the parse ledger
+        (RUN-LEDGER-WIRE, F-061): class and drift counters always, hit
+        counts and masked shapes only while the ledger consent is on. A
+        ledger error never stops the tailer."""
         ev = parser.parse_line(line)
         if ev is not None:
             self.bus.publish(ev)
+        wire = self.ledger_wire
+        if wire is not None:
+            try:
+                wire.feed(line, ev)
+            except Exception as exc:  # noqa: BLE001 - the tailer must read on
+                self._tick_errors.failed("ledger feed", exc)
         return ev
 
     def _on_status(self, ev):
