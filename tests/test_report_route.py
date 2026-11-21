@@ -28,6 +28,11 @@ WIN_PATH = "Q" + ":" + "\\" + "zzqhome" + "\\" + "zzq"
 @pytest.fixture
 def core(tmp_path, monkeypatch):
     monkeypatch.setattr(report, "_now", lambda: NOW)
+    # the module object the served route lives in (another test may have
+    # made plug discovery import a fresh copy)
+    served = plug.route("GET", report.PATH)
+    assert served is not None
+    monkeypatch.setitem(served.__globals__, "_now", lambda: NOW)
     log = tmp_path / "Client.txt"
     log.write_bytes(b"")
     c = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
