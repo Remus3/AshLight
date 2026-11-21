@@ -36,7 +36,7 @@ function fakeDoc() {
   spans[2].textContent = "the item check key";
   const ids = {};
   ["hotkey-eval", "hotkey-toggle"].forEach((id) => { ids[id] = el("input"); });
-  ["hotkey-eval-said", "hotkey-toggle-said", "play-c"].forEach((id) => { ids[id] = el("p"); });
+  ["hotkey-eval-said", "hotkey-toggle-said", "play-c", "layout-status"].forEach((id) => { ids[id] = el("p"); });
   const doc = {
     ids, spans, activeElement: null,
     getElementById(id) {
@@ -126,7 +126,7 @@ function reply(status, body) {
 
 const tick = () => new Promise((r) => setImmediate(r));
 
-test("the change field posts /api/hotkeys and shows the saved key", async () => {
+test("the change field posts /api/hotkeys and says the saved key in the polite region", async () => {
   hk._reset();
   const doc = fakeDoc();
   hk.paint(doc, BOUND);
@@ -144,14 +144,14 @@ test("the change field posts /api/hotkeys and shows the saved key", async () => 
   assert.equal(sent[0][1].method, "POST");
   assert.equal(sent[0][1].headers["X-AL-Token"], "t0k");
   assert.deepEqual(JSON.parse(sent[0][1].body), { name: "eval", key: "ctrl+alt+j" });
-  const said = doc.ids["hotkey-eval-said"];
-  assert.equal(said.textContent, "Saved. AshLight switches to Ctrl+Alt+J by itself.");
-  // the answer stands while the client has not re-registered ...
-  hk.paint(doc, { hotkeys: view });
-  assert.equal(said.textContent, "Saved. AshLight switches to Ctrl+Alt+J by itself.");
-  // ... and gives way once it has: the spans show the new key
+  // the answer goes to the overlay group's one polite region (#layout-status)
+  const status = doc.ids["layout-status"];
+  assert.equal(status.textContent, "Saved. The AshLight app switches to Ctrl+Alt+J by itself.");
+  assert.equal(doc.ids["hotkey-eval-said"].textContent, "");
+  // the bound key still shows until the client re-registers ...
+  assert.equal(doc.spans[0].textContent, "Ctrl+Alt+K");
+  // ... and then the spans show the new key
   hk.paint(doc, snapOf(entry("Ctrl+Alt+J", "Ctrl+Alt+J", true, false), view.toggle, true));
-  assert.equal(said.textContent, "");
   assert.equal(doc.spans[0].textContent, "Ctrl+Alt+J");
 });
 
@@ -165,15 +165,24 @@ test("a refused key shows the core's sentence and nothing changes", async () => 
   input.value = "Ctrl+C";
   input.listeners.change();
   await tick(); await tick();
-  const said = doc.ids["hotkey-eval-said"];
-  assert.equal(said.textContent, refusal + " Nothing changed.");
-  // a state push that changes nothing leaves the answer in place
+  const status = doc.ids["layout-status"];
+  assert.equal(status.textContent, refusal + " Nothing changed.");
   hk.paint(doc, BOUND);
-  assert.equal(said.textContent, refusal + " Nothing changed.");
+  assert.equal(status.textContent, refusal + " Nothing changed.");
   assert.equal(doc.spans[0].textContent, "Ctrl+Alt+K");
-  // typing again clears it
+  // typing again clears the key answer
   input.listeners.input();
-  assert.equal(said.textContent, "");
+  assert.equal(status.textContent, "");
+});
+
+test("a key answer never wipes the overlay layout's own status", async () => {
+  hk._reset();
+  const doc = fakeDoc();
+  hk.paint(doc, BOUND);
+  hk.wire(doc, { token: "t", fetch: () => reply(200, { hotkeys: BOUND.hotkeys }) });
+  doc.ids["layout-status"].textContent = "Saved. The overlay moves within a second.";
+  doc.ids["hotkey-eval"].listeners.input();
+  assert.equal(doc.ids["layout-status"].textContent, "Saved. The overlay moves within a second.");
 });
 
 test("save failures and an emptied field", async () => {
@@ -183,14 +192,14 @@ test("save failures and an emptied field", async () => {
   let calls = 0;
   hk.wire(doc, { token: "t", fetch: () => { calls += 1; return calls === 1 ? reply(500, {}) : Promise.reject(new Error("down")); } });
   const input = doc.ids["hotkey-toggle"];
-  const said = doc.ids["hotkey-toggle-said"];
+  const status = doc.ids["layout-status"];
   input.value = "Ctrl+Alt+M";
   input.listeners.change();
   await tick(); await tick();
-  assert.equal(said.textContent, hk.FAILED);
+  assert.equal(status.textContent, hk.FAILED);
   input.listeners.change();
   await tick(); await tick();
-  assert.equal(said.textContent, hk.OFFLINE);
+  assert.equal(status.textContent, hk.OFFLINE);
   // an emptied field asks nothing and shows the asked key again
   input.value = "  ";
   input.listeners.change();
@@ -209,7 +218,11 @@ test("the Play line shows only while overlay_on is false", () => {
   const line = doc.ids["play-c"].children[0];
   assert.equal(line.id, "overlay-off-line");
   assert.equal(line.hidden, false);
-  assert.equal(line.textContent, "The overlay is switched off. Press Ctrl+Alt+L to show it.");
+  assert.equal(line.textContent, "Overlay off. Press Ctrl+Alt+L to show it.");
+  // one row of region C: at most 52 characters with a three-modifier F key
+  assert.ok(hk.playLine(snapOf(BOUND.hotkeys.eval,
+    entry("Ctrl+Alt+Shift+F10", "Ctrl+Alt+Shift+F10", true, false), false)).length <= 52);
+  assert.ok(hk.OFF_NO_KEY.length <= 52);
   hk.paint(doc, BOUND);
   assert.equal(line.hidden, true);
   assert.equal(doc.ids["play-c"].children.length, 1);
