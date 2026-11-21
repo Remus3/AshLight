@@ -36,4 +36,4 @@ jobs:
       - name: upstream watch (key issues only)
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python tools/watch_ci.py --sources pob-release,repoe-fork,ggg-tree,electron,npm-audit
+        run: python tools/watch_ci.py --sources pob-release,repoe-fork,ggg-tree,electron

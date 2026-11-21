@@ -36,10 +36,10 @@ Per source (the CI side; the sources themselves are never edited):
 - electron: the source's own check with ctx root = this checkout. The
   3-day age of a line head counts from the GitHub release's published_at
   (repository metadata), never from now, so the wait is kept, not cut.
-- npm-audit: the source's own check against a scratch copy of app/
-  package.json, app/package-lock.json and app/.npmrc; npm makes the one
-  advisory request. The scratch root's config/local.json says only what
-  this scope rule says: a runner is not a user host (decision 0076).
+- npm-audit never runs here: it stays a loop-home source under its own
+  web_data gate (decision 0069; only the operator can exempt a source, in
+  writing). npm advisories in CI would need a CI-native check with no
+  web_data flag; out of scope (decision 0076).
 - repoe-fork, ggg-tree: the source's own check (metadata only); the found
   live_version is compared with BASELINE; a different version is a finding
   keyed by that version. A session moves BASELINE after acting on it.
@@ -51,9 +51,7 @@ import argparse
 import json
 import os
 import re
-import shutil
 import sys
-import tempfile
 import time
 import urllib.parse
 from pathlib import Path
@@ -86,9 +84,10 @@ SERVER_URL = "https://github.com"
 RATE_STATUSES = (429, 503)
 
 # The sources a CI run may name: the ones docs/plan/06 AUTO-19 lists, plus
-# any registry source whose home is "ci" or "both". ggg-docs never runs here.
-CI_SOURCES = ("pob-release", "pob-next", "repoe-fork", "ggg-tree", "electron", "npm-audit")
-NEVER = ("ggg-docs",)
+# any registry source whose home is "ci" or "both". ggg-docs and npm-audit
+# (a loop-home source under its own web_data gate) never run here.
+CI_SOURCES = ("pob-release", "pob-next", "repoe-fork", "ggg-tree", "electron")
+NEVER = ("ggg-docs", "npm-audit")
 
 # Tracked baseline: the live versions the project last acted on. A session
 # moves a value after it has acted on the finding (the issue then closes).
@@ -236,23 +235,6 @@ def check_electron(src, fetch, now, root):
     return found
 
 
-def check_npm_audit(src, fetch, now, root, runner=None):
-    from watch_sources import npm_audit as na
-    with tempfile.TemporaryDirectory(prefix="al-watch-ci-") as tmp:
-        scratch = Path(tmp)
-        (scratch / "app").mkdir()
-        (scratch / "config").mkdir()
-        for rel in ("app/package.json", "app/package-lock.json", "app/.npmrc"):
-            path = Path(root) / rel
-            if path.is_file():
-                shutil.copyfile(path, scratch / rel)
-        # A runner is not a user host (decision 0076): the opt-in this source
-        # reads is the dev host's; the scratch root states the CI scope.
-        (scratch / "config" / "local.json").write_text('{"web_data": true}\n', encoding="ascii")
-        ctx = {"root": str(scratch), "npm_audit": runner or na.run_npm_audit}
-        return src["check"](_state(src["name"]), now, fetch, ctx)
-
-
 def check_versioned(src, fetch, now, root):
     """repoe-fork / ggg-tree: the source's own check, then live_version
     against BASELINE."""
@@ -268,20 +250,17 @@ def check_versioned(src, fetch, now, root):
 ADAPTERS = {
     "pob-release": check_pob_release,
     "electron": check_electron,
-    "npm-audit": check_npm_audit,
     "repoe-fork": check_versioned,
     "ggg-tree": check_versioned,
 }
 
 
-def run_source(src, environ, transport, now, root, npm_runner=None):
+def run_source(src, environ, transport, now, root):
     """(ok, keys, line). keys are the `<source>:<key>` strings found."""
     fetch = source_fetch(src, environ, transport)
     adapter = ADAPTERS.get(src["name"])
     try:
-        if adapter is check_npm_audit:
-            found = adapter(src, fetch, now, root, npm_runner)
-        elif adapter is not None:
+        if adapter is not None:
             found = adapter(src, fetch, now, root)
         else:
             found = src["check"](_state(src["name"]), now, fetch, {"root": str(root)})
@@ -442,7 +421,7 @@ def select(names, sources):
 
 
 def main(argv=None, environ=None, transport=None, out=None, now=None, root=None,
-         directory=None, npm_runner=None):
+         directory=None):
     environ = os.environ if environ is None else environ
     out = out or sys.stdout
     root = Path(root) if root else ROOT
@@ -465,7 +444,7 @@ def main(argv=None, environ=None, transport=None, out=None, now=None, root=None,
     now = time.time() if now is None else now
     found, ran_ok, failed = [], set(), []
     for src in picked:
-        ok, keys, line = run_source(src, environ, transport, now, root, npm_runner)
+        ok, keys, line = run_source(src, environ, transport, now, root)
         print(line, file=out)
         if ok:
             ran_ok.add(src["name"])

@@ -17,7 +17,9 @@ Decision 0013 governs the app and the dev host; the CI watcher runs only on a Gi
    `contents: read` and `issues: write` only, every action pinned by full
    commit id (the same pins as ci.yml), checkout without persisted
    credentials and no repository secret: the job token
-   (`github.token`) is the only credential. It runs
+   (`github.token`) is the only credential. That token is read-only for
+   contents; `issues: write` is its only write scope, the one the issue
+   protocol needs. It runs
    `python tools/watch_ci.py --sources <names>`; the entry takes registry
    source names, so a later package (AUTO-20) adds its own workflow
    without editing this one.
@@ -27,10 +29,11 @@ Decision 0013 governs the app and the dev host; the CI watcher runs only on a Gi
    metadata checks; the found live version against a tracked BASELINE in
    tools/watch_ci.py), electron (its own check against app/package.json
    and config/electron_pin.json; the 3-day age of a line head counts from
-   the GitHub release's published_at) and npm-audit (its own check; npm
-   audit against a scratch copy of the tracked lockfile). A name outside
-   that list whose home is not ci or both, ggg-docs always, and an unknown
-   name are refused before any request. No CI job downloads a repoe-fork
+   the GitHub release's published_at). npm-audit stays a loop-home
+   source under its own web_data gate (decision 0069) and never runs in
+   CI. A name outside that list whose home is not ci or both, ggg-docs
+   and npm-audit always, and an unknown name are refused before any
+   request. No CI job downloads a repoe-fork
    or tree file.
 3. Every source read goes through watch_ci's own fetch: watch_gate.check_url
    on the URL and on every redirect hop, then server/al/webfetch.request
@@ -71,9 +74,12 @@ Decision 0013 governs the app and the dev host; the CI watcher runs only on a Gi
   pattern is all it accepts.
 - A commit or pull request per finding. Rejected: CI never commits
   (decision 0069); rows come only from the tick's tracked templates.
-- Reading the dev host's web_data setting on the runner. Rejected: a
-  runner is no user host (LE-76); the scratch root of the npm-audit run
-  states that scope instead of faking a user's choice.
+- Reading or setting a web_data value on the runner. Rejected: a runner
+  is no user host (LE-76), and a workflow never turns web data on.
+- npm advisories in CI. Rejected for now: npm-audit's source reads the
+  web_data gate, which only the operator can exempt in writing (decision
+  0069); npm advisories in CI would need a CI-native check with no
+  web_data flag; out of scope.
 
 ## Why
 

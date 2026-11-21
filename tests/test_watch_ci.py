@@ -191,7 +191,7 @@ def test_workflow_permissions_and_pinned_actions():
     assert re.search(r"(?m)^\s*runs-on:\s*(windows|ubuntu)-[0-9a-z.]+\s*$", text)
     runs = re.findall(r"(?m)^\s*(?:-\s+)?run:\s*(.*)$", text)
     assert runs == ["python tools/watch_ci.py --sources "
-                    "pob-release,repoe-fork,ggg-tree,electron,npm-audit"]
+                    "pob-release,repoe-fork,ggg-tree,electron"]
     for word in ("git commit", "git push", "pull_request", "pull-requests"):
         assert word not in text
 
@@ -235,10 +235,16 @@ def test_ci_entry_refuses_to_run_off_a_github_runner():
         assert fake.calls == []
     # On a runner: a source that never runs in CI, or an unknown name, is refused
     # before any request.
-    for name in ("ggg-docs", "launch", "nope"):
+    for name in ("ggg-docs", "npm-audit", "launch", "nope"):
         fake = FakeGitHub()
         code, text = run(fake, "--sources", name)
         assert code == watch_ci.EXIT_REFUSED and fake.calls == [], text
+    # npm-audit is a loop-home source under its own web_data gate: select refuses it.
+    sources = watch_ci.upstream_watch.discover()
+    assert next(s for s in sources if s["name"] == "npm-audit")["home"] == "loop"
+    with pytest.raises(watch_ci.Refused, match="npm-audit does not run in CI"):
+        watch_ci.select(["npm-audit"], sources)
+    assert [s["name"] for s in watch_ci.select(["electron"], sources)] == ["electron"]
 
 
 def test_versioned_source_finds_a_version_off_the_baseline():
