@@ -11814,7 +11814,9 @@
     "F-077",
     "DEP-11"
    ],
-   "files": [],
+   "files": [
+    "tests/test_install_home.py"
+   ],
    "new_files": [
     "server/al/install/switch.py",
     "server/al/install/apply_staged.py",
@@ -11841,7 +11843,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "switch.py holds the logic (apply(home, now), bump_attempt(home), rollback(home), confirm(home, health=callable)); apply_staged.py, rollback.py and confirm.py are the three thin command modules the cli table names. 'never while a core of this home runs' is decided from this home's own pid and heartbeat files (the proven-ours rule of decision 0010), never a process-list search for the game. All shell effects go through shell.py with the injected runner.",
+   "notes": "switch.py holds the logic (apply(home, now), bump_attempt(home), rollback(home), confirm(home, health=callable)); apply_staged.py, rollback.py and confirm.py are the three thin command modules the cli table names. 'never while a core of this home runs' is decided from this home's own pid and heartbeat files (the proven-ours rule of decision 0010), never a process-list search for the game. All shell effects go through shell.py with the injected runner. Ruling W16-3 (2026-11-20): files widen to tests/test_install_home.py; test_not_yet_built_command_exits_2 now fakes a missing module for each command instead of scanning for unbuilt modules, because apply_staged, rollback and confirm complete cli.COMMANDS. Reverses if: a command needs a different not-available path, or the monkeypatched-module form stops reaching the import guard.",
    "wave": 16,
    "owner": "session",
    "tier": "P1",
