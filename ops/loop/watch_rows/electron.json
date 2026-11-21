@@ -1,0 +1,62 @@
+{
+ "kinds": {
+  "electronbump": {
+   "act": "row",
+   "id": "ELECTRON-<MAJ>-<MIN>-<PAT>",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "Electron <version> is at least 3 days old (pin <pin>): bump the exact pin, the lockfile and config/electron_pin.json under the written upgrade policy (decision 0070). ACCEPT: all three name <version>; npm test, the static guards, npm audit signatures and the docs freshness test pass. ZERO-CLICK: the loop works it. SOURCE: watch electron <version>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "MAJ": "[0-9]{2,3}",
+    "MIN": "[0-9]{1,4}",
+    "PAT": "[0-9]{1,4}",
+    "version": "[0-9]+\\.[0-9]+\\.[0-9]+",
+    "pin": "[0-9]+\\.[0-9]+\\.[0-9]+"
+   },
+   "sample": {
+    "MAJ": "45",
+    "MIN": "3",
+    "PAT": "4",
+    "version": "45.3.4",
+    "pin": "45.3.3"
+   }
+  },
+  "electronmajor": {
+   "act": "row",
+   "id": "ELECTRON-MAJOR-<MAJ>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session",
+   "text": "Electron <MAJ> is due (line <PINMAJ> ends <eol>): move to the next major under the written upgrade policy (decision 0070) and re-measure the decision 0002 budgets. ACCEPT: a pin on line <MAJ> or a dated plan. SOURCE: watch electron major <MAJ>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "MAJ": "[0-9]{2,3}",
+    "PINMAJ": "[0-9]{2,3}",
+    "eol": "[0-9]{4}-[0-9]{2}-[0-9]{2}|unknown"
+   },
+   "sample": {
+    "MAJ": "46",
+    "PINMAJ": "45",
+    "eol": "2027-04-27"
+   }
+  },
+  "npmaudit": {
+   "act": "row",
+   "id": "NPM-AUDIT-<PKG>-<YYYYMMDD>",
+   "lane": "data",
+   "priority": true,
+   "blocked": null,
+   "text": "npm audit reports a <severity> advisory on <package> in the app lockfile: move it to the newest release at least 3 days old that clears it, within 24 h (decision 0070 item 2; for electron also config/electron_pin.json). ACCEPT: npm audit --package-lock-only --prefix app names no advisory on <package>; npm test, the static guards and npm audit signatures pass. ZERO-CLICK: the loop works it. SOURCE: watch npm-audit <package>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "PKG": "[A-Z0-9]+(?:-[A-Z0-9]+)*",
+    "package": "[A-Za-z0-9][A-Za-z0-9._-]*",
+    "severity": "low|moderate|high|critical"
+   },
+   "sample": {
+    "PKG": "ELECTRON",
+    "package": "electron",
+    "severity": "high"
+   }
+  }
+ }
+}
