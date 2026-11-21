@@ -594,7 +594,9 @@ of the HALT check.
   built from tracked templates and validated tokens, at most 3 of each kind
   a local day, with the operator identity, only through the kit git lock,
   never while HALT exists; the release check reads in front of the HALT
-  return and acts on nothing while HALTed; pin moves stay session commits).
+  return and acts on nothing while HALTed; pin moves stay session commits)
+  (0025 / 0028 amendment 2026-11-18: trial --ref is a rehearsal apply never
+  accepts; the GUI reference is keyed by tag).
   Reverses if:
   GitHub limits or terms bar the daily read, PoB-PoE2 stops publishing
   releases or ships a headless API, the loop gains safe auto-commit, PoB
@@ -607,12 +609,21 @@ of the HALT check.
   refresh, started by the core loop while the log is active or /api/rates
   was read in the last 10 min (at most one check a minute, web data on;
   the hourly gates still decide; decision 0026 amended 2026-11-20) (same
-  opt-in, contact, UA, league; per-type hourly gate + ETag),
+  opt-in, contact, UA, league; per-type gate (Currency and types pressed
+  in the last 24 h hourly, the rest every 3 h; decision 0072) + ETag),
   the press reads the cache only, movers from the same cache, auto league
   re-read every 6 h or after a 404, trade links follow the cached league
   while web data is on (decision 0026). Reverses if: poe.ninja asks for
   less polling or blocks it, decision 0013 goes per-feature, or the
   overview shapes break every release.
+- poe.ninja polling: Currency hourly, the other overview types every 3 h
+  unless a press matched the type in the last 24 h (at most 200 overview
+  GETs a day); a release build makes no poe.ninja request
+  (ninja.RELEASE_POLLING off, trade link only) until a decision records
+  poe.ninja's yes, an approved mirror or the operator's written ruling;
+  silence is not consent (decision 0072, amends 0026 item 2). Reverses if:
+  poe.ninja says yes (flip the constant), asks for a mirror or less
+  polling (new decision), or blocks the client.
 - LuaJIT for the optional calc builds with a system compiler, else a
   hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
   Cache on -TcCalc only, PATH set only in the build subprocess, never
@@ -748,6 +759,18 @@ of the HALT check.
   `line`, and a bad short makes the file malformed (decision 0043 amendment
   2026-11-19). Reverses if: a licence objection, verified PoE2 quest log
   lines, or the operator rules the file unwanted.
+  DATA-GUIDE-FACTS: every campaign area id of the cached world_areas snapshot
+  has a guide entry with a goal (an objective, or a bonus for a side zone) or
+  `"skip": true` (no permitted source for a goal; such an entry carries only
+  skip, src and checked; it shows no act default, only its waypoint; a bad
+  skip makes the file malformed). New or changed entries cite only snapshot:,
+  ggg-export:, log or operator, never a research note, checked against a
+  frozen baseline in tests/test_provenance.py. Root Hollow, Library of Kamasa,
+  Isle of Decay and Brinerot Cove are skips until OA-37 pastes text. The point
+  books read 'A book of 2 points' (kind other), with no passive or weapon-set
+  claim. Reverses if: the operator pastes the reward or zone text (OA-37), an
+  allowed source settles the kind of point, or a skipped area proves to need a
+  guide in play.
 - BUILD-LIVE: one build per decision 0038 character, swapped by the loop
   tick and hot-reloaded on mtime; stale-build alert; checked items kept in
   memory only and re-scored on build / weight change into upgrade notices;
@@ -1045,8 +1068,17 @@ of the HALT check.
   AshLight User-Agent, no cookie; a wrong hash leaves nothing in the
   target), never bundled and never fetched by the running core; boot.py
   plus one command builder (paths.python_cmd); no Electron fuse flipped
-  (decision 0063). Reverses if: the spike fails, a publisher drops
-  hash-verifiable assets, or a licence objection appears.
+  (decision 0063). Scripts find Python, Electron and the paths only through
+  scripts/al_env.ps1 (Get-AlPython, Get-AlPythonCmd, Invoke-AlPython,
+  Get-AlPaths, Get-AlElectron: `<python> -m` in a checkout, `<python>
+  <payload>oot.py <module>` with the private runtime in an install);
+  setup.ps1 and build.ps1 refuse an installed home; build.ps1 -Package runs
+  tools/release.py build alone; the client's children get home.js
+  childEnv(), which strips app/guards.js STRIPPED_ENV (ELECTRON_RUN_AS_NODE,
+  NODE_OPTIONS) (REL-RUNTIME-SCRIPTS). Reverses if: the spike fails, a
+  publisher drops hash-verifiable assets, a licence objection appears, a
+  script needs a lookup al_env.ps1 cannot give, or calc_setup.ps1 must keep
+  its own.
 - A release is the app zip, install.ps1, release.json, SHA256SUMS.txt, the
   notes file and an SBOM, built reproducibly by tools/release.py build from
   one git ref; no installer framework, no packaged .exe, no signing at

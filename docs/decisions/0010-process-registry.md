@@ -21,6 +21,14 @@ supervisor that then exited on the single-instance lock).
     children and an overlay started before pids were recorded). The scan is
     off for a tmp runtime (AL_RUNTIME_DIR) unless AL_ELECTRON_DIR names the
     dir, so a test can never reach a live overlay.
+    Amended 2026-11-21 (REL-RUNTIME-SCRIPTS, plan units F-047, DEP-06): in
+    an installed copy the proven-ours Electron folder is the private
+    runtime `<home>\runtime\<marker "electron">` of decision 0063
+    (installed runtimes), the folder `procs.electron_dir()` reads from
+    `paths.electron_exe()`; run.ps1 starts the client from that same exe
+    (`scripts/al_env.ps1` Get-AlElectron) with the payload's `app` folder,
+    never a `resources\app` folder, so its pid record and the folder scan
+    name one Electron.
 - `scripts/stop.ps1`: stop.request and the core as before (decision 0005),
   then `python -m server.al.procs stop`: waits for the supervisor to exit
   on stop.request, forces it only after the timeout, terminates the

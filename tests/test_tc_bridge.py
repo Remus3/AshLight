@@ -8,7 +8,6 @@ tests drive the real pinned PoB checkout via luajit.exe and SKIP cleanly when
 that optional component is absent (decision 0018, decision 0022).
 """
 
-import json
 import os
 import re
 import sys
@@ -21,8 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import tc_pin  # noqa: E402
 
-from server.al import exepin, logs, paths, prio  # noqa: E402
+from server.al import exepin, logs, prio  # noqa: E402
 from server.al.theorycraft import bridge  # noqa: E402
+import tc_live_util  # noqa: E402
 from tc_live_util import LIVE_CALC  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures" / "tc_bridge"
@@ -552,10 +552,8 @@ LIVE = pytest.mark.skipif(not bridge.available(),
                           reason="optional calc component absent (setup.ps1 -TcCalc)")
 # TC-LIVE: the reference may also live beside the component in the AL
 # sidecar Cache (a public build whose owner was not asked stays untracked).
-EXPECTED = [p for p in (FIX / "gui_expected.json",
-                        ROOT / "ops" / "runtime" / "tc_bridge" / "gui_expected.json",
-                        paths.all_runtime_paths()["tc_bridge_ref"])
-            if p.is_file()]
+# LOOP-DRIFT-REF: references are keyed by tag (tc_live_util.pick_reference).
+EXPECTED = tc_live_util.gui_references()
 
 
 @pytest.fixture(scope="module")
@@ -639,13 +637,29 @@ def test_live_reload_does_not_leak_state(live_bridge):
 @pytest.mark.skipif(not EXPECTED, reason="no PoB GUI reference values recorded "
                     "(tests/fixtures/tc_bridge/README.md)")
 def test_live_outputs_match_pob_gui_within_0_1_percent(warm_bridge):
+    """LOOP-DRIFT-REF: the reference is chosen by the tag under test. The
+    same tag compares the recorded numbers within 0.1 percent; another tag
+    reports per-key deltas and passes only with a session's written
+    acceptance recorded in that reference for the tag under test."""
     live_bridge = warm_bridge  # TEST-FULLSTACK-CALC-WARM
-    ref = json.loads(EXPECTED[0].read_text(encoding="ascii"))
-    xml = (EXPECTED[0].parent / ref["build_xml"]).read_text(encoding="utf-8")
+    tag = tc_live_util.tested_tag()
+    mode, ref_path, ref = tc_live_util.pick_reference(tag, EXPECTED)
+    xml = (ref_path.parent / ref["build_xml"]).read_text(encoding="utf-8")
     live_bridge.load_build(xml)
     for text in ref.get("items", []):
         live_bridge.set_item(text)
     got = live_bridge.outputs(sorted(ref["outputs"]))
-    for key, want in ref["outputs"].items():
-        assert key in got, key
-        assert got[key] == pytest.approx(want, rel=1e-3), key
+    if mode == "same":
+        for key, want in ref["outputs"].items():
+            assert key in got, key
+            assert got[key] == pytest.approx(want, rel=1e-3), key
+        return
+    lines = tc_live_util.delta_lines(tc_live_util.reference_deltas(ref["outputs"], got))
+    print(f"GUI reference is for PoB {ref['pob']}, tested {tag}; per-key deltas:")
+    for line in lines:
+        print("  " + line)
+    if tc_live_util.accepted_for(ref, tag) is None:
+        pytest.fail(f"no GUI reference recorded for {tag} (newest is {ref['pob']}); "
+                    "record one or a session's written acceptance "
+                    f'("accepted": {{"{tag}": "<YYYY-MM-DD> <why>"}}); deltas: '
+                    + "; ".join(lines))

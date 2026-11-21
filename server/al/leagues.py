@@ -87,3 +87,31 @@ def id_of(listed, value):
     """The poe.ninja id of a cached league given by id or name, or None."""
     entry = entry_of(listed, value)
     return entry["id"] if entry is not None else None
+
+
+# DATA-LEAGUE-PICKER-API (research 0056 F10 / R10, unit F-141): a solo
+# league prices and links from its trade league. poe.ninja prices trade
+# leagues only, so a solo league name would find no book. PoE2's solo
+# naming is UNVERIFIED (0056 F10, Q1: a search summary names "SSF
+# Standard" and "SSF <challenge league>"), so the table holds only that
+# one prefix form, and it is inert unless the name left after stripping it
+# IS a league of the cached list (a wrong guess then maps nothing). A name
+# that is itself in the cached list is never mapped.
+SOLO_FORMS = ("SSF ",)
+
+
+def trade_league_of(name, listed, forms=SOLO_FORMS):
+    """The trade league a configured league prices from: for a solo name
+    (a listed prefix form, ignoring case) whose rest is a league of the
+    cached list `listed`, that league's display name; otherwise `name`
+    unchanged. Pure: no request, no file."""
+    value = _text(name)
+    if value is None or entry_of(listed, value) is not None:
+        return name
+    low = value.lower()
+    for form in forms:
+        if isinstance(form, str) and form and low.startswith(form.lower()):
+            hit = entry_of(listed, value[len(form):])
+            if hit is not None:
+                return hit["name"]
+    return name
