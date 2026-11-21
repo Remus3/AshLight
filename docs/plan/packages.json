@@ -11754,7 +11754,9 @@
     "web/checks.js",
     "app/test/client.test.js",
     "app/test/checks.test.js",
-    "docs/decisions/0041-desktop-client.md"
+    "docs/decisions/0041-desktop-client.md",
+    "app/test/autostart_switch.test.js",
+    "app/test/client_controls.test.js"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -11792,7 +11794,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Ruling Q-08: a second preload action with a fixed name and no arguments; amend decision 0041 point 5 in this commit (another cluster amends points 2 for the tray-only start: keep to point 5). app/main.js gains one ipcMain handler; F-026, F-027 and others edit app/main.js too (cluster OVL / RUN): land after them or rebase. In an installed copy the action maps to DEP-09's 'installer calc --opt-in'. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). REL-AUTOSTART-SWITCH (cluster REL) also adds preload actions in app/client/preload.js and the same 0041 point 5: one after the other, whichever lands second rebases and keeps both actions.",
+   "notes": "Tier P2. Ruling Q-08: a second preload action with a fixed name and no arguments; amend decision 0041 point 5 in this commit (another cluster amends points 2 for the tray-only start: keep to point 5). app/main.js gains one ipcMain handler; F-026, F-027 and others edit app/main.js too (cluster OVL / RUN): land after them or rebase. In an installed copy the action maps to DEP-09's 'installer calc --opt-in'. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). REL-AUTOSTART-SWITCH (cluster REL) also adds preload actions in app/client/preload.js and the same 0041 point 5: one after the other, whichever lands second rebases and keeps both actions. Adjudicator ruling W16-1 (2026-11-20): files widen to app/test/autostart_switch.test.js and app/test/client_controls.test.js, which pin the preload to exactly 5 actions while keeping the argument-free and fixed-channel checks; the action spawns python tools/tc_pin.py setup --opt-in in a checkout and installer calc --opt-in in an installed copy, hidden, in the background, never setup.ps1 (decision 0070 refuses its npm step while the client runs). Reverses if: the 0041 action set is ruled closed at 4, tc_pin.py or the installer calc command changes its CLI, or a client run of tc_pin.py fails where setup.ps1 succeeds.",
    "wave": 16,
    "owner": "session",
    "tier": "P2",
