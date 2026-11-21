@@ -182,7 +182,7 @@ button.link {
   min-height: 24px;
 }
 
-/* UTIL-MULTICHAR: the per-character selector in the Act times card */
+/* UTIL-MULTICHAR: the per-character selector (the Acts card's pace page) */
 .char-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; }
 .char-pick select {
   font: inherit;
@@ -196,8 +196,11 @@ button.link {
 }
 .char-pick select:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 /* PLAY-LEGACY-OUT-1: the picker and the pace line keep the muted sub line
-   look they had under the old Level tile */
+   look they had under the old Level tile; since PLAY-TD-20A-RUN-GRID they
+   sit on the Acts card's pace page (tests/test_ux_review.py pins the
+   first selector) */
 #actsbox > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
+#actsbox .card-page > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
 
 .tag {
   display: inline-block;
@@ -284,7 +287,6 @@ input[type="file"] { min-height: 24px; max-width: 100%; }
 .acts-table thead th:not(:first-child) { text-align: right; padding-right: 0; }
 /* Current row: weight on the row header only, so the number columns never
    change width on an act change (design review HA-8). */
-.acts-table tr[data-current] th, .zones-table tr.here th { font-weight: 700; }
 .acts-table th .muted { font-weight: 400; }
 .small { font-size: 0.9rem; }
 a.out { color: var(--fk-accent); font-size: 0.9rem; }
@@ -365,8 +367,6 @@ textarea, .weights-form input {
 .zone-guide { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .zone-guide p { margin: 0 0 4px; }
 .zone-guide .zg-title { font-weight: 600; }
-/* ZONE-GUIDE in the Act times card (PLAY-LEGACY-OUT-2) */
-.acts > .zone-guide { margin: 8px 0 12px; }
 /* PLAY-LEGACY-OUT-2: the Zone tip box, the campaign hint list and the tip
    card are gone; these three dead rules stay only while
    tests/test_design_tokens.py (test_multiline_prose_reads_at_1_5) pins
@@ -441,11 +441,6 @@ textarea, .weights-form input {
   .bar { padding: 8px 12px; }
 }
 .tool-row { margin: 8px 0 0; }
-/* UTIL-MAP-LADDER: five number columns; tighter padding and wrapping
-   headers keep them inside a phone-width card */
-#ladder .acts-table td.mono, #ladder-all .acts-table td.mono { padding-left: 8px; }
-#ladder .acts-table thead th, #ladder-all .acts-table thead th { overflow-wrap: anywhere;
-  white-space: normal; padding-left: 8px; }
 
 /* DIAG-SELF: the Checks tool (glyph + word per row, never colour alone). */
 .checks-list { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -742,9 +737,32 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 .grid-card a.out { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 .tool-page input[type="file"] { width: 13rem; font-size: var(--al-fs-meta); }
 .tool-page .card-act > .one-line:empty { display: none; }
-/* every Build and items column is a card cell: never a scroll box, in the
-   flow class too (the panel is the one scroll path there) */
-.panel-cards > .col { max-height: none; overflow: visible; padding-right: 0; }
+/* every card column (Build and items; Run's Acts, Maps and Deaths) is a
+   card cell: never a scroll box, in the flow class too (the panel is the
+   one scroll path there) */
+.panel-cards > .col:has(> .grid-card) { max-height: none; overflow: visible; padding-right: 0; }
+
+/* Acts, Maps and Deaths (PLAY-TD-20A-RUN-GRID; plan 03 section 4, TD-20).
+   A home page is its list of 10 rows (8 compact), the pager row and one
+   more row of at most 24 px: the page buttons (Acts, Maps) or the most
+   deaths line (Deaths, 20 px); a list page is its rows, the pager row and one meta line (the
+   game data credit, a ladder sentence). Both button rows are 24 px in
+   these cards (the buttons are 24 px targets), so 220 + 24 + 24 = 268 of
+   the 270 px under the title at s = 1 (compact 176 + 48 = 224 of 240). An
+   empty list hides and its sentence shows in its place. The pace and
+   guide pages say what will show there while they wait. */
+#panel-run .grid-card .al-pager, #panel-run .grid-card .card-foot { min-height: 1.5rem; }
+#panel-run .grid-card .card-page > .pager-slot { flex: 1 1 auto; display: flex;
+  flex-direction: column; min-height: 0; }
+#pace:not([hidden]) ~ .pace-none, #zone-guide:not([hidden]) + .guide-none { display: none; }
+#actsbox .zone-guide { margin: 0; }
+#actsbox .char-pick { margin-top: 0.25rem; }
+/* the game data credit is never cut: it wraps to its two lines (decision
+   0009; the full credits are in the footer) */
+#actsbox .zones-credit { overflow-wrap: anywhere; }
+/* a Run card row shows its short list text in a span (rowPager parts) and
+   has no control, so it keeps the 22 px list row */
+#panel-run .grid-card li.al-row-ctl { height: auto; min-height: 0; }
 
 /* Last item, Prices, Item scoring (PLAY-TD-19D-ITEMS-GRID; plan 03 section
    4). Head rows are one line of 24 px: the verdict and the price state

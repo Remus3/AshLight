@@ -464,7 +464,13 @@
   </div>
   </div>
 
-  <div id="panel-run" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
+  <!-- PLAY-TD-20A-RUN-GRID (plan 03 section 4, TD-20): Run is a fixed 3 x 2
+       grid of cards in the cockpit classes. Acts, Maps and Deaths are card
+       cells (.grid-card): one page at a time, lists that page at 10 rows (8
+       compact) through web/pager.js (web/acts.js, web/runs.js), never a
+       scroll box. Last session, Recent and Run history become cards with
+       PLAY-TD-20B-RUN-CARDS. -->
+  <div id="panel-run" class="panel panel-grid panel-cards" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
   <div class="col">
   <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
        the game closes; hidden until the first card. Not a live region
@@ -476,38 +482,107 @@
     <ul id="summary-lines" class="event-list"></ul>
     <p id="summary-ended" class="muted"></p>
   </section>
-
-  <section id="actsbox" class="card acts" aria-labelledby="acts-title">
-    <h2 id="acts-title">Act times</h2>
-    <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region.
-         PLAY-LEGACY-OUT-1: moved here from the old Level tile. -->
-    <p id="char-pick-box" class="sub char-pick" hidden>
-      <label for="char-pick">Show numbers for</label>
-      <select id="char-pick"></select></p>
-    <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
-    <p id="pace" class="sub" hidden></p>
-    <!-- ZONE-GUIDE (decision 0043): the guide and quest tracker of the zone
-         the player is in. PLAY-LEGACY-OUT-2: moved from Play, where region C
-         carries the short guide line. #zone-guide is a slot for the fuller
-         guide: ALTabs.fill(document, "zone-guide", node) fills it (null
-         empties and hides it). Not a live region. -->
-    <div id="zone-guide" class="zone-guide" role="group" aria-label="Zone guide" hidden></div>
-    <p id="acts-empty" class="muted"></p>
-    <table id="acts-table" class="acts-table" hidden>
-      <thead><tr><th scope="col">Act</th><th scope="col">Time in act</th>
-        <th scope="col">Run total</th></tr></thead>
-      <tbody id="acts-rows"></tbody>
-    </table>
-    <p id="acts-note" class="muted small" hidden></p>
-    <h3 id="zones-title" class="sub-h">Zone levels</h3>
-    <p id="zones-empty" class="muted"></p>
-    <table id="zones-table" class="acts-table zones-table" hidden>
-      <thead><tr><th scope="col">Zone</th><th scope="col">Level</th></tr></thead>
-      <tbody id="zones-rows"></tbody>
-    </table>
-    <p id="zones-source" class="muted small" hidden></p>
+  </div>
+  <div class="col">
+  <section id="actsbox" class="card acts grid-card" aria-labelledby="acts-title" data-home="main">
+    <div class="card-head">
+      <h2 id="acts-title" tabindex="-1">Acts</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <!-- act, time in the act, run total and your best: one row per act -->
+    <div class="card-page" data-page="main" data-label="">
+      <p id="acts-empty" class="row-body muted"></p>
+      <div id="acts-rows" class="pager-slot" hidden></div>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="zones">Zone levels</button>
+        <button type="button" class="secondary btn-24" data-card-open="pace" aria-label="Level pace">Pace</button>
+        <button type="button" class="secondary btn-24" data-card-open="guide" aria-label="Zone guide">Guide</button>
+      </div>
+    </div>
+    <!-- HUD-ACT: the zone levels of the act the player is in; the game data
+         credit line shows under them whenever they show (decision 0009) -->
+    <div class="card-page" data-page="zones" data-label="Zone levels" hidden>
+      <p id="zones-empty" class="row-body muted"></p>
+      <div id="zones-rows" class="pager-slot" hidden></div>
+      <p id="zones-source" class="row-meta muted zones-credit" hidden></p>
+    </div>
+    <div class="card-page" data-page="pace" data-label="Level pace" hidden>
+      <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
+      <p id="pace" class="sub row-body" hidden></p>
+      <p class="row-body muted pace-none">Your pace shows here after you level up.</p>
+      <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region.
+           PLAY-LEGACY-OUT-1: moved here from the old Level tile. -->
+      <p id="char-pick-box" class="sub char-pick" hidden>
+        <label for="char-pick">Show numbers for</label>
+        <select id="char-pick"></select></p>
+    </div>
+    <div class="card-page" data-page="guide" data-label="Zone guide" hidden>
+      <!-- ZONE-GUIDE (decision 0043): the guide and quest tracker of the zone
+           the player is in. Region C on Play carries the short guide line.
+           #zone-guide is a slot for the fuller guide:
+           ALTabs.fill(document, "zone-guide", node) fills it (null empties
+           and hides it). Not a live region. -->
+      <div id="zone-guide" class="zone-guide" role="group" aria-label="Zone guide" hidden></div>
+      <p class="row-body muted guide-none">The guide for your zone shows here while you are in a campaign zone.</p>
+    </div>
   </section>
-
+  </div>
+  <div class="col">
+  <section id="mapsbox" class="card acts maps grid-card" aria-labelledby="maps-title" data-home="main">
+    <div class="card-head">
+      <h2 id="maps-title" tabindex="-1">Maps</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <!-- UTIL-MAPS: this session's maps, the open one first -->
+    <div class="card-page" data-page="main" data-label="">
+      <p id="maps-empty" class="row-body muted"></p>
+      <div id="maps-rows" class="pager-slot" hidden></div>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="summary" aria-label="Map summary">Summary</button>
+        <button type="button" class="secondary btn-24" data-card-open="ladder" aria-label="Maps by level, this session">By level</button>
+        <button type="button" class="secondary btn-24" data-card-open="saved" id="ladder-all-open" aria-label="Maps by level, all saved sessions" hidden>Saved</button>
+      </div>
+    </div>
+    <div class="card-page" data-page="summary" data-label="Map summary" hidden>
+      <p id="maps-summary" class="row-body"></p>
+    </div>
+    <!-- UTIL-MAP-LADDER: per map area level, highest first; filled by itself -->
+    <div id="ladder" class="card-page" data-page="ladder" data-label="By map level, this session" hidden>
+      <p id="ladder-text" class="row-meta one-line muted"></p>
+      <div id="ladder-rows" class="pager-slot"></div>
+    </div>
+    <div id="ladder-all" class="card-page" data-page="saved" data-label="By map level, all saved sessions" hidden>
+      <p id="ladder-all-text" class="row-meta one-line muted"></p>
+      <div id="ladder-all-rows" class="pager-slot"></div>
+    </div>
+  </section>
+  </div>
+  <div class="col">
+  <!-- UTIL-DEATHS: the death recap, newest first, and the zone with the
+       most deaths under it -->
+  <section id="deathsbox" class="card deaths grid-card" aria-labelledby="deaths-title" data-home="main">
+    <div class="card-head">
+      <h2 id="deaths-title" tabindex="-1">Deaths</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <div class="card-page" data-page="main" data-label="">
+      <p id="deaths-empty" class="row-body muted"></p>
+      <div id="deaths-list" class="pager-slot" hidden></div>
+      <p id="deaths-worst" class="row-meta one-line" hidden></p>
+    </div>
+  </section>
+  </div>
+  <div class="col">
+  <section class="card events" aria-labelledby="events-title">
+    <h2 id="events-title">Recent</h2>
+    <ol id="events" class="event-list"></ol>
+    <p id="events-empty" class="muted">Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.</p>
+  </section>
+  </div>
+  <div class="col">
   <section id="historybox" class="card history" hidden aria-labelledby="history-title">
     <h2 id="history-title">Run history</h2>
     <p id="history-on" class="muted"></p>
@@ -526,55 +601,6 @@
       <button id="history-clear" type="button" class="secondary">Clear run history</button>
     </div>
     <p id="history-said" class="muted"></p>
-  </section>
-
-  </div>
-  <div class="col">
-  <section id="mapsbox" class="card acts maps" aria-labelledby="maps-title">
-    <h2 id="maps-title">Maps</h2>
-    <p id="maps-empty" class="muted"></p>
-    <p id="maps-summary" hidden></p>
-    <table id="maps-table" class="acts-table" hidden>
-      <thead><tr><th scope="col">Map</th><th scope="col">Level</th>
-        <th scope="col">Time in map</th><th scope="col">Deaths</th></tr></thead>
-      <tbody id="maps-rows"></tbody>
-    </table>
-    <!-- UTIL-MAP-LADDER: per map area level, highest first; filled by itself -->
-    <div id="ladder" hidden>
-      <h3 id="ladder-title" class="sub-h">By map level, this session</h3>
-      <p id="ladder-text" class="muted"></p>
-      <table id="ladder-table" class="acts-table" aria-labelledby="ladder-title">
-        <thead><tr><th scope="col">Map level</th><th scope="col">Maps</th>
-          <th scope="col">Deaths</th><th scope="col">Median time</th>
-          <th scope="col">Level-ups</th></tr></thead>
-        <tbody id="ladder-rows"></tbody>
-      </table>
-    </div>
-    <div id="ladder-all" hidden>
-      <h3 id="ladder-all-title" class="sub-h">By map level, all saved sessions</h3>
-      <p id="ladder-all-text" class="muted"></p>
-      <table id="ladder-all-table" class="acts-table" aria-labelledby="ladder-all-title">
-        <thead><tr><th scope="col">Map level</th><th scope="col">Maps</th>
-          <th scope="col">Deaths</th><th scope="col">Median time</th>
-          <th scope="col">Level-ups</th></tr></thead>
-        <tbody id="ladder-all-rows"></tbody>
-      </table>
-    </div>
-  </section>
-
-  </div>
-  <div class="col">
-  <section id="deathsbox" class="card deaths" aria-labelledby="deaths-title">
-    <h2 id="deaths-title">Death recap</h2>
-    <p id="deaths-empty" class="muted"></p>
-    <ol id="deaths-list" class="event-list" hidden></ol>
-    <p id="deaths-worst" hidden></p>
-  </section>
-
-  <section class="card events" aria-labelledby="events-title">
-    <h2 id="events-title">Recent</h2>
-    <ol id="events" class="event-list"></ol>
-    <p id="events-empty" class="muted">Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.</p>
   </section>
   </div>
   </div>

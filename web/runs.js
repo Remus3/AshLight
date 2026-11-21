@@ -1,19 +1,29 @@
-/* AshLight dashboard: map runs (UTIL-MAPS) and the death recap
-   (UTIL-DEATHS). UMD: CommonJS for node --test (app/test/runs.test.js),
-   window.ALRuns for the page. The core folds Client.txt and sends every
-   sentence in the snapshot's `maps` and `death_recap` parts
-   (server/al/runs.py); this file only formats times and fills the cards.
-   No timers of its own, no network. */
+/* AshLight dashboard: the Maps and Deaths cards of the Run grid (UTIL-MAPS,
+   UTIL-DEATHS; PLAY-TD-20A-RUN-GRID, plan 03 section 4, TD-20). UMD:
+   CommonJS for node --test (app/test/runs.test.js), window.ALRuns for the
+   page. The core folds Client.txt and sends every sentence in the
+   snapshot's `maps` and `death_recap` parts (server/al/runs.py); this file
+   only formats times and writes the rows. No timers of its own, no
+   network.
+
+   Both cards are fixed cells of the Run grid and their lists page at 10
+   rows (8 compact) through web/acts.js's pager and page helpers (fill,
+   wireCard). Maps: this session's maps, the open one first; pages: the
+   summary line, the map ladder of this session and of all saved sessions
+   (UTIL-MAP-LADDER). Deaths: the death recap, newest first, with the zone
+   of most deaths under it. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
-  var api = factory(common ? require("./fmt.js") : root.ALFmt);
+  var api = factory(common ? require("./fmt.js") : root.ALFmt, function () {
+    return common ? require("./acts.js") : root.ALActs;
+  });
   if (common) {
     module.exports = api;
   } else {
     root.ALRuns = api;
   }
-}(typeof self !== "undefined" ? self : this, function (F) {
+}(typeof self !== "undefined" ? self : this, function (F, actsLib) {
   "use strict";
 
   /* Seconds as m:ss or h:mm:ss, the same form as the zone timer
@@ -27,9 +37,14 @@
      when the time is not a number (web/fmt.js). */
   var clock = F.clock;
 
-  /* The Deaths column holds the bare count under its header, so the
-     narrow table never runs the time into the next cell (UX-NEW-CARDS). */
+  /* A count as a bare number ("0" when it is not one). */
   function deathsCount(n) { return String(Number.isInteger(n) ? n : 0); }
+
+  /* "1 death", "2 deaths"; "0 deaths" when the count is not a number. */
+  function plural(n, word) {
+    var k = Number.isInteger(n) ? n : 0;
+    return k + " " + word + (k === 1 ? "" : "s");
+  }
 
   /* The open map's time: the snapshot's time plus the seconds since it
      was taken, but only while the player is in the map. */
@@ -63,58 +78,30 @@
     return out;
   }
 
-  /* The line under the Maps table: average, maps per hour (UTIL-MAPRUN),
-     deaths in maps; each sentence from the core, empty ones skipped. */
+  /* "Savannah (now): level 66, 5:05, 1 death" */
+  function mapText(r) {
+    return r.name + (r.note ? " (" + r.note + ")" : "") + ": level " + r.level + ", " +
+      r.time + ", " + plural(parseInt(r.deaths, 10), "death");
+  }
+
+  /* The summary page: average, maps per hour (UTIL-MAPRUN), deaths in
+     maps; each sentence from the core, empty ones skipped. */
   function mapsSummary(maps) {
     if (!maps) { return ""; }
     return [maps.avg_text, maps.rate_text, maps.deaths_text]
       .filter(function (t) { return !!t; }).join(" ");
   }
 
-  function cell(doc, tag, text, cls) {
-    var c = doc.createElement(tag);
-    if (cls) { c.className = cls; }
-    c.textContent = text;
-    return c;
-  }
-
-  function paintMaps(doc, maps, snapNow, now, full) {
-    var tbody = doc.getElementById("maps-rows");
-    if (!tbody) { return; }
-    var rows = mapRows(maps, snapNow, now);
-    if (!full) {
-      var live = tbody.querySelector("tr[data-current]");
-      if (live && rows.length && rows[0].current) {
-        live.children[2].textContent = rows[0].time;
-      }
-      return;
-    }
-    doc.getElementById("maps-table").hidden = rows.length === 0;
-    var empty = doc.getElementById("maps-empty");
-    empty.hidden = rows.length > 0;
-    empty.textContent = (maps && maps.empty_text) || "";
-    var summary = mapsSummary(maps);
-    var sum = doc.getElementById("maps-summary");
-    sum.textContent = summary;
-    sum.hidden = !summary;
-    tbody.textContent = "";
-    rows.forEach(function (r) {
-      var tr = doc.createElement("tr");
-      if (r.current) { tr.setAttribute("data-current", ""); }
-      var th = cell(doc, "th", r.name);
-      th.setAttribute("scope", "row");
-      if (r.note) { th.appendChild(cell(doc, "span", " (" + r.note + ")", "muted")); }
-      tr.appendChild(th);
-      tr.appendChild(cell(doc, "td", r.level, "mono"));
-      tr.appendChild(cell(doc, "td", r.time, "mono"));
-      tr.appendChild(cell(doc, "td", r.deaths, "mono"));
-      tbody.appendChild(tr);
-    });
-  }
-
   /* The death recap lines, newest first, as the core wrote them. */
   function deathLines(recap) {
     return ((recap && recap.recent) || []).map(function (r) { return r.text; });
+  }
+
+  /* One death row: the core's sentence in the list (zone and level
+     first); the whole text (title, Full text page) adds the local time. */
+  function deathText(row) {
+    var t = clock(row.at);
+    return row.text + (t ? " At " + t + "." : "");
   }
 
   /* The line under the list: the worst zone, then how many deaths came
@@ -123,28 +110,6 @@
     if (!recap) { return ""; }
     return [recap.worst_text, recap.earlier_text]
       .filter(function (t) { return !!t; }).join(" ");
-  }
-
-  function paintDeaths(doc, recap) {
-    var list = doc.getElementById("deaths-list");
-    if (!list) { return; }
-    var lines = deathLines(recap);
-    list.textContent = "";
-    ((recap && recap.recent) || []).forEach(function (row) {
-      var li = doc.createElement("li");
-      var t = clock(row.at);
-      if (t) { li.appendChild(cell(doc, "span", t, "time mono")); li.appendChild(doc.createTextNode(" ")); }
-      li.appendChild(doc.createTextNode(row.text));
-      list.appendChild(li);
-    });
-    list.hidden = lines.length === 0;
-    var empty = doc.getElementById("deaths-empty");
-    empty.textContent = (recap && recap.empty_text) || "";
-    empty.hidden = lines.length > 0;
-    var worst = doc.getElementById("deaths-worst");
-    var foot = recapFoot(recap);
-    worst.textContent = foot;
-    worst.hidden = !foot;
   }
 
   /* UTIL-MAP-LADDER: display rows of a ladder view (highest level first),
@@ -157,27 +122,57 @@
     });
   }
 
-  function paintLadder(doc, prefix, lad) {
+  /* "Level 66: 3 maps, 1 death, median 6:30, 2 level-ups" */
+  function ladderText(r) {
+    return "Level " + r.level + ": " + plural(parseInt(r.maps, 10), "map") + ", " +
+      plural(parseInt(r.deaths, 10), "death") + ", median " + r.median + ", " +
+      plural(parseInt(r.levelups, 10), "level-up");
+  }
+
+  function paintMaps(doc, maps, snapNow, now, full) {
+    var A = actsLib();
+    if (!doc.getElementById("maps-rows")) { return; }
+    var rows = mapRows(maps, snapNow, now);
+    if (full) { A.wireCard(doc, "mapsbox"); }
+    A.fill(doc, "maps-rows", "maps", rows.map(function (r) { return { text: mapText(r) }; }));
+    if (!full) { return; }
+    A.showText(doc, "maps-empty", rows.length ? "" : (maps && maps.empty_text) || "");
+    var sum = mapsSummary(maps);
+    // the summary page never stands empty: the empty sentence until a map
+    A.showText(doc, "maps-summary", sum || (maps && maps.empty_text) || "");
+  }
+
+  /* One ladder page: its sentence (whole in title) above the rows; the
+     empty sentence until the first map (design rule 9). */
+  function paintLadder(doc, prefix, lad, label) {
+    var A = actsLib();
     var wrap = doc.getElementById(prefix);
     if (!wrap) { return; }
     var rows = ladderRows(lad);
-    // the empty sentence shows until the first map (design rule 9)
-    wrap.hidden = !lad;
-    doc.getElementById(prefix + "-table").hidden = rows.length === 0;
-    doc.getElementById(prefix + "-text").textContent =
-      (lad && (rows.length ? lad.text : lad.empty_text)) || "";
-    var tbody = doc.getElementById(prefix + "-rows");
-    tbody.textContent = "";
-    rows.forEach(function (r) {
-      var tr = doc.createElement("tr");
-      var th = cell(doc, "th", r.level);
-      th.setAttribute("scope", "row");
-      tr.appendChild(th);
-      [r.maps, r.deaths, r.median, r.levelups].forEach(function (v) {
-        tr.appendChild(cell(doc, "td", v, "mono"));
-      });
-      tbody.appendChild(tr);
-    });
+    var text = (lad && (rows.length ? lad.text : lad.empty_text)) || "";
+    var t = doc.getElementById(prefix + "-text");
+    A.showText(doc, prefix + "-text", text);
+    if (t) {
+      if (text) { t.setAttribute("title", text); } else { t.removeAttribute("title"); }
+    }
+    A.fill(doc, prefix + "-rows", label, rows.map(function (r) { return { text: ladderText(r) }; }));
+  }
+
+  function paintDeaths(doc, recap) {
+    var A = actsLib();
+    if (!doc.getElementById("deaths-list")) { return; }
+    A.wireCard(doc, "deathsbox");
+    var recent = (recap && recap.recent) || [];
+    A.fill(doc, "deaths-list", "deaths", recent.map(function (row) {
+      return { text: deathText(row), line: row.text };
+    }));
+    A.showText(doc, "deaths-empty", recent.length ? "" : (recap && recap.empty_text) || "");
+    var foot = recapFoot(recap);
+    A.showText(doc, "deaths-worst", foot);
+    var w = doc.getElementById("deaths-worst");
+    if (w) {
+      if (foot) { w.setAttribute("title", foot); } else { w.removeAttribute("title"); }
+    }
   }
 
   /* full: a new snapshot (rebuild both cards); otherwise the 1 s tick
@@ -188,13 +183,24 @@
     if (full) {
       paintDeaths(doc, snap.death_recap || null);
       var maps = snap.maps || {};
-      paintLadder(doc, "ladder", maps.ladder || null);
-      paintLadder(doc, "ladder-all", maps.ladder_all || null);
+      paintLadder(doc, "ladder", maps.ladder || null, "map levels this session");
+      paintLadder(doc, "ladder-all", maps.ladder_all || null, "map levels of all saved sessions");
+      // the saved sessions page exists only while run history is on
+      var open = doc.getElementById("ladder-all-open");
+      if (open) {
+        open.hidden = !maps.ladder_all;
+        // run history went off while its page showed: back to the list
+        var box = doc.getElementById("mapsbox");
+        if (open.hidden && box && box.getAttribute("data-shown") === "saved") {
+          var back = box.querySelector("[data-card-back]");
+          if (back) { back.click(); }
+        }
+      }
     }
   }
 
-  return { duration: duration, levelText: levelText, clock: clock,
-    liveTime: liveTime, mapRows: mapRows, mapsSummary: mapsSummary,
-    deathLines: deathLines, recapFoot: recapFoot, ladderRows: ladderRows,
-    paint: paint };
+  return { duration: duration, levelText: levelText, clock: clock, plural: plural,
+    liveTime: liveTime, mapRows: mapRows, mapText: mapText, mapsSummary: mapsSummary,
+    deathLines: deathLines, deathText: deathText, recapFoot: recapFoot,
+    ladderRows: ladderRows, ladderText: ladderText, paint: paint };
 }));
