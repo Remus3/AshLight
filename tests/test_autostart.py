@@ -228,6 +228,10 @@ def test_launcher_is_hidden_and_relative(tmp_path, monkeypatch):
     log = (tmp_path / "AL" / "Logs" / "run.log").read_text(encoding="ascii")
     assert "autostart entry: opt-in off (no-op)" in log
     assert "autostart entry: run.ps1 started (pid 4242)" in log
+    # same line format as run.ps1 / logs.py: UTC ISO stamp, LEVEL, name[pid]
+    stamp_re = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z (INFO|ERROR) autostart\[\d+\] autostart entry: ")
+    lines = log.splitlines()
+    assert lines and all(stamp_re.match(ln) for ln in lines), lines
     # a missing run.ps1 starts nothing and says so
     (root / "scripts" / "run.ps1").unlink()
     assert autostart_entry.start(root, popen=fake_popen) == 1
