@@ -4,7 +4,7 @@ SESSION: 17   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 18 done, next wave 19
+WAVE POINTER: wave 19 done, next wave 20
 DEFERRED: TEST-SUITE-SOAK (wave 18): median gate hold 181.3 s over the 75 s target (11 green runs); evidence merged, row re-tagged wave 20 with TEST-SUITE-HOLD-75 (adjudicator ruling C 2026-11-21); re-soak after HOLD-75; branch worktree-w18-TEST-SUITE-SOAK reaped at session 16 /done (its commits are on main)
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
 PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
