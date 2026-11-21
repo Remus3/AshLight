@@ -12874,6 +12874,9 @@
     "web/pricewatch.js",
     "app/test/prices.test.js",
     "app/test/util9.test.js",
+    "app/test/tabs.test.js",
+    "app/test/search.test.js",
+    "app/test/filtermerge.test.js",
     "tests/test_ux_review.py",
     "tests/test_ux_b8.py",
     "tests/play_fit_pending/tab-build.txt"

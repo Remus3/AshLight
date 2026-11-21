@@ -1402,7 +1402,7 @@ bind failure names its cause; --port stays in the block (P8-4).
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-TD-19D-ITEMS-GRID [session, L 90m, build, P1, DR] Build and items grid 2: Last item, Prices with checked items, Item scoring. Files: web/index.html, web/app.css, web/app.js, web/prices.js, web/pricewatch.js (+5 more). Deps: PLAY-TD-19C-BUILD-GRID.
+- PLAY-TD-19D-ITEMS-GRID [session, L 90m, build, P1, DR] Build and items grid 2: Last item, Prices with checked items, Item scoring. Files: web/index.html, web/app.css, web/app.js, web/prices.js, web/pricewatch.js (+8 more). Deps: PLAY-TD-19C-BUILD-GRID.
 - DATA-DIAG-SEAM [session, L 85m, build, P2] One hook for data checks: diag_data (attach, facts, rows) + League picker, server half: write the league key, solo-league mapping. Files: server/al/core.py, server/al/diag.py, server/al/http.py, server/al/leagues.py, server/al/diag_data.py (+2 more). Deps: DATA-CONTACT-FIELD, DATA-LEAGUE-IDENTITY.
 - RUN-START-REASON-CORE [session, M 60m, build, P2] A bind failure names its cause; --port stays in the block (P8-4) + One JSON line per own event (events.jsonl). Files: server/al/__main__.py, server/al/ports.py, tests/test_port_resolve.py, server/al/oplog.py, server/al/plug/oplog.py (+1 more). Deps: RUN-OBS-LOGS-PY, RUN-METRICS-SITES, RUN-LEDGER-WIRE.
 - DATA-PRICE-CADENCE [session, M 60m, build, P1] Tiered poe.ninja cadence and the release polling gate. Files: server/al/ninja.py, server/al/pricebook.py, docs/decisions/0026-price-book-and-league-rollover.md, docs/decisions/0072-poe-ninja-cadence-and-release-gate.md, tests/test_price_cadence.py. Deps: DATA-PRICE-POLITE, DATA-CONTACT-FIELD.
