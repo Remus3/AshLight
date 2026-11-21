@@ -826,7 +826,7 @@
     21
    ],
    "est_wall_min": 511,
-   "session_packages": 56,
+   "session_packages": 57,
    "milestones": [
     "the bootstrap installer exists",
     "the release stage round trip (install, update, rollback, uninstall) passes"
@@ -841,7 +841,7 @@
     24
    ],
    "est_wall_min": 458,
-   "session_packages": 38,
+   "session_packages": 39,
    "milestones": []
   },
   {
@@ -1523,7 +1523,8 @@
     "AUTO-08",
     "AUTO-17",
     "PLAY-TD-19E-ITEM-TEXT",
-    "REL-HOME-REFUSAL-UI"
+    "REL-HOME-REFUSAL-UI",
+    "REL-INSTALLED-RUN-CHECK"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1585,6 +1586,7 @@
     "RUN-HISTORY-UNDO",
     "RUN-OVERLAY-REMEMBER",
     "DATA-SNAP-TRIM",
+    "PLAY-PAGER-SCALE-24",
     "REL-CUTOVER-LIVE"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean; REL-CUTOVER-LIVE runs alone after the last batch is on main, with nothing else in flight"
@@ -15138,7 +15140,7 @@
    "tests": [
     "tests/test_release_gates.py (new, with git, gh and the clock injected; each refusal leaves nothing changed: the phrase differs; no stage report, FAIL, another version, another commit, or older than 24 h; a dirty tree or HEAD is not the stage commit; the notes file has its STUB mark or CHANGELOG.md is stale; the tag exists locally or on the remote; origin/main is not HEAD; no remote; the committer is not the operator identity; immutable releases not confirmed; a headless marker (kit progress-owner variable or a lane lock) is set. On pass: one annotated tag vX.Y.Z whose message carries 'sums-sha256: <hex>' and one push of refs/tags/vX.Y.Z through fleet_gitlock, never --tags, --all or --mirror, never a branch. --rehearse makes 0 pushes and no tag. prepush-check refuses a v* ref with no matching PASS stage report and passes a branch ref untouched)"
    ],
-   "accept": "python -m pytest -q tests/test_release_gates.py tests/test_release_stage.py passes and python tools/release.py publish --rehearse --version <VERSION> --go \"release <VERSION>\" exits non-zero and names 'no remote' among its refusals while the repository is local only.",
+   "accept": "python -m pytest -q tests/test_release_gates.py tests/test_release_stage.py passes (the injected-git case with no remote still refuses with 'no remote') and python tools/release.py publish --rehearse --version <VERSION> --go \"release <VERSION>\" exits non-zero while no PASS stage report exists for HEAD, prints 'remote: origin' (the address of config/public_repo.json), does not print 'no remote', and leaves `git tag -l` and `git ls-remote origin` unchanged (0 tags, 0 pushes).",
    "zero_click": "One operator phrase per release; everything before and after is automatic.",
    "size": "L",
    "est_min": 85,
@@ -15152,7 +15154,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "0073 = the number the wave integrator assigns at dispatch (next free at plan time: 0046); the package writes the decision file under that number. tools/rel_publish.py: gates(ctx) as a list of named checks, publish(), rehearse(), prepush_check(stdin refs). config/release.json: {immutable_confirmed: null} plus an empty repository field; the repository address itself is read from the go-public address file when it exists (one source). The one 'release.py prepush-check' call in .githooks/pre-push is NOT in this package: it rides the guarded-push package of the go-public cluster. Until a remote exists every publish refuses for 'no remote'. A MAIN ORDER carrying the phrase counts but is acted on only in an interactive session (FLEET item 6).",
+   "notes": "0073 = the number the wave integrator assigns at dispatch (next free at plan time: 0046); the package writes the decision file under that number. tools/rel_publish.py: gates(ctx) as a list of named checks, publish(), rehearse(), prepush_check(stdin refs). config/release.json: {immutable_confirmed: null} plus an empty repository field; the repository address itself is read from the go-public address file when it exists (one source). The one 'release.py prepush-check' call in .githooks/pre-push is NOT in this package: it rides the guarded-push package of the go-public cluster. With origin configured the no-remote gate passes; it refuses only when no remote is configured (test-injected). A MAIN ORDER carrying the phrase counts but is acted on only in an interactive session (FLEET item 6).",
    "wave": 21,
    "owner": "session",
    "tier": "P1",
@@ -17240,6 +17242,46 @@
    "owner": "session",
    "tier": "P1",
    "cluster": "REL"
+  },
+  {
+   "id": "PLAY-PAGER-SCALE-24",
+   "title": "Pager buttons and compact weight inputs stay at least 24 px below UI scale 1",
+   "goal": "Confirm the pager buttons (.al-pager-btn, 1.5rem) and the compact weight inputs stay at least 24 px when the UI scale --al-s is below 1; clamp with max(24px, 1.5rem) if not; make the disabled dashed edge 2px if it reads faint (D-2).",
+   "units": [
+    "PLAY-PAGER-SCALE-24"
+   ],
+   "files": [
+    "web/app.css",
+    "tests/test_play_fit.py",
+    "tests/test_ux_review.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_play_fit.py (with the UI scale below 1 the pager buttons and the compact weight inputs measure 24 px or more)",
+    "tests/test_ux_review.py (static: the .al-pager-btn and compact weight input sizes carry the 24 px floor)",
+    "app/test/pager.test.js (stays green)"
+   ],
+   "accept": "python -m pytest -q tests/test_play_fit.py tests/test_ux_review.py passes and npm test --prefix app passes with the scale below 1 measured at 24 px or more.",
+   "zero_click": "Nothing for players; a layout floor that holds by itself.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [
+    "PLAY-TD-19D-ITEMS-GRID",
+    "PLAY-TD-20A-RUN-GRID"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Filed session 16. Ruling Q2 (2026-11-21) named wave 21, amended the same day by the adjudicator to wave 24: in wave 21 PLAY-TD-20A-RUN-GRID owns web/app.css, web/index.html and serial group web-index and a dep must sit in an earlier wave; waves 21 to 23 all edit web/app.css and wave 24 is the first free of it. The D-1 part of the ROADMAP row (tabindex=-1 on the #prices-title markup, web/index.html) is split out: web/index.html belongs to DATA-CONTACT-UI in wave 24, so D-1 rides that package's owner or a follow-up row filed by the integrator. The ROADMAP row tag moves to BLOCKED: session wave 24 and its DEPENDS adds PLAY-TD-20A-RUN-GRID (integrator edit). Clamp only what measures under 24 px; the cockpit fit (no scroll at the 5 cockpit sizes) stays green.",
+   "wave": 24,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "PLAY"
   },
   {
    "id": "SEC-LOG-PATH-FIELD",
@@ -21820,6 +21862,42 @@
    "cluster": "REL"
   },
   {
+   "id": "REL-INSTALLED-RUN-CHECK",
+   "title": "Installed copy: run.ps1 verifies electron.exe without tools/electron_pin.py and names the installer",
+   "goal": "In an installed copy run.ps1 does not start the client (its electron.exe check calls tools/electron_pin.py, which config/ship_list.json does not ship) and its failure log line points at setup.ps1; ship an installed-copy check route (or verify via the install marker) and fix the log line.",
+   "units": [
+    "REL-INSTALLED-RUN-CHECK"
+   ],
+   "files": [
+    "scripts/run.ps1",
+    "tests/test_install_shell.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_install_shell.py (a test where an installed-layout run.ps1 verifies electron.exe without tools/electron_pin.py, and the failure line names the installer, not setup.ps1)"
+   ],
+   "accept": "python -m pytest -q tests/test_install_shell.py passes with a test where an installed-layout run.ps1 verifies electron.exe without tools/electron_pin.py and the failure line names the installer, not setup.ps1.",
+   "zero_click": "An installed copy starts its client by itself with no manual step.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [
+    "REL-RUNTIME-SCRIPTS"
+   ],
+   "serial_group": "rel-scripts",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Filed session 16. Placement ruled by the adjudicator 2026-11-21 (ruling Q2): wave 21; scripts/run.ps1 has no other wave 21 editor and REL-RUNTIME-SCRIPTS (wave 18) is on main. Scripts find Python and Electron only through scripts/al_env.ps1 (decision 0063); a PowerShell change is validated with powershell.exe 5.1 ParseFile.",
+   "wave": 21,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "REL"
+  },
+  {
    "id": "TEST-SHOTS-TABS",
    "title": "Screenshots of the Build, Run and Settings tabs and the overlay page",
    "goal": "tools/shots.py render covers every tab and the overlay page: capture.mjs gains an argument-checked --tab option and may load the overlay page as an app file page, so PENDING is empty.",
@@ -23442,6 +23520,12 @@
   ],
   "TEST-SHOTS-TABS": [
    "TEST-SHOTS-TABS"
+  ],
+  "REL-INSTALLED-RUN-CHECK": [
+   "REL-INSTALLED-RUN-CHECK"
+  ],
+  "PLAY-PAGER-SCALE-24": [
+   "PLAY-PAGER-SCALE-24"
   ]
  }
 }

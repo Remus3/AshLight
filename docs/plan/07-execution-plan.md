@@ -1526,9 +1526,10 @@ feed: no minute stamp or report text in the snapshot, ages stepped at 5
 minutes; Zone moment card in the one card slot, and the guide-line fields
 for HUD line 2.
 
-- Session 6; width 14 worktree + 0 main-checkout, 0 loop rows released;
+- Session 6; width 15 worktree + 0 main-checkout, 0 loop rows released;
   about 125 minutes (PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI joined
-  at the wave 18 start, session 16).
+  at the wave 18 start, session 16; REL-INSTALLED-RUN-CHECK joined by
+  ruling Q2, 2026-11-21).
 - Hotspots: web/index.html (PLAY-TD-20A-RUN-GRID); server/al/core.py
   (RUN-QUIET-FEED); server/al/state.py (RUN-QUIET-FEED); web/app.css
   (PLAY-TD-20A-RUN-GRID); server/al/diag.py (RUN-QUIET-FEED);
@@ -1536,13 +1537,13 @@ for HUD line 2.
   app/shared/render_gate.js (OVL-LINE2-RULE); app/test/checks.test.js
   (RUN-QUIET-FEED); web/checks.js (RUN-QUIET-FEED); web/app.js
   (PLAY-TD-19E-ITEM-TEXT); app/main.js (REL-HOME-REFUSAL-UI).
-- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
   REL-PUBLISH-GATES; docs/decisions/README.md: REL-PUBLISH-GATES;
   docs/design/reviews.log: 5 lines.
 - Batches: 1: PLAY-TD-20A-RUN-GRID, RUN-QUIET-FEED, OVL-ZONE-CARD,
   OVL-LINE2-RULE; 2: REL-PUBLISH-GATES, REL-STAGE-ROUNDTRIP, RUN-STOP-RACE,
   OVL-CHECK; 3: OVL-CONTRAST-PIXELS, DEP-14, AUTO-08, AUTO-17; 4:
-  PLAY-TD-19E-ITEM-TEXT, REL-HOME-REFUSAL-UI.
+  PLAY-TD-19E-ITEM-TEXT, REL-HOME-REFUSAL-UI, REL-INSTALLED-RUN-CHECK.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1565,6 +1566,7 @@ for HUD line 2.
 - AUTO-17 [session, M 45m, build] REFRESH-SOURCE: stale docs, screenshots and an unplanned release become rows. Files: tools/watch_sources/refresh.py, ops/loop/watch_rows/refresh.json, tests/test_watch_refresh.py. Deps: AUTO-05, LOOP-WATCH-ROWS, LOOP-WAVE-HOLD.
 - PLAY-TD-19E-ITEM-TEXT [session, M 45m, build, P2, DR] Build card: each worn item's raw item text on a Full text page. Files: web/app.js, tests/test_build_item_text.py. Deps: PLAY-TD-19C-BUILD-GRID, PLAY-TD-19D-ITEMS-GRID.
 - REL-HOME-REFUSAL-UI [session, S 30m, build, P2] Show the refused-home sentence before the client exits. Files: app/main.js, app/client/home.js, app/test/home.test.js. Deps: REL-CLIENT-HOME, REL-RUNTIME-SCRIPTS.
+- REL-INSTALLED-RUN-CHECK [session, M 45m, build, P2] Installed copy: run.ps1 verifies electron.exe without tools/electron_pin.py and names the installer. Files: scripts/run.ps1, tests/test_install_shell.py. Deps: REL-RUNTIME-SCRIPTS.
 
 ### Wave 22: install and release, reliability and observability, overlay and client
 
@@ -1666,8 +1668,9 @@ Goal: Leads: Contact field in the web-data card and honest blocked wording;
 Five cause rows in Checks; Core refuses Origin null and file:// once both
 local pages load from the app scheme.
 
-- Session 7; width 11 worktree + 1 main-checkout, 0 loop rows released;
-  about 190 minutes.
+- Session 7; width 12 worktree + 1 main-checkout, 0 loop rows released;
+  about 190 minutes (PLAY-PAGER-SCALE-24 joined by ruling Q2 as amended,
+  2026-11-21).
 - Hotspots: web/index.html (DATA-CONTACT-UI); server/al/core.py
   (TC-WEIGHTS-DELTA-EXPORT); web/app.js (DATA-CONTACT-UI); server/al/http.py
   (OVL-APP-SCHEME-STRICT); app/main.js (RUN-OVERLAY-REMEMBER); README.md
@@ -1677,13 +1680,13 @@ local pages load from the app scheme.
   (OVL-APP-SCHEME-STRICT); tests/test_ux_settings_io.py
   (TC-WEIGHTS-DELTA-EXPORT); app/test/prices.test.js (DATA-CONTACT-UI);
   server/al/pricebook.py (DATA-PRICE-TYPES-FILE).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
   OVL-APP-SCHEME-STRICT, RUN-BUDGET-TESTS-LIVE, TC-PIN-POLICY;
   AL-NEXT-SESSION.txt: REL-CUTOVER-LIVE; docs/design/reviews.log: 4 lines.
 - Batches: 1: DATA-CONTACT-UI, RUN-EXPLAIN-ROWS, OVL-APP-SCHEME-STRICT,
   TC-WEIGHTS-DELTA-EXPORT; 2: RUN-BUDGET-TESTS-LIVE, TEST-SLOW-BUDGET,
   DATA-PRICE-TYPES-FILE, TC-PIN-POLICY; 3: RUN-HISTORY-UNDO,
-  RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM.
+  RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1704,6 +1707,7 @@ local pages load from the app scheme.
 - RUN-HISTORY-UNDO [session, M 30m, build, P3, DR] Undo for Clear run history. Files: web/history.js, tests/test_util_run_history.py, app/test/history.test.js. Deps: RUN-DURABLE-STORES.
 - RUN-OVERLAY-REMEMBER [session, M 30m, build, P3] Remember the overlay shown / hidden choice across restarts. Files: app/overlay_gate.js, app/main.js, app/test/overlay_gate.test.js. Deps: RUN-OBS-LOGS-SHELL.
 - DATA-SNAP-TRIM [session, S 25m, build, P3] Drop the two unread files from the snapshot fetch list. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py. Deps: DATA-SNAP-PROBE.
+- PLAY-PAGER-SCALE-24 [session, M 45m, build, P2] Pager buttons and compact weight inputs stay at least 24 px below UI scale 1. Files: web/app.css, tests/test_play_fit.py, tests/test_ux_review.py. Deps: PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20A-RUN-GRID.
 - REL-CUTOVER-LIVE [session, M 60m, build, P1] Cut-over: the operator's live copy becomes an installed release. Files: none (an act or a read-back). Deps: DEP-13, DEP-09, REL-UNINSTALL-SHELL, REL-UPDATE-LAUNCH, REL-UPDATE-CHECKS, REL-RUNTIME-SCRIPTS, REL-BUILD-ASSETS.
 
 ### Wave 25: local security, overlay and client, theorycraft
