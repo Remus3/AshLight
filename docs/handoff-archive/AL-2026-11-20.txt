@@ -43,3 +43,16 @@ Do NOT redo (session 13, all on main and pushed): wave 15 closed (14
 packages plus RUN-SETTINGS-TRIM-DOCS merged, listed in the Wave 15 line;
 TC-CALC-CONFINE-LUA retried and merged 1a93b64); roadmap fold 5aea0f9; reap
 of the w15 worktrees.
+
+*** SESSION 15 /done (2026-11-20): closed records moved from AL-NEXT-SESSION.txt verbatim ***
+- NOTE (session 14 /done, 2026-11-20): reap --apply removed 11 w16-*
+  worktrees (on main by patch, branches deleted), listed w16-OVL-KEYS-WEB
+  (f204f99, Next action step 0); read back: 5 worktrees, 1 worktree-*
+  branch. roadmap_fold: 25 row files applied, 13 done rows archived, 0 rows
+  "BLOCKED: session wave 16" (b919850).
+Do NOT redo (session 14, all on main and pushed): wave 16 closed (12
+packages merged in 3 green batches, listed in the archived Wave 16 line; batch
+suites 4220 / 4255 / 4283 passed, 6 skipped, timing 32; npm 539 / 539 /
+555); adjudicator rulings W16-1 to W16-4 in plan commits 6d4e332, 3799dfe,
+34b3d1d, e5b7e56; wave pointer 042c573; roadmap fold b919850; reap of 11
+w16 worktrees. NOT done: f204f99 (Next action step 0).
