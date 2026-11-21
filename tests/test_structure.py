@@ -66,6 +66,9 @@ EXEMPT = {
         "game log line prefixes matched by the ledger, not AshLight text",
     "server/al/mapladder.py":
         "map ladder empty-state and column notes published with the ladder",
+    "server/al/ninjashape.py":
+        "Checks row texts (ninja_shape, ninja_leagues, league_changed) like "
+        "diag and health; move under server/al/text/ in a follow-up",
     "server/al/playcards.py":
         "Play region C card sentences composed at the source (PLAY-TD-07B)",
     "server/al/playview.py":
