@@ -102,6 +102,17 @@
     return s.length > max ? s.slice(0, max - 3) + "..." : s;
   }
 
+  /* OVL-LINE2-RULE (plan 03 section 5.1): the length in characters of HUD
+     line 2 as the plan writes it, "Lv 74  3 deaths" + the status word: the
+     two spaces stand for the gap between the level and the deaths text (the
+     gap before the word is the plate's 10 px, not a character). */
+  function line2Length(level, deaths, word) {
+    var l = level ? String(level) : "";
+    var d = deaths ? String(deaths) : "";
+    var w = word ? String(word) : "";
+    return l.length + ((l && d) ? 2 : 0) + d.length + w.length;
+  }
+
   /* TC-EVAL-UI: the item check card. The words come from the core
      (server/al/text/itemcheck.py eval_card_text, one template for both
      surfaces); this only clips them to the card's line limit. verdict drives the edge colour,
@@ -127,7 +138,9 @@
 
   return {
     cardText: cardText,
+    clip: clip,
     evalCard: evalCard,
+    line2Length: line2Length,
     tradeCard: tradeCard,
     minutes: minutes,
     msUntilNextChange: msUntilNextChange,

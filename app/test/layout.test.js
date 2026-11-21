@@ -293,6 +293,45 @@ test("hudModel shows the newest open trade and repaints only on change", () => {
   assert.deepEqual(gate.changedFields(a, c), ["anchor"]);
 });
 
+/* OVL-LINE2-RULE: the hudModel line 2 fields (level, deaths, sep and the
+   status word) follow the one order and the 26-character rule. */
+test("hudModel: line 2 fields follow the order", () => {
+  const snap = { zone: "Clearfell", zone_entered_at: 0, level: 74, deaths: 3,
+                 trade_requests: [ITEM], overlay_layout: { corner: "top-right" } };
+  const card = { head: "Upgrade: +12% DPS", line2: "Ring", line3: "", verdict: "upgrade",
+                 expires_at: 100 };
+  const line2 = (m) => [m.level, m.sep, m.deaths, gate.statusText(m)];
+  // rank 7: level and deaths alone
+  assert.deepEqual(line2(gate.hudModel(snap, 10, "live")), ["Lv 74", "|", "3 deaths", ""]);
+  // rank 6: a campaign word that fits beside "Lv 74  3 deaths" (15 + 10 = 25)
+  assert.deepEqual(line2(gate.hudModel({ ...snap, campaign: { word: "Boss: cold" } }, 10, "live")),
+                   ["Lv 74", "|", "3 deaths", "Boss: cold"]);
+  // rank 6 over 26 characters: the deaths text drops, the separator with it
+  assert.deepEqual(line2(gate.hudModel({ ...snap, campaign: { word: "Boots: no speed" } }, 10,
+                                       "live")), ["Lv 74", "", "", "Boots: no speed"]);
+  // rank 4 beats rank 6
+  assert.equal(gate.statusText(gate.hudModel({ ...snap, afk: true,
+    campaign: { word: "Boss: cold" } }, 10, "live")), "AFK");
+  // rank 3 beats rank 4
+  assert.equal(gate.statusText(gate.hudModel({ ...snap, afk: true,
+    underlevel: { word: "3 lv under" } }, 10, "live")), "3 lv under");
+  // rank 2: a card covers the open trade, so the count beats rank 3
+  const covered = gate.hudModel({ ...snap, card, underlevel: { word: "3 lv under" } }, 10, "live");
+  assert.deepEqual(line2(covered), ["Lv 74", "|", "3 deaths", "1 trade"]);
+  // rank 1: the Client.txt word beats the trade count
+  const quiet = gate.hudModel({ ...snap, card,
+    tailer: { consented: true, reading: false, path: "x" } }, 10, "live");
+  assert.deepEqual(line2(quiet), ["Lv 74", "", "", "waiting for log"]);
+  // rank 1 before any data: the word alone
+  assert.deepEqual(line2(gate.hudModel(null, 10, "connecting")), ["", "", "", "connecting"]);
+  const off = gate.hudModel({ ...snap, tailer: { consented: false } }, 10, "live");
+  assert.deepEqual(line2(off), ["", "", "", "not reading - see dashboard"]);
+  // a dropped deaths text is one repaint of the deaths and sep nodes
+  const before = gate.hudModel(snap, 10, "live");
+  const after = gate.hudModel({ ...snap, campaign: { word: "Boots: no speed" } }, 10, "live");
+  assert.deepEqual(gate.changedFields(before, after), ["deaths", "sep", "campaign"]);
+});
+
 /* UX-REAL-OVERLAY: on the real desktop a transparent, software-composited
    window with BrowserWindow.setOpacity drew nothing at all. The value is
    page CSS instead; OVL-TD05-PLATE: only the plate alpha knob, never a

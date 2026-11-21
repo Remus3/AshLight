@@ -270,6 +270,12 @@
 
   function hudModel(snap, nowS, status) {
     var m = withEval(baseModel(snap, nowS, status), snap, nowS);
+    /* OVL-LINE2-RULE: line 2 is picked last, once the trade count (rank 2)
+       is known; it only ever empties level / deaths, never adds text. */
+    var l2 = hudLine2(m);
+    m.level = l2.level;
+    m.deaths = l2.deaths;
+    m.sep = (m.level && m.deaths) ? "|" : "";
     /* OVL-PARTS-PAGE: the HUD plate shows only while one of its lines has
        something; with every part off and no failure word it is absent.
        Not enumerable: a boolean for the page, not a visible string, so a
@@ -380,9 +386,45 @@
      campaign hint word, else nothing. OVL-PARTS-PAGE: rank 1 (connection
      and Client.txt words) shows whatever parts.status says; the model
      already holds "" for the lower ranks when the status part is off. */
-  function statusText(model) {
-    if (model.status !== "live") { return model.status; }
+  function statusWord(model) {
+    if (model.status !== "live") { return model.status || ""; }
     return model.log || model.trades || model.under || model.away || model.campaign || "";
+  }
+
+  function statusText(model) {
+    return hudLine2(model).status;
+  }
+
+  /* OVL-LINE2-RULE (plan 03 sections 5.1 and 5.2, TD-17): HUD line 2 shows
+     one thing, by one order, first match:
+       1 the connection / Client.txt word (alone before any data: the model
+         holds no level then), 2 "N trades" while a card covers an open
+         trade, 3 the under-level word, 4 AFK / DND, 6 the campaign hint
+         word, 7 level and deaths alone.
+     Rank 5, the zone-guide line, is reserved for OVL-LINE2-GUIDE.
+     Width rule (the 258 px plate, 236 px inside): the level text and the
+     status word are at most LINE2_MAX characters together, else the deaths
+     text drops (and the level text too if still over); a word over
+     WORD_BESIDE_MAX stands alone, clipped to
+     WORD_ALONE_MAX. Pure: model inputs in, {level, deaths, status} out. */
+  var LINE2_MAX = 26;
+  var WORD_BESIDE_MAX = 20;
+  var WORD_ALONE_MAX = STATUS_WORDS.overlay_alone_max;
+
+  function hudLine2(inp) {
+    var m = inp || {};
+    var word = statusWord(m);
+    var level = m.level || "";
+    var deaths = m.deaths || "";
+    if (word.length > WORD_BESIDE_MAX) {
+      return { level: "", deaths: "", status: fmt.clip(word, WORD_ALONE_MAX) };
+    }
+    if (word && fmt.line2Length(level, deaths, word) > LINE2_MAX) { deaths = ""; }
+    /* design review L2-1: a level text and word still over the rule with
+       the deaths text gone ("Lv unknown" + a 20-character word) leave the
+       word alone, so the line never passes the plate. */
+    if (word && fmt.line2Length(level, "", word) > LINE2_MAX) { level = ""; }
+    return { level: level, deaths: deaths, status: word };
   }
 
   function underWord(snap) {
@@ -432,5 +474,7 @@
            timerSeconds: timerSeconds, overlayWanted: overlayWanted,
            shouldRender: shouldRender,
            changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD,
+           hudLine2: hudLine2, LINE2_MAX: LINE2_MAX, WORD_BESIDE_MAX: WORD_BESIDE_MAX,
+           WORD_ALONE_MAX: WORD_ALONE_MAX,
            STATUS_WORDS: STATUS_WORDS };
 }));
