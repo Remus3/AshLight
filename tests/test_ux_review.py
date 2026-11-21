@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 import srcpaths
-from test_design_contrast import _hex, over, ratio
+from test_design_contrast import _hex, over, plate, ratio
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_CSS = srcpaths.path("app.css")
@@ -92,14 +92,14 @@ def _scale_floor():
 
 
 def _plate(v):
-    m = re.fullmatch(r"rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)", v["al-plate"])
-    assert m, v["al-plate"]
-    return tuple(int(m.group(i)) for i in (1, 2, 3)), float(m.group(4))
+    return plate(v)
 
 
 def overlay_ratio(fg_hex, window_opacity, plate_alpha=None):
     """Text over the plate over a white scene, the whole window at
-    `window_opacity`; every composite rounded to 8 bits a channel."""
+    `window_opacity`; every composite rounded to 8 bits a channel. Until
+    OVL-TD05-PLATE, main.js still inserts a page opacity from layout.js
+    (floor 0.9), so this interim worst case stays checked here."""
     v = _overlay_vars()
     rgb, alpha = _plate(v)
     plate = over(rgb, alpha if plate_alpha is None else plate_alpha, WHITE)
@@ -162,7 +162,9 @@ def test_dashboard_glance_values_7_to_1(theme):
 def test_high_contrast_mode_lifts_muted_text(path):
     block = _media(_css(path), "prefers-contrast: more")
     assert block is not None, f"{path.name}: no @media (prefers-contrast: more)"
-    assert re.search(r"--fk-text-muted\s*:\s*var\(--fk-text\)", block), block
+    # the overlay's secondary text is its own token (OVL-TD05-LEGIBILITY)
+    muted = "--al-ovl-text-2" if path == OVERLAY_CSS else "--fk-text-muted"
+    assert re.search(re.escape(muted) + r"\s*:\s*var\(--fk-text\)", block), block
 
 
 def test_overlay_high_contrast_plate_is_opaque():
@@ -196,6 +198,23 @@ def _sizes(css):
     return re.findall(r"font(?:-size)?\s*:[^;]*?([\d.]+)(rem|px)", css)
 
 
+def _overlay_font_sizes():
+    """Every font size the overlay declares, in px: literals in font /
+    font-size declarations and the --al-ovl-fs-* tokens they use."""
+    css = re.sub(r"/\*.*?\*/", "", _css(OVERLAY_CSS), flags=re.S)
+    v = _overlay_vars()
+    out = []
+    for decl in re.findall(r"(?<![-\w])font(?:-size)?\s*:([^;]+);", css):
+        for name in re.findall(r"var\(--([\w-]+)\)", decl):
+            assert name.startswith("al-ovl-fs-"), f"font size from --{name}"
+            m = re.fullmatch(r"([\d.]+)px", v[name])
+            assert m, f"--{name}: {v[name]}"
+            out.append(float(m.group(1)))
+        stripped = re.sub(r"var\([^)]*\)", "", decl)
+        out.extend(float(n) for n, _u in re.findall(r"([\d.]+)(px|rem|em|pt)(?![\w-])", stripped))
+    return out
+
+
 def _al_font_tokens():
     """--al-fs-* token values (rem) from the token block of web/app.css."""
     root = re.search(r":root\s*\{(.*?)\}", _css(APP_CSS), re.S).group(1)
@@ -222,8 +241,63 @@ def test_dashboard_type_floor_13px():
 
 
 def test_overlay_type_floor_12px_after_zoom():
-    sizes = [float(v) for v, _u in _sizes(_css(OVERLAY_CSS))]
+    sizes = _overlay_font_sizes()
     assert sizes and min(sizes) * _scale_floor() >= 12
+
+
+def test_overlay_two_font_sizes_16_and_14():
+    """OVL-TD05-LEGIBILITY (design 0001 section 3): two sizes only, 16 px
+    for HUD lines and the status word, 14 px for card lines; nothing under
+    14 px; sizes only through the two --al-ovl-fs-* tokens."""
+    v = _overlay_vars()
+    assert {n: v[n] for n in v if n.startswith("al-ovl-fs-")} == {
+        "al-ovl-fs-hud": "16px", "al-ovl-fs-card": "14px"}
+    sizes = _overlay_font_sizes()
+    assert sorted(set(sizes)) == [14.0, 16.0], sizes
+    assert min(sizes) >= 14
+    rules = dict(_rules(_strip_media(_css(OVERLAY_CSS))))
+    assert "var(--al-ovl-fs-hud)" in rules[".hud"]
+    for card in (".trade", ".evalcard"):
+        assert "var(--al-ovl-fs-card)" in rules[card], card
+    # no font size outside the token block and the three plate rules
+    for sel, body in rules.items():
+        if sel not in (":root", ".hud", ".trade", ".evalcard"):
+            assert not re.search(r"(?<![-\w])font(?:-size)?\s*:", body), sel
+
+
+def test_overlay_has_no_page_opacity():
+    """OVL-TD05-LEGIBILITY: text is opaque; the plate alone carries the
+    alpha. No opacity rule anywhere in overlay.css, and the plate alpha
+    is the --al-plate-a knob with a 0.86 default."""
+    css = re.sub(r"/\*.*?\*/", "", _css(OVERLAY_CSS), flags=re.S)
+    assert not re.search(r"html\s*\{\s*opacity", css)
+    assert not re.search(r"(?<![-\w])opacity\s*:", css)
+    assert re.fullmatch(r"rgba\(15, 18, 22, var\(--al-plate-a, 0\.86\)\)",
+                        _overlay_vars()["al-plate"])
+
+
+def test_overlay_halo_on_every_plate():
+    """The note 0041 halo, no stroke: every plate's text carries it."""
+    v = _overlay_vars()
+    assert v["al-halo"] == "0 0 2px #000, 0 0 2px #000, 0 1px 2px #000"
+    rules = dict(_rules(_strip_media(_css(OVERLAY_CSS))))
+    for sel in (".hud", ".trade", ".evalcard"):
+        assert re.search(r"text-shadow\s*:\s*var\(--al-halo\)\s*;", rules[sel]), sel
+        assert re.search(r"border\s*:\s*1px solid var\(--fk-border\)", rules[sel]), sel
+    assert "text-stroke" not in _css(OVERLAY_CSS)
+
+
+def test_overlay_separator_is_a_gap_not_a_glyph():
+    """F-094: the "|" between level and deaths is a 10 px gap; #sep stays
+    in the page (render_gate still fills it) but is never drawn."""
+    rules = _rules(_strip_media(_css(OVERLAY_CSS)))
+    nums = [b for s, b in rules if s == ".row.nums"]
+    assert nums and re.search(r"display\s*:\s*flex", nums[0])
+    assert re.search(r"(?<![-\w])gap\s*:\s*10px", nums[0])
+    hidden = [s for s, b in rules if re.search(r"display\s*:\s*none", b)]
+    assert any(".sep" in [x.strip() for x in s.split(",")] for s in hidden), hidden
+    html = (ROOT / "app" / "overlay" / "index.html").read_text(encoding="ascii")
+    assert 'id="sep" class="sep"' in html
 
 
 # --- U5: no motion by default ---------------------------------------------

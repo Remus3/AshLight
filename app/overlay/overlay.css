@@ -1,31 +1,40 @@
 /* Overlay HUD. The overlay cannot load /tokens.css from the core under its
    strict file:// CSP, so the few colours here mirror the kit's dark theme
    values (ops/fleet_kit/tokens.json themes.dark / status.dark). No
-   animation, no transition: a frame is drawn only when text changes. */
+   animation, no transition: a frame is drawn only when text changes.
+   Legibility recipe (OVL-TD05-LEGIBILITY, design 0001 sections 3, 5.2
+   and 10): text is always opaque, the plate alone carries the alpha, a
+   soft black halo separates text from a busy scene, and there are two
+   sizes only. Nothing reads the screen to adapt the plate. */
 
 :root {
   --fk-surface: #0f1216;
   --fk-text: #e4e8ec;
-  --fk-text-muted: #99a1aa;
   --fk-border: #323840;
-  --fk-status-bad: #f0605a;
   --fk-status-warn: #d19a2a;
   --fk-status-ok: #46b85c;
-  /* HUD plate (design system 0001 section 10): 92 percent so every text
-     colour above keeps 4.5:1 even over a pure white game scene. */
-  --al-plate: rgba(15, 18, 22, 0.92);
-  --al-shadow: #000;
-  /* Neutral item-check card edge: the muted grey, kept apart from the
-     muted text token so high-contrast mode does not whiten it (UX-REVIEW). */
+  /* Overlay-only text colours (design 0001 section 5.1): secondary lines
+     and the warn word. Both keep 7:1 on the default plate over a white
+     scene and 5.5:1 at the 0.80 alpha floor; the kit's text-muted and
+     status-warn do not, so those stay edges here, never text. */
+  --al-ovl-text-2: #c3c9d0;
+  --al-ovl-warn: #f0bd55;
+  /* HUD plate (design 0001 section 10): the surface colour at alpha 0.86
+     by default. --al-plate-a is the one alpha knob (0.80 to 1.0); until
+     OVL-TD05-PLATE sets it from the layout, the fallback holds. */
+  --al-plate: rgba(15, 18, 22, var(--al-plate-a, 0.86));
+  /* Soft halo, no stroke: two tight blurs and a 1 px drop. */
+  --al-halo: 0 0 2px #000, 0 0 2px #000, 0 1px 2px #000;
+  /* The two overlay sizes (design 0001 section 3): HUD lines and the
+     status word, then card lines. Nothing else, nothing under 14 px. */
+  --al-ovl-fs-hud: 16px;
+  --al-ovl-fs-card: 14px;
+  /* Neutral item-check card edge: the kit muted grey (#99a1aa), kept as its
+     own token so high-contrast mode does not whiten it (UX-REVIEW). */
   --al-edge: #99a1aa;
 }
 
 * { animation: none !important; transition: none !important; }
-
-/* UX-REAL-OVERLAY: the layout default opacity (layout.js LIMITS floor 0.9)
-   from the first paint, so a reload never flashes at full opacity before
-   main.js inserts the player's value (design review N1). */
-html { opacity: 0.9; }
 
 html, body {
   margin: 0;
@@ -49,27 +58,30 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   border-radius: 6px;
   background: var(--al-plate);
   color: var(--fk-text);
-  font: 600 15px/1.3 system-ui, "Segoe UI", sans-serif;
+  font: 600 var(--al-ovl-fs-hud)/1.3 system-ui, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 1px var(--al-shadow);
+  text-shadow: var(--al-halo);
   max-width: 258px;
 }
 
 .row { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.zone { font-size: 16px; }
 /* A long zone name clips itself, so the zone timer always stays visible. */
 .row.zone { display: flex; align-items: baseline; }
 .zone #zone { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Full text colour (12.5:1 on the plate): the timer is live content. */
+/* Full text colour (10.28:1 on the default plate over white): the timer
+   is live content. */
 .timer { flex: none; color: var(--fk-text); margin-left: 8px; }
 .timer:empty { display: none; }
-.sep { color: var(--fk-text-muted); }
-.status { color: var(--fk-status-warn); margin-left: 6px; font-size: 13px; }
-/* The slot shows a connection word, or AFK / DND while live; empty hides. */
-.status:empty, .sep:empty { display: none; }
-/* UX-DPI: with no numbers (first run, offline) the word starts the line,
-   flush with the zone line above. */
-#deaths:empty + .status { margin-left: 0; }
+/* Line 2: level, deaths and the status word, 10 px apart (F-094). The
+   "|" glyph render_gate still writes into #sep is not drawn: the flex gap
+   is the separator. An empty part drops out with its gap, so with no
+   numbers (first run, offline) the word starts the line, flush with the
+   zone line above (UX-DPI). */
+.row.nums { display: flex; gap: 10px; align-items: baseline; }
+.nums > * { flex: none; }
+.nums > :empty, .sep { display: none; }
+/* The status word is the one part that may clip, so the numbers stay. */
+.status { color: var(--al-ovl-warn); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Trade whisper card (HUD-WHISPER). The cue is quiet and static: a steady
    accent edge, no flash, no motion, no sound. Dismissed on the dashboard. */
@@ -81,12 +93,12 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   border-radius: 6px;
   background: var(--al-plate);
   color: var(--fk-text);
-  font: 600 14px/1.3 system-ui, "Segoe UI", sans-serif;
+  font: 600 var(--al-ovl-fs-card)/1.3 system-ui, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 1px var(--al-shadow);
+  text-shadow: var(--al-halo);
   max-width: 258px;
 }
-.trade .where, .trade .more { color: var(--fk-text-muted); font-size: 13px; }
+.trade .where, .trade .more { color: var(--al-ovl-text-2); }
 /* A long sender name clips itself, so "+N more" always stays visible. */
 .trade .from-row { display: flex; gap: 4px; align-items: baseline; }
 .trade .from-row #tradeFrom { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -104,16 +116,16 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   border-radius: 6px;
   background: var(--al-plate);
   color: var(--fk-text);
-  font: 600 14px/1.3 system-ui, "Segoe UI", sans-serif;
+  font: 600 var(--al-ovl-fs-card)/1.3 system-ui, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 1px var(--al-shadow);
+  text-shadow: var(--al-halo);
   max-width: 258px;
 }
 .evalcard[data-verdict="upgrade"] { border-left-color: var(--fk-status-ok); }
 /* UX-OVERLAY-WAYSTONE: a risky waystone, warn like its dashboard pill;
    the head word "Risky" carries the meaning */
 .evalcard[data-verdict="risky"] { border-left-color: var(--fk-status-warn); }
-.evalcard .line { color: var(--fk-text-muted); font-size: 13px; }
+.evalcard .line { color: var(--al-ovl-text-2); }
 
 /* The disclaimer is the overlay's "About"; screen readers get it, the HUD
    stays one small box. */
@@ -129,11 +141,12 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
 
 /* High-contrast mode (UX-REVIEW U3, research 0008): follows the Windows
    "more contrast" setting, no click. Secondary text takes the full text
-   colour and the plate drops its own alpha (the window opacity, 0.9 to
-   1.0, still applies). The card edge keeps --al-edge. */
+   colour and the plate is opaque, whatever --al-plate-a says (until
+   OVL-TD05-PLATE, the page opacity main.js inserts still applies). The
+   card edge keeps --al-edge. */
 @media (prefers-contrast: more) {
   :root {
-    --fk-text-muted: var(--fk-text);
+    --al-ovl-text-2: var(--fk-text);
     --al-plate: #0f1216;
   }
 }
