@@ -139,7 +139,10 @@ def test_no_request_while_web_data_is_off(tmp_path):
 
 
 def test_one_request_per_type_per_hour_then_etag(tmp_path):
+    # DATA-PRICE-CADENCE (decision 0072): Currency hourly, the book types
+    # every 3 h while no press matched them
     net, clock = FakeNet(), Clock()
+    start = clock.t
     c, _ = _client(tmp_path, net, clock)
     assert c.refresh() == "fetched"
     over = [u for _, u, _ in net.calls if not u.endswith(ninja.LEAGUES_PATH)]
@@ -154,6 +157,12 @@ def test_one_request_per_type_per_hour_then_etag(tmp_path):
     c2, _ = _client(tmp_path, net, clock)
     assert c2.refresh() == "fresh" and len(net.calls) == n
     clock.t += 2
+    assert c2.refresh() == "unchanged"
+    hourly = net.calls[n:]  # an hour on: Currency only, the book waits 3 h
+    assert len(hourly) == 1 and "type=Currency" in hourly[0][1]
+    n = len(net.calls)
+    assert c2.book.due(start + pricebook.INTERVAL_S - 1) is False
+    clock.t = start + pricebook.INTERVAL_S
     assert c2.refresh() == "unchanged"
     again = net.calls[n:]
     assert len(again) == 1 + N_TYPES
@@ -183,33 +192,33 @@ def test_type_failing_three_times_waits_a_day(tmp_path):
     net.status["type=UniqueWeapons"] = 500
     c, _ = _client(tmp_path, net, clock)
     start = clock.t
-    for i in range(3):  # three hourly failures in a row
-        clock.t = start + i * (ninja.MIN_INTERVAL_S + 1)
+    for i in range(3):  # three failures in a row, one per 3 h round
+        clock.t = start + i * (pricebook.INTERVAL_S + 1)
         c.refresh()
     assert _asked(net, "type=UniqueWeapons") == 3
     assert c.book.doc["types"]["UniqueWeapons"]["fails"] == 3
     third = clock.t
-    # the other types keep their hourly round; the failing one waits a day,
+    # the other types keep their 3 h round; the failing one waits a day,
     # also after a restart on the same cache
-    for dt in (ninja.MIN_INTERVAL_S + 1, 12 * 3600, pricebook.DAILY_S - 1):
+    for dt in (pricebook.INTERVAL_S + 1, 12 * 3600, pricebook.DAILY_S - 1):
         clock.t = third + dt
         c, _ = _client(tmp_path, net, clock)
         c.refresh()
     assert _asked(net, "type=UniqueWeapons") == 3
     assert _asked(net, "type=UniqueArmours") == 6
-    # a day later it is asked again; one success brings back the hourly gate
+    # a day later it is asked again; one success brings back the 3 h gate
     del net.status["type=UniqueWeapons"]
     clock.t = third + pricebook.DAILY_S
     c.refresh()
     assert _asked(net, "type=UniqueWeapons") == 4
     assert c.book.doc["types"]["UniqueWeapons"]["fails"] == 0
-    clock.t += ninja.MIN_INTERVAL_S + 1
+    clock.t += pricebook.INTERVAL_S + 1
     c.refresh()
     assert _asked(net, "type=UniqueWeapons") == 5
-    # a failure never brings a faster retry: two failures keep the hour
+    # a failure never brings a faster retry: two failures keep the 3 h gate
     net.status["type=Essences"] = 500
     for _ in range(2):
-        clock.t += ninja.MIN_INTERVAL_S + 1
+        clock.t += pricebook.INTERVAL_S + 1
         c.refresh()
     n = _asked(net, "type=Essences")
     assert c.book.doc["types"]["Essences"]["fails"] == 2

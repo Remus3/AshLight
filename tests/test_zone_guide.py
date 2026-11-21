@@ -386,3 +386,126 @@ def test_shipped_hub_and_cross_act_steps():
     done = {s["zone"]: s["done"] for s in q["steps"]}
     assert done["Volcanic Warrens"] is True and done["Singing Caverns"] is False
     assert q["steps_done"] == 2                       # Isle of Kin by its next; no back-fill
+
+# -- DATA-GUIDE-FACTS (F-122, S5-FOLLOWUP c and f) ----------------------------
+
+def _snapshot_campaign_areas(doc):
+    """[(act key, area id, name)] for every campaign area of a world_areas
+    document (acts.act_of knows its id, it has a name)."""
+    out = []
+    for area_id, a in doc.items():
+        info = acts.act_of(area_id)
+        if info is None or not isinstance(a, dict) or not isinstance(a.get("name"), str):
+            continue
+        if a["name"].strip():
+            out.append((info["key"], area_id, a["name"].strip()))
+    return out
+
+
+@pytest.mark.skipif(not acts.default_path().is_file(), reason="world_areas snapshot not fetched")
+def test_every_snapshot_campaign_area_has_a_goal_or_an_explicit_skip():
+    """Every campaign area id of the cached world_areas snapshot has a guide
+    entry under its act with a goal (an objective, or a bonus for a side
+    zone) or `"skip": true` (no permitted source for a goal, so no guide)."""
+    doc = json.loads(acts.default_path().read_text(encoding="utf-8"))
+    areas = _snapshot_campaign_areas(doc)
+    assert areas
+    bad = []
+    for key, area_id, name in areas:
+        z = SHIPPED["acts"].get(key, {}).get("zones", {}).get(name)
+        if not isinstance(z, dict):
+            bad.append((area_id, name, "no entry"))
+        elif not (zoneguide.is_skip(z) or zoneguide._clean(z.get("objective"))
+                  or zoneguide._optional(z)):
+            bad.append((area_id, name, "no goal and no skip"))
+    assert bad == []
+
+
+# The four zones the guide had no goal for (OPEN-13): skipped until an
+# allowed source (the operator's paste, OA-37) gives one.
+BLANK_ZONES = {("G1", "Root Hollow"), ("G3", "Library of Kamasa"),
+               ("G4", "Isle of Decay"), ("G4", "Brinerot Cove")}
+
+
+def test_blank_zones_are_explicit_skips_from_the_snapshot():
+    for key, zone in BLANK_ZONES:
+        z = SHIPPED["acts"][key]["zones"][zone]
+        assert z == {"skip": True, "src": "snapshot:world_areas",
+                     "checked": "2026-11-21"}, (key, zone)
+    skipped = [(k, n) for k, a in SHIPPED["acts"].items()
+               for n, z in a.get("zones", {}).items() if zoneguide.is_skip(z)]
+    for key, zone in skipped:
+        z = SHIPPED["acts"][key]["zones"][zone]
+        assert set(z) == {"skip", "src", "checked"}, (key, zone)
+        assert z["src"] == "snapshot:world_areas", (key, zone)
+
+
+def test_point_books_claim_no_kind_of_point():
+    """S5 (f): the point books say neither passive nor weapon-set points,
+    and the book lines are not filed under the passive kind."""
+    books = 0
+    for key, act in SHIPPED["acts"].items():
+        for zone, z in act.get("zones", {}).items():
+            for field in ("objective", "short", "layout"):
+                v = z.get(field) or ""
+                assert "skill point" not in v.lower(), (key, zone, field)
+            for o in z.get("optional", []):
+                low = o["text"].lower()
+                assert "skill point" not in low, (key, zone)
+                assert "weapon set" not in low and "passive point" not in low, (key, zone)
+                if low.startswith("a book of 2 points"):
+                    books += 1
+                    assert o["kind"] == "other", (key, zone)
+    assert books == 11
+
+
+def test_a_skipped_zone_shows_no_act_default_only_its_waypoint(tmp_path):
+    doc = json.loads(json.dumps(DOC))
+    zones = doc["acts"]["G1"]["zones"]
+    zones["Mud Burrow"] = {"skip": True, "src": "snapshot:world_areas",
+                           "checked": "2026-11-21"}
+    zones["Hidden Glade"] = {"skip": True}
+    assert zoneguide.guide_problem(doc) is None
+    v = zoneguide.view(doc, GRAPH, "G1_3", "Mud Burrow", False, 3, 3, None)
+    assert v["objective"] is None and v["optional"] == [] and v["layout"] is None
+    assert v["waypoint"] == "No waypoint here. Nearest: Clearfell."
+    assert v["short"] == "" and v["line"] is None
+    # no waypoint known either: no guide at all
+    assert zoneguide.view(doc, {}, "G1_8", "Hidden Glade", False, 8, 8, None) is None
+    # an unlisted zone still gets the act default
+    v = zoneguide.view(doc, {}, "G1_9", "Somewhere New", False, 8, 8, None)
+    assert v["objective"] == "Act one default."
+    # the tracker never counts a skipped zone as a step or a bonus
+    q = zoneguide.quest_view(doc, "G1", None)
+    assert "Mud Burrow" not in [s["zone"] for s in q["steps"]]
+    assert q["bonus_total"] == 2
+    path = tmp_path / "guide.json"
+    path.write_text(json.dumps(doc), encoding="ascii")
+    assert zoneguide.load(path) == doc
+    cache = zoneguide.guide_cache(path)
+    assert cache.get() == doc
+
+
+def test_a_bad_skip_makes_the_guide_malformed(tmp_path):
+    for bad_entry, word in (({"skip": "yes"}, "not true"), ({"skip": 1}, "not true"),
+                            ({"skip": False}, "not true"),
+                            ({"skip": True, "objective": "Go on."}, "objective"),
+                            ({"skip": True, "optional": []}, "optional")):
+        doc = json.loads(json.dumps(DOC))
+        doc["acts"]["G1"]["zones"]["Mud Burrow"] = bad_entry
+        problem = zoneguide.guide_problem(doc)
+        assert problem and "Mud Burrow" in problem and word in problem, bad_entry
+        path = tmp_path / "bad.json"
+        path.write_text(json.dumps(doc), encoding="ascii")
+        assert zoneguide.load(path) == {}
+    # a hot reload of a bad skip keeps the last good guide
+    path = tmp_path / "guide.json"
+    path.write_text(json.dumps(DOC), encoding="ascii")
+    cache = zoneguide.guide_cache(path)
+    assert cache.get() == DOC
+    doc = json.loads(json.dumps(DOC))
+    doc["acts"]["G1"]["zones"]["Mud Burrow"] = {"skip": True, "layout": "x"}
+    path.write_text(json.dumps(doc), encoding="ascii")
+    st = os.stat(path)
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 2_000_000_000))
+    assert cache.get() == DOC and "layout" in cache.error
