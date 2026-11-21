@@ -103,8 +103,8 @@
   }
 
   /* TC-EVAL-UI: the item check card. The words come from the core
-     (state.py eval_card_text, one template for both surfaces); this only
-     clips them to the card's line limit. verdict drives the edge colour,
+     (server/al/text/itemcheck.py eval_card_text, one template for both
+     surfaces); this only clips them to the card's line limit. verdict drives the edge colour,
      never alone (the head starts with the verdict word). */
   function evalCard(ev, maxLen) {
     var max = maxLen || 34;
@@ -114,9 +114,10 @@
              verdict: ev.ok ? String(ev.verdict || "") : "note" };
   }
 
-  /* PRICE-1-UI (decision 0016): the one card the core chose (state.py
-     overlay_card: item check, price check, or both from one press). The
-     words come from the core; this only clips them to the line limit. */
+  /* PRICE-1-UI (decision 0016): the one card the core chose
+     (server/al/text/overlaycard.py overlay_card: item check, price check,
+     or both from one press). The words come from the core; this only clips
+     them to the line limit. */
   function cardText(card, maxLen) {
     var max = maxLen || 34;
     if (!card || !card.head) { return { head: "", line2: "", line3: "", verdict: "" }; }

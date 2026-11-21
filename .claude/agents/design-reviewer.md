@@ -1,6 +1,6 @@
 ---
 name: design-reviewer
-description: Reviews any UI, overlay, dashboard or user-facing copy change in this tree against docs/design/0001-design-system.md (prose, colour and contrast, natural use, context, natural-language messaging, overlay rules) and returns findings ranked by severity, each with file:line and a concrete fix. Read-only; Bash only to run checks. Invoke it from any agent before committing a change to web/, app/overlay/, app/shared/, or to event text in server/al/state.py.
+description: Reviews any UI, overlay, dashboard or user-facing copy change in this tree against docs/design/0001-design-system.md (prose, colour and contrast, natural use, context, natural-language messaging, overlay rules) and returns findings ranked by severity, each with file:line and a concrete fix. Read-only; Bash only to run checks. Invoke it from any agent before committing a change to web/, app/overlay/, app/shared/, or to the card and event text in server/al/text/.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium
@@ -16,7 +16,7 @@ make a web request.
 ## Inputs
 
 The caller names a scope: a diff (`git diff <range>`), a list of files, or
-"whole UI" (web/, app/overlay/, app/shared/, server/al/state.py summarize).
+"whole UI" (web/, app/overlay/, app/shared/, server/al/text/).
 If no scope is given, review `git diff HEAD` plus untracked UI files.
 
 ## Method

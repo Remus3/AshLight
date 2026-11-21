@@ -12,7 +12,8 @@ making that text from log events (section 9; ruling Q-15, 2026-11-18).
 
 - Surfaces: the second-screen dashboard (`web/`), the overlay HUD
   (`app/overlay/`, `app/shared/`), and every user-facing string the core
-  produces (`server/al/state.py` `summarize`, status words in `web/app.js`).
+  produces (the card and event text package `server/al/text/`, e.g.
+  `events.py` `summarize`; status words in `server/al/data/status_words.json`).
 - Colours, themes and the state vocabulary come from the fleet kit:
   `ops/fleet_kit/tokens.json` / `tokens.css` (kit v32). The kit is never
   edited here. AshLight adds only `--al-*` tokens for needs the kit does not
@@ -306,7 +307,7 @@ Kit state vocabulary (tokens.json `states`) mapped to AshLight meanings:
 | dashboard feed live | done | [+] | status-ok | live |
 | connecting / reconnecting | pending | [ ] | status-idle | reconnecting |
 | opted in but file missing / quiet | blocked | [#] | status-warn | waiting for Client.txt |
-| opted in, no log line for 20 min (TEST-LIVE-EXIT, decision 0029) | blocked | [#] | status-warn | quiet for 20 min - game closed or AFK? (the overlay hides in this state, decision 0029 amendment 2026-11-17; the dashboard Tools card says "Overlay hidden: no game activity for 20 min. It comes back with the next log line.") |
+| opted in, no log line for 20 min (TEST-LIVE-EXIT, decision 0029) | blocked | [#] | status-warn | log quiet, still reading - game closed or AFK? (FIX-IDLE-WORD; the overlay hides in this state, decision 0029 amendment 2026-11-17; the dashboard Tools card says "Overlay hidden: no game activity for 20 min. It comes back with the next log line.") |
 | not opted in | idle | [-] | status-idle | not reading Client.txt |
 | cannot reach AshLight | failed | [x] | status-bad | can't reach AshLight |
 
@@ -428,8 +429,9 @@ Good / bad examples:
 ## 9. Natural-language messaging (NLM)
 
 How AshLight turns a log event into words. All event text is produced in
-one place (`server/al/state.py`: `summarize`, `trade_card_text`, and for
-the item check `eval_card_text` / `stat_delta_text`) and the overlay formats in
+one place, the card and event text package `server/al/text/` (`events.py`:
+`summarize`, `trade_card_text`; `itemcheck.py`: `eval_card_text` /
+`stat_delta_text`; one module per card) and the overlay formats in
 `app/shared/format.js`; no other site invents event wording.
 
 Generation rules:
@@ -452,7 +454,10 @@ Generation rules:
      see dashboard` (UX-FIRSTRUN), opted in `waiting for log` when
      the file is known but quiet (15 characters at most next to the
      numbers), `no Client.txt` when it is not found
-     (UX-COPY); dashboard deaths tile before the opt-in `-` over `Counts
+     (UX-COPY); dashboard bar while the log is quiet for 20 min `log
+     quiet, still reading - game closed or AFK?` (overlay `log quiet`;
+     AshLight still reads the file, so the bar says so, FIX-IDLE-WORD);
+     dashboard deaths tile before the opt-in `-` over `Counts
      once reading starts` (UX-FIRSTRUN)
    - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
      (empty slot: `<Verdict> <+delta> - <slot> empty`), item name, top
@@ -505,7 +510,7 @@ Generation rules:
      these for this build yet): <mods>.`
    - build alert and upgrade notices (BUILD-LIVE, decision 0045,
      `build_alert_text` / `upgrade_notice_text` / `upgrades_text` in
-     state.py, shown by web/buildlive.js in the #build-alert card titled
+     server/al/text/buildlive.py, shown by web/buildlive.js in the #build-alert card titled
      `Your build`, hidden when the build fits and nothing is an upgrade;
      not a live region): `No build saved for <name> yet. Paste a PoB code
      on the Build tab to check items for <name>.`, `Build is for a

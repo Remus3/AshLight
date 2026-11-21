@@ -49,7 +49,7 @@
     },
     "idle": {
       "rank": 4, "kit": "blocked", "glyph": "[#]",
-      "bar": "log quiet - game closed or AFK?", "overlay": "log quiet", "overlay_alone": false,
+      "bar": "log quiet, still reading - game closed or AFK?", "overlay": "log quiet", "overlay_alone": false,
       "check_row": "last_line", "check": "The game may be closed, or you are AFK.",
       "next": "", "fault": false
     },

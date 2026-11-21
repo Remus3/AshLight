@@ -114,7 +114,7 @@
         "rank": 4,
         "kit": "blocked",
         "glyph": "[#]",
-        "bar": "log quiet - game closed or AFK?",
+        "bar": "log quiet, still reading - game closed or AFK?",
         "overlay": "log quiet",
         "overlay_alone": false,
         "check_row": "last_line",
@@ -216,9 +216,9 @@
 
 
   /* TC-EVAL-UI: the item check card shows from the hotkey press until the
-     core's expires_at (state.py EVAL_CARD_S), then leaves by itself. While
-     it shows it takes the one card slot (design 0001 section 10: at most
-     one card), so the trade card waits; trades stay on the dashboard. */
+     core's expires_at (server/al/text/overlaycard.py EVAL_CARD_S), then
+     leaves by itself. While it shows it takes the one card slot (design
+     0001 section 10: at most one card), so the trade card waits; trades stay on the dashboard. */
   /* PRICE-1-UI (decision 0016): a core that sends "card" has already
      chosen the one card (item check, price check, or both from one press);
      it shows until its expires_at. An older core without the field keeps
