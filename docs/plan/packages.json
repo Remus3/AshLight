@@ -13737,7 +13737,8 @@
     "server/al/http.py",
     "tests/test_keepalive.py",
     "tests/test_supervisor.py",
-    "docs/decisions/0005-core-keepalive.md"
+    "docs/decisions/0005-core-keepalive.md",
+    "tests/test_core_crash_log.py"
    ],
    "new_files": [
     "server/al/plug/supervisor.py"
@@ -13772,7 +13773,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. keepalive.py: Keepalive.__init__ / step / _crashed / _write_state (209-383) and health_check (194-207). http.py: the /api/health arm (234-238) adds loop_age_s from core.loop_at (RUN-SEAMS). The Checks sentence lives in plug/supervisor.py. Worst-case hang recovery 97 s -> 102 s, inside the 120 s budget. One dated amendment paragraph in decision 0005.",
+   "notes": "Tier P2. keepalive.py: Keepalive.__init__ / step / _crashed / _write_state (209-383) and health_check (194-207). http.py: the /api/health arm (234-238) adds loop_age_s from core.loop_at (RUN-SEAMS). The Checks sentence lives in plug/supervisor.py. Worst-case hang recovery 97 s -> 102 s, inside the 120 s budget. One dated amendment paragraph in decision 0005. Ruling A precedent applied 2026-11-21 (session 17): tests/test_core_crash_log.py test_supervisor_kill_writes_record pinned the old one-step stale kill; this package owns that test and updates it to the two-failed-checks verdict, keeping the supervisor-kill record assertions.",
    "wave": 19,
    "owner": "session",
    "tier": "P2",
@@ -14041,7 +14042,10 @@
    "units": [
     "F-105"
    ],
-   "files": [],
+   "files": [
+    "tests/test_overlay_smoke.py",
+    "app/test/audit_electron.test.js"
+   ],
    "new_files": [
     "app/crashguard.js",
     "app/parts/05-crashguard.js",
@@ -14071,7 +14075,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. app/crashguard.js (new, pure, clock injected): counters for 'N events in a window' (errors 3 in 60 s -> relaunch once; overlay rebuilds 3 in 10 min -> stop and report). app/parts/05-crashguard.js: hook early: process.on('uncaughtException') and ('unhandledRejection') log the stack through ctx.log and carry on (a registered handler is what suppresses Electron's error dialog); at the cap app.relaunch() then app.exit(0) - the core never restarts the client (decision 0041 point 2). Hook overlayWindow: render-process-gone, unresponsive, did-fail-load -> ctx.actions.restartOverlay() within the cap. Hook clientWindow: the same three events reload the companion (win.webContents.reload()). Hooks quit and the relaunch path write ops/runtime/client-exit.json atomically ({at, reason: quit | relaunch | crash, detail}) for the Checks row of OVL-OBS-CRASH. After the cap set the tray tooltip through ctx.getClient().tray(). No setInterval; no new window, process or dialog; the overlay budget tests stay green. Decision 0041 point 2 already says the client, not the core, restarts the client: no decision edit; the caps go into the commit message.",
+   "notes": "Tier P2. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. app/crashguard.js (new, pure, clock injected): counters for 'N events in a window' (errors 3 in 60 s -> relaunch once; overlay rebuilds 3 in 10 min -> stop and report). app/parts/05-crashguard.js: hook early: process.on('uncaughtException') and ('unhandledRejection') log the stack through ctx.log and carry on (a registered handler is what suppresses Electron's error dialog); at the cap app.relaunch() then app.exit(0) - the core never restarts the client (decision 0041 point 2). Hook overlayWindow: render-process-gone, unresponsive, did-fail-load -> ctx.actions.restartOverlay() within the cap. Hook clientWindow: the same three events reload the companion (win.webContents.reload()). Hooks quit and the relaunch path write ops/runtime/client-exit.json atomically ({at, reason: quit | relaunch | crash, detail}) for the Checks row of OVL-OBS-CRASH. After the cap set the tray tooltip through ctx.getClient().tray(). No setInterval; no new window, process or dialog; the overlay budget tests stay green. Decision 0041 point 2 already says the client, not the core, restarts the client: no decision edit; the caps go into the commit message. Adjudicator ruling 2026-11-21 (session 17, as ruling A): 05-crashguard.js sorts ahead of 10-guards.js on purpose (its early hook catches throws from later parts), so tests/test_overlay_smoke.py and app/test/audit_electron.test.js relax the 'guards part is first' assertion to 'first, or second after 05-crashguard.js, and 05 creates no window or webContents'. Reverses if: 05-crashguard.js ever creates a window or webContents, a part sorting before 10-guards.js does so, or decision 0053's ordering changes.",
    "wave": 19,
    "owner": "session",
    "tier": "P2",
