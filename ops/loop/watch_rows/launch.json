@@ -1,0 +1,34 @@
+{
+ "kinds": {
+  "gatepoe210": {
+   "act": "gate",
+   "id": "GATE-POE2-10",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "Gate: PoE2 1.0 is live (the launch date has passed and an upstream record shows 1.0).",
+   "tokens": {},
+   "sample": {}
+  },
+  "gateact5seen": {
+   "act": "gate",
+   "id": "GATE-ACT5-SEEN",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "Gate: the operator's own log shows Act 5 (run history or parse ledger).",
+   "tokens": {},
+   "sample": {}
+  },
+  "launchcheck": {
+   "act": "row",
+   "id": "LAUNCH-CHECK-<YYYYMMDD>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session",
+   "text": "The 1.0 date passed 3 days ago and no upstream shows 1.0: confirm the launch state from the allowed sources. ACCEPT: the gate is flipped by hand or a new date is recorded. SOURCE: watch launch no-signal, filed <YYYY-MM-DD>.",
+   "tokens": {},
+   "sample": {}
+  }
+ }
+}
