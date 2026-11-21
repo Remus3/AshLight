@@ -10,15 +10,16 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
 - FOLDED 2026-11-18: LIVE-1 -> RUN-LEDGER-CORE, RUN-LEDGER-WIRE, RUN-LEDGER-REPORT, RUN-LIVE1-FIXTURES (docs/plan/07 Coverage; the old row text is in git history).
 - FOLDED 2026-11-18: TEST-LIVE-CLICKS -> RUN-LIVE-CLICKS-STRIKE, RUN-LEDGER-WIRE, RUN-LEDGER-REPORT, RUN-LIVE-CLICKS-CLOSE (docs/plan/07 Coverage; the old row text is in git history).
 - FOLDED 2026-11-18: OVL-BUDGET -> RUN-BUDGET-LOG-CORE, RUN-BUDGET-LOG-CLIENT, RUN-OVL-BUDGET-CLOSE (docs/plan/07 Coverage; the old row text is in git history).
-- [ ] OVL-FPS (review) OVL-FPS: record the in-map overlay check result (budget B19) and close the
-  row. ACCEPT: python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
-  tests/test_leak_sweep.py passes and git grep -n B19 --
-  docs/decisions/0006-fps-measurement-method.md shows the dated result line with the report's
-  figures and `git grep -n "B19" -- docs/decisions/0002-stack.md` prints exactly that one appended
-  line. ZERO-CLICK: The operator plays one map they would play anyway; the schedule, the record and
-  this write-up need no further act. DEPENDS: OVL-CHECK, RUN-BUDGET-LOG-CORE. BLOCKED: one normally
-  played map with tools/ovl_check.py armed (Q-18, budget B19); unblocks when the sidecar Logs dir
-  holds an ovl_check report JSON that includes the operator's same / dropped answer (operator).
+- [ ] OVL-FPS (review) OVL-FPS: record the in-map overlay check result (budget B19, ruling Q-18) and close the
+  row. ACCEPT: budget B19, documented as a proxy: no change on the game's own FPS display with the
+  HUD on (the operator's same / dropped answer), AshLight CPU under 1 percent, system totals within
+  noise; method: tools/ovl_check.py; the numbers go in decision 0006 (not 0002, ruling Q-18):
+  python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py
+  passes and git grep -n B19 -- docs/decisions/0006-fps-measurement-method.md shows the dated result
+  line with the report's figures. ZERO-CLICK: The operator plays one map they would play anyway; the
+  schedule, the record and this write-up need no further act. DEPENDS: OVL-CHECK, RUN-BUDGET-LOG-CORE.
+  BLOCKED: operator plays one map with tools/ovl_check.py armed (Q-18, B19); the loop skips it until
+  then (operator).
 - [ ] CORE-REGOPEN-ROOT (build) A test core's Checks stat of the docs-watch flag (core.py, REG_OPEN under paths.runtime_dir()) reads the real ops/runtime folder; it must use the core's own runtime root so a test or demo core never touches live runtime (found by PLAY-TD-01A-PLAY-STATES). ACCEPT: python -m pytest -q tests/test_play_states.py passes with a test that a core on a tmp runtime root never stats the live ops/runtime path. ZERO-CLICK: No click: a code fix the loop lands by itself. BLOCKED: session wave 7.
 - [ ] TC-CARD-PARTS-DOC (build) Item card words in design 0001 section 9 (TCP-8 of the TC-CARD-PARTS
   review): one line naming the mark words (Upgrade, Sidegrade, Downgrade, Not checked, Risky, No risky
@@ -45,7 +46,7 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
   tests/test_floor_static.py` is green and `npm test --prefix app` passes. ZERO-CLICK: The lane or
   AUTO-17 runs render and check; no window appears. DEPENDS: AUTO-15, TEST-CAPTURE-HELPER. BLOCKED:
   session wave 20.
-- [ ] PLAY-PAGER-SCALE-24 (build) Confirm the pager buttons (.al-pager-btn, 1.5rem) and the compact weight inputs stay at least 24 px when the UI scale --al-s is below 1; clamp with max(24px, 1.5rem) if not; also add tabindex=-1 to the #prices-title markup (D-1) and make the disabled dashed edge 2px if it reads faint (D-2). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_ux_review.py passes and npm test --prefix app passes with the scale below 1 measured at 24 px or more. ZERO-CLICK: Nothing for players; a layout floor that holds by itself. DEPENDS: PLAY-TD-19D-ITEMS-GRID. BLOCKED: session wave 21.
+- [ ] PLAY-PAGER-SCALE-24 (build) Confirm the pager buttons (.al-pager-btn, 1.5rem) and the compact weight inputs stay at least 24 px when the UI scale --al-s is below 1; clamp with max(24px, 1.5rem) if not; make the disabled dashed edge 2px if it reads faint (D-2). The D-1 #prices-title tabindex part is split out to PRICES-TITLE-TABINDEX (ruling Q2 amended, 2026-11-21). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_ux_review.py passes and npm test --prefix app passes with the scale below 1 measured at 24 px or more. ZERO-CLICK: Nothing for players; a layout floor that holds by itself. DEPENDS: PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20A-RUN-GRID. BLOCKED: session wave 24.
 - [ ] REL-INSTALLED-RUN-CHECK (build) In an installed copy run.ps1 does not start the client (its electron.exe check calls tools/electron_pin.py, which config/ship_list.json does not ship) and its failure log line points at setup.ps1; ship an installed-copy check route (or verify via the install marker) and fix the log line. ACCEPT: python -m pytest -q tests/test_install_shell.py passes with a test where an installed-layout run.ps1 verifies electron.exe without tools/electron_pin.py and the failure line names the installer, not setup.ps1. ZERO-CLICK: An installed copy starts its client by itself with no manual step. DEPENDS: REL-RUNTIME-SCRIPTS. BLOCKED: session wave 21.
 - [ ] TEST-SUITE-HOLD-75 (build) Bring the gated whole-suite hold under its target: profile phase 1 by test file (gate log), then raise WORKERS in tools/suite_run.py or move the slowest work out, and record whether to re-set the 75 s target (4437 tests, phase 2 fixed ~37 s). Evidence: docs/research/0049-test-suite-speed.md second addendum (median 181.3 s, 11 runs). ACCEPT: python -m pytest -q tests/test_research_numbers.py tests/test_ascii_lf.py tests/test_leak_sweep.py is green and the note's third dated addendum shows the profile, the change and a gated median hold at or under the target. ZERO-CLICK: The gate runs itself. DEPENDS: TEST-SUITE-SOAK. BLOCKED: session wave 20.
 

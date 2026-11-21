@@ -457,7 +457,8 @@ of the HALT check.
 - OVL-FPS never uses PresentMon or ETW Present tracing of the game, not even
   dev-only (decision 0006). AshLight's own-process counters (budget log)
   are a Checks-class self-diagnostic and ship; the on / off FPS measurement
-  still never ships (0006 note 2026-11-18). Reverses if: GGG explicitly
+  still never ships (0006 note 2026-11-18); note 2026-11-21 (B19
+  acceptance, tools/ovl_check.py). Reverses if: GGG explicitly
   permits it or the operator rules OS performance telemetry is allowed.
 - PoB2 share codes: stdlib codec, share-URL fetch deferred to TC-URL, no
   clipboard read in the codec (decision 0007). Reverses if: a real PoB2
