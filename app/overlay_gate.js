@@ -29,7 +29,7 @@ const HINTS = {
     "or the tray brings it back.",
   hidden_idle: "The overlay is hidden because the game looks closed (no new game log " +
     "line for a while). It comes back on the next one.",
-  starting: "The overlay is starting. It shows once the game log is active."
+  starting: "The overlay is starting. This takes a few seconds."
 };
 
 function createOverlayGate(view, log) {

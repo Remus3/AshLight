@@ -133,7 +133,7 @@ test("gate exposes one of four states", () => {
   for (const sentence of Gate.HINTS.shown.split(/(?<=\.) /)) {
     assert.ok(sentence.split(" ").length <= 20, sentence);
   }
-  assert.match(Gate.HINTS.starting, /once the game log is active/);
+  assert.match(Gate.HINTS.starting, /a few seconds/);
   const mod = code(fs.readFileSync(path.join(__dirname, "..", "overlay_gate.js"), "utf8"));
   for (const word of ["require(", "getAllDisplays", "getAllWindows", "getFocusedWindow", "FindWindow",
                       "process", "child_process"]) {
