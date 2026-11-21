@@ -388,6 +388,10 @@ checkout runs on the dev port.
   the whole suite runs once per merge batch through the gate before main
   moves (decision 0060).
 - No AI or bot attribution trailer (FLEET item 17; the commit-msg hook strips).
+- A release is published only by
+  `python tools/release.py publish --version X.Y.Z --go "release X.Y.Z"`
+  in an interactive session after the operator typed that phrase; lanes,
+  loop ticks and inbox responders never tag or publish (decision 0073).
 
 ## Loop (headless lanes, copied from the fleet's lane pattern) - ARMED
 
@@ -1097,6 +1101,16 @@ of the HALT check.
   artifact (decision 0064; 0041 point 9 stands). Reverses if: the operator
   gets a signing identity, or SmartScreen friction measurably blocks
   installs.
+- Versioning and release trigger: SemVer 0.y.z, tag = v + VERSION; a
+  release only from a REL-PREP milestone row or an explicit version
+  request, published only on the operator's phrase `release X.Y.Z`
+  through tools/release.py publish (tools/rel_publish.py: every gate
+  checked, every refusal named, a refusal changes nothing), never by a
+  lane, tick or inbox responder; CI rebuilds and publishes on the tag;
+  the rehearsal names the configured remote and pushes nothing; the
+  no-remote gate is kept and proven by the injected-git test (decision
+  0073). Reverses if: the operator rules that milestones may publish
+  themselves, or the remote is removed.
 - KINDLER: the build generator "Kindler" ranks AshLight-authored
   archetype templates (server/al/data/archetypes.json, JSON never run as
   code, src and checked, hot reloaded, nothing copied) scored only by
