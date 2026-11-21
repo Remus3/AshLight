@@ -73,20 +73,18 @@ window: glance numbers clamp(2rem, 2.6vw, 2.75rem), zone name
 clamp(1.5rem, 2.2vw, 2.25rem), zone timer 1.3rem; tiles pad 8px 12px
 (4px 10px at 820px tall or less), stat sub lines 0.9rem, footer 0.8125rem.
 
-Overlay (CSS px at zoom 1.0; the window zoom is the layout `scale`):
+Overlay (CSS px at zoom 1.0; the window zoom is the layout `scale`). Two
+sizes only, both weight 600, line-height 1.3, tabular numerals, set by two
+tokens in `app/overlay/overlay.css` (TD-05, OVL-TD05-LEGIBILITY):
 
-| Role | Size | Weight |
+| Token | Size | Roles |
 |---|---|---|
-| zone line | 16px | 600 |
-| zone timer (full text colour, never clipped) | 16px | 600 |
-| HUD numbers | 15px | 600 |
-| trade card | 14px | 600 |
-| secondary (where, more, status) | 13px | 600 |
+| `--al-ovl-fs-hud` | 16px | HUD lines: zone line, zone timer (full text colour, never clipped), level and deaths, the status word |
+| `--al-ovl-fs-card` | 14px | card lines: trade card, item check card, price card (the guide line and key hint take it when they land) |
 
-Overlay rule: rendered text never under 12px **after** zoom, so the
-smallest overlay size times the minimum `scale` must be >= 12px. With the
-13px secondary size that means `scale >= 0.93`; see audit 0002 for the
-current 0.75 floor.
+Nothing on the overlay is under 14px. Overlay rule: rendered text never
+under 12px **after** zoom, so the smallest overlay size times the minimum
+`scale` must be >= 12px; with 14px that means `scale >= 0.86`.
 
 ## 4. Spacing and shape
 
@@ -161,20 +159,27 @@ AshLight additions:
 
 | Token | Value | Why |
 |---|---|---|
-| `--al-plate` (overlay) | rgba(15, 18, 22, 0.92) | HUD plate; 0.92 keeps all overlay text >= 4.5:1 over a pure white scene |
+| `--al-plate` (overlay) | rgba(15, 18, 22, var(--al-plate-a, 0.86)) | HUD plate; the plate alone carries the alpha (default 0.86, floor 0.80); text stays opaque (5.2) |
+| `--al-ovl-text-2` (overlay) | #c3c9d0 | overlay secondary text (where, more, the card's third line); kit `text-muted` is 3.91:1 at the alpha floor, so it is not overlay text |
+| `--al-ovl-warn` (overlay) | #f0bd55 | overlay warn word (the status slot); kit `status-warn` stays an edge colour on the overlay |
 | `--al-control-edge` | #7a828c light, #737c88 dark | control boundary: inputs, selects, textareas, secondary buttons, checkboxes; kit `border` is 1.3-1.6:1, too faint for SC 1.4.11, and `text-muted` is louder than the content; `--fk-text` under `prefers-contrast: more` |
 | `--al-text-body` | #30353c light, #c5ccd3 dark | sentences and rows inside cards; `--fk-text` stays on values, names, headings and verdict words |
 
-Overlay colours mirror the kit dark theme (`text`, `text-muted`, `border`,
-`status-warn`, `status-bad`). The overlay is always dark: it sits on a game
-scene, not on a page, so it does not follow `prefers-color-scheme`.
+Overlay colours mirror the kit dark theme (`surface`, `text`, `border`,
+`status-warn`, `status-ok`) plus the two overlay-only text tokens above.
+Green, red and the warn amber are never overlay text: they are card edges,
+and the word carries the meaning. The overlay is always dark: it sits on a
+game scene, not on a page, so it does not follow `prefers-color-scheme`.
 
 ### 5.2 Measured contrast
 
 Computed with the WCAG 2.2 relative-luminance formula (sRGB linearised,
 `(L1 + 0.05) / (L2 + 0.05)`), not estimated. `overlay.plate-worst` is
-`--al-plate` composited over #ffffff: the brightest possible game scene is
-the worst case for light text on a translucent dark plate. Each row is
+`--al-plate` at its default alpha (0.86) composited over #ffffff, and
+`overlay.plate-floor` the same at the 0.80 alpha floor: the brightest
+possible game scene is the worst case for light text on a translucent dark
+plate. Overlay text is opaque, so the text colour is used as it is. Each
+row is
 `foreground background minimum measured`; `tests/test_design_contrast.py`
 recomputes every row from the token files and fails if a ratio drops under
 its minimum or no longer matches the number written here.
@@ -212,11 +217,18 @@ light.text-muted light.surface 3.0 6.68
 light.text light.surface-2 3.0 15.37
 dark.text-muted dark.surface 3.0 7.18
 dark.text dark.surface-2 3.0 13.89
-# overlay over the worst-case (white) scene
-overlay.text overlay.plate-worst 4.5 12.50
-overlay.text-muted overlay.plate-worst 4.5 5.89
-overlay.status-warn overlay.plate-worst 4.5 6.13
-overlay.status-bad overlay.plate-worst 4.5 4.78
+# overlay text over the worst-case (white) scene: default plate 0.86 (7:1)
+overlay.text overlay.plate-worst 7.0 10.28
+overlay.al-ovl-text-2 overlay.plate-worst 7.0 7.59
+overlay.al-ovl-warn overlay.plate-worst 7.0 7.30
+# overlay text at the 0.80 alpha floor: primary 7:1, secondary and warn 5.5:1
+overlay.text overlay.plate-floor 7.0 8.30
+overlay.al-ovl-text-2 overlay.plate-floor 5.5 6.13
+overlay.al-ovl-warn overlay.plate-floor 5.5 5.90
+# overlay card edges at the alpha floor (SC 1.4.11, 3:1)
+overlay.status-ok overlay.plate-floor 3.0 4.03
+overlay.status-warn overlay.plate-floor 3.0 4.07
+overlay.al-edge overlay.plate-floor 3.0 3.91
 ```
 
 AshLight's own dashboard colours are measured the same way in the block
@@ -242,22 +254,24 @@ surface, 1.30:1 on surface-2; dark 1.59:1 / 1.45:1). It is a decorative
 divider only; anything a user must find (an input, a button edge) uses the
 control-boundary colour.
 
-Overlay window opacity multiplies text and plate together. Measured over a
-white scene with the 0.92 plate, every alpha composite rounded to 8 bits a
-channel as the framebuffer stores it (unrounded maths gives about +0.03),
-text / text-muted: window opacity 1.0
-gives 12.50 / 5.89, 0.9 gives 9.34 / 4.80, 0.85 gives 7.94 / 4.29, 0.7
-gives 4.99 / 3.05, 0.5 gives 2.83 / 2.01. Rule: the effective overlay
-opacity floor is the value that keeps `text-muted` at 4.5:1 over white,
-0.87 with the 0.92 plate (measured 0.867); the slider floor is 0.9
-(`layout.js` LIMITS.opacity, DS-OPACITY).
-At the 0.9 default and floor (`layout.js` LIMITS) status-warn reads 4.96
-and status-bad 3.92, so status-bad is never an overlay text colour;
-`tests/test_ux_review.py` checks every overlay text colour at the floor
-(audit 0004 U1). High-contrast mode (`prefers-contrast: more`) lifts muted
-text to the text colour on both surfaces and drops the plate's own alpha
-(the window opacity still applies); the overlay card's neutral edge keeps
-its `--al-edge` colour (U3).
+Overlay legibility (TD-05, note 0041 recipe): text is opaque and the plate
+alone carries the alpha, so a bright scene darkens only behind the plate.
+Every alpha composite is rounded to 8 bits a channel as the framebuffer
+stores it. Floors: text >= 7:1 at the default plate and secondary and warn
+text >= 5.5:1 at the 0.80 floor over white (primary stays >= 7:1 there);
+card edges >= 3:1. `tests/test_design_contrast.py` also checks every
+overlay text and edge colour over a warm bright scene (#f2e6c8), where each
+ratio is higher (text 10.76, secondary 7.94, warn 7.65 at 0.86). The kit
+`border` edge (#323840) is decorative only. Interim until OVL-TD05-PLATE:
+the overlay CSS has no page opacity, but `app/main.js` still inserts the
+layout's page opacity (`layout.js` LIMITS.opacity, 0.9 to 1.0) over the
+whole window; at its 0.9 floor with the 0.86 plate the white-scene values
+are text 7.69, secondary 5.86, warn 5.68, still above the old 4.5:1 floor
+that `tests/test_ux_review.py` keeps checking until the slider sets the
+plate alpha only. High-contrast mode (`prefers-contrast: more`) lifts
+secondary text to the text colour on both surfaces and makes the overlay
+plate opaque; the overlay card's neutral edge keeps its `--al-edge` colour
+(U3).
 
 ### 5.3 Colour-blind safety
 
@@ -633,20 +647,23 @@ Generation rules:
   the trade card comes back by itself. Never two cards at once. A price
   check from the same press shares that card (decision 0016: merged card,
   or the price-only card when no build is loaded).
-- Plate: `--al-plate` (92 percent) with a 1px kit-border edge and a
-  `0 1px 1px #000` text shadow (source 4: outlines and shadows separate
-  text from busy scenes). In high-contrast mode (`prefers-contrast:
-  more`) the plate has no alpha of its own; the window opacity still
-  applies (audit 0004 U3). In Windows forced colours the plate is opaque
+- Plate: `--al-plate` (86 percent by default, `--al-plate-a` 0.80 to 1.0)
+  with a 1px kit-border edge and the halo `0 0 2px #000, 0 0 2px #000,
+  0 1px 2px #000`, no stroke (`--al-halo`; source 4: outlines and shadows
+  separate text from busy scenes). Text is opaque. In high-contrast mode
+  (`prefers-contrast: more`) the plate is opaque and secondary text takes
+  the text colour (audit 0004 U3). In Windows forced colours the plate is opaque
   Canvas, text and edges take the system theme (the trade, upgrade and
   risky-waystone edges use Highlight; elsewhere the risky waystone edge
   is status-warn, audit 0004 U24), the page root opts out so the window stays
   transparent, and contrast is the theme's own, not measured here; the
   window opacity slider still multiplies (audit 0004 U8).
-- Opacity: the effective opacity must keep every overlay text pair >= 4.5:1
-  over a white scene (5.2). Decorative transparency comes from the plate,
-  not from fading the text.
-- Size: secondary text >= 12px after zoom (section 3).
+- Opacity: overlay text pairs >= 7:1 at the default plate and >= 5.5:1 at
+  the alpha floor over a white scene, card edges >= 3:1 (5.2). Decorative
+  transparency comes from the plate, never from fading the text; the
+  overlay CSS has no page opacity (until OVL-TD05-PLATE, main.js still
+  inserts the layout's 0.9 to 1.0 page opacity, 5.2).
+- Size: two sizes, 16px HUD and 14px card; >= 12px after zoom (section 3).
 - No flashing, ever (WCAG 2.3.1; the overlay is in peripheral vision during
   combat). No animation, no transition, no blinking caret, no colour
   cycling. A change is a single repaint.
