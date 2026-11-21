@@ -206,9 +206,14 @@ test("Play holds only the regions; tools and the full cards live in other tabs",
   const build = HTML.slice(HTML.indexOf('id="panel-build"'), HTML.indexOf('id="panel-run"'));
   assert.match(build, /^id="panel-build"[^>]*>\s*<div class="col">\s*<section id="buildbox"/);
   assert.match(build, /<\/div>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="evalbox"/);
-  ["buildbox", "healthbox", "searchbox", "evalbox", "eval-result", "price-result", "pricebox",
-    "valuebox", "upgradebox", "pricesbox", "watchbox", "weightsbox"].forEach((id) => {
+  // PLAY-TD-19D-ITEMS-GRID (F-056): the price, value and upgrade boxes are
+  // rows of the Last item card and the separate price watch card is gone
+  ["buildbox", "healthbox", "searchbox", "evalbox", "eval-result", "price-result", "eval-rows",
+    "pricesbox", "prices-list", "weightsbox"].forEach((id) => {
     assert.ok(build.includes('id="' + id + '"'), id);
+  });
+  ["watchbox", "pricebox", "valuebox", "upgradebox", "movers"].forEach((id) => {
+    assert.ok(!HTML.includes('id="' + id + '"'), id);
   });
   assert.ok(build.indexOf('id="searchbox"') < build.indexOf('id="evalbox"'));
   // PLAY-LEGACY-OUT-1: the old strip tiles, trade card and build alert slot are gone
