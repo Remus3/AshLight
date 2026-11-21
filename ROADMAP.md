@@ -33,6 +33,19 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
 
 ## Lane: data
 
+- [ ] LIVE-1-ACCEPTED (data) Live-verify the trade accepted / cancelled log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the trade accepted / cancelled item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-AFK (data) Live-verify the AFK log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the AFK item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-CRUEL (data) Live-verify the Cruel area id log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the Cruel area id item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-DEATH (data) Live-verify the death log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the death item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-GUILD (data) Live-verify the guild log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the guild item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-HIDEOUT (data) Live-verify the hideout log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the hideout item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-JOINED (data) Live-verify the area joined log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the area joined item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-MAP (data) Live-verify the endgame Map area id log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the endgame Map area id item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-PARTY (data) Live-verify the party join / leave log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the party join / leave item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-TRADE (data) Live-verify the trade request log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the trade request item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-1-WHISPER (data) Live-verify the whisper log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the whisper item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+- [ ] LIVE-WAYSTONE (data) Live-verify the waystone item text shape from the parse ledger's masked waystone block. ACCEPT: python tools/live1_report.py prints VERIFIED live for the waystone item. ZERO-CLICK: The operator only presses the item key on a waystone in normal play; the ledger keeps the masked shape by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
+
 
 ## Lane: review
 
@@ -243,69 +256,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 16: theorycraft, loop and watchers, reliability and observability
 
-- [ ] OVL-KEYS-WEB (build) Dashboard prints the real keys, one change-key field per chord, one Play
-  line while the overlay is off. ACCEPT: node --test app/test/hotkeys_view.test.js
-  app/test/prices.test.js and python -m pytest -q tests/test_ux_review.py tests/test_ux_b8.py
-  tests/test_newbie_hints.py tests/test_a11y.py pass, and git grep -n -F "Alt+Shift+" -- web
-  server/al/hints.py prints nothing. ZERO-CLICK: The keys shown follow the registration by
-  themselves; rebinding is one optional field, saved on change. DEPENDS: OVL-KEYS-CORE. BLOCKED:
-  session wave 16.
-- [ ] RUN-LEDGER-WIRE (build) Wire the ledger: feed_line hook, write tick, drift note, read-back
-  flags, waystone shape. ACCEPT: python -m pytest -q tests/test_ledger_wire.py
-  tests/test_ledger_consent.py tests/test_budgets.py passes. ZERO-CLICK: After the one consent click
-  (RUN-LEDGER-CONSENT (folded into RUN-METRICS-SITES)) the ledger fills in normal play by itself.
-  DEPENDS: RUN-METRICS-SITES. BLOCKED: session wave 16.
-- [ ] RUN-OBS-LOGS-PY (build) Python logs bounded, one format, a banner per start, faulthandler on
-  its own file + Heavy child processes start below normal priority. ACCEPT: python -m pytest -q
-  tests/test_logs.py tests/test_core_crash_log.py tests/test_keepalive.py tests/test_tc_bridge.py
-  passes. Also (folded RUN-CALC-PRIORITY): python -m pytest -q tests/test_tc_bridge.py
-  tests/test_keepalive.py tests/test_tc_drift.py tests/test_ascii_lf.py passes. ZERO-CLICK: At
-  start, by itself. Also (folded RUN-CALC-PRIORITY): Automatic. DEPENDS: RUN-BUILD-STAMP-CORE,
-  RUN-DURABLE-CRLF, RUN-METRICS-SITES. BLOCKED: session wave 16.
-- [ ] TC-CALC-OPTIN-BUTTON (build) 'Set up the Path of Building calc' button in the client. ACCEPT:
-  npm test --prefix app passes. ZERO-CLICK: One click, the decision 0018 opt-in; setup then runs and
-  reports by itself. DEPENDS: TC-CALC-OPTIN, TC-WORN-KEY, OVL-KEYS-CLIENT. BLOCKED: session wave 16.
-- [ ] REL-UPDATE-SWITCH (build) Update: apply-staged, confirm and rollback. ACCEPT: python -m pytest
-  -q tests/test_update_switch.py tests/test_updater.py tests/test_install_shell.py passes.
-  ZERO-CLICK: Applied at the next client start by itself; rollback needs no click. DEPENDS: DEP-11,
-  REL-INSTALL-SHELL. BLOCKED: session wave 16.
-- [ ] TC-GGG-LISTENER (build) One-shot loopback listener for the OAuth redirect. ACCEPT: python -m
-  pytest -q tests/test_oauthlisten.py tests/test_port_resolve.py tests/test_floor_static.py passes.
-  ZERO-CLICK: Dev step: offline module proven by its tests; nothing listens in play until TC-IMPORT
-  wires it. BLOCKED: session wave 16.
-- [ ] DATA-GUIDE-BOSS (data) Boss elements move from campaign.BOSS_ZONES into the guide file.
-  ACCEPT: python -m pytest -q tests/test_util_campaign.py tests/test_zone_guide.py
-  tests/test_provenance.py tests/test_bus_state.py tests/test_hot_reload.py passes and python -c
-  "import server.al.campaign as c; assert not hasattr(c, 'BOSS_ZONES')" exits 0. ZERO-CLICK: Data
-  only; the guide file hot-reloads (decision 0042) and the boss hint follows the log with no click.
-  DEPENDS: DATA-GUIDE-MERGE. BLOCKED: session wave 16.
-- [ ] LOOP-USAGE-LABEL (build) The row id reaches the lane's usage line. ACCEPT: `python -m pytest
-  -q tests/test_lane_usage_label.py tests/test_al_lane.py tests/test_al_lane_sidecar.py
-  tests/test_p163_lane_tools.py` passes. ZERO-CLICK: Unattended: every lane run labels its own usage
-  line; nobody tags runs by hand. BLOCKED: session wave 16.
-- [ ] TEST-DOCS-FACTS-UI (build) docs_fresh.py: hotkeys, budgets, settings keys and tab names.
-  ACCEPT: python -m pytest -q tests/test_docs_fresh.py passes and python tools/docs_fresh.py check
-  exits 0 on the tree. ZERO-CLICK: Unattended: runs as a test; a package that renames a tab or moves
-  a hotkey sees README named as stale in its own subset. DEPENDS: TEST-DOCS-INDEX. BLOCKED: session
-  wave 16.
-- [ ] AUTO-09 (build) ELECTRON-WATCH sources: releases, schedule and npm audit. ACCEPT: `python -m
-  pytest -q tests/test_watch_electron.py tests/test_watch_rows.py` passes. ZERO-CLICK: Unattended:
-  the only exposure that grows by itself is watched daily and turns into a row the loop works.
-  DEPENDS: AUTO-05, LOOP-WATCH-ROWS, LOOP-ELECTRON-POLICY. BLOCKED: session wave 16.
-- [ ] TC-CHARJSON-SHAPES (build) charjson reads the item shapes GGG documents today. ACCEPT: python
-  -m pytest -q tests/test_tc_json.py tests/test_tc_code_api.py passes with a new both-shapes fixture
-  in tests/tc_fixtures.py. ZERO-CLICK: Same paste path, no new press. BLOCKED: session wave 16.
-- [ ] AUTO-07 (build) LAUNCH-GATE: the 1.0 rows open by themselves (due 2026-12-04). ACCEPT: `python
-  -m pytest -q tests/test_watch_launch.py tests/test_watch_rows.py` passes, driven end to end with a
-  fake clock from a source record to a committed done file in a scratch repository. ZERO-CLICK:
-  Unattended, bar the operator's own play session that the floor requires of a log read: the gate
-  flips on a tick and the dependent rows are dispatched. DEPENDS: AUTO-03, AUTO-05, LOOP-WATCH-ROWS,
-  LOOP-WATCH-FILE, LOOP-WATCH-META, AUTO-04. BLOCKED: session wave 16.
-- [ ] SEC-CEIL-WEBFETCH (build) A total deadline per outbound request. ACCEPT: python -m pytest -q
-  tests/test_webfetch_deadline.py tests/test_data_ninja.py tests/test_tc_url.py passes: a fake
-  response object yielding one byte a second raises FetchError at the total deadline with an
-  injected clock. ZERO-CLICK: Code change; opt-in, User-Agent and host lists do not change. DEPENDS:
-  RUN-METRICS-SITES.
 
 ### Wave 17: go-public, theorycraft, tests and code seams
 
