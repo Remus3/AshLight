@@ -12,10 +12,15 @@
    the child's working directory (the repo), so a planted powershell.exe or
    python.exe there would run. PowerShell runs by its absolute System32
    path (psExe) and Python only from an absolute PATH entry (whichAbs, the
-   which_abs rule of server/al/exepin.py). */
+   which_abs rule of server/al/exepin.py).
+   REL-CLIENT-HOME (F-049): resolveSidecar(), startCore() and stopAll() take
+   their script path, cwd, Python command and child environment from the
+   one client resolver (app/client/home.js); a bare repository root still
+   works (a checkout home). */
 
 const childProcess = require("child_process");
 const path = require("path");
+const Home = require("./home.js");
 
 const PYTHONS = ["python", "py"];
 
@@ -75,15 +80,20 @@ function psArgs(script, extra) {
 /* The AL sidecar root from server.al.paths, or "" when Python is missing.
    Used only when the client was started without AL_SIDECAR_ROOT (a Start
    Menu shortcut), so the Electron profile and the single-instance lock are
-   the same ones scripts\run.ps1 gives the overlay. */
-function resolveSidecar(repo, exec, env, fsMod) {
+   the same ones scripts\run.ps1 gives the overlay. home is a resolve()
+   result of app/client/home.js or a repository root; the command is
+   Home.pythonCmd's ("-m" form in a checkout, python looked up in an
+   absolute PATH entry; boot.py under the marker's runtime in an install). */
+function resolveSidecar(home, exec, env, fsMod) {
   const run = exec || childProcess.execFileSync;
-  for (const name of PYTHONS) {
-    const py = whichAbs(name, env, fsMod);
+  const h = Home.asHome(home, env);
+  const cmd = Home.pythonCmd(h, "server.al.paths", []);
+  const exes = cmd.exe ? [cmd.exe] : PYTHONS.map((name) => whichAbs(name, env, fsMod));
+  for (const py of exes) {
     if (!py) { continue; }
     try {
-      const out = run(py, ["-m", "server.al.paths"], {
-        cwd: repo, windowsHide: true, timeout: 15000, encoding: "utf8",
+      const out = run(py, cmd.args, {
+        cwd: h.root, env: Home.childEnv(env), windowsHide: true, timeout: 15000, encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"]
       });
       const doc = JSON.parse(String(out));
@@ -98,13 +108,14 @@ function resolveSidecar(repo, exec, env, fsMod) {
    detaches the core and supervisor itself (WMI). It converges to one
    core, one supervisor and (this process already being the overlay) no
    second overlay. Returns the child pid or 0. */
-function startCore(repo, port, spawn, env) {
+function startCore(home, port, spawn, env) {
   const run = spawn || childProcess.spawn;
+  const root = Home.asHome(home, env).root;
   const extra = ["-NoBrowser"];
   if (Number.isInteger(port) && port > 0) { extra.push("-Port", String(port)); }
   try {
-    const child = run(psExe(env), psArgs(path.join(repo, "scripts", "run.ps1"), extra), {
-      cwd: repo, detached: false, windowsHide: true, stdio: "ignore"
+    const child = run(psExe(env), psArgs(path.join(root, "scripts", "run.ps1"), extra), {
+      cwd: root, env: Home.childEnv(env), detached: false, windowsHide: true, stdio: "ignore"
     });
     if (child && typeof child.unref === "function") { child.unref(); }
     return (child && child.pid) || 0;
@@ -114,11 +125,12 @@ function startCore(repo, port, spawn, env) {
 }
 
 /* Stop everything (scripts\stop.ps1: core, supervisor, overlay). */
-function stopAll(repo, spawn, env) {
+function stopAll(home, spawn, env) {
   const run = spawn || childProcess.spawn;
+  const root = Home.asHome(home, env).root;
   try {
-    const child = run(psExe(env), psArgs(path.join(repo, "scripts", "stop.ps1")), {
-      cwd: repo, detached: false, windowsHide: true, stdio: "ignore"
+    const child = run(psExe(env), psArgs(path.join(root, "scripts", "stop.ps1")), {
+      cwd: root, env: Home.childEnv(env), detached: false, windowsHide: true, stdio: "ignore"
     });
     if (child && typeof child.unref === "function") { child.unref(); }
     return (child && child.pid) || 0;
