@@ -70,7 +70,7 @@ ELECTRON_ARCH = "x64"
 PYTHON_ARCH = "amd64"
 # The bootstrap's stamp point: every occurrence becomes the version.
 VERSION_TOKEN = "__AL_VERSION__"
-STAMP_MARKER = "al-version-stamp"  # tools/rel_version.py MARKER
+STAMP_MARKER = "al-version-" + "stamp"  # tools/rel_version.py MARKER, split
 
 _DECISION_FILE = re.compile(r"^docs/decisions/\d{4}-[A-Za-z0-9._-]+\.md$")
 _POLLING_RECORD = re.compile(

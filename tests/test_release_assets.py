@@ -227,10 +227,11 @@ def test_install_ps1_without_a_stamp_point_refuses(tmp_path):
 
 
 def test_stamp_marker_lines_must_hold_the_version():
-    good = b"$v = '1.2.3'  # al-version-stamp\n"
+    marker = b"al-version-" + b"stamp"  # split: rel_version scans tracked files
+    good = b"$v = '1.2.3'  # " + marker + b"\n"
     assert ra.stamp_installer(good, "1.2.3") == good
     with pytest.raises(ra.AssetError, match="does not hold 1.2.3"):
-        ra.stamp_installer(b"$v = '1.2.2'  # al-version-stamp\n", "1.2.3")
+        ra.stamp_installer(b"$v = '1.2.2'  # " + marker + b"\n", "1.2.3")
 
 
 # --- notes and SBOM --------------------------------------------------------
