@@ -14,8 +14,12 @@ are fetched at install, not bundled: the embeddable CPython and the
 unmodified Electron zip, each at the exact version, size and SHA-256 of its
 pin (`config/runtime_pins.json`, `config/electron_pin.json`), downloaded
 by the installer's own process from the publisher and unpacked unmodified
-into the install's `runtime\` folder. No AshLight artifact carries either.
-The licence record is `docs/decisions/0063-installed-runtimes.md`.
+into the install's `runtime\` folder. The fetch happens when the player
+runs the install line or `install.ps1`; with `install.ps1 -RuntimeDir` the
+player supplies the two publisher zips instead, checked against the same
+pins. The running app never fetches a runtime. An update, once it ships,
+fetches one only when the new release pins another version. No AshLight artifact
+carries either. The licence record is `docs/decisions/0063-installed-runtimes.md`.
 
 ## CPython (embeddable package)
 

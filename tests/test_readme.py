@@ -1,0 +1,222 @@
+"""DEP-14 (F-148 text half): the player docs name the real install, update,
+uninstall and verify steps and say plainly what unsigned means.
+
+Section and wording lint over README.md and SECURITY.md:
+
+- Install carries the one pasted line (the installer User-Agent, the
+  project's release address, `| iex`) on an `al-version-stamp` line that
+  holds VERSION, and the verified `-Zip` route.
+- Update, Uninstall, Verify your download (SHA256SUMS, gh attestation
+  verify, gh release verify-asset) and Windows may warn (each prompt named,
+  never advice to switch a protection off) are present.
+- The privacy text names the daily release read under web data.
+- The not-affiliated line is present word for word.
+- Every repository address names the project's own address from
+  config/public_repo.json (ruling Q-24: the one allowed address; the
+  'placeholder' of plan 05 DEP-14 is that value since GP-10).
+- No GGG art and no paid or donation link.
+"""
+
+import json
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+README = ROOT / "README.md"
+SECURITY = ROOT / "SECURITY.md"
+THIRD = ROOT / "THIRD-PARTY.md"
+
+SECTIONS = ("Install (Windows)", "Update", "Uninstall", "Verify your download",
+            "Windows may warn")
+PROMPTS = ("execution policy", "SmartScreen", "Smart App Control",
+           "User Account Control", "Firewall", "Antivirus")
+
+
+def _text(path):
+    return path.read_text(encoding="ascii")
+
+
+def _flat(text):
+    return " ".join(text.split())
+
+
+def _section(text, heading):
+    start = text.index("\n## " + heading + "\n") + 1
+    end = text.find("\n## ", start + 1)
+    return text[start:end if end != -1 else len(text)]
+
+
+def _version():
+    import server.al as al
+    return al.VERSION
+
+
+def _repo():
+    doc = json.loads((ROOT / "config" / "public_repo.json").read_text(encoding="utf-8"))
+    repo = doc["repo"]
+    assert re.fullmatch(r"[A-Za-z0-9-]+/[A-Za-z0-9._-]+", repo), repo
+    return repo
+
+
+def test_sections_present_in_order():
+    heads = re.findall(r"^## (.+)$", _text(README), re.M)
+    idx = [heads.index(h) for h in SECTIONS]
+    assert idx == sorted(idx), heads
+    # the player sections come before the source quick start
+    assert idx[-1] < heads.index("Quick start (Windows)")
+
+
+def test_install_pasted_line_is_stamped_with_version():
+    sec = _section(_text(README), "Install (Windows)")
+    version, repo = _version(), _repo()
+    lines = [ln for ln in sec.splitlines() if "al-version-stamp" in ln]
+    assert len(lines) == 1, lines
+    line = lines[0]
+    assert line.startswith("irm -UserAgent 'AshLight/%s (installer)' " % version), line
+    assert "https://github.com/%s/releases/" % repo in line
+    assert line.split("#")[0].rstrip().endswith("/install.ps1 | iex"), line
+    assert re.search(r"#\s*al-version-stamp\s*$", line), line
+    # the stamp check of DEP-03 holds this line to VERSION
+    assert re.search(r"(?<![\w.-])" + re.escape(version) + r"(?![\w-]|\.\d)", line)
+    # every version in the line is VERSION, so release.py bump swaps them all
+    found = re.findall(r"\d+\.\d+\.\d+(?:-rc\.\d+)?", line)
+    assert found and set(found) == {version}, found
+
+
+def test_install_names_the_verified_zip_route():
+    sec = _section(_text(README), "Install (Windows)")
+    flat = _flat(sec)
+    assert re.search(r"^powershell -NoProfile -ExecutionPolicy Bypass -File "
+                     r"\.\\install\.ps1 -Zip \.\\AshLight-<version>-app\.zip$", sec, re.M)
+    for name in ("install.ps1", "AshLight-<version>-app.zip", "release.json",
+                 "SHA256SUMS.txt", "-RuntimeDir", "-InstallDir", "-NoStart"):
+        assert name in sec, name
+    assert "Verify your download" in flat
+    assert "never asks for admin rights" in flat
+    assert "Releases: none yet, so the line below does not work today" in flat
+    assert "AL_INSTALL_DIR" in sec
+
+
+def test_update_section():
+    flat = _flat(_section(_text(README), "Update"))
+    assert flat.startswith("## Update Automatic update is not finished yet.")
+    assert "once a day" in flat and "web data on" in flat
+    assert "24 hours" in flat and "SHA256SUMS.txt" in flat
+    assert "With web data off, AshLight checks nothing" in flat
+    assert "paste the install line again" in flat
+
+
+def test_uninstall_section():
+    sec = _section(_text(README), "Uninstall")
+    flat = _flat(sec)
+    assert "uninstall.ps1" in sec and "Installed apps" in flat
+    assert "-Purge" in sec and "Recycle Bin" in flat and "-DryRun" in sec
+    assert "data" in flat and "It asks nothing" in flat
+    assert "never looks in your game folders" in flat
+
+
+def test_verify_section_names_three_checks():
+    sec = _section(_text(README), "Verify your download")
+    repo = _repo()
+    assert "SHA256SUMS.txt" in sec and "Get-FileHash" in sec
+    assert re.search(r"gh attestation verify \S+ --repo " + re.escape(repo), sec)
+    assert re.search(r"gh release verify-asset v<version> \S+ --repo "
+                     + re.escape(repo), sec)
+    assert "immutable" in sec
+    assert "SECURITY.md" in sec
+
+
+_OFF_ADVICE = re.compile(
+    r"Set-ExecutionPolicy|Unblock-File|Run anyway|More info|Add-MpPreference|"
+    r"\bexclusion\b|\b(turn|switch|shut)(ing)? (it |them )?off\b|"
+    r"\bdisabl\w*|\ballow access\b|\bchoose Yes\b", re.I)
+
+
+def _advice_problems(flat):
+    """Sentences that tell the player to lower a protection. A sentence that
+    names one only to say AshLight never needs it is allowed."""
+    return [s for s in re.split(r"(?<=[.;:])\s+", flat)
+            if _OFF_ADVICE.search(s)
+            and not re.search(r"\bnever\b|\bno exclusion\b", s)]
+
+
+def test_windows_may_warn_names_each_prompt_and_never_says_switch_off():
+    sec = _section(_text(README), "Windows may warn")
+    flat = _flat(sec)
+    for prompt in PROMPTS:
+        assert prompt in flat, prompt
+    assert "not code-signed" in flat
+    assert "not tested yet" in flat          # Smart App Control: unverified
+    assert _advice_problems(flat) == []
+    assert "AshLight needs no exclusion" in flat
+    assert "Leave Smart App Control as it is" in flat
+
+
+def test_off_advice_lint_catches_a_planted_line():
+    bad = "If SmartScreen stops it, click More info, then Run anyway."
+    assert _advice_problems(bad)
+    assert _advice_problems("You can turn it off in Windows Security.")
+    assert _advice_problems("Add an exclusion for the AshLight folder.")
+    assert not _advice_problems("Let it finish; AshLight needs no exclusion.")
+
+
+def test_privacy_names_the_daily_release_read_under_web_data():
+    flat = _flat(_section(_text(README), "Privacy and consent"))
+    assert re.search(r"an installed copy with web data on will read the "
+                     r"project's latest release on GitHub once a day", flat)
+    assert "It is not made yet." in flat
+    assert "with web data off it is never made" in flat
+
+
+def test_not_affiliated_line_present():
+    import server.al as al
+    text = _text(README)
+    assert al.DISCLAIMER in text
+    assert ("This product isn't affiliated with or endorsed by Grinding Gear "
+            "Games in any way.") in text
+
+
+def test_repository_address_is_only_the_projects_own():
+    repo = _repo().lower()
+    for path in (README, SECURITY, THIRD):
+        text = _text(path)
+        for owner_repo in re.findall(r"github\.com/([\w.-]+/[\w.-]+)", text, re.I):
+            name = owner_repo.lower()
+            if name.endswith(".git"):
+                name = name[:-4]
+            if path is THIRD:
+                continue          # upstream projects of the notices
+            assert name == repo, (path.name, owner_repo)
+    # the third-party file names upstreams only, never another AshLight
+    for owner_repo in re.findall(r"github\.com/([\w.-]+/[\w.-]+)", _text(THIRD), re.I):
+        assert "ashlight" not in owner_repo.lower() or owner_repo.lower() == repo
+
+
+def test_no_ggg_art_and_no_paid_link():
+    text = _text(README)
+    for src in re.findall(r"""(?:src|srcset)=["']([^"']+)["']""", text):
+        assert src.startswith("assets/brand/"), src
+    for src in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text):
+        assert src.startswith("assets/brand/"), src
+    lowered = text.lower()
+    for word in ("patreon", "ko-fi", "buymeacoffee", "paypal", "sponsors",
+                 "donate", "opencollective", "pathofexile.com/image",
+                 "web.poecdn.com"):
+        assert word not in lowered, word
+
+
+def test_security_states_what_the_updater_verifies():
+    flat = _flat(_text(SECURITY))
+    assert "## Release provenance" in _text(SECURITY)
+    assert "Immutable releases" in flat and "Two hash sources" in flat
+    assert "SHA256SUMS.txt" in flat and "digest" in flat
+    assert "do not verify the attestation" in flat
+    assert "CI verifies it" in flat and "gh attestation verify" in flat
+    assert "not code-signed" in flat
+
+
+def test_third_party_runtimes_fetched_at_install():
+    flat = _flat(_text(THIRD))
+    assert "fetched at install, not bundled" in flat
+    assert "-RuntimeDir" in flat
+    assert "never fetches a runtime" in flat
