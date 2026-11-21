@@ -19,6 +19,22 @@ first refusal stops the run and every later step reads `skipped`:
                 scratch folders; every asset must be byte-identical
     6 sweep     tools/leak_sweep.py over the staged tree as written: every
                 app zip member and every asset, names and bytes
+    7 roundtrip plan step (6), REL-STAGE-ROUNDTRIP: a scratch home under
+                <sidecar>/Temp, the real pinned runtimes from the sidecar
+                Cache (runtimes/, then electron/; size and SHA-256 checked; a
+                miss fails the step, never a download), then in order:
+                install N-1 (the newest v* tag below VERSION, else a
+                synthetic N-1 built from a local --shared clone with the
+                version swapped down), update to N (installer update +
+                apply-staged), rollback, uninstall (only data/ stays),
+                reinstall N and uninstall -Purge (the scratch data/ goes to
+                the Recycle Bin, adjudicator ruling). Every child runs hidden
+                at below-normal priority with AL_SHELL_ROOT on a scratch
+                root, so shortcuts, the uninstall key and the logon task are
+                never the operator's real ones; a read of AshLight's own real
+                entry names before and after must be equal. The shipped
+                self-test ports must lie in 8970-8975 (never 8960) and the
+                scratch home's web data must read off after every install.
 
 On PASS the first build's assets move into the release folder
 <sidecar>/Build/release/<version>/ (or --out). Every run, PASS or FAIL,
@@ -29,12 +45,13 @@ sandbox. A FAIL leaves the tree and every release asset as they were: the
 scratch build folders are removed and nothing moves.
 
 Steps are a list of callables (STEPS); a later package adds one step by
-appending to it (REL-STAGE-ROUNDTRIP, REL-STAGE-SANDBOX). `--sandbox` is
+appending to it (REL-STAGE-SANDBOX). `--sandbox` is
 recorded; with no sandbox step built yet a note says so.
 
 Floor: the tool never looks for the game - no process list, no window
-query, no game log access; it only reads the repository. It never uploads,
-tags, commits or pushes; no network. Heavy steps (suite, node, builds) run
+query, no game log access; it reads the repository and its own scratch.
+It never uploads, tags or pushes, and commits only inside the round trip's
+throw-away clone; no network. Heavy steps (suite, node, builds) run
 at below-normal priority. Stdlib only.
 """
 import argparse
@@ -44,6 +61,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -211,8 +229,600 @@ def step_sweep(ctx):
     return "%d staged file(s) clean%s" % (count, "; " + notes[0] if notes else "")
 
 
-# The append point: (name, callable). REL-STAGE-ROUNDTRIP and
-# REL-STAGE-SANDBOX each append one entry.
+# --- the scratch-home round trip (REL-STAGE-ROUNDTRIP) ---------------------
+
+RT_PREFIX = "al-stage-rt-"
+RT_SUBSTEPS = ("install", "update", "rollback", "uninstall", "purge")
+RUNTIME_CACHE_SUBS = ("runtimes", "electron")
+RELEASE_JSON = "release.json"
+INSTALLER_PS1 = "install.ps1"
+LINK_NAME = "AshLight.lnk"
+TASK_NAME = "AshLight Autostart"
+REAL_UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\AshLight"
+SCRATCH_KEY_BASE = r"Software\AshLightShellScratch"
+SELFTEST_BLOCK = (8970, 8975)  # ports.SELFTEST_PORTS; never the core's 8960
+CORE_PORT = 8960
+EXIT_SWITCHED = 10             # apply-staged / rollback: the marker moved
+RT_TIMEOUT_S = 900             # one installer or uninstall child
+CREATE_NO_WINDOW = 0x08000000
+CSIDL_PROGRAMS, CSIDL_DESKTOPDIRECTORY = 0x0002, 0x0010
+# the caller's overrides never reach the installer children of the round trip
+RT_DROP_ENV = ("AL_HOME", "AL_INSTALL_DIR", "AL_RUNTIME_DIR", "AL_PORT",
+               "AL_DEV", "AL_TC_PINS_FILE", "AL_HOT_RELOAD", "AL_UNINSTALL_FAKE",
+               "NODE_OPTIONS", "ELECTRON_RUN_AS_NODE", "PYTHONPATH",
+               "PYTHONHOME", "PYTHONSTARTUP")
+_SELFTEST_LINE = re.compile(
+    rb"^SELFTEST_PORTS\s*=\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)", re.M)
+
+
+def _server_al():
+    """server.al.paths and server.al.autostart_entry of this checkout."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from server.al import autostart_entry, paths  # noqa: E402
+    return paths, autostart_entry
+
+
+def previous_version(version):
+    """The synthetic N-1: X.Y.Z-rc.N -> X.Y.Z-rc.(N-1) when N > 0, else the
+    core one lower: X.Y.(Z-1), else X.(Y-1).0, else (X-1).0.0; None for
+    0.0.0 (nothing sorts below it)."""
+    core, _sep, pre = version.partition("-")
+    m = re.match(r"^rc\.(\d+)$", pre)
+    if m and int(m.group(1)) > 0:
+        return "%s-rc.%d" % (core, int(m.group(1)) - 1)
+    x, y, z = (int(p) for p in core.split("."))
+    if z > 0:
+        return "%d.%d.%d" % (x, y, z - 1)
+    if y > 0:
+        return "%d.%d.0" % (x, y - 1)
+    if x > 0:
+        return "%d.0.0" % (x - 1)
+    return None
+
+
+def selftest_ports(zip_bytes):
+    """(low, high) of SELFTEST_PORTS in the shipped server/al/ports.py."""
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        names = [n for n in zf.namelist() if n.endswith("/server/al/ports.py")]
+        if len(names) != 1:
+            return None
+        m = _SELFTEST_LINE.search(zf.read(names[0]))
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def _sha256_file(path):
+    h = hashlib.sha256()
+    with open(str(path), "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def pin_file_name(pin):
+    url = str(pin.get("url") or "")
+    name = pin.get("file") or url.rsplit("/", 1)[-1]
+    if not name or "/" in name or "\\" in name or name in (".", ".."):
+        return None
+    return name
+
+
+def find_runtimes(release, cache_dirs):
+    """{file name: cached path} for both pinned runtimes of release.json,
+    each matched by size and SHA-256; StepFail naming the first miss.
+    Nothing is ever requested: a miss is the step's verdict."""
+    runtimes = release.get("runtimes") if isinstance(release, dict) else None
+    if not isinstance(runtimes, dict) or not runtimes:
+        raise StepFail("release.json names no runtimes")
+    found = {}
+    for key in sorted(runtimes):
+        pin = runtimes[key]
+        name = pin_file_name(pin) if isinstance(pin, dict) else None
+        if name is None or not isinstance(pin.get("size"), int) \
+                or not isinstance(pin.get("sha256"), str):
+            raise StepFail("release.json: the %s pin is malformed" % key)
+        hit = None
+        for folder in cache_dirs:
+            cand = Path(folder) / name
+            try:
+                if cand.is_file() and cand.stat().st_size == pin["size"] \
+                        and _sha256_file(cand) == pin["sha256"].lower():
+                    hit = cand
+                    break
+            except OSError:
+                continue
+        if hit is None:
+            raise StepFail("runtimes not cached: %s (put the pinned publisher "
+                           "zip in the sidecar Cache/runtimes; the stage never "
+                           "downloads)" % name)
+        found[name] = hit
+    return found
+
+
+def _link_or_copy(src, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.link(str(src), str(dst))
+    except OSError:
+        shutil.copyfile(str(src), str(dst))
+
+
+def scratch_key_id(root):
+    """al_shell's <id> for an effect root: the first 8 bytes of SHA-256 of
+    the full, lower-cased root path, as hex."""
+    full = os.path.abspath(str(root)).rstrip("\\/")
+    return hashlib.sha256(full.lower().encode("utf-8")).hexdigest()[:16]
+
+
+def _known_folder(csidl):
+    if sys.platform != "win32":
+        return None
+    import ctypes  # noqa: E402 - Windows only
+    buf = ctypes.create_unicode_buffer(260)
+    if ctypes.windll.shell32.SHGetFolderPathW(None, csidl, None, 0, buf) != 0:
+        return None
+    return buf.value or None
+
+
+def _file_print(path):
+    try:
+        st = path.stat()
+        return [st.st_size, st.st_mtime_ns, _sha256_file(path)]
+    except OSError:
+        return None
+
+
+def _key_values(subkey):
+    """{name: repr(value)} of an HKCU key, or None when it is absent."""
+    if sys.platform != "win32":
+        return None
+    import winreg  # noqa: E402 - Windows only
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, subkey)
+    except OSError:
+        return None
+    out = {}
+    with key:
+        i = 0
+        while True:
+            try:
+                name, value, kind = winreg.EnumValue(key, i)
+            except OSError:
+                break
+            out[name] = "%d:%r" % (kind, value)
+            i += 1
+    return out
+
+
+def _task_print(run=None):
+    """SHA-256 of the real logon task's XML, or None when there is none.
+    A query of AshLight's own task name only."""
+    if sys.platform != "win32":
+        return None
+    run = run or subprocess.run
+    try:
+        res = run(["schtasks.exe", "/Query", "/TN", "\\" + TASK_NAME, "/XML"],
+                  capture_output=True, timeout=60, stdin=subprocess.DEVNULL,
+                  creationflags=CREATE_NO_WINDOW)
+    except (OSError, subprocess.SubprocessError):
+        return "unreadable"
+    if res.returncode != 0:
+        return None
+    return hashlib.sha256(res.stdout or b"").hexdigest()
+
+
+def real_shell_snapshot():
+    """AshLight's own real shell entries, by name only: the two AshLight.lnk
+    files (Start Menu Programs, Desktop), the per-user uninstall key and the
+    logon task. Read only; no listing of any folder, key or task list."""
+    snap = {}
+    for label, csidl in (("start_menu", CSIDL_PROGRAMS),
+                         ("desktop", CSIDL_DESKTOPDIRECTORY)):
+        folder = _known_folder(csidl)
+        snap[label] = _file_print(Path(folder) / LINK_NAME) if folder else None
+    snap["uninstall_key"] = _key_values(REAL_UNINSTALL_KEY)
+    snap["logon_task"] = _task_print()
+    return snap
+
+
+def _read_json(path):
+    try:
+        doc = json.loads(Path(path).read_bytes().decode("utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError):
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
+class RoundTripEffects:
+    """The real effects of the round trip. Every child runs hidden at
+    below-normal priority with AL_SHELL_ROOT = <base>/shell (shortcuts,
+    uninstall key and logon task go to the scratch root) and TEMP / TMP =
+    <base>/temp. Tests pass a stand-in with the same methods."""
+
+    def __init__(self, ctx, base):
+        self.ctx = ctx
+        self.base = Path(base)
+        self.home = self.base / "home"
+        self.shell = self.base / "shell"
+        self.temp = self.base / "temp"
+        self.rtdir = self.base / "runtimes"
+        self.snapshot = ctx.get("snapshot") or real_shell_snapshot
+
+    # --- inputs ---
+    def cache_dirs(self):
+        if self.ctx.get("runtime_cache") is not None:
+            return [Path(p) for p in self.ctx["runtime_cache"]]
+        paths, _ae = _server_al()
+        cache = paths.sidecar_dir("Cache")
+        return [cache / sub for sub in RUNTIME_CACHE_SUBS]
+
+    def runtimes(self, release):
+        found = find_runtimes(release, self.cache_dirs())
+        for name, src in found.items():
+            _link_or_copy(src, self.rtdir / name)
+        return sorted(found)
+
+    def write_release(self, label, assets):
+        folder = self.base / ("release-" + label)
+        folder.mkdir(parents=True, exist_ok=True)
+        for name, data in assets.items():
+            (folder / name).write_bytes(data)
+        return folder
+
+    def previous(self, version):
+        """(N-1 version, its assets): the newest v* tag below `version`, else
+        a synthetic N-1 built from a local clone with the version swapped
+        down (adjudicator ruling, REL-STAGE-ROUNDTRIP Q3)."""
+        root, build = self.ctx["root"], self.ctx["build"]
+        tag = newest_tag_below(root, version)
+        out = self.base / "prev-build"
+        try:
+            if tag is not None:
+                res = build(root=root, out=out, tag=tag)
+            else:
+                prev = previous_version(version)
+                if prev is None:
+                    raise StepFail("no version below %s for a synthetic N-1" % version)
+                clone = synthetic_clone(root, self.base / "prev-src", version, prev)
+                res = build(root=clone, out=out)
+        except rb.BuildError as exc:
+            raise StepFail("the N-1 build refused: %s" % exc)
+        return res["version"], _asset_bytes(out)
+
+    # --- children ---
+    def env(self):
+        env = dict(os.environ)
+        for key in list(env):
+            if key.upper() in RT_DROP_ENV:
+                del env[key]
+        self.temp.mkdir(parents=True, exist_ok=True)
+        self.shell.mkdir(parents=True, exist_ok=True)
+        env["AL_SHELL_ROOT"] = str(self.shell)
+        env["TEMP"] = env["TMP"] = str(self.temp)
+        return env
+
+    def _run(self, argv):
+        flags = (CREATE_NO_WINDOW | BELOW_NORMAL) if sys.platform == "win32" else 0
+        try:
+            res = subprocess.run([str(a) for a in argv], cwd=str(self.temp),
+                                 env=self.env(), stdin=subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 timeout=RT_TIMEOUT_S, creationflags=flags)
+        except subprocess.TimeoutExpired:
+            return -1
+        except OSError as exc:
+            raise StepFail("could not start %s (%s)" % (Path(str(argv[0])).name,
+                                                        exc.__class__.__name__))
+        return res.returncode
+
+    def _powershell(self):
+        _paths, ae = _server_al()
+        exe = ae.powershell_exe()
+        if exe is None:
+            raise StepFail("SystemRoot is not set; Windows PowerShell not found")
+        return [str(exe), "-NoProfile", "-NonInteractive", "-ExecutionPolicy",
+                "Bypass", "-File"]
+
+    def install(self, folder, version):
+        zip_path = Path(folder) / rb.zip_name(version)
+        return self._run(self._powershell() + [
+            Path(folder) / INSTALLER_PS1, "-Zip", zip_path, "-RuntimeDir",
+            self.rtdir, "-InstallDir", self.home, "-NoStart"])
+
+    def installer(self, command, *args):
+        """<home python> <active payload>/boot.py server.al.install <command>
+        --home <home> [args]: the active version's own installer."""
+        marker = _read_json(self.home / "install.json") or {}
+        payload = self.home / "app" / str(marker.get("version") or "")
+        paths, _ae = _server_al()
+        argv = paths.python_cmd("server.al.install", command, "--home",
+                                str(self.home), *[str(a) for a in args],
+                                root=payload, environ={paths.HOME_ENV: str(self.home),
+                                                       "SystemRoot": os.environ.get(
+                                                           "SystemRoot", "")})
+        return self._run(argv)
+
+    def uninstall(self, purge):
+        argv = self._powershell() + [self.home / "uninstall.ps1", "-Quiet"]
+        if purge:
+            argv += ["-Purge", "-Yes"]
+        return self._run(argv)
+
+    # --- read-backs ---
+    def scratch_left(self):
+        """Scratch shell entries still present (names only)."""
+        left = [sub + "/" + LINK_NAME for sub in ("Programs", "Desktop")
+                if (self.shell / sub / LINK_NAME).exists()]
+        key = SCRATCH_KEY_BASE + "\\" + scratch_key_id(self.shell) + \
+            r"\Uninstall\AshLight"
+        if _key_values(key) is not None:
+            left.append("scratch uninstall key")
+        return left
+
+    def cleanup(self):
+        _remove_empty_scratch_keys(scratch_key_id(self.shell))
+        # the base holds only this run's scratch: its own home, release
+        # copies, links of cached runtimes and a clone, all regenerable
+        _rmtree_scratch(self.base)
+
+
+def _rmtree_scratch(path):
+    """Remove a scratch tree of this run; git marks some of its files
+    read-only, so a refused unlink clears the flag and tries once more."""
+    import stat  # noqa: E402
+
+    def retry(func, target, _exc):
+        try:
+            os.chmod(target, stat.S_IWRITE)
+            func(target)
+        except OSError:
+            pass
+    if Path(path).exists():
+        shutil.rmtree(str(path), onerror=retry)
+
+
+def _remove_empty_scratch_keys(key_id):
+    """Remove al_shell's scratch registry keys of this effect root when they
+    are empty (no values, no subkeys), deepest first; never another key."""
+    if sys.platform != "win32":
+        return
+    import winreg  # noqa: E402 - Windows only
+    chain = [SCRATCH_KEY_BASE + "\\" + key_id + r"\Uninstall\AshLight",
+             SCRATCH_KEY_BASE + "\\" + key_id + r"\Uninstall",
+             SCRATCH_KEY_BASE + "\\" + key_id]
+    for sub in chain:
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub) as key:
+                subs, values, _t = winreg.QueryInfoKey(key)
+            if subs or values:
+                return
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub)
+        except OSError:
+            continue
+
+
+def newest_tag_below(root, version):
+    """The newest v<X.Y.Z> tag whose version sorts below `version`, else None."""
+    try:
+        out = rb._git(root, "tag", "--list", "v*")
+    except Exception:  # noqa: BLE001 - no tags is the common case
+        return None
+    text = out.decode("ascii", "replace") if isinstance(out, bytes) else str(out or "")
+    best = None
+    for tag in text.split():
+        ver = tag[1:]
+        try:
+            rv.parse(ver)
+        except rv.VersionError:
+            continue
+        if rv.compare(ver, version) < 0 and (best is None or rv.compare(ver, best[1]) > 0):
+            best = (tag, ver)
+    return best[0] if best else None
+
+
+def downgrade_plan(root, old, new):
+    """{rel path: text}: every version-bearing place of `root` moved from
+    `old` to the lower `new`, plus the notes stub of `new` (rel_version's
+    bump, which refuses a lower version, done the other way)."""
+    out = {}
+    out[rv.INIT_REL] = rv._swap_once(rv._INIT_LINE, rv._read(root, rv.INIT_REL),
+                                     old, new, rv.INIT_REL)
+    out[rv.PKG_REL] = rv._swap_once(rv._TOP_VERSION, rv._read(root, rv.PKG_REL),
+                                    old, new, rv.PKG_REL)
+    lock = rv._read(root, rv.LOCK_REL)
+    span = rv._lock_root_span(lock)
+    if span is None:
+        raise StepFail('%s: packages[""] block not found' % rv.LOCK_REL)
+    head = rv._swap_once(rv._TOP_VERSION, lock[:span[0]], old, new, rv.LOCK_REL)
+    block = rv._swap_once(rv._ROOT_PKG_VERSION, lock[span[0]:span[1]], old, new,
+                          rv.LOCK_REL)
+    out[rv.LOCK_REL] = head + block + lock[span[1]:]
+    by_file = {}
+    for rel, n, _line in rv.stamp_lines(root):
+        by_file.setdefault(rel, []).append(n)
+    for rel, numbers in by_file.items():
+        lines = out.get(rel, rv._read(root, rel)).split("\n")
+        for n in numbers:
+            lines[n - 1] = rv._swap_on_line(lines[n - 1], old, new)
+        out[rel] = "\n".join(lines)
+    out[rv.notes_rel(new)] = rv.notes_stub(new)
+    return out
+
+
+def _clone_git(cwd, *args):
+    cmd = ["git", "-c", "core.hooksPath=", "-c", "core.autocrlf=false",
+           "-c", "commit.gpgsign=false"] + list(args)
+    proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True,
+                          stdin=subprocess.DEVNULL, check=False)
+    if proc.returncode != 0:
+        tail = (proc.stderr or b"").decode("utf-8", "replace").strip().splitlines()
+        raise StepFail("synthetic N-1: git %s failed%s"
+                       % (args[0], ": " + tail[-1][:200] if tail else ""))
+    return proc.stdout
+
+
+def synthetic_clone(root, dest, old, new):
+    """A local --shared clone of HEAD under `dest` with one commit that
+    moves every version-bearing place to `new`; the clone path. The clone
+    is never pushed and is removed with the round trip's scratch; its
+    commit carries the operator's own git identity (FLEET item 17)."""
+    root, dest = Path(root), Path(dest)
+    commit = rb._rev(root, "HEAD^{commit}")
+    if not commit:
+        raise StepFail("synthetic N-1: no HEAD commit")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    _clone_git(dest.parent, "clone", "-q", "--shared", "--no-tags",
+               "--no-checkout", str(root), dest.name)
+    _clone_git(dest, "checkout", "-q", "--detach", commit)
+    plan = downgrade_plan(dest, old, new)
+    for rel in sorted(plan):
+        rv._write(dest, rel, plan[rel])
+    ident = []
+    for key in ("user.name", "user.email"):
+        proc = subprocess.run(["git", "config", "--get", key], cwd=str(root),
+                              capture_output=True, stdin=subprocess.DEVNULL)
+        value = (proc.stdout or b"").decode("utf-8", "replace").strip()
+        if value:
+            ident += ["-c", "%s=%s" % (key, value)]
+    _clone_git(dest, "add", "--", *sorted(plan))
+    _clone_git(dest, *(ident + ["commit", "-q", "-m",
+                                "chore: synthetic %s for the stage round trip" % new]))
+    return dest
+
+
+def _expect(rc, want, label):
+    if rc != want:
+        raise StepFail("%s exit %s (want %s)" % (label, rc, want))
+
+
+def _marker(home, label, version, **want):
+    doc = _read_json(Path(home) / "install.json")
+    if doc is None:
+        raise StepFail("%s: no readable install.json" % label)
+    if doc.get("version") != version:
+        raise StepFail("%s: the marker names %s, want %s"
+                       % (label, doc.get("version"), version))
+    for key, value in want.items():
+        if doc.get(key) != value:
+            raise StepFail("%s: marker %s is %r, want %r"
+                           % (label, key, doc.get(key), value))
+    return doc
+
+
+def _web_data_off(home, label):
+    doc = _read_json(Path(home) / "data" / "local.json")
+    if doc is None:
+        raise StepFail("%s: no readable data/local.json" % label)
+    if doc.get("web_data") is not False:
+        raise StepFail("%s: web data is not off in the scratch home" % label)
+
+
+def _links(fx, label, present):
+    have = [sub for sub in ("Programs", "Desktop")
+            if (Path(fx.shell) / sub / LINK_NAME).is_file()]
+    if present and len(have) != 2:
+        raise StepFail("%s: the scratch shortcuts were not written" % label)
+    if not present:
+        left = fx.scratch_left()
+        if left:
+            raise StepFail("%s: left behind: %s" % (label, ", ".join(left)))
+
+
+def default_roundtrip(ctx):
+    """The real effects, in a fresh scratch folder under <sidecar>/Temp."""
+    paths, _ae = _server_al()
+    temp = paths.sidecar_dir("Temp")
+    temp.mkdir(parents=True, exist_ok=True)
+    import tempfile  # noqa: E402
+    base = Path(tempfile.mkdtemp(prefix=RT_PREFIX + ctx["version"] + "-",
+                                 dir=str(temp)))
+    return RoundTripEffects(ctx, base)
+
+
+def step_roundtrip(ctx):
+    """Plan step (6): install N-1, update to N, rollback, uninstall, purge
+    in a scratch home with the real pinned runtimes from the sidecar cache;
+    every shell effect goes to a scratch root and the real entries must read
+    the same before and after. A runtime that is not cached fails the step
+    (never a download)."""
+    staged = ctx.get("staged")
+    if not staged or RELEASE_JSON not in staged:
+        raise StepFail("the build made no %s" % RELEASE_JSON)
+    try:
+        release = json.loads(staged[RELEASE_JSON].decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        raise StepFail("%s is unreadable" % RELEASE_JSON)
+    version, zip_name = ctx["version"], ctx["zip_name"]
+    block = selftest_ports(staged[zip_name])
+    if block is None or block[0] > block[1] or block[0] < SELFTEST_BLOCK[0] \
+            or block[1] > SELFTEST_BLOCK[1] or block[0] <= CORE_PORT <= block[1]:
+        raise StepFail("the shipped self-test ports are not inside %d-%d"
+                       % SELFTEST_BLOCK)
+    fx = ctx["roundtrip"](ctx)
+    done = ctx["roundtrip_done"] = []
+    try:
+        fx.runtimes(release)
+        if INSTALLER_PS1 not in staged:
+            raise StepFail("the build made no %s" % INSTALLER_PS1)
+        before = fx.snapshot()
+        prev, prev_assets = fx.previous(version)
+        if rv.compare(prev, version) >= 0:
+            raise StepFail("the N-1 build is %s, not below %s" % (prev, version))
+        new_dir = fx.write_release("new", staged)
+        prev_dir = fx.write_release("prev", prev_assets)
+
+        _expect(fx.install(prev_dir, prev), 0, "install %s" % prev)
+        _marker(fx.home, "install", prev)
+        _web_data_off(fx.home, "install")
+        _links(fx, "install", True)
+        done.append("install")
+
+        _expect(fx.installer("update", "--zip", new_dir / zip_name,
+                             "--runtime-dir", fx.rtdir), 0, "update")
+        _expect(fx.installer("apply-staged"), EXIT_SWITCHED, "apply-staged")
+        _marker(fx.home, "update", version, previous=prev, pending_confirm=True)
+        _web_data_off(fx.home, "update")
+        done.append("update")
+
+        _expect(fx.installer("rollback"), EXIT_SWITCHED, "rollback")
+        _marker(fx.home, "rollback", prev)
+        skip = _read_json(Path(fx.home) / "data" / "update_skip.json") or {}
+        rows = skip.get("versions") if isinstance(skip.get("versions"), list) else []
+        if version not in [r.get("version") for r in rows if isinstance(r, dict)]:
+            raise StepFail("rollback: %s is not in update_skip.json" % version)
+        done.append("rollback")
+
+        _expect(fx.uninstall(False), 0, "uninstall")
+        kept = sorted(p.name for p in Path(fx.home).iterdir()) \
+            if Path(fx.home).is_dir() else []
+        if kept != ["data"]:
+            raise StepFail("uninstall: the home holds %s, want only data"
+                           % (", ".join(kept) or "nothing"))
+        _links(fx, "uninstall", False)
+        done.append("uninstall")
+
+        _expect(fx.install(new_dir, version), 0, "reinstall %s" % version)
+        _marker(fx.home, "reinstall", version)
+        _web_data_off(fx.home, "reinstall")
+        _expect(fx.uninstall(True), 0, "purge")
+        if Path(fx.home).exists() and any(Path(fx.home).iterdir()):
+            raise StepFail("purge: the home is not empty")
+        _links(fx, "purge", False)
+        done.append("purge")
+
+        after = fx.snapshot()
+        if after != before:
+            changed = sorted(k for k in set(before) | set(after)
+                             if before.get(k) != after.get(k))
+            raise StepFail("the real shell entries changed: %s" % ", ".join(changed))
+    finally:
+        fx.cleanup()
+    return ("install %s, update to %s, rollback, uninstall, purge; self-test "
+            "ports %d-%d, web data off, real shell entries unchanged"
+            % ((prev, version) + tuple(block)))
+
+
+# The append point: (name, callable). REL-STAGE-SANDBOX appends one entry.
 STEPS = [
     ("clean", step_clean),
     ("version", step_version),
@@ -220,6 +830,7 @@ STEPS = [
     ("node", step_node),
     ("builds", step_builds),
     ("sweep", step_sweep),
+    ("roundtrip", step_roundtrip),
 ]
 
 
@@ -243,10 +854,12 @@ def _remove_scratch(scratch):
 
 
 def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
-          owner=None, build=None, steps=None):
-    """Run the static gates; write <out>/stage.json; return the report dict
-    (plus "out", the folder). run(argv, cwd) -> exit code and now() ->
-    epoch seconds are injected; build defaults to rel_build.build."""
+          owner=None, build=None, steps=None, roundtrip=None):
+    """Run the gates; write <out>/stage.json; return the report dict (plus
+    "out", the folder). run(argv, cwd) -> exit code and now() -> epoch
+    seconds are injected; build defaults to rel_build.build; roundtrip(ctx)
+    -> the round trip's effects (default: RoundTripEffects in a fresh
+    scratch folder under <sidecar>/Temp)."""
     root = Path(root)
     out = Path(out) if out is not None else rb.default_out(version)
     ctx = {
@@ -254,7 +867,7 @@ def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
         "run": run or default_run, "build": build or rb.build,
         "owner": owner or os.environ.get(OWNER_ENV) or DEFAULT_OWNER,
         "scratch": out / SCRATCH_NAME, "notes": [], "staged": None,
-        "zip_name": None,
+        "zip_name": None, "roundtrip": roundtrip or default_roundtrip,
     }
     clock = now or time.time
     commit = rb._rev(root, "HEAD^{commit}") or ""
