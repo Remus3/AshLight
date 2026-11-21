@@ -1,0 +1,44 @@
+{
+ "kinds": {
+  "live1hit": {
+   "act": "gate",
+   "id": "LIVE-1-<ITEM>",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "Live-verified: the parse ledger counts a live hit of the <ITEM> log shape.",
+   "tokens": {"ITEM": "DEATH|WHISPER|TRADE|PARTY|GUILD|AFK|JOINED|HIDEOUT|CRUEL|MAP"},
+   "sample": {"ITEM": "DEATH"}
+  },
+  "live1accepted": {
+   "act": "gate",
+   "id": "LIVE-1-ACCEPTED",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "Live-verified: the parse ledger counts a live hit of the trade accepted / cancelled log shape.",
+   "tokens": {},
+   "sample": {}
+  },
+  "logshape": {
+   "act": "row",
+   "id": "LOG-SHAPE-<YYYYMMDD>",
+   "lane": "build",
+   "priority": false,
+   "blocked": null,
+   "text": "New masked log shapes passed the two-sighting rule: work each NEW SHAPE line of ops/runtime/watch/live1_report.json (copied into the lane worktree) into a parser pattern with a fixture, or note why it stays unparsed. ACCEPT: every listed shape has a fixture and a passing test or a one-line note. SOURCE: watch ledger log-shape, filed <YYYY-MM-DD>.",
+   "tokens": {},
+   "sample": {}
+  },
+  "snapprobe": {
+   "act": "row",
+   "id": "SNAP-<FILE>-<YYYYMMDD>",
+   "lane": "data",
+   "priority": false,
+   "blocked": null,
+   "text": "The <FILE> game-data snapshot failed its shape probe (ops/runtime/snapshot/probe.json): compare the upstream shape with the probe table and its reader, then fix the reader or the probe. ACCEPT: a fixture of the new shape probes as pass and its reader test passes. SOURCE: watch ledger snap-probe, filed <YYYY-MM-DD>.",
+   "tokens": {"FILE": "[A-Z][A-Z0-9-]{0,39}"},
+   "sample": {"FILE": "WORLD-AREAS"}
+  }
+ }
+}

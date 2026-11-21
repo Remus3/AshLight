@@ -145,35 +145,52 @@ def test_overlay_js_keys_match_python():
     assert 'quiet_town: false, zone_guide: "entry"' in js
 
 
-# DS-OPACITY / DS-SCALE (design 0001 5.2 and O3): opacity floor 0.9 keeps
-# every overlay text pair >= 4.5:1 over a white scene; scale floor 0.95
-# keeps 13px secondary text >= 12px.
+# DS-OPACITY / DS-SCALE (design 0001 5.2 and O3), OVL-TD05-PLATE: the
+# "opacity" key is the plate alpha only (text stays opaque); its floor 0.80
+# keeps every overlay text colour >= 4.5:1 over a white scene; scale floor
+# 0.95 keeps 13px secondary text >= 12px.
 
 def test_floors():
-    assert (layout.OPACITY_MIN, layout.OPACITY_MAX) == (0.9, 1.0)
+    assert (layout.OPACITY_MIN, layout.OPACITY_MAX) == (0.8, 1.0)
+    assert (layout.V1_OPACITY_MIN, layout.V1_OPACITY_MAX) == (0.9, 1.0)
+    assert layout.DEFAULT["opacity"] == 0.86 and layout.DEFAULT["v"] == 2
     assert (layout.SCALE_MIN, layout.SCALE_MAX) == (0.95, 2.0)
     assert 13 * layout.SCALE_MIN >= 12
 
 
 @pytest.mark.parametrize("bad", [
-    {"opacity": 0.85}, {"opacity": 0.3}, {"scale": 0.9}, {"scale": 0.75},
+    {"opacity": 0.75, "v": 2}, {"opacity": 0.3, "v": 2},
+    # schema 1 (no "v"): the old 0.9 floor still applies before migration
+    {"opacity": 0.85}, {"opacity": 0.3},
+    {"scale": 0.9}, {"scale": 0.75},
 ])
 def test_strict_rejects_below_floor(bad):
     with pytest.raises(layout.LayoutError):
         layout.normalize(bad)
 
 
+@pytest.mark.parametrize("bad", [1, 3, "2", True, None])
+def test_strict_rejects_unknown_schema(bad):
+    with pytest.raises(layout.LayoutError):
+        layout.normalize({"v": bad})
+
+
 def test_strict_accepts_floor():
-    got = layout.normalize({"opacity": 0.9, "scale": 0.95})
-    assert got["opacity"] == 0.9 and got["scale"] == 0.95
+    got = layout.normalize({"opacity": 0.8, "scale": 0.95, "v": 2})
+    assert got["opacity"] == 0.8 and got["scale"] == 0.95 and got["v"] == 2
 
 
 def test_lenient_clamps_old_layouts():
-    # A layout saved before the floors were raised clamps itself on load.
+    # A layout saved before the floors were raised clamps itself on load
+    # (schema 1: clamped to 0.9, then migrated to 0.86).
     got = layout.normalize({"opacity": 0.3, "scale": 0.75, "margin": 999},
                            strict=False)
-    assert got["opacity"] == 0.9 and got["scale"] == 0.95 and got["margin"] == 400
+    assert got["opacity"] == 0.86 and got["scale"] == 0.95 and got["margin"] == 400
     assert layout.normalize({"scale": 99}, strict=False)["scale"] == 2.0
+    got = layout.normalize({"opacity": 0.3, "v": 2}, strict=False)
+    assert got["opacity"] == 0.8 and got["v"] == 2
+    # a bad marker is a schema 1 layout, never a refusal on load
+    assert layout.normalize({"opacity": 0.95, "v": "x"}, strict=False)["opacity"] == 0.93
 
 
 def test_load_clamps_saved_config(tmp_path):
@@ -182,14 +199,49 @@ def test_load_clamps_saved_config(tmp_path):
                                            "corner": "top-left"}}),
                    encoding="ascii")
     got = layout.load(cfg)
-    assert got["opacity"] == 0.9 and got["scale"] == 0.95
-    assert got["corner"] == "top-left"
+    assert got["opacity"] == 0.86 and got["scale"] == 0.95
+    assert got["corner"] == "top-left" and got["v"] == 2
+
+
+# OVL-TD05-PLATE: a saved 0.9 to 1.0 page opacity maps linearly onto the
+# plate alpha 0.86 to 1.0, once: the next save writes "v": 2.
+
+@pytest.mark.parametrize("old,new", [
+    (0.9, 0.86), (0.95, 0.93), (1.0, 1.0), (0.91, 0.87), (0.99, 0.99),
+])
+def test_old_layout_migrates(old, new):
+    for strict in (True, False):
+        got = layout.normalize({"opacity": old}, strict=strict)
+        assert got["opacity"] == new and got["v"] == 2
+
+
+def test_migration_is_linear_in_hundredths():
+    for i in range(101):
+        old = 0.9 + i / 1000
+        got = layout.normalize({"opacity": old}, strict=False)["opacity"]
+        assert abs(got - (0.86 + (old - 0.9) * 1.4)) <= 0.005 + 1e-9, (old, got)
+        assert got == round(got, 2)
+
+
+def test_migration_runs_once(tmp_path):
+    cfg = tmp_path / "local.json"
+    cfg.write_text(json.dumps({"overlay": {"opacity": 0.95, "corner": "top-left"}}),
+                   encoding="ascii")
+    first = layout.load(cfg)
+    assert first["opacity"] == 0.93 and first["v"] == 2
+    saved = layout.save(cfg, first)
+    stored = json.loads(cfg.read_text(encoding="ascii"))["overlay"]
+    assert stored == saved and stored["v"] == 2 and stored["opacity"] == 0.93
+    assert layout.load(cfg) == first  # read back unchanged, not mapped again
 
 
 def test_dashboard_sliders_match_floors():
     html = srcpaths.index_html()
     assert 'id="layout-scale" name="scale" type="range" min="0.95"' in html
-    assert 'id="layout-opacity" name="opacity" type="range" min="0.9"' in html
+    # step 0.01 so the 0.86 default sits on the slider (a 0.05 step would
+    # snap it to 0.85 and post that on the next unrelated change)
+    assert ('id="layout-opacity" name="opacity" type="range" min="%s" max="1" '
+            'step="0.01"' % layout.OPACITY_MIN) in html
 
 
 def test_overlay_js_limits_match_python():
@@ -197,6 +249,19 @@ def test_overlay_js_limits_match_python():
     assert ("scale: [%s, %s], opacity: [%s, %s]" % (
         layout.SCALE_MIN, layout.SCALE_MAX, layout.OPACITY_MIN,
         layout.OPACITY_MAX)) in js
+    # Python and JS migrate identically: one schema, one old range, one
+    # formula spelled the same (floor(x + 0.5) is JS Math.round)
+    assert "var SCHEMA = %d;" % layout.SCHEMA in js
+    assert "var V1_OPACITY = [%s, %s];" % (layout.V1_OPACITY_MIN,
+                                           layout.V1_OPACITY_MAX) in js
+    assert "opacity: %s," % layout.DEFAULT["opacity"] in js
+    assert "Math.floor(140 * old - 40 + 0.5) / 100" in js
+    src = (ROOT / "server" / "al" / "layout.py").read_text(encoding="ascii")
+    assert "math.floor(140 * old - 40 + 0.5) / 100" in src
+    for row in _js_shared_fixture():
+        if "opacity" in row["in"]:
+            assert layout.normalize(row["in"], strict=False)["opacity"] == \
+                row["out"]["opacity"], row["in"]
 
 
 def test_save_keeps_other_keys_ascii_lf(tmp_path):
@@ -369,3 +434,37 @@ def test_trade_dismiss_api(srv):
     assert call(srv, "POST", "/api/trade-dismiss", {"id": True})[0] == 400
     code, doc = call(srv, "POST", "/api/trade-dismiss", {"all": True})
     assert code == 200 and doc["dismissed"] == 2 and doc["state"]["trade_requests"] == []
+
+
+# OVL-TD05-PLATE review F1: the dashboard (web/app.js readLayoutForm) posts
+# display, corner, scale, opacity and margin with no "v". The real path,
+# Core.set_overlay_layout (POST /api/overlay-layout), merges that body onto
+# the stored layout, which always reads back with "v": 2, so a 0.80 to 0.89
+# plate alpha saves as is and never drifts on a later save.
+
+def _form(opacity, corner):
+    return {"display": "primary", "corner": corner, "scale": 1.0,
+            "opacity": opacity, "margin": 16}
+
+
+@pytest.mark.parametrize("stored", [None, {"opacity": 0.9, "v": 2,
+                                           "corner": "top-left"}])
+def test_dashboard_post_without_v_keeps_plate_alpha(tmp_path, stored):
+    rt = tmp_path / "rt"
+    core = Core(runtime=rt, tail=False)
+    try:
+        if stored is not None:
+            core.config_path.write_text(json.dumps({"overlay": stored}),
+                                        encoding="ascii")
+        got = core.set_overlay_layout(_form(0.85, "top-right"))
+        assert got["opacity"] == 0.85 and got["v"] == 2
+        got = core.set_overlay_layout(_form(got["opacity"], "bottom-left"))
+        assert got["opacity"] == 0.85 and got["corner"] == "bottom-left"
+        stored_now = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert stored_now["overlay"]["opacity"] == 0.85
+        assert stored_now["overlay"]["v"] == 2
+        for _ in range(3):  # 0.95 never drifts on later saves
+            got = core.set_overlay_layout(_form(0.95, "top-right"))
+        assert got["opacity"] == 0.95
+    finally:
+        core.close()

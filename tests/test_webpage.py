@@ -171,12 +171,36 @@ def test_the_served_page_has_unique_ids(srv, web):
 
 
 def test_no_panel_serves_index_html_byte_identical(srv, web):
+    # the no-panel contract, on the tmp_path tree: no panels folder, an
+    # empty one, and a page without the marker each give index.html byte
+    # for byte
     _, body = get(srv, "/")
     assert body == (web / "index.html").read_bytes()
+    assert webpage.assemble(web) == (web / "index.html").read_bytes()
     (web / "panels").mkdir()
     _, body = get(srv, "/")
     assert body == (web / "index.html").read_bytes()
-    assert srcpaths.index_html() == srcpaths.read("index.html")
+    assert webpage.assemble(web) == (web / "index.html").read_bytes()
+    raw = (web / "index.html").read_bytes().replace(webpage.MARKER, b"")
+    (web / "index.html").write_bytes(raw)
+    _, body = get(srv, "/")
+    assert body == raw
+    assert webpage.assemble(web) == raw
+
+
+def test_the_real_page_is_index_html_with_its_panel_tags():
+    # TEST-WEB-PANELS-A: the real tree holds panel files now (web/panels/),
+    # so the dashboard page is the assembled one: index.html's text with
+    # one tag per panel file at the marker, each listed once
+    page = srcpaths.index_html()
+    assert page == webpage.assemble(srcpaths.WEB).decode("ascii")
+    names = sorted(p.name for p in srcpaths.PANELS.glob("*.js"))
+    assert "build.js" in names
+    for name in names:
+        assert page.count(f'<script src="/web/panels/{name}" defer></script>') == 1
+    stripped = re.sub(r'<script src="/web/panels/[^"]+" defer></script>\n?', "", page)
+    stripped = re.sub(r'<link rel="stylesheet" href="/web/panels/[^"]+">\n?', "", stripped)
+    assert stripped == srcpaths.read("index.html")
 
 
 def test_only_safe_regular_panel_files_are_tagged(web):

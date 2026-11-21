@@ -20,6 +20,7 @@
    the IPC block below answers only the exact sender frame. */
 
 const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, nativeTheme, screen, session } = require("electron");
+const crypto = require("crypto");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
@@ -38,6 +39,7 @@ const Parts = require("./parts.js");
 const Guards = require("./guards.js");
 const Metrics = require("./metrics.js");
 const AppLog = require("./applog.js");
+const Hello = require("./hello.js");
 
 // RUN-OBS-LOGS-SHELL (F-090): overlay.log in the one line format, rotated
 // at start over 1 MB, the build banner first (app/applog.js). Lines before
@@ -83,6 +85,9 @@ let metrics = null; // RUN-BUDGET-LOG-CLIENT: the once-a-minute own-process samp
 let onWear = null; // TC-WORN-KEY: the wear key's press handler (built in start())
 let wearRaw; // TC-WORN-KEY: the config value last bound (undefined before the first bind)
 let wearBound = null; // TC-WORN-KEY: the wear accelerator really bound, null when none
+let getVersion = null; // GET /api/version behind the hello check (built in start())
+let overlayStarted = false; // the overlay window was built at least once
+let overlayGotEmpty = false; // al:config last answered the overlay without a token
 
 function openLog() {
   // run.ps1 sets AL_SIDECAR_ROOT from server.al.paths (the one resolver).
@@ -136,6 +141,19 @@ const config = readJson(LOCAL_CONFIG);
 // P8-3: a refused port value is logged once the log file is open (start()).
 const portNotes = [];
 const port = corePort(process.env.AL_PORT, config, readPortsPy(), (m) => portNotes.push(m));
+
+/* SEC-HELLO-CLIENT (F-137, decision 0054): the token leaves this process
+   only after the listener on the port proved, by the hello handshake
+   (app/hello.js), that it holds the token and bound that port. Every
+   consumer takes verifiedToken ("" until then), so the item text of a
+   press, the dashboard URL and the overlay page's token never reach a
+   foreign listener. Verified once per token value, again after any request
+   error. readToken itself feeds only the verifier and the token-change
+   watch below. */
+const hello = Hello.makeVerifier(http, crypto, port, readToken, { onVerified: onCoreVerified });
+const verifiedToken = hello.verifiedToken;
+const TOKEN_VERIFY_MS = 30000; // a new token's core gets this long to prove itself
+const TOKEN_VERIFY_STEP_MS = 1000;
 // AREA-AUDIT P5-3: a bare key (or a game key like Ctrl+C) from the env or a
 // hand-edited / imported config is refused before globalShortcut.register,
 // which would otherwise take that key from the game system-wide.
@@ -184,7 +202,7 @@ if (CLIENT_MODE && !process.env.AL_SIDECAR_ROOT && HOME.mode === "checkout") {
 const PARTS = Parts.load(path.join(__dirname, "parts"), fs.readdirSync, require, log);
 const ctx = {
   app: app, log: log, repo: REPO, runtimeDir: path.dirname(TOKEN_FILE), port: port,
-  readToken: readToken, readConfig: () => readJson(LOCAL_CONFIG), env: process.env,
+  readToken: verifiedToken, readConfig: () => readJson(LOCAL_CONFIG), env: process.env,
   clientMode: CLIENT_MODE, devTools: DEV_TOOLS,
   defaults: { toggle: DEFAULT_TOGGLE, eval: DEFAULT_EVAL_KEY },
   keys: { toggle: toggleKey, eval: evalKey },
@@ -386,13 +404,29 @@ function setAbout(doc) {
 /* On a core restart: re-read the credit and the version (a new core may
    be a new build), then reload the page (the token changed, so the page
    reloads anyway; one reload, not two). */
-function refreshAboutAndReload(getVersion) {
+function refreshAboutAndReload() {
+  if (!getVersion) { return; }
   getVersion().then((doc) => setAbout(doc), (e) => {
     log("about: version not read: " + e.message);
   }).then(() => {
     if (win) { win.webContents.reload(); }
     if (client) { client.reload(); }
   });
+}
+
+/* SEC-HELLO-CLIENT: a hello check passed. A newly verified token value
+   (a core restart) re-reads the About and reloads the overlay page and
+   the companion; the same value proved again (after a request error)
+   reloads only an overlay page that was handed no token. Before the
+   overlay window first exists, start() builds it with the token already
+   released. */
+function onCoreVerified(changed) {
+  if (!overlayStarted) { return; }
+  if (changed) {
+    refreshAboutAndReload();
+  } else if (overlayGotEmpty && win) {
+    win.webContents.reload();
+  }
 }
 
 /* RUN-EXPLAIN-OVERLAY-STATE (F-129): the overlay's state (the gate's
@@ -473,7 +507,7 @@ function openClient() {
   if (!client) {
     const electron = require("electron");
     client = require("./client/window.js").createClient({
-      electron: electron, http: http, repo: REPO, port: port, readToken: readToken,
+      electron: electron, http: http, repo: REPO, port: port, readToken: verifiedToken,
       runtimeDir: path.dirname(TOKEN_FILE), log: log, devTools: DEV_TOOLS,
       toggleOverlay: toggle, overlayVisible: () => !gate || gate.userWants(),
       restartOverlay: restartOverlay, overlayBounds: ctx.overlayBounds,
@@ -496,9 +530,16 @@ function start() {
   // OVL-SHELL-GUARDS: the token goes only to the overlay window's main
   // frame (e.senderFrame === win.webContents.mainFrame) on exactly the
   // overlay page, never to another file URL ending in /overlay/index.html.
+  // SEC-HELLO-CLIENT: only a verified token; with none the page waits and
+  // a hello check starts, whose pass reloads the page (onCoreVerified).
   ipcMain.on("al:config", (e) => {
     const ok = Guards.frameIsOverlayPage(e.senderFrame, win, OVERLAY_URL);
-    e.returnValue = ok ? { token: readToken(), port: port, credit: dataCredit } : {};
+    const token = ok ? verifiedToken() : "";
+    if (ok) {
+      overlayGotEmpty = !token;
+      if (!token) { hello.check(); }
+    }
+    e.returnValue = ok ? { token: token, port: port, credit: dataCredit } : {};
   });
   ipcMain.on("al:gate", (e, visible) => {
     if (!win || e.sender !== win.webContents) { return; } // the overlay page only
@@ -523,10 +564,12 @@ function start() {
   if (CLIENT_MODE) { openClient(); }
   // TC-SNAP-UI: the credit is read before the page loads (at most
   // About.START_WAIT_MS), so the window never reloads just to show it.
-  const getVersion = About.makeGetVersion(http, port, readToken);
+  // SEC-HELLO-CLIENT: the version request runs only after the hello check.
+  getVersion = Hello.guard(hello, About.makeGetVersion(http, port, verifiedToken));
   About.firstDoc(getVersion, About.START_WAIT_MS).then((doc) => {
     setAbout(doc);
     createWindow();
+    overlayStarted = true;
   });
   screen.on("display-added", onDisplaysChanged);
   screen.on("display-removed", onDisplaysChanged);
@@ -538,13 +581,17 @@ function start() {
     bindWearKey();
   });
 
-  // The core writes a fresh token on every start: reload when it changes.
+  // The core writes a fresh token on every start: when it changes, prove
+  // the new core (SEC-HELLO-CLIENT); its pass reloads (onCoreVerified).
+  // Reading the file here sends nothing.
   let lastToken = readToken();
   fs.watchFile(TOKEN_FILE, { interval: 5000, persistent: false }, () => {
     const t = readToken();
     if (t !== lastToken) {
       lastToken = t;
-      refreshAboutAndReload(getVersion);
+      Link.waitFor(hello.check, TOKEN_VERIFY_MS, TOKEN_VERIFY_STEP_MS).then((ok) => {
+        if (!ok) { log.warn("the core did not prove the new token; nothing sent"); }
+      });
     }
   });
 
@@ -564,7 +611,7 @@ function start() {
   // per manual press of either key), posting to /api/wear instead.
   const pressDeps = { // the item keys' one clipboard read site
     readText: () => clipboard.readText(),
-    post: EvalKey.makePost(http, port, readToken),
+    post: Hello.guard(hello, EvalKey.makePost(http, port, verifiedToken)),
     log: log
   };
   const onEval = EvalKey.createEvalHotkey(pressDeps, EvalKey.POST_EVAL);

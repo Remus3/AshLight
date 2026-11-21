@@ -10,6 +10,8 @@ const path = require("node:path");
 const http = require("node:http");
 const Link = require("../client/link.js");
 const Launcher = require("../client/launcher.js");
+const Hello = require("../hello.js");
+const crypto = require("node:crypto");
 
 const TOKEN = "ab".repeat(24);
 const AT = String.fromCharCode(64);
@@ -206,24 +208,69 @@ test("waitFor polls until the core answers or the time is up", async () => {
   assert.equal(t, 2000);
 });
 
-test("health check sends the token header and reads 200 as up", async () => {
-  let seen = null;
-  const srv = http.createServer((req, res) => {
-    seen = req.headers["x-al-token"];
-    res.statusCode = seen === TOKEN ? 200 : 401;
-    res.end("{}");
+/* SEC-HELLO-CLIENT (decision 0054): the health check is the hello
+   handshake (app/hello.js); the token itself never goes out with it. */
+function helloCore(token, seen) {
+  return http.createServer((req, res) => {
+    seen.push({ url: req.url, headers: req.headers });
+    const nonce = req.headers["x-al-hello-nonce"];
+    if (req.url !== "/api/hello" ||
+        req.headers["x-al-hello-proof"] !== Hello.clientProof(crypto, token, nonce)) {
+      res.statusCode = 401;
+      res.end("{}");
+      return;
+    }
+    const port = req.socket.localPort;
+    res.end(JSON.stringify({ port: port, proof: Hello.serverProof(crypto, token, nonce, port) }));
   });
+}
+
+test("makeHealthCheck uses the handshake; no token is sent before it", async () => {
+  const seen = [];
+  const srv = helloCore(TOKEN, seen);
   await new Promise((r) => srv.listen(0, "127.0.0.1", r));
   const port = srv.address().port;
   try {
     assert.equal(await Link.makeHealthCheck(http, port, () => TOKEN)(), true);
-    assert.equal(seen, TOKEN);
     assert.equal(await Link.makeHealthCheck(http, port, () => "cd".repeat(24))(), false);
     assert.equal(await Link.makeHealthCheck(http, port, () => "")(), false);
+    assert.ok(seen.length >= 2 && seen.every((r) => r.url === "/api/hello"));
+    assert.ok(!seen.some((r) => JSON.stringify(r.headers).includes(TOKEN)), "token sent");
+    // main.js hands the verifier's own getter: one shared verification
+    const v = Hello.makeVerifier(http, crypto, port, () => TOKEN);
+    assert.equal(v.verifiedToken(), "");
+    assert.equal(await Link.makeHealthCheck(http, port, v.verifiedToken)(), true);
+    assert.equal(v.verifiedToken(), TOKEN);
   } finally {
     srv.close();
   }
   assert.equal(await Link.makeHealthCheck(http, port, () => TOKEN)(), false); // closed
+  // a listener answering 200 to everything is not the core and sees no token
+  const fakeSeen = [];
+  const fake = http.createServer((req, res) => { fakeSeen.push(req.headers); res.end("{}"); });
+  await new Promise((r) => fake.listen(0, "127.0.0.1", r));
+  try {
+    assert.equal(await Link.makeHealthCheck(http, fake.address().port, () => TOKEN)(), false);
+    assert.ok(fakeSeen.length === 1 && !JSON.stringify(fakeSeen).includes(TOKEN));
+  } finally {
+    fake.close();
+  }
+});
+
+test("main.js hands every consumer the verified token only", () => {
+  const c = code(MAIN_SRC);
+  assert.match(c, /const hello = Hello\.makeVerifier\(http, crypto, port, readToken, \{ onVerified: onCoreVerified \}\);/);
+  assert.match(c, /const verifiedToken = hello\.verifiedToken;/);
+  // readToken: its definition, the verifier and the token-change watch
+  // (twice); the other two hits are the "readToken: verifiedToken" keys
+  assert.equal((c.match(/\breadToken\b/g) || []).length, 6);
+  assert.equal((c.match(/readToken\(\)/g) || []).length, 3);
+  assert.equal((c.match(/readToken: verifiedToken/g) || []).length, 2); // parts ctx, companion
+  assert.match(c, /const token = ok \? verifiedToken\(\) : "";/);
+  assert.match(c, /e\.returnValue = ok \? \{ token: token, port: port, credit: dataCredit \} : \{\};/);
+  assert.match(c, /getVersion = Hello\.guard\(hello, About\.makeGetVersion\(http, port, verifiedToken\)\);/);
+  assert.match(c, /post: Hello\.guard\(hello, EvalKey\.makePost\(http, port, verifiedToken\)\),/);
+  assert.match(c, /Link\.waitFor\(hello\.check, TOKEN_VERIFY_MS, TOKEN_VERIFY_STEP_MS\)/);
 });
 
 test("the window and tray use the brand icon files", () => {

@@ -106,15 +106,21 @@ function fitText(text) {
   return out;
 }
 
-/* A JSON POST to the local core with the per-start token (Node http). */
+/* A JSON POST to the local core with the per-start token (Node http).
+   SEC-HELLO-CLIENT (decision 0054): getToken is the hello verifier's
+   verifiedToken (main.js), "" until the core proved it holds the token;
+   with "" the post rejects and nothing (no item text) is sent. */
 function makePost(http, port, getToken) {
   return function post(path, body) {
     return new Promise((resolve, reject) => {
+      let token = "";
+      try { token = String(getToken() || ""); } catch (e) { token = ""; }
+      if (!token) { reject(new Error("core not verified")); return; }
       const data = Buffer.from(JSON.stringify(body), "utf8");
       const req = http.request({
         host: "127.0.0.1", port: port, path: path, method: "POST", timeout: 5000,
         headers: { "Content-Type": "application/json", "Content-Length": data.length,
-                   "X-AL-Token": getToken() }
+                   "X-AL-Token": token }
       }, (res) => {
         res.resume();
         res.on("end", () => (res.statusCode === 200 ? resolve(res.statusCode)
