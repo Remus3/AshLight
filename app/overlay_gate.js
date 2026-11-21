@@ -10,9 +10,27 @@
    - the gate is known: the first report from the page seeds it (stale at
      start = hidden, no flash), or GRACE_MS passes without one (no core yet:
      the HUD shows its offline word).
-   Showing is always showInactive (never takes focus from the game). */
+   Showing is always showInactive (never takes focus from the game).
+
+   RUN-EXPLAIN-OVERLAY-STATE (F-129): state() names why the overlay is
+   shown or hidden, from this gate's own flags only (no screen read, no
+   look at any other window): one of STATES, the player's off first (the
+   gate never overrides it), then "starting" (page not ready or no first
+   report yet), then "hidden_idle" (game may be closed), else "shown".
+   HINTS holds one fixed sentence per state; exclusive fullscreen is never
+   detected, it is only named in the fixed "shown" hint. */
 
 const GRACE_MS = 3000;
+const STATES = ["shown", "hidden_user", "hidden_idle", "starting"];
+const HINTS = {
+  shown: "The overlay is shown. If you can't see it over the game, set the game to " +
+    "Windowed Fullscreen: an exclusive fullscreen game covers every other window.",
+  hidden_user: "The overlay is hidden because you turned it off. The show / hide key " +
+    "or the tray brings it back.",
+  hidden_idle: "The overlay is hidden because the game looks closed (no new game log " +
+    "line for a while). It comes back on the next one.",
+  starting: "The overlay is starting."
+};
 
 function createOverlayGate(view, log) {
   const say = log || (() => {});
@@ -22,6 +40,13 @@ function createOverlayGate(view, log) {
   let user = true;
 
   function wanted() { return ready && known && user && gate; }
+
+  function state() {
+    if (!user) { return "hidden_user"; }
+    if (!ready || !known) { return "starting"; }
+    if (!gate) { return "hidden_idle"; }
+    return "shown";
+  }
 
   function apply() {
     const want = wanted();
@@ -49,8 +74,10 @@ function createOverlayGate(view, log) {
     userWants() { return user; },
     /* a new window (page reload keeps the state; a new window re-seeds) */
     reset() { ready = false; known = false; gate = true; },
-    wanted: wanted
+    wanted: wanted,
+    /* why the overlay is shown or hidden: one of STATES */
+    state: state
   };
 }
 
-module.exports = { createOverlayGate, GRACE_MS };
+module.exports = { createOverlayGate, GRACE_MS, STATES, HINTS };

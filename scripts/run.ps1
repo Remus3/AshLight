@@ -83,6 +83,51 @@ foreach ($dir in @($paths.runtime, $paths.logs, $paths.temp)) {
 }
 $log = Join-Path $paths.logs 'run.log'
 
+# RUN-OBS-LOGS-SHELL (F-090): run.log (run.ps1 and stop.ps1) is bounded and
+# in the one line format of AshLight's logs (server\al\logs.py): over 1 MB
+# at start it moves to run.log.1 (one old file kept; a move that fails, the
+# file held open elsewhere, keeps appending), every line is
+# '<UTC ISO stamp> <LEVEL> run[<pid>] <message>' and each start opens with
+# the build banner (server\al\buildinfo.py build_id, version plus 12 hex).
+function Add-AlRunLine([string]$Path, [string]$Level, [string]$Name, [string]$Message) {
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+        [System.Globalization.CultureInfo]::InvariantCulture)
+    Add-Content -Path $Path -Value ($stamp + ' ' + $Level + ' ' + $Name + '[' + $PID + '] ' + $Message) -Encoding ASCII
+}
+
+function Get-AlBuildId {
+    $ErrorActionPreference = 'Continue'
+    $b = ''
+    Push-Location -LiteralPath $AlEnvRoot
+    try {
+        $b = ((& $py -c "import sys; sys.path.insert(0, sys.argv[1]); from server.al import buildinfo; print(buildinfo.build_id())" $AlEnvRoot 2>$null) -join '').Trim()
+    } catch {
+        $b = ''
+    } finally {
+        Pop-Location
+    }
+    if ($b -match '^[0-9A-Za-z.+-]{1,64}$') { return $b }
+    return 'unknown'
+}
+
+function Start-AlRunLog([string]$Path, [string]$Name, [string]$Build) {
+    $old = $Path + '.1'
+    try {
+        if ((Test-Path -LiteralPath $Path -PathType Leaf) -and ((Get-Item -LiteralPath $Path).Length -gt 1048576)) {
+            if (Test-Path -LiteralPath $old -PathType Leaf) {
+                [System.IO.File]::Replace($Path, $old, [NullString]::Value)
+            } else {
+                [System.IO.File]::Move($Path, $old)
+            }
+        }
+    } catch {
+        # held open elsewhere: keep appending to the old file
+    }
+    Add-AlRunLine $Path 'INFO' $Name ("AshLight $Build $Name start (pid $PID, powershell " + [string]$PSVersionTable.PSVersion + ')')
+}
+
+Start-AlRunLog $log 'run' (Get-AlBuildId)
+
 # The client's Electron (Get-AlElectron): the checkout's npm ci dist, or the
 # installed copy's private runtime; '' when the install marker names none.
 $electron = [string](Get-AlElectron)
@@ -107,7 +152,7 @@ if ($Autostart) {
         }
     }
     $state = if ($optin) { 'on' } else { 'off (no-op)' }
-    Add-Content -Path $log -Value ((Get-Date -Format 's') + " run: logon autostart, opt-in $state") -Encoding ASCII
+    Add-AlRunLine $log 'INFO' 'run' "run: logon autostart, opt-in $state"
     if (-not $optin) { exit 0 }
     # the client is installed when its electron.exe (Get-AlElectron) is there
     if ($haveElectron) {
@@ -116,11 +161,13 @@ if ($Autostart) {
     } else {
         $mode = 'core only (client not installed)'
     }
-    Add-Content -Path $log -Value ((Get-Date -Format 's') + " run: logon start, $mode") -Encoding ASCII
+    Add-AlRunLine $log 'INFO' 'run' "run: logon start, $mode"
 }
 
-function Write-AlLog([string]$Message) {
-    $line = (Get-Date -Format 's') + ' ' + $Message
+function Write-AlLog([string]$Message, [string]$Level = 'INFO') {
+    $stamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+        [System.Globalization.CultureInfo]::InvariantCulture)
+    $line = $stamp + ' ' + $Level + ' run[' + $PID + '] ' + $Message
     Add-Content -Path $log -Value $line -Encoding ASCII
     Write-Host $Message
 }
@@ -148,6 +195,49 @@ function Test-AlHealth {
     } finally {
         if ($r) { $r.Close() }
     }
+}
+
+# RUN-START-REASON-CLIENT (F-091): the core's one-line reason for a start
+# that could not bind its port (ops\runtime\start-error.json "fix", written
+# by server\al\__main__.py), when the record is no older than $Since (UNIX
+# seconds); '' otherwise. Printable ASCII, at most 300 characters.
+function Get-AlStartError([double]$Since) {
+    $file = Join-Path $paths.runtime 'start-error.json'
+    try {
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { return '' }
+        if ((Get-Item -LiteralPath $file).Length -gt 4096) { return '' }
+        $doc = Get-Content -LiteralPath $file -Raw | ConvertFrom-Json
+        $at = [double]$doc.at
+        $fix = ([string]$doc.fix).Trim()
+    } catch {
+        return ''
+    }
+    if ($at -lt $Since) { return '' }
+    if (-not $fix -or $fix.Length -gt 300 -or $fix -notmatch '^[\x20-\x7e]+$') { return '' }
+    return $fix
+}
+
+function Get-AlUnixNow {
+    return ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() / 1000.0)
+}
+
+# Wait up to 15 s for the core to answer. A fresh start-error record ends
+# the wait at once and its line is printed; $false when the core is not up.
+function Wait-AlCore([double]$Since) {
+    $deadline = (Get-Date).AddSeconds(15)
+    while (-not (Test-AlHealth)) {
+        $why = Get-AlStartError $Since
+        if ($why) {
+            Write-AlLog "run: core did not start: $why" 'ERROR'
+            return $false
+        }
+        if ((Get-Date) -gt $deadline) {
+            Write-AlLog "run: core did not answer on 127.0.0.1:$port within 15 s; see $($paths.core_log)" 'ERROR'
+            return $false
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    return $true
 }
 
 $env:TEMP = $paths.temp
@@ -226,29 +316,17 @@ if (Test-AlHealth) {
     Write-AlLog "run: core already running on 127.0.0.1:$port (no-op)"
 } elseif ($plan.status.core.live) {
     Write-AlLog "run: core pid $($plan.status.core.pid) is starting; waiting for it"
-    $deadline = (Get-Date).AddSeconds(15)
-    while (-not (Test-AlHealth)) {
-        if ((Get-Date) -gt $deadline) {
-            Write-AlLog "run: core did not answer on 127.0.0.1:$port within 15 s; see $($paths.core_log)"
-            exit 1
-        }
-        Start-Sleep -Milliseconds 250
-    }
+    # started by someone else just before: its record may be up to 60 s old
+    if (-not (Wait-AlCore ((Get-AlUnixNow) - 60))) { exit 1 }
 } else {
     # Detached via WMI (scripts\al_detach.ps1): the core must outlive this
     # script and whatever shell started it. --quiet: core.log is the record.
     $coreArgs = Get-AlDetachArgs 'server.al' @('--quiet', '--port', [string]$port)
+    $launchedAt = (Get-AlUnixNow) - 1
     $corePid = Start-AlDetached -FilePath $exe -ArgumentList $coreArgs `
         -WorkingDirectory $AlEnvRoot -Environment $detachEnv
     Write-AlLog "run: core launched detached (pid $corePid)"
-    $deadline = (Get-Date).AddSeconds(15)
-    while (-not (Test-AlHealth)) {
-        if ((Get-Date) -gt $deadline) {
-            Write-AlLog "run: core did not answer on 127.0.0.1:$port within 15 s; see $($paths.core_log)"
-            exit 1
-        }
-        Start-Sleep -Milliseconds 250
-    }
+    if (-not (Wait-AlCore $launchedAt)) { exit 1 }
     Write-AlLog "run: core started on 127.0.0.1:$port"
 }
 
