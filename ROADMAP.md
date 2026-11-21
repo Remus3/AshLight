@@ -45,6 +45,9 @@ Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
   tests/test_floor_static.py` is green and `npm test --prefix app` passes. ZERO-CLICK: The lane or
   AUTO-17 runs render and check; no window appears. DEPENDS: AUTO-15, TEST-CAPTURE-HELPER. BLOCKED:
   session wave 20.
+- [ ] PLAY-PAGER-SCALE-24 (build) Confirm the pager buttons (.al-pager-btn, 1.5rem) and the compact weight inputs stay at least 24 px when the UI scale --al-s is below 1; clamp with max(24px, 1.5rem) if not; also add tabindex=-1 to the #prices-title markup (D-1) and make the disabled dashed edge 2px if it reads faint (D-2). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_ux_review.py passes and npm test --prefix app passes with the scale below 1 measured at 24 px or more. ZERO-CLICK: Nothing for players; a layout floor that holds by itself. DEPENDS: PLAY-TD-19D-ITEMS-GRID. BLOCKED: session wave 21.
+- [ ] REL-INSTALLED-RUN-CHECK (build) In an installed copy run.ps1 does not start the client (its electron.exe check calls tools/electron_pin.py, which config/ship_list.json does not ship) and its failure log line points at setup.ps1; ship an installed-copy check route (or verify via the install marker) and fix the log line. ACCEPT: python -m pytest -q tests/test_install_shell.py passes with a test where an installed-layout run.ps1 verifies electron.exe without tools/electron_pin.py and the failure line names the installer, not setup.ps1. ZERO-CLICK: An installed copy starts its client by itself with no manual step. DEPENDS: REL-RUNTIME-SCRIPTS. BLOCKED: session wave 21.
+- [ ] TEST-SUITE-HOLD-75 (build) Bring the gated whole-suite hold under its target: profile phase 1 by test file (gate log), then raise WORKERS in tools/suite_run.py or move the slowest work out, and record whether to re-set the 75 s target (4437 tests, phase 2 fixed ~37 s). Evidence: docs/research/0049-test-suite-speed.md second addendum (median 181.3 s, 11 runs). ACCEPT: python -m pytest -q tests/test_research_numbers.py tests/test_ascii_lf.py tests/test_leak_sweep.py is green and the note's third dated addendum shows the profile, the change and a gated median hold at or under the target. ZERO-CLICK: The gate runs itself. DEPENDS: TEST-SUITE-SOAK. BLOCKED: session wave 20.
 
 ## Lane: data
 
@@ -277,63 +280,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 18: go-public, web data, reliability and observability
 
-- [ ] PLAY-TD-19D-ITEMS-GRID (build) Build and items grid 2: Last item, Prices with checked items,
-  Item scoring. ACCEPT: npm test --prefix app and python -m pytest -q tests/test_play_fit.py
-  tests/test_ux_review.py tests/test_ux_b8.py tests/test_price_book.py tests/test_dash_console.py
-  pass with the tab-build marker deleted: a moved checked item sets the tab mark and renders above
-  the movers, the separate price watch card is gone, the poe.ninja credit line is visible on the
-  Prices card while it shows prices, and G1 holds for every list and Full text page of the tab.
-  ZERO-CLICK: Fills from the press the player already makes and from the cached price book; no new
-  request. DEPENDS: PLAY-TD-19C-BUILD-GRID. BLOCKED: session wave 18.
-- [ ] DATA-DIAG-SEAM (build) One hook for data checks: diag_data (attach, facts, rows) + League
-  picker, server half: write the league key, solo-league mapping. ACCEPT: python -m pytest -q
-  tests/test_diag_data.py tests/test_diag_self.py tests/test_floor_static.py passes. Also (folded
-  DATA-LEAGUE-PICKER-API): python -m pytest -q tests/test_league_picker.py
-  tests/test_contact_field.py tests/test_util_10_ready.py tests/test_ux_settings_io.py passes.
-  ZERO-CLICK: The dev step that lets four later packages run in parallel with no shared edit. Also
-  (folded DATA-LEAGUE-PICKER-API): The league follows the auto league as today; the picker is an
-  optional override. DEPENDS: DATA-CONTACT-FIELD, DATA-LEAGUE-IDENTITY. BLOCKED: session wave 18.
-- [ ] RUN-START-REASON-CORE (build) A bind failure names its cause; --port stays in the block (P8-4)
-  + One JSON line per own event (events.jsonl). ACCEPT: python -m pytest -q
-  tests/test_port_resolve.py tests/test_audit_pass8.py passes. Also (folded RUN-OPLOG): python -m
-  pytest -q tests/test_oplog.py tests/test_sidecar_paths.py passes. ZERO-CLICK: The line names the
-  one fix; AshLight never moves to another port by itself. Also (folded RUN-OPLOG): Written by
-  itself; read by the probe and the report. DEPENDS: RUN-OBS-LOGS-PY, RUN-METRICS-SITES,
-  RUN-LEDGER-WIRE. BLOCKED: session wave 18.
-- [ ] DATA-PRICE-CADENCE (build) Tiered poe.ninja cadence and the release polling gate. ACCEPT:
-  python -m pytest -q tests/test_price_cadence.py tests/test_price_book.py tests/test_data_ninja.py
-  tests/test_audit_pass2.py passes. ZERO-CLICK: Nothing for players; the cadence is automatic. The
-  Q-05 message is optional (OA-2, skipped in writing 2026-11-18). DEPENDS: DATA-PRICE-POLITE,
-  DATA-CONTACT-FIELD. BLOCKED: session wave 18.
-- [ ] REL-RUNTIME-SCRIPTS (build) One PowerShell helper for Python and paths; the client prefers the
-  private runtimes. ACCEPT: python -m pytest -q tests/test_al_env.py tests/test_supervisor.py
-  tests/test_run_detach.py tests/test_autostart.py tests/test_port_resolve.py
-  tests/test_desktop_client.py passes and npm test --prefix app passes. ZERO-CLICK: Dev and install
-  plumbing; a start needs no PATH Python and no Node on the player path. DEPENDS: DEP-06,
-  REL-AUTOSTART-ENTRY, REL-CLIENT-HOME, REL-RUNTIME-PINS, DEP-02, OVL-ELECTRON-SETUP,
-  OVL-LAUNCH-ENV, SEC-NO-PROXY. BLOCKED: session wave 18.
-- [ ] LOOP-DRIFT-REF (build) TC-DRIFT-TRIAL-FIX (part 2): trial --ref rehearsal and the GUI
-  reference keyed by tag. ACCEPT: `python -m pytest -q tests/test_tc_drift.py
-  tests/test_tc_bridge.py` passes (the live bridge tests skip where the optional calc component is
-  absent). ZERO-CLICK: The static tier is unattended; the live tier and the pin move stay session
-  acts (decision 0025). DEPENDS: AUTO-12. BLOCKED: session wave 18.
-- [ ] LOOP-WATCH-POBNEXT (build) Watch source: PoB-PoE2 next release (master head, weekly). ACCEPT:
-  `python -m pytest -q tests/test_watch_pob_next.py tests/test_watch_rows.py` passes. ZERO-CLICK:
-  Unattended; the static rehearsal itself stays a session act (`tc_drift.py trial --ref`, AUTO-12).
-  DEPENDS: AUTO-05, LOOP-WATCH-ROWS. BLOCKED: session wave 18.
-- [ ] RUN-LEDGER-REPORT (build) tools/live1_report.py: VERIFIED live / NOT SEEN / NEW SHAPE per
-  LIVE-1 item. ACCEPT: python -m pytest -q tests/test_live1_report.py passes and python
-  tools/live1_report.py --json on a fixture ledger exits 0. ZERO-CLICK: A session runs it as one
-  command; the loop runs it once AUTO-18 wires it (cross); the operator only plays. DEPENDS:
-  RUN-LEDGER-CORE, RUN-LEDGER-WIRE. BLOCKED: session wave 18.
-- [ ] PUB-SETTINGS-FILES (build) Repository settings as tracked files with a lint test. ACCEPT:
-  `python -m pytest -q tests/test_repo_settings_files.py tests/test_ascii_lf.py
-  tests/test_leak_sweep.py` is green. ZERO-CLICK: Files only; GP-13 and GP-15 apply them with gh and
-  read them back, with no click. DEPENDS: GP-05. BLOCKED: session wave 18.
-- [ ] GP-08 (build) Dependabot config file. ACCEPT: `python -m pytest -q
-  tests/test_dependabot_config.py tests/test_ascii_lf.py` is green. ZERO-CLICK: GitHub opens the
-  bump pull requests by itself; GP-14's tool re-applies and closes them, nothing is merged on
-  GitHub. BLOCKED: session wave 18.
 - [ ] TEST-SUITE-SOAK (review) Prove the parallel gate: 10 green runs, one serial fallback run, one
   spelling. ACCEPT: python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
   tests/test_leak_sweep.py passes and the note's second dated addendum lists 10 consecutive green
@@ -341,23 +287,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   hidden, and one command hash for all of them in the gate's duration log. ZERO-CLICK: The agent
   runs the eleven gated runs itself, one at a time, at below-normal priority; no operator step.
   DEPENDS: TEST-GATE-CALLERS. BLOCKED: session wave 20.
-- [ ] DATA-GUIDE-FACTS (data) Guide facts from allowed sources: 4 blank zones, point-books wording,
-  coverage. ACCEPT: python -m pytest -q tests/test_zone_guide.py tests/test_provenance.py
-  tests/test_hot_reload.py passes (the snapshot coverage test runs where the world_areas cache
-  exists, as test_every_guide_zone_names_a_snapshot_zone_of_its_act does). ZERO-CLICK: Data only;
-  the file hot-reloads and the guide follows the log with no click. DEPENDS: DATA-GUIDE-MERGE,
-  DATA-GUIDE-BOSS. BLOCKED: session wave 18.
-- [ ] PUB-DEPBOT-ACTIONS (data) Dependabot re-apply tool: actions bumps and the commit, push and
-  close path. ACCEPT: `python -m pytest -q tests/test_dependabot_reapply.py
-  tests/test_p163_lane_tools.py tests/test_ascii_lf.py tests/test_leak_sweep.py` is green.
-  ZERO-CLICK: Part of `python tools/dependabot_reapply.py run`: no prompt; a session runs it until
-  the loop resumes (F-078), then the tick does (PUB-DEPBOT-TICK). DEPENDS: GP-14, GP-02, GP-05.
-  BLOCKED: session wave 18.
-- [ ] PUB-DEPBOT-TICK (build) Loop tick launches the Dependabot re-apply worker once a day. ACCEPT:
-  `python -m pytest -q tests/test_loop_depbot.py tests/test_loop_split.py tests/test_al_loop.py
-  tests/test_p163_lane_tools.py` is green. ZERO-CLICK: Fully unattended once F-078 resumes the loop;
-  while HALT is present nothing is launched and a session runs the tool instead. DEPENDS: GP-14,
-  PUB-LOCAL-ONLY-TEXT. BLOCKED: session wave 18.
 
 ### Wave 19: reliability and observability, web data, install and release
 
@@ -1129,12 +1058,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Parked
 
-- [ ] GP-10 (build) The project's own address in tracked files. ACCEPT: `python tools/leak_sweep.py
-  --tree` exits 0 printing `ARMED` with the address in README.md, and `python -m pytest -q
-  tests/test_leak_sweep.py tests/test_community_files.py tests/test_public_docs.py
-  tests/test_ascii_lf.py` is green. ZERO-CLICK: One config value written by an agent from the
-  existing remote; no player types an address. DEPENDS: GP-09, PUB-SWEEP-OWN-ADDRESS, GP-06,
-  PUB-README-PLAYERS. BLOCKED: session wave 18.
 - (TC-IMPORT: its row is replaced in place under '## Theorycraft and item optimization (decision 0004, research 0010)'.)
 - [ ] DATA-LOOT-TALLY (build) Loot tally from the items the player checked. ACCEPT: python -m pytest
   -q tests/test_loot_tally.py tests/test_util_price_watch.py tests/test_util_maprun.py passes and
@@ -1271,12 +1194,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   dev_press_samples on (rare gear, a unique, a currency stack, a waystone, a tablet, a gem; plain
   and advanced copy); unblocks when at least six sanitized candidate files, one per shape, exist
   under the sidecar Scratch press-samples folder (operator).
-- [ ] AUTO-19 (build) CI-WATCH (workflow half): a daily workflow that writes one key issue per
-  finding. ACCEPT: `python -m pytest -q tests/test_watch_ci.py` passes, `git grep -c "not a web_data
-  path" -- docs/decisions/0076-ci-issue-protocol.md` prints a count of 1 and, after the first push,
-  the workflow's manual run ends green. ZERO-CLICK: Unattended: the watch survives a dev host that
-  is off; standard runners are free on a public repository. DEPENDS: AUTO-05, LOOP-WATCH-GATE,
-  GP-09, GP-05. BLOCKED: session wave 18.
 - [ ] AUTO-20 (build) DEPBOT-WATCH: Dependabot alerts and pull requests become rows. ACCEPT: `python
   -m pytest -q tests/test_watch_dependabot.py tests/test_watch_rows.py` passes. ZERO-CLICK: The lane
   runs from the tick and re-applies the bump locally as an operator commit; nothing is merged on
