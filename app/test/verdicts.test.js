@@ -120,21 +120,22 @@ test("verdicts: model lists the open checks, one click posts a verdict", async (
   const closed = rowsOf(d)[4];
   assert.equal(find(closed, (n) => n.tagName === "BUTTON").length, 0, "a worked check is closed");
 
-  // one click: Worked on the first check posts it, with the typed note
-  byId(d, "verdicts-note").value = "  loaded fine  ";
+  // one click: Worked on the first check posts it, with that row's note
+  byId(d, "verdicts-note-TC-BUILDFILE-LIVE").value = "  loaded fine  ";
   const first = buttons(d).find((b) => b.getAttribute("data-check") === "TC-BUILDFILE-LIVE" &&
     b.getAttribute("data-result") === "worked");
   first.focus();
   first.listeners.click();
   assert.deepEqual(api.calls[1], ["POST", "/api/verdicts",
     { check: "TC-BUILDFILE-LIVE", result: "worked", note: "loaded fine" }]);
-  assert.ok(buttons(d).every((b) => b.disabled), "one post at a time");
+  assert.ok(buttons(d).every((b) => b.getAttribute("aria-disabled") === "true" && !b.disabled),
+    "one post at a time");
   first.listeners.click(); // a second click while it posts does nothing
   assert.equal(api.calls.length, 2);
   await tickle();
   assert.equal(api.calls.length, 2, "no read after the post: the answer repaints");
   assert.equal(buttons(d).length, 6);
-  assert.equal(byId(d, "verdicts-note").value, "", "the note goes with that one click");
+  assert.equal(byId(d, "verdicts-note-TC-BUILDFILE-LIVE"), null, "a closed check has no note field");
   assert.equal(byId(d, "verdicts-said").textContent, V.SAVED.worked);
   assert.equal(d.activeElement, byId(d, "verdicts-said"), "focus never drops to the body");
 
@@ -148,11 +149,12 @@ test("verdicts: model lists the open checks, one click posts a verdict", async (
   assert.equal(find(lf, (n) => n.tagName === "BUTTON").length, 2);
 
   // a note the core would refuse is said, never cut and never sent
-  byId(d, "verdicts-note").value = "x".repeat(201);
+  const noteOf = (b) => byId(d, "verdicts-note-" + b.getAttribute("data-check"));
+  noteOf(buttons(d)[0]).value = "x".repeat(201);
   buttons(d)[0].listeners.click();
   assert.equal(api.calls.length, 3);
   assert.equal(byId(d, "verdicts-said").textContent, V.NOTE_BAD);
-  byId(d, "verdicts-note").value = "caf\u00e9";
+  noteOf(buttons(d)[0]).value = "caf\u00e9";
   buttons(d)[0].listeners.click();
   assert.equal(api.calls.length, 3);
   assert.equal(V.cleanNote(" ok ", 200), "ok");
@@ -162,7 +164,7 @@ test("verdicts: model lists the open checks, one click posts a verdict", async (
   for (const [id] of CHECKS) {
     const b = buttons(d).find((x) => x.getAttribute("data-check") === id &&
       x.getAttribute("data-result") === "worked");
-    if (b) { byId(d, "verdicts-note").value = ""; b.listeners.click(); await tickle(); }
+    if (b) { byId(d, "verdicts-note-" + id).value = ""; b.listeners.click(); await tickle(); }
   }
   assert.equal(buttons(d).length, 0);
   assert.equal(rowsOf(d).length, 5, "closed checks stay listed");
@@ -177,13 +179,113 @@ test("verdicts: a failed post or read says so", async () => {
   buttons(d)[0].listeners.click();
   await tickle();
   assert.equal(byId(d, "verdicts-said").textContent, V.SAVE_FAILED);
-  assert.ok(buttons(d).every((b) => !b.disabled), "the buttons come back");
+  assert.ok(buttons(d).every((b) => b.getAttribute("aria-disabled") === "false"),
+    "the buttons come back");
   const d2 = fakeDoc();
   await V.wire(d2, () => Promise.reject(new Error("HTTP 500")));
   assert.equal(d2.mount.hidden, false);
   assert.equal(byId(d2, "verdicts-said").textContent, V.LOAD_FAILED);
   // no mount, no api: nothing at all
   assert.equal(await V.wire({ getElementById: () => null }, fakeApi({})), false);
+});
+
+/* VERDICTS-UI-A11Y: the RUN-VERDICTS-UI design review, V-1 to V-3. */
+const btn = (d, id, result) => buttons(d).find((b) => b.getAttribute("data-check") === id &&
+  b.getAttribute("data-result") === result);
+
+test("verdicts V-1: a Refused click is read out: focus moves to the said line", async () => {
+  const d = fakeDoc();
+  await V.wire(d, fakeApi({}));
+  const refused = btn(d, "LIVE-FILTER", "refused");
+  refused.focus();
+  refused.listeners.click();
+  await tickle();
+  // the row stays open (its buttons are rebuilt), yet the focus moves on
+  assert.ok(btn(d, "LIVE-FILTER", "refused"), "a refused check stays open");
+  assert.equal(byId(d, "verdicts-said").textContent, V.SAVED.refused);
+  assert.equal(d.activeElement, byId(d, "verdicts-said"));
+  assert.equal(byId(d, "verdicts-said").getAttribute("tabindex"), "-1");
+  // a failed post is read out the same way
+  const d2 = fakeDoc();
+  await V.wire(d2, fakeApi({}, { fail: true }));
+  const w = btn(d2, "OVL-FPS", "worked");
+  w.focus();
+  w.listeners.click();
+  await tickle();
+  assert.equal(byId(d2, "verdicts-said").textContent, V.SAVE_FAILED);
+  assert.equal(d2.activeElement, byId(d2, "verdicts-said"));
+  // focus the player moved elsewhere during the post is left alone
+  const d3 = fakeDoc();
+  await V.wire(d3, fakeApi({}));
+  btn(d3, "OVL-FPS", "refused").focus();
+  btn(d3, "OVL-FPS", "refused").listeners.click();
+  const elsewhere = byId(d3, "verdicts-note-LIVE-FILTER");
+  elsewhere.focus();
+  await tickle();
+  assert.equal(d3.activeElement, elsewhere);
+});
+
+test("verdicts V-2: the busy state keeps the focus (aria-disabled, never disabled)", async () => {
+  const d = fakeDoc();
+  let answer = null;
+  const api = (method) => (method === "GET" ? Promise.resolve(doc({})) :
+    new Promise((r) => { answer = r; }));
+  await V.wire(d, api);
+  const b = btn(d, "LIVE-SEARCHSTR", "worked");
+  b.focus();
+  b.listeners.click();
+  for (const x of buttons(d)) {
+    assert.equal(x.disabled, false, "a disabled button would drop the focus");
+    assert.equal(x.getAttribute("aria-disabled"), "true");
+  }
+  assert.equal(d.activeElement, b, "focus stays on the pressed button while it posts");
+  answer({ verdicts: doc({ "LIVE-SEARCHSTR": { result: "worked", note: "" } }) });
+  await tickle();
+  assert.ok(buttons(d).every((x) => x.getAttribute("aria-disabled") === "false"));
+  assert.equal(d.activeElement, byId(d, "verdicts-said"));
+  // the source never sets .disabled on a verdict button
+  assert.ok(!/\.disabled\s*=/.test(CODE));
+});
+
+test("verdicts V-3: each open check has its own note field, sent only with that check", async () => {
+  const d = fakeDoc();
+  const api = fakeApi({});
+  await V.wire(d, api);
+  const notes = find(d.mount, (n) => n.tagName === "TEXTAREA");
+  assert.equal(notes.length, 5, "one note field per open check");
+  for (const n of notes) {
+    const id = n.id.replace("verdicts-note-", "");
+    const label = find(d.mount, (x) => x.tagName === "LABEL" && x.getAttribute("for") === n.id);
+    assert.equal(label.length, 1);
+    assert.equal(label[0].textContent, V.NOTE_LABEL);
+    assert.equal(label[0].textContent, "Note for this check, optional");
+    const li = rowsOf(d).find((r) => r.getAttribute("data-check") === id);
+    assert.ok(find(li, (x) => x === n).length, "the field sits in its own check's row");
+    assert.equal(n.getAttribute("maxlength"), "200");
+  }
+  // a note typed under one check never goes with another
+  byId(d, "verdicts-note-LIVE-FILTER").value = "bad line 12";
+  byId(d, "verdicts-note-OVL-FPS").value = "steady";
+  btn(d, "TC-BUILDFILE-LIVE", "worked").listeners.click();
+  assert.deepEqual(api.calls[1][2], { check: "TC-BUILDFILE-LIVE", result: "worked" });
+  await tickle();
+  // the rebuild keeps what was typed in the rows still open
+  assert.equal(byId(d, "verdicts-note-LIVE-FILTER").value, "bad line 12");
+  assert.equal(byId(d, "verdicts-note-OVL-FPS").value, "steady");
+  btn(d, "LIVE-FILTER", "refused").listeners.click();
+  assert.deepEqual(api.calls[2][2], { check: "LIVE-FILTER", result: "refused", note: "bad line 12" });
+  await tickle();
+  assert.equal(byId(d, "verdicts-note-LIVE-FILTER").value, "", "a sent note is cleared");
+  assert.equal(byId(d, "verdicts-note-OVL-FPS").value, "steady");
+  // a refused note focuses its own field, which points at the said line
+  const bad = byId(d, "verdicts-note-OVL-FPS");
+  bad.value = "tab\there";
+  btn(d, "OVL-FPS", "worked").listeners.click();
+  assert.equal(api.calls.length, 3);
+  assert.equal(d.activeElement, bad);
+  assert.equal(bad.getAttribute("aria-invalid"), "true");
+  assert.equal(bad.getAttribute("aria-describedby"), "verdicts-said");
+  assert.ok(!/goes with your next click/.test(SRC));
 });
 
 test("verdicts: no timer, no clipboard, text set with textContent", () => {

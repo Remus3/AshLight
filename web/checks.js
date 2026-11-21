@@ -17,6 +17,11 @@
    there yet (the fold opened by itself on a failure, or the build
    failed), that click builds and shows it and the next one copies; the
    clipboard is never written after a wait. No upload, ever.
+   VERDICTS-UI-A11Y (design review V-4, V-5): a Copy click that built the
+   missing preview says it is below and asks for Copy report again; a
+   preview made before a check changed its state is made again by the
+   next Copy click (which then copies nothing), so the copy is never an
+   older report than the checks on show.
    TC-CALC-OPTIN-BUTTON (decision 0018 opt-in, decision 0041 amendment
    2026-11-20): inside the desktop client only (window.alClient.setupCalc,
    app/client/preload.js) the calc row carries a "Set up the calc" button
@@ -39,6 +44,11 @@
   var REPORT_PATH = "/api/report";
   var BUILDING = "Making the report...";
   var READY = "This is the report. Press Copy report to copy it.";
+  // V-4: after a Copy click that had to build the preview first
+  var READY_AGAIN = "The report is below. Press Copy report again to copy it.";
+  // V-5: after a Copy click that found the preview older than the checks
+  var READY_CHANGED = "The checks changed. The new report is below. " +
+    "Press Copy report again to copy it.";
   var BUILD_FAILED = "Couldn't make the report. Try again.";
   var WAITING = "Checking AshLight...";
   var DISMISS_KEY = "al.lang.dismissed";
@@ -219,6 +229,13 @@
       state.calc = "";
     }
     state.calcRow = calcRow;
+    // V-5: the checks' states (not their wording, which ages by the
+    // minute); a change makes an open preview stale
+    var states = JSON.stringify(m.rows.map(function (r) { return [r.id, r.word]; }));
+    if (states !== report.states) {
+      report.states = states;
+      report.checksGen += 1;
+    }
     var key = JSON.stringify([m, !!client]);
     if (box.getAttribute("data-key") === key) {
       syncCalc(); // a cleared setup line, with no rebuild
@@ -283,8 +300,10 @@
 
   /* RUN-REPORT-ROUTE: the preview. report.text is the text on show ("" for
      none), report.gen counts builds so a late answer of an older build
-     never overwrites a newer one. */
-  var report = { text: "", gen: 0 };
+     never overwrites a newer one. V-5: report.checksGen moves when a
+     check's state changes (report.states), report.builtGen is the
+     checksGen the preview on show was asked at (-1 for none). */
+  var report = { text: "", gen: 0, states: "", checksGen: 0, builtGen: -1 };
 
   function showPreview(doc, text) {
     var pre = doc.getElementById("checks-preview");
@@ -294,13 +313,15 @@
     if (box) { box.hidden = !text; }
   }
 
-  /* GET /api/report, then the preview. Resolves to true when it shows. */
-  function buildReport(doc, api, said) {
+  /* GET /api/report, then the preview; `ready` is the line said when it
+     shows (READY by default). Resolves to true when it shows. */
+  function buildReport(doc, api, said, ready) {
     if (typeof api !== "function") {
       said.textContent = BUILD_FAILED;
       return Promise.resolve(false);
     }
     var gen = ++report.gen;
+    var asked = report.checksGen;
     said.textContent = BUILDING;
     var p;
     try { p = api("GET", REPORT_PATH); } catch (e) { p = Promise.reject(e); }
@@ -308,7 +329,8 @@
       if (gen !== report.gen) { return false; }
       var text = res && typeof res.report === "string" ? res.report : "";
       showPreview(doc, text);
-      said.textContent = text ? READY : BUILD_FAILED;
+      report.builtGen = text ? asked : -1;
+      said.textContent = text ? (ready || READY) : BUILD_FAILED;
       return !!text;
     }, function () {
       if (gen !== report.gen) { return false; }
@@ -327,6 +349,7 @@
     held.wired = true;
     report.text = "";
     report.gen = 0;
+    report.builtGen = -1;
     var copy = doc.getElementById("checks-copy");
     var said = doc.getElementById("checks-said");
     var fold = doc.getElementById("checks");
@@ -342,7 +365,11 @@
       copy.addEventListener("click", function () {
         var text = report.text;
         if (!text) { // no preview yet: this click builds it, the next copies
-          buildReport(doc, api, said);
+          buildReport(doc, api, said, READY_AGAIN);
+          return;
+        }
+        if (report.builtGen !== report.checksGen) { // V-5: a check moved since
+          buildReport(doc, api, said, READY_CHANGED);
           return;
         }
         said.textContent = "";
@@ -364,6 +391,7 @@
   return { model: model, langModel: langModel, calcModel: calcModel, paint: paint, wire: wire,
            COPIED: COPIED, COPY_FAILED: COPY_FAILED, WAITING: WAITING, MARK: MARK,
            REPORT_PATH: REPORT_PATH, BUILDING: BUILDING, READY: READY,
+           READY_AGAIN: READY_AGAIN, READY_CHANGED: READY_CHANGED,
            BUILD_FAILED: BUILD_FAILED, _report: report,
            CALC_BUTTON: CALC_BUTTON, CALC_PENDING: CALC_PENDING, CALC_OK: CALC_OK,
            CALC_FAILED: CALC_FAILED, _state: state };

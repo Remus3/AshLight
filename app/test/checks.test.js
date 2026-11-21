@@ -156,7 +156,7 @@ test("checks: clipboard only inside the click", async () => {
   await tickle();
   await tickle();
   assert.deepEqual(wrote, [], "never written after a wait");
-  assert.equal(doc.ids["checks-said"].textContent, ck.READY);
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY_AGAIN);
   // the next click copies, synchronously inside it
   click("checks-copy");
   assert.deepEqual(wrote, [REPORT]);
@@ -183,6 +183,86 @@ test("checks: clipboard only inside the click", async () => {
   assert.equal(src.split("clipboard.writeText(").length - 1, 1);
   assert.ok(!/\.then\(function \(res\) \{[^}]*writeText/.test(src));
   assert.ok(!/setTimeout|setInterval/.test(src));
+});
+
+/* VERDICTS-UI-A11Y: the RUN-VERDICTS-UI design review, V-4 to V-6. */
+test("checks V-4: after an auto-opened fold the Copy click says the report is below", async () => {
+  const doc = fakeDoc();
+  const calls = [];
+  const wrote = [];
+  const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
+  ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
+  ck.paint(doc, { diag: DIAG }); // the fold opens by itself: no preview yet
+  assert.equal(doc.ids.checks.open, true);
+  doc.ids["checks-copy"].listeners.click();
+  await tickle();
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY_AGAIN);
+  assert.equal(ck.READY_AGAIN, "The report is below. Press Copy report again to copy it.");
+  assert.notEqual(ck.READY_AGAIN, ck.READY);
+  assert.deepEqual(wrote, []);
+  doc.ids["checks-copy"].listeners.click();
+  assert.deepEqual(wrote, [REPORT]);
+  // opening the fold by hand keeps the plain line
+  const d2 = fakeDoc();
+  ck.wire(d2, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, []));
+  d2.ids["checks-summary"].listeners.click();
+  await tickle();
+  assert.equal(d2.ids["checks-said"].textContent, ck.READY);
+});
+
+test("checks V-5: a preview older than the checks' states is made again before a copy", async () => {
+  const doc = fakeDoc();
+  const calls = [];
+  const wrote = [];
+  let text = REPORT;
+  const api = (method, path) => { calls.push([method, path]); return Promise.resolve({ report: text }); };
+  let inClick = false;
+  const nav = { clipboard: { writeText: (t) => {
+    assert.ok(inClick, "writeText outside the click");
+    wrote.push(t);
+    return Promise.resolve();
+  } } };
+  const click = (id) => { inClick = true; try { doc.ids[id].listeners.click(); } finally { inClick = false; } };
+  ck.wire(doc, () => ({ diag: DIAG }), nav, null, api);
+  ck.paint(doc, { diag: DIAG });
+  doc.ids.checks.open = false; // the player closed it, then opens it again
+  click("checks-summary");
+  await tickle();
+  assert.equal(calls.length, 1);
+  // new wording only (the minutes age): the preview is still current
+  ck.paint(doc, { diag: Object.assign({}, DIAG, { summary: "same states, new words" }) });
+  click("checks-copy");
+  assert.deepEqual(wrote, [REPORT]);
+  assert.equal(calls.length, 1);
+  // a check changes its state while the fold is open
+  const fixed = Object.assign({}, DIAG, { failed: 0, summary: "All checks pass.",
+    checks: DIAG.checks.map((c) => (c.id === "overlay" ? Object.assign({}, c, { status: "pass" }) : c)) });
+  text = "AshLight 0.1.0 (abc) self-check, 2026-11-21 10:05 UTC\n[OK] Overlay\n";
+  ck.paint(doc, { diag: fixed });
+  click("checks-copy"); // remakes the preview, copies nothing
+  assert.equal(calls.length, 2);
+  assert.deepEqual(wrote, [REPORT]);
+  await tickle();
+  assert.equal(doc.ids["checks-preview"].value, text);
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY_CHANGED);
+  assert.match(ck.READY_CHANGED, /Press Copy report again to copy it\.$/);
+  click("checks-copy"); // the next click copies the new preview, synchronously
+  assert.deepEqual(wrote, [REPORT, text]);
+  assert.equal(calls.length, 2);
+});
+
+test("checks V-6: the preview is 6 rows, full width, inside the Checks fold", () => {
+  const html = web.source("index.html");
+  assert.match(html, /<textarea id="checks-preview" class="code-out" readonly rows="6" spellcheck="false"><\/textarea>/);
+  const css = web.source("app.css");
+  assert.match(css, /\.code-out \{ width: 100%;/);
+  assert.match(css, /\.paste-box \{ width: 100%;/);
+  // a tab's column scrolls on its own, so the open fold never pushes the page
+  assert.match(css, /\.panel-grid > \.col \{ max-height: 100%; overflow-y: auto;/);
+  const fold = html.indexOf('<details id="checks">');
+  const end = html.indexOf("</details>", fold);
+  const box = html.indexOf('id="checks-preview-box"');
+  assert.ok(fold > 0 && box > fold && box < end);
 });
 
 test("language notice: region N owns it; the Hide key is read at wire and stored at once", () => {
