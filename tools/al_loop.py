@@ -472,8 +472,8 @@ class Deps:
 def _drift_check(root, now):
     """TC-DRIFT (tools/tc_drift.py): one line when a check ran, else None; never raises."""
     try:
-        import tc_drift
-        return tc_drift.loop_check(root, now)
+        import loop_depbot, tc_drift  # noqa: E401  PUB-DEPBOT-TICK: daily worker
+        return loop_depbot.join(loop_depbot.loop_check(root, now), tc_drift.loop_check(root, now))
     except Exception as exc:  # noqa: BLE001 - a drift fault must not stop the tick
         return f"tc drift: {type(exc).__name__}: {exc}"
 
