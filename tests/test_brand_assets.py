@@ -2,6 +2,7 @@
 present, sized right, in sync, ASCII, and wired into README and dashboard
 (docs/design/0005-brand-mark.md)."""
 
+import struct
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ def test_check_mode_is_clean():
 
 
 def test_svg_sources_are_ascii_and_have_no_font_or_raster():
-    for svg in (mi.MARK, mi.SMALL, mi.HERO, mi.FAVICON_SVG):
+    for svg in (mi.MARK, mi.SMALL, mi.HERO, mi.SOCIAL, mi.FAVICON_SVG):
         data = svg.read_bytes()
         data.decode("ascii")
         text = data.decode("ascii").lower()
@@ -35,6 +36,35 @@ def test_png_sizes_and_transparent_corners():
     for theme in ("light", "dark"):
         assert mi.png_size(mi.hero_path(theme).read_bytes()) == mi.HERO_SIZE
 
+
+
+def test_social_preview_card():
+    # PUB-SOCIAL-CARD: the repository social preview, 1280 x 640, drawn
+    # from the hero strokes only; IHDR / IDAT / IEND and nothing else (no
+    # text or time metadata), small enough for the 500 KB blob gate
+    assert mi.SOCIAL_SIZE == (1280, 640)
+    assert mi.social_path() == mi.BRAND / "social-preview.png"
+    data = mi.social_path().read_bytes()
+    assert mi.png_size(data) == mi.SOCIAL_SIZE
+    assert len(data) < 250 * 1024
+    kinds, pos = [], 8
+    while pos < len(data):
+        n, kind = struct.unpack(">I4s", data[pos:pos + 8])
+        kinds.append(kind)
+        pos += 12 + n
+    assert pos == len(data)
+    assert set(kinds) == {b"IHDR", b"IDAT", b"IEND"}
+    assert kinds[0] == b"IHDR" and kinds[-1] == b"IEND"
+    jobs = [j for j in mi.jobs(mi.BRAND) if j["dest"] == mi.social_path()]
+    assert len(jobs) == 1
+    assert jobs[0]["svg"] == str(mi.SOCIAL)
+    assert jobs[0]["size"] == [1280, 640] and jobs[0]["theme"] == "dark"
+    svg = mi.SOCIAL.read_text(encoding="ascii")
+    assert 'width="1280" height="640" viewBox="0 0 1280 640"' in svg
+    hero = mi.HERO.read_text(encoding="ascii")
+    for glyph in ("w-ua", "w-ls", "w-lh", "w-lg", "t-two"):
+        line = next(x for x in hero.splitlines() if 'id="%s"' % glyph in x)
+        assert line.strip() in svg, glyph
 
 def test_ico_holds_every_size_as_png():
     got = mi.ico_entries(mi.ICO.read_bytes())

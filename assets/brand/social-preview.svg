@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640">
+  <!-- AshLight social preview card (PUB-SOCIAL-CARD, docs/design/0005-brand-mark.md).
+       The README hero's own strokes (mark, drawn word AshLight, drawn
+       tagline) centred on GitHub's 1280 x 640 card, dark theme only:
+       no font, no raster, no game art. tools/make_icons.py renders
+       social-preview.png from this file. -->
+  <title>AshLight - a live, glanceable companion for Path of Exile 2</title>
+  <style>
+    .al-ground { fill: #0f1216; }
+    .al-rule { stroke: #323840; }
+    .al-ink { stroke: #e4e8ec; }
+    .al-tag { stroke: #99a1aa; }
+  </style>
+  <defs>
+    <linearGradient id="al-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d222a"/>
+      <stop offset="1" stop-color="#0f1216"/>
+    </linearGradient>
+    <radialGradient id="al-glow" cx="128" cy="150" r="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eb6834" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#eb6834" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="al-flame" x1="0" y1="30" x2="0" y2="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eb6834"/>
+      <stop offset="1" stop-color="#eda100"/>
+    </linearGradient>
+    <linearGradient id="al-core" x1="0" y1="96" x2="0" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7c35f"/>
+      <stop offset="1" stop-color="#fff1d2"/>
+    </linearGradient>
+    <path id="w-ua" d="M0 120L46 0L92 120M19 78H73"/>
+    <path id="w-ls" d="M56 50C50 43 41 40 30 40C15 40 4 47 4 58C4 70 15 74 29 78C44 82 56 87 56 99C56 112 45 120 30 120C17 120 7 115 1 107"/>
+    <path id="w-lh" d="M0 0V120M0 76C0 54 14 40 34 40C54 40 64 53 64 72V120"/>
+    <path id="w-ul" d="M0 0V120H60"/>
+    <path id="w-li" d="M0 40V120"/>
+    <path id="w-lg" d="M64 80C64 102 50 120 32 120C14 120 0 102 0 80C0 58 14 40 32 40C50 40 64 58 64 80ZM64 40V140C64 160 51 170 33 170C20 170 10 165 4 157"/>
+    <path id="w-lt" d="M16 8V100C16 114 23 120 36 120H44M0 40H42"/>
+    <path id="t-ua" d="M0 20L8 0L16 20M3 13.5H13"/>
+    <path id="t-ul" d="M0 0V20H11"/>
+    <path id="t-ui" d="M0 0V20"/>
+    <path id="t-uv" d="M0 0L8 20L16 0"/>
+    <path id="t-ue" d="M12 0H0V20H12M0 10H10"/>
+    <path id="t-comma" d="M1.5 18L0 23"/>
+    <path id="t-ug" d="M15.5 4.2A9 10 0 1 0 17 13V11.5H10"/>
+    <path id="t-un" d="M0 20V0L15 20V0"/>
+    <path id="t-uc" d="M15.5 4.2A9 10 0 1 0 15.5 15.8"/>
+    <path id="t-ub" d="M0 10H7.5A5 5 0 0 1 7.5 20H0V0H7A4.6 5 0 0 1 7 10"/>
+    <path id="t-uo" d="M0 10A9 10 0 1 0 18 10A9 10 0 1 0 0 10Z"/>
+    <path id="t-um" d="M0 20V0L9 13L18 0V20"/>
+    <path id="t-up" d="M0 20V0H7A5.5 5.5 0 0 1 7 11H0"/>
+    <path id="t-uf" d="M12 0H0V20M0 10H10"/>
+    <path id="t-ur" d="M0 20V0H7A5.5 5.5 0 0 1 7 11H0M6.5 11L13 20"/>
+    <path id="t-ut" d="M0 0H14M7 0V20"/>
+    <path id="t-uh" d="M0 0V20M14 0V20M0 10H14"/>
+    <path id="t-ux" d="M0 0L15 20M15 0L0 20"/>
+    <path id="t-two" d="M0.5 5.5A6.5 5.5 0 0 1 13 6C13 10.5 2 14 0 20H13"/>
+  </defs>
+  <rect class="al-ground" width="1280" height="640"/>
+  <g transform="translate(0 116)">
+    <g transform="translate(92 84) scale(0.90625)">
+      <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#al-tile)"/>
+      <rect x="9" y="9" width="238" height="238" rx="51" fill="none" stroke="#323840" stroke-width="2"/>
+      <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#al-glow)"/>
+      <path fill="url(#al-flame)" d="M140 30C154 66 190 92 188 144C186 178 160 196 128 196C96 196 70 176 70 146C70 116 88 98 100 72C104 92 112 104 122 108C120 80 126 52 140 30Z"/>
+      <path fill="url(#al-core)" d="M132 96C144 120 162 136 160 160C158 180 144 190 128 190C112 190 100 180 100 162C100 142 118 128 132 96Z"/>
+      <circle cx="192" cy="60" r="6" fill="#eda100"/>
+      <circle cx="74" cy="50" r="5" fill="#eb6834"/>
+      <circle cx="204" cy="96" r="4.5" fill="#eda100" fill-opacity="0.8"/>
+      <path d="M64 210H192" stroke="#99a1aa" stroke-width="14" stroke-linecap="round"/>
+      <path d="M96 231H160" stroke="#5b636c" stroke-width="12" stroke-linecap="round"/>
+    </g>
+    <g class="al-ink" fill="none" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" transform="translate(384 98)">
+      <use xlink:href="#w-ua" x="0"/>
+      <use xlink:href="#w-ls" x="118"/>
+      <use xlink:href="#w-lh" x="204"/>
+      <use xlink:href="#w-ul" x="298"/>
+      <use xlink:href="#w-lg" x="408"/>
+      <use xlink:href="#w-lh" x="502"/>
+      <use xlink:href="#w-lt" x="596"/>
+      <use xlink:href="#w-li" x="378"/>
+    </g>
+    <path fill="url(#al-flame)" transform="translate(762 104)" d="M0 -15C6 -7 10 -1 10 5C10 11 5.5 15 0 15C-5.5 15 -10 11 -10 5C-10 -1 -6 -7 0 -15Z"/>
+    <path class="al-rule" d="M384 278H448" stroke-width="2" stroke-linecap="round"/>
+    <g class="al-tag" fill="none" stroke-width="3.13953" stroke-linecap="round" stroke-linejoin="round" transform="translate(384 300) scale(0.86)">
+      <use xlink:href="#t-ua" x="0"/>
+      <use xlink:href="#t-ul" x="35.5"/>
+      <use xlink:href="#t-ui" x="55"/>
+      <use xlink:href="#t-uv" x="63.5"/>
+      <use xlink:href="#t-ue" x="88"/>
+      <use xlink:href="#t-comma" x="108.5"/>
+      <use xlink:href="#t-ug" x="129.5"/>
+      <use xlink:href="#t-ul" x="155"/>
+      <use xlink:href="#t-ua" x="174.5"/>
+      <use xlink:href="#t-un" x="199"/>
+      <use xlink:href="#t-uc" x="222.5"/>
+      <use xlink:href="#t-ue" x="247"/>
+      <use xlink:href="#t-ua" x="267.5"/>
+      <use xlink:href="#t-ub" x="292"/>
+      <use xlink:href="#t-ul" x="313.5"/>
+      <use xlink:href="#t-ue" x="333"/>
+      <use xlink:href="#t-uc" x="364.5"/>
+      <use xlink:href="#t-uo" x="389"/>
+      <use xlink:href="#t-um" x="415.5"/>
+      <use xlink:href="#t-up" x="442"/>
+      <use xlink:href="#t-ua" x="463"/>
+      <use xlink:href="#t-un" x="487.5"/>
+      <use xlink:href="#t-ui" x="511"/>
+      <use xlink:href="#t-uo" x="519.5"/>
+      <use xlink:href="#t-un" x="546"/>
+      <use xlink:href="#t-uf" x="580.5"/>
+      <use xlink:href="#t-uo" x="601"/>
+      <use xlink:href="#t-ur" x="627.5"/>
+      <use xlink:href="#t-up" x="660"/>
+      <use xlink:href="#t-ua" x="681"/>
+      <use xlink:href="#t-ut" x="705.5"/>
+      <use xlink:href="#t-uh" x="728"/>
+      <use xlink:href="#t-uo" x="761.5"/>
+      <use xlink:href="#t-uf" x="788"/>
+      <use xlink:href="#t-ue" x="819.5"/>
+      <use xlink:href="#t-ux" x="840"/>
+      <use xlink:href="#t-ui" x="863.5"/>
+      <use xlink:href="#t-ul" x="872"/>
+      <use xlink:href="#t-ue" x="891.5"/>
+      <use xlink:href="#t-two" x="923"/>
+    </g>
+  </g>
+</svg>
