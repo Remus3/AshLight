@@ -1,7 +1,8 @@
 "use strict";
 /* PRICE-1-UI (decision 0016): the overlay card slot follows the core's
-   chosen card (state.py overlay_card), clipped by format.js cardText; an
-   older core without "card" keeps the item check path. */
+   chosen card (server/al/text/overlaycard.py overlay_card), clipped by
+   format.js cardText; an older core without "card" keeps the item check
+   path. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fmt = require("../shared/format.js");

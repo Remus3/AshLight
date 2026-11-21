@@ -1,10 +1,10 @@
 """DS-REVIEW-HOOK: warn-only design-review reminder for pre-commit.
 
 Adjudicator ruling (docs/design/0003-second-audit.md, DS-REVIEW-HOOK): a
-staged change to a UI path (web/, app/overlay/, app/shared/, the card and
-event text package server/al/text/, the event text in server/al/state.py)
-without a staged review record (a docs/design/*.md audit or a
-docs/design/reviews.log line) prints ONE line and exits 0. It
+staged change to a UI path (web/, app/overlay/, app/shared/, or the card and
+event text package server/al/text/, where all event wording lives since
+TEST-STATE-TEXT-PINS) without a staged review record (a docs/design/*.md
+audit or a docs/design/reviews.log line) prints ONE line and exits 0. It
 never blocks: the design-reviewer is an agent and cannot run inside a hook,
 and a refusal would stall headless lanes. The binding rule lives in the lane
 prompts (tools/loop_prompts.py GATES and verify_prompt). Stdlib only.
@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 UI_PREFIXES = ("web/", "app/overlay/", "app/shared/", "server/al/text/")
-UI_FILES = ("server/al/state.py",)
+UI_FILES = ()
 RECORD_PREFIX = "docs/design/"
 
 

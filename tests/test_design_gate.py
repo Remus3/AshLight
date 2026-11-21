@@ -14,13 +14,15 @@ import loop_prompts  # noqa: E402
 
 
 def test_ui_paths_are_detected():
-    # TEST-STATE-EQUIV: the text package is a UI path before it exists;
-    # server/al/state.py stays one until TEST-STATE-TEXT-PINS.
+    # TEST-STATE-TEXT-PINS: the copy review keys on the text package;
+    # server/al/state.py is no longer a UI path.
+    assert design_gate.UI_FILES == ()
     for p in ("web/app.js", "web/status.js", "app/overlay/overlay.css",
-              "app/shared/format.js", "server/al/state.py",
+              "app/shared/format.js",
               "server/al/text/price.py", r"server\al\text\price.py"):
         assert design_gate.is_ui_path(p), p
-    for p in ("server/al/http.py", "scripts/run.ps1", "app/main.js",
+    for p in ("server/al/state.py", r"server\al\state.py",
+              "server/al/http.py", "scripts/run.ps1", "app/main.js",
               "tests/test_x.py", "docs/design/0003-second-audit.md",
               "server/al/textual.py", "server/al/theorycraft/live.py"):
         assert not design_gate.is_ui_path(p), p
@@ -60,6 +62,15 @@ def test_lane_prompts_name_the_rule():
     assert "design-reviewer" in g and "docs/design/reviews.log" in g
     v = loop_prompts.verify_prompt({"label": "x"}, 1)
     assert "docs/design/reviews.log" in v
+
+
+def test_lane_prompts_key_the_review_on_the_text_package():
+    # TEST-STATE-TEXT-PINS: event wording lives in server/al/text/, so the
+    # lane rule and the verifier's FAIL rule name it, never server/al/state.py.
+    v = loop_prompts.verify_prompt({"label": "x"}, 1)
+    for text in (loop_prompts.DESIGN_RULE, v):
+        assert "server/al/text/" in text
+        assert "server/al/state.py" not in text
 
 
 def test_ledger_exists_with_its_format_line():
