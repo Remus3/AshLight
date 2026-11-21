@@ -60,6 +60,13 @@ source checkout polls as before. The constant flips only by a decision
 recording poe.ninja's written yes, an approved mirror or the operator's
 written ruling; silence is not consent. DEP-08's release build reads the
 name RELEASE_POLLING.
+
+DATA-PRICE-SHAPE-GUARD (F-085): the Currency overview gets the price
+book's shape guard (pricebook.shape_error): a 200 body with lines but no
+usable rate, or fewer than half of 5 or more lines kept, keeps the last
+good rates and ETag and sets last_error "shape: ...". snapshot()["types"]
+publishes every type's state (Currency first, then the book's), counts and
+errors only; the Checks row is the book's DATA-DIAG-SEAM hook.
 """
 
 import json
@@ -133,8 +140,9 @@ def parse_leagues(body):
 
 
 def parse_overview(body):
-    """{"primary", "rates": {id: {"value", "name"?}}} from an exchange
-    overview. Defensive: unknown fields are ignored, bad lines skipped.
+    """{"primary", "rates": {id: {"value", "name"?}}, "lines"} from an
+    exchange overview. Defensive: unknown fields are ignored, bad lines
+    skipped; "lines" counts the dict lines read (DATA-PRICE-SHAPE-GUARD).
     DATA-NINJA-NAMES: line names come from the TOP-LEVEL `items` array (id,
     name, category, detailsId; research 0013, the real response), and
     `core.items` (only the reference currencies there) fills any gap."""
@@ -150,9 +158,11 @@ def parse_overview(body):
                 if isinstance(name, str) and name and it["id"] not in names:
                     names[it["id"]] = name[:120]
     rates = {}
+    lines = 0
     for line in doc["lines"][:MAX_LINES]:
         if not isinstance(line, dict):
             continue
+        lines += 1
         lid = line.get("id") or line.get("itemId")
         value = _num(line.get("primaryValue"))
         if not isinstance(lid, str) or not lid or value is None:
@@ -165,7 +175,7 @@ def parse_overview(body):
             entry["name"] = names[lid]
         rates[lid[:120]] = entry
     primary = core.get("primary") if isinstance(core.get("primary"), str) else None
-    return {"primary": primary, "rates": rates}
+    return {"primary": primary, "rates": rates, "lines": lines}
 
 
 class BackedOff(webfetch.FetchError, pricebook.StopRound):
@@ -437,6 +447,9 @@ class RatesClient:
                 parsed = parse_overview(body)
                 if not parsed["rates"]:
                     self._rollover(league_id)
+                bad = pricebook.shape_error(parsed["lines"], len(parsed["rates"]))
+                if bad is not None:
+                    raise ValueError(bad)  # the last good rates and ETag stay
                 self._set_league(league_id, name, now)
                 self.doc.update({"url": url, "primary": parsed["primary"],
                                  "rates": parsed["rates"], "fetched_at": now,
@@ -496,7 +509,22 @@ class RatesClient:
                 "stale": age is None or age > STALE_AFTER_S,
                 "next_refresh_in_s": next_in if blocked is None else None,
                 "refreshing": self._busy, "last_error": doc.get("last_error"),
-                "movers": self.movers()}
+                "movers": self.movers(), "types": self.types()}
+
+    def types(self):
+        """DATA-PRICE-SHAPE-GUARD: {type: {"entries", "league",
+        "last_error", "state"}}, Currency (these rates) first, then the
+        book's types; state one of pricebook.STATES. Counts and errors only,
+        never a request."""
+        doc = self.doc
+        rates = doc.get("rates") if isinstance(doc.get("rates"), dict) else {}
+        err = doc.get("last_error")
+        out = {OVERVIEW_TYPE: {"entries": len(rates), "league": doc.get("league"),
+                               "last_error": err,
+                               "state": pricebook.state_of(len(rates), err)}}
+        if self.book is not None:
+            out.update(self.book.summary())
+        return out
 
     def movers(self):
         """UTIL-MOVERS: the cached price book's biggest 7-day risers and
