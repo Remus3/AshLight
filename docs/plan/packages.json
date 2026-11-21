@@ -12995,6 +12995,7 @@
    "files": [
     "server/al/__main__.py",
     "server/al/ports.py",
+    "tests/test_hot_reload.py",
     "tests/test_port_resolve.py"
    ],
    "new_files": [
