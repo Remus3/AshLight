@@ -502,6 +502,7 @@ class Handler(BaseHTTPRequestHandler):
         # DATA-NINJA: cached rates with their age, never a blocking fetch;
         # a due refresh (opt-in on, at most hourly) runs in the background.
         rates = self.server.core.rates
+        self.server.core.note_rates_read()  # DATA-PRICE-REFRESH-CORE: keeps the loop refreshing
         started = rates.refresh_async()
         doc = rates.snapshot()
         doc["refreshing"] = bool(doc["refreshing"] or started)
@@ -783,21 +784,39 @@ class Handler(BaseHTTPRequestHandler):
                 "uses": ["poe.ninja currency rates", "poe.ninja unique and stackable item values",
                          "build share links you paste"],
                 # UA-CONTACT: rates also need the contact (config/local.json
-                # "contact"); the value is never echoed.
+                # "contact", typed in the dashboard: DATA-CONTACT-FIELD);
+                # write-only, the value is never echoed, only contact_set.
                 "contact_set": core.contact() is not None,
                 "needs_contact": ["poe.ninja currency rates", "poe.ninja unique and stackable item values"],
                 "blocked": core.web_blocked_reason(),
                 "policy": "docs/decisions/0013-web-data.md"}
 
     def _set_web_data(self, path, query, extra):
-        """The one web-data opt-in (decision 0013), default off."""
+        """The one web-data opt-in (decision 0013), default off.
+        DATA-CONTACT-FIELD (F-018): the body holds "enabled" (bool) and / or
+        "contact" (text; '' removes it). Both are checked before anything is
+        written; the contact is stored only in config/local.json and the
+        answer says only contact_set, never the value."""
+        refused = ("AshLight can't use that contact. Use up to 120 plain "
+                   "characters, without brackets or a backslash.")
         body = self._read_json()
         if body is None:
             return None
-        if not isinstance(body.get("enabled"), bool):
+        has_on, has_contact = "enabled" in body, "contact" in body
+        if not (has_on or has_contact) or (has_on and not isinstance(body["enabled"], bool)):
             return self._json(400, {"error": "enabled: true|false required"})
+        contact = body.get("contact")
+        if has_contact and not (isinstance(contact, str) and (
+                not contact.strip() or webfetch.clean_contact(contact) is not None)):
+            return self._json(400, {"error": refused})
+        core = self.server.core
         try:
-            self.server.core.set_web_data(body["enabled"])
+            if has_contact:
+                core.set_contact(contact)
+            if has_on:
+                core.set_web_data(body["enabled"])
+        except ValueError:
+            return self._json(400, {"error": refused})
         except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._web_data_doc())

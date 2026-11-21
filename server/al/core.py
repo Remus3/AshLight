@@ -29,6 +29,7 @@ from . import hotkeys  # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE)
 from . import hotreload  # HOT-RELOAD (decision 0042)
 from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import plug  # RUN-SEAMS (decision 0056)
+from . import pricerefresh  # DATA-PRICE-REFRESH-CORE (F-036)
 from . import summary as summary_mod
 from .bus import EventBus
 from .state import EMPTY_CLIPBOARD, SessionState
@@ -266,6 +267,9 @@ class Core:
                                        league=self.configured_league, fetch=web_fetch,
                                        contact=self.contact,
                                        book=pricebook.PriceBook(rates_dir))
+        # DATA-PRICE-REFRESH-CORE: the loop's refresh gate and the last
+        # /api/rates read (monotonic s; tick_prices / note_rates_read)
+        self.price_gate, self.rates_read_at = pricerefresh.Gate(), None
         # PRICE-TRADE-LINK (decision 0017): one offline trade-search link per
         # item-hotkey press (POST /api/eval), published as the decision 0016
         # card with the press time. No trade-site request is ever made and
@@ -575,7 +579,7 @@ class Core:
 
     def _write_config(self, update):
         """Merge `update` into the local config and persist it, keeping
-        every other key (the contact included; never written here).
+        every other key (the contact included; only set_contact writes it).
         Atomic, ASCII + LF, with one .bak of the written copy (F-014).
         Raises ConfigUnreadable (an OSError) on a hand-broken file that
         no .bak can restore."""
@@ -924,12 +928,63 @@ class Core:
 
     def set_web_data(self, enabled):
         """Persist the opt-in in the local config, keeping every other key
-        (the contact included; it is never written here). AREA-AUDIT
+        (the contact included; only set_contact writes it). AREA-AUDIT
         P5-1: raises ConfigUnreadable on a hand-broken file."""
         self._write_config({"web_data": bool(enabled)})
         if enabled:
             self.rates.refresh_async()
         return bool(enabled)
+
+    def set_contact(self, value):
+        """DATA-CONTACT-FIELD (F-018): store the User-Agent contact typed
+        in the dashboard as "contact" in the gitignored local config, its
+        only store (decision 0015); '' (or blank) removes the key. The value
+        is never returned, echoed or logged. Raises ValueError for an
+        unusable value (webfetch.clean_contact) with nothing written, and
+        ConfigUnreadable (an OSError) on a hand-broken file. A set contact
+        starts a due price refresh at once (the opt-in and the hourly gates
+        still decide). Returns True when a contact is now set."""
+        if not isinstance(value, str):
+            raise ValueError("the contact must be text")
+        cleaned = webfetch.clean_contact(value) if value.strip() else ""
+        if cleaned is None:
+            raise ValueError("unusable contact")
+        with self._lock:
+            cfg = self._read_config_strict()
+            if cleaned:
+                cfg[webfetch.CONTACT_KEY] = cleaned
+            else:
+                cfg.pop(webfetch.CONTACT_KEY, None)
+            jsonfile.write_json(self.config_path, cfg, indent=2, backup=True)
+            self._private_config()
+        if cleaned:
+            self.rates.refresh_async()
+        return bool(cleaned)
+
+    def note_rates_read(self, now=None):
+        """DATA-PRICE-REFRESH-CORE: a page read /api/rates (monotonic s)."""
+        self.rates_read_at = time.monotonic() if now is None else now
+
+    def tick_prices(self, now=None):
+        """DATA-PRICE-REFRESH-CORE (F-036), from the core loop: at most once
+        a minute, while web data is on and either the log is active
+        (consented and not idle, decision 0029) or /api/rates was read in
+        the last 10 minutes, start a due price refresh. The hourly gates,
+        the back-off and the contact rule of RatesClient.refresh_async still
+        decide; no request is made here. True when a refresh started."""
+        now = time.monotonic() if now is None else now
+        gate = self.price_gate
+        if not gate.ready(now):
+            return False
+        web_on = self.web_data_enabled()
+        idle = True
+        if web_on:
+            # read the way diag_facts reads it, once a minute at most
+            tl = self.state.snapshot().get("tailer") or {}
+            idle = not tl.get("consented") or bool(tl.get("idle"))
+        if not gate.due(now, web_on, idle, self.rates_read_at):
+            return False
+        return bool(self.rates.refresh_async())
 
     def load_share_url(self, url):
         """TC-URL: fetch a pasted share URL once (opt-in, allowlist, size cap,
