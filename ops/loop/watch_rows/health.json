@@ -1,0 +1,14 @@
+{
+ "kinds": {
+  "watchbroken": {
+   "act": "row",
+   "id": "WATCH-BROKEN-<NAME>-<YYYYMMDD>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session",
+   "text": "The <NAME> upstream watcher has had no good read for 7 days (last cause <CAUSE>): read python tools/upstream_watch.py status, then fix the source, its endpoint or its template, or retire it. ACCEPT: the source reads ok again, or it is removed with its test. ZERO-CLICK: the loop watches its own watchers. SOURCE: watch health <NAME>, filed <YYYY-MM-DD>.",
+   "tokens": {"NAME": "[A-Z][A-Z0-9-]{0,25}", "CAUSE": "network|status|shape|rate-limit|workflow"},
+   "sample": {"NAME": "NINJA-DOCS", "CAUSE": "rate-limit"}
+  }
+ }
+}
