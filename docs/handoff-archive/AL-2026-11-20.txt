@@ -26,3 +26,20 @@ Do NOT redo (session 12, all on main and pushed): wave 14 closed (W14-START,
 W14-DISPATCH, W14-METRICS, W14-CLOSE; 12 merges listed in the Wave 14 line;
 records in WAVE-14 RULINGS); TC-CALC-CONFINE-LUA is deferred, not lost (keep
 ref, wave 15 retry); roadmap fold 9efc0e7; reap of the w14 worktrees.
+
+*** SESSION 14 /done (2026-11-20): closed records moved from AL-NEXT-SESSION.txt verbatim ***
+Wave 16 (session 14): 12 session packages, all merged in 3 batches, run 2, 3, 1 (deviation: batch 1 waited on design fix rounds; files disjoint) (batch 2 REL-UPDATE-SWITCH b3528e6, TC-GGG-LISTENER cbc2025, DATA-GUIDE-BOSS 4782e28, LOOP-USAGE-LABEL 8032237; batch 3 TEST-DOCS-FACTS-UI 5ab40d6, AUTO-09 1f96efb, TC-CHARJSON-SHAPES a5555b8, AUTO-07 8820af1; batch 1 OVL-KEYS-WEB 7438154, RUN-LEDGER-WIRE 72c69d3, RUN-OBS-LOGS-PY 1b7a6f7, TC-CALC-OPTIN-BUTTON 72b23a4); none deferred, second suites 0; suites 4220 / 4255 / 4283 passed, 6 skipped, timing 32 each; npm 539 / 539 / 555; main 1d75ae7. Adjudicator rulings (plan commits): W16-1 6d4e332 and W16-2 3799dfe (TC-CALC-OPTIN-BUTTON widened to the preload pin tests, launcher.js, tray_mode.test.js; fixed scripts/calc_setup.ps1 via psExe, never setup.ps1), W16-3 34b3d1d (REL-UPDATE-SWITCH + test_install_home.py), W16-4 e5b7e56 (OVL-KEYS-WEB + web/itemcard.js). Design fix rounds: OVL-KEYS-WEB (KW-1 S2) and TC-CALC-OPTIN-BUTTON (CB-1 S2), both PASS WITH FINDINGS after one round.
+Wave 15 (session 13): 13 session packages plus the carried TC-CALC-CONFINE-LUA, all 14 merged in 4 batches (batch 0 TC-CALC-CONFINE-LUA 1a93b64; batch 1 RUN-METRICS-SITES 9c33988, TC-WORN-KEY 7dcb3dd, DEP-11 ff62d54, PLAY-TD-22B-TAB-FOCUS a48915e; batch 2 TEST-STATE-TEXT-4 718d610, OVL-LAUNCH-ENV 202442a, TEST-DOCS-INDEX 26bb3fd, LOOP-WATCH-FILE 9f51c7d; batch 3 DEP-13 50329f4, LOOP-WATCH-META c00e214, LOOP-WATCH-SETTLED efaa9b0, TC-GGG-RATELIMIT d37b326) plus act RUN-SETTINGS-TRIM-DOCS 54e43d1; none deferred, second suites 0, escapes 0; suites 4041 / 4071 / 4100 / 4150 passed, 6 skipped, timing 32 each; npm 528 / 537 / 539 / 539; main 6815760. Plan rulings: 5f46bb5, 9eb22e8 (CONFINE-LUA moved to wave 15, adjudicator), ee8a726 (TEST-STATE-TEXT-4 + test_glance_rules, adjudicator), 2bbc7eb (LOOP-WATCH-SETTLED templates hyphenated). DEP-13 refuted once (web_data copied; fixed: web_data never moves).
+- NOTE (session 13 /done, 2026-11-20): fleet_done.py reap --apply removed
+  the 14 w15-* package and integrator worktrees (clean, every commit on main
+  by patch, branches deleted); a re-run printed "reap applied: 0 removed, 3
+  kept, 0 listed (base main)"; read back after: 4 worktrees listed (main,
+  lanes 0 to 2), 0 worktree-* branches, keep refs RUN-METRICS-CORE,
+  TC-CALC-CONFINE-LUA, TC-UPGRADE-STATS, UTIL-WAYSTONE intact. roadmap_fold:
+  14 row files applied, 14 done rows archived, 0 rows left with "BLOCKED:
+  session wave 15" (5aea0f9; its subject wrongly says "session 12", not
+  amended or rewritten).
+Do NOT redo (session 13, all on main and pushed): wave 15 closed (14
+packages plus RUN-SETTINGS-TRIM-DOCS merged, listed in the Wave 15 line;
+TC-CALC-CONFINE-LUA retried and merged 1a93b64); roadmap fold 5aea0f9; reap
+of the w15 worktrees.
