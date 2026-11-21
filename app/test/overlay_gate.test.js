@@ -130,11 +130,16 @@ test("gate exposes one of four states", () => {
   }
   assert.match(Gate.HINTS.shown, /exclusive fullscreen/);
   assert.match(Gate.HINTS.shown, /Windowed Fullscreen/);
+  for (const sentence of Gate.HINTS.shown.split(/(?<=\.) /)) {
+    assert.ok(sentence.split(" ").length <= 20, sentence);
+  }
+  assert.match(Gate.HINTS.starting, /once the game log is active/);
   const mod = code(fs.readFileSync(path.join(__dirname, "..", "overlay_gate.js"), "utf8"));
-  for (const word of ["require(", "screen.", "getAllDisplays", "getAllWindows", "getFocusedWindow", "FindWindow",
+  for (const word of ["require(", "getAllDisplays", "getAllWindows", "getFocusedWindow", "FindWindow",
                       "process", "child_process"]) {
     assert.ok(!mod.includes(word), word);
   }
+  assert.ok(!/(^|[^A-Za-z])screen\./.test(mod), "screen.");
   // main.js asks for a state write after a toggle and after a gate report
   const main = code(fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8"));
   const toggleFn = main.slice(main.indexOf("function toggle()"), main.indexOf("function restartOverlay()"));

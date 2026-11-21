@@ -24,12 +24,12 @@ const GRACE_MS = 3000;
 const STATES = ["shown", "hidden_user", "hidden_idle", "starting"];
 const HINTS = {
   shown: "The overlay is shown. If you can't see it over the game, set the game to " +
-    "Windowed Fullscreen: an exclusive fullscreen game covers every other window.",
+    "Windowed Fullscreen. An exclusive fullscreen game covers every other window.",
   hidden_user: "The overlay is hidden because you turned it off. The show / hide key " +
     "or the tray brings it back.",
   hidden_idle: "The overlay is hidden because the game looks closed (no new game log " +
     "line for a while). It comes back on the next one.",
-  starting: "The overlay is starting."
+  starting: "The overlay is starting. It shows once the game log is active."
 };
 
 function createOverlayGate(view, log) {
