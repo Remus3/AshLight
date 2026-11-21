@@ -33,6 +33,7 @@
 <script src="/web/chars.js" defer></script>
 <script src="/web/pricewatch.js" defer></script>
 <script src="/web/settingsio.js" defer></script>
+<script src="/web/hotkeys.js" defer></script>
 <script src="/web/hints.js" defer></script>
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
@@ -275,10 +276,12 @@
   <section id="evalbox" class="card evalbox" aria-labelledby="eval-title">
     <h2 id="eval-title">Item check</h2>
     <div id="eval-result" class="eval-result" role="status" aria-live="polite" aria-atomic="true">
+      <!-- OVL-KEYS-WEB: web/hotkeys.js puts the bound key in each data-hotkey
+           span; its own words stay while no key is bound -->
       <p id="eval-empty" class="muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
-        then press Alt+Shift+E. AshLight reads the clipboard once per press and shows the
-        verdict here and on the overlay for 20 seconds. You can change the key in AshLight's
-        settings file.</p>
+        then press <span data-hotkey="eval">the item check key</span>. AshLight reads the
+        clipboard once per press and shows the verdict here and on the overlay for 20 seconds.
+        You can change the key under Settings, Tools.</p>
       <div id="eval-body" hidden>
         <p class="eval-head"><span id="eval-word" class="verdict"></span>
           <span id="eval-item" class="eval-item"></span></p>
@@ -307,7 +310,8 @@
       <h3 class="sub-h">Price</h3>
       <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
         <p id="price-empty" class="muted">Nothing checked yet. After you check an item with
-          Alt+Shift+E, a link to search for it on the official trade site shows here.</p>
+          <span data-hotkey="eval">the item check key</span>, a link to search for it on the
+          official trade site shows here.</p>
         <div id="price-body" hidden>
           <p class="eval-head"><span id="price-badge" class="pill" data-state="pending"><span
             class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
@@ -525,8 +529,9 @@
        folded in the Build and Search strings cards, next to what they are made from. -->
   <section id="toolsbox" class="card tools" aria-labelledby="tools-title">
     <h2 id="tools-title">Tools</h2>
-    <p class="muted">Show or hide the overlay any time with Alt+Shift+A, and check an item
-      with Alt+Shift+E (unless you set other keys in AshLight's settings file).</p>
+    <p class="muted">Show or hide the overlay any time with <span data-hotkey="toggle">the
+      overlay key</span>, and check an item with <span data-hotkey="eval">the item check
+      key</span>. You can change either key under Keys below.</p>
     <p id="overlay-idle-note" class="muted" hidden>Overlay hidden: no game activity for 20 min. It comes back with the next log line.</p>
     <!-- DESKTOP-CLIENT (decision 0041): shown only inside the AshLight
          desktop client, which hands the page this one action; on the
@@ -554,7 +559,7 @@
     </div>
 
     <details id="tools-more">
-    <summary>Overlay position, settings transfer and graphics</summary>
+    <summary>Overlay position, keys, settings transfer and graphics</summary>
     <div class="tool layout" role="group" aria-labelledby="layout-title">
       <h3 id="layout-title" class="sub-h">Overlay position and size</h3>
       <form id="layout-form" class="layout-form">
@@ -575,6 +580,24 @@
         </label>
       </form>
       <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
+    </div>
+
+    <!-- OVL-KEYS-WEB (decision 0058): one optional field per key, saved on
+         change (POST /api/hotkeys); the desktop client switches by itself.
+         Not a live region (the dashboard keeps at most 12): each field
+         points at its answer. -->
+    <div id="hotkeysbox" class="tool hotkeys" role="group" aria-labelledby="hotkeys-title">
+      <h3 id="hotkeys-title" class="sub-h">Keys</h3>
+      <p class="muted">Type a key with Ctrl or Alt held, for example Ctrl+Alt+K. It is saved
+        when you leave the field. Keys the game uses are refused.</p>
+      <p class="tool-row"><label for="hotkey-eval">Item check key</label>
+        <input id="hotkey-eval" type="text" maxlength="40" autocomplete="off"
+          spellcheck="false" aria-describedby="hotkey-eval-said">
+        <span id="hotkey-eval-said" class="muted"></span></p>
+      <p class="tool-row"><label for="hotkey-toggle">Show or hide the overlay</label>
+        <input id="hotkey-toggle" type="text" maxlength="40" autocomplete="off"
+          spellcheck="false" aria-describedby="hotkey-toggle-said">
+        <span id="hotkey-toggle-said" class="muted"></span></p>
     </div>
 
     <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">

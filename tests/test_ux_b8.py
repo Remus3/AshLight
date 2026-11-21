@@ -52,8 +52,13 @@ def test_tools_group_is_last_and_holds_the_set_once_tools():
     for needle in ('id="layout-form"', 'id="settingsbox"', 'id="gfx"'):
         assert needle in tools, needle
     # folded behind one summary; the hotkey hint stays outside the fold
+    # (OVL-KEYS-WEB: as data-hotkey spans the page fills with the bound keys)
     fold = tools.index('<details id="tools-more">')
-    assert tools.index("Alt+Shift+A") < fold
+    assert tools.index('data-hotkey="toggle"') < fold
+    assert tools.index('data-hotkey="eval"') < fold
+    # the two change-key fields sit in the fold
+    for fid in ("hotkey-eval", "hotkey-toggle"):
+        assert tools.index('id="%s"' % fid) > fold, fid
 
 
 def test_build_file_and_loot_filter_fold_in_their_own_cards():
@@ -102,3 +107,24 @@ def test_dom_order_is_tab_order():
     assert re.findall(r'<section id="play-([a-z])"', play) == list("gctnbiu")
     for r in "gctnbiu":
         assert re.search(r"#play-%s \{ grid-area: %s; \}" % (r, r), css), r
+
+
+# -- OVL-KEYS-WEB (F-026): no page text names a key that is not bound
+
+def test_no_literal_default_key_in_the_page_or_the_hints():
+    """Every key the dashboard or a hint names is the bound one (web/
+    hotkeys.js paint, hints.town_text), so no 'Alt+Shift+' default is
+    written into web/ or server/al/hints.py."""
+    paths = [p for p in srcpaths.WEB.rglob("*") if p.is_file()
+             and p.suffix in (".html", ".js", ".css")]
+    assert paths
+    paths.append(srcpaths.ROOT / "server" / "al" / "hints.py")
+    hits = [p.name for p in paths if "Alt+Shift+" in p.read_text(encoding="utf-8")]
+    assert hits == [], hits
+
+
+def test_every_hotkey_span_is_a_known_key():
+    spans = re.findall(r'data-hotkey="([^"]*)"', HTML)
+    assert spans and set(spans) <= {"eval", "toggle"}, spans
+    assert '<script src="/web/hotkeys.js" defer></script>' in HTML
+    assert HTML.index("/web/hotkeys.js") < HTML.index("/web/app.js")

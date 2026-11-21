@@ -9,7 +9,7 @@ import json
 import threading
 from pathlib import Path
 
-from server.al import hints
+from server.al import hints, hotkeys
 from server.al.core import Core
 from server.al.http import serve
 from server.al.state import SessionState
@@ -71,9 +71,41 @@ def test_first_town_shows_the_item_check_hint_once():
     r = Run()
     snap = r.feed(gen("G1_1", 1000), lvl(1010, 2), gen("G1_town", 1100, 15))
     assert snap["hint"]["id"] == "town"
-    assert "Alt+Shift+E" in snap["hint"]["text"]
+    # OVL-KEYS-WEB: no client file, so no key is bound and none is named
+    assert snap["hint"]["text"] == hints.town_text(None)
+    assert hints.NO_KEY in snap["hint"]["text"] and "Alt+" not in snap["hint"]["text"]
     r.feed(gen("G1_2", 1200, 3), gen("G1_town", 1300, 15))
-    assert [x["text"] for x in r.hint_rows()].count(hints.HINTS["town"]) == 1
+    assert [x["text"] for x in r.hint_rows()].count(hints.town_text(None)) == 1
+
+
+def _client_file(runtime, key, registered=True, fallback=False):
+    """A synthetic desktop-client hotkeys.json (app/parts/20-hotkeys.js)."""
+    doc = {"keys": {"eval": {"want": "Alt+Shift+E", "bound": key,
+                             "registered": registered, "fallback": fallback},
+                    "toggle": {"want": "Ctrl+Alt+F10", "bound": "Ctrl+Alt+F10",
+                               "registered": True, "fallback": False}},
+           "overlay": {"user_on": True}}
+    (runtime / hotkeys.FILE_NAME).write_text(json.dumps(doc), encoding="ascii")
+
+
+def test_town_hint_carries_the_bound_item_key(tmp_path):
+    """OVL-KEYS-WEB: the hint names the key the client bound (a fallback
+    names the alternate), never a default the client did not bind."""
+    _client_file(tmp_path, "Ctrl+Shift+F9", fallback=True)
+    r = Run(tmp_path / hints.FILE_NAME)
+    snap = r.feed(lvl(1010, 2), gen("G1_town", 1100, 15))
+    assert snap["hint"]["id"] == "town"
+    assert "Then press Ctrl+Shift+F9." in snap["hint"]["text"]
+    assert snap["hint"]["text"] == hints.town_text("Ctrl+Shift+F9")
+
+
+def test_town_hint_names_no_key_the_client_could_not_bind(tmp_path):
+    _client_file(tmp_path, None, registered=False)
+    r = Run(tmp_path / hints.FILE_NAME)
+    snap = r.feed(lvl(1010, 2), gen("G1_town", 1100, 15))
+    assert snap["hint"]["text"] == hints.town_text(None)
+    # a key the rule refuses is never named either
+    assert hints.town_text("Ctrl+C") == hints.town_text(None)
 
 
 def test_hideout_counts_as_town():
@@ -167,7 +199,7 @@ def test_unwritable_store_falls_back_to_this_session(tmp_path):
     snap = r.feed(lvl(1010, 2), gen("G1_town", 1100))
     assert snap["hint"]["id"] == "town"
     snap = r.feed(gen("G1_town", 1200))
-    assert len([x for x in r.hint_rows() if x["text"] == hints.HINTS["town"]]) == 1
+    assert len([x for x in r.hint_rows() if x["text"] == hints.town_text(None)]) == 1
 
 
 def test_bad_store_reads_empty_and_is_bounded(tmp_path):
@@ -187,8 +219,10 @@ def test_bad_store_reads_empty_and_is_bounded(tmp_path):
 
 
 def test_hint_texts_are_ascii_and_short():
-    for text in hints.HINTS.values():
-        assert text.isascii() and len(text) <= 220
+    texts = [t for k, t in hints.HINTS.items() if k != "town"]
+    texts += [hints.town_text(None), hints.town_text("Ctrl+Alt+Shift+F24")]
+    for text in texts:
+        assert text.isascii() and len(text) <= 220 and "{" not in text
 
 
 def _post(port, path, body, token="f" * 48):

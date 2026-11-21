@@ -147,10 +147,19 @@ test("price section: core words, conversions per listing, state word", () => {
 
 test("price empty state says what will appear, web data on or off", () => {
   // PRICE-TRADE-LINK: the trade link is built offline, so web data does not gate it
-  const want = "Nothing checked yet. After you check an item with Alt+Shift+E, a link to " +
+  // OVL-KEYS-WEB: the bound item key comes in as an argument
+  const want = "Nothing checked yet. After you check an item with Ctrl+Alt+K, a link to " +
     "search for it on the official trade site shows here.";
+  assert.equal(p.priceEmpty(false, "Ctrl+Alt+K"), want);
+  assert.equal(p.priceEmpty(true, "Ctrl+Alt+K"), want);
+});
+
+test("price empty state names no key while none is bound", () => {
+  const want = "Nothing checked yet. After you check an item with the item check key, a " +
+    "link to search for it on the official trade site shows here.";
   assert.equal(p.priceEmpty(false), want);
-  assert.equal(p.priceEmpty(true), want);
+  assert.equal(p.priceEmpty(true, ""), want);
+  assert.equal(p.priceEmpty(true, null), want);
 });
 
 const LINK = "https://www.pathofexile.com/trade2/search/poe2/Dawn?q=%7B%22query%22%3A%7B%7D%7D";

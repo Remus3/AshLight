@@ -317,9 +317,11 @@
   }
 
   /* The trade link needs no web data (it is built offline), so the empty
-     state reads the same either way. */
-  function priceEmpty() {
-    return "Nothing checked yet. After you check an item with Alt+Shift+E, a link to " +
+     state reads the same either way. OVL-KEYS-WEB: `key` is the bound item
+     key (web/hotkeys.js shown); with none bound the sentence names no key. */
+  function priceEmpty(webOn, key) {
+    var press = typeof key === "string" && key ? key : "the item check key";
+    return "Nothing checked yet. After you check an item with " + press + ", a link to " +
       "search for it on the official trade site shows here.";
   }
 
