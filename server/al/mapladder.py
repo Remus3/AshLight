@@ -16,6 +16,13 @@ finished map is saved to one bounded JSON file in the runtime dir
 (decision 0038). A map rebuilt after a restart matches its saved record by
 area id, seed and open time (MATCH_S), so it is never counted twice. The
 run-history switch turns saving off and its clear button empties the file.
+
+RUN-LADDER-TICK (AUDIT-P8-LOW P8-5): the saved maps of a character are
+indexed by (area id, seed), so a match looks only at the records of that
+instance, and the all-sessions view is cached and rebuilt only when the
+saved list (rev) or the session rows that shape it changed. An open map's
+running time does not shape the view (only finished maps count to the
+median), so a tick inside a map rebuilds nothing.
 """
 
 from pathlib import Path
@@ -155,6 +162,19 @@ def _cap(by):
     return {k: by[k] for k in keep}
 
 
+def _row_sig(r):
+    """What of a session row shapes the all-sessions view: its match key,
+    the ladder fields and, for a finished map, its time (an open map's
+    time is not final and never counts, only whether clean() keeps it)."""
+    t = r.get("time_s")
+    done = bool(r.get("done"))
+    if not done:
+        t = num.finite(t)
+        t = t is not None and t >= 0
+    return (r.get("area_id"), r.get("seed"), r.get("opened_at"), r.get("area_level"),
+            r.get("deaths"), r.get("level_ups"), done, t)
+
+
 class MapLadder:
     """The saved maps and their ladder. Not thread-safe: the core calls it
     from its loop tick and the clear request under its lock."""
@@ -162,6 +182,31 @@ class MapLadder:
     def __init__(self, path):
         self.path = Path(path)
         self.by = load(self.path)
+        self.rev = 0  # moves on with every change of `by` in memory
+        self._index = {}  # character key: {(area id, seed): [opened_at]}
+        self._view_sig = None
+        self._view = None
+
+    def _changed(self):
+        self.rev += 1
+        self._index = {}
+
+    def _keys(self, key):
+        """The (area id, seed) index of one character's saved maps, built
+        on first use after a change."""
+        idx = self._index.get(key)
+        if idx is None:
+            idx = {}
+            for s in self.by.get(key, []):
+                idx.setdefault((s["area_id"], s.get("seed")), []).append(s["opened_at"])
+            self._index[key] = idx
+        return idx
+
+    @staticmethod
+    def _known(idx, rec):
+        """True when `rec` matches an indexed map (same_map)."""
+        opened = idx.get((rec["area_id"], rec.get("seed")))
+        return bool(opened) and any(abs(rec["opened_at"] - o) <= MATCH_S for o in opened)
 
     def _save(self):
         """Write the ladder file with one .bak of it (F-014)."""
@@ -175,36 +220,47 @@ class MapLadder:
         the unknown character ""). True when the file was written."""
         key = (character or "")[:MAX_ID]
         saved = self.by.get(key, [])
+        idx = self._keys(key)
         new = []
+        seen = {}
         for m in maps:
             rec = clean(m)
-            if rec is None or any(same_map(rec, s) for s in saved[-MAX_SAVED:]):
-                continue
-            if any(same_map(rec, n) for n in new):
+            if rec is None or self._known(idx, rec) or self._known(seen, rec):
                 continue
             new.append(rec)
+            seen.setdefault((rec["area_id"], rec.get("seed")), []).append(rec["opened_at"])
         if not new:
             return False
         self.by[key] = sorted(saved + new, key=lambda r: r["opened_at"])
         self.by = _cap(self.by)
+        self._changed()
         self._save()
         return True
 
     def clear(self):
         """Forget every saved map; the .bak goes with the data."""
         self.by = {}
+        self._changed()
         self._save()
         runhistory.drop_bak(self.path)
 
     def view(self, character, session_rows):
         """The all-sessions ladder of `character`: the saved maps plus this
         session's rows not saved yet (the open map, a map closed since the
-        last save), each map once."""
-        saved = self.by.get((character or "")[:MAX_ID], [])
+        last save), each map once. The last view is returned again while
+        neither the saved list nor the rows' shaping fields changed."""
+        key = (character or "")[:MAX_ID]
+        sig = (key, self.rev, tuple(_row_sig(r) for r in session_rows))
+        if sig == self._view_sig:
+            return self._view
+        saved = self.by.get(key, [])
+        idx = self._keys(key)
         rows = [dict(r, done=True) for r in saved]
         for r in session_rows:
             rec = clean(r)
-            if rec is not None and any(same_map(rec, s) for s in saved):
+            if rec is not None and self._known(idx, rec):
                 continue
             rows.append(r)
-        return ladder(rows, title=TITLE_ALL)
+        self._view = ladder(rows, title=TITLE_ALL)
+        self._view_sig = sig
+        return self._view

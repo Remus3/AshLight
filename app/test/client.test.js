@@ -588,3 +588,137 @@ test("wake in the window: showInactive only, never focus, saved state and overla
     assert.ok(!part.includes(banned), banned);
   }
 });
+
+/* RUN-START-REASON-CLIENT (F-091): the failed page shows the one line of
+   start-error.json (the core's fix sentence) from this start attempt. */
+const ClientWin = require("../client/window.js");
+const FIX = "Port 8960 is used by another program; give AshLight a free port of " +
+  "8960-8979 with the AL_PORT setting or the \"port\" setting.";
+
+function startErrorDir(doc) {
+  const dir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "al-starterr-"));
+  if (doc !== undefined) {
+    fs.writeFileSync(path.join(dir, ClientWin.START_ERROR_FILE),
+      typeof doc === "string" ? doc : JSON.stringify(doc));
+  }
+  return dir;
+}
+
+/* Run starting.js against a tiny fake page (the three elements it touches). */
+function runStartingPage(url) {
+  const vm = require("node:vm");
+  const els = {};
+  for (const id of ["starting", "failed", "reason", "reason-line"]) {
+    els[id] = { hidden: id !== "starting", textContent: "", innerHTML: "" };
+  }
+  const u = new URL(url);
+  const sandbox = { document: { getElementById: (id) => els[id] },
+                    location: { hash: u.hash, search: u.search }, URLSearchParams: URLSearchParams };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "client", "starting.js"), "utf8"), sandbox);
+  return els;
+}
+
+test("failed page shows the start-error line, no script path", (t) => {
+  const now = 1795000000000;
+  const dirs = [];
+  t.after(() => { for (const d of dirs) { fs.rmSync(d, { recursive: true, force: true }); } });
+  function line(doc, since) {
+    const d = startErrorDir(doc);
+    dirs.push(d);
+    return ClientWin.startErrorLine(d, since === undefined ? now : since);
+  }
+  const fresh = { reason: "port_in_use", port: 8960, errno: 10048, fix: FIX, at: now / 1000 + 2 };
+  assert.equal(line(fresh), FIX);
+  // a record up to a minute before the attempt still counts; older does not
+  assert.equal(line(Object.assign({}, fresh, { at: now / 1000 - 50 })), FIX);
+  assert.equal(line(Object.assign({}, fresh, { at: now / 1000 - 3600 })), "");
+  // no file, junk, no "at", a long or non-ASCII line, a path or a script: nothing
+  assert.equal(line(undefined), "");
+  assert.equal(line("{not json"), "");
+  assert.equal(line({ fix: FIX }), "");
+  assert.equal(line(Object.assign({}, fresh, { fix: "x".repeat(ClientWin.REASON_MAX + 1) })), "");
+  assert.equal(line(Object.assign({}, fresh, { fix: "Port caf\u00e9 refused" })), "");
+  const drive = "C" + ":" + "\\" + "x";
+  assert.equal(line(Object.assign({}, fresh, { fix: "see " + drive })), "");
+  assert.equal(line(Object.assign({}, fresh, { fix: "run scripts" + String.fromCharCode(92) + "run.ps1 again" })), "");
+  assert.equal(line(Object.assign({}, fresh, { fix: "run setup.ps1 again" })), "");
+  assert.equal(line(Object.assign({}, fresh, { fix: "x".repeat(5000) })), "");
+  // the page options: the line as the one query value, else #failed alone
+  assert.deepEqual(ClientWin.failedPage(FIX), { hash: "failed", query: { reason: FIX } });
+  assert.deepEqual(ClientWin.failedPage(""), { hash: "failed" });
+
+  // the page: the reason replaces the general line, as text only
+  const shown = runStartingPage("file:///starting.html?reason=" + encodeURIComponent(FIX) + "#failed");
+  assert.equal(shown.starting.hidden, true);
+  assert.equal(shown.reason.hidden, false);
+  assert.equal(shown["reason-line"].textContent, FIX);
+  assert.equal(shown.failed.hidden, true);
+  assert.equal(shown["reason-line"].innerHTML, "");
+  const plain = runStartingPage("file:///starting.html#failed");
+  assert.equal(plain.failed.hidden, false);
+  assert.equal(plain.reason.hidden, true);
+  const markup = runStartingPage("file:///starting.html?reason=" +
+    encodeURIComponent("<b>x</b>\u00e9") + "#failed");
+  assert.equal(markup.reason.hidden, true);
+  assert.equal(markup.failed.hidden, false);
+  const starting = runStartingPage("file:///starting.html?reason=x");
+  assert.equal(starting.starting.hidden, false);
+  assert.equal(starting.reason.hidden, true);
+
+  const html = fs.readFileSync(path.join(__dirname, "..", "client", "starting.html"), "utf8");
+  assert.match(html, /<div id="reason" role="status" hidden>/);
+  assert.match(html, /<p id="reason-line"><\/p>/);
+  assert.ok(!/\.ps1|\.py\b|scripts\\/.test(html), "no script path on the page");
+  assert.match(html, /script-src 'self'; style-src 'self'; img-src 'none'; connect-src 'none'/);
+  const page = code(fs.readFileSync(path.join(__dirname, "..", "client", "starting.js"), "utf8"));
+  assert.ok(!page.includes("innerHTML") && page.includes(".textContent = reason"));
+  // both failed branches of the window go through showFailed (this attempt's time)
+  const c = code(WIN_SRC);
+  assert.equal((c.match(/win\.loadFile\(STARTING_HTML, \{ hash: "failed" \}\)/g) || []).length, 0);
+  assert.match(c, /win\.loadFile\(STARTING_HTML, failedPage\(line\)\);/);
+  assert.match(c, /if \(url\) \{ win\.loadURL\(url\); \} else \{ showFailed\(sinceMs\); \}/);
+  assert.match(c, /log\("client: core did not answer within " \+ CORE_WAIT_MS \/ 1000 \+ " s"\);\s*showFailed\(since\);/);
+  assert.match(c, /const since = Date\.now\(\);/);
+});
+
+/* P8-3: main.js corePort, cut out of main.js and run (it is pure). */
+function mainCorePort() {
+  const start = MAIN_SRC.indexOf("function corePort(");
+  const rest = MAIN_SRC.slice(start);
+  const src = rest.slice(0, rest.indexOf("\n}\n") + 3);
+  return new Function(src + "\nreturn corePort;")();
+}
+
+test("corePort refuses a port outside the block, int only", () => {
+  const corePort = mainCorePort();
+  const PY = "PORT_BLOCK = (8960, 8979)\nAL_PORT = 8960  # core server\n";
+  const said = [];
+  const warn = (m) => said.push(m);
+  assert.equal(corePort("8963", { port: 8962 }, PY, warn), 8963);
+  assert.equal(corePort(undefined, { port: 8962 }, PY, warn), 8962);
+  assert.equal(corePort("", { port: "8964" }, PY, warn), 8964); // the core's rule takes digit text
+  assert.equal(corePort(undefined, {}, PY, warn), 8960);
+  assert.equal(corePort(undefined, null, PY, warn), 8960);
+  assert.equal(said.length, 0);
+  // out of the block, 0, a fraction, a bool, junk: refused, the next source read
+  assert.equal(corePort("80", { port: 8961 }, PY, warn), 8961);
+  assert.equal(corePort("8980", {}, PY, warn), 8960);
+  assert.equal(corePort("8959", {}, PY, warn), 8960);
+  assert.equal(corePort("x", { port: 9000 }, PY, warn), 8960);
+  assert.equal(corePort("8961.5", { port: 8961.5 }, PY, warn), 8960);
+  assert.equal(corePort(undefined, { port: true }, PY, warn), 8960);
+  assert.equal(corePort("0", { port: 0 }, PY, warn), 8960);
+  assert.equal(corePort("-8961", { port: -8961 }, PY, warn), 8960);
+  assert.equal(corePort("8979", {}, PY, warn), 8979);
+  assert.ok(said.length >= 9 && said.every((m) => / is not a port in the block 8960-8979; ignored$/.test(m)), said.join("|"));
+  assert.ok(said.some((m) => m.startsWith("env AL_PORT \"80\"")));
+  assert.ok(said.some((m) => m.startsWith("config \"port\" 9000")));
+  // ports.py itself must name a block port; without one: 0 (no URL is built)
+  assert.equal(corePort(undefined, {}, "AL_PORT = 80\n"), 0);
+  assert.equal(corePort(undefined, {}, ""), 0);
+  assert.equal(corePort(undefined, {}, undefined), 0);
+  // the call: env, config and the ports.py text; warnings wait for the log file
+  const main = code(MAIN_SRC);
+  assert.match(main, /const port = corePort\(process\.env\.AL_PORT, config, readPortsPy\(\), \(m\) => portNotes\.push\(m\)\);/);
+  assert.match(main, /openLog\(\);\s*for \(const note of portNotes\) \{ log\.warn\(note\); \}/);
+});

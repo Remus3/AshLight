@@ -265,14 +265,25 @@ def test_supervisor_kill_writes_record(tmp_path):
     def terminate(pid):
         killed.append(pid)
         return True
+    clock = {"t": 1000.0}
     sup = ka.Keepalive(tmp_path, 8960, launch=lambda: 4343, pid_alive=lambda p: True,
                        health=lambda: False, terminate=terminate,
-                       now=lambda: 1000.0, created=lambda p: None)
+                       now=lambda: clock["t"], created=lambda p: None)
+    # RUN-SUPERVISOR-CLOCK (decision 0005 amendment 2026-11-18): the age
+    # runs on the supervisor's clock from the first sighting (its wall age
+    # counts for at most one poll: seen at 1000, written "at" 995); a kill
+    # needs two failed checks RECHECK_S apart: the first at age 95 (1090),
+    # the second at age 100 (1095)
     sup.step()
+    assert killed == []
+    while not killed and clock["t"] < 1000.0 + ka.STALE_S + ka.RECHECK_S + 30:
+        clock["t"] += ka.POLL_S
+        sup.step()
     assert killed == [4242]
+    assert clock["t"] == 1000.0 + ka.STALE_S + ka.RECHECK_S  # 1095
     doc = _record(tmp_path)
     assert doc["reason"] == "supervisor-kill" and doc["pid"] == 4242
-    assert doc["at"] == 1000.0 and doc["detail"] == "heartbeat 200 s old"
+    assert doc["at"] == 1095.0 and doc["detail"] == "heartbeat 100 s old"
 
 
 # -- RUN-OBS-LOGS-PY (F-090): faulthandler on its own always-open file

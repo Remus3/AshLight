@@ -221,3 +221,69 @@ def test_core_history_off_saves_nothing_and_clear_empties(tmp_path):
     assert mapladder.load(core.ladder.path) == {}
     core.set_history(enabled=False)
     assert core.state.snapshot()["maps"]["ladder_all"] is None
+
+
+# -- RUN-LADDER-TICK (AUDIT-P8-LOW P8-5): a quiet tick costs no matching
+
+def test_view_is_not_rebuilt_when_nothing_changed(tmp_path, monkeypatch):
+    core = _core(tmp_path)
+    ev = [lvl(1000, 80)] + _map("MapCrypt", 1100, 65, 1, 300)
+    ev += [gen("MapBog", 1500, 66, 2), scene("Bog", 1501)]  # an open map
+    _feed(core, ev)
+    built, recorded = [], []
+    real_ladder, real_record = mapladder.ladder, core.ladder.record
+    monkeypatch.setattr(mapladder, "ladder",
+                        lambda rows, title=mapladder.TITLE_SESSION:
+                        (title == mapladder.TITLE_ALL and built.append(1))
+                        or real_ladder(rows, title=title))
+    monkeypatch.setattr(core.ladder, "record",
+                        lambda ch, maps: recorded.append(1) or real_record(ch, maps))
+    assert core.tick_ladder(on=True) is True  # MapCrypt saved
+    first = core.state.snapshot()["maps"]["ladder_all"]
+    assert first["maps"] == 2 and len(recorded) == 1
+    n_built = len(built)
+    # the open map's clock runs on: nothing that shapes the view changed
+    for t in (1600, 1700, 1800):
+        core.state._clock = (lambda v: (lambda: v))(float(t))
+        assert core.tick_ladder(on=True) is False
+    assert len(built) == n_built and len(recorded) == 1
+    assert core.state.snapshot()["maps"]["ladder_all"] == first
+    # a death in the open map shapes the view: rebuilt, nothing recorded
+    _feed(core, [died(1900)])
+    core.tick_ladder(on=True)
+    assert len(built) == n_built + 1 and len(recorded) == 1
+    assert core.state.snapshot()["maps"]["ladder_all"]["levels"][0]["deaths"] == 1
+    # the open map closes: recorded once, the view rebuilt once
+    _feed(core, [gen("MapDune", 2000, 67, 3)])  # a new map closes MapBog
+    assert core.tick_ladder(on=True) is True
+    assert len(recorded) == 2
+    core.tick_ladder(on=True)
+    assert len(recorded) == 2
+    saved = mapladder.load(core.ladder.path)["Quill"]
+    assert [r["area_id"] for r in saved] == ["MapCrypt", "MapBog"]
+    # run history off and on again records what closed meanwhile
+    core.tick_ladder(on=False)
+    core.tick_ladder(on=True)
+    assert len(recorded) == 3
+
+
+def test_restart_rebuilt_map_matches_saved_within_match_s(tmp_path):
+    path = tmp_path / mapladder.FILE_NAME
+    rec = {"area_id": "MapCrypt", "seed": 5, "opened_at": 1000.0, "area_level": 65,
+           "time_s": 200.0, "deaths": 0, "level_ups": 0, "done": True}
+    mapladder.MapLadder(path).record("Quill", [rec])
+    lad = mapladder.MapLadder(path)  # a restart reads the file again
+    edge = dict(rec, opened_at=1000.0 + mapladder.MATCH_S)
+    assert lad.record("Quill", [edge]) is False
+    assert lad.view("Quill", [edge])["maps"] == 1
+    past = dict(rec, opened_at=1000.0 + mapladder.MATCH_S + 1)
+    other_seed = dict(rec, seed=6)
+    other_area = dict(rec, area_id="MapBog")
+    no_seed = dict(rec, seed=None)
+    rows = [edge, past, other_seed, other_area, no_seed]
+    assert lad.view("Quill", rows)["maps"] == 5
+    assert lad.record("Quill", rows + [dict(past)]) is True  # one of each, once
+    assert len(mapladder.load(path)["Quill"]) == 5
+    # the same rows again: all known, no write
+    assert lad.record("Quill", rows) is False
+    assert lad.view("Quill", rows)["maps"] == 5

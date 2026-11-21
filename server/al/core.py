@@ -287,6 +287,7 @@ class Core:
         # sessions, under the same run-history switch, one bounded file.
         self.ladder = mapladder.MapLadder(self.runtime / mapladder.FILE_NAME)
         self._ladder_since = None  # maps opened before a clear stay unsaved
+        self._ladder_key = None  # RUN-LADDER-TICK: the finished maps last recorded
         # ZONE-GUIDE: zones each character entered, one bounded runtime file
         # under the same run-history switch (decision 0036).
         self.visits_path = self.runtime / zoneguide.FILE_NAME
@@ -746,13 +747,18 @@ class Core:
         """UTIL-MAP-LADDER: save the session's finished maps (run history
         on) and publish the all-sessions ladder; off publishes none. True
         when the file was written. RUN-DURABLE-STORES: an unsaved change
-        is retried first; new maps wait in the state while it fails."""
+        is retried first; new maps wait in the state while it fails.
+        RUN-LADDER-TICK (AUDIT-P8-LOW P8-5): the finished maps are recorded
+        only when they changed (a map closed, a character switch, a clear,
+        run history turned on) and the ladder returns its cached view while
+        nothing that shapes it changed, so a quiet tick costs no matching."""
         if on is None:
             on = self.history_enabled()
         saver = self.savers["ladder"]
         was_dirty = saver.dirty
         wrote = self._flush("ladder") and was_dirty
         if not on:
+            self._ladder_key = None  # turned on again: record what closed meanwhile
             self.state.set_map_ladder(None)
             return wrote
         character, rows = self.state.map_ladder_rows()
@@ -762,8 +768,13 @@ class Core:
                     and r["opened_at"] > since]
         if not saver.dirty:
             done = [r for r in rows if r.get("done")]
-            wrote = self._store_op("ladder",
-                                   lambda: self.ladder.record(character, done)) or wrote
+            key = (character, since, self.ladder.rev,
+                   tuple((r.get("area_id"), r.get("seed"), r.get("opened_at")) for r in done))
+            if key != self._ladder_key:
+                wrote = self._store_op("ladder",
+                                       lambda: self.ladder.record(character, done)) or wrote
+                if not saver.dirty:  # a failed save records again after its retry
+                    self._ladder_key = key[:2] + (self.ladder.rev,) + key[3:]
         with self._lock:
             view = self.ladder.view(character, rows)
         self.state.set_map_ladder(view)
