@@ -761,3 +761,78 @@ test ids and cannot be re-attributed; the runs were `-n 4 --dist
 loadgroup`, not the loop's `-n 8 --dist loadfile`. Green parallel holds
 were about 115 s against the 237 s serial RUN of F1 (different suite
 size: 3137 tests against 2319).
+
+## Addendum 2026-11-21 - parallel gate soak (TEST-SUITE-SOAK)
+
+Checks the F-089 acceptance of the parallel gate (TEST-SUITE-RUNNER and
+TEST-GATE-CALLERS on main) on the tree at main f8816cc (wave 18 start).
+No new research number. Method: in a clean package worktree, eleven runs
+one after the other of the one gate command
+
+    python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py
+
+each started from a below-normal priority PowerShell parent (suite_run.py
+sets its children below normal too); pytest 9.2.0, pytest-xdist 3.8.0,
+Python 3.14.4, 16 logical CPUs. Hold and wait seconds are the gate's own
+durations.jsonl rows; test counts are the pytest summary lines. A run's
+hold covers both phases of suite_run.py: phase 1 (`-m "not timing" -n 4
+--dist loadgroup`) and phase 2 (`-m timing`, serial).
+
+Runs 1 to 10 (parallel; phase 1: 4399 passed, 6 skipped; phase 2: 32
+passed, 4405 deselected; every run exit 0):
+
+- run 1: hold 206.8 s, wait 0.0 s, phase 1 154.5 s, phase 2 51.4 s
+- run 2: hold 180.4 s, wait 730.3 s, phase 1 141.4 s, phase 2 38.1 s
+- run 3: hold 185.0 s, wait 307.8 s, phase 1 146.9 s, phase 2 37.3 s
+- run 4: hold 177.9 s, wait 0.0 s, phase 1 139.3 s, phase 2 37.8 s
+- run 5: hold 186.8 s, wait 100.8 s, phase 1 148.7 s, phase 2 37.4 s
+- run 6: hold 182.0 s, wait 0.0 s, phase 1 143.1 s, phase 2 38.1 s
+- run 7: hold 180.6 s, wait 0.0 s, phase 1 141.3 s, phase 2 38.6 s
+- run 8: hold 183.0 s, wait 0.0 s, phase 1 143.9 s, phase 2 38.2 s
+- run 9: hold 180.0 s, wait 0.0 s, phase 1 140.4 s, phase 2 38.8 s
+- run 10: hold 177.3 s, wait 0.0 s, phase 1 139.2 s, phase 2 37.3 s
+
+10 consecutive green runs; median hold 181.3 s (range 177.3 to 206.8 s);
+peak commit 3.4 to 5.9 GB. No worker was lost and no red appeared, so the
+three test defects of the 2026-11-19 addendum stay fixed under load.
+
+Run 11 (xdist hidden): exit 0; phase 1 serial: 4398 passed, 7 skipped,
+32 deselected in 455.1 s; phase 2: 32 passed in 37.1 s; hold 493.3 s,
+wait 0.0 s, peak commit 1.0 GB. The one extra skip is the xdist-present
+case of tests/test_suite_run.py. Method: suite_run.py has no serial switch
+of its own (it asks importlib whether xdist and execnet exist), so the run
+put a scratch folder holding a sitecustomize.py on PYTHONPATH whose meta
+path finder refuses the names xdist and execnet, plus PYTEST_ADDOPTS="-p
+no:xdist -p no:xdist.looponfail" so pytest skips both entry points;
+nothing was uninstalled and the gate command was unchanged.
+
+One command hash for all eleven runs: a9a73e2a48a6e29b (the gate's
+cmd_hash of ["python", "tools/suite_run.py"]); no other tree held a slot
+in the window (06:11 to 07:09 local).
+
+Verdict against F-089: 10 green parallel runs - met; serial run with
+xdist hidden - met; one spelling in the gate log - met; median hold under
+75 s - NOT met (181.3 s, 2.4 times the target). The callers stay as they
+are (the serial path is still correct and parallel is 2.7 times faster
+than serial on the same tree).
+
+Reading: the 75 s target was set against a 3137-test suite (2026-11-19
+addendum, about 115 s parallel holds) and the suite has since grown to
+4437 tests. Phase 1 alone is about 140 s on 4 workers and phase 2 adds a
+fixed 37 to 38 s, about 21 percent of the hold. Row to file for the
+integrator: TEST-SUITE-HOLD-75 - profile phase 1 by file from a junit
+run, then either raise WORKERS (16 logical CPUs, 4 used) under the gate's
+commit admission or move the slowest files' work out (R1 / R2 of this
+note), and decide whether the 75 s target is re-set against today's
+suite size.
+
+Limits: the tree was not quiet in the brief's sense: wave 18 builders ran
+their own file-named subsets beside runs 1 to 5 (no gated suite of this
+tree overlapped; the gate allows one per tree) and their gated subsets
+queued between runs, hence the waits of runs 2, 3 and 5; run 1's slower
+phase 2 is in that window too. Kit observation (document only, for MAIN):
+during runs 4 to 11 four queued `python -m pytest -q` tickets of the same
+tree waited 20 to 31 minutes as "tree-busy" while each new suite_run
+ticket of this package took the freed slot at once (wait 0.0 s), so the
+gate's queue order did not hold across tree-busy re-polls; the
+orchestrator paused further soak runs after run 11 for that reason.
