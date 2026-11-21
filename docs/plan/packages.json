@@ -11580,7 +11580,9 @@
     "app/test/prices.test.js",
     "tests/test_newbie_hints.py",
     "tests/test_ux_b8.py",
-    "tests/test_ux_review.py"
+    "tests/test_ux_review.py",
+    "web/itemcard.js",
+    "app/test/itemcard.test.js"
    ],
    "new_files": [
     "web/hotkeys.js",
@@ -11616,7 +11618,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). web/hotkeys.js (new UMD view like web/settingsio.js: window.ALHotkeys, CommonJS for node --test): paint(document, snap) writes snap.hotkeys.eval.key / toggle.key into every element with data-hotkey=\"eval\" | \"toggle\"; wire(document, api) for the two change-key fields (POST /api/hotkeys); the Play line 'The overlay is switched off. Press <key> to show it.' while snap.hotkeys.overlay_on is false. web/index.html: replace the literals at the item-check help (about line 175), the Prices empty text (203), the overlay help (515-516) with data-hotkey spans, add the two fields in the overlay settings group, one script tag. web/app.js: one wire call beside the ALSettingsIO wire and one paint call in the render path, nothing else. web/prices.js (the 'Nothing checked yet' sentence) takes the key as an argument. server/al/hints.py line with 'Alt+Shift+E, or the item check key you set' uses the effective key from the state. README.md keeps 'default' wording and is not edited here. HOT: web/index.html, web/app.js (PLAY cluster TD-09, TD-19 to TD-21 rewrite both: never in one wave with them; F-135 FS-WEB-SHELL, if landed, replaces the app.js lines with a panel registration).",
+   "notes": "Tier P1. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). web/hotkeys.js (new UMD view like web/settingsio.js: window.ALHotkeys, CommonJS for node --test): paint(document, snap) writes snap.hotkeys.eval.key / toggle.key into every element with data-hotkey=\"eval\" | \"toggle\"; wire(document, api) for the two change-key fields (POST /api/hotkeys); the Play line 'The overlay is switched off. Press <key> to show it.' while snap.hotkeys.overlay_on is false. web/index.html: replace the literals at the item-check help (about line 175), the Prices empty text (203), the overlay help (515-516) with data-hotkey spans, add the two fields in the overlay settings group, one script tag. web/app.js: one wire call beside the ALSettingsIO wire and one paint call in the render path, nothing else. web/prices.js (the 'Nothing checked yet' sentence) takes the key as an argument. server/al/hints.py line with 'Alt+Shift+E, or the item check key you set' uses the effective key from the state. README.md keeps 'default' wording and is not edited here. HOT: web/index.html, web/app.js (PLAY cluster TD-09, TD-19 to TD-21 rewrite both: never in one wave with them; F-135 FS-WEB-SHELL, if landed, replaces the app.js lines with a panel registration). Ruling W16-4 (2026-11-20): files widen to web/itemcard.js and app/test/itemcard.test.js; the DEFAULT_KEY literal goes, and with no bound key the card says the item check key. Reverses if: another wave 16 package owns web/itemcard.js, or players miss the default key hint before the first snapshot.",
    "wave": 16,
    "owner": "session",
    "tier": "P1",
@@ -11754,9 +11756,17 @@
     "web/checks.js",
     "app/test/client.test.js",
     "app/test/checks.test.js",
-    "docs/decisions/0041-desktop-client.md"
+    "docs/decisions/0041-desktop-client.md",
+    "app/test/autostart_switch.test.js",
+    "app/test/client_controls.test.js",
+    "app/client/launcher.js",
+    "app/test/tray_mode.test.js",
+    "tests/test_audit_exe_path.py",
+    "tests/test_floor_static.py"
    ],
-   "new_files": [],
+   "new_files": [
+    "scripts/calc_setup.ps1"
+   ],
    "integrator_edits": [
     {
      "file": "ROADMAP.md",
@@ -11792,7 +11802,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Ruling Q-08: a second preload action with a fixed name and no arguments; amend decision 0041 point 5 in this commit (another cluster amends points 2 for the tray-only start: keep to point 5). app/main.js gains one ipcMain handler; F-026, F-027 and others edit app/main.js too (cluster OVL / RUN): land after them or rebase. In an installed copy the action maps to DEP-09's 'installer calc --opt-in'. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). REL-AUTOSTART-SWITCH (cluster REL) also adds preload actions in app/client/preload.js and the same 0041 point 5: one after the other, whichever lands second rebases and keeps both actions.",
+   "notes": "Tier P2. Ruling Q-08: a second preload action with a fixed name and no arguments; amend decision 0041 point 5 in this commit (another cluster amends points 2 for the tray-only start: keep to point 5). app/main.js gains one ipcMain handler; F-026, F-027 and others edit app/main.js too (cluster OVL / RUN): land after them or rebase. In an installed copy the action maps to DEP-09's 'installer calc --opt-in'. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). REL-AUTOSTART-SWITCH (cluster REL) also adds preload actions in app/client/preload.js and the same 0041 point 5: one after the other, whichever lands second rebases and keeps both actions. Adjudicator ruling W16-1 (2026-11-20): files widen to app/test/autostart_switch.test.js and app/test/client_controls.test.js, which pin the preload to exactly 5 actions while keeping the argument-free and fixed-channel checks; the action spawns python tools/tc_pin.py setup --opt-in in a checkout and installer calc --opt-in in an installed copy, hidden, in the background, never setup.ps1 (decision 0070 refuses its npm step while the client runs). Reverses if: the 0041 action set is ruled closed at 4, tc_pin.py or the installer calc command changes its CLI, or a client run of tc_pin.py fails where setup.ps1 succeeds. Adjudicator ruling W16-2 (2026-11-20, amends W16-1): files widen to app/client/launcher.js and app/test/tray_mode.test.js (tests/test_audit_exe_path.py and tests/test_floor_static.py only if a pinned list must name the new script), new file scripts/calc_setup.ps1; launcher.setupCalc() is the one spawn, argument-free, through psExe (absolute System32 PowerShell), hidden, not detached; the script sets its own priority BelowNormal first, resolves Python as scripts/autostart.ps1 does in a checkout and through the install marker runtime in an installed copy, runs tools/tc_pin.py setup --opt-in (installer calc --opt-in in an installed copy), never setup.ps1; main.js calls it from one sender-checked handler, one run at a time. Reverses if: test_audit_exe_path or the floor tests reject the script spawn after a real attempt (then split or park), the install marker cannot give a Python path from the script, or the operator wants Python resolved in JS.",
    "wave": 16,
    "owner": "session",
    "tier": "P2",
@@ -11806,7 +11816,9 @@
     "F-077",
     "DEP-11"
    ],
-   "files": [],
+   "files": [
+    "tests/test_install_home.py"
+   ],
    "new_files": [
     "server/al/install/switch.py",
     "server/al/install/apply_staged.py",
@@ -11833,7 +11845,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "switch.py holds the logic (apply(home, now), bump_attempt(home), rollback(home), confirm(home, health=callable)); apply_staged.py, rollback.py and confirm.py are the three thin command modules the cli table names. 'never while a core of this home runs' is decided from this home's own pid and heartbeat files (the proven-ours rule of decision 0010), never a process-list search for the game. All shell effects go through shell.py with the injected runner.",
+   "notes": "switch.py holds the logic (apply(home, now), bump_attempt(home), rollback(home), confirm(home, health=callable)); apply_staged.py, rollback.py and confirm.py are the three thin command modules the cli table names. 'never while a core of this home runs' is decided from this home's own pid and heartbeat files (the proven-ours rule of decision 0010), never a process-list search for the game. All shell effects go through shell.py with the injected runner. Ruling W16-3 (2026-11-20): files widen to tests/test_install_home.py; test_not_yet_built_command_exits_2 now fakes a missing module for each command instead of scanning for unbuilt modules, because apply_staged, rollback and confirm complete cli.COMMANDS. Reverses if: a command needs a different not-available path, or the monkeypatched-module form stops reaching the import guard.",
    "wave": 16,
    "owner": "session",
    "tier": "P1",
