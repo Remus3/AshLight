@@ -1,0 +1,93 @@
+========================================
+SESSION 16 /done (2026-11-21): moved from AL-NEXT-SESSION.txt
+========================================
+- NOTE (session 15 /done, 2026-11-20): reap --apply printed "reap applied: 0
+  removed, 3 kept, 0 listed (base main)"; read back: 4 worktrees (main,
+  lanes 0 to 2), 0 worktree-* branches. roadmap_fold: 16 row files applied, 13 done rows
+  archived, 0 rows "BLOCKED: session wave 17" (505bb8b).
+Do NOT redo (sessions 15 and 16, all on main and pushed): wave 17 (12 packages, 3 batches, close 0440372) and wave 18 (closed 2026-11-21, main = origin/main); worktrees reaped; the DPC-1 note is closed (tests/test_contact_field.py).
+In flight: none. No wave agent or lane run started by session 15; fleet_checklist stale: none (read 2026-11-20 at session 15 /done); HALT absent (loop live); REG_OPEN absent (registration closed).
+
+Status (session 15 /done, 2026-11-20, fresh runs read back): whole suite
+through the suite gate 4399 passed / 6 skipped, timing phase 32 passed
+(rc 0); npm test --prefix app 574/574; leak sweep --tree no HALT (ARMED
+needles=44); main 0440372 equal to origin/main before /done, then the
+roadmap fold 505bb8b and this hand-off commit pushed.
+Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip
+terminal, no reply. Operator acts: OA-19 / OA-20 actionable (optional).
+Status board skipped (opt-out, not asked).
+(originals of bullets tightened in the hand-off at session 16 /done)
+Session-level lessons (sessions 8 to 11), keep in the orchestrator briefs: run a
+whole wave via one background orchestrator with a real background watch;
+never end an orchestrator turn on "Waiting" with nothing running (session
+11: it happened twice and the orchestrator had to be resumed; the brief must
+say never end a turn without a live background child, and to stop verifier
+watcher leftovers before closing); never tell
+a package agent "do not push" when CLAUDE.md authorizes the push; builders
+and verifiers always also run tests/test_test_layout.py; use a fresh
+integrator per batch; verify every builder's claimed commit sha against git
+before review; a red batch suite is reverted and the package deferred (08
+section 4 step 6), not fixed forward on the package branch (session 10
+deviation, bullet below).
+Session-15 lessons (same briefs): no bare "|" in a docs/design/reviews.log
+line (breaks the 5-field format; test_design_gate); a builder "needs
+<path>" failure gets a packages.json patch plus a fix round (ruling A in
+5787074's body; OVL-TD05-LEGIBILITY app/test/layout.test.js); the merged
+tip must equal the verified tip.
+Wording and reading. The text inside each pair of quotes is the wording of
+the operator's session brief, word for word (its section on going public;
+line breaks joined). The label in front of a quote is not the operator's
+wording, it is the reading of a ruling: that the order is the go for Q-23
+step 1 (create the private repository, push main) and step 4 (the public
+flip on the plan-04 gates) is the reading of ruling LE-01; that the
+sentence on the one act left is the written skip of OA-2 (the message to
+poe.ninja) is the reading of ruling LE-38 (docs/plan/07, Rulings
+2026-11-18 (close-out); decision 0078).
+
+- LIVE rows needing the operator or the live game (all BLOCKED): LIVE-1
+  unseen lines; TEST-LIVE-CLICKS (operator logs in once while the core
+  runs; 01 Rejected R-1 struck the other path, the floor bars game input);
+  OVL-BUDGET in-map measurement; OVL-FPS in-map test; TC-BUILDFILE-LIVE
+  (load an AshLight .build once); LIVE-FILTER-MERGE; waystone /
+  search-string / filter in-game checks. Rows: LIVE-1 =
+  RUN-LEDGER-CORE wave 5, RUN-LEDGER-WIRE wave 16, RUN-LEDGER-REPORT wave
+  18, RUN-LIVE1-FIXTURES parked; TEST-LIVE-CLICKS = RUN-LIVE-CLICKS-STRIKE
+  wave 1, RUN-LIVE-CLICKS-CLOSE parked; OVL-BUDGET = RUN-BUDGET-LOG-CORE
+  and RUN-BUDGET-LOG-CLIENT wave 14, RUN-OVL-BUDGET-CLOSE parked; OVL-FPS =
+  OVL-CHECK wave 21, OVL-FPS parked; TC-BUILDFILE-LIVE =
+  RUN-BUILDFILE-LIVE-CLOSE parked; the filter, merged-filter and
+  search-string checks (01 LIVE-FILTER, LIVE-FILTER-MERGE, LIVE-SEARCHSTR)
+  = RUN-VERDICTS-CLOSE parked; the waystone check (01 LIVE-WAYSTONE) =
+  RUN-LEDGER-WIRE wave 16, RUN-LIVE1-FIXTURES parked.
+KIT (for MAIN, send via the outbox next session): fleet_suite_gate tree-busy waiters lose FIFO order - a freshly queued same-tree suite took each freed slot while four earlier tickets waited 20-31 min (wave 18, 2026-11-21).
+- OPERATOR ACTS (one batched ask, docs/plan/09-operator-acts.md, OA-1 to
+  OA-37; all optional, defaults in force, no wave waits; letters are the
+  old hand-off acts): (a) in-map FPS test, Windowed Fullscreen, one normal
+  map (OA-33; OVL-CHECK wave 21, OVL-FPS parked; the RAM half needs no act,
+  RUN-BUDGET-LOG-CORE / -CLIENT wave 14); (b) no separate LIVE-1 session
+  (07 Coverage, CARRY-12): tick the parse-ledger consent once, then play
+  (OA-19, OA-20; RUN-LEDGER-WIRE wave 16), one login for TEST-LIVE-CLICKS;
+  (c) TC-OAUTH-REG when GGG reopens registration (OA-36; application from
+  DATA-GGG-APPLICATION, wave 1); (e) logon
+  autostart scripts\autostart.ps1 -Enable (OA-7; decision 0011, OFF by
+  default); (g) UA contact in config/local.json + web_data on (OA-8;
+  poe.ninja / share-URL features only); (k) review decision 0017 (trade
+  link only) and say if it should be reversed (OA-9).
+  Act (d), create the GitHub remote, is no operator act any more: the go
+  is recorded above and row GP-09 (wave 5) creates the repository and
+  pushes. Act (f), dropped unacted at commit a3bf44c, is OA-12 above.
+  After the first push: OA-3 (immutable releases, only if the API answers
+  404) and OA-13 (the release phrase).
+- KIT DEFECT for MAIN (rows AUTO-25 wave 2 drafts, LOOP-KIT-REPORT-SEND
+  parked on OA-21 sends; NOT yet reported: no destination inbox / fleet
+  roster for AL; send once config loop.dest_inboxes MAIN or FLEET_ROSTER
+  exists, under the 12/day cap): (1) fleet_suite_gate.py line ~672 crashed
+  once, `_rec(a)` returned None while agents were queued (AttributeError on
+  .get), a retry worked; (2) (ruling R3, 2026-11-18) the kit fleet_identity
+  pre-push check reads no tag object or tagger and matches three trailer
+  keys and three names only (tools/push_guard.py covers both locally,
+  decision 0046 amendment); (3) (probe 2026-11-18) for a PowerShell
+  `cd <backslash path>; git add -N` the claims hook recorded a nonexistent
+  path (harmless; builders use Bash, forward slashes). Read back 2026-11-18:
+  outbox holds no note. A gate traceback seen in a wave is one more line
+  here, not a note.
