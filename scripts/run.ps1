@@ -312,35 +312,49 @@ $wantOverlay = -not ($NoOverlay -or $NoBrowser -or $Browser -or $EdgeApp)
 if ($trayOnly) { $wantOverlay = $true }
 $plan = Get-AlPlan -PlanCmd (Get-AlPythonCmd -Module 'server.al.procs' -ArgList @('plan'))
 
+# RUN-SECOND-LINE-PY (F-127, decision 0005 amendment 2026-11-18): the
+# supervisor starts right after the core and BEFORE the health wait, handed
+# the new core's pid (--adopt-pid: watched as a starting core for 60 s), so
+# a slow core start still ends with one core and a supervisor; a core that
+# finds no supervisor later starts one itself (server\al\plug\secondline.py).
+$corePid = 0
+$waitSince = -1
 if (Test-AlHealth) {
     Write-AlLog "run: core already running on 127.0.0.1:$port (no-op)"
 } elseif ($plan.status.core.live) {
     Write-AlLog "run: core pid $($plan.status.core.pid) is starting; waiting for it"
     # started by someone else just before: its record may be up to 60 s old
-    if (-not (Wait-AlCore ((Get-AlUnixNow) - 60))) { exit 1 }
+    $waitSince = (Get-AlUnixNow) - 60
 } else {
     # Detached via WMI (scripts\al_detach.ps1): the core must outlive this
     # script and whatever shell started it. --quiet: core.log is the record.
     $coreArgs = Get-AlDetachArgs 'server.al' @('--quiet', '--port', [string]$port)
-    $launchedAt = (Get-AlUnixNow) - 1
+    $waitSince = (Get-AlUnixNow) - 1
     $corePid = Start-AlDetached -FilePath $exe -ArgumentList $coreArgs `
         -WorkingDirectory $AlEnvRoot -Environment $detachEnv
     Write-AlLog "run: core launched detached (pid $corePid)"
-    if (-not (Wait-AlCore $launchedAt)) { exit 1 }
-    Write-AlLog "run: core started on 127.0.0.1:$port"
 }
 
 # CORE-KEEPALIVE: a detached supervisor restarts the core if it dies
-# (decision 0005). It adopts the running core. Started only when no
-# supervisor holds its single-instance lock (OPS-RUN-IDEMP), so a re-run
-# never spawns a second one. Log: Logs\keepalive.log.
+# (decision 0005). It adopts the running core, or the one just launched
+# (--adopt-pid). Started only when no supervisor holds its single-instance
+# lock (OPS-RUN-IDEMP), so a re-run never spawns a second one. Log:
+# Logs\keepalive.log.
 if (@($plan.start) -contains 'supervisor') {
-    $supArgs = Get-AlDetachArgs 'server.al.keepalive' @('--port', [string]$port)
+    $supList = @('--port', [string]$port)
+    if ([int]$corePid -gt 0) { $supList += @('--adopt-pid', [string]$corePid) }
+    $supArgs = Get-AlDetachArgs 'server.al.keepalive' $supList
     $supPid = Start-AlDetached -FilePath $exe -ArgumentList $supArgs `
         -WorkingDirectory $AlEnvRoot -Environment $detachEnv
     Write-AlLog "run: keepalive supervisor launched (pid $supPid; stop with scripts\stop.ps1)"
 } else {
     Write-AlLog "run: keepalive supervisor already running (no-op)"
+}
+
+if ($waitSince -ge 0) {
+    # a core that is slow to answer stays watched by the supervisor
+    if (-not (Wait-AlCore $waitSince)) { exit 1 }
+    if ([int]$corePid -gt 0) { Write-AlLog "run: core started on 127.0.0.1:$port" }
 }
 
 $url = "http://127.0.0.1:$port/#token=" + (Get-AlToken)
