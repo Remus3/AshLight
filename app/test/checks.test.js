@@ -1,6 +1,9 @@
 /* DIAG-SELF / LANG-GUARD: the dashboard helpers in web/checks.js. The core
    sends every check, sentence and the redacted report; these only show
-   them, and the clipboard is written only inside the copy click. */
+   them, and the clipboard is written only inside the copy click.
+   RUN-REPORT-ROUTE (folded into RUN-VERDICTS-UI): the report is built on
+   the click by GET /api/report into a read-only preview, and Copy report
+   writes exactly the previewed text, synchronously inside its click. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -35,8 +38,9 @@ function el(tag) {
 
 function fakeDoc() {
   const ids = {};
-  ["checksbox", "checks", "checks-summary",
-    "checks-list", "checks-copy", "checks-said"].forEach((id) => { ids[id] = el("x"); });
+  ["checksbox", "checks", "checks-summary", "checks-list", "checks-copy", "checks-said",
+    "checks-preview", "checks-preview-box"].forEach((id) => { ids[id] = el("x"); });
+  ids["checks-preview-box"].hidden = true;
   return {
     ids,
     getElementById: (id) => ids[id] || null,
@@ -68,19 +72,117 @@ test("checks: paint opens the fold on a new failure only", () => {
   assert.equal(doc.ids.checks.open, false);
 });
 
-test("checks: copy writes the core's report only in the click", async () => {
+/* app.js api() stand-in: GET /api/report answers `text` (or fails). */
+function reportApi(text, calls) {
+  return (method, path, body) => {
+    calls.push([method, path, body]);
+    if (text === null) { return Promise.reject(new Error("HTTP 500")); }
+    return Promise.resolve({ report: text });
+  };
+}
+
+const REPORT = "AshLight 0.1.0 (abc) self-check, 2026-11-21 10:00 UTC\n[FIX] Overlay: Not running.\n";
+const tickle = () => new Promise((r) => setImmediate(r));
+
+test("checks: the copy button waits only for the first checks", () => {
   const doc = fakeDoc();
+  ck.paint(doc, { diag: Object.assign({}, DIAG, { report: undefined }) });
+  assert.equal(doc.ids["checks-copy"].disabled, false, "the route builds it, not the snapshot");
+  const empty = fakeDoc();
+  ck.paint(empty, { diag: { summary: "x", failed: 0, checks: [] } });
+  assert.equal(empty.ids["checks-copy"].disabled, true);
+});
+
+test("checks: opening the fold builds the preview; a fold that opens by itself builds nothing", async () => {
+  const doc = fakeDoc();
+  const calls = [];
   const wrote = [];
   const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
-  ck.wire(doc, () => ({ diag: DIAG }), nav, null);
-  assert.deepEqual(wrote, []);
+  ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
+  assert.deepEqual(calls, [], "nothing is built at wire time");
+  ck.paint(doc, { diag: DIAG }); // a failure opens the fold by itself
+  assert.equal(doc.ids.checks.open, true);
+  assert.deepEqual(calls, [], "no click, no build");
+  doc.ids.checks.open = false;
+  doc.ids["checks-summary"].listeners.click(); // the player opens it
+  assert.deepEqual(calls, [["GET", "/api/report", undefined]]);
+  assert.equal(doc.ids["checks-said"].textContent, ck.BUILDING);
+  await tickle();
+  assert.equal(doc.ids["checks-preview"].value, REPORT);
+  assert.equal(doc.ids["checks-preview-box"].hidden, false);
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY);
+  // closing it builds nothing
+  doc.ids.checks.open = true;
+  doc.ids["checks-summary"].listeners.click();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(wrote, [], "building the preview never writes the clipboard");
+});
+
+test("checks: preview equals the copied text byte for byte", async () => {
+  const doc = fakeDoc();
+  const calls = [];
+  const wrote = [];
+  const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
+  ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
+  doc.ids["checks-summary"].listeners.click();
+  await tickle();
   doc.ids["checks-copy"].listeners.click();
-  await new Promise((r) => setImmediate(r));
-  assert.deepEqual(wrote, [DIAG.report]);
+  assert.equal(wrote.length, 1);
+  assert.equal(wrote[0], doc.ids["checks-preview"].value);
+  assert.equal(Buffer.compare(Buffer.from(wrote[0], "utf8"), Buffer.from(REPORT, "utf8")), 0);
+  // the snapshot's own report is not what is copied
+  assert.notEqual(wrote[0], DIAG.report);
+  await tickle();
   assert.equal(doc.ids["checks-said"].textContent, ck.COPIED);
-  ck.wire(doc, () => ({ diag: DIAG }), {}, null);
-  doc.ids["checks-copy"].listeners.click();
-  assert.equal(doc.ids["checks-said"].textContent, ck.COPY_FAILED);
+  assert.equal(calls.length, 1, "the copy click builds nothing");
+});
+
+test("checks: clipboard only inside the click", async () => {
+  const doc = fakeDoc();
+  const calls = [];
+  const wrote = [];
+  let inClick = false;
+  const nav = { clipboard: { writeText: (t) => {
+    assert.ok(inClick, "writeText outside the click");
+    wrote.push(t);
+    return Promise.resolve();
+  } } };
+  const click = (id) => { inClick = true; try { doc.ids[id].listeners.click(); } finally { inClick = false; } };
+  ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
+  // no preview yet (the fold opened by itself): this click builds it and
+  // copies nothing, not even once the build answers
+  click("checks-copy");
+  assert.deepEqual(calls, [["GET", "/api/report", undefined]]);
+  await tickle();
+  await tickle();
+  assert.deepEqual(wrote, [], "never written after a wait");
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY);
+  // the next click copies, synchronously inside it
+  click("checks-copy");
+  assert.deepEqual(wrote, [REPORT]);
+  // a failed build says so and copies nothing
+  const bad = fakeDoc();
+  const none = [];
+  ck.wire(bad, () => ({ diag: DIAG }), nav, null, reportApi(null, none));
+  inClick = true;
+  bad.ids["checks-copy"].listeners.click();
+  inClick = false;
+  await tickle();
+  assert.equal(bad.ids["checks-said"].textContent, ck.BUILD_FAILED);
+  assert.equal(bad.ids["checks-preview-box"].hidden, true);
+  assert.deepEqual(wrote, [REPORT]);
+  // no clipboard: the copy says it failed
+  const plain = fakeDoc();
+  ck.wire(plain, () => ({ diag: DIAG }), {}, null, reportApi(REPORT, []));
+  plain.ids["checks-summary"].listeners.click();
+  await tickle();
+  plain.ids["checks-copy"].listeners.click();
+  assert.equal(plain.ids["checks-said"].textContent, ck.COPY_FAILED);
+  // the source writes the clipboard in one place, never after a then
+  const src = web.source("checks.js");
+  assert.equal(src.split("clipboard.writeText(").length - 1, 1);
+  assert.ok(!/\.then\(function \(res\) \{[^}]*writeText/.test(src));
+  assert.ok(!/setTimeout|setInterval/.test(src));
 });
 
 test("language notice: region N owns it; the Hide key is read at wire and stored at once", () => {

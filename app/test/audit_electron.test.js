@@ -35,9 +35,12 @@ test("the guards part: sandbox, WebGL off, defaults on every new webContents", (
   assert.match(PART, /app\.on\("web-contents-created"/);
   assert.match(PART, /Guards\.attachDefaults\(wc, reg/);
   assert.match(PART, /Guards\.isDebugStart\(argv, env\)/);
-  // 10-guards runs before every other part (file-name order)
+  // 10-guards runs first, or second after 05-crashguard (which creates no window or webContents)
   const parts = fs.readdirSync(path.join(__dirname, "..", "parts")).filter((n) => n.endsWith(".js")).sort();
-  assert.equal(parts[0], "10-guards.js");
+  const guardAt = parts.indexOf("10-guards.js");
+  assert.ok(guardAt === 0 || (guardAt === 1 && parts[0] === "05-crashguard.js"), parts.join());
+  const CG = fs.readFileSync(path.join(__dirname, "..", "parts", "05-crashguard.js"), "utf8");
+  assert.doesNotMatch(CG, /new\s+(BrowserWindow|BrowserView|WebContentsView)/);
 });
 
 test("main.js: exact-sender IPC, throttled restart, popups still denied", () => {

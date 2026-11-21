@@ -10,13 +10,19 @@ adopts a core that is already running (pid from <runtime>/core.alive) and
 polls every POLL_S seconds:
 
 - core pid gone, core.alive left behind -> crash -> relaunch after backoff
-- core pid alive, heartbeat older than STALE_S and /api/health failing ->
-  hung -> terminate (only when the image is python) -> relaunch
+- core pid alive, heartbeat older than STALE_S and two /api/health checks
+  failing RECHECK_S apart (a loop_age_s over LOOP_STALE_S fails a check) ->
+  hung -> terminate (only when the image is python) -> relaunch; never
+  inside the GAP_GRACE_S after a poll gap (sleep or a stalled machine)
 - core pid gone and core.alive removed (clean exit) or stop.request present
   (scripts/stop.ps1) -> user stop -> log it and exit; never restarted
 - no heartbeat but /api/health answers (a core from an older build) ->
   left alone; started only once nothing answers
 - more than CAP restarts inside WINDOW_S -> logged give-up and exit
+
+Every interval runs on the monotonic clock (RUN-SUPERVISOR-CLOCK); the
+wall clock only stamps keepalive.json, whose last_restart (time and reason)
+plug/supervisor.py shows in Checks for 10 minutes.
 
 It only ever looks at, starts or stops AshLight's own python core; it never
 touches the game process (ToS floor). Decision: docs/decisions/0005.
@@ -43,6 +49,19 @@ from . import exitrecord, hello, hotreload, jsonfile, logs, paths, ports, prio, 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
 START_GRACE_S = 60.0    # a fresh core must write its first heartbeat by then
+# RUN-SUPERVISOR-CLOCK (F-136, decision 0005 amendment 2026-11-18): every
+# interval is measured on the monotonic clock. A stale kill needs two failed
+# health checks at least RECHECK_S apart; a check fails when nothing answers
+# or the core's loop is older than LOOP_STALE_S (/api/health loop_age_s). A
+# step more than POLL_GAP_S after the one before (sleep, hibernate, a stalled
+# machine) opens GAP_GRACE_S with no kill.
+RECHECK_S = 5.0
+LOOP_STALE_S = 60.0
+POLL_GAP_S = 30.0
+GAP_GRACE_S = 60.0
+HEALTH_MAX_BYTES = 64 * 1024
+# last_restart reason codes in keepalive.json (plug/supervisor.py words them)
+RESTART_REASONS = ("hung", "crash", "start-crash", "start-timeout")
 BACKOFF_S = (2.0, 10.0, 30.0, 60.0, 120.0)
 CAP = 5                 # restarts allowed inside WINDOW_S
 WINDOW_S = 900.0
@@ -205,40 +224,113 @@ def release_lock(fh):
 _NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
-def health_check(runtime, port, timeout=3.0):
+def _loop_age(body):
+    """loop_age_s from an /api/health body; None when absent (an older
+    core, or a core whose loop has not run yet) or unreadable."""
+    try:
+        value = json.loads(body.decode("utf-8")).get("loop_age_s")
+    except (ValueError, AttributeError, UnicodeDecodeError):
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def health_check(runtime, port, timeout=3.0, detail=False):
     """True when the core answers /api/health with the current token.
+    detail=True: {"ok": bool, "loop_age_s": float or None} instead
+    (RUN-SUPERVISOR-CLOCK: the supervisor also judges the loop age).
 
     SEC-HELLO-CORE (decision 0054): the listener first proves it is the
     core (hello.verify, once per token value); the token is sent only after
     that. Any request error clears the verification, so the next check
     proves the listener again."""
+    def out(ok, age=None):
+        return {"ok": ok, "loop_age_s": age} if detail else ok
     try:
         token = (Path(runtime) / "token").read_text(encoding="ascii").strip()
     except (OSError, ValueError):
-        return False
+        return out(False)
     if not hello.verify(port, token, opener=_NO_PROXY_OPENER, timeout=timeout):
-        return False
+        return out(False)
     req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}/api/health",
                                  headers={"X-AL-Token": token})
     try:
         with _NO_PROXY_OPENER.open(req, timeout=timeout) as r:
             if r.status == 200:
-                return True
+                return out(True, _loop_age(r.read(HEALTH_MAX_BYTES)) if detail else None)
     except (OSError, ValueError):
         pass
     hello.forget(port)
-    return False
+    return out(False)
+
+
+def read_last_restart(path):
+    """last_restart of a keepalive.json ({"at": wall time, "reason": a
+    RESTART_REASONS code}), or None when absent or malformed."""
+    try:
+        doc = json.loads(Path(path).read_text(encoding="ascii"))
+    except (OSError, ValueError):
+        return None
+    rec = doc.get("last_restart") if isinstance(doc, dict) else None
+    if not isinstance(rec, dict) or rec.get("reason") not in RESTART_REASONS:
+        return None
+    at = rec.get("at")
+    if isinstance(at, bool) or not isinstance(at, (int, float)):
+        return None
+    return {"at": float(at), "reason": rec["reason"]}
+
+
+def answered(result):
+    """The core answered /api/health (a bool or a health_check detail)."""
+    if isinstance(result, dict):
+        return bool(result.get("ok"))
+    return bool(result)
+
+
+def check_passed(result, loop_stale_s=LOOP_STALE_S):
+    """One stale-heartbeat health check passed: the core answered and its
+    loop is not older than loop_stale_s (no loop age reads as passed: an
+    older core)."""
+    if not answered(result):
+        return False
+    age = result.get("loop_age_s") if isinstance(result, dict) else None
+    return age is None or age <= loop_stale_s
 
 
 class Keepalive:
     """The supervisor state machine; step() is one poll."""
 
     def __init__(self, runtime, port, launch, pid_alive=pid_alive, health=None,
-                 terminate=terminate_core, now=time.time, log=None, created=None,
+                 terminate=terminate_core, now=time.monotonic, log=None, created=None,
                  stale_s=STALE_S, start_grace_s=START_GRACE_S, backoff=BACKOFF_S,
                  cap=CAP, window_s=WINDOW_S, code_watch=None, preflight=None,
                  reload_debounce_s=RELOAD_DEBOUNCE_S, reload_exit_s=RELOAD_EXIT_S,
-                 snapshot=None, snapshot_every_s=SNAPSHOT_EVERY_S):
+                 snapshot=None, snapshot_every_s=SNAPSHOT_EVERY_S, wall=None,
+                 recheck_s=RECHECK_S, loop_stale_s=LOOP_STALE_S,
+                 poll_gap_s=POLL_GAP_S, gap_grace_s=GAP_GRACE_S, poll_s=POLL_S):
+        # RUN-SUPERVISOR-CLOCK (F-136): `now` is the monotonic clock every
+        # interval uses; `wall` only stamps records other processes read
+        # (keepalive.json, last-exit.json, the code reload status, the
+        # snapshot starter's file ages) and corrects a fresh heartbeat's
+        # sighting by at most one poll. A caller that injects only `now`
+        # (a test's fake clock) gets it as the wall clock too.
+        if wall is None:
+            wall = time.time if now is time.monotonic else now
+        self._wall = wall
+        self._loop_age = None      # loop_age_s of the last default check
+        self.recheck_s = float(recheck_s)
+        self.loop_stale_s = float(loop_stale_s)
+        self.poll_gap_s = float(poll_gap_s)
+        self.gap_grace_s = float(gap_grace_s)
+        self.poll_s = float(poll_s)
+        self._beat_key = None      # (pid, created, updated) last seen
+        self._beat_at = None       # monotonic time that heartbeat was written
+        self._failed_at = None     # monotonic time of the first failed check
+        self._last_step = None
+        self.grace_until = None    # no kill before this monotonic time
+        self._restart_reason = None
+        self.last_restart = None   # {"at": wall time, "reason": code}
         # DATA-SNAP-AT-START: snapshot(now) -> pid or None starts the
         # game-data snapshot tool when it is due. None: never (tests).
         self._snapshot = snapshot
@@ -262,7 +354,7 @@ class Keepalive:
         self.port = int(port)
         self._launch = launch
         self._alive = pid_alive
-        self._health = health or (lambda: health_check(self.runtime, self.port))
+        self._health = health or self._default_health
         self._terminate = terminate
         self._created_of = created or process_created
         self._now = now
@@ -278,19 +370,49 @@ class Keepalive:
         self.next_launch = None
         self.restarts = []
         self._created = process_created(os.getpid())
+        # the last restart survives a supervisor restart (run.ps1 re-run)
+        self.last_restart = read_last_restart(self.runtime / STATE_FILE)
 
     def _write_state(self, status):
         data = {"pid": os.getpid(), "created": self._created, "status": status,
                 "core_pid": self.pid,
                 "restarts": len(self.restarts), "port": self.port,
-                "updated": self._now()}
+                "updated": self._wall(), "last_restart": self.last_restart}
         try:
             jsonfile.write_text(self.runtime / STATE_FILE, json.dumps(data) + "\n")
         except OSError:
             pass
 
+    def _beat_age(self, hb, now):
+        """Seconds since the heartbeat was written, on the monotonic clock:
+        the time a new heartbeat value was first seen, minus its wall age
+        clamped to one poll (a wall clock step moves it by at most that)."""
+        key = (hb["pid"], hb.get("created") or 0, hb["updated"])
+        if key != self._beat_key:
+            lag = min(max(self._wall() - hb["updated"], 0.0), self.poll_s)
+            self._beat_key = key
+            self._beat_at = now - lag
+            self._failed_at = None
+        return now - self._beat_at
+
+    def _no_kill(self, now):
+        return self.grace_until is not None and now < self.grace_until
+
+    def _gap_step(self, now):
+        """A step long after the previous one (the machine slept or
+        stalled): the core may not have had time to beat; no kill for
+        gap_grace_s and the failed-check count starts over."""
+        last, self._last_step = self._last_step, now
+        if last is None or now - last <= self.poll_gap_s:
+            return
+        self.grace_until = now + self.gap_grace_s
+        self._failed_at = None
+        self._log(f"poll gap of {now - last:.0f} s; no kill for "
+                  f"{self.gap_grace_s:g} s")
+
     def step(self):
         now = self._now()
+        self._gap_step(now)
         self._snapshot_step(now)
         hb = read_heartbeat(self.runtime / HEARTBEAT_FILE)
         live = bool(hb) and self._alive(hb["pid"]) and self._same_process(hb)
@@ -307,15 +429,22 @@ class Keepalive:
             self.launched_at = None
             self.hot_launch = False
             self.blocked = False
-            if now - hb["updated"] > self.stale_s and not self._health():
-                ok = self._terminate(hb["pid"])
-                if ok:  # OBS-CRASH: the killed core cannot write its own record
-                    exitrecord.write(self.runtime, exitrecord.SUPERVISOR_KILL,
-                                     f"heartbeat {now - hb['updated']:.0f} s old",
-                                     now=now, pid=hb["pid"])
-                return self._crashed(now, f"core hung (pid {hb['pid']}, heartbeat "
-                                     f"{now - hb['updated']:.0f} s old, "
-                                     f"terminated={bool(ok)})")
+            age = self._beat_age(hb, now)
+            if age <= self.stale_s:
+                self._failed_at = None
+            elif not self._no_kill(now):
+                verdict = self._stale_verdict(now)
+                if verdict == "hung":
+                    ok = self._terminate(hb["pid"])
+                    if ok:  # OBS-CRASH: the killed core cannot write its own record
+                        exitrecord.write(self.runtime, exitrecord.SUPERVISOR_KILL,
+                                         f"heartbeat {age:.0f} s old",
+                                         now=self._wall(), pid=hb["pid"])
+                    return self._crashed(now, f"core hung (pid {hb['pid']}, heartbeat "
+                                         f"{age:.0f} s old, two failed checks, "
+                                         f"terminated={bool(ok)})", code="hung")
+                if verdict == "checking":
+                    return "checking"
             if self.reloading_since is not None:
                 if now - self.reloading_since > self.reload_exit_s:
                     ok = self._terminate(hb["pid"])
@@ -325,12 +454,13 @@ class Keepalive:
                 return "reloading"
             return self._code_step(now) or "ok"
         if self.launched_at is not None and self.pid and self._alive(self.pid):
-            if now - self.launched_at > self.start_grace_s and not self._health():
+            if (now - self.launched_at > self.start_grace_s and not self._no_kill(now)
+                    and not answered(self._health())):
                 ok = self._terminate(self.pid)
                 return self._crashed(now, f"core start timed out (pid {self.pid}, "
-                                     f"terminated={bool(ok)})")
+                                     f"terminated={bool(ok)})", code="start-timeout")
             return "starting"
-        if self._health():
+        if answered(self._health()):
             # a core answers but writes no heartbeat (an older build): leave it
             if self.next_launch is not None:
                 self.next_launch = None
@@ -359,7 +489,7 @@ class Keepalive:
                 self._reload_refused(err)
                 return "reload-blocked"
             self.blocked = False
-            hotreload.write_status(self.runtime, None, now=now)
+            hotreload.write_status(self.runtime, None, now=self._wall())
             self._log("code changed again and passed the check; starting it")
             return self._launch_core(now, hot=True)
         if self.next_launch is not None:
@@ -370,13 +500,43 @@ class Keepalive:
             self._log("user stop (core exited cleanly); not restarting; supervisor exits")
             self._write_state("user-stop")
             return "user-stop"
+        code = None  # "no core running" is a first start, not a restart
         if self.launched_at is not None:
             reason = f"core crash before first heartbeat (pid {self.pid})"
+            code = "start-crash"
         elif hb is not None:
             reason = f"core crash (pid {hb['pid']} gone, heartbeat left behind)"
+            code = "crash"
         else:
             reason = "no core running"
-        return self._crashed(now, reason)
+        return self._crashed(now, reason, code=code)
+
+    def _default_health(self):
+        """health_check's answer as a bool (as before); its loop_age_s is
+        kept for the stale verdict (RUN-SUPERVISOR-CLOCK)."""
+        d = health_check(self.runtime, self.port, detail=True)
+        self._loop_age = d["loop_age_s"]
+        return d["ok"]
+
+    def _stale_verdict(self, now):
+        """With a stale heartbeat: "ok" (a check passed), "checking" (the
+        first failed check, or the second came too soon) or "hung" (a
+        second failed check at least recheck_s after the first)."""
+        self._loop_age = None
+        result = self._health()
+        if not isinstance(result, dict):
+            result = {"ok": bool(result), "loop_age_s": self._loop_age}
+        if check_passed(result, self.loop_stale_s):
+            self._failed_at = None
+            return "ok"
+        if self._failed_at is None:
+            self._failed_at = now
+            self._log("heartbeat stale and the health check failed; checking again")
+            return "checking"
+        if now - self._failed_at < self.recheck_s:
+            return "checking"
+        self._failed_at = None
+        return "hung"
 
     def _snapshot_step(self, now):
         """DATA-SNAP-AT-START: one rate-limited call of the snapshot starter;
@@ -390,7 +550,7 @@ class Keepalive:
         if (self.runtime / STOP_FILE).exists():
             return
         try:
-            pid = self._snapshot(now)
+            pid = self._snapshot(self._wall())  # file ages are wall times
         except Exception as exc:  # noqa: BLE001 - the core watch goes on
             self._log(f"game data snapshot did not start ({type(exc).__name__})")
             return
@@ -408,11 +568,13 @@ class Keepalive:
         got = self._created_of(hb["pid"])
         return not got or got == want
 
-    def _crashed(self, now, reason):
+    def _crashed(self, now, reason, code=None):
         self.restarts = [t for t in self.restarts if now - t < self.window_s]
         self.pid = None
         self.seen_beat = False
         self.launched_at = None
+        self._failed_at = None
+        self._restart_reason = code  # recorded when the relaunch happens
         if self.hot_launch and self._code_watch is not None:
             # HOT-RELOAD: the new code died before its first heartbeat.
             # Never a crash loop: nothing starts until the code changes
@@ -422,7 +584,7 @@ class Keepalive:
             self.next_launch = None
             self._log(f"{reason}; the new code did not start; waiting for the "
                       f"next code change")
-            hotreload.write_status(self.runtime, RELOAD_DEAD_NOTE, now=now)
+            hotreload.write_status(self.runtime, RELOAD_DEAD_NOTE, now=self._wall())
             self._write_state("reload-blocked")
             return "reload-blocked"
         if len(self.restarts) >= self.cap:
@@ -471,7 +633,7 @@ class Keepalive:
         if not ok:
             self._reload_refused(err)
             return "reload-refused"
-        hotreload.write_status(self.runtime, None, now=now)
+        hotreload.write_status(self.runtime, None, now=self._wall())
         try:
             jsonfile.write_text(self.runtime / hotreload.RESTART_FILE, "reload\n")
         except OSError as exc:
@@ -486,7 +648,7 @@ class Keepalive:
         where = f" ({err})" if err else ""
         note = f"A code change did not load{where}. The running version stays in use."[:300]
         self._log(f"code reload refused: {err}")
-        hotreload.write_status(self.runtime, note, now=self._now())
+        hotreload.write_status(self.runtime, note, now=self._wall())
 
     def _launch_core(self, now, hot=False):
         self.next_launch = None
@@ -501,6 +663,11 @@ class Keepalive:
             self._log(f"core launch failed: {exc}")
             return "launched"
         self.launched_at = now
+        if not hot and self._restart_reason in RESTART_REASONS:
+            # RUN-SUPERVISOR-CLOCK: Checks shows it for 10 minutes
+            self.last_restart = {"at": round(self._wall(), 3),
+                                 "reason": self._restart_reason}
+        self._restart_reason = None
         self._log(f"core launched (pid {self.pid})")
         self._write_state("starting")
         return "launched"
@@ -661,7 +828,7 @@ def main(argv=None):
             poll = min(poll, DEV_POLL_S)
         sup = Keepalive(runtime, args.port, _Launcher(core_command(args.port, args.core_args)),
                         log=log, stale_s=args.stale, backoff=backoff, cap=args.cap,
-                        window_s=args.window, code_watch=code_watch,
+                        window_s=args.window, code_watch=code_watch, poll_s=poll,
                         preflight=run_preflight if code_watch is not None else None,
                         snapshot=snapshot_starter(runtime, args.runtime))
         sup._write_state("started")  # records this supervisor's pid for stop.ps1
