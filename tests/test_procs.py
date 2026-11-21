@@ -209,6 +209,110 @@ def test_status_reports_the_recorded_main_overlay_pid(tmp_path, monkeypatch):
     assert procs.overlay_main_pid(tmp_path) == 0
 
 
+def test_bad_pid_value_reads_as_not_ours(tmp_path):
+    """RUN-STOP-RACE (F-152): a damaged record (text, a list, a bool, a
+    float) names no process and never raises."""
+    for bad in ("abc", [1], {"x": 1}, True, 12.5, "", None, -4):
+        rec = json.dumps({"pid": bad, "created": "zz"})
+        for name in (ka.STATE_FILE, ka.HEARTBEAT_FILE, procs.OVERLAY_PID_FILE):
+            (tmp_path / name).write_text(rec, encoding="ascii")
+        assert procs.supervisor_pid(tmp_path) == 0
+        assert procs.core_pid(tmp_path) == 0
+        assert procs.overlay_main_pid(tmp_path) == 0
+        assert procs.is_ours(bad, procs.PYTHON_PREFIX) is False
+        st = procs.status(tmp_path, edir=tmp_path / "none")
+        assert st["core"] == {"live": False, "pid": 0}
+        assert st["overlay"]["pids"] == []
+    # a bad creation time never raises either; a whole-number string still reads
+    assert procs._as_int(" 42 ") == 42 and procs._as_int("4x") == 0
+    if sys.platform == "win32":
+        assert procs.is_ours(os.getpid(), procs.PYTHON_PREFIX, "zz")
+        assert procs.is_ours(str(os.getpid()), procs.PYTHON_PREFIX)
+
+
+def test_stop_asked_at_reads_a_fresh_request_only(tmp_path):
+    now = 1_800_000_000 * 10**9
+    assert procs.stop_asked_at(tmp_path, now_ns=lambda: now) == procs.to_filetime(now)
+    req = tmp_path / ka.STOP_FILE
+    req.write_text("stop\n", encoding="ascii")
+    fresh = now - 5 * 10**9
+    os.utime(req, ns=(fresh, fresh))
+    assert procs.stop_asked_at(tmp_path, now_ns=lambda: now) == procs.to_filetime(fresh)
+    stale = now - (procs.STOP_REQUEST_FRESH_S + 1) * 10**9
+    os.utime(req, ns=(stale, stale))
+    assert procs.stop_asked_at(tmp_path, now_ns=lambda: now) == procs.to_filetime(now)
+    # 1970-01-01 is FILETIME 116444736000000000
+    assert procs.to_filetime(0) == 116444736000000000
+
+
+def test_stop_ends_older_overlay_and_leaves_younger(tmp_path, monkeypatch):
+    """RUN-STOP-RACE: the decision itself, on fake pids (any platform)."""
+    old, young, cutoff = 7000, 7100, 5000
+    created = {old: 4000, young: 6000}
+    alive = {old: True, young: True}
+    killed = []
+
+    def term(pid, prefix, made=0):
+        killed.append((pid, made))
+        alive[pid] = False
+        return True
+
+    monkeypatch.setattr(procs.ka, "process_created", lambda pid: created.get(pid, 0))
+    monkeypatch.setattr(procs.ka, "pid_alive", lambda pid: alive.get(pid, False))
+    monkeypatch.setattr(procs, "_terminate", term)
+    monkeypatch.setattr(procs, "overlay_pids",
+                        lambda rt, edir=None: sorted(p for p in created if alive[p]))
+    (tmp_path / procs.OVERLAY_PID_FILE).write_text("{}", encoding="ascii")
+    r = procs.stop(tmp_path, wait_s=0.1, edir=tmp_path / "none", asked_at=cutoff)
+    assert killed == [(old, 4000)]
+    assert alive[young] is True
+    assert r["left"] == [] and r["overlay_younger"] == [young]
+    assert r["overlay"] == "stopped (1 process(es))"
+    assert "overlay_left" not in r
+    # a younger overlay's own record is kept
+    assert (tmp_path / procs.OVERLAY_PID_FILE).exists()
+
+
+def test_stop_script_passes_when_stop_was_asked():
+    text = STOP.read_text(encoding="ascii")
+    assert "ToFileTimeUtc()" in text and "'--asked-at'" in text
+    # the request is written before the time is read and the registry runs
+    assert text.index("Set-Content -LiteralPath $request") < text.index("$askedAt =") \
+        < text.index("Invoke-AlPython server.al.procs stop")
+
+
+@WIN
+def test_overlay_started_after_stop_request_is_left(tmp_path):
+    """C25 (research 0050): a fake overlay that starts after stop.request
+    was written is left running; the older one is ended; nothing counts as
+    left over."""
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    edir = tmp_path / "electron" / "dist"
+    exe = _fake_electron(edir)
+    env = dict(os.environ)
+    spawned = []
+    try:
+        older = _spawn_fake(exe, env)
+        spawned.append(older)
+        (runtime / ka.STOP_FILE).write_text("stop\n", encoding="ascii")
+        time.sleep(0.1)  # a clock tick, so the next creation time is later
+        younger = _spawn_fake(exe, env)
+        spawned.append(younger)
+        cutoff = procs.stop_asked_at(runtime)
+        assert ka.process_created(older.pid) <= cutoff < ka.process_created(younger.pid)
+        r = procs.stop(runtime, wait_s=ci_scale(5), edir=edir)
+        assert _wait(lambda: not ka.pid_alive(older.pid), ci_scale(10)), r
+        assert ka.pid_alive(younger.pid), r
+        assert r["left"] == [], r
+        assert r["overlay_younger"] == [younger.pid], r
+        assert r["overlay"] == "stopped (1 process(es))", r
+    finally:
+        for p in spawned:
+            if p.poll() is None:
+                p.kill()
+
+
 def test_run_script_no_op_line_prints_the_status_pid():
     text = RUN.read_text(encoding="ascii")
     # DESKTOP-CLIENT (decision 0041): the "overlay" component is the client

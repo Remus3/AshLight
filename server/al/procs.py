@@ -5,8 +5,14 @@
                                                 JSON: components run.ps1 must start
     python -m server.al.procs record-overlay PID
                                                 write <runtime>/overlay.pid
-    python -m server.al.procs stop [--wait S]   stop supervisor and overlay
+    python -m server.al.procs stop [--wait S] [--asked-at FILETIME]
+                                                stop supervisor and overlay
                                                 (after stop.ps1 stopped the core)
+
+RUN-STOP-RACE (F-152): stop ends only overlay processes created before stop
+was asked (--asked-at, else the fresh stop.request mtime, else now); a
+younger one (a racing start) is left running, reported as overlay_younger
+and not counted as left. A damaged pid or creation-time record reads as 0.
 
 RUN-SECOND-LINE-PY (decision 0005 amendment 2026-11-18): supervisor_command
 builds the one supervisor start (the one command builder, windowless) and
@@ -71,15 +77,28 @@ def electron_dir():
     return exe.parent if exe is not None else None
 
 
+def _as_int(value):
+    """A recorded pid or creation time as an int; a value that is not a
+    whole number (a damaged record: text, a list, a float) reads as 0, so
+    a bad record names no process (RUN-STOP-RACE, F-152)."""
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return 0
+
+
 def _same_created(pid, created):
-    created = int(created or 0)
+    created = _as_int(created)
     return created == 0 or ka.process_created(pid) == created
 
 
 def is_ours(pid, image_prefix, created=0):
     """pid is alive, its image starts with image_prefix (case-insensitive)
     and, when a creation time was recorded, it is the same process."""
-    pid = int(pid or 0)
+    pid = _as_int(pid)
     if pid <= 0 or not ka.pid_alive(pid):
         return False
     if not ka.image_name(pid).lower().startswith(image_prefix):
@@ -140,10 +159,7 @@ def overlay_main_pid(runtime):
     utility, renderer) also live in the dist dir and may have lower pids, so
     only this record names the main process."""
     rec = _read_json(Path(runtime) / OVERLAY_PID_FILE) or {}
-    try:
-        pid = int(rec.get("pid") or 0)
-    except (TypeError, ValueError):
-        return 0
+    pid = _as_int(rec.get("pid"))
     return pid if pid > 0 and is_ours(pid, ELECTRON_IMAGE, rec.get("created")) else 0
 
 
@@ -180,13 +196,14 @@ def supervisor_locked(runtime):
 def supervisor_pid(runtime):
     """The recorded supervisor pid when it is provably ours, else 0."""
     rec = _read_json(Path(runtime) / ka.STATE_FILE) or {}
-    pid = int(rec.get("pid") or 0)
+    pid = _as_int(rec.get("pid"))
     return pid if is_ours(pid, PYTHON_PREFIX, rec.get("created")) else 0
 
 
 def core_pid(runtime):
+    """The core.alive pid when it is provably ours, else 0."""
     rec = _read_json(Path(runtime) / ka.HEARTBEAT_FILE) or {}
-    pid = int(rec.get("pid") or 0)
+    pid = _as_int(rec.get("pid"))
     return pid if is_ours(pid, PYTHON_PREFIX, rec.get("created")) else 0
 
 
@@ -264,9 +281,12 @@ def record_overlay(runtime, pid):
     return True
 
 
-def _terminate(pid, image_prefix):
-    """Terminate pid only when its image still matches."""
+def _terminate(pid, image_prefix, created=0):
+    """Terminate pid only when its image still matches and, when a creation
+    time is given, it is still the same process (no reused pid)."""
     if os.name != "nt" or not ka.image_name(pid).lower().startswith(image_prefix):
+        return False
+    if not _same_created(pid, created):
         return False
     ctypes, wintypes, k = ka._kernel32()
     h = k.OpenProcess(ka._TERMINATE | ka._QUERY_LIMITED, False, int(pid))
@@ -287,11 +307,56 @@ def _wait_gone(pids, timeout, sleep=time.sleep, now=time.monotonic):
     return left
 
 
-def stop(runtime=None, wait_s=10.0, edir=None):
+_EPOCH_AS_FILETIME = 116444736000000000  # 1970-01-01 in 100 ns ticks since 1601
+
+
+def to_filetime(ns_since_epoch):
+    """A time in ns since 1970 as a FILETIME integer, the unit of
+    keepalive.process_created."""
+    return int(ns_since_epoch) // 100 + _EPOCH_AS_FILETIME
+
+
+STOP_REQUEST_FRESH_S = 600  # an older stop.request is a leftover, not this stop
+
+
+def stop_asked_at(runtime, now_ns=time.time_ns):
+    """When stop was asked, as a FILETIME integer: the mtime of
+    <runtime>/stop.request (stop.ps1 writes it before it calls stop; it
+    also passes the time itself as --asked-at), else now (a direct
+    `procs stop` with no request file, or one older than
+    STOP_REQUEST_FRESH_S, a leftover of an earlier stop)."""
+    now = int(now_ns())
+    try:
+        mtime = os.stat(Path(runtime) / ka.STOP_FILE).st_mtime_ns
+    except OSError:
+        return to_filetime(now)
+    if mtime > now or now - mtime > STOP_REQUEST_FRESH_S * 1_000_000_000:
+        return to_filetime(now)
+    return to_filetime(mtime)
+
+
+def _split_by_age(pids, cutoff):
+    """(older, younger): RUN-STOP-RACE (F-152) - a pid created after the
+    cutoff was started after stop was asked (a racing run.ps1 or client
+    start) and is not this stop's to end. An unknown creation time (0)
+    counts as older."""
+    older, younger = [], []
+    for pid in pids:
+        created = ka.process_created(pid)
+        (younger if created > cutoff else older).append((pid, created))
+    return older, [p for p, _ in younger]
+
+
+def stop(runtime=None, wait_s=10.0, edir=None, asked_at=None):
     """Stop the supervisor (it exits by itself on stop.request; forced after
     wait_s) and the overlay (terminated: it has no clean-exit channel and
-    holds no state). Returns a report dict; "left" lists what is still up."""
+    holds no state). Only overlay processes created before stop was asked
+    (asked_at, a FILETIME; default stop_asked_at) are ended; younger ones
+    are left alone, listed in "overlay_younger" and not counted as left
+    (RUN-STOP-RACE, F-152). Returns a report dict; "left" lists what is
+    still up."""
     runtime = Path(runtime) if runtime else paths.runtime_dir()
+    cutoff = stop_asked_at(runtime) if asked_at is None else int(asked_at)
     report = {"supervisor": "not running", "overlay": "not running", "left": []}
     spid = supervisor_pid(runtime)
     if spid:
@@ -307,28 +372,36 @@ def stop(runtime=None, wait_s=10.0, edir=None):
             time.sleep(0.2)
         report["supervisor"] = ("still running (unrecorded pid)"
                                 if supervisor_locked(runtime) else "exited")
-    olist = overlay_pids(runtime, edir)
-    if olist:
-        for pid in olist:
-            _terminate(pid, ELECTRON_IMAGE)
+    older, younger = _split_by_age(overlay_pids(runtime, edir), cutoff)
+    if older:
+        for pid, created in older:
+            _terminate(pid, ELECTRON_IMAGE, created)
         # GP-09 (decision 0080): a loaded machine can take longer than 5 s
         # to tear a terminated process down; the overlay gets the same wait
         # as the supervisor (stop.ps1 -TimeoutSec), never less than 5 s.
-        _wait_gone(olist, max(5.0, wait_s))
-        report["overlay"] = f"stopped ({len(olist)} process(es))"
-    try:
-        (runtime / OVERLAY_PID_FILE).unlink()
-    except OSError:
-        pass
+        _wait_gone([p for p, _ in older], max(5.0, wait_s))
+        report["overlay"] = f"stopped ({len(older)} process(es))"
+    if not younger:
+        # a younger overlay wrote its own record; keep it for its status
+        try:
+            (runtime / OVERLAY_PID_FILE).unlink()
+        except OSError:
+            pass
     _wait_gone([spid] if spid else [], 3.0)
     left = status(runtime, edir)
     # GP-09 (decision 0080): an overlay pid the process scan still lists
     # after it has exited (its exit code is set) is not left running.
-    alive = [p for p in left["overlay"]["pids"] if ka.pid_alive(p)]
+    # RUN-STOP-RACE: nor is one started after stop was asked.
+    _, young_now = _split_by_age(left["overlay"]["pids"], cutoff)
+    young = sorted(set(younger) | set(young_now))
+    alive = [p for p in left["overlay"]["pids"]
+             if p not in young and ka.pid_alive(p)]
     left["overlay"]["live"] = bool(alive)
     report["left"] = [c for c in COMPONENTS if left[c]["live"]]
     if alive:
         report["overlay_left"] = alive
+    if young:
+        report["overlay_younger"] = young
     return report
 
 
@@ -345,6 +418,9 @@ def build_parser():
     rec.add_argument("pid", type=int)
     st = sub.add_parser("stop")
     st.add_argument("--wait", type=float, default=10.0)
+    st.add_argument("--asked-at", type=int, default=None,
+                    help="when stop was asked (FILETIME); overlay processes "
+                         "created later are left alone")
     return p
 
 
@@ -369,7 +445,8 @@ def main(argv=None):
                 break
             time.sleep(0.1)
         return 1
-    report = stop(runtime, args.wait)
+    asked = args.asked_at if args.asked_at and args.asked_at > 0 else None
+    report = stop(runtime, args.wait, asked_at=asked)
     print(json.dumps(report))
     return 0 if not report["left"] else 1
 

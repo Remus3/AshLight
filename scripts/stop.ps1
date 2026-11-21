@@ -105,6 +105,14 @@ function Get-AlOwnCorePid {
 }
 
 Set-Content -LiteralPath $request -Value 'stop' -Encoding ASCII
+# RUN-STOP-RACE (F-152): the moment stop was asked, as a FILETIME (the unit
+# of a process creation time). procs stop ends only overlay processes
+# created before it; one a racing start made later is left alone.
+try {
+    $askedAt = (Get-Item -LiteralPath $request).LastWriteTimeUtc.ToFileTimeUtc()
+} catch {
+    $askedAt = [DateTime]::UtcNow.ToFileTimeUtc()
+}
 $corePid = Get-AlCorePid
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
 while ((Test-Path -LiteralPath $alive) -and ((Get-Date) -lt $deadline)) {
@@ -131,11 +139,14 @@ if (-not (Test-Path -LiteralPath $alive)) {
 # forced after the wait) and the Electron overlay, each only by a pid proven
 # ours (server\al\procs.py: recorded pid + creation time, or an electron.exe
 # inside this checkout's app\node_modules). Never the game, never another app.
-$out = (Invoke-AlPython server.al.procs stop '--wait' $TimeoutSec) -join "`n"
+$out = (Invoke-AlPython server.al.procs stop '--wait' $TimeoutSec '--asked-at' ([string]$askedAt)) -join "`n"
 $procRc = $LASTEXITCODE
 try {
     $report = $out | ConvertFrom-Json
     Write-AlLog ("stop: supervisor " + $report.supervisor + '; overlay ' + $report.overlay)
+    if (($report.PSObject.Properties.Name -contains 'overlay_younger') -and (@($report.overlay_younger).Count -gt 0)) {
+        Write-AlLog ('stop: left an overlay started after the stop was asked: pid ' + (@($report.overlay_younger) -join ', '))
+    }
     if (@($report.left).Count -gt 0) {
         Write-AlLog ('stop: still running: ' + (@($report.left) -join ', '))
     }
