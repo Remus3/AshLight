@@ -252,8 +252,15 @@ test("run.ps1 prints the core's start-error line and stops waiting on it", () =>
   assert.match(body, /\$why = Get-AlStartError \$Since/);
   assert.match(body, /Write-AlLog "run: core did not start: \$why" 'ERROR'/);
   assert.match(body, /within 15 s/);
-  // both waits go through it; the launch time bounds the record's age
-  assert.equal((run.match(/Wait-AlCore /g) || []).length, 2);
-  assert.ok(run.indexOf("$launchedAt = (Get-AlUnixNow) - 1") < run.indexOf("if (-not (Wait-AlCore $launchedAt)) { exit 1 }"));
-  assert.ok(run.includes("if (-not (Wait-AlCore ((Get-AlUnixNow) - 60))) { exit 1 }"));
+  // RUN-SECOND-LINE-PY: one wait, after the supervisor start, serves both
+  // cases; its since time is taken fresh for this start attempt (the launch
+  // time, or 60 s back for a core someone else just started)
+  assert.equal((run.match(/Wait-AlCore /g) || []).length, 1);
+  const call = run.indexOf("if (-not (Wait-AlCore $waitSince)) { exit 1 }");
+  assert.ok(call > 0);
+  const launch = run.indexOf("$waitSince = (Get-AlUnixNow) - 1");
+  assert.ok(launch > 0 && launch < run.indexOf("$corePid = Start-AlDetached") && launch < call);
+  const other = run.indexOf("$waitSince = (Get-AlUnixNow) - 60");
+  assert.ok(other > 0 && other < call);
+  assert.ok(run.indexOf("$waitSince = -1") < other);
 });
