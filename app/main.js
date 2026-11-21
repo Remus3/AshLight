@@ -32,16 +32,28 @@ const TrayMenu = require("./client/tray_menu.js");
 const OverlayGate = require("./overlay_gate.js");
 const Link = require("./client/link.js");
 const Launcher = require("./client/launcher.js");
+const Home = require("./client/home.js");
 const HotReload = require("./hotreload.js");
 const Parts = require("./parts.js");
 const Guards = require("./guards.js");
 const Metrics = require("./metrics.js");
 
-const REPO = path.resolve(__dirname, "..");
-const TOKEN_FILE = path.join(REPO, "ops", "runtime", "token");
-const DISPLAYS_FILE = path.join(REPO, "ops", "runtime", "displays.json");
-const PORTS_PY = path.join(REPO, "server", "al", "ports.py");
-const LOCAL_CONFIG = path.join(REPO, "config", "local.json");
+// REL-CLIENT-HOME (F-049, decision 0059): every runtime path comes from the
+// one client resolver (app/client/home.js, the mirror of paths.install_mode):
+// the checkout's ops/runtime and config, or <home>/data in an install. A home
+// in a Steam library or the game's folder is refused before anything starts.
+let HOME = null;
+try {
+  HOME = Home.resolve(__dirname, process.env, fs);
+} catch (e) {
+  process.stderr.write("AshLight: " + e.message + "\n");
+  process.exit(2);
+}
+const REPO = HOME.root;
+const TOKEN_FILE = HOME.tokenFile;
+const DISPLAYS_FILE = HOME.displaysFile;
+const PORTS_PY = HOME.portsPy;
+const LOCAL_CONFIG = HOME.localConfig;
 const OVERLAY_HTML = path.join(__dirname, "overlay", "index.html");
 // OVL-SHELL-GUARDS: the one page al:config answers (app/guards.js compares
 // it in either file URL spelling).
@@ -141,8 +153,10 @@ function bindWearKey() {
 // resolver (server.al.paths) gives it: the profile, and with it the
 // single-instance lock, is then the same one a run.ps1 start holds.
 const CLIENT_MODE = Link.wantsClient(process.argv);
-if (CLIENT_MODE && !process.env.AL_SIDECAR_ROOT) {
-  const side = Launcher.resolveSidecar(REPO);
+// An install needs no read: its home is the sidecar (setting AL_SIDECAR_ROOT
+// there would give the children the checkout's sidecar layout).
+if (CLIENT_MODE && !process.env.AL_SIDECAR_ROOT && HOME.mode === "checkout") {
+  const side = Launcher.resolveSidecar(HOME);
   if (side) { process.env.AL_SIDECAR_ROOT = side; }
 }
 
@@ -164,10 +178,11 @@ function runParts(hook, ...args) { Parts.run(PARTS, hook, ctx, ...args); }
 
 // Sidecar rule: Electron's profile (cache, crash dumps) never lands in the
 // user's roaming profile - it goes to the AL sidecar (set by run.ps1 from
-// server.al.paths) or, without it, to the repo's gitignored ops/runtime.
+// server.al.paths) or, without it, to <home>/cache in an install, else to
+// the repo's gitignored ops/runtime (Home.profileDir).
 const profileDir = process.env.AL_SIDECAR_ROOT
   ? path.join(process.env.AL_SIDECAR_ROOT, "Cache", "overlay-profile")
-  : path.join(REPO, "ops", "runtime", "overlay-profile");
+  : Home.profileDir(HOME, process.env);
 app.setPath("userData", profileDir);
 app.setPath("sessionData", profileDir);
 app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");

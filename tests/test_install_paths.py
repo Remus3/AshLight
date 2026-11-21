@@ -344,3 +344,42 @@ def test_health_and_version_carry_mode_and_previous(srv, tmp_path, clean_env):
     for route in ("/api/health", "/api/version"):
         doc = _get(srv, route)
         assert doc["mode"] == "installed" and doc["previous"] == "0.1.0", route
+
+
+# --- REL-CLIENT-HOME: the client's JS resolver mirrors this one ------------
+
+
+def _js_const(src, name):
+    import re
+    m = re.search(r'^const %s = "([^"]*)";$' % name, src, re.M)
+    assert m, name
+    return m.group(1)
+
+
+def test_js_and_python_resolvers_agree():
+    """Static: app/client/home.js uses the same marker name, folder names,
+    environment names and refusal words as server/al/paths.py."""
+    import re
+    src = (ROOT / "app" / "client" / "home.js").read_text(encoding="ascii")
+    assert _js_const(src, "HOME_ENV") == paths.HOME_ENV
+    assert _js_const(src, "SIDECAR_ENV") == paths.SIDECAR_ENV
+    assert _js_const(src, "MARKER_NAME") == paths.MARKER_NAME
+    assert _js_const(src, "DATA_DIR") == paths.DATA_DIR
+    assert _js_const(src, "CACHE_DIR") == paths.INSTALLED_SUBDIRS["Cache"]
+    assert _js_const(src, "RUNTIME_FOLDER") == paths.RUNTIME_FOLDER
+    assert _js_const(src, "BOOT_NAME") == paths.BOOT_NAME
+    assert _js_const(src, "APP_FOLDER") == "app"  # paths._marker_home: parent.name == "app"
+    assert 'root.parent.name.lower() == "app"' in (ROOT / "server" / "al" / "paths.py").read_text(
+        encoding="ascii")
+    m = re.search(r"^const MARKER_MAX_BYTES = (\d+) \* (\d+);$", src, re.M)
+    assert m and int(m.group(1)) * int(m.group(2)) == paths.MARKER_MAX_BYTES
+    m = re.search(r"^const REFUSED_COMPONENTS = \[([^\]]*)\];$", src, re.M)
+    assert m
+    assert tuple(re.findall(r'"([^"]*)"', m.group(1))) == paths.REFUSED_COMPONENTS
+    # the refusal sentence is the same words
+    probe = paths.home_refusal(Path("x") / "steamapps")
+    assert probe
+    for piece in ("the install home may not lie in a '", "' folder (a Steam ",
+                  "library or the game's own folder); install AshLight in its own folder"):
+        assert piece in src, piece
+        assert piece in probe, piece

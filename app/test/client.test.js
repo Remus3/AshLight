@@ -256,6 +256,48 @@ test("launcher runs the repo's own scripts, hidden, never detached", () => {
   assert.equal(Launcher.startCore("R", 0, () => { throw new Error("no ps"); }), 0);
 });
 
+/* REL-CLIENT-HOME (F-049): the launcher takes its script path, cwd, Python
+   command and child environment from app/client/home.js. */
+test("launcher follows the Home: scripts and cwd under its root, env from childEnv", () => {
+  const Home = require("../client/home.js");
+  const calls = [];
+  const fake = (exe, args, opts) => { calls.push({ exe, args, opts }); return { pid: 7, unref() {} }; };
+  const root = path.join(path.parse(__dirname).root, "H", "app", "0.1.1");
+  const home = { mode: "installed", root: root, home: path.dirname(path.dirname(root)), pythonDir: null };
+  const env = { SystemRoot: "C" + ":" + "\\Windows", AL_HOME: home.home };
+  assert.equal(Launcher.startCore(home, 8961, fake, env), 7);
+  assert.equal(Launcher.stopAll(home, fake, env), 7);
+  assert.equal(calls[0].args[calls[0].args.indexOf("-File") + 1], path.join(root, "scripts", "run.ps1"));
+  assert.equal(calls[1].args[calls[1].args.indexOf("-File") + 1], path.join(root, "scripts", "stop.ps1"));
+  for (const c of calls) {
+    assert.equal(c.opts.cwd, root);
+    assert.deepEqual(c.opts.env, Home.childEnv(env));
+    assert.notEqual(c.opts.env, env);
+  }
+  // a bare root is a checkout home: the same paths as before
+  calls.length = 0;
+  Launcher.startCore("R", 0, fake, env);
+  assert.equal(calls[0].opts.cwd, "R");
+  assert.equal(calls[0].args[calls[0].args.indexOf("-File") + 1], path.join("R", "scripts", "run.ps1"));
+});
+
+test("resolveSidecar: the Home's python command (boot.py and the private runtime in an install)", () => {
+  const Home = require("../client/home.js");
+  const root = path.join(path.parse(__dirname).root, "H", "app", "0.1.1");
+  const py = path.join(path.parse(__dirname).root, "H", "runtime", "python-3.14.10", "python.exe");
+  const home = { mode: "installed", root: root, home: path.dirname(path.dirname(root)),
+                 pythonDir: path.dirname(py) };
+  const seen = [];
+  const exec = (exe, args, opts) => { seen.push({ exe, args, opts }); return JSON.stringify({ sidecar: "S" }); };
+  assert.equal(Launcher.resolveSidecar(home, exec, { PATH: "" }), "S");
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].exe, py);
+  assert.deepEqual(seen[0].args, Home.pythonCmd(home, "server.al.paths", []).args);
+  assert.deepEqual(seen[0].args, [path.join(root, "boot.py"), "server.al.paths"]);
+  assert.equal(seen[0].opts.cwd, root);
+  assert.deepEqual(seen[0].opts.env, { PATH: "" });
+});
+
 /* A temp folder with a python.exe and a py.exe; PATH and PATHEXT for it. */
 function pyDirs(t) {
   const root = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "al-launch-"));
@@ -445,8 +487,11 @@ test("main.js opens the client only in client mode, after ready", () => {
   assert.match(c, /if \(Link\.wantsClient\(argv\)\) \{ openClient\(\); \}/);
   // the window module is loaded lazily, never at an overlay-only start
   assert.ok(!/^const .*require\("\.\/client\/window\.js"\)/m.test(c));
-  assert.ok(c.indexOf("resolveSidecar(REPO)") < c.indexOf('app.setPath("userData"'));
-  assert.ok(c.indexOf("resolveSidecar(REPO)") < c.indexOf("requestSingleInstanceLock()"));
+  assert.ok(c.indexOf("resolveSidecar(HOME)") > 0);
+  assert.ok(c.indexOf("resolveSidecar(HOME)") < c.indexOf('app.setPath("userData"'));
+  assert.ok(c.indexOf("resolveSidecar(HOME)") < c.indexOf("requestSingleInstanceLock()"));
+  // REL-CLIENT-HOME: an install never sets AL_SIDECAR_ROOT (its home is the sidecar)
+  assert.match(c, /if \(CLIENT_MODE && !process\.env\.AL_SIDECAR_ROOT && HOME\.mode === "checkout"\) \{/);
 });
 
 /* OVL-WAKE-COMPANION (decision 0041 amendment 2026-11-19): the companion
