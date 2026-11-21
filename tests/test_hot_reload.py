@@ -634,11 +634,10 @@ def test_real_core_exits_for_reload_and_keeps_token(tmp_path):
     env[paths.RUNTIME_ENV] = str(runtime)
     env[paths.SIDECAR_ENV] = str(tmp_path / "AL")
     env["AL_HEARTBEAT_S"] = "0.5"
-    with socket.socket() as s:  # a free port: parallel suites share the block
-        s.bind(("127.0.0.1", 0))
-        port = s.getsockname()[1]
+    # an OS-picked port (0): parallel suites share the block, and P8-4
+    # refuses any other port outside it
     cmd = [sys.executable, "-m", "server.al", "--quiet", "--no-tail",
-           "--port", str(port)]
+           "--port", "0"]
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
     def start():
