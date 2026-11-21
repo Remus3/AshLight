@@ -14,7 +14,9 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
+import zipfile
 import sys
 from pathlib import Path
 
@@ -52,7 +54,8 @@ def _git(cwd, *args):
 
 REAL = ("config/ship_list.json", "config/runtime_pins.json",
         "config/electron_pin.json", "config/tc_pins.json",
-        "app/package.json", "app/package-lock.json")
+        "app/package.json", "app/package-lock.json",
+        "scripts/install.ps1", "server/al/ports.py")
 FILES = {
     "server/al/__init__.py": "\"\"\"AshLight core.\"\"\"\n\nVERSION = \"%s\"\n"
                              % VERSION,
@@ -68,8 +71,10 @@ FILES = {
 
 
 @pytest.fixture(autouse=True)
-def standin_needle(monkeypatch):
+def standin_needle(monkeypatch, tmp_path):
     monkeypatch.setenv("AL_LEAK_NEEDLES", NEEDLE)
+    # the round trip's scratch and runtime cache resolve under tmp_path
+    monkeypatch.setenv("AL_SIDECAR_ROOT", str(tmp_path / "sidecar"))
 
 
 @pytest.fixture
@@ -110,6 +115,8 @@ def _builder(tmp_path):
 
 def _stage(repo, tmp_path, version=VERSION, run=None, build=None, **kw):
     run = run if run is not None else Runner()
+    if "roundtrip" not in kw:
+        kw["roundtrip"] = FakeFactory(tmp_path)
     rep = rs.stage(version, run=run, now=lambda: WHEN_TS, root=repo,
                    out=tmp_path / "out", owner="sess.agent",
                    build=build or _builder(tmp_path), **kw)
@@ -126,6 +133,134 @@ def _status(repo):
 
 def _statuses(rep):
     return {r["name"]: r["status"] for r in rep["steps"]}
+
+
+def _detail(rep, name):
+    return [r for r in rep["steps"] if r["name"] == name][0]["detail"]
+
+
+# --- the round trip's stand-in effects ---------------------------------------
+
+def _write_json(path, doc):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes((json.dumps(doc, indent=1) + "\n").encode("ascii"))
+
+
+class FakeEffects(rs.RoundTripEffects):
+    """The real scratch layout, N-1 build, env and cleanup; the installer,
+    update, switch and uninstall children are stand-ins that make the same
+    file changes in the scratch home and under the scratch shell root.
+    Nothing outside the scratch base is written."""
+
+    def __init__(self, ctx, base, log, web_data=False, leave_link=False,
+                 snapshots=None):
+        super().__init__(ctx, base)
+        self.log = log
+        self.web_data = web_data
+        self.leave_link = leave_link
+        self.snapshots = snapshots
+        self.envs = []
+        if snapshots is not None:
+            self.snapshot = lambda: self.snapshots.pop(0)
+
+    def runtimes(self, release):
+        self.log.append(("runtimes", sorted(release["runtimes"])))
+        return []
+
+    def previous(self, version):
+        prev, assets = super().previous(version)
+        self.log.append(("previous", prev))
+        return prev, assets
+
+    def _set_links(self, present):
+        for sub in ("Programs", "Desktop"):
+            link = self.shell / sub / rs.LINK_NAME
+            if present:
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.write_bytes(b"link")
+            elif link.exists() and not (self.leave_link and sub == "Desktop"):
+                link.unlink()
+
+    def _marker(self):
+        return json.loads((self.home / "install.json").read_bytes())
+
+    def install(self, folder, version):
+        self.envs.append(self.env())
+        assert (folder / rs.rb.zip_name(version)).is_file()
+        assert (folder / rs.INSTALLER_PS1).is_file()
+        self.log.append(("install", version))
+        _write_json(self.home / "install.json", {
+            "schema": 1, "name": "AshLight", "version": version,
+            "previous": None, "pending_confirm": False})
+        local = self.home / "data" / "local.json"
+        if not local.exists():
+            _write_json(local, {"web_data": self.web_data})
+        (self.home / "app" / version).mkdir(parents=True, exist_ok=True)
+        (self.home / "uninstall.ps1").write_bytes(b"# stand-in\n")
+        self._set_links(True)
+        return 0
+
+    def installer(self, command, *args):
+        self.envs.append(self.env())
+        self.log.append(("installer", command))
+        marker = self._marker()
+        if command == "update":
+            zip_path = Path(str(args[list(args).index("--zip") + 1]))
+            assert zip_path.is_file()
+            new = zip_path.name[len("AshLight-"):-len("-app.zip")]
+            _write_json(self.home / "staged" / (new + ".json"), {"version": new})
+            return 0
+        if command == "apply-staged":
+            new = sorted(p.stem for p in (self.home / "staged").iterdir())[0]
+            marker.update(previous=marker["version"], version=new,
+                          pending_confirm=True)
+            _write_json(self.home / "install.json", marker)
+            return rs.EXIT_SWITCHED
+        if command == "rollback":
+            left = marker["version"]
+            marker.update(version=marker["previous"], previous=None,
+                          pending_confirm=False)
+            _write_json(self.home / "install.json", marker)
+            _write_json(self.home / "data" / "update_skip.json",
+                        {"versions": [{"version": left}]})
+            return rs.EXIT_SWITCHED
+        return 2
+
+    def uninstall(self, purge):
+        self.envs.append(self.env())
+        self.log.append(("uninstall", purge))
+        for item in list(self.home.iterdir()):
+            if item.name == "data" and not purge:
+                continue
+            if item.is_dir():
+                shutil.rmtree(str(item))
+            else:
+                item.unlink()
+        if purge:
+            self.home.rmdir()
+        self._set_links(False)
+        return 0
+
+    def cleanup(self):
+        self.log.append(("cleanup",))
+        super().cleanup()
+
+
+class FakeFactory:
+    """roundtrip(ctx) -> FakeEffects in a fresh base under the tmp sidecar."""
+
+    def __init__(self, tmp_path, **kw):
+        self.tmp_path = tmp_path
+        self.kw = kw
+        self.log = []
+        self.made = []
+
+    def __call__(self, ctx):
+        base = self.tmp_path / "sidecar" / "Temp" / ("rt%d" % len(self.made))
+        base.mkdir(parents=True)
+        fx = FakeEffects(ctx, base, self.log, **self.kw)
+        self.made.append(fx)
+        return fx
 
 
 def _assert_nothing_changed(repo, tmp_path, rep, head, status, failed):
@@ -155,7 +290,7 @@ def test_pass_writes_stage_json_with_every_field(repo, tmp_path):
     rep, run = _stage(repo, tmp_path)
     assert rep["verdict"] == "PASS", rep["steps"]
     assert [r["name"] for r in rep["steps"]] == [
-        "clean", "version", "suite", "node", "builds", "sweep"]
+        "clean", "version", "suite", "node", "builds", "sweep", "roundtrip"]
     assert set(_statuses(rep).values()) == {"pass"}
     out = tmp_path / "out"
     doc = json.loads((out / "stage.json").read_bytes().decode("ascii"))
@@ -312,7 +447,7 @@ def test_sweep_of_the_staged_tree_refuses_a_needle(repo, tmp_path):
     head, status = _head(repo), _status(repo)
     rep, _run = _stage(repo, tmp_path, build=build)
     _assert_nothing_changed(repo, tmp_path, rep, head, status, "sweep")
-    detail = rep["steps"][-1]["detail"]
+    detail = _detail(rep, "sweep")
     assert NEEDLE not in detail and "extra.txt" in detail
 
 
@@ -326,6 +461,193 @@ def test_staged_tree_holds_zip_members_and_assets(repo, tmp_path):
     assert top + "MANIFEST.json" in tree
     assert "release/SHA256SUMS.txt" in tree
     assert not any(n.endswith("-app.zip") for n in tree)
+
+
+# --- step 7 (plan step 6): the scratch-home round trip -----------------------
+
+PREV = rs.previous_version(VERSION)
+
+
+def test_round_trip_steps_and_order(repo, tmp_path):
+    fac = FakeFactory(tmp_path)
+    rep, _run = _stage(repo, tmp_path, roundtrip=fac)
+    assert rep["verdict"] == "PASS", rep["steps"]
+    assert _statuses(rep)["roundtrip"] == "pass"
+    assert fac.log == [
+        ("runtimes", ["electron", "python"]),
+        ("previous", PREV),
+        ("install", PREV),
+        ("installer", "update"),
+        ("installer", "apply-staged"),
+        ("installer", "rollback"),
+        ("uninstall", False),
+        ("install", VERSION),
+        ("uninstall", True),
+        ("cleanup",),
+    ]
+    detail = _detail(rep, "roundtrip")
+    assert "install %s, update to %s" % (PREV, VERSION) in detail
+    # the scratch base (home, releases, the N-1 clone) is gone afterwards
+    assert not fac.made[0].base.exists()
+    # the stage's own repository is untouched by the N-1 clone
+    assert _status(repo) == b""
+    assert _git(repo, "tag", "--list") == b""
+
+
+def test_round_trip_synthetic_previous_version():
+    assert rs.previous_version("0.1.0") == "0.0.0"
+    assert rs.previous_version("1.2.3") == "1.2.2"
+    assert rs.previous_version("1.2.0") == "1.1.0"
+    assert rs.previous_version("2.0.0") == "1.0.0"
+    assert rs.previous_version("1.0.0-rc.2") == "1.0.0-rc.1"
+    assert rs.previous_version("1.0.0-rc.0") == "0.0.0"
+    assert rs.previous_version("0.0.0") is None
+    for v in ("0.1.0", "1.2.3", "1.0.0-rc.2"):
+        assert rs.rv.compare(rs.previous_version(v), v) < 0
+
+
+def test_round_trip_refuses_a_step_that_does_not_read_back(repo, tmp_path):
+    fac = FakeFactory(tmp_path, leave_link=True)
+    rep, _run = _stage(repo, tmp_path, roundtrip=fac)
+    assert rep["verdict"] == "FAIL" and rep["assets"] == []
+    assert "uninstall: left behind: Desktop/AshLight.lnk" in _detail(rep, "roundtrip")
+    assert fac.log[-1] == ("cleanup",)
+    assert sorted(p.name for p in (tmp_path / "out").iterdir()) == ["stage.json"]
+
+
+def test_round_trip_writes_no_real_shell_entry(repo, tmp_path, monkeypatch):
+    for key in ("AL_HOME", "AL_PORT", "AL_UNINSTALL_FAKE", "AL_DEV"):
+        monkeypatch.setenv(key, "x")
+    before = rs.real_shell_snapshot()
+    fac = FakeFactory(tmp_path)
+    rep, _run = _stage(repo, tmp_path, roundtrip=fac)
+    assert rep["verdict"] == "PASS", rep["steps"]
+    assert rs.real_shell_snapshot() == before
+    fx = fac.made[0]
+    sidecar_temp = (tmp_path / "sidecar" / "Temp").resolve()
+    assert fx.base.resolve().parent == sidecar_temp
+    assert len(fx.envs) == 7
+    for env in fx.envs:
+        assert env["AL_SHELL_ROOT"] == str(fx.shell)
+        assert env["TEMP"] == env["TMP"] == str(fx.temp)
+        for key in ("AL_HOME", "AL_PORT", "AL_UNINSTALL_FAKE", "AL_DEV"):
+            assert key not in env
+    # the real snapshot reads AshLight's own names only
+    snap = rs.real_shell_snapshot()
+    assert sorted(snap) == ["desktop", "logon_task", "start_menu", "uninstall_key"]
+    assert rs.REAL_UNINSTALL_KEY.endswith(r"\Uninstall\AshLight")
+    # a real entry that changes during the round trip fails the step
+    real = {"start_menu": None, "desktop": None, "uninstall_key": None,
+            "logon_task": None}
+    moved = dict(real, desktop=[1, 2, "ab"])
+    fac2 = FakeFactory(tmp_path / "two", snapshots=[real, moved])
+    (tmp_path / "two").mkdir()
+    rep2, _run = _stage(repo, tmp_path, roundtrip=fac2)
+    assert rep2["verdict"] == "FAIL"
+    assert _detail(rep2, "roundtrip") == "the real shell entries changed: desktop"
+
+
+def test_round_trip_scratch_key_id_matches_al_shell(tmp_path):
+    # al_shell.ps1 Get-AlShellPlaces: SHA-256 of the lower-cased full root
+    # path (UTF-8, no trailing separator), first 8 bytes as hex
+    root = os.path.abspath(str(tmp_path / "Shell"))
+    want = hashlib.sha256(root.lower().encode("utf-8")).hexdigest()[:16]
+    assert rs.scratch_key_id(root + os.sep) == want
+    text = (ROOT / "scripts" / "al_shell.ps1").read_text(encoding="ascii")
+    assert "ToLowerInvariant()" in text and "$bytes[0..7]" in text
+
+
+def _zip_with_ports(line):
+    import io
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("AshLight-%s/server/al/ports.py" % VERSION, line + "\n")
+    return buf.getvalue()
+
+
+def test_round_trip_demo_cores_use_selftest_ports_and_web_data_off(repo, tmp_path):
+    # the shipped self-test block is 8970-8975, never the core's 8960
+    out = tmp_path / "one"
+    _builder(tmp_path)(root=repo, out=out)
+    zip_bytes = (out / ("AshLight-%s-app.zip" % VERSION)).read_bytes()
+    assert rs.selftest_ports(zip_bytes) == (8970, 8975)
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from server.al import ports
+    from server.al.install import selftest
+    import inspect
+    assert ports.SELFTEST_PORTS == rs.SELFTEST_BLOCK
+    assert inspect.signature(selftest.run).parameters["ports"].default \
+        == ports.SELFTEST_PORTS
+    if os.name == "nt":
+        assert selftest.child_flags() & rs.CREATE_NO_WINDOW
+    # a payload whose self-test could bind the core port is refused first
+    for bad in ("SELFTEST_PORTS = (8960, 8965)", "SELFTEST_PORTS = (8970, 8979)",
+                "PORTS = 1"):
+        log = []
+        ctx = {"staged": {"release.json": b"{}", "z.zip": _zip_with_ports(bad)},
+               "version": VERSION, "zip_name": "z.zip",
+               "roundtrip": lambda c: log.append("effects")}
+        with pytest.raises(rs.StepFail) as err:
+            rs.step_roundtrip(ctx)
+        assert "8970-8975" in str(err.value) and log == []
+    # web data on in the scratch home fails the step after the install
+    fac = FakeFactory(tmp_path, web_data=True)
+    rep, _run = _stage(repo, tmp_path, roundtrip=fac)
+    assert rep["verdict"] == "FAIL"
+    assert _detail(rep, "roundtrip") == \
+        "install: web data is not off in the scratch home"
+    assert ("installer", "update") not in fac.log
+    assert fac.log[-1] == ("cleanup",)
+
+
+def test_round_trip_skips_cleanly_without_cached_runtimes(repo, tmp_path,
+                                                          monkeypatch):
+    import socket
+    import urllib.request
+
+    def no_network(*_a, **_k):
+        raise AssertionError("the round trip made a network request")
+    monkeypatch.setattr(socket.socket, "connect", no_network)
+    monkeypatch.setattr(urllib.request, "urlopen", no_network)
+    # a cached file with the right name but the wrong bytes is not a hit
+    cache = tmp_path / "sidecar" / "Cache" / "runtimes"
+    cache.mkdir(parents=True)
+    pins = json.loads((ROOT / "config" / "runtime_pins.json").read_bytes())
+    py_file = pins["runtimes"]["python"]["file"]
+    (cache / py_file).write_bytes(b"not the pinned zip")
+    rep = rs.stage(VERSION, run=Runner(), now=lambda: WHEN_TS, root=repo,
+                   out=tmp_path / "out", owner="sess.agent",
+                   build=_builder(tmp_path))
+    assert rep["verdict"] == "FAIL"
+    assert _statuses(rep)["roundtrip"] == "fail"
+    detail = _detail(rep, "roundtrip")
+    assert detail.startswith("runtimes not cached: ")
+    assert "never downloads" in detail
+    assert str(tmp_path) not in detail
+    assert rep["assets"] == []
+    assert sorted(p.name for p in (tmp_path / "out").iterdir()) == ["stage.json"]
+    # the default scratch folder under <sidecar>/Temp is removed again
+    temp = tmp_path / "sidecar" / "Temp"
+    assert not [p for p in temp.iterdir() if p.name.startswith(rs.RT_PREFIX)]
+
+
+def test_find_runtimes_matches_size_and_hash(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    data = b"publisher zip bytes"
+    (b / "rt.zip").write_bytes(data)
+    (a / "rt.zip").write_bytes(b"other bytes of a size")
+    pin = {"url": "https://example.invalid/x/rt.zip", "size": len(data),
+           "sha256": hashlib.sha256(data).hexdigest()}
+    found = rs.find_runtimes({"runtimes": {"python": pin}}, [a, b])
+    assert found == {"rt.zip": b / "rt.zip"}
+    with pytest.raises(rs.StepFail) as err:
+        rs.find_runtimes({"runtimes": {"python": pin}}, [a])
+    assert "runtimes not cached: rt.zip" in str(err.value)
+    with pytest.raises(rs.StepFail):
+        rs.find_runtimes({"runtimes": {}}, [a])
 
 
 # --- dispatcher ------------------------------------------------------------
