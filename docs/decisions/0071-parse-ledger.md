@@ -103,3 +103,21 @@ app/test/dashboard.test.js.
 
 A mask gap stores a name or a chat word, GGG restricts derived local
 records, or the operator rules the ledger unwanted.
+
+## Amendment 2026-11-20 (RUN-LEDGER-WIRE, recorded by the wave 16 integrator)
+
+The writer landed as server/al/plug/ledger.py (decision 0056 seam).
+Core.feed_line feeds every tailed line; class and drift counters run under
+the Client.txt opt-in, in memory only, never written. Hit counts, masked
+shapes, five read-back booleans (zone, character, level, act, session
+timer) and up to 4 masked waystone property-block shapes from item presses
+(known property keys kept in lower case, every other key and every value
+through the allow-list mask; at most 12 lines each, LRU) are kept only
+while the ledger consent is on. ops/runtime/logshapes.json is written at
+most once a minute and only when something changed; a write and the
+revoke-delete share core.ledger_lock, and a revoke also empties the
+in-memory ledger. Two "Game log" Checks notes: 3 anchored misses in one
+game run (kept for the life of the core), and a resume scan stopped at its
+32 MB cap before the session start. Reverses if: the once-a-minute write
+costs overlay budget, the sticky drift note misfires in normal play, or a
+waystone key outside the known list proves to hold player text.

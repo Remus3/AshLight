@@ -676,7 +676,15 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   starts the client); X closes the window to the tray (tray Quit stops
   everything); tray Minimize-Restore / overlay toggle / Restart overlay /
   Quit; token in the URL fragment; a small fixed set of named, argument-free preload actions (restart
-  overlay, autostart on / off / state);
+  overlay, autostart on / off / state, set up the calc); "set up the calc"
+  is one ipcMain handler answering only the exact companion sender frame,
+  one run at a time, and app/client/launcher.js setupCalc() is its one
+  spawn: the fixed scripts\calc_setup.ps1 through the absolute System32
+  PowerShell, hidden, not detached, no argument; the script sets itself
+  BelowNormal and runs tools/tc_pin.py setup --opt-in (installer calc
+  --opt-in in an installed copy), never setup.ps1; the Checks calc row
+  shows the button only in the client while the row is off or needs a fix
+  (decision 0041 amendment 2026-11-20, rulings Q-08, W16-1, W16-2);
   only https links to the hosts in config/link_hosts.json (or their
   subdomains) leave via shell.openExternal, while the companion has focus,
   at most 1 a second and 5 a minute; downloads are saved only from the core
@@ -1147,9 +1155,17 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   ops/runtime/logshapes.json only under their own consent line beside the
   Client.txt opt-in; revoking deletes the file; no raw line, name, chat or
   item text is ever stored or sent; in-memory class counters need no extra
-  consent (decision 0071). Reverses if: a mask gap stores a name or a chat
-  word, GGG restricts derived local records, or the operator rules the
-  ledger unwanted.
+  consent (decision 0071). RUN-LEDGER-WIRE (decision 0071 amendment
+  2026-11-20): server/al/plug/ledger.py, fed by Core.feed_line; hit counts,
+  masked shapes, five read-back booleans and up to 4 masked waystone
+  property-block shapes kept only while the ledger consent is on; the file
+  is written at most once a minute and only on change, a write and the
+  revoke-delete share core.ledger_lock and a revoke empties memory; two
+  "Game log" Checks notes (3 anchored misses in one game run; a resume scan
+  stopped at its 32 MB cap). Reverses if: a mask gap stores a name or a chat
+  word, GGG restricts derived local records, the operator rules the ledger
+  unwanted, the once-a-minute write costs overlay budget, or the sticky
+  drift note misfires in normal play.
 - DOCS-FRESH: tools/docs_fresh.py check is a list of small fact functions
   (FACTS); each reads a value from tracked files and matches where docs quote
   it (Electron pin in app/main.js and decision 0002; VERSION in
