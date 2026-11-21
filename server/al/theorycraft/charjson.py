@@ -32,6 +32,7 @@ import json
 import xml.etree.ElementTree as ET
 
 from . import model
+from . import treedata
 
 MAX_JSON_CHARS = 2 * 1024 * 1024
 
@@ -242,12 +243,15 @@ def _classes(cls, class_names=None):
     name is used as is; an internal id (e.g. an ascendancy id of the tree
     export) maps through `class_names` first; an unknown name passes
     through as the class name."""
-    if cls and cls not in ASCENDANCY_CLASS and cls not in BASE_CLASSES:
+    if (cls and cls not in ASCENDANCY_CLASS and cls not in BASE_CLASSES
+            and not treedata.class_of(cls)):
         mapped = _str(_class_map(class_names).get(cls))
         if mapped:
             cls = mapped
-    if cls in ASCENDANCY_CLASS:
-        return ASCENDANCY_CLASS[cls], cls
+    # TC-ASC-FROM-TREE: the cached tree export first, the table as fallback
+    base = treedata.class_of(cls) or ASCENDANCY_CLASS.get(cls)
+    if base:
+        return base, cls
     return cls, "None"
 
 
