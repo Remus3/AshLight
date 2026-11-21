@@ -60,6 +60,144 @@ On the dashboard (the overlay shows the first three in a small corner box):
 The source lives at https://github.com/Remus3/AshLight; clone it with
 `git clone https://github.com/Remus3/AshLight.git`.
 
+## Install (Windows)
+
+Releases: none yet, so the line below does not work today. Install from
+source instead (see the quick start below). The steps here apply from the
+first release on.
+
+Open Windows PowerShell as yourself (not with "Run as admin") and paste this
+one line:
+
+```powershell
+irm -UserAgent 'AshLight/0.1.0 (installer)' https://github.com/Remus3/AshLight/releases/latest/download/install.ps1 | iex   # al-version-stamp
+```
+
+It downloads the small installer of the latest release and runs it. The
+installer:
+
+- checks every file it downloads against the release's `SHA256SUMS.txt`
+  before it unpacks anything, and stops with nothing installed if a hash
+  is wrong or missing;
+- fetches the two runtimes AshLight runs on, a private Python from
+  python.org and the unmodified Electron from the Electron project's
+  GitHub releases, each checked against its pinned size and SHA-256;
+- installs for your user only, in `%LOCALAPPDATA%\Programs\AshLight`, and
+  never asks for admin rights;
+- adds an AshLight shortcut in the Start Menu and on the desktop and an
+  AshLight entry in Installed apps, then opens AshLight. The first window
+  asks before it reads `Client.txt`; that is the one click.
+
+It needs about 400 MB of disk. Every request names AshLight and its
+version, goes only to GitHub and python.org, and carries no cookie or
+account id. The installer never looks for the game and never reads or
+writes a game folder. To install somewhere else, run
+`$env:AL_INSTALL_DIR = '<folder>'` in the same window before the line (a
+folder inside a Steam library or the game's own folder is refused).
+
+### Install from the release files
+
+To check everything before anything runs, or to install offline: from the
+release page, download `install.ps1`, `AshLight-<version>-app.zip`,
+`release.json` and `SHA256SUMS.txt` into one folder, check them (see
+Verify your download below), then run in that folder:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Zip .\AshLight-<version>-app.zip
+```
+
+`-ExecutionPolicy Bypass` applies to this one command only. Your Windows
+setting stays as it is. Add `-RuntimeDir <folder>` to use the two runtime
+zips you downloaded yourself (the Python embeddable zip and the Electron
+zip at the versions `release.json` names); they are checked against the
+same pins. `-InstallDir <folder>` picks the folder and `-NoStart` installs
+without opening AshLight.
+
+## Update
+
+Automatic update is not finished yet. For now, update by hand: paste the
+install line again. It upgrades in place and keeps your settings and data.
+The release-files route above, with the new release's files, does the
+same.
+
+When automatic update ships, it works only with web data on. An installed
+copy will look for a newer release once a day and download it. It will
+check the size and SHA-256 against the release's `SHA256SUMS.txt` and
+GitHub's own record of the file. It will test the new version next to the
+one you run. It will switch at the next start of AshLight, at least 24
+hours after the release was published. If the new version does not start,
+AshLight goes back to the previous one by itself. Test versions
+(pre-releases) are never offered. With web data off, AshLight checks
+nothing.
+
+From a source copy, see Update under the quick start.
+
+## Uninstall
+
+An installed copy: open Settings, then Apps, then Installed apps (Apps and
+features on Windows 10), and choose Uninstall next to AshLight. Or run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\AshLight\uninstall.ps1"
+```
+
+If you installed somewhere else, use that folder in place of
+`$env:LOCALAPPDATA\Programs\AshLight`.
+
+It asks nothing. It stops AshLight and removes the program, its runtimes,
+the two shortcuts, the logon autostart if you turned it on, and the
+Installed apps entry. Your settings and run history stay in the `data`
+folder; add `-Purge` to move that to the Recycle Bin too, or `-DryRun` to
+see what would go without removing anything. It ends by naming what stays.
+Files you saved elsewhere yourself, such as a downloaded `.build` guide or
+loot filter, are yours to delete: it never looks in your game folders.
+
+From a source copy, see Uninstall under the quick start.
+
+## Verify your download
+
+Each release is immutable: its files cannot be changed once it is
+published. Three checks, each in PowerShell in the folder that holds the
+files (the last two need the GitHub CLI, `gh`):
+
+1. Hashes. `Get-FileHash .\AshLight-<version>-app.zip -Algorithm SHA256`
+   prints a hash that must equal the zip's line in `SHA256SUMS.txt`. Do
+   the same for `install.ps1` and `release.json`.
+2. Build attestation. It shows the project's release workflow built the
+   file from the tagged source:
+   `gh attestation verify .\AshLight-<version>-app.zip --repo Remus3/AshLight`
+3. Release asset. It shows the file is the one attached to that release:
+   `gh release verify-asset v<version> .\AshLight-<version>-app.zip --repo Remus3/AshLight`
+
+The installer makes the first check by itself. It cannot make the other
+two; `SECURITY.md` says what it does verify.
+
+## Windows may warn
+
+AshLight is not code-signed yet, so Windows may show one of these:
+
+- PowerShell execution policy: the pasted line runs without touching it.
+  The release-files route and the uninstall command pass
+  `-ExecutionPolicy Bypass` for that one command only. Your policy is not
+  changed, and AshLight never asks you to change it.
+- Microsoft Defender SmartScreen ("Windows protected your PC"): the pasted
+  line downloads with PowerShell, which adds no download mark, so
+  SmartScreen should not stop it. If it stops a file you downloaded in a
+  browser, choose Don't run. Check the file (see Verify your download); if
+  a hash does not match, get the file again from the release page. Or use
+  the pasted line, which checks every file it downloads.
+- Smart App Control (Windows 11): it may block unsigned programs such as
+  the AshLight desktop client. This is not tested yet. If it blocks
+  AshLight, there is no fix yet. Leave Smart App Control as it is.
+- User Account Control: AshLight never asks for admin rights. A
+  User Account Control prompt during the install does not come from
+  AshLight; choose No.
+- Windows Defender Firewall: AshLight listens on `127.0.0.1` only, so no
+  firewall prompt is expected. If one appears for AshLight, choose Cancel;
+  AshLight needs no access from other computers.
+- Microsoft Defender Antivirus: it may scan the new files the first time.
+  Let it finish; AshLight needs no exclusion.
+
 ## Quick start (Windows)
 
 Needs Python 3.11 or newer (take 3.13 or newer for a new install: python.org
@@ -182,9 +320,9 @@ There is no uninstall script yet; these are the steps by hand:
 
 - The first time, the dashboard asks before reading `Client.txt` and names the
   file and what is derived from it. Your answer is stored locally.
-- Nothing leaves your computer unless you turn on web data (off by default).
-  With it on, AshLight fetches currency and item prices from poe.ninja at most
-  once an hour and a build share link (pobb.in, pastebin) once when you paste
+- Apart from the install you start yourself, nothing leaves your computer
+  unless you turn on web data (off by default). With it on, AshLight
+  fetches currency and item prices from poe.ninja at most once an hour and a build share link (pobb.in, pastebin) once when you paste
   it; every request names AshLight and its version and carries no cookie or
   account id.
 - Game data (zone levels, item bases and mods, the passive tree) also needs
@@ -195,6 +333,11 @@ There is no uninstall script yet; these are the steps by hand:
   computer. You do
   nothing else, and nothing is fetched while web data is off. It never asks the trade site anything: the trade link after an
   item check opens in your own browser only when you click it.
+- When automatic update ships (see Update), an installed copy with web
+  data on will read the project's latest release on GitHub once a day, to
+  learn whether a newer version is out. It is not made yet. The request
+  will name AshLight and its version and carry no contact, cookie or
+  account id; with web data off it is never made.
 - The server binds `127.0.0.1` only; every API call needs the per-start token;
   the Host and Origin headers are checked; the dashboard runs under a strict
   Content Security Policy.
