@@ -184,3 +184,54 @@ def test_cache_picks_the_tree_with_the_best_id_match(tmp_path):
     assert c.best_for([99]).name(1) == "New One"  # nothing matches: newest
     c.prev_path.write_text("not json", encoding="ascii")
     assert c.best_for([1, 7, 8]).name(1) == "New One"  # broken previous skipped
+
+
+@pytest.fixture
+def clean_class_map():
+    treedata.publish(None)
+    yield
+    treedata.publish(None)
+
+
+def test_class_map_from_export(tree, tmp_path, clean_class_map):
+    """TC-ASC-FROM-TREE: parse() keeps ascendancy name -> class name, and
+    TreeCache.get() publishes the newest good map for treedata.class_of."""
+    assert tree.class_map == {"First Ascent": "Alpha Class",
+                              "Second Ascent": "Alpha Class"}
+    assert treedata.class_of("First Ascent") is None  # nothing published yet
+    path = tmp_path / "skilltree.json"
+    shutil.copy(FIX, path)
+    cache = treedata.TreeCache(path)
+    assert cache.get() is not None
+    assert treedata.class_of("First Ascent") == "Alpha Class"
+    assert treedata.class_of("Second Ascent") == "Alpha Class"
+    assert treedata.class_of("Alpha Class") is None  # a class, not an ascendancy
+    assert treedata.class_of(None) is None and treedata.class_of(7) is None
+    path.unlink()  # a missing file keeps the newest good map
+    assert cache.get() is None
+    assert treedata.class_of("First Ascent") == "Alpha Class"
+    doc = json.loads(FIX.read_text(encoding="ascii"))
+    doc["classes"][1]["ascendancies"] = [{"id": "Beta1", "name": "Brand New"}]
+    _write_tree(path, doc)  # a newer good export replaces it
+    assert cache.get() is not None
+    assert treedata.class_of("Brand New") == "Beta Class"
+    assert treedata.class_of("First Ascent") == "Alpha Class"
+    path.write_text("not json at all, longer", encoding="ascii")
+    assert cache.get() is None  # a broken one does not
+    assert treedata.class_of("Brand New") == "Beta Class"
+
+
+def test_previous_tree_does_not_publish(tmp_path, clean_class_map):
+    p = tmp_path / "skilltree.json"
+    c = treedata.TreeCache(p)
+    _write_tree(c.prev_path, {"nodes": {}, "classes": [
+        {"name": "A", "ascendancies": [{"id": "A1", "name": "Old Asc"}]}]})
+    assert c.best_for([]) is not None
+    assert treedata.class_of("Old Asc") is None
+
+
+def test_class_map_skips_unnamed_entries():
+    doc = {"nodes": {}, "classes": [
+        {"name": "A", "ascendancies": [{"id": "A1"}, {"name": "Asc"}, "x"]},
+        {"ascendancies": [{"name": "Orphan"}]}, 3]}
+    assert treedata.parse(doc).class_map == {"Asc": "A"}

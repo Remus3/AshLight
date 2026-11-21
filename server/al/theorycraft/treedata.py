@@ -38,6 +38,15 @@ export's `id` slug (e.g. `strength89`; null on some nodes), kept as
 `Node.gid`. The game's `.build` file names passives by that slug, so the
 mapping PoB node id -> `.build` passive id is: spec id == export `skill` ->
 that node's `id`. No table, no guess: a null or missing slug is skipped.
+
+Class map (TC-ASC-FROM-TREE, F-113): `parse` also keeps ascendancy name ->
+class name from classes[].ascendancies (`TreeData.class_map`), and each
+good read of the CURRENT export by `TreeCache.get()` publishes it, so
+`class_of(name)` answers for an ascendancy GGG adds with no code change.
+The newest good map stays published while the file is missing or broken;
+the previous export (DATA-TREE-HOLD) never publishes. Names come only from
+the cached GGG export (decision 0009: nothing bundled); the built-in table
+in charjson stays the fallback and gains no name.
 """
 
 import json
@@ -111,10 +120,11 @@ def _str(value):
 
 
 class TreeData:
-    def __init__(self, nodes, classes, ascendancy_ids=None):
+    def __init__(self, nodes, classes, ascendancy_ids=None, class_map=None):
         self.nodes = nodes      # int id -> Node
         self.classes = classes  # tuple of class names, index order
         self._asc_ids = dict(ascendancy_ids or {})  # ascendancy name -> id
+        self.class_map = dict(class_map or {})  # ascendancy name -> class name
 
     def ascendancy_id(self, name):
         """The export's ascendancy id (e.g. `Witch1`) for a name, or None."""
@@ -179,12 +189,18 @@ def parse(doc):
         raise ValueError("not a passive tree export (no nodes object)")
     classes = []
     asc_names = {}  # ascendancy id -> name
+    class_map = {}  # ascendancy name -> class name (TC-ASC-FROM-TREE)
     for c in doc.get("classes") if isinstance(doc.get("classes"), list) else ():
-        classes.append(_str(c.get("name")) if isinstance(c, dict) else None)
+        cname = _str(c.get("name")) if isinstance(c, dict) else None
+        classes.append(cname)
         ascs = c.get("ascendancies") if isinstance(c, dict) else None
         for a in ascs if isinstance(ascs, list) else ():
-            if isinstance(a, dict) and _str(a.get("id")) and _str(a.get("name")):
+            if not isinstance(a, dict):
+                continue
+            if _str(a.get("id")) and _str(a.get("name")):
                 asc_names.setdefault(a["id"], a["name"])
+            if cname and _str(a.get("name")):
+                class_map.setdefault(a["name"], cname)
     nodes = {}
     for key, raw in doc["nodes"].items():
         if not isinstance(raw, dict):
@@ -214,7 +230,23 @@ def parse(doc):
     asc_ids = {}
     for aid, name in asc_names.items():
         asc_ids.setdefault(name, aid)
-    return TreeData(nodes, tuple(classes), asc_ids)
+    return TreeData(nodes, tuple(classes), asc_ids, class_map)
+
+
+_published = {}  # ascendancy name -> class name from the newest good export
+
+
+def publish(tree):
+    """Make `tree`'s class map the one `class_of` reads (None clears it).
+    TreeCache.get() calls it on each new good read of the current export."""
+    global _published
+    _published = dict(tree.class_map) if tree is not None else {}
+
+
+def class_of(name):
+    """The base class of an ascendancy named in the newest good cached tree
+    export, or None (an unknown name, a class name, or no export read)."""
+    return _published.get(name) if isinstance(name, str) else None
 
 
 def load(path):
@@ -285,6 +317,7 @@ class TreeCache:
     def __init__(self, path):
         self._cur = _FileHolder(path)
         self._prev = _FileHolder(previous_path(path))
+        self._published = None  # the TreeData this cache last published
 
     @property
     def path(self):
@@ -299,7 +332,11 @@ class TreeCache:
         return self._cur.error
 
     def get(self):
-        return self._cur.get()
+        tree = self._cur.get()
+        if tree is not None and tree is not self._published:
+            self._published = tree
+            publish(tree)
+        return tree
 
     def get_previous(self):
         return self._prev.get()

@@ -177,6 +177,38 @@ def test_class_fit_rules():
     assert buildlive.class_fits("NewClass", "NewClass", None) is True
 
 
+def test_class_fit_follows_the_tree(tmp_path):
+    """TC-ASC-FROM-TREE: a synthetic tree naming a new ascendancy makes
+    class_fits (and the character JSON import) know its class with no code
+    change; the built-in table stays the fallback and gains no name."""
+    import json as json_mod
+    from server.al.theorycraft import charjson, treedata
+    doc = {"nodes": {}, "classes": [
+        {"name": "Ranger", "ascendancies": [
+            {"id": "Ranger9", "name": "Synthetic Skyrunner"}]},
+        {"name": "Witch", "ascendancies": [
+            {"id": "Witch9", "name": "Synthetic Hexer"}]}]}
+    path = tmp_path / "skilltree.json"
+    path.write_text(json_mod.dumps(doc), encoding="ascii")
+    treedata.publish(None)
+    try:
+        assert buildlive.class_fits("Synthetic Skyrunner", "Ranger", None) is False
+        assert treedata.TreeCache(path).get() is not None
+        assert buildlive.class_fits("Synthetic Skyrunner", "Ranger", None) is True
+        assert buildlive.class_fits("Synthetic Skyrunner", "Ranger",
+                                    "Synthetic Skyrunner") is True
+        assert buildlive.class_fits("Synthetic Skyrunner", "Ranger", "Deadeye") is False
+        assert buildlive.class_fits("Synthetic Hexer", "Ranger", None) is False
+        assert buildlive.class_fits("Deadeye", "Ranger", None) is True  # table fallback
+        assert buildlive.class_fits("Pathfinder", "Ranger", "Deadeye") is False
+        assert charjson._classes("Synthetic Hexer") == ("Witch", "Synthetic Hexer")
+        assert charjson._classes("Lich") == ("Witch", "Lich")
+        assert charjson._classes("Witch") == ("Witch", "None")
+        assert "Synthetic Hexer" not in charjson.ASCENDANCY_CLASS
+    finally:
+        treedata.publish(None)
+
+
 def test_alert_kinds_and_words():
     assert buildlive.alert(info(), "Sable", "Ranger", 44) is None
     assert buildlive.alert(info(level=90), "Sable", "Ranger", 51) is None  # planned ahead

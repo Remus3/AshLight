@@ -17,6 +17,7 @@ import collections
 import hashlib
 
 from . import charjson
+from . import treedata
 from . import item as item_parser
 
 LEVEL_GAP = 5  # the log level this far past the build's level -> stale
@@ -25,10 +26,16 @@ MAX_CHARACTERS = 12
 NO_CHARACTER = ""  # the list for presses made before the log names anyone
 
 
+def _asc_class(name):
+    """Base class of an ascendancy: the cached tree export first
+    (TC-ASC-FROM-TREE), then the built-in table; None for a non-ascendancy."""
+    return treedata.class_of(name) or charjson.ASCENDANCY_CLASS.get(name)
+
+
 def _base_class(name):
     if not name:
         return None
-    return charjson.ASCENDANCY_CLASS.get(name, name)
+    return _asc_class(name) or name
 
 
 def class_fits(log_class, build_class, build_asc):
@@ -38,7 +45,7 @@ def class_fits(log_class, build_class, build_asc):
         return None
     if log_class in (build_class, build_asc):
         return True
-    if build_asc and log_class in charjson.ASCENDANCY_CLASS:
+    if build_asc and _asc_class(log_class):
         return False  # ascended into another ascendancy than the build's
     return _base_class(log_class) == _base_class(build_class)
 
