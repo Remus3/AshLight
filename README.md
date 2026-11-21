@@ -57,6 +57,9 @@ On the dashboard (the overlay shows the first three in a small corner box):
 - Tools: overlay position and size, moving settings to another computer, and
   suggested graphics settings for this computer (you apply them in game).
 
+The source lives at https://github.com/Remus3/AshLight; clone it with
+`git clone https://github.com/Remus3/AshLight.git`.
+
 ## Quick start (Windows)
 
 Needs Python 3.11 or newer (take 3.13 or newer for a new install: python.org

@@ -4,7 +4,7 @@
 
 Please report security issues privately through GitHub's "Report a
 vulnerability" button (private security advisory) on the repository's
-Security tab. Do not open a public issue for a security
+Security tab (https://github.com/Remus3/AshLight/security/advisories/new). Do not open a public issue for a security
 problem.
 
 Include what you found, how to reproduce it, and the AshLight version
