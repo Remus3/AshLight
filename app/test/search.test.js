@@ -180,5 +180,5 @@ test("the page keeps the card markup: no live region, filter page, intro words",
   assert.match(card, /class="card-page" data-page="main"/);
   assert.match(card, /data-card-open="filter"/);
   assert.match(card, /<details id="filter-more" class="card-page tool-page" data-page="filter"[^>]*open hidden>/);
-  assert.match(card, /Copy one, paste it in game\. Copies only on your click\./);
+  assert.match(card, />Copy one, paste it in game\.</);
 });
