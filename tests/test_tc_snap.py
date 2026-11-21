@@ -154,8 +154,11 @@ def test_real_source_names_mocked_fetch(tmp_path):
     # DATA-SRC-URLS / DATA-TREE-SRC acceptance: the real URLs through a mock.
     bodies = {u: b'{"nodes": {}}' for u in snapshot.SOURCES.values() if u}
     fake = Fake(bodies)
-    # UA-CONTACT: the GGG tree source needs a contact (a neutral test token)
-    out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000, contact="test-contact")
+    # UA-CONTACT: the GGG tree source needs a contact (a neutral test token);
+    # DATA-SNAP-PROBE: these stub bodies are not real files, so no probes
+    # (tests/test_snap_probe.py covers the probe on the real table)
+    out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000, contact="test-contact",
+                       probes={})
     assert out == {k: "fetched" for k in snapshot.SOURCES}
     assert sorted(u for u, _ in fake.calls) == sorted(bodies)
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))

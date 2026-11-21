@@ -70,7 +70,7 @@ test("no pid, path or name ever reaches the file", () => {
     for (const k of Object.keys(o)) { keys.push(k); if (o[k] && typeof o[k] === "object") { walk(o[k]); } }
   })(JSON.parse(text));
   const allowed = new Set(["schema", "updated", "period_s", "processes", "working_set_kb", "private_kb",
-    "cpu_pct", "by_type", "overlay_shown", "companion_open", "count",
+    "cpu_pct", "by_type", "overlay_shown", "companion_open", "overlay_state", "count",
     ...Object.values(M.TYPE_KEYS), "other"]);
   for (const k of keys) { assert.ok(allowed.has(k), k); }
   // empty or broken input gives an all-zero document
@@ -78,6 +78,7 @@ test("no pid, path or name ever reaches the file", () => {
   assert.strictEqual(empty.processes, 0);
   assert.deepStrictEqual(empty.by_type, {});
   assert.strictEqual(empty.overlay_shown, false);
+  assert.strictEqual(empty.overlay_state, "starting");
 });
 
 test("the write is atomic (tmp then rename), ASCII + LF, bounded", () => {
@@ -213,4 +214,67 @@ test("the sampler is wired in the main process only, never in a page", () => {
                       "OpenProcess", "require(\"electron\")"]) {
     assert.ok(!mod.includes(word), word);
   }
+});
+
+/* RUN-EXPLAIN-OVERLAY-STATE (F-129): overlay_state from the gate. */
+test("state field written on change, no screen or window query", () => {
+  assert.strictEqual(M.snapshot([], { overlay_state: "hidden_idle" }, new Date()).overlay_state, "hidden_idle");
+  assert.strictEqual(M.snapshot([], { overlay_state: "maximised" }, new Date()).overlay_state, "starting");
+  assert.strictEqual(M.stateWord(undefined), "starting");
+  const t = fakeTimers();
+  const written = [];
+  const logged = [];
+  const fsi = { mkdirSync() {}, writeFileSync: (f, txt) => written.push(JSON.parse(txt)), renameSync() {} };
+  let state = "starting";
+  let stateReads = 0;
+  let windowReads = 0;
+  const overlay = { isDestroyed: () => { windowReads += 1; return false; }, isVisible: () => true };
+  const s = M.createSampler({ getMetrics: () => rows(), dir: "rt", fs: fsi, log: (m) => logged.push(m),
+    overlay: () => overlay, companion: () => null,
+    overlayState: () => { stateReads += 1; return state; },
+    setInterval: t.setInterval, clearInterval: t.clearInterval, processType: "browser" });
+  // before start nothing is written (a renderer, or the sampler not yet up)
+  assert.strictEqual(s.noteState(), false);
+  assert.strictEqual(written.length, 0);
+  s.start();
+  // the first note writes the state at once
+  assert.strictEqual(s.noteState(), true);
+  assert.strictEqual(written.length, 1);
+  assert.strictEqual(written[0].overlay_state, "starting");
+  // unchanged: no write, the gate is the only thing read
+  windowReads = 0;
+  const before = stateReads;
+  assert.strictEqual(s.noteState(), false);
+  assert.strictEqual(written.length, 1);
+  assert.strictEqual(windowReads, 0);
+  assert.strictEqual(stateReads, before + 1);
+  // a change writes once, with the hint in the log
+  state = "hidden_idle";
+  assert.strictEqual(s.noteState(), true);
+  assert.strictEqual(s.noteState(), false);
+  assert.strictEqual(written.length, 2);
+  assert.strictEqual(written[1].overlay_state, "hidden_idle");
+  assert.ok(logged.some((m) => m.startsWith("overlay state hidden_idle: ") && m.includes("game looks closed")));
+  // the minute sample carries the field too
+  state = "shown";
+  t.set[0].fn();
+  assert.strictEqual(written[2].overlay_state, "shown");
+  assert.strictEqual(s.noteState(), false, "already written by the sample");
+  // a throwing gate reads starting, never throws
+  state = null;
+  const bad = M.createSampler({ getMetrics: () => [], dir: "rt", fs: fsi, processType: "browser",
+    overlayState: () => { throw new Error("gone"); }, setInterval: t.setInterval, clearInterval: t.clearInterval });
+  bad.start();
+  assert.doesNotThrow(() => bad.noteState());
+  assert.strictEqual(written[written.length - 1].overlay_state, "starting");
+  s.stop();
+  assert.strictEqual(s.noteState(), false);
+  // the module never looks at the screen or at any other window (code only)
+  const mod = fs.readFileSync(path.join(APP, "metrics.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  for (const word of ["screen.", "getAllDisplays", "getAllWindows", "getFocusedWindow", "FindWindow",
+                      "EnumWindows", "GetForegroundWindow", "require(\"electron\")"]) {
+    assert.ok(!mod.includes(word), word);
+  }
+  assert.match(mod, /require\("\.\/overlay_gate\.js"\)/);
 });
