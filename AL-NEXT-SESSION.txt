@@ -198,10 +198,11 @@ Carried forward (not acted on yet):
   search-string checks (01 LIVE-FILTER, LIVE-FILTER-MERGE, LIVE-SEARCHSTR)
   = RUN-VERDICTS-CLOSE parked; the waystone check (01 LIVE-WAYSTONE) =
   RUN-LEDGER-WIRE wave 16, RUN-LIVE1-FIXTURES parked.
-- UTIL-1.0-POST: BLOCKED until PoE2 1.0 launch 2026-12-11; runbook
-  docs/ops/1.0-launch-runbook.md. Row AUTO-03 (wave 1) replaces the row by
-  GATE-POE2-10, GATE-ACT5-SEEN, UTIL-10-DATA, UTIL-10-NOTES and
-  UTIL-10-LOG; row AUTO-07 (wave 16, due 2026-12-04) is the launch gate.
+- LAUNCH-GATE (AUTO-07, wave 16): the launch gate (rows GATE-POE2-10 and
+  GATE-ACT5-SEEN) opens UTIL-10-DATA, UTIL-10-NOTES and UTIL-10-LOG by
+  itself; nothing to remember. If HALT is still present on 2026-12-11, the
+  session of that day flips GATE-POE2-10 by hand from the pending finding.
+  Runbook docs/ops/1.0-launch-runbook.md.
 - NOTE (01 LIVE-VERDICTS): a "Tried in game" card with Worked / Refused
   for the player checks; rows RUN-VERDICTS-CORE wave 6, RUN-VERDICTS-UI
   wave 19.

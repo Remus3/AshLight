@@ -63,6 +63,37 @@ def test_guide_shows_on_zone_change_with_waypoint_and_next():
     assert g["optional"] == [{"kind": "resist", "text": "Rare boss: resist."}]
 
 
+def test_view_carries_the_boss_element():
+    """DATA-GUIDE-BOSS (F-122): a zone's `boss` {element} entry is published
+    as the view's `boss`; no entry, an unknown element, the act default and
+    the endgame give None."""
+    doc = json.loads(json.dumps(DOC))
+    zones = doc["acts"]["G1"]["zones"]
+    zones["The Riverbank"]["boss"] = {"element": "cold", "src": "research:0031",
+                                      "checked": "2026-11-17"}
+    zones["Clearfell"]["boss"] = {"element": "physical"}
+    zones["The Grelwood"]["boss"] = "fire"
+    st = SessionState(clock=lambda: 10.0)
+    st.set_zone_guide(guide=doc, graph=GRAPH)
+    assert _enter(st, "G1_1", "The Riverbank")["boss"] == "cold"
+    assert _enter(st, "G1_2", "Clearfell")["boss"] is None
+    assert _enter(st, "G1_4", "The Grelwood")["boss"] is None
+    assert _enter(st, "G1_5", "Somewhere Unlisted")["boss"] is None
+    assert _enter(st, "MapCrypt", "Crypt")["boss"] is None
+    assert set(zoneguide.ELEMENTS) == {"fire", "cold", "lightning", "chaos"}
+    # the shipped file: the two act bosses AshLight names an element for
+    shipped = zoneguide.load()
+    assert zoneguide.view(shipped, {}, "G1_15", "Ogham Manor", False, 15, 15,
+                          None)["boss"] == "cold"
+    assert zoneguide.view(shipped, {}, "G2_10_2", "Mawdun Mine", False, 30, 30,
+                          None)["boss"] == "fire"
+    for act in shipped["acts"].values():
+        for zone, z in act.get("zones", {}).items():
+            if "boss" in z:
+                assert set(z["boss"]) == {"element", "src", "checked"}, zone
+                assert z["boss"]["element"] in zoneguide.ELEMENTS, zone
+
+
 def test_unknown_zone_falls_back_to_act_default_and_hideout_hides():
     st = _state()
     g = _enter(st, "G1_9", "Somewhere New")

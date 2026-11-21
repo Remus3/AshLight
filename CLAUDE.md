@@ -704,8 +704,12 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   broken code (decision 0042). Reverses if: the polls cost overlay budget,
   token reuse is ruled unsafe, or a restart loses unrebuildable state.
 - ZONE-GUIDE: per-zone guide in AshLight's own words (facts from public
-  sources, nothing copied, unsure facts left out), waypoints from the snapshot
-  graph, quest tracker from entered zones per character (never claims a reward
+  sources, nothing copied, unsure facts left out), one guide file (goal,
+  bonus, layout, next, boss element); src and checked on every entry, a boss
+  entry its own; facts only from the attributed snapshots, GGG Data Exports,
+  AshLight's own Client.txt observations and operator-pasted text
+  (DATA-GUIDE-BOSS: campaign.BOSS_ZONES is gone, the boss hint reads the
+  guide's boss element), waypoints from the snapshot graph, quest tracker from entered zones per character (never claims a reward
   was taken), visits file under the run-history switch, guide file hot
   reloaded via hotreload.register (decisions 0043, 0042); each guide entry may
   carry an authored short (at most 34 characters, own words, empty when
@@ -1152,6 +1156,11 @@ applies to it as to a row. Pause: `ops/loop/control/HALT`.
   app/package.json and the lockfile; the setup.ps1 Python / Node floors,
   AL_PORT / PORT_BLOCK and the scripts named in README; the kit version in
   CLAUDE.md while quoted and design 0001; the disclaimer word for word in
-  README); a stale quote fails tests/test_docs_fresh.py naming the file; no
+  README; TEST-DOCS-FACTS-UI: the default item-check and show / hide keys
+  from server/al/hotkeys.py FALLBACKS (never web/ text) where README quotes
+  them, the decision 0002 budget numbers from tests/test_budgets.py where
+  README and decision 0002 quote them, every core-read settings key of
+  config/local.example.json named in README, and the tab labels where
+  README names a tab); a stale quote fails tests/test_docs_fresh.py naming the file; no
   request, no write. Reverses if: a fact's pattern misfires on a legitimate
   rewording, or the later fact packages need a different table shape.
