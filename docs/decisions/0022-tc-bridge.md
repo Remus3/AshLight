@@ -150,3 +150,52 @@ build XML and hotkey-read item text; nothing reaches the game).
   process, a real build needs more than the memory limit, or job objects
   are refused in a supported install layout (then a Checks note and a
   per-user opt-out, never a silent unconfined start).
+
+## Amendment 2026-11-20 (TC-CALC-VERIFY-USE, F-139)
+
+- Decision: before every bridge start (the first and every restart after
+  a crash or a time-out) `Bridge._start` re-checks PoB's runnable Lua
+  files against the pinned `lua_sha256` of config/tc_pins.json (decision
+  0018 amendment 2026-11-20). The digest is computed in bridge.py in the
+  exact form of tools/tc_pin.py `tree_digest(select=is_lua)` (every `.lua`
+  file under the checkout's top folder: sorted relative path, size and
+  SHA-256), so the core imports nothing from tools/. A mismatch, an added
+  or a removed Lua file raises `BridgeUnavailable("calc component changed,
+  re-run setup")` before any process starts. A digest that matched is
+  cached in memory with every Lua file's size and mtime: while those are
+  unchanged the files are only stat-ed (about 1100 files, a few ms), and a
+  mismatch is never cached. `status()` reports a mismatch as the missing
+  part `pob-lua` (a pin file without a well-formed digest as `pins`, fail
+  closed), so the Checks calc row reads "Missing or changed: pob-lua."
+  with its existing fix line (run scripts\setup.ps1 -TcCalc).
+  `from_component` refuses only the absent parts (luajit, pob, script,
+  pins) and leaves the Lua check to the start, so the shared instance
+  stays lazy and the refusal carries the fix words.
+- Package loader guard (bridge.lua): before PoB loads, the native (C)
+  loaders of `require` (package.loaders 3 and up) are wrapped to answer
+  only for the allow-listed `lua-utf8` (PoB's one native module on the
+  headless path; HeadlessWrapper already stubs lcurl) and, from the
+  lockdown on, for nothing; any other native module fails with "refused by
+  the AshLight calc bridge". The test-only probe tries two DLLs that sit
+  in PoB's runtime (socket, lzip).
+- Alternatives: check the digest in `from_component` only (a checkout
+  edited while the core runs would be used by the next restart); hash
+  every start without a cache (about 0.5 s cold on the dev host each
+  start); persist the verified stat record in the sidecar (same-user
+  writable, so no stronger than the in-memory cache, and needs a new path
+  in paths.py); allow-list by file path instead of module name (PoB names
+  modules, not files); clear package.cpath only (a module loaded before
+  the lockdown, or a Croot loader hit, could still pull a DLL). Rejected.
+- Why: the pin proved the archive at setup, but nothing proved the files
+  the calc then runs; a stale extract, a partial update or a stray edit
+  of PoB's Lua now stops the calc with one fix instead of feeding item
+  checks numbers from unpinned code. The cache keeps the warm cost to a
+  stat walk.
+- Tests: tests/test_tc_bridge.py (an edited or added Lua file makes the
+  component unavailable and the start refuses with the fix words, no
+  spawn; the digest equals tc_pin's form; the cache re-hashes only on a
+  size or mtime change; the loader guard sits before the PoB load; live:
+  the probe's native requires fail inside the running bridge).
+- Reverses if: PoB's headless path needs another native module, PoB
+  starts generating Lua files at run time inside its checkout, or a pin
+  move ships Lua outside the pinned digest's form.

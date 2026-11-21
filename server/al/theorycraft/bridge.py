@@ -42,10 +42,20 @@ appending), and every calc start writes one banner line first (build id,
 pid of the core) in the one log format of server/al/logs.py.
 RUN-CALC-PRIORITY (F-107): luajit starts with the below-normal priority
 class (server/al/prio.py), so a calc never competes with the game.
+
+TC-CALC-VERIFY-USE (F-139, decision 0022 amendment 2026-11-20): before each
+start (the first and every restart) the bridge re-checks PoB's runnable Lua
+files against the pinned lua_sha256 of config/tc_pins.json (the
+tools/tc_pin.py tree_digest form over the checkout's .lua files) and refuses
+with LUA_CHANGED on a mismatch. A digest that matched is cached in memory
+with every file's size and mtime, so an unchanged checkout is only stat-ed;
+status() reports a mismatch as the missing part LUA_MISSING for the Checks
+calc row.
 """
 
 import ctypes
 import functools
+import hashlib
 import json
 import os
 import queue
@@ -279,6 +289,16 @@ class BridgeUnavailable(BridgeError):
 
 # --- component discovery ----------------------------------------------------
 
+# TC-CALC-VERIFY-USE: the pin key, the fix words and the status() part name
+LUA_KEY = "lua_sha256"
+LUA_CHANGED = "calc component changed, re-run setup"
+LUA_MISSING = "pob-lua"
+_MARKER = ".al-extracted.json"  # tools/tc_pin.py MARKER, never digested
+_HEX64 = frozenset("0123456789abcdef")
+_LUA_CACHE = {}  # str(checkout) -> (pinned digest, stat key) of the last match
+_LUA_LOCK = threading.Lock()
+
+
 def _load_pins():
     return json.loads(paths.tc_pins_file().read_text(encoding="ascii"))
 
@@ -297,11 +317,86 @@ def component_paths(environ=None):
     }
 
 
+def pinned_lua_digest():
+    """The pinned lua_sha256 of PoB's runnable Lua files, or None when the
+    pin file lacks a well-formed one (then nothing verifies: fail closed)."""
+    want = _load_pins()["pob2"].get(LUA_KEY)
+    if isinstance(want, str) and len(want) == 64 and set(want) <= _HEX64:
+        return want
+    return None
+
+
+def _lua_files(checkout):
+    """[(relative posix path, absolute path, size, mtime_ns)] of every .lua
+    file under checkout, sorted by path (tools/tc_pin.py is_lua)."""
+    checkout = Path(checkout)
+    out = []
+    for dirpath, dirnames, filenames in os.walk(checkout):
+        dirnames.sort()
+        for fn in filenames:
+            if not fn.lower().endswith(".lua"):
+                continue
+            p = Path(dirpath) / fn
+            rel = p.relative_to(checkout).as_posix()
+            if rel == _MARKER:
+                continue
+            st = p.stat()
+            out.append((rel, p, st.st_size, st.st_mtime_ns))
+    out.sort(key=lambda e: e[0])
+    return out
+
+
+def _hash_file(path):
+    h, size = hashlib.sha256(), 0
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+            size += len(block)
+    return size, h.hexdigest()
+
+
+def lua_digest(checkout, files=None):
+    """SHA-256 over PoB's .lua files under checkout, in the exact form of
+    tools/tc_pin.py tree_digest(select=is_lua): sorted relative path, size
+    and content hash of each file."""
+    outer = hashlib.sha256()
+    for rel, path, _, _ in (_lua_files(checkout) if files is None else files):
+        size, sha = _hash_file(path)
+        outer.update(f"{rel}\0{size}\0{sha}\n".encode("utf-8"))
+    return outer.hexdigest()
+
+
+def lua_verified(checkout, want):
+    """True when PoB's runnable Lua files under checkout give the pinned
+    digest `want`. A match is cached with every file's size and mtime; while
+    those are unchanged the files are not read again. Never raises."""
+    if not want:
+        return False
+    key = str(checkout)
+    try:
+        files = _lua_files(checkout)
+        stat_key = tuple((rel, size, mtime) for rel, _, size, mtime in files)
+        with _LUA_LOCK:
+            if _LUA_CACHE.get(key) == (want, stat_key):
+                return True
+        ok = bool(files) and lua_digest(checkout, files) == want
+    except (OSError, ValueError):
+        ok, stat_key = False, None
+    with _LUA_LOCK:
+        if ok:
+            _LUA_CACHE[key] = (want, stat_key)
+        else:
+            _LUA_CACHE.pop(key, None)
+    return ok
+
+
 def status(environ=None):
-    """{"available": bool, "missing": [names]} - never raises."""
+    """{"available": bool, "missing": [names]} - never raises. LUA_MISSING
+    names PoB's Lua files when they differ from the pinned digest."""
     try:
         comp = component_paths(environ)
-    except (OSError, ValueError, KeyError) as exc:
+        want = pinned_lua_digest()
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
         return {"available": False, "missing": ["pins"], "error": str(exc)}
     missing = []
     if not exepin.verified(comp["luajit"]):
@@ -309,6 +404,10 @@ def status(environ=None):
         missing.append("luajit")
     if not (comp["pob_src"] / "HeadlessWrapper.lua").is_file():
         missing.append("pob")
+    elif want is None:
+        missing.append("pins")
+    elif not lua_verified(comp["pob_src"].parent, want):
+        missing.append(LUA_MISSING)  # TC-CALC-VERIFY-USE
     if not comp["script"].is_file():
         missing.append("script")
     return {"available": not missing, "missing": missing}
@@ -326,8 +425,11 @@ class Bridge:
 
     def __init__(self, argv, cwd=None, env=None, timeout=DEFAULT_TIMEOUT,
                  start_timeout=DEFAULT_START_TIMEOUT, log_path=None, exe_check=None,
-                 env_allow=()):
+                 env_allow=(), lua_check=None):
         self.argv = list(argv)
+        # TC-CALC-VERIFY-USE: (PoB checkout, pinned lua_sha256) re-checked
+        # before every start; None (tests, fakes) checks nothing
+        self.lua_check = tuple(lua_check) if lua_check else None
         # TC-CALC-CONFINE-PROC: names kept in the child's environment beyond
         # ENV_ALLOW (tests only; the component passes none)
         self.env_allow = tuple(env_allow)
@@ -351,10 +453,14 @@ class Bridge:
     @classmethod
     def from_component(cls, environ=None, **kw):
         st = status(environ)
-        if not st["available"]:
-            raise BridgeUnavailable("calc component absent: "
-                                    + ", ".join(st["missing"]))
+        # TC-CALC-VERIFY-USE: changed Lua files are refused at the start
+        # (the first and every restart), with the fix words, not here: the
+        # instance stays lazy and stat-free until first need
+        absent = [m for m in st["missing"] if m != LUA_MISSING]
+        if absent:
+            raise BridgeUnavailable("calc component absent: " + ", ".join(absent))
         comp = component_paths(environ)
+        kw.setdefault("lua_check", (comp["pob_src"].parent, pinned_lua_digest()))
         env = child_env()  # TC-CALC-CONFINE-PROC: allow-listed names only
         for name in ("TEMP", "TMP"):
             env[name] = str(comp["temp"])
@@ -377,6 +483,8 @@ class Bridge:
         if self.exe_check is not None and not exepin.verified(self.exe_check):
             raise BridgeUnavailable("luajit.exe does not match its recorded hash; "
                                     "re-run setup.ps1 -TcCalc")
+        if self.lua_check is not None and not lua_verified(*self.lua_check):
+            raise BridgeUnavailable(LUA_CHANGED)  # TC-CALC-VERIFY-USE
         stderr = subprocess.DEVNULL
         if self.log_path is not None:
             try:
