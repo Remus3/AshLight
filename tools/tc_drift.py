@@ -6,7 +6,11 @@ Decision 0004 item 3, decision 0018, decision 0025. Python stdlib only.
   truthful User-Agent, no cookie, no token) compares the newest PoB-PoE2
   release with config/tc_pins.json. At most one check per CHECK_EVERY_S;
   X-RateLimit-Reset / Retry-After push the next check out. State lives in the
-  gitignored ops/runtime/tc_drift.json.
+  gitignored ops/runtime/tc_drift.json. TC-BUILDFILE-EXIT-WATCH (F-187,
+  decision 0034 amendment 2026-11-21): the same reply's body is read as text
+  (never stored); a line naming an export and `.build` records a sticky
+  `build_export` {tag, seen} and every summary and HOLD line then carries the
+  exit note. No extra request.
 - `loop_check`: the al_loop tick hook. Silent until a check is due; on a new
   tag it launches ONE detached `trial` for that tag and reports one line.
   `halted=True` (the loop is HALTed) makes that launch static only.
@@ -89,6 +93,11 @@ TRIAL_TIMEOUT_S = 3600
 MAX_ARCHIVE = 2 * 1024 ** 3
 API_MAX_BYTES = 256 * 1024
 STATE_REL = Path("ops") / "runtime" / "tc_drift.json"
+BODY_MAX_CHARS = 64 * 1024
+_EXPORT_WORD = re.compile(r"\bexport", re.I)
+_DOT_BUILD = re.compile(r"\.build\b", re.I)
+BUILD_EXPORT_NOTE = ("PoB exports .build itself: retire AshLight's .build download "
+                     "by an amendment of decision 0034")
 
 _TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 _HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -188,7 +197,18 @@ def latest_release(repo, fetch=None, now=None):
     if not isinstance(tag, str):
         raise webfetch.FetchError("releases reply has no tag_name")
     return {"tag": tag, "published": doc.get("published_at"),
-            "draft": bool(doc.get("draft")), "prerelease": bool(doc.get("prerelease"))}
+            "draft": bool(doc.get("draft")), "prerelease": bool(doc.get("prerelease")),
+            "build_export": build_export_named(doc.get("body"))}
+
+
+def build_export_named(body):
+    """TC-BUILDFILE-EXIT-WATCH (F-187): True when one line of a release body
+    names an export together with the game's `.build` file. The body is read
+    as text from the same releases reply; it is never stored."""
+    if not isinstance(body, str):
+        return False
+    return any(_EXPORT_WORD.search(line) and _DOT_BUILD.search(line)
+               for line in body[:BODY_MAX_CHARS].splitlines())
 
 
 def resolve_commit(repo, tag, fetch=None, now=None):
@@ -275,6 +295,9 @@ def check(root, now, fetch=None):
         save_state(root, st)
         return st
     st.pop("error", None)
+    if rel.get("build_export") and not st.get("build_export"):
+        # sticky: the note repeats on every check until decision 0034 is amended
+        st["build_export"] = {"tag": rel["tag"], "seen": iso(now)[:10]}
     st.update({"latest": rel["tag"], "published": rel["published"],
                "status": compare(pob["tag"], rel["tag"]),
                "next_check": now + CHECK_EVERY_S})
@@ -303,7 +326,19 @@ def status_text(root):
             "(run `python tools/tc_drift.py check`)")
 
 
+def build_export_text(st):
+    """The .build exit note for a summary or HOLD line, '' when not raised."""
+    be = st.get("build_export")
+    if not isinstance(be, dict):
+        return ""
+    return f"; {BUILD_EXPORT_NOTE} (PoB-PoE2 {be.get('tag')}, seen {be.get('seen')})"
+
+
 def summary(st):
+    return _summary(st) + build_export_text(st)
+
+
+def _summary(st):
     status, pinned, latest = st.get("status"), st.get("pinned"), st.get("latest")
     if status == "current":
         return f"tc drift: PoB-PoE2 {pinned} current"
@@ -771,9 +806,10 @@ def hold_note(st):
     if st.get("trial") and tr.get("tag") == st.get("latest"):
         date = (st.get("checked") or tr.get("at") or "")[:10] or date
         return (f"{date} HOLD: PoB-PoE2 {tr['tag']} trial {tr.get('verdict')} "
-                f"({tr.get('detail')}); pin stays {st.get('pinned')}.")
+                f"({tr.get('detail')}); pin stays {st.get('pinned')}"
+                f"{build_export_text(st)}.")
     return (f"{date} HOLD: no PoB-PoE2 release after {st.get('pinned')} "
-            f"(latest {st.get('latest')}); pin stays.")
+            f"(latest {st.get('latest')}); pin stays{build_export_text(st)}.")
 
 
 # --- CLI ----------------------------------------------------------------
