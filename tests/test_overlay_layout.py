@@ -434,3 +434,37 @@ def test_trade_dismiss_api(srv):
     assert call(srv, "POST", "/api/trade-dismiss", {"id": True})[0] == 400
     code, doc = call(srv, "POST", "/api/trade-dismiss", {"all": True})
     assert code == 200 and doc["dismissed"] == 2 and doc["state"]["trade_requests"] == []
+
+
+# OVL-TD05-PLATE review F1: the dashboard (web/app.js readLayoutForm) posts
+# display, corner, scale, opacity and margin with no "v". The real path,
+# Core.set_overlay_layout (POST /api/overlay-layout), merges that body onto
+# the stored layout, which always reads back with "v": 2, so a 0.80 to 0.89
+# plate alpha saves as is and never drifts on a later save.
+
+def _form(opacity, corner):
+    return {"display": "primary", "corner": corner, "scale": 1.0,
+            "opacity": opacity, "margin": 16}
+
+
+@pytest.mark.parametrize("stored", [None, {"opacity": 0.9, "v": 2,
+                                           "corner": "top-left"}])
+def test_dashboard_post_without_v_keeps_plate_alpha(tmp_path, stored):
+    rt = tmp_path / "rt"
+    core = Core(runtime=rt, tail=False)
+    try:
+        if stored is not None:
+            core.config_path.write_text(json.dumps({"overlay": stored}),
+                                        encoding="ascii")
+        got = core.set_overlay_layout(_form(0.85, "top-right"))
+        assert got["opacity"] == 0.85 and got["v"] == 2
+        got = core.set_overlay_layout(_form(got["opacity"], "bottom-left"))
+        assert got["opacity"] == 0.85 and got["corner"] == "bottom-left"
+        stored_now = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert stored_now["overlay"]["opacity"] == 0.85
+        assert stored_now["overlay"]["v"] == 2
+        for _ in range(3):  # 0.95 never drifts on later saves
+            got = core.set_overlay_layout(_form(0.95, "top-right"))
+        assert got["opacity"] == 0.95
+    finally:
+        core.close()
