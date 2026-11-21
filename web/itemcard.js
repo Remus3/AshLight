@@ -20,7 +20,8 @@
      F-070) and posts /api/wear (no clipboard read: the core files the
      last checked item).
    Empty (no press yet): 4 muted rows that teach the press with the bound
-   item key (snap.hotkeys.eval.key once F-026 lands, else the default) and
+   item key (snap.hotkeys.eval.key; with none bound, the words "the item
+   check key", never a default the client may not have bound: F-026) and
    say that this card stays while the overlay card leaves after its card
    time (snap.overlay_layout.card_s, else 20 s) - the F-151 correction.
 
@@ -56,7 +57,7 @@
   var COMPARE_ROWS = 5;
   var MAX_LINKS = 2;
   var ROW_CHARS = 36;         // plan 03 3.4: the item sentence row budget
-  var DEFAULT_KEY = "Alt+Shift+E";   // app/main.js DEFAULT_EVAL_KEY until F-026
+  var NO_KEY = "the item check key";  // OVL-KEYS-WEB: no bound key, no key named
   var COPY_KEY = "Ctrl+C";    // the game's own item copy (the player presses it)
   var CARD_TIMES = [20, 60, 200];    // TD-18 card time choices; 20 s by default
   var DEFAULT_CARD_S = 20;
@@ -90,13 +91,12 @@
     return out.slice(0, rows);
   }
 
-  /* The bound item key: the core's effective key once F-026 publishes it
-     (snap.hotkeys.eval.key), else the default the client binds. */
+  /* The bound item key (snap.hotkeys.eval.key: the core sets it only
+     while the client registered it), else "" (none is bound). */
   function itemKey(snap) {
     var hk = isObj(snap) && isObj(snap.hotkeys) ? snap.hotkeys : null;
     var ev = hk && isObj(hk.eval) ? hk.eval : null;
-    var key = ev ? str(ev.key) : "";
-    return key || DEFAULT_KEY;
+    return ev ? str(ev.key) : "";
   }
 
   /* The overlay card time in seconds (TD-18: 20, 60 or 200; else 20). */
@@ -111,7 +111,7 @@
      after its card time). */
   function emptyRows(snap) {
     var teach = "Hover an item in game, press " + COPY_KEY + ", then press " +
-      itemKey(snap) + ".";
+      (itemKey(snap) || NO_KEY) + ".";
     var stays = "The check stays here; the overlay card leaves after " +
       cardTime(snap) + " seconds.";
     return wrapRows(teach, ROW_CHARS, 2).concat(wrapRows(stays, ROW_CHARS, 2));
@@ -416,7 +416,7 @@
   };
 
   return {
-    NAME: NAME, REGION: REGION, RETIRES: RETIRES, DEFAULT_KEY: DEFAULT_KEY,
+    NAME: NAME, REGION: REGION, RETIRES: RETIRES, NO_KEY: NO_KEY,
     DEFAULT_CARD_S: DEFAULT_CARD_S, DETAILS_LABEL: DETAILS_LABEL, WEAR_LABEL: WEAR_LABEL,
     EMPTY_WORD: EMPTY_WORD, ROW_CHARS: ROW_CHARS,
     model: model, itemKey: itemKey, cardTime: cardTime, emptyRows: emptyRows,
