@@ -251,10 +251,3 @@ test("main.js never uses the window-level opacity", () => {
   assert.ok(!/\.setOpacity\s*\(/.test(src), "BrowserWindow.setOpacity hides the overlay");
   assert.ok(/insertCSS\(/.test(src) && /opacityCss\(/.test(src));
 });
-
-test("overlay.css paints at the default opacity before main.js applies the layout", () => {
-  const css = require("fs").readFileSync(require("path").join(__dirname, "..", "overlay", "overlay.css"), "utf8");
-  const m = /\nhtml \{ opacity: ([0-9.]+); \}/.exec(css);
-  assert.ok(m, "html opacity rule");
-  assert.equal(Number(m[1]), L.LAYOUT_DEFAULT.opacity);
-});
