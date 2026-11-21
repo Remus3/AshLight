@@ -40,14 +40,11 @@ integrator per batch; verify every builder's claimed commit sha against git
 before review; a red batch suite is reverted and the package deferred (08
 section 4 step 6), not fixed forward on the package branch (session 10
 deviation, bullet below).
-Session-15 lessons (keep in the orchestrator briefs): a
-docs/design/reviews.log line must not contain a bare "|" (it breaks the
-5-field format; test_design_gate); builder "needs <path>" failures are
-handled by a packages.json patch plus a fix round (TC-GGG-CLIENT-CORE
-adjudicator ruling A recorded in the integrate commit 5787074 body;
-OVL-TD05-LEGIBILITY app/test/layout.test.js); builders also run
-tests/test_test_layout.py; the merged tip must equal the verified tip.
-
+Session-15 lessons (same briefs): no bare "|" in a docs/design/reviews.log
+line (breaks the 5-field format; test_design_gate); a builder "needs
+<path>" failure gets a packages.json patch plus a fix round (ruling A in
+5787074's body; OVL-TD05-LEGIBILITY app/test/layout.test.js); the merged
+tip must equal the verified tip.
 
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
@@ -101,9 +98,9 @@ Carried forward (not acted on yet):
   setup.ps1 / run.ps1 with the Electron fetch and client start
   (OVL-ELECTRON-SETUP); tray-only memory <= 250 MB, read from the new client
   sampler (RUN-BUDGET-LOG-CLIENT, wave 14).
-- WAVE-14 OPEN FOLLOW-UPS (rulings W14-1 to W14-4 archived, block "SESSION 13 /done"; TDF-1 to TDF-3 in the next bullet): RUN-BUDGET-LOG-CORE reads luajit figures via the loaded theorycraft package's private _SHARED._proc (a public accessor would be cleaner); merge commit 6b2ada0 carries a wrong title (not rewritten); REL-INSTALL-CMD: zip size not checked against release.json until REL-BUILD-ASSETS.
+- WAVE-14 OPEN FOLLOW-UPS (rulings W14-1 to W14-4 archived, block "SESSION 13 /done"; TDF-1 to TDF-3 next bullet): RUN-BUDGET-LOG-CORE reads luajit figures via theorycraft's private _SHARED._proc (a public accessor is cleaner); merge commit 6b2ada0 carries a wrong title (not rewritten); REL-INSTALL-CMD: zip size not checked against release.json until REL-BUILD-ASSETS.
 - DESIGN FINDINGS OPEN (wave 14, session 12, docs/design/reviews.log, PLAY-TD-19B-FOUR-TABS, none blocking): TDF-1 (S3, medium) #panel-build became 5 auto-fit columns instead of the fixed 3 x 2 grid (for the TD-20 fixed-grid package); TDF-2 (S4, minor) design 0001 section 3 UI-GLANCE tabs bullet still lists five tabs; TDF-3 (S4, minor) web/index.html comment wording.
-- KIT NOTE (for the AUTO-25 kit report, not a note): during the batch 0 suite the loop's own suite_run (owner al-loop.main) held the gate's second slot at the same time, so two whole suites ran in the AshLight tree at once (item 16c says one per tree); that is the likely cause of the selftest port collision. Session 11 /done: no outbound note path for AL exists yet (see KIT DEFECT bullet), so this is recorded here, not sent; it goes in the same MAIN note.
+- KIT NOTE (for the AUTO-25 kit report, not a note): during the batch 0 suite the loop's own suite_run (owner al-loop.main) held the gate's second slot, so two whole suites ran in the AshLight tree at once (item 16c says one per tree), the likely cause of the selftest port collision. Not sent (no outbound path, KIT DEFECT bullet); it goes in the same MAIN note.
 - WAVE-13 FOLLOW-UPS: DATA-SNAP-AT-START: server/al/plug/dataage.py FIX still says "Run scriptsuild.ps1 -Snapshot" (pinned by tests/test_diag_data_age.py); datacredit ATTRIBUTION / ZONE_LEVELS_CREDIT still say "when AshLight was built"; the snapshot child is not in procs.py (stop.ps1 does not stop it; short-lived). TEST-STATE-TEXT-3: itemcheck._alert_text is a call-time import of state.build_alert_text (cycle) until TEST-STATE-TEXT-4, whose files should add server/al/text/itemcheck.py. RUN-BUILD-STAMP-UI: its tests live in app/test/about.test.js (not client_controls.test.js / test_ux_review.py); version text is written twice (app/about.js, web/app.js) held equal by a vm test; the overlay page About shows no version (app/overlay outside files). TC-UPGRADE-PER-SLOT: health.js keeps its own TRADE_SEARCH copy (one host list with F-112). TC-CALC-CONFINE-PROC: a venv python.exe launcher breaks the one-process job limit in fake-child tests (CI and this machine use a real python.exe).
 - DESIGN FINDINGS OPEN (wave 13, docs/design/reviews.log): TST3-1 (S4, design 0001 section 9 still names state.py as card text home; folds with TSM2-1); BS-1, BS-2 (S4, RUN-BUILD-STAMP-UI Settings About fold copy, ", dev"); TUP-1 (S3), TUP-2 (S4) (TC-UPGRADE-PER-SLOT row link wording / layout). ZGS-1 to ZGS-3 FIXED in the fix round (0e3836c).
 - WAVE-12 FOLLOW-UPS: DATA-GUIDE-MERGE dropped the notes file's Cruel "C" act default, so a Cruel zone shows no guide text (0030 amendment; a Cruel guide entry is a later DATA-GUIDE row), playcards.py still reads the empty snapshot key zone_note, test_install_payload / test_release_tool keep zone_notes.json as fixture strings; DEP-10 uninstall.ps1 uses Remove-Item -Recurse on fixed-name folders (PowerShell 5.1 can follow a junction inside them; low) and ships the AL_UNINSTALL_FAKE test seam (safe-failing); registry, shortcut and task steps wait for REL-UNINSTALL-SHELL; REL-INSTALL-SHELL refuses a rewrite while the payload has no scripts/uninstall.ps1 (DEP-10 now on main); TEST-WEB-ASSEMBLE: panel stylesheets in web/panels/ must follow design 0001 section 11 and panel scripts load before app.js; TC-WEIGHTS-DELTA-STORE added GET/PUT "defaults" and "changed" and WeightsStore.reset() with no route (a reset button is a later package); README says the overlay appears "once the game is running" (0011 says gated by the log).
@@ -115,8 +112,8 @@ Carried forward (not acted on yet):
 - DESIGN FINDINGS OPEN (session 10, docs/design/reviews.log): SU-1, SU-2
   (PLAY-TD-12), SRW-1 to SRW-3 (RUN-TAIL-HEAL-CORE), OLD-1, OLD-2 (medium);
   plus FMT-1/2, ZR-1, OLD-3, OLD-4, TWR-1 to TWR-3, TCS-2 (wave 9 block in the archive).
-- Play-fit markers: n.txt deleted (PLAY-N-FIT, wave 11); g.txt stays (FIX-IDLE-WORD); tab-build, tab-run, tab-settings wait for their regions. Delete each when tests/test_play_fit.py is green without it.
-- Design findings left OPEN in docs/design/reviews.log: BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (folded by PLAY-TD-11 as .edge; see CTX-3), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper), DPC-2 (note below), F1 (PLAY-TD-23-RECORDS); F2 closed (barStatus used since PLAY-TD-09C-BAR). Wave 7 (all PASS WITH FINDINGS, no S1 or S2): PH-1 to PH-3 (OVL-PARTS-PAGE; PH-1 parts.item off drops press status cards), TVC-1 to TVC-3 (alert sentence lengths, design 0001 section 9 alert templates owed), DS-1, DS-2, DS-4 (stores Checks copy), KC-1, KC-2, CTX-1 to CTX-6 (Copy fallback cause and announce, .edge contrast), IC-1 to IC-4 (empty head announced; I wear this posts to /api/wear before TC-WORN-WIRE, latent; literal key until F-026), STRIP-1 (20 px bar word worsens BAR-1 at 320 px), STRIP-2.
+- Play-fit markers: g.txt stays (FIX-IDLE-WORD); tab-build, tab-run, tab-settings wait for their regions. Delete each when tests/test_play_fit.py is green without it.
+- Design findings left OPEN in docs/design/reviews.log: BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (folded by PLAY-TD-11 as .edge; see CTX-3), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper), DPC-2 (note below), F1 (PLAY-TD-23-RECORDS); F2 closed (barStatus used since PLAY-TD-09C-BAR). Wave 7 (PASS WITH FINDINGS, no S1 / S2): PH-1 to PH-3 (OVL-PARTS-PAGE; PH-1 parts.item off drops press status cards), TVC-1 to TVC-3 (alert lengths; design 0001 section 9 alert templates owed), DS-1, DS-2, DS-4 (stores Checks copy), KC-1, KC-2, CTX-1 to CTX-6 (Copy fallback cause / announce, .edge contrast), IC-1 to IC-4 (empty head announced; I wear this posts to /api/wear before TC-WORN-WIRE, latent; literal key until F-026), STRIP-1 (20 px bar word worsens BAR-1 at 320 px), STRIP-2.
 - Review folds must file new rows already tagged "BLOCKED: session wave <n>" (06 line 39); an untagged fold row is what kept HALT in wave 6.
 - a bullet is loop work only when it starts with 'LOOP:'; none today.
 - SESSION 14: builders ran in hand-made sidecar worktrees (OA-12 hook,
@@ -129,17 +126,15 @@ Carried forward (not acted on yet):
   ACTS bullet).
 - OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
 - OPERATOR before the first push (OA-5; rows GP-03, GP-09; optional): name another holder, owner or repository name; default: the gh account and AshLight.
-- OPERATOR ACTS (the one batched ask is docs/plan/09-operator-acts.md,
-  OA-1 to OA-37; all optional, every default is in force, no open wave
-  waits; the letters are the old hand-off acts): (a) in-map FPS / RAM
-  test, Windowed Fullscreen: the FPS half is one normally played map
-  (OA-33; rows OVL-CHECK wave 21, OVL-FPS parked), the RAM half needs no
-  act (rows RUN-BUDGET-LOG-CORE and RUN-BUDGET-LOG-CLIENT wave 14); (b)
-  LIVE-1 play session and one login for TEST-LIVE-CLICKS: no separate
-  session is asked any more (07 Coverage, CARRY-12); tick the parse-ledger
-  consent once, then play as usual (OA-19, OA-20; row RUN-LEDGER-WIRE wave
-  16); (c) TC-OAUTH-REG when GGG reopens registration (OA-36; the ready
-  application file comes with row DATA-GGG-APPLICATION, wave 1); (e) logon
+- OPERATOR ACTS (one batched ask, docs/plan/09-operator-acts.md, OA-1 to
+  OA-37; all optional, defaults in force, no wave waits; letters are the
+  old hand-off acts): (a) in-map FPS test, Windowed Fullscreen, one normal
+  map (OA-33; OVL-CHECK wave 21, OVL-FPS parked; the RAM half needs no act,
+  RUN-BUDGET-LOG-CORE / -CLIENT wave 14); (b) no separate LIVE-1 session
+  (07 Coverage, CARRY-12): tick the parse-ledger consent once, then play
+  (OA-19, OA-20; RUN-LEDGER-WIRE wave 16), one login for TEST-LIVE-CLICKS;
+  (c) TC-OAUTH-REG when GGG reopens registration (OA-36; application from
+  DATA-GGG-APPLICATION, wave 1); (e) logon
   autostart scripts\autostart.ps1 -Enable (OA-7; decision 0011, OFF by
   default); (g) UA contact in config/local.json + web_data on (OA-8;
   poe.ninja / share-URL features only); (k) review decision 0017 (trade
@@ -152,65 +147,55 @@ Carried forward (not acted on yet):
 - OPERATOR DECISION: phone view needs LAN access; CLAUDE.md keeps LAN off
   (OA-27, ruling Q-11; default P0, no network path; units CARRY-19,
   OPEN-18, F-205; no package until the operator names a design).
-- TC-OAUTH-REG (row TC-OAUTH-REG, parked; row DATA-GGG-APPLICATION, wave
-  1, prepares the application and decision 0048 and narrows the scope to
-  account:characters): BLOCKED until GGG reopens OAuth app registration
-  (public client PKCE, scopes account:profile + account:characters, fixed
-  loopback redirect in 8960-8979; the PoE2 API gives equipment / skills /
-  passives, no backpack / stash). GGG-DOCS-WATCH (decision 0044) checks
-  daily and writes ops/runtime/ggg_docs/REG_OPEN; registration still
-  CLOSED (read back 2026-11-18: no flag).
-- O1 / TC-IMPORT (rows TC-IMPORT and TC-IMPORT-UI, parked; groundwork rows
-  TC-GGG-RATELIMIT wave 15, TC-CHARJSON-SHAPES and TC-GGG-LISTENER wave
-  16, TC-GGG-CLIENT-CORE wave 17): live character import via the ggg_api
-  provider (theorycraft/providers.py stub) after registration. TC-CURX
-  (row TC-CURX) also BLOCKED on registration: no package in the plan (07
-  Coverage, F-206), the row stays BLOCKED.
-- KIT DEFECT for MAIN (rows AUTO-25 wave 2: draft the note;
-  LOOP-KIT-REPORT-SEND parked on OA-21: send it; not yet reported: no
-  destination inbox / fleet roster configured for AL, so no outbound note
-  path): fleet_suite_gate.py line ~672 crashed once with `_rec(a)`
-  returning None while other agents were queued (AttributeError on .get);
-  a retry worked. Report via a note to MAIN once a delivery path exists
-  (config loop.dest_inboxes MAIN or FLEET_ROSTER), under the 12/day cap.
-  Second defect, same note and rows (ruling R3, 2026-11-18): the kit
-  fleet_identity pre-push check reads no tag object or tagger and matches
-  three trailer keys and three names only; tools/push_guard.py covers
-  both locally (decision 0046 amendment). Third line, same note (worktree
-  probe 2026-11-18): for a PowerShell `cd <backslash path>; git add -N`
-  call the claims hook recorded a path that does not exist (harmless;
-  builders use Bash with forward slashes). Nothing is sent: read back
-  2026-11-18, the outbox holds no note, and decision 0046 now says NOT
-  yet reported.
-  A gate traceback seen in a wave is one more line here, not a note.
-- AUDIT-P8-LOW (folded into rows RUN-START-REASON-CORE wave 18,
-  RUN-OBS-LOGS-SHELL and RUN-LADDER-TICK wave 19, RUN-REPORT-FIELDS wave
-  22, RUN-BUDGET-TESTS-DASH wave 23, RUN-P8-8-CHARMIX wave 32): P8-3
-  overlay corePort (app/main.js) takes AL_PORT / config "port" without the
-  8960-8979 check; P8-4 core --port flag outside the block still binds
-  (refuse; 0 for tests only); P8-5 tick_ladder re-dedupes all session maps
-  twice per 0.5 s tick (about 10 ms at 200 + 500 maps); P8-6 dashboard
-  console / CSP test never renders the Checks rows, a hint or ladder_all;
-  P8-7 diag.redact can blank a word in fixed report text matching a
+- TC-OAUTH-REG (row parked; DATA-GGG-APPLICATION, wave 1, prepared the
+  application, decision 0048 narrows the scope to account:characters):
+  BLOCKED until GGG reopens OAuth app registration (public client PKCE,
+  fixed loopback redirect in 8960-8979; the PoE2 API gives equipment /
+  skills / passives, no backpack / stash). GGG-DOCS-WATCH (decision 0044)
+  writes ops/runtime/ggg_docs/REG_OPEN; still CLOSED (read back 2026-11-20:
+  no flag).
+- O1 / TC-IMPORT (rows TC-IMPORT, TC-IMPORT-UI parked; groundwork
+  TC-GGG-RATELIMIT w15, TC-CHARJSON-SHAPES and TC-GGG-LISTENER w16,
+  TC-GGG-CLIENT-CORE w17, all merged): live character import via the
+  ggg_api provider (theorycraft/providers.py stub) after registration.
+  TC-CURX also BLOCKED on registration: no package (07 Coverage, F-206).
+- KIT DEFECT for MAIN (rows AUTO-25 wave 2 drafts, LOOP-KIT-REPORT-SEND
+  parked on OA-21 sends; NOT yet reported: no destination inbox / fleet
+  roster for AL; send once config loop.dest_inboxes MAIN or FLEET_ROSTER
+  exists, under the 12/day cap): (1) fleet_suite_gate.py line ~672 crashed
+  once, `_rec(a)` returned None while agents were queued (AttributeError on
+  .get), a retry worked; (2) (ruling R3, 2026-11-18) the kit fleet_identity
+  pre-push check reads no tag object or tagger and matches three trailer
+  keys and three names only (tools/push_guard.py covers both locally,
+  decision 0046 amendment); (3) (probe 2026-11-18) for a PowerShell
+  `cd <backslash path>; git add -N` the claims hook recorded a nonexistent
+  path (harmless; builders use Bash, forward slashes). Read back 2026-11-18:
+  outbox holds no note. A gate traceback seen in a wave is one more line
+  here, not a note.
+- AUDIT-P8-LOW (rows RUN-START-REASON-CORE w18, RUN-OBS-LOGS-SHELL and
+  RUN-LADDER-TICK w19, RUN-REPORT-FIELDS w22, RUN-BUDGET-TESTS-DASH w23,
+  RUN-P8-8-CHARMIX w32): P8-3 overlay corePort (app/main.js) takes AL_PORT
+  / config "port" without the 8960-8979 check; P8-4 core --port outside
+  the block still binds (refuse; 0 for tests); P8-5 tick_ladder re-dedupes
+  all session maps twice per 0.5 s tick (~10 ms at 200 + 500 maps); P8-6
+  dashboard console / CSP test never renders Checks rows, a hint or
+  ladder_all; P8-7 diag.redact can blank a fixed-text word matching a
   character / contact name; P8-8 "This session" ladder and Maps card mix
-  characters after a switch (and a map open across a game restart is saved
+  characters after a switch (a map open across a game restart is saved
   under neither).
-- CODE-HEALTH-FOLLOWUP (folded into rows TEST-STATE-EQUIV and
-  RUN-DURABLE-CRLF wave 6, TEST-WEB-FMT wave 8, RUN-ZONE-RESET wave 9,
-  TEST-STATE-TEXT-2 wave 11, TEST-STATE-TEXT-3 wave 13, TEST-STATE-TEXT-4
-  wave 15, TEST-STATE-TEXT-PINS wave 19; details in
-  docs/audit/code-health-2026-11-17.md): state.py split (card / event text
-  out, update design_gate / design-reviewer / loop_prompts / design docs
-  0001-0002 together); web/ pad / duration / clock helper dedup; runtime
-  pid / state / heartbeat files still written CRLF (switch to LF, re-test
-  stop.ps1 / run.ps1).
-- LIVE rows needing the operator or the live game (all BLOCKED in ROADMAP):
-  LIVE-1 remaining unseen lines; TEST-LIVE-CLICKS (operator logs in once
-  while the core runs; the old second unblock path is struck: 01 Rejected
-  R-1, the floor bars any input to the game); OVL-BUDGET active in-map
-  measurement; OVL-FPS in-map FPS test; TC-BUILDFILE-LIVE (load an
-  AshLight .build in game once); LIVE-FILTER-MERGE (merge a real filter);
-  waystone / search-string / filter in-game checks. Rows: LIVE-1 =
+- CODE-HEALTH-FOLLOWUP (rows TEST-STATE-EQUIV, RUN-DURABLE-CRLF w6,
+  TEST-WEB-FMT w8, RUN-ZONE-RESET w9, TEST-STATE-TEXT-2 w11, -3 w13, -4
+  w15, TEST-STATE-TEXT-PINS w19; docs/audit/code-health-2026-11-17.md):
+  state.py split (card / event text out; design_gate, design-reviewer,
+  loop_prompts, design 0001-0002 together); web/ pad / duration / clock
+  helper dedup; runtime pid / state / heartbeat files still CRLF (switch to
+  LF, re-test stop.ps1 / run.ps1).
+- LIVE rows needing the operator or the live game (all BLOCKED): LIVE-1
+  unseen lines; TEST-LIVE-CLICKS (operator logs in once while the core
+  runs; 01 Rejected R-1 struck the other path, the floor bars game input);
+  OVL-BUDGET in-map measurement; OVL-FPS in-map test; TC-BUILDFILE-LIVE
+  (load an AshLight .build once); LIVE-FILTER-MERGE; waystone /
+  search-string / filter in-game checks. Rows: LIVE-1 =
   RUN-LEDGER-CORE wave 5, RUN-LEDGER-WIRE wave 16, RUN-LEDGER-REPORT wave
   18, RUN-LIVE1-FIXTURES parked; TEST-LIVE-CLICKS = RUN-LIVE-CLICKS-STRIKE
   wave 1, RUN-LIVE-CLICKS-CLOSE parked; OVL-BUDGET = RUN-BUDGET-LOG-CORE
@@ -281,8 +266,7 @@ Carried forward (not acted on yet):
   open (wave 4 today: PUB-GO-DECISION, GP-02).
 - NOTE (session 15 /done, 2026-11-20): reap --apply printed "reap applied: 0
   removed, 3 kept, 0 listed (base main)"; read back: 4 worktrees (main,
-  lanes 0 to 2), 0 worktree-* branches. The 13 w17 worktrees were reaped
-  earlier in session 15. roadmap_fold: 16 row files applied, 13 done rows
+  lanes 0 to 2), 0 worktree-* branches. roadmap_fold: 16 row files applied, 13 done rows
   archived, 0 rows "BLOCKED: session wave 17" (505bb8b).
 
 Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078 to 0080),
@@ -330,7 +314,7 @@ roadmap fold 505bb8b (session 15 /done); the DPC-1 note is closed
 
 Do NOT redo (sessions 6 to 14): docs/handoff-archive/.
 
-In flight: none. No wave agent or lane run started by session 15 (wave 17 closed 2026-11-20); fleet_checklist stale: none (read 2026-11-20 at session 15 /done); HALT absent (loop live); REG_OPEN absent (registration closed).
+In flight: none. No wave agent or lane run started by session 15; fleet_checklist stale: none (read 2026-11-20 at session 15 /done); HALT absent (loop live); REG_OPEN absent (registration closed).
 
 Status (session 15 /done, 2026-11-20, fresh runs read back): whole suite
 through the suite gate 4399 passed / 6 skipped, timing phase 32 passed
