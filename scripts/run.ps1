@@ -16,6 +16,12 @@
   verify-exe; a full hash only when its size or mtime changed) before the
   client starts; a changed exe is refused, the dashboard opens in the
   browser instead and the log names the fix (run scripts\setup.ps1 again).
+  REL-INSTALLED-RUN-CHECK: an installed copy ships no tools\electron_pin.py;
+  there run.ps1 checks the private runtime's electron.exe itself against
+  the shipped config\electron_pin.json entry whose zip SHA-256 the runtime
+  folder's install marker (ashlight-runtime.json) records, with the same
+  size-or-mtime fast path (<home>\build\electron-exe-installed.json), and
+  a refusal names the installer repair, never setup.ps1.
 .PARAMETER Overlay
   Accepted for compatibility; the client (with its overlay) starts by
   default when installed (scripts\setup.ps1 with Node).
@@ -131,6 +137,9 @@ Start-AlRunLog $log 'run' (Get-AlBuildId)
 # The client's Electron (Get-AlElectron): the checkout's npm ci dist, or the
 # installed copy's private runtime; '' when the install marker names none.
 $electron = [string](Get-AlElectron)
+# REL-INSTALLED-RUN-CHECK: the install home ($null in a checkout) picks the
+# electron.exe check route and the fix the log lines name.
+$alInstallHome = Get-AlInstallHome
 $haveElectron = [bool]($electron -and (Test-Path -LiteralPath $electron -PathType Leaf))
 
 # CORE-AUTOSTART (decision 0011): the logon task passes -Autostart; the
@@ -286,6 +295,13 @@ function Get-AlPlan {
 # setup.ps1); ok only with exit 0 and its "electron.exe ok" line (a
 # machine no pin covers has no trusted exe).
 function Test-AlElectronExe {
+    # REL-INSTALLED-RUN-CHECK: an installed copy has no tools\electron_pin.py
+    $inst = Get-Variable -Name alInstallHome -ValueOnly -ErrorAction SilentlyContinue
+    if ($inst) {
+        return (Test-AlInstalledElectronExe -Exe $electron `
+            -PinFile (Join-Path $AlEnvRoot 'config\electron_pin.json') `
+            -CheckFile (Join-Path ([string]$paths.build) 'electron-exe-installed.json'))
+    }
     $ErrorActionPreference = 'Continue'
     $out = @()
     $rc = 1
@@ -304,6 +320,107 @@ function Test-AlElectronExe {
         if ($line) { Write-AlLog "run: electron: $line" }
     }
     return ($rc -eq 0 -and [bool](@($out) -match '^electron\.exe ok'))
+}
+
+# REL-INSTALLED-RUN-CHECK: a small JSON file as an object, or $null when it
+# is missing, larger than 64 KB or not JSON.
+function Read-AlSmallJson([string]$Path) {
+    try {
+        if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+        if ((Get-Item -LiteralPath $Path).Length -gt 65536) { return $null }
+        return ((Get-Content -LiteralPath $Path -Raw) | ConvertFrom-Json)
+    } catch {
+        return $null
+    }
+}
+
+function Get-AlJsonField($Doc, [string]$Name) {
+    if ($null -eq $Doc -or -not ($Doc.PSObject.Properties.Name -contains $Name)) { return $null }
+    return $Doc.$Name
+}
+
+# REL-INSTALLED-RUN-CHECK (decisions 0063, 0068): the installed copy's check
+# of its private electron.exe, with no Python and no tools\electron_pin.py
+# (config\ship_list.json ships neither the tool nor its cache helpers).
+# The runtime folder's install marker (ashlight-runtime.json, written by the
+# installer after the pinned zip's size and SHA-256 matched) names the zip;
+# the shipped config\electron_pin.json arch entry with that zip_sha256 gives
+# exe_size and exe_sha256. The size is checked every start; the full SHA-256
+# runs only when size or mtime changed since the last good check recorded in
+# CheckFile. Ok only when every step holds; each result is one log line.
+function Test-AlInstalledElectronExe([string]$Exe, [string]$PinFile, [string]$CheckFile) {
+    $ErrorActionPreference = 'Continue'
+    $why = $null
+    $spec = $null
+    $marker = Read-AlSmallJson (Join-Path (Split-Path -Parent $Exe) 'ashlight-runtime.json')
+    $pin = Read-AlSmallJson $PinFile
+    $zipSha = [string](Get-AlJsonField $marker 'sha256')
+    if ($null -eq $marker -or [string](Get-AlJsonField $marker 'name') -ne 'electron' -or
+        $zipSha -cnotmatch '^[0-9a-f]{64}$') {
+        $why = 'the Electron runtime has no valid install marker'
+    } elseif ($null -eq $pin -or $null -eq (Get-AlJsonField $pin 'arch')) {
+        $why = 'config\electron_pin.json is missing or unreadable'
+    } elseif ([string](Get-AlJsonField $marker 'version') -cne [string](Get-AlJsonField $pin 'version')) {
+        $why = 'the Electron runtime is not the version this release pins'
+    } else {
+        $arches = Get-AlJsonField $pin 'arch'
+        foreach ($p in @($arches.PSObject.Properties)) {
+            if ([string](Get-AlJsonField $p.Value 'zip_sha256') -ceq $zipSha) { $spec = $p.Value }
+        }
+        if ($null -eq $spec) { $why = 'no pinned Electron zip matches the runtime' }
+    }
+    $wantSha = [string](Get-AlJsonField $spec 'exe_sha256')
+    $wantSize = Get-AlJsonField $spec 'exe_size'
+    if (-not $why -and ($wantSha -cnotmatch '^[0-9a-f]{64}$' -or -not ($wantSize -is [int] -or $wantSize -is [long]) -or
+            [long]$wantSize -le 0)) {
+        $why = 'the Electron pin entry is malformed'
+    }
+    $item = $null
+    if (-not $why) {
+        $item = Get-Item -LiteralPath $Exe -ErrorAction SilentlyContinue
+        if ($null -eq $item -or $item.PSIsContainer) {
+            $why = 'electron.exe missing'
+        } elseif ([long]$item.Length -ne [long]$wantSize) {
+            $why = 'electron.exe size ' + $item.Length + ' differs from the pinned ' + $wantSize
+        }
+    }
+    if ($why) {
+        Write-AlLog "run: electron: refused: $why"
+        return $false
+    }
+    $key = [System.IO.Path]::GetFullPath($Exe)
+    $ticks = [long]$item.LastWriteTimeUtc.Ticks
+    $last = Read-AlSmallJson $CheckFile
+    if ($null -ne $last -and [string](Get-AlJsonField $last 'path') -ieq $key -and
+        [string](Get-AlJsonField $last 'sha256') -ceq $wantSha -and
+        [string](Get-AlJsonField $last 'size') -eq [string]$item.Length -and
+        [string](Get-AlJsonField $last 'mtime_ticks') -eq [string]$ticks) {
+        Write-AlLog 'run: electron: electron.exe ok (unchanged since last check)'
+        return $true
+    }
+    $got = ''
+    try {
+        $got = ([string](Get-FileHash -LiteralPath $Exe -Algorithm SHA256).Hash).ToLowerInvariant()
+    } catch {
+        $got = ''
+    }
+    if ($got -cne $wantSha) {
+        Write-AlLog 'run: electron: refused: electron.exe sha256 differs from the pinned one'
+        return $false
+    }
+    try {
+        $dir = Split-Path -Parent $CheckFile
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $doc = [ordered]@{ path = $key; sha256 = $got; size = [long]$item.Length; mtime_ticks = $ticks }
+        $tmp = $CheckFile + '.tmp'
+        [System.IO.File]::WriteAllText($tmp, (($doc | ConvertTo-Json) -replace "`r`n", "`n") + "`n",
+            [System.Text.Encoding]::ASCII)
+        Move-Item -LiteralPath $tmp -Destination $CheckFile -Force
+    } catch {
+        # the record is only a fast path; the next start hashes again
+    }
+    Write-AlLog 'run: electron: electron.exe ok (hashed)'
+    return $true
 }
 # DESKTOP-CLIENT (decision 0041): the "overlay" component is the client
 # process; it is wanted only when a window is wanted and the browser is not.
@@ -368,13 +485,19 @@ $clientShown = $false
 if (-not $wantOverlay) {
     Write-AlLog 'run: client not requested (-NoOverlay / -NoBrowser / -Browser)'
 } elseif (-not $haveElectron) {
-    Write-AlLog 'run: client not installed - run scripts\setup.ps1 with Node 22.12.0 or newer'
+    # REL-INSTALLED-RUN-CHECK: an installed copy names the installer
+    $fix = 'run scripts\setup.ps1 with Node 22.12.0 or newer'
+    if ($alInstallHome) { $fix = 'run the installer repair (re-run the install line)' }
+    Write-AlLog "run: client not installed - $fix"
 } elseif ($trayOnly -and -not (@($plan.start) -contains 'overlay')) {
     # a live client is left alone: a second --client start would show its window
     Write-AlLog "run: client already running (pid $($plan.status.overlay.pid)); logon start leaves it alone"
 } elseif (-not (Test-AlElectronExe)) {
-    # refused: never start an exe that is not the pinned one
-    Write-AlLog 'run: client NOT started - electron.exe is not the pinned one; run scripts\setup.ps1 again to restore it'
+    # refused: never start an exe that is not the pinned one; an installed
+    # copy has no setup.ps1 route, so its line names the installer repair
+    $fix = 'run scripts\setup.ps1 again to restore it'
+    if ($alInstallHome) { $fix = 'run the installer repair (re-run the install line) to restore it' }
+    Write-AlLog "run: client NOT started - electron.exe is not the pinned one; $fix"
 } else {
     # The app folder (<root>\app: the repository's app\ or the payload's) is
     # the first argument in both modes, never a resources\app folder: the
