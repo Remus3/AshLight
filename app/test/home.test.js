@@ -132,6 +132,30 @@ test("the steamapps and game-folder path shapes are refused, by path text only",
   assert.throws(() => Home.resolve(path.join(lib, "app", "0.1.0", "app"), {}, fs), Home.HomeRefused);
 });
 
+test("refusalNotice shows the refusal sentence once, and nothing for an accepted home", (t) => {
+  const base = tmp(t);
+  for (const parts of [["Steam", "steamapps", "AshLight"], ["Games", "Path of Exile 2", "AshLight"]]) {
+    const home = path.join(base, ...parts);
+    let err = null;
+    try { Home.resolve(APP, { AL_HOME: home }, fs); } catch (e) { err = e; }
+    const calls = [];
+    assert.equal(Home.refusalNotice(err, (...args) => { calls.push(args); }), true);
+    assert.deepEqual(calls, [[Home.homeRefusal(home)]], "exactly the sentence, once");
+    assert.ok(!calls[0][0].includes(base), "no path in the notice");
+  }
+  // an accepted home throws nothing, so nothing is shown; other errors show nothing
+  const calls = [];
+  const show = (...args) => { calls.push(args); };
+  assert.equal(Home.resolve(APP, { AL_HOME: path.join(base, "Home") }, fs).mode, "installed");
+  assert.equal(Home.resolve(APP, {}, fs).mode, "checkout");
+  assert.equal(Home.refusalNotice(new Error("disk"), show), false);
+  assert.equal(Home.refusalNotice(null, show), false);
+  assert.equal(Home.refusalNotice(undefined, show), false);
+  assert.deepEqual(calls, []);
+  // no show function: nothing thrown
+  assert.equal(Home.refusalNotice(new Home.HomeRefused("x"), undefined), false);
+});
+
 test("pythonCmd: the -m form in a checkout, boot.py under the marker runtime in an install", (t) => {
   const co = Home.resolve(APP, {}, fs);
   assert.deepEqual(Home.pythonCmd(co, "server.al.paths", []), { exe: null, args: ["-m", "server.al.paths"] });

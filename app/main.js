@@ -19,7 +19,7 @@
    renderer the sandbox and default-deny navigation / popups / webview;
    the IPC block below answers only the exact sender frame. */
 
-const { app, BrowserWindow, clipboard, globalShortcut, ipcMain, nativeTheme, screen, session } = require("electron");
+const { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, nativeTheme, screen, session } = require("electron");
 const crypto = require("crypto");
 const fs = require("fs");
 const http = require("http");
@@ -49,12 +49,18 @@ const log = AppLog.createLog({ electron: process.versions.electron });
 // REL-CLIENT-HOME (F-049, decision 0059): every runtime path comes from the
 // one client resolver (app/client/home.js, the mirror of paths.install_mode):
 // the checkout's ops/runtime and config, or <home>/data in an install. A home
-// in a Steam library or the game's folder is refused before anything starts.
+// in a Steam library or the game's folder is refused before anything starts,
+// with its sentence in one error box (REL-HOME-REFUSAL-UI).
 let HOME = null;
 try {
   HOME = Home.resolve(__dirname, process.env, fs);
 } catch (e) {
   process.stderr.write("AshLight: " + e.message + "\n");
+  // REL-HOME-REFUSAL-UI: a refused home also shows its one sentence in an
+  // error box (no window for any other error); exit code 2 either way.
+  try {
+    Home.refusalNotice(e, (text) => dialog.showErrorBox("AshLight", text));
+  } catch (err) { /* the stderr line stands */ }
   process.exit(2);
 }
 const REPO = HOME.root;
