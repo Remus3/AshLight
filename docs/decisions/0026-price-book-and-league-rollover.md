@@ -78,3 +78,12 @@ last 10 minutes. The hourly gates, the back-off and the contact rule still
 decide whether any request is made, so overlay-only play keeps fresh prices
 and nothing is asked while nobody plays. Reverses if: poe.ninja asks for
 less polling, or the idle rule misfires in play (then page reads only).
+
+## Amendment 2026-11-21
+
+DATA-PRICE-CADENCE (F-046): item 1's hourly per-type gate is amended by
+decision 0072: Currency hourly, the other 22 types every 3 h, hourly while
+a press matched the type in the last 24 h (at most 200 overview GETs a day
+with no press); a type cached for another league is asked within the hour;
+a release build makes no poe.ninja request until a decision records
+poe.ninja's yes.
