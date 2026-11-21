@@ -1,1 +1,0 @@
-- [ ] DOCS-FRESH-20261121 (data) 1 dated markers in docs are older than 30 days: resolve or re-date each with a source. ACCEPT: docs_fresh.py stale prints 0. ZERO-CLICK: the loop works it. SOURCE: watch refresh docs, filed 2026-11-21.

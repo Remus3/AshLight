@@ -1,1 +1,0 @@
-- [ ] OBS-SHELL-COPY (review) DR (design review) nits from the RUN-OBS-LOGS-SHELL review: split the 22-word HINTS.shown sentence; reword "Then open AshLight again." in app/client/starting.html; make HINTS.starting say when it ends. ACCEPT: the three texts changed and python -m pytest -q tests/test_ascii_lf.py passes. ZERO-CLICK: Copy only; no click. BLOCKED: session wave 20.
