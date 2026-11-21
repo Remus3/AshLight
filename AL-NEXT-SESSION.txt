@@ -4,27 +4,26 @@ SESSION: 16   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 17 done, next wave 18
+WAVE POINTER: wave 18 done, next wave 19
+DEFERRED: TEST-SUITE-SOAK (wave 18): median gate hold 181.3 s over the 75 s target (11 green runs); evidence merged, row re-tagged wave 20 with TEST-SUITE-HOLD-75 (adjudicator ruling C 2026-11-21); re-soak after HOLD-75; branch worktree-w18-TEST-SUITE-SOAK
+KIT (for MAIN, send via the outbox next session): fleet_suite_gate tree-busy waiters lose FIFO order - a freshly queued same-tree suite took each freed slot while four earlier tickets waited 20-31 min (wave 18, 2026-11-21).
+PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
+WAVE-18 RULINGS (2026-11-21): LOOP-CI-ISSUES -> wave 22; PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI -> wave 21; TEST-SHOTS-TABS -> wave 20 option B; AUTO-19 watch.yml issues: write (ruling A); merger pushes after gated batches (08 amended).
 RELEASE HOLD (session 15): do not cut a release between wave 17 and OVL-TD05-PLATE (wave 20): app/main.js still inserts the old 0.9-1.0 page opacity over the new overlay plate (text stays above the contrast floor meanwhile).
 WAVE-17 FOLLOW-UPS (session 15, design findings OPEN, session items): SC-1 social card tagline small in half-size thumbnails (scale to about 1.0, regenerate), SC-3 margin nit; OVL-1 overlay reload full-opacity flash (clears with OVL-TD05-PLATE), OVL-2 design 0001 scale floor 0.86 not pinned to LIMITS.scale by a test; BG-9 wiki link dropped from gear / gem rows, BG-10 always-open details #filter-more (convert to a div); the server-side .build left-out note text in server/al/theorycraft/buildfile.py is still long (suggest "No passives yet. Turn on web data."). New wave-18 rows filed session 15: TEST-SHOTS-TABS, REL-HOME-REFUSAL-UI, PLAY-TD-19E-ITEM-TEXT.
-WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW-3, OVL-KEYS-WEB KW-7, TC-CALC-OPTIN-BUTTON CB-4..CB-6. Research 0039 CHARJSON-SHAPES item can be marked done by TC-CHARJSON-SHAPES (not in its files). TC-CHARJSON-SHAPES class_names map has no caller yet (paste.py, TC-IMPORT). docs/design/0001 still says five tabs / Items and prices tab (TEST-DOCS-FACTS-UI does not check it). 12 LIVE rows filed (LIVE-1-* and LIVE-WAYSTONE, BLOCKED on the first live ledger hit). Orchestration note: several task notifications carried invented commit shas or recycled results; every sha was read back from git before review and merge.
+WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW-3, OVL-KEYS-WEB KW-7, TC-CALC-OPTIN-BUTTON CB-4..CB-6. Research 0039 CHARJSON-SHAPES item can be marked done by TC-CHARJSON-SHAPES (not in its files). TC-CHARJSON-SHAPES class_names map has no caller yet (paste.py, TC-IMPORT). docs/design/0001 still says five tabs / Items and prices tab (TEST-DOCS-FACTS-UI does not check it). 12 LIVE rows filed (LIVE-1-* and LIVE-WAYSTONE, BLOCKED on the first live ledger hit). Orchestration note: task notifications carried invented shas; read every sha back from git.
 WAVE-15 FOLLOW-UPS: setAutostart in app/client/launcher.js still spawns bare powershell.exe (pinned by app/test/autostart_switch.test.js:70; shrink-only BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py) - file a row to switch it to psExe(). tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt (waves 1 to 9 escape counts and rulings; block "SESSION 11 /done": waves 10 to 12, sessions 7 to 10) and AL-2026-11-20.txt (block "SESSION 12 /done": the Wave 13 line, WAVE-13 RULINGS and DEVIATIONS (owed checks stay in OWED LIVE CHECKS), session 11 Do NOT redo, reap note and LOOP RECORDS read-back, the 2026-11-18 quote check); block "SESSION 13 /done": the Wave 14 line, WAVE-14 RULINGS, session 12 reap note and Do NOT redo; block "SESSION 14 /done": the Wave 15 and Wave 16 lines, session 13 reap note and Do NOT redo; block "SESSION 15 /done": session 14 reap note and Do NOT redo.
 
-Next action: start wave 18 of docs/plan/07-execution-plan.md: dispatch
+Next action: start wave 19 of docs/plan/07-execution-plan.md: dispatch
 one start agent (docs/plan/08-orchestration.md section 1, argument wave
-18), then the wave (08 sections 2 to 7); packages from
-`python tools/plan_check.py wave 18`; resume at the first unmerged package
-per decision 0077; then onward per 07's session grouping. The wave 18 start
-must ALSO move GP-10, AUTO-19 and LOOP-CI-ISSUES into wave 18 with a
-docs/plan/packages.json plus docs/plan/07 patch: their parked conditions
-now read true (origin exists and is private, GP-09 flipped; GP-10 also
-needed PUB-SWEEP-OWN-ADDRESS, merged in wave 17). Run exactly as 08 says:
-ONE background orchestrator agent for the wave with a real background watch
-on the progress files; merge batches of 4. Ask the operator nothing (every
-operator item has a default in force). The main session only dispatches;
-every command runs in a sub-agent, in the main checkout.
-1. Waves 10 to 17 are closed (sessions 12 to 15).
+19), then the wave (08 sections 2 to 7); packages from
+`python tools/plan_check.py wave 19`; resume at the first unmerged package
+per decision 0077; then onward per 07's session grouping. Run exactly as 08
+says: ONE background orchestrator agent with a real background watch on the
+progress files; merge batches of 4. Ask the operator nothing. The main
+session only dispatches; every command runs in a sub-agent.
+1. Waves 10 to 18 are closed (sessions 12 to 16).
 2. Go-public track: the repository exists and is PRIVATE; it stays private
    until the plan-04 flip gates hold (GP-12). Push main only through
    fleet_gitlock, never force. Status bullet GO-PUBLIC STATUS below.
@@ -296,22 +295,9 @@ Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
 list before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, core, overlay or loop (08, Rules).
 
-Acceptance: GP-10 and AUTO-19 are listed by `python tools/plan_check.py
-wave 18` (LOOP-CI-ISSUES: wave 22; plan_check ok), and wave 18 is
-closed as 08 section 7 says (open-row command for wave 18 prints "none
-open", git status --short empty on main, leak sweep clean, last batch
-suite and npm test green, git show HEAD:AL-NEXT-SESSION.txt holds "WAVE
-POINTER: wave 18 done, next wave 19"), any deferred package re-tagged with
-a ruling, and no row still carries "BLOCKED: session wave 18".
+Acceptance: wave 19 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 19 done, next wave 20"), no row carries "BLOCKED: session wave 19".
 
-Do NOT redo (session 15, all on main and pushed): f204f99 merged as
-a791895 and pushed; wave 17 start; all 12 wave-17 packages built,
-independently verified (and design-reviewed where flagged), merged and
-pushed in 3 batches (integrate commits 5787074, 13e22f9, 49e0cd3, 126d428;
-suites 4341 / 4365 / 4399 passed, npm 556 / 556 / 574); wave close
-0440372, pointer "wave 17 done, next wave 18"; 13 w17 worktrees reaped;
-roadmap fold 505bb8b (session 15 /done); the DPC-1 note is closed
-(tests/test_contact_field.py checks the "Prices and web data" card).
+Do NOT redo (sessions 15 and 16, all on main and pushed): wave 17 (12 packages, 3 batches, close 0440372) and wave 18 (closed 2026-11-21, main = origin/main); worktrees reaped; the DPC-1 note is closed (tests/test_contact_field.py).
 
 Do NOT redo (sessions 6 to 14): docs/handoff-archive/.
 
