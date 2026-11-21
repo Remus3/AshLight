@@ -1,6 +1,6 @@
 AL NEXT SESSION
 ---------------
-SESSION: 14   (FLEET item 13 counter; /done writes n+1)
+SESSION: 15   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
@@ -11,17 +11,34 @@ Wave 15 (session 13): 13 session packages plus the carried TC-CALC-CONFINE-LUA, 
 WAVE-15 FOLLOW-UPS: setAutostart in app/client/launcher.js still spawns bare powershell.exe (pinned by app/test/autostart_switch.test.js:70; shrink-only BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py) - file a row to switch it to psExe(). tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt (waves 1 to 9 escape counts and rulings; block "SESSION 11 /done": waves 10 to 12, sessions 7 to 10) and AL-2026-11-20.txt (block "SESSION 12 /done": the Wave 13 line, WAVE-13 RULINGS and DEVIATIONS (owed checks stay in OWED LIVE CHECKS), session 11 Do NOT redo, reap note and LOOP RECORDS read-back, the 2026-11-18 quote check); block "SESSION 13 /done": the Wave 14 line, WAVE-14 RULINGS, session 12 reap note and Do NOT redo.
 
-Next action: start wave 16 of docs/plan/07-execution-plan.md ("Wave 16:
-theorycraft, loop and watchers, reliability and observability"; packages
-from `python tools/plan_check.py wave 16`, e.g. OVL-KEYS-WEB, RUN-LEDGER-WIRE,
-RUN-OBS-LOGS-PY, TC-CALC-OPTIN-BUTTON, REL-UPDATE-SWITCH; then onward per
-07's session grouping), run exactly as docs/plan/08-orchestration.md says:
-ONE background orchestrator agent for the wave with a real background watch
-on the progress files; merge batches of 4. Ask the operator nothing (every
-operator item has a default in force). The main session only dispatches;
-every command runs in a sub-agent, in the main checkout.
-1. Dispatch one start agent (08 section 1, argument wave 16), then wave 16
-   (08 sections 2 to 7). Waves 10 to 15 are closed (sessions 12 and 13).
+Next action: FIRST merge the missed OVL-KEYS-WEB design fix (step 0
+below), then start wave 17 of docs/plan/07-execution-plan.md ("Wave 17:
+go-public, theorycraft, tests and code seams"; packages from
+`python tools/plan_check.py wave 17`, e.g. PLAY-TD-19C-BUILD-GRID,
+OVL-TD05-LEGIBILITY, DATA-CONTACT-FIELD, REL-CLIENT-HOME,
+TC-CALC-VERIFY-USE; resume at the first unmerged package per decision
+0077; then onward per 07's session grouping), run exactly as
+docs/plan/08-orchestration.md says: ONE background orchestrator agent for
+the wave with a real background watch on the progress files; merge batches
+of 4. Ask the operator nothing (every operator item has a default in
+force). The main session only dispatches; every command runs in a
+sub-agent, in the main checkout.
+0. MISSED MERGE (found by session 14 /done reap, 2026-11-20): OVL-KEYS-WEB's
+   design fix-round commit f204f99 ("design(OVL-KEYS-WEB): key answers in
+   the overlay group's polite region, fields in that group, shorter Play
+   line and copy (KW-1 to KW-4, KW-6)", 18:59) is NOT on main: merge
+   7438154 (19:08) took the earlier tip 019b65f, so the KW-1 (S2) fix the
+   reviews.log PASS covers (e5b7e56..f204f99) never landed. f204f99 is a
+   child of 019b65f and git merge-tree with main is clean. Read back:
+   `git merge-base --is-ancestor f204f99 main` fails. Merge it (its files:
+   app/test/hotkeys_view.test.js, server/al/hints.py, web/hotkeys.js,
+   web/index.html), run the files tools/test_select.py names plus the whole
+   suite through the gate and npm test, push; then
+   `fleet_done.py reap --apply` removes worktree w16-OVL-KEYS-WEB (kept,
+   1 commit not on main by patch). Do this before OVL-TD05-LEGIBILITY
+   (deps OVL-KEYS-WEB) and PLAY-TD-19C-BUILD-GRID (web/index.html).
+1. Dispatch one start agent (08 section 1, argument wave 17), then wave 17
+   (08 sections 2 to 7). Waves 10 to 16 are closed (sessions 12 to 14).
 2. Go-public track: the repository exists and is PRIVATE; it stays private
    until the plan-04 flip gates hold (GP-12). Push main only through
    fleet_gitlock, never force. Status bullet GO-PUBLIC STATUS below.
@@ -107,6 +124,31 @@ Carried forward (not acted on yet):
 - Design findings left OPEN in docs/design/reviews.log: BAR-1 bar word at 320 px, BAR-2 design 0001 still says live-region cap 12 (tests say 11), PC-1 bonus-row cue (folded by PLAY-TD-11 as .edge; see CTX-3), PC-2 title cut, BL-4 Old build / Wrong class copy in playview.py, N14-5 session-only fallback Hide (checks.js exports no write helper), DPC-2 (note below), F1 (PLAY-TD-23-RECORDS); F2 closed (barStatus used since PLAY-TD-09C-BAR). Wave 7 (all PASS WITH FINDINGS, no S1 or S2): PH-1 to PH-3 (OVL-PARTS-PAGE; PH-1 parts.item off drops press status cards), TVC-1 to TVC-3 (alert sentence lengths, design 0001 section 9 alert templates owed), DS-1, DS-2, DS-4 (stores Checks copy), KC-1, KC-2, CTX-1 to CTX-6 (Copy fallback cause and announce, .edge contrast), IC-1 to IC-4 (empty head announced; I wear this posts to /api/wear before TC-WORN-WIRE, latent; literal key until F-026), STRIP-1 (20 px bar word worsens BAR-1 at 320 px), STRIP-2.
 - Review folds must file new rows already tagged "BLOCKED: session wave <n>" (06 line 39); an untagged fold row is what kept HALT in wave 6.
 - a bullet is loop work only when it starts with 'LOOP:'; none today.
+- SESSION 14 (wave 16) carry: design findings OPEN in reviews.log: LW-1 to
+  LW-3 (RUN-LEDGER-WIRE), KW-7 (OVL-KEYS-WEB), CB-4 to CB-6
+  (TC-CALC-OPTIN-BUTTON); research note 0039's CHARJSON-SHAPES item not yet
+  marked done (outside TC-CHARJSON-SHAPES's files; the next package owning
+  docs/research/0039 or the integrator marks it); builders ran in hand-made
+  sidecar worktrees because the sidecar worktree hook (OA-12, decision
+  0012) is still not wired.
+- ORCHESTRATION NOTE (session 14, keep in every orchestrator brief):
+  several sub-agent task notifications carried commit hashes that did not
+  exist or results from other agents; every hash was read back from git
+  before merge. Also check that the merged branch tip is the reviewed tip
+  (the f204f99 miss, Next action step 0).
+- OPERATOR (optional, default in force): OA-19 / OA-20 tick the new
+  parse-ledger consent line in Settings now that RUN-LEDGER-WIRE landed,
+  then play as usual; the other OA items carry forward unchanged (OPERATOR
+  ACTS bullet).
+- NOTE (session 14 /done, 2026-11-20): fleet_done.py reap --apply removed
+  11 w16-* package / integrator worktrees (clean, every commit on main by
+  patch, branches deleted) and listed w16-OVL-KEYS-WEB (1 commit not on main
+  by patch: f204f99, Next action step 0); a dry-run after printed "reap
+  dry-run: 0 removable, 3 kept, 1 listed (base main)"; read back: 5
+  worktrees (main, lanes 0 to 2, w16-OVL-KEYS-WEB), 1 worktree-* branch
+  (worktree-w16-OVL-KEYS-WEB). roadmap_fold: 25 row files applied (12 new:
+  LIVE-1-* and LIVE-WAYSTONE; 13 done flipped), 13 done rows archived, 0
+  rows left with "BLOCKED: session wave 16" (b919850).
 - OPERATOR before wave 1 (OA-12 with OA-6; row AUTO-26; optional, wave 1 does not wait): paste decision 0012's two hook entries into .claude/settings.json. In force without it: hand-made sidecar worktrees (probe passed 2026-11-18; rulings LE-92, LE-99, LE-100).
 - OPERATOR before the first push (OA-5; rows GP-03, GP-09; optional): name another holder, owner or repository name; default: the gh account and AshLight.
 - OPERATOR ACTS (the one batched ask is docs/plan/09-operator-acts.md,
@@ -296,12 +338,20 @@ Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
 list before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, core, overlay or loop (08, Rules).
 
-Acceptance: wave 16 is closed as 08 section 7 says (open-row command for
-wave 16 prints "none open", plan_check ok, git status --short empty on main,
-leak sweep clean, last batch suite and npm test green, git show
-HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 16 done, next wave 17"),
-any deferred package re-tagged with a ruling, and no row still carries
-"BLOCKED: session wave 16".
+Acceptance: f204f99 is an ancestor of main (git merge-base --is-ancestor),
+and wave 17 is closed as 08 section 7 says (open-row command for wave 17
+prints "none open", plan_check ok, git status --short empty on main, leak
+sweep clean, last batch suite and npm test green, git show
+HEAD:AL-NEXT-SESSION.txt holds "WAVE POINTER: wave 17 done, next wave
+18"), any deferred package re-tagged with a ruling, and no row still
+carries "BLOCKED: session wave 17".
+
+Do NOT redo (session 14, all on main and pushed): wave 16 closed (12
+packages merged in 3 green batches, listed in the Wave 16 line; batch
+suites 4220 / 4255 / 4283 passed, 6 skipped, timing 32; npm 539 / 539 /
+555); adjudicator rulings W16-1 to W16-4 in plan commits 6d4e332, 3799dfe,
+34b3d1d, e5b7e56; wave pointer 042c573; roadmap fold b919850; reap of 11
+w16 worktrees. NOT done: f204f99 (Next action step 0).
 
 Do NOT redo (session 13, all on main and pushed): wave 15 closed (14
 packages plus RUN-SETTINGS-TRIM-DOCS merged, listed in the Wave 15 line;
@@ -310,14 +360,15 @@ of the w15 worktrees.
 
 Do NOT redo (sessions 6 to 9, waves 0 to 7, the ultraplan, AUTO-21): docs/handoff-archive/AL-2026-11-19.txt.
 
-In flight: none. No wave agent running (wave 15 closed 2026-11-20); fleet_checklist stale: none (read 2026-11-20 at session 13 /done); HALT absent (loop live); REG_OPEN absent (registration closed).
+In flight: none. No wave agent or lane run started by session 14 (wave 16 closed 2026-11-20); fleet_checklist stale: none (read 2026-11-20 at session 14 /done); HALT absent (loop live); REG_OPEN absent (registration closed).
 
-Status (session 13 /done, 2026-11-20, fresh runs read back): whole suite
-through the suite gate 4150 passed / 6 skipped, timing phase 32 passed
-(rc 0); npm test --prefix app 539/539; leak sweep --tree no HALT (ARMED
-needles=44); main aba3928 equal to origin/main before /done, then the
-roadmap fold 5aea0f9 and this hand-off commit pushed. Inbox: 1 note (MAIN
+Status (session 14 /done, 2026-11-20, fresh runs read back): whole suite
+through the suite gate 4283 passed / 6 skipped, timing phase 32 passed
+(rc 0); npm test --prefix app 555/555; leak sweep --tree no HALT (ARMED
+needles=44); main 042c573 equal to origin/main before /done, then the
+roadmap fold b919850 and this hand-off commit pushed. Inbox: 1 note (MAIN
 INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply.
-Operator acts: none new. Status board skipped (opt-out, not asked).
+Operator acts: OA-19 / OA-20 now actionable (optional). Status board
+skipped (opt-out, not asked).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
