@@ -46,6 +46,9 @@ ROOT = Path(__file__).resolve().parent.parent
 LANES = ("build", "data", "review")
 CODE = "AL"
 SEED_CONFIG = ("config/leak_needles.json", "config/local.json")
+# AUTO-18: the masked LIVE-1 report the ledger watch source writes; a LOG-SHAPE
+# row's lane reads it. Unlike the config seeds, an older copy is overwritten.
+SEED_FRESH = ("ops/runtime/watch/live1_report.json",)
 # Headless -p has no prompt to approve edits; code lanes run in acceptEdits so
 # file edits land in the lane worktree. Bash stays on the project allow list
 # plus the gate commands below; commits and merges are done by the main session.
@@ -167,14 +170,35 @@ def check_lane(lane):
     return lane
 
 
+def _stale(src, dst):
+    """True when dst is missing or differs from src in size or mtime."""
+    try:
+        a = src.stat()
+    except OSError:
+        return False
+    try:
+        b = dst.stat()
+    except OSError:
+        return True
+    return a.st_size != b.st_size or a.st_mtime_ns != b.st_mtime_ns
+
+
 def seed_config(worktree, root=ROOT):
-    """Copy gitignored gate config into a lane worktree when missing. Idempotent."""
+    """Copy gitignored gate config into a lane worktree when missing, and the
+    fresh report seeds (SEED_FRESH) whenever the worktree copy is older or
+    differs (copied with its mtime, so a repeat call is a no-op). Idempotent."""
     copied = []
     for rel in SEED_CONFIG:
         src, dst = Path(root) / rel, Path(worktree) / rel
         if src.is_file() and not dst.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src, dst)
+            copied.append(rel)
+    for rel in SEED_FRESH:
+        src, dst = Path(root) / rel, Path(worktree) / rel
+        if src.is_file() and _stale(src, dst):
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
             copied.append(rel)
     return copied
 

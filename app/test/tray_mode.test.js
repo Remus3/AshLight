@@ -14,6 +14,8 @@ const path = require("node:path");
 const Link = require("../client/link.js");
 const Launcher = require("../client/launcher.js");
 const Client = require("../client/window.js");
+const Hello = require("../hello.js");
+const crypto = require("node:crypto");
 
 const TOKEN = "cd".repeat(24);
 const PORT = 8962;
@@ -38,6 +40,18 @@ function fakeEmitter() {
     once(ev, fn) { return this.on(ev, fn); },
     emit(ev, ...args) { for (const fn of handlers[ev] || []) { fn(...args); } }
   };
+}
+
+/* SEC-HELLO-CLIENT (decision 0054): the fake core answers the hello
+   handshake with a real proof (app/hello.js) for the nonce it got and the
+   dialled port, so the client's health check sees a proven core. */
+function helloReply(o, cb) {
+  const res = fakeEmitter();
+  res.statusCode = 200;
+  res.resume = () => {};
+  const nonce = o.headers[Hello.NONCE_HEADER];
+  const body = JSON.stringify({ port: o.port, proof: Hello.serverProof(crypto, TOKEN, nonce, o.port) });
+  setImmediate(() => { cb(res); res.emit("data", Buffer.from(body)); res.emit("end"); });
 }
 
 function fakeWorld() {
@@ -108,7 +122,9 @@ function fakeWorld() {
       req.end = () => {
         calls.push("health");
         setImmediate(() => {
-          if (coreUp) { cb({ statusCode: 200, resume() {} }); } else { req.emit("error", new Error("refused")); }
+          if (!coreUp) { req.emit("error", new Error("refused")); return; }
+          if (o.path === Hello.PATH) { helloReply(o, cb); return; }
+          cb({ statusCode: 200, resume() {} });
         });
       };
       return req;

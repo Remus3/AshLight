@@ -778,7 +778,9 @@ of the HALT check.
   guide in play.
 - BUILD-LIVE: one build per decision 0038 character, swapped by the loop
   tick and hot-reloaded on mtime; stale-build alert; checked items kept in
-  memory only and re-scored on build / weight change into upgrade notices;
+  memory only (dev-host fixture capture excepted: a gitignored local.json
+  key, sanitized text, sidecar only; decision 0045 amendment 2026-11-18)
+  and re-scored on build / weight change into upgrade notices;
   build sources pluggable, the ggg_api provider a no-request stub
   (decision 0045). Reverses if: 0038 reverses, a better key appears, the
   5-level gap misfires, or item text must not stay in memory.
