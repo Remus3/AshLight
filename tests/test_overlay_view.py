@@ -1,7 +1,8 @@
 """OVL-CARD-SLOT (F-118): the overlay view seam (server/al/overlayview.py).
 
-- the card-slot holder order: the press card, then the sample (a live
-  press card always wins; the sample shows only while the slot is free);
+- the card-slot holder order: the press card, then the sample, then the
+  zone moment card (a live press card always wins; the sample shows only
+  while the slot is free; OVL-ZONE-CARD's moment card comes last);
 - the 10 s sample card shows, leaves by itself and never enters the recent
   events, the item check, the price check or run history;
 - POST /api/overlay-sample needs the token;
@@ -96,13 +97,38 @@ PRICES = [
 
 # -- the holder table ---------------------------------------------------------
 
-def test_holder_order_is_press_then_sample():
-    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample"]
+def test_holder_order_is_press_then_sample_then_moment():
+    # press first (design review D-2 of OVL-CARD-SLOT), then the sample;
+    # the trade card is built on the overlay page between sample and
+    # moment (render_gate.js), then the zone moment card (OVL-ZONE-CARD)
+    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample", "moment"]
     for h in CARD_HOLDERS:
         assert isinstance(h["life_s"], (int, float)) and h["life_s"] > 0, h
         exempt, twin = h.get("exempt"), h.get("twin")
         assert (isinstance(exempt, str) and exempt.strip()) or twin, h
     assert CARD_HOLDERS[1]["life_s"] == SAMPLE_S == 10
+    moment = CARD_HOLDERS[2]
+    assert moment["life_s"] == overlayview.MOMENT_CARD_S == 12
+    assert moment["cards"] == ("zone",) and moment["twin"] == ("zone-guide",)
+
+
+def test_a_press_or_the_sample_beats_the_moment_card():
+    st, clock = _state()
+    st.overlay.moment = {"at": T0, "gen": st._zone_gen, "head": "Zone short",
+                         "line2": "Next: Elsewhere", "line3": ""}
+    assert st.snapshot()["card"]["kind"] == "zone"
+    clock.t = T0 + 1
+    assert st.set_overlay_sample()["kind"] == "sample"
+    assert st.overlay.moment is None  # dropped, never returns
+    clock.t = T0 + SAMPLE_S + 2
+    assert st.snapshot()["card"] is None
+    st2, clock2 = _state()
+    st2.set_eval(EVALS[0], at=T0)
+    st2.overlay.moment = {"at": T0 + 1, "gen": st2._zone_gen, "head": "Zone short",
+                          "line2": "", "line3": ""}
+    clock2.t = T0 + 1
+    assert st2.snapshot()["card"]["kind"] == "eval"
+    assert st2.overlay.moment is None
 
 
 def test_a_live_press_card_beats_the_sample():
@@ -210,7 +236,7 @@ def test_snapshot_card_unchanged_for_every_fixture():
             snap = st.snapshot()
             want = overlay_card(st.eval, st.price, T0 + dt, snap["build_alert"])
             assert snap["card"] == want, (ev, pr, dt)
-            assert snap["overlay"] == {}
+            assert snap["overlay"] == {"guide_short": "", "calm_at": None}
 
 
 # -- the feed hooks -----------------------------------------------------------
