@@ -8,7 +8,10 @@ guidance, shown by itself on every zone change (zero clicks):
   in the one tracked zone file `server/al/data/zone_guide.json` (the zone
   notes of decision 0030 live in its `layout` fields; decision 0009: no
   wiki or poe2db prose; a fact we are not sure of is left out, never
-  guessed);
+  guessed); an area with no permitted source for a goal carries
+  `"skip": true` (DATA-GUIDE-FACTS: an explicit "no guide for this area",
+  so every campaign area of the snapshot is either guided or skipped on
+  purpose); a skipped area shows no act default, only its waypoint;
 - the zone boss's main damage element (a boss zone's `boss` {element,
   src, checked}, AshLight-authored, decision 0039), published as `boss`
   for the campaign boss hint (campaign.view);
@@ -55,6 +58,9 @@ MAX_LINE = 120
 # note; the overlay never reads `line`). Own words, left empty when unsure.
 MAX_SHORT = 34
 WAYPOINT_HOPS = 6
+# DATA-GUIDE-FACTS: the only keys a `"skip": true` zone entry may carry
+# (its provenance pair beside the flag; no guide text).
+SKIP_KEYS = frozenset(("skip", "src", "checked"))
 
 KINDS = ("spirit", "resist", "passive", "life", "mana", "gem", "charm",
          "flask", "item", "skill", "other")
@@ -126,20 +132,49 @@ def short_problem(doc):
     return None
 
 
+def is_skip(z):
+    """True for a zone entry marked `"skip": true` (no guide on purpose)."""
+    return isinstance(z, dict) and z.get("skip") is True
+
+
+def skip_problem(doc):
+    """Why a guide document's `skip` fields are bad (a skip that is not
+    exactly true, or a skip entry that also carries guide text: any key
+    besides SKIP_KEYS), else None. An entry without `skip` is fine."""
+    if not isinstance(doc, dict):
+        return None
+    table = doc.get("acts") if isinstance(doc.get("acts"), dict) else {}
+    for key, act in table.items():
+        for zone, z in _zones(act).items():
+            if not isinstance(z, dict) or "skip" not in z:
+                continue
+            if z["skip"] is not True:
+                return f"{key} {zone}: skip is not true"
+            extra = sorted(set(z) - SKIP_KEYS)
+            if extra:
+                return f"{key} {zone}: a skipped zone carries {', '.join(extra)}"
+    return None
+
+
+def guide_problem(doc):
+    """The first bad `short` or `skip` field of a guide document, else None."""
+    return short_problem(doc) or skip_problem(doc)
+
+
 def load(path=PATH):
     """The guide document ({} when missing, oversized or malformed; a bad
-    `short` field makes it malformed)."""
+    `short` or `skip` field makes it malformed)."""
     doc = jsonfile.read_json(path, max_bytes=MAX_GUIDE_BYTES, encoding="ascii",
                              kind=dict, default={})
-    return {} if short_problem(doc) else doc
+    return {} if guide_problem(doc) else doc
 
 
 def check_guide(path):
-    """The hot reload check: valid JSON within MAX_GUIDE_BYTES and every
-    short within MAX_SHORT; raises ValueError so a bad edit keeps the last
-    good guide and shows a Checks note."""
+    """The hot reload check: valid JSON within MAX_GUIDE_BYTES, every
+    short within MAX_SHORT and every skip well formed; raises ValueError
+    so a bad edit keeps the last good guide and shows a Checks note."""
     doc = hotreload.check_json(MAX_GUIDE_BYTES)(path)
-    problem = short_problem(doc)
+    problem = guide_problem(doc)
     if problem:
         raise ValueError(problem)
     return doc
@@ -530,7 +565,9 @@ def view(doc, graph, area_id, zone, in_hideout, level, area_level, visits,
     act = _act_table(doc, info["key"])
     z = _zones(act).get(zone.strip())
     z = z if isinstance(z, dict) else {}
-    entry = {"objective": _clean(z.get("objective")) or _clean((act or {}).get("default")),
+    # a skipped zone: no guide text and no act default, only the waypoint
+    default = None if is_skip(z) else _clean((act or {}).get("default"))
+    entry = {"objective": _clean(z.get("objective")) or default,
              "layout": _clean(z.get("layout")), "optional": _optional(z),
              "next": _clean(z.get("next")),
              "short": _clean(z.get("short"), MAX_SHORT) or ""}
