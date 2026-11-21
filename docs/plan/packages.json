@@ -11754,9 +11754,17 @@
     "web/checks.js",
     "app/test/client.test.js",
     "app/test/checks.test.js",
-    "docs/decisions/0041-desktop-client.md"
+    "docs/decisions/0041-desktop-client.md",
+    "app/test/autostart_switch.test.js",
+    "app/test/client_controls.test.js",
+    "app/client/launcher.js",
+    "app/test/tray_mode.test.js",
+    "tests/test_audit_exe_path.py",
+    "tests/test_floor_static.py"
    ],
-   "new_files": [],
+   "new_files": [
+    "scripts/calc_setup.ps1"
+   ],
    "integrator_edits": [
     {
      "file": "ROADMAP.md",
@@ -11792,7 +11800,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Ruling Q-08: a second preload action with a fixed name and no arguments; amend decision 0041 point 5 in this commit (another cluster amends points 2 for the tray-only start: keep to point 5). app/main.js gains one ipcMain handler; F-026, F-027 and others edit app/main.js too (cluster OVL / RUN): land after them or rebase. In an installed copy the action maps to DEP-09's 'installer calc --opt-in'. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). REL-AUTOSTART-SWITCH (cluster REL) also adds preload actions in app/client/preload.js and the same 0041 point 5: one after the other, whichever lands second rebases and keeps both actions.",
+   "notes": "Tier P2. Ruling Q-08: a second preload action with a fixed name and no arguments; amend decision 0041 point 5 in this commit (another cluster amends points 2 for the tray-only start: keep to point 5). app/main.js gains one ipcMain handler; F-026, F-027 and others edit app/main.js too (cluster OVL / RUN): land after them or rebase. In an installed copy the action maps to DEP-09's 'installer calc --opt-in'. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). REL-AUTOSTART-SWITCH (cluster REL) also adds preload actions in app/client/preload.js and the same 0041 point 5: one after the other, whichever lands second rebases and keeps both actions. Adjudicator ruling W16-1 (2026-11-20): files widen to app/test/autostart_switch.test.js and app/test/client_controls.test.js, which pin the preload to exactly 5 actions while keeping the argument-free and fixed-channel checks; the action spawns python tools/tc_pin.py setup --opt-in in a checkout and installer calc --opt-in in an installed copy, hidden, in the background, never setup.ps1 (decision 0070 refuses its npm step while the client runs). Reverses if: the 0041 action set is ruled closed at 4, tc_pin.py or the installer calc command changes its CLI, or a client run of tc_pin.py fails where setup.ps1 succeeds. Adjudicator ruling W16-2 (2026-11-20, amends W16-1): files widen to app/client/launcher.js and app/test/tray_mode.test.js (tests/test_audit_exe_path.py and tests/test_floor_static.py only if a pinned list must name the new script), new file scripts/calc_setup.ps1; launcher.setupCalc() is the one spawn, argument-free, through psExe (absolute System32 PowerShell), hidden, not detached; the script sets its own priority BelowNormal first, resolves Python as scripts/autostart.ps1 does in a checkout and through the install marker runtime in an installed copy, runs tools/tc_pin.py setup --opt-in (installer calc --opt-in in an installed copy), never setup.ps1; main.js calls it from one sender-checked handler, one run at a time. Reverses if: test_audit_exe_path or the floor tests reject the script spawn after a real attempt (then split or park), the install marker cannot give a Python path from the script, or the operator wants Python resolved in JS.",
    "wave": 16,
    "owner": "session",
    "tier": "P2",
