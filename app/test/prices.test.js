@@ -145,21 +145,13 @@ test("price section: core words, conversions per listing, state word", () => {
   assert.equal(p.priceView({ id: 1 }, RATES, null), null); // no text from the core
 });
 
-test("price empty state says what will appear, web data on or off", () => {
-  // PRICE-TRADE-LINK: the trade link is built offline, so web data does not gate it
-  // OVL-KEYS-WEB: the bound item key comes in as an argument
-  const want = "Nothing checked yet. After you check an item with Ctrl+Alt+K, a link to " +
-    "search for it on the official trade site shows here.";
-  assert.equal(p.priceEmpty(false, "Ctrl+Alt+K"), want);
-  assert.equal(p.priceEmpty(true, "Ctrl+Alt+K"), want);
-});
-
-test("price empty state names no key while none is bound", () => {
-  const want = "Nothing checked yet. After you check an item with the item check key, a " +
-    "link to search for it on the official trade site shows here.";
-  assert.equal(p.priceEmpty(false), want);
-  assert.equal(p.priceEmpty(true, ""), want);
-  assert.equal(p.priceEmpty(true, null), want);
+test("no separate price empty sentence: the Last item card's own says what fills it", () => {
+  // PLAY-TD-19D-ITEMS-GRID: the price state is one line of the Last item
+  // card; before a check the card's one empty sentence names the press
+  assert.equal(p.priceEmpty, undefined);
+  const html = require("./_web.js").source("index.html", "ascii");
+  assert.ok(html.indexOf('id="price-empty"') < 0);
+  assert.match(html, /<p id="eval-empty"[^>]*>Nothing checked yet\./);
 });
 
 const LINK = "https://www.pathofexile.com/trade2/search/poe2/Dawn?q=%7B%22query%22%3A%7B%7D%7D";
@@ -251,6 +243,32 @@ test("price movers: words not colour, hidden while web data is off", () => {
                                                         down: [{ name: "B", change: "x" }] } });
   assert.equal(flat.up[0].change, "no change");
   assert.equal(flat.down[0].change, "no change");
+});
+
+test("Prices card: top 6 currency values and the 3 biggest moves worded as a trend", () => {
+  /* PLAY-TD-19D-ITEMS-GRID (F-056): one list, cache only */
+  const rates = {};
+  for (let i = 0; i < 9; i++) {
+    rates["c" + i] = { name: "Currency " + i, value: 1 + i, volume: 100 - i };
+  }
+  const v = p.ratesView(Object.assign({}, RATES, { rates: rates, primary: "div" }));
+  assert.equal(v.rows.length, 6);
+  assert.deepEqual(v.rows.map((r) => r.name).slice(0, 2), ["Currency 0", "Currency 1"]);
+  const doc = { web_data: true, movers: {
+    up: [{ name: "Big Up", value: 2, unit: "Divine Orb", change: 80 },
+         { name: "Small Up", value: 1, unit: "Divine Orb", change: 3 }],
+    down: [{ name: "Big Down", value: 1234.5, unit: "Divine Orb", change: -40 },
+           { name: "Mid Down", change: -10 }] } };
+  assert.deepEqual(p.trendRows(doc), [
+    "Big Up is rising: up 80% this week (2 Divine Orb)",
+    "Big Down is falling: down 40% this week (1,235 Divine Orb)",
+    "Mid Down is falling: down 10% this week"]);
+  assert.deepEqual(p.trendRows({ web_data: false, movers: doc.movers }), []);
+  assert.deepEqual(p.trendRows(null), []);
+  assert.deepEqual(p.trendRows({ web_data: true, movers: { up: [], down: [] } }),
+    ["No price changes to show yet. They appear after the next hourly price update."]);
+  assert.deepEqual(p.trendRows({ web_data: true, movers: { up: [{ name: "A", change: 0.2 }] } }),
+    ["A has not moved"]);
 });
 
 /* MATH-VALUE-UI: the item check's value doc (MATH-VALUE) -> card words */
