@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import tc_pin  # noqa: E402
 
-from server.al import exepin, paths  # noqa: E402
+from server.al import exepin, logs, paths, prio  # noqa: E402
 from server.al.theorycraft import bridge  # noqa: E402
 from tc_live_util import LIVE_CALC  # noqa: E402
 
@@ -269,6 +269,51 @@ def test_job_closes_with_the_bridge(tmp_path):
     b.close()
     assert job.closed and b._job is None
     assert proc.poll() is not None and not b.running()
+
+
+# --- RUN-CALC-PRIORITY (F-107) and RUN-OBS-LOGS-PY (F-090) -------------------
+
+def test_started_luajit_has_below_normal_priority(tmp_path, monkeypatch):
+    """The calc child (luajit; here the fake child through the same start
+    path) starts with the below-normal priority class, read back from the
+    running process."""
+    flags = []
+    real = bridge.subprocess.Popen
+
+    def spy(*a, **kw):
+        flags.append(kw.get("creationflags", 0))
+        return real(*a, **kw)
+    monkeypatch.setattr(bridge.subprocess, "Popen", spy)
+    b = _child(tmp_path)
+    try:
+        b.request("env")
+        assert flags and flags[0] == prio.below_normal(flags[0])
+        if os.name == "nt":
+            assert flags[0] & prio.BELOW_NORMAL
+            assert prio.priority_class(b._proc.pid) == prio.BELOW_NORMAL
+    finally:
+        b.close()
+
+
+def test_each_calc_start_rotates_its_log_and_writes_a_banner(tmp_path):
+    log = tmp_path / "logs" / "tc-bridge.log"
+    log.parent.mkdir()
+    old = b"missing node\n" * (1_200_000 // 13)
+    log.write_bytes(old)
+    b = _child(tmp_path, log_path=log)
+    try:
+        b.request("env")
+        assert logs.backup_path(log).read_bytes() == old  # one old file kept
+        first = log.read_text(encoding="ascii").splitlines()[0]
+        assert re.match(r"^\d{4}-\d\d-\d\dT[\d:.]+Z INFO tc-bridge\[\d+\] AshLight \S+ "
+                        r"calc bridge start \(pid \d+", first), first
+        b.close()
+        b.request("env")  # a second start: no rotation, a second banner
+        lines = log.read_text(encoding="ascii").splitlines()
+        assert sum(" calc bridge start (pid " in ln for ln in lines) == 2
+        assert logs.backup_path(log).read_bytes() == old
+    finally:
+        b.close()
 
 
 # --- component discovery (core runs without it) -----------------------------

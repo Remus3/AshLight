@@ -84,7 +84,9 @@ if ($NoSnapshot -or ($env:AL_NO_SNAPSHOT -and $env:AL_NO_SNAPSHOT -ne '0')) {
     Write-AlLog 'build: game-data snapshot skipped (web_data off; -Snapshot or AL_SNAPSHOT=1 forces it)'
 } else {
     $snapLog = Join-Path $paths.logs 'build-snapshot.log'
-    $snapArgs = @('-m', 'server.al.theorycraft.snapshot')
+    # RUN-CALC-PRIORITY (F-107): server.al.prio starts the snapshot module as
+    # a below-normal priority child with this step's streams and exit code.
+    $snapArgs = @('-m', 'server.al.prio', 'server.al.theorycraft.snapshot')
     if ($forceSnap) { $snapArgs += '--opt-in' }
     Push-Location $Repo
     try {

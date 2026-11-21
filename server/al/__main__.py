@@ -14,7 +14,6 @@ is a demo.DemoCore that can read only the folder's Client.txt.
 """
 
 import argparse
-import faulthandler
 import json
 import logging
 import os
@@ -25,7 +24,7 @@ import time
 from pathlib import Path
 
 from . import (DISCLAIMER, NAME, VERSION, acl, demo, exitrecord, hotreload, jsonfile,
-               paths, ports)
+               logs, paths, ports)
 from .core import Core, write_private
 from .http import new_token, serve
 
@@ -79,25 +78,32 @@ def check_code(root=None, out=None):
 
 
 def setup_logging(quiet):
+    """RUN-OBS-LOGS-PY (F-090): core.log rotates at start when over 1 MB and
+    in run at 2 MB (one old file kept); every line is one format (UTC ISO
+    stamp, level word, logger name and pid, no absolute path); the first
+    line of this start is the build banner (F-027); faulthandler writes to
+    its own always-open core-fault.log (server/al/logs.py)."""
     handlers = []
+    core_log = None
     try:
         paths.ensure_dirs()
-        handlers.append(logging.FileHandler(paths.all_runtime_paths()["core_log"],
-                                            encoding="utf-8"))
+        core_log = paths.all_runtime_paths()["core_log"]
+        logs.rotate_at_start(core_log)
+        handlers.append(logs.BackstopHandler(core_log, component="core"))
     except OSError:
         pass
-    for h in handlers:
-        stream = getattr(h, "stream", None)
-        if stream is not None:
-            try:
-                faulthandler.enable(file=stream)  # native crash -> core.log
-            except (OSError, ValueError, AttributeError):
-                pass
-            break
+    if core_log is not None:
+        try:
+            logs.enable_faulthandler(logs.fault_path(core_log))  # native crash
+        except OSError:
+            pass
     if not quiet and sys.stderr is not None:
         handlers.append(logging.StreamHandler())
-    logging.basicConfig(level=logging.INFO, handlers=handlers or [logging.NullHandler()],
-                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    formatter = logs.Formatter()
+    for h in handlers:
+        h.setFormatter(formatter)
+    logging.basicConfig(level=logging.INFO, handlers=handlers or [logging.NullHandler()])
+    logging.getLogger("al").info("%s", logs.banner("core"))
 
 
 HEARTBEAT_S = 30.0

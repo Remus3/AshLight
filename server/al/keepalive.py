@@ -38,7 +38,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import exitrecord, hello, hotreload, jsonfile, paths, ports, snapstart
+from . import exitrecord, hello, hotreload, jsonfile, logs, paths, ports, prio, snapstart
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -553,6 +553,7 @@ def run_preflight(root=None, timeout=PREFLIGHT_TIMEOUT_S, run=subprocess.run):
     # pipes need a console-subsystem python; the one command builder (DEP-06)
     cmd = paths.python_cmd("server.al", "--check", windowless=False, root=root)
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    flags = prio.below_normal(flags)  # RUN-CALC-PRIORITY (F-107): a batch child
     try:
         r = run(cmd, cwd=str(root),
                 stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout,
@@ -586,10 +587,21 @@ class _Launcher:
         return self.child.pid
 
 
+_WARN_WORDS = ("failed", "refused", "give up", "did not", "timed out", "cannot",
+               "hung", "killed")
+
+
 def _file_logger(path):
+    """RUN-OBS-LOGS-PY (F-090): keepalive.log rotates at start when over
+    1 MB (one old file kept) and opens this start with the build banner;
+    each line is the one format of server/al/logs.py (UTC ISO stamp, a
+    level word, keepalive[pid], no absolute path). A line that reports a
+    failure reads WARNING, the rest INFO."""
+    logs.start_file(path, "keepalive", "keepalive")
+
     def log(line):
-        stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
-        text = f"{stamp} keepalive[{os.getpid()}] {line}\n"
+        level = "WARNING" if any(w in str(line) for w in _WARN_WORDS) else "INFO"
+        text = logs.format_line("keepalive", level, line) + "\n"
         try:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             with open(path, "a", encoding="ascii", errors="replace", newline="\n") as fh:
