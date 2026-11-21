@@ -445,7 +445,10 @@ of the HALT check.
 - A detached stdlib keepalive supervisor restarts a dead or hung core;
   stop.ps1's stop.request is honoured (decision 0005); a stale kill needs
   two failed health checks and the loop age; intervals use the monotonic
-  clock (0005 amendment 2026-11-18). Reverses if: the supervisor proves
+  clock (0005 amendment 2026-11-18); run.ps1 hands the supervisor the core
+  pid, the core restarts a missing supervisor and the client restarts a
+  missing core, each with its own cap; stop.request wins; no new watchdog
+  process (0005 amendment 2026-11-18). Reverses if: the supervisor proves
   unreliable, logon survival is wanted, or the stale heartbeat kill
   false-fires on slow machines.
 - OVL-FPS never uses PresentMon or ETW Present tracing of the game, not even
