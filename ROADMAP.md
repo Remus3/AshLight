@@ -373,11 +373,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_audit_snapshot_optin.py passes. ZERO-CLICK: The dev step runs itself: one setup
   command, no second command for game data once 'Use web data' is ticked. DEPENDS:
   REL-RUNTIME-SCRIPTS.
-- [ ] DATA-TRADESTAT-COVERAGE (build) Count trade stat id coverage per source before retiring the
-  PoB fallback. ACCEPT: python -m pytest -q tests/test_math_tradestat_local.py
-  tests/test_math_tradestat_pob.py tests/test_math_tradestat_cover.py tests/test_tc_upgrade_stats.py
-  tests/test_diag_data.py passes. ZERO-CLICK: Computed at each index load, shown on the Checks page
-  with no click. DEPENDS: DATA-DIAG-SEAM, TC-UPGRADE-PER-SLOT.
 - [ ] TC-BUILDFILE-EXIT-WATCH (review) .build exit trigger from the PoB release check. ACCEPT:
   python -m pytest -q tests/test_tc_drift.py passes. ZERO-CLICK: The exit trigger needs no reminder:
   the loop tick's existing check raises it. DEPENDS: TC-CALC-VERIFY-PIN, AUTO-12, AUTO-05,
