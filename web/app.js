@@ -217,13 +217,6 @@
     return a;
   }
 
-  function appendLinks(parent, list, name) {
-    list.forEach(function (l) {
-      parent.appendChild(document.createTextNode(" "));
-      parent.appendChild(linkOut(l, name));
-    });
-  }
-
   function loadBuild() {
     api("GET", "/api/build").then(function (doc) {
       buildDoc = doc;
@@ -232,101 +225,226 @@
       if (window.ALSearch) { window.ALSearch.paint(document, doc, navigator); }
       // MATH-BUILD-HEALTH / MATH-NEXT-LOOK: PoB numbers; Copy on a click only
       if (window.ALHealth) { window.ALHealth.paint(document, doc, navigator); }
-      // MATH-SKILL-SPLIT: PoB's per-skill DPS on the Build card
+      // MATH-SKILL-SPLIT: PoB's per-skill DPS on the Build card's Damage page
       if (window.ALSkillSplit) { window.ALSkillSplit.paint(document, doc); }
+      var noSplit = $("split-wrap").hidden;
+      $("split-open").hidden = noSplit;
+      if (noSplit && cardShown($("buildbox")) === "split") { cardHome($("buildbox")); }
     }).catch(function () {
-      $("build-status").textContent = "Can't load the build. Is AshLight running?";
+      setLine($("build-status"), "Can't load the build. Is AshLight running?");
     });
+  }
+
+  /* ---- PLAY-TD-19C-BUILD-GRID: card pages (plan 03 section 4). A grid
+     card (.grid-card) shows one .card-page at a time: its home page, or
+     the page a button with data-card-open names. The Back button in the
+     card head returns home and gives focus back to the button that opened
+     the page. A page changes only on a press, or when the card's home
+     changes (a build loads or goes); then a focus inside the page that is
+     hidden moves to the card's heading, never out of the card. */
+  function cardHomeName(box) { return box.getAttribute("data-home") || "main"; }
+
+  function cardShown(box) { return box.getAttribute("data-shown") || cardHomeName(box); }
+
+  function cardHeading(box) { return box.querySelector("h2"); }
+
+  function showCardPage(box, name, focusTo) {
+    var home = cardHomeName(box);
+    var active = document.activeElement;
+    var lost = false;
+    var cur = null;
+    Array.prototype.forEach.call(box.querySelectorAll(".card-page"), function (pg) {
+      var on = pg.getAttribute("data-page") === name;
+      if (!on && !pg.hidden && pg.contains(active)) { lost = true; }
+      pg.hidden = !on;
+      if (on) { cur = pg; }
+      if (pg.tagName === "DETAILS") { pg.open = true; }
+    });
+    box.setAttribute("data-shown", name);
+    var label = name === home || !cur ? "" : cur.getAttribute("data-label") || "";
+    setLine(box.querySelector("[data-card-sub]"), label);
+    var back = box.querySelector("[data-card-back]");
+    back.hidden = name === home;
+    back.setAttribute("aria-label", "Back to the first page of " + cardHeading(box).textContent);
+    if (focusTo && !focusTo.hidden) {
+      focusTo.focus();
+    } else if (lost) {
+      cardHeading(box).focus();
+    }
+  }
+
+  function cardHome(box) { showCardPage(box, cardHomeName(box), null); }
+
+  /* a new home page: the card follows only when it showed its old home */
+  function setCardHome(box, name) {
+    var atHome = cardShown(box) === cardHomeName(box);
+    box.setAttribute("data-home", name);
+    if (atHome) { cardHome(box); }
+  }
+
+  var cardOpener = {};
+
+  function wireCard(box) {
+    Array.prototype.forEach.call(box.querySelectorAll("[data-card-open]"), function (b) {
+      b.addEventListener("click", function () {
+        cardOpener[box.id] = b;
+        showCardPage(box, b.getAttribute("data-card-open"), box.querySelector("[data-card-back]"));
+      });
+    });
+    box.querySelector("[data-card-back]").addEventListener("click", function () {
+      var o = cardOpener[box.id];
+      showCardPage(box, cardHomeName(box), o && !o.hidden && !o.disabled ? o : cardHeading(box));
+    });
+    cardHome(box);
+  }
+
+  /* the pagers of the Build card's rows: web/pager.js through web/search.js
+     (textPager; app.js reaches the regions and their helpers only through
+     the three hook calls, app/test/regions.test.js), and rowPager for rows
+     with a link. They page again when a resize changes the size class. */
+  var buildPagers = {};
+
+  function sizeClass() {
+    return window.ALSearch ? window.ALSearch.sizeClass(document) : "full";
+  }
+
+  function textPager(slotId, label, rows) {
+    var pg = buildPagers[slotId];
+    if (!pg) {
+      pg = window.ALSearch.textPager(document, { rows: rows, label: label, sizeClass: sizeClass });
+      buildPagers[slotId] = pg;
+      $(slotId).replaceChildren(pg.node);
+      return pg;
+    }
+    pg.set(rows);
+    return pg;
+  }
+
+  function linkPager(slotId, label, size, opts) {
+    var pg = buildPagers[slotId];
+    if (!pg) {
+      pg = window.ALSearch.rowPager(document, {
+        label: label, size: size, sizeClass: sizeClass, text: opts.text,
+        rowClass: opts.rowClass,
+        controls: function (d, r) { return r.link ? [linkOut(r.link, r.linkName)] : []; }
+      });
+      buildPagers[slotId] = pg;
+      $(slotId).replaceChildren(pg.node);
+    }
+    pg.set(opts.rows);
+    return pg;
+  }
+
+  /* a resize: every pager whose size class changed pages again */
+  function relayoutPagers() {
+    if (window.ALSearch) { window.ALSearch.relayout(); }
+  }
+
+  function setLine(node, text) {
+    node.textContent = text;
+    if (text) { node.setAttribute("title", text); } else { node.removeAttribute("title"); }
+  }
+
+  /* BUILD-LIVE (decision 0045): where the build came from and how old it is */
+  var SOURCE_WORDS = { paste: "Pasted", press: "Loaded with the item key",
+    ggg_api: "Loaded from your account" };
+
+  function sourceLine(doc) {
+    var word = SOURCE_WORDS[doc && doc.source] || "Loaded";
+    var at = doc && typeof doc.loaded_at === "number" ? doc.loaded_at : null;
+    if (at === null) { return word + "."; }
+    var s = Math.max(0, serverNow() - at);
+    var age = s < 60 ? "just now" : s < 3600 ? Math.floor(s / 60) + " min ago"
+      : s < 172800 ? Math.floor(s / 3600) + " h ago" : Math.floor(s / 86400) + " days ago";
+    return word + ", " + age + ".";
   }
 
   function renderBuildYou() {
     if (!buildDoc) { return; }
     var v = T.buildView(buildDoc, snap);
-    if (v.loaded) { $("build-you").textContent = v.you; }
+    if (!v.loaded) { return; }
+    setLine($("build-level"), v.levelLine);
+    setLine($("build-you"), v.you);
+    $("build-you").hidden = !v.you;
+    setLine($("build-source"), sourceLine(buildDoc));
   }
+
+  var KEY_STATS_SHOWN = 6; // plan 03 section 4: key stats (6)
 
   function renderBuild() {
     var v = T.buildView(buildDoc, snap);
     $("build-view").hidden = !v.loaded;
     $("build-empty").hidden = v.loaded;
     $("build-paste-label").textContent = v.loaded ? "Paste another build" : "Paste a build";
+    setCardHome($("buildbox"), v.loaded ? "main" : "paste");
     if (!v.loaded) {
       $("build-empty").textContent = v.empty;
       return;
     }
-    $("build-name").textContent = v.title;
-    $("build-level").textContent = v.levelLine;
-    $("build-you").textContent = v.you;
+    setLine($("build-name"), v.title);
+    renderBuildYou();
     var dl = document.createDocumentFragment();
-    v.stats.forEach(function (s) {
-      var row = el("div", "kv-row");
+    v.stats.slice(0, KEY_STATS_SHOWN).forEach(function (s) {
+      var row = el("div", "");
       row.appendChild(el("dt", "", s.label));
       row.appendChild(el("dd", "mono", s.value));
       dl.appendChild(row);
     });
     $("build-stats").replaceChildren(dl);
     $("build-stats-empty").hidden = v.stats.length > 0;
+    setLine($("build-copy-status"), "");
+    $("build-copy").setAttribute("aria-label", "Copy the build code for Path of Building");
 
-    var gear = document.createDocumentFragment();
-    v.gear.forEach(function (g) {
-      var li = el("li");
-      var line = el("p", "gear-line");
-      line.appendChild(el("span", "slot", g.slot));
-      line.appendChild(el("span", "name", g.name));
-      if (g.base) { line.appendChild(el("span", "muted", g.base)); }
-      if (g.rarity) { line.appendChild(el("span", "tag", g.rarity)); }
-      appendLinks(line, g.links, g.name);
-      li.appendChild(line);
-      if (g.text) {
-        var d = el("details", "item-text");
-        d.appendChild(el("summary", "", "Item text"));
-        d.appendChild(el("pre", "", g.text));
-        li.appendChild(d);
-      }
-      gear.appendChild(li);
+    // the Health and next card's gear, gems and notes pages: rows through
+    // the pagers (one line each; the Full text page holds the whole text)
+    linkPager("build-gear", "gear", { full: 9, compact: 7 }, {
+      rows: v.gear.length ? v.gear.map(function (g) {
+        return { text: g.slot + ": " + g.name + (g.base ? ", " + g.base : "") +
+          (g.rarity ? " (" + g.rarity + ")" : ""),
+          link: g.links[0] || null, linkName: g.name };
+      }) : [{ text: "No gear in this build." }],
+      text: function (r) { return r.text; }
     });
-    if (!v.gear.length) { gear.appendChild(el("li", "muted", "No gear in this build.")); }
-    $("build-gear").replaceChildren(gear);
-
-    var sk = document.createDocumentFragment();
+    var gems = [];
     v.skills.forEach(function (g) {
-      var li = el("li", g.enabled ? "" : "off");
-      var head = el("p", "skill-head");
-      head.appendChild(el("strong", "", g.label));
-      if (g.main) { head.appendChild(el("span", "tag", "main skill")); }
-      if (!g.enabled) { head.appendChild(el("span", "tag", "off")); }
-      if (g.slot) { head.appendChild(el("span", "muted", g.slot)); }
-      li.appendChild(head);
-      var gems = el("ul", "gems");
+      var head = g.label + (g.main ? " (main skill)" : "") + (g.enabled ? "" : " (off)");
       g.gems.forEach(function (m) {
-        var gi = el("li", m.enabled ? "" : "off");
-        gi.appendChild(el("span", "", m.name));
-        if (m.detail) { gi.appendChild(el("span", "muted", " (" + m.detail + ")")); }
-        appendLinks(gi, m.links, m.name);
-        gems.appendChild(gi);
+        gems.push({ text: head + ": " + m.name + (m.detail ? " (" + m.detail + ")" : ""),
+          off: !g.enabled || !m.enabled, link: m.links[0] || null, linkName: m.name });
       });
-      li.appendChild(gems);
-      sk.appendChild(li);
+      if (!g.gems.length) { gems.push({ text: head, off: !g.enabled }); }
     });
-    if (!v.skills.length) { sk.appendChild(el("li", "muted", "No skills in this build.")); }
-    $("build-skills").replaceChildren(sk);
-
+    linkPager("build-skills", "skills and gems", { full: 8, compact: 6 }, {
+      rows: gems.length ? gems : [{ text: "No skills in this build." }],
+      text: function (r) { return r.text; },
+      rowClass: function (r) { return r.off ? "off" : ""; }
+    });
     var tree = $("build-tree");
     tree.replaceChildren();
     if (v.tree) {
-      tree.appendChild(document.createTextNode(v.tree.line + ". "));
+      var line = el("span", "one-line", v.tree.line + ".");
+      line.setAttribute("title", v.tree.line + ".");
+      tree.appendChild(line);
       if (v.tree.url) {
         var a = el("a", "out", "Open the tree");
         a.href = v.tree.url;
         a.target = "_blank";
         a.rel = "noopener noreferrer";
+        a.setAttribute("aria-label", "Open the passive tree (opens in a new tab)");
         tree.appendChild(a);
       }
     } else {
       tree.textContent = "No passive tree in this build.";
     }
-    $("build-notes-box").hidden = !v.notes;
-    $("build-notes").textContent = v.notes;
+    var notes = v.notes ? v.notes.split(/\r?\n/).map(function (x) { return x.trim(); })
+      .filter(function (x) { return x; }) : [];
+    textPager("build-notes", "build notes", notes.length ? notes : ["No notes in this build."]);
+    var mine = buildDoc && buildDoc.character;
+    var chars = (buildDoc && Array.isArray(buildDoc.characters_with_builds)
+      ? buildDoc.characters_with_builds : []).filter(function (n) { return typeof n === "string" && n; })
+      .map(function (n) { return n === mine ? n + " (this character)" : n; });
+    textPager("build-chars", "characters with a build", chars.length ? chars
+      : ["No character has a saved build yet."]);
     $("build-code-out").value = v.code;
     renderBuildFile();
   }
@@ -337,16 +455,13 @@
     var f = T.buildFileView(buildDoc);
     tellBuildFile("");  /* a new build: the last click's answer is stale */
     $("buildfile-save").disabled = !f.ready;
-    $("buildfile-summary").textContent = f.ready ? f.summary
-      : "The build file isn't available for this build.";
-    var list = $("buildfile-notes");
-    list.textContent = "";
-    f.notes.forEach(function (s) {
-      var li = document.createElement("li");
-      li.textContent = s;
-      list.appendChild(li);
-    });
-    list.hidden = !f.notes.length;
+    setLine($("buildfile-summary"), f.ready ? f.summary
+      : "The build file isn't available for this build.");
+    /* each left-out note on its own wrapping row: the whole text shows */
+    var notes = $("buildfile-notes");
+    notes.replaceChildren();
+    f.notes.forEach(function (s) { notes.appendChild(el("li", "", s)); });
+    notes.hidden = !f.notes.length;
   }
 
   /* TC-BUILDFILE: on the player's click, fetch the .build text and hand it
@@ -354,7 +469,7 @@
      writes no file itself. No live region (the page keeps its 12): as for
      downloadFilter, the focused button's name carries the answer. */
   function tellBuildFile(text) {
-    $("buildfile-said").textContent = text;
+    setLine($("buildfile-said"), text);
     $("buildfile-save").setAttribute("aria-label", text ? "Save .build file (" + text + ")"
       : "Save .build file");
   }
@@ -403,11 +518,12 @@
   /* The paste box's answer: the status line, a loaded build, and the
      TC-LINK-RECOVER offer when the core refused a link for web data. */
   function showPaste(res, body, code) {
-    $("build-status").textContent = res.text;
+    setLine($("build-status"), res.text);
     linkRecover = res.offer ? T.linkRecover(code, postJson) : null;
     $("link-recover").hidden = !linkRecover;
     $("link-offer-row").hidden = false;
     $("link-confirm").hidden = true;
+    $("paste-form").hidden = false;
     if (res.ok) {
       $("build-paste").value = "";
       buildDoc = body;
@@ -423,12 +539,12 @@
     lastPaste = text;
     linkRecover = null;
     $("link-recover").hidden = true;
-    $("build-status").textContent = "Loading the build...";
+    setLine($("build-status"), "Loading the build...");
     postJson("/api/build-code", { code: text }).then(function (r) {
       showPaste(T.pasteResult(r.status, r.body), r.body, text);
     }).catch(function () {
       lastPaste = "";
-      $("build-status").textContent = "Not loaded. Can't reach AshLight - is it running?";
+      setLine($("build-status"), "Not loaded. Can't reach AshLight - is it running?");
     });
   }
 
@@ -443,6 +559,7 @@
     $("link-sentence").textContent = shown.sentence;
     $("link-offer-row").hidden = true;
     $("link-confirm").hidden = false;
+    $("paste-form").hidden = true; /* the sentence takes the paste box's place */
     $("link-yes").focus();
   }
 
@@ -450,6 +567,7 @@
     if (!linkRecover) { return; }
     linkRecover.cancel();
     $("link-confirm").hidden = true;
+    $("paste-form").hidden = false;
     $("link-offer-row").hidden = false;
     $("link-offer").focus();
   }
@@ -459,18 +577,22 @@
     var going = rec ? rec.confirm() : null;
     if (!going) { return; }
     $("link-yes").disabled = true;
-    $("build-status").textContent = "Turning on web data, then loading the link...";
+    setLine($("build-status"), "Turning on web data, then loading the link...");
     going.then(function (out) {
       $("link-yes").disabled = false;
       if (out.web) { webDataSaved(out.web); }
       if (rec !== linkRecover) { return; } // a new paste took the box meanwhile
       if (!out.saved) {
-        $("build-status").textContent = out.result.text;
+        setLine($("build-status"), out.result.text);
         $("link-yes").focus(); // re-enabled; the panel stays for another try
         return;
       }
       showPaste(out.result, out.body, "");
-      $("build-paste").focus(); // the buttons are gone; stay in this card
+      // the buttons are gone; stay in this card (the paste box, or the
+      // heading once the loaded build took the card's first page)
+      if (cardShown($("buildbox")) === "paste") { $("build-paste").focus(); } else {
+        cardHeading($("buildbox")).focus();
+      }
     });
   }
 
@@ -484,7 +606,8 @@
        this click (best effort, audit 0004 U22) */
     var btn = $("filter-download");
     var tell = function (text) {
-      said.textContent = text;
+      setLine(said, text);
+      setLine($("filter-merge-said"), "");  /* one outcome line for the page */
       btn.setAttribute("aria-label", text ? "Download ashlight.filter (" + text + ")"
         : "Download ashlight.filter");
     };
@@ -526,7 +649,8 @@
       fetch: function (url, opts) { return fetch(url, opts); },
       token: token,
       tell: function (text) {
-        $("filter-merge-said").textContent = text;
+        setLine($("filter-merge-said"), text);
+        if (text) { setLine($("filter-said"), ""); }
         if (text) {
           input.setAttribute("aria-label", "Your loot filter file (" + text + ")");
         } else {
@@ -546,19 +670,24 @@
     }).then(function () { input.value = ""; });  /* the same file can be picked again */
   }
 
+  /* Copy code: the clipboard is written only in this click. No live region
+     (PLAY-TD-19C-BUILD-GRID: the page-wide cap is 6); the answer is plain
+     text beside the button and the button's own name. When the clipboard
+     refuses, the card's code page shows the code selected for Ctrl+C. */
   function copyBuild() {
     var code = buildDoc && buildDoc.code;
     if (!code) { return; }
     var out = $("build-code-out");
+    var btn = $("build-copy");
     var done = function () {
-      $("build-copy-status").textContent =
-        "Copied. In Path of Building, open Import/Export Build and paste it.";
+      setLine($("build-copy-status"), "Copied - paste it into Path of Building");
+      btn.setAttribute("aria-label", "Copy the build code for Path of Building (copied)");
     };
     var fallback = function () {
-      out.hidden = false;
-      out.focus();
+      setLine($("build-copy-status"), "");
+      cardOpener.buildbox = btn;
+      showCardPage($("buildbox"), "code", out);
       out.select();
-      $("build-copy-status").textContent = "Select the code above and press Ctrl+C to copy it.";
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(code).then(done, fallback);
@@ -991,6 +1120,10 @@
       $("link-no").addEventListener("click", linkCancel);
       $("build-copy").addEventListener("click", copyBuild);
       $("buildfile-save").addEventListener("click", saveBuildFile);
+      ["buildbox", "healthbox", "searchbox"].forEach(function (id) { wireCard($(id)); });
+      window.addEventListener("resize", relayoutPagers);
+      if (window.ALSearch) { window.ALSearch.paint(document, null, navigator); }
+      if (window.ALHealth) { window.ALHealth.paint(document, null, navigator); }
     }
   });
   A.register({

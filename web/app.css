@@ -382,43 +382,20 @@ textarea, .weights-form input {
 .weights-add label:first-of-type { flex: 1 1 16em; }
 .weights-band input, .weights-add input[type="number"] { width: 8em; }
 
-/* Build view (TC-VIEW). */
-.build-title { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
-.build-title strong { font-size: 1rem; }
-.build-you { margin: 4px 0 0; }
-.gear-list, .skill-list { list-style: none; margin: 0; padding: 0; }
-.gear-list > li, .skill-list > li { padding: 6px 0; border-top: 1px solid var(--fk-border); min-width: 0; }
-.gear-list > li:first-child, .skill-list > li:first-child { border-top: none; }
-.gear-line, .skill-head { margin: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; }
-.gear-line .slot { flex: 0 0 7.5em; color: var(--fk-text-muted); font-size: 0.9rem; }
-.gear-line .name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
-.item-text summary { font-size: 0.9rem; color: var(--fk-text-muted); }
-.item-text pre { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 0.9rem; }
-.gems { margin: 4px 0 0; padding-left: 20px; }
-.gems li { overflow-wrap: anywhere; }
-li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(--fk-text-muted); }
+/* Build view (TC-VIEW); PLAY-TD-19C-BUILD-GRID moved its rows into the
+   card grid rules at the end of this file. */
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .code-out { width: 100%; margin-top: 8px; font-size: 0.85rem; }
-/* UTIL-SEARCHSTR: one row per search string, Copy on the player's click */
-.search-list { list-style: none; margin: 0; padding: 0; }
-.search-row { padding: 8px 0; border-top: 1px solid var(--fk-border); min-width: 0; }
-.search-row:first-child { border-top: none; }
-.search-row p { margin: 0 0 6px; }
-/* UX-B5-CARDS: the string wraps (a long one is read whole at 320 px);
-   the `|` joins break anywhere, so no line runs past the card */
-.search-row .search-text { margin: 0 0 6px; padding: 4px 6px; font-family: var(--al-font-mono);
-  font-size: 0.85rem; overflow-wrap: anywhere;
-  border: 1px solid var(--fk-border); border-radius: 4px; }
+/* UX-B5-CARDS: the import line breaks anywhere, so no line runs past the
+   card (the search strings are pager rows, PLAY-TD-19C-BUILD-GRID) */
 .filter-line { overflow-wrap: anywhere; }
 /* MATH-BUILD-HEALTH: one row per PoB warning; the leading word carries the
    severity, the colour only repeats it */
-.health-list { list-style: none; margin: 0 0 8px; padding: 0; }
-.health-row { padding: 4px 0; overflow-wrap: anywhere; }
+.health-list { list-style: none; margin: 0; padding: 0; }
+.health-row { padding: 0; overflow-wrap: anywhere; }
 .health-row[data-severity="high"] .health-word { color: var(--fk-status-warn); font-weight: 700; }
 .health-row[data-severity="medium"] .health-word { color: var(--fk-text); }
 .health-row[data-severity="low"] .health-word { color: var(--fk-text-muted); }
-#next-wrap { margin-top: 12px; }
-.search-said { margin-left: 10px; }
 /* F-161: multi-line prose (the zone guide, notes) reads at 1.5 */
 .zone-guide { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .zone-guide p { margin: 0 0 4px; }
@@ -432,7 +409,7 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .zone-note { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .campaign-hints { padding-left: 20px; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .card.hint p { margin: 0; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
-.paste { display: block; margin: 16px 0 4px; font-weight: 600; }
+.paste { display: block; font-weight: 600; }
 .paste-box { width: 100%; resize: vertical; font-size: 0.9rem; }
 
 /* Graphics advisor (GFX-ADVISOR): optional, opened with a click. */
@@ -487,12 +464,12 @@ li.off > span:first-child, .skill-list > li.off .skill-head strong { color: var(
 .history-controls, .settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
 .history .slower { color: var(--fk-status-warn); }
 .watch-list li { overflow-wrap: anywhere; }
-/* UX-DASH-DENSITY: set-once tools in one folded group; .build and the loot
-   filter add-on folded in their own cards. Separators only, no motion. */
+/* UX-DASH-DENSITY: set-once tools in one folded group (the .build file and
+   the loot filter add-on are card pages since PLAY-TD-19C-BUILD-GRID).
+   Separators only, no motion. */
 .tools .tool { border-top: 1px solid var(--fk-border); margin-top: 12px; padding-top: 4px; }
 .tools .tool:first-of-type { border-top: none; }
-.tool-fold { margin-top: 12px; border-top: 1px solid var(--fk-border); padding-top: 4px; }
-.tool-fold > summary, .tools > details > summary { color: var(--fk-text); font-weight: 600; }
+.tools > details > summary { color: var(--fk-text); font-weight: 600; }
 
 /* Narrow side window next to the game: tighter spacing only. */
 @media (max-width: 520px) {
@@ -750,3 +727,91 @@ button.btn-24 { min-height: 1.5rem; padding: 0 0.5rem; font-size: var(--al-fs-me
   line-height: var(--al-lh-meta); }
 button.btn-28 { min-height: 1.75rem; padding: 0 0.625rem; line-height: var(--al-lh-body); }
 button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-body); }
+
+/* --- Card grid (PLAY-TD-19C-BUILD-GRID; plan 03 section 4, TD-19) --------
+   Build and items (and Run, PLAY-TD-20A-RUN-GRID) is a fixed 3 x 2 grid of
+   cards in the cockpit classes. At s = 1 a card is 408 x 322 px (full) and
+   322 x 292 px (compact): border 2 + padding 24 + title 26 + 10 rows of 22
+   (8 compact) + pager row 28 = 300 (256), slack 22 (36). The two row
+   tracks share the panel height (652 px at 1280x760: 322 + 8 + 322), so
+   extra height is slack, never a scroll. A card shows one page at a time
+   (.card-page, web/app.js cardPages); a list pages (web/pager.js classes
+   below) and never grows its card. Rows are one line with the ellipsis as
+   the guard in the cockpit; they wrap in the flow class and under a
+   text-spacing override (data-text-spacing="user"). */
+.grid-card { display: flex; flex-direction: column; min-width: 0; gap: 0; }
+.card-head { display: flex; align-items: center; gap: 0.5rem; min-width: 0;
+  min-height: var(--al-lh-title); }
+.grid-card .card-head h2 { margin: 0; font-size: var(--al-fs-title); line-height: var(--al-lh-title);
+  font-weight: 600; white-space: nowrap; }
+.card-head h2:focus-visible { outline: 3px solid var(--fk-text); outline-offset: -3px; }
+.card-sub { flex: 1 1 auto; min-width: 0; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
+  overflow-wrap: anywhere; }
+.card-back { margin-left: auto; flex: none; }
+.card-page { display: flex; flex-direction: column; min-height: 0; min-width: 0; flex: 1 1 auto; }
+.card-page > .card-foot, .card-page > .pager-slot { margin-top: auto; }
+#next-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+#next-wrap > .pager-slot { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.pager-slot > .al-pager-host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.card-foot, .card-act { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem;
+  margin: 0; min-width: 0; }
+.card-foot { min-height: 1.75rem; }
+.card-act > .one-line { flex: 1 1 0; }
+.card-h3 { margin: 0.25rem 0 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); font-weight: 600; }
+.card-h3 .muted { font-weight: 400; }
+.card-kv { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 0.75rem; }
+.card-kv-1 { grid-template-columns: minmax(0, 1fr); }
+.card-kv > div { display: flex; gap: 0.5rem; min-width: 0; font-size: var(--al-fs-body);
+  line-height: var(--al-lh-body); }
+.card-kv dt { color: var(--fk-text-muted); min-width: 0; overflow-wrap: anywhere; }
+.card-kv dd { margin: 0 0 0 auto; font-weight: 600; white-space: nowrap; }
+.grid-card .health-row { font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
+.grid-card .paste-box { resize: none; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
+.grid-card .code-out { margin: 0.25rem 0 0; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); resize: none; }
+.grid-card p { margin: 0; }
+.grid-card .row-meta + .card-act, .grid-card .card-act + .row-meta { margin-top: 0.25rem; }
+#link-recover { margin-top: 0.25rem; }
+/* the loot filter page: the details element stays open and its summary is
+   not drawn; the card's page buttons show it (web/app.js cardPages) */
+.tool-page > summary { display: none; }
+.tool-page .small { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); margin: 0.25rem 0 0; }
+.tool-page .link { min-height: 1.5rem; padding: 0; font-size: var(--al-fs-meta); }
+.card-notes { margin: 0; padding-left: 1rem; overflow-wrap: anywhere; }
+.grid-card a.out { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
+.tool-page input[type="file"] { width: 13rem; font-size: var(--al-fs-meta); }
+.tool-page .card-act > .one-line:empty { display: none; }
+
+/* The pager (web/pager.js CLS names, and ALSearch.rowPager's control rows) */
+.al-pager-list { list-style: none; margin: 0; padding: 0; min-width: 0; }
+.al-row1 { display: block; margin: 0; min-width: 0; font-size: var(--al-fs-body);
+  line-height: var(--al-lh-body); overflow-wrap: anywhere; }
+.al-pager-line { display: block; font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
+.al-row-ctl { display: flex; align-items: center; gap: 0.5rem; min-width: 0; min-height: 1.5rem; }
+.al-row-ctl > .al-row1 { flex: 1 1 auto; }
+.al-row-ctl > a.out { flex: none; display: inline-flex; align-items: center; min-height: 1.5rem;
+  font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
+.al-row-ctl .al-row-lbl { color: var(--fk-text-muted); }
+.al-row-ctl .al-row-txt { font-family: var(--al-font-mono); font-size: var(--al-fs-meta); }
+.al-pager { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem;
+  min-height: 1.75rem; margin-top: auto; }
+.al-pager-count { margin-right: auto; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
+  color: var(--fk-text-muted); }
+button.al-pager-btn { min-height: 1.5rem; padding: 0 0.5rem; font-size: var(--al-fs-meta);
+  line-height: var(--al-lh-meta); background: var(--fk-surface); }
+button.al-pager-btn[aria-disabled="true"] { color: var(--fk-text-muted); cursor: default; }
+li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
+
+@media (min-width: 64em) and (min-height: 43.75em) {
+  .panel-cards { align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; }
+  .panel-cards > .col:nth-child(-n+3) { display: grid; grid-template-rows: minmax(0, 1fr);
+    max-height: none; overflow: visible; padding-right: 0; }
+  .grid-card { min-height: 0; padding: 0.75rem; }
+  .al-row1, .al-pager-line, .card-sub, .card-kv dt { white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  .al-row-ctl { height: 1.5rem; }
+}
+[data-text-spacing="user"] .al-row1, [data-text-spacing="user"] .al-pager-line,
+[data-text-spacing="user"] .card-sub, [data-text-spacing="user"] .card-kv dt {
+  white-space: normal; overflow: visible; }
+[data-text-spacing="user"] .al-row-ctl { height: auto; }

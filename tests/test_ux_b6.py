@@ -28,9 +28,11 @@ def _flat(s):
 
 
 def test_search_strings_wrap_instead_of_a_one_line_input():
+    """UX-B5-CARDS: no one-line input. PLAY-TD-19C-BUILD-GRID: a string is a
+    one-line pager row (full text in title) whose Full text page is the
+    keyboard-reachable twin; the import line still breaks anywhere."""
     assert 'createElement("input")' not in SEARCH
-    m = re.search(r"\.search-row \.search-text \{([^}]*)\}", CSS)
-    assert m and "overflow-wrap: anywhere" in m.group(1)
+    assert "P.rowRule(span, t)" in SEARCH and "P.wrap(t, shape.cols, shape.lines)" in SEARCH
     assert re.search(r"\.filter-line \{[^}]*overflow-wrap: anywhere", CSS)
 
 
@@ -45,17 +47,20 @@ def test_copy_feedback_adds_no_live_region():
 
 
 def test_copy_buttons_are_real_buttons():
-    assert 'btn = doc.createElement("button")' in SEARCH
+    assert 'var btn = el(doc, "button", "secondary btn-24", "Copy");' in SEARCH
     assert 'btn.type = "button"' in SEARCH
 
 
 def test_filter_words_say_what_it_does_and_that_nothing_is_written():
     m = re.search(r'<section id="searchbox".*?</section>', HTML, re.S)
     text = _flat(m.group(0))
-    assert "rare drops of the item bases your build wears" in text
-    assert "browser's downloads" in text
-    assert "Move it yourself" in text
-    assert "AshLight writes nothing into your game folders." in text
+    # PLAY-TD-19C-BUILD-GRID (review BG-3): the loot filter page's words
+    assert "AshLight adds its dated blocks at the top and hides nothing." in text
+    assert "Your own file is not changed." in text
+    assert "The copy goes to your downloads." in text
+    assert "Move it to the game's filter folder yourself." in text
+    # the Build file page keeps the promise for the planner folder
+    assert "AshLight writes nothing into your game folders." in _flat(HTML)
 
 
 def test_footer_keeps_the_disclaimer_and_folds_the_promises():

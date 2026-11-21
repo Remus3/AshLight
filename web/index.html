@@ -139,130 +139,174 @@
   </section>
   </div>
 
-  <div id="panel-build" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-build" tabindex="0" hidden>
+  <!-- PLAY-TD-19C-BUILD-GRID (TD-19, F-067; plan 03 section 4): Build and
+       items is a fixed 3 x 2 grid of cards (408 x 322 px at s = 1, 322 x 292
+       compact). These first three cells are cards with pages: a card shows
+       one page at a time, a list longer than its page pages (Prev / Next,
+       Full text), and a rarer tool is a further page of the same card, so no
+       fold can grow a card. A page changes only on a press (web/app.js
+       cardPages). The other three cells keep today's markup until
+       PLAY-TD-19D-ITEMS-GRID. -->
+  <div id="panel-build" class="panel panel-grid panel-cards" role="tabpanel" aria-labelledby="tab-build" tabindex="0" hidden>
   <div class="col">
-  <section id="buildbox" class="card build" aria-labelledby="build-title">
-    <h2 id="build-title">Build</h2>
-    <p id="build-empty" class="muted">No build yet.</p>
-    <div id="build-view" hidden>
-      <p class="build-title"><strong id="build-name"></strong>
-        <span id="build-level" class="muted"></span></p>
-      <p id="build-you" class="build-you"></p>
-      <h3 class="sub-h">Key stats <span class="muted">(saved by Path of Building)</span></h3>
-      <dl id="build-stats" class="kv"></dl>
-      <p id="build-stats-empty" class="muted" hidden>No stats saved in this build. Open it in
-        Path of Building once and copy the code again to include them.</p>
-      <!-- MATH-SKILL-SPLIT: Path of Building's own per-skill DPS -->
-      <div id="split-wrap" hidden>
-        <h3 class="sub-h">Damage by skill <span class="muted">(from Path of Building)</span></h3>
-        <dl id="split-list" class="kv"></dl>
-        <p id="split-more" class="muted" hidden></p>
-        <p id="split-ailments" hidden></p>
-      </div>
-      <h3 class="sub-h">Gear</h3>
-      <ul id="build-gear" class="gear-list"></ul>
-      <h3 class="sub-h">Skills</h3>
-      <ul id="build-skills" class="skill-list"></ul>
-      <h3 class="sub-h">Passive tree</h3>
-      <p id="build-tree"></p>
-      <details id="build-notes-box" hidden><summary>Build notes</summary>
-        <p id="build-notes" class="notes"></p></details>
-      <div class="actions">
-        <button id="build-copy" type="button" class="secondary">Copy code for Path of Building</button>
-      </div>
-      <textarea id="build-code-out" class="code-out" readonly rows="2" aria-label="Build code for Path of Building"></textarea>
-      <!-- UX-DASH-DENSITY: a rarely used tool, folded beside the build it saves -->
-      <details id="buildfile-more" class="tool-fold">
-      <summary>Build file for the game</summary>
-      <p class="muted">The game can load this build as a guide. The button saves a .build
-        file to your browser's downloads. Move it yourself to the game's planner
-        folder in your Documents. AshLight writes nothing into your game folders.</p>
-      <div class="actions">
-        <button id="buildfile-save" type="button" class="secondary">Save .build file</button>
-        <span id="buildfile-said" class="muted"></span>
-      </div>
-      <p id="buildfile-summary" class="muted"></p>
-      <ul id="buildfile-notes" class="muted small" hidden></ul>
-      </details>
+  <section id="buildbox" class="card build grid-card" aria-labelledby="build-title" data-home="main">
+    <div class="card-head">
+      <h2 id="build-title" tabindex="-1">Build</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
-    <p id="build-copy-status" class="muted" role="status" aria-live="polite"></p>
-    <label class="paste" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
-    <textarea id="build-paste" class="paste-box" rows="3" spellcheck="false" autocomplete="off"
-      placeholder="Path of Building code"></textarea>
-    <p id="build-status" class="muted" role="status" aria-live="polite"></p>
-    <!-- TC-LINK-RECOVER (decision 0013): a link refused while web data is off.
-         The first click only shows the opt-in sentence; web data turns on only
-         on the confirm click, which then loads the same link once. -->
-    <div id="link-recover" hidden>
-      <div id="link-offer-row" class="actions">
-        <button id="link-offer" type="button" class="secondary">Turn on web data and load this link</button>
+    <div class="card-page" data-page="main" data-label="">
+      <div id="build-view" hidden>
+        <p class="row-body one-line"><strong id="build-name"></strong></p>
+        <p id="build-level" class="row-body one-line muted"></p>
+        <p id="build-you" class="row-body one-line muted" hidden></p>
+        <p id="build-source" class="row-body one-line muted"></p>
+        <dl id="build-stats" class="card-kv"></dl>
+        <p id="build-stats-empty" class="row-meta muted" hidden>No stats saved in this build. Open it in
+          Path of Building once and copy the code again to include them.</p>
+        <p class="card-act">
+          <button id="build-copy" type="button" class="secondary btn-28">Copy code</button>
+          <span id="build-copy-status" class="row-meta one-line muted"></span>
+        </p>
       </div>
-      <div id="link-confirm" hidden>
-        <p id="link-sentence"></p>
-        <div class="actions">
-          <button id="link-yes" type="button" aria-describedby="link-sentence">Turn on web data</button>
-          <button id="link-no" type="button" class="secondary">Not now</button>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="paste">Paste</button>
+        <button type="button" class="secondary btn-24" data-card-open="chars">Characters</button>
+        <button type="button" class="secondary btn-24" data-card-open="split" id="split-open" hidden>Damage</button>
+        <button type="button" class="secondary btn-24" data-card-open="more">Build file</button>
+      </div>
+    </div>
+    <div class="card-page" data-page="paste" data-label="Paste a build" hidden>
+      <!-- while the link offer's sentence shows, it takes the place of the
+           paste box (web/app.js linkOffer); the status line stays -->
+      <div id="paste-form">
+        <p id="build-empty" class="row-meta muted">No build yet.</p>
+        <label class="paste row-body" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
+        <textarea id="build-paste" class="paste-box" rows="3" spellcheck="false" autocomplete="off"
+          aria-describedby="build-status"
+          placeholder="Path of Building code"></textarea>
+      </div>
+      <p id="build-status" class="row-meta one-line muted"></p>
+      <!-- TC-LINK-RECOVER (decision 0013): a link refused while web data is off.
+           The first click only shows the opt-in sentence; web data turns on only
+           on the confirm click, which then loads the same link once. -->
+      <div id="link-recover" hidden>
+        <div id="link-offer-row" class="card-act">
+          <button id="link-offer" type="button" class="secondary btn-28">Turn on web data and load this link</button>
+        </div>
+        <div id="link-confirm" hidden>
+          <p id="link-sentence" class="row-meta"></p>
+          <div class="card-act">
+            <button id="link-yes" type="button" class="btn-28" aria-describedby="link-sentence">Turn on web data</button>
+            <button id="link-no" type="button" class="secondary btn-28">Not now</button>
+          </div>
         </div>
       </div>
     </div>
-    <p class="muted small">Gem and unique item links open poe2db or the PoE2 wiki in a new tab.</p>
+    <div class="card-page" data-page="chars" data-label="One build per character" hidden>
+      <div id="build-chars" class="pager-slot"></div>
+    </div>
+    <!-- MATH-SKILL-SPLIT: Path of Building's own per-skill DPS -->
+    <div class="card-page" data-page="split" data-label="Damage by skill (from Path of Building)" hidden>
+      <div id="split-wrap" hidden>
+        <dl id="split-list" class="card-kv card-kv-1"></dl>
+        <p id="split-more" class="row-meta one-line muted" hidden></p>
+        <p id="split-ailments" class="row-meta one-line" hidden></p>
+      </div>
+    </div>
+    <div id="buildfile-more" class="card-page" data-page="more" data-label="Build file for the game" hidden>
+      <p class="row-meta">Save it, then move it yourself to the game's planner folder in your
+        Documents. AshLight writes nothing into your game folders.</p>
+      <p class="card-act">
+        <button id="buildfile-save" type="button" class="secondary btn-28">Save .build file</button>
+        <span id="buildfile-said" class="row-meta one-line muted"></span>
+      </p>
+      <p id="buildfile-summary" class="row-meta one-line muted"></p>
+      <ul id="buildfile-notes" class="card-notes row-meta muted" hidden></ul>
+    </div>
+    <!-- the copy fallback: shown only when the clipboard refused the Copy click -->
+    <div class="card-page" data-page="code" data-label="Build code" hidden>
+      <label class="row-meta" for="build-code-out">Select the code and press Ctrl+C to copy it.</label>
+      <textarea id="build-code-out" class="code-out" readonly rows="4"></textarea>
+    </div>
   </section>
 
   </div>
   <div class="col">
-  <section id="healthbox" class="card health" hidden aria-labelledby="health-title">
-    <h2 id="health-title">Build health</h2>
-    <p class="muted">Numbers from Path of Building: the ones saved with your build, plus
-      more when the optional calc is on. They update when you load a build or check an
-      item.</p>
-    <p id="health-msg"></p>
-    <ul id="health-list" class="health-list" hidden></ul>
-    <dl id="health-values" class="kv" hidden></dl>
-    <!-- MATH-DEF-BREAKDOWN: Path of Building's defence and sustain numbers -->
-    <div id="def-wrap" hidden>
-      <h3 class="sub-h">Defence and sustain</h3>
-      <dl id="def-list" class="kv"></dl>
-      <p id="def-hint" class="muted" hidden></p>
+  <section id="healthbox" class="card health grid-card" aria-labelledby="health-title" data-home="main">
+    <div class="card-head">
+      <h2 id="health-title" tabindex="-1">Health and next</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
-    <div id="next-wrap" hidden>
-      <h3 class="sub-h">Look for next</h3>
-      <p class="muted">What to look for on each item you wear: missing resistances
-        and attributes first, then the stats Path of Building rated highest for that slot. Copy one,
-        then paste it into the stash or vendor search box in game.</p>
-      <ul id="next-list" class="search-list"></ul>
-      <p id="next-hint" class="muted" hidden></p>
+    <div class="card-page" data-page="main" data-label="">
+      <p id="health-msg" class="row-body"></p>
+      <ul id="health-list" class="health-list" hidden></ul>
+      <div id="next-wrap" hidden>
+        <h3 id="next-title" class="card-h3">Look for next</h3>
+        <p id="next-hint" class="row-meta one-line muted" hidden></p>
+        <div id="next-list" class="pager-slot"></div>
+      </div>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="numbers" aria-label="Build numbers">Numbers</button>
+        <button type="button" class="secondary btn-24" data-card-open="gear" aria-label="Build gear">Gear</button>
+        <button type="button" class="secondary btn-24" data-card-open="gems" aria-label="Build gems">Gems</button>
+        <button type="button" class="secondary btn-24" data-card-open="notes" aria-label="Build notes">Notes</button>
+      </div>
+    </div>
+    <!-- MATH-DEF-BREAKDOWN: Path of Building's defence and sustain numbers,
+         with the plain values and any warning past the top 3 -->
+    <div id="def-wrap" class="card-page" data-page="numbers" data-label="PoB numbers" hidden>
+      <p id="def-hint" class="row-meta muted" hidden></p>
+      <div id="def-list" class="pager-slot"></div>
+    </div>
+    <div class="card-page" data-page="gear" data-label="Gear" hidden>
+      <div id="build-gear" class="pager-slot"></div>
+    </div>
+    <div class="card-page" data-page="gems" data-label="Gems" hidden>
+      <p id="build-tree" class="row-meta one-line muted"></p>
+      <div id="build-skills" class="pager-slot"></div>
+    </div>
+    <div class="card-page" data-page="notes" data-label="Build notes" hidden>
+      <div id="build-notes" class="pager-slot"></div>
     </div>
   </section>
 
   </div>
   <div class="col">
-  <section id="searchbox" class="card search" hidden aria-labelledby="search-title">
-    <h2 id="search-title">Search strings</h2>
-    <p class="muted">Made from your build. Copy one, then paste it into the stash or vendor
-      search box in game. AshLight copies only when you click Copy.</p>
-    <ul id="search-list" class="search-list"></ul>
-    <!-- UX-DASH-DENSITY: a rarely used tool, folded beside the strings it is made from -->
-    <details id="filter-more" class="tool-fold">
-    <summary>Loot filter add-on</summary>
-    <!-- TC-FILTER-ONE-CONTROL (F-158): one primary control, the merge below;
+  <section id="searchbox" class="card search grid-card" aria-labelledby="search-title" data-home="main">
+    <div class="card-head">
+      <h2 id="search-title" tabindex="-1">Search strings</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <div class="card-page" data-page="main" data-label="">
+      <p id="search-intro" class="row-meta one-line muted">Copy one, paste it in game.</p>
+      <div id="search-list" class="pager-slot"></div>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="filter">Loot filter</button>
+      </div>
+    </div>
+    <!-- UX-DASH-DENSITY / PLAY-TD-19C-BUILD-GRID: the loot filter add-on is a
+         page of this card; the details element is kept open and only the
+         card's page buttons show or hide it (its summary is not drawn).
+         TC-FILTER-ONE-CONTROL (F-158): one primary control, the merge below;
          the plain download is a small link. AshLight's part of the file is
          dated and names the league of its prices. -->
-    <p class="muted">Add AshLight's highlights to your own loot filter. It shows rare
-      drops of the item bases your build wears in larger text. With web data on,
-      valuable uniques and currency stand out. Pick your filter file below. AshLight
-      puts its dated blocks at the top, hides nothing and leaves the rest as it is. The
-      combined copy goes to your browser's downloads as a new file; your own file is not
-      changed. Move it yourself to the folder the game's own filter button opens.
-      AshLight writes nothing into your game folders.</p>
-    <p class="muted small">Want the add-on as its own file instead?
-      <button id="filter-download" type="button" class="link">Download ashlight.filter</button>
-      and add <code class="filter-line">Import "ashlight.filter" Optional</code> near the
-      top of your own filter. <span id="filter-said"></span></p>
-    <div class="actions">
-      <label for="filter-merge-file">Your loot filter file</label>
+    <details id="filter-more" class="card-page tool-page" data-page="filter" data-label="Loot filter add-on" open hidden>
+    <summary>Loot filter add-on</summary>
+    <p class="row-meta">Pick your filter file. AshLight adds its dated blocks at the top and hides
+      nothing. Your own file is not changed. The copy goes to your downloads. Move it to the
+      game's filter folder yourself.</p>
+    <div class="card-act">
+      <label for="filter-merge-file" class="row-meta">Filter file</label>
       <input id="filter-merge-file" type="file" accept=".filter,text/plain">
-      <span id="filter-merge-said" class="muted"></span>
     </div>
+    <p class="card-act"><span id="filter-merge-said" class="row-meta one-line muted"></span><span
+      id="filter-said" class="row-meta one-line muted"></span></p>
+    <p class="muted small">Or <button id="filter-download" type="button" class="link">Download ashlight.filter</button>
+      and add <code class="filter-line">Import "ashlight.filter" Optional</code> to your
+      filter.</p>
     </details>
   </section>
 
