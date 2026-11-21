@@ -68,6 +68,43 @@ def test_two_runs_converge_to_one_of_each():
     assert live == {"core": 1, "supervisor": 1, "overlay": 1}
 
 
+def test_supervisor_command_builder():
+    # RUN-SECOND-LINE-PY: the one supervisor start, windowless, through the
+    # one command builder; --adopt-pid only for a core without a heartbeat
+    cmd = procs.supervisor_command(TEST_PORT)
+    assert cmd == paths.python_cmd("server.al.keepalive", "--port", str(TEST_PORT),
+                                   windowless=True)
+    assert "--adopt-pid" not in cmd
+    cmd = procs.supervisor_command(TEST_PORT, adopt_pid=1234)
+    assert cmd[-4:] == ["--port", str(TEST_PORT), "--adopt-pid", "1234"]
+    assert "electron" not in " ".join(cmd).lower()
+    seen = {}
+
+    def popen(c, **kw):
+        seen["cmd"], seen["kw"] = c, kw
+        return "child"
+
+    assert procs.start_supervisor(TEST_PORT, popen=popen) == "child"
+    assert seen["cmd"] == procs.supervisor_command(TEST_PORT)
+    kw = seen["kw"]
+    assert kw["stdin"] == subprocess.DEVNULL and kw["stdout"] == subprocess.DEVNULL
+    assert kw["stderr"] == subprocess.DEVNULL and kw["close_fds"] is True
+    assert kw["cwd"] == str(paths.repo_root())
+    if os.name == "nt":
+        assert kw["creationflags"] & subprocess.CREATE_NO_WINDOW
+        assert kw["creationflags"] & subprocess.CREATE_NEW_PROCESS_GROUP
+
+
+def test_supervisor_live_reads_the_record_then_the_lock(tmp_path):
+    assert procs.supervisor_live(tmp_path) is False
+    held = ka.acquire_lock(tmp_path)
+    try:
+        assert procs.supervisor_live(tmp_path) is True
+    finally:
+        ka.release_lock(held)
+    assert procs.supervisor_live(tmp_path) is False
+
+
 def test_run_script_uses_the_plan_and_has_no_overlay_gate_on_browser():
     text = RUN.read_text(encoding="ascii")
     assert "server.al.procs" in text and "record-overlay" in text

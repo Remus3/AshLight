@@ -11,6 +11,7 @@ displays.json so the dashboard can offer them; the core only reads that file.
 """
 
 import json
+import math
 from pathlib import Path
 
 from . import jsonfile
@@ -18,11 +19,18 @@ from . import jsonfile
 CONFIG_KEY = "overlay"
 CORNERS = ("top-left", "top-center", "top-right",
            "bottom-left", "bottom-center", "bottom-right")
-# Floors from design 0001 (DS-OPACITY, DS-SCALE): window opacity fades text
-# and plate together, so below 0.9 overlay text drops under 4.5:1 over a
-# white scene (5.2); below 0.95 the 13px secondary text renders under 12px.
+# Floors from design 0001 (DS-OPACITY, DS-SCALE): below 0.95 the 13px
+# secondary text renders under 12px. OVL-TD05-PLATE (TD-05 part 2): the
+# "opacity" key is the HUD plate alpha only (app/shared/layout.js sets
+# --al-plate-a); text stays opaque, so the floor is the plate's own 0.80,
+# where every overlay text colour keeps 4.5:1 over a white scene.
 SCALE_MIN, SCALE_MAX = 0.95, 2.0
-OPACITY_MIN, OPACITY_MAX = 0.9, 1.0
+OPACITY_MIN, OPACITY_MAX = 0.8, 1.0
+# Schema marker. A layout without "v": 2 was saved when "opacity" faded the
+# whole page within 0.9 to 1.0; that value maps linearly onto 0.86 to 1.0
+# once (migrate_opacity), at the next read. Any save writes "v": 2.
+SCHEMA = 2
+V1_OPACITY_MIN, V1_OPACITY_MAX = 0.9, 1.0
 MARGIN_MAX = 400
 MAX_DISPLAYS = 16
 
@@ -35,11 +43,12 @@ PARTS = ("zone", "timer", "level", "deaths", "status", "trade", "item",
 ZONE_GUIDE = ("entry", "always", "never")
 
 DEFAULT = {"display": "primary", "corner": "top-right", "scale": 1.0,
-           "opacity": 0.9, "margin": 16,
+           "opacity": 0.86, "margin": 16,
            "parts": {name: True for name in PARTS},
            # hide the zone line in town and hideout
            "quiet_town": False,
-           "zone_guide": "entry"}
+           "zone_guide": "entry",
+           "v": SCHEMA}
 
 
 class LayoutError(ValueError):
@@ -60,15 +69,45 @@ def _number(value, name, lo, hi, clamp=False):
     return round(float(value), 2)
 
 
+def migrate_opacity(old):
+    """A schema 1 page opacity (0.9 to 1.0, already range-checked) as the
+    schema 2 plate alpha: 0.9 -> 0.86, 1.0 -> 1.0, linear between, in whole
+    hundredths. floor(x + 0.5) is JS Math.round, so app/shared/layout.js
+    gets the same number from the same double."""
+    return math.floor(140 * old - 40 + 0.5) / 100
+
+
+def _opacity(value, current, strict):
+    if current:
+        return _number(value, "opacity", OPACITY_MIN, OPACITY_MAX, not strict)
+    # type and range checked as before; the mapping reads the unrounded
+    # value, as app/shared/layout.js does
+    _number(value, "opacity", V1_OPACITY_MIN, V1_OPACITY_MAX, not strict)
+    old = min(V1_OPACITY_MAX, max(V1_OPACITY_MIN, float(value)))
+    return _number(migrate_opacity(old), "opacity", OPACITY_MIN, OPACITY_MAX,
+                   True)
+
+
+def _schema(value):
+    if isinstance(value, bool) or value != SCHEMA:
+        raise LayoutError(f"v must be {SCHEMA}")
+    return SCHEMA
+
+
 def normalize(layout, strict=True):
     """A complete, valid layout dict. strict=True raises LayoutError on a bad
     field (API input); strict=False clamps an out-of-range number to its
     bound and drops any other bad field to the default (a hand-edited or
-    older config file must never stop the app)."""
+    older config file must never stop the app). A layout without "v": 2
+    (both modes: an old config file or an old settings export) reads its
+    opacity on the schema 1 range and migrates it; the result always
+    carries "v": 2."""
     if not isinstance(layout, dict):
         if strict:
             raise LayoutError("layout must be an object")
         layout = {}
+    raw_v = layout.get("v")
+    current = not isinstance(raw_v, bool) and raw_v == SCHEMA
     out = dict(DEFAULT)
     out["parts"] = dict(DEFAULT["parts"])
     checks = {
@@ -76,13 +115,13 @@ def normalize(layout, strict=True):
                                                         + ", ".join(CORNERS)),
         "display": _display,
         "scale": lambda v: _number(v, "scale", SCALE_MIN, SCALE_MAX, not strict),
-        "opacity": lambda v: _number(v, "opacity", OPACITY_MIN, OPACITY_MAX,
-                                     not strict),
+        "opacity": lambda v: _opacity(v, current, strict),
         "margin": lambda v: int(_number(v, "margin", 0, MARGIN_MAX, not strict)),
         "parts": lambda v: _parts(v, strict),
         "quiet_town": lambda v: _flag(v, "quiet_town"),
         "zone_guide": lambda v: v if v in ZONE_GUIDE else _bad(
             "zone_guide must be one of " + ", ".join(ZONE_GUIDE)),
+        "v": _schema,
     }
     for key, check in checks.items():
         if key not in layout:

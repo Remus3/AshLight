@@ -14488,7 +14488,9 @@
     "F-135"
    ],
    "files": [
-    "web/app.js"
+    "web/app.js",
+    "tests/test_webpage.py",
+    "tests/test_srcpaths.py"
    ],
    "new_files": [
     "web/panels/build.js",
@@ -14578,7 +14580,8 @@
     "server/al/procs.py",
     "tests/test_supervisor.py",
     "tests/test_procs.py",
-    "docs/decisions/0005-core-keepalive.md"
+    "docs/decisions/0005-core-keepalive.md",
+    "app/test/applog.test.js"
    ],
    "new_files": [
     "server/al/plug/secondline.py"
@@ -14714,7 +14717,9 @@
     "app/main.js",
     "app/eval_hotkey.js",
     "app/client/link.js",
-    "app/test/client.test.js"
+    "app/test/client.test.js",
+    "app/test/autostart_switch.test.js",
+    "app/test/tray_mode.test.js"
    ],
    "new_files": [
     "app/hello.js",
