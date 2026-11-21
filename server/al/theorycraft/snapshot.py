@@ -17,6 +17,16 @@ copied to `<name>.prev.json` (`keep_previous`, DATA-TREE-HOLD): one previous
 copy per source, so a reader (treedata.TreeCache) can fall back to it.
 Nothing here is bundled in the repo (decision 0009 item 1).
 
+DATA-SNAP-PROBE (F-143): every fetched body of a source in
+snapprobe.PROBES is probed after the JSON check and before the write (top
+level type, minimum entry count, the fields its reader uses). A failing
+body is 'error: probe: ...' and the cached file and its manifest entry stay
+as they were. Each probe is compared with the cached file (the copy
+keep_previous keeps) and logged to <sidecar>/Logs/snapshot-drift.log; the
+verdicts go to ops/runtime/snapshot/probe.json (snapprobe.report, read by
+AUTO-18 and the Checks row). A caller's own sources table is not probed
+unless it passes `probes`.
+
     python -m server.al.theorycraft.snapshot [--force] [--strict] [--dir D] [--opt-in]
 
 Network only with consent: nothing is fetched while the web_data opt-in
@@ -37,7 +47,7 @@ import urllib.request
 from pathlib import Path
 
 from .. import NAME, VERSION, jsonfile, paths, webfetch
-from . import datacredit
+from . import datacredit, snapprobe
 
 ATTRIBUTION = datacredit.ATTRIBUTION  # one source: theorycraft/datacredit.py
 UA_PURPOSE = "build-time game-data snapshot"
@@ -175,17 +185,58 @@ def load_manifest(directory):
                               default={})
 
 
+LOG_MAX_BYTES = 512 * 1024  # snapshot-drift.log keeps its newest half past this
+
+
+def _old_stats(target, name, probes):
+    """snapprobe.stats of the cached file (None when missing or unreadable)."""
+    doc = jsonfile.read_json(target, max_bytes=MAX_BYTES, kind=(dict, list))
+    return None if doc is None else snapprobe.stats(name, doc, probes)
+
+
+def append_log(path, lines, cap=LOG_MAX_BYTES):
+    """Append ASCII lines to the drift log; past `cap` bytes only the
+    newest half (from a line start) is kept."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="ascii", errors="replace", newline="\n") as fh:
+        fh.write("".join(line + "\n" for line in lines))
+    if path.stat().st_size > cap:
+        tail = path.read_bytes()[-(cap // 2):]
+        cut = tail.find(b"\n")
+        jsonfile.write_bytes(path, tail[cut + 1:] if cut >= 0 else b"")
+
+
+def write_probe_report(runtime, records, now=None):
+    """Merge `records` into <runtime>/snapshot/probe.json (snapprobe.report)."""
+    path = snapprobe.report_path(runtime)
+    previous = jsonfile.read_json(path, max_bytes=snapprobe.REPORT_MAX_BYTES, kind=dict)
+    doc = snapprobe.report(previous, records, now)
+    jsonfile.write_bytes(path, (json.dumps(doc, indent=1, sort_keys=True) + "\n")
+                         .encode("ascii"))
+    return path
+
+
 def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
-        contact=None):
+        contact=None, probes=None, runtime=None, log_dir=None):
     """Refresh every enabled source. Returns {name: outcome} where outcome is
     'fetched', 'unchanged', 'fresh' (skipped, checked < MIN_AGE_S ago),
     'disabled', 'off: contact not set' (a GGG source without a contact) or
-    'error: ...'. Writes the manifest when anything changed."""
+    'error: ...' ('error: probe: ...' when a fetched body fails its probe).
+    Writes the manifest when anything changed.
+
+    probes: the probe table (None: snapprobe.PROBES for the default
+    sources, nothing for a caller's own table). runtime / log_dir: where
+    probe.json (runtime/snapshot/) and snapshot-drift.log go when anything
+    was probed; None writes neither (main passes the real places)."""
     contact = webfetch.clean_contact(contact)
     ua = user_agent(contact)
     directory = Path(directory) if directory is not None else cache_dir()
+    if probes is None:
+        probes = snapprobe.PROBES if sources is None else {}
     sources = SOURCES if sources is None else sources
     now = time.time() if now is None else now
+    records, lines = [], []
     manifest = load_manifest(directory)
     files = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
     out, dirty = {}, False
@@ -216,11 +267,21 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
                 out[name] = "unchanged"
             elif status == 200:
                 try:
-                    json.loads(body)
-                except ValueError as e:
+                    doc = json.loads(body)
+                except (ValueError, RecursionError) as e:
                     raise FetchError("response is not JSON") from e
                 sha = hashlib.sha256(body).hexdigest()
-                if have and sha == entry.get("sha256"):
+                same = bool(have) and sha == entry.get("sha256")
+                result = snapprobe.probe(name, doc, table=probes)
+                if result is not None:
+                    d = None if same else snapprobe.drift(
+                        _old_stats(target, name, probes), snapprobe.stats(name, doc, probes))
+                    records.append(snapprobe.record(result, d, now, probes))
+                    lines.append(snapprobe.drift_line(name, result, d, now))
+                    if result["verdict"] != snapprobe.PASS:
+                        raise FetchError("probe: " + result["reason"])
+                del doc
+                if same:
                     out[name] = "unchanged"
                 else:
                     try:
@@ -241,6 +302,16 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
             dirty = True
         except FetchError as e:
             out[name] = f"error: {e}"
+    if records and runtime is not None:
+        try:
+            write_probe_report(runtime, records, now)
+        except OSError as e:  # a report that cannot be written never fails the run
+            print(f"snapshot: probe report not written: {e}", file=sys.stderr)
+    if lines and log_dir is not None:
+        try:
+            append_log(Path(log_dir) / snapprobe.LOG_NAME, lines)
+        except OSError as e:
+            print(f"snapshot: drift log not written: {e}", file=sys.stderr)
     if dirty:
         doc = {"tool": f"{NAME} {VERSION} theorycraft.snapshot", "attribution": ATTRIBUTION,
                "decision": "docs/decisions/0009-data-license.md",
@@ -278,7 +349,8 @@ def main(argv=None, environ=None, fetch=http_fetch, contact=None, web_data=None)
         print("snapshot: skipped (web_data off; turn web data on or pass --opt-in)")
         return 0
     directory = Path(args.dir) if args.dir else cache_dir(env)
-    result = run(directory, fetch=fetch, force=args.force, contact=contact)
+    result = run(directory, fetch=fetch, force=args.force, contact=contact,
+                 runtime=paths.runtime_dir(), log_dir=paths.sidecar_dir("Logs", env))
     for name in sorted(result):
         print(f"snapshot: {name}: {result[name]}")
     failed = any(v.startswith("error") for v in result.values())
