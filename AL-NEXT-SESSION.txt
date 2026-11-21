@@ -4,7 +4,7 @@ SESSION: 17   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 20 done, next wave 21
+WAVE POINTER: wave 21 done, next wave 22
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
 PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
 WAVE-18 RULINGS (2026-11-21): LOOP-CI-ISSUES -> wave 22; PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI -> wave 21; TEST-SHOTS-TABS -> wave 20 option B; AUTO-19 ruling A: .github/workflows/watch.yml keeps an issues: write exception to the read-only token; runbook docs/plan/08 line 58 amended: the wave integrator or merger may push main after a gated batch. New rows filed session 16: TEST-SUITE-HOLD-75 (wave 20), PLAY-PAGER-SCALE-24 and REL-INSTALLED-RUN-CHECK (wave 21). Loop-owned wave-19 row DATA-TRADESTAT-COVERAGE merged by the loop (89b99c8) and folded at session 16 /done.
@@ -14,10 +14,10 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: setAutostart in app/client/launcher.js still spawns bare powershell.exe (pinned by app/test/autostart_switch.test.js:70; shrink-only BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py) - file a row to switch it to psExe(). tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt (waves 1 to 9 escape counts and rulings; block "SESSION 11 /done": waves 10 to 12, sessions 7 to 10) and AL-2026-11-20.txt (block "SESSION 12 /done": the Wave 13 line, WAVE-13 RULINGS and DEVIATIONS (owed checks stay in OWED LIVE CHECKS), session 11 Do NOT redo, reap note and LOOP RECORDS read-back, the 2026-11-18 quote check); block "SESSION 13 /done": the Wave 14 line, WAVE-14 RULINGS, session 12 reap note and Do NOT redo; block "SESSION 14 /done": the Wave 15 and Wave 16 lines, session 13 reap note and Do NOT redo; block "SESSION 15 /done": session 14 reap note and Do NOT redo; AL-2026-11-21.txt block "SESSION 16 /done": session 15 reap note, Do NOT redo, In flight and Status.
 
-Next action: start wave 21 of docs/plan/07-execution-plan.md: dispatch
+Next action: start wave 22 of docs/plan/07-execution-plan.md: dispatch
 one start agent (docs/plan/08-orchestration.md section 1, argument wave
-21), then the wave (08 sections 2 to 7); packages from
-`python tools/plan_check.py wave 21`; resume at the first unmerged package
+22), then the wave (08 sections 2 to 7); packages from
+`python tools/plan_check.py wave 22`; resume at the first unmerged package
 per decision 0077; then onward per 07's session grouping. Run exactly as 08
 says: ONE background orchestrator agent with a real background watch on the
 progress files; merge batches of 4. Ask the operator nothing. The main
