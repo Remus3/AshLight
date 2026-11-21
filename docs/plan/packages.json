@@ -13737,7 +13737,8 @@
     "server/al/http.py",
     "tests/test_keepalive.py",
     "tests/test_supervisor.py",
-    "docs/decisions/0005-core-keepalive.md"
+    "docs/decisions/0005-core-keepalive.md",
+    "tests/test_core_crash_log.py"
    ],
    "new_files": [
     "server/al/plug/supervisor.py"
@@ -13772,7 +13773,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. keepalive.py: Keepalive.__init__ / step / _crashed / _write_state (209-383) and health_check (194-207). http.py: the /api/health arm (234-238) adds loop_age_s from core.loop_at (RUN-SEAMS). The Checks sentence lives in plug/supervisor.py. Worst-case hang recovery 97 s -> 102 s, inside the 120 s budget. One dated amendment paragraph in decision 0005.",
+   "notes": "Tier P2. keepalive.py: Keepalive.__init__ / step / _crashed / _write_state (209-383) and health_check (194-207). http.py: the /api/health arm (234-238) adds loop_age_s from core.loop_at (RUN-SEAMS). The Checks sentence lives in plug/supervisor.py. Worst-case hang recovery 97 s -> 102 s, inside the 120 s budget. One dated amendment paragraph in decision 0005. Ruling A precedent applied 2026-11-21 (session 17): tests/test_core_crash_log.py test_supervisor_kill_writes_record pinned the old one-step stale kill; this package owns that test and updates it to the two-failed-checks verdict, keeping the supervisor-kill record assertions.",
    "wave": 19,
    "owner": "session",
    "tier": "P2",
