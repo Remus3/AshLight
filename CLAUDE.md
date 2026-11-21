@@ -433,9 +433,12 @@ of the HALT check.
   its diff, file-named, outside the suite gate (no timing tests, at most
   90 s per subset; timing and budget tests go through the gate); main moves
   only after one whole green suite through the gate per merge batch
-  (decision 0060). Reverses if: subset runs cause machine contention or
-  missed regressions, or MAIN's kit changes item 16c to forbid ungated
-  file-named runs.
+  (decision 0060). Amended 2026-11-21 (decision 0060 amendment,
+  TEST-SUITE-HOLD-75): the gated whole-suite hold target is a 120 s median
+  (soak bound 125 s); phase 1 runs min(12, CPUs - 4) workers, never under
+  2; phase 2 stays serial. Reverses if: subset runs cause machine
+  contention or missed regressions, or MAIN's kit changes item 16c to
+  forbid ungated file-named runs.
 - Clipboard / screen only per AshLight hotkey press, never a watcher, never
   input to the game (decision 0003). Reverses if: GGG's overlay rules change.
 - Theorycraft via Path of Building PoE2 interop (codes first, then an

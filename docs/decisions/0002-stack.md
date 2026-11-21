@@ -222,7 +222,8 @@ verdict "XDIST: cleared"; TEST-SUITE-RUNNER):
   the kit suite gate (`python ops/fleet_kit/fleet_suite_gate.py run --owner
   <id> -- python tools/suite_run.py`; `suite_run.py argv --owner <id>`
   prints it) and refused without the gate's `FLEET_SUITE_SLOT`. Phase 1 runs
-  every test except `timing` on 4 workers with `--dist loadgroup` when xdist
+  every test except `timing` on min(12, CPUs - 4) workers (never under 2;
+  decision 0060 amendment 2026-11-21) with `--dist loadgroup` when xdist
   is importable, serially otherwise (the serial path stays the default on a
   machine without the plugin); phase 2 runs the `timing` tests alone,
   serially, after phase 1. The exit code is the worst phase's; children run
