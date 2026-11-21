@@ -1,0 +1,19 @@
+[
+ {
+  "number": 61,
+  "title": "Bump made-up-lib from 3.2.1 to 3.2.2 in /app",
+  "headRefOid": "0000000000000000000000000000000000000061",
+  "files": [
+   {"path": "app/package-lock.json", "additions": 3, "deletions": 3}
+  ]
+ },
+ {
+  "number": 62,
+  "title": "Bump electron from 45.3.3 to 45.3.4 in /app",
+  "headRefOid": "0000000000000000000000000000000000000062",
+  "files": [
+   {"path": "app/package.json", "additions": 1, "deletions": 1},
+   {"path": "app/package-lock.json", "additions": 3, "deletions": 3}
+  ]
+ }
+]
