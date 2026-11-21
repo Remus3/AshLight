@@ -21,7 +21,7 @@ Cache: <sidecar>\\Cache\\ninja\\rates.json (server/al/paths.py).
 PRICE-UNIQUE / PRICE-STACKABLES / UTIL-MOVERS: an optional PriceBook
 (pricebook.py) refreshes the unique and stackable overviews inside the same
 refresh (same opt-in, contact, User-Agent, league, one request at a time),
-each type on its own hourly gate and ETag; snapshot() adds the movers.
+each type on its own gate and ETag; snapshot() adds the movers.
 
 UTIL-1.0-READY (league rollover, research 0019): the auto league is
 re-read at most every LEAGUE_INTERVAL_S (6 h); after the current league's
@@ -47,6 +47,19 @@ it with the size cap applied after inflation). The book's GETs are spaced
 2 s apart (pricebook.GAP_S, the injected sleep): the 23 GETs of a full
 round have 22 gaps. The User-Agent purpose says "prices", since 22 of the
 23 requests fetch other prices than currency.
+
+DATA-PRICE-CADENCE (F-046, decision 0072): Currency stays hourly here; the
+book asks its 22 types every 3 h, hourly for a type a press matched in the
+last 24 h (lookup() calls book.note_press on a press hit), so a day with no
+press makes at most 24 + 176 = 200 overview GETs. RELEASE_POLLING is the
+release gate: while it is False an installed copy (paths.install_mode() ==
+"installed") makes no poe.ninja request at all (refresh() returns
+"off: release build", refresh_async() starts nothing, snapshot()["blocked"]
+says REASON_RELEASE); the press still builds its offline trade link. A
+source checkout polls as before. The constant flips only by a decision
+recording poe.ninja's written yes, an approved mirror or the operator's
+written ruling; silence is not consent. DEP-08's release build reads the
+name RELEASE_POLLING.
 """
 
 import json
@@ -84,6 +97,22 @@ CACHE_NAME = "rates.json"
 # UTIL-FILTER-2 (decision 0032): thin markets never set a filter tier
 FILTER_MIN_LISTINGS = 10  # = pricebook.FEW_LISTINGS
 FILTER_MIN_VOLUME = 1.0  # = pricebook.MOVERS_MIN_VOLUME
+# DATA-PRICE-CADENCE (decision 0072): False = an installed (release) copy
+# sends poe.ninja nothing until a decision records poe.ninja's yes
+RELEASE_POLLING = False
+REASON_RELEASE = "release build"
+
+
+def _installed_default():
+    """True in an installed copy (paths.install_mode, DEP-05); False when
+    that function is missing or fails (a source checkout)."""
+    mode = getattr(paths, "install_mode", None)
+    if not callable(mode):
+        return False
+    try:
+        return mode() == "installed"
+    except Exception:  # noqa: BLE001 - an unreadable mode never blocks a checkout
+        return False
 
 
 def cache_dir(environ=None):
@@ -159,11 +188,13 @@ class RatesClient:
     sleep: sleep(seconds), the wait between the book's GETs (DATA-PRICE-POLITE);
     None = time.sleep with the real transport, no wait with an injected
     fetch (a mock transport has no server to be polite to).
+    installed: callable -> bool, True in an installed (release) copy
+    (DATA-PRICE-CADENCE); None = paths.install_mode() == "installed".
     """
 
     def __init__(self, directory=None, enabled=lambda: False, league=lambda: None,
                  fetch=None, clock=time.time, contact=lambda: None, book=None,
-                 sleep=None):
+                 sleep=None, installed=None):
         self.directory = Path(directory) if directory is not None else cache_dir()
         self.path = self.directory / CACHE_NAME
         self.enabled = enabled
@@ -179,6 +210,7 @@ class RatesClient:
         self._busy = False
         self.doc = self._load()
         self.book = book  # pricebook.PriceBook or None
+        self.installed = installed if installed is not None else _installed_default
 
     def _load(self):
         return jsonfile.read_json(self.path, encoding="ascii", kind=dict, default={})
@@ -190,6 +222,27 @@ class RatesClient:
             log.warning("rates cache not written: %s", e)
 
     # -- gating
+    def release_blocked(self):
+        """DATA-PRICE-CADENCE: True while RELEASE_POLLING is off and this is
+        an installed copy (read on every call; an unreadable answer counts
+        as installed, the stricter reading)."""
+        if RELEASE_POLLING:
+            return False
+        try:
+            return bool(self.installed() if callable(self.installed) else self.installed)
+        except Exception:  # noqa: BLE001 - unknown counts as installed
+            return True
+
+    def blocked_reason(self):
+        """Why nothing is requested now: REASON_OFF, REASON_RELEASE,
+        REASON_CONTACT or None."""
+        enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
+        if not enabled:
+            return webfetch.REASON_OFF
+        if self.release_blocked():
+            return REASON_RELEASE
+        return webfetch.blocked_reason(enabled, self.contact)
+
     def _due(self, key, interval, now):
         last = self.doc.get(key)
         return not isinstance(last, (int, float)) or not 0 <= now - last < interval
@@ -309,6 +362,8 @@ class RatesClient:
             webfetch.require_opt_in(self.enabled)
         except webfetch.WebDataOff:
             return "off"
+        if self.release_blocked():  # decision 0072: no request until a yes
+            return "off: " + REASON_RELEASE
         contact = webfetch.contact_value(self.contact)
         if contact is None:
             return "off: " + webfetch.REASON_CONTACT
@@ -333,6 +388,9 @@ class RatesClient:
             outcome = self._refresh_rates(league_id, name, now)
             if outcome == "backoff":
                 return outcome  # the Currency GET hit a 429 / 403 / 503
+        # DATA-PRICE-CADENCE: a new league prices its book types within the
+        # hour even when their 3 h gate has not passed (decision 0026 item 4)
+        book_due = book_due or (self.book is not None and self.book.due(now, league_id))
         if book_due:
             # the Currency GET (when due) comes first; the book sleeps
             # GAP_S before each of its GETs and stops on BackedOff
@@ -398,7 +456,7 @@ class RatesClient:
     def refresh_async(self):
         """Start a background refresh when the opt-in is on and one is due;
         returns True when a thread was started. Never blocks a request."""
-        if webfetch.blocked_reason(self.enabled, self.contact) is not None:
+        if self.blocked_reason() is not None:
             return False
         if self._busy or not self.any_due():
             return False
@@ -417,7 +475,7 @@ class RatesClient:
         if isinstance(attempt, (int, float)):
             next_in = max(0, int(attempt + MIN_INTERVAL_S - now))
         enabled = bool(self.enabled() if callable(self.enabled) else self.enabled)
-        blocked = webfetch.blocked_reason(enabled, self.contact)
+        blocked = self.blocked_reason()
         changed = doc.get("league_changed_at")
         listed = doc.get("leagues") if isinstance(doc.get("leagues"), list) else []
         return {"web_data": enabled, "source": "poe.ninja",
@@ -455,10 +513,16 @@ class RatesClient:
         parsed item, or None; currency from the rates, the rest from the
         book, current league only. Web data off -> None. Never a request:
         the press reads the cache only. A hit carries league_changed_at
-        (epoch seconds like checked_at, or None) for the card text."""
+        (epoch seconds like checked_at, or None) for the card text.
+        DATA-PRICE-CADENCE: a book hit for a pressed item (a parsed item
+        object, what PriceChecker passes) calls book.note_press, in memory
+        only; a plain dict (the price watch's cache re-read) is no press."""
         hit = self._lookup(item)
         if hit is not None:
             hit["league_changed_at"] = self.doc.get("league_changed_at")
+            if self.book is not None and not isinstance(item, dict) \
+                    and hit.get("type") != OVERVIEW_TYPE:
+                self.book.note_press(hit.get("type"), self.clock())
         return hit
 
     def _lookup(self, item):

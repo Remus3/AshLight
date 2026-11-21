@@ -607,12 +607,21 @@ of the HALT check.
   refresh, started by the core loop while the log is active or /api/rates
   was read in the last 10 min (at most one check a minute, web data on;
   the hourly gates still decide; decision 0026 amended 2026-11-20) (same
-  opt-in, contact, UA, league; per-type hourly gate + ETag),
+  opt-in, contact, UA, league; per-type gate (Currency and types pressed
+  in the last 24 h hourly, the rest every 3 h; decision 0072) + ETag),
   the press reads the cache only, movers from the same cache, auto league
   re-read every 6 h or after a 404, trade links follow the cached league
   while web data is on (decision 0026). Reverses if: poe.ninja asks for
   less polling or blocks it, decision 0013 goes per-feature, or the
   overview shapes break every release.
+- poe.ninja polling: Currency hourly, the other overview types every 3 h
+  unless a press matched the type in the last 24 h (at most 200 overview
+  GETs a day); a release build makes no poe.ninja request
+  (ninja.RELEASE_POLLING off, trade link only) until a decision records
+  poe.ninja's yes, an approved mirror or the operator's written ruling;
+  silence is not consent (decision 0072, amends 0026 item 2). Reverses if:
+  poe.ninja says yes (flip the constant), asks for a mirror or less
+  polling (new decision), or blocks the client.
 - LuaJIT for the optional calc builds with a system compiler, else a
   hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
   Cache on -TcCalc only, PATH set only in the build subprocess, never
