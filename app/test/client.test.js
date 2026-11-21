@@ -303,8 +303,10 @@ function checkPythonLookup(saved, bin, cwd) {
   const seen = [];
   const exec = (py) => { seen.push(py); return JSON.stringify({ sidecar: "s" }); };
   // the current directory, ".", empty, relative and UNC entries are skipped
+  // (path.relative is absolute when the temp dir is on another drive: skip it then)
   const rel = path.relative(saved, bin);
-  for (const p of ["", ".", ";;", "repo", rel, "\\\\server\\share", "//server/share"]) {
+  const rels = path.isAbsolute(rel) ? [] : [rel];
+  for (const p of ["", ".", ";;", "repo", ...rels, "\\\\server\\share", "//server/share"]) {
     const env = { PATH: p, PATHEXT: ".EXE" };
     assert.equal(Launcher.whichAbs("python", env), "", p);
     assert.equal(Launcher.resolveSidecar(cwd, exec, env), "", p);

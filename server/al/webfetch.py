@@ -12,6 +12,12 @@ Rules (CLAUDE.md "Game ToS floor", decision 0013):
 - a truthful User-Agent naming AshLight and its version on every request;
   never a cookie (no POESESSID, no cookie jar);
 - a response size cap and a short timeout on every request;
+- SEC-CEIL-WEBFETCH: a TOTAL deadline (DEADLINE_S) per request on an
+  injectable clock. The socket timeout bounds one silent wait only, so a
+  server trickling one byte a second would never trip it; the body is read
+  in blocks through read1 (one socket read each) and the deadline is
+  checked between blocks and between redirect hops. A read overshoots it by
+  at most one socket timeout;
 - never the official trade site or its API, whatever a caller's allowlist
   says (decision 0017, `is_trade_url`);
 - a gzip body is inflated through `inflate` with the same size cap applied
@@ -42,6 +48,8 @@ import urllib.request
 from . import NAME, VERSION, metrics
 
 TIMEOUT_S = 10.0
+DEADLINE_S = 30.0
+READ_BLOCK = 64 * 1024
 MAX_REDIRECTS = 3
 DEFAULT_MAX_BYTES = 2 * 1024 * 1024
 REDIRECT_CODES = (301, 302, 303, 307, 308)
@@ -190,22 +198,53 @@ def _count_fetch(url, status, t0):
     metrics.emit("fetch", host=host, cls=cls, ms=ms)
 
 
-def _open_once(method, url, headers, body, max_bytes, timeout):
+def _past(deadline_at, clock):
+    if clock() >= deadline_at:
+        raise FetchError("request passed its total deadline")
+
+
+def read_body(resp, max_bytes, deadline_at, clock=time.monotonic, cut=False):
+    """The body of `resp`, at most max_bytes (more raises FetchError, or
+    with cut=True is cut to max_bytes), read in blocks of at most READ_BLOCK
+    through read1 when the response has it (one socket read per call, so a
+    trickle returns between bytes), else read; FetchError once clock()
+    reaches deadline_at (SEC-CEIL-WEBFETCH)."""
+    reader = getattr(resp, "read1", None) or resp.read
+    parts, size = [], 0
+    while True:
+        _past(deadline_at, clock)
+        block = reader(min(READ_BLOCK, max_bytes + 1 - size))
+        if not block:
+            break
+        parts.append(block)
+        size += len(block)
+        if size > max_bytes:
+            if cut:
+                return b"".join(parts)[:max_bytes]
+            raise FetchError("response too large")
+    return b"".join(parts)
+
+
+def _open_once(method, url, headers, body, max_bytes, timeout,
+               deadline_at=None, clock=time.monotonic):
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
     opener = urllib.request.build_opener(_NoRedirect())
     t0 = time.monotonic()
+    if deadline_at is None:
+        deadline_at = clock() + DEADLINE_S
     status = None  # stays None (class "error") unless a reply is returned
     try:
+        _past(deadline_at, clock)
+        timeout = max(0.001, min(timeout, deadline_at - clock()))
         with opener.open(req, timeout=timeout) as resp:
-            data = resp.read(max_bytes + 1)
-            if len(data) > max_bytes:
-                raise FetchError("response too large")
+            data = read_body(resp, max_bytes, deadline_at, clock)
             status = resp.status
             return status, dict(resp.headers.items()), data
     except urllib.error.HTTPError as e:
         try:
-            data = e.read(max_bytes + 1) if e.fp is not None else b""
-        except (OSError, http.client.HTTPException):
+            data = (read_body(e, max_bytes, deadline_at, clock, cut=True)
+                    if e.fp is not None else b"")
+        except (OSError, http.client.HTTPException, FetchError):
             data = b""
         status = e.code
         return e.code, dict((e.headers or {}).items()), data[:max_bytes]
@@ -289,28 +328,38 @@ def retry_after_s(headers, now, lo=RETRY_AFTER_LO_S, hi=RETRY_AFTER_HI_S):
     return min(max(wait, float(lo)), float(hi))
 
 
-def make_transport(max_bytes=DEFAULT_MAX_BYTES, timeout=TIMEOUT_S):
-    """The real one-hop transport, fetch(method, url, headers, body)."""
+def make_transport(max_bytes=DEFAULT_MAX_BYTES, timeout=TIMEOUT_S,
+                   deadline=DEADLINE_S, clock=time.monotonic):
+    """The real one-hop transport, fetch(method, url, headers, body); each
+    call gets its own total deadline of `deadline` seconds on `clock`."""
     def fetch(method, url, headers, body=None):
-        return _open_once(method, url, headers, body, max_bytes, timeout)
+        return _open_once(method, url, headers, body, max_bytes, timeout,
+                          clock() + deadline, clock)
     return fetch
 
 
 def request(method, url, headers, allowed_hosts, body=None, fetch=None,
-            max_bytes=DEFAULT_MAX_BYTES, max_redirects=MAX_REDIRECTS):
+            max_bytes=DEFAULT_MAX_BYTES, max_redirects=MAX_REDIRECTS,
+            deadline=DEADLINE_S, clock=time.monotonic):
     """One logical request through `fetch` (default: the real transport),
     following at most max_redirects redirects, each checked against
     allowed_hosts. Returns (status, headers, body) of the final hop; a 3xx
     past the limit or off the allowlist raises. A User-Agent header is
-    required; a Cookie header is refused."""
+    required; a Cookie header is refused. The whole chain has one total
+    deadline (SEC-CEIL-WEBFETCH): no hop starts after it, and the default
+    transport's body reads stop at it."""
     if not header(headers, "User-Agent"):
         raise FetchError("a User-Agent is required")
     if header(headers, "Cookie") is not None:
         raise FetchError("cookies are never sent")
-    fetch = fetch or make_transport(max_bytes)
+    deadline_at = clock() + deadline
+    if fetch is None:
+        def fetch(m, u, h, b=None):
+            return _open_once(m, u, h, b, max_bytes, TIMEOUT_S, deadline_at, clock)
     current = url
     for hop in range(max_redirects + 1):
         check_url(current, allowed_hosts)
+        _past(deadline_at, clock)
         status, rh, data = fetch(method, current, dict(headers), body)
         if data is not None and len(data) > max_bytes:
             raise FetchError("response too large")
