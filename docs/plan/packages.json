@@ -13049,7 +13049,9 @@
    "files": [
     "server/al/ninja.py",
     "server/al/pricebook.py",
-    "docs/decisions/0026-price-book-and-league-rollover.md"
+    "docs/decisions/0026-price-book-and-league-rollover.md",
+    "tests/test_price_book.py",
+    "tests/test_fullstack.py"
    ],
    "new_files": [
     "docs/decisions/0072-poe-ninja-cadence-and-release-gate.md",
@@ -13119,6 +13121,7 @@
     "scripts/build.ps1",
     "scripts/autostart.ps1",
     "app/client/home.js",
+    "app/guards.js",
     "docs/decisions/0002-stack.md",
     "docs/decisions/0010-process-registry.md",
     "docs/decisions/0041-desktop-client.md"
