@@ -7,9 +7,15 @@
    search string works, the filter imports, the overlay keeps its FPS).
    The card lists them from GET /api/verdicts (server/al/plug/verdicts.py);
    each open check (not tried yet, or refused) carries Worked and Refused
-   buttons, and one click posts the verdict (POST /api/verdicts) with the
-   optional note typed above the list. A check that worked is closed and
-   shows no buttons. The core keeps the record (ops/runtime/verdicts.json);
+   buttons and its own optional note field, and one click posts the
+   verdict (POST /api/verdicts) with that row's note. A check that worked
+   is closed and shows no buttons.
+   VERDICTS-UI-A11Y (design review V-1 to V-3): every verdict click ends
+   with focus on the said line (#verdicts-said, tabindex -1), so a screen
+   reader reads Saved or the failure; while a post runs the buttons are
+   aria-disabled (never disabled, which would drop the focus) and clicks
+   are ignored; each open row has its own note, so a note can only go
+   with the check it sits under. The core keeps the record (ops/runtime/verdicts.json);
    nothing is sent to the game or anywhere else. No timers, no clipboard,
    no modal; every text is set with textContent. */
 (function (root, factory) {
@@ -26,7 +32,7 @@
   var PATH = "/api/verdicts";
   var INTRO = "Some things only you can check in the game. After you try one, " +
     "press Worked or Refused. Nothing is sent anywhere.";
-  var NOTE_LABEL = "Note, optional (goes with your next click)";
+  var NOTE_LABEL = "Note for this check, optional";
   var WORKED = "Worked";
   var REFUSED = "Refused";
   var STATUS = { open: "not tried yet", worked: "worked", refused: "refused" };
@@ -88,7 +94,8 @@
   }
 
   // the card's fixed nodes, made once per wire; the list is rebuilt
-  var state = { doc: null, api: null, nodes: null, data: null, busy: false, buttons: [] };
+  var state = { doc: null, api: null, nodes: null, data: null, busy: false, buttons: [],
+                notes: {} };
 
   function make(doc, tag, cls, text) {
     var n = doc.createElement(tag);
@@ -99,26 +106,17 @@
 
   function build(doc, mount) {
     var intro = make(doc, "p", "muted small", INTRO);
-    var label = make(doc, "label", "row-meta", NOTE_LABEL);
-    label.setAttribute("for", "verdicts-note");
-    var note = make(doc, "textarea", "paste-box");
-    note.id = "verdicts-note";
-    note.setAttribute("rows", "2");
-    note.setAttribute("maxlength", String(MAX_NOTE));
-    note.setAttribute("autocomplete", "off");
     var list = make(doc, "ul", "checks-list");
     list.id = "verdicts-list";
     // not a live region: the dashboard keeps at most 9 (test_a11y); focus
-    // moves here when a click removes the focused button
+    // moves here after every verdict click (V-1), so it is read out
     var said = make(doc, "p", "muted");
     said.id = "verdicts-said";
     said.setAttribute("tabindex", "-1");
     mount.appendChild(intro);
-    mount.appendChild(label);
-    mount.appendChild(note);
     mount.appendChild(list);
     mount.appendChild(said);
-    return { mount: mount, note: note, list: list, said: said };
+    return { mount: mount, list: list, said: said };
   }
 
   function button(doc, text, row, result) {
@@ -127,9 +125,26 @@
     b.setAttribute("data-check", row.id);
     b.setAttribute("data-result", result);
     b.setAttribute("aria-describedby", "verdicts-label-" + row.id);
-    b.addEventListener("click", function () { send(row.id, result); });
+    b.setAttribute("aria-disabled", state.busy ? "true" : "false");
+    b.addEventListener("click", function () { send(row.id, result, b); });
     state.buttons.push(b);
     return b;
+  }
+
+  /* V-3: one note field per open row, labelled for that row. */
+  function noteField(doc, row, maxNote) {
+    var wrap = make(doc, "p", "check-detail");
+    var id = "verdicts-note-" + row.id;
+    var label = make(doc, "label", "row-meta", NOTE_LABEL);
+    label.setAttribute("for", id);
+    var note = make(doc, "textarea", "paste-box");
+    note.id = id;
+    note.setAttribute("rows", "1");
+    note.setAttribute("maxlength", String(maxNote));
+    note.setAttribute("autocomplete", "off");
+    wrap.appendChild(label);
+    wrap.appendChild(note);
+    return { wrap: wrap, note: note };
   }
 
   function paint() {
@@ -138,7 +153,9 @@
     var doc = state.doc;
     var m = model(state.data);
     n.mount.hidden = m.rows.length === 0;
-    n.note.setAttribute("maxlength", String(m.maxNote));
+    // a rebuild keeps what the player typed in the rows still open
+    var kept = state.notes;
+    state.notes = {};
     n.list.textContent = "";
     state.buttons = [];
     m.rows.forEach(function (r) {
@@ -161,6 +178,15 @@
         li.appendChild(make(doc, "p", "check-detail muted", "Your note: " + r.note));
       }
       if (r.open) {
+        var f = noteField(doc, r, m.maxNote);
+        f.note.value = kept[r.id] ? kept[r.id].value : "";
+        // W-2: a refused note stays marked across a rebuild
+        if (kept[r.id] && kept[r.id].getAttribute("aria-invalid") === "true") {
+          f.note.setAttribute("aria-invalid", "true");
+          f.note.setAttribute("aria-describedby", "verdicts-said");
+        }
+        state.notes[r.id] = f.note;
+        li.appendChild(f.wrap);
         var row = make(doc, "p", "settings-controls");
         row.appendChild(button(doc, WORKED, r, "worked"));
         row.appendChild(button(doc, REFUSED, r, "refused"));
@@ -171,40 +197,60 @@
     if (m.allDone && !n.said.textContent) { n.said.textContent = ALL_DONE; }
   }
 
-  /* While a click's post runs every verdict button waits (one at a time). */
+  /* While a click's post runs every verdict button waits (one at a time).
+     V-2: aria-disabled, never disabled, so the focused button keeps the
+     focus; send() ignores clicks while busy. */
   function setBusy(on) {
     state.busy = on;
-    state.buttons.forEach(function (b) { b.disabled = on; });
+    state.buttons.forEach(function (b) { b.setAttribute("aria-disabled", on ? "true" : "false"); });
   }
 
-  /* One click: post the verdict with the typed note, then repaint from the
-     core's answer. A refused note is said, never cut or sent. */
-  function send(id, result) {
+  /* V-1: the said line takes the focus after a verdict click, unless the
+     player has since moved it somewhere else on the page. */
+  function sayFocus(clicked) {
+    var n = state.nodes;
+    var doc = state.doc;
+    if (!n || typeof n.said.focus !== "function") { return; }
+    var a = doc ? doc.activeElement : null;
+    if (!clicked || !a || a === clicked || a === doc.body) { n.said.focus(); }
+  }
+
+  /* One click: post the verdict with that row's note, then repaint from
+     the core's answer. A refused note is said, never cut or sent; the
+     focus goes to that note field, which then points at the said line. */
+  function send(id, result, clicked) {
     var n = state.nodes;
     if (!n || state.busy || typeof state.api !== "function") { return; }
     var m = model(state.data);
-    var note = cleanNote(n.note.value, m.maxNote);
+    var field = state.notes[id] || null;
+    var note = cleanNote(field ? field.value : "", m.maxNote);
     if (note === null) {
       n.said.textContent = NOTE_BAD;
+      if (field) { // W-4
+        field.setAttribute("aria-invalid", "true");
+        field.setAttribute("aria-describedby", "verdicts-said");
+        if (typeof field.focus === "function") { field.focus(); }
+      }
       return;
+    }
+    if (field && field.getAttribute("aria-invalid") === "true") {
+      field.setAttribute("aria-invalid", "false");
     }
     n.said.textContent = "";
     setBusy(true);
     var p;
     try { p = state.api("POST", PATH, body(id, result, note)); } catch (e) { p = Promise.reject(e); }
     return Promise.resolve(p).then(function (res) {
-      var doc = state.doc;
-      var hadFocus = doc && doc.activeElement && doc.activeElement.getAttribute &&
-        doc.activeElement.getAttribute("data-check") === id;
       state.busy = false;
       if (res && res.verdicts) { state.data = res.verdicts; }
-      n.note.value = "";
+      if (state.notes[id]) { state.notes[id].value = ""; }
       paint();
       n.said.textContent = SAVED[result];
-      if (hadFocus && typeof n.said.focus === "function") { n.said.focus(); }
+      sayFocus(clicked);
     }, function () {
       setBusy(false);
       n.said.textContent = SAVE_FAILED;
+      sayFocus(clicked);
     });
   }
 
@@ -218,6 +264,8 @@
     state.data = null;
     state.busy = false;
     state.nodes = null;
+    state.notes = {};
+    state.buttons = [];
     if (!mount || typeof api !== "function") { return Promise.resolve(false); }
     state.nodes = build(doc, mount);
     var p;
