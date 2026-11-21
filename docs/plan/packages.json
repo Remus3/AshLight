@@ -12252,7 +12252,7 @@
     "tests/test_play_fit.py",
     "tests/test_ux_b8.py::test_build_file_and_loot_filter_fold_in_their_own_cards"
    ],
-   "accept": "npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py tests/test_ux_b6.py tests/test_ux_b8.py tests/test_dash_console.py pass: the Build, Health and next and Search strings cards are 3 cells of the 3 x 2 grid, each list pages at 10 rows (8 compact), and no element inside the three cards has scrollHeight above clientHeight at the 5 cockpit sizes.",
+   "accept": "npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py tests/test_ux_b6.py tests/test_ux_b8.py tests/test_dash_console.py pass: the Build, Health and next and Search strings cards are 3 cells of the 3 x 2 grid, control-row lists page at Search 7/5, Look for next 4/2, gear 9/7, gems 8/6, Numbers 8/6; plain lists 10/8, and no element inside the three cards has scrollHeight above clientHeight at the 5 cockpit sizes.",
    "zero_click": "Cards fill when a build loads; paging is optional and outside play.",
    "size": "L",
    "est_min": 90,
