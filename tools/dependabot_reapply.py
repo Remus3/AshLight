@@ -26,6 +26,17 @@ seam (PUB-DEPBOT-NPM). A seam that returns None is empty: the pull request
 stays open and one line `needs <package id>` is reported. Any other pull
 request stays open with one `needs review` line.
 
+apply_npm (PUB-DEPBOT-NPM): a lockfile-only bump is re-applied through the
+pin procedure (F-037, decision 0068): a release under 3 days old (npm view
+<pkg> time) leaves the pull request open with one line; else the pull
+request's lockfile is read from its head commit, regenerated with
+`npm install --prefix app --package-lock-only --ignore-scripts` under
+app/.npmrc, checked (the package at the new version, electron unchanged),
+`npm audit signatures` must pass, then the same gate / commit / push / close
+path. A pull request that bumps electron itself yields no commit: it is
+closed with one line naming the Electron bump procedure (decision 0070) once
+that procedure's files exist, and left open and reported before then.
+
 apply_actions: re-read the new tag's commit with
 `gh api repos/<owner>/<name>/commits/v<tag> --jq .sha`, rewrite the `uses:`
 SHA and its `# v<tag>` comment in the workflow files the pull request
@@ -39,8 +50,8 @@ guarded pre-push hook applies) and close the pull request with
 The repository is read from the checkout's own origin remote, never from a
 tracked constant. With no origin remote every sub-command is a no-op that
 exits 0. Runs in the MAIN checkout like the loop's push worker, never in a lane
-worktree (lanes get no gh; tests/test_p163_lane_tools.py). git, gh and the
-clock are injected (tests use recording fakes; no network in tests).
+worktree (lanes get no gh; tests/test_p163_lane_tools.py). git, gh, npm and
+the clock are injected (tests use recording fakes; no network in tests).
 
 Exit codes: 0 done (bumps left open included), 1 a git or gh call failed or
 the pull request is not an open Dependabot one, 2 usage.
@@ -271,10 +282,205 @@ def apply_actions(ctx, pr):
     return "applied locally as %s, pushed, closed" % head
 
 
+# npm titles: "Bump <name>|@<scope>/<name> from <old> to <new>[ in /app]",
+# optionally behind a conventional prefix. A group title names no package.
+_NPM_BUMP = re.compile(
+    r"(?:^|:\s*)[Bb]ump (@?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?) "
+    r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?\s*$")
+_ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$")
+NPM_AGE_S = 3 * 86400
+NPM_LOCK = "app/package-lock.json"
+NPM_PKG = "app/package.json"
+NPM_PREFIX = ["--prefix", "app"]
+NPM_REGEN = ["install", "--prefix", "app", "--package-lock-only", "--ignore-scripts"]
+NPM_AUDIT = ["audit", "signatures", "--prefix", "app"]
+ELECTRON = "electron"
+# The Electron bump procedure: decision 0070's policy plus the ELECTRON-WATCH
+# row templates (AUTO-09). It exists when both tracked files do.
+ELECTRON_PROCEDURE = "the Electron bump procedure (decision 0070)"
+ELECTRON_PROCEDURE_FILES = ("docs/decisions/0070-electron-upgrade-policy.md",
+                            "ops/loop/watch_rows/electron.json")
+ELECTRON_COMMENT = ("Electron moves only through the Electron bump procedure "
+                    "(decision 0070); this pull request was a signal.")
+
+
+def default_npm(root):
+    """npm(args) -> (rc, stdout), run in the checkout root; npm.cmd on
+    Windows is resolved by its full path."""
+    import shutil
+    exe = shutil.which("npm") or "npm"
+    return lambda args: _run([exe] + list(args), root)
+
+
+def parse_npm_bump(title):
+    """(package, old, new) of a Dependabot npm bump title, else None."""
+    m = _NPM_BUMP.search((title or "").strip())
+    if not m or ".." in m.group(1):
+        return None
+    return m.group(1), m.group(2), m.group(3)
+
+
+def iso_epoch(text):
+    """Epoch seconds of an npm 'time' stamp (UTC, 'Z'), else None."""
+    m = _ISO.match((text or "").strip())
+    if not m:
+        return None
+    import calendar
+    try:
+        return calendar.timegm(tuple(int(x) for x in m.groups()) + (0, 0, 0))
+    except (OverflowError, ValueError):
+        return None
+
+
+def lock_version(text, name):
+    """The version the lockfile resolves for a top-level node_modules/<name>,
+    else None (also for a lockfile that is not JSON)."""
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None
+    pkgs = data.get("packages") if isinstance(data, dict) else None
+    entry = pkgs.get("node_modules/" + name) if isinstance(pkgs, dict) else None
+    v = entry.get("version") if isinstance(entry, dict) else None
+    return v if isinstance(v, str) else None
+
+
+def electron_signal(ctx, pr, new, leave):
+    """An electron bump yields no commit: closed with one line naming the
+    Electron bump procedure once it exists, left open and reported before."""
+    n = pr["number"]
+    if not all((ctx.root / rel).is_file() for rel in ELECTRON_PROCEDURE_FILES):
+        return leave("electron %s waits for %s" % (new, ELECTRON_PROCEDURE))
+    rc, _out = ctx.gh(["pr", "close", str(n), "--repo", ctx.repo, "--comment",
+                       ELECTRON_COMMENT])
+    if rc != 0:
+        return leave("electron signal, gh pr close failed (rc %d)" % rc, 1)
+    return "closed, electron %s moves only through %s" % (new, ELECTRON_PROCEDURE)
+
+
+def land(ctx, n, edited, subject, restore, leave):
+    """The shared gate / commit / push / close path (GP-14): every gate of
+    ops/loop/gates.txt, one operator commit of the named paths through the
+    kit git lock, push main, close with 'Applied locally as <sha>.'."""
+    for cmd, ok, detail in ctx.gates(ctx.root):
+        if not ok:
+            restore()
+            return leave("gate red: %s (%s)" % (cmd, detail))
+    rc, _out = ctx.git(["commit", "-q", "-m", subject, "--"] + edited)
+    if rc != 0:
+        restore()
+        return leave("commit refused (rc %d)" % rc, 1)
+    rc, out = ctx.git(["rev-parse", "HEAD"])
+    head = (out or "").strip()
+    if rc != 0 or not _SHA.match(head):
+        return leave("committed, HEAD unreadable (rc %d)" % rc, 1)
+    rc, _out = ctx.git(["push", "origin", "main"])
+    if rc != 0:
+        return leave("committed %s, push refused (rc %d)" % (head, rc), 1)
+    rc, _out = ctx.gh(["pr", "close", str(n), "--repo", ctx.repo, "--comment",
+                       "Applied locally as %s." % head])
+    if rc != 0:
+        return leave("applied as %s and pushed, gh pr close failed (rc %d)"
+                     % (head, rc), 1)
+    return "applied locally as %s, pushed, closed" % head
+
+
 def apply_npm(ctx, pr):
-    """Seam for an npm bump (PUB-DEPBOT-NPM fills it). Returns the one result
-    line when it handled the pull request, None while empty."""
-    return None
+    """Re-apply one npm lockfile bump through the pin procedure (F-037,
+    decision 0068): the 3-day age rule first (`npm view <pkg> time --json`;
+    a release under 3 days old leaves the pull request open with one line),
+    then the pull request's lockfile is read from its head commit and
+    regenerated with `npm install --prefix app --package-lock-only
+    --ignore-scripts`, checked (the package at the new version, electron
+    unchanged), `npm audit signatures` must pass, then the shared gate /
+    commit / push / close path. An electron bump is only a signal for the
+    Electron bump procedure (electron_signal). Returns the one result line."""
+    n = pr["number"]
+
+    def leave(why, rc=0):
+        ctx.left_open.append(n)
+        ctx.seam_rc = max(getattr(ctx, "seam_rc", 0), rc)
+        return "left open, " + why
+
+    bump = parse_npm_bump(pr.get("title"))
+    if bump is None:
+        return leave("needs review (title names no bump)")
+    dep, old, new = bump
+    if dep == ELECTRON:
+        return electron_signal(ctx, pr, new, leave)
+    paths = pr_paths(pr)
+    if NPM_PKG in paths or NPM_LOCK not in paths:
+        return leave("needs review (%s changes beyond the lockfile)" % dep)
+    npm = getattr(ctx, "npm", None) or default_npm(ctx.root)
+    rc, out = ctx.git(["rev-parse", "--abbrev-ref", "HEAD"])
+    if rc != 0 or out.strip() != "main":
+        return leave("checkout is not on main", 1 if rc else 0)
+    rc, out = ctx.git(["status", "--porcelain", "--"] + list(NPM_PATHS))
+    if rc != 0:
+        return leave("git status failed (rc %d)" % rc, 1)
+    if out.strip():
+        return leave("local edits in the npm files")
+    # the 3-day age rule, before anything is changed
+    rc, out = npm(["view", dep, "time", "--json"] + NPM_PREFIX)
+    try:
+        times = json.loads(out or "") if rc == 0 else None
+    except ValueError:
+        times = None
+    published = iso_epoch(times.get(new)) if isinstance(times, dict) else None
+    if published is None:
+        return leave("npm view gave no publish time for %s %s (rc %d)"
+                     % (dep, new, rc), 1)
+    age = ctx.clock() - published
+    if age < NPM_AGE_S:
+        return leave("%s %s is under 3 days old (published %s), waits"
+                     % (dep, new, times.get(new)))
+    sha = str(pr.get("headRefOid") or "")
+    if not _SHA.match(sha):
+        return leave("needs review (no head commit)")
+    rc, _out = ctx.git(["fetch", "-q", "origin", sha])
+    if rc != 0:
+        return leave("git fetch of the head commit failed (rc %d)" % rc, 1)
+    rc, pr_lock = ctx.git(["show", "%s:%s" % (sha, NPM_LOCK)])
+    if rc != 0 or not pr_lock:
+        return leave("head commit has no %s (rc %d)" % (NPM_LOCK, rc), 1)
+    lock = ctx.root / NPM_LOCK
+    try:
+        original = lock.read_bytes()
+    except OSError:
+        return leave("no %s in the checkout" % NPM_LOCK, 1)
+    pin = lock_version(original.decode("utf-8", "replace"), ELECTRON)
+
+    def restore():
+        lock.write_bytes(original)
+
+    lock.write_bytes(pr_lock.encode("utf-8"))
+    rc, _out = npm(list(NPM_REGEN))
+    if rc != 0:
+        restore()
+        return leave("npm lockfile regeneration failed (rc %d)" % rc, 1)
+    try:
+        regen = lock.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        restore()
+        return leave("regenerated lockfile unreadable", 1)
+    got = lock_version(regen, dep)
+    if got != new:
+        restore()
+        return leave("regenerated lockfile has %s %s, not %s" % (dep, got, new))
+    if lock_version(regen, ELECTRON) != pin:
+        restore()
+        return leave("regenerated lockfile moves electron; needs %s"
+                     % ELECTRON_PROCEDURE)
+    rc, out = ctx.git(["status", "--porcelain", "--", NPM_LOCK])
+    if rc == 0 and not out.strip():
+        restore()
+        return leave("%s %s is already locked" % (dep, new))
+    rc, _out = npm(list(NPM_AUDIT))
+    if rc != 0:
+        restore()
+        return leave("npm audit signatures failed (rc %d)" % rc, 1)
+    subject = "deps(npm): bump %s from %s to %s" % (dep, old, new)
+    return land(ctx, n, [NPM_LOCK], subject, restore, leave)
 
 
 SEAMS = {
@@ -284,15 +490,16 @@ SEAMS = {
 
 
 class Reapply:
-    """One run against one checkout. git(args) and gh(args) return
-    (rc, stdout); clock() returns epoch seconds; say(line) reports;
+    """One run against one checkout. git(args), gh(args) and npm(args)
+    return (rc, stdout); clock() returns epoch seconds; say(line) reports;
     gates(root) returns [(cmd, ok, detail)]."""
 
     def __init__(self, root=ROOT, git=None, gh=None, clock=time.time, say=print,
-                 seams=None, gates=None):
+                 seams=None, gates=None, npm=None):
         self.root = Path(root)
         self.git = git or default_git(self.root)
         self.gh = gh or default_gh(self.root)
+        self.npm = npm or default_npm(self.root)
         self.gates = gates or default_gates
         self.seam_rc = 0
         self.clock = clock

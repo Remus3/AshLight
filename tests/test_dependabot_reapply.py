@@ -1,8 +1,11 @@
-"""GP-14 and PUB-DEPBOT-ACTIONS: tools/dependabot_reapply.py lists open
-Dependabot pull requests, closes one that touches the vendored identity-guard
-copy with one line, leaves a bump open with one report line while its apply
-seam is empty, and re-applies a github-actions bump as one operator commit,
-pushed and closed. git, gh, the clock and the gate runner are injected: the
+"""GP-14, PUB-DEPBOT-ACTIONS and PUB-DEPBOT-NPM: tools/dependabot_reapply.py
+lists open Dependabot pull requests, closes one that touches the vendored
+identity-guard copy with one line, leaves a bump open with one report line
+while its apply seam is empty, re-applies a github-actions bump as one
+operator commit, pushed and closed, re-applies an npm lockfile bump through
+the pin procedure (regenerated without scripts, signatures audited, the 3-day
+age rule) and treats an electron bump as a signal only (npm is a recording
+fake). git, gh, the clock and the gate runner are injected: the
 GP-14 cases use recording fakes; the actions cases use real git in tmp_path
 with a local bare remote (no network) and a recording gh. Fixture names are
 made up."""
@@ -65,7 +68,11 @@ def _empty_actions(ctx, pr):
     return None
 
 
-EMPTY = {"actions": _empty_actions, "npm": dr.apply_npm}
+def _empty_npm(ctx, pr):
+    return None
+
+
+EMPTY = {"actions": _empty_actions, "npm": _empty_npm}
 
 
 def make(git=None, gh=None, seams=None):
@@ -151,18 +158,22 @@ def test_filled_seam_is_called_and_its_line_reported():
         seen.append(pr["number"])
         return "applied locally as abc1234"
 
-    deps, lines = make(seams={"actions": fake_actions, "npm": dr.apply_npm})
+    deps, lines = make(seams={"actions": fake_actions, "npm": _empty_npm})
     assert dr.main(["run"], **deps) == 0
     assert seen == [42]
     assert "#42: applied locally as abc1234" in lines
     assert "#43: left open, needs PUB-DEPBOT-NPM" in lines
 
 
-def test_default_seams_actions_filled_npm_empty():
-    r = dr.Reapply(root=ROOT, git=FakeGit(), gh=FakeGh(), say=lambda _l: None)
+def test_default_seams_actions_and_npm_filled():
+    r = dr.Reapply(root=ROOT, git=FakeGit(), gh=FakeGh(), say=lambda _l: None,
+                   npm=lambda _a: (1, ""))
     assert r.seams["actions"] is dr.apply_actions
     assert r.seams["npm"] is dr.apply_npm
-    assert dr.apply_npm(r, {"number": 1}) is None
+    # an untitled pull request is left open by the npm seam too
+    assert dr.apply_npm(r, {"number": 2}) == \
+        "left open, needs review (title names no bump)"
+    r.left_open.clear()
     # an untitled pull request is left open by the filled seam, never applied
     assert dr.apply_actions(r, {"number": 1}) == \
         "left open, needs review (title names no bump)"
@@ -505,3 +516,226 @@ def test_dirty_or_already_pinned_workflow_is_left_open(tmp_path):
     assert rc == 0
     assert lines == ["#52: left open, example-org/setup-thing v1.1.0 is already pinned"]
     assert gates.seen == [] and repo.verbs("commit", "push") == []
+
+
+# ----------------------------------------------------- npm bump (real git)
+
+NPM_FIXTURE = ROOT / "tests" / "fixtures" / "dependabot" / "pr_npm.json"
+NOW = 1795000000.0
+PKG_JSON = (
+    '{\n  "name": "made-up-app",\n  "version": "0.1.0",\n'
+    '  "private": true,\n  "dependencies": {\n    "electron": "45.3.3"\n  }\n}\n')
+
+
+def _lock(lib, electron="45.3.3"):
+    return json.dumps({
+        "name": "made-up-app", "version": "0.1.0", "lockfileVersion": 3,
+        "requires": True,
+        "packages": {
+            "": {"name": "made-up-app", "version": "0.1.0",
+                 "dependencies": {"electron": electron}},
+            "node_modules/electron": {"version": electron,
+                                      "dependencies": {"made-up-lib": "^3.2.0"}},
+            "node_modules/made-up-lib": {"version": lib},
+        }}, indent=2) + "\n"
+
+
+def _iso(epoch):
+    import time as _t
+    return _t.strftime("%Y-%m-%dT%H:%M:%S.000Z", _t.gmtime(epoch))
+
+
+class FakeNpm:
+    """npm as a recording fake: view answers publish times, install
+    re-writes the lockfile the way npm normalises it (here: the same JSON
+    dumped again), audit signatures answers audit_rc. No network."""
+
+    def __init__(self, lock_file, published, audit_rc=0):
+        self.lock_file = lock_file
+        self.published = published
+        self.audit_rc = audit_rc
+        self.calls = []
+
+    def __call__(self, args):
+        args = list(args)
+        self.calls.append(args)
+        if args[:1] == ["view"]:
+            return 0, json.dumps({"3.2.1": _iso(NOW - 90 * 86400),
+                                  "3.2.2": _iso(self.published)})
+        if args[:1] == ["install"]:
+            data = json.loads(self.lock_file.read_text(encoding="utf-8"))
+            self.lock_file.write_text(json.dumps(data, indent=2) + "\n",
+                                      encoding="utf-8", newline="\n")
+            return 0, ""
+        if args[:2] == ["audit", "signatures"]:
+            return self.audit_rc, ""
+        return 1, ""
+
+
+class NpmRepo(Repo):
+    """Repo plus app/package.json and its lockfile on main, and a Dependabot
+    head commit on origin that bumps made-up-lib in the lockfile only."""
+
+    def __init__(self, tmp_path):
+        super().__init__(tmp_path)
+        off = "core.hooksPath=%s" % (tmp_path / "nohooks")
+        app = self.work / "app"
+        app.mkdir()
+        (app / "package.json").write_bytes(PKG_JSON.encode("ascii"))
+        self.lock = app / "package-lock.json"
+        self.lock.write_bytes(_lock("3.2.1").encode("ascii"))
+        self.run(self.work, "-c", off, "add", "app")
+        self.run(self.work, "-c", off, "commit", "-q", "-m", "chore: app")
+        self.run(self.work, "-c", off, "push", "-q", "origin", "main")
+        branch = "dependabot/npm/made-up-lib"
+        self.run(self.work, "checkout", "-q", "-b", branch)
+        self.lock.write_bytes(_lock("3.2.2").encode("ascii"))
+        self.run(self.work, "-c", off, "commit", "-q", "-a", "-m", "deps: bump")
+        self.head_sha = self.out("rev-parse", "HEAD")
+        self.run(self.work, "-c", off, "push", "-q", "origin", branch)
+        self.run(self.work, "checkout", "-q", "main")
+        self.run(self.work, "branch", "-q", "-D", branch)
+        self.calls = []
+
+
+def _npm_gh(head_sha, numbers):
+    gh = RecordingGh()
+    prs = json.loads(NPM_FIXTURE.read_text(encoding="utf-8"))
+    for p in prs:
+        if p["number"] == 61:
+            p["headRefOid"] = head_sha
+    gh.prs = [p for p in prs if p["number"] in numbers]
+    return gh
+
+
+def _run_npm(repo, argv, gh, npm, gates):
+    lines = []
+    rc = dr.main(argv, root=repo.work, git=repo, gh=gh, npm=npm,
+                 clock=lambda: NOW, say=lines.append, gates=gates)
+    return rc, lines
+
+
+VIEW = ["view", "made-up-lib", "time", "--json", "--prefix", "app"]
+
+
+def test_npm_fixture_is_ascii_and_made_up():
+    raw = NPM_FIXTURE.read_bytes()
+    raw.decode("ascii")
+    assert b"\r" not in raw
+    data = json.loads(raw)
+    assert [p["number"] for p in data] == [61, 62]
+    assert [dr.kind(p) for p in data] == ["npm", "npm"]
+    assert dr.parse_npm_bump(data[0]["title"]) == ("made-up-lib", "3.2.1", "3.2.2")
+    assert dr.parse_npm_bump(data[1]["title"]) == ("electron", "45.3.3", "45.3.4")
+    assert dr.parse_npm_bump("build(deps): bump @made-up/scoped from 1.0.0 to 1.0.1") \
+        == ("@made-up/scoped", "1.0.0", "1.0.1")
+    assert dr.parse_npm_bump("Bump the npm_and_yarn group across 1 directory") is None
+
+
+@needs_git
+def test_npm_bump_regenerates_lockfile_and_closes(tmp_path):
+    repo = NpmRepo(tmp_path / "ok")
+    base = repo.out("rev-parse", "HEAD")
+    gh = _npm_gh(repo.head_sha, [61])
+    npm = FakeNpm(repo.lock, published=NOW - 5 * 86400)
+    gates = Gates()
+    rc, lines = _run_npm(repo, ["run"], gh, npm, gates)
+    assert rc == 0, lines
+    head = repo.out("rev-parse", "HEAD")
+    # the pin procedure, in order: age, regenerate without scripts, audit
+    assert npm.calls == [
+        VIEW,
+        ["install", "--prefix", "app", "--package-lock-only", "--ignore-scripts"],
+        ["audit", "signatures", "--prefix", "app"]]
+    assert len(gates.seen) == 1
+    # one operator commit of the lockfile only, pushed and closed
+    assert repo.out("rev-list", "--count", "%s..HEAD" % base) == "1"
+    assert repo.out("log", "-1", "--format=%an <%ae>") == "%s <%s>" % OPERATOR
+    assert repo.out("log", "-1", "--format=%cn <%ce>") == "%s <%s>" % OPERATOR
+    assert repo.out("log", "-1", "--format=%B") == \
+        "deps(npm): bump made-up-lib from 3.2.1 to 3.2.2"
+    assert repo.out("log", "-1", "--format=%(trailers)") == ""
+    assert repo.out("diff", "--name-only", "%s..HEAD" % base) == "app/package-lock.json"
+    locked = json.loads(repo.lock.read_text(encoding="utf-8"))["packages"]
+    assert locked["node_modules/made-up-lib"]["version"] == "3.2.2"
+    assert locked["node_modules/electron"]["version"] == "45.3.3"
+    assert repo.verbs("push") == [["push", "origin", "main"]]
+    assert repo.out("rev-parse", "main", cwd=repo.bare) == head
+    assert gh.closes() == [["pr", "close", "61", "--repo", REPO, "--comment",
+                            "Applied locally as %s." % head]]
+    assert not any("merge" in c for c in gh.calls)
+    assert "#61: applied locally as %s, pushed, closed" % head in lines
+    assert lines[-1] == "left open: 0"
+    assert repo.out("status", "--porcelain") == ""
+    # a failed signature audit restores the lockfile and commits nothing
+    repo2 = NpmRepo(tmp_path / "audit")
+    base2 = repo2.out("rev-parse", "HEAD")
+    before = repo2.lock.read_bytes()
+    npm2 = FakeNpm(repo2.lock, published=NOW - 5 * 86400, audit_rc=1)
+    gh2 = _npm_gh(repo2.head_sha, [61])
+    rc, lines = _run_npm(repo2, ["apply", "61"], gh2, npm2, Gates())
+    assert rc == 1
+    assert lines == ["#61: left open, npm audit signatures failed (rc 1)"]
+    assert repo2.lock.read_bytes() == before
+    assert repo2.out("rev-parse", "HEAD") == base2
+    assert repo2.verbs("commit", "push") == [] and gh2.closes() == []
+
+
+@needs_git
+def test_npm_bump_younger_than_three_days_waits(tmp_path):
+    repo = NpmRepo(tmp_path)
+    base = repo.out("rev-parse", "HEAD")
+    before = repo.lock.read_bytes()
+    gh = _npm_gh(repo.head_sha, [61])
+    published = NOW - 3 * 86400 + 60
+    npm = FakeNpm(repo.lock, published=published)
+    gates = Gates()
+    rc, lines = _run_npm(repo, ["run"], gh, npm, gates)
+    assert rc == 0, lines
+    # only the age read ran; nothing fetched, regenerated, gated or committed
+    assert npm.calls == [VIEW]
+    assert gates.seen == []
+    assert repo.lock.read_bytes() == before
+    assert repo.out("rev-parse", "HEAD") == base
+    assert repo.verbs("commit", "push", "fetch") == []
+    assert gh.closes() == []
+    assert [x for x in lines if x.startswith("#61:")] == [
+        "#61: left open, made-up-lib 3.2.2 is under 3 days old (published %s), waits"
+        % _iso(published)]
+    assert lines[-1] == "left open: 1"
+
+
+def test_electron_bump_is_a_signal_only(tmp_path):
+    prs = json.loads(NPM_FIXTURE.read_text(encoding="utf-8"))
+    electron = [p for p in prs if p["number"] == 62]
+    npm_calls = []
+
+    def npm(args):
+        npm_calls.append(list(args))
+        return 1, ""
+
+    # with the Electron bump procedure's files present: closed with one line
+    for rel in dr.ELECTRON_PROCEDURE_FILES:
+        assert (ROOT / rel).is_file(), rel
+    gh, git, lines = FakeGh(prs=electron), FakeGit(), []
+    rc = dr.main(["run"], root=ROOT, git=git, gh=gh, npm=npm,
+                 clock=lambda: NOW, say=lines.append, gates=Gates())
+    assert rc == 0, lines
+    assert gh.closes() == [["pr", "close", "62", "--repo", REPO, "--comment",
+                            dr.ELECTRON_COMMENT]]
+    assert "Electron bump procedure" in dr.ELECTRON_COMMENT
+    assert ("#62: closed, electron 45.3.4 moves only through the Electron bump "
+            "procedure (decision 0070)") in lines
+    # no commit, no npm call, no git call past the origin read
+    assert git.calls == [["remote", "get-url", "origin"]]
+    assert npm_calls == []
+    assert lines[-1] == "left open: 0"
+    # before the procedure exists (a root without its files): left open
+    gh, git, lines = FakeGh(prs=electron), FakeGit(), []
+    rc = dr.main(["apply", "62"], root=tmp_path, git=git, gh=gh, npm=npm,
+                 clock=lambda: NOW, say=lines.append, gates=Gates())
+    assert rc == 0
+    assert gh.closes() == []
+    assert lines == ["#62: left open, electron 45.3.4 waits for the Electron "
+                     "bump procedure (decision 0070)"]
+    assert git.calls == [["remote", "get-url", "origin"]] and npm_calls == []
