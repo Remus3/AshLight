@@ -7,7 +7,11 @@ shows before the player allows reading Client.txt:
   character AshLight first sees at level 2 is new; one first seen higher
   is a veteran and never gets a hint.
 - "town": its first town or hideout area generation (the item check
-  hotkey how-to, the moment a player sorts loot).
+  hotkey how-to, the moment a player sorts loot). OVL-KEYS-WEB: it names
+  the item check key the desktop client bound (its runtime file
+  hotkeys.json beside the hint store, read through hotkeys.read_runtime,
+  the source of the snapshot's hotkeys view); with no bound key it names
+  no key (town_text).
 - "campaign_death": its first death in a campaign area.
 - "first_map": its first endgame map generation.
 Each hint shows once per character, on the dashboard and in the event
@@ -29,7 +33,7 @@ import collections
 import hashlib
 from pathlib import Path
 
-from . import acts, jsonfile
+from . import acts, hotkeys, jsonfile
 
 FILE_NAME = "hints.json"
 SCHEMA = 1
@@ -46,8 +50,7 @@ HINTS = collections.OrderedDict([
               "zone, level, deaths and act times update as you play. The "
               "badge at the top shows when AshLight reads Client.txt."),
     ("town", "To check an item, copy it in the game with Ctrl+C. Then press "
-             "Alt+Shift+E, or the item check key you set. AshLight reads "
-             "the clipboard once for each press."),
+             "{key}. AshLight reads the clipboard once for each press."),
     ("campaign_death", "Deaths in the campaign cost no experience. The Death "
                        "recap card shows where each one happened."),
     ("first_map", "Your first map. Unlike the campaign, deaths in endgame "
@@ -56,6 +59,15 @@ HINTS = collections.OrderedDict([
 ])
 
 RESET_TEXT = "New-character tips will show again."
+# The town hint's words while no item check key is bound (no client, or
+# the client could not register one): no key is named.
+NO_KEY = "the item check key shown under Settings"
+
+
+def town_text(key):
+    """The town hint with the bound item check key, or NO_KEY's words."""
+    key = hotkeys.safe_accelerator(key) if key else None
+    return HINTS["town"].replace("{key}", key or NO_KEY)
 
 
 def char_key(name):
@@ -150,9 +162,22 @@ class Hints:
             return None
         c["seen"].append(hint_id)
         self._save()
-        self.shown = {"id": hint_id, "text": HINTS[hint_id], "at": at,
+        text = town_text(self.bound_key()) if hint_id == "town" else HINTS[hint_id]
+        self.shown = {"id": hint_id, "text": text, "at": at,
                       "expires_at": at + HINT_S}
         return dict(self.shown)
+
+    def bound_key(self):
+        """The item check key the desktop client bound, from its runtime
+        file beside the store (hotkeys.read_runtime: bounded, validated),
+        or None (no store, no file, or not registered)."""
+        if self.path is None:
+            return None
+        rt = hotkeys.read_runtime(self.path.parent)
+        ev = rt.get("eval") if isinstance(rt, dict) else None
+        if isinstance(ev, dict) and ev.get("registered") is True:
+            return ev.get("key")
+        return None
 
     def on_level(self, name, level, at):
         c = self._entry(name, level)

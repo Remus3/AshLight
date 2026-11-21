@@ -266,7 +266,8 @@ test("the empty card teaches the press with the bound key and says where the che
   assert.equal(txt(doc, "ic-word"), "[ ] Nothing checked yet");
   assert.equal(shown(doc.getElementById("ic-body")), false);
   const rows = doc.getElementById("ic-empty").children.map((r) => r.textContent);
-  assert.deepEqual(rows, ["Hover an item in game, press Ctrl+C,", "then press Alt+Shift+E.",
+  // OVL-KEYS-WEB: no bound key yet, so no key is named
+  assert.deepEqual(rows, ["Hover an item in game, press Ctrl+C,", "then press the item check key.",
     "The check stays here; the overlay", "card leaves after 20 seconds."]);
   rows.forEach((r) => assert.ok(r.length <= IC.ROW_CHARS, r));
   // the keys and the card time from the snapshot (F-026, TD-18)
@@ -277,7 +278,10 @@ test("the empty card teaches the press with the bound key and says where the che
     "The check stays here; the overlay", "card leaves after 60 seconds."]);
   // a card time that is not one of the choices reads the default
   assert.equal(IC.cardTime({ overlay_layout: { card_s: 5 } }), 20);
-  assert.equal(IC.itemKey({ hotkeys: { eval: { key: "" } } }), IC.DEFAULT_KEY);
+  assert.equal(IC.itemKey({ hotkeys: { eval: { key: "" } } }), "");
+  assert.equal(IC.itemKey({ hotkeys: { eval: { key: null, want: "Ctrl+Alt+K" } } }), "");
+  assert.equal(IC.itemKey(null), "");
+  assert.equal(IC.DEFAULT_KEY, undefined);
 });
 
 test("the next press replaces the empty card; no snapshot hides the region", () => {

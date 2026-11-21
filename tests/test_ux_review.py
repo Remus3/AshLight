@@ -387,7 +387,9 @@ def test_overlay_settings_fold_but_hotkey_hint_stays_open():
     fold = tools[tools.index('<details id="tools-more">'):]
     assert 'id="layout-form"' in fold and 'id="layout-status"' in fold
     assert fold.index('id="layout-form"') < fold.index('id="layout-status"')
-    assert "Alt+Shift+A" in tools[:tools.index('<details id="tools-more">')]
+    # OVL-KEYS-WEB: the hint names the bound keys through data-hotkey spans
+    hint = tools[:tools.index('<details id="tools-more">')]
+    assert 'data-hotkey="toggle"' in hint and 'data-hotkey="eval"' in hint
 
 
 # --- F-159: colour only for exceptions; one filled button --------------------

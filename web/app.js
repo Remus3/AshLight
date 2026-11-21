@@ -871,12 +871,14 @@
 
   function renderPrice(pr, force) {
     var v = P.priceView(pr, ratesDoc, clock);
-    var key = v ? v.key : null;
+    // OVL-KEYS-WEB: the empty sentence names the bound item key only
+    var hk = window.ALHotkeys ? window.ALHotkeys.shown(snap, "eval") : "";
+    var key = (v ? v.key : "") + "|" + hk;
     if (key === priceShown && !force) { return; }
     priceShown = key;
     $("price-empty").hidden = !!v;
     $("price-body").hidden = !v;
-    $("price-empty").textContent = P.priceEmpty(webOn);
+    $("price-empty").textContent = P.priceEmpty(webOn, hk);
     var frag = document.createDocumentFragment();
     if (v) {
       setPill($("price-badge"), v.badge.state, v.badge.glyph, v.badge.word);
@@ -1204,6 +1206,11 @@
     order: 260,
     // UX-SETTINGS-IO: the player's clicks
     wire: function () {
+      // OVL-KEYS-WEB: the two change-key fields, saved on change (POST /api/hotkeys)
+      if (window.ALHotkeys) {
+        window.ALHotkeys.wire(document, { fetch: function (url, opts) { return fetch(url, opts); },
+          token: token });
+      }
       if (!window.ALSettingsIO) { return; }
       window.ALSettingsIO.wire(document, {
         fetch: function (url, opts) { return fetch(url, opts); },
@@ -1239,6 +1246,9 @@
     offset = Date.now() / 1000 - s.now;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
+    // OVL-KEYS-WEB: every named key is the bound one; the change fields and
+    // the Play line while the overlay is off (web/hotkeys.js)
+    if (window.ALHotkeys) { window.ALHotkeys.paint(document, s); }
     A.render(s, charView(s));
     // TD-09 region hook: every registered Play region paints after the panels
     if (window.ALRegions) { window.ALRegions.paint(document, s, serverNow()); }
