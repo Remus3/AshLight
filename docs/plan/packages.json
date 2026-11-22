@@ -17434,7 +17434,8 @@
     "server/al/diag.py",
     "docs/design/0001-design-system.md",
     "tests/test_status_words.py",
-    "app/test/statuswords.test.js"
+    "app/test/statuswords.test.js",
+    "server/al/statuswords.py"
    ],
    "new_files": [],
    "integrator_edits": [],
@@ -17461,7 +17462,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Review SRW-1, SRW-2. Placement: UNREADABLE-RETAG (session 18): wave 22 has render_gate.js (OVL-LINE2-GUIDE) and diag.py (RUN-REPORT-FIELDS); wave 23 has render_gate.js (OVL-KEY-HINT), design 0001 (TEST-COPY-SHEETS) and diag.py (REL-UPDATE-CHECKS); wave 24 is the earliest with all free. The sentences stay in design 0001 section 9, not a docs/design/copy sheet: TEST-COPY-SHEETS splits only section 9 rule 2 (message templates) and a log-state sentence is a status word (W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P7; reverses if TEST-COPY-SHEETS moves the status-word lines out of section 9, then docs/design/copy/events.md). Design: run the design-reviewer agent on the diff and return its reviews.log line.",
+   "notes": "Tier P2. Review SRW-1, SRW-2. Placement: UNREADABLE-RETAG (session 18): wave 22 has render_gate.js (OVL-LINE2-GUIDE) and diag.py (RUN-REPORT-FIELDS); wave 23 has render_gate.js (OVL-KEY-HINT), design 0001 (TEST-COPY-SHEETS) and diag.py (REL-UPDATE-CHECKS); wave 24 is the earliest with all free. The sentences stay in design 0001 section 9, not a docs/design/copy sheet: TEST-COPY-SHEETS splits only section 9 rule 2 (message templates) and a log-state sentence is a status word (W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P7; reverses if TEST-COPY-SHEETS moves the status-word lines out of section 9, then docs/design/copy/events.md). Design: run the design-reviewer agent on the diff and return its reviews.log line. Re-plan (session 19, ruling A pattern 5787074): files gain server/al/statuswords.py (its reading_state mirrors web/status.js readingState and needs the same unreadable check).",
    "wave": 24,
    "owner": "session",
    "tier": "P2",
