@@ -1622,7 +1622,6 @@ report from an allow-list of structured fields, with a hardened redactor
 - RUN-SECOND-LINE-CLIENT [session, M 30m, build, P2] The client restarts a core that stays down. Files: app/client/window.js, app/client/launcher.js, app/test/client.test.js. Deps: RUN-OBS-LOGS-SHELL, RUN-SECOND-LINE-PY.
 - PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py. Deps: GP-02, REL-PUBLISH-GATES.
 - LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json, tests/test_watch_ci_issues.py, tools/watch_gate.py, tests/test_watch_gate.py, docs/decisions/0069-upstream-watch-frame.md. Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08, LOOP-WATCH-GATE.
-- CARD-LINE-LIMIT [session, M 40m, build, P2, DR] Card lines fit the 236 px inside width: lower the card character limit. Files: app/shared/format.js, server/al/text/common.py, tests/test_overlay_pixels.py. Deps: OVL-CONTRAST-PIXELS.
 - BUILD-GEAR-EMPTY-COPY [session, S 20m, build, P3, DR] Build card empty-gear row says what to do next. Files: web/panels/build.js, tests/test_build_item_text.py. Deps: PLAY-TD-19E-ITEM-TEXT.
 - DEP14-UNINSTALL-LINE [session, S 20m, build, P2] README Quick start names the uninstall step. Files: README.md, tests/test_public_docs.py. Deps: DEP-14.
 - HOME-REFUSAL-COPY [session, M 60m, build, P2, DR] Refused-home sentence, design 0001 start-up exception and wording, plan 03 section 5.1 widths and line 2 rule. Files: server/al/paths.py, app/client/home.js, app/test/home.test.js, docs/design/0001-design-system.md, docs/plan/03-target-design.md. Deps: REL-HOME-REFUSAL-UI, OVL-CONTRAST-PIXELS, OVL-LINE2-RULE, PLAY-TD-20A-RUN-GRID.
@@ -1737,14 +1736,15 @@ card; OVERLAY-FEED: /events?view=overlay sends only the fields the HUD
 reads, only when one c...; luajit leaves when it is not needed. Releases 1
 loop-owned rows.
 
-- Session 8; width 5 worktree + 0 main-checkout, 1 loop rows released; about
-  93 minutes.
+- Session 8; width 6 worktree + 0 main-checkout, 1 loop rows released; about
+  93 minutes (CARD-LINE-LIMIT re-planned here from wave 22 with seven more
+  files, session 19: design 0001 is owned in waves 23 and 24).
 - Hotspots: web/index.html (SEC-LOG-PATH-FIELD); server/al/core.py
   (TC-CALC-IDLE); web/app.js (SEC-LOG-PATH-FIELD); server/al/http.py
   (OVL-OVERLAY-FEED); web/app.css (SEC-LOG-PATH-FIELD);
   app/shared/render_gate.js (OVL-OVERLAY-FEED);
   server/al/theorycraft/bridge.py (TC-CALC-IDLE).
-- Integrator: ROADMAP.md rows of all 6 packages; docs/design/reviews.log: 3
+- Integrator: ROADMAP.md rows of all 7 packages; docs/design/reviews.log: 4
   lines.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
@@ -1760,6 +1760,7 @@ loop-owned rows.
 - SEC-CEIL-SNAPSHOT [loop, M 45m, build, P3] Snapshot fetch: deadline, per-source cap on disk, one URL check. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py. Deps: SEC-CEIL-WEBFETCH, DATA-SNAP-TRIM.
 - DATA-PRICE-TYPE-PROOF [session, M 50m, build, P3] Prove each price type after the first real round. Files: server/al/data/price_types.json, server/al/theorycraft/value.py, server/al/data/ninja_read_keys.json, server/al/ninjashape.py, tools/price_type_report.py (+1 more). Deps: DATA-PRICE-TYPES-FILE, DATA-NINJA-SHAPE-WATCH.
 - PUB-GUIDE-DOWNLOAD-PLACE [session, M 45m, build, P2, DR] One download place in README, FAQ and About. Files: README.md, docs/guide/download.md, docs/guide/faq.md, app/about.js, app/main.js (+2 more). Deps: PUB-GUIDE-PAGES, GP-10.
+- CARD-LINE-LIMIT [session, M 40m, build, P2, DR] Card lines fit the 236 px inside width: lower the card character limit. Files: app/shared/format.js, server/al/text/common.py, tests/test_overlay_pixels.py (+7 more). Deps: OVL-CONTRAST-PIXELS.
 
 ### Wave 26: Play tab and dashboard, install and release
 

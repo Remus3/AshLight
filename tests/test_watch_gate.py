@@ -173,3 +173,29 @@ def test_user_agent_names_ashlight_and_no_cookie_is_sent(tmp_path):
         assert ua.startswith(NAME + "/") and ua.isascii()
     assert t.calls[0][2]["User-Agent"] == webfetch.user_agent("dev: watcher test")
     assert t.calls[1][2]["User-Agent"] == webfetch.user_agent("dev: watcher bare")
+
+
+@pytest.mark.parametrize("tail", ["/issues", "/issues?labels=al-watch&state=open&per_page=100",
+                                  "/actions/workflows/watch.yml",
+                                  "/actions/workflows/watch.yml/runs",
+                                  "/actions/workflows/watch.yml/runs?status=success&per_page=1"])
+def test_ci_issue_tails_pass_and_other_actions_paths_are_refused(tmp_path, tail):
+    """Decision 0069 amendment 2026-11-21 (LOOP-CI-ISSUES): exactly the issue
+    list and the watch workflow's own state and runs pass; every other
+    /actions/ and /issues/ sub-path stays refused."""
+    assert watch_gate.check_url(SOURCE, REPO + tail).hostname == "api.github.com"
+    for bad in ("/actions/runs/1/logs", "/actions/artifacts", "/actions/secrets",
+                "/issues/1/comments", "/issues/1", "/issues/comments",
+                "/actions/workflows", "/actions/workflows/ci.yml",
+                "/actions/workflows/watch.yml/runs/1", "/actions/workflows/watch.yml/dispatches",
+                "/actions/workflows/watchxyml", "/actions/runs", "/actions/caches"):
+        with pytest.raises(webfetch.UrlNotAllowed):
+            watch_gate.check_url(SOURCE, REPO + bad)
+    root = _root(tmp_path, {"web_data": True})
+    t = FakeTransport()
+    status, _h, _b = watch_gate.fetch(root, SOURCE, REPO + tail, transport=t)
+    assert status == 200 and len(t.calls) == 1
+    t2 = FakeTransport()
+    with pytest.raises(webfetch.UrlNotAllowed):
+        watch_gate.fetch(root, SOURCE, REPO + "/actions/runs/1/logs", transport=t2)
+    assert t2.calls == []
