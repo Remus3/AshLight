@@ -1,0 +1,1 @@
+- [ ] CL-3 (build) Dashboard item rows: the row separator matches the design system (design review CARD-LINE-LIMIT-COPY finding CL-3, wave 26). ACCEPT: python -m pytest -q tests/test_design_contrast.py tests/test_ux_review.py and npm test --prefix app pass. ZERO-CLICK: nothing for players; the rows render that way by themselves. DEPENDS: none.

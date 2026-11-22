@@ -1,0 +1,1 @@
+- [ ] LP-B (build) Client.txt path form: after Save hides the form, keyboard focus lands on the control that opened it instead of being lost (design review SEC-LOG-PATH-FIELD finding LP-B, wave 26). ACCEPT: npm test --prefix app passes with a test that the opener holds focus after a successful save. ZERO-CLICK: focus returns by itself. DEPENDS: none.

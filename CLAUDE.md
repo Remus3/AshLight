@@ -1458,3 +1458,19 @@ of the HALT check.
   share proves wrong in practice, or a source needs more than one dive a
   day.
 - TC-CALC-IDLE (F-154, decision 0028 amendment 2026-11-22): calcwire.Provider stamps last_used when __call__ makes a calc and around every calc / calc.raw call, counts calls in flight, and reap(idle) stops luajit after IDLE_STOP_S = 1200 s without a call or at once while the game is idle (Core.tick_calc reads the state's decision 0029 game-idle flag only while a calc runs; never a process-list check), never while a press holds it (a call in flight or one that ended under PRESS_HOLD_S = 30 s ago); turning tc_calc off still stops it at once; the next press or build load makes a fresh calc behind the first staged card, and a call on a dropped calc is adopted again; exepin.verified caches a match by the exe's size and mtime plus the recorded hash; bridge.lua's 384 MB GC ceiling stays (a full collect per load measured +0.22 s per load for about 220 MB the idle stop frees). Reverses if: restarts make presses feel slow in play, game_idle misfires while playing, a press is cut by a stop, or the full collect measures cheaper than the ceiling.
+- REL-UPDATE-TRIGGER (F-077, DEP-17): with a newer release in the cached
+  update answer, web data on, the wording acknowledged, "update_click_only"
+  off and game_idle true (decision 0029, never a process check), the core
+  starts the installer's `<python> boot.py server.al.install update --yes
+  --home <home>` hidden, detached and below-normal (updates.maybe_start from
+  tick_update), at most once a day per version, never beside a run still
+  going, never for a version already staged, never in a checkout. The
+  token-gated POST /api/update-now (Host / Origin / Sec-Fetch-Site checks,
+  empty JSON body only, answers {started, state} with a fixed word) starts it
+  at once without the idle gate or click-only (core.update_now).
+  "update_click_only" is on the settings allow-list. The snapshot 'update'
+  block adds staged and click_only. The core only starts the process and
+  downloads nothing; applying stays the client's next start (apply-now filed
+  as REL-UPDATE-APPLY-NOW). Reverses if: the installer's update command
+  changes, game_idle misfires as idle in play, or the operator rules the
+  automatic start unwanted.
