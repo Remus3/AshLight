@@ -5,6 +5,8 @@ S2 the handler has a socket timeout, so an idle connection frees its thread.
 S3 ?token= is accepted on /events only (EventSource), not on /api routes.
 S4 POST /api/consent "path" refuses UNC / device / relative paths and file
    names other than Client.txt, lexically (no file system or SMB access).
+OVL-APP-SCHEME-STRICT (F-174): the origin table of the read-only feed path
+   holds only the app scheme's origin; null and file pages are refused.
 
 Ephemeral port, runtime under tmp_path; a running AshLight is never touched.
 """
@@ -19,6 +21,7 @@ import pytest
 
 from server.al import logfile
 from server.al.core import Core
+from server.al import http as al_http
 from server.al.http import Handler, serve
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -186,3 +189,36 @@ def test_consent_api_refuses_a_file_not_named_client_txt(srv, tmp_path):
     assert srv.core.log_path == before
     assert not srv.core.consented()
     assert srv.core.tailer is None or srv.core.tailer.path != secret
+
+
+# -- OVL-APP-SCHEME-STRICT (F-174)
+def test_origin_table_holds_only_the_app_scheme_origin():
+    """The read-only path set is the feed alone and its origin table holds
+    only the app scheme's origin: no null, no file page origin."""
+    assert al_http.FILE_ORIGIN_PATHS == {"/events"}
+    assert al_http.FILE_ORIGINS == {al_http.APP_ORIGIN} == {"al-app://app"}
+    src = (ROOT / "server" / "al" / "http.py").read_text(encoding="utf-8")
+    assert '"file://"' not in src and '"null"' not in src
+
+
+def test_null_and_file_origins_get_403_on_the_feed_and_read_routes(srv):
+    for origin in ("null", "file://"):
+        for site in ("cross-site", None):
+            h = {"X-AL-Token": TOKEN, "Origin": origin}
+            if site:
+                h["Sec-Fetch-Site"] = site
+            for path in ("/api/state", "/api/health"):
+                r, _ = req(srv, "GET", path, h)
+                assert r.status == 403, (origin, site, path)
+                assert r.getheader("Access-Control-Allow-Origin") is None
+            s = socket.create_connection(("127.0.0.1", srv.port), timeout=5)
+            try:
+                s.sendall((f"GET /events?token={TOKEN} HTTP/1.1\r\n"
+                           f"Host: 127.0.0.1:{srv.port}\r\n"
+                           + "".join(f"{k}: {v}\r\n" for k, v in h.items()
+                                     if k != "X-AL-Token") + "\r\n").encode())
+                head = s.recv(65536)
+            finally:
+                s.close()
+            assert head.split(b"\r\n")[0].endswith(b"403 Forbidden"), (origin, site, head[:60])
+            assert b"Access-Control-Allow-Origin" not in head
