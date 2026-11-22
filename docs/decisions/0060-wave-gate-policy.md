@@ -68,3 +68,28 @@ kit changes item 16c to forbid ungated file-named runs.
   while the 120 s gate is already measured green.
 - Reverses if: a soak median exceeds 125 s, or a calc group split makes
   under 90 s demonstrable (then tighten).
+
+## Amendment 2026-11-22 (GATE-HOLD, adjudicator)
+
+- Reverse condition of TEST-SUITE-HOLD-75 met: 14 consecutive green
+  gated holds since 2026-11-21 20:26 (cmd a9a73e2a48a6e29b, 16 CPUs,
+  12 workers, about 5258 tests) have a median of 139.0 s (last 8:
+  137.6 s), against the 125 s soak bound (research 0063).
+- Interim bound: gated median 145 s, soak bound 150 s. Target: 120 s
+  median stays the standing target.
+- Recovery: packages TEST-FUZZ-PARALLEL, TEST-LOOP-WINDOW-5S,
+  TEST-LUAJIT-RELOADS-12, then TEST-CALC-GROUP-SPLIT, then
+  TEST-PROBE-XDIST-2 (research 0063 section 5); a 5-run gated soak
+  after the first three and after the split.
+- Why: the suite grew 10.5 percent but the hold about 18.5 percent
+  (117.3 to 139.0 s); the cost sits in fixed timing windows and the
+  one-worker calc group, not in the test count, so it can be fixed. The
+  145 s bound sits above the 139 s median; the 155.7 s outlier is a
+  single run.
+- Alternatives: packages with no interim bound; a permanent 140 s
+  target; waiting for a formal soak. Rejected as in research 0063
+  section 6.
+- Reverses if: a soak median after the packages is at or under 125 s
+  (restore the 120 s bound), the split demonstrates under 90 s
+  (tighten), or a soak median exceeds 145 s (regression: bisect, do
+  not move the number).

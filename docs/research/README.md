@@ -268,3 +268,6 @@ its code (license notes: 0006).
   new rows ([0061-deep-dive-20261120.md](0061-deep-dive-20261120.md))
 - 0062 Deep dive 2026-11-21 - offline run (web data off), no floor change, no
   new rows ([0062-deep-dive-20261121.md](0062-deep-dive-20261121.md))
+- 0063 Suite hold check 2026-11-22 (GATE-HOLD) - gated median 139.0 s over the
+  125 s bound; interim 145 s bound, five speed-up packages
+  ([0063-suite-hold-20261122.md](0063-suite-hold-20261122.md))

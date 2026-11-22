@@ -55,6 +55,25 @@ operator phrase.`
 - [ ] LOG-SHAPE-20261122 (build) New masked log shapes passed the two-sighting rule: work each NEW SHAPE line of ops/runtime/watch/live1_report.json (copied into the lane worktree) into a parser pattern with a fixture, or note why it stays unparsed. ACCEPT: every listed shape has a fixture and a passing test or a one-line note. SOURCE: watch ledger log-shape, filed 2026-11-22.
 - [ ] RUN-BUDGET-CALIBRATE-B11 (build) Calibrate B11 300 -> 384 MB and B18 to 460 MB (384 + core max 68); B10, B12; decision 0002 amendment with median, p95, max, rows; research 0048 figures. Files: server/al/budgetlog.py, tests/test_budgets.py, tests/test_budget_log.py, docs/decisions/0002-stack.md, docs/research/0048-performance-budgets-review.md, README.md. ACCEPT: budgetlog check exits 0 on the live log; a row above new B11 still breaches. ZERO-CLICK: loop tick runs the check. DEPENDS: none. Ruling 2026-11-21 option A; reverses if B10 or B12 breach persistently or the operator keeps 300 MB. BLOCKED: session wave 26.
 - [ ] TEST-SUITE-T0 (build) tools/suite_run.py exports AL_SUITE_T0 at start so the TEST-SLOW-BUDGET whole-suite ceiling measures from the runner start, not per phase. Files: tools/suite_run.py, tests/test_suite_run.py. ACCEPT: python -m pytest -q tests/test_suite_run.py tests/test_slow_budget.py passes. ZERO-CLICK: the suite runner sets it by itself. DEPENDS: TEST-SLOW-BUDGET. BLOCKED: session wave 26.
+- [ ] TEST-FUZZ-PARALLEL (build) Fuzz tests leave the serial timing phase. ACCEPT: python -m pytest
+  -q tests/test_fuzz.py tests/test_marks.py passes, python -m pytest -q -n 12 tests/test_fuzz.py
+  passes, and -m timing no longer collects test_fuzz. ZERO-CLICK: None needed; the suite runner
+  picks it up. BLOCKED: session wave 26.
+- [ ] TEST-LUAJIT-RELOADS-12 (build) LuaJIT memory test runs 12 reloads, not 30. ACCEPT:
+  tests/test_math_perf.py passes through the suite gate with the calc component present, at 12
+  reloads with both asserts kept. ZERO-CLICK: None needed; the suite runner picks it up. BLOCKED:
+  session wave 26.
+- [ ] TEST-LOOP-WINDOW-5S (build) Loop-body budget test measures a 5 s window. ACCEPT:
+  tests/test_budgets.py passes through the suite gate with a 5.0 s loop-body window, and python -m
+  pytest -q tests/test_slow_budget.py tests/test_docs_fresh.py passes. ZERO-CLICK: None needed; the
+  suite runner picks it up. DEPENDS: RUN-BUDGET-CALIBRATE-B11. BLOCKED: session wave 27.
+- [ ] TEST-CALC-GROUP-SPLIT (build) Split the calc xdist group in two. ACCEPT: python -m pytest -q
+  tests/test_marks.py passes, the 8 CALC_FILES pass file-named, and one gated whole suite is green.
+  ZERO-CLICK: None needed; the suite runner picks it up. DEPENDS: TEST-FUZZ-PARALLEL. BLOCKED:
+  session wave 27.
+- [ ] TEST-PROBE-XDIST-2 (build) Suite-run timing probe uses 2 workers. ACCEPT: python -m pytest -q
+  tests/test_suite_run.py passes with the probe at -n 2. ZERO-CLICK: None needed; the suite runner
+  picks it up. DEPENDS: TEST-CALC-GROUP-SPLIT. BLOCKED: session wave 28.
 
 ## Lane: data
 

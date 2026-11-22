@@ -437,9 +437,14 @@ of the HALT check.
   90 s per subset; timing and budget tests go through the gate); main moves
   only after one whole green suite through the gate per merge batch
   (decision 0060). Amended 2026-11-21 (decision 0060 amendment,
-  TEST-SUITE-HOLD-75): the gated whole-suite hold target is a 120 s median
-  (soak bound 125 s); phase 1 runs min(12, CPUs - 4) workers, never under
-  2; phase 2 stays serial. Reverses if: subset runs cause machine
+  TEST-SUITE-HOLD-75; amended 2026-11-22, GATE-HOLD, research 0063): the
+  gated whole-suite hold has an interim bound of a 145 s median (soak
+  150 s) while the 120 s median stays the target, recovered by five
+  test-side packages; phase 1 runs min(12, CPUs - 4) workers, never under
+  2; phase 2 stays serial. The interim bound reverses if a soak median
+  after the packages is at or under 125 s (restore 120 s), the calc split
+  shows under 90 s (tighten), or a soak median exceeds 145 s (bisect, do
+  not move the number). Reverses if: subset runs cause machine
   contention or missed regressions, or MAIN's kit changes item 16c to
   forbid ungated file-named runs.
 - Clipboard / screen only per AshLight hotkey press, never a watcher, never
