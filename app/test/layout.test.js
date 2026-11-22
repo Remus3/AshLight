@@ -237,18 +237,19 @@ test("scale multiplies the window in DIPs and never exceeds the work area", () =
 test("UX-DPI: the HUD grows by itself only on tall low-scale monitors", () => {
   // DIP height = physical height / Windows scale factor.
   assert.equal(L.autoScale(disp(1, 0, 0, 1920, 1080, 1)), 1);    // 1080p 100%
-  assert.equal(L.autoScale(disp(1, 0, 0, 2560, 1440, 1)), 1);    // 1440p 100%
-  assert.equal(L.autoScale(disp(1, 0, 0, 2560, 1440, 1.5)), 1);  // 4K 150%
-  assert.equal(L.autoScale(disp(1, 0, 0, 3072, 1728, 1.25)), 1.2); // 4K 125%
-  assert.equal(L.autoScale(disp(1, 0, 0, 3840, 2160, 1)), 1.5);  // 4K 100%
+  assert.equal(L.autoScale(disp(1, 0, 0, 2560, 1440, 1)), 1.2);  // 1440p 100%
+  assert.equal(L.autoScale(disp(1, 0, 0, 2560, 1440, 1.5)), 1.2);  // 4K 150% (1440 DIP)
+  assert.equal(L.autoScale(disp(1, 0, 0, 3072, 1728, 1.25)), 1.45); // 4K 125%
+  assert.equal(L.autoScale(disp(1, 0, 0, 3840, 2160, 1)), 1.8);  // 4K 100%
   assert.equal(L.autoScale(disp(1, 0, 0, 7680, 4320, 1)), 2);    // 8K 100%: capped
   assert.equal(L.autoScale(null), 1);
   const big = disp(1, 0, 0, 3840, 2160, 1, 40);
   const b = L.computeBounds({ scale: 1.2 }, [big], 1);
-  assert.equal(b.zoom, 1.8);
-  assert.equal(b.width, Math.round(L.BASE.width * 1.8));
-  // 13 px secondary text: physical px never under the 1440p / 100% size.
-  assert.ok(13 * L.computeBounds({}, [big], 1).zoom >= 13 * 2160 / 1440);
+  assert.equal(b.zoom, 2.16);
+  assert.equal(b.width, Math.round(L.BASE.width * 2.16));
+  assert.equal(L.computeBounds({}, [big], 1).zoom, 1.8);
+  // 13 px secondary text: physical px never under the 1200 DIP size.
+  assert.ok(13 * L.computeBounds({}, [big], 1).zoom >= 13 * 2160 / 1200);
   assert.equal(L.computeBounds({ scale: 1.5 }, ALL, 10).zoom, 1.5);
   assert.equal(L.computeBounds({ scale: 2 }, [disp(1, 0, 0, 7680, 4320, 1)], 1).zoom, 2.5);
 });

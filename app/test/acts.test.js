@@ -308,7 +308,9 @@ test("Run is a card grid; Acts, Maps and Deaths are its card cells, no tables in
     assert.ok(box.includes('class="card-head"') && box.includes("data-card-back"), id);
     assert.ok(!/<table|<details/.test(box), id + ": a list pages, a fold never grows a card");
   });
-  const order = ["summarybox", "actsbox", "mapsbox", "deathsbox", "events-title", "historybox"]
+  // Run history is a page of the Last session card
+  assert.match(sectionOf("summarybox"), /id="historybox" class="card-page" data-page="history"/);
+  const order = ["summarybox", "historybox", "actsbox", "mapsbox", "deathsbox", "events-title", "charsbox"]
     .map((id) => run.indexOf('id="' + id + '"'));
   assert.deepEqual(order.slice().sort((x, y) => x - y), order);
   assert.equal((run.match(/<div class="col">/g) || []).length, 6);
@@ -326,8 +328,11 @@ test("the Acts card: rows, zone levels with the credit, pace and guide pages", (
   // the credit wraps (no .one-line): it is never cut
   assert.ok(zones.includes('id="zones-source" class="row-meta muted zones-credit"'));
   assert.ok(box.includes('id="acts-rows" class="pager-slot"'));
-  // the pace line, the picker and the zone guide stay inside the card
-  ["pace", "char-pick-box", "zone-guide"].forEach((id) => assert.ok(box.includes('id="' + id + '"'), id));
+  // the pace line and the zone guide stay inside the card; the picker moved
+  // to the Characters card
+  ["pace", "zone-guide"].forEach((id) => assert.ok(box.includes('id="' + id + '"'), id));
+  assert.ok(!box.includes('id="char-pick-box"'));
+  assert.ok(sectionOf("charsbox").includes('id="char-pick-box"'));
 });
 
 test("the card rows fit: two 24 px button rows in the Run cards, pages that wait say so", () => {

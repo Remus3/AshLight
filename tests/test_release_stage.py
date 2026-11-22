@@ -300,7 +300,7 @@ def test_pass_writes_stage_json_with_every_field(repo, tmp_path):
     assert doc["version"] == VERSION
     assert doc["commit"] == head
     assert doc["created"] == WHEN
-    assert doc["sandbox"] is False
+    assert doc["sandbox"] == "skipped"
     names = sorted(e["name"] for e in doc["assets"])
     assert "AshLight-%s-app.zip" % VERSION in names
     assert "SHA256SUMS.txt" not in names
@@ -328,9 +328,10 @@ def test_suite_runs_through_the_suite_gate(repo, tmp_path):
 
 
 def test_sandbox_is_recorded(repo, tmp_path):
-    rep, _run = _stage(repo, tmp_path, sandbox=True)
+    steps = [s for s in rs.STEPS if s[0] != rs.SANDBOX_STEP]
+    rep, _run = _stage(repo, tmp_path, sandbox=True, steps=steps)
     doc = json.loads((tmp_path / "out" / "stage.json").read_bytes())
-    assert doc["sandbox"] is True and rep["sandbox"] is True
+    assert doc["sandbox"] == "skipped" and rep["sandbox"] == "skipped"
     assert any("sandbox" in n for n in doc["notes"])
 
 
@@ -691,3 +692,169 @@ def test_the_loop_never_publishes_or_tags():
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "release.py publish" not in text, rel
         assert "git tag" not in text, rel
+
+
+# --- the optional Windows Sandbox phases (REL-STAGE-SANDBOX) ---------------
+
+def _sandbox_result(version, install_rc=0, key_after=False):
+    return {"schema": 1, "version": version,
+            "install": {"rc": install_rc, "state": {
+                "key": True, "links": 2,
+                "home": ["app", "data", "install.json", "uninstall.ps1"]}},
+            "uninstall": {"rc": 0, "state": {
+                "key": key_after, "links": 0, "home": "data"}}}
+
+
+class FakeSandbox(rs.SandboxEffects):
+    """The real scratch layout, asset copy and .wsb writer; the feature
+    check, the runtime lookup, the launch and the wait are stand-ins."""
+
+    def __init__(self, ctx, base, log, present=True, result=None):
+        super().__init__(ctx, base)
+        self.log = log
+        self.present = present
+        self.result = result
+        self.wsb = None
+        self.asset_names = None
+
+    def feature_present(self):
+        self.log.append(("feature",))
+        return self.present
+
+    def runtimes(self, release):
+        self.log.append(("runtimes", sorted(release["runtimes"])))
+        return {}
+
+    def put_assets(self, staged, runtimes):
+        super().put_assets(staged, runtimes)
+        self.asset_names = sorted(p.name for p in self.assets.iterdir())
+
+    def launch(self, wsb):
+        self.log.append(("launch",))
+        self.wsb = Path(wsb).read_bytes().decode("utf-8")
+
+    def wait_result(self, timeout=rs.SB_TIMEOUT_S):
+        self.log.append(("wait",))
+        doc = self.result if self.result is not None else \
+            _sandbox_result(self.ctx["version"])
+        return json.dumps(doc).encode("ascii")
+
+    def cleanup(self):
+        self.log.append(("cleanup",))
+        super().cleanup()
+
+
+class SandboxFactory:
+    """sandbox_fx(ctx) -> FakeSandbox in a fresh base under tmp_path."""
+
+    def __init__(self, tmp_path, **kw):
+        self.tmp_path = tmp_path
+        self.kw = kw
+        self.log = []
+        self.made = []
+
+    def __call__(self, ctx):
+        base = self.tmp_path / "sidecar" / "Temp" / ("sb%d" % len(self.made))
+        base.mkdir(parents=True)
+        fx = FakeSandbox(ctx, base, self.log, **self.kw)
+        self.made.append(fx)
+        return fx
+
+
+def test_sandbox_phases_run_only_with_the_flag(repo, tmp_path):
+    assert rs.STEPS[-1][0] == rs.SANDBOX_STEP
+    assert rs._parser().parse_args([]).sandbox is False
+    off = SandboxFactory(tmp_path / "a")
+    rep, _run = _stage(repo, tmp_path, sandbox_fx=off)
+    assert rep["verdict"] == "PASS", rep["steps"]
+    assert rs.SANDBOX_STEP not in _statuses(rep)
+    assert off.made == [] and off.log == []
+    assert rep["sandbox"] == "skipped"
+
+    on = SandboxFactory(tmp_path / "b")
+    rep, _run = _stage(repo, tmp_path, sandbox=True, sandbox_fx=on)
+    assert rep["verdict"] == "PASS", rep["steps"]
+    assert [r["name"] for r in rep["steps"]][-2:] == ["roundtrip", "sandbox"]
+    assert _statuses(rep)["sandbox"] == "pass"
+    assert rep["sandbox"] == "pass"
+    doc = json.loads((tmp_path / "out" / "stage.json").read_bytes())
+    assert doc["sandbox"] == "pass"
+    assert [e[0] for e in on.log] == ["feature", "runtimes", "launch", "wait",
+                                     "cleanup"]
+    fx = on.made[0]
+    assert rs.SB_SCRIPT in fx.asset_names
+    assert rs.INSTALLER_PS1 in fx.asset_names
+    assert "AshLight-%s-app.zip" % VERSION in fx.asset_names
+    assert not fx.base.exists()
+
+
+def test_sandbox_result_that_does_not_read_back_fails(repo, tmp_path):
+    for result, word in ((_sandbox_result(VERSION, install_rc=1), "install"),
+                         (_sandbox_result(VERSION, key_after=True), "key")):
+        fac = SandboxFactory(tmp_path / ("r" + word), result=result)
+        rep, _run = _stage(repo, tmp_path, sandbox=True, sandbox_fx=fac)
+        assert rep["verdict"] == "FAIL"
+        assert _statuses(rep)["sandbox"] == "fail"
+        assert word in _detail(rep, "sandbox")
+        assert rep["sandbox"] == "fail" and rep["assets"] == []
+        assert not fac.made[0].base.exists()
+
+
+def test_wsb_file_has_networking_and_clipboard_off_and_a_read_only_asset_folder(
+        repo, tmp_path):
+    import xml.etree.ElementTree as ET
+    fac = SandboxFactory(tmp_path)
+    rep, _run = _stage(repo, tmp_path, sandbox=True, sandbox_fx=fac)
+    assert rep["verdict"] == "PASS", rep["steps"]
+    fx = fac.made[0]
+    root = ET.fromstring(fx.wsb)
+    assert root.tag == "Configuration"
+    assert root.findtext("Networking") == "Disable"
+    assert root.findtext("ClipboardRedirection") == "Disable"
+    for key in ("VGpu", "AudioInput", "VideoInput", "PrinterRedirection"):
+        assert root.findtext(key) == "Disable"
+    maps = root.findall("MappedFolders/MappedFolder")
+    by_host = {m.findtext("HostFolder"): m for m in maps}
+    assets = by_host[str(fx.assets)]
+    assert assets.findtext("ReadOnly") == "true"
+    assert fx.assets.name == rs.SB_ASSETS
+    assert root.find("MappedFolders/MappedFolder/SandboxFolder") is None
+    # the only writable mapping is the results folder
+    writable = [m for m in maps if m.findtext("ReadOnly") != "true"]
+    assert [m.findtext("HostFolder") for m in writable] == [str(fx.results)]
+    cmd = root.findtext("LogonCommand/Command")
+    assert (rs.SB_ASSETS + "\\" + rs.SB_SCRIPT) in cmd
+    script = rs.sandbox_script(VERSION, "AshLight-%s-app.zip" % VERSION)
+    script.encode("ascii")
+    assert "-NoStart" in script and "-Quiet" in script
+    assert "shutdown.exe" in script and "-Purge" not in script
+    for word in ("Invoke-WebRequest", "Invoke-RestMethod", "Set-Clipboard",
+                 "Get-Clipboard", "http"):
+        assert word not in script
+
+
+def test_sandbox_missing_feature_is_reported_not_enabled(repo, tmp_path,
+                                                          monkeypatch):
+    fac = SandboxFactory(tmp_path, present=False)
+    rep, _run = _stage(repo, tmp_path, sandbox=True, sandbox_fx=fac)
+    assert rep["verdict"] == "FAIL"
+    assert _statuses(rep)["sandbox"] == "fail"
+    detail = _detail(rep, "sandbox")
+    assert "not available" in detail and "OA-14" in detail
+    assert [e[0] for e in fac.log] == ["feature", "cleanup"]
+    assert rep["sandbox"] == "fail" and rep["assets"] == []
+    # the real check is a path test under SystemRoot, nothing else
+    monkeypatch.setenv("SystemRoot", str(tmp_path / "noroot"))
+    real = rs.SandboxEffects({}, tmp_path / "x")
+    assert real.feature_present() is False
+    exe = tmp_path / "root" / "System32" / "WindowsSandbox.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"")
+    monkeypatch.setenv("SystemRoot", str(tmp_path / "root"))
+    assert real.feature_present() is True
+    # the tool never turns a Windows feature on and never asks for elevation
+    text = (ROOT / "tools" / "rel_stage.py").read_text(encoding="utf-8")
+    for word in ("dism", "enable-windowsoptionalfeature", "optionalfeature",
+                 "runas", "-verb", "shellexecute", "isuseranadmin",
+                 "/online"):
+        assert word not in text.lower(), word
