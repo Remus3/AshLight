@@ -60,6 +60,42 @@ On the dashboard (the overlay shows the first three in a small corner box):
 The source lives at https://github.com/Remus3/AshLight; clone it with
 `git clone https://github.com/Remus3/AshLight.git`.
 
+<!-- shots:begin -->
+## Screenshots
+
+AshLight's own pages, rendered from an invented demo session (no game
+footage, no game art). They follow your light or dark setting.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-1440.png">
+  <img src="docs/shots/play-light-1440.png" width="720" alt="The Play tab of the AshLight dashboard">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/build-dark-1440.png">
+  <img src="docs/shots/build-light-1440.png" width="720" alt="The Build and items tab of the AshLight dashboard">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/run-dark-1440.png">
+  <img src="docs/shots/run-light-1440.png" width="720" alt="The Run tab of the AshLight dashboard">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/settings-dark-1440.png">
+  <img src="docs/shots/settings-light-1440.png" width="720" alt="The Settings tab of the AshLight dashboard">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-360.png">
+  <img src="docs/shots/play-light-360.png" width="240" alt="The Play tab at phone width">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/overlay-dark-1440.png">
+  <img src="docs/shots/overlay-light-1440.png" width="480" alt="The AshLight overlay page on a plain ground">
+</picture>
+<!-- shots:end -->
+
 ## Install (Windows)
 
 Releases: none yet, so the line below does not work today. Install from

@@ -318,3 +318,56 @@ def test_c26_live_shapes_fixture_counts_no_miss():
     for ln in RESTART.read_text(encoding="ascii").splitlines():
         drift.observe(ln, parser.parse_line(ln))
     assert drift.total == 0
+
+
+# --- RUN-LIVE1-FIXTURES (wave 23): LIVE-1 items the parse ledger marked
+# VERIFIED live on 2026-11-21 (tools/live1_report.py: DEATH, JOINED,
+# ACCEPTED). Each line is built from the ledger's masked shape (a pattern id
+# hit, never a raw line): made-up names, the live prefix form. The lines stay
+# here, not in client_live_shapes.txt, because that file's exact event and
+# pattern-id counts are pinned by test_logshapes, test_ledger_wire,
+# test_bus_state and test_resume.
+LIVE1_VERIFIED = {
+    "death": "2026/11/21 23:10:00 9100 4c5d6e7f [INFO Client 6262] : Emberline has been slain.",
+    "joined": "2026/11/21 22:30:00 9200 4c5d6e7f [INFO Client 6262] : Tradewind has joined the area.",
+    "left": "2026/11/21 22:31:00 9300 4c5d6e7f [INFO Client 6262] : Tradewind has left the area.",
+    "trade_accepted": "2026/11/21 22:32:00 9400 4c5d6e7f [INFO Client 6262] : Trade accepted.",
+}
+
+
+def test_live1_verified_death():
+    ev = parser.parse_line(LIVE1_VERIFIED["death"])
+    assert ev["type"] == "death" and ev["character"] == "Emberline"
+    assert ev["suicide"] is False and ev["level_tag"] == "INFO"
+
+
+def test_live1_verified_joined_and_left():
+    ev = parser.parse_line(LIVE1_VERIFIED["joined"])
+    assert (ev["type"], ev["character"]) == ("player_joined_area", "Tradewind")
+    ev = parser.parse_line(LIVE1_VERIFIED["left"])
+    assert (ev["type"], ev["character"]) == ("player_left_area", "Tradewind")
+
+
+def test_live1_verified_trade_accepted():
+    assert parser.parse_line(LIVE1_VERIFIED["trade_accepted"])["type"] == "trade_accepted"
+
+
+def test_live1_verified_lines_hit_the_ledger_ids_and_no_drift():
+    from server.al import logshapes
+    led = logshapes.Ledger()
+    drift = logshapes.Drift()
+    for ln in LIVE1_VERIFIED.values():
+        ev = parser.parse_line(ln)
+        led.observe(ln, ev, now=1000.0)
+        assert not drift.observe(ln, ev), ln
+    assert set(LIVE1_VERIFIED) <= set(led.hits)
+    for item in ("DEATH", "JOINED", "ACCEPTED"):
+        assert any(i in led.hits for i in logshapes.LIVE1_ITEMS[item]), item
+    assert led.shapes == {}  # matched events keep no shape
+
+
+def test_live1_verified_ids_left_the_unverified_comments():
+    src = Path(parser.__file__).read_text(encoding="utf-8")
+    for word in ("has been slain. - VERIFIED live", "has left the area. - VERIFIED live",
+                 "Trade accepted. - VERIFIED live"):
+        assert word in src, word

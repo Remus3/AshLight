@@ -308,8 +308,13 @@ class Repo:
         shutil.copytree(ROOT / ".githooks", hooks)
         for h in hooks.iterdir():
             h.chmod(0o755)
+        # same hook files as tests/test_pre_push_hook.py HOOK_FILES (a test
+        # there fails when the two lists differ), plus the subject checker
         for rel in ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py",
-                    "tools/push_guard.py", "tools/commit_subject.py"):
+                    "tools/push_guard.py", "tools/release.py",
+                    "tools/rel_publish.py", "tools/rel_build.py",
+                    "tools/rel_version.py", "tools/rel_readback.py",
+                    "server/al/paths.py", "tools/commit_subject.py"):
             dst = self.work / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / rel, dst)
