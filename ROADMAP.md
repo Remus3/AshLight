@@ -387,7 +387,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_diag_explain.py tests/test_diag_self.py passes and npm test --prefix app passes.
   ZERO-CLICK: Computed every 5 s; Checks opens by itself on a new failure. DEPENDS:
   RUN-OBS-LOGS-SHELL, RUN-METRICS-SITES, RUN-SUPERVISOR-CLOCK, RUN-LEDGER-WIRE, RUN-REPORT-FIELDS,
-  OVL-OBS-CRASH. BLOCKED: session wave 24.
+  OVL-OBS-CRASH. BLOCKED: session wave 25 (DEFERRED from wave 24: batch suite red on tests/test_structure.py, 30 player sentences in server/al/plug/explain.py must move under server/al/text/ with a docs/design/copy sheet; re-plan files first).
 - [ ] OVL-APP-SCHEME-STRICT (build) Core refuses Origin null and file:// once both local pages load
   from the app scheme. ACCEPT: python -m pytest -q tests/test_http_security.py
   tests/test_audit_http_harden.py tests/test_sse_idle_push.py passes and git grep -n -F '"file://"'
@@ -432,7 +432,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   the checkout's setup.ps1 -NoShortcut leaves the installed copy's shortcuts and logon task alone
   (read back with the scripts/al_shell.ps1 readers). ZERO-CLICK: Waits for game_idle by itself; no
   operator step. DEPENDS: DEP-13, DEP-09, REL-UNINSTALL-SHELL, REL-UPDATE-LAUNCH, REL-UPDATE-CHECKS,
-  REL-RUNTIME-SCRIPTS, REL-BUILD-ASSETS. BLOCKED: session wave 24.
+  REL-RUNTIME-SCRIPTS, REL-BUILD-ASSETS. BLOCKED: operator act (prep done session 19: 0.2.0-rc.0 built in the sidecar Build release folder; install not run because install.ps1 always writes shortcuts; the operator runs the prepared switch-over script in the sidecar Scratch cutover folder, cutover.ps1, which waits for game_idle; adjudicator ruling 2026-11-21: agents never start or stop the app).
 
 ### Wave 25: local security, overlay and client, theorycraft
 
