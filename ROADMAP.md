@@ -918,9 +918,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_data_ninja.py tests/test_leak_sweep.py passes and npm test --prefix app passes.
   ZERO-CLICK: After this no player types anything for prices: the web-data tick is enough. DEPENDS:
   DATA-CONTACT-UI, DATA-WEBFETCH-GZIP, DATA-DIAG-SEAM, DATA-SNAP-TRIM, DATA-GUIDE-ONE-BLOCK, GP-10.
-  BLOCKED: the project's public repository address exists as one tracked constant (Q-24); unblocks
-  when GP-10 is merged to main, so the address constant and its leak-sweep allow-list entry are in
-  the tree (package GP-10 (PUB cluster), itself behind the repository and first push (GP-09)).
+  BLOCKED: session wave 43.
 - [ ] OVL-ITEM-KEY-CTRL (build) Item-check default chord moves under Ctrl once the operator names a
   free letter. ACCEPT: node --test app/test/hotkey.test.js app/test/eval.test.js and python -m
   pytest -q tests/test_audit_pass5_low.py tests/test_floor_static.py pass with the new default in
@@ -982,9 +980,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   -m pytest -q tests/test_download_place.py tests/test_player_guide.py tests/test_leak_sweep.py
   tests/test_ascii_lf.py` and `npm test --prefix app` are green. ZERO-CLICK: No click: About shows
   the line by itself; the player opens the place in their own browser if they want it. DEPENDS:
-  PUB-GUIDE-PAGES, GP-10. BLOCKED: the project's address is in tracked config/public_repo.json;
-  unblocks when `python -c "import json;print(json.load(open('config/public_repo.json'))['repo'])"`
-  prints the repository address (package GP-10).
+  PUB-GUIDE-PAGES, GP-10. BLOCKED: session wave 25.
 - [ ] DATA-GUIDE-GAP-TUNE (build) Tune the clear-or-push threshold from play data. ACCEPT: python -m
   pytest -q tests/test_zone_guide.py tests/test_util_underlevel.py passes and the commit message
   cites the sample size. ZERO-CLICK: Automatic for the player; the data comes from normal play.
@@ -1004,10 +1000,8 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   -m pytest -q tests/test_price_type_report.py tests/test_ninja_shape.py tests/test_math_value.py
   passes and python tools/price_type_report.py exits 0 on the dev host's cache (every requested type
   has entries and a matching path or was removed). ZERO-CLICK: Automatic afterwards: the report runs
-  in the loop tick. DEPENDS: DATA-PRICE-TYPES-FILE, DATA-NINJA-SHAPE-WATCH. BLOCKED: one real
-  poe.ninja round on the dev host; unblocks when the operator sets the contact and turns web data on
-  on the dev host (batched ask act g) and the sidecar Cache ninja book.json holds a fetched round
-  (operator).
+  in the loop tick. DEPENDS: DATA-PRICE-TYPES-FILE, DATA-NINJA-SHAPE-WATCH. BLOCKED: session wave
+  25.
 - [ ] TC-AFFIX-LINE (build) Affix line on the item card. ACCEPT: python -m pytest -q
   tests/test_tc_affix_line.py tests/test_eval_text.py passes. ZERO-CLICK: Same press; no click.
   DEPENDS: TC-CARD-PARTS, TC-PRESS-FIXTURES. BLOCKED: a real advanced-copy item sample as a fixture;

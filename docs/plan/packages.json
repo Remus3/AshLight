@@ -860,7 +860,7 @@
     29
    ],
    "est_wall_min": 490,
-   "session_packages": 15,
+   "session_packages": 17,
    "milestones": [
     "the Settings rail is complete"
    ]
@@ -895,16 +895,17 @@
   },
   {
    "n": 11,
-   "title": "Session 11: waves 38 to 42",
+   "title": "Session 11: waves 38 to 43",
    "waves": [
     38,
     39,
     40,
     41,
-    42
+    42,
+    43
    ],
    "est_wall_min": 540,
-   "session_packages": 12,
+   "session_packages": 13,
    "milestones": [
     "the item info popover and Kindler build generator are on the Build tab"
    ]
@@ -1611,7 +1612,9 @@
     "SEC-LOG-PATH-FIELD",
     "OVL-OVERLAY-FEED",
     "TC-CALC-IDLE",
-    "SEC-CEIL-SNAPSHOT"
+    "SEC-CEIL-SNAPSHOT",
+    "DATA-PRICE-TYPE-PROOF",
+    "PUB-GUIDE-DOWNLOAD-PLACE"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1796,6 +1799,15 @@
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
   {
+   "n": 43,
+   "title": "Wave 43: parked package released, default contact",
+   "goal": "Leads: Default contact: the project's issues page once the repository is public.",
+   "merge_order": [
+    "DATA-CONTACT-DEFAULT"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
    "n": 99,
    "title": "Parked",
    "goal": "Blocked packages with their unblock conditions; a package joins the next open wave once its condition reads true.",
@@ -1810,7 +1822,6 @@
     "AUTO-24",
     "TC-WAYSTONE-TUNE-UI",
     "TC-IMPORT-UI",
-    "DATA-CONTACT-DEFAULT",
     "OVL-ITEM-KEY-CTRL",
     "AUTO-26",
     "DATA-NINJA-RELEASE-ON",
@@ -1818,10 +1829,8 @@
     "DATA-GUIDE-ACTS-5-6",
     "TC-PRESS-FIXTURES",
     "AUTO-20",
-    "PUB-GUIDE-DOWNLOAD-PLACE",
     "DATA-GUIDE-GAP-TUNE",
     "TC-TREE-URL",
-    "DATA-PRICE-TYPE-PROOF",
     "TC-AFFIX-LINE",
     "GP-16",
     "PLAY-F-204B-SR-RUN",
@@ -20015,14 +20024,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": true,
-   "blocked": {
-    "on": "the project's public repository address exists as one tracked constant (Q-24)",
-    "who": "package GP-10 (PUB cluster), itself behind the repository and first push (GP-09)",
-    "unblock": "GP-10 is merged to main, so the address constant and its leak-sweep allow-list entry are in the tree"
-   },
+   "blocked": null,
    "operator_act": "",
    "notes": "Tier P1 unit, blocked (ruling Q-03). webfetch.py: one DEFAULT_CONTACT derived from the address constant GP-10 adds and effective_contact(configured); core.py Core.contact falls back to it; snapshot.py main() likewise; the web field becomes an optional per-install override (label and help text only). Amend decision 0015 item 1 and 0016, dated. The deps are file-order edges only (webfetch.py, core.py, snapshot.py, web/prices.js, web/index.html).",
-   "wave": 99,
+   "wave": 43,
    "owner": "session",
    "tier": "P1",
    "cluster": "DATA"
@@ -20699,14 +20704,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": true,
-   "blocked": {
-    "on": "the project's address is in tracked config/public_repo.json",
-    "who": "package GP-10",
-    "unblock": "`python -c \"import json;print(json.load(open('config/public_repo.json'))['repo'])\"` prints the repository address"
-   },
+   "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. The download place is the releases page of the address in config/public_repo.json (the only address the leak sweep allows). README.md: one line naming it, next to the link to docs/guide/ (a region outside the quick start and outside '## How this repository is run'). docs/guide/download.md and faq.md: the same line. app/about.js: aboutText(disclaimer, credit) gains an optional third argument `download` (a plain text line appended after the credit; the non-affiliation line stays first); app/main.js: only the one About call site (line 268, `About.aboutText(DISCLAIMER, dataCredit)`) passes the line built from config/public_repo.json read once at start (missing file = no line). The About text is user-facing copy shown in the overlay About, so the design reviewer checks it (design_review true). tests/test_download_place.py: the same place string appears in README.md, docs/guide/faq.md and is what app/about.js is given. Needs F-050 / DEP-09 for the releases page to hold an installer (until then the line says releases appear there) and shares app/about.js with F-027 and app/main.js with the OVL cluster (see cross). No network call is added: the app only shows the text. Sized M 45: six files across README, two guide pages, about.js, main.js and two tests plus a design review. docs/guide/download.md and faq.md exist once PUB-GUIDE-PAGES lands (a dep).",
-   "wave": 99,
+   "wave": 25,
    "owner": "session",
    "tier": "P2",
    "cluster": "PUB"
@@ -20860,14 +20861,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "one real poe.ninja round on the dev host",
-    "who": "operator",
-    "unblock": "the operator sets the contact and turns web data on on the dev host (batched ask act g) and the sidecar Cache ninja book.json holds a fetched round"
-   },
+   "blocked": null,
    "operator_act": "OA-8 (docs/plan/09): Batched ask act (g): type the contact in the dashboard field and tick 'Use web data' on the dev host.",
    "notes": "Tier P3 unit, blocked. The tool reads only AshLight's own cache files in the sidecar (counts and key names; never a real item name into a fixture: fixtures stay synthetic, decision 0009's spirit). First candidate to drop: PrecursorTablets (only UNIQUE-rarity items are looked up in the item types). value.py: ALIASES loses ids the rates do not carry. Hosting the report in the loop tick needs the watcher frame (AUTO-05): see cross. PRICE-VARIANT (F-207) stays deferred until this round shows whether lines carry 'variant'. Not yet tracked at plan time (a dep creates them): server/al/data/price_types.json is created by DATA-PRICE-TYPES-FILE; server/al/data/ninja_read_keys.json is created by DATA-NINJA-SHAPE-WATCH; server/al/ninjashape.py is created by DATA-NINJA-SHAPE-WATCH.",
-   "wave": 99,
+   "wave": 25,
    "owner": "session",
    "tier": "P3",
    "cluster": "DATA"
