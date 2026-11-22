@@ -54,7 +54,21 @@ death or level-up time + CALM_S, else None) for the HUD guide line
 (OVL-LINE2-GUIDE). The guide is read only through the state's zone-guide
 view (zoneguide.view). Nothing is read from the game and nothing is sent;
 stdlib only. The caller (SessionState) holds its lock around every call.
+
+OVL-OVERLAY-FEED (F-177): the overlay page's own feed. /events?view=overlay
+sends small(snap): only the snapshot fields the HUD reads (OVERLAY_FIELDS,
+the same list as SNAP_FIELDS in app/shared/render_gate.js; both tests
+check it), and only when one of them changed (change_key: the frame clock
+"now", the stamp and a map timer that runs with the clock are not
+changes). The frame's "version" is the feed's own change stamp, not the
+state version. FeedFrames keeps one serialised frame per view per state
+version on the server object, shared by every stream of that view; it has
+its own lock and takes the state's snapshot outside SessionState's lock.
 """
+
+import json
+import threading
+import time
 
 from .text.common import _is_time
 from .text.overlaycard import EVAL_CARD_S, overlay_card
@@ -458,3 +472,104 @@ class OverlayView:
                 setattr(self, "_store_" + key, value)
         self.dirty = False
         return True
+
+
+# -- OVL-OVERLAY-FEED (F-177): the overlay's own feed ---------------------------
+
+# Every snapshot field the overlay page reads (app/shared/render_gate.js
+# SNAP_FIELDS, the same strings in the same order; app/overlay/overlay.js
+# reads only "now" besides). A dotted entry keeps only that part of its
+# top-level dict ("maps.current": the open map, not the ladder). The frame
+# also carries "version": the feed's own change stamp (STAMP).
+OVERLAY_FIELDS = (
+    "now", "zone", "in_hideout", "in_town", "zone_entered_at", "level", "deaths",
+    "afk", "dnd", "tailer", "game_idle", "maps.current", "trade_requests",
+    "underlevel.word", "campaign.word", "card", "eval.text", "eval.expires_at",
+    "eval.ok", "eval.verdict", "overlay", "overlay_layout")
+STAMP = "version"
+VIEWS = ("overlay",)  # the views /events takes besides the default (absent)
+# A frame built for a state version is reused by the other streams of its
+# view for this long; then the next push takes a fresh snapshot (its "now").
+FRAME_REUSE_S = 0.25
+
+
+def small(snap, stamp=None):
+    """The overlay view of a state snapshot: only OVERLAY_FIELDS, plus
+    "version" = stamp (the feed's change stamp; None keeps the snapshot's).
+    A key the snapshot lacks stays absent; a dotted entry under a value
+    that is not a dict keeps that value (None stays None)."""
+    out = {}
+    if not isinstance(snap, dict):
+        return out
+    for field in OVERLAY_FIELDS:
+        top, _, sub = field.partition(".")
+        if top not in snap:
+            continue
+        value = snap[top]
+        if not sub:
+            out[top] = value
+        elif not isinstance(value, dict):
+            out.setdefault(top, value)
+        else:
+            part = out.setdefault(top, {})
+            if isinstance(part, dict) and sub in value:
+                part[sub] = value[sub]
+    out[STAMP] = snap.get(STAMP) if stamp is None else stamp
+    return out
+
+
+def change_key(doc):
+    """The text two overlay frames are compared by: the small view without
+    the clock and the stamp. A map timer that runs with the clock (time_s
+    while inside) counts by its start (now - time_s), and the last log
+    line time only while the log is idle (the HUD reads it only then), so
+    neither the clock nor a busy log alone is a change."""
+    key = {k: v for k, v in doc.items() if k not in ("now", STAMP)}
+    tl = key.get("tailer")
+    if isinstance(tl, dict) and not (tl.get("consented") and tl.get("idle")):
+        key["tailer"] = {k: v for k, v in tl.items() if k != "last_line_at"}
+    maps = key.get("maps")
+    cur = maps.get("current") if isinstance(maps, dict) else None
+    now = doc.get("now")
+    if (isinstance(cur, dict) and cur.get("inside") is True
+            and _is_time(now) and _is_time(cur.get("time_s"))):
+        cur = dict(cur, time_s=None, started=round(float(now) - cur["time_s"], 3))
+        key["maps"] = dict(maps, current=cur)
+    return json.dumps(key, sort_keys=True, separators=(",", ":"), default=str)
+
+
+class FeedFrames:
+    """One serialised state frame per view per state version, shared by
+    every SSE stream of that view (server/al/http.py _sse_stream). For the
+    overlay view the stamp moves only when change_key moves; for the
+    default view (None) the stamp is the state version. Thread-safe."""
+
+    def __init__(self, clock=time.monotonic):
+        self._lock = threading.Lock()
+        self._clock = clock
+        self._frames = {}  # view -> (state version, built_at, stamp, text)
+        self._key = None  # change key of the last overlay frame
+        self._stamp = 0  # the overlay feed's change stamp
+
+    def frame(self, view, state, encode):
+        """(state version, stamp, frame text) for `view` (None or "overlay").
+        encode(event, data) makes the frame text (Handler._sse_msg)."""
+        with self._lock:
+            hit = self._frames.get(view)
+            now = self._clock()
+            if (hit is not None and hit[0] == state.version
+                    and 0 <= now - hit[1] < FRAME_REUSE_S):
+                return hit[0], hit[2], hit[3]
+            snap = state.snapshot()
+            if view == "overlay":
+                doc = small(snap)
+                key = change_key(doc)
+                if key != self._key:
+                    self._key = key
+                    self._stamp += 1
+                stamp = doc[STAMP] = self._stamp
+            else:
+                doc, stamp = snap, snap.get(STAMP)
+            text = encode("state", doc)
+            self._frames[view] = (snap.get(STAMP), now, stamp, text)
+            return snap.get(STAMP), stamp, text
