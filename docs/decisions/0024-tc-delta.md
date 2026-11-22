@@ -82,6 +82,12 @@ positive per-mod weights of the compared stats}.
   768 MB (511 MB with the bridge.lua GC ceiling). Enforced by
   tests/test_math_perf.py and tests/test_math_e2e_live.py. Reverses if:
   a re-measure after a pin move or on the target machine says otherwise.
+  R7 amendment 2026-11-18 (RUN-BUDGET-TESTS-LIVE, research 0048 B16):
+  the time ceilings tighten to about 2.5 times the 2026-11-17 values:
+  cold start 5 s, load 1.5 s, reload 1 s, set item 0.5 s, all probes of
+  a first check 30 s and of a warm check 12 s, repeat check 4 s; the
+  768 MB peak stays (B17). tests/tc_live_util.py BUDGET holds them. It
+  tightens only; nothing above is reversed.
 
 ## Reverses if
 

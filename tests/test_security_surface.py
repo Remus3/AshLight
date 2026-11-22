@@ -543,10 +543,11 @@ def test_reply_header_set_is_pinned(srv):
     r, _ = req(srv, "GET", "/", host="evil.example")
     assert r.status == 400
     _check(_names(r.getheaders()))
-    # the SSE stream: no length, Connection: close; the overlay's null
-    # origin adds the one CORS header and its Vary entry
-    for origin, extra in ((None, {}), ("null", {"access-control-allow-origin": "null",
-                                                "vary": "Origin, Sec-Fetch-Site"})):
+    # the SSE stream: no length, Connection: close; the app origin adds
+    # the one CORS header and its Vary entry; Origin null is refused
+    for origin, extra in ((None, {}), (al_http.APP_ORIGIN, {
+            "access-control-allow-origin": "al-app://app",
+            "vary": "Origin, Sec-Fetch-Site"})):
         lines = raw(srv, f"GET /events?token={TOKEN} HTTP/1.1\r\n"
                          f"Host: 127.0.0.1:{port}\r\n"
                          + (f"Origin: {origin}\r\n" if origin else "") + "\r\n")
@@ -554,6 +555,9 @@ def test_reply_header_set_is_pinned(srv):
         got = _names([tuple(x.split(": ", 1)) for x in lines[1:]])
         _check(got, {"connection": "close", "content-type": "text/event-stream; charset=utf-8",
                      **extra}, without=("content-length",))
+    lines = raw(srv, f"GET /events?token={TOKEN} HTTP/1.1\r\n"
+                     f"Host: 127.0.0.1:{port}\r\nOrigin: null\r\n\r\n")
+    assert " 403 " in lines[0], lines[0]
 
 
 def test_fix_cases_static_xml_cross_site_discovery(srv, tmp_path):

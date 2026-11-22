@@ -520,7 +520,10 @@ of the HALT check.
   2026-11-20), fetched by setup.ps1 -TcCalc only on opt-in, never
   vendored (decision 0018). Reverses if: GitHub archives stop being
   byte-stable, either license leaves MIT / permissive, or LuaJIT ships
-  hashed release binaries.
+  hashed release binaries. Amended 2026-11-21 (TC-PIN-POLICY): at most one
+  PoB pin move per game patch cycle unless a release changes a reference
+  output; LuaJIT moves only with a PoB move; the toolchain is removed after
+  a verified build.
 - A trade accepted / cancelled line closes ONE open trade card: the named
   counterparty's, else the oldest (decision 0019). Reverses if: a PoE2 log
   line names the counterparty (then match by name only), or the oldest-card
@@ -643,13 +646,18 @@ of the HALT check.
   hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
   Cache on -TcCalc only, PATH set only in the build subprocess, never
   vendored, its extracted tree re-hashed against the marker before each
-  build (decision 0027; amendment 2026-11-17, P3-10). Reverses if: WinLibs drops .zip assets, a
+  build (decision 0027; amendment 2026-11-17, P3-10). Amended 2026-11-21
+  (TC-PIN-POLICY): the toolchain tree and archive are deleted directly after
+  a verified luajit.exe and fetched again only for a rebuild. Reverses if: WinLibs drops .zip assets, a
   license objection appears, or LuaJIT ships hashed Windows binaries.
 - Theorycraft is proven end to end on the real reference build (PoB-sourced
   card deltas, kill fallback), with calc budgets in decision 0024 R7, a
   bridge.lua GC ceiling (384 MB Lua heap) and a PoB API drift guard test
-  (decision 0028). Reverses if: a pin move or the target machine breaches
-  the budgets, or the GC ceiling costs more than it saves.
+  (decision 0028); calc ceilings re-measured and tightened to about 2.5
+  times the 2026-11-17 values (R7 amendment 2026-11-18,
+  RUN-BUDGET-TESTS-LIVE); live budget shapes (overlay alone, client, calc,
+  live budget log) are opt-in by env var and skip otherwise. Reverses if: a
+  pin move or the target machine breaches the budgets, or the GC ceiling costs more than it saves.
 - Waystone risk check on the item-check press from an own rule table and
   the build's PoB numbers; search strings (<= 250 chars) copied only on
   the player's click; zone notes folded into the one guide file (decision
@@ -682,7 +690,16 @@ of the HALT check.
   .bak of its last good copy, removed by Clear run history (0036
   amendment 2026-11-18). Reverses if: the operator rules local history
   files unwanted, GGG restricts derived local records, or decision 0013
-  changes.
+  changes. Amended 2026-11-21 (TC-WEIGHTS-DELTA-EXPORT): the settings file is
+  schema 2 and carries a top-level weights block, the player's stat weight
+  changes in the weights file's version 2 form, checked by the weights
+  store's own rules (at most weights.MAX_KEYS rows; a bad block refuses the
+  whole file). An import with the block sets the weights to the defaults plus
+  the file's changes and re-scores the last item. A file without it, schema 1
+  included, leaves the weights alone. The 16 KB cap stays, and an export
+  whose block would pass it leaves the block out. Reverses if: the weights
+  store changes its file form, players expect an import to keep their own
+  weight changes, or a real export drops its block at the cap.
 - UTIL-MULTICHAR: level, deaths, pace, act splits and run history are
   keyed by the character name in the player's own Client.txt (switch only
   on the first level-up / death after a game start with no join / leave
@@ -1068,8 +1085,11 @@ of the HALT check.
   egress lock allows the scheme's one host and refuses every file: URL;
   the core adds APP_ORIGIN al-app://app to FILE_ORIGINS for GET /events
   only and echoes it in Access-Control-Allow-Origin, while null and
-  file:// stay until OVL-APP-SCHEME-STRICT (decision 0061 amendment
-  2026-11-21). Reverses if: the live smoke shows the feed blocked or the
+  file:// were refused from OVL-APP-SCHEME-STRICT on (decision 0061
+  amendment 2026-11-21). Amended 2026-11-21 (OVL-APP-SCHEME-STRICT, F-174):
+  the core now accepts only that app origin instead of null and file://
+  (FILE_ORIGINS = {APP_ORIGIN} on the read-only path set {"/events"}; Origin
+  null and file:// are refused). Reverses if: the live smoke shows the feed blocked or the
   window not painting from the scheme, Electron drops protocol.handle or
   registerSchemesAsPrivileged, or a page needs a file outside the list.
   Reverses if: a needed

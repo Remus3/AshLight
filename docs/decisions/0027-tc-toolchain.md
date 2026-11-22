@@ -78,3 +78,32 @@ Still the same-user model of P2-B3: it stops a stale or partial tree, not a
 same-user attacker who can also edit the archive and marker. Reverses if:
 the re-hash makes setup noticeably slow, or the toolchain entry is dropped.
 Test: tests/test_tc_pin.py test_p3_10_tampered_toolchain_tree_is_reextracted_before_the_build.
+
+## Amendment 2026-11-21 (TC-PIN-POLICY, plan unit F-180)
+
+The toolchain tree and archive are removed after a verified build and
+re-fetched only for a rebuild. Once `luajit.exe` is built and its SHA-256
+is recorded (status `ready`, or a no-op setup run whose `luajit.exe`
+still verifies, which also clears a toolchain an earlier version kept),
+`tools/tc_pin.py` `remove_toolchain` deletes `Cache\toolchain\mingw64\`,
+`toolchain.zip` and any leftover `.part` with a direct delete, not the
+Recycle Bin: they are AshLight's own re-fetchable cache files under the
+sidecar, not player data, and the log line says so. A quarantined
+`.rejected` file is kept as evidence. A failed build or a `source-only`
+run keeps the toolchain. A failed delete is logged and never fails setup.
+A later rebuild (a pin move, or a `luajit.exe` that no longer verifies)
+fetches the archive again (about 276 MB), hash-verified as before.
+
+Alternatives: keep the toolchain (276 MB on disk for a build that runs
+once per pin); delete via the Recycle Bin (the space is not freed, and
+FLEET item 9 binds only irreplaceable files); delete only the tree (the
+archive alone is most of the size). Rejected.
+
+Why: the toolchain is used only to build `luajit.exe`; after that it is
+dead weight in the player's sidecar, and the pin makes a re-fetch exact.
+
+Reverses if: rebuilds become frequent enough that the re-download costs
+more than the disk space, or WinLibs assets stop being re-fetchable at
+the pinned URL. Tests: tests/test_tc_pin.py
+test_toolchain_removed_after_ready_and_rerun_is_noop,
+test_failed_build_keeps_the_toolchain.

@@ -1,0 +1,12 @@
+{
+  "_README": "DATA-PRICE-TYPES-FILE (F-201): the poe.ninja overview types the price book (server/al/pricebook.py) asks for. unique = item overview types (stash/current/item/overview), exchange = the stackable kinds of the exchange overview (Currency itself stays in the rates client). Each name is letters only, at most 40 per list, no name twice, no name in both lists. Adding or dropping a type is an edit here: hot reloaded (decision 0042), a bad edit keeps the last good lists and shows a Checks note, a missing file reads as the built-in lists. Type names only: no price, no item name, no league name.",
+  "schema": 1,
+  "src": "research 0019 (poe.ninja PoE2 economy overview types)",
+  "checked": "2026-11-21",
+  "unique": ["UniqueWeapons", "UniqueArmours", "UniqueAccessories",
+             "UniqueFlasks", "UniqueCharms", "UniqueJewels",
+             "UniqueSanctumRelics", "UniqueTablets", "PrecursorTablets"],
+  "exchange": ["Fragments", "Abyss", "UncutGems", "LineageSupportGems",
+               "Essences", "SoulCores", "Idols", "Runes", "Ritual",
+               "Expedition", "Delirium", "Breach", "Verisium"]
+}

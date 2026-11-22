@@ -9,8 +9,9 @@ Thanks for your interest in AshLight.
   (`app/`) pins every npm package to an exact version.
 - Every text file is ASCII with LF line endings.
 - Run the tests before sending a change:
-  `python -m pytest -q` and `npm test --prefix app`. The test tools are
-  hash pinned:
+  `python -m pytest -q` and `npm test --prefix app`. The suite needs
+  pytest 9.0 or newer (pytest.ini sets faulthandler_exit_on_timeout). The
+  test tools are hash pinned:
   `python -m pip install --require-hashes -r requirements-dev.txt`.
 - `powershell -ExecutionPolicy Bypass -File scripts\build.ps1` runs the
   test suite and writes a build stamp. It is the dev gate, not a player

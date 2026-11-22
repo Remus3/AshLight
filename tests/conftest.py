@@ -97,3 +97,9 @@ def pytest_configure(config):
                       ("discovery", "may reach the real Steam library lookup "
                                     "(SEC-NO-DISCOVERY guard off)")):
         config.addinivalue_line("markers", f"{name}: {doc}")
+
+
+# TEST-SLOW-BUDGET (F-168): per-test call ceilings, the full-run suite
+# ceiling and the five worst call times (tests/slow_budget.py).
+import slow_budget  # noqa: E402
+slow_budget.install(globals())
