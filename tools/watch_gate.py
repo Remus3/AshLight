@@ -7,7 +7,9 @@ asks this module three things:
   True; a missing, unreadable or non-dict file is off), at call time.
 - check_url(source, url): may this source read this URL? Only
   api.github.com repository METADATA paths (repository, commits, tags,
-  branches, refs, releases by id / tag / latest) and the exact https URLs
+  branches, refs, releases by id / tag / latest; for the CI issue protocol
+  the issue list /issues and the watch workflow /actions/workflows/watch.yml
+  and its /runs, decision 0069 amendment 2026-11-21) and the exact https URLs
   the source lists in SOURCE['urls'] pass. Every GGG host (the settled docs
   watch and release check keep their own reads, decisions 0044 and 0025),
   the trade site (webfetch.is_trade_url, decision 0017), raw / codeload /
@@ -64,6 +66,12 @@ METADATA_TAILS = tuple(re.compile(p) for p in (
     r"/releases/latest",
     r"/releases/tags/" + _REF,
     r"/releases/[0-9]+",
+    # CI issue protocol (decision 0076 item 6; 0069 amendment 2026-11-21):
+    # the open issue list and the watch workflow's own state and runs. Every
+    # other /issues/ and /actions/ sub-path stays refused.
+    r"/issues",
+    r"/actions/workflows/watch\.yml",
+    r"/actions/workflows/watch\.yml/runs",
 ))
 _REPO_PATH = re.compile(r"^/repos/(" + _SEG + r")/(" + _SEG + r")(/.*)?$")
 # Path words that mean file content, never metadata (any GitHub host).
