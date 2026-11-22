@@ -22467,7 +22467,14 @@
     "app/test/eval.test.js",
     "app/test/layout.test.js",
     "app/test/price.test.js",
-    "app/test/slots.test.js"
+    "app/test/slots.test.js",
+    "tests/test_moment_cards.py",
+    "tests/test_price_card_age.py",
+    "web/slots.js",
+    "app/shared/render_gate.js",
+    "app/test/keyhint.test.js",
+    "server/al/theorycraft/cardparts/keep.py",
+    "tests/test_tc_levelrules.py"
    ],
    "new_files": [],
    "integrator_edits": [
