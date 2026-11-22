@@ -330,3 +330,172 @@ test("B13: 1,000 snapshots differing only outside the HUD fields give 0 paints",
   paint({ ...base, deaths: 5 });
   assert.equal(paints, 1);
 });
+
+/* OVL-OVERLAY-FEED (F-177): the core's /events?view=overlay frame holds
+   only SNAP_FIELDS (server/al/overlayview.py OVERLAY_FIELDS; the Python
+   test tests/test_overlay_feed.py compares the two lists too). Here: the
+   lists are equal, a walk of every snapshot read render_gate.js makes on
+   a set of full snapshots finds none outside the list and every entry read,
+   and the HUD output for the small view equals the output for the full
+   snapshot on every fixture (B13: the small feed changes no paint). */
+const fs = require("node:fs");
+const path = require("node:path");
+
+const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+/* The JS twin of overlayview.small: only the listed fields; a dotted entry
+   keeps one key of a top-level object; a non-object stays as it is. */
+function smallView(snap, fields) {
+  const out = {};
+  for (const f of fields) {
+    const i = f.indexOf(".");
+    const top = i < 0 ? f : f.slice(0, i);
+    const sub = i < 0 ? "" : f.slice(i + 1);
+    if (!has(snap, top)) { continue; }
+    const v = snap[top];
+    if (!sub) {
+      out[top] = v;
+    } else if (!v || typeof v !== "object" || Array.isArray(v)) {
+      if (!has(out, top)) { out[top] = v; }
+    } else {
+      if (!has(out, top)) { out[top] = {}; }
+      if (has(v, sub)) { out[top][sub] = v[sub]; }
+    }
+  }
+  out.version = snap.version;
+  return out;
+}
+
+/* A deep read recorder: every property path read through it lands in seen. */
+function recorder(obj, where, seen) {
+  if (obj === null || typeof obj !== "object") { return obj; }
+  const at = (k) => (where ? where + "." + String(k) : String(k));
+  return new Proxy(obj, {
+    get(t, k, r) {
+      if (typeof k === "symbol") { return Reflect.get(t, k, r); }
+      seen.add(at(k));
+      return recorder(Reflect.get(t, k, r), at(k), seen);
+    },
+    has(t, k) {
+      if (typeof k !== "symbol") { seen.add(at(k)); }
+      return Reflect.has(t, k);
+    },
+    getOwnPropertyDescriptor(t, k) {
+      if (typeof k !== "symbol") { seen.add(at(k)); }
+      return Reflect.getOwnPropertyDescriptor(t, k);
+    }
+  });
+}
+
+/* Full snapshots as the core sends them, with dashboard-only state around
+   the HUD fields. Values are invented. */
+const NOISE_FIELDS = {
+  version: 812, events_seen: 9001, recent_events: [{ seq: 1, type: "death", at: 4990 }],
+  sources: { calc_on: true }, diag: { rows: [{ id: "log" }] }, run_history: { on: true },
+  hotkeys: { eval: { key: "Alt+Shift+E" } }, build: { name: "B" }, price: { rows: 3 },
+  zone_guide: { line: "long guide line" }, pace: { rate: 1 }, characters: [{ name: "Me" }]
+};
+const FEED_BASE = {
+  ...NOISE_FIELDS,
+  now: 5000, zone: "Crypt", in_hideout: false, in_town: false, zone_entered_at: 4400,
+  level: 71, deaths: 4, afk: false, dnd: false, game_idle: false,
+  tailer: { consented: true, reading: true, path: "x", idle: false, last_line_at: 4990 },
+  maps: { count: 3, current: { name: "Crypt", area_level: 65, time_s: 600, deaths: 1, inside: true },
+          recent: [{ name: "Old" }], ladder: { rows: [] } },
+  trade_requests: [tradeRow(1, "A"), tradeRow(2, "B")],
+  underlevel: { word: "", gap: 3 }, campaign: { word: "", rows: [] },
+  card: { kind: "price", head: "Price: Doom Grip", line2: "12 exalted", line3: "",
+          verdict: "note", expires_at: 5015 },
+  eval: { text: { head: "Upgrade", item: "Doom Grip", line: "+4% DPS" }, expires_at: 5015,
+          ok: true, verdict: "upgrade", mods: ["a", "b"], at: 4995 },
+  overlay: { guide_short: "Kill the boss", calm_at: 4000 },
+  overlay_layout: { corner: "top-right", quiet_town: true, zone_guide: "always",
+                    parts: { zone: true, timer: true, level: true, deaths: true } }
+};
+const OLD_CORE = { ...FEED_BASE };  // a core without "card": the eval path
+delete OLD_CORE.card;
+const HINT = { kind: "hint", head: "Alt+Shift+E: check an item", line2: "", line3: "",
+               verdict: "hint", expires_at: null };
+const FEED_FIXTURES = [
+  FEED_BASE,
+  OLD_CORE,
+  { ...OLD_CORE, eval: { ...FEED_BASE.eval, ok: false } },
+  { ...FEED_BASE, card: null, trade_requests: [] },
+  { ...FEED_BASE, tailer: { consented: false } },
+  { ...FEED_BASE, game_idle: true, card: null,
+    tailer: { consented: true, reading: true, path: "x", idle: true, last_line_at: 4800 },
+    maps: { ...FEED_BASE.maps, current: { ...FEED_BASE.maps.current, inside: false } } },
+  { ...FEED_BASE, tailer: { consented: true, reading: false, unreadable: true, path: "x" } },
+  { ...FEED_BASE, tailer: { consented: true, reading: false, path: null }, maps: null },
+  { ...FEED_BASE, in_town: true, card: null, trade_requests: [] },
+  { ...FEED_BASE, in_hideout: true, zone: "Felled Hideout", card: null },
+  { ...FEED_BASE, card: { kind: "zone", head: "Kill the boss", line2: "Next: Grelwood",
+                          line3: "", verdict: "", expires_at: 5010 } },
+  { ...FEED_BASE, card: HINT },
+  { ...FEED_BASE, card: HINT, trade_requests: [] },
+  { ...FEED_BASE, card: null, trade_requests: [],
+    overlay: { guide_short: "Kill the boss", calm_at: 5010 } },
+  { ...FEED_BASE, card: null, trade_requests: [], afk: true },
+  { ...FEED_BASE, card: null, trade_requests: [], dnd: true,
+    underlevel: { word: "4 lv under", gap: 3 }, campaign: { word: "Cold res 32%" } },
+  { ...FEED_BASE, card: null, trade_requests: [], underlevel: null, campaign: null,
+    overlay_layout: { corner: "bottom-left", quiet_town: false, zone_guide: "never",
+                      parts: { trade: false, status: false, hint: false } } },
+  { ...FEED_BASE, overlay_layout: null, overlay: { guide_short: "", calm_at: null } }
+];
+const FEED_TIMES = [4990, 5000, 5005, 5012, 5020, 5100];
+
+/* Everything the overlay page asks render_gate.js about one snapshot. */
+function hudOutputs(s, nowS) {
+  const m = gate.hudModel(s, nowS, "live");
+  return { model: m, guide: m.guide, hudShown: m.hudShown, status: gate.statusText(m),
+           evalMs: gate.msUntilEvalExpires(s, nowS), guideMs: gate.msUntilGuideDue(s, nowS),
+           timer: gate.timerSeconds(s, nowS), wanted: gate.overlayWanted(s, "live") };
+}
+
+test("OVERLAY-FEED: SNAP_FIELDS equals the core's OVERLAY_FIELDS", () => {
+  const py = fs.readFileSync(path.join(__dirname, "..", "..", "server", "al", "overlayview.py"),
+                             "utf8");
+  const m = /^OVERLAY_FIELDS = \(([\s\S]*?)\)$/m.exec(py);
+  assert.ok(m, "overlayview.py lost OVERLAY_FIELDS");
+  const list = m[1].match(/"[^"]+"/g).map((q) => q.slice(1, -1));
+  assert.deepEqual(gate.SNAP_FIELDS, list);
+  assert.equal(new Set(list).size, list.length);
+});
+
+test("OVERLAY-FEED: every snapshot read of render_gate.js is in SNAP_FIELDS, every entry read", () => {
+  const seen = new Set();
+  for (const s of FEED_FIXTURES) {
+    for (const t of FEED_TIMES) { hudOutputs(recorder(s, "", seen), t); }
+  }
+  const fields = gate.SNAP_FIELDS;
+  const covered = (r) => fields.some((f) => r === f || r.startsWith(f + ".") ||
+                                            f.startsWith(r + "."));
+  const outside = [...seen].filter((r) => !covered(r)).sort();
+  assert.deepEqual(outside, [], "reads outside SNAP_FIELDS");
+  const unread = fields.filter((f) => ![...seen].some((r) => r === f || r.startsWith(f + ".")));
+  assert.deepEqual(unread, [], "SNAP_FIELDS entries no fixture read");
+  /* a source walk too: a top-level read on a branch no fixture takes */
+  const tops = new Set(fields.map((f) => f.split(".")[0]));
+  for (const file of ["../shared/render_gate.js", "../overlay/overlay.js"]) {
+    const src = fs.readFileSync(path.join(__dirname, file), "utf8");
+    for (const hit of src.matchAll(/\bsnap\.(\w+)/g)) {
+      assert.ok(tops.has(hit[1]), file + " reads snap." + hit[1]);
+    }
+  }
+});
+
+test("OVERLAY-FEED B13: the small view paints exactly what the full snapshot paints", () => {
+  for (const s of FEED_FIXTURES) {
+    const small = smallView(s, gate.SNAP_FIELDS);
+    for (const k of Object.keys(NOISE_FIELDS)) {
+      if (k !== "version") { assert.ok(!has(small, k), k); }
+    }
+    for (const t of FEED_TIMES) {
+      const full = hudOutputs(s, t);
+      const view = hudOutputs(small, t);
+      assert.deepEqual(view, full, JSON.stringify({ t: t, zone: s.zone }));
+      assert.equal(gate.shouldRender(full.model, view.model), false);
+    }
+  }
+});
