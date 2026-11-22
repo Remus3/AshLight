@@ -819,6 +819,12 @@
         window.ALHotkeys.wire(document, { fetch: function (url, opts) { return fetch(url, opts); },
           token: token });
       }
+      // OVL-PARTS-WEB: the 'Overlay shows' group, saved on change (POST
+      // /api/overlay-layout); its first read runs on connect, beside the layout's
+      if (window.ALOverlayParts) {
+        window.ALOverlayParts.wire(document, api);
+        onConnect(function () { window.ALOverlayParts.load(document, api); });
+      }
       if (!window.ALSettingsIO) { return; }
       window.ALSettingsIO.wire(document, {
         fetch: function (url, opts) { return fetch(url, opts); },
