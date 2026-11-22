@@ -16130,7 +16130,9 @@
     "web/checks.js",
     "app/test/checks.test.js",
     "tests/test_ux_review.py",
-    "tests/test_ux_b8.py"
+    "tests/test_ux_b8.py",
+    "app/test/tabs.test.js",
+    "app/test/dashboard.test.js"
    ],
    "new_files": [
     "web/rail.js",
@@ -16163,7 +16165,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. index.html: the Settings panel frame (rail 220 px, pane), sections 1 Checks (12 rows a page, Copy report), 2 Reading and web data (Stop reading Client.txt moved from the footer with its id, the log path, the one web-data switch moved from its card with its wording and default OFF, price book state), 3 Overlay (the layout form rows that exist today; the slider label, parts chooser, zone guide setting and card time arrive with the OVL packages); the bar word #reading becomes a button (32 px) that stays the polite reading indicator (ToS floor: visible on every tab in every state). Sections 4 to 6 keep today's Tools card until PLAY-TD-21B-SETTINGS-ABOUT. web/rail.js (new, UMD): section switch, jump-and-focus, the pager for a section over 448 px; this package adds its script tag. web/checks.js: rows page instead of the details fold. Status texts beside forms lose their live role (page cap 6). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "notes": "Tier P1. index.html: the Settings panel frame (rail 220 px, pane), sections 1 Checks (12 rows a page, Copy report), 2 Reading and web data (Stop reading Client.txt moved from the footer with its id, the log path, the one web-data switch moved from its card with its wording and default OFF, price book state), 3 Overlay (the layout form rows that exist today; the slider label, parts chooser, zone guide setting and card time arrive with the OVL packages); the bar word #reading becomes a button (32 px) that stays the polite reading indicator (ToS floor: visible on every tab in every state). Sections 4 to 6 keep today's Tools card until PLAY-TD-21B-SETTINGS-ABOUT. web/rail.js (new, UMD): section switch, jump-and-focus, the pager for a section over 448 px; this package adds its script tag. web/checks.js: rows page instead of the details fold. Status texts beside forms lose their live role (page cap 6). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Re-plan (session 19, ruling A pattern 5787074): files gain app/test/tabs.test.js (its footer pin of consent-no moves with the opt-out) and app/test/dashboard.test.js (the ledger consent line moves beside the opt-out, decision 0071).",
    "wave": 23,
    "owner": "session",
    "tier": "P1",
