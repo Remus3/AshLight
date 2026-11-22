@@ -70,8 +70,15 @@ const PROBE = `(function () {
   document.querySelectorAll("details").forEach(function (d) { if (d.id !== "gfx") d.open = true; });
   return new Promise(function (r) { setTimeout(function () {
     var de = document.documentElement;
+    // RUN-P8-6-CONSOLE: what the Checks, region N and saved-ladder painters left
+    var notice = document.querySelector('#play-n [data-slot="n"]');
+    var lad = document.getElementById("ladder-all-rows");
     r({ sw: de.scrollWidth, cw: de.clientWidth,
-        cards: document.querySelectorAll("main .card:not([hidden])").length });
+        cards: document.querySelectorAll("main .card:not([hidden])").length,
+        checks: document.querySelectorAll("#checks-list > li").length,
+        notice: notice ? notice.textContent.replace(/\\s+/g, " ").trim() : "",
+        ladder_all: (lad && !lad.hidden) ? lad.textContent.trim().length : 0,
+        size: window.ALSearch ? window.ALSearch.sizeClass(document) : "" });
   }, 400); });
 })()`;
 const views = {};

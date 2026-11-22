@@ -450,183 +450,16 @@ Generation rules:
    fixed templates and the event's own fields; the same event always gives
    the same words. Nothing is sent off the machine to phrase text.
 2. **One event, one sentence**, subject first: `<who> <verb> <what>`.
-   Example templates:
-   - level up: `<character> reached level <n>`
-   - death: `<character> died` (suicide: `<character> died (self-inflicted)`)
-   - zone: `Entered <zone>` (hideout: `Entered <zone> (hideout)`)
-   - trade: `<from> wants <item> - <price>` (no price: `- no price set`)
-   - whisper in / out: `<from>: "<text>"` / `To <to>: "<text>"`
-   - AFK / DND: `You're AFK` / `You're back`, `Do not disturb on` / `off`
-   - party: `<character> joined the area` / `<character> left the area`
-   - log state: `Reading Client.txt`, `Client.txt was reset (<reason>)`;
-     the game's server connect line is not listed (it came before every
-     zone, UX-COPY); overlay status slot before the opt-in `not reading -
-     see dashboard` (UX-FIRSTRUN), opted in `waiting for log` when
-     the file is known but quiet (15 characters at most next to the
-     numbers), `no Client.txt` when it is not found
-     (UX-COPY); dashboard bar while the log is quiet for 20 min `log
-     quiet, still reading - game closed or AFK?` (overlay `log quiet`;
-     AshLight still reads the file, so the bar says so, FIX-IDLE-WORD);
-     dashboard deaths tile before the opt-in `-` over `Counts
-     once reading starts` (UX-FIRSTRUN)
-   - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
-     (empty slot: `<Verdict> <+delta> - <slot> empty`), item name, top
-     counted stat (`+35 to maximum Life`; a flag mod `Gains: <mod>` /
-     `Loses: <mod>`); dashboard `Upgrade: <n> points more than your <slot>
-     (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
-     the same as your <slot> (<name>), <+n> points.`; errors `No build
-     loaded`, `Not an item`, `Can't compare this` with the next step;
-     a press that held a copied build (TC-PRESS-BUILD) is a status card:
-     word and head `Build loaded` (edge tone note, never colour alone),
-     line 2 `<ascendancy or class>, level <n>`, line 3 `Item checks use it
-     now`, one dashboard note naming the build and character; a share link
-     not loaded reads `Build not loaded` (word `Not checked`), `See the
-     dashboard`, with the reason as the dashboard note
-   - item check scoring source (TC-DELTA, decision 0024, `_calc_text`):
-     when Path of Building scored the item the overlay third line is `DPS
-     <+pct>%, EHP <+pct>%` (a 0 base reads `unknown`) and the dashboard adds
-     `Path of Building: this item in <slot> replaces <name>. DPS <+pct>%
-     (from <old> to <new>). EHP <+pct>% (from <old> to <new>).` (`this item
-     goes in the empty <slot> slot.` for an empty slot; `(the better of the
-     <n> slots it fits)` after the slot when it fits several; MATH-COMPARE,
-     decision 0032) and each other compared slot shows `Path of Building:
-     DPS <+pct>%, EHP <+pct>%.` under its sentence; when PoB's numbers make
-     no sense (MATH-DPS-SANITY) it adds `Scored with your stat weights. DPS
-     and EHP are not shown because Path of Building's numbers for this item
-     don't add up. Try the check again.` (implausible); when PoB says the
-     main skill cannot use the checked weapon type (MATH-WEAPON-TYPE,
-     decision 0032 amendment) the overlay head is `Downgrade - wrong weapon
-     type`, the third line `Main skill can't use this weapon`, the dashboard
-     adds `Your main skill can't use this weapon type, so this item is a
-     downgrade for this build. Path of Building counts no damage from
-     <skill> with it in <slot>.` (`that skill` without a name) and that
-     slot's sentence reads `Downgrade: your main skill can't use this weapon
-     type in <slot> (<name>).` (no name for an empty slot); otherwise the dashboard
-     adds `Scored with your stat weights. To see DPS and EHP, turn on the
-     optional Path of Building calc in AshLight's settings file.` (off) or
-     `Scored with your stat weights. DPS and EHP are not shown because Path
-     of Building could not be reached. Try the check again.` (failed); with
-     PoB scoring, uncounted mods read `Not counted (the mod has no number):
-     <mods>.`
-   - cached PoB weights (MATH-WEIGHTS, `CALC_CACHED_TEXT`): with the calc
-     off or failing but weights Path of Building measured earlier for the
-     same build, the dashboard adds `Scored with the stat weights Path of
-     Building measured for this build earlier. DPS and EHP are not shown
-     because the Path of Building calc is off.` (off) or `... because Path
-     of Building could not be reached. Try the check again.` (failed) or
-     `... because its numbers for this item don't add up. Try the check
-     again.` (implausible); uncounted mods read `Not counted (Path of
-     Building has not measured
-     these for this build yet): <mods>.`
-   - build alert and upgrade notices (BUILD-LIVE, decision 0045,
-     `build_alert_text` / `upgrade_notice_text` / `upgrades_text` in
-     server/al/text/buildlive.py, shown by web/buildlive.js in the #build-alert card titled
-     `Your build`, hidden when the build fits and nothing is an upgrade;
-     not a live region): `No build saved for <name> yet. Paste a PoB code
-     on the Build tab to check items for <name>.`, `Build is for a
-     <class>, but <name> is a <class>. Paste <name>'s own PoB code so item
-     checks fit.`, `Build is from level <n>; you are level <n>. Paste a
-     fresh PoB code to keep item checks right.`; list `Upgrades from items
-     you checked`, `1 item you checked is an upgrade now.` / `<n> items you
-     checked are upgrades now.` (no list and no text with none), rows `New upgrade for <slot>: <item>` (or
-     `Upgrade for ...`), `Replaces <name>, <+n points|+n%>.` / `Goes in
-     your empty <slot> slot, <delta>.`, fit `Fits your <class> build.` or
-     `Needs level <n>; you are level <n>.` The card clears by itself when
-     the build is fixed (re-pasted, or the character's file changes) or a
-     re-score drops the item; no timer and no dismiss button.
-   - price and points (MATH-VALUE-UI, web/prices.js `valueView`): `Asking
-     price: <n> <currency>, about <n> <primary>.` (`Buyout price: ...` for
-     a b/o note; no "about" when already the primary), `<n> points per
-     <primary>.`, `These currency values may be out of date.`, the
-     poe.ninja credit; without rates `No currency values are saved yet, so
-     AshLight can't compare the item's price with its points.`, without a
-     rate for that currency `There is no saved value for <currency> yet,
-     so AshLight can't compare the item's price with its points.`; hidden
-     when the item has no note price.
-   - roll potential (MATH-POTENTIAL-UI, web/tc.js `rollsText`): muted line
-     on the item check card, `Rolls: worth <n> points now, <n> at the worst
-     and <n> at the best, so <pct>% of the way up.`; at the top `Rolls:
-     worth <n> points now, the best these rolls can be.`; hidden when there
-     is no spread, the numbers are junk or the check failed.
-   - price check (PRICE-1-UI, `price_card_text`): overlay `Price: <item>`,
-     `<n> listed, ~<middle>` / `Lowest <amount> <currency>`, `Searching
-     prices...`, `Prices in about <n> s`, `Web data is off`, `No listings found`,
-     `Price check failed`; dashboard `<n> listed in <league>. The cheapest
-     is <a>; the middle of the <k> cheapest is <b>.`; the one card is
-     chosen by `overlay_card` (decision 0016)
-   - open trade count (UX-REVIEW F1, `format.js tradeCount`): HUD status
-     slot `1 trade` / `<n> trades` while a card hides the trade card;
-     slot order: connection, Client.txt state, trade count, under-level
-     word (UTIL-UNDERLEVEL `N lv under`, at most 11 characters), AFK / DND,
-     campaign hint word (UTIL-CAMPAIGN-CHECKS, at most 15 characters)
-   - new trade request (UX-REVIEW F6, `web/trades.js`): dashboard polite
-     live region `New trade request from <from>.` (no name: `New trade
-     request.`; several at once: `<n> new trade requests.`), only when the
-     set of open trade ids grows
-   - Acts card (HUD-ACT, `server/al/acts.py`, `web/acts.js`; titled
-     `Acts` since PLAY-TD-20A-RUN-GRID): dashboard only; one line per act,
-     key facts first, `<act> (<notes>): <t>, total <t>, best <t>` (act
-     `Act <n>` / `Cruel Act <n>` / `Interlude <n>`; time in the act, run
-     total and your best, m:ss or h:mm:ss; `best` only when a saved run
-     has one); the notes `now`, `partial` in one pair of parentheses,
-     joined with ", ", the parentheses left out with no note; for a
-     partial row the whole text adds `Partial: counted from the first
-     zone AshLight saw.` (UX-NEW-CARDS); zone heading `Zone levels in
-     <act>`, zone notes `(you are here)` / `(town)`; empty `No act times yet. They start by
-     themselves when you enter a campaign zone.`, `Zone levels show here
-     while you are in a campaign act.`, `Zone levels aren't downloaded yet.
-     Run AshLight's build step (scripts/build.ps1) to get them.`, and in
-     an act the downloaded table lacks (UTIL-1.0-FIXTURES) `Zone levels for
-     <act> aren't downloaded yet. They show here once the game data has
-     them: after a game update, run AshLight's build step again
-     (scripts/build.ps1).`; source
-     line `Zone levels: RePoE fork export, downloaded when AshLight was
-     built. Game data (c) Grinding Gear Games.` (decision 0020)
-   - Maps card (UTIL-MAPS, `server/al/runs.py`, `web/runs.js`): dashboard
-     only; one line per map, `<map> (<note>): level <n>, <t>, <n>
-     death(s)` (level missing: `unknown`; time in the map m:ss or
-     h:mm:ss; `1 death`, `2 deaths`); the open row's note `now` or
-     `paused`, the parentheses left out on a finished map; the By level
-     pages (UTIL-MAP-LADDER) one line per map level, `Level <n>: <n>
-     maps, <n> deaths, median <t>, <n> level-ups` (each count singular
-     at 1); summary `Average map: <m:ss> over <n> finished map(s).`
-     then `<n> death(s) in maps.` or `No deaths in maps.`; empty `No maps
-     yet. Map times start by themselves when you open a map.`
-   - level pace (UTIL-PACE, `server/al/pace.py`): dashboard only, one
-     line under the Level tile, hidden while empty, key word first:
-     `Pace: about <m:ss> a level over the last <n>, <x.x> levels an
-     hour.` (one level: `about <m:ss> for the last level`; `1.0 level an
-     hour`; the hourly part needs 2+ level-ups seen live and 10 minutes
-     since AshLight started; m:ss matches the dashboard timers; shortened
-     for 320 px, UX-NEW-CARDS)
-   - Deaths card (UTIL-DEATHS, same files; titled `Deaths` since
-     PLAY-TD-20A-RUN-GRID, the death recap): dashboard only; one line per
-     death, newest first, `HH:MM` local time then `Died in <zone> (area
-     level <n>) at level <n>, <m:ss> into the zone.` (parts without data
-     are left out; no zone: `Died at level <n>.`); `Most deaths: <zone>
-     (<n>).` from 2 deaths in one zone; empty `No deaths this session.
-     Each one shows here with its zone and level.`; deaths counted
-     before AshLight started reading (LIVE-RESUME restores the count,
-     not the details): empty `<n> death(s) came before AshLight started
-     reading, so their zones aren't known. New deaths show here with
-     their zone and level.`, else `<n> death(s) came before AshLight
-     started reading.` after the worst-zone line (UX-NEW-CARDS)
-   - last session (UTIL-SESSION-SUMMARY, `server/al/summary.py`,
-     `web/summary.js`): dashboard only, hidden until the first card; lines
-     `Played <m:ss|h:mm:ss> and reached level <n>.` (no levels gained: `at
-     level <n>`; no level known: `Played <t>.`), `Levels: <a> to <b>, at
-     <x.x> an hour.` (pace from 10 minutes of play), `Maps: <n>.`,
-     `Deaths: <n>.`, `Price movers: <name> up|down <n>%, ...` (top 3 by
-     size); then `Session ended at <HH:MM> after 20 minutes with no game
-     activity.` / `... when the game closed.` (date added for an older
-     card); not a live region (not urgent, never announced; reachable via
-     its labelled `Last session` heading; keeps the 12-region cap)
-   - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
-     only, `Your build wears <base> in <slot>, so this finds rare items of
-     that base.` (empty slot: `Your build has nothing in <slot>, so this
-     uses the checked item's base, <base>.`) then `It matches base type and
-     rarity only, not stats.`; link `Search the official trade site for
-     rare <base> (<slot>)`
+   The templates live in one copy sheet per text module of
+   `server/al/text/` (TEST-COPY-SHEETS); a new or changed template is
+   edited in its sheet, never here. The rules of this section bind every
+   sheet. The sheets:
+   - events: [`docs/design/copy/events.md`](copy/events.md)
+   - itemcheck: [`docs/design/copy/itemcheck.md`](copy/itemcheck.md)
+   - buildlive: [`docs/design/copy/buildlive.md`](copy/buildlive.md)
+   - price: [`docs/design/copy/price.md`](copy/price.md)
+   - waystone: [`docs/design/copy/waystone.md`](copy/waystone.md)
+   - overlaycard: [`docs/design/copy/overlaycard.md`](copy/overlaycard.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
@@ -645,11 +478,9 @@ Generation rules:
    does not pop up, chime or take focus. At most one overlay card is new at
    a time.
 10. Every new template gets a unit test of its exact output.
-11. Waystone rewards (decision 0039): `Rewards: +N% item quantity, +N%
-    item rarity, ...` / `Rewards: none found in the item text.` /
-    `Rewards: identify it to see them.`; overlay `+N% quantity, +N% rarity
-    +K more` (34 chars). Campaign hints: `This zone's boss deals mostly
-    <element> damage. Your build has N% <element> resistance (the cap is
+11. Waystone rewards (decision 0039): see
+    [`docs/design/copy/waystone.md`](copy/waystone.md). Campaign hints:
+    `This zone's boss deals mostly <element> damage. Your build has N% <element> resistance (the cap is
     75%).` (or `(at the cap)`, or `... resistance is unknown.`), `A(n)
     <base> can drop at your level; your build has a(n) <base>.`, `Your
     build's boots have no movement speed. Boots with it help in the
