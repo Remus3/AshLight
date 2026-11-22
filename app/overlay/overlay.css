@@ -45,13 +45,29 @@ html, body {
 }
 
 /* The window is sized for the HUD plus one trade card (layout.js BASE).
-   Bottom corners stack from the bottom edge so the HUD hugs the corner. */
+   Bottom corners stack from the bottom edge so the HUD hugs the corner.
+   OVL-LINE2-GUIDE (plan 03 section 5.3): the card's near edge is anchored
+   62 px from the window's anchored edge (the 2-line HUD, 55.6 px, + 6)
+   whatever line 2 shows: the HUD plate sits out of the flow at that edge
+   and the cards start after the 62 px of body padding, so a guide line, a
+   one-line or an absent HUD never moves a card. */
 html, body { height: 100%; }
-body { display: flex; flex-direction: column; gap: 6px; }
-body[data-anchor="bottom"] { flex-direction: column-reverse; }
+body {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 62px;
+}
+body[data-anchor="bottom"] { flex-direction: column-reverse; padding-top: 0; padding-bottom: 62px; }
 [hidden] { display: none !important; }
 
 .hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   margin: 0;
   padding: 6px 10px;
   border: 1px solid var(--fk-border);
@@ -63,6 +79,8 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
   text-shadow: var(--al-halo);
   max-width: 258px;
 }
+
+body[data-anchor="bottom"] .hud { top: auto; bottom: 0; }
 
 .row { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* A long zone name clips itself, so the zone timer always stays visible. */
@@ -82,6 +100,12 @@ body[data-anchor="bottom"] { flex-direction: column-reverse; }
 .nums > :empty, .sep { display: none; }
 /* The status word is the one part that may clip, so the numbers stay. */
 .status { color: var(--al-ovl-warn); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* OVL-LINE2-GUIDE (plan 03 section 5.4): the zone-guide line, alone on
+   line 2 when it shows, in the secondary colour. It keeps the HUD size:
+   tests/test_ux_review.py allows a font size only on the plate rules, so
+   the plan's 14 px waits for that allow-list (one line here then). A short
+   too wide for the plate takes the ellipsis. */
+.guide { color: var(--al-ovl-text-2); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Trade whisper card (HUD-WHISPER). The cue is quiet and static: a steady
    accent edge, no flash, no motion, no sound. Dismissed on the dashboard. */
