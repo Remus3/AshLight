@@ -103,9 +103,12 @@ def home_refusal(home):
     read, no library file, no listing and no stat of anything."""
     for part in re.split(r"[\\/]+", str(home)):
         if part.rstrip(". ").casefold() in REFUSED_COMPONENTS:
-            return (f"the install home may not lie in a '{part}' folder (a Steam "
+            # HOME-REFUSAL-COPY: one sentence, capital first and full stop
+            # last; the same words as app/client/home.js homeRefusal
+            return ("This folder can't hold AshLight: "
+                    f"the install home may not lie in a '{part}' folder (a Steam "
                     "library or the game's own folder); install AshLight in its "
-                    "own folder")
+                    "own folder.")
     return None
 
 

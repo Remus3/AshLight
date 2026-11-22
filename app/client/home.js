@@ -38,8 +38,10 @@ class HomeRefused extends Error {
 function homeRefusal(home) {
   for (const part of String(home).split(/[\\/]+/)) {
     if (REFUSED_COMPONENTS.includes(part.replace(/[. ]+$/, "").toLowerCase())) {
-      return "the install home may not lie in a '" + part + "' folder (a Steam " +
-        "library or the game's own folder); install AshLight in its own folder";
+      // HOME-REFUSAL-COPY: one sentence, capital first and full stop last
+      return "This folder can't hold AshLight: " +
+        "the install home may not lie in a '" + part + "' folder (a Steam " +
+        "library or the game's own folder); install AshLight in its own folder.";
     }
   }
   return null;
