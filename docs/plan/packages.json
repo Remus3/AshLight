@@ -16084,7 +16084,8 @@
    "files": [
     ".githooks/pre-push",
     "tests/test_pre_push_hook.py",
-    "tests/test_fleet_kit_conformance.py"
+    "tests/test_fleet_kit_conformance.py",
+    "tests/test_dependabot_reapply.py"
    ],
    "new_files": [],
    "integrator_edits": [],
@@ -16108,7 +16109,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. Plan 05 (DEP-12, corrections item 3) puts this one call into F-016's diff; it cannot ride GP-02 because tools/release.py does not exist then and the hook fails closed. Runs only after DEP-12 (REL cluster) has landed `release.py prepush-check` (refuses a v* ref with no matching PASS stage report, passes a branch ref untouched). .githooks/pre-push: one new line between the check_refs line and the identity line: `printf '%s\\n' \"$REFS\" | python \"$ROOT/tools/release.py\" prepush-check \"$@\" || exit 1`, and one more line in the header comment list. tests/test_pre_push_hook.py: the tmp repo also gets a copy of tools/release.py (or a stub with the same sub-command contract when release.py needs more files); case 7 (tag v0.0.1 pushes) gets a PASS stage report fixture. If the REL cluster's own packages already add this line, drop this package at merge (see cross). tests/test_pre_push_hook.py exists once GP-02 lands (a dep).",
+   "notes": "Tier P1. Plan 05 (DEP-12, corrections item 3) puts this one call into F-016's diff; it cannot ride GP-02 because tools/release.py does not exist then and the hook fails closed. Runs only after DEP-12 (REL cluster) has landed `release.py prepush-check` (refuses a v* ref with no matching PASS stage report, passes a branch ref untouched). .githooks/pre-push: one new line between the check_refs line and the identity line: `printf '%s\\n' \"$REFS\" | python \"$ROOT/tools/release.py\" prepush-check \"$@\" || exit 1`, and one more line in the header comment list. tests/test_pre_push_hook.py: the tmp repo also gets a copy of tools/release.py (or a stub with the same sub-command contract when release.py needs more files); case 7 (tag v0.0.1 pushes) gets a PASS stage report fixture. If the REL cluster's own packages already add this line, drop this package at merge (see cross). tests/test_pre_push_hook.py exists once GP-02 lands (a dep). Adjudicator ruling 2026-11-21 (session 19, second deferral): retry with files gaining tests/test_dependabot_reapply.py; both hook fixtures copy tools/release.py plus its imports; merges in wave 23 batch 4 ahead of PUB-DEPBOT-FIRST-RUN.",
    "wave": 22,
    "owner": "session",
    "tier": "P1",
@@ -16478,10 +16479,29 @@
     "AUTO-15"
    ],
    "files": [
-    "README.md"
+    "README.md",
+    "tests/test_readme.py"
    ],
    "new_files": [
-    "docs/shots/manifest.json"
+    "docs/shots/manifest.json",
+    "docs/shots/build-dark-1440.png",
+    "docs/shots/build-dark-360.png",
+    "docs/shots/build-light-1440.png",
+    "docs/shots/build-light-360.png",
+    "docs/shots/overlay-dark-1440.png",
+    "docs/shots/overlay-light-1440.png",
+    "docs/shots/play-dark-1440.png",
+    "docs/shots/play-dark-360.png",
+    "docs/shots/play-light-1440.png",
+    "docs/shots/play-light-360.png",
+    "docs/shots/run-dark-1440.png",
+    "docs/shots/run-dark-360.png",
+    "docs/shots/run-light-1440.png",
+    "docs/shots/run-light-360.png",
+    "docs/shots/settings-dark-1440.png",
+    "docs/shots/settings-dark-360.png",
+    "docs/shots/settings-light-1440.png",
+    "docs/shots/settings-light-360.png"
    ],
    "integrator_edits": [],
    "tests": [
@@ -16505,7 +16525,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "New files besides the manifest: the PNGs it names under docs/shots/ (one per tab, scheme and width, plus the overlay page; the names follow the tabs at render time, so they are not listed here). The fixture holds invented names only; the images show AshLight's own page, never the game or game art. README.md: add one block between '<!-- shots:begin -->' and '<!-- shots:end -->'; the lane replaces only that block. README is the go-public cluster's rewrite target (F-020): serial_group readme. Best run after the Play redesign's wave 2 has merged, or the set is stale at once (then W12 files SHOTS-<date> and the loop re-renders; no harm, one extra run).",
+   "notes": "New files besides the manifest: the PNGs it names under docs/shots/ (one per tab, scheme and width, plus the overlay page; the names follow the tabs at render time, so they are not listed here). The fixture holds invented names only; the images show AshLight's own page, never the game or game art. README.md: add one block between '<!-- shots:begin -->' and '<!-- shots:end -->'; the lane replaces only that block. README is the go-public cluster's rewrite target (F-020): serial_group readme. Best run after the Play redesign's wave 2 has merged, or the set is stale at once (then W12 files SHOTS-<date> and the loop re-renders; no harm, one extra run). Re-plan (session 19, ruling A pattern 5787074): files gain tests/test_readme.py (its no-GGG-art image rule also allows docs/shots/ sources, AshLight's own pages) and new_files list the 18 rendered PNGs.",
    "wave": 23,
    "owner": "session",
    "tier": "P2",
