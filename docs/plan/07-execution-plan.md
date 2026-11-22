@@ -38,7 +38,7 @@ full detail.
 - Wave 99: parked packages, each with its unblock condition. Once the
   condition reads true the package joins the next open wave; re-run the
   validator after the move. Parked packages may name the same file or
-  serial group (11 files and 6 groups today; section Parked packages lists
+  serial group (10 files and 3 groups today; section Parked packages lists
   them): nothing in the list runs. The shared-file rule binds a package
   from the wave it joins, so two parked packages that share a file or a
   group never join the same wave, and a parked package never joins a wave
@@ -89,7 +89,7 @@ carry.
   (PLAN-LANDING, SEC-STEAM-SCAN-A03, DATA-RESEARCH-GAPS) and dropped 1
   (LOOP-PLAN-CONTRACT, its work moved into PLAN-LANDING); 396 in the plan
   after 25 folds.
-- Owners: 339 session packages in waves 0 to 37, 16 loop-owned packages, 41
+- Owners: 339 session packages in waves 0 to 37, 16 loop-owned packages, 32
   parked in wave 99.
 - Waves: wave 0 (the landing), 37 open waves and the parked wave. Sessions:
   10 operator `continue`s after the landing (session 0), about 75 h 26 min
@@ -209,13 +209,13 @@ sessions rises (three waves a session: 13 sessions). Nothing else changes.
   (install, update, rollback, uninstall) passes.
 - Session 7: waves 22 to 24, 38 session packages (LOOP-CI-ISSUES joined
   at the wave 18 start, session 16), about 7 h 38 min before it joined.
-- Session 8: waves 25 to 29, 15 session packages, about 8 h 10 min.
+- Session 8: waves 25 to 29, 17 session packages, about 8 h 10 min.
   Delivers: the Settings rail is complete.
 - Session 9: waves 30 to 33, 12 session packages, about 7 h 27 min.
   Delivers: design 0001 and the cockpit decision are rewritten (records).
 - Session 10: waves 34 to 37, 7 session packages, about 6 h 07 min.
 
-- Session 11: waves 38 to 42, 12 session packages, about 9 h 00 min. Added
+- Session 11: waves 38 to 43, 13 session packages, about 9 h 00 min. Added
   2026-11-19 from docs/plan/10 (operator requests 2026-11-19, decisions 0081
   to 0083). Delivers: the item info popover and Kindler build generator are
   on the Build tab.
@@ -422,7 +422,9 @@ named.
   focus.
 - Wave 42 (session 11): width 1 + 0; about 108 min. Leads: Kindler result
   card with stages and follow Play guidance.
-- Wave 99 (parked): 41 packages; no gate; see Parked packages.
+- Wave 43 (session 11): width 1 + 0; about 45 min. Leads: Default contact:
+  the project's issues page once the repository is public.
+- Wave 99 (parked): 32 packages; no gate; see Parked packages.
 
 ## Gate commands
 
@@ -1606,7 +1608,7 @@ report from an allow-list of structured fields, with a hardened redactor
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-TD-20B-RUN-CARDS [session, L 80m, build, P1, DR] Run grid 2: Recent, Last session and Characters cards. Files: web/index.html, web/app.css, web/app.js, web/history.js, web/chars.js (+4 more). Deps: PLAY-TD-20A-RUN-GRID.
+- PLAY-TD-20B-RUN-CARDS [session, L 80m, build, P1, DR] Run grid 2: Recent, Last session and Characters cards. Files: web/index.html, web/app.css, web/app.js, web/history.js, web/chars.js (+6 more). Deps: PLAY-TD-20A-RUN-GRID.
 - RUN-REPORT-FIELDS [session, L 90m, build, P2, DR] The report from an allow-list of structured fields, with a hardened redactor (P8-7) + Keep per-press 'Not counted' lines for the session. Files: server/al/diag.py, server/al/plug/report.py, web/checks.js, app/test/checks.test.js, server/al/theorycraft/live.py (+4 more). Deps: RUN-QUIET-FEED, RUN-METRICS-CORE, RUN-LEDGER-WIRE, RUN-BUDGET-LOG-CORE, GP-06, OVL-OBS-CRASH, TC-PRESS-STAGED-LIVE.
 - OVL-LINE2-GUIDE [session, L 75m, build, P2, DR] Overlay HUD line 2: the opt-in guide line and the fixed card anchor. Files: app/shared/render_gate.js, app/overlay/index.html, app/overlay/overlay.js, app/overlay/overlay.css, app/test/overlay_gate.test.js (+1 more). Deps: OVL-LINE2-RULE, OVL-ZONE-CARD, OVL-TD05-LEGIBILITY.
 - OVL-ACT-CARD [session, M 40m, build, P2, DR] Act moment card: 12 s when an act split closes, with the gap to the saved best. Files: server/al/overlayview.py, server/al/text/overlaycard.py, tests/test_moment_cards.py, tests/test_overlay_view.py. Deps: OVL-ZONE-CARD.
@@ -1619,9 +1621,9 @@ report from an allow-list of structured fields, with a hardened redactor
 - DEP-19 [session, M 45m, build] CPython pin watch. Files: tools/watch_sources/cpython.py, ops/loop/watch_rows/cpython.json, tests/test_watch_cpython.py. Deps: REL-RUNTIME-PINS, AUTO-05, LOOP-WATCH-ROWS, AUTO-09.
 - RUN-SECOND-LINE-CLIENT [session, M 30m, build, P2] The client restarts a core that stays down. Files: app/client/window.js, app/client/launcher.js, app/test/client.test.js. Deps: RUN-OBS-LOGS-SHELL, RUN-SECOND-LINE-PY.
 - PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py. Deps: GP-02, REL-PUBLISH-GATES.
-- LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json, tests/test_watch_ci_issues.py. Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08.
+- LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json, tests/test_watch_ci_issues.py, tools/watch_gate.py, tests/test_watch_gate.py, docs/decisions/0069-upstream-watch-frame.md. Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08, LOOP-WATCH-GATE.
 - CARD-LINE-LIMIT [session, M 40m, build, P2, DR] Card lines fit the 236 px inside width: lower the card character limit. Files: app/shared/format.js, server/al/text/common.py, tests/test_overlay_pixels.py. Deps: OVL-CONTRAST-PIXELS.
-- BUILD-GEAR-EMPTY-COPY [session, S 20m, build, P3, DR] Build card empty-gear row says what to do next. Files: web/panels/build.js. Deps: PLAY-TD-19E-ITEM-TEXT.
+- BUILD-GEAR-EMPTY-COPY [session, S 20m, build, P3, DR] Build card empty-gear row says what to do next. Files: web/panels/build.js, tests/test_build_item_text.py. Deps: PLAY-TD-19E-ITEM-TEXT.
 - DEP14-UNINSTALL-LINE [session, S 20m, build, P2] README Quick start names the uninstall step. Files: README.md, tests/test_public_docs.py. Deps: DEP-14.
 - HOME-REFUSAL-COPY [session, M 60m, build, P2, DR] Refused-home sentence, design 0001 start-up exception and wording, plan 03 section 5.1 widths and line 2 rule. Files: server/al/paths.py, app/client/home.js, app/test/home.test.js, docs/design/0001-design-system.md, docs/plan/03-target-design.md. Deps: REL-HOME-REFUSAL-UI, OVL-CONTRAST-PIXELS, OVL-LINE2-RULE, PLAY-TD-20A-RUN-GRID.
 
@@ -1631,7 +1633,7 @@ Goal: Leads: Settings rail 1: Checks, Reading and web data, Overlay; Move
 the overlay page and the starting page off file:// onto one app scheme;
 Teach the item-check key in the empty card slot, then retire it.
 
-- Session 7; width 12 worktree + 0 main-checkout, 0 loop rows released;
+- Session 7; width 13 worktree + 1 main-checkout, 0 loop rows released;
   about 125 minutes.
 - Hotspots: web/index.html (PLAY-TD-21A-SETTINGS-RAIL); server/al/core.py
   (REL-UPDATE-CHECKS); web/app.js (PLAY-TD-21A-SETTINGS-RAIL);
@@ -1645,13 +1647,13 @@ Teach the item-check key in the empty card slot, then retire it.
   (PLAY-TD-21A-SETTINGS-RAIL); docs/design/0001-design-system.md
   (TEST-COPY-SHEETS); web/checks.js (PLAY-TD-21A-SETTINGS-RAIL);
   tests/test_http_security.py (OVL-APP-SCHEME).
-- Integrator: ROADMAP.md rows of all 12 packages; docs/design/reviews.log: 3
+- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log: 3
   lines.
 - Watch: tests/test_ux_review.py (PLAY-TD-21A-SETTINGS-RAIL edits,
   REL-UPDATE-CHECKS runs).
 - Batches: 1: PLAY-TD-21A-SETTINGS-RAIL, OVL-APP-SCHEME, OVL-KEY-HINT,
   DEP-17; 2: RUN-BUDGET-TESTS-DASH, REL-UPDATE-CHECKS, SEC-HELLO-PS,
-  TEST-SHOTS-RENDER; 3: AUTO-16, AUTO-13, TEST-COPY-SHEETS, AUTO-22.
+  TEST-SHOTS-RENDER; 3: AUTO-16, AUTO-13, TEST-COPY-SHEETS, AUTO-22; 4: PUB-DEPBOT-FIRST-RUN, RUN-LIVE1-FIXTURES.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1672,6 +1674,8 @@ Teach the item-check key in the empty card slot, then retire it.
 - AUTO-13 [session, M 60m, build, P3] DIVE-ON-DEMAND: a source may request one dive a day; the idle dive is weekly. Files: tools/loop_roadmap.py, tests/test_loop_dive.py, tools/loop_steps/dive_request.py, tests/test_loop_dive_request.py. Deps: AUTO-01, AUTO-04, AUTO-05, LOOP-ROWFILES-WORK, LOOP-TESTS-CARVE.
 - TEST-COPY-SHEETS [session, M 50m, build, P3] Split design 0001 section 9 rule 2 into docs/design/copy/<family>.md. Files: docs/design/0001-design-system.md, .claude/agents/design-reviewer.md, tests/test_structure.py, docs/design/copy/events.md, docs/design/copy/price.md (+4 more). Deps: TEST-STRUCTURE-GUARD.
 - AUTO-22 [session, M 45m, build, P3] OVL-SMOKE-DAILY: the tick runs the live overlay smoke once a day while the game is idle. Files: tools/loop_steps/overlay_smoke.py, tests/test_loop_overlay_smoke_step.py. Deps: AUTO-01, SEC-NO-PROXY.
+- PUB-DEPBOT-FIRST-RUN [session, S 20m, data, P1] First live run of the Dependabot re-apply tool. Files: none. Deps: GP-09, PUB-DEPBOT-ACTIONS, GP-08.
+- RUN-LIVE1-FIXTURES [session, M 60m, build, P1] Turn each live-verified log shape into a fixture line and a test. Files: tests/fixtures/client_live_shapes.txt, tests/test_parser.py, server/al/parser.py. Deps: RUN-LEDGER-WIRE, RUN-LEDGER-REPORT.
 
 ### Wave 24: reliability and observability, web data, theorycraft
 
@@ -1733,14 +1737,14 @@ card; OVERLAY-FEED: /events?view=overlay sends only the fields the HUD
 reads, only when one c...; luajit leaves when it is not needed. Releases 1
 loop-owned rows.
 
-- Session 8; width 3 worktree + 0 main-checkout, 1 loop rows released; about
+- Session 8; width 5 worktree + 0 main-checkout, 1 loop rows released; about
   93 minutes.
 - Hotspots: web/index.html (SEC-LOG-PATH-FIELD); server/al/core.py
   (TC-CALC-IDLE); web/app.js (SEC-LOG-PATH-FIELD); server/al/http.py
   (OVL-OVERLAY-FEED); web/app.css (SEC-LOG-PATH-FIELD);
   app/shared/render_gate.js (OVL-OVERLAY-FEED);
   server/al/theorycraft/bridge.py (TC-CALC-IDLE).
-- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log: 2
+- Integrator: ROADMAP.md rows of all 6 packages; docs/design/reviews.log: 3
   lines.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
@@ -1754,6 +1758,8 @@ loop-owned rows.
 - OVL-OVERLAY-FEED [session, L 75m, build, P3, DR] OVERLAY-FEED: /events?view=overlay sends only the fields the HUD reads, only when one changes. Files: server/al/http.py, server/al/overlayview.py, app/overlay/overlay.js, app/shared/render_gate.js, app/test/shared.test.js (+2 more). Deps: OVL-KEY-HINT, OVL-APP-SCHEME-STRICT, RUN-QUIET-FEED, RUN-BUDGET-TESTS-DET.
 - TC-CALC-IDLE [session, M 55m, build, P3] luajit leaves when it is not needed. Files: server/al/theorycraft/calcwire.py, server/al/theorycraft/bridge.py, server/al/exepin.py, server/al/core.py, tests/test_tc_wire.py (+3 more). Deps: TC-PRESS-STAGED-LIVE, TC-CALC-CONFINE-PROC, TC-CALC-VERIFY-USE, TC-WEIGHTS-DELTA-EXPORT, TC-UPGRADE-PER-SLOT.
 - SEC-CEIL-SNAPSHOT [loop, M 45m, build, P3] Snapshot fetch: deadline, per-source cap on disk, one URL check. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py. Deps: SEC-CEIL-WEBFETCH, DATA-SNAP-TRIM.
+- DATA-PRICE-TYPE-PROOF [session, M 50m, build, P3] Prove each price type after the first real round. Files: server/al/data/price_types.json, server/al/theorycraft/value.py, server/al/data/ninja_read_keys.json, server/al/ninjashape.py, tools/price_type_report.py (+1 more). Deps: DATA-PRICE-TYPES-FILE, DATA-NINJA-SHAPE-WATCH.
+- PUB-GUIDE-DOWNLOAD-PLACE [session, M 45m, build, P2, DR] One download place in README, FAQ and About. Files: README.md, docs/guide/download.md, docs/guide/faq.md, app/about.js, app/main.js (+2 more). Deps: PUB-GUIDE-PAGES, GP-10.
 
 ### Wave 26: Play tab and dashboard, install and release
 
@@ -2194,6 +2200,26 @@ Goal: Leads: Kindler result card with stages and follow Play guidance.
 
 - KINDLER-UI-RESULT [session, L 90m, build, P2, DR] Kindler result card with stages and follow Play guidance. Files: web/index.html, web/kindler.js, web/kindler.css, tests/test_kindler_result_ui.py. Deps: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI.
 
+### Wave 43: parked package released, default contact
+
+Goal: Leads: Default contact: the project's issues page once the repository
+is public.
+
+- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released;
+  about 45 minutes.
+- Hotspots: web/index.html (DATA-CONTACT-DEFAULT).
+- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log: 1
+  lines.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- DATA-CONTACT-DEFAULT [session, M 45m, build, P1, DR] Default contact: the project's issues page once the repository is public. Files: server/al/webfetch.py, server/al/core.py, server/al/theorycraft/snapshot.py, web/index.html, web/prices.js (+4 more). Deps: DATA-CONTACT-UI, DATA-WEBFETCH-GZIP, DATA-DIAG-SEAM, DATA-SNAP-TRIM, DATA-GUIDE-ONE-BLOCK, GP-10.
+
 ## Hotspot schedule
 
 The number of waves is bounded below by the longest chain of packages that
@@ -2579,25 +2605,21 @@ that has no other editor of its files; docs/plan/08 section 9 step 3 is the
 move and its check. The same test fails when a line here falls out of step
 with packages.json.
 
-- README.md: REL-RC-LIVE, OVL-ITEM-KEY-CTRL, PUB-GUIDE-DOWNLOAD-PLACE.
+- README.md: REL-RC-LIVE, OVL-ITEM-KEY-CTRL.
 - server/al/core.py: TC-IMPORT, DATA-LOOT-TALLY, SEC-STEAM-SCAN-A03,
-  AUTO-24, DATA-CONTACT-DEFAULT.
+  AUTO-24.
 - server/al/state.py: DATA-LOOT-TALLY, TC-WAYSTONE-TUNE.
-- web/index.html: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI,
-  DATA-CONTACT-DEFAULT.
+- web/index.html: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI.
 - web/tc.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-TREE-URL.
 - web/app.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI.
 - app/test/tc_view.test.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
   TC-TREE-URL.
 - server/al/diag.py: SEC-STEAM-SCAN-A03, AUTO-24.
-- app/main.js: OVL-ITEM-KEY-CTRL, PUB-GUIDE-DOWNLOAD-PLACE.
 - tests/test_zone_guide.py: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
 - docs/decisions/0002-stack.md: RUN-OVL-BUDGET-CLOSE, OVL-FPS.
 - Serial group item-press: TC-IMPORT, TC-WAYSTONE-TUNE.
-- Serial group data-core: DATA-LOOT-TALLY, DATA-CONTACT-DEFAULT.
 - Serial group web-tc: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
   TC-IMPORT-UI, TC-TREE-URL.
-- Serial group ninja: DATA-NINJA-RELEASE-ON, DATA-PRICE-TYPE-PROOF.
 - Serial group guide-data: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
 
 Unblocked by operator (21):
@@ -2623,10 +2645,6 @@ Unblocked by operator (21):
   package), the guarded pre-push hook with the prepush-check call is merged,
   immutable releases are on before the first v* tag, and the operator types
   'release 0.2.0-rc.1' in an interactive session. Joins wave 25 or later.
-- RUN-LIVE1-FIXTURES: waits on live sightings of the 11 remaining shapes in
-  normal play. Who: operator. Unblock: the ledger consent line is ticked and
-  python tools/live1_report.py prints VERIFIED live for at least one LIVE-1
-  item. Joins wave 19 or later.
 - TC-BUILD-FILEPICK: waits on operator decision Q-02 file half: one line in
   the CLAUDE.md read list allowing a file the player picks in AshLight's own
   page (bytes only, never a path or a stored copy). Who: operator. Unblock:
@@ -2677,10 +2695,6 @@ Unblocked by operator (21):
   Cache/gamedata/skilltree.json exists under the AL sidecar root
   (treedata.FILE_NAME) after the operator sets the contact and the snapshot
   runs. Joins wave 36 or later.
-- DATA-PRICE-TYPE-PROOF: waits on one real poe.ninja round on the dev host.
-  Who: operator. Unblock: the operator sets the contact and turns web data
-  on on the dev host (batched ask act g) and the sidecar Cache ninja
-  book.json holds a fetched round. Joins wave 25 or later.
 - PLAY-F-204B-SR-RUN: waits on The operator confirms the game is closed (not
   only that they are not playing) and game_idle is true; speech output and a
   visible browser on this machine. Who: operator. Unblock: The operator says
@@ -2751,20 +2765,11 @@ LOOP-CI-ISSUES wave 22 at the wave 18 start, session 16):
 - TC-IMPORT-UI: waits on the core half of the import. Who: package
   TC-IMPORT. Unblock: TC-IMPORT is merged. Joins wave 4 or later; also
   behind parked TC-IMPORT.
-- DATA-CONTACT-DEFAULT: waits on the project's public repository address
-  exists as one tracked constant (Q-24). Who: package GP-10 (PUB cluster),
-  itself behind the repository and first push (GP-09). Unblock: GP-10 is
-  merged to main, so the address constant and its leak-sweep allow-list
-  entry are in the tree. Joins wave 37 or later; also behind parked GP-10.
 - AUTO-20: waits on Dependabot alerts and pull requests exist only after the
   public flip. Who: package GP-12. Unblock: the repository is public (GP-12
   done) and .github/dependabot.yml and tools/dependabot_reapply.py are on
   main. Joins wave 19 or later; also behind parked AUTO-19, LOOP-CI-ISSUES,
   GP-12.
-- PUB-GUIDE-DOWNLOAD-PLACE: waits on the project's address is in tracked
-  config/public_repo.json. Who: package GP-10. Unblock: `python -c "import
-  json;print(json.load(open('config/public_repo.json'))['repo'])"` prints
-  the repository address. Joins wave 20 or later; also behind parked GP-10.
 - TC-AFFIX-LINE: waits on a real advanced-copy item sample as a fixture.
   Who: package TC-PRESS-FIXTURES. Unblock: tests/fixtures/press holds a
   reviewed advanced-copy gear fixture. Joins wave 3 or later; also behind
@@ -2785,10 +2790,6 @@ LOOP-CI-ISSUES wave 22 at the wave 18 start, session 16):
   public repository on a personal account). Who: package GP-12. Unblock: `gh
   repo view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins
   wave 19 or later; also behind parked GP-12.
-- PUB-DEPBOT-FIRST-RUN: waits on the repository exists and
-  .github/dependabot.yml is on main. Who: package GP-09. Unblock: `gh api
-  "repos/$R/contents/.github/dependabot.yml" --jq .path` prints the config
-  path. Joins wave 19 or later.
 - GP-15: waits on the public flip. Who: package GP-12. Unblock: `gh repo
   view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins wave 19
   or later; also behind parked GP-12.

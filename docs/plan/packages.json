@@ -846,7 +846,7 @@
     24
    ],
    "est_wall_min": 458,
-   "session_packages": 44,
+   "session_packages": 46,
    "milestones": []
   },
   {
@@ -860,7 +860,7 @@
     29
    ],
    "est_wall_min": 490,
-   "session_packages": 15,
+   "session_packages": 17,
    "milestones": [
     "the Settings rail is complete"
    ]
@@ -895,16 +895,17 @@
   },
   {
    "n": 11,
-   "title": "Session 11: waves 38 to 42",
+   "title": "Session 11: waves 38 to 43",
    "waves": [
     38,
     39,
     40,
     41,
-    42
+    42,
+    43
    ],
    "est_wall_min": 540,
-   "session_packages": 12,
+   "session_packages": 13,
    "milestones": [
     "the item info popover and Kindler build generator are on the Build tab"
    ]
@@ -1575,7 +1576,9 @@
     "AUTO-16",
     "AUTO-13",
     "TEST-COPY-SHEETS",
-    "AUTO-22"
+    "AUTO-22",
+    "PUB-DEPBOT-FIRST-RUN",
+    "RUN-LIVE1-FIXTURES"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1609,7 +1612,9 @@
     "SEC-LOG-PATH-FIELD",
     "OVL-OVERLAY-FEED",
     "TC-CALC-IDLE",
-    "SEC-CEIL-SNAPSHOT"
+    "SEC-CEIL-SNAPSHOT",
+    "DATA-PRICE-TYPE-PROOF",
+    "PUB-GUIDE-DOWNLOAD-PLACE"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1794,6 +1799,15 @@
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
   {
+   "n": 43,
+   "title": "Wave 43: parked package released, default contact",
+   "goal": "Leads: Default contact: the project's issues page once the repository is public.",
+   "merge_order": [
+    "DATA-CONTACT-DEFAULT"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
    "n": 99,
    "title": "Parked",
    "goal": "Blocked packages with their unblock conditions; a package joins the next open wave once its condition reads true.",
@@ -1803,13 +1817,11 @@
     "TC-WAYSTONE-TUNE",
     "DEP-18",
     "REL-RC-LIVE",
-    "RUN-LIVE1-FIXTURES",
     "TC-BUILD-FILEPICK",
     "SEC-STEAM-SCAN-A03",
     "AUTO-24",
     "TC-WAYSTONE-TUNE-UI",
     "TC-IMPORT-UI",
-    "DATA-CONTACT-DEFAULT",
     "OVL-ITEM-KEY-CTRL",
     "AUTO-26",
     "DATA-NINJA-RELEASE-ON",
@@ -1817,10 +1829,8 @@
     "DATA-GUIDE-ACTS-5-6",
     "TC-PRESS-FIXTURES",
     "AUTO-20",
-    "PUB-GUIDE-DOWNLOAD-PLACE",
     "DATA-GUIDE-GAP-TUNE",
     "TC-TREE-URL",
-    "DATA-PRICE-TYPE-PROOF",
     "TC-AFFIX-LINE",
     "GP-16",
     "PLAY-F-204B-SR-RUN",
@@ -1830,7 +1840,6 @@
     "RUN-OVL-BUDGET-CLOSE",
     "TC-OAUTH-REG",
     "OVL-FPS",
-    "PUB-DEPBOT-FIRST-RUN",
     "RUN-BUILDFILE-LIVE-CLOSE",
     "GP-15",
     "RUN-VERDICTS-CLOSE",
@@ -15502,7 +15511,9 @@
     "web/summary.js",
     "app/test/chars.test.js",
     "app/test/summary.test.js",
-    "tests/play_fit_pending/tab-run.txt"
+    "tests/play_fit_pending/tab-run.txt",
+    "app/test/acts.test.js",
+    "app/test/tabs.test.js"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -15514,7 +15525,9 @@
    "tests": [
     "app/test/chars.test.js",
     "app/test/summary.test.js",
-    "tests/test_play_fit.py"
+    "tests/test_play_fit.py",
+    "app/test/acts.test.js (stale Run grid and picker assertions follow the move; ruling 2026-11-21)",
+    "app/test/tabs.test.js (stale Run grid and picker assertions follow the move; ruling 2026-11-21)"
    ],
    "accept": "npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py tests/test_dash_console.py pass with the tab-run marker deleted: Recent filters by the chips All, Deaths and Trades, Last session shows the summary with run history pages, Characters holds the picker, and G1 holds for the whole tab in states f and g.",
    "zero_click": "Everything fills from the log; chips, pages and the picker are optional review acts.",
@@ -15530,7 +15543,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. Recent: events newest first; chips are buttons with aria-pressed; it is the twin of Play T and keeps whispers (muted FROM / TO tag, no edge), accepted / cancelled and party lines. Last session: the summary (also Play C while idle); pages: run history (20 runs). Characters: the picker moved from the Level tile (looking at another character is a review act) and per-character bests; names stay local (decision 0038). app.js: renderEvents only. The keep / clear switch of run history stays in its card until PLAY-TD-21B-SETTINGS-ABOUT. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "notes": "Tier P1. Recent: events newest first; chips are buttons with aria-pressed; it is the twin of Play T and keeps whispers (muted FROM / TO tag, no edge), accepted / cancelled and party lines. Last session: the summary (also Play C while idle); pages: run history (20 runs). Characters: the picker moved from the Level tile (looking at another character is a review act) and per-character bests; names stay local (decision 0038). app.js: renderEvents only. The keep / clear switch of run history stays in its card until PLAY-TD-21B-SETTINGS-ABOUT. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Ruling 2026-11-21 (session 18, wave 22): app/test/acts.test.js and app/test/tabs.test.js join files and tests; only the assertions the move made stale change. The Acts/Maps/Deaths 10-row paging (268 px against a 244 px budget) is a recorded known gap for a later row.",
    "wave": 22,
    "owner": "session",
    "tier": "P1",
@@ -15735,10 +15748,10 @@
    "tests": [
     "tests/test_budgets.py::test_real_loop_body_10_s_worst_case_under_half_percent (B1, slow)",
     "tests/test_budgets.py::test_core_working_set_in_a_child (B5)",
-    "tests/test_budget_tick.py::test_full_tick_under_2_ms_worst_and_0_3_ms_campaign (B2)",
+    "tests/test_budget_tick.py::test_full_tick_under_2_ms_worst_and_0_3_ms_campaign (B2; the 2 ms worst case is gross, the 0.3 ms campaign tick is measured net of stat calls)",
     "tests/test_budget_tick.py::test_idle_tick_at_most_20_stats_and_no_read (B3)",
     "tests/test_budget_snapshot.py::test_snapshot_under_32_kb_no_key_over_8_kb (B7)",
-    "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent (retired: superseded by B1)"
+    "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent (kept with a superseded-by-B1 comment; retirement waits for row BUDGET-RETIRE-TAILER-IDLE)"
    ],
    "accept": "python -m pytest -q tests/test_budgets.py tests/test_budget_tick.py tests/test_budget_snapshot.py passes.",
    "zero_click": "The suite runs them.",
@@ -16678,6 +16691,84 @@
    "owner": "session",
    "tier": "P3",
    "cluster": "LOOP"
+  },
+  {
+   "id": "PUB-DEPBOT-FIRST-RUN",
+   "title": "First live run of the Dependabot re-apply tool",
+   "goal": "Every Dependabot bump pull request open on the repository is re-applied locally or closed by the tool, with nothing merged on GitHub.",
+   "units": [
+    "F-081",
+    "GP-14"
+   ],
+   "files": [],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_dependabot_reapply.py (existing, re-run before the live run)"
+   ],
+   "accept": "After `python tools/dependabot_reapply.py run`, `gh pr list --repo \"$R\" --author \"app/dependabot\" --state open --json number,title` lists only pull requests the tool reported as waiting (npm age rule or electron signal), and `gh pr list --repo \"$R\" --state merged --json number` is empty.",
+   "zero_click": "One command, run by the session that handles go-public while the loop is HALTed; the tick runs it by itself after F-078 (PUB-DEPBOT-TICK).",
+   "size": "S",
+   "est_min": 20,
+   "deps": [
+    "GP-09",
+    "PUB-DEPBOT-ACTIONS",
+    "GP-08"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "none",
+   "lane": "data",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P1. No hand edit: the tool makes each commit as the operator through fleet_gitlock in the main checkout and pushes main through the guarded hook; isolation none for that reason. With zero open bump pull requests the run is a no-op that exits 0 and the package is done. A pull request on the vendored guard copy is closed by the tool and listed for the next note to MAIN (F-203). Repeat by hand until PUB-DEPBOT-TICK and F-078 are in.",
+   "wave": 23,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
+  },
+  {
+   "id": "RUN-LIVE1-FIXTURES",
+   "title": "Turn each live-verified log shape into a fixture line and a test",
+   "goal": "For each LIVE-1 item the report marks VERIFIED live (and the waystone block shape), add a fixture line built from the masked shape and a parser test; fix the pattern when the report prints NEW SHAPE.",
+   "units": [
+    "LIVE-1",
+    "OPEN-01",
+    "OPEN-23",
+    "CARRY-09"
+   ],
+   "files": [
+    "tests/fixtures/client_live_shapes.txt",
+    "tests/test_parser.py",
+    "server/al/parser.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_parser.py (one test per newly verified shape)",
+    "tests/test_waystone.py (real-shaped property block, when seen)"
+   ],
+   "accept": "python tools/live1_report.py prints no NOT SEEN line for the items this run closes and python -m pytest -q tests/test_parser.py tests/test_fuzz.py passes.",
+   "zero_click": "The operator only plays; the loop files one LIVE-1-<ITEM> row per first live hit.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "RUN-LEDGER-WIRE",
+    "RUN-LEDGER-REPORT"
+   ],
+   "serial_group": "ledger",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
+   "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items. PLAN 07 (close-out 2026-11-18, LE-35): also closes the LIVE-1 remains list of F-082 (its Client.txt shapes); the coverage of F-082 names this package.",
+   "wave": 23,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "RUN"
   },
   {
    "id": "DATA-CONTACT-UI",
@@ -19607,52 +19698,6 @@
    "cluster": "REL"
   },
   {
-   "id": "RUN-LIVE1-FIXTURES",
-   "title": "Turn each live-verified log shape into a fixture line and a test",
-   "goal": "For each LIVE-1 item the report marks VERIFIED live (and the waystone block shape), add a fixture line built from the masked shape and a parser test; fix the pattern when the report prints NEW SHAPE.",
-   "units": [
-    "LIVE-1",
-    "OPEN-01",
-    "OPEN-23",
-    "CARRY-09"
-   ],
-   "files": [
-    "tests/fixtures/client_live_shapes.txt",
-    "tests/test_parser.py",
-    "server/al/parser.py"
-   ],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_parser.py (one test per newly verified shape)",
-    "tests/test_waystone.py (real-shaped property block, when seen)"
-   ],
-   "accept": "python tools/live1_report.py prints no NOT SEEN line for the items this run closes and python -m pytest -q tests/test_parser.py tests/test_fuzz.py passes.",
-   "zero_click": "The operator only plays; the loop files one LIVE-1-<ITEM> row per first live hit.",
-   "size": "M",
-   "est_min": 60,
-   "deps": [
-    "RUN-LEDGER-WIRE",
-    "RUN-LEDGER-REPORT"
-   ],
-   "serial_group": "ledger",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "live sightings of the 11 remaining shapes in normal play",
-    "who": "operator",
-    "unblock": "the ledger consent line is ticked and python tools/live1_report.py prints VERIFIED live for at least one LIVE-1 item"
-   },
-   "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
-   "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items. PLAN 07 (close-out 2026-11-18, LE-35): also closes the LIVE-1 remains list of F-082 (its Client.txt shapes); the coverage of F-082 names this package.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "RUN"
-  },
-  {
    "id": "TC-BUILD-FILEPICK",
    "title": "Load a build from a save file the player picks",
    "goal": "Beside the paste box a file control lets the player pick a Path of Building save file in the browser; the page posts the file's text to the existing POST /api/build-code, so the core gets the bytes only (token API, no path, no stored copy), handled as a paste.",
@@ -19983,14 +20028,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": true,
-   "blocked": {
-    "on": "the project's public repository address exists as one tracked constant (Q-24)",
-    "who": "package GP-10 (PUB cluster), itself behind the repository and first push (GP-09)",
-    "unblock": "GP-10 is merged to main, so the address constant and its leak-sweep allow-list entry are in the tree"
-   },
+   "blocked": null,
    "operator_act": "",
    "notes": "Tier P1 unit, blocked (ruling Q-03). webfetch.py: one DEFAULT_CONTACT derived from the address constant GP-10 adds and effective_contact(configured); core.py Core.contact falls back to it; snapshot.py main() likewise; the web field becomes an optional per-install override (label and help text only). Amend decision 0015 item 1 and 0016, dated. The deps are file-order edges only (webfetch.py, core.py, snapshot.py, web/prices.js, web/index.html).",
-   "wave": 99,
+   "wave": 43,
    "owner": "session",
    "tier": "P1",
    "cluster": "DATA"
@@ -20416,20 +20457,30 @@
     "F-150",
     "AUTO-19"
    ],
-   "files": [],
+   "files": [
+    "tools/watch_gate.py",
+    "tests/test_watch_gate.py",
+    "docs/decisions/0069-upstream-watch-frame.md"
+   ],
    "new_files": [
     "tools/watch_sources/ci_issues.py",
     "ops/loop/watch_rows/ci.json",
     "tests/test_watch_ci_issues.py"
    ],
-   "integrator_edits": [],
+   "integrator_edits": [
+    {
+     "file": "CLAUDE.md",
+     "change": "Append to the 'Upstream watcher frame' Settled entry, before its Reverses-if: Amended 2026-11-21 (LOOP-CI-ISSUES, adjudicator ruling): METADATA_TAILS gains /issues, /actions/workflows/watch.yml and /actions/workflows/watch.yml/runs, read-only repository metadata on api.github.com for the CI issue protocol (decision 0076 item 6); other /actions/ and /issues/ sub-paths stay refused. Reverses if: GitHub treats these as non-metadata, or the operator limits watchers to the earlier tails."
+    }
+   ],
    "tests": [
     "tests/test_watch_ci_issues.py::test_one_valid_key_and_one_forged_issue_file_exactly_one_row",
     "tests/test_watch_ci_issues.py::test_body_with_extra_text_is_ignored",
     "tests/test_watch_ci_issues.py::test_disabled_inactivity_switches_the_tick_to_failover",
-    "tests/test_watch_ci_issues.py::test_seven_days_of_failover_file_watch_broken_ci_once"
+    "tests/test_watch_ci_issues.py::test_seven_days_of_failover_file_watch_broken_ci_once",
+    "tests/test_watch_gate.py::test_ci_issue_tails_pass_and_other_actions_paths_are_refused (new: /issues and the two watch.yml tails pass; /actions/runs/1/logs, /actions/artifacts, /actions/secrets and /issues/1/comments stay refused)"
    ],
-   "accept": "`python -m pytest -q tests/test_watch_ci_issues.py tests/test_watch_rows.py` passes.",
+   "accept": "`python -m pytest -q tests/test_watch_ci_issues.py tests/test_watch_rows.py tests/test_watch_gate.py` passes.",
    "zero_click": "Unattended: the watch survives a dev host that is off, and the dev loop takes over by itself when CI goes quiet.",
    "size": "M",
    "est_min": 50,
@@ -20437,7 +20488,8 @@
     "AUTO-19",
     "LOOP-WATCH-ROWS",
     "LOOP-WATCH-FILE",
-    "AUTO-08"
+    "AUTO-08",
+    "LOOP-WATCH-GATE"
    ],
    "serial_group": "",
    "agent": "general-purpose",
@@ -20446,7 +20498,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Split out of AUTO-19 by the verifier (size). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. ci_issues reads the open issues labelled al-watch once per 6 h and the workflow state once a day through the documented GitHub API; the address comes from the checkout's own remote, never a tracked constant; only issues by the workflow's bot account whose body is exactly 'AL-WATCH key=<source>:<key> v=1' count. Failover: when the workflow is disabled, inactive or 48 h silent, the ci-home sources run on the dev loop again; 7 days of failover file WATCH-BROKEN-CI once (health template of AUTO-08). Gated on web_data like every new source. Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped). Placement ruled by the adjudicator at the wave 18 start (session 16): wave 22, not 18, because dep AUTO-08 is in wave 21 and plan_check needs every dep in a strictly earlier wave.",
+   "notes": "Split out of AUTO-19 by the verifier (size). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only, except the three gate files listed in files: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. ci_issues reads the open issues labelled al-watch once per 6 h and the workflow state once a day through the documented GitHub API; the address comes from the checkout's own remote, never a tracked constant; only issues by the workflow's bot account whose body is exactly 'AL-WATCH key=<source>:<key> v=1' count. Failover: when the workflow is disabled, inactive or 48 h silent, the ci-home sources run on the dev loop again; 7 days of failover file WATCH-BROKEN-CI once (health template of AUTO-08). Gated on web_data like every new source. Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped). Placement ruled by the adjudicator at the wave 18 start (session 16): wave 22, not 18, because dep AUTO-08 is in wave 21 and plan_check needs every dep in a strictly earlier wave. Ruling 2026-11-21 (session 18, wave 22): watch_gate METADATA_TAILS gains exactly /issues, /actions/workflows/watch.yml and /actions/workflows/watch.yml/runs, with a dated amendment line in decision 0069 written by this package (text in integrator_edits).",
    "wave": 22,
    "owner": "session",
    "tier": "P2",
@@ -20499,7 +20551,8 @@
     "BUILD-GEAR-EMPTY-COPY"
    ],
    "files": [
-    "web/panels/build.js"
+    "web/panels/build.js",
+    "tests/test_build_item_text.py"
    ],
    "new_files": [],
    "integrator_edits": [],
@@ -20521,7 +20574,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. PLAY-TD-19E-ITEM-TEXT review D-3 (nit). Design: run the design-reviewer agent on the diff and return its reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P4: new wave-22 package, web/panels/build.js unowned in wave 22.",
+   "notes": "Tier P3. PLAY-TD-19E-ITEM-TEXT review D-3 (nit). Design: run the design-reviewer agent on the diff and return its reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P4: new wave-22 package, web/panels/build.js unowned in wave 22. Ruling 2026-11-21 (session 18, wave 22, OVL-ACT-CARD precedent): tests/test_build_item_text.py joins files, since the tests field names its empty-gear sentence assertion.",
    "wave": 22,
    "owner": "session",
    "tier": "P3",
@@ -20655,14 +20708,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": true,
-   "blocked": {
-    "on": "the project's address is in tracked config/public_repo.json",
-    "who": "package GP-10",
-    "unblock": "`python -c \"import json;print(json.load(open('config/public_repo.json'))['repo'])\"` prints the repository address"
-   },
+   "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. The download place is the releases page of the address in config/public_repo.json (the only address the leak sweep allows). README.md: one line naming it, next to the link to docs/guide/ (a region outside the quick start and outside '## How this repository is run'). docs/guide/download.md and faq.md: the same line. app/about.js: aboutText(disclaimer, credit) gains an optional third argument `download` (a plain text line appended after the credit; the non-affiliation line stays first); app/main.js: only the one About call site (line 268, `About.aboutText(DISCLAIMER, dataCredit)`) passes the line built from config/public_repo.json read once at start (missing file = no line). The About text is user-facing copy shown in the overlay About, so the design reviewer checks it (design_review true). tests/test_download_place.py: the same place string appears in README.md, docs/guide/faq.md and is what app/about.js is given. Needs F-050 / DEP-09 for the releases page to hold an installer (until then the line says releases appear there) and shares app/about.js with F-027 and app/main.js with the OVL cluster (see cross). No network call is added: the app only shows the text. Sized M 45: six files across README, two guide pages, about.js, main.js and two tests plus a design review. docs/guide/download.md and faq.md exist once PUB-GUIDE-PAGES lands (a dep).",
-   "wave": 99,
+   "wave": 25,
    "owner": "session",
    "tier": "P2",
    "cluster": "PUB"
@@ -20816,14 +20865,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "one real poe.ninja round on the dev host",
-    "who": "operator",
-    "unblock": "the operator sets the contact and turns web data on on the dev host (batched ask act g) and the sidecar Cache ninja book.json holds a fetched round"
-   },
+   "blocked": null,
    "operator_act": "OA-8 (docs/plan/09): Batched ask act (g): type the contact in the dashboard field and tick 'Use web data' on the dev host.",
    "notes": "Tier P3 unit, blocked. The tool reads only AshLight's own cache files in the sidecar (counts and key names; never a real item name into a fixture: fixtures stay synthetic, decision 0009's spirit). First candidate to drop: PrecursorTablets (only UNIQUE-rarity items are looked up in the item types). value.py: ALIASES loses ids the rates do not carry. Hosting the report in the loop tick needs the watcher frame (AUTO-05): see cross. PRICE-VARIANT (F-207) stays deferred until this round shows whether lines carry 'variant'. Not yet tracked at plan time (a dep creates them): server/al/data/price_types.json is created by DATA-PRICE-TYPES-FILE; server/al/data/ninja_read_keys.json is created by DATA-NINJA-SHAPE-WATCH; server/al/ninjashape.py is created by DATA-NINJA-SHAPE-WATCH.",
-   "wave": 99,
+   "wave": 25,
    "owner": "session",
    "tier": "P3",
    "cluster": "DATA"
@@ -21268,46 +21313,6 @@
    "owner": "session",
    "tier": "P1",
    "cluster": "OVL"
-  },
-  {
-   "id": "PUB-DEPBOT-FIRST-RUN",
-   "title": "First live run of the Dependabot re-apply tool",
-   "goal": "Every Dependabot bump pull request open on the repository is re-applied locally or closed by the tool, with nothing merged on GitHub.",
-   "units": [
-    "F-081",
-    "GP-14"
-   ],
-   "files": [],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_dependabot_reapply.py (existing, re-run before the live run)"
-   ],
-   "accept": "After `python tools/dependabot_reapply.py run`, `gh pr list --repo \"$R\" --author \"app/dependabot\" --state open --json number,title` lists only pull requests the tool reported as waiting (npm age rule or electron signal), and `gh pr list --repo \"$R\" --state merged --json number` is empty.",
-   "zero_click": "One command, run by the session that handles go-public while the loop is HALTed; the tick runs it by itself after F-078 (PUB-DEPBOT-TICK).",
-   "size": "S",
-   "est_min": 20,
-   "deps": [
-    "GP-09",
-    "PUB-DEPBOT-ACTIONS",
-    "GP-08"
-   ],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "none",
-   "lane": "data",
-   "design_review": false,
-   "blocked": {
-    "on": "the repository exists and .github/dependabot.yml is on main",
-    "who": "package GP-09",
-    "unblock": "`gh api \"repos/$R/contents/.github/dependabot.yml\" --jq .path` prints the config path"
-   },
-   "operator_act": "",
-   "notes": "Tier P1. No hand edit: the tool makes each commit as the operator through fleet_gitlock in the main checkout and pushes main through the guarded hook; isolation none for that reason. With zero open bump pull requests the run is a no-op that exits 0 and the package is done. A pull request on the vendored guard copy is closed by the tool and listed for the next note to MAIN (F-203). Repeat by hand until PUB-DEPBOT-TICK and F-078 are in.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
   },
   {
    "id": "RUN-BUILDFILE-LIVE-CLOSE",
