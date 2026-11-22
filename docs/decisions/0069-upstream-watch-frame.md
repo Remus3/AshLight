@@ -118,3 +118,12 @@ rule keeps the tick under its 60 s target.
 A source's owner asks tools not to read it automatically, the
 metadata-only rule hides a break that only a data read shows, or the
 operator exempts a source from the web-data gate in writing.
+
+## Amendment 2026-11-21
+
+Amended 2026-11-21 (LOOP-CI-ISSUES, adjudicator ruling): METADATA_TAILS gains
+/issues, /actions/workflows/watch.yml and /actions/workflows/watch.yml/runs,
+read-only repository metadata on api.github.com for the CI issue protocol
+(decision 0076 item 6); other /actions/ and /issues/ sub-paths stay refused.
+Reverses if: GitHub treats these as non-metadata, or the operator limits
+watchers to the earlier tails.
