@@ -875,9 +875,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   ACCEPT: python tools/live1_report.py prints no NOT SEEN line for the items this run closes and
   python -m pytest -q tests/test_parser.py tests/test_fuzz.py passes. ZERO-CLICK: The operator only
   plays; the loop files one LIVE-1-<ITEM> row per first live hit. DEPENDS: RUN-LEDGER-WIRE,
-  RUN-LEDGER-REPORT. BLOCKED: live sightings of the 11 remaining shapes in normal play; unblocks
-  when the ledger consent line is ticked and python tools/live1_report.py prints VERIFIED live for
-  at least one LIVE-1 item (operator).
+  RUN-LEDGER-REPORT. BLOCKED: session wave 23.
 - [ ] TC-BUILD-FILEPICK (build) Load a build from a save file the player picks. ACCEPT: python -m
   pytest -q tests/test_tc_build_filepick.py tests/test_http_security.py passes and npm test --prefix
   app passes. ZERO-CLICK: One pick per build change, the player's own act; no folder read, no
@@ -1072,8 +1070,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   rule or electron signal), and `gh pr list --repo "$R" --state merged --json number` is empty.
   ZERO-CLICK: One command, run by the session that handles go-public while the loop is HALTed; the
   tick runs it by itself after F-078 (PUB-DEPBOT-TICK). DEPENDS: GP-09, PUB-DEPBOT-ACTIONS, GP-08.
-  BLOCKED: the repository exists and .github/dependabot.yml is on main; unblocks when `gh api
-  "repos/$R/contents/.github/dependabot.yml" --jq .path` prints the config path (package GP-09).
+  BLOCKED: session wave 23.
 - [ ] RUN-BUILDFILE-LIVE-CLOSE (review) Record the in-game result of an AshLight-made .build.
   ACCEPT: python tools/live_verdicts.py lists a verdict for TC-BUILDFILE-LIVE and python -m pytest
   -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py passes.

@@ -1631,7 +1631,7 @@ Goal: Leads: Settings rail 1: Checks, Reading and web data, Overlay; Move
 the overlay page and the starting page off file:// onto one app scheme;
 Teach the item-check key in the empty card slot, then retire it.
 
-- Session 7; width 12 worktree + 0 main-checkout, 0 loop rows released;
+- Session 7; width 13 worktree + 1 main-checkout, 0 loop rows released;
   about 125 minutes.
 - Hotspots: web/index.html (PLAY-TD-21A-SETTINGS-RAIL); server/al/core.py
   (REL-UPDATE-CHECKS); web/app.js (PLAY-TD-21A-SETTINGS-RAIL);
@@ -1645,13 +1645,13 @@ Teach the item-check key in the empty card slot, then retire it.
   (PLAY-TD-21A-SETTINGS-RAIL); docs/design/0001-design-system.md
   (TEST-COPY-SHEETS); web/checks.js (PLAY-TD-21A-SETTINGS-RAIL);
   tests/test_http_security.py (OVL-APP-SCHEME).
-- Integrator: ROADMAP.md rows of all 12 packages; docs/design/reviews.log: 3
+- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log: 3
   lines.
 - Watch: tests/test_ux_review.py (PLAY-TD-21A-SETTINGS-RAIL edits,
   REL-UPDATE-CHECKS runs).
 - Batches: 1: PLAY-TD-21A-SETTINGS-RAIL, OVL-APP-SCHEME, OVL-KEY-HINT,
   DEP-17; 2: RUN-BUDGET-TESTS-DASH, REL-UPDATE-CHECKS, SEC-HELLO-PS,
-  TEST-SHOTS-RENDER; 3: AUTO-16, AUTO-13, TEST-COPY-SHEETS, AUTO-22.
+  TEST-SHOTS-RENDER; 3: AUTO-16, AUTO-13, TEST-COPY-SHEETS, AUTO-22; 4: PUB-DEPBOT-FIRST-RUN, RUN-LIVE1-FIXTURES.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1672,6 +1672,8 @@ Teach the item-check key in the empty card slot, then retire it.
 - AUTO-13 [session, M 60m, build, P3] DIVE-ON-DEMAND: a source may request one dive a day; the idle dive is weekly. Files: tools/loop_roadmap.py, tests/test_loop_dive.py, tools/loop_steps/dive_request.py, tests/test_loop_dive_request.py. Deps: AUTO-01, AUTO-04, AUTO-05, LOOP-ROWFILES-WORK, LOOP-TESTS-CARVE.
 - TEST-COPY-SHEETS [session, M 50m, build, P3] Split design 0001 section 9 rule 2 into docs/design/copy/<family>.md. Files: docs/design/0001-design-system.md, .claude/agents/design-reviewer.md, tests/test_structure.py, docs/design/copy/events.md, docs/design/copy/price.md (+4 more). Deps: TEST-STRUCTURE-GUARD.
 - AUTO-22 [session, M 45m, build, P3] OVL-SMOKE-DAILY: the tick runs the live overlay smoke once a day while the game is idle. Files: tools/loop_steps/overlay_smoke.py, tests/test_loop_overlay_smoke_step.py. Deps: AUTO-01, SEC-NO-PROXY.
+- PUB-DEPBOT-FIRST-RUN [session, S 20m, data, P1] First live run of the Dependabot re-apply tool. Files: none. Deps: GP-09, PUB-DEPBOT-ACTIONS, GP-08.
+- RUN-LIVE1-FIXTURES [session, M 60m, build, P1] Turn each live-verified log shape into a fixture line and a test. Files: tests/fixtures/client_live_shapes.txt, tests/test_parser.py, server/al/parser.py. Deps: RUN-LEDGER-WIRE, RUN-LEDGER-REPORT.
 
 ### Wave 24: reliability and observability, web data, theorycraft
 
@@ -2623,10 +2625,6 @@ Unblocked by operator (21):
   package), the guarded pre-push hook with the prepush-check call is merged,
   immutable releases are on before the first v* tag, and the operator types
   'release 0.2.0-rc.1' in an interactive session. Joins wave 25 or later.
-- RUN-LIVE1-FIXTURES: waits on live sightings of the 11 remaining shapes in
-  normal play. Who: operator. Unblock: the ledger consent line is ticked and
-  python tools/live1_report.py prints VERIFIED live for at least one LIVE-1
-  item. Joins wave 19 or later.
 - TC-BUILD-FILEPICK: waits on operator decision Q-02 file half: one line in
   the CLAUDE.md read list allowing a file the player picks in AshLight's own
   page (bytes only, never a path or a stored copy). Who: operator. Unblock:
@@ -2785,10 +2783,6 @@ LOOP-CI-ISSUES wave 22 at the wave 18 start, session 16):
   public repository on a personal account). Who: package GP-12. Unblock: `gh
   repo view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins
   wave 19 or later; also behind parked GP-12.
-- PUB-DEPBOT-FIRST-RUN: waits on the repository exists and
-  .github/dependabot.yml is on main. Who: package GP-09. Unblock: `gh api
-  "repos/$R/contents/.github/dependabot.yml" --jq .path` prints the config
-  path. Joins wave 19 or later.
 - GP-15: waits on the public flip. Who: package GP-12. Unblock: `gh repo
   view "$R" --json visibility --jq .visibility` prints PUBLIC. Joins wave 19
   or later; also behind parked GP-12.

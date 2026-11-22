@@ -846,7 +846,7 @@
     24
    ],
    "est_wall_min": 458,
-   "session_packages": 44,
+   "session_packages": 46,
    "milestones": []
   },
   {
@@ -1575,7 +1575,9 @@
     "AUTO-16",
     "AUTO-13",
     "TEST-COPY-SHEETS",
-    "AUTO-22"
+    "AUTO-22",
+    "PUB-DEPBOT-FIRST-RUN",
+    "RUN-LIVE1-FIXTURES"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1803,7 +1805,6 @@
     "TC-WAYSTONE-TUNE",
     "DEP-18",
     "REL-RC-LIVE",
-    "RUN-LIVE1-FIXTURES",
     "TC-BUILD-FILEPICK",
     "SEC-STEAM-SCAN-A03",
     "AUTO-24",
@@ -1830,7 +1831,6 @@
     "RUN-OVL-BUDGET-CLOSE",
     "TC-OAUTH-REG",
     "OVL-FPS",
-    "PUB-DEPBOT-FIRST-RUN",
     "RUN-BUILDFILE-LIVE-CLOSE",
     "GP-15",
     "RUN-VERDICTS-CLOSE",
@@ -16680,6 +16680,84 @@
    "cluster": "LOOP"
   },
   {
+   "id": "PUB-DEPBOT-FIRST-RUN",
+   "title": "First live run of the Dependabot re-apply tool",
+   "goal": "Every Dependabot bump pull request open on the repository is re-applied locally or closed by the tool, with nothing merged on GitHub.",
+   "units": [
+    "F-081",
+    "GP-14"
+   ],
+   "files": [],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_dependabot_reapply.py (existing, re-run before the live run)"
+   ],
+   "accept": "After `python tools/dependabot_reapply.py run`, `gh pr list --repo \"$R\" --author \"app/dependabot\" --state open --json number,title` lists only pull requests the tool reported as waiting (npm age rule or electron signal), and `gh pr list --repo \"$R\" --state merged --json number` is empty.",
+   "zero_click": "One command, run by the session that handles go-public while the loop is HALTed; the tick runs it by itself after F-078 (PUB-DEPBOT-TICK).",
+   "size": "S",
+   "est_min": 20,
+   "deps": [
+    "GP-09",
+    "PUB-DEPBOT-ACTIONS",
+    "GP-08"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "none",
+   "lane": "data",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P1. No hand edit: the tool makes each commit as the operator through fleet_gitlock in the main checkout and pushes main through the guarded hook; isolation none for that reason. With zero open bump pull requests the run is a no-op that exits 0 and the package is done. A pull request on the vendored guard copy is closed by the tool and listed for the next note to MAIN (F-203). Repeat by hand until PUB-DEPBOT-TICK and F-078 are in.",
+   "wave": 23,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "PUB"
+  },
+  {
+   "id": "RUN-LIVE1-FIXTURES",
+   "title": "Turn each live-verified log shape into a fixture line and a test",
+   "goal": "For each LIVE-1 item the report marks VERIFIED live (and the waystone block shape), add a fixture line built from the masked shape and a parser test; fix the pattern when the report prints NEW SHAPE.",
+   "units": [
+    "LIVE-1",
+    "OPEN-01",
+    "OPEN-23",
+    "CARRY-09"
+   ],
+   "files": [
+    "tests/fixtures/client_live_shapes.txt",
+    "tests/test_parser.py",
+    "server/al/parser.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_parser.py (one test per newly verified shape)",
+    "tests/test_waystone.py (real-shaped property block, when seen)"
+   ],
+   "accept": "python tools/live1_report.py prints no NOT SEEN line for the items this run closes and python -m pytest -q tests/test_parser.py tests/test_fuzz.py passes.",
+   "zero_click": "The operator only plays; the loop files one LIVE-1-<ITEM> row per first live hit.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "RUN-LEDGER-WIRE",
+    "RUN-LEDGER-REPORT"
+   ],
+   "serial_group": "ledger",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
+   "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items. PLAN 07 (close-out 2026-11-18, LE-35): also closes the LIVE-1 remains list of F-082 (its Client.txt shapes); the coverage of F-082 names this package.",
+   "wave": 23,
+   "owner": "session",
+   "tier": "P1",
+   "cluster": "RUN"
+  },
+  {
    "id": "DATA-CONTACT-UI",
    "title": "Contact field in the web-data card and honest blocked wording + League dropdown in the web-data card",
    "goal": "The 'Prices and web data' card has a write-only contact field, and while prices are blocked the switch, rates pill, movers and price box say that one step instead of 'arrive within a minute'. Also (folded DATA-LEAGUE-PICKER-UI): A league dropdown fed by the cached league list writes the 'league' key, and the card says 'prices from <league>' when a solo league is mapped.",
@@ -19607,52 +19685,6 @@
    "cluster": "REL"
   },
   {
-   "id": "RUN-LIVE1-FIXTURES",
-   "title": "Turn each live-verified log shape into a fixture line and a test",
-   "goal": "For each LIVE-1 item the report marks VERIFIED live (and the waystone block shape), add a fixture line built from the masked shape and a parser test; fix the pattern when the report prints NEW SHAPE.",
-   "units": [
-    "LIVE-1",
-    "OPEN-01",
-    "OPEN-23",
-    "CARRY-09"
-   ],
-   "files": [
-    "tests/fixtures/client_live_shapes.txt",
-    "tests/test_parser.py",
-    "server/al/parser.py"
-   ],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_parser.py (one test per newly verified shape)",
-    "tests/test_waystone.py (real-shaped property block, when seen)"
-   ],
-   "accept": "python tools/live1_report.py prints no NOT SEEN line for the items this run closes and python -m pytest -q tests/test_parser.py tests/test_fuzz.py passes.",
-   "zero_click": "The operator only plays; the loop files one LIVE-1-<ITEM> row per first live hit.",
-   "size": "M",
-   "est_min": 60,
-   "deps": [
-    "RUN-LEDGER-WIRE",
-    "RUN-LEDGER-REPORT"
-   ],
-   "serial_group": "ledger",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": false,
-   "blocked": {
-    "on": "live sightings of the 11 remaining shapes in normal play",
-    "who": "operator",
-    "unblock": "the ledger consent line is ticked and python tools/live1_report.py prints VERIFIED live for at least one LIVE-1 item"
-   },
-   "operator_act": "OA-19, OA-20 (docs/plan/09): Tick the ledger consent line once, then play as usual (die once, enter a hideout, receive a whisper, run a map).",
-   "notes": "Tier P1. Fixtures are built from masked shapes, never from a raw line. May run several times, once per batch of verified items. PLAN 07 (close-out 2026-11-18, LE-35): also closes the LIVE-1 remains list of F-082 (its Client.txt shapes); the coverage of F-082 names this package.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "RUN"
-  },
-  {
    "id": "TC-BUILD-FILEPICK",
    "title": "Load a build from a save file the player picks",
    "goal": "Beside the paste box a file control lets the player pick a Path of Building save file in the browser; the page posts the file's text to the existing POST /api/build-code, so the core gets the bytes only (token API, no path, no stored copy), handled as a paste.",
@@ -21280,46 +21312,6 @@
    "owner": "session",
    "tier": "P1",
    "cluster": "OVL"
-  },
-  {
-   "id": "PUB-DEPBOT-FIRST-RUN",
-   "title": "First live run of the Dependabot re-apply tool",
-   "goal": "Every Dependabot bump pull request open on the repository is re-applied locally or closed by the tool, with nothing merged on GitHub.",
-   "units": [
-    "F-081",
-    "GP-14"
-   ],
-   "files": [],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_dependabot_reapply.py (existing, re-run before the live run)"
-   ],
-   "accept": "After `python tools/dependabot_reapply.py run`, `gh pr list --repo \"$R\" --author \"app/dependabot\" --state open --json number,title` lists only pull requests the tool reported as waiting (npm age rule or electron signal), and `gh pr list --repo \"$R\" --state merged --json number` is empty.",
-   "zero_click": "One command, run by the session that handles go-public while the loop is HALTed; the tick runs it by itself after F-078 (PUB-DEPBOT-TICK).",
-   "size": "S",
-   "est_min": 20,
-   "deps": [
-    "GP-09",
-    "PUB-DEPBOT-ACTIONS",
-    "GP-08"
-   ],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "none",
-   "lane": "data",
-   "design_review": false,
-   "blocked": {
-    "on": "the repository exists and .github/dependabot.yml is on main",
-    "who": "package GP-09",
-    "unblock": "`gh api \"repos/$R/contents/.github/dependabot.yml\" --jq .path` prints the config path"
-   },
-   "operator_act": "",
-   "notes": "Tier P1. No hand edit: the tool makes each commit as the operator through fleet_gitlock in the main checkout and pushes main through the guarded hook; isolation none for that reason. With zero open bump pull requests the run is a no-op that exits 0 and the package is done. A pull request on the vendored guard copy is closed by the tool and listed for the next note to MAIN (F-203). Repeat by hand until PUB-DEPBOT-TICK and F-078 are in.",
-   "wave": 99,
-   "owner": "session",
-   "tier": "P1",
-   "cluster": "PUB"
   },
   {
    "id": "RUN-BUILDFILE-LIVE-CLOSE",
