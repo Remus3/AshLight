@@ -28,6 +28,14 @@ EHP_KEYS = ("TotalEHP",)
 EHP_PARTS = ("Life", "EnergyShield")
 OUTPUT_KEYS = DPS_KEYS + EHP_KEYS + EHP_PARTS
 RECHECK_S = 30.0
+# TC-CALC-IDLE (F-154): the calc process stops after this long without a
+# calc call (a press, a re-score, a build-view table), or as soon as the
+# game is idle (decision 0029 staleness), and starts again on the next need
+IDLE_STOP_S = 1200.0
+# a calc called within this long, or mid call, is held by a press: its
+# stages run back to back, so a stop between two of them would only cost
+# the press a cold start
+PRESS_HOLD_S = 30.0
 # MATH-WEAPON-TYPE (decision 0032 amendment): PoB's own disableReason texts
 # (pinned checkout, src/Modules/CalcActiveSkill.lua) that mean the main
 # skill cannot use the weapon now equipped. Name drift stays here (TC-DRIFT);
@@ -153,6 +161,12 @@ class Provider:
         self._calc = None
         self._checked = None
         self._lock = threading.Lock()
+        # TC-CALC-IDLE: calls in flight and the last use; `_use` orders a
+        # stop against the start of a calc call, so a call never meets a
+        # process that is being stopped under it
+        self._use = threading.Lock()
+        self._busy = 0
+        self.last_used = None
 
     def _real_available(self):
         from . import bridge  # lazy: only with the opt-in on
@@ -183,24 +197,72 @@ class Provider:
                 ok = False
             if not ok:
                 return None
-            self._calc = make_calc(self._get_bridge or self._real_bridge)
+            self._calc = self._track(make_calc(self._get_bridge or self._real_bridge))
+            self.last_used = now
             return self._calc
+
+    def _track(self, calc):
+        """TC-CALC-IDLE: `calc` (and its `raw`) with the use stamped: the
+        busy count and last_used. A call on a calc this provider already
+        dropped by an idle stop adopts it again, so the process that call
+        starts is reaped like any other."""
+        def held(fn):
+            def call(*args, **kwargs):
+                with self._use:
+                    self._busy += 1
+                    self.last_used = self._clock()
+                    with self._lock:
+                        if self._calc is None:
+                            self._calc = tracked
+                try:
+                    return fn(*args, **kwargs)
+                finally:
+                    with self._use:
+                        self._busy -= 1
+                        self.last_used = self._clock()
+            return call
+
+        tracked = held(calc)
+        tracked.raw = held(calc.raw)
+        return tracked
 
     def running(self):
         """True while this provider holds a calc (the process may be up)."""
         return self._calc is not None
 
-    def reap(self):
+    def held(self):
+        """TC-CALC-IDLE: True while a calc call runs or the last one ended
+        under PRESS_HOLD_S ago (a press between two of its stages)."""
+        if self._busy:
+            return True
+        last = self.last_used
+        return last is not None and self._clock() - last < PRESS_HOLD_S
+
+    def reap(self, idle=False):
         """AREA-AUDIT P3-6, from the core's loop tick: stop the calc process
         once the user turned tc_calc off. Reads the opt-in only while a calc
-        is running (no config read when idle). True when it stopped one."""
+        is running (no config read when idle). True when it stopped one.
+
+        TC-CALC-IDLE: also stop it after IDLE_STOP_S without a calc call, or
+        at once when `idle` (the game is idle, decision 0029), but never
+        while a press holds it (held()). The next press or build load makes
+        a fresh calc and the process starts behind the first staged card."""
         if self._calc is None:
             return False
         try:
             on = bool(self.enabled())
         except Exception:  # noqa: BLE001 - a bad config reads as off
             on = False
-        return False if on else self.close()
+        if not on:
+            return self.close()
+        with self._use:
+            if self.held():
+                return False
+            last = self.last_used
+            unused = last is None or self._clock() - last >= IDLE_STOP_S
+            if not (idle or unused):
+                return False
+            return self.close()
 
     def close(self):
         """Stop the shared bridge process if this provider started one;

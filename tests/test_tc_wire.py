@@ -105,7 +105,9 @@ def test_p3_6_turning_tc_calc_off_stops_the_calc_process(tmp_path):
     log.write_text("", encoding="utf-8")
     core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
     reaped = []
-    core.tc_provider = type("P", (), {"reap": lambda self: reaped.append(1) or False,
+    core.tc_provider = type("P", (), {"reap": lambda self, idle=False: reaped.append(1)
+                                      or False,
+                                      "running": lambda self: True,
                                       "close": lambda self: None})()
     core.tick_calc()
     assert reaped == [1]
@@ -122,6 +124,131 @@ def test_p3_6_turning_tc_calc_off_stops_the_calc_process(tmp_path):
              if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
              and isinstance(n.func.value, ast.Name) and n.func.value.id == "core"]
     assert "tick_all" in calls and "tick_calc" not in calls
+
+
+def _idle_provider(t, stopped, bridge_log=None):
+    """A Provider on a fake clock `t` ([seconds]) whose stop is recorded."""
+    def get_bridge():
+        b = FakeBridge()
+        if bridge_log is not None:
+            bridge_log.append(b)
+        return b
+    return calcwire.Provider(lambda: True, available=lambda: True, get_bridge=get_bridge,
+                             clock=lambda: t[0], stop=lambda: stopped.append(t[0]))
+
+
+def test_provider_stops_after_idle_and_answers_later():
+    """TC-CALC-IDLE (F-154): the calc process stops after IDLE_STOP_S
+    without a calc call and the next press makes a fresh calc that
+    answers; the opt-in stays on throughout."""
+    t, stopped = [0.0], []
+    p = _idle_provider(t, stopped)
+    build = model.parse(EVAL_BUILD_XML)
+    calc = p()
+    assert callable(calc) and p.last_used == 0.0 and p.running()
+    t[0] = 10.0
+    assert calc(build, {}) == {"dps": 100.0, "ehp": 1000.0}
+    assert p.last_used == 10.0
+    assert calc.raw(build, calcwire.OUTPUT_KEYS) == {"FullDPS": 100.0, "Life": 1000.0}
+    for now in (11.0, 600.0, 10.0 + calcwire.IDLE_STOP_S - 1):
+        t[0] = now
+        assert p.reap() is False and stopped == []  # used too recently
+    t[0] = 10.0 + calcwire.IDLE_STOP_S
+    assert p.reap() is True and stopped == [t[0]]
+    assert not p.running() and p.reap() is False and len(stopped) == 1
+    # the next press: a fresh calc at once (no RECHECK_S wait), answering
+    t[0] += 5
+    again = p()
+    assert callable(again) and again is not calc and p.running()
+    assert again(build, {"Gloves": "x"}) == {"dps": 105.0, "ehp": 1001.0}
+    # a call on the dropped calc (a holder kept it) is adopted again, so
+    # the process it starts is reaped like any other
+    assert p.close() is True and len(stopped) == 2 and not p.running()
+    assert calc(build, {}) == {"dps": 100.0, "ehp": 1000.0} and p.running()
+    t[0] += calcwire.IDLE_STOP_S
+    assert p.reap() is True and len(stopped) == 3
+
+
+def test_idle_stop_never_fires_mid_press():
+    """TC-CALC-IDLE: neither the idle timer nor game idle stops the calc
+    while a press holds it: mid call, or between two of a press's stages
+    (PRESS_HOLD_S after the last call)."""
+    import threading
+    t, stopped = [0.0], []
+    gate, inside = threading.Event(), threading.Event()
+
+    class SlowBridge(FakeBridge):
+        def outputs(self, keys=None):
+            inside.set()
+            assert gate.wait(10)
+            return super().outputs(keys)
+
+    p = calcwire.Provider(lambda: True, available=lambda: True, get_bridge=SlowBridge,
+                          clock=lambda: t[0], stop=lambda: stopped.append(t[0]))
+    calc = p()
+    build = model.parse(EVAL_BUILD_XML)
+    got = []
+    worker = threading.Thread(target=lambda: got.append(calc(build, {"Ring 1": "r"})))
+    worker.start()
+    try:
+        assert inside.wait(10)
+        t[0] = 5 * calcwire.IDLE_STOP_S  # a very long call
+        assert p.held()
+        assert p.reap(idle=True) is False and p.reap() is False and stopped == []
+    finally:
+        gate.set()
+        worker.join(10)
+    assert got == [{"dps": 105.0, "ehp": 1001.0}]
+    # between two stages: the call just ended, so the press still holds it
+    t[0] += calcwire.PRESS_HOLD_S - 1
+    assert p.held() and p.reap(idle=True) is False and stopped == []
+    t[0] += 1
+    assert not p.held() and p.reap(idle=True) is True and len(stopped) == 1
+    # a fresh calc is held while its press starts (stamped in __call__)
+    assert callable(p())
+    assert p.held() and p.reap(idle=True) is False and len(stopped) == 1
+    # turning the opt-in off still stops it at once, held or not
+    on = [True]
+    q = calcwire.Provider(lambda: on[0], available=lambda: True, get_bridge=FakeBridge,
+                          clock=lambda: t[0], stop=lambda: stopped.append("off"))
+    assert callable(q()) and q.held()
+    on[0] = False
+    assert q.reap() is True and stopped[-1] == "off"
+
+
+def test_game_idle_stops_the_calc(tmp_path):
+    """TC-CALC-IDLE: the core's loop tick passes the state's game-idle flag
+    (decision 0029 Client.txt staleness, no process-list check) and the
+    calc stops once no press holds it; nothing is read while no calc runs."""
+    from server.al.core import Core
+    log = tmp_path / "Client.txt"
+    log.write_text("", encoding="utf-8")
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
+    try:
+        t, stopped = [0.0], []
+        core.tc_provider = _idle_provider(t, stopped)
+        assert core.tick_calc() is False and stopped == []  # nothing running
+        assert callable(core.tc_provider())
+        core.state.set_tailer(consented=True, idle=False)
+        t[0] = 2 * calcwire.PRESS_HOLD_S
+        assert core.game_idle() is False
+        assert core.tick_calc() is False and stopped == []  # game active
+        core.state.set_tailer(idle=True)
+        assert core.game_idle() is True and core.state.snapshot()["game_idle"] is True
+        assert core.tick_calc() is True and len(stopped) == 1
+        assert core.tick_calc() is False and len(stopped) == 1
+        # without the log opt-in the flag is never idle (as the snapshot)
+        core.state.set_tailer(consented=False)
+        assert core.game_idle() is False and core.state.snapshot()["game_idle"] is False
+        # the next press while the game is idle still gets a calc; it stops
+        # again only after the press let go of it
+        core.state.set_tailer(consented=True)
+        assert callable(core.tc_provider())
+        assert core.tick_calc() is False and len(stopped) == 1
+        t[0] += calcwire.PRESS_HOLD_S
+        assert core.tick_calc() is True and len(stopped) == 2
+    finally:
+        core.close()
 
 
 def test_core_reads_the_opt_in(tmp_path):

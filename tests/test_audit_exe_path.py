@@ -103,6 +103,37 @@ def test_record_and_verify(tmp_path):
     assert exepin.verified(exe) is False
 
 
+def test_verified_is_cached_by_mtime_and_size(tmp_path, monkeypatch):
+    """TC-CALC-IDLE (F-154): a match is remembered with the exe's size and
+    mtime and the recorded hash; the exe is hashed again only when one of
+    them changed, and a mismatch is never cached."""
+    exe = tmp_path / "luajit.exe"
+    exe.write_bytes(b"built")
+    exepin.record(exe)
+    reads = []
+    real = exepin._digest
+    monkeypatch.setattr(exepin, "_digest", lambda p: reads.append(1) or real(p))
+    assert exepin.verified(exe) is True and len(reads) == 1
+    for _ in range(5):
+        assert exepin.verified(exe) is True
+    assert len(reads) == 1  # unchanged: not read again
+    st = exe.stat()
+    os.utime(exe, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))  # same size, new mtime
+    assert exepin.verified(exe) is True and len(reads) == 2
+    exe.write_bytes(b"swapped")  # new size
+    assert exepin.verified(exe) is False and len(reads) == 3
+    assert exepin.verified(exe) is False and len(reads) == 4  # a mismatch is not cached
+    exe.write_bytes(b"built")
+    assert exepin.verified(exe) is True and len(reads) == 5
+    # a changed record is checked at once, whatever the exe's stat says
+    (tmp_path / "luajit.exe.sha256").write_text("0" * 64 + "\n", encoding="ascii")
+    assert exepin.verified(exe) is False and len(reads) == 6
+    exepin.record(exe)
+    assert exepin.verified(exe) is True and len(reads) == 8  # record() hashes too
+    exe.unlink()
+    assert exepin.verified(exe) is False
+
+
 def _lay(tmp_path):
     return tc_pin.layout(tc_pin.load_pins(), environ={"AL_SIDECAR_ROOT": str(tmp_path)})
 
