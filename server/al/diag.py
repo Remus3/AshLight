@@ -14,14 +14,16 @@ writes the clipboard inside that click only, decision 0014). It carries
 no path, user name, contact, token, character name, account id or chat:
 the check details are written without them, and redact() masks any that
 slipped into a free-text field (a fetch error) before the report is made.
+RUN-REPORT-FIELDS: the report's allow-list of fields and the hardened,
+whole-word redactor live in server/al/report.py; secrets(), redact() and
+report() here delegate to it.
 """
 
-import os
-import re
 import time
 from pathlib import Path
 
-from . import buildinfo, diag_data, langguard, plug
+from . import diag_data, langguard, plug
+from . import report as report_mod
 from . import statuswords as words
 from .num import finite
 
@@ -441,64 +443,31 @@ def checks(f, now):
     return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})
 
 
-# -- redaction (ruling J)
+# -- redaction (ruling J) and the report: server/al/report.py (RUN-REPORT-FIELDS)
 
 def secrets(f=None, environ=None):
-    """The strings a report must never carry: the Windows user name, the
-    home, sidecar and repo paths, the contact and the character name.
-    Longest first, so a path masks before its user-name part."""
-    environ = os.environ if environ is None else environ
-    f = f or {}
-    out = []
-    for key, tag in (("repo", "<repo>"), ("sidecar", "<sidecar>"), ("home", "<home>"),
-                     ("log_path", "<Client.txt>")):
-        v = f.get("_" + key)
-        if isinstance(v, str) and len(v) >= 3:
-            out.append((v, tag))
-    home = environ.get("USERPROFILE") or environ.get("HOME")
-    if home and len(home) >= 3:
-        out.append((home, "<home>"))
-    for key, tag in (("contact", "<contact>"), ("character", "<character>")):
-        v = f.get("_" + key)
-        if isinstance(v, str) and len(v.strip()) >= 2:
-            out.append((v.strip(), tag))
-    user = environ.get("USERNAME") or environ.get("USER")
-    if user and len(user) >= 3:
-        out.append((user, "<user>"))
-    # forward-slash forms of each path too
-    out += [(v.replace("\\", "/"), t) for v, t in out if "\\" in v]
-    out.sort(key=lambda p: -len(p[0]))
-    return out
-
-
-_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
-_DRIVE_PATH = re.compile(r"[A-Za-z]:[\\/][^\s\"']*")
+    """The strings a report must never carry (report.secrets): the paths,
+    the Windows user, the contact and every known character name."""
+    return report_mod.secrets(f, environ)
 
 
 def redact(text, pairs):
-    """`text` with every secret masked (case-insensitive), then any e-mail
-    address and any absolute drive path left over."""
-    if not isinstance(text, str):
-        return text
-    for value, tag in pairs:
-        text = re.sub(re.escape(value), tag, text, flags=re.IGNORECASE)
-    text = _EMAIL.sub("<email>", text)
-    return _DRIVE_PATH.sub("<path>", text)
+    """`text` with every secret masked as a whole word, then e-mail, paths,
+    URLs, addresses, host names and long hex runs (report.redact, P8-7)."""
+    return report_mod.redact(text, pairs)
 
 
-def report(rows, version, now, pairs):
-    """The plain-text report the player copies (ASCII, LF). The header
-    names the build (RUN-BUILD-STAMP-CORE): `version` plus buildinfo's
-    commit and dev mark, the string /api/health and /api/version show."""
-    stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(now))
-    lines = [f"AshLight {buildinfo.build_id(version=version)} self-check, {stamp}"]
-    for r in rows:
-        line = f"[{MARK[r['status']]}] {r['label']}: {render_detail(r, now)}"
-        if r.get("fix"):
-            line += f" Fix: {r['fix']}"
-        lines.append(line)
-    text = redact("\n".join(lines) + "\n", pairs)
-    return text.encode("ascii", "replace").decode("ascii")
+def report(rows, version, now, pairs, extra=None, tails=None):
+    """The plain-text report the player copies (ASCII, LF), made by
+    report.compose from its allow-list: the header naming the build
+    (RUN-BUILD-STAMP-CORE: `version` plus buildinfo's commit and dev
+    mark), the OS, Python and Electron versions, the counters, one line
+    per row (ages written in at `now`), then `extra` (last restart, the
+    session's not counted mod lines, ledger shapes) and, only on the
+    player's second choice, `tails`. Only free text is redacted; labels
+    and marks are fixed words (P8-7)."""
+    return report_mod.compose(rows, version, now, pairs, render=render_detail,
+                              mark=MARK, extra=extra, tails=tails)
 
 
 def summary(rows):
