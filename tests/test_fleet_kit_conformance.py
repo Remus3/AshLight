@@ -167,6 +167,7 @@ def test_git_hooks_wire_identity_and_leak_sweep():
     assert "refs/heads/main|refs/tags/v[0-9]*" in pp
     order = [pp.index("check_refs || exit 1"),
              pp.index('push_guard.py" "$@" || exit 1'),
+             pp.index('release.py" prepush-check "$@" || exit 1'),
              pp.index('fleet_identity.py" pre-push "$@" || exit 1'),
              pp.index('leak_sweep.py" --pre-push "$@" || exit 1'),
              pp.rstrip().rindex("exit 0")]

@@ -9,8 +9,11 @@
 #      is v<SemVer> on a commit (never a blob or tree), every pushed tag
 #      object has the operator as tagger, and no commit or tag message
 #      carries an AI or bot attribution trailer of any key.
-#   3. Kit v13 (FLEET-COMMON 17) identity gate: fleet_identity.py pre-push.
-#   4. Leak sweep over every object being pushed (blobs, trees, commit and
+#   3. Release stage gate: tools/release.py prepush-check - a v* tag leaves
+#      only with a PASS stage report (plan 05) for that version and commit;
+#      a branch ref passes untouched.
+#   4. Kit v13 (FLEET-COMMON 17) identity gate: fleet_identity.py pre-push.
+#   5. Leak sweep over every object being pushed (blobs, trees, commit and
 #      tag messages, ref names): tools/leak_sweep.py --pre-push. It needs
 #      config/leak_needles.json; without it the push fails closed.
 # There is no override variable (AL_LEAK_NEEDLES only adds needles).
@@ -53,6 +56,7 @@ check_refs() {
 
 printf '%s\n' "$REFS" | check_refs || exit 1
 printf '%s\n' "$REFS" | python "$ROOT/tools/push_guard.py" "$@" || exit 1
+printf '%s\n' "$REFS" | python "$ROOT/tools/release.py" prepush-check "$@" || exit 1
 printf '%s\n' "$REFS" | python "$ROOT/ops/fleet_kit/fleet_identity.py" pre-push "$@" || exit 1
 printf '%s\n' "$REFS" | python "$ROOT/tools/leak_sweep.py" --pre-push "$@" || exit 1
 exit 0
