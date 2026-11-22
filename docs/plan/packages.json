@@ -16726,7 +16726,10 @@
     "F-081",
     "GP-14"
    ],
-   "files": [],
+   "files": [
+    "tools/dependabot_reapply.py",
+    "tests/test_dependabot_reapply.py"
+   ],
    "new_files": [],
    "integrator_edits": [],
    "tests": [
@@ -16748,7 +16751,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. No hand edit: the tool makes each commit as the operator through fleet_gitlock in the main checkout and pushes main through the guarded hook; isolation none for that reason. With zero open bump pull requests the run is a no-op that exits 0 and the package is done. A pull request on the vendored guard copy is closed by the tool and listed for the next note to MAIN (F-203). Repeat by hand until PUB-DEPBOT-TICK and F-078 are in.",
+   "notes": "Tier P1. No hand edit: the tool makes each commit as the operator through fleet_gitlock in the main checkout and pushes main through the guarded hook; isolation none for that reason. With zero open bump pull requests the run is a no-op that exits 0 and the package is done. A pull request on the vendored guard copy is closed by the tool and listed for the next note to MAIN (F-203). Repeat by hand until PUB-DEPBOT-TICK and F-078 are in. Re-plan (session 19, ruling A pattern 5787074): the first live run found grouped Dependabot titles ('bump X from A to B in /dir in the <group> group') unparsed (PR left open 'title names no bump'); files gain tools/dependabot_reapply.py and tests/test_dependabot_reapply.py; the parser fix is built in a worktree and merged through a batch suite, then the live run repeats in the main checkout.",
    "wave": 23,
    "owner": "session",
    "tier": "P1",
