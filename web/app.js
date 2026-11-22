@@ -150,46 +150,6 @@
     evPager.set(shown);
   }
 
-  /* OVL-POS: overlay layout editor. Saved to config/local.json by the core;
-     the overlay follows the file. */
-  var layoutBusy = false;
-
-  function option(value, text) {
-    var o = document.createElement("option");
-    o.value = value;
-    o.textContent = text;
-    return o;
-  }
-
-  function fillLayout(doc) {
-    var l = doc.layout;
-    var corner = $("layout-corner");
-    if (!corner.options.length) {
-      doc.corners.forEach(function (c) { corner.appendChild(option(c, D.cornerLabel(c))); });
-    }
-    var disp = $("layout-display");
-    disp.replaceChildren(option("primary", "Primary"));
-    (doc.displays || []).forEach(function (d) {
-      disp.appendChild(option(String(d.index), "Monitor " + (d.index + 1) +
-        (d.primary ? " (primary)" : "") +
-        (d.width ? " - " + d.width + "x" + d.height : "") +
-        (d.scale_factor && d.scale_factor !== 1
-          ? " @" + Math.round(d.scale_factor * 100) + "%" : "")));
-    });
-    var known = (doc.displays || []).some(function (d) { return d.index === l.display; });
-    if (l.display !== "primary" && !known) {
-      disp.appendChild(option(String(l.display),
-        "Monitor " + (l.display + 1) + " (not connected - primary used)"));
-    }
-    disp.value = String(l.display);
-    corner.value = l.corner;
-    $("layout-scale").value = String(l.scale);
-    $("layout-opacity").value = String(l.opacity);
-    $("layout-margin").value = String(l.margin);
-    $("layout-scale-out").textContent = Math.round(l.scale * 100) + "%";
-    $("layout-opacity-out").textContent = Math.round(l.opacity * 100) + "%";
-  }
-
   /* DESKTOP-CLIENT (decision 0041): inside the desktop client the page
      gets one action, window.alClient.restartOverlay (app/client/preload.js);
      in a browser there is none and the button stays hidden. */
@@ -204,36 +164,6 @@
       setText($("restart-overlay-said"), snap && snap.game_idle
         ? "Restarting the overlay. It stays hidden while the game looks closed."
         : "Restarting the overlay.");
-    });
-  }
-
-  function readLayoutForm() {
-    var d = $("layout-display").value;
-    return {
-      display: d === "primary" ? "primary" : parseInt(d, 10),
-      corner: $("layout-corner").value,
-      scale: parseFloat($("layout-scale").value),
-      opacity: parseFloat($("layout-opacity").value),
-      margin: parseInt($("layout-margin").value, 10) || 0
-    };
-  }
-
-  function saveLayout() {
-    if (layoutBusy) { return; }
-    layoutBusy = true;
-    $("layout-status").textContent = "Saving...";
-    api("POST", "/api/overlay-layout", readLayoutForm()).then(function (doc) {
-      fillLayout(doc);
-      $("layout-status").textContent = "Saved. The overlay moves within a second.";
-    }).catch(function (e) {
-      $("layout-status").textContent = "Not saved. Try again.";
-      console.warn("layout save failed: " + e.message);
-    }).then(function () { layoutBusy = false; });
-  }
-
-  function loadLayout() {
-    api("GET", "/api/overlay-layout").then(fillLayout).catch(function () {
-      $("layout-status").textContent = "Can't load the overlay settings. Is AshLight running?";
     });
   }
 
@@ -540,229 +470,6 @@
     paintEvalRows();
   }
 
-  /* Stat weights editor: saves on change (PUT /api/weights). */
-  var weightsBusy = false;
-  var weightsAgain = false; // a change arrived while a save was in flight
-
-  /* PLAY-TD-19D-ITEMS-GRID: the Item scoring card. Its first page lists
-     only the weights changed from the defaults (the core's `changed`);
-     the Stat weights page shows every weight, 10 a page (8 compact): all
-     rows stay in the form and a page only hides the others, so focus, a
-     value being typed and every save keep working across pages. */
-  /* rows of 24 px (a 24 px number box) plus the card's status line fit 9
-     a page in the full class and 6 in the compact one (cards 322 and 256
-     px tall at s = 1) */
-  var WEIGHT_PAGE = { full: 9, compact: 6 };
-  var CHANGED_ROWS = { full: 6, compact: 4 };
-  var weightsDoc = null;
-  var weightsPageAt = 0;
-  var weightsBar = null;
-
-  function weightLabel(k) { return String(k).replace(/#/g, "N"); }
-
-  function pointsText(v) {
-    var n = P.num(v);
-    return n === "1" ? "1 point" : n + " points";
-  }
-
-  function changedRows(doc) {
-    var ch = (doc && doc.changed) || {};
-    var defs = (doc && doc.defaults) || {};
-    var dw = defs.weights || {};
-    var rows = Object.keys(ch.weights || {}).sort(function (a, b) {
-      var x = a.toLowerCase(), y = b.toLowerCase();
-      return x < y ? -1 : (x > y ? 1 : 0);
-    }).map(function (k) {
-      var v = ch.weights[k];
-      var d = dw[k];
-      if (v === null) { return weightLabel(k) + ": removed (default " + pointsText(d) + ")"; }
-      return weightLabel(k) + ": " + pointsText(v) +
-        (typeof d === "number" ? " (default " + pointsText(d) + ")" : " (added)");
-    });
-    var sg = ch.sidegrade || {};
-    var dsg = defs.sidegrade || {};
-    if (typeof sg.abs === "number") {
-      rows.push("Sidegrade range: " + pointsText(sg.abs) + " (default " + pointsText(dsg.abs) + ")");
-    }
-    if (typeof sg.pct === "number") {
-      rows.push("Sidegrade range: " + P.num(sg.pct) + "% of your item's score (default " +
-        P.num(dsg.pct) + "%)");
-    }
-    return rows;
-  }
-
-  function bandLine(doc) {
-    var sg = (doc && doc.sidegrade) || {};
-    if (typeof sg.abs !== "number" || typeof sg.pct !== "number") { return ""; }
-    return "About the same within " + pointsText(sg.abs) + " or " + P.num(sg.pct) +
-      "% of your item's score.";
-  }
-
-  function weightPager() {
-    if (weightsBar) { return weightsBar; }
-    var count = el("span", "al-pager-count");
-    var mk = function (text, label, step) {
-      var b = el("button", "al-pager-btn", text);
-      b.type = "button";
-      b.setAttribute("aria-label", label);
-      b.addEventListener("click", function () {
-        if (b.getAttribute("aria-disabled") === "true") { return; }
-        weightsPageAt += step;
-        showWeightPage();
-      });
-      return b;
-    };
-    weightsBar = { count: count, prev: mk("Prev", "Previous page of stat weights", -1),
-      next: mk("Next", "Next page of stat weights", 1) };
-    $("weights-pager").replaceChildren(count, weightsBar.prev, weightsBar.next);
-    return weightsBar;
-  }
-
-  /* One page of the weight rows; it changes on a press, a new stat list
-     or a size class change, never by itself. */
-  function showWeightPage() {
-    var items = $("weights-list").querySelectorAll("li");
-    var size = WEIGHT_PAGE[sizeClass() === "compact" ? "compact" : "full"];
-    var pages = Math.max(1, Math.ceil(items.length / size));
-    weightsPageAt = Math.min(Math.max(0, weightsPageAt), pages - 1);
-    var from = weightsPageAt * size;
-    Array.prototype.forEach.call(items, function (li, i) {
-      li.hidden = i < from || i >= from + size;
-    });
-    var bar = weightPager();
-    bar.count.textContent = pages > 1
-      ? (from + 1) + "-" + Math.min(items.length, from + size) + " of " + items.length : "";
-    bar.prev.hidden = bar.next.hidden = pages < 2;
-    [[bar.prev, weightsPageAt > 0], [bar.next, weightsPageAt < pages - 1]].forEach(function (p) {
-      if (p[1]) { p[0].removeAttribute("aria-disabled"); } else { p[0].setAttribute("aria-disabled", "true"); }
-    });
-  }
-
-  /* Update the rows in place when the stat list is the same, so focus and
-     a value being typed survive a save; rebuild only when stats were added
-     or removed, then put focus back on the same stat (on its page). */
-  function fillWeights(doc) {
-    weightsDoc = doc;
-    var rows = T.weightRows(doc);
-    var inputs = $("weights-list").querySelectorAll("input[data-key]");
-    var same = inputs.length === rows.length && rows.every(function (r, i) {
-      return inputs[i].getAttribute("data-key") === r.key;
-    });
-    fillBand(doc);
-    var changed = changedRows(doc);
-    linkPager("weights-changed", "changed weights", CHANGED_ROWS, {
-      rows: (changed.length ? changed : ["Every weight is at its default."]).map(textRow),
-      text: function (r) { return r.text; }
-    });
-    setLine($("weights-band-line"), bandLine(doc));
-    if (same) {
-      rows.forEach(function (r, i) {
-        if (inputs[i] !== document.activeElement) { inputs[i].value = String(r.weight); }
-      });
-      return;
-    }
-    var focusKey = document.activeElement && document.activeElement.getAttribute
-      ? document.activeElement.getAttribute("data-key") : null;
-    var frag = document.createDocumentFragment();
-    rows.forEach(function (r, i) {
-      var li = el("li");
-      var id = "w-" + i;
-      var lab = el("label", "", r.label);
-      lab.htmlFor = id;
-      lab.setAttribute("title", r.label);
-      var inp = el("input");
-      inp.type = "number";
-      inp.step = "any";
-      inp.id = id;
-      inp.value = String(r.weight);
-      inp.setAttribute("data-key", r.key);
-      inp.setAttribute("inputmode", "decimal");
-      li.appendChild(lab);
-      li.appendChild(inp);
-      frag.appendChild(li);
-    });
-    $("weights-list").replaceChildren(frag);
-    var all = $("weights-list").querySelectorAll("input[data-key]");
-    var back = focusKey ? Array.prototype.find.call(all, function (inp) {
-      return inp.getAttribute("data-key") === focusKey;
-    }) : null;
-    if (back) {
-      weightsPageAt = Math.floor(Array.prototype.indexOf.call(all, back) /
-        WEIGHT_PAGE[sizeClass() === "compact" ? "compact" : "full"]);
-    }
-    showWeightPage();
-    if (back) { back.focus(); }
-  }
-
-  /* Reset (the card's Reset page, one confirm click): the defaults the
-     core sent with the weights, saved as one PUT. */
-  function resetWeights() {
-    var defs = weightsDoc && weightsDoc.defaults;
-    if (!defs || weightsBusy) { return; }
-    weightsBusy = true;
-    $("weights-status").textContent = "Saving...";
-    api("PUT", "/api/weights", { weights: defs.weights, sidegrade: defs.sidegrade })
-      .then(function (doc) {
-        fillWeights(doc);
-        $("weights-status").textContent = "Back to the defaults.";
-        showCardPage($("weightsbox"), "main", cardHeading($("weightsbox")));
-      }).catch(function () {
-        $("weights-status").textContent = "Not reset. Try again.";
-      }).then(function () { weightsBusy = false; });
-  }
-
-  function fillBand(doc) {
-    var sg = (doc && doc.sidegrade) || {};
-    [["weights-abs", sg.abs], ["weights-pct", sg.pct]].forEach(function (p) {
-      if ($(p[0]) !== document.activeElement) {
-        $(p[0]).value = p[1] === undefined ? "" : String(p[1]);
-      }
-    });
-  }
-
-  function loadWeights() {
-    api("GET", "/api/weights").then(fillWeights).catch(function () {
-      $("weights-status").textContent = "Can't load the weights. Is AshLight running?";
-    });
-  }
-
-  function saveWeights(e) {
-    if (weightsBusy) { weightsAgain = true; return; }
-    var rows = [];
-    Array.prototype.forEach.call($("weights-list").querySelectorAll("input[data-key]"),
-      function (inp) { rows.push({ key: inp.getAttribute("data-key"), value: inp.value }); });
-    var nk = $("weights-new-key").value.trim();
-    var nv = $("weights-new-value").value;
-    var numOk = nv !== "" && isFinite(parseFloat(nv));
-    var adding = !!nk && numOk;
-    var target = e && e.target;
-    if ((nk || nv !== "") && !adding &&
-        (target === $("weights-new-key") || target === $("weights-new-value"))) {
-      // half a new row: wait for the other field, save nothing yet
-      $("weights-status").textContent = nk ? "Add the points to add this stat."
-                                           : "Add the stat name to add these points.";
-      return;
-    }
-    if (adding) { rows.push({ key: nk, value: nv }); }
-    weightsBusy = true;
-    $("weights-status").textContent = "Saving...";
-    api("PUT", "/api/weights", T.weightsDoc(rows, $("weights-abs").value, $("weights-pct").value))
-      .then(function (doc) {
-        fillWeights(doc);
-        if (adding) {
-          $("weights-new-key").value = "";
-          $("weights-new-value").value = "";
-        }
-        $("weights-status").textContent = snap && snap.eval
-          ? "Saved. The last item was checked again." : "Saved.";
-      }).catch(function () {
-        $("weights-status").textContent = "Not saved. Check that each value is a number, then try again.";
-      }).then(function () {
-        weightsBusy = false;
-        if (weightsAgain) { weightsAgain = false; saveWeights(); }
-      });
-  }
-
   /* ---- DATA-NINJA-UI / PRICE-1-UI (decision 0016): the one web-data
      opt-in, poe.ninja currency values and the last price check. Rates are
      polled from the local core every few minutes (the core itself asks
@@ -770,118 +477,21 @@
   var P = window.ALPrices; // web/prices.js: pure view helpers
   var RATES_POLL_MS = 5 * 60 * 1000;
   var ratesDoc = null;
-  var webOn = false;
-  var webBusy = false;
   var ratesAgain = null;
   var priceShown = null;
 
-  var webDoc = null; // DATA-LEAGUE-PICKER-UI: the last full GET / POST /api/web-data answer
+  /* TEST-WEB-PANELS-B: the web data switch, the contact field and the
+     league picker live in web/panels/webdata.js. On its wire that panel
+     fills this link with fill(doc), saved(doc) and state() (on, busy, doc),
+     so the rates below follow the switch without owning it. */
+  var webLink = {};
 
-  /* The switch, the contact field (DATA-CONTACT-UI: shown only until a
-     contact is set; never prefilled) and the league picker. A partial doc
-     (only web_data, from /api/rates) leaves the field and the picker. */
-  function fillWebData(doc) {
-    var v = P.webDataView(doc);
-    webOn = v.on;
-    $("webdata-on").checked = v.on;
-    if (v.contact.show !== null) { $("webdata-contact-row").hidden = !v.contact.show; }
-    if (doc && Array.isArray(doc.leagues)) {
-      webDoc = doc;
-      var lv = P.leagueView(doc);
-      var sel = $("webdata-league");
-      sel.textContent = "";
-      lv.options.forEach(function (o) {
-        var opt = document.createElement("option");
-        opt.value = o.value;
-        opt.textContent = o.text;
-        sel.appendChild(opt);
-      });
-      sel.value = lv.selected;
-      $("webdata-league-note").textContent = lv.from;
-      $("webdata-league-row").hidden = !lv.show;
-      if (ratesDoc) { renderRates(); }
-    }
-    return v;
+  function webState() {
+    return typeof webLink.state === "function" ? webLink.state() : { on: false, busy: false, doc: null };
   }
 
-  function loadWebData() {
-    api("GET", "/api/web-data").then(function (doc) {
-      $("webdata-status").textContent = fillWebData(doc).status;
-      renderPrice(snap ? snap.price : null, true);
-    }).catch(function () {
-      $("webdata-status").textContent = "Can't load the web data setting. Is AshLight running?";
-    });
-  }
-
-  /* After a saved web-data choice (the Settings switch or the
-     TC-LINK-RECOVER confirm): the switch, its status and the prices. */
   function webDataSaved(doc) {
-    fillWebData(doc);
-    $("webdata-status").textContent = P.savedText(webOn, doc);
-    renderPrice(snap ? snap.price : null, true);
-    loadRates();
-  }
-
-  /* DATA-CONTACT-UI: the Save click (the form's submit). The value goes
-     only to POST /api/web-data {contact}; the answer says contact_set,
-     never the value. The field is cleared after a save; a refused value
-     stays so the player can fix it. */
-  function saveContact() {
-    var box = $("webdata-contact");
-    var value = box.value.trim();
-    if (webBusy) { return; }
-    if (!value) {
-      $("webdata-status").textContent = "Type a contact first, then click Save.";
-      return;
-    }
-    webBusy = true;
-    $("webdata-status").textContent = "Saving...";
-    api("POST", "/api/web-data", { contact: value }).then(function (doc) {
-      box.value = "";
-      fillWebData(doc);
-      $("webdata-status").textContent = P.contactSavedText(doc);
-      renderPrice(snap ? snap.price : null, true);
-      loadRates();
-    }).catch(function (e) {
-      $("webdata-status").textContent = e && e.message === "HTTP 400"
-        ? P.CONTACT_REFUSED : "Not saved. Try again.";
-    }).then(function () { webBusy = false; });
-  }
-
-  /* DATA-LEAGUE-PICKER-UI: a pick saves at once (POST /api/web-data
-     {league}; "" follows poe.ninja's current league again). Makes no
-     request to poe.ninja: the next due price update uses it. */
-  function saveLeague() {
-    var sel = $("webdata-league");
-    if (webBusy) { return; }
-    webBusy = true;
-    $("webdata-status").textContent = "Saving...";
-    api("POST", "/api/web-data", { league: sel.value }).then(function (doc) {
-      fillWebData(doc);
-      $("webdata-status").textContent = P.leagueSavedText(doc);
-    }).catch(function (e) {
-      sel.value = P.leagueView(webDoc).selected; // back to what is really saved
-      $("webdata-status").textContent = e && e.message === "HTTP 400"
-        ? P.LEAGUE_REFUSED : "Not saved. Try again.";
-    }).then(function () { webBusy = false; });
-  }
-
-  /* The form's change event: the switch saves at once, a league pick
-     saves at once, typing in the contact field waits for Save. */
-  function saveWebData(e) {
-    var target = e && e.target;
-    if (target && target.id === "webdata-league") { saveLeague(); return; }
-    if (target && target.id === "webdata-contact") { return; }
-    if (webBusy) { return; }
-    var want = $("webdata-on").checked;
-    webBusy = true;
-    $("webdata-status").textContent = "Saving...";
-    api("POST", "/api/web-data", { enabled: want }).then(function (doc) {
-      webDataSaved(doc);
-    }).catch(function () {
-      $("webdata-on").checked = webOn; // back to what is really saved
-      $("webdata-status").textContent = "Not saved. Try again.";
-    }).then(function () { webBusy = false; });
+    if (typeof webLink.saved === "function") { webLink.saved(doc); }
   }
 
   /* PLAY-TD-19D-ITEMS-GRID (F-056): the Prices card is one list that
@@ -901,7 +511,7 @@
   }
 
   function renderRates() {
-    var v = P.ratesView(ratesDoc, webDoc);
+    var v = P.ratesView(ratesDoc, webState().doc);
     setPill($("rates-pill"), v.pill.state, v.pill.glyph, v.pill.word);
     // PLAY-TD-21A-SETTINGS-RAIL: the same state beside the web data switch
     setPill($("book-state"), v.pill.state, v.pill.glyph, v.pill.word);
@@ -926,8 +536,10 @@
     if (ratesAgain) { clearTimeout(ratesAgain); ratesAgain = null; }
     api("GET", "/api/rates").then(function (doc) {
       ratesDoc = doc;
-      if (typeof doc.web_data === "boolean" && !webBusy && doc.web_data !== webOn) {
-        fillWebData({ web_data: doc.web_data });
+      var web = webState();
+      if (typeof doc.web_data === "boolean" && !web.busy && doc.web_data !== web.on &&
+          typeof webLink.fill === "function") {
+        webLink.fill({ web_data: doc.web_data });
       }
       renderRates();
       renderPrice(snap ? snap.price : null, true);
@@ -968,51 +580,6 @@
     paintEvalRows();
   }
 
-  /* ---- GFX-ADVISOR: read on the first open of the panel (a click on the
-     dashboard, so the game is not focused then); kept for the session. */
-  var gfxLoaded = false;
-
-  function renderGfx(doc) {
-    var v = T.gfxView(doc);
-    var hw = document.createDocumentFragment();
-    v.hardware.forEach(function (h) {
-      var row = el("div", "kv-row");
-      row.appendChild(el("dt", "", h.label));
-      row.appendChild(el("dd", "", h.value));
-      hw.appendChild(row);
-    });
-    $("gfx-hw").replaceChildren(hw);
-    $("gfx-tier").textContent = v.ok ? v.tierText : v.error;
-    var warn = document.createDocumentFragment();
-    v.warnings.forEach(function (w) { warn.appendChild(el("li", "", w)); });
-    $("gfx-warn").replaceChildren(warn);
-    var list = document.createDocumentFragment();
-    v.settings.forEach(function (s) {
-      var li = el("li");
-      var line = el("p", "gfx-line");
-      line.appendChild(el("span", "gfx-name", s.setting));
-      line.appendChild(el("strong", "gfx-value", s.value));
-      li.appendChild(line);
-      li.appendChild(el("p", "muted gfx-why", s.why.charAt(0).toUpperCase() + s.why.slice(1) + "."));
-      list.appendChild(li);
-    });
-    $("gfx-list").replaceChildren(list);
-    $("gfx-body").hidden = false;
-  }
-
-  function openGfx() {
-    if (!$("gfx").open || gfxLoaded) { return; }
-    gfxLoaded = true;
-    $("gfx-status").textContent = "Checking this computer's hardware...";
-    api("GET", "/api/gfx").then(function (doc) {
-      renderGfx(doc);
-      $("gfx-status").textContent = "";
-    }).catch(function () {
-      gfxLoaded = false;
-      $("gfx-status").textContent = "Can't check right now. Is AshLight running? Close and open this panel to try again.";
-    });
-  }
-
   /* ---- TEST-WEB-REGISTRY (F-135): the dashboard panels. Each paint, tick
      and wire that render(), tick() and start() called in one sequence is
      one registered entry; the explicit order keeps today's paint order and
@@ -1024,13 +591,21 @@
   /* TEST-WEB-PANELS-A: what a panel file in web/panels/ reaches of this
      page. Set here, before start(), and read by a panel on its first
      paint or wire (web/panels/build.js). The snapshot is a getter: snap
-     changes on every push. */
+     changes on every push.
+     TEST-WEB-PANELS-B: the settings-side panels (web/panels/layout.js,
+     weights.js, webdata.js, gfx.js) also get sizeClass, the rates helpers
+     (getRatesDoc, renderRates, renderPrice, loadRates), the web data link
+     (webLink, above) and onConnect(fn): a panel's first read, run by
+     connect() in wire order, only while the page has its token. */
   A.host = {
     $: $, api: api, token: token, getSnap: function () { return snap; },
     serverNow: serverNow, el: el, linkOut: linkOut, setLine: setLine,
     linkPager: linkPager, textPager: textPager, cardShown: cardShown,
     cardHome: cardHome, setCardHome: setCardHome, showCardPage: showCardPage,
-    cardHeading: cardHeading, cardOpener: cardOpener, webDataSaved: webDataSaved
+    cardHeading: cardHeading, cardOpener: cardOpener, webDataSaved: webDataSaved,
+    sizeClass: sizeClass, getRatesDoc: function () { return ratesDoc; },
+    renderRates: renderRates, renderPrice: renderPrice, loadRates: loadRates,
+    webLink: webLink, onConnect: onConnect
   };
   A.register({
     name: "build",
@@ -1217,20 +792,10 @@
       if (window.ALZoneGuide) { window.ALZoneGuide.paint(document, s); }
     }
   });
-  // the tools and settings that only wire the player's clicks
-  A.register({
-    name: "layout",
-    order: 200,
-    wire: function () {
-      $("layout-form").addEventListener("change", saveLayout);
-      $("layout-form").addEventListener("submit", function (e) { e.preventDefault(); });
-      ["layout-scale", "layout-opacity"].forEach(function (id) {
-        $(id).addEventListener("input", function () {
-          $(id + "-out").textContent = Math.round(parseFloat($(id).value) * 100) + "%";
-        });
-      });
-    }
-  });
+  // the tools and settings that only wire the player's clicks.
+  // TEST-WEB-PANELS-B: "layout" (200), "weights" (220), "gfx" (230) and
+  // "webdata" (250) register from their web/panels/ files with the same
+  // names and orders, so the page keeps today's wire order.
   A.register({
     name: "filter",
     order: 210,
@@ -1240,35 +805,9 @@
     }
   });
   A.register({
-    name: "weights",
-    order: 220,
-    wire: function () {
-      $("weights-form").addEventListener("change", saveWeights);
-      $("weights-form").addEventListener("submit", function (e) { e.preventDefault(); });
-      $("weights-reset").addEventListener("click", resetWeights);
-      window.addEventListener("resize", showWeightPage);
-    }
-  });
-  A.register({
-    name: "gfx",
-    order: 230,
-    wire: function () { $("gfx").addEventListener("toggle", openGfx); }
-  });
-  A.register({
     name: "restart-overlay",
     order: 240,
     wire: function () { wireRestartOverlay(); }
-  });
-  A.register({
-    name: "webdata",
-    order: 250,
-    wire: function () {
-      // TC-LINK-RECOVER: Settings shows the one opt-in sentence the confirm shows
-      $("webdata-sentence").textContent = T.WEB_DATA_OPT_IN;
-      $("webdata-form").addEventListener("change", saveWebData);
-      // DATA-CONTACT-UI: Save (or Enter in the contact field) submits the form
-      $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); saveContact(); });
-    }
   });
   A.register({
     name: "settingsio",
@@ -1476,14 +1015,22 @@
     }).catch(function () { /* keep the last line; the next connect retries */ });
   }
 
+  /* TEST-WEB-PANELS-B: a panel's first read (host.onConnect), kept in the
+     order the panels wired and run by connect() where it read them itself */
+  var connectReads = [];
+
+  function onConnect(fn) {
+    if (typeof fn === "function") { connectReads.push(fn); }
+  }
+
   function connect() {
     if (!token) {
       setLink("notoken");
       return;
     }
-    loadLayout();
-    loadWeights();
-    loadWebData();
+    // TEST-WEB-PANELS-B: the overlay layout, the stat weights and the web
+    // data setting, read by their panels (onConnect, in wire order)
+    connectReads.forEach(function (fn) { fn(); });
     loadRates();
     loadDataCredit();
     api("GET", "/api/state").then(render).catch(function () {
