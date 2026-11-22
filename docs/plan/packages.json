@@ -20416,20 +20416,30 @@
     "F-150",
     "AUTO-19"
    ],
-   "files": [],
+   "files": [
+    "tools/watch_gate.py",
+    "tests/test_watch_gate.py",
+    "docs/decisions/0069-upstream-watch-frame.md"
+   ],
    "new_files": [
     "tools/watch_sources/ci_issues.py",
     "ops/loop/watch_rows/ci.json",
     "tests/test_watch_ci_issues.py"
    ],
-   "integrator_edits": [],
+   "integrator_edits": [
+    {
+     "file": "CLAUDE.md",
+     "change": "Append to the 'Upstream watcher frame' Settled entry, before its Reverses-if: Amended 2026-11-21 (LOOP-CI-ISSUES, adjudicator ruling): METADATA_TAILS gains /issues, /actions/workflows/watch.yml and /actions/workflows/watch.yml/runs, read-only repository metadata on api.github.com for the CI issue protocol (decision 0076 item 6); other /actions/ and /issues/ sub-paths stay refused. Reverses if: GitHub treats these as non-metadata, or the operator limits watchers to the earlier tails."
+    }
+   ],
    "tests": [
     "tests/test_watch_ci_issues.py::test_one_valid_key_and_one_forged_issue_file_exactly_one_row",
     "tests/test_watch_ci_issues.py::test_body_with_extra_text_is_ignored",
     "tests/test_watch_ci_issues.py::test_disabled_inactivity_switches_the_tick_to_failover",
-    "tests/test_watch_ci_issues.py::test_seven_days_of_failover_file_watch_broken_ci_once"
+    "tests/test_watch_ci_issues.py::test_seven_days_of_failover_file_watch_broken_ci_once",
+    "tests/test_watch_gate.py::test_ci_issue_tails_pass_and_other_actions_paths_are_refused (new: /issues and the two watch.yml tails pass; /actions/runs/1/logs, /actions/artifacts, /actions/secrets and /issues/1/comments stay refused)"
    ],
-   "accept": "`python -m pytest -q tests/test_watch_ci_issues.py tests/test_watch_rows.py` passes.",
+   "accept": "`python -m pytest -q tests/test_watch_ci_issues.py tests/test_watch_rows.py tests/test_watch_gate.py` passes.",
    "zero_click": "Unattended: the watch survives a dev host that is off, and the dev loop takes over by itself when CI goes quiet.",
    "size": "M",
    "est_min": 50,
@@ -20437,7 +20447,8 @@
     "AUTO-19",
     "LOOP-WATCH-ROWS",
     "LOOP-WATCH-FILE",
-    "AUTO-08"
+    "AUTO-08",
+    "LOOP-WATCH-GATE"
    ],
    "serial_group": "",
    "agent": "general-purpose",
@@ -20446,7 +20457,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Split out of AUTO-19 by the verifier (size). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. ci_issues reads the open issues labelled al-watch once per 6 h and the workflow state once a day through the documented GitHub API; the address comes from the checkout's own remote, never a tracked constant; only issues by the workflow's bot account whose body is exactly 'AL-WATCH key=<source>:<key> v=1' count. Failover: when the workflow is disabled, inactive or 48 h silent, the ci-home sources run on the dev loop again; 7 days of failover file WATCH-BROKEN-CI once (health template of AUTO-08). Gated on web_data like every new source. Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped). Placement ruled by the adjudicator at the wave 18 start (session 16): wave 22, not 18, because dep AUTO-08 is in wave 21 and plan_check needs every dep in a strictly earlier wave.",
+   "notes": "Split out of AUTO-19 by the verifier (size). Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only, except the three gate files listed in files: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. ci_issues reads the open issues labelled al-watch once per 6 h and the workflow state once a day through the documented GitHub API; the address comes from the checkout's own remote, never a tracked constant; only issues by the workflow's bot account whose body is exactly 'AL-WATCH key=<source>:<key> v=1' count. Failover: when the workflow is disabled, inactive or 48 h silent, the ci-home sources run on the dev loop again; 7 days of failover file WATCH-BROKEN-CI once (health template of AUTO-08). Gated on web_data like every new source. Moved from wave 99 at the wave 18 start (session 16): the unblock condition read true (origin is the private repository, gh repo view succeeds, GP-09 flipped). Placement ruled by the adjudicator at the wave 18 start (session 16): wave 22, not 18, because dep AUTO-08 is in wave 21 and plan_check needs every dep in a strictly earlier wave. Ruling 2026-11-21 (session 18, wave 22): watch_gate METADATA_TAILS gains exactly /issues, /actions/workflows/watch.yml and /actions/workflows/watch.yml/runs, with a dated amendment line in decision 0069 written by this package (text in integrator_edits).",
    "wave": 22,
    "owner": "session",
    "tier": "P2",
@@ -20499,7 +20510,8 @@
     "BUILD-GEAR-EMPTY-COPY"
    ],
    "files": [
-    "web/panels/build.js"
+    "web/panels/build.js",
+    "tests/test_build_item_text.py"
    ],
    "new_files": [],
    "integrator_edits": [],
@@ -20521,7 +20533,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. PLAY-TD-19E-ITEM-TEXT review D-3 (nit). Design: run the design-reviewer agent on the diff and return its reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P4: new wave-22 package, web/panels/build.js unowned in wave 22.",
+   "notes": "Tier P3. PLAY-TD-19E-ITEM-TEXT review D-3 (nit). Design: run the design-reviewer agent on the diff and return its reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P4: new wave-22 package, web/panels/build.js unowned in wave 22. Ruling 2026-11-21 (session 18, wave 22, OVL-ACT-CARD precedent): tests/test_build_item_text.py joins files, since the tests field names its empty-gear sentence assertion.",
    "wave": 22,
    "owner": "session",
    "tier": "P3",
