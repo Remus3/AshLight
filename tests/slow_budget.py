@@ -41,9 +41,10 @@ TAG = "slow-test budget"
 
 # Tests marked slow here instead of in their own file (this package may edit
 # only its own files): every test over its ceiling in the gated survey of
-# 2026-11-21 (12 workers: phase 1 wall 104 s, phase 2 55 s), plus unmarked
-# ones over 75 percent of the parallel ceiling (2.25 s), so a loaded box does
-# not flap them. Key: a node id, a node id without its [params], or a test
+# 2026-11-21 (12 workers: phase 1 wall 104 s, phase 2 55 s; and a serial
+# run of 5,168 tests in 529 s), plus unmarked ones over 75 percent of their
+# ceiling in either run (2.25 s parallel, 1.1 s serial), so a loaded box
+# does not flap them. Key: a node id, a node id without its [params], or a test
 # file (every test in it). Value: (unscaled ceiling in seconds, reason).
 # A test that gets faster leaves the table; tests/test_slow_budget.py checks
 # that every key still names a live test.
@@ -56,7 +57,7 @@ SLOW_TABLE = {
     "tests/test_fullstack.py::test_fullstack_calc_on_leg":
         (HEAVY_S, "live PoB calc through a real core"),
     "tests/test_dash_perf.py::test_dashboard_elements_task_time_and_heap":
-        (SLOW_S, "drives a real browser page and measures its heap"),
+        (HEAVY_S, "drives a real browser page and measures its heap"),
     "tests/test_logshapes.py::test_file_text_under_64_kb_after_1000000_lines":
         (SLOW_S, "feeds one million log lines"),
     "tests/test_test_select.py::test_the_last_20_merge_commits_select_every_test_file_they_changed":
@@ -79,8 +80,8 @@ SLOW_TABLE = {
         (SLOW_S, "runs the real pre-push hook against git repositories"),
     "tests/test_math_skill_split.py::test_live_calc_outputs_for_build_view":
         (SLOW_S, "live PoB calc"),
-    "tests/test_http_security.py::test_events_tap_only_in_a_source_checkout":
-        (SLOW_S, "starts real cores"),
+    "tests/test_http_security.py":
+        (SLOW_S, "real cores, cross-site probes and SSE streams"),
     "tests/test_loop_wave_hold.py::test_two_holders_of_the_merge_lock_run_one_after_the_other":
         (SLOW_S, "two real processes take the merge lock in turn"),
     "tests/test_tc_press_staged.py::test_first_card_and_reply_within_budget_with_a_slow_calc":
@@ -91,8 +92,8 @@ SLOW_TABLE = {
         (SLOW_S, "runs real pytest children"),
     "tests/test_leak_sweep.py::test_tracked_tree_is_clean_structurally":
         (SLOW_S, "sweeps every tracked file"),
-    "tests/test_capture_helper.py::test_writes_png_of_a_tab_and_of_the_overlay_page":
-        (SLOW_S, "captures pages in a real browser"),
+    "tests/test_capture_helper.py":
+        (SLOW_S, "captures pages of a demo core in a real browser"),
     "tests/test_probe.py":
         (SLOW_S, "starts and stops a real core"),
     "tests/test_structure.py::test_planted_text_module_outside_the_gate_fails":
@@ -103,6 +104,20 @@ SLOW_TABLE = {
         (SLOW_S, "real socket transport with size caps"),
     "tests/test_http_backlog.py::test_the_old_backlog_of_5_refuses_the_same_burst":
         (SLOW_S, "a real connection burst"),
+    "tests/test_tc_code_api.py::test_rejected_body_drain_is_bounded":
+        (SLOW_S, "waits out a bounded body drain on a real server"),
+    "tests/test_http_robust.py::test_slow_sse_reader_is_dropped_and_does_not_stall_others":
+        (SLOW_S, "waits until a real slow SSE reader is dropped"),
+    "tests/test_run_health_ps.py::test_fake_listener_gets_no_token_from_run_ps1":
+        (SLOW_S, "runs run.ps1 under Windows PowerShell"),
+    "tests/test_fullstack.py::test_fullstack_session_through_http_and_sse":
+        (SLOW_S, "a real core through HTTP and SSE"),
+    "tests/test_install_selftest.py::test_wrong_version_answer_fails_moves_and_reports":
+        (SLOW_S, "a real self-test start that fails and moves"),
+    "tests/test_oauthlisten.py::test_closes_after_the_timeout_with_no_request":
+        (SLOW_S, "waits out the listener timeout"),
+    "tests/test_soak.py::test_dropped_sse_clients_free_their_slots_promptly":
+        (SLOW_S, "waits for real SSE slots to free"),
 }
 
 
