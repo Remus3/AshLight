@@ -17,6 +17,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / ".githooks" / "pre-push"
+# Files a hook run needs in a temp repo; the Repo fixture of
+# tests/test_dependabot_reapply.py lists the same ones (checked below).
+HOOK_FILES = ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py",
+              "tools/push_guard.py", "tools/release.py", "tools/rel_publish.py",
+              "tools/rel_build.py", "tools/rel_version.py", "tools/rel_readback.py",
+              "server/al/paths.py")
 OPERATOR = ("Op Erator", "op@example.com")
 REFUSED = "pre-push: refused"
 # Synthetic needles only; the hook test never spells a real one.
@@ -74,10 +80,7 @@ class World:
         shutil.copytree(ROOT / ".githooks", hooks)
         for p in hooks.iterdir():
             p.chmod(0o755)
-        for rel in ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py",
-                    "tools/push_guard.py", "tools/release.py", "tools/rel_publish.py",
-                    "tools/rel_build.py", "tools/rel_version.py", "tools/rel_readback.py",
-                    "server/al/paths.py"):
+        for rel in HOOK_FILES:
             dst = self.work / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / rel, dst)
@@ -514,3 +517,9 @@ def test_branch_push_ignores_the_stage_check(world):
     r = world.push("main")
     assert r.returncode == 0, r.stderr
     assert "prepush-check" not in r.stderr
+
+
+def test_dependabot_fixture_copies_the_same_hook_files():
+    text = (ROOT / "tests" / "test_dependabot_reapply.py").read_text(encoding="utf-8")
+    missing = [rel for rel in HOOK_FILES if '"%s"' % rel not in text]
+    assert not missing, "tests/test_dependabot_reapply.py Repo fixture lacks %s" % missing
