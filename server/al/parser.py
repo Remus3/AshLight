@@ -38,19 +38,21 @@ INSTANCE = re.compile(r"^Connecting to instance server at ([^\s:]+):(\d+)\s*$")
 ENTERED = re.compile(r"^You have entered (.+?)\.?\s*$")
 # <Name> (<Class>) is now level <N> - EE2 client strings (MIT).
 LEVEL_UP = re.compile(r"^(.+) \((.+)\) is now level (\d+)\s*$")
-# <Name> has been slain. / has committed suicide. - UNVERIFIED for PoE2
-# (ledger: death, death.suicide).
+# <Name> has been slain. - VERIFIED live 2026-11-21 (ledger: death, masked
+# shape "<name> has been slain."; RUN-LIVE1-FIXTURES). <Name> has committed
+# suicide. - UNVERIFIED for PoE2 (ledger: death.suicide).
 DEATH = re.compile(r"^(.+?) has (been slain|committed suicide)\.?\s*$")
 # AFK mode is now ON. <autoreply> - PoE2 sample seen; OFF form inferred
 # (ledger: afk.off).
 AFK = re.compile(r"^AFK mode is now (ON|OFF)\.?\s*(.*)$")
 # DND mode is now ON/OFF - wording UNVERIFIED (ledger: dnd.on, dnd.off).
 DND = re.compile(r"^DND mode is now (ON|OFF)\.?\s*(.*)$")
-# <Name> has joined / has left the area. - UNVERIFIED for PoE2 (ledger:
-# joined, left).
+# <Name> has joined / has left the area. - VERIFIED live 2026-11-21 (ledger:
+# joined, left; RUN-LIVE1-FIXTURES).
 JOINED = re.compile(r"^(.+?) has joined the area\.?\s*$")
 LEFT = re.compile(r"^(.+?) has left the area\.?\s*$")
-# Trade accepted. - PoE2 sample seen.
+# Trade accepted. - VERIFIED live 2026-11-21 (ledger: trade_accepted;
+# RUN-LIVE1-FIXTURES).
 TRADE_ACCEPTED = re.compile(r"^Trade accepted\.?\s*$")
 # Trade cancelled. - seen in a live PoE2 log (LIVE-1, 2026-11-16).
 TRADE_CANCELLED = re.compile(r"^Trade cancelled\.?\s*$")
