@@ -17,6 +17,12 @@ A sentence literal is a heuristic: a string constant or f-string that is not
 a docstring, starts with a capital letter, has at least three words, is
 mostly letters and spaces and has no line break inside. It reads source
 files only (ast); it imports nothing from server/ and reads no game data.
+
+Rule 3 (copy sheets, TEST-COPY-SHEETS): every module under server/al/text/
+except common.py (and the package's __init__.py) has a copy sheet of the
+same name under docs/design/copy/, every sheet names a text module, and
+design 0001 section 9 links each sheet; the sheets hold the templates, the
+rules stay in design 0001.
 """
 import ast
 import graphlib
@@ -291,7 +297,38 @@ def check_text(root, exempt):
     return out
 
 
+COPY_DIR = "docs/design/copy"
+DESIGN_0001 = "docs/design/0001-design-system.md"
+COPY_SKIP = ("__init__", "common")
+
+
+def check_copy_sheets(root):
+    """Rule 3: one copy sheet per text module, each linked from section 9."""
+    text_dir = root / "server" / "al" / "text"
+    mods = {p.stem for p in text_dir.glob("*.py") if p.stem not in COPY_SKIP}
+    sheet_dir = root / COPY_DIR
+    sheets = ({p.stem for p in sheet_dir.glob("*.md")}
+              if sheet_dir.is_dir() else set())
+    doc = (root / DESIGN_0001).read_text(encoding="ascii")
+    s9 = doc.split("## 9. ", 1)[1].split("\n## 10. ", 1)[0]
+    out = []
+    for m in sorted(mods - sheets):
+        out.append("server/al/text/%s.py: no copy sheet %s/%s.md"
+                   % (m, COPY_DIR, m))
+    for s in sorted(sheets - mods):
+        out.append("%s/%s.md: no text module server/al/text/%s.py"
+                   % (COPY_DIR, s, s))
+    for s in sorted(sheets & mods):
+        if "](copy/%s.md)" % s not in s9:
+            out.append("%s/%s.md: not linked from design 0001 section 9"
+                       % (COPY_DIR, s))
+    return out
+
+
 # -- the rules on the tree --------------------------------------------------
+
+def test_every_text_module_has_a_linked_copy_sheet():
+    assert check_copy_sheets(ROOT) == []
 
 def test_server_imports_have_no_cycle():
     assert check_cycles(ROOT, CYCLE_ALLOW) == []
@@ -392,3 +429,41 @@ def test_stale_cycle_allow_entry_fails(tmp_path):
     out = check_cycles(root, stale)
     assert out == ["server.al.num -> server.al.state: no longer a "
                    "module-level import, remove it from CYCLE_ALLOW"]
+
+
+def _copy_docs(root):
+    (root / "docs" / "design").mkdir(parents=True)
+    shutil.copytree(ROOT / COPY_DIR, root / COPY_DIR)
+    shutil.copy2(ROOT / DESIGN_0001, root / DESIGN_0001)
+
+
+def test_copy_sheet_guard_on_a_copy(tmp_path):
+    root = _copy(tmp_path)
+    _copy_docs(root)
+    assert check_copy_sheets(root) == []
+    # a new text module without a sheet fails
+    (root / "server" / "al" / "text" / "zz_new.py").write_text(
+        "X = 1\n", encoding="utf-8")
+    assert check_copy_sheets(root) == [
+        "server/al/text/zz_new.py: no copy sheet docs/design/copy/zz_new.md"]
+    # a sheet that section 9 does not link fails
+    (root / COPY_DIR / "zz_new.md").write_text("# zz\n", encoding="ascii")
+    assert check_copy_sheets(root) == [
+        "docs/design/copy/zz_new.md: not linked from design 0001 section 9"]
+    # an orphan sheet fails
+    (root / "server" / "al" / "text" / "zz_new.py").unlink()
+    assert check_copy_sheets(root) == [
+        "docs/design/copy/zz_new.md: no text module server/al/text/zz_new.py"]
+
+
+def test_copy_sheet_link_must_sit_in_section_9(tmp_path):
+    root = _copy(tmp_path)
+    _copy_docs(root)
+    doc = root / DESIGN_0001
+    text = doc.read_text(encoding="ascii")
+    s9 = text.split("## 9. ", 1)[1].split("\n## 10. ", 1)[0]
+    moved = s9.replace("](copy/price.md)", "]")
+    doc.write_text(text.replace(s9, moved) + "\n[x](copy/price.md)\n",
+                   encoding="ascii")
+    assert check_copy_sheets(root) == [
+        "docs/design/copy/price.md: not linked from design 0001 section 9"]

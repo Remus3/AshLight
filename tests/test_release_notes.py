@@ -205,6 +205,35 @@ def test_range_starts_at_the_previous_tag(history):
 
 
 @pytest.mark.git
+def test_count_since_last_tag(history):
+    assert rn.last_tag(root=history) == "v0.0.1"
+    n, day = rn.count(("v0.0.1", "HEAD"), root=history)
+    assert n == 3 and len(day) == 10 and day[4] == "-"
+    first = rn.collect(("v0.0.1", "HEAD"), root=history)[0][0]
+    want = _git(history, "log", "-1", "--format=%cs", first).strip()
+    assert day == want
+    proc = _run("--count", "--root", str(history))
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout == ("3 %s" % want) + chr(10)
+
+
+@pytest.mark.git
+def test_count_from_root_without_a_tag(tmp_path):
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    _commit(repo, "docs: start", text="# R" + chr(10))
+    assert rn.last_tag(root=repo) is None
+    assert rn.count((None, "HEAD"), root=repo) == (0, "")
+    _merge(repo, "w-a", "merge: A-ONE first (wave 1)")
+    _merge(repo, "w-b", "merge: B-TWO second (wave 1)")
+    n, day = rn.count((None, "HEAD"), root=repo)
+    assert n == 2 and len(day) == 10
+    proc = _run("--count", "--root", str(repo))
+    assert proc.returncode == 0 and proc.stdout.startswith("2 20")
+
+
+@pytest.mark.git
 def test_two_runs_give_the_same_bytes(history):
     a = rn.write("0.1.0", root=history).read_bytes()
     log_a = (history / rn.CHANGELOG_REL).read_bytes()
