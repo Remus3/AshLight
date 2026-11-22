@@ -120,7 +120,7 @@ def load_json(path):
 
 RETRY_TRIES = 3          # reads of one changed file on an OSError
 RETRY_GAP_S = 0.05       # pause between those reads (at most 0.1 s)
-SHARE_KEEP_S = 10.0      # a shared parsed document serves late joiners this long
+SHARE_KEEP_S = 10.0      # upper bound on keeping a shared parsed document
 
 
 def _stat_sig(path):
@@ -278,9 +278,10 @@ class SharedDoc:
     stat per get, one parse per change for every member whose table is
     behind, each member's value from its own from_doc. A bad file, or a
     from_doc that raises, keeps that member's last good copy only. The
-    parsed document is kept SHARE_KEEP_S for a member that joins late
-    (the core builds its caches one after another at start), then
-    dropped, so the parsed tree does not stay in memory."""
+    parsed document serves a member that joins late (the core builds its
+    caches one after another at start) only until the next get finds
+    every member current, or SHARE_KEEP_S, whichever comes first; then it
+    is dropped, so the parsed tree does not stay in memory (B5)."""
 
     _SHARES = weakref.WeakValueDictionary()
     _SHARES_LOCK = threading.Lock()
@@ -355,10 +356,12 @@ class SharedDoc:
                 m._stat_ok()
                 if m._sig != sig:
                     behind.append(m)
-            if behind and sig is None:
+            if not behind:
+                self._doc = None             # every table is current: drop it
+            elif sig is None:
                 for m in behind:
                     m._settle(None, None, None, False)
-            elif behind:
+            else:
                 doc, reason, transient = self._document(
                     sig, caller._sleep, caller.retry_gap_s)
                 for m in behind:

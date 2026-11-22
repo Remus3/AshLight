@@ -290,14 +290,20 @@ def test_shared_file_is_parsed_once_for_both_tables(tmp_path, monkeypatch):
     # one change: one parse refreshes both tables of the file
     _bump(areas, json.dumps({"G2_1": {"name": "Vastiri", "area_level": 20,
                                       "connections": ["G2_2"]}}))
+    share = table._share
     assert list(graph.get()) == ["G2_1"]
+    assert share is graph._share and share._doc is not None   # kept for joiners
     assert list(table.get()) == ["G2"]
     assert len(parsed) == 3
-    # the kept document is dropped once its keep time is over
-    share = table._share
-    assert share is graph._share and share._doc is not None
+    assert share._doc is None          # every table current: the tree is dropped
+    # a late joiner after the drop parses again (correct, just not shared)
+    assert list(zoneguide.graph_cache(areas).get()) == ["G2_1"]
+    assert len(parsed) == 4
+    # the keep time bounds a document nobody asked about again
+    _bump(areas, json.dumps({"G3_1": {"name": "Jungle", "area_level": 33}}))
+    assert list(table.get()) == ["G3"] and share._doc is not None
     share._clock = lambda: float("inf")
-    table.get()
+    share._drop_stale(share._doc_sig)
     assert share._doc is None
 
 
