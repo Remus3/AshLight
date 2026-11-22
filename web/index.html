@@ -34,6 +34,7 @@
 <script src="/web/pricewatch.js" defer></script>
 <script src="/web/settingsio.js" defer></script>
 <script src="/web/hotkeys.js" defer></script>
+<script src="/web/overlayparts.js" defer></script>
 <script src="/web/hints.js" defer></script>
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
@@ -823,6 +824,43 @@
             <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
           </label>
         </form>
+      </div>
+    </div>
+    <!-- OVL-PARTS-WEB (F-118, TD-17): what the overlay shows, beside the
+         layout form. web/overlayparts.js saves each change at once (POST
+         /api/overlay-layout, the core merges); its answer goes to
+         #parts-status, a plain line (no new live region). -->
+    <div class="rail-block">
+      <div id="overlay-parts" class="tool parts" role="group" aria-labelledby="parts-title">
+        <h4 id="parts-title" class="sub-h">Overlay shows</h4>
+        <p class="tool-row"><button id="parts-full" type="button" class="secondary"
+            aria-describedby="parts-preset-note">Full</button>
+          <button id="parts-cards" type="button" class="secondary"
+            aria-describedby="parts-preset-note">Cards only</button></p>
+        <p id="parts-preset-note" class="muted">Full turns every part on. Cards only keeps the
+          cards and turns the rest off.</p>
+        <div class="parts-grid">
+          <label class="check" for="part-zone"><input id="part-zone" type="checkbox"> Zone name</label>
+          <label class="check" for="part-timer"><input id="part-timer" type="checkbox"> Zone timer</label>
+          <label class="check" for="part-level"><input id="part-level" type="checkbox"> Level</label>
+          <label class="check" for="part-deaths"><input id="part-deaths" type="checkbox"> Deaths</label>
+          <label class="check" for="part-status"><input id="part-status" type="checkbox"> Status word</label>
+          <label class="check" for="part-trade"><input id="part-trade" type="checkbox"> Trade card</label>
+          <label class="check" for="part-item"><input id="part-item" type="checkbox"> Item check card</label>
+          <label class="check" for="part-moment"><input id="part-moment" type="checkbox"> Zone and act cards</label>
+          <label class="check" for="part-hint"><input id="part-hint" type="checkbox"> Key hint</label>
+        </div>
+        <p class="tool-row"><label class="check" for="parts-quiet-town"><input id="parts-quiet-town"
+          type="checkbox"> Hide the zone line in town and hideout</label></p>
+        <p class="tool-row"><label for="parts-zone-guide">Zone guide on the overlay</label>
+          <select id="parts-zone-guide">
+            <option value="entry">On entry</option>
+            <option value="always">Always</option>
+            <option value="never">Never</option>
+          </select></p>
+        <p class="tool-row"><button id="parts-sample" type="button" class="secondary"
+            aria-describedby="parts-status">Show a sample card for 10 s</button></p>
+        <p id="parts-status" class="muted"></p>
       </div>
     </div>
     <div class="rail-block">

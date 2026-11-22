@@ -667,3 +667,36 @@ def test_disabled_button_has_a_visible_style():
     for sel, body in _rules(_css(APP_CSS)):
         if "disabled" in sel:
             assert not re.search(r"opacity\s*:", body), ("no faded disabled state", sel)
+
+
+def test_overlay_shows_group_sits_beside_the_layout_form():
+    """OVL-PARTS-WEB (F-118, TD-17; plan 03 section 4, Overlay row): one
+    'Overlay shows' group in Settings, Overlay, after the layout form and
+    outside it (a switch never saves the position form) and before the key
+    fields; quiet buttons only (F-159); the status line is plain; every
+    player sentence keeps design 0001 section 8.1 (<= 20 words)."""
+    _, main = _main_order()
+    i = main.index('<section id="set-overlay"')
+    overlay = main[i:main.index("</section>", i)]
+    assert overlay.count('id="overlay-parts"') == 1
+    assert overlay.index("</form>") < overlay.index('id="overlay-parts"') \
+        < overlay.index('id="hotkeysbox"')
+    group = overlay[overlay.index('id="overlay-parts"'):overlay.index('id="hotkeysbox"')]
+    for b in re.findall(r"<button\b[^>]*>", group):
+        assert 'class="secondary"' in b, b
+    assert re.search(r'<p id="parts-status" class="muted"></p>', group)
+    note = re.search(r'<p id="parts-preset-note" class="muted">([^<]+)</p>', group).group(1)
+    js = srcpaths.read("overlayparts.js")
+    say = re.search(r"var SAY = \{(.*?)\};", js, re.S).group(1)
+    lines = re.findall(r':\s*"([^"]+)"', say) + [" ".join(note.split())]
+    assert len(lines) == 8, lines
+    for line in lines:
+        for sentence in re.split(r"(?<=[.?])\s+", line):
+            assert len(sentence.split()) <= 20, sentence
+        assert "!" not in line and line == line.strip()
+    # the parts the switches name are the core's parts (server/al/layout.py)
+    from server.al import layout
+    parts = re.search(r"var PARTS = \[([^\]]*)\]", js).group(1)
+    assert re.findall(r'"([a-z]+)"', parts) == list(layout.PARTS)
+    assert set(re.findall(r'id="part-([a-z]+)"', group)) == set(layout.PARTS)
+    assert re.findall(r'<option value="([a-z]+)"', group) == list(layout.ZONE_GUIDE)
