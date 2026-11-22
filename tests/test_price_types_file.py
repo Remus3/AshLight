@@ -1,7 +1,7 @@
 """DATA-PRICE-TYPES-FILE (F-201): the price book's unique and exchange type
 lists live in server/al/data/price_types.json, hot reloaded (decision 0042).
 
-The shipped file holds today's 9 + 13 names; a bad edit keeps the last good
+The shipped file holds today's 8 + 13 names; a bad edit keeps the last good
 lists with a reload note; a dropped type is no longer requested. Mocked GET
 only: nothing reaches the network. Tmp files only."""
 
@@ -13,7 +13,7 @@ from server.al import hotreload, pricebook
 
 UNIQUE = ["UniqueWeapons", "UniqueArmours", "UniqueAccessories",
           "UniqueFlasks", "UniqueCharms", "UniqueJewels",
-          "UniqueSanctumRelics", "UniqueTablets", "PrecursorTablets"]
+          "UniqueSanctumRelics", "UniqueTablets"]
 EXCHANGE = ["Fragments", "Abyss", "UncutGems", "LineageSupportGems",
             "Essences", "SoulCores", "Idols", "Runes", "Ritual",
             "Expedition", "Delirium", "Breach", "Verisium"]
@@ -38,12 +38,12 @@ def _use(monkeypatch, tmp_path, doc):
     return f
 
 
-def test_the_shipped_file_lists_todays_22_types():
+def test_the_shipped_file_lists_todays_21_types():
     raw = pricebook.TYPES_PATH.read_bytes()
     assert raw.decode("ascii") and b"\r" not in raw
     unique, exchange = pricebook.load_types(pricebook.TYPES_PATH)
     assert list(unique) == UNIQUE and list(exchange) == EXCHANGE
-    assert (len(unique), len(exchange)) == (9, 13)
+    assert (len(unique), len(exchange)) == (8, 13)
     assert unique == pricebook.BUILTIN_UNIQUE and exchange == pricebook.BUILTIN_EXCHANGE
     assert pricebook.UNIQUE_TYPES == unique
     assert pricebook.EXCHANGE_TYPES == exchange
@@ -113,7 +113,7 @@ def test_a_dropped_type_is_no_longer_requested(monkeypatch, tmp_path):
     later = now + pricebook.INTERVAL_S + 1
     asked = _requested(book, later)
     assert "UniqueTablets" not in asked and "Verisium" not in asked
-    assert len(asked) == 20
+    assert len(asked) == 19
     assert "UniqueTablets" not in book.summary() and "Verisium" not in book.summary()
     book.note_press("Verisium", later)
     assert not book.pressed("Verisium", later)
