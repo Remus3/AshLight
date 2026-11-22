@@ -460,6 +460,7 @@ Generation rules:
    - price: [`docs/design/copy/price.md`](copy/price.md)
    - waystone: [`docs/design/copy/waystone.md`](copy/waystone.md)
    - overlaycard: [`docs/design/copy/overlaycard.md`](copy/overlaycard.md)
+   - explain: [`docs/design/copy/explain.md`](copy/explain.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
