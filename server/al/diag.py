@@ -425,6 +425,127 @@ def check_last_exit(f, now):
     return [r for r in rows if r]
 
 
+# REL-UPDATE-CHECKS (F-077, DEP-11): the installed copy's rows. The facts
+# are Core.diag_facts()["install"]: the marker's version and previous, the
+# newest staged version (<home>/staged) and the last update result
+# (<home>/logs/reports/last-update.json), read only by the core, never
+# fetched or switched. Every value is a checked version, a fixed word or a
+# time, never a path. A checkout has no row.
+INSTALL_ID, INSTALL_LABEL = "install", "Installed copy"
+UPDATE_ID, UPDATE_LABEL = "install_update", "Update"
+INSTALL_ROW_IDS = (INSTALL_ID, UPDATE_ID)
+# a rollback's fix row clears by itself after this long (or when the next
+# update result replaces it)
+ROLLBACK_SHOWN_S = 7 * 86400
+FIX_ROLLBACK = ("Nothing to undo: AshLight already went back by itself. The next "
+                "release installs by itself. To tell the project what went "
+                "wrong, copy this report.")
+_VERSION_CHARS = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-")
+
+
+def _version(value):
+    """A version word (digits, letters, dots and dashes, a digit first), or
+    None: nothing else from the files reaches a row."""
+    if (isinstance(value, str) and 0 < len(value) <= 40 and value[0].isdigit()
+            and set(value) <= _VERSION_CHARS):
+        return value
+    return None
+
+
+def _last_text(last):
+    """The last update result in words, or None (an unknown word)."""
+    if not isinstance(last, dict):
+        return None
+    action, status = last.get("action"), last.get("status")
+    new, old = _version(last.get("version")), _version(last.get("from"))
+    if action == "update":
+        if status == "staged" and new:
+            return f"{new} downloaded and checked"
+        if status == "failed":
+            return "a new version failed its checks, nothing changed"
+        if status == "deferred":
+            return "waiting until the game is idle"
+        if status == "refused":
+            return "refused, nothing changed"
+        return None
+    if action == "apply":
+        if status == "switched" and new and old:
+            return f"switched from {old} to {new}"
+        if status == "failed":
+            return "switching failed, nothing changed"
+        return None
+    if action == "rollback":
+        if status == "rolled back" and new and old:
+            return f"went back from {old} to {new}"
+        if status == "failed":
+            return "going back failed"
+        return None
+    if action == "confirm" and status == "confirmed" and new:
+        return f"{new} started fine"
+    return None
+
+
+def _install_row(ins):
+    version, previous = _version(ins.get("version")), _version(ins.get("previous"))
+    if version is None:
+        status, detail = UNKNOWN, "Its version file can't be read."
+    else:
+        status = PASS
+        detail = f"Version {version}, " + (f"previous {previous} kept." if previous
+                                           else "no earlier version kept.")
+    last = ins.get("last")
+    text, at = _last_text(last), None
+    if text:
+        at = finite(last.get("at"))
+        detail += f" Last update: {text}" + (f", {AGO}." if at is not None else ".")
+    return _check(INSTALL_ID, INSTALL_LABEL, status, detail, at=at)
+
+
+def _rollback_row(last, version, now):
+    """The one fix row after a rollback to the running version."""
+    if not (isinstance(last, dict) and last.get("action") == "rollback"
+            and last.get("status") == "rolled back"):
+        return None
+    bad, back = _version(last.get("from")), _version(last.get("version"))
+    if not bad or not back or back != version:
+        return None
+    at = finite(last.get("at"))
+    if at is not None and now - at > ROLLBACK_SHOWN_S:
+        return None
+    return _check(UPDATE_ID, UPDATE_LABEL, FAIL,
+                  f"Version {bad} did not work, so AshLight went back to {back}. "
+                  f"It won't offer {bad} again.", FIX_ROLLBACK)
+
+
+def _staged_row(staged, version, now):
+    """The one line naming a staged version."""
+    new = _version(staged.get("version")) if isinstance(staged, dict) else None
+    if not new or new == version:
+        return None
+    due = finite(staged.get("apply_after"))
+    if due is not None and due > now:
+        stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(due))
+        when = f"the first time you open AshLight after {stamp}"
+    else:
+        when = "the next time you open AshLight"
+    return _check(UPDATE_ID, UPDATE_LABEL, NOTE, f"Version {new} is ready. It starts {when}.")
+
+
+def check_install(f, now):
+    """REL-UPDATE-CHECKS: in an installed copy, the version row (mode,
+    version, previous, the last update result) and at most one update row:
+    the fix row after a rollback, else the note naming a staged version.
+    A checkout (or no install facts) has no row."""
+    ins = f.get("install")
+    if not isinstance(ins, dict) or ins.get("mode") != "installed":
+        return []
+    rows = [_install_row(ins)]
+    version = _version(ins.get("version"))
+    extra = (_rollback_row(ins.get("last"), version, now)
+             or _staged_row(ins.get("staged"), version, now))
+    return rows + ([extra] if extra else [])
+
+
 def checks(f, now):
     """Every check, in reading order, from a facts dict (see Core.diag_facts).
     RUN-SEAMS (decision 0056): plug modules' rows follow the built-in ones,
@@ -436,7 +557,7 @@ def checks(f, now):
             check_calc(f), check_snapshot(f, now),
             _live(f, "overlay", "overlay", "Overlay", "The overlay"),
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
-            *check_hotkey(f), check_port(f)]
+            *check_hotkey(f), *check_install(f, now), check_port(f)]
     rows += diag_data.rows(f, now, taken={r["id"] for r in rows})  # DATA-DIAG-SEAM
     rows += [r for r in (check_reload(f), check_dev_docs(f), check_private(f)) if r]
     rows += check_last_exit(f, now)
@@ -465,7 +586,11 @@ def report(rows, version, now, pairs, extra=None, tails=None):
     per row (ages written in at `now`), then `extra` (last restart, the
     session's not counted mod lines, ledger shapes) and, only on the
     player's second choice, `tails`. Only free text is redacted; labels
-    and marks are fixed words (P8-7)."""
+    and marks are fixed words (P8-7). REL-UPDATE-CHECKS: the installed
+    copy's rows (mode, version, previous, last update result, a staged
+    or rolled-back version) come first, right under the header fields."""
+    rows = ([r for r in rows if r.get("id") in INSTALL_ROW_IDS]
+            + [r for r in rows if r.get("id") not in INSTALL_ROW_IDS])
     return report_mod.compose(rows, version, now, pairs, render=render_detail,
                               mark=MARK, extra=extra, tails=tails)
 
