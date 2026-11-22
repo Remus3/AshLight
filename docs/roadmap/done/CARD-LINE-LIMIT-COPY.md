@@ -1,1 +1,0 @@
- -- done 2026-11-22 (session wave 26; verified; partial by adjudicator ruling: code copy <=26 done, zone shorts, out-of-list pins and copy sheets moved to CARD-LINE-LIMIT-COPY2, wave 27)

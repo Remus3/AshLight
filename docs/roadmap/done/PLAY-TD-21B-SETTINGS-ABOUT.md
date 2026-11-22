@@ -1,1 +1,0 @@
- -- done 2026-11-22 (session wave 27; verified; run history keep / clear stays on the Last session card with a jump row by adjudicator ruling (option B), move filed as PLAY-TD-21C-HISTORY-MOVE)

@@ -1,1 +1,0 @@
- -- done 2026-11-22 (session wave 27; verified; files widened by ruling A (test_eval_text, test_price_text, test_price_card_age))

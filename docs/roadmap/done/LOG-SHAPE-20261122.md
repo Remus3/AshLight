@@ -1,1 +1,0 @@
- -- done 2026-11-22 (session wave 25; loop keep ref merged by coordinator order 2026-11-22; batch suite)

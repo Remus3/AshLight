@@ -1,1 +1,0 @@
-- [ ] RUN-DATAAGE-SHARED-PARSE (build) server/al/plug/dataage.py still reads world_areas on its own through acts.load_ids; move it onto acts.TableCache shared parse (RUN-PERF-PARSE-ONCE follow-up). ACCEPT: python -m pytest -q tests/test_diag_data_age.py tests/test_budget_start.py passes. ZERO-CLICK: the data age check parses nothing extra by itself. DEPENDS: RUN-PERF-PARSE-ONCE.
