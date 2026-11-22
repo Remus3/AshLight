@@ -21,6 +21,7 @@ FULL = {"character": "Ash", "poll_ms": 300, "overlay_toggle": "Alt+Shift+A",
         "tc_calc": False, "underlevel_gap": 4, "run_history": False,
         "price_watch_pct": 30, "boots_speed_level": 20, "worn_gear": False,
         "wear_hotkey": "Ctrl+Shift+F7",
+        "update_click_only": True,  # REL-UPDATE-TRIGGER: the click-only switch
         "overlay": {"display": "primary", "corner": "top-left", "scale": 1.2,
                     "opacity": 0.95, "margin": 20,
                     # OVL-OVERLAY-KEYS: the new keys round trip too
