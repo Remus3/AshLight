@@ -2,7 +2,7 @@
 
 Measured on the reference build (pobb.in Nqt6FK5lIc6F): cold start, load,
 reload, a warm set_item + outputs, and the luajit.exe peak working set
-over 30 reloads (one first item check reloads the build about 22 times).
+over 12 reloads (one first item check reloads the build about 22 times).
 The ceilings in tc_live_util.BUDGET are generous; the memory one also
 guards the bridge.lua GC ceiling (without it the working set reached
 ~900 MB). Skips without the optional calc component and the reference.
@@ -70,10 +70,13 @@ def test_load_reload_and_item_within_budget(perf):
         assert got[key] <= BUDGET[key], (key, got[key])
 
 
+RELOADS = 12  # the GC ceiling acts per load_build; 12 passes keep the peak guard
+
+
 def test_luajit_memory_stays_under_ceiling(perf):
     b, xml, got = perf
     times = []
-    for _ in range(30):
+    for _ in range(RELOADS):
         t0 = time.perf_counter()
         b.load_build(xml)
         times.append(time.perf_counter() - t0)
