@@ -1,9 +1,10 @@
 AL NEXT SESSION
 ---------------
-SESSION: 20   (FLEET item 13 counter; /done writes n+1)
+SESSION: 21   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 29 done, next wave 30 (session group 25-29 closed; next session group waves 30 to 33)
 NOTE: wave 29 merged all 5 (PLAY-TD-22C-A11Y-CDP, RUN-PERF-PARSE-ONCE, OVL-PARTS-WEB, CARD-LINE-LIMIT-FLIP in batch 1; SEC-LOG-PATH-PERSIST alone in batch 2 by ruling, it was still building when the other four were ready, no file overlap); batch suites: b1 125 s green (parallel 95.06 + timing 29.51), b2 142 s wall green (106.91 + 32.89), both first run, under the 145 s hold bound; ruling A once (packages.json widened: CARD-LINE-LIMIT-FLIP +7 paths for the 26 limit, 4cc86c1); design OPEN: OVP-1/OVP-2 nits (OVL-PARTS-WEB), FLIP-1/FLIP-2 nits (CARD-LINE-LIMIT-FLIP); rows filed (loop-owned): A11Y-1, NDE-1, NDE-2, PLAN-07-WAVE-DRIFT, CARD-LINE-34-LEFTOVERS, RUN-DATAAGE-SHARED-PARSE; batch 2's single row flip was applied by the merger in the integrator role; tests/test_ovl_check.py slow-test budget still fails under load in builder gated subsets, passed in both batch suites.
+NOTE (session 20 /done): reap --apply removed the 6 w29 worktrees (w29-int and five packages, all clean, on main by patch); lanes kept. roadmap_fold: 31 rows archived, 48 row files removed (b9c34ee, 8bce050). Whole suite attempt 1 red (12 parallel failures: test_al_loop_gate_cache x8, fullstack calc leg, math_e2e_live x3, plus the test_budgets loop-body timing flake) while the hand-off file was being edited in the tree; attempt 2 green first-clean.
 NOTE: docs/plan/07-execution-plan.md wave sections drift from docs/plan/packages.json (files, batches; waves 26 to 29, plan_check trusted); row PLAN-07-WAVE-DRIFT filed to regenerate or retire them.
 NOTE: wave 28 merged all 5 (PLAY-TD-22A-A11Y-CSS, TEST-WEB-PANELS-B, TEST-CORE-TICKS, RUN-NO-DEAD-ENDS, TEST-PROBE-XDIST-2) in 3 batches (RUN-NO-DEAD-ENDS took its own batch 2 after two fix rounds; TEST-PROBE-XDIST-2 alone last as the soak); batch suites: b1 136 s red only on test_budgets loop-body timing (passed twice by name) then 124 s green (parallel 93.23 + timing 29.95), b2 116 s (85.09 + 29.61), b3 soak 115 s (84.93 + 29.45), all under the 145 s hold bound; ruling A three times (packages.json widened: RUN-NO-DEAD-ENDS +22 paths size L, db911d3, then +8 copy sheets/playcards/pins, 25194cd; TEST-WEB-PANELS-B +app/test/registry.test.js and the test_ux_review cut-end fix given to A11Y-CSS, which owned that file, dd0ecaf); 07 wave 28 section is stale against packages.json (plan_check trusted); design OPEN: A11Y-1 nit (disabled button.link no edge cue), NDE-1 S3 (private-files app-folder fix still prints `python -m server.al.acl apply .`), NDE-2 nit (web/index.html:100 aria word order); TEST-CORE-TICKS found the tick list already built by RUN-SEAMS (import split + tests only); tests/test_ovl_check.py slow budget fails under load in builder subsets and on main, passed in every batch suite; main pushed after close.
 NOTE: wave 27 merged all 5 (PLAY-TD-21B-SETTINGS-ABOUT, REL-UPDATE-TRIGGER, CARD-LINE-LIMIT-COPY2, TEST-LOOP-WINDOW-5S, TEST-CALC-GROUP-SPLIT); batch suites 124 s (parallel 94.34 + timing 29.46) and 118 s (86.18 + 30.90), both green first run, under the 145 s hold bound; ruling A twice (packages.json widened: CARD-LINE-LIMIT-COPY2 +test_eval_text/test_price_text/test_price_card_age, 9dac106; REL-UPDATE-TRIGGER +test_ux_settings_io, 8e89800); 07 wave 27 section is stale against packages.json (plan_check trusted); design OPEN: 21B D1-D3 nits, COPY2 CL2-1/CL2-2 (filed CARD-HINT-TWIN); rows filed (loop-owned): LP-A, LP-B, CL-2, CL-3, TEST-OVL-CHECK-LOAD, REL-UPDATE-APPLY-NOW, PLAY-TD-21C-HISTORY-MOVE, CARD-HINT-TWIN, RUN-SETTINGS-WORDS; tests/test_ovl_check.py slow budget still fails under load in builder gated subsets, passed in both batch suites; main pushed after close.
@@ -17,28 +18,27 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: setAutostart in app/client/launcher.js still spawns bare powershell.exe (pinned by app/test/autostart_switch.test.js:70; shrink-only BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py) - file a row to switch it to psExe(). tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt, AL-2026-11-20.txt, AL-2026-11-21.txt and AL-2026-11-22.txt, one block per session headed "SESSION <n> /done" (index of blocks 11 to 17 in "SESSION 18 /done" of AL-2026-11-21.txt; block "SESSION 19 /done" of AL-2026-11-22.txt: the session 18 and 19 lines, the PUB-HOOK-RELEASE-CHECK ruling note, the WATCH (wave 22) gate-hold history, the BUDGETLOG finding, the session 18 reap note and Do NOT redo).
 
-Next action: start wave 25 of docs/plan/07-execution-plan.md: dispatch
-one start agent (docs/plan/08-orchestration.md section 1, argument wave
-25), then the wave (08 sections 2 to 7); first re-plan RUN-EXPLAIN-ROWS
-(its sentences move to server/al/text/explain.py with a
-docs/design/copy/explain.md sheet; patch its packages.json files), add a
-package for PRICES-TITLE-TABINDEX and place TEST-SUITE-T0 and
-RUN-BUDGET-CALIBRATE-B11; packages from `python tools/plan_check.py wave
-25`; resume at the first unmerged package per decision 0077; then onward
-per 07's session grouping. Run exactly as 08 says: ONE background
-orchestrator agent with a real background watch on the progress files;
-merge batches of 4. Ask the operator nothing. The main session only
-dispatches. The orchestrator keeps a live background child of its OWN (a
-Monitor on the progress files) at every turn end (session 16 stalled
-three times relying on grandchildren to wake it).
-1. Waves 10 to 24 are closed (sessions 12 to 19).
+Next action: start wave 30 (session group 30 to 33; packages.json session
+n=9) per docs/plan/08-orchestration.md: dispatch one start agent (section
+1, argument wave 30), then the wave (08 sections 2 to 7); packages from
+`python tools/plan_check.py wave 30` (trust plan_check over 07 prose; today
+PLAY-TD-04B-THEME-CHOICE and PLAY-F-204A-SR-TOOL); resume at the first
+unmerged package per decision 0077; then onward per the session grouping
+(waves 31 to 33). Run exactly as 08 says: ONE background orchestrator agent
+with a real background watch on the progress files; merge batches of 4. Ask
+the operator nothing. The main session only dispatches. The orchestrator
+keeps a live background child of its OWN (a Monitor on the progress files)
+at every turn end (session 16 stalled three times relying on grandchildren
+to wake it), and keeps its own progress heartbeat (it read STALE once in
+session 20).
+1. Waves 10 to 29 are closed (sessions 12 to 20; session group 25-29 closed).
 2. Go-public track: the repository exists and is PRIVATE; it stays private
    until the plan-04 flip gates hold (GP-12). Push main only through
    fleet_gitlock, never force. Status bullet GO-PUBLIC STATUS below.
 Orchestrator lessons (full text: archive blocks "SESSION 18 /done" and
 "SESSION 19 /done"): dispatch the next step right after each child
 report; package agents may push per CLAUDE.md; builders and verifiers
-also run tests/test_test_layout.py; a fresh integrator per batch; read
+also run tests/test_test_layout.py; a fresh integrator per batch; a single-flip batch may have the merger apply the flip in the integrator role (wave 29 batch 2); the orchestrator keeps its own progress heartbeat (read STALE once in session 20); read
 every sha back from git; a red batch suite is reverted and the package
 deferred, never fixed forward; reviews.log lines in the exact format;
 "needs <path>" = packages.json patch plus a fix round (ruling A).
@@ -285,14 +285,16 @@ Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
 list before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, core, overlay or loop (08, Rules).
 
-Acceptance: wave 25 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 25 done, next wave 26"), RUN-EXPLAIN-ROWS, CARD-LINE-LIMIT and PRICES-TITLE-TABINDEX merged or re-deferred with a reason, no row carries "BLOCKED: session wave 25".
+Acceptance: wave 30 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 30 done, next wave 31"), PLAY-TD-04B-THEME-CHOICE and PLAY-F-204A-SR-TOOL merged or re-deferred with a reason, no row carries "BLOCKED: session wave 30".
+
+Do NOT redo (session 20, on main and pushed): wave 29 (5/5 merged, 33b1a3a and ddd8d35, pointer be71449); the session 20 roadmap fold (b9c34ee, 8bce050); w29 worktrees reaped.
 
 Do NOT redo (session 19, on main and pushed): wave 22 carry (008c899, 409e3a0); wave 23 (14/14); wave 24 (12 merged, pointer a4f98b0, f8d1c1b); BUDGETLOG diagnosis and adjudicator ruling (row RUN-BUDGET-CALIBRATE-B11); REL-CUTOVER-LIVE prep (0.2.0-rc.0 built); the session 19 roadmap fold (ed1d53a); w22, w23 and w24 worktrees reaped.
 
 Do NOT redo (sessions 6 to 18): docs/handoff-archive/
 
-In flight: none (the wave orchestrator finished; no progress row running). Loop live, do not touch (HALT absent; loop.json fire 469 done 03:33 idle, push skipped: loop push off); fleet_checklist stale: none (read 2026-11-22 at session 19 /done); REG_OPEN absent (registration closed).
+In flight: none (no orchestrator or progress row running). Loop live, do not touch; REG_OPEN not re-read this /done (read 2026-11-22 session 19: absent).
 
-Status (session 19 /done, 2026-11-22, fresh, read back): whole suite via the gate 5172 passed / 8 skipped / 1 xfailed (parallel 87.98 s), timing phase 35 passed (48.76 s), rc 0; npm test --prefix app 733/733; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = f8d1c1b before /done, then fold ed1d53a and this hand-off commit pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
+Status (session 20 /done, 2026-11-22, fresh): whole suite via the gate 5309 passed / 8 skipped (parallel 108.99 s), timing phase 17 passed (33.57 s), rc 0 on attempt 2 (wall about 144 s; attempt 1 red, see NOTE); npm test --prefix app 784/784; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = be71449 before /done, then fold commits and this hand-off pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
