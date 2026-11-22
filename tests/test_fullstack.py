@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import synth_client  # noqa: E402
 import tc_eval_fixtures as fx  # noqa: E402
-from tc_live_util import BUDGET, LIVE_CALC, lease_port  # noqa: E402
+from tc_live_util import BUDGET, CALC_GROUP_B, LIVE_CALC, lease_port  # noqa: E402
 
 from server.al import VERSION, http as al_http, ninja, pricebook, summary, webfetch  # noqa: E402
 from server.al.core import Core  # noqa: E402
@@ -499,7 +499,7 @@ def test_synth_marker_has_the_live_shape():
     assert resume._marker_ts(line.encode()) == "2026-11-16T21:00:01"
 
 
-@LIVE_CALC
+@LIVE_CALC(group=CALC_GROUP_B)  # TEST-CALC-GROUP-SPLIT: one of the heavy three
 @pytest.mark.slow
 def test_fullstack_calc_on_leg(env, warm_bridge):
     """The calc ON path: "tc_calc" on in the temp config, the PoB reference

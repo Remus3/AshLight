@@ -23,7 +23,8 @@ from pathlib import Path
 import pytest
 
 import math_live_items as items
-from tc_live_util import BUDGET, CALC_MARKS, LIVE_REF, keep_warm, lease_port, reference
+from tc_live_util import (BUDGET, CALC_GROUP_B, LIVE_CALC, LIVE_REF, keep_warm, lease_port,
+                          reference)
 
 from server.al.core import Core
 from server.al.http import serve
@@ -33,7 +34,11 @@ ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "m" * 48
 SIDE_BAND = delta.SIDEGRADE_PCT
 
-pytestmark = [pytest.mark.server, pytest.mark.slow, LIVE_REF, *CALC_MARKS]
+# TEST-CALC-GROUP-SPLIT: the calc mark for the whole module, the xdist
+# group per test (one group each): test_repeat_press_uses_cached_probes is
+# self-contained (TEST-E2E-REPEAT-SELF), so it runs in calc-b beside
+# test_fullstack_calc_on_leg while the rest of the file stays in calc-a.
+pytestmark = [pytest.mark.server, pytest.mark.slow, LIVE_REF, pytest.mark.calc]
 
 
 def _req(port, method, path, body=None, timeout=120):
@@ -122,6 +127,7 @@ def _sign_ok(change, want):
 ORDER = ["ring_upgrade", "amulet_sidegrade", "bow_downgrade", "body_upgrade"]
 
 
+@LIVE_CALC
 @pytest.mark.parametrize("name", ORDER)
 def test_item_check_deltas_come_from_pob(live, name):
     """Waits for the last stage (TC-PRESS-STAGED-LIVE): PoB's numbers reach
@@ -152,6 +158,7 @@ def test_item_check_deltas_come_from_pob(live, name):
     assert took <= BUDGET["first_press_s" if first else "press_s"], took
 
 
+@LIVE_CALC(group=CALC_GROUP_B)
 def test_repeat_press_uses_cached_probes(live):
     """TEST-E2E-REPEAT-SELF: self-contained in any order. The ring is pressed
     twice here: the first press fills the probe cache (a cold one may pay
@@ -166,6 +173,7 @@ def test_repeat_press_uses_cached_probes(live):
     assert _best(again)["dps"]["pct"] > 0
 
 
+@LIVE_CALC
 def test_killed_calc_falls_back_then_recovers(live):
     """The calc process is killed again and again while a press runs: the
     press still answers 200 within budget with the weights fallback and the
