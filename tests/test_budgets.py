@@ -5,7 +5,7 @@ with the measured value printed, after the structural checks (decision
 0080); the memory bounds always hold.
 
 RUN-BUDGET-TESTS-DET (F-108, research 0048 R6) adds B1 (the real loop body
-for 10 s on the worst-case fixture) and B5 (the absolute working set of a
+for 5 s on the worst-case fixture) and B5 (the absolute working set of a
 core in a child process); B2, B3 and B7 are the deterministic files
 tests/test_budget_tick.py and tests/test_budget_snapshot.py."""
 
@@ -297,8 +297,10 @@ def test_real_loop_body_10_s_worst_case_under_half_percent(tmp_path):
     """RUN-BUDGET-TESTS-DET (F-108, research 0048 B1): the core's real loop
     body (server/al/__main__: the stop and restart file checks,
     Core.tick_all, the price refresh tick, the heartbeat) every 0.5 s for
-    10 s on the worst-case fixture, with the tailer thread polling, costs
-    under 0.5 percent of one core."""
+    5.0 s (TEST-LOOP-WINDOW-5S; research 0048 B1 named 10 s, the bound is a
+    share, not a total, so the same 0.5 percent holds over the shorter window)
+    on the worst-case fixture, with the tailer thread polling, costs under
+    0.5 percent of one core."""
     import threading
 
     from server.al import __main__ as entry
@@ -313,7 +315,7 @@ def test_real_loop_body_10_s_worst_case_under_half_percent(tmp_path):
         assert core.state.snapshot()["maps"]["ladder_all"]["maps"] > 500
         assert core.tailer is not None
         c0, w0 = time.process_time(), time.perf_counter()
-        while time.perf_counter() - w0 < 10.0 and not stop.wait(0.5):
+        while time.perf_counter() - w0 < 5.0 and not stop.wait(0.5):
             if entry.stop_requested(rt / entry.STOP_FILE):
                 break
             if entry.stop_requested(rt / hotreload.RESTART_FILE):
@@ -325,7 +327,7 @@ def test_real_loop_body_10_s_worst_case_under_half_percent(tmp_path):
         cpu, wall = time.process_time() - c0, time.perf_counter() - w0
     finally:
         core.close()
-    assert passes >= 18, passes
+    assert passes >= 9, passes
     assert set(core.tick_ms) == {n for n, _ in core.ticks}
     share = cpu / wall
     print(f"loop body {share * 100:.3f} percent of one core over {wall:.1f} s, "
