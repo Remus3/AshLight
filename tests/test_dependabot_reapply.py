@@ -744,3 +744,23 @@ def test_electron_bump_is_a_signal_only(tmp_path):
     assert lines == ["#62: left open, electron 45.3.4 waits for the Electron "
                      "bump procedure (decision 0070)"]
     assert git.calls == [["remote", "get-url", "origin"]] and npm_calls == []
+
+
+def test_grouped_single_dependency_title():
+    g = "chore(deps): bump electron from 45.3.3 to 45.3.4 in /app in the npm-all group"
+    assert dr.parse_npm_bump(g) == ("electron", "45.3.3", "45.3.4")
+    assert dr.parse_npm_bump("Bump made-up-lib from 1.0.0 to 1.0.1 in /app in the npm-all group")         == ("made-up-lib", "1.0.0", "1.0.1")
+    assert dr.parse_bump("Bump example-org/x from v4 to v5 in /.github/workflows "
+                         "in the actions-all group") == ("example-org/x", "4", "5")
+    assert dr.parse_npm_bump("Bump a from 1.0.0 to 1.0.1 in /app in the x group extra") is None
+
+
+def test_multi_dependency_group_title_is_needs_review():
+    class Ctx:
+        left_open = []
+        seam_rc = 0
+    title = "chore(deps): bump the npm-all group across 1 directory with 3 updates"
+    assert dr.parse_npm_bump(title) is None
+    out = dr.apply_npm(Ctx(), {"number": 7, "title": title, "files": []})
+    assert out.startswith("left open, needs review (group title names several bumps")
+    assert Ctx.left_open == [7]
