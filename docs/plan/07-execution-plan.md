@@ -1574,9 +1574,12 @@ Goal: Leads: Run grid 2: Recent, Last session and Characters cards; The
 report from an allow-list of structured fields, with a hardened redactor
 (P8-7); Overlay HUD line 2: the opt-in guide line and the fixed card anchor.
 
-- Session 7; width 14 worktree + 0 main-checkout, 0 loop rows released;
+- Session 7; width 18 worktree + 0 main-checkout, 0 loop rows released;
   about 143 minutes (LOOP-CI-ISSUES joined at the wave 18 start, session
-  16).
+  16; CARD-LINE-LIMIT, BUILD-GEAR-EMPTY-COPY, DEP14-UNINSTALL-LINE and
+  HOME-REFUSAL-COPY joined, ZONE-CARD-ITEM-GATE folded into
+  OVL-LINE2-GUIDE and REPORT-DOC-QUIET into RUN-REPORT-FIELDS by the
+  W22-FOLD ruling, session 18).
 - Hotspots: web/index.html (PLAY-TD-20B-RUN-CARDS); server/al/core.py
   (REL-UPDATE-WIRE); web/app.js (PLAY-TD-20B-RUN-CARDS); server/al/http.py
   (REL-UPDATE-WIRE); server/al/state.py (REL-UPDATE-WIRE); web/app.css
@@ -1584,13 +1587,17 @@ report from an allow-list of structured fields, with a hardened redactor
   app/client/window.js (RUN-SECOND-LINE-CLIENT); app/test/client.test.js
   (RUN-SECOND-LINE-CLIENT); app/shared/render_gate.js (OVL-LINE2-GUIDE);
   app/test/checks.test.js (RUN-REPORT-FIELDS); web/checks.js
-  (RUN-REPORT-FIELDS); server/al/settingsio.py (REL-UPDATE-WIRE).
-- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
-  REL-UPDATE-WIRE; docs/design/reviews.log: 5 lines.
+  (RUN-REPORT-FIELDS); server/al/settingsio.py (REL-UPDATE-WIRE);
+  README.md (DEP14-UNINSTALL-LINE); docs/design/0001-design-system.md
+  (HOME-REFUSAL-COPY).
+- Integrator: ROADMAP.md rows of all 18 packages; CLAUDE.md:
+  REL-UPDATE-WIRE; docs/design/reviews.log: 8 lines.
 - Batches: 1: PLAY-TD-20B-RUN-CARDS, RUN-REPORT-FIELDS, OVL-LINE2-GUIDE,
   OVL-ACT-CARD; 2: RUN-BUDGET-TESTS-DET, OVL-TD06-AUTOSCALE, DEP-15,
   REL-UPDATE-WIRE; 3: REL-PUBLISH-READBACK, REL-STAGE-SANDBOX, DEP-19,
-  RUN-SECOND-LINE-CLIENT; 4: PUB-HOOK-RELEASE-CHECK, LOOP-CI-ISSUES.
+  RUN-SECOND-LINE-CLIENT; 4: PUB-HOOK-RELEASE-CHECK, LOOP-CI-ISSUES,
+  CARD-LINE-LIMIT, BUILD-GEAR-EMPTY-COPY; 5: DEP14-UNINSTALL-LINE,
+  HOME-REFUSAL-COPY.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1601,7 +1608,7 @@ report from an allow-list of structured fields, with a hardened redactor
 
 - PLAY-TD-20B-RUN-CARDS [session, L 80m, build, P1, DR] Run grid 2: Recent, Last session and Characters cards. Files: web/index.html, web/app.css, web/app.js, web/history.js, web/chars.js (+4 more). Deps: PLAY-TD-20A-RUN-GRID.
 - RUN-REPORT-FIELDS [session, L 90m, build, P2, DR] The report from an allow-list of structured fields, with a hardened redactor (P8-7) + Keep per-press 'Not counted' lines for the session. Files: server/al/diag.py, server/al/plug/report.py, web/checks.js, app/test/checks.test.js, server/al/theorycraft/live.py (+4 more). Deps: RUN-QUIET-FEED, RUN-METRICS-CORE, RUN-LEDGER-WIRE, RUN-BUDGET-LOG-CORE, GP-06, OVL-OBS-CRASH, TC-PRESS-STAGED-LIVE.
-- OVL-LINE2-GUIDE [session, M 55m, build, P2, DR] Overlay HUD line 2: the opt-in guide line and the fixed card anchor. Files: app/shared/render_gate.js, app/overlay/index.html, app/overlay/overlay.js, app/overlay/overlay.css, app/test/overlay_gate.test.js (+1 more). Deps: OVL-LINE2-RULE, OVL-ZONE-CARD, OVL-TD05-LEGIBILITY.
+- OVL-LINE2-GUIDE [session, L 75m, build, P2, DR] Overlay HUD line 2: the opt-in guide line and the fixed card anchor. Files: app/shared/render_gate.js, app/overlay/index.html, app/overlay/overlay.js, app/overlay/overlay.css, app/test/overlay_gate.test.js (+1 more). Deps: OVL-LINE2-RULE, OVL-ZONE-CARD, OVL-TD05-LEGIBILITY.
 - OVL-ACT-CARD [session, M 40m, build, P2, DR] Act moment card: 12 s when an act split closes, with the gap to the saved best. Files: server/al/overlayview.py, tests/test_moment_cards.py. Deps: OVL-ZONE-CARD.
 - RUN-BUDGET-TESTS-DET [session, M 60m, build, P2] Deterministic budget tests: tick cost, idle tick, snapshot size, real loop body. Files: tests/test_budgets.py, tests/test_budget_tick.py, tests/test_budget_snapshot.py. Deps: RUN-LADDER-TICK, RUN-QUIET-FEED.
 - OVL-TD06-AUTOSCALE [session, S 25m, build, P3, DR] Overlay physical size: autoScale reference 1200 DIP, budgets re-run (TD-06). Files: app/shared/layout.js, app/test/layout.test.js. Deps: OVL-TD05-PLATE, OVL-LINE2-RULE.
@@ -1613,6 +1620,10 @@ report from an allow-list of structured fields, with a hardened redactor
 - RUN-SECOND-LINE-CLIENT [session, M 30m, build, P2] The client restarts a core that stays down. Files: app/client/window.js, app/client/launcher.js, app/test/client.test.js. Deps: RUN-OBS-LOGS-SHELL, RUN-SECOND-LINE-PY.
 - PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py. Deps: GP-02, REL-PUBLISH-GATES.
 - LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json, tests/test_watch_ci_issues.py. Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08.
+- CARD-LINE-LIMIT [session, M 40m, build, P2, DR] Card lines fit the 236 px inside width: lower the card character limit. Files: app/shared/format.js, server/al/text/common.py, tests/test_overlay_pixels.py. Deps: OVL-CONTRAST-PIXELS.
+- BUILD-GEAR-EMPTY-COPY [session, S 20m, build, P3, DR] Build card empty-gear row says what to do next. Files: web/panels/build.js. Deps: PLAY-TD-19E-ITEM-TEXT.
+- DEP14-UNINSTALL-LINE [session, S 20m, build, P2] README Quick start names the uninstall step. Files: README.md, tests/test_public_docs.py. Deps: DEP-14.
+- HOME-REFUSAL-COPY [session, M 60m, build, P2, DR] Refused-home sentence, design 0001 start-up exception and wording, plan 03 section 5.1 widths and line 2 rule. Files: server/al/paths.py, app/client/home.js, app/test/home.test.js, docs/design/0001-design-system.md, docs/plan/03-target-design.md. Deps: REL-HOME-REFUSAL-UI, OVL-CONTRAST-PIXELS, OVL-LINE2-RULE, PLAY-TD-20A-RUN-GRID.
 
 ### Wave 23: install and release, overlay and client, tests and code seams
 
@@ -1668,9 +1679,10 @@ Goal: Leads: Contact field in the web-data card and honest blocked wording;
 Five cause rows in Checks; Core refuses Origin null and file:// once both
 local pages load from the app scheme.
 
-- Session 7; width 12 worktree + 1 main-checkout, 0 loop rows released;
+- Session 7; width 13 worktree + 1 main-checkout, 0 loop rows released;
   about 190 minutes (PLAY-PAGER-SCALE-24 joined by ruling Q2 as amended,
-  2026-11-21).
+  2026-11-21; RUN-UNREADABLE-WORD joined by UNREADABLE-RETAG, session 18:
+  waves 22 and 23 own render_gate.js, diag.py or design 0001).
 - Hotspots: web/index.html (DATA-CONTACT-UI); server/al/core.py
   (TC-WEIGHTS-DELTA-EXPORT); web/app.js (DATA-CONTACT-UI); server/al/http.py
   (OVL-APP-SCHEME-STRICT); app/main.js (RUN-OVERLAY-REMEMBER); README.md
@@ -1679,14 +1691,17 @@ local pages load from the app scheme.
   (TC-WEIGHTS-DELTA-EXPORT); tests/test_http_security.py
   (OVL-APP-SCHEME-STRICT); tests/test_ux_settings_io.py
   (TC-WEIGHTS-DELTA-EXPORT); app/test/prices.test.js (DATA-CONTACT-UI);
-  server/al/pricebook.py (DATA-PRICE-TYPES-FILE).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
+  server/al/pricebook.py (DATA-PRICE-TYPES-FILE); server/al/diag.py,
+  app/shared/render_gate.js, docs/design/0001-design-system.md
+  (RUN-UNREADABLE-WORD).
+- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
   OVL-APP-SCHEME-STRICT, RUN-BUDGET-TESTS-LIVE, TC-PIN-POLICY;
-  AL-NEXT-SESSION.txt: REL-CUTOVER-LIVE; docs/design/reviews.log: 4 lines.
+  AL-NEXT-SESSION.txt: REL-CUTOVER-LIVE; docs/design/reviews.log: 5 lines.
 - Batches: 1: DATA-CONTACT-UI, RUN-EXPLAIN-ROWS, OVL-APP-SCHEME-STRICT,
   TC-WEIGHTS-DELTA-EXPORT; 2: RUN-BUDGET-TESTS-LIVE, TEST-SLOW-BUDGET,
   DATA-PRICE-TYPES-FILE, TC-PIN-POLICY; 3: RUN-HISTORY-UNDO,
-  RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24.
+  RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24; 4:
+  RUN-UNREADABLE-WORD.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1708,6 +1723,7 @@ local pages load from the app scheme.
 - RUN-OVERLAY-REMEMBER [session, M 30m, build, P3] Remember the overlay shown / hidden choice across restarts. Files: app/overlay_gate.js, app/main.js, app/test/overlay_gate.test.js. Deps: RUN-OBS-LOGS-SHELL.
 - DATA-SNAP-TRIM [session, S 25m, build, P3] Drop the two unread files from the snapshot fetch list. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py. Deps: DATA-SNAP-PROBE.
 - PLAY-PAGER-SCALE-24 [session, M 45m, build, P2] Pager buttons and compact weight inputs stay at least 24 px below UI scale 1. Files: web/app.css, tests/test_play_fit.py, tests/test_ux_review.py. Deps: PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20A-RUN-GRID.
+- RUN-UNREADABLE-WORD [session, M 50m, build, P2, DR] One status word for the unreadable Client.txt state. Files: server/al/data/status_words.json, web/status.js, app/shared/render_gate.js, server/al/diag.py, docs/design/0001-design-system.md (+2 more). Deps: TEST-STATE-TEXT-PINS, RUN-REPORT-FIELDS, OVL-KEY-HINT, REL-UPDATE-CHECKS, TEST-COPY-SHEETS.
 - REL-CUTOVER-LIVE [session, M 60m, build, P1] Cut-over: the operator's live copy becomes an installed release. Files: none (an act or a read-back). Deps: DEP-13, DEP-09, REL-UNINSTALL-SHELL, REL-UPDATE-LAUNCH, REL-UPDATE-CHECKS, REL-RUNTIME-SCRIPTS, REL-BUILD-ASSETS.
 
 ### Wave 25: local security, overlay and client, theorycraft
@@ -2397,7 +2413,7 @@ made to the cluster packages (each package also says so in its notes):
   guarded push) is GP-02 in wave 1; this package adds the release-tag check
   that needs the release tool (P1 chain).
 
-Folds (25). Rule: same serial group or same file set, same lane and
+Folds (28; three added by the W22-FOLD ruling, session 18). Rule: same serial group or same file set, same lane and
 isolation, none blocked, combined estimate at most 90 minutes; the id of the
 higher-tier package is kept and units, tests, files and integrator edits are
 joined. The builder adds four guards: no fold across a dependency that runs
@@ -2433,6 +2449,10 @@ chain). Each line: kept id <- folded ids (minutes).
 - RUN-START-REASON-CORE <- RUN-OPLOG (60 min)
 - RUN-BUDGET-TESTS-DASH <- RUN-P8-6-CONSOLE (85 min)
 - RUN-REPORT-FIELDS <- RUN-UNKNOWN-ITEM-TEXT (90 min)
+- OVL-LINE2-GUIDE <- ZONE-CARD-ITEM-GATE (75 min)
+- RUN-REPORT-FIELDS <- REPORT-DOC-QUIET (90 min, docstring edit absorbed)
+- HOME-REFUSAL-COPY <- RUN-GRID-DESIGN-WORDS, HUD-PLATE-WIDTH-DOC,
+  PLAN03-LINE2-WORDING (60 min)
 
 Cross entries (342 in the cluster files). Each was read and resolved one of
 three ways: 142 are covered by a dependency on real package ids (the 151

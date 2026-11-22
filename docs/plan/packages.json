@@ -232,7 +232,7 @@
   },
   {
    "file": "server/al/diag.py",
-   "packages_in": 17,
+   "packages_in": 18,
    "packages_planned": 17,
    "waves": [
     1,
@@ -250,6 +250,7 @@
     21,
     22,
     23,
+    24,
     27,
     30
    ]
@@ -406,7 +407,7 @@
   },
   {
    "file": "README.md",
-   "packages_in": 10,
+   "packages_in": 11,
    "packages_planned": 10,
    "waves": [
     6,
@@ -417,6 +418,7 @@
     16,
     18,
     21,
+    22,
     23,
     24
    ]
@@ -471,7 +473,7 @@
   },
   {
    "file": "app/shared/render_gate.js",
-   "packages_in": 8,
+   "packages_in": 9,
    "packages_planned": 8,
    "waves": [
     4,
@@ -480,6 +482,7 @@
     21,
     22,
     23,
+    24,
     25,
     33
    ]
@@ -501,14 +504,16 @@
   },
   {
    "file": "docs/design/0001-design-system.md",
-   "packages_in": 8,
+   "packages_in": 10,
    "packages_planned": 8,
    "waves": [
     4,
     5,
     17,
     19,
+    22,
     23,
+    24,
     27,
     31,
     33
@@ -841,7 +846,7 @@
     24
    ],
    "est_wall_min": 458,
-   "session_packages": 39,
+   "session_packages": 44,
    "milestones": []
   },
   {
@@ -1546,7 +1551,11 @@
     "DEP-19",
     "RUN-SECOND-LINE-CLIENT",
     "PUB-HOOK-RELEASE-CHECK",
-    "LOOP-CI-ISSUES"
+    "LOOP-CI-ISSUES",
+    "CARD-LINE-LIMIT",
+    "BUILD-GEAR-EMPTY-COPY",
+    "DEP14-UNINSTALL-LINE",
+    "HOME-REFUSAL-COPY"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1587,6 +1596,7 @@
     "RUN-OVERLAY-REMEMBER",
     "DATA-SNAP-TRIM",
     "PLAY-PAGER-SCALE-24",
+    "RUN-UNREADABLE-WORD",
     "REL-CUTOVER-LIVE"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean; REL-CUTOVER-LIVE runs alone after the last batch is on main, with nothing else in flight"
@@ -15535,7 +15545,8 @@
     "OPEN-10",
     "AUDIT-P8-LOW",
     "CARRY-07",
-    "F-185"
+    "F-185",
+    "REPORT-DOC-QUIET"
    ],
    "files": [
     "server/al/diag.py",
@@ -15567,9 +15578,10 @@
     "tests/test_unknown_item_text.py::test_checks_count_is_1",
     "tests/test_unknown_item_text.py::test_copied_report_holds_the_line_and_no_path",
     "tests/test_unknown_item_text.py::test_restart_clears_it_and_no_file_is_written",
-    "tests/test_unknown_item_text.py::test_list_caps_at_200"
+    "tests/test_unknown_item_text.py::test_list_caps_at_200",
+    "tests/test_quiet_feed.py (stays green; REPORT-DOC-QUIET docstring only)"
    ],
-   "accept": "python -m pytest -q tests/test_report.py tests/test_diag_self.py tests/test_audit_pass8.py passes and npm test --prefix app passes. Also (folded RUN-UNKNOWN-ITEM-TEXT): python -m pytest -q tests/test_unknown_item_text.py tests/test_tc_eval.py tests/test_report.py passes.",
+   "accept": "python -m pytest -q tests/test_report.py tests/test_diag_self.py tests/test_audit_pass8.py passes and npm test --prefix app passes. Also (folded RUN-UNKNOWN-ITEM-TEXT): python -m pytest -q tests/test_unknown_item_text.py tests/test_tc_eval.py tests/test_report.py passes. Also (folded REPORT-DOC-QUIET): python -m pytest -q tests/test_quiet_feed.py tests/test_diag_self.py passes.",
    "zero_click": "One click to copy (decision 0014 requires it); the preview costs no extra click. Also (folded RUN-UNKNOWN-ITEM-TEXT): Collected silently; the report copy stays a click (decision 0040).",
    "size": "L",
    "est_min": 90,
@@ -15589,7 +15601,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. diag.py: secrets (239-264) and redact (271-279) delegate to server/al/report.py. web/checks.js: one checkbox in the preview. The issue form with the report text area is a PUB package (go-public). FOLDED RUN-UNKNOWN-ITEM-TEXT: Tier P3. live.py: next to the 'unweighted' list at line 78. The list never reaches a file (decision 0045: item text in memory only). No new read: it reuses the per-press clipboard text (decision 0003). PLAN 07: folded from RUN-REPORT-FIELDS, RUN-UNKNOWN-ITEM-TEXT (one agent, one commit series, at most 90 minutes).",
+   "notes": "Tier P2. diag.py: secrets (239-264) and redact (271-279) delegate to server/al/report.py. web/checks.js: one checkbox in the preview. The issue form with the report text area is a PUB package (go-public). FOLDED RUN-UNKNOWN-ITEM-TEXT: Tier P3. live.py: next to the 'unweighted' list at line 78. The list never reaches a file (decision 0045: item text in memory only). No new read: it reuses the per-press clipboard text (decision 0003). PLAN 07: folded from RUN-REPORT-FIELDS, RUN-UNKNOWN-ITEM-TEXT (one agent, one commit series, at most 90 minutes). FOLDED REPORT-DOC-QUIET: server/al/plug/report.py docstring still describes the snapshot report text and minute stamp that RUN-QUIET-FEED removed; restate it for the quiet feed (report text built only on the click, ages stepped at 5 minutes). Docstring edit absorbed, est_min stays 90. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P2.",
    "wave": 22,
    "owner": "session",
    "tier": "P2",
@@ -15606,7 +15618,8 @@
     "TD-17",
     "OPEN-13",
     "S5-FOLLOWUP",
-    "OPEN-50"
+    "OPEN-50",
+    "ZONE-CARD-ITEM-GATE"
    ],
    "files": [
     "app/shared/render_gate.js",
@@ -15630,12 +15643,13 @@
    "tests": [
     "app/test/hudline2.test.js (rank 5: under zone_guide always the guide short replaces the level text and a death or level-up brings level and deaths back for 20 s; under entry / never rank 5 never fires; the page never renders the long guide line)",
     "app/test/overlay_gate.test.js (the card's near edge is 62 px from the anchored edge in every state, top and bottom anchors)",
-    "tests/test_overlay_smoke.py::test_overlay_page_renders_only_on_change (still one setTimeout)"
+    "tests/test_overlay_smoke.py::test_overlay_page_renders_only_on_change (still one setTimeout)",
+    "app/test/overlay_gate.test.js (ZONE-CARD-ITEM-GATE: a kind zone card renders with parts.item off and an item card does not)"
    ],
-   "accept": "node --test app/test/hudline2.test.js app/test/overlay_gate.test.js app/test/layout.test.js app/test/overlay_parts.test.js app/test/shared.test.js and python -m pytest -q tests/test_overlay_smoke.py tests/test_ux_review.py pass.",
+   "accept": "node --test app/test/hudline2.test.js app/test/overlay_gate.test.js app/test/layout.test.js app/test/overlay_parts.test.js app/test/shared.test.js and python -m pytest -q tests/test_overlay_smoke.py tests/test_ux_review.py pass. Also (folded ZONE-CARD-ITEM-GATE): npm test --prefix app passes with a test that a kind zone card renders with parts.item off and an item card does not.",
    "zero_click": "The line follows the snapshot by itself; the guide line is an opt-in setting (Always), the default keeps level and deaths.",
-   "size": "M",
-   "est_min": 55,
+   "size": "L",
+   "est_min": 75,
    "deps": [
     "OVL-LINE2-RULE",
     "OVL-ZONE-CARD",
@@ -15648,7 +15662,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). Plan 03 sections 5.3 (anchor) and 5.4. app/shared/render_gate.js: hudLine2 gains rank 5, the guide line (alone; only when snap.overlay_layout.zone_guide is 'always', snap.overlay.guide_short is not empty and now >= snap.overlay.calm_at); FIELDS gains 'guide'. The 20 s return needs one more wake-up: fold it into overlay.js schedule() (min of the three times; still one setTimeout call site). app/overlay/index.html: a guide span on the nums row (14 px, secondary colour) and the separator handling left by OVL-TD05-LEGIBILITY. app/overlay/overlay.css: the card anchored 62 px from the window's anchored edge whatever line 2 shows (HUD min-height or card margin), the guide span style. Rendered widths (G10) of the line-2 worst-case strings are measured by OVL-CONTRAST-PIXELS from fixture strings (independent of this package); its test file is not edited here. Part (a) of S5-FOLLOWUP / OPEN-13 (overlay guide line) is delivered here; its other parts belong to cluster DATA. HOT: app/shared/render_gate.js.",
+   "notes": "Tier P2. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). Plan 03 sections 5.3 (anchor) and 5.4. app/shared/render_gate.js: hudLine2 gains rank 5, the guide line (alone; only when snap.overlay_layout.zone_guide is 'always', snap.overlay.guide_short is not empty and now >= snap.overlay.calm_at); FIELDS gains 'guide'. The 20 s return needs one more wake-up: fold it into overlay.js schedule() (min of the three times; still one setTimeout call site). app/overlay/index.html: a guide span on the nums row (14 px, secondary colour) and the separator handling left by OVL-TD05-LEGIBILITY. app/overlay/overlay.css: the card anchored 62 px from the window's anchored edge whatever line 2 shows (HUD min-height or card margin), the guide span style. Rendered widths (G10) of the line-2 worst-case strings are measured by OVL-CONTRAST-PIXELS from fixture strings (independent of this package); its test file is not edited here. Part (a) of S5-FOLLOWUP / OPEN-13 (overlay guide line) is delivered here; its other parts belong to cluster DATA. HOT: app/shared/render_gate.js. FOLDED ZONE-CARD-ITEM-GATE: OVL-ZONE-CARD review D-1: render_gate.js shows every card only while parts.item is on, so the zone moment card is hidden when the item part is off; gate the zone card on its own part (or the card slot) instead of parts.item. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P1.",
    "wave": 22,
    "owner": "session",
    "tier": "P2",
@@ -17282,6 +17296,53 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "PLAY"
+  },
+  {
+   "id": "RUN-UNREADABLE-WORD",
+   "title": "One status word for the unreadable Client.txt state",
+   "goal": "The 'Client.txt can't be read' state has one status word: an unreadable state in server/al/data/status_words.json with copies in web/status.js and app/shared/render_gate.js (kit blocked, bar \"can't read Client.txt\", overlay at most 15 characters); diag.check_reading uses _state_check; the new log-state sentences (five reset sentences, restarted / unreadable / readable lines, the two Reading-row strings) are added to docs/design/0001-design-system.md section 9 (review SRW-1, SRW-2).",
+   "units": [
+    "RUN-UNREADABLE-WORD"
+   ],
+   "files": [
+    "server/al/data/status_words.json",
+    "web/status.js",
+    "app/shared/render_gate.js",
+    "server/al/diag.py",
+    "docs/design/0001-design-system.md",
+    "tests/test_status_words.py",
+    "app/test/statuswords.test.js"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_status_words.py (unreadable state present, overlay word at most 15 characters, copies in web/status.js and render_gate.js match)",
+    "app/test/statuswords.test.js (bar, overlay and Checks name the same state)",
+    "tests/test_diag_self.py (check_reading goes through _state_check)"
+   ],
+   "accept": "python -m pytest -q tests/test_status_words.py tests/test_diag_self.py passes and npm test --prefix app passes; bar, overlay and Checks name the same state.",
+   "zero_click": "The word follows the reader state by itself; no click.",
+   "size": "M",
+   "est_min": 50,
+   "deps": [
+    "TEST-STATE-TEXT-PINS",
+    "RUN-REPORT-FIELDS",
+    "OVL-KEY-HINT",
+    "REL-UPDATE-CHECKS",
+    "TEST-COPY-SHEETS"
+   ],
+   "serial_group": "render-gate-js",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Review SRW-1, SRW-2. Placement: UNREADABLE-RETAG (session 18): wave 22 has render_gate.js (OVL-LINE2-GUIDE) and diag.py (RUN-REPORT-FIELDS); wave 23 has render_gate.js (OVL-KEY-HINT), design 0001 (TEST-COPY-SHEETS) and diag.py (REL-UPDATE-CHECKS); wave 24 is the earliest with all free. The sentences stay in design 0001 section 9, not a docs/design/copy sheet: TEST-COPY-SHEETS splits only section 9 rule 2 (message templates) and a log-state sentence is a status word (W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P7; reverses if TEST-COPY-SHEETS moves the status-word lines out of section 9, then docs/design/copy/events.md). Design: run the design-reviewer agent on the diff and return its reviews.log line.",
+   "wave": 24,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "RUN"
   },
   {
    "id": "SEC-LOG-PATH-FIELD",
@@ -20389,6 +20450,168 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "LOOP"
+  },
+  {
+   "id": "CARD-LINE-LIMIT",
+   "title": "Card lines fit the 236 px inside width: lower the card character limit",
+   "goal": "A worst-case capitals-and-digits card line fits the plate's 236 px inside width: app/shared/format.js maxLen defaults and CARD_LINE in server/al/text/common.py are lowered (never the font size) and the OVL-CONTRAST-PIXELS strict xfail in tests/test_overlay_pixels.py becomes a pass.",
+   "units": [
+    "CARD-LINE-LIMIT"
+   ],
+   "files": [
+    "app/shared/format.js",
+    "server/al/text/common.py",
+    "tests/test_overlay_pixels.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_overlay_pixels.py (the 34-character worst-case line xfail removed; the worst-case card line renders at or under 236 px)",
+    "tests/test_glance_rules.py (card line limit matches CARD_LINE)",
+    "app/test/layout.test.js (stays green)"
+   ],
+   "accept": "python -m pytest -q tests/test_overlay_pixels.py tests/test_glance_rules.py passes with the xfail removed and npm test --prefix app passes.",
+   "zero_click": "Nothing for players; card lines fit by themselves.",
+   "size": "M",
+   "est_min": 40,
+   "deps": [
+    "OVL-CONTRAST-PIXELS"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. Filed from the OVL-CONTRAST-PIXELS finding (strict xfail: a 34-character line renders at about 292 px against 236 px). Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P3: new wave-22 package, every file unowned in wave 22.",
+   "wave": 22,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "OVL"
+  },
+  {
+   "id": "BUILD-GEAR-EMPTY-COPY",
+   "title": "Build card empty-gear row says what to do next",
+   "goal": "The Build card's empty-gear row text 'No gear in this build.' (web/panels/build.js) says what to do next in the voice of design 0001 section 9 (how gear appears once the build is pasted with items).",
+   "units": [
+    "BUILD-GEAR-EMPTY-COPY"
+   ],
+   "files": [
+    "web/panels/build.js"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_build_item_text.py (the empty-gear sentence)",
+    "tests/test_ux_review.py (stays green)"
+   ],
+   "accept": "npm test --prefix app passes and python -m pytest -q tests/test_build_item_text.py tests/test_ux_review.py passes with the new sentence.",
+   "zero_click": "Shown by itself when a build has no gear; no click.",
+   "size": "S",
+   "est_min": 20,
+   "deps": [
+    "PLAY-TD-19E-ITEM-TEXT"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P3. PLAY-TD-19E-ITEM-TEXT review D-3 (nit). Design: run the design-reviewer agent on the diff and return its reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P4: new wave-22 package, web/panels/build.js unowned in wave 22.",
+   "wave": 22,
+   "owner": "session",
+   "tier": "P3",
+   "cluster": "PLAY"
+  },
+  {
+   "id": "DEP14-UNINSTALL-LINE",
+   "title": "README Quick start names the uninstall step",
+   "goal": "README.md drops the stale Quick start sentence 'There is no uninstall script yet' (uninstall.ps1 exists, decision 0066) for the uninstall step, its pin in tests/test_public_docs.py follows, and DEP-14 review D11 (the item 1 line fragment) is finished.",
+   "units": [
+    "DEP14-UNINSTALL-LINE"
+   ],
+   "files": [
+    "README.md",
+    "tests/test_public_docs.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_public_docs.py (pins the uninstall step, not the stale sentence)",
+    "tests/test_readme.py (stays green)",
+    "tests/test_docs_fresh.py (stays green)"
+   ],
+   "accept": "python -m pytest -q tests/test_public_docs.py tests/test_readme.py tests/test_docs_fresh.py passes.",
+   "zero_click": "Document edit; no click.",
+   "size": "S",
+   "est_min": 20,
+   "deps": [
+    "DEP-14"
+   ],
+   "serial_group": "readme",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. DEP-14 leftover. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P5: new wave-22 package, README.md and tests/test_public_docs.py unowned in wave 22.",
+   "wave": 22,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "DEP"
+  },
+  {
+   "id": "HOME-REFUSAL-COPY",
+   "title": "Refused-home sentence, design 0001 start-up exception and wording, plan 03 section 5.1 widths and line 2 rule",
+   "goal": "The shared refused-home sentence (server/al/paths.py home_refusal and app/client/home.js) is a sentence with a capital and a full stop in both; design 0001 section 7 allows a blocking OS error box only for a start-up refusal; design 0001 section 9 renames Act times card to Acts card and Death recap card to Deaths card with the row forms '<act> (<notes>): <t>, total <t>, best <t>', '<map> (<note>): level <n>, <t>, <n> death(s)', 'Level <n>: <n> maps, <n> deaths, median <t>, <n> level-ups'; docs/plan/03-target-design.md section 5.1 (and design 0001) state the measured HUD plate (258 px inside, 280 px outside) and the 26-character line 2 rule names the deaths text hudLine2 counts.",
+   "units": [
+    "HOME-REFUSAL-COPY",
+    "RUN-GRID-DESIGN-WORDS",
+    "HUD-PLATE-WIDTH-DOC",
+    "PLAN03-LINE2-WORDING"
+   ],
+   "files": [
+    "server/al/paths.py",
+    "app/client/home.js",
+    "app/test/home.test.js",
+    "docs/design/0001-design-system.md",
+    "docs/plan/03-target-design.md"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_install_paths.py (home_refusal is a sentence: capital first, full stop last)",
+    "app/test/home.test.js (the client shows the same sentence)",
+    "tests/test_design_contrast.py (stays green)",
+    "tests/test_overlay_pixels.py (the widths section 5.1 states are the ones it measures)",
+    "tests/test_ascii_lf.py (stays green)"
+   ],
+   "accept": "npm test --prefix app and python -m pytest -q tests/test_install_paths.py tests/test_design_contrast.py tests/test_overlay_pixels.py tests/test_ascii_lf.py pass; design 0001 section 7 carries the start-up refusal exception, section 9 the Acts and Deaths card words, and plan 03 section 5.1 the measured plate widths and the deaths text in the line 2 count.",
+   "zero_click": "Shown once at a refused start; the rest are document edits; no click.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "REL-HOME-REFUSAL-UI",
+    "OVL-CONTRAST-PIXELS",
+    "OVL-LINE2-RULE",
+    "PLAY-TD-20A-RUN-GRID"
+   ],
+   "serial_group": "design-0001",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. REL-HOME-REFUSAL-UI review S3 and S4. FOLDED RUN-GRID-DESIGN-WORDS (PLAY-TD-20A-RUN-GRID review D-3), HUD-PLATE-WIDTH-DOC (OVL-CONTRAST-PIXELS measurement; the doc option: section 5.1 and design 0001 follow the measured 258/280 px plate, since narrowing the plate CSS needs app/overlay/overlay.css, owned by OVL-LINE2-GUIDE in wave 22; reopen the CSS fix as a later row if the plate proves wrong in play) and PLAN03-LINE2-WORDING (OVL-LINE2-RULE review L2-2). Design: run the design-reviewer agent on the diff and return its reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P6: one wave-22 owner of design 0001.",
+   "wave": 22,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "REL"
   },
   {
    "id": "PUB-GUIDE-DOWNLOAD-PLACE",
@@ -23526,6 +23749,36 @@
   ],
   "PLAY-PAGER-SCALE-24": [
    "PLAY-PAGER-SCALE-24"
+  ],
+  "ZONE-CARD-ITEM-GATE": [
+   "OVL-LINE2-GUIDE"
+  ],
+  "REPORT-DOC-QUIET": [
+   "RUN-REPORT-FIELDS"
+  ],
+  "CARD-LINE-LIMIT": [
+   "CARD-LINE-LIMIT"
+  ],
+  "BUILD-GEAR-EMPTY-COPY": [
+   "BUILD-GEAR-EMPTY-COPY"
+  ],
+  "DEP14-UNINSTALL-LINE": [
+   "DEP14-UNINSTALL-LINE"
+  ],
+  "HOME-REFUSAL-COPY": [
+   "HOME-REFUSAL-COPY"
+  ],
+  "RUN-GRID-DESIGN-WORDS": [
+   "HOME-REFUSAL-COPY"
+  ],
+  "HUD-PLATE-WIDTH-DOC": [
+   "HOME-REFUSAL-COPY"
+  ],
+  "PLAN03-LINE2-WORDING": [
+   "HOME-REFUSAL-COPY"
+  ],
+  "RUN-UNREADABLE-WORD": [
+   "RUN-UNREADABLE-WORD"
   ]
  }
 }
