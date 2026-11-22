@@ -84,3 +84,133 @@ test("chars: Object.prototype names are kept (AUDIT-P6-LOW P6-3)", () => {
     { name: "hasOwnProperty", current: false }]);
   assert.equal(ch.view(snap, "__proto__").character, "__proto__");
 });
+
+/* ---- a small fake DOM: enough for the card pages and the pagers -------- */
+function matches(n, sel) {
+  let m;
+  if ((m = /^\[([\w-]+)="([^"]*)"\]$/.exec(sel))) { return n.attrs[m[1]] === m[2]; }
+  if ((m = /^\[([\w-]+)\]$/.exec(sel))) { return m[1] in n.attrs; }
+  if (sel.charAt(0) === ".") { return n.className.split(/\s+/).includes(sel.slice(1)); }
+  return n.tagName === sel.toUpperCase();
+}
+
+function fakeDoc(size) {
+  const doc = { activeElement: null, els: {} };
+  doc.createElement = (tag) => ({
+    tagName: tag.toUpperCase(), className: "", hidden: false, children: [], parentNode: null,
+    attrs: {}, listeners: {}, _text: "", value: "", checked: false,
+    get firstChild() { return this.children[0] || null; },
+    get textContent() { return this._text + this.children.map((c) => c.textContent).join(""); },
+    set textContent(v) { this.children = []; this._text = String(v); },
+    appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+    removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
+    replaceChildren(...kids) { this.children = []; this._text = ""; kids.forEach((k) => this.appendChild(k)); },
+    setAttribute(k, v) { this.attrs[k] = String(v); if (k === "id") { doc.els[v] = this; } },
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+    hasAttribute(k) { return k in this.attrs; },
+    removeAttribute(k) { delete this.attrs[k]; },
+    addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
+    click() { (this.listeners.click || []).forEach((fn) => fn({ target: this })); },
+    contains(x) { return x === this || this.walk().includes(x); },
+    walk(out) {
+      out = out || [];
+      this.children.forEach((c) => { out.push(c); if (c.walk) { c.walk(out); } });
+      return out;
+    },
+    querySelector(sel) { return this.querySelectorAll(sel)[0] || null; },
+    querySelectorAll(sel) { return this.walk().filter((c) => matches(c, sel)); },
+    focus() { doc.activeElement = this; }
+  });
+  doc.getElementById = (id) => doc.els[id] || null;
+  doc.defaultView = { getComputedStyle: () => ({ getPropertyValue: () => size || "full" }) };
+  return doc;
+}
+
+function mk(doc, tag, attrs, kids) {
+  const n = doc.createElement(tag);
+  Object.keys(attrs || {}).forEach((k) => {
+    if (k === "class") { n.className = attrs[k]; } else if (k === "hidden") { n.hidden = !!attrs[k]; } else {
+      n.setAttribute(k, attrs[k]);
+    }
+  });
+  (kids || []).forEach((k) => n.appendChild(k));
+  return n;
+}
+
+const listOf = (d, id) => d.getElementById(id).children[0].children[0]; // host > ul
+const texts = (ul) => ul.children.map((li) => li.textContent);
+
+/* The Characters card as web/index.html builds it. */
+function charsCard(size) {
+  const d = fakeDoc(size);
+  mk(d, "section", { id: "charsbox", class: "card grid-card chars" }, [
+    mk(d, "div", { class: "card-page", "data-page": "main" }, [
+      mk(d, "p", { id: "char-pick-box", hidden: true }, [mk(d, "select", { id: "char-pick" })]),
+      mk(d, "p", { id: "chars-empty" }), mk(d, "div", { id: "chars-rows", hidden: true })])]);
+  return d;
+}
+
+test("chars: one row per character, who is playing, level, deaths and best times", () => {
+  assert.deepEqual(ch.charRows(SNAP).map((r) => r.text), [
+    "Sable (playing now): Witch, level 4, 2 deaths",
+    "Quill (not playing): Monk, level 20, 5 deaths",
+    "Old (history only)"]);
+  const timed = Object.assign({}, SNAP, { run_history: { on: true,
+    best: [{ key: "G1", label: "Act 1", best_text: "20:00" }, { key: "G2", label: "Act 2", best_text: "15:00" }],
+    by_character: { Old: { on: true, best: [{ key: "G1", label: "Act 1", best_text: "19:00" }] } } } });
+  assert.deepEqual(ch.charRows(timed).map((r) => r.text), [
+    "Sable (playing now): Witch, level 4, 2 deaths; best Act 1 20:00, Act 2 15:00",
+    "Quill (not playing): Monk, level 20, 5 deaths",
+    "Old (history only): best Act 1 19:00"]);
+  const one = { characters: [{ name: "Solo", current: true, "class": "Monk", level: 1, deaths: 1 }] };
+  assert.deepEqual(ch.charRows(one).map((r) => r.text), ["Solo (playing now): Monk, level 1, 1 death"]);
+  assert.deepEqual(ch.charRows(null), []);
+  assert.equal(ch.bestsText(null), "");
+});
+
+test("chars paint: the picker shows with 2+ characters, the rows page at 8 (6 compact)", () => {
+  const d = charsCard();
+  ch.paint(d, SNAP, "");
+  assert.equal(d.getElementById("char-pick-box").hidden, false);
+  const sel = d.getElementById("char-pick");
+  assert.deepEqual(sel.children.map((o) => o.textContent), ["Sable (playing now)", "Quill", "Old"]);
+  assert.deepEqual(sel.children.map((o) => o.value), ["", "Quill", "Old"]);
+  assert.equal(sel.value, "");
+  assert.equal(texts(listOf(d, "chars-rows")).length, 3);
+  assert.equal(d.getElementById("chars-empty").hidden, true);
+  ch.paint(d, SNAP, "Quill");
+  assert.equal(sel.value, "Quill");
+  // the player's change picks
+  const picked = [];
+  ch.wire(d, (name) => picked.push(name));
+  sel.value = "Old";
+  (sel.listeners.change || []).forEach((fn) => fn({ target: sel }));
+  assert.deepEqual(picked, ["Old"]);
+  // nobody yet: the sentence in place of the rows, no picker
+  ch.paint(d, { characters: [], run_history: null }, "");
+  assert.equal(d.getElementById("char-pick-box").hidden, true);
+  assert.equal(d.getElementById("chars-rows").hidden, true);
+  assert.equal(d.getElementById("chars-empty").hidden, false);
+  // 12 names: 8 rows a page (6 compact)
+  const by = {};
+  for (let i = 0; i < 12; i += 1) { by["C" + i] = { best: [] }; }
+  ["full", "compact"].forEach((size) => {
+    const c = charsCard(size);
+    ch.paint(c, { characters: [], run_history: { by_character: by } }, "");
+    assert.equal(listOf(c, "chars-rows").children.length, size === "full" ? 8 : 6, size);
+  });
+  assert.deepEqual(ch.ROWS, { full: 8, compact: 6 });
+});
+
+test("the Characters card in the markup: the picker and its rows, after Recent", () => {
+  const html = web.source("index.html");
+  const at = html.indexOf('id="charsbox"');
+  const box = html.slice(at, html.indexOf("</section>", at));
+  assert.match(box, /^id="charsbox" class="card grid-card chars"/);
+  ["char-pick-box", "char-pick", "chars-empty"].forEach((id) => assert.ok(box.includes('id="' + id + '"'), id));
+  assert.ok(box.includes('<label for="char-pick">Show numbers for</label>'));
+  assert.ok(box.includes('id="chars-rows" class="pager-slot"'));
+  assert.ok(html.indexOf('id="events-title"') < at);
+  // the picker moved: one picker on the page
+  assert.equal(html.split('id="char-pick"').length, 2);
+});
