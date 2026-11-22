@@ -23,6 +23,11 @@ What it does, all under the AL sidecar (server/al/paths.py):
   "source-only" and the core keeps working (the component is optional);
 - writes Build\\tc-pins-stamp.json; a re-run with the same pins and the
   outputs present is a no-op with no network request;
+- TC-PIN-POLICY (F-180, decision 0018 pin policy, decision 0027 amendment
+  2026-11-21): once luajit.exe is built and verified ('ready', or a no-op
+  run) the portable toolchain tree and archive are deleted directly (they
+  are AshLight's own re-fetchable cache files under the sidecar, not player
+  data); a later rebuild fetches them again;
 - TC-CALC-VERIFY-PIN (F-139, decision 0018 amendment 2026-11-20): the pin
   carries a content digest per component (content_sha256: the tree_digest
   form over every file under the top dir) and, for PoB, a digest of its
@@ -543,6 +548,41 @@ def ensure_toolchain(doc, lay, fetch=None):
     return lay["toolchain_bin"]
 
 
+def _rm_readonly(func, path, _exc):
+    """shutil.rmtree onerror: clear a read-only bit once and retry."""
+    os.chmod(path, 0o700)
+    func(path)
+
+
+def remove_toolchain(lay):
+    """TC-PIN-POLICY: delete the portable toolchain tree and archive after a
+    verified luajit.exe (decision 0027 amendment 2026-11-21). A direct
+    delete, not the Recycle Bin: both are AshLight's own re-fetchable cache
+    files under the sidecar Cache. Quarantined *.rejected files are kept as
+    evidence. Returns True when anything was removed; a delete that fails is
+    logged and never fails setup (the next verified run tries again)."""
+    root, archive = lay["toolchain_root"], lay["toolchain_archive"]
+    cache = lay["toolchain_cache"]
+    removed = False
+    for path in (root, archive, archive.with_name(archive.name + ".part")):
+        if path.parent != cache or not (path.exists() or path.is_symlink()):
+            continue
+        try:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path, onerror=_rm_readonly)
+            else:
+                path.unlink()
+            removed = True
+        except OSError as e:
+            log(f"{TOOLCHAIN}: could not delete {path.name} ({type(e).__name__}); "
+                "kept, the next verified run tries again")
+    if removed:
+        log(f"{TOOLCHAIN}: luajit.exe verified; deleted the portable toolchain tree "
+            "and archive directly (AshLight's own re-fetchable cache files under the "
+            "sidecar Cache); a later rebuild fetches them again")
+    return removed
+
+
 def ensure_luajit(lay, which=None, run=subprocess.run, environ=None, toolchain=None,
                   source_check=None):
     """'ready' when luajit.exe exists AND matches the SHA-256 recorded when
@@ -703,6 +743,7 @@ def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run,
     lay = layout(doc, environ)
     if is_noop(doc, lay):
         log("tc calc component up to date (no-op)")
+        remove_toolchain(lay)  # a toolchain an earlier version kept
         return "noop"
     for name, archive, parent, tree in (
             ("pob2", "pob2_archive", "pob2_cache", "pob2_checkout"),
@@ -727,6 +768,8 @@ def run_setup(doc, environ=None, fetch=None, which=None, run=subprocess.run,
     status = ensure_luajit(lay, which=which, run=run, environ=environ,
                            toolchain=toolchain, source_check=source_check)
     write_stamp(doc, lay, status)
+    if status == "ready" and exepin.verified(lay["luajit_exe"]):
+        remove_toolchain(lay)
     log(f"tc calc component: {status} (PoB-PoE2 {doc['pob2']['tag']}, "
         f"LuaJIT {doc['luajit']['version']})")
     return status

@@ -181,3 +181,40 @@ Reverses if: the content digest accepts a tree that later proves
 different from the pinned commit, re-hashing PoB's Lua on each re-run
 makes setup measurably slow on the target machine, or GitHub publishes
 signed or digest-stable source archives.
+
+## Amendment 2026-11-21 (TC-PIN-POLICY, plan unit F-180)
+
+Pin policy, and the toolchain cleaned up after a verified build.
+
+1. At most one PoB pin move per game patch cycle (the time between two
+   game patches), unless a PoB release changes a reference output (a
+   number in the decision 0028 reference build checks); then that release
+   may move the pin within the same cycle. A move still runs only through
+   `tools/tc_drift.py apply` after a live-green trial, committed by a
+   session (decision 0025).
+2. LuaJIT moves only together with a PoB move: never on its own, only
+   when the PoB move needs it or in the same commit. A LuaJIT-only change
+   would rebuild `luajit.exe` for every player with no calc gain.
+3. After a verified build (`luajit.exe` built and its SHA-256 recorded,
+   status `ready`, or a no-op run whose `luajit.exe` still verifies)
+   `tools/tc_pin.py` deletes the portable toolchain tree and archive
+   (decision 0027 amendment 2026-11-21). A re-run is still a no-op: the
+   stamp, the PoB and LuaJIT trees and `luajit.exe` stay, and nothing is
+   fetched or built.
+4. The update flow re-runs calc setup when the pin digest changed (a new
+   release carries a moved pin); that step is built by the REL update
+   package, not here.
+
+Alternatives: follow every PoB release (most current numbers, but a
+large re-download and rebuild per player each time and more drift risk);
+move only on a broken bridge (stale numbers for a whole league); move
+LuaJIT on its own schedule (rebuilds with no calc gain). Rejected.
+
+Why: PoB releases several times per patch cycle; one move per cycle
+keeps players current for the patch while a reference-output change
+still lands at once, and pinning LuaJIT to PoB moves keeps rebuilds rare.
+
+Reverses if: PoB starts fixing calc bugs in releases that leave the
+reference outputs unchanged and players miss them, GGG patches become so
+frequent that one move per cycle means a move per release, or a LuaJIT
+security fix must land without a PoB move.
