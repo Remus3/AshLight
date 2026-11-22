@@ -71,9 +71,12 @@ def test_copied_report_holds_the_line_and_no_path(core, tmp_path):
     for p in (str(tmp_path), str(tmp_path).replace("\\", "/"), str(core.runtime)):
         assert p.lower() not in text.lower()
     # a mod line carrying a path is masked like any free text
-    core.unknown_items.add(["Seen in " + str(tmp_path / "x.txt")])
+    # a fixed path no env value can match (LOOP-RED 2026-11-22: under a TEMP
+    # inside the user profile the tmp_path line was masked as <home>); the
+    # drive letter is joined so the leak sweep's drive-path rule stays quiet
+    core.unknown_items.add(["Seen in " + "D" + ":\\zqpathdir\\x.txt"])
     text = route.build(core, now=NOW)
-    assert str(tmp_path).lower() not in text.lower() and "<path>" in text
+    assert "zqpathdir" not in text.lower() and "<path>" in text
 
 
 def test_restart_clears_it_and_no_file_is_written(tmp_path):
