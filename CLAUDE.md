@@ -1288,3 +1288,34 @@ of the HALT check.
   browser or Electron refuses the synchronous copy, the summary click proves
   unreliable as the build trigger, players re-record worked checks often
   enough to need a retry control, or RUN-QUIET-FEED reshapes the report.
+- REL-STAGE-SANDBOX: `release.py stage --sandbox` (off by default; operator
+  act OA-14) adds step 8, sandbox_phases(). It builds a scratch folder under
+  <sidecar>/Temp with the staged assets and the cached pinned runtimes,
+  mapped read-only. A .wsb file turns off networking, clipboard, GPU, audio,
+  video and printers, and maps one writable results folder. A generated
+  phase script installs, reads back the per-user uninstall key, the
+  shortcuts and the home, uninstalls, reads back again, writes result.json
+  and shuts the sandbox down. The tool only checks that
+  %SystemRoot%\System32\WindowsSandbox.exe exists. It never turns a Windows
+  feature on and never asks for elevation, and a missing feature fails the
+  step with the reason. A runtime that is not cached also fails the step and
+  is never downloaded. stage.json "sandbox" is "skipped" without the flag,
+  else the step's status. Reverses if: Windows Sandbox drops .wsb mapped
+  folders or LogonCommand, the live OA-14 run shows the desktop mapping or
+  ProtectedClient breaks the phases, or the operator rules a missing feature
+  should be a skip, not a FAIL.
+- RUN-SECOND-LINE-CLIENT (F-127, decision 0005 amendment 2026-11-18): the
+  desktop client's main process (app/client/window.js, never the overlay
+  page) runs the hello health check every 30 s from its first open; after 4
+  failed checks in a row it runs scripts\run.ps1 once through the launcher,
+  at most once per 15 minutes, and connect()'s own start counts toward that
+  limit. run.ps1 converges, so it starts only the missing core and
+  supervisor. When keepalive.json says "gave-up", Launcher.readGiveUp passes
+  on only the restart count and a known reason word, and giveUpLine turns
+  them into a fixed sentence with no path. That sentence shows on the failed
+  page when there is no start-error line. An open companion follows the
+  watch's start: the starting page, then the dashboard or the failed page.
+  There is no tray note (design 0001 section 7.1). Reverses if: the watch
+  restarts a core the player stopped on purpose, 4 x 30 s proves too slow or
+  too eager in play, or a give-up reason has to say more than the count and
+  the reason.
