@@ -9,7 +9,9 @@
    core, which applies allowed keys only. Web data is never turned on by
    an import: the player is told to tick the switch themselves. Nor is
    the optional calc (tc_calc_offered): the player is told it stays off
-   until they set it up. No timers. */
+   until they set it up. TC-WEIGHTS-DELTA-EXPORT: schema 2 files also
+   carry the player's stat weight changes (weights_applied in the
+   report). No timers. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -29,6 +31,8 @@
   var OFFLINE = "Can't reach AshLight - is it running?";
   var SAVED = "Downloaded " + FILE_NAME + ". It holds AshLight's settings " +
     "only: no contact, password or file paths.";
+  /* design review D-1: an import replaces this computer's weight changes */
+  var WEIGHTS_NOTE = " They replace the stat weights you had here.";
   var WEB_OFFER = " The file had web data on. It stays off here until you tick " +
     "\"Use web data\" under Prices and web data.";
   /* FOLLOWUP11: the dashboard has no switch for the calc (it is set up
@@ -43,8 +47,15 @@
   function importedText(report) {
     report = report || {};
     var n = (report.applied || []).length;
-    var text = n === 0 ? "No settings in that file were changed."
-      : "Imported " + n + (n === 1 ? " setting." : " settings.");
+    var w = report.weights_applied === true;
+    var text;
+    if (n === 0) {
+      text = w ? "Imported your stat weights." : "No settings in that file were changed.";
+    } else {
+      text = "Imported " + n + (n === 1 ? " setting" : " settings") +
+        (w ? " and your stat weights." : ".");
+    }
+    if (w) { text += WEIGHTS_NOTE; }
     var ignored = report.ignored || [];
     /* the calc gets its own sentence, so it isn't counted as skipped too */
     if (report.tc_calc_offered) {
@@ -144,5 +155,5 @@
   return { runImport: runImport, runExport: runExport, importedText: importedText,
     refusedText: refusedText, wire: wire, MAX_BYTES: MAX_BYTES, TOO_BIG: TOO_BIG,
     NOT_JSON: NOT_JSON, FAILED: FAILED, OFFLINE: OFFLINE, SAVED: SAVED,
-    WEB_OFFER: WEB_OFFER, CALC_OFFER: CALC_OFFER };
+    WEB_OFFER: WEB_OFFER, CALC_OFFER: CALC_OFFER, WEIGHTS_NOTE: WEIGHTS_NOTE };
 }));
