@@ -42,3 +42,15 @@ def test_running_session_has_no_anyio_asyncio_or_timeout_plugin(pytestconfig):
         assert pm.is_blocked(name), name
     loaded = {pm.get_name(p) or "" for p in pm.get_plugins()}
     assert not any("anyio" in n or "asyncio" in n for n in loaded), sorted(loaded)
+
+
+def test_hang_guard_is_set_in_the_ini():
+    """TEST-SLOW-BUDGET: a hung test ends after 120 s with tracebacks."""
+    ini = _ini()
+    assert ini["faulthandler_timeout"].strip() == "120"
+    assert ini["faulthandler_exit_on_timeout"].strip() == "true"
+
+
+def test_hang_guard_reaches_the_running_session(pytestconfig):
+    assert float(pytestconfig.getini("faulthandler_timeout")) == 120
+    assert pytestconfig.getini("faulthandler_exit_on_timeout") is True
