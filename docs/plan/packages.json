@@ -782,7 +782,7 @@
     9
    ],
    "est_wall_min": 418,
-   "session_packages": 37,
+   "session_packages": 39,
    "milestones": [
     "the wave gate policy is recorded and the test selector picks each package's subset"
    ]
@@ -797,7 +797,7 @@
     13
    ],
    "est_wall_min": 501,
-   "session_packages": 48,
+   "session_packages": 52,
    "milestones": [
     "one gate spelling; the whole suite runs in parallel",
     "the item check compares against worn gear (worn-gear baseline)",
@@ -814,7 +814,7 @@
     17
    ],
    "est_wall_min": 490,
-   "session_packages": 49,
+   "session_packages": 54,
    "milestones": [
     "four tabs: Play, Build and items, Run, Settings",
     "the dashboard prints the real keys and can change them",
@@ -831,7 +831,7 @@
     21
    ],
    "est_wall_min": 511,
-   "session_packages": 57,
+   "session_packages": 60,
    "milestones": [
     "the bootstrap installer exists",
     "the release stage round trip (install, update, rollback, uninstall) passes"
@@ -846,7 +846,7 @@
     24
    ],
    "est_wall_min": 458,
-   "session_packages": 45,
+   "session_packages": 44,
    "milestones": []
   },
   {
@@ -860,7 +860,7 @@
     29
    ],
    "est_wall_min": 490,
-   "session_packages": 18,
+   "session_packages": 23,
    "milestones": [
     "the Settings rail is complete"
    ]
@@ -875,7 +875,7 @@
     33
    ],
    "est_wall_min": 447,
-   "session_packages": 12,
+   "session_packages": 9,
    "milestones": [
     "design 0001 and the cockpit decision are rewritten (records)"
    ]
@@ -890,7 +890,7 @@
     37
    ],
    "est_wall_min": 367,
-   "session_packages": 7,
+   "session_packages": 11,
    "milestones": []
   },
   {
@@ -902,10 +902,12 @@
     40,
     41,
     42,
-    43
+    43,
+    44,
+    45
    ],
    "est_wall_min": 540,
-   "session_packages": 13,
+   "session_packages": 15,
    "milestones": [
     "the item info popover and Kindler build generator are on the Build tab"
    ]
@@ -1607,13 +1609,10 @@
    "title": "Wave 25: local security, overlay and client, theorycraft",
    "goal": "Leads: Find Client.txt outside Steam: a typed path on the consent card; OVERLAY-FEED: /events?view=overlay sends only the fields the HUD reads, only when one c...; luajit leaves when it is not needed. Releases 1 loop-owned rows.",
    "merge_order": [
-    "SEC-LOG-PATH-FIELD",
-    "OVL-OVERLAY-FEED",
     "TC-CALC-IDLE",
     "SEC-CEIL-SNAPSHOT",
     "DATA-PRICE-TYPE-PROOF",
     "PUB-GUIDE-DOWNLOAD-PLACE",
-    "CARD-LINE-LIMIT",
     "RUN-EXPLAIN-ROWS",
     "TEST-SUITE-T0"
    ],
@@ -1624,8 +1623,10 @@
    "title": "Wave 26: Play tab and dashboard, install and release",
    "goal": "Milestones: the Settings rail is complete. Leads: Settings rail 2: Keys, Appearance and tools, About and data; footer; Core: start the updater by itself, 'Update now' and click-only.",
    "merge_order": [
-    "PLAY-TD-21B-SETTINGS-ABOUT",
-    "REL-UPDATE-TRIGGER",
+    "OVL-OVERLAY-FEED",
+    "SEC-LOG-PATH-FIELD",
+    "CARD-LINE-LIMIT-COPY",
+    "LOOP-GATE-SIDECAR-TEMP",
     "RUN-BUDGET-CALIBRATE-B11"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
@@ -1635,10 +1636,9 @@
    "title": "Wave 27: tests and code seams, reliability and observability, Play tab and dashboard",
    "goal": "Leads: Copy pass: eleven sentences and four errors never send the player to a script; Accessibility CSS: inset focus ring, 24 px targets, forced colours, text spacing; Panel move B: layout, weights, web data and graphics panels.",
    "merge_order": [
-    "RUN-NO-DEAD-ENDS",
-    "PLAY-TD-22A-A11Y-CSS",
-    "TEST-WEB-PANELS-B",
-    "TEST-CORE-TICKS"
+    "PLAY-TD-21B-SETTINGS-ABOUT",
+    "REL-UPDATE-TRIGGER",
+    "CARD-LINE-LIMIT-FLIP"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1647,10 +1647,10 @@
    "title": "Wave 28: Play tab and dashboard, reliability and observability",
    "goal": "Leads: Theme choice: Dark, Follow Windows, Light; In-browser accessibility pass in the CDP harness; Parse each data file once. Releases 1 loop-owned rows.",
    "merge_order": [
-    "PLAY-TD-04B-THEME-CHOICE",
-    "PLAY-TD-22C-A11Y-CDP",
-    "RUN-PERF-PARSE-ONCE",
-    "PLAY-F-165-COLOUR-WORD-TEST"
+    "RUN-NO-DEAD-ENDS",
+    "PLAY-TD-22A-A11Y-CSS",
+    "TEST-WEB-PANELS-B",
+    "TEST-CORE-TICKS"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1659,9 +1659,11 @@
    "title": "Wave 29: Play tab and dashboard, overlay and client",
    "goal": "Leads: Settings group 'Overlay shows': part switches, presets Full / Cards only, zone-guide ch...; Player notes: bounded store, token route and the your-note row; Screen-reader pass tool and its refusals.",
    "merge_order": [
-    "OVL-PARTS-WEB",
-    "PLAY-F-186A-PLAYER-NOTES-STORE",
-    "PLAY-F-204A-SR-TOOL"
+    "SEC-LOG-PATH-PERSIST",
+    "PLAY-TD-22C-A11Y-CDP",
+    "RUN-PERF-PARSE-ONCE",
+    "PLAY-F-165-COLOUR-WORD-TEST",
+    "OVL-PARTS-WEB"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1670,9 +1672,8 @@
    "title": "Wave 30: overlay and client, tests and code seams, loop and watchers",
    "goal": "Leads: Card time setting: 20 / 60 / 200 s (TD-18, optional); Panel move C: remaining Play blocks (events and trades, item check, rates and price); Two Checks notes: a stale loop tick (dev host) and the Electron end of life.",
    "merge_order": [
-    "OVL-TD18-CARD-TIME",
-    "TEST-WEB-PANELS-C",
-    "LOOP-DEV-CHECKS"
+    "PLAY-TD-04B-THEME-CHOICE",
+    "PLAY-F-204A-SR-TOOL"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1681,9 +1682,8 @@
    "title": "Wave 31: Play tab and dashboard, reliability and observability",
    "goal": "Milestones: design 0001 and the cockpit decision are rewritten (records). Leads: Player notes: edit box on Run and the export option; 'This is my character' pin in the picker; poll_ms and character apply without a restart; Records: design 0001 rewritten, the cockpit decision, decision 0014 amended.",
    "merge_order": [
-    "PLAY-F-186B-PLAYER-NOTES-UI",
-    "RUN-CHARACTER-PIN",
-    "PLAY-TD-23-RECORDS"
+    "PLAY-F-186A-PLAYER-NOTES-STORE",
+    "TEST-WEB-PANELS-C"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1692,9 +1692,8 @@
    "title": "Wave 32: reliability and observability, install and release",
    "goal": "Leads: Settings: version lines, update line, opt-in wording; P8-8: the session ladder and the Maps card no longer mix characters; Supervisor diet and idle backoff.",
    "merge_order": [
-    "REL-UPDATE-NOTICE-UI",
-    "RUN-P8-8-CHARMIX",
-    "RUN-PERF-IDLE-BACKOFF"
+    "OVL-TD18-CARD-TIME",
+    "LOOP-DEV-CHECKS"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1703,9 +1702,9 @@
    "title": "Wave 33: Play tab and dashboard, tests and code seams, reliability and observability",
    "goal": "Leads: One spacing scale, one badge, one list row, held by a lint; SessionState mixins: cards and trades; The page says what really happened to the feed.",
    "merge_order": [
-    "PLAY-F-189A-SPACING-BADGE",
-    "TEST-STATE-MIXIN-A",
-    "RUN-FEED-TRUTH"
+    "PLAY-F-186B-PLAYER-NOTES-UI",
+    "RUN-CHARACTER-PIN",
+    "PLAY-TD-23-RECORDS"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1714,9 +1713,9 @@
    "title": "Wave 34: install and release, tests and code seams, Play tab and dashboard",
    "goal": "Leads: 'Start with Windows' row on Settings; SessionState mixins: characters; Overlay: one plate class.",
    "merge_order": [
-    "REL-AUTOSTART-SETTINGS",
-    "TEST-STATE-MIXIN-B",
-    "PLAY-F-189B-OVERLAY-PLATE"
+    "REL-UPDATE-NOTICE-UI",
+    "RUN-P8-8-CHARMIX",
+    "RUN-PERF-IDLE-BACKOFF"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1725,8 +1724,9 @@
    "title": "Wave 35: theorycraft, tests and code seams",
    "goal": "Leads: Weights panel marks changes and resets; SessionState mixins: idle and summary, published views.",
    "merge_order": [
-    "TC-WEIGHTS-DELTA-UI",
-    "TEST-STATE-MIXIN-C"
+    "PLAY-F-189A-SPACING-BADGE",
+    "TEST-STATE-MIXIN-A",
+    "RUN-FEED-TRUTH"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1735,7 +1735,9 @@
    "title": "Wave 36: web data",
    "goal": "Leads: Dashboard: one guide block, no separate Zone tip.",
    "merge_order": [
-    "DATA-GUIDE-ONE-BLOCK"
+    "REL-AUTOSTART-SETTINGS",
+    "TEST-STATE-MIXIN-B",
+    "PLAY-F-189B-OVERLAY-PLATE"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1744,7 +1746,8 @@
    "title": "Wave 37: reliability and observability",
    "goal": "Leads: Small leftovers: Windowed Fullscreen sentence, the dead 501 stub, the no-op switch.",
    "merge_order": [
-    "RUN-LEFTOVERS-CORE"
+    "TC-WEIGHTS-DELTA-UI",
+    "TEST-STATE-MIXIN-C"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1753,8 +1756,8 @@
    "title": "Wave 38: operator requests 2026-11-19, cores",
    "goal": "Leads: Item info lookup: token-gated GET /api/iteminfo over local caches; Drop the visible AshLight text left of the tabs; sr-only h1 kept; Kindler template schema and checked loader.",
    "merge_order": [
+    "DATA-GUIDE-ONE-BLOCK",
     "ITEM-INFO-CORE",
-    "UI-HEADER-TEXT",
     "KINDLER-DATA",
     "KINDLER-STORE"
    ],
@@ -1765,8 +1768,8 @@
    "title": "Wave 39: operator requests 2026-11-19, popover and templates",
    "goal": "Leads: Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines under sha256 pins; Item names as link-like buttons with the shared item info popover; First authored Kindler templates, act 1 to maps.",
    "merge_order": [
+    "RUN-LEFTOVERS-CORE",
     "ITEM-INFO-POB-TEXT",
-    "ITEM-INFO-UI",
     "KINDLER-TEMPLATES"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
@@ -1776,8 +1779,8 @@
    "title": "Wave 40: operator requests 2026-11-19, engine and tabs",
    "goal": "Leads: Kindler candidates, PoB scoring and deterministic ranking on the Generate route; Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and close.",
    "merge_order": [
-    "KINDLER-ENGINE",
-    "KINDLER-UI-TABS"
+    "UI-HEADER-TEXT",
+    "KINDLER-ENGINE"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1786,7 +1789,7 @@
    "title": "Wave 41: operator requests 2026-11-19, Kindler plan and card collapse",
    "goal": "Leads: Collapsible cards on Build and items and Run in the desktop client; state in the core; Kindler result plan: stages, links, gem timing, passives, ascendancy, item focus.",
    "merge_order": [
-    "UI-CARD-COLLAPSE",
+    "ITEM-INFO-UI",
     "KINDLER-PLAN"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
@@ -1796,7 +1799,7 @@
    "title": "Wave 42: operator requests 2026-11-19, Kindler result card",
    "goal": "Leads: Kindler result card with stages and follow Play guidance.",
    "merge_order": [
-    "KINDLER-UI-RESULT"
+    "KINDLER-UI-TABS"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1804,6 +1807,24 @@
    "n": 43,
    "title": "Wave 43: parked package released, default contact",
    "goal": "Leads: Default contact: the project's issues page once the repository is public.",
+   "merge_order": [
+    "UI-CARD-COLLAPSE"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
+   "n": 44,
+   "title": "Wave 44: re-plan overflow",
+   "goal": "Packages moved down by the wave 26 re-plan (disjoint files).",
+   "merge_order": [
+    "KINDLER-UI-RESULT"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
+   "n": 45,
+   "title": "Wave 45: re-plan overflow",
+   "goal": "Packages moved down by the wave 26 re-plan (disjoint files).",
    "merge_order": [
     "DATA-CONTACT-DEFAULT"
    ],
@@ -17450,7 +17471,8 @@
     "tests/test_log_path_field.py::test_bad_path_shows_the_existing_error",
     "tests/test_log_path_field.py::test_no_registry_vdf_or_directory_listing_call_is_added",
     "tests/test_log_path_field.py::test_field_markup_has_a_label_and_no_inline_script",
-    "tests/test_a11y.py (stays green with tabindex=\"-1\" on #prices-title; FOLDED PRICES-TITLE-TABINDEX)"
+    "tests/test_a11y.py (stays green with tabindex=\"-1\" on #prices-title; FOLDED PRICES-TITLE-TABINDEX)",
+    "tests/test_sidecar_paths.py::test_no_literal_drive_path_in_app_files"
    ],
    "accept": "npm test --prefix app and python -m pytest -q tests/test_log_path_field.py tests/test_a11y.py tests/test_http_security.py pass: a posted Client.txt path starts the tailer, a bad one returns the existing 400 text, and spies show the request adds no winreg, libraryfolders.vdf or directory-listing call; FOLDED PRICES-TITLE-TABINDEX: python -m pytest -q tests/test_a11y.py passes, npm test --prefix app passes and #prices-title in web/index.html carries tabindex=\"-1\".",
    "zero_click": "Today's discovery first; the field appears by itself only when nothing is found. Then the player types the path and presses Enter or the Use button: that one act is also the Client.txt opt-in, which the floor requires to be the player's own, and it replaces hand-editing config/local.json. Only Client.txt, only at the path the player typed.",
@@ -17467,8 +17489,8 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "New web/logpath.js holds the view rule and the submit (POST /api/consent {consent: true, path}); index.html: the field inside section #consent and one script tag; app.js: two lines (call the module from the tailer paint near the consent-path line, wire it in the init block). The 'not found' signal is the existing Checks row id 'log' (status fail) in the snapshot; no state.py change. Nothing probes a standalone client's folder, registry key or config file (floor audit L3; 0039-Q7 unverified). A file path must be named Client.txt (SEC-NO-DISCOVERY). Needs F-069 (another cluster) first: that Setup card replaces the consent card, and the field belongs in its row 1. Design review checks the Play word and control caps (design 0001, budgets B1-B7). FOLDED PRICES-TITLE-TABINDEX (W25-PLAN, adjudicator 2026-11-22): in web/index.html add tabindex=\"-1\" to the h2 #prices-title (inside section #pricesbox) so focus can land on it (D-1 split from PLAY-PAGER-SCALE-24, ruling Q2 amended 2026-11-21); it was meant to fold into DATA-CONTACT-UI in wave 24 and was not; web/index.html has an owner in every wave 25 to 43, so it rides with this wave-25 owner. No new live region.",
-   "wave": 25,
+   "notes": "New web/logpath.js holds the view rule and the submit (POST /api/consent {consent: true, path}); index.html: the field inside section #consent and one script tag; app.js: two lines (call the module from the tailer paint near the consent-path line, wire it in the init block). The 'not found' signal is the existing Checks row id 'log' (status fail) in the snapshot; no state.py change. Nothing probes a standalone client's folder, registry key or config file (floor audit L3; 0039-Q7 unverified). A file path must be named Client.txt (SEC-NO-DISCOVERY). Needs F-069 (another cluster) first: that Setup card replaces the consent card, and the field belongs in its row 1. Design review checks the Play word and control caps (design 0001, budgets B1-B7). FOLDED PRICES-TITLE-TABINDEX (W25-PLAN, adjudicator 2026-11-22): in web/index.html add tabindex=\"-1\" to the h2 #prices-title (inside section #pricesbox) so focus can land on it (D-1 split from PLAY-PAGER-SCALE-24, ruling Q2 amended 2026-11-21); it was meant to fold into DATA-CONTACT-UI in wave 24 and was not; web/index.html has an owner in every wave 25 to 43, so it rides with this wave-25 owner. No new live region. Re-plan wave 26 (deferred from wave 25, batch 1 suite red on ade1d2d): no literal drive paths in app/test/logpath.test.js (build them at run time or use a non-drive form; tests/test_sidecar_paths.py::test_no_literal_drive_path_in_app_files); folded PRICES-TITLE-TABINDEX (tabindex=\"-1\" on #prices-title) stays; design review S3 SEC-LP-1/2 to close. Branch worktree-w25-SEC-LOG-PATH-FIELD.",
+   "wave": 26,
    "owner": "session",
    "tier": "P2",
    "cluster": "SEC",
@@ -17489,10 +17511,13 @@
     "app/overlay/overlay.js",
     "app/shared/render_gate.js",
     "app/test/shared.test.js",
-    "tests/test_overlay_view.py"
+    "tests/test_overlay_view.py",
+    "tests/test_metrics.py",
+    "tests/test_budget_snapshot.py"
    ],
    "new_files": [
-    "tests/test_overlay_feed.py"
+    "tests/test_overlay_feed.py",
+    "tests/snapshot_cores.py"
    ],
    "integrator_edits": [
     {
@@ -17506,7 +17531,10 @@
    ],
    "tests": [
     "tests/test_overlay_feed.py (new: view=overlay frames hold only OVERLAY_FIELDS; a change of a dashboard-only field sends no frame; two overlay streams share one serialised frame; the default view is unchanged; an unknown view is 400; budget B7 holds for the small view)",
-    "app/test/shared.test.js (walks app/shared/render_gate.js: every snapshot field it reads is in the core's OVERLAY_FIELDS list, read from one JSON fixture the Python test also checks; hudModel output equals the full-snapshot output on every fixture: budget B13)"
+    "app/test/shared.test.js (walks app/shared/render_gate.js: every snapshot field it reads is in the core's OVERLAY_FIELDS list, read from one JSON fixture the Python test also checks; hudModel output equals the full-snapshot output on every fixture: budget B13)",
+    "tests/test_metrics.py::test_sse_gauge_goes_0_1_0",
+    "tests/test_test_layout.py",
+    "tests/test_budget_snapshot.py"
    ],
    "accept": "python -m pytest -q tests/test_overlay_feed.py tests/test_overlay_view.py tests/test_sse_idle_push.py tests/test_http_security.py tests/test_budgets.py and node --test app/test/shared.test.js app/test/overlay_gate.test.js app/test/hudline2.test.js pass.",
    "zero_click": "Automatic; same token, same loopback feed.",
@@ -17525,8 +17553,8 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). server/al/overlayview.py: OVERLAY_FIELDS (one list: every top-level snapshot key app/shared/render_gate.js reads - now, version, zone, in_hideout, zone_entered_at, level, deaths, afk, dnd, tailer, game_idle, maps.current, trade_requests, underlevel, campaign, card, eval, overlay, overlay_layout, hotkeys - confirm by the walking test) and small(snap) with its own change stamp. server/al/http.py _sse_stream: read view from the query (overlay or absent), push a state frame for an overlay stream only when small(snap) changed, and keep one serialised frame per view per version on the server object for all streams of that view. app/overlay/overlay.js: the EventSource URL gains view=overlay. app/shared/render_gate.js: export the list of snapshot fields it reads (SNAP_FIELDS) for the test. tests/test_budget_snapshot.py belongs to F-108 (cluster RUN): add the B7 small-view assertion there only if that file exists, else keep it in tests/test_overlay_feed.py. HOT: server/al/http.py (_sse_stream; F-093 QUIET-FEED of cluster RUN edits the same loop and lands first), app/shared/render_gate.js.",
-   "wave": 25,
+   "notes": "Tier P3. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). server/al/overlayview.py: OVERLAY_FIELDS (one list: every top-level snapshot key app/shared/render_gate.js reads - now, version, zone, in_hideout, zone_entered_at, level, deaths, afk, dnd, tailer, game_idle, maps.current, trade_requests, underlevel, campaign, card, eval, overlay, overlay_layout, hotkeys - confirm by the walking test) and small(snap) with its own change stamp. server/al/http.py _sse_stream: read view from the query (overlay or absent), push a state frame for an overlay stream only when small(snap) changed, and keep one serialised frame per view per version on the server object for all streams of that view. app/overlay/overlay.js: the EventSource URL gains view=overlay. app/shared/render_gate.js: export the list of snapshot fields it reads (SNAP_FIELDS) for the test. tests/test_budget_snapshot.py belongs to F-108 (cluster RUN): add the B7 small-view assertion there only if that file exists, else keep it in tests/test_overlay_feed.py. HOT: server/al/http.py (_sse_stream; F-093 QUIET-FEED of cluster RUN edits the same loop and lands first), app/shared/render_gate.js. Re-plan wave 26 (deferred from wave 25, batch 1 suite red on 2bf9591): give the FakeServer in tests/test_metrics.py feed_frames (test_sse_gauge_goes_0_1_0), and move the shared core builders (_busy_session_core, _worst_maps_core) out of tests/test_budget_snapshot.py into the non-test module tests/snapshot_cores.py that both test files import (test_test_layout: no test-to-test import). Branch worktree-w25-OVL-OVERLAY-FEED.",
+   "wave": 26,
    "owner": "session",
    "tier": "P3",
    "cluster": "OVL"
@@ -17685,7 +17713,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P1. Sections: 4 Keys (the key text rows of today; real bound keys and change key arrive with the OVL cluster's F-026), 5 Appearance and tools (settings export / import, restart overlay, show tips again, More: the graphics advisor; the Theme row is added by PLAY-TD-04B-THEME-CHOICE and autostart by the REL cluster), 6 About and data (what AshLight does and never does, the full game data credits of decision 0009, the trademark line, run history keep / clear moved from its card, version). Index row on top: build source, item scoring, search strings and filter, characters. Footer: one row with the disclaimer sentence (unchanged words, text colour) and the trademark sentence; the two folds move. MERGE-SEAMS F5 and F7 are PLAY-MERGE-SEAMS-F5-F7 (folded into PLAY-TD-09C-BAR) (a dep); the tool rows keep the tool-row class. The disclaimer also stays in the README and the overlay About. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
-   "wave": 26,
+   "wave": 27,
    "owner": "session",
    "tier": "P1",
    "cluster": "PLAY"
@@ -17731,7 +17759,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "updates.py: maybe_start(now, idle, spawn) and update_now(spawn). core.py: new update_now() and one call in the tick that already drives tick_update(). http.py: one POST route /api/update-now in do_POST and its handler. settingsio.py: one allow-list entry. state.py is not edited (set_update takes the view dict). 'Update now' stops the copy through stop.request and applies; the restart is timed by game_idle from the log, never a process check. The core only starts the installer process; it downloads nothing itself. PLAN 07 (review): it adds POST /api/update-now, so it edits its row in tests/test_security_surface.py (the route table of SEC-SURFACE-PIN) in the same commit; the pin file has one editor a wave.",
-   "wave": 26,
+   "wave": 27,
    "owner": "session",
    "tier": "P1",
    "cluster": "REL"
@@ -17830,7 +17858,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. diag.py: the FIX_* constants (36-46, 193-194) only. state.py: event and card sentences named in research 0042 R4 (design review). Wording only; no new read or request. Runs after the controls it points at exist (see cross).",
-   "wave": 27,
+   "wave": 28,
    "owner": "session",
    "tier": "P2",
    "cluster": "RUN"
@@ -17882,7 +17910,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. app.css: the focus rules (lines about 91, 148, 230, 254, 328 and the panel rules), .check input 24 px, a forced-colors block for button.tab[aria-selected=true] (system colour keywords only, as overlay.css does), [disabled] styles with the reason shown beside the button by its own renderer, and the [data-text-spacing=user] rules (rows wrap, tracks become minimums, the page is the only scroll container, nothing clipped). web/textspacing.js fills the stub pre-linked by PLAY-TD-09A: a hidden one-row reference element watched by a ResizeObserver (an event, not a timer). The token test switches on the whole-sheet rule (G7 static part). Zoom keys in the client (Ctrl plus / minus / 0) are the OVL cluster's F-145 and are not rebuilt here. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
-   "wave": 27,
+   "wave": 28,
    "owner": "session",
    "tier": "P1",
    "cluster": "PLAY"
@@ -17934,7 +17962,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Blocks: layout (option, fillLayout, wireRestartOverlay, readLayoutForm, saveLayout, loadLayout; 210-293), weights (fillWeights, fillBand, loadWeights, saveWeights; 703-793), web data (fillWebData, loadWebData, saveWebData; 795-837; the one web_data opt-in of decision 0013 stays a player's switch), graphics (renderGfx, openGfx; 942-985; read on the player's click, decision 0014). Waits for the Settings rail step of the Play redesign (cross TD-21). app/test/panels.test.js is extended (created by package A). Each block moves verbatim into a UMD panel file that calls ALApp.register; no index.html edit is needed (TEST-WEB-ASSEMBLE inserts the tag). The line ranges are web/app.js at HEAD; they are re-read at package time because the Play redesign of another cluster replaces parts of the file first (cross). design-reviewer on the diff; PASS line returned in the result. Source: research 0047 R4 (c).",
-   "wave": 27,
+   "wave": 28,
    "owner": "session",
    "tier": "P2",
    "cluster": "TEST"
@@ -17976,7 +18004,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "server/al/core.py: imports at lines 15-31 (the grouped 'from . import (...)' at 15-18 becomes one name per line, sorted); Core gains self.ticks and add_tick(name, fn), filled at the end of Core.__init__ (starts line 64) in the order of server/al/__main__.py lines 226-265. __main__.py: those ten try / except blocks become one loop with the same 'log.exception(\"<name> failed\")' text; the hot-reload exit above them and the heartbeat below stay. Floor: the consent gate inside ensure_tailing is unchanged and stays the first tick; the token, Host / Origin checks, CSP and the 127.0.0.1 bind are untouched. The no-discovery and demo-mode packages of another cluster edit the same two files and land first (cross F-001, F-034; serial_group core-py); tests/test_no_discovery.py exists once F-001 has landed. Source: research 0047 R7 (ticks, imports).",
-   "wave": 27,
+   "wave": 28,
    "owner": "session",
    "tier": "P3",
    "cluster": "TEST"
@@ -18034,7 +18062,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. index.html: data-theme=dark on the html element, the Theme row in Settings, Appearance and tools, and the tags of web/theme.js and web/theme.css. theme.css holds the color-scheme rules per data-theme (app.css is not edited). Config key theme = dark | system | light, default dark, added to ALLOWED and LABELS in server/al/settingsio.py; GET and POST /api/theme in server/al/http.py with the token and the Host / Origin checks of every route; Core.set_theme beside set_web_data (core.py about line 589). web/theme.js registers on ALRegions (ctx.api), applies the attribute (dark, light, or removed for Follow Windows) and wires the select. The client reads /api/theme once the core answers and sets themeSource to dark, system or light; the start page stays dark and the overlay is always dark. The capture half of the proof uses only the shared capture helper of the TEST cluster (F-147: own page, headless, demo core); no other capture path. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). PLAN 07 (review): it adds POST /api/theme, so it edits its row in tests/test_security_surface.py (the route table of SEC-SURFACE-PIN) in the same commit; the pin file has one editor a wave.",
-   "wave": 28,
+   "wave": 30,
    "owner": "session",
    "tier": "P2",
    "cluster": "PLAY"
@@ -18074,7 +18102,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. Drives AshLight's own page only, with synthetic Tab keys to that page through the DevTools protocol; nothing reaches the game, no clipboard or screen read, no capture. States from tests/play_states.py (one fixture state plus the long-string fixture). Light is reached by setting data-theme on the page. pytest.mark.server; never port 8960.",
-   "wave": 28,
+   "wave": 29,
    "owner": "session",
    "tier": "P2",
    "cluster": "PLAY"
@@ -18122,7 +18150,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. hotreload.py: check_json (91-103), load_json (105-108) and Watched.get. acts.py TableCache, zoneguide.graph_cache, campaign.FlaskCache, basetypes.NamesCache share one parse per file. Decision 0042's last-good-copy rule holds per table.",
-   "wave": 28,
+   "wave": 29,
    "owner": "session",
    "tier": "P2",
    "cluster": "RUN"
@@ -18157,7 +18185,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. A new file instead of tests/test_a11y.py (a hotspot). Reads every web/*.css rule that sets a --fk-status-* colour or border colour and checks that the selector's element in web/index.html or in the web/*.js that creates it writes a word or a kit glyph; an explicit allow-list with a reason per entry.",
-   "wave": 28,
+   "wave": 29,
    "owner": "loop",
    "tier": "P3",
    "cluster": "PLAY"
@@ -18273,7 +18301,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. New bounded file under ops/runtime (server/al/paths.py resolver), keyed by the Client.txt area id and the character name of decision 0038; plain text, no markup; written only by POST /api/player-note (token, Host / Origin checks, size cap) on the player's Save. core.py loads it, registers it with hotreload and publishes the current zone's note; state.py: one published key; playcards.py: the your-note row of guide mode (1 row, at most 52 characters shown, full text in title). Nothing game-side, no new read. The decision record rides this package (pattern of decision 0036). Lands after the RUN cluster's zone reset and hot-reload retry (F-088, F-092) and the DATA cluster's one guide file (F-122). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). PLAN 07 (review): it adds the /api/player-note route, so it edits its row in tests/test_security_surface.py (the route table of SEC-SURFACE-PIN) in the same commit; the pin file has one editor a wave.",
-   "wave": 29,
+   "wave": 31,
    "owner": "session",
    "tier": "P3",
    "cluster": "PLAY"
@@ -18310,7 +18338,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. Split from the blocked pass by the verifier: the operator's run needs the tool first. Stdlib only. The pass runs on a fixture (demo) core on a free port, never 8960; game_idle is read from the operator's running core over the token API on 127.0.0.1 (the tool never reads Client.txt). Keys go to the page through the browser driver (the CDP harness of app/test/cdp), never the OS input queue; the transcript is the reader's own speech log, with no screen or audio capture. Floor audit (L3): only with the game closed.",
-   "wave": 29,
+   "wave": 30,
    "owner": "session",
    "tier": "P3",
    "cluster": "PLAY"
@@ -18369,7 +18397,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P4. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). Second item of the cut list (plan 03 section 14): optional. Key \"card_s\" in the overlay layout (20 | 60 | 200, default 20) in server/al/layout.py and app/shared/layout.js; server/al/state.py: EVAL_CARD_S and PRICE_CARD_S become the defaults of a per-state card time taken from the overlay layout (set_overlay_layout), used by overlay_card(), price_until() and the snapshot's expires_at values; web/overlayparts.js + web/index.html: one select 'Keep a card for' in the Overlay shows group. The decision 0014 amendment (card time) and the CLAUDE.md Settled wording ('one card slot, 20 s') are TD-23's records (cluster PLAY). HOT: server/al/state.py, web/index.html, app/shared/layout.js.",
-   "wave": 30,
+   "wave": 32,
    "owner": "session",
    "tier": "",
    "cluster": "OVL"
@@ -18433,7 +18461,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Blocks still in web/app.js after the Play redesign's region steps: events and trades (renderEvents, renderTrades, dismissTrade; 115-213), item check (renderEval; 614-702), rates and price (renderRates, moverList, renderMovers, loadRates, pollRates, renderPrice; 839-945). A block the redesign already replaced by a region renderer is not recreated: its new_files entry is then dropped and said so in the result. Waits for the last Play region step (cross TD-16). Each block moves verbatim into a UMD panel file that calls ALApp.register; no index.html edit is needed (TEST-WEB-ASSEMBLE inserts the tag). The line ranges are web/app.js at HEAD; they are re-read at package time because the Play redesign of another cluster replaces parts of the file first (cross). The view-module self-registration and the shell check are TEST-WEB-PANELS-SHELL (folded into TEST-WEB-PANELS-C) (split from this package for size). design-reviewer on the diff; PASS line returned in the result. Source: research 0047 R4 (c). FOLDED TEST-WEB-PANELS-SHELL: The ten view modules render() calls at HEAD (ALActs, ALBuildLive, ALChars, ALChecks, ALHints, ALHistory, ALPriceWatch, ALRuns, ALSummary, ALZoneGuide; web/app.js 987-1062) each gain one ALApp.register line; a module the Play redesign replaced is skipped and said so in the result. The adapter entries registered in app.js by TEST-WEB-REGISTRY are removed. Final check of finding F-135: wc -l web/app.js under 300, no 'window.AL<Name>' feature reference in it, and pad, duration, clock each defined once under web/. No clipboard read, timer or request is added; the Copy-code clipboard write stays on the player's click (decision 0014). Paint order is kept by explicit order values. design-reviewer on the diff; PASS line returned in the result. Source: research 0047 R4 (c). PLAN 07: folded from TEST-WEB-PANELS-C, TEST-WEB-PANELS-SHELL (one agent, one commit series, at most 90 minutes).",
-   "wave": 30,
+   "wave": 31,
    "owner": "session",
    "tier": "P2",
    "cluster": "TEST",
@@ -18478,7 +18506,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "server/al/diag.py: two new check functions beside check_dev_docs (check_loop_tick(f, now) and check_electron_eol(f, now)), each returning None when it has nothing to say, appended in checks() the way check_dev_docs is. server/al/core.py diag_facts: 'loop_tick_age_s' from ops/loop/control/progress/loop.json 'updated' (the file exists only where the dev loop runs, so players never see the note; a HALTed tick still writes it every 15 minutes) and 'electron_eol' from the tracked config/electron_pin.json that unit F-044 creates (absent file: no note). Wording in plain words, with the fix text naming scripts\\setup.ps1; diag.py is not event text of state.py, so no design review is required, but keep the tone of the existing notes. File overlap outside this cluster: server/al/diag.py is edited by more than 25 other units and server/al/core.py by more; the orchestrator gives this package its own slot on both. The end-of-life half needs config/electron_pin.json (unit F-044); built before it, that half is proven with a fixture and stays silent in the tree.",
-   "wave": 30,
+   "wave": 32,
    "owner": "session",
    "tier": "P2",
    "cluster": "LOOP"
@@ -18527,7 +18555,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. index.html: a labelled textarea and Save on the zone guide page of the Run, Acts card, the export checkbox in Settings, Appearance and tools, and the tag of web/playernote.js (registers on ALRegions for ctx.api). settingsio.py: an explicit include-notes option outside ALLOWED's default set; an import never overwrites notes silently. Play itself gains no control (principle 5). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
-   "wave": 31,
+   "wave": 33,
    "owner": "session",
    "tier": "P3",
    "cluster": "PLAY"
@@ -18578,7 +18606,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. core.py: a tick that re-reads poll_ms / character from _config() (516-551) and applies them to the tailer and the state. state.py: one setter that fixes or frees the character (decision 0038: a configured character never switches). web/chars.js: the pin control. The POST route lives in plug/charpin.py.",
-   "wave": 31,
+   "wave": 33,
    "owner": "session",
    "tier": "P3",
    "cluster": "RUN"
@@ -18662,7 +18690,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. Own tier blank; P2 as the closing step. design 0001 sections 3, 4, 5, 6, 7.2, 9, 10 and 11 are rewritten from the 2026-11-18 amendment (ids C7, N7, N8, O7, O8, S6 added), section 4 takes the measured figures of docs/design/play-fit-figures.md, section 6 points at the one status table (server/al/data/status_words.json), N6 gets the per-press announcement budget and the silent exemptions (F-151), then the amendment section is removed. New decision 0075 (the number the plan reserves, F-017): fixed cockpit Play, four tabs, dark by default; alternatives designs B and C and the three-tab set; it records the kept per-row Dismiss and the opt-in guide line. Dated amendments: decision 0014 (card slot holders, card time, the guide line on HUD line 2) and the placement ruling's record in docs/design/0004-glance-review.md U11 (the HUD is still 2 lines; the reversal clause is not triggered). The overlay parts of sections 5, 7.2 and 10 are written only for overlay steps that have landed (TD-05, TD-06, TD-17, TD-18 in the OVL cluster); a step that has not landed keeps its amendment paragraph under a short Pending heading instead of the removed section. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
-   "wave": 31,
+   "wave": 33,
    "owner": "session",
    "tier": "P3",
    "cluster": "PLAY"
@@ -18710,7 +18738,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "web/updates.js (new renderer, UMD like web/checks.js): model(update, webData) and paint(doc, snap). web/index.html: the web-data label sentence (lines 440-449 today), one container for the version lines and the update line, one script tag. web/app.js: one paint call in the snapshot painter and the 'ack' field in the web-data POST. The newest-3-versions list follows the target design's paging rule (no fold that grows a card). Lands after the Settings rail step (TD-21) and the price-contact UX package (DATA), which edit the same form; design-reviewer pass and a docs/design/reviews.log line required. The README privacy text is DEP-14.",
-   "wave": 32,
+   "wave": 34,
    "owner": "session",
    "tier": "P1",
    "cluster": "REL"
@@ -18773,7 +18801,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. state.py: map_ladder_rows (1202-1211), _switch (1358-1375) and the maps part of snapshot(). mapladder.py: view() takes the character's rows only. No event text. Id is not AUDIT-P8-LOW: that is the open ROADMAP row this package closes one item of, and the loop keys rows by id. FOLDED TEST-STATE-PUBLISH: server/al/state.py: add publish(); set_run_history (line 1171), set_price_watch (1220) and set_diag (1274) keep their names and call it; snapshot() (1807-1888) merges the published dict where those three keys are read today. set_map_ladder (1213) shares the body and may follow. State is built only from the opted-in Client.txt tail and per-press item text; no new input, read or request. No event text is edited (design review not needed). Source: research 0047 R5 (1). PLAN 07: folded from RUN-P8-8-CHARMIX, TEST-STATE-PUBLISH (one agent, one commit series, at most 90 minutes).",
-   "wave": 32,
+   "wave": 34,
    "owner": "session",
    "tier": "P2",
    "cluster": "RUN",
@@ -18822,7 +18850,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. keepalive.py: the urllib import (32) moves into health_check (194-207). __main__.py: the stop.wait(0.5) of the main loop (215) reads the idle state. core.py: tick_all exposes the idle flag. logfile.py: Tailer.poll_s is adjustable by the core while idle. The first line after idle is seen up to 0.75 s later.",
-   "wave": 32,
+   "wave": 34,
    "owner": "session",
    "tier": "P3",
    "cluster": "RUN"
@@ -18877,7 +18905,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. Done after the layout work so it is not done twice. The tokens exist since PLAY-TD-03-TOKENS; this package makes them the only values and renames the classes in markup and in the renderers that create badges. The fit harness must stay green (no region changes size). Design 0001 section 4 gets the badge and row rules. Any visual comparison uses only the TEST cluster's shared capture helper (F-147); no capture of the desktop. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
-   "wave": 33,
+   "wave": 35,
    "owner": "session",
    "tier": "P3",
    "cluster": "PLAY"
@@ -18922,7 +18950,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Moves (state.py lines at HEAD, before the text moves shift them): cards - set_eval, set_price, set_build_info, set_upgrades, _upgrades_view, _build_alert, bump_calc_rev (1024-1100); trades - expire_trades (999), dismiss_trade, _expire_trades, _close_trade, _trade_row (1284-1331); plus their fields from __init__ (855-973) and their keys from snapshot() (1807-1888). Lock discipline and operation order must not change: methods move verbatim, the lock stays the class's one lock, apply / _apply_locked (1419-1590) are not moved. The mixin pattern is the loop's (tools/loop_inbox.py, tools/loop_merge.py). tests/test_soak.py is a timing test: it runs in the batch suite or through the gate, not in the ungated subset. The whole suite runs through the gate before the last of the three merges. Source: research 0047 R5 (2).",
-   "wave": 33,
+   "wave": 35,
    "owner": "session",
    "tier": "P3",
    "cluster": "TEST"
@@ -18980,7 +19008,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. web/app.js: connect() (1112-1139). web/status.js: the feed word. http.py: the keep-alive write in _sse_stream (714-785). app/overlay/overlay.js and app/shared/render_gate.js: the stale mark (no new timer in the overlay page: the check rides the existing frame handling). Loopback API only; the per-start token rule is unchanged. FOLDED RUN-PERF-DASH-IDLE: Tier P3. web/app.js: tick() (91-113), render() (987-1062) entry guard and the ticker set up in start() (1196-1198). PLAN 07: folded from RUN-FEED-TRUTH, RUN-PERF-DASH-IDLE (one agent, one commit series, at most 90 minutes).",
-   "wave": 33,
+   "wave": 35,
    "owner": "session",
    "tier": "P3",
    "cluster": "RUN",
@@ -19037,7 +19065,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "web/autostart.js (new renderer, UMD like web/checks.js): model(client) and paint(doc). web/index.html: one 32 px setting row in the Settings panel plus one script tag; web/app.js: one paint call and one wire call. The switch works only inside the AshLight client (window.alClient); in a plain browser the row reads 'Set this in the AshLight app' and is disabled. Lands after the Settings rail step of the target design (TD-21) so the row goes straight into section 5; design-reviewer pass and a docs/design/reviews.log line required. FOLDED REL-UPDATE-UI: web/updates.js: model() gains staged / click_only and paint() two controls. web/index.html: one button and one switch row in the Settings section that holds the update line. Lands after the Settings rail step (TD-21); design-reviewer pass and a docs/design/reviews.log line required. PLAN 07: folded from REL-AUTOSTART-SETTINGS, REL-UPDATE-UI (one agent, one commit series, at most 90 minutes).",
-   "wave": 34,
+   "wave": 36,
    "owner": "session",
    "tier": "P1",
    "cluster": "REL",
@@ -19084,7 +19112,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Moves: _run_counter, run_record, _record_of (1134-1170), _is_me, _fresh_fields, _may_switch, _switch, _note_other, character_names, _char_view, _characters_view, parked_record (1332-1418) and _restore_chars (1751-1795), with their fields and snapshot keys (decision 0038 behaviour unchanged). Lock discipline and operation order must not change: methods move verbatim, the lock stays the class's one lock, apply / _apply_locked (1419-1590) are not moved. The mixin pattern is the loop's (tools/loop_inbox.py, tools/loop_merge.py). tests/test_soak.py is a timing test: it runs in the batch suite or through the gate, not in the ungated subset. The whole suite runs through the gate before the last of the three merges. Source: research 0047 R5 (2).",
-   "wave": 34,
+   "wave": 36,
    "owner": "session",
    "tier": "P3",
    "cluster": "TEST"
@@ -19128,7 +19156,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. CSS and class names only: the window stays separate, transparent, always-on-top, click-through and non-focusable; the decision 0002 budgets are re-checked by tests/test_budgets.py. Floor audit (L3): the comparison renders the overlay page in the headless test browser through the F-147 helper; never a capture of the live overlay window or the desktop (it would grab the game). Lands after the OVL steps that rewrite overlay.css (TD-05, TD-17). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
-   "wave": 34,
+   "wave": 36,
    "owner": "session",
    "tier": "P3",
    "cluster": "PLAY"
@@ -19185,7 +19213,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. Edits web/tc.js weightRows / weightsDoc (lines 225-253), web/app.js weights editor (lines 696-791) and the #weights-form block of web/index.html (lines 481-503). Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). FOLDED TC-BUILDFILE-TEXTS: Tier P3. buildfile.py _passives notes (lines 147-175); web/index.html #buildfile-more block (lines 354-365). The upload is the player's own browser act; no endpoint is called. F-142 (cluster DATA) edits buildfile.py tree resolution. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). PLAN 07: folded from TC-WEIGHTS-DELTA-UI, TC-BUILDFILE-TEXTS (one agent, one commit series, at most 90 minutes).",
-   "wave": 35,
+   "wave": 37,
    "owner": "session",
    "tier": "P2",
    "cluster": "TC",
@@ -19233,7 +19261,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Moves: idle and summary - _counters, _close_stretch, session_end_due, check_session_end, _idle_due, seed_last_line, log_idle_due, check_log_idle, set_session_summary (1614-1700); published views - publish and its wrappers, set_map_ladder, map_ladder_rows, set_zone_table, set_zone_guide, visits_doc, load_visits, clear_visits, _zone_note, _zone_guide_view, the hint store methods (1180-1283, 1591-1613). After this package SessionState keeps __init__, the dispatcher, restore and snapshot as thin composition. Lock discipline and operation order must not change: methods move verbatim, the lock stays the class's one lock, apply / _apply_locked (1419-1590) are not moved. The mixin pattern is the loop's (tools/loop_inbox.py, tools/loop_merge.py). tests/test_soak.py is a timing test: it runs in the batch suite or through the gate, not in the ungated subset. The whole suite runs through the gate before the last of the three merges. Source: research 0047 R5 (2).",
-   "wave": 35,
+   "wave": 37,
    "owner": "session",
    "tier": "P3",
    "cluster": "TEST"
@@ -19301,7 +19329,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P2. web/index.html: remove the #zone-note-box paragraph inside .zone-guide-box; web/app.js: remove the three UX-ZONE-NOTES lines in render(); web/app.css: remove .zone-note. The boss hint keeps its place in #campaign-hints. The dep on DATA-LEAGUE-PICKER-UI (folded into DATA-CONTACT-UI) is a file-order edge (index.html, app.js). The Play redesign (TD-11, F-068) rewrites this tile later: see cross. FOLDED DATA-PRICE-NINJA-LINK: Tier P3. New ninjalink.py (pure): a type-to-page table and url_for(type, league list entry) with a strict https://poe.ninja/ allow pattern; price.py: card_of adds one key (ninja_url); web/prices.js: priceView adds a second link object and its own allow regex; web/app.js: renderPrice only. The page URL form is undocumented and uses a league slug (research 0036 NE knows one form): the table holds only forms read from poe.ninja's public economy pages, never a derived or guessed slug (adjudicator LE-39, 2026-11-18). One read pass, in one run, by a stdlib urllib script in the scratch dir (run with python -I). User-Agent: AshLight/<VERSION> (dev research; contact per decision 0015). Read https://poe.ninja/robots.txt first and obey it. Then at most one GET per category page form, 30 GETs total, only human-facing economy pages, never an /api/ or data route, 1 s apart. Record each URL form with the access date in research 0036. Store no page body in a tracked file. If robots disallows the pages or a read fails, the table holds only what research 0036 NE already records, else nothing, and the card links the poe.ninja landing page. A category or league whose form was not read gets no link. The app itself requests nothing (as decision 0017 for trade). Deps are file-order edges for price.py and the web files. Decision 0016 (the card contract) gets one dated amendment for the ninja_url key: a page link the player opens, the app requests nothing; 0016 is also edited by DATA-PRICE-CARD-TEXT (a dep) and DATA-CONTACT-DEFAULT (depends on this package). PLAN 07: folded from DATA-GUIDE-ONE-BLOCK, DATA-PRICE-NINJA-LINK (one agent, one commit series, at most 90 minutes).",
-   "wave": 36,
+   "wave": 38,
    "owner": "session",
    "tier": "P2",
    "cluster": "DATA",
@@ -19357,7 +19385,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P3. http.py: remove the '/api/clipboard-read' entry from the POST route table TEST-HTTP-ROUTES built, with its handler method, and delete its row in tests/test_security_surface.py (PLAN 07 review: the old line range is gone after the route tables). scripts/run.ps1: the -Overlay parameter and its help text (15, 40). web/index.html: one sentence on the first-run card. Advice only: no game file is read and nothing detects the display mode. The graphics advisor stays (retire only on a renamed option label).",
-   "wave": 37,
+   "wave": 39,
    "owner": "session",
    "tier": "P3",
    "cluster": "RUN"
@@ -20055,7 +20083,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Tier P1 unit, blocked (ruling Q-03). webfetch.py: one DEFAULT_CONTACT derived from the address constant GP-10 adds and effective_contact(configured); core.py Core.contact falls back to it; snapshot.py main() likewise; the web field becomes an optional per-install override (label and help text only). Amend decision 0015 item 1 and 0016, dated. The deps are file-order edges only (webfetch.py, core.py, snapshot.py, web/prices.js, web/index.html).",
-   "wave": 43,
+   "wave": 45,
    "owner": "session",
    "tier": "P1",
    "cluster": "DATA"
@@ -20859,52 +20887,6 @@
    "cluster": "DATA"
   },
   {
-   "id": "CARD-LINE-LIMIT",
-   "title": "Card lines fit the 236 px inside width: lower the card character limit",
-   "goal": "A worst-case capitals-and-digits card line fits the plate's 236 px inside width: app/shared/format.js maxLen defaults and CARD_LINE in server/al/text/common.py are lowered (never the font size) and the OVL-CONTRAST-PIXELS strict xfail in tests/test_overlay_pixels.py becomes a pass.",
-   "units": [
-    "CARD-LINE-LIMIT"
-   ],
-   "files": [
-    "app/shared/format.js",
-    "server/al/text/common.py",
-    "tests/test_overlay_pixels.py",
-    "tests/test_glance_rules.py",
-    "tests/test_moment_cards.py",
-    "docs/design/0001-design-system.md",
-    "server/al/zoneguide.py",
-    "server/al/theorycraft/cardparts/__init__.py",
-    "server/al/theorycraft/cardparts/keep.py",
-    "app/test/slots.test.js"
-   ],
-   "new_files": [],
-   "integrator_edits": [],
-   "tests": [
-    "tests/test_overlay_pixels.py (the 34-character worst-case line xfail removed; the worst-case card line renders at or under 236 px)",
-    "tests/test_glance_rules.py (card line limit matches CARD_LINE)",
-    "app/test/layout.test.js (stays green)"
-   ],
-   "accept": "python -m pytest -q tests/test_overlay_pixels.py tests/test_glance_rules.py passes with the xfail removed and npm test --prefix app passes.",
-   "zero_click": "Nothing for players; card lines fit by themselves.",
-   "size": "M",
-   "est_min": 40,
-   "deps": [
-    "OVL-CONTRAST-PIXELS"
-   ],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": true,
-   "blocked": null,
-   "operator_act": "",
-   "notes": "Tier P2. Filed from the OVL-CONTRAST-PIXELS finding (strict xfail: a 34-character line renders at about 292 px against 236 px). Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line. W22-FOLD ruling (adjudicator, session 18, 2026-11-21), P3: new wave-22 package, every file unowned in wave 22. Re-plan (session 19, ruling A pattern 5787074): files gain the seven paths the session-18 builder needed; moved to wave 25 because design 0001 is owned by TEST-COPY-SHEETS (wave 23) and RUN-UNREADABLE-WORD (wave 24) and test_moment_cards.py by OVL-ACT-CARD (wave 22).",
-   "wave": 25,
-   "owner": "session",
-   "tier": "P2",
-   "cluster": "OVL"
-  },
-  {
    "id": "RUN-EXPLAIN-ROWS",
    "title": "Five cause rows in Checks",
    "goal": "Checks gains: overlay on screen; item check key (last press, age, outcome); calc at run time; log lines understood (fail when 500 lines gave 0 events); restarts (shown to players only after 3 restarts in a day).",
@@ -21703,7 +21685,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Decision 0082 part 2. The version line belongs to RUN-BUILD-STAMP-UI.",
-   "wave": 38,
+   "wave": 40,
    "owner": "session",
    "tier": "P2",
    "cluster": "UI"
@@ -21752,7 +21734,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Decision 0082 part 3 and amendment 2026-11-19: buttons only when window.alClient is present; no localStorage; not exported, not cleared by Clear run history. Play regions and Settings never collapse; alerts expand their card. stores.py: one Checks row while unsaved. Moved from the drafted wave 38 to wave 41 by the wave 11 pre-batch integrator: in wave 38 it shared serial_group web-shell, web/index.html and web/app.css with UI-HEADER-TEXT and server/al/plug/stores.py with KINDLER-STORE.",
-   "wave": 41,
+   "wave": 43,
    "owner": "session",
    "tier": "P2",
    "cluster": "UI"
@@ -21918,7 +21900,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Decision 0082 part 1 and 0083 points 1, 5, 6. The poe2db link goes through the client's link guard (decision 0041).",
-   "wave": 39,
+   "wave": 41,
    "owner": "session",
    "tier": "P2",
    "cluster": "UI"
@@ -22045,7 +22027,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Decision 0081 points 7 to 11. Sub-tabs follow the tablist pattern of web/tabs.js; no drag; close never uses window.confirm.",
-   "wave": 40,
+   "wave": 42,
    "owner": "session",
    "tier": "P2",
    "cluster": "TC"
@@ -22131,7 +22113,7 @@
    "blocked": null,
    "operator_act": "",
    "notes": "Decision 0081 points 10, 15 to 18. Credits Path of Building; no number with the calc off; the .build stays a click download (0034); the card fits design A's 3 x 2 grid and pages.",
-   "wave": 42,
+   "wave": 44,
    "owner": "session",
    "tier": "P2",
    "cluster": "TC"
@@ -22291,6 +22273,214 @@
    "owner": "session",
    "tier": "P2",
    "cluster": "TEST"
+  },
+  {
+   "id": "CARD-LINE-LIMIT-COPY",
+   "title": "Card copy fits 26 characters (limit unchanged)",
+   "goal": "Every shipped overlay card line is reworded to 26 characters or fewer while CARD_LINE, format.js maxLen and HEAD_MAX stay 34: the keep / vendor head, the item-check delta head, the price line, the under-level clear line and the shipped zone guide shorts (zoneguide MAX_SHORT stays 34); tests pin the new words.",
+   "units": [
+    "CARD-LINE-LIMIT"
+   ],
+   "files": [
+    "server/al/theorycraft/cardparts/keep.py",
+    "server/al/text/itemcheck.py",
+    "server/al/text/price.py",
+    "server/al/text/overlaycard.py",
+    "server/al/data/zone_guide.json",
+    "docs/design/0001-design-system.md",
+    "tests/test_eval_text.py",
+    "tests/test_tc_levelrules.py",
+    "tests/test_price_text.py",
+    "tests/test_tc_cardparts.py",
+    "tests/test_price_card_age.py",
+    "tests/test_moment_cards.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges."
+    },
+    {
+     "file": "docs/design/reviews.log",
+     "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
+    }
+   ],
+   "tests": [
+    "tests/test_eval_text.py",
+    "tests/test_tc_levelrules.py",
+    "tests/test_price_text.py",
+    "tests/test_tc_cardparts.py",
+    "tests/test_price_card_age.py",
+    "tests/test_moment_cards.py",
+    "tests/test_zone_guide.py",
+    "tests/test_provenance.py",
+    "tests/test_glance_rules.py (stays green at 34)"
+   ],
+   "accept": "python -m pytest -q tests/test_eval_text.py tests/test_tc_levelrules.py tests/test_price_text.py tests/test_tc_cardparts.py tests/test_price_card_age.py tests/test_moment_cards.py tests/test_zone_guide.py tests/test_provenance.py tests/test_glance_rules.py passes, every reworded line is at most 26 characters, and npm test --prefix app passes.",
+   "zero_click": "Nothing for players; card lines fit by themselves.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "OVL-CONTRAST-PIXELS"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Adjudicator split 2026-11-22 (session 20, wave 25 close): a 26-character limit broke tests outside CARD-LINE-LIMIT's file list (probe at 8088f3e: 23 pytest cases in 10 files and 3 app tests); COPY rewords the copy under 26 with the limit unchanged, FLIP lowers the limit. Probe failures at 26 this package fixes: keep.py head \"<word> - <k> of <n> met at level <lv>\" (falls back to \"No build loaded\"), text/itemcheck.py \"<verdict> <delta> vs <slot>\", text/price.py \"About <money> in <league>\" and a 27-character long price, text/overlaycard.py CLEAR_LINE, zone_guide.json shorts over 26 (e.g. The Riverbank). Changed guide entries keep an allowed src (test_provenance). Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line. Merges after OVL-OVERLAY-FEED in the wave 26 merge order.",
+   "wave": 26,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "OVL"
+  },
+  {
+   "id": "CARD-LINE-LIMIT-FLIP",
+   "title": "Lower the card line limit to 26",
+   "goal": "CARD_LINE in server/al/text/common.py, the format.js maxLen defaults and the cardparts HEAD_MAX become 26 (never the font size); the key hint fits 26 with the longest safe key; the tests that pin 34 move to 26 and the OVL-CONTRAST-PIXELS strict xfail becomes a pass.",
+   "units": [
+    "CARD-LINE-LIMIT"
+   ],
+   "files": [
+    "server/al/text/common.py",
+    "server/al/theorycraft/cardparts/__init__.py",
+    "app/shared/format.js",
+    "server/al/overlayview.py",
+    "docs/design/0001-design-system.md",
+    "tests/test_overlay_pixels.py",
+    "tests/test_glance_rules.py",
+    "tests/test_overlay_view.py",
+    "tests/test_waystone_reward.py",
+    "app/test/eval.test.js",
+    "app/test/layout.test.js",
+    "app/test/price.test.js",
+    "app/test/slots.test.js"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges."
+    },
+    {
+     "file": "docs/design/reviews.log",
+     "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
+    }
+   ],
+   "tests": [
+    "tests/test_overlay_pixels.py (xfail removed; the worst-case card line renders at or under 236 px)",
+    "tests/test_glance_rules.py (card line limit matches CARD_LINE = 26)",
+    "tests/test_overlay_view.py",
+    "tests/test_waystone_reward.py",
+    "app/test/layout.test.js (stays green)",
+    "app/test/eval.test.js",
+    "app/test/price.test.js",
+    "app/test/slots.test.js"
+   ],
+   "accept": "python -m pytest -q tests/test_overlay_pixels.py tests/test_glance_rules.py tests/test_overlay_view.py tests/test_waystone_reward.py tests/test_moment_cards.py tests/test_eval_text.py passes with the xfail removed and npm test --prefix app passes.",
+   "zero_click": "Nothing for players; card lines fit by themselves.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [
+    "CARD-LINE-LIMIT-COPY",
+    "OVL-OVERLAY-FEED"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Adjudicator split 2026-11-22 (session 20, wave 25 close): a 26-character limit broke tests outside CARD-LINE-LIMIT's file list (probe at 8088f3e: 23 pytest cases in 10 files and 3 app tests); COPY rewords the copy under 26 with the limit unchanged, FLIP lowers the limit. Probe failures at 26 this package fixes: test_glance_rules pins \"maxLen || 34\", test_overlay_view card_lines_fit_the_clip and the two hint tests (HINT_TEXT \"{key}: check an item\" is over 26 with a real key; overlayview.py is owned by OVL-OVERLAY-FEED in wave 26, so the hint wording lives here), test_waystone_reward exact text (join width), app tests evalCard / tradeCard / cardText pin 34. Design 0001 section 9 rule 6 moves to 26 here. Design: run the design-reviewer agent on the diff.",
+   "wave": 27,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "OVL"
+  },
+  {
+   "id": "LOOP-GATE-SIDECAR-TEMP",
+   "title": "Loop gate runs set TEMP and TMP under the AL sidecar",
+   "goal": "tools/al_loop.py whole-suite gate runs give the child TEMP and TMP under the AL sidecar Temp like the lanes, so a test comparing against the profile path cannot pass or fail on where TEMP lives.",
+   "units": [
+    "LOOP-GATE-SIDECAR-TEMP"
+   ],
+   "files": [
+    "tools/al_loop.py",
+    "tests/test_al_loop.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges."
+    }
+   ],
+   "tests": [
+    "tests/test_al_loop.py (extended: a gate run's child environment names the sidecar Temp for TEMP and TMP)"
+   ],
+   "accept": "python -m pytest -q tests/test_al_loop.py passes and a gate run's child environment names the sidecar Temp.",
+   "zero_click": "The loop sets it by itself.",
+   "size": "S",
+   "est_min": 30,
+   "deps": [],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Source: LOOP-RED diagnosis 2026-11-22 (row file docs/roadmap/new/LOOP-GATE-SIDECAR-TEMP.md).",
+   "wave": 26,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "LOOP"
+  },
+  {
+   "id": "SEC-LOG-PATH-PERSIST",
+   "title": "The typed Client.txt path survives a core restart",
+   "goal": "core.record_consent writes the path typed in the consent card field (SEC-LOG-PATH-FIELD) to config/local.json \"client_log\", so a restart keeps it.",
+   "units": [
+    "SEC-LOG-PATH-PERSIST"
+   ],
+   "files": [
+    "server/al/core.py",
+    "tests/test_log_path_field.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges."
+    }
+   ],
+   "tests": [
+    "tests/test_log_path_field.py (extended: a typed path is in local.json client_log and a new core keeps it)",
+    "tests/test_http_security.py (stays green)"
+   ],
+   "accept": "python -m pytest -q tests/test_log_path_field.py tests/test_http_security.py passes and a restart keeps the typed path.",
+   "zero_click": "The typed path persists by itself; no extra click.",
+   "size": "S",
+   "est_min": 35,
+   "deps": [
+    "SEC-LOG-PATH-FIELD"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Source: SEC-LOG-PATH-FIELD builder gap 2026-11-22 (row file docs/roadmap/new/SEC-LOG-PATH-PERSIST.md).",
+   "wave": 29,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "SEC"
   }
  ],
  "coverage": {
@@ -23888,7 +24078,8 @@
    "RUN-REPORT-FIELDS"
   ],
   "CARD-LINE-LIMIT": [
-   "CARD-LINE-LIMIT"
+   "CARD-LINE-LIMIT-COPY",
+   "CARD-LINE-LIMIT-FLIP"
   ],
   "BUILD-GEAR-EMPTY-COPY": [
    "BUILD-GEAR-EMPTY-COPY"
@@ -23916,6 +24107,12 @@
   ],
   "RUN-BUDGET-CALIBRATE-B11": [
    "RUN-BUDGET-CALIBRATE-B11"
+  ],
+  "LOOP-GATE-SIDECAR-TEMP": [
+   "LOOP-GATE-SIDECAR-TEMP"
+  ],
+  "SEC-LOG-PATH-PERSIST": [
+   "SEC-LOG-PATH-PERSIST"
   ]
  }
 }

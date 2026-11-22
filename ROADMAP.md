@@ -38,7 +38,17 @@ operator phrase.`
   the loop lands by itself. DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 7.
 - [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
-- [ ] CARD-LINE-LIMIT (build) OVL-CONTRAST-PIXELS finding (strict xfail): a 34-character capitals-and-digits card line renders at about 292 px against the 236 px inside width; lower the card character limit (app/shared/format.js maxLen defaults and CARD_LINE in server/al/text/common.py), never the font size, and turn the xfail into a pass. ACCEPT: python -m pytest -q tests/test_overlay_pixels.py tests/test_glance_rules.py passes with the xfail removed and npm test --prefix app passes. ZERO-CLICK: Nothing for players; card lines fit by themselves. DEPENDS: OVL-CONTRAST-PIXELS. BLOCKED: session wave 26 (split by adjudicator 2026-11-22 into CARD-LINE-LIMIT-COPY w26 and CARD-LINE-LIMIT-FLIP w27; packages to add).
+- [ ] CARD-LINE-LIMIT-COPY (build) Card copy fits 26 characters (limit unchanged). ACCEPT: python -m
+  pytest -q tests/test_eval_text.py tests/test_tc_levelrules.py tests/test_price_text.py
+  tests/test_tc_cardparts.py tests/test_price_card_age.py tests/test_moment_cards.py
+  tests/test_zone_guide.py tests/test_provenance.py tests/test_glance_rules.py passes, every
+  reworded line is at most 26 characters, and npm test --prefix app passes. ZERO-CLICK: Nothing for
+  players; card lines fit by themselves. DEPENDS: OVL-CONTRAST-PIXELS. BLOCKED: session wave 26.
+- [ ] CARD-LINE-LIMIT-FLIP (build) Lower the card line limit to 26. ACCEPT: python -m pytest -q
+  tests/test_overlay_pixels.py tests/test_glance_rules.py tests/test_overlay_view.py
+  tests/test_waystone_reward.py tests/test_moment_cards.py tests/test_eval_text.py passes with the
+  xfail removed and npm test --prefix app passes. ZERO-CLICK: Nothing for players; card lines fit by
+  themselves. DEPENDS: CARD-LINE-LIMIT-COPY, OVL-OVERLAY-FEED. BLOCKED: session wave 27.
 - [ ] PRICES-TITLE-TABINDEX (build) D-1 split from PLAY-PAGER-SCALE-24 (ruling Q2 amended 2026-11-21): add tabindex=-1 to the #prices-title markup in web/index.html so focus can land on it; fold into DATA-CONTACT-UI, the wave 24 owner of web/index.html. ACCEPT: python -m pytest -q tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: Nothing for players; focus lands by itself. Folded into SEC-LOG-PATH-FIELD (adjudicator 2026-11-22). BLOCKED: session wave 26.
 - [ ] BUDGET-RETIRE-TAILER-IDLE (build) Retire tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent, superseded by B1 (RUN-BUDGET-TESTS-DET kept it because tools/docs_fresh.py and README.md pin it): delete the test, repoint the "tailer idle" fact in tools/docs_fresh.py to test_real_loop_body_10_s_worst_case_under_half_percent and reword README's tailer line to B1's half-percent figure. ACCEPT: python -m pytest -q tests/test_docs_fresh.py tests/test_budgets.py passes. ZERO-CLICK: Test housekeeping; no click. DEPENDS: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a package in wave 25 or later).
 - [ ] RUN-CARDS-PAGE-FIT (build) Run tab Acts, Maps and Deaths cards still page at 10 rows (8 compact): 268 px against the measured 244 px budget at 1280x760 (204 px at 1024x700). Only a 10-row fill overflows; no fit state fills 10 rows today. Add one fit state that fills 10 rows on each card and set the page size so it fits (PLAY-TD-20B-RUN-CARDS review gap). ACCEPT: python -m pytest -q tests/test_play_fit.py passes with the new 10-row state and npm test --prefix app passes. ZERO-CLICK: Layout floor; no click. DEPENDS: PLAY-TD-20B-RUN-CARDS. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a wave 23 or 24 package owning the Run cards, or a new small package).
@@ -343,7 +353,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   every index entry jumps to and focuses its control, the disclaimer sentence is still in the
   footer, the full credits and the does / never does text are in About and data, and the page has at
   most 6 live regions. ZERO-CLICK: Set-once switches only; nothing here is needed in play. DEPENDS:
-  PLAY-TD-21A-SETTINGS-RAIL, PLAY-TD-09C-BAR. BLOCKED: session wave 26.
+  PLAY-TD-21A-SETTINGS-RAIL, PLAY-TD-09C-BAR. BLOCKED: session wave 27.
 - [ ] REL-UPDATE-TRIGGER (build) Core: start the updater by itself, 'Update now' and click-only.
   ACCEPT: python -m pytest -q tests/test_updates.py tests/test_http_security.py
   tests/test_ux_settings_io.py passes. ZERO-CLICK: No click with web data on; click-only waits for
@@ -357,7 +367,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_ux_review.py tests/test_design_gate.py passes and npm test --prefix app passes.
   ZERO-CLICK: Fewer wrong acts; nothing added. DEPENDS: RUN-REPORT-FIELDS, RUN-OBS-LOGS-SHELL,
   RUN-ZONE-RESET, RUN-DIAG-DATA-AGE, RUN-EXPLAIN-ROWS, DATA-CONTACT-UI, OVL-KEYS-WEB,
-  SEC-LOG-PATH-FIELD, TC-CALC-OPTIN-BUTTON. BLOCKED: session wave 27.
+  SEC-LOG-PATH-FIELD, TC-CALC-OPTIN-BUTTON. BLOCKED: session wave 28.
 - [ ] PLAY-TD-22A-A11Y-CSS (build) Accessibility CSS: inset focus ring, 24 px targets, forced
   colours, text spacing. ACCEPT: python -m pytest -q tests/test_a11y.py tests/test_design_tokens.py
   tests/test_ux_review.py tests/test_play_fit.py and node --test app/test/textspacing.test.js pass:
@@ -366,19 +376,19 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   disabled button has a visible disabled style, every font-size in web/*.css is a var(--al-fs-*)
   token, and the probe sets data-text-spacing=user when its reference box differs from the tokens.
   ZERO-CLICK: Follows the OS and browser settings; no click. DEPENDS: PLAY-TD-21B-SETTINGS-ABOUT,
-  PLAY-TD-03-TOKENS. BLOCKED: session wave 27.
+  PLAY-TD-03-TOKENS. BLOCKED: session wave 28.
 - [ ] TEST-WEB-PANELS-B (build) Panel move B: layout, weights, web data and graphics panels. ACCEPT:
   npm test --prefix app passes and python -m pytest -q tests/test_dash_console.py tests/test_a11y.py
   tests/test_floor_static.py tests/test_ux_review.py tests/test_webpage.py passes. ZERO-CLICK:
   Developer-side only; the player does nothing. The page assembles the panel tags by itself; paint
   order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-A, PLAY-TD-21B-SETTINGS-ABOUT.
-  BLOCKED: session wave 27.
+  BLOCKED: session wave 28.
 - [ ] TEST-CORE-TICKS (build) Core tick list and one import per line. ACCEPT: python
   tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
   tests/test_core_ticks.py tests/test_core_crash_log.py tests/test_fullstack.py
   tests/test_hot_reload.py tests/test_no_discovery.py passes. ZERO-CLICK: Developer-side only; the
   player does nothing. The core runs the same ticks in the same order with no click, as today.
-  DEPENDS: TEST-STATE-EQUIV, SEC-DEMO-ENTRY. BLOCKED: session wave 27.
+  DEPENDS: TEST-STATE-EQUIV, SEC-DEMO-ENTRY. BLOCKED: session wave 28.
 
 ### Wave 28: Play tab and dashboard, reliability and observability
 
@@ -390,7 +400,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   and a capture through the shared capture helper has a mean relative luminance under 0.05.
   ZERO-CLICK: Dark with no action; the choice is one optional click in Settings. DEPENDS:
   PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04A-DARK-CLIENT, SEC-SURFACE-PIN, TEST-CAPTURE-HELPER.
-  BLOCKED: session wave 28.
+  BLOCKED: session wave 30.
 - [ ] PLAY-TD-22C-A11Y-CDP (build) In-browser accessibility pass in the CDP harness. ACCEPT: python
   -m pytest -q tests/test_a11y_render.py passes in about 10 s and fails on a planted clipped ring, a
   planted unnamed button and a planted 3:1 text pair: it checks the AX tree (no unnamed focusable,
@@ -399,11 +409,11 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   in the page, 320 px reflow with no horizontal scroll, and the four text-spacing overrides on both
   axes at 1024x700 and 1280x760. ZERO-CLICK: Dev step; runs in the gates in windowless Chrome on a
   demo core; skips cleanly without Chrome. DEPENDS: PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS,
-  PLAY-TD-01A-PLAY-STATES, SEC-DEMO-ENTRY. BLOCKED: session wave 28.
+  PLAY-TD-01A-PLAY-STATES, SEC-DEMO-ENTRY. BLOCKED: session wave 29.
 - [ ] RUN-PERF-PARSE-ONCE (build) Parse each data file once. ACCEPT: python -m pytest -q
   tests/test_budget_start.py tests/test_hot_reload.py tests/test_hud_act.py tests/test_zone_guide.py
   tests/test_util_campaign.py passes. ZERO-CLICK: Automatic. DEPENDS: RUN-HOTRELOAD-RETRY,
-  RUN-DIAG-DATA-AGE, RUN-NO-DEAD-ENDS, RUN-DURABLE-STORES. BLOCKED: session wave 28.
+  RUN-DIAG-DATA-AGE, RUN-NO-DEAD-ENDS, RUN-DURABLE-STORES. BLOCKED: session wave 29.
 - [ ] PLAY-F-165-COLOUR-WORD-TEST (build) Test: colour never works alone. ACCEPT: python -m pytest
   -q tests/test_colour_never_alone.py passes on the tree and fails when .foo { color:
   var(--fk-status-ok) } is planted on a wordless node. ZERO-CLICK: Runs in the test gates by itself;
@@ -424,8 +434,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   malformed file keeps the last good copy with a Checks note, the file never exceeds 300 zones of
   200 characters, and the POST needs the token and accepts plain text only. ZERO-CLICK: Shown by
   itself on zone entry; writing a note is the player's choice. DEPENDS: PLAY-TD-07B-PLAY-CARDS,
-  PLAY-TD-04B-THEME-CHOICE, RUN-ZONE-RESET, RUN-HOTRELOAD-RETRY, DATA-GUIDE-MERGE. BLOCKED: session
-  wave 29.
+  PLAY-TD-04B-THEME-CHOICE, RUN-ZONE-RESET, RUN-HOTRELOAD-RETRY, DATA-GUIDE-MERGE. BLOCKED: session wave 31.
 - [ ] PLAY-F-204A-SR-TOOL (build) Screen-reader pass tool and its refusals. ACCEPT: python -m pytest
   -q tests/test_sr_pass.py tests/test_floor_static.py passes: tools/sr_pass.py exits non-zero
   without the operator flag and while the running core reports game_idle false, holds no OS input,
@@ -433,7 +442,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   per step (page load, item check, trade request, tab switch, Settings form); the transcript check
   of docs/design/screen-reader-pass.md skips while that file is absent. ZERO-CLICK: Dev step; the
   tool and its refusals run in the test gates on a fixture speech log; no player step. DEPENDS:
-  PLAY-TD-22C-A11Y-CDP, SEC-DEMO-ENTRY. BLOCKED: session wave 29.
+  PLAY-TD-22C-A11Y-CDP, SEC-DEMO-ENTRY. BLOCKED: session wave 30.
 
 ### Wave 30: overlay and client, tests and code seams, loop and watchers
 
@@ -442,7 +451,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_price_text.py tests/test_eval_text.py tests/test_ux_settings_io.py and node --test
   app/test/layout.test.js app/test/overlayparts.test.js pass. ZERO-CLICK: Set once in Settings; the
   card still shows and leaves by itself. DEPENDS: OVL-LINE2-GUIDE, OVL-PARTS-WEB,
-  OVL-TD06-AUTOSCALE, OVL-COPY-FIRST, OVL-KEYS-WEB, OVL-OVERLAY-FEED. BLOCKED: session wave 30.
+  OVL-TD06-AUTOSCALE, OVL-COPY-FIRST, OVL-KEYS-WEB, OVL-OVERLAY-FEED. BLOCKED: session wave 32.
 - [ ] TEST-WEB-PANELS-C (build) Panel move C: remaining Play blocks (events and trades, item check,
   rates and price) + Panel move D: view modules register themselves; app.js is a shell. ACCEPT: npm
   test --prefix app passes and python -m pytest -q tests/test_dash_console.py tests/test_a11y.py
@@ -454,11 +463,11 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   the panel tags by itself; paint order is kept by explicit order values. Also (folded
   TEST-WEB-PANELS-SHELL): Developer-side only; the player does nothing. The page assembles the panel
   tags by itself; paint order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-B,
-  PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD. BLOCKED: session wave 30.
+  PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD. BLOCKED: session wave 31.
 - [ ] LOOP-DEV-CHECKS (build) Two Checks notes: a stale loop tick (dev host) and the Electron end of
   life. ACCEPT: `python -m pytest -q tests/test_diag_dev_notes.py tests/test_diag_self.py` passes.
   ZERO-CLICK: Passive: the notes appear in the Checks view by themselves; the app makes no request
-  and checks no version online (decision 0013). BLOCKED: session wave 30.
+  and checks no version online (decision 0013). BLOCKED: session wave 32.
 
 ### Wave 31: Play tab and dashboard, reliability and observability
 
@@ -468,11 +477,11 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   note for the shown zone and character, the box is capped at 200 characters, and a settings export
   holds notes only when the option is ticked. ZERO-CLICK: Optional review act on the Run tab;
   nothing to press in play. DEPENDS: PLAY-F-186A-PLAYER-NOTES-STORE, PLAY-TD-04B-THEME-CHOICE,
-  PLAY-TD-20A-RUN-GRID. BLOCKED: session wave 31.
+  PLAY-TD-20A-RUN-GRID. BLOCKED: session wave 33.
 - [ ] RUN-CHARACTER-PIN (build) 'This is my character' pin in the picker; poll_ms and character
   apply without a restart. ACCEPT: python -m pytest -q tests/test_util_multichar.py
   tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: One click once; nothing in
-  play. DEPENDS: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE. BLOCKED: session wave 31.
+  play. DEPENDS: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE. BLOCKED: session wave 33.
 - [ ] PLAY-TD-23-RECORDS (build) Records: design 0001 rewritten, the cockpit decision, decision 0014
   amended. ACCEPT: python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
   tests/test_leak_sweep.py tests/test_design_contrast.py tests/test_design_gate.py passes and
@@ -483,8 +492,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   PLAY-TD-09B-SKELETON, PLAY-LEGACY-OUT-2, PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20B-RUN-CARDS,
   PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS,
   PLAY-TD-22C-A11Y-CDP, OVL-TD05-LEGIBILITY, OVL-TD05-PLATE, OVL-TD06-AUTOSCALE, OVL-LINE2-GUIDE,
-  OVL-ACT-CARD, OVL-COPY-FIRST, OVL-KEY-HINT, OVL-GLANCE-RULES, OVL-TD18-CARD-TIME. BLOCKED: session
-  wave 31.
+  OVL-ACT-CARD, OVL-COPY-FIRST, OVL-KEY-HINT, OVL-GLANCE-RULES, OVL-TD18-CARD-TIME. BLOCKED: session wave 33.
 
 ### Wave 32: reliability and observability, install and release
 
@@ -492,7 +500,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   test --prefix app passes and python -m pytest -q tests/test_ux_review.py tests/test_a11y.py
   tests/test_dash_console.py passes. ZERO-CLICK: The line appears by itself; no toast, no prompt; an
   earlier opt-in needs one acknowledgement click, once. DEPENDS: REL-UPDATE-WIRE,
-  PLAY-TD-21A-SETTINGS-RAIL. BLOCKED: session wave 32.
+  PLAY-TD-21A-SETTINGS-RAIL. BLOCKED: session wave 34.
 - [ ] RUN-P8-8-CHARMIX (build) P8-8: the session ladder and the Maps card no longer mix characters +
   SessionState.publish(key, view) for views the core only stores. ACCEPT: python -m pytest -q
   tests/test_util_map_ladder.py tests/test_util_multichar.py tests/test_util_maps_resume.py
@@ -502,11 +510,11 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   passes. ZERO-CLICK: No player interaction. Also (folded TEST-STATE-PUBLISH): Developer-side only;
   the player does nothing. Published views reach the dashboard and overlay in the snapshot by
   themselves. DEPENDS: RUN-LADDER-TICK, RUN-CHARACTER-PIN, TEST-STATE-TEXT-4, PLAY-TD-07A-PLAY-VIEW.
-  BLOCKED: session wave 32.
+  BLOCKED: session wave 34.
 - [ ] RUN-PERF-IDLE-BACKOFF (build) Supervisor diet and idle backoff. ACCEPT: python -m pytest -q
   tests/test_keepalive.py tests/test_tailer.py tests/test_budget_tick.py tests/test_live_exit.py
   passes. ZERO-CLICK: Automatic. DEPENDS: RUN-STOP-RACE, RUN-CHARACTER-PIN, RUN-START-REASON-CORE,
-  RUN-TAIL-HEAL-READER, RUN-BUDGET-TESTS-DET. BLOCKED: session wave 32.
+  RUN-TAIL-HEAL-READER, RUN-BUDGET-TESTS-DET. BLOCKED: session wave 34.
 
 ### Wave 33: Play tab and dashboard, tests and code seams, reliability and observability
 
@@ -516,20 +524,20 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   web/*.css is one of --al-space-0..4, exactly 3 radius values are used, and no rule or script names
   .pill, .verdict, .tab-mark or .tag. ZERO-CLICK: Styling only; nothing to press. DEPENDS:
   PLAY-TD-23-RECORDS, PLAY-TD-22A-A11Y-CSS, PLAY-F-186B-PLAYER-NOTES-UI, TEST-CAPTURE-HELPER.
-  BLOCKED: session wave 33.
+  BLOCKED: session wave 35.
 - [ ] TEST-STATE-MIXIN-A (build) SessionState mixins: cards and trades. ACCEPT: python
   tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
   tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py tests/test_util_multichar.py
   tests/test_live_exit.py tests/test_resume.py tests/test_state_publish.py passes. ZERO-CLICK:
   Developer-side only; the player does nothing. Behaviour is byte-identical; a running core reloads
-  itself after the merge. DEPENDS: RUN-P8-8-CHARMIX. BLOCKED: session wave 33.
+  itself after the merge. DEPENDS: RUN-P8-8-CHARMIX. BLOCKED: session wave 35.
 - [ ] RUN-FEED-TRUTH (build) The page says what really happened to the feed + The dashboard rests
   when unseen or frozen. ACCEPT: npm test --prefix app passes and python -m pytest -q
   tests/test_sse_idle_push.py tests/test_fullstack.py tests/test_budgets.py passes. Also (folded
   RUN-PERF-DASH-IDLE): npm test --prefix app passes and python -m pytest -q tests/test_dash_perf.py
   passes. ZERO-CLICK: Automatic; the client window already reloads itself. Also (folded
   RUN-PERF-DASH-IDLE): Automatic. DEPENDS: RUN-SUPERVISOR-CLOCK, RUN-CHARACTER-PIN,
-  RUN-NO-DEAD-ENDS, RUN-BUDGET-TESTS-DASH, SEC-SSE-TAP. BLOCKED: session wave 33.
+  RUN-NO-DEAD-ENDS, RUN-BUDGET-TESTS-DASH, SEC-SSE-TAP. BLOCKED: session wave 35.
 
 ### Wave 34: install and release, tests and code seams, Play tab and dashboard
 
@@ -540,19 +548,19 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_ux_review.py tests/test_a11y.py tests/test_dash_console.py passes. ZERO-CLICK: One tick
   once; the row reflects the recorded state by itself. Also (folded REL-UPDATE-UI): Nothing to press
   by default; the button and switch are for players who want control. DEPENDS: REL-AUTOSTART-SWITCH,
-  REL-UPDATE-NOTICE-UI, REL-UPDATE-TRIGGER, PLAY-TD-21A-SETTINGS-RAIL. BLOCKED: session wave 34.
+  REL-UPDATE-NOTICE-UI, REL-UPDATE-TRIGGER, PLAY-TD-21A-SETTINGS-RAIL. BLOCKED: session wave 36.
 - [ ] TEST-STATE-MIXIN-B (build) SessionState mixins: characters. ACCEPT: python
   tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
   tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py tests/test_util_multichar.py
   tests/test_live_exit.py tests/test_resume.py tests/test_state_publish.py passes. ZERO-CLICK:
   Developer-side only; the player does nothing. Behaviour is byte-identical; a running core reloads
-  itself after the merge. DEPENDS: TEST-STATE-MIXIN-A. BLOCKED: session wave 34.
+  itself after the merge. DEPENDS: TEST-STATE-MIXIN-A. BLOCKED: session wave 36.
 - [ ] PLAY-F-189B-OVERLAY-PLATE (build) Overlay: one plate class. ACCEPT: python -m pytest -q
   tests/test_overlay_plate_class.py tests/test_overlay_layout.py tests/test_budgets.py
   tests/test_ux_review.py passes: overlay.css has one plate rule, and the overlay page rendered
   headless over a synthetic backdrop through the shared capture helper is pixel-identical before and
   after. ZERO-CLICK: No repaint, no animation and no new content on the overlay. DEPENDS:
-  PLAY-F-189A-SPACING-BADGE. BLOCKED: session wave 34.
+  PLAY-F-189A-SPACING-BADGE. BLOCKED: session wave 36.
 
 ### Wave 35: theorycraft, tests and code seams
 
@@ -562,14 +570,14 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   pytest -q tests/test_tc_buildfile.py tests/test_audit_buildfile.py tests/test_ux_review.py passes.
   ZERO-CLICK: Reset buttons only for a player who tunes; saving stays on change. Also (folded
   TC-BUILDFILE-TEXTS): Texts only; the download stays the player's click (decision 0034). DEPENDS:
-  TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB. BLOCKED: session wave 35.
+  TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB. BLOCKED: session wave 37.
 - [ ] TEST-STATE-MIXIN-C (build) SessionState mixins: idle and summary, published views. ACCEPT:
   python tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m
   pytest -q tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py
   tests/test_util_multichar.py tests/test_live_exit.py tests/test_resume.py
   tests/test_state_publish.py passes. ZERO-CLICK: Developer-side only; the player does nothing.
   Behaviour is byte-identical; a running core reloads itself after the merge. DEPENDS:
-  TEST-STATE-MIXIN-B. BLOCKED: session wave 35.
+  TEST-STATE-MIXIN-B. BLOCKED: session wave 37.
 
 ### Wave 36: web data
 
@@ -580,14 +588,14 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_price_check.py tests/test_price_card_age.py passes and npm test --prefix app passes.
   ZERO-CLICK: Layout only; nothing for the player to do. Also (folded DATA-PRICE-NINJA-LINK): An
   optional click; nothing is needed and nothing is fetched by the app. DEPENDS: DATA-GUIDE-MERGE,
-  DATA-CONTACT-UI, DATA-PRICE-CARD-TEXT, DATA-LEAGUE-IDENTITY. BLOCKED: session wave 36.
+  DATA-CONTACT-UI, DATA-PRICE-CARD-TEXT, DATA-LEAGUE-IDENTITY. BLOCKED: session wave 38.
 
 ### Wave 37: reliability and observability
 
 - [ ] RUN-LEFTOVERS-CORE (build) Small leftovers: Windowed Fullscreen sentence, the dead 501 stub,
   the no-op switch. ACCEPT: python -m pytest -q tests/test_leftovers.py tests/test_http_security.py
   tests/test_floor_static.py tests/test_run_detach.py tests/test_ascii_lf.py passes. ZERO-CLICK: The
-  sentence shows itself. DEPENDS: RUN-FEED-TRUTH, RUN-STOP-RACE. BLOCKED: session wave 37.
+  sentence shows itself. DEPENDS: RUN-FEED-TRUTH, RUN-STOP-RACE. BLOCKED: session wave 39.
 
 ### Wave 38: operator requests 2026-11-19, cores
 
@@ -596,7 +604,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   already cached; no setting. BLOCKED: session wave 38.
 - [ ] UI-HEADER-TEXT (build) Drop the visible AshLight text left of the tabs; sr-only h1 kept.
   ACCEPT: python -m pytest -q tests/test_brand_assets.py tests/test_a11y.py passes. ZERO-CLICK:
-  Automatic. BLOCKED: session wave 38.
+  Automatic. BLOCKED: session wave 40.
 - [ ] KINDLER-DATA (data) Kindler template schema and checked loader. ACCEPT: python -m pytest -q
   tests/test_kindler_data.py passes. ZERO-CLICK: Reloads by itself on change. BLOCKED: session wave
   38.
@@ -613,7 +621,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] ITEM-INFO-UI (build) Item names as link-like buttons with the shared item info popover.
   ACCEPT: python -m pytest -q tests/test_iteminfo_ui.py tests/test_a11y.py tests/test_ux_review.py
   passes. ZERO-CLICK: One click to look; it closes by itself on any other click. DEPENDS:
-  ITEM-INFO-CORE. BLOCKED: session wave 39.
+  ITEM-INFO-CORE. BLOCKED: session wave 41.
 - [ ] KINDLER-TEMPLATES (data) First authored Kindler templates, act 1 to maps. ACCEPT: python -m
   pytest -q tests/test_kindler_templates.py passes. ZERO-CLICK: Reloads by itself on change.
   DEPENDS: KINDLER-DATA. BLOCKED: session wave 39.
@@ -627,14 +635,14 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] KINDLER-UI-TABS (build) Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename
   and close. ACCEPT: python -m pytest -q tests/test_kindler_tabs_ui.py tests/test_a11y.py
   tests/test_ux_review.py and npm test --prefix app pass. ZERO-CLICK: The tabs come back by
-  themselves; one Generate click per new idea. DEPENDS: KINDLER-STORE. BLOCKED: session wave 40.
+  themselves; one Generate click per new idea. DEPENDS: KINDLER-STORE. BLOCKED: session wave 42.
 
 ### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
 
 - [ ] UI-CARD-COLLAPSE (build) Collapsible cards on Build and items and Run in the desktop client;
   state in the core. ACCEPT: python -m pytest -q tests/test_card_collapse.py tests/test_ui_layout.py
   tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: Remembered by the app;
-  nothing to set. BLOCKED: session wave 41.
+  nothing to set. BLOCKED: session wave 43.
 - [ ] KINDLER-PLAN (build) Kindler result plan: stages, links, gem timing, passives, ascendancy,
   item focus. ACCEPT: python -m pytest -q tests/test_kindler_plan.py passes. ZERO-CLICK: Follows the
   Play guidance by itself while the tab toggle is on. DEPENDS: KINDLER-ENGINE. BLOCKED: session wave
@@ -645,7 +653,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] KINDLER-UI-RESULT (build) Kindler result card with stages and follow Play guidance. ACCEPT:
   python -m pytest -q tests/test_kindler_result_ui.py tests/test_a11y.py tests/test_ux_review.py and
   npm test --prefix app pass. ZERO-CLICK: The current step moves with the Play guidance by itself.
-  DEPENDS: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI. BLOCKED: session wave 42.
+  DEPENDS: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI. BLOCKED: session wave 44.
 
 ### Parked
 
@@ -730,7 +738,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_data_ninja.py tests/test_leak_sweep.py passes and npm test --prefix app passes.
   ZERO-CLICK: After this no player types anything for prices: the web-data tick is enough. DEPENDS:
   DATA-CONTACT-UI, DATA-WEBFETCH-GZIP, DATA-DIAG-SEAM, DATA-SNAP-TRIM, DATA-GUIDE-ONE-BLOCK, GP-10.
-  BLOCKED: session wave 43.
+  BLOCKED: session wave 45.
 - [ ] OVL-ITEM-KEY-CTRL (build) Item-check default chord moves under Ctrl once the operator names a
   free letter. ACCEPT: node --test app/test/hotkey.test.js app/test/eval.test.js and python -m
   pytest -q tests/test_audit_pass5_low.py tests/test_floor_static.py pass with the new default in
