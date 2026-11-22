@@ -100,10 +100,14 @@ PRICES = [
 def test_holder_order_is_press_then_sample_then_moment():
     # press first (design review D-2 of OVL-CARD-SLOT), then the sample;
     # the trade card is built on the overlay page between sample and
-    # moment (render_gate.js), then the zone moment card (OVL-ZONE-CARD)
-    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample", "moment"]
+    # moment (render_gate.js), then the zone moment card (OVL-ZONE-CARD),
+    # then the key hint last (OVL-KEY-HINT)
+    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample", "moment", "hint"]
     for h in CARD_HOLDERS:
-        assert isinstance(h["life_s"], (int, float)) and h["life_s"] > 0, h
+        if h["kind"] == "hint":
+            assert h["life_s"] is None, h  # no expiry while due
+        else:
+            assert isinstance(h["life_s"], (int, float)) and h["life_s"] > 0, h
         exempt, twin = h.get("exempt"), h.get("twin")
         assert (isinstance(exempt, str) and exempt.strip()) or twin, h
     assert CARD_HOLDERS[1]["life_s"] == SAMPLE_S == 10
@@ -111,6 +115,8 @@ def test_holder_order_is_press_then_sample_then_moment():
     assert moment["life_s"] == overlayview.MOMENT_CARD_S == 12
     assert moment["cards"] == ("zone", "act")
     assert moment["twin"] == ("zone-guide", "actsbox")
+    hint = CARD_HOLDERS[3]
+    assert "twin" not in hint and "item-check help text" in hint["exempt"]
 
 
 def test_a_press_or_the_sample_beats_the_moment_card():
@@ -393,3 +399,226 @@ def test_store_save_failure_is_retried(tmp_path, monkeypatch):
         assert (rt / overlayview.FILE_NAME).is_file()
     finally:
         core.close()
+
+
+# -- OVL-KEY-HINT: the key hint in the empty slot -------------------------------
+
+KEY = "Alt+Shift+E"
+
+
+def _hotkeys(key=KEY):
+    """A published hotkeys view (hotkeys.view shape) with `key` bound."""
+    bound = key is not None
+    return {"eval": {"key": key, "want": KEY, "registered": True if bound else None,
+                     "fallback": False if bound else None},
+            "toggle": {"key": None, "want": "Alt+Shift+A", "registered": None,
+                       "fallback": None},
+            "overlay_on": True}
+
+
+def _hint_state(key=KEY):
+    st, clock = _state()
+    st.set_hotkeys(_hotkeys(key))
+    return st, clock
+
+
+def _game_start(st, at):
+    st.apply({"type": "log_opened", "recv_ts": at})
+
+
+def test_hint_shows_in_the_empty_slot_with_the_bound_key():
+    st, _ = _hint_state()
+    card = st.snapshot()["card"]
+    assert card == {"kind": "hint", "head": "Alt+Shift+E: check an item",
+                    "line2": "", "line3": "", "verdict": "hint", "expires_at": None}
+    assert overlayview.HINT_TEXT.format(key=KEY) == card["head"]
+    # no expiry while due: still there an hour later
+    assert st.overlay.card(st, T0 + 3600) == card
+    # showing the hint records nothing and enters no history
+    assert not st.overlay.dirty and not st.recent_events and st.eval is None
+
+
+def test_hint_needs_a_known_key():
+    for view in (None, {}, _hotkeys(None), {"eval": "Alt+Shift+E"},
+                 {"eval": {"key": ""}}, {"eval": {"key": 5}}):
+        st, _ = _state()
+        st.hotkeys = view
+        assert st.snapshot()["card"] is None, view
+    # the bound key is shown (here a fallback key), not the wanted one
+    st, _ = _hint_state("Ctrl+Shift+F9")
+    assert st.snapshot()["card"]["head"] == "Ctrl+Shift+F9: check an item"
+
+
+def test_any_card_hides_the_hint():
+    # a press card (and the press retires it for good)
+    st, clock = _hint_state()
+    st.set_eval(EVALS[0], at=T0)
+    assert st.snapshot()["card"]["kind"] == "eval"
+    clock.t = T0 + 60
+    assert st.snapshot()["card"] is None
+    # the sample card, then the hint comes back once the sample left
+    st, clock = _hint_state()
+    assert st.set_overlay_sample()["kind"] == "sample"
+    clock.t = T0 + SAMPLE_S
+    assert st.snapshot()["card"]["kind"] == "hint"
+    # a zone moment card, then the hint again
+    st, clock = _hint_state()
+    st.overlay.moment = {"at": T0, "gen": st._zone_gen, "head": "Zone short",
+                         "line2": "", "line3": ""}
+    assert st.snapshot()["card"]["kind"] == "zone"
+    clock.t = T0 + overlayview.MOMENT_CARD_S
+    assert st.snapshot()["card"]["kind"] == "hint"
+    # an open trade request: the overlay page's trade card outranks the hint
+    st, _ = _hint_state()
+    st.trade_requests.append({"id": 1, "from": "Buyer", "item": "Grim Grip"})
+    assert st.overlay.card(st, T0) is None
+    st.overlay_layout = {"parts": {"trade": False}}
+    assert st.overlay.card(st, T0)["kind"] == "hint"
+
+
+def test_parts_hint_off_hides_it():
+    st, _ = _hint_state()
+    st.set_overlay_layout({"parts": {"hint": False}})
+    assert st.snapshot()["card"] is None
+    st.set_overlay_layout({"parts": {"hint": True, "moment": False, "item": False}})
+    assert st.snapshot()["card"]["kind"] == "hint"
+    assert not st.overlay.dirty  # a hidden hint is still due, nothing recorded
+
+
+def test_hint_retires_after_the_first_press():
+    st, clock = _hint_state()
+    assert st.overlay.hint_due()
+    st.set_eval(EVALS[3], at=T0)  # any real press counts, a refusal too
+    assert not st.overlay.hint_due() and st.overlay.dirty
+    assert st.overlay.to_doc()["key_hint"] == {"pressed": True, "sessions": 0}
+    for dt in (30.0, 3600.0, 86400.0):
+        clock.t = T0 + dt
+        assert st.snapshot()["card"] is None, dt
+    _game_start(st, T0 + 90000)
+    assert st.snapshot()["card"] is None
+
+
+def test_a_rescore_is_not_a_press():
+    st, _ = _hint_state()
+    st.eval = dict(EVALS[0], id=1, at=T0 - 100)
+    st.set_eval(EVALS[1], keep_time=True)
+    assert st.overlay.hint_due()
+    assert st.overlay.card(st, T0 + 60)["kind"] == "hint"
+
+
+def test_hint_retires_after_3_game_sessions():
+    assert overlayview.HINT_SESSIONS == 3
+    st, _ = _hint_state()
+    for n in (1, 2):
+        _game_start(st, T0 + n)
+        assert st.overlay.to_doc()["key_hint"] == {"pressed": False, "sessions": n}
+        assert st.snapshot()["card"]["kind"] == "hint", n
+    v0 = st.version
+    _game_start(st, T0 + 10)
+    assert st.version > v0  # pushed: the overlay drops the line at once
+    assert st.overlay.to_doc()["key_hint"] == {"pressed": False, "sessions": 3}
+    assert st.snapshot()["card"] is None
+    # more sessions change nothing more
+    st.overlay.dirty = False
+    _game_start(st, T0 + 20)
+    assert not st.overlay.dirty
+    assert st.overlay.to_doc()["key_hint"]["sessions"] == 3
+
+
+def test_a_session_with_no_known_key_does_not_count():
+    # no client (no hotkeys view, or no bound key): the hint could not
+    # show, so the game session is not counted and nothing is stored
+    st, _ = _state()
+    for n in range(5):
+        _game_start(st, T0 + n)
+    st.set_hotkeys(_hotkeys(None))
+    _game_start(st, T0 + 10)
+    assert st.overlay.to_doc() == {"schema": overlayview.SCHEMA}
+    assert not st.overlay.dirty and st.overlay.hint_due()
+    st.set_hotkeys(_hotkeys())
+    assert st.snapshot()["card"]["kind"] == "hint"
+
+
+def _core(tmp_path):
+    log = tmp_path / "Client.txt"
+    if not log.exists():
+        log.write_bytes(b"")
+    return Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
+
+
+@pytest.mark.parametrize("how", ["press", "sessions"])
+def test_retired_hint_never_returns_across_a_core_restart(tmp_path, how):
+    core = _core(tmp_path)
+    try:
+        core.state.set_hotkeys(_hotkeys())
+        assert core.state.snapshot()["card"]["kind"] == "hint"
+        if how == "press":
+            core.state.set_eval(EVALS[0])
+        else:
+            for n in range(overlayview.HINT_SESSIONS):
+                _game_start(core.state, T0 + n)
+        core.tick_guide()
+        assert not core.state.overlay.dirty
+    finally:
+        core.close()
+    raw = json.loads((tmp_path / "rt" / overlayview.FILE_NAME).read_bytes())
+    assert raw["schema"] == overlayview.SCHEMA
+    assert raw["key_hint"]["pressed"] is (how == "press")
+    again = _core(tmp_path)
+    try:
+        again.state.set_hotkeys(_hotkeys())
+        assert not again.state.overlay.hint_due()
+        assert again.state.snapshot()["card"] is None
+    finally:
+        again.close()
+
+
+def test_sessions_below_3_survive_a_restart(tmp_path):
+    core = _core(tmp_path)
+    try:
+        core.state.set_hotkeys(_hotkeys())
+        _game_start(core.state, T0)
+        _game_start(core.state, T0 + 1)
+        core.tick_guide()
+    finally:
+        core.close()
+    again = _core(tmp_path)
+    try:
+        again.state.set_hotkeys(_hotkeys())
+        assert again.state.snapshot()["card"]["kind"] == "hint"
+        _game_start(again.state, T0 + 2)  # the third session retires it
+        assert again.state.snapshot()["card"] is None
+    finally:
+        again.close()
+
+
+def test_hint_marker_is_validated_on_load():
+    good = {"schema": overlayview.SCHEMA, "key_hint": {"pressed": True, "sessions": 1}}
+    v = OverlayView()
+    assert v.load_doc(good) and not v.hint_due()
+    assert v.to_doc() == good
+    big = OverlayView()
+    big.load_doc({"schema": overlayview.SCHEMA, "key_hint": {"pressed": False, "sessions": 99}})
+    assert big.to_doc()["key_hint"] == {"pressed": False, "sessions": 3}
+    assert not big.hint_due()
+    for bad in (None, [], "x", {"pressed": "yes", "sessions": 0},
+                {"pressed": False, "sessions": -1}, {"pressed": False, "sessions": True},
+                {"pressed": False, "sessions": 1.5}, {"pressed": False}):
+        z = OverlayView()
+        z.load_doc({"schema": overlayview.SCHEMA, "key_hint": bad})
+        assert z.to_doc() == {"schema": overlayview.SCHEMA}, bad
+        assert z.hint_due(), bad
+
+
+def test_hint_fits_34_with_a_19_character_key():
+    from server.al import hotkeys
+    key = "Ctrl+Shift+PageDown"
+    assert len(key) == 19 and hotkeys.safe_accelerator(key) == key
+    st, _ = _hint_state(key)
+    head = st.snapshot()["card"]["head"]
+    assert head == "Ctrl+Shift+PageDown: check an item"
+    assert len(head) == CARD_LINE == 34 and head.isascii()
+    # a longer key is cut by the card clip (format.js clip rule)
+    st, _ = _hint_state("Ctrl+Alt+Shift+Backspace")
+    head = st.snapshot()["card"]["head"]
+    assert len(head) == 34 and head.endswith("...")

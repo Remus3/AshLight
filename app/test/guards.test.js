@@ -12,9 +12,12 @@ const CORE = "http://127.0.0.1:" + PORT;
 // (tests/test_sidecar_paths.py)
 const D = "C" + ":";
 const d = "c" + ":";
-// what url.pathToFileURL gives for an install path with a space in it (a
-// neutral ProgramData folder, never a user profile)
-const OVERLAY_URL = "file:///" + D + "/ProgramData/Ash%20Light/app/overlay/index.html";
+// OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the overlay page's
+// one URL is on the app scheme (app/pages.js urlFor).
+const OVERLAY_URL = "al-app://app/overlay/index.html";
+// what url.pathToFileURL gave before, for an install path with a space in
+// it (a neutral ProgramData folder, never a user profile)
+const OVERLAY_FILE = "file:///" + D + "/ProgramData/Ash%20Light/app/overlay/index.html";
 
 function fakeWc() {
   const handlers = {};
@@ -108,19 +111,29 @@ function fakeWin(frameUrl) {
 }
 
 test("al:config answers only the overlay main frame on the exact page", () => {
-  const spellings = [
-    OVERLAY_URL,
-    "file:///" + D + "/ProgramData/Ash Light/app/overlay/index.html",
-    "file:///" + d + "/ProgramData/Ash%20Light/app/overlay/index.html",
-    "file://" + D + "\\ProgramData\\Ash Light\\app\\overlay\\index.html"
-  ];
-  for (const s of spellings) {
+  assert.equal(require("../pages.js").urlFor("overlay/index.html"), OVERLAY_URL);
+  for (const s of [OVERLAY_URL, OVERLAY_URL + "#x", OVERLAY_URL + "?y=1"]) {
     const { win, mainFrame } = fakeWin(s);
     assert.equal(Guards.frameIsOverlayPage(mainFrame, win, OVERLAY_URL), true, s);
   }
-  // a foreign file URL that also ends in /overlay/index.html
-  const foreign = fakeWin("file:///" + D + "/ProgramData/Downloads/evil/overlay/index.html");
-  assert.equal(Guards.frameIsOverlayPage(foreign.mainFrame, foreign.win, OVERLAY_URL), false);
+  // the new page URL only: the old file URL in any spelling is not it
+  for (const s of [OVERLAY_FILE,
+                   "file:///" + D + "/ProgramData/Ash Light/app/overlay/index.html",
+                   "file:///" + d + "/ProgramData/Ash%20Light/app/overlay/index.html",
+                   "file://" + D + "\\ProgramData\\Ash Light\\app\\overlay\\index.html"]) {
+    const { win, mainFrame } = fakeWin(s);
+    assert.equal(Guards.frameIsOverlayPage(mainFrame, win, OVERLAY_URL), false, s);
+  }
+  // another app scheme page, another host, a port or a user name
+  for (const s of ["al-app://app/client/starting.html", "al-app://evil/overlay/index.html",
+                   "al-app://app.evil/overlay/index.html", "al-app://app:1/overlay/index.html",
+                   "al-app://u@app/overlay/index.html"]) {
+    const { win, mainFrame } = fakeWin(s);
+    assert.equal(Guards.frameIsOverlayPage(mainFrame, win, OVERLAY_URL), false, s);
+  }
+  // a file URL as the wanted page matches nothing
+  const old = fakeWin(OVERLAY_FILE);
+  assert.equal(Guards.frameIsOverlayPage(old.mainFrame, old.win, OVERLAY_FILE), false);
   // the right URL, but a subframe (not the main frame)
   const { win } = fakeWin(OVERLAY_URL);
   assert.equal(Guards.frameIsOverlayPage({ url: OVERLAY_URL }, win, OVERLAY_URL), false);
@@ -132,8 +145,7 @@ test("al:config answers only the overlay main frame on the exact page", () => {
   assert.equal(Guards.frameIsOverlayPage(null, win, OVERLAY_URL), false);
   const web = fakeWin(CORE + "/overlay/index.html");
   assert.equal(Guards.frameIsOverlayPage(web.mainFrame, web.win, OVERLAY_URL), false);
-  // a bad percent escape is not the page
-  const bad = fakeWin("file:///" + D + "/ProgramData/Ash%ZZLight/app/overlay/index.html");
+  const bad = fakeWin("not a url");
   assert.equal(Guards.frameIsOverlayPage(bad.mainFrame, bad.win, OVERLAY_URL), false);
 });
 
