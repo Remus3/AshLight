@@ -1,1 +1,0 @@
-The Settings tab still scrolls; PLAY-TD-21B-SETTINGS-ABOUT lands its rail and deletes this marker.
