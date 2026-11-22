@@ -30,12 +30,14 @@ import importlib.util
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GATE_REL = "ops/fleet_kit/fleet_suite_gate.py"
 SELF_REL = "tools/suite_run.py"
 SLOT_ENV = "FLEET_SUITE_SLOT"
+T0_ENV = "AL_SUITE_T0"  # epoch seconds of the runner start (tests/slow_budget.py)
 WORKERS = 12  # research 0049 addendum 2026-11-21 (TEST-SUITE-HOLD-75)
 SPARE_CPUS = 4  # logical CPUs left free for the player's own work
 MIN_WORKERS = 2
@@ -100,6 +102,8 @@ def run(environ=None, runner=None, xdist=None, out=None):
               + gate_command("<owner>"), file=out)
         return 2
     runner = runner or _default_runner
+    if not env.get(T0_ENV):  # an outer runner's value is kept
+        env[T0_ENV] = repr(time.time())
     codes = []
     for name, argv in phases(xdist):
         print(f"suite_run: phase {name}: {' '.join(argv[1:])}", file=out, flush=True)
