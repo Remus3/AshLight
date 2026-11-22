@@ -873,17 +873,17 @@ of the HALT check.
   handlers and the one clipboard read (decision 0053). Reverses if: a
   part needs an order that file names cannot give, a packaged build
   cannot list the directory, or the floor scan stops covering app/parts.
-- Core hello (core part): GET /api/hello takes a fresh 128-bit nonce and
-  HMAC-SHA256(token, 'client' + nonce), never the token, and answers
-  HMAC-SHA256(token, 'server' + nonce + bound port); the Python client
-  (hello.verify) and the supervisor check it once per token value and
-  after any request error before they send the token; the proof is this
-  route's token gate and no process is looked at (decision 0054; the
-  run.ps1 and Electron parts land with SEC-HELLO-PS and
-  SEC-HELLO-CLIENT). Reverses if: a client that cannot compute an HMAC
-  must be supported, the handshake pushes a start past its budget, or
-  the stack rule's token wording is ruled to mean the token itself on
-  every call.
+- Core hello: clients prove the core before they send anything: GET
+  /api/hello takes a fresh 128-bit nonce and HMAC-SHA256(token, 'client' +
+  nonce), never the token, and answers HMAC-SHA256(token, 'server' + nonce +
+  bound port); the Electron main process, the supervisor and run.ps1 check it
+  once per token value and after any request error, before they send the
+  token, post item text or load the dashboard; the proof is this route's
+  token gate and no process is looked at (decision 0054; core part
+  SEC-HELLO-CORE, Electron part SEC-HELLO-CLIENT, run.ps1 part SEC-HELLO-PS
+  landed wave 23). Reverses if: a client that cannot compute an HMAC must be
+  supported, the handshake pushes a start past its budget, or the stack
+  rule's token wording is ruled to mean the token itself on every call.
 - NO-DISCOVERY: only the real entry point with no configured log path
   runs the Steam library scan; a core given a runtime dir or a log path
   never scans; a configured Client.txt path that is missing stays
@@ -1234,6 +1234,21 @@ of the HALT check.
   GitHub drops the asset digest field or moves its asset hosts, the cached
   answer goes stale enough to miss releases, or the operator rules the
   typed --yes line must also wait for game_idle.
+- Install checks (REL-UPDATE-CHECKS, F-077, DEP-11): in an installed copy,
+  Checks shows an "Installed copy" row with the version, the previous
+  version and the last update result (its age written in from "at"). It
+  also shows at most one "Update" row: a fail row with the fix after a
+  rollback to the running version, which clears after 7 days or when the
+  next update result replaces it, else a note naming the newest staged
+  version. A checkout has no row. The report puts these rows first, under
+  the header fields. Core.diag_facts()["install"] reads the marker
+  (paths.read_marker), <home>/staged, data/update_skip.json and
+  logs/reports/last-update.json through jsonfile, never restoring a .bak.
+  It passes on only checked versions, fixed words and times, never the
+  free-text reason. It never imports server/al/install, never fetches and
+  never switches. Reverses if: the installer's report or staged format
+  changes, report.py gains its own install fields, or the 7-day clear
+  hides a repeated rollback.
 - Uninstall: uninstall.ps1 needs no Python, removes only items proven
   AshLight's own, keeps <home>\data unless -Purge (Recycle Bin), asks
   nothing by default, never reads a game folder and ends with one fixed
