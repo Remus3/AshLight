@@ -45,6 +45,13 @@ def load_names(path):
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return {}
+    return names_from_doc(doc)
+
+
+def names_from_doc(doc):
+    """load_names' list from an already parsed base_items document
+    (RUN-PERF-PARSE-ONCE: NamesCache and campaign.FlaskCache share one
+    parse); a document that is not an object gives {}."""
     if not isinstance(doc, dict):
         return {}
     out = {}
@@ -68,11 +75,14 @@ def default_path(environ=None):
 
 class NamesCache(hotreload.Watched):
     """Loads the base list once and again only when the file changes;
-    a malformed rewrite keeps the last good list (HOT-RELOAD, 0042)."""
+    a malformed rewrite keeps the last good list (HOT-RELOAD, 0042). One
+    parse of the file feeds this list and campaign.FlaskCache's table
+    (RUN-PERF-PARSE-ONCE)."""
 
     def __init__(self, path):
         super().__init__(path, load_names, name="Base item list", default=dict,
-                         check=hotreload.check_json(MAX_BYTES))
+                         check=hotreload.check_json(MAX_BYTES),
+                         from_doc=names_from_doc, share=True)
 
 
 def from_names(line, names):

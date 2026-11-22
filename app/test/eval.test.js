@@ -24,7 +24,7 @@ test("evalCard clips the core's words and keeps the verdict", () => {
       verdict: "upgrade" });
   const long = fmt.evalCard({ ok: true, verdict: "downgrade",
                               text: { head: "H", item: "A".repeat(50), line: "" } });
-  assert.equal(long.item.length, 34);
+  assert.equal(long.item.length, 26);
   assert.ok(long.item.endsWith("..."));
   assert.equal(fmt.evalCard({ ok: false, text: { head: "Not an item" } }).verdict, "note");
   assert.deepEqual(fmt.evalCard(null), { head: "", item: "", line: "", verdict: "" });

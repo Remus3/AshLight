@@ -69,7 +69,7 @@
      trade request row of the core snapshot. */
   function tradeCard(req, maxLen) {
     if (!req) { return { from: "", item: "", where: "" }; }
-    var max = maxLen || 34;
+    var max = maxLen || 26;
     function clipText(s) {
       s = s ? String(s) : "";
       return s.length > max ? s.slice(0, max - 3) + "..." : s;
@@ -85,13 +85,22 @@
       price = "no price set";
     }
     var where = price.trim();
-    /* DS-HUD-CLIP: "tab Sale (3,7)" - tab name, then (left,top). */
+    /* DS-HUD-CLIP: "tab Sale (3,7)" - tab name, then (left,top).
+       CARD-LINE-LIMIT-FLIP: a line over the limit drops its least needed
+       part before any clip: first the word "tab", then the position. */
     if (req.stash_tab !== undefined && req.stash_tab !== null) {
-      where += " | tab " + req.stash_tab;
+      var pos = "";
       if (req.left !== undefined && req.left !== null &&
           req.top !== undefined && req.top !== null) {
-        where += " (" + req.left + "," + req.top + ")";
+        pos = " (" + req.left + "," + req.top + ")";
       }
+      var forms = [" | tab " + req.stash_tab + pos, " | " + req.stash_tab + pos,
+                   " | " + req.stash_tab];
+      var pick = forms[forms.length - 1];
+      for (var i = 0; i < forms.length; i++) {
+        if ((where + forms[i]).length <= max) { pick = forms[i]; break; }
+      }
+      where += pick;
     }
     return { from: clipText("Trade: " + (req.from || "unknown player")), item: clipText(item),
              where: clipText(where) };
@@ -118,7 +127,7 @@
      surfaces); this only clips them to the card's line limit. verdict drives the edge colour,
      never alone (the head starts with the verdict word). */
   function evalCard(ev, maxLen) {
-    var max = maxLen || 34;
+    var max = maxLen || 26;
     var t = (ev && ev.text) || {};
     if (!ev || !t.head) { return { head: "", item: "", line: "", verdict: "" }; }
     return { head: clip(t.head, max), item: clip(t.item, max), line: clip(t.line, max),
@@ -130,7 +139,7 @@
      or both from one press). The words come from the core; this only clips
      them to the line limit. */
   function cardText(card, maxLen) {
-    var max = maxLen || 34;
+    var max = maxLen || 26;
     if (!card || !card.head) { return { head: "", line2: "", line3: "", verdict: "" }; }
     return { head: clip(card.head, max), line2: clip(card.line2, max),
              line3: clip(card.line3, max), verdict: String(card.verdict || "") };

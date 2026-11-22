@@ -254,6 +254,20 @@ button.secondary {
   padding: 6px 8px;
 }
 .layout-form input[type="range"] { width: 100%; min-height: 24px; margin: 0; accent-color: var(--fk-accent); }
+/* OVL-PARTS-WEB: the 'Overlay shows' switches as a grid; the zone guide
+   choice keeps the control look of the layout form */
+.parts-grid { display: grid; gap: 0 16px; margin: 8px 0 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); }
+.parts select {
+  font: inherit;
+  color: var(--fk-text);
+  background: var(--fk-surface);
+  border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
+  border-radius: 6px;
+  padding: 4px 6px;
+  min-height: 32px;
+  max-width: 100%;
+}
 /* UX-REGRESSION-SWEEP: file pickers keep the 24px hit target (S2) */
 input[type="file"] { min-height: 24px; max-width: 100%; }
 

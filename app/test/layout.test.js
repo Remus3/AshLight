@@ -269,13 +269,18 @@ test("tradeCard: item, unpriced and exchange", () => {
     from: "Trade: Tradewind", item: "Grim Bane Ruby Ring",
     where: "5 exalted | tab Sale (3,7)" });
   const unpriced = fmt.tradeCard({ ...ITEM, price_amount: null, price_currency: null });
-  assert.equal(unpriced.where, "no price set | tab Sale (3,7)");
+  assert.equal(unpriced.where, "no price set | Sale (3,7)");
+  // CARD-LINE-LIMIT-FLIP: over the limit the word "tab" goes, then the position
+  const longTab = fmt.tradeCard({ ...ITEM, price_amount: null, price_currency: null,
+                                  stash_tab: "Sale tab 2" });
+  assert.equal(longTab.where, "no price set | Sale tab 2");
+  assert.ok(longTab.where.length <= 26);
   const ex = fmt.tradeCard({ id: 2, from: "Coin", kind: "exchange", item: "Chaos Orb",
                              want_amount: 10, price_amount: 1, price_currency: "Divine Orb" });
   assert.equal(ex.item, "10 Chaos Orb");
   assert.equal(ex.where, "for 1 Divine Orb");
   const long = fmt.tradeCard({ ...ITEM, item: "X".repeat(80) });
-  assert.ok(long.item.length <= 34 && long.item.endsWith("..."));
+  assert.ok(long.item.length <= 26 && long.item.endsWith("..."));
   assert.deepEqual(fmt.tradeCard(null), { from: "", item: "", where: "" });
 });
 

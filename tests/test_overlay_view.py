@@ -6,7 +6,7 @@
 - the 10 s sample card shows, leaves by itself and never enters the recent
   events, the item check, the price check or run history;
 - POST /api/overlay-sample needs the token;
-- every card line fits the 34-character clip;
+- every card line fits the 26-character clip;
 - the snapshot card is the old overlay_card() result for every eval /
   price fixture (the press card is unchanged);
 - the store round trip drops unknown keys and survives a broken file.
@@ -227,7 +227,7 @@ def test_card_lines_fit_the_clip():
     card = st.set_overlay_sample()
     for key in ("head", "line2", "line3"):
         assert isinstance(card[key], str) and card[key].isascii(), key
-        assert 0 < len(card[key]) <= CARD_LINE == 34, (key, card[key])
+        assert 0 < len(card[key]) <= CARD_LINE == 26, (key, card[key])
 
 
 def test_snapshot_card_unchanged_for_every_fixture():
@@ -611,9 +611,9 @@ def test_hint_marker_is_validated_on_load():
 
 
 def test_hint_fits_26_with_a_19_character_key():
-    # CARD-LINE-LIMIT-COPY2: the hint fits 26 while CARD_LINE stays 34
+    # CARD-LINE-LIMIT-FLIP: the hint fits the 26-character card line
     from server.al import hotkeys
-    assert overlayview.HINT_FIT == 26 and CARD_LINE == 34
+    assert overlayview.HINT_FIT == CARD_LINE == 26
     key = "Ctrl+Shift+PageDown"
     assert len(key) == 19 and hotkeys.safe_accelerator(key) == key
     st, _ = _hint_state(key)

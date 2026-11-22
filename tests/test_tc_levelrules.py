@@ -173,9 +173,9 @@ def test_press_with_and_without_build(tmp_path):
 
 def test_card_lines_fit_26():
     """CARD-LINE-LIMIT-COPY: the head fits 26 at every level and count (HEAD_MAX
-    stays 34 until CARD-LINE-LIMIT-FLIP); level 100 with a word Vendor drops
+    is 26 since CARD-LINE-LIMIT-FLIP); level 100 with a word Vendor drops
     the level, never the count."""
-    assert keep.HEAD_MAX == 34 and keep.HEAD_FIT == 26
+    assert keep.HEAD_MAX == keep.HEAD_FIT == 26
     for level in range(1, 101):
         for status in ("keep", "vendor"):
             for of in range(1, 7):

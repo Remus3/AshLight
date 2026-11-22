@@ -38,7 +38,6 @@ runtime dir, under the run-history switch (decision 0036).
 
 import collections
 import json
-import os
 from pathlib import Path
 
 from . import acts as acts_mod
@@ -173,42 +172,24 @@ def check_guide(path):
     """The hot reload check: valid JSON within MAX_GUIDE_BYTES, every
     short within MAX_SHORT and every skip well formed; raises ValueError
     so a bad edit keeps the last good guide and shows a Checks note."""
-    doc = hotreload.check_json(MAX_GUIDE_BYTES)(path)
+    doc = hotreload.check_json(MAX_GUIDE_BYTES, encoding="ascii")(path)
     problem = guide_problem(doc)
     if problem:
         raise ValueError(problem)
     return doc
 
 
-class FileCache:
-    """Calls `loader(path)` once and again only when the file's mtime or
-    size changes (hot reload); a missing file gives `empty`."""
-
-    def __init__(self, path, loader, empty=None):
-        self.path = Path(path)
-        self._loader = loader
-        self._empty = {} if empty is None else empty
-        self._sig = None
-        self._value = self._empty
-
-    def get(self):
-        try:
-            st = os.stat(self.path)
-            sig = (st.st_mtime_ns, st.st_size)
-        except OSError:
-            self._sig, self._value = None, self._empty
-            return self._value
-        if sig != self._sig:
-            self._value = self._loader(self.path)
-            self._sig = sig
-        return self._value
+def _guide_from_doc(doc):
+    """check_guide already parsed and checked the document."""
+    return doc
 
 
 def guide_cache(path=PATH):
     """HOT-RELOAD (decision 0042): the guide file joins the hot reload
-    registry; a removed file reads as {}."""
+    registry; a removed file reads as {}. check_guide's parse is the value
+    (RUN-PERF-PARSE-ONCE: one parse per change)."""
     return hotreload.register(path, load, name="Zone guide", default=dict,
-                              check=check_guide)
+                              check=check_guide, from_doc=_guide_from_doc)
 
 
 # -- the snapshot graph -------------------------------------------------------
@@ -225,6 +206,12 @@ def load_graph(path):
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return {}
+    return graph_from_doc(doc)
+
+
+def graph_from_doc(doc):
+    """load_graph's graph from an already parsed world_areas document; a
+    document that is not an object gives {}."""
     if not isinstance(doc, dict):
         return {}
     out = {}
@@ -242,7 +229,14 @@ def load_graph(path):
 
 
 def graph_cache(path):
-    return FileCache(path, load_graph)
+    """The waypoint graph, hot reloaded (decision 0042) from the same
+    parse as acts.TableCache (RUN-PERF-PARSE-ONCE); a malformed rewrite
+    keeps the last good graph. Not in the Checks registry: the zone level
+    table already notes a bad file, and the table's poll keeps this
+    graph current through the shared parse."""
+    return hotreload.Watched(path, load_graph, name="Waypoint graph", default=dict,
+                             check=hotreload.check_json(MAX_GRAPH_BYTES),
+                             registry=False, from_doc=graph_from_doc, share=True)
 
 
 def _graph_node(graph, area_id, zone):

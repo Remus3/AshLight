@@ -406,7 +406,7 @@ test("cardHolder: the 5 holders, first match", () => {
   assert.equal(h3.holder, "moment");
   const h4 = S.cardHolder({ now: 105, hint });
   assert.equal(h4.holder, "hint");
-  assert.equal(h4.line1, "Ctrl+Alt+Shift+F12: check an item");
+  assert.equal(h4.line1, "Check: Ctrl+Alt+Shift+F12");
   assert.ok(h4.line1.length <= S.CARD_CHARS);
   const h5 = S.cardHolder({ now: 105 });
   assert.equal(h5.holder, "none");
@@ -443,10 +443,14 @@ test("cardHolder: press card time, trade return, moment never waits", () => {
   assert.equal(S.cardHolder({ now: 205, moment: { kind: "tip", at: 200 } }).holder, "none");
 });
 
-test("cardHolder: the key hint fits the 34-character line", () => {
+test("cardHolder: the key hint fits the 26-character line", () => {
   assert.equal(S.KEY_NAME_MAX, 19);
+  assert.equal(S.CARD_CHARS, 26);
   const key19 = "K".repeat(19);
-  assert.equal(S.cardHolder({ hint: { due: true, key: key19 } }).line1.length, 34);
+  // over 26 with the full wording: the short form "Check: <key>" (overlayview)
+  assert.equal(S.cardHolder({ hint: { due: true, key: key19 } }).line1, "Check: " + key19);
+  assert.equal(S.cardHolder({ hint: { due: true, key: "Alt+Shift+E" } }).line1,
+               "Alt+Shift+E: check an item");
   assert.equal(S.cardHolder({ hint: { due: true, key: key19 + "K" } }).holder, "none");
   assert.equal(S.cardHolder({ hint: { due: false, key: "F" } }).holder, "none");
   assert.equal(S.cardHolder({ hint: { due: true, key: "" } }).holder, "none");

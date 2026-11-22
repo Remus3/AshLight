@@ -29,10 +29,10 @@ the game. Reverses if: MAIN or the operator requires the F-147 helper, or a
 real composited capture disagrees with these numbers by more than 5 percent
 (then a follow-up extends capture.mjs and replaces the proxy).
 
-Known gap, reported and pinned as a strict xfail: a 34-character
-capitals-and-digits card line does not fit 236 px at 14 px. Per the package
-note the character limit drops (app/shared/format.js and state.CARD_LINE),
-never the font size; that is a follow-up package, not an edit here.
+Card width: a 34-character capitals-and-digits card line rendered about
+292 px at 14 px, over the 236 px budget; CARD-LINE-LIMIT-FLIP dropped the
+limit to 26 (app/shared/format.js and state.CARD_LINE), never the font size,
+and the worst-case 26-character line (wide capitals and digits) must fit.
 
 Skips, with the reason, when node or Chrome / Edge is missing.
 """
@@ -50,6 +50,8 @@ sys.path.insert(0, str(ROOT))
 
 from browser_util import find_browser  # noqa: E402
 from ci_timing import ci_scale  # noqa: E402
+
+from server.al.text.common import CARD_LINE  # noqa: E402
 
 DRIVER = ROOT / "app" / "test" / "cdp" / "overlay_pixels.mjs"
 NODE = shutil.which("node")
@@ -77,7 +79,7 @@ LINE2 = [
      {"level": "Lv 100", "deaths": "999 deaths", "status": ""}),
 ]
 ZONE = {"text": "The Grelwood Waystone Tower X", "timer": "59m"}  # 29 > 28: clips
-CARD_34 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ01234567"
+CARD_26 = "ABCDEFGHIJKLMNOPQRSTUVW012"  # CARD_LINE characters, M and W included
 CARD_IDS = ["evalHead", "evalItem", "evalLine", "tradeItem", "tradeWhere"]
 SECONDARY = [{"id": "evalLine", "text": "Better than your boots, +12 life"},
              {"id": "tradeWhere", "text": "Stash tab 2, left 3, top 4"}]
@@ -153,7 +155,7 @@ def spec_doc(css_file):
             "variants": [{"name": "current"}, {"name": "pre_td05", "css_file": str(css_file)}],
             "line2": [{"name": n, "inp": inp} for n, inp, _ in LINE2],
             "zone": ZONE,
-            "cards": [{"id": i, "text": CARD_34} for i in CARD_IDS],
+            "cards": [{"id": i, "text": CARD_26} for i in CARD_IDS],
             "secondary": SECONDARY}
 
 
@@ -284,15 +286,11 @@ def test_only_the_zone_name_clips(measured, dpr):
 @pytest.mark.server
 @pytest.mark.slow
 @needs_browser
-@pytest.mark.xfail(strict=True, reason=(
-    "OVL-CONTRAST-PIXELS finding: a 34-character capitals-and-digits card line "
-    "renders about 292 px at 14 px / 600, over the 236 px budget and over the "
-    "card row; per the package note the 34-character card limit drops "
-    "(app/shared/format.js, state.CARD_LINE), never the font size - a follow-up "
-    "package"))
-def test_a_34_character_capitals_card_line_fits(measured):
+def test_a_26_character_capitals_card_line_fits(measured):
+    # CARD-LINE-LIMIT-FLIP: the worst-case line at the card limit fits
+    assert len(CARD_26) == CARD_LINE == 26
     for dpr in DPRS:
         for w in rows(measured[("current", dpr)], CARD_IDS):
-            assert w["text"] == CARD_34
+            assert w["text"] == CARD_26
             assert w["width"] <= INSIDE, f"{w['name']} {w['width']:.1f} px > {INSIDE}"
             assert w["scroll"] <= w["client"], w

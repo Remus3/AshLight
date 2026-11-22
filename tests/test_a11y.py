@@ -389,3 +389,57 @@ def test_the_short_window_query_and_the_play_shell_are_gone():
     for sel in (".stat", ".stats", ".panel-play", ".trade", "#panel-play {"):
         assert sel not in shell.replace("#panel-play:not", ""), sel
     assert re.search(r"html \{ font-size: calc\(100% \* var\(--al-s\)\); \}", CSS)
+
+
+# -- OVL-PARTS-WEB (F-118, TD-17): the 'Overlay shows' group
+
+PART_LABELS = {"part-zone": "Zone name", "part-timer": "Zone timer", "part-level": "Level",
+               "part-deaths": "Deaths", "part-status": "Status word",
+               "part-trade": "Trade card", "part-item": "Item check card",
+               "part-moment": "Zone and act cards", "part-hint": "Key hint",
+               "parts-quiet-town": "Hide the zone line in town and hideout",
+               "parts-zone-guide": "Zone guide on the overlay"}
+
+
+def test_overlay_parts_is_one_named_group_with_a_label_on_every_control():
+    """Every switch, the town switch and the zone guide choice has its own
+    label (S2); the group is one role=group named by its own h4, inside
+    Settings, Overlay; the presets and the sample button carry their words."""
+    ids = by_id()
+    group = ids["overlay-parts"]
+    assert ids["set-overlay"] in list(group.ancestors())
+    assert group.attrs.get("role") == "group"
+    assert group.attrs.get("aria-labelledby") == "parts-title"
+    title = ids["parts-title"]
+    assert title.tag == "h4" and group in list(title.ancestors())
+    assert title.all_text().strip() == "Overlay shows"
+    # one group: no nested group inside it
+    assert [n for n in group.walk() if n.attrs.get("role") == "group"] == [group]
+    labels = {n.attrs["for"]: n.all_text().strip() for n in group.walk()
+              if n.tag == "label" and "for" in n.attrs}
+    assert labels == PART_LABELS, labels
+    for cid in PART_LABELS:
+        assert group in list(ids[cid].ancestors()), cid
+    assert ids["parts-zone-guide"].tag == "select"
+    assert [o.attrs["value"] for o in ids["parts-zone-guide"].walk() if o.tag == "option"] == [
+        "entry", "always", "never"]
+    words = {b.attrs["id"]: b.all_text().strip() for b in group.walk() if b.tag == "button"}
+    assert words == {"parts-full": "Full", "parts-cards": "Cards only",
+                     "parts-sample": "Show a sample card for 10 s"}, words
+    for bid in ("parts-full", "parts-cards"):
+        assert ids[bid].attrs.get("aria-describedby") == "parts-preset-note"
+    assert ids["parts-sample"].attrs.get("aria-describedby") == "parts-status"
+
+
+def test_overlay_parts_adds_no_live_region_beyond_its_status_line():
+    """The group's answers go to #parts-status, a plain line inside the
+    group; nothing in the group is a live region (the page keeps at most
+    6) and web/overlayparts.js makes none."""
+    ids = by_id()
+    group = ids["overlay-parts"]
+    assert not [n.attrs for n in group.walk() if is_live(n)]
+    status = ids["parts-status"]
+    assert status.tag == "p" and group in list(status.ancestors())
+    assert not is_live(status) and not any(is_live(a) for a in status.ancestors())
+    src = JS["overlayparts.js"]
+    assert "aria-live" not in src and not re.search(r"""role["']?\s*,""", src)

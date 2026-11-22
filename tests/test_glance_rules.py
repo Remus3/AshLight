@@ -1,7 +1,7 @@
 """OVL-GLANCE-RULES (F-095, design 0001 sections 7.1 and 10).
 
 1. Glance rule: every overlay card's first line starts with its answer
-   inside the 34-character clip: the verdict word (item check), the price
+   inside the 26-character clip: the verdict word (item check), the price
    word (price card), the buyer (trade card) or one of the fixed status
    words of a card without a verdict.
 2. Twins: every card kind the core can publish has a dashboard twin that
@@ -30,7 +30,7 @@ RENDER_GATE = ROOT / "app" / "shared" / "render_gate.js"
 FORMAT_JS = ROOT / "app" / "shared" / "format.js"
 DESIGN = ROOT / "docs" / "design" / "0001-design-system.md"
 
-CLIP = 34  # design 0001 section 9 rule 6; format.js cardText / tradeCard
+CLIP = 26  # design 0001 section 9 rule 6; format.js cardText / tradeCard
 
 # Today's card kinds and their dashboard twins (ids in web/index.html).
 # A later holder declares its own twin in overlayview.CARD_HOLDERS instead.
@@ -258,7 +258,7 @@ def test_trade_card_starts_with_the_buyer():
     # the overlay's first trade line is "Trade: <buyer>", clipped to the card
     assert re.search(r'from:\s*clipText\("Trade: "\s*\+\s*\(req\.from', src), \
         "format.js tradeCard first line changed: re-check the glance rule"
-    assert re.search(r"var max = maxLen \|\| 34;", src)
+    assert re.search(r"var max = maxLen \|\| 26;", src) and CLIP == state.CARD_LINE
     for buyer in ("Quietfox", "A_Really_Long_Character_Name_From_Wraeclast"):
         line = _clip(TRADE_WORD + buyer)
         assert line.startswith(TRADE_WORD + buyer[:CLIP - 3 - len(TRADE_WORD)]), line
@@ -403,7 +403,7 @@ def test_design_0001_states_both_rules():
     s71 = text.split("### 7.1 ", 1)[1].split("### 7.2 ", 1)[0]
     s10 = text.split("## 10. Overlay rules", 1)[1].split("## 11. ", 1)[0]
     assert "Notification policy" in s71 and "toast" in s71 and "flash" in s71
-    assert "Glance rule" in s10 and "34-character clip" in s10 and "twin" in s10
+    assert "Glance rule" in s10 and "26-character clip" in s10 and "twin" in s10
     for word in STATUS_WORDS:
         if word in DESIGN_TEXT_PENDING:
             continue

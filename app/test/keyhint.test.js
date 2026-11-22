@@ -80,14 +80,15 @@ test("parts.hint off hides it; parts.item does not", () => {
                HEAD);
 });
 
-test("the hint line fits the 34-character card clip", () => {
-  const key19 = gate.hudModel(snap({ card: hint({ head: "Ctrl+Shift+PageDown: check an item" }) }),
+test("the hint line fits the 26-character card clip", () => {
+  // the core sends the short form for a 19-character key (overlayview _hint_head)
+  const key19 = gate.hudModel(snap({ card: hint({ head: "Check: Ctrl+Shift+PageDown" }) }),
                               1005, "live");
-  assert.equal(key19.evalHead.length, 34);
-  assert.equal(key19.evalHead, "Ctrl+Shift+PageDown: check an item");
+  assert.equal(key19.evalHead.length, 26);
+  assert.equal(key19.evalHead, "Check: Ctrl+Shift+PageDown");
   const long = gate.hudModel(snap({ card: hint({ head: "Ctrl+Alt+Shift+Backspace: check an item" }) }),
                              1005, "live");
-  assert.equal(long.evalHead.length, 34);
+  assert.equal(long.evalHead.length, 26);
   assert.ok(long.evalHead.endsWith("..."));
 });
 

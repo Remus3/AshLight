@@ -269,9 +269,11 @@
      item", overlayview CARD_HOLDERS "hint") is line 1 only, muted
      (overlay.css data-verdict="hint"), with no expiry while the core
      sends it. Holder order: press card, trade, moment, hint: an open
-     trade card always outranks it, so it never shows over one. */
+     trade card always outranks it, so it never shows over one. The core
+     already fits the line (overlayview _hint_head, "Check: <key>" past 26);
+     the clip is the card line limit (CARD-LINE-LIMIT-FLIP). */
   function hintText(c) {
-    return { head: fmt.clip(c.head, 34), line2: "", line3: "", verdict: "hint" };
+    return { head: fmt.clip(c.head, 26), line2: "", line3: "", verdict: "hint" };
   }
 
   function slotPart(snap) {
