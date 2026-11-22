@@ -138,14 +138,15 @@ def test_error_card_text():
     assert t["sentence"] == NO_BUILD_SENTENCE
     assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
         [], "Not checked", "note", False)
+    # RUN-NO-DEAD-ENDS (research 0042 F20 d): a press with no item names none
     t = eval_card_text({"ok": False, "error": "not an item", "item": {}})
     assert (t["head"], t["item"], t["line"]) == \
-        ("Not an item", "Unnamed item", "Copy an item in game first")
+        ("Not an item", "", "Copy an item in game first")
     t = eval_card_text({"ok": False, "error": "no gear slot for this item class"})
     assert (t["head"], t["line"]) == ("Can't compare this", "Only gear is compared")
     # OVL-COPY-FIRST (F-054): a press before the game wrote the clipboard
     t = eval_card_text({"ok": False, "error": "empty clipboard", "item": {}})
-    assert (t["head"], t["item"], t["line"]) ==         ("Copy the item first", "Unnamed item", "Hover it, press Ctrl+C")
+    assert (t["head"], t["item"], t["line"]) ==         ("Copy the item first", "", "Hover it, press Ctrl+C")
     assert t["sentence"] == ("The clipboard was empty when you pressed the hotkey. Hover "
                              "an item in game, press Ctrl+C, then press the hotkey again.")
     assert (t["notes"], t["word"], t["tone"], t["answers"]) == (

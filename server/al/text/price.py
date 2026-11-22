@@ -20,6 +20,19 @@ EMPTY_CLIPBOARD = "empty clipboard"
 EMPTY_CLIPBOARD_TEXT = ("Copy the item first", "Hover it, press Ctrl+C",
                         "The clipboard was empty when you pressed the hotkey. Hover an "
                         "item in game, press Ctrl+C, then press the hotkey again.")
+# RUN-NO-DEAD-ENDS (research 0042 F20 d): a press that held no item names no
+# item: the item text stays empty (never "Unnamed item") and the price head is
+# the plain PRICE_CHECK_HEAD.
+NO_ITEM_ERRORS = ("not an item", EMPTY_CLIPBOARD)
+PRICE_CHECK_HEAD = "Price check"
+
+
+def no_item(card):
+    """True for an error card whose press held no item (and none is named)."""
+    card = _dict(card)
+    item = _dict(card.get("item"))
+    return (_key(card.get("error")) in NO_ITEM_ERRORS
+            and not _text(item.get("name") or item.get("base"), ""))
 
 # "link" (decision 0017) is the only success status the core produces now;
 # searching / waiting / done / off are kept for the 0016 contract's readers
@@ -219,11 +232,12 @@ def price_card_text(card):
     exact-output test (tests/test_price_text.py)."""
     card = _dict(card)
     item = _dict(card.get("item"))
-    name = _text(item.get("name") or item.get("base"), "Unnamed item")
+    empty = no_item(card)
+    name = _text(item.get("name") or item.get("base"), "" if empty else "Unnamed item")
     listings = _dicts(card.get("listings"))
     rows = [_listing_text(r) for r in listings[:PRICE_LISTINGS]]
-    out = {"head": f"Price: {name}", "item": name, "line": "", "detail": "",
-           "sentence": "", "rows": rows}
+    out = {"head": PRICE_CHECK_HEAD if empty else f"Price: {name}", "item": name,
+           "line": "", "detail": "", "sentence": "", "rows": rows}
     status = _key(card.get("status"))
     league = _text(card.get("league"), "this league")
     if status == "waiting":

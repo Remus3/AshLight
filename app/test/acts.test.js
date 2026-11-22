@@ -28,7 +28,7 @@ const ACTS = {
   levels: true,
   source: CREDIT,
   empty_text: "No act times yet. They start by themselves when you enter a campaign zone.",
-  no_levels_text: "Zone levels aren't downloaded yet. Turn on web data, then run AshLight's build step (scripts/build.ps1).",
+  no_levels_text: "Zone levels aren't downloaded yet. AshLight fetches them by itself while \"Use web data\" is ticked under Settings, Reading and web data.",
   no_zones_text: "Zone levels show here while you are in a campaign act.",
   partial_text: "partial: counted from the first zone AshLight saw"
 };
@@ -89,15 +89,15 @@ test("zoneRows, zoneText, zonesTitle and zonesEmpty, exact", () => {
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { levels: false, zones: [], current: null })),
     "Zone levels show here while you are in a campaign act.");
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { levels: false, zones: [] })),
-    "Zone levels aren't downloaded yet. Turn on web data, then run AshLight's build step (scripts/build.ps1).");
+    "Zone levels aren't downloaded yet. AshLight fetches them by itself while \"Use web data\" is ticked under Settings, Reading and web data.");
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { zones: [] })),
     "Zone levels show here while you are in a campaign act.");
   assert.equal(a.zonesEmpty(null), "");
   // UTIL-1.0-FIXTURES: in an act the downloaded table lacks
   // same text as server/al/acts.py ACT_NO_LEVELS_TEXT (tests/test_util_10_fixtures.py)
   const lacks = "Zone levels for Act 5 aren't downloaded yet. They show here once the " +
-    "game data has them: after a game update, run AshLight's build step again " +
-    "(scripts/build.ps1).";
+    "game data has them. AshLight fetches newer game data by itself, at most once a " +
+    "day, while web data is on.";
   assert.equal(a.zonesEmpty(Object.assign({}, ACTS, { zones: [], act_levels_text: lacks })), lacks);
 });
 

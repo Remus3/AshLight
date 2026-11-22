@@ -73,9 +73,9 @@ NO_ZONES_TEXT = "Zone levels show here while you are in a campaign act."
 # rows for (Acts 5-6 before the repoe-fork snapshot is refreshed, research
 # 0021); NO_ZONES_TEXT would wrongly say they are not in an act.
 ACT_NO_LEVELS_TEXT = ("Zone levels for {act} aren't downloaded yet. They "
-                      "show here once the game data has them: after a game "
-                      "update, run AshLight's build step again "
-                      "(scripts/build.ps1).")
+                      "show here once the game data has them. AshLight "
+                      "fetches newer game data by itself, at most once a "
+                      "day, while web data is on.")
 PARTIAL_TEXT = "partial: counted from the first zone AshLight saw"
 
 

@@ -9,7 +9,7 @@ same object. Pure functions and constants; stdlib only.
 from ..theorycraft import cardparts
 from .buildlive import build_alert_text
 from .common import _dict, _dicts, _key, _num_text, _points, _signed, _signed_points, _text
-from .price import EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT
+from .price import EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT, no_item
 from .waystone import waystone_text
 
 
@@ -255,7 +255,10 @@ def _delta_head(verdict, delta, slot, empty):
 def _eval_lines(card):
     """eval_card_text's head, item, line, sentence, comparisons and calc."""
     item = _dict(card.get("item"))
-    name = _text(item.get("name") or item.get("base"), "Unnamed item")
+    # RUN-NO-DEAD-ENDS (research 0042 F20 d): a press that held no item names
+    # no item (the overlay's empty line 2 takes no space)
+    empty = not card.get("ok") and no_item(card)
+    name = _text(item.get("name") or item.get("base"), "" if empty else "Unnamed item")
     if card.get("unidentified"):
         name += " (unidentified)"
     out = {"head": "", "item": name, "line": "", "sentence": "", "comparisons": [],
