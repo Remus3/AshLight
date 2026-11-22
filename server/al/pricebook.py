@@ -54,29 +54,45 @@ DATA-NINJA-SHAPE-WATCH (F-140 layer 1): refresh() hands every 200 body,
 parsed or not, to ninjashape.observe (family "item" for the unique types,
 "exchange" for the rest) through self.shape_watch, which ninjashape.attach
 sets; None (the default) checks nothing. No request is added.
+
+DATA-PRICE-TYPES-FILE (F-201): the unique and exchange type lists live in
+server/al/data/price_types.json, hot reloaded (decision 0042): one stat per
+read, a re-read only when the file moved. A type name is letters only, each
+list holds at most TYPES_MAX names, no name twice; a bad edit keeps the last
+good lists and shows a reload note; a missing file reads as the built-in
+lists below. UNIQUE_TYPES and EXCHANGE_TYPES stay readable as module
+attributes and always give the current lists; a dropped type is no longer
+requested, looked up or summarised.
 """
 
 import threading
 
 import json
 import logging
+import re
 import urllib.parse
 from pathlib import Path
 
-from . import jsonfile, ninjashape, num
+from . import hotreload, jsonfile, ninjashape, num
 
 log = logging.getLogger("al.pricebook")
 
 ITEM_PATH = "/poe2/api/economy/stash/current/item/overview"
 EXCHANGE_PATH = "/poe2/api/economy/exchange/current/overview"
-UNIQUE_TYPES = ("UniqueWeapons", "UniqueArmours", "UniqueAccessories",
-                "UniqueFlasks", "UniqueCharms", "UniqueJewels",
-                "UniqueSanctumRelics", "UniqueTablets", "PrecursorTablets")
+# DATA-PRICE-TYPES-FILE: the shipped lists live in TYPES_PATH; these
+# built-in copies are only the missing-file default (the same 9 + 13 names).
+BUILTIN_UNIQUE = ("UniqueWeapons", "UniqueArmours", "UniqueAccessories",
+                  "UniqueFlasks", "UniqueCharms", "UniqueJewels",
+                  "UniqueSanctumRelics", "UniqueTablets", "PrecursorTablets")
 # Currency itself stays in RatesClient (rates.json); these are the other
 # stackable kinds of the exchange overview (research 0019).
-EXCHANGE_TYPES = ("Fragments", "Abyss", "UncutGems", "LineageSupportGems",
-                  "Essences", "SoulCores", "Idols", "Runes", "Ritual",
-                  "Expedition", "Delirium", "Breach", "Verisium")
+BUILTIN_EXCHANGE = ("Fragments", "Abyss", "UncutGems", "LineageSupportGems",
+                    "Essences", "SoulCores", "Idols", "Runes", "Ritual",
+                    "Expedition", "Delirium", "Breach", "Verisium")
+TYPES_PATH = Path(__file__).resolve().parent / "data" / "price_types.json"
+TYPES_MAX = 40  # names per list
+TYPES_MAX_BYTES = 64 * 1024
+_TYPE_RE = re.compile(r"[A-Za-z]{1,64}")
 CACHE_NAME = "book.json"
 MAX_LINES = 5000
 FEW_LISTINGS = 10  # a unique with fewer listings is a thin market
@@ -229,12 +245,68 @@ def parse_exchange_overview(body):
     return {"primary": pid, "unit": unit, "entries": entries, "lines": lines}
 
 
+def _type_list(doc, key):
+    names = doc.get(key)
+    if not isinstance(names, list):
+        raise ValueError(f"{key} is not a list")
+    if len(names) > TYPES_MAX:
+        raise ValueError(f"{key} holds more than {TYPES_MAX} names")
+    for name in names:
+        if not isinstance(name, str) or not _TYPE_RE.fullmatch(name):
+            raise ValueError(f"{key} holds a name that is not letters only")
+    if len(set(names)) != len(names):
+        raise ValueError(f"{key} names a type twice")
+    return tuple(names)
+
+
+def load_types(path):
+    """(unique, exchange) name tuples from the types file; raises on a bad
+    file (hotreload keeps the last good lists)."""
+    doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(doc, dict):
+        raise ValueError("not a JSON object")
+    unique = _type_list(doc, "unique")
+    exchange = _type_list(doc, "exchange")
+    if set(unique) & set(exchange):
+        raise ValueError("a type is in both lists")
+    return unique, exchange
+
+
+_types_watch = None
+_types_lock = threading.Lock()
+
+
+def types():
+    """(unique, exchange): the current lists, hot reloaded (decision 0042)."""
+    global _types_watch
+    with _types_lock:
+        if _types_watch is None or _types_watch.path != Path(TYPES_PATH):
+            _types_watch = hotreload.register(
+                TYPES_PATH, load_types, name="price types",
+                default=lambda: (BUILTIN_UNIQUE, BUILTIN_EXCHANGE),
+                check=hotreload.check_json(max_bytes=TYPES_MAX_BYTES))
+        w = _types_watch
+    return w.get()
+
+
+def __getattr__(name):
+    """UNIQUE_TYPES / EXCHANGE_TYPES read the current lists (PEP 562)."""
+    if name == "UNIQUE_TYPES":
+        return types()[0]
+    if name == "EXCHANGE_TYPES":
+        return types()[1]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 def _all_types():
-    return ([(t, ITEM_PATH, "unique") for t in UNIQUE_TYPES]
-            + [(t, EXCHANGE_PATH, "exchange") for t in EXCHANGE_TYPES])
+    unique, exchange = types()
+    return ([(t, ITEM_PATH, "unique") for t in unique]
+            + [(t, EXCHANGE_PATH, "exchange") for t in exchange])
 
 
-_TYPE_NAMES = frozenset(UNIQUE_TYPES + EXCHANGE_TYPES)
+def _type_names():
+    unique, exchange = types()
+    return frozenset(unique + exchange)
 
 
 class PriceBook:
@@ -253,8 +325,9 @@ class PriceBook:
         self._press_lock = threading.Lock()
         self._pressed = {}
         saved = self.doc.get("pressed")
+        known = _type_names()
         for name, at in (saved.items() if isinstance(saved, dict) else ()):
-            if name in _TYPE_NAMES and isinstance(_num(at), float):
+            if name in known and isinstance(_num(at), float):
                 self._pressed[name] = _num(at)
 
     def _load(self):
@@ -277,7 +350,7 @@ class PriceBook:
         refreshes every pressed_interval_s for PRESSED_FOR_S. Memory only:
         the next refresh saves it. Unknown types are ignored."""
         at = _num(now)
-        if type_name not in _TYPE_NAMES or at is None:
+        if type_name not in _type_names() or at is None:
             return
         with self._press_lock:
             if at > self._pressed.get(type_name, float("-inf")):
