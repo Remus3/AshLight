@@ -314,3 +314,55 @@ def test_checks_row_says_ashlight_uses_n_mb(core):
     assert rows[0]["detail"] == "AshLight uses 198 MB."  # 48 core + 150 client
     over = budget.rows({"budget_mb": 400.0, "budget_over": ["B18"]}, 0.0)
     assert over["status"] == "note" and over["detail"].startswith("AshLight uses 400 MB.")
+
+
+# RUN-BUDGET-TESTS-LIVE (F-108, research 0048 R4 / R6): the real budget log,
+# opt-in. AL_BUDGET_LOG_LIVE=1 reads the log the core writes on this host
+# (AL_BUDGET_LOG names another file); it is resolved at import, before any
+# test points the sidecar at a tmp dir. Only read, never written.
+LIVE_BUDGET_LOG = os.environ.get("AL_BUDGET_LOG_LIVE") == "1"
+LIVE_BUDGET_FILE = (os.environ.get("AL_BUDGET_LOG") or str(budgetlog.default_file())
+                    if LIVE_BUDGET_LOG else None)
+LIVE_BUDGET_IDS = ("B9", "B10", "B11", "B12", "B17", "B18")
+
+
+def test_log_rows_inside_b9_to_b12_b17_b18(tmp_path):
+    """research 0048: every row of the budget log is inside B9 to B12, B17
+    and B18. Always: the checker knows exactly those budgets and flags a
+    row over each of them (one replayed row per budget). Opt-in
+    (AL_BUDGET_LOG_LIVE=1): the host's real log holds a row and no
+    breach."""
+    assert tuple(sorted(budgetlog.BUDGETS, key=lambda k: int(k[1:]))) == LIVE_BUDGET_IDS
+    edge = budgetlog.client_figures(client_doc(0.0, companion=True, procs=3,
+                                               ws_kb=299 * 1024), 0.0)[0]
+    inside = [{"tags": [], "supervisor_mb": 34.9},
+              budgetlog.make_row(1, FAKE_PROC, None, edge, ["game_active", "companion_open"]),
+              *clean_rows(2)]
+    assert budgetlog.check(inside) == [], budgetlog.check(inside)
+    over = {
+        "B9": {"tags": [], "supervisor_mb": 35.0},
+        "B10": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
+            client_doc(0.0, priv_kb=121 * 1024), 0.0)[0], ["game_active"]),
+        "B11": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
+            client_doc(0.0, companion=True, procs=3, ws_kb=301 * 1024), 0.0)[0],
+            ["game_active", "companion_open", "calc_on"]),
+        "B12": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
+            client_doc(0.0, tab_cpu=1.5), 0.0)[0], ["game_active", "in_map"]),
+        "B17": budgetlog.make_row(1, FAKE_PROC, {"luajit_mb": 500.0, "luajit_peak_mb": 768.0},
+                                  None, ["game_active", "calc_on"]),
+        "B18": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
+            client_doc(0.0, ws_kb=199 * 1024, priv_kb=100 * 1024), 0.0)[0],
+            ["game_active"]),
+    }
+    over["B18"]["total_mb"] = 350.0  # a supervisor-free total at the B18 limit
+    for bid, row in over.items():
+        got = {b["budget"] for b in budgetlog.check([row])}
+        assert bid in got, (bid, got, row)
+    if not LIVE_BUDGET_LOG:
+        pytest.skip("the real budget log is opt-in (AL_BUDGET_LOG_LIVE=1)")
+    rows = budgetlog.read_rows(LIVE_BUDGET_FILE)
+    if not rows:
+        pytest.skip("no budget log row on this host yet")
+    lines, rc = budgetlog.report(rows)
+    print("\n".join(lines))
+    assert rc == 0 and budgetlog.check(rows) == [], "\n".join(lines)
