@@ -273,3 +273,60 @@ test("UTIL-MAPRUN-OVL: row-1 timer shows map time inside a map", () => {
   // not opted in: no numbers at all
   assert.equal(gate.hudModel({ ...snap, tailer: { consented: false } }, 1000, "live").timer, "");
 });
+
+/* RUN-BUDGET-TESTS-DASH (B13, research 0048): a snapshot that changes no
+   HUD string costs the overlay no paint. 1,000 snapshots differ from a busy
+   base only in fields the HUD does not show (state version, counters, the
+   dashboard's own views); the overlay's paint step (app/overlay/overlay.js
+   paint: hudModel, then shouldRender) paints the first and none after.
+   Seeded, so every run walks the same 1,000. Values are invented. */
+test("B13: 1,000 snapshots differing only outside the HUD fields give 0 paints", () => {
+  const base = {
+    now: 5000, zone: "Crypt", in_hideout: false, in_town: false, zone_entered_at: 4400,
+    level: 71, deaths: 4, afk: false, dnd: false,
+    tailer: { consented: true, reading: true, path: "x", idle: false, last_line_at: 4990 },
+    maps: { count: 3, current: { name: "Crypt", area_level: 65, time_s: 600, deaths: 1, inside: true } },
+    trade_requests: [tradeRow(1, "A"), tradeRow(2, "B")],
+    card: { kind: "price", head: "Price: Doom Grip", line2: "12 exalted", line3: "",
+            verdict: "note", expires_at: 5015 },
+    overlay_layout: { corner: "top-right", quiet_town: true, zone_guide: "always",
+                      parts: { zone: true, timer: true, level: true, deaths: true } },
+    overlay: { guide_short: "Kill the boss", calm_at: 4000 },
+    underlevel: { word: "" }, campaign: { word: "" }
+  };
+  const nowS = 5005;
+  let seed = 20261121;
+  const rnd = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  const NOISE = [
+    (s, i) => { s.version = 100 + i; },
+    (s, i) => { s.events_seen = 9000 + i * 3; },
+    (s, i) => { s.run_history = { count: rnd(20), enabled: true }; },
+    (s, i) => { s.diag = { rows: [{ id: "log", state: rnd(2) ? "ok" : "fix" }], failed: rnd(3) }; },
+    (s, i) => { s.play = { notices: [{ id: "tip" + i, text: "Tip " + i }] }; },
+    (s, i) => { s.maps = { ...s.maps, count: 3 + rnd(50), ladder_all: { rows: [{ level: rnd(80) }] } }; },
+    (s, i) => { s.price = { book_at: 4000 + i, rows: rnd(500) }; },
+    (s, i) => { s.build = { name: "Build " + rnd(9), stale: rnd(2) === 1 }; },
+    (s, i) => { s.hotkeys = { eval: { key: "Ctrl+Alt+" + "DEF"[rnd(3)] } }; },
+    (s, i) => { s.recent_events = [{ seq: i, type: "zone", at: 4000 + i }]; }
+  ];
+  let shown = null;
+  let paints = 0;
+  const paint = (s) => {
+    const model = gate.hudModel(s, nowS, "live");
+    if (gate.shouldRender(shown, model)) { paints++; shown = model; }
+  };
+  paint(base);
+  assert.equal(paints, 1); // the first snapshot paints the HUD
+  assert.ok(shown.zone && shown.timer && shown.evalHead, shown);
+  paints = 0;
+  for (let i = 0; i < 1000; i++) {
+    const s = { ...base };
+    const n = 1 + rnd(4);
+    for (let k = 0; k < n; k++) { NOISE[rnd(NOISE.length)](s, i); }
+    paint(s);
+  }
+  assert.equal(paints, 0);
+  // the gate is not blind: one HUD string changed is one paint
+  paint({ ...base, deaths: 5 });
+  assert.equal(paints, 1);
+});

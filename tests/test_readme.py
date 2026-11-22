@@ -192,17 +192,38 @@ def test_repository_address_is_only_the_projects_own():
         assert "ashlight" not in owner_repo.lower() or owner_repo.lower() == repo
 
 
+# AshLight's own rendered pages (TEST-SHOTS-RENDER): a plain PNG name
+# directly under docs/shots/, nothing nested, no '..', no query or scheme.
+SHOT_SRC = re.compile(r"docs/shots/[a-z0-9][a-z0-9-]*\.png")
+
+
+def _image_source_allowed(src):
+    if src.startswith("assets/brand/"):
+        return True
+    return SHOT_SRC.fullmatch(src) is not None
+
+
 def test_no_ggg_art_and_no_paid_link():
     text = _text(README)
     for src in re.findall(r"""(?:src|srcset)=["']([^"']+)["']""", text):
-        assert src.startswith("assets/brand/"), src
+        assert _image_source_allowed(src), src
     for src in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text):
-        assert src.startswith("assets/brand/"), src
+        assert _image_source_allowed(src), src
     lowered = text.lower()
     for word in ("patreon", "ko-fi", "buymeacoffee", "paypal", "sponsors",
                  "donate", "opencollective", "pathofexile.com/image",
                  "web.poecdn.com"):
         assert word not in lowered, word
+
+
+def test_image_source_rule_stays_narrow():
+    for ok in ("assets/brand/hero.png", "docs/shots/play-dark-1440.png"):
+        assert _image_source_allowed(ok), ok
+    for bad in ("docs/shots/../x.png", "docs/shots/sub/play.png",
+                "docs/shots/play.jpg", "docs/shots/play.png?x=1",
+                "https://web.poecdn.com/image/x.png", "docs/play.png",
+                "docs/shots-x/play.png", "/docs/shots/play.png"):
+        assert not _image_source_allowed(bad), bad
 
 
 def test_security_states_what_the_updater_verifies():

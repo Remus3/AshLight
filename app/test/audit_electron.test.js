@@ -45,7 +45,11 @@ test("the guards part: sandbox, WebGL off, defaults on every new webContents", (
 
 test("main.js: exact-sender IPC, throttled restart, popups still denied", () => {
   assert.match(MAIN, /Guards\.frameIsOverlayPage\(e\.senderFrame, win, OVERLAY_URL\)/);
-  assert.match(MAIN, /const OVERLAY_URL = url\.pathToFileURL\(OVERLAY_HTML\)\.href;/);
+  // OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the app scheme
+  // URL, loaded with loadURL; no file page is loaded any more
+  assert.match(MAIN, /const OVERLAY_URL = Pages\.urlFor\("overlay\/index\.html"\);/);
+  assert.match(MAIN, /win\.loadURL\(OVERLAY_URL\);/);
+  assert.doesNotMatch(MAIN, /loadFile\(|pathToFileURL/);
   assert.doesNotMatch(MAIN, /endsWith\("\/overlay\/index\.html"\)/);
   assert.match(MAIN, /const restartGate = Guards\.throttle\(RESTART_MIN_MS\);/);
   assert.match(MAIN, /const RESTART_MIN_MS = 2000;/);

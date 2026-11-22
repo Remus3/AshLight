@@ -186,13 +186,64 @@ function Get-AlToken {
     return ''
 }
 
+# SEC-HELLO-PS (F-137, decision 0054): the hello handshake runs first, so the
+# token header (and the dashboard URL with its token fragment, built only
+# after the health wait) never goes to a listener that cannot prove it holds
+# the token and bound $port. The proof sent is HMAC-SHA256(token, 'client' +
+# nonce), never the token; the answer must be HMAC-SHA256(token, 'server' +
+# nonce + $port) for the port dialled.
 function Test-AlHealth {
     $token = Get-AlToken
     if (-not $token) { return $false }
     # Loopback only: an explicit empty proxy (PowerShell 5.1 has no -NoProxy),
     # so the token never reaches a proxy whatever the session or system names.
     $r = $null
+    $mac = $null
     try {
+        $ascii = [System.Text.Encoding]::ASCII
+        if ($token -notmatch '^[\x00-\x7f]+$') { return $false }
+        $bytes = New-Object byte[] 16
+        $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+        try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
+        $nonce = (($bytes | ForEach-Object { $_.ToString('x2') }) -join '')
+        $mac = New-Object System.Security.Cryptography.HMACSHA256 (, $ascii.GetBytes($token))
+        $proof = (($mac.ComputeHash($ascii.GetBytes('client' + $nonce)) |
+            ForEach-Object { $_.ToString('x2') }) -join '')
+        $want = (($mac.ComputeHash($ascii.GetBytes('server' + $nonce + [string][int]$port)) |
+            ForEach-Object { $_.ToString('x2') }) -join '')
+
+        $req = [System.Net.WebRequest]::Create("http://127.0.0.1:$port/api/hello")
+        $req.Proxy = New-Object System.Net.WebProxy
+        $req.Timeout = 2000
+        $req.Headers.Add('X-AL-Hello-Nonce', $nonce)
+        $req.Headers.Add('X-AL-Hello-Proof', $proof)
+        $r = $req.GetResponse()
+        if ([int]$r.StatusCode -ne 200) { return $false }
+        $buf = New-Object byte[] 4097
+        $stream = $r.GetResponseStream()
+        $n = 0
+        while ($n -lt $buf.Length) {
+            $got = $stream.Read($buf, $n, $buf.Length - $n)
+            if ($got -le 0) { break }
+            $n += $got
+        }
+        $r.Close()
+        $r = $null
+        if ($n -le 0 -or $n -gt 4096) { return $false }
+        $doc = $ascii.GetString($buf, 0, $n) | ConvertFrom-Json
+        if ($null -eq $doc -or $doc -isnot [System.Management.Automation.PSCustomObject]) { return $false }
+        $gotPort = $doc.port
+        if (-not ($gotPort -is [int] -or $gotPort -is [long]) -or [long]$gotPort -ne [long]$port) {
+            return $false
+        }
+        $gotProof = $doc.proof
+        if ($gotProof -isnot [string] -or $gotProof -cnotmatch '^[0-9a-f]{64}$') { return $false }
+        # fixed-time compare of the two 64-digit hex strings
+        $diff = 0
+        for ($i = 0; $i -lt 64; $i++) { $diff = $diff -bor ([int]$want[$i] -bxor [int]$gotProof[$i]) }
+        if ($diff -ne 0) { return $false }
+
+        # Proven: only now does the token header leave this process.
         $req = [System.Net.WebRequest]::Create("http://127.0.0.1:$port/api/health")
         $req.Proxy = New-Object System.Net.WebProxy
         $req.Timeout = 2000
@@ -203,6 +254,7 @@ function Test-AlHealth {
         return $false
     } finally {
         if ($r) { $r.Close() }
+        if ($mac) { $mac.Dispose() }
     }
 }
 

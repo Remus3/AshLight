@@ -63,7 +63,13 @@
    the failed page when the core left no start-error line; an open
    companion follows the watch's start through the starting page to the
    dashboard or that failed page. No tray note: nothing pops up by itself
-   (design 0001 section 7.1). */
+   (design 0001 section 7.1).
+
+   OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the starting page
+   loads from the app scheme (app/pages.js, served on this window's session
+   by app/parts/12-pages.js from the clientWindow hook, which runs before
+   the first load), with a header CSP that lets it connect nowhere; never
+   from file://. */
 
 const fs = require("fs");
 const path = require("path");
@@ -71,9 +77,10 @@ const Link = require("./link.js");
 const Brand = require("../brand/index.js"); // BRAND-ICON (design 0005)
 const Launcher = require("./launcher.js");
 const TrayMenu = require("./tray_menu.js");
+const Pages = require("../pages.js");
 
 const PARTITION = "persist:client";
-const STARTING_HTML = path.join(__dirname, "starting.html");
+const STARTING_PAGE = Pages.STARTING_PAGE; // client/starting.html on the app scheme
 const PRELOAD = path.join(__dirname, "preload.js");
 const STATE_FILE = "client-window.json";
 const CORE_WAIT_MS = 30000;
@@ -108,10 +115,15 @@ function startErrorLine(runtimeDir, sinceMs, fsi) {
   }
 }
 
-/* The loadFile options of the failed page: #failed, plus the reason line
-   as the one query value when there is one. */
+/* The page options of the failed page: #failed, plus the reason line
+   as the one query value when there is one (startingUrl builds the URL). */
 function failedPage(line) {
   return line ? { hash: "failed", query: { reason: line } } : { hash: "failed" };
+}
+
+/* The starting page's app scheme URL, with failedPage's options or none. */
+function startingUrl(options) {
+  return Pages.urlFor(STARTING_PAGE, options);
 }
 
 /* RUN-SECOND-LINE-CLIENT: the core watch. */
@@ -326,7 +338,7 @@ function createClient(opts) {
       line = giveUpNow();
       if (line) { log("client: supervisor gave up: " + line); }
     }
-    win.loadFile(STARTING_HTML, failedPage(line));
+    win.loadURL(startingUrl(failedPage(line)));
   }
 
   function showDashboard(sinceMs) {
@@ -368,7 +380,7 @@ function createClient(opts) {
      waits for it on the starting page (a closed one has nothing to show). */
   function followStart(since) {
     if (starting || !win || win.isDestroyed()) { return; }
-    win.loadFile(STARTING_HTML);
+    win.loadURL(startingUrl());
     starting = Link.waitFor(healthy, CORE_WAIT_MS, CORE_STEP_MS).then((ok) => settle(ok, since));
   }
 
@@ -436,7 +448,7 @@ function createClient(opts) {
       win.show();
     });
     if (typeof opts.onWindow === "function") { opts.onWindow(win, clientSession()); }
-    win.loadFile(STARTING_HTML);
+    win.loadURL(startingUrl());
     connect();
   }
 
@@ -625,6 +637,6 @@ function createClient(opts) {
            tray: () => tray };
 }
 
-module.exports = { createClient, startErrorLine, failedPage, PARTITION, STATE_FILE,
+module.exports = { createClient, startErrorLine, failedPage, startingUrl, PARTITION, STATE_FILE,
                    START_ERROR_FILE, REASON_MAX, giveUpLine, makeWatch, WATCH_MS, WATCH_FAILS,
                    WATCH_GAP_MS };

@@ -873,17 +873,17 @@ of the HALT check.
   handlers and the one clipboard read (decision 0053). Reverses if: a
   part needs an order that file names cannot give, a packaged build
   cannot list the directory, or the floor scan stops covering app/parts.
-- Core hello (core part): GET /api/hello takes a fresh 128-bit nonce and
-  HMAC-SHA256(token, 'client' + nonce), never the token, and answers
-  HMAC-SHA256(token, 'server' + nonce + bound port); the Python client
-  (hello.verify) and the supervisor check it once per token value and
-  after any request error before they send the token; the proof is this
-  route's token gate and no process is looked at (decision 0054; the
-  run.ps1 and Electron parts land with SEC-HELLO-PS and
-  SEC-HELLO-CLIENT). Reverses if: a client that cannot compute an HMAC
-  must be supported, the handshake pushes a start past its budget, or
-  the stack rule's token wording is ruled to mean the token itself on
-  every call.
+- Core hello: clients prove the core before they send anything: GET
+  /api/hello takes a fresh 128-bit nonce and HMAC-SHA256(token, 'client' +
+  nonce), never the token, and answers HMAC-SHA256(token, 'server' + nonce +
+  bound port); the Electron main process, the supervisor and run.ps1 check it
+  once per token value and after any request error, before they send the
+  token, post item text or load the dashboard; the proof is this route's
+  token gate and no process is looked at (decision 0054; core part
+  SEC-HELLO-CORE, Electron part SEC-HELLO-CLIENT, run.ps1 part SEC-HELLO-PS
+  landed wave 23). Reverses if: a client that cannot compute an HMAC must be
+  supported, the handshake pushes a start past its budget, or the stack
+  rule's token wording is ruled to mean the token itself on every call.
 - NO-DISCOVERY: only the real entry point with no configured log path
   runs the Steam library scan; a core given a runtime dir or a log path
   never scans; a configured Client.txt path that is missing stays
@@ -1054,7 +1054,25 @@ of the HALT check.
   port, blob: / data: or (AL_DEV=1) devtools (app/egress.js,
   app/parts/15-egress.js; refused origins logged once each, at most 64);
   the icon render page carries a no-network CSP (decision 0061 amendment
-  2026-11-19). Reverses if: a needed
+  2026-11-19). Amended 2026-11-21 (OVL-APP-SCHEME): the overlay page and
+  the companion's starting page load from one privileged app scheme
+  al-app (origin al-app://app, standard and secure, registered at the
+  parts' early hook by app/parts/12-pages.js and served with
+  protocol.handle on the default session and persist:client), never from
+  file://; app/pages.js serves a fixed list of eight files looked up
+  exactly (anything else, and any method but GET or HEAD, is 404 and
+  reads no file), reads each one fresh with no-store so hot reload still
+  works, and sends the CSP as a header (the overlay's connect-src is
+  http://127.0.0.1:<port> exactly, the starting page connects nowhere,
+  frame-ancestors 'none'); al:config answers only the scheme URL; the
+  egress lock allows the scheme's one host and refuses every file: URL;
+  the core adds APP_ORIGIN al-app://app to FILE_ORIGINS for GET /events
+  only and echoes it in Access-Control-Allow-Origin, while null and
+  file:// stay until OVL-APP-SCHEME-STRICT (decision 0061 amendment
+  2026-11-21). Reverses if: the live smoke shows the feed blocked or the
+  window not painting from the scheme, Electron drops protocol.handle or
+  registerSchemesAsPrivileged, or a page needs a file outside the list.
+  Reverses if: a needed
   feature must navigate or open a window, the guards cost the overlay budget
   (decision 0002), or Electron removes an API they rely on.
 - DEP-04 changelog: One changelog generator (tools/release.py notes):
@@ -1194,6 +1212,43 @@ of the HALT check.
   terms bar the daily read, a bad release auto-applies in practice, the
   operator wants click-only, or a stdlib-verifiable signature becomes
   available.
+  Amended 2026-11-21 (DEP-17, F-077), network half: `installer update
+  --yes` and update.stage_from_release download, verify and stage the
+  release in the releases/latest answer that server/al/updates.py cached,
+  so there is still one releases read per 24 h. Nothing is requested
+  unless the home's data/local.json has web_data true and an acknowledged
+  wording (web_data_ack), nor for a pre-release, a version that is not
+  newer, a version in update_skip.json, or a version already staged from
+  the same zip. Every asset url must be
+  https://github.com/<repo>/releases/download/<tag>/<name> for the cached
+  repository. Downloads go through payload.installer_stream over
+  api.github.com, github.com and the two GitHub asset hosts only, with the
+  installer User-Agent and no cookie; they start only on a click or while
+  game_idle is true, and run at below-normal priority. Each asset is
+  checked against its API size and its API digest when one is given, and
+  the zip and release.json against SHA256SUMS.txt; an answer with no
+  digest is recorded ("digest": "absent") and SHA256SUMS.txt alone
+  decides. Any mismatch stages nothing. A changed runtime pin is fetched
+  in the installer process and checked against the new pin. The Sigstore
+  attestation is not verified (the standard library cannot). Reverses if:
+  GitHub drops the asset digest field or moves its asset hosts, the cached
+  answer goes stale enough to miss releases, or the operator rules the
+  typed --yes line must also wait for game_idle.
+- Install checks (REL-UPDATE-CHECKS, F-077, DEP-11): in an installed copy,
+  Checks shows an "Installed copy" row with the version, the previous
+  version and the last update result (its age written in from "at"). It
+  also shows at most one "Update" row: a fail row with the fix after a
+  rollback to the running version, which clears after 7 days or when the
+  next update result replaces it, else a note naming the newest staged
+  version. A checkout has no row. The report puts these rows first, under
+  the header fields. Core.diag_facts()["install"] reads the marker
+  (paths.read_marker), <home>/staged, data/update_skip.json and
+  logs/reports/last-update.json through jsonfile, never restoring a .bak.
+  It passes on only checked versions, fixed words and times, never the
+  free-text reason. It never imports server/al/install, never fetches and
+  never switches. Reverses if: the installer's report or staged format
+  changes, report.py gains its own install fields, or the 7-day clear
+  hides a repeated rollback.
 - Uninstall: uninstall.ps1 needs no Python, removes only items proven
   AshLight's own, keeps <home>\data unless -Purge (Recycle Bin), asks
   nothing by default, never reads a game folder and ends with one fixed
@@ -1325,3 +1380,46 @@ of the HALT check.
   restarts a core the player stopped on purpose, 4 x 30 s proves too slow or
   too eager in play, or a give-up reason has to say more than the count and
   the reason.
+- OVL-KEY-HINT: the hint is the last card-slot holder (after moment). When
+  the slot is empty it shows one muted line, '<key>: check an item'. The
+  key is the bound item-check key from the published hotkeys view; no
+  known key means no hint. The line has no expiry (expires_at null) and
+  is exempt from the dashboard-twin rule, which points at the item-check
+  help text. Any card hides it, and so does an open trade request while
+  parts.trade is on, on both the core and the page; parts.hint off hides
+  it. It is due while no real press was ever recorded and fewer than 3
+  game sessions (log_opened seen while a key was known) were counted. The
+  marker key_hint {pressed, sessions} is validated in the OverlayView
+  store, so once the hint retires it never returns, across a core
+  restart. It reads nothing and sends nothing. Reverses if: players miss
+  the line after 3 sessions, the key-known session rule misfires in play,
+  or the hint shows over a card in play.
+- OVL-SMOKE-DAILY (AUTO-22, F-199): the loop step
+  tools/loop_steps/overlay_smoke.py runs the opt-in live overlay smoke
+  (python -m pytest -q tests/test_overlay_smoke.py with AL_OVERLAY_SMOKE=1,
+  hidden, below-normal priority, 600 s limit) from post_work at most once a
+  local day (state ops/runtime/watch/overlay_smoke.json), never HALTed or
+  dry, and only when the dev host's own core reports game_idle true
+  (loopback, ports.resolve, runtime token after the hello proof, no proxy);
+  a core that is not reachable is unknown, runs nothing and leaves the day
+  open; a scratch root without injected seams reads no core and starts
+  nothing; a red verdict is one checklist row 'overlay-smoke' that stays
+  until a later green run and files nothing; it never lists processes or
+  windows and sends no input (decision 0029). Reverses if: the smoke breaks
+  play on an idle day, game_idle misfires as idle while the operator plays,
+  or the operator rules the smoke must stay manual.
+- DIVE-ON-DEMAND (AUTO-13, F-171): a watcher source asks for a research
+  dive by writing ops/runtime/watch/dive_request.json through
+  upstream_watch.request_dive. The tick step tools/loop_steps/dive_request.py
+  checks every URL with tools/webfetch.py allowed(). A request that is
+  malformed or has a refused URL is dropped, never retried. A request waits
+  while a DD-<date> record or a deep-dive research file of today exists (one
+  dive a day, shared with the idle dive), and while the runs budget is
+  unreadable or at or over 60 percent of its cap. Otherwise it is dispatched
+  as a deep-dive DD-<date> even when rows are open: the spawn uses
+  DEEP_EXTRA (no WebFetch or WebSearch), and the request file is removed
+  once the record reads dispatched. The idle dive is skipped while the
+  newest dive, idle or requested, is under 7 days old, whatever it
+  proposed. Reverses if: requested dives crowd out row work, the 60 percent
+  share proves wrong in practice, or a source needs more than one dive a
+  day.

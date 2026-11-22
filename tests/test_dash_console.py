@@ -8,7 +8,10 @@ test_fullstack mock), a loaded build and three item checks (gear, waystone,
 a weapon into an empty slot). app/test/cdp/dash_console.mjs then drives
 headless Chrome over the DevTools protocol at 360 / 1440 / 768 px (dark,
 light, forced colours) with every fold open, and this test fails on any
-issue it reports. Skips when Chrome (or Edge) or node is missing.
+issue it reports. RUN-P8-6-CONSOLE: a second run adds the Checks view
+(tick_diag), a new-character tip and the all-sessions map ladder, and checks
+their painters left rows on the page. Skips when Chrome (or Edge) or node is
+missing.
 """
 
 import json
@@ -31,7 +34,7 @@ import test_fullstack as fs  # noqa: E402
 from ci_timing import ci_scale  # noqa: E402
 from tc_live_util import lease_port  # noqa: E402
 
-from server.al import ninja  # noqa: E402
+from server.al import ninja, playview  # noqa: E402
 from server.al.core import Core  # noqa: E402
 from server.al.http import serve  # noqa: E402
 from server.al.theorycraft import codec  # noqa: E402
@@ -68,13 +71,9 @@ def stack(tmp_path):
         mock.close()
 
 
-def test_dashboard_has_no_console_error_or_csp_violation(stack, tmp_path, monkeypatch):
-    browser = find_browser()
-    node = shutil.which("node")
-    if not browser or not node:
-        pytest.skip("headless Chrome / Edge or node not found")
+def _busy_session(st, log, monkeypatch):
+    """The synthetic session, the price book, the build and three checks."""
     monkeypatch.setattr(fs, "TOKEN", TOKEN)
-    st, log = stack
     assert st.req("POST", "/api/consent", {"consent": True})[0] == 200
     st.wait_for(lambda x: x["tailer"]["reading"], "tailer reading")
     s = synth_client.Session(seed=31, character="Consolecheck", klass="Sorceress")
@@ -97,6 +96,9 @@ def test_dashboard_has_no_console_error_or_csp_violation(stack, tmp_path, monkey
     for tick in ("tick_history", "tick_watch"):
         getattr(st.core, tick)()
 
+
+def _sweep(st, tmp_path, node, browser):
+    """Run the CDP sweep; fail on any issue; return its views."""
     url = f"http://127.0.0.1:{st.port}/#token={TOKEN}"
     r = subprocess.run([node, str(SCRIPT), browser, str(tmp_path / "chrome"), url],
                        capture_output=True, text=True, timeout=ci_scale(90))
@@ -107,3 +109,50 @@ def test_dashboard_has_no_console_error_or_csp_violation(stack, tmp_path, monkey
         assert v["live"], (tag, v)  # the feed came up, so the cards painted
         assert v["cards"] >= 8, (tag, v)
         assert v["sw"] <= v["cw"], (tag, v)  # no horizontal scroll, folds open
+    return out["views"]
+
+
+def _tools():
+    browser = find_browser()
+    node = shutil.which("node")
+    if not browser or not node:
+        pytest.skip("headless Chrome / Edge or node not found")
+    return node, browser
+
+
+def test_dashboard_has_no_console_error_or_csp_violation(stack, tmp_path, monkeypatch):
+    node, browser = _tools()
+    st, log = stack
+    _busy_session(st, log, monkeypatch)
+    _sweep(st, tmp_path, node, browser)
+
+
+def test_no_console_error_with_checks_hint_and_ladder_all(stack, tmp_path, monkeypatch):
+    """RUN-P8-6-CONSOLE (AUDIT-P8-LOW P8-6): the same sweep on a core that
+    has run tick_diag (Checks rows), shows a new-character tip (a region N
+    notice) and carries an all-sessions map ladder, so those painters run
+    under the console / CSP watch too."""
+    node, browser = _tools()
+    st, log = stack
+    _busy_session(st, log, monkeypatch)
+    # web data off again: the "Game data: not fetched yet" note (a data
+    # note, kind 5) would otherwise hold region N ahead of the tip (kind 6)
+    assert st.req("POST", "/api/web-data", {"enabled": False})[0] == 200
+    assert st.core.tick_diag(force=True)
+    st.core.tick_ladder()
+    snap = st.state()
+    assert snap["diag"] and snap["diag"]["checks"], snap["diag"]
+    assert snap["hint"], "no new-character tip on show"
+    notices = snap["play"]["notices"]
+    assert notices and notices[0]["kind"] == playview.KIND_TIP, notices
+    assert snap["maps"]["ladder_all"], snap["maps"].get("ladder_all")
+    title = playview.TIP_TITLES[snap["hint"]["id"]]
+    views = _sweep(st, tmp_path, node, browser)
+    for tag, v in views.items():
+        assert v["checks"] >= len(snap["diag"]["checks"]), (tag, v)  # Checks rows
+        assert v["ladder_all"] >= 1, (tag, v)  # all-sessions ladder rows
+        # the tip in region N; the compact class hides tips by design
+        # (web/slots.js hiddenNoticeKinds), so only a full view shows it
+        if v["size"] == "full":
+            assert title in v["notice"], (tag, title, v)
+    assert any(v["size"] == "full" for v in views.values()), views
