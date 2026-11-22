@@ -21,12 +21,21 @@ CARD_HOLDERS: the first holder with a card wins.
   waits and never returns: anything that takes the slot first drops it.
   The trade card is built on the overlay page itself, so the order the
   player sees is press, sample, trade, moment.
+- moment, kind act (OVL-ACT-CARD): an act split closing (the acts
+  module's split the area generation just ended) shows for MOMENT_CARD_S:
+  line 1 '<act> done', line 2 the split time, line 3 the gap to the best
+  saved run of the run history view while run history is on (decision
+  0036), else empty (no best, a partial split, history off). Only
+  parts.moment turns it off. It holds the slot over the zone card of the
+  same entry (the scene line after the closing generation): that zone
+  card is dropped, never queued, and the zone counts as seen. Like the
+  zone card it never waits and never returns.
 
 OverlayView also carries a small bounded store (to_doc / load_doc, a dirty
 flag) that the core loads from ops/runtime/overlay-view.json at start and
-saves from its guide tick. It is empty today: later packages (OVL-ACT-CARD,
-OVL-KEY-HINT, OVL-OVERLAY-FEED) record act close and the first press here
-through on_event / on_press. The zone entries seen in this game run stay in
+saves from its guide tick. It is empty today: later packages (OVL-KEY-HINT,
+OVL-OVERLAY-FEED) record the first press here through on_press; the act
+card (OVL-ACT-CARD) needs no stored key, its moment stays in memory. The zone entries seen in this game run stay in
 memory only. view() fills the snapshot's "overlay" dict: guide_short (the
 short of the current guided campaign zone, else "") and calm_at (the last
 death or level-up time + CALM_S, else None) for the HUD guide line
@@ -47,6 +56,14 @@ MAX_BYTES = 16 * 1024  # read cap of the store file (a bigger file reads as empt
 # The store's known keys besides "schema"; load_doc drops every other key.
 # Empty today; a later package adds its key here and its bound.
 STORE_KEYS = ()
+
+# OVL-ACT-CARD: the act moment card copy (design 0001 section 9 rule 6)
+ACT_HEAD = "{label} done"
+ACT_TIME = "Act time {time}"
+ACT_TIME_PARTIAL = "Act time {time}, partial"
+ACT_FASTER = "New best by {gap}"
+ACT_SLOWER = "{gap} behind your best"
+ACT_SAME = "Ties your best"
 
 SAMPLE_S = 10
 SAMPLE_HEAD = "Sample card"
@@ -69,18 +86,74 @@ CARD_HOLDERS = (
      "twin": ("eval-result", "price-result")},
     {"kind": "sample", "life_s": SAMPLE_S,
      "exempt": "shown only on its Settings button, which is its own twin"},
-    {"kind": "moment", "life_s": MOMENT_CARD_S, "cards": ("zone",),
-     "twin": ("zone-guide",)},
+    {"kind": "moment", "life_s": MOMENT_CARD_S, "cards": ("zone", "act"),
+     "twin": ("zone-guide", "actsbox")},
 )
 
 
-def _layout_allows(state):
-    """parts.moment on and zone_guide not "never" (no layout = defaults)."""
+def _layout_allows(state, kind="zone"):
+    """parts.moment on and, for the zone card, zone_guide not "never" (no
+    layout = defaults). The act card follows parts.moment only."""
     lay = getattr(state, "overlay_layout", None)
     if not isinstance(lay, dict):
         return True
     parts = lay.get("parts") if isinstance(lay.get("parts"), dict) else {}
-    return parts.get("moment", True) is not False and lay.get("zone_guide") != "never"
+    if parts.get("moment", True) is False:
+        return False
+    return kind == "act" or lay.get("zone_guide") != "never"
+
+
+def _clock_text(seconds):
+    """"m:ss", or "h:mm:ss" from one hour (whole seconds)."""
+    s = int(max(0, round(seconds)))
+    h, m, sec = s // 3600, (s % 3600) // 60, s % 60
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+
+
+def _closed_split(state, now):
+    """The act split this area generation closed (its ended_at is `now`),
+    else None."""
+    acts = getattr(state, "acts", None)
+    splits = getattr(acts, "splits", None)
+    if not isinstance(splits, list):
+        return None
+    for i in range(len(splits) - 1, -1, -1):
+        s = splits[i]
+        if not isinstance(s, dict) or s.get("ended_at") != now:
+            continue
+        started, ended = s.get("started_at"), s.get("ended_at")
+        label = s.get("label")
+        if not (_is_time(started) and _is_time(ended)) or not isinstance(label, str):
+            return None
+        partial = i == 0 and not getattr(acts, "complete_start", False)
+        return {"key": s.get("key"), "label": label,
+                "time_s": max(0.0, ended - started), "partial": partial}
+    return None
+
+
+def _gap_line(state, split):
+    """Line 3 of the act card: the gap to the saved best of this act in
+    the run history view, or "" (history off, no saved best, a partial
+    split, a best that is this run's own)."""
+    if split["partial"]:
+        return ""
+    view = getattr(state, "run_history", None)
+    if not isinstance(view, dict) or view.get("on") is not True:
+        return ""
+    for row in view.get("best") or ():
+        if not isinstance(row, dict) or row.get("key") != split["key"]:
+            continue
+        best = row.get("best_s")
+        if (row.get("this_run") or isinstance(best, bool)
+                or not isinstance(best, (int, float)) or not 0 <= best < 1e7):
+            return ""
+        gap = int(round(split["time_s"])) - int(round(best))
+        if gap < 0:
+            return clip(ACT_FASTER.format(gap=_clock_text(-gap)))
+        if gap > 0:
+            return clip(ACT_SLOWER.format(gap=_clock_text(gap)))
+        return ACT_SAME
+    return ""
 
 
 def _trade_takes_slot(state):
@@ -124,6 +197,8 @@ class OverlayView:
             changed = changed or bool(self.seen) or self.moment is not None
             self.seen = {}
             self.moment = None
+        if t == "area_generated" and _is_time(now):
+            changed = self._act_closed(state, now) or changed
         if t in ENTRY_TYPES and state.zone and state.zone_entered_at == now:
             changed = self._enter(state, now) or changed
         if self._sync_guide(state):
@@ -142,11 +217,30 @@ class OverlayView:
         view = getattr(state, "_zone_guide_view", None)
         return view() if callable(view) else None
 
+    def _act_closed(self, state, now):
+        """OVL-ACT-CARD: an area generation that closed an act split gets
+        the act card; any moment card before it goes."""
+        split = _closed_split(state, now)
+        if split is None or not split["label"]:
+            return False
+        tmpl = ACT_TIME_PARTIAL if split["partial"] else ACT_TIME
+        self.moment = {"at": float(now), "gen": getattr(state, "_zone_gen", None),
+                       "kind": "act", "head": clip(ACT_HEAD.format(label=split["label"])),
+                       "line2": clip(tmpl.format(time=_clock_text(split["time_s"]))),
+                       "split": split}
+        return True
+
     def _enter(self, state, now):
         """A fresh zone entry: the zone card of the zone before it goes; a
-        guided campaign zone not entered before in this run gets its own."""
-        changed = self.moment is not None
-        self.moment = None
+        guided campaign zone not entered before in this run gets its own.
+        An act card of this same entry keeps the slot: the zone card is
+        dropped (never queued) and the zone counts as seen."""
+        gen = getattr(state, "_zone_gen", None)
+        m = self.moment
+        act_here = m is not None and m.get("kind") == "act" and m["gen"] == gen
+        changed = m is not None and not act_here
+        if not act_here:
+            self.moment = None
         if state.in_hideout or not _is_time(now):
             return changed
         guide = self._guide(state)
@@ -163,8 +257,10 @@ class OverlayView:
         if len(self.seen) >= MAX_SEEN:
             self.seen.pop(next(iter(self.seen)))
         self.seen[key] = True
+        if act_here:
+            return changed
         head, line2, line3 = lines
-        self.moment = {"at": float(now), "gen": getattr(state, "_zone_gen", None),
+        self.moment = {"at": float(now), "gen": gen, "kind": "zone",
                        "head": head, "line2": line2, "line3": line3}
         return True
 
@@ -209,20 +305,24 @@ class OverlayView:
     def _press_card(self, state, now, alert=None):
         return overlay_card(state.eval, state.price, now, alert)
 
-    # -- the zone moment card
+    # -- the zone / act moment card
     def _moment_card(self, state, now):
         m = self.moment
         if m is None:
             return None
         at = m["at"]
+        kind = m.get("kind", "zone")
         if (not at <= now < at + MOMENT_CARD_S
                 or m["gen"] != getattr(state, "_zone_gen", None)
-                or _trade_takes_slot(state) or not _layout_allows(state)):
+                or _trade_takes_slot(state) or not _layout_allows(state, kind)):
             if now >= at:
                 self.moment = None  # it never waits and never returns
             return None
-        return {"kind": "zone", "head": m["head"], "line2": m["line2"],
-                "line3": m["line3"], "verdict": "",
+        # the act card's gap is read at show time: the history view the
+        # core tick publishes may land after the closing log line
+        line3 = _gap_line(state, m["split"]) if kind == "act" else m["line3"]
+        return {"kind": kind, "head": m["head"], "line2": m["line2"],
+                "line3": line3, "verdict": "",
                 "expires_at": at + MOMENT_CARD_S}
 
     def card(self, state, now, alert=None):
