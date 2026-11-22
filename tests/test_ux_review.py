@@ -476,17 +476,27 @@ def test_price_and_points_follows_price():
 
 def test_overlay_settings_fold_but_hotkey_hint_stays_open():
     """U18, amended by U26 (UX-DASH-DENSITY): set-once overlay settings fold
-    away inside the Tools group; the hotkey hint stays outside the fold. The
-    save status sits next to the form, so it is shown whenever a save can
-    happen (the form is only usable with the fold open; review F1)."""
+    away; the hotkey hint stays open. The save status sits next to the form,
+    so it is shown whenever a save can happen (review F1).
+    PLAY-TD-21A-SETTINGS-RAIL (TD-21): the fold is the Settings rail; the
+    layout form, the key fields and their status are the Overlay section,
+    shown only on its rail press, and the status line follows the form. The
+    hint naming the bound keys stays in the Tools card (sections 4 to 6
+    until PLAY-TD-21B-SETTINGS-ABOUT) with a jump to the key fields."""
     _, main = _main_order()
-    tools = main[main.index('id="toolsbox"'):]
-    fold = tools[tools.index('<details id="tools-more">'):]
-    assert 'id="layout-form"' in fold and 'id="layout-status"' in fold
-    assert fold.index('id="layout-form"') < fold.index('id="layout-status"')
+    i = main.index('<section id="set-overlay"')
+    overlay = main[i:main.index("</section>", i)]
+    assert re.match(r'<section id="set-overlay" class="card rail-section"[^>]*\bhidden>', overlay)
+    assert 'id="layout-form"' in overlay and 'id="layout-status"' in overlay
+    assert overlay.index('id="layout-form"') < overlay.index('id="hotkey-eval"') \
+        < overlay.index('id="layout-status"')
+    # the status line is a plain line now (the page keeps at most 6 live regions)
+    assert re.search(r'<p id="layout-status" class="muted"></p>', overlay)
     # OVL-KEYS-WEB: the hint names the bound keys through data-hotkey spans
+    tools = main[main.index('id="toolsbox"'):]
     hint = tools[:tools.index('<details id="tools-more">')]
     assert 'data-hotkey="toggle"' in hint and 'data-hotkey="eval"' in hint
+    assert 'data-jump="hotkey-eval"' in hint
 
 
 # --- F-159: colour only for exceptions; one filled button --------------------

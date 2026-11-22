@@ -52,19 +52,38 @@ def test_look_for_next_hint_has_no_jargon():
 # -- U26 UX-DASH-DENSITY
 
 def test_tools_group_is_last_and_holds_the_set_once_tools():
+    """PLAY-TD-21A-SETTINGS-RAIL (TD-21): Settings is a rail of 6 section
+    buttons and a pane of sections in the same order; the Tools card is
+    the last section, shared by Keys, Appearance and tools and About and
+    data until PLAY-TD-21B-SETTINGS-ABOUT. It keeps the set-once tools
+    folded; the layout form moved to the Overlay section."""
     sections = re.findall(r'<section id="([a-z-]+)"', MAIN)
     assert sections[-1] == "toolsbox", sections
+    settings = MAIN[MAIN.index('id="panel-settings"'):]
+    assert re.findall(r'<section id="([a-z-]+)"', settings) == [
+        "checks", "set-reading", "set-overlay", "toolsbox"]
+    rail = re.findall(r'<button id="(rail-[a-z]+)" class="rail-item" type="button" '
+                      r'aria-controls="([a-z-]+)"[^>]*>([^<]+)</button>', settings)
+    assert [(b, c) for b, c, _ in rail] == [
+        ("rail-checks", "checks"), ("rail-reading", "set-reading"),
+        ("rail-overlay", "set-overlay"), ("rail-keys", "toolsbox"),
+        ("rail-tools", "toolsbox"), ("rail-about", "toolsbox")]
+    # the rail names are used exactly (plan 03 section 4, S4)
+    assert [t for _, _, t in rail] == ["Checks", "Reading and web data", "Overlay", "Keys",
+                                       "Appearance and tools", "About and data"]
     tools = MAIN[MAIN.index('id="toolsbox"'):]
-    for needle in ('id="layout-form"', 'id="settingsbox"', 'id="gfx"'):
+    for needle in ('id="settingsbox"', 'id="gfx"', 'id="restart-overlay"', 'id="about-fold"'):
         assert needle in tools, needle
+    assert 'id="layout-form"' not in tools
     # folded behind one summary; the hotkey hint stays outside the fold
     # (OVL-KEYS-WEB: as data-hotkey spans the page fills with the bound keys)
     fold = tools.index('<details id="tools-more">')
     assert tools.index('data-hotkey="toggle"') < fold
     assert tools.index('data-hotkey="eval"') < fold
-    # the two change-key fields sit in the fold
-    for fid in ("hotkey-eval", "hotkey-toggle"):
-        assert tools.index('id="%s"' % fid) > fold, fid
+    # the two change-key fields sit with the layout form, in Overlay
+    overlay = settings[settings.index('id="set-overlay"'):settings.index('id="toolsbox"')]
+    for fid in ("layout-form", "hotkey-eval", "hotkey-toggle"):
+        assert 'id="%s"' % fid in overlay, fid
 
 
 def test_build_file_and_loot_filter_fold_in_their_own_cards():
@@ -121,10 +140,12 @@ def test_build_and_items_is_a_fixed_three_by_two_grid():
     # no element inside the three cards holds a live region (page-wide cap)
     three = panel[:panel.index('id="evalbox"')]
     assert not re.findall(r'aria-live="polite"|role="status"|role="alert"', three)
-    # the last three keep their four (verdict, price state, web data and
-    # weights status) and add none; the tab mark is no live region
+    # the last three keep three (verdict, price state and weights status)
+    # and add none; the tab mark is no live region. PLAY-TD-21A-SETTINGS-RAIL
+    # moved the web data switch and its status to Settings
     rest = panel[panel.index('id="evalbox"'):]
-    assert len(re.findall(r'aria-live="polite"', rest)) == 4
+    assert len(re.findall(r'aria-live="polite"', rest)) == 3
+    assert 'id="webdata-on"' not in panel
     assert "<details" not in panel
 
 
@@ -137,8 +158,16 @@ def test_live_regions_stay_within_the_cap():
     live = re.findall(r'aria-live="polite"|role="status"|role="alert"', HTML)
     ids = set(re.findall(r'<[^>]*(?:aria-live="polite"|role="status")[^>]*>', HTML))
     # PLAY-TD-09C-BAR (MERGE-SEAMS F2): one bar status word, cap 12 to 11;
-    # PLAY-LEGACY-OUT-2: the consent error left with the old card, 11 to 9
-    assert len(ids) <= 9, len(ids)
+    # PLAY-LEGACY-OUT-2: the consent error left with the old card, 11 to 9;
+    # PLAY-TD-21A-SETTINGS-RAIL: the web data and layout status lines beside
+    # their forms lost the live role, 9 to 5: tab news, the reading word,
+    # item check, price, weights status. With the calc row's own region
+    # (web/checks.js) that is 6, the page cap of plan 03 4.1.3 (Play's
+    # region files build their 3, checked by tests/test_a11y.py)
+    assert len(ids) <= 5, len(ids)
+    for quiet in ("webdata-status", "layout-status"):
+        tag = re.search(r'<[^>]*\bid="%s"[^>]*>' % quiet, HTML).group(0)
+        assert "aria-live" not in tag and "role=" not in tag, quiet
     assert live
     # Play's markup holds none; its live regions (verdict, trade status,
     # notice) are built by the region files, the reading word is the bar's

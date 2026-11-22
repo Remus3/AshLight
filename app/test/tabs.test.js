@@ -195,9 +195,13 @@ test("Play holds only the regions; tools and the full cards live in other tabs",
     "hintbox", "hint-text", "zone-note-box", "zone-note", "campaign-hints"].forEach((id) => {
     assert.ok(!HTML.includes('id="' + id + '"'), id);
   });
-  // the opt-out stays in the footer until PLAY-TD-21A-SETTINGS-RAIL
+  // PLAY-TD-21A-SETTINGS-RAIL: the opt-out left the footer for Settings,
+  // Reading and web data, where the bar status word leads
   const foot = HTML.slice(HTML.indexOf("<footer"));
-  assert.ok(foot.includes('id="consent-no"') && foot.includes('aria-describedby="consent-said"'));
+  assert.ok(!foot.includes('id="consent-no"'));
+  const reading = HTML.slice(HTML.indexOf('<section id="set-reading"'),
+    HTML.indexOf("</section>", HTML.indexOf('<section id="set-reading"')));
+  assert.ok(reading.includes('id="consent-no"') && reading.includes('aria-describedby="consent-said"'));
   // moved as they were: Last session first in Run, the zone guide in Act
   // times; PLAY-TD-19B-FOUR-TABS: the Items and prices columns, the full
   // last check first, follow the build columns in Build and items

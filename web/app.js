@@ -832,6 +832,8 @@
   function renderRates() {
     var v = P.ratesView(ratesDoc);
     setPill($("rates-pill"), v.pill.state, v.pill.glyph, v.pill.word);
+    // PLAY-TD-21A-SETTINGS-RAIL: the same state beside the web data switch
+    setPill($("book-state"), v.pill.state, v.pill.glyph, v.pill.word);
     $("rates-credit").textContent = v.credit;
     $("rates-unit").textContent = v.rows.length
       ? ", in " + v.primary + (v.league ? ", league " + v.league : "") : "";
@@ -862,6 +864,7 @@
       if (doc.refreshing) { ratesAgain = setTimeout(loadRates, 3000); }
     }).catch(function () {
       setPill($("rates-pill"), "failed", "[x]", "can't load currency values - is AshLight running?");
+      setPill($("book-state"), "failed", "[x]", "can't load currency values - is AshLight running?");
     });
   }
 
@@ -1012,11 +1015,19 @@
   A.register({
     name: "consent",
     order: 70,
-    // the opt-in is region C's setup card (web/setupcard.js); the footer
-    // keeps the opt-out until PLAY-TD-21A-SETTINGS-RAIL moves it
+    // the opt-in is region C's setup card (web/setupcard.js); the opt-out,
+    // the log path and the reading state are in Settings, Reading and web
+    // data (PLAY-TD-21A-SETTINGS-RAIL), where the bar status word leads
     paint: function (s) {
       var tl = s.tailer || {};
-      $("consent-no").hidden = !tl.consented;
+      var rv = readingView(tl);
+      setText($("reading-state"), rv.state);
+      setText($("reading-path"), rv.path);
+      if ($("reading-path").getAttribute("title") !== rv.path) {
+        $("reading-path").setAttribute("title", rv.path);
+      }
+      $("reading-path").hidden = !rv.path;
+      $("consent-no").hidden = !rv.stop;
       $("events-empty").textContent = D.emptyText(!!tl.consented);
       paintLedger(tl);
     },
@@ -1279,6 +1290,27 @@
     });
   }
 
+  /* READING-VIEW:begin (app/test/rail.test.js runs this function alone;
+     keep it self-contained ES5)
+     PLAY-TD-21A-SETTINGS-RAIL: the Reading and web data section's first
+     rows from the snapshot's tailer block: the reading state in plain
+     words, the log file AshLight uses ("" for none) and whether "Stop
+     reading Client.txt" shows (only while the player has allowed it). */
+  function readingView(tl) {
+    tl = tl || {};
+    var path = typeof tl.path === "string" ? tl.path.trim() : "";
+    var state;
+    if (tl.consented !== true) {
+      state = "AshLight is not reading Client.txt. The setup card on Play asks first.";
+    } else if (tl.reading === true) {
+      state = "AshLight is reading Client.txt.";
+    } else {
+      state = "Allowed, but AshLight is not reading Client.txt now. Checks says why.";
+    }
+    return { state: state, path: path ? "Log file: " + path : "", stop: tl.consented === true };
+  }
+  /* READING-VIEW:end */
+
   /* LEDGER-VIEW:begin (app/test/dashboard.test.js runs this function alone;
      keep it self-contained ES5)
      RUN-LEDGER-CONSENT (decision 0071): the log record's consent line from
@@ -1403,6 +1435,13 @@
     A.start();
     // RUN-VERDICTS-UI: the 'Tried in game' card (one read, then clicks only)
     if (window.ALVerdicts) { window.ALVerdicts.wire(document, api); }
+    // PLAY-TD-21A-SETTINGS-RAIL: the Settings rail, the bar status word's
+    // jump and the data-jump buttons; before the first push, so a failing
+    // check shows the Checks section (web/rail.js)
+    if (window.ALRail) {
+      window.ALRail.start(document, { tabs: window.ALTabs || null,
+        observe: typeof window.ResizeObserver === "function" ? window.ResizeObserver : null });
+    }
     // TD-09 region hook: wire every registered Play region before the first push
     if (window.ALRegions) {
       window.ALRegions.start(document, {

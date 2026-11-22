@@ -3,7 +3,11 @@
    them, and the clipboard is written only inside the copy click.
    RUN-REPORT-ROUTE (folded into RUN-VERDICTS-UI): the report is built on
    the click by GET /api/report into a read-only preview, and Copy report
-   writes exactly the previewed text, synchronously inside its click. */
+   writes exactly the previewed text, synchronously inside its click.
+   PLAY-TD-21A-SETTINGS-RAIL: Checks is section 1 of the Settings rail;
+   #checks.open is web/rail.js's accessor (a plain property here), the
+   press of the Checks rail button (#rail-checks) that shows the section
+   builds the preview, and the rows page 12 at a time. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -25,6 +29,7 @@ function el(tag) {
     tagName: tag, children: [], attrs: {}, hidden: false, open: false, disabled: false,
     textContent: "", className: "", listeners: {},
     setAttribute(k, v) { this.attrs[k] = String(v); },
+    removeAttribute(k) { delete this.attrs[k]; },
     getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
     appendChild(c) { this.children.push(c); return c; },
     addEventListener(t, f) { this.listeners[t] = f; }
@@ -39,7 +44,8 @@ function el(tag) {
 function fakeDoc() {
   const ids = {};
   ["checksbox", "checks", "checks-summary", "checks-list", "checks-copy", "checks-said",
-    "checks-preview", "checks-preview-box"].forEach((id) => { ids[id] = el("x"); });
+    "checks-preview", "checks-preview-box", "rail-checks", "checks-pager", "checks-count",
+    "checks-prev", "checks-next"].forEach((id) => { ids[id] = el("x"); });
   ids["checks-preview-box"].hidden = true;
   return {
     ids,
@@ -58,7 +64,7 @@ test("checks: model maps every status to a glyph and a word", () => {
   assert.deepEqual(ck.model(null), { summary: ck.WAITING, failed: 0, rows: [] });
 });
 
-test("checks: paint opens the fold on a new failure only", () => {
+test("checks: paint shows the section on a new failure only", () => {
   const doc = fakeDoc();
   ck.paint(doc, { diag: DIAG });
   assert.equal(doc.ids.checks.open, true);
@@ -93,27 +99,27 @@ test("checks: the copy button waits only for the first checks", () => {
   assert.equal(empty.ids["checks-copy"].disabled, true);
 });
 
-test("checks: opening the fold builds the preview; a fold that opens by itself builds nothing", async () => {
+test("checks: the rail press builds the preview; Checks shown by itself builds nothing", async () => {
   const doc = fakeDoc();
   const calls = [];
   const wrote = [];
   const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
   ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
   assert.deepEqual(calls, [], "nothing is built at wire time");
-  ck.paint(doc, { diag: DIAG }); // a failure opens the fold by itself
+  ck.paint(doc, { diag: DIAG }); // a failure shows Checks by itself
   assert.equal(doc.ids.checks.open, true);
   assert.deepEqual(calls, [], "no click, no build");
   doc.ids.checks.open = false;
-  doc.ids["checks-summary"].listeners.click(); // the player opens it
+  doc.ids["rail-checks"].listeners.click(); // the player presses Checks in the rail
   assert.deepEqual(calls, [["GET", "/api/report", undefined]]);
   assert.equal(doc.ids["checks-said"].textContent, ck.BUILDING);
   await tickle();
   assert.equal(doc.ids["checks-preview"].value, REPORT);
   assert.equal(doc.ids["checks-preview-box"].hidden, false);
   assert.equal(doc.ids["checks-said"].textContent, ck.READY);
-  // closing it builds nothing
+  // a press while Checks is already on show builds nothing
   doc.ids.checks.open = true;
-  doc.ids["checks-summary"].listeners.click();
+  doc.ids["rail-checks"].listeners.click();
   assert.equal(calls.length, 1);
   assert.deepEqual(wrote, [], "building the preview never writes the clipboard");
 });
@@ -124,7 +130,7 @@ test("checks: preview equals the copied text byte for byte", async () => {
   const wrote = [];
   const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
   ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
-  doc.ids["checks-summary"].listeners.click();
+  doc.ids["rail-checks"].listeners.click();
   await tickle();
   doc.ids["checks-copy"].listeners.click();
   assert.equal(wrote.length, 1);
@@ -149,7 +155,7 @@ test("checks: clipboard only inside the click", async () => {
   } } };
   const click = (id) => { inClick = true; try { doc.ids[id].listeners.click(); } finally { inClick = false; } };
   ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
-  // no preview yet (the fold opened by itself): this click builds it and
+  // no preview yet (Checks showed by itself): this click builds it and
   // copies nothing, not even once the build answers
   click("checks-copy");
   assert.deepEqual(calls, [["GET", "/api/report", undefined]]);
@@ -174,7 +180,7 @@ test("checks: clipboard only inside the click", async () => {
   // no clipboard: the copy says it failed
   const plain = fakeDoc();
   ck.wire(plain, () => ({ diag: DIAG }), {}, null, reportApi(REPORT, []));
-  plain.ids["checks-summary"].listeners.click();
+  plain.ids["rail-checks"].listeners.click();
   await tickle();
   plain.ids["checks-copy"].listeners.click();
   assert.equal(plain.ids["checks-said"].textContent, ck.COPY_FAILED);
@@ -186,13 +192,13 @@ test("checks: clipboard only inside the click", async () => {
 });
 
 /* VERDICTS-UI-A11Y: the RUN-VERDICTS-UI design review, V-4 to V-6. */
-test("checks V-4: after an auto-opened fold the Copy click says the report is below", async () => {
+test("checks V-4: after Checks showed by itself the Copy click says the report is below", async () => {
   const doc = fakeDoc();
   const calls = [];
   const wrote = [];
   const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
   ck.wire(doc, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, calls));
-  ck.paint(doc, { diag: DIAG }); // the fold opens by itself: no preview yet
+  ck.paint(doc, { diag: DIAG }); // Checks shows by itself: no preview yet
   assert.equal(doc.ids.checks.open, true);
   doc.ids["checks-copy"].listeners.click();
   await tickle();
@@ -202,10 +208,10 @@ test("checks V-4: after an auto-opened fold the Copy click says the report is be
   assert.deepEqual(wrote, []);
   doc.ids["checks-copy"].listeners.click();
   assert.deepEqual(wrote, [REPORT]);
-  // opening the fold by hand keeps the plain line
+  // pressing Checks in the rail keeps the plain line
   const d2 = fakeDoc();
   ck.wire(d2, () => ({ diag: DIAG }), nav, null, reportApi(REPORT, []));
-  d2.ids["checks-summary"].listeners.click();
+  d2.ids["rail-checks"].listeners.click();
   await tickle();
   assert.equal(d2.ids["checks-said"].textContent, ck.READY);
 });
@@ -226,7 +232,7 @@ test("checks V-5: a preview older than the checks' states is made again before a
   ck.wire(doc, () => ({ diag: DIAG }), nav, null, api);
   ck.paint(doc, { diag: DIAG });
   doc.ids.checks.open = false; // the player closed it, then opens it again
-  click("checks-summary");
+  click("rail-checks");
   await tickle();
   assert.equal(calls.length, 1);
   // new wording only (the minutes age): the preview is still current
@@ -234,7 +240,7 @@ test("checks V-5: a preview older than the checks' states is made again before a
   click("checks-copy");
   assert.deepEqual(wrote, [REPORT]);
   assert.equal(calls.length, 1);
-  // a check changes its state while the fold is open
+  // a check changes its state while Checks is on show
   const fixed = Object.assign({}, DIAG, { failed: 0, summary: "All checks pass.",
     checks: DIAG.checks.map((c) => (c.id === "overlay" ? Object.assign({}, c, { status: "pass" }) : c)) });
   text = "AshLight 0.1.0 (abc) self-check, 2026-11-21 10:05 UTC\n[OK] Overlay\n";
@@ -294,18 +300,93 @@ test("checks W-1: a Copy click that builds the preview moves the focus to the sa
   assert.match(web.source("index.html"), /<p id="checks-said" class="muted" tabindex="-1"><\/p>/);
 });
 
-test("checks V-6: the preview is 6 rows, full width, inside the Checks fold", () => {
+test("checks V-6: the preview is 6 rows, full width, inside the Checks section", () => {
   const html = web.source("index.html");
   assert.match(html, /<textarea id="checks-preview" class="code-out" readonly rows="6" spellcheck="false"><\/textarea>/);
   const css = web.source("app.css");
   assert.match(css, /\.code-out \{ width: 100%;/);
   assert.match(css, /\.paste-box \{ width: 100%;/);
-  // a tab's column scrolls on its own, so the open fold never pushes the page
+  // a tab's column scrolls on its own; the Settings rail pages a long
+  // section instead (web/rail.js), so the preview never pushes the page
   assert.match(css, /\.panel-grid > \.col \{ max-height: 100%; overflow-y: auto;/);
-  const fold = html.indexOf('<details id="checks">');
-  const end = html.indexOf("</details>", fold);
+  assert.match(css, /\.rail-block\[data-off\] \{ height: 0;/);
+  const sec = html.indexOf('<section id="checks" class="card rail-section checks"');
+  const end = html.indexOf("</section>", sec);
   const box = html.indexOf('id="checks-preview-box"');
-  assert.ok(fold > 0 && box > fold && box < end);
+  assert.ok(sec > 0 && box > sec && box < end);
+  assert.ok(!html.includes('<details id="checks">'), "no fold any more");
+  // the summary line takes the focus of "Open Checks" (web/notice.js,
+  // web/setupcard.js)
+  assert.match(html, /<p id="checks-summary" class="check-sum" tabindex="-1">Checking AshLight\.\.\.<\/p>/);
+});
+
+/* PLAY-TD-21A-SETTINGS-RAIL: the rows page instead of folding. */
+const MANY = {
+  summary: "1 check needs a fix.", failed: 1,
+  checks: Array.from({ length: 16 }, (_, i) => ({
+    id: "c" + i, label: "Check " + i, status: i === 14 ? "fail" : "pass",
+    detail: "Detail " + i + ".", fix: i === 14 ? "Do this." : null }))
+};
+
+// every row stays in the list (a page turn moves hidden, never rebuilds);
+// the shown page is the rows without hidden
+const shownRows = (doc) => doc.ids["checks-list"].children.filter((li) => !li.hidden);
+
+test("checks rows: 12 a page, Prev / Next only on a press, ends do nothing", () => {
+  assert.equal(ck.ROWS_PAGE, 12);
+  const p = ck.rowsPage(MANY.checks, 0);
+  assert.equal(p.rows.length, 12);
+  assert.equal(p.label, "1-12 of 16");
+  assert.deepEqual([p.hasPrev, p.hasNext, p.pages], [false, true, 2]);
+  assert.equal(ck.rowsPage(MANY.checks, 9).index, 1, "clamped");
+  assert.equal(ck.rowsPage(MANY.checks.slice(0, 12), 0).label, "", "one page: no label");
+  const doc = fakeDoc();
+  ck.wire(doc, () => ({ diag: MANY }), null, null, reportApi(REPORT, []));
+  // all pass: page 1, the pager shows
+  const ok = Object.assign({}, MANY, { failed: 0, summary: "All checks pass.",
+    checks: MANY.checks.map((c) => Object.assign({}, c, { status: "pass", fix: null })) });
+  ck.paint(doc, { diag: ok });
+  assert.equal(doc.ids["checks-list"].children.length, 16, "every row stays in the list");
+  assert.equal(shownRows(doc).length, 12);
+  assert.deepEqual(shownRows(doc).map((li) => li.children[0].children[2].textContent),
+    ok.checks.slice(0, 12).map((c) => c.label));
+  const nodes = doc.ids["checks-list"].children.slice();
+  assert.equal(doc.ids["checks-pager"].hidden, false);
+  assert.equal(doc.ids["checks-count"].textContent, "1-12 of 16");
+  assert.equal(doc.ids["checks-prev"].getAttribute("aria-disabled"), "true");
+  assert.equal(doc.ids["checks-next"].getAttribute("aria-disabled"), null);
+  const prev = doc.ids["checks-prev"];
+  prev.listeners.click(); // an end does nothing
+  assert.equal(doc.ids["checks-count"].textContent, "1-12 of 16");
+  doc.ids["checks-next"].listeners.click();
+  assert.equal(doc.ids["checks-list"].children.length, 16);
+  assert.equal(shownRows(doc).length, 4);
+  assert.deepEqual(shownRows(doc), nodes.slice(12), "a page turn rebuilds no row");
+  assert.equal(doc.ids["checks-count"].textContent, "13-16 of 16");
+  assert.equal(doc.ids["checks-next"].getAttribute("aria-disabled"), "true");
+  assert.equal(doc.ids["checks-prev"], prev, "the pressed button is never re-created");
+  // a data change keeps the page
+  ck.paint(doc, { diag: Object.assign({}, ok, { summary: "new words" }) });
+  assert.equal(doc.ids["checks-count"].textContent, "13-16 of 16");
+  // twelve rows or fewer: no pager
+  const few = fakeDoc();
+  ck.paint(few, { diag: DIAG });
+  assert.equal(few.ids["checks-pager"].hidden, true);
+});
+
+test("checks rows: a new failure shows the page with the first failing row", () => {
+  const doc = fakeDoc();
+  ck.wire(doc, () => ({ diag: MANY }), null, null, reportApi(REPORT, []));
+  ck.paint(doc, { diag: MANY });
+  assert.equal(doc.ids.checks.open, true);
+  assert.equal(doc.ids["checks-count"].textContent, "13-16 of 16");
+  assert.equal(doc.ids["checks-list"].children.length, 16);
+  const fail = shownRows(doc).find((li) => li.getAttribute("data-state") === "blocked");
+  assert.ok(fail, "the failing row is on show");
+  // the player goes back to page 1: the same failure does not move it again
+  doc.ids["checks-prev"].listeners.click();
+  ck.paint(doc, { diag: Object.assign({}, MANY, { summary: "still one" }) });
+  assert.equal(doc.ids["checks-count"].textContent, "1-12 of 16");
 });
 
 test("language notice: region N owns it; the Hide key is read at wire and stored at once", () => {
@@ -580,8 +661,8 @@ test("checks: the second choice is off by default", async () => {
   const holder = doc.ids["checks-preview-box"].children[0];
   assert.ok(holder && holder.children[0].children[0] === box);
   assert.equal(holder.children[0].children[1].textContent, " " + ck.TAILS_LABEL);
-  // the fold's opening click asks for the report without the log lines
-  doc.ids["checks-summary"].listeners.click();
+  // the rail press asks for the report without the log lines
+  doc.ids["rail-checks"].listeners.click();
   assert.deepEqual(calls, [["GET", ck.REPORT_PATH]]);
   await tickle();
   doc.ids["checks-copy"].listeners.click();

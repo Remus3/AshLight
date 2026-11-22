@@ -147,11 +147,16 @@ function webLedgerView() {
 
 test("ledger consent line with its own Allow control", () => {
   const html = web.source("index.html");
+  // PLAY-TD-21A-SETTINGS-RAIL: both moved from the footer to Settings,
+  // Reading and web data; the ledger line still sits right after the opt-out
   const foot = /<footer[^>]*>([\s\S]*?)<\/footer>/.exec(html)[1];
-  const line = /<p id="ledger-line"[^>]*>([\s\S]*?)<\/p>/.exec(foot);
-  assert.ok(line, "the ledger line sits in the footer, beside the Client.txt opt-out");
+  assert.ok(!foot.includes('id="ledger-line"') && !foot.includes('id="consent-no"'));
+  const sec = /<section id="set-reading"[^>]*>([\s\S]*?)<\/section>/.exec(html)[1];
+  const line = /<p id="ledger-line"[^>]*>([\s\S]*?)<\/p>/.exec(sec);
+  assert.ok(line, "the ledger line sits in Reading and web data, beside the Client.txt opt-out");
   assert.match(line[0], /<p id="ledger-line"[^>]*\bhidden\b/);
-  assert.ok(foot.indexOf('id="consent-no"') < foot.indexOf('id="ledger-line"'));
+  assert.ok(sec.indexOf('id="consent-no"') < sec.indexOf('id="ledger-line"'));
+  assert.ok(sec.indexOf('id="consent-said"') < sec.indexOf('id="ledger-line"'));
   // its own control: a plain button, never the app's one primary button
   const btn = /<button id="ledger-allow"([^>]*)>([^<]*)<\/button>/.exec(line[1]);
   assert.ok(btn, "the line has its own button");
