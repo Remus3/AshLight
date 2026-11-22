@@ -135,3 +135,35 @@ Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
   switch; a second setting would contradict the single opt-in).
 - Reverses if: the operator rules web data must be per feature, or a
   source objects to start-time fetches.
+
+## Amendment 2026-11-21 (REL-UPDATE-WIRE, plan units F-055, F-077, ruling Q-21)
+
+- Decision: the one `web_data` opt-in also covers the daily release check
+  of decision 0065 (server/al/updates.py, one read of api.github.com per
+  24 h), and its sentence names that check and the automatic apply.
+  The wording carries a version (updates.WORDING_VERSION); the core makes
+  no update request until the player has acknowledged the current one:
+  `POST /api/web-data` takes an optional `"ack"` (the
+  `wording_version` the GET answer gives; any other value is refused with
+  nothing written) and stores `"web_data_ack"` in config/local.json. An
+  opt-in given before that wording keeps working for every other use and
+  makes 0 update requests until acknowledged once (`ack_needed` in the
+  GET answer and in the snapshot's `update` block). A settings import
+  never sets `web_data_ack` (settingsio NEVER list). The core drives the
+  check from its loop (Core.tick_update, called from tick_sources because
+  the built-in tick list is pinned by decision 0056) on a daemon thread,
+  never on the loop thread, and publishes one `update` block in the
+  snapshot (installed, latest, notes, releases_url, checked_at,
+  ack_needed and the rest of UpdateClient.view(); never an event or card
+  text). webfetch.py stays the only outbound HTTP code.
+- Alternatives: (b) a second "update check" switch - rejected: two
+  switches contradict the single opt-in; (c) treat an earlier opt-in as
+  consent to the new use - rejected by ruling Q-21: the player agreed to
+  a sentence that did not name it; (d) accept any truthy "ack" - rejected:
+  a page showing an older sentence must not acknowledge a newer one.
+- Why: one consent switch, the promise "nothing hits the network while
+  off" kept literally, zero-click after the one acknowledgement.
+- Reverses if: the operator rules web data must be per feature, GitHub or
+  GGG terms bar the daily read, or the operator rules an earlier opt-in
+  covers the update check.
+- Tests: tests/test_updates.py.

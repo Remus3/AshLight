@@ -191,8 +191,8 @@
   /* TEST-LIVE-EXIT: the HUD status word for an idle log (<= 15 chars). */
   var IDLE_WORD = W.idle.overlay;
 
-  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "under", "campaign", "log",
-                "status", "trades",
+  var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "under", "campaign", "guide",
+                "log", "status", "trades",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
                 "evalHead", "evalItem", "evalLine", "evalVerdict", "hudShown"];
 
@@ -223,14 +223,24 @@
      chosen the one card (item check, price check, or both from one press);
      it shows until its expires_at. An older core without the field keeps
      the item check path. */
+  /* ZONE-CARD-ITEM-GATE (OVL-ZONE-CARD review D-1): the parts switch each
+     card kind follows. The zone moment card (overlayview CARD_HOLDERS
+     "moment") has its own part; every other card the core sends (item
+     check, price, both, waystone, sample) is a press card: parts.item. */
+  var CARD_PART = { zone: "moment" };
+
+  function cardPart(c) {
+    var k = (c && c.kind) ? String(c.kind) : "";
+    return Object.prototype.hasOwnProperty.call(CARD_PART, k) ? CARD_PART[k] : "item";
+  }
+
   function slotPart(snap) {
     if (!snap) { return null; }
     if (Object.prototype.hasOwnProperty.call(snap, "card")) {
       var c = snap.card;
-      /* every card the core sends today is a press card (item check,
-         price, both, waystone): parts.item */
-      if (!c || !c.head || !partOn(snap, "item")) { return null; }
-      return { expires: c.expires_at, text: fmt.cardText(c) };
+      var part = cardPart(c);
+      if (!c || !c.head || !partOn(snap, part)) { return null; }
+      return { expires: c.expires_at, text: fmt.cardText(c), part: part };
     }
     var ev = snap.eval;
     if (!ev || !ev.text || !ev.text.head || !partOn(snap, "item")) { return null; }
@@ -268,20 +278,73 @@
     return Math.max(250, Math.ceil((p.expires - nowS) * 1000));
   }
 
+  /* OVL-LINE2-GUIDE (plan 03 sections 5.2 and 5.4, S5-FOLLOWUP a): the
+     guide entry's short from the core (snap.overlay.guide_short, at most
+     GUIDE_MAX characters, already "" outside a guided campaign zone), only
+     under the opt-in zone guide setting Always and never in a town or the
+     hideout. The overlay never reads the guide's long `line`. */
+  var GUIDE_MAX = 34;
+
+  function guideShort(snap) {
+    var l = snap && snap.overlay_layout;
+    var o = snap && snap.overlay;
+    if (!l || l.zone_guide !== "always" || !o || typeof o !== "object") { return ""; }
+    if (snap.in_town === true || snap.in_hideout === true) { return ""; }
+    return typeof o.guide_short === "string" ? o.guide_short : "";
+  }
+
+  /* A death or a level-up keeps the guide line quiet until calm_at (the
+     core's event time + 20 s), so "Lv 74  3 deaths" shows the moment. */
+  function calmAt(snap) {
+    var c = snap.overlay.calm_at;
+    return (typeof c === "number" && isFinite(c)) ? c : null;
+  }
+
+  /* The guide line due at nowS, or "". */
+  function guideText(snap, nowS) {
+    var s = guideShort(snap);
+    if (!s) { return ""; }
+    var calm = calmAt(snap);
+    if (calm !== null && !(nowS >= calm)) { return ""; }
+    return fmt.clip(s, GUIDE_MAX);
+  }
+
+  /* Milliseconds until a quiet guide line is due again, or null: the one
+     extra wake-up the page folds into its single timer. */
+  function msUntilGuideDue(snap, nowS) {
+    if (!guideShort(snap)) { return null; }
+    var calm = calmAt(snap);
+    if (calm === null || !(nowS < calm)) { return null; }
+    return Math.max(250, Math.ceil((calm - nowS) * 1000));
+  }
+
   function hudModel(snap, nowS, status) {
     var m = withEval(baseModel(snap, nowS, status), snap, nowS);
+    /* OVL-LINE2-GUIDE: under Always the zone card comes first, then the
+       guide line (plan 03 section 5.4): while a moment card holds the slot
+       (the zone card's line 1 already says the short) line 2 does not
+       repeat it. */
+    var slot = freshSlot(snap, nowS);
+    /* Not enumerable, like hudShown: a visible string the page and the
+       render gate read by name (FIELDS), kept out of a dump of the model
+       so the model's shape stays as it was with the guide line off. */
+    Object.defineProperty(m, "guide", {
+      value: (snap && !(slot && slot.part === "moment")) ? guideText(snap, nowS) : "",
+      enumerable: false, writable: true, configurable: true
+    });
     /* OVL-LINE2-RULE: line 2 is picked last, once the trade count (rank 2)
        is known; it only ever empties level / deaths, never adds text. */
     var l2 = hudLine2(m);
     m.level = l2.level;
     m.deaths = l2.deaths;
+    m.guide = l2.guide || "";
     m.sep = (m.level && m.deaths) ? "|" : "";
     /* OVL-PARTS-PAGE: the HUD plate shows only while one of its lines has
        something; with every part off and no failure word it is absent.
        Not enumerable: a boolean for the page, not a visible string, so a
        dump of the model's strings stays as it was. */
     Object.defineProperty(m, "hudShown", {
-      value: !!(m.zone || m.timer || m.level || m.deaths || statusText(m)),
+      value: !!(m.zone || m.timer || m.level || m.deaths || m.guide || statusText(m)),
       enumerable: false, writable: true, configurable: true
     });
     return m;
@@ -388,7 +451,13 @@
      already holds "" for the lower ranks when the status part is off. */
   function statusWord(model) {
     if (model.status !== "live") { return model.status || ""; }
-    return model.log || model.trades || model.under || model.away || model.campaign || "";
+    return highWord(model) || model.campaign || "";
+  }
+
+  /* Ranks 1 to 4: the words the guide line yields to at once. */
+  function highWord(model) {
+    if (model.status !== "live") { return model.status || ""; }
+    return model.log || model.trades || model.under || model.away || "";
   }
 
   function statusText(model) {
@@ -399,20 +468,26 @@
      one thing, by one order, first match:
        1 the connection / Client.txt word (alone before any data: the model
          holds no level then), 2 "N trades" while a card covers an open
-         trade, 3 the under-level word, 4 AFK / DND, 6 the campaign hint
-         word, 7 level and deaths alone.
-     Rank 5, the zone-guide line, is reserved for OVL-LINE2-GUIDE.
+         trade, 3 the under-level word, 4 AFK / DND, 5 the zone-guide line
+         (OVL-LINE2-GUIDE: model.guide, set by hudModel only while it is
+         due; alone on the line, it replaces level and deaths and yields at
+         once to ranks 1 to 4), 6 the campaign hint word, 7 level and
+         deaths alone.
      Width rule (the 258 px plate, 236 px inside): the level text and the
      status word are at most LINE2_MAX characters together, else the deaths
      text drops (and the level text too if still over); a word over
      WORD_BESIDE_MAX stands alone, clipped to
-     WORD_ALONE_MAX. Pure: model inputs in, {level, deaths, status} out. */
+     WORD_ALONE_MAX. Pure: model inputs in, {level, deaths, status} out,
+     plus guide only when rank 5 fires. */
   var LINE2_MAX = 26;
   var WORD_BESIDE_MAX = 20;
   var WORD_ALONE_MAX = STATUS_WORDS.overlay_alone_max;
 
   function hudLine2(inp) {
     var m = inp || {};
+    if (m.guide && !highWord(m) && m.status === "live") {
+      return { level: "", deaths: "", status: "", guide: fmt.clip(m.guide, GUIDE_MAX) };
+    }
     var word = statusWord(m);
     var level = m.level || "";
     var deaths = m.deaths || "";
@@ -471,6 +546,7 @@
   }
 
   return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
+           msUntilGuideDue: msUntilGuideDue, GUIDE_MAX: GUIDE_MAX,
            timerSeconds: timerSeconds, overlayWanted: overlayWanted,
            shouldRender: shouldRender,
            changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD,

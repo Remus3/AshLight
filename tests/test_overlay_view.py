@@ -109,7 +109,8 @@ def test_holder_order_is_press_then_sample_then_moment():
     assert CARD_HOLDERS[1]["life_s"] == SAMPLE_S == 10
     moment = CARD_HOLDERS[2]
     assert moment["life_s"] == overlayview.MOMENT_CARD_S == 12
-    assert moment["cards"] == ("zone",) and moment["twin"] == ("zone-guide",)
+    assert moment["cards"] == ("zone", "act")
+    assert moment["twin"] == ("zone-guide", "actsbox")
 
 
 def test_a_press_or_the_sample_beats_the_moment_card():
