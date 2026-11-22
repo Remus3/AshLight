@@ -1,0 +1,12 @@
+2026/11/22 00:01:00 200000 2b3c4d5e [INFO Client 6160] [Render Device] (The Primary Adapter) memory 4096 MB
+2026/11/22 00:01:01 200100 2b3c4d5e [INFO Client 6160] [Render Device] (Heart of the Adapter) memory 2048 MB
+2026/11/22 00:01:02 200200 2b3c4d5e [INFO Client 6160] [Render Device] (The Adapter) memory 1024 MB
+2026/11/22 00:01:03 200300 2b3c4d5e [INFO Client 6160] [Render Device] (Adapter) memory 512 MB
+2026/11/22 00:01:04 200400 2b3c4d5e [INFO Client 6160] [Bundle request] Trying to request Manifest
+2026/11/22 00:01:05 200500 2b3c4d5e [INFO Client 6160] Connected to login.example.net in 120ms.
+2026/11/22 00:01:06 200600 2b3c4d5e [INFO Client 6160] Ready to fight a boss with 2 friends!
+2026/11/22 00:01:07 200700 2b3c4d5e [INFO Client 6160] : Error: Failed to Join instance Lobby: the Host of the Realm Departed.
+2026/11/22 00:01:08 200800 2b3c4d5e [INFO Client 6160] : Failed to Move item: Item cannot be Stacked.
+2026/11/22 00:01:09 200900 2b3c4d5e [INFO Client 6160] : Failed to Use item: Target is not Valid.
+2026/11/22 00:01:10 201000 2b3c4d5e [INFO Client 6160] : Failed to Socket item: Item has no Room for more Runes.
+2026/11/22 00:01:11 201100 2b3c4d5e [INFO Client 6160] : Skip the Cutscene?

@@ -5,7 +5,7 @@
   "checked": "2026-11-21",
   "unique": ["UniqueWeapons", "UniqueArmours", "UniqueAccessories",
              "UniqueFlasks", "UniqueCharms", "UniqueJewels",
-             "UniqueSanctumRelics", "UniqueTablets", "PrecursorTablets"],
+             "UniqueSanctumRelics", "UniqueTablets"],
   "exchange": ["Fragments", "Abyss", "UncutGems", "LineageSupportGems",
                "Essences", "SoulCores", "Idols", "Runes", "Ritual",
                "Expedition", "Delirium", "Breach", "Verisium"]

@@ -106,3 +106,60 @@ The drift guard rows change only together with bridge.lua.
   becomes possible.
 - Tests: tests/test_tc_drift.py test_gui_reference_is_keyed_by_tag,
   tests/test_tc_bridge.py test_live_outputs_match_pob_gui_within_0_1_percent.
+
+## Amendment 2026-11-22 (TC-CALC-IDLE, plan unit F-154)
+
+- Decision: luajit leaves when it is not needed, and the GC ceiling in
+  bridge.lua stays as it is (bridge.lua not edited).
+  1. calcwire.Provider stamps `last_used` when __call__ makes a calc and
+     at the start and end of every calc and calc.raw call, and counts the
+     calls in flight. Its `reap(idle=False)`, from the core's loop tick,
+     stops the calc process after IDLE_STOP_S = 1200 s without a call, or
+     at once when `idle` is true, but never while a press holds it: a call
+     in flight, or one that ended under PRESS_HOLD_S = 30 s ago (a press
+     between two of its stages). Turning tc_calc off still stops it at
+     once. A stop and the start of a call are ordered by one lock, so a
+     call never meets a process being stopped under it.
+  2. Core.tick_calc reads the state's game-idle flag (decision 0029
+     Client.txt staleness: the log consented and stale for 20 min, the
+     snapshot's `game_idle`; never a process-list check), only while a
+     calc is running, and passes it to reap.
+  3. The next press, re-score or build load makes a fresh calc at once
+     (no RECHECK_S wait); the stat-weight card is published before any
+     calc call (decision 0024 amendment 2026-11-19), so luajit starts
+     behind the first staged card. A call on a calc the provider dropped
+     is adopted again, so the process it starts is reaped like any other.
+  4. exepin.verified caches a match with the exe's size and mtime and the
+     recorded hash (the record is read every time); any change hashes the
+     exe again and a mismatch is never cached. Each restart after an idle
+     stop checks the exe before it runs it, now without reading it.
+- Measured 2026-11-22 on this machine, reference build, 30 loads per
+  run, two runs each (a scratch copy of bridge.lua for the variant):
+  - GC ceiling as shipped: median reload 0.26 to 0.28 s, working set
+    485 to 504 MB, peak 492 to 504 MB.
+  - full collect after every load: median reload 0.49 s, working set
+    275 to 281 MB, peak 281 to 286 MB.
+  The full collect costs about 0.22 s per load (about 4.8 s on a first
+  item check of 22 loads) for about 220 MB that the idle stop now frees
+  anyway, 30 s after a press while the game is idle and after 20 min
+  otherwise. The reverse clause of this decision (the ceiling costs more
+  than it saves) is not met, so item 3 stands; B17 (peak 768 MB) is
+  unchanged.
+- Alternatives: a full collect after every probe load (measured above:
+  slower presses for memory the idle stop frees); stop only on game idle
+  (luajit stays at about 500 MB through a long session without presses);
+  a shorter idle timer such as 5 min (a cold start of about 1.3 s plus the
+  first load on more presses in normal play); reading game idle from a
+  full state snapshot each tick (a snapshot every 0.5 s for one boolean);
+  stamping last_used on every __call__ (the build view asks the provider
+  on each read, so an open dashboard would keep luajit alive forever).
+- Why: the calc holds about 500 MB that nothing uses between presses; a
+  restart costs one cold start behind a card that is already shown.
+- Reverses if: restarts after an idle stop make presses feel slow in play,
+  game_idle misfires while the player plays, a press is ever seen cut by
+  a stop, or a later measurement shows the full collect cheaper than the
+  ceiling.
+- Tests: tests/test_tc_wire.py test_provider_stops_after_idle_and_answers_later,
+  test_idle_stop_never_fires_mid_press, test_game_idle_stops_the_calc;
+  tests/test_audit_exe_path.py test_verified_is_cached_by_mtime_and_size;
+  tests/test_math_perf.py test_luajit_memory_stays_under_ceiling (B17).
