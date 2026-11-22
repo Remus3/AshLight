@@ -288,7 +288,7 @@ _NPM_BUMP = re.compile(
     r"(?:^|:\s*)[Bb]ump (@?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?) "
     r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?(?: in the \S+ group)?\s*$")
 # "Bump the <group> group across N directories with M updates": several bumps.
-_MULTI_GROUP = re.compile(r"[Bb]ump the \S+ group (?:across|with|in)")
+_MULTI_GROUP = re.compile(r"[Bb]ump the \S+ group (?:across|with|in)")
 _ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$")
 NPM_AGE_S = 3 * 86400
 NPM_LOCK = "app/package-lock.json"
