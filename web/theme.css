@@ -1,0 +1,10 @@
+/* PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): the colour scheme of each
+   Theme choice. The page ships <html data-theme="dark">; web/theme.js
+   sets "light", keeps "dark" or removes the attribute for Follow Windows.
+   The colours themselves come from the kit's data-theme and
+   prefers-color-scheme selectors (/tokens.css) and the --al-* block of
+   web/app.css; this file only tells the browser which scheme the form
+   controls and scrollbars use, so it holds no colour. */
+:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root:not([data-theme]) { color-scheme: light dark; }

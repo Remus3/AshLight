@@ -69,7 +69,18 @@
    loads from the app scheme (app/pages.js, served on this window's session
    by app/parts/12-pages.js from the clientWindow hook, which runs before
    the first load), with a header CSP that lets it connect nowhere; never
-   from file://. */
+   from file://.
+
+   PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): main.js opens every window dark
+   (nativeTheme.themeSource = "dark" before the first window). Once the
+   core answers, the client reads the dashboard's Theme choice (GET
+   /api/theme with the verified token, makeThemeReader) each time the
+   dashboard loads and after each passing watch check (every 30 s while the
+   window is open), and sets the native theme source to "dark", "system"
+   (Follow Windows) or "light", so the dashboard's prefers-color-scheme
+   follows the choice. The starting page stays dark (starting.css has no
+   prefers-color-scheme rule) and the overlay is always dark (its page has
+   none either). */
 
 const fs = require("fs");
 const path = require("path");
@@ -184,6 +195,63 @@ function makeWatch(o) {
   return { tick, noteStart, streak: () => streak };
 }
 
+/* PLAY-TD-04B-THEME-CHOICE: the native theme sources, the same words as
+   server/al/settingsio.py THEMES ("system" = Follow Windows). */
+const THEME_SOURCES = Object.freeze(["dark", "system", "light"]);
+const THEME_PATH = "/api/theme";
+const THEME_MAX = 4096; // bytes of an answer read
+const THEME_TIMEOUT_MS = 3000;
+
+/* The theme source in a GET /api/theme answer, or null. */
+function themeSourceOf(doc) {
+  const v = doc && typeof doc === "object" && !Array.isArray(doc) ? doc.theme : null;
+  return THEME_SOURCES.includes(v) ? v : null;
+}
+
+/* readTheme(): GET /api/theme on 127.0.0.1:port with getToken() (the
+   verified token, "" until the hello proof passed: then nothing is sent).
+   Resolves the theme source or null; never rejects. */
+function makeThemeReader(http, port, getToken) {
+  return function readTheme() {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (v) => { if (!done) { done = true; resolve(v); } };
+      const token = typeof getToken === "function" ? getToken() : "";
+      if (typeof token !== "string" || !token) { finish(null); return; }
+      let req;
+      try {
+        req = http.request({
+          host: "127.0.0.1", port: port, path: THEME_PATH, method: "GET",
+          timeout: THEME_TIMEOUT_MS, headers: { "X-AL-Token": token }
+        }, (res) => {
+          const chunks = [];
+          let size = 0;
+          res.on("data", (c) => {
+            size += c.length;
+            if (size > THEME_MAX) { finish(null); req.destroy(); return; }
+            chunks.push(c);
+          });
+          res.on("end", () => {
+            if (res.statusCode !== 200) { finish(null); return; }
+            try {
+              finish(themeSourceOf(JSON.parse(Buffer.concat(chunks).toString("utf8"))));
+            } catch (e) {
+              finish(null);
+            }
+          });
+          res.on("error", () => finish(null));
+        });
+      } catch (e) {
+        finish(null);
+        return;
+      }
+      req.on("timeout", () => req.destroy(new Error("timeout")));
+      req.on("error", () => finish(null));
+      req.end();
+    });
+  };
+}
+
 function createClient(opts) {
   const { BrowserWindow, Menu, Tray, nativeImage, session, shell, screen, app,
           ipcMain } = opts.electron;
@@ -192,6 +260,7 @@ function createClient(opts) {
   const port = opts.port;
   const stateFile = path.join(opts.runtimeDir, STATE_FILE);
   const healthy = Link.makeHealthCheck(http, port, opts.readToken);
+  const readTheme = makeThemeReader(http, port, opts.readToken);
   let win = null;
   let tray = null;
   let saveTimer = null;
@@ -224,8 +293,23 @@ function createClient(opts) {
   function watchStep() {
     watchTimer = null;
     const busy = starting !== null; // connect() is waiting on its own start
-    (busy ? Promise.resolve("busy") : watch.tick()).catch(() => "fail").then(() => {
+    (busy ? Promise.resolve("busy") : watch.tick()).catch(() => "fail").then((r) => {
+      if (r === "ok" && win && !win.isDestroyed()) { syncTheme(); }
       if (watchTimer === null && watching) { scheduleWatch(); }
+    });
+  }
+
+  /* PLAY-TD-04B-THEME-CHOICE: the native theme source follows the
+     dashboard's Theme choice; an unreadable answer changes nothing. */
+  function syncTheme() {
+    const nt = opts.electron.nativeTheme;
+    if (!nt) { return Promise.resolve(null); }
+    return readTheme().then((source) => {
+      if (source && nt.themeSource !== source) {
+        nt.themeSource = source;
+        log("client: theme " + source);
+      }
+      return source;
     });
   }
 
@@ -429,7 +513,9 @@ function createClient(opts) {
     });
     win.webContents.on("did-finish-load", () => {
       const shown = win.webContents.getURL();
-      log("client: " + (Link.isCoreUrl(shown, port) ? "dashboard" : "starting page") + " shown");
+      const dashboard = Link.isCoreUrl(shown, port);
+      log("client: " + (dashboard ? "dashboard" : "starting page") + " shown");
+      if (dashboard) { syncTheme(); } // PLAY-TD-04B-THEME-CHOICE
     });
     win.on("page-title-updated", (e) => e.preventDefault()); // always "AshLight"
     win.on("resize", saveSoon);
@@ -639,4 +725,4 @@ function createClient(opts) {
 
 module.exports = { createClient, startErrorLine, failedPage, startingUrl, PARTITION, STATE_FILE,
                    START_ERROR_FILE, REASON_MAX, giveUpLine, makeWatch, WATCH_MS, WATCH_FAILS,
-                   WATCH_GAP_MS };
+                   WATCH_GAP_MS, makeThemeReader, themeSourceOf, THEME_SOURCES, THEME_PATH };

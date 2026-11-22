@@ -533,6 +533,11 @@ class Handler(BaseHTTPRequestHandler):
     def _get_web_data(self, path, query, extra):
         return self._json(200, self._web_data_doc(), extra)
 
+    def _get_theme(self, path, query, extra):
+        """PLAY-TD-04B-THEME-CHOICE: the Theme choice (web/theme.js, the
+        desktop client's native theme)."""
+        return self._json(200, self._theme_doc(), extra)
+
     def _get_events(self, path, query, extra):
         if self.command == "HEAD":
             # AUDIT-HTTP-HARDEN S1: HEAD never opens the endless stream.
@@ -893,6 +898,29 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._web_data_doc())
+
+    def _theme_doc(self):
+        return {"theme": self.server.core.theme(), "choices": list(settingsio.THEMES)}
+
+    def _set_theme(self, path, query, extra):
+        """PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): {"theme": "dark" |
+        "system" | "light"} stores the Theme choice in config/local.json
+        ("system" is Follow Windows). The token, Host / Origin and
+        Sec-Fetch-Site checks ran in _guard; any other value or field is
+        refused (400) with nothing written."""
+        body = self._read_json()
+        if body is None:
+            return None
+        value = body.get("theme")
+        if set(body) != {"theme"} or not isinstance(value, str)                 or value not in settingsio.THEMES:
+            return self._json(400, {"error": 'theme: "dark"|"system"|"light" required'})
+        try:
+            self.server.core.set_theme(value)
+        except ValueError:
+            return self._json(400, {"error": 'theme: "dark"|"system"|"light" required'})
+        except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
+            return self._json(500, {"error": SAVE_FAILED})
+        return self._json(200, self._theme_doc())
 
     def _update_now(self, path, query, extra):
         """REL-UPDATE-TRIGGER (F-077, decision 0065): 'Update now'. The
@@ -1271,6 +1299,7 @@ GET_ROUTES = {
     "/api/gfx": Handler._get_gfx,
     "/api/rates": Handler._get_rates,
     "/api/web-data": Handler._get_web_data,
+    "/api/theme": Handler._get_theme,  # PLAY-TD-04B-THEME-CHOICE
     "/events": Handler._get_events,
 }
 
@@ -1291,6 +1320,7 @@ POST_ROUTES = {
     "/api/hotkeys": Handler._set_hotkey,  # HOTKEYS-LIVE (OVL-KEYS-CORE)
     "/api/overlay-sample": Handler._overlay_sample,  # OVL-CARD-SLOT
     "/api/update-now": Handler._update_now,  # REL-UPDATE-TRIGGER
+    "/api/theme": Handler._set_theme,  # PLAY-TD-04B-THEME-CHOICE
 }
 
 PUT_ROUTES = {
