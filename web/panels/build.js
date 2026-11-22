@@ -165,7 +165,7 @@
           (g.rarity ? " (" + g.rarity + ")" : "");
         return { text: line, full: gearFull(g, line),
           link: g.links[0] || null, linkName: g.name };
-      }) : [{ text: "No gear in this build." }],
+      }) : [{ text: "No gear yet - paste a build code that includes items." }],
       text: function (r) { return r.text; },
       full: function (r) { return r.full || r.text; }
     });

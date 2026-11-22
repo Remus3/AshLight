@@ -65,7 +65,7 @@ def test_visible_row_line_stays_slot_name_base_rarity():
     assert re.search(r"text:\s*line\b", call), call
     assert re.search(r"text:\s*function\s*\(r\)\s*\{\s*return r\.text;", call), call
     # the empty build keeps its one row
-    assert '"No gear in this build."' in call
+    assert '"No gear yet - paste a build code that includes items."' in call
 
 
 def test_row_without_text_keeps_its_one_line_text():
