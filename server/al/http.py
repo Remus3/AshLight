@@ -892,6 +892,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._web_data_doc())
 
+    def _update_now(self, path, query, extra):
+        """REL-UPDATE-TRIGGER (F-077, decision 0065): 'Update now'. The
+        token, Host / Origin and Sec-Fetch-Site checks ran in _guard; the
+        body is an empty JSON object (any field is refused with nothing
+        started). The core starts the installer's update process at once
+        (core.update_now: never while web data is off or its wording is
+        not acknowledged, never in a checkout) and answers one fixed word,
+        never a path."""
+        body = self._read_json()
+        if body is None:
+            return None
+        if body:
+            return self._json(400, {"error": "Update now takes no fields"})
+        word = self.server.core.update_now()
+        return self._json(200, {"started": word == "started", "state": word})
+
     def _set_hotkey(self, path, query, extra):
         """HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE): {"name": "eval" |
         "toggle", "key": str} stores one shortcut in config/local.json; the
@@ -1272,6 +1288,7 @@ POST_ROUTES = {
     "/api/wear": Handler._wear,  # TC-WORN-WIRE
     "/api/hotkeys": Handler._set_hotkey,  # HOTKEYS-LIVE (OVL-KEYS-CORE)
     "/api/overlay-sample": Handler._overlay_sample,  # OVL-CARD-SLOT
+    "/api/update-now": Handler._update_now,  # REL-UPDATE-TRIGGER
 }
 
 PUT_ROUTES = {

@@ -1,6 +1,9 @@
 """DEP-16: the release check client (server/al/updates.py, decision 0065).
 REL-UPDATE-WIRE: the core tick, the acknowledgement POST, the settings
 import rule and the snapshot 'update' block.
+REL-UPDATE-TRIGGER: the installer start by itself while the game is idle,
+'Update now' and the click-only switch (injected spawner only: no test
+starts a process).
 
 Transport and clock are injected: no test touches the network."""
 
@@ -434,7 +437,11 @@ def test_snapshot_update_block_carries_the_view_and_no_event_text(tmp_path, monk
     assert "text" not in block  # no card or event text, only the view
     assert snap["recent_events"] == before["recent_events"]
     assert snap["events_seen"] == before["events_seen"]
-    assert block == core.updates.view()
+    view = core.updates.view()
+    assert {k: block[k] for k in view} == view
+    # REL-UPDATE-TRIGGER: the two added keys (a checkout: nothing staged)
+    assert set(block) - set(view) == {"staged", "click_only"}
+    assert block["staged"] is None and block["click_only"] is False
     # an unchanged view bumps no version, so SSE pushes nothing new
     version = core.state.version
     assert core.publish_update() is False and core.state.version == version
@@ -515,3 +522,237 @@ def test_post_web_data_with_ack_stores_the_wording_version(tmp_path, monkeypatch
     finally:
         server.shutdown()
         server.server_close()
+
+
+# -- REL-UPDATE-TRIGGER (F-077, DEP-17) ---------------------------------------
+
+ON = {"web_data": True, "web_data_ack": updates.WORDING_VERSION}
+
+
+class Child:
+    """A started process stand-in: poll() is None while it runs."""
+
+    def __init__(self):
+        self.code = None
+
+    def poll(self):
+        return self.code
+
+
+class Spawner:
+    """The injected spawner: records every start, never runs anything."""
+
+    def __init__(self, fail=False):
+        self.calls = []
+        self.children = []
+        self.fail = fail
+
+    def __call__(self, argv, creationflags=0):
+        self.calls.append((list(argv), creationflags))
+        if self.fail:
+            raise OSError("no such file")
+        child = Child()
+        self.children.append(child)
+        return child
+
+    def finish(self):
+        for child in self.children:
+            child.code = 0
+
+
+def _installed(tmp_path, monkeypatch):
+    """An installed copy by its home (AL_HOME); no marker, nothing staged."""
+    home = tmp_path / "home"
+    (home / "staged").mkdir(parents=True)
+    monkeypatch.setenv("AL_HOME", str(home))
+    return home
+
+
+def _trigger_core(tmp_path, monkeypatch, cfg=ON, installed=True, idle=True, spawn=None):
+    """A test core whose cached answer names v9.0.0 (newer than VERSION)."""
+    if not installed:
+        monkeypatch.delenv("AL_HOME", raising=False)
+    fake = GitHubOnly((200, {"ETag": '"e"'}, release("v9.0.0")))
+    core, path, clock = _core(tmp_path, monkeypatch, fake, cfg=dict(ON))
+    core.update_spawn = spawn if spawn is not None else Spawner()
+    _run(core)  # the day's read (web data on, acknowledged): latest 9.0.0
+    assert core.updates.newer_version() == "9.0.0"
+    assert core.update_spawn.calls == []  # the read pass starts nothing
+    home = _installed(tmp_path, monkeypatch) if installed else None
+    path.write_text(json.dumps(cfg), encoding="ascii")
+    core.state.set_tailer(consented=True, idle=idle)
+    return core, path, clock, home
+
+
+def test_idle_installed_copy_starts_the_installer_once_hidden_below_normal(tmp_path, monkeypatch):
+    core, _, clock, home = _trigger_core(tmp_path, monkeypatch)
+    assert core.game_idle() is True
+    spawn = core.update_spawn
+    _run(core)
+    assert len(spawn.calls) == 1
+    argv, flags = spawn.calls[0]
+    assert Path(argv[1]).name == "boot.py"
+    assert argv[2:] == ["server.al.install", "update", "--yes", "--home", str(home)]
+    assert Path(argv[0]).name.lower() in ("pythonw.exe", "python.exe", "pythonw", "python")
+    assert flags == updates.creation_flags()
+    if updates.os.name == "nt":
+        for bit in (updates.BELOW_NORMAL, updates.NO_WINDOW, updates.DETACHED):
+            assert flags & bit
+    for _ in range(3):  # never beside a run still going
+        _run(core)
+    assert len(spawn.calls) == 1
+    spawn.finish()
+    _run(core, clock[0] + 3600)  # ended, same day: once a day per version
+    assert len(spawn.calls) == 1
+    clock[0] += DAY
+    _run(core)
+    assert len(spawn.calls) == 2
+    spawn.finish()
+    # staged now: never started for that version again
+    (home / "staged" / "9.0.0.json").write_text(json.dumps({"version": "9.0.0"}),
+                                                encoding="ascii")
+    clock[0] += DAY
+    _run(core)
+    assert len(spawn.calls) == 2
+    assert core.state.snapshot()["update"]["staged"] == "9.0.0"
+
+
+def test_game_not_idle_never_starts(tmp_path, monkeypatch):
+    core, _, clock, _ = _trigger_core(tmp_path, monkeypatch, idle=False)
+    for _ in range(3):
+        _run(core)
+        clock[0] += DAY
+    assert core.update_spawn.calls == []
+    core.state.set_tailer(consented=False, idle=True)  # no consent: not idle
+    _run(core)
+    assert core.update_spawn.calls == []
+
+
+def test_click_only_waits_for_update_now(tmp_path, monkeypatch):
+    core, _, clock, home = _trigger_core(tmp_path, monkeypatch,
+                                         cfg=dict(ON, update_click_only=True))
+    assert core.update_click_only() is True
+    for _ in range(3):
+        _run(core)
+        clock[0] += DAY
+    assert core.update_spawn.calls == []
+    assert core.state.snapshot()["update"]["click_only"] is True
+    core.state.set_tailer(idle=False)  # a click needs no idle game
+    assert core.update_now() == updates.STARTED
+    assert len(core.update_spawn.calls) == 1
+    assert core.update_spawn.calls[0][0][2:5] == ["server.al.install", "update", "--yes"]
+    assert core.update_now() == updates.RUNNING  # never doubled
+    assert len(core.update_spawn.calls) == 1
+
+
+def test_web_data_off_or_unacknowledged_never_starts(tmp_path, monkeypatch):
+    for cfg in ({"web_data": False, "web_data_ack": updates.WORDING_VERSION},
+                {"web_data": True}):
+        sub = tmp_path / str(len(cfg))
+        sub.mkdir()
+        core, _, clock, _ = _trigger_core(sub, monkeypatch, cfg=cfg)
+        for _ in range(3):
+            _run(core)
+            clock[0] += DAY
+        assert core.update_now() == updates.OFF
+        assert core.update_spawn.calls == []
+
+
+def test_checkout_never_starts(tmp_path, monkeypatch):
+    core, _, clock, _ = _trigger_core(tmp_path, monkeypatch, installed=False)
+    assert updates.update_command() is None
+    for _ in range(3):
+        _run(core)
+        clock[0] += DAY
+    assert core.update_now() == updates.CHECKOUT
+    assert core.update_spawn.calls == []
+    assert core.state.snapshot()["update"]["staged"] is None
+
+
+def test_client_start_rules_without_a_core(tmp_path):
+    spawn = Spawner()
+    fake = Fake((200, {}, release("v9.0.0")))
+    c = client(fake)
+    c.command = lambda: ["py", "boot.py", "server.al.install", "update", "--yes"]
+    assert c.maybe_start(T0, True, spawn) is False  # nothing cached yet
+    c.tick(T0)
+    for idle in (False, None, 1, "yes"):  # only an exact True is idle
+        assert c.maybe_start(T0, idle, spawn) is False
+    c.click_only = lambda: True
+    assert c.maybe_start(T0, True, spawn) is False
+    c.click_only = False
+    assert c.maybe_start(T0, True, spawn, staged=lambda: "9.0.0") is False
+    assert spawn.calls == []
+    assert c.maybe_start(T0, True, spawn, staged=lambda: "8.0.0") is True
+    assert len(spawn.calls) == 1
+    # a pre-release is never started; a failed start never raises
+    pre = client(Fake((200, {}, release("v9.1.0", prerelease=True))))
+    pre.command = c.command
+    pre.tick(T0)
+    assert pre.update_now(spawn) == updates.CURRENT
+    bad = client(Fake((200, {}, release("v9.0.0"))))
+    bad.command = c.command
+    bad.tick(T0)
+    assert bad.update_now(Spawner(fail=True)) == updates.FAILED
+    assert len(spawn.calls) == 1
+
+
+def _post(port, path, body=b"{}", headers=None, ctype="application/json"):
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    h = {"Host": f"127.0.0.1:{port}", "X-AL-Token": TOKEN, "Content-Type": ctype,
+         "Content-Length": str(len(body))}
+    h.update(headers or {})
+    h = {k: v for k, v in h.items() if v is not None}
+    conn.request("POST", path, body=body, headers=h)
+    r = conn.getresponse()
+    out = (r.status, r.read())
+    conn.close()
+    return out
+
+
+def test_post_update_now_needs_the_token_the_host_checks_and_no_fields(tmp_path, monkeypatch):
+    core, _, _, _ = _trigger_core(tmp_path, monkeypatch, cfg=dict(ON, update_click_only=True))
+    server = serve(core, TOKEN, port=0, web_root=ROOT / "web",
+                   tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
+    threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
+                     daemon=True).start()
+    port, path = server.port, "/api/update-now"
+    try:
+        assert _post(port, path, headers={"X-AL-Token": None})[0] == 401
+        assert _post(port, path, headers={"X-AL-Token": "x" * 48})[0] == 401
+        assert _post(port, path + f"?token={TOKEN}", headers={"X-AL-Token": None})[0] == 401
+        assert _post(port, path, headers={"Host": "evil.example"})[0] in (400, 403)
+        assert _post(port, path, headers={"Origin": "http://evil.example"})[0] == 403
+        assert _post(port, path, headers={"Sec-Fetch-Site": "cross-site"})[0] == 403
+        assert _post(port, path, body=b'{"version": "9.0.0"}')[0] == 400
+        assert _post(port, path, body=b"[]")[0] == 400
+        assert _post(port, path, body=b"x", ctype="text/plain")[0] == 415
+        assert core.update_spawn.calls == []  # nothing refused started anything
+        status, raw = _post(port, path)
+        assert status == 200
+        assert json.loads(raw.decode("ascii")) == {"started": True, "state": "started"}
+        assert len(core.update_spawn.calls) == 1
+        status, raw = _post(port, path, body=b"")  # no body at all: the same click
+        assert status == 200 and json.loads(raw.decode("ascii"))["state"] == "running"
+        assert len(core.update_spawn.calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_update_click_only_is_on_the_settings_allow_list(tmp_path, monkeypatch):
+    assert settingsio.ALLOWED["update_click_only"] is settingsio._bool
+    assert settingsio.LABELS["update_click_only"]
+    assert "update_click_only" not in settingsio.NEVER
+    doc = settingsio.export_doc({"update_click_only": True}, "v")
+    assert doc["settings"] == {"update_click_only": True}
+    update, report = settingsio.parse_import(doc, {})
+    assert update == {"update_click_only": True} and report["applied"] == ["update_click_only"]
+    bad = dict(doc, settings={"update_click_only": "yes"})
+    with pytest.raises(settingsio.SettingsError):
+        settingsio.parse_import(bad, {})
+    core, cfg, _ = _core(tmp_path, monkeypatch, GitHubOnly())
+    assert core.update_click_only() is False
+    core.import_settings(doc)
+    assert json.loads(cfg.read_text(encoding="ascii"))["update_click_only"] is True
+    assert core.update_click_only() is True

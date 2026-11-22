@@ -288,12 +288,18 @@ class Core:
                       else self.runtime / "cache" / "updates")
         if update_repo is None:
             update_repo = None if runtime is None else ""
+        # REL-UPDATE-TRIGGER (F-077, DEP-17): the same client starts the
+        # installer's update process (never in a checkout); update_spawn is
+        # the spawner (None: updates.spawn_hidden; tests inject their own)
         self.updates = updates.UpdateClient(
             self.web_data_enabled, self.web_data_acked, repo=update_repo, fetch=web_fetch,
             cache_dir=update_dir,
-            changelog=None if runtime is None else self.runtime / "CHANGELOG.md")
+            changelog=None if runtime is None else self.runtime / "CHANGELOG.md",
+            click_only=self.update_click_only)
         self._update_thread = None
         self._update_key = None
+        self.update_spawn = None
+        self._update_child_running = False
         # DATA-PRICE-REFRESH-CORE: the loop's refresh gate and the last
         # /api/rates read (monotonic s; tick_prices / note_rates_read)
         self.price_gate, self.rates_read_at = pricerefresh.Gate(), None
@@ -990,6 +996,12 @@ class Core:
         value = self._config().get(ACK_KEY)
         return value if isinstance(value, int) and not isinstance(value, bool) else None
 
+    def update_click_only(self):
+        """REL-UPDATE-TRIGGER (decision 0065): the Settings switch
+        "update_click_only" (default off): on, the updater starts only on
+        'Update now'."""
+        return self._config().get(updates.CLICK_ONLY_KEY) is True
+
     def contact(self):
         """UA-CONTACT: the User-Agent contact from the gitignored local
         config ("contact"), cleaned; None when unset or unusable."""
@@ -1111,17 +1123,25 @@ class Core:
         'update' block is published again when the opt-in or the
         acknowledgement changed and when a read ends. No request is made
         on the loop thread. Returns the started thread or None. `now`
-        (epoch s) is for tests; None reads the client's clock."""
-        key = (self.web_data_enabled(), self.web_data_acked())
+        (epoch s) is for tests; None reads the client's clock.
+        REL-UPDATE-TRIGGER: also tick_trigger() (the updater start) on
+        every pass; the click-only switch is part of the publish key. The
+        local config is read once per pass (the tick stat budget)."""
+        cfg = self._config()
+        ack = cfg.get(ACK_KEY)
+        ack = ack if isinstance(ack, int) and not isinstance(ack, bool) else None
+        key = (cfg.get("web_data") is True, ack, cfg.get(updates.CLICK_ONLY_KEY) is True)
         if key != self._update_key:
             self._update_key = key
             self.publish_update()
+        client = self.updates
+        allowed = bool(client.repo) and key[0] and updates.ack_ok(ack)
+        self.tick_trigger(now, allowed=allowed)
         running = self._update_thread
         if running is not None and running.is_alive():
             return None
-        client = self.updates
         when = float(client.clock() if now is None else now)
-        if not (client.allowed() and client.due(when)):
+        if not (allowed and client.due(when)):
             return None
 
         def run():
@@ -1135,11 +1155,62 @@ class Core:
         thread.start()
         return thread
 
+    def tick_trigger(self, now=None, allowed=None):
+        """REL-UPDATE-TRIGGER (F-077), ZERO-CLICK, from tick_update: with a
+        newer release in the cached answer, the release check allowed (web
+        data on, the wording acknowledged), the click-only switch off and
+        game_idle true (decision 0029: the log's staleness, never a process
+        check), start the installer's `update --yes` process hidden at
+        below-normal priority (UpdateClient.maybe_start: once a day per
+        version, never beside a run still going, never in a checkout). The
+        'update' block is published again when such a run ends (its staged
+        version). True when a run started. `allowed`: the release check
+        gate as tick_update read it (None: ask the client)."""
+        client = self.updates
+        alive = client.running()
+        if self._update_child_running and not alive:
+            self.publish_update()
+        self._update_child_running = alive
+        if alive or not (client.allowed() if allowed is None else allowed):
+            return False
+        when = float(client.clock() if now is None else now)
+        started = client.maybe_start(when, self.game_idle(), spawn=self.update_spawn,
+                                     staged=self._staged_version)
+        if started:
+            self._update_child_running = client.running()
+        return started
+
+    def update_now(self):
+        """REL-UPDATE-TRIGGER: 'Update now' (the token-gated POST
+        /api/update-now, the player's click): start the installer's update
+        process at once, without the game_idle gate and whatever the
+        click-only switch says (UpdateClient.update_now). Nothing while web
+        data is off or its wording is not acknowledged, and never in a
+        checkout. The core only starts that process; it downloads nothing
+        itself. Returns the client's fixed word (started, running, off,
+        checkout, current, staged or failed)."""
+        word = self.updates.update_now(spawn=self.update_spawn, staged=self._staged_version)
+        if word == updates.STARTED:
+            self._update_child_running = self.updates.running()
+        self.publish_update()
+        return word
+
+    def _staged_version(self):
+        """The newest staged version of an installed copy
+        (_install_facts()["staged"]), or None."""
+        facts = self._install_facts()
+        staged = facts.get("staged") if isinstance(facts, dict) else None
+        return staged.get("version") if isinstance(staged, dict) else None
+
     def publish_update(self):
         """REL-UPDATE-WIRE: hand UpdateClient.view() to the state as the
         snapshot's 'update' block (no event, no card text). True on a
-        change."""
-        return self.state.set_update(self.updates.view())
+        change. REL-UPDATE-TRIGGER: the block also carries "staged" (the
+        staged version of an installed copy, or None) and "click_only"
+        (the Settings switch)."""
+        view = dict(self.updates.view(), staged=self._staged_version(),
+                    click_only=self.update_click_only())
+        return self.state.set_update(view)
 
     def set_contact(self, value):
         """DATA-CONTACT-FIELD (F-018): store the User-Agent contact typed
