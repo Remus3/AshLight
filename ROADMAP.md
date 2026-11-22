@@ -38,13 +38,13 @@ operator phrase.`
   the loop lands by itself. DEPENDS: TC-CARD-PARTS. BLOCKED: session wave 7.
 - [ ] TC-EVAL-NOTES-STYLE (build) Card notes list style (TCPW-1 of the TC-CARD-PARTS-WEB review): web/app.css gets a rule for #eval-notes (no bullets, the card's own spacing) so the notes read as part of the card. ACCEPT: python -m pytest -q tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: No click: a style edit the loop lands by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
-- [ ] RUN-UNREADABLE-WORD (build): give the "Client.txt can't be read" state one status word: add an unreadable state to server/al/data/status_words.json with copies in web/status.js and app/shared/render_gate.js (kit blocked, bar "can't read Client.txt", overlay at most 15 characters), make diag.check_reading use _state_check, and add the new log-state sentences (five reset sentences, restarted / unreadable / readable lines, the two Reading-row strings) to docs/design/0001-design-system.md section 9 (review SRW-1, SRW-2). ACCEPT: bar, overlay and Checks name the same state; status-word tests green. ZERO-CLICK: the word follows the reader state by itself; no click. DEPENDS: TEST-STATE-TEXT-PINS, RUN-REPORT-FIELDS, OVL-KEY-HINT, REL-UPDATE-CHECKS, TEST-COPY-SHEETS. BLOCKED: session wave 24 (UNREADABLE-RETAG, session 18: package RUN-UNREADABLE-WORD; wave 22 owns render_gate.js and diag.py, wave 23 render_gate.js, design 0001 and diag.py; wave 24 owns none; the earlier wave 20 tag had no package).
-- [ ] PLAY-PAGER-SCALE-24 (build) Confirm the pager buttons (.al-pager-btn, 1.5rem) and the compact weight inputs stay at least 24 px when the UI scale --al-s is below 1; clamp with max(24px, 1.5rem) if not; make the disabled dashed edge 2px if it reads faint (D-2). The D-1 #prices-title tabindex part is split out to PRICES-TITLE-TABINDEX (ruling Q2 amended, 2026-11-21). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_ux_review.py passes and npm test --prefix app passes with the scale below 1 measured at 24 px or more. ZERO-CLICK: Nothing for players; a layout floor that holds by itself. DEPENDS: PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20A-RUN-GRID. BLOCKED: session wave 24.
 - [ ] CARD-LINE-LIMIT (build) OVL-CONTRAST-PIXELS finding (strict xfail): a 34-character capitals-and-digits card line renders at about 292 px against the 236 px inside width; lower the card character limit (app/shared/format.js maxLen defaults and CARD_LINE in server/al/text/common.py), never the font size, and turn the xfail into a pass. ACCEPT: python -m pytest -q tests/test_overlay_pixels.py tests/test_glance_rules.py passes with the xfail removed and npm test --prefix app passes. ZERO-CLICK: Nothing for players; card lines fit by themselves. DEPENDS: OVL-CONTRAST-PIXELS. BLOCKED: session wave 25 (DEFERRED from wave 22; re-planned session 19, seven more files).
 - [ ] PRICES-TITLE-TABINDEX (build) D-1 split from PLAY-PAGER-SCALE-24 (ruling Q2 amended 2026-11-21): add tabindex=-1 to the #prices-title markup in web/index.html so focus can land on it; fold into DATA-CONTACT-UI, the wave 24 owner of web/index.html. ACCEPT: python -m pytest -q tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: Nothing for players; focus lands by itself. BLOCKED: session wave 25 (not folded into DATA-CONTACT-UI in wave 24; needs a package in docs/plan/packages.json).
-- [ ] REPORT-DOC-QUIET (build) server/al/plug/report.py docstring still describes the snapshot report text and minute stamp that RUN-QUIET-FEED removed; restate it for the quiet feed (report text built only on the click, ages stepped at 5 minutes). ACCEPT: python -m pytest -q tests/test_quiet_feed.py tests/test_diag_self.py passes. ZERO-CLICK: Docstring edit; no click. DEPENDS: RUN-QUIET-FEED. BLOCKED: session wave 23 (DEFERRED from wave 22) (W22-FOLD: folded into RUN-REPORT-FIELDS, the wave 22 owner of report.py).
 - [ ] BUDGET-RETIRE-TAILER-IDLE (build) Retire tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent, superseded by B1 (RUN-BUDGET-TESTS-DET kept it because tools/docs_fresh.py and README.md pin it): delete the test, repoint the "tailer idle" fact in tools/docs_fresh.py to test_real_loop_body_10_s_worst_case_under_half_percent and reword README's tailer line to B1's half-percent figure. ACCEPT: python -m pytest -q tests/test_docs_fresh.py tests/test_budgets.py passes. ZERO-CLICK: Test housekeeping; no click. DEPENDS: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a package in wave 25 or later).
 - [ ] RUN-CARDS-PAGE-FIT (build) Run tab Acts, Maps and Deaths cards still page at 10 rows (8 compact): 268 px against the measured 244 px budget at 1280x760 (204 px at 1024x700). Only a 10-row fill overflows; no fit state fills 10 rows today. Add one fit state that fills 10 rows on each card and set the page size so it fits (PLAY-TD-20B-RUN-CARDS review gap). ACCEPT: python -m pytest -q tests/test_play_fit.py passes with the new 10-row state and npm test --prefix app passes. ZERO-CLICK: Layout floor; no click. DEPENDS: PLAY-TD-20B-RUN-CARDS. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a wave 23 or 24 package owning the Run cards, or a new small package).
+- [ ] LOG-SHAPE-20261122 (build) New masked log shapes passed the two-sighting rule: work each NEW SHAPE line of ops/runtime/watch/live1_report.json (copied into the lane worktree) into a parser pattern with a fixture, or note why it stays unparsed. ACCEPT: every listed shape has a fixture and a passing test or a one-line note. SOURCE: watch ledger log-shape, filed 2026-11-22.
+- [ ] RUN-BUDGET-CALIBRATE-B11 (build) Calibrate B11 300 -> 384 MB and B18 to 460 MB (384 + core max 68); B10, B12; decision 0002 amendment with median, p95, max, rows; research 0048 figures. Files: server/al/budgetlog.py, tests/test_budgets.py, tests/test_budgetlog.py, docs/decisions/0002-stack.md, docs/research/0048-performance-budgets-review.md, README.md. ACCEPT: budgetlog check exits 0 on the live log; a row above new B11 still breaches. ZERO-CLICK: loop tick runs the check. DEPENDS: none. Ruling 2026-11-21 option A; reverses if B10 or B12 breach persistently or the operator keeps 300 MB. BLOCKED: session wave 25 (needs a package).
+- [ ] TEST-SUITE-T0 (build) tools/suite_run.py exports AL_SUITE_T0 at start so the TEST-SLOW-BUDGET whole-suite ceiling measures from the runner start, not per phase. Files: tools/suite_run.py, tests/test_suite_runner.py. ACCEPT: python -m pytest -q tests/test_suite_runner.py tests/test_slow_budget.py passes. ZERO-CLICK: the suite runner sets it by itself. DEPENDS: TEST-SLOW-BUDGET. BLOCKED: session wave 25 (needs a package in docs/plan/packages.json).
 
 ## Lane: data
 
@@ -287,145 +287,17 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 22: install and release, reliability and observability, overlay and client
 
-- [ ] RUN-REPORT-FIELDS (build) The report from an allow-list of structured fields, with a hardened
-  redactor (P8-7) + Keep per-press 'Not counted' lines for the session. ACCEPT: python -m pytest -q
-  tests/test_report.py tests/test_diag_self.py tests/test_audit_pass8.py passes and npm test
-  --prefix app passes. Also (folded RUN-UNKNOWN-ITEM-TEXT): python -m pytest -q
-  tests/test_unknown_item_text.py tests/test_tc_eval.py tests/test_report.py passes. ZERO-CLICK: One
-  click to copy (decision 0014 requires it); the preview costs no extra click. Also (folded
-  RUN-UNKNOWN-ITEM-TEXT): Collected silently; the report copy stays a click (decision 0040).
-  DEPENDS: RUN-QUIET-FEED, RUN-METRICS-CORE, RUN-LEDGER-WIRE, RUN-BUDGET-LOG-CORE, GP-06,
-  OVL-OBS-CRASH, TC-PRESS-STAGED-LIVE. BLOCKED: session wave 23 (DEFERRED from wave 22).
-- [ ] PUB-HOOK-RELEASE-CHECK (build) Guarded hook: refuse a v* tag without a PASS stage report.
-  ACCEPT: `python -m pytest -q tests/test_pre_push_hook.py tests/test_fleet_kit_conformance.py
-  tests/test_ascii_lf.py` is green and `git grep -n "release.py\" prepush-check" --
-  .githooks/pre-push` prints one line. ZERO-CLICK: Runs by itself on every push; a release needs no
-  extra step beyond plan 05's one operator phrase. DEPENDS: GP-02, REL-PUBLISH-GATES. BLOCKED:
-  session wave 23 (DEFERRED from wave 22).
 
 ### Wave 23: install and release, overlay and client, tests and code seams
 
-- [ ] PLAY-TD-21A-SETTINGS-RAIL (build) Settings rail 1: Checks, Reading and web data, Overlay.
-  ACCEPT: npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py
-  tests/test_ux_review.py tests/test_ux_b8.py tests/test_dash_console.py pass: the rail lists 6
-  sections with one visible, sections 1 to 3 hold at most 448 px of rows each, the reading status
-  word is visible on all 4 tabs and pressing it shows Settings, Reading and web data with focus on
-  Stop reading Client.txt, and Checks shows by itself while a check fails. ZERO-CLICK: Checks opens
-  by itself on a failure; every switch is optional and lives in one place. DEPENDS:
-  PLAY-TD-20B-RUN-CARDS. BLOCKED: session wave 23.
-- [ ] OVL-APP-SCHEME (build) Move the overlay page and the starting page off file:// onto one app
-  scheme. ACCEPT: node --test app/test/pages.test.js app/test/egress.test.js app/test/guards.test.js
-  app/test/overlay_gate.test.js app/test/hotreload.test.js and python -m pytest -q
-  tests/test_http_security.py tests/test_overlay_smoke.py tests/test_sse_idle_push.py pass.
-  ZERO-CLICK: Nothing for the player; the overlay stays a separate click-through window. DEPENDS:
-  OVL-SHELL-GUARDS, OVL-EGRESS-LOCK, OVL-WAKE-COMPANION, OVL-LINE2-GUIDE, OVL-KEYS-CORE,
-  SEC-STATIC-MAP. BLOCKED: session wave 23.
-- [ ] OVL-KEY-HINT (build) Teach the item-check key in the empty card slot, then retire it. ACCEPT:
-  python -m pytest -q tests/test_overlay_view.py tests/test_moment_cards.py
-  tests/test_glance_rules.py and node --test app/test/keyhint.test.js app/test/hudline2.test.js
-  app/test/overlay_parts.test.js pass. ZERO-CLICK: Appears and retires by itself; the press it
-  teaches is the manual press the floor requires. The hint causes no clipboard read. DEPENDS:
-  OVL-KEYS-CORE, OVL-ACT-CARD, OVL-LINE2-GUIDE. BLOCKED: session wave 23.
-- [ ] DEP-17 (build) Update, network half: download, verify and stage from a release. ACCEPT: python
-  -m pytest -q tests/test_updater.py tests/test_update_switch.py passes. ZERO-CLICK: None with web
-  data on and the wording acknowledged; with web data off 0 calls. DEPENDS: DEP-11, DEP-16, DEP-15,
-  REL-UPDATE-SWITCH. BLOCKED: session wave 23.
-- [ ] RUN-BUDGET-TESTS-DASH (build) Dashboard and overlay paint budgets under test (B13, B14) +
-  P8-6: the console / CSP test paints Checks rows, a hint and ladder_all. ACCEPT: python -m pytest
-  -q tests/test_dash_perf.py tests/test_dash_console.py passes and npm test --prefix app passes.
-  Also (folded RUN-P8-6-CONSOLE): python -m pytest -q tests/test_dash_console.py passes. ZERO-CLICK:
-  The suite runs them. Also (folded RUN-P8-6-CONSOLE): No player interaction. DEPENDS:
-  RUN-VERDICTS-UI, PLAY-TD-01B-FIT-HARNESS, RUN-QUIET-FEED. BLOCKED: session wave 23.
-- [ ] REL-UPDATE-CHECKS (build) Checks row and report lines for the install. ACCEPT: python -m
-  pytest -q tests/test_update_checks.py tests/test_diag_self.py tests/test_ux_review.py
-  tests/test_install_home.py passes. ZERO-CLICK: The line appears by itself in Checks; no toast, no
-  window. DEPENDS: REL-UPDATE-SWITCH, PLAY-F-131-STATUS-TABLE. BLOCKED: session wave 23.
-- [ ] SEC-HELLO-PS (build) run.ps1 verifies the core before it sends the token or opens the page.
-  ACCEPT: python -m pytest -q tests/test_run_health_ps.py passes: the Test-AlHealth function text
-  run in powershell.exe 5.1 against a fake listener that answers 200 to everything returns false and
-  that listener sees no X-AL-Token header, and against a test core it returns true. ZERO-CLICK: Code
-  change; run.ps1 checks by itself on every start. DEPENDS: SEC-HELLO-CORE, SEC-NO-PROXY. BLOCKED:
-  session wave 23.
-- [ ] TEST-SHOTS-RENDER (data) First screenshot render and the README image block. ACCEPT: python
-  tools/shots.py check exits 0, and python -m pytest -q tests/test_shots.py
-  tests/test_brand_assets.py tests/test_ascii_lf.py tests/test_leak_sweep.py passes. ZERO-CLICK: The
-  agent runs 'python tools/shots.py render' itself (headless, no window); later refreshes are filed
-  and worked by the watcher with no reminder. DEPENDS: AUTO-15, PUB-README-PLAYERS. BLOCKED: session
-  wave 23.
-- [ ] AUTO-16 (build) REL-NOTES: notes --count and the REL-PREP row text. ACCEPT: python -m pytest
-  -q tests/test_release_notes.py tests/test_commit_subject.py passes and python tools/release.py
-  notes --count prints one line '<n> <date>'. ZERO-CLICK: Read by the loop's refresh source; no
-  operator step. DEPENDS: DEP-04, AUTO-01. BLOCKED: session wave 23.
-- [ ] AUTO-13 (build) DIVE-ON-DEMAND: a source may request one dive a day; the idle dive is weekly.
-  ACCEPT: `python -m pytest -q tests/test_loop_dive_request.py tests/test_loop_dive.py` passes.
-  ZERO-CLICK: Unattended: an upstream version change asks for its own research; nobody has to
-  remember to look. DEPENDS: AUTO-01, AUTO-04, AUTO-05, LOOP-ROWFILES-WORK, LOOP-TESTS-CARVE.
-  BLOCKED: session wave 23.
-- [ ] TEST-COPY-SHEETS (build) Split design 0001 section 9 rule 2 into docs/design/copy/<family>.md.
-  ACCEPT: python -m pytest -q tests/test_structure.py tests/test_a11y.py
-  tests/test_design_contrast.py tests/test_ascii_lf.py tests/test_leak_sweep.py passes and grep -c
-  'docs/design/copy/' .claude/agents/design-reviewer.md prints at least 1. ZERO-CLICK:
-  Developer-side only; the player does nothing. The reviewer agent reads the sheets by itself from
-  its own method step. DEPENDS: TEST-STRUCTURE-GUARD. BLOCKED: session wave 23.
-- [ ] AUTO-22 (build) OVL-SMOKE-DAILY: the tick runs the live overlay smoke once a day while the
-  game is idle. ACCEPT: `python -m pytest -q tests/test_loop_overlay_smoke_step.py` passes.
-  ZERO-CLICK: Unattended: the smoke runs by itself on an idle day; it never runs while the operator
-  plays. DEPENDS: AUTO-01, SEC-NO-PROXY. BLOCKED: session wave 23.
 
 ### Wave 24: reliability and observability, web data, theorycraft
 
-- [ ] DATA-CONTACT-UI (build) Contact field in the web-data card and honest blocked wording + League
-  dropdown in the web-data card. ACCEPT: npm test --prefix app passes, including a new
-  app/test/prices.test.js case that asserts no 'arrive within a minute' text in webDataView,
-  savedText, ratesPill or moversView while doc.blocked is 'contact not set'. Also (folded
-  DATA-LEAGUE-PICKER-UI): npm test --prefix app passes. ZERO-CLICK: One typed value and one Save
-  click, once per install and outside play, until DATA-CONTACT-DEFAULT makes the field optional; the
-  field shows only until a contact is set and nothing is clicked in play. Also (folded
-  DATA-LEAGUE-PICKER-UI): Optional override only; with no pick the league follows poe.ninja's
-  current one. DEPENDS: DATA-CONTACT-FIELD, DATA-DIAG-SEAM. BLOCKED: session wave 24.
 - [ ] RUN-EXPLAIN-ROWS (build) Five cause rows in Checks. ACCEPT: python -m pytest -q
   tests/test_diag_explain.py tests/test_diag_self.py passes and npm test --prefix app passes.
   ZERO-CLICK: Computed every 5 s; Checks opens by itself on a new failure. DEPENDS:
   RUN-OBS-LOGS-SHELL, RUN-METRICS-SITES, RUN-SUPERVISOR-CLOCK, RUN-LEDGER-WIRE, RUN-REPORT-FIELDS,
   OVL-OBS-CRASH. BLOCKED: session wave 25 (DEFERRED from wave 24: batch suite red on tests/test_structure.py, 30 player sentences in server/al/plug/explain.py must move under server/al/text/ with a docs/design/copy sheet; re-plan files first).
-- [ ] OVL-APP-SCHEME-STRICT (build) Core refuses Origin null and file:// once both local pages load
-  from the app scheme. ACCEPT: python -m pytest -q tests/test_http_security.py
-  tests/test_audit_http_harden.py tests/test_sse_idle_push.py passes and git grep -n -F '"file://"'
-  -- server/al/http.py prints nothing. ZERO-CLICK: Nothing for the player; the overlay already loads
-  from the app scheme. DEPENDS: OVL-APP-SCHEME. BLOCKED: session wave 24.
-- [ ] TC-WEIGHTS-DELTA-EXPORT (build) Settings export schema 2 carries the weight changes. ACCEPT:
-  python -m pytest -q tests/test_ux_settings_io.py tests/test_tc_weights_delta.py passes and npm
-  test --prefix app passes. ZERO-CLICK: No click beyond the existing export and import buttons.
-  DEPENDS: TC-WEIGHTS-DELTA-STORE, TC-WORN-WIRE, TC-CALC-OPTIN. BLOCKED: session wave 24.
-- [ ] RUN-BUDGET-TESTS-LIVE (build) Opt-in live budgets: client process counts, calc ceilings,
-  budget-log bounds. ACCEPT: python -m pytest -q tests/test_overlay_smoke.py
-  tests/test_budget_log.py tests/test_math_perf.py passes (live parts skip unless opted in).
-  ZERO-CLICK: The suite runs them; the live smoke stays opt-in. DEPENDS: RUN-BUDGET-LOG-CORE,
-  RUN-BUDGET-TESTS-DET, TC-PRESS-STAGED-LIVE. BLOCKED: session wave 24.
-- [ ] TEST-SLOW-BUDGET (build) Slow-test budget and hang guard. ACCEPT: python -m pytest -q
-  tests/test_slow_budget.py tests/test_pytest_config.py passes and grep -c faulthandler_timeout
-  pytest.ini prints 1. ZERO-CLICK: Enforced in every run by the hook; nobody has to look at
-  durations. DEPENDS: TEST-FLOOR-MEMO, TEST-TIMER-FIXES, TEST-PLUGIN-PIN, TEST-MARKS,
-  TEST-SUITE-RUNNER, TEST-DOCS-FACTS-UI, PUB-README-PLAYERS, DEP-02. BLOCKED: session wave 24.
-- [ ] DATA-PRICE-TYPES-FILE (build) Price type lists in a hot-reloaded data file. ACCEPT: python -m
-  pytest -q tests/test_price_types_file.py tests/test_price_book.py tests/test_price_cadence.py
-  tests/test_hot_reload.py passes. ZERO-CLICK: Automatic; the file reloads by itself (decision
-  0042). DEPENDS: DATA-NINJA-SHAPE-WATCH. BLOCKED: session wave 24.
-- [ ] TC-PIN-POLICY (build) Pin policy written into decision 0018; toolchain cleaned up. ACCEPT:
-  python -m pytest -q tests/test_tc_pin.py passes. ZERO-CLICK: Setup cleans up by itself. DEPENDS:
-  TC-CALC-VERIFY-PIN, AUTO-12. BLOCKED: session wave 24.
-- [ ] RUN-HISTORY-UNDO (build) Undo for Clear run history. ACCEPT: npm test --prefix app passes and
-  python -m pytest -q tests/test_util_run_history.py tests/test_a11y.py passes. ZERO-CLICK: Nothing
-  in play. DEPENDS: RUN-DURABLE-STORES. BLOCKED: session wave 24.
-- [ ] RUN-OVERLAY-REMEMBER (build) Remember the overlay shown / hidden choice across restarts.
-  ACCEPT: npm test --prefix app passes and python -m pytest -q tests/test_overlay_layout.py
-  tests/test_floor_static.py passes. ZERO-CLICK: One toggle fewer per session. DEPENDS:
-  RUN-OBS-LOGS-SHELL. BLOCKED: session wave 24.
-- [ ] DATA-SNAP-TRIM (build) Drop the two unread files from the snapshot fetch list. ACCEPT: python
-  -m pytest -q tests/test_tc_snap.py tests/test_tc_snap_ui.py tests/test_snap_probe.py
-  tests/test_audit_snapshot_optin.py passes and snapshot.SOURCES has exactly base_items,
-  stat_translations, skilltree and world_areas. ZERO-CLICK: Unchanged for the player; fewer requests
-  to a community host. DEPENDS: DATA-SNAP-PROBE. BLOCKED: session wave 24.
 - [ ] REL-CUTOVER-LIVE (build) Cut-over: the operator's live copy becomes an installed release.
   ACCEPT: GET /api/health on 127.0.0.1:8960 answers mode 'installed' with version 0.2.0-rc.0 from
   <sidecar>\Install, the checkout answers on 127.0.0.1:8961 with mode 'checkout', and a re-run of
@@ -817,11 +689,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   private repository exists with main pushed and CI green (go-public remote package), the guarded
   pre-push hook with the prepush-check call is merged, immutable releases are on before the first v*
   tag, and the operator types 'release 0.2.0-rc.1' in an interactive session (operator).
-- [ ] RUN-LIVE1-FIXTURES (build) Turn each live-verified log shape into a fixture line and a test.
-  ACCEPT: python tools/live1_report.py prints no NOT SEEN line for the items this run closes and
-  python -m pytest -q tests/test_parser.py tests/test_fuzz.py passes. ZERO-CLICK: The operator only
-  plays; the loop files one LIVE-1-<ITEM> row per first live hit. DEPENDS: RUN-LEDGER-WIRE,
-  RUN-LEDGER-REPORT. BLOCKED: session wave 23.
 - [ ] TC-BUILD-FILEPICK (build) Load a build from a save file the player picks. ACCEPT: python -m
   pytest -q tests/test_tc_build_filepick.py tests/test_http_security.py passes and npm test --prefix
   app passes. ZERO-CLICK: One pick per build change, the player's own act; no folder read, no
@@ -999,13 +866,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   normal play with the budget log on (no operator act); closes from the log.
 - (TC-OAUTH-REG: its row is replaced in place under '## Theorycraft and item optimization (decision 0004, research 0010)'.)
 - (OVL-FPS: its row is replaced in place under '## Lane: build'.)
-- [ ] PUB-DEPBOT-FIRST-RUN (data) First live run of the Dependabot re-apply tool. ACCEPT: After
-  `python tools/dependabot_reapply.py run`, `gh pr list --repo "$R" --author "app/dependabot"
-  --state open --json number,title` lists only pull requests the tool reported as waiting (npm age
-  rule or electron signal), and `gh pr list --repo "$R" --state merged --json number` is empty.
-  ZERO-CLICK: One command, run by the session that handles go-public while the loop is HALTed; the
-  tick runs it by itself after F-078 (PUB-DEPBOT-TICK). DEPENDS: GP-09, PUB-DEPBOT-ACTIONS, GP-08.
-  BLOCKED: session wave 23.
 - [ ] RUN-BUILDFILE-LIVE-CLOSE (review) Record the in-game result of an AshLight-made .build.
   ACCEPT: python tools/live_verdicts.py lists a verdict for TC-BUILDFILE-LIVE and python -m pytest
   -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py passes.
