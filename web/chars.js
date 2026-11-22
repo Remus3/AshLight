@@ -5,22 +5,36 @@
    reports (`characters`, `run_history.by_character`); the page shows the
    character being played by default, and this file only swaps in another
    character's numbers when the player picks one. Not a live region; no
-   timers, no network. Names stay on this computer. */
+   timers, no network. Names stay on this computer.
+
+   PLAY-TD-20B-RUN-CARDS (plan 03 section 4): the Run grid's Characters
+   card holds the picker (looking at another character is a review act)
+   and one row per character: who is playing, class, level, deaths and the
+   best act times from run history, paged at 8 (6 compact) under the
+   picker through web/acts.js's pager. The picker moved here from the Acts
+   card's pace page; web/acts.js still reads its choice (#char-pick). */
 (function (root, factory) {
   "use strict";
-  var api = factory();
-  if (typeof module === "object" && module.exports) {
+  var common = typeof module === "object" && module.exports;
+  var api = factory(function () {
+    return common ? require("./acts.js") : root.ALActs;
+  });
+  if (common) {
     module.exports = api;
   } else {
     root.ALChars = api;
   }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (actsLib) {
   "use strict";
 
   var MAX = 12;
   var PLAYING = " (playing now)";
   var NOT_PLAYING = " (not playing)";
   var HISTORY_ONLY = " (history only)";
+  /* rows a page under the picker: 32 + 4 + 8 x 22 + pager 24 = 236 of the
+     244 px under the title at 1280x760 (compact 32 + 4 + 6 x 22 + 24 = 192
+     of 204 at 1024x700) */
+  var ROWS = { full: 8, compact: 6 };
 
   /* [{name, current}] : live characters first (the current one leads),
      then characters seen only in the saved run history; at most MAX. */
@@ -92,12 +106,46 @@
     return out;
   }
 
+  function own(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+
+  /* "Act 1 20:00, Act 2 15:00": a run history view's best act times. */
+  function bestsText(hist) {
+    return ((hist && hist.best) || []).filter(function (b) {
+      return b && typeof b.best_text === "string" && b.best_text;
+    }).map(function (b) {
+      return (b.label || b.key || "Act") + " " + b.best_text;
+    }).join(", ");
+  }
+
+  /* One row of the Characters card per character (names() order): "Sable
+     (playing now): Witch, level 4, 2 deaths; best Act 1 20:00". A
+     character seen only in the saved run history has its best times only. */
+  function charRows(snap) {
+    var s = snap || {};
+    var by = (s.run_history && s.run_history.by_character) || {};
+    return names(s).map(function (c) {
+      var live = find(s.characters || [], c.name);
+      var hist = c.current ? s.run_history : (own(by, c.name) ? by[c.name] : null);
+      var facts = [];
+      if (live) {
+        if (live["class"]) { facts.push(live["class"]); }
+        if (typeof live.level === "number") { facts.push("level " + live.level); }
+        var d = typeof live.deaths === "number" ? live.deaths : 0;
+        facts.push(d + (d === 1 ? " death" : " deaths"));
+      }
+      var best = bestsText(hist);
+      var text = c.name + (c.current ? PLAYING : live ? NOT_PLAYING : HISTORY_ONLY);
+      if (facts.length) { text += ": " + facts.join(", "); }
+      if (best) { text += (facts.length ? "; best " : ": best ") + best; }
+      return { text: text };
+    });
+  }
+
   /* Fill the selector; hidden while there is one character or none. */
-  function paint(doc, snap, picked) {
+  function paintPicker(doc, list, picked) {
     var box = doc.getElementById("char-pick-box");
     var sel = doc.getElementById("char-pick");
     if (!box || !sel) { return; }
-    var list = names(snap);
     box.hidden = list.length < 2;
     var key = JSON.stringify(list);
     if (sel.getAttribute("data-key") !== key) {
@@ -114,6 +162,16 @@
     if (sel.value !== want && doc.activeElement !== sel) { sel.value = want; }
   }
 
+  /* The picker and the Characters card's rows (on each new snapshot). */
+  function paint(doc, snap, picked) {
+    var list = names(snap);
+    paintPicker(doc, list, picked);
+    if (!doc.getElementById("chars-rows")) { return; }
+    actsLib().fill(doc, "chars-rows", "characters", charRows(snap), ROWS);
+    var empty = doc.getElementById("chars-empty");
+    if (empty) { empty.hidden = list.length > 0; }
+  }
+
   /* onPick(name or "") on the player's change. */
   function wire(doc, onPick) {
     var sel = doc.getElementById("char-pick");
@@ -121,6 +179,7 @@
     sel.addEventListener("change", function () { onPick(sel.value || ""); });
   }
 
-  return { names: names, view: view, paint: paint, wire: wire, MAX: MAX, PLAYING: PLAYING,
+  return { names: names, view: view, paint: paint, wire: wire, charRows: charRows,
+    bestsText: bestsText, ROWS: ROWS, MAX: MAX, PLAYING: PLAYING,
     NOT_PLAYING: NOT_PLAYING, HISTORY_ONLY: HISTORY_ONLY };
 }));

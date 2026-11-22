@@ -225,12 +225,17 @@ test("Play holds only the regions; tools and the full cards live in other tabs",
     assert.ok(!HTML.includes('data-legacy="' + g + '"'), g);
   });
   assert.ok(!HTML.includes("/web/trades.js") && !HTML.includes("/web/buildlive.js"));
-  // the character picker, the pace line and the zone guide moved, as they
-  // were, to Act times
+  // the pace line and the zone guide moved, as they were, to Act times;
+  // the character picker sits in the Characters card
   const at = HTML.indexOf('id="actsbox"');
   const acts = HTML.slice(at, HTML.indexOf("</section>", at));
-  ["char-pick-box", "char-pick", "pace", "zone-guide"].forEach((id) => {
+  ["pace", "zone-guide"].forEach((id) => {
     assert.ok(acts.includes('id="' + id + '"'), id);
+  });
+  const ct = HTML.indexOf('id="charsbox"');
+  const chars = HTML.slice(ct, HTML.indexOf("</section>", ct));
+  ["char-pick-box", "char-pick"].forEach((id) => {
+    assert.ok(chars.includes('id="' + id + '"'), id);
   });
 });
 
