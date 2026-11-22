@@ -137,6 +137,73 @@ def _entry_hash(entry):
 BOOK_NEW, BOOK_OLD = "A book of 2 points - ", "A book of 2 skill points - "
 SHORT_NEW, SHORT_OLD = ": book of 2 points", ": 2 skill points"
 
+# CARD-LINE-LIMIT-COPY2: the zone shorts reworded to fit 26 characters say
+# the same thing in fewer words; no fact is added. Each new short maps back
+# to the short it replaced, so the entry keeps its baseline pair (the book
+# rule above then applies to the old short).
+SHORT_REWORD = {
+    "Miller boss at river's end": "Miller boss where the river ends",
+    "Town: gem from Renly": "Town: gem from Renly, then out",
+    "Beira: +10% cold res": "Beira's ritual: +10% cold res",
+    "Devourer, then to Renly": "Devourer below, then back to Renly",
+    "3 obelisks, then Rust King": "3 obelisks, then the Rust King",
+    "Find the way to the graves": "Find the way down to the graves",
+    "Crowbell: book of 2 points": "Crowbell pit: book of 2 points",
+    "Side: altars, +30 spirit": "Optional: altars for +30 spirit",
+    "Lute to Una: 2-point book": "Lute back to Una: book of 2 points",
+    "Free Leitis: Executioner": "Free Leitis from the Executioner",
+    "No boss: up to the manor": "No boss: up to the manor door",
+    "Rathbreaker, then caravan": "Rathbreaker, then the caravan",
+    "Town: use the desert map": "Town: travel by the desert map",
+    "Jamanra now, horn later": "Jamanra first; horn opens it later",
+    "Open seal, then Balbala": "Open the seal, then Balbala",
+    "Ascendancy: Rattlecage": "Ascendancy trial: Rattlecage",
+    "Kabala: book of 2 points": "Kabala pit: book of 2 points",
+    "Azarian; goddess cinders": "Azarian, then cinders to goddess",
+    "Find the drop to the pits": "Look for the drop to the pits",
+    "Two pit bosses, keep relic": "Two pit bosses; keep the relic",
+    "3 seals open Titan Grotto": "3 seals open the Titan Grotto",
+    "Zalmarath, in the cave": "Zalmarath waits in the cave",
+    "Shambrin letter: 2 points": "Letter to Shambrin: 2 points",
+    "Uphill to the spires": "Uphill all the way to the spires",
+    "Trail leads to the machine": "Follow the trail to the machine",
+    "Cap resists: Jamanra": "Cap resists: Jamanra, act boss",
+    "Town: jungle exit up top": "Town: jungle exit near the top",
+    "Crypts, Barrens branch off": "Crypts and Barrens branch off here",
+    "Venom vial to Servi: bonus": "Venom vial to Servi: a bonus",
+    "Xyclucian at Machinarium": "Xyclucian guards the Machinarium",
+    "Generators, then Zicoatl": "Generators on, then Zicoatl",
+    "Pull levers to drain it": "Pull levers to drain the water",
+    "Side: witch, +30 spirit": "Optional: bog witch, +30 spirit",
+    "Side: Mektul, timed fight": "Optional: Mektul, a timed fight",
+    "Queen of Filth, mid-zone": "Queen of Filth in the middle",
+    "Heart on altar: 2 points": "Vaal heart at altar: 2 points",
+    "Doryani: cap resists": "Act boss Doryani: cap resists",
+    "Town: ship to next island": "Town: ship to the next island",
+    "Find Volcanic Warrens cave": "Find the cave: Volcanic Warrens",
+    "Hartlin, then mist spikes": "Hartlin, then spikes for the mists",
+    "Kaimana fin: defence bonus": "Fin to Kaimana: defence bonus",
+    "Goddess: flask bonus": "Goddess of justice: flask bonus",
+    "+5% mana; on to the Halls": "To Halls of the Dead; +5% mana",
+    "Yama, then see Hinekora": "Yama, then talk to Hinekora",
+    "Boss: Benedictus": "Benedictus is the boss here",
+    "Needs 4 torn map pieces": "Opens with 4 torn map pieces",
+    "Bosses: Isolde and Heldra": "Two bosses: Isolde and Heldra",
+    "Side: 6 megaliths, Siora": "Optional: 6 megaliths, then Siora",
+    "Free the ferryman": "Free the ferryman in the middle",
+    "Ledger: book of 2 points": "Oswin's ledger: book of 2 points",
+    "Last: Wulfric and Elswyth": "Last fight: Wulfric and Elswyth",
+    "Town: any exit to Crossing": "Town: any exit to the Crossing",
+    "North shrine: +5% life": "Molten shrine up north: +5% life",
+    "No boss; on to sanctuary": "No boss; on to the sanctuary",
+    "Wall pillar: pick a bonus": "Outer wall pillar: pick a bonus",
+    "Town: out to Ashen Forest": "Town: out to the Ashen Forest",
+    "Tusks to Hilda: 2 points": "Yeti tusks to Hilda: 2 points",
+    "Spirits: a free unique": "Follow the spirits: a free unique",
+    "Final: Zolin and Zelina": "Zolin and Zelina: final bosses",
+    "Map boss ends it": "Map boss ends it; rares optional",
+}
+
 
 def _un_narrow(entry):
     e = json.loads(json.dumps(entry))
@@ -146,6 +213,8 @@ def _un_narrow(entry):
             if o.get("kind") == "other":
                 o["kind"] = "passive"
     s = e.get("short")
+    if isinstance(s, str) and s in SHORT_REWORD:
+        s = e["short"] = SHORT_REWORD[s]
     if isinstance(s, str) and s.endswith(SHORT_NEW):
         e["short"] = s[:-len(SHORT_NEW)] + SHORT_OLD
     return e
@@ -290,7 +359,9 @@ def test_new_or_changed_guide_entries_carry_their_own_src_and_checked(tmp_path):
     assert len(BASELINE) == 101
     found = _new_or_changed(guide)
     narrowed = sorted(k for k, (_, how) in found.items() if how == "narrowed")
-    assert len(narrowed) == 11
+    # 11 book rewords (S5 f) plus the 49 other CARD-LINE-LIMIT-COPY2 shorts
+    assert len(narrowed) == 60
+    assert all(len(s) <= 26 < len(o) for s, o in SHORT_REWORD.items())
     for key, (entry, how) in found.items():
         if how == "narrowed":
             continue        # the old pair stands: nothing new is claimed
@@ -320,6 +391,10 @@ def test_new_or_changed_guide_entries_carry_their_own_src_and_checked(tmp_path):
     zone = bad["acts"]["G1"]["zones"]["Hunting Grounds"]
     zone["optional"][0]["text"] += " Twice."
     assert _new_or_changed(bad)["G1/Hunting Grounds"][1] == "changed"
+    # a short reworded outside the table is a changed entry too
+    bad = json.loads(json.dumps(guide))
+    bad["acts"]["G1"]["zones"]["The Riverbank"]["short"] = "Miller boss, then a chest"
+    assert _new_or_changed(bad)["G1/The Riverbank"][1] == "changed"
 
 
 def test_src_refuses_wiki_poe2db_and_forum_hosts():

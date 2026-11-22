@@ -446,7 +446,7 @@ def test_hint_needs_a_known_key():
         assert st.snapshot()["card"] is None, view
     # the bound key is shown (here a fallback key), not the wanted one
     st, _ = _hint_state("Ctrl+Shift+F9")
-    assert st.snapshot()["card"]["head"] == "Ctrl+Shift+F9: check an item"
+    assert st.snapshot()["card"]["head"] == "Check: Ctrl+Shift+F9"
 
 
 def test_any_card_hides_the_hint():
@@ -610,15 +610,20 @@ def test_hint_marker_is_validated_on_load():
         assert z.hint_due(), bad
 
 
-def test_hint_fits_34_with_a_19_character_key():
+def test_hint_fits_26_with_a_19_character_key():
+    # CARD-LINE-LIMIT-COPY2: the hint fits 26 while CARD_LINE stays 34
     from server.al import hotkeys
+    assert overlayview.HINT_FIT == 26 and CARD_LINE == 34
     key = "Ctrl+Shift+PageDown"
     assert len(key) == 19 and hotkeys.safe_accelerator(key) == key
     st, _ = _hint_state(key)
     head = st.snapshot()["card"]["head"]
-    assert head == "Ctrl+Shift+PageDown: check an item"
-    assert len(head) == CARD_LINE == 34 and head.isascii()
-    # a longer key is cut by the card clip (format.js clip rule)
+    assert head == "Check: Ctrl+Shift+PageDown"
+    assert len(head) == overlayview.HINT_FIT and head.isascii()
+    # an 11-character key keeps the full wording at exactly 26
+    assert overlayview._hint_head("Alt+Shift+E") == "Alt+Shift+E: check an item"
+    # a longer key shows no hint (never a cut key) and counts no session
     st, _ = _hint_state("Ctrl+Alt+Shift+Backspace")
-    head = st.snapshot()["card"]["head"]
-    assert len(head) == 34 and head.endswith("...")
+    assert st.snapshot()["card"] is None
+    _game_start(st, T0)
+    assert st.overlay.to_doc().get("key_hint") is None

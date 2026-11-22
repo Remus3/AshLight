@@ -422,7 +422,7 @@ def test_item_card_price_of_another_press_is_not_shown():
     assert item["price"]["value"] == "No price for this check"
     off = pc.item_view({"eval": _eval(), "price": _price(status="off", url=None)})
     assert off["price"] == {"value": "Web data is off",
-                            "source": "Turn it on in Prices and web data"}
+                            "source": "See Prices and web data"}
     assert [x["label"] for x in off["links"]] == ["Upgrade search"]
 
 

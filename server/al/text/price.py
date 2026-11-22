@@ -46,10 +46,10 @@ PRICE_TEXT = {
                   "Searching the official trade site for this item..."),
     # DATA-PRICE-CARD-TEXT (F-018): the blocked copy names poe.ninja and the
     # dashboard card, never a file
-    "off": ("Web data is off", "Turn it on in Prices and web data",
+    "off": ("Web data is off", "See Prices and web data",
             "poe.ninja prices need web data, which is off. Turn it on in the Prices and "
             "web data card on this page."),
-    "contact not set": ("Contact not set", "Add it in Prices and web data",
+    "contact not set": ("Contact not set", "See Prices and web data",
                         "poe.ninja prices need a contact, such as an email or a name. Add "
                         "it in the Prices and web data card on this page, then press the "
                         "hotkey again."),
@@ -169,7 +169,8 @@ def ninja_text(ninja, at=None):
     if ninja.get("few"):
         detail = "Few listings: rough price"
     elif trend:
-        detail = trend[0].upper() + trend[1:] + " (poe.ninja)"
+        # the 7-day trend within LINE_FIT; the dashboard sentence names poe.ninja
+        detail = f"{word.capitalize()} {_num_text(abs(change))}% in 7 days"
     else:
         detail = "From poe.ninja"
     sentence = (f"poe.ninja puts this at under {money} in {league}" if dust

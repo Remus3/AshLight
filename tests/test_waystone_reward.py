@@ -72,7 +72,7 @@ def test_reward_text_exact():
     t = waystone_text(waystone.check(RICH, LIFE_BUILD))
     assert t["rewards"] == ("Rewards: +12% item quantity, +38% item rarity, +20% pack size, "
                             "+30% magic monsters, +25% rare monsters, +120% waystone drops.")
-    assert t["reward_line"] == "+12% quantity, +38% rarity +4 more"
+    assert t["reward_line"] == "+12% quantity +5 more"
     t = waystone_text(waystone.check(WAYSTONE, LIFE_BUILD))
     assert t["rewards"] == "Rewards: +38% item rarity, +12% pack size."
     assert t["reward_line"] == "+38% rarity, +12% pack"
@@ -86,7 +86,7 @@ def test_reward_text_exact():
     assert t["rewards"] == "Rewards: -20% item rarity."
     assert waystone_text({})["rewards"] == "Rewards: none found in the item text."
     for w in (RICH, WAYSTONE, CALM, UNID):
-        assert len(waystone_text(waystone.check(w, None))["reward_line"]) <= 34
+        assert len(waystone_text(waystone.check(w, None))["reward_line"]) <= 26
 
 
 def test_overlay_card_shows_rewards_in_the_item_line():
