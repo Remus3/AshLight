@@ -15678,7 +15678,9 @@
    ],
    "files": [
     "server/al/overlayview.py",
-    "tests/test_moment_cards.py"
+    "server/al/text/overlaycard.py",
+    "tests/test_moment_cards.py",
+    "tests/test_overlay_view.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -15709,7 +15711,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). First item of the cut list (plan 03 section 14): drop this package first if effort must shrink. server/al/overlayview.py: on_event() notes an act split closing (the acts module's closed split in the state) and card() offers kind 'act' in the moment holder: line 1 'Act <n> done', line 2 the split time, line 3 the gap to the saved best from the run history view when run history is on (decision 0036), else empty. The same parts.moment switch turns it off. Its holder entry names the dashboard Acts element as twin.",
+   "notes": "Tier P2. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line in the result (the integrator appends it). First item of the cut list (plan 03 section 14): drop this package first if effort must shrink. server/al/overlayview.py: on_event() notes an act split closing (the acts module's closed split in the state) and card() offers kind 'act' in the moment holder: line 1 'Act <n> done', line 2 the split time, line 3 the gap to the saved best from the run history view when run history is on (decision 0036), else empty. The same parts.moment switch turns it off. Its holder entry names the dashboard Acts element as twin. Ruling 2026-11-21 (session 18, wave 22): the act card copy lives in server/al/text/overlaycard.py, re-exported by overlayview (test_structure rule 2); tests/test_overlay_view.py holder expectation becomes (\"zone\", \"act\") and (\"zone-guide\", \"actsbox\").",
    "wave": 22,
    "owner": "session",
    "tier": "P2",
