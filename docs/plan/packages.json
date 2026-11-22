@@ -15983,21 +15983,20 @@
    "units": [
     "DEP-19"
    ],
-   "files": [
-    "tools/upstream_watch.py",
-    "tests/test_upstream_watch.py"
-   ],
+   "files": [],
    "new_files": [
-    "ops/loop/watch_rows/cpython.json"
+    "tools/watch_sources/cpython.py",
+    "ops/loop/watch_rows/cpython.json",
+    "tests/test_watch_cpython.py"
    ],
    "integrator_edits": [],
    "tests": [
-    "tests/test_upstream_watch.py::test_cpython_newer_patch_files_one_row (new: a fixture listing with 3.14.11 files exactly one row)",
-    "tests/test_upstream_watch.py::test_cpython_same_listing_files_nothing (new)",
-    "tests/test_upstream_watch.py::test_cpython_without_embeddable_zip_logs_one_line (new)",
-    "tests/test_upstream_watch.py::test_cpython_makes_no_request_while_halted (new: 0 requests while ops/loop/control/HALT is set)"
+    "tests/test_watch_cpython.py::test_cpython_newer_patch_files_one_row (new: a fixture listing with 3.14.11 files exactly one row)",
+    "tests/test_watch_cpython.py::test_cpython_same_listing_files_nothing (new)",
+    "tests/test_watch_cpython.py::test_cpython_without_embeddable_zip_logs_one_line (new)",
+    "tests/test_watch_cpython.py::test_cpython_makes_no_request_while_halted (new: 0 requests while ops/loop/control/HALT is set)"
    ],
-   "accept": "python -m pytest -q tests/test_upstream_watch.py passes.",
+   "accept": "python -m pytest -q tests/test_watch_cpython.py passes.",
    "zero_click": "Runs on the loop tick by itself; a pin move is a gated commit and ships as a 0.y.z release through a REL-PREP row. Never from the app.",
    "size": "M",
    "est_min": 45,
@@ -16014,7 +16013,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "The three files are created by the watcher-core package of the LOOP cluster; this package adds one source function, one row template and its tests, and runs after the Electron watch source (same files, one live agent at a time). The read is a dev-tool GET of www.python.org/api/v2/downloads/release/ for the pinned 3.14 line, once per 24 h, truthful AshLight User-Agent, no cookie; a moved endpoint is recorded in the row, never guessed. It reads config/runtime_pins.json and never writes it. Unlike GGG-DOCS-WATCH this source respects HALT. PLAN 07 (narrowed): the row template is its own file ops/loop/watch_rows/cpython.json (the folder table of LOOP-WATCH-ROWS), not the single ops/loop/watch_rows.json that docs/plan/06 named.",
+   "notes": "The watcher frame comes from the watcher-core package of the LOOP cluster (AUTO-05); this package adds one source module in tools/watch_sources/ (decision 0069, AUTO-05 frame; tools/upstream_watch.py is unchanged; adjudicator ruling, session 18 wave 22), one row template and its tests, and runs after the Electron watch source (same files, one live agent at a time). The read is a dev-tool GET of www.python.org/api/v2/downloads/release/ for the pinned 3.14 line, once per 24 h, truthful AshLight User-Agent, no cookie; a moved endpoint is recorded in the row, never guessed. It reads config/runtime_pins.json and never writes it. Unlike GGG-DOCS-WATCH this source respects HALT. PLAN 07 (narrowed): the row template is its own file ops/loop/watch_rows/cpython.json (the folder table of LOOP-WATCH-ROWS), not the single ops/loop/watch_rows.json that docs/plan/06 named.",
    "wave": 22,
    "owner": "session",
    "tier": "",
