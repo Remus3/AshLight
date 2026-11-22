@@ -160,8 +160,9 @@ Each release is immutable: its files cannot be changed once it is
 published. Three checks, each in PowerShell in the folder that holds the
 files (the last two need the GitHub CLI, `gh`):
 
-1. Hashes. `Get-FileHash .\AshLight-<version>-app.zip -Algorithm SHA256`
-   prints a hash that must equal the zip's line in `SHA256SUMS.txt`. Do
+1. Hashes. It shows the file arrived whole: run
+   `Get-FileHash .\AshLight-<version>-app.zip -Algorithm SHA256` and check
+   that the hash it prints equals the zip's line in `SHA256SUMS.txt`. Do
    the same for `install.ps1` and `release.json`.
 2. Build attestation. It shows the project's release workflow built the
    file from the tagged source:
@@ -290,16 +291,22 @@ from its shortcut.
 
 ### Uninstall
 
-There is no uninstall script yet; these are the steps by hand:
+Run the uninstall script from your copy of the repository:
 
-1. If you turned on the logon autostart, turn it off:
-   `scripts\autostart.ps1 -Disable`.
-2. Stop AshLight (tray Quit AshLight, or `scripts\stop.ps1`).
-3. Note the sidecar folder: `python -m server.al.paths` prints it as
-   `sidecar` (run it before you delete the repository folder).
-4. Delete the two AshLight shortcuts, in the Start Menu and on the desktop.
-5. Delete the repository folder (your settings in `config/local.json` and
-   your run history in `ops/runtime/` go with it) and the sidecar folder.
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1 -Checkout
+```
+
+It asks nothing. It stops AshLight, then removes the logon autostart if you
+turned it on and the two AshLight shortcuts, in the Start Menu and on the
+desktop, when they point into this copy. It deletes no file by itself. Add
+`-DryRun` to see what it would do without changing anything, or `-Purge` to
+also move your settings in `config/local.json` and your run history in
+`ops/runtime/` to the Recycle Bin and delete the caches, logs and build
+output in the sidecar folder; `-Purge` asks once for the typed word PURGE.
+It ends by naming what stays. Then delete the repository folder yourself.
+The sidecar folder (`python -m server.al.paths` prints it as `sidecar`) is
+left in place; delete it too if you no longer want it.
 
 ### Troubleshooting
 

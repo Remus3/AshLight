@@ -48,9 +48,14 @@ def test_readme_quick_start_update_uninstall_shortcut():
     # Update / Uninstall / Troubleshooting carry today's steps
     assert "Releases: none yet" in qs
     assert "git pull" in qs
-    assert "autostart.ps1 -Disable" in qs
     assert "python -m server.al.paths" in qs
-    assert "There is no uninstall script yet" in flat
+    # DEP14-UNINSTALL-LINE: the uninstall step is the checkout script
+    # (decision 0066), not the old by-hand list
+    assert "There is no uninstall script yet" not in flat
+    assert re.search(r"^powershell -ExecutionPolicy Bypass -File "
+                     r"scripts\\uninstall\.ps1 -Checkout$", qs, re.M)
+    for word in ("-DryRun", "-Purge", "PURGE", "Recycle Bin"):
+        assert word in qs, word
     assert "Checks" in qs and "Copy report" in qs
     assert '"port"' in qs and "Windowed Fullscreen" in qs
     assert "http" not in qs
