@@ -78,7 +78,7 @@ ROUTES = {
     # (server/al/plug/report.py); the report built on the click
     ("GET", "/api/report"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (16)
+    # token POST (17)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
@@ -95,6 +95,7 @@ ROUTES = {
     ("POST", "/api/wear"): (HEADER, 256 * 1024),  # TC-WORN-WIRE: the eval body cap
     ("POST", "/api/hotkeys"): (HEADER, 4096),  # HOTKEYS-LIVE (OVL-KEYS-CORE)
     ("POST", "/api/overlay-sample"): (HEADER, 4096),  # OVL-CARD-SLOT
+    ("POST", "/api/update-now"): (HEADER, 4096),  # REL-UPDATE-TRIGGER: an empty body
     # token PUT (1)
     ("PUT", "/api/weights"): (HEADER, 64 * 1024),
     # refused verbs
@@ -343,7 +344,7 @@ def test_route_table_matches_http_py():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
     assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 15,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 16, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 17, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
@@ -425,6 +426,9 @@ def test_unlisted_route_fails_the_comparison():
             routes_from_source(bad)
 
 
+# REL-UPDATE-TRIGGER: about 7 real requests per route row (31 rows) put it
+# at the 1.5 s unmarked ceiling
+@pytest.mark.slow
 def test_every_token_route_answers_401_without_the_token(srv):
     port = srv.port
     for (method, path), (rule, _) in ROUTES.items():
