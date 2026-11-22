@@ -1,4 +1,49 @@
 ========================================
+SESSION 18 /done (2026-11-21): moved from AL-NEXT-SESSION.txt
+========================================
+- NOTE (01 LIVE-VERDICTS): a "Tried in game" card with Worked / Refused
+  for the player checks; rows RUN-VERDICTS-CORE wave 6, RUN-VERDICTS-UI
+  wave 19.
+- NOTE (01 L18): three overlay asks compete for the capped HUD (S5 (a)
+  zone-guide line, the UX-ZONE-NOTES overlay word, UTIL-OVERLAY-MAP); rows
+  OVL-ZONE-CARD and OVL-LINE2-RULE wave 21, OVL-LINE2-GUIDE wave 22.
+Orchestrator brief lessons (sessions 8 to 15): one background orchestrator
+with a real background watch, never ending a turn without a live background
+child (stop verifier watcher leftovers before closing); never tell a package
+agent "do not push" when CLAUDE.md authorizes it; builders and verifiers also
+run tests/test_test_layout.py; a fresh integrator per batch; verify each
+claimed sha against git before review and the merged tip equals the verified
+tip; a red batch suite is reverted and the package deferred (08 section 4
+step 6), never fixed forward; no bare "|" in a reviews.log line
+(test_design_gate); a builder "needs <path>" failure gets a packages.json
+patch plus a fix round (ruling A, 5787074).
+Session 17 lessons: (a) the orchestrator still went silent twice (after
+TEST-SUITE-SOAK, and after wave 21 batch A: 69 min with no running child)
+and needed a main-session nudge: it must dispatch the next step
+immediately after each child report, never wait for another wake; (b)
+integrators write reviews.log lines in the required format exactly (two
+bad lines turned a batch suite red); (c) the wave 20 landing agent ran a
+fast-forward merge outside fleet_gitlock (no commit made): every merge,
+commit and push goes through fleet_gitlock.
+
+SESSION 17 (2026-11-21): waves 19, 20 and 21 closed; main = origin/main = 68bf41d at wave 21 close (read back after fetch at session 17 /done). Wave 22 has 14 packages (python tools/plan_check.py wave 22).
+RELEASE HOLD (session 15) lifted: OVL-TD05-PLATE merged wave 20 (session 17); record archived, block "SESSION 17 /done". Releases stay milestone / explicit-tag only.
+WAVE-18 RULINGS (2026-11-21): applied, full line archived (block "SESSION 17 /done"); live: LOOP-CI-ISSUES is in wave 22; AUTO-19 ruling A (watch.yml issues: write); runbook 08 line 58: the wave integrator or merger may push main after a gated batch.
+- HOLD-75 OUTCOME (ruling 49d62fb, decision 0060 amendment 2026-11-21):
+  75 s unreachable (phase 2 37 to 39 s, calc group 52.7 s on one worker);
+  target 120 s gated median, soak bound 125 s; HOLD-75 117.9 / 118.8 /
+  118.7 s, SOAK median 117.3 s. Reverses if a soak median exceeds 125 s or
+  a calc split shows under 90 s.
+Do NOT redo (session 17, on main and pushed): waves 19, 20 and 21 (closed 2026-11-21; wave 21 close a9678d4, hand-off pointer 68bf41d); the wave 19 to 21 rows folded at /done (793678f); w20 and merged agent worktrees reaped at /done; HOLD-75 ruled (49d62fb).
+Closed records: docs/handoff-archive/AL-2026-11-19.txt (waves 1 to 9 escape counts and rulings; block "SESSION 11 /done": waves 10 to 12, sessions 7 to 10) and AL-2026-11-20.txt (block "SESSION 12 /done": the Wave 13 line, WAVE-13 RULINGS and DEVIATIONS (owed checks stay in OWED LIVE CHECKS), session 11 Do NOT redo, reap note and LOOP RECORDS read-back, the 2026-11-18 quote check); block "SESSION 13 /done": the Wave 14 line, WAVE-14 RULINGS, session 12 reap note and Do NOT redo; block "SESSION 14 /done": the Wave 15 and Wave 16 lines, session 13 reap note and Do NOT redo; block "SESSION 15 /done": session 14 reap note and Do NOT redo; AL-2026-11-21.txt block "SESSION 16 /done": session 15 reap note, Do NOT redo, In flight and Status; block "SESSION 17 /done": session 16 reap note, Acceptance, Do NOT redo, In flight and Status, the lifted release hold, the FIX-IDLE-WORD line, the WAVE-18 RULINGS line and the SESSION 14 worktree note.
+Acceptance (session 17): wave 22 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 22 done, next wave 23"), no row carries "BLOCKED: session wave 22". Met at session 18 (read back: 0 rows).
+In flight (session 17 /done): no wave agent. Loop live (HALT absent, fire 413 at 13:33, idle; lanes 0 to 2 done, lane-0 build 08:20); the loop checklist holds DATA-SNAP-SETUP (wave-hold) and DOCS-FRESH-20261121; fleet_checklist stale: none besides this ritual's own file (read 2026-11-21 at session 17 /done); REG_OPEN absent (registration closed).
+Status (session 17 /done, 2026-11-21, fresh runs read back): whole suite through the suite gate 4928 passed / 6 skipped / 1 xfailed (115.25 s), timing phase 33 passed (46.64 s), rc 0; npm test --prefix app 667/667; leak sweep --tree no HALT (ARMED needles=44); before /done main = origin/main = 68bf41d, then the session fold 793678f and this hand-off commit pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply; outbox empty. Operator acts: OA-19 / OA-20 actionable (optional). Status board skipped (opt-out, not asked).
+- NOTE (session 17 /done): reap --apply removed 33 worktrees (w20-*, merged agent-*), kept lanes 0 to 2 and 4 locked agent-* (owner pid 19532, the live session 17 process; reap at the next /done). Read back: 8 worktrees. roadmap_fold: 64 row files applied, 49 rows archived (793678f). Acted at session 18 /done (agent-* reaped).
+- RUN-UNREADABLE-WORD bullet (session 17): acted session 18 by W22-FOLD + UNREADABLE-RETAG (51f8834): new package in wave 24.
+- DEV PORT bullet (session 11): ruled session 18 (DEV-PORT, deferred to the install cutover; live bullet in the hand-off).
+
+========================================
 SESSION 17 /done (2026-11-21): moved from AL-NEXT-SESSION.txt
 ========================================
 WAVE-18 RULINGS (2026-11-21): LOOP-CI-ISSUES -> wave 22; PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI -> wave 21; TEST-SHOTS-TABS -> wave 20 option B; AUTO-19 ruling A: .github/workflows/watch.yml keeps an issues: write exception to the read-only token; runbook docs/plan/08 line 58 amended: the wave integrator or merger may push main after a gated batch. New rows filed session 16: TEST-SUITE-HOLD-75 (wave 20), PLAY-PAGER-SCALE-24 and REL-INSTALLED-RUN-CHECK (wave 21). Loop-owned wave-19 row DATA-TRADESTAT-COVERAGE merged by the loop (89b99c8) and folded at session 16 /done.
