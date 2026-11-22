@@ -22,7 +22,12 @@ If no scope is given, review `git diff HEAD` plus untracked UI files.
 ## Method
 
 1. Read `docs/design/0001-design-system.md` in full. It is the rulebook; the
-   audit checklist in its section 11 is the item list. Read
+   audit checklist in its section 11 is the item list. Then read the copy
+   sheets `docs/design/copy/<family>.md` for the scope under review (the
+   sheet named like each changed `server/al/text/<family>.py`, and every
+   sheet whose templates the changed web/ or app/ text prints; all of
+   `docs/design/copy/*.md` for "whole UI"): they hold the message
+   templates, section 9 holds the rules. Read
    `ops/fleet_kit/tokens.json` (kit tokens and state vocabulary; never
    propose editing the kit, propose an AL-side override instead).
 2. Run the mechanical checks and record the result line of each:
@@ -33,7 +38,8 @@ If no scope is given, review `git diff HEAD` plus untracked UI files.
      `!` at the end of a user string, `innerHTML`, hard-coded hex colours
      outside the token blocks, `font-size` below 13px, `opacity` literals.
 3. Read every changed user-facing string and apply the voice rules
-   (section 8) and the messaging templates (section 9).
+   (section 8), the messaging rules (section 9) and the templates of the
+   copy sheets.
 4. For each colour pair you cannot find in the contrast block, compute the
    WCAG 2.2 ratio yourself (relative luminance; composite any alpha over
    #ffffff as the worst-case game scene for the overlay) and quote it.
