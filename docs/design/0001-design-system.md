@@ -342,7 +342,17 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
   happen only on a hotkey press, once per press (CLAUDE.md ToS floor).
 - No modals: no `alert`, `confirm`, `prompt`, dialog or toast that blocks
   input or steals focus. The overlay window is non-focusable and
-  click-through.
+  click-through. One exception, a start-up refusal only (HOME-REFUSAL-COPY,
+  REL-HOME-REFUSAL-UI): when the client refuses to start because its
+  install folder lies in a Steam library or the game's own folder, it
+  shows one blocking OS error box (Electron `dialog.showErrorBox`, title
+  `AshLight`) with the refusal sentence and nothing else, once, before any
+  window exists, so a Start Menu launch is not silent. The sentence
+  (`server/al/paths.py` home_refusal, the same words in
+  `app/client/home.js`): `This folder can't hold AshLight: the install
+  home may not lie in a '<folder>' folder (a Steam library or the game's
+  own folder); install AshLight in its own folder.` No other error, and
+  nothing during play, may use an OS error box.
 - Notification policy (F-095): AshLight never pulls the eye off the game.
   During play there is no Windows toast or notification, no sound or beep
   and no taskbar or window flash; news is a change of text in place on the
@@ -371,8 +381,8 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | Not reading / offline | one status word ("offline") | pill with the fix |
 | Item check hotkey pressed | item check card for 20 s (verdict, item, top stat) in the card slot | Item check card (Play tab, right column) with every compared slot; the stat weights it adds up are in the Item check scoring card (Items and prices tab); a new card shows Play by itself |
 | In a map (UTIL-MAPS, UTIL-MAPRUN-OVL) | row-1 timer is the time in this map (kept across hideout trips) instead of this zone instance; no new line or word; map deaths stay on the dashboard | Maps card: open map time (counts only while in the map, `(paused)` outside), last 5 maps, average |
-| Died (UTIL-DEATHS) | no change | Death recap card: newest first, local time, zone and level |
-| In a campaign act (HUD-ACT) | no change | Act times card (Run and history tab): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
+| Died (UTIL-DEATHS) | no change | Deaths card: newest first, local time, zone and level |
+| In a campaign act (HUD-ACT) | no change | Acts card (Run and history tab): splits, zone levels for the current act; in endgame the splits stay, the zone table empties |
 | Waystone check (UTIL-WAYSTONE-REWARD) | reward line (`+38% rarity, +12% pack`) replaces the item name in that card | `Rewards: ...` sentence under the risk sentence in the Item check card |
 | Campaign hint (UTIL-CAMPAIGN-CHECKS) | status word, last in the slot order (`Cold res 32%`, `Better flask`, `Boots: no speed`, `Boss: cold`) | Up to 3 hint rows in the Play tab's context region C (web/context.js): the boss row as `Boss: <element> damage. Your <element> res: N%.`, the gear rows as their sentence, each sentence in the row's title; a guide block carries its own (PLAY-CAMPAIGN-HINTS-C) |
 | Price check from the same press (web data on) | price line replaces the item name in that card; price-only card when no build is loaded (decision 0016) | Price section in the Item check card, listings with "about N <primary>" |
@@ -553,13 +563,16 @@ Generation rules:
      live region `New trade request from <from>.` (no name: `New trade
      request.`; several at once: `<n> new trade requests.`), only when the
      set of open trade ids grows
-   - act times (HUD-ACT, `server/al/acts.py`, `web/acts.js`): dashboard
-     only; rows `Act <n>` / `Cruel Act <n>` / `Interlude <n>` with `Time in
-     act` and `Run total` (m:ss or h:mm:ss); one note per row in one pair of
-     parentheses: `(now)`, `(partial)`, joined with ", ", and under the
-     table, when a row is partial, `Partial: counted from the first zone
-     AshLight saw.` (UX-NEW-CARDS); zone heading `Zone levels in <act>`, zone notes `(you
-     are here)` / `(town)`; empty `No act times yet. They start by
+   - Acts card (HUD-ACT, `server/al/acts.py`, `web/acts.js`; titled
+     `Acts` since PLAY-TD-20A-RUN-GRID): dashboard only; one line per act,
+     key facts first, `<act> (<notes>): <t>, total <t>, best <t>` (act
+     `Act <n>` / `Cruel Act <n>` / `Interlude <n>`; time in the act, run
+     total and your best, m:ss or h:mm:ss; `best` only when a saved run
+     has one); the notes `now`, `partial` in one pair of parentheses,
+     joined with ", ", the parentheses left out with no note; for a
+     partial row the whole text adds `Partial: counted from the first
+     zone AshLight saw.` (UX-NEW-CARDS); zone heading `Zone levels in
+     <act>`, zone notes `(you are here)` / `(town)`; empty `No act times yet. They start by
      themselves when you enter a campaign zone.`, `Zone levels show here
      while you are in a campaign act.`, `Zone levels aren't downloaded yet.
      Run AshLight's build step (scripts/build.ps1) to get them.`, and in
@@ -569,11 +582,14 @@ Generation rules:
      (scripts/build.ps1).`; source
      line `Zone levels: RePoE fork export, downloaded when AshLight was
      built. Game data (c) Grinding Gear Games.` (decision 0020)
-   - map runs (UTIL-MAPS, `server/al/runs.py`, `web/runs.js`): dashboard
-     only; rows `<map>` with `Level` (missing: `unknown`), `Time in map`
-     (m:ss or h:mm:ss) and `Deaths` as a bare count (UX-NEW-CARDS: the
-     words ran into the time at 320 px); open row note `(now)` or
-     `(paused)`; summary `Average map: <m:ss> over <n> finished map(s).`
+   - Maps card (UTIL-MAPS, `server/al/runs.py`, `web/runs.js`): dashboard
+     only; one line per map, `<map> (<note>): level <n>, <t>, <n>
+     death(s)` (level missing: `unknown`; time in the map m:ss or
+     h:mm:ss; `1 death`, `2 deaths`); the open row's note `now` or
+     `paused`, the parentheses left out on a finished map; the By level
+     pages (UTIL-MAP-LADDER) one line per map level, `Level <n>: <n>
+     maps, <n> deaths, median <t>, <n> level-ups` (each count singular
+     at 1); summary `Average map: <m:ss> over <n> finished map(s).`
      then `<n> death(s) in maps.` or `No deaths in maps.`; empty `No maps
      yet. Map times start by themselves when you open a map.`
    - level pace (UTIL-PACE, `server/al/pace.py`): dashboard only, one
@@ -583,7 +599,8 @@ Generation rules:
      hour`; the hourly part needs 2+ level-ups seen live and 10 minutes
      since AshLight started; m:ss matches the dashboard timers; shortened
      for 320 px, UX-NEW-CARDS)
-   - death recap (UTIL-DEATHS, same files): dashboard only; one line per
+   - Deaths card (UTIL-DEATHS, same files; titled `Deaths` since
+     PLAY-TD-20A-RUN-GRID, the death recap): dashboard only; one line per
      death, newest first, `HH:MM` local time then `Died in <zone> (area
      level <n>) at level <n>, <m:ss> into the zone.` (parts without data
      are left out; no zone: `Died at level <n>.`); `Most deaths: <zone>
@@ -645,7 +662,11 @@ Generation rules:
   non-focusable (CLAUDE.md). It exists only while the desktop client runs
   and hides while the game looks closed (decision 0041; decision 0029
   amendment 2026-11-17). Base size 280 x 176 DIP at scale 1.0
-  (`app/shared/layout.js` BASE); HUD plates max-width 258px.
+  (`app/shared/layout.js` BASE); HUD plates max-width 258px on the
+  content box, so a plate measures 258 px inside and 280 px outside
+  (padding 10 + 10, border 1 + 1; measured by OVL-CONTRAST-PIXELS,
+  HUD-PLATE-WIDTH-DOC); HUD line 2 keeps the 236 px text budget of plan
+  03 section 5.1, which `tests/test_overlay_pixels.py` holds.
 - Content cap: 2 HUD lines + one 3-line card. Nothing else. The card slot
   holds the trade card, or for 20 s after the item check hotkey press the
   item check card (TC-EVAL-UI; the player just asked for it), after which
@@ -970,9 +991,12 @@ Section 7.2 - context (TD-17):
 - Row "Died". Old: deaths count changes; no flash, no pop-up. New: the
   same; while the opt-in guide line holds line 2, a death or a level-up
   puts the level and deaths text back for 20 s.
-- HUD line 2 width (new): level text and status word together at most 26
-  characters (the plate is 236px inside); over that the deaths text
-  drops; a status word over 20 characters stands alone (at most 27).
+- HUD line 2 width (new): the level text, the deaths text and the status
+  word together at most 26 characters, counted as `Lv 74  3 deaths` plus
+  the word (`app/shared/format.js` line2Length; the plate is 258 px inside,
+  the line keeps a 236 px text budget, plan 03 section 5.1); over that the
+  deaths text drops, and the level text too if still over; a status word
+  over 20 characters stands alone (at most 27).
 - Rows "Trade request arrives" and "Under-levelled". The dashboard keeps
   the trade list with a Dismiss on every row (plus "Dismiss all" from 2
   open requests); the line under the Level tile uses the overlay's words,

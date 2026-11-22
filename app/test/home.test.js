@@ -132,6 +132,20 @@ test("the steamapps and game-folder path shapes are refused, by path text only",
   assert.throws(() => Home.resolve(path.join(lib, "app", "0.1.0", "app"), {}, fs), Home.HomeRefused);
 });
 
+test("the refusal is one sentence, the same words as server/al/paths.py home_refusal", (t) => {
+  // HOME-REFUSAL-COPY (REL-HOME-REFUSAL-UI review S3): capital first, full
+  // stop last, in the client and in the core (the middle words are pinned
+  // by tests/test_install_paths.py)
+  const text = Home.homeRefusal(path.join(tmp(t), "steamapps", "AshLight"));
+  assert.match(text, /^[A-Z]/, "a capital first");
+  assert.match(text, /[^.]\.$/, "one full stop last");
+  const lead = text.slice(0, text.indexOf("the install home"));
+  assert.equal(lead, "This folder can't hold AshLight: ");
+  const py = fs.readFileSync(path.join(REPO, "server", "al", "paths.py"), "ascii");
+  assert.ok(py.includes('"' + lead + '"'), "the core opens with the same words");
+  assert.ok(py.includes('"own folder.")'), "the core ends with the same full stop");
+});
+
 test("refusalNotice shows the refusal sentence once, and nothing for an accepted home", (t) => {
   const base = tmp(t);
   for (const parts of [["Steam", "steamapps", "AshLight"], ["Games", "Path of Exile 2", "AshLight"]]) {

@@ -597,9 +597,10 @@ shown; Settings carries "fix" while a check needs one.
 ## 5. Overlay
 
 Window: unchanged. Separate, transparent, always-on-top, click-through, non-focusable; 280 x 176
-DIP at scale 1.0 (`app/shared/layout.js` BASE); plates at most 258 px wide; corners only,
-default top-right; hidden while the game is idle (decision 0029). Content cap unchanged in
-count: 2 HUD lines + one 3-line card. The placement ruling's reversal clause ("the HUD grows
+DIP at scale 1.0 (`app/shared/layout.js` BASE); plates max-width 258 px on the content box
+(258 px inside, 280 px outside, section 5.1); corners only, default top-right; hidden while
+the game is idle (decision 0029). Content cap unchanged in count: 2 HUD lines + one 3-line
+card. The placement ruling's reversal clause ("the HUD grows
 past 2 lines") is not triggered.
 
 ### 5.1 Default content
@@ -608,13 +609,20 @@ past 2 lines") is not triggered.
   clipped, minute steps).
 - Line 2 (16 px): "Lv 74  3 deaths" plus at most one status word at the same size; the "|"
   glyph becomes a 10 px gap (F-094).
-- Line 2 width budget: the plate is at most 258 px wide, 236 px inside (border 2, padding 10
-  + 10, `app/overlay/overlay.css`). Rule in `hudLine2`: the level text and the status word
-  together are at most 26 characters; over that the deaths text drops ("Lv 74" + gap +
-  "Boots: no speed"); a status word over 20 characters stands alone (at most 27). Font metrics
-  [C] at 16 px / 600: "Lv 74  3 deaths" 108.5 px and "Boots: no speed" 116.1 px, so the pair
-  with the gap is 234.6 px (1.4 px spare) and "Lv 100  999 deaths" with the same word is
-  259 px, over the plate: the draft did not check this. With the rule the worst strings are
+- Line 2 width budget: the HUD plate's max-width 258 px applies to its content box
+  (`app/overlay/overlay.css`), so the plate measures 258 px inside and 280 px outside (padding
+  10 + 10, border 1 + 1), as OVL-CONTRAST-PIXELS measured (HUD-PLATE-WIDTH-DOC: the document
+  follows the measured plate; the CSS was not narrowed). Line 2 keeps a 236 px text budget,
+  22 px under the inside width: `tests/test_overlay_pixels.py` (INSIDE) holds each worst-case
+  line 2 at most 236 px wide. Rule in `hudLine2` (`app/shared/render_gate.js`, counted by
+  `app/shared/format.js` line2Length): the level text, the deaths text and the status word
+  together are at most 26 characters, counted as "Lv 74  3 deaths" plus the word (the two
+  spaces stand for the gap between level and deaths; the 10 px gap before the word counts
+  nothing); over that the deaths text drops ("Lv 74" + gap + "Boots: no speed"), and the
+  level text too if still over; a status word over 20 characters stands alone (at most 27).
+  Font metrics [C] at 16 px / 600: "Lv 74  3 deaths" 108.5 px and "Boots: no speed" 116.1 px,
+  so the pair with the gap is 234.6 px (1.4 px under the budget) and "Lv 100  999 deaths" with
+  the same word is 259 px, over the budget and the plate: the draft did not check this. With the rule the worst strings are
   "Lv 100" + gap + "Boots: no speed" = 170.6 px and "not reading - see dashboard" alone =
   205.4 px. Budget [D]: 7.84 px a character (0.49em, the widest measured sample), 26 x 7.84 +
   10 = 213.8 px of 236. TD-17 measures the rendered widths (G10).
@@ -689,9 +697,9 @@ HUD, 2 lines of 16 px: border 2 + padding 12 + 20.8 + 20.8 = 55.6 px (53.0 with 
 line; 34.8 with 1 line). Card: border 2 + padding 10 + 3 x 18.2 = 66.6 px. Tallest content: 62
 + 66.6 = 128.6 px of 176 (47.4 px spare; today 125.6 [M]).
 
-Widths [C] (Segoe UI Semibold font metrics; inside width 236 px): a 34-character card line at
-14 px / 600 measures 200 to 230 px (lower case 199.9; capitals and digits 229.6), so the
-34-character limit holds at the new size; a 28-character zone name at 16 px / 600 measures
+Widths [C] (Segoe UI Semibold font metrics; text budget 236 px, section 5.1): a 34-character
+card line at 14 px / 600 measures 200 to 230 px (lower case 199.9; capitals and digits 229.6),
+so the 34-character limit holds at the new size; a 28-character zone name at 16 px / 600 measures
 about 200 px and the "12:41" timer 34.7 px, so with the 10 px gap a name over about 26
 characters takes the ellipsis (the timer never does, as today); line 2 is in 5.1. TD-05 and
 TD-17 repeat these as rendered measurements; if a 34-character fixture line does not fit, the
