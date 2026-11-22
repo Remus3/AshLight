@@ -299,7 +299,8 @@ test("value view: no rates or no rate for the currency say so honestly", () => {
     name: "exalted" }, primary: null, primary_name: null, price_primary: null,
     score_per_primary: null, stale: true, credit: null });
   assert.equal(none.sentence, "Asking price: 4 Exalted. No currency values are saved yet, " +
-    "so AshLight can't compare the item's price with its points.");
+    "so AshLight can't compare the item's price with its points. They come by themselves " +
+    "while \"Use web data\" is ticked under Settings, Reading and web data.");
   assert.equal(none.per, "");
   assert.equal(none.stale, "");
   assert.equal(none.credit, "");

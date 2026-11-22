@@ -436,8 +436,10 @@
     var rated = !!primary && typeof v.price_primary === "number" && isFinite(v.price_primary);
     var sentence;
     if (!primary) {
+      // RUN-NO-DEAD-ENDS (research 0042 F12): name the switch and its place
       sentence = listed + ". No currency values are saved yet, so AshLight can't " +
-                 "compare the item's price with its points.";
+                 "compare the item's price with its points. They come by themselves " +
+                 "while \"Use web data\" is ticked under Settings, Reading and web data.";
     } else if (!rated) {
       sentence = listed + ". There is no saved value for " + cur + " yet, so AshLight " +
                  "can't compare the item's price with its points.";

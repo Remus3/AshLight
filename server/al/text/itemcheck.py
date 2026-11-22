@@ -117,9 +117,10 @@ def _stat_rows(comp):
 
 CALC_NOTICE_TEXT = {
     # TC-DELTA (decision 0024): why the card shows stat-weight points, not
-    # Path of Building DPS / EHP
-    "off": ("Scored with your stat weights. To see DPS and EHP, turn on the "
-            "optional Path of Building calc in AshLight's settings file."),
+    # Path of Building DPS / EHP. RUN-NO-DEAD-ENDS (research 0042 R4): the
+    # words name the Checks row's button (diag.CALC_BUTTON), never a file
+    "off": ("Scored with your stat weights. To see DPS and EHP, press \"Set up "
+            "the calc\" under Settings, Checks in the AshLight window."),
     "failed": ("Scored with your stat weights. DPS and EHP are not shown because "
                "Path of Building could not be reached. Try the check again."),
     # MATH-DPS-SANITY (decision 0032): PoB answered numbers that make no

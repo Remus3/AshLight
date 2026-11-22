@@ -116,7 +116,9 @@ test("settings io: import sentences", () => {
     "take from a file.");
   assert.match(sio.CALC_OFFER, /^ [^\n]+\.$/);
   // TC-CALC-OPTIN: the sentence names the one setup step, which turns it on
-  assert.ok(sio.CALC_OFFER.includes("run scripts\\setup.ps1 -TcCalc."));
+  // RUN-NO-DEAD-ENDS: the Checks row's button, never a script
+  assert.ok(sio.CALC_OFFER.includes("press \"Set up the calc\" under Settings, Checks"));
+  assert.ok(!/\.ps1|scripts/.test(sio.CALC_OFFER));
   assert.ok(sio.CALC_OFFER.includes("turns it on"));
   assert.ok(!/local\.json|config/.test(sio.CALC_OFFER));
   assert.equal(sio.refusedText(413, null), sio.TOO_BIG);

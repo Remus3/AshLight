@@ -25,23 +25,27 @@
 
   var MAX_BYTES = 16 * 1024;  /* settingsio.MAX_BYTES */
   var FILE_NAME = "ashlight-settings.json";
-  var TOO_BIG = "That file is over 16 KB, so it isn't an AshLight settings file. Nothing changed.";
-  var NOT_JSON = "That file isn't an AshLight settings file. Nothing changed.";
+  /* RUN-NO-DEAD-ENDS (research 0042 F3): the export is the "settings
+     backup", never a "settings file" (that name belongs to no file the
+     player edits). */
+  var TOO_BIG = "That file is over 16 KB, so it isn't an AshLight settings backup. Nothing changed.";
+  var NOT_JSON = "That file isn't an AshLight settings backup. Nothing changed.";
   var FAILED = "Nothing changed. Try again.";
   var OFFLINE = "Can't reach AshLight - is it running?";
-  var SAVED = "Downloaded " + FILE_NAME + ". It holds AshLight's settings " +
-    "only: no contact, password or file paths.";
+  var SAVED = "Downloaded your settings backup, " + FILE_NAME + ". It holds " +
+    "AshLight's settings only: no contact, password or file paths.";
   /* design review D-1: an import replaces this computer's weight changes */
   var WEIGHTS_NOTE = " They replace the stat weights you had here.";
   var WEB_OFFER = " The file had web data on. It stays off here until you tick " +
-    "\"Use web data\" under Prices and web data.";
-  /* FOLLOWUP11: the dashboard has no switch for the calc (it is set up
-     with setup.ps1 -TcCalc, decision 0018), so the sentence names that
-     step instead of a tick box. TC-CALC-OPTIN: that one run installs the
-     calc and turns it on (no second edit of the config). */
+    "\"Use web data\" under Settings, Reading and web data.";
+  /* FOLLOWUP11: the dashboard has no tick box for the calc (decision
+     0018). TC-CALC-OPTIN: one run installs the calc and turns it on (no
+     second edit of the config). RUN-NO-DEAD-ENDS (research 0042 R4): the
+     sentence names the Checks row's button (TC-CALC-OPTIN-BUTTON), never a
+     script. */
   var CALC_OFFER = " The file had the optional Path of Building calc on. It stays " +
-    "off here. To use it, run scripts\\setup.ps1 -TcCalc. That one step installs " +
-    "the calc and turns it on.";
+    "off here. To use it, press \"Set up the calc\" under Settings, Checks in " +
+    "the AshLight window. That one step installs the calc and turns it on.";
 
   /* The sentence after an import, from the core's report. */
   function importedText(report) {
@@ -138,8 +142,8 @@
         said.textContent = text;
         [btn, input].forEach(function (el) {
           if (text && el === doc.activeElement) {
-            el.setAttribute("aria-label", (el === btn ? "Download settings" :
-              "Import a settings file") + " (" + text + ")");
+            el.setAttribute("aria-label", (el === btn ? "Download settings backup" :
+              "Import a settings backup") + " (" + text + ")");
           } else {
             el.removeAttribute("aria-label");
           }

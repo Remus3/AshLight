@@ -45,13 +45,16 @@ PRICE_TEXT = {
     "searching": ("Searching prices...", "On the official trade site",
                   "Searching the official trade site for this item..."),
     # DATA-PRICE-CARD-TEXT (F-018): the blocked copy names poe.ninja and the
-    # dashboard card, never a file
+    # dashboard card, never a file. RUN-NO-DEAD-ENDS (research 0042 R4): the
+    # switch and the contact field sit under Settings, Reading and web data,
+    # so the sentence names that place; the short line keeps the card, whose
+    # Web data button jumps there
     "off": ("Web data is off", "See Prices and web data",
-            "poe.ninja prices need web data, which is off. Turn it on in the Prices and "
-            "web data card on this page."),
+            "poe.ninja prices need web data, which is off. Turn it on under "
+            "Settings, Reading and web data."),
     "contact not set": ("Contact not set", "See Prices and web data",
                         "poe.ninja prices need a contact, such as an email or a name. Add "
-                        "it in the Prices and web data card on this page, then press the "
+                        "it under Settings, Reading and web data, then press the "
                         "hotkey again."),
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "

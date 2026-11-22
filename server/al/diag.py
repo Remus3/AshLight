@@ -42,23 +42,30 @@ SNAPSHOT_OLD_S = 60 * 86400  # older data may miss a new league's zones
 FIX_START_GAME = words.next_step("missing")
 FIX_LOG_PATH = words.next_step("path_missing")
 FIX_RUN = words.next_step("stalled")
-# DATA-CONTACT-FIELD (F-018): the contact is typed in the dashboard card
-# (web/index.html h2), never a file path in the fix text
-CONTACT_CARD = "Prices and web data"
-FIX_CONTACT = f"Type your contact in the {CONTACT_CARD} card."
+# DATA-CONTACT-FIELD (F-018): the contact is typed in the dashboard, never
+# a file path in the fix text. RUN-NO-DEAD-ENDS (research 0042 R4): the field
+# moved to the Settings section Reading and web data (web/index.html h3), so
+# the words name that exact place.
+CONTACT_CARD = "Settings, Reading and web data"
+FIX_CONTACT = f"Type your contact under {CONTACT_CARD}."
 FIX_NET = ("Check this computer's internet connection. AshLight tries again "
            "by itself.")
 # TC-CALC-OPTIN (F-132): one run of the switch installs the calc and turns
 # it on (tools/tc_pin.py writes "tc_calc"); no second edit of the config.
-CALC_STEP = r"scripts\setup.ps1 -TcCalc"
-FIX_CALC = (f"Run {CALC_STEP}. That one step installs the calc again and "
+# RUN-NO-DEAD-ENDS (research 0042 R4, F20 c): the words name the row's own
+# button (TC-CALC-OPTIN-BUTTON, web/checks.js CALC_BUTTON), never a script,
+# and never "again" for a part that was never installed.
+CALC_BUTTON = "Set up the calc"
+CALC_PLACE = "under Settings, Checks in the AshLight window"
+CALC_STEP = f'press "{CALC_BUTTON}" {CALC_PLACE}'
+FIX_CALC = (f'Press "{CALC_BUTTON}" {CALC_PLACE}. It installs the calc and '
             "turns it on.")
 # DATA-SNAP-AT-START (F-072): the supervisor fetches game data by itself
 # while web data is on, so no fix line names a script
 FIX_SNAPSHOT = ("AshLight fetches it by itself while web data is on, at most "
                 "once a day. If it stays missing or old, check this computer's "
                 "internet connection.")
-FIX_SNAPSHOT_OFF = ('Tick "Use web data" under Prices and web data. AshLight '
+FIX_SNAPSHOT_OFF = (f'Tick "Use web data" under {CONTACT_CARD}. AshLight '
                     "then fetches it by itself.")
 # HOTKEYS-LIVE (OVL-KEYS-CORE): the fix names the in-app field (Tools >
 # Overlay position and size); the client re-registers with no restart.
@@ -168,7 +175,9 @@ def check_last_line(f, now):
     if age >= LAST_LINE_QUIET_S or f.get("idle"):
         # decision 0029: a quiet log is not a fault; idle comes only from
         # Client.txt staleness
-        return _state_check("last_line", "Last log line", "idle", status=UNKNOWN,
+        # RUN-NO-DEAD-ENDS (research 0042 F20 a): the age is known, so the
+        # row is a note, never "not known yet" beside "25 min ago"
+        return _state_check("last_line", "Last log line", "idle", status=NOTE,
                             prefix=AGO + ". ", at=at)
     return _check("last_line", "Last log line", PASS, AGO + ".", at=at)
 
@@ -219,7 +228,7 @@ def check_calc(f):
     if not f.get("calc_on"):
         return _check("calc", "Calc component", OFF,
                       "Off. Item checks use your stat weights. To use the calc, "
-                      f"run {CALC_STEP}.")
+                      f"{CALC_STEP}.")
     st = f.get("calc_status")
     if not isinstance(st, dict):
         return _check("calc", "Calc component", UNKNOWN, "Not checked yet.")
@@ -323,14 +332,16 @@ def check_reload(f):
 
 
 # SEC-ACL-CHECK (F-011): which folder, never its path. The runtime dir and
-# the sidecar are AshLight-made and setup.ps1 makes them private; the
+# the sidecar are AshLight-made and AshLight's setup makes them private; the
 # player's own checkout changes only on the player's command.
+# RUN-NO-DEAD-ENDS (research 0042 R4): the fix names the act, never a script.
 PRIVATE_WHAT = {"runtime": "AshLight's runtime folder", "app": "the AshLight folder",
                 "sidecar": "AshLight's sidecar folder"}
-FIX_PRIVATE_SETUP = r"Run scripts\setup.ps1."
+FIX_PRIVATE_SETUP = ("Run AshLight's setup again, as when you installed it. It "
+                     "makes AshLight's own folders private.")
 FIX_PRIVATE_APP = "In the AshLight folder, run: python -m server.al.acl apply ."
-FIX_PRIVATE_BOTH = (r"Run scripts\setup.ps1, then in the AshLight folder run: "
-                    "python -m server.al.acl apply .")
+FIX_PRIVATE_BOTH = ("Run AshLight's setup again, as when you installed it. Then "
+                    "in the AshLight folder run: python -m server.al.acl apply .")
 
 
 def check_private(f):
