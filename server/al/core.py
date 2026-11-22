@@ -1627,10 +1627,107 @@ class Core:
             "last_exit": exitrecord.read(self.runtime),
             "client_exit": exitrecord.read_client(self.runtime),
             "started_at": self.started_at,
+            # REL-UPDATE-CHECKS (F-077, DEP-11): the installed copy's marker,
+            # staged version and last update result; read only
+            "install": self._install_facts(),
             "_log_path": str(log) if log else None,
             "_contact": self.contact(), "_character": sf["character"],
         })
         return dict(diag_data.facts(self, plug.collect_facts(self, now)), **built)
+
+    # REL-UPDATE-CHECKS: the update words the installer writes (switch.py,
+    # update.py); any other word reads as no result
+    _UPDATE_ACTIONS = ("update", "apply", "rollback", "confirm")
+    _STAGED_MAX_BYTES = 64 * 1024
+    _REPORT_MAX_BYTES = 256 * 1024
+
+    @staticmethod
+    def _install_version(value):
+        """(key, text) of a SemVer word X.Y.Z[-pre], else None (a pre-release
+        sorts below its release)."""
+        if not isinstance(value, str) or len(value) > 40:
+            return None
+        core, _, pre = value.partition("-")
+        nums = core.split(".")
+        if len(nums) != 3 or not all(n.isdigit() for n in nums):
+            return None
+        if "-" in value and not all(p.isalnum() for p in pre.split(".")):
+            return None
+        ids = tuple((0, int(x), "") if x.isdigit() else (1, 0, x)
+                    for x in pre.split(".")) if pre else ()
+        return (tuple(int(n) for n in nums) + ((0, ids) if pre else (1, ())), value)
+
+    @staticmethod
+    def _install_time(value):
+        """Epoch seconds of an installer stamp (ISO 8601 UTC), else None."""
+        if not isinstance(value, str) or len(value) > 40:
+            return None
+        try:
+            when = _dt.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=_dt.timezone.utc)
+        return when.timestamp()
+
+    def _install_facts(self):
+        """REL-UPDATE-CHECKS: {"mode": "checkout"} in a checkout; in an
+        installed copy also "version", "previous" and "pending_confirm"
+        from the marker (paths.read_marker), "staged" ({"version",
+        "apply_after"} of the newest staged version above the marker's that
+        update_skip.json does not name, or None) and "last" ({"action",
+        "status", "version", "from", "at"} of the last update report, or
+        None). Plain reads of the home's own small files through jsonfile
+        (never a .bak restore here); the core never imports the installer,
+        never fetches and never switches. Values are versions, fixed words
+        and times only."""
+        try:
+            home = paths.install_home()
+        except paths.HomeRefused:
+            return {"mode": "installed"}
+        except Exception:  # noqa: BLE001 - an unreadable home reads as no facts
+            return None
+        if home is None:
+            return {"mode": "checkout"}
+        marker = paths.read_marker()
+        ver = self._install_version(marker.get("version"))
+        prev = self._install_version(marker.get("previous"))
+        out = {"mode": "installed", "version": ver[1] if ver else None,
+               "previous": prev[1] if prev else None,
+               "pending_confirm": marker.get("pending_confirm") is True,
+               "staged": None, "last": None}
+        skip = jsonfile.read_json(home / paths.DATA_DIR / "update_skip.json",
+                                  max_bytes=self._STAGED_MAX_BYTES, kind=dict, default={})
+        skipped = {r.get("version") for r in (skip.get("versions") or [])
+                   if isinstance(r, dict)} if isinstance(skip.get("versions"), list) else set()
+        try:
+            names = os.listdir(home / "staged")
+        except OSError:
+            names = []
+        found = [self._install_version(n[:-5]) for n in names if n.endswith(".json")]
+        found = sorted(k for k in found if k and k[1] not in skipped
+                       and (ver is None or k[0] > ver[0]))
+        for _key, name in reversed(found):
+            doc = jsonfile.read_json(home / "staged" / f"{name}.json",
+                                     max_bytes=self._STAGED_MAX_BYTES, kind=dict)
+            if isinstance(doc, dict) and doc.get("version") == name:
+                out["staged"] = {"version": name,
+                                 "apply_after": self._install_time(doc.get("apply_after"))}
+                break
+        rep = jsonfile.read_json(home / "logs" / "reports" / "last-update.json",
+                                 max_bytes=self._REPORT_MAX_BYTES, kind=dict)
+        if isinstance(rep, dict):
+            sw = rep.get("switch")
+            last = dict(sw) if isinstance(sw, dict) else dict(rep, action="update")
+            word = last.get("status")
+            if last["action"] in self._UPDATE_ACTIONS and isinstance(word, str)                     and 0 < len(word) <= 24 and word.replace(" ", "").isalpha():
+                new = self._install_version(last.get("version"))
+                old = self._install_version(last.get("from"))
+                out["last"] = {"action": last["action"], "status": word,
+                               "version": new[1] if new else None,
+                               "from": old[1] if old else None,
+                               "at": self._install_time(last.get("at"))}
+        return out
 
     def _ggg_reg_open(self):
         """True while the dev docs watch's REG_OPEN flag exists (a stat of a
