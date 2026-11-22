@@ -17293,7 +17293,8 @@
    ],
    "files": [
     "server/al/theorycraft/snapshot.py",
-    "tests/test_tc_snap.py"
+    "tests/test_tc_snap.py",
+    "tests/test_snap_probe.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -17321,7 +17322,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. snapshot.py: SOURCES only; the two URLs stay in a table that is not fetched by default, so a dev re-check of the waystone mod pool (the provenance re-verify list) can pass sources= explicitly. Decision 0009 item 2 permits the files and does not require them, so no decision edit. Files already in a cache are left alone (never deleted by the tool).",
+   "notes": "Tier P3. snapshot.py: SOURCES only; the two URLs stay in a table that is not fetched by default, so a dev re-check of the waystone mod pool (the provenance re-verify list) can pass sources= explicitly. Decision 0009 item 2 permits the files and does not require them, so no decision edit. Files already in a cache are left alone (never deleted by the tool). Re-plan (session 19, ruling A pattern 5787074): files gain tests/test_snap_probe.py (its PROBES == SOURCES assert becomes SOURCES <= PROBES).",
    "wave": 24,
    "owner": "session",
    "tier": "P3",
