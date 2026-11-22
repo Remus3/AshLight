@@ -24,7 +24,10 @@
    folding: ROWS_PAGE (12) a page, Prev / Next only on a press (#checks-
    pager; the pressed button is never re-created or disabled, an end one
    says aria-disabled="true" and does nothing); a new failure shows the
-   page holding the first failing row.
+   page holding the first failing row. Every row stays in #checks-list;
+   a row off the shown page carries the hidden attribute, so it is out of
+   view and out of the accessibility tree, and a page turn only moves
+   that attribute (no rebuild).
    VERDICTS-UI-A11Y (design review V-4, V-5): a Copy click that built the
    missing preview says it is below and asks for Copy report again; a
    preview made before a check changed its state is made again by the
@@ -175,7 +178,7 @@
      a reload until it clears and begins again. */
   var held = { dismissed: undefined, wired: false };
   var state = { store: null, client: undefined, calc: "", calcRow: null, calcNodes: null,
-                page: 0, rows: [], inClient: false };
+                page: 0, rows: [], rowNodes: [], inClient: false };
   Object.defineProperty(state, "dismissed", {
     enumerable: true,
     get: function () { return held.dismissed; },
@@ -303,13 +306,11 @@
     if (on) { b.removeAttribute("aria-disabled"); } else { b.setAttribute("aria-disabled", "true"); }
   }
 
-  /* The shown page of the rows and the pager under them. */
+  /* Every row in #checks-list, then the shown page. */
   function renderRows(doc) {
-    var p = rowsPage(state.rows, state.page);
-    state.page = p.index;
     var list = doc.getElementById("checks-list");
     list.textContent = "";
-    p.rows.forEach(function (r) {
+    state.rowNodes = state.rows.map(function (r) {
       var li = doc.createElement("li");
       li.setAttribute("data-state", r.state);
       var head = doc.createElement("p");
@@ -341,6 +342,21 @@
       }
       addCalc(doc, li, r, state.inClient);
       list.appendChild(li);
+      return li;
+    });
+    return showPage(doc);
+  }
+
+  /* The shown page: rows off it carry hidden (out of view and out of the
+     accessibility tree, still in the list), and the pager under them. */
+  function showPage(doc) {
+    var p = rowsPage(state.rows, state.page);
+    state.page = p.index;
+    var from = p.index * ROWS_PAGE;
+    var to = from + p.rows.length;
+    state.rowNodes.forEach(function (li, i) {
+      var off = i < from || i >= to;
+      if (li.hidden !== off) { li.hidden = off; }
     });
     var bar = doc.getElementById("checks-pager");
     if (bar) { bar.hidden = p.pages < 2; }
@@ -357,7 +373,7 @@
     var next = p.index + step;
     if (next < 0 || next >= p.pages) { return p; }
     state.page = next;
-    return renderRows(doc);
+    return showPage(doc);
   }
 
   function paintChecks(doc, snap) {

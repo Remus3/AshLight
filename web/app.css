@@ -413,7 +413,8 @@ textarea, .weights-form input {
 /* DIAG-SELF: the Checks tool (glyph + word per row, never colour alone). */
 .checks-list { list-style: none; margin: 8px 0 0; padding: 0; }
 .checks-list li { border-top: 1px solid var(--fk-border); padding: 6px 0; min-width: 0; }
-.checks-list li:first-child { border-top: none; }
+/* a page of Checks rows starts after a hidden row (web/checks.js) */
+.checks-list li:first-child, .checks-list li[hidden] + li { border-top: none; }
 .check-line, .check-detail, .check-fix { margin: 0; overflow-wrap: anywhere; }
 .check-line .glyph { font-family: var(--al-font-mono); }
 .check-word { color: var(--fk-text-muted); font-size: 0.9rem; }

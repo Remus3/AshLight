@@ -328,6 +328,10 @@ const MANY = {
     detail: "Detail " + i + ".", fix: i === 14 ? "Do this." : null }))
 };
 
+// every row stays in the list (a page turn moves hidden, never rebuilds);
+// the shown page is the rows without hidden
+const shownRows = (doc) => doc.ids["checks-list"].children.filter((li) => !li.hidden);
+
 test("checks rows: 12 a page, Prev / Next only on a press, ends do nothing", () => {
   assert.equal(ck.ROWS_PAGE, 12);
   const p = ck.rowsPage(MANY.checks, 0);
@@ -342,7 +346,11 @@ test("checks rows: 12 a page, Prev / Next only on a press, ends do nothing", () 
   const ok = Object.assign({}, MANY, { failed: 0, summary: "All checks pass.",
     checks: MANY.checks.map((c) => Object.assign({}, c, { status: "pass", fix: null })) });
   ck.paint(doc, { diag: ok });
-  assert.equal(doc.ids["checks-list"].children.length, 12);
+  assert.equal(doc.ids["checks-list"].children.length, 16, "every row stays in the list");
+  assert.equal(shownRows(doc).length, 12);
+  assert.deepEqual(shownRows(doc).map((li) => li.children[0].children[2].textContent),
+    ok.checks.slice(0, 12).map((c) => c.label));
+  const nodes = doc.ids["checks-list"].children.slice();
   assert.equal(doc.ids["checks-pager"].hidden, false);
   assert.equal(doc.ids["checks-count"].textContent, "1-12 of 16");
   assert.equal(doc.ids["checks-prev"].getAttribute("aria-disabled"), "true");
@@ -351,7 +359,9 @@ test("checks rows: 12 a page, Prev / Next only on a press, ends do nothing", () 
   prev.listeners.click(); // an end does nothing
   assert.equal(doc.ids["checks-count"].textContent, "1-12 of 16");
   doc.ids["checks-next"].listeners.click();
-  assert.equal(doc.ids["checks-list"].children.length, 4);
+  assert.equal(doc.ids["checks-list"].children.length, 16);
+  assert.equal(shownRows(doc).length, 4);
+  assert.deepEqual(shownRows(doc), nodes.slice(12), "a page turn rebuilds no row");
   assert.equal(doc.ids["checks-count"].textContent, "13-16 of 16");
   assert.equal(doc.ids["checks-next"].getAttribute("aria-disabled"), "true");
   assert.equal(doc.ids["checks-prev"], prev, "the pressed button is never re-created");
@@ -370,7 +380,8 @@ test("checks rows: a new failure shows the page with the first failing row", () 
   ck.paint(doc, { diag: MANY });
   assert.equal(doc.ids.checks.open, true);
   assert.equal(doc.ids["checks-count"].textContent, "13-16 of 16");
-  const fail = doc.ids["checks-list"].children.find((li) => li.getAttribute("data-state") === "blocked");
+  assert.equal(doc.ids["checks-list"].children.length, 16);
+  const fail = shownRows(doc).find((li) => li.getAttribute("data-state") === "blocked");
   assert.ok(fail, "the failing row is on show");
   // the player goes back to page 1: the same failure does not move it again
   doc.ids["checks-prev"].listeners.click();
