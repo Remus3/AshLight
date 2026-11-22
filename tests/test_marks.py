@@ -10,8 +10,11 @@ fixtures, once with -m calc and once with -m timing:
 - -m timing lists all of test_budgets, test_soak and test_math_perf, the
   the individually marked tests of mixed files (TIMING_TESTS, e.g. the
   TC-PRESS-STAGED-LIVE first-card budget test), and nothing else;
-- a calc test is in the xdist group 'calc'; every test of the three
-  supervisor files is in the xdist group 'supervisor';
+- a calc test is in exactly one xdist group of tc_live_util.CALC_GROUPS
+  (calc-a, calc-b; TEST-CALC-GROUP-SPLIT), both groups are used, the
+  heaviest three calc tests go one-and-two across them, and no test keeps
+  the old single group 'calc'; every test of the three supervisor files is
+  in the xdist group 'supervisor';
 - the marks are registered (--strict-markers).
 """
 
@@ -23,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from tc_live_util import CALC_FILES
+from tc_live_util import CALC_FILES, CALC_GROUP_A, CALC_GROUP_B, CALC_GROUPS
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.slow  # two collect-only runs of the whole tree
@@ -82,6 +85,14 @@ TIMING_TESTS = {
     "tests/test_tc_press_staged.py": {"test_first_card_and_reply_within_budget_with_a_slow_calc"},
     "tests/test_metrics.py": {"test_100000_updates_under_50_ms"},
     "tests/test_budget_log.py": {"test_sampler_cost_under_budget"},
+}
+# TEST-CALC-GROUP-SPLIT (research 0063 section 5): the heaviest three calc
+# tests (about 60 s of the old single group) and the group each runs in
+HEAVY_CALC = {
+    "tests/test_math_e2e_live.py::test_item_check_deltas_come_from_pob[ring_upgrade]":
+        CALC_GROUP_A,
+    "tests/test_math_e2e_live.py::test_repeat_press_uses_cached_probes": CALC_GROUP_B,
+    "tests/test_fullstack.py::test_fullstack_calc_on_leg": CALC_GROUP_B,
 }
 FUZZ = "tests/test_fuzz.py"
 SUPERVISOR = ("tests/test_keepalive.py", "tests/test_procs.py", "tests/test_supervisor.py")
@@ -161,12 +172,27 @@ def test_every_warm_bridge_user_is_a_calc_test(calc_rows):
     assert not unmarked, f"warm_bridge users without the calc mark: {unmarked}"
 
 
-def test_calc_tests_share_the_calc_worker_group(calc_rows):
+def test_calc_tests_split_over_the_two_calc_worker_groups(calc_rows):
+    assert CALC_GROUPS == ("calc-a", "calc-b")
+    used = set()
     for r in calc_rows:
+        assert "calc" not in r["groups"], r["nodeid"]  # the old single group
         if r["selected"]:
-            assert "calc" in r["groups"], r["nodeid"]
+            # one group only: xdist joins several group marks into a third
+            assert len(r["groups"]) == 1 and r["groups"][0] in CALC_GROUPS, (
+                r["nodeid"], r["groups"])
+            used.add(r["groups"][0])
         else:
-            assert "calc" not in r["groups"], r["nodeid"]
+            assert not set(r["groups"]) & set(CALC_GROUPS), r["nodeid"]
+    assert used == set(CALC_GROUPS)
+
+
+def test_heaviest_calc_tests_go_one_and_two_across_the_groups(calc_rows):
+    got = {r["nodeid"]: r["groups"] for r in calc_rows if r["nodeid"] in HEAVY_CALC}
+    assert set(got) == set(HEAVY_CALC), sorted(set(HEAVY_CALC) - set(got))
+    for nodeid, group in HEAVY_CALC.items():
+        assert got[nodeid] == [group], (nodeid, got[nodeid])
+    assert sorted(list(HEAVY_CALC.values()).count(g) for g in CALC_GROUPS) == [1, 2]
 
 
 def test_minus_m_timing_lists_the_timing_files_and_not_fuzz(timing_rows):

@@ -154,12 +154,20 @@ LIVE_REF = pytest.mark.skipif(not bridge.available() or reference() is None,
 
 
 # TEST-MARKS (research 0049 R4, R9): every test that starts the live calc
-# carries the 'calc' mark and the xdist group 'calc' (one worker owns the
-# session's warm bridge), so a subset or the parallel suite can select or
-# group it. A module lists CALC_MARKS in its pytestmark; a single test takes
-# the LIVE_CALC decorator. CALC_FILES are the test files that hold such a test
-# (tests/test_marks.py checks the -m calc selection against it).
-CALC_MARKS = (pytest.mark.calc, pytest.mark.xdist_group("calc"))
+# carries the 'calc' mark and one xdist group of CALC_GROUPS, so a subset or
+# the parallel suite can select or group it. A module lists CALC_MARKS in its
+# pytestmark; a single test takes the LIVE_CALC decorator. CALC_FILES are the
+# test files that hold such a test (tests/test_marks.py checks the -m calc
+# selection against it).
+# TEST-CALC-GROUP-SPLIT (research 0063 section 5): two groups, so two workers
+# each own a session warm bridge (conftest's warm_bridge is session-scoped,
+# so every worker builds its own). CALC_MARKS and a bare @LIVE_CALC use
+# calc-a; @LIVE_CALC(group=CALC_GROUP_B) puts a test in calc-b. A test holds
+# exactly one group (xdist joins several group marks into a third group).
+CALC_GROUP_A = "calc-a"
+CALC_GROUP_B = "calc-b"
+CALC_GROUPS = (CALC_GROUP_A, CALC_GROUP_B)
+CALC_MARKS = (pytest.mark.calc, pytest.mark.xdist_group(CALC_GROUP_A))
 CALC_FILES = (
     "tests/test_audit_pass7.py",
     "tests/test_fullstack.py",
@@ -172,9 +180,14 @@ CALC_FILES = (
 )
 
 
-def LIVE_CALC(obj):  # noqa: N802 (a mark decorator, named like LIVE)
-    """Apply CALC_MARKS to one test function."""
-    for mark in CALC_MARKS:
+def LIVE_CALC(obj=None, *, group=CALC_GROUP_A):  # noqa: N802 (a mark decorator, named like LIVE)
+    """Apply the calc mark and one CALC_GROUPS xdist group to one test
+    function: @LIVE_CALC (calc-a) or @LIVE_CALC(group=CALC_GROUP_B)."""
+    if group not in CALC_GROUPS:
+        raise ValueError(f"unknown calc group {group!r}")
+    if obj is None:
+        return lambda fn: LIVE_CALC(fn, group=group)
+    for mark in (pytest.mark.calc, pytest.mark.xdist_group(group)):
         obj = mark(obj)
     return obj
 
