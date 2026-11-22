@@ -389,6 +389,56 @@ test("checks rows: a new failure shows the page with the first failing row", () 
   assert.equal(doc.ids["checks-count"].textContent, "1-12 of 16");
 });
 
+/* RUN-EXPLAIN-ROWS (F-129): the five cause rows of server/al/plug/explain.py
+   are plain plug rows; the generic row model paints them with no web edit,
+   and a new failing one opens Checks by itself. */
+const EXPLAIN = [
+  { id: "overlay_screen", label: "Overlay on screen", status: "note",
+    detail: "The overlay is hidden because the game looks closed (no new game log " +
+      "line for a while). It comes back on the next one.", fix: null },
+  { id: "item_key_press", label: "Last item check", status: "pass",
+    detail: "Pressed 15 min ago. The item was checked.", fix: null },
+  { id: "calc_run", label: "Calc in use", status: "pass",
+    detail: "Working. The last calculation took 0.8 s.", fix: null },
+  { id: "log_understood", label: "Log lines understood", status: "pass",
+    detail: "Yes. AshLight understands the game log.", fix: null },
+  { id: "restarts", label: "Restarts", status: "fail",
+    detail: "AshLight restarted its core 3 times in the last 24 hours, last at 21:14 " +
+      "(it had stopped answering).",
+    fix: "AshLight keeps running by itself. To help find the cause, copy this report " +
+      "and send it to the project." }];
+
+test("checks: the five cause rows paint through the generic row model", () => {
+  const m = ck.model({ summary: "1 check needs a fix.", failed: 1, checks: EXPLAIN });
+  assert.deepEqual(m.rows.map((r) => [r.id, r.glyph, r.word]), [
+    ["overlay_screen", "[-]", "note"], ["item_key_press", "[+]", "ok"],
+    ["calc_run", "[+]", "ok"], ["log_understood", "[+]", "ok"],
+    ["restarts", "[#]", "needs a fix"]]);
+  assert.deepEqual(m.rows.map((r) => r.detail), EXPLAIN.map((c) => c.detail));
+  const doc = fakeDoc();
+  const quiet = EXPLAIN.slice(0, 4);
+  ck.paint(doc, { diag: { summary: "All checks pass.", failed: 0, checks: quiet } });
+  assert.equal(doc.ids.checks.open, false, "no failure: Checks stays shut");
+  assert.equal(doc.ids["checks-list"].children.length, 4);
+  // the restarts row newly needs a fix: Checks opens by itself
+  ck.paint(doc, { diag: { summary: "1 check needs a fix.", failed: 1, checks: EXPLAIN } });
+  assert.equal(doc.ids.checks.open, true);
+  const li = doc.ids["checks-list"].children[4];
+  assert.equal(li.getAttribute("data-state"), "blocked");
+  assert.equal(li.children[0].children[2].textContent, "Restarts");
+  assert.equal(li.children[1].textContent, EXPLAIN[4].detail);
+  assert.equal(li.children[2].textContent, "Fix: " + EXPLAIN[4].fix);
+  // a note or ok row carries no fix line
+  assert.equal(doc.ids["checks-list"].children[0].children.length, 2);
+  // the player shuts it; the 500-line row failing too is not a new failure
+  doc.ids.checks.open = false;
+  const both = EXPLAIN.map((c) => c.id === "log_understood" ? Object.assign({}, c,
+    { status: "fail", detail: "AshLight read 500 game log lines in a row and understood none of them.",
+      fix: "Set the game's language to English." }) : c);
+  ck.paint(doc, { diag: { summary: "2 checks need a fix.", failed: 2, checks: both } });
+  assert.equal(doc.ids.checks.open, false);
+});
+
 test("language notice: region N owns it; the Hide key is read at wire and stored at once", () => {
   // PLAY-LEGACY-OUT-2: the old #langbox card is gone; checks.js keeps only
   // the stored Hide key that web/notice.js reads with langModel
