@@ -1,0 +1,1 @@
+- [ ] NDE-2 (build) The aria-label word order in web/index.html (around line 100) reads awkwardly; put the label words in reading order (wave 28 design finding, nit). ACCEPT: python -m pytest -q tests/test_a11y.py passes. ZERO-CLICK: the label reads right by itself. DEPENDS: none.

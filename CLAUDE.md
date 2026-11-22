@@ -1474,3 +1474,17 @@ of the HALT check.
   as REL-UPDATE-APPLY-NOW). Reverses if: the installer's update command
   changes, game_idle misfires as idle in play, or the operator rules the
   automatic start unwanted.
+- RUN-PERF-PARSE-ONCE (F-178, F-108 B6): a hot-reload watch with
+  from_doc builds its value from the document its check already parsed,
+  so each change is parsed once; with share=True every watch on one file
+  uses one SharedDoc; world_areas feeds the zone level table and the
+  waypoint graph, and base_items the base list and the flask table, from
+  one parse each; each table keeps its own last good copy and note
+  (decision 0042); the parsed document is kept only for a table that
+  joins late, until the next get finds every table up to date (at most
+  10 s), then dropped; zoneguide.FileCache is gone (the graph is a watch
+  outside the Checks registry and keeps its last good copy);
+  tests/test_budget_start.py checks bytes parsed at start are at most 1.2
+  times the JSON bytes opened. Reverses if: holding the document until
+  the next get breaks B5, a table needs a different size cap or check
+  from the other table on its file, or the per-table notes misfire.
