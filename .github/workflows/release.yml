@@ -1,0 +1,120 @@
+name: release
+
+# DEP-15 (F-076, F-148; decision 0073): a pushed release tag v<VERSION>
+# (made only by tools/release.py publish) is rebuilt here from the tag,
+# its SHA256SUMS.txt is compared with the 'sums-sha256:' line of the tag
+# message, the SBOM is re-made and compared, the assets are attested and a
+# draft release carrying the notes file is filled and then published
+# (a pre-release for an -rc. tag). Pushing the tag is the only act.
+# It never merges, never commits or pushes, and web data stays off.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      # decision 0080: timing budgets skip, test waits widen (CI only)
+      AL_CI: "1"
+    steps:
+      - name: checkout with full history and tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11.9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22.12.0"
+      - name: tag shape and folders
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.(0|[1-9][0-9]*))?$') {
+            throw "not a release tag: $tag"
+          }
+          if ((git cat-file -t "refs/tags/$tag") -ne 'tag') { throw "the tag is not annotated" }
+          Add-Content $env:GITHUB_ENV "AL_SIDECAR_ROOT=$env:RUNNER_TEMP\al-sidecar"
+          Add-Content $env:GITHUB_ENV "AL_REL_TAG=$tag"
+          Add-Content $env:GITHUB_ENV "AL_REL_VERSION=$($tag.Substring(1))"
+          Add-Content $env:GITHUB_ENV "AL_REL_OUT=$env:RUNNER_TEMP\release"
+      - name: dev requirements (hash pinned)
+        run: python -m pip install --require-hashes -r requirements-dev.txt
+      - name: python tests
+        run: python -m pytest -q
+      - name: node modules (no scripts, no Electron binary)
+        run: npm ci --prefix app --ignore-scripts
+      - name: node tests
+        run: npm test --prefix app
+      - name: rebuild the release from the tag
+        shell: pwsh
+        run: |
+          git status --porcelain
+          python tools/release.py build --tag "$env:AL_REL_TAG" --out "$env:AL_REL_OUT"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: compare SHA256SUMS.txt with the tag message sums-sha256
+        shell: pwsh
+        run: |
+          $msg = git tag -l --format='%(contents)' "$env:AL_REL_TAG"
+          $want = @($msg | Select-String -Pattern '^sums-sha256: ([0-9a-f]{64})$' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+          if ($want.Count -ne 1) { throw "the tag message carries no single sums-sha256 line" }
+          $got = (Get-FileHash -Algorithm SHA256 (Join-Path $env:AL_REL_OUT 'SHA256SUMS.txt')).Hash.ToLowerInvariant()
+          if ($got -ne $want[0]) { throw "sums-sha256 mismatch: tag $($want[0]), rebuild $got" }
+          Write-Output "sums-sha256 match: $got"
+      - name: SBOM re-made by tools/sbom.py and compared
+        shell: pwsh
+        run: |
+          $check = Join-Path $env:RUNNER_TEMP 'sbom-check.json'
+          python tools/sbom.py --commit "$env:AL_REL_TAG" --out $check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $built = Join-Path $env:AL_REL_OUT "AshLight-$env:AL_REL_VERSION.sbom.json"
+          if ((Get-FileHash $check).Hash -ne (Get-FileHash $built).Hash) { throw "the SBOM differs from the built one" }
+      - name: attest the release assets
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/release/*
+      - name: draft release with the notes file as body
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = Join-Path $env:AL_REL_OUT "AshLight-$env:AL_REL_VERSION-notes.md"
+          gh release create "$env:AL_REL_TAG" --draft --verify-tag --title "AshLight $env:AL_REL_VERSION" --notes-file $notes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: upload the release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = @(Get-ChildItem -File $env:AL_REL_OUT | ForEach-Object { $_.FullName })
+          gh release upload "$env:AL_REL_TAG" @files
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:AL_REL_TAG -match '-rc\.') {
+            gh release edit "$env:AL_REL_TAG" --draft=false --prerelease
+          } else {
+            gh release edit "$env:AL_REL_TAG" --draft=false --latest
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
