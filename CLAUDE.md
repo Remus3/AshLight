@@ -520,7 +520,10 @@ of the HALT check.
   2026-11-20), fetched by setup.ps1 -TcCalc only on opt-in, never
   vendored (decision 0018). Reverses if: GitHub archives stop being
   byte-stable, either license leaves MIT / permissive, or LuaJIT ships
-  hashed release binaries.
+  hashed release binaries. Amended 2026-11-21 (TC-PIN-POLICY): at most one
+  PoB pin move per game patch cycle unless a release changes a reference
+  output; LuaJIT moves only with a PoB move; the toolchain is removed after
+  a verified build.
 - A trade accepted / cancelled line closes ONE open trade card: the named
   counterparty's, else the oldest (decision 0019). Reverses if: a PoE2 log
   line names the counterparty (then match by name only), or the oldest-card
@@ -643,13 +646,18 @@ of the HALT check.
   hash-pinned portable WinLibs MinGW-w64 .zip fetched into the sidecar
   Cache on -TcCalc only, PATH set only in the build subprocess, never
   vendored, its extracted tree re-hashed against the marker before each
-  build (decision 0027; amendment 2026-11-17, P3-10). Reverses if: WinLibs drops .zip assets, a
+  build (decision 0027; amendment 2026-11-17, P3-10). Amended 2026-11-21
+  (TC-PIN-POLICY): the toolchain tree and archive are deleted directly after
+  a verified luajit.exe and fetched again only for a rebuild. Reverses if: WinLibs drops .zip assets, a
   license objection appears, or LuaJIT ships hashed Windows binaries.
 - Theorycraft is proven end to end on the real reference build (PoB-sourced
   card deltas, kill fallback), with calc budgets in decision 0024 R7, a
   bridge.lua GC ceiling (384 MB Lua heap) and a PoB API drift guard test
-  (decision 0028). Reverses if: a pin move or the target machine breaches
-  the budgets, or the GC ceiling costs more than it saves.
+  (decision 0028); calc ceilings re-measured and tightened to about 2.5
+  times the 2026-11-17 values (R7 amendment 2026-11-18,
+  RUN-BUDGET-TESTS-LIVE); live budget shapes (overlay alone, client, calc,
+  live budget log) are opt-in by env var and skip otherwise. Reverses if: a
+  pin move or the target machine breaches the budgets, or the GC ceiling costs more than it saves.
 - Waystone risk check on the item-check press from an own rule table and
   the build's PoB numbers; search strings (<= 250 chars) copied only on
   the player's click; zone notes folded into the one guide file (decision
