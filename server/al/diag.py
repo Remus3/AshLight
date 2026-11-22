@@ -143,14 +143,15 @@ def check_consent(f):
 
 # RUN-TAIL-HEAL-CORE (research 0050 F13): the file is there but every open
 # or read fails (another program holds it locked, no rights, a broken drive).
-UNREADABLE_DETAIL = "Client.txt is there but can't be read. AshLight keeps trying."
-FIX_UNREADABLE = ("Close any program that has Client.txt open, "
-                  "or check that you can open the file yourself.")
+# RUN-UNREADABLE-WORD: the words are the table's unreadable state, the one
+# the dashboard bar and the overlay name too.
+UNREADABLE_DETAIL = words.check("unreadable")
+FIX_UNREADABLE = words.next_step("unreadable")
 
 
 def check_reading(f):
     if f.get("unreadable") and f.get("consented"):
-        return _check("reading", "Reading", FAIL, UNREADABLE_DETAIL, FIX_UNREADABLE)
+        return _state_check("reading", "Reading", "unreadable")
     if f.get("reading"):
         return _state_check("reading", "Reading", "reading", status=PASS)
     if not (f.get("consented") and f.get("log_found")):

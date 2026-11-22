@@ -61,6 +61,13 @@
       "next": "Start Path of Exile 2 once so it writes Client.txt. AshLight finds it by itself.",
       "fault": true
     },
+    "unreadable": {
+      "rank": 4, "kit": "blocked", "glyph": "[#]",
+      "bar": "can't read Client.txt", "overlay": "can't read log", "overlay_alone": false,
+      "check_row": "reading", "check": "Client.txt is there but can't be read. AshLight keeps trying.",
+      "next": "Close any program that has Client.txt open, or check that you can open the file yourself.",
+      "fault": true
+    },
     "path_missing": {
       "rank": 4, "kit": "blocked", "glyph": "[#]",
       "bar": null, "overlay": null, "overlay_alone": false,
