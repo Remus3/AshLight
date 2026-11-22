@@ -167,7 +167,8 @@ def test_real_phases_keep_timing_tests_out_of_the_parallel_pass(tmp_path, xdist)
     (proj / "pytest.ini").write_text(PROBE_INI, newline="\n")
     (proj / "test_probe.py").write_text(PROBE_TEST, newline="\n")
     ran = {}
-    for name, argv in suite_run.phases(xdist=xdist):
+    # TEST-PROBE-XDIST-2: cpus=6 makes phase 1 run at -n 2, not the full 12.
+    for name, argv in suite_run.phases(xdist=xdist, cpus=6):
         out = tmp_path / f"{name}.txt"
         env = dict(os.environ, AL_PROBE_OUT=str(out))
         env.pop("PYTEST_XDIST_WORKER", None)
@@ -181,7 +182,7 @@ def test_real_phases_keep_timing_tests_out_of_the_parallel_pass(tmp_path, xdist)
     assert list(ran) == [first, "timing"]
     assert ran[first] == ["plain"], ran  # timing deselected beside the workers
     assert ran["timing"] == ["timed"], ran  # and run alone afterwards
-    timing_argv = suite_run.phases(xdist=xdist)[1][1]
+    timing_argv = suite_run.phases(xdist=xdist, cpus=6)[1][1]
     assert "-n" not in timing_argv and "--dist" not in timing_argv
 
 
