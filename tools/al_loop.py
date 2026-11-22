@@ -258,8 +258,19 @@ def gate_tail(stdout, stderr=""):
     return (err + "\n" + body) if err else body
 
 
+def gate_env(environ=None):
+    """LOOP-GATE-SIDECAR-TEMP: the gate child's environment, TEMP / TMP under
+    the AL sidecar Temp like a lane's (no sidecar: the parent's TEMP stays)."""
+    env = dict(os.environ if environ is None else environ)
+    tmp = al_lane.sidecar_temp(env)
+    if tmp is not None:
+        env["TEMP"] = env["TMP"] = str(tmp)
+    return env
+
+
 def _run_gate(argv, cwd):
     r = subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True,
+                       env=gate_env(),
                        timeout=GATE_TIMEOUT_S, creationflags=_NO_WINDOW,
                        encoding="utf-8", errors="replace")
     return r.returncode, gate_tail(r.stdout, r.stderr)
