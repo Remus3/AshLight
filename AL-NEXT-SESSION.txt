@@ -2,22 +2,17 @@ AL NEXT SESSION
 ---------------
 SESSION: 20   (FLEET item 13 counter; /done writes n+1)
 
-Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
-
 WAVE POINTER: wave 24 done, next wave 25
-DEFERRED: RUN-EXPLAIN-ROWS (wave 24 -> wave 25): batch suite red, tests/test_structure.py refuses 30 player sentences in server/al/plug/explain.py outside server/al/text/; re-plan files (server/al/text/explain.py, docs/design/copy/explain.md) first; reverted d97a090, backout fae97a6; branch worktree-w24-RUN-EXPLAIN-ROWS (c44ebd0; re-created by hand after reap deleted it at session 19 /done, worktree gone)
+DEFERRED: RUN-EXPLAIN-ROWS (wave 24 -> wave 25): batch suite red, tests/test_structure.py refuses 30 player sentences in server/al/plug/explain.py outside server/al/text/; re-plan files (server/al/text/explain.py, docs/design/copy/explain.md) first; reverted d97a090, backout fae97a6; branch worktree-w24-RUN-EXPLAIN-ROWS (c44ebd0, re-created after reap)
 DEFERRED: PRICES-TITLE-TABINDEX (wave 24 -> wave 25): not folded into DATA-CONTACT-UI (#prices-title still has no tabindex=-1); has no package: add one to docs/plan/packages.json first; row tagged BLOCKED: session wave 25
-DEFERRED: CARD-LINE-LIMIT (wave 25, re-planned 702769e). New rows for wave 25: TEST-SUITE-T0 and RUN-BUDGET-CALIBRATE-B11 (folded into ROADMAP at session 19 /done, ed1d53a); both need a package or a placement.
-GATE-HOLD (session item, carried): batch suites hold the gate about 135-155 s against the 120 s target (wave 23: 135-150 s; wave 24: parallel 87-99 s + timing 49-56 s); session 19 /done whole suite: parallel 87.98 s + timing 48.76 s. Needs a look; a soak median over 125 s reverses the 120 s target.
-SESSION 19 (2026-11-22): wave 22 carry RUN-REPORT-FIELDS 008c899 and PUB-HOOK-RELEASE-CHECK 409e3a0 (3rd try, adjudicator ruling) merged; wave 23 all 14 packages merged; wave 24 12 merged (DATA-CONTACT-UI, OVL-APP-SCHEME-STRICT, TC-WEIGHTS-DELTA-EXPORT, RUN-BUDGET-TESTS-LIVE, TEST-SLOW-BUDGET, DATA-PRICE-TYPES-FILE, TC-PIN-POLICY, RUN-HISTORY-UNDO, RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24, RUN-UNREADABLE-WORD); RUN-EXPLAIN-ROWS, CARD-LINE-LIMIT and PRICES-TITLE-TABINDEX deferred to wave 25; BUDGETLOG diagnosed (adjudicator: recalibrate B11); REL-CUTOVER-LIVE prepped, waits on the operator act below.
-NOTE: CARD-LINE-LIMIT re-planned to wave 25 with seven more files (702769e; ROADMAP row tagged BLOCKED: session wave 25). PUB-HOOK-RELEASE-CHECK deferred twice then merged (adjudicator ruling 2026-11-21: retry with tests/test_dependabot_reapply.py in files; alternatives skip the hook line when release.py is absent, park; reverses if a third red batch).
-SESSION 18 (2026-11-21): W22-FOLD + UNREADABLE-RETAG (51f8834: 9 package-less wave-22 rows folded; RUN-UNREADABLE-WORD is a new package in wave 24; adjudicator amendment: its log-state sentences stay in design 0001 s9); wave 22 closed 14/18 merged, pushed origin/main 0555f53; parked packages re-placed: PUB-DEPBOT-FIRST-RUN and RUN-LIVE1-FIXTURES -> wave 23, DATA-PRICE-TYPE-PROOF and PUB-GUIDE-DOWNLOAD-PLACE -> wave 25, DATA-CONTACT-DEFAULT -> wave 43. Follow-up rows filed: RUN-CARDS-PAGE-FIT, BUDGET-RETIRE-TAILER-IDLE.
+DEFERRED: CARD-LINE-LIMIT (wave 25, re-planned 702769e). New rows for wave 25: TEST-SUITE-T0 and RUN-BUDGET-CALIBRATE-B11 (in ROADMAP since ed1d53a) need a package or placement.
+GATE-HOLD (session item, carried; was WATCH (wave 22), history in archive block "SESSION 19 /done"): batch suites hold the gate about 135-155 s against the 120 s target (wave 21 batch B 193 s; wave 22 176-190 s; wave 23 135-150 s; wave 24 parallel 87-99 s + timing 49-56 s); session 19 /done whole suite: parallel 87.98 s + timing 48.76 s. Needs a look (session item, not loop); a soak median over 125 s reverses the 120 s target.
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
 PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
-WAVE-17 FOLLOW-UPS (session 15, design findings OPEN, session items): SC-1 social card tagline small in half-size thumbnails (scale to about 1.0, regenerate), SC-3 margin nit; OVL-1 overlay reload full-opacity flash (clears with OVL-TD05-PLATE), OVL-2 design 0001 scale floor 0.86 not pinned to LIMITS.scale by a test; BG-9 wiki link dropped from gear / gem rows, BG-10 always-open details #filter-more (convert to a div); the server-side .build left-out note text in server/al/theorycraft/buildfile.py is still long (suggest "No passives yet. Turn on web data."). New wave-18 rows filed session 15: TEST-SHOTS-TABS, REL-HOME-REFUSAL-UI, PLAY-TD-19E-ITEM-TEXT.
-WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW-3, OVL-KEYS-WEB KW-7, TC-CALC-OPTIN-BUTTON CB-4..CB-6. Research 0039 CHARJSON-SHAPES item can be marked done by TC-CHARJSON-SHAPES (not in its files). TC-CHARJSON-SHAPES class_names map has no caller yet (paste.py, TC-IMPORT). docs/design/0001 still says five tabs / Items and prices tab (TEST-DOCS-FACTS-UI does not check it). 12 LIVE rows filed (LIVE-1-* and LIVE-WAYSTONE, BLOCKED on the first live ledger hit). Orchestration note: task notifications carried invented shas; read every sha back from git.
+WAVE-17 FOLLOW-UPS (session 15, design findings OPEN, session items): SC-1 social card tagline small in half-size thumbnails (scale to about 1.0, regenerate), SC-3 margin nit; OVL-1 overlay reload full-opacity flash (clears with OVL-TD05-PLATE), OVL-2 design 0001 scale floor 0.86 not pinned to LIMITS.scale by a test; BG-9 wiki link dropped from gear / gem rows, BG-10 always-open details #filter-more (convert to a div); the server-side .build left-out note text in server/al/theorycraft/buildfile.py is still long (suggest "No passives yet. Turn on web data.").
+WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW-3, OVL-KEYS-WEB KW-7, TC-CALC-OPTIN-BUTTON CB-4..CB-6. Research 0039 CHARJSON-SHAPES item can be marked done by TC-CHARJSON-SHAPES (not in its files). TC-CHARJSON-SHAPES class_names map has no caller yet (paste.py, TC-IMPORT). docs/design/0001 still says five tabs / Items and prices tab (TEST-DOCS-FACTS-UI does not check it). LIVE-1-* and LIVE-WAYSTONE rows are BLOCKED on the first live ledger hit.
 WAVE-15 FOLLOW-UPS: setAutostart in app/client/launcher.js still spawns bare powershell.exe (pinned by app/test/autostart_switch.test.js:70; shrink-only BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py) - file a row to switch it to psExe(). tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
-Closed records: docs/handoff-archive/AL-2026-11-19.txt, AL-2026-11-20.txt and AL-2026-11-21.txt, one block per session headed "SESSION <n> /done" (the full index of what each block holds is in the "SESSION 18 /done" block of AL-2026-11-21.txt).
+Closed records: docs/handoff-archive/AL-2026-11-19.txt, AL-2026-11-20.txt, AL-2026-11-21.txt and AL-2026-11-22.txt, one block per session headed "SESSION <n> /done" (index of blocks 11 to 17 in "SESSION 18 /done" of AL-2026-11-21.txt; block "SESSION 19 /done" of AL-2026-11-22.txt: the session 18 and 19 lines, the PUB-HOOK-RELEASE-CHECK ruling note, the WATCH (wave 22) gate-hold history, the BUDGETLOG finding, the session 18 reap note and Do NOT redo).
 
 Next action: start wave 25 of docs/plan/07-execution-plan.md: dispatch
 one start agent (docs/plan/08-orchestration.md section 1, argument wave
@@ -30,26 +25,20 @@ RUN-BUDGET-CALIBRATE-B11; packages from `python tools/plan_check.py wave
 per 07's session grouping. Run exactly as 08 says: ONE background
 orchestrator agent with a real background watch on the progress files;
 merge batches of 4. Ask the operator nothing. The main session only
-dispatches; every command runs in a sub-agent. The orchestrator must keep
-a live background child of its OWN (a Monitor on the progress files) at
-every turn end: in session 16 it stalled three times when it relied on
-grandchildren (builder / merger agents) to wake it.
+dispatches. The orchestrator keeps a live background child of its OWN (a
+Monitor on the progress files) at every turn end (session 16 stalled
+three times relying on grandchildren to wake it).
 1. Waves 10 to 24 are closed (sessions 12 to 19).
 2. Go-public track: the repository exists and is PRIVATE; it stays private
    until the plan-04 flip gates hold (GP-12). Push main only through
    fleet_gitlock, never force. Status bullet GO-PUBLIC STATUS below.
-Orchestrator lessons (sessions 8 to 17; full text in the archive block
-"SESSION 18 /done"): one background orchestrator that keeps a live
-background child (a Monitor on the progress files) at every turn end and
-dispatches the next step right after each child report; never tell a
-package agent "do not push" when CLAUDE.md authorizes it; builders and
-verifiers also run tests/test_test_layout.py; a fresh integrator per
-batch; verify each claimed sha against git and that the merged tip is the
-verified tip; a red batch suite is reverted and the package deferred (08
-section 4 step 6), never fixed forward; reviews.log lines exactly in the
-required format, no bare "|"; a builder "needs <path>" failure gets a
-packages.json patch plus a fix round (ruling A, 5787074); every merge,
-commit and push goes through fleet_gitlock.
+Orchestrator lessons (full text: archive blocks "SESSION 18 /done" and
+"SESSION 19 /done"): dispatch the next step right after each child
+report; package agents may push per CLAUDE.md; builders and verifiers
+also run tests/test_test_layout.py; a fresh integrator per batch; read
+every sha back from git; a red batch suite is reverted and the package
+deferred, never fixed forward; reviews.log lines in the exact format;
+"needs <path>" = packages.json patch plus a fix round (ruling A).
 
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
@@ -89,8 +78,7 @@ Carried forward (not acted on yet):
   overlay shows waiting); RUN-BUDGET-TESTS-LIVE keeps the live B10 check at
   215 MB until RUN-BUDGET-CALIBRATE-B11; TEST-SLOW-BUDGET follow-up row
   TEST-SUITE-T0 filed; DATA-PRICE-TYPES-FILE: a missing price_types.json
-  falls back to the built-in lists. Wave 24 batch suites: parallel 87-99 s +
-  timing 49-56 s (GATE-HOLD still open).
+  falls back to the built-in lists.
 - WAVE-23 FOLLOW-UPS (session 19): PLAY-TD-21A left old wording pointing at
   the moved controls (diag.py FIX_SNAPSHOT_OFF "under Prices and web data",
   FIX_HOTKEY and FIX_TOGGLE_KEY "in AshLight's Tools", text/price.py lines,
@@ -105,10 +93,7 @@ Carried forward (not acted on yet):
   it daily when idle); RUN-LIVE1-FIXTURES kept verified lines in
   tests/test_parser.py LIVE1_VERIFIED instead of the fixture file; AUTO-13
   left the al_loop.py idle line "backed off to weekly (3 dives, 0 plans)"
-  stale; parsed Dependabot multi-bump group titles stay needs-review. New row
-  RUN-BUDGET-CALIBRATE-B11 (BLOCKED: session wave 25) answers the BUDGETLOG
-  item. Wave 23 batch suite holds: 135-150 s each (parallel 85-96 s + timing
-  49-56 s) vs the 120 s target (GATE-HOLD item still open).
+  stale; parsed Dependabot multi-bump group titles stay needs-review.
 - DEV-PORT (ruled 2026-11-21, session 18): deferred to the install
   cutover. The checkout stays on 8960 (config/local.json "port": null)
   until an installed copy exists; at cutover set "port": 8961 in
@@ -123,12 +108,10 @@ Carried forward (not acted on yet):
   back then.
 - GO-PUBLIC STATUS (2026-11-22, session 19): PUB-HOOK-RELEASE-CHECK is
   merged (409e3a0); GP-09 and SEC-STATIC-MAP are both flipped (done, on
-  main); GP-12 still waits on gates 3 and 6 being checked;
-  local test part 69/69 green. GP-10 and DATA-PRICE-CADENCE merged wave 18.
-  PUB-README-PLAYERS landed wave 12; ci green on consecutive runs. Flip only
-  on the operator's word: `gh repo edit <public repo> --visibility public
-  --accept-visibility-change-consequences` (<public repo> = the
-  config/public_repo.json value once GP-10 lands).
+  main); GP-12 still waits on gates 3 and 6 being checked (local test part
+  69/69 green). Flip only on the operator's word: `gh repo edit <public
+  repo> --visibility public --accept-visibility-change-consequences`
+  (<public repo> = the config/public_repo.json value).
 - OPERATOR REQUESTS 2026-11-19 (item tooltip, Kindler build generator,
   header / version line, collapsible panels): planned in
   docs/plan/10-operator-requests-2026-11-19.md and decisions 0081 to 0083;
@@ -138,7 +121,7 @@ Carried forward (not acted on yet):
   setup.ps1 / run.ps1 with the Electron fetch and client start
   (OVL-ELECTRON-SETUP); tray-only memory <= 250 MB, read from the new client
   sampler (RUN-BUDGET-LOG-CLIENT, wave 14).
-- WAVE-14 OPEN FOLLOW-UPS (rulings W14-1 to W14-4 archived, block "SESSION 13 /done"; TDF-1 to TDF-3 next bullet): RUN-BUDGET-LOG-CORE reads luajit figures via theorycraft's private _SHARED._proc (a public accessor is cleaner); merge commit 6b2ada0 carries a wrong title (not rewritten); REL-INSTALL-CMD: zip size not checked against release.json until REL-BUILD-ASSETS.
+- WAVE-14 OPEN FOLLOW-UPS (rulings W14-1 to W14-4 archived, block "SESSION 13 /done"; TDF-1 to TDF-3 next bullet): RUN-BUDGET-LOG-CORE reads luajit figures via theorycraft's private _SHARED._proc (a public accessor is cleaner); REL-INSTALL-CMD: zip size not checked against release.json until REL-BUILD-ASSETS.
 - DESIGN FINDINGS OPEN (wave 14, session 12, docs/design/reviews.log, PLAY-TD-19B-FOUR-TABS, none blocking): TDF-1 (S3, medium) #panel-build became 5 auto-fit columns instead of the fixed 3 x 2 grid (for the TD-20 fixed-grid package); TDF-2 (S4, minor) design 0001 section 3 UI-GLANCE tabs bullet still lists five tabs; TDF-3 (S4, minor) web/index.html comment wording.
 - KIT NOTE (for the AUTO-25 kit report, not a note): during the batch 0 suite the loop's own suite_run (owner al-loop.main) held the gate's second slot, so two whole suites ran in the AshLight tree at once (item 16c says one per tree), the likely cause of the selftest port collision. Not sent (no outbound path, KIT DEFECT bullet); it goes in the same MAIN note.
 - WAVE-13 FOLLOW-UPS: DATA-SNAP-AT-START: server/al/plug/dataage.py FIX still says "Run scriptsuild.ps1 -Snapshot" (pinned by tests/test_diag_data_age.py); datacredit ATTRIBUTION / ZONE_LEVELS_CREDIT still say "when AshLight was built"; the snapshot child is not in procs.py (stop.ps1 does not stop it; short-lived). TEST-STATE-TEXT-3: itemcheck._alert_text is a call-time import of state.build_alert_text (cycle) until TEST-STATE-TEXT-4, whose files should add server/al/text/itemcheck.py. RUN-BUILD-STAMP-UI: its tests live in app/test/about.test.js (not client_controls.test.js / test_ux_review.py); version text is written twice (app/about.js, web/app.js) held equal by a vm test; the overlay page About shows no version (app/overlay outside files). TC-UPGRADE-PER-SLOT: health.js keeps its own TRADE_SEARCH copy (one host list with F-112). TC-CALC-CONFINE-PROC: a venv python.exe launcher breaks the one-process job limit in fake-child tests (CI and this machine use a real python.exe).
@@ -210,8 +193,7 @@ Carried forward (not acted on yet):
   the block still binds (refuse; 0 for tests); P8-5 tick_ladder re-dedupes
   all session maps twice per 0.5 s tick (~10 ms at 200 + 500 maps); P8-6
   dashboard console / CSP test never renders Checks rows, a hint or
-  ladder_all; P8-7 diag.redact can blank a fixed-text word matching a
-  character / contact name; P8-8 "This session" ladder and Maps card mix
+  ladder_all; (P8-7 fixed by RUN-REPORT-FIELDS 008c899); P8-8 "This session" ladder and Maps card mix
   characters after a switch (a map open across a game restart is saved
   under neither).
 - LIVE rows (all BLOCKED, need the operator or the live game): LIVE-1
@@ -229,8 +211,6 @@ Carried forward (not acted on yet):
   itself; nothing to remember. If HALT is still present on 2026-12-11, the
   session of that day flips GATE-POE2-10 by hand from the pending finding.
   Runbook docs/ops/1.0-launch-runbook.md.
-- NOTE (01 L7): the opt-in live overlay smoke runs in no scheduled run;
-  row AUTO-22 wave 23.
 - NOTE (wave 4, DATA-PRICE-CARD-TEXT DPC-2): design 0001 section 9 needs
   a bullet for the new price-age templates; owner: the next package that
   owns docs/design/0001 (PLAY-TD-23-RECORDS at the latest).
@@ -272,35 +252,15 @@ Carried forward (not acted on yet):
 - SESSION-7 FINDING (docs/plan/08): section 1's open-row check ignores
   docs/roadmap/archive/, so re-checking an archived wave lists its rows as
   open (wave 4 today: PUB-GO-DECISION, GP-02).
-- WATCH (wave 22): the wave 21 batch B suite gate hold was about 193 s
-  against the 120 s target (batch A about 119 s, TEST-SUITE-SOAK median
-  117.3 s) with no other gate users; session 17 /done whole suite: phase 1
-  115.25 s plus timing 46.64 s. Session 18: every wave-22 batch held the
-  gate 176-190 s vs the 120 s target (parallel phase 116-129 s, timing
-  phase +48-60 s); session 18 /done whole suite: parallel 122.16 s plus
-  timing 59.91 s. Needs a look (session item, not loop); a soak median
-  over 125 s reverses the 120 s target (next bullet).
-- BUDGETLOG FINDING (session 18): `python -m server.al.budgetlog check`
-  prints FAIL: 406 breaches (e.g. B11 ws_mb 318.5 > 300); not a wave gate;
-  investigate (session item). Session 19: diagnosed (B11 provisional 300 MB
-  cap, 397 companion-open rows median 319 MB, B18 follows); adjudicator ruled
-  calibrate, row RUN-BUDGET-CALIBRATE-B11 filed.
 - NOTE (session 19 /done): reap --apply removed 33 worktrees (w22-*,
   w23-*, w24-*, incl. w23-int and w24-int); kept lanes 0 to 2. Read back:
   4 worktrees (main, lane-0..2); second run "reap applied: 0 removed, 3
-  kept, 0 listed (base main)". The kit defect below repeated: reap deleted
+  kept, 0 listed (base main)". The reap kit defect repeated: reap deleted
   worktree-w24-RUN-EXPLAIN-ROWS (its merge was reverted); re-created by
-  hand at c44ebd0. roadmap_fold: 32 row files applied, 29 rows archived
-  (ed1d53a).
-- NOTE (session 18 /done): reap --apply removed the 4 agent-* and the
-  w22-* worktrees except w22-PUB-HOOK-RELEASE-CHECK; kept lanes 0 to 2.
-  Read back: 5 worktrees (main, lane-0..2, w22-PUB-HOOK-RELEASE-CHECK);
-  second run "reap applied: 0 removed, 3 kept, 1 listed". Kit defect
-  candidate: reap deletes a deferred package's branch when its commits are
-  on main by patch even though the merge was reverted (RUN-REPORT-FIELDS;
-  re-created by hand); one more line for the KIT DEFECT bullet.
-  roadmap_fold: 27 row files applied, 24 rows archived (d398fc9); read
-  back: no ROADMAP row reads "BLOCKED: session wave 22".
+  hand at c44ebd0 (session 18 saw the same with RUN-REPORT-FIELDS). KIT
+  DEFECT line to add: reap deletes a deferred package's branch when its
+  commits are on main by patch although the merge was reverted.
+  roadmap_fold: 32 row files applied, 29 rows archived (ed1d53a).
 
 Context: CLAUDE.md (Settled list, with decisions 0046, 0077, 0078 to 0080),
 docs/plan/07-execution-plan.md ("Wave 7" on),
@@ -311,18 +271,12 @@ docs/roadmap/archive/2026-11.md; new and done row files under
 docs/roadmap/new and docs/roadmap/done are folded by /done),
 docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT,
 ops/runtime/ggg_docs/.
-Operator orders recorded session 5 (2026-11-17):
-- Releases only on a milestone or an explicit tag, never per commit.
-- docs / README refresh and upstream watches must be scheduled, never
-  need a reminder.
-- Overlay / app restarts mid-game are fine.
-- The operator plays while work runs: heavy work runs at low priority.
-- Status board only on request (ops/status_board.json opt_in false).
-Operator orders recorded session 6:
-- 2026-11-17: one deep review and one sequenced plan that normal sessions
-  execute in waves (docs/plan/README.md).
-- 2026-11-18: go public, private first (decision 0046; the lines under
-  Operator records).
+Operator orders (sessions 5 and 6; full text archive block "SESSION 19
+/done"): releases only on a milestone or an explicit tag; docs refresh
+and upstream watches scheduled; overlay / app restarts mid-game fine;
+heavy work at low priority while the operator plays; status board only
+on request; one deep review and a waved plan (docs/plan/README.md); go
+public, private first (decision 0046).
 Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
 127.0.0.1:8960 listening (session 11). Probe /api/health and the process
 list before touching them; other pythonw processes belong to other trees. A
@@ -332,12 +286,10 @@ Acceptance: wave 25 closed as 08 section 7 says (open-row command prints "none o
 
 Do NOT redo (session 19, on main and pushed): wave 22 carry (008c899, 409e3a0); wave 23 (14/14); wave 24 (12 merged, pointer a4f98b0, f8d1c1b); BUDGETLOG diagnosis and adjudicator ruling (row RUN-BUDGET-CALIBRATE-B11); REL-CUTOVER-LIVE prep (0.2.0-rc.0 built); the session 19 roadmap fold (ed1d53a); w22, w23 and w24 worktrees reaped.
 
-Do NOT redo (session 18, on main and pushed): W22-FOLD + UNREADABLE-RETAG (51f8834); wave 22 closed 14/18 (pointer commit 0555f53); the five parked packages re-placed (waves 23, 25, 43); DEV-PORT ruled (bullet above); the session 18 roadmap fold (d398fc9); w22 and agent-* worktrees reaped.
-
-Do NOT redo (sessions 6 to 17): docs/handoff-archive/
+Do NOT redo (sessions 6 to 18): docs/handoff-archive/
 
 In flight: none (the wave orchestrator finished; no progress row running). Loop live, do not touch (HALT absent; loop.json fire 469 done 03:33 idle, push skipped: loop push off); fleet_checklist stale: none (read 2026-11-22 at session 19 /done); REG_OPEN absent (registration closed).
 
-Status (session 19 /done, 2026-11-22, fresh runs read back): whole suite through the suite gate 5172 passed / 8 skipped / 1 xfailed (parallel 87.98 s), timing phase 35 passed (48.76 s), rc 0; npm test --prefix app 733/733; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = f8d1c1b before /done, then fold ed1d53a and this hand-off commit pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
+Status (session 19 /done, 2026-11-22, fresh, read back): whole suite via the gate 5172 passed / 8 skipped / 1 xfailed (parallel 87.98 s), timing phase 35 passed (48.76 s), rc 0; npm test --prefix app 733/733; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = f8d1c1b before /done, then fold ed1d53a and this hand-off commit pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.

@@ -1,0 +1,57 @@
+========================================
+SESSION 19 /done (2026-11-22): moved from AL-NEXT-SESSION.txt
+========================================
+SESSION 19 (2026-11-22): wave 22 carry RUN-REPORT-FIELDS 008c899 and PUB-HOOK-RELEASE-CHECK 409e3a0 (3rd try, adjudicator ruling) merged; wave 23 all 14 packages merged; wave 24 12 merged (DATA-CONTACT-UI, OVL-APP-SCHEME-STRICT, TC-WEIGHTS-DELTA-EXPORT, RUN-BUDGET-TESTS-LIVE, TEST-SLOW-BUDGET, DATA-PRICE-TYPES-FILE, TC-PIN-POLICY, RUN-HISTORY-UNDO, RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24, RUN-UNREADABLE-WORD); RUN-EXPLAIN-ROWS, CARD-LINE-LIMIT and PRICES-TITLE-TABINDEX deferred to wave 25; BUDGETLOG diagnosed (adjudicator: recalibrate B11); REL-CUTOVER-LIVE prepped, waits on the operator act below.
+NOTE: CARD-LINE-LIMIT re-planned to wave 25 with seven more files (702769e; ROADMAP row tagged BLOCKED: session wave 25). PUB-HOOK-RELEASE-CHECK deferred twice then merged (adjudicator ruling 2026-11-21: retry with tests/test_dependabot_reapply.py in files; alternatives skip the hook line when release.py is absent, park; reverses if a third red batch).
+SESSION 18 (2026-11-21): W22-FOLD + UNREADABLE-RETAG (51f8834: 9 package-less wave-22 rows folded; RUN-UNREADABLE-WORD is a new package in wave 24; adjudicator amendment: its log-state sentences stay in design 0001 s9); wave 22 closed 14/18 merged, pushed origin/main 0555f53; parked packages re-placed: PUB-DEPBOT-FIRST-RUN and RUN-LIVE1-FIXTURES -> wave 23, DATA-PRICE-TYPE-PROOF and PUB-GUIDE-DOWNLOAD-PLACE -> wave 25, DATA-CONTACT-DEFAULT -> wave 43. Follow-up rows filed: RUN-CARDS-PAGE-FIT, BUDGET-RETIRE-TAILER-IDLE.
+- WATCH (wave 22): the wave 21 batch B suite gate hold was about 193 s
+  against the 120 s target (batch A about 119 s, TEST-SUITE-SOAK median
+  117.3 s) with no other gate users; session 17 /done whole suite: phase 1
+  115.25 s plus timing 46.64 s. Session 18: every wave-22 batch held the
+  gate 176-190 s vs the 120 s target (parallel phase 116-129 s, timing
+  phase +48-60 s); session 18 /done whole suite: parallel 122.16 s plus
+  timing 59.91 s. Needs a look (session item, not loop); a soak median
+  over 125 s reverses the 120 s target (next bullet).
+- BUDGETLOG FINDING (session 18): `python -m server.al.budgetlog check`
+  prints FAIL: 406 breaches (e.g. B11 ws_mb 318.5 > 300); not a wave gate;
+  investigate (session item). Session 19: diagnosed (B11 provisional 300 MB
+  cap, 397 companion-open rows median 319 MB, B18 follows); adjudicator ruled
+  calibrate, row RUN-BUDGET-CALIBRATE-B11 filed.
+- NOTE (session 18 /done): reap --apply removed the 4 agent-* and the
+  w22-* worktrees except w22-PUB-HOOK-RELEASE-CHECK; kept lanes 0 to 2.
+  Read back: 5 worktrees (main, lane-0..2, w22-PUB-HOOK-RELEASE-CHECK);
+  second run "reap applied: 0 removed, 3 kept, 1 listed". Kit defect
+  candidate: reap deletes a deferred package's branch when its commits are
+  on main by patch even though the merge was reverted (RUN-REPORT-FIELDS;
+  re-created by hand); one more line for the KIT DEFECT bullet.
+  roadmap_fold: 27 row files applied, 24 rows archived (d398fc9); read
+  back: no ROADMAP row reads "BLOCKED: session wave 22".
+Do NOT redo (session 18, on main and pushed): W22-FOLD + UNREADABLE-RETAG (51f8834); wave 22 closed 14/18 (pointer commit 0555f53); the five parked packages re-placed (waves 23, 25, 43); DEV-PORT ruled (bullet above); the session 18 roadmap fold (d398fc9); w22 and agent-* worktrees reaped.
+Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
+- NOTE (01 L7): the opt-in live overlay smoke runs in no scheduled run;
+  row AUTO-22 wave 23.
+Orchestrator lessons (sessions 8 to 17; full text in the archive block
+"SESSION 18 /done"): one background orchestrator that keeps a live
+background child (a Monitor on the progress files) at every turn end and
+dispatches the next step right after each child report; never tell a
+package agent "do not push" when CLAUDE.md authorizes it; builders and
+verifiers also run tests/test_test_layout.py; a fresh integrator per
+batch; verify each claimed sha against git and that the merged tip is the
+verified tip; a red batch suite is reverted and the package deferred (08
+section 4 step 6), never fixed forward; reviews.log lines exactly in the
+required format, no bare "|"; a builder "needs <path>" failure gets a
+packages.json patch plus a fix round (ruling A, 5787074); every merge,
+commit and push goes through fleet_gitlock.
+Operator orders recorded session 5 (2026-11-17):
+- Releases only on a milestone or an explicit tag, never per commit.
+- docs / README refresh and upstream watches must be scheduled, never
+  need a reminder.
+- Overlay / app restarts mid-game are fine.
+- The operator plays while work runs: heavy work runs at low priority.
+- Status board only on request (ops/status_board.json opt_in false).
+Operator orders recorded session 6:
+- 2026-11-17: one deep review and one sequenced plan that normal sessions
+  execute in waves (docs/plan/README.md).
+- 2026-11-18: go public, private first (decision 0046; the lines under
+  Operator records).
+Tightened out of the hand-off (closed records): GO-PUBLIC: GP-10 and DATA-PRICE-CADENCE merged wave 18; PUB-README-PLAYERS landed wave 12; ci green on consecutive runs. AUDIT-P8-LOW P8-7 (diag.redact could blank a fixed-text word matching a character / contact name) fixed by RUN-REPORT-FIELDS 008c899. WAVE-16: 12 LIVE rows filed (LIVE-1-* and LIVE-WAYSTONE); orchestration note: task notifications carried invented shas, read every sha back from git. WAVE-14: merge commit 6b2ada0 carries a wrong title (not rewritten). WAVE-17: new wave-18 rows filed session 15: TEST-SHOTS-TABS, REL-HOME-REFUSAL-UI, PLAY-TD-19E-ITEM-TEXT. WAVE-23 / WAVE-24 batch suite holds (wave 23 135-150 s, parallel 85-96 s + timing 49-56 s; wave 24 parallel 87-99 s + timing 49-56 s) now live in the GATE-HOLD line.
