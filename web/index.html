@@ -40,6 +40,7 @@
 <script src="/web/rail.js" defer></script>
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
+<script src="/web/logpath.js" defer></script>
 <script src="/web/slots.js" defer></script>
 <script src="/web/regions.js" defer></script>
 <script src="/web/pager.js" defer></script>
@@ -373,7 +374,7 @@
        new. The separate price watch card is gone. -->
   <section id="pricesbox" class="card prices grid-card" aria-labelledby="prices-title" data-home="main">
     <div class="card-head">
-      <h2 id="prices-title">Prices and web data</h2>
+      <h2 id="prices-title" tabindex="-1">Prices and web data</h2>
       <span class="card-sub muted" data-card-sub></span>
       <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
@@ -707,6 +708,25 @@
     <div class="rail-block">
       <p id="reading-state" class="row-body">AshLight is not reading Client.txt.</p>
       <p id="reading-path" class="row-meta muted one-line" hidden></p>
+      <!-- SEC-LOG-PATH-FIELD (F-098): shown by web/logpath.js only while the
+           Checks row "log" fails (no Client.txt found). Use (or Enter)
+           posts /api/consent {consent: true, path}: the player's own
+           opt-in for that one file. Nothing looks in any other folder,
+           registry key or config file. The answer line sits after the form
+           so a Saved line stays when the form hides. It is not a live region
+           (the page cap of plan 03 4.1.3, Settings lines stay quiet); the
+           field and Use point at it, and a refused path marks the field
+           invalid. -->
+      <form id="logpath-form" class="logpath-form set-row" hidden>
+        <label for="logpath-in">Can't find Client.txt? Type the game folder or the path to Client.txt</label>
+        <input id="logpath-in" type="text" maxlength="1024" autocomplete="off"
+          spellcheck="false" aria-describedby="logpath-note logpath-said">
+        <button id="logpath-use" type="submit" class="secondary btn-28"
+          aria-describedby="logpath-said">Use</button>
+        <span id="logpath-note" class="row-meta muted">Use also allows AshLight to read
+          Client.txt there, read only. Only that file, only at this path.</span>
+      </form>
+      <p id="logpath-said" class="row-meta"></p>
       <p class="set-row"><button id="consent-no" type="button" class="secondary" hidden
         aria-describedby="consent-said">Stop reading Client.txt</button>
         <span id="consent-said" class="row-meta"></span></p>
