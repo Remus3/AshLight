@@ -259,3 +259,118 @@ test("a kind zone card renders with parts.item off and an item card does not", (
                "Upgrade: +12% DPS");
   assert.equal(S.hudModel(snapOf({}, zone), 1005, "live").evalHead, "Find the Sacred Grove");
 });
+
+/* RUN-OVERLAY-REMEMBER (F-188): the player's show / hide choice is kept in
+   ops/runtime/overlay-choice.json, so a hidden overlay stays hidden after a
+   client restart. */
+function choiceDir() {
+  return fs.mkdtempSync(path.join(require("node:os").tmpdir(), "al-ovlchoice-"));
+}
+
+test("a seeded 'hidden' choice starts hidden", () => {
+  const dir = choiceDir();
+  const file = path.join(dir, Gate.CHOICE_FILE);
+  fs.writeFileSync(file, JSON.stringify({ updated: "2026-11-21T00:00:00.000Z", user_on: false }));
+  const seeded = Gate.readChoice(file, fs);
+  assert.equal(seeded, false);
+  const v = fakeView();
+  const g = Gate.createOverlayGate(v, null, { userOn: seeded });
+  assert.equal(g.userWants(), false);
+  g.ready();
+  g.setGate(true); // a fresh log line: still the player's off
+  g.graceOver();
+  assert.deepEqual(v.calls, []);
+  assert.equal(g.state(), "hidden_user");
+  g.toggleUser(); // the player turns it back on
+  assert.deepEqual(v.calls, ["show"]);
+  assert.equal(g.state(), "shown");
+  // no file, junk, an oversized file or anything but an explicit false: shown
+  assert.equal(Gate.readChoice(path.join(dir, "missing.json"), fs), true);
+  fs.writeFileSync(file, "{not json");
+  assert.equal(Gate.readChoice(file, fs), true);
+  fs.writeFileSync(file, JSON.stringify({ user_on: false, pad: "x".repeat(5000) }));
+  assert.equal(Gate.readChoice(file, fs), true);
+  for (const doc of [{ user_on: true }, { user_on: "false" }, { user_on: 0 }, [], null, {}]) {
+    fs.writeFileSync(file, JSON.stringify(doc));
+    assert.equal(Gate.readChoice(file, fs), true, JSON.stringify(doc));
+  }
+  // no opts: shown, as before
+  assert.equal(Gate.createOverlayGate(fakeView()).userWants(), true);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("toggle writes the choice once, atomically", () => {
+  const ops = [];
+  const store = {};
+  const fakeFs = {
+    writeFileSync(p, text, o) { ops.push(["write", p, o.encoding]); store[p] = text; },
+    renameSync(a, b) { ops.push(["rename", a, b]); store[b] = store[a]; delete store[a]; }
+  };
+  const file = path.join("rt", Gate.CHOICE_FILE);
+  const reports = [];
+  const v = fakeView();
+  const g = Gate.createOverlayGate(v, null, { userOn: true, onUserChange: (on) => {
+    reports.push(on);
+    Gate.writeChoice(file, on, fakeFs, new Date(Date.UTC(2026, 10, 21)));
+  } });
+  g.ready();
+  g.setGate(true);
+  g.setGate(false); // gate reports never write the choice
+  g.setGate(true);
+  g.graceOver();
+  g.reset();
+  assert.deepEqual(ops, []);
+  g.toggleUser();
+  assert.deepEqual(reports, [false]);
+  // one write to a tmp file, then one rename over the real file
+  assert.deepEqual(ops, [["write", file + ".tmp", "ascii"], ["rename", file + ".tmp", file]]);
+  assert.deepEqual(Object.keys(store), [file]);
+  const text = store[file];
+  assert.ok(/^[\x00-\x7f]*$/.test(text) && !text.includes("\r") && text.endsWith("}\n"));
+  assert.deepEqual(JSON.parse(text), { updated: "2026-11-21T00:00:00.000Z", user_on: false });
+  g.toggleUser();
+  assert.deepEqual(reports, [false, true]);
+  assert.equal(ops.length, 4);
+  assert.equal(JSON.parse(store[file]).user_on, true);
+  // a throwing reporter is logged, the toggle still applies
+  const said = [];
+  const h = Gate.createOverlayGate(fakeView(), (m) => said.push(m),
+                                   { onUserChange: () => { throw new Error("disk full"); } });
+  h.toggleUser();
+  assert.equal(h.userWants(), false);
+  assert.ok(said.some((m) => /overlay choice not kept: disk full/.test(m)));
+  // a real round trip leaves no tmp file behind
+  const dir = choiceDir();
+  const real = path.join(dir, Gate.CHOICE_FILE);
+  Gate.writeChoice(real, false, fs);
+  assert.deepEqual(fs.readdirSync(dir), [Gate.CHOICE_FILE]);
+  assert.equal(Gate.readChoice(real, fs), false);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("main.js reads the choice at start and keeps it on toggle (RUN-OVERLAY-REMEMBER)", () => {
+  const main = code(fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8"));
+  // the file sits beside displays.json in the runtime dir
+  assert.match(main, /const CHOICE_FILE = path\.join\(path\.dirname\(DISPLAYS_FILE\), OverlayGate\.CHOICE_FILE\);/);
+  // read once in start(), before the companion, the parts and the window
+  const startFn = main.slice(main.indexOf("function start()"));
+  const read = startFn.indexOf("userOn = OverlayGate.readChoice(CHOICE_FILE, fs);");
+  assert.ok(read > 0, "readChoice in start()");
+  assert.ok(read < startFn.indexOf("openClient();"), "before the companion");
+  assert.ok(read < startFn.indexOf("createWindow(userOn);"), "before the first window");
+  assert.ok(read < startFn.indexOf('runParts("ready");'), "before the parts");
+  assert.equal((main.match(/readChoice\(/g) || []).length, 1);
+  // the gate is seeded and reports each toggle to keepChoice, the one writer
+  assert.match(main, /\}, log, \{ userOn: seedUserOn !== false, onUserChange: keepChoice \}\);/);
+  assert.equal((main.match(/writeChoice\(/g) || []).length, 1);
+  const keep = main.slice(main.indexOf("function keepChoice(on)"));
+  const keepBody = keep.slice(0, keep.indexOf("\n}\n"));
+  assert.match(keepBody, /if \(v === userOn\) \{ return; \}/); // a restart re-applying it: no write
+  assert.match(keepBody, /OverlayGate\.writeChoice\(CHOICE_FILE, userOn, fs\);/);
+  // toggle() itself writes nothing; the gate's report does
+  const toggleFn = main.slice(main.indexOf("function toggle()"), main.indexOf("function restartOverlay()"));
+  assert.ok(!/writeChoice|keepChoice/.test(toggleFn));
+  // before the window exists the parts and the companion see the kept choice
+  assert.match(main, /getGate: \(\) => gate \|\| choiceGate,/);
+  assert.match(main, /overlayVisible: \(\) => \(gate \? gate\.userWants\(\) : userOn\),/);
+});

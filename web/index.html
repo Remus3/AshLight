@@ -721,6 +721,27 @@
         <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
           Use web data</label>
         <span id="webdata-status" class="row-meta one-line muted"></span>
+        <!-- DATA-CONTACT-UI (F-018): the write-only contact for poe.ninja,
+             never prefilled, cleared after a save, shown only until a
+             contact is set (web/prices.js contactView); Save submits the
+             form. Its answer reuses #webdata-status (no new live region). -->
+        <span id="webdata-contact-row" class="set-row" hidden>
+          <label for="webdata-contact">Contact for poe.ninja</label>
+          <input id="webdata-contact" type="text" maxlength="120" autocomplete="off"
+            spellcheck="false" aria-describedby="webdata-contact-note webdata-status">
+          <button id="webdata-contact-save" type="submit" class="secondary btn-28">Save</button>
+          <span id="webdata-contact-note" class="row-meta muted">An email address or a name.
+            AshLight sends it to poe.ninja in its User-Agent, as poe.ninja asks, and stores it
+            only on this computer.</span>
+        </span>
+        <!-- DATA-LEAGUE-PICKER-UI (F-141): the league prices follow, from the
+             cached list only; the first option is automatic (poe.ninja's
+             current league). Saved on change; shown while a list is cached. -->
+        <span id="webdata-league-row" class="set-row" hidden>
+          <label for="webdata-league">League for prices</label>
+          <select id="webdata-league" aria-describedby="webdata-league-note webdata-status"></select>
+          <span id="webdata-league-note" class="row-meta muted"></span>
+        </span>
       </form>
       <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
            text the build link recovery shows before its confirm click) -->

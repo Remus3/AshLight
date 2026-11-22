@@ -86,13 +86,20 @@ GGG_TREE_POE2 = ("https://raw.githubusercontent.com/grindinggear/"
 # The GGG tree export is fetch-only, never bundled (DATA-TREE-SRC; reader:
 # theorycraft/treedata.py).
 SOURCES = {
-    "mods": REPOE_POE2 + "mods.json",
     "base_items": REPOE_POE2 + "base_items.json",
-    "stats": REPOE_POE2 + "stats_by_file.json",
     "stat_translations": REPOE_POE2 + "stat_translations/stat_descriptions.json",
     "skilltree": GGG_TREE_POE2,
     # HUD-ACT (decision 0020): act / zone levels; reader server/al/acts.py.
     "world_areas": REPOE_POE2 + "world_areas.json",
+}
+
+# DATA-SNAP-TRIM: two files with no reader (about 27 MB) are not fetched by
+# default. A dev re-check of the waystone mod pool passes
+# sources=dict(SOURCES, **OPTIONAL_SOURCES) to run() explicitly. Copies
+# already in a cache are left alone, never deleted by the tool.
+OPTIONAL_SOURCES = {
+    "mods": REPOE_POE2 + "mods.json",
+    "stats": REPOE_POE2 + "stats_by_file.json",
 }
 
 
