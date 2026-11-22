@@ -80,10 +80,10 @@ log = logging.getLogger("al.pricebook")
 ITEM_PATH = "/poe2/api/economy/stash/current/item/overview"
 EXCHANGE_PATH = "/poe2/api/economy/exchange/current/overview"
 # DATA-PRICE-TYPES-FILE: the shipped lists live in TYPES_PATH; these
-# built-in copies are only the missing-file default (the same 9 + 13 names).
+# built-in copies are only the missing-file default (the same 8 + 13 names).
 BUILTIN_UNIQUE = ("UniqueWeapons", "UniqueArmours", "UniqueAccessories",
                   "UniqueFlasks", "UniqueCharms", "UniqueJewels",
-                  "UniqueSanctumRelics", "UniqueTablets", "PrecursorTablets")
+                  "UniqueSanctumRelics", "UniqueTablets")
 # Currency itself stays in RatesClient (rates.json); these are the other
 # stackable kinds of the exchange overview (research 0019).
 BUILTIN_EXCHANGE = ("Fragments", "Abyss", "UncutGems", "LineageSupportGems",

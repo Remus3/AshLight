@@ -14,6 +14,12 @@ endpoint (decision 0017).
 - `convert(amount, src, dst, snap)` -> a cross-rate conversion, or None.
 - `per_unit(score, price)` -> score per one unit of price, or None.
 - `value_of(note, score_delta, snap)` -> the value doc for an item check.
+- `alias_ids()` -> the poe.ninja exchange ids the note aliases point at.
+
+DATA-PRICE-TYPE-PROOF (F-201): every id in ALIASES must be an id the
+Currency overview carries in rates.json; tools/price_type_report.py
+reports one that is missing and ninjashape watches each Currency body for
+them. The first real round (2026-11-21) carried all 11, so none was dropped.
 """
 
 import math
@@ -31,6 +37,13 @@ ALIASES = {
     "regal": "regal", "vaal": "vaal", "annul": "annul", "mirror": "mirror",
     "chance": "chance", "transmute": "transmute", "aug": "aug",
 }
+
+
+
+def alias_ids():
+    """The sorted poe.ninja exchange ids ALIASES maps note tokens to."""
+    return tuple(sorted(set(ALIASES.values())))
+
 
 _NOTE_RE = re.compile(
     r"^~(price|b/o)\s+(\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)?)\s+([a-z][a-z-]{0,30})\s*$", re.I)

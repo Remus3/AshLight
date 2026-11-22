@@ -1563,8 +1563,20 @@ class Core:
 
     def tick_calc(self):
         """AREA-AUDIT P3-6, from the core's main loop: stop the shared calc
-        process once the user turned "tc_calc" off. True when it stopped."""
-        return self.tc_provider.reap()
+        process once the user turned "tc_calc" off. True when it stopped.
+        TC-CALC-IDLE (F-154): also after IDLE_STOP_S without a calc call or
+        while the game is idle: the state's game-idle flag, the decision
+        0029 Client.txt staleness (never a process-list check), read only
+        while a calc is running."""
+        if not self.tc_provider.running():
+            return False
+        return self.tc_provider.reap(idle=self.game_idle())
+
+    def game_idle(self):
+        """The snapshot's game_idle flag (decision 0029) without building a
+        snapshot: the log is consented to and has been stale for 20 min."""
+        tailer = self.state.tailer
+        return bool(tailer.get("consented") and tailer.get("idle"))
 
     # -- DIAG-SELF (ruling J)
     DIAG_TICK_S = 5.0
