@@ -17,7 +17,7 @@ app's own process tree and checks a clean exit.
   starts on a leased port (AL_HOME in tmp holds its token, so the live
   token, config and core are never read); the companion shows that core's
   dashboard; at most 3 processes and a summed working set under B11's
-  300 MB. The client log must show the dashboard and no run.ps1 start.
+  384 MB. The client log must show the dashboard and no run.ps1 start.
 Opt-in because it puts AshLight's own (transparent, click-through) overlay
 and its companion window on the screen for a few seconds; the armed loop's
 suites never set it.
@@ -254,7 +254,7 @@ def test_live_shapes_use_the_budget_log_limits():
     """The two live shapes read B10 / B11 from server/al/budgetlog.py, the
     one table the budget log checker uses (no second copy to drift)."""
     assert MAX_PROCS == B10["processes"] == 2 and B11["processes"] == 3
-    assert B10["private_mb"] == 120.0 and B11["ws_mb"] == 300.0
+    assert B10["private_mb"] == 120.0 and B11["ws_mb"] == 384.0
     assert RAM_BUDGET < 250 * MB  # decision 0002's overlay ceiling
 
 

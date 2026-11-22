@@ -235,3 +235,43 @@ verdict "XDIST: cleared"; TEST-SUITE-RUNNER):
   (237 s and more, past lane eligibility).
 - Reverses if: the diagnosed runs show xdist caused flakes or lost workers,
   or the operator rules tests must be stdlib-only.
+
+## Budget log calibration (RUN-BUDGET-CALIBRATE-B11, 2026-11-22)
+
+Amended (BUDGETLOG diagnosis, session 19; adjudicator ruling 2026-11-21,
+option A; research 0048 B10 to B18): the budget log's provisional client
+ceilings move to measured values in `server/al/budgetlog.py`; the
+overlay's 250 MB ceiling above and the smoke test's 215 MB stay.
+
+- B11 (desktop client with the companion open, summed working set): 300
+  to B11 384 MB, at most 3 processes as before. The first live budget log
+  (3059 rows, 2026-11-20 to 2026-11-22) holds 400 rows with the companion
+  open: working set median 319.2, p95 330.2, max 340.5, min 273.8 MB, 3
+  processes in every row; 397 of them were over the provisional 300 MB.
+  384 MB is about 1.2 times the median and 43.5 MB over the max.
+- B18 (all of AshLight, calc off): 350 to B18 460 MB = B11 plus the
+  core's max working set in the log (68.2 MB; median 49.4, p95 64.9 over
+  3059 rows), 452 MB, rounded up. The 1228 calc-off client rows total
+  median 236.5, p95 389.3, max 406.3 MB; the 126 of them with the
+  companion open total median 389.2, max 406.3 MB.
+- B10 and B12 stay (200 MB working set, 120 MB private; 0.2 and 1
+  percent). The log's 1796 companion-closed rows: working set median
+  187.6, p95 193.3, max 206.1 MB; private max 112.1 MB; overlay CPU
+  median and p95 0.000 percent. Two single rows (2026-11-21 20:48 and
+  2026-11-22 00:03, both at an overlay hide, calc on) are over B10's
+  working set (204.8, 206.1 MB) and B12 (0.384, 5.831 percent), with the
+  rows before and after back at 192 MB and 0 percent; they are transients,
+  not a persistent breach, so `python -m server.al.budgetlog check` on
+  that log still reports those two rows.
+- Alternatives: keep 300 MB and close the companion to the tray by
+  default (research 0048 open question 4; the companion is the dashboard
+  players open on purpose); trim the companion renderer first (no
+  measured lever beyond UX-OVL-RAM's flags); a per-row transient filter
+  for B10 / B12 (out of this row's scope; it would hide a real spike).
+- Why: 300 MB was a guess written before any companion-open figure
+  existed; the check failed on every companion-open row and so said
+  nothing. A ceiling just above the measured range keeps a real growth
+  visible.
+- Reverses if: B10 or B12 breach persistently in the log, the operator
+  keeps 300 MB, or a later log puts the companion-open median over 350 MB
+  (then trim or default the companion to the tray).
