@@ -49,7 +49,7 @@ def test_three_hour_old_cache_exact_text():
 
 def test_rough_old_price_keeps_the_rough_word():
     t = price_card_text(card(checked_at=PRESS - 5 * H, listings=3, few=True, change=None))
-    assert t["detail"] == "Rough price from 5 h ago"
+    assert t["detail"] == "Rough price, 5 h ago"
     assert t["sentence"] == (
         "poe.ninja puts this at about 12.5 Divine Orb in Dawn, but only 3 are listed. The "
         "price is rough. This price is from 5 h ago. A trade site search in Dawn is ready "
@@ -92,10 +92,10 @@ def test_thirty_hour_old_cache_shows_the_link_only():
 
 def test_overlay_line_names_the_league_for_24_h_after_a_change():
     t = price_card_text(card(league_changed_at=PRESS - 2 * H))
-    assert t["line"] == "About 12.5 Divine Orb in Dawn"
+    assert t["line"] == "~12.5 Divine Orb in Dawn"
     assert t["detail"] == "Up 8.2% over 7 days (poe.ninja)"
     edge = price_card_text(card(league_changed_at=PRESS - LEAGUE_NEW_S + 1))
-    assert edge["line"] == "About 12.5 Divine Orb in Dawn"
+    assert edge["line"] == "~12.5 Divine Orb in Dawn"
     later = price_card_text(card(league_changed_at=PRESS - LEAGUE_NEW_S))
     assert later["line"] == "About 12.5 Divine Orb"
     # no change recorded, or one after the press: no league on the line
@@ -103,21 +103,21 @@ def test_overlay_line_names_the_league_for_24_h_after_a_change():
         assert price_card_text(card(league_changed_at=stamp))["line"] == "About 12.5 Divine Orb"
     # the overlay card shows it
     only = overlay_card(None, card(league_changed_at=PRESS - H), PRESS + 1)
-    assert only["line2"] == "About 12.5 Divine Orb in Dawn"
+    assert only["line2"] == "~12.5 Divine Orb in Dawn"
     # a name too long for the line goes to the detail line, within the cap
     long = price_card_text(card(league_changed_at=PRESS - H, league="Fate of the Vaal"))
     assert long["line"] == "About 12.5 Divine Orb"
     assert long["detail"] == "League: Fate of the Vaal"
     huge = price_card_text(card(league_changed_at=PRESS - H,
                                 league="Return of the Ancients Hardcore SSF"))
-    assert huge["detail"] == "League: Return of the Ancients..."
+    assert huge["detail"] == "League: Return of the..."
     # a non-ASCII name stays off the overlay lines (the sentence keeps it)
     accent = price_card_text(card(league_changed_at=PRESS - H, league="D" + chr(233) + "but"))
     assert accent["line"] == "About 12.5 Divine Orb"
     assert accent["detail"] == "Up 8.2% over 7 days (poe.ninja)"
     # an old price after a change says both
     both = price_card_text(card(checked_at=PRESS - 4 * H, league_changed_at=PRESS - 5 * H))
-    assert (both["line"], both["detail"]) == ("About 12.5 Divine Orb in Dawn",
+    assert (both["line"], both["detail"]) == ("~12.5 Divine Orb in Dawn",
                                               "Price from 4 h ago")
 
 
@@ -130,6 +130,20 @@ def test_new_lines_fit_the_card():
     for c in cases:
         t = price_card_text(c)
         assert len(t["line"]) <= CARD_LINE and len(t["detail"]) <= CARD_LINE, t
+        # CARD-LINE-LIMIT-COPY: worded to fit 26 while CARD_LINE stays 34
+        assert CARD_LINE == 34 and len(t["line"]) <= 26 and len(t["detail"]) <= 26, t
+    for hours in range(3, 25):
+        t = price_card_text(card(checked_at=PRESS - hours * H, few=True))
+        assert t["detail"] == f"Rough price, {hours} h ago" and len(t["detail"]) <= 26
+    # a long amount and unit: "About" turns into the "~" of the listed line
+    t = price_card_text(card(value=123456.78, unit="Exalted Orb"))
+    assert t["line"] == "~123456.78 Exalted Orb"
+    t = price_card_text(card(value=1234.5, unit="Exalted Orb"))
+    assert t["line"] == "About 1234.5 Exalted Orb"
+    t = price_card_text(card(value=1234.5, unit="Exalted Orb", league_changed_at=PRESS - H))
+    assert (t["line"], t["detail"]) == ("About 1234.5 Exalted Orb", "League: Dawn")
+    t = price_card_text(card(league_changed_at=PRESS - H, league="A" * 60))
+    assert t["detail"] == "League: " + "A" * 15 + "..."
 
 
 def test_ninja_text_without_a_press_time_is_unchanged():
@@ -158,6 +172,6 @@ def test_press_pipeline_ages_the_cached_price():
     assert checker.request(text, at=PRESS)["status"] == "link"
     snap = st.snapshot()
     assert snap["price"]["ninja"]["checked_at"] == PRESS - 3 * H - 1
-    assert snap["price"]["text"]["line"] == "About 12.5 Divine Orb in Dawn"
+    assert snap["price"]["text"]["line"] == "~12.5 Divine Orb in Dawn"
     assert snap["price"]["text"]["detail"] == "Price from 3 h ago"
-    assert snap["card"]["line2"] == "About 12.5 Divine Orb in Dawn"
+    assert snap["card"]["line2"] == "~12.5 Divine Orb in Dawn"

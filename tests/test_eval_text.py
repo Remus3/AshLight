@@ -99,14 +99,42 @@ def test_sidegrade_empty_slot_and_unidentified():
     assert t["sentence"] == "Upgrade: your build has nothing in Boots (+45 points)."
     t = eval_card_text(card(unidentified=True, item={"name": None, "base": "Example Ring"}))
     assert t["item"] == "Example Ring (unidentified)"
-    assert t["line"] == "Mods hidden - identify it first"
+    assert t["line"] == "Mods hidden: identify it"
+
+
+def test_delta_head_drops_the_slot_name_over_26():
+    """CARD-LINE-LIMIT-COPY: the item check head keeps the verdict and the
+    number whole; over 26 characters the slot name drops (the dashboard
+    sentence still names it)."""
+    t = eval_card_text(card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade",
+                            comparisons=[comp("Body Armour", "downgrade", -1234.5)]))
+    assert t["head"] == "Downgrade -1234.5"
+    assert "Body Armour" in t["sentence"]
+    t = eval_card_text(card(slot="Body Armour", score_delta=12,
+                            comparisons=[comp("Body Armour", "upgrade", 12)]))
+    assert t["head"] == "Upgrade +12 vs Body Armour" and len(t["head"]) == 26
+    t = eval_card_text(card(slot="Body Armour", score_delta=12,
+                            comparisons=[comp("Body Armour", "upgrade", 12, empty=True)]))
+    assert t["head"] == "Upgrade +12 - slot empty"
+    t = eval_card_text(card(slot="Gloves", score_delta=5,
+                            comparisons=[comp("Gloves", "upgrade", 5, empty=True)]))
+    assert t["head"] == "Upgrade +5 - Gloves empty"
+    t = eval_card_text(card(slot="Weapon 1", score_delta=123.5,
+                            comparisons=[comp("Weapon 1", "upgrade", 123.5, empty=True)]))
+    assert t["head"] == "Upgrade +123.5"
+    for slot in ("Weapon 1", "Body Armour", "Charm 3"):
+        for verdict, delta in (("upgrade", 99999.5), ("sidegrade", -0.5), ("downgrade", -12.5)):
+            for empty in (False, True):
+                c = card(verdict=verdict, slot=slot, score_delta=delta,
+                         comparisons=[comp(slot, verdict, delta, empty=empty)])
+                assert len(eval_card_text(c)["head"]) <= 26, (slot, delta, empty)
 
 
 def test_error_card_text():
     t = eval_card_text({"ok": False, "error": "no build loaded",
                         "item": {"name": "Grim Clutch"}})
     assert (t["head"], t["item"], t["line"]) == \
-        ("No build loaded", "Grim Clutch", "Paste a build on the dashboard")
+        ("No build loaded", "Grim Clutch", "Load a build first")
     assert t["sentence"] == NO_BUILD_SENTENCE
     assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
         [], "Not checked", "note", False)
@@ -117,7 +145,7 @@ def test_error_card_text():
     assert (t["head"], t["line"]) == ("Can't compare this", "Only gear is compared")
     # OVL-COPY-FIRST (F-054): a press before the game wrote the clipboard
     t = eval_card_text({"ok": False, "error": "empty clipboard", "item": {}})
-    assert (t["head"], t["item"], t["line"]) ==         ("Copy the item first", "Unnamed item", "Hover it in game, press Ctrl+C")
+    assert (t["head"], t["item"], t["line"]) ==         ("Copy the item first", "Unnamed item", "Hover it, press Ctrl+C")
     assert t["sentence"] == ("The clipboard was empty when you pressed the hotkey. Hover "
                              "an item in game, press Ctrl+C, then press the hotkey again.")
     assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
@@ -150,13 +178,15 @@ def test_every_mark_has_a_word():
 
 
 def test_overlay_lines_fit_the_card():
-    """Section 9 rule 6: the head and line of the common cases fit 34."""
+    """Section 9 rule 6: the head and line of the common cases fit 34;
+    CARD-LINE-LIMIT-COPY: without an alert they are worded to fit 26."""
     for c in (card(), card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade"),
+              card(unidentified=True),
               {"ok": False, "error": "no build loaded"},
               {"ok": False, "error": "no gear slot for this item class"},
               {"ok": False, "error": "empty clipboard"}):
         t = eval_card_text(c)
-        assert len(t["head"]) <= 34 and len(t["line"]) <= 34, t
+        assert len(t["head"]) <= 26 and len(t["line"]) <= 26, t
         # TC-VERDICT-CAVEAT: with any build alert, worst cases included
         long_name = "Q" * 23
         for alert in [a for a, _short in ALERTS] + [
@@ -193,7 +223,7 @@ def test_alert_head_takes_line3():
     # an unidentified item keeps naming the input it lacks; the note stays
     alert = ALERTS[0][0]
     t = eval_card_text(card(unidentified=True), alert)
-    assert t["line"] == "Mods hidden - identify it first"
+    assert t["line"] == "Mods hidden: identify it"
     assert t["notes"] == [build_alert_text(alert)["text"]]
     # error and waystone cards are left as they are
     for c in ({"ok": False, "error": "no build loaded"},
@@ -317,7 +347,7 @@ def test_blank_press_is_the_copy_first_card_and_asks_no_price(core):
         ev = core.state.snapshot()["eval"]
         assert ev["error"] == "empty clipboard"
         assert (ev["text"]["head"], ev["text"]["line"]) == (
-            "Copy the item first", "Hover it in game, press Ctrl+C")
+            "Copy the item first", "Hover it, press Ctrl+C")
         assert core.state.snapshot()["card"]["head"] == "Copy the item first"
     assert prices == [] and core.state.price is None
     assert core.last_eval.rerun() is None  # nothing to re-score
@@ -354,7 +384,7 @@ def test_no_build_keep_part_words():
     t = eval_card_text(dict(base, parts={"keep": keep}))
     assert (t["word"], t["tone"], t["answers"]) == ("Keep", "upgrade", True)
     assert (t["head"], t["item"], t["line"]) == (
-        "Keep - 2 of 5 met at level 24", "Grim Clutch", "Paste a build on the dashboard")
+        "Keep - 2 of 5 met, Lv 24", "Grim Clutch", "Load a build first")
     assert t["sentence"] == NO_BUILD_SENTENCE
     assert t["notes"] == [
         "Worth keeping: it meets 2 of 5 levelling thresholds for level 24.",
@@ -362,7 +392,7 @@ def test_no_build_keep_part_words():
     vendor = dict(keep, status="vendor", count=0, met=[])
     t = eval_card_text(dict(base, parts={"keep": vendor}))
     assert (t["word"], t["tone"], t["head"]) == ("Vendor", "note",
-                                                 "Vendor - 0 of 5 met at level 24")
+                                                 "Vendor - 0 of 5 met, Lv 24")
     assert t["notes"] == [
         "Vendor: it meets 0 of 5 levelling thresholds for level 24, and 2 are needed."]
     t = eval_card_text(dict(base, parts={"keep": {"status": "no_level"}}))

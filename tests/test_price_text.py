@@ -167,7 +167,7 @@ def test_empty_clipboard_price_error_says_copy_first():
     """OVL-COPY-FIRST: PRICE_TEXT handles the eval's "empty clipboard" key."""
     t = price_card_text(price("error", error="empty clipboard", item={}))
     assert (t["line"], t["detail"]) == ("Copy the item first",
-                                        "Hover it in game, press Ctrl+C")
+                                        "Hover it, press Ctrl+C")
     assert t["sentence"] == ("The clipboard was empty when you pressed the hotkey. Hover "
                              "an item in game, press Ctrl+C, then press the hotkey again.")
 
@@ -340,8 +340,8 @@ def test_card_merged_when_the_keep_part_answers_without_a_build():
     st.set_price(price(count=5, listings=FIVE), at=1000.5)
     _s, card = snap_parts(st)
     assert (card["kind"], card["head"], card["line2"], card["line3"], card["verdict"]) == (
-        "merged", "Vendor - 1 of 5 met at level 30", "5 listed, ~12 exalted",
-        "Paste a build on the dashboard", "note")
+        "merged", "Vendor - 1 of 5 met, Lv 30", "5 listed, ~12 exalted",
+        "Load a build first", "note")
     ev["parts"] = {"keep": {"status": "no_level"}}
     st.set_eval(ev, at=1000.0)
     assert st.snapshot()["card"]["kind"] == "price"

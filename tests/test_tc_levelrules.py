@@ -4,7 +4,7 @@ Fixture items at levels 10, 30 and 60 give the expected verdict and the
 thresholds met, with the exact card words; a broken rule file keeps the
 last good copy with a Checks note; every entry carries src and checked;
 the boots band agrees with campaign.DEFAULT_BOOTS_LEVEL; a loaded build
-gives no keep part; card lines fit 34 characters."""
+gives no keep part; card lines fit 26 characters (CARD-LINE-LIMIT-COPY)."""
 
 import json
 import os
@@ -68,9 +68,9 @@ def test_level_10_gloves_keep():
                 {"label": "fire res", "min": 8, "have": 9}],
         "missed": []}
     assert (t["word"], t["tone"], t["answers"]) == ("Keep", "upgrade", True)
-    assert t["head"] == "Keep - 2 of 5 met at level 10"
+    assert t["head"] == "Keep - 2 of 5 met, Lv 10"
     assert t["item"] == "Test Piece"
-    assert t["line"] == "Paste a build on the dashboard"
+    assert t["line"] == "Load a build first"
     assert t["notes"] == [
         "Worth keeping: it meets 2 of 5 levelling thresholds for level 10.",
         "Thresholds met: life 10+, fire res 8+."]
@@ -78,7 +78,7 @@ def test_level_10_gloves_keep():
 
 def test_level_30_ring_keep_counts_all_elemental_for_each():
     _card, t = card_for(RING_30, 30)
-    assert t["head"] == "Keep - 3 of 5 met at level 30"
+    assert t["head"] == "Keep - 3 of 5 met, Lv 30"
     assert t["notes"] == [
         "Worth keeping: it meets 3 of 5 levelling thresholds for level 30.",
         "Thresholds met: fire res 12+, cold res 12+, lightning res 12+."]
@@ -88,7 +88,7 @@ def test_level_30_helmet_vendor():
     card, t = card_for(HELMET_30, 30)
     assert card["parts"]["keep"]["status"] == "vendor"
     assert (t["word"], t["tone"], t["answers"]) == ("Vendor", "note", True)
-    assert t["head"] == "Vendor - 1 of 5 met at level 30"
+    assert t["head"] == "Vendor - 1 of 5 met, Lv 30"
     assert t["notes"] == [
         "Vendor: it meets 1 of 5 levelling thresholds for level 30, and 2 are needed.",
         "Thresholds met: life 25+."]
@@ -96,7 +96,7 @@ def test_level_30_helmet_vendor():
 
 def test_level_60_armour_keep():
     _card, t = card_for(ARMOUR_60, 60)
-    assert t["head"] == "Keep - 2 of 5 met at level 60"
+    assert t["head"] == "Keep - 2 of 5 met, Lv 60"
     assert t["notes"] == [
         "Worth keeping: it meets 2 of 5 levelling thresholds for level 60.",
         "Thresholds met: life 65+, cold res 25+."]
@@ -104,18 +104,18 @@ def test_level_60_armour_keep():
 
 def test_level_60_boots_without_speed_vendor():
     _card, t = card_for(BOOTS_60, 60)
-    assert (t["word"], t["head"]) == ("Vendor", "Vendor - no move speed at level 60")
+    assert (t["word"], t["head"]) == ("Vendor", "Vendor - no move speed")
     assert t["notes"] == [
         "Vendor: it lacks move speed 10+, which this levelling rule needs at level 60.",
         "Thresholds met: life 65+, fire res 25+."]
     _card, t = card_for(FAST_BOOTS_60, 60)
-    assert t["head"] == "Keep - 3 of 6 met at level 60"
+    assert t["head"] == "Keep - 3 of 6 met, Lv 60"
     assert t["notes"][1] == "Thresholds met: life 65+, fire res 25+, move speed 10+."
 
 
 def test_level_10_boots_have_no_speed_rule_and_none_met():
     _card, t = card_for(BOOTS_10, 10)
-    assert t["head"] == "Vendor - 0 of 5 met at level 10"
+    assert t["head"] == "Vendor - 0 of 5 met, Lv 10"
     assert t["notes"] == [
         "Vendor: it meets 0 of 5 levelling thresholds for level 10, and 1 is needed."]
 
@@ -160,7 +160,7 @@ def test_press_with_and_without_build(tmp_path):
         ev = core.state.snapshot()["eval"]
         assert ev["error"] == "no build loaded"
         assert ev["parts"]["keep"]["status"] == "keep"
-        assert ev["text"]["head"] == "Keep - 3 of 5 met at level 30"
+        assert ev["text"]["head"] == "Keep - 3 of 5 met, Lv 30"
         core.builds.load_code(codec.encode(EVAL_BUILD_XML))
         ev = core.state.snapshot()["eval"]
         assert ev["ok"] and "keep" not in ev["parts"]
@@ -171,17 +171,27 @@ def test_press_with_and_without_build(tmp_path):
 
 # -- card line lengths --------------------------------------------------------
 
-def test_card_lines_fit_34():
+def test_card_lines_fit_26():
+    """CARD-LINE-LIMIT-COPY: the head fits 26 at every level and count (HEAD_MAX
+    stays 34 until CARD-LINE-LIMIT-FLIP); level 100 with a word Vendor drops
+    the level, never the count."""
+    assert keep.HEAD_MAX == 34 and keep.HEAD_FIT == 26
     for level in range(1, 101):
         for status in ("keep", "vendor"):
             for of in range(1, 7):
                 value = {"status": status, "level": level, "need": 2, "of": of,
                          "count": of, "met": [], "missed": []}
-                assert len(keep.head(value)) <= 34
+                h = keep.head(value)
+                assert len(h) <= 26 and f"{of} of {of} met" in h, h
+    value = {"status": "vendor", "level": 100, "need": 2, "of": 6, "count": 0,
+             "met": [], "missed": []}
+    assert keep.head(value) == "Vendor - 0 of 6 met"
+    value["status"], value["count"] = "keep", 6
+    assert keep.head(value) == "Keep - 6 of 6 met, Lv 100"
     for text, level in ((GLOVES_10, 10), (RING_30, 30), (HELMET_30, 30),
                         (ARMOUR_60, 60), (BOOTS_60, 60), (BOOTS_10, 10)):
         _card, t = card_for(text, level)
-        assert len(t["head"]) <= 34 and len(t["line"]) <= 34, t
+        assert len(t["head"]) <= 26 and len(t["line"]) <= 26, t
         for note in t["notes"]:
             assert note.isascii() and "!" not in note and len(note.split()) <= 20, note
 
@@ -254,10 +264,11 @@ def test_no_table_gives_no_part(monkeypatch):
     assert keep.compute(ctx_for(GLOVES_10, 30)) is None
 
 
-def test_missed_must_head_names_the_check_and_fits_34():
+def test_missed_must_head_names_the_check_and_fits_26():
     """Design review TCK-3: a Vendor from a missed must check names the
     check, never a count that reads like a pass; every must label in the
-    table fits 34 at every level (level 100 drops the level)."""
+    table fits 26 at every level (CARD-LINE-LIMIT-COPY: "move speed" is too
+    long for ", Lv <n>", so the level drops; a short label keeps it)."""
     doc = levelrules.table()
     labels = {c["label"] for b in doc["bands"] for c in b["checks"] if c["must"]}
     assert labels == {"move speed"}
@@ -266,9 +277,14 @@ def test_missed_must_head_names_the_check_and_fits_34():
             value = {"status": "vendor", "level": level, "need": 2, "of": 6, "count": 5,
                      "met": [], "missed": [{"label": label, "min": 10, "have": 0}]}
             h = keep.head(value)
-            assert len(h) <= 34 and h.startswith(f"Vendor - no {label}"), h
+            assert len(h) <= 26 and h.startswith(f"Vendor - no {label}"), h
             assert "met" not in h
     value["level"] = 20
-    assert keep.head(value) == "Vendor - no move speed at level 20"
+    assert keep.head(value) == "Vendor - no move speed"
     value["level"] = 100
     assert keep.head(value) == "Vendor - no move speed"
+    value["missed"] = [{"label": "life", "min": 10, "have": 0}]
+    assert keep.head(value) == "Vendor - no life, Lv 100"
+    value["missed"] = [{"label": "lightning res", "min": 10, "have": 0}]
+    value["level"] = 20
+    assert keep.head(value) == "Vendor - no lightning res"

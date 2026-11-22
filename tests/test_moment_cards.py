@@ -247,17 +247,17 @@ def test_zone_lines_words():
         "Short words", "Your level fits this zone", "")
     clear = {"mode": "clear", "text": zoneguide.CLEAR_TEXT.format(n=1, lv="level")}
     g = dict(base, next="Clearfell", advice=clear)
-    assert zone_lines(g) == ("Short words", "Next: Clearfell", "You are 1 level under: clear it")
+    assert zone_lines(g) == ("Short words", "Next: Clearfell", "1 level under: clear it")
     # the boss element outranks the level advice
     g = dict(base, next="Clearfell", boss="fire", advice=clear)
-    assert zone_lines(g) == ("Short words", "Next: Clearfell", "Boss deals mostly fire damage")
+    assert zone_lines(g) == ("Short words", "Next: Clearfell", "Boss hits mostly fire")
     g = dict(base, advice={"mode": "fit", "text": zoneguide.FIT_TEXT}, boss="cold")
-    assert zone_lines(g) == ("Short words", "Boss deals mostly cold damage", "")
+    assert zone_lines(g) == ("Short words", "Boss hits mostly cold", "")
     g = dict(base, optional=[{"kind": "resist", "text": "+10% cold resistance - near the middle."}],
              next="Clearfell", advice={"mode": "push",
                                        "text": zoneguide.RUSH_TEXT.format(n=7, lv="levels")})
     assert zone_lines(g) == ("Short words", "Bonus: +10% cold resistance",
-                             "You are 7 levels over: move on")
+                             "7 levels over: move on")
     # a next zone the short already names gives no line
     g = dict(base, short="Next: Clearfell", next="Clearfell")
     assert zone_lines(g) is None
@@ -271,6 +271,22 @@ def test_zone_lines_words():
     g = dict(base, optional=[{"kind": "charm", "text": "A charm bonus of your choice"}])
     assert zone_lines(g)[1] == "Bonus: A charm bonus of your..."
     assert overlayview.clip_words("x" * 40) == "x" * 31 + "..."
+
+
+def test_fixed_zone_lines_fit_26():
+    """CARD-LINE-LIMIT-COPY: the fixed zone card lines fit 26 characters for
+    a two-digit level gap and every boss element (CARD_LINE stays 34)."""
+    assert CARD_LINE == 34
+    lines = [overlayview.FIT_LINE] + [overlayview.BOSS_LINE.format(element=e)
+                                      for e in zoneguide.ELEMENTS]
+    for n in range(1, 100):
+        lv = "level" if n == 1 else "levels"
+        lines += [overlayview.CLEAR_LINE.format(n=n, lv=lv),
+                  overlayview.PUSH_LINE.format(n=n, lv=lv)]
+    for line in lines:
+        assert line.isascii() and len(line) <= 26, line
+    assert overlayview.CLEAR_LINE.format(n=12, lv="levels") == "12 levels under: clear it"
+    assert overlayview.BOSS_LINE.format(element="lightning") == "Boss hits mostly lightning"
 
 
 def test_overlay_view_carries_the_guide_short_never_the_guide_line():

@@ -14,9 +14,9 @@ or {"status": "no_level"} / {"status": "unidentified"} when it cannot
 answer (a note names the missing input; the card stays "No build loaded").
 
 Words (design 0001 section 9, AshLight's own): word Keep (edge upgrade) or
-Vendor (edge note), head "<word> - <k> of <n> met at level <lv>" or, for
-a missed must check, "Vendor - no <label> at level <lv>" (at most 34
-characters), dashboard notes "Worth keeping: it meets ..." / "Vendor:
+Vendor (edge note), head "<word> - <k> of <n> met, Lv <lv>" or, for a
+missed must check, "Vendor - no <label>, Lv <lv>" (at most HEAD_FIT, 26
+characters: over it the level drops), dashboard notes "Worth keeping: it meets ..." / "Vendor:
 ..." and "Thresholds met: ...", and answers True so the overlay keeps the
 item card. Nothing here reads the clipboard or sends anything anywhere.
 """
@@ -68,19 +68,24 @@ def _n(value):
 
 
 HEAD_MAX = 34  # design 0001 section 9 rule 6
+# CARD-LINE-LIMIT-COPY: the head is worded to fit 26 characters while
+# HEAD_MAX stays 34; CARD-LINE-LIMIT-FLIP lowers HEAD_MAX to this value.
+HEAD_FIT = 26
 
 
 def head(value):
-    """The overlay head: "<word> - <k> of <n> met at level <lv>"; a Vendor
-    caused by a missed must check names it instead ("Vendor - no move
-    speed at level 30"), dropping " at level <lv>" when that would pass
-    HEAD_MAX, so a count never reads like a pass."""
+    """The overlay head: "<word> - <k> of <n> met, Lv <lv>"; a Vendor
+    caused by a missed must check names it instead ("Vendor - no life,
+    Lv 30"). Over HEAD_FIT the ", Lv <lv>" part drops ("Vendor - no move
+    speed"), so the head never clips and a count never reads like a pass."""
     missed = value.get("missed") or []
     if value["status"] != "keep" and missed:
-        text = f"{WORD_VENDOR} - no {missed[0]['label']} at level {value['level']}"
-        return text if len(text) <= HEAD_MAX else f"{WORD_VENDOR} - no {missed[0]['label']}"
-    word = WORD_KEEP if value["status"] == "keep" else WORD_VENDOR
-    return f"{word} - {value['count']} of {value['of']} met at level {value['level']}"
+        text = f"{WORD_VENDOR} - no {missed[0]['label']}"
+    else:
+        word = WORD_KEEP if value["status"] == "keep" else WORD_VENDOR
+        text = f"{word} - {value['count']} of {value['of']} met"
+    full = f"{text}, Lv {value['level']}"
+    return full if len(full) <= HEAD_FIT else text
 
 
 def verdict_note(value):

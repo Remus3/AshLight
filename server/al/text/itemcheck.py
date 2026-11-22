@@ -16,11 +16,15 @@ from .waystone import waystone_text
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
 # the overlay print these; neither builds verdict wording itself.
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
+# CARD-LINE-LIMIT-COPY: overlay lines are worded to fit 26 characters while
+# common.CARD_LINE stays 34; CARD-LINE-LIMIT-FLIP lowers CARD_LINE to it.
+LINE_FIT = 26
+UNIDENTIFIED_LINE = "Mods hidden: identify it"
 EVAL_ERROR_TEXT = {
     # error: (overlay head, overlay line, dashboard sentence)
     EMPTY_CLIPBOARD: EMPTY_CLIPBOARD_TEXT,
     # TC-VERDICT-CAVEAT (F-042): the sentence names the item-key build load
-    "no build loaded": ("No build loaded", "Paste a build on the dashboard",
+    "no build loaded": ("No build loaded", "Load a build first",
                         "No build loaded yet. Paste a Path of Building code under Build, "
                         "or copy the code in Path of Building and press the item key, "
                         "then check the item again."),
@@ -202,7 +206,7 @@ def eval_card_text(card, alert=None):
     buildlive.alert() finding, or None). While one is set, a compared
     item's `line` (overlay line 3) is the alert's short head, so the
     caveat travels with the verdict, and its sentence is the first note
-    on the dashboard. An unidentified item keeps its "identify it first"
+    on the dashboard. An unidentified item keeps its "identify it"
     line (the missing input it names comes first); error and waystone
     cards are left as they are (their lines already name what is
     missing, or do not compare gear)."""
@@ -233,6 +237,19 @@ def eval_card_text(card, alert=None):
     return out
 
 
+def _delta_head(verdict, delta, slot, empty):
+    """The compared item's head: "<Verdict> <delta> vs <slot>" (empty slot:
+    "<Verdict> <delta> - <slot> empty"); over LINE_FIT the slot name drops
+    ("<Verdict> <delta> - slot empty", then "<Verdict> <delta>"), so the
+    verdict and the number always show whole and the dashboard names the
+    slot."""
+    if empty:
+        heads = (f"{verdict} {delta} - {slot} empty", f"{verdict} {delta} - slot empty")
+    else:
+        heads = (f"{verdict} {delta} vs {slot}",)
+    return next((h for h in heads if len(h) <= LINE_FIT), f"{verdict} {delta}")
+
+
 def _eval_lines(card):
     """eval_card_text's head, item, line, sentence, comparisons and calc."""
     item = _dict(card.get("item"))
@@ -257,12 +274,11 @@ def _eval_lines(card):
     verdict = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
     slot = _text(card.get("slot"), "its slot")
     delta = _signed(card.get("score_delta") or 0)
-    out["head"] = (f"{verdict} {delta} - {slot} empty" if best.get("empty")
-                   else f"{verdict} {delta} vs {slot}")
+    out["head"] = _delta_head(verdict, delta, slot, best.get("empty"))
     counted = [stat_delta_text(s.get("key"), s.get("delta"))
                for s in _dicts(best.get("stats")) if s.get("weighted")]
     if card.get("unidentified"):
-        out["line"] = "Mods hidden - identify it first"
+        out["line"] = UNIDENTIFIED_LINE
     else:
         out["line"] = counted[0] if counted else "No counted stat changes"
     out["calc"], calc_line = _calc_text(card, best, len(comps))
