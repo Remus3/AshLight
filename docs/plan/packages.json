@@ -22367,7 +22367,10 @@
     "tests/test_play_cards.py",
     "tests/test_price_book.py",
     "tests/test_overlay_view.py",
-    "tests/test_waystone_reward.py"
+    "tests/test_waystone_reward.py",
+    "tests/test_eval_text.py",
+    "tests/test_price_text.py",
+    "tests/test_price_card_age.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -22387,7 +22390,10 @@
     "tests/test_play_cards.py",
     "tests/test_price_book.py",
     "tests/test_overlay_view.py",
-    "tests/test_waystone_reward.py"
+    "tests/test_waystone_reward.py",
+    "tests/test_eval_text.py",
+    "tests/test_price_text.py",
+    "tests/test_price_card_age.py"
    ],
    "accept": "python -m pytest -q tests/test_provenance.py tests/test_zone_guide.py tests/test_math_weapon_type.py tests/test_play_cards.py tests/test_price_book.py tests/test_overlay_view.py tests/test_waystone_reward.py passes and every card line built by the changed modules is at most 26 characters with the limits unchanged.",
    "zero_click": "Nothing for players; card lines fit by themselves.",
