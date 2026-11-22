@@ -65,7 +65,7 @@ def _points(n):
     return f"{t} point" + ("" if t == "1" else "s")
 
 
-CARD_LINE = 34  # design 0001 section 9 rule 6: overlay card line length
+CARD_LINE = 26  # design 0001 section 9 rule 6: overlay card line length
 
 
 def _short_list(words, width=CARD_LINE):

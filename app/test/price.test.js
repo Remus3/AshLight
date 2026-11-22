@@ -22,11 +22,11 @@ const merged = Object.assign({}, base, {
           line3: "+35 to maximum Life", verdict: "upgrade", expires_at: 1020 }
 });
 
-test("cardText clips each line to 34 and keeps the verdict", () => {
+test("cardText clips each line to 26 and keeps the verdict", () => {
   const long = { kind: "price", head: "Price: " + "x".repeat(60), line2: "a", line3: "b",
                  verdict: "price", expires_at: 5 };
   const c = fmt.cardText(long);
-  assert.equal(c.head.length, 34);
+  assert.equal(c.head.length, 26);
   assert.ok(c.head.endsWith("..."));
   assert.deepEqual([c.line2, c.line3, c.verdict], ["a", "b", "price"]);
   assert.deepEqual(fmt.cardText(null), { head: "", line2: "", line3: "", verdict: "" });
