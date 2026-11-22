@@ -8,6 +8,10 @@ Pure functions and constants; stdlib only.
 from .. import num as num_mod
 from .common import _dict, _dicts, _short_list, _signed, _text
 
+# CARD-LINE-LIMIT-COPY2: the overlay lines fit 26 characters while
+# common.CARD_LINE stays 34; CARD-LINE-LIMIT-FLIP lowers CARD_LINE to it.
+LINE_FIT = 26
+
 
 WAYSTONE_LISTED = 3  # design 0001 rule 1: the sentence names at most 3 mods
 
@@ -26,7 +30,7 @@ def waystone_rewards_text(ws):
     full = ", ".join(f"{_signed(r['pct'])}% {_text(r.get('label'), '')}" for r in rows)
     shorts = [f"{_signed(r['pct'])}% {_text(r.get('short'), '') or _text(r.get('label'), '')}"
               for r in rows]
-    return {"rewards": f"Rewards: {full}.", "reward_line": _short_list(shorts)}
+    return {"rewards": f"Rewards: {full}.", "reward_line": _short_list(shorts, LINE_FIT)}
 
 
 def _reward_pct(v):
@@ -49,7 +53,7 @@ def _waystone_risk_text(ws):
     what = (f"Tier {tier} waystone" if isinstance(tier, int) and not isinstance(tier, bool)
             else "Waystone")
     if ws.get("unidentified"):
-        return {"head": "Waystone unidentified", "line": "Identify it to check its mods",
+        return {"head": "Waystone unidentified", "line": "Identify it to check mods",
                 "sentence": f"{what}. Identify it to see its mods, then press the hotkey "
                             "again."}
     risky = _dicts(ws.get("risky"))
@@ -69,4 +73,4 @@ def _waystone_risk_text(ws):
     listed = ", ".join(labels[:WAYSTONE_LISTED])
     if len(labels) > WAYSTONE_LISTED:
         listed += f", and {len(labels) - WAYSTONE_LISTED} more"
-    return {"head": head, "line": _short_list(shorts), "sentence": sentence + listed + "."}
+    return {"head": head, "line": _short_list(shorts, LINE_FIT), "sentence": sentence + listed + "."}

@@ -273,9 +273,13 @@ def test_core_saves_visits_and_clear_empties_them(tmp_path):
 # -- the shipped guide file ---------------------------------------------------
 
 SHIPPED = zoneguide.load()
+# CARD-LINE-LIMIT-COPY2: every shipped short fits the 26-character card line
+# while the file's own cap (MAX_SHORT) stays 34 until CARD-LINE-LIMIT-FLIP.
+SHIPPED_SHORT_FIT = 26
 
 
 def test_shipped_guide_shape_and_text():
+    assert zoneguide.MAX_SHORT == 34 > SHIPPED_SHORT_FIT
     assert SHIPPED.get("acts"), "guide file missing or malformed"
     for key, entry in SHIPPED["acts"].items():
         assert acts.label_of(key), key
@@ -286,7 +290,7 @@ def test_shipped_guide_shape_and_text():
             short = z.get("short")
             assert short is None or short == "" or (
                 isinstance(short, str) and short.isascii()
-                and len(short) <= zoneguide.MAX_SHORT), (zone, "short")
+                and len(short) <= SHIPPED_SHORT_FIT), (zone, "short")
             for o in z.get("optional", []):
                 assert o["kind"] in zoneguide.KINDS, (zone, o)
                 assert 5 <= len(o["text"]) <= 120, (zone, o)
@@ -297,7 +301,7 @@ def test_shipped_guide_shape_and_text():
     assert SHIPPED["endgame"]["objective"]
     short = SHIPPED["endgame"].get("short")
     assert short is None or (isinstance(short, str) and short.isascii()
-                             and len(short) <= zoneguide.MAX_SHORT)
+                             and len(short) <= SHIPPED_SHORT_FIT)
 
 
 # The campaign zones that had a zone note (zone_notes.json, decision 0030)

@@ -27,6 +27,17 @@ a new or changed price template is edited here, not in design 0001.
   `Price check failed`; dashboard `<n> listed in <league>. The cheapest
   is <a>; the middle of the <k> cheapest is <b>.`; the one card is
   chosen by `overlay_card` (decision 0016)
+- poe.ninja price (PRICE-UNIQUE / PRICE-STACKABLES, `ninja_text`):
+  overlay line `About <amount> <unit>` (`Under 0.001 <unit>` for dust);
+  over 26 characters it reads `~<amount> <unit>`; within 24 h of a
+  league change the line adds ` in <league>` when that fits (else
+  `~<amount> <unit> in <league>`), otherwise the league goes to the
+  detail line as `League: <league>`, cut at a whole word with `...`; a
+  non-ASCII league name stays in the dashboard sentence only; detail
+  `Few listings: rough price`, `<Up|Down> <pct>% over 7 days
+  (poe.ninja)`, `Price from <h> h ago` / `Rough price, <h> h ago` (aged)
+  or `From poe.ninja`; the empty clipboard reads `Copy
+  the item first`, `Hover it, press Ctrl+C` (CARD-LINE-LIMIT-COPY)
 - upgrade search (TC-UPGRADE, `web/prices.js upgradeView`): dashboard
   only, `Your build wears <base> in <slot>, so this finds rare items of
   that base.` (empty slot: `Your build has nothing in <slot>, so this
