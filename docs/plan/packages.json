@@ -17850,7 +17850,15 @@
     "app/test/util9.test.js",
     "app/test/dashboard.test.js",
     "app/test/prices.test.js",
-    "app/test/checks.test.js"
+    "app/test/checks.test.js",
+    "tests/test_util_10_fixtures.py",
+    "docs/design/copy/explain.md",
+    "docs/design/copy/itemcheck.md",
+    "docs/design/copy/events.md",
+    "app/test/acts.test.js",
+    "server/al/playcards.py",
+    "tests/test_play_cards.py",
+    "app/test/itemcard.test.js"
    ],
    "new_files": [
     "tests/test_copy_dead_ends.py"
@@ -17888,7 +17896,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. diag.py: the FIX_* constants (36-46, 193-194) only. state.py: event and card sentences named in research 0042 R4 (design review). Wording only; no new read or request. Runs after the controls it points at exist (see cross). Wave 28 fix round (2026-11-22): files widened after the first builder found the copy moved into server/al/text/ by RUN-ZONE-RESET and equality tests outside the list (diag FIX_* vs status_words.json / text/explain.py); size L 90m.",
+   "notes": "Tier P2. diag.py: the FIX_* constants (36-46, 193-194) only. state.py: event and card sentences named in research 0042 R4 (design review). Wording only; no new read or request. Runs after the controls it points at exist (see cross). Wave 28 fix round (2026-11-22): files widened after the first builder found the copy moved into server/al/text/ by RUN-ZONE-RESET and equality tests outside the list (diag FIX_* vs status_words.json / text/explain.py); size L 90m. Second fix round (2026-11-22): adds the copy sheets, playcards.py and their pinning tests for F20 d and the template copies.",
    "wave": 28,
    "owner": "session",
    "tier": "P2",
