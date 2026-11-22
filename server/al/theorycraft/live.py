@@ -154,6 +154,10 @@ class LastEval:
         self._busy = False
         # the result of the last published stage (wait() then read it)
         self.last_result = None
+        # RUN-UNKNOWN-ITEM-TEXT (F-185): a callable taking each fresh
+        # press's "unweighted" mod lines (plug/unknownitems.py sets it;
+        # None: not kept). Memory only, decision 0045.
+        self.unknown_sink = None
 
     def _who(self):
         """(character, level) from the state: the player's own log facts."""
@@ -236,6 +240,8 @@ class LastEval:
                 self._queue(press, stages, name)
             else:
                 stages.close()
+        if not keep_time:
+            self._note_unknown(result)
         if not keep_time and result.get("ok") and press.waystone is None:
             # BUILD-LIVE: a press adds the item to this character's list
             with self._lock:
@@ -248,6 +254,19 @@ class LastEval:
                 store.note_compared(self._who()[0], result.get("slot"), text)
             self.rescore(fresh=False)
         return result
+
+    def _note_unknown(self, result):
+        """RUN-UNKNOWN-ITEM-TEXT: hand the press's unweighted mod lines (the
+        same list compact() trims for the card) to unknown_sink; a failing
+        sink never fails the press."""
+        sink = self.unknown_sink
+        lines = result.get("unweighted") if isinstance(result, dict) else None
+        if not callable(sink) or not lines:
+            return
+        try:
+            sink(list(lines))
+        except Exception as exc:  # noqa: BLE001 - the card matters more
+            LOG.warning("not counted lines not kept (%s)", type(exc).__name__)
 
     def clear(self, card=None, result=None, at=None):
         """TC-EVAL-CLEAR-API: start a new press that has no item (the blank
