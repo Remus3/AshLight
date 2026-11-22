@@ -1279,26 +1279,3 @@ of the HALT check.
   browser or Electron refuses the synchronous copy, the summary click proves
   unreliable as the build trigger, players re-record worked checks often
   enough to need a retry control, or RUN-QUIET-FEED reshapes the report.
-- RUN-REPORT-FIELDS: the Checks report is built by server/al/report.py from an
-  allow-list. The header names the build. Then come OS build, Python, Electron
-  (the pinned version) and Counters (lines read / ignored / failed, log
-  events, refused requests; numbers only), then the Checks rows. After the
-  rows, and only when present, come Last restart (time and reason code), the
-  session's "Not counted mod lines" and the ledger's confirmed masked shapes
-  (only while the ledger consent is on). Log tails are the last 20 lines of
-  AshLight's own core.log and overlay.log. They are added only when the player
-  ticks the preview's one checkbox, which is off on every load and never
-  stored; it sends GET /api/report?tails=1. Client.txt is never part of the
-  report. Only free text goes through the redactor; labels, marks and the
-  header are fixed words (P8-7). The redactor masks whole words: every known
-  character name (current, parked, others of the run, via the plug/report
-  facts "_characters"), paths, the user and the contact. After that it masks
-  e-mail, quoted / UNC / drive / POSIX home paths, URLs, IP addresses
-  (loopback kept), host names under common TLDs and hex runs of 32 or more.
-  The redactor runs before any cut. The unweighted mod lines of each fresh
-  press go to an in-memory list (plug/unknownitems.py: deduplicated
-  case-insensitively, at most 200, oldest dropped, never written, empty after
-  a restart). Checks shows one note with the count. Reverses if: a mask gap
-  leaks a name or path, the whole-word rule misses a real leak, a fixed word
-  is blanked, the tails reveal more than AshLight's own logs, or decision 0045
-  changes.
