@@ -70,38 +70,84 @@
   }
 
   /* UX-PERF: most state pushes (timers, trades, HUD fields) leave the
-     recent list as it was; rebuild its rows only when the list changed. */
+     recent list as it was; rebuild its rows only when the list changed.
+     PLAY-TD-20B-RUN-CARDS: Run > Recent is a grid card, the twin of Play's
+     feed: every recent event newest first in one-line rows that page at 8
+     (6 compact) through web/pager.js (ALSearch.rowPager; the whole text in
+     title and on the Full text page). A row is the local time, a muted tag
+     (From / To for whispers, no edge; Death in the bad state colour) and
+     the core's sentence. The chips All, Deaths and Trades (aria-pressed)
+     filter the rows; a chip press starts the list at its first page. */
   var renderedEvents = "";
+  var evRows = [];
+  var evFilter = "all";
+  var evPager = null;
+  var EV_SIZE = { full: 8, compact: 6 };
+  var EV_NONE = { death: "No deaths among your recent events.",
+    trade: "No trades among your recent events." };
+
+  function evTag(kind) { return kind.charAt(0).toUpperCase() + kind.slice(1); }
+
+  function evShows(kind, filter) {
+    return filter === "all" || kind === filter;
+  }
+
+  function evChips() {
+    return Array.prototype.slice.call(document.querySelectorAll("[data-ev-filter]"));
+  }
+
+  function evStart() {
+    var slot = $("events");
+    if (!slot || !window.ALSearch) { return null; }
+    var S = window.ALSearch;
+    evPager = S.rowPager(document, {
+      label: "recent events",
+      size: EV_SIZE,
+      sizeClass: function () { return S.sizeClass(document); },
+      text: function (r) { return r.text; },
+      parts: function (r) {
+        return [{ text: r.time ? r.time + " " : "", cls: "ev-time" },
+          { text: r.tag + " ", cls: "ev-tag" }, { text: r.body }];
+      },
+      rowClass: function (r) { return "ev-" + r.kind; }
+    });
+    slot.replaceChildren(evPager.node);
+    evChips().forEach(function (b) {
+      b.addEventListener("click", function () {
+        evFilter = b.getAttribute("data-ev-filter") || "all";
+        evChips().forEach(function (c) {
+          c.setAttribute("aria-pressed", c === b ? "true" : "false");
+        });
+        renderedEvents = "";
+        renderEvents(evRows);
+        while (evPager.state().hasPrev) { evPager.press("prev"); }
+      });
+    });
+    return evPager;
+  }
 
   function renderEvents(rows) {
-    var key = D.eventsKey(rows);
+    evRows = rows;
+    var key = evFilter + "#" + D.eventsKey(rows);
     if (key === renderedEvents) { return; }
+    if (!evPager && !evStart()) { return; }
     renderedEvents = key;
-    var list = $("events");
-    var frag = document.createDocumentFragment();
+    var shown = [];
     for (var i = rows.length - 1; i >= 0; i--) {
       var row = rows[i];
-      var li = document.createElement("li");
       var k = D.kindOf(row);
-      if (row.whisper) { li.className = "whisper"; }
-      if (row.trade) { li.className += " trade"; }
-      if (row.type === "death") { li.className = "death"; }
-      var t = document.createElement("span");
-      t.className = "time mono";
-      t.textContent = clock(row.at);
-      var kd = document.createElement("span");
-      kd.className = "kind";
-      kd.textContent = k;
-      var tx = document.createElement("span");
-      tx.className = "text";
-      tx.textContent = row.text;
-      li.appendChild(t);
-      li.appendChild(kd);
-      li.appendChild(tx);
-      frag.appendChild(li);
+      if (!evShows(k, evFilter)) { continue; }
+      var t = clock(row.at);
+      var tag = evTag(k);
+      shown.push({ kind: k, time: t, tag: tag, body: row.text,
+        text: (t ? t + " " : "") + tag + ": " + row.text });
     }
-    list.replaceChildren(frag);
+    $("events").hidden = shown.length === 0;
     $("events-empty").hidden = rows.length > 0;
+    var none = $("events-none");
+    setText(none, rows.length && !shown.length ? EV_NONE[evFilter] || "" : "");
+    none.hidden = !none.textContent;
+    evPager.set(shown);
   }
 
   /* OVL-POS: overlay layout editor. Saved to config/local.json by the core;

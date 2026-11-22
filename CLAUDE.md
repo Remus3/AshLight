@@ -357,8 +357,7 @@ checkout runs on the dev port.
 - Server side: `.github/workflows/fleet-identity-guard.yml` is a byte
   copy of `ops/fleet_kit/fleet_identity_guard.yml`; the checks
   `fleet-identity-guard` and `test` are required on main. Workflows pin
-  every action by full commit SHA, use a read-only token (no `contents`, `pull-requests` or `actions` write; the one exception is `watch.yml`, which also holds `issues: write` for the CI issue protocol, decision 0076) and no secret,
-  never turn web data on and never call a GGG or poe.ninja host.
+  every action by full commit SHA, use a read-only token (no `contents`, `pull-requests` or `actions` write) and no secret, never turn web data on and never call a GGG or poe.ninja host; two exceptions: `watch.yml` also holds `issues: write` for the CI issue protocol (decision 0076), and `release.yml` holds exactly `contents: write`, `id-token: write` and `attestations: write`, runs only on a push of a v* tag, uses persist-credentials false, opens no pull request and commits and pushes nothing (decisions 0064 and 0073, adjudicator ruling 2026-11-21).
 - No absolute machine path, account id, email or sibling tree name in any
   tracked file outside `ops/fleet_kit/`; per-host values live in
   gitignored `config/local.json`. One exception (ruling Q-24,
@@ -490,8 +489,11 @@ of the HALT check.
   (decision 0012). Reverses if: the harness gains a worktree base-dir
   setting or the hook breaks isolated spawns.
 - Web data is one opt-in "web_data" setting, default OFF; nothing hits the
-  network while off (decision 0013). Reverses if: an endpoint is forbidden,
-  GGG policy changes, or the operator rules per-feature opt-in.
+  network while off; its sentence names the daily update check and the
+  automatic apply, and an opt-in given before that wording makes no update
+  request until acknowledged once (decision 0013, amended 2026-11-18 and
+  2026-11-21). Reverses if: an endpoint is forbidden, GGG policy changes,
+  or the operator rules per-feature opt-in.
 - Build view, item check card (one card slot, 20 s), graphics advisor read
   on a dashboard click, Copy-code clipboard write on the player's click
   (decision 0014). Reverses if: design section 10 allows two cards or
@@ -1100,7 +1102,13 @@ of the HALT check.
   first; no Electron, CPython, game data, PoB source or LuaJIT in any
   artifact (decision 0064; 0041 point 9 stands). Reverses if: the operator
   gets a signing identity, or SmartScreen friction measurably blocks
-  installs.
+  installs. Amended 2026-11-21 (DEP-15, adjudicator ruling): the
+  tag-triggered .github/workflows/release.yml holds exactly permissions
+  contents: write, id-token: write, attestations: write (rebuild, compare,
+  attest, publish the draft release), no secret, persist-credentials false,
+  actions pinned by full SHA; tests/test_workflows.py pins the three
+  scopes. Reverses if: GitHub changes those scopes, a run writes anything
+  beyond release assets, or the operator rules CI must not publish.
 - Versioning and release trigger: SemVer 0.y.z, tag = v + VERSION; a
   release only from a REL-PREP milestone row or an explicit version
   request, published only on the operator's phrase `release X.Y.Z`
@@ -1110,7 +1118,8 @@ of the HALT check.
   the rehearsal names the configured remote and pushes nothing; the
   no-remote gate is kept and proven by the injected-git test (decision
   0073). Reverses if: the operator rules that milestones may publish
-  themselves, or the remote is removed.
+  themselves, or the remote is removed. Amended 2026-11-21: release.yml
+  scopes as in the 0064 entry (DEP-15).
 - KINDLER: the build generator "Kindler" ranks AshLight-authored
   archetype templates (server/al/data/archetypes.json, JSON never run as
   code, src and checked, hot reloaded, nothing copied) scored only by
