@@ -98,7 +98,7 @@ def test_replayed_log_with_a_breach_fails_and_clean_passes(tmp_path):
                                    None, ["game_active", "calc_on"]))
     open_ok = budgetlog.client_figures(client_doc(0.0, companion=True, procs=3,
                                                   ws_kb=250 * 1024), 0.0)[0]
-    over.append(budgetlog.make_row(2150, FAKE_PROC, {"luajit_mb": 100.0}, open_ok,
+    over.append(budgetlog.make_row(2150, FAKE_PROC, {"luajit_mb": 170.0}, open_ok,
                                    ["game_active", "companion_open"]))
     many = budgetlog.client_figures(client_doc(0.0, companion=True, procs=4), 0.0)[0]
     over.append(budgetlog.make_row(2180, FAKE_PROC, None, many,
@@ -110,7 +110,7 @@ def test_replayed_log_with_a_breach_fails_and_clean_passes(tmp_path):
     assert rc == 1, lines
     got = {(b["budget"], b["field"]) for b in budgetlog.check(rows)}
     assert ("B10", "ws_mb") in got
-    assert ("B18", "total_mb") in got  # 48 + 250 + 100 with the calc tag off
+    assert ("B18", "total_mb") in got  # 48 + 250 + 170 with the calc tag off
     assert ("B12", "overlay_cpu_pct") in got
     assert ("B17", "luajit_peak_mb") in got
     assert ("B11", "processes") in got
@@ -334,7 +334,7 @@ def test_log_rows_inside_b9_to_b12_b17_b18(tmp_path):
     breach."""
     assert tuple(sorted(budgetlog.BUDGETS, key=lambda k: int(k[1:]))) == LIVE_BUDGET_IDS
     edge = budgetlog.client_figures(client_doc(0.0, companion=True, procs=3,
-                                               ws_kb=299 * 1024), 0.0)[0]
+                                               ws_kb=383 * 1024), 0.0)[0]
     inside = [{"tags": [], "supervisor_mb": 34.9},
               budgetlog.make_row(1, FAKE_PROC, None, edge, ["game_active", "companion_open"]),
               *clean_rows(2)]
@@ -344,7 +344,7 @@ def test_log_rows_inside_b9_to_b12_b17_b18(tmp_path):
         "B10": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
             client_doc(0.0, priv_kb=121 * 1024), 0.0)[0], ["game_active"]),
         "B11": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
-            client_doc(0.0, companion=True, procs=3, ws_kb=301 * 1024), 0.0)[0],
+            client_doc(0.0, companion=True, procs=3, ws_kb=385 * 1024), 0.0)[0],
             ["game_active", "companion_open", "calc_on"]),
         "B12": budgetlog.make_row(1, FAKE_PROC, None, budgetlog.client_figures(
             client_doc(0.0, tab_cpu=1.5), 0.0)[0], ["game_active", "in_map"]),
@@ -354,7 +354,7 @@ def test_log_rows_inside_b9_to_b12_b17_b18(tmp_path):
             client_doc(0.0, ws_kb=199 * 1024, priv_kb=100 * 1024), 0.0)[0],
             ["game_active"]),
     }
-    over["B18"]["total_mb"] = 350.0  # a supervisor-free total at the B18 limit
+    over["B18"]["total_mb"] = 460.0  # a supervisor-free total at the B18 limit
     for bid, row in over.items():
         got = {b["budget"] for b in budgetlog.check([row])}
         assert bid in got, (bid, got, row)
@@ -366,3 +366,86 @@ def test_log_rows_inside_b9_to_b12_b17_b18(tmp_path):
     lines, rc = budgetlog.report(rows)
     print("\n".join(lines))
     assert rc == 0 and budgetlog.check(rows) == [], "\n".join(lines)
+
+
+# RUN-BUDGET-CALIBRATE-B11 (decision 0002 amendment 2026-11-22, research
+# 0048 B11 / B18): B11 calibrated from 300 to 384 MB and B18 from 350 to
+# 460 MB on the first live log; B10 and B12 stay.
+def _live_shaped_rows():
+    """Rows shaped like the live log of 2026-11-20 to 22: companion-open
+    client working sets 274 to 340.5 MB (median 319), 3 processes, core 45
+    to 68 MB, calc on and off; companion-closed rows near 188 MB."""
+    rows = []
+    at = 1000
+    for i, ws in enumerate((273.8, 305.0, 319.2, 322.6, 330.2, 340.5)):
+        core = {"working_set_mb": (45.1, 68.2, 64.9, 49.4)[i % 4], "cpu_s": 1.0}
+        open_c = budgetlog.client_figures(client_doc(
+            0.0, companion=True, procs=3, ws_kb=int(ws * 1024),
+            priv_kb=150 * 1024), 0.0)[0]
+        tags = ["game_idle", "overlay_shown", "companion_open"]
+        rows.append(budgetlog.make_row(at, core, None, open_c, tags))
+        rows.append(budgetlog.make_row(at + 60, core, {"luajit_mb": 120.0},
+                                       open_c, tags + ["calc_on"]))
+        closed = budgetlog.client_figures(client_doc(
+            0.0, ws_kb=int(187.6 * 1024), priv_kb=int(106.3 * 1024),
+            tab_cpu=0.0), 0.0)[0]
+        rows.append(budgetlog.make_row(at + 120, core, None, closed,
+                                       ["game_idle", "overlay_shown"]))
+        at += 180
+    return rows
+
+
+def test_calibrated_b11_b18_live_shaped_log_is_clean_and_overs_still_breach():
+    assert budgetlog.BUDGETS["B11"] == {"processes": 3, "ws_mb": 384.0}
+    assert budgetlog.BUDGETS["B18"] == {"total_mb": 460.0}
+    assert budgetlog.BUDGETS["B10"] == {"processes": 2, "ws_mb": 200.0,
+                                        "private_mb": 120.0}
+    assert budgetlog.BUDGETS["B12"] == {"idle_pct": 0.2, "map_pct": 1.0}
+    rows = _live_shaped_rows()
+    assert max(r["client"]["ws_mb"] for r in rows) == 340.5
+    assert max(r["total_mb"] for r in rows if "calc_on" not in r["tags"]) >= 400.0
+    lines, rc = budgetlog.report(rows)
+    assert rc == 0 and budgetlog.check(rows) == [], lines
+
+    # a row above the new B11 still breaches (and only B11 on the client)
+    fat = budgetlog.client_figures(client_doc(
+        0.0, companion=True, procs=3, ws_kb=int(384.1 * 1024)), 0.0)[0]
+    row = budgetlog.make_row(1, {"working_set_mb": 45.0, "cpu_s": 1.0}, None,
+                             fat, ["game_idle", "companion_open", "calc_on"])
+    got = [(b["budget"], b["field"]) for b in budgetlog.check([row])]
+    assert got == [("B11", "ws_mb")], got
+    lines, rc = budgetlog.report(rows + [row])
+    assert rc == 1 and any(line.startswith("breach B11") for line in lines), lines
+    # the old ceiling no longer breaches
+    old = budgetlog.client_figures(client_doc(
+        0.0, companion=True, procs=3, ws_kb=int(330.0 * 1024)), 0.0)[0]
+    assert budgetlog.check([budgetlog.make_row(
+        1, FAKE_PROC, None, old, ["game_idle", "companion_open"])]) == []
+
+    # B18 breaches above 460 MB with the calc off, not at 459.9 or calc on
+    ok = budgetlog.client_figures(client_doc(
+        0.0, companion=True, procs=3, ws_kb=380 * 1024), 0.0)[0]
+    big = budgetlog.make_row(1, {"working_set_mb": 81.0, "cpu_s": 1.0}, None,
+                             ok, ["game_idle", "companion_open"])
+    assert big["total_mb"] == 461.0
+    assert [(b["budget"], b["field"]) for b in budgetlog.check([big])] == [
+        ("B18", "total_mb")]
+    under = dict(big, total_mb=459.9)
+    assert budgetlog.check([under]) == []
+    assert budgetlog.check([dict(big, tags=big["tags"] + ["calc_on"])]) == []
+
+
+def test_calibrated_budgets_are_quoted_in_decision_0002_and_research_0048():
+    """The amendment and research 0048 quote the numbers the checker uses."""
+    dec = (ROOT / "docs" / "decisions" / "0002-stack.md").read_text(encoding="ascii")
+    res = (ROOT / "docs" / "research" / "0048-performance-budgets-review.md"
+           ).read_text(encoding="ascii")
+    head = "## Budget log calibration (RUN-BUDGET-CALIBRATE-B11, 2026-11-22)"
+    assert head in dec
+    amend = dec.split(head, 1)[1].split(chr(10) + "## ", 1)[0]
+    b11 = int(budgetlog.BUDGETS["B11"]["ws_mb"])
+    b18 = int(budgetlog.BUDGETS["B18"]["total_mb"])
+    assert f"B11 {b11} MB" in amend and f"B18 {b18} MB" in amend
+    assert f"B11 {b11} MB" in res and f"B18 {b18} MB" in res
+    for figure in ("median 319.2", "p95 330.2", "max 340.5", "400 rows"):
+        assert figure in amend, figure

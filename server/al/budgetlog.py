@@ -30,11 +30,13 @@ breach or when the log holds no row (0 otherwise). Budgets (research 0048,
 MB unless named): B9 supervisor under 35 (only a row that carries it; the
 core never measures the supervisor), B10 client with the companion closed
 at most 2 processes, working set under 200, private under 120, B11 client
-with the companion open at most 3 processes, working set under 300, B12
+with the companion open at most 3 processes, working set under 384, B12
 overlay CPU under 0.2 percent of a core outside a map and under 1 percent
 in a map (only measurable while the companion is closed: then the one
 renderer is the overlay), B17 luajit peak under 768, B18 all of AshLight
-(core + client + luajit) under 350 with the calc off.
+(core + client + luajit) under 460 with the calc off. B11 and B18 were
+calibrated from the first live log (RUN-BUDGET-CALIBRATE-B11, decision
+0002 amendment 2026-11-22): B11 was a provisional 300 and B18 350.
 
 Standard library only.
 """
@@ -66,14 +68,17 @@ IN_MAP, OVERLAY_SHOWN, COMPANION_OPEN, CALC_ON = (
     "in_map", "overlay_shown", "companion_open", "calc_on")
 TAGS = (GAME_IDLE, GAME_ACTIVE, IN_MAP, OVERLAY_SHOWN, COMPANION_OPEN, CALC_ON)
 
-# research 0048 budgets (MB, process counts, percent of one core)
+# research 0048 budgets (MB, process counts, percent of one core); B11 and
+# B18 calibrated from the live log (decision 0002 amendment 2026-11-22):
+# B11 384 = about 1.2 x the companion-open median (319 MB), 43 MB over its
+# max (340.5); B18 460 = B11 + the core's max (68 MB), rounded up.
 BUDGETS = {
     "B9": {"supervisor_mb": 35.0},
     "B10": {"processes": 2, "ws_mb": 200.0, "private_mb": 120.0},
-    "B11": {"processes": 3, "ws_mb": 300.0},
+    "B11": {"processes": 3, "ws_mb": 384.0},
     "B12": {"idle_pct": 0.2, "map_pct": 1.0},
     "B17": {"luajit_peak_mb": 768.0},
-    "B18": {"total_mb": 350.0},
+    "B18": {"total_mb": 460.0},
 }
 
 ROW_KEYS = ("v", "at", "core_mb", "core_cpu_s", "core_cpu_pct", "luajit_mb",

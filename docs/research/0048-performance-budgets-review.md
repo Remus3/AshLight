@@ -287,7 +287,8 @@ bytes), hard also on a loaded machine; the rest are timings.
 - B10 Client, companion closed: at most 2 processes, summed working
   set under 200 MB [169.1], private under 120 MB [98.9].
 - B11 Client, companion open: at most 3 processes; provisional ceiling
-  300 MB until R4's first log [unmeasured].
+  300 MB until R4's first log [unmeasured]. Calibrated 2026-11-22 to
+  B11 384 MB [median 319.2, max 340.5] (addendum below).
 - B12 Overlay CPU under 0.2 percent of a core idle [0.000], under 1
   percent while the HUD updates in a map [unmeasured].
 - B13 Det. Overlay paints: none for a snapshot that changes no HUD
@@ -306,6 +307,7 @@ bytes), hard also on a loaded machine; the rest are timings.
 - B17 luajit peak 768 MB until R9 lands, then 400 MB; gone within a
   minute of R9's idle rule.
 - B18 All of AshLight beside the game, calc off: under 350 MB [248].
+  Calibrated 2026-11-22 to B18 460 MB [max 406.3] (addendum below).
 - B19 Game FPS: no change visible on the game's own display with the
   HUD on; system-wide proxies inside their own noise (R5, questions).
 
@@ -637,6 +639,37 @@ ahead of R6 because they close the two operator-blocked ROADMAP rows.
 6. Whether a hardware plane keeps the game on its direct path under
    the plate on this GPU and driver: not knowable inside the floor;
    R5's hidden and shown blocks answer the practical question.
+
+## Addendum 2026-11-22: first budget log (RUN-BUDGET-CALIBRATE-B11)
+
+Source: AshLight's own budget log (R4; budget.jsonl in the sidecar Logs
+dir), 3059 rows, one a minute, 2026-11-20 04:13 to 2026-11-22 07:43
+local, read with `python -m server.al.budgetlog check` and a read-only
+tally (accessed 2026-11-22). No game process or log was read. p95 is the
+nearest-rank value.
+
+- Tags: game_idle 2642, game_active 417, in_map 0, overlay_shown 2194,
+  companion_open 400, calc_on 968.
+- B11 (companion open, 400 rows, 2026-11-21 12:35 to 20:01): working set
+  median 319.2, p95 330.2, max 340.5, min 273.8 MB; 3 processes in every
+  row. 397 rows were over the provisional 300 MB, so open question 4 is
+  answered: the companion-open client is not inside 250 MB.
+- B10 (companion closed, 1796 rows): working set median 187.6, p95 193.3,
+  max 206.1 MB; private median 106.3, p95 108.1, max 112.1 MB. Overlay
+  CPU median and p95 0.000 percent, max 5.831.
+- Core (3059 rows): working set median 49.4, p95 64.9, max 68.2 MB.
+- B18 (calc off, with client figures, 1228 rows): total median 236.5, p95
+  389.3, max 406.3 MB; companion open (126 rows) median 389.2, max 406.3;
+  companion closed (1102 rows) median 236.3, max 250.5.
+- Residual: two single rows at an overlay hide with the calc on
+  (2026-11-21 20:48, 2026-11-22 00:03) read B10 working set 204.8 and
+  206.1 MB and B12 overlay CPU 0.384 and 5.831 percent; the rows on
+  either side read 192 MB and 0 percent. Transients, not persistent.
+
+Calibration (adjudicator ruling 2026-11-21 option A; decision 0002
+amendment 2026-11-22): B11 384 MB (about 1.2 times the median, 43.5 MB
+over the max), B18 460 MB (B11 plus the core max 68.2 MB, 452 MB,
+rounded up). B10, B12, B9 and B17 stay.
 
 ## Verification
 
