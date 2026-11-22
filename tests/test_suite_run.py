@@ -104,6 +104,24 @@ def test_exit_code_is_the_worst_phase():
         assert len(seen) == 2, "phase 2 always runs"
 
 
+def test_both_phases_get_the_same_suite_t0_set_at_start():
+    seen, runner = _record([0, 0])
+    env = dict(GATED)
+    env.pop("AL_SUITE_T0", None)
+    assert suite_run.run(env, runner, xdist=True, out=io.StringIO()) == 0
+    values = [e.get("AL_SUITE_T0") for _argv, e in seen]
+    assert values[0] and values[0] == values[1]
+    assert float(values[0]) > 1e9
+    assert "AL_SUITE_T0" not in env, "the caller's mapping is not changed"
+
+
+def test_an_existing_suite_t0_is_not_overwritten():
+    seen, runner = _record([0, 0])
+    env = dict(GATED, AL_SUITE_T0="1234.5")
+    suite_run.run(env, runner, xdist=False, out=io.StringIO())
+    assert [e["AL_SUITE_T0"] for _argv, e in seen] == ["1234.5", "1234.5"]
+
+
 def test_run_outside_the_gate_is_refused_with_the_gate_command():
     seen, runner = _record([0, 0])
     buf = io.StringIO()
