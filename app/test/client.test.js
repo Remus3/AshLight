@@ -769,3 +769,138 @@ test("corePort refuses a port outside the block, int only", () => {
   assert.match(main, /const port = corePort\(process\.env\.AL_PORT, config, readPortsPy\(\), \(m\) => portNotes\.push\(m\)\);/);
   assert.match(main, /openLog\(\);\s*for \(const note of portNotes\) \{ log\.warn\(note\); \}/);
 });
+
+/* RUN-SECOND-LINE-CLIENT (F-127, C18): the client restarts a core that
+   stays down; the watch is window.js makeWatch, run with a fake clock. */
+function fakeWatch(results) {
+  let t = 1795000000000;
+  const starts = [];
+  const queue = results.slice();
+  const w = ClientWin.makeWatch({
+    check: () => {
+      const r = queue.shift();
+      if (r === "throw") { return Promise.reject(new Error("refused")); }
+      return Promise.resolve(r);
+    },
+    start: () => starts.push(t),
+    now: () => t
+  });
+  return { w, starts, advance: (ms) => { t += ms; }, at: () => t };
+}
+
+test("4 failed health checks give one start (C18)", async () => {
+  const f = fakeWatch([false, false, "throw", false, false, false]);
+  const got = [];
+  for (let i = 0; i < 4; i++) { got.push(await f.w.tick()); f.advance(ClientWin.WATCH_MS); }
+  assert.deepEqual(got, ["fail", "fail", "fail", "start"]);
+  assert.equal(f.starts.length, 1);
+  // a pass resets the streak: 3 failures, a pass, 3 failures give nothing
+  const g = fakeWatch([false, false, false, true, false, false, false]);
+  const seen = [];
+  for (let i = 0; i < 7; i++) { seen.push(await g.w.tick()); g.advance(ClientWin.WATCH_MS); }
+  assert.deepEqual(seen, ["fail", "fail", "fail", "ok", "fail", "fail", "fail"]);
+  assert.equal(g.starts.length, 0);
+  assert.equal(ClientWin.WATCH_MS, 30000);
+  assert.equal(ClientWin.WATCH_FAILS, 4);
+  assert.equal(ClientWin.WATCH_GAP_MS, 15 * 60 * 1000);
+});
+
+test("a second streak inside 15 minutes gives none (C18)", async () => {
+  const many = new Array(80).fill(false);
+  const f = fakeWatch(many);
+  const out = [];
+  for (let i = 0; i < 4; i++) { out.push(await f.w.tick()); f.advance(ClientWin.WATCH_MS); }
+  assert.equal(out[3], "start");
+  const first = f.starts[0];
+  // the core stays down: every check past the streak is held until 15 min passed
+  let held = 0;
+  while (f.at() - first < ClientWin.WATCH_GAP_MS) {
+    const r = await f.w.tick();
+    if (r === "held") { held += 1; }
+    assert.notEqual(r, "start");
+    f.advance(ClientWin.WATCH_MS);
+  }
+  assert.ok(held > 20, String(held));
+  assert.equal(f.starts.length, 1);
+  // the first failed check after the hold starts again, once
+  assert.equal(await f.w.tick(), "start");
+  assert.equal(f.starts.length, 2);
+  assert.ok(f.starts[1] - f.starts[0] >= ClientWin.WATCH_GAP_MS);
+  // a start made by connect() counts toward the hold
+  const g = fakeWatch(new Array(8).fill(false));
+  g.w.noteStart(g.at());
+  for (let i = 0; i < 8; i++) { assert.notEqual(await g.w.tick(), "start"); g.advance(ClientWin.WATCH_MS); }
+  assert.equal(g.starts.length, 0);
+});
+
+test("the watch runs in the main process: window.js timer, launcher start, not the overlay", () => {
+  const c = code(WIN_SRC);
+  assert.match(c, /watchTimer = setTimeout\(watchStep, WATCH_MS\);/);
+  assert.match(c, /check: healthy,/);
+  const startBody = c.slice(c.indexOf("const watch = makeWatch("), c.indexOf("function watchStep()"));
+  assert.equal((startBody.match(/Launcher\.startCore\(opts\.repo, port\)/g) || []).length, 1);
+  assert.match(c, /function ensureTray\(\) \{[\s\S]*?startWatch\(\);[\s\S]*?\n  \}/);
+  assert.match(c, /function dispose\(\) \{\s*stopWatch\(\);/);
+  // connect()'s own start counts toward the hold
+  assert.match(c, /Launcher\.startCore\(opts\.repo, port\);\s*watch\.noteStart\(\);/);
+  // no timer in the overlay page or main.js for this
+  const ovl = code(fs.readFileSync(path.join(__dirname, "..", "overlay", "overlay.js"), "utf8"));
+  assert.ok(!ovl.includes("startCore") && !ovl.includes("/api/health"));
+  assert.ok(!code(MAIN_SRC).includes("makeWatch"));
+});
+
+test("give-up reason is shown, no path", (t) => {
+  const dirs = [];
+  t.after(() => { for (const d of dirs) { fs.rmSync(d, { recursive: true, force: true }); } });
+  function rec(doc) {
+    const d = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "al-giveup-"));
+    dirs.push(d);
+    if (doc !== undefined) {
+      fs.writeFileSync(path.join(d, Launcher.KEEPALIVE_FILE),
+        typeof doc === "string" ? doc : JSON.stringify(doc));
+    }
+    return Launcher.readGiveUp(d);
+  }
+  const gave = { pid: 4242, created: 1, status: "gave-up", core_pid: null, restarts: 5,
+                 port: 8960, updated: 1795000000, last_restart: { at: 1795000000, reason: "hung" } };
+  assert.deepEqual(rec(gave), { restarts: 5, reason: "hung" });
+  assert.equal(ClientWin.giveUpLine(rec(gave)),
+               "AshLight stopped restarting its core after 5 tries (it had stopped answering).");
+  assert.equal(ClientWin.giveUpLine(rec(Object.assign({}, gave, { last_restart: { at: 1, reason: "crash" } }))),
+               "AshLight stopped restarting its core after 5 tries (it had closed unexpectedly).");
+  // an unknown reason or count is left out, never echoed
+  const drive = "C" + ":" + String.fromCharCode(92);
+  assert.equal(ClientWin.giveUpLine(rec(Object.assign({}, gave, { restarts: drive + "x",
+    last_restart: { at: 1, reason: drive + "x" + String.fromCharCode(92) + "run.ps1" } }))),
+               "AshLight stopped restarting its core.");
+  assert.equal(ClientWin.giveUpLine({ restarts: 1, reason: "start-timeout" }),
+               "AshLight stopped restarting its core after 1 try (it did not finish starting).");
+  // not gave-up, missing, junk, too big: nothing
+  for (const doc of [Object.assign({}, gave, { status: "watching" }), undefined, "{nope", "[]",
+                     JSON.stringify(Object.assign({}, gave, { pad: "x".repeat(70000) }))]) {
+    const r = rec(doc);
+    assert.equal(r, null);
+    assert.equal(ClientWin.giveUpLine(r), "");
+  }
+  // only restarts and reason leave the file: no pid, port or path
+  assert.deepEqual(Object.keys(rec(gave)).sort(), ["reason", "restarts"]);
+  // the line passes the failed page's own rules (printable ASCII, no path)
+  const line = ClientWin.giveUpLine(rec(gave));
+  assert.ok(line.length <= ClientWin.REASON_MAX && /^[\x20-\x7e]+$/.test(line));
+  assert.ok(!/[A-Za-z]:[\/\\]|\\|\.(ps1|py|exe|js)\b/i.test(line));
+  const shown = runStartingPage("file:///starting.html?reason=" + encodeURIComponent(line) + "#failed");
+  assert.equal(shown["reason-line"].textContent, line);
+  assert.equal(shown.reason.hidden, false);
+  // shown: the failed page falls back to it after the start-error line,
+  // and an open window follows the watch's start to that page; no tray note
+  const c = code(WIN_SRC);
+  assert.match(c, /let line = startErrorLine\(opts\.runtimeDir, sinceMs\);[\s\S]*?line = giveUpNow\(\);[\s\S]*?win\.loadFile\(STARTING_HTML, failedPage\(line\)\);/);
+  assert.match(c, /function giveUpNow\(\) \{\s*return giveUpLine\(Launcher\.readGiveUp\(opts\.runtimeDir\)\);/);
+  const startBody = c.slice(c.indexOf("const watch = makeWatch("), c.indexOf("function watchStep()"));
+  assert.ok(startBody.includes("followStart(since);"));
+  const balloon = "display" + "Balloon"; // spelled in parts: the glance scan reads tests too
+  assert.ok(!startBody.includes(balloon));
+  assert.equal(c.split(balloon + "(").length - 1, 1); // the X-closed note only
+  const follow = c.slice(c.indexOf("function followStart(since)"));
+  assert.match(follow, /win\.loadFile\(STARTING_HTML\);\s*starting = Link\.waitFor\(healthy, CORE_WAIT_MS, CORE_STEP_MS\)\.then\(\(ok\) => settle\(ok, since\)\);/);
+});
