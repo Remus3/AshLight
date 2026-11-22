@@ -186,7 +186,7 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _QUOTED = re.compile(r"(\"|')(?:[A-Za-z]:[\\/]|\\\\|" + _TOP + r"/|~/)[^\"'\r\n]*\1")
 _UNC = re.compile(r"\\\\[^\s\\\"'<>|]+(?:\\" + _PCHAR + r"*)?")
 # a drive path; an unquoted space continues it while the next piece still
-# holds a separator ("C:\Program Files\x" masks whole)
+# holds a separator (a drive path through "Program Files" masks whole)
 _DRIVE = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]" + _PCHAR + r"*"
                     r"(?: " + _PCHAR + r"*[\\/]" + _PCHAR + r"*)*")
 _POSIX = re.compile(r"(?<![\w.:/])(?:" + _TOP + r"|~)(?:/" + _PCHAR + r"*)?(?=[\s\"'<>|]|$)")
