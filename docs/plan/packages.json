@@ -1587,7 +1587,6 @@
    "goal": "Leads: Contact field in the web-data card and honest blocked wording; Five cause rows in Checks; Core refuses Origin null and file:// once both local pages load from the app scheme.",
    "merge_order": [
     "DATA-CONTACT-UI",
-    "RUN-EXPLAIN-ROWS",
     "OVL-APP-SCHEME-STRICT",
     "TC-WEIGHTS-DELTA-EXPORT",
     "RUN-BUDGET-TESTS-LIVE",
@@ -1614,7 +1613,9 @@
     "SEC-CEIL-SNAPSHOT",
     "DATA-PRICE-TYPE-PROOF",
     "PUB-GUIDE-DOWNLOAD-PLACE",
-    "CARD-LINE-LIMIT"
+    "CARD-LINE-LIMIT",
+    "RUN-EXPLAIN-ROWS",
+    "TEST-SUITE-T0"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1624,7 +1625,8 @@
    "goal": "Milestones: the Settings rail is complete. Leads: Settings rail 2: Keys, Appearance and tools, About and data; footer; Core: start the updater by itself, 'Update now' and click-only.",
    "merge_order": [
     "PLAY-TD-21B-SETTINGS-ABOUT",
-    "REL-UPDATE-TRIGGER"
+    "REL-UPDATE-TRIGGER",
+    "RUN-BUDGET-CALIBRATE-B11"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -16857,59 +16859,6 @@
    ]
   },
   {
-   "id": "RUN-EXPLAIN-ROWS",
-   "title": "Five cause rows in Checks",
-   "goal": "Checks gains: overlay on screen; item check key (last press, age, outcome); calc at run time; log lines understood (fail when 500 lines gave 0 events); restarts (shown to players only after 3 restarts in a day).",
-   "units": [
-    "F-129"
-   ],
-   "files": [
-    "app/test/checks.test.js"
-   ],
-   "new_files": [
-    "server/al/plug/explain.py",
-    "tests/test_diag_explain.py"
-   ],
-   "integrator_edits": [
-    {
-     "file": "docs/design/reviews.log",
-     "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
-    }
-   ],
-   "tests": [
-    "tests/test_diag_explain.py::test_overlay_row_each_of_four_states_from_seeded_file",
-    "tests/test_diag_explain.py::test_item_key_row_last_press_age_and_outcome",
-    "tests/test_diag_explain.py::test_calc_run_time_row",
-    "tests/test_diag_explain.py::test_500_lines_0_events_fails_the_understood_row",
-    "tests/test_diag_explain.py::test_restarts_row_only_after_3_in_a_day",
-    "app/test/checks.test.js (new rows paint through the generic row model)"
-   ],
-   "accept": "python -m pytest -q tests/test_diag_explain.py tests/test_diag_self.py passes and npm test --prefix app passes.",
-   "zero_click": "Computed every 5 s; Checks opens by itself on a new failure.",
-   "size": "M",
-   "est_min": 60,
-   "deps": [
-    "RUN-OBS-LOGS-SHELL",
-    "RUN-METRICS-SITES",
-    "RUN-SUPERVISOR-CLOCK",
-    "RUN-LEDGER-WIRE",
-    "RUN-REPORT-FIELDS",
-    "OVL-OBS-CRASH"
-   ],
-   "serial_group": "",
-   "agent": "general-purpose",
-   "isolation": "worktree",
-   "lane": "build",
-   "design_review": true,
-   "blocked": null,
-   "operator_act": "",
-   "notes": "Tier P2. All five rows live in plug/explain.py and read: overlay-state.json, the metrics press and calc counters, the ledger's in-memory class counters and keepalive.json last_restart. One player-facing health surface, no second status page. Sentences get a design-reviewer pass.",
-   "wave": 24,
-   "owner": "session",
-   "tier": "P2",
-   "cluster": "RUN"
-  },
-  {
    "id": "OVL-APP-SCHEME-STRICT",
    "title": "Core refuses Origin null and file:// once both local pages load from the app scheme",
    "goal": "The core stops accepting Origin null and file:// on the feed paths, so a foreign local file cannot read AshLight's state.",
@@ -17500,9 +17449,10 @@
     "tests/test_log_path_field.py::test_posted_path_starts_the_tailer",
     "tests/test_log_path_field.py::test_bad_path_shows_the_existing_error",
     "tests/test_log_path_field.py::test_no_registry_vdf_or_directory_listing_call_is_added",
-    "tests/test_log_path_field.py::test_field_markup_has_a_label_and_no_inline_script"
+    "tests/test_log_path_field.py::test_field_markup_has_a_label_and_no_inline_script",
+    "tests/test_a11y.py (stays green with tabindex=\"-1\" on #prices-title; FOLDED PRICES-TITLE-TABINDEX)"
    ],
-   "accept": "npm test --prefix app and python -m pytest -q tests/test_log_path_field.py tests/test_a11y.py tests/test_http_security.py pass: a posted Client.txt path starts the tailer, a bad one returns the existing 400 text, and spies show the request adds no winreg, libraryfolders.vdf or directory-listing call.",
+   "accept": "npm test --prefix app and python -m pytest -q tests/test_log_path_field.py tests/test_a11y.py tests/test_http_security.py pass: a posted Client.txt path starts the tailer, a bad one returns the existing 400 text, and spies show the request adds no winreg, libraryfolders.vdf or directory-listing call; FOLDED PRICES-TITLE-TABINDEX: python -m pytest -q tests/test_a11y.py passes, npm test --prefix app passes and #prices-title in web/index.html carries tabindex=\"-1\".",
    "zero_click": "Today's discovery first; the field appears by itself only when nothing is found. Then the player types the path and presses Enter or the Use button: that one act is also the Client.txt opt-in, which the floor requires to be the player's own, and it replaces hand-editing config/local.json. Only Client.txt, only at the path the player typed.",
    "size": "M",
    "est_min": 50,
@@ -17517,11 +17467,14 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "New web/logpath.js holds the view rule and the submit (POST /api/consent {consent: true, path}); index.html: the field inside section #consent and one script tag; app.js: two lines (call the module from the tailer paint near the consent-path line, wire it in the init block). The 'not found' signal is the existing Checks row id 'log' (status fail) in the snapshot; no state.py change. Nothing probes a standalone client's folder, registry key or config file (floor audit L3; 0039-Q7 unverified). A file path must be named Client.txt (SEC-NO-DISCOVERY). Needs F-069 (another cluster) first: that Setup card replaces the consent card, and the field belongs in its row 1. Design review checks the Play word and control caps (design 0001, budgets B1-B7).",
+   "notes": "New web/logpath.js holds the view rule and the submit (POST /api/consent {consent: true, path}); index.html: the field inside section #consent and one script tag; app.js: two lines (call the module from the tailer paint near the consent-path line, wire it in the init block). The 'not found' signal is the existing Checks row id 'log' (status fail) in the snapshot; no state.py change. Nothing probes a standalone client's folder, registry key or config file (floor audit L3; 0039-Q7 unverified). A file path must be named Client.txt (SEC-NO-DISCOVERY). Needs F-069 (another cluster) first: that Setup card replaces the consent card, and the field belongs in its row 1. Design review checks the Play word and control caps (design 0001, budgets B1-B7). FOLDED PRICES-TITLE-TABINDEX (W25-PLAN, adjudicator 2026-11-22): in web/index.html add tabindex=\"-1\" to the h2 #prices-title (inside section #pricesbox) so focus can land on it (D-1 split from PLAY-PAGER-SCALE-24, ruling Q2 amended 2026-11-21); it was meant to fold into DATA-CONTACT-UI in wave 24 and was not; web/index.html has an owner in every wave 25 to 43, so it rides with this wave-25 owner. No new live region.",
    "wave": 25,
    "owner": "session",
    "tier": "P2",
-   "cluster": "SEC"
+   "cluster": "SEC",
+   "folded": [
+    "PRICES-TITLE-TABINDEX"
+   ]
   },
   {
    "id": "OVL-OVERLAY-FEED",
@@ -17782,6 +17735,45 @@
    "owner": "session",
    "tier": "P1",
    "cluster": "REL"
+  },
+  {
+   "id": "RUN-BUDGET-CALIBRATE-B11",
+   "title": "Calibrate budget B11 to 384 MB and B18 to 460 MB",
+   "goal": "Budget B11 (client with the companion open, working set) moves from 300 to 384 MB and B18 (all of AshLight) to 460 MB (384 + core max 68) in server/al/budgetlog.py; B10 and B12 stay; decision 0002 gains an amendment with the median, p95, max and row counts; research 0048 carries the figures.",
+   "units": [
+    "RUN-BUDGET-CALIBRATE-B11"
+   ],
+   "files": [
+    "server/al/budgetlog.py",
+    "tests/test_budgets.py",
+    "tests/test_budget_log.py",
+    "docs/decisions/0002-stack.md",
+    "docs/research/0048-performance-budgets-review.md",
+    "README.md"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_budget_log.py (extended: a live-shaped log whose B11 rows sit under 384 MB checks clean; a row above the new B11 still breaches; B18 breaches above 460 MB)",
+    "tests/test_budgets.py (stays green; budget numbers match decision 0002; through the suite gate)"
+   ],
+   "accept": "python -m pytest -q tests/test_budget_log.py passes, tests/test_budgets.py passes through the suite gate, python -m server.al.budgetlog check exits 0 on the live log, and a row above the new B11 still breaches.",
+   "zero_click": "The loop tick runs the check.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. BUDGETLOG diagnosis and adjudicator ruling 2026-11-21 option A (session 19). Reverses if B10 or B12 breach persistently or the operator keeps 300 MB. The ROADMAP row names tests/test_budgetlog.py: a typo for the existing tests/test_budget_log.py (same ruling pattern as TEST-SUITE-T0, adjudicator 2026-11-22). README.md only where it quotes a budget number (DOCS-FRESH). RUN-BUDGET-TESTS-LIVE keeps the live B10 check at 215 MB until this lands. Placed in wave 26: README.md is owned in wave 25 by PUB-GUIDE-DOWNLOAD-PLACE.",
+   "wave": 26,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "RUN"
   },
   {
    "id": "RUN-NO-DEAD-ENDS",
@@ -20913,6 +20905,100 @@
    "cluster": "OVL"
   },
   {
+   "id": "RUN-EXPLAIN-ROWS",
+   "title": "Five cause rows in Checks",
+   "goal": "Checks gains: overlay on screen; item check key (last press, age, outcome); calc at run time; log lines understood (fail when 500 lines gave 0 events); restarts (shown to players only after 3 restarts in a day).",
+   "units": [
+    "F-129"
+   ],
+   "files": [
+    "app/test/checks.test.js"
+   ],
+   "new_files": [
+    "server/al/plug/explain.py",
+    "server/al/text/explain.py",
+    "docs/design/copy/explain.md",
+    "tests/test_diag_explain.py"
+   ],
+   "integrator_edits": [
+    {
+     "file": "docs/design/reviews.log",
+     "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
+    }
+   ],
+   "tests": [
+    "tests/test_diag_explain.py::test_overlay_row_each_of_four_states_from_seeded_file",
+    "tests/test_diag_explain.py::test_item_key_row_last_press_age_and_outcome",
+    "tests/test_diag_explain.py::test_calc_run_time_row",
+    "tests/test_diag_explain.py::test_500_lines_0_events_fails_the_understood_row",
+    "tests/test_diag_explain.py::test_restarts_row_only_after_3_in_a_day",
+    "tests/test_diag_self.py (stays green)",
+    "tests/test_structure.py (stays green: every player sentence of the five rows lives in server/al/text/explain.py, none in server/al/plug/explain.py, and the copy sheet docs/design/copy/explain.md matches the text module)",
+    "app/test/checks.test.js (new rows paint through the generic row model)"
+   ],
+   "accept": "python -m pytest -q tests/test_diag_explain.py tests/test_diag_self.py tests/test_structure.py passes and npm test --prefix app passes.",
+   "zero_click": "Computed every 5 s; Checks opens by itself on a new failure.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [
+    "RUN-OBS-LOGS-SHELL",
+    "RUN-METRICS-SITES",
+    "RUN-SUPERVISOR-CLOCK",
+    "RUN-LEDGER-WIRE",
+    "RUN-REPORT-FIELDS",
+    "OVL-OBS-CRASH"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P2. All five rows live in plug/explain.py and read: overlay-state.json, the metrics press and calc counters, the ledger's in-memory class counters and keepalive.json last_restart. One player-facing health surface, no second status page. Sentences get a design-reviewer pass. RE-PLAN (W25-PLAN, session 20): deferred from wave 24 because tests/test_structure.py refused 30 player sentences in server/al/plug/explain.py (the design-gate path is server/al/text/). The row logic stays in server/al/plug/explain.py; every player sentence (row labels, details, fixes) moves to the new text module server/al/text/explain.py, which plug/explain.py imports, and its copy sheet docs/design/copy/explain.md lists them (rule 3, TEST-COPY-SHEETS: one sheet per text module). Prior branch worktree-w24-RUN-EXPLAIN-ROWS (c44ebd0; merge reverted in d97a090, backed out in fae97a6) may be reused: rebase it on main and move the sentences rather than start over.",
+   "wave": 25,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "RUN"
+  },
+  {
+   "id": "TEST-SUITE-T0",
+   "title": "Suite runner exports AL_SUITE_T0 at start",
+   "goal": "tools/suite_run.py sets AL_SUITE_T0 (epoch seconds) in the environment of both phases at its own start, so the TEST-SLOW-BUDGET whole-suite ceiling (tests/slow_budget.py SUITE_T0_ENV) measures from the runner start, not per phase.",
+   "units": [
+    "TEST-SUITE-T0"
+   ],
+   "files": [
+    "tools/suite_run.py",
+    "tests/test_suite_run.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [],
+   "tests": [
+    "tests/test_suite_run.py (extended: both phase commands get the same AL_SUITE_T0 epoch value set at runner start; an AL_SUITE_T0 already in the environment is not overwritten)",
+    "tests/test_slow_budget.py (stays green: the suite ceiling reads AL_SUITE_T0 when set)"
+   ],
+   "accept": "python -m pytest -q tests/test_suite_run.py tests/test_slow_budget.py passes.",
+   "zero_click": "The suite runner sets it by itself.",
+   "size": "S",
+   "est_min": 25,
+   "deps": [
+    "TEST-SLOW-BUDGET"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Tier P3. Follow-up row of TEST-SLOW-BUDGET (session 19). tests/slow_budget.py already reads SUITE_T0_ENV = \"AL_SUITE_T0\"; only the runner side is missing. The ROADMAP row names tests/test_suite_runner.py: a typo for the existing tests/test_suite_run.py, the test file of tools/suite_run.py (adjudicator 2026-11-22). Placed in wave 25: no other wave-25 package touches tools/suite_run.py or tests/test_suite_run.py.",
+   "wave": 25,
+   "owner": "session",
+   "tier": "P3",
+   "cluster": "TEST"
+  },
+  {
    "id": "TC-AFFIX-LINE",
    "title": "Affix line on the item card",
    "goal": "When the pressed text is the advanced copy, the card gains one line with the prefix and suffix counts and the best tier found; a plain copy gives none.",
@@ -23824,6 +23910,12 @@
   ],
   "RUN-UNREADABLE-WORD": [
    "RUN-UNREADABLE-WORD"
+  ],
+  "TEST-SUITE-T0": [
+   "TEST-SUITE-T0"
+  ],
+  "RUN-BUDGET-CALIBRATE-B11": [
+   "RUN-BUDGET-CALIBRATE-B11"
   ]
  }
 }
