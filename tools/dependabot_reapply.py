@@ -173,7 +173,7 @@ def kind(pr):
 # behind a conventional prefix ("build(deps): bump ...").
 _BUMP = re.compile(
     r"(?:^|:\s*)[Bb]ump ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_./-]+)?) "
-    r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?\s*$")
+    r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?(?: in the \S+ group)?\s*$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 WORKFLOWS = ".github/workflows/"
 
@@ -286,7 +286,9 @@ def apply_actions(ctx, pr):
 # optionally behind a conventional prefix. A group title names no package.
 _NPM_BUMP = re.compile(
     r"(?:^|:\s*)[Bb]ump (@?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)?) "
-    r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?\s*$")
+    r"from v?([0-9][0-9A-Za-z.+-]*) to v?([0-9][0-9A-Za-z.+-]*)(?: in \S+)?(?: in the \S+ group)?\s*$")
+# "Bump the <group> group across N directories with M updates": several bumps.
+_MULTI_GROUP = re.compile(r"[Bb]ump the \S+ group (?:across|with|in)")
 _ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$")
 NPM_AGE_S = 3 * 86400
 NPM_LOCK = "app/package-lock.json"
@@ -404,6 +406,9 @@ def apply_npm(ctx, pr):
 
     bump = parse_npm_bump(pr.get("title"))
     if bump is None:
+        if _MULTI_GROUP.search((pr.get("title") or "").strip()):
+            return leave("needs review (group title names several bumps; "
+                         "one bump is re-applied at a time)")
         return leave("needs review (title names no bump)")
     dep, old, new = bump
     if dep == ELECTRON:
