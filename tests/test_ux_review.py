@@ -470,7 +470,7 @@ def test_price_and_points_follows_price():
     assert main.index('id="price-result"') < main.index('id="eval-rows"') < main.index('id="weights"')
     js = srcpaths.read("app.js", encoding="utf-8")
     assert "evalRows.check.concat(evalRows.price, evalRows.after)" in js
-    ev = js[js.index("  function renderEval(ev) {"):js.index("  function fillBand(doc) {")]
+    ev = js[js.index("  function renderEval(ev) {"):js.index("  /* ---- DATA-NINJA-UI")]
     assert ev.index("P.valueView(ev.value)") < ev.index("P.upgradeView(ev.upgrade)")
 
 
