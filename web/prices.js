@@ -49,18 +49,112 @@
     return d + (d === 1 ? " day ago" : " days ago");
   }
 
-  /* ---- the one web-data opt-in (decision 0013), GET / POST /api/web-data */
-  function webDataView(doc) {
-    var on = !!(doc && doc.web_data === true);
-    return { on: on, status: on
-      ? "Web data is on. Prices come from poe.ninja about once an hour."
-      : "Web data is off. AshLight asks nothing from the internet." };
+  /* ---- the one web-data opt-in (decision 0013), GET / POST /api/web-data.
+     DATA-CONTACT-UI (F-018): `blocked` is the core's reason no poe.ninja
+     request runs ("web data off", "contact not set", "release build" or
+     null; /api/web-data and /api/rates both carry it). While prices are
+     blocked the words name the one step instead of a promise. */
+  var NO_CONTACT = "contact not set";
+  var RELEASE = "release build";
+  var STEP_CONTACT = "add your contact for poe.ninja";
+  var RELEASE_TEXT = "This version of AshLight does not ask poe.ninja for prices.";
+
+  function blockedOf(doc) {
+    var b = doc && typeof doc.blocked === "string" ? doc.blocked : "";
+    return b === NO_CONTACT || b === RELEASE ? b : "";
   }
 
-  function savedText(on) {
-    return on ? "Saved. Web data is on. Currency values arrive within a minute."
-              : "Saved. Web data is off. AshLight asks nothing from the internet now.";
+  /* The contact field (write-only: never prefilled, the value is never
+     echoed; the core answers only contact_set). Shown only while the doc
+     says no contact is set; a doc without contact_set leaves it as it is
+     (show null). */
+  function contactView(doc) {
+    var known = !!doc && typeof doc.contact_set === "boolean";
+    return {
+      show: known ? doc.contact_set !== true : null,
+      label: "Contact for poe.ninja",
+      note: "An email address or a name. AshLight sends it to poe.ninja in its " +
+            "User-Agent, as poe.ninja asks, and stores it only on this computer."
+    };
   }
+
+  function webDataView(doc) {
+    var on = !!(doc && doc.web_data === true);
+    var blocked = on ? blockedOf(doc) : "";
+    var status;
+    if (!on) {
+      status = "Web data is off. AshLight asks nothing from the internet.";
+    } else if (blocked === NO_CONTACT) {
+      status = "Web data is on. Prices need one more step: " + STEP_CONTACT + " below.";
+    } else if (blocked === RELEASE) {
+      status = "Web data is on. " + RELEASE_TEXT;
+    } else {
+      status = "Web data is on. Prices come from poe.ninja about once an hour.";
+    }
+    return { on: on, blocked: blocked, status: status, contact: contactView(doc) };
+  }
+
+  /* After a saved switch; `doc` is the POST answer (its blocked reason). */
+  function savedText(on, doc) {
+    if (!on) { return "Saved. Web data is off. AshLight asks nothing from the internet now."; }
+    var blocked = blockedOf(doc);
+    if (blocked === NO_CONTACT) {
+      return "Saved. Web data is on. Prices start once you " + STEP_CONTACT + " below.";
+    }
+    if (blocked === RELEASE) { return "Saved. Web data is on. " + RELEASE_TEXT; }
+    return "Saved. Web data is on. Currency values arrive within a minute.";
+  }
+
+  /* The answer to a contact Save; `doc` is the POST answer. */
+  var CONTACT_REFUSED = "AshLight can't use that contact. Use up to 120 plain " +
+                        "characters, without brackets or a backslash.";
+
+  function contactSavedText(doc) {
+    if (!doc || doc.contact_set !== true) { return "Not saved. Try again."; }
+    if (doc.web_data !== true) {
+      return "Contact saved on this computer. Turn on web data to get poe.ninja prices.";
+    }
+    if (blockedOf(doc) === RELEASE) { return "Contact saved on this computer. " + RELEASE_TEXT; }
+    return "Contact saved on this computer. Currency values arrive within a minute.";
+  }
+
+  /* ---- DATA-LEAGUE-PICKER-UI (F-141): the league picker from the GET
+     /api/web-data doc: "league" (the setting or null), "league_auto" (the
+     current league's name or null), "prices_from" (the league prices come
+     from: a solo league maps to its trade league) and "leagues" (the
+     cached names, newest first). The first option is the automatic one
+     (value "", the key removed); with no pick the league follows
+     poe.ninja's current one. Shown only while a list is cached. */
+  function textOf(v) { return typeof v === "string" && v.trim() ? v.trim() : ""; }
+
+  function leagueView(doc) {
+    var names = doc && Array.isArray(doc.leagues) ? doc.leagues.filter(textOf) : [];
+    var setting = textOf(doc && doc.league);
+    var auto = textOf(doc && doc.league_auto);
+    var from = textOf(doc && doc.prices_from);
+    var options = [{ value: "", text: auto ? "Automatic (" + auto + ")"
+                                           : "Automatic (poe.ninja's current league)" }];
+    names.forEach(function (n) { options.push({ value: n, text: n }); });
+    // a league set by hand that the list lacks stays the shown choice
+    if (setting && names.indexOf(setting) < 0) { options.push({ value: setting, text: setting }); }
+    var mapped = !!(setting && from && from !== setting);
+    return {
+      show: names.length > 0, label: "League for prices", options: options,
+      selected: setting,
+      from: mapped ? "Prices from " + from + ": poe.ninja has no prices for " + setting + "." : ""
+    };
+  }
+
+  function leagueSavedText(doc) {
+    var setting = textOf(doc && doc.league);
+    if (!setting) { return "Saved. Prices follow poe.ninja's current league."; }
+    var from = textOf(doc && doc.prices_from);
+    var source = from && from !== setting ? from : setting;
+    return "Saved. Prices come from " + source + " after the next price update.";
+  }
+
+  var LEAGUE_REFUSED = "AshLight can't price that league. Pick one from the list, " +
+                       "or the automatic league.";
 
   /* ---- poe.ninja rates (GET /api/rates) */
   function rateList(doc) {
@@ -127,14 +221,21 @@
   function ratesPill(doc, has) {
     if (!doc) { return pill("pending", "[ ]", "currency values not loaded yet"); }
     var age = ageText(doc.age_s);
+    var from = age ? " (from " + age + ")" : "";
+    var blocked = doc.web_data ? blockedOf(doc) : "";
     if (has) {
       if (!doc.web_data) {
-        return pill("idle", "[-]", "not updating - web data is off" + (age ? " (from " + age + ")" : ""));
+        return pill("idle", "[-]", "not updating - web data is off" + from);
       }
+      // DATA-CONTACT-UI: opted in but blocked, like "waiting for Client.txt"
+      if (blocked === NO_CONTACT) { return pill("blocked", "[#]", "not updating - " + STEP_CONTACT + from); }
+      if (blocked === RELEASE) { return pill("idle", "[-]", "not updating in this version" + from); }
       if (doc.stale) { return pill("blocked", "[#]", "old values" + (age ? " - from " + age : "")); }
       return pill("done", "[+]", age ? "updated " + age : "updated");
     }
     if (!doc.web_data) { return pill("idle", "[-]", "web data is off - no currency values"); }
+    if (blocked === NO_CONTACT) { return pill("blocked", "[#]", "one step left: " + STEP_CONTACT); }
+    if (blocked === RELEASE) { return pill("idle", "[-]", "no currency values in this version"); }
     if (doc.refreshing) { return pill("running", "[>]", "getting currency values from poe.ninja..."); }
     if (doc.last_error) {
       var mins = Math.ceil((Number(doc.next_refresh_in_s) || 0) / 60);
@@ -145,8 +246,18 @@
   }
 
   /* The rates panel: top currencies (by traded volume, else value) in the
-     primary unit, the state word, league and the credit. */
-  function ratesView(doc) {
+     primary unit, the state word, league and the credit.
+     DATA-LEAGUE-PICKER-UI: `web` (optional, the GET /api/web-data doc)
+     names the league line: "league <rates league>", or, when a solo
+     league is mapped, "league <setting>, prices from <trade league>". */
+  function leagueLine(league, web) {
+    var setting = textOf(web && web.league);
+    var from = textOf(web && web.prices_from);
+    if (setting && from && from !== setting) { return "league " + setting + ", prices from " + from; }
+    return league ? "league " + league : "";
+  }
+
+  function ratesView(doc, web) {
     var rates = rateList(doc);
     var unit = primaryName(doc);
     var ids = Object.keys(rates).filter(function (id) {
@@ -163,8 +274,9 @@
       return { name: nameOf(id, rates[id]), value: num(v) + " " + u,
                per: v < 1 && unit ? num(1 / v) + " per " + unit : "" };
     });
+    var league = (doc && typeof doc.league === "string") ? doc.league : "";
     return { pill: ratesPill(doc, ids.length > 0), rows: rows, primary: unit,
-             league: (doc && typeof doc.league === "string") ? doc.league : "",
+             league: league, leagueLine: leagueLine(league, web),
              credit: (doc && doc.credit) || "Prices: poe.ninja",
              attribution: (doc && doc.attribution) || "" };
   }
@@ -188,12 +300,16 @@
     var m = doc && doc.movers && typeof doc.movers === "object" ? doc.movers : {};
     var up = Array.isArray(m.up) ? m.up.map(moverRow) : [];
     var down = Array.isArray(m.down) ? m.down.map(moverRow) : [];
-    return {
-      show: on, up: up, down: down,
-      empty: on && !up.length && !down.length
-        ? "No price changes to show yet. They appear after the next hourly price update."
-        : ""
-    };
+    var blocked = on ? blockedOf(doc) : "";
+    var empty = "";
+    if (on && !up.length && !down.length) {
+      empty = blocked === NO_CONTACT
+        ? "No price changes to show yet. They appear once you " + STEP_CONTACT + "."
+        : blocked === RELEASE
+          ? "No price changes to show. " + RELEASE_TEXT
+          : "No price changes to show yet. They appear after the next hourly price update.";
+    }
+    return { show: on, up: up, down: down, empty: empty };
   }
 
   /* PLAY-TD-19D-ITEMS-GRID (F-056): the week's 3 biggest moves of either
@@ -227,9 +343,11 @@
     waiting: pill("pending", "[ ]", "waiting"),
     done: pill("done", "[+]", "priced"),
     off: pill("idle", "[-]", "web data off"),
-    // off because config/local.json has no contact (PRICE-1-COPY F2); idle
-    // like "web data off": a setting the player chose not to make, not a
-    // failed check (design review PRICE-1-COPY F3)
+    // off because no contact for poe.ninja is set yet (DATA-CONTACT-UI: the
+    // player types it in the web data form, Settings > Reading and web
+    // data; the core keeps it only on this computer); idle like "web data
+    // off": a setting the player has not made yet, not a failed check
+    // (design review PRICE-1-COPY F3)
     contact: pill("idle", "[-]", "no contact"),
     error: pill("failed", "[x]", "not priced"),
     // the player can fix these themselves: warn, not red (review N5)
@@ -341,7 +459,10 @@
   }
 
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
-           ratesView: ratesView, convert: convert, aboutText: aboutText,
+           contactView: contactView, contactSavedText: contactSavedText,
+           CONTACT_REFUSED: CONTACT_REFUSED, leagueView: leagueView,
+           leagueSavedText: leagueSavedText, LEAGUE_REFUSED: LEAGUE_REFUSED,
+           ratesPill: ratesPill, ratesView: ratesView, convert: convert, aboutText: aboutText,
            tradeAbout: tradeAbout, priceView: priceView, trendRows: trendRows,
            tradeLink: tradeLink, upgradeView: upgradeView, moversView: moversView,
            valueView: valueView };
