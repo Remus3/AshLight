@@ -16,7 +16,7 @@ import pytest
 
 from ci_timing import skip_if_ci_timing
 from server.al import http as al_http
-from server.al import logfile, metrics, parser, plug
+from server.al import logfile, metrics, overlayview, parser, plug
 from server.al.core import Core
 from server.al.plug import debug
 from srcpaths import ROOT
@@ -58,6 +58,7 @@ class FakeServer:
         self.events_tap = False
         self.stopping = threading.Event()
         self.sse_slots = threading.BoundedSemaphore(al_http.MAX_SSE_CLIENTS)
+        self.feed_frames = overlayview.FeedFrames()
 
 
 def call(core, method, path, headers=None, handler=al_http.Handler):
