@@ -71,6 +71,7 @@ calculator of its own.
 ## Is there an installer?
 
 No release yet: install from source (see [Download](download.md)).
+AshLight releases appear at github.com/Remus3/AshLight/releases.
 
 ## Does it cost anything?
 

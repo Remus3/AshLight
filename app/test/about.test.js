@@ -153,7 +153,7 @@ test("main.js: one /api/version read feeds the About text and the tray tooltip",
   const main = fs.readFileSync(path.join(ROOT, "app", "main.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
   assert.match(main, /versionText = About\.versionLine\(doc\) \|\| versionText;/);
-  assert.match(main, /credits: About\.aboutText\(DISCLAIMER, dataCredit, versionText\)/);
+  assert.match(main, /credits: About\.aboutText\(DISCLAIMER, dataCredit, versionText,\s*DOWNLOAD_LINE\)/);
   assert.match(main, /t\.setToolTip\(TrayMenu\.tooltipFor\(versionText\)\);/);
   // at start (before the page loads) and on every core restart
   assert.match(main, /About\.firstDoc\(getVersion, About\.START_WAIT_MS\)\.then\(\(doc\) => \{\s*setAbout\(doc\);/);
@@ -197,4 +197,44 @@ test("Settings About fold carries the same string as the footer", () => {
   assert.match(fold[1], /<p id="about-version" class="muted">/);
   const js = web.source("app.js");
   assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*\$\("build-line"\)\.textContent = ver;\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
+});
+
+/* PUB-GUIDE-DOWNLOAD-PLACE (F-126): the one download place, the releases
+   page of config/public_repo.json, closes the overlay About text. */
+const PLACE = "AshLight releases appear at github.com/owner-1/Repo.name/releases.";
+
+test("download line: from a GitHub-shaped owner/name only, else no line", () => {
+  assert.equal(about.downloadLine({ repo: "owner-1/Repo.name" }), PLACE);
+  for (const bad of [null, {}, { repo: 5 }, { repo: "" }, { repo: "owner" },
+                     { repo: "a/b/c" }, { repo: "-x/y" }, { repo: "x/.." }, { repo: "x/." },
+                     { repo: "x y/z" }, { repo: "x/<b>" }, { repo: "x/y\nz" }]) {
+    assert.equal(about.downloadLine(bad), "", JSON.stringify(bad));
+  }
+});
+
+test("aboutText with a download line: disclaimer first, the line last", () => {
+  const v = "Version 0.1.0";
+  assert.equal(about.aboutText(DISCLAIMER, CREDIT, v, PLACE),
+               DISCLAIMER + "\n" + v + "\n\n" + CREDIT + "\n\n" + PLACE);
+  assert.equal(about.aboutText(DISCLAIMER, "", "", PLACE), DISCLAIMER + "\n\n" + PLACE);
+  assert.equal(about.aboutText(DISCLAIMER, CREDIT, v, ""), DISCLAIMER + "\n" + v + "\n\n" + CREDIT);
+  assert.ok(about.aboutText(DISCLAIMER, CREDIT, v, PLACE).startsWith(DISCLAIMER));
+});
+
+test("main.js reads config/public_repo.json once at start for the download line", () => {
+  const main = fs.readFileSync(path.join(ROOT, "app", "main.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  assert.match(main, /^const DOWNLOAD_LINE = About\.downloadLine\(readJson\(path\.join\(REPO, "config", "public_repo\.json"\)\)\);$/m);
+  assert.equal((main.match(/public_repo\.json/g) || []).length, 1);
+  assert.equal((main.match(/About\.aboutText\(/g) || []).length, 1);
+});
+
+test("the tracked address gives the same line README and the guide carry", () => {
+  const doc = JSON.parse(fs.readFileSync(path.join(ROOT, "config", "public_repo.json"), "utf8"));
+  const line = about.downloadLine(doc);
+  assert.ok(line.endsWith(about.DOWNLOAD_SUFFIX));
+  for (const rel of ["README.md", "docs/guide/download.md", "docs/guide/faq.md"]) {
+    const text = fs.readFileSync(path.join(ROOT, rel), "utf8").split(/\s+/).join(" ");
+    assert.ok(text.includes(line), rel);
+  }
 });
