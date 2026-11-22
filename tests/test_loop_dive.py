@@ -1,6 +1,7 @@
 """LOOP-TESTS-CARVE: the tools/al_loop.py tests of idle deep dives, moved
 unchanged from tests/test_al_loop.py. Owners later: AUTO-04, then AUTO-13,
-which edit this file and never tests/test_al_loop.py."""
+which edit this file and never tests/test_al_loop.py. AUTO-13 rewrote the
+idle-dive test for the weekly rule."""
 
 import sys
 from pathlib import Path
@@ -20,20 +21,68 @@ def _isolated_git(monkeypatch):
     isolate_git(monkeypatch)  # TESTS-A-19
 
 
-@pytest.mark.git
-def test_idle_dispatches_one_deep_dive_per_day(tmp_path):
+DAY_S = 86400.0
+T0 = 1_790_000_000.0
+
+
+def _day(t):
+    import datetime as dt
+    return dt.datetime.fromtimestamp(t).strftime("%Y%m%d")
+
+
+def test_idle_dive_runs_at_most_once_in_7_days(tmp_path):
+    """AUTO-13: the idle dive is weekly whatever the last dive proposed: the
+    first idle tick dispatches DD-<date> (prompt as before); while the newest
+    dive in the history is under 7 days old no idle dive runs; on day 7 the
+    next one does."""
     rm = ROADMAP.replace("- [ ] ", "- [x] ")
     root = make_root(tmp_path, roadmap=rm, handoff="",
                      local={"loop": {"max_new_plans_per_day": 1}})
-    d = deps(root)
+    now = {"t": T0}
+    history = []  # dive dates the fake git log reports, oldest first
+
+    def git(args, cwd, input=None, lock=None):
+        import subprocess
+        if args and args[0] == "log" and "docs/research/" in args:
+            out = "".join(f"@\ndocs/research/{i + 1:04d}-deep-dive-{d}.md\nROADMAP.md\n"
+                          for i, d in enumerate(reversed(history)))
+            return subprocess.CompletedProcess(["git", *args], 0, out, "")
+        if args and args[0] == "config":
+            return subprocess.CompletedProcess(["git", *args], 1, "", "")
+        return subprocess.CompletedProcess(["git", *args], 128, "", "not a repo")
+
+    d = deps(root, clock=lambda: now["t"], git=git)
     al_loop.tick(deps=d, no_push=True)
-    assert len(d.seen["launch"]) == 1 and d.seen["launch"][0].startswith("DD-")
-    rec = al_loop.Items(root).get(d.seen["launch"][0])
+    assert len(d.seen["launch"]) == 1 and d.seen["launch"][0] == f"DD-{_day(T0)}"
+    items = al_loop.Items(root)
+    rec = items.get(d.seen["launch"][0])
     assert rec["kind"] == "deep-dive" and "AT MOST 1 new ROADMAP.md rows" in rec["prompt"]
     assert "robots.txt" in rec["prompt"] and "Grind spot recommender" in rec["prompt"]
     assert "docs/research/0001-deep-dive-" in rec["prompt"]
-    al_loop.tick(deps=d, no_push=True)
+    al_loop.tick(deps=d, no_push=True)  # same day: never a second one
     assert len(d.seen["launch"]) == 1
+    # the dive lands (it proposed a row: that no longer resets to daily)
+    rec.update(state="merged")
+    items.put(rec)
+    history.append(_day(T0))
+    for n in range(1, 7):
+        now["t"] = T0 + n * DAY_S
+        al_loop.tick(deps=d, no_push=True)
+        assert len(d.seen["launch"]) == 1, f"day {n}"
+    now["t"] = T0 + 7 * DAY_S
+    al_loop.tick(deps=d, no_push=True)
+    assert d.seen["launch"][1:] == [f"DD-{_day(T0 + 7 * DAY_S)}"]
+
+
+def test_dive_backoff_is_weekly_whatever_was_proposed():
+    import datetime as dt
+    from loop_roadmap import dive_backoff
+    today = dt.date(2026, 11, 21)
+    assert not dive_backoff([], today)
+    assert dive_backoff([("20261120", 1)], today)  # a plan proposed: still weekly
+    assert dive_backoff([("20261115", 0)], today)
+    assert not dive_backoff([("20261114", 1)], today)
+    assert not dive_backoff([("bad", 0)], today)
 
 
 def test_deep_dive_checks_cap_and_dupes(tmp_path):

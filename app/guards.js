@@ -9,15 +9,17 @@
      unless the developer said so with AL_DEV=1. Chromium on Windows also
      reads "-name" and "/name" as switches, so all three spellings count.
    - frameIsOverlayPage(frame, win, overlayUrl): the IPC sender is the
-     overlay window's main frame showing exactly the overlay page (the
-     file URL in either spelling: percent-encoded or plain, forward or
-     back slashes, any drive letter case). A file URL elsewhere that also
-     ends in /overlay/index.html is not it.
+     overlay window's main frame showing exactly the overlay page on the
+     app scheme (OVL-APP-SCHEME: origin al-app://app and path compared
+     exactly, query and fragment ignored; app/pages.js pageKey). A file
+     URL, another app scheme page or an http page is not it.
    - throttle(ms, now): a gate that lets one call through per ms.
    - createRegistry / attachDefaults: every webContents the app makes gets
      default-deny navigation, redirects, popups and webview attach; a
      webContents its creator registered gets that creator's policy,
      looked up at event time. */
+
+const Pages = require("./pages.js");
 
 const DEBUG_SWITCHES = ["remote-debugging-port", "remote-debugging-pipe"];
 
@@ -53,28 +55,14 @@ function isDebugStart(argv, env) {
   return opts.some((k) => typeof e[k] === "string" && e[k].trim() !== "");
 }
 
-/* One spelling for a file URL: no fragment, percent-decoded, forward
-   slashes, lower-case drive letter. "" for anything that is not file:. */
-function fileUrlKey(url) {
-  let s = String(url == null ? "" : url);
-  if (!/^file:/i.test(s)) { return ""; }
-  const hash = s.indexOf("#");
-  if (hash >= 0) { s = s.slice(0, hash); }
-  try { s = decodeURIComponent(s); } catch (e) { return ""; }
-  let rest = s.slice("file:".length).split("\\").join("/");
-  while (rest.startsWith("/")) { rest = rest.slice(1); }
-  if (/^[A-Za-z]:/.test(rest)) { rest = rest.charAt(0).toLowerCase() + rest.slice(1); }
-  return "file:///" + rest;
-}
-
 /* Is frame the overlay window's main frame on exactly overlayUrl? */
 function frameIsOverlayPage(frame, win, overlayUrl) {
   if (!frame || !win) { return false; }
   if (typeof win.isDestroyed === "function" && win.isDestroyed()) { return false; }
   const wc = win.webContents;
   if (!wc || frame !== wc.mainFrame) { return false; }
-  const want = fileUrlKey(overlayUrl);
-  return want !== "" && fileUrlKey(frame.url) === want;
+  const want = Pages.pageKey(overlayUrl);
+  return want !== "" && Pages.pageKey(frame.url) === want;
 }
 
 /* A gate: the first call is let through (true), then every call within
@@ -142,4 +130,4 @@ function attachDefaults(wc, registry, say) {
 }
 
 module.exports = { isDebugStart, frameIsOverlayPage, throttle, createRegistry, attachDefaults,
-                   denyAll, fileUrlKey, switchName, DEBUG_SWITCHES, STRIPPED_ENV };
+                   denyAll, switchName, DEBUG_SWITCHES, STRIPPED_ENV };

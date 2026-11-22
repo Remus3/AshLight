@@ -30,11 +30,23 @@ CARD_HOLDERS: the first holder with a card wins.
   same entry (the scene line after the closing generation): that zone
   card is dropped, never queued, and the zone counts as seen. Like the
   zone card it never waits and never returns.
+- hint (OVL-KEY-HINT): the empty slot teaches the item-check key: one
+  line, '<key>: check an item', the bound key of the hotkeys view
+  (OVL-KEYS-CORE; no key known = no hint). It has no expiry while due:
+  due while no press was ever recorded on this install and fewer than
+  HINT_SESSIONS game sessions (log_opened events seen while a key was
+  known, so the hint could show) were seen. After that
+  it never returns, across a core restart (the store keeps the marker).
+  It shows only while no earlier holder has a card, no open trade
+  request takes the slot (the page's trade card outranks it) and
+  parts.hint is on. The hint reads nothing: the press it teaches is the
+  player's own manual press.
 
 OverlayView also carries a small bounded store (to_doc / load_doc, a dirty
 flag) that the core loads from ops/runtime/overlay-view.json at start and
-saves from its guide tick. It is empty today: later packages (OVL-KEY-HINT,
-OVL-OVERLAY-FEED) record the first press here through on_press; the act
+saves from its guide tick. OVL-KEY-HINT keeps its marker here ("key_hint":
+{"pressed": bool, "sessions": int}: on_press records the first press,
+on_event counts game sessions up to HINT_SESSIONS); the act
 card (OVL-ACT-CARD) needs no stored key, its moment stays in memory. The zone entries seen in this game run stay in
 memory only. view() fills the snapshot's "overlay" dict: guide_short (the
 short of the current guided campaign zone, else "") and calm_at (the last
@@ -56,8 +68,12 @@ FILE_NAME = "overlay-view.json"
 SCHEMA = 1
 MAX_BYTES = 16 * 1024  # read cap of the store file (a bigger file reads as empty)
 # The store's known keys besides "schema"; load_doc drops every other key.
-# Empty today; a later package adds its key here and its bound.
-STORE_KEYS = ()
+# A later package adds its key here and its bound.
+STORE_KEYS = ("key_hint",)
+
+# OVL-KEY-HINT: the key hint line and when it retires for good
+HINT_TEXT = "{key}: check an item"
+HINT_SESSIONS = 3  # game sessions (log_opened) after which the hint retires
 
 SAMPLE_S = 10
 SAMPLE_HEAD = "Sample card"
@@ -82,6 +98,10 @@ CARD_HOLDERS = (
      "exempt": "shown only on its Settings button, which is its own twin"},
     {"kind": "moment", "life_s": MOMENT_CARD_S, "cards": ("zone", "act"),
      "twin": ("zone-guide", "actsbox")},
+    # life_s None: no expiry while due; it retires after the first press
+    {"kind": "hint", "life_s": None,
+     "exempt": "not a self-leaving answer: it stays until the first press, "
+               "and its twin is the item-check help text on the dashboard"},
 )
 
 
@@ -150,6 +170,29 @@ def _gap_line(state, split):
     return ""
 
 
+def _hint_marker(raw):
+    """A valid key-hint marker {"pressed": bool, "sessions": 0..HINT_SESSIONS}
+    from a read store value, else None (dropped)."""
+    if not isinstance(raw, dict):
+        return None
+    pressed, sessions = raw.get("pressed"), raw.get("sessions")
+    if not isinstance(pressed, bool) or isinstance(sessions, bool):
+        return None
+    if not isinstance(sessions, int) or sessions < 0:
+        return None
+    return {"pressed": pressed, "sessions": min(sessions, HINT_SESSIONS)}
+
+
+def _hint_key(state):
+    """The bound item-check key of the published hotkeys view, else None."""
+    view = getattr(state, "hotkeys", None)
+    entry = view.get("eval") if isinstance(view, dict) else None
+    key = entry.get("key") if isinstance(entry, dict) else None
+    if not isinstance(key, str) or not key or not key.isascii():
+        return None
+    return key
+
+
 def _trade_takes_slot(state):
     """An open trade request takes the slot while the trade part is on
     (the overlay page builds that card itself)."""
@@ -172,6 +215,8 @@ class OverlayView:
         self.calm_at = None
         self._guide_key = None  # the zone generation guide_short was read for
         self._counts = (0, 0)  # (deaths, level_ups) after the last event
+        # OVL-KEY-HINT: the stored marker, None until its first change
+        self._store_key_hint = None
 
     # -- feed
     def on_event(self, ev, state, now):
@@ -191,6 +236,10 @@ class OverlayView:
             changed = changed or bool(self.seen) or self.moment is not None
             self.seen = {}
             self.moment = None
+            if _hint_key(state) is not None:
+                # a game session counts only while a key is known (the
+                # hint could teach it); no client, no key, no count
+                changed = self._count_session() or changed
         if t == "area_generated" and _is_time(now):
             changed = self._act_closed(state, now) or changed
         if t in ENTRY_TYPES and state.zone and state.zone_entered_at == now:
@@ -201,11 +250,49 @@ class OverlayView:
 
     def on_press(self, now):
         """A real item-key press (not a re-score). False: nothing changed.
-        A press drops the zone card: it never waits or returns."""
+        A press drops the zone card: it never waits or returns. The first
+        press retires the key hint for good (OVL-KEY-HINT)."""
+        changed = False
+        marker = self._hint_state()
+        if not marker["pressed"]:
+            self._store_key_hint = dict(marker, pressed=True)
+            self.dirty = changed = True
         if self.moment is not None:
             self.moment = None
-            return True
-        return False
+            changed = True
+        return changed
+
+    # -- the key hint (OVL-KEY-HINT)
+    def _hint_state(self):
+        return _hint_marker(self._store_key_hint) or {"pressed": False, "sessions": 0}
+
+    def _count_session(self):
+        """One more game session seen, up to HINT_SESSIONS. True on a change."""
+        marker = self._hint_state()
+        if marker["pressed"] or marker["sessions"] >= HINT_SESSIONS:
+            return False
+        self._store_key_hint = dict(marker, sessions=marker["sessions"] + 1)
+        self.dirty = True
+        return True
+
+    def hint_due(self):
+        """No press ever recorded and fewer than HINT_SESSIONS game sessions."""
+        marker = self._hint_state()
+        return not marker["pressed"] and marker["sessions"] < HINT_SESSIONS
+
+    def _hint_card(self, state):
+        if not self.hint_due() or _trade_takes_slot(state):
+            return None
+        lay = getattr(state, "overlay_layout", None)
+        parts = lay.get("parts") if isinstance(lay, dict) and isinstance(
+            lay.get("parts"), dict) else {}
+        if parts.get("hint", True) is False:
+            return None
+        key = _hint_key(state)
+        if key is None:
+            return None
+        return {"kind": "hint", "head": clip(HINT_TEXT.format(key=key)),
+                "line2": "", "line3": "", "verdict": "hint", "expires_at": None}
 
     def _guide(self, state):
         view = getattr(state, "_zone_guide_view", None)
@@ -321,7 +408,8 @@ class OverlayView:
 
     def card(self, state, now, alert=None):
         """The one card dict {kind, head, line2, line3, verdict,
-        expires_at} that holds the slot at `now`, or None. `alert`: the
+        expires_at} that holds the slot at `now`, or None (the hint card's
+        expires_at is None: no expiry while due). `alert`: the
         snapshot's build alert, passed on to the press card."""
         self._sync_guide(state)
         for holder in CARD_HOLDERS:
@@ -332,10 +420,13 @@ class OverlayView:
                 c = self._press_card(state, now, alert)
             elif kind == "moment":
                 c = self._moment_card(state, now)
+            elif kind == "hint":
+                c = self._hint_card(state)
             else:  # pragma: no cover - a holder without a producer
                 c = None
             if c is not None:
-                if kind != "moment" and self.moment is not None and self.moment["at"] <= now:
+                if (kind in ("press", "sample") and self.moment is not None
+                        and self.moment["at"] <= now):
                     self.moment = None  # an earlier holder took the slot
                 return c
         return None
@@ -361,6 +452,9 @@ class OverlayView:
             return False
         for key in STORE_KEYS:
             if key in doc:
-                setattr(self, "_store_" + key, doc[key])
+                value = doc[key]
+                if key == "key_hint":
+                    value = _hint_marker(value)  # a bad marker reads as none
+                setattr(self, "_store_" + key, value)
         self.dirty = False
         return True

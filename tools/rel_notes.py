@@ -12,6 +12,12 @@ Loaded by tools/release.py for the `notes` sub-command:
         is written to docs/releases/X.Y.Z.md (the lead paragraph between
         the two lead markers of an existing file is kept) and CHANGELOG.md
         is regenerated.
+    release.py notes --count [--from REV] [--to REF] [--root DIR]
+        print one line `<n> <date>`: n row merges (first-parent `merge:
+        <ROW-ID> ...` subjects) in FROM..TO (FROM: the newest v* tag
+        reachable from TO, else the whole history) and the committer date
+        (YYYY-MM-DD) of the oldest, `-` when n is 0. Read by the loop's
+        refresh source (AUTO-16).
     release.py notes --changelog [--check] [--root DIR]
         regenerate CHANGELOG.md from docs/releases/*.md, newest first;
         --check writes nothing and exits 1 when the file differs.
@@ -130,6 +136,33 @@ def previous_tag(version, to="HEAD", root=ROOT):
         if k < key and (best is None or k > best[0]):
             best = (k, tag)
     return best[1] if best else None
+
+
+def last_tag(to="HEAD", root=ROOT):
+    """The newest v* tag reachable from `to`, else None."""
+    out = _git(root, "describe", "--tags", "--abbrev=0", "--match", "v*",
+               to, ok_fail=True)
+    return out.strip() or None if out else None
+
+
+def count(rev_range, root=ROOT):
+    """(n, date of the oldest) of the row merges in rev_range: first-parent
+    commits whose subject is `merge: <ROW-ID> ...`. The date is the
+    committer date YYYY-MM-DD, "" when n is 0."""
+    out = _git(root, "log", "--first-parent", "--reverse",
+               "--format=%cs%x09%s", *_range_args(rev_range), "--")
+    n, oldest = 0, ""
+    for line in out.splitlines():
+        day, _, subject = line.partition("	")
+        parsed = parse_subject(subject)
+        if not parsed or parsed[0] != "merge":
+            continue
+        if row_id("merge", None, subject[len("merge:"):].strip()
+                  if subject.startswith("merge:") else "") is None:
+            continue
+        n += 1
+        oldest = oldest or day
+    return n, oldest
 
 
 # ---------------------------------------------------------------- inputs
@@ -397,6 +430,7 @@ def _parser():
     p.add_argument("--write", action="store_true")
     p.add_argument("--changelog", action="store_true")
     p.add_argument("--check", action="store_true")
+    p.add_argument("--count", action="store_true")
     p.add_argument("--from", dest="start")
     p.add_argument("--to", default="HEAD")
     p.add_argument("--date")
@@ -411,6 +445,11 @@ def main(command, argv):
         return int(exc.code or 0) and 2
     root = Path(args.root)
     try:
+        if args.count:
+            start = args.start if args.start else last_tag(args.to, root)
+            n, day = count((start, args.to), root)
+            print("%d %s" % (n, day or "-"))
+            return 0
         if args.changelog and not args.version:
             if args.check:
                 if changelog(check=True, root=root):
