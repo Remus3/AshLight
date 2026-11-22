@@ -205,7 +205,7 @@ def test_alert_head_takes_line3():
     alert sentence is the first dashboard note; the verdict stays."""
     for alert, short in ALERTS:
         words = build_alert_text(alert)
-        assert words["short"] == short and len(short) <= 34
+        assert words["short"] == short and len(short) <= 26
         t = eval_card_text(card(), alert)
         assert (t["head"], t["item"], t["line"]) == (
             "Upgrade +47.5 vs Ring 1", "Storm Loop", short)
@@ -215,11 +215,13 @@ def test_alert_head_takes_line3():
     # articles and fallbacks for long names and classes
     assert build_alert_text({"kind": "class", "build_class": "Invoker",
                              "log_class": "Ranger"})["short"] == "Build is for an Invoker"
-    assert build_alert_text({"kind": "missing"})["short"] == "No build for this character"
-    assert build_alert_text({"kind": "missing", "character": "Q" * 23})["short"] ==         "No build for this character"
+    # CARD-LINE-LIMIT-COPY2: shorts fit 26 (a 13-character name just fits)
+    assert build_alert_text({"kind": "missing"})["short"] == "No build saved"
+    assert build_alert_text({"kind": "missing", "character": "Q" * 13})["short"] ==         "No build for " + "Q" * 13
+    assert build_alert_text({"kind": "missing", "character": "Q" * 14})["short"] ==         "No build saved"
     assert build_alert_text({"kind": "class", "build_class": "X" * 40})["short"] ==         "Build is for another class"
     assert build_alert_text({"kind": "class"})["short"] == "Build is for another class"
-    assert build_alert_text({"kind": "level", "build_level": 10 ** 40})["short"] ==         "Build is from a lower level"
+    assert build_alert_text({"kind": "level", "build_level": 10 ** 40})["short"] ==         "Build is for a lower level"
     # an unidentified item keeps naming the input it lacks; the note stays
     alert = ALERTS[0][0]
     t = eval_card_text(card(unidentified=True), alert)

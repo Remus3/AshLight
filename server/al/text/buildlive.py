@@ -6,7 +6,7 @@ state.py re-exports every name, so state.<name> is the same object. Pure
 functions and constants; stdlib only.
 """
 
-from .common import CARD_LINE, _dict, _dicts, _num_text, _signed, _signed_points, _text
+from .common import _dict, _dicts, _num_text, _signed, _signed_points, _text
 
 
 # BUILD-LIVE (decision 0045): the stale-build alert and the upgrade
@@ -14,7 +14,9 @@ from .common import CARD_LINE, _dict, _dicts, _num_text, _signed, _signed_points
 # tests/test_build_live.py.
 # TC-VERDICT-CAVEAT (F-042, F-043): every alert sentence names both routes
 # (the Build tab paste and the item-key build load), and `short` is the
-# overlay card's third line while the alert lasts (CARD_LINE at most).
+# overlay card's third line while the alert lasts (LINE_FIT at most;
+# CARD-LINE-LIMIT-COPY2: common.CARD_LINE stays 34 until CARD-LINE-LIMIT-FLIP).
+LINE_FIT = 26
 ALERT_ROUTES = ("on the Build tab, or copy the code in Path of Building and press "
                 "the item key.")
 
@@ -29,12 +31,12 @@ def _a_class(value):
 
 
 def _fit(text, fallback):
-    return text if len(text) <= CARD_LINE else fallback
+    return text if len(text) <= LINE_FIT else fallback
 
 
 def build_alert_text(alert):
     """The words of a buildlive.alert() finding, or None: `head` (the alert
-    heading), `short` (the overlay card's line 3, at most CARD_LINE) and
+    heading), `short` (the overlay card's line 3, at most LINE_FIT) and
     `text` (the sentence, printed in the Your build card and as an item
     check note)."""
     a = _dict(alert)
@@ -42,7 +44,7 @@ def build_alert_text(alert):
     who = _text(a.get("character"), "this character")
     if kind == "missing":
         return {"kind": kind, "head": f"No build saved for {who} yet",
-                "short": _fit(f"No build for {who}", "No build for this character"),
+                "short": _fit(f"No build for {who}", "No build saved"),
                 "text": f"No build saved for {who} yet. Paste a PoB code " + ALERT_ROUTES}
     if kind == "class":
         build_class = _a_class(a.get("build_class"))
@@ -54,7 +56,7 @@ def build_alert_text(alert):
     if kind == "level":
         built = _num_text(a.get("build_level"))
         return {"kind": kind, "head": f"Build is from level {built}",
-                "short": _fit(f"Build is from level {built}", "Build is from a lower level"),
+                "short": _fit(f"Build is from level {built}", "Build is for a lower level"),
                 "text": (f"Build is from level {built}; you are level "
                          f"{_num_text(a.get('level'))}. Paste a fresh PoB code "
                          + ALERT_ROUTES)}
