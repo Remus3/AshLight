@@ -16919,7 +16919,8 @@
    "files": [
     "server/al/http.py",
     "tests/test_http_security.py",
-    "tests/test_audit_http_harden.py"
+    "tests/test_audit_http_harden.py",
+    "tests/test_security_surface.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -16950,7 +16951,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. server/al/http.py: FILE_ORIGINS (line 67) drops 'null' and 'file://' and keeps only the app-scheme origin added by OVL-APP-SCHEME for FILE_ORIGIN_PATHS. Lands only after OVL-APP-SCHEME, or the overlay loses its feed. HOT: server/al/http.py (F-003 of cluster SEC edits the same origin rules and must land first).",
+   "notes": "Tier P3. Gate: the named tests only (ruling Q-17), then npm test --prefix app when an app/ or web/ file changed. server/al/http.py: FILE_ORIGINS (line 67) drops 'null' and 'file://' and keeps only the app-scheme origin added by OVL-APP-SCHEME for FILE_ORIGIN_PATHS. Lands only after OVL-APP-SCHEME, or the overlay loses its feed. HOT: server/al/http.py (F-003 of cluster SEC edits the same origin rules and must land first). Re-plan (session 19, ruling A pattern 5787074): files gain tests/test_security_surface.py (its pinned /events reply header for Origin null moves to al-app://app).",
    "wave": 24,
    "owner": "session",
    "tier": "P3",
@@ -17293,7 +17294,8 @@
    ],
    "files": [
     "server/al/theorycraft/snapshot.py",
-    "tests/test_tc_snap.py"
+    "tests/test_tc_snap.py",
+    "tests/test_snap_probe.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -17321,7 +17323,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. snapshot.py: SOURCES only; the two URLs stay in a table that is not fetched by default, so a dev re-check of the waystone mod pool (the provenance re-verify list) can pass sources= explicitly. Decision 0009 item 2 permits the files and does not require them, so no decision edit. Files already in a cache are left alone (never deleted by the tool).",
+   "notes": "Tier P3. snapshot.py: SOURCES only; the two URLs stay in a table that is not fetched by default, so a dev re-check of the waystone mod pool (the provenance re-verify list) can pass sources= explicitly. Decision 0009 item 2 permits the files and does not require them, so no decision edit. Files already in a cache are left alone (never deleted by the tool). Re-plan (session 19, ruling A pattern 5787074): files gain tests/test_snap_probe.py (its PROBES == SOURCES assert becomes SOURCES <= PROBES).",
    "wave": 24,
    "owner": "session",
    "tier": "P3",
