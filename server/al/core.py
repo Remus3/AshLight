@@ -641,17 +641,28 @@ class Core:
     # -- UX-SETTINGS-IO (ruling E)
     def export_settings(self):
         """AshLight's own settings for the download (allow-list only: no
-        contact, token, cookie or path)."""
-        return settingsio.export_doc(self._config(), VERSION)
+        contact, token, cookie or path). TC-WEIGHTS-DELTA-EXPORT: schema 2
+        adds the player's stat weight changes from self.weights; a weights
+        file that did not load (defaults in use) adds no block."""
+        snap = self.weights.snapshot()
+        block = None if snap.get("load_error") else snap.get("changed")
+        return settingsio.export_doc(self._config(), VERSION, weights=block)
 
     def import_settings(self, doc):
         """Merge an imported settings file's allowed keys into the local
-        config; web data is never switched on here. Returns the report;
-        raises settingsio.SettingsError with nothing applied."""
+        config; web data is never switched on here. A schema 2 weights
+        block becomes the stat weights (defaults plus the file's changes)
+        through self.weights and the last item is re-scored at once.
+        Returns the report; raises settingsio.SettingsError with nothing
+        applied."""
         update, report = settingsio.parse_import(doc, self._config())
+        weights = settingsio.weights_of(doc)
         if update:
             self._write_config(update)
             self.state.set_overlay_layout(layout.load(self.config_path))
+        if weights is not None:
+            self.weights.put(weights)
+            self.last_eval.rerun()  # TC-EVAL-UI: re-score at once
         return report
 
     # -- RUN-DURABLE-STORES (F-014): store saves with retry and back-off
