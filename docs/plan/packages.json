@@ -15748,10 +15748,10 @@
    "tests": [
     "tests/test_budgets.py::test_real_loop_body_10_s_worst_case_under_half_percent (B1, slow)",
     "tests/test_budgets.py::test_core_working_set_in_a_child (B5)",
-    "tests/test_budget_tick.py::test_full_tick_under_2_ms_worst_and_0_3_ms_campaign (B2)",
+    "tests/test_budget_tick.py::test_full_tick_under_2_ms_worst_and_0_3_ms_campaign (B2; the 2 ms worst case is gross, the 0.3 ms campaign tick is measured net of stat calls)",
     "tests/test_budget_tick.py::test_idle_tick_at_most_20_stats_and_no_read (B3)",
     "tests/test_budget_snapshot.py::test_snapshot_under_32_kb_no_key_over_8_kb (B7)",
-    "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent (retired: superseded by B1)"
+    "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent (kept with a superseded-by-B1 comment; retirement waits for row BUDGET-RETIRE-TAILER-IDLE)"
    ],
    "accept": "python -m pytest -q tests/test_budgets.py tests/test_budget_tick.py tests/test_budget_snapshot.py passes.",
    "zero_click": "The suite runs them.",
