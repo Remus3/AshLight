@@ -8,7 +8,6 @@ fixtures, once with -m calc and once with -m timing:
 - -m calc lists only tests of the live calc files (tc_live_util.CALC_FILES),
   every one of them, and every test that requests warm_bridge;
 - -m timing lists all of test_budgets, test_soak and test_math_perf, the
-  per-call bound tests of test_fuzz (those that call _run or _timed) and
   the individually marked tests of mixed files (TIMING_TESTS, e.g. the
   TC-PRESS-STAGED-LIVE first-card budget test), and nothing else;
 - a calc test is in the xdist group 'calc'; every test of the three
@@ -170,10 +169,10 @@ def test_calc_tests_share_the_calc_worker_group(calc_rows):
             assert "calc" not in r["groups"], r["nodeid"]
 
 
-def test_minus_m_timing_lists_the_timing_files_and_fuzz_bounds(timing_rows):
+def test_minus_m_timing_lists_the_timing_files_and_not_fuzz(timing_rows):
     picked = [r for r in timing_rows if r["selected"]]
     files = {r["file"] for r in picked}
-    assert files == TIMING_WHOLE | {FUZZ} | set(TIMING_TESTS), sorted(files)
+    assert files == TIMING_WHOLE | set(TIMING_TESTS), sorted(files)
     for rel in TIMING_WHOLE:
         rows = [r for r in timing_rows if r["file"] == rel]
         assert rows and all(r["selected"] for r in rows), rel
@@ -182,12 +181,11 @@ def test_minus_m_timing_lists_the_timing_files_and_fuzz_bounds(timing_rows):
         assert got == names, (rel, sorted(got ^ names))
         # the file's other tests are not wall-clock sensitive
         assert any(r["file"] == rel and not r["selected"] for r in timing_rows), rel
-    bound = _fuzz_bound_tests()
-    assert len(bound) >= 12
-    got = {r["name"] for r in picked if r["file"] == FUZZ}
-    assert got == bound, (sorted(got - bound), sorted(bound - got))
-    # the rest of test_fuzz is not wall-clock sensitive
-    assert any(r["file"] == FUZZ and not r["selected"] for r in timing_rows)
+    # TEST-FUZZ-PARALLEL: the fuzz bounds are load-scaled and run in the
+    # parallel phase, so no test_fuzz test carries the timing mark
+    assert _fuzz_bound_tests()
+    assert not {r["name"] for r in picked if r["file"] == FUZZ}
+    assert any(r["file"] == FUZZ for r in timing_rows)
 
 
 def test_supervisor_files_share_one_worker_group(calc_rows):
