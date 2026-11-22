@@ -17453,7 +17453,8 @@
    "files": [
     "web/index.html",
     "web/app.js",
-    "web/app.css"
+    "web/app.css",
+    "tests/test_diag_self.py"
    ],
    "new_files": [
     "web/logpath.js",
@@ -17782,7 +17783,8 @@
     "tests/test_budget_log.py",
     "docs/decisions/0002-stack.md",
     "docs/research/0048-performance-budgets-review.md",
-    "README.md"
+    "README.md",
+    "tests/test_overlay_smoke.py"
    ],
    "new_files": [],
    "integrator_edits": [],

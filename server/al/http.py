@@ -34,6 +34,11 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   /events?tap=1, served only in a source checkout (a .git entry at the
   repo root), and each tapped event keeps its type plus its numeric,
   boolean and null fields: no chat text, name or other string leaves.
+- OVL-OVERLAY-FEED (F-177): /events?view=overlay (the overlay page) sends
+  only the snapshot fields the HUD reads (overlayview.small) and only when
+  one of them changed; the default view (no view) is unchanged; any other
+  view is 400. One serialised frame per view per state version is kept on
+  the server (overlayview.FeedFrames) and shared by all its streams.
 - RUN-METRICS-CORE (decision 0067): _send counts each reply by route key
   and status class plus the 401s, _sse_write counts SSE frames and bytes
   (server/al/metrics.py); read only through the token-gated GET /api/debug
@@ -55,8 +60,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, metrics, paths, plug,
-               ports, settingsio, static, updates, webfetch, webpage)
+from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, metrics,
+               overlayview, paths, plug, ports, settingsio, static, updates, webfetch,
+               webpage)
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -170,6 +176,8 @@ class ALServer(ThreadingHTTPServer):
         # SEC-SSE-TAP: the /events?tap=1 dev tap exists only in a source
         # checkout; not tied to the hot-reload switch (the suite turns it off)
         self.events_tap = (paths.repo_root() / ".git").exists()
+        # OVL-OVERLAY-FEED: one serialised state frame per view per version
+        self.feed_frames = overlayview.FeedFrames()
         super().__init__((ports.LOOPBACK, int(port)), Handler)
         self.port = self.server_address[1]
         self.allowed_hosts = {f"127.0.0.1:{self.port}", f"localhost:{self.port}"}
@@ -1060,6 +1068,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def _sse(self, extra, query=None):
         srv = self.server
+        # OVL-OVERLAY-FEED: ?view=overlay or no view; anything else is 400
+        views = (query or {}).get("view")
+        if views is None:
+            view = None
+        elif len(views) == 1 and views[0] in overlayview.VIEWS:
+            view = views[0]
+        else:
+            return self._json(400, {"error": "unknown view"}, extra)
         if not srv.sse_slots.acquire(blocking=False):
             # A non-200 reply makes an EventSource give up for good (the
             # overlay would stay offline); a 200 stream that only sets a long
@@ -1070,16 +1086,22 @@ class Handler(BaseHTTPRequestHandler):
                               dict(extra, **{"Retry-After": str(SSE_BUSY_RETRY_MS // 1000)}))
         try:
             tap = bool(srv.events_tap) and (query or {}).get("tap") == ["1"]
-            return self._sse_stream(extra, tap)
+            return self._sse_stream(extra, tap, view)
         finally:
             srv.sse_slots.release()
 
-    def _sse_stream(self, extra, tap=False):
+    def _sse_stream(self, extra, tap=False, view=None):
         """State frames, a reload notice and heartbeats. With tap (a dev
         tap, source checkout only) each push also carries an "events" frame
-        of tap_event() rows."""
+        of tap_event() rows. OVL-OVERLAY-FEED: view "overlay" sends the
+        small view, and a state frame only when its stamp moved (a version
+        bump of dashboard-only state sends nothing to the overlay)."""
         srv = self.server
         core = srv.core
+
+        def frame():
+            # (state version, stamp, frame text), shared by the view's streams
+            return srv.feed_frames.frame(view, core.state, self._sse_msg)
         sub = core.bus.subscribe()
         try:
             self.send_response(200)
@@ -1087,10 +1109,9 @@ class Handler(BaseHTTPRequestHandler):
             self._common_headers("text/event-stream; charset=utf-8", None, extra)
             self.send_header("Connection", "close")
             self.end_headers()
-            snap = core.state.snapshot()
-            sent_version = snap["version"]
+            sent_version, sent_stamp, text = frame()
             self._sse_write("retry: 3000\n\n")
-            self._sse_write(self._sse_msg("state", snap))
+            self._sse_write(text)
             last_push = time.monotonic()
             last_beat = last_push
             pending = []
@@ -1124,26 +1145,27 @@ class Handler(BaseHTTPRequestHandler):
                     chunk = (self._sse_msg("events", [tap_event(ev) for ev in pending])
                              if tap else "")
                     pending = []
-                    snap = core.state.snapshot()
-                    if snap["version"] != sent_version:
-                        sent_version = snap["version"]
-                        chunk += self._sse_msg("state", snap)
+                    sent_version, stamp, text = frame()
+                    if stamp != sent_stamp:
+                        sent_stamp = stamp
+                        chunk += text
                     if chunk:
                         self._sse_write(chunk)
                         last_push = last_beat = now
                 elif (not pending and core.state.version != sent_version
                       and now - last_push >= SSE_MIN_INTERVAL_S):
-                    snap = core.state.snapshot()
-                    sent_version = snap["version"]
-                    self._sse_write(self._sse_msg("state", snap))
-                    last_push = last_beat = now
+                    sent_version, stamp, text = frame()
+                    if stamp != sent_stamp:
+                        sent_stamp = stamp
+                        self._sse_write(text)
+                        last_push = last_beat = now
                 elif now - last_beat >= SSE_HEARTBEAT_S:
                     # A state can change with no log event (a trade card
                     # expiring, DS-TRADE-EXPIRE): the heartbeat sends it.
-                    snap = core.state.snapshot()
-                    if snap["version"] != sent_version:
-                        sent_version = snap["version"]
-                        self._sse_write(self._sse_msg("state", snap))
+                    sent_version, stamp, text = frame()
+                    if stamp != sent_stamp:
+                        sent_stamp = stamp
+                        self._sse_write(text)
                         last_push = now
                     else:
                         self._sse_write(": hb\n\n")
