@@ -16,7 +16,7 @@ const STUB_JS = ["pager", "textspacing", "strip", "context", "setupcard", "feed"
   "notice", "buildline", "itemcard", "keptchecks"];
 // every pre-linked region sheet, in <link> order (they stay linked)
 const LINKED_CSS = ["strip", "context", "setupcard", "feed", "notice", "buildline",
-  "itemcard", "keptchecks"];
+  "itemcard", "keptchecks", "theme"];
 // the sheets still empty stubs: one per line, a comment line between each
 // pair, so a region package deletes only its own line
 const STUB_CSS = [

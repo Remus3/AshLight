@@ -124,6 +124,8 @@ def discover_default(runtime, log_path):
 # REL-UPDATE-WIRE (ruling Q-21): the local config key holding the opt-in
 # wording version the player acknowledged (updates.WORDING_VERSION).
 ACK_KEY = "web_data_ack"
+# PLAY-TD-04B-THEME-CHOICE: the local config key of the Theme choice
+THEME_KEY = "theme"
 
 
 class ConfigUnreadable(OSError):
@@ -1146,6 +1148,23 @@ class Core:
         if enabled:
             self.rates.refresh_async()
         return bool(enabled) if enabled is not None else self.web_data_enabled()
+
+    # -- PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): the Theme choice
+    def theme(self):
+        """The dashboard's Theme choice ("theme" in the local config): one
+        of settingsio.THEMES, "dark" when unset or not a known choice."""
+        value = self._config().get(THEME_KEY)
+        return value if value in settingsio.THEMES else settingsio.THEME_DEFAULT
+
+    def set_theme(self, value):
+        """GET / POST /api/theme: store the Theme choice, keeping every
+        other key. ValueError (nothing written) for a value that is not one
+        of settingsio.THEMES; ConfigUnreadable (an OSError) on a hand-broken
+        config, as set_web_data. Returns the stored choice."""
+        if not isinstance(value, str) or value not in settingsio.THEMES:
+            raise ValueError("not a theme choice")
+        self._write_config({THEME_KEY: value})
+        return value
 
     def tick_update(self, now=None):
         """REL-UPDATE-WIRE (decision 0065), ZERO-CLICK, from tick_sources:
