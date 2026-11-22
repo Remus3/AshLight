@@ -1379,3 +1379,32 @@ of the HALT check.
   restart. It reads nothing and sends nothing. Reverses if: players miss
   the line after 3 sessions, the key-known session rule misfires in play,
   or the hint shows over a card in play.
+- OVL-SMOKE-DAILY (AUTO-22, F-199): the loop step
+  tools/loop_steps/overlay_smoke.py runs the opt-in live overlay smoke
+  (python -m pytest -q tests/test_overlay_smoke.py with AL_OVERLAY_SMOKE=1,
+  hidden, below-normal priority, 600 s limit) from post_work at most once a
+  local day (state ops/runtime/watch/overlay_smoke.json), never HALTed or
+  dry, and only when the dev host's own core reports game_idle true
+  (loopback, ports.resolve, runtime token after the hello proof, no proxy);
+  a core that is not reachable is unknown, runs nothing and leaves the day
+  open; a scratch root without injected seams reads no core and starts
+  nothing; a red verdict is one checklist row 'overlay-smoke' that stays
+  until a later green run and files nothing; it never lists processes or
+  windows and sends no input (decision 0029). Reverses if: the smoke breaks
+  play on an idle day, game_idle misfires as idle while the operator plays,
+  or the operator rules the smoke must stay manual.
+- DIVE-ON-DEMAND (AUTO-13, F-171): a watcher source asks for a research
+  dive by writing ops/runtime/watch/dive_request.json through
+  upstream_watch.request_dive. The tick step tools/loop_steps/dive_request.py
+  checks every URL with tools/webfetch.py allowed(). A request that is
+  malformed or has a refused URL is dropped, never retried. A request waits
+  while a DD-<date> record or a deep-dive research file of today exists (one
+  dive a day, shared with the idle dive), and while the runs budget is
+  unreadable or at or over 60 percent of its cap. Otherwise it is dispatched
+  as a deep-dive DD-<date> even when rows are open: the spawn uses
+  DEEP_EXTRA (no WebFetch or WebSearch), and the request file is removed
+  once the record reads dispatched. The idle dive is skipped while the
+  newest dive, idle or requested, is under 7 days old, whatever it
+  proposed. Reverses if: requested dives crowd out row work, the 60 percent
+  share proves wrong in practice, or a source needs more than one dive a
+  day.
