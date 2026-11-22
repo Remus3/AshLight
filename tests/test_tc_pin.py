@@ -363,8 +363,79 @@ def test_no_system_compiler_builds_with_the_pinned_toolchain(world, monkeypatch)
     assert "MSYSTEM" not in seen["env"] and "TERM" not in seen["env"]
     # everything inside the AL sidecar Cache
     assert lay["toolchain_root"].is_relative_to(world["root"] / "Cache")
+    # TC-PIN-POLICY: removed after the verified build; a rebuild re-fetches it
+    assert not lay["toolchain_root"].exists()
+    assert tc_pin.ensure_toolchain(doc, lay, fetch=tc_fetch) == lay["toolchain_bin"]
+    assert len(tc_calls) == 2
     # a second toolchain use is a no-op (marker), no refetch
     assert tc_pin.ensure_toolchain(doc, lay, fetch=None) == lay["toolchain_bin"]
+
+
+def test_toolchain_removed_after_ready_and_rerun_is_noop(world, capsys):
+    """TC-PIN-POLICY (F-180): after a verified build the toolchain tree and
+    archive are deleted directly (log says so), the rest stays, and a re-run
+    is a no-op: no fetch, no build, no file change."""
+    blob = _toolchain(world)
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+    tc_calls = []
+
+    def tc_fetch(url, max_bytes):
+        tc_calls.append(url)
+        yield blob
+
+    assert tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler,
+                            run=_fake_build(lay), toolchain_fetch=tc_fetch) == "ready"
+    assert tc_calls == [doc["toolchain"]["archive_url"]]
+    assert not lay["toolchain_root"].exists()
+    assert not lay["toolchain_archive"].exists()
+    out = capsys.readouterr().out
+    assert "deleted the portable toolchain tree and archive directly" in out
+    assert "re-fetchable cache files under the sidecar" in out
+    # PoB, LuaJIT, luajit.exe and the stamp are kept
+    assert tc_pin.exepin.verified(lay["luajit_exe"])
+    assert lay["pob2_archive"].is_file() and lay["luajit_archive"].is_file()
+    assert tc_pin.is_noop(doc, lay)
+
+    def no_net(url, max_bytes):
+        raise AssertionError("re-run must not fetch")
+
+    def no_build(*a, **k):
+        raise AssertionError("re-run must not build")
+
+    before = sorted(p.relative_to(world["root"]) for p in world["root"].rglob("*"))
+    assert tc_pin.run_setup(doc, environ=env, fetch=no_net, which=_no_compiler,
+                            run=no_build, toolchain_fetch=no_net) == "noop"
+    after = sorted(p.relative_to(world["root"]) for p in world["root"].rglob("*"))
+    assert before == after
+    # a toolchain an earlier version kept is removed by the next no-op run;
+    # a quarantined archive is kept as evidence
+    tc_pin.ensure_toolchain(doc, lay, fetch=tc_fetch)
+    rejected = lay["toolchain_cache"] / "toolchain.zip.rejected"
+    rejected.write_bytes(b"x")
+    assert lay["toolchain_root"].is_dir()
+    assert tc_pin.run_setup(doc, environ=env, fetch=no_net, which=_no_compiler,
+                            run=no_build, toolchain_fetch=no_net) == "noop"
+    assert not lay["toolchain_root"].exists() and not lay["toolchain_archive"].exists()
+    assert rejected.is_file()
+    # nothing left to remove: no delete, no log line
+    assert tc_pin.remove_toolchain(lay) is False
+
+
+def test_failed_build_keeps_the_toolchain(world):
+    blob = _toolchain(world)
+    doc, env = world["doc"], world["env"]
+    lay = tc_pin.layout(doc, env)
+
+    def failed_build(cmd, cwd=None, env=None, capture_output=None, timeout=None):
+        class R:
+            returncode = 1
+        return R()
+
+    with pytest.raises(RuntimeError):
+        tc_pin.run_setup(doc, environ=env, fetch=world["fetch"], which=_no_compiler,
+                         run=failed_build, toolchain_fetch=lambda u, n: iter([blob]))
+    assert lay["toolchain_root"].is_dir() and lay["toolchain_archive"].is_file()
 
 
 def test_p3_10_tampered_toolchain_tree_is_reextracted_before_the_build(world):
