@@ -1,5 +1,7 @@
 """UX-SETTINGS-IO: settings export / import (research 0028 ruling E).
-Round trip, secret exclusion, bad files, web data never switched on."""
+Round trip, secret exclusion, bad files, web data never switched on.
+TC-WEIGHTS-DELTA-EXPORT: schema 2 carries the stat weight changes; schema 1
+files still import."""
 
 import http.client
 import json
@@ -11,6 +13,7 @@ import pytest
 from server.al import settingsio
 from server.al.core import Core
 from server.al.http import serve
+from server.al.theorycraft import weights as weights_mod
 
 ROOT = Path(__file__).resolve().parents[1]
 FULL = {"character": "Ash", "poll_ms": 300, "overlay_toggle": "Alt+Shift+A",
@@ -34,7 +37,8 @@ FULL = {"character": "Ash", "poll_ms": 300, "overlay_toggle": "Alt+Shift+A",
 
 def test_export_holds_allowed_keys_only():
     doc = settingsio.export_doc(FULL, "1.2.3")
-    assert doc["kind"] == settingsio.KIND and doc["schema"] == 1
+    assert doc["kind"] == settingsio.KIND and doc["schema"] == settingsio.SCHEMA == 2
+    assert "weights" not in doc  # no block unless the core passes one
     assert set(doc["settings"]) == set(settingsio.ALLOWED)
     text = json.dumps(doc)
     for secret in ("someone-at-example", "Client.txt", "8961", "inbox_dir", "t" * 48):
@@ -54,7 +58,7 @@ def test_round_trip():
     want = {k: v for k, v in FULL.items() if k in settingsio.ALLOWED}
     assert update == want
     assert report == {"applied": sorted(want), "ignored": [], "web_data_offered": False,
-                      "tc_calc_offered": False}
+                      "tc_calc_offered": False, "weights_applied": False}
 
 
 def test_overlay_export_import_keeps_v2():
@@ -99,7 +103,20 @@ def test_unknown_and_secret_keys_are_not_applied():
 
 @pytest.mark.parametrize("doc", [
     None, [], "x", {}, {"kind": "other", "schema": 1, "settings": {}},
-    {"kind": settingsio.KIND, "schema": 2, "settings": {}},
+    {"kind": settingsio.KIND, "schema": 3, "settings": {}},
+    {"kind": settingsio.KIND, "schema": True, "settings": {}},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {}, "weights": []},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {}, "weights": {"weights": 5}},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {},
+     "weights": {"weights": {"+# to maximum Life": "lots"}}},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {},
+     "weights": {"weights": {"not a default row": None}}},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {},
+     "weights": {"weights": {}, "sidegrade": {"abs": -1}}},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {},
+     "weights": {"weights": {}, "sidegrade": {"evil": 1}}},
+    {"kind": settingsio.KIND, "schema": 2, "settings": {},
+     "weights": {"weights": {f"+# to Stat {i}": 1 for i in range(weights_mod.MAX_KEYS)}}},
     {"kind": settingsio.KIND, "schema": 1, "settings": []},
     {"kind": settingsio.KIND, "schema": 1, "settings": {"poll_ms": 1}},
     {"kind": settingsio.KIND, "schema": 1, "settings": {"web_data": "yes"}},
@@ -113,6 +130,122 @@ def test_unknown_and_secret_keys_are_not_applied():
 def test_bad_files_refused(doc):
     with pytest.raises(settingsio.SettingsError):
         settingsio.parse_import(doc, {})
+
+
+CHANGES = {"weights": {"+# to maximum Life": 2.5, "+# to Spirit": None,
+                       "#% increased Fire Damage": 0.7},
+           "sidegrade": {"pct": 8.0}}
+
+
+def _two_cores(tmp_path, src_cfg, dst_cfg):
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    a.write_text(json.dumps(src_cfg), encoding="ascii")
+    b.write_text(json.dumps(dst_cfg), encoding="ascii")
+    src = Core(runtime=tmp_path / "ra", log_path=str(log), tail=False, config_path=a)
+    dst = Core(runtime=tmp_path / "rb", log_path=str(log), tail=False, config_path=b)
+    return src, dst, b
+
+
+def test_schema_2_round_trips_weight_changes(tmp_path):
+    """TC-WEIGHTS-DELTA-EXPORT (F-134): the export carries the weights
+    store's changes (a changed row, a removed default row as null, an added
+    row, a band part) and an import on another computer puts the same
+    merged weights in place, with the same changes, and re-scores; a bad
+    block refuses the whole file with nothing applied."""
+    doc = json.loads(json.dumps(settingsio.export_doc(FULL, "v", weights=CHANGES)))
+    assert doc["schema"] == 2 and doc["weights"] == CHANGES
+    text = json.dumps(doc)
+    for secret in ("someone-at-example", "Client.txt", "inbox_dir", "t" * 48):
+        assert secret not in text
+    update, report = settingsio.parse_import(doc, {"web_data": True})
+    assert report["weights_applied"] is True and "weights" not in update
+    full = settingsio.weights_of(doc)
+    assert full == weights_mod.merge(weights_mod.validate_overrides(CHANGES))
+    assert "+# to Spirit" not in full["weights"] and full["sidegrade"]["pct"] == 8.0
+    # a block the store would refuse is left out of the export, never fatal
+    bad = {"weights": {"+# to maximum Life": float("nan")}}
+    assert "weights" not in settingsio.export_doc({}, "v", weights=bad)
+    # through two cores: export from one, import into another
+    src, dst, dst_cfg = _two_cores(tmp_path, {"league": "Standard"},
+                                   {"league": "Other", "contact": "keep-me"})
+    try:
+        src.weights.put(weights_mod.merge(weights_mod.validate_overrides(CHANGES)))
+        exported = json.loads(settingsio._text(src.export_settings()))
+        assert exported["weights"] == src.weights.snapshot()["changed"]
+        assert len(settingsio._text(exported)) <= settingsio.MAX_BYTES
+        reruns = []
+        dst.last_eval.rerun = lambda: reruns.append(1)
+        report = dst.import_settings(exported)
+        assert report["weights_applied"] is True and report["applied"] == ["league"]
+        assert reruns == [1]
+        assert dst.weights.snapshot()["changed"] == src.weights.snapshot()["changed"]
+        assert dst.weights.get() == src.weights.get()
+        saved = json.loads(dst_cfg.read_text(encoding="ascii"))
+        assert saved["league"] == "Standard" and saved["contact"] == "keep-me"
+        # one bad value anywhere: nothing applied, weights untouched
+        before = (dst_cfg.read_text(encoding="ascii"), dst.weights.get())
+        broken = dict(exported, settings={"league": "Z"},
+                      weights={"weights": {"+# to maximum Life": True}})
+        with pytest.raises(settingsio.SettingsError, match="stat weights"):
+            dst.import_settings(broken)
+        assert (dst_cfg.read_text(encoding="ascii"), dst.weights.get()) == before
+        # a file from a computer with no changes puts the defaults back here
+        src.weights.reset()
+        plain = json.loads(json.dumps(src.export_settings()))
+        assert plain["weights"] == {"weights": {}, "sidegrade": {}}
+        dst.import_settings(plain)
+        assert dst.weights.get() == weights_mod.defaults()
+        # a weights file that did not load (defaults in use) exports no block
+        src.weights.load_error = "unreadable: OSError"
+        assert "weights" not in src.export_settings()
+    finally:
+        src.close()
+        dst.close()
+
+
+def test_export_leaves_out_a_block_past_the_size_cap():
+    """A weights block that would push the download past MAX_BYTES is left
+    out (the import would refuse such a file, 16 KB cap); a block of 100
+    changed or added rows plus every default removed still fits."""
+    assert settingsio.MAX_BYTES == 16 * 1024
+    stem = "#% increased Damage with a long stat name of sixty char "
+    rows = {f"{stem}{i:04d}": 123.25 for i in range(100)}
+    rows.update({k: None for k in weights_mod.DEFAULT_WEIGHTS})
+    fits = settingsio.export_doc(FULL, "v", weights={"weights": rows, "sidegrade": {}})
+    assert "weights" in fits and len(settingsio._text(fits)) <= settingsio.MAX_BYTES
+    _update, report = settingsio.parse_import(json.loads(settingsio._text(fits)), {})
+    assert report["weights_applied"] is True
+    wide = {"+# to " + "W" * 190 + f"{i:04d}": 1 for i in range(weights_mod.MAX_KEYS - 50)}
+    big = settingsio.export_doc(FULL, "v", weights={"weights": wide, "sidegrade": {}})
+    assert "weights" not in big and big["settings"]
+
+
+def test_schema_1_file_still_imports(tmp_path):
+    """A schema 1 file (no weights block) imports as before and leaves the
+    weights alone; a weights block in a schema 1 file is never read."""
+    doc = {"kind": settingsio.KIND, "schema": 1, "app_version": "0.1.0",
+           "settings": {"league": "L", "underlevel_gap": 5}}
+    update, report = settingsio.parse_import(doc, {})
+    assert update == {"league": "L", "underlevel_gap": 5}
+    assert report["weights_applied"] is False and settingsio.weights_of(doc) is None
+    sneaky = dict(doc, weights={"weights": {"+# to maximum Life": 99}})
+    assert settingsio.weights_of(sneaky) is None
+    assert settingsio.parse_import(sneaky, {})[1]["weights_applied"] is False
+    core, _other, _cfg = _two_cores(tmp_path, {}, {})
+    _other.close()
+    try:
+        core.weights.put(weights_mod.merge(weights_mod.validate_overrides(CHANGES)))
+        before = core.weights.get()
+        report = core.import_settings(sneaky)
+        assert report["applied"] == ["league", "underlevel_gap"]
+        assert report["weights_applied"] is False
+        assert core.weights.get() == before
+        saved = json.loads((tmp_path / "a.json").read_text(encoding="ascii"))
+        assert saved["underlevel_gap"] == 5
+    finally:
+        core.close()
 
 
 def test_wear_hotkey_validated_by_the_hotkey_rule():

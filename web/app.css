@@ -804,13 +804,16 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 .grid-card .card-act > .check { min-height: 1.75rem; }
 .grid-card .webdata-form { margin: 0 0 0.25rem; }
 /* Item scoring: the form only groups its pages (each page is a card
-   page); a weight row is 24 px, label and number box on one line */
+   page); a weight row is 24 px, label and number box on one line.
+   PLAY-PAGER-SCALE-24: the row and its number box never drop under 24 px
+   when the root is under 16 px (a smaller default font or --al-s under 1);
+   at s = 1 and up max(24px, 1.5rem) is 1.5rem, so the cockpit fit holds. */
 .grid-card .weights-form { display: contents; }
 .grid-card .weights-list { display: flex; flex-direction: column; gap: 0; }
-.grid-card .weights-list li { min-height: 1.5rem; gap: 0.5rem; }
+.grid-card .weights-list li { min-height: max(24px, 1.5rem); gap: 0.5rem; }
 .grid-card .weights-list label { font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
 .grid-card .weights-form input { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
-  padding: 1px 6px; border-radius: var(--al-radius-control); }
+  padding: 1px 6px; border-radius: var(--al-radius-control); min-height: max(24px, 1.5rem); }
 .grid-card .weights-list input { width: 6em; }
 /* the Add a stat page: two groups of two 24 px rows, label and box on one
    row, no frame (the legend names the group) */
@@ -841,14 +844,19 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
   min-height: 1.75rem; margin-top: auto; }
 .al-pager-count { margin-right: auto; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
   color: var(--fk-text-muted); }
-button.al-pager-btn { min-height: 1.5rem; min-width: 1.5rem; padding: 0 0.5rem;
+button.al-pager-btn { min-height: max(24px, 1.5rem); min-width: max(24px, 1.5rem); padding: 0 0.5rem;
   font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); background: var(--fk-surface); }
 /* PGR-1..3 (PLAY-TD-19D-ITEMS-GRID): an end button says so without colour:
    a dashed edge and the not-allowed cursor. Its text stays the muted token
    (6.1:1 light, 6.5:1 dark on the card) and its edge the control edge
-   (3.5:1 light, 4.1:1 dark), so no opacity; the target stays 24 px. */
+   (3.5:1 light, 4.1:1 dark), so no opacity; the target stays 24 px.
+   PLAY-PAGER-SCALE-24 (review D-2): the 1 px dashes read faint, so the
+   edge is 2 px; the side padding gives back the extra 1 px a side and the
+   min-height holds the height, so the box never moves when a page end is
+   reached and the target keeps its 24 px floor. */
 button.al-pager-btn[aria-disabled="true"] { color: var(--fk-text-muted);
-  border-style: dashed; border-color: var(--al-control-edge); cursor: not-allowed; }
+  border-style: dashed; border-width: 2px; border-color: var(--al-control-edge);
+  padding: 0 calc(0.5rem - 1px); cursor: not-allowed; }
 button.al-pager-btn[hidden] { display: none; }
 li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
 
@@ -891,7 +899,7 @@ button.chip::after { display: block; height: 0; overflow: hidden; visibility: hi
     text-overflow: ellipsis; }
   .al-row-ctl { height: 1.5rem; }
   .grid-card .eval-head, .grid-card .price-head { flex-wrap: nowrap; }
-  .grid-card .weights-list li { height: 1.5rem; }
+  .grid-card .weights-list li { height: max(24px, 1.5rem); }
   /* the Build card's first page fits the 256 px compact card (PLAY-TD-19D-
      ITEMS-GRID): key stat rows of 20 px and a 24 px Copy button */
   #buildbox .card-kv > div { line-height: 1.25rem; }

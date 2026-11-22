@@ -682,7 +682,16 @@ of the HALT check.
   .bak of its last good copy, removed by Clear run history (0036
   amendment 2026-11-18). Reverses if: the operator rules local history
   files unwanted, GGG restricts derived local records, or decision 0013
-  changes.
+  changes. Amended 2026-11-21 (TC-WEIGHTS-DELTA-EXPORT): the settings file is
+  schema 2 and carries a top-level weights block, the player's stat weight
+  changes in the weights file's version 2 form, checked by the weights
+  store's own rules (at most weights.MAX_KEYS rows; a bad block refuses the
+  whole file). An import with the block sets the weights to the defaults plus
+  the file's changes and re-scores the last item. A file without it, schema 1
+  included, leaves the weights alone. The 16 KB cap stays, and an export
+  whose block would pass it leaves the block out. Reverses if: the weights
+  store changes its file form, players expect an import to keep their own
+  weight changes, or a real export drops its block at the cap.
 - UTIL-MULTICHAR: level, deaths, pace, act splits and run history are
   keyed by the character name in the player's own Client.txt (switch only
   on the first level-up / death after a game start with no join / leave
@@ -1068,8 +1077,11 @@ of the HALT check.
   egress lock allows the scheme's one host and refuses every file: URL;
   the core adds APP_ORIGIN al-app://app to FILE_ORIGINS for GET /events
   only and echoes it in Access-Control-Allow-Origin, while null and
-  file:// stay until OVL-APP-SCHEME-STRICT (decision 0061 amendment
-  2026-11-21). Reverses if: the live smoke shows the feed blocked or the
+  file:// were refused from OVL-APP-SCHEME-STRICT on (decision 0061
+  amendment 2026-11-21). Amended 2026-11-21 (OVL-APP-SCHEME-STRICT, F-174):
+  the core now accepts only that app origin instead of null and file://
+  (FILE_ORIGINS = {APP_ORIGIN} on the read-only path set {"/events"}; Origin
+  null and file:// are refused). Reverses if: the live smoke shows the feed blocked or the
   window not painting from the scheme, Electron drops protocol.handle or
   registerSchemesAsPrivileged, or a page needs a file outside the list.
   Reverses if: a needed
