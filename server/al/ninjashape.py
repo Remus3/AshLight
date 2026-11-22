@@ -39,6 +39,13 @@ signature keeps key names (bounded and filtered to plain identifiers),
 shares and counts, in memory only; the flag holds key names and a time.
 record() never raises into the refresh path: observe() swallows and logs.
 
+DATA-PRICE-TYPE-PROOF (F-201): the Currency body is also checked for the
+exchange ids the note-price aliases point at (theorycraft.value.alias_ids,
+the one list). An id with no priced line is an invariant that failed
+("alias_ids", a CHANGE, never a break: the parser still reads) and the
+reason names the missing ids, which come from AshLight's own table, never
+from the body. An empty Currency body (league start) is not checked.
+
 attach(core) gives core.rates (and its book) the watch; diag_facts /
 diag_rows are the DATA-DIAG-SEAM hooks (diag_data.MODULES).
 """
@@ -52,6 +59,7 @@ import time
 from pathlib import Path
 
 from . import hotreload, jsonfile, plug
+from .theorycraft import value
 
 log = logging.getLogger("al.ninjashape")
 
@@ -66,6 +74,7 @@ MAX_KEYS = 100        # key names kept per key set
 LEAGUE_NOTE_S = 7 * 24 * 3600
 FACT = "ninja_shape"
 LEAGUE_FACT = "ninja_league"
+ALIAS_TYPE = "Currency"  # = ninja.OVERVIEW_TYPE: the body the aliases price from
 _KEY_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,39}$")
 _PATH_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,39}(\.[A-Za-z][A-Za-z0-9_]{0,39}){0,3}$")
 _STRING_KEYS = frozenset(("id", "name", "baseType", "primary", "itemId"))
@@ -239,9 +248,20 @@ def league_list_problem(listed):
     return None
 
 
-def signature(family, doc, headers=None, kept=None, named=None):
+def alias_missing(lines):
+    """The alias ids (value.alias_ids) with no line carrying a usable
+    primaryValue, sorted; [] for an empty or unreadable lines list."""
+    if not isinstance(lines, list) or not lines:
+        return []
+    priced = {x.get("id") for x in lines[:MAX_ELEMENTS]
+              if isinstance(x, dict) and _finite_pos(x.get("primaryValue"))}
+    return [i for i in value.alias_ids() if i not in priced]
+
+
+def signature(family, doc, headers=None, kept=None, named=None, type_name=None):
     """The signature of one parsed body (key names, shares, counts,
-    invariants; no value, no name)."""
+    invariants; no value, no name). For the Currency body (`type_name`
+    ALIAS_TYPE) the alias ids with no priced line go in "alias_missing"."""
     spec = baseline().get(family) or {"read": [], "soft": set()}
     sig = {"family": family, "cache": cache_class(headers), "etag": _has_etag(headers),
            "kept": kept if isinstance(kept, int) else None,
@@ -279,6 +299,9 @@ def signature(family, doc, headers=None, kept=None, named=None):
                    if isinstance(x, dict) and x.get("id") == primary]
             inv["primary_worth_1"] = (not own) or all(
                 _finite_pos(v) and abs(v - 1) < 1e-9 for v in own)
+        if family == "exchange" and type_name == ALIAS_TYPE                 and isinstance(lines, list) and lines:
+            sig["alias_missing"] = alias_missing(lines)
+            inv["alias_ids"] = not sig["alias_missing"]
         if family == "item" and isinstance(lines, list):
             counts = [x.get("listingCount") for x in lines[:MAX_ELEMENTS]
                       if isinstance(x, dict) and "listingCount" in x]
@@ -326,6 +349,9 @@ def verdict(sig, previous=None):
     if any(v is False for v in sig["invariants"].values()):
         notes.append("an invariant failed: " + ", ".join(
             k for k, v in sig["invariants"].items() if v is False))
+    if sig.get("alias_missing"):
+        notes.append("note currencies without a price: "
+                     + ", ".join(sig["alias_missing"][:20]))
     if previous is not None:
         for part in ("top", "core", "line_keys"):
             new = set(sig.get(part) or ()) - set(previous.get(part) or ())
@@ -383,7 +409,7 @@ class Watch:
             except ValueError:
                 doc = None
         key = (family, type_name[:60])
-        sig = signature(family, doc, headers, kept, named)
+        sig = signature(family, doc, headers, kept, named, type_name)
         now = self.clock()
         with self._lock:
             result, missing, reason = verdict(sig, self.signatures.get(key))

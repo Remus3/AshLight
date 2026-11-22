@@ -37,9 +37,11 @@ AL_NO_SNAPSHOT=1 skips it always (AUDIT-SNAPSHOT-OPTIN).
 import argparse
 import calendar
 import hashlib
+import http.client
 import json
 import os
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -70,8 +72,36 @@ def needs_contact(name, url):
             or "/grindinggear/" in parts.path.lower())
 OPT_OUT_ENV = "AL_NO_SNAPSHOT"
 MIN_AGE_S = 24 * 3600
+# SEC-CEIL-SNAPSHOT (F-173): MAX_BYTES is only the ceiling every per-source
+# cap stays under; a body is streamed to a temp file in the cache dir (never
+# held whole in memory while it downloads), a body past its source's cap is
+# refused and its temp file removed, and one fetch ends at DEADLINE_S
+# (total, a dripping reply included); TIMEOUT_S bounds each socket wait.
 MAX_BYTES = 256 * 1024 * 1024
+MiB = 1024 * 1024
+# about 4 to 8 times the sizes seen in 2026-11 (decision 0009, research
+# 0037 / 0048: stat_descriptions 10.1 MB, base_items 8.2 MB, world_areas
+# 1.9 MB, stats_by_file 14.4 MB, mods 12.7 MB)
+SOURCE_CAPS = {
+    "base_items": 64 * MiB,
+    "stat_translations": 64 * MiB,
+    "skilltree": 64 * MiB,
+    "world_areas": 16 * MiB,
+    "mods": 96 * MiB,
+    "stats": 96 * MiB,
+}
+DEFAULT_CAP = 32 * MiB  # a caller's own source name
 TIMEOUT_S = 60
+DEADLINE_S = 600.0
+READ_BLOCK = webfetch.READ_BLOCK
+SPOOL_PREFIX = ".snap-"
+SPOOL_SUFFIX = ".part"
+
+
+def source_cap(name):
+    """The byte cap of one source (DEFAULT_CAP for an unknown name), never
+    over MAX_BYTES."""
+    return min(SOURCE_CAPS.get(name, DEFAULT_CAP), MAX_BYTES)
 ALLOWED_HOSTS = ("repoe-fork.github.io", "raw.githubusercontent.com")
 # raw.githubusercontent.com serves every public repo: only GGG's own export
 # repository is allowed there (decision 0009 item 3 as amended).
@@ -123,12 +153,21 @@ def _parse_utc(text):
 
 
 def _check_url(url):
-    parts = urllib.parse.urlsplit(url)
-    if parts.scheme != "https" or parts.hostname not in ALLOWED_HOSTS:
-        raise FetchError(f"URL not allowed: {url}")
-    prefix = HOST_PATH_PREFIX.get(parts.hostname)
-    if prefix and (not parts.path.startswith(prefix) or ".." in parts.path):
-        raise FetchError(f"URL not allowed: {url}")
+    """One URL rule (SEC-CEIL-SNAPSHOT): webfetch.check_url with
+    ALLOWED_HOSTS (https only, no user info, no port other than 443, no IP
+    literal, exact host), then the per-host path prefix with no '..' in the
+    path, decoded or not."""
+    try:
+        parts = webfetch.check_url(url, ALLOWED_HOSTS)
+    except webfetch.UrlNotAllowed as e:
+        raise FetchError(f"URL not allowed: {e}") from e
+    host = (parts.hostname or "").lower()
+    prefix = HOST_PATH_PREFIX.get(host)
+    path = parts.path or ""
+    decoded = urllib.parse.unquote(path)
+    if prefix and (not path.startswith(prefix) or ".." in path or ".." in decoded):
+        raise FetchError("URL not allowed: path outside the allowed repository")
+    return parts
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):
@@ -137,23 +176,82 @@ class _Redirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def http_fetch(url, headers):
-    """(status, headers dict, body bytes) for one GET. 304 has an empty body."""
+def _remove(path):
+    try:
+        Path(path).unlink()
+    except OSError:
+        pass
+
+
+def _spool(resp, cap, deadline_at, spool_dir):
+    """Stream `resp` into a new temp file in spool_dir, at most `cap`
+    bytes; FetchError past the cap or the deadline, with the file removed.
+    Returns the temp file's Path."""
+    spool_dir = Path(spool_dir)
+    spool_dir.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=SPOOL_PREFIX, suffix=SPOOL_SUFFIX, dir=spool_dir)
+    reader = getattr(resp, "read1", None) or resp.read
+    size, done = 0, False
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            while True:
+                if time.monotonic() >= deadline_at:
+                    raise FetchError("request passed its total deadline")
+                block = reader(min(READ_BLOCK, cap + 1 - size))
+                if not block:
+                    break
+                size += len(block)
+                if size > cap:
+                    raise FetchError(f"response too large (cap {cap} bytes)")
+                fh.write(block)
+            fh.flush()
+            os.fsync(fh.fileno())
+        done = True
+        return Path(name)
+    finally:
+        if not done:
+            _remove(name)
+
+
+def http_fetch(url, headers, cap=None, spool_dir=None, deadline_s=DEADLINE_S):
+    """(status, headers dict, body) for one GET. 304 has an empty body.
+
+    With spool_dir the body is streamed to a temp file there and `body` is
+    its Path (the caller moves or removes it); without, it is the bytes.
+    cap: the byte cap (default MAX_BYTES). The whole fetch ends at
+    deadline_s; no socket wait outlasts it."""
     _check_url(url)
+    cap = MAX_BYTES if cap is None else min(int(cap), MAX_BYTES)
+    deadline_at = time.monotonic() + deadline_s
     req = urllib.request.Request(url, headers=headers, method="GET")
     opener = urllib.request.build_opener(_Redirects())
+    path = None
     try:
-        with opener.open(req, timeout=TIMEOUT_S) as resp:
-            body = resp.read(MAX_BYTES + 1)
-            if len(body) > MAX_BYTES:
-                raise FetchError("response too large")
-            return resp.status, dict(resp.headers.items()), body
+        timeout = max(0.001, min(TIMEOUT_S, deadline_at - time.monotonic()))
+        with opener.open(req, timeout=timeout) as resp:
+            if spool_dir is not None:
+                path = _spool(resp, cap, deadline_at, spool_dir)
+                body = path
+            else:
+                try:
+                    body = webfetch.read_body(resp, cap, deadline_at, time.monotonic)
+                except webfetch.FetchError as e:
+                    raise FetchError(str(e)) from e
+            result = resp.status, dict(resp.headers.items()), body
+            path = None
+            return result
     except urllib.error.HTTPError as e:
         if e.code == 304:
             return 304, dict(e.headers.items()), b""
         raise FetchError(f"HTTP {e.code}") from e
-    except (urllib.error.URLError, OSError) as e:
-        raise FetchError(f"network: {e}") from e
+    except (urllib.error.URLError, OSError, ValueError, http.client.HTTPException) as e:
+        raise FetchError(f"network: {type(e).__name__}: {e}") from e
+    finally:
+        if path is not None:
+            _remove(path)
+
+
+http_fetch.streams = True  # run() passes cap and spool_dir to this fetcher
 
 
 def _header(headers, name):
@@ -224,6 +322,47 @@ def write_probe_report(runtime, records, now=None):
     return path
 
 
+def _measure(body):
+    """(size, sha256 hex) of a body: bytes, or a spooled temp file read in
+    blocks."""
+    if not isinstance(body, Path):
+        body = bytes(body or b"")
+        return len(body), hashlib.sha256(body).hexdigest()
+    h, size = hashlib.sha256(), 0
+    try:
+        with open(body, "rb") as fh:
+            for block in iter(lambda: fh.read(READ_BLOCK), b""):
+                h.update(block)
+                size += len(block)
+    except OSError as e:
+        raise FetchError(f"cannot read the downloaded body: {e}") from e
+    return size, h.hexdigest()
+
+
+def _load_json(body):
+    try:
+        if isinstance(body, Path):
+            with open(body, "rb") as fh:
+                return json.load(fh)
+        return json.loads(body)
+    except (ValueError, RecursionError) as e:
+        raise FetchError("response is not JSON") from e
+    except OSError as e:
+        raise FetchError(f"cannot read the downloaded body: {e}") from e
+
+
+def _install(body, target):
+    """Put a checked body in place atomically: a spooled temp file (in the
+    same directory) is moved over `target`, bytes are written atomically."""
+    try:
+        if isinstance(body, Path):
+            jsonfile._replace(body, target)
+        else:
+            jsonfile.write_bytes(target, body)
+    except OSError as e:
+        raise FetchError(f"cannot write {Path(target).name}: {e}") from e
+
+
 def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
         contact=None, probes=None, runtime=None, log_dir=None):
     """Refresh every enabled source. Returns {name: outcome} where outcome is
@@ -268,16 +407,20 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
                 headers["If-None-Match"] = entry["etag"]
             if entry.get("last_modified"):
                 headers["If-Modified-Since"] = entry["last_modified"]
+        cap = source_cap(name)
+        body = None
         try:
-            status, rh, body = fetch(url, headers)
+            if getattr(fetch, "streams", False):
+                status, rh, body = fetch(url, headers, cap=cap, spool_dir=directory)
+            else:
+                status, rh, body = fetch(url, headers)
             if status == 304 and have:
                 out[name] = "unchanged"
             elif status == 200:
-                try:
-                    doc = json.loads(body)
-                except (ValueError, RecursionError) as e:
-                    raise FetchError("response is not JSON") from e
-                sha = hashlib.sha256(body).hexdigest()
+                size, sha = _measure(body)
+                if size > cap:
+                    raise FetchError(f"response too large (cap {cap} bytes)")
+                doc = _load_json(body)
                 same = bool(have) and sha == entry.get("sha256")
                 result = snapprobe.probe(name, doc, table=probes)
                 if result is not None:
@@ -295,9 +438,9 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
                         keep_previous(target)
                     except OSError as e:
                         raise FetchError(f"cannot keep previous copy: {e}") from e
-                    jsonfile.write_bytes(target, body)
+                    _install(body, target)
                     entry = {"url": url, "fetched_at": _utc(now), "sha256": sha,
-                             "bytes": len(body)}
+                             "bytes": size}
                     out[name] = "fetched"
                 entry["etag"] = _header(rh, "ETag") or entry.get("etag")
                 entry["last_modified"] = (_header(rh, "Last-Modified")
@@ -309,6 +452,9 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
             dirty = True
         except FetchError as e:
             out[name] = f"error: {e}"
+        finally:
+            if isinstance(body, Path):  # a spooled body not moved into place
+                _remove(body)
     if records and runtime is not None:
         try:
             write_probe_report(runtime, records, now)

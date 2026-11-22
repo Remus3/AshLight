@@ -6,6 +6,7 @@ and the default fetcher is checked only for its URL guard.
 
 import hashlib
 import json
+import types
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = {"mods": "https://repoe-fork.github.io/poe2/mods.json",
        "stats": "https://repoe-fork.github.io/poe2/stats_by_file.json",
        "skilltree": None}
+AT = chr(64)
 TREE_URL = "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/main/data.json"
 
 
@@ -121,10 +123,166 @@ def test_default_cache_is_in_al_sidecar(tmp_path):
                                  "https://raw.githubusercontent.com/grindinggear/"
                                  "poe2-skilltree-export/../../x/y.json",
                                  "https://githubusercontent.com.example.org/grindinggear/"
-                                 "poe2-skilltree-export/main/data.json"])
-def test_url_guard_refuses_off_allowlist(url):
+                                 "poe2-skilltree-export/main/data.json",
+                                 # SEC-CEIL-SNAPSHOT: the webfetch rule as well
+                                 # user info; AT kept apart so the bytes
+                                 # never look like an address to the sweep
+                                 "https://user:pw" + AT + "repoe-fork.github.io/poe2/mods.json",
+                                 "https://user" + AT + "repoe-fork.github.io/poe2/mods.json",
+                                 "https://repoe-fork.github.io:8443/poe2/mods.json",
+                                 "https://185.199.108.153/poe2/mods.json",
+                                 "https://[::1]/poe2/mods.json",
+                                 "https://raw.githubusercontent.com/grindinggear/"
+                                 "poe2-skilltree-export/%2e%2e/%2e%2e/x/y.json",
+                                 "https://repoe-fork.github.io/poe2/mods.json\\x"])
+def test_url_guard_refuses_off_allowlist(url, monkeypatch):
+    def no_network(*a, **k):
+        raise AssertionError("the guard must refuse before any request")
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", no_network)
     with pytest.raises(snapshot.FetchError):
         snapshot.http_fetch(url, {})
+    with pytest.raises(snapshot.FetchError):
+        snapshot._check_url(url)
+
+
+class _Resp:
+    """A fake urllib reply: read1 hands out `blocks` one at a time; every
+    call moves the fake clock on by `step` seconds."""
+
+    def __init__(self, blocks, clock=None, step=0.0, status=200, headers=None):
+        self.blocks = list(blocks)
+        self.clock, self.step = clock, step
+        self.status = status
+        self.headers = headers or {"ETag": "W/\"9\""}
+        self.reads = 0
+
+    def read1(self, n):
+        self.reads += 1
+        if self.clock is not None:
+            self.clock[0] += self.step
+        if not self.blocks:
+            return b""
+        block = self.blocks.pop(0)
+        if len(block) > n:
+            self.blocks.insert(0, block[n:])
+            block = block[:n]
+        return block
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _opener(resp, seen=None):
+    class Opener:
+        def open(self, req, timeout=None):
+            if seen is not None:
+                seen.append(timeout)
+            return resp
+    return lambda *handlers: Opener()
+
+
+def test_http_fetch_streams_to_a_temp_file_in_the_cache(tmp_path, monkeypatch):
+    body = b'{"a": 1}' * 1000
+    resp = _Resp([body[i:i + 300] for i in range(0, len(body), 300)])
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp))
+    status, headers, got = snapshot.http_fetch(SRC["mods"], {}, cap=len(body),
+                                               spool_dir=tmp_path)
+    assert status == 200 and headers["ETag"] == "W/\"9\""
+    assert isinstance(got, Path) and got.parent == tmp_path
+    assert got.read_bytes() == body
+    got.unlink()
+
+
+def test_body_over_the_source_cap_is_refused_and_leaves_no_file(tmp_path, monkeypatch):
+    # the real fetcher: the read stops one byte past the cap, the temp file goes
+    cap = 1000
+    resp = _Resp([b"x" * 400] * 10)
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp))
+    with pytest.raises(snapshot.FetchError, match="too large"):
+        snapshot.http_fetch(SRC["mods"], {}, cap=cap, spool_dir=tmp_path)
+    assert resp.reads <= 4  # never read on to the end of the reply
+    assert list(tmp_path.iterdir()) == []
+    # through run(): the per-source cap table decides, nothing is written
+    monkeypatch.setitem(snapshot.SOURCE_CAPS, "mods", cap)
+    resp = _Resp([b"[" + b"1," * 600 + b"1]"])
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp))
+    out = snapshot.run(tmp_path, sources={"mods": SRC["mods"]}, now=1_800_000_000)
+    assert out["mods"].startswith("error") and "too large" in out["mods"]
+    assert list(tmp_path.iterdir()) == []
+    # an injected fetch that returns bytes meets the same cap
+    big = Fake({SRC["mods"]: b"[" + b"1," * 600 + b"1]"})
+    out = snapshot.run(tmp_path, fetch=big, sources={"mods": SRC["mods"]},
+                       now=1_800_000_000)
+    assert "too large" in out["mods"] and list(tmp_path.iterdir()) == []
+
+
+def test_every_source_has_a_cap_under_the_ceiling():
+    for name in list(snapshot.SOURCES) + list(snapshot.OPTIONAL_SOURCES):
+        cap = snapshot.source_cap(name)
+        assert 0 < cap <= snapshot.MAX_BYTES, name
+        assert name in snapshot.SOURCE_CAPS, name
+    assert snapshot.source_cap("unknown") == snapshot.DEFAULT_CAP
+
+
+def _fake_time(clock):
+    """A stand-in for snapshot's `time` name only: patching the real time
+    module's monotonic would freeze the clock for every other thread."""
+    return types.SimpleNamespace(monotonic=lambda: clock[0])
+
+
+def test_slow_drip_is_dropped_at_the_deadline(tmp_path, monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(snapshot, "time", _fake_time(clock))
+    # one byte a second, far more bytes than the deadline allows
+    resp = _Resp([b"x"] * 100_000, clock=clock, step=1.0)
+    seen = []
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp, seen))
+    with pytest.raises(snapshot.FetchError, match="deadline"):
+        snapshot.http_fetch(SRC["mods"], {}, cap=10 ** 9, spool_dir=tmp_path)
+    assert resp.reads <= snapshot.DEADLINE_S + 2
+    assert seen and 0 < seen[0] <= snapshot.TIMEOUT_S
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_the_socket_timeout_never_outlasts_the_deadline(tmp_path, monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(snapshot, "time", _fake_time(clock))
+    resp = _Resp([b"[]"])
+    seen = []
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp, seen))
+    got = snapshot.http_fetch(SRC["mods"], {}, cap=100, spool_dir=tmp_path,
+                              deadline_s=5.0)[2]
+    assert seen == [5.0]
+    got.unlink()
+
+
+def test_a_real_fetch_replaces_the_file_atomically(tmp_path, monkeypatch):
+    resp = _Resp([b'{"ExampleMod": {}}'])
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp))
+    out = snapshot.run(tmp_path, sources={"mods": SRC["mods"]}, now=1_800_000_000)
+    assert out == {"mods": "fetched"}
+    assert (tmp_path / "mods.json").read_bytes() == b'{"ExampleMod": {}}'
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["manifest.json", "mods.json"]
+    man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
+    assert man["files"]["mods"]["bytes"] == len(b'{"ExampleMod": {}}')
+    assert man["files"]["mods"]["sha256"] == hashlib.sha256(b'{"ExampleMod": {}}').hexdigest()
+    # unchanged body: the temp file is removed, the file stays
+    resp2 = _Resp([b'{"ExampleMod": {}}'])
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp2))
+    out = snapshot.run(tmp_path, sources={"mods": SRC["mods"]}, force=True,
+                       now=1_800_000_100)
+    assert out == {"mods": "unchanged"}
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["manifest.json", "mods.json"]
+    # a body that is not JSON leaves no temp file and the old file in place
+    resp3 = _Resp([b"<html>"])
+    monkeypatch.setattr(snapshot.urllib.request, "build_opener", _opener(resp3))
+    out = snapshot.run(tmp_path, sources={"mods": SRC["mods"]}, force=True,
+                       now=1_800_000_200)
+    assert out["mods"].startswith("error")
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["manifest.json", "mods.json"]
 
 
 def test_url_guard_accepts_every_enabled_source():

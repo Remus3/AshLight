@@ -10,15 +10,21 @@ name, so AshLight never runs one:
   verified), checked before every exec.
   The record sits beside the exe in the user-writable sidecar, so it
   stops a stale or foreign exe, not a same-user tamper (decision 0022,
-  amendment P2-B3).
+  amendment P2-B3). TC-CALC-IDLE (F-154): a match is cached with the
+  exe's size and mtime and the recorded hash; while all three are
+  unchanged the exe is not read again (the calc restarts after every idle
+  stop, and each restart checks).
 Stdlib only.
 """
 
 import hashlib
 import os
+import threading
 from pathlib import Path
 
 HASH_SUFFIX = ".sha256"
+_VERIFIED = {}  # str(exe) -> (recorded hash, size, mtime_ns) of the last match
+_VERIFIED_LOCK = threading.Lock()
 
 
 def system_dir():
@@ -89,9 +95,26 @@ def record(exe):
 
 
 def verified(exe):
-    """True only when exe exists and matches its recorded SHA-256."""
+    """True only when exe exists and matches its recorded SHA-256. A match
+    is cached by the exe's size and mtime and the recorded hash (the record
+    is read every time); any change hashes the exe again. Never raises."""
+    key = str(exe)
     try:
         want = hash_file(exe).read_text(encoding="ascii").strip()
-        return len(want) == 64 and Path(exe).is_file() and _digest(exe) == want
+        st = Path(exe).stat()
+        stamp = (want, st.st_size, st.st_mtime_ns)
+        if len(want) != 64 or not Path(exe).is_file():
+            ok = False
+        else:
+            with _VERIFIED_LOCK:
+                if _VERIFIED.get(key) == stamp:
+                    return True
+            ok = _digest(exe) == want
     except (OSError, ValueError):
-        return False
+        ok = False
+    with _VERIFIED_LOCK:
+        if ok:
+            _VERIFIED[key] = stamp
+        else:
+            _VERIFIED.pop(key, None)
+    return ok
