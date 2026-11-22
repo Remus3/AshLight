@@ -716,13 +716,26 @@ test("failed page shows the start-error line, no script path", (t) => {
   assert.match(html, /<div id="reason" role="status" hidden>/);
   assert.match(html, /<p id="reason-line"><\/p>/);
   assert.ok(!/\.ps1|\.py\b|scripts\\/.test(html), "no script path on the page");
-  assert.match(html, /script-src 'self'; style-src 'self'; img-src 'none'; connect-src 'none'/);
+  // OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the CSP is the app
+  // scheme's response header (no meta); the starting page connects nowhere
+  assert.ok(!/http-equiv/i.test(html), "no CSP meta");
+  assert.match(require("../pages.js").cspFor(8960, "client/starting.html"),
+    /script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'/);
   const page = code(fs.readFileSync(path.join(__dirname, "..", "client", "starting.js"), "utf8"));
   assert.ok(!page.includes("innerHTML") && page.includes(".textContent = reason"));
+  // the failed page URL: the app scheme, the reason as the one query value
+  const failedUrl = new URL(ClientWin.startingUrl(ClientWin.failedPage(FIX)));
+  assert.equal(failedUrl.protocol + "//" + failedUrl.host + failedUrl.pathname,
+    "al-app://app/client/starting.html");
+  assert.equal(failedUrl.searchParams.get("reason"), FIX);
+  assert.equal(failedUrl.hash, "#failed");
+  assert.equal(ClientWin.startingUrl(), "al-app://app/client/starting.html");
+  const viaUrl = runStartingPage(ClientWin.startingUrl(ClientWin.failedPage(FIX)));
+  assert.equal(viaUrl["reason-line"].textContent, FIX);
   // both failed branches of the window go through showFailed (this attempt's time)
   const c = code(WIN_SRC);
-  assert.equal((c.match(/win\.loadFile\(STARTING_HTML, \{ hash: "failed" \}\)/g) || []).length, 0);
-  assert.match(c, /win\.loadFile\(STARTING_HTML, failedPage\(line\)\);/);
+  assert.ok(!c.includes("loadFile("), "no file page is loaded");
+  assert.match(c, /win\.loadURL\(startingUrl\(failedPage\(line\)\)\);/);
   assert.match(c, /if \(url\) \{ win\.loadURL\(url\); \} else \{ showFailed\(sinceMs\); \}/);
   assert.match(c, /log\("client: core did not answer within " \+ CORE_WAIT_MS \/ 1000 \+ " s"\);\s*showFailed\(since\);/);
   assert.match(c, /const since = Date\.now\(\);/);
@@ -894,7 +907,7 @@ test("give-up reason is shown, no path", (t) => {
   // shown: the failed page falls back to it after the start-error line,
   // and an open window follows the watch's start to that page; no tray note
   const c = code(WIN_SRC);
-  assert.match(c, /let line = startErrorLine\(opts\.runtimeDir, sinceMs\);[\s\S]*?line = giveUpNow\(\);[\s\S]*?win\.loadFile\(STARTING_HTML, failedPage\(line\)\);/);
+  assert.match(c, /let line = startErrorLine\(opts\.runtimeDir, sinceMs\);[\s\S]*?line = giveUpNow\(\);[\s\S]*?win\.loadURL\(startingUrl\(failedPage\(line\)\)\);/);
   assert.match(c, /function giveUpNow\(\) \{\s*return giveUpLine\(Launcher\.readGiveUp\(opts\.runtimeDir\)\);/);
   const startBody = c.slice(c.indexOf("const watch = makeWatch("), c.indexOf("function watchStep()"));
   assert.ok(startBody.includes("followStart(since);"));
@@ -902,5 +915,5 @@ test("give-up reason is shown, no path", (t) => {
   assert.ok(!startBody.includes(balloon));
   assert.equal(c.split(balloon + "(").length - 1, 1); // the X-closed note only
   const follow = c.slice(c.indexOf("function followStart(since)"));
-  assert.match(follow, /win\.loadFile\(STARTING_HTML\);\s*starting = Link\.waitFor\(healthy, CORE_WAIT_MS, CORE_STEP_MS\)\.then\(\(ok\) => settle\(ok, since\)\);/);
+  assert.match(follow, /win\.loadURL\(startingUrl\(\)\);\s*starting = Link\.waitFor\(healthy, CORE_WAIT_MS, CORE_STEP_MS\)\.then\(\(ok\) => settle\(ok, since\)\);/);
 });

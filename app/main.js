@@ -17,14 +17,16 @@
    clipboard read.
    OVL-SHELL-GUARDS (decision 0061): app/parts/10-guards.js gives every
    renderer the sandbox and default-deny navigation / popups / webview;
-   the IPC block below answers only the exact sender frame. */
+   the IPC block below answers only the exact sender frame.
+   OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the overlay page
+   loads from the app scheme (app/pages.js, served by app/parts/12-pages.js)
+   with a header CSP naming the core port, never from file://. */
 
 const { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, nativeTheme, screen, session } = require("electron");
 const crypto = require("crypto");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
-const url = require("url");
 const L = require("./shared/layout.js");
 const EvalKey = require("./eval_hotkey.js");
 const Hotkey = require("./hotkey.js");
@@ -37,6 +39,7 @@ const Home = require("./client/home.js");
 const HotReload = require("./hotreload.js");
 const Parts = require("./parts.js");
 const Guards = require("./guards.js");
+const Pages = require("./pages.js");
 const Metrics = require("./metrics.js");
 const AppLog = require("./applog.js");
 const Hello = require("./hello.js");
@@ -68,10 +71,9 @@ const TOKEN_FILE = HOME.tokenFile;
 const DISPLAYS_FILE = HOME.displaysFile;
 const PORTS_PY = HOME.portsPy;
 const LOCAL_CONFIG = HOME.localConfig;
-const OVERLAY_HTML = path.join(__dirname, "overlay", "index.html");
-// OVL-SHELL-GUARDS: the one page al:config answers (app/guards.js compares
-// it in either file URL spelling).
-const OVERLAY_URL = url.pathToFileURL(OVERLAY_HTML).href;
+// OVL-SHELL-GUARDS, OVL-APP-SCHEME: the one page al:config answers, on the
+// app scheme (app/guards.js compares origin and path exactly).
+const OVERLAY_URL = Pages.urlFor("overlay/index.html");
 const RESTART_MIN_MS = 2000;
 const restartGate = Guards.throttle(RESTART_MIN_MS);
 // AUDIT-ELECTRON S6: the overlay is never packaged, so !app.isPackaged
@@ -384,7 +386,7 @@ function createWindow() {
     noteOverlayState();
     setTimeout(() => { if (gate) { gate.graceOver(); noteOverlayState(); } }, OverlayGate.GRACE_MS);
   });
-  win.loadFile(OVERLAY_HTML);
+  win.loadURL(OVERLAY_URL);
   runParts("overlayWindow", win);
 }
 
@@ -535,7 +537,7 @@ function start() {
 
   // OVL-SHELL-GUARDS: the token goes only to the overlay window's main
   // frame (e.senderFrame === win.webContents.mainFrame) on exactly the
-  // overlay page, never to another file URL ending in /overlay/index.html.
+  // overlay page on the app scheme, never to a file URL or another page.
   // SEC-HELLO-CLIENT: only a verified token; with none the page waits and
   // a hello check starts, whose pass reloads the page (onCoreVerified).
   ipcMain.on("al:config", (e) => {

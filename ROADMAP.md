@@ -5,6 +5,15 @@ Format: `- [ ] ID (lane) title. ACCEPT: ...`; `(priority)` jumps the queue.
 Rows are filed as `docs/roadmap/new/<ID>.md` and closed as
 `docs/roadmap/done/<ID>.md`, and folded in at /done.
 
+REL-PREP row template, filed at each wave end (AUTO-16): `- [ ] REL-PREP-<n>
+(build) Prepare release X.Y.Z: docs_fresh.py index --write, docs_fresh.py check,
+shots.py check; release.py bump X.Y.Z; release.py notes X.Y.Z --write; curate the
+notes (remove the STUB mark); release.py notes --changelog; commit; release.py
+stage. Never tags or pushes. On stage PASS set this row to BLOCKED: operator
+phrase "release X.Y.Z" (stage PASS). DEPENDS: <the wave's row ids>. ACCEPT:
+stage.json verdict PASS for X.Y.Z at HEAD. ZERO-CLICK: unattended up to the one
+operator phrase.`
+
 ## Lane: build
 
 - FOLDED 2026-11-18: LIVE-1 -> RUN-LEDGER-CORE, RUN-LEDGER-WIRE, RUN-LEDGER-REPORT, RUN-LIVE1-FIXTURES (docs/plan/07 Coverage; the old row text is in git history).

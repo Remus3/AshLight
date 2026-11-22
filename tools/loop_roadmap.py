@@ -395,21 +395,24 @@ def dispatchable(rec, open_ids=()):
         rec.get("state") in ("refused", "lost") and rec.get("attempts", 0) < MAX_ATTEMPTS)
 
 
-# -- W44 (MAIN ORDER Nee58d0 item 3): idle deep-dive weekly backoff
-DIVE_ZERO_STREAK = 3
+# -- W44 (MAIN ORDER Nee58d0 item 3), AUTO-13: the idle deep-dive is weekly
 DIVE_BACKOFF_DAYS = 7
 _DIVE_RX = re.compile(r"^docs/research/\d+-deep-dive-(\d{8})\.md$")
 _PLAN_RX = re.compile(r"^" + re.escape(ROADMAP_REL.as_posix()) + r"$")
 
 
-def dive_backoff(history, today, streak=DIVE_ZERO_STREAK, days=DIVE_BACKOFF_DAYS):
+def dive_backoff(history, today, days=DIVE_BACKOFF_DAYS):
     """history = [(YYYYMMDD, plans proposed)] oldest first. True = skip the
-    dive today: the last `streak` dives all proposed 0 plans and the newest is
-    under `days` days old (weekly). Any plan proposed resets it to daily."""
-    if len(history) < streak or any(n for _, n in history[-streak:]):
+    idle dive today: the newest dive (idle or requested) is under `days` days
+    old, whatever it proposed (AUTO-13: weekly, no zero-plan streak). A
+    requested dive (tools/loop_steps/dive_request.py) has its own rule."""
+    if not history:
         return False
     import datetime as _dt
-    last = _dt.datetime.strptime(history[-1][0], "%Y%m%d").date()
+    try:
+        last = _dt.datetime.strptime(str(history[-1][0]), "%Y%m%d").date()
+    except (ValueError, TypeError, IndexError):
+        return False
     return (today - last).days < days
 
 
