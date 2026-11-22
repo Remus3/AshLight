@@ -4,7 +4,8 @@ Moved byte for byte out of server/al/state.py (TEST-STATE-TEXT-4): the
 card timers, price_until and overlay_card. state.py re-exports every name,
 so state.<name> is the same object. OVL-ZONE-CARD: the zone moment card's
 timer, copy and pure line builders (zone_lines and its helpers) live here
-too; server/al/overlayview.py re-exports them. Pure functions and
+too, and so does the act moment card's copy (OVL-ACT-CARD);
+server/al/overlayview.py re-exports them. Pure functions and
 constants; stdlib only.
 """
 
@@ -123,6 +124,15 @@ CLEAR_LINE = "You are {n} {lv} under: clear it"
 PUSH_LINE = "You are {n} {lv} over: move on"
 FIT_LINE = "Your level fits this zone"
 BOSS_LINE = "Boss deals mostly {element} damage"
+
+# OVL-ACT-CARD: the act moment card copy (design 0001 section 9 rule 6);
+# server/al/overlayview.py owns the card and re-exports these.
+ACT_HEAD = "{label} done"
+ACT_TIME = "Act time {time}"
+ACT_TIME_PARTIAL = "Act time {time}, partial"
+ACT_FASTER = "New best by {gap}"
+ACT_SLOWER = "{gap} behind your best"
+ACT_SAME = "Ties your best"
 
 _LEVELS = re.compile(r"\D*(\d+)")
 

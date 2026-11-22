@@ -182,7 +182,7 @@ button.link {
   min-height: 24px;
 }
 
-/* UTIL-MULTICHAR: the per-character selector (the Acts card's pace page) */
+/* UTIL-MULTICHAR: the per-character selector (the Characters card) */
 .char-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; }
 .char-pick select {
   font: inherit;
@@ -195,10 +195,10 @@ button.link {
   max-width: 100%;
 }
 .char-pick select:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
-/* PLAY-LEGACY-OUT-1: the picker and the pace line keep the muted sub line
-   look they had under the old Level tile; since PLAY-TD-20A-RUN-GRID they
-   sit on the Acts card's pace page (tests/test_ux_review.py pins the
-   first selector) */
+/* PLAY-LEGACY-OUT-1: the pace line keeps the muted sub line look it had
+   under the old Level tile; since PLAY-TD-20A-RUN-GRID it sits on the Acts
+   card's pace page and since PLAY-TD-20B-RUN-CARDS the picker is on the
+   Characters card (tests/test_ux_review.py pins the first selector) */
 #actsbox > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
 #actsbox .card-page > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
 
@@ -211,33 +211,6 @@ button.link {
   font-size: 0.85rem;
   vertical-align: middle;
 }
-
-.event-list { list-style: none; margin: 0; padding: 0; }
-.event-list li {
-  display: flex;
-  gap: 10px;
-  padding: 6px 8px;
-  border-top: 1px solid var(--fk-border);
-  min-width: 0;
-}
-.event-list li:first-child { border-top: none; }
-.event-list .time { color: var(--fk-text-muted); flex: none; }
-.event-list .kind {
-  flex: none;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  min-width: 4.5em;
-  text-transform: uppercase;
-  letter-spacing: var(--al-track-caps);
-  color: var(--fk-text-muted);
-}
-.event-list .text { overflow-wrap: anywhere; min-width: 0; }
-/* Whispers: a left rule AND a text label (colour is never the only signal). */
-.event-list li.whisper { border-left: 4px solid var(--fk-accent); background: var(--fk-surface); }
-.event-list li.whisper .kind { color: var(--fk-accent); }
-.event-list li.trade { border-left-color: var(--fk-status-warn); }
-.event-list li.trade .kind { color: var(--fk-status-warn); }
-.event-list li.death .kind { color: var(--fk-status-bad); }
 
 /* UX-NEWEST N1: the Last session card is silent (no live region), so it
    shows by position (first in Run, PLAY-LEGACY-OUT-2) and a
@@ -401,10 +374,6 @@ textarea, .weights-form input {
 .promises ul { margin: 0 0 8px; padding-left: 20px; line-height: var(--al-lh-prose); }
 .promises li { margin: 2px 0; }
 
-@media (max-width: 600px) {
-  .event-list .time { display: none; }
-}
-
 /* High-contrast mode (UX-REVIEW U3, research 0008): follows the Windows /
    browser "more contrast" setting, no click. Muted text and control edges
    take the full text colour; set on body so it beats every theme selector. */
@@ -425,8 +394,7 @@ textarea, .weights-form input {
 }
 
 /* UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO */
-.history-controls, .settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
-.history .slower { color: var(--fk-status-warn); }
+.settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
 /* UX-DASH-DENSITY: set-once tools in one folded group (the .build file and
    the loot filter add-on are card pages since PLAY-TD-19C-BUILD-GRID).
    Separators only, no motion. */
@@ -756,7 +724,6 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
   flex-direction: column; min-height: 0; }
 #pace:not([hidden]) ~ .pace-none, #zone-guide:not([hidden]) + .guide-none { display: none; }
 #actsbox .zone-guide { margin: 0; }
-#actsbox .char-pick { margin-top: 0.25rem; }
 /* the game data credit is never cut: it wraps to its two lines (decision
    0009; the full credits are in the footer) */
 #actsbox .zones-credit { overflow-wrap: anywhere; }
@@ -834,6 +801,36 @@ button.al-pager-btn[aria-disabled="true"] { color: var(--fk-text-muted);
   border-style: dashed; border-color: var(--al-control-edge); cursor: not-allowed; }
 button.al-pager-btn[hidden] { display: none; }
 li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
+
+/* Last session, Recent and Characters (PLAY-TD-20B-RUN-CARDS; plan 03
+   section 4, TD-20). Measured, a card page has 244 px under the title at
+   1280x760 and 204 px at 1024x700 (the tightest cockpit sizes at s = 1),
+   so the lists page shorter than the 10 / 8 rows of the other cards. Last
+   session: the summary lines (7 a page, 5 compact), the end sentence (at
+   most two meta lines) and its 24 px page buttons: 154 + 24 + 40 + 24 =
+   242 (compact 110 + 88 = 198); the Run history page 9 rows (8 compact)
+   and the pager row: 222 (200); the Keep or clear page the on / off
+   sentence, the switch (28 px), the clear button (24 px) and its result
+   line. Recent: the 24 px chip row, 4 px, 8 rows (6 compact) and the
+   pager row: 228 (compact 184). Characters: the 32 px picker, 4 px, 8
+   rows (6 compact) and the pager row: 236 (192). The small tag of a
+   Recent row keeps the 22 px row (line-height 1). A pressed chip says so
+   by its edge and weight, never by colour alone; a hidden copy of its
+   label at 600 keeps its width when it turns bold (as button.tab). */
+#summarybox .card-act + .card-act, #history-on + .card-act { margin-top: 0.25rem; }
+#summarybox #history-said:not(:empty) { margin-top: 0.25rem; }
+.ev-chips { min-height: 1.5rem; margin-bottom: 0.25rem; }
+button.chip[aria-pressed="true"] { border-color: var(--fk-accent);
+  box-shadow: inset 0 -3px 0 var(--fk-accent); font-weight: 600; }
+button.chip::after { display: block; height: 0; overflow: hidden; visibility: hidden;
+  font-weight: 600; content: attr(data-label); }
+.events .ev-time { color: var(--fk-text-muted); }
+.events .ev-tag { font-size: var(--al-fs-meta); line-height: 1; font-weight: 600;
+  color: var(--fk-text-muted); }
+.events .ev-death .ev-tag { color: var(--fk-status-bad); }
+#charsbox .char-pick { flex-wrap: nowrap; margin: 0 0 0.25rem; min-width: 0; }
+#charsbox .char-pick label { flex: none; }
+#charsbox .char-pick select { flex: 1 1 auto; min-width: 0; }
 
 @media (min-width: 64em) and (min-height: 43.75em) {
   .panel-cards { align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr));
