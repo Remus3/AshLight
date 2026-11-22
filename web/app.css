@@ -77,7 +77,7 @@ body {
   margin: 0;
   background: var(--fk-surface);
   color: var(--fk-text);
-  font: 1rem/1.4 system-ui, "Segoe UI", sans-serif;
+  font: var(--al-fs-body)/1.4 system-ui, "Segoe UI", sans-serif;
   font-variant-numeric: tabular-nums; /* after the font shorthand, which resets it */
   min-height: 100vh;
   display: flex;
@@ -114,11 +114,11 @@ body {
 .bar > .tabs { grid-area: tabs; min-width: 0; }
 .bar > .bar-char { grid-area: char; justify-self: end; }
 .bar > #reading { grid-area: status; justify-self: end; }
-.brand { font-size: 1rem; margin: 0; display: inline-flex; align-items: center; gap: 8px; }
+.brand { font-size: var(--al-fs-body); margin: 0; display: inline-flex; align-items: center; gap: 8px; }
 /* F-190: AshLight's own mark in a 20 px box left of the name */
 .brand-mark { display: block; flex: 0 0 auto; width: 20px; height: 20px; }
 .bar-char { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; font-size: 1rem; }
+  white-space: nowrap; font-size: var(--al-fs-body); }
 
 .pill {
   margin: 0;
@@ -128,7 +128,7 @@ body {
   padding: 2px 10px;
   border: 1px solid var(--fk-border);
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: var(--al-fs-meta);
 }
 .pill .glyph { font-family: var(--al-font-mono); }
 .pill[data-state="running"] { color: var(--fk-status-running); border-color: var(--fk-status-running); }
@@ -153,7 +153,7 @@ main {
   background: var(--fk-surface-2);
   padding: 16px;
 }
-.card h2 { font-size: 1rem; margin: 0 0 8px; }
+.card h2 { font-size: var(--al-fs-body); margin: 0 0 8px; }
 
 /* F-159: the bare button is quiet (text colour, no fill, the control
    edge); button.primary is the one filled style, used once, by the setup
@@ -172,7 +172,23 @@ button.primary {
   background: var(--fk-accent);
   border-color: var(--fk-accent);
 }
-button:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
+/* PLAY-TD-22A-A11Y-CSS (TD-22, F-096; plan 03 section 9, 2.4.7 / 2.4.11):
+   one focus ring for every focusable kind, 3 px in the accent and drawn
+   inside the element (outline-offset -3px), so a parent that clips its
+   overflow never cuts it. The one filled accent button, button.primary,
+   takes it outside, where it shows against the page; a ticked checkbox is
+   filled with the accent too, so it does the same. */
+a:focus-visible, button:focus-visible, summary:focus-visible, textarea:focus-visible,
+input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--fk-accent); outline-offset: -3px; }
+button.primary:focus-visible, .check input:checked:focus-visible { outline-offset: 2px; }
+/* A disabled button says so without colour alone: muted text, a dashed
+   edge and the not-allowed cursor (as the pager's end buttons); the reason
+   is a line beside the button, written by that button's own renderer. */
+button:disabled, button[aria-disabled="true"] { color: var(--fk-text-muted); cursor: not-allowed; }
+button:not(.link):disabled, button:not(.link)[aria-disabled="true"] { border-style: dashed; }
+button.primary:disabled, button.primary[aria-disabled="true"] { background: transparent;
+  border-color: var(--al-control-edge); }
 button.link {
   background: none;
   border: none;
@@ -194,7 +210,6 @@ button.link {
   min-height: 32px;
   max-width: 100%;
 }
-.char-pick select:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 /* PLAY-LEGACY-OUT-1: the pace line keeps the muted sub line look it had
    under the old Level tile; since PLAY-TD-20A-RUN-GRID it sits on the Acts
    card's pace page and since PLAY-TD-20B-RUN-CARDS the picker is on the
@@ -208,7 +223,7 @@ button.link {
   padding: 0 8px;
   border: 1px solid var(--fk-border);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--al-fs-meta);
   vertical-align: middle;
 }
 
@@ -229,7 +244,7 @@ button.secondary {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px 16px;
 }
-.layout-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.layout-form label { display: flex; flex-direction: column; gap: 4px; font-size: var(--al-fs-meta); }
 .layout-form select, .layout-form input[type="number"] {
   font: inherit;
   color: var(--fk-text);
@@ -241,16 +256,15 @@ button.secondary {
 .layout-form input[type="range"] { width: 100%; min-height: 24px; margin: 0; accent-color: var(--fk-accent); }
 /* UX-REGRESSION-SWEEP: file pickers keep the 24px hit target (S2) */
 input[type="file"] { min-height: 24px; max-width: 100%; }
-.layout-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 
 /* Shared bits for the build view, item check and graphics panel. */
-.sub-h { font-size: 0.9rem; margin: 16px 0 6px; color: var(--fk-text-muted); }
-.sub-h4 { font-size: 0.85rem; margin: 10px 0 4px; font-weight: 600; }
+.sub-h { font-size: var(--al-fs-meta); margin: 16px 0 6px; color: var(--fk-text-muted); }
+.sub-h4 { font-size: var(--al-fs-meta); margin: 10px 0 4px; font-weight: 600; }
 /* HUD-ACT: act times and zone levels; numbers right-aligned, no jitter. */
 .acts-table { width: 100%; border-collapse: collapse; }
 .acts-table th, .acts-table td { text-align: left; padding: 6px 8px 6px 0;
   border-top: 1px solid var(--fk-border); vertical-align: top; }
-.acts-table thead th { border-top: none; font-size: 0.85rem; font-weight: 600;
+.acts-table thead th { border-top: none; font-size: var(--al-fs-meta); font-weight: 600;
   color: var(--fk-text-muted); }
 .acts-table tbody th { font-weight: 600; overflow-wrap: anywhere; }
 .acts-table td.mono { text-align: right; white-space: nowrap; padding-right: 0; }
@@ -261,14 +275,12 @@ input[type="file"] { min-height: 24px; max-width: 100%; }
 /* Current row: weight on the row header only, so the number columns never
    change width on an act change (design review HA-8). */
 .acts-table th .muted { font-weight: 400; }
-.small { font-size: 0.9rem; }
-a.out { color: var(--fk-accent); font-size: 0.9rem; }
-a:focus-visible, summary:focus-visible, textarea:focus-visible,
-.weights-form :focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
+.small { font-size: var(--al-fs-meta); }
+a.out { color: var(--fk-accent); font-size: var(--al-fs-meta); }
 .actions { margin: 12px 0 0; }
 .kv { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; }
 .kv-row { min-width: 0; }
-.kv dt { font-size: 0.85rem; color: var(--fk-text-muted); }
+.kv dt { font-size: var(--al-fs-meta); color: var(--fk-text-muted); }
 .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 summary { cursor: pointer; min-height: 24px; padding: 4px 0; }
 textarea, .weights-form input {
@@ -301,31 +313,33 @@ textarea, .weights-form input {
    glyph (kit pill); colour only repeats it. Prices are never red. */
 .webdata-form { margin: 0 0 8px; }
 .check { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-weight: 600; cursor: pointer; }
-.check input { width: 20px; height: 20px; margin: 0; flex: none; cursor: pointer;
-  /* F-160: an honest checkbox. Unchecked is an empty box with the control
+.check input { width: 24px; height: 24px; margin: 0; flex: none; cursor: pointer;
+  /* F-160: an honest checkbox, 24 px (F-164, 2.5.8). Unchecked is an empty box with the control
      edge; checked is filled with the accent and carries a tick (the fill is
      never the only cue). Forced colours keep the native control. */
   appearance: none; background: transparent;
   border: 1px solid var(--al-control-edge); border-radius: var(--al-radius-control); }
 .check input:checked { background: var(--fk-accent) var(--al-check-tick) center / 16px 16px no-repeat;
   border-color: var(--fk-accent); }
-.check input:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
+/* a checkbox made outside a .check label (web/checks.js) keeps the native
+   control at the same 24 px */
+input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
 .weights-form { display: grid; gap: 12px; }
 .weights-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px;
   grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
 .weights-list li { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.weights-list label { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.9rem; }
+.weights-list label { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: var(--al-fs-meta); }
 .weights-list input { width: 6.5em; flex: none; }
 .weights-form fieldset { border: 1px solid var(--fk-border); border-radius: 6px; margin: 0;
   padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.weights-form fieldset label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; min-width: 0; }
+.weights-form fieldset label { display: flex; flex-direction: column; gap: 4px; font-size: var(--al-fs-meta); min-width: 0; }
 .weights-add label:first-of-type { flex: 1 1 16em; }
 .weights-band input, .weights-add input[type="number"] { width: 8em; }
 
 /* Build view (TC-VIEW); PLAY-TD-19C-BUILD-GRID moved its rows into the
    card grid rules at the end of this file. */
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
-.code-out { width: 100%; margin-top: 8px; font-size: 0.85rem; }
+.code-out { width: 100%; margin-top: 8px; font-size: var(--al-fs-meta); }
 /* UX-B5-CARDS: the import line breaks anywhere, so no line runs past the
    card (the search strings are pager rows, PLAY-TD-19C-BUILD-GRID) */
 .filter-line { overflow-wrap: anywhere; }
@@ -348,7 +362,7 @@ textarea, .weights-form input {
 .campaign-hints { padding-left: 20px; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .card.hint p { margin: 0; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .paste { display: block; font-weight: 600; }
-.paste-box { width: 100%; resize: vertical; font-size: 0.9rem; }
+.paste-box { width: 100%; resize: vertical; font-size: var(--al-fs-meta); }
 
 /* Graphics advisor (GFX-ADVISOR): optional, opened with a click. */
 .gfx-warn { margin: 8px 0; padding-left: 20px; color: var(--fk-status-warn); }
@@ -358,7 +372,7 @@ textarea, .weights-form input {
 .gfx-list li { border-top: 1px solid var(--fk-border); padding: 6px 0; min-width: 0; }
 .gfx-line { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
 .gfx-value { overflow-wrap: anywhere; }
-.gfx-why { margin: 2px 0 0; font-size: 0.9rem; }
+.gfx-why { margin: 2px 0 0; font-size: var(--al-fs-meta); }
 
 /* PLAY-TD-21B-SETTINGS-ABOUT (plan 03 section 3.4): the footer is one
    row, the disclaimer sentence (text colour) and the trademark sentence
@@ -393,7 +407,8 @@ textarea, .weights-form input {
 }
 
 /* Forced colours: the checkbox goes back to the native control, so its
-   checked state keeps the system colours (F-160). */
+   checked state keeps the system colours (F-160). The tab and rail cues
+   are in the forced-colours block at the end of this sheet. */
 @media (forced-colors: active) {
   .check input { appearance: auto; }
   .check input:checked { background-image: none; }
@@ -428,7 +443,7 @@ textarea, .weights-form input {
 .checks-list li:first-child, .checks-list li[hidden] + li { border-top: none; }
 .check-line, .check-detail, .check-fix { margin: 0; overflow-wrap: anywhere; }
 .check-line .glyph { font-family: var(--al-font-mono); }
-.check-word { color: var(--fk-text-muted); font-size: 0.9rem; }
+.check-word { color: var(--fk-text-muted); font-size: var(--al-fs-meta); }
 .checks-list li[data-state="done"] .glyph { color: var(--fk-status-ok); }
 .checks-list li[data-state="blocked"] .glyph,
 .checks-list li[data-state="blocked"] .check-word { color: var(--fk-status-warn); }
@@ -468,13 +483,12 @@ button.tab::after { display: block; height: 0; overflow: hidden; visibility: hid
 #tab-run::after { content: "Run"; }
 #tab-settings::after { content: "Settings"; }
 button.tab:hover { background: var(--fk-surface); }
-button.tab:focus-visible { outline-offset: -3px; }
 .tab-mark {
   margin-left: 4px;
   padding: 0 6px;
   border: 1px solid var(--al-control-edge);
   border-radius: 999px;
-  font-size: 0.8125rem;
+  font-size: var(--al-fs-micro);
   font-weight: 600;
 }
 .panel { display: grid; gap: 16px; align-content: start; min-width: 0; }
@@ -502,7 +516,7 @@ button.rail-item {
 button.rail-item[aria-current="true"] { border-left-color: var(--fk-accent); font-weight: 600; }
 button.rail-item:hover { background: var(--fk-surface); }
 .rail-pane { display: grid; min-width: 0; }
-.rail-section h3 { font-size: 1rem; margin: 0 0 8px; }
+.rail-section h3 { font-size: var(--al-fs-body); margin: 0 0 8px; }
 /* flow-root: no margin collapses through a block, so its height reads the
    same folded or shown */
 .rail-block { display: flow-root; min-width: 0; }
@@ -533,13 +547,10 @@ button.bar-word:hover { background: var(--fk-surface); }
   .panel-settings { grid-template-columns: 220px minmax(0, 1fr); }
   .rail { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
 }
-.panel:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 .panel-grid { grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); align-items: start; }
 .panel-grid > .col { display: grid; gap: 16px; align-content: start; min-width: 0; }
 /* a column whose cards are all hidden (no build yet) takes no track */
 .panel-grid > .col:not(:has(> section:not([hidden]))) { display: none; }
-.panel-grid > .col:focus-visible {
-  outline: 3px solid var(--fk-text); outline-offset: 2px; }
 /* the header news line: a polite live region that is always visually
    hidden (PLAY-TD-09C-BAR: 0 px of the bar); the tab mark is its twin */
 .tab-news { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
@@ -552,7 +563,7 @@ button.bar-word:hover { background: var(--fk-surface); }
    is its one scroll path (F-086: the Play half of this shell and the 820px
    short-window query are gone). */
 @media (min-width: 900px) and (min-height: 560px) {
-  body:not(:has(#panel-play:not([hidden]))) { height: 100vh; }
+  :root:not([data-text-spacing="user"]) body:not(:has(#panel-play:not([hidden]))) { height: 100vh; }
   main {
     flex: 1 1 auto;
     min-height: 0;
@@ -744,7 +755,6 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
   min-height: var(--al-lh-title); }
 .grid-card .card-head h2 { margin: 0; font-size: var(--al-fs-title); line-height: var(--al-lh-title);
   font-weight: 600; white-space: nowrap; }
-.card-head h2:focus-visible { outline: 3px solid var(--fk-text); outline-offset: -3px; }
 .card-sub { flex: 1 1 auto; min-width: 0; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
   overflow-wrap: anywhere; }
 .card-back { margin-left: auto; flex: none; }
@@ -938,3 +948,37 @@ button.chip::after { display: block; height: 0; overflow: hidden; visibility: hi
   flex-wrap: wrap; }
 [data-text-spacing="user"] .grid-card .weights-list li { height: auto; }
 [data-text-spacing="user"] .grid-card .weights-list label { white-space: normal; overflow: visible; }
+
+/* --- PLAY-TD-22A-A11Y-CSS: forced colours and text spacing (TD-22) -------
+   Forced colours (F-164): the selected tab and the shown rail section keep
+   their own edge colour. System colour keywords only (design 0001 C3, as
+   app/overlay/overlay.css does), which forced colours keep, so the bar of
+   the selected tab never falls to the one CanvasText edge the other tabs
+   get. A disabled button turns GrayText. Last in the sheet, so it follows
+   the tab, rail and pager rules it changes. */
+@media (forced-colors: active) {
+  button.tab { border-bottom-color: Canvas; }
+  button.tab[aria-selected="true"] { border-bottom-color: Highlight; }
+  button.rail-item { border-left-color: Canvas; }
+  button.rail-item[aria-current="true"] { border-left-color: Highlight; }
+  button:disabled, button[aria-disabled="true"],
+  button.al-pager-btn[aria-disabled="true"] { color: GrayText; border-color: GrayText; }
+}
+
+/* Text spacing (WCAG 2.2 SC 1.4.12; plan 03 section 3.9). web/textspacing.js
+   keeps the hidden one-row reference below at the body step and sets
+   data-text-spacing="user" on the root while its box differs from the
+   tokens (a text-spacing override, a user style sheet, a minimum font
+   size). Then rows wrap, tracks are minimums (the fixed Play tracks above
+   already grow), the page is the only scroll container (the app shell's
+   own scroll boxes open up) and nothing is clipped. */
+.ts-probe { position: absolute; top: 0; left: 0; margin: 0; padding: 0; border: 0;
+  font-size: var(--al-fs-body); line-height: var(--al-lh-body); white-space: nowrap;
+  visibility: hidden; pointer-events: none; }
+[data-text-spacing="user"] .panel-grid, [data-text-spacing="user"] .panel-settings,
+[data-text-spacing="user"] .panel-grid > .col { max-height: none; overflow: visible; }
+[data-text-spacing="user"] .panel-cards { grid-template-rows: none; grid-auto-rows: auto; }
+[data-text-spacing="user"] .panel-cards > .col { grid-template-rows: auto; }
+[data-text-spacing="user"] .grid-card { min-height: auto; }
+[data-text-spacing="user"] .grid-card .card-head h2,
+[data-text-spacing="user"] .bar-char { white-space: normal; overflow: visible; }
