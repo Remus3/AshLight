@@ -499,6 +499,8 @@ button.rail-item:hover { background: var(--fk-surface); }
 .rail-pager { margin-top: 8px; }
 .set-row { margin: 8px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
   min-height: 32px; }
+/* SEC-LOG-PATH-FIELD: the typed Client.txt path takes the row's free width */
+.logpath-form input[type="text"] { flex: 1 1 16rem; min-width: 0; }
 /* the bar status word is a 32 px button (G12): the pill look, no fill */
 button.bar-word { min-height: 32px; padding: 2px 10px; background: none; }
 button.bar-word:hover { background: var(--fk-surface); }
