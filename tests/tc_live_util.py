@@ -372,19 +372,22 @@ def process_memory_mb(pid):
             "private": pmc.PagefileUsage / mb}
 
 
-# MATH-PERF budgets (decision 0028). Generous ceilings over the values
-# measured on the reference build (pobb.in Nqt6FK5lIc6F, level 90) on
-# 2026-11-17; a breach means the bridge or PoB got much slower or heavier.
+# MATH-PERF budgets (decision 0028). Ceilings over the values measured on
+# the reference build (pobb.in Nqt6FK5lIc6F, level 90) on 2026-11-17; a
+# breach means the bridge or PoB got much slower or heavier.
+# RUN-BUDGET-TESTS-LIVE (research 0048 B16; decision 0024 R7 amendment
+# 2026-11-18): the time ceilings are about 2.5 times those values (the
+# first ones were 10 to 25 times), so a twofold regression is caught.
 BUDGET = {
-    "cold_start_s": 30.0,       # luajit + PoB start to the ready frame (1.3 s)
-    "load_build_s": 5.0,        # load_build of the real build (0.38 s)
-    "reload_s": 5.0,            # load_build again (median 0.3 s)
-    "set_item_s": 2.0,          # set_item + outputs, warm (0.09 s)
-    "first_press_s": 60.0,      # first item check incl. bridge start (~12 s)
-    "press_s": 30.0,            # an item check, bridge warm (3.4 to 5 s)
-    "repeat_press_s": 10.0,     # the same item again, probes cached
+    "cold_start_s": 5.0,        # luajit + PoB start to the ready frame (1.3 s)
+    "load_build_s": 1.5,        # load_build of the real build (0.38 s)
+    "reload_s": 1.0,            # load_build again (median 0.3 s)
+    "set_item_s": 0.5,          # set_item + outputs, warm (0.09 s)
+    "first_press_s": 30.0,      # all probes of a first item check incl. bridge start (12.4 s)
+    "press_s": 12.0,            # all probes of an item check, bridge warm (3.6 to 5.5 s)
+    "repeat_press_s": 4.0,      # the same item again, probes cached (1.3 s)
     "fallback_press_s": 30.0,   # a press while the calc is being killed
-    "peak_ws_mb": 768.0,        # luajit peak working set, 30 reloads (~510 MB)
+    "peak_ws_mb": 768.0,        # luajit peak working set, 30 reloads (~510 MB; B17)
 }
 
 
