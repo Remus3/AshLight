@@ -231,6 +231,118 @@ def test_existing_caches_keep_last_good(tmp_path):
     assert cache.get() is good and "Zone level table" in cache.error
 
 
+def test_check_hands_parsed_document_to_the_loader(tmp_path, monkeypatch):
+    """RUN-PERF-PARSE-ONCE (F-178): the check's parse is the value's
+    source; the path loader never runs and a change is parsed once."""
+    f = tmp_path / "d.json"
+    parsed = []
+    real = json.loads
+
+    def counting(s, *a, **k):
+        parsed.append(len(s))
+        return real(s, *a, **k)
+
+    def path_loader(path):
+        raise AssertionError("the path loader must not run")
+
+    w = hotreload.Watched(f, path_loader, name="Test data", default=dict,
+                          check=hotreload.check_json(), registry=False,
+                          from_doc=lambda doc: {"n": len(doc)})
+    monkeypatch.setattr(json, "loads", counting)
+    _bump(f, '{"a": 1, "b": 2}')
+    assert w.get() == {"n": 2} and len(parsed) == 1
+    assert w.get() == {"n": 2} and len(parsed) == 1     # unchanged: no read
+    _bump(f, '{"a": ')
+    assert w.get() == {"n": 2} and "did not load" in w.error
+    assert len(parsed) == 2
+    # the existing caches take the same route
+    g = tmp_path / acts.FILE_NAME
+    _bump(g, json.dumps({"G1_1": {"name": "Riverbank", "area_level": 1}}))
+    del parsed[:]
+    assert acts.TableCache(g).get()["G1"][0]["name"] == "Riverbank"
+    assert len(parsed) == 1
+
+
+def test_shared_file_is_parsed_once_for_both_tables(tmp_path, monkeypatch):
+    """world_areas feeds the zone level table and the waypoint graph,
+    base_items the base list and the flask table: one parse each, also
+    for a table built after the first one read the file."""
+    from server.al import campaign, zoneguide
+    from server.al.theorycraft import basetypes
+    areas, bases = tmp_path / acts.FILE_NAME, tmp_path / basetypes.FILE_NAME
+    _bump(areas, json.dumps({"G1_1": {"name": "Riverbank", "area_level": 1,
+                                      "has_waypoint": True, "connections": []}}))
+    _bump(bases, json.dumps({"m/LifeFlask1": {"name": "Small Life Flask",
+                                              "item_class": "LifeFlask",
+                                              "drop_level": 1}}))
+    parsed = []
+    real = json.loads
+    monkeypatch.setattr(json, "loads",
+                        lambda s, *a, **k: parsed.append(s) or real(s, *a, **k))
+    table = acts.TableCache(areas)
+    assert table.get()["G1"][0]["id"] == "G1_1"
+    graph = zoneguide.graph_cache(areas)                 # a late joiner
+    assert graph.get()["G1_1"]["waypoint"] is True
+    names, flasks = basetypes.NamesCache(bases), campaign.FlaskCache(bases)
+    assert names.get() == {"small life flask": "Small Life Flask"}
+    assert flasks.get() == {"life": [(1, "Small Life Flask")]}
+    assert len(parsed) == 2
+    # one change: one parse refreshes both tables of the file
+    _bump(areas, json.dumps({"G2_1": {"name": "Vastiri", "area_level": 20,
+                                      "connections": ["G2_2"]}}))
+    assert list(graph.get()) == ["G2_1"]
+    assert list(table.get()) == ["G2"]
+    assert len(parsed) == 3
+    # the kept document is dropped once its keep time is over
+    share = table._share
+    assert share is graph._share and share._doc is not None
+    share._clock = lambda: float("inf")
+    table.get()
+    assert share._doc is None
+
+
+def test_last_good_copy_holds_per_table(tmp_path):
+    """Decision 0042 per table: a bad rewrite keeps each table's own last
+    good copy and note; a table whose build fails keeps its copy while
+    the other table of the same file moves on."""
+    f = tmp_path / "shared.json"
+    _bump(f, '{"a": 1}')
+    fail = [False]
+
+    def picky(doc):
+        if fail[0]:
+            raise ValueError("table b refused it")
+        return dict(doc)
+
+    reg = hotreload.Registry()
+    a = hotreload.Watched(f, hotreload.load_json, name="Table A", default=dict,
+                          check=hotreload.check_json(), registry=reg,
+                          from_doc=lambda doc: sorted(doc), share=True)
+    b = hotreload.Watched(f, hotreload.load_json, name="Table B", default=dict,
+                          check=hotreload.check_json(), registry=reg,
+                          from_doc=picky, share=True)
+    assert a.get() == ["a"] and b.get() == {"a": 1}
+    _bump(f, "{half written")                            # bad for both
+    reg.poll()
+    assert a.get() == ["a"] and b.get() == {"a": 1}
+    assert reg.notes() == [
+        "Table A did not load (not valid JSON at line 1). The last good copy stays in use.",
+        "Table B did not load (not valid JSON at line 1). The last good copy stays in use."]
+    fail[0] = True
+    _bump(f, '{"a": 1, "c": 3}')                         # bad for B only
+    reg.poll()
+    assert a.get() == ["a", "c"] and a.error is None
+    assert b.get() == {"a": 1}
+    assert b.error == ("Table B did not load (table b refused it). "
+                       "The last good copy stays in use.")
+    fail[0] = False
+    _bump(f, '{"d": 4}')
+    reg.poll()
+    assert a.get() == ["d"] and b.get() == {"d": 4} and reg.notes() == []
+    f.unlink()                                           # removed: defaults
+    assert a.get() == {} and b.get() == {}
+
+
 # ---- TreeWatch / dev_enabled ----------------------------------------------
 
 class Clock:
