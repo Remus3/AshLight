@@ -159,7 +159,7 @@ def test_web_data():
     card = "Prices and web data"
     assert diag.CONTACT_CARD == card and r["fix"] == diag.FIX_CONTACT
     h2 = Path(__file__).resolve().parents[1] / "web" / "index.html"
-    assert f'<h2 id="prices-title">{card}</h2>' in h2.read_text(encoding="utf-8")
+    assert f'<h2 id="prices-title" tabindex="-1">{card}</h2>' in h2.read_text(encoding="utf-8")
     for text in (r["fix"], r["detail"]):
         assert card in text
         assert "local.json" not in text and "config" not in text
