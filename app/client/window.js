@@ -47,7 +47,23 @@
    core's "fix" sentence for a port it could not bind) when that record is
    from this start attempt (startErrorLine): printable ASCII, at most
    REASON_MAX characters, never a path or a script name; it reaches the
-   page as a query value and is shown as text only. */
+   page as a query value and is shown as text only.
+
+   RUN-SECOND-LINE-CLIENT (F-127, decision 0005 amendment 2026-11-18): the
+   client is the last line when the core and its supervisor are both down.
+   A timer in this (main) process, never in the overlay page, runs the
+   same hello health check every WATCH_MS (30 s); after WATCH_FAILS (4)
+   failed checks in a row it runs scripts\run.ps1 once through the
+   launcher, at most once per WATCH_GAP_MS (15 min), counting the start
+   connect() makes. run.ps1 is idempotent per component (decision 0010),
+   so it starts only the missing core and supervisor, never a second
+   client (decision 0041). When the supervisor gave up (keepalive.json
+   "gave-up", Launcher.readGiveUp) its reason is shown in words
+   (giveUpLine: fixed text, a number and a reason word, never a path) on
+   the failed page when the core left no start-error line; an open
+   companion follows the watch's start through the starting page to the
+   dashboard or that failed page. No tray note: nothing pops up by itself
+   (design 0001 section 7.1). */
 
 const fs = require("fs");
 const path = require("path");
@@ -98,6 +114,64 @@ function failedPage(line) {
   return line ? { hash: "failed", query: { reason: line } } : { hash: "failed" };
 }
 
+/* RUN-SECOND-LINE-CLIENT: the core watch. */
+const WATCH_MS = 30000;
+const WATCH_FAILS = 4;
+const WATCH_GAP_MS = 15 * 60 * 1000;
+// the words of server/al/plug/supervisor.py REASON_WORDS
+const GIVE_UP_WORDS = {
+  "hung": "it had stopped answering",
+  "crash": "it had closed unexpectedly",
+  "start-crash": "it closed while starting",
+  "start-timeout": "it did not finish starting"
+};
+
+/* The supervisor's give-up record (Launcher.readGiveUp) as one sentence,
+   or "" for none. Built only from fixed words, the restart count and a
+   known reason word; printable ASCII without a path, as startErrorLine. */
+function giveUpLine(rec) {
+  if (!rec || typeof rec !== "object") { return ""; }
+  const n = rec.restarts;
+  const count = Number.isInteger(n) && n >= 1 && n <= 1000
+    ? " after " + n + (n === 1 ? " try" : " tries") : "";
+  const why = Object.prototype.hasOwnProperty.call(GIVE_UP_WORDS, rec.reason)
+    ? " (" + GIVE_UP_WORDS[rec.reason] + ")" : "";
+  const line = "AshLight stopped restarting its core" + count + why + ".";
+  return line.length <= REASON_MAX && /^[\x20-\x7e]+$/.test(line) && !NO_PATH.test(line) ? line : "";
+}
+
+/* The watch's state machine, one tick per health check. o: {check (a
+   promise of true / false), start (runs scripts\run.ps1), now, fails,
+   gapMs}. tick() resolves "ok", "fail" (the streak is short), "start"
+   (fails failed checks in a row and no start in the last gapMs: start()
+   ran once) or "held" (a start is due but one ran inside gapMs; the
+   streak keeps counting, so the first failed check after the hold
+   starts). noteStart(t) records a start made elsewhere (connect()). */
+function makeWatch(o) {
+  const clock = typeof o.now === "function" ? o.now : Date.now;
+  const fails = Number.isInteger(o.fails) && o.fails > 0 ? o.fails : WATCH_FAILS;
+  const gapMs = typeof o.gapMs === "number" && o.gapMs >= 0 ? o.gapMs : WATCH_GAP_MS;
+  let streak = 0;
+  let lastStart = null;
+  function noteStart(t) {
+    lastStart = typeof t === "number" ? t : clock();
+    streak = 0;
+  }
+  function tick() {
+    return Promise.resolve().then(o.check).then((ok) => ok === true, () => false).then((ok) => {
+      if (ok) { streak = 0; return "ok"; }
+      streak += 1;
+      if (streak < fails) { return "fail"; }
+      const t = clock();
+      if (lastStart !== null && t - lastStart < gapMs) { return "held"; }
+      noteStart(t);
+      o.start();
+      return "start";
+    });
+  }
+  return { tick, noteStart, streak: () => streak };
+}
+
 function createClient(opts) {
   const { BrowserWindow, Menu, Tray, nativeImage, session, shell, screen, app,
           ipcMain } = opts.electron;
@@ -116,6 +190,49 @@ function createClient(opts) {
   let opened = []; // times of the links opened in the last minute (rate limit)
   let prefs = null; // client-prefs.json, read on first use
   let autostartBusy = false; // scripts\autostart.ps1 is running
+  let watchTimer = null; // RUN-SECOND-LINE-CLIENT: the next health check
+
+  /* RUN-SECOND-LINE-CLIENT: 4 failed checks in a row run scripts\run.ps1
+     once (at most once per 15 minutes). An open companion follows the
+     start as connect() does: the starting page, then the dashboard, or the
+     failed page with the supervisor's give-up reason. No tray note (design
+     0001 section 7.1: nothing pops up by itself). */
+  const watch = makeWatch({
+    check: healthy,
+    start: () => {
+      const since = Date.now();
+      const reason = giveUpNow();
+      const pid = Launcher.startCore(opts.repo, port);
+      log("client: core down for " + WATCH_FAILS + " checks; scripts\\run.ps1 started (pid " +
+          pid + ")" + (reason ? "; supervisor gave up: " + reason : ""));
+      followStart(since);
+    }
+  });
+
+  function watchStep() {
+    watchTimer = null;
+    const busy = starting !== null; // connect() is waiting on its own start
+    (busy ? Promise.resolve("busy") : watch.tick()).catch(() => "fail").then(() => {
+      if (watchTimer === null && watching) { scheduleWatch(); }
+    });
+  }
+
+  let watching = false;
+  function scheduleWatch() {
+    watchTimer = setTimeout(watchStep, WATCH_MS);
+    if (watchTimer && typeof watchTimer.unref === "function") { watchTimer.unref(); }
+  }
+
+  function startWatch() {
+    if (watching) { return; }
+    watching = true;
+    scheduleWatch();
+  }
+
+  function stopWatch() {
+    watching = false;
+    if (watchTimer) { clearTimeout(watchTimer); watchTimer = null; }
+  }
 
   function iconImage() {
     return Brand.trayImage(nativeImage);
@@ -193,11 +310,22 @@ function createClient(opts) {
     }
   }
 
-  /* The failed page, with the core's reason when this attempt left one. */
+  /* The supervisor's give-up sentence, or "". */
+  function giveUpNow() {
+    return giveUpLine(Launcher.readGiveUp(opts.runtimeDir));
+  }
+
+  /* The failed page, with the core's reason when this attempt left one,
+     else the supervisor's give-up reason when it gave up. */
   function showFailed(sinceMs) {
     if (!win || win.isDestroyed()) { return; }
-    const line = startErrorLine(opts.runtimeDir, sinceMs);
-    if (line) { log("client: start error: " + line); }
+    let line = startErrorLine(opts.runtimeDir, sinceMs);
+    if (line) {
+      log("client: start error: " + line);
+    } else {
+      line = giveUpNow();
+      if (line) { log("client: supervisor gave up: " + line); }
+    }
     win.loadFile(STARTING_HTML, failedPage(line));
   }
 
@@ -217,19 +345,31 @@ function createClient(opts) {
     starting = healthy().then((ok) => {
       if (ok) { return true; }
       const pid = Launcher.startCore(opts.repo, port);
+      watch.noteStart(); // counts toward the watch's one start per 15 minutes
       log("client: core not answering; scripts\\run.ps1 started (pid " + pid + ")");
       return Link.waitFor(healthy, CORE_WAIT_MS, CORE_STEP_MS);
-    }).then((ok) => {
-      starting = null;
-      if (!win || win.isDestroyed()) { return; }
-      if (ok) {
-        showDashboard(since);
-      } else {
-        log("client: core did not answer within " + CORE_WAIT_MS / 1000 + " s");
-        showFailed(since);
-      }
-    });
+    }).then((ok) => settle(ok, since));
     return starting;
+  }
+
+  /* The end of a start attempt: the dashboard, or the failed page. */
+  function settle(ok, since) {
+    starting = null;
+    if (!win || win.isDestroyed()) { return; }
+    if (ok) {
+      showDashboard(since);
+    } else {
+      log("client: core did not answer within " + CORE_WAIT_MS / 1000 + " s");
+      showFailed(since);
+    }
+  }
+
+  /* RUN-SECOND-LINE-CLIENT: the watch started the core; an open window
+     waits for it on the starting page (a closed one has nothing to show). */
+  function followStart(since) {
+    if (starting || !win || win.isDestroyed()) { return; }
+    win.loadFile(STARTING_HTML);
+    starting = Link.waitFor(healthy, CORE_WAIT_MS, CORE_STEP_MS).then((ok) => settle(ok, since));
   }
 
   /* inactive: the wake path. The window shows without taking focus and at
@@ -382,6 +522,7 @@ function createClient(opts) {
     tray.setToolTip(TrayMenu.TOOLTIP);
     tray.setContextMenu(trayMenu());
     tray.on("click", open); // left-click restores the companion
+    startWatch(); // RUN-SECOND-LINE-CLIENT: from the client's first open
   }
 
   /* Is this IPC sender the companion window's main frame on the core? */
@@ -475,6 +616,7 @@ function createClient(opts) {
   function hasTray() { return tray !== null; }
 
   function dispose() {
+    stopWatch();
     if (tray) { tray.destroy(); tray = null; }
   }
 
@@ -484,4 +626,5 @@ function createClient(opts) {
 }
 
 module.exports = { createClient, startErrorLine, failedPage, PARTITION, STATE_FILE,
-                   START_ERROR_FILE, REASON_MAX };
+                   START_ERROR_FILE, REASON_MAX, giveUpLine, makeWatch, WATCH_MS, WATCH_FAILS,
+                   WATCH_GAP_MS };

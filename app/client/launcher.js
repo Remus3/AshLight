@@ -381,6 +381,40 @@ function readAutostart(home, fsMod) {
   }
 }
 
+/* RUN-SECOND-LINE-CLIENT (F-127): the supervisor's give-up record. The
+   keepalive supervisor (server/al/keepalive.py) writes <runtime>\
+   keepalive.json; "status": "gave-up" means it hit its restart cap and
+   exited, so nothing restarts the core until the next scripts\run.ps1.
+   Returns null unless the file is small, valid JSON and says gave-up;
+   else {restarts, reason}: restarts a whole number 1-1000 (else 0) and
+   reason one of KEEPALIVE_REASONS from last_restart (else ""). Only these
+   two values leave the file: no pid, port or path. Never throws. */
+const KEEPALIVE_FILE = "keepalive.json";
+const KEEPALIVE_MAX_BYTES = 64 * 1024;
+const KEEPALIVE_REASONS = ["hung", "crash", "start-crash", "start-timeout"];
+
+function readGiveUp(runtimeDir, fsMod) {
+  const f = fsMod || require("fs");
+  try {
+    const file = path.join(String(runtimeDir || ""), KEEPALIVE_FILE);
+    const st = f.statSync(file);
+    if (!st.isFile() || st.size > KEEPALIVE_MAX_BYTES) { return null; }
+    const doc = JSON.parse(String(f.readFileSync(file, "utf8")).replace(/^\uFEFF/, ""));
+    if (!doc || typeof doc !== "object" || Array.isArray(doc) || doc.status !== "gave-up") {
+      return null;
+    }
+    const n = doc.restarts;
+    const restarts = Number.isInteger(n) && n >= 1 && n <= 1000 ? n : 0;
+    const last = doc.last_restart;
+    const reason = last && typeof last === "object" && KEEPALIVE_REASONS.includes(last.reason)
+      ? last.reason : "";
+    return { restarts: restarts, reason: reason };
+  } catch (e) {
+    return null;
+  }
+}
+
 module.exports = { resolveSidecar, startCore, stopAll, psArgs, psExe, whichAbs, setAutostart,
                    readAutostart, AUTOSTART_FILE, setupCalc, CALC_SETUP_PS1,
-                   applyStaged, relaunch, startConfirm, EXIT_SWITCHED };
+                   applyStaged, relaunch, startConfirm, EXIT_SWITCHED,
+                   readGiveUp, KEEPALIVE_FILE, KEEPALIVE_REASONS };
