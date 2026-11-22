@@ -775,10 +775,32 @@
   var ratesAgain = null;
   var priceShown = null;
 
+  var webDoc = null; // DATA-LEAGUE-PICKER-UI: the last full GET / POST /api/web-data answer
+
+  /* The switch, the contact field (DATA-CONTACT-UI: shown only until a
+     contact is set; never prefilled) and the league picker. A partial doc
+     (only web_data, from /api/rates) leaves the field and the picker. */
   function fillWebData(doc) {
     var v = P.webDataView(doc);
     webOn = v.on;
     $("webdata-on").checked = v.on;
+    if (v.contact.show !== null) { $("webdata-contact-row").hidden = !v.contact.show; }
+    if (doc && Array.isArray(doc.leagues)) {
+      webDoc = doc;
+      var lv = P.leagueView(doc);
+      var sel = $("webdata-league");
+      sel.textContent = "";
+      lv.options.forEach(function (o) {
+        var opt = document.createElement("option");
+        opt.value = o.value;
+        opt.textContent = o.text;
+        sel.appendChild(opt);
+      });
+      sel.value = lv.selected;
+      $("webdata-league-note").textContent = lv.from;
+      $("webdata-league-row").hidden = !lv.show;
+      if (ratesDoc) { renderRates(); }
+    }
     return v;
   }
 
@@ -795,12 +817,61 @@
      TC-LINK-RECOVER confirm): the switch, its status and the prices. */
   function webDataSaved(doc) {
     fillWebData(doc);
-    $("webdata-status").textContent = P.savedText(webOn);
+    $("webdata-status").textContent = P.savedText(webOn, doc);
     renderPrice(snap ? snap.price : null, true);
     loadRates();
   }
 
-  function saveWebData() {
+  /* DATA-CONTACT-UI: the Save click (the form's submit). The value goes
+     only to POST /api/web-data {contact}; the answer says contact_set,
+     never the value. The field is cleared after a save; a refused value
+     stays so the player can fix it. */
+  function saveContact() {
+    var box = $("webdata-contact");
+    var value = box.value.trim();
+    if (webBusy) { return; }
+    if (!value) {
+      $("webdata-status").textContent = "Type a contact first, then click Save.";
+      return;
+    }
+    webBusy = true;
+    $("webdata-status").textContent = "Saving...";
+    api("POST", "/api/web-data", { contact: value }).then(function (doc) {
+      box.value = "";
+      fillWebData(doc);
+      $("webdata-status").textContent = P.contactSavedText(doc);
+      renderPrice(snap ? snap.price : null, true);
+      loadRates();
+    }).catch(function (e) {
+      $("webdata-status").textContent = e && e.message === "HTTP 400"
+        ? P.CONTACT_REFUSED : "Not saved. Try again.";
+    }).then(function () { webBusy = false; });
+  }
+
+  /* DATA-LEAGUE-PICKER-UI: a pick saves at once (POST /api/web-data
+     {league}; "" follows poe.ninja's current league again). Makes no
+     request to poe.ninja: the next due price update uses it. */
+  function saveLeague() {
+    var sel = $("webdata-league");
+    if (webBusy) { return; }
+    webBusy = true;
+    $("webdata-status").textContent = "Saving...";
+    api("POST", "/api/web-data", { league: sel.value }).then(function (doc) {
+      fillWebData(doc);
+      $("webdata-status").textContent = P.leagueSavedText(doc);
+    }).catch(function (e) {
+      sel.value = P.leagueView(webDoc).selected; // back to what is really saved
+      $("webdata-status").textContent = e && e.message === "HTTP 400"
+        ? P.LEAGUE_REFUSED : "Not saved. Try again.";
+    }).then(function () { webBusy = false; });
+  }
+
+  /* The form's change event: the switch saves at once, a league pick
+     saves at once, typing in the contact field waits for Save. */
+  function saveWebData(e) {
+    var target = e && e.target;
+    if (target && target.id === "webdata-league") { saveLeague(); return; }
+    if (target && target.id === "webdata-contact") { return; }
     if (webBusy) { return; }
     var want = $("webdata-on").checked;
     webBusy = true;
@@ -830,13 +901,13 @@
   }
 
   function renderRates() {
-    var v = P.ratesView(ratesDoc);
+    var v = P.ratesView(ratesDoc, webDoc);
     setPill($("rates-pill"), v.pill.state, v.pill.glyph, v.pill.word);
     // PLAY-TD-21A-SETTINGS-RAIL: the same state beside the web data switch
     setPill($("book-state"), v.pill.state, v.pill.glyph, v.pill.word);
     $("rates-credit").textContent = v.credit;
     $("rates-unit").textContent = v.rows.length
-      ? ", in " + v.primary + (v.league ? ", league " + v.league : "") : "";
+      ? ", in " + v.primary + (v.leagueLine ? ", " + v.leagueLine : "") : "";
     $("rates-credit-line").setAttribute("title", $("rates-credit-line").textContent);
     $("rates-attrib").textContent = v.attribution;
     rateRows = v.rows.map(function (r) {
@@ -1193,7 +1264,8 @@
       // TC-LINK-RECOVER: Settings shows the one opt-in sentence the confirm shows
       $("webdata-sentence").textContent = T.WEB_DATA_OPT_IN;
       $("webdata-form").addEventListener("change", saveWebData);
-      $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); });
+      // DATA-CONTACT-UI: Save (or Enter in the contact field) submits the form
+      $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); saveContact(); });
     }
   });
   A.register({

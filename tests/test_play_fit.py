@@ -27,10 +27,12 @@ the live Client.txt or port 8960.
 """
 
 import contextlib
+import html as htmllib
 import json
 import math
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -48,6 +50,7 @@ for _p in (ROOT / "tools", ROOT / "tests", ROOT):
         sys.path.insert(0, str(_p))
 
 import play_states as ps  # noqa: E402
+import srcpaths  # noqa: E402
 from ci_timing import ci_scale  # noqa: E402
 
 pytestmark = pytest.mark.server
@@ -713,6 +716,198 @@ def figures(sweep):
         out.append(f"- {r['key']}: {r['chars']} chars at {r['px']} px / {r['weight']}: "
                    f"{r['width']} px, {r['spaced']} px with the 1.4.12 override")
     return out
+
+
+# -- PLAY-PAGER-SCALE-24: the 24 px floor below UI scale 1 -----------------------
+#
+# The scale step --al-s is 1 or more at the cockpit sizes, but the root is
+# 100% of the viewer's default font size times s, so a smaller default font
+# (or a lowered --al-s) shrinks every rem. The pager buttons and the compact
+# weight inputs keep a 24 px target there (WCAG 2.2 SC 2.5.8): a static page
+# on the real stylesheets, web/pager.js and the Item scoring card of the
+# assembled page, measured by the browser's own --dump-dom run (no core, no
+# network, no port). At s = 1 the floor changes nothing (1.5rem is 24 px).
+
+SCALES = (0.75, 0.875, 1)
+SCALE_SIZES = ((1280, 760), (1024, 700), (320, 640))
+SCALE_OUT = "al-scale-out"
+
+_SCALE_JS = r"""
+(function () {
+  var out = {}, de = document.documentElement;
+  var rows = [];
+  for (var i = 0; i < 30; i++) { rows.push("Row " + i); }
+  var pg = window.ALPager.build(document, { rows: rows, label: "rows", sizeClass: "full" });
+  document.getElementById("al-pager-slot").appendChild(pg.node);
+  var list = document.getElementById("weights-list");
+  for (var j = 0; j < 9; j++) {
+    var li = document.createElement("li"), lab = document.createElement("label");
+    var inp = document.createElement("input");
+    lab.htmlFor = "w-" + j; lab.textContent = "Stat " + j;
+    inp.type = "number"; inp.step = "any"; inp.id = "w-" + j; inp.value = "1.5";
+    inp.setAttribute("data-key", "k" + j); inp.setAttribute("inputmode", "decimal");
+    li.appendChild(lab); li.appendChild(inp); list.appendChild(li);
+  }
+  var wp = document.getElementById("weights-pager");
+  ["Prev", "Next"].forEach(function (t) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "al-pager-btn"; b.textContent = t; wp.appendChild(b);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#weightsbox .card-page[hidden]"),
+    function (p) { p.removeAttribute("hidden"); });
+  var box = function (e) { var r = e.getBoundingClientRect(); return [r.width, r.height]; };
+  var SCALES = __SCALES__;
+  SCALES.forEach(function (s) {
+    de.style.setProperty("--al-s", String(s));
+    var m = { root: parseFloat(getComputedStyle(de).fontSize), pager: [], inputs: [], rows: [] };
+    Array.prototype.forEach.call(document.querySelectorAll("button.al-pager-btn"), function (b) {
+      if (b.hidden) { return; }
+      var off = b.getAttribute("aria-disabled") === "true", cs = getComputedStyle(b);
+      var e = { text: b.textContent, off: off, box: box(b),
+                edge: [cs.borderTopStyle, parseFloat(cs.borderTopWidth)] };
+      if (off) {
+        b.removeAttribute("aria-disabled");
+        e.onBox = box(b);
+        b.setAttribute("aria-disabled", "true");
+      }
+      m.pager.push(e);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#weightsbox .weights-form input"),
+      function (inp) { m.inputs.push({ id: inp.id, box: box(inp) }); });
+    Array.prototype.forEach.call(document.querySelectorAll("#weights-list li"), function (li) {
+      var r = li.getBoundingClientRect(), ir = li.querySelector("input").getBoundingClientRect();
+      m.rows.push({ h: r.height, over: Math.max(0, r.top - ir.top, ir.bottom - r.bottom) });
+    });
+    out[String(s)] = m;
+  });
+  document.getElementById("__OUT__").textContent = JSON.stringify(out);
+}());
+"""
+
+
+def _file_url(path):
+    return Path(path).resolve().as_uri()
+
+
+def scale_page(scales=SCALES):
+    """The static measuring page: every stylesheet of the assembled page
+    (tokens from the fleet kit), a pager from web/pager.js and the Item
+    scoring card, then the script that measures at each scale."""
+    html = srcpaths.index_html(encoding="utf-8")
+    links = []
+    for href in re.findall(r'<link rel="stylesheet" href="([^"]+)">', html):
+        if href == "/tokens.css":
+            links.append(ROOT / "ops" / "fleet_kit" / "tokens.css")
+        elif href.startswith("/web/"):
+            links.append(srcpaths.path(href[len("/web/"):]))
+    i = html.index('<section id="weightsbox"')
+    weights = html[i:html.index("</section>", i) + len("</section>")]
+    js = _SCALE_JS.replace("__SCALES__", json.dumps(list(scales))).replace("__OUT__", SCALE_OUT)
+    head = "".join(f'<link rel="stylesheet" href="{_file_url(p)}">\n' for p in links)
+    return ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+            f"<title>scale floor</title>\n{head}</head>\n<body>\n<main>\n"
+            "<section id=\"al-pagerbox\" class=\"card grid-card\">"
+            "<div id=\"al-pager-slot\" class=\"pager-slot\"></div></section>\n"
+            f"{weights}\n</main>\n<pre id=\"{SCALE_OUT}\"></pre>\n"
+            f"<script src=\"{_file_url(srcpaths.path('pager.js'))}\"></script>\n"
+            f"<script>{js}</script>\n</body>\n</html>\n")
+
+
+def measure_scales(browser, folder, size):
+    """{scale: measures} for the page at one window size, read back from
+    the browser's --dump-dom output."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    page = folder / "scale.html"
+    page.write_text(scale_page(), encoding="utf-8")
+    w, h = size
+    cmd = [browser, "--headless=new", "--disable-gpu", "--in-process-gpu", "--no-first-run",
+           "--no-default-browser-check", "--disable-extensions", "--hide-scrollbars",
+           "--force-device-scale-factor=1",
+           f"--user-data-dir={folder / 'profile'}", f"--window-size={w},{h}",
+           "--dump-dom", page.as_uri()]
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=ci_scale(90))
+    m = re.search(r'<pre id="' + SCALE_OUT + r'">(.*?)</pre>', r.stdout, re.S)
+    assert m and m.group(1).strip(), f"no measures at {w}x{h}; stderr: {r.stderr[-1500:]}"
+    return json.loads(htmllib.unescape(m.group(1)))
+
+
+def scale_failures(measures, size):
+    """Every target under 24 px, every disabled pager button whose box
+    differs from its enabled box or whose dashed edge is under 2 px, and
+    every weight row its input overflows."""
+    fails = []
+    key = size_key(*size)
+    for s, m in measures.items():
+        where = f"s={s} {key} (root {m['root']:g} px)"
+        if not m["pager"] or not m["inputs"]:
+            fails.append(f"{where}: nothing measured")
+        for b in m["pager"]:
+            bw, bh = b["box"]
+            if bw < TARGET_MIN - 0.01 or bh < TARGET_MIN - 0.01:
+                fails.append(f"{where}: pager button {b['text']!r} is {bw:.1f}x{bh:.1f} px")
+            if b["off"]:
+                if b["edge"][0] != "dashed" or b["edge"][1] < 2:
+                    fails.append(f"{where}: disabled {b['text']!r} edge {b['edge']}")
+                if any(abs(a - c) > 0.01 for a, c in zip(b["box"], b["onBox"])):
+                    fails.append(f"{where}: disabled {b['text']!r} box {b['box']} "
+                                 f"against {b['onBox']} enabled")
+        for inp in m["inputs"]:
+            iw, ih = inp["box"]
+            if ih < TARGET_MIN - 0.01:
+                fails.append(f"{where}: weight input {inp['id']} is {iw:.1f}x{ih:.1f} px")
+        for row in m["rows"]:
+            if row["over"] > 0.01:
+                fails.append(f"{where}: a weight input runs {row['over']:.1f} px out of its row")
+    return fails
+
+
+def test_scale_failures_catch_small_and_shifting_targets():
+    ok = {"1": {"root": 16, "pager": [{"text": "Prev", "off": True, "box": [44, 24],
+                                       "onBox": [44, 24], "edge": ["dashed", 2]}],
+                "inputs": [{"id": "w-0", "box": [84, 24]}], "rows": [{"h": 24, "over": 0}]}}
+    assert scale_failures(ok, (1280, 760)) == []
+    bad = json.loads(json.dumps(ok))
+    m = bad["1"]
+    m["pager"][0].update(box=[30, 18], onBox=[32, 18], edge=["dashed", 1])
+    m["inputs"][0]["box"] = [63, 19]
+    m["rows"][0]["over"] = 3
+    fails = scale_failures(bad, (1280, 760))
+    assert len(fails) == 5, fails
+
+
+@pytest.fixture(scope="module")
+def scale_measures(tmp_path_factory):
+    browser = find_browser()
+    if not browser:
+        pytest.skip("headless Chrome / Edge not found")
+    root = tmp_path_factory.mktemp("scale_floor")
+    return {size: measure_scales(browser, root / size_key(*size), size) for size in SCALE_SIZES}
+
+
+def test_pager_and_weight_inputs_keep_24px_below_scale_1(scale_measures):
+    fails = []
+    for size, measures in scale_measures.items():
+        assert set(measures) == {str(s) for s in SCALES}, measures.keys()
+        for s in SCALES:
+            if s < 1:
+                assert measures[str(s)]["root"] < 16, (size, s)
+        fails += scale_failures(measures, size)
+    assert not fails, "\n".join(fails[:40])
+
+
+def test_floor_leaves_scale_1_unchanged(scale_measures):
+    """At s = 1 max(24px, 1.5rem) is 1.5rem: the pager buttons and the
+    weight inputs stay 24 px tall, so the cockpit fit is untouched."""
+    for size, measures in scale_measures.items():
+        m = measures["1"]
+        assert m["root"] == 16, size
+        for b in m["pager"]:
+            assert abs(b["box"][1] - TARGET_MIN) < 0.01, (size, b)
+        for inp in m["inputs"]:
+            assert abs(inp["box"][1] - TARGET_MIN) < 0.01, (size, inp)
 
 
 if __name__ == "__main__":

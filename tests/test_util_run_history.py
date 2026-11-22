@@ -192,3 +192,31 @@ def test_core_saves_on_split_close_and_honours_off(tmp_path):
         assert core.state.snapshot()["run_history"]["runs"] == 1
     finally:
         core.close()
+
+
+def test_file_is_byte_identical_when_no_clear_arrives(tmp_path):
+    """RUN-HISTORY-UNDO (F-191): the page waits out its 10 s undo window
+    before it sends the clear, so a core that gets no clear request (an
+    Undo, a page close or a core exit inside the window) keeps the saved
+    file byte for byte."""
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    path = tmp_path / "rt" / runhistory.FILE_NAME
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
+    try:
+        core.state.apply(gen("G1_1", 1000.0))
+        core.state.apply(gen("G2_1", 2200.0))
+        assert core.tick_history() is True
+        before = path.read_bytes()
+        assert runhistory.load(path)
+        for _ in range(20):  # the window's core ticks, no request
+            assert core.tick_history() is False
+        assert path.read_bytes() == before
+    finally:
+        core.close()
+    assert path.read_bytes() == before  # a core exit leaves it too
+    again = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False)
+    try:
+        assert again.history.runs and path.read_bytes() == before
+    finally:
+        again.close()

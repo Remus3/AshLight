@@ -9,8 +9,8 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   rebinding guard); an Origin header, when present, must match;
 - SEC-CROSS-SITE: a request whose Sec-Fetch-Site is present and neither
   same-origin nor none gets 403 on every route, before the token check
-  (one exception: GET /events from the overlay page, Origin null or the
-  app scheme's al-app://app, OVL-APP-SCHEME);
+  (one exception: GET /events from the overlay page, Origin the app
+  scheme's al-app://app; OVL-APP-SCHEME-STRICT refuses null and file://);
   every reply carries Cross-Origin-Resource-Policy: same-origin and
   Vary: Sec-Fetch-Site; the Server header names no version;
 - SEC-STATIC-MAP: /web/ answers by exact lookup in a map of AshLight's own
@@ -101,15 +101,16 @@ MAX_SSE_CLIENTS = 16
 # starts; slots free as idle connections hit REQUEST_TIMEOUT_S.
 MAX_HANDLER_THREADS = 64
 SSE_BUSY_RETRY_MS = 30000  # a stream refused for the cap reconnects after this
-# The overlay is a local page; its EventSource carries "Origin: null" from
-# file:// or, since OVL-APP-SCHEME (decision 0061 amendment 2026-11-21), the
-# app scheme's origin (APP_ORIGIN, app/pages.js ORIGIN). Allowed for this
-# read-only, token-gated GET only (SEC-CROSS-SITE: /api/state and
-# /api/health no longer; the overlay never fetched them). The null and
-# file:// origins go in OVL-APP-SCHEME-STRICT.
+# The overlay and starting pages load from AshLight's own app scheme
+# (OVL-APP-SCHEME, decision 0061 amendment 2026-11-21); the overlay's
+# EventSource carries that origin (APP_ORIGIN, app/pages.js ORIGIN). It is
+# allowed for this read-only, token-gated GET only (SEC-CROSS-SITE:
+# /api/state and /api/health no longer; the overlay never fetched them).
+# OVL-APP-SCHEME-STRICT (F-174): Origin null and a file page's origin are
+# refused like any foreign origin, so another local file cannot read state.
 FILE_ORIGIN_PATHS = {"/events"}
 APP_ORIGIN = "al-app://app"
-FILE_ORIGINS = {"null", "file://", APP_ORIGIN}
+FILE_ORIGINS = {APP_ORIGIN}
 # SEC-CROSS-SITE: Sec-Fetch-Site values let through. same-site is refused
 # on purpose: a page on another loopback port is same-site.
 FETCH_SITE_OK = {"same-origin", "none"}
@@ -292,8 +293,9 @@ class Handler(BaseHTTPRequestHandler):
         """SEC-CROSS-SITE: True when the browser says the request comes from
         another site (Sec-Fetch-Site present and neither same-origin nor
         none). The one exception is GET /events from the overlay page
-        (Origin null, file:// or the app scheme's APP_ORIGIN). No header = a non-browser client or an older
-        browser, judged by the other checks as before."""
+        (Origin the app scheme's APP_ORIGIN; null and file pages are
+        refused, OVL-APP-SCHEME-STRICT). No header = a non-browser client
+        or an older browser, judged by the other checks as before."""
         site = self.headers.get("Sec-Fetch-Site")
         if site is None or site.strip().lower() in FETCH_SITE_OK:
             return False
@@ -309,8 +311,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin in self.server.allowed_origins:
             return True, {}
         if origin in FILE_ORIGINS and self.command == "GET" and path in FILE_ORIGIN_PATHS:
-            allow = APP_ORIGIN if origin == APP_ORIGIN else "null"
-            return True, {"Access-Control-Allow-Origin": allow, "Vary": "Origin"}
+            return True, {"Access-Control-Allow-Origin": APP_ORIGIN, "Vary": "Origin"}
         return False, {}
 
     def _bearer(self):
