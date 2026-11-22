@@ -122,3 +122,57 @@ Reverses if: a page needs a request outside these origins (then it is
 added to allow with its reason), Electron drops webRequest
 onBeforeRequest, or the per-request callback costs the overlay budget
 (decision 0002).
+
+## Amendment 2026-11-21 (OVL-APP-SCHEME, plan unit F-174)
+
+The overlay page and the companion's starting page no longer load from
+file://. They load from one privileged app scheme, al-app, whose one
+host is app (origin al-app://app), registered standard and secure at the
+parts' early hook by app/parts/12-pages.js and served through
+protocol.handle on the default session and the persist:client
+partition (at ready, and on a window's own session at overlayWindow and
+clientWindow, because the companion's first load runs before ready; a
+session is served once). The rules are app/pages.js (pure): a fixed
+list of eight files (overlay/index.html, overlay.css, overlay.js,
+shared/format.js, shared/render_gate.js, client/starting.html, .css,
+.js) looked up exactly, so "..", an encoded slash or a backslash never
+names a file outside it; any other path, host, port or user name, and
+any method but GET or HEAD, is 404, and no file is read for it. Each
+file is read fresh (Cache-Control: no-store), so the hot reload of
+decision 0042 still reloads the page with the edit. The CSP is now a
+response header, not a meta tag: the overlay's connect-src names
+http://127.0.0.1:<port> exactly (the port the client resolved; no port,
+no connection), the starting page connects nowhere, and both add
+frame-ancestors 'none'. app/main.js loads Pages.urlFor of the overlay
+page with loadURL and al:config answers only that URL (app/guards.js
+frameIsOverlayPage compares origin and path; a file URL in any spelling
+is no longer the overlay page); app/client/window.js loads the starting
+page by its scheme URL (startingUrl, the reason line as the one query
+value as before). The egress lock (app/egress.js) allows the scheme's
+one host and refuses every file: URL, the app folder's included. The
+core (server/al/http.py) adds APP_ORIGIN, al-app://app, to
+FILE_ORIGINS and echoes it in Access-Control-Allow-Origin; null and
+file:// stay accepted until OVL-APP-SCHEME-STRICT removes them.
+
+Ruled here: the scheme origin is accepted on FILE_ORIGIN_PATHS, which
+is GET /events only, not on three read-only paths as the package's test
+text says (SEC-CROSS-SITE narrowed the null origin to /events; the
+overlay opens nothing else, and the stricter reading wins). The
+starting page gets its own CSP with connect-src 'none' (alternative:
+one CSP naming the core port for both; that would loosen the page's
+earlier meta). HEAD is served without a body (alternative: 404 like
+other methods; Chromium may probe with HEAD). The overlayWindow hook
+still runs after the overlay's loadURL in app/main.js: the overlay is
+built only after ready, when the ready hook already serves the default
+session. The live opt-in smoke (tests/test_overlay_smoke.py,
+AL_OVERLAY_SMOKE=1) must confirm on the target machine that the
+transparent window paints and that the overlay's EventSource from the
+secure app origin to the loopback core is not blocked by Chromium's
+local network access rules; a builder never starts the overlay.
+
+Reverses if: the live smoke shows the feed blocked or the window not
+painting from the scheme (then the scheme gains the privilege or
+permission it needs, or the pages return to file:// with this record
+amended), Electron drops protocol.handle or registerSchemesAsPrivileged,
+or a page needs a file outside the fixed list (then it is added to the
+list with its reason).

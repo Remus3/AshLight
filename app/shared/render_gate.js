@@ -226,12 +226,27 @@
   /* ZONE-CARD-ITEM-GATE (OVL-ZONE-CARD review D-1): the parts switch each
      card kind follows. The zone moment card (overlayview CARD_HOLDERS
      "moment") has its own part; every other card the core sends (item
-     check, price, both, waystone, sample) is a press card: parts.item. */
-  var CARD_PART = { zone: "moment" };
+     check, price, both, waystone, sample) is a press card: parts.item.
+     OVL-KEY-HINT: the key hint card follows parts.hint. */
+  var CARD_PART = { zone: "moment", hint: "hint" };
 
   function cardPart(c) {
     var k = (c && c.kind) ? String(c.kind) : "";
     return Object.prototype.hasOwnProperty.call(CARD_PART, k) ? CARD_PART[k] : "item";
+  }
+
+  /* An open trade request the page's trade card shows (parts.trade on). */
+  function tradeShown(snap) {
+    return partOn(snap, "trade") && !!(snap.trade_requests && snap.trade_requests.length);
+  }
+
+  /* OVL-KEY-HINT: the empty slot's key hint ("Alt+Shift+E: check an
+     item", overlayview CARD_HOLDERS "hint") is line 1 only, muted
+     (overlay.css data-verdict="hint"), with no expiry while the core
+     sends it. Holder order: press card, trade, moment, hint: an open
+     trade card always outranks it, so it never shows over one. */
+  function hintText(c) {
+    return { head: fmt.clip(c.head, 34), line2: "", line3: "", verdict: "hint" };
   }
 
   function slotPart(snap) {
@@ -240,6 +255,9 @@
       var c = snap.card;
       var part = cardPart(c);
       if (!c || !c.head || !partOn(snap, part)) { return null; }
+      if (part === "hint") {
+        return tradeShown(snap) ? null : { expires: null, text: hintText(c), part: part };
+      }
       return { expires: c.expires_at, text: fmt.cardText(c), part: part };
     }
     var ev = snap.eval;
@@ -251,6 +269,7 @@
 
   function freshSlot(snap, nowS) {
     var p = slotPart(snap);
+    if (p && p.part === "hint") { return p; }
     return (p && typeof p.expires === "number" && nowS < p.expires) ? p : null;
   }
 
@@ -274,7 +293,8 @@
   /* Milliseconds until the card in the slot leaves, or null. */
   function msUntilEvalExpires(snap, nowS) {
     var p = freshSlot(snap, nowS);
-    if (!p) { return null; }
+    /* the key hint has no expiry: the next push takes it away */
+    if (!p || typeof p.expires !== "number") { return null; }
     return Math.max(250, Math.ceil((p.expires - nowS) * 1000));
   }
 

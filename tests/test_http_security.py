@@ -373,6 +373,51 @@ def test_null_origin_events_is_the_one_exception(srv):
         assert r.status == 403, (method, path)
 
 
+def test_app_scheme_origin_reads_the_feed_only(srv):
+    """OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the overlay page
+    on the app scheme opens GET /events with Origin al-app://app; it is let
+    through, with that origin echoed, on the same read-only path set as the
+    null origin (FILE_ORIGIN_PATHS), and nowhere else."""
+    origin = al_http.APP_ORIGIN
+    assert origin == "al-app://app" and origin in al_http.FILE_ORIGINS
+    assert al_http.FILE_ORIGIN_PATHS == {"/events"}
+    for site in ("cross-site", "same-site", None):
+        h = {"Origin": origin}
+        if site:
+            h["Sec-Fetch-Site"] = site
+        out = _raw_events(srv, h)
+        assert out.split(b"\r\n")[0].endswith(b"200 OK"), (site, out[:60])
+        assert b"Access-Control-Allow-Origin: al-app://app\r\n" in out
+        assert b"Access-Control-Allow-Origin: null" not in out
+        assert b"event: state" in out
+    # the token is still needed
+    r, _ = req(srv, "GET", "/events", {"Origin": origin, "Sec-Fetch-Site": "cross-site"})
+    assert r.status == 401
+    # another method, a read route, the page or a write: refused, no echo
+    for method, path in (("HEAD", "/events"), ("POST", "/events"), ("GET", "/api/state"),
+                         ("GET", "/api/health"), ("GET", "/api/version"), ("GET", "/")):
+        for site in ("cross-site", None):
+            h = {**auth(), "Origin": origin}
+            if site:
+                h["Sec-Fetch-Site"] = site
+            r, _ = req(srv, method, path, h)
+            assert r.status == 403, (method, path, site)
+            assert r.getheader("Access-Control-Allow-Origin") is None, (method, path)
+    r, _ = req(srv, "POST", "/api/consent",
+               {**auth(), "Origin": origin, "Content-Type": "application/json"},
+               body=json.dumps({"consent": True}))
+    assert r.status == 403
+    assert not srv.core.consented()
+    # a look-alike origin is not it
+    for bad in ("al-app://app.evil", "al-app://evil", "AL-APP://APP", "al-app://app/",
+                "al-app://app:1"):
+        out = _raw_events(srv, {"Origin": bad, "Sec-Fetch-Site": "cross-site"})
+        assert out.split(b"\r\n")[0].endswith(b"403 Forbidden"), bad
+    # the null origin keeps its own answer until OVL-APP-SCHEME-STRICT
+    out = _raw_events(srv, {"Origin": "null", "Sec-Fetch-Site": "cross-site"})
+    assert b"Access-Control-Allow-Origin: null" in out
+
+
 def test_corp_and_vary_on_every_reply(srv):
     cases = [("GET", "/", {}, 200), ("GET", "/web/app.js", {}, 200),
              ("GET", "/tokens.css", {}, 200), ("GET", "/favicon.ico", {}, 200),
