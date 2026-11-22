@@ -1,0 +1,154 @@
+{
+ "files": 59,
+ "fixture": "tests/fixtures/demo",
+ "inputs": "b4192bc19b88846994cc20352884e8101af964dbabb18852442d6fe6aa3ed6cb",
+ "pending": [],
+ "schema": 1,
+ "shots": [
+  {
+   "file": "play-dark-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "play",
+   "width": 1440
+  },
+  {
+   "file": "play-dark-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "play",
+   "width": 360
+  },
+  {
+   "file": "play-light-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "light",
+   "tab": "play",
+   "width": 1440
+  },
+  {
+   "file": "play-light-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "light",
+   "tab": "play",
+   "width": 360
+  },
+  {
+   "file": "build-dark-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "build",
+   "width": 1440
+  },
+  {
+   "file": "build-dark-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "build",
+   "width": 360
+  },
+  {
+   "file": "build-light-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "light",
+   "tab": "build",
+   "width": 1440
+  },
+  {
+   "file": "build-light-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "light",
+   "tab": "build",
+   "width": 360
+  },
+  {
+   "file": "run-dark-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "run",
+   "width": 1440
+  },
+  {
+   "file": "run-dark-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "run",
+   "width": 360
+  },
+  {
+   "file": "run-light-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "light",
+   "tab": "run",
+   "width": 1440
+  },
+  {
+   "file": "run-light-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "light",
+   "tab": "run",
+   "width": 360
+  },
+  {
+   "file": "settings-dark-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "settings",
+   "width": 1440
+  },
+  {
+   "file": "settings-dark-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "dark",
+   "tab": "settings",
+   "width": 360
+  },
+  {
+   "file": "settings-light-1440.png",
+   "height": 900,
+   "page": "/",
+   "scheme": "light",
+   "tab": "settings",
+   "width": 1440
+  },
+  {
+   "file": "settings-light-360.png",
+   "height": 800,
+   "page": "/",
+   "scheme": "light",
+   "tab": "settings",
+   "width": 360
+  },
+  {
+   "file": "overlay-dark-1440.png",
+   "ground": "plain",
+   "height": 900,
+   "page": "app/overlay/index.html",
+   "scheme": "dark",
+   "width": 1440
+  },
+  {
+   "file": "overlay-light-1440.png",
+   "ground": "plain",
+   "height": 900,
+   "page": "app/overlay/index.html",
+   "scheme": "light",
+   "width": 1440
+  }
+ ],
+ "tool": "tools/shots.py"
+}
