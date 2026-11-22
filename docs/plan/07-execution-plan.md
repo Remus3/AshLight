@@ -1608,7 +1608,7 @@ report from an allow-list of structured fields, with a hardened redactor
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-TD-20B-RUN-CARDS [session, L 80m, build, P1, DR] Run grid 2: Recent, Last session and Characters cards. Files: web/index.html, web/app.css, web/app.js, web/history.js, web/chars.js (+4 more). Deps: PLAY-TD-20A-RUN-GRID.
+- PLAY-TD-20B-RUN-CARDS [session, L 80m, build, P1, DR] Run grid 2: Recent, Last session and Characters cards. Files: web/index.html, web/app.css, web/app.js, web/history.js, web/chars.js (+6 more). Deps: PLAY-TD-20A-RUN-GRID.
 - RUN-REPORT-FIELDS [session, L 90m, build, P2, DR] The report from an allow-list of structured fields, with a hardened redactor (P8-7) + Keep per-press 'Not counted' lines for the session. Files: server/al/diag.py, server/al/plug/report.py, web/checks.js, app/test/checks.test.js, server/al/theorycraft/live.py (+4 more). Deps: RUN-QUIET-FEED, RUN-METRICS-CORE, RUN-LEDGER-WIRE, RUN-BUDGET-LOG-CORE, GP-06, OVL-OBS-CRASH, TC-PRESS-STAGED-LIVE.
 - OVL-LINE2-GUIDE [session, L 75m, build, P2, DR] Overlay HUD line 2: the opt-in guide line and the fixed card anchor. Files: app/shared/render_gate.js, app/overlay/index.html, app/overlay/overlay.js, app/overlay/overlay.css, app/test/overlay_gate.test.js (+1 more). Deps: OVL-LINE2-RULE, OVL-ZONE-CARD, OVL-TD05-LEGIBILITY.
 - OVL-ACT-CARD [session, M 40m, build, P2, DR] Act moment card: 12 s when an act split closes, with the gap to the saved best. Files: server/al/overlayview.py, server/al/text/overlaycard.py, tests/test_moment_cards.py, tests/test_overlay_view.py. Deps: OVL-ZONE-CARD.

@@ -15511,7 +15511,9 @@
     "web/summary.js",
     "app/test/chars.test.js",
     "app/test/summary.test.js",
-    "tests/play_fit_pending/tab-run.txt"
+    "tests/play_fit_pending/tab-run.txt",
+    "app/test/acts.test.js",
+    "app/test/tabs.test.js"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -15523,7 +15525,9 @@
    "tests": [
     "app/test/chars.test.js",
     "app/test/summary.test.js",
-    "tests/test_play_fit.py"
+    "tests/test_play_fit.py",
+    "app/test/acts.test.js (stale Run grid and picker assertions follow the move; ruling 2026-11-21)",
+    "app/test/tabs.test.js (stale Run grid and picker assertions follow the move; ruling 2026-11-21)"
    ],
    "accept": "npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py tests/test_dash_console.py pass with the tab-run marker deleted: Recent filters by the chips All, Deaths and Trades, Last session shows the summary with run history pages, Characters holds the picker, and G1 holds for the whole tab in states f and g.",
    "zero_click": "Everything fills from the log; chips, pages and the picker are optional review acts.",
@@ -15539,7 +15543,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1. Recent: events newest first; chips are buttons with aria-pressed; it is the twin of Play T and keeps whispers (muted FROM / TO tag, no edge), accepted / cancelled and party lines. Last session: the summary (also Play C while idle); pages: run history (20 runs). Characters: the picker moved from the Level tile (looking at another character is a review act) and per-character bests; names stay local (decision 0038). app.js: renderEvents only. The keep / clear switch of run history stays in its card until PLAY-TD-21B-SETTINGS-ABOUT. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "notes": "Tier P1. Recent: events newest first; chips are buttons with aria-pressed; it is the twin of Play T and keeps whispers (muted FROM / TO tag, no edge), accepted / cancelled and party lines. Last session: the summary (also Play C while idle); pages: run history (20 runs). Characters: the picker moved from the Level tile (looking at another character is a review act) and per-character bests; names stay local (decision 0038). app.js: renderEvents only. The keep / clear switch of run history stays in its card until PLAY-TD-21B-SETTINGS-ABOUT. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Ruling 2026-11-21 (session 18, wave 22): app/test/acts.test.js and app/test/tabs.test.js join files and tests; only the assertions the move made stale change. The Acts/Maps/Deaths 10-row paging (268 px against a 244 px budget) is a recorded known gap for a later row.",
    "wave": 22,
    "owner": "session",
    "tier": "P1",
