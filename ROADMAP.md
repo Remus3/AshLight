@@ -297,7 +297,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   tests/test_diag_explain.py tests/test_diag_self.py passes and npm test --prefix app passes.
   ZERO-CLICK: Computed every 5 s; Checks opens by itself on a new failure. DEPENDS:
   RUN-OBS-LOGS-SHELL, RUN-METRICS-SITES, RUN-SUPERVISOR-CLOCK, RUN-LEDGER-WIRE, RUN-REPORT-FIELDS,
-  OVL-OBS-CRASH. BLOCKED: session wave 25 (DEFERRED from wave 24: batch suite red on tests/test_structure.py, 30 player sentences in server/al/plug/explain.py must move under server/al/text/ with a docs/design/copy sheet; re-plan files first).
+  OVL-OBS-CRASH.
 - [ ] REL-CUTOVER-LIVE (build) Cut-over: the operator's live copy becomes an installed release.
   ACCEPT: GET /api/health on 127.0.0.1:8960 answers mode 'installed' with version 0.2.0-rc.0 from
   <sidecar>\Install, the checkout answers on 127.0.0.1:8961 with mode 'checkout', and a re-run of
@@ -787,7 +787,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   -m pytest -q tests/test_download_place.py tests/test_player_guide.py tests/test_leak_sweep.py
   tests/test_ascii_lf.py` and `npm test --prefix app` are green. ZERO-CLICK: No click: About shows
   the line by itself; the player opens the place in their own browser if they want it. DEPENDS:
-  PUB-GUIDE-PAGES, GP-10. BLOCKED: session wave 25.
+  PUB-GUIDE-PAGES, GP-10.
 - [ ] DATA-GUIDE-GAP-TUNE (build) Tune the clear-or-push threshold from play data. ACCEPT: python -m
   pytest -q tests/test_zone_guide.py tests/test_util_underlevel.py passes and the commit message
   cites the sample size. ZERO-CLICK: Automatic for the player; the data comes from normal play.
