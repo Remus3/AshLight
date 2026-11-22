@@ -120,7 +120,7 @@ TICK_ORDER = ("ensure_tailing",  # TEST-E2E: log found later / moved
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
                  character=None, start_at_end=True, config_path=None, web_fetch=None,
-                 discover=None):
+                 discover=None, update_repo=None):
         # SEC-NO-DISCOVERY: only the real entry point with no log path looks
         # for the live Client.txt in the Steam libraries. A core given a
         # runtime dir (a test or demo core) or a log path never scans,
@@ -279,11 +279,19 @@ class Core:
         # 2026-11-21): the daily release check, only while web data is on
         # and the opt-in wording that names it is acknowledged
         # ("web_data_ack"); tick_update (from tick_sources) drives it on a
-        # daemon thread, never on the loop thread.
+        # daemon thread, never on the loop thread. Only the real core reads
+        # the repository constant (config/public_repo.json); a test or demo
+        # core opens no file outside its own dirs and stays off unless it
+        # is handed `update_repo`; its notes come from a CHANGELOG.md in its
+        # runtime dir (normally none: no notes), never the shipped one.
         update_dir = (paths.sidecar_dir("Cache") / "updates" if runtime is None
                       else self.runtime / "cache" / "updates")
-        self.updates = updates.UpdateClient(self.web_data_enabled, self.web_data_acked,
-                                            fetch=web_fetch, cache_dir=update_dir)
+        if update_repo is None:
+            update_repo = None if runtime is None else ""
+        self.updates = updates.UpdateClient(
+            self.web_data_enabled, self.web_data_acked, repo=update_repo, fetch=web_fetch,
+            cache_dir=update_dir,
+            changelog=None if runtime is None else self.runtime / "CHANGELOG.md")
         self._update_thread = None
         self._update_key = None
         # DATA-PRICE-REFRESH-CORE: the loop's refresh gate and the last

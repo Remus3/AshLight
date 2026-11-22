@@ -321,14 +321,16 @@ class GitHubOnly(Fake):
         return super().__call__(method, url, headers, body)
 
 
-def _core(tmp_path, monkeypatch, fake, cfg=None):
-    monkeypatch.setattr(updates, "load_repo", lambda path=None: REPO)
+def _core(tmp_path, monkeypatch, fake, cfg=None, repo=REPO):
+    def no_read(path=None):
+        raise AssertionError("a test core never reads config/public_repo.json")
+    monkeypatch.setattr(updates, "load_repo", no_read)
     log = tmp_path / "Client.txt"
     log.write_bytes(b"")
     path = tmp_path / "local.json"
     path.write_text(json.dumps(cfg or {"web_data": False}), encoding="ascii")
     core = core_mod.Core(runtime=tmp_path / "rt", log_path=str(log), tail=False,
-                         config_path=path, web_fetch=fake)
+                         config_path=path, web_fetch=fake, update_repo=repo)
     clock = [T0]
     core.updates.clock = lambda: clock[0]
     return core, path, clock
@@ -346,6 +348,7 @@ def test_core_tick_drives_the_client_once_a_day_only_when_on_and_acked(tmp_path,
     fake = GitHubOnly()
     core, cfg, clock = _core(tmp_path, monkeypatch, fake)
     assert core.updates.state_file().parent == tmp_path / "rt" / "cache" / "updates"
+    assert core.updates.changelog == tmp_path / "rt" / "CHANGELOG.md"
     for _ in range(3):  # web data off: never a request, whatever the day
         assert _run(core) is None
         clock[0] += DAY
@@ -427,7 +430,7 @@ def test_snapshot_update_block_carries_the_view_and_no_event_text(tmp_path, monk
     assert block["installed"] == VERSION and block["latest"] == "9.0.0"
     assert block["releases_url"] == f"https://github.com/{REPO}/releases"
     assert block["checked_at"] == T0 and block["ack_needed"] is False
-    assert isinstance(block["notes"], list)
+    assert block["notes"] == []  # a test core never reads the shipped CHANGELOG.md
     assert "text" not in block  # no card or event text, only the view
     assert snap["recent_events"] == before["recent_events"]
     assert snap["events_seen"] == before["events_seen"]
@@ -436,6 +439,16 @@ def test_snapshot_update_block_carries_the_view_and_no_event_text(tmp_path, monk
     version = core.state.version
     assert core.publish_update() is False and core.state.version == version
     json.dumps(block).encode("ascii")
+
+
+def test_a_test_core_without_a_repository_stays_off(tmp_path, monkeypatch):
+    fake = GitHubOnly()
+    core, _, _ = _core(tmp_path, monkeypatch, fake, repo=None,
+                       cfg={"web_data": True, "web_data_ack": updates.WORDING_VERSION})
+    assert core.updates.repo == ""
+    assert _run(core) is None and fake.calls == []
+    block = core.state.snapshot()["update"]
+    assert block["releases_url"] is None and block["ack_needed"] is False
 
 
 def test_settings_import_never_sets_web_data_ack(tmp_path, monkeypatch):
