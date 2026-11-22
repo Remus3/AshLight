@@ -77,8 +77,9 @@ function fakeWorld() {
       calls.push("window");
     }
     setMenu() {}
-    loadFile(f) { this.url = "file:///" + path.basename(f); }
-    loadURL(u) { this.url = u; calls.push("loadURL"); }
+    // OVL-APP-SCHEME: the starting page loads by URL too (the app scheme);
+    // "loadURL" counts the dashboard (the core) only
+    loadURL(u) { this.url = u; calls.push(String(u).startsWith("al-app:") ? "loadPage" : "loadURL"); }
     isDestroyed() { return this.destroyed; }
     isVisible() { return this.visible; }
     isMinimized() { return false; }
@@ -176,6 +177,7 @@ test("a --client --tray first open: tray and core, no window, no focus", async (
   world.windows[0].emit("ready-to-show");
   await settle();
   assert.ok(world.calls.includes("show"), "the window is shown");
+  assert.ok(world.calls.includes("loadPage"), "the starting page is loaded first");
   assert.ok(world.calls.includes("loadURL"), "the dashboard is loaded");
   assert.equal(world.trays.length, 1, "one tray only");
   assert.deepEqual(started, [PORT]);
