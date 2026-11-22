@@ -67,10 +67,8 @@ def _n(value):
     return str(value)
 
 
-HEAD_MAX = 34  # design 0001 section 9 rule 6
-# CARD-LINE-LIMIT-COPY: the head is worded to fit 26 characters while
-# HEAD_MAX stays 34; CARD-LINE-LIMIT-FLIP lowers HEAD_MAX to this value.
-HEAD_FIT = 26
+HEAD_FIT = 26  # CARD-LINE-LIMIT-COPY: the head is worded to fit 26
+HEAD_MAX = HEAD_FIT  # design 0001 section 9 rule 6; 26 since CARD-LINE-LIMIT-FLIP
 
 
 def head(value):

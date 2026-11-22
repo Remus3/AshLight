@@ -476,7 +476,9 @@ Generation rules:
    line must fit (`Lv 12 | 3 deaths`, `Trade: Quietfox`). The dashboard
    register is the full sentence.
 6. **Line limits**: overlay zone 28 chars, trade card and item check card
-   34 chars per line;
+   26 chars per line (CARD-LINE-LIMIT-FLIP; 34 before, which rendered
+   past the 236 px text budget at 14 px - the limit drops, never the font
+   size);
    dashboard event lines wrap, never truncate.
 7. **Plurals are correct**: `1 death`, `2 deaths`, `1 level-up`.
 8. **Time words are relative on the overlay** (`3m`, `1h05m`) and local
@@ -558,7 +560,7 @@ Generation rules:
 - Glance time target: each line readable in one fixation (< 1 s): <= 5
   words, number or name first, no wrapping (`nowrap` + ellipsis).
 - Glance rule (F-095): a card's first line starts with its answer, inside
-  the 34-character clip: the verdict word on an item check card (Upgrade,
+  the 26-character clip: the verdict word on an item check card (Upgrade,
   Sidegrade, Downgrade, Risky, No risky mods), the price word on a price
   card (`Price:`), the buyer on a trade card (`Trade: <buyer>`), or one of
   the fixed status words of a card that has no verdict (No build loaded,
@@ -872,8 +874,9 @@ Section 9 - messaging (TD-07, TD-17):
   line too). Under a text-spacing override rows wrap and the page
   scrolls.
 - Card copy target (CARD-LINE-LIMIT-COPY). Every fixed card line is
-  worded to fit 26 characters while the clip stays 34 (CARD_LINE,
-  format.js, cardparts HEAD_MAX; CARD-LINE-LIMIT-FLIP lowers it). A line
+  worded to fit 26 characters; CARD-LINE-LIMIT-FLIP lowered the clip
+  from 34 to 26 (CARD_LINE, the format.js maxLen defaults, cardparts
+  HEAD_MAX; the key hint's HINT_FIT is CARD_LINE). A line
   built from values drops its least needed part instead of clipping: the
   keep / vendor head drops ", Lv <n>", the item check head drops the slot
   name, the price line names the league only when it fits and turns

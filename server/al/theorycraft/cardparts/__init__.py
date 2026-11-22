@@ -54,7 +54,7 @@ import threading
 LOG = logging.getLogger("al.cardparts")
 NOTES_MAX = 4
 VALUE_MAX = 2000  # characters of a part value as JSON
-HEAD_MAX = 34  # design 0001 section 9 rule 6 (state.CARD_LINE)
+HEAD_MAX = 26  # design 0001 section 9 rule 6 (state.CARD_LINE; CARD-LINE-LIMIT-FLIP)
 # the overlay card's verdict edges (app/overlay data-verdict)
 TONES = ("upgrade", "sidegrade", "downgrade", "risky", "note", "")
 # the keys a part's words() may change; every other key is put back

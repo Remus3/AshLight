@@ -33,7 +33,7 @@ CARD_HOLDERS: the first holder with a card wins.
 - hint (OVL-KEY-HINT): the empty slot teaches the item-check key: one
   line, '<key>: check an item', the bound key of the hotkeys view
   (OVL-KEYS-CORE; no key known = no hint). CARD-LINE-LIMIT-COPY2: over
-  HINT_FIT (26) characters it reads 'Check: <key>'; a key too long for
+  HINT_FIT (CARD_LINE, 26) characters it reads 'Check: <key>'; a key too long for
   that (over 19 characters) shows no hint, never a cut key. It has no expiry while due:
   due while no press was ever recorded on this install and fewer than
   HINT_SESSIONS game sessions (log_opened events seen while a key was
@@ -72,7 +72,7 @@ import json
 import threading
 import time
 
-from .text.common import _is_time
+from .text.common import CARD_LINE, _is_time
 from .text.overlaycard import EVAL_CARD_S, overlay_card
 from .text.overlaycard import (  # noqa: F401 - OVL-ZONE-CARD card copy, re-exported
     BONUS_TEXT, BOSS_LINE, CLEAR_LINE, FIT_LINE, MOMENT_CARD_S, NEXT_TEXT,
@@ -90,7 +90,7 @@ STORE_KEYS = ("key_hint",)
 # OVL-KEY-HINT: the key hint line and when it retires for good
 HINT_TEXT = "{key}: check an item"
 HINT_SHORT = "Check: {key}"
-HINT_FIT = 26  # CARD-LINE-LIMIT-COPY2: common.CARD_LINE stays 34 until FLIP
+HINT_FIT = CARD_LINE  # 26 since CARD-LINE-LIMIT-FLIP (design 0001 section 9 rule 6)
 HINT_SESSIONS = 3  # game sessions (log_opened) after which the hint retires
 
 SAMPLE_S = 10

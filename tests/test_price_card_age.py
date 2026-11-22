@@ -130,8 +130,8 @@ def test_new_lines_fit_the_card():
     for c in cases:
         t = price_card_text(c)
         assert len(t["line"]) <= CARD_LINE and len(t["detail"]) <= CARD_LINE, t
-        # CARD-LINE-LIMIT-COPY: worded to fit 26 while CARD_LINE stays 34
-        assert CARD_LINE == 34 and len(t["line"]) <= 26 and len(t["detail"]) <= 26, t
+        # CARD-LINE-LIMIT-COPY worded them to fit 26; FLIP made it the limit
+        assert CARD_LINE == 26, t
     for hours in range(3, 25):
         t = price_card_text(card(checked_at=PRESS - hours * H, few=True))
         assert t["detail"] == f"Rough price, {hours} h ago" and len(t["detail"]) <= 26
