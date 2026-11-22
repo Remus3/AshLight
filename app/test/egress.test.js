@@ -15,11 +15,17 @@ const APP = "file:///" + D + "/ProgramData/Ash%20Light/app";
 const OPTS = { port: PORT, dev: false, appRoot: ROOT, windows: true };
 const DEV = Object.assign({}, OPTS, { dev: true });
 
+// OVL-APP-SCHEME (decision 0061 amendment 2026-11-21): the app pages come
+// from the app scheme's one host; file: pages are refused, the app folder's
+// included.
+const SCHEME = "al-app://app";
 const ALLOWED = [
-  APP + "/overlay/index.html",
-  APP + "/overlay/overlay.css",
-  APP + "/shared/format.js",
-  APP + "/client/starting.html#failed",
+  SCHEME + "/overlay/index.html",
+  SCHEME + "/overlay/overlay.css",
+  SCHEME + "/shared/format.js",
+  SCHEME + "/client/starting.html#failed",
+  SCHEME + "/client/starting.html?reason=x#failed",
+  "blob:al-app://app/0b4f-12",
   "http://127.0.0.1:8960/#token=abc",
   "http://127.0.0.1:8960/events?token=abc",
   "http://127.0.0.1:8960/api/health",
@@ -28,6 +34,14 @@ const ALLOWED = [
 ];
 
 const REFUSED = [
+  APP + "/overlay/index.html",
+  APP + "/overlay/overlay.css",
+  APP + "/shared/format.js",
+  APP + "/client/starting.html#failed",
+  "al-app://evil/overlay/index.html",
+  "al-app://app.evil/overlay/index.html",
+  "al-app://app:8960/overlay/index.html",
+  "al-app://user@app/overlay/index.html",
   "https://www.pathofexile.com/trade2/search/poe2/Standard",
   "https://poe.ninja/api/data/economy",
   "http://127.0.0.1:8961/api/health",
@@ -46,7 +60,7 @@ const REFUSED = [
   "not a url"
 ];
 
-test("the allow function: app pages, the core on its port, blob: and data:", () => {
+test("the allow function: app scheme pages, the core on its port, blob: and data:", () => {
   for (const u of ALLOWED) { assert.equal(Egress.allow(u, OPTS), true, u); }
 });
 
@@ -62,11 +76,14 @@ test("devtools only with AL_DEV=1; dev opens nothing else", () => {
   }
 });
 
-test("no port, no root or no options refuse the core and files", () => {
+test("no port or no options refuse the core; file pages are refused with any options", () => {
   assert.equal(Egress.allow("http://127.0.0.1:8960/", { appRoot: ROOT, windows: true }), false);
-  assert.equal(Egress.allow(APP + "/overlay/index.html", { port: PORT, windows: true }), false);
+  assert.equal(Egress.allow(APP + "/overlay/index.html", OPTS), false);
+  assert.equal(Egress.allow(APP + "/overlay/index.html", DEV), false);
   assert.equal(Egress.allow("http://127.0.0.1:8960/"), false);
   assert.equal(Egress.allow("data:,x"), true);
+  // the app scheme needs no option (the handler serves only its fixed list)
+  assert.equal(Egress.allow(SCHEME + "/overlay/index.html"), true);
 });
 
 test("the filter cancels refused requests and logs each origin once, never a path", () => {
