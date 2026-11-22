@@ -47,11 +47,12 @@ in design 0001.
   <act>`, zone notes `(you are here)` / `(town)`; empty `No act times yet. They start by
   themselves when you enter a campaign zone.`, `Zone levels show here
   while you are in a campaign act.`, `Zone levels aren't downloaded yet.
-  Run AshLight's build step (scripts/build.ps1) to get them.`, and in
-  an act the downloaded table lacks (UTIL-1.0-FIXTURES) `Zone levels for
-  <act> aren't downloaded yet. They show here once the game data has
-  them: after a game update, run AshLight's build step again
-  (scripts/build.ps1).`; source
+  AshLight fetches them by itself while "Use web data" is ticked under
+  Settings, Reading and web data.`, and in an act the downloaded table
+  lacks (UTIL-1.0-FIXTURES) `Zone levels for <act> aren't downloaded
+  yet. They show here once the game data has them. AshLight fetches
+  newer game data by itself, at most once a day, while web data is on.`
+  (RUN-NO-DEAD-ENDS: never a script); source
   line `Zone levels: RePoE fork export, downloaded when AshLight was
   built. Game data (c) Grinding Gear Games.` (decision 0020)
 - Maps card (UTIL-MAPS, `server/al/runs.py`, `web/runs.js`): dashboard

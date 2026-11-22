@@ -18,10 +18,31 @@ import threading
 import time
 from pathlib import Path
 
-from . import (VERSION, acl, acts, campaign, diag, layout, logfile, ninja, parser, paths, ports,
-               price, pricebook, pricewatch, procs, resume, runhistory, settingsio, tradestats, underlevel,
-               upgrade, zoneguide,
-               webfetch)
+from . import (
+    VERSION,
+    acl,
+    acts,
+    campaign,
+    diag,
+    layout,
+    logfile,
+    ninja,
+    parser,
+    paths,
+    ports,
+    price,
+    pricebook,
+    pricewatch,
+    procs,
+    resume,
+    runhistory,
+    settingsio,
+    tradestats,
+    underlevel,
+    upgrade,
+    webfetch,
+    zoneguide,
+)
 from . import metrics  # RUN-METRICS-SITES (decision 0067): press counters
 from . import hints, mapladder  # NEWBIE-HINTS, UTIL-MAP-LADDER
 from . import exitrecord  # OBS-CRASH: last-exit.json, client-exit.json

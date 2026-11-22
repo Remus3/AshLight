@@ -592,6 +592,12 @@ def _price_row(snap, ev):
                         and abs(at_p - at_e) < SAME_PRESS_S)
     if not price or not same:
         return {"value": NO_PRICE, "source": ""}, None
+    # RUN-NO-DEAD-ENDS (research 0042 F20 d): the price check failed for the
+    # reason the item check already shows (not an item, an empty clipboard):
+    # the words are said once, under the card's word, not again here
+    if (ev and ev.get("ok") is not True and price.get("status") == "error"
+            and _name(ev.get("error")) and ev.get("error") == price.get("error")):
+        return {"value": NO_PRICE, "source": ""}, None
     t = _dict(price.get("text"))
     value = _text(t.get("line")) or NO_PRICE
     url = price.get("url")
@@ -654,7 +660,9 @@ def item_view(snap):
         kind = "waystone" if ws else ("verdict" if ev.get("ok") is True else "error")
         if kind == "error":
             word = _text(t.get("head")) or word
-        name = _name(t.get("item")) or "Unnamed item"
+        # RUN-NO-DEAD-ENDS (research 0042 F20 d): an error card with no item
+        # names none (the card hides an empty name), never "Unnamed item"
+        name = _name(t.get("item")) or ("" if kind == "error" else "Unnamed item")
         sentence = _text(t.get("sentence"))
         if kind == "verdict":
             sentence = _strip_word(sentence, word)
@@ -668,7 +676,8 @@ def item_view(snap):
         # reserved card of a verdict)
         kind, word = "verdict", "Price"
         pt = _dict(price.get("text"))
-        name = _name(pt.get("item")) or "Unnamed item"
+        name = _name(pt.get("item")) or ("" if price.get("status") == "error"
+                                          else "Unnamed item")
         sentence = _text(pt.get("sentence"))
     kit = WORD_KIT.get(word, "idle")
     label, label_name, crows = _item_compare(ev, t) if ev else ("", "", [])

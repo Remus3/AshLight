@@ -412,7 +412,13 @@ Rules (sources 10, 11, 12):
 3. Present tense, active voice, subject first: "Quietfox wants Plain Belt".
 4. Use the player's words (zone, hideout, level, trade, whisper). Never
    expose internals: "core", "token", "SSE", "tailer", "HTTP 500" in the
-   main line.
+   main line. A repo path or a script name is an internal too
+   (RUN-NO-DEAD-ENDS, research 0042 R4): a sentence that sends the player
+   somewhere names the control and its exact place ("Settings, Checks",
+   "Settings, Reading and web data", the Start Menu shortcut), never a
+   script, and the words "settings file", "scripts" and ".ps1" stay out
+   of player text (tests/test_copy_dead_ends.py). The settings export is
+   the "settings backup".
 5. Errors say what happened, then what to do. Never blame the user. No
    exclamation marks, no ALL CAPS shouting, no "Oops".
 6. Numbers as digits; units with a space ("12 deaths", "3m").
@@ -425,7 +431,7 @@ Good / bad examples:
 
 | Bad | Good | Why |
 |---|---|---|
-| token rejected or core stopped | can't reach AshLight - restart it | no internals; gives the fix |
+| token rejected or core stopped | can't reach AshLight - reopen it from the Start Menu | no internals; gives the fix and where |
 | Layout unavailable (core stopped?) | Can't load the overlay settings. Is AshLight running? | plain words, a question the user can answer |
 | No events yet. | Nothing yet. Zones, level-ups, deaths and whispers show up here as you play. | says what and when |
 | --:-- (blank line under it) | Starts when you allow reading Client.txt | an empty timer says when it starts (UX-U9) |
@@ -604,7 +610,8 @@ Colour and contrast
 
 Prose and messaging
 - P1: plain words, sentence case, present tense, subject first.
-- P2: no internals (core, token, SSE, tailer, HTTP codes) in a main line.
+- P2: no internals (core, token, SSE, tailer, HTTP codes, repo paths,
+  script names) in a main line; a pointer names the control and its place.
 - P3: errors say what happened and what to do; no blame, no "!".
 - P4: event text comes only from `summarize` / `format.js` templates, each
   with an exact-output test.

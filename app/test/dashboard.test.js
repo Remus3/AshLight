@@ -12,7 +12,7 @@ test("link pill: first failure says what to do; later ones reconnect", () => {
     { state: "failed", glyph: "[x]", word: "open AshLight from the link it showed at start" });
   assert.deepEqual(v.linkView("open", false), { state: "done", glyph: "[+]", word: "live" });
   assert.deepEqual(v.linkView("error", false),
-    { state: "failed", glyph: "[x]", word: "can't reach AshLight - restart it" });
+    { state: "failed", glyph: "[x]", word: "can't reach AshLight - reopen it from the Start Menu" });
   assert.deepEqual(v.linkView("error", true), { state: "pending", glyph: "[ ]", word: "reconnecting" });
   // F-131: before the first event the pill says it is connecting
   assert.deepEqual(v.linkView("connecting", false), { state: "pending", glyph: "[ ]", word: "connecting" });

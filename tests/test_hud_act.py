@@ -169,8 +169,9 @@ def test_snapshot_acts_exact(tmp_path):
         "zones_act": None, "levels": False, "source": None,
         "empty_text": ("No act times yet. They start by themselves when you enter "
                        "a campaign zone."),
-        "no_levels_text": ("Zone levels aren't downloaded yet. Turn on web data, "
-                           "then run AshLight's build step (scripts/build.ps1)."),
+        "no_levels_text": ("Zone levels aren't downloaded yet. AshLight fetches "
+                           "them by itself while \"Use web data\" is ticked under "
+                           "Settings, Reading and web data."),
         "no_zones_text": "Zone levels show here while you are in a campaign act.",
         "act_levels_text": "",
         "partial_text": "partial: counted from the first zone AshLight saw",

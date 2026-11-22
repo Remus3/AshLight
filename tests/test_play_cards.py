@@ -546,3 +546,29 @@ def test_pack_states_compose_the_cards(name, tmp_path):
     else:
         assert play["item"] is None
     assert play == pv.view({k: v for k, v in snap.items() if k != "play"})
+
+
+def test_item_card_with_no_item_names_none_and_says_it_once():
+    # RUN-NO-DEAD-ENDS (research 0042 F20 d): a press that held no item shows
+    # no "Unnamed item", and the price row does not repeat the card's words
+    bare = dict(ok=False, error="not an item", verdict=None, comparisons=[],
+                upgrade=None, item={})
+    err = pc.item_view({"eval": _eval(**bare),
+                        "price": _price(status="error", error="not an item", item={},
+                                        url=None)})
+    assert (err["kind"], err["word"], err["name"]) == ("error", "Not an item", "")
+    assert err["sentence"] == ["The clipboard did not hold an item."]
+    assert err["price"] == {"value": "No price for this check", "source": ""}
+    assert "Unnamed item" not in str(err)
+    # the empty clipboard press reads the same way
+    blank = pc.item_view({"eval": _eval(**dict(bare, error="empty clipboard"))})
+    assert (blank["word"], blank["name"]) == ("Copy the item first", "")
+    # a price error of another kind still shows its own words
+    other = pc.item_view({"eval": _eval(**bare),
+                          "price": _price(status="error", error="no league", url=None)})
+    assert other["price"] == {"value": "League unknown", "source": "Try again in a minute"}
+    # a price alone with no item names none either
+    alone = pc.item_view({"price": _price(status="error", error="not an item", item={},
+                                          url=None)})
+    assert alone["name"] == "" and alone["word"] == "Price"
+    assert_item_caps(err)

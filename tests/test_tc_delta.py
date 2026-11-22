@@ -283,8 +283,9 @@ def test_card_text_pob_and_notices():
     st2 = _State()
     live.LastEval(_Builds(_build()), _Weights(), st2).run(RARE_GLOVES)
     t2 = eval_card_text(st2.eval)
-    assert t2["calc"] == ("Scored with your stat weights. To see DPS and EHP, turn on the "
-                          "optional Path of Building calc in AshLight's settings file.")
+    assert t2["calc"] == ("Scored with your stat weights. To see DPS and EHP, press "
+                          "\"Set up the calc\" under Settings, Checks in the AshLight "
+                          "window.")
     assert t2["line"] == "+30 to maximum Life"
     failed = dict(st2.eval, calc={"source": "weights", "notice": "failed"})
     assert eval_card_text(failed)["calc"] == (

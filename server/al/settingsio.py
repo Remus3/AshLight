@@ -198,15 +198,17 @@ def parse_import(doc, current):
     "tc_calc_offered": bool, "weights_applied": bool}. The weights block
     (schema 2) is checked here and taken with weights_of(doc).
     Raises SettingsError (nothing applied) on a file that is not an
-    AshLight settings file or holds a bad value."""
+    AshLight settings backup or holds a bad value. RUN-NO-DEAD-ENDS
+    (research 0042 F3): the player-facing name of this file is "settings
+    backup"."""
     if not isinstance(doc, dict) or doc.get("kind") != KIND:
-        raise SettingsError("This file isn't an AshLight settings file.")
+        raise SettingsError("This file isn't an AshLight settings backup.")
     schema = doc.get("schema")
     if isinstance(schema, bool) or schema not in SCHEMAS:
-        raise SettingsError("This settings file is from a version AshLight can't read.")
+        raise SettingsError("This settings backup is from a version AshLight can't read.")
     settings = doc.get("settings")
     if not isinstance(settings, dict):
-        raise SettingsError("This settings file has no settings in it.")
+        raise SettingsError("This settings backup has no settings in it.")
     current = current if isinstance(current, dict) else {}
     update, ignored = {}, []
     for key, value in settings.items():

@@ -121,8 +121,10 @@ FILE_ORIGINS = {APP_ORIGIN}
 # on purpose: a page on another loopback port is same-site.
 FETCH_SITE_OK = {"same-origin", "none"}
 # SEC-CROSS-SITE: fixed reply texts; the OS error detail goes to the log only
-LAYOUT_READ_FAILED = ("AshLight couldn't read its settings file, so the overlay "
-                      "layout wasn't saved.")
+# RUN-NO-DEAD-ENDS (research 0042 F3): "settings file" names no place the
+# player can find; the words say what failed and what to do.
+LAYOUT_READ_FAILED = ("AshLight couldn't read its saved settings, so the overlay "
+                      "layout wasn't saved. Try again.")
 SHARE_FETCH_FAILED = ("AshLight couldn't fetch that share link. Check the link, "
                       "or paste the build code itself.")
 

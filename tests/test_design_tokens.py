@@ -281,8 +281,9 @@ def test_checkbox_is_an_empty_box_and_filled_when_checked():
     assert re.search(r"appearance\s*:\s*none", box)
     assert re.search(r"background\s*:\s*transparent", box)
     assert re.search(r"border\s*:\s*1px solid var\(--al-control-edge\)", box)
-    assert re.search(r"(?<![-\w])width\s*:\s*20px", box)
-    assert re.search(r"(?<![-\w])height\s*:\s*20px", box)
+    # 24 px (PLAY-TD-22A-A11Y-CSS, F-164; WCAG 2.2 SC 2.5.8)
+    assert re.search(r"(?<![-\w])width\s*:\s*24px", box)
+    assert re.search(r"(?<![-\w])height\s*:\s*24px", box)
     assert "outline" not in box and "accent-color" not in box
     checked = rules[".check input:checked"]
     assert "var(--fk-accent)" in checked and "var(--al-check-tick)" in checked
@@ -362,6 +363,31 @@ def test_selected_tab_is_600_and_keeps_its_width():
     for tab_id, label in labels.items():
         body = rules.get("#%s::after" % tab_id, "")
         assert ('content: "%s"' % label) in body, (tab_id, label)
+
+
+# --- whole-sheet type rule (plan 03 section 11, G7 static part) ---------------
+
+def test_every_font_size_in_every_sheet_is_a_type_token():
+    """PLAY-TD-22A-A11Y-CSS (F-053, G7): every font-size in web/*.css is one
+    var(--al-fs-*) token, and every font shorthand is inherit or starts
+    with one; the one exception is the root scale on html (100% x s),
+    which sets no text size of its own."""
+    for sheet in sorted(WEB.glob("*.css")):
+        css = _nocomment(sheet.read_text(encoding="ascii"))
+        if sheet == APP_CSS:
+            css = _outside_token_block()
+        for sel, body in _rules(css):
+            for val in re.findall(r"(?<![-\w])font-size\s*:\s*([^;]+);", body):
+                val = val.strip()
+                if sheet == APP_CSS and sel == "html":
+                    assert val == "calc(100% * var(--al-s))", (sheet.name, sel, val)
+                    continue
+                assert re.fullmatch(r"var\(--al-fs-(%s)\)" % "|".join(FS), val), (
+                    sheet.name, sel, val)
+            for val in re.findall(r"(?<![-\w])font\s*:\s*([^;]+);", body):
+                val = val.strip()
+                assert val == "inherit" or re.match(
+                    r"var\(--al-fs-(%s)\)(/|\s)" % "|".join(FS), val), (sheet.name, sel, val)
 
 
 # --- root scale queries (applied later by PLAY-TD-09B-SKELETON) --------------

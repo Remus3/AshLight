@@ -22,6 +22,11 @@ a new or changed itemcheck template is edited here, not in design 0001.
   (<name>).`, `Downgrade: <n> points less than ...`, `Sidegrade: about
   the same as your <slot> (<name>), <+n> points.`; errors `No build
   loaded`, `Not an item`, `Can't compare this` with the next step;
+  a press that held no item (`Not an item`, `Copy the item first`)
+  names no item: the item line is empty, never `Unnamed item`, the
+  price card head is `Price check`, and the Play card's price row reads
+  `No price for this check` instead of repeating the card's words
+  (RUN-NO-DEAD-ENDS, research 0042 F20 d);
   a press that held a copied build (TC-PRESS-BUILD) is a status card:
   word and head `Build loaded` (edge tone note, never colour alone),
   line 2 `<ascendancy or class>, level <n>`, line 3 `Item checks use it
@@ -57,8 +62,9 @@ a new or changed itemcheck template is edited here, not in design 0001.
   <skill> with it in <slot>.` (`that skill` without a name) and that
   slot's sentence reads `Downgrade: your main skill can't use this weapon
   type in <slot> (<name>).` (no name for an empty slot); otherwise the dashboard
-  adds `Scored with your stat weights. To see DPS and EHP, turn on the
-  optional Path of Building calc in AshLight's settings file.` (off) or
+  adds `Scored with your stat weights. To see DPS and EHP, press "Set up
+  the calc" under Settings, Checks in the AshLight window.` (off;
+  RUN-NO-DEAD-ENDS: the Checks row's button, never a file) or
   `Scored with your stat weights. DPS and EHP are not shown because Path
   of Building could not be reached. Try the check again.` (failed); with
   PoB scoring, uncounted mods read `Not counted (the mod has no number):

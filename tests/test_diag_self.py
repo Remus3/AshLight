@@ -42,7 +42,10 @@ def test_log_found():
     r = row({"log_found": False, "log_configured": True}, "log")
     assert r["status"] == "fail"
     assert r["detail"] == "The Client.txt path in your settings is missing."
-    assert "client_log" in r["fix"] and r["fix"] == diag.FIX_LOG_PATH
+    # RUN-NO-DEAD-ENDS (research 0042 R4): the fix names the dashboard field
+    # (SEC-LOG-PATH-FIELD, shown while this row fails), never a file to edit
+    assert "Settings, Reading and web data" in r["fix"] and r["fix"] == diag.FIX_LOG_PATH
+    assert "local.json" not in r["fix"]
     assert status({"log_configured": True}, "log") == "pass"
 
 
@@ -101,7 +104,9 @@ def test_last_line():
     assert status({}, "last_line") == "pass"
     assert status({"last_line_at": None}, "last_line") == "unknown"
     r = row({"last_line_at": NOW - 3600}, "last_line")
-    assert r["status"] == "unknown" and "may be closed" in r["detail"]
+    # RUN-NO-DEAD-ENDS (research 0042 F20 a): a known age is a note, never
+    # "not known yet" beside "1 h ago"
+    assert r["status"] == "note" and "may be closed" in r["detail"]
     # RUN-QUIET-FEED: the age is written in from "at" (report, dashboard)
     assert r["detail"] == diag.AGO + ". The game may be closed, or you are AFK."
     assert r["at"] == NOW - 3600
@@ -154,12 +159,15 @@ def test_web_data():
     assert status({"web_data": False}, "web_data") == "off"
     r = row({"contact_set": False}, "web_data")
     assert r["status"] == "fail" and "contact" in r["fix"]
-    # DATA-CONTACT-FIELD: the fix and the detail name the dashboard card
-    # (the h2 of web/index.html), never a file path
-    card = "Prices and web data"
+    # DATA-CONTACT-FIELD: the fix and the detail name the dashboard place
+    # of the field, never a file path. RUN-NO-DEAD-ENDS: the field sits in
+    # the Settings section Reading and web data (an h3 of web/index.html)
+    card = "Settings, Reading and web data"
     assert diag.CONTACT_CARD == card and r["fix"] == diag.FIX_CONTACT
-    h2 = Path(__file__).resolve().parents[1] / "web" / "index.html"
-    assert f'<h2 id="prices-title" tabindex="-1">{card}</h2>' in h2.read_text(encoding="utf-8")
+    h3 = Path(__file__).resolve().parents[1] / "web" / "index.html"
+    page = h3.read_text(encoding="utf-8")
+    assert '<h3 id="reading-title" tabindex="-1">Reading and web data</h3>' in page
+    assert page.index('id="reading-title"') < page.index('id="webdata-contact"')
     for text in (r["fix"], r["detail"]):
         assert card in text
         assert "local.json" not in text and "config" not in text
@@ -178,13 +186,17 @@ def test_calc():
     assert status({}, "calc") == "pass"
     assert status({"calc_on": False}, "calc") == "off"
     r = row({"calc_status": {"available": False, "missing": ["luajit"]}}, "calc")
-    assert r["status"] == "fail" and "-TcCalc" in r["fix"] and "luajit" in r["detail"]
-    # TC-CALC-OPTIN: the fix names the one step, which also turns the calc on
+    assert r["status"] == "fail" and "luajit" in r["detail"]
+    # TC-CALC-OPTIN: the fix names the one step, which also turns the calc on.
+    # RUN-NO-DEAD-ENDS (research 0042 R4, F20 c): the step is the Checks
+    # row's button (web/checks.js CALC_BUTTON), never a script, never "again"
     assert r["fix"] == diag.FIX_CALC
-    assert r"scripts\setup.ps1 -TcCalc." in r["fix"] and "turns it on" in r["fix"]
+    assert '"Set up the calc" under Settings, Checks' in r["fix"] and "turns it on" in r["fix"]
+    assert ".ps1" not in r["fix"] and "scripts" not in r["fix"] and "again" not in r["fix"]
     assert "config" not in r["fix"]  # no second edit of local.json asked for
     off = row({"calc_on": False}, "calc")
-    assert off["fix"] is None and off["detail"].endswith(r"run scripts\setup.ps1 -TcCalc.")
+    assert off["fix"] is None and off["detail"].endswith(
+        'press "Set up the calc" under Settings, Checks in the AshLight window.')
     assert status({"calc_status": None}, "calc") == "unknown"
 
 
@@ -210,7 +222,9 @@ def test_overlay_and_supervisor():
     for cid in ("overlay", "supervisor"):
         assert status({}, cid) == "pass"
         r = row({cid: False}, cid)
-        assert r["status"] == "fail" and "run.ps1" in r["fix"]
+        # RUN-NO-DEAD-ENDS (research 0042 R4): the player's act, never a script
+        assert r["status"] == "fail" and "Start Menu shortcut" in r["fix"]
+        assert ".ps1" not in r["fix"] and "scripts" not in r["fix"]
         assert status({cid: None}, cid) == "unknown"
 
 
@@ -313,7 +327,8 @@ def test_private_files_row():
     assert r["fix"] == "In the AshLight folder, run: python -m server.al.acl apply ."
     for name in ("runtime", "sidecar"):
         r = row({"acl_open": [name]}, "private")
-        assert r["fix"] == diag.FIX_PRIVATE_SETUP and "setup.ps1" in r["fix"]
+        assert r["fix"] == diag.FIX_PRIVATE_SETUP and "AshLight's setup again" in r["fix"]
+        assert ".ps1" not in r["fix"] and "scripts" not in r["fix"]
     r = row({"acl_open": ["sidecar", "app", "runtime"]}, "private")
     assert r["detail"].endswith("in AshLight's runtime folder, the AshLight folder "
                                 "and AshLight's sidecar folder.")

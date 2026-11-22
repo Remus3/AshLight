@@ -214,8 +214,20 @@ const PANELS = ["build", "eval", "price", "chars", "pace", "consent", "reading",
   "checks", "zoneguide", "layout", "filter", "weights", "gfx", "restart-overlay", "webdata",
   "settingsio"];
 
+/* TEST-WEB-PANELS-B: these entries register from their own web/panels/
+   files under the name and order app.js gave them before the move */
+const MOVED = { layout: "layout.js", weights: "weights.js", gfx: "gfx.js", webdata: "webdata.js" };
+
 test("app.js registers its panels in today's order", () => {
   const reg = appRegistry();
+  assert.deepEqual(reg.names(), PANELS.filter((n) => !(n in MOVED)));
+  // with the moved panel files (the page links them before app.js) the
+  // page keeps today's whole order
+  Object.values(MOVED).forEach((file) => {
+    const sandbox = { ALApp: reg };
+    sandbox.window = sandbox;
+    vm.runInNewContext(web.source(file), sandbox, { filename: file });
+  });
   assert.deepEqual(reg.names(), PANELS);
 });
 
