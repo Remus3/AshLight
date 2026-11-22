@@ -341,7 +341,7 @@ def test_card_merged_when_the_keep_part_answers_without_a_build():
     _s, card = snap_parts(st)
     assert (card["kind"], card["head"], card["line2"], card["line3"], card["verdict"]) == (
         "merged", "Vendor - 1 of 5 met, Lv 30", "5 listed, ~12 exalted",
-        "Load a build first", "note")
+        "Paste a build first", "note")
     ev["parts"] = {"keep": {"status": "no_level"}}
     st.set_eval(ev, at=1000.0)
     assert st.snapshot()["card"]["kind"] == "price"

@@ -70,7 +70,7 @@ def test_level_10_gloves_keep():
     assert (t["word"], t["tone"], t["answers"]) == ("Keep", "upgrade", True)
     assert t["head"] == "Keep - 2 of 5 met, Lv 10"
     assert t["item"] == "Test Piece"
-    assert t["line"] == "Load a build first"
+    assert t["line"] == "Paste a build first"
     assert t["notes"] == [
         "Worth keeping: it meets 2 of 5 levelling thresholds for level 10.",
         "Thresholds met: life 10+, fire res 8+."]

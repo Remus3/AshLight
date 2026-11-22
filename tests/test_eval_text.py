@@ -134,7 +134,7 @@ def test_error_card_text():
     t = eval_card_text({"ok": False, "error": "no build loaded",
                         "item": {"name": "Grim Clutch"}})
     assert (t["head"], t["item"], t["line"]) == \
-        ("No build loaded", "Grim Clutch", "Load a build first")
+        ("No build loaded", "Grim Clutch", "Paste a build first")
     assert t["sentence"] == NO_BUILD_SENTENCE
     assert (t["notes"], t["word"], t["tone"], t["answers"]) == (
         [], "Not checked", "note", False)
@@ -384,7 +384,7 @@ def test_no_build_keep_part_words():
     t = eval_card_text(dict(base, parts={"keep": keep}))
     assert (t["word"], t["tone"], t["answers"]) == ("Keep", "upgrade", True)
     assert (t["head"], t["item"], t["line"]) == (
-        "Keep - 2 of 5 met, Lv 24", "Grim Clutch", "Load a build first")
+        "Keep - 2 of 5 met, Lv 24", "Grim Clutch", "Paste a build first")
     assert t["sentence"] == NO_BUILD_SENTENCE
     assert t["notes"] == [
         "Worth keeping: it meets 2 of 5 levelling thresholds for level 24.",

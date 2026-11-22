@@ -24,7 +24,7 @@ EVAL_ERROR_TEXT = {
     # error: (overlay head, overlay line, dashboard sentence)
     EMPTY_CLIPBOARD: EMPTY_CLIPBOARD_TEXT,
     # TC-VERDICT-CAVEAT (F-042): the sentence names the item-key build load
-    "no build loaded": ("No build loaded", "Load a build first",
+    "no build loaded": ("No build loaded", "Paste a build first",
                         "No build loaded yet. Paste a Path of Building code under Build, "
                         "or copy the code in Path of Building and press the item key, "
                         "then check the item again."),
