@@ -28,6 +28,7 @@ FACTS = {
     "missing": {"log_found": False, "reading": False},
     "path_missing": {"log_found": False, "log_configured": True, "reading": False},
     "stalled": {"reading": False},
+    "unreadable": {"unreadable": True, "reading": False},
 }
 
 
@@ -109,6 +110,8 @@ def test_reading_state_matches_the_dashboard_rule():
     assert rs(None) == "unknown"
     assert rs({"consented": True, "reading": True}, live=False) == "unknown"
     assert rs({"consented": True, "reading": True, "idle": True}) == "idle"
+    assert rs({"consented": True, "reading": True, "idle": True,
+               "unreadable": True}) == "unreadable"
     assert rs({"consented": True, "reading": True}) == "reading"
     assert rs({"consented": True, "reading": False, "path": "x"}) == "waiting"
     assert rs({"consented": True, "reading": False, "path": None}) == "missing"
@@ -125,3 +128,31 @@ def test_idle_words_share_one_root_and_name_no_fixed_time():
     assert idle["bar"].startswith(idle["overlay"])
     for w in (idle["bar"], idle["overlay"], idle["check"]):
         assert "20" not in w
+
+
+def test_unreadable_state_is_one_word_for_bar_overlay_and_checks(monkeypatch):
+    # RUN-UNREADABLE-WORD (review SRW-1): the file is there but can't be
+    # read; the table names it once and diag.check_reading takes it from
+    # the table through _state_check
+    s = states()["unreadable"]
+    assert s["kit"] == "blocked" and s["glyph"] == "[#]"
+    assert s["bar"] == "can't read Client.txt"
+    assert s["overlay"] and not s["overlay_alone"]
+    assert len(s["overlay"]) <= statuswords.table()["overlay_beside_max"] == 15
+    assert s["fault"] and s["check_row"] == "reading"
+    assert diag.UNREADABLE_DETAIL == s["check"]
+    assert diag.FIX_UNREADABLE == s["next"]
+    seen = []
+    real = diag._state_check
+
+    def spy(cid, label, sid, **kw):
+        seen.append((cid, sid))
+        return real(cid, label, sid, **kw)
+
+    monkeypatch.setattr(diag, "_state_check", spy)
+    for reading in (True, False):
+        seen.clear()
+        r = diag.check_reading(dict(GREEN, unreadable=True, reading=reading))
+        assert seen == [("reading", "unreadable")], reading
+        assert r["status"] == diag.FAIL
+        assert (r["detail"], r["fix"]) == (s["check"], s["next"])

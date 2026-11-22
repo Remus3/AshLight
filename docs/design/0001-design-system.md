@@ -486,6 +486,24 @@ Generation rules:
     build's boots have no movement speed. Boots with it help in the
     campaign.`; words `<Element> res N%`, `Boss: <element>`, `Better
     flask`, `Boots: no speed` (15 chars).
+12. Log-state sentences and words (RUN-TAIL-HEAL-CORE,
+    RUN-UNREADABLE-WORD; review SRW-1, SRW-2). A log-state sentence is a
+    status word, so these stay here, not in a copy sheet. Reader reset
+    sentences in the event list, by where the reader goes on:
+    `Client.txt is back - reading on from where it stopped`, `Client.txt
+    was replaced - reading on from where it stopped`, `Client.txt was
+    replaced - reading new lines only`, `Client.txt got shorter - reading
+    on from where it stopped`, `Client.txt got shorter - reading new
+    lines only`. Reader lines: `AshLight restarted its log reader` (no
+    trailing period, like every event line), `Client.txt can't be read
+    right now - trying again`, `Client.txt can be read again`. The
+    unreadable state is one row of `server/al/data/status_words.json`
+    (kit `blocked`): dashboard bar `can't read Client.txt`, overlay status
+    slot `can't read log` (15 characters at most beside the numbers), and
+    the Reading row of the Checks tool `Client.txt is there but can't be
+    read. AshLight keeps trying.` with the fix `Close any program that has
+    Client.txt open, or check that you can open the file yourself.` It
+    shows only after the opt-in and is named before the quiet-log state.
 
 ## 10. Overlay rules
 

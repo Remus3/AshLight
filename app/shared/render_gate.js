@@ -134,6 +134,18 @@
         "next": "Start Path of Exile 2 once so it writes Client.txt. AshLight finds it by itself.",
         "fault": true
       },
+      "unreadable": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "can't read Client.txt",
+        "overlay": "can't read log",
+        "overlay_alone": false,
+        "check_row": "reading",
+        "check": "Client.txt is there but can't be read. AshLight keeps trying.",
+        "next": "Close any program that has Client.txt open, or check that you can open the file yourself.",
+        "fault": true
+      },
       "path_missing": {
         "rank": 4,
         "kit": "blocked",
@@ -456,8 +468,11 @@
       campaign: words ? campaignWord(snap) : "",
       /* UX-COPY: a known file that is quiet is not missing. Telegraphic so
          it fits after "Lv 100 | 99 deaths" in the 258 px plate (design
-         review F1: "waiting for Client.txt" clipped). */
-      log: idle ? IDLE_WORD
+         review F1: "waiting for Client.txt" clipped). RUN-UNREADABLE-WORD:
+         a file that is there but can't be read is named first, the same
+         state as the bar (web/status.js readingState). */
+      log: (tl && tl.unreadable) ? W.unreadable.overlay
+        : idle ? IDLE_WORD
         : ((tl && !tl.reading) ? (tl.path ? W.waiting.overlay : W.missing.overlay) : ""),
       status: status || "live"
     };

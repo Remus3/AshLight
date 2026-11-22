@@ -133,6 +133,18 @@
         "next": "Start Path of Exile 2 once so it writes Client.txt. AshLight finds it by itself.",
         "fault": true
       },
+      "unreadable": {
+        "rank": 4,
+        "kit": "blocked",
+        "glyph": "[#]",
+        "bar": "can't read Client.txt",
+        "overlay": "can't read log",
+        "overlay_alone": false,
+        "check_row": "reading",
+        "check": "Client.txt is there but can't be read. AshLight keeps trying.",
+        "next": "Close any program that has Client.txt open, or check that you can open the file yourself.",
+        "fault": true
+      },
       "path_missing": {
         "rank": 4,
         "kit": "blocked",
@@ -215,9 +227,13 @@
      the same rule). While the feed is down the page cannot know, so it
      says so instead of repeating the last (possibly stale) state.
      TEST-LIVE-EXIT (decision 0029): no line for 20 minutes - the game may
-     be closed, or the player is away. Never "closed": a guess. */
+     be closed, or the player is away. Never "closed": a guess.
+     RUN-UNREADABLE-WORD: an opted-in file that is there but can't be read
+     (RUN-TAIL-HEAL-CORE's tailer.unreadable) is named before idle; its
+     log goes quiet because nothing can be read. */
   function readingState(tailer, live) {
     if (!live || !tailer) { return "unknown"; }
+    if (tailer.consented && tailer.unreadable) { return "unreadable"; }
     if (tailer.consented && tailer.idle) { return "idle"; }
     if (tailer.reading) { return "reading"; }
     if (tailer.consented) { return tailer.path ? "waiting" : "missing"; }

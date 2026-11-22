@@ -56,6 +56,8 @@ const CASES = {
           link: "open", status: "live" },
   missing: { tailer: { consented: true, reading: false, path: null }, link: "open",
              status: "live" },
+  unreadable: { tailer: { consented: true, reading: false, path: "logs/Client.txt",
+                          unreadable: true }, link: "open", status: "live" },
   link_down: { tailer: null, link: "error", everLive: false, status: "offline" },
   link_token: { tailer: null, link: "notoken", everLive: false }
 };
@@ -150,4 +152,27 @@ test("kit glyphs and the fault rule hold for every row", () => {
     assert.equal(s.glyph, kit[s.kit].row, id);
     if (s.fault) { assert.ok(s.next && s.check, id); }
   });
+});
+
+test("unreadable: bar, overlay and Checks name the same state", () => {
+  /* RUN-UNREADABLE-WORD (review SRW-1): the file is there but can't be
+     read. It wins over a quiet log (nothing can be read, so the log goes
+     quiet) and over a stale reading flag; with the feed down the feed
+     state still outranks it. */
+  const s = W.unreadable;
+  const base = { consented: true, reading: false, path: "logs/Client.txt", unreadable: true };
+  [base, { ...base, idle: true, last_line_at: 900 }, { ...base, reading: true }].forEach((tl) => {
+    const b = dash.barStatus(tl, "open");
+    assert.equal(b.id, "unreadable");
+    assert.deepEqual([b.state, b.glyph, b.word], ["blocked", "[#]", "can't read Client.txt"]);
+    assert.equal(b.next, s.next);
+    const m = gate.hudModel({ ...SNAP, tailer: tl }, 1060, "live");
+    assert.equal(gate.statusText(m), s.overlay);
+  });
+  assert.ok(s.overlay.length <= SOURCE.overlay_beside_max);
+  assert.equal(s.check_row, "reading");
+  assert.equal(s.fault, true);
+  assert.equal(dash.barStatus(base, "error", true).id, "link_retry");
+  // not opted in: nothing is read, so nothing is unreadable
+  assert.equal(dash.readingState({ consented: false, unreadable: true }, true), "off");
 });
