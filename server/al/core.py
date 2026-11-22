@@ -107,6 +107,13 @@ LEDGER_FILE = "logshapes.json"
 LEDGER_KEEPS = ["pattern hit counts", "masked line shapes"]
 
 
+def _client_log_of(cfg):
+    """SEC-LOG-PATH-PERSIST: the config's "client_log" when it is a
+    non-empty string, else None."""
+    value = cfg.get("client_log") if isinstance(cfg, dict) else None
+    return value if isinstance(value, str) and value else None
+
+
 def discover_default(runtime, log_path):
     """SEC-NO-DISCOVERY: may a core built with these arguments run the Steam
     library scan? Only the real entry point: no runtime dir and no log
@@ -176,7 +183,12 @@ class Core:
         self.state.set_session_summary(summary_mod.load_last(self.summary_path))
         last = self.state.session_summary
         self._summary_saved = last.get("id") if last else None
-        self._configured_log = log_path or cfg.get("client_log")
+        # SEC-LOG-PATH-PERSIST: a path typed in the consent card is kept as
+        # "client_log" of the config file (record_consent), so a restart
+        # keeps it; a test or demo core reads it from its own config file
+        own = cfg if runtime is None else jsonfile.read_json(
+            self.config_path, kind=dict, default={})
+        self._configured_log = log_path or _client_log_of(own)
         self.log_path = None
         self.tailer = None
         self._next_locate = 0.0
@@ -1364,6 +1376,19 @@ class Core:
         self.state.set_tailer(ledger=bool(consented))
         return rec
 
+    def _keep_log_path(self, path):
+        """SEC-LOG-PATH-PERSIST: write the checked, typed Client.txt path to
+        the config file's "client_log" (as typed: the file or its folder),
+        so the next core start uses it (locate_log). A config that cannot
+        be written keeps the path for this run only; the consent goes on."""
+        text = str(path)
+        if self._config().get("client_log") == text:
+            return
+        try:
+            self._write_config({"client_log": text})
+        except OSError:
+            LOG.warning("could not save the Client.txt path in the local config")
+
     def record_consent(self, consented, path=None):
         if path and not logfile.consent_path_ok(path):
             # AUDIT-HTTP-HARDEN S4: checked before any file system access.
@@ -1375,6 +1400,7 @@ class Core:
         if path:
             self._configured_log = path
             self.locate_log()
+            self._keep_log_path(path)
         rec = {"consented": bool(consented), "at": _utc_now(), "app_version": VERSION,
                "file": "Client.txt", "derives": ["zone", "level", "deaths",
                                                  "whispers", "session times"]}

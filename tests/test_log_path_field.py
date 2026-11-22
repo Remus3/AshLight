@@ -181,6 +181,65 @@ def test_no_registry_vdf_or_directory_listing_call_is_added(core, tmp_path, monk
     assert calls == []
 
 
+def test_typed_path_is_kept_in_local_json_and_a_new_core_keeps_it(core, tmp_path):
+    """SEC-LOG-PATH-PERSIST: the typed path lands in the config file's
+    "client_log" (as typed, other keys kept) and a core started afresh on
+    the same files finds the log with no new post."""
+    core.config_path.parent.mkdir(parents=True, exist_ok=True)
+    core.config_path.write_text(json.dumps({"league": "Standard"}), encoding="ascii")
+    log = game_log(tmp_path)
+    typed = str(log.parent.parent)
+    status, doc = post(core, {"consent": True, "path": typed})
+    assert status == 200, doc
+    saved = json.loads(core.config_path.read_text(encoding="utf-8"))
+    assert saved == {"league": "Standard", "client_log": typed}
+    runtime = core.runtime
+    core.close()
+    again = Core(runtime=runtime, poll_s=0.02)
+    try:
+        assert again.discover is False
+        assert again.log_path == log
+        assert again.consented() is True
+        assert again.state.snapshot()["tailer"]["path"] == str(log)
+        again.ensure_tailing()
+        assert wait_for(lambda: again.state.snapshot()["tailer"].get("reading") is True)
+    finally:
+        again.close()
+
+
+def test_bad_path_is_not_kept(core, tmp_path):
+    other = tmp_path / "notes.txt"
+    other.write_text("x\n", encoding="ascii")
+    for bad in ("logs/Client.txt", str(other)):
+        status, _ = post(core, {"consent": True, "path": bad})
+        assert status == 400, bad
+    assert not core.config_path.exists()
+
+
+def test_unwritable_config_keeps_the_path_for_this_run(core, tmp_path, monkeypatch):
+    """A config write that fails (a hand-broken file) still records the
+    consent and reads the typed log for this run."""
+    def broken(update):
+        raise OSError("config unreadable")
+
+    monkeypatch.setattr(core, "_write_config", broken)
+    log = game_log(tmp_path)
+    status, doc = post(core, {"consent": True, "path": str(log)})
+    assert status == 200, doc
+    assert core.log_path == log and core.consented()
+
+
+def test_a_non_text_client_log_is_ignored(tmp_path):
+    rt = tmp_path / "rt"
+    rt.mkdir()
+    (rt / "local.json").write_text(json.dumps({"client_log": 5}), encoding="ascii")
+    c = Core(runtime=rt, tail=False)
+    try:
+        assert c.log_path is None
+    finally:
+        c.close()
+
+
 class _Markup(HTMLParser):
     def __init__(self):
         super().__init__()
