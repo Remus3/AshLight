@@ -432,6 +432,15 @@ of the HALT check.
   Clarified 2026-11-18: optional dev-only test plugins allowed, serial path
   stays the default; reverses if the diagnosed runs show xdist caused flakes
   or lost workers, or the operator rules tests must be stdlib-only.
+- Budget log calibration (RUN-BUDGET-CALIBRATE-B11, decision 0002
+  amendment 2026-11-22): B11, the client with the companion open, moves
+  from 300 to 384 MB, still at most 3 processes. B18, all of AshLight with
+  the calc off, moves from 350 to 460 MB: B11 plus the core max of 68 MB is
+  452, rounded up. B10 and B12 stay. Figures are from the first live budget
+  log: 3059 rows, 400 with the companion open, working set median 319.2,
+  p95 330.2, max 340.5 MB. Reverses if: B10 or B12 breach persistently, the
+  operator keeps 300 MB, or a later log puts the companion-open median over
+  350 MB.
 - Wave gate: a package runs the test files tools/test_select.py names for
   its diff, file-named, outside the suite gate (no timing tests, at most
   90 s per subset; timing and budget tests go through the gate); main moves

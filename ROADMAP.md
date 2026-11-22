@@ -44,11 +44,18 @@ operator phrase.`
   tests/test_zone_guide.py tests/test_provenance.py tests/test_glance_rules.py passes, every
   reworded line is at most 26 characters, and npm test --prefix app passes. ZERO-CLICK: Nothing for
   players; card lines fit by themselves. DEPENDS: OVL-CONTRAST-PIXELS. BLOCKED: session wave 26.
+- [ ] CARD-LINE-LIMIT-COPY2 (build) Zone shorts and pinned card lines fit 26 characters (limit
+  unchanged). ACCEPT: python -m pytest -q tests/test_provenance.py tests/test_zone_guide.py
+  tests/test_math_weapon_type.py tests/test_play_cards.py tests/test_price_book.py
+  tests/test_overlay_view.py tests/test_waystone_reward.py passes and every card line built by the
+  changed modules is at most 26 characters with the limits unchanged. ZERO-CLICK: Nothing for
+  players; card lines fit by themselves. DEPENDS: CARD-LINE-LIMIT-COPY. BLOCKED: session wave 27.
 - [ ] CARD-LINE-LIMIT-FLIP (build) Lower the card line limit to 26. ACCEPT: python -m pytest -q
   tests/test_overlay_pixels.py tests/test_glance_rules.py tests/test_overlay_view.py
   tests/test_waystone_reward.py tests/test_moment_cards.py tests/test_eval_text.py passes with the
   xfail removed and npm test --prefix app passes. ZERO-CLICK: Nothing for players; card lines fit by
-  themselves. DEPENDS: CARD-LINE-LIMIT-COPY, OVL-OVERLAY-FEED. BLOCKED: session wave 27.
+  themselves. DEPENDS: CARD-LINE-LIMIT-COPY, OVL-OVERLAY-FEED, CARD-LINE-LIMIT-COPY2. BLOCKED:
+  session wave 29.
 - [ ] PRICES-TITLE-TABINDEX (build) D-1 split from PLAY-PAGER-SCALE-24 (ruling Q2 amended 2026-11-21): add tabindex=-1 to the #prices-title markup in web/index.html so focus can land on it; fold into DATA-CONTACT-UI, the wave 24 owner of web/index.html. ACCEPT: python -m pytest -q tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: Nothing for players; focus lands by itself. Folded into SEC-LOG-PATH-FIELD (adjudicator 2026-11-22). BLOCKED: session wave 26.
 - [ ] BUDGET-RETIRE-TAILER-IDLE (build) Retire tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent, superseded by B1 (RUN-BUDGET-TESTS-DET kept it because tools/docs_fresh.py and README.md pin it): delete the test, repoint the "tailer idle" fact in tools/docs_fresh.py to test_real_loop_body_10_s_worst_case_under_half_percent and reword README's tailer line to B1's half-percent figure. ACCEPT: python -m pytest -q tests/test_docs_fresh.py tests/test_budgets.py passes. ZERO-CLICK: Test housekeeping; no click. DEPENDS: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a package in wave 25 or later).
 - [ ] RUN-CARDS-PAGE-FIT (build) Run tab Acts, Maps and Deaths cards still page at 10 rows (8 compact): 268 px against the measured 244 px budget at 1280x760 (204 px at 1024x700). Only a 10-row fill overflows; no fit state fills 10 rows today. Add one fit state that fills 10 rows on each card and set the page size so it fits (PLAY-TD-20B-RUN-CARDS review gap). ACCEPT: python -m pytest -q tests/test_play_fit.py passes with the new 10-row state and npm test --prefix app passes. ZERO-CLICK: Layout floor; no click. DEPENDS: PLAY-TD-20B-RUN-CARDS. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a wave 23 or 24 package owning the Run cards, or a new small package).
