@@ -1,7 +1,8 @@
 /* AshLight overlay page. Event-driven only: no requestAnimationFrame, no
    polling loop. A repaint happens when an SSE "state" push changes a visible
-   string, or when the coarse zone timer's minute text rolls over or the
-   item check card leaves (one setTimeout to the nearer of the two). */
+   string, or when the coarse zone timer's minute text rolls over, the
+   item check card leaves or the guide line is due again (one setTimeout to
+   the nearest of the three). */
 (function () {
   "use strict";
 
@@ -35,9 +36,12 @@
              HUD plate is absent (overlay.css [hidden]). */
           nodes.hud.hidden = !model.hudShown;
         } else if (f === "status" || f === "away" || f === "under" || f === "campaign" ||
-                   f === "log" || f === "trades") {
+                   f === "log" || f === "trades" || f === "guide") {
+          /* OVL-LINE2-GUIDE: the guide line (rank 5) and the status word
+             share line 2, so a change of either repaints both. */
           nodes.hud.setAttribute("data-status", model.status);
           nodes.status.textContent = S.statusText(model);
+          nodes.guide.textContent = model.guide;
         } else {
           nodes[f].textContent = model[f];
         }
@@ -48,7 +52,9 @@
   }
 
   /* One timer to the next visible change: the zone timer's minute
-     rollover, or the item check card leaving (TC-EVAL-UI). */
+     rollover, the item check card leaving (TC-EVAL-UI), or the guide line
+     coming back 20 s after a death or level-up (OVL-LINE2-GUIDE): the
+     nearest of the three. */
   function schedule() {
     if (timer) { clearTimeout(timer); timer = null; }
     if (!snap) { return; }
@@ -59,6 +65,8 @@
     var ms = (shown && !shown.timer) ? null : S.msUntilNextChange(S.timerSeconds(snap, now));
     var evalMs = S.msUntilEvalExpires(snap, now);
     if (evalMs !== null && (ms === null || evalMs < ms)) { ms = evalMs; }
+    var guideMs = S.msUntilGuideDue(snap, now);
+    if (guideMs !== null && (ms === null || guideMs < ms)) { ms = guideMs; }
     if (ms !== null) { timer = setTimeout(paint, ms); }
   }
 
@@ -100,7 +108,7 @@
   }
 
   function start() {
-    ["hud", "zone", "timer", "level", "deaths", "sep", "status", "trade", "tradeFrom",
+    ["hud", "zone", "timer", "level", "deaths", "sep", "guide", "status", "trade", "tradeFrom",
      "tradeItem", "tradeWhere", "tradeMore", "evalCard", "evalHead", "evalItem",
      "evalLine"].forEach(function (id) {
       nodes[id] = document.getElementById(id);

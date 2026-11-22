@@ -57,10 +57,10 @@
      (4K at 100 percent, say) would draw the 13 px secondary line under
      2 mm tall, while the game's own UI grows with the resolution. The HUD
      then grows by itself so its text is never physically smaller than at
-     1440p and 100 percent: factor = physical height / scale factor / 1440,
-     which is the display's DIP height / 1440, never under 1 (1080p, 1440p and 4K at 150 percent are unchanged), at
+     1200 DIP tall: factor = physical height / scale factor / 1200,
+     which is the display's DIP height / 1200, never under 1 (1080p is unchanged), at
      most 2, in 0.05 steps. Zero clicks: it follows the monitor. */
-  var AUTO_REF_HEIGHT = 1440;
+  var AUTO_REF_HEIGHT = 1200;
   var MAX_ZOOM = 2.5;
 
   function autoScale(display) {

@@ -468,19 +468,49 @@
        grid of cards in the cockpit classes. Acts, Maps and Deaths are card
        cells (.grid-card): one page at a time, lists that page at 10 rows (8
        compact) through web/pager.js (web/acts.js, web/runs.js), never a
-       scroll box. Last session, Recent and Run history become cards with
-       PLAY-TD-20B-RUN-CARDS. -->
+       scroll box. PLAY-TD-20B-RUN-CARDS: Last session (with the run history
+       pages), Recent and Characters are card cells too. -->
   <div id="panel-run" class="panel panel-grid panel-cards" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
   <div class="col">
-  <!-- UTIL-SESSION-SUMMARY: shown by itself after 20 minutes idle or when
-       the game closes; hidden until the first card. Not a live region
-       (polite regions are capped). PLAY-LEGACY-OUT-2: moved as it is from
-       Play to the top of Run, where the run is looked back on
-       (UX-NEWEST N1; design 0001 N6 exemption) -->
-  <section id="summarybox" class="card session" hidden aria-labelledby="summary-title">
-    <h2 id="summary-title">Last session</h2>
-    <ul id="summary-lines" class="event-list"></ul>
-    <p id="summary-ended" class="muted"></p>
+  <!-- UTIL-SESSION-SUMMARY: filled by itself after 20 minutes idle or when
+       the game closes; until then the card says when it fills. Not a live
+       region (polite regions are capped). PLAY-LEGACY-OUT-2: moved as it is
+       from Play to the top of Run, where the run is looked back on
+       (UX-NEWEST N1; design 0001 N6 exemption). PLAY-TD-20B-RUN-CARDS: a
+       grid card (web/summary.js); its pages are the run history
+       (UTIL-RUN-HISTORY, web/history.js) and the keep / clear switch, which
+       stays here until PLAY-TD-21B-SETTINGS-ABOUT. -->
+  <section id="summarybox" class="card session grid-card" aria-labelledby="summary-title" data-home="main">
+    <div class="card-head">
+      <h2 id="summary-title" tabindex="-1">Last session</h2>
+      <span class="card-sub muted" data-card-sub></span>
+      <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
+    </div>
+    <div class="card-page" data-page="main" data-label="">
+      <p id="summary-empty" class="row-body muted">Your last session shows here after 20 minutes with no game activity, or when the game closes.</p>
+      <div id="summary-lines" class="pager-slot" hidden></div>
+      <p id="summary-ended" class="row-meta muted" hidden></p>
+      <div class="card-foot" data-card-foot>
+        <button type="button" class="secondary btn-24" data-card-open="history">Run history</button>
+        <button type="button" class="secondary btn-24" data-card-open="keep" aria-label="Keep or clear run history">Keep or clear</button>
+      </div>
+    </div>
+    <!-- your best act times and the zones of most deaths across saved runs -->
+    <div id="historybox" class="card-page" data-page="history" data-label="Run history" hidden>
+      <p id="history-empty" class="row-body muted" hidden></p>
+      <div id="history-rows" class="pager-slot" hidden></div>
+    </div>
+    <div class="card-page" data-page="keep" data-label="Keep or clear run history" hidden>
+      <p id="history-on" class="row-meta muted"></p>
+      <div class="card-act">
+        <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
+          Keep run history on this computer</label>
+      </div>
+      <div class="card-act">
+        <button id="history-clear" type="button" class="secondary btn-24">Clear run history</button>
+      </div>
+      <p id="history-said" class="row-meta muted"></p>
+    </div>
   </section>
   </div>
   <div class="col">
@@ -511,11 +541,6 @@
       <!-- UTIL-PACE: not a live region; it changes only on a level-up. -->
       <p id="pace" class="sub row-body" hidden></p>
       <p class="row-body muted pace-none">Your pace shows here after you level up.</p>
-      <!-- UTIL-MULTICHAR: shown with 2+ characters; not a live region.
-           PLAY-LEGACY-OUT-1: moved here from the old Level tile. -->
-      <p id="char-pick-box" class="sub char-pick" hidden>
-        <label for="char-pick">Show numbers for</label>
-        <select id="char-pick"></select></p>
     </div>
     <div class="card-page" data-page="guide" data-label="Zone guide" hidden>
       <!-- ZONE-GUIDE (decision 0043): the guide and quest tracker of the zone
@@ -576,31 +601,48 @@
   </section>
   </div>
   <div class="col">
-  <section class="card events" aria-labelledby="events-title">
-    <h2 id="events-title">Recent</h2>
-    <ol id="events" class="event-list"></ol>
-    <p id="events-empty" class="muted">Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.</p>
+  <!-- Recent (plan 03 section 4): the twin of Play's feed (region T), every
+       recent event newest first, whispers included (a muted From / To tag,
+       no edge), trade accepted / cancelled and party lines too. The chips
+       All, Deaths and Trades filter the list (aria-pressed); they are an
+       optional review act, the list fills from the log by itself. The rows
+       page at 8 (6 compact) under the chip row (web/app.js renderEvents). -->
+  <section class="card grid-card events" aria-labelledby="events-title">
+    <div class="card-head">
+      <h2 id="events-title" tabindex="-1">Recent</h2>
+    </div>
+    <div class="card-page" data-page="main" data-label="">
+      <div class="card-act ev-chips" role="group" aria-label="Show events">
+        <button type="button" class="secondary btn-24 chip" data-ev-filter="all" data-label="All" aria-pressed="true">All</button>
+        <button type="button" class="secondary btn-24 chip" data-ev-filter="death" data-label="Deaths" aria-pressed="false">Deaths</button>
+        <button type="button" class="secondary btn-24 chip" data-ev-filter="trade" data-label="Trades" aria-pressed="false">Trades</button>
+      </div>
+      <p id="events-empty" class="row-body muted">Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.</p>
+      <p id="events-none" class="row-body muted" hidden></p>
+      <div id="events" class="pager-slot" hidden></div>
+    </div>
   </section>
   </div>
   <div class="col">
-  <section id="historybox" class="card history" hidden aria-labelledby="history-title">
-    <h2 id="history-title">Run history</h2>
-    <p id="history-on" class="muted"></p>
-    <p id="history-empty" class="muted" hidden></p>
-    <table id="history-table" class="acts-table" hidden>
-      <thead><tr><th scope="col">Act</th><th scope="col">Your best</th>
-        <th scope="col">This run</th></tr></thead>
-      <tbody id="history-rows"></tbody>
-    </table>
-    <h3 id="history-deaths-title" class="sub-h">Most deaths across runs</h3>
-    <p id="history-deaths-empty" class="muted" hidden></p>
-    <ol id="history-deaths" class="event-list" hidden></ol>
-    <div class="history-controls">
-      <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
-        Keep run history on this computer</label>
-      <button id="history-clear" type="button" class="secondary">Clear run history</button>
+  <!-- Characters (UTIL-MULTICHAR, decision 0038): the picker (looking at
+       another character is a review act; the one playing shows by default)
+       and one row per character with its level, deaths and best act times.
+       Names come from the player's own Client.txt and stay on this
+       computer (web/chars.js). The picker shows with 2+ characters; not a
+       live region. PLAY-TD-20B-RUN-CARDS: moved here from the Acts card's
+       pace page (PLAY-LEGACY-OUT-1 had moved it there from the old Level
+       tile). -->
+  <section id="charsbox" class="card grid-card chars" aria-labelledby="chars-title">
+    <div class="card-head">
+      <h2 id="chars-title" tabindex="-1">Characters</h2>
     </div>
-    <p id="history-said" class="muted"></p>
+    <div class="card-page" data-page="main" data-label="">
+      <p id="char-pick-box" class="char-pick" hidden>
+        <label for="char-pick">Show numbers for</label>
+        <select id="char-pick"></select></p>
+      <p id="chars-empty" class="row-body muted">No character yet. Yours shows here after its first level-up or death.</p>
+      <div id="chars-rows" class="pager-slot" hidden></div>
+    </div>
   </section>
   </div>
   </div>

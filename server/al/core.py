@@ -33,6 +33,7 @@ from . import plug  # RUN-SEAMS (decision 0056)
 from . import diag_data, leagues  # DATA-DIAG-SEAM, DATA-LEAGUE-PICKER-API
 from . import pricerefresh  # DATA-PRICE-REFRESH-CORE (F-036)
 from . import summary as summary_mod
+from . import updates  # REL-UPDATE-WIRE (decision 0065): the release check
 from .bus import EventBus
 from .state import EMPTY_CLIPBOARD, SessionState
 from .theorycraft import basetypes
@@ -92,6 +93,11 @@ def discover_default(runtime, log_path):
     return runtime is None and not log_path
 
 
+# REL-UPDATE-WIRE (ruling Q-21): the local config key holding the opt-in
+# wording version the player acknowledged (updates.WORDING_VERSION).
+ACK_KEY = "web_data_ack"
+
+
 class ConfigUnreadable(OSError):
     """AREA-AUDIT P5-1: config/local.json exists but is not a JSON object;
     nothing is written over it."""
@@ -114,7 +120,7 @@ TICK_ORDER = ("ensure_tailing",  # TEST-E2E: log found later / moved
 class Core:
     def __init__(self, runtime=None, log_path=None, tail=True, poll_s=None,
                  character=None, start_at_end=True, config_path=None, web_fetch=None,
-                 discover=None):
+                 discover=None, update_repo=None):
         # SEC-NO-DISCOVERY: only the real entry point with no log path looks
         # for the live Client.txt in the Steam libraries. A core given a
         # runtime dir (a test or demo core) or a log path never scans,
@@ -269,6 +275,25 @@ class Core:
                                        league=self.configured_league, fetch=web_fetch,
                                        contact=self.contact,
                                        book=pricebook.PriceBook(rates_dir))
+        # REL-UPDATE-WIRE (decision 0065, decision 0013 amendment
+        # 2026-11-21): the daily release check, only while web data is on
+        # and the opt-in wording that names it is acknowledged
+        # ("web_data_ack"); tick_update (from tick_sources) drives it on a
+        # daemon thread, never on the loop thread. Only the real core reads
+        # the repository constant (config/public_repo.json); a test or demo
+        # core opens no file outside its own dirs and stays off unless it
+        # is handed `update_repo`; its notes come from a CHANGELOG.md in its
+        # runtime dir (normally none: no notes), never the shipped one.
+        update_dir = (paths.sidecar_dir("Cache") / "updates" if runtime is None
+                      else self.runtime / "cache" / "updates")
+        if update_repo is None:
+            update_repo = None if runtime is None else ""
+        self.updates = updates.UpdateClient(
+            self.web_data_enabled, self.web_data_acked, repo=update_repo, fetch=web_fetch,
+            cache_dir=update_dir,
+            changelog=None if runtime is None else self.runtime / "CHANGELOG.md")
+        self._update_thread = None
+        self._update_key = None
         # DATA-PRICE-REFRESH-CORE: the loop's refresh gate and the last
         # /api/rates read (monotonic s; tick_prices / note_rates_read)
         self.price_gate, self.rates_read_at = pricerefresh.Gate(), None
@@ -946,6 +971,14 @@ class Core:
         """True only when the user turned web data on (default off)."""
         return self._config().get("web_data") is True
 
+    def web_data_acked(self):
+        """REL-UPDATE-WIRE (ruling Q-21): the opt-in wording version the
+        player acknowledged ("web_data_ack" in the local config, written
+        only by set_web_data from the web-data POST; never imported), or
+        None. updates.ack_ok decides whether it covers the current wording."""
+        value = self._config().get(ACK_KEY)
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
     def contact(self):
         """UA-CONTACT: the User-Agent contact from the gitignored local
         config ("contact"), cleaned; None when unset or unusable."""
@@ -1036,14 +1069,66 @@ class Core:
         league = self.rates.doc.get("league")
         return league.strip() if isinstance(league, str) and league.strip() else None
 
-    def set_web_data(self, enabled):
+    def set_web_data(self, enabled, ack=None):
         """Persist the opt-in in the local config, keeping every other key
         (the contact included; only set_contact writes it). AREA-AUDIT
-        P5-1: raises ConfigUnreadable on a hand-broken file."""
-        self._write_config({"web_data": bool(enabled)})
+        P5-1: raises ConfigUnreadable on a hand-broken file.
+        REL-UPDATE-WIRE: `enabled` None keeps the switch as it is; `ack`
+        (the wording version the page showed, which must be
+        updates.WORDING_VERSION, else ValueError with nothing written)
+        stores "web_data_ack" in the same write. Returns the switch."""
+        if ack is not None and not (isinstance(ack, int) and not isinstance(ack, bool)
+                                    and ack == updates.WORDING_VERSION):
+            raise ValueError("not the current wording version")
+        change = {}
+        if enabled is not None:
+            change["web_data"] = bool(enabled)
+        if ack is not None:
+            change[ACK_KEY] = updates.WORDING_VERSION
+        if change:
+            self._write_config(change)
         if enabled:
             self.rates.refresh_async()
-        return bool(enabled)
+        return bool(enabled) if enabled is not None else self.web_data_enabled()
+
+    def tick_update(self, now=None):
+        """REL-UPDATE-WIRE (decision 0065), ZERO-CLICK, from tick_sources:
+        start the day's one release read on a daemon thread when the
+        UpdateClient allows it (web data on, the wording acknowledged, the
+        repository constant set) and it is due (24 h, a server wait
+        honoured); a read still running is never doubled. The snapshot
+        'update' block is published again when the opt-in or the
+        acknowledgement changed and when a read ends. No request is made
+        on the loop thread. Returns the started thread or None. `now`
+        (epoch s) is for tests; None reads the client's clock."""
+        key = (self.web_data_enabled(), self.web_data_acked())
+        if key != self._update_key:
+            self._update_key = key
+            self.publish_update()
+        running = self._update_thread
+        if running is not None and running.is_alive():
+            return None
+        client = self.updates
+        when = float(client.clock() if now is None else now)
+        if not (client.allowed() and client.due(when)):
+            return None
+
+        def run():
+            try:
+                client.tick(when)
+            finally:
+                self.publish_update()
+
+        thread = threading.Thread(target=run, name="al-update-check", daemon=True)
+        self._update_thread = thread
+        thread.start()
+        return thread
+
+    def publish_update(self):
+        """REL-UPDATE-WIRE: hand UpdateClient.view() to the state as the
+        snapshot's 'update' block (no event, no card text). True on a
+        change."""
+        return self.state.set_update(self.updates.view())
 
     def set_contact(self, value):
         """DATA-CONTACT-FIELD (F-018): store the User-Agent contact typed
@@ -1428,10 +1513,15 @@ class Core:
                       if isinstance(t, dict) and isinstance(t.get("checked_at"), (int, float))]
             book_at = max(stamps) if stamps else None
         rates_at = self.rates.doc.get("checked_at")
-        return self.state.set_sources(
+        changed = self.state.set_sources(
             calc_on=calc_on, calc_running=self.tc_provider.running(),
             rates_checked_at=rates_at if isinstance(rates_at, (int, float)) else None,
             book_checked_at=book_at)
+        # REL-UPDATE-WIRE: the release check rides this tick (the built-in
+        # tick list is pinned, decision 0056); it starts a thread at most
+        # once a day and makes no request here
+        self.tick_update()
+        return changed
 
     def reload_notes(self):
         """HOT-RELOAD: one line per data file holding its last good copy,
