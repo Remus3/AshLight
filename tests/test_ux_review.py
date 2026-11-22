@@ -556,3 +556,55 @@ def test_only_the_setup_card_uses_button_primary():
     assert hits == ["setupcard.js"], hits
     setup = srcpaths.read("setupcard.js")
     assert re.search(r'r\.action === "consent" \? "primary" : "secondary"', setup)
+
+
+# --- PLAY-PAGER-SCALE-24: the 24 px floor below UI scale 1 -------------------
+
+_FLOOR = r"max\(\s*24px\s*,\s*1\.5rem\s*\)"
+
+
+def _rule(rules, selector):
+    hits = [b for s, b in rules if s == selector]
+    assert len(hits) == 1, (selector, hits)
+    return hits[0]
+
+
+def test_pager_buttons_and_weight_inputs_carry_the_24px_floor():
+    """WCAG 2.2 SC 2.5.8: a 1.5rem target is 18 px on a 12 px root (a
+    smaller default font or --al-s under 1). The pager buttons, the compact
+    weight inputs and their rows say max(24px, 1.5rem), which is 1.5rem
+    from s = 1 up, so the cockpit fit is untouched; the browser check is
+    tests/test_play_fit.py."""
+    css = _css(APP_CSS)
+    base = _rules(_strip_media(css))
+    btn = _rule(base, "button.al-pager-btn")
+    assert re.search(r"(?<![-\w])min-height\s*:\s*" + _FLOOR, btn), btn
+    assert re.search(r"(?<![-\w])min-width\s*:\s*" + _FLOOR, btn), btn
+    inp = _rule(base, ".grid-card .weights-form input")
+    assert re.search(r"(?<![-\w])min-height\s*:\s*" + _FLOOR, inp), inp
+    row = _rule(base, ".grid-card .weights-list li")
+    assert re.search(r"(?<![-\w])min-height\s*:\s*" + _FLOOR, row), row
+    q = "@media (min-width: 64em) and (min-height: 43.75em) {"
+    cockpit = []
+    for part in css.split(q)[1:]:
+        cockpit += _rules(_media(q + part, "min-width: 64em) and (min-height: 43.75em"))
+    fixed = _rule(cockpit, ".grid-card .weights-list li")
+    assert re.search(r"(?<![-\w])height\s*:\s*" + _FLOOR, fixed), fixed
+    # no 1.5rem-only size is left on these selectors anywhere in the sheet
+    for sel, body in _rules(css):
+        if "al-pager-btn" in sel or ".weights-list li" in sel or ".weights-form input" in sel:
+            assert not re.search(r"(?<![-\w])(?:min-)?(?:height|width)\s*:\s*1\.5rem", body), \
+                (sel, body)
+
+
+def test_disabled_pager_edge_is_2px_dashed_without_a_shift():
+    """Review D-2 (PLAY-TD-19D-ITEMS-GRID): the 1 px dashed end-button edge
+    read faint; it is 2 px, and the side padding gives the extra pixel back
+    so the button keeps its box when a page end is reached."""
+    base = _rules(_strip_media(_css(APP_CSS)))
+    off = _rule(base, 'button.al-pager-btn[aria-disabled="true"]')
+    assert re.search(r"border-style\s*:\s*dashed", off), off
+    assert re.search(r"border-width\s*:\s*2px", off), off
+    assert re.search(r"padding\s*:\s*0 calc\(\s*0\.5rem\s*-\s*1px\s*\)", off), off
+    on = _rule(base, "button.al-pager-btn")
+    assert re.search(r"padding\s*:\s*0 0\.5rem\s*;", on), on

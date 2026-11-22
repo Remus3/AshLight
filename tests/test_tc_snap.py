@@ -137,16 +137,18 @@ def test_sources_policy():
     # decision 0009 (items 2, 3 amended, 4; research 0011): repoe-fork PoE2
     # files under their real names, plus GGG's own tree export, fetch-only.
     s = snapshot.SOURCES
-    assert s["mods"] == "https://repoe-fork.github.io/poe2/mods.json"
+    # DATA-SNAP-TRIM: mods and stats have no reader, so they are not fetched
+    # by default; a dev re-check passes them explicitly.
+    assert snapshot.OPTIONAL_SOURCES["mods"] == "https://repoe-fork.github.io/poe2/mods.json"
+    assert snapshot.OPTIONAL_SOURCES["stats"] == (
+        "https://repoe-fork.github.io/poe2/stats_by_file.json")
     assert s["base_items"] == "https://repoe-fork.github.io/poe2/base_items.json"
-    assert s["stats"] == "https://repoe-fork.github.io/poe2/stats_by_file.json"
     assert s["stat_translations"] == (
         "https://repoe-fork.github.io/poe2/stat_translations/stat_descriptions.json")
     assert s["skilltree"] == TREE_URL
     # HUD-ACT (decision 0020): world areas for the zone level table.
     assert s["world_areas"] == "https://repoe-fork.github.io/poe2/world_areas.json"
-    assert set(s) == {"mods", "base_items", "stats", "stat_translations", "skilltree",
-                      "world_areas"}
+    assert set(s) == {"base_items", "stat_translations", "skilltree", "world_areas"}
     assert set(snapshot.ALLOWED_HOSTS) == {"repoe-fork.github.io", "raw.githubusercontent.com"}
 
 
@@ -163,7 +165,8 @@ def test_real_source_names_mocked_fetch(tmp_path):
     assert sorted(u for u, _ in fake.calls) == sorted(bodies)
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
     assert man["files"]["skilltree"]["url"] == TREE_URL
-    assert man["files"]["stats"]["url"].endswith("/stats_by_file.json")
+    assert man["files"]["world_areas"]["url"].endswith("/world_areas.json")
+    assert len(man["files"]) == 4
     assert (tmp_path / "skilltree.json").is_file()
     assert "tree export" in snapshot.ATTRIBUTION
     for _, headers in fake.calls:
@@ -210,3 +213,15 @@ def test_a_changed_file_keeps_one_previous_copy(tmp_path):
         "mods.json", "mods.prev.json"]
     assert snapshot.previous_path(tmp_path / "skilltree.json").name == "skilltree.prev.json"
     assert snapshot.keep_previous(tmp_path / "missing.json") is False
+
+
+def test_a_fresh_snapshot_and_its_manifest_list_four_files(tmp_path):
+    # DATA-SNAP-TRIM: a default run fetches four files, never mods or stats.
+    bodies = {u: b'{"nodes": {}}' for u in snapshot.SOURCES.values() if u}
+    fake = Fake(bodies)
+    out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000, contact="test-contact",
+                       probes={})
+    assert set(out) == {"base_items", "stat_translations", "skilltree", "world_areas"}
+    man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
+    assert set(man["files"]) == set(out)
+    assert not (tmp_path / "mods.json").exists() and not (tmp_path / "stats.json").exists()

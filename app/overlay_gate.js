@@ -18,9 +18,20 @@
    gate never overrides it), then "starting" (page not ready or no first
    report yet), then "hidden_idle" (game may be closed), else "shown".
    HINTS holds one fixed sentence per state; exclusive fullscreen is never
-   detected, it is only named in the fixed "shown" hint. */
+   detected, it is only named in the fixed "shown" hint.
+
+   RUN-OVERLAY-REMEMBER (F-188): the player's show / hide choice outlives a
+   client restart. main.js reads CHOICE_FILE (ops/runtime, beside
+   displays.json) once at start (readChoice) and hands the value to
+   createOverlayGate as opts.userOn; toggleUser reports each change through
+   opts.onUserChange, and main.js writes it with writeChoice (tmp file then
+   rename, ASCII and LF). Only an explicit {"user_on": false} starts hidden;
+   a missing, oversized or unreadable file means shown (the default). The
+   caller passes the fs functions in; this module requires nothing. */
 
 const GRACE_MS = 3000;
+const CHOICE_FILE = "overlay-choice.json";
+const CHOICE_MAX_BYTES = 4096;
 const STATES = ["shown", "hidden_user", "hidden_idle", "starting"];
 const HINTS = {
   shown: "The overlay is shown. If you can't see it over the game, set the game to " +
@@ -32,12 +43,35 @@ const HINTS = {
   starting: "The overlay is starting. This takes a few seconds."
 };
 
-function createOverlayGate(view, log) {
+/* The remembered choice: false only for an explicit {"user_on": false}. */
+function readChoice(file, fsi) {
+  try {
+    const text = fsi.readFileSync(file, "utf8");
+    if (typeof text !== "string" || text.length > CHOICE_MAX_BYTES) { return true; }
+    const doc = JSON.parse(text);
+    return !(doc && typeof doc === "object" && doc.user_on === false);
+  } catch (e) {
+    return true;
+  }
+}
+
+/* Write the choice: tmp file then rename, so a reader never sees half a file. */
+function writeChoice(file, userOn, fsi, now) {
+  const doc = { updated: (now || new Date()).toISOString(), user_on: userOn === true };
+  const tmp = file + ".tmp";
+  fsi.writeFileSync(tmp, JSON.stringify(doc, null, 1) + "\n", { encoding: "ascii" });
+  fsi.renameSync(tmp, file);
+  return doc;
+}
+
+function createOverlayGate(view, log, opts) {
   const say = log || (() => {});
+  const o = opts || {};
+  const onUserChange = typeof o.onUserChange === "function" ? o.onUserChange : null;
   let ready = false;
   let known = false;
   let gate = true;
-  let user = true;
+  let user = o.userOn !== false;
 
   function wanted() { return ready && known && user && gate; }
 
@@ -69,8 +103,15 @@ function createOverlayGate(view, log) {
     },
     /* no report from the page in time: show as before (offline HUD) */
     graceOver() { if (!known) { known = true; } return apply(); },
-    /* the player's toggle */
-    toggleUser() { user = !user; return apply(); },
+    /* the player's toggle; the change is reported once (RUN-OVERLAY-REMEMBER) */
+    toggleUser() {
+      user = !user;
+      const want = apply();
+      if (onUserChange) {
+        try { onUserChange(user); } catch (e) { say("overlay choice not kept: " + e.message); }
+      }
+      return want;
+    },
     userWants() { return user; },
     /* a new window (page reload keeps the state; a new window re-seeds) */
     reset() { ready = false; known = false; gate = true; },
@@ -80,4 +121,5 @@ function createOverlayGate(view, log) {
   };
 }
 
-module.exports = { createOverlayGate, GRACE_MS, STATES, HINTS };
+module.exports = { createOverlayGate, readChoice, writeChoice, GRACE_MS, STATES, HINTS,
+                   CHOICE_FILE };
