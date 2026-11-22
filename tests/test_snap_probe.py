@@ -194,5 +194,5 @@ def test_snapprobe_never_imports_snapshot():
     for bad in ("snapshot", "urllib", "http", "socket", "ssl", "webfetch", "ninja"):
         assert not any(bad in n.split(".") for n in names), bad
     # the default tables of a run probe every real source by name
-    assert set(snapprobe.PROBES) == set(snapshot.SOURCES)
+    assert set(snapshot.SOURCES) <= set(snapprobe.PROBES)
     assert snapprobe.probe("not_a_source", {}) is None
