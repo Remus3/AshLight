@@ -154,15 +154,17 @@ def test_notes_capped_at_four(use_parts):
 
 
 def test_word_and_tone_pass_through(use_parts):
+    # CARD-LINE-LIMIT-COPY: a 3-letter word keeps the joined head within 26
     def keep(value, card, out):
-        out.update(word="Keep", tone="upgrade")
+        out.update(word="Use", tone="upgrade")
     use_parts(part("keep", 1, words=keep))
     ev = ok_card(verdict="downgrade", parts={"keep": 1}, at=100.0)
     t = eval_card_text(ev)
-    assert (t["word"], t["tone"]) == ("Keep", "upgrade")
-    assert t["head"] == "Keep - Downgrade +2 vs Belt"  # the word leads the head
+    assert (t["word"], t["tone"]) == ("Use", "upgrade")
+    assert t["head"] == "Use - Downgrade +2 vs Belt"  # the word leads the head
+    assert len(t["head"]) == 26
     card = overlay_card(ev, None, 101.0)
-    assert (card["verdict"], card["head"]) == ("upgrade", "Keep - Downgrade +2 vs Belt")
+    assert (card["verdict"], card["head"]) == ("upgrade", "Use - Downgrade +2 vs Belt")
     plain = dict(ev, parts={})
     assert eval_card_text(plain)["word"] == "Downgrade"
     assert overlay_card(plain, None, 101.0)["verdict"] == "downgrade"
