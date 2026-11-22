@@ -184,7 +184,7 @@ def test_the_page_ships_dark_with_the_theme_row():
     assert '<html lang="en" data-theme="dark">' in html
     assert '<link rel="stylesheet" href="/web/theme.css">' in html
     assert '<script src="/web/theme.js" defer></script>' in html
-    assert '<select id="theme-pick" aria-describedby="theme-said">' in html
+    assert '<select id="theme-pick" aria-describedby="theme-help theme-said">' in html
     for value, label in (("dark", "Dark"), ("system", "Follow Windows"), ("light", "Light")):
         assert f'<option value="{value}">{label}</option>' in html
 

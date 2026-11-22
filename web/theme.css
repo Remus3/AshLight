@@ -4,7 +4,18 @@
    The colours themselves come from the kit's data-theme and
    prefers-color-scheme selectors (/tokens.css) and the --al-* block of
    web/app.css; this file only tells the browser which scheme the form
-   controls and scrollbars use, so it holds no colour. */
+   controls and scrollbars use, so it holds no literal colour; the Theme select's look uses tokens
+   only, the same as the Characters select (.char-pick select). */
 :root[data-theme="dark"] { color-scheme: dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root:not([data-theme]) { color-scheme: light dark; }
+#theme-pick {
+  font: inherit;
+  color: var(--fk-text);
+  background: var(--fk-surface);
+  border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
+  border-radius: var(--al-radius-control);
+  padding: 4px 6px;
+  min-height: 32px;
+  max-width: 100%;
+}

@@ -910,15 +910,17 @@
          (data-theme on the html element); this one optional choice changes
          it (web/theme.js, GET / POST /api/theme). Follow Windows removes the
          attribute, so the browser's light or dark setting decides. The
-         answer line is not a live region; the select points at it. -->
+         answer line is not a live region; the select points at it and at
+         the helper sentence. -->
     <div class="rail-block">
       <p id="theme-row" class="set-row"><label for="theme-pick">Theme</label>
-        <select id="theme-pick" aria-describedby="theme-said">
+        <select id="theme-pick" aria-describedby="theme-help theme-said">
           <option value="dark">Dark</option>
           <option value="system">Follow Windows</option>
           <option value="light">Light</option>
         </select>
         <span id="theme-said" class="muted"></span></p>
+      <p id="theme-help" class="muted small">Follow Windows uses your Windows light or dark setting.</p>
     </div>
     <div class="rail-block">
     <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">

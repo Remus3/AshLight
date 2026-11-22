@@ -255,7 +255,8 @@ test("the Theme row is in Appearance and tools with the three choices", () => {
   assert.ok(row > 0, "the Theme row is in the toolsbox section");
   assert.ok(row < tools.indexOf('id="settingsbox"'), "it is the first row");
   assert.match(tools, /<label for="theme-pick">Theme<\/label>/);
-  assert.match(tools, /<select id="theme-pick" aria-describedby="theme-said">/);
+  assert.match(tools, /<select id="theme-pick" aria-describedby="theme-help theme-said">/);
+  assert.match(tools, /<p id="theme-help" class="muted small">Follow Windows uses your Windows light or dark setting\.<\/p>/);
   const opts = [...tools.matchAll(/<option value="([a-z]+)">([^<]+)<\/option>/g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(opts, [["dark", "Dark"], ["system", "Follow Windows"], ["light", "Light"]]);
   assert.match(tools, /<span id="theme-said" class="muted"><\/span>/);
