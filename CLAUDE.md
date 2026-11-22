@@ -1435,16 +1435,3 @@ of the HALT check.
   proposed. Reverses if: requested dives crowd out row work, the 60 percent
   share proves wrong in practice, or a source needs more than one dive a
   day.
-- RUN-EXPLAIN-ROWS: plug/explain.py adds five Checks rows: Overlay on screen
-  (from a fresh overlay-state.json, the overlay_gate.js hint sentences word
-  for word; a 2-minute start is a fix row), Last item check (last press
-  metric, age in 5-minute steps, error = fix), Calc in use (last calc metric
-  while the calc is on; timeout, crash or unavailable = fix), Log lines
-  understood (the ledger's in-memory class counters; a fix once 500 lines in
-  a row since the last event gave no event; chat, speech and blank lines not
-  counted), Restarts (keepalive restart times in a bounded runtime file
-  restart_history.json, 16 times, 24 h; a fix from 3 restarts in 24 h). Rows
-  refresh with the 5 s Checks tick, a new fix row opens Checks by itself, no
-  request is made and nothing is sent. Reverses if: the 500-line run
-  misfires in normal play, the 5-minute age steps churn the feed, or
-  restart_history.json is ruled an unwanted local file.
