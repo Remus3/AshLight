@@ -17940,7 +17940,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. app.css: the focus rules (lines about 91, 148, 230, 254, 328 and the panel rules), .check input 24 px, a forced-colors block for button.tab[aria-selected=true] (system colour keywords only, as overlay.css does), [disabled] styles with the reason shown beside the button by its own renderer, and the [data-text-spacing=user] rules (rows wrap, tracks become minimums, the page is the only scroll container, nothing clipped). web/textspacing.js fills the stub pre-linked by PLAY-TD-09A: a hidden one-row reference element watched by a ResizeObserver (an event, not a timer). The token test switches on the whole-sheet rule (G7 static part). Zoom keys in the client (Ctrl plus / minus / 0) are the OVL cluster's F-145 and are not rebuilt here. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "notes": "Tier P2. app.css: the focus rules (lines about 91, 148, 230, 254, 328 and the panel rules), .check input 24 px, a forced-colors block for button.tab[aria-selected=true] (system colour keywords only, as overlay.css does), [disabled] styles with the reason shown beside the button by its own renderer, and the [data-text-spacing=user] rules (rows wrap, tracks become minimums, the page is the only scroll container, nothing clipped). web/textspacing.js fills the stub pre-linked by PLAY-TD-09A: a hidden one-row reference element watched by a ResizeObserver (an event, not a timer). The token test switches on the whole-sheet rule (G7 static part). Zoom keys in the client (Ctrl plus / minus / 0) are the OVL cluster's F-145 and are not rebuilt here. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Wave 28 fix round (2026-11-22): test_price_and_points_follows_price ends its app.js cut at the DATA-NINJA-UI marker instead of fillBand (TEST-WEB-PANELS-B moves fillBand to web/panels/weights.js).",
    "wave": 28,
    "owner": "session",
    "tier": "P1",
@@ -17955,7 +17955,8 @@
    ],
    "files": [
     "web/app.js",
-    "app/test/panels.test.js"
+    "app/test/panels.test.js",
+    "app/test/registry.test.js"
    ],
    "new_files": [
     "web/panels/layout.js",
@@ -17992,7 +17993,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Blocks: layout (option, fillLayout, wireRestartOverlay, readLayoutForm, saveLayout, loadLayout; 210-293), weights (fillWeights, fillBand, loadWeights, saveWeights; 703-793), web data (fillWebData, loadWebData, saveWebData; 795-837; the one web_data opt-in of decision 0013 stays a player's switch), graphics (renderGfx, openGfx; 942-985; read on the player's click, decision 0014). Waits for the Settings rail step of the Play redesign (cross TD-21). app/test/panels.test.js is extended (created by package A). Each block moves verbatim into a UMD panel file that calls ALApp.register; no index.html edit is needed (TEST-WEB-ASSEMBLE inserts the tag). The line ranges are web/app.js at HEAD; they are re-read at package time because the Play redesign of another cluster replaces parts of the file first (cross). design-reviewer on the diff; PASS line returned in the result. Source: research 0047 R4 (c).",
+   "notes": "Blocks: layout (option, fillLayout, wireRestartOverlay, readLayoutForm, saveLayout, loadLayout; 210-293), weights (fillWeights, fillBand, loadWeights, saveWeights; 703-793), web data (fillWebData, loadWebData, saveWebData; 795-837; the one web_data opt-in of decision 0013 stays a player's switch), graphics (renderGfx, openGfx; 942-985; read on the player's click, decision 0014). Waits for the Settings rail step of the Play redesign (cross TD-21). app/test/panels.test.js is extended (created by package A). Each block moves verbatim into a UMD panel file that calls ALApp.register; no index.html edit is needed (TEST-WEB-ASSEMBLE inserts the tag). The line ranges are web/app.js at HEAD; they are re-read at package time because the Play redesign of another cluster replaces parts of the file first (cross). design-reviewer on the diff; PASS line returned in the result. Source: research 0047 R4 (c). Wave 28 fix round (2026-11-22): adds app/test/registry.test.js (its app.js-only panel list pinned the moved panels); the test_ux_review.py renderEval cut end moves to the DATA-NINJA-UI marker in PLAY-TD-22A-A11Y-CSS, which owns that file this wave and merges first.",
    "wave": 28,
    "owner": "session",
    "tier": "P2",
