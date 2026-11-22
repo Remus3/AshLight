@@ -3,8 +3,9 @@
    section buttons and a pane that shows ONE section at a time:
      1 Checks, 2 Reading and web data, 3 Overlay, 4 Keys,
      5 Appearance and tools, 6 About and data.
-   Until PLAY-TD-21B-SETTINGS-ABOUT splits it, sections 4 to 6 share
-   today's Tools card (#toolsbox): their three buttons show that one card.
+   PLAY-TD-21B-SETTINGS-ABOUT split today's Tools card into sections 4 to
+   6 (#set-keys, #toolsbox, #set-about) and added the index row on top of
+   the pane: buttons with data-jump that reach settings kept on other tabs.
 
    What this file does:
    - The section switch: a press of a rail button shows its section, marks
@@ -17,13 +18,17 @@
      it says whether Checks is the section on show. ZERO-CLICK: Checks is
      the section shown at load, and a new failure shows it again, unless
      the focus is inside another section (the player is working there).
-   - Jump and focus: jump(doc, id) shows Settings, the section holding the
-     element, the page of that section holding it, then focuses it. The
+   - Jump and focus: jump(doc, id) shows the tab holding the element
+     (Settings, or another tab for the index row), the section and page of
+     that section holding it, or the card page holding it (by a press of
+     that card's own page button, so the card's Back returns as usual),
+     then focuses it. The
      bar status word (#reading, a button since this package) jumps to
      "Stop reading Client.txt" (#consent-no), or to the Reading and web
      data heading while Client.txt is not read: 2 clicks from any tab to
      the opt-out (ToS floor: the word stays the visible reading indicator
-     on every tab). A button with data-jump="<id>" jumps the same way.
+     on every tab). A button with data-jump="<id>" jumps the same way;
+     data-jump-else="<id>" takes the focus while the target is hidden.
    - The pager: a section holds at most MAX_PX (448 px at s = 1) of rows
      and text. Its .rail-block children are packed in DOM order into pages
      of at most MAX_PX (a block taller than that is a page alone); Prev /
@@ -51,15 +56,16 @@
 
   var MAX_PX = 448;
   var CHECKS = "checks";
-  // the rail buttons in order: [button id, section id]; 4 to 6 share #toolsbox
+  // the rail buttons in order: [button id, section id]
   var RAIL = [
     ["rail-checks", "checks"],
     ["rail-reading", "set-reading"],
     ["rail-overlay", "set-overlay"],
-    ["rail-keys", "toolsbox"],
+    ["rail-keys", "set-keys"],
     ["rail-tools", "toolsbox"],
-    ["rail-about", "toolsbox"]
+    ["rail-about", "set-about"]
   ];
+  var PAGE_NAME = /^[a-z0-9-]{1,32}$/;
   var STOP = "consent-no";
   var READING_HEAD = "reading-title";
 
@@ -112,10 +118,12 @@
     return out;
   }
 
+  function hasClass(n, c) { return (" " + ((n && n.className) || "") + " ").indexOf(" " + c + " ") >= 0; }
+
   function blocks(section) {
     if (!section || !section.children) { return []; }
     return Array.prototype.filter.call(section.children, function (c) {
-      return (" " + (c.className || "") + " ").indexOf(" rail-block ") >= 0;
+      return hasClass(c, "rail-block");
     });
   }
 
@@ -242,6 +250,34 @@
     return null;
   }
 
+  /* The tab whose panel (#panel-<tab>) holds `el`, or null. */
+  function tabOf(el) {
+    for (var n = el; n; n = n.parentNode) {
+      if (n.id && n.id.indexOf("panel-") === 0) { return n.id.slice(6); }
+    }
+    return null;
+  }
+
+  /* A grid card shows one .card-page at a time (web/app.js, web/acts.js):
+     when `el` sits on a hidden page, press that card's own page button
+     (data-card-open="<page>"), so the card shows the page and its Back
+     returns to the button, exactly as a press by the player would. */
+  function openPage(el) {
+    for (var n = el; n; n = n.parentNode) {
+      if (!hasClass(n, "card-page")) { continue; }
+      if (n.hidden !== true) { return; }
+      var name = n.getAttribute("data-page") || "";
+      if (!PAGE_NAME.test(name)) { return; }
+      for (var box = n.parentNode; box; box = box.parentNode) {
+        if (!hasClass(box, "grid-card")) { continue; }
+        var b = isFn(box.querySelector) ? box.querySelector('[data-card-open="' + name + '"]') : null;
+        if (b && isFn(b.click)) { b.click(); }
+        return;
+      }
+      return;
+    }
+  }
+
   function visible(el) {
     for (var n = el; n; n = n.parentNode) {
       if (n.hidden === true) { return false; }
@@ -250,16 +286,18 @@
     return true;
   }
 
-  /* Show Settings, the section and page holding element `id`, and focus
-     it; `fallback` (an element id) takes the focus when the element is
-     hidden. Returns the element focused, or null. */
+  /* Show the tab, the section and page (or the card page) holding element
+     `id`, and focus it; `fallback` (an element id) takes the focus when
+     the element is hidden. Returns the element focused, or null. */
   function jump(doc, id, fallback) {
     doc = doc || state.doc;
     var el = byId(doc, id);
     if (!el || el.hidden) { el = fallback ? byId(doc, fallback) : null; }
     if (!el) { return null; }
     var tabs = state.tabs;
-    if (tabs && isFn(tabs.show)) { tabs.show(doc, "settings", false); }
+    var tab = tabOf(el);
+    if (tab && tabs && isFn(tabs.show)) { tabs.show(doc, tab, false); }
+    openPage(el);
     var at = locate(doc, el);
     if (at) {
       var button = state.button;
@@ -338,7 +376,9 @@
     }
     var jumps = isFn(doc.querySelectorAll) ? doc.querySelectorAll("[data-jump]") : [];
     Array.prototype.forEach.call(jumps, function (b) {
-      b.addEventListener("click", function () { jump(doc, b.getAttribute("data-jump"), null); });
+      b.addEventListener("click", function () {
+        jump(doc, b.getAttribute("data-jump"), b.getAttribute("data-jump-else"));
+      });
     });
     accessor(doc);
     show(doc, RAIL[0][0]);

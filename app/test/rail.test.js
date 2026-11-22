@@ -3,7 +3,11 @@
    and a pane that shows ONE section; a section holds at most 448 px of
    rows (its .rail-block children page beyond that); the bar status word
    leads to "Stop reading Client.txt" in 2 clicks from any tab; Checks
-   shows by itself. The markup and the wiring are read as text. */
+   shows by itself. The markup and the wiring are read as text.
+   PLAY-TD-21B-SETTINGS-ABOUT: sections 4 Keys, 5 Appearance and tools
+   and 6 About and data are their own sections; the index row jumps to
+   settings on other tabs (and the card page holding them); the footer
+   is one row and its folds moved to About and data. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -29,6 +33,18 @@ function makeDoc() {
       getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
       removeAttribute(k) { delete this.attrs[k]; },
       appendChild(c) { c.parentNode = this; this.children.push(c); if (c.id) { ids[c.id] = c; } return c; },
+      querySelector(sel) {
+        const m = /^\[([a-z-]+)="([a-z0-9-]+)"\]$/.exec(sel);
+        const walk = (n) => {
+          for (const c of n.children) {
+            if (m && c.getAttribute(m[1]) === m[2]) { return c; }
+            const f = walk(c);
+            if (f) { return f; }
+          }
+          return null;
+        };
+        return walk(this);
+      },
       addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); },
       click() { (this.listeners.click || []).forEach((f) => f()); },
       contains(x) { for (let m = x; m; m = m.parentNode) { if (m === this) { return true; } } return false; },
@@ -51,12 +67,13 @@ function makeDoc() {
   return doc;
 }
 
-/* The Settings panel as web/index.html lays it out: 6 rail buttons, 4
-   sections (4 to 6 share #toolsbox), blocks with heights (px). */
+/* The Settings panel as web/index.html lays it out: 6 rail buttons, 6
+   sections, blocks with heights (px). */
 function settingsDoc(heights) {
   const doc = makeDoc();
   const h = Object.assign({ checks: [380, 260, 240], "set-reading": [180, 160],
-                            "set-overlay": [220, 200], toolsbox: [160, 90] }, heights || {});
+                            "set-overlay": [220, 200], "set-keys": [120],
+                            toolsbox: [160, 90, 40], "set-about": [330, 150, 80] }, heights || {});
   const body = doc.el("body", "body");
   const panel = body.appendChild(doc.el("div", "panel-settings", { hidden: true }));
   const rail = panel.appendChild(doc.el("div", "rail"));
@@ -97,7 +114,7 @@ function fakeTabs(doc) {
   };
 }
 
-const SECTIONS = ["checks", "set-reading", "set-overlay", "toolsbox"];
+const SECTIONS = ["checks", "set-reading", "set-overlay", "set-keys", "toolsbox", "set-about"];
 const shown = (doc) => SECTIONS.filter((s) => !doc.ids[s].hidden);
 const current = (doc) => R.RAIL.map((r) => r[0]).filter((b) => doc.ids[b].getAttribute("aria-current") === "true");
 
@@ -242,6 +259,148 @@ test("pager: a section over 448 px pages; Prev / Next only on a press; ends do n
   assert.equal(doc.ids["checks-b0"].getAttribute("data-off"), null);
 });
 
+/* PLAY-TD-21B-SETTINGS-ABOUT: a Build tab with a grid card whose pages a
+   press of its own data-card-open button switches (as web/app.js and
+   web/acts.js do), and a Run tab with the Characters card. */
+function otherTabsDoc() {
+  const doc = settingsDoc();
+  const body = doc.ids.body;
+  const build = body.appendChild(doc.el("div", "panel-build", { hidden: true }));
+  const card = build.appendChild(doc.el("section", "buildbox", { className: "card grid-card" }));
+  card.appendChild(doc.el("h2", "build-title"));
+  const main = card.appendChild(doc.el("div", "build-main", { className: "card-page" }));
+  main.setAttribute("data-page", "main");
+  const open = main.appendChild(doc.el("button", "paste-open"));
+  open.setAttribute("data-card-open", "paste");
+  const paste = card.appendChild(doc.el("div", "build-paste-page", { className: "card-page", hidden: true }));
+  paste.setAttribute("data-page", "paste");
+  paste.appendChild(doc.el("textarea", "build-paste"));
+  open.addEventListener("click", () => { main.hidden = true; paste.hidden = false; });
+  const run = body.appendChild(doc.el("div", "panel-run", { hidden: true }));
+  const chars = run.appendChild(doc.el("section", "charsbox", { className: "card grid-card" }));
+  chars.appendChild(doc.el("h2", "chars-title"));
+  const pickBox = chars.appendChild(doc.el("p", "char-pick-box", { hidden: true }));
+  pickBox.appendChild(doc.el("select", "char-pick"));
+  const pane = doc.ids.pane;
+  const row = pane.appendChild(doc.el("div", "set-index"));
+  [["ix-build", "build-paste", "build-title"], ["ix-chars", "char-pick", "chars-title"]].forEach(([id, to, other]) => {
+    const b = row.appendChild(doc.el("button", id));
+    b.setAttribute("data-jump", to);
+    b.setAttribute("data-jump-else", other);
+  });
+  return doc;
+}
+
+function tabsOf(doc) {
+  const calls = [];
+  return {
+    calls,
+    show(d, id, focus) {
+      calls.push([id, focus]);
+      ["play", "build", "run", "settings"].forEach((t) => {
+        if (doc.ids["panel-" + t]) { doc.ids["panel-" + t].hidden = t !== id; }
+      });
+      return id;
+    }
+  };
+}
+
+test("the index row: the tab and the card page holding the setting, then its focus", () => {
+  const doc = otherTabsDoc();
+  const tabs = tabsOf(doc);
+  R.start(doc, { tabs });
+  doc.ids["ix-build"].focus();
+  doc.ids["ix-build"].click();
+  assert.deepEqual(tabs.calls.at(-1), ["build", false], "the Build tab, focus not on the tab row");
+  assert.equal(doc.ids["build-paste-page"].hidden, false, "the card's own page button opened the page");
+  assert.equal(doc.ids["build-main"].hidden, true);
+  assert.equal(doc.activeElement, doc.ids["build-paste"]);
+  // the control hidden (no character yet): the else target takes the focus
+  doc.ids["ix-chars"].click();
+  assert.deepEqual(tabs.calls.at(-1), ["run", false]);
+  assert.equal(doc.activeElement, doc.ids["chars-title"]);
+  doc.ids["char-pick-box"].hidden = false;
+  doc.ids["ix-chars"].click();
+  assert.equal(doc.activeElement, doc.ids["char-pick"]);
+  // a page already shown is not pressed again
+  let pressed = 0;
+  doc.ids["paste-open"].addEventListener("click", () => { pressed += 1; });
+  R.jump(doc, "build-paste");
+  assert.equal(pressed, 0);
+  // a Settings target still shows Settings and its section
+  doc.ids["to-web"].click();
+  assert.deepEqual(tabs.calls.at(-1), ["settings", false]);
+  assert.deepEqual(shown(doc), ["set-reading"]);
+});
+
+test("markup: the index row names 4 settings on other tabs, each target exists", () => {
+  const pane = HTML.slice(HTML.indexOf('<div class="rail-pane">'), HTML.indexOf('<section id="checks"'));
+  assert.match(pane, /<div id="set-index" class="set-index" role="group" aria-labelledby="set-index-h">/);
+  const rows = [...pane.matchAll(/<button type="button" class="link" data-jump="([a-z-]+)" data-jump-else="([a-z-]+)">([^<]+)<\/button>/g)];
+  assert.deepEqual(rows.map((m) => m[3]), ["Build source", "Item scoring", "Search strings and filter", "Characters"]);
+  const at = (id) => HTML.indexOf('id="' + id + '"');
+  const card = (id, box) => at(id) > at(box) && at(id) < HTML.indexOf("</section>", at(box));
+  assert.deepEqual(rows.map((m) => [m[1], m[2]]), [["build-paste", "build-title"],
+    ["weights-edit-open", "weightsbox-title"], ["filter-merge-file", "search-title"], ["char-pick", "chars-title"]]);
+  for (const [, to, other] of rows) {
+    assert.equal(HTML.split('id="' + to + '"').length - 1, 1, to);
+    assert.equal(HTML.split('id="' + other + '"').length - 1, 1, other);
+  }
+  assert.ok(card("build-paste", "buildbox") && card("weights-edit-open", "weightsbox"));
+  assert.ok(card("filter-merge-file", "searchbox") && card("char-pick", "charsbox"));
+  // the pages holding a target have their own page button in the card
+  const build = HTML.slice(at("buildbox"), HTML.indexOf("</section>", at("buildbox")));
+  assert.ok(build.includes('data-card-open="paste"') && build.includes('data-page="paste"'));
+  const search = HTML.slice(at("searchbox"), HTML.indexOf("</section>", at("searchbox")));
+  assert.ok(search.includes('data-card-open="filter"') && search.includes('data-page="filter"'));
+  assert.match(HTML, /<button id="weights-edit-open" type="button" class="secondary btn-24" data-card-open="edit">Edit weights<\/button>/);
+  assert.match(CSS, /\.set-index \{ display: flex;[^}]*min-height: 32px;/);
+});
+
+test("markup: Keys, Appearance and tools, About and data hold their rows", () => {
+  const sec = (id) => HTML.slice(HTML.indexOf('<section id="' + id + '"'), HTML.indexOf("</section>", HTML.indexOf('<section id="' + id + '"')));
+  const keys = sec("set-keys");
+  assert.match(keys, /<h3 id="keys-title">Keys<\/h3>/);
+  assert.ok(keys.includes('data-hotkey="toggle"') && keys.includes('data-hotkey="eval"'));
+  assert.ok(keys.includes('data-jump="hotkey-eval"'), "change key jumps to the field in Overlay");
+  const tools = sec("toolsbox");
+  assert.match(tools, /<h3 id="tools-title">Appearance and tools<\/h3>/);
+  for (const id of ["settingsbox", "settings-export", "settings-import-file", "restart-overlay-row", "hints-reset", "gfx"]) {
+    assert.ok(tools.includes('id="' + id + '"'), id);
+  }
+  assert.equal((tools.match(/<details/g) || []).length, 1, "More, the graphics advisor, is the one fold");
+  assert.match(tools, /<details id="gfx" class="tool gfx">\s*<summary>More: suggested graphics settings<\/summary>/);
+  assert.match(tools, /<p class="tool-row"><button id="hints-reset"/);
+  const about = sec("set-about");
+  assert.match(about, /<h3 id="about-title">About and data<\/h3>/);
+  assert.ok(!about.includes("<details"), "the moved folds are open here");
+  assert.match(about, /<div id="promises" class="rail-block promises"/);
+  for (const words of ["What AshLight does and never does", "AshLight does", "AshLight never",
+    "Sends a key press, click or chat message to the game."]) {
+    assert.ok(about.includes(words), words);
+  }
+  assert.ok(about.includes('<p id="data-credit" class="muted" hidden></p>'));
+  assert.ok(about.includes("<p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>"));
+  assert.ok(about.includes('<p class="muted">Path of Exile is a trademark of Grinding Gear Games.</p>'));
+  assert.ok(about.includes('data-jump="history-keep" data-jump-else="summary-title"'));
+  assert.ok(about.indexOf('id="about-version"') > about.indexOf('data-jump="history-keep"'));
+  // every rail-block of the new sections is a direct child of its section
+  for (const id of ["set-keys", "toolsbox", "set-about"]) {
+    assert.ok((sec(id).match(/class="rail-block[ "]/g) || []).length >= 1, id);
+  }
+});
+
+test("the footer is one row: the disclaimer, the trademark, the version line; no fold", () => {
+  const foot = HTML.slice(HTML.indexOf("<footer"), HTML.indexOf("</footer>"));
+  const lines = [...foot.matchAll(/<p[^>]*>[^<]*<\/p>/g)].map((m) => m[0]);
+  assert.deepEqual(lines, [
+    "<p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>",
+    '<p class="muted">Path of Exile is a trademark of Grinding Gear Games.</p>',
+    '<p id="build-line" class="muted" hidden></p>']);
+  assert.ok(!foot.includes("<details") && !foot.includes("promises") && !foot.includes("data-credit"));
+  assert.match(CSS, /\.foot \{\n  display: flex;\n  flex-wrap: wrap;[^}]*font-size: var\(--al-fs-micro\);/);
+});
+
 test("a ResizeObserver, when the page has one, pages the shown section again", () => {
   const doc = settingsDoc();
   let fire = null;
@@ -260,7 +419,7 @@ test("a ResizeObserver, when the page has one, pages the shown section again", (
 
 /* ---- the markup, the stylesheet and the wiring ---- */
 
-test("markup: the rail, its 6 names in order, 4 sections, one shown at load", () => {
+test("markup: the rail, its 6 names in order, 6 sections, one shown at load", () => {
   const panel = HTML.slice(HTML.indexOf('<div id="panel-settings"'), HTML.indexOf("</main>"));
   assert.match(panel, /^<div id="panel-settings" class="panel panel-settings" role="tabpanel"/);
   const rail = [...panel.matchAll(/<button id="(rail-[a-z]+)" class="rail-item" type="button" aria-controls="([a-z-]+)"( aria-current="true")?>([^<]+)<\/button>/g)];

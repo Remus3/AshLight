@@ -1454,17 +1454,19 @@
   }
   /* BUILD-STAMP:end */
 
-  /* TC-SNAP-UI: the game-data credit in the footer, read on every connect,
-     so a snapshot made by the build shows up without a click.
-     RUN-BUILD-STAMP-UI: the same read fills the footer's version line and
-     the Settings About fold, so a core restart on a new build shows it. */
+  /* TC-SNAP-UI: the full game-data credits in Settings > About and data
+     (PLAY-TD-21B-SETTINGS-ABOUT moved them out of the footer), read on
+     every connect, so a snapshot made by the build shows up without a
+     click. RUN-BUILD-STAMP-UI: the same read fills the footer's version
+     line and the About and data version, so a core restart on a new build
+     shows it. */
   function loadDataCredit() {
     api("GET", "/api/version").then(function (doc) {
       var text = D.dataCreditText(doc);
       var p = $("data-credit");
       p.textContent = text;
       p.hidden = !text;
-      $("credits").hidden = !text; // UI-GLANCE: the footer fold around it
+      $("credits").hidden = !text; // the About and data group around it
       var ver = versionText(doc);
       if (ver) {
         $("build-line").textContent = ver;

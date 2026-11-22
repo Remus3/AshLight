@@ -53,35 +53,42 @@ def test_look_for_next_hint_has_no_jargon():
 
 def test_tools_group_is_last_and_holds_the_set_once_tools():
     """PLAY-TD-21A-SETTINGS-RAIL (TD-21): Settings is a rail of 6 section
-    buttons and a pane of sections in the same order; the Tools card is
-    the last section, shared by Keys, Appearance and tools and About and
-    data until PLAY-TD-21B-SETTINGS-ABOUT. It keeps the set-once tools
-    folded; the layout form moved to the Overlay section."""
+    buttons and a pane of sections in the same order. PLAY-TD-21B-SETTINGS-
+    ABOUT split the Tools card: 4 Keys, 5 Appearance and tools (#toolsbox,
+    the set-once tools; More, the graphics advisor, is its one fold) and 6
+    About and data, the last section. The layout form and the key fields
+    are the Overlay section."""
     sections = re.findall(r'<section id="([a-z-]+)"', MAIN)
-    assert sections[-1] == "toolsbox", sections
+    assert sections[-1] == "set-about", sections
     settings = MAIN[MAIN.index('id="panel-settings"'):]
     assert re.findall(r'<section id="([a-z-]+)"', settings) == [
-        "checks", "set-reading", "set-overlay", "toolsbox"]
+        "checks", "set-reading", "set-overlay", "set-keys", "toolsbox", "set-about"]
     rail = re.findall(r'<button id="(rail-[a-z]+)" class="rail-item" type="button" '
                       r'aria-controls="([a-z-]+)"[^>]*>([^<]+)</button>', settings)
     assert [(b, c) for b, c, _ in rail] == [
         ("rail-checks", "checks"), ("rail-reading", "set-reading"),
-        ("rail-overlay", "set-overlay"), ("rail-keys", "toolsbox"),
-        ("rail-tools", "toolsbox"), ("rail-about", "toolsbox")]
+        ("rail-overlay", "set-overlay"), ("rail-keys", "set-keys"),
+        ("rail-tools", "toolsbox"), ("rail-about", "set-about")]
     # the rail names are used exactly (plan 03 section 4, S4)
     assert [t for _, _, t in rail] == ["Checks", "Reading and web data", "Overlay", "Keys",
                                        "Appearance and tools", "About and data"]
-    tools = MAIN[MAIN.index('id="toolsbox"'):]
-    for needle in ('id="settingsbox"', 'id="gfx"', 'id="restart-overlay"', 'id="about-fold"'):
+    tools = MAIN[MAIN.index('id="toolsbox"'):MAIN.index('id="set-about"')]
+    for needle in ('id="settingsbox"', 'id="gfx"', 'id="restart-overlay"', 'id="hints-reset"'):
         assert needle in tools, needle
     assert 'id="layout-form"' not in tools
-    # folded behind one summary; the hotkey hint stays outside the fold
-    # (OVL-KEYS-WEB: as data-hotkey spans the page fills with the bound keys)
-    fold = tools.index('<details id="tools-more">')
-    assert tools.index('data-hotkey="toggle"') < fold
-    assert tools.index('data-hotkey="eval"') < fold
+    # More (the graphics advisor) is the one fold; transfer and restart are rows
+    assert tools.count("<details") == 1
+    assert tools.index('id="settingsbox"') < tools.index('<details id="gfx"')
+    # the hotkey hint is the Keys section, never folded (OVL-KEYS-WEB: as
+    # data-hotkey spans the page fills with the bound keys)
+    keys = settings[settings.index('id="set-keys"'):settings.index('id="toolsbox"')]
+    assert 'data-hotkey="toggle"' in keys and 'data-hotkey="eval"' in keys
+    assert "<details" not in keys
+    # the version is the last line of About and data, not a fold
+    about = settings[settings.index('id="set-about"'):]
+    assert 'id="about-version"' in about and 'id="about-fold"' not in MAIN
     # the two change-key fields sit with the layout form, in Overlay
-    overlay = settings[settings.index('id="set-overlay"'):settings.index('id="toolsbox"')]
+    overlay = settings[settings.index('id="set-overlay"'):settings.index('id="set-keys"')]
     for fid in ("layout-form", "hotkey-eval", "hotkey-toggle"):
         assert 'id="%s"' % fid in overlay, fid
 
@@ -152,6 +159,10 @@ def test_build_and_items_is_a_fixed_three_by_two_grid():
 def test_no_nested_fold_for_the_overlay_layout():
     tools = MAIN[MAIN.index('id="toolsbox"'):]
     assert 'id="layout-more"' not in tools
+    # PLAY-TD-21B-SETTINGS-ABOUT: no fold inside a fold anywhere in Settings;
+    # the graphics advisor is the one fold left there
+    settings = MAIN[MAIN.index('id="panel-settings"'):]
+    assert re.findall(r"<details[^>]*>", settings) == ['<details id="gfx" class="tool gfx">']
 
 
 def test_live_regions_stay_within_the_cap():

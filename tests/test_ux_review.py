@@ -481,8 +481,8 @@ def test_overlay_settings_fold_but_hotkey_hint_stays_open():
     PLAY-TD-21A-SETTINGS-RAIL (TD-21): the fold is the Settings rail; the
     layout form, the key fields and their status are the Overlay section,
     shown only on its rail press, and the status line follows the form. The
-    hint naming the bound keys stays in the Tools card (sections 4 to 6
-    until PLAY-TD-21B-SETTINGS-ABOUT) with a jump to the key fields."""
+    hint naming the bound keys is the Keys section (PLAY-TD-21B-SETTINGS-
+    ABOUT) with a jump to the key fields."""
     _, main = _main_order()
     i = main.index('<section id="set-overlay"')
     overlay = main[i:main.index("</section>", i)]
@@ -493,8 +493,10 @@ def test_overlay_settings_fold_but_hotkey_hint_stays_open():
     # the status line is a plain line now (the page keeps at most 6 live regions)
     assert re.search(r'<p id="layout-status" class="muted"></p>', overlay)
     # OVL-KEYS-WEB: the hint names the bound keys through data-hotkey spans
-    tools = main[main.index('id="toolsbox"'):]
-    hint = tools[:tools.index('<details id="tools-more">')]
+    i = main.index('<section id="set-keys"')
+    hint = main[i:main.index("</section>", i)]
+    assert re.match(r'<section id="set-keys" class="card rail-section"[^>]*\bhidden>', hint)
+    assert "<details" not in hint
     assert 'data-hotkey="toggle"' in hint and 'data-hotkey="eval"' in hint
     assert 'data-jump="hotkey-eval"' in hint
 

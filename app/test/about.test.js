@@ -188,13 +188,17 @@ test("dashboard footer: one muted build line, hidden until the core answers", ()
   assert.equal((html.match(/id="build-line"/g) || []).length, 1);
 });
 
-test("Settings About fold carries the same string as the footer", () => {
+test("Settings > About and data carries the same string as the footer", () => {
+  // PLAY-TD-21B-SETTINGS-ABOUT: the About fold became the rail's About and
+  // data section, open, with the version as its last line
   const html = web.source("index.html");
   const settings = html.slice(html.indexOf('id="panel-settings"'), html.indexOf("</main>"));
-  const fold = /<details id="about-fold">([\s\S]*?)<\/details>/.exec(settings);
-  assert.ok(fold, "About fold in the Settings tab");
-  assert.match(fold[1], /<summary>About AshLight<\/summary>/);
-  assert.match(fold[1], /<p id="about-version" class="muted">/);
+  const at = settings.indexOf('<section id="set-about"');
+  assert.ok(at > 0, "About and data in the Settings tab");
+  const about = settings.slice(at, settings.indexOf("</section>", at));
+  assert.match(about, /<h3 id="about-title">About and data<\/h3>/);
+  assert.ok(!settings.includes('id="about-fold"'), "no About fold left");
+  assert.match(about, /<p id="about-version" class="muted">/);
   const js = web.source("app.js");
   assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*\$\("build-line"\)\.textContent = ver;\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
 });
