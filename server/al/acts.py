@@ -235,6 +235,13 @@ def load_table(path):
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return {}
+    return table_from_doc(doc)
+
+
+def table_from_doc(doc):
+    """load_table's table from an already parsed world_areas document
+    (RUN-PERF-PARSE-ONCE: TableCache and the waypoint graph share one
+    parse); a document that is not an object gives {}."""
     if not isinstance(doc, dict):
         return {}
     acts = {}
@@ -264,11 +271,14 @@ def default_path(environ=None):
 
 class TableCache(hotreload.Watched):
     """Loads the cached table once and again only when the file changes;
-    a malformed rewrite keeps the last good table (HOT-RELOAD, 0042)."""
+    a malformed rewrite keeps the last good table (HOT-RELOAD, 0042). One
+    parse of the file feeds this table and zoneguide.graph_cache's graph
+    (RUN-PERF-PARSE-ONCE)."""
 
     def __init__(self, path):
         super().__init__(path, load_table, name="Zone level table", default=dict,
-                         check=hotreload.check_json(MAX_BYTES))
+                         check=hotreload.check_json(MAX_BYTES),
+                         from_doc=table_from_doc, share=True)
 
 
 def view(splits, table, area_id, zone, now):

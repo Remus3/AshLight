@@ -56,8 +56,14 @@ _num = num.finite
 def load_flasks(path):
     """{"life": [(drop_level, name), ...], "mana": [...]} sorted by level,
     from a cached base_items.json; missing, oversized or malformed -> {}."""
-    doc = jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict)
-    if doc is None:
+    return flasks_from_doc(jsonfile.read_json(path, max_bytes=MAX_BYTES, kind=dict))
+
+
+def flasks_from_doc(doc):
+    """load_flasks' table from an already parsed base_items document
+    (RUN-PERF-PARSE-ONCE: FlaskCache and basetypes.NamesCache share one
+    parse); a document that is not an object gives {}."""
+    if not isinstance(doc, dict):
         return {}
     out = {}
     for entry in doc.values():
@@ -77,11 +83,14 @@ def default_path(environ=None):
 
 class FlaskCache(hotreload.Watched):
     """Loads the flask table once and again only when the file changes;
-    a malformed rewrite keeps the last good table (HOT-RELOAD, 0042)."""
+    a malformed rewrite keeps the last good table (HOT-RELOAD, 0042). One
+    parse of the file feeds this table and basetypes.NamesCache's list
+    (RUN-PERF-PARSE-ONCE)."""
 
     def __init__(self, path):
         super().__init__(path, load_flasks, name="Flask table", default=dict,
-                         check=hotreload.check_json(MAX_BYTES))
+                         check=hotreload.check_json(MAX_BYTES),
+                         from_doc=flasks_from_doc, share=True)
 
 
 # AREA-AUDIT P7-7: only a positive "N% increased Movement Speed" counts;
