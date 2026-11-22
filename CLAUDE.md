@@ -1054,7 +1054,25 @@ of the HALT check.
   port, blob: / data: or (AL_DEV=1) devtools (app/egress.js,
   app/parts/15-egress.js; refused origins logged once each, at most 64);
   the icon render page carries a no-network CSP (decision 0061 amendment
-  2026-11-19). Reverses if: a needed
+  2026-11-19). Amended 2026-11-21 (OVL-APP-SCHEME): the overlay page and
+  the companion's starting page load from one privileged app scheme
+  al-app (origin al-app://app, standard and secure, registered at the
+  parts' early hook by app/parts/12-pages.js and served with
+  protocol.handle on the default session and persist:client), never from
+  file://; app/pages.js serves a fixed list of eight files looked up
+  exactly (anything else, and any method but GET or HEAD, is 404 and
+  reads no file), reads each one fresh with no-store so hot reload still
+  works, and sends the CSP as a header (the overlay's connect-src is
+  http://127.0.0.1:<port> exactly, the starting page connects nowhere,
+  frame-ancestors 'none'); al:config answers only the scheme URL; the
+  egress lock allows the scheme's one host and refuses every file: URL;
+  the core adds APP_ORIGIN al-app://app to FILE_ORIGINS for GET /events
+  only and echoes it in Access-Control-Allow-Origin, while null and
+  file:// stay until OVL-APP-SCHEME-STRICT (decision 0061 amendment
+  2026-11-21). Reverses if: the live smoke shows the feed blocked or the
+  window not painting from the scheme, Electron drops protocol.handle or
+  registerSchemesAsPrivileged, or a page needs a file outside the list.
+  Reverses if: a needed
   feature must navigate or open a window, the guards cost the overlay budget
   (decision 0002), or Electron removes an API they rely on.
 - DEP-04 changelog: One changelog generator (tools/release.py notes):
@@ -1194,6 +1212,28 @@ of the HALT check.
   terms bar the daily read, a bad release auto-applies in practice, the
   operator wants click-only, or a stdlib-verifiable signature becomes
   available.
+  Amended 2026-11-21 (DEP-17, F-077), network half: `installer update
+  --yes` and update.stage_from_release download, verify and stage the
+  release in the releases/latest answer that server/al/updates.py cached,
+  so there is still one releases read per 24 h. Nothing is requested
+  unless the home's data/local.json has web_data true and an acknowledged
+  wording (web_data_ack), nor for a pre-release, a version that is not
+  newer, a version in update_skip.json, or a version already staged from
+  the same zip. Every asset url must be
+  https://github.com/<repo>/releases/download/<tag>/<name> for the cached
+  repository. Downloads go through payload.installer_stream over
+  api.github.com, github.com and the two GitHub asset hosts only, with the
+  installer User-Agent and no cookie; they start only on a click or while
+  game_idle is true, and run at below-normal priority. Each asset is
+  checked against its API size and its API digest when one is given, and
+  the zip and release.json against SHA256SUMS.txt; an answer with no
+  digest is recorded ("digest": "absent") and SHA256SUMS.txt alone
+  decides. Any mismatch stages nothing. A changed runtime pin is fetched
+  in the installer process and checked against the new pin. The Sigstore
+  attestation is not verified (the standard library cannot). Reverses if:
+  GitHub drops the asset digest field or moves its asset hosts, the cached
+  answer goes stale enough to miss releases, or the operator rules the
+  typed --yes line must also wait for game_idle.
 - Uninstall: uninstall.ps1 needs no Python, removes only items proven
   AshLight's own, keeps <home>\data unless -Purge (Recycle Bin), asks
   nothing by default, never reads a game folder and ends with one fixed
@@ -1325,3 +1365,17 @@ of the HALT check.
   restarts a core the player stopped on purpose, 4 x 30 s proves too slow or
   too eager in play, or a give-up reason has to say more than the count and
   the reason.
+- OVL-KEY-HINT: the hint is the last card-slot holder (after moment). When
+  the slot is empty it shows one muted line, '<key>: check an item'. The
+  key is the bound item-check key from the published hotkeys view; no
+  known key means no hint. The line has no expiry (expires_at null) and
+  is exempt from the dashboard-twin rule, which points at the item-check
+  help text. Any card hides it, and so does an open trade request while
+  parts.trade is on, on both the core and the page; parts.hint off hides
+  it. It is due while no real press was ever recorded and fewer than 3
+  game sessions (log_opened seen while a key was known) were counted. The
+  marker key_hint {pressed, sessions} is validated in the OverlayView
+  store, so once the hint retires it never returns, across a core
+  restart. It reads nothing and sends nothing. Reverses if: players miss
+  the line after 3 sessions, the key-known session rule misfires in play,
+  or the hint shows over a card in play.

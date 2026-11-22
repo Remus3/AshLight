@@ -150,6 +150,10 @@ body[data-anchor="bottom"] .hud { top: auto; bottom: 0; }
    the head word "Risky" carries the meaning */
 .evalcard[data-verdict="risky"] { border-left-color: var(--fk-status-warn); }
 .evalcard .line { color: var(--al-ovl-text-2); }
+/* OVL-KEY-HINT: the key hint in the empty slot is one quiet line, the
+   secondary colour at normal weight on the neutral edge: a teaching line,
+   never an answer. Same plate and size as every card. */
+.evalcard[data-verdict="hint"] .head { color: var(--al-ovl-text-2); font-weight: 400; }
 
 /* The disclaimer is the overlay's "About"; screen readers get it, the HUD
    stays one small box. */
