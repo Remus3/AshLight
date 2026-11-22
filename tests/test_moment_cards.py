@@ -321,7 +321,10 @@ def test_card_copy_lives_in_the_text_module_and_is_re_exported():
     from server.al.text import overlaycard
     for name in ("MOMENT_CARD_S", "BONUS_TEXT", "NEXT_TEXT", "CLEAR_LINE",
                  "PUSH_LINE", "FIT_LINE", "BOSS_LINE", "_LEVELS", "clip",
-                 "clip_words", "_lv", "_plain", "zone_lines"):
+                 "clip_words", "_lv", "_plain", "zone_lines",
+                 # OVL-ACT-CARD fix round: the act card copy too
+                 "ACT_HEAD", "ACT_TIME", "ACT_TIME_PARTIAL", "ACT_FASTER",
+                 "ACT_SLOWER", "ACT_SAME"):
         assert getattr(overlayview, name) is getattr(overlaycard, name), name
 
 

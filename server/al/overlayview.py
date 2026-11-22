@@ -49,6 +49,8 @@ from .text.overlaycard import EVAL_CARD_S, overlay_card
 from .text.overlaycard import (  # noqa: F401 - OVL-ZONE-CARD card copy, re-exported
     BONUS_TEXT, BOSS_LINE, CLEAR_LINE, FIT_LINE, MOMENT_CARD_S, NEXT_TEXT,
     PUSH_LINE, _LEVELS, _lv, _plain, clip, clip_words, zone_lines)
+from .text.overlaycard import (  # noqa: F401 - OVL-ACT-CARD card copy, re-exported
+    ACT_FASTER, ACT_HEAD, ACT_SAME, ACT_SLOWER, ACT_TIME, ACT_TIME_PARTIAL)
 
 FILE_NAME = "overlay-view.json"
 SCHEMA = 1
@@ -56,14 +58,6 @@ MAX_BYTES = 16 * 1024  # read cap of the store file (a bigger file reads as empt
 # The store's known keys besides "schema"; load_doc drops every other key.
 # Empty today; a later package adds its key here and its bound.
 STORE_KEYS = ()
-
-# OVL-ACT-CARD: the act moment card copy (design 0001 section 9 rule 6)
-ACT_HEAD = "{label} done"
-ACT_TIME = "Act time {time}"
-ACT_TIME_PARTIAL = "Act time {time}, partial"
-ACT_FASTER = "New best by {gap}"
-ACT_SLOWER = "{gap} behind your best"
-ACT_SAME = "Ties your best"
 
 SAMPLE_S = 10
 SAMPLE_HEAD = "Sample card"
