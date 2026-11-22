@@ -1,7 +1,7 @@
 """DATA-PRICE-CADENCE (F-046, decision 0072): poe.ninja polling tiers and
 the release polling gate.
 
-Currency refreshes hourly, the other 22 overview types every 3 h, and a
+Currency refreshes hourly, the other 21 overview types every 3 h, and a
 type a press matched in the last 24 h hourly; a day with no press makes at
 most 200 overview GETs. An installed (release) copy sends poe.ninja nothing
 while ninja.RELEASE_POLLING is off, and the press still builds its offline
@@ -86,7 +86,7 @@ def test_unpressed_day_makes_at_most_200_overview_gets(tmp_path):
     assert len(net.overviews("type=Currency")) == 24  # Currency hourly
     for name in pricebook.UNIQUE_TYPES + pricebook.EXCHANGE_TYPES:
         assert sum(1 for u in over if u.endswith("type=" + name)) == 8, name
-    assert len(over) == 24 + N_BOOK * 8 == 200
+    assert len(over) == 24 + N_BOOK * 8 <= 200
     assert pricebook.INTERVAL_S == 3 * 3600 and pricebook.PRESSED_INTERVAL_S == 3600
     # a price watch re-read (a plain dict) is no press: the cadence holds
     clock.t = START + DAY

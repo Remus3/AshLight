@@ -226,7 +226,7 @@ def test_type_failing_three_times_waits_a_day(tmp_path):
     assert c.refresh() == "fresh" and _asked(net, "type=Essences") == n
 
 
-def test_round_has_22_gaps_of_two_seconds(tmp_path):
+def test_round_has_21_gaps_of_two_seconds(tmp_path):
     events = []
 
     class Net(FakeNet):
@@ -239,12 +239,12 @@ def test_round_has_22_gaps_of_two_seconds(tmp_path):
     assert c.refresh() == "fetched"
     sleeps = [s for kind, s in events if kind == "sleep"]
     gets = [u for kind, u in events if kind == "get" and not u.endswith(ninja.LEAGUES_PATH)]
-    assert len(gets) == 1 + N_TYPES == 23 and sleeps == [pricebook.GAP_S] * 22 == [2.0] * 22
+    assert len(gets) == 1 + N_TYPES and sleeps == [pricebook.GAP_S] * N_TYPES == [2.0] * N_TYPES
     # the league list, then the Currency GET, then every book GET follows
     # one 2 s sleep
     assert events[0] == ("get", ninja.BASE + ninja.LEAGUES_PATH)
     assert events[1][0] == "get" and "type=Currency" in events[1][1]
-    assert [k for k, _ in events[2:]] == ["sleep", "get"] * 22
+    assert [k for k, _ in events[2:]] == ["sleep", "get"] * N_TYPES
 
 
 def test_a_429_stops_the_round(tmp_path):
