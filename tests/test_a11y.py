@@ -266,13 +266,26 @@ def test_deaths_dash_has_screen_reader_text():
 
 
 def test_every_focusable_kind_has_a_visible_focus_ring():
-    rules = re.findall(r"([^{}]+)\{([^}]*outline:\s*3px solid var\(--fk-text\)[^}]*)\}", CSS)
-    sel = " ".join(s for s, _ in rules)
-    for kind in ("button", "a", "summary", "textarea", "input", "select"):
-        covered = re.search(rf"(^|[\s,]){kind}:focus-visible", sel) or \
-            (kind in ("input", "select") and ".layout-form :focus-visible" in sel
-             and ".weights-form :focus-visible" in sel and "input:focus-visible" in sel)
-        assert covered, kind
+    """PLAY-TD-22A-A11Y-CSS (TD-22, F-096; plan 03 section 9, 2.4.7 /
+    2.4.11): every focusable kind has a 3 px accent ring drawn inside the
+    element (outline-offset -3px), so no parent clips it; the only outside
+    ring is the filled accent one (button.primary, and the ticked checkbox,
+    filled with the accent too)."""
+    css = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+    rules = [(s.strip(), b) for s, b in re.findall(r"([^{}]+)\{([^{}]*)\}", css)]
+    ring = [(s, b) for s, b in rules if re.search(r"outline:\s*3px solid var\(--fk-accent\)", b)]
+    assert ring, "no accent focus ring"
+    sel = " ".join(s for s, _ in ring)
+    for kind in ("button", "a", "summary", "textarea", "input", "select", r"\[tabindex\]"):
+        assert re.search(rf"(^|[\s,]){kind}:focus-visible", sel), kind
+    for s, b in ring:
+        assert re.search(r"outline-offset:\s*-3px", b), s
+    outside = [s for s, b in rules if re.search(r"outline-offset:\s*\d", b)]
+    assert outside == ["button.primary:focus-visible, .check input:checked:focus-visible"], outside
+    # no other outline colour or width anywhere, and never a removed ring
+    for s, b in rules:
+        for val in re.findall(r"(?<![-\w])outline\s*:\s*([^;]+);", b):
+            assert val.strip() == "3px solid var(--fk-accent)", (s, val)
     assert "outline: none" not in CSS and "outline:none" not in CSS
 
 
