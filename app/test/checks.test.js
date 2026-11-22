@@ -558,3 +558,55 @@ test("checks: ages step at 5 minutes", () => {
   assert.equal(ck.model({ checks: [{ id: "x", status: "note", detail: "a " + ck.AGO }] }, T)
     .rows[0].detail, "a " + ck.AGO);
 });
+
+/* RUN-REPORT-FIELDS (finding F-109): the preview's one checkbox, the
+   player's explicit second choice that adds AshLight's own log lines. */
+test("checks: the second choice is off by default", async () => {
+  const doc = fakeDoc();
+  const calls = [];
+  const wrote = [];
+  const nav = { clipboard: { writeText: (t) => { wrote.push(t); return Promise.resolve(); } } };
+  const api = (method, path) => {
+    calls.push([method, path]);
+    return Promise.resolve({ report: path.indexOf("tails=1") >= 0 ? REPORT + "Log tails: x\n" : REPORT });
+  };
+  ck.wire(doc, () => ({ diag: DIAG }), nav, null, api);
+  const box = ck._report.tailsBox;
+  assert.ok(box, "the checkbox is made at wire time");
+  assert.equal(box.type, "checkbox");
+  assert.equal(box.id, "checks-tails");
+  assert.equal(box.checked, false, "off by default");
+  // it sits inside the preview box, with its own label text
+  const holder = doc.ids["checks-preview-box"].children[0];
+  assert.ok(holder && holder.children[0].children[0] === box);
+  assert.equal(holder.children[0].children[1].textContent, " " + ck.TAILS_LABEL);
+  // the fold's opening click asks for the report without the log lines
+  doc.ids["checks-summary"].listeners.click();
+  assert.deepEqual(calls, [["GET", ck.REPORT_PATH]]);
+  await tickle();
+  doc.ids["checks-copy"].listeners.click();
+  assert.deepEqual(wrote, [REPORT]);
+  // ticking it makes the preview again with the log lines; nothing is copied
+  box.checked = true;
+  box.listeners.change();
+  assert.deepEqual(calls[1], ["GET", ck.REPORT_PATH + ck.TAILS_QUERY]);
+  await tickle();
+  await tickle();
+  assert.equal(doc.ids["checks-preview"].value, REPORT + "Log tails: x\n");
+  assert.equal(doc.ids["checks-said"].textContent, ck.READY_TAILS);
+  assert.equal(wrote.length, 1, "a change never writes the clipboard");
+  doc.ids["checks-copy"].listeners.click();
+  assert.deepEqual(wrote, [REPORT, REPORT + "Log tails: x\n"]);
+  // a preview made with the other choice is made again before any copy
+  box.checked = false;
+  doc.ids["checks-copy"].listeners.click();
+  assert.deepEqual(calls[2], ["GET", ck.REPORT_PATH]);
+  assert.equal(wrote.length, 2);
+  await tickle();
+  await tickle();
+  assert.equal(doc.ids["checks-preview"].value, REPORT);
+  // a new page starts unticked again (never stored)
+  const again = fakeDoc();
+  ck.wire(again, () => ({ diag: DIAG }), nav, null, api);
+  assert.equal(ck._report.tailsBox.checked, false);
+});
