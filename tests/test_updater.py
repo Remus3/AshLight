@@ -8,6 +8,13 @@ N+1 and N+1 to N+2 staged from the local zips. The self-test is a fake, or
 the real selftest.run with a fake child. No request leaves the process (an
 autouse fixture fails any socket connect) and no real child process starts
 (subprocess.Popen and subprocess.run fail the test).
+
+DEP-17 (the network half, stage_from_release and `update --yes`): a fake
+GitHub on loopback. FakeGitHub is a local HTTP server; LoopbackOpener is
+the request opener handed to the installer's real fetch
+(payload.installer_stream), so the host allow-list, the redirect hops,
+the User-Agent and the size caps run for real and only the socket goes to
+127.0.0.1 (the connect guard allows loopback and nothing else).
 """
 
 import hashlib
@@ -19,8 +26,12 @@ import re
 import socket
 import subprocess
 import sys
+import threading
+import urllib.parse
+import urllib.request
 import zipfile
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -33,6 +44,11 @@ from server.al import NAME, pinfetch  # noqa: E402
 from server.al.install import cli, install, payload, update  # noqa: E402
 from server.al.install import home as homemod  # noqa: E402
 from server.al.install import selftest as selftestmod  # noqa: E402
+from server.al.install import switch as switchmod  # noqa: E402
+from server.al import updates  # noqa: E402
+
+_REAL_CONNECT = socket.socket.connect
+_REAL_CREATE = socket.create_connection
 
 VER_N = "1.2.3"
 VER_N1 = "1.3.0"
@@ -578,3 +594,470 @@ def test_the_update_module_writes_no_marker_and_asks_no_network():
     assert not re.search(r"runas|ShellExecute|IsUserAnAdmin|elevat", text, re.I)
     assert not re.search(r"tasklist|EnumProcesses|CreateToolhelp32Snapshot|"
                          r"OpenProcess|FindWindow", text)
+
+
+# === DEP-17: the network half (stage_from_release, update --yes) ==================
+
+REPO = "al-test/AshLight"
+API_PUBLISHED = "2026-11-19T10:00:00Z"
+GH_HOSTS = {"api.github.com", "github.com", "release-assets.githubusercontent.com",
+            "objects.githubusercontent.com"}
+EL2_ZIP = _runtime_zip({"electron.exe": b"stand-in electron 2\n", "LICENSE": b"MIT\n"})
+EL2_URL = ("https://github.com/electron/electron/releases/download/v45.3.4/"
+           "electron-v45.3.4-win32-x64.zip")
+EL2_RT = "electron-45.3.4"
+
+
+class FakeGitHub:
+    """A loopback HTTP server standing in for github.com and its asset
+    hosts: routes by (host, path); records (host, path, headers) of every
+    request it got."""
+
+    def __init__(self):
+        self.routes = {}
+        self.seen = []
+        owner = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                host = self.headers.get("X-Fake-Host", "")
+                hdrs = {k.lower(): v for k, v in self.headers.items()
+                        if k.lower() != "x-fake-host"}
+                owner.seen.append((host, self.path, hdrs))
+                status, headers, body = owner.routes.get(
+                    (host, self.path), (404, {}, b"not found"))
+                self.send_response(status)
+                for key, value in headers.items():
+                    self.send_header(key, value)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_a):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.port = self.server.server_address[1]
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def serve(self, url, body, status=200, headers=None):
+        parts = urllib.parse.urlsplit(url)
+        self.routes[(parts.hostname, parts.path)] = (status, headers or {}, body)
+
+    def via_cdn(self, url, body, host="release-assets.githubusercontent.com"):
+        """github.com answers 302 to an asset host that serves the bytes."""
+        cdn = "https://%s/production/%s" % (host, url.rsplit("/", 1)[-1])
+        self.serve(url, b"", 302, {"Location": cdn})
+        self.serve(cdn, body)
+
+    def opener(self, on_open=None):
+        return LoopbackOpener(self, on_open)
+
+
+class LoopbackOpener:
+    """The request opener handed to payload.installer_stream: the https URL
+    that passed the installer's host check goes to the loopback server
+    with its host in X-Fake-Host; redirects come back as HTTPError for the
+    installer's own hop check."""
+
+    def __init__(self, gh, on_open=None):
+        self.gh = gh
+        self.on_open = on_open
+        self.urls = []
+        self.inner = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                                                 pinfetch._NoRedirect())
+
+    def open(self, req, timeout=None):
+        url = req.full_url
+        self.urls.append(url)
+        if self.on_open is not None:
+            self.on_open(url)
+        parts = urllib.parse.urlsplit(url)
+        assert parts.scheme == "https"
+        headers = dict(req.header_items())
+        headers["X-Fake-Host"] = parts.hostname
+        local = urllib.request.Request("http://127.0.0.1:%d%s" % (self.gh.port, parts.path),
+                                       headers=headers, method="GET")
+        return self.inner.open(local, timeout=timeout)
+
+
+@pytest.fixture
+def gh(sealed, monkeypatch):
+    """The fake GitHub; sockets may connect to 127.0.0.1 and nowhere else."""
+    def connect(sock, address):
+        if not (isinstance(address, tuple) and address[0] == "127.0.0.1"):
+            raise AssertionError("a test tried to open a non-loopback connection")
+        return _REAL_CONNECT(sock, address)
+
+    def create(address, *a, **k):
+        if address[0] != "127.0.0.1":
+            raise AssertionError("a test tried to open a non-loopback connection")
+        return _REAL_CREATE(address, *a, **k)
+    monkeypatch.setattr(socket.socket, "connect", connect)
+    monkeypatch.setattr(socket, "create_connection", create)
+    server = FakeGitHub()
+    yield server
+    server.close()
+
+
+def _web_on(home, ack=updates.WORDING_VERSION, on=True):
+    doc = {"web_data": on, "mine": 1}
+    if ack is not None:
+        doc[update.ACK_KEY] = ack
+    (home / "data" / "local.json").write_text(json.dumps(doc) + "\n", encoding="ascii")
+
+
+@pytest.fixture
+def web_home(home):
+    """The home with web data on and the update wording acknowledged."""
+    _web_on(home)
+    return home
+
+
+def _sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def _gh_url(version, name, repo=REPO):
+    return "https://github.com/%s/releases/download/v%s/%s" % (repo, version, name)
+
+
+def _publish(gh, releases, version, zip_bytes=None, listed_zip=None, release_doc=None,
+             listed_release=None, digest=True, digests=None, sizes=None, urls=None,
+             published_at=API_PUBLISHED, tag=None, prerelease=False):
+    """Serve the three assets of `version` (github.com redirecting to an
+    asset host) and return the cached answer updates.py keeps for them:
+    a raw releases/latest document through updates._parse_release."""
+    src = releases[version]
+    real_zip = src["zip"].read_bytes()
+    data = real_zip if zip_bytes is None else zip_bytes
+    rel_b = (json.dumps(release_doc or _release_doc(version), indent=1) + "\n").encode("ascii")
+    zname = src["zip"].name
+    listed = {zname: listed_zip if listed_zip is not None else real_zip,
+              "release.json": listed_release if listed_release is not None else rel_b}
+    sums = "".join("%s  %s\n" % (_sha(listed[n]), n) for n in sorted(listed)).encode("ascii")
+    files = {"release.json": rel_b, "SHA256SUMS.txt": sums, zname: data}
+    assets = []
+    for name, body in files.items():
+        url = (urls or {}).get(name) or _gh_url(version, name)
+        if url.startswith("https://github.com/" + REPO + "/"):
+            gh.via_cdn(url, body)
+        raw = {"name": name, "size": (sizes or {}).get(name, len(body)),
+               "browser_download_url": url}
+        if digest:
+            raw["digest"] = "sha256:" + (digests or {}).get(name, _sha(body))
+        assets.append(raw)
+    raw_doc = {"tag_name": tag or "v" + version, "draft": False, "prerelease": prerelease,
+               "published_at": published_at,
+               "html_url": "https://github.com/%s/releases/tag/v%s" % (REPO, version),
+               "assets": assets}
+    return updates._parse_release(json.dumps(raw_doc).encode("ascii"))
+
+
+def _rstage(home, answer, gh, **kw):
+    kw.setdefault("idle", lambda: True)
+    kw.setdefault("selftest", FakeSelftest())
+    kw.setdefault("priority", FakePriority())
+    kw.setdefault("now", STAMP)
+    kw.setdefault("repo", REPO)
+    if "opener" not in kw:
+        kw["opener"] = gh.opener()
+    out = kw.pop("out", None) or io.StringIO()
+    return update.stage_from_release(home, answer, out=out, **kw)
+
+
+def _nothing_staged(home, version=VER_N1):
+    assert not (home / "staged").exists() or update.staged_versions(home) == []
+    assert not (home / "app" / version).exists()
+    assert not (home / "cache" / "downloads" / version).exists()
+    assert homemod.read_marker(home)["version"] == VER_N
+
+
+def test_release_n_to_n1_needs_no_click_and_stays_on_the_github_hosts(
+        web_home, releases, gh):
+    answer = _publish(gh, releases, VER_N1)
+    opener = gh.opener()
+    code, report = _rstage(web_home, answer, gh, clicked=False, opener=opener)
+    assert code == update.EXIT_OK, report
+    assert report["status"] == "staged" and report["source"] == "release"
+    assert report["steps"]["gate"] == "idle" and report["steps"]["download"] == "ok"
+    assert report["digest"] == "checked"
+    doc = update.read_staged(web_home, VER_N1)
+    assert doc["published_at"] == API_PUBLISHED
+    assert doc["hashes"]["zip"] == _sha(releases[VER_N1]["zip"].read_bytes())
+    assert payload.check_manifest(web_home / "app" / VER_N1) == []
+    assert homemod.read_marker(web_home)["version"] == VER_N
+    hosts = {urllib.parse.urlsplit(u).hostname for u in opener.urls}
+    assert hosts <= GH_HOSTS and "github.com" in hosts
+    assert {h for h, _p, _hd in gh.seen} == hosts
+    for _host, _path, headers in gh.seen:
+        assert headers["user-agent"] == payload.user_agent()
+        assert "cookie" not in headers and "authorization" not in headers
+    assert len(gh.seen) == 6  # three assets, each one github.com hop and one asset host
+    cached = web_home / "cache" / "downloads" / VER_N1
+    assert (cached / releases[VER_N1]["zip"].name).read_bytes() == \
+        releases[VER_N1]["zip"].read_bytes()
+
+
+@pytest.mark.parametrize("case", ["size", "sha256", "digest", "release-sums"])
+def test_a_size_sha256_or_digest_mismatch_stages_nothing(web_home, releases, gh, case):
+    real = releases[VER_N1]["zip"].read_bytes()
+    zname = releases[VER_N1]["zip"].name
+    tampered = bytearray(real)
+    tampered[len(tampered) // 2] ^= 1
+    kw = {}
+    if case == "size":
+        kw["sizes"] = {zname: len(real) + 1}
+    elif case == "sha256":
+        kw["zip_bytes"] = bytes(tampered)  # its API digest matches; SHA256SUMS does not
+    elif case == "digest":
+        kw["digests"] = {zname: _sha(bytes(tampered))}
+    else:
+        kw["listed_release"] = b"{}\n"
+    answer = _publish(gh, releases, VER_N1, **kw)
+    test = FakeSelftest()
+    code, report = _rstage(web_home, answer, gh, selftest=test)
+    assert code == update.EXIT_FAIL, report
+    assert report["stage"] == "verify" and report["status"] == "failed"
+    words = {"size": "the release lists", "sha256": "SHA256SUMS",
+             "digest": "release digest", "release-sums": "release.json"}
+    assert words[case] in report["reason"]
+    assert test.calls == []
+    _nothing_staged(web_home)
+    assert _report_doc(web_home)["status"] == "failed"
+
+
+def test_a_release_younger_than_24_h_is_staged_with_the_hold(web_home, releases, gh):
+    answer = _publish(gh, releases, VER_N1, published_at="2026-11-20T10:00:00Z")
+    code, report = _rstage(web_home, answer, gh)
+    assert code == update.EXIT_OK, report
+    doc = update.read_staged(web_home, VER_N1)
+    assert doc["published_at"] == "2026-11-20T10:00:00Z"
+    assert doc["apply_after"] == "2026-11-21T10:00:00Z"
+    assert update.parse_time(doc["apply_after"]) > STAMP  # not due yet
+    assert homemod.read_marker(web_home)["version"] == VER_N
+
+
+def test_a_version_in_update_skip_is_never_staged_again(web_home, releases, gh):
+    switchmod.record_skip(web_home, VER_N1, "rolled back", now=STAMP)
+    answer = _publish(gh, releases, VER_N1)
+    opener = gh.opener()
+    code, report = _rstage(web_home, answer, gh, clicked=True, opener=opener)
+    assert code == update.EXIT_OK and report["status"] == "skipped"
+    assert opener.urls == [] and gh.seen == []
+    _nothing_staged(web_home)
+    newer = _publish(gh, releases, VER_N2)  # a newer release is offered
+    code, report = _rstage(web_home, newer, gh)
+    assert code == update.EXIT_OK and report["status"] == "staged"
+    assert report["version"] == VER_N2
+
+
+def test_a_changed_runtime_pin_is_fetched_in_the_installer_process(web_home, releases, gh):
+    rdoc = _release_doc(VER_N1)
+    rdoc["runtimes"]["electron"] = _pin(EL2_URL, EL2_ZIP, "45.3.4", "MIT")
+    gh.via_cdn(EL2_URL, EL2_ZIP, host="objects.githubusercontent.com")
+    answer = _publish(gh, releases, VER_N1, release_doc=rdoc)
+    opener = gh.opener()
+    code, report = _rstage(web_home, answer, gh, opener=opener)
+    assert code == update.EXIT_OK, report
+    assert report["steps"]["runtimes"] == "placed"
+    assert EL2_URL in opener.urls
+    assert all(urllib.parse.urlsplit(u).hostname in GH_HOSTS for u in opener.urls)
+    for _host, _path, headers in gh.seen:
+        assert headers["user-agent"] == payload.user_agent()
+        assert "cookie" not in headers
+    rt = web_home / "runtime" / EL2_RT
+    assert pinfetch.runtime_ready("electron", rdoc["runtimes"]["electron"], rt)
+    assert (rt / "electron.exe").read_bytes() == b"stand-in electron 2\n"
+    assert update.read_staged(web_home, VER_N1)["electron"] == EL2_RT
+    assert homemod.read_marker(web_home)["electron"] == EL_RT
+
+
+def test_a_runtime_that_fails_its_new_pin_stages_nothing(web_home, releases, gh):
+    rdoc = _release_doc(VER_N1)
+    rdoc["runtimes"]["electron"] = _pin(EL2_URL, EL2_ZIP, "45.3.4", "MIT")
+    gh.via_cdn(EL2_URL, b"x" * len(EL2_ZIP))
+    answer = _publish(gh, releases, VER_N1, release_doc=rdoc)
+    code, report = _rstage(web_home, answer, gh)
+    assert code == update.EXIT_FAIL and report["stage"] == "runtimes", report
+    assert "HashMismatch" in report["reason"]
+    assert not (web_home / "runtime" / EL2_RT).exists()
+    assert not (web_home / "staged").exists()
+
+
+def test_download_runs_below_normal_and_only_after_the_gate(web_home, releases, gh):
+    answer = _publish(gh, releases, VER_N1)
+    prio = FakePriority(start=0x20)
+    seen = []
+    code, report = _rstage(web_home, answer, gh, priority=prio,
+                           opener=gh.opener(lambda _u: seen.append(prio.current)))
+    assert code == update.EXIT_OK, report
+    assert seen and set(seen) == {update.BELOW_NORMAL}
+    assert prio.calls == [update.BELOW_NORMAL, 0x20]
+
+    answers = [False, None, True]
+    asked = []
+
+    def idle():
+        asked.append(1)
+        return answers.pop(0) if answers else True
+    first = []
+    answer = _publish(gh, releases, VER_N2)
+    code, report = _rstage(web_home, answer, gh, idle=idle, sleep=lambda _s: None,
+                           opener=gh.opener(lambda _u: first.append(len(asked))))
+    assert code == update.EXIT_OK, report
+    assert first and min(first) == 3 and report["waited"] == 2
+
+
+def test_never_idle_defers_with_no_request(web_home, releases, gh):
+    answer = _publish(gh, releases, VER_N1)
+    opener = gh.opener()
+    prio = FakePriority()
+    code, report = _rstage(web_home, answer, gh, idle=lambda: False, max_wait_s=0,
+                           sleep=lambda _s: None, priority=prio, opener=opener)
+    assert code == update.EXIT_DEFERRED and report["stage"] == "gate"
+    assert opener.urls == [] and gh.seen == [] and prio.calls == []
+    code, report = _rstage(web_home, answer, gh, idle=None, opener=opener)
+    assert code == update.EXIT_DEFERRED and opener.urls == []
+    code, report = _rstage(web_home, answer, gh, idle=None, clicked=True, opener=opener)
+    assert code == update.EXIT_OK and report["steps"]["gate"] == "clicked"
+
+
+def test_an_answer_without_digest_is_recorded_and_sha256sums_decides(
+        web_home, releases, gh):
+    answer = _publish(gh, releases, VER_N1, digest=False)
+    assert all(a["digest"] is None for a in answer["assets"])
+    code, report = _rstage(web_home, answer, gh)
+    assert code == update.EXIT_OK, report
+    assert report["digest"] == "absent"
+    assert set(report["digests"].values()) == {"absent"}
+    assert _report_doc(web_home)["digest"] == "absent"
+
+    real = releases[VER_N2]["zip"].read_bytes()
+    tampered = bytearray(real)
+    tampered[10] ^= 1
+    answer = _publish(gh, releases, VER_N2, digest=False, zip_bytes=bytes(tampered))
+    code, report = _rstage(web_home, answer, gh)
+    assert code == update.EXIT_FAIL and report["stage"] == "verify"
+    assert "SHA256SUMS" in report["reason"]
+    assert update.staged_versions(web_home) == [VER_N1]
+
+
+def test_web_data_off_or_unacknowledged_makes_no_request(home, releases, gh):
+    answer = _publish(gh, releases, VER_N1)
+    for setup in (lambda: None, lambda: _web_on(home, ack=None),
+                  lambda: _web_on(home, ack=0), lambda: _web_on(home, on=False)):
+        setup()
+        opener = gh.opener()
+        code, report = _rstage(home, answer, gh, clicked=True, opener=opener)
+        assert code == update.EXIT_FAIL and report["stage"] == "web_data"
+        assert "nothing was requested" in report["reason"]
+        assert opener.urls == [] and gh.seen == []
+    _nothing_staged(home)
+    assert update.web_data_allowed(home) is False
+    _web_on(home)
+    assert update.web_data_allowed(home) is True
+
+
+def test_a_foreign_address_or_redirect_is_refused(web_home, releases, gh):
+    zname = releases[VER_N1]["zip"].name
+    opener = gh.opener()
+    answer = _publish(gh, releases, VER_N1,
+                      urls={zname: "https://example.com/x/" + zname})
+    code, report = _rstage(web_home, answer, gh, opener=opener)
+    assert code == update.EXIT_FAIL and report["stage"] == "release"
+    assert opener.urls == []
+    answer = _publish(gh, releases, VER_N1)
+    code, report = _rstage(web_home, answer, gh, repo="someone/else", opener=opener)
+    assert code == update.EXIT_FAIL and report["stage"] == "release"
+    assert opener.urls == []
+
+    answer = _publish(gh, releases, VER_N1)
+    gh.serve(_gh_url(VER_N1, zname), b"", 302,
+             {"Location": "https://downloads.example.net/" + zname})
+    code, report = _rstage(web_home, answer, gh, opener=opener)
+    assert code == update.EXIT_FAIL and report["stage"] == "download", report
+    assert "UrlNotAllowed" in report["reason"]
+    assert all(urllib.parse.urlsplit(u).hostname in GH_HOSTS for u in opener.urls)
+    _nothing_staged(web_home)
+
+
+def test_not_newer_or_prerelease_is_nothing_to_do_with_no_request(web_home, releases, gh):
+    opener = gh.opener()
+    for answer, status in (
+            (_publish(gh, releases, VER_N), "current"),
+            (_publish(gh, releases, VER_N1, prerelease=True), "skipped"),
+            (_publish(gh, releases, VER_N1, tag="v1.3.0-rc.1"), "skipped")):
+        code, report = _rstage(web_home, answer, gh, opener=opener)
+        assert code == update.EXIT_OK and report["status"] == status, report
+    assert opener.urls == []
+    code, report = _rstage(web_home, None, gh, opener=opener)
+    assert code == update.EXIT_FAIL and report["stage"] == "release"
+    _nothing_staged(web_home)
+
+
+def test_a_staged_release_is_current_with_no_new_download(web_home, releases, gh):
+    answer = _publish(gh, releases, VER_N1)
+    test = FakeSelftest()
+    assert _rstage(web_home, answer, gh, selftest=test)[0] == update.EXIT_OK
+    staged = (web_home / "staged" / (VER_N1 + ".json")).read_bytes()
+    opener = gh.opener()
+    code, report = _rstage(web_home, answer, gh, selftest=test, opener=opener)
+    assert code == update.EXIT_OK and report["steps"]["download"] == "current"
+    assert opener.urls == [] and test.calls == [VER_N1]
+    assert (web_home / "staged" / (VER_N1 + ".json")).read_bytes() == staged
+
+
+def test_the_yes_line_reads_the_cached_answer_and_stages(web_home, releases, gh,
+                                                        monkeypatch):
+    seen = []
+
+    def run(h, version, **kw):
+        seen.append(kw.get("clicked"))
+        return selftestmod.Result(status=selftestmod.PASSED, version=version)
+    monkeypatch.setattr(selftestmod, "run", run)
+    monkeypatch.setattr(update, "set_priority", lambda _cls: None)
+    answer = _publish(gh, releases, VER_N1)
+    cache = update.cache_path(web_home)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps({"repo": REPO, "latest": answer, "etag": None,
+                                 "checked_at": 1.0, "next_at": 2.0}) + "\n",
+                     encoding="ascii")
+    opener = gh.opener()
+    out = io.StringIO()
+    code = update.main(["--yes", "--home", str(web_home)], out=out, opener=opener)
+    assert code == update.EXIT_OK, out.getvalue()
+    assert seen == [True] and update.staged_versions(web_home) == [VER_N1]
+    assert update.read_staged(web_home, VER_N1)["apply_after"] == "2026-11-20T10:00:00Z"
+    assert "staged " + VER_N1 in out.getvalue()
+
+
+def test_the_yes_line_with_web_data_off_requests_nothing(home, releases, gh):
+    answer = _publish(gh, releases, VER_N1)
+    cache = update.cache_path(home)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps({"repo": REPO, "latest": answer}) + "\n", encoding="ascii")
+    opener = gh.opener()
+    code = update.main(["--yes", "--home", str(home)], out=io.StringIO(), opener=opener)
+    assert code == update.EXIT_FAIL
+    assert opener.urls == [] and gh.seen == []
+    assert _report_doc(home)["stage"] == "web_data"
+
+
+def test_the_yes_line_usage():
+    for argv in (["--yes", "--zip", "x.zip"], ["--yes", "--runtime-dir", "rt"],
+                 ["--yes", "--published-at", "2026-11-19T00:00:00Z"],
+                 ["--zip", "x.zip", "--release-cache", "c.json"]):
+        assert update.main(argv, out=io.StringIO()) == update.EXIT_USAGE, argv
+
+
+def test_release_hosts_and_ack_key_match_their_sources():
+    from server.al import core
+    assert set(update.RELEASE_HOSTS) == GH_HOSTS
+    assert update.ACK_KEY == core.ACK_KEY
+    assert set(update.RELEASE_HOSTS) - {updates.API_HOST} <= set(pinfetch.RUNTIME_HOSTS)
