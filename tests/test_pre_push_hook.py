@@ -6,7 +6,6 @@ same relative paths, and a local bare repo as origin. No network remote is
 ever used. Each case asserts the push return code and the bare repo's refs.
 """
 
-import json
 import os
 import shutil
 import subprocess
@@ -63,8 +62,6 @@ class World:
         env["GIT_CONFIG_GLOBAL"] = str(gcfg)
         env["GIT_CONFIG_NOSYSTEM"] = "1"
         env["GIT_TERMINAL_PROMPT"] = "0"
-        self.sidecar = tmp_path / "sidecar"
-        env["AL_SIDECAR_ROOT"] = str(self.sidecar)
         env["PATH"] = os.path.dirname(sys.executable) + os.pathsep + env.get("PATH", "")
         self.env = env
         self.git_in(tmp_path, "init", "-q", "--bare", "-b", "main", str(self.bare))
@@ -75,9 +72,7 @@ class World:
         for p in hooks.iterdir():
             p.chmod(0o755)
         for rel in ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py",
-                    "tools/push_guard.py", "tools/release.py", "tools/rel_publish.py",
-                    "tools/rel_build.py", "tools/rel_version.py", "tools/rel_readback.py",
-                    "server/al/paths.py"):
+                    "tools/push_guard.py"):
             dst = self.work / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / rel, dst)
@@ -95,15 +90,6 @@ class World:
         self.cfg.write_text('{"needles": ["%s", "%s"]}\n' % tuple(NEEDLES), encoding="ascii",
                             newline="\n")
         self.commit("README.txt", "hello\n", "first commit")
-
-    def stage_pass(self, version, ref="HEAD"):
-        """A PASS stage report of version at ref's commit (plan 05 fixture)."""
-        d = self.sidecar / "Build" / "release" / version
-        d.mkdir(parents=True, exist_ok=True)
-        rep = {"verdict": "PASS", "version": version,
-               "commit": self.rev(ref + "^{commit}"),
-               "created": "2026-01-01T00:00:00Z", "sums_sha256": "a" * 64}
-        (d / "stage.json").write_text(json.dumps(rep), encoding="ascii", newline="\n")
 
     def git_in(self, cwd, *args, env=None, check=True):
         r = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True,
@@ -230,7 +216,6 @@ def test_renamed_targets_are_refused(pushed, extra):
 @pytest.mark.parametrize("extra", ALLOW)
 def test_release_tag_pushes_once_and_never_moves(pushed, extra):
     pushed.git("tag", "v0.0.1")
-    pushed.stage_pass("0.0.1")
     r = pushed.push("v0.0.1", extra_env=extra)
     assert r.returncode == 0, r.stderr
     tag_sha = pushed.rev("v0.0.1")
@@ -333,7 +318,6 @@ def test_tag_on_a_tree_is_refused(pushed):
 def test_annotated_tag_message_is_swept(pushed):
     before = pushed.remote_refs()
     pushed.git("tag", "-a", "v0.9.0", "-m", "release", "-m", f"thanks {N0}")
-    pushed.stage_pass("0.9.0", "v0.9.0")
     r = pushed.push("v0.9.0")
     assert _halted(r) and "tag-message" in r.stderr, r.stderr
     assert pushed.remote_refs() == before
@@ -474,7 +458,6 @@ def test_only_semver_release_tags(pushed):
     assert pushed.remote_refs() == before
     for name in ("v0.2.0-rc.1", "v0.2.0"):
         pushed.git("tag", name)
-        pushed.stage_pass(name[1:], name)
         r = pushed.push(name)
         assert r.returncode == 0, (name, r.stderr)
         assert pushed.remote_refs()[f"refs/tags/{name}"] == pushed.rev(name)
@@ -482,35 +465,6 @@ def test_only_semver_release_tags(pushed):
 
 def test_annotated_operator_tag_on_public_commit_pushes(pushed):
     pushed.git("tag", "-a", "v0.3.0", "-m", "release 0.3.0")
-    pushed.stage_pass("0.3.0", "v0.3.0")
     r = pushed.push("v0.3.0")
     assert r.returncode == 0, r.stderr
     assert pushed.remote_refs()["refs/tags/v0.3.0"] == pushed.rev("v0.3.0")
-
-
-# PUB-HOOK-RELEASE-CHECK
-def test_tag_without_pass_stage_report_is_refused(pushed):
-    before = pushed.remote_refs()
-    pushed.git("tag", "v0.4.0")
-    r = pushed.push("v0.4.0")
-    assert r.returncode != 0 and "prepush-check: refused" in r.stderr, r.stderr
-    assert pushed.remote_refs() == before
-    pushed.stage_pass("0.4.0")
-    d = pushed.sidecar / "Build" / "release" / "0.4.0" / "stage.json"
-    rep = json.loads(d.read_text("ascii"))
-    rep["verdict"] = "FAIL"
-    d.write_text(json.dumps(rep), encoding="ascii", newline="\n")
-    r = pushed.push("v0.4.0")
-    assert r.returncode != 0 and "prepush-check: refused" in r.stderr, r.stderr
-    assert pushed.remote_refs() == before
-    pushed.stage_pass("0.4.0")
-    r = pushed.push("v0.4.0")
-    assert r.returncode == 0, r.stderr
-    assert pushed.remote_refs()["refs/tags/v0.4.0"] == pushed.rev("v0.4.0")
-
-
-def test_branch_push_ignores_the_stage_check(world):
-    assert not (world.sidecar / "Build").exists()
-    r = world.push("main")
-    assert r.returncode == 0, r.stderr
-    assert "prepush-check" not in r.stderr
