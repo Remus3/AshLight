@@ -29,7 +29,14 @@
    setup script and the row says it is working, then done or not done.
    RUN-QUIET-FEED (findings F-093, F-109): the snapshot holds no report
    text and no age words; age rows carry an absolute "at" and this file
-   writes the age in, stepped at 5 minutes (ageText). */
+   writes the age in, stepped at 5 minutes (ageText).
+   RUN-REPORT-FIELDS (finding F-109, research 0051 R6): the preview holds
+   one checkbox (#checks-tails, made here, off on every page load and never
+   stored). Ticking it is the player's explicit second choice: the preview
+   is made again with GET /api/report?tails=1, which adds the last lines of
+   AshLight's own logs through the core's redactor. A Copy click whose
+   preview was made with the other choice makes it again and copies
+   nothing, so the copy always matches the box on show. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -53,6 +60,12 @@
   var READY_CHANGED = "The checks changed. The new report is below. " +
     "Press Copy report again to copy it.";
   var BUILD_FAILED = "Couldn't make the report. Try again.";
+  // RUN-REPORT-FIELDS: the preview's second choice (off by default)
+  var TAILS_QUERY = "?tails=1";
+  var TAILS_LABEL = "Also add the last lines of AshLight's own logs. " +
+    "Paths, names and addresses are masked.";
+  var READY_TAILS = "The report changed with your choice. The new report is below. " +
+    "Press Copy report to copy it.";
   var WAITING = "Checking AshLight...";
   var DISMISS_KEY = "al.lang.dismissed";
   // TC-CALC-OPTIN-BUTTON: the calc row's button and its three lines
@@ -347,7 +360,39 @@
      never overwrites a newer one. V-5: report.checksGen moves when a
      check's state changes (report.states), report.builtGen is the
      checksGen the preview on show was asked at (-1 for none). */
-  var report = { text: "", gen: 0, states: "", checksGen: 0, builtGen: -1 };
+  var report = { text: "", gen: 0, states: "", checksGen: 0, builtGen: -1,
+                 tails: false, builtTails: false, tailsBox: null };
+
+  /* RUN-REPORT-FIELDS: true while the player ticked the second choice. */
+  function tailsOn() {
+    var b = report.tailsBox;
+    return !!(b && b.checked === true);
+  }
+
+  /* The one checkbox, made once per page inside the preview box (after
+     the text area); unticked on every load, never stored. `onChange`
+     runs on the player's change. Returns the input or null. */
+  function addTails(doc, onChange) {
+    var box = doc.getElementById("checks-preview-box");
+    if (!box) { return null; }
+    var input = doc.getElementById("checks-tails");
+    if (!input) {
+      var p = doc.createElement("p");
+      p.className = "row-meta small";
+      var label = doc.createElement("label");
+      input = doc.createElement("input");
+      input.type = "checkbox";
+      input.id = "checks-tails";
+      input.checked = false;
+      label.appendChild(input);
+      label.appendChild(doc.createTextNode(" " + TAILS_LABEL));
+      p.appendChild(label);
+      box.appendChild(p);
+    }
+    input.checked = false;
+    input.addEventListener("change", onChange);
+    return input;
+  }
 
   function showPreview(doc, text) {
     var pre = doc.getElementById("checks-preview");
@@ -366,14 +411,18 @@
     }
     var gen = ++report.gen;
     var asked = report.checksGen;
+    var tails = tailsOn();
     said.textContent = BUILDING;
     var p;
-    try { p = api("GET", REPORT_PATH); } catch (e) { p = Promise.reject(e); }
+    try {
+      p = api("GET", tails ? REPORT_PATH + TAILS_QUERY : REPORT_PATH);
+    } catch (e) { p = Promise.reject(e); }
     return Promise.resolve(p).then(function (res) {
       if (gen !== report.gen) { return false; }
       var text = res && typeof res.report === "string" ? res.report : "";
       showPreview(doc, text);
       report.builtGen = text ? asked : -1;
+      report.builtTails = tails;
       said.textContent = text ? (ready || READY) : BUILD_FAILED;
       return !!text;
     }, function () {
@@ -394,6 +443,7 @@
     report.text = "";
     report.gen = 0;
     report.builtGen = -1;
+    report.builtTails = false;
     var copy = doc.getElementById("checks-copy");
     var said = doc.getElementById("checks-said");
     var fold = doc.getElementById("checks");
@@ -415,6 +465,9 @@
         if (!a || a === copy || a === doc.body) { said.focus(); }
       });
     };
+    // RUN-REPORT-FIELDS: the player's change of the second choice makes
+    // the preview again with (or without) the log lines
+    report.tailsBox = addTails(doc, function () { rebuild(READY_TAILS); });
     if (copy) {
       copy.addEventListener("click", function () {
         var text = report.text;
@@ -424,6 +477,10 @@
         }
         if (report.builtGen !== report.checksGen) { // V-5: a check moved since
           rebuild(READY_CHANGED);
+          return;
+        }
+        if (report.builtTails !== tailsOn()) { // made with the other choice
+          rebuild(READY_TAILS);
           return;
         }
         said.textContent = "";
@@ -448,6 +505,7 @@
            REPORT_PATH: REPORT_PATH, BUILDING: BUILDING, READY: READY,
            READY_AGAIN: READY_AGAIN, READY_CHANGED: READY_CHANGED,
            BUILD_FAILED: BUILD_FAILED, _report: report,
+           TAILS_QUERY: TAILS_QUERY, TAILS_LABEL: TAILS_LABEL, READY_TAILS: READY_TAILS,
            CALC_BUTTON: CALC_BUTTON, CALC_PENDING: CALC_PENDING, CALC_OK: CALC_OK,
            CALC_FAILED: CALC_FAILED, _state: state };
 }));
