@@ -1098,14 +1098,12 @@
         $("reading-path").setAttribute("title", rv.path);
       }
       $("reading-path").hidden = !rv.path;
-      if (window.ALLogPath) { window.ALLogPath.paint(document, s); } // SEC-LOG-PATH-FIELD
       $("consent-no").hidden = !rv.stop;
       $("events-empty").textContent = D.emptyText(!!tl.consented);
       paintLedger(tl);
     },
     wire: function () {
       $("consent-no").addEventListener("click", stopReading);
-      if (window.ALLogPath) { window.ALLogPath.wire(document, api, render); }
       $("ledger-allow").addEventListener("click", toggleLedger);
     }
   });
