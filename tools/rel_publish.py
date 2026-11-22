@@ -39,7 +39,13 @@ A refusal changes nothing. A failed push deletes the local tag again.
 
 `--rehearse` runs every gate, prints each one and the remote line, and
 makes no tag and no push; origin is only read (one ls-remote). It exits 0
-only when every gate passes.
+only when every gate passes. It never runs the read-back.
+
+After a pushed tag, publish makes one call to tools/rel_readback.py
+read_back() (REL-PUBLISH-READBACK): bounded polling until the release is
+published and immutable, the tag targets the stage commit, every asset
+digest equals the staged one and the app zip's attestation verifies; the
+verdict lands in publish.json under read_back and a FAIL exits 1.
 
 prepush-check (for the guarded pre-push hook; the hook call itself rides
 the go-public push package): a pushed refs/tags/v* ref passes only with a
@@ -95,6 +101,7 @@ def _load_tool(name):
 
 rb = _load_tool("rel_build")
 rv = rb.rv
+rr = _load_tool("rel_readback")
 
 
 class Refuse(Exception):
@@ -462,7 +469,7 @@ def _changelog_current(root):
 
 def make_ctx(version, go, root=ROOT, out=None, git=None, gh=None, push=None,
              now=None, env=None, lane_locks=None, owner=None,
-             changelog_current=None):
+             changelog_current=None, read_back=None, sleep=None):
     root = Path(root)
     config = read_config(root)
     return {
@@ -476,6 +483,8 @@ def make_ctx(version, go, root=ROOT, out=None, git=None, gh=None, push=None,
         or DEFAULT_OWNER,
         "config": config, "repository": repository(root, config),
         "changelog_current": changelog_current or _changelog_current,
+        "read_back": read_back or rr.read_back,
+        "sleep": sleep or time.sleep,
         "remote": None, "head": None, "stage": None,
     }
 
@@ -522,7 +531,8 @@ def run(ctx, rehearse=False):
     remote_line = ("remote: %s (%s)" % (REMOTE, ctx["repository"] or url)
                    if url else "remote: none")
     result = {"rows": rows, "refusals": refusals, "tagged": False,
-              "pushed": False, "remote_line": remote_line, "error": None}
+              "pushed": False, "remote_line": remote_line, "error": None,
+              "read_back": None}
     if refusals or rehearse:
         return result
     version = ctx["version"]
@@ -552,6 +562,10 @@ def run(ctx, rehearse=False):
                       .encode("ascii"))
     except OSError:
         pass
+    # REL-PUBLISH-READBACK: the one read-back call, after the push only.
+    result["read_back"] = ctx["read_back"](
+        version, gh=ctx["gh"], now=ctx["now"], sleep=ctx["sleep"],
+        out=ctx["out"], repo=ctx["repository"])
     return result
 
 
@@ -644,7 +658,9 @@ def main(command, argv):
             print("publish: %s" % res["error"], file=sys.stderr)
             return 1
         print("publish: tagged and pushed %s" % rv.tag_for(args.version))
-        return 0
+        back = res["read_back"] or {}
+        print("publish: %s" % (back.get("hand_off") or "read-back missing"))
+        return 0 if back.get("verdict") == "PASS" else 1
     if command == "prepush-check":
         try:
             args = _prepush_parser().parse_args(list(argv))
