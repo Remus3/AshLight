@@ -4,10 +4,8 @@ SESSION: 19   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 22 done, next wave 23
-DEFERRED: CARD-LINE-LIMIT (wave 22): needs files outside its list (tests/test_glance_rules.py, tests/test_moment_cards.py, design 0001, zoneguide.py, cardparts __init__/keep.py, app/test/slots.test.js), re-plan first; its branch had no commits of its own (tip 9223ce2 is on main) and was reaped at session 18 /done: start fresh
-DEFERRED: RUN-REPORT-FIELDS (wave 22): batch A suite red, test_no_literal_drive_path_in_app_files on a drive-path comment at server/al/report.py:189 (merge reverted 2f5c4b1); reword the comment; carries REPORT-DOC-QUIET; the reap deleted its branch at session 18 /done and it was re-created locally as worktree-w22-RUN-REPORT-FIELDS at 6ea2f10 (= 542abe9^2, every commit already on main): resume by reverting the revert 2f5c4b1, then the reword
-DEFERRED: PUB-HOOK-RELEASE-CHECK (wave 22): red after main merge, tests/test_pre_push_hook.py fixture copy list lacks tools/rel_readback.py; add it; branch worktree-w22-PUB-HOOK-RELEASE-CHECK
+WAVE POINTER: wave 23 done, next wave 24
+NOTE: CARD-LINE-LIMIT re-planned to wave 25 with seven more files (702769e; ROADMAP row tagged BLOCKED: session wave 25). PUB-HOOK-RELEASE-CHECK deferred twice then merged (adjudicator ruling 2026-11-21: retry with tests/test_dependabot_reapply.py in files; alternatives skip the hook line when release.py is absent, park; reverses if a third red batch).
 SESSION 18 (2026-11-21): W22-FOLD + UNREADABLE-RETAG (51f8834: 9 package-less wave-22 rows folded; RUN-UNREADABLE-WORD is a new package in wave 24; adjudicator amendment: its log-state sentences stay in design 0001 s9); wave 22 closed 14/18 merged, pushed origin/main 0555f53; parked packages re-placed: PUB-DEPBOT-FIRST-RUN and RUN-LIVE1-FIXTURES -> wave 23, DATA-PRICE-TYPE-PROOF and PUB-GUIDE-DOWNLOAD-PLACE -> wave 25, DATA-CONTACT-DEFAULT -> wave 43. Follow-up rows filed: RUN-CARDS-PAGE-FIT, BUDGET-RETIRE-TAILER-IDLE.
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
 PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
@@ -69,6 +67,24 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- WAVE-23 FOLLOW-UPS (session 19): PLAY-TD-21A left old wording pointing at
+  the moved controls (diag.py FIX_SNAPSHOT_OFF "under Prices and web data",
+  FIX_HOTKEY and FIX_TOGGLE_KEY "in AshLight's Tools", text/price.py lines,
+  settingsio.js message, hotkeys.js comment on #layout-status) and
+  tests/play_fit_pending/tab-settings.txt is still present; REL-UPDATE-CHECKS
+  copy nits (FIX_ROLLBACK opens with a negative, "Its version file can't be
+  read.", a comma splice) and report "mode" is implied only;
+  TEST-SHOTS-RENDER README nits (blank line before the 360/overlay pictures,
+  "plain ground" -> "plain background") and demo shots show a ~119 h session
+  clock; OVL-KEY-HINT D-1 N5 exemption not in design 0001 s10; OVL-APP-SCHEME
+  live render on the scheme not yet seen (opt-in overlay smoke, AUTO-22 runs
+  it daily when idle); RUN-LIVE1-FIXTURES kept verified lines in
+  tests/test_parser.py LIVE1_VERIFIED instead of the fixture file; AUTO-13
+  left the al_loop.py idle line "backed off to weekly (3 dives, 0 plans)"
+  stale; parsed Dependabot multi-bump group titles stay needs-review. New row
+  RUN-BUDGET-CALIBRATE-B11 (BLOCKED: session wave 25) answers the BUDGETLOG
+  item. Wave 23 batch suite holds: 135-150 s each (parallel 85-96 s + timing
+  49-56 s) vs the 120 s target (GATE-HOLD item still open).
 - DEV-PORT (ruled 2026-11-21, session 18): deferred to the install
   cutover. The checkout stays on 8960 (config/local.json "port": null)
   until an installed copy exists; at cutover set "port": 8961 in
@@ -81,10 +97,10 @@ Carried forward (not acted on yet):
   AL sidecar Logs folder, acl-before-20261119-185409 (icacls save). The
   dashboard "Private files" Checks row clears on the next core start; read it
   back then.
-- GO-PUBLIC STATUS (2026-11-21, session 18): NOT ready; GP-12 still
-  blocked: PUB-HOOK-RELEASE-CHECK deferred (wave 23), GP-09 and
-  SEC-STATIC-MAP not confirmed landed, gates 3 and 6 unchecked; local test
-  part 69/69 green. GP-10 and DATA-PRICE-CADENCE merged wave 18.
+- GO-PUBLIC STATUS (2026-11-21, session 19): as of 2026-11-21 session 19
+  PUB-HOOK-RELEASE-CHECK is merged (409e3a0) and GP-09 and SEC-STATIC-MAP
+  are confirmed landed; GP-12 still waits on gates 3 and 6 being checked;
+  local test part 69/69 green. GP-10 and DATA-PRICE-CADENCE merged wave 18.
   PUB-README-PLAYERS landed wave 12; ci green on consecutive runs. Flip only
   on the operator's word: `gh repo edit <public repo> --visibility public
   --accept-visibility-change-consequences` (<public repo> = the
@@ -194,11 +210,6 @@ Carried forward (not acted on yet):
 - NOTE (wave 4, DATA-PRICE-CARD-TEXT DPC-2): design 0001 section 9 needs
   a bullet for the new price-age templates; owner: the next package that
   owns docs/design/0001 (PLAY-TD-23-RECORDS at the latest).
-- NOTE (wave 4): CLAUDE.md holds a core-only Settled bullet for decision
-  0054 (SEC-HELLO-CORE); the integrator of the batch that merges the later
-  of SEC-HELLO-PS and SEC-HELLO-CLIENT (both still open) replaces it with
-  the full packages.json wording of SEC-HELLO-CORE, then runs
-  tests/test_audit_batch4.py.
 - NOTE (wave 4, TC-FILTER-ONE-CONTROL builder):
   tests/test_audit_pass5_low.py::test_p5_5_terminated_section_still_re_merges_once
   uses today's date and could flake across midnight.
@@ -247,7 +258,9 @@ Carried forward (not acted on yet):
   over 125 s reverses the 120 s target (next bullet).
 - BUDGETLOG FINDING (session 18): `python -m server.al.budgetlog check`
   prints FAIL: 406 breaches (e.g. B11 ws_mb 318.5 > 300); not a wave gate;
-  investigate (session item).
+  investigate (session item). Session 19: diagnosed (B11 provisional 300 MB
+  cap, 397 companion-open rows median 319 MB, B18 follows); adjudicator ruled
+  calibrate, row RUN-BUDGET-CALIBRATE-B11 filed.
 - NOTE (session 18 /done): reap --apply removed the 4 agent-* and the
   w22-* worktrees except w22-PUB-HOOK-RELEASE-CHECK; kept lanes 0 to 2.
   Read back: 5 worktrees (main, lane-0..2, w22-PUB-HOOK-RELEASE-CHECK);
