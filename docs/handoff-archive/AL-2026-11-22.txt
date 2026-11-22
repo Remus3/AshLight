@@ -61,3 +61,23 @@ NOTE: wave 28 merged all 5 (PLAY-TD-22A-A11Y-CSS, TEST-WEB-PANELS-B, TEST-CORE-T
 NOTE: wave 27 merged all 5 (PLAY-TD-21B-SETTINGS-ABOUT, REL-UPDATE-TRIGGER, CARD-LINE-LIMIT-COPY2, TEST-LOOP-WINDOW-5S, TEST-CALC-GROUP-SPLIT); batch suites 124 s (parallel 94.34 + timing 29.46) and 118 s (86.18 + 30.90), both green first run, under the 145 s hold bound; ruling A twice (packages.json widened: CARD-LINE-LIMIT-COPY2 +test_eval_text/test_price_text/test_price_card_age, 9dac106; REL-UPDATE-TRIGGER +test_ux_settings_io, 8e89800); 07 wave 27 section is stale against packages.json (plan_check trusted); design OPEN: 21B D1-D3 nits, COPY2 CL2-1/CL2-2 (filed CARD-HINT-TWIN); rows filed (loop-owned): LP-A, LP-B, CL-2, CL-3, TEST-OVL-CHECK-LOAD, REL-UPDATE-APPLY-NOW, PLAY-TD-21C-HISTORY-MOVE, CARD-HINT-TWIN, RUN-SETTINGS-WORDS; tests/test_ovl_check.py slow budget still fails under load in builder gated subsets, passed in both batch suites; main pushed after close.
 NOTE: wave 26 merged all 7 (OVL-OVERLAY-FEED, SEC-LOG-PATH-FIELD + PRICES-TITLE-TABINDEX, CARD-LINE-LIMIT-COPY partial by ruling, LOOP-GATE-SIDECAR-TEMP, RUN-BUDGET-CALIBRATE-B11, TEST-FUZZ-PARALLEL, TEST-LUAJIT-RELOADS-12); batch suites 145 s, 129 s (attempt 2; attempt 1 red only on test_budgets loop-body timing 0.617 vs 0.5 percent, passed by name), 123 s, all green; tests/test_ovl_check.py fails its slow-test budget (1.6-2.2 s vs 1.5 s) under load, also on main, and passed in every batch suite; design OPEN: SEC LP-A/LP-B focus, CARD CL-2/CL-3 nits; adjudicator rulings 2026-11-22: test_overlay_smoke.py added to RUN-BUDGET-CALIBRATE-B11, test_diag_self.py added to SEC-LOG-PATH-FIELD, budgetlog accept read as no B11/B18 breach (B10/B12 two transient rows kept); main pushed after close.
 NOTE: CARD-LINE-LIMIT-COPY2 merged w27: every card line built by the changed modules is <=26 (limits stay 34), so CARD-LINE-LIMIT-FLIP may start; web/slots.js HINT_TAIL twin is row CARD-HINT-TWIN.
+- NOTE (session 19 /done): reap --apply removed 33 worktrees (w22-*,
+  w23-*, w24-*, incl. w23-int and w24-int); kept lanes 0 to 2. Read back:
+  4 worktrees (main, lane-0..2); second run "reap applied: 0 removed, 3
+  kept, 0 listed (base main)". The reap kit defect repeated: reap deleted
+  worktree-w24-RUN-EXPLAIN-ROWS (its merge was reverted); re-created by
+  hand at c44ebd0 (session 18 saw the same with RUN-REPORT-FIELDS). KIT
+  DEFECT line to add: reap deletes a deferred package's branch when its
+  commits are on main by patch although the merge was reverted.
+  roadmap_fold: 32 row files applied, 29 rows archived (ed1d53a).
+Do NOT redo (session 19, on main and pushed): wave 22 carry (008c899, 409e3a0); wave 23 (14/14); wave 24 (12 merged, pointer a4f98b0, f8d1c1b); BUDGETLOG diagnosis and adjudicator ruling (row RUN-BUDGET-CALIBRATE-B11); REL-CUTOVER-LIVE prep (0.2.0-rc.0 built); the session 19 roadmap fold (ed1d53a); w22, w23 and w24 worktrees reaped.
+Operator orders (sessions 5 and 6; full text archive block "SESSION 19
+/done"): releases only on a milestone or an explicit tag; docs refresh
+and upstream watches scheduled; overlay / app restarts mid-game fine;
+heavy work at low priority while the operator plays; status board only
+on request; one deep review and a waved plan (docs/plan/README.md); go
+public, private first (decision 0046).
+Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
+127.0.0.1:8960 listening (session 11). Probe /api/health and the process
+list before touching them; other pythonw processes belong to other trees. A
+wave agent never starts or stops the app, core, overlay or loop (08, Rules).
