@@ -40,6 +40,7 @@
 <script src="/web/rail.js" defer></script>
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
+<script src="/web/logpath.js" defer></script>
 <script src="/web/slots.js" defer></script>
 <script src="/web/regions.js" defer></script>
 <script src="/web/pager.js" defer></script>
@@ -707,6 +708,20 @@
     <div class="rail-block">
       <p id="reading-state" class="row-body">AshLight is not reading Client.txt.</p>
       <p id="reading-path" class="row-meta muted one-line" hidden></p>
+      <!-- SEC-LOG-PATH-FIELD (F-098): shown by web/logpath.js only while the
+           Checks row "log" fails (no Client.txt found). Use (or Enter)
+           posts /api/consent {consent: true, path}: the player's own
+           opt-in for that one file. Nothing looks in any other folder,
+           registry key or config file. The answer is not a live region. -->
+      <form id="logpath-form" class="logpath-form set-row" hidden>
+        <label for="logpath-in">Can't find Client.txt? Type the game folder or the path to Client.txt</label>
+        <input id="logpath-in" type="text" maxlength="1024" autocomplete="off"
+          spellcheck="false" aria-describedby="logpath-note logpath-said">
+        <button id="logpath-use" type="submit" class="secondary btn-28">Use</button>
+        <span id="logpath-note" class="row-meta muted">Use also allows AshLight to read
+          Client.txt there, read only. Only that file, only at this path.</span>
+        <span id="logpath-said" class="row-meta"></span>
+      </form>
       <p class="set-row"><button id="consent-no" type="button" class="secondary" hidden
         aria-describedby="consent-said">Stop reading Client.txt</button>
         <span id="consent-said" class="row-meta"></span></p>
