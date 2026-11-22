@@ -501,6 +501,7 @@ def test_synth_marker_has_the_live_shape():
 
 @LIVE_CALC(group=CALC_GROUP_B)  # TEST-CALC-GROUP-SPLIT: one of the heavy three
 @pytest.mark.slow
+@pytest.mark.timing  # wave 30 ruling: wait(30) deadline, serial phase
 def test_fullstack_calc_on_leg(env, warm_bridge):
     """The calc ON path: "tc_calc" on in the temp config, the PoB reference
     build loaded as a code, one item check scored by PoB. Runs only where
