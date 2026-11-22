@@ -68,8 +68,9 @@ def _equipped_name(comp):
 
 # MATH-WEAPON-TYPE (decision 0032 amendment): Path of Building says the
 # build's main skill cannot use the checked weapon type in that slot
-WEAPON_TYPE_HEAD = "Downgrade - wrong weapon type"
-WEAPON_TYPE_LINE = "Main skill can't use this weapon"
+# (CARD-LINE-LIMIT-COPY2: both fit LINE_FIT)
+WEAPON_TYPE_HEAD = "Downgrade - wrong weapon"
+WEAPON_TYPE_LINE = "Main skill can't use it"
 
 
 def _weapon_skill(comp):

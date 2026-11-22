@@ -334,7 +334,7 @@ def test_press_card_carries_the_ninja_price(tmp_path):
                              "change": 8.2, "league": "Example League",
                              "checked_at": 1800000000.0, "league_changed_at": None}
     assert card["text"]["line"] == "About 12.5 Divine Orb"
-    assert card["text"]["detail"] == "Up 8.2% over 7 days (poe.ninja)"
+    assert card["text"]["detail"] == "Up 8.2% in 7 days"
     assert card["text"]["sentence"] == (
         "poe.ninja puts this at about 12.5 Divine Orb in Example League, from 342 "
         "listings; up 8.2% over 7 days. A trade site search in Example League is "
@@ -355,6 +355,9 @@ def test_press_without_a_cached_price_keeps_the_link_card(tmp_path):
 
 def test_ninja_text_exact():
     assert ninja_text(None) is None
+    # CARD-LINE-LIMIT-COPY2: the 7-day trend detail fits 26 even when huge
+    big = ninja_text({"value": 2.0, "unit": "Divine Orb", "change": -99999.9})
+    assert big["detail"].startswith("Down ") and len(big["detail"]) <= 26
     assert ninja_text({"value": float("nan")}) is None
     few = ninja_text({"value": 20.0, "unit": "Divine Orb", "listings": 3, "few": True,
                       "change": -40.0, "league": "L"})

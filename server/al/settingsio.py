@@ -115,6 +115,7 @@ ALLOWED = {
     "boots_speed_level": _int(1, 100),
     "worn_gear": _bool,  # TC-WORN-WIRE (decision 0052): on by default
     "wear_hotkey": _hotkey,  # TC-WORN-KEY: the optional wear key, unset by default
+    "update_click_only": _bool,  # REL-UPDATE-TRIGGER: updates wait for 'Update now'
 }
 # Player words for each key, for the import error sentence (design 0001 P2).
 LABELS = {
@@ -124,7 +125,7 @@ LABELS = {
     "overlay": "overlay position", "underlevel_gap": "under-level gap",
     "run_history": "run history switch", "price_watch_pct": "price watch threshold",
     "boots_speed_level": "boots speed level", "worn_gear": "worn gear switch",
-    "wear_hotkey": "wear item hotkey",
+    "wear_hotkey": "wear item hotkey", "update_click_only": "update on click only switch",
 }
 # Never exported or imported, even if a later key list grows (tests pin it).
 # REL-UPDATE-WIRE (ruling Q-21): web_data_ack, the acknowledged opt-in

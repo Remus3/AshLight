@@ -59,7 +59,7 @@ def test_rough_old_price_keeps_the_rough_word():
 def test_age_bounds():
     # 2 h or less: no age words
     fresh = price_card_text(card(checked_at=PRESS - PRICE_AGED_S))
-    assert fresh["detail"] == "Up 8.2% over 7 days (poe.ninja)"
+    assert fresh["detail"] == "Up 8.2% in 7 days"
     assert "ago" not in fresh["sentence"]
     just = price_card_text(card(checked_at=PRESS - PRICE_AGED_S - 1))
     assert just["detail"] == "Price from 2 h ago"
@@ -71,7 +71,7 @@ def test_age_bounds():
     # a cache stamped after the press (clock step) or without a stamp reads fresh
     for stamp in (PRESS + 600, None, "x", True):
         t = price_card_text(card(checked_at=stamp))
-        assert t["detail"] == "Up 8.2% over 7 days (poe.ninja)", stamp
+        assert t["detail"] == "Up 8.2% in 7 days", stamp
     # a card without a press time ages nothing
     t = price_card_text(dict(card(checked_at=PRESS - 30 * H), at=None))
     assert t["line"] == "About 12.5 Divine Orb" and "ago" not in t["sentence"]
@@ -93,7 +93,7 @@ def test_thirty_hour_old_cache_shows_the_link_only():
 def test_overlay_line_names_the_league_for_24_h_after_a_change():
     t = price_card_text(card(league_changed_at=PRESS - 2 * H))
     assert t["line"] == "~12.5 Divine Orb in Dawn"
-    assert t["detail"] == "Up 8.2% over 7 days (poe.ninja)"
+    assert t["detail"] == "Up 8.2% in 7 days"
     edge = price_card_text(card(league_changed_at=PRESS - LEAGUE_NEW_S + 1))
     assert edge["line"] == "~12.5 Divine Orb in Dawn"
     later = price_card_text(card(league_changed_at=PRESS - LEAGUE_NEW_S))
@@ -114,7 +114,7 @@ def test_overlay_line_names_the_league_for_24_h_after_a_change():
     # a non-ASCII name stays off the overlay lines (the sentence keeps it)
     accent = price_card_text(card(league_changed_at=PRESS - H, league="D" + chr(233) + "but"))
     assert accent["line"] == "About 12.5 Divine Orb"
-    assert accent["detail"] == "Up 8.2% over 7 days (poe.ninja)"
+    assert accent["detail"] == "Up 8.2% in 7 days"
     # an old price after a change says both
     both = price_card_text(card(checked_at=PRESS - 4 * H, league_changed_at=PRESS - 5 * H))
     assert (both["line"], both["detail"]) == ("~12.5 Divine Orb in Dawn",

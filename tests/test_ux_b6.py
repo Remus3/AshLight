@@ -1,5 +1,6 @@
 """AREA-UX batch 6 (glance review 0004 U22-U24): the search strings card,
-the loot filter words, the footer promises and the waystone card text.
+the loot filter words, the promises (Settings > About and data since
+PLAY-TD-21B-SETTINGS-ABOUT) and the waystone card text.
 Static reads of web/ plus the core's waystone template; stdlib only."""
 
 import re
@@ -63,12 +64,24 @@ def test_filter_words_say_what_it_does_and_that_nothing_is_written():
     assert "AshLight writes nothing into your game folders." in _flat(HTML)
 
 
+def _section(sid):
+    i = HTML.index('<section id="%s"' % sid)
+    return HTML[i:HTML.index("</section>", i)]
+
+
 def test_footer_keeps_the_disclaimer_and_folds_the_promises():
+    """PLAY-TD-21B-SETTINGS-ABOUT (plan 03 section 3.4): the footer keeps the
+    disclaimer sentence, words unchanged and in the text colour, beside the
+    trademark sentence on one row; the promises fold left the footer and
+    reads open in Settings > About and data, always on the page."""
     foot = _footer()
-    assert DISCLAIMER in foot
-    m = re.search(r'<details id="promises"[^>]*>(.*?)</details>', foot, re.S)
-    assert m, "promises fold in the footer"
-    assert "open" not in re.search(r'<details id="promises"[^>]*>', foot).group(0)
+    assert "<p>%s</p>" % DISCLAIMER in foot
+    assert '<p class="muted">Path of Exile is a trademark of Grinding Gear Games.</p>' in foot
+    assert "<details" not in foot and 'id="promises"' not in foot
+    about = _section("set-about")
+    m = re.search(r'<div id="promises" class="rail-block promises"[^>]*>(.*?)</div>', about, re.S)
+    assert m, "promises in About and data"
+    assert "<details" not in about
     text = _flat(m.group(1))
     assert "What AshLight does and never does" in text
     for words in ("Client.txt, only after you allow it",

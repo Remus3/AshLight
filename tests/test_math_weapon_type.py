@@ -146,8 +146,8 @@ def test_evaluate_prefers_a_hand_the_skill_can_use():
 
 # -- card text -------------------------------------------------------------
 
-HEAD = "Downgrade - wrong weapon type"
-LINE = "Main skill can't use this weapon"
+HEAD = "Downgrade - wrong weapon"
+LINE = "Main skill can't use it"
 CALC = ("Your main skill can't use this weapon type, so this item is a downgrade "
         "for this build. Path of Building counts no damage from Ice Shot with it "
         "in Weapon 1.")
@@ -157,8 +157,8 @@ COMP = "Downgrade: your main skill can't use this weapon type in Weapon 1 (Main 
 def test_card_says_the_main_skill_cannot_use_this_weapon_type():
     r = tc_evaluate.evaluate(ONE_HAND, _build(), calc=_unusable_calc())
     t = eval_card_text(r)
-    assert t["head"] == HEAD and len(HEAD) <= 34
-    assert t["line"] == LINE and len(LINE) <= 34
+    assert t["head"] == HEAD and len(HEAD) <= 26
+    assert t["line"] == LINE and len(LINE) <= 26
     assert t["calc"] == CALC
     assert t["sentence"] == COMP
     assert t["comparisons"][0]["sentence"] == COMP

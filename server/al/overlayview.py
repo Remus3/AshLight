@@ -32,7 +32,9 @@ CARD_HOLDERS: the first holder with a card wins.
   zone card it never waits and never returns.
 - hint (OVL-KEY-HINT): the empty slot teaches the item-check key: one
   line, '<key>: check an item', the bound key of the hotkeys view
-  (OVL-KEYS-CORE; no key known = no hint). It has no expiry while due:
+  (OVL-KEYS-CORE; no key known = no hint). CARD-LINE-LIMIT-COPY2: over
+  HINT_FIT (26) characters it reads 'Check: <key>'; a key too long for
+  that (over 19 characters) shows no hint, never a cut key. It has no expiry while due:
   due while no press was ever recorded on this install and fewer than
   HINT_SESSIONS game sessions (log_opened events seen while a key was
   known, so the hint could show) were seen. After that
@@ -87,6 +89,8 @@ STORE_KEYS = ("key_hint",)
 
 # OVL-KEY-HINT: the key hint line and when it retires for good
 HINT_TEXT = "{key}: check an item"
+HINT_SHORT = "Check: {key}"
+HINT_FIT = 26  # CARD-LINE-LIMIT-COPY2: common.CARD_LINE stays 34 until FLIP
 HINT_SESSIONS = 3  # game sessions (log_opened) after which the hint retires
 
 SAMPLE_S = 10
@@ -184,6 +188,18 @@ def _gap_line(state, split):
     return ""
 
 
+def _hint_head(key):
+    """The hint line for a known key: HINT_TEXT, else HINT_SHORT, within
+    HINT_FIT; None with no key or a key too long for either."""
+    if key is None:
+        return None
+    for form in (HINT_TEXT, HINT_SHORT):
+        line = form.format(key=key)
+        if len(line) <= HINT_FIT:
+            return line
+    return None
+
+
 def _hint_marker(raw):
     """A valid key-hint marker {"pressed": bool, "sessions": 0..HINT_SESSIONS}
     from a read store value, else None (dropped)."""
@@ -250,9 +266,10 @@ class OverlayView:
             changed = changed or bool(self.seen) or self.moment is not None
             self.seen = {}
             self.moment = None
-            if _hint_key(state) is not None:
-                # a game session counts only while a key is known (the
-                # hint could teach it); no client, no key, no count
+            if _hint_head(_hint_key(state)) is not None:
+                # a game session counts only while a key is known and fits
+                # the hint line (the hint could teach it); no client, no
+                # key, no count
                 changed = self._count_session() or changed
         if t == "area_generated" and _is_time(now):
             changed = self._act_closed(state, now) or changed
@@ -302,10 +319,10 @@ class OverlayView:
             lay.get("parts"), dict) else {}
         if parts.get("hint", True) is False:
             return None
-        key = _hint_key(state)
-        if key is None:
+        head = _hint_head(_hint_key(state))
+        if head is None:
             return None
-        return {"kind": "hint", "head": clip(HINT_TEXT.format(key=key)),
+        return {"kind": "hint", "head": head,
                 "line2": "", "line3": "", "verdict": "hint", "expires_at": None}
 
     def _guide(self, state):

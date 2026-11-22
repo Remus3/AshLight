@@ -107,6 +107,10 @@ function fakeDoc(ids) {
 test("dashboard: the restart-overlay button shows only inside the client", () => {
   const html = web.source("index.html");
   assert.match(html, /<p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay<\/button>\s*<span id="restart-overlay-said" class="muted"><\/span><\/p>/);
+  // PLAY-TD-21B-SETTINGS-ABOUT: a row of Settings > Appearance and tools
+  const tools = html.slice(html.indexOf('<section id="toolsbox"'), html.indexOf("</section>", html.indexOf('<section id="toolsbox"')));
+  assert.match(tools, /<h3 id="tools-title">Appearance and tools<\/h3>/);
+  assert.ok(tools.includes('id="restart-overlay-row"'));
   const src = web.source("app.js");
   const start = src.indexOf("  function wireRestartOverlay()");
   const end = src.indexOf("\n  }\n", start) + 4;

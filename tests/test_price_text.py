@@ -63,7 +63,7 @@ def test_off_and_errors_say_what_to_do():
     off = price_card_text(price("off"))
     # DATA-PRICE-CARD-TEXT (F-018): names poe.ninja and the card, not a file
     assert (off["line"], off["detail"]) == ("Web data is off",
-                                            "Turn it on in Prices and web data")
+                                            "See Prices and web data")
     assert off["sentence"] == ("poe.ninja prices need web data, which is off. Turn it on "
                                "in the Prices and web data card on this page.")
     nai = price_card_text(price("error", error="not an item", item={}))
@@ -85,7 +85,7 @@ def test_off_contact_not_set_says_what_to_do():
     # F2 (PRICE-1-COPY): off because no contact is set must not say web data is off
     t = price_card_text(price("off", error="contact not set"))
     # DATA-PRICE-CARD-TEXT (F-018): names poe.ninja and the card, not a file
-    assert (t["line"], t["detail"]) == ("Contact not set", "Add it in Prices and web data")
+    assert (t["line"], t["detail"]) == ("Contact not set", "See Prices and web data")
     assert t["sentence"] == ("poe.ninja prices need a contact, such as an email or a name. "
                              "Add it in the Prices and web data card on this page, then "
                              "press the hotkey again.")

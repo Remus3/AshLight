@@ -165,7 +165,13 @@ def test_live_regions_are_few_and_named():
     # P8-2; PLAY-TD-09C-BAR / MERGE-SEAMS F2 dropped the feed pill);
     # PLAY-LEGACY-OUT-2 removed the consent error with the old consent card,
     # so it is 9: a new one replaces one of these, never adds a tenth.
-    assert len(live) <= 9, [n.attrs.get("id") for n in live]
+    # PLAY-TD-21A-SETTINGS-RAIL took the live role off the Settings status
+    # lines; PLAY-TD-21B-SETTINGS-ABOUT holds the page to at most 6 (plan
+    # 03 4.1.3): the markup's 5 (tab news, the bar status word, item check,
+    # price, weights status) and the calc row region web/checks.js builds.
+    assert len(live) + 1 <= 6, [n.attrs.get("id") for n in live]
+    settings = by_id()["panel-settings"]
+    assert not [n.attrs for n in settings.walk() if is_live(n)]
     # Play's own markup holds none: its regions build their own
     play = by_id()["panel-play"]
     assert not [n.attrs for n in play.walk() if is_live(n)]
