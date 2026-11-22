@@ -37,6 +37,7 @@
 <script src="/web/hints.js" defer></script>
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
+<script src="/web/rail.js" defer></script>
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
 <script src="/web/slots.js" defer></script>
@@ -87,10 +88,15 @@
        feed state (ALDash.barStatus). It is the visible reading indicator of
        the ToS floor, on every tab (MERGE-SEAMS F2: the feed pill is gone). -->
   <p id="bar-char" class="bar-char muted"></p>
-  <p id="reading" class="pill" data-state="pending" role="status" aria-live="polite">
+  <!-- PLAY-TD-21A-SETTINGS-RAIL (TD-21, G12): the word is a 32 px button and
+       stays the polite reading indicator; a press shows Settings, Reading
+       and web data with focus on "Stop reading Client.txt" (web/rail.js) -->
+  <button id="reading" class="pill bar-word" type="button" data-state="pending" aria-live="polite"
+    aria-describedby="reading-to">
     <span class="glyph" aria-hidden="true">[ ]</span>
     <span class="word">connecting</span>
-  </p>
+  </button>
+  <span id="reading-to" hidden>Opens Reading and web data in Settings.</span>
 </header>
 
 <main>
@@ -379,7 +385,7 @@
         id="rates-credit">Prices: poe.ninja</span><span id="rates-unit"></span></p>
       <div class="card-foot" data-card-foot>
         <button type="button" class="secondary btn-24" data-card-open="watch">Checked items</button>
-        <button type="button" class="secondary btn-24" data-card-open="web">Web data</button>
+        <button type="button" class="secondary btn-24" data-jump="webdata-on" aria-describedby="reading-to">Web data</button>
         <button type="button" class="secondary btn-24" data-card-open="source">Source</button>
       </div>
     </div>
@@ -389,20 +395,6 @@
         id="watch-said" class="row-meta one-line muted"></span></p>
       <p class="row-meta muted">Uses the poe.ninja prices AshLight already has. It asks the web
         nothing new.</p>
-    </div>
-    <div class="card-page" data-page="web" data-label="Web data" hidden>
-      <form id="webdata-form" class="webdata-form card-act">
-        <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
-          Use web data</label>
-        <span id="webdata-status" class="row-meta one-line muted" role="status" aria-live="polite"></span>
-      </form>
-      <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
-           text the build link recovery shows before its confirm click) -->
-      <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for two things only.
-        It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
-        paste, once. It never asks the trade site anything; the trade link after an item check
-        opens only when you click it. It sends no account, password or cookie, and never touches
-        the game.</p>
     </div>
     <div class="card-page" data-page="source" data-label="Where prices come from" hidden>
       <p id="rates-attrib" class="row-meta"></p>
@@ -647,78 +639,137 @@
   </div>
   </div>
 
-  <div id="panel-settings" class="panel panel-grid" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
-  <!-- UX-DASH-DENSITY: set-once tools folded into one group at the end; the
-       hotkey hint stays visible. The .build file and the loot filter add-on stay
-       folded in the Build and Search strings cards, next to what they are made from. -->
-  <section id="toolsbox" class="card tools" aria-labelledby="tools-title">
-    <h2 id="tools-title">Tools</h2>
-    <p class="muted">Show or hide the overlay any time with <span data-hotkey="toggle">the
-      overlay key</span>, and check an item with <span data-hotkey="eval">the item check
-      key</span>. You can change either key under Keys below.</p>
-    <p id="overlay-idle-note" class="muted" hidden>Overlay hidden: no game activity for 20 min. It comes back with the next log line.</p>
-    <!-- DESKTOP-CLIENT (decision 0041): shown only inside the AshLight
-         desktop client, which hands the page this one action; on the
-         Settings tab outside the fold so it is one click away -->
-    <p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay</button>
-      <span id="restart-overlay-said" class="muted"></span></p>
-    <!-- NEWBIE-HINTS: one click shows the new-character tips again -->
-    <p class="tool-row"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
-      <span id="hints-said" class="muted"></span></p>
-    <!-- DIAG-SELF (ruling J): computed by the core; folded when green, opens
-         by itself on a failure; the copy is the only click. RUN-REPORT-ROUTE:
-         opening the fold builds the report (GET /api/report) into the
-         read-only preview; Copy report copies exactly that text -->
-    <div id="checksbox" class="tool checks" role="group" aria-labelledby="checks-title">
-      <h3 id="checks-title" class="sub-h">Checks</h3>
-      <details id="checks">
-        <summary id="checks-summary">Checking AshLight...</summary>
-        <ul id="checks-list" class="checks-list"></ul>
-        <!-- RUN-VERDICTS-UI: the 'Tried in game' card (web/verdicts.js fills it) -->
-        <div id="verdicts" class="tool verdicts" role="group" aria-labelledby="verdicts-title" hidden>
-          <h4 id="verdicts-title" class="sub-h">Tried in game</h4>
-        </div>
-        <div class="settings-controls">
-          <button id="checks-copy" type="button" disabled>Copy report</button>
-        </div>
-        <p class="muted small">The report holds no file paths, names, contact or chat.
-          Paste it where you ask for help.</p>
-        <div id="checks-preview-box" hidden>
-          <label class="row-meta muted small" for="checks-preview">The report, as Copy report copies it</label>
-          <textarea id="checks-preview" class="code-out" readonly rows="6" spellcheck="false"></textarea>
-        </div>
-        <!-- not a live region: the dashboard keeps at most 12 (design N6) -->
-        <p id="checks-said" class="muted" tabindex="-1"></p>
-      </details>
+  <div id="panel-settings" class="panel panel-settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
+  <!-- PLAY-TD-21A-SETTINGS-RAIL (TD-21, F-067; plan 03 section 4): a rail
+       of 6 section buttons (220 px) and a pane that shows ONE section
+       (web/rail.js). A section holds at most 448 px of rows; its
+       .rail-block children page beyond that (Prev / Next), never a scroll.
+       Checks shows by itself at load and on a new failure. Sections 4 to 6
+       share today's Tools card until PLAY-TD-21B-SETTINGS-ABOUT. -->
+  <h2 id="settings-h" class="sr-only">Settings</h2>
+  <div id="rail" class="rail" role="group" aria-label="Settings sections">
+    <button id="rail-checks" class="rail-item" type="button" aria-controls="checks" aria-current="true">Checks</button>
+    <button id="rail-reading" class="rail-item" type="button" aria-controls="set-reading">Reading and web data</button>
+    <button id="rail-overlay" class="rail-item" type="button" aria-controls="set-overlay">Overlay</button>
+    <button id="rail-keys" class="rail-item" type="button" aria-controls="toolsbox">Keys</button>
+    <button id="rail-tools" class="rail-item" type="button" aria-controls="toolsbox">Appearance and tools</button>
+    <button id="rail-about" class="rail-item" type="button" aria-controls="toolsbox">About and data</button>
+  </div>
+  <div class="rail-pane">
+  <!-- 1 Checks. DIAG-SELF (ruling J): computed by the core; shows by itself
+       on a failure; the copy is the only click. The rows page 12 at a time
+       (web/checks.js). RUN-REPORT-ROUTE: the player's press of the Checks
+       rail button builds the report (GET /api/report) into the read-only
+       preview; Copy report copies exactly that text -->
+  <section id="checks" class="card rail-section checks" aria-labelledby="checks-title">
+    <h3 id="checks-title">Checks</h3>
+    <div id="checksbox" class="rail-block">
+      <p id="checks-summary" class="check-sum" tabindex="-1">Checking AshLight...</p>
+      <ul id="checks-list" class="checks-list"></ul>
+      <div id="checks-pager" class="al-pager" hidden>
+        <span id="checks-count" class="al-pager-count"></span>
+        <button id="checks-prev" type="button" class="al-pager-btn" aria-label="Previous page of checks">Prev</button>
+        <button id="checks-next" type="button" class="al-pager-btn" aria-label="Next page of checks">Next</button>
+      </div>
     </div>
+    <div class="rail-block">
+      <!-- RUN-VERDICTS-UI: the 'Tried in game' card (web/verdicts.js fills it) -->
+      <div id="verdicts" class="tool verdicts" role="group" aria-labelledby="verdicts-title" hidden>
+        <h4 id="verdicts-title" class="sub-h">Tried in game</h4>
+      </div>
+    </div>
+    <div class="rail-block">
+      <div class="settings-controls">
+        <button id="checks-copy" type="button" disabled>Copy report</button>
+      </div>
+      <p class="muted small">The report holds no file paths, names, contact or chat.
+        Paste it where you ask for help.</p>
+      <div id="checks-preview-box" hidden>
+        <label class="row-meta muted small" for="checks-preview">The report, as Copy report copies it</label>
+        <textarea id="checks-preview" class="code-out" readonly rows="6" spellcheck="false"></textarea>
+      </div>
+      <!-- not a live region: the dashboard keeps at most 6 (plan 03 4.1.3) -->
+      <p id="checks-said" class="muted" tabindex="-1"></p>
+    </div>
+  </section>
 
-    <details id="tools-more">
-    <summary>Overlay position, keys, settings transfer and graphics</summary>
-    <div class="tool layout" role="group" aria-labelledby="layout-title">
-      <h3 id="layout-title" class="sub-h">Overlay position and size</h3>
-      <form id="layout-form" class="layout-form">
-        <label>Monitor
-          <select id="layout-display" name="display"><option value="primary">Primary</option></select>
-        </label>
-        <label>Corner
-          <select id="layout-corner" name="corner"></select>
-        </label>
-        <label>Size <span id="layout-scale-out" class="mono"></span>
-          <input id="layout-scale" name="scale" type="range" min="0.95" max="2" step="0.05">
-        </label>
-        <label>Background <span id="layout-opacity-out" class="mono"></span>
-          <input id="layout-opacity" name="opacity" type="range" min="0.8" max="1" step="0.01">
-        </label>
-        <label>Gap from the screen edge (px)
-          <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
-        </label>
+  <!-- 2 Reading and web data. The bar status word (#reading) lands here, on
+       "Stop reading Client.txt" (moved from the footer with its id); the
+       opt-in is region C's setup card on Play. RUN-LEDGER-CONSENT
+       (decision 0071): the log record's own consent line sits beside the
+       opt-out, with its own Allow control; shown only while Client.txt is
+       read; never implied by the Client.txt opt-in. The one web-data
+       switch moved from the Prices card with its wording, default OFF.
+       The answers beside the controls are not live regions (each control
+       points at its own). -->
+  <section id="set-reading" class="card rail-section" aria-labelledby="reading-title" hidden>
+    <h3 id="reading-title" tabindex="-1">Reading and web data</h3>
+    <div class="rail-block">
+      <p id="reading-state" class="row-body">AshLight is not reading Client.txt.</p>
+      <p id="reading-path" class="row-meta muted one-line" hidden></p>
+      <p class="set-row"><button id="consent-no" type="button" class="secondary" hidden
+        aria-describedby="consent-said">Stop reading Client.txt</button>
+        <span id="consent-said" class="row-meta"></span></p>
+      <p id="ledger-line" class="row-meta muted" hidden>
+        <span id="ledger-text">Log record: off.</span>
+        <button id="ledger-allow" type="button" class="link"
+          aria-describedby="ledger-text ledger-said">Allow the log record</button>
+        <span id="ledger-said"></span></p>
+    </div>
+    <div class="rail-block">
+      <form id="webdata-form" class="webdata-form set-row">
+        <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
+          Use web data</label>
+        <span id="webdata-status" class="row-meta one-line muted"></span>
       </form>
-      <!-- OVL-KEYS-WEB (decision 0058): one optional field per key, saved on
-           change (POST /api/hotkeys); the desktop client switches by itself.
-           The Checks fix sentences (diag.py) send the player here. Each
-           field's note (a taken key) sits beside it; the answer to a save
-           goes to this group's one polite region, #layout-status below
-           (the dashboard keeps at most 9). -->
+      <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
+           text the build link recovery shows before its confirm click) -->
+      <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for two things only.
+        It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
+        paste, once. It never asks the trade site anything; the trade link after an item check
+        opens only when you click it. It sends no account, password or cookie, and never touches
+        the game.</p>
+      <p class="row-meta set-row"><span class="muted">Price book</span>
+        <span id="book-state" class="pill" data-state="pending"><span class="glyph"
+          aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></span></p>
+    </div>
+  </section>
+
+  <!-- 3 Overlay: the layout form rows that exist today (the slider label,
+       parts chooser, zone guide setting and card time arrive with the OVL
+       packages). OVL-KEYS-WEB (decision 0058): the change-key fields stay
+       with the layout form until PLAY-TD-21B-SETTINGS-ABOUT; each saves on
+       change (POST /api/hotkeys) and the desktop client switches by itself.
+       The Checks fix sentences (diag.py) send the player here. Each field's
+       note (a taken key) sits beside it; the answer to a save goes to
+       #layout-status below, a plain line (not a live region since this
+       package: the page keeps at most 6). -->
+  <section id="set-overlay" class="card rail-section" aria-labelledby="overlay-title" hidden>
+    <h3 id="overlay-title">Overlay</h3>
+    <div class="rail-block">
+      <p id="overlay-idle-note" class="muted" hidden>Overlay hidden: no game activity for 20 min. It comes back with the next log line.</p>
+      <div class="tool layout" role="group" aria-labelledby="layout-title">
+        <h4 id="layout-title" class="sub-h">Overlay position and size</h4>
+        <form id="layout-form" class="layout-form">
+          <label>Monitor
+            <select id="layout-display" name="display"><option value="primary">Primary</option></select>
+          </label>
+          <label>Corner
+            <select id="layout-corner" name="corner"></select>
+          </label>
+          <label>Size <span id="layout-scale-out" class="mono"></span>
+            <input id="layout-scale" name="scale" type="range" min="0.95" max="2" step="0.05">
+          </label>
+          <label>Background <span id="layout-opacity-out" class="mono"></span>
+            <input id="layout-opacity" name="opacity" type="range" min="0.8" max="1" step="0.01">
+          </label>
+          <label>Gap from the screen edge (px)
+            <input id="layout-margin" name="margin" type="number" min="0" max="400" step="1">
+          </label>
+        </form>
+      </div>
+    </div>
+    <div class="rail-block">
       <div id="hotkeysbox" class="hotkeys" role="group" aria-labelledby="hotkeys-title">
         <h4 id="hotkeys-title" class="sub-h">Keys</h4>
         <p class="muted">Type the key as words, for example Ctrl+Alt+K. It needs Ctrl or
@@ -732,11 +783,37 @@
             spellcheck="false" aria-describedby="hotkey-toggle-said">
           <span id="hotkey-toggle-said" class="muted"></span></p>
       </div>
-      <p id="layout-status" class="muted" role="status" aria-live="polite"></p>
+      <p id="layout-status" class="muted"></p>
+    </div>
+  </section>
+
+  <!-- 4 Keys, 5 Appearance and tools, 6 About and data: today's Tools card
+       until PLAY-TD-21B-SETTINGS-ABOUT. UX-DASH-DENSITY: set-once tools
+       folded into one group at the end; the hotkey hint stays visible. The
+       .build file and the loot filter add-on stay as pages of the Build
+       and Search strings cards, next to what they are made from. -->
+  <section id="toolsbox" class="card rail-section tools" aria-labelledby="tools-title" hidden>
+    <h3 id="tools-title">Tools</h3>
+    <div class="rail-block">
+    <p class="muted">Show or hide the overlay any time with <span data-hotkey="toggle">the
+      overlay key</span>, and check an item with <span data-hotkey="eval">the item check
+      key</span>. You can change either key under Overlay.</p>
+    <p class="tool-row"><button type="button" class="secondary" data-jump="hotkey-eval">Change a key</button></p>
+    <!-- DESKTOP-CLIENT (decision 0041): shown only inside the AshLight
+         desktop client, which hands the page this one action; on the
+         Settings tab outside the fold so it is one click away -->
+    <p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay</button>
+      <span id="restart-overlay-said" class="muted"></span></p>
+    <!-- NEWBIE-HINTS: one click shows the new-character tips again -->
+    <p class="tool-row"><button id="hints-reset" type="button" aria-describedby="hints-said">Show new-character tips again</button>
+      <span id="hints-said" class="muted"></span></p>
     </div>
 
+    <div class="rail-block">
+    <details id="tools-more">
+    <summary>Settings transfer and graphics</summary>
     <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">
-      <h3 id="settings-title" class="sub-h">Move settings to another computer</h3>
+      <h4 id="settings-title" class="sub-h">Move settings to another computer</h4>
       <p class="muted">Download AshLight's settings, then import the file on the other
         computer. The file never holds your contact, a password or file paths.</p>
       <div class="settings-controls">
@@ -748,14 +825,14 @@
     </div>
 
     <div class="tool gfx" role="group" aria-labelledby="gfx-title">
-      <h3 id="gfx-title" class="sub-h">Graphics settings for this computer</h3>
+      <h4 id="gfx-title" class="sub-h">Graphics settings for this computer</h4>
       <details id="gfx">
         <summary>Show suggested settings</summary>
         <p class="muted">Suggested Path of Exile 2 settings for this computer. AshLight only
           suggests them: apply them in game under Options, Graphics. AshLight never reads or
           changes the game's files.</p>
         <!-- not a live region: read once the player opens this fold
-             (the dashboard keeps at most 12, design N6) -->
+             (the dashboard keeps at most 6, plan 03 4.1.3) -->
         <p id="gfx-status" class="muted"></p>
         <div id="gfx-body" hidden>
           <dl id="gfx-hw" class="kv"></dl>
@@ -773,7 +850,9 @@
       <summary>About AshLight</summary>
       <p id="about-version" class="muted">Reading the version...</p>
     </details>
+    </div>
   </section>
+  </div>
   </div>
 </main>
 
@@ -812,21 +891,10 @@
     <summary>Game data credits</summary>
   <p id="data-credit" class="muted" hidden></p>
   </details>
-  <!-- the opt-out stays here until PLAY-TD-21A-SETTINGS-RAIL moves it; its
-       failure line is not a live region (the button points at it) -->
-  <p class="muted">Path of Exile is a trademark of Grinding Gear Games.
-    <button id="consent-no" type="button" class="link" hidden
-      aria-describedby="consent-said">Stop reading Client.txt</button>
-    <span id="consent-said"></span></p>
-  <!-- RUN-LEDGER-CONSENT (decision 0071): the log record's own consent line
-       beside the Client.txt opt-out, with its own Allow control; shown only
-       while Client.txt is read; never implied by the Client.txt opt-in; its
-       failure line is not a live region (the button points at it) -->
-  <p id="ledger-line" class="muted" hidden>
-    <span id="ledger-text">Log record: off.</span>
-    <button id="ledger-allow" type="button" class="link"
-      aria-describedby="ledger-text ledger-said">Allow the log record</button>
-    <span id="ledger-said"></span></p>
+  <!-- PLAY-TD-21A-SETTINGS-RAIL: "Stop reading Client.txt" and the log
+       record line moved to Settings, Reading and web data (the bar status
+       word leads there) -->
+  <p class="muted">Path of Exile is a trademark of Grinding Gear Games.</p>
 </footer>
 </body>
 </html>

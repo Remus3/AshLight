@@ -400,7 +400,7 @@ textarea, .weights-form input {
    Separators only, no motion. */
 .tools .tool { border-top: 1px solid var(--fk-border); margin-top: 12px; padding-top: 4px; }
 .tools .tool:first-of-type { border-top: none; }
-.tools > details > summary { color: var(--fk-text); font-weight: 600; }
+.tools .rail-block > details > summary { color: var(--fk-text); font-weight: 600; }
 
 /* Narrow side window next to the game: tighter spacing only. */
 @media (max-width: 520px) {
@@ -421,7 +421,14 @@ textarea, .weights-form input {
 .checks-list li[data-state="blocked"] .glyph,
 .checks-list li[data-state="blocked"] .check-word { color: var(--fk-status-warn); }
 .check-fix { font-weight: 600; }
-.checks > details > summary { color: var(--fk-text); font-weight: 600; min-height: 32px; cursor: pointer; }
+/* PLAY-TD-21A-SETTINGS-RAIL: no fold; the summary line heads the rows. A
+   row is one 32 px line while its name, word and detail fit (they flow
+   side by side); a fix, the calc line and the calc button take their own
+   line. 12 rows a page (web/checks.js) stay inside the 448 px rule. */
+.check-sum { margin: 0; font-weight: 600; min-height: 1.5rem; }
+.checks-list li { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
+.checks-list li > .check-fix, .checks-list li > #checks-calc-status { flex-basis: 100%; }
+#checks-pager { margin-top: 4px; }
 
 /* UI-GLANCE: tabs. Play is the glance tab and fits one screen; the other
    tabs use compact grids. The selected tab has a bar under it AND bold
@@ -459,6 +466,45 @@ button.tab:focus-visible { outline-offset: -3px; }
   font-weight: 600;
 }
 .panel { display: grid; gap: 16px; align-content: start; min-width: 0; }
+/* PLAY-TD-21A-SETTINGS-RAIL (TD-21, F-067; plan 03 section 4): Settings is
+   a rail of 6 section buttons and a pane that shows one section. Narrow:
+   the rail wraps above the pane; from 900 px the rail is a 220 px column.
+   The shown button has a bar on its leading edge AND bold weight plus
+   aria-current (colour never alone); no motion. A section holds at most
+   448 px of rows: web/rail.js folds its .rail-block children that are off
+   the shown page (data-off: 0 px, out of view and out of the focus order;
+   scrollHeight still reads their height) and adds Prev / Next. */
+.panel-settings { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.rail { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+button.rail-item {
+  color: var(--fk-text);
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 0 6px 6px 0;
+  padding: 4px 12px;
+  min-height: 32px;
+  text-align: left;
+  font-weight: 400;
+}
+button.rail-item[aria-current="true"] { border-left-color: var(--fk-accent); font-weight: 600; }
+button.rail-item:hover { background: var(--fk-surface); }
+.rail-pane { display: grid; min-width: 0; }
+.rail-section h3 { font-size: 1rem; margin: 0 0 8px; }
+/* flow-root: no margin collapses through a block, so its height reads the
+   same folded or shown */
+.rail-block { display: flow-root; min-width: 0; }
+.rail-block[data-off] { height: 0; margin: 0; padding: 0; overflow: hidden; visibility: hidden; }
+.rail-pager { margin-top: 8px; }
+.set-row { margin: 8px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+  min-height: 32px; }
+/* the bar status word is a 32 px button (G12): the pill look, no fill */
+button.bar-word { min-height: 32px; padding: 2px 10px; background: none; }
+button.bar-word:hover { background: var(--fk-surface); }
+@media (min-width: 900px) {
+  .panel-settings { grid-template-columns: 220px minmax(0, 1fr); }
+  .rail { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+}
 .panel:focus-visible { outline: 3px solid var(--fk-text); outline-offset: 2px; }
 .panel-grid { grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); align-items: start; }
 .panel-grid > .col { display: grid; gap: 16px; align-content: start; min-width: 0; }
@@ -492,6 +538,9 @@ button.tab:focus-visible { outline-offset: -3px; }
     grid-template-areas: "brand tabs char status"; padding: 6px 16px; }
   .card { padding: 12px; }
   .panel-grid { gap: 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* the rail pages a long section; this only catches one block taller
+     than the pane (the page itself never scrolls) */
+  .panel-settings { gap: 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   /* each column of a tab scrolls on its own; the page never does */
   .panel-grid > .col { max-height: 100%; overflow-y: auto; padding-right: 4px; gap: 12px; }
   .foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;

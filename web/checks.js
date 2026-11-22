@@ -11,12 +11,20 @@
    RUN-REPORT-ROUTE (finding F-109, folded into RUN-VERDICTS-UI): the
    report is built on the player's click by GET /api/report
    (server/al/plug/report.py) and shown first in a read-only preview
-   (#checks-preview). The click that opens the Checks fold builds it, so
-   the preview costs no extra click; "Copy report" then writes exactly the
-   previewed text, synchronously inside its own click. When no preview is
-   there yet (the fold opened by itself on a failure, or the build
-   failed), that click builds and shows it and the next one copies; the
-   clipboard is never written after a wait. No upload, ever.
+   (#checks-preview). The press of the Checks rail button that shows the
+   section builds it, so the preview costs no extra click; "Copy report"
+   then writes exactly the previewed text, synchronously inside its own
+   click. When no preview is there yet (Checks showed by itself, at load
+   or on a failure, or the build failed), that click builds and shows it
+   and the next one copies; the clipboard is never written after a wait.
+   No upload, ever.
+   PLAY-TD-21A-SETTINGS-RAIL (TD-21): Checks is section 1 of the Settings
+   rail (web/rail.js), no longer a fold. #checks.open is rail.js's
+   accessor, so setting it shows the section. The rows page instead of
+   folding: ROWS_PAGE (12) a page, Prev / Next only on a press (#checks-
+   pager; the pressed button is never re-created or disabled, an end one
+   says aria-disabled="true" and does nothing); a new failure shows the
+   page holding the first failing row.
    VERDICTS-UI-A11Y (design review V-4, V-5): a Copy click that built the
    missing preview says it is below and asks for Copy report again; a
    preview made before a check changed its state is made again by the
@@ -67,6 +75,10 @@
   var READY_TAILS = "The report changed with your choice. The new report is below. " +
     "Press Copy report to copy it.";
   var WAITING = "Checking AshLight...";
+  // PLAY-TD-21A-SETTINGS-RAIL: rows a page, and the rail button whose
+  // press shows the section (and builds the preview)
+  var ROWS_PAGE = 12;
+  var OPENER = "rail-checks";
   var DISMISS_KEY = "al.lang.dismissed";
   // TC-CALC-OPTIN-BUTTON: the calc row's button and its three lines
   var CALC_BUTTON = "Set up the calc";
@@ -162,7 +174,8 @@
      wired a new key is stored at once, so a hidden note stays hidden after
      a reload until it clears and begins again. */
   var held = { dismissed: undefined, wired: false };
-  var state = { store: null, client: undefined, calc: "", calcRow: null, calcNodes: null };
+  var state = { store: null, client: undefined, calc: "", calcRow: null, calcNodes: null,
+                page: 0, rows: [], inClient: false };
   Object.defineProperty(state, "dismissed", {
     enumerable: true,
     get: function () { return held.dismissed; },
@@ -272,47 +285,31 @@
     }
   }
 
-  function paintChecks(doc, snap) {
-    var box = doc.getElementById("checksbox");
-    if (!box) { return; }
-    var m = model(snap && snap.diag, snap && snap.now);
-    var client = calcClient();
-    // a finished setup's line clears once the core's calc row changes
-    var calcRow = "";
-    m.rows.forEach(function (r) { if (r.id === "calc") { calcRow = r.word; } });
-    if (state.calcRow !== null && calcRow !== state.calcRow &&
-        (state.calc === "ok" || state.calc === "failed")) {
-      state.calc = "";
-    }
-    state.calcRow = calcRow;
-    // V-5: the checks' states (not their wording, whose ages step every
-    // 5 minutes); a change makes an open preview stale
-    var states = JSON.stringify(m.rows.map(function (r) { return [r.id, r.word]; }));
-    if (states !== report.states) {
-      report.states = states;
-      report.checksGen += 1;
-    }
-    var key = JSON.stringify([m, !!client]);
-    if (box.getAttribute("data-key") === key) {
-      syncCalc(); // a cleared setup line, with no rebuild
-      return;
-    }
-    box.setAttribute("data-key", key);
-    doc.getElementById("checks-summary").textContent = m.summary;
-    var fold = doc.getElementById("checks");
-    // ZERO-CLICK: opens by itself when a check newly needs a fix
-    var before = Number(box.getAttribute("data-failed") || "0");
-    if (m.failed > 0 && before === 0) {
-      fold.open = true;
-    }
-    // UI-GLANCE: the Settings tab says "fix" while a check needs one (it
-    // never switches tabs by itself; Play stays in front during play)
-    var tabs = typeof self !== "undefined" && self.ALTabs ? self.ALTabs : null;
-    if (tabs) { tabs.mark(doc, "settings", m.failed > 0 ? "fix" : ""); }
-    box.setAttribute("data-failed", String(m.failed));
+  /* One page of `rows`: {rows, index, pages, label, hasPrev, hasNext};
+     index clamped; label "1-12 of 16" ("" when one page holds them all). */
+  function rowsPage(rows, index) {
+    rows = Array.isArray(rows) ? rows : [];
+    var pages = Math.max(1, Math.ceil(rows.length / ROWS_PAGE));
+    var i = Math.max(0, Math.min(typeof index === "number" ? index : 0, pages - 1));
+    var from = i * ROWS_PAGE;
+    var to = Math.min(rows.length, from + ROWS_PAGE);
+    return { rows: rows.slice(from, to), index: i, pages: pages,
+             label: pages > 1 ? (from + 1) + "-" + to + " of " + rows.length : "",
+             hasPrev: i > 0, hasNext: i < pages - 1 };
+  }
+
+  function setEnd(b, on) {
+    if (!b) { return; }
+    if (on) { b.removeAttribute("aria-disabled"); } else { b.setAttribute("aria-disabled", "true"); }
+  }
+
+  /* The shown page of the rows and the pager under them. */
+  function renderRows(doc) {
+    var p = rowsPage(state.rows, state.page);
+    state.page = p.index;
     var list = doc.getElementById("checks-list");
     list.textContent = "";
-    m.rows.forEach(function (r) {
+    p.rows.forEach(function (r) {
       var li = doc.createElement("li");
       li.setAttribute("data-state", r.state);
       var head = doc.createElement("p");
@@ -342,9 +339,73 @@
         fix.textContent = "Fix: " + r.fix;
         li.appendChild(fix);
       }
-      addCalc(doc, li, r, !!client);
+      addCalc(doc, li, r, state.inClient);
       list.appendChild(li);
     });
+    var bar = doc.getElementById("checks-pager");
+    if (bar) { bar.hidden = p.pages < 2; }
+    var count = doc.getElementById("checks-count");
+    if (count && count.textContent !== p.label) { count.textContent = p.label; }
+    setEnd(doc.getElementById("checks-prev"), p.hasPrev);
+    setEnd(doc.getElementById("checks-next"), p.hasNext);
+    return p;
+  }
+
+  /* Prev / Next: the only way the rows page changes; an end does nothing. */
+  function turnRows(doc, step) {
+    var p = rowsPage(state.rows, state.page);
+    var next = p.index + step;
+    if (next < 0 || next >= p.pages) { return p; }
+    state.page = next;
+    return renderRows(doc);
+  }
+
+  function paintChecks(doc, snap) {
+    var box = doc.getElementById("checksbox");
+    if (!box) { return; }
+    var m = model(snap && snap.diag, snap && snap.now);
+    var client = calcClient();
+    // a finished setup's line clears once the core's calc row changes
+    var calcRow = "";
+    m.rows.forEach(function (r) { if (r.id === "calc") { calcRow = r.word; } });
+    if (state.calcRow !== null && calcRow !== state.calcRow &&
+        (state.calc === "ok" || state.calc === "failed")) {
+      state.calc = "";
+    }
+    state.calcRow = calcRow;
+    // V-5: the checks' states (not their wording, whose ages step every
+    // 5 minutes); a change makes an open preview stale
+    var states = JSON.stringify(m.rows.map(function (r) { return [r.id, r.word]; }));
+    if (states !== report.states) {
+      report.states = states;
+      report.checksGen += 1;
+    }
+    var key = JSON.stringify([m, !!client]);
+    if (box.getAttribute("data-key") === key) {
+      syncCalc(); // a cleared setup line, with no rebuild
+      return;
+    }
+    box.setAttribute("data-key", key);
+    doc.getElementById("checks-summary").textContent = m.summary;
+    var fold = doc.getElementById("checks");
+    // ZERO-CLICK: shows by itself when a check newly needs a fix, on the
+    // page holding the first failing row
+    var before = Number(box.getAttribute("data-failed") || "0");
+    var newFail = m.failed > 0 && before === 0;
+    // UI-GLANCE: the Settings tab says "fix" while a check needs one (it
+    // never switches tabs by itself; Play stays in front during play)
+    var tabs = typeof self !== "undefined" && self.ALTabs ? self.ALTabs : null;
+    if (tabs) { tabs.mark(doc, "settings", m.failed > 0 ? "fix" : ""); }
+    box.setAttribute("data-failed", String(m.failed));
+    state.rows = m.rows;
+    state.inClient = !!client;
+    if (newFail) {
+      for (var i = 0; i < m.rows.length; i++) {
+        if (m.rows[i].word === MARK.fail.word) { state.page = Math.floor(i / ROWS_PAGE); break; }
+      }
+    }
+    renderRows(doc);
+    if (newFail && fold) { fold.open = true; }
     // RUN-REPORT-ROUTE: the core builds the report on the click; the
     // button waits only for the first checks (RUN-QUIET-FEED: the
     // snapshot carries no report)
@@ -447,14 +508,20 @@
     var copy = doc.getElementById("checks-copy");
     var said = doc.getElementById("checks-said");
     var fold = doc.getElementById("checks");
-    var head = doc.getElementById("checks-summary");
-    // the player's click that opens the fold builds the preview (a fold
-    // that opens by itself on a failure builds nothing)
-    if (head && fold) {
-      head.addEventListener("click", function () {
+    var opener = doc.getElementById(OPENER);
+    // the player's press that shows the Checks section builds the preview
+    // (Checks shown by itself, at load or on a failure, builds nothing);
+    // this listener runs before web/rail.js shows the section
+    if (opener && fold) {
+      opener.addEventListener("click", function () {
         if (!fold.open) { buildReport(doc, api, said); }
       });
     }
+    state.page = 0;
+    var prev = doc.getElementById("checks-prev");
+    var next = doc.getElementById("checks-next");
+    if (prev) { prev.addEventListener("click", function () { turnRows(doc, -1); }); }
+    if (next) { next.addEventListener("click", function () { turnRows(doc, 1); }); }
     /* W-1: #checks-said is not a live region, so a Copy click that had to
        (re)build the preview moves the focus there once the preview shows,
        unless the player has since moved it somewhere else. */
@@ -507,5 +574,6 @@
            BUILD_FAILED: BUILD_FAILED, _report: report,
            TAILS_QUERY: TAILS_QUERY, TAILS_LABEL: TAILS_LABEL, READY_TAILS: READY_TAILS,
            CALC_BUTTON: CALC_BUTTON, CALC_PENDING: CALC_PENDING, CALC_OK: CALC_OK,
-           CALC_FAILED: CALC_FAILED, _state: state };
+           CALC_FAILED: CALC_FAILED, _state: state,
+           ROWS_PAGE: ROWS_PAGE, OPENER: OPENER, rowsPage: rowsPage };
 }));
