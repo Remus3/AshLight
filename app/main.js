@@ -69,6 +69,8 @@ try {
 const REPO = HOME.root;
 const TOKEN_FILE = HOME.tokenFile;
 const DISPLAYS_FILE = HOME.displaysFile;
+// RUN-OVERLAY-REMEMBER (F-188): the player's show / hide choice, beside displays.json.
+const CHOICE_FILE = path.join(path.dirname(DISPLAYS_FILE), OverlayGate.CHOICE_FILE);
 const PORTS_PY = HOME.portsPy;
 const LOCAL_CONFIG = HOME.localConfig;
 // OVL-SHELL-GUARDS, OVL-APP-SCHEME: the one page al:config answers, on the
@@ -86,6 +88,10 @@ const DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding G
 let win = null;
 let client = null; // DESKTOP-CLIENT companion window + tray (client mode only)
 let gate = null; // overlay visibility (app/overlay_gate.js)
+let userOn = true; // RUN-OVERLAY-REMEMBER: the player's choice, read in start(), kept on toggle
+// While no overlay window exists yet, the parts (hotkeys.json user_on) and
+// the companion read the remembered choice, not a "shown" default.
+const choiceGate = { userWants: () => userOn };
 let stopHotReload = null; // HOT-RELOAD: stops the overlay page file watch
 let dataCredit = ""; // TC-SNAP-UI: game-data credit, "" without snapshot data
 let versionText = ""; // RUN-BUILD-STAMP-UI: the version line, "" until the core answers
@@ -214,7 +220,7 @@ const ctx = {
   clientMode: CLIENT_MODE, devTools: DEV_TOOLS,
   defaults: { toggle: DEFAULT_TOGGLE, eval: DEFAULT_EVAL_KEY },
   keys: { toggle: toggleKey, eval: evalKey },
-  getOverlay: () => win, getClient: () => client, getGate: () => gate,
+  getOverlay: () => win, getClient: () => client, getGate: () => gate || choiceGate,
   overlayBounds: () => layoutBounds(currentLayout()),
   actions: { toggle: toggle, restartOverlay: restartOverlay, openClient: openClient, onEval: null }
 };
@@ -340,7 +346,27 @@ function onDisplaysChanged() {
   applyLayout(true);
 }
 
-function createWindow() {
+/* RUN-OVERLAY-REMEMBER: the gate reports each toggle once; a changed
+   choice is written tmp-then-rename (OverlayGate.writeChoice). The same
+   value again (restartOverlay re-applying the choice to a new window) is
+   not written. A failed write is logged; the choice still holds for this
+   run. */
+function keepChoice(on) {
+  const v = on === true;
+  if (v === userOn) { return; }
+  userOn = v;
+  try {
+    fs.mkdirSync(path.dirname(CHOICE_FILE), { recursive: true });
+    OverlayGate.writeChoice(CHOICE_FILE, userOn, fs);
+  } catch (e) {
+    log("overlay-choice.json not written: " + e.message);
+  }
+}
+
+/* seedUserOn: the first window starts from the remembered choice
+   (start()); a rebuild starts shown and restartOverlay re-applies the
+   choice (an unchanged value is not written again). */
+function createWindow(seedUserOn) {
   const b = layoutBounds(currentLayout());
   win = new BrowserWindow({
     x: b.x, y: b.y, width: b.width, height: b.height,
@@ -380,7 +406,7 @@ function createWindow() {
     isVisible: () => !!(win && win.isVisible()),
     showInactive: () => { if (win) { win.showInactive(); } },
     hide: () => { if (win) { win.hide(); } }
-  }, log);
+  }, log, { userOn: seedUserOn !== false, onUserChange: keepChoice });
   win.once("ready-to-show", () => {
     gate.ready();
     noteOverlayState();
@@ -517,7 +543,7 @@ function openClient() {
     client = require("./client/window.js").createClient({
       electron: electron, http: http, repo: REPO, port: port, readToken: verifiedToken,
       runtimeDir: path.dirname(TOKEN_FILE), log: log, devTools: DEV_TOOLS,
-      toggleOverlay: toggle, overlayVisible: () => !gate || gate.userWants(),
+      toggleOverlay: toggle, overlayVisible: () => (gate ? gate.userWants() : userOn),
       restartOverlay: restartOverlay, overlayBounds: ctx.overlayBounds,
       onWindow: (w, s) => runParts("clientWindow", w, s)
     });
@@ -567,6 +593,10 @@ function start() {
   });
 
   writeDisplays();
+  // RUN-OVERLAY-REMEMBER: the choice kept by the last run, before the
+  // companion, the parts and the overlay window read it.
+  userOn = OverlayGate.readChoice(CHOICE_FILE, fs);
+  if (!userOn) { log("overlay starts hidden (the player's choice)"); }
   // DESKTOP-CLIENT: the companion window first, so the shortcut shows
   // something at once (it starts the core itself when needed).
   if (CLIENT_MODE) { openClient(); }
@@ -576,7 +606,7 @@ function start() {
   getVersion = Hello.guard(hello, About.makeGetVersion(http, port, verifiedToken));
   About.firstDoc(getVersion, About.START_WAIT_MS).then((doc) => {
     setAbout(doc);
-    createWindow();
+    createWindow(userOn);
     overlayStarted = true;
   });
   screen.on("display-added", onDisplaysChanged);

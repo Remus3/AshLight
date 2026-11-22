@@ -3,8 +3,15 @@
    for the page. The core sends every sentence in the snapshot
    (`run_history`); this file only formats times and fills the pages. The
    under-level words are the strip's sub line (web/strip.js) since
-   PLAY-LEGACY-OUT-1. No timers, no network except the player's own clicks
-   (switch, clear).
+   PLAY-LEGACY-OUT-1. No network except the player's own clicks (switch,
+   clear); the one timer is the clear's 10 s undo window.
+
+   RUN-HISTORY-UNDO (F-191): the Clear click hides the saved runs and puts
+   "Cleared." with an Undo button in place of the said line, focused, for
+   10 s; no modal. Undo inside the window sends nothing. Only when the
+   window ends is the clear request sent, so the core rewrites its files
+   after that and a page close or core exit inside the window leaves the
+   data as it was.
 
    PLAY-TD-20B-RUN-CARDS (plan 03 section 4): the run history is two pages
    of the Run grid's Last session card. "Run history" (#historybox): your
@@ -32,6 +39,14 @@
      1280x760 (compact 8 x 22 + 24 = 200 of 204 at 1024x700) */
   var ROWS = { full: 9, compact: 8 };
   var FAILED = "That didn't save. Try again.";
+  var PENDING = "Cleared.";
+  var UNDO = "Undo";
+  var UNDO_LABEL = "Undo clear run history";
+  var KEPT = "Run history kept.";
+  var UNDO_MS = 10000;
+  /* the Run history page holds this attribute while a clear waits */
+  var CLEARING = "data-clearing";
+  var lastSnap = null;
 
   /* The size of a time either side of zero, no unknown form (web/fmt.js). */
   var duration = F.durationAbs;
@@ -96,6 +111,7 @@
   function paint(doc, snap) {
     var box = doc.getElementById("historybox");
     if (!box) { return; }
+    lastSnap = snap;
     var h = (snap && snap.run_history) || null;
     setText(doc.getElementById("history-on"), h ? h.text || "" : "");
     var keep = doc.getElementById("history-keep");
@@ -103,11 +119,23 @@
     var A = actsLib();
     A.fill(doc, "history-rows", "run history", listRows(h), ROWS);
     A.showText(doc, "history-empty", emptyText(h));
+    if (box.getAttribute(CLEARING) !== null) { hideData(doc); }
+  }
+
+  /* While a clear waits out its undo window the saved runs are not shown. */
+  function hideData(doc) {
+    ["history-rows", "history-empty"].forEach(function (id) {
+      var n = doc.getElementById(id);
+      if (n) { n.hidden = true; }
+    });
   }
 
   /* The switch and the clear button. api(method, path, body) -> promise
-     of the JSON reply (app.js api()). */
-  function wire(doc, api) {
+     of the JSON reply (app.js api()). timers: { set, clear } for tests
+     (default the page's setTimeout / clearTimeout). */
+  function wire(doc, api, timers) {
+    var T = timers || { set: function (f, ms) { return setTimeout(f, ms); },
+      clear: function (id) { clearTimeout(id); } };
     var keep = doc.getElementById("history-keep");
     var clear = doc.getElementById("history-clear");
     var said = doc.getElementById("history-said");
@@ -120,16 +148,68 @@
         tell(FAILED);
       });
     });
+    var pending = null;
+    var busy = false;  // from the click until the clear request answers
+    function box() { return doc.getElementById("historybox"); }
+    function showData() {
+      var b = box();
+      if (b) { b.removeAttribute(CLEARING); }
+      if (lastSnap) { paint(doc, lastSnap); }
+    }
+    /* End the window: the said line takes text in place of the Undo
+       button, and focus that was on it moves to the clear button. */
+    function settle(had, text) {
+      busy = false;
+      tell(text);
+      if (had && clear.focus) { clear.focus(); }
+    }
     clear.addEventListener("click", function () {
+      if (busy) { return; }
+      busy = true;
+      var b = box();
+      if (b) { b.setAttribute(CLEARING, ""); }
+      hideData(doc);
       tell("");
-      api("POST", "/api/run-history", { clear: true }).then(function () {
-        tell(CLEARED);
-      }, function () { tell(FAILED); });
+      var undo = doc.createElement("button");
+      undo.type = "button";
+      undo.className = "secondary btn-24";
+      undo.textContent = UNDO;
+      undo.setAttribute("aria-label", UNDO_LABEL);
+      if (said) {
+        said.appendChild(doc.createTextNode(PENDING + " "));
+        said.appendChild(undo);
+      }
+      var timer = T.set(function () {
+        pending = null;
+        var had = doc.activeElement === undo;
+        tell("");  // the Undo button goes; clicks wait for the answer
+        if (had && clear.focus) { clear.focus(); }
+        api("POST", "/api/run-history", { clear: true }).then(function () {
+          // the next snapshot repaints the emptied history
+          var bx = box();
+          if (bx) { bx.removeAttribute(CLEARING); }
+          settle(false, CLEARED);
+        }, function () {
+          showData();
+          settle(false, FAILED);
+        });
+      }, UNDO_MS);
+      pending = { timer: timer };
+      undo.addEventListener("click", function () {
+        if (!pending) { return; }
+        T.clear(pending.timer);
+        pending = null;
+        var had = doc.activeElement === undo;
+        showData();
+        settle(had, KEPT);
+      });
+      if (undo.focus) { undo.focus(); }
     });
   }
 
   return { duration: duration, deltaText: deltaText,
     bestRows: bestRows, deathRows: deathRows, bestLine: bestLine, listRows: listRows,
     emptyText: emptyText, paint: paint, wire: wire, ROWS: ROWS,
-    CLEARED: CLEARED, FAILED: FAILED };
+    CLEARED: CLEARED, FAILED: FAILED, PENDING: PENDING, UNDO: UNDO,
+    UNDO_LABEL: UNDO_LABEL, KEPT: KEPT, UNDO_MS: UNDO_MS };
 }));

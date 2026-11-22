@@ -93,3 +93,47 @@ while web data is off.
   own their files, and core's own writers are RUN-DURABLE-STORES).
 - Reverses if: the .bak doubles a file past its budget, a restore revives
   data the player removed, or decision 0036 itself reverses.
+
+## Amendment 2026-11-21 (TC-WEIGHTS-DELTA-EXPORT, finding F-134)
+
+- The settings file moves to schema 2. Beside "settings" it carries one
+  top-level "weights" block: the player's stat weight changes over
+  AshLight's defaults and the sidegrade band parts that differ, in the
+  weights file's own version 2 form ({"weights": {stat key: number or
+  null}, "sidegrade": {abs?, pct?}}; null is a default row the player
+  removed; decision 0024, TC-WEIGHTS-DELTA-STORE). The core takes it from
+  its weights store; a weights file that did not load (defaults in use)
+  adds no block.
+- The block is checked by the weights store's own rules (the version 2
+  checks, then the merged document, at most weights.MAX_KEYS rows); a bad
+  block refuses the whole file with nothing applied, as a bad setting
+  does. An import with the block makes the weights the defaults plus the
+  file's changes and re-scores the last checked item at once; a file
+  without the block, which is every schema 1 file, leaves the weights as
+  they are. Schema 1 files still import; a "weights" key in a schema 1
+  file is never read. The report gains "weights_applied" and the
+  dashboard says "Imported N settings and your stat weights. They
+  replace the stat weights you had here."
+- The import cap stays 16 KB (server and page; pinned by the security
+  surface test). An export whose block would pass it leaves the block out,
+  as an export leaves out any stored value that does not validate; about
+  100 changed or added rows plus every default removed still fit. The
+  download sentence keeps "AshLight's settings only", which stays true
+  with or without the block.
+- The allow-list is unchanged otherwise: the block holds stat keys and
+  numbers only, never the contact, a token, a cookie or a path; an import
+  never turns web data or the calc on.
+- Alternatives: merge the file's changes over this computer's own
+  changes (rejected: the result would match neither computer, and the
+  file is meant to move one player's set); put the weights inside
+  "settings" (rejected: settings keys are config/local.json keys, the
+  weights live in their own store file); full weights document instead
+  of the changes (rejected: it would pin today's defaults on the other
+  computer, which TC-WEIGHTS-DELTA-STORE exists to avoid); raise the cap
+  to 256 KB so a full weights.MAX_KEYS block always fits (rejected here:
+  the 16 KB body cap is pinned with every other route cap, and a real
+  change set is tens of rows).
+- Reverses if: the weights store changes its file form again, players
+  expect the import to keep their own weight changes, or a real export
+  drops its weights block at the 16 KB cap (then raise the cap with its
+  security surface pin).

@@ -24,12 +24,13 @@ const RATES = {
 function with_(over) { return Object.assign({}, RATES, over); }
 
 test("web-data words: off says nothing is asked; on says what is fetched", () => {
-  assert.deepEqual(p.webDataView({ web_data: false }), {
-    on: false,
-    status: "Web data is off. AshLight asks nothing from the internet." });
-  assert.deepEqual(p.webDataView({ web_data: true }), {
-    on: true,
-    status: "Web data is on. Prices come from poe.ninja about once an hour." });
+  const off = p.webDataView({ web_data: false });
+  assert.equal(off.on, false);
+  assert.equal(off.blocked, "");
+  assert.equal(off.status, "Web data is off. AshLight asks nothing from the internet.");
+  const on = p.webDataView({ web_data: true });
+  assert.equal(on.on, true);
+  assert.equal(on.status, "Web data is on. Prices come from poe.ninja about once an hour.");
   assert.equal(p.webDataView(null).on, false);
   assert.equal(p.savedText(true), "Saved. Web data is on. Currency values arrive within a minute.");
   assert.equal(p.savedText(false), "Saved. Web data is off. AshLight asks nothing from the internet now.");
@@ -321,4 +322,147 @@ test("value view: null for no doc or a malformed price", () => {
   }
   assert.equal(p.valueView(Object.assign({}, VALUE, {
     price: Object.assign({}, VALUE.price, { currency: "" }) })), null);
+});
+
+/* DATA-CONTACT-UI (F-018): while prices are blocked for want of a contact,
+   every surface names that one step, never "arrive within a minute". */
+const BLOCKED_WEB = { web_data: true, contact_set: false, blocked: "contact not set" };
+const ARRIVE = /arrive within a minute/;
+
+test("blocked by a missing contact: no 'arrive within a minute' anywhere", () => {
+  const w = p.webDataView(BLOCKED_WEB);
+  assert.equal(w.on, true);
+  assert.equal(w.blocked, "contact not set");
+  assert.equal(w.status, "Web data is on. Prices need one more step: add your contact for poe.ninja below.");
+  const saved = p.savedText(true, BLOCKED_WEB);
+  assert.equal(saved, "Saved. Web data is on. Prices start once you add your contact for poe.ninja below.");
+  const empty = with_({ rates: {}, age_s: null, blocked: "contact not set", contact_set: false,
+                        next_refresh_in_s: null });
+  assert.deepEqual(p.ratesView(empty).pill,
+    { state: "blocked", glyph: "[#]", word: "one step left: add your contact for poe.ninja" });
+  const cached = with_({ blocked: "contact not set", contact_set: false, age_s: 3 * 3600, stale: true });
+  assert.deepEqual(p.ratesView(cached).pill,
+    { state: "blocked", glyph: "[#]", word: "not updating - add your contact for poe.ninja (from 3 h ago)" });
+  assert.deepEqual(p.ratesPill(empty, false), p.ratesView(empty).pill);
+  const movers = p.moversView({ web_data: true, blocked: "contact not set", movers: { up: [], down: [] } });
+  assert.equal(movers.show, true);
+  assert.equal(movers.empty, "No price changes to show yet. They appear once you add your contact for poe.ninja.");
+  for (const text of [w.status, saved, p.ratesView(empty).pill.word, p.ratesView(cached).pill.word,
+                      p.ratesPill(empty, false).word, movers.empty]) {
+    assert.ok(!ARRIVE.test(text), text);
+    assert.ok(!/trade site/.test(text), text);
+    assert.ok(/poe\.ninja/.test(text), text);
+  }
+  // the unblocked state keeps its words
+  assert.equal(p.savedText(true, { web_data: true, contact_set: true, blocked: null }),
+    "Saved. Web data is on. Currency values arrive within a minute.");
+  // switched off, the contact does not matter: off is off
+  assert.equal(p.webDataView({ web_data: false, blocked: "web data off", contact_set: false }).status,
+    "Web data is off. AshLight asks nothing from the internet.");
+  assert.equal(p.savedText(false, { blocked: "web data off" }),
+    "Saved. Web data is off. AshLight asks nothing from the internet now.");
+});
+
+test("release build block: honest words, no promise", () => {
+  const doc = { web_data: true, contact_set: true, blocked: "release build" };
+  const texts = [
+    p.webDataView(doc).status, p.savedText(true, doc),
+    p.ratesView(with_({ rates: {}, age_s: null, blocked: "release build" })).pill.word,
+    p.ratesView(with_({ blocked: "release build" })).pill.word,
+    p.moversView(Object.assign({ movers: { up: [], down: [] } }, doc)).empty,
+    p.contactSavedText(doc)
+  ];
+  for (const t of texts) { assert.ok(t && !ARRIVE.test(t), t); }
+  assert.equal(p.webDataView(doc).status,
+    "Web data is on. This version of AshLight does not ask poe.ninja for prices.");
+  assert.equal(p.ratesView(with_({ blocked: "release build" })).pill.state, "idle");
+});
+
+test("contact field view: write-only, shown only until a contact is set", () => {
+  const c = p.contactView({ contact_set: false });
+  assert.equal(c.show, true);
+  assert.equal(c.label, "Contact for poe.ninja");
+  assert.match(c.note, /User-Agent/);
+  assert.match(c.note, /poe\.ninja/);
+  assert.match(c.note, /only on this computer/);
+  assert.equal(p.contactView({ contact_set: true }).show, false);
+  // a doc without contact_set (the /api/rates switch echo) leaves the field
+  assert.equal(p.contactView({ web_data: true }).show, null);
+  assert.equal(p.contactView(null).show, null);
+  assert.deepEqual(p.webDataView(BLOCKED_WEB).contact, c);
+  // the view never carries a value: there is none to echo
+  assert.ok(!("value" in c));
+  assert.equal(p.contactSavedText({ web_data: true, contact_set: true, blocked: null }),
+    "Contact saved on this computer. Currency values arrive within a minute.");
+  assert.equal(p.contactSavedText({ web_data: false, contact_set: true, blocked: "web data off" }),
+    "Contact saved on this computer. Turn on web data to get poe.ninja prices.");
+  assert.equal(p.contactSavedText({ web_data: true, contact_set: false }), "Not saved. Try again.");
+  assert.equal(p.CONTACT_REFUSED,
+    "AshLight can't use that contact. Use up to 120 plain characters, without brackets or a backslash.");
+});
+
+test("contact field markup: labelled, never prefilled, answer in #webdata-status", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "utf8");
+  const start = html.indexOf('<form id="webdata-form"');
+  const form = html.slice(start, html.indexOf("</form>", start));
+  assert.match(form, /<label for="webdata-contact">Contact for poe\.ninja<\/label>/);
+  const input = form.match(/<input id="webdata-contact"[^>]*>/)[0];
+  assert.ok(!/\bvalue=/.test(input), "never prefilled");
+  assert.match(input, /autocomplete="off"/);
+  assert.match(input, /maxlength="120"/);
+  assert.match(input, /aria-describedby="webdata-contact-note webdata-status"/);
+  assert.match(form, /<button id="webdata-contact-save" type="submit"[^>]*>Save<\/button>/);
+  assert.match(form, /<span id="webdata-contact-row" class="set-row" hidden>/);
+  assert.match(form, /<label for="webdata-league">League for prices<\/label>/);
+  assert.match(form, /<select id="webdata-league"/);
+  assert.ok(!/aria-live|role="status"|role="alert"/.test(form), "no new live region");
+  assert.ok(!/trade site/.test(form));
+});
+
+/* DATA-LEAGUE-PICKER-UI (F-141): the league dropdown from the cached list. */
+const LEAGUES = { leagues: ["Dawn", "Standard", "Hardcore Dawn"], league: null,
+                  league_auto: "Dawn", prices_from: "Dawn" };
+
+test("league view: the auto entry first, then the cached names", () => {
+  const v = p.leagueView(LEAGUES);
+  assert.equal(v.show, true);
+  assert.equal(v.label, "League for prices");
+  assert.deepEqual(v.options, [
+    { value: "", text: "Automatic (Dawn)" },
+    { value: "Dawn", text: "Dawn" },
+    { value: "Standard", text: "Standard" },
+    { value: "Hardcore Dawn", text: "Hardcore Dawn" }]);
+  assert.equal(v.selected, "");
+  assert.equal(v.from, "");
+  const picked = p.leagueView(Object.assign({}, LEAGUES, { league: "Standard", prices_from: "Standard" }));
+  assert.equal(picked.selected, "Standard");
+  assert.equal(picked.options.length, 4);
+  assert.equal(picked.from, "");
+  // no auto league known yet, and no list: hidden, the auto entry still worded
+  const none = p.leagueView({ leagues: [], league: null, league_auto: null, prices_from: null });
+  assert.equal(none.show, false);
+  assert.deepEqual(none.options, [{ value: "", text: "Automatic (poe.ninja's current league)" }]);
+  assert.equal(p.leagueView(null).show, false);
+  assert.equal(p.leagueSavedText({ league: null }), "Saved. Prices follow poe.ninja's current league.");
+  assert.equal(p.leagueSavedText({ league: "Standard", prices_from: "Standard" }),
+    "Saved. Prices come from Standard after the next price update.");
+  assert.equal(p.LEAGUE_REFUSED,
+    "AshLight can't price that league. Pick one from the list, or the automatic league.");
+});
+
+test("league view: a mapped solo league says 'prices from' its trade league", () => {
+  const solo = Object.assign({}, LEAGUES, { league: "SSF Dawn", prices_from: "Dawn" });
+  const v = p.leagueView(solo);
+  // a league set by hand that the list lacks stays the shown choice
+  assert.equal(v.selected, "SSF Dawn");
+  assert.deepEqual(v.options[v.options.length - 1], { value: "SSF Dawn", text: "SSF Dawn" });
+  assert.equal(v.from, "Prices from Dawn: poe.ninja has no prices for SSF Dawn.");
+  assert.equal(p.leagueSavedText(solo), "Saved. Prices come from Dawn after the next price update.");
+  // the Prices card's league line
+  assert.equal(p.ratesView(RATES, solo).leagueLine, "league SSF Dawn, prices from Dawn");
+  assert.equal(p.ratesView(RATES, LEAGUES).leagueLine, "league Dawn");
+  assert.equal(p.ratesView(RATES).leagueLine, "league Dawn");
+  assert.equal(p.ratesView(with_({ league: null })).leagueLine, "");
 });
