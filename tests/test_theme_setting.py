@@ -29,7 +29,7 @@ from server.al.core import Core, ConfigUnreadable
 from server.al.http import serve
 
 from browser_util import find_browser
-from test_capture_helper import NODE, demo_core, run_helper  # noqa: F401 (fixture)
+from capture_util import NODE, demo_core, run_helper  # noqa: F401 (fixture)
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "e" * 48
