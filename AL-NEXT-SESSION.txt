@@ -4,7 +4,10 @@ SESSION: 18   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 21 done, next wave 22
+WAVE POINTER: wave 22 done, next wave 23
+DEFERRED: CARD-LINE-LIMIT (wave 22): needs files outside its list (tests/test_glance_rules.py, tests/test_moment_cards.py, design 0001, zoneguide.py, cardparts __init__/keep.py, app/test/slots.test.js), re-plan first; branch worktree-w22-CARD-LINE-LIMIT
+DEFERRED: RUN-REPORT-FIELDS (wave 22): batch A suite red, test_no_literal_drive_path_in_app_files on a drive-path comment at server/al/report.py:189 (merge reverted 2f5c4b1); reword the comment; branch worktree-w22-RUN-REPORT-FIELDS
+DEFERRED: PUB-HOOK-RELEASE-CHECK (wave 22): red after main merge, tests/test_pre_push_hook.py fixture copy list lacks tools/rel_readback.py; add it; branch worktree-w22-PUB-HOOK-RELEASE-CHECK
 SESSION 17 (2026-11-21): waves 19, 20 and 21 closed; main = origin/main = 68bf41d at wave 21 close (read back after fetch at session 17 /done). Wave 22 has 14 packages (python tools/plan_check.py wave 22).
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
 PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
