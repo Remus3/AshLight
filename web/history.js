@@ -1,23 +1,36 @@
-/* AshLight dashboard: the Run history card (UTIL-RUN-HISTORY, decision
-   0036). UMD: CommonJS for node --test (app/test/history.test.js),
-   window.ALHistory for the page. The core sends every sentence in the
-   snapshot (`run_history`); this file only formats times and fills the
-   card. The under-level words are the strip's sub line (web/strip.js)
-   since PLAY-LEGACY-OUT-1. No timers, no network except the player's own
-   clicks (switch, clear). */
+/* AshLight dashboard: the run history (UTIL-RUN-HISTORY, decision 0036).
+   UMD: CommonJS for node --test (app/test/util9.test.js), window.ALHistory
+   for the page. The core sends every sentence in the snapshot
+   (`run_history`); this file only formats times and fills the pages. The
+   under-level words are the strip's sub line (web/strip.js) since
+   PLAY-LEGACY-OUT-1. No timers, no network except the player's own clicks
+   (switch, clear).
+
+   PLAY-TD-20B-RUN-CARDS (plan 03 section 4): the run history is two pages
+   of the Run grid's Last session card. "Run history" (#historybox): your
+   best time per act and the zones of most deaths across the saved runs
+   (20 runs a character), one line a row, paged at 9 (8 compact) through
+   web/acts.js's pager; with run history off it says so. "Keep or clear":
+   the on / off sentence, the keep switch and the clear button, here until
+   PLAY-TD-21B-SETTINGS-ABOUT moves them to Settings. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
-  var api = factory(common ? require("./fmt.js") : root.ALFmt);
+  var api = factory(common ? require("./fmt.js") : root.ALFmt, function () {
+    return common ? require("./acts.js") : root.ALActs;
+  });
   if (common) {
     module.exports = api;
   } else {
     root.ALHistory = api;
   }
-}(typeof self !== "undefined" ? self : this, function (F) {
+}(typeof self !== "undefined" ? self : this, function (F, actsLib) {
   "use strict";
 
   var CLEARED = "Run history cleared.";
+  /* rows a page: 9 x 22 + pager 24 = 222 of the 244 px under the title at
+     1280x760 (compact 8 x 22 + 24 = 200 of 204 at 1024x700) */
+  var ROWS = { full: 9, compact: 8 };
   var FAILED = "That didn't save. Try again.";
 
   /* The size of a time either side of zero, no unknown form (web/fmt.js). */
@@ -45,11 +58,35 @@
     });
   }
 
-  function cell(doc, tag, text, cls) {
-    var c = doc.createElement(tag);
-    if (cls) { c.className = cls; }
-    c.textContent = text;
-    return c;
+  /* One line of the Run history page per best act time: "Act 1: best
+     20:00, this run 1:40 slower"; this run's own best reads "best so far". */
+  function bestLine(r) {
+    if (r.delta === "best so far") { return r.label + ": best so far " + r.best + " (this run)"; }
+    return r.label + ": best " + r.best + (r.delta ? ", this run " + r.delta : ", not reached this run");
+  }
+
+  /* Every row of the Run history page: the best act times, then the zones
+     of most deaths ("Most deaths: Ogham, 4 deaths"); with best times and no
+     death, the core's no-deaths sentence closes the list. */
+  function listRows(h) {
+    if (!h || !h.on) { return []; }
+    var rows = bestRows(h).map(function (r) { return { text: bestLine(r) }; });
+    ((h.deaths_by_zone) || []).forEach(function (d) {
+      rows.push({ text: "Most deaths: " + d.zone + ", " + d.deaths +
+        (d.deaths === 1 ? " death" : " deaths") });
+    });
+    if (rows.length && !(h.deaths_by_zone || []).length && h.deaths_empty_text) {
+      rows.push({ text: h.deaths_empty_text });
+    }
+    return rows;
+  }
+
+  /* The sentence in place of the best times: run history off, or on with
+     no finished act saved yet ("" when there are best times). */
+  function emptyText(h) {
+    if (!h) { return ""; }
+    if (!h.on) { return h.text || ""; }
+    return bestRows(h).length ? "" : h.empty_text || "";
   }
 
   function setText(el, text) {
@@ -60,40 +97,12 @@
     var box = doc.getElementById("historybox");
     if (!box) { return; }
     var h = (snap && snap.run_history) || null;
-    box.hidden = !h;
-    if (!h) { return; }
-    setText(doc.getElementById("history-on"), h.text || "");
+    setText(doc.getElementById("history-on"), h ? h.text || "" : "");
     var keep = doc.getElementById("history-keep");
-    if (keep && doc.activeElement !== keep) { keep.checked = !!h.on; }
-    var rows = bestRows(h);
-    var key = JSON.stringify(rows) + "|" + JSON.stringify(deathRows(h));
-    if (box.getAttribute("data-key") === key) { return; }
-    box.setAttribute("data-key", key);
-    var empty = doc.getElementById("history-empty");
-    setText(empty, h.empty_text || "");
-    empty.hidden = !h.empty_text;
-    doc.getElementById("history-table").hidden = rows.length === 0;
-    var tbody = doc.getElementById("history-rows");
-    tbody.textContent = "";
-    rows.forEach(function (r) {
-      var tr = doc.createElement("tr");
-      var th = cell(doc, "th", r.label);
-      th.setAttribute("scope", "row");
-      tr.appendChild(th);
-      tr.appendChild(cell(doc, "td", r.best, "mono"));
-      tr.appendChild(cell(doc, "td", r.delta || "not yet", "mono" + (r.slower ? " slower" : "")));
-      tbody.appendChild(tr);
-    });
-    var deaths = deathRows(h);
-    var dtitle = doc.getElementById("history-deaths-title");
-    if (dtitle) { dtitle.hidden = !h.on; }
-    var dempty = doc.getElementById("history-deaths-empty");
-    setText(dempty, h.deaths_empty_text || "");
-    dempty.hidden = !h.deaths_empty_text;
-    var list = doc.getElementById("history-deaths");
-    list.textContent = "";
-    deaths.forEach(function (d) { list.appendChild(cell(doc, "li", d)); });
-    list.hidden = deaths.length === 0;
+    if (h && keep && doc.activeElement !== keep) { keep.checked = !!h.on; }
+    var A = actsLib();
+    A.fill(doc, "history-rows", "run history", listRows(h), ROWS);
+    A.showText(doc, "history-empty", emptyText(h));
   }
 
   /* The switch and the clear button. api(method, path, body) -> promise
@@ -120,6 +129,7 @@
   }
 
   return { duration: duration, deltaText: deltaText,
-    bestRows: bestRows, deathRows: deathRows, paint: paint, wire: wire,
+    bestRows: bestRows, deathRows: deathRows, bestLine: bestLine, listRows: listRows,
+    emptyText: emptyText, paint: paint, wire: wire, ROWS: ROWS,
     CLEARED: CLEARED, FAILED: FAILED };
 }));

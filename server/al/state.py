@@ -100,6 +100,9 @@ class SessionState:
         # The calc and price book status (core tick_sources); no request.
         self.sources = {"calc_on": False, "calc_running": False,
                         "rates_checked_at": None, "book_checked_at": None}
+        # REL-UPDATE-WIRE (decision 0065): the release check view the core
+        # publishes (updates.UpdateClient.view); None until its first tick.
+        self.update_view = None
         self.session_started_at = clock()
         # The pace counts only level-ups seen live, so its hourly base stays
         # the core start even when LIVE-RESUME moves the Session tile back
@@ -244,6 +247,20 @@ class SessionState:
                 self.sources.update(fields)
                 self.version += 1
             return changed
+
+    def set_update(self, view):
+        """REL-UPDATE-WIRE (decision 0065): the release check view from the
+        core (installed, latest, notes, releases_url, checked_at,
+        ack_needed, ...), published as the snapshot's 'update' block. It
+        is never an event and carries no card text. Bumps the version only
+        when it changed; returns whether it did."""
+        view = copy.deepcopy(view) if isinstance(view, dict) else None
+        with self._lock:
+            if view == self.update_view:
+                return False
+            self.update_view = view
+            self.version += 1
+            return True
 
     def expire_trades(self, now=None):
         """From the core's loop tick: drop expired trade cards now, so the
@@ -1328,6 +1345,8 @@ class SessionState:
                 "diag": dict(self.diag) if self.diag else None,
                 # HOTKEYS-LIVE (decision 0058): the keys really bound
                 "hotkeys": copy.deepcopy(self.hotkeys) if self.hotkeys else None,
+                # REL-UPDATE-WIRE (decision 0065): the release check, no event text
+                "update": copy.deepcopy(self.update_view) if self.update_view else None,
             }
             # PLAY-TD-07A: the Play rows, composed and capped at the source
             snap["play"] = playview_mod.view(snap)

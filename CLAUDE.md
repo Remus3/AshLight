@@ -357,8 +357,7 @@ checkout runs on the dev port.
 - Server side: `.github/workflows/fleet-identity-guard.yml` is a byte
   copy of `ops/fleet_kit/fleet_identity_guard.yml`; the checks
   `fleet-identity-guard` and `test` are required on main. Workflows pin
-  every action by full commit SHA, use a read-only token (no `contents`, `pull-requests` or `actions` write; the one exception is `watch.yml`, which also holds `issues: write` for the CI issue protocol, decision 0076) and no secret,
-  never turn web data on and never call a GGG or poe.ninja host.
+  every action by full commit SHA, use a read-only token (no `contents`, `pull-requests` or `actions` write) and no secret, never turn web data on and never call a GGG or poe.ninja host; two exceptions: `watch.yml` also holds `issues: write` for the CI issue protocol (decision 0076), and `release.yml` holds exactly `contents: write`, `id-token: write` and `attestations: write`, runs only on a push of a v* tag, uses persist-credentials false, opens no pull request and commits and pushes nothing (decisions 0064 and 0073, adjudicator ruling 2026-11-21).
 - No absolute machine path, account id, email or sibling tree name in any
   tracked file outside `ops/fleet_kit/`; per-host values live in
   gitignored `config/local.json`. One exception (ruling Q-24,
@@ -490,8 +489,11 @@ of the HALT check.
   (decision 0012). Reverses if: the harness gains a worktree base-dir
   setting or the hook breaks isolated spawns.
 - Web data is one opt-in "web_data" setting, default OFF; nothing hits the
-  network while off (decision 0013). Reverses if: an endpoint is forbidden,
-  GGG policy changes, or the operator rules per-feature opt-in.
+  network while off; its sentence names the daily update check and the
+  automatic apply, and an opt-in given before that wording makes no update
+  request until acknowledged once (decision 0013, amended 2026-11-18 and
+  2026-11-21). Reverses if: an endpoint is forbidden, GGG policy changes,
+  or the operator rules per-feature opt-in.
 - Build view, item check card (one card slot, 20 s), graphics advisor read
   on a dashboard click, Copy-code clipboard write on the player's click
   (decision 0014). Reverses if: design section 10 allows two cards or
@@ -1100,7 +1102,13 @@ of the HALT check.
   first; no Electron, CPython, game data, PoB source or LuaJIT in any
   artifact (decision 0064; 0041 point 9 stands). Reverses if: the operator
   gets a signing identity, or SmartScreen friction measurably blocks
-  installs.
+  installs. Amended 2026-11-21 (DEP-15, adjudicator ruling): the
+  tag-triggered .github/workflows/release.yml holds exactly permissions
+  contents: write, id-token: write, attestations: write (rebuild, compare,
+  attest, publish the draft release), no secret, persist-credentials false,
+  actions pinned by full SHA; tests/test_workflows.py pins the three
+  scopes. Reverses if: GitHub changes those scopes, a run writes anything
+  beyond release assets, or the operator rules CI must not publish.
 - Versioning and release trigger: SemVer 0.y.z, tag = v + VERSION; a
   release only from a REL-PREP milestone row or an explicit version
   request, published only on the operator's phrase `release X.Y.Z`
@@ -1110,7 +1118,8 @@ of the HALT check.
   the rehearsal names the configured remote and pushes nothing; the
   no-remote gate is kept and proven by the injected-git test (decision
   0073). Reverses if: the operator rules that milestones may publish
-  themselves, or the remote is removed.
+  themselves, or the remote is removed. Amended 2026-11-21: release.yml
+  scopes as in the 0064 entry (DEP-15).
 - KINDLER: the build generator "Kindler" ranks AshLight-authored
   archetype templates (server/al/data/archetypes.json, JSON never run as
   code, src and checked, hot reloaded, nothing copied) scored only by
@@ -1218,7 +1227,13 @@ of the HALT check.
   and only while the dev host's web_data is on; the docs watch and the
   release check keep their settled reads; CI reads GitHub and public
   registries only, never a GGG host or poe.ninja, and never commits; row
-  text comes only from tracked templates (decision 0069). Reverses if: a
+  text comes only from tracked templates (decision 0069). Amended
+  2026-11-21 (LOOP-CI-ISSUES, adjudicator ruling): METADATA_TAILS gains
+  /issues, /actions/workflows/watch.yml and /actions/workflows/watch.yml/runs,
+  read-only repository metadata on api.github.com for the CI issue protocol
+  (decision 0076 item 6); other /actions/ and /issues/ sub-paths stay refused.
+  Reverses if: GitHub treats these as non-metadata, or the operator limits
+  watchers to the earlier tails. Reverses if: a
   source's owner asks tools not to read it automatically, the metadata-only
   rule hides a break only a data read shows, or the operator exempts a
   source from the web-data gate in writing.
@@ -1279,3 +1294,34 @@ of the HALT check.
   browser or Electron refuses the synchronous copy, the summary click proves
   unreliable as the build trigger, players re-record worked checks often
   enough to need a retry control, or RUN-QUIET-FEED reshapes the report.
+- REL-STAGE-SANDBOX: `release.py stage --sandbox` (off by default; operator
+  act OA-14) adds step 8, sandbox_phases(). It builds a scratch folder under
+  <sidecar>/Temp with the staged assets and the cached pinned runtimes,
+  mapped read-only. A .wsb file turns off networking, clipboard, GPU, audio,
+  video and printers, and maps one writable results folder. A generated
+  phase script installs, reads back the per-user uninstall key, the
+  shortcuts and the home, uninstalls, reads back again, writes result.json
+  and shuts the sandbox down. The tool only checks that
+  %SystemRoot%\System32\WindowsSandbox.exe exists. It never turns a Windows
+  feature on and never asks for elevation, and a missing feature fails the
+  step with the reason. A runtime that is not cached also fails the step and
+  is never downloaded. stage.json "sandbox" is "skipped" without the flag,
+  else the step's status. Reverses if: Windows Sandbox drops .wsb mapped
+  folders or LogonCommand, the live OA-14 run shows the desktop mapping or
+  ProtectedClient breaks the phases, or the operator rules a missing feature
+  should be a skip, not a FAIL.
+- RUN-SECOND-LINE-CLIENT (F-127, decision 0005 amendment 2026-11-18): the
+  desktop client's main process (app/client/window.js, never the overlay
+  page) runs the hello health check every 30 s from its first open; after 4
+  failed checks in a row it runs scripts\run.ps1 once through the launcher,
+  at most once per 15 minutes, and connect()'s own start counts toward that
+  limit. run.ps1 converges, so it starts only the missing core and
+  supervisor. When keepalive.json says "gave-up", Launcher.readGiveUp passes
+  on only the restart count and a known reason word, and giveUpLine turns
+  them into a fixed sentence with no path. That sentence shows on the failed
+  page when there is no start-error line. An open companion follows the
+  watch's start: the starting page, then the dashboard or the failed page.
+  There is no tray note (design 0001 section 7.1). Reverses if: the watch
+  restarts a core the player stopped on purpose, 4 x 30 s proves too slow or
+  too eager in play, or a give-up reason has to say more than the count and
+  the reason.

@@ -1,0 +1,24 @@
+{
+ "kinds": {
+  "cikey": {
+   "act": "row",
+   "id": "CI-WATCH-<SRC>-<KEYID>",
+   "lane": "review",
+   "priority": false,
+   "blocked": "session (decision 0076: a session acts on the finding and moves the pin or the baseline)",
+   "text": "The CI watch workflow holds an open al-watch key for <src> (key <KEY>): run that source's check on the dev host, act on the finding, then move its pin or its tools/watch_ci.py baseline. ACCEPT: the key issue closes on the next watch workflow run. ZERO-CLICK: the daily workflow watches while the dev host is off. SOURCE: watch ci <src> <KEY>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "SRC": "[A-Z][A-Z0-9-]{0,25}",
+    "KEYID": "[A-Z0-9]{1,40}(?:-[A-Z0-9]{1,40}){0,15}",
+    "src": "[a-z][a-z0-9_-]{0,47}",
+    "KEY": "[A-Za-z0-9._-]{1,64}"
+   },
+   "sample": {
+    "SRC": "POB-RELEASE",
+    "KEYID": "V0-24-0",
+    "src": "pob-release",
+    "KEY": "v0.24.0"
+   }
+  }
+ }
+}
