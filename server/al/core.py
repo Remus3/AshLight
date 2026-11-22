@@ -1125,18 +1125,23 @@ class Core:
         on the loop thread. Returns the started thread or None. `now`
         (epoch s) is for tests; None reads the client's clock.
         REL-UPDATE-TRIGGER: also tick_trigger() (the updater start) on
-        every pass; the click-only switch is part of the publish key."""
-        key = (self.web_data_enabled(), self.web_data_acked(), self.update_click_only())
+        every pass; the click-only switch is part of the publish key. The
+        local config is read once per pass (the tick stat budget)."""
+        cfg = self._config()
+        ack = cfg.get(ACK_KEY)
+        ack = ack if isinstance(ack, int) and not isinstance(ack, bool) else None
+        key = (cfg.get("web_data") is True, ack, cfg.get(updates.CLICK_ONLY_KEY) is True)
         if key != self._update_key:
             self._update_key = key
             self.publish_update()
-        self.tick_trigger(now)
+        client = self.updates
+        allowed = bool(client.repo) and key[0] and updates.ack_ok(ack)
+        self.tick_trigger(now, allowed=allowed)
         running = self._update_thread
         if running is not None and running.is_alive():
             return None
-        client = self.updates
         when = float(client.clock() if now is None else now)
-        if not (client.allowed() and client.due(when)):
+        if not (allowed and client.due(when)):
             return None
 
         def run():
@@ -1150,7 +1155,7 @@ class Core:
         thread.start()
         return thread
 
-    def tick_trigger(self, now=None):
+    def tick_trigger(self, now=None, allowed=None):
         """REL-UPDATE-TRIGGER (F-077), ZERO-CLICK, from tick_update: with a
         newer release in the cached answer, the release check allowed (web
         data on, the wording acknowledged), the click-only switch off and
@@ -1159,13 +1164,14 @@ class Core:
         below-normal priority (UpdateClient.maybe_start: once a day per
         version, never beside a run still going, never in a checkout). The
         'update' block is published again when such a run ends (its staged
-        version). True when a run started."""
+        version). True when a run started. `allowed`: the release check
+        gate as tick_update read it (None: ask the client)."""
         client = self.updates
         alive = client.running()
         if self._update_child_running and not alive:
             self.publish_update()
         self._update_child_running = alive
-        if alive or not client.allowed():
+        if alive or not (client.allowed() if allowed is None else allowed):
             return False
         when = float(client.clock() if now is None else now)
         started = client.maybe_start(when, self.game_idle(), spawn=self.update_spawn,

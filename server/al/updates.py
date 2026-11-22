@@ -490,10 +490,18 @@ class UpdateClient:
         staged version or None, read only right before a start). At most
         one automatic start per version every RETRY_S, never beside a run
         still going. True when it started one."""
+        now = float(now)
         with self._start_lock:
-            if idle is not True or bool(_call(self.click_only)):
+            # the cheap memory checks first: the tick calls this every pass
+            if idle is not True or _alive(self._child):
                 return False
-            return self._start(float(now), spawn, staged, auto=True) == STARTED
+            version = self.newer_version()
+            if version is None or (self._attempt is not None and self._attempt[0] == version
+                                   and 0 <= now - self._attempt[1] < RETRY_S):
+                return False
+            if bool(_call(self.click_only)):
+                return False
+            return self._start(now, spawn, staged, auto=True) == STARTED
 
     def update_now(self, spawn=None, staged=None, now=None):
         """'Update now' (the player's click): the same start without the
