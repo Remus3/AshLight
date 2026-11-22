@@ -60,6 +60,9 @@ On the dashboard (the overlay shows the first three in a small corner box):
 The source lives at https://github.com/Remus3/AshLight; clone it with
 `git clone https://github.com/Remus3/AshLight.git`.
 
+AshLight releases appear at github.com/Remus3/AshLight/releases. The player guide (download, quick
+start, common issues, FAQ) is in [docs/guide/](docs/guide/download.md).
+
 <!-- shots:begin -->
 ## Screenshots
 

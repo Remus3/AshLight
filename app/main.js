@@ -73,6 +73,9 @@ const DISPLAYS_FILE = HOME.displaysFile;
 const CHOICE_FILE = path.join(path.dirname(DISPLAYS_FILE), OverlayGate.CHOICE_FILE);
 const PORTS_PY = HOME.portsPy;
 const LOCAL_CONFIG = HOME.localConfig;
+// PUB-GUIDE-DOWNLOAD-PLACE (F-126): the About text's download line, from
+// config/public_repo.json read once at start (missing file = no line).
+const DOWNLOAD_LINE = About.downloadLine(readJson(path.join(REPO, "config", "public_repo.json")));
 // OVL-SHELL-GUARDS, OVL-APP-SCHEME: the one page al:config answers, on the
 // app scheme (app/guards.js compares origin and path exactly).
 const OVERLAY_URL = Pages.urlFor("overlay/index.html");
@@ -431,7 +434,8 @@ function setAbout(doc) {
   dataCredit = About.creditOf(doc);
   versionText = About.versionLine(doc) || versionText;
   app.setAboutPanelOptions({ applicationName: "AshLight overlay",
-                             credits: About.aboutText(DISCLAIMER, dataCredit, versionText) });
+                             credits: About.aboutText(DISCLAIMER, dataCredit, versionText,
+                                                      DOWNLOAD_LINE) });
   setTrayTooltip();
 }
 

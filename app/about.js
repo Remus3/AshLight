@@ -7,7 +7,11 @@
    the core's build string follows the disclaimer, in the About text and
    the tray tooltip: "Version 0.1.0, build 0123456789ab" (build_id split at
    "+"), ", dev" while hot reload is on. web/app.js versionText says the
-   same words for the dashboard footer and the Settings About fold. */
+   same words for the dashboard footer and the Settings About fold.
+   PUB-GUIDE-DOWNLOAD-PLACE (F-126): the one download place, the releases
+   page of the address in config/public_repo.json, closes the About text;
+   README.md, docs/guide/download.md and docs/guide/faq.md carry the same
+   line (tests/test_download_place.py). Text only: nothing is fetched. */
 const START_WAIT_MS = 1500;
 
 const MAX_CREDIT_CHARS = 1000;
@@ -43,11 +47,28 @@ function versionLine(doc) {
   return "Version " + ver + (commit ? ", build " + commit : "") + (dev ? ", dev" : "");
 }
 
+const DOWNLOAD_PREFIX = "AshLight releases appear at github.com/";
+const DOWNLOAD_SUFFIX = "/releases.";
+const REPO_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/;
+
+/* The download line from a config/public_repo.json document ({"repo":
+   "<owner>/<name>"}), or "" (no line) when the file was missing or the
+   value is not a GitHub-shaped owner/name. */
+function downloadLine(doc) {
+  const repo = doc && doc.repo;
+  if (typeof repo !== "string" || !REPO_RE.test(repo)) { return ""; }
+  const name = repo.split("/")[1];
+  if (name === "." || name === "..") { return ""; }
+  return DOWNLOAD_PREFIX + repo + DOWNLOAD_SUFFIX;
+}
+
 /* The About panel credits: the disclaimer, the version line when known,
-   then the credit when there is one. */
-function aboutText(disclaimer, credit, version) {
+   then the credit when there is one, then the download line when there
+   is one. The disclaimer always stays first. */
+function aboutText(disclaimer, credit, version, download) {
   const head = version ? disclaimer + "\n" + version : disclaimer;
-  return credit ? head + "\n\n" + credit : head;
+  const body = credit ? head + "\n\n" + credit : head;
+  return download ? body + "\n\n" + download : body;
 }
 
 /* GET /api/version with the per-start token; resolves the parsed JSON. */
@@ -88,5 +109,5 @@ function firstCredit(getVersion, ms) {
   return firstDoc(getVersion, ms).then(creditOf);
 }
 
-module.exports = { creditOf, versionLine, aboutText, makeGetVersion, firstDoc, firstCredit,
-                   MAX_CREDIT_CHARS, START_WAIT_MS };
+module.exports = { creditOf, versionLine, downloadLine, aboutText, makeGetVersion, firstDoc,
+                   firstCredit, MAX_CREDIT_CHARS, START_WAIT_MS, DOWNLOAD_PREFIX, DOWNLOAD_SUFFIX };

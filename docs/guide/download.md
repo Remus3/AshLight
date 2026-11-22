@@ -9,6 +9,8 @@ No release yet. Until the first release ships, you install AshLight from its
 source code: a copy of the AshLight repository on your computer. There is no
 installer file to download and nothing to pay for.
 
+AshLight releases appear at github.com/Remus3/AshLight/releases.
+
 ## What you need
 
 - Windows 10 or 11.
