@@ -455,9 +455,10 @@
 
   var HOLDERS = ["press", "trade", "moment", "hint", "none"];
   var MOMENT_S = 12;
-  var CARD_CHARS = 34;
+  var CARD_CHARS = 26; // CARD-LINE-LIMIT-FLIP (state.CARD_LINE)
   var HINT_TAIL = ": check an item";
-  var KEY_NAME_MAX = CARD_CHARS - HINT_TAIL.length; // 19
+  var HINT_HEAD = "Check: "; // the short form, overlayview HINT_SHORT
+  var KEY_NAME_MAX = CARD_CHARS - HINT_HEAD.length; // 19
   var STATUS_CARD_WORDS = ["Build loaded", "Not an item", "Copy the item first"];
   var CARD_EDGE_PX = 62; // the card's near edge, whatever line 2 shows
 
@@ -474,9 +475,10 @@
                 that notes the moment sets moment.dropped once a trade card
                 held the slot at its arrival or took it later; a dropped
                 moment never shows;
-     4 hint   - input.hint {due, key}: "<key>: check an item" while due;
-                a key name over 19 characters would break the 34-character
-                line, so no hint then;
+     4 hint   - input.hint {due, key}: "<key>: check an item" while due,
+                "Check: <key>" when that is over the 26-character line
+                (overlayview _hint_head); a key name over 19 characters
+                fits neither, so no hint then (never a cut key);
      5 none   - the card plate is absent.
      Returns {holder, rank, card, more, line1}. */
   function cardHolder(input) {
@@ -504,7 +506,8 @@
     var h = isObj(s.hint) ? s.hint : null;
     var key = h ? str(h.key) : "";
     if (h && h.due === true && key && key.length <= KEY_NAME_MAX) {
-      return { holder: "hint", rank: 4, card: h, more: 0, line1: key + HINT_TAIL };
+      var line1 = (key + HINT_TAIL).length <= CARD_CHARS ? key + HINT_TAIL : HINT_HEAD + key;
+      return { holder: "hint", rank: 4, card: h, more: 0, line1: line1 };
     }
     return { holder: "none", rank: 5, card: null, more: 0, line1: "" };
   }

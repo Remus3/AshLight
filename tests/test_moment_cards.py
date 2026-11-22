@@ -2,7 +2,7 @@
 guide-line fields of the snapshot's "overlay" dict (server/al/overlayview.py).
 
 - a replayed log entering a guided campaign zone publishes one card of
-  kind zone, 3 lines of at most 34 characters, for 12 s;
+  kind zone, 3 lines of at most 26 characters, for 12 s;
 - an open trade request, a press card or the sample takes the slot first,
   and the zone card never waits or returns;
 - re-entry in the same game run shows nothing; a new game run shows it
@@ -104,7 +104,7 @@ def test_first_entry_of_a_guided_zone_shows_the_zone_card_for_12_s():
     assert card["verdict"] == ""  # neutral edge
     assert card["expires_at"] == T0 + MOMENT_CARD_S == T0 + 12
     for key in ("head", "line2", "line3"):
-        assert card[key].isascii() and len(card[key]) <= CARD_LINE == 34, (key, card[key])
+        assert card[key].isascii() and len(card[key]) <= CARD_LINE == 26, (key, card[key])
     assert _card(st, T0 + MOMENT_CARD_S - 0.01) == card
     assert _card(st, T0 + MOMENT_CARD_S) is None
     assert st.overlay.moment is None  # gone for good
@@ -256,8 +256,9 @@ def test_zone_lines_words():
     g = dict(base, optional=[{"kind": "resist", "text": "+10% cold resistance - near the middle."}],
              next="Clearfell", advice={"mode": "push",
                                        "text": zoneguide.RUSH_TEXT.format(n=7, lv="levels")})
-    assert zone_lines(g) == ("Short words", "Bonus: +10% cold resistance",
-                             "7 levels over: move on")
+    # CARD-LINE-LIMIT-FLIP: "Bonus: +10% cold resistance" is 27 characters,
+    # over the 26-character line, so it gives way to the next zone
+    assert zone_lines(g) == ("Short words", "Next: Clearfell", "7 levels over: move on")
     # a next zone the short already names gives no line
     g = dict(base, short="Next: Clearfell", next="Clearfell")
     assert zone_lines(g) is None
@@ -267,16 +268,17 @@ def test_zone_lines_words():
     assert zone_lines(g)[1] == "Next: Qimah"
     # with no next zone a long bonus is cut at a whole word
     g = dict(base, optional=[{"kind": "other", "text": "A permanent bonus of your choice"}])
-    assert zone_lines(g)[1] == "Bonus: A permanent bonus of..."
+    assert zone_lines(g)[1] == "Bonus: A permanent..."
     g = dict(base, optional=[{"kind": "charm", "text": "A charm bonus of your choice"}])
-    assert zone_lines(g)[1] == "Bonus: A charm bonus of your..."
-    assert overlayview.clip_words("x" * 40) == "x" * 31 + "..."
+    assert zone_lines(g)[1] == "Bonus: A charm bonus of..."
+    assert overlayview.clip_words("x" * 40) == "x" * 23 + "..."
 
 
 def test_fixed_zone_lines_fit_26():
     """CARD-LINE-LIMIT-COPY: the fixed zone card lines fit 26 characters for
-    a two-digit level gap and every boss element (CARD_LINE stays 34)."""
-    assert CARD_LINE == 34
+    a two-digit level gap and every boss element (CARD_LINE is 26 since
+    CARD-LINE-LIMIT-FLIP)."""
+    assert CARD_LINE == 26
     lines = [overlayview.FIT_LINE] + [overlayview.BOSS_LINE.format(element=e)
                                       for e in zoneguide.ELEMENTS]
     for n in range(1, 100):
