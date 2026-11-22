@@ -4,8 +4,9 @@ older than the game, through the plug seam (decision 0056).
 A bus listener notes every campaign, cruel, interlude or map area id the
 log names (area generation events, acts.area_kind) that the cached
 world_areas.json does not list. While at least one such id stays unknown,
-Checks shows "Game data is older than your game" with the build step that
-refreshes it. The id list is re-read only when the cached file changes
+Checks shows "Game data is older than your game" with the switch that
+refreshes it (RUN-NO-DEAD-ENDS: the supervisor fetches newer data by itself
+while web data is on, DATA-SNAP-AT-START; never a script). The id list is re-read only when the cached file changes
 (hotreload.Watched, one stat per Checks pass), so the row clears by itself
 once a refreshed snapshot lists the ids. With no snapshot file there is
 nothing to compare and no row (the built-in "Game data" row covers that).
@@ -23,7 +24,8 @@ MAX_SEEN = 16  # area ids kept for the check, newest kept
 
 ROW_ID = "data_age"
 LABEL = "Game data"
-FIX = r"Run scripts\build.ps1 -Snapshot to fetch the newest game data."
+FIX = ('Keep "Use web data" ticked under Settings, Reading and web data. '
+       "AshLight fetches newer game data by itself, at most once a day.")
 
 
 def detail_text(n):

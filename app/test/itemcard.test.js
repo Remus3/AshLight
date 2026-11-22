@@ -301,13 +301,16 @@ test("a press error and a waystone use the core's words", () => {
   IC.reset();
   const doc = makeDoc();
   IC.wire(doc, { tabs: Tabs });
+  /* RUN-NO-DEAD-ENDS (research 0042 F20 d): a press with no item names none
+     and the price row does not repeat the card's words (server/al/playcards.py) */
   IC.paint(doc, snapWith(card({ kind: "error", state: "idle", glyph: "[-]", word: "Not an item",
-    name: "Unnamed item", sentence: ["The clipboard did not hold an item."], links: [],
+    name: "", sentence: ["The clipboard did not hold an item."], links: [],
     compare: { label: "", rows: [] },
-    price: { value: "Not an item", source: "Copy an item in game first" } })));
+    price: { value: "No price for this check", source: "" } })));
   assert.equal(txt(doc, "ic-word"), "[-] Not an item");
-  assert.equal(txt(doc, "ic-pval"), "Not an item");
-  assert.equal(txt(doc, "ic-psrc"), "Copy an item in game first");
+  assert.equal(doc.getElementById("ic-name").hidden, true);
+  assert.equal(txt(doc, "ic-pval"), "No price for this check");
+  assert.equal(txt(doc, "ic-psrc"), "");
   assert.equal(doc.getElementById("ic-links").children.length, 0);
   IC.paint(doc, snapWith(card({ kind: "waystone", state: "needs-operator", glyph: "[?]",
     word: "Risky", name: "Waystone (Tier 15)",

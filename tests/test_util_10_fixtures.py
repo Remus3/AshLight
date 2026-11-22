@@ -135,8 +135,8 @@ def test_pre_10_zone_table_says_act_5_levels_are_missing(tmp_path):
     assert a["current"] == "G5" and a["zones"] == [] and a["zones_act"] is None
     assert a["act_levels_text"] == (
         "Zone levels for Act 5 aren't downloaded yet. They show here once the "
-        "game data has them: after a game update, run AshLight's build step "
-        "again (scripts/build.ps1).")
+        "game data has them. AshLight fetches newer game data by itself, at "
+        "most once a day, while web data is on.")
     # in a map the campaign table is off and nothing is claimed
     a = replay(lines, 3700.0, table).snapshot()["acts"]
     assert a["current"] is None and a["act_levels_text"] == ""

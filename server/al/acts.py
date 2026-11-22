@@ -60,18 +60,22 @@ _ENDGAME = re.compile(r"^Map")
 # Shown under the zone level table whenever it is (decision 0009 item 2).
 ATTRIBUTION = datacredit.ZONE_LEVELS_CREDIT  # one source: theorycraft/datacredit.py
 # Dashboard copy (design 0001 section 9); the page prints these as given.
+# RUN-NO-DEAD-ENDS (research 0042 R4): no script for a player task; the
+# supervisor fetches the game data by itself while web data is on
+# (DATA-SNAP-AT-START), so the words name the switch and its place.
 EMPTY_TEXT = ("No act times yet. They start by themselves when you enter a "
               "campaign zone.")
-NO_LEVELS_TEXT = ("Zone levels aren't downloaded yet. Turn on web data, then run "
-                  "AshLight's build step (scripts/build.ps1).")
+NO_LEVELS_TEXT = ("Zone levels aren't downloaded yet. AshLight fetches them by "
+                  "itself while \"Use web data\" is ticked under Settings, Reading "
+                  "and web data.")
 NO_ZONES_TEXT = "Zone levels show here while you are in a campaign act."
 # UTIL-1.0-FIXTURES: the player is in an act the downloaded table has no
 # rows for (Acts 5-6 before the repoe-fork snapshot is refreshed, research
 # 0021); NO_ZONES_TEXT would wrongly say they are not in an act.
 ACT_NO_LEVELS_TEXT = ("Zone levels for {act} aren't downloaded yet. They "
-                      "show here once the game data has them: after a game "
-                      "update, run AshLight's build step again "
-                      "(scripts/build.ps1).")
+                      "show here once the game data has them. AshLight "
+                      "fetches newer game data by itself, at most once a "
+                      "day, while web data is on.")
 PARTIAL_TEXT = "partial: counted from the first zone AshLight saw"
 
 

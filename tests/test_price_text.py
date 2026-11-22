@@ -65,9 +65,12 @@ def test_off_and_errors_say_what_to_do():
     assert (off["line"], off["detail"]) == ("Web data is off",
                                             "See Prices and web data")
     assert off["sentence"] == ("poe.ninja prices need web data, which is off. Turn it on "
-                               "in the Prices and web data card on this page.")
+                               "under Settings, Reading and web data.")
     nai = price_card_text(price("error", error="not an item", item={}))
-    assert nai["head"] == "Price: Unnamed item"
+    # RUN-NO-DEAD-ENDS (research 0042 F20 d): no item, so no item name
+    assert (nai["head"], nai["item"]) == ("Price check", "")
+    named = price_card_text(price("error", error="not an item", item={"name": "Grim Clutch"}))
+    assert named["head"] == "Price: Grim Clutch"
     assert (nai["line"], nai["detail"]) == ("Not an item", "Copy an item in game first")
     league = price_card_text(price("error", error="no league"))
     assert league["line"] == "League unknown"
@@ -87,7 +90,7 @@ def test_off_contact_not_set_says_what_to_do():
     # DATA-PRICE-CARD-TEXT (F-018): names poe.ninja and the card, not a file
     assert (t["line"], t["detail"]) == ("Contact not set", "See Prices and web data")
     assert t["sentence"] == ("poe.ninja prices need a contact, such as an email or a name. "
-                             "Add it in the Prices and web data card on this page, then "
+                             "Add it under Settings, Reading and web data, then "
                              "press the hotkey again.")
     assert "Web data is off" not in str(t)
     assert "config/local.json" not in str(t) and "trade site" not in str(t)

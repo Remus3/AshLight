@@ -154,7 +154,7 @@
         "overlay_alone": false,
         "check_row": "log",
         "check": "The Client.txt path in your settings is missing.",
-        "next": "Correct \"client_log\" in config\\local.json, or remove it so AshLight finds Client.txt by itself. Starting the game once may also create it.",
+        "next": "Type the game folder or the Client.txt path under Settings, Reading and web data, then press Use.",
         "fault": true
       },
       "stalled": {
@@ -166,14 +166,14 @@
         "overlay_alone": false,
         "check_row": "reading",
         "check": "Not reading Client.txt.",
-        "next": "Run scripts\\run.ps1 to start AshLight's parts again.",
+        "next": "Quit AshLight from its tray icon, then open it again from its Start Menu shortcut.",
         "fault": true
       },
       "link_down": {
         "rank": 6,
         "kit": "failed",
         "glyph": "[x]",
-        "bar": "can't reach AshLight - restart it",
+        "bar": "can't reach AshLight - reopen it from the Start Menu",
         "overlay": "offline",
         "overlay_alone": false,
         "check_row": null,

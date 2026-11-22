@@ -49,8 +49,9 @@ changed template is edited in both places together.
     keeps happening, close other heavy programs while you play.`
   - crash (fail): `The calc closed twice in a row during a calculation.
     <FALLBACK>`; fix (`FIX_CALC_SETUP`, the same words as diag.FIX_CALC):
-    `Run scripts\setup.ps1 -TcCalc. That one step installs the calc
-    again and turns it on.`
+    `Press "Set up the calc" under Settings, Checks in the AshLight
+    window. It installs the calc and turns it on.` (RUN-NO-DEAD-ENDS: the
+    Checks row's button, never a script)
   - unavailable (fail): `The calc could not start. <FALLBACK>`; fix
     `FIX_CALC_SETUP`
   - error (note): `The last calculation returned an error, so that item

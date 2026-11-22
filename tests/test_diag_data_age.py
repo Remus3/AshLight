@@ -82,7 +82,9 @@ def test_unknown_campaign_id_raises_the_row(core):
                    "detail": ("Game data is older than your game: it doesn't list "
                               "an area you entered, so zone levels can be missing "
                               "there."),
-                   "fix": r"Run scripts\build.ps1 -Snapshot to fetch the newest game data."}
+                   "fix": ('Keep "Use web data" ticked under Settings, Reading and '
+                           "web data. AshLight fetches newer game data by itself, "
+                           "at most once a day.")}
     core.bus.publish(gen("MapBrandNew"))
     assert "2 areas" in checks_row(core)["detail"]
 

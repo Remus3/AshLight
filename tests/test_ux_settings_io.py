@@ -326,7 +326,7 @@ def test_http_export_download_and_import(tmp_path):
         before = cfg.read_text(encoding="ascii")
         status, body = _post(server.port, "/api/settings-import",
                              {"kind": "nope", "settings": {"league": "Z"}})
-        assert status == 400 and "isn't an AshLight settings file" in body
+        assert status == 400 and "isn't an AshLight settings backup" in body
         assert cfg.read_text(encoding="ascii") == before
         # oversized body refused before reading
         big = json.dumps({"kind": settingsio.KIND, "schema": 1,

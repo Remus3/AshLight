@@ -9,7 +9,7 @@ same object. Pure functions and constants; stdlib only.
 from ..theorycraft import cardparts
 from .buildlive import build_alert_text
 from .common import _dict, _dicts, _key, _num_text, _points, _signed, _signed_points, _text
-from .price import EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT
+from .price import EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT, no_item
 from .waystone import waystone_text
 
 
@@ -117,9 +117,10 @@ def _stat_rows(comp):
 
 CALC_NOTICE_TEXT = {
     # TC-DELTA (decision 0024): why the card shows stat-weight points, not
-    # Path of Building DPS / EHP
-    "off": ("Scored with your stat weights. To see DPS and EHP, turn on the "
-            "optional Path of Building calc in AshLight's settings file."),
+    # Path of Building DPS / EHP. RUN-NO-DEAD-ENDS (research 0042 R4): the
+    # words name the Checks row's button (diag.CALC_BUTTON), never a file
+    "off": ("Scored with your stat weights. To see DPS and EHP, press \"Set up "
+            "the calc\" under Settings, Checks in the AshLight window."),
     "failed": ("Scored with your stat weights. DPS and EHP are not shown because "
                "Path of Building could not be reached. Try the check again."),
     # MATH-DPS-SANITY (decision 0032): PoB answered numbers that make no
@@ -254,7 +255,10 @@ def _delta_head(verdict, delta, slot, empty):
 def _eval_lines(card):
     """eval_card_text's head, item, line, sentence, comparisons and calc."""
     item = _dict(card.get("item"))
-    name = _text(item.get("name") or item.get("base"), "Unnamed item")
+    # RUN-NO-DEAD-ENDS (research 0042 F20 d): a press that held no item names
+    # no item (the overlay's empty line 2 takes no space)
+    empty = not card.get("ok") and no_item(card)
+    name = _text(item.get("name") or item.get("base"), "" if empty else "Unnamed item")
     if card.get("unidentified"):
         name += " (unidentified)"
     out = {"head": "", "item": name, "line": "", "sentence": "", "comparisons": [],

@@ -77,8 +77,10 @@ CALC_WORDS = {
 FIX_CALC_SLOW = ("Nothing to do right now: AshLight tries the calc again on the "
                  "next item check. If it keeps happening, close other heavy "
                  "programs while you play.")
-FIX_CALC_SETUP = (r"Run scripts\setup.ps1 -TcCalc. That one step installs the "
-                  "calc again and turns it on.")  # diag.FIX_CALC
+# RUN-NO-DEAD-ENDS (research 0042 R4, F20 c): the Checks row's button, never
+# a script, and no "again" for a part that was never installed
+FIX_CALC_SETUP = ('Press "Set up the calc" under Settings, Checks in the AshLight '
+                  "window. It installs the calc and turns it on.")  # diag.FIX_CALC
 CALC_FIX = {"timeout": FIX_CALC_SLOW, "crash": FIX_CALC_SETUP,
             "unavailable": FIX_CALC_SETUP}
 
