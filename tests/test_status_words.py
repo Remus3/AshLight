@@ -110,6 +110,8 @@ def test_reading_state_matches_the_dashboard_rule():
     assert rs(None) == "unknown"
     assert rs({"consented": True, "reading": True}, live=False) == "unknown"
     assert rs({"consented": True, "reading": True, "idle": True}) == "idle"
+    assert rs({"consented": True, "reading": True, "idle": True,
+               "unreadable": True}) == "unreadable"
     assert rs({"consented": True, "reading": True}) == "reading"
     assert rs({"consented": True, "reading": False, "path": "x"}) == "waiting"
     assert rs({"consented": True, "reading": False, "path": None}) == "missing"

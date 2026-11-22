@@ -55,10 +55,13 @@ def overlay(sid):
 def reading_state(tailer, live=True):
     """The reading state id of a snapshot's tailer dict, the same rule as
     web/status.js readingState: unknown while the feed is down or the core
-    sends no tailer; idle (decision 0029) before reading; then reading,
-    waiting (path known), missing (no path) or off (not opted in)."""
+    sends no tailer; unreadable (Client.txt can't be read) and then idle
+    (decision 0029) before reading; then reading, waiting (path known),
+    missing (no path) or off (not opted in)."""
     if not live or not isinstance(tailer, dict):
         return "unknown"
+    if tailer.get("consented") and tailer.get("unreadable"):
+        return "unreadable"
     if tailer.get("consented") and tailer.get("idle"):
         return "idle"
     if tailer.get("reading"):
