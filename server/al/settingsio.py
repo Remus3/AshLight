@@ -108,7 +108,9 @@ LABELS = {
     "wear_hotkey": "wear item hotkey",
 }
 # Never exported or imported, even if a later key list grows (tests pin it).
-NEVER = ("contact", "client_log", "port", "loop", "token", "poesessid")
+# REL-UPDATE-WIRE (ruling Q-21): web_data_ack, the acknowledged opt-in
+# wording version, is set only by the player's own web-data click.
+NEVER = ("contact", "client_log", "port", "loop", "token", "poesessid", "web_data_ack")
 
 
 def export_doc(cfg, version):

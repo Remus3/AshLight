@@ -55,7 +55,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, metrics, paths, plug,
-               ports, settingsio, static, webfetch, webpage)
+               ports, settingsio, static, updates, webfetch, webpage)
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -795,11 +795,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def _web_data_doc(self):
         core = self.server.core
-        return {"web_data": core.web_data_enabled(),
+        on = core.web_data_enabled()
+        acked = updates.ack_ok(core.web_data_acked())
+        return {"web_data": on,
                 # decision 0017: the trade link is built offline, so it is
                 # no web-data use; the app calls no trade-site endpoint
                 "uses": ["poe.ninja currency rates", "poe.ninja unique and stackable item values",
-                         "build share links you paste"],
+                         "build share links you paste",
+                         "the daily AshLight update check on GitHub"],
+                # REL-UPDATE-WIRE (ruling Q-21): the opt-in wording version
+                # the page posts back as "ack"; an opt-in given before it
+                # makes no update request until acknowledged once
+                "wording_version": updates.WORDING_VERSION,
+                "acked": acked,
+                "ack_needed": on and not acked,
                 # UA-CONTACT: rates also need the contact (config/local.json
                 # "contact", typed in the dashboard: DATA-CONTACT-FIELD);
                 # write-only, the value is never echoed, only contact_set.
@@ -823,7 +832,11 @@ class Handler(BaseHTTPRequestHandler):
         answer says only contact_set, never the value.
         DATA-LEAGUE-PICKER-API (F-141): an optional "league" (text) sets
         the "league" key to a league of the cached list ('' clears it, so
-        the auto league is followed again); checked first like the rest."""
+        the auto league is followed again); checked first like the rest.
+        REL-UPDATE-WIRE (ruling Q-21): an optional "ack" (the wording
+        version from the GET answer) stores "web_data_ack" with the current
+        wording version; any other value is refused before anything is
+        written. A settings import never sets it."""
         refused = ("AshLight can't use that contact. Use up to 120 plain "
                    "characters, without brackets or a backslash.")
         league_refused = ("AshLight can't price that league. Pick one from the "
@@ -833,9 +846,14 @@ class Handler(BaseHTTPRequestHandler):
             return None
         has_on, has_contact = "enabled" in body, "contact" in body
         has_league = "league" in body
-        if not (has_on or has_contact or has_league) or (
+        has_ack = "ack" in body
+        if not (has_on or has_contact or has_league or has_ack) or (
                 has_on and not isinstance(body["enabled"], bool)):
             return self._json(400, {"error": "enabled: true|false required"})
+        ack = body.get("ack")
+        if has_ack and not (isinstance(ack, int) and not isinstance(ack, bool)
+                            and ack == updates.WORDING_VERSION):
+            return self._json(400, {"error": "ack: the current wording version required"})
         contact = body.get("contact")
         if has_contact and not (isinstance(contact, str) and (
                 not contact.strip() or webfetch.clean_contact(contact) is not None)):
@@ -851,8 +869,9 @@ class Handler(BaseHTTPRequestHandler):
                 core.set_league(body["league"])
             if has_contact:
                 core.set_contact(contact)
-            if has_on:
-                core.set_web_data(body["enabled"])
+            if has_on or has_ack:
+                core.set_web_data(body["enabled"] if has_on else None,
+                                  ack=ack if has_ack else None)
         except ValueError:
             return self._json(400, {"error": refused})
         except OSError:  # AREA-AUDIT P5-1: a broken config is never overwritten
