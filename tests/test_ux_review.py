@@ -470,7 +470,7 @@ def test_price_and_points_follows_price():
     assert main.index('id="price-result"') < main.index('id="eval-rows"') < main.index('id="weights"')
     js = srcpaths.read("app.js", encoding="utf-8")
     assert "evalRows.check.concat(evalRows.price, evalRows.after)" in js
-    ev = js[js.index("  function renderEval(ev) {"):js.index("  function fillBand(doc) {")]
+    ev = js[js.index("  function renderEval(ev) {"):js.index("  /* ---- DATA-NINJA-UI")]
     assert ev.index("P.valueView(ev.value)") < ev.index("P.upgradeView(ev.upgrade)")
 
 
@@ -610,3 +610,60 @@ def test_disabled_pager_edge_is_2px_dashed_without_a_shift():
     assert re.search(r"padding\s*:\s*0 calc\(\s*0\.5rem\s*-\s*1px\s*\)", off), off
     on = _rule(base, "button.al-pager-btn")
     assert re.search(r"padding\s*:\s*0 0\.5rem\s*;", on), on
+
+
+# --- PLAY-TD-22A-A11Y-CSS (TD-22, F-164): forced colours, disabled, 24 px -----
+
+_SYSTEM = {"Canvas", "CanvasText", "Highlight", "HighlightText", "GrayText", "ButtonFace",
+           "ButtonText", "ButtonBorder", "LinkText", "VisitedText", "ActiveText", "Field",
+           "FieldText", "Mark", "MarkText", "AccentColor", "AccentColorText", "transparent"}
+
+
+def _forced_rules():
+    """(selector, body) of every rule in every forced-colors block of app.css."""
+    css = re.sub(r"/\*.*?\*/", "", _css(APP_CSS), flags=re.S)
+    out = []
+    for part in css.split("@media (forced-colors: active)")[1:]:
+        out += _rules(_media("@media (forced-colors: active)" + part, "forced-colors: active"))
+    return out
+
+
+def test_selected_tab_keeps_its_own_edge_under_forced_colours():
+    """F-164 (R1): under forced colours the selected tab's bottom border is
+    a system colour no other tab has; system colour keywords only, as
+    app/overlay/overlay.css does (design 0001 C3), and the block follows
+    the tab rules so it wins the cascade."""
+    rules = _forced_rules()
+    tab = _rule(rules, "button.tab")
+    sel = _rule(rules, 'button.tab[aria-selected="true"]')
+    a = re.search(r"border-bottom-color\s*:\s*(\w+)\s*;", tab).group(1)
+    b = re.search(r"border-bottom-color\s*:\s*(\w+)\s*;", sel).group(1)
+    assert a != b and {a, b} <= _SYSTEM, (a, b)
+    rail = re.search(r"border-left-color\s*:\s*(\w+)", _rule(rules, "button.rail-item")).group(1)
+    shown = re.search(r"border-left-color\s*:\s*(\w+)",
+                      _rule(rules, 'button.rail-item[aria-current="true"]')).group(1)
+    assert rail != shown and {rail, shown} <= _SYSTEM
+    for s, body in rules:
+        for val in re.findall(r"(?<![-\w])(?:color|[\w-]*-color)\s*:\s*([^;]+);", body):
+            assert val.strip() in _SYSTEM, (s, val)
+    css = _css(APP_CSS)
+    last = css.rindex("@media (forced-colors: active)")
+    assert last > css.index('button.tab[aria-selected="true"] {')
+    assert last > css.index('button.al-pager-btn[aria-disabled="true"] {')
+
+
+def test_disabled_button_has_a_visible_style():
+    """F-164: a disabled button (disabled or aria-disabled) says so without
+    colour alone: the muted text, a dashed edge (a link button keeps no
+    edge) and the not-allowed cursor; the filled button drops its fill."""
+    base = _rules(_strip_media(_css(APP_CSS)))
+    off = _rule(base, 'button:disabled, button[aria-disabled="true"]')
+    assert re.search(r"(?<![-\w])color\s*:\s*var\(--fk-text-muted\)", off), off
+    assert re.search(r"cursor\s*:\s*not-allowed", off), off
+    edge = _rule(base, 'button:not(.link):disabled, button:not(.link)[aria-disabled="true"]')
+    assert re.search(r"border-style\s*:\s*dashed", edge), edge
+    primary = _rule(base, 'button.primary:disabled, button.primary[aria-disabled="true"]')
+    assert re.search(r"background\s*:\s*transparent", primary), primary
+    for sel, body in _rules(_css(APP_CSS)):
+        if "disabled" in sel:
+            assert not re.search(r"opacity\s*:", body), ("no faded disabled state", sel)
