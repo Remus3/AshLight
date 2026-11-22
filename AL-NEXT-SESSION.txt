@@ -1,12 +1,15 @@
 AL NEXT SESSION
 ---------------
-SESSION: 19   (FLEET item 13 counter; /done writes n+1)
+SESSION: 20   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
 WAVE POINTER: wave 24 done, next wave 25
-DEFERRED: RUN-EXPLAIN-ROWS (wave 24): batch suite red, tests/test_structure.py refuses 30 player sentences in server/al/plug/explain.py outside server/al/text/; re-plan files (server/al/text/explain.py, docs/design/copy/explain.md) first; reverted d97a090, backout fae97a6; branch worktree-w24-RUN-EXPLAIN-ROWS
-DEFERRED: PRICES-TITLE-TABINDEX (wave 24): not folded into DATA-CONTACT-UI (#prices-title still has no tabindex=-1); needs a package; row retagged BLOCKED: session wave 25
+DEFERRED: RUN-EXPLAIN-ROWS (wave 24 -> wave 25): batch suite red, tests/test_structure.py refuses 30 player sentences in server/al/plug/explain.py outside server/al/text/; re-plan files (server/al/text/explain.py, docs/design/copy/explain.md) first; reverted d97a090, backout fae97a6; branch worktree-w24-RUN-EXPLAIN-ROWS (c44ebd0; re-created by hand after reap deleted it at session 19 /done, worktree gone)
+DEFERRED: PRICES-TITLE-TABINDEX (wave 24 -> wave 25): not folded into DATA-CONTACT-UI (#prices-title still has no tabindex=-1); has no package: add one to docs/plan/packages.json first; row tagged BLOCKED: session wave 25
+DEFERRED: CARD-LINE-LIMIT (wave 25, re-planned 702769e). New rows for wave 25: TEST-SUITE-T0 and RUN-BUDGET-CALIBRATE-B11 (folded into ROADMAP at session 19 /done, ed1d53a); both need a package or a placement.
+GATE-HOLD (session item, carried): batch suites hold the gate about 135-155 s against the 120 s target (wave 23: 135-150 s; wave 24: parallel 87-99 s + timing 49-56 s); session 19 /done whole suite: parallel 87.98 s + timing 48.76 s. Needs a look; a soak median over 125 s reverses the 120 s target.
+SESSION 19 (2026-11-22): wave 22 carry RUN-REPORT-FIELDS 008c899 and PUB-HOOK-RELEASE-CHECK 409e3a0 (3rd try, adjudicator ruling) merged; wave 23 all 14 packages merged; wave 24 12 merged (DATA-CONTACT-UI, OVL-APP-SCHEME-STRICT, TC-WEIGHTS-DELTA-EXPORT, RUN-BUDGET-TESTS-LIVE, TEST-SLOW-BUDGET, DATA-PRICE-TYPES-FILE, TC-PIN-POLICY, RUN-HISTORY-UNDO, RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24, RUN-UNREADABLE-WORD); RUN-EXPLAIN-ROWS, CARD-LINE-LIMIT and PRICES-TITLE-TABINDEX deferred to wave 25; BUDGETLOG diagnosed (adjudicator: recalibrate B11); REL-CUTOVER-LIVE prepped, waits on the operator act below.
 NOTE: CARD-LINE-LIMIT re-planned to wave 25 with seven more files (702769e; ROADMAP row tagged BLOCKED: session wave 25). PUB-HOOK-RELEASE-CHECK deferred twice then merged (adjudicator ruling 2026-11-21: retry with tests/test_dependabot_reapply.py in files; alternatives skip the hook line when release.py is absent, park; reverses if a third red batch).
 SESSION 18 (2026-11-21): W22-FOLD + UNREADABLE-RETAG (51f8834: 9 package-less wave-22 rows folded; RUN-UNREADABLE-WORD is a new package in wave 24; adjudicator amendment: its log-state sentences stay in design 0001 s9); wave 22 closed 14/18 merged, pushed origin/main 0555f53; parked packages re-placed: PUB-DEPBOT-FIRST-RUN and RUN-LIVE1-FIXTURES -> wave 23, DATA-PRICE-TYPE-PROOF and PUB-GUIDE-DOWNLOAD-PLACE -> wave 25, DATA-CONTACT-DEFAULT -> wave 43. Follow-up rows filed: RUN-CARDS-PAGE-FIT, BUDGET-RETIRE-TAILER-IDLE.
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
@@ -16,23 +19,22 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: setAutostart in app/client/launcher.js still spawns bare powershell.exe (pinned by app/test/autostart_switch.test.js:70; shrink-only BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py) - file a row to switch it to psExe(). tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt, AL-2026-11-20.txt and AL-2026-11-21.txt, one block per session headed "SESSION <n> /done" (the full index of what each block holds is in the "SESSION 18 /done" block of AL-2026-11-21.txt).
 
-Next action: start wave 23 of docs/plan/07-execution-plan.md: dispatch
+Next action: start wave 25 of docs/plan/07-execution-plan.md: dispatch
 one start agent (docs/plan/08-orchestration.md section 1, argument wave
-23), then the wave (08 sections 2 to 7); the 3 wave-22 DEFERRED packages
-first (RUN-REPORT-FIELDS: reword the drive-path comment at
-server/al/report.py:189, carries REPORT-DOC-QUIET; PUB-HOOK-RELEASE-CHECK:
-add tools/rel_readback.py to the tests/test_pre_push_hook.py fixture copy
-list; CARD-LINE-LIMIT: re-plan first, about 7 files outside its list incl.
-design 0001 and zoneguide.py); packages from
-`python tools/plan_check.py wave 23`; resume at the first unmerged package
-per decision 0077; then onward per 07's session grouping. Run exactly as 08
-says: ONE background orchestrator agent with a real background watch on the
-progress files; merge batches of 4. Ask the operator nothing. The main
-session only dispatches; every command runs in a sub-agent. The orchestrator
-must keep a live background child of its OWN (a Monitor on the progress
-files) at every turn end: in session 16 it stalled three times when it relied
-on grandchildren (builder / merger agents) to wake it.
-1. Waves 10 to 22 are closed (sessions 12 to 18).
+25), then the wave (08 sections 2 to 7); first re-plan RUN-EXPLAIN-ROWS
+(its sentences move to server/al/text/explain.py with a
+docs/design/copy/explain.md sheet; patch its packages.json files), add a
+package for PRICES-TITLE-TABINDEX and place TEST-SUITE-T0 and
+RUN-BUDGET-CALIBRATE-B11; packages from `python tools/plan_check.py wave
+25`; resume at the first unmerged package per decision 0077; then onward
+per 07's session grouping. Run exactly as 08 says: ONE background
+orchestrator agent with a real background watch on the progress files;
+merge batches of 4. Ask the operator nothing. The main session only
+dispatches; every command runs in a sub-agent. The orchestrator must keep
+a live background child of its OWN (a Monitor on the progress files) at
+every turn end: in session 16 it stalled three times when it relied on
+grandchildren (builder / merger agents) to wake it.
+1. Waves 10 to 24 are closed (sessions 12 to 19).
 2. Go-public track: the repository exists and is PRIVATE; it stays private
    until the plan-04 flip gates hold (GP-12). Push main only through
    fleet_gitlock, never force. Status bullet GO-PUBLIC STATUS below.
@@ -52,8 +54,8 @@ commit and push goes through fleet_gitlock.
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
 apply act in the batched operator ask (OA-36); the ready application is
-docs/ops/ggg-oauth-application.md (decision 0048). Read back 2026-11-21
-(session 18 /done): absent (no REG_OPEN file).
+docs/ops/ggg-oauth-application.md (decision 0048). Read back 2026-11-22
+(session 19 /done): absent (no REG_OPEN file).
 
 Operator records (the three lines below stay in this file, verbatim):
 OPERATOR GO Q-23 step 1 (2026-11-18): "The operator has ordered going public. Record that as a decision (docs/decisions/NNNN-go-public.md: decision, alternatives, why, reverses if), update CLAUDE.md "Public-repo hygiene" and ROADMAP, and flip .githooks/pre-push from refuse-all to the normal guarded push (fleet_identity pre-push check stays)."
@@ -119,9 +121,9 @@ Carried forward (not acted on yet):
   AL sidecar Logs folder, acl-before-20261119-185409 (icacls save). The
   dashboard "Private files" Checks row clears on the next core start; read it
   back then.
-- GO-PUBLIC STATUS (2026-11-21, session 19): as of 2026-11-21 session 19
-  PUB-HOOK-RELEASE-CHECK is merged (409e3a0) and GP-09 and SEC-STATIC-MAP
-  are confirmed landed; GP-12 still waits on gates 3 and 6 being checked;
+- GO-PUBLIC STATUS (2026-11-22, session 19): PUB-HOOK-RELEASE-CHECK is
+  merged (409e3a0); GP-09 and SEC-STATIC-MAP are both flipped (done, on
+  main); GP-12 still waits on gates 3 and 6 being checked;
   local test part 69/69 green. GP-10 and DATA-PRICE-CADENCE merged wave 18.
   PUB-README-PLAYERS landed wave 12; ci green on consecutive runs. Flip only
   on the operator's word: `gh repo edit <public repo> --visibility public
@@ -283,6 +285,13 @@ Carried forward (not acted on yet):
   investigate (session item). Session 19: diagnosed (B11 provisional 300 MB
   cap, 397 companion-open rows median 319 MB, B18 follows); adjudicator ruled
   calibrate, row RUN-BUDGET-CALIBRATE-B11 filed.
+- NOTE (session 19 /done): reap --apply removed 33 worktrees (w22-*,
+  w23-*, w24-*, incl. w23-int and w24-int); kept lanes 0 to 2. Read back:
+  4 worktrees (main, lane-0..2); second run "reap applied: 0 removed, 3
+  kept, 0 listed (base main)". The kit defect below repeated: reap deleted
+  worktree-w24-RUN-EXPLAIN-ROWS (its merge was reverted); re-created by
+  hand at c44ebd0. roadmap_fold: 32 row files applied, 29 rows archived
+  (ed1d53a).
 - NOTE (session 18 /done): reap --apply removed the 4 agent-* and the
   w22-* worktrees except w22-PUB-HOOK-RELEASE-CHECK; kept lanes 0 to 2.
   Read back: 5 worktrees (main, lane-0..2, w22-PUB-HOOK-RELEASE-CHECK);
@@ -319,14 +328,16 @@ Live: setup.ps1 made the Desktop / Start Menu shortcuts (session 5); core
 list before touching them; other pythonw processes belong to other trees. A
 wave agent never starts or stops the app, core, overlay or loop (08, Rules).
 
-Acceptance: wave 23 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 23 done, next wave 24"), the 3 wave-22 DEFERRED packages merged or re-deferred with a reason, no row carries "BLOCKED: session wave 23".
+Acceptance: wave 25 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 25 done, next wave 26"), RUN-EXPLAIN-ROWS, CARD-LINE-LIMIT and PRICES-TITLE-TABINDEX merged or re-deferred with a reason, no row carries "BLOCKED: session wave 25".
+
+Do NOT redo (session 19, on main and pushed): wave 22 carry (008c899, 409e3a0); wave 23 (14/14); wave 24 (12 merged, pointer a4f98b0, f8d1c1b); BUDGETLOG diagnosis and adjudicator ruling (row RUN-BUDGET-CALIBRATE-B11); REL-CUTOVER-LIVE prep (0.2.0-rc.0 built); the session 19 roadmap fold (ed1d53a); w22, w23 and w24 worktrees reaped.
 
 Do NOT redo (session 18, on main and pushed): W22-FOLD + UNREADABLE-RETAG (51f8834); wave 22 closed 14/18 (pointer commit 0555f53); the five parked packages re-placed (waves 23, 25, 43); DEV-PORT ruled (bullet above); the session 18 roadmap fold (d398fc9); w22 and agent-* worktrees reaped.
 
 Do NOT redo (sessions 6 to 17): docs/handoff-archive/
 
-In flight: no wave agent from session 18. Loop live, do not touch (HALT absent; loop.json done 19:48 idle, push skipped: loop push off); fleet_checklist stale: none (read 2026-11-21 at session 18 /done); REG_OPEN absent (registration closed).
+In flight: none (the wave orchestrator finished; no progress row running). Loop live, do not touch (HALT absent; loop.json fire 469 done 03:33 idle, push skipped: loop push off); fleet_checklist stale: none (read 2026-11-22 at session 19 /done); REG_OPEN absent (registration closed).
 
-Status (session 18 /done, 2026-11-21, fresh runs read back): whole suite through the suite gate 5024 passed / 6 skipped / 1 xfailed (parallel 122.16 s), timing phase 35 passed (59.91 s), rc 0; npm test --prefix app 687/687; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = 0555f53 before /done, then fold d398fc9 and this hand-off commit pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
+Status (session 19 /done, 2026-11-22, fresh runs read back): whole suite through the suite gate 5172 passed / 8 skipped / 1 xfailed (parallel 87.98 s), timing phase 35 passed (48.76 s), rc 0; npm test --prefix app 733/733; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = f8d1c1b before /done, then fold ed1d53a and this hand-off commit pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
