@@ -806,3 +806,27 @@ def test_git_worlds_see_no_host_global_or_system_config(tmp_path):
     assert origins <= {"local", "worktree", "command"}, origins
     assert real_git(["config", "--global", "--list"], root).stdout == ""
     assert os.environ["GIT_CONFIG_NOSYSTEM"] == "1"
+
+
+def test_gate_child_env_names_sidecar_temp(tmp_path, monkeypatch):
+    """LOOP-GATE-SIDECAR-TEMP: a gate run's child gets TEMP and TMP under the
+    AL sidecar Temp; without a sidecar the parent's values stay."""
+    root = tmp_path / "side"
+    root.mkdir()
+    env = al_loop.gate_env({"AL_SIDECAR_ROOT": str(root), "TEMP": "x", "TMP": "x"})
+    assert env["TEMP"] == env["TMP"] == str(root / "Temp")
+    assert (root / "Temp").is_dir()
+    keep = al_loop.gate_env({"AL_SIDECAR_ROOT": "relative", "TEMP": "x", "TMP": "y"})
+    assert (keep["TEMP"], keep["TMP"]) == ("x", "y")
+    seen = {}
+
+    def fake_run(argv, **kw):
+        seen.update(kw)
+        class R:
+            returncode, stdout, stderr = 0, "", ""
+        return R()
+
+    monkeypatch.setenv("AL_SIDECAR_ROOT", str(root))
+    monkeypatch.setattr(al_loop.subprocess, "run", fake_run)
+    al_loop._run_gate(["python", "-V"], tmp_path)
+    assert seen["env"]["TEMP"] == seen["env"]["TMP"] == str(root / "Temp")

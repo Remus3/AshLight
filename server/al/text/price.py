@@ -10,19 +10,23 @@ functions and constants; stdlib only.
 
 import math
 
-from .common import CARD_LINE, _dict, _dicts, _is_time, _key, _num_text, _text
+from .common import _dict, _dicts, _is_time, _key, _num_text, _text
 
 
 # OVL-COPY-FIRST (F-054): the press found a blank clipboard (the game had not
 # written the item yet); core.eval_press publishes this error and asks for no
 # price check. The player copies the item and presses again: no retry.
 EMPTY_CLIPBOARD = "empty clipboard"
-EMPTY_CLIPBOARD_TEXT = ("Copy the item first", "Hover it in game, press Ctrl+C",
+EMPTY_CLIPBOARD_TEXT = ("Copy the item first", "Hover it, press Ctrl+C",
                         "The clipboard was empty when you pressed the hotkey. Hover an "
                         "item in game, press Ctrl+C, then press the hotkey again.")
 
 # "link" (decision 0017) is the only success status the core produces now;
 # searching / waiting / done / off are kept for the 0016 contract's readers
+# CARD-LINE-LIMIT-COPY: the price line is worded to fit 26 characters while
+# common.CARD_LINE stays 34; CARD-LINE-LIMIT-FLIP lowers CARD_LINE to it.
+LINE_FIT = 26
+
 PRICE_STATUSES = ("link", "searching", "waiting", "done", "off", "error")
 PRICE_LISTINGS = 10
 
@@ -71,7 +75,7 @@ PRICE_TEXT = {
     # the press; over PRICE_OLD_S the card is the link alone
     "aged": "This price is from {hours} h ago.",
     "aged_detail": "Price from {hours} h ago",
-    "aged_rough": "Rough price from {hours} h ago",
+    "aged_rough": "Rough price, {hours} h ago",
     "too_old": "The poe.ninja price for it is over a day old, so AshLight does not show "
                "it.",
 }
@@ -124,6 +128,17 @@ def _age_s(at, then):
     return float(at) - float(then)
 
 
+def _cut_words(text, width=LINE_FIT):
+    """Over the width, cut at the last whole word that fits before "..."
+    when that keeps over half the width, else mid-word (one long name)."""
+    if len(text) <= width:
+        return text
+    cut = text[:width - 3]
+    if text[width - 3] != " " and cut.rfind(" ") > width // 2:
+        cut = cut[:cut.rindex(" ")]
+    return cut.rstrip(" ,;:-") + "..."
+
+
 def ninja_text(ninja, at=None):
     """PRICE-UNIQUE / PRICE-STACKABLES: {line, detail, sentence} for the
     card's cached poe.ninja price, or None. `at` is the press time: a price
@@ -168,6 +183,9 @@ def ninja_text(ninja, at=None):
             sentence += f", from {listings} listing{'' if listings == 1 else 's'}"
         sentence += f"; {trend}." if trend else "."
     line = f"Under {money}" if dust else f"About {money}"
+    if len(line) > LINE_FIT:
+        # a long amount and unit: the telegraphic "~" of the listed line
+        line = f"~{money}"
     age = _age_s(at, ninja.get("checked_at"))
     if age is not None and age > PRICE_AGED_S:
         hours = int(age // 3600)
@@ -176,16 +194,17 @@ def ninja_text(ninja, at=None):
         sentence += " " + PRICE_TEXT["aged"].format(hours=hours)
     changed = _age_s(at, ninja.get("league_changed_at"))
     named = ninja.get("league")
-    # the league on the price line; a long name takes the detail line; a
-    # non-ASCII name stays in the sentence only (design 0001 overlay text)
+    # the league on the price line ("About" turns into "~" to make room); a
+    # long name takes the detail line, cut at a whole word; a non-ASCII
+    # name stays in the sentence only (design 0001 overlay text)
     if (changed is not None and changed < LEAGUE_NEW_S and isinstance(named, str)
             and named.strip() and named.isascii()):
-        if len(f"{line} in {named}") <= CARD_LINE:
-            line = f"{line} in {named}"
+        lines = [f"{line} in {named}"] + ([] if dust else [f"~{money} in {named}"])
+        fit = next((t for t in lines if len(t) <= LINE_FIT), None)
+        if fit:
+            line = fit
         else:
-            detail = f"League: {named}"
-            if len(detail) > CARD_LINE:
-                detail = detail[:CARD_LINE - 3].rstrip() + "..."
+            detail = _cut_words(f"League: {named}")
     return {"line": line, "detail": detail, "sentence": sentence}
 
 

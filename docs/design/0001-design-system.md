@@ -864,6 +864,13 @@ Section 9 - messaging (TD-07, TD-17):
   page of its card on Run or Build and items (list rows there are one
   line too). Under a text-spacing override rows wrap and the page
   scrolls.
+- Card copy target (CARD-LINE-LIMIT-COPY). Every fixed card line is
+  worded to fit 26 characters while the clip stays 34 (CARD_LINE,
+  format.js, cardparts HEAD_MAX; CARD-LINE-LIMIT-FLIP lowers it). A line
+  built from values drops its least needed part instead of clipping: the
+  keep / vendor head drops ", Lv <n>", the item check head drops the slot
+  name, the price line names the league only when it fits and turns
+  "About <amount>" into "~<amount>".
 - Status slot order. Old: connection, Client.txt state, trade count,
   under-level word, AFK / DND, campaign hint word. New: the zone-guide
   line sits after AFK / DND and before the campaign hint word.

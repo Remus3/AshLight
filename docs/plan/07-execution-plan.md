@@ -1761,6 +1761,7 @@ loop-owned rows.
 - DATA-PRICE-TYPE-PROOF [session, M 50m, build, P3] Prove each price type after the first real round. Files: server/al/data/price_types.json, server/al/theorycraft/value.py, server/al/data/ninja_read_keys.json, server/al/ninjashape.py, tools/price_type_report.py (+1 more). Deps: DATA-PRICE-TYPES-FILE, DATA-NINJA-SHAPE-WATCH.
 - PUB-GUIDE-DOWNLOAD-PLACE [session, M 45m, build, P2, DR] One download place in README, FAQ and About. Files: README.md, docs/guide/download.md, docs/guide/faq.md, app/about.js, app/main.js (+2 more). Deps: PUB-GUIDE-PAGES, GP-10.
 - CARD-LINE-LIMIT [session, M 40m, build, P2, DR] Card lines fit the 236 px inside width: lower the card character limit. Files: app/shared/format.js, server/al/text/common.py, tests/test_overlay_pixels.py (+7 more). Deps: OVL-CONTRAST-PIXELS.
+  Split 2026-11-22 (adjudicator, waves 25 and 26 closes; packages.json is the source): CARD-LINE-LIMIT-COPY (wave 26, merged), CARD-LINE-LIMIT-COPY2 (wave 27: zone shorts, out-of-list pins, copy sheets) and CARD-LINE-LIMIT-FLIP (wave 29, after COPY2; wave 28 shares docs/design/0001-design-system.md).
 
 ### Wave 26: Play tab and dashboard, install and release
 

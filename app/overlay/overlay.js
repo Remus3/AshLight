@@ -88,7 +88,10 @@
       reportGate();
       return; // main reloads this page when the core writes a token
     }
-    var es = new EventSource("http://127.0.0.1:" + cfg.port + "/events?token=" +
+    /* OVL-OVERLAY-FEED (F-177): view=overlay: the core sends only the
+       fields the HUD reads (render_gate.js SNAP_FIELDS), and only when one
+       of them changed, so dashboard-only state costs no parse or wake-up. */
+    var es = new EventSource("http://127.0.0.1:" + cfg.port + "/events?view=overlay&token=" +
                              encodeURIComponent(cfg.token));
     es.addEventListener("open", function () {
       if (status !== "live") { console.info("overlay: feed live"); }

@@ -514,7 +514,7 @@
     22,
     23,
     24,
-    27,
+    29,
     31,
     33
    ]
@@ -860,7 +860,7 @@
     29
    ],
    "est_wall_min": 690,
-   "session_packages": 28,
+   "session_packages": 29,
    "milestones": [
     "the Settings rail is complete"
    ]
@@ -1640,7 +1640,7 @@
    "merge_order": [
     "PLAY-TD-21B-SETTINGS-ABOUT",
     "REL-UPDATE-TRIGGER",
-    "CARD-LINE-LIMIT-FLIP",
+    "CARD-LINE-LIMIT-COPY2",
     "TEST-LOOP-WINDOW-5S",
     "TEST-CALC-GROUP-SPLIT"
    ],
@@ -1668,7 +1668,8 @@
     "PLAY-TD-22C-A11Y-CDP",
     "RUN-PERF-PARSE-ONCE",
     "PLAY-F-165-COLOUR-WORD-TEST",
-    "OVL-PARTS-WEB"
+    "OVL-PARTS-WEB",
+    "CARD-LINE-LIMIT-FLIP"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -17453,7 +17454,8 @@
    "files": [
     "web/index.html",
     "web/app.js",
-    "web/app.css"
+    "web/app.css",
+    "tests/test_diag_self.py"
    ],
    "new_files": [
     "web/logpath.js",
@@ -17782,7 +17784,8 @@
     "tests/test_budget_log.py",
     "docs/decisions/0002-stack.md",
     "docs/research/0048-performance-budgets-review.md",
-    "README.md"
+    "README.md",
+    "tests/test_overlay_smoke.py"
    ],
    "new_files": [],
    "integrator_edits": [],
@@ -22343,6 +22346,70 @@
    "cluster": "OVL"
   },
   {
+   "id": "CARD-LINE-LIMIT-COPY2",
+   "title": "Zone shorts and pinned card lines fit 26 characters (limit unchanged)",
+   "goal": "The card lines CARD-LINE-LIMIT-COPY left over 26 characters are reworded to 26 or fewer while CARD_LINE, format.js maxLen, HEAD_MAX and zoneguide MAX_SHORT stay 34: the 60 zone guide shorts over 26 (own words), the weapon-type head and line (WEAPON_TYPE_HEAD / WEAPON_TYPE_LINE in server/al/text/itemcheck.py), the web-data-off and contact-not-set price lines and the 7-day trend detail (server/al/text/price.py), the stale-build alert shorts (server/al/text/buildlive.py), the key hint (HINT_TEXT in server/al/overlayview.py) and the waystone reward line (server/al/text/waystone.py); the tests that pin those words move with them and the copy sheets follow the new fallback forms.",
+   "units": [
+    "CARD-LINE-LIMIT"
+   ],
+   "files": [
+    "server/al/data/zone_guide.json",
+    "server/al/text/itemcheck.py",
+    "server/al/text/price.py",
+    "server/al/text/buildlive.py",
+    "server/al/text/waystone.py",
+    "server/al/overlayview.py",
+    "docs/design/copy/itemcheck.md",
+    "docs/design/copy/price.md",
+    "tests/test_provenance.py",
+    "tests/test_zone_guide.py",
+    "tests/test_math_weapon_type.py",
+    "tests/test_play_cards.py",
+    "tests/test_price_book.py",
+    "tests/test_overlay_view.py",
+    "tests/test_waystone_reward.py"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges."
+    },
+    {
+     "file": "docs/design/reviews.log",
+     "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
+    }
+   ],
+   "tests": [
+    "tests/test_provenance.py",
+    "tests/test_zone_guide.py",
+    "tests/test_math_weapon_type.py",
+    "tests/test_play_cards.py",
+    "tests/test_price_book.py",
+    "tests/test_overlay_view.py",
+    "tests/test_waystone_reward.py"
+   ],
+   "accept": "python -m pytest -q tests/test_provenance.py tests/test_zone_guide.py tests/test_math_weapon_type.py tests/test_play_cards.py tests/test_price_book.py tests/test_overlay_view.py tests/test_waystone_reward.py passes and every card line built by the changed modules is at most 26 characters with the limits unchanged.",
+   "zero_click": "Nothing for players; card lines fit by themselves.",
+   "size": "M",
+   "est_min": 45,
+   "deps": [
+    "CARD-LINE-LIMIT-COPY"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Adjudicator ruling 2026-11-22 on CARD-LINE-LIMIT-COPY (option b): COPY merged in wave 26 with the code copy at 26 or fewer; the zone guide shorts, the out-of-list pins and the copy sheets move here. Add a short-reword table in tests/test_provenance.py keyed by the old short (like the point-books _un_narrow rule) so a reworded short keeps its baseline provenance pair and no false snapshot:, ggg-export:, log or operator claim is made. Bring docs/design/copy/itemcheck.md and price.md in line with the fallback forms COPY shipped (keep head drops ', Lv', the item check head drops the slot name, price '~X' with the league on the detail line). The key hint wording moves here from FLIP's notes; FLIP keeps overlayview.py for the limit. Design: run the design-reviewer agent on the diff and return its docs/design/reviews.log line. Gates CARD-LINE-LIMIT-FLIP.",
+   "wave": 27,
+   "owner": "session",
+   "tier": "P2",
+   "cluster": "OVL"
+  },
+  {
    "id": "CARD-LINE-LIMIT-FLIP",
    "title": "Lower the card line limit to 26",
    "goal": "CARD_LINE in server/al/text/common.py, the format.js maxLen defaults and the cardparts HEAD_MAX become 26 (never the font size); the key hint fits 26 with the longest safe key; the tests that pin 34 move to 26 and the OVL-CONTRAST-PIXELS strict xfail becomes a pass.",
@@ -22391,7 +22458,8 @@
    "est_min": 45,
    "deps": [
     "CARD-LINE-LIMIT-COPY",
-    "OVL-OVERLAY-FEED"
+    "OVL-OVERLAY-FEED",
+    "CARD-LINE-LIMIT-COPY2"
    ],
    "serial_group": "",
    "agent": "general-purpose",
@@ -22400,8 +22468,8 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Adjudicator split 2026-11-22 (session 20, wave 25 close): a 26-character limit broke tests outside CARD-LINE-LIMIT's file list (probe at 8088f3e: 23 pytest cases in 10 files and 3 app tests); COPY rewords the copy under 26 with the limit unchanged, FLIP lowers the limit. Probe failures at 26 this package fixes: test_glance_rules pins \"maxLen || 34\", test_overlay_view card_lines_fit_the_clip and the two hint tests (HINT_TEXT \"{key}: check an item\" is over 26 with a real key; overlayview.py is owned by OVL-OVERLAY-FEED in wave 26, so the hint wording lives here), test_waystone_reward exact text (join width), app tests evalCard / tradeCard / cardText pin 34. Design 0001 section 9 rule 6 moves to 26 here. Design: run the design-reviewer agent on the diff.",
-   "wave": 27,
+   "notes": "Adjudicator split 2026-11-22 (session 20, wave 25 close): a 26-character limit broke tests outside CARD-LINE-LIMIT's file list (probe at 8088f3e: 23 pytest cases in 10 files and 3 app tests); COPY rewords the copy under 26 with the limit unchanged, FLIP lowers the limit. Probe failures at 26 this package fixes: test_glance_rules pins \"maxLen || 34\", test_overlay_view card_lines_fit_the_clip and the two hint tests (HINT_TEXT \"{key}: check an item\" is over 26 with a real key; overlayview.py is owned by OVL-OVERLAY-FEED in wave 26, so the hint wording lives here), test_waystone_reward exact text (join width), app tests evalCard / tradeCard / cardText pin 34. Design 0001 section 9 rule 6 moves to 26 here. Design: run the design-reviewer agent on the diff. Moved to wave 29 behind CARD-LINE-LIMIT-COPY2 (wave 27) by the adjudicator ruling of 2026-11-22: wave 28 shares docs/design/0001-design-system.md (RUN-NO-DEAD-ENDS).",
+   "wave": 29,
    "owner": "session",
    "tier": "P2",
    "cluster": "OVL"
@@ -24292,7 +24360,8 @@
   ],
   "CARD-LINE-LIMIT": [
    "CARD-LINE-LIMIT-COPY",
-   "CARD-LINE-LIMIT-FLIP"
+   "CARD-LINE-LIMIT-FLIP",
+   "CARD-LINE-LIMIT-COPY2"
   ],
   "BUILD-GEAR-EMPTY-COPY": [
    "BUILD-GEAR-EMPTY-COPY"
