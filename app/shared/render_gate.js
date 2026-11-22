@@ -203,19 +203,6 @@
   /* TEST-LIVE-EXIT: the HUD status word for an idle log (<= 15 chars). */
   var IDLE_WORD = W.idle.overlay;
 
-  /* OVL-OVERLAY-FEED (F-177): every snapshot field this file (and
-     app/overlay/overlay.js: "now") reads, the same strings in the same
-     order as server/al/overlayview.py OVERLAY_FIELDS: the core's
-     /events?view=overlay frame holds only these (plus its "version"
-     stamp). A dotted entry is one key of a top-level object. The walking
-     test in app/test/shared.test.js records every read and fails on one
-     outside this list; tests/test_overlay_feed.py compares the two lists. */
-  var SNAP_FIELDS = [
-    "now", "zone", "in_hideout", "in_town", "zone_entered_at", "level", "deaths",
-    "afk", "dnd", "tailer", "game_idle", "maps.current", "trade_requests",
-    "underlevel.word", "campaign.word", "card", "eval.text", "eval.expires_at",
-    "eval.ok", "eval.verdict", "overlay", "overlay_layout"];
-
   var FIELDS = ["zone", "timer", "level", "deaths", "sep", "away", "under", "campaign", "guide",
                 "log", "status", "trades",
                 "tradeFrom", "tradeItem", "tradeWhere", "tradeMore", "anchor",
@@ -593,7 +580,7 @@
     return !(tl && tl.consented && tl.idle);
   }
 
-  return { FIELDS: FIELDS, SNAP_FIELDS: SNAP_FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
+  return { FIELDS: FIELDS, hudModel: hudModel, msUntilEvalExpires: msUntilEvalExpires,
            msUntilGuideDue: msUntilGuideDue, GUIDE_MAX: GUIDE_MAX,
            timerSeconds: timerSeconds, overlayWanted: overlayWanted,
            shouldRender: shouldRender,
