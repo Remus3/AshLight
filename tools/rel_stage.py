@@ -35,18 +35,29 @@ first refusal stops the run and every later step reads `skipped`:
                 entry names before and after must be equal. The shipped
                 self-test ports must lie in 8970-8975 (never 8960) and the
                 scratch home's web data must read off after every install.
+    8 sandbox   plan step (7), REL-STAGE-SANDBOX, ONLY with --sandbox (off
+                by default; operator act OA-14): the staged assets and the
+                cached runtimes in a read-only mapped folder, a .wsb file
+                with networking, clipboard, GPU, audio, video and printers
+                off, and inside Windows Sandbox an install, a read-back of
+                the per-user uninstall key, shortcuts and home, an
+                uninstall and a second read-back; one result file comes
+                back through the one writable mapped folder. A machine
+                without WindowsSandbox.exe fails the step with that reason:
+                the tool never turns a Windows feature on and never asks
+                for elevation.
 
 On PASS the first build's assets move into the release folder
 <sidecar>/Build/release/<version>/ (or --out). Every run, PASS or FAIL,
 writes <out>/stage.json: schema, version, commit, verdict, steps (name,
 status pass | fail | skipped, detail), assets (name, size, sha256),
 sums_sha256 (of SHA256SUMS.txt), created (the injected clock, UTC) and
-sandbox. A FAIL leaves the tree and every release asset as they were: the
+sandbox ("skipped" without --sandbox, else the sandbox step's status). A FAIL leaves the tree and every release asset as they were: the
 scratch build folders are removed and nothing moves.
 
 Steps are a list of callables (STEPS); a later package adds one step by
-appending to it (REL-STAGE-SANDBOX). `--sandbox` is
-recorded; with no sandbox step built yet a note says so.
+appending to it. The "sandbox" entry is dropped from the run unless
+`--sandbox` was given.
 
 Floor: the tool never looks for the game - no process list, no window
 query, no game log access; it reads the repository and its own scratch.
@@ -822,7 +833,293 @@ def step_roundtrip(ctx):
             % ((prev, version) + tuple(block)))
 
 
-# The append point: (name, callable). REL-STAGE-SANDBOX appends one entry.
+# --- the optional Windows Sandbox phases (REL-STAGE-SANDBOX) ---------------
+#
+# Plan step (7), only on the operator's explicit --sandbox flag (operator act
+# OA-14): the staged assets and the cached pinned runtimes go into a
+# read-only mapped folder, a .wsb file turns networking, the clipboard, the
+# GPU, audio, video and printers off, and a phase script inside the sandbox
+# installs, reads back, uninstalls, reads back, writes one result file into
+# the one writable mapped folder and shuts the sandbox down. The sandbox is
+# a throw-away VM, so the real per-user uninstall key, shortcuts and home of
+# a fresh Windows user are what is checked there. The tool only looks for
+# WindowsSandbox.exe by path: it never turns a Windows feature on and never
+# asks for elevation; a missing feature is the step's reported verdict.
+
+SANDBOX_STEP = "sandbox"
+SB_PREFIX = "al-stage-sb-"
+SB_EXE = ("System32", "WindowsSandbox.exe")
+# A mapped folder with no SandboxFolder lands on the sandbox user's desktop
+# under its host folder name (every Windows Sandbox build supports that), so
+# no guest drive path is written anywhere.
+SB_ASSETS = "AshLightStage"
+SB_RESULTS = "AshLightResults"
+SB_SCRIPT = "sandbox_phase.ps1"
+SB_RESULT = "result.json"
+SB_WSB = "stage.wsb"
+SB_TIMEOUT_S = 1800            # the whole sandbox run, boot to shutdown
+SB_POLL_S = 5
+SB_RESULT_CAP = 64 * 1024
+SB_OFF = ("VGpu", "Networking", "ClipboardRedirection", "AudioInput",
+          "VideoInput", "PrinterRedirection")
+SB_PHASES = ("install", "uninstall")
+
+
+def _xml(text):
+    from xml.sax.saxutils import escape  # noqa: E402
+    return escape(str(text))
+
+
+def wsb_text(assets_dir, results_dir, command):
+    """The .wsb configuration: every redirection off, the assets folder
+    mapped read-only, the results folder the one writable mapping, one
+    logon command."""
+    lines = ["<Configuration>"]
+    lines += ["  <%s>Disable</%s>" % (k, k) for k in SB_OFF]
+    lines += ["  <ProtectedClient>Enable</ProtectedClient>",
+              "  <MappedFolders>"]
+    for host, ro in ((assets_dir, "true"), (results_dir, "false")):
+        lines += ["    <MappedFolder>",
+                  "      <HostFolder>%s</HostFolder>" % _xml(host),
+                  "      <ReadOnly>%s</ReadOnly>" % ro,
+                  "    </MappedFolder>"]
+    lines += ["  </MappedFolders>",
+              "  <LogonCommand>",
+              "    <Command>%s</Command>" % _xml(command),
+              "  </LogonCommand>",
+              "</Configuration>"]
+    return "\n".join(lines) + "\n"
+
+
+def write_wsb(path, assets_dir, results_dir, command):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(wsb_text(assets_dir, results_dir, command).encode("utf-8"))
+    return path
+
+
+def sandbox_command():
+    """The logon command: the phase script from the mapped assets folder on
+    the sandbox user's desktop."""
+    return ("powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass "
+            "-Command \"& (Join-Path $env:USERPROFILE 'Desktop\\%s\\%s')\""
+            % (SB_ASSETS, SB_SCRIPT))
+
+
+def _ps_quote(text):
+    return "'" + str(text).replace("'", "''") + "'"
+
+
+def sandbox_script(version, zip_name):
+    """The phase script run inside the sandbox (ASCII, Windows PowerShell
+    5.1): install, read back, uninstall, read back, one result file, then
+    shut the sandbox down."""
+    return "\n".join([
+        "# AshLight release stage: sandbox phases (generated; no network)",
+        "$ErrorActionPreference = 'Continue'",
+        "$assets = Join-Path $env:USERPROFILE %s" % _ps_quote(
+            "Desktop\\" + SB_ASSETS),
+        "$out = Join-Path $env:USERPROFILE %s" % _ps_quote(
+            "Desktop\\" + SB_RESULTS),
+        "$alHome = Join-Path $env:LOCALAPPDATA 'Programs\\AshLight'",
+        "$key = %s" % _ps_quote("HKCU:\\" + REAL_UNINSTALL_KEY),
+        "$links = @((Join-Path ([Environment]::GetFolderPath('Programs')) "
+        "%s), (Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) "
+        "%s))" % (_ps_quote(LINK_NAME), _ps_quote(LINK_NAME)),
+        "$ps = Join-Path $env:SystemRoot "
+        "'System32\\WindowsPowerShell\\v1.0\\powershell.exe'",
+        "function Get-AlStageState {",
+        "    $names = @()",
+        "    if (Test-Path -LiteralPath $alHome) {",
+        "        $names = @(Get-ChildItem -LiteralPath $alHome -Force -Name)",
+        "    }",
+        "    return [ordered]@{ key = [bool](Test-Path -LiteralPath $key);",
+        "        links = @($links | Where-Object { Test-Path -LiteralPath $_ }).Count;",
+        "        home = $names }",
+        "}",
+        "$r = [ordered]@{ schema = 1; version = %s }" % _ps_quote(version),
+        "& $ps -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "
+        "(Join-Path $assets 'install.ps1') -Zip (Join-Path $assets %s) "
+        "-RuntimeDir (Join-Path $assets 'runtimes') -InstallDir $alHome "
+        "-NoStart" % _ps_quote(zip_name),
+        "$r.install = [ordered]@{ rc = $LASTEXITCODE; state = (Get-AlStageState) }",
+        "$un = Join-Path $alHome 'uninstall.ps1'",
+        "if (Test-Path -LiteralPath $un) {",
+        "    & $ps -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $un -Quiet",
+        "    $rc = $LASTEXITCODE",
+        "} else { $rc = -2 }",
+        "$r.uninstall = [ordered]@{ rc = $rc; state = (Get-AlStageState) }",
+        "$tmp = Join-Path $out 'result.partial'",
+        "$r | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $tmp -Encoding Ascii",
+        "Move-Item -LiteralPath $tmp -Destination (Join-Path $out %s) -Force"
+        % _ps_quote(SB_RESULT),
+        "& (Join-Path $env:SystemRoot 'System32\\shutdown.exe') /s /t 0",
+        ""])
+
+
+class SandboxEffects:
+    """The real effects of the sandbox phases: a scratch base under
+    <sidecar>/Temp holding AshLightStage/ (mapped read-only),
+    AshLightResults/ (the one writable mapping) and the .wsb file. Tests pass a stand-in with the same
+    methods; nothing here turns a feature on or asks for elevation."""
+
+    def __init__(self, ctx, base):
+        self.ctx = ctx
+        self.base = Path(base)
+        self.assets = self.base / SB_ASSETS
+        self.results = self.base / SB_RESULTS
+        self.proc = None
+
+    def exe(self):
+        root = os.environ.get("SystemRoot") or os.environ.get("SYSTEMROOT")
+        return Path(root, *SB_EXE) if root else None
+
+    def feature_present(self):
+        """WindowsSandbox.exe exists: a path check only, no query of the
+        Windows feature store (that needs elevation)."""
+        exe = self.exe()
+        return bool(exe and exe.is_file())
+
+    def cache_dirs(self):
+        if self.ctx.get("runtime_cache") is not None:
+            return [Path(p) for p in self.ctx["runtime_cache"]]
+        paths, _ae = _server_al()
+        cache = paths.sidecar_dir("Cache")
+        return [cache / sub for sub in RUNTIME_CACHE_SUBS]
+
+    def runtimes(self, release):
+        """{file name: cached path} of both pinned runtimes (StepFail on a
+        miss; never a download)."""
+        return find_runtimes(release, self.cache_dirs())
+
+    def put_assets(self, staged, runtimes):
+        self.assets.mkdir(parents=True, exist_ok=True)
+        self.results.mkdir(parents=True, exist_ok=True)
+        for name, data in staged.items():
+            (self.assets / name).write_bytes(data)
+        for name, src in runtimes.items():
+            _link_or_copy(src, self.assets / "runtimes" / name)
+
+    def launch(self, wsb):
+        flags = BELOW_NORMAL if sys.platform == "win32" else 0
+        try:
+            self.proc = subprocess.Popen([str(self.exe()), str(wsb)],
+                                         stdin=subprocess.DEVNULL,
+                                         stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.DEVNULL,
+                                         creationflags=flags)
+        except OSError as exc:
+            raise StepFail("could not start Windows Sandbox (%s)"
+                           % exc.__class__.__name__)
+
+    def wait_result(self, timeout=SB_TIMEOUT_S):
+        """The result file's bytes, or None after the timeout."""
+        path = self.results / SB_RESULT
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if path.is_file():
+                return path.read_bytes()[:SB_RESULT_CAP]
+            time.sleep(SB_POLL_S)
+        return None
+
+    def cleanup(self):
+        # the base holds only this run's copies of the staged assets, links
+        # of cached runtimes and the sandbox's result: all regenerable
+        _rmtree_scratch(self.base)
+
+
+def default_sandbox(ctx):
+    """The real effects, in a fresh scratch folder under <sidecar>/Temp."""
+    paths, _ae = _server_al()
+    temp = paths.sidecar_dir("Temp")
+    temp.mkdir(parents=True, exist_ok=True)
+    import tempfile  # noqa: E402
+    base = Path(tempfile.mkdtemp(prefix=SB_PREFIX + ctx["version"] + "-",
+                                 dir=str(temp)))
+    return SandboxEffects(ctx, base)
+
+
+def _home_names(state):
+    names = state.get("home")
+    if isinstance(names, str):  # ConvertTo-Json flattens a one-item list
+        names = [names]
+    return sorted(str(n) for n in names) if isinstance(names, list) else None
+
+
+def check_sandbox_result(raw, version):
+    """The phase script's result, read back; StepFail naming the first
+    phase that did not read back."""
+    try:
+        doc = json.loads(raw.decode("utf-8-sig"))
+    except (ValueError, UnicodeDecodeError, AttributeError):
+        raise StepFail("sandbox: the result file is unreadable")
+    if not isinstance(doc, dict) or doc.get("version") != version:
+        raise StepFail("sandbox: the result names another version")
+    for phase in SB_PHASES:
+        row = doc.get(phase)
+        state = row.get("state") if isinstance(row, dict) else None
+        if not isinstance(state, dict):
+            raise StepFail("sandbox %s: no read-back" % phase)
+        if row.get("rc") != 0:
+            raise StepFail("sandbox %s exit %s (want 0)" % (phase, row.get("rc")))
+        names = _home_names(state)
+        if phase == "install":
+            if state.get("key") is not True:
+                raise StepFail("sandbox install: no per-user uninstall key")
+            if state.get("links") != 2:
+                raise StepFail("sandbox install: the shortcuts were not written")
+            if not names or "install.json" not in names:
+                raise StepFail("sandbox install: the home holds no install.json")
+        else:
+            if state.get("key") is not False:
+                raise StepFail("sandbox uninstall: the uninstall key is left")
+            if state.get("links") != 0:
+                raise StepFail("sandbox uninstall: a shortcut is left")
+            if names not in ([], ["data"]):
+                raise StepFail("sandbox uninstall: the home holds %s, want "
+                               "only data" % ", ".join(names or ["?"]))
+    return doc
+
+
+def sandbox_phases(ctx):
+    """Plan step (7), only with --sandbox: install and uninstall inside
+    Windows Sandbox with networking and the clipboard off and the assets in
+    a read-only mapped folder. A missing feature is reported, never turned
+    on; a runtime that is not cached fails the step (never a download)."""
+    staged = ctx.get("staged")
+    if not staged or RELEASE_JSON not in staged or INSTALLER_PS1 not in staged:
+        raise StepFail("the build made no %s / %s" % (RELEASE_JSON, INSTALLER_PS1))
+    try:
+        release = json.loads(staged[RELEASE_JSON].decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        raise StepFail("%s is unreadable" % RELEASE_JSON)
+    fx = ctx["sandbox_fx"](ctx)
+    try:
+        if not fx.feature_present():
+            raise StepFail("Windows Sandbox is not available on this machine; "
+                           "it is an optional Windows feature that needs "
+                           "elevation and a restart (operator act OA-14). "
+                           "The stage never turns it on")
+        runtimes = fx.runtimes(release)
+        staged = dict(staged)
+        staged[SB_SCRIPT] = sandbox_script(
+            ctx["version"], ctx["zip_name"]).encode("ascii")
+        fx.put_assets(staged, runtimes)
+        wsb = write_wsb(fx.base / SB_WSB, fx.assets, fx.results,
+                        sandbox_command())
+        fx.launch(wsb)
+        raw = fx.wait_result()
+        if raw is None:
+            raise StepFail("sandbox: no result within %d s" % SB_TIMEOUT_S)
+        check_sandbox_result(raw, ctx["version"])
+    finally:
+        fx.cleanup()
+    return ("install and uninstall in Windows Sandbox (networking and "
+            "clipboard off, assets read-only): uninstall key and shortcuts "
+            "written, then removed")
+
+
+# The append point: (name, callable). "sandbox" runs only with --sandbox.
 STEPS = [
     ("clean", step_clean),
     ("version", step_version),
@@ -831,6 +1128,7 @@ STEPS = [
     ("builds", step_builds),
     ("sweep", step_sweep),
     ("roundtrip", step_roundtrip),
+    (SANDBOX_STEP, sandbox_phases),
 ]
 
 
@@ -853,13 +1151,27 @@ def _remove_scratch(scratch):
         shutil.rmtree(str(scratch), ignore_errors=True)
 
 
+def _sandbox_status(sandbox, rows):
+    """stage.json "sandbox": "skipped" without the flag (or with no sandbox
+    step), else the sandbox step's status (pass | fail | skipped)."""
+    if sandbox:
+        for row in rows:
+            if row["name"] == SANDBOX_STEP:
+                return row["status"]
+    return "skipped"
+
+
 def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
-          owner=None, build=None, steps=None, roundtrip=None):
+          owner=None, build=None, steps=None, roundtrip=None,
+          sandbox_fx=None):
     """Run the gates; write <out>/stage.json; return the report dict (plus
     "out", the folder). run(argv, cwd) -> exit code and now() -> epoch
     seconds are injected; build defaults to rel_build.build; roundtrip(ctx)
     -> the round trip's effects (default: RoundTripEffects in a fresh
-    scratch folder under <sidecar>/Temp)."""
+    scratch folder under <sidecar>/Temp); sandbox_fx(ctx) -> the sandbox
+    phases' effects (default: SandboxEffects). The "sandbox" step runs only
+    when sandbox is true; stage.json's "sandbox" is "skipped" without the
+    flag, else that step's status."""
     root = Path(root)
     out = Path(out) if out is not None else rb.default_out(version)
     ctx = {
@@ -868,17 +1180,19 @@ def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
         "owner": owner or os.environ.get(OWNER_ENV) or DEFAULT_OWNER,
         "scratch": out / SCRATCH_NAME, "notes": [], "staged": None,
         "zip_name": None, "roundtrip": roundtrip or default_roundtrip,
+        "sandbox_fx": sandbox_fx or default_sandbox,
     }
     clock = now or time.time
     commit = rb._rev(root, "HEAD^{commit}") or ""
-    names = [name for name, _fn in (steps if steps is not None else STEPS)]
-    if sandbox and "sandbox" not in names:
-        ctx["notes"].append("sandbox asked; the sandbox step is not built yet")
+    plan = [(name, fn) for name, fn in (steps if steps is not None else STEPS)
+            if sandbox or name != SANDBOX_STEP]
+    if sandbox and SANDBOX_STEP not in [name for name, _fn in plan]:
+        ctx["notes"].append("sandbox asked; this step list has no sandbox step")
     rows, verdict = [], PASS
     out.mkdir(parents=True, exist_ok=True)
     _remove_scratch(ctx["scratch"])
     try:
-        for name, fn in (steps if steps is not None else STEPS):
+        for name, fn in plan:
             if verdict == FAIL:
                 rows.append({"name": name, "status": "skipped", "detail": ""})
                 continue
@@ -902,7 +1216,7 @@ def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
         "schema": SCHEMA, "version": version, "commit": commit,
         "verdict": verdict, "steps": rows, "assets": assets,
         "sums_sha256": sums_sha, "created": created_text(clock()),
-        "sandbox": bool(sandbox), "notes": list(ctx["notes"]),
+        "sandbox": _sandbox_status(sandbox, rows), "notes": list(ctx["notes"]),
     }
     _write_atomic(out / STAGE_NAME,
                   (json.dumps(report, indent=1, sort_keys=True,
@@ -920,8 +1234,11 @@ def _parser():
         description="Run the release gates and write stage.json (PASS / "
                     "FAIL). No upload, no tag, no network.")
     p.add_argument("version", nargs="?", help="default: the source VERSION")
-    p.add_argument("--sandbox", action="store_true",
-                   help="also run the sandbox step (recorded)")
+    p.add_argument("--sandbox", action="store_true", default=False,
+                   help="off by default: also install and uninstall inside "
+                        "Windows Sandbox (networking and clipboard off, "
+                        "assets read-only; operator act OA-14). The feature "
+                        "is never turned on by this tool")
     p.add_argument("--owner", help="suite gate owner id (default env %s)"
                                    % OWNER_ENV)
     p.add_argument("--out", help="release folder (default "
