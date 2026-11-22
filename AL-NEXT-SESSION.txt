@@ -4,7 +4,8 @@ SESSION: 19   (FLEET item 13 counter; /done writes n+1)
 
 Fable ultraplan complete: docs/research/0035-0058, docs/plan/01-09 with findings.json and packages.json, decisions 0046, 0077, 0078.
 
-WAVE POINTER: wave 23 done, next wave 24
+WAVE POINTER: wave 24 done, next wave 25
+DEFERRED: RUN-EXPLAIN-ROWS (wave 24): batch suite red, tests/test_structure.py refuses 30 player sentences in server/al/plug/explain.py outside server/al/text/; re-plan files (server/al/text/explain.py, docs/design/copy/explain.md) first; reverted d97a090, backout fae97a6; branch worktree-w24-RUN-EXPLAIN-ROWS
 NOTE: CARD-LINE-LIMIT re-planned to wave 25 with seven more files (702769e; ROADMAP row tagged BLOCKED: session wave 25). PUB-HOOK-RELEASE-CHECK deferred twice then merged (adjudicator ruling 2026-11-21: retry with tests/test_dependabot_reapply.py in files; alternatives skip the hook line when release.py is absent, park; reverses if a third red batch).
 SESSION 18 (2026-11-21): W22-FOLD + UNREADABLE-RETAG (51f8834: 9 package-less wave-22 rows folded; RUN-UNREADABLE-WORD is a new package in wave 24; adjudicator amendment: its log-state sentences stay in design 0001 s9); wave 22 closed 14/18 merged, pushed origin/main 0555f53; parked packages re-placed: PUB-DEPBOT-FIRST-RUN and RUN-LIVE1-FIXTURES -> wave 23, DATA-PRICE-TYPE-PROOF and PUB-GUIDE-DOWNLOAD-PLACE -> wave 25, DATA-CONTACT-DEFAULT -> wave 43. Follow-up rows filed: RUN-CARDS-PAGE-FIT, BUDGET-RETIRE-TAILER-IDLE.
 KIT (for MAIN): report the suite-gate FIFO defect, item (4) of the KIT DEFECT bullet below.
@@ -67,6 +68,26 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- OPERATOR ACT REL-CUTOVER-LIVE (session 19): prep done; run once, any time
+  (it waits for game_idle by itself): powershell -NoProfile
+  -ExecutionPolicy Bypass -File <AL sidecar>\Scratch\cutover\cutover.ps1 .
+  It removes the checkout's two shortcuts, installs 0.2.0-rc.0 (zip sha256
+  ba4f4ce4...) to <AL sidecar>\Install, migrates, stops the checkout, sets
+  config "port": 8961, starts the installed copy on 8960 and the checkout on
+  8961, and reads back both /api/health. Rollback is in the script header.
+  Agents never start or stop the app (adjudicator 2026-11-21). Follow-up for
+  an agent-run cutover: install.ps1 needs a no-shell switch (new package).
+- WAVE-24 FOLLOW-UPS (session 19): DATA-CONTACT-UI D-1 focus drops to body
+  after Save hides the contact row (S3), D-2/D-3 nits;
+  TC-WEIGHTS-DELTA-EXPORT D-1 "Downloaded" sentence says settings only (S3);
+  RUN-HISTORY-UNDO no Escape for Undo; PLAY-PAGER-SCALE-24: btn-24 and other
+  1.5rem sizes still under 24 px below scale 1; OVL-APP-SCHEME-STRICT:
+  app/test/cdp/capture.mjs still loads the overlay as file:// (demo capture
+  overlay shows waiting); RUN-BUDGET-TESTS-LIVE keeps the live B10 check at
+  215 MB until RUN-BUDGET-CALIBRATE-B11; TEST-SLOW-BUDGET follow-up row
+  TEST-SUITE-T0 filed; DATA-PRICE-TYPES-FILE: a missing price_types.json
+  falls back to the built-in lists. Wave 24 batch suites: parallel 87-99 s +
+  timing 49-56 s (GATE-HOLD still open).
 - WAVE-23 FOLLOW-UPS (session 19): PLAY-TD-21A left old wording pointing at
   the moved controls (diag.py FIX_SNAPSHOT_OFF "under Prices and web data",
   FIX_HOTKEY and FIX_TOGGLE_KEY "in AshLight's Tools", text/price.py lines,
