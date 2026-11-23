@@ -451,6 +451,15 @@ test("cardHolder: the key hint fits the 26-character line", () => {
   assert.equal(S.cardHolder({ hint: { due: true, key: key19 } }).line1, "Check: " + key19);
   assert.equal(S.cardHolder({ hint: { due: true, key: "Alt+Shift+E" } }).line1,
                "Alt+Shift+E: check an item");
+  // CARD-HINT-TWIN (CL2-1): both forms at their edges, the twin of
+  // overlayview._hint_head
+  const line = (key) => S.cardHolder({ hint: { due: true, key } }).line1;
+  assert.equal(line("K".repeat(11)), "K".repeat(11) + ": check an item");
+  assert.equal(line("K".repeat(11)).length, 26);
+  assert.equal(line("K".repeat(12)), "Check: " + "K".repeat(12));
+  assert.equal(line("Ctrl+Shift+E"), "Check: Ctrl+Shift+E");
+  assert.equal(line(key19).length, 26);
+  // a key too long for either form shows no hint, never a cut key
   assert.equal(S.cardHolder({ hint: { due: true, key: key19 + "K" } }).holder, "none");
   assert.equal(S.cardHolder({ hint: { due: false, key: "F" } }).holder, "none");
   assert.equal(S.cardHolder({ hint: { due: true, key: "" } }).holder, "none");
