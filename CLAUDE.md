@@ -508,9 +508,10 @@ of the HALT check.
   request until acknowledged once (decision 0013, amended 2026-11-18 and
   2026-11-21). Reverses if: an endpoint is forbidden, GGG policy changes,
   or the operator rules per-feature opt-in.
-- Build view, item check card (one card slot, 20 s), graphics advisor read
-  on a dashboard click, Copy-code clipboard write on the player's click
-  (decision 0014). Reverses if: design section 10 allows two cards or
+- Build view, one card slot with its holders (press card, newest open
+  trade, zone or act card, key hint), card time 20 / 60 / 200 s, graphics
+  advisor read on a dashboard click, Copy-code clipboard write on the
+  player's click (decision 0014, amended 2026-11-22). Reverses if: design section 10 allows two cards or
   decision 0003 restricts clipboard writes.
 - Price check shares the item-check hotkey; contact stored only in
   gitignored config/local.json (typed in the dashboard's Prices and web
@@ -1548,3 +1549,34 @@ of the HALT check.
   a quiet machine with only that row's diff applied (then a regression
   row and a bisect), or a later change gives one of those rows a per-tick
   or web-asset cost in the measured path.
+- Fixed cockpit Play, four tabs, dark by default: Play is a fixed cockpit
+  of 7 regions with fixed tracks (full, compact and flow classes from em
+  queries on width and height, scale steps 1 / 1.25 / 1.5 / 2); four tabs
+  (Play, Build and items, Run, Settings); dark by default with a Theme
+  choice (Dark / Follow Windows / Light); every trade row keeps its own
+  Dismiss; the zone-guide line on HUD line 2 is an opt-in (On entry is the
+  default); the overlay stays 2 HUD lines plus one card (decision 0075).
+  Reverses if: a play state needs two contexts at once in region C, the
+  no-scroll rule cannot hold with real strings at scale 1, players report
+  hunting through Settings more than once a session, or the corner map
+  proves routinely covered by the 2-line HUD.
+- RUN-CHARACTER-PIN (F-157): the Characters card's picker line holds a
+  'This is my character' toggle (#char-pin, aria-pressed, chip style). It
+  shows from the first character on and pins the character the picker
+  shows: the picked one, else the one being played. One click calls POST
+  /api/character (server/al/plug/charpin.py, token-gated plug route after
+  the handler guard, body capped at 4096). The route writes the same
+  "character" key of config/local.json; a name must be one AshLight has
+  seen (state or run history), and "" or null frees the pin.
+  SessionState.set_character is the one setter that fixes or frees the
+  character: a fixed name never switches (decision 0038), a parked name is
+  loaded, and with no character known yet the fields seen so far become
+  its own. The snapshot publishes character_pinned. Core.tick_config
+  (attached by the plug, after the built-in ticks, so TICK_ORDER is
+  unchanged) re-reads poll_ms and character through _config() on every
+  pass. A change since the last apply takes effect within that tick:
+  poll_ms through settingsio's 50 to 5000 check, also on the running
+  tailer's next wait. A core given its character keeps it until the file
+  changes. Reverses if: players pin by mistake in play, a hand-edited
+  character must wait for a restart, or the per-pass config read breaks
+  the tick budget.
