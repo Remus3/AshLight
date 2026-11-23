@@ -40,6 +40,7 @@
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
 <script src="/web/updates.js" defer></script>
+<script src="/web/autostart.js" defer></script>
 <script src="/web/rail.js" defer></script>
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
@@ -961,6 +962,15 @@
     </div>
     </div>
     <div class="rail-block">
+    <!-- REL-AUTOSTART-SETTINGS (decision 0011, ruling Q-08): the tray's
+         "Start with Windows" switch, the same recorded choice
+         (web/autostart.js; the client's autostartOn / autostartOff /
+         autostartState). Off by default. In a plain browser the box stays
+         disabled and the line says to set it in the AshLight app. Not a
+         live region: the box points at its answer line. -->
+    <p id="autostart-row" class="set-row"><label class="check" for="autostart-on"><input
+      id="autostart-on" type="checkbox" disabled aria-describedby="autostart-said"> Start with Windows</label>
+      <span id="autostart-said" class="muted">Set this in the AshLight app.</span></p>
     <!-- DESKTOP-CLIENT (decision 0041): shown only inside the AshLight
          desktop client, which hands the page this one action -->
     <p id="restart-overlay-row" class="tool-row" hidden><button id="restart-overlay" type="button" aria-describedby="restart-overlay-said">Restart overlay</button>
@@ -1013,6 +1023,18 @@
       <p id="update-version"></p>
       <p id="update-data" class="muted" hidden></p>
       <p id="update-line" class="row-meta"></p>
+      <!-- REL-AUTOSTART-SETTINGS (folded REL-UPDATE-UI; decision 0065,
+           REL-UPDATE-TRIGGER): in an installed copy only, 'Update now'
+           shows while a newer or staged version exists (one token-gated
+           POST /api/update-now, no body) and the click-only switch
+           ("update_click_only", saved as a one-key settings import). -->
+      <p id="update-staged" class="row-meta" hidden></p>
+      <p id="update-now-row" class="set-row" hidden><button id="update-now" type="button"
+        class="secondary btn-28" aria-describedby="update-line update-now-said">Update now</button>
+        <span id="update-now-said" class="muted"></span></p>
+      <p id="update-click-row" class="set-row" hidden><label class="check" for="update-click-only"><input
+        id="update-click-only" type="checkbox" aria-describedby="update-click-said"> Update only when I click Update now</label>
+        <span id="update-click-said" class="muted"></span></p>
       <p id="update-ack-row" class="set-row" hidden><button id="update-ack" type="button"
         class="secondary btn-28" aria-describedby="update-line update-said">OK, check for updates</button></p>
       <p id="update-link-row" hidden><a id="update-link" class="out" target="_blank"

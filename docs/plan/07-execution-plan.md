@@ -1934,7 +1934,8 @@ Leads: Dashboard: one guide block, no separate Zone tip.
 
 - Session 10; width 3 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (REL-AUTOSTART-SETTINGS); web/app.js
-  (REL-AUTOSTART-SETTINGS); server/al/state.py (TEST-STATE-MIXIN-B).
+  (REL-AUTOSTART-SETTINGS); server/al/state.py (TEST-STATE-MIXIN-B);
+  tests/test_ux_review.py (PLAY-F-189B-OVERLAY-PLATE).
 - Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
   REL-AUTOSTART-SETTINGS, PLAY-F-189B-OVERLAY-PLATE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
@@ -1947,7 +1948,7 @@ Leads: Dashboard: one guide block, no separate Zone tip.
 
 - REL-AUTOSTART-SETTINGS [session, L 85m, build, P1, DR] 'Start with Windows' row on Settings + Settings: 'Update now', the click-only switch and the staged line. Files: web/index.html, web/app.js, web/updates.js, app/test/updates.test.js, web/autostart.js (+1 more). Deps: REL-AUTOSTART-SWITCH, REL-UPDATE-NOTICE-UI, REL-UPDATE-TRIGGER, PLAY-TD-21A-SETTINGS-RAIL.
 - TEST-STATE-MIXIN-B [session, M 60m, build, P3] SessionState mixins: characters. Files: server/al/state.py, server/al/state_chars.py. Deps: TEST-STATE-MIXIN-A.
-- PLAY-F-189B-OVERLAY-PLATE [session, M 50m, build, P3, DR] Overlay: one plate class. Files: app/overlay/overlay.css, app/overlay/index.html, tests/test_overlay_plate_class.py. Deps: PLAY-F-189A-SPACING-BADGE.
+- PLAY-F-189B-OVERLAY-PLATE [session, M 50m, build, P3, DR] Overlay: one plate class. Files: app/overlay/overlay.css, app/overlay/index.html, tests/test_ux_review.py, app/test/overlay_gate.test.js, tests/test_overlay_plate_class.py. Deps: PLAY-F-189A-SPACING-BADGE.
 
 ### Wave 37: reliability and observability
 

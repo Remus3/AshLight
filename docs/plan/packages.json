@@ -19284,7 +19284,9 @@
    ],
    "files": [
     "app/overlay/overlay.css",
-    "app/overlay/index.html"
+    "app/overlay/index.html",
+    "tests/test_ux_review.py",
+    "app/test/overlay_gate.test.js"
    ],
    "new_files": [
     "tests/test_overlay_plate_class.py"
@@ -19313,7 +19315,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. CSS and class names only: the window stays separate, transparent, always-on-top, click-through and non-focusable; the decision 0002 budgets are re-checked by tests/test_budgets.py. Floor audit (L3): the comparison renders the overlay page in the headless test browser through the F-147 helper; never a capture of the live overlay window or the desktop (it would grab the game). Lands after the OVL steps that rewrite overlay.css (TD-05, TD-17). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "notes": "Tier P3. CSS and class names only: the window stays separate, transparent, always-on-top, click-through and non-focusable; the decision 0002 budgets are re-checked by tests/test_budgets.py. Floor audit (L3): the comparison renders the overlay page in the headless test browser through the F-147 helper; never a capture of the live overlay window or the desktop (it would grab the game). Lands after the OVL steps that rewrite overlay.css (TD-05, TD-17). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Session 22 widening (needs-path rule): files add tests/test_ux_review.py and app/test/overlay_gate.test.js (they pin the shared plate declarations per selector). Pixel proof: the HUD plate before / after through capture.mjs; the trade and item cards by resolving their CSS declarations before and after (capture.mjs shows only the waiting state and stays unedited).",
    "wave": 36,
    "owner": "session",
    "tier": "P3",

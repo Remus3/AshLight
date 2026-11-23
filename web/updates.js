@@ -27,7 +27,21 @@
    button posts {ack: <wording version>} to POST /api/web-data (the
    version the core gave in GET /api/web-data). Ticking the Settings box
    sends the same version (web/panels/webdata.js; ackBody() is that rule).
-   No timer, no clipboard, no live region, no request but that click. */
+   REL-AUTOSTART-SETTINGS (folded REL-UPDATE-UI; F-077, DEP-17, decision
+   0065, REL-UPDATE-TRIGGER): in an installed copy (the "install" Checks
+   row is there; a checkout has none) the block also holds
+   - one line naming a staged version (the main line names it already when
+     it is the newest one);
+   - 'Update now', shown only while a newer or a staged version exists and
+     web data is on and acknowledged: one POST /api/update-now carrying the
+     token header and no body (the core starts the installer at once, or
+     asks the client to apply the staged version); the answer's fixed
+     word is said beside the button;
+   - the click-only switch ("update_click_only", off by default): saved as
+     a one-key settings import (POST /api/settings-import, the allow-listed
+     key), so the core needs no route of its own; the snapshot's
+     click_only follows on the core's next pass.
+   No timer, no clipboard, no live region, no request but those clicks. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
@@ -61,7 +75,24 @@
       "at a later start.",
     error: "The last update check got no answer. AshLight tries again tomorrow.",
     acked: "Saved. AshLight checks for updates from now on.",
-    notSaved: "Not saved. Try again."
+    notSaved: "Not saved. Try again.",
+    clickOn: "AshLight updates only when you click Update now.",
+    clickOff: "AshLight updates by itself while the game is closed.",
+    nowFailed: "The update didn't start. Try again later."
+  };
+  var NOW_LABEL = "Update now";
+  var CLICK_LABEL = "Update only when I click Update now";
+  var CLICK_KEY = "update_click_only";
+  var SETTINGS_KIND = "ashlight-settings";
+  var INSTALL_ROW = "install";
+  /* the core's fixed answer words (server/al/updates.py) in plain words */
+  var NOW_SAID = {
+    started: "Downloading and checking the update. AshLight restarts when it is ready.",
+    staged: "Installing the downloaded version. AshLight restarts in a moment.",
+    running: "An update is already running.",
+    current: "AshLight is up to date.",
+    off: "Turn on web data to update.",
+    checkout: "This copy doesn't update itself."
   };
 
   function str(v) { return typeof v === "string" ? v : ""; }
@@ -104,12 +135,15 @@
 
   /* The view of the update block. update: the snapshot's `update` (or
      null); webData: true / false for the web-data switch, null when not
-     known yet; hosts: the link host list (web/tc.js LINK_HOSTS).
-     -> {show, version, state, line, ack, link, mark, notes} */
-  function model(update, webData, hosts) {
+     known yet; hosts: the link host list (web/tc.js LINK_HOSTS);
+     inCopy: true in an installed copy (installedCopy()).
+     -> {show, version, state, line, ack, link, mark, notes, staged, now,
+         click, clickOnly} */
+  function model(update, webData, hosts, inCopy) {
     var u = update && typeof update === "object" ? update : null;
     var empty = { show: false, version: "", state: "none", line: "", ack: false,
-      link: null, mark: "", notes: [] };
+      link: null, mark: "", notes: [], staged: "", now: false, click: false,
+      clickOnly: false };
     if (!u || !version(u.installed)) { return empty; }
     var installed = version(u.installed);
     var link = releasesLink(u.releases_url, hosts);
@@ -141,6 +175,8 @@
     } else {
       state = "first"; line = T.first;
     }
+    var inst = inCopy === true;
+    var live = state !== "none" && state !== "off" && state !== "ack";
     return {
       show: true,
       version: "AshLight " + installed,
@@ -149,7 +185,12 @@
       ack: state === "ack",
       link: state === "none" ? null : link,
       mark: state === "newer" || state === "staged" ? MARK : "",
-      notes: notes(u.notes)
+      notes: notes(u.notes),
+      staged: inst && staged && state !== "staged"
+        ? cut("AshLight " + staged + " is downloaded. Update now installs it.", LINE_MAX) : "",
+      now: inst && live && (state === "newer" || state === "staged" || !!staged),
+      click: inst && state !== "none",
+      clickOnly: u.click_only === true
     };
   }
 
@@ -173,6 +214,16 @@
       if (rows[i] && rows[i].id === "web_data") { return rows[i].status !== "off"; }
     }
     return null;
+  }
+
+  /* True in an installed copy: the core sends the "install" Checks row
+     only there (server/al/diag.py INSTALL_ID); a checkout has none. */
+  function installedCopy(snap) {
+    var rows = snap && snap.diag && Array.isArray(snap.diag.checks) ? snap.diag.checks : [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] && rows[i].id === INSTALL_ROW) { return true; }
+    }
+    return false;
   }
 
   /* The checks of the page that failed (web/checks.js marks "fix" then). */
@@ -214,7 +265,7 @@
      check needs a fix, so "fix" always wins. */
   function paint(doc, snap, opts) {
     var box = doc.getElementById("update-box");
-    var m = model(snap && snap.update, webDataOn(snap), hostList(opts));
+    var m = model(snap && snap.update, webDataOn(snap), hostList(opts), installedCopy(snap));
     var data = dataLine(snap);
     var t = tabs(opts);
     if (t && typeof t.mark === "function" && !failed(snap)) { t.mark(doc, TAB, m.mark); }
@@ -245,13 +296,112 @@
       list.appendChild(li);
     });
     doc.getElementById("update-notes-box").hidden = !m.notes.length;
+    paintControls(doc, m);
     return m;
+  }
+
+  /* The staged line, 'Update now' and the click-only switch. A switch
+     the player just changed keeps their value (data-want) until the
+     snapshot says the same. */
+  function paintControls(doc, m) {
+    var st = doc.getElementById("update-staged");
+    if (st) {
+      st.textContent = m.staged;
+      st.hidden = !m.staged;
+    }
+    var nowRow = doc.getElementById("update-now-row");
+    if (nowRow) { nowRow.hidden = !m.now; }
+    var row = doc.getElementById("update-click-row");
+    var box = doc.getElementById("update-click-only");
+    if (row) { row.hidden = !m.click; }
+    if (!box) { return; }
+    var want = box.getAttribute("data-want");
+    if (want === "1" || want === "0") {
+      if ((want === "1") !== m.clickOnly) { return; }
+      box.removeAttribute("data-want");
+    }
+    box.checked = m.clickOnly;
+    var said = doc.getElementById("update-click-said");
+    if (said) { said.textContent = m.clickOnly ? T.clickOn : T.clickOff; }
+  }
+
+  /* The fetch options of 'Update now': the token header, the JSON type
+     the core asks for, and no body. */
+  function nowRequest(token) {
+    return { method: "POST", cache: "no-store",
+      headers: { "X-AL-Token": String(token || ""), "Content-Type": "application/json" } };
+  }
+
+  /* The core's answer word as a sentence. */
+  function nowSaid(answer) {
+    var w = answer && typeof answer.state === "string" ? answer.state : "";
+    return Object.prototype.hasOwnProperty.call(NOW_SAID, w) ? NOW_SAID[w] : T.nowFailed;
+  }
+
+  /* The body of the click-only switch: a one-key settings import. */
+  function clickBody(on) {
+    var settings = {};
+    settings[CLICK_KEY] = on === true;
+    return { kind: SETTINGS_KIND, schema: 1, settings: settings };
+  }
+
+  function tokenOf(net) {
+    var t = net ? net.token : "";
+    return typeof t === "function" ? t() : t;
+  }
+
+  /* 'Update now' and the click-only switch. net: {fetch, token} (token a
+     value or a getter), the page's fetch for the bodiless POST. */
+  function wireControls(doc, api, net) {
+    var now = doc.getElementById("update-now");
+    var nowSaidEl = doc.getElementById("update-now-said");
+    if (now && nowSaidEl && net && typeof net.fetch === "function") {
+      var busy = false;
+      now.addEventListener("click", function () {
+        if (busy) { return; }
+        busy = true;
+        nowSaidEl.textContent = "";
+        Promise.resolve().then(function () {
+          return net.fetch("/api/update-now", nowRequest(tokenOf(net)));
+        }).then(function (r) {
+          if (!r || !r.ok) { throw new Error("HTTP " + (r ? r.status : "")); }
+          return r.json();
+        }).then(function (answer) {
+          nowSaidEl.textContent = nowSaid(answer);
+        }, function () {
+          nowSaidEl.textContent = T.nowFailed;
+        }).then(function () { busy = false; });
+      });
+    }
+    var box = doc.getElementById("update-click-only");
+    var said = doc.getElementById("update-click-said");
+    if (!box || !said || typeof api !== "function") { return; }
+    box.addEventListener("change", function () {
+      var on = box.checked === true;
+      var mark = on ? "1" : "0";
+      box.setAttribute("data-want", mark);
+      said.textContent = "";
+      Promise.resolve().then(function () {
+        return api("POST", "/api/settings-import", clickBody(on));
+      }).then(function (report) {
+        var applied = report && Array.isArray(report.applied) ? report.applied : [];
+        if (applied.indexOf(CLICK_KEY) < 0) { throw new Error("not applied"); }
+        said.textContent = on ? T.clickOn : T.clickOff;
+      }).then(null, function () {
+        if (box.getAttribute("data-want") === mark) {
+          box.removeAttribute("data-want");
+          box.checked = !on;
+        }
+        said.textContent = T.notSaved;
+      });
+    });
   }
 
   /* The OK click: one POST {ack} with the wording version the core gave
      (getDoc() returns the last GET /api/web-data answer). saved(doc) shows
      the answer in the web data section. */
-  function wire(doc, api, getDoc, saved) {
+  function wire(doc, api, getDoc, saved, net) {
+    wireControls(doc, api, net);
     var btn = doc.getElementById("update-ack");
     var said = doc.getElementById("update-said");
     if (!btn || !said) { return; }
@@ -276,5 +426,7 @@
   return { model: model, paint: paint, wire: wire, ackBody: ackBody, wording: wording,
     dataLine: dataLine, webDataOn: webDataOn, releasesLink: releasesLink, notes: notes,
     day: day, TEXT: T, MARK: MARK, TAB: TAB, LINK_TEXT: LINK_TEXT, ACK_LABEL: ACK_LABEL,
-    LINE_MAX: LINE_MAX, NOTE_MAX: NOTE_MAX };
+    LINE_MAX: LINE_MAX, NOTE_MAX: NOTE_MAX, installedCopy: installedCopy,
+    nowRequest: nowRequest, nowSaid: nowSaid, clickBody: clickBody, NOW_SAID: NOW_SAID,
+    NOW_LABEL: NOW_LABEL, CLICK_LABEL: CLICK_LABEL };
 }));
