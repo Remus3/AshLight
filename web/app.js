@@ -16,8 +16,6 @@
   var renderedVersion = -1;
   // UTIL-MULTICHAR: the character the player picked ("" = the one playing)
   var charPick = "";
-  var es = null;
-  var ticker = null;
   var linkLive = false; // the state feed is live right now
   var everLive = false; // ... and was live at least once on this page
   var linkEvent = null; // the feed's last event, for the one bar word
@@ -859,13 +857,133 @@
     try { return window.ALChars.view(s, charPick); } catch (e) { return s; }
   }
 
+  /* FEED-PACE:begin (app/test/dashboard.test.js runs this block alone;
+     keep it self-contained ES5)
+     RUN-FEED-TRUTH (F-175): the state feed says what really happened.
+     When the EventSource is closed for good (readyState 2: the core
+     answered with something other than a stream), the page asks
+     /api/health once. A 401 after a live feed means the core restarted
+     with a new token: the bar says so and the page stops trying (the
+     client window reloads itself with the new token). A 401 before any
+     live feed is a wrong link. Anything else (an error, no answer) opens
+     the feed again FEED_RETRY_MS later, so it retries every 3 s. A feed
+     that is only reconnecting (readyState 0) is left to the browser,
+     which retries on the core's "retry: 3000".
+     o: open() -> a new EventSource; health() -> a promise of the HTTP
+     status (0 or a rejection when nothing answered); link(event) with
+     "open" | "error" | "restarted" | "notoken"; frame(name, m) for each
+     named message; later(fn, ms); everLive() -> bool; retry() (optional,
+     else open()) is what a retry runs. */
+  var FEED_RETRY_MS = 3000;
+
+  function feedLink(o) {
+    var es = null;
+    var asking = false;
+    var waiting = false;
+    var over = false;
+
+    function onError(src) {
+      if (src !== es || over) { return; }
+      o.link("error");
+      if (es.readyState !== 2 || asking || waiting) { return; }
+      asking = true;
+      var settle = function (code) {
+        asking = false;
+        if (over) { return; }
+        if (code === 401) {
+          over = true;
+          o.link(o.everLive() ? "restarted" : "notoken");
+          return;
+        }
+        waiting = true;
+        o.later(function () {
+          waiting = false;
+          if (typeof o.retry === "function") { o.retry(); } else { open(); }
+        }, FEED_RETRY_MS);
+      };
+      var p;
+      try { p = o.health(); } catch (e) { p = null; }
+      if (!p || typeof p.then !== "function") { settle(0); return; }
+      p.then(settle, function () { settle(0); });
+    }
+
+    function open() {
+      if (over) { return null; }
+      if (es) { es.close(); }
+      var src = o.open();
+      es = src;
+      src.addEventListener("open", function () { if (src === es) { o.link("open"); } });
+      src.addEventListener("error", function () { onError(src); });
+      // the state frames and the HOT-RELOAD notice (decision 0042)
+      es.addEventListener("state", function (m) { if (src === es) { o.frame("state", m); } });
+      es.addEventListener("reload", function (m) { if (src === es) { o.frame("reload", m); } });
+      return src;
+    }
+
+    return { open: open, over: function () { return over; } };
+  }
+
+  /* RUN-PERF-DASH-IDLE (F-178): the page rests while nobody can see it
+     and while the game is idle. push(s) is the state push: false while
+     the page is hidden (the newest snapshot is held and painted once when
+     the page shows again, through shown()); true when the caller paints.
+     The 1 s ticker runs only while the page shows and the game is not
+     idle (snapshot game_idle, decision 0029): a fresh log line clears
+     game_idle and the next push starts it again.
+     o: hidden() -> bool; paint(s); tick(); every(fn, ms) -> handle;
+     stop(handle). */
+  function pacer(o) {
+    var held = null;
+    var idle = false;
+    var ticker = null;
+
+    function sync() {
+      var on = !idle && !o.hidden();
+      if (on && ticker === null) {
+        ticker = o.every(o.tick, 1000);
+      } else if (!on && ticker !== null) {
+        o.stop(ticker);
+        ticker = null;
+      }
+    }
+
+    function push(s) {
+      idle = !!(s && s.game_idle === true);
+      sync();
+      if (o.hidden()) { held = s; return false; }
+      held = null;
+      return true;
+    }
+
+    function shown() {
+      sync();
+      if (o.hidden()) { return; }
+      if (held) {
+        var s = held;
+        held = null;
+        o.paint(s);
+      } else {
+        o.tick();
+      }
+    }
+
+    return { push: push, shown: shown, sync: sync,
+      ticking: function () { return ticker !== null; },
+      held: function () { return held !== null; } };
+  }
+  /* FEED-PACE:end */
+
+  var pace = null; // pacer(), made in start()
+
   function render(s) {
     snap = s;
+    offset = Date.now() / 1000 - s.now;
+    // RUN-PERF-DASH-IDLE: a hidden page paints nothing; one paint on return
+    if (pace && !pace.push(s)) { return; }
     // MERGE-SEAMS F5: the restart-overlay note clears on the next state push
     if (restartSaid) { restartSaid = false; setText($("restart-overlay-said"), ""); }
     // decision 0029 amendment: say why the overlay is hidden (no live region)
     $("overlay-idle-note").hidden = s.game_idle !== true;
-    offset = Date.now() / 1000 - s.now;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
     // OVL-KEYS-WEB: every named key is the bound one; the change fields and
@@ -1048,26 +1166,58 @@
     loadRates();
     loadDataCredit();
     api("GET", "/api/state").then(render).catch(function () {
-      if (!linkLive) { setLink("error"); }
+      // a feed that found the core restarted keeps saying so
+      if (!linkLive && !(feed && feed.over())) { setLink("error"); }
     });
-    if (es) { es.close(); }
-    es = new EventSource("/events?token=" + encodeURIComponent(token));
-    es.addEventListener("open", function () { setLink("open"); tick(); });
-    es.addEventListener("error", function () { setLink("error"); });
-    es.addEventListener("state", function (m) {
-      try { render(JSON.parse(m.data)); } catch (e) { /* ignore a bad frame */ }
-    });
-    /* HOT-RELOAD (decision 0042): a dashboard file changed on disk (source
-       checkout only); load the new page. The token stays in sessionStorage. */
-    es.addEventListener("reload", function (m) {
-      var d = null;
-      try { d = JSON.parse(m.data); } catch (e) { d = null; }
-      if (d && d.target === "web") { location.reload(); }
-    });
+    if (!feed) { feed = feedLink(feedHooks()); }
+    feed.open();
+  }
+
+  /* RUN-FEED-TRUTH: the page's side of feedLink (FEED-PACE above). A
+     retry runs the whole connect(), so the panels' first reads come again
+     after a core restart that kept its token. */
+  var feed = null;
+
+  function feedHooks() {
+    return {
+      open: function () { return new EventSource("/events?token=" + encodeURIComponent(token)); },
+      health: function () {
+        return fetch("/api/health", { headers: { "X-AL-Token": token }, cache: "no-store" })
+          .then(function (r) { return r.status; });
+      },
+      link: function (event) {
+        setLink(event);
+        if (event === "open") { tick(); }
+      },
+      frame: function (name, m) {
+        if (name === "state") {
+          try { render(JSON.parse(m.data)); } catch (e) { /* ignore a bad frame */ }
+          return;
+        }
+        /* HOT-RELOAD (decision 0042): a dashboard file changed on disk
+           (source checkout only); load the new page. The token stays in
+           sessionStorage. */
+        var d = null;
+        try { d = JSON.parse(m.data); } catch (e) { d = null; }
+        if (d && d.target === "web") { location.reload(); }
+      },
+      later: function (fn, ms) { return setTimeout(fn, ms); },
+      retry: connect,
+      everLive: function () { return everLive; }
+    };
   }
 
   function start() {
-    document.addEventListener("visibilitychange", tick);
+    // RUN-PERF-DASH-IDLE (F-178): the 1 s ticker and the painters rest
+    // while the page is hidden or the game is idle (pacer, FEED-PACE above)
+    pace = pacer({
+      hidden: function () { return document.hidden; },
+      paint: render,
+      tick: tick,
+      every: function (fn, ms) { return setInterval(fn, ms); },
+      stop: function (h) { clearInterval(h); }
+    });
+    document.addEventListener("visibilitychange", pace.shown);
     // TEST-WEB-REGISTRY: every panel's wire, in its order (web/registry.js)
     A.start();
     // RUN-VERDICTS-UI: the 'Tried in game' card (one read, then clicks only)
@@ -1089,8 +1239,9 @@
       });
     }
     setInterval(pollRates, RATES_POLL_MS);
-    // The two timers advance once a second; nothing else moves.
-    ticker = setInterval(tick, 1000);
+    // The two timers advance once a second while the page shows and the
+    // game is not idle; nothing else moves.
+    pace.sync();
     connect();
   }
 

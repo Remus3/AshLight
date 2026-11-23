@@ -199,7 +199,21 @@
 
   var W = STATUS_WORDS.states;
 
-  function statePill(id) { var s = W[id]; return pill(s.kit, s.glyph, s.bar); }
+  /* RUN-FEED-TRUTH (F-175): the feed word after the core restarted with a
+     new token (a 401 from /api/health once the feed had been live). It is
+     the dashboard's own word, never the overlay's (the overlay page gets
+     its new token from the client), so it lives here beside the table and
+     outranks every state of it. */
+  var RESTARTED = {
+    rank: 8, kit: "failed", glyph: "[x]",
+    bar: "AshLight restarted. Open it again from the tray.",
+    next: "Open AshLight again from its tray icon."
+  };
+  var RESTARTED_WORD = RESTARTED.bar;
+
+  function stateOf(id) { return id === "link_restarted" ? RESTARTED : W[id]; }
+
+  function statePill(id) { var s = stateOf(id); return pill(s.kit, s.glyph, s.bar); }
 
   var IDLE_WORD = W.idle.bar;
 
@@ -213,10 +227,12 @@
   }
 
   /* The feed state id. event: "notoken" | "open" | "error" | "connecting"
-     (or none yet). everLive: the feed was live at least once on this
-     page. A failure before that says what to do; one after it is a
-     reconnect. */
+     | "restarted" (or none yet). everLive: the feed was live at least
+     once on this page. A failure before that says what to do; one after
+     it is a reconnect. "restarted" (RUN-FEED-TRUTH): the core answered
+     401 after a live feed; the page stops retrying. */
   function linkState(event, everLive) {
+    if (event === "restarted") { return "link_restarted"; }
     if (event === "notoken") { return "link_token"; }
     if (event === "open") { return "live"; }
     if (event === "connecting" || event == null) { return "link_wait"; }
@@ -252,10 +268,10 @@
   function barStatus(tailer, link, everLive) {
     var feed = linkState(link, everLive);
     var read = readingState(tailer, feed === "live");
-    var id = W[feed].rank > W[read].rank ? feed : read;
+    var id = stateOf(feed).rank > W[read].rank ? feed : read;
     var p = statePill(id);
     p.id = id;
-    p.next = W[id].next;
+    p.next = stateOf(id).next;
     return p;
   }
 
@@ -349,7 +365,7 @@
   return { linkView: linkView, readingView: readingView, kindOf: kindOf,
            linkState: linkState, readingState: readingState,
            barStatus: barStatus, zoneNext: zoneNext, STATUS_WORDS: STATUS_WORDS,
-           IDLE_WORD: IDLE_WORD, clockUntil: clockUntil,
+           IDLE_WORD: IDLE_WORD, RESTARTED_WORD: RESTARTED_WORD, clockUntil: clockUntil,
            emptyText: emptyText, eventsKey: eventsKey, sessionSub: sessionSub, countsView: countsView, tradeLine: tradeLine, cornerLabel: cornerLabel,
            dataCreditText: dataCreditText };
 }));

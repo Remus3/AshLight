@@ -1,8 +1,8 @@
 /* AshLight overlay page. Event-driven only: no requestAnimationFrame, no
    polling loop. A repaint happens when an SSE "state" push changes a visible
    string, or when the coarse zone timer's minute text rolls over, the
-   item check card leaves or the guide line is due again (one setTimeout to
-   the nearest of the three). */
+   item check card leaves, the guide line is due again or a live feed turns
+   stale (one setTimeout to the nearest of the four). */
 (function () {
   "use strict";
 
@@ -14,8 +14,14 @@
   var status = "connecting";
   var timer = null;
   var nodes = {};
+  var lastFrame = 0; // Date.now() of the feed's last frame (RUN-FEED-TRUTH)
 
   function paint() {
+    /* RUN-FEED-TRUTH (F-175): no frame, not even the core's "alive" beat,
+       for 45 s marks a live feed stale (render_gate.js feedStatus); the
+       next frame makes it live again. */
+    var was = status;
+    status = S.feedStatus(status, lastFrame, Date.now());
     var model = S.hudModel(snap, Date.now() / 1000 - offset, status);
     if (S.shouldRender(shown, model)) {
       var changed = S.changedFields(shown, model);
@@ -49,6 +55,7 @@
       shown = model;
     }
     schedule();
+    if (status !== was) { reportGate(); }
   }
 
   /* One timer to the next visible change: the zone timer's minute
@@ -67,6 +74,8 @@
     if (evalMs !== null && (ms === null || evalMs < ms)) { ms = evalMs; }
     var guideMs = S.msUntilGuideDue(snap, now);
     if (guideMs !== null && (ms === null || guideMs < ms)) { ms = guideMs; }
+    var staleMs = S.msUntilStale(status, lastFrame, Date.now());
+    if (staleMs !== null && (ms === null || staleMs < ms)) { ms = staleMs; }
     if (ms !== null) { timer = setTimeout(paint, ms); }
   }
 
@@ -95,13 +104,21 @@
                              encodeURIComponent(cfg.token));
     es.addEventListener("open", function () {
       if (status !== "live") { console.info("overlay: feed live"); }
+      lastFrame = Date.now();
       status = "live";
       paint();
+    });
+    /* RUN-FEED-TRUTH: the core's keep-alive; it only proves the feed is
+       alive, so it paints only when it ends a stale mark. */
+    es.addEventListener("alive", function () {
+      lastFrame = Date.now();
+      if (status !== "live") { status = "live"; paint(); reportGate(); }
     });
     es.addEventListener("error", function () { status = "offline"; paint(); reportGate(); });
     es.addEventListener("state", function (m) {
       try {
         snap = JSON.parse(m.data);
+        lastFrame = Date.now();
         offset = Date.now() / 1000 - snap.now;
         status = "live";
         paint();
