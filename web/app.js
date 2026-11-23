@@ -781,7 +781,10 @@
     },
     wire: function () {
       if (window.ALUpdates) {
-        window.ALUpdates.wire(document, api, function () { return webState().doc; }, webDataSaved);
+        // REL-AUTOSTART-SETTINGS: 'Update now' posts with no body, so it
+        // gets the page's fetch and token instead of api()
+        window.ALUpdates.wire(document, api, function () { return webState().doc; }, webDataSaved,
+          { fetch: function (url, opts) { return fetch(url, opts); }, token: token });
       }
       if (window.ALChecks) {
         var store = null;
@@ -813,7 +816,12 @@
   A.register({
     name: "restart-overlay",
     order: 240,
-    wire: function () { wireRestartOverlay(); }
+    // REL-AUTOSTART-SETTINGS: the 'Start with Windows' row beside it
+    // (web/autostart.js; the client's three autostart actions)
+    wire: function () {
+      wireRestartOverlay();
+      if (window.ALAutostart) { window.ALAutostart.wire(document, window.alClient); }
+    }
   });
   A.register({
     name: "settingsio",

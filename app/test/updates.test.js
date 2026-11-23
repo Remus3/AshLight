@@ -45,7 +45,9 @@ function fakeDoc(ids) {
 }
 
 const BOX_IDS = ["update-box", "update-version", "update-data", "update-line", "update-ack-row",
-  "update-ack", "update-link", "update-link-row", "update-said", "update-notes-box", "update-notes"];
+  "update-ack", "update-link", "update-link-row", "update-said", "update-notes-box", "update-notes",
+  "update-staged", "update-now-row", "update-now", "update-now-said", "update-click-row",
+  "update-click-only", "update-click-said"];
 
 function fakeTabs() {
   const marks = [];
@@ -263,4 +265,133 @@ test("the page holds one update container in About and data, and loads updates.j
   assert.ok(HTML.indexOf("/web/updates.js") < HTML.indexOf("/web/app.js"));
   const boxHtml = HTML.slice(box, HTML.indexOf("</section>", box));
   assert.doesNotMatch(boxHtml, /aria-live|role="status"|<details/);
+});
+
+/* REL-AUTOSTART-SETTINGS (folded REL-UPDATE-UI; F-077, DEP-17, decision
+   0065): the staged line, 'Update now' and the click-only switch. */
+const INSTALL = { id: "install", status: "pass" };
+
+test("installed copy: the staged line and Update now only with a staged or newer version", () => {
+  assert.equal(U.installedCopy(snapOf(block(), [INSTALL])), true);
+  assert.equal(U.installedCopy(snapOf(block())), false);
+  // a checkout: no controls whatever the block says
+  const co = U.model(block({ latest: "0.5.0", newer: true, staged: "0.5.0" }), true, HOSTS, false);
+  assert.equal(co.now, false);
+  assert.equal(co.click, false);
+  assert.equal(co.staged, "");
+  // installed, up to date, nothing staged: the switch, no button
+  const cur = U.model(block(), true, HOSTS, true);
+  assert.equal(cur.now, false);
+  assert.equal(cur.click, true);
+  assert.equal(cur.staged, "");
+  // a newer version: the button
+  assert.equal(U.model(block({ latest: "0.5.0", newer: true }), true, HOSTS, true).now, true);
+  // staged and newest: the main line names it, no second line
+  const st = U.model(block({ latest: "0.5.0", newer: true, staged: "0.5.0" }), true, HOSTS, true);
+  assert.equal(st.now, true);
+  assert.equal(st.staged, "");
+  assert.match(st.line, /0\.5\.0 is downloaded/);
+  // staged while the newest is another one: one line names the staged one
+  const two = U.model(block({ latest: "0.6.0", newer: true, staged: "0.5.0" }), true, HOSTS, true);
+  assert.equal(two.staged, "AshLight 0.5.0 is downloaded. Update now installs it.");
+  assert.equal(two.now, true);
+  const only = U.model(block({ staged: "0.5.0" }), true, HOSTS, true);
+  assert.equal(only.staged, "AshLight 0.5.0 is downloaded. Update now installs it.");
+  assert.equal(only.now, true);
+  // web data off or the wording not acknowledged: no button (the core refuses)
+  assert.equal(U.model(block({ latest: "0.5.0", newer: true }), false, HOSTS, true).now, false);
+  assert.equal(U.model(block({ latest: "0.5.0", newer: true, ack_needed: true }), true, HOSTS, true).now,
+    false);
+  // a bad staged version is never shown
+  assert.equal(U.model(block({ staged: "<b>" }), true, HOSTS, true).staged, "");
+  // paint
+  const doc = fakeDoc(BOX_IDS);
+  U.paint(doc, snapOf(block({ latest: "0.6.0", newer: true, staged: "0.5.0" }), [INSTALL]),
+    { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(doc.getElementById("update-staged").hidden, false);
+  assert.equal(doc.getElementById("update-staged").textContent,
+    "AshLight 0.5.0 is downloaded. Update now installs it.");
+  assert.equal(doc.getElementById("update-now-row").hidden, false);
+  assert.equal(doc.getElementById("update-click-row").hidden, false);
+  const d2 = fakeDoc(BOX_IDS);
+  U.paint(d2, snapOf(block({ latest: "0.6.0", newer: true, staged: "0.5.0" })),
+    { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(d2.getElementById("update-staged").hidden, true);
+  assert.equal(d2.getElementById("update-now-row").hidden, true);
+  assert.equal(d2.getElementById("update-click-row").hidden, true);
+});
+
+test("Update now: one POST with the token header and no body; the answer word in plain words", async () => {
+  const req = U.nowRequest("t0k");
+  assert.deepEqual(req, { method: "POST", cache: "no-store",
+    headers: { "X-AL-Token": "t0k", "Content-Type": "application/json" } });
+  assert.equal("body" in req, false);
+  const doc = fakeDoc(BOX_IDS);
+  const calls = [];
+  const fetch = (url, opts) => {
+    calls.push([url, opts]);
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ started: true, state: "started" }) });
+  };
+  U.wire(doc, () => Promise.resolve({}), () => null, null, { fetch, token: () => "t0k" });
+  const btn = doc.getElementById("update-now");
+  btn.fire("click");
+  btn.fire("click"); // a second click while it runs adds nothing
+  await tick(); await tick();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "/api/update-now");
+  assert.equal("body" in calls[0][1], false);
+  assert.equal(calls[0][1].headers["X-AL-Token"], "t0k");
+  assert.equal(doc.getElementById("update-now-said").textContent, U.NOW_SAID.started);
+  for (const w of Object.keys(U.NOW_SAID)) { assert.equal(U.nowSaid({ state: w }), U.NOW_SAID[w]); }
+  assert.equal(U.nowSaid({ state: "failed" }), U.TEXT.nowFailed);
+  assert.equal(U.nowSaid(null), U.TEXT.nowFailed);
+  // a refused request says it did not start
+  const d2 = fakeDoc(BOX_IDS);
+  U.wire(d2, () => Promise.resolve({}), () => null, null,
+    { fetch: () => Promise.resolve({ ok: false, status: 403 }), token: "x" });
+  d2.getElementById("update-now").fire("click");
+  await tick(); await tick();
+  assert.equal(d2.getElementById("update-now-said").textContent, U.TEXT.nowFailed);
+  for (const t of Object.values(U.NOW_SAID)) { assert.ok(t.length <= U.LINE_MAX, t); }
+  assert.match(HTML, new RegExp("<button id=\"update-now\"[^>]*>" + U.NOW_LABEL + "</button>"));
+});
+
+test("the click-only switch: shows the core's state and saves one allow-listed key", async () => {
+  assert.equal(U.model(block({ click_only: true }), true, HOSTS, true).clickOnly, true);
+  assert.equal(U.model(block(), true, HOSTS, true).clickOnly, false);
+  assert.deepEqual(U.clickBody(true),
+    { kind: "ashlight-settings", schema: 1, settings: { update_click_only: true } });
+  const doc = fakeDoc(BOX_IDS);
+  const box = doc.getElementById("update-click-only");
+  U.paint(doc, snapOf(block({ click_only: true }), [INSTALL]), { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(box.checked, true);
+  assert.equal(doc.getElementById("update-click-said").textContent, U.TEXT.clickOn);
+  const calls = [];
+  let answer = { applied: ["update_click_only"], ignored: [] };
+  U.wire(doc, (m, p, b) => { calls.push([m, p, b]); return Promise.resolve(answer); }, () => null);
+  box.checked = false;
+  box.fire("change");
+  await tick(); await tick();
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)),
+    [["POST", "/api/settings-import", U.clickBody(false)]]);
+  assert.equal(doc.getElementById("update-click-said").textContent, U.TEXT.clickOff);
+  // the snapshot has not caught up yet: the player's value stays
+  U.paint(doc, snapOf(block({ click_only: true, checked_at: 1795400001 }), [INSTALL]),
+    { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(box.checked, false);
+  // the core's next pass agrees
+  U.paint(doc, snapOf(block({ click_only: false }), [INSTALL]), { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(box.checked, false);
+  assert.equal(box.getAttribute("data-want"), null);
+  // not applied: the box goes back and says so
+  answer = { applied: [], ignored: ["update_click_only"] };
+  box.checked = true;
+  box.fire("change");
+  await tick(); await tick();
+  assert.equal(box.checked, false);
+  assert.equal(doc.getElementById("update-click-said").textContent, U.TEXT.notSaved);
+  const label = /<label class="check" for="update-click-only"><input\s+id="update-click-only" type="checkbox" aria-describedby="update-click-said"> ([^<]+)<\/label>/.exec(HTML);
+  assert.ok(label, "the switch has its label");
+  assert.equal(label[1], U.CLICK_LABEL);
+  for (const t of [U.TEXT.clickOn, U.TEXT.clickOff]) { assert.ok(t.length <= U.LINE_MAX, t); }
 });
