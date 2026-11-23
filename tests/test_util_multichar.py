@@ -419,3 +419,151 @@ def test_storage_caps_characters_and_runs(tmp_path):
     assert len(doc["characters"]) == runhistory.MAX_CHARACTERS
     assert "C0" not in doc["characters"]
     assert len(h.characters()) == runhistory.MAX_CHARACTERS
+
+
+# -- RUN-CHARACTER-PIN (F-157): the picker's pin, live poll_ms / character
+
+PIN_TOKEN = "p" * 48
+
+
+def _pin_core(tmp_path, **kw):
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    return Core(runtime=tmp_path / "rt", log_path=str(log), tail=False,
+                config_path=tmp_path / "cfg" / "local.json", **kw)
+
+
+def _cfg_write(core, doc):
+    core.config_path.parent.mkdir(parents=True, exist_ok=True)
+    core.config_path.write_text(json.dumps(doc), encoding="ascii")
+    core._config_cache = None  # the test writes inside one coarse tick
+
+
+def test_pin_makes_the_character_fixed_without_restart(tmp_path):
+    core = _pin_core(tmp_path)
+    try:
+        st = core.state
+        st.apply(lvl("Quill", "Monk", 5, 1000.0))
+        st.apply(opened(2000.0))
+        st.apply(lvl("Sable", "Witch", 2, 2010.0))   # a game start switches
+        assert st.character == "Sable" and st.character_fixed is False
+        assert st.snapshot()["character_pinned"] is False
+        # the picker's pin: Quill, a parked character, becomes the fixed one
+        view = core.pin_character("Quill")
+        assert view == {"character": "Quill", "pinned": True}
+        doc = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert doc["character"] == "Quill"  # the same local key as before
+        snap = st.snapshot()
+        assert snap["character"] == "Quill" and snap["level"] == 5
+        assert snap["character_pinned"] is True
+        # decision 0038: a configured character never switches, not even
+        # on the first name line after a game start
+        st.apply(opened(3000.0))
+        st.apply(lvl("Sable", "Witch", 3, 3010.0))
+        assert st.character == "Quill"
+        # an unknown name is refused, nothing written
+        try:
+            core.pin_character("Nobody")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("an unseen name was pinned")
+        assert json.loads(core.config_path.read_text(encoding="ascii"))["character"] == "Quill"
+        # unpin: "" frees it; the next game start may switch again
+        assert core.pin_character("") == {"character": "Quill", "pinned": False}
+        assert json.loads(core.config_path.read_text(encoding="ascii"))["character"] == ""
+        st.apply(opened(4000.0))
+        st.apply(lvl("Sable", "Witch", 4, 4010.0))
+        assert st.character == "Sable"
+        # a hand edit of the file applies within one tick, no restart
+        _cfg_write(core, {"character": "Quill"})
+        assert core.tick_config() == ["character"]
+        assert st.character == "Quill" and st.character_fixed is True
+        assert core.tick_config() == []  # nothing new
+        _cfg_write(core, {})
+        assert core.tick_config() == ["character"]
+        assert st.character_fixed is False
+        # the plug attached the tick to the core loop
+        assert "tick_config" in [n for n, _ in core.ticks]
+    finally:
+        core.close()
+
+
+def test_poll_ms_edit_applies_within_one_tick(tmp_path):
+    core = _pin_core(tmp_path, poll_s=0.25)
+
+    class Reader:
+        poll_s = 0.25
+
+    try:
+        core.tailer = Reader()
+        _cfg_write(core, {"poll_ms": 1000})
+        core.tick_all()
+        assert core.poll_s == 1.0 and core.tailer.poll_s == 1.0
+        # a bad value is left alone (settingsio's 50 to 5000)
+        _cfg_write(core, {"poll_ms": 10})
+        assert core.tick_config() == []
+        assert core.poll_s == 1.0
+        _cfg_write(core, {"poll_ms": 100})
+        assert core.tick_config() == ["poll_ms"]
+        assert core.tailer.poll_s == 0.1
+    finally:
+        core.tailer = None
+        core.close()
+
+
+def test_a_given_character_is_kept_until_the_file_changes(tmp_path):
+    core = _pin_core(tmp_path, character="Wren")
+    try:
+        assert core.tick_config() == []  # no key in the file: kept
+        assert core.state.character == "Wren" and core.state.character_fixed
+    finally:
+        core.close()
+
+
+def test_pin_route_needs_the_token(tmp_path):
+    import http.client
+    import threading
+    from pathlib import Path
+
+    from server.al import http as al_http
+
+    root = Path(__file__).resolve().parents[1]
+    core = _pin_core(tmp_path)
+    core.state.apply(lvl("Quill", "Monk", 5, 1000.0))
+    server = al_http.serve(core, PIN_TOKEN, port=0, web_root=root / "web",
+                           tokens_css=root / "ops" / "fleet_kit" / "tokens.css")
+    t = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True)
+    t.start()
+
+    def post(body, token=None):
+        conn = http.client.HTTPConnection("127.0.0.1", server.port, timeout=10)
+        h = {"Host": f"127.0.0.1:{server.port}", "Content-Type": "application/json"}
+        if token:
+            h["X-AL-Token"] = token
+        conn.request("POST", "/api/character", body=json.dumps(body), headers=h)
+        r = conn.getresponse()
+        data = r.read()
+        conn.close()
+        return r.status, data
+
+    try:
+        status, _ = post({"name": "Quill"})
+        assert status in (401, 403)
+        status, _ = post({"name": "Quill"}, token="x" * 48)
+        assert status in (401, 403)
+        assert not core.config_path.exists() and core.state.character_fixed is False
+        status, data = post({"name": "Quill"}, token=PIN_TOKEN)
+        assert status == 200, data
+        assert json.loads(data) == {"character": "Quill", "pinned": True}
+        assert core.state.character_fixed is True
+        status, data = post({"name": 5}, token=PIN_TOKEN)
+        assert status == 400
+        status, data = post({"name": "Nobody"}, token=PIN_TOKEN)
+        assert status == 400 and core.state.character == "Quill"
+        status, data = post({"name": None}, token=PIN_TOKEN)
+        assert status == 200 and json.loads(data)["pinned"] is False
+    finally:
+        server.stop()
+        core.close()

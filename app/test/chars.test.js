@@ -214,3 +214,64 @@ test("the Characters card in the markup: the picker and its rows, after Recent",
   // the picker moved: one picker on the page
   assert.equal(html.split('id="char-pick"').length, 2);
 });
+
+/* RUN-CHARACTER-PIN (F-157): the 'This is my character' pin in the picker. */
+test("chars pin: one click pins the shown character, a click on the pressed pin frees it", async () => {
+  const d = charsCard();
+  const calls = [];
+  let reply = { character: "Sable", pinned: true };
+  ch.wire(d, () => {}, (method, path, body) => { calls.push([method, path, body]); return Promise.resolve(reply); });
+  ch.paint(d, SNAP, "");
+  const pin = d.getElementById("char-pin");
+  assert.ok(pin, "the pin is in the picker line");
+  assert.equal(pin.parentNode, d.getElementById("char-pick-box"));
+  assert.equal(pin.tagName, "BUTTON");
+  assert.equal(pin.getAttribute("type"), "button");
+  assert.equal(pin.textContent, ch.PIN_LABEL);
+  assert.equal(ch.PIN_LABEL, "This is my character");
+  assert.equal(pin.getAttribute("aria-pressed"), "false");
+  // one click: the character being played is pinned
+  pin.click();
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(calls, [["POST", "/api/character", { name: "Sable" }]]);
+  assert.equal(pin.getAttribute("aria-pressed"), "true");
+  // the next snapshot says pinned: pressed; a click frees it
+  const pinned = Object.assign({}, SNAP, { character_pinned: true });
+  ch.paint(d, pinned, "");
+  assert.equal(pin.getAttribute("aria-pressed"), "true");
+  reply = { character: "Sable", pinned: false };
+  pin.click();
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(calls[1], ["POST", "/api/character", { name: "" }]);
+  assert.equal(pin.getAttribute("aria-pressed"), "false");
+  // a picked character: the pin acts on that one, and is not pressed
+  ch.paint(d, pinned, "Quill");
+  assert.equal(pin.getAttribute("aria-pressed"), "false");
+  reply = { character: "Quill", pinned: true };
+  pin.click();
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(calls[2], ["POST", "/api/character", { name: "Quill" }]);
+  // one button only, however often the card paints
+  ch.paint(d, pinned, "");
+  assert.equal(d.getElementById("char-pick-box").querySelectorAll("button").length, 1);
+});
+
+test("chars pin: shows with one character, says a failed save, no picker with nobody", async () => {
+  const d = charsCard();
+  ch.wire(d, () => {}, () => Promise.reject(new Error("down")));
+  const one = { character: "Solo", characters: [{ name: "Solo", current: true }] };
+  ch.paint(d, one, "");
+  assert.equal(d.getElementById("char-pick-box").hidden, false);
+  const pin = d.getElementById("char-pin");
+  assert.equal(pin.hidden, false);
+  pin.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(d.getElementById("char-pin-said").textContent, ch.PIN_FAILED);
+  assert.equal(pin.getAttribute("aria-pressed"), "false");
+  assert.equal(pin.getAttribute("aria-disabled"), "false");
+  ch.paint(d, { characters: [], run_history: null }, "");
+  assert.equal(d.getElementById("char-pick-box").hidden, true);
+  assert.equal(ch.shownName(SNAP, "Old"), "Old");
+  assert.equal(ch.shownName(SNAP, "Nobody"), "Sable");
+  assert.equal(ch.pinPressed(Object.assign({}, SNAP, { character_pinned: true }), "Quill"), false);
+});

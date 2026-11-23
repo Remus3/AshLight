@@ -12,7 +12,17 @@
    and one row per character: who is playing, class, level, deaths and the
    best act times from run history, paged at 8 (6 compact) under the
    picker through web/acts.js's pager. The picker moved here from the Acts
-   card's pace page; web/acts.js still reads its choice (#char-pick). */
+   card's pace page; web/acts.js still reads its choice (#char-pick).
+
+   RUN-CHARACTER-PIN (F-157): a 'This is my character' toggle button
+   (#char-pin, aria-pressed) after the picker pins the character the
+   picker shows (the picked one, else the one being played): one click
+   posts POST /api/character, which writes the same "character" setting a
+   player could type into config/local.json; a click on the pressed pin
+   frees it (""). A pinned character never switches (decision 0038). The
+   picker line shows from the first character on, so the pin is there
+   with one character too. The only network use of this file, and only
+   on that click. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
@@ -35,6 +45,11 @@
      244 px under the title at 1280x760 (compact 32 + 4 + 6 x 22 + 24 = 192
      of 204 at 1024x700) */
   var ROWS = { full: 8, compact: 6 };
+  var PIN_LABEL = "This is my character";
+  var PIN_FAILED = "AshLight couldn't save that.";
+  var PIN_PATH = "/api/character";
+  /* the last painted snapshot and pick, and the click's api (wire) */
+  var pinState = { snap: null, picked: "", api: null, busy: false };
 
   /* [{name, current}] : live characters first (the current one leads),
      then characters seen only in the saved run history; at most MAX. */
@@ -141,12 +156,84 @@
     });
   }
 
-  /* Fill the selector; hidden while there is one character or none. */
-  function paintPicker(doc, list, picked) {
+  /* The name the pin acts on: the picked one, else the one being played. */
+  function shownName(snap, picked) {
+    var list = names(snap);
+    var p = picked ? find(list, picked) : null;
+    if (p && !p.current) { return p.name; }
+    return snap && typeof snap.character === "string" && snap.character ? snap.character : "";
+  }
+
+  /* Pressed while the shown character is the pinned one. */
+  function pinPressed(snap, picked) {
+    return !!(snap && snap.character_pinned && snap.character &&
+      shownName(snap, picked) === snap.character);
+  }
+
+  /* The pin button, made once after the picker in its line. */
+  function pinButton(doc, box) {
+    var b = doc.getElementById("char-pin");
+    if (b) { return b; }
+    b = doc.createElement("button");
+    b.setAttribute("type", "button");
+    b.setAttribute("id", "char-pin");
+    b.className = "chip";
+    b.setAttribute("data-label", PIN_LABEL);
+    b.setAttribute("aria-pressed", "false");
+    b.setAttribute("aria-describedby", "char-pin-said");
+    b.textContent = PIN_LABEL;
+    box.appendChild(b);
+    var said = doc.createElement("span");
+    said.setAttribute("id", "char-pin-said");
+    said.className = "muted";
+    box.appendChild(said);
+    b.addEventListener("click", function () { pinClick(doc); });
+    return b;
+  }
+
+  /* One click: pin the shown character, or free it when pressed. */
+  function pinClick(doc) {
+    var api = pinState.api;
+    if (typeof api !== "function") {
+      var host = typeof self !== "undefined" && self.ALApp && self.ALApp.host;
+      api = host && typeof host.api === "function" ? host.api : null;
+    }
+    var snap = pinState.snap;
+    var b = doc.getElementById("char-pin");
+    var said = doc.getElementById("char-pin-said");
+    if (!b || pinState.busy || !api || !snap) { return null; }
+    var name = pinPressed(snap, pinState.picked) ? "" : shownName(snap, pinState.picked);
+    if (!name && !snap.character_pinned) { return null; }
+    pinState.busy = true;
+    b.setAttribute("aria-disabled", "true");
+    if (said) { said.textContent = ""; }
+    var p;
+    try { p = api("POST", PIN_PATH, { name: name }); } catch (e) { p = Promise.reject(e); }
+    return Promise.resolve(p).then(function (res) {
+      pinState.busy = false;
+      b.setAttribute("aria-disabled", "false");
+      var on = !!(res && res.pinned);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    }, function () {
+      pinState.busy = false;
+      b.setAttribute("aria-disabled", "false");
+      if (said) { said.textContent = PIN_FAILED; }
+    });
+  }
+
+  /* Fill the selector and the pin; hidden while there is no character. */
+  function paintPicker(doc, list, picked, snap) {
     var box = doc.getElementById("char-pick-box");
     var sel = doc.getElementById("char-pick");
     if (!box || !sel) { return; }
-    box.hidden = list.length < 2;
+    box.hidden = list.length < 1;
+    pinState.snap = snap || null;
+    pinState.picked = picked || "";
+    var pin = pinButton(doc, box);
+    pin.hidden = !shownName(snap, picked);
+    if (!pinState.busy) {
+      pin.setAttribute("aria-pressed", pinPressed(snap, picked) ? "true" : "false");
+    }
     var key = JSON.stringify(list);
     if (sel.getAttribute("data-key") !== key) {
       sel.setAttribute("data-key", key);
@@ -165,15 +252,18 @@
   /* The picker and the Characters card's rows (on each new snapshot). */
   function paint(doc, snap, picked) {
     var list = names(snap);
-    paintPicker(doc, list, picked);
+    paintPicker(doc, list, picked, snap);
     if (!doc.getElementById("chars-rows")) { return; }
     actsLib().fill(doc, "chars-rows", "characters", charRows(snap), ROWS);
     var empty = doc.getElementById("chars-empty");
     if (empty) { empty.hidden = list.length > 0; }
   }
 
-  /* onPick(name or "") on the player's change. */
-  function wire(doc, onPick) {
+  /* onPick(name or "") on the player's change. api(method, path, body)
+     -> promise of the JSON reply, for the pin's click (app.js api(); left
+     out, the page's window.ALApp.host.api is used at the click). */
+  function wire(doc, onPick, api) {
+    pinState.api = typeof api === "function" ? api : null;
     var sel = doc.getElementById("char-pick");
     if (!sel) { return; }
     sel.addEventListener("change", function () { onPick(sel.value || ""); });
@@ -181,5 +271,7 @@
 
   return { names: names, view: view, paint: paint, wire: wire, charRows: charRows,
     bestsText: bestsText, ROWS: ROWS, MAX: MAX, PLAYING: PLAYING,
+    shownName: shownName, pinPressed: pinPressed, PIN_LABEL: PIN_LABEL,
+    PIN_FAILED: PIN_FAILED,
     NOT_PLAYING: NOT_PLAYING, HISTORY_ONLY: HISTORY_ONLY };
 }));

@@ -861,6 +861,35 @@ class SessionState:
         while len(self._parked) > MAX_CHARACTERS - 1:
             self._parked.popitem(last=False)
 
+    def set_character(self, name):
+        """RUN-CHARACTER-PIN (F-157): the one setter that fixes or frees the
+        character (the "character" setting, from the picker's pin or an edit
+        of config/local.json, applied by the core without a restart). A name
+        makes it the configured character (decision 0038: a configured
+        character never switches): the current one is parked and `name`
+        loaded when it differs; with no character known yet the fields seen
+        so far become its own. None or "" frees it: the character being
+        played stays and later name lines may switch again. Returns True on
+        a change."""
+        name = name.strip() if isinstance(name, str) else None
+        name = name or None
+        with self._lock:
+            if name is None:
+                if not self.character_fixed:
+                    return False
+                self.character_fixed = False
+            else:
+                if self.character_fixed and name == self.character:
+                    return False
+                self._others.discard(name)
+                if self.character is None:
+                    self.character = name
+                elif name != self.character:
+                    self._switch(name, self._clock())
+                self.character_fixed = True
+            self.version += 1
+            return True
+
     def _note_other(self, name):
         if name and name != self.character and len(self._others) < MAX_OTHERS:
             self._others.add(name)
@@ -1331,6 +1360,8 @@ class SessionState:
                 "session_started_at": self.session_started_at,
                 "session_s": max(0.0, now - self.session_started_at),
                 "character": self.character,
+                # RUN-CHARACTER-PIN: the picker's pin is pressed
+                "character_pinned": self.character_fixed,
                 "class": self.char_class,
                 "level": self.level,
                 "zone": self.zone,
