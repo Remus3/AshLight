@@ -22,7 +22,9 @@ from . import runs as runs_mod
 from . import summary as summary_mod
 from . import underlevel as underlevel_mod
 from . import zoneguide as zoneguide_mod
-from .theorycraft import buildlive as buildlive_mod
+from .state_cards import CardsMixin
+from .state_trades import (  # noqa: F401 - re-exported, state.<name> stays
+    TRADE_EXPIRE_S, TRADE_FIELDS, TRADE_REQUESTS, TradesMixin)
 from .text.buildlive import (  # noqa: F401 - re-exported, state.<name> stays
     ALERT_ROUTES, _a_class, _fit, _upgrade_delta, build_alert_text, upgrade_notice_text,
     upgrades_text)
@@ -48,12 +50,6 @@ from .text.waystone import (  # noqa: F401 - re-exported, state.<name> stays
     waystone_text)
 
 RECENT_EVENTS = 30
-TRADE_REQUESTS = 5  # open trade whisper cards (HUD-WHISPER); oldest drops
-# DS-TRADE-EXPIRE (design 0001 N5): a card clears by itself this long after
-# it arrived; the dashboard states the rule and Dismiss stays.
-TRADE_EXPIRE_S = 600
-TRADE_FIELDS = ("kind", "item", "price_amount", "price_currency", "want_amount",
-                "league", "stash_tab", "left", "top")
 
 # Event types shown in the dashboard's recent list. UX-COPY: not
 # session_connect - the game logs one before every zone change, so
@@ -161,7 +157,13 @@ def _merge_maps(runs, moved):
     return runs
 
 
-class SessionState:
+class SessionState(CardsMixin, TradesMixin):
+    """TEST-STATE-MIXIN-A (F-192): the press cards (state_cards.CardsMixin)
+    and the trade cards (state_trades.TradesMixin) live in per-concern
+    mixins, each with its _init_<x>() called from __init__ and its
+    _view_<x>(now) called from snapshot(); the lock and the event
+    dispatcher (apply / _apply_locked) stay here."""
+
     def __init__(self, character=None, clock=time.time):
         self._lock = threading.Lock()
         self._clock = clock
@@ -211,21 +213,11 @@ class SessionState:
         self.dnd = False
         self.events_seen = 0
         self.recent_events = collections.deque(maxlen=RECENT_EVENTS)
-        self.trade_requests = collections.deque(maxlen=TRADE_REQUESTS)
+        self._init_trades()
         self.overlay_layout = None
         # OVL-CARD-SLOT (F-118): the one owner of the overlay card slot
         self.overlay = overlayview_mod.OverlayView()
-        self._trade_ids = 0
-        # TC-EVAL-UI / TC-VIEW (server/al/theorycraft/live.py).
-        self.eval = None
-        self._eval_ids = 0
-        # PRICE-1-UI: the last price check (decision 0016 contract).
-        self.price = None
-        self._price_ids = 0
-        self.build_info = None
-        # BUILD-LIVE (decision 0045): the checked items that are upgrades
-        # now (live.LastEval.rescore)
-        self.upgrades = None
+        self._init_cards()
         # HUD-ACT: per-act splits; zone level table from the game-data cache.
         self.acts = acts_mod.ActSplits()
         self.zone_table = {}
@@ -344,12 +336,6 @@ class SessionState:
             self.version += 1
             return True
 
-    def expire_trades(self, now=None):
-        """From the core's loop tick: drop expired trade cards now, so the
-        change is pushed without waiting for a snapshot."""
-        with self._lock:
-            self._expire_trades(self._clock() if now is None else now)
-
     def set_tailer(self, **fields):
         with self._lock:
             changed = any(self.tailer.get(k) != v for k, v in fields.items())
@@ -384,22 +370,6 @@ class SessionState:
         with it so the item check and the price check share `at`."""
         return self._clock()
 
-    def set_eval(self, card, keep_time=False, at=None):
-        """TC-EVAL-UI: publish the last item check (a live.compact() card).
-        keep_time keeps the previous card's time (a re-score after a
-        weights or build change), so the overlay does not show it again.
-        `at`: the press time when the caller already took it."""
-        with self._lock:
-            if at is None:
-                at = self._clock()
-                if keep_time and self.eval is not None:
-                    at = self.eval["at"]
-            self._eval_ids += 1
-            self.eval = dict(card, id=self._eval_ids, at=at)
-            if not keep_time:  # OVL-CARD-SLOT: a real press, not a re-score
-                self.overlay.on_press(at)
-            self.version += 1
-
     def set_overlay_sample(self):
         """OVL-CARD-SLOT: the Settings button's 10 s sample card. Display
         state only: no event, eval, price or run history entry."""
@@ -418,70 +388,6 @@ class SessionState:
                 return None
             self.overlay.dirty = False
             return self.overlay.to_doc()
-
-    def set_price(self, card, at=None, keep_time=False):
-        """PRICE-1-UI (decision 0016): publish the last price check. `card`
-        follows the PRICE-1 result contract (status, wait_s, item, league,
-        count, listings, error). `at` is the hotkey press time (the same
-        press stamps the eval too); keep_time keeps the previous card's time
-        for a status update of the same check (searching -> done)."""
-        card = dict(card) if isinstance(card, dict) else {}
-        card["listings"] = [dict(r) for r in _dicts(card.get("listings"))][:PRICE_LISTINGS]
-        with self._lock:
-            if at is None:
-                at = self._clock()
-                if keep_time and self.price is not None:
-                    at = self.price["at"]
-            self._price_ids += 1
-            self.price = dict(card, id=self._price_ids, at=float(at),
-                              updated_at=float(self._clock()))
-            self.version += 1
-
-    def set_build_info(self, info):
-        """TC-VIEW: the loaded build's summary (live.build_info())."""
-        with self._lock:
-            if info != self.build_info:
-                self.build_info = dict(info) if info else None
-                self.version += 1
-
-    def set_upgrades(self, view):
-        """BUILD-LIVE: the upgrade notices of the current character's
-        checked items (live.LastEval.rescore)."""
-        with self._lock:
-            view = dict(view) if isinstance(view, dict) else None
-            if view != self.upgrades:
-                self.upgrades = view
-                self.version += 1
-
-    def _upgrades_view(self):
-        """Caller holds the lock. None until the first check."""
-        v = self.upgrades
-        if not v:
-            return None
-        items = [dict(n, **upgrade_notice_text(n)) for n in _dicts(v.get("items"))]
-        return dict(v, items=items, text=upgrades_text(v),
-                    new=sum(1 for n in items if n.get("new")))
-
-    def _build_alert(self):
-        """Caller holds the lock. BUILD-LIVE: the stale-build alert."""
-        found = buildlive_mod.alert(self.build_info, self.character, self.char_class,
-                                    self.level)
-        return dict(found, **build_alert_text(found)) if found else None
-
-    def bump_calc_rev(self):
-        """MATH-SKILL-SPLIT: a new PoB output table is ready, so the build
-        view is read again. AREA-AUDIT P7-4: read and write under one lock
-        hold, so a build loaded meanwhile is never overwritten. Returns
-        whether a build summary was there to bump."""
-        with self._lock:
-            info = self.build_info
-            if not info:
-                return False
-            rev = info.get("calc_rev")
-            rev = rev if isinstance(rev, int) and not isinstance(rev, bool) else 0
-            self.build_info = dict(info, calc_rev=rev + 1)
-            self.version += 1
-            return True
 
     def set_campaign(self, facts=False, flasks=False, boots_level=False):
         """UTIL-CAMPAIGN-CHECKS: any of the build facts
@@ -839,77 +745,6 @@ class SessionState:
                 self.version += 1
                 return True
             return False
-
-    def dismiss_trade(self, trade_id=None):
-        """Drop one open trade card by id, or all of them (trade_id None).
-        Returns how many were dismissed. Dashboard only: nothing goes to the
-        game."""
-        with self._lock:
-            before = len(self.trade_requests)
-            if trade_id is None:
-                self.trade_requests.clear()
-            else:
-                kept = [r for r in self.trade_requests if r["id"] != trade_id]
-                self.trade_requests.clear()
-                self.trade_requests.extend(kept)
-            n = before - len(self.trade_requests)
-            if n:
-                self.version += 1
-            return n
-
-    def _expire_trades(self, now):
-        """Drop trade cards older than TRADE_EXPIRE_S. Caller holds the
-        lock. Bumps the version when one goes, so the change is pushed."""
-        kept = [r for r in self.trade_requests if now - r["at"] < TRADE_EXPIRE_S]
-        if len(kept) != len(self.trade_requests):
-            self.trade_requests.clear()
-            self.trade_requests.extend(kept)
-            self.version += 1
-
-    def _close_trade(self, name=None):
-        """OVL-TRADE-CANCEL (decision 0019): a finished trade ("Trade
-        accepted." / "Trade cancelled.") closes one open card: the one from
-        `name` when a line names the counterparty, else the oldest. Caller
-        holds the lock. Returns True when a card went."""
-        if not self.trade_requests:
-            return False
-        rows = list(self.trade_requests)
-        drop = next((r for r in rows if name and r.get("from") == name), rows[0])
-        self.trade_requests.clear()
-        self.trade_requests.extend(r for r in rows if r is not drop)
-        return True
-
-    def _trade_row(self, ev, now):
-        self._trade_ids += 1
-        row = {"id": self._trade_ids, "at": now, "from": ev.get("from")}
-        trade = ev.get("trade") or {}
-        for k in TRADE_FIELDS:
-            if k in trade:
-                row[k] = trade[k]
-        return row
-
-    def _refresh_trade(self, ev, now):
-        """PLAY-F-120-TRADE-REFRESH: an incoming trade whisper with the same
-        sender and item text as an open card refreshes that card (its at and
-        the TRADE_FIELDS of the newest whisper) instead of adding one; the
-        card keeps its id and place. Caller holds the lock. Returns True when
-        a card was refreshed."""
-        sender = ev.get("from")
-        trade = ev.get("trade") or {}
-        item = trade.get("item")
-        if not isinstance(sender, str) or not sender or not isinstance(item, str):
-            return False
-        row = next((r for r in self.trade_requests
-                    if r.get("from") == sender and r.get("item") == item), None)
-        if row is None:
-            return False
-        row["at"] = now
-        for k in TRADE_FIELDS:
-            if k in trade:
-                row[k] = trade[k]
-            else:
-                row.pop(k, None)
-        return True
 
     def _is_me(self, name):
         return self.character is None or name == self.character
@@ -1470,7 +1305,9 @@ class SessionState:
             self._expire_trades(now)
             # BUILD-LIVE (decision 0045): the stale-build alert, once; the
             # item check words carry its caveat (TC-VERDICT-CAVEAT, F-043)
-            alert = self._build_alert()
+            cards = self._view_cards(now)
+            alert = cards["build_alert"]
+            trades = self._view_trades(now)
             guide = self._zone_guide_view()
             snap = {
                 "version": self.version,
@@ -1499,29 +1336,23 @@ class SessionState:
                 "dnd": self.dnd,
                 "events_seen": self.events_seen,
                 "recent_events": list(self.recent_events),
-                "trade_requests": [dict(r, **trade_card_text(r))
-                                   for r in self.trade_requests],
+                "trade_requests": trades["trade_requests"],
                 "overlay_layout": dict(self.overlay_layout) if self.overlay_layout else None,
                 "tailer": dict(self.tailer),
                 # decision 0029 amendment (DESKTOP-CLIENT): the 0029 idle
                 # "game may be closed" state as one boolean; the overlay
                 # hides while it is true
                 "game_idle": bool(self.tailer.get("consented") and self.tailer.get("idle")),
-                "eval": (dict(self.eval, text=eval_card_text(self.eval, alert),
-                              expires_at=self.eval["at"] + self._card_time(EVAL_CARD_S))
-                         if self.eval else None),
-                "price": (dict(self.price, text=price_card_text(self.price),
-                               expires_at=price_until(self.price,
-                                                      self._card_time(PRICE_CARD_S)))
-                          if self.price else None),
+                "eval": cards["eval"],
+                "price": cards["price"],
                 # The one overlay card chosen at this moment (decision 0016),
                 # by the card-slot holder order (OVL-CARD-SLOT)
                 "card": self.overlay.card(self, now, alert),
                 "overlay": self.overlay.view(now),
-                "build": dict(self.build_info) if self.build_info else None,
+                "build": cards["build"],
                 # BUILD-LIVE (decision 0045): stale build, upgrades now
                 "build_alert": alert,
-                "upgrades": self._upgrades_view(),
+                "upgrades": cards["upgrades"],
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
                 "maps": dict(self.maps.view(now),
