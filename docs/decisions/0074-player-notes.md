@@ -31,11 +31,18 @@ edit box and the export option are PLAY-F-186B.
    format, surrogate, private-use and unassigned characters are refused;
    a text over 200 characters is refused, never cut. Renderers show it as
    text only.
-5. The core loads the file into the hot reload registry (decision 0042).
-   A hand edit is taken on its next stat change. A malformed file (bad
-   JSON, wrong schema, a bound broken, a bad entry) keeps the last good
-   copy and shows one Checks note ("Your notes did not load ... The last
-   good copy stays in use."). At start a malformed file falls back to its
+5. The core loads the file into the hot reload registry (decision 0042),
+   stat-throttled: the registry poll on the core tick stats it at most
+   once per 60 s (playernotes.CHECK_S), so the tick's stat budget (B3, at
+   most 20 stats, tests/test_budget_tick.py) is unchanged. AshLight is the
+   only writer: a Save keeps the new book in memory and publishes it at
+   once, and a hand edit is taken within a minute. A re-read is pushed to
+   the snapshot by the watch's listener, so the core adds no stat of its
+   own. A malformed file (bad JSON, wrong schema, a bound broken, a bad
+   entry) keeps the last good copy and shows one Checks note in plain
+   words ("Your notes did not load (two notes share one zone). The last
+   good copy stays in use. Fix the file, or save a note to replace it.").
+   At start a malformed file falls back to its
    `.bak` (jsonfile keeps one, a copy of the last good write) as the last
    good copy; the broken file is left alone until the next Save writes
    over it.
@@ -70,6 +77,15 @@ edit box and the export option are PLAY-F-186B.
   wrong would be overwritten silently. Keeping the last good copy with a
   Checks note is the hot reload contract the package asks for.
 - Clear the notes with run history: rejected (item 8).
+- Stat the notes file on every core tick, as the other hot reloaded data
+  files are (directly or through the registry poll): rejected; it takes
+  the worst-case idle tick to 21 stats, over B3's 20, and B3 is not this
+  package's to move. Folding the check into another watch's stat:
+  rejected; no watch shares this file, and a shared stat would tie two
+  unrelated files' change detection together. Checking only on Save:
+  rejected; a hand edit or a broken file would never be seen, and the
+  package asks for the last-good-copy Checks note. A 60 s throttle keeps
+  both: the Save path is instant and outside edits wait at most a minute.
 
 ## Why
 
@@ -81,4 +97,6 @@ other player-data stores already follow.
 ## Reverses if
 
 The operator rules local note files unwanted, a note reaches a report or
-an export unasked, or decision 0036 changes.
+an export unasked, or decision 0036 changes. The 60 s throttle (item 5)
+reverses if: B3 gains room for one more stat, players miss hand edits
+that take up to a minute, or another writer of the file appears.

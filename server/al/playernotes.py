@@ -15,9 +15,11 @@ character name of decision 0038; the text is whatever the player typed.
 - It is written only by save(), which POST /api/player-note calls on the
   player's Save (token, Host / Origin checks, plain text body, size cap).
   An empty text removes the note. Over the cap the oldest notes leave.
-- It joins the hot reload registry (decision 0042): a hand edit is picked
-  up on its next stat change; a malformed file keeps the last good copy
-  and shows one Checks note. At start a malformed file falls back to its
+- It joins the hot reload registry (decision 0042), stat-throttled: the
+  registry poll stats it at most once per CHECK_S (60 s), so the core
+  tick's stat budget (B3) is unchanged; a Save refreshes at once (AshLight
+  is the only writer), a hand edit is picked up within a minute. A
+  malformed file keeps the last good copy and shows one Checks note. At start a malformed file falls back to its
   .bak as the last good copy (the broken file itself is left alone until
   the next Save writes over it).
 - Plain text, no markup: whitespace runs fold to one space, control and
@@ -30,6 +32,7 @@ player picks it). Standard library only.
 """
 
 import copy
+import json
 import re
 import threading
 import time
@@ -53,6 +56,26 @@ AREA_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 _BAD_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn")
 
 
+# PN-2: refusals the Save shows, each a sentence with a next step
+TEXT_LONG = f"Your note is over {MAX_NOTE} characters. Shorten it and save again."
+TEXT_BAD = ("Your note has a character AshLight can't keep. "
+            "Use plain letters, digits and punctuation.")
+NO_CHARACTER = "AshLight doesn't know your character yet. Enter a zone, then save again."
+NO_ZONE = "AshLight doesn't know this zone yet. Enter a zone, then save again."
+# PN-1: why a notes file did not load (the hot reload note's reason)
+FILE_FORMAT = "the file is not in AshLight's notes format"
+FILE_ROW = "a note is not in the right form"
+FILE_TWO = "two notes share one zone"
+FILE_LONG = f"a note is over {MAX_NOTE} characters"
+FILE_MANY = f"the file holds more than {MAX_ZONES} notes"
+FILE_CHARS = f"the file holds notes of more than {MAX_CHARACTERS} characters"
+FILE_BIG = "the file is too large"
+FIX_TAIL = "Fix the file, or save a note to replace it."
+# B3 (tests/test_budget_tick.py): the registry poll stats the file at most
+# once per CHECK_S; a Save refreshes at once, so only an outside edit waits
+CHECK_S = 60.0
+
+
 class NoteError(ValueError):
     """A note the store refuses; str() is the reason, safe to show."""
 
@@ -61,18 +84,18 @@ def clean_text(text):
     """The note as stored ('' removes it), or NoteError. Whitespace runs
     (new lines and tabs too) fold to one space; nothing is cut."""
     if not isinstance(text, str):
-        raise NoteError("the note must be text")
+        raise NoteError(TEXT_BAD)
     text = " ".join(text.split())
     if len(text) > MAX_NOTE:
-        raise NoteError(f"the note is longer than {MAX_NOTE} characters")
+        raise NoteError(TEXT_LONG)
     if any(unicodedata.category(ch) in _BAD_CATEGORIES for ch in text):
-        raise NoteError("the note must be plain text")
+        raise NoteError(TEXT_BAD)
     return text
 
 
 def clean_area(area_id):
     if not isinstance(area_id, str) or not AREA_RE.match(area_id):
-        raise NoteError("unknown zone")
+        raise NoteError(NO_ZONE)
     return area_id
 
 
@@ -80,13 +103,13 @@ def clean_name(name):
     if (not isinstance(name, str) or not name or len(name) > MAX_NAME
             or name != name.strip()
             or any(unicodedata.category(ch) in _BAD_CATEGORIES for ch in name)):
-        raise NoteError("unknown character")
+        raise NoteError(NO_CHARACTER)
     return name
 
 
 def _at(v):
     if isinstance(v, bool) or not isinstance(v, int) or v < 0:
-        raise ValueError("bad note time")
+        raise ValueError(FILE_ROW)
     return v
 
 
@@ -95,37 +118,46 @@ def from_doc(doc):
     on anything outside the bounds (the hot reload keeps the last good
     copy then)."""
     if not isinstance(doc, dict) or doc.get("schema") != SCHEMA:
-        raise ValueError("not a schema 1 notes file")
+        raise ValueError(FILE_FORMAT)
     rows = doc.get("notes")
     if not isinstance(rows, list):
-        raise ValueError("notes is not a list")
+        raise ValueError(FILE_FORMAT)
     if len(rows) > MAX_ZONES:
-        raise ValueError(f"more than {MAX_ZONES} notes")
+        raise ValueError(FILE_MANY)
     book = {}
     for row in rows:
         if not isinstance(row, dict):
-            raise ValueError("a note is not an object")
+            raise ValueError(FILE_ROW)
+        raw = row.get("text")
+        if isinstance(raw, str) and len(raw) > MAX_NOTE:
+            raise ValueError(FILE_LONG)
         try:
             name = clean_name(row.get("character"))
             area = clean_area(row.get("area_id"))
-            text = clean_text(row.get("text"))
-        except NoteError as exc:
-            raise ValueError(str(exc)) from None
-        if not text or text != row.get("text"):
-            raise ValueError("a note text is not stored plain text")
+            text = clean_text(raw)
+        except NoteError:
+            raise ValueError(FILE_ROW) from None
+        if not text or text != raw:
+            raise ValueError(FILE_ROW)
         per = book.setdefault(name, {})
         if area in per:
-            raise ValueError("a zone has two notes")
+            raise ValueError(FILE_TWO)
         per[area] = {"text": text, "at": _at(row.get("at"))}
     if len(book) > MAX_CHARACTERS:
-        raise ValueError(f"more than {MAX_CHARACTERS} characters")
+        raise ValueError(FILE_CHARS)
     return book
 
 
 def check(path):
     """The hot reload check: size cap, JSON object, then from_doc's bounds
     (so a bad file is refused before it replaces the last good copy)."""
-    doc = hotreload.check_json(max_bytes=MAX_BYTES, kind=dict)(path)
+    p = Path(path)
+    if p.stat().st_size > MAX_BYTES:
+        raise ValueError(FILE_BIG)
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, RecursionError):
+        raise ValueError(FILE_FORMAT) from None
     from_doc(doc)
     return doc
 
@@ -158,21 +190,60 @@ def _trim(book, keep):
             del book[name]
 
 
+class _NotesWatch(hotreload.Watched):
+    """The notes file's Watched (decision 0042) with two changes: get()
+    stats at most once per CHECK_S unless forced (the registry poll runs it
+    every core tick, B3), and a held last good copy says how to fix it."""
+
+    def __init__(self, *a, clock=time.monotonic, **kw):
+        self._mono = clock
+        self._checked = None
+        super().__init__(*a, **kw)
+
+    def _note(self, text):
+        if text.endswith("The last good copy stays in use."):
+            text = f"{text} {FIX_TAIL}"
+        super()._note(text)
+
+    def _notify(self, value):
+        """Every fresh load, the first too (a file made after start: the
+        base class skips loads == 1, which the start read already covers)."""
+        if self.on_change is not None:
+            try:
+                self.on_change(value)
+            except Exception:  # noqa: BLE001 - a listener never breaks a load
+                hotreload.LOG.exception("hot reload listener failed for %s",
+                                        self.name)
+
+    def get(self, force=False):
+        now = self._mono()
+        if (not force and self._checked is not None
+                and now - self._checked < CHECK_S):
+            with self._lock:
+                return self._value
+        self._checked = now
+        return super().get()
+
+
 class PlayerNotes:
     """The notes file of one runtime dir. Thread safe: HTTP handler threads
-    call save(); the core tick calls get()."""
+    call save(); the core reads book() (no stat)."""
 
-    def __init__(self, path, registry=None, clock=time.time, on_change=None):
-        """on_change(book), optional: called after a re-read the hot reload
-        registry's poll made (a hand edit, or this store's own write), so
-        the core publishes it with no stat of its own on the tick (B3)."""
+    def __init__(self, path, registry=None, clock=time.time, on_change=None,
+                 mono=time.monotonic):
+        """on_change(book), optional: called after a re-read made by the
+        hot reload registry's throttled poll (a hand edit, or this store's
+        own write), so the core publishes it with no stat of its own (B3).
+        mono: the monotonic clock of the throttle (tests replace it)."""
         self.path = Path(path)
         self._clock = clock
         self._lock = threading.RLock()
         self._listener = on_change
-        self.watch = hotreload.Watched(self.path, hotreload.load_json, name=NAME,
-                                       default=dict, check=check, from_doc=from_doc,
-                                       registry=registry, on_change=self._loaded)
+        self._seen = self._book = None
+        self.watch = _NotesWatch(self.path, hotreload.load_json, name=NAME,
+                                 default=dict, check=check, from_doc=from_doc,
+                                 registry=registry, on_change=self._loaded,
+                                 clock=mono)
         self._seen = self.watch.get()
         self._book = self._seen
         if self.watch.error:
@@ -208,7 +279,8 @@ class PlayerNotes:
     def get(self):
         """The current book (one stat; a re-read only on a change). Do not
         change it: save() makes a new one."""
-        value = self.watch.get()  # outside the lock: a re-read calls _loaded
+        # forced, outside the lock: a re-read calls _loaded
+        value = self.watch.get(force=True)
         with self._lock:
             if value is not self._seen:  # a fresh good load (hand edit, our write)
                 self._seen = value

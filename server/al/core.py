@@ -363,10 +363,10 @@ class Core:
         self._visits_saved = self.state.visits_doc()[0]
         # PLAY-F-186A (decision 0074): the player's own note per zone and
         # character, one bounded runtime file in the hot reload registry
-        # (a malformed file keeps the last good copy, a Checks note; a
-        # re-read the registry poll makes is published by on_change, so
-        # the tick adds no stat of its own); written only by
-        # save_player_note (the player's Save)
+        # (a malformed file keeps the last good copy, a Checks note; the
+        # registry poll stats it at most once a minute and a re-read is
+        # published by on_change, so the tick adds no stat of its own, B3);
+        # written only by save_player_note (the player's Save)
         self.player_notes = playernotes.PlayerNotes(
             playernotes.default_path(self.runtime),
             on_change=self.state.set_player_notes)
@@ -842,10 +842,10 @@ class Core:
         with self.state._lock:
             character, current = self.state.character, self.state.area_id
         if not character:
-            raise playernotes.NoteError("no character known yet")
+            raise playernotes.NoteError(playernotes.NO_CHARACTER)
         area = area_id if area_id is not None else current
         if not area:
-            raise playernotes.NoteError("no zone known yet")
+            raise playernotes.NoteError(playernotes.NO_ZONE)
         note = self.player_notes.save(character, area, text)
         self.state.set_player_notes(self.player_notes.book())
         return note

@@ -124,6 +124,7 @@ def test_malformed_file_keeps_the_last_good_copy_with_a_note(tmp_path):
         os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 10_000_000))
         assert s.note("Ash", "G1_2")["text"] == "first"
         assert s.error and pn.NAME in s.error and "last good copy" in s.error
+        assert s.error.endswith(pn.FIX_TAIL)
         assert [n for n in reg.notes() if pn.NAME in n]
     # a good hand edit is taken on its next change and the note clears
     path.write_text(json.dumps({"schema": 1, "notes": [
@@ -253,7 +254,7 @@ def test_route_needs_the_token_and_plain_text(srv):
     assert _post(srv, b"x", token="wrong")[0] == 401
     # nothing known yet: refused, nothing written
     code, doc = _post(srv, b"x")
-    assert code == 400 and "character" in doc["error"]
+    assert code == 400 and doc["error"] == pn.NO_CHARACTER
     _enter(core.state)
     for ctype in ("application/json", "text/html", "text/plain; charset=latin-1",
                   "multipart/form-data", ""):
@@ -306,7 +307,44 @@ def test_note_shows_on_the_next_entry_for_that_character_only(tmp_path):
             encoding="utf-8")
         st_ = os.stat(path)
         os.utime(path, ns=(st_.st_atime_ns, st_.st_mtime_ns + 10_000_000))
-        core.player_notes.watch.get()  # the registry poll's stat
+        core.player_notes.watch.get(force=True)  # the registry poll, a minute on
         assert core.state.snapshot()["player_note"]["text"] == "edited"
     finally:
         core.close()
+
+
+def test_registry_poll_stats_the_file_at_most_once_a_minute(tmp_path, monkeypatch):
+    """B3 (tests/test_budget_tick.py): the core tick's registry poll does
+    not stat the notes file again inside CHECK_S; a Save is seen at once
+    (save() keeps the book), an outside edit after the minute."""
+    clock = [100.0]
+    reg = hotreload.Registry()
+    path = tmp_path / pn.FILE_NAME
+    seen = []
+    s = pn.PlayerNotes(path, registry=reg, mono=lambda: clock[0], on_change=seen.append)
+    s.save("Ash", "G1_2", "mine", now=1)
+    assert s.book()["Ash"]["G1_2"]["text"] == "mine"
+    stats = []
+    real = os.stat
+
+    def counting(p, *a, **k):
+        if Path(p) == path:
+            stats.append(p)
+        return real(p, *a, **k)
+    monkeypatch.setattr(hotreload.os, "stat", counting)
+    path.write_text(json.dumps({"schema": 1, "notes": [
+        {"character": "Ash", "area_id": "G1_2", "text": "outside", "at": 2}]}),
+        encoding="utf-8")
+    st = real(path)
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 10_000_000))
+    clock[0] += pn.CHECK_S - 1
+    reg.poll()
+    assert stats == [] and s.book()["Ash"]["G1_2"]["text"] == "mine"
+    clock[0] += 1
+    reg.poll()
+    n = len(stats)  # the due stat, plus the re-read's size check on a change
+    assert 1 <= n <= 2 and s.book()["Ash"]["G1_2"]["text"] == "outside"
+    assert seen and seen[-1]["Ash"]["G1_2"]["text"] == "outside"
+    clock[0] += pn.CHECK_S - 1
+    reg.poll()
+    assert len(stats) == n

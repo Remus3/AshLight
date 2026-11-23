@@ -88,7 +88,7 @@ SAVE_FAILED = "AshLight couldn't save the settings."
 # TC-WORN-WIRE: the worn-gear file could not be written
 WEAR_SAVE_FAILED = "AshLight couldn't save the worn item."
 # PLAY-F-186A: the player notes file could not be written
-NOTE_SAVE_FAILED = "AshLight couldn't save your note."
+NOTE_SAVE_FAILED = "AshLight couldn't save your note. Try again."
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
 # POST /api/eval: the item key's one clipboard text, an item or a copied
 # build (TC-PRESS-BUILD: the build size, app/eval_hotkey.js caps 256 KB)
@@ -958,10 +958,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError:
-            return self._json(400, {"error": "the note must be UTF-8 text"})
+            return self._json(400, {"error": playernotes.TEXT_BAD})
         area = query.get("area")
         if area is not None and len(area) != 1:
-            return self._json(400, {"error": "one area at most"})
+            return self._json(400, {"error": "Save one zone at a time."})
         try:
             playernotes.clean_text(text)
             note = self.server.core.save_player_note(
