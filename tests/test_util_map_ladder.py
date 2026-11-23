@@ -287,3 +287,47 @@ def test_restart_rebuilt_map_matches_saved_within_match_s(tmp_path):
     # the same rows again: all known, no write
     assert lad.record("Quill", rows) is False
     assert lad.view("Quill", rows)["maps"] == 5
+
+
+def test_session_ladder_holds_one_character_after_a_switch():
+    """RUN-P8-8-CHARMIX (AUDIT-P8-LOW P8-8): after a switch to another of
+    the player's characters (decision 0038) the "This session" ladder shows
+    that character's maps only, and the first one's come back with it."""
+    ev = [lvl(1000, 80, "Quill")]
+    ev += _map("MapCrypt", 1100, 65, 1, 300)
+    ev += _map("MapBog", 1500, 66, 2, 300)
+    ev += [_ev("log_opened", 2000), lvl(2100, 70, "Sable")]
+    ev += _map("MapSump", 2200, 70, 3, 300)
+    st, clock = _state(ev)
+    assert st.snapshot()["character"] == "Sable"
+    lad = _ladder(st)
+    assert lad["maps"] == 1 and [r["area_level"] for r in lad["levels"]] == [70]
+    character, rows = st.map_ladder_rows()
+    assert character == "Sable"
+    assert [r["area_id"] for r in rows] == ["MapSump"]
+    assert all(r["character"] == "Sable" for r in rows)
+    # back to Quill after the next game start: its own two maps again
+    for e in [_ev("log_opened", 3000), lvl(3100, 81, "Quill")]:
+        clock[0] = e["recv_ts"]
+        st.apply(e)
+    lad = _ladder(st)
+    assert st.snapshot()["character"] == "Quill"
+    assert lad["maps"] == 2 and [r["area_level"] for r in lad["levels"]] == [66, 65]
+
+
+def test_all_sessions_view_takes_the_characters_rows_only(tmp_path):
+    """mapladder.view and record leave out a row carrying another
+    character's name (RUN-P8-8-CHARMIX)."""
+    lad = mapladder.MapLadder(tmp_path / mapladder.FILE_NAME)
+    mine = {"area_id": "MapCrypt", "seed": 1, "opened_at": 100.0, "area_level": 65,
+            "time_s": 300.0, "deaths": 0, "level_ups": 0, "done": True,
+            "character": "Quill"}
+    other = dict(mine, area_id="MapBog", opened_at=900.0, area_level=70,
+                 character="Sable")
+    plain = dict(mine, area_id="MapFen", opened_at=1500.0, area_level=66)
+    del plain["character"]
+    assert lad.record("Quill", [mine, other, plain])
+    assert [r["area_id"] for r in lad.by["Quill"]] == ["MapCrypt", "MapFen"]
+    assert "Sable" not in lad.by
+    view = lad.view("Quill", [mine, other, plain])
+    assert view["maps"] == 2 and view["highest"] == 66

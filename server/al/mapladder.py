@@ -162,6 +162,18 @@ def _cap(by):
     return {k: by[k] for k in keep}
 
 
+def _theirs(key, rows):
+    """RUN-P8-8-CHARMIX (AUDIT-P8-LOW P8-8): the rows of the character
+    `key` only. A row may carry its "character" (state.map_ladder_rows);
+    a row of another character is left out, a row without one is kept."""
+    out = []
+    for r in rows:
+        if "character" in r and (r["character"] or "")[:MAX_ID] != key:
+            continue
+        out.append(r)
+    return out
+
+
 def _row_sig(r):
     """What of a session row shapes the all-sessions view: its match key,
     the ladder fields and, for a finished map, its time (an open map's
@@ -223,7 +235,7 @@ class MapLadder:
         idx = self._keys(key)
         new = []
         seen = {}
-        for m in maps:
+        for m in _theirs(key, maps):
             rec = clean(m)
             if rec is None or self._known(idx, rec) or self._known(seen, rec):
                 continue
@@ -248,8 +260,10 @@ class MapLadder:
         """The all-sessions ladder of `character`: the saved maps plus this
         session's rows not saved yet (the open map, a map closed since the
         last save), each map once. The last view is returned again while
-        neither the saved list nor the rows' shaping fields changed."""
+        neither the saved list nor the rows' shaping fields changed. Only
+        the character's own rows count (_theirs)."""
         key = (character or "")[:MAX_ID]
+        session_rows = _theirs(key, session_rows)
         sig = (key, self.rev, tuple(_row_sig(r) for r in session_rows))
         if sig == self._view_sig:
             return self._view
