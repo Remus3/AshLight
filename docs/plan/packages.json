@@ -19335,7 +19335,9 @@
     "web/index.html",
     "app/test/tc_view.test.js",
     "server/al/theorycraft/buildfile.py",
-    "tests/test_tc_buildfile.py"
+    "tests/test_tc_buildfile.py",
+    "web/panels/weights.js",
+    "web/app.css"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -19372,7 +19374,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Edits web/tc.js weightRows / weightsDoc (lines 225-253), web/app.js weights editor (lines 696-791) and the #weights-form block of web/index.html (lines 481-503). Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). FOLDED TC-BUILDFILE-TEXTS: Tier P3. buildfile.py _passives notes (lines 147-175); web/index.html #buildfile-more block (lines 354-365). The upload is the player's own browser act; no endpoint is called. F-142 (cluster DATA) edits buildfile.py tree resolution. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). PLAN 07: folded from TC-WEIGHTS-DELTA-UI, TC-BUILDFILE-TEXTS (one agent, one commit series, at most 90 minutes).",
+   "notes": "Tier P2. Edits web/tc.js weightRows / weightsDoc (lines 225-253), web/app.js weights editor (lines 696-791) and the #weights-form block of web/index.html (lines 481-503). Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). FOLDED TC-BUILDFILE-TEXTS: Tier P3. buildfile.py _passives notes (lines 147-175); web/index.html #buildfile-more block (lines 354-365). The upload is the player's own browser act; no endpoint is called. F-142 (cluster DATA) edits buildfile.py tree resolution. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). PLAN 07: folded from TC-WEIGHTS-DELTA-UI, TC-BUILDFILE-TEXTS (one agent, one commit series, at most 90 minutes). Session 22 widening (needs-path rule): files add web/panels/weights.js (the weights panel moved out of web/app.js by TEST-WEB-PANELS) and web/app.css.",
    "wave": 37,
    "owner": "session",
    "tier": "P2",
@@ -19389,7 +19391,8 @@
     "F-192"
    ],
    "files": [
-    "server/al/state.py"
+    "server/al/state.py",
+    "tests/test_live_exit.py"
    ],
    "new_files": [
     "server/al/state_idle.py",
@@ -19420,7 +19423,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Moves: idle and summary - _counters, _close_stretch, session_end_due, check_session_end, _idle_due, seed_last_line, log_idle_due, check_log_idle, set_session_summary (1614-1700); published views - publish and its wrappers, set_map_ladder, map_ladder_rows, set_zone_table, set_zone_guide, visits_doc, load_visits, clear_visits, _zone_note, _zone_guide_view, the hint store methods (1180-1283, 1591-1613). After this package SessionState keeps __init__, the dispatcher, restore and snapshot as thin composition. Lock discipline and operation order must not change: methods move verbatim, the lock stays the class's one lock, apply / _apply_locked (1419-1590) are not moved. The mixin pattern is the loop's (tools/loop_inbox.py, tools/loop_merge.py). tests/test_soak.py is a timing test: it runs in the batch suite or through the gate, not in the ungated subset. The whole suite runs through the gate before the last of the three merges. Source: research 0047 R5 (2).",
+   "notes": "Moves: idle and summary - _counters, _close_stretch, session_end_due, check_session_end, _idle_due, seed_last_line, log_idle_due, check_log_idle, set_session_summary (1614-1700); published views - publish and its wrappers, set_map_ladder, map_ladder_rows, set_zone_table, set_zone_guide, visits_doc, load_visits, clear_visits, _zone_note, _zone_guide_view, the hint store methods (1180-1283, 1591-1613). After this package SessionState keeps __init__, the dispatcher, restore and snapshot as thin composition. Lock discipline and operation order must not change: methods move verbatim, the lock stays the class's one lock, apply / _apply_locked (1419-1590) are not moved. The mixin pattern is the loop's (tools/loop_inbox.py, tools/loop_merge.py). tests/test_soak.py is a timing test: it runs in the batch suite or through the gate, not in the ungated subset. The whole suite runs through the gate before the last of the three merges. Source: research 0047 R5 (2). Session 22 widening (needs-path rule): files add tests/test_live_exit.py (test_exit_detection_never_looks_at_processes reads SessionState source; check_log_idle moves to state_idle.IdleMixin, so the process-word scan covers state_idle.py).",
    "wave": 37,
    "owner": "session",
    "tier": "P3",

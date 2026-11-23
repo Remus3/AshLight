@@ -1957,7 +1957,8 @@ no-op switch.
 
 - Session 10; width 2 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (TC-WEIGHTS-DELTA-UI); web/app.js
-  (TC-WEIGHTS-DELTA-UI); server/al/state.py (TEST-STATE-MIXIN-C).
+  (TC-WEIGHTS-DELTA-UI); server/al/state.py (TEST-STATE-MIXIN-C);
+  web/app.css (TC-WEIGHTS-DELTA-UI).
 - Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
   TC-WEIGHTS-DELTA-UI.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
@@ -1968,8 +1969,8 @@ no-op switch.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- TC-WEIGHTS-DELTA-UI [session, L 90m, build, P2, DR] Weights panel marks changes and resets + .build texts: correct the passives note, name the upload route. Files: web/tc.js, web/app.js, web/index.html, app/test/tc_view.test.js, server/al/theorycraft/buildfile.py (+1 more). Deps: TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB.
-- TEST-STATE-MIXIN-C [session, L 70m, build, P3] SessionState mixins: idle and summary, published views. Files: server/al/state.py, server/al/state_idle.py, server/al/state_views.py. Deps: TEST-STATE-MIXIN-B.
+- TC-WEIGHTS-DELTA-UI [session, L 90m, build, P2, DR] Weights panel marks changes and resets + .build texts: correct the passives note, name the upload route. Files: web/tc.js, web/app.js, web/index.html, app/test/tc_view.test.js, server/al/theorycraft/buildfile.py (+3 more). Deps: TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB.
+- TEST-STATE-MIXIN-C [session, L 70m, build, P3] SessionState mixins: idle and summary, published views. Files: server/al/state.py, tests/test_live_exit.py, server/al/state_idle.py, server/al/state_views.py. Deps: TEST-STATE-MIXIN-B.
 
 ### Wave 38: operator requests 2026-11-19, cores
 
