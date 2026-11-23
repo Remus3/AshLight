@@ -19335,7 +19335,9 @@
     "web/index.html",
     "app/test/tc_view.test.js",
     "server/al/theorycraft/buildfile.py",
-    "tests/test_tc_buildfile.py"
+    "tests/test_tc_buildfile.py",
+    "web/panels/weights.js",
+    "web/app.css"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -19372,7 +19374,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P2. Edits web/tc.js weightRows / weightsDoc (lines 225-253), web/app.js weights editor (lines 696-791) and the #weights-form block of web/index.html (lines 481-503). Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). FOLDED TC-BUILDFILE-TEXTS: Tier P3. buildfile.py _passives notes (lines 147-175); web/index.html #buildfile-more block (lines 354-365). The upload is the player's own browser act; no endpoint is called. F-142 (cluster DATA) edits buildfile.py tree resolution. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). PLAN 07: folded from TC-WEIGHTS-DELTA-UI, TC-BUILDFILE-TEXTS (one agent, one commit series, at most 90 minutes).",
+   "notes": "Tier P2. Edits web/tc.js weightRows / weightsDoc (lines 225-253), web/app.js weights editor (lines 696-791) and the #weights-form block of web/index.html (lines 481-503). Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). FOLDED TC-BUILDFILE-TEXTS: Tier P3. buildfile.py _passives notes (lines 147-175); web/index.html #buildfile-more block (lines 354-365). The upload is the player's own browser act; no endpoint is called. F-142 (cluster DATA) edits buildfile.py tree resolution. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). PLAN 07: folded from TC-WEIGHTS-DELTA-UI, TC-BUILDFILE-TEXTS (one agent, one commit series, at most 90 minutes). Session 22 widening (needs-path rule): files add web/panels/weights.js (the weights panel moved out of web/app.js by TEST-WEB-PANELS) and web/app.css.",
    "wave": 37,
    "owner": "session",
    "tier": "P2",
