@@ -66,3 +66,40 @@ away); rulings recorded below.
   restricts clipboard reads and input to the game; a write from the
   dashboard on the player's own click does neither. Reverses if: CLAUDE.md
   or decision 0003 is amended to restrict clipboard writes.
+
+## Amendment 2026-11-22 (PLAY-TD-23-RECORDS; plan units TD-17, TD-18, OVL-LINE2-GUIDE; decision 0075)
+
+Ruling F2 is widened, not reversed: the overlay still holds 2 HUD lines
+and one card, never two cards, so its own Reverses-if is not met.
+
+- Card slot holders (TD-17, OVL-CARD-SLOT, `server/al/overlayview.py`
+  CARD_HOLDERS): the one card slot is held, first match, by the press
+  card (item check, price or the merged card of one press; "Copy the
+  item first" for an empty clipboard), the Settings sample card (10 s,
+  only on its button), the newest open trade card ("+N more" for the
+  rest), a zone or act card (12 s, only into a free slot, never queued),
+  then the key hint line ("<key>: check an item", until the first press
+  or 3 game sessions). When a holder leaves, the next one due shows by
+  itself; the trade card coming back after the press card is one case of
+  this.
+- Card time (TD-18, OVL-TD18-CARD-TIME): the press card shows for 20 s by
+  default (`EVAL_CARD_S`); the setting "Keep a card for" picks 20, 60 or
+  200 s (layout `card_s`, `server/al/layout.py` CARD_S). The dashboard
+  twins (region I on Play, the Item check card on Build and items) stay
+  with no timer.
+- The guide line on HUD line 2 (OVL-LINE2-GUIDE): an opt-in. The setting
+  "Zone guide on the overlay" is On entry (default; the zone card only),
+  Always or Never. Only under Always, in a guided campaign zone, the
+  guide entry's `short` (at most 34 characters) replaces the level and
+  deaths text while no connection, log state, trade count, under-level
+  or AFK / DND word is due; a death or a level-up brings them back for
+  20 s. It is a line-2 state, not a third line.
+
+Alternatives: (b) a third HUD line for the guide (plan option O-5, not
+adopted: 0040-X5 and the placement ruling); (c) a queue of cards (design
+C, not adopted: a second card by another name); (d) a fixed 20 s with no
+setting (rejected: a slower reader loses the card before reading it,
+while the twin stays). Why: every new holder fits the existing 2 lines +
+one card cap and the fixed window size, so the decision 0002 budgets are
+unchanged. Reverses if: unchanged (section 10 of design 0001 is amended
+to allow two cards).

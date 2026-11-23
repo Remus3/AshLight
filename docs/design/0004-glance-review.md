@@ -123,6 +123,15 @@ and emulated device scale factors.
   Placement ruled by an adjudicator: top-right stays (design 0001
   section 10). The dashboard keeps its 1100 px column on wide screens;
   the player sizes it with browser zoom.
+  Amendment 2026-11-22 (PLAY-TD-23-RECORDS, decision 0075): the target
+  design changed what the overlay shows, not its size: the HUD is still 2
+  lines and one card. The card slot gained holders (the newest open trade
+  card, a 12 s zone or act card, the key hint line), the press card time
+  became a 20 / 60 / 200 s setting (20 s default) and the zone-guide line
+  is an opt-in state of line 2 (Always), never a third line. `autoScale`
+  now uses a 1200 DIP reference (TD-06). The ruling's reversal clause
+  (the corner map routinely needed and covered, or the HUD past 2 lines)
+  is not triggered, so top-right stays the default.
 - U12 UX-COPY [S4; fixed] "Connected to a game server" was listed before
   every zone and halved the useful rows in Recent: no longer listed.
   The overlay said "no Client.txt" for a known but quiet file: now
