@@ -131,7 +131,7 @@ from loop_inbox import (  # noqa: E402
     triage_spawn_kwargs,  # noqa: F401
     missing_ordered, order_prompt, order_settled, session_needs, settled_notes,  # noqa: F401
 )
-from loop_gatefail import foreign_only  # noqa: E402  LOOP-GATE-RERUN
+from loop_gatefail import foreign_only, ids_block  # noqa: E402  LOOP-GATE-RERUN, LOOP-TRUNC
 from loop_merge import GateCache, MergeMixin, last_lines  # noqa: E402
 from loop_review import ReviewMixin  # noqa: E402
 from loop_review import ROUND_LOG_CAP, ROUND_LOG_MAX_FINDINGS  # noqa: E402,F401
@@ -244,18 +244,22 @@ SUMMARY_RX = re.compile(r"^=+ short test summary info =+\s*$", re.M)
 GATE_TAIL_MAX = 1500
 
 
-def gate_tail(stdout, stderr=""):
+def gate_tail(stdout, stderr="", pytest=False):
     """TEST-PLUGIN-PIN: the part of a gate's output a red verdict needs. The
     pytest short test summary (FAILED ids, then the count line) when present,
     else the last lines of stdout; a short stderr tail goes first so the
-    output still ENDS with the ids and the count line."""
+    output still ENDS with the ids and the count line. LOOP-TRUNC: for a
+    pytest gate (`pytest`) the ids block of EVERY phase's summary, read from
+    the whole stdout before any cut, goes between the two, so 9 to 15 long
+    FAILED lines or a later phase's output cannot hide a failing id."""
     out = stdout or ""
+    block = ids_block(out) if pytest else ""
     hits = list(SUMMARY_RX.finditer(out))
     if hits:
         out = out[hits[-1].end():]
     err = last_lines(stderr, 500)
     body = last_lines(out, GATE_TAIL_MAX)
-    return (err + "\n" + body) if err else body
+    return "\n".join(part for part in (err, block, body) if part)
 
 
 def gate_env(environ=None):
@@ -273,7 +277,7 @@ def _run_gate(argv, cwd):
                        env=gate_env(),
                        timeout=GATE_TIMEOUT_S, creationflags=_NO_WINDOW,
                        encoding="utf-8", errors="replace")
-    return r.returncode, gate_tail(r.stdout, r.stderr)
+    return r.returncode, gate_tail(r.stdout, r.stderr, pytest=_pytest_gate(argv))
 
 
 SHELL_OPERATOR_CHARS = set("();<>|&")
@@ -303,6 +307,13 @@ def _whole_suite(argv):
         return False
     rest = argv[argv.index("pytest") + 1:]
     return not any(a.endswith(".py") or "::" in a for a in rest)
+
+
+def _pytest_gate(argv):
+    """LOOP-TRUNC: True when a gate argv runs pytest (the whole-suite runner,
+    under the kit suite gate or not, or pytest itself)."""
+    return "pytest" in argv or any(
+        str(a).replace("\\", "/").endswith(SUITE_RUN_REL) for a in argv)
 
 
 def _gate_argv(cmd):
