@@ -714,15 +714,30 @@ of the HALT check.
   whose block would pass it leaves the block out. Reverses if: the weights
   store changes its file form, players expect an import to keep their own
   weight changes, or a real export drops its block at the cap.
-- UTIL-MULTICHAR: level, deaths, pace, act splits and run history are
-  keyed by the character name in the player's own Client.txt (switch only
-  on the first level-up / death after a game start with no join / leave
-  since it, or when none is known; never mid-session; a configured
-  character never switches; 12 characters, run history schema 2 with
-  schema 1 migrated; names stay local) (decision 0038). Reverses if: a
-  login line naming the character is found, party play misfiles splits
-  in normal use, relogs without a game restart misfile runs, or names
-  must not be stored.
+- UTIL-MULTICHAR: level, deaths, pace, act splits and run history are keyed
+  by the character name in the player's own Client.txt. A switch happens
+  only on the first level-up / death after a game start with no join / leave
+  since it, or after a relog through character select (char_select, from the
+  login-host 'Async connecting to <label>.login.pathofexile2.com:<port>'
+  line, anchored, host not kept) on the first level-up / death of a name
+  never seen joining or leaving this game run, whatever the party flag says.
+  Lines of known others neither switch nor close that window. A switch also
+  happens when no character is known. Never mid-session. A configured
+  character never switches. Resume takes the newest in-run level-up of a
+  name not seen joining or leaving, unknown when none is left. 12
+  characters, run history schema 2 with schema 1 migrated; names stay local
+  (decision 0038, amended 2026-11-22). Reverses if: a login line naming the
+  character is found, party play misfiles splits in normal use, the
+  login-host line appears on plain reconnects that keep the character and
+  misfiles runs, a party member with no join line often levels first after a
+  relog, or names must not be stored.
+- PLAYER-NOTES: the player's own plain-text note per zone and character in
+  one bounded file under ops/runtime (300 zones, 200 characters each), keyed
+  by the Client.txt area id, written only on the player's Save through the
+  token API, shown after AshLight's guide rows as 'your note', exported only
+  when picked; names and notes stay local (decision 0074). Reverses if: the
+  operator rules local note files unwanted, a note reaches a report or an
+  export unasked, or decision 0036 changes.
 - Waystone rewards from the item text's reward properties on the same
   press; campaign hints (boss resist, flask base, boots speed) only from
   Client.txt, the PoB build and the cached base_items snapshot, boss
