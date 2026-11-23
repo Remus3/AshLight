@@ -1970,7 +1970,7 @@ no-op switch.
   is flipped and main is clean.
 
 - TC-WEIGHTS-DELTA-UI [session, L 90m, build, P2, DR] Weights panel marks changes and resets + .build texts: correct the passives note, name the upload route. Files: web/tc.js, web/app.js, web/index.html, app/test/tc_view.test.js, server/al/theorycraft/buildfile.py (+3 more). Deps: TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB.
-- TEST-STATE-MIXIN-C [session, L 70m, build, P3] SessionState mixins: idle and summary, published views. Files: server/al/state.py, server/al/state_idle.py, server/al/state_views.py. Deps: TEST-STATE-MIXIN-B.
+- TEST-STATE-MIXIN-C [session, L 70m, build, P3] SessionState mixins: idle and summary, published views. Files: server/al/state.py, tests/test_live_exit.py, server/al/state_idle.py, server/al/state_views.py. Deps: TEST-STATE-MIXIN-B.
 
 ### Wave 38: operator requests 2026-11-19, cores
 
