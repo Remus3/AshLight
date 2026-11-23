@@ -477,23 +477,32 @@ estimate counts one suite per batch for it.
 
 ## Waves
 
-Per wave: goal, hotspot files and their one editor, what the integrator
-applies, test files to watch (edited by one package and run by another in
-the same wave: the batch suite is the authority there), the gate, then the
-packages in merge order. Package line: id [owner, size and minutes, lane,
-tier, DR = design review] title. Files (at most five named). Deps.
+The wave sections between the two markers below are generated from
+docs/plan/packages.json by python tools/plan_check.py waves --write and are
+never edited by hand: python tools/plan_check.py check fails when they
+drift from packages.json (PLAN-07-WAVE-DRIFT, 2026-11-22). A plan change
+patches packages.json and then re-runs waves --write. The hand-written wave
+sections and their rulings notes before that date stay in git history.
+
+Per wave: goal, the session that runs it and its width (worktree and
+main-checkout packages, loop rows released), the plan hotspots its packages
+edit with their editor, the integrator files its packages name, the gate,
+then the packages in merge order. Package line: id [owner, size and
+minutes, lane, tier, DR = design review] title. Files (at most five named).
+Deps. The parked wave has its own section (Parked packages).
+
+<!-- plan_check waves begin: generated, do not edit by hand -->
 
 ### Wave 0: plan landing
 
-Goal: The plan itself lands: docs/plan/08 (how a session runs a wave, the
-agent contract), docs/plan/09 (the one batched operator ask), the ROADMAP
-row of every package and the hand-off that makes 'continue' start wave 1.
+The plan itself lands: docs/plan/08 (how a session runs a wave, the agent
+contract), docs/plan/09 (the one batched operator ask), the ROADMAP row of
+every package and the hand-off that makes 'continue' start wave 1.
 Milestones: the plan is landed: 08 and 09 exist, every package has its
 ROADMAP row, the hand-off starts wave 1. Leads: Land the plan: orchestration
 and operator-acts sections, ROADMAP rows, hand-off.
 
-- Session 0; width 0 worktree + 1 main-checkout, 0 loop rows released; about
-  110 minutes.
+- Session 0; width 0 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: none.
 - Integrator: ROADMAP.md rows of all 1 packages; AL-NEXT-SESSION.txt:
   PLAN-LANDING; docs/plan/README.md: PLAN-LANDING.
@@ -509,30 +518,25 @@ and operator-acts sections, ROADMAP rows, hand-off.
 
 ### Wave 1: loop and watchers, local security, reliability and observability
 
-Goal: What everything else stands on: the no-discovery guard, the local
-security P0s that need nothing first, the hardened write path, the first
-steps of the loop-parser fix (the tick split, the test carve and the row
-lint tool), the ledger rule and the slot tables. Milestones: the
-no-discovery guard (F-001) is on main. Leads: A pointed, test or demo core
-never looks for the live Client.txt; Serve /web/ from a fixed name map
-(closes the UNC path leak); Strict build XML intake: refuse an inflated
-payload holding a NUL byte.
+What everything else stands on: the no-discovery guard, the local security
+P0s that need nothing first, the hardened write path, the first steps of the
+loop-parser fix (the tick split, the test carve and the row lint tool), the
+ledger rule and the slot tables. Milestones: the no-discovery guard (F-001)
+is on main. Leads: A pointed, test or demo core never looks for the live
+Client.txt; Serve /web/ from a fixed name map (closes the UNC path leak);
+Strict build XML intake: refuse an inflated payload holding a NUL byte.
 
-- Session 1; width 11 worktree + 4 main-checkout, 0 loop rows released;
-  about 139 minutes.
+- Session 1; width 11 worktree + 4 main-checkout, 0 loop rows released.
 - Hotspots: server/al/core.py (SEC-NO-DISCOVERY); server/al/http.py
   (SEC-STATIC-MAP); server/al/diag.py (SEC-NO-DISCOVERY); scripts/run.ps1
   (SEC-NO-PROXY); server/al/keepalive.py (SEC-NO-PROXY);
   tests/test_diag_self.py (SEC-NO-DISCOVERY); tests/test_keepalive.py
   (SEC-NO-PROXY); tests/test_http_security.py (SEC-STATIC-MAP).
 - Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
-  SEC-NO-DISCOVERY, GP-03, DATA-GGG-APPLICATION; docs/decisions/README.md:
-  LOOP-LEDGERS, GP-03, DATA-GGG-APPLICATION; AL-NEXT-SESSION.txt: AUTO-03,
-  RUN-LIVE-CLICKS-STRIKE, DATA-GGG-APPLICATION; docs/design/reviews.log: 1
-  lines.
-- Batches: 1: SEC-NO-DISCOVERY; 2: SEC-STATIC-MAP, SEC-XML-NUL,
-  RUN-DURABLE-JSONFILE, SEC-NO-PROXY, LOOP-SPLIT-TICK; 3: LOOP-TESTS-CARVE,
-  PLAY-TD-02-SLOTS, AUTO-03, LOOP-LEDGERS, LOOP-PREFLIGHT-CMD.
+  SEC-NO-DISCOVERY, GP-03, DATA-GGG-APPLICATION; docs/design/reviews.log:
+  PLAY-TD-02-SLOTS; AL-NEXT-SESSION.txt: AUTO-03, RUN-LIVE-CLICKS-STRIKE,
+  DATA-GGG-APPLICATION; docs/decisions/README.md: LOOP-LEDGERS, GP-03,
+  DATA-GGG-APPLICATION.
 - Gate: SEC-NO-DISCOVERY merges first and alone, its whole suite run after
   its own Settled bullet is applied; then per package: its named tests as a
   file-named run (timing files and any subset over 90 s and the fixed-port
@@ -546,7 +550,7 @@ payload holding a NUL byte.
 
 - SEC-NO-DISCOVERY [session, L 75m, build, P0] A pointed, test or demo core never looks for the live Client.txt. Files: server/al/core.py, server/al/logfile.py, server/al/diag.py, tests/conftest.py, tests/test_e2e_replay.py (+4 more). Deps: none.
 - SEC-STATIC-MAP [session, L 90m, build, P0] Serve /web/ from a fixed name map (closes the UNC path leak) + Refuse cross-site requests on every route; trim unused allowances. Files: server/al/http.py, tests/test_http_security.py, server/al/static.py. Deps: none.
-- SEC-XML-NUL [session, S 25m, build, P0] Strict build XML intake: refuse an inflated payload holding a NUL byte. Files: server/al/theorycraft/codec.py, server/al/theorycraft/model.py, tests/test_tc_code.py, tests/test_tc_code_api.py. Deps: none.
+- SEC-XML-NUL [session, S 25m, build, P0] Strict build XML intake: refuse an inflated payload holding a NUL byte. Files: server/al/theorycraft/codec.py, server/al/theorycraft/model.py, tests/test_tc_code.py, tests/test_tc_code_api.py, tests/test_fuzz.py. Deps: none.
 - RUN-DURABLE-JSONFILE [session, M 60m, build, P0] Hardened write path in jsonfile (temp name, fsync, retry, .bak, Saver). Files: server/al/jsonfile.py, tests/test_jsonfile.py. Deps: none.
 - SEC-NO-PROXY [session, M 40m, build, P0] Loopback calls never use a proxy. Files: server/al/keepalive.py, scripts/run.ps1, tests/test_keepalive.py, tests/test_run_health_ps.py. Deps: none.
 - LOOP-SPLIT-TICK [session, L 90m, build] Split Tick review and work-list methods out of al_loop.py (no behaviour change). Files: tools/al_loop.py, tests/test_loop_split.py, tools/loop_review.py, tools/loop_work.py. Deps: none.
@@ -562,28 +566,23 @@ payload holding a NUL byte.
 
 ### Wave 2: loop and watchers, local security, reliability and observability
 
-Goal: The second step of the foundations: the loop session-line fix, the
-demo-mode core, the fresh-clone proof and the item card seam. Milestones:
-the local HTTP surface is pinned by one test file. Leads: Item card parts
-registry (server side seam); Demo mode core: an isolated instance on a
-fixture folder; LOOP-PREFLIGHT core: session line, dry run past HALT, tick
-step seam.
+The second step of the foundations: the loop session-line fix, the demo-mode
+core, the fresh-clone proof and the item card seam. Milestones: the local
+HTTP surface is pinned by one test file. Leads: Item card parts registry
+(server side seam); Demo mode core: an isolated instance on a fixture
+folder; LOOP-PREFLIGHT core: session line, dry run past HALT, tick step
+seam.
 
-- Session 1; width 12 worktree + 3 main-checkout, 0 loop rows released;
-  about 119 minutes.
+- Session 1; width 12 worktree + 3 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-09A-REGION-HOOK); server/al/core.py
   (TC-CARD-PARTS); web/app.js (PLAY-TD-09A-REGION-HOOK); server/al/http.py
   (SEC-CEIL-HTTP); server/al/state.py (TC-CARD-PARTS);
-  tests/test_security_surface.py (SEC-SURFACE-PIN); server/al/zoneguide.py
-  (RUN-DURABLE-STORE-FILES).
-- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md: SEC-DEMO-CORE,
-  AUTO-04, LOOP-HANDOFF-PREFIX, RUN-DURABLE-STORE-FILES;
-  docs/decisions/README.md: SEC-DEMO-CORE, AUTO-04; AL-NEXT-SESSION.txt:
-  AUTO-01, LOOP-HANDOFF-PREFIX; docs/design/reviews.log: 2 lines.
-- Batches: 1: TC-CARD-PARTS, SEC-DEMO-CORE, AUTO-01, AUTO-04; 2:
-  LOOP-ROWFILES-MERGE, LOOP-HANDOFF-PREFIX, AUTO-02, SEC-SURFACE-PIN; 3:
-  RUN-DURABLE-STORE-FILES, RUN-TAIL-HEAL-READER, PLAY-TD-09A-REGION-HOOK,
-  SEC-CEIL-HTTP.
+  server/al/zoneguide.py (RUN-DURABLE-STORE-FILES).
+- Integrator: ROADMAP.md rows of all 15 packages; docs/design/reviews.log:
+  TC-CARD-PARTS, PLAY-TD-09A-REGION-HOOK; docs/decisions/README.md:
+  SEC-DEMO-CORE, AUTO-04; CLAUDE.md: SEC-DEMO-CORE, AUTO-04,
+  LOOP-HANDOFF-PREFIX, RUN-DURABLE-STORE-FILES; AL-NEXT-SESSION.txt:
+  AUTO-01, LOOP-HANDOFF-PREFIX.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s and the fixed-port files through the suite gate);
   main-checkout acts one at a time in merge order; per merge batch of 4 on
@@ -598,10 +597,10 @@ step seam.
 - AUTO-01 [session, L 75m, build, P1] LOOP-PREFLIGHT core: session line, dry run past HALT, tick step seam. Files: tools/al_loop.py, tools/loop_steps/__init__.py, tools/loop_steps/docs_watch.py, tools/loop_steps/tc_drift.py, tests/test_loop_steps.py. Deps: LOOP-SPLIT-TICK.
 - AUTO-04 [session, L 75m, build, P3] DIVE-FLOOR: dives lose free web tools and read GGG only at the two docs pages. Files: tools/loop_prompts.py, tools/loop_base.py, tests/test_loop_dive.py, tests/test_p163_lane_tools.py, docs/ops/1.0-launch-runbook.md (+4 more). Deps: LOOP-TESTS-CARVE.
 - LOOP-ROWFILES-MERGE [session, M 60m, build, P1] The loop merge closes a row with a done file, not a ROADMAP.md edit. Files: tools/loop_merge.py, tests/test_loop_flip.py. Deps: LOOP-TESTS-CARVE, AUTO-03.
-- LOOP-HANDOFF-PREFIX [session, M 40m, build, P1] Hand-off bullets are loop work only with a LOOP: prefix. Files: tools/loop_roadmap.py, tests/test_loop_handoff.py. Deps: LOOP-TESTS-CARVE, LOOP-PREFLIGHT-CMD.
+- LOOP-HANDOFF-PREFIX [session, M 40m, build, P1] Hand-off bullets are loop work only with a LOOP: prefix. Files: tools/loop_roadmap.py, tests/test_loop_handoff.py, tests/test_loop_preflight.py, tests/test_al_loop.py. Deps: LOOP-TESTS-CARVE, LOOP-PREFLIGHT-CMD.
 - AUTO-02 [session, M 60m, build, P1] ROADMAP-PRUNE: tools/roadmap_fold.py with prune and fold, first prune run. Files: tests/test_desktop_client.py, tools/roadmap_fold.py, tests/test_roadmap_fold.py. Deps: none.
 - SEC-SURFACE-PIN [session, M 45m, build, P0] One test file that pins the local HTTP surface. Files: tests/test_security_surface.py. Deps: SEC-NO-DISCOVERY, SEC-STATIC-MAP, SEC-XML-NUL.
-- RUN-DURABLE-STORE-FILES [session, M 50m, build, P0] Store modules save with one .bak and clear it with the data. Files: server/al/runhistory.py, server/al/mapladder.py, server/al/pricewatch.py, server/al/summary.py, server/al/hints.py (+4 more). Deps: RUN-DURABLE-JSONFILE.
+- RUN-DURABLE-STORE-FILES [session, M 50m, build, P0] Store modules save with one .bak and clear it with the data. Files: server/al/runhistory.py, server/al/mapladder.py, server/al/pricewatch.py, server/al/summary.py, server/al/hints.py (+6 more). Deps: RUN-DURABLE-JSONFILE.
 - RUN-TAIL-HEAL-READER [session, M 60m, build, P0] Tailer never dies and never replays a backlog (logfile.py). Files: server/al/logfile.py, tests/test_tailer.py. Deps: SEC-NO-DISCOVERY.
 - PLAY-TD-09A-REGION-HOOK [session, L 75m, build, P1, DR] Region hook: one registry, pre-linked region files. Files: web/index.html, web/app.js, web/regions.js, app/test/regions.test.js, web/strip.js (+17 more). Deps: PLAY-TD-02-SLOTS.
 - SEC-CEIL-HTTP [session, S 30m, build, P3] Ceiling on handler threads. Files: server/al/http.py, tests/test_http_ceilings.py. Deps: none.
@@ -611,26 +610,21 @@ step seam.
 
 ### Wave 3: loop and watchers, tests and code seams, theorycraft
 
-Goal: Demo mode is complete; the HTTP surface is pinned; the gate output
-keeps its tail. Milestones: the isolated demo mode exists (python -m
-server.al --demo). Leads: Demo mode entry: python -m server.al --demo
-<fixture dir>; Pin the pytest plugin set; register markers; keep the end of
-the gate output; A failed item is parked visibly; a foreign gate failure
-ends the fix rounds.
+Demo mode is complete; the HTTP surface is pinned; the gate output keeps its
+tail. Milestones: the isolated demo mode exists (python -m server.al
+--demo). Leads: Demo mode entry: python -m server.al --demo <fixture dir>;
+Pin the pytest plugin set; register markers; keep the end of the gate
+output; A failed item is parked visibly; a foreign gate failure ends the fix
+rounds.
 
-- Session 1; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 149 minutes.
+- Session 1; width 12 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (TC-CARD-PARTS-WEB); server/al/core.py
   (TC-PRESS-BUILD); web/app.js (TC-CARD-PARTS-WEB); server/al/http.py
   (TC-PRESS-BUILD); server/al/state.py (OVL-HIDEOUT-AREA);
   server/al/__main__.py (SEC-DEMO-ENTRY); server/al/ninja.py
   (DATA-LEAGUE-IDENTITY); server/al/pricebook.py (DATA-LEAGUE-IDENTITY).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md: TC-PRESS-BUILD;
-  docs/design/reviews.log: 2 lines.
-- Batches: 1: SEC-DEMO-ENTRY, TEST-PLUGIN-PIN, LOOP-FAILED-PARK,
-  LOOP-ROWFILES-WORK; 2: LOOP-DONE-FOLD, TEST-LAYOUT-GUARD,
-  TC-CARD-PARTS-WEB, DATA-LEAGUE-IDENTITY; 3: PLAY-TD-01A-PLAY-STATES,
-  TC-PRESS-BUILD, OVL-HIDEOUT-AREA; 4: GP-04.
+- Integrator: ROADMAP.md rows of all 12 packages; docs/design/reviews.log:
+  TC-CARD-PARTS-WEB, TC-PRESS-BUILD; CLAUDE.md: TC-PRESS-BUILD.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s and the fixed-port files through the suite gate);
   main-checkout acts one at a time in merge order; per merge batch of 4 on
@@ -656,12 +650,11 @@ ends the fix rounds.
 
 ### Wave 4: go-public, Play tab and dashboard, theorycraft
 
-Goal: Leads: Record the go-public decision and the rules text; Guarded
-pre-push hook and its tests; Replace the local-only wording in loop tools
-and ritual files.
+Leads: Record the go-public decision and the rules text; Guarded pre-push
+hook and its tests; Replace the local-only wording in loop tools and ritual
+files.
 
-- Session 2; width 14 worktree + 1 main-checkout, 0 loop rows released;
-  about 139 minutes.
+- Session 2; width 14 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (TC-FILTER-ONE-CONTROL); server/al/core.py
   (SEC-ACL-APPLY); server/al/http.py (SEC-HELLO-CORE); server/al/state.py
   (DATA-PRICE-CARD-TEXT); web/app.css (PLAY-TD-03-TOKENS); server/al/diag.py
@@ -674,19 +667,13 @@ and ritual files.
   docs/design/0001-design-system.md (PLAY-TD-03-TOKENS);
   tests/test_keepalive.py (SEC-HELLO-CORE); server/al/ninja.py
   (TC-FILTER-ONE-CONTROL).
-- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md: PUB-GO-DECISION,
-  PUB-LOCAL-ONLY-TEXT, SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS,
-  SEC-HELLO-CORE; docs/decisions/README.md: PUB-GO-DECISION, SEC-ACL-APPLY,
-  TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE; AL-NEXT-SESSION.txt:
-  PUB-GO-DECISION, PLAY-TD-03-TOKENS; docs/design/reviews.log: 5 lines.
-- Watch: tests/test_fleet_kit_conformance.py (GP-02 edits, PUB-GO-DECISION
-  runs); tests/test_fleet_kit_conformance.py (GP-02 edits,
-  PUB-LOCAL-ONLY-TEXT runs); tests/test_diag_self.py
-  (PLAY-F-131-STATUS-TABLE edits, OVL-MAIN-PARTS runs).
-- Batches: 1: GP-02, PUB-LOCAL-ONLY-TEXT, LOOP-WAVE-HOLD, SEC-ACL-APPLY; 2:
-  GP-05, DATA-PRICE-CARD-TEXT, PLAY-F-131-STATUS-TABLE,
-  PLAY-TD-01B-FIT-HARNESS; 3: PLAY-TD-03-TOKENS, TC-PRESS-STAGED-EVAL,
-  TC-WORN-STORE, OVL-MAIN-PARTS; 4: SEC-HELLO-CORE, TC-FILTER-ONE-CONTROL.
+- Integrator: ROADMAP.md rows of all 15 packages; docs/decisions/README.md:
+  PUB-GO-DECISION, SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS,
+  SEC-HELLO-CORE; CLAUDE.md: PUB-GO-DECISION, PUB-LOCAL-ONLY-TEXT,
+  SEC-ACL-APPLY, TC-WORN-STORE, OVL-MAIN-PARTS, SEC-HELLO-CORE;
+  AL-NEXT-SESSION.txt: PUB-GO-DECISION, PLAY-TD-03-TOKENS;
+  docs/design/reviews.log: DATA-PRICE-CARD-TEXT, PLAY-F-131-STATUS-TABLE,
+  PLAY-TD-03-TOKENS, SEC-HELLO-CORE, TC-FILTER-ONE-CONTROL.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s and the fixed-port files through the suite gate);
   main-checkout acts one at a time in merge order; per merge batch of 4 on
@@ -714,15 +701,14 @@ and ritual files.
 
 ### Wave 5: Play tab and dashboard, reliability and observability, overlay and client
 
-Goal: Milestones: the Play skeleton (7 fixed regions) is on the page; the
-private repository exists and the first push is green. Leads:
-WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD;
-Plug-in folder: ticks, Checks rows and token-gated routes without
-shared-file edits; setup.ps1 makes the sidecar private; the logon launcher
-starts PowerShell by its System....
+Milestones: the Play skeleton (7 fixed regions) is on the page; the private
+repository exists and the first push is green. Leads: WAVE-INTERPLAY:
+BLOCKED reason echo and the dispatch re-check from HEAD; Plug-in folder:
+ticks, Checks rows and token-gated routes without shared-file edits;
+setup.ps1 makes the sidecar private; the logon launcher starts PowerShell by
+its System....
 
-- Session 2; width 12 worktree + 1 main-checkout, 0 loop rows released;
-  about 179 minutes.
+- Session 2; width 12 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-09B-SKELETON); server/al/core.py
   (RUN-SEAMS); web/app.js (PLAY-TD-09B-SKELETON); server/al/http.py
   (RUN-SEAMS); server/al/state.py (PLAY-TD-07A-PLAY-VIEW); web/app.css
@@ -738,22 +724,20 @@ starts PowerShell by its System....
 - Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md: AUTO-06,
   RUN-SEAMS, TC-CAMPAIGN-KEEP, OVL-KEYS-CLIENT; docs/decisions/README.md:
   AUTO-06, RUN-SEAMS, TC-CAMPAIGN-KEEP, OVL-KEYS-CLIENT;
-  AL-NEXT-SESSION.txt: GP-09; docs/design/reviews.log: 6 lines.
-- Batches: 1: AUTO-06, RUN-SEAMS, SEC-ACL-SETUP, TEST-PORT-LEASE; 2:
-  PLAY-TD-07A-PLAY-VIEW, PLAY-TD-09B-SKELETON, TC-CAMPAIGN-KEEP,
-  RUN-LEDGER-CORE; 3: OVL-KEYS-CLIENT, PLAY-TD-19A-PAGER, OVL-GLANCE-RULES,
-  PLAY-TD-04A-DARK-CLIENT.
-- Gate: per package: its named tests as a file-named run (timing files and any
-  subset over 90 s and the fixed-port files through the suite gate);
-  main-checkout acts one at a time in merge order; per merge batch of 4 on the
-  integration worktree: merge, then the integrator's edits for the batch as
-  one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id>
-  -- python -m pytest -q and npm test --prefix app, green, then main moves;
-  then python tools/plan_check.py check; the wave closes when every session
-  row is flipped and main is clean; GP-09 runs alone after the last batch is
-  on main: from its gate 3 to its read-back no merge, integrator commit, batch
-  suite, revert or other act touches main, and the wave closes only after its
-  read-back or its DEFERRED line (ruling R1, 2026-11-18).
+  docs/design/reviews.log: PLAY-TD-07A-PLAY-VIEW, PLAY-TD-09B-SKELETON,
+  TC-CAMPAIGN-KEEP, PLAY-TD-19A-PAGER, OVL-GLANCE-RULES,
+  PLAY-TD-04A-DARK-CLIENT; AL-NEXT-SESSION.txt: GP-09.
+- Gate: per package: its named tests as a file-named run (timing files and
+  any subset over 90 s and the fixed-port files through the suite gate);
+  main-checkout acts one at a time in merge order; per merge batch of 4 on
+  the integration worktree: merge, then the integrator's edits for the batch
+  as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner
+  <id> -- python -m pytest -q and npm test --prefix app, green, then main
+  moves; then python tools/plan_check.py check; the wave closes when every
+  session row is flipped and main is clean; GP-09 runs alone after the last
+  batch is on main: from its gate 3 to its read-back no merge, integrator
+  commit, batch suite, revert or other act touches main, and the wave closes
+  only after its read-back or its DEFERRED line (ruling R1, 2026-11-18).
 
 - AUTO-06 [session, M 50m, build, P1] WAVE-INTERPLAY: BLOCKED reason echo and the dispatch re-check from HEAD. Files: tools/loop_work.py, tests/test_loop_wave.py, docs/decisions/0055-loop-and-wave-contract.md. Deps: LOOP-ROWFILES-WORK, LOOP-WAVE-HOLD, AUTO-01.
 - RUN-SEAMS [session, M 60m, build, P2] Plug-in folder: ticks, Checks rows and token-gated routes without shared-file edits. Files: server/al/core.py, server/al/__main__.py, server/al/diag.py, server/al/http.py, tests/test_security_surface.py (+3 more). Deps: SEC-SURFACE-PIN, SEC-NO-DISCOVERY.
@@ -771,13 +755,12 @@ starts PowerShell by its System....
 
 ### Wave 6: Play tab and dashboard, local security, reliability and observability
 
-Goal: Milestones: HALT is removed; the headless loop takes the loop-owned
-rows. Leads: Checks note when AshLight's folders let someone else write;
-Move the five CRLF / hand-rolled writers onto the jsonfile helper; Play
-view: context modes, item card and kept checks.
+Milestones: HALT is removed; the headless loop takes the loop-owned rows.
+Leads: Checks note when AshLight's folders let someone else write; Move the
+five CRLF / hand-rolled writers onto the jsonfile helper; Play view: context
+modes, item card and kept checks.
 
-- Session 2; width 12 worktree + 1 main-checkout, 0 loop rows released;
-  about 129 minutes.
+- Session 2; width 12 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-09C-BAR); server/al/core.py
   (SEC-ACL-CHECK); web/app.js (PLAY-TD-09C-BAR); server/al/http.py
   (SEC-SSE-TAP); server/al/state.py (SEC-SSE-TAP); web/app.css
@@ -789,13 +772,11 @@ view: context modes, item card and kept checks.
   (DEP-02); tests/test_a11y.py (PLAY-TD-09C-BAR);
   tests/test_http_security.py (SEC-SSE-TAP); tests/test_ux_settings_io.py
   (OVL-OVERLAY-KEYS).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
-  RUN-VERDICTS-CORE; AL-NEXT-SESSION.txt: PLAY-TD-09C-BAR, AUTO-21;
-  docs/plan/README.md: AUTO-21; docs/design/reviews.log: 6 lines.
-- Batches: 1: SEC-ACL-CHECK, RUN-DURABLE-CRLF, PLAY-TD-07B-PLAY-CARDS,
-  PLAY-TD-09C-BAR; 2: PLAY-TD-13-FEED, PLAY-TD-15-BUILDLINE,
-  PLAY-TD-14-NOTICE, RUN-VERDICTS-CORE; 3: OVL-OVERLAY-KEYS,
-  TEST-STATE-EQUIV, DEP-02, SEC-SSE-TAP.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  PLAY-TD-07B-PLAY-CARDS, PLAY-TD-09C-BAR, PLAY-TD-13-FEED,
+  PLAY-TD-15-BUILDLINE, PLAY-TD-14-NOTICE, OVL-OVERLAY-KEYS;
+  AL-NEXT-SESSION.txt: PLAY-TD-09C-BAR, AUTO-21; CLAUDE.md:
+  RUN-VERDICTS-CORE; docs/plan/README.md: AUTO-21.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s through the suite gate); main-checkout acts one at a
   time in merge order; per merge batch of 4 on the integration worktree:
@@ -823,13 +804,12 @@ view: context modes, item card and kept checks.
 
 ### Wave 7: Play tab and dashboard, tests and code seams, reliability and observability
 
-Goal: Leads: app/test/_web.js: one helper that knows where dashboard sources
-live (node side); tests/srcpaths.py: one helper that knows where dashboard
+Leads: app/test/_web.js: one helper that knows where dashboard sources live
+(node side); tests/srcpaths.py: one helper that knows where dashboard
 sources live (Python side); Core saves retried from the tick with back-off;
 one Checks row while unsaved. Releases 2 loop-owned rows.
 
-- Session 3; width 12 worktree + 1 main-checkout, 2 loop rows released;
-  about 141 minutes.
+- Session 3; width 12 worktree + 0 main-checkout, 2 loop rows released.
 - Hotspots: server/al/core.py (RUN-DURABLE-STORES); server/al/http.py
   (DEP-05); server/al/state.py (TC-VERDICT-CAVEAT); tests/test_ux_review.py
   (TEST-WEB-SRCPATHS-PY); server/al/__main__.py (DEP-05);
@@ -840,14 +820,10 @@ one Checks row while unsaved. Releases 2 loop-owned rows.
   tests/test_http_security.py (TEST-WEB-SRCPATHS-PY);
   app/test/prices.test.js (TEST-WEB-SRCPATHS-NODE); server/al/zoneguide.py
   (PLAY-TD-08A-GUIDE-SHORT-FIELD); tests/test_tc_bridge.py (TEST-MARKS).
-- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md: DEP-05;
-  docs/decisions/README.md: DEP-05; docs/design/reviews.log: 7 lines.
-- Watch: tests/test_zone_guide.py (PLAY-TD-08A-GUIDE-SHORT-FIELD edits,
-  RUN-DURABLE-STORES runs).
-- Batches: 1: TEST-WEB-SRCPATHS-NODE, TEST-WEB-SRCPATHS-PY,
-  RUN-DURABLE-STORES, TEST-MARKS; 2: PLAY-TD-11-CONTEXT, PLAY-TD-10-STRIP,
-  PLAY-TD-16B-KEPT-CHECKS, PLAY-TD-16A-ITEMCARD; 3: OVL-PARTS-PAGE,
-  PLAY-TD-08A-GUIDE-SHORT-FIELD, DEP-05, TC-VERDICT-CAVEAT.
+- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log:
+  RUN-DURABLE-STORES, PLAY-TD-11-CONTEXT, PLAY-TD-10-STRIP,
+  PLAY-TD-16B-KEPT-CHECKS, PLAY-TD-16A-ITEMCARD, OVL-PARTS-PAGE,
+  TC-VERDICT-CAVEAT; CLAUDE.md: DEP-05; docs/decisions/README.md: DEP-05.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s through the suite gate); main-checkout acts one at a
   time in merge order; per merge batch of 4 on the integration worktree:
@@ -874,22 +850,18 @@ one Checks row while unsaved. Releases 2 loop-owned rows.
 
 ### Wave 8: tests and code seams, install and release, reliability and observability
 
-Goal: Leads: web/fmt.js: pad, duration and clock defined once; Core restarts
-a dead log reader and the Reading row tells the truth; tools/test_select.py:
+Leads: web/fmt.js: pad, duration and clock defined once; Core restarts a
+dead log reader and the Reading row tells the truth; tools/test_select.py:
 the test files for a diff.
 
-- Session 3; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 131 minutes.
+- Session 3; width 12 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (TEST-WEB-FMT); server/al/core.py
   (RUN-TAIL-HEAL-CORE); web/app.js (TEST-WEB-FMT); server/al/http.py
   (TEST-HTTP-ROUTES); server/al/state.py (RUN-TAIL-HEAL-CORE);
   server/al/diag.py (RUN-TAIL-HEAL-CORE); tests/test_security_surface.py
   (TEST-HTTP-ROUTES); tests/test_diag_self.py (RUN-TAIL-HEAL-CORE).
-- Integrator: ROADMAP.md rows of all 12 packages; docs/design/reviews.log: 3
-  lines.
-- Batches: 1: TEST-WEB-FMT, RUN-TAIL-HEAL-CORE, TEST-SELECT,
-  TEST-XDIST-DIAG; 2: PLAY-TD-12-CONTEXT-SETUP, GP-06, DEP-03, DEP-01; 3:
-  REL-SUBJECT-CHECK, DATA-WEBFETCH-GZIP, OVL-ELECTRON-PIN, TEST-HTTP-ROUTES.
+- Integrator: ROADMAP.md rows of all 12 packages; docs/design/reviews.log:
+  TEST-WEB-FMT, RUN-TAIL-HEAL-CORE, PLAY-TD-12-CONTEXT-SETUP.
 - Gate: per package: its named tests as a file-named run (timing files and
   any subset over 90 s through the suite gate); main-checkout acts one at a
   time in merge order; per merge batch of 4 on the integration worktree:
@@ -914,14 +886,13 @@ the test files for a diff.
 
 ### Wave 9: install and release, tests and code seams, overlay and client
 
-Goal: Milestones: the wave gate policy is recorded and the test selector
-picks each package's subset. Leads: Publish the item check in stages; Record
-the wave gate policy (Q-17) in a decision, the lane prompt and /done;
+Milestones: the wave gate policy is recorded and the test selector picks
+each package's subset. Leads: Publish the item check in stages; Record the
+wave gate policy (Q-17) in a decision, the lane prompt and /done;
 web/registry.js: ALApp.register and per-panel isolation in render, tick and
 start.
 
-- Session 3; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 136 minutes.
+- Session 3; width 12 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (TEST-WEB-REGISTRY); server/al/core.py
   (TC-PRESS-STAGED-LIVE); web/app.js (TEST-WEB-REGISTRY); server/al/http.py
   (TC-PRESS-STAGED-LIVE); server/al/state.py (RUN-ZONE-RESET); app/main.js
@@ -929,14 +900,11 @@ start.
   server/al/keepalive.py (DEP-06); app/test/client.test.js
   (OVL-LINKS-DOWNLOADS); scripts/setup.ps1 (DEP-07); server/al/ninja.py
   (DATA-PRICE-POLITE); server/al/pricebook.py (DATA-PRICE-POLITE).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
-  TEST-WAVE-GATE-POLICY, TEST-SUITE-RUNNER, OVL-LINKS-DOWNLOADS,
-  OVL-SHELL-GUARDS, DEP-04; docs/decisions/README.md: TEST-WAVE-GATE-POLICY,
-  OVL-SHELL-GUARDS, DEP-04; docs/design/reviews.log: 4 lines.
-- Batches: 1: TC-PRESS-STAGED-LIVE, TEST-WAVE-GATE-POLICY,
-  TEST-WEB-REGISTRY, TEST-SUITE-RUNNER; 2: RUN-ZONE-RESET, REL-PINFETCH,
-  OVL-LINKS-DOWNLOADS, OVL-SHELL-GUARDS; 3: DEP-04, DEP-06, DEP-07,
-  DATA-PRICE-POLITE.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  TC-PRESS-STAGED-LIVE, TEST-WEB-REGISTRY, RUN-ZONE-RESET,
+  OVL-LINKS-DOWNLOADS; CLAUDE.md: TEST-WAVE-GATE-POLICY, TEST-SUITE-RUNNER,
+  OVL-LINKS-DOWNLOADS, OVL-SHELL-GUARDS, DEP-04; docs/decisions/README.md:
+  TEST-WAVE-GATE-POLICY, OVL-SHELL-GUARDS, DEP-04.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -956,18 +924,17 @@ start.
 - DEP-04 [session, L 75m, build, P2] Notes and changelog generator. Files: tools/rel_notes.py, CHANGELOG.md, docs/releases/0.1.0.md, tests/test_release_notes.py, docs/decisions/0062-changelog.md. Deps: DEP-03, REL-SUBJECT-CHECK, AUTO-01, AUTO-03.
 - DEP-06 [session, M 55m, build, P1] Runtime resolvers and one command builder. Files: server/al/paths.py, server/al/keepalive.py, server/al/procs.py, boot.py, tests/test_runtime_layout.py. Deps: DEP-01, DEP-02, DEP-05.
 - DEP-07 [session, M 60m, build, P3] Shell integration helper: shortcuts and the uninstall entry in one place. Files: scripts/setup.ps1, tests/test_desktop_client.py, scripts/al_shell.ps1, tests/test_shell_integration.py. Deps: DEP-02, SEC-ACL-SETUP.
-- GP-11 [session, S 10m, review, P1] Description, topics and feature switches. Files: none. Deps: GP-09.
 - DATA-PRICE-POLITE [session, L 70m, build, P1] poe.ninja client: back off, daily retry of a failing type, spaced requests. Files: server/al/ninja.py, server/al/pricebook.py, tests/test_data_ninja.py, tests/test_price_book.py. Deps: DATA-WEBFETCH-GZIP.
+- GP-11 [session, S 10m, review, P1] Description, topics and feature switches. Files: none (an act or a read-back). Deps: GP-09.
 
 ### Wave 10: install and release, overlay and client, tests and code seams
 
-Goal: Milestones: one gate spelling; the whole suite runs in parallel.
-Leads: Item check compares against the worn item first; Legacy out 1: old
-strip tiles, trade card and build alert slot; One gate spelling in the loop,
-gates.txt, build.ps1 and /done; kit crash = retry.
+Milestones: one gate spelling; the whole suite runs in parallel. Leads: Item
+check compares against the worn item first; Legacy out 1: old strip tiles,
+trade card and build alert slot; One gate spelling in the loop, gates.txt,
+build.ps1 and /done; kit crash = retry.
 
-- Session 4; width 12 worktree + 0 main-checkout, 0 loop rows released;
-  about 131 minutes.
+- Session 4; width 12 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-LEGACY-OUT-1); server/al/core.py
   (OVL-COPY-FIRST); web/app.js (PLAY-LEGACY-OUT-1); server/al/http.py
   (RUN-BUILD-STAMP-CORE); server/al/state.py (OVL-COPY-FIRST); web/app.css
@@ -976,16 +943,11 @@ gates.txt, build.ps1 and /done; kit crash = retry.
   (OVL-WAKE-COMPANION); app/test/client.test.js (OVL-WAKE-COMPANION);
   tests/test_a11y.py (PLAY-LEGACY-OUT-1); app/test/tabs.test.js
   (PLAY-LEGACY-OUT-1).
-- Integrator: ROADMAP.md rows of all 12 packages; CLAUDE.md:
-  TEST-GATE-CALLERS, REL-RUNTIME-PINS, OVL-WAKE-COMPANION, OVL-EGRESS-LOCK,
-  DEP-08; docs/decisions/README.md: REL-RUNTIME-PINS, DEP-08;
-  docs/design/reviews.log: 4 lines.
-- Watch: tests/test_eval_text.py (OVL-COPY-FIRST edits, TC-WORN-BASELINE
-  runs).
-- Batches: 1: TC-WORN-BASELINE, PLAY-LEGACY-OUT-1, TEST-GATE-CALLERS,
-  RUN-BUILD-STAMP-CORE; 2: REL-RUNTIME-PINS, OVL-WAKE-COMPANION,
-  OVL-EGRESS-LOCK, TEST-FLOOR-MEMO; 3: RUN-DIAG-DATA-AGE, DEP-08,
-  REL-INSTALL-HOME, OVL-COPY-FIRST.
+- Integrator: ROADMAP.md rows of all 12 packages; docs/design/reviews.log:
+  TC-WORN-BASELINE, PLAY-LEGACY-OUT-1, RUN-DIAG-DATA-AGE, OVL-COPY-FIRST;
+  CLAUDE.md: TEST-GATE-CALLERS, REL-RUNTIME-PINS, OVL-WAKE-COMPANION,
+  OVL-EGRESS-LOCK, DEP-08; docs/decisions/README.md: REL-RUNTIME-PINS,
+  DEP-08.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1005,18 +967,17 @@ gates.txt, build.ps1 and /done; kit crash = retry.
 - RUN-DIAG-DATA-AGE [session, M 30m, build, P2, DR] Checks row when the game data is older than the game. Files: server/al/acts.py, server/al/plug/dataage.py, tests/test_diag_data_age.py. Deps: RUN-SEAMS.
 - DEP-08 [session, L 80m, build, P1] Release build tool: the app zip, MANIFEST and BUILD. Files: tools/rel_build.py, config/ship_list.json, tests/test_release_tool.py, docs/decisions/0064-release-artifact.md. Deps: DEP-03, DEP-04, DEP-06.
 - REL-INSTALL-HOME [session, L 70m, build, P1] Installer package: home, marker and the command table. Files: server/al/install/__init__.py, server/al/install/__main__.py, server/al/install/cli.py, server/al/install/home.py, server/al/install/status.py (+1 more). Deps: DEP-05, RUN-DURABLE-JSONFILE, SEC-ACL-APPLY.
-- OVL-COPY-FIRST [session, M 60m, build, P1, DR] Empty clipboard at the item-check press shows a 'Copy the item first' card; one read per press stays under test + On the overlay card the item name. Files: server/al/state.py, server/al/core.py, tests/test_eval_text.py, app/test/eval.test.js, tests/test_price_text.py (+1 more). Deps: none.
+- OVL-COPY-FIRST [session, M 60m, build, P1, DR] Empty clipboard at the item-check press shows a 'Copy the item first' card; one read per press stays under test + On the overlay card the item name stays on line 2 unless a poe.ninja value exists. Files: server/al/state.py, server/al/core.py, tests/test_eval_text.py, app/test/eval.test.js, tests/test_price_text.py (+1 more). Deps: none.
 
 ### Wave 11: install and release, theorycraft, tests and code seams
 
-Goal: Milestones: the item check compares against worn gear (worn-gear
-baseline); the Play tab never scrolls (legacy cards are gone). Leads: 'I
-wear this' endpoint, worn-gear switch and clear; Legacy out 2: consent,
-guide, tip, language and item cards leave Play; Calc opt-in in one act
-(setup switch). Releases 1 loop-owned rows.
+Milestones: the item check compares against worn gear (worn-gear baseline);
+the Play tab never scrolls (legacy cards are gone). Leads: 'I wear this'
+endpoint, worn-gear switch and clear; Legacy out 2: consent, guide, tip,
+language and item cards leave Play; Calc opt-in in one act (setup switch).
+Releases 1 loop-owned rows.
 
-- Session 4; width 12 worktree + 0 main-checkout, 1 loop rows released;
-  about 125 minutes.
+- Session 4; width 12 worktree + 0 main-checkout, 1 loop rows released.
 - Hotspots: web/index.html (PLAY-LEGACY-OUT-2); server/al/core.py
   (TC-WORN-WIRE); web/app.js (PLAY-LEGACY-OUT-2); server/al/http.py
   (TC-WORN-WIRE); server/al/state.py (TEST-STATE-TEXT-2); web/app.css
@@ -1029,15 +990,9 @@ guide, tip, language and item cards leave Play; Calc opt-in in one act
   (PLAY-LEGACY-OUT-2); app/test/tabs.test.js (PLAY-LEGACY-OUT-2);
   server/al/settingsio.py (TC-WORN-WIRE); tests/test_ux_settings_io.py
   (TC-WORN-WIRE).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
-  REL-AUTOSTART-ENTRY, DEP-16; docs/decisions/README.md: DEP-16;
-  docs/design/reviews.log: 3 lines.
-- Watch: tests/test_floor_static.py (TEST-CAPTURE-HELPER edits, TC-WORN-WIRE
-  runs).
-- Batches: 1: TC-WORN-WIRE, PLAY-LEGACY-OUT-2, TC-CALC-OPTIN,
-  REL-AUTOSTART-ENTRY; 2: REL-SBOM, TEST-CAPTURE-HELPER,
-  REL-INSTALL-PAYLOAD, REL-INSTALL-SELFTEST; 3: DATA-PROVENANCE,
-  RUN-HOTRELOAD-RETRY, DEP-16, TEST-STATE-TEXT-2.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  PLAY-LEGACY-OUT-2, TC-CALC-OPTIN, TEST-STATE-TEXT-2; CLAUDE.md:
+  REL-AUTOSTART-ENTRY, DEP-16; docs/decisions/README.md: DEP-16.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1062,13 +1017,12 @@ guide, tip, language and item cards leave Play; Calc opt-in in one act
 
 ### Wave 12: install and release, overlay and client, theorycraft
 
-Goal: Leads: Generate the dashboard's panel script and style tags at serve
-time; Quiet base button, one filled button; OBS-CRASH: the core writes
+Leads: Generate the dashboard's panel script and style tags at serve time;
+Quiet base button, one filled button; OBS-CRASH: the core writes
 ops/runtime/last-exit.json on every exit path; Checks reads.... Releases 2
 loop-owned rows.
 
-- Session 4; width 12 worktree + 0 main-checkout, 2 loop rows released;
-  about 120 minutes.
+- Session 4; width 12 worktree + 0 main-checkout, 2 loop rows released.
 - Hotspots: web/index.html (TEST-WEB-ASSEMBLE); server/al/core.py
   (OVL-OBS-CRASH); server/al/http.py (TEST-WEB-ASSEMBLE); server/al/state.py
   (DATA-GUIDE-MERGE); web/app.css (PLAY-F-159-QUIET-BUTTON);
@@ -1079,14 +1033,10 @@ loop-owned rows.
   tests/test_diag_self.py (OVL-OBS-CRASH); README.md (PUB-README-PLAYERS);
   scripts/setup.ps1 (OVL-NPM-LOCK); server/al/zoneguide.py
   (DATA-GUIDE-MERGE).
-- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
-  DATA-GUIDE-MERGE, REL-AUTOSTART-TRAY, DEP-10; docs/decisions/README.md:
-  DEP-10; AL-NEXT-SESSION.txt: DATA-GUIDE-MERGE; docs/design/reviews.log: 2
-  lines.
-- Batches: 1: TEST-WEB-ASSEMBLE, PLAY-F-159-QUIET-BUTTON, OVL-OBS-CRASH,
-  REL-INSTALL-SHELL; 2: DATA-GUIDE-MERGE, REL-AUTOSTART-TRAY, OVL-NPM-LOCK,
-  PUB-README-PLAYERS; 3: TC-BRIDGE-NEXT, TC-WEIGHTS-DELTA-STORE,
-  LOOP-WATCH-GATE, DEP-10.
+- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log:
+  TEST-WEB-ASSEMBLE, PLAY-F-159-QUIET-BUTTON; CLAUDE.md: DATA-GUIDE-MERGE,
+  REL-AUTOSTART-TRAY, DEP-10; AL-NEXT-SESSION.txt: DATA-GUIDE-MERGE;
+  docs/decisions/README.md: DEP-10.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1112,13 +1062,12 @@ loop-owned rows.
 
 ### Wave 13: loop and watchers, reliability and observability, theorycraft
 
-Goal: Leads: Build id in the dashboard footer, overlay About and tray
-tooltip; Own counters: metrics.py and the token-gated GET /api/debug; Game
-data arrives at start: the supervisor runs the snapshot tool hidden.
-Releases 1 loop-owned rows.
+Leads: Build id in the dashboard footer, overlay About and tray tooltip; Own
+counters: metrics.py and the token-gated GET /api/debug; Game data arrives
+at start: the supervisor runs the snapshot tool hidden. Releases 1
+loop-owned rows.
 
-- Session 4; width 12 worktree + 0 main-checkout, 1 loop rows released;
-  about 125 minutes.
+- Session 4; width 12 worktree + 0 main-checkout, 1 loop rows released.
 - Hotspots: web/index.html (RUN-BUILD-STAMP-UI); server/al/core.py
   (TC-UPGRADE-PER-SLOT); web/app.js (RUN-BUILD-STAMP-UI); server/al/http.py
   (RUN-METRICS-CORE); server/al/state.py (TEST-STATE-TEXT-3);
@@ -1130,14 +1079,11 @@ Releases 1 loop-owned rows.
   server/al/theorycraft/bridge.py (TC-CALC-CONFINE-PROC);
   tests/test_tc_bridge.py (TC-CALC-CONFINE-PROC); tools/tc_drift.py
   (AUTO-12).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
-  RUN-METRICS-CORE, DATA-SNAP-AT-START, OVL-ELECTRON-SETUP, AUTO-12,
-  AUTO-05; docs/decisions/README.md: RUN-METRICS-CORE, OVL-ELECTRON-SETUP,
-  AUTO-05; docs/design/reviews.log: 4 lines.
-- Batches: 1: RUN-BUILD-STAMP-UI, RUN-METRICS-CORE, DATA-SNAP-AT-START,
-  PLAY-TD-08B-GUIDE-SHORT-TEXT; 2: TEST-STATE-TEXT-3, OVL-ELECTRON-SETUP,
-  AUTO-12, TC-CALC-CONFINE-PROC; 3: AUTO-05, LOOP-WATCH-ROWS,
-  REL-UNINSTALL-SHELL, TC-UPGRADE-PER-SLOT.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  RUN-BUILD-STAMP-UI, PLAY-TD-08B-GUIDE-SHORT-TEXT, TEST-STATE-TEXT-3,
+  TC-UPGRADE-PER-SLOT; CLAUDE.md: RUN-METRICS-CORE, DATA-SNAP-AT-START,
+  OVL-ELECTRON-SETUP, AUTO-12, AUTO-05; docs/decisions/README.md:
+  RUN-METRICS-CORE, OVL-ELECTRON-SETUP, AUTO-05.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1147,7 +1093,7 @@ Releases 1 loop-owned rows.
   is flipped and main is clean.
 
 - RUN-BUILD-STAMP-UI [session, M 30m, build, P1, DR] Build id in the dashboard footer, overlay About and tray tooltip. Files: web/index.html, web/app.js, app/about.js, app/client/tray_menu.js, app/main.js (+1 more). Deps: RUN-BUILD-STAMP-CORE.
-- RUN-METRICS-CORE [session, L 75m, build, P1] Own counters: metrics.py and the token-gated GET /api/debug. Files: server/al/http.py, tests/test_security_surface.py, server/al/metrics.py, server/al/plug/debug.py, tests/test_metrics.py (+1 more). Deps: RUN-SEAMS, RUN-BUILD-STAMP-CORE, RUN-TAIL-HEAL-READER.
+- RUN-METRICS-CORE [session, L 75m, build, P1] Own counters: metrics.py and the token-gated GET /api/debug. Files: server/al/http.py, tests/test_security_surface.py, tests/test_marks.py, server/al/metrics.py, server/al/plug/debug.py (+2 more). Deps: RUN-SEAMS, RUN-BUILD-STAMP-CORE, RUN-TAIL-HEAL-READER.
 - DATA-SNAP-AT-START [session, L 70m, build, P1] Game data arrives at start: the supervisor runs the snapshot tool hidden. Files: server/al/keepalive.py, server/al/diag.py, server/al/theorycraft/snapshot.py, README.md, docs/decisions/0009-data-license.md (+4 more). Deps: none.
 - PLAY-TD-08B-GUIDE-SHORT-TEXT [session, L 90m, data, DR] Zone guide short lines: author the 93 entries. Files: server/al/data/zone_guide.json. Deps: PLAY-TD-08A-GUIDE-SHORT-FIELD, DATA-GUIDE-MERGE.
 - TEST-STATE-TEXT-3 [session, M 50m, build, P2, DR] State text move 3: text/itemcheck.py. Files: server/al/state.py, tests/test_audit_pass2.py, server/al/text/itemcheck.py. Deps: TEST-STATE-TEXT-2.
@@ -1162,14 +1108,12 @@ Releases 1 loop-owned rows.
 
 ### Wave 14: reliability and observability, install and release, theorycraft
 
-Goal: Milestones: four tabs: Play, Build and items, Run, Settings. Leads:
-Four tabs: Play, Build and items, Run, Settings; Hotkeys in the core:
-effective keys in the snapshot, POST /api/hotkeys, Checks rows for...;
-Budget log: the core records its own footprint once a minute. Releases 3
-loop-owned rows.
+Milestones: four tabs: Play, Build and items, Run, Settings. Leads: Four
+tabs: Play, Build and items, Run, Settings; Hotkeys in the core: effective
+keys in the snapshot, POST /api/hotkeys, Checks rows for...; Budget log: the
+core records its own footprint once a minute. Releases 3 loop-owned rows.
 
-- Session 5; width 12 worktree + 0 main-checkout, 3 loop rows released;
-  about 115 minutes.
+- Session 5; width 11 worktree + 0 main-checkout, 3 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-19B-FOUR-TABS); server/al/core.py
   (OVL-KEYS-CORE); server/al/http.py (OVL-KEYS-CORE); server/al/state.py
   (OVL-KEYS-CORE); web/app.css (PLAY-TD-19B-FOUR-TABS); server/al/diag.py
@@ -1178,17 +1122,13 @@ loop-owned rows.
   (OVL-KEYS-CORE); app/client/window.js (REL-AUTOSTART-SWITCH);
   tests/test_diag_self.py (OVL-KEYS-CORE); README.md (AUTO-14);
   tests/test_ux_b8.py (PLAY-TD-19B-FOUR-TABS); scripts/setup.ps1
-  (LOOP-ELECTRON-POLICY); app/test/tabs.test.js (PLAY-TD-19B-FOUR-TABS);
-  tests/test_tc_bridge.py (TC-CALC-CONFINE-LUA); tools/tc_drift.py
+  (LOOP-ELECTRON-POLICY); tests/test_a11y.py (PLAY-TD-19B-FOUR-TABS);
+  app/test/tabs.test.js (PLAY-TD-19B-FOUR-TABS); tools/tc_drift.py
   (TC-CALC-VERIFY-PIN).
-- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
-  RUN-BUDGET-LOG-CORE, REL-AUTOSTART-SWITCH, AUTO-14, TC-CALC-VERIFY-PIN,
-  LOOP-ELECTRON-POLICY; docs/decisions/README.md: LOOP-ELECTRON-POLICY;
-  docs/design/reviews.log: 1 lines.
-- Batches: 1: PLAY-TD-19B-FOUR-TABS, OVL-KEYS-CORE, RUN-BUDGET-LOG-CORE,
-  RUN-BUDGET-LOG-CLIENT; 2: REL-INSTALL-CMD, REL-AUTOSTART-SWITCH, AUTO-14,
-  TC-CALC-VERIFY-PIN; 3: TC-CALC-CONFINE-LUA, AUTO-11, DATA-TREE-HOLD,
-  LOOP-ELECTRON-POLICY.
+- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log:
+  PLAY-TD-19B-FOUR-TABS; CLAUDE.md: RUN-BUDGET-LOG-CORE,
+  REL-AUTOSTART-SWITCH, AUTO-14, TC-CALC-VERIFY-PIN, LOOP-ELECTRON-POLICY;
+  docs/decisions/README.md: LOOP-ELECTRON-POLICY.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1197,15 +1137,14 @@ loop-owned rows.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-TD-19B-FOUR-TABS [session, M 60m, build, P1, DR] Four tabs: Play, Build and items, Run, Settings. Files: web/index.html, web/tabs.js, web/app.css, app/test/tabs.test.js, tests/test_ux_review.py (+1 more). Deps: PLAY-LEGACY-OUT-2, PLAY-F-159-QUIET-BUTTON.
+- PLAY-TD-19B-FOUR-TABS [session, M 60m, build, P1, DR] Four tabs: Play, Build and items, Run, Settings. Files: web/index.html, web/tabs.js, web/app.css, app/test/tabs.test.js, tests/test_ux_review.py (+5 more). Deps: PLAY-LEGACY-OUT-2, PLAY-F-159-QUIET-BUTTON.
 - OVL-KEYS-CORE [session, L 80m, build, P1] Hotkeys in the core: effective keys in the snapshot, POST /api/hotkeys, Checks rows for both chords. Files: server/al/hotkeys.py, server/al/core.py, server/al/state.py, server/al/http.py, server/al/diag.py (+4 more). Deps: OVL-KEYS-CLIENT, SEC-SURFACE-PIN.
-- RUN-BUDGET-LOG-CORE [session, M 60m, build, P1] Budget log: the core records its own footprint once a minute. Files: docs/decisions/0006-fps-measurement-method.md, server/al/budgetlog.py, server/al/plug/budget.py, tests/test_budget_log.py. Deps: RUN-METRICS-CORE.
+- RUN-BUDGET-LOG-CORE [session, M 60m, build, P1] Budget log: the core records its own footprint once a minute. Files: docs/decisions/0006-fps-measurement-method.md, tests/test_marks.py, server/al/budgetlog.py, server/al/plug/budget.py, tests/test_budget_log.py. Deps: RUN-METRICS-CORE.
 - RUN-BUDGET-LOG-CLIENT [session, M 30m, build, P1] Client samples its own Electron processes once a minute. Files: app/main.js, app/metrics.js, app/test/metrics.test.js. Deps: RUN-BUILD-STAMP-UI.
 - REL-INSTALL-CMD [session, L 75m, build, P1] Installer package: install and repair commands. Files: server/al/install/install.py, server/al/install/repair.py, tests/test_installer.py. Deps: REL-INSTALL-PAYLOAD, REL-INSTALL-SELFTEST, REL-INSTALL-SHELL, DATA-SNAP-AT-START.
 - REL-AUTOSTART-SWITCH [session, M 60m, build, P1] 'Start with Windows' in the tray menu. Files: app/client/tray_menu.js, app/client/window.js, app/client/launcher.js, app/client/preload.js, app/test/client_controls.test.js (+1 more). Deps: REL-AUTOSTART-TRAY.
 - AUTO-14 [session, L 70m, build, P2] DOCS-FRESH: tools/docs_fresh.py check, with the code-pin facts. Files: README.md, tools/docs_fresh.py, tests/test_docs_fresh.py. Deps: DEP-03, PUB-README-PLAYERS.
 - TC-CALC-VERIFY-PIN [session, L 70m, build, P2] Pin contents, not bytes. Files: config/tc_pins.json, tools/tc_pin.py, tools/tc_drift.py, tests/test_tc_pin.py, tests/test_tc_drift.py (+1 more). Deps: TC-CALC-OPTIN, AUTO-12.
-- TC-CALC-CONFINE-LUA [session, M 45m, build, P2] Drop dangerous Lua entry points after PoB loads. Files: server/al/theorycraft/bridge.lua, tests/test_tc_bridge.py, tests/test_tc_pob_drift_guard.py. Deps: TC-BRIDGE-NEXT, TC-CALC-CONFINE-PROC.
 - AUTO-11 [session, M 40m, build, P2] DOCS-SHAPE: a 'shape' topic in the GGG docs watch. Files: tools/ggg_docs_watch.py, tests/test_ggg_docs_watch.py, docs/decisions/0044-ggg-docs-watch.md. Deps: none.
 - DATA-TREE-HOLD [session, M 60m, build, P2] Keep the previous passive tree and resolve each build against the best match. Files: server/al/theorycraft/snapshot.py, server/al/theorycraft/treedata.py, server/al/theorycraft/store.py, tests/test_tc_tree.py, tests/test_tc_tree_ids.py (+1 more). Deps: DATA-SNAP-AT-START.
 - LOOP-ELECTRON-POLICY [session, M 50m, build, P2] Electron upgrade policy decision; setup refuses the npm step while the client runs. Files: scripts/setup.ps1, docs/decisions/0070-electron-upgrade-policy.md, tests/test_setup_client_guard.py. Deps: none.
@@ -1215,12 +1154,11 @@ loop-owned rows.
 
 ### Wave 15: loop and watchers, reliability and observability, theorycraft
 
-Goal: Leads: Counter call sites: fetches per host, calc starts and
-time-outs, press outcome; Optional wear key (unset by default); Update from
-a local zip: verify, build beside, self-test, stage.
+Leads: Counter call sites: fetches per host, calc starts and time-outs,
+press outcome; Optional wear key (unset by default); Update from a local
+zip: verify, build beside, self-test, stage.
 
-- Session 5; width 12 worktree + 1 main-checkout, 0 loop rows released;
-  about 135 minutes.
+- Session 5; width 13 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (RUN-METRICS-SITES); server/al/core.py
   (RUN-METRICS-SITES); web/app.js (RUN-METRICS-SITES); server/al/http.py
   (RUN-METRICS-SITES); server/al/state.py (TEST-STATE-TEXT-4); app/main.js
@@ -1228,16 +1166,14 @@ a local zip: verify, build beside, self-test, stage.
   (RUN-SETTINGS-TRIM-DOCS); app/test/client.test.js (OVL-LAUNCH-ENV);
   app/test/tabs.test.js (PLAY-TD-22B-TAB-FOCUS); server/al/settingsio.py
   (TC-WORN-KEY); tests/test_ux_settings_io.py (TC-WORN-KEY);
-  server/al/theorycraft/bridge.py (RUN-METRICS-SITES); tools/tc_drift.py
+  server/al/theorycraft/bridge.py (RUN-METRICS-SITES);
+  tests/test_tc_bridge.py (TC-CALC-CONFINE-LUA); tools/tc_drift.py
   (LOOP-WATCH-SETTLED).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
+- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
   RUN-METRICS-SITES; docs/decisions/README.md: RUN-METRICS-SITES,
-  TEST-DOCS-INDEX; AL-NEXT-SESSION.txt: LOOP-WATCH-SETTLED;
-  docs/research/README.md: TEST-DOCS-INDEX; docs/design/reviews.log: 3
-  lines.
-- Batches: 1: RUN-METRICS-SITES, TC-WORN-KEY, DEP-11, PLAY-TD-22B-TAB-FOCUS;
-  2: TEST-STATE-TEXT-4, OVL-LAUNCH-ENV, TEST-DOCS-INDEX, LOOP-WATCH-FILE; 3:
-  DEP-13, LOOP-WATCH-META, LOOP-WATCH-SETTLED, TC-GGG-RATELIMIT.
+  TEST-DOCS-INDEX; docs/design/reviews.log: RUN-METRICS-SITES,
+  PLAY-TD-22B-TAB-FOCUS, TEST-STATE-TEXT-4; docs/research/README.md:
+  TEST-DOCS-INDEX; AL-NEXT-SESSION.txt: LOOP-WATCH-SETTLED.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1246,31 +1182,31 @@ a local zip: verify, build beside, self-test, stage.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- RUN-METRICS-SITES [session, L 90m, build, P1, DR] Counter call sites: fetches per host, calc starts and time-outs, press outcome + Own consent line for the parse ledger (consent key, route flag, da. Files: server/al/webfetch.py, server/al/theorycraft/bridge.py, server/al/core.py, tests/test_metrics.py, server/al/http.py (+4 more). Deps: RUN-METRICS-CORE, RUN-TAIL-HEAL-CORE, RUN-LEDGER-CORE, RUN-BUILD-STAMP-UI.
+- TC-CALC-CONFINE-LUA [session, M 45m, build, P2] Drop dangerous Lua entry points after PoB loads. Files: server/al/theorycraft/bridge.lua, tests/test_tc_bridge.py, tests/test_tc_pob_drift_guard.py, tests/test_marks.py. Deps: TC-BRIDGE-NEXT, TC-CALC-CONFINE-PROC.
+- RUN-METRICS-SITES [session, L 90m, build, P1, DR] Counter call sites: fetches per host, calc starts and time-outs, press outcome + Own consent line for the parse ledger (consent key, route flag, dashboard line). Files: server/al/webfetch.py, server/al/theorycraft/bridge.py, server/al/core.py, tests/test_metrics.py, server/al/http.py (+5 more). Deps: RUN-METRICS-CORE, RUN-TAIL-HEAL-CORE, RUN-LEDGER-CORE, RUN-BUILD-STAMP-UI.
 - TC-WORN-KEY [session, M 45m, build, P1] Optional wear key (unset by default). Files: app/main.js, app/eval_hotkey.js, server/al/settingsio.py, app/test/eval.test.js, tests/test_floor_static.py (+1 more). Deps: TC-WORN-WIRE, TC-PRESS-BUILD, OVL-KEYS-CORE.
 - DEP-11 [session, L 75m, build, P1] Update from a local zip: verify, build beside, self-test, stage. Files: server/al/install/update.py, tests/test_updater.py. Deps: REL-INSTALL-CMD.
 - PLAY-TD-22B-TAB-FOCUS [session, M 40m, build, P2, DR] Auto-return to Play keeps focus where the user is. Files: web/tabs.js, app/test/tabs.test.js. Deps: PLAY-TD-19B-FOUR-TABS.
-- TEST-STATE-TEXT-4 [session, M 45m, build, P2, DR] State text move 4: text/buildlive.py and text/overlaycard.py. Files: server/al/state.py, server/al/text/buildlive.py, server/al/text/overlaycard.py. Deps: TEST-STATE-TEXT-3.
+- TEST-STATE-TEXT-4 [session, M 45m, build, P2, DR] State text move 4: text/buildlive.py and text/overlaycard.py. Files: server/al/state.py, server/al/text/itemcheck.py, tests/test_glance_rules.py, server/al/text/buildlive.py, server/al/text/overlaycard.py. Deps: TEST-STATE-TEXT-3.
 - OVL-LAUNCH-ENV [session, M 45m, build, P2] Launcher runs tools by absolute path; the client starts without ELECTRON_RUN_AS_NODE and NODE_OPTIONS. Files: app/client/launcher.js, scripts/run.ps1, scripts/al_detach.ps1, app/test/client.test.js, tests/test_audit_exe_path.py. Deps: OVL-ELECTRON-SETUP.
 - TEST-DOCS-INDEX [session, M 45m, build, P2] docs_fresh.py: stale markers, index --write, every decision and research file indexed. Files: tools/docs_fresh.py, tests/test_docs_fresh.py, tests/test_docs_index.py. Deps: AUTO-14, LOOP-LEDGERS.
 - LOOP-WATCH-FILE [session, L 85m, build, P1] The two row primitives and the unattended add-only commit path (Q-12). Files: tools/watch_file.py, tests/test_watch_file.py. Deps: AUTO-03, AUTO-05, LOOP-WATCH-ROWS.
 - DEP-13 [session, M 50m, build, P1] Cut-over tooling: migrate player data from a checkout. Files: server/al/install/migrate.py, tests/test_migrate.py. Deps: REL-INSTALL-CMD.
 - LOOP-WATCH-META [session, M 50m, build, P1] Watch sources: repoe-fork data and the GGG passive tree export (metadata only). Files: tools/watch_sources/repoe_fork.py, tools/watch_sources/ggg_tree.py, tests/test_watch_meta.py. Deps: AUTO-05.
-- LOOP-WATCH-SETTLED [session, M 55m, build, P1] The GGG docs watch and the PoB release check as registry sources. Files: tools/tc_drift.py, tools/watch_sources/ggg_docs.py, tools/watch_sources/pob_release.py, ops/loop/watch_rows/ggg_docs.json, ops/loop/watch_rows/pob_release.json (+1 more). Deps: AUTO-05, LOOP-WATCH-ROWS, AUTO-11.
+- LOOP-WATCH-SETTLED [session, M 55m, build, P1] The GGG docs watch and the PoB release check as registry sources. Files: tools/tc_drift.py, tools/watch_sources/ggg_docs.py, tools/watch_sources/pob_release.py, ops/loop/watch_rows/ggg-docs.json, ops/loop/watch_rows/pob-release.json (+1 more). Deps: AUTO-05, LOOP-WATCH-ROWS, AUTO-11.
 - TC-GGG-RATELIMIT [session, M 50m, build, P1] Header-driven rate limiter. Files: server/al/ratelimit.py, tests/test_ratelimit.py. Deps: none.
 - RUN-SETTINGS-TRIM-DOCS [session, S 15m, review, P3] Drop four tuning keys from the player docs. Files: README.md, config/local.example.json. Deps: PUB-README-PLAYERS.
 
 ### Wave 16: theorycraft, loop and watchers, reliability and observability
 
-Goal: Milestones: the dashboard prints the real keys and can change them;
-the parse ledger is wired (LIVE-1 read-back starts). Leads: Dashboard prints
-the real keys, one change-key field per chord, one Play line while the...;
-Wire the ledger: feed_line hook, write tick, drift note, read-back flags,
+Milestones: the dashboard prints the real keys and can change them; the
+parse ledger is wired (LIVE-1 read-back starts). Leads: Dashboard prints the
+real keys, one change-key field per chord, one Play line while the...; Wire
+the ledger: feed_line hook, write tick, drift note, read-back flags,
 waystone shape; Python logs bounded, one format, a banner per start,
 faulthandler on its own file. Releases 1 loop-owned rows.
 
-- Session 5; width 12 worktree + 0 main-checkout, 1 loop rows released;
-  about 115 minutes.
+- Session 5; width 12 worktree + 0 main-checkout, 1 loop rows released.
 - Hotspots: web/index.html (OVL-KEYS-WEB); server/al/core.py
   (RUN-LEDGER-WIRE); web/app.js (OVL-KEYS-WEB); server/al/state.py
   (DATA-GUIDE-BOSS); tests/test_ux_review.py (OVL-KEYS-WEB); app/main.js
@@ -1284,13 +1220,9 @@ faulthandler on its own file. Releases 1 loop-owned rows.
   (RUN-OBS-LOGS-PY); server/al/zoneguide.py (DATA-GUIDE-BOSS);
   tests/test_tc_bridge.py (RUN-OBS-LOGS-PY); tools/tc_drift.py
   (RUN-OBS-LOGS-PY).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
-  TC-CALC-OPTIN-BUTTON, DATA-GUIDE-BOSS; AL-NEXT-SESSION.txt: AUTO-07;
-  docs/design/reviews.log: 3 lines.
-- Batches: 1: OVL-KEYS-WEB, RUN-LEDGER-WIRE, RUN-OBS-LOGS-PY,
-  TC-CALC-OPTIN-BUTTON; 2: REL-UPDATE-SWITCH, TC-GGG-LISTENER,
-  DATA-GUIDE-BOSS, LOOP-USAGE-LABEL; 3: TEST-DOCS-FACTS-UI, AUTO-09,
-  TC-CHARJSON-SHAPES, AUTO-07.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  OVL-KEYS-WEB, RUN-LEDGER-WIRE, TC-CALC-OPTIN-BUTTON; CLAUDE.md:
+  TC-CALC-OPTIN-BUTTON, DATA-GUIDE-BOSS; AL-NEXT-SESSION.txt: AUTO-07.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1299,11 +1231,11 @@ faulthandler on its own file. Releases 1 loop-owned rows.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- OVL-KEYS-WEB [session, L 75m, build, P1, DR] Dashboard prints the real keys, one change-key field per chord, one Play line while the overlay is off. Files: web/index.html, web/app.js, web/prices.js, server/al/hints.py, app/test/prices.test.js (+5 more). Deps: OVL-KEYS-CORE.
+- OVL-KEYS-WEB [session, L 75m, build, P1, DR] Dashboard prints the real keys, one change-key field per chord, one Play line while the overlay is off. Files: web/index.html, web/app.js, web/prices.js, server/al/hints.py, app/test/prices.test.js (+7 more). Deps: OVL-KEYS-CORE.
 - RUN-LEDGER-WIRE [session, M 60m, build, P1, DR] Wire the ledger: feed_line hook, write tick, drift note, read-back flags, waystone shape. Files: server/al/core.py, server/al/plug/ledger.py, tests/test_ledger_wire.py. Deps: RUN-METRICS-SITES.
 - RUN-OBS-LOGS-PY [session, L 75m, build, P1] Python logs bounded, one format, a banner per start, faulthandler on its own file + Heavy child processes start below normal priority. Files: server/al/__main__.py, server/al/keepalive.py, server/al/theorycraft/bridge.py, tests/test_core_crash_log.py, tools/tc_drift.py (+6 more). Deps: RUN-BUILD-STAMP-CORE, RUN-DURABLE-CRLF, RUN-METRICS-SITES.
-- TC-CALC-OPTIN-BUTTON [session, M 60m, build, P2, DR] 'Set up the Path of Building calc' button in the client. Files: app/client/preload.js, app/main.js, web/checks.js, app/test/client.test.js, app/test/checks.test.js (+1 more). Deps: TC-CALC-OPTIN, TC-WORN-KEY, OVL-KEYS-CLIENT.
-- REL-UPDATE-SWITCH [session, L 80m, build, P1] Update: apply-staged, confirm and rollback. Files: server/al/install/switch.py, server/al/install/apply_staged.py, server/al/install/rollback.py, server/al/install/confirm.py, tests/test_update_switch.py. Deps: DEP-11, REL-INSTALL-SHELL.
+- TC-CALC-OPTIN-BUTTON [session, M 60m, build, P2, DR] 'Set up the Path of Building calc' button in the client. Files: app/client/preload.js, app/main.js, web/checks.js, app/test/client.test.js, app/test/checks.test.js (+8 more). Deps: TC-CALC-OPTIN, TC-WORN-KEY, OVL-KEYS-CLIENT.
+- REL-UPDATE-SWITCH [session, L 80m, build, P1] Update: apply-staged, confirm and rollback. Files: tests/test_install_home.py, server/al/install/switch.py, server/al/install/apply_staged.py, server/al/install/rollback.py, server/al/install/confirm.py (+1 more). Deps: DEP-11, REL-INSTALL-SHELL.
 - TC-GGG-LISTENER [session, M 40m, build, P1] One-shot loopback listener for the OAuth redirect. Files: server/al/ports.py, tests/test_port_resolve.py, server/al/oauthlisten.py, tests/test_oauthlisten.py. Deps: none.
 - DATA-GUIDE-BOSS [session, M 35m, data, P2] Boss elements move from campaign.BOSS_ZONES into the guide file. Files: server/al/data/zone_guide.json, server/al/zoneguide.py, server/al/campaign.py, server/al/state.py, tools/provenance.py (+3 more). Deps: DATA-GUIDE-MERGE.
 - LOOP-USAGE-LABEL [session, S 25m, build, P1] The row id reaches the lane's usage line. Files: tools/al_lane.py, tests/test_lane_usage_label.py. Deps: none.
@@ -1315,13 +1247,12 @@ faulthandler on its own file. Releases 1 loop-owned rows.
 
 ### Wave 17: go-public, theorycraft, tests and code seams
 
-Goal: Leads: Build and items grid 1: Build, Health and next, Search strings;
+Leads: Build and items grid 1: Build, Health and next, Search strings;
 Overlay legibility recipe and two type sizes in the overlay CSS (TD-05, part
 1); Contact value: a write-only POST and its core setter. Releases 1
 loop-owned rows.
 
-- Session 5; width 12 worktree + 0 main-checkout, 1 loop rows released;
-  about 125 minutes.
+- Session 5; width 12 worktree + 0 main-checkout, 1 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-19C-BUILD-GRID); server/al/core.py
   (DATA-CONTACT-FIELD); web/app.js (PLAY-TD-19C-BUILD-GRID);
   server/al/http.py (DATA-CONTACT-FIELD); web/app.css
@@ -1334,14 +1265,9 @@ loop-owned rows.
   tests/test_keepalive.py (TEST-TIMER-FIXES);
   server/al/theorycraft/bridge.py (TC-CALC-VERIFY-USE);
   tests/test_tc_bridge.py (TC-CALC-VERIFY-USE).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
-  DATA-CONTACT-FIELD, TC-CALC-VERIFY-USE, LOOP-WATCH-WIRE;
-  docs/design/reviews.log: 3 lines.
-- Watch: tests/test_p163_lane_tools.py (AUTO-15 edits, GP-14 runs).
-- Batches: 1: PLAY-TD-19C-BUILD-GRID, OVL-TD05-LEGIBILITY,
-  DATA-CONTACT-FIELD, REL-CLIENT-HOME; 2: TC-CALC-VERIFY-USE, AUTO-15,
-  TEST-TIMER-FIXES, TC-GGG-CLIENT-CORE; 3: LOOP-WATCH-WIRE, GP-14,
-  PUB-SWEEP-OWN-ADDRESS, PUB-SOCIAL-CARD.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  PLAY-TD-19C-BUILD-GRID, OVL-TD05-LEGIBILITY, PUB-SOCIAL-CARD; CLAUDE.md:
+  DATA-CONTACT-FIELD, TC-CALC-VERIFY-USE, LOOP-WATCH-WIRE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1351,13 +1277,13 @@ loop-owned rows.
   is flipped and main is clean.
 
 - PLAY-TD-19C-BUILD-GRID [session, L 90m, build, P1, DR] Build and items grid 1: Build, Health and next, Search strings. Files: web/index.html, web/app.css, web/app.js, web/health.js, web/search.js (+4 more). Deps: PLAY-TD-19B-FOUR-TABS, PLAY-TD-19A-PAGER.
-- OVL-TD05-LEGIBILITY [session, M 55m, build, P2, DR] Overlay legibility recipe and two type sizes in the overlay CSS (TD-05, part 1). Files: app/overlay/overlay.css, app/overlay/index.html, tests/test_design_contrast.py, tests/test_ux_review.py, docs/design/0001-design-system.md. Deps: OVL-KEYS-WEB, OVL-GLANCE-RULES, PLAY-TD-03-TOKENS, PLAY-TD-04A-DARK-CLIENT.
+- OVL-TD05-LEGIBILITY [session, M 55m, build, P2, DR] Overlay legibility recipe and two type sizes in the overlay CSS (TD-05, part 1). Files: app/overlay/overlay.css, app/overlay/index.html, tests/test_design_contrast.py, tests/test_ux_review.py, docs/design/0001-design-system.md (+1 more). Deps: OVL-KEYS-WEB, OVL-GLANCE-RULES, PLAY-TD-03-TOKENS, PLAY-TD-04A-DARK-CLIENT.
 - DATA-CONTACT-FIELD [session, L 90m, build, P1] Contact value: a write-only POST and its core setter + Prices refresh from the core loop, not the visible page. Files: server/al/http.py, server/al/core.py, server/al/diag.py, docs/decisions/0015-price-check-and-contact.md, tests/test_diag_self.py (+5 more). Deps: none.
 - REL-CLIENT-HOME [session, M 50m, build, P1] Installed-mode paths in the Electron client. Files: app/main.js, app/client/launcher.js, app/test/client.test.js, tests/test_install_paths.py, app/client/home.js (+1 more). Deps: DEP-05.
 - TC-CALC-VERIFY-USE [session, M 60m, build, P2] Verify the calc component at each start. Files: server/al/theorycraft/bridge.py, server/al/theorycraft/bridge.lua, tests/test_tc_bridge.py, docs/decisions/0022-tc-bridge.md. Deps: TC-CALC-VERIFY-PIN, TC-CALC-CONFINE-LUA, TC-CALC-CONFINE-PROC.
 - AUTO-15 [session, L 75m, build, P2] SHOTS: tools/shots.py render and check, the manifest, the lane tool grant. Files: tools/al_lane.py, tests/test_p163_lane_tools.py, tools/shots.py, tests/test_shots.py. Deps: TEST-CAPTURE-HELPER, SEC-DEMO-ENTRY.
 - TEST-TIMER-FIXES [session, M 30m, build, P2] Small timer fixes in five test files. Files: tests/test_keepalive.py, tests/test_audit_pass5.py, tests/test_cover_gaps.py, tests/test_procs.py, tests/test_budgets.py. Deps: TEST-PORT-LEASE, TEST-MARKS.
-- TC-GGG-CLIENT-CORE [session, M 60m, build, P1] Offline core of a GGG OAuth client. Files: server/al/gggapi.py, tests/test_gggapi.py. Deps: TC-GGG-RATELIMIT, TC-GGG-LISTENER, DATA-GGG-APPLICATION.
+- TC-GGG-CLIENT-CORE [session, M 60m, build, P1] Offline core of a GGG OAuth client. Files: tests/test_trade_link.py, server/al/gggapi.py, tests/test_gggapi.py. Deps: TC-GGG-RATELIMIT, TC-GGG-LISTENER, DATA-GGG-APPLICATION.
 - LOOP-WATCH-WIRE [session, M 55m, build, P1] Wire the watcher into the tick in front of HALT; file pending findings after the work list. Files: tools/loop_steps/docs_watch.py, tools/loop_steps/tc_drift.py, docs/decisions/0025-tc-drift.md, tools/loop_steps/upstream_watch.py, tests/test_watch_wire.py. Deps: AUTO-01, AUTO-05, LOOP-WATCH-FILE, LOOP-WATCH-SETTLED.
 - GP-14 [session, M 45m, data, P1] Dependabot re-apply tool: list, close and the run loop. Files: tools/dependabot_reapply.py, tests/test_dependabot_reapply.py, tests/fixtures/dependabot/pr_guard.json. Deps: none.
 - PUB-SWEEP-OWN-ADDRESS [session, M 45m, build, P1] Leak sweep: allow exactly the project's own repository address. Files: tools/leak_sweep.py, tests/test_leak_sweep.py. Deps: none.
@@ -1366,36 +1292,28 @@ loop-owned rows.
 
 ### Wave 18: go-public, web data, reliability and observability
 
-Goal: Leads: Build and items grid 2: Last item, Prices with checked items,
-Item scoring; One hook for data checks: diag_data (attach, facts, rows); A
-bind failure names its cause; --port stays in the block (P8-4).
+Leads: Build and items grid 2: Last item, Prices with checked items, Item
+scoring; One hook for data checks: diag_data (attach, facts, rows); A bind
+failure names its cause; --port stays in the block (P8-4).
 
-- Session 6; width 16 worktree + 0 main-checkout, 0 loop rows released;
-  about 133 minutes (GP-10 and AUTO-19 joined at the wave 18 start,
-  session 16).
+- Session 6; width 16 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-19D-ITEMS-GRID); server/al/core.py
   (DATA-DIAG-SEAM); web/app.js (PLAY-TD-19D-ITEMS-GRID); server/al/http.py
   (DATA-DIAG-SEAM); web/app.css (PLAY-TD-19D-ITEMS-GRID); server/al/diag.py
   (DATA-DIAG-SEAM); tests/test_ux_review.py (PLAY-TD-19D-ITEMS-GRID);
   server/al/__main__.py (RUN-START-REASON-CORE); scripts/run.ps1
-  (REL-RUNTIME-SCRIPTS); tests/test_ux_b8.py (PLAY-TD-19D-ITEMS-GRID);
-  scripts/setup.ps1 (REL-RUNTIME-SCRIPTS); web/prices.js
+  (REL-RUNTIME-SCRIPTS); README.md (GP-10); tests/test_ux_b8.py
+  (PLAY-TD-19D-ITEMS-GRID); scripts/setup.ps1 (REL-RUNTIME-SCRIPTS);
+  web/prices.js (PLAY-TD-19D-ITEMS-GRID); app/test/tabs.test.js
   (PLAY-TD-19D-ITEMS-GRID); app/test/prices.test.js
   (PLAY-TD-19D-ITEMS-GRID); server/al/ninja.py (DATA-PRICE-CADENCE);
   server/al/pricebook.py (DATA-PRICE-CADENCE); server/al/zoneguide.py
   (DATA-GUIDE-FACTS); tests/test_tc_bridge.py (LOOP-DRIFT-REF);
-  tools/tc_drift.py (LOOP-DRIFT-REF); README.md (GP-10).
-- Integrator: ROADMAP.md rows of all 16 packages; CLAUDE.md:
-  DATA-PRICE-CADENCE, LOOP-DRIFT-REF, AUTO-19; docs/decisions/README.md:
-  DATA-PRICE-CADENCE, AUTO-19; AL-NEXT-SESSION.txt: DATA-PRICE-CADENCE;
-  docs/design/reviews.log: 1 lines.
-- Watch: tests/test_port_resolve.py (RUN-START-REASON-CORE edits,
-  REL-RUNTIME-SCRIPTS runs).
-- Batches: 1: PLAY-TD-19D-ITEMS-GRID, DATA-DIAG-SEAM, RUN-START-REASON-CORE,
-  DATA-PRICE-CADENCE; 2: REL-RUNTIME-SCRIPTS, LOOP-DRIFT-REF,
-  LOOP-WATCH-POBNEXT, RUN-LEDGER-REPORT; 3: PUB-SETTINGS-FILES, GP-08,
-  TEST-SUITE-SOAK, DATA-GUIDE-FACTS; 4: PUB-DEPBOT-ACTIONS, PUB-DEPBOT-TICK,
-  GP-10, AUTO-19.
+  tools/tc_drift.py (LOOP-DRIFT-REF).
+- Integrator: ROADMAP.md rows of all 16 packages; docs/design/reviews.log:
+  PLAY-TD-19D-ITEMS-GRID; docs/decisions/README.md: DATA-PRICE-CADENCE,
+  AUTO-19; CLAUDE.md: DATA-PRICE-CADENCE, LOOP-DRIFT-REF, AUTO-19;
+  AL-NEXT-SESSION.txt: DATA-PRICE-CADENCE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1406,9 +1324,9 @@ bind failure names its cause; --port stays in the block (P8-4).
 
 - PLAY-TD-19D-ITEMS-GRID [session, L 90m, build, P1, DR] Build and items grid 2: Last item, Prices with checked items, Item scoring. Files: web/index.html, web/app.css, web/app.js, web/prices.js, web/pricewatch.js (+8 more). Deps: PLAY-TD-19C-BUILD-GRID.
 - DATA-DIAG-SEAM [session, L 85m, build, P2] One hook for data checks: diag_data (attach, facts, rows) + League picker, server half: write the league key, solo-league mapping. Files: server/al/core.py, server/al/diag.py, server/al/http.py, server/al/leagues.py, server/al/diag_data.py (+2 more). Deps: DATA-CONTACT-FIELD, DATA-LEAGUE-IDENTITY.
-- RUN-START-REASON-CORE [session, M 60m, build, P2] A bind failure names its cause; --port stays in the block (P8-4) + One JSON line per own event (events.jsonl). Files: server/al/__main__.py, server/al/ports.py, tests/test_port_resolve.py, server/al/oplog.py, server/al/plug/oplog.py (+1 more). Deps: RUN-OBS-LOGS-PY, RUN-METRICS-SITES, RUN-LEDGER-WIRE.
-- DATA-PRICE-CADENCE [session, M 60m, build, P1] Tiered poe.ninja cadence and the release polling gate. Files: server/al/ninja.py, server/al/pricebook.py, docs/decisions/0026-price-book-and-league-rollover.md, docs/decisions/0072-poe-ninja-cadence-and-release-gate.md, tests/test_price_cadence.py, tests/test_price_book.py, tests/test_fullstack.py. Deps: DATA-PRICE-POLITE, DATA-CONTACT-FIELD.
-- REL-RUNTIME-SCRIPTS [session, L 80m, build, P1] One PowerShell helper for Python and paths; the client prefers the private runtimes. Files: scripts/run.ps1, scripts/stop.ps1, scripts/setup.ps1, scripts/build.ps1, scripts/autostart.ps1 (+7 more). Deps: DEP-06, REL-AUTOSTART-ENTRY, REL-CLIENT-HOME, REL-RUNTIME-PINS, DEP-02, OVL-ELECTRON-SETUP, OVL-LAUNCH-ENV, SEC-NO-PROXY.
+- RUN-START-REASON-CORE [session, M 60m, build, P2] A bind failure names its cause; --port stays in the block (P8-4) + One JSON line per own event (events.jsonl). Files: server/al/__main__.py, server/al/ports.py, tests/test_hot_reload.py, tests/test_port_resolve.py, server/al/oplog.py (+2 more). Deps: RUN-OBS-LOGS-PY, RUN-METRICS-SITES, RUN-LEDGER-WIRE.
+- DATA-PRICE-CADENCE [session, M 60m, build, P1] Tiered poe.ninja cadence and the release polling gate. Files: server/al/ninja.py, server/al/pricebook.py, docs/decisions/0026-price-book-and-league-rollover.md, tests/test_price_book.py, tests/test_fullstack.py (+2 more). Deps: DATA-PRICE-POLITE, DATA-CONTACT-FIELD.
+- REL-RUNTIME-SCRIPTS [session, L 80m, build, P1] One PowerShell helper for Python and paths; the client prefers the private runtimes. Files: scripts/run.ps1, scripts/stop.ps1, scripts/setup.ps1, scripts/build.ps1, scripts/autostart.ps1 (+8 more). Deps: DEP-06, REL-AUTOSTART-ENTRY, REL-CLIENT-HOME, REL-RUNTIME-PINS, DEP-02, OVL-ELECTRON-SETUP, OVL-LAUNCH-ENV, SEC-NO-PROXY.
 - LOOP-DRIFT-REF [session, M 60m, build, P1] TC-DRIFT-TRIAL-FIX (part 2): trial --ref rehearsal and the GUI reference keyed by tag. Files: tools/tc_drift.py, tests/test_tc_drift.py, tests/tc_live_util.py, tests/test_tc_bridge.py, docs/decisions/0025-tc-drift.md (+1 more). Deps: AUTO-12.
 - LOOP-WATCH-POBNEXT [session, M 35m, build, P1] Watch source: PoB-PoE2 next release (master head, weekly). Files: tools/watch_sources/pob_next.py, ops/loop/watch_rows/pob-next.json, tests/test_watch_pob_next.py. Deps: AUTO-05, LOOP-WATCH-ROWS.
 - RUN-LEDGER-REPORT [session, M 30m, build, P1] tools/live1_report.py: VERIFIED live / NOT SEEN / NEW SHAPE per LIVE-1 item. Files: tools/live1_report.py, tests/test_live1_report.py. Deps: RUN-LEDGER-CORE, RUN-LEDGER-WIRE.
@@ -1423,12 +1341,11 @@ bind failure names its cause; --port stays in the block (P8-4).
 
 ### Wave 19: reliability and observability, web data, install and release
 
-Goal: Leads: 'Tried in game' card on the Checks tool; Map ladder tick is
-free when nothing changed (AUDIT-P8-LOW P8-5); overlay.log and run.log
-bounded, same stamp format. Releases 3 loop-owned rows.
+Leads: 'Tried in game' card on the Checks tool; Map ladder tick is free when
+nothing changed (AUDIT-P8-LOW P8-5); overlay.log and run.log bounded, same
+stamp format. Releases 3 loop-owned rows.
 
-- Session 6; width 13 worktree + 0 main-checkout, 3 loop rows released;
-  about 143 minutes.
+- Session 6; width 13 worktree + 0 main-checkout, 3 loop rows released.
 - Hotspots: web/index.html (RUN-VERDICTS-UI); server/al/core.py
   (RUN-LADDER-TICK); web/app.js (RUN-VERDICTS-UI); server/al/http.py
   (RUN-SUPERVISOR-CLOCK); app/main.js (RUN-OBS-LOGS-SHELL);
@@ -1442,13 +1359,9 @@ bounded, same stamp format. Releases 3 loop-owned rows.
   web/checks.js (RUN-VERDICTS-UI); web/prices.js (TEST-STATE-TEXT-PINS);
   server/al/ninja.py (DATA-PRICE-SHAPE-GUARD); server/al/pricebook.py
   (DATA-PRICE-SHAPE-GUARD); tools/tc_drift.py (TC-BUILDFILE-EXIT-WATCH).
-- Integrator: ROADMAP.md rows of all 16 packages; CLAUDE.md:
-  RUN-SUPERVISOR-CLOCK; AL-NEXT-SESSION.txt: TEST-STATE-TEXT-PINS;
-  docs/design/reviews.log: 3 lines.
-- Batches: 1: RUN-VERDICTS-UI, RUN-LADDER-TICK, RUN-OBS-LOGS-SHELL,
-  RUN-SUPERVISOR-CLOCK; 2: REL-BUILD-ASSETS, DATA-PRICE-SHAPE-GUARD,
-  TEST-STATE-TEXT-PINS, REL-UPDATE-LAUNCH; 3: DATA-SNAP-PROBE,
-  OVL-CLIENT-GUARD, PUB-GUIDE-PAGES, DATA-RESEARCH-GAPS; 4: PUB-DEPBOT-NPM.
+- Integrator: ROADMAP.md rows of all 16 packages; docs/design/reviews.log:
+  RUN-VERDICTS-UI, RUN-OBS-LOGS-SHELL, TEST-STATE-TEXT-PINS; CLAUDE.md:
+  RUN-SUPERVISOR-CLOCK; AL-NEXT-SESSION.txt: TEST-STATE-TEXT-PINS.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1459,14 +1372,14 @@ bounded, same stamp format. Releases 3 loop-owned rows.
 
 - RUN-VERDICTS-UI [session, L 90m, build, P1, DR] 'Tried in game' card on the Checks tool + The report is built on the click by GET /api/report and shown in a preview first. Files: web/index.html, web/app.js, web/checks.js, app/test/checks.test.js, tests/test_security_surface.py (+4 more). Deps: RUN-VERDICTS-CORE, RUN-LEDGER-WIRE, RUN-BUILD-STAMP-CORE.
 - RUN-LADDER-TICK [session, M 30m, build, P2] Map ladder tick is free when nothing changed (AUDIT-P8-LOW P8-5). Files: server/al/mapladder.py, server/al/core.py, tests/test_util_map_ladder.py, tests/test_budgets.py. Deps: RUN-DURABLE-STORES, RUN-LEDGER-WIRE.
-- RUN-OBS-LOGS-SHELL [session, L 90m, build, P2, DR] overlay.log and run.log bounded, same stamp format + run.ps1 and the client's failed page print the start error; client port check (P8-3) + The cli. Files: app/main.js, scripts/run.ps1, scripts/stop.ps1, app/client/window.js, app/client/starting.html (+8 more). Deps: RUN-OBS-LOGS-PY, RUN-BUDGET-LOG-CLIENT, RUN-START-REASON-CORE.
+- RUN-OBS-LOGS-SHELL [session, L 90m, build, P2, DR] overlay.log and run.log bounded, same stamp format + run.ps1 and the client's failed page print the start error; client port check (P8-3) + The client reports why the overlay is shown or hidden. Files: app/main.js, scripts/run.ps1, scripts/stop.ps1, app/client/window.js, app/client/starting.html (+8 more). Deps: RUN-OBS-LOGS-PY, RUN-BUDGET-LOG-CLIENT, RUN-START-REASON-CORE.
 - RUN-SUPERVISOR-CLOCK [session, M 60m, build, P2] Supervisor liveness verdict that cannot misfire. Files: server/al/keepalive.py, server/al/http.py, tests/test_keepalive.py, tests/test_supervisor.py, docs/decisions/0005-core-keepalive.md (+2 more). Deps: RUN-OBS-LOGS-PY, RUN-METRICS-CORE, RUN-SEAMS, RUN-LEDGER-WIRE.
 - REL-BUILD-ASSETS [session, L 70m, build, P1] Release build: release.json, stamped installer, notes, SBOM, SHA256SUMS. Files: tools/rel_build.py, tools/rel_assets.py, tests/test_release_assets.py. Deps: DEP-08, REL-SBOM, DATA-PRICE-CADENCE.
 - DATA-PRICE-SHAPE-GUARD [session, M 50m, build, P2] A silent poe.ninja shape change keeps the last good prices. Files: server/al/pricebook.py, server/al/ninja.py, tests/test_price_shape_guard.py. Deps: DATA-DIAG-SEAM, DATA-PRICE-CADENCE.
 - TEST-STATE-TEXT-PINS [session, M 45m, build, P2, DR] Point the design gate, the reviewer agent, the lane prompt and design 0001 at server/al/text/. Files: tools/design_gate.py, tests/test_design_gate.py, tools/loop_prompts.py, .claude/agents/design-reviewer.md, docs/design/0001-design-system.md (+9 more). Deps: TEST-STATE-TEXT-4, TEST-WAVE-GATE-POLICY.
 - REL-UPDATE-LAUNCH [session, M 55m, build, P1] Client launcher: apply a staged update before the core starts. Files: app/client/launcher.js, app/test/launcher.test.js. Deps: REL-UPDATE-SWITCH, REL-RUNTIME-SCRIPTS, REL-CLIENT-HOME.
 - DATA-SNAP-PROBE [session, L 80m, build, P2] Probe each fetched snapshot file before it replaces the cached one. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py, server/al/theorycraft/snapprobe.py, tests/test_snap_probe.py. Deps: DATA-TREE-HOLD, DATA-DIAG-SEAM.
-- OVL-CLIENT-GUARD [session, M 60m, build, P2] CLIENT-GUARD: the client survives its own errors without a dialog and rebuilds a dead overlay or companion page. Files: app/crashguard.js, app/parts/05-crashguard.js, app/test/crashguard.test.js, tests/test_overlay_smoke.py, app/test/audit_electron.test.js. Deps: OVL-MAIN-PARTS.
+- OVL-CLIENT-GUARD [session, M 60m, build, P2] CLIENT-GUARD: the client survives its own errors without a dialog and rebuilds a dead overlay or companion page. Files: tests/test_overlay_smoke.py, app/test/audit_electron.test.js, app/crashguard.js, app/parts/05-crashguard.js, app/test/crashguard.test.js. Deps: OVL-MAIN-PARTS.
 - PUB-GUIDE-PAGES [session, M 60m, build, P2] Four-page player guide. Files: docs/guide/download.md, docs/guide/quick-start.md, docs/guide/common-issues.md, docs/guide/faq.md, tests/test_player_guide.py. Deps: PUB-README-PLAYERS.
 - DATA-RESEARCH-GAPS [session, M 60m, data] Research gaps: triage table for note 0056 and the adopted-patterns register of note 0055. Files: docs/research/0056-third-party-repo-review.md, docs/research/0055-competitive-companions-overlays.md. Deps: GP-01.
 - PUB-DEPBOT-NPM [session, M 60m, data, P1] Dependabot re-apply tool: the npm branch. Files: tools/dependabot_reapply.py, tests/test_dependabot_reapply.py, tests/fixtures/dependabot/pr_npm.json. Deps: PUB-DEPBOT-ACTIONS, OVL-NPM-LOCK.
@@ -1476,14 +1389,12 @@ bounded, same stamp format. Releases 3 loop-owned rows.
 
 ### Wave 20: overlay and client, install and release, tests and code seams
 
-Goal: Milestones: the bootstrap installer exists. Leads: Overlay slider sets
-the plate alpha only: limits 0.80 to 1.0, default 0.86, saved layou...;
-Overlay view seam (server/al/overlayview.py) with the card-slot holder order
-and the 10...; Release stage: the PASS / FAIL report (static gates).
+Milestones: the bootstrap installer exists. Leads: Overlay slider sets the
+plate alpha only: limits 0.80 to 1.0, default 0.86, saved layou...; Overlay
+view seam (server/al/overlayview.py) with the card-slot holder order and the
+10...; Release stage: the PASS / FAIL report (static gates).
 
-- Session 6; width 13 worktree + 0 main-checkout, 0 loop rows released;
-  about 110 minutes (TEST-SHOTS-TABS joined at the wave 18 start, session
-  16).
+- Session 6; width 13 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (OVL-TD05-PLATE); server/al/core.py
   (OVL-CARD-SLOT); web/app.js (TEST-WEB-PANELS-A); server/al/http.py
   (OVL-CARD-SLOT); server/al/state.py (OVL-CARD-SLOT);
@@ -1493,11 +1404,9 @@ and the 10...; Release stage: the PASS / FAIL report (static gates).
   app/test/client.test.js (SEC-HELLO-CLIENT); tests/test_ux_settings_io.py
   (OVL-TD05-PLATE); server/al/ninja.py (DATA-NINJA-SHAPE-WATCH);
   server/al/pricebook.py (DATA-NINJA-SHAPE-WATCH).
-- Integrator: ROADMAP.md rows of all 13 packages; CLAUDE.md:
-  RUN-SECOND-LINE-PY, TC-PRESS-SAMPLES; docs/design/reviews.log: 3 lines.
-- Batches: 1: OVL-TD05-PLATE, OVL-CARD-SLOT, DEP-12, TEST-WEB-PANELS-A; 2:
-  DEP-09, RUN-SECOND-LINE-PY, DATA-NINJA-SHAPE-WATCH, TEST-STRUCTURE-GUARD;
-  3: SEC-HELLO-CLIENT, AUTO-10, TC-PRESS-SAMPLES, AUTO-18; 4: TEST-SHOTS-TABS.
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  OVL-TD05-PLATE, OVL-CARD-SLOT, TEST-WEB-PANELS-A; CLAUDE.md:
+  RUN-SECOND-LINE-PY, TC-PRESS-SAMPLES.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1509,12 +1418,12 @@ and the 10...; Release stage: the PASS / FAIL report (static gates).
 - OVL-TD05-PLATE [session, M 45m, build, P2, DR] Overlay slider sets the plate alpha only: limits 0.80 to 1.0, default 0.86, saved layouts migrate once (TD-05, part 2). Files: app/shared/layout.js, server/al/layout.py, web/index.html, app/test/layout.test.js, tests/test_overlay_layout.py (+2 more). Deps: OVL-TD05-LEGIBILITY, OVL-OVERLAY-KEYS.
 - OVL-CARD-SLOT [session, L 70m, build, P2, DR] Overlay view seam (server/al/overlayview.py) with the card-slot holder order and the 10 s sample card. Files: server/al/state.py, server/al/http.py, server/al/core.py, tests/test_security_surface.py, server/al/overlayview.py (+1 more). Deps: SEC-SURFACE-PIN.
 - DEP-12 [session, M 60m, build, P1] Release stage: the PASS / FAIL report (static gates). Files: tools/rel_stage.py, tests/test_release_stage.py. Deps: REL-BUILD-ASSETS.
-- TEST-WEB-PANELS-A [session, L 75m, build, P2, DR] Panel move A: the loaded-build block to web/panels/build.js. Files: web/app.js, web/panels/build.js, app/test/panels.test.js, tests/test_webpage.py, tests/test_srcpaths.py. Deps: TEST-WEB-ASSEMBLE, PLAY-TD-19D-ITEMS-GRID.
+- TEST-WEB-PANELS-A [session, L 75m, build, P2, DR] Panel move A: the loaded-build block to web/panels/build.js. Files: web/app.js, tests/test_webpage.py, tests/test_srcpaths.py, web/panels/build.js, app/test/panels.test.js. Deps: TEST-WEB-ASSEMBLE, PLAY-TD-19D-ITEMS-GRID.
 - DEP-09 [session, L 70m, build, P1] Bootstrap install.ps1. Files: scripts/install.ps1, tests/test_install_ps1.py. Deps: REL-INSTALL-CMD, REL-BUILD-ASSETS.
 - RUN-SECOND-LINE-PY [session, M 60m, build, P2] Nothing stays down: supervisor adopted at start, core restarts a missing supervisor. Files: scripts/run.ps1, server/al/keepalive.py, server/al/procs.py, tests/test_supervisor.py, tests/test_procs.py (+3 more). Deps: RUN-SUPERVISOR-CLOCK, RUN-OBS-LOGS-SHELL.
 - DATA-NINJA-SHAPE-WATCH [session, L 75m, build, P2] poe.ninja drift detection in the core: signatures, baseline, league checks. Files: server/al/pricebook.py, server/al/ninja.py, server/al/ninjashape.py, server/al/data/ninja_read_keys.json, tests/test_ninja_shape.py. Deps: DATA-PRICE-SHAPE-GUARD, DATA-LEAGUE-IDENTITY, DATA-DIAG-SEAM.
 - TEST-STRUCTURE-GUARD [session, M 45m, build, P3] Structure test: acyclic server imports, player text under a gate path. Files: tests/test_structure.py. Deps: TEST-STATE-TEXT-PINS.
-- SEC-HELLO-CLIENT [session, L 70m, build, P2] The Electron client verifies the core before it sends anything. Files: app/main.js, app/eval_hotkey.js, app/client/link.js, app/test/client.test.js, app/hello.js (+3 more). Deps: SEC-HELLO-CORE, RUN-OBS-LOGS-SHELL.
+- SEC-HELLO-CLIENT [session, L 70m, build, P2] The Electron client verifies the core before it sends anything. Files: app/main.js, app/eval_hotkey.js, app/client/link.js, app/test/client.test.js, app/test/autostart_switch.test.js (+3 more). Deps: SEC-HELLO-CORE, RUN-OBS-LOGS-SHELL.
 - AUTO-10 [session, M 55m, build, P2] NINJA-WATCH: the poe.ninja docs page and the shape-drift flag. Files: tools/watch_sources/ninja_docs.py, tools/watch_sources/ninja_shape.py, ops/loop/watch_rows/ninja.json, tests/test_watch_ninja.py. Deps: AUTO-05, LOOP-WATCH-ROWS.
 - TC-PRESS-SAMPLES [session, M 55m, build, P2] Dev-host capture of sanitized item-press samples. Files: docs/decisions/0045-per-character-build.md, server/al/theorycraft/cardparts/sample.py, tools/press_samples.py, tests/test_press_samples.py. Deps: TC-CARD-PARTS.
 - AUTO-18 [session, M 55m, build] LEDGER-SOURCE: live log shapes and snapshot probe results become rows. Files: tools/al_lane.py, tools/watch_sources/ledger.py, ops/loop/watch_rows/ledger.json, tests/test_watch_ledger.py. Deps: AUTO-05, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, LOOP-ROWFILES-WORK, LOOP-USAGE-LABEL.
@@ -1522,30 +1431,23 @@ and the 10...; Release stage: the PASS / FAIL report (static gates).
 
 ### Wave 21: overlay and client, install and release, reliability and observability
 
-Goal: Milestones: the release stage round trip (install, update, rollback,
+Milestones: the release stage round trip (install, update, rollback,
 uninstall) passes. Leads: Run grid 1: Acts, Maps and Deaths cards; Quiet
 feed: no minute stamp or report text in the snapshot, ages stepped at 5
 minutes; Zone moment card in the one card slot, and the guide-line fields
 for HUD line 2.
 
-- Session 6; width 15 worktree + 0 main-checkout, 0 loop rows released;
-  about 125 minutes (PLAY-TD-19E-ITEM-TEXT and REL-HOME-REFUSAL-UI joined
-  at the wave 18 start, session 16; REL-INSTALLED-RUN-CHECK joined by
-  ruling Q2, 2026-11-21).
+- Session 6; width 15 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-20A-RUN-GRID); server/al/core.py
-  (RUN-QUIET-FEED); server/al/state.py (RUN-QUIET-FEED); web/app.css
-  (PLAY-TD-20A-RUN-GRID); server/al/diag.py (RUN-QUIET-FEED);
-  tests/test_diag_self.py (RUN-QUIET-FEED); README.md (DEP-14);
-  app/shared/render_gate.js (OVL-LINE2-RULE); app/test/checks.test.js
-  (RUN-QUIET-FEED); web/checks.js (RUN-QUIET-FEED); web/app.js
-  (PLAY-TD-19E-ITEM-TEXT); app/main.js (REL-HOME-REFUSAL-UI).
-- Integrator: ROADMAP.md rows of all 15 packages; CLAUDE.md:
-  REL-PUBLISH-GATES; docs/decisions/README.md: REL-PUBLISH-GATES;
-  docs/design/reviews.log: 5 lines.
-- Batches: 1: PLAY-TD-20A-RUN-GRID, RUN-QUIET-FEED, OVL-ZONE-CARD,
-  OVL-LINE2-RULE; 2: REL-PUBLISH-GATES, REL-STAGE-ROUNDTRIP, RUN-STOP-RACE,
-  OVL-CHECK; 3: OVL-CONTRAST-PIXELS, DEP-14, AUTO-08, AUTO-17; 4:
-  PLAY-TD-19E-ITEM-TEXT, REL-HOME-REFUSAL-UI, REL-INSTALLED-RUN-CHECK.
+  (RUN-QUIET-FEED); web/app.js (PLAY-TD-19E-ITEM-TEXT); server/al/state.py
+  (RUN-QUIET-FEED); web/app.css (PLAY-TD-20A-RUN-GRID); server/al/diag.py
+  (RUN-QUIET-FEED); app/main.js (REL-HOME-REFUSAL-UI); scripts/run.ps1
+  (REL-INSTALLED-RUN-CHECK); tests/test_diag_self.py (RUN-QUIET-FEED);
+  README.md (DEP-14); app/shared/render_gate.js (OVL-LINE2-RULE);
+  app/test/checks.test.js (RUN-QUIET-FEED); web/checks.js (RUN-QUIET-FEED).
+- Integrator: ROADMAP.md rows of all 15 packages; docs/design/reviews.log:
+  PLAY-TD-20A-RUN-GRID, RUN-QUIET-FEED, OVL-ZONE-CARD, OVL-LINE2-RULE;
+  CLAUDE.md: REL-PUBLISH-GATES; docs/decisions/README.md: REL-PUBLISH-GATES.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1572,34 +1474,25 @@ for HUD line 2.
 
 ### Wave 22: install and release, reliability and observability, overlay and client
 
-Goal: Leads: Run grid 2: Recent, Last session and Characters cards; The
-report from an allow-list of structured fields, with a hardened redactor
-(P8-7); Overlay HUD line 2: the opt-in guide line and the fixed card anchor.
+Leads: Run grid 2: Recent, Last session and Characters cards; The report
+from an allow-list of structured fields, with a hardened redactor (P8-7);
+Overlay HUD line 2: the opt-in guide line and the fixed card anchor.
 
-- Session 7; width 18 worktree + 0 main-checkout, 0 loop rows released;
-  about 143 minutes (LOOP-CI-ISSUES joined at the wave 18 start, session
-  16; CARD-LINE-LIMIT, BUILD-GEAR-EMPTY-COPY, DEP14-UNINSTALL-LINE and
-  HOME-REFUSAL-COPY joined, ZONE-CARD-ITEM-GATE folded into
-  OVL-LINE2-GUIDE and REPORT-DOC-QUIET into RUN-REPORT-FIELDS by the
-  W22-FOLD ruling, session 18).
+- Session 7; width 17 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-20B-RUN-CARDS); server/al/core.py
   (REL-UPDATE-WIRE); web/app.js (PLAY-TD-20B-RUN-CARDS); server/al/http.py
   (REL-UPDATE-WIRE); server/al/state.py (REL-UPDATE-WIRE); web/app.css
   (PLAY-TD-20B-RUN-CARDS); server/al/diag.py (RUN-REPORT-FIELDS);
-  app/client/window.js (RUN-SECOND-LINE-CLIENT); app/test/client.test.js
-  (RUN-SECOND-LINE-CLIENT); app/shared/render_gate.js (OVL-LINE2-GUIDE);
-  app/test/checks.test.js (RUN-REPORT-FIELDS); web/checks.js
-  (RUN-REPORT-FIELDS); server/al/settingsio.py (REL-UPDATE-WIRE);
-  README.md (DEP14-UNINSTALL-LINE); docs/design/0001-design-system.md
-  (HOME-REFUSAL-COPY).
-- Integrator: ROADMAP.md rows of all 18 packages; CLAUDE.md:
-  REL-UPDATE-WIRE; docs/design/reviews.log: 8 lines.
-- Batches: 1: PLAY-TD-20B-RUN-CARDS, RUN-REPORT-FIELDS, OVL-LINE2-GUIDE,
-  OVL-ACT-CARD; 2: RUN-BUDGET-TESTS-DET, OVL-TD06-AUTOSCALE, DEP-15,
-  REL-UPDATE-WIRE; 3: REL-PUBLISH-READBACK, REL-STAGE-SANDBOX, DEP-19,
-  RUN-SECOND-LINE-CLIENT; 4: PUB-HOOK-RELEASE-CHECK, LOOP-CI-ISSUES,
-  CARD-LINE-LIMIT, BUILD-GEAR-EMPTY-COPY; 5: DEP14-UNINSTALL-LINE,
-  HOME-REFUSAL-COPY.
+  app/client/window.js (RUN-SECOND-LINE-CLIENT); README.md
+  (DEP14-UNINSTALL-LINE); app/test/client.test.js (RUN-SECOND-LINE-CLIENT);
+  app/shared/render_gate.js (OVL-LINE2-GUIDE); app/test/checks.test.js
+  (RUN-REPORT-FIELDS); docs/design/0001-design-system.md
+  (HOME-REFUSAL-COPY); web/checks.js (RUN-REPORT-FIELDS);
+  app/test/tabs.test.js (PLAY-TD-20B-RUN-CARDS); server/al/settingsio.py
+  (REL-UPDATE-WIRE).
+- Integrator: ROADMAP.md rows of all 17 packages; docs/design/reviews.log:
+  PLAY-TD-20B-RUN-CARDS, RUN-REPORT-FIELDS, OVL-LINE2-GUIDE, OVL-ACT-CARD,
+  OVL-TD06-AUTOSCALE; CLAUDE.md: REL-UPDATE-WIRE, LOOP-CI-ISSUES.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1620,20 +1513,19 @@ report from an allow-list of structured fields, with a hardened redactor
 - REL-STAGE-SANDBOX [session, M 40m, build, P1] Release stage: optional Windows Sandbox phases. Files: tools/rel_stage.py, tests/test_release_stage.py. Deps: REL-STAGE-ROUNDTRIP.
 - DEP-19 [session, M 45m, build] CPython pin watch. Files: tools/watch_sources/cpython.py, ops/loop/watch_rows/cpython.json, tests/test_watch_cpython.py. Deps: REL-RUNTIME-PINS, AUTO-05, LOOP-WATCH-ROWS, AUTO-09.
 - RUN-SECOND-LINE-CLIENT [session, M 30m, build, P2] The client restarts a core that stays down. Files: app/client/window.js, app/client/launcher.js, app/test/client.test.js. Deps: RUN-OBS-LOGS-SHELL, RUN-SECOND-LINE-PY.
-- PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py. Deps: GP-02, REL-PUBLISH-GATES.
-- LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json, tests/test_watch_ci_issues.py, tools/watch_gate.py, tests/test_watch_gate.py, docs/decisions/0069-upstream-watch-frame.md. Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08, LOOP-WATCH-GATE.
+- PUB-HOOK-RELEASE-CHECK [session, S 25m, build, P1] Guarded hook: refuse a v* tag without a PASS stage report. Files: .githooks/pre-push, tests/test_pre_push_hook.py, tests/test_fleet_kit_conformance.py, tests/test_dependabot_reapply.py. Deps: GP-02, REL-PUBLISH-GATES.
+- LOOP-CI-ISSUES [session, M 50m, build, P2] CI-WATCH (tick half): read the key issues, fail over when CI is silent. Files: tools/watch_gate.py, tests/test_watch_gate.py, docs/decisions/0069-upstream-watch-frame.md, tools/watch_sources/ci_issues.py, ops/loop/watch_rows/ci.json (+1 more). Deps: AUTO-19, LOOP-WATCH-ROWS, LOOP-WATCH-FILE, AUTO-08, LOOP-WATCH-GATE.
 - BUILD-GEAR-EMPTY-COPY [session, S 20m, build, P3, DR] Build card empty-gear row says what to do next. Files: web/panels/build.js, tests/test_build_item_text.py. Deps: PLAY-TD-19E-ITEM-TEXT.
 - DEP14-UNINSTALL-LINE [session, S 20m, build, P2] README Quick start names the uninstall step. Files: README.md, tests/test_public_docs.py. Deps: DEP-14.
 - HOME-REFUSAL-COPY [session, M 60m, build, P2, DR] Refused-home sentence, design 0001 start-up exception and wording, plan 03 section 5.1 widths and line 2 rule. Files: server/al/paths.py, app/client/home.js, app/test/home.test.js, docs/design/0001-design-system.md, docs/plan/03-target-design.md. Deps: REL-HOME-REFUSAL-UI, OVL-CONTRAST-PIXELS, OVL-LINE2-RULE, PLAY-TD-20A-RUN-GRID.
 
 ### Wave 23: install and release, overlay and client, tests and code seams
 
-Goal: Leads: Settings rail 1: Checks, Reading and web data, Overlay; Move
-the overlay page and the starting page off file:// onto one app scheme;
-Teach the item-check key in the empty card slot, then retire it.
+Leads: Settings rail 1: Checks, Reading and web data, Overlay; Move the
+overlay page and the starting page off file:// onto one app scheme; Teach
+the item-check key in the empty card slot, then retire it.
 
-- Session 7; width 13 worktree + 1 main-checkout, 0 loop rows released;
-  about 125 minutes.
+- Session 7; width 13 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-21A-SETTINGS-RAIL); server/al/core.py
   (REL-UPDATE-CHECKS); web/app.js (PLAY-TD-21A-SETTINGS-RAIL);
   server/al/http.py (OVL-APP-SCHEME); web/app.css
@@ -1642,17 +1534,13 @@ Teach the item-check key in the empty card slot, then retire it.
   (OVL-APP-SCHEME); app/client/window.js (OVL-APP-SCHEME); scripts/run.ps1
   (SEC-HELLO-PS); tests/test_diag_self.py (REL-UPDATE-CHECKS); README.md
   (TEST-SHOTS-RENDER); tests/test_ux_b8.py (PLAY-TD-21A-SETTINGS-RAIL);
-  app/shared/render_gate.js (OVL-KEY-HINT); app/test/checks.test.js
-  (PLAY-TD-21A-SETTINGS-RAIL); docs/design/0001-design-system.md
-  (TEST-COPY-SHEETS); web/checks.js (PLAY-TD-21A-SETTINGS-RAIL);
-  tests/test_http_security.py (OVL-APP-SCHEME).
-- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log: 3
-  lines.
-- Watch: tests/test_ux_review.py (PLAY-TD-21A-SETTINGS-RAIL edits,
-  REL-UPDATE-CHECKS runs).
-- Batches: 1: PLAY-TD-21A-SETTINGS-RAIL, OVL-APP-SCHEME, OVL-KEY-HINT,
-  DEP-17; 2: RUN-BUDGET-TESTS-DASH, REL-UPDATE-CHECKS, SEC-HELLO-PS,
-  TEST-SHOTS-RENDER; 3: AUTO-16, AUTO-13, TEST-COPY-SHEETS, AUTO-22; 4: PUB-DEPBOT-FIRST-RUN, RUN-LIVE1-FIXTURES.
+  app/test/client.test.js (OVL-APP-SCHEME); app/shared/render_gate.js
+  (OVL-KEY-HINT); app/test/checks.test.js (PLAY-TD-21A-SETTINGS-RAIL);
+  docs/design/0001-design-system.md (TEST-COPY-SHEETS); web/checks.js
+  (PLAY-TD-21A-SETTINGS-RAIL); app/test/tabs.test.js
+  (PLAY-TD-21A-SETTINGS-RAIL); tests/test_http_security.py (OVL-APP-SCHEME).
+- Integrator: ROADMAP.md rows of all 14 packages; docs/design/reviews.log:
+  PLAY-TD-21A-SETTINGS-RAIL, OVL-APP-SCHEME, OVL-KEY-HINT.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1661,50 +1549,45 @@ Teach the item-check key in the empty card slot, then retire it.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-TD-21A-SETTINGS-RAIL [session, L 90m, build, P1, DR] Settings rail 1: Checks, Reading and web data, Overlay. Files: web/index.html, web/app.css, web/app.js, web/checks.js, app/test/checks.test.js (+4 more). Deps: PLAY-TD-20B-RUN-CARDS.
-- OVL-APP-SCHEME [session, L 70m, build, P3, DR] Move the overlay page and the starting page off file:// onto one app scheme. Files: app/main.js, app/client/window.js, app/egress.js, app/overlay/index.html, app/client/starting.html (+8 more). Deps: OVL-SHELL-GUARDS, OVL-EGRESS-LOCK, OVL-WAKE-COMPANION, OVL-LINE2-GUIDE, OVL-KEYS-CORE, SEC-STATIC-MAP.
+- PLAY-TD-21A-SETTINGS-RAIL [session, L 90m, build, P1, DR] Settings rail 1: Checks, Reading and web data, Overlay. Files: web/index.html, web/app.css, web/app.js, web/checks.js, app/test/checks.test.js (+6 more). Deps: PLAY-TD-20B-RUN-CARDS.
+- OVL-APP-SCHEME [session, L 70m, build, P3, DR] Move the overlay page and the starting page off file:// onto one app scheme. Files: app/main.js, app/client/window.js, app/egress.js, app/overlay/index.html, app/client/starting.html (+12 more). Deps: OVL-SHELL-GUARDS, OVL-EGRESS-LOCK, OVL-WAKE-COMPANION, OVL-LINE2-GUIDE, OVL-KEYS-CORE, SEC-STATIC-MAP.
 - OVL-KEY-HINT [session, M 60m, build, P2, DR] Teach the item-check key in the empty card slot, then retire it. Files: server/al/overlayview.py, app/shared/render_gate.js, app/overlay/overlay.css, tests/test_overlay_view.py, app/test/keyhint.test.js. Deps: OVL-KEYS-CORE, OVL-ACT-CARD, OVL-LINE2-GUIDE.
 - DEP-17 [session, L 80m, build, P1] Update, network half: download, verify and stage from a release. Files: server/al/install/update.py, tests/test_updater.py. Deps: DEP-11, DEP-16, DEP-15, REL-UPDATE-SWITCH.
 - RUN-BUDGET-TESTS-DASH [session, L 85m, build, P2] Dashboard and overlay paint budgets under test (B13, B14) + P8-6: the console / CSP test paints Checks rows, a hint and ladder_all. Files: app/test/shared.test.js, tests/test_dash_console.py, app/test/cdp/dash_console.mjs, tests/test_dash_perf.py, app/test/cdp/dash_perf.mjs. Deps: RUN-VERDICTS-UI, PLAY-TD-01B-FIT-HARNESS, RUN-QUIET-FEED.
 - REL-UPDATE-CHECKS [session, M 45m, build, P1] Checks row and report lines for the install. Files: server/al/diag.py, server/al/core.py, tests/test_diag_self.py, tests/test_update_checks.py. Deps: REL-UPDATE-SWITCH, PLAY-F-131-STATUS-TABLE.
 - SEC-HELLO-PS [session, S 30m, build, P2] run.ps1 verifies the core before it sends the token or opens the page. Files: scripts/run.ps1, tests/test_run_health_ps.py. Deps: SEC-HELLO-CORE, SEC-NO-PROXY.
-- TEST-SHOTS-RENDER [session, M 30m, data, P2] First screenshot render and the README image block. Files: README.md, docs/shots/manifest.json. Deps: AUTO-15, PUB-README-PLAYERS.
+- TEST-SHOTS-RENDER [session, M 30m, data, P2] First screenshot render and the README image block. Files: README.md, tests/test_readme.py, docs/shots/manifest.json, docs/shots/build-dark-1440.png, docs/shots/build-dark-360.png (+16 more). Deps: AUTO-15, PUB-README-PLAYERS.
 - AUTO-16 [session, S 25m, build, P2] REL-NOTES: notes --count and the REL-PREP row text. Files: tools/rel_notes.py, tests/test_release_notes.py. Deps: DEP-04, AUTO-01.
 - AUTO-13 [session, M 60m, build, P3] DIVE-ON-DEMAND: a source may request one dive a day; the idle dive is weekly. Files: tools/loop_roadmap.py, tests/test_loop_dive.py, tools/loop_steps/dive_request.py, tests/test_loop_dive_request.py. Deps: AUTO-01, AUTO-04, AUTO-05, LOOP-ROWFILES-WORK, LOOP-TESTS-CARVE.
 - TEST-COPY-SHEETS [session, M 50m, build, P3] Split design 0001 section 9 rule 2 into docs/design/copy/<family>.md. Files: docs/design/0001-design-system.md, .claude/agents/design-reviewer.md, tests/test_structure.py, docs/design/copy/events.md, docs/design/copy/price.md (+4 more). Deps: TEST-STRUCTURE-GUARD.
 - AUTO-22 [session, M 45m, build, P3] OVL-SMOKE-DAILY: the tick runs the live overlay smoke once a day while the game is idle. Files: tools/loop_steps/overlay_smoke.py, tests/test_loop_overlay_smoke_step.py. Deps: AUTO-01, SEC-NO-PROXY.
-- PUB-DEPBOT-FIRST-RUN [session, S 20m, data, P1] First live run of the Dependabot re-apply tool. Files: none. Deps: GP-09, PUB-DEPBOT-ACTIONS, GP-08.
+- PUB-DEPBOT-FIRST-RUN [session, S 20m, data, P1] First live run of the Dependabot re-apply tool. Files: tools/dependabot_reapply.py, tests/test_dependabot_reapply.py. Deps: GP-09, PUB-DEPBOT-ACTIONS, GP-08.
 - RUN-LIVE1-FIXTURES [session, M 60m, build, P1] Turn each live-verified log shape into a fixture line and a test. Files: tests/fixtures/client_live_shapes.txt, tests/test_parser.py, server/al/parser.py. Deps: RUN-LEDGER-WIRE, RUN-LEDGER-REPORT.
 
 ### Wave 24: reliability and observability, web data, theorycraft
 
-Goal: Leads: Contact field in the web-data card and honest blocked wording;
-Five cause rows in Checks; Core refuses Origin null and file:// once both
-local pages load from the app scheme.
+Leads: Contact field in the web-data card and honest blocked wording; Five
+cause rows in Checks; Core refuses Origin null and file:// once both local
+pages load from the app scheme.
 
-- Session 7; width 13 worktree + 1 main-checkout, 0 loop rows released;
-  about 190 minutes (PLAY-PAGER-SCALE-24 joined by ruling Q2 as amended,
-  2026-11-21; RUN-UNREADABLE-WORD joined by UNREADABLE-RETAG, session 18:
-  waves 22 and 23 own render_gate.js, diag.py or design 0001).
+- Session 7; width 12 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (DATA-CONTACT-UI); server/al/core.py
   (TC-WEIGHTS-DELTA-EXPORT); web/app.js (DATA-CONTACT-UI); server/al/http.py
-  (OVL-APP-SCHEME-STRICT); app/main.js (RUN-OVERLAY-REMEMBER); README.md
-  (TEST-SLOW-BUDGET); app/test/checks.test.js (RUN-EXPLAIN-ROWS);
-  web/prices.js (DATA-CONTACT-UI); server/al/settingsio.py
-  (TC-WEIGHTS-DELTA-EXPORT); tests/test_http_security.py
-  (OVL-APP-SCHEME-STRICT); tests/test_ux_settings_io.py
-  (TC-WEIGHTS-DELTA-EXPORT); app/test/prices.test.js (DATA-CONTACT-UI);
-  server/al/pricebook.py (DATA-PRICE-TYPES-FILE); server/al/diag.py,
-  app/shared/render_gate.js, docs/design/0001-design-system.md
-  (RUN-UNREADABLE-WORD).
-- Integrator: ROADMAP.md rows of all 14 packages; CLAUDE.md:
+  (OVL-APP-SCHEME-STRICT); web/app.css (PLAY-PAGER-SCALE-24);
+  server/al/diag.py (RUN-UNREADABLE-WORD); tests/test_ux_review.py
+  (PLAY-PAGER-SCALE-24); app/main.js (RUN-OVERLAY-REMEMBER);
+  tests/test_security_surface.py (OVL-APP-SCHEME-STRICT); README.md
+  (TEST-SLOW-BUDGET); app/shared/render_gate.js (RUN-UNREADABLE-WORD);
+  docs/design/0001-design-system.md (RUN-UNREADABLE-WORD); web/prices.js
+  (DATA-CONTACT-UI); server/al/settingsio.py (TC-WEIGHTS-DELTA-EXPORT);
+  tests/test_http_security.py (OVL-APP-SCHEME-STRICT);
+  tests/test_ux_settings_io.py (TC-WEIGHTS-DELTA-EXPORT);
+  app/test/prices.test.js (DATA-CONTACT-UI); server/al/pricebook.py
+  (DATA-PRICE-TYPES-FILE).
+- Integrator: ROADMAP.md rows of all 13 packages; docs/design/reviews.log:
+  DATA-CONTACT-UI, TC-WEIGHTS-DELTA-EXPORT, RUN-HISTORY-UNDO; CLAUDE.md:
   OVL-APP-SCHEME-STRICT, RUN-BUDGET-TESTS-LIVE, TC-PIN-POLICY;
-  AL-NEXT-SESSION.txt: REL-CUTOVER-LIVE; docs/design/reviews.log: 5 lines.
-- Batches: 1: DATA-CONTACT-UI, RUN-EXPLAIN-ROWS, OVL-APP-SCHEME-STRICT,
-  TC-WEIGHTS-DELTA-EXPORT; 2: RUN-BUDGET-TESTS-LIVE, TEST-SLOW-BUDGET,
-  DATA-PRICE-TYPES-FILE, TC-PIN-POLICY; 3: RUN-HISTORY-UNDO,
-  RUN-OVERLAY-REMEMBER, DATA-SNAP-TRIM, PLAY-PAGER-SCALE-24; 4:
-  RUN-UNREADABLE-WORD.
+  AL-NEXT-SESSION.txt: REL-CUTOVER-LIVE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1715,8 +1598,7 @@ local pages load from the app scheme.
   batch is on main, with nothing else in flight.
 
 - DATA-CONTACT-UI [session, L 85m, build, P1, DR] Contact field in the web-data card and honest blocked wording + League dropdown in the web-data card. Files: web/index.html, web/app.js, web/prices.js, app/test/prices.test.js. Deps: DATA-CONTACT-FIELD, DATA-DIAG-SEAM.
-- RUN-EXPLAIN-ROWS [session, M 60m, build, P2, DR] Five cause rows in Checks. Files: app/test/checks.test.js, server/al/plug/explain.py, tests/test_diag_explain.py. Deps: RUN-OBS-LOGS-SHELL, RUN-METRICS-SITES, RUN-SUPERVISOR-CLOCK, RUN-LEDGER-WIRE, RUN-REPORT-FIELDS, OVL-OBS-CRASH.
-- OVL-APP-SCHEME-STRICT [session, S 25m, build, P3] Core refuses Origin null and file:// once both local pages load from the app scheme. Files: server/al/http.py, tests/test_http_security.py, tests/test_audit_http_harden.py. Deps: OVL-APP-SCHEME.
+- OVL-APP-SCHEME-STRICT [session, S 25m, build, P3] Core refuses Origin null and file:// once both local pages load from the app scheme. Files: server/al/http.py, tests/test_http_security.py, tests/test_audit_http_harden.py, tests/test_security_surface.py. Deps: OVL-APP-SCHEME.
 - TC-WEIGHTS-DELTA-EXPORT [session, M 50m, build, P2, DR] Settings export schema 2 carries the weight changes. Files: server/al/settingsio.py, server/al/core.py, web/settingsio.js, tests/test_ux_settings_io.py, docs/decisions/0036-run-history-file.md. Deps: TC-WEIGHTS-DELTA-STORE, TC-WORN-WIRE, TC-CALC-OPTIN.
 - RUN-BUDGET-TESTS-LIVE [session, M 45m, build, P2] Opt-in live budgets: client process counts, calc ceilings, budget-log bounds. Files: tests/test_overlay_smoke.py, tests/tc_live_util.py, tests/test_budget_log.py, docs/decisions/0024-tc-delta.md. Deps: RUN-BUDGET-LOG-CORE, RUN-BUDGET-TESTS-DET, TC-PRESS-STAGED-LIVE.
 - TEST-SLOW-BUDGET [session, M 60m, build, P3] Slow-test budget and hang guard. Files: tests/conftest.py, pytest.ini, README.md, tests/test_pytest_config.py, CONTRIBUTING.md (+2 more). Deps: TEST-FLOOR-MEMO, TEST-TIMER-FIXES, TEST-PLUGIN-PIN, TEST-MARKS, TEST-SUITE-RUNNER, TEST-DOCS-FACTS-UI, PUB-README-PLAYERS, DEP-02.
@@ -1724,28 +1606,25 @@ local pages load from the app scheme.
 - TC-PIN-POLICY [session, M 40m, build, P3] Pin policy written into decision 0018; toolchain cleaned up. Files: docs/decisions/0018-tc-pin.md, docs/decisions/0027-tc-toolchain.md, tools/tc_pin.py, tests/test_tc_pin.py. Deps: TC-CALC-VERIFY-PIN, AUTO-12.
 - RUN-HISTORY-UNDO [session, M 30m, build, P3, DR] Undo for Clear run history. Files: web/history.js, tests/test_util_run_history.py, app/test/history.test.js. Deps: RUN-DURABLE-STORES.
 - RUN-OVERLAY-REMEMBER [session, M 30m, build, P3] Remember the overlay shown / hidden choice across restarts. Files: app/overlay_gate.js, app/main.js, app/test/overlay_gate.test.js. Deps: RUN-OBS-LOGS-SHELL.
-- DATA-SNAP-TRIM [session, S 25m, build, P3] Drop the two unread files from the snapshot fetch list. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py. Deps: DATA-SNAP-PROBE.
+- DATA-SNAP-TRIM [session, S 25m, build, P3] Drop the two unread files from the snapshot fetch list. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py, tests/test_snap_probe.py. Deps: DATA-SNAP-PROBE.
 - PLAY-PAGER-SCALE-24 [session, M 45m, build, P2] Pager buttons and compact weight inputs stay at least 24 px below UI scale 1. Files: web/app.css, tests/test_play_fit.py, tests/test_ux_review.py. Deps: PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20A-RUN-GRID.
-- RUN-UNREADABLE-WORD [session, M 50m, build, P2, DR] One status word for the unreadable Client.txt state. Files: server/al/data/status_words.json, web/status.js, app/shared/render_gate.js, server/al/diag.py, docs/design/0001-design-system.md (+2 more). Deps: TEST-STATE-TEXT-PINS, RUN-REPORT-FIELDS, OVL-KEY-HINT, REL-UPDATE-CHECKS, TEST-COPY-SHEETS.
+- RUN-UNREADABLE-WORD [session, M 50m, build, P2, DR] One status word for the unreadable Client.txt state. Files: server/al/data/status_words.json, web/status.js, app/shared/render_gate.js, server/al/diag.py, docs/design/0001-design-system.md (+3 more). Deps: TEST-STATE-TEXT-PINS, RUN-REPORT-FIELDS, OVL-KEY-HINT, REL-UPDATE-CHECKS, TEST-COPY-SHEETS.
 - REL-CUTOVER-LIVE [session, M 60m, build, P1] Cut-over: the operator's live copy becomes an installed release. Files: none (an act or a read-back). Deps: DEP-13, DEP-09, REL-UNINSTALL-SHELL, REL-UPDATE-LAUNCH, REL-UPDATE-CHECKS, REL-RUNTIME-SCRIPTS, REL-BUILD-ASSETS.
 
 ### Wave 25: local security, overlay and client, theorycraft
 
-Goal: Leads: Find Client.txt outside Steam: a typed path on the consent
-card; OVERLAY-FEED: /events?view=overlay sends only the fields the HUD
-reads, only when one c...; luajit leaves when it is not needed. Releases 1
-loop-owned rows.
+Leads: Find Client.txt outside Steam: a typed path on the consent card;
+OVERLAY-FEED: /events?view=overlay sends only the fields the HUD reads, only
+when one c...; luajit leaves when it is not needed. Releases 1 loop-owned
+rows.
 
-- Session 8; width 6 worktree + 0 main-checkout, 1 loop rows released; about
-  93 minutes (CARD-LINE-LIMIT re-planned here from wave 22 with seven more
-  files, session 19: design 0001 is owned in waves 23 and 24).
-- Hotspots: web/index.html (SEC-LOG-PATH-FIELD); server/al/core.py
-  (TC-CALC-IDLE); web/app.js (SEC-LOG-PATH-FIELD); server/al/http.py
-  (OVL-OVERLAY-FEED); web/app.css (SEC-LOG-PATH-FIELD);
-  app/shared/render_gate.js (OVL-OVERLAY-FEED);
+- Session 8; width 5 worktree + 0 main-checkout, 1 loop rows released.
+- Hotspots: server/al/core.py (TC-CALC-IDLE); app/main.js
+  (PUB-GUIDE-DOWNLOAD-PLACE); README.md (PUB-GUIDE-DOWNLOAD-PLACE);
+  app/test/checks.test.js (RUN-EXPLAIN-ROWS);
   server/al/theorycraft/bridge.py (TC-CALC-IDLE).
-- Integrator: ROADMAP.md rows of all 7 packages; docs/design/reviews.log: 4
-  lines.
+- Integrator: ROADMAP.md rows of all 6 packages; docs/design/reviews.log:
+  PUB-GUIDE-DOWNLOAD-PLACE, RUN-EXPLAIN-ROWS.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1754,23 +1633,52 @@ loop-owned rows.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- SEC-LOG-PATH-FIELD [session, M 50m, build, P2, DR] Find Client.txt outside Steam: a typed path on the consent card. Files: web/index.html, web/app.js, web/app.css, web/logpath.js, app/test/logpath.test.js (+1 more). Deps: SEC-NO-DISCOVERY, PLAY-TD-12-CONTEXT-SETUP.
-- OVL-OVERLAY-FEED [session, L 75m, build, P3, DR] OVERLAY-FEED: /events?view=overlay sends only the fields the HUD reads, only when one changes. Files: server/al/http.py, server/al/overlayview.py, app/overlay/overlay.js, app/shared/render_gate.js, app/test/shared.test.js (+2 more). Deps: OVL-KEY-HINT, OVL-APP-SCHEME-STRICT, RUN-QUIET-FEED, RUN-BUDGET-TESTS-DET.
 - TC-CALC-IDLE [session, M 55m, build, P3] luajit leaves when it is not needed. Files: server/al/theorycraft/calcwire.py, server/al/theorycraft/bridge.py, server/al/exepin.py, server/al/core.py, tests/test_tc_wire.py (+3 more). Deps: TC-PRESS-STAGED-LIVE, TC-CALC-CONFINE-PROC, TC-CALC-VERIFY-USE, TC-WEIGHTS-DELTA-EXPORT, TC-UPGRADE-PER-SLOT.
 - SEC-CEIL-SNAPSHOT [loop, M 45m, build, P3] Snapshot fetch: deadline, per-source cap on disk, one URL check. Files: server/al/theorycraft/snapshot.py, tests/test_tc_snap.py. Deps: SEC-CEIL-WEBFETCH, DATA-SNAP-TRIM.
 - DATA-PRICE-TYPE-PROOF [session, M 50m, build, P3] Prove each price type after the first real round. Files: server/al/data/price_types.json, server/al/theorycraft/value.py, server/al/data/ninja_read_keys.json, server/al/ninjashape.py, tools/price_type_report.py (+1 more). Deps: DATA-PRICE-TYPES-FILE, DATA-NINJA-SHAPE-WATCH.
 - PUB-GUIDE-DOWNLOAD-PLACE [session, M 45m, build, P2, DR] One download place in README, FAQ and About. Files: README.md, docs/guide/download.md, docs/guide/faq.md, app/about.js, app/main.js (+2 more). Deps: PUB-GUIDE-PAGES, GP-10.
-- CARD-LINE-LIMIT [session, M 40m, build, P2, DR] Card lines fit the 236 px inside width: lower the card character limit. Files: app/shared/format.js, server/al/text/common.py, tests/test_overlay_pixels.py (+7 more). Deps: OVL-CONTRAST-PIXELS.
-  Split 2026-11-22 (adjudicator, waves 25 and 26 closes; packages.json is the source): CARD-LINE-LIMIT-COPY (wave 26, merged), CARD-LINE-LIMIT-COPY2 (wave 27: zone shorts, out-of-list pins, copy sheets) and CARD-LINE-LIMIT-FLIP (wave 29, after COPY2; wave 28 shares docs/design/0001-design-system.md).
+- RUN-EXPLAIN-ROWS [session, M 60m, build, P2, DR] Five cause rows in Checks. Files: app/test/checks.test.js, server/al/plug/explain.py, server/al/text/explain.py, docs/design/copy/explain.md, tests/test_diag_explain.py. Deps: RUN-OBS-LOGS-SHELL, RUN-METRICS-SITES, RUN-SUPERVISOR-CLOCK, RUN-LEDGER-WIRE, RUN-REPORT-FIELDS, OVL-OBS-CRASH.
+- TEST-SUITE-T0 [session, S 25m, build, P3] Suite runner exports AL_SUITE_T0 at start. Files: tools/suite_run.py, tests/test_suite_run.py. Deps: TEST-SLOW-BUDGET.
 
 ### Wave 26: Play tab and dashboard, install and release
 
-Goal: Milestones: the Settings rail is complete. Leads: Settings rail 2:
-Keys, Appearance and tools, About and data; footer; Core: start the updater
-by itself, 'Update now' and click-only.
+Milestones: the Settings rail is complete. Leads: Settings rail 2: Keys,
+Appearance and tools, About and data; footer; Core: start the updater by
+itself, 'Update now' and click-only.
 
-- Session 8; width 2 worktree + 0 main-checkout, 0 loop rows released; about
-  98 minutes.
+- Session 8; width 7 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (SEC-LOG-PATH-FIELD); web/app.js
+  (SEC-LOG-PATH-FIELD); server/al/http.py (OVL-OVERLAY-FEED); web/app.css
+  (SEC-LOG-PATH-FIELD); tests/test_diag_self.py (SEC-LOG-PATH-FIELD);
+  README.md (RUN-BUDGET-CALIBRATE-B11); app/shared/render_gate.js
+  (OVL-OVERLAY-FEED); docs/design/0001-design-system.md
+  (CARD-LINE-LIMIT-COPY).
+- Integrator: ROADMAP.md rows of all 7 packages; docs/design/reviews.log:
+  OVL-OVERLAY-FEED, SEC-LOG-PATH-FIELD, CARD-LINE-LIMIT-COPY.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- OVL-OVERLAY-FEED [session, L 75m, build, P3, DR] OVERLAY-FEED: /events?view=overlay sends only the fields the HUD reads, only when one changes. Files: server/al/http.py, server/al/overlayview.py, app/overlay/overlay.js, app/shared/render_gate.js, app/test/shared.test.js (+5 more). Deps: OVL-KEY-HINT, OVL-APP-SCHEME-STRICT, RUN-QUIET-FEED, RUN-BUDGET-TESTS-DET.
+- SEC-LOG-PATH-FIELD [session, M 50m, build, P2, DR] Find Client.txt outside Steam: a typed path on the consent card. Files: web/index.html, web/app.js, web/app.css, tests/test_diag_self.py, web/logpath.js (+2 more). Deps: SEC-NO-DISCOVERY, PLAY-TD-12-CONTEXT-SETUP.
+- CARD-LINE-LIMIT-COPY [session, M 60m, build, P2, DR] Card copy fits 26 characters (limit unchanged). Files: server/al/theorycraft/cardparts/keep.py, server/al/text/itemcheck.py, server/al/text/price.py, server/al/text/overlaycard.py, server/al/data/zone_guide.json (+7 more). Deps: OVL-CONTRAST-PIXELS.
+- LOOP-GATE-SIDECAR-TEMP [session, S 30m, build, P2] Loop gate runs set TEMP and TMP under the AL sidecar. Files: tools/al_loop.py, tests/test_al_loop.py. Deps: none.
+- RUN-BUDGET-CALIBRATE-B11 [session, M 45m, build, P2] Calibrate budget B11 to 384 MB and B18 to 460 MB. Files: server/al/budgetlog.py, tests/test_budgets.py, tests/test_budget_log.py, docs/decisions/0002-stack.md, docs/research/0048-performance-budgets-review.md (+2 more). Deps: none.
+- TEST-FUZZ-PARALLEL [session, S 30m, build, P2] Fuzz tests leave the serial timing phase. Files: tests/test_fuzz.py, tests/test_marks.py. Deps: none.
+- TEST-LUAJIT-RELOADS-12 [session, S 30m, build, P2] LuaJIT memory test runs 12 reloads, not 30. Files: tests/test_math_perf.py. Deps: none.
+
+### Wave 27: tests and code seams, reliability and observability, Play tab and dashboard
+
+Leads: Copy pass: eleven sentences and four errors never send the player to
+a script; Accessibility CSS: inset focus ring, 24 px targets, forced
+colours, text spacing; Panel move B: layout, weights, web data and graphics
+panels.
+
+- Session 8; width 5 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-21B-SETTINGS-ABOUT); server/al/core.py
   (REL-UPDATE-TRIGGER); web/app.js (PLAY-TD-21B-SETTINGS-ABOUT);
   server/al/http.py (REL-UPDATE-TRIGGER); web/app.css
@@ -1778,9 +1686,9 @@ by itself, 'Update now' and click-only.
   (PLAY-TD-21B-SETTINGS-ABOUT); tests/test_security_surface.py
   (REL-UPDATE-TRIGGER); tests/test_ux_b8.py (PLAY-TD-21B-SETTINGS-ABOUT);
   tests/test_a11y.py (PLAY-TD-21B-SETTINGS-ABOUT); server/al/settingsio.py
-  (REL-UPDATE-TRIGGER).
-- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log: 1
-  lines.
+  (REL-UPDATE-TRIGGER); tests/test_ux_settings_io.py (REL-UPDATE-TRIGGER).
+- Integrator: ROADMAP.md rows of all 5 packages; docs/design/reviews.log:
+  PLAY-TD-21B-SETTINGS-ABOUT, CARD-LINE-LIMIT-COPY2.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1790,29 +1698,32 @@ by itself, 'Update now' and click-only.
   is flipped and main is clean.
 
 - PLAY-TD-21B-SETTINGS-ABOUT [session, L 80m, build, P1, DR] Settings rail 2: Keys, Appearance and tools, About and data; footer. Files: web/index.html, web/app.css, web/app.js, web/rail.js, app/test/client_controls.test.js (+8 more). Deps: PLAY-TD-21A-SETTINGS-RAIL, PLAY-TD-09C-BAR.
-- REL-UPDATE-TRIGGER [session, M 60m, build, P1] Core: start the updater by itself, 'Update now' and click-only. Files: server/al/updates.py, server/al/core.py, server/al/http.py, server/al/settingsio.py, tests/test_updates.py (+1 more). Deps: DEP-17, REL-UPDATE-WIRE, DEP-05, DEP-16, SEC-SURFACE-PIN.
+- REL-UPDATE-TRIGGER [session, M 60m, build, P1] Core: start the updater by itself, 'Update now' and click-only. Files: server/al/updates.py, server/al/core.py, server/al/http.py, server/al/settingsio.py, tests/test_updates.py (+2 more). Deps: DEP-17, REL-UPDATE-WIRE, DEP-05, DEP-16, SEC-SURFACE-PIN.
+- CARD-LINE-LIMIT-COPY2 [session, M 45m, build, P2, DR] Zone shorts and pinned card lines fit 26 characters (limit unchanged). Files: server/al/data/zone_guide.json, server/al/text/itemcheck.py, server/al/text/price.py, server/al/text/buildlive.py, server/al/text/waystone.py (+13 more). Deps: CARD-LINE-LIMIT-COPY.
+- TEST-LOOP-WINDOW-5S [session, S 30m, build, P2] Loop-body budget test measures a 5 s window. Files: tests/test_budgets.py, tests/test_slow_budget.py, docs/decisions/0002-stack.md. Deps: RUN-BUDGET-CALIBRATE-B11.
+- TEST-CALC-GROUP-SPLIT [session, M 90m, build, P2] Split the calc xdist group in two. Files: tests/tc_live_util.py, tests/test_math_e2e_live.py, tests/test_fullstack.py, tests/test_marks.py, tests/conftest.py. Deps: TEST-FUZZ-PARALLEL.
 
-### Wave 27: tests and code seams, reliability and observability, Play tab and dashboard
+### Wave 28: Play tab and dashboard, reliability and observability
 
-Goal: Leads: Copy pass: eleven sentences and four errors never send the
-player to a script; Accessibility CSS: inset focus ring, 24 px targets,
-forced colours, text spacing; Panel move B: layout, weights, web data and
-graphics panels.
+Leads: Theme choice: Dark, Follow Windows, Light; In-browser accessibility
+pass in the CDP harness; Parse each data file once. Releases 1 loop-owned
+rows.
 
-- Session 8; width 4 worktree + 0 main-checkout, 0 loop rows released; about
-  93 minutes.
+- Session 8; width 5 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (RUN-NO-DEAD-ENDS); server/al/core.py
-  (TEST-CORE-TICKS); web/app.js (TEST-WEB-PANELS-B); server/al/state.py
-  (RUN-NO-DEAD-ENDS); web/app.css (PLAY-TD-22A-A11Y-CSS); server/al/diag.py
-  (RUN-NO-DEAD-ENDS); tests/test_ux_review.py (PLAY-TD-22A-A11Y-CSS);
-  server/al/__main__.py (TEST-CORE-TICKS); docs/design/0001-design-system.md
-  (RUN-NO-DEAD-ENDS); tests/test_a11y.py (PLAY-TD-22A-A11Y-CSS);
-  web/prices.js (RUN-NO-DEAD-ENDS).
-- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log: 3
-  lines.
-- Watch: tests/test_ux_review.py (PLAY-TD-22A-A11Y-CSS edits,
-  RUN-NO-DEAD-ENDS runs); tests/test_a11y.py (PLAY-TD-22A-A11Y-CSS edits,
-  TEST-WEB-PANELS-B runs).
+  (TEST-CORE-TICKS); web/app.js (TEST-WEB-PANELS-B); server/al/http.py
+  (RUN-NO-DEAD-ENDS); server/al/state.py (RUN-NO-DEAD-ENDS); web/app.css
+  (PLAY-TD-22A-A11Y-CSS); server/al/diag.py (RUN-NO-DEAD-ENDS);
+  tests/test_ux_review.py (PLAY-TD-22A-A11Y-CSS); server/al/__main__.py
+  (TEST-CORE-TICKS); tests/test_diag_self.py (RUN-NO-DEAD-ENDS);
+  app/shared/render_gate.js (RUN-NO-DEAD-ENDS); app/test/checks.test.js
+  (RUN-NO-DEAD-ENDS); docs/design/0001-design-system.md (RUN-NO-DEAD-ENDS);
+  tests/test_a11y.py (PLAY-TD-22A-A11Y-CSS); web/checks.js
+  (RUN-NO-DEAD-ENDS); web/prices.js (RUN-NO-DEAD-ENDS);
+  server/al/settingsio.py (RUN-NO-DEAD-ENDS); tests/test_ux_settings_io.py
+  (RUN-NO-DEAD-ENDS); app/test/prices.test.js (RUN-NO-DEAD-ENDS).
+- Integrator: ROADMAP.md rows of all 5 packages; docs/design/reviews.log:
+  RUN-NO-DEAD-ENDS, PLAY-TD-22A-A11Y-CSS, TEST-WEB-PANELS-B.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1821,27 +1732,58 @@ graphics panels.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- RUN-NO-DEAD-ENDS [session, M 60m, build, P2, DR] Copy pass: eleven sentences and four errors never send the player to a script. Files: server/al/diag.py, server/al/state.py, server/al/acts.py, web/index.html, web/settingsio.js (+5 more). Deps: RUN-REPORT-FIELDS, RUN-OBS-LOGS-SHELL, RUN-ZONE-RESET, RUN-DIAG-DATA-AGE, RUN-EXPLAIN-ROWS, DATA-CONTACT-UI, OVL-KEYS-WEB, SEC-LOG-PATH-FIELD, TC-CALC-OPTIN-BUTTON.
+- RUN-NO-DEAD-ENDS [session, L 90m, build, P2, DR] Copy pass: eleven sentences and four errors never send the player to a script. Files: server/al/diag.py, server/al/state.py, server/al/acts.py, web/index.html, web/settingsio.js (+35 more). Deps: RUN-REPORT-FIELDS, RUN-OBS-LOGS-SHELL, RUN-ZONE-RESET, RUN-DIAG-DATA-AGE, RUN-EXPLAIN-ROWS, DATA-CONTACT-UI, OVL-KEYS-WEB, SEC-LOG-PATH-FIELD, TC-CALC-OPTIN-BUTTON.
 - PLAY-TD-22A-A11Y-CSS [session, L 75m, build, P1, DR] Accessibility CSS: inset focus ring, 24 px targets, forced colours, text spacing. Files: web/app.css, web/textspacing.js, tests/test_a11y.py, tests/test_ux_review.py, tests/test_design_tokens.py (+1 more). Deps: PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-03-TOKENS.
-- TEST-WEB-PANELS-B [session, L 75m, build, P2, DR] Panel move B: layout, weights, web data and graphics panels. Files: web/app.js, app/test/panels.test.js, web/panels/layout.js, web/panels/weights.js, web/panels/webdata.js (+1 more). Deps: TEST-WEB-PANELS-A, PLAY-TD-21B-SETTINGS-ABOUT.
+- TEST-WEB-PANELS-B [session, L 75m, build, P2, DR] Panel move B: layout, weights, web data and graphics panels. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, web/panels/layout.js, web/panels/weights.js (+2 more). Deps: TEST-WEB-PANELS-A, PLAY-TD-21B-SETTINGS-ABOUT.
 - TEST-CORE-TICKS [session, M 45m, build, P3] Core tick list and one import per line. Files: server/al/core.py, server/al/__main__.py, tests/test_core_ticks.py. Deps: TEST-STATE-EQUIV, SEC-DEMO-ENTRY.
+- TEST-PROBE-XDIST-2 [session, S 20m, build, P2] Suite-run timing probe uses 2 workers. Files: tests/test_suite_run.py. Deps: TEST-CALC-GROUP-SPLIT.
 
-### Wave 28: Play tab and dashboard, reliability and observability
+### Wave 29: Play tab and dashboard, overlay and client
 
-Goal: Leads: Theme choice: Dark, Follow Windows, Light; In-browser
-accessibility pass in the CDP harness; Parse each data file once. Releases 1
-loop-owned rows.
+Leads: Settings group 'Overlay shows': part switches, presets Full / Cards
+only, zone-guide ch...; Player notes: bounded store, token route and the
+your-note row; Screen-reader pass tool and its refusals.
 
-- Session 8; width 3 worktree + 0 main-checkout, 1 loop rows released; about
-  108 minutes.
+- Session 8; width 5 worktree + 0 main-checkout, 1 loop rows released.
+- Hotspots: web/index.html (OVL-PARTS-WEB); server/al/core.py
+  (SEC-LOG-PATH-PERSIST); web/app.js (OVL-PARTS-WEB); web/app.css
+  (OVL-PARTS-WEB); tests/test_ux_review.py (OVL-PARTS-WEB);
+  app/shared/render_gate.js (CARD-LINE-LIMIT-FLIP);
+  docs/design/0001-design-system.md (CARD-LINE-LIMIT-FLIP);
+  tests/test_a11y.py (OVL-PARTS-WEB); server/al/zoneguide.py
+  (RUN-PERF-PARSE-ONCE).
+- Integrator: ROADMAP.md rows of all 6 packages; docs/design/reviews.log:
+  OVL-PARTS-WEB, CARD-LINE-LIMIT-FLIP.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- SEC-LOG-PATH-PERSIST [session, S 35m, build, P2] The typed Client.txt path survives a core restart. Files: server/al/core.py, tests/test_log_path_field.py. Deps: SEC-LOG-PATH-FIELD.
+- PLAY-TD-22C-A11Y-CDP [session, L 90m, build, P2] In-browser accessibility pass in the CDP harness. Files: app/test/cdp/a11y.mjs, tests/test_a11y_render.py. Deps: PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS, PLAY-TD-01A-PLAY-STATES, SEC-DEMO-ENTRY.
+- RUN-PERF-PARSE-ONCE [session, M 45m, build, P2] Parse each data file once. Files: server/al/hotreload.py, server/al/acts.py, server/al/campaign.py, server/al/zoneguide.py, server/al/theorycraft/basetypes.py (+2 more). Deps: RUN-HOTRELOAD-RETRY, RUN-DIAG-DATA-AGE, RUN-NO-DEAD-ENDS, RUN-DURABLE-STORES.
+- PLAY-F-165-COLOUR-WORD-TEST [loop, S 25m, build, P3] Test: colour never works alone. Files: tests/test_colour_never_alone.py. Deps: PLAY-TD-22A-A11Y-CSS.
+- OVL-PARTS-WEB [session, M 60m, build, P2, DR] Settings group 'Overlay shows': part switches, presets Full / Cards only, zone-guide choice, 'Show a sample card for 10 s'. Files: web/index.html, web/app.js, web/app.css, tests/test_a11y.py, tests/test_ux_review.py (+2 more). Deps: OVL-OVERLAY-KEYS, OVL-CARD-SLOT, OVL-TD05-PLATE.
+- CARD-LINE-LIMIT-FLIP [session, M 45m, build, P2, DR] Lower the card line limit to 26. Files: server/al/text/common.py, server/al/theorycraft/cardparts/__init__.py, app/shared/format.js, server/al/overlayview.py, docs/design/0001-design-system.md (+15 more). Deps: CARD-LINE-LIMIT-COPY, OVL-OVERLAY-FEED, CARD-LINE-LIMIT-COPY2.
+
+### Wave 30: overlay and client, tests and code seams, loop and watchers
+
+Leads: Card time setting: 20 / 60 / 200 s (TD-18, optional); Panel move C:
+remaining Play blocks (events and trades, item check, rates and price); Two
+Checks notes: a stale loop tick (dev host) and the Electron end of life.
+
+- Session 9; width 2 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-TD-04B-THEME-CHOICE); server/al/core.py
   (PLAY-TD-04B-THEME-CHOICE); server/al/http.py (PLAY-TD-04B-THEME-CHOICE);
   tests/test_security_surface.py (PLAY-TD-04B-THEME-CHOICE);
   app/client/window.js (PLAY-TD-04B-THEME-CHOICE); server/al/settingsio.py
   (PLAY-TD-04B-THEME-CHOICE); tests/test_ux_settings_io.py
-  (PLAY-TD-04B-THEME-CHOICE); server/al/zoneguide.py (RUN-PERF-PARSE-ONCE).
-- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log: 1
-  lines.
+  (PLAY-TD-04B-THEME-CHOICE).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  PLAY-TD-04B-THEME-CHOICE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1851,27 +1793,26 @@ loop-owned rows.
   is flipped and main is clean.
 
 - PLAY-TD-04B-THEME-CHOICE [session, L 75m, build, P2, DR] Theme choice: Dark, Follow Windows, Light. Files: web/index.html, server/al/settingsio.py, server/al/http.py, server/al/core.py, app/client/window.js (+6 more). Deps: PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04A-DARK-CLIENT, SEC-SURFACE-PIN, TEST-CAPTURE-HELPER.
-- PLAY-TD-22C-A11Y-CDP [session, L 90m, build, P2] In-browser accessibility pass in the CDP harness. Files: app/test/cdp/a11y.mjs, tests/test_a11y_render.py. Deps: PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS, PLAY-TD-01A-PLAY-STATES, SEC-DEMO-ENTRY.
-- RUN-PERF-PARSE-ONCE [session, M 45m, build, P2] Parse each data file once. Files: server/al/hotreload.py, server/al/acts.py, server/al/campaign.py, server/al/zoneguide.py, server/al/theorycraft/basetypes.py (+2 more). Deps: RUN-HOTRELOAD-RETRY, RUN-DIAG-DATA-AGE, RUN-NO-DEAD-ENDS, RUN-DURABLE-STORES.
-- PLAY-F-165-COLOUR-WORD-TEST [loop, S 25m, build, P3] Test: colour never works alone. Files: tests/test_colour_never_alone.py. Deps: PLAY-TD-22A-A11Y-CSS.
+- PLAY-F-204A-SR-TOOL [session, M 50m, build, P3] Screen-reader pass tool and its refusals. Files: tools/sr_pass.py, tests/test_sr_pass.py. Deps: PLAY-TD-22C-A11Y-CDP, SEC-DEMO-ENTRY.
 
-### Wave 29: Play tab and dashboard, overlay and client
+### Wave 31: Play tab and dashboard, reliability and observability
 
-Goal: Leads: Settings group 'Overlay shows': part switches, presets Full /
-Cards only, zone-guide ch...; Player notes: bounded store, token route and
-the your-note row; Screen-reader pass tool and its refusals.
+Milestones: design 0001 and the cockpit decision are rewritten (records).
+Leads: Player notes: edit box on Run and the export option; 'This is my
+character' pin in the picker; poll_ms and character apply without a restart;
+Records: design 0001 rewritten, the cockpit decision, decision 0014 amended.
 
-- Session 8; width 3 worktree + 0 main-checkout, 0 loop rows released; about
-  98 minutes.
-- Hotspots: web/index.html (OVL-PARTS-WEB); server/al/core.py
-  (PLAY-F-186A-PLAYER-NOTES-STORE); web/app.js (OVL-PARTS-WEB);
-  server/al/http.py (PLAY-F-186A-PLAYER-NOTES-STORE); server/al/state.py
-  (PLAY-F-186A-PLAYER-NOTES-STORE); web/app.css (OVL-PARTS-WEB);
-  tests/test_ux_review.py (OVL-PARTS-WEB); tests/test_security_surface.py
-  (PLAY-F-186A-PLAYER-NOTES-STORE); tests/test_a11y.py (OVL-PARTS-WEB).
-- Integrator: ROADMAP.md rows of all 3 packages; CLAUDE.md:
+- Session 9; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: server/al/core.py (PLAY-F-186A-PLAYER-NOTES-STORE); web/app.js
+  (TEST-WEB-PANELS-C); server/al/http.py (PLAY-F-186A-PLAYER-NOTES-STORE);
+  server/al/state.py (PLAY-F-186A-PLAYER-NOTES-STORE);
+  tests/test_security_surface.py (PLAY-F-186A-PLAYER-NOTES-STORE);
+  docs/design/0001-design-system.md (PLAY-F-186A-PLAYER-NOTES-STORE);
+  web/checks.js (TEST-WEB-PANELS-C).
+- Integrator: ROADMAP.md rows of all 2 packages; CLAUDE.md:
   PLAY-F-186A-PLAYER-NOTES-STORE; docs/decisions/README.md:
-  PLAY-F-186A-PLAYER-NOTES-STORE; docs/design/reviews.log: 2 lines.
+  PLAY-F-186A-PLAYER-NOTES-STORE; docs/design/reviews.log:
+  PLAY-F-186A-PLAYER-NOTES-STORE, TEST-WEB-PANELS-C.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1880,25 +1821,21 @@ the your-note row; Screen-reader pass tool and its refusals.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- OVL-PARTS-WEB [session, M 60m, build, P2, DR] Settings group 'Overlay shows': part switches, presets Full / Cards only, zone-guide choice, 'Show a sample card for 10 s'. Files: web/index.html, web/app.js, web/app.css, tests/test_a11y.py, tests/test_ux_review.py (+2 more). Deps: OVL-OVERLAY-KEYS, OVL-CARD-SLOT, OVL-TD05-PLATE.
-- PLAY-F-186A-PLAYER-NOTES-STORE [session, L 80m, build, P3, DR] Player notes: bounded store, token route and the your-note row. Files: server/al/http.py, server/al/core.py, server/al/state.py, server/al/playcards.py, tests/test_security_surface.py (+3 more). Deps: PLAY-TD-07B-PLAY-CARDS, PLAY-TD-04B-THEME-CHOICE, RUN-ZONE-RESET, RUN-HOTRELOAD-RETRY, DATA-GUIDE-MERGE.
-- PLAY-F-204A-SR-TOOL [session, M 50m, build, P3] Screen-reader pass tool and its refusals. Files: tools/sr_pass.py, tests/test_sr_pass.py. Deps: PLAY-TD-22C-A11Y-CDP, SEC-DEMO-ENTRY.
+- PLAY-F-186A-PLAYER-NOTES-STORE [session, L 80m, build, P3, DR] Player notes: bounded store, token route and the your-note row. Files: server/al/http.py, server/al/core.py, server/al/state.py, server/al/playcards.py, tests/test_security_surface.py (+6 more). Deps: PLAY-TD-07B-PLAY-CARDS, PLAY-TD-04B-THEME-CHOICE, RUN-ZONE-RESET, RUN-HOTRELOAD-RETRY, DATA-GUIDE-MERGE.
+- TEST-WEB-PANELS-C [session, L 90m, build, P2, DR] Panel move C: remaining Play blocks (events and trades, item check, rates and price) + Panel move D: view modules register themselves; app.js is a shell. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, web/acts.js, web/buildlive.js (+11 more). Deps: TEST-WEB-PANELS-B, PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD.
 
-### Wave 30: overlay and client, tests and code seams, loop and watchers
+### Wave 32: reliability and observability, install and release
 
-Goal: Leads: Card time setting: 20 / 60 / 200 s (TD-18, optional); Panel
-move C: remaining Play blocks (events and trades, item check, rates and
-price); Two Checks notes: a stale loop tick (dev host) and the Electron end
-of life.
+Leads: Settings: version lines, update line, opt-in wording; P8-8: the
+session ladder and the Maps card no longer mix characters; Supervisor diet
+and idle backoff.
 
-- Session 9; width 3 worktree + 0 main-checkout, 0 loop rows released; about
-  118 minutes.
+- Session 9; width 2 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (OVL-TD18-CARD-TIME); server/al/core.py
-  (LOOP-DEV-CHECKS); web/app.js (TEST-WEB-PANELS-C); server/al/state.py
-  (OVL-TD18-CARD-TIME); server/al/diag.py (LOOP-DEV-CHECKS); web/checks.js
-  (TEST-WEB-PANELS-C).
-- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log: 2
-  lines.
+  (LOOP-DEV-CHECKS); server/al/state.py (OVL-TD18-CARD-TIME);
+  server/al/diag.py (LOOP-DEV-CHECKS).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  OVL-TD18-CARD-TIME.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1908,27 +1845,24 @@ of life.
   is flipped and main is clean.
 
 - OVL-TD18-CARD-TIME [session, M 45m, build, DR] Card time setting: 20 / 60 / 200 s (TD-18, optional). Files: server/al/layout.py, app/shared/layout.js, server/al/state.py, web/overlayparts.js, web/index.html (+4 more). Deps: OVL-LINE2-GUIDE, OVL-PARTS-WEB, OVL-TD06-AUTOSCALE, OVL-COPY-FIRST, OVL-KEYS-WEB, OVL-OVERLAY-FEED.
-- TEST-WEB-PANELS-C [session, L 90m, build, P2, DR] Panel move C: remaining Play blocks (events and trades, item check, rates and price) + Panel move D: view modules register themselves; app.js is a. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, web/acts.js, web/buildlive.js (+11 more). Deps: TEST-WEB-PANELS-B, PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD.
 - LOOP-DEV-CHECKS [session, M 40m, build, P2] Two Checks notes: a stale loop tick (dev host) and the Electron end of life. Files: server/al/diag.py, server/al/core.py, tests/test_diag_dev_notes.py. Deps: none.
 
-### Wave 31: Play tab and dashboard, reliability and observability
+### Wave 33: Play tab and dashboard, tests and code seams, reliability and observability
 
-Goal: Milestones: design 0001 and the cockpit decision are rewritten
-(records). Leads: Player notes: edit box on Run and the export option; 'This
-is my character' pin in the picker; poll_ms and character apply without a
-restart; Records: design 0001 rewritten, the cockpit decision, decision 0014
-amended.
+Leads: One spacing scale, one badge, one list row, held by a lint;
+SessionState mixins: cards and trades; The page says what really happened to
+the feed.
 
-- Session 9; width 2 worktree + 1 main-checkout, 0 loop rows released; about
-  108 minutes.
+- Session 9; width 2 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-F-186B-PLAYER-NOTES-UI); server/al/core.py
   (RUN-CHARACTER-PIN); server/al/state.py (RUN-CHARACTER-PIN);
   docs/design/0001-design-system.md (PLAY-TD-23-RECORDS);
   server/al/settingsio.py (PLAY-F-186B-PLAYER-NOTES-UI);
   tests/test_ux_settings_io.py (PLAY-F-186B-PLAYER-NOTES-UI).
-- Integrator: ROADMAP.md rows of all 3 packages; CLAUDE.md:
-  PLAY-TD-23-RECORDS; docs/decisions/README.md: PLAY-TD-23-RECORDS;
-  docs/design/reviews.log: 3 lines.
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
+  PLAY-F-186B-PLAYER-NOTES-UI, RUN-CHARACTER-PIN, PLAY-TD-23-RECORDS;
+  CLAUDE.md: PLAY-TD-23-RECORDS; docs/decisions/README.md:
+  PLAY-TD-23-RECORDS.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1941,21 +1875,19 @@ amended.
 - RUN-CHARACTER-PIN [session, M 45m, build, P3, DR] 'This is my character' pin in the picker; poll_ms and character apply without a restart. Files: server/al/core.py, server/al/state.py, web/chars.js, app/test/chars.test.js, tests/test_util_multichar.py (+1 more). Deps: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE.
 - PLAY-TD-23-RECORDS [session, L 90m, build, P3, DR] Records: design 0001 rewritten, the cockpit decision, decision 0014 amended. Files: docs/design/0001-design-system.md, docs/decisions/0014-ui-build-eval-gfx.md, docs/design/0004-glance-review.md, docs/design/play-fit-figures.md, docs/decisions/0075-fixed-cockpit-play.md. Deps: PLAY-TD-02-SLOTS, PLAY-TD-03-TOKENS, PLAY-TD-01B-FIT-HARNESS, DATA-PRICE-CARD-TEXT, PLAY-F-131-STATUS-TABLE, PLAY-TD-07B-PLAY-CARDS, PLAY-TD-08B-GUIDE-SHORT-TEXT, PLAY-TD-09B-SKELETON, PLAY-LEGACY-OUT-2, PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20B-RUN-CARDS, PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS, PLAY-TD-22C-A11Y-CDP, OVL-TD05-LEGIBILITY, OVL-TD05-PLATE, OVL-TD06-AUTOSCALE, OVL-LINE2-GUIDE, OVL-ACT-CARD, OVL-COPY-FIRST, OVL-KEY-HINT, OVL-GLANCE-RULES, OVL-TD18-CARD-TIME.
 
-### Wave 32: reliability and observability, install and release
+### Wave 34: install and release, tests and code seams, Play tab and dashboard
 
-Goal: Leads: Settings: version lines, update line, opt-in wording; P8-8: the
-session ladder and the Maps card no longer mix characters; Supervisor diet
-and idle backoff.
+Leads: 'Start with Windows' row on Settings; SessionState mixins:
+characters; Overlay: one plate class.
 
-- Session 9; width 3 worktree + 0 main-checkout, 0 loop rows released; about
-  113 minutes.
+- Session 10; width 3 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (REL-UPDATE-NOTICE-UI); server/al/core.py
   (RUN-PERF-IDLE-BACKOFF); web/app.js (REL-UPDATE-NOTICE-UI);
   server/al/state.py (RUN-P8-8-CHARMIX); server/al/__main__.py
   (RUN-PERF-IDLE-BACKOFF); server/al/keepalive.py (RUN-PERF-IDLE-BACKOFF);
   tests/test_keepalive.py (RUN-PERF-IDLE-BACKOFF).
-- Integrator: ROADMAP.md rows of all 3 packages; AL-NEXT-SESSION.txt:
-  RUN-P8-8-CHARMIX; docs/design/reviews.log: 1 lines.
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
+  REL-UPDATE-NOTICE-UI; AL-NEXT-SESSION.txt: RUN-P8-8-CHARMIX.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1968,14 +1900,12 @@ and idle backoff.
 - RUN-P8-8-CHARMIX [session, L 85m, build, P2] P8-8: the session ladder and the Maps card no longer mix characters + SessionState.publish(key, view) for views the core only stores. Files: server/al/state.py, server/al/mapladder.py, tests/test_util_map_ladder.py, tests/test_util_multichar.py, tests/test_util_maps_resume.py (+1 more). Deps: RUN-LADDER-TICK, RUN-CHARACTER-PIN, TEST-STATE-TEXT-4, PLAY-TD-07A-PLAY-VIEW.
 - RUN-PERF-IDLE-BACKOFF [session, M 30m, build, P3] Supervisor diet and idle backoff. Files: server/al/keepalive.py, server/al/core.py, server/al/__main__.py, server/al/logfile.py, tests/test_keepalive.py (+1 more). Deps: RUN-STOP-RACE, RUN-CHARACTER-PIN, RUN-START-REASON-CORE, RUN-TAIL-HEAL-READER, RUN-BUDGET-TESTS-DET.
 
-### Wave 33: Play tab and dashboard, tests and code seams, reliability and observability
+### Wave 35: theorycraft, tests and code seams
 
-Goal: Leads: One spacing scale, one badge, one list row, held by a lint;
-SessionState mixins: cards and trades; The page says what really happened to
-the feed.
+Leads: Weights panel marks changes and resets; SessionState mixins: idle and
+summary, published views.
 
-- Session 9; width 3 worktree + 0 main-checkout, 0 loop rows released; about
-  108 minutes.
+- Session 10; width 3 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-F-189A-SPACING-BADGE); web/app.js
   (RUN-FEED-TRUTH); server/al/http.py (RUN-FEED-TRUTH); server/al/state.py
   (TEST-STATE-MIXIN-A); web/app.css (PLAY-F-189A-SPACING-BADGE);
@@ -1983,8 +1913,8 @@ the feed.
   docs/design/0001-design-system.md (PLAY-F-189A-SPACING-BADGE);
   web/checks.js (PLAY-F-189A-SPACING-BADGE); web/prices.js
   (PLAY-F-189A-SPACING-BADGE).
-- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log: 2
-  lines.
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
+  PLAY-F-189A-SPACING-BADGE, RUN-FEED-TRUTH.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1997,17 +1927,15 @@ the feed.
 - TEST-STATE-MIXIN-A [session, M 60m, build, P3] SessionState mixins: cards and trades. Files: server/al/state.py, server/al/state_cards.py, server/al/state_trades.py. Deps: RUN-P8-8-CHARMIX.
 - RUN-FEED-TRUTH [session, L 75m, build, P3, DR] The page says what really happened to the feed + The dashboard rests when unseen or frozen. Files: web/app.js, web/status.js, server/al/http.py, app/overlay/overlay.js, app/shared/render_gate.js (+3 more). Deps: RUN-SUPERVISOR-CLOCK, RUN-CHARACTER-PIN, RUN-NO-DEAD-ENDS, RUN-BUDGET-TESTS-DASH, SEC-SSE-TAP.
 
-### Wave 34: install and release, tests and code seams, Play tab and dashboard
+### Wave 36: web data
 
-Goal: Leads: 'Start with Windows' row on Settings; SessionState mixins:
-characters; Overlay: one plate class.
+Leads: Dashboard: one guide block, no separate Zone tip.
 
-- Session 10; width 3 worktree + 0 main-checkout, 0 loop rows released;
-  about 113 minutes.
+- Session 10; width 3 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (REL-AUTOSTART-SETTINGS); web/app.js
   (REL-AUTOSTART-SETTINGS); server/al/state.py (TEST-STATE-MIXIN-B).
-- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log: 2
-  lines.
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
+  REL-AUTOSTART-SETTINGS, PLAY-F-189B-OVERLAY-PLATE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2020,17 +1948,16 @@ characters; Overlay: one plate class.
 - TEST-STATE-MIXIN-B [session, M 60m, build, P3] SessionState mixins: characters. Files: server/al/state.py, server/al/state_chars.py. Deps: TEST-STATE-MIXIN-A.
 - PLAY-F-189B-OVERLAY-PLATE [session, M 50m, build, P3, DR] Overlay: one plate class. Files: app/overlay/overlay.css, app/overlay/index.html, tests/test_overlay_plate_class.py. Deps: PLAY-F-189A-SPACING-BADGE.
 
-### Wave 35: theorycraft, tests and code seams
+### Wave 37: reliability and observability
 
-Goal: Leads: Weights panel marks changes and resets; SessionState mixins:
-idle and summary, published views.
+Leads: Small leftovers: Windowed Fullscreen sentence, the dead 501 stub, the
+no-op switch.
 
-- Session 10; width 2 worktree + 0 main-checkout, 0 loop rows released;
-  about 118 minutes.
+- Session 10; width 2 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (TC-WEIGHTS-DELTA-UI); web/app.js
   (TC-WEIGHTS-DELTA-UI); server/al/state.py (TEST-STATE-MIXIN-C).
-- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log: 1
-  lines.
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  TC-WEIGHTS-DELTA-UI.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2042,18 +1969,20 @@ idle and summary, published views.
 - TC-WEIGHTS-DELTA-UI [session, L 90m, build, P2, DR] Weights panel marks changes and resets + .build texts: correct the passives note, name the upload route. Files: web/tc.js, web/app.js, web/index.html, app/test/tc_view.test.js, server/al/theorycraft/buildfile.py (+1 more). Deps: TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB.
 - TEST-STATE-MIXIN-C [session, L 70m, build, P3] SessionState mixins: idle and summary, published views. Files: server/al/state.py, server/al/state_idle.py, server/al/state_views.py. Deps: TEST-STATE-MIXIN-B.
 
-### Wave 36: web data
+### Wave 38: operator requests 2026-11-19, cores
 
-Goal: Leads: Dashboard: one guide block, no separate Zone tip.
+Leads: Item info lookup: token-gated GET /api/iteminfo over local caches;
+Drop the visible AshLight text left of the tabs; sr-only h1 kept; Kindler
+template schema and checked loader.
 
-- Session 10; width 1 worktree + 0 main-checkout, 0 loop rows released;
-  about 88 minutes.
+- Session 11; width 4 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (DATA-GUIDE-ONE-BLOCK); web/app.js
   (DATA-GUIDE-ONE-BLOCK); web/app.css (DATA-GUIDE-ONE-BLOCK); web/prices.js
   (DATA-GUIDE-ONE-BLOCK); app/test/tabs.test.js (DATA-GUIDE-ONE-BLOCK);
-  app/test/prices.test.js (DATA-GUIDE-ONE-BLOCK).
-- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log: 1
-  lines.
+  server/al/settingsio.py (KINDLER-STORE); app/test/prices.test.js
+  (DATA-GUIDE-ONE-BLOCK); server/al/pricebook.py (ITEM-INFO-CORE).
+- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log:
+  DATA-GUIDE-ONE-BLOCK.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2063,20 +1992,23 @@ Goal: Leads: Dashboard: one guide block, no separate Zone tip.
   is flipped and main is clean.
 
 - DATA-GUIDE-ONE-BLOCK [session, L 70m, build, P2, DR] Dashboard: one guide block, no separate Zone tip + A poe.ninja category link beside the trade link. Files: web/index.html, web/app.js, web/app.css, app/test/tabs.test.js, server/al/price.py (+6 more). Deps: DATA-GUIDE-MERGE, DATA-CONTACT-UI, DATA-PRICE-CARD-TEXT, DATA-LEAGUE-IDENTITY.
+- ITEM-INFO-CORE [session, M 45m, build, P2] Item info lookup: token-gated GET /api/iteminfo over local caches. Files: server/al/theorycraft/snapshot.py, server/al/pricebook.py, server/al/iteminfo.py, server/al/plug/iteminfo.py, tests/test_iteminfo.py. Deps: none.
+- KINDLER-DATA [session, M 60m, data, P2] Kindler template schema and checked loader. Files: server/al/theorycraft/archetypes.py, tests/kindler_fixtures.py, tests/test_kindler_data.py. Deps: none.
+- KINDLER-STORE [session, M 55m, build, P2] Kindler tabs store ops/runtime/gen_builds.json. Files: server/al/settingsio.py, server/al/runhistory.py, server/al/plug/stores.py, tests/test_settingsio.py, server/al/theorycraft/genstore.py (+2 more). Deps: none.
 
-### Wave 37: reliability and observability
+### Wave 39: operator requests 2026-11-19, popover and templates
 
-Goal: Leads: Small leftovers: Windowed Fullscreen sentence, the dead 501
-stub, the no-op switch.
+Leads: Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines
+under sha256 pins; Item names as link-like buttons with the shared item info
+popover; First authored Kindler templates, act 1 to maps.
 
-- Session 10; width 1 worktree + 0 main-checkout, 0 loop rows released;
-  about 48 minutes.
+- Session 11; width 3 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (RUN-LEFTOVERS-CORE); server/al/http.py
   (RUN-LEFTOVERS-CORE); tests/test_security_surface.py (RUN-LEFTOVERS-CORE);
   scripts/run.ps1 (RUN-LEFTOVERS-CORE); tests/test_http_security.py
   (RUN-LEFTOVERS-CORE).
-- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log: 1
-  lines.
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
+  RUN-LEFTOVERS-CORE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2086,69 +2018,21 @@ stub, the no-op switch.
   is flipped and main is clean.
 
 - RUN-LEFTOVERS-CORE [session, M 30m, build, P3, DR] Small leftovers: Windowed Fullscreen sentence, the dead 501 stub, the no-op switch. Files: web/index.html, server/al/http.py, tests/test_http_security.py, scripts/run.ps1, docs/ops/1.0-launch-runbook.md (+3 more). Deps: RUN-FEED-TRUTH, RUN-STOP-RACE.
-
-### Wave 38: operator requests 2026-11-19, cores
-
-Goal: Leads: Item info lookup: token-gated GET /api/iteminfo over local
-caches; Drop the visible AshLight text left of the tabs; sr-only h1 kept;
-Kindler template schema and checked loader.
-
-- Session 11; width 4 worktree + 0 main-checkout, 0 loop rows released;
-  about 88 minutes.
-- Hotspots: web/index.html (UI-HEADER-TEXT); web/app.css (UI-HEADER-TEXT);
-  tests/test_a11y.py (UI-HEADER-TEXT); server/al/settingsio.py
-  (KINDLER-STORE); server/al/pricebook.py (ITEM-INFO-CORE).
-- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log: 1
-  lines.
-- Gate: per package: its named tests as a file-named run; main-checkout acts
-  one at a time in merge order; per merge batch of 4 on the integration
-  worktree: merge, then the integrator's edits for the batch as one commit,
-  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
-  tools/suite_run.py and npm test --prefix app, green, then main moves; then
-  python tools/plan_check.py check; the wave closes when every session row
-  is flipped and main is clean.
-
-- ITEM-INFO-CORE [session, M 45m, build, P2] Item info lookup: token-gated GET /api/iteminfo over local caches. Files: server/al/theorycraft/snapshot.py, server/al/pricebook.py, server/al/iteminfo.py, server/al/plug/iteminfo.py, tests/test_iteminfo.py. Deps: none.
-- UI-HEADER-TEXT [session, S 20m, build, P2, DR] Drop the visible AshLight text left of the tabs; sr-only h1 kept. Files: web/index.html, web/app.css, tests/test_brand_assets.py, tests/test_a11y.py. Deps: none.
-- KINDLER-DATA [session, M 60m, data, P2] Kindler template schema and checked loader. Files: server/al/theorycraft/archetypes.py, tests/kindler_fixtures.py, tests/test_kindler_data.py. Deps: none.
-- KINDLER-STORE [session, M 55m, build, P2] Kindler tabs store ops/runtime/gen_builds.json. Files: server/al/settingsio.py, server/al/runhistory.py, server/al/plug/stores.py, tests/test_settingsio.py, server/al/theorycraft/genstore.py (+2 more). Deps: none.
-
-### Wave 39: operator requests 2026-11-19, popover and templates
-
-Goal: Leads: Text-parse PoB CurrencyNames, WorldAreas and Uniques Source
-lines under sha256 pins; Item names as link-like buttons with the shared
-item info popover; First authored Kindler templates, act 1 to maps.
-
-- Session 11; width 3 worktree + 0 main-checkout, 0 loop rows released;
-  about 118 minutes.
-- Hotspots: web/index.html (ITEM-INFO-UI); web/app.js (ITEM-INFO-UI);
-  web/prices.js (ITEM-INFO-UI).
-- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log: 1
-  lines.
-- Gate: per package: its named tests as a file-named run; main-checkout acts
-  one at a time in merge order; per merge batch of 4 on the integration
-  worktree: merge, then the integrator's edits for the batch as one commit,
-  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
-  tools/suite_run.py and npm test --prefix app, green, then main moves; then
-  python tools/plan_check.py check; the wave closes when every session row
-  is flipped and main is clean.
-
 - ITEM-INFO-POB-TEXT [session, M 60m, data, P3] Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines under sha256 pins. Files: config/tc_pins.json, server/al/iteminfo.py, tests/test_tc_pob_drift_guard.py, server/al/theorycraft/pobtext.py, tests/test_tc_pobtext.py. Deps: ITEM-INFO-CORE.
-- ITEM-INFO-UI [session, M 60m, build, P2, DR] Item names as link-like buttons with the shared item info popover. Files: web/index.html, web/prices.js, web/pricewatch.js, web/app.js, web/iteminfo.js (+2 more). Deps: ITEM-INFO-CORE.
 - KINDLER-TEMPLATES [session, L 90m, data, P2] First authored Kindler templates, act 1 to maps. Files: server/al/data/archetypes.json, tests/test_kindler_templates.py. Deps: KINDLER-DATA.
 
 ### Wave 40: operator requests 2026-11-19, engine and tabs
 
-Goal: Leads: Kindler candidates, PoB scoring and deterministic ranking on
-the Generate route; Build tab sub-tabs: Pasted build plus Kindler tabs with
+Leads: Kindler candidates, PoB scoring and deterministic ranking on the
+Generate route; Build tab sub-tabs: Pasted build plus Kindler tabs with
 move, rename and close.
 
-- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released;
-  about 118 minutes.
-- Hotspots: web/index.html (KINDLER-UI-TABS); web/app.css (KINDLER-UI-TABS);
-  server/al/theorycraft/bridge.py (KINDLER-ENGINE).
-- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log: 1
-  lines.
+- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (UI-HEADER-TEXT); web/app.css (UI-HEADER-TEXT);
+  tests/test_a11y.py (UI-HEADER-TEXT); server/al/theorycraft/bridge.py
+  (KINDLER-ENGINE).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  UI-HEADER-TEXT.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2157,21 +2041,59 @@ move, rename and close.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
+- UI-HEADER-TEXT [session, S 20m, build, P2, DR] Drop the visible AshLight text left of the tabs; sr-only h1 kept. Files: web/index.html, web/app.css, tests/test_brand_assets.py, tests/test_a11y.py. Deps: none.
 - KINDLER-ENGINE [session, L 90m, build, P2] Kindler candidates, PoB scoring and deterministic ranking on the Generate route. Files: server/al/theorycraft/bridge.py, server/al/theorycraft/kindler.py, server/al/plug/kindler.py, tests/test_kindler_engine.py, tests/test_kindler_live.py. Deps: KINDLER-DATA, KINDLER-TEMPLATES, KINDLER-STORE.
-- KINDLER-UI-TABS [session, M 60m, build, P2, DR] Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and close. Files: web/index.html, web/tc.js, web/app.css, web/kindler.js, web/kindler.css (+1 more). Deps: KINDLER-STORE.
 
 ### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
 
-Goal: Leads: Collapsible cards on Build and items and Run in the desktop
-client; state in the core; Kindler result plan: stages, links, gem timing,
-passives, ascendancy, item focus.
+Leads: Collapsible cards on Build and items and Run in the desktop client;
+state in the core; Kindler result plan: stages, links, gem timing, passives,
+ascendancy, item focus.
 
-- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released;
-  about 108 minutes.
+- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (ITEM-INFO-UI); web/app.js (ITEM-INFO-UI);
+  web/prices.js (ITEM-INFO-UI).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  ITEM-INFO-UI.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- ITEM-INFO-UI [session, M 60m, build, P2, DR] Item names as link-like buttons with the shared item info popover. Files: web/index.html, web/prices.js, web/pricewatch.js, web/app.js, web/iteminfo.js (+2 more). Deps: ITEM-INFO-CORE.
+- KINDLER-PLAN [session, L 80m, build, P2] Kindler result plan: stages, links, gem timing, passives, ascendancy, item focus. Files: server/al/plug/kindler.py, server/al/theorycraft/kindlerplan.py, tests/test_kindler_plan.py. Deps: KINDLER-ENGINE.
+
+### Wave 42: operator requests 2026-11-19, Kindler result card
+
+Leads: Kindler result card with stages and follow Play guidance.
+
+- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (KINDLER-UI-TABS); web/app.css (KINDLER-UI-TABS).
+- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log:
+  KINDLER-UI-TABS.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- KINDLER-UI-TABS [session, M 60m, build, P2, DR] Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and close. Files: web/index.html, web/tc.js, web/app.css, web/kindler.js, web/kindler.css (+1 more). Deps: KINDLER-STORE.
+
+### Wave 43: parked package released, default contact
+
+Leads: Default contact: the project's issues page once the repository is
+public.
+
+- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (UI-CARD-COLLAPSE); web/app.css
   (UI-CARD-COLLAPSE).
-- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log: 1
-  lines.
+- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log:
+  UI-CARD-COLLAPSE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2181,17 +2103,15 @@ passives, ascendancy, item focus.
   is flipped and main is clean.
 
 - UI-CARD-COLLAPSE [session, L 80m, build, P2, DR] Collapsible cards on Build and items and Run in the desktop client; state in the core. Files: web/index.html, web/app.css, web/pager.js, server/al/plug/stores.py, web/collapse.js (+4 more). Deps: none.
-- KINDLER-PLAN [session, L 80m, build, P2] Kindler result plan: stages, links, gem timing, passives, ascendancy, item focus. Files: server/al/plug/kindler.py, server/al/theorycraft/kindlerplan.py, tests/test_kindler_plan.py. Deps: KINDLER-ENGINE.
 
-### Wave 42: operator requests 2026-11-19, Kindler result card
+### Wave 44: re-plan overflow
 
-Goal: Leads: Kindler result card with stages and follow Play guidance.
+Packages moved down by the wave 26 re-plan (disjoint files).
 
-- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released;
-  about 108 minutes.
+- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (KINDLER-UI-RESULT).
-- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log: 1
-  lines.
+- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log:
+  KINDLER-UI-RESULT.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2202,16 +2122,16 @@ Goal: Leads: Kindler result card with stages and follow Play guidance.
 
 - KINDLER-UI-RESULT [session, L 90m, build, P2, DR] Kindler result card with stages and follow Play guidance. Files: web/index.html, web/kindler.js, web/kindler.css, tests/test_kindler_result_ui.py. Deps: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI.
 
-### Wave 43: parked package released, default contact
+### Wave 45: re-plan overflow
 
-Goal: Leads: Default contact: the project's issues page once the repository
-is public.
+Packages moved down by the wave 26 re-plan (disjoint files).
 
-- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released;
-  about 45 minutes.
-- Hotspots: web/index.html (DATA-CONTACT-DEFAULT).
-- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log: 1
-  lines.
+- Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (DATA-CONTACT-DEFAULT); server/al/core.py
+  (DATA-CONTACT-DEFAULT); web/prices.js (DATA-CONTACT-DEFAULT);
+  app/test/prices.test.js (DATA-CONTACT-DEFAULT).
+- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md:
+  DATA-CONTACT-DEFAULT; docs/design/reviews.log: DATA-CONTACT-DEFAULT.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2221,6 +2141,8 @@ is public.
   is flipped and main is clean.
 
 - DATA-CONTACT-DEFAULT [session, M 45m, build, P1, DR] Default contact: the project's issues page once the repository is public. Files: server/al/webfetch.py, server/al/core.py, server/al/theorycraft/snapshot.py, web/index.html, web/prices.js (+4 more). Deps: DATA-CONTACT-UI, DATA-WEBFETCH-GZIP, DATA-DIAG-SEAM, DATA-SNAP-TRIM, DATA-GUIDE-ONE-BLOCK, GP-10.
+
+<!-- plan_check waves end -->
 
 ## Hotspot schedule
 
