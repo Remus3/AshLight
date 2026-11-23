@@ -155,6 +155,9 @@ class SessionState:
         self.zone_guide = {}
         self.area_graph = {}
         self.visits = zoneguide_mod.VisitBook()
+        # PLAY-F-186A (decision 0074): the player's own notes book
+        # {character: {area id: {"text", "at"}}}, set by the core
+        self.player_notes = {}
         # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
         self.maps = runs_mod.MapRuns()
         self.death_log = runs_mod.DeathLog()
@@ -655,6 +658,26 @@ class SessionState:
             if changed:
                 self.version += 1
             return changed
+
+    def set_player_notes(self, book):
+        """PLAY-F-186A: the player notes book (playernotes.PlayerNotes.get);
+        bumps only on a change."""
+        book = book if isinstance(book, dict) else {}
+        with self._lock:
+            if book is self.player_notes or book == self.player_notes:
+                return False
+            self.player_notes = book
+            self.version += 1
+            return True
+
+    def _player_note_view(self):
+        """PLAY-F-186A: this character's note for the zone the player is
+        in, {"area_id", "text", "at"}, or None. Caller holds the lock."""
+        per = self.player_notes.get(self.character) if self.character else None
+        e = per.get(self.area_id) if isinstance(per, dict) and self.area_id else None
+        if not isinstance(e, dict) or not isinstance(e.get("text"), str):
+            return None
+        return {"area_id": self.area_id, "text": e["text"], "at": e.get("at")}
 
     def visits_doc(self):
         """ZONE-GUIDE: (version, file document) of the visited zones."""
@@ -1361,6 +1384,9 @@ class SessionState:
                     self.in_hideout, self.zone_table, self.underlevel_gap),
                 # ZONE-GUIDE (decision 0043): the live zone guide and tracker
                 "zone_guide": guide,
+                # PLAY-F-186A (decision 0074): the player's own note for this
+                # zone and character, or None
+                "player_note": self._player_note_view(),
                 # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039); the boss
                 # element comes from the guide entry (DATA-GUIDE-BOSS)
                 "campaign": campaign_mod.view(self.level, self.area_id,
