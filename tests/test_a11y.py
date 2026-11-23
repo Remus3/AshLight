@@ -289,6 +289,26 @@ def test_every_focusable_kind_has_a_visible_focus_ring():
     assert "outline: none" not in CSS and "outline:none" not in CSS
 
 
+def test_disabled_link_button_has_a_non_colour_cue():
+    """A11Y-1 (wave 28 design finding; design 0001 C1, colour never the
+    only signal): a disabled link-style button keeps no edge, so muted text
+    alone would say it; its underline turns dashed (the same cue as the
+    dashed edge of every other disabled button), never faded."""
+    css = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+    rules = [(s.strip(), b) for s, b in re.findall(r"([^{}]+)\{([^{}]*)\}", css)]
+    link = [b for s, b in rules if s == "button.link"]
+    assert link and re.search(r"text-decoration:\s*underline", link[0]), link
+    off = [b for s, b in rules
+           if s == 'button.link:disabled, button.link[aria-disabled="true"]']
+    assert off, "no disabled link-button rule"
+    assert re.search(r"text-decoration-style:\s*dashed", off[0]), off
+    assert not re.search(r"opacity\s*:", off[0]), off
+    # no other rule takes the underline off a link button
+    for s, b in rules:
+        if ".link" in s:
+            assert not re.search(r"text-decoration(-line)?:\s*none", b), s
+
+
 def test_text_colours_are_measured_token_pairs():
     """C1: every colour the dashboard paints text in is a kit token whose
     pairs are recomputed by tests/test_design_contrast.py (section 5.2)."""

@@ -197,6 +197,9 @@ button.link {
   padding: 4px 0 4px 8px;
   min-height: 24px;
 }
+/* A11Y-1: a link button has no edge to dash, so when disabled its
+   underline turns dashed instead; muted text is never the only cue. */
+button.link:disabled, button.link[aria-disabled="true"] { text-decoration-style: dashed; }
 
 /* UTIL-MULTICHAR: the per-character selector (the Characters card) */
 .char-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; }
