@@ -117,6 +117,63 @@ def test_new_keys_survive_save_and_merge(tmp_path):
         core.close()
 
 
+# OVL-TD18-CARD-TIME (TD-18): the press card time, 20 / 60 / 200 s, default 20.
+
+def test_card_s_defaults_to_20_and_is_never_stored():
+    assert layout.CARD_S == (20, 60, 200)
+    # absent means 20: a layout saved before this key stays the same document
+    assert "card_s" not in layout.DEFAULT
+    assert "card_s" not in layout.normalize({})
+    assert "card_s" not in layout.normalize({"card_s": 20})
+    assert layout.card_seconds(None) == layout.card_seconds({}) == 20
+    assert layout.card_seconds(layout.normalize({})) == 20
+
+
+@pytest.mark.parametrize("value", [20, 60, 200])
+def test_card_s_strict_accepts(value):
+    got = layout.normalize({"card_s": value})
+    assert layout.card_seconds(got) == value
+    if value != 20:
+        assert got["card_s"] == value and isinstance(got["card_s"], int)
+    # 60.0 reads as 60 (JSON.parse reads it the same in layout.js)
+    assert layout.normalize({"card_s": float(value)}) == got
+
+
+@pytest.mark.parametrize("bad", [0, 7, 30, 120, -20, 600, True, False, "60",
+                                 None, [60], 60.5, float("nan"), float("inf")])
+def test_card_s_strict_rejects_and_lenient_drops(bad):
+    with pytest.raises(layout.LayoutError):
+        layout.normalize({"card_s": bad})
+    assert layout.normalize({"card_s": bad}, strict=False) == layout.DEFAULT
+    assert layout.card_seconds({"card_s": bad}) == 20
+
+
+def test_card_s_survives_save_and_merge(tmp_path):
+    core = Core(runtime=tmp_path / "rt", tail=False)
+    try:
+        assert core.set_overlay_layout({"card_s": 60})["card_s"] == 60
+        got = core.set_overlay_layout({"corner": "bottom-left"})
+        assert got["card_s"] == 60  # a later partial change keeps it
+        stored = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert stored["overlay"]["card_s"] == 60
+        assert core.state.snapshot()["overlay_layout"]["card_s"] == 60
+        assert layout.load(core.config_path)["card_s"] == 60
+        # back to the default: the key leaves the stored layout
+        got = core.set_overlay_layout({"card_s": 20})
+        assert "card_s" not in got and core.state.card_s == 20
+        stored = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert "card_s" not in stored["overlay"]
+    finally:
+        core.close()
+
+
+def test_card_s_matches_the_js_side():
+    js = (ROOT / "app" / "shared" / "layout.js").read_text(encoding="ascii")
+    m = re.search(r"var CARD_S = \[(.*?)\];", js, re.S)
+    assert m and [int(x) for x in re.findall(r"\d+", m.group(1))] == list(layout.CARD_S)
+    assert "cardS !== CARD_S[0]" in js
+
+
 def _js_shared_fixture():
     """The fixture in app/test/layout.test.js between the SHARED-FIXTURE
     markers: rows of {"in", "out"} both sides must agree on."""

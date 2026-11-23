@@ -287,6 +287,21 @@ class SessionState:
                 self.overlay_layout = dict(layout)
                 self.version += 1
 
+    @property
+    def card_s(self):
+        """OVL-TD18-CARD-TIME (TD-18): how long the press card shows, in
+        seconds: the overlay layout's card_s, 20 without one. OverlayView
+        passes it to overlay_card()."""
+        from . import layout as layout_mod  # local: keeps the import block as is
+        return layout_mod.card_seconds(self.overlay_layout)
+
+    def _card_time(self, default):
+        """The snapshot's card time: EVAL_CARD_S / PRICE_CARD_S (`default`)
+        while the layout keeps the default card time, else its card_s."""
+        from . import layout as layout_mod
+        n = self.card_s
+        return default if n == layout_mod.CARD_S[0] else n
+
     def now(self):
         """The state clock (server time, s); PRICE-1-WIRE stamps one press
         with it so the item check and the price check share `at`."""
@@ -1321,10 +1336,11 @@ class SessionState:
                 # hides while it is true
                 "game_idle": bool(self.tailer.get("consented") and self.tailer.get("idle")),
                 "eval": (dict(self.eval, text=eval_card_text(self.eval, alert),
-                              expires_at=self.eval["at"] + EVAL_CARD_S)
+                              expires_at=self.eval["at"] + self._card_time(EVAL_CARD_S))
                          if self.eval else None),
                 "price": (dict(self.price, text=price_card_text(self.price),
-                               expires_at=price_until(self.price))
+                               expires_at=price_until(self.price,
+                                                      self._card_time(PRICE_CARD_S)))
                           if self.price else None),
                 # The one overlay card chosen at this moment (decision 0016),
                 # by the card-slot holder order (OVL-CARD-SLOT)

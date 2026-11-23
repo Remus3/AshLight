@@ -41,6 +41,12 @@ PARTS = ("zone", "timer", "level", "deaths", "status", "trade", "item",
          "moment", "hint")
 # Zone guide: shown on zone entry (default), always, or never.
 ZONE_GUIDE = ("entry", "always", "never")
+# OVL-TD18-CARD-TIME (TD-18): how long the press card (item check, price,
+# merged) stays on the overlay, in seconds. 20 is the default; a slow reader
+# keeps it longer. The card still leaves by itself. A layout carries
+# "card_s" only when it is not the default (absent means 20), so a layout,
+# config file or settings export saved before stays the same document.
+CARD_S = (20, 60, 200)
 
 DEFAULT = {"display": "primary", "corner": "top-right", "scale": 1.0,
            "opacity": 0.86, "margin": 16,
@@ -121,6 +127,7 @@ def normalize(layout, strict=True):
         "quiet_town": lambda v: _flag(v, "quiet_town"),
         "zone_guide": lambda v: v if v in ZONE_GUIDE else _bad(
             "zone_guide must be one of " + ", ".join(ZONE_GUIDE)),
+        "card_s": _card_s,
         "v": _schema,
     }
     for key, check in checks.items():
@@ -135,11 +142,32 @@ def normalize(layout, strict=True):
         extra = sorted(set(layout) - set(checks))
         if extra:
             raise LayoutError("unknown field: " + ", ".join(extra))
+    if out.get("card_s") == CARD_S[0]:
+        del out["card_s"]  # the default is never stored (absent means 20)
     return out
 
 
 def _bad(msg):
     raise LayoutError(msg)
+
+
+def _card_s(value):
+    """One of CARD_S as an int (never true / false). 60.0 reads as 60, as
+    JSON.parse in app/shared/layout.js reads it, so both sides agree."""
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or value not in CARD_S):
+        raise LayoutError("card_s must be one of " + ", ".join(map(str, CARD_S)))
+    return int(value)
+
+
+def card_seconds(layout):
+    """The press card time of a layout dict (any shape): its card_s when
+    valid, else the default. Never raises."""
+    value = layout.get("card_s") if isinstance(layout, dict) else None
+    try:
+        return _card_s(value)
+    except LayoutError:
+        return CARD_S[0]
 
 
 def _flag(value, name):
