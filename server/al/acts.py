@@ -148,6 +148,13 @@ def load_ids(path):
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return frozenset()
+    return ids_from_doc(doc)
+
+
+def ids_from_doc(doc):
+    """load_ids's set from an already parsed world_areas document
+    (RUN-DATAAGE-SHARED-PARSE: the data age check shares TableCache's one
+    parse); a document that is not an object gives an empty set."""
     if not isinstance(doc, dict):
         return frozenset()
     return frozenset(k for k in doc if isinstance(k, str) and k)

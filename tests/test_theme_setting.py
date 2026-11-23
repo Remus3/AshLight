@@ -189,6 +189,59 @@ def test_the_page_ships_dark_with_the_theme_row():
         assert f'<option value="{value}">{label}</option>' in html
 
 
+# THM-2 (wave 30 design finding, S3): a failed save is announced. The
+# visible #theme-said line is not a live region (the page holds at most 6,
+# tests/test_a11y.py); the same words go to the page's one shared polite
+# line, the header's #tab-news, through ALTabs.say. The node script runs
+# web/theme.js against a fake page whose POST fails and prints every id
+# that received the failed-save line.
+THM2_SCRIPT = r"""
+const T = require(process.argv[1]);
+const ids = {};
+function el(id) {
+  const ls = {};
+  return ids[id] = { id: id, value: "", textContent: "",
+    setAttribute() {}, removeAttribute() {},
+    addEventListener(t, fn) { (ls[t] = ls[t] || []).push(fn); },
+    fire(t) { return (ls[t] || []).map((fn) => fn({ type: t })); } };
+}
+["theme-pick", "theme-said", "settings-said", "tab-news"].forEach(el);
+const doc = { documentElement: el("html"), getElementById: (i) => ids[i] || null,
+  defaultView: {} };
+const api = (m) => m === "GET" ? Promise.resolve({ theme: "dark" })
+  : Promise.reject(new Error("HTTP 500"));
+T.wire(doc, { api: api });
+setTimeout(async () => {
+  ids["theme-pick"].value = "light";
+  await ids["theme-pick"].fire("change")[0];
+  const got = Object.keys(ids).filter((i) => ids[i].textContent === T.NOT_SAVED);
+  process.stdout.write(JSON.stringify(got));
+}, 0);
+"""
+
+
+def _tag_of(html, ident):
+    import re
+    m = re.search(r'<[a-z0-9]+\b[^>]*\bid="' + ident + r'"[^>]*>', html)
+    return m.group(0) if m else ""
+
+
+@pytest.mark.skipif(not NODE, reason="node is not installed")
+def test_a_failed_save_line_lands_in_a_polite_region():
+    import subprocess
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    r = subprocess.run([NODE, "-e", THM2_SCRIPT, str(ROOT / "web" / "theme.js")],
+                       cwd=str(ROOT), capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    got = json.loads(r.stdout)
+    assert "theme-said" in got  # the visible line beside the select
+    polite = [i for i in got if 'aria-live="polite"' in _tag_of(html, i)]
+    assert polite == ["tab-news"], got
+    # the visible line stays plain text: no new live region on the page
+    assert "aria-live" not in _tag_of(html, "theme-said")
+    assert 'role="status"' not in _tag_of(html, "theme-said")
+
+
 # -- the pixels, through the shared capture helper ---------------------------
 
 def read_png(data):

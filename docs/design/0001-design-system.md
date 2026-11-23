@@ -638,7 +638,7 @@ Natural use and context
   (`#summarybox`), which stays silent and is reached by its heading, and
   the build card (`#build-alert`, BUILD-LIVE): it changes only when the
   character or build changes, is not urgent, and the polite-region cap
-  (12, test_a11y) keeps its last slot for urgent states, so it is
+  (6, test_a11y) keeps its last slot for urgent states, so it is
   reached by its heading too.
 
 Overlay

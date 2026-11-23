@@ -178,7 +178,10 @@
   /* The header's polite line (visually hidden): "New on Play: <what>."
      while Play stays hidden, "Showing Play. <What>." once on the
      automatic return. The same text twice is cleared and written again,
-     so it is said again. */
+     so it is said again. Exported as say(doc, text): the page's one shared
+     polite line, so a Settings answer that must be heard (THM-2, a failed
+     theme save) is said here instead of adding a live region (the page
+     holds at most 6, tests/test_a11y.py). */
   function news(doc, text) {
     var n = doc.getElementById("tab-news");
     if (!n) { return; }
@@ -272,5 +275,5 @@
   return { TABS: TABS, PRIMARY: PRIMARY, STORE_KEY: STORE_KEY, SLOTS: SLOTS,
     pick: pick, step: step, shouldSwitch: shouldSwitch, show: show, mark: mark,
     notify: notify, fill: fill, start: start, current: current, setClock: setClock,
-    GRACE_MS: GRACE_MS };
+    say: news, GRACE_MS: GRACE_MS };
 }));

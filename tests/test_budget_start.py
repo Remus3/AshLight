@@ -18,6 +18,7 @@ from pathlib import Path
 
 from server.al import acts, hotreload
 from server.al.core import Core
+from server.al.plug import dataage
 from server.al.theorycraft import basetypes
 
 PARSE_RATIO_MAX = 1.2  # B6
@@ -82,6 +83,17 @@ def test_bytes_parsed_at_start_at_most_1_2_times_disk(tmp_path, monkeypatch):
                for n in (acts.FILE_NAME, basetypes.FILE_NAME)}
         assert big <= opened, "the fixture snapshots were not read at start"
         assert core.state.zone_table and core.state.flask_table
+        # RUN-DATAAGE-SHARED-PARSE: the data age area list joins the one
+        # world_areas parse at start and a Checks pass parses nothing more
+        assert core.data_age.ids._share is core.zone_table._share
+        assert len(core.data_age.ids.get()) == 3000
+        before = len(parsed)
+        monkeypatch.setattr(json, "loads", counting_loads)
+        try:
+            dataage.facts(core, 0.0)
+        finally:
+            monkeypatch.setattr(json, "loads", real_loads)
+        assert len(parsed) == before, "the data age check parsed by itself"
         total = sum(parsed)
         assert total <= PARSE_RATIO_MAX * disk, (
             f"parsed {total} bytes for {disk} bytes on disk "

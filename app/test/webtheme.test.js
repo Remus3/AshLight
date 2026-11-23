@@ -44,7 +44,7 @@ function page(opts) {
   const root = el("html", "HTML");
   root.setAttribute("data-theme", "dark"); // as shipped in web/index.html
   const ids = { "theme-pick": el("theme-pick", "SELECT"), "theme-said": el("theme-said"),
-    "settings-said": el("settings-said") };
+    "settings-said": el("settings-said"), "tab-news": el("tab-news") };
   const observers = [];
   function Observer(cb) { this.cb = cb; observers.push(this); }
   Observer.prototype.observe = function (target, init) { this.target = target; this.init = init; };
@@ -166,6 +166,35 @@ test("a change the core refuses goes back to the saved choice and says so", asyn
   assert.equal(pick.value, "dark");
   assert.equal(p.ids["theme-said"].textContent, T.NOT_SAVED);
   assert.equal(T.NOT_SAVED, "Your choice was not saved. Try again.");
+  // THM-2: the same line is said in the page's shared polite region (the
+  // header's #tab-news, through ALTabs.say), never a new live region
+  assert.equal(T.IDS.news, "tab-news");
+  assert.equal(p.ids["tab-news"].textContent, T.NOT_SAVED);
+  // a second refusal is said again (the region is cleared, then written)
+  const writes = [];
+  const news = p.ids["tab-news"];
+  let text = news.textContent;
+  Object.defineProperty(news, "textContent", {
+    get() { return text; }, set(v) { writes.push(v); text = v; } });
+  pick.value = "light";
+  await pick.fire("change")[0];
+  assert.deepEqual(writes, ["", T.NOT_SAVED]);
+  // a later change clears our stale line, but never another feature's news
+  writes.length = 0;
+  p.ids["theme-pick"].value = "light";
+  const ok = fakeApi({ "POST /api/theme": (b) => ({ theme: b.theme }) });
+  const r = page();
+  T.wire(r.doc, { api: ok.api });
+  r.ids["tab-news"].textContent = T.NOT_SAVED;
+  r.ids["theme-pick"].value = "light";
+  await r.ids["theme-pick"].fire("change")[0];
+  assert.equal(r.ids["tab-news"].textContent, "");
+  const s = page();
+  T.wire(s.doc, { api: ok.api });
+  s.ids["tab-news"].textContent = "New on Play: item check.";
+  s.ids["theme-pick"].value = "light";
+  await s.ids["theme-pick"].fire("change")[0];
+  assert.equal(s.ids["tab-news"].textContent, "New on Play: item check.");
   // the next good change clears the line
   f.calls.length = 0;
   const g = fakeApi({ "POST /api/theme": (b) => ({ theme: b.theme }) });
