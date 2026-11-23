@@ -756,3 +756,62 @@ def test_update_click_only_is_on_the_settings_allow_list(tmp_path, monkeypatch):
     core.import_settings(doc)
     assert json.loads(cfg.read_text(encoding="ascii"))["update_click_only"] is True
     assert core.update_click_only() is True
+
+
+# REL-UPDATE-APPLY-NOW: an 'Update now' run that staged asks the client to apply
+
+def _apply_request(core):
+    return core.runtime / updates.APPLY_REQUEST
+
+
+def _stage(home, version="9.0.0"):
+    doc = json.dumps({"version": version})
+    (home / "staged" / (version + ".json")).write_text(doc, encoding="ascii")
+
+
+def test_update_now_run_that_stages_writes_the_apply_request(tmp_path, monkeypatch):
+    core, _, _, home = _trigger_core(tmp_path, monkeypatch, cfg=dict(ON, update_click_only=True))
+    assert core.update_now() == updates.STARTED
+    _run(core)  # still running: nothing asked yet
+    assert not _apply_request(core).exists()
+    _stage(home)
+    core.update_spawn.finish()
+    _run(core)  # the run ended with 9.0.0 staged
+    doc = json.loads(_apply_request(core).read_text(encoding="ascii"))
+    assert doc == {"version": "9.0.0"}
+    _apply_request(core).unlink()  # the client takes it once
+    _run(core)
+    assert not _apply_request(core).exists()  # one ask per click
+
+
+def test_update_now_run_that_stages_nothing_asks_nothing(tmp_path, monkeypatch):
+    core, _, _, _ = _trigger_core(tmp_path, monkeypatch, cfg=dict(ON, update_click_only=True))
+    assert core.update_now() == updates.STARTED
+    core.update_spawn.finish()
+    _run(core)
+    assert not _apply_request(core).exists()
+
+
+def test_update_now_with_the_release_staged_already_asks_at_once(tmp_path, monkeypatch):
+    core, _, _, home = _trigger_core(tmp_path, monkeypatch, cfg=dict(ON, update_click_only=True))
+    _stage(home)
+    assert core.update_now() == updates.STAGED
+    assert core.update_spawn.calls == []
+    doc = json.loads(_apply_request(core).read_text(encoding="ascii"))
+    assert doc == {"version": "9.0.0"}
+
+
+def test_an_automatic_run_never_asks_for_an_apply(tmp_path, monkeypatch):
+    core, _, clock, home = _trigger_core(tmp_path, monkeypatch)
+    _run(core)  # the idle start (no click)
+    assert len(core.update_spawn.calls) == 1
+    _stage(home)
+    core.update_spawn.finish()
+    _run(core, clock[0] + 60)
+    assert not _apply_request(core).exists()  # it applies at the next client start
+
+
+def test_refused_update_now_asks_nothing(tmp_path, monkeypatch):
+    core, _, _, _ = _trigger_core(tmp_path, monkeypatch, installed=False)
+    assert core.update_now() == updates.CHECKOUT
+    assert not _apply_request(core).exists()

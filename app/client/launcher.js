@@ -165,10 +165,12 @@ function plainName(name) {
    it could not run or timed out; the start goes on), line its last output
    line ("" when none). A checkout, or an install whose marker names no
    usable Python, runs nothing and returns null. */
-function applyStaged(home, exec, env) {
+function applyStaged(home, exec, env, ifDue) {
   const h = Home.asHome(home, env);
   if (h.mode !== "installed" || !h.home) { return null; }
-  const cmd = Home.pythonCmd(h, INSTALLER_MODULE, ["apply-staged", "--if-due", "--home", h.home]);
+  const args = ifDue === false ? ["apply-staged", "--home", h.home]
+    : ["apply-staged", "--if-due", "--home", h.home];
+  const cmd = Home.pythonCmd(h, INSTALLER_MODULE, args);
   if (!cmd.exe) { return null; }
   const run = exec || childProcess.execFileSync;
   let code = 0;
@@ -305,6 +307,106 @@ function stopAll(home, spawn, env) {
   }
 }
 
+/* REL-UPDATE-APPLY-NOW (F-077, decision 0065): one 'Update now' click
+   finishes the update. After the click's staging run the core writes
+   <data>/apply_now.request ({"version"}; server/al/core.py _ask_apply).
+   takeApplyRequest() reads it (at most 4 KB) and always removes it, so a
+   request is acted on once; it returns the version when it is a plain
+   SemVer text, else null. Never throws. */
+const APPLY_REQUEST_FILE = "apply_now.request";
+const APPLY_REQUEST_MAX_BYTES = 4096;
+const STOP_FILE = "stop.request";
+const CORE_ALIVE_FILE = "core.alive";
+const STOP_WAIT_MS = 20000;  // stop.ps1's clean-exit wait is 15 s
+const STOP_STEP_MS = 500;
+const VERSION_RE = /^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}(-[0-9A-Za-z.-]{1,40})?$/;
+
+function takeApplyRequest(runtimeDir, fsMod) {
+  const f = fsMod || require("fs");
+  const file = path.join(String(runtimeDir || ""), APPLY_REQUEST_FILE);
+  let doc = null;
+  try {
+    const st = f.statSync(file);
+    if (st.isFile() && st.size <= APPLY_REQUEST_MAX_BYTES) {
+      const text = String(f.readFileSync(file, "utf8"));
+      doc = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text); // a BOM is dropped
+    }
+  } catch (e) {
+    doc = null;
+  }
+  try { f.unlinkSync(file); } catch (e) { /* missing: nothing to take */ }
+  const v = doc && typeof doc === "object" && !Array.isArray(doc) ? doc.version : null;
+  return typeof v === "string" && VERSION_RE.test(v) ? v : null;
+}
+
+/* Stop the core through stop.request, wait until it is gone, apply the
+   staged version at once and start again. In an installed copy only:
+   1. write <data>/stop.request (the user-stop file scripts\stop.ps1 writes:
+      the core exits cleanly and the supervisor exits too, so nothing
+      restarts the old core during the switch);
+   2. wait (at most STOP_WAIT_MS) until o.check() (the hello health check)
+      says the core is down and core.alive is gone;
+   3. run 'installer apply-staged --home <home>' (no --if-due: the click
+      skips the 24 h hold, switch.apply's "Update now" case);
+   4. exit 10 and a relaunch from the marker's version: this process exits
+      ("switched"); anything else: startCore() as at a normal start
+      (run.ps1 removes stop.request), "restarted", or "busy" when the core
+      never went away (apply is then not run; the release still applies at
+      the next client start). A checkout does nothing ("checkout").
+   o (tests): {check, exec, spawn, fs, env, exit, log, sleep, now, waitMs,
+   stepMs}. Resolves one fixed word; never rejects. */
+function applyNow(home, port, opts) {
+  const o = opts || {};
+  const f = o.fs || require("fs");
+  const env = o.env;
+  const h = resolvedHome(home, env, f);
+  const say = typeof o.log === "function" ? o.log : () => {};
+  if (h.mode !== "installed" || !h.home) { return Promise.resolve("checkout"); }
+  const restart = (word) => {
+    startCore(h, port, o.spawn, env, { exec: o.exec, fs: f, exit: o.exit, log: o.log });
+    return word;
+  };
+  try {
+    f.mkdirSync(h.dataDir, { recursive: true });
+    f.writeFileSync(path.join(h.dataDir, STOP_FILE), "update\n");
+  } catch (e) {
+    say("update: stop request not written; the update applies at the next start");
+    return Promise.resolve("failed");
+  }
+  const check = typeof o.check === "function" ? o.check : () => Promise.resolve(false);
+  const clock = typeof o.now === "function" ? o.now : Date.now;
+  const pause = typeof o.sleep === "function" ? o.sleep
+    : (ms) => new Promise((r) => setTimeout(r, ms));
+  const waitMs = typeof o.waitMs === "number" ? o.waitMs : STOP_WAIT_MS;
+  const stepMs = typeof o.stepMs === "number" ? o.stepMs : STOP_STEP_MS;
+  const end = clock() + waitMs;
+  const aliveFile = path.join(h.dataDir, CORE_ALIVE_FILE);
+  function gone() {
+    return Promise.resolve().then(check).then((up) => up === true, () => false)
+      .then((up) => !up && !isFile(f, aliveFile));
+  }
+  function round() {
+    return gone().then((down) => {
+      if (down) { return true; }
+      if (clock() >= end) { return false; }
+      return Promise.resolve(pause(stepMs)).then(round);
+    });
+  }
+  return round().then((down) => {
+    if (!down) {
+      say("update: the core did not stop; the update applies at the next start");
+      return restart("busy");
+    }
+    const res = applyStaged(h, o.exec, env, false);
+    if (res && res.line) { say("update: " + res.line); }
+    if (res && res.code === EXIT_SWITCHED && relaunch(h, o.spawn, env, f)) {
+      (typeof o.exit === "function" ? o.exit : exitNow)();
+      return "switched";
+    }
+    return restart("restarted");
+  }).catch(() => "failed");
+}
+
 /* REL-AUTOSTART-SWITCH (decision 0011, ruling Q-08): tray "Start with
    Windows". Runs scripts\autostart.ps1 -Enable or -Disable hidden, with no
    other script argument; the script registers or removes the logon task and
@@ -417,4 +519,5 @@ function readGiveUp(runtimeDir, fsMod) {
 module.exports = { resolveSidecar, startCore, stopAll, psArgs, psExe, whichAbs, setAutostart,
                    readAutostart, AUTOSTART_FILE, setupCalc, CALC_SETUP_PS1,
                    applyStaged, relaunch, startConfirm, EXIT_SWITCHED,
+                   applyNow, takeApplyRequest, APPLY_REQUEST_FILE,
                    readGiveUp, KEEPALIVE_FILE, KEEPALIVE_REASONS };

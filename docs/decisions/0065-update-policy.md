@@ -88,3 +88,37 @@ all before the address exists or before the player has seen the wording.
 GitHub or GGG terms bar the daily read, a bad release auto-applies in
 practice, the operator wants click-only, or a stdlib-verifiable
 signature becomes available.
+
+## Amendment 2026-11-22 (REL-UPDATE-APPLY-NOW, F-077)
+
+Decision: one 'Update now' click finishes the update. When the click's
+update run ends with a version staged (or the release was staged
+already), the core writes <runtime>/apply_now.request holding only the
+version (core._ask_apply; an automatic idle run never writes it, so that
+update still applies at the next client start after the 24 h hold). The
+desktop client's main process takes the file on its 30 s watch
+(launcher.takeApplyRequest: at most 4 KB, removed on every read, a plain
+SemVer only) and runs launcher.applyNow: it writes stop.request (the
+user-stop file of scripts/stop.ps1, so the supervisor exits too), waits
+up to 20 s for the hello check to fail and core.alive to go, runs
+`installer apply-staged --home <home>` without --if-due (the click skips
+the hold, as switch.apply already allowed), then relaunches from the new
+marker version (exit 10) or starts the core again through run.ps1. A
+core that does not stop is never switched under; the version applies at
+the next start. The first health answer still confirms and a failed
+start still rolls back (unchanged).
+
+Alternatives: a new preload action from the dashboard button (rejected:
+decision 0041 keeps the preload set fixed, and the renderer cannot see
+when the staging run ends); the client reading the snapshot over the
+token (rejected: the main process holds no feed, and a file in the
+private runtime dir is the existing stop.request pattern); the installer
+itself stopping the core (rejected: only the client may relaunch the
+client, and the installer never kills processes).
+
+Why: the operator's minimal-interaction order; the click already states
+the player's consent to update now, so the hold adds nothing.
+
+Reverses if: the stop then apply cuts a press or a calc in play, the
+30 s watch delay proves too slow, or the operator wants the click to wait
+for the next start again.
