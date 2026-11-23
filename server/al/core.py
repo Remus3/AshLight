@@ -50,6 +50,7 @@ from . import hotkeys  # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE)
 from . import hotreload  # HOT-RELOAD (decision 0042)
 from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import overlayview  # OVL-CARD-SLOT (F-118)
+from . import playernotes  # PLAY-F-186A (decision 0074)
 from . import plug  # RUN-SEAMS (decision 0056)
 from . import diag_data, leagues  # DATA-DIAG-SEAM, DATA-LEAGUE-PICKER-API
 from . import pricerefresh  # DATA-PRICE-REFRESH-CORE (F-036)
@@ -360,6 +361,16 @@ class Core:
         self.visits_path = self.runtime / zoneguide.FILE_NAME
         self.state.load_visits(zoneguide.read_visits(self.visits_path))
         self._visits_saved = self.state.visits_doc()[0]
+        # PLAY-F-186A (decision 0074): the player's own note per zone and
+        # character, one bounded runtime file in the hot reload registry
+        # (a malformed file keeps the last good copy, a Checks note; the
+        # registry poll stats it at most once a minute and a re-read is
+        # published by on_change, so the tick adds no stat of its own, B3);
+        # written only by save_player_note (the player's Save)
+        self.player_notes = playernotes.PlayerNotes(
+            playernotes.default_path(self.runtime),
+            on_change=self.state.set_player_notes)
+        self.state.set_player_notes(self.player_notes.book())
         # NEWBIE-HINTS (ruling L): hashed character keys and hint ids only
         self.state.use_hint_store(self.runtime / hints.FILE_NAME)
         # UTIL-PRICE-WATCH: the last priced presses, one bounded runtime
@@ -819,6 +830,25 @@ class Core:
         if not saver.dirty:
             return False
         return self._flush("visits")
+
+    # -- PLAY-F-186A (decision 0074)
+    def save_player_note(self, text, area_id=None):
+        """POST /api/player-note: the player's Save. Stores (an empty text
+        removes) the note of the character being played for `area_id`, else
+        the zone the player is in, and publishes it at once. Returns the
+        note dict or None when removed. playernotes.NoteError when no
+        character or zone is known or the text is refused (nothing
+        written); OSError when the file could not be written."""
+        with self.state._lock:
+            character, current = self.state.character, self.state.area_id
+        if not character:
+            raise playernotes.NoteError(playernotes.NO_CHARACTER)
+        area = area_id if area_id is not None else current
+        if not area:
+            raise playernotes.NoteError(playernotes.NO_ZONE)
+        note = self.player_notes.save(character, area, text)
+        self.state.set_player_notes(self.player_notes.book())
+        return note
 
     # -- OVL-CARD-SLOT (F-118)
     def _save_overlay_view(self):

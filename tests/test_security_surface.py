@@ -79,7 +79,7 @@ ROUTES = {
     # (server/al/plug/report.py); the report built on the click
     ("GET", "/api/report"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (18)
+    # token POST (19)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
@@ -98,6 +98,7 @@ ROUTES = {
     ("POST", "/api/overlay-sample"): (HEADER, 4096),  # OVL-CARD-SLOT
     ("POST", "/api/update-now"): (HEADER, 4096),  # REL-UPDATE-TRIGGER: an empty body
     ("POST", "/api/theme"): (HEADER, 4096),  # PLAY-TD-04B-THEME-CHOICE
+    ("POST", "/api/player-note"): (HEADER, 4096),  # PLAY-F-186A: text/plain
     # token PUT (1)
     ("PUT", "/api/weights"): (HEADER, 64 * 1024),
     # refused verbs
@@ -346,7 +347,7 @@ def test_route_table_matches_http_py():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
     assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 16,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 18, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 19, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
@@ -496,11 +497,12 @@ def test_body_caps_are_pinned(srv):
                        body=b"{}")
             assert r.status == 501, path
             continue
-        ctype = ("application/octet-stream" if path == "/api/filter-merge"
-                 else "application/json")
+        ctype = {"/api/filter-merge": "application/octet-stream",
+                 "/api/player-note": "text/plain"}.get(path, "application/json")
         assert _cap_probe(srv, path, cap + 1, ctype) == 413, path
-        # exactly the cap is read (a refused body, never a 413); bad JSON or
-        # a non-filter keeps every handler from changing anything
+        # exactly the cap is read (a refused body, never a 413); bad JSON, a
+        # non-filter or a note that is not UTF-8 keeps every handler from
+        # changing anything
         body = b"[" + b" " * (cap - 1) if ctype == "application/json" else b"\xff" * cap
         r, _ = req(srv, method, path, {**auth(), "Content-Type": ctype}, body=body)
         assert r.status == 400, (path, r.status)
