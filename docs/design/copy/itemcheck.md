@@ -14,8 +14,12 @@ a new or changed itemcheck template is edited here, not in design 0001.
 
 - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
   (empty slot: `<Verdict> <+delta> - <slot> empty`; over 26 characters
-  the slot name drops: `<Verdict> <+delta> - slot empty`, then
-  `<Verdict> <+delta>`, and the dashboard names the slot;
+  the verdict and the slot name stay and the number gives way (CL-2): it
+  rounds to a whole one, then leaves the head (`<Verdict> vs <slot>`,
+  `<Verdict>: <slot> empty`) and the dashboard sentence carries it; only
+  a slot too long beside the verdict drops: `<Verdict> <+delta> - slot
+  empty`, `<Verdict>: slot empty`, then `<Verdict> <+delta>`; examples
+  `Upgrade +5 - Gloves empty`, `Upgrade: Body Armour empty`;
   CARD-LINE-LIMIT-COPY), item name, top
   counted stat (`+35 to maximum Life`; a flag mod `Gains: <mod>` /
   `Loses: <mod>`); dashboard `Upgrade: <n> points more than your <slot>

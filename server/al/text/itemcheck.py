@@ -239,16 +239,34 @@ def eval_card_text(card, alert=None):
     return out
 
 
-def _delta_head(verdict, delta, slot, empty):
+def _whole(score):
+    """The score delta rounded half away from zero to a whole signed number,
+    or None when that says nothing new (under 1, or already whole)."""
+    try:
+        n = float(score or 0)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not 1 <= abs(n) < 1e15 or n == int(n):  # also drops nan and inf
+        return None
+    return _signed(int(abs(n) + 0.5) * (1 if n > 0 else -1))
+
+
+def _delta_head(verdict, score, slot, empty):
     """The compared item's head: "<Verdict> <delta> vs <slot>" (empty slot:
-    "<Verdict> <delta> - <slot> empty"); over LINE_FIT the slot name drops
-    ("<Verdict> <delta> - slot empty", then "<Verdict> <delta>"), so the
-    verdict and the number always show whole and the dashboard names the
-    slot."""
+    "<Verdict> <delta> - <slot> empty"). CL-2: over LINE_FIT the verdict
+    word and the slot name stay and the number gives way: it rounds to a
+    whole one, then leaves the head ("<Verdict> vs <slot>", "<Verdict>:
+    <slot> empty") for the dashboard sentence; only a slot that cannot fit
+    beside the verdict drops ("<Verdict> <delta> - slot empty", "<Verdict>:
+    slot empty", then "<Verdict> <delta>")."""
+    delta = _signed(score or 0)
+    deltas = [delta] + [d for d in (_whole(score),) if d]
     if empty:
-        heads = (f"{verdict} {delta} - {slot} empty", f"{verdict} {delta} - slot empty")
+        heads = [f"{verdict} {d} - {slot} empty" for d in deltas]
+        heads += [f"{verdict}: {slot} empty", f"{verdict} {delta} - slot empty",
+                  f"{verdict}: slot empty"]
     else:
-        heads = (f"{verdict} {delta} vs {slot}",)
+        heads = [f"{verdict} {d} vs {slot}" for d in deltas] + [f"{verdict} vs {slot}"]
     return next((h for h in heads if len(h) <= LINE_FIT), f"{verdict} {delta}")
 
 
@@ -278,8 +296,7 @@ def _eval_lines(card):
                 comps[0] if comps else {})
     verdict = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
     slot = _text(card.get("slot"), "its slot")
-    delta = _signed(card.get("score_delta") or 0)
-    out["head"] = _delta_head(verdict, delta, slot, best.get("empty"))
+    out["head"] = _delta_head(verdict, card.get("score_delta"), slot, best.get("empty"))
     counted = [stat_delta_text(s.get("key"), s.get("delta"))
                for s in _dicts(best.get("stats")) if s.get("weighted")]
     if card.get("unidentified"):

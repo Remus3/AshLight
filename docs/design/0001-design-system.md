@@ -878,9 +878,10 @@ Section 9 - messaging (TD-07, TD-17):
   from 34 to 26 (CARD_LINE, the format.js maxLen defaults, cardparts
   HEAD_MAX; the key hint's HINT_FIT is CARD_LINE). A line
   built from values drops its least needed part instead of clipping: the
-  keep / vendor head drops ", Lv <n>", the item check head drops the slot
-  name, the price line names the league only when it fits and turns
-  "About <amount>" into "~<amount>".
+  keep / vendor head drops ", Lv <n>", the item check head rounds, then
+  drops the number and keeps the slot name (CL-2; only a slot too long
+  beside the verdict drops), the price line names the league only when
+  it fits and turns "About <amount>" into "~<amount>".
 - Status slot order. Old: connection, Client.txt state, trade count,
   under-level word, AFK / DND, campaign hint word. New: the zone-guide
   line sits after AFK / DND and before the campaign hint word.

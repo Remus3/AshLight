@@ -102,32 +102,50 @@ def test_sidegrade_empty_slot_and_unidentified():
     assert t["line"] == "Mods hidden: identify it"
 
 
-def test_delta_head_drops_the_slot_name_over_26():
-    """CARD-LINE-LIMIT-COPY: the item check head keeps the verdict and the
-    number whole; over 26 characters the slot name drops (the dashboard
-    sentence still names it)."""
+def test_delta_head_keeps_the_slot_name_at_the_26_fit():
+    """CL-2 (CARD-LINE-LIMIT-COPY): the item check head keeps the verdict
+    word and the slot name; over 26 characters the number rounds to a whole
+    one, then moves to the dashboard sentence; the slot name drops only when
+    the verdict and the slot alone cannot fit."""
     t = eval_card_text(card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade",
                             comparisons=[comp("Body Armour", "downgrade", -1234.5)]))
-    assert t["head"] == "Downgrade -1234.5"
-    assert "Body Armour" in t["sentence"]
+    assert t["head"] == "Downgrade vs Body Armour"
+    assert "1234.5" in t["sentence"] and "Body Armour" in t["sentence"]
     t = eval_card_text(card(slot="Body Armour", score_delta=12,
                             comparisons=[comp("Body Armour", "upgrade", 12)]))
     assert t["head"] == "Upgrade +12 vs Body Armour" and len(t["head"]) == 26
+    t = eval_card_text(card(slot="Body Armour", score_delta=12.4,
+                            comparisons=[comp("Body Armour", "upgrade", 12.4)]))
+    assert t["head"] == "Upgrade +12 vs Body Armour"
     t = eval_card_text(card(slot="Body Armour", score_delta=12,
                             comparisons=[comp("Body Armour", "upgrade", 12, empty=True)]))
-    assert t["head"] == "Upgrade +12 - slot empty"
+    assert t["head"] == "Upgrade: Body Armour empty" and len(t["head"]) == 26
     t = eval_card_text(card(slot="Gloves", score_delta=5,
                             comparisons=[comp("Gloves", "upgrade", 5, empty=True)]))
     assert t["head"] == "Upgrade +5 - Gloves empty"
     t = eval_card_text(card(slot="Weapon 1", score_delta=123.5,
                             comparisons=[comp("Weapon 1", "upgrade", 123.5, empty=True)]))
-    assert t["head"] == "Upgrade +123.5"
-    for slot in ("Weapon 1", "Body Armour", "Charm 3"):
+    assert t["head"] == "Upgrade: Weapon 1 empty"
+    t = eval_card_text(card(slot="Weapon 1", score_delta=-0.4, verdict="sidegrade",
+                            comparisons=[comp("Weapon 1", "sidegrade", -0.4)]))
+    assert t["head"] == "Sidegrade -0.4 vs Weapon 1"
+    long = "A Slot Name Far Too Long To Fit"
+    t = eval_card_text(card(slot=long, score_delta=7, comparisons=[comp(long, "upgrade", 7)]))
+    assert t["head"] == "Upgrade +7"
+    known = ("Weapon 1", "Weapon 2", "Helmet", "Body Armour", "Gloves", "Boots",
+             "Amulet", "Ring 1", "Ring 2", "Belt", "Charm 3", "Flask 1")
+    for slot in known:
         for verdict, delta in (("upgrade", 99999.5), ("sidegrade", -0.5), ("downgrade", -12.5)):
             for empty in (False, True):
                 c = card(verdict=verdict, slot=slot, score_delta=delta,
                          comparisons=[comp(slot, verdict, delta, empty=empty)])
-                assert len(eval_card_text(c)["head"]) <= 26, (slot, delta, empty)
+                head = eval_card_text(c)["head"]
+                assert len(head) <= 26, (slot, delta, empty)
+                # 9-letter verdict + "Body Armour" + empty is 28 at least
+                if not (empty and verdict != "upgrade" and slot == "Body Armour"):
+                    assert slot in head, (slot, verdict, empty, head)
+                elif empty:
+                    assert head.endswith("slot empty"), head
 
 
 def test_error_card_text():
