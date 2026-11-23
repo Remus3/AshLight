@@ -336,6 +336,7 @@ class Core:
         self._update_key = None
         self.update_spawn = None
         self._update_child_running = False
+        self._apply_after_run = False  # REL-UPDATE-APPLY-NOW: an 'Update now' run
         # DATA-PRICE-REFRESH-CORE: the loop's refresh gate and the last
         # /api/rates read (monotonic s; tick_prices / note_rates_read)
         self.price_gate, self.rates_read_at = pricerefresh.Gate(), None
@@ -1252,6 +1253,9 @@ class Core:
         alive = client.running()
         if self._update_child_running and not alive:
             self.publish_update()
+            if self._apply_after_run:
+                self._apply_after_run = False
+                self._ask_apply()
         self._update_child_running = alive
         if alive or not (client.allowed() if allowed is None else allowed):
             return False
@@ -1274,8 +1278,31 @@ class Core:
         word = self.updates.update_now(spawn=self.update_spawn, staged=self._staged_version)
         if word == updates.STARTED:
             self._update_child_running = self.updates.running()
+            self._apply_after_run = True
+        elif word == updates.STAGED:
+            self._ask_apply()
         self.publish_update()
         return word
+
+    def _ask_apply(self):
+        """REL-UPDATE-APPLY-NOW: one 'Update now' click finishes the update.
+        When this installed copy has a staged version, write
+        <runtime>/apply_now.request ({"version": <staged>}, no path); the
+        desktop client takes it on its watch (launcher.takeApplyRequest),
+        stops this core through stop.request and runs the installer's
+        apply-staged. Only after the click: right away when the release was
+        staged already, else when the click's update run ends. True when
+        the request was written; a failed write is logged, never raised
+        (the version then applies at the next client start)."""
+        version = self._staged_version()
+        if not version:
+            return False
+        try:
+            jsonfile.write_json(self.runtime / updates.APPLY_REQUEST, {"version": version})
+        except OSError as exc:
+            LOG.warning("update: apply request not written (%s)", type(exc).__name__)
+            return False
+        return True
 
     def _staged_version(self):
         """The newest staged version of an installed copy

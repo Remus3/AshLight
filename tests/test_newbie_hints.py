@@ -74,6 +74,8 @@ def test_first_town_shows_the_item_check_hint_once():
     # OVL-KEYS-WEB: no client file, so no key is bound and none is named
     assert snap["hint"]["text"] == hints.town_text(None)
     assert hints.NO_KEY in snap["hint"]["text"] and "Alt+" not in snap["hint"]["text"]
+    # RUN-SETTINGS-WORDS: the words name the Settings Keys section
+    assert "Settings, Keys" in hints.NO_KEY and "Tools" not in hints.NO_KEY
     r.feed(gen("G1_2", 1200, 3), gen("G1_town", 1300, 15))
     assert [x["text"] for x in r.hint_rows()].count(hints.town_text(None)) == 1
 

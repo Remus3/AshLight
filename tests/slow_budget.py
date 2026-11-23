@@ -145,6 +145,10 @@ SLOW_TABLE = {
         (SLOW_S, "a full check over real loopback HTTP on a fake clock"),
     "tests/test_test_layout.py::test_no_new_test_to_test_imports":
         (SLOW_S, "an ast pass over every test file"),
+    "tests/test_budgets.py::test_core_idle_cpu_under_1_percent_with_dashboard_and_overlay_streams":
+        (SLOW_S, "samples real core CPU over a fixed idle window"),
+    "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent":
+        (SLOW_S, "samples real tailer CPU over a fixed idle window"),
 }
 
 

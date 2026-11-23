@@ -48,7 +48,7 @@ that press and shows a verdict for 20 seconds. Paste your Path of Building code
 on the Build tab first to check items against your build.
 
 The overlay shows and hides with Alt+Shift+A by default. Both keys can be
-changed under Overlay position and size in AshLight's Tools.
+changed with Change a key under Settings, Keys.
 
 ## Optional
 

@@ -531,3 +531,152 @@ def test_shared_recount_sees_a_clash():
     find(plan, "C3")["serial_group"] = find(plan, "B2")["serial_group"] = "g1"
     assert _shared(plan["packages"])[2] == {
         "server/al/b2.py": ["B2", "C3"], "group:g1": ["B2", "C3"]}
+
+
+# PLAN-07-WAVE-DRIFT: the wave sections of docs/plan/07 are rendered from
+# packages.json between two markers; check fails when they drift.
+
+def doc_for(plan, before="# Plan\n\n## Waves\n\nIntro.\n\n",
+            after="\n## Hotspot schedule\n\nMore.\n"):
+    return (before + plan_check.WAVES_BEGIN + "\n" + plan_check.render_waves(plan)
+            + plan_check.WAVES_END + "\n" + after)
+
+
+def test_render_waves_package_lines_and_bullets():
+    plan = base_plan()
+    plan["sessions"] = [{"n": 3, "waves": [1, 2]}]
+    b2 = find(plan, "B2")
+    b2.update(owner="session", tier="P1", design_review=True,
+              new_files=[f"web/b2_{i}.js" for i in range(6)],
+              integrator_edits=[{"file": "CLAUDE.md", "change": "x"},
+                                {"file": "ROADMAP.md", "change": "flip"}])
+    find(plan, "C3").update(owner="loop", files=["server/al/state.py"],
+                            new_files=[])
+    find(plan, "A1").update(files=[], new_files=[])
+    text = plan_check.render_waves(plan)
+    assert text.isascii() and "\r" not in text
+    assert "### Wave 1: First\n" in text and "### Wave 2: Second\n" in text
+    assert ("- B2 [session, S 20m, build, P1, DR] Package B2. Files:"
+            " server/al/b2.py, web/b2_0.js, web/b2_1.js, web/b2_2.js,"
+            " web/b2_3.js (+2 more). Deps: A1.") in text
+    assert ("- C3 [loop, S 20m, build] Package C3. Files: server/al/state.py."
+            " Deps: none.") in text
+    assert ("- A1 [S 20m, build] Package A1. Files: none (an act or a"
+            " read-back). Deps: none.") in text
+    w2 = text[text.index("### Wave 2"):]
+    assert ("- Session 3; width 1 worktree + 0 main-checkout, 1 loop rows"
+            " released.") in " ".join(w2.split("\n  "))
+    assert "- Hotspots: server/al/state.py (C3)." in w2
+    assert ("- Integrator: ROADMAP.md rows of all 2 packages; CLAUDE.md: B2."
+            in " ".join(w2.split("\n  ")))
+    assert "- Gate: suite green." in w2
+    assert w2.index("- B2 [") < w2.index("- C3 [")
+    for ln in text.splitlines():
+        if not ln.startswith(("- A1 ", "- B2 ", "- C3 ")):
+            assert len(ln) <= plan_check.DOC_WIDTH, ln
+
+
+def test_render_waves_reads_hotspot_records():
+    """The real plan lists hotspots as {"file": ...} records."""
+    plan = base_plan()
+    plan["hotspots"] = [{"file": "server/al/c3.py", "waves": [2]}]
+    assert "- Hotspots: server/al/c3.py (C3)." in plan_check.render_waves(plan)
+
+
+def test_render_waves_skips_parked_and_is_stable():
+    plan = base_plan()
+    plan["waves"].append({"n": 99, "title": "Parked", "goal": "g",
+                          "merge_order": ["P9"], "gate": "none"})
+    plan["packages"].append(pkg("P9", 99, blocked={"on": "a", "who": "b",
+                                                   "unblock": "c"}))
+    text = plan_check.render_waves(plan)
+    assert "Wave 99" not in text and "P9" not in text
+    assert text == plan_check.render_waves(copy.deepcopy(plan))
+
+
+def test_doc_drift_none_when_rendered():
+    plan = base_plan()
+    assert plan_check.doc_drift(plan, doc_for(plan)) == []
+
+
+def test_doc_drift_names_the_wave():
+    plan = base_plan()
+    doc = doc_for(plan)
+    find(plan, "C3")["files"].append("server/al/extra.py")
+    got = plan_check.doc_drift(plan, doc)
+    assert got == ["07: wave 2 section drifts from packages.json"
+                   " (run: python tools/plan_check.py waves --write)"]
+    plan["waves"].append({"n": 3, "title": "Third", "goal": "g",
+                          "merge_order": [], "gate": "g"})
+    got = plan_check.doc_drift(plan, doc)
+    assert any("wave 3 section missing" in x for x in got)
+    plan = base_plan()
+    plan["waves"].pop()
+    plan["packages"] = [find(plan, "A1")]
+    got = plan_check.doc_drift(plan, doc)
+    assert any("wave 2 section not in packages.json" in x for x in got)
+
+
+def test_doc_drift_markers_missing():
+    got = plan_check.doc_drift(base_plan(), "# Plan\n\n## Waves\n")
+    assert got and "markers" in got[0]
+
+
+def test_check_runs_the_drift_check(tmp_path, capsys):
+    plan = base_plan()
+    f = write(tmp_path, plan)
+    doc = tmp_path / "07.md"
+    doc.write_text(doc_for(plan), encoding="ascii", newline="\n")
+    assert plan_check.main(["check", "--file", str(f), "--doc", str(doc)]) == 0
+    capsys.readouterr()
+    find(plan, "A1")["title"] = "Renamed"
+    f = write(tmp_path, plan)
+    assert plan_check.main(["check", "--file", str(f), "--doc", str(doc)]) == 1
+    assert "wave 1 section drifts" in capsys.readouterr().out
+    assert plan_check.main(["check", "--file", str(f), "--doc",
+                            str(tmp_path / "nodoc.md")]) == 1
+    assert "07: cannot read" in capsys.readouterr().out
+
+
+def test_check_on_another_file_skips_the_default_doc(tmp_path, capsys):
+    """A synthetic --file is not compared with the real 07 unless --doc names
+    a document: the drift check binds the default plan to the default doc."""
+    assert plan_check.main(["check", "--file", str(write(tmp_path, base_plan()))]) == 0
+
+
+def test_waves_write_regenerates_in_place(tmp_path, capsys):
+    plan = base_plan()
+    doc = tmp_path / "07.md"
+    old = doc_for(base_plan())
+    find(plan, "A1")["title"] = "Renamed"
+    f = write(tmp_path, plan)
+    doc.write_text(old, encoding="ascii", newline="\n")
+    assert plan_check.main(["waves", "--file", str(f), "--doc", str(doc),
+                            "--write"]) == 0
+    new = doc.read_bytes().decode("ascii")
+    assert new == doc_for(plan)
+    assert new.startswith("# Plan\n\n## Waves\n\nIntro.\n\n")
+    assert new.endswith("\n## Hotspot schedule\n\nMore.\n")
+    assert plan_check.main(["check", "--file", str(f), "--doc", str(doc)]) == 0
+    capsys.readouterr()
+    assert plan_check.main(["waves", "--file", str(f)]) == 0
+    assert capsys.readouterr().out == plan_check.render_waves(plan)
+
+
+def test_waves_write_refuses_without_markers(tmp_path):
+    f = write(tmp_path, base_plan())
+    doc = tmp_path / "07.md"
+    doc.write_text("# Plan\n", encoding="ascii", newline="\n")
+    assert plan_check.main(["waves", "--file", str(f), "--doc", str(doc),
+                            "--write"]) == 1
+    assert doc.read_text(encoding="ascii") == "# Plan\n"
+
+
+def test_real_plan_07_waves_match_packages_json(capsys):
+    """ACCEPT of PLAN-07-WAVE-DRIFT: the real 07 wave sections are exactly
+    what packages.json renders, and the default check runs this itself."""
+    doc = (ROOT / "docs" / "plan" / "07-execution-plan.md").read_text(
+        encoding="ascii")
+    plan = json.loads(plan_check.DEFAULT_FILE.read_text(encoding="utf-8"))
+    assert plan_check.doc_drift(plan, doc) == []
+    assert plan_check.main(["check"]) == 0

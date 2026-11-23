@@ -461,3 +461,12 @@ def test_a_refused_log_path_moves_focus_to_the_marked_field():
     field = re.search(r"<input id=\"logpath-in\"[^>]*>", HTML, re.S).group(0)
     # the answer is read first, then the static note
     assert 'aria-describedby="logpath-said logpath-note"' in field
+
+
+def test_reading_word_hint_reads_in_place_order():
+    """NDE-2: the hint the reading word and the Web data button point at
+    names the place in reading order, the tab first and then its section
+    (Settings, then Reading and web data), as the rail shows it."""
+    hint = by_id()["reading-to"]
+    assert hint.tag == "span" and "hidden" in hint.attrs
+    assert hint.all_text().strip() == "Opens Settings at Reading and web data."

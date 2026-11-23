@@ -61,7 +61,7 @@ HINTS = collections.OrderedDict([
 RESET_TEXT = "New-character tips will show again."
 # The town hint's words while no item check key is bound (no client, or
 # the client could not register one): no key is named.
-NO_KEY = "the item check key from Settings, Tools, Keys"
+NO_KEY = "the item check key from Settings, Keys"
 
 
 def town_text(key):

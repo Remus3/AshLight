@@ -290,9 +290,29 @@ function createClient(opts) {
     }
   });
 
+  /* REL-UPDATE-APPLY-NOW: the core asked (after an 'Update now' click's
+     staging run) for the staged version to apply now. The launcher stops
+     the core through stop.request, runs apply-staged and either relaunches
+     this client from the new version (this process exits) or starts the
+     core again; an open window follows on the starting page. */
+  function applyRequested() {
+    const version = Launcher.takeApplyRequest(opts.runtimeDir);
+    if (!version) { return false; }
+    const since = Date.now();
+    log("client: applying update " + version + " now");
+    if (win && !win.isDestroyed()) { win.loadURL(startingUrl()); }
+    watch.noteStart(); // the restart below counts toward the watch's limit
+    starting = Launcher.applyNow(opts.repo, port, { check: healthy, log: (m) => log("client: " + m) })
+      .then((word) => {
+        log("client: update apply ended: " + word);
+        return Link.waitFor(healthy, CORE_WAIT_MS, CORE_STEP_MS);
+      }).then((ok) => settle(ok, since), () => settle(false, since));
+    return true;
+  }
+
   function watchStep() {
     watchTimer = null;
-    const busy = starting !== null; // connect() is waiting on its own start
+    const busy = starting !== null || applyRequested(); // connect() waits on its own start
     (busy ? Promise.resolve("busy") : watch.tick()).catch(() => "fail").then((r) => {
       if (r === "ok" && win && !win.isDestroyed()) { syncTheme(); }
       if (watchTimer === null && watching) { scheduleWatch(); }

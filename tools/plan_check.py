@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
 """Plan check - validates docs/plan/packages.json and prints its ROADMAP rows.
 
-    plan_check.py check [--file F]              exit 0 "plan_check: ok <n> packages,
+    plan_check.py check [--file F] [--doc D]    exit 0 "plan_check: ok <n> packages,
                                                 <w> waves", else exit 1, one line
                                                 per problem
     plan_check.py rows [--file F] [--wave N]    one ROADMAP row per package, wave
                                                 then merge order, wrapped at 100
     plan_check.py wave N [--file F] [--json]    that wave's packages in merge order
+    plan_check.py waves [--file F] [--doc D] [--write]
+                                                the docs/plan/07 wave sections
+                                                rendered from the plan; --write
+                                                puts them between the markers
 
-rows and wave refuse (exit 1, problems on stderr) when the plan does not pass
-check. Stdlib only; reads the file, writes nothing.
+rows, wave and waves refuse (exit 1, problems on stderr) when the plan does not
+pass check. Stdlib only; writes nothing except waves --write, which rewrites
+only the text between WAVES_BEGIN and WAVES_END of the 07 document.
+
+07 DRIFT (PLAN-07-WAVE-DRIFT): the "## Waves" sections of
+docs/plan/07-execution-plan.md are render_waves(plan) between the two marker
+lines. check compares them with the plan (the default plan with the default
+07 document; another --file only when --doc names a document) and reports,
+per wave, a section that drifts, is missing or is not in the plan.
 
 FILE SCHEMA (schema 1), one JSON object:
 
@@ -86,6 +97,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FILE = ROOT / "docs" / "plan" / "packages.json"
+DEFAULT_DOC = ROOT / "docs" / "plan" / "07-execution-plan.md"
+DOC_WIDTH = 76
+WAVES_BEGIN = "<!-- plan_check waves begin: generated, do not edit by hand -->"
+WAVES_END = "<!-- plan_check waves end -->"
+DRIFT_HINT = " (run: python tools/plan_check.py waves --write)"
 SCHEMA = 1
 PARKED_WAVE = 99
 WIDTH = 100
@@ -502,6 +518,121 @@ def wave_info(plan, n):
                          for p in ordered(plan, n)]}
 
 
+def _fill(text, indent=""):
+    return textwrap.fill(" ".join(text.split()), width=DOC_WIDTH,
+                         subsequent_indent=indent, break_long_words=False,
+                         break_on_hyphens=False)
+
+
+def package_line(p):
+    """One 07 package line: id [owner, size and minutes, lane, tier, DR]
+    title. Files (at most five named). Deps. Never wrapped."""
+    tags = [p["owner"]] if p.get("owner") else []
+    tags += [f"{p['size']} {p['est_min']}m", p["lane"]]
+    if p.get("tier"):
+        tags.append(str(p["tier"]))
+    if p["design_review"]:
+        tags.append("DR")
+    files = p["files"] + p["new_files"]
+    if files:
+        shown = ", ".join(files[:5])
+        if len(files) > 5:
+            shown += f" (+{len(files) - 5} more)"
+    else:
+        shown = "none (an act or a read-back)"
+    title = " ".join(p["title"].split()).rstrip(".")
+    deps = ", ".join(p["deps"]) or "none"
+    return f"- {p['id']} [{', '.join(tags)}] {title}. Files: {shown}. Deps: {deps}."
+
+
+def _wave_section(w, by_id, hotspots, session_of):
+    n = w["n"]
+    pk = [by_id[x] for x in w["merge_order"]]
+    title = " ".join(w["title"].split())
+    head = title if title.startswith(f"Wave {n}:") else f"Wave {n}: {title}"
+    lines = [f"### {head}", ""]
+    if w["goal"].strip():
+        lines += [_fill(w["goal"]), ""]
+    work = [p for p in pk if p.get("owner") != "loop"]
+    wt = sum(p["isolation"] == "worktree" for p in work)
+    sess = (f"Session {session_of[n]}" if n in session_of else "No session")
+    bullets = [f"{sess}; width {wt} worktree + {len(work) - wt} main-checkout,"
+               f" {len(pk) - len(work)} loop rows released."]
+    hot = [f"{h} ({', '.join(p['id'] for p in pk if h in p['files'])})"
+           for h in hotspots if any(h in p["files"] for p in pk)]
+    bullets.append("Hotspots: " + ("; ".join(hot) or "none") + ".")
+    integ = {}
+    for p in pk:
+        for e in p["integrator_edits"]:
+            ids = integ.setdefault(e["file"], [])
+            if e["file"] != "ROADMAP.md" and p["id"] not in ids:
+                ids.append(p["id"])
+    parts = [f"ROADMAP.md rows of all {len(pk)} packages"]
+    parts += [f"{f}: {', '.join(ids)}" for f, ids in integ.items()
+              if f != "ROADMAP.md"]
+    bullets.append("Integrator: " + "; ".join(parts) + ".")
+    bullets.append("Gate: " + _sentence(w["gate"]))
+    lines += [_fill("- " + b, "  ") for b in bullets] + [""]
+    lines += [package_line(p) for p in pk] or ["No packages."]
+    return "\n".join(lines) + "\n"
+
+
+def render_waves(plan):
+    """The text between WAVES_BEGIN and WAVES_END in docs/plan/07: one
+    section per wave that runs (the parked wave has its own section)."""
+    by_id = {p["id"]: p for p in plan["packages"]}
+    session_of = {wn: s["n"] for s in plan.get("sessions", [])
+                  for wn in s["waves"]}
+    hotspots = [h.get("file") if isinstance(h, dict) else h
+                for h in plan.get("hotspots", [])]
+    hotspots = [h for h in hotspots if isinstance(h, str) and h]
+    secs = [_wave_section(w, by_id, hotspots, session_of)
+            for w in sorted(plan["waves"], key=lambda w: w["n"])
+            if w["n"] != PARKED_WAVE]
+    return "\n" + "\n".join(secs) + "\n"
+
+
+def _markers(doc):
+    b = doc.find(WAVES_BEGIN)
+    e = doc.find(WAVES_END, b + 1) if b >= 0 else -1
+    return (b + len(WAVES_BEGIN), e) if b >= 0 and e >= 0 else None
+
+
+def _sections(block):
+    hits = list(re.finditer(r"^### Wave (\d+):", block, re.M))
+    return {int(m.group(1)): block[m.start():(hits[i + 1].start()
+                                              if i + 1 < len(hits) else len(block))]
+            for i, m in enumerate(hits)}
+
+
+def doc_drift(plan, doc):
+    """Problems where the 07 wave block differs from render_waves(plan)."""
+    span = _markers(doc)
+    if span is None:
+        return ["07: wave section markers missing (" + WAVES_BEGIN + " ... "
+                + WAVES_END + ")" + DRIFT_HINT]
+    have, want = doc[span[0]:span[1]], "\n" + render_waves(plan)
+    if have == want:
+        return []
+    hs, ws = _sections(have), _sections(want)
+    out = []
+    for n in sorted(set(hs) | set(ws)):
+        if n not in hs:
+            out.append(f"07: wave {n} section missing{DRIFT_HINT}")
+        elif n not in ws:
+            out.append(f"07: wave {n} section not in packages.json{DRIFT_HINT}")
+        elif hs[n] != ws[n]:
+            out.append(f"07: wave {n} section drifts from packages.json{DRIFT_HINT}")
+    return out or [f"07: wave block drifts outside the wave sections{DRIFT_HINT}"]
+
+
+def _read_doc(path):
+    try:
+        return Path(path).read_bytes().decode("ascii"), []
+    except (OSError, UnicodeDecodeError) as e:
+        return None, [f"07: cannot read {Path(path).name}: {e.__class__.__name__}"]
+
+
 def _valid(path):
     plan, problems = load(path)
     if not problems:
@@ -517,6 +648,11 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check")
     c.add_argument("--file", default=str(DEFAULT_FILE))
+    c.add_argument("--doc")
+    v = sub.add_parser("waves")
+    v.add_argument("--file", default=str(DEFAULT_FILE))
+    v.add_argument("--doc")
+    v.add_argument("--write", action="store_true")
     r = sub.add_parser("rows")
     r.add_argument("--file", default=str(DEFAULT_FILE))
     r.add_argument("--wave", type=int)
@@ -530,6 +666,13 @@ def main(argv=None):
         plan, problems = load(a.file)
         if not problems:
             problems = check_plan(plan)
+        doc_path = a.doc
+        if doc_path is None and Path(a.file).resolve() == DEFAULT_FILE.resolve():
+            doc_path = DEFAULT_DOC
+        if not problems and doc_path is not None:
+            doc, problems = _read_doc(doc_path)
+            if doc is not None:
+                problems = doc_drift(plan, doc)
         if problems:
             for line in problems:
                 print(line)
@@ -540,6 +683,24 @@ def main(argv=None):
     plan = _valid(a.file)
     if plan is None:
         return 1
+    if a.cmd == "waves":
+        text = render_waves(plan)
+        if not a.write:
+            sys.stdout.write(text)
+            return 0
+        path = Path(a.doc or DEFAULT_DOC)
+        doc, problems = _read_doc(path)
+        span = _markers(doc) if doc is not None else None
+        if span is None:
+            print(problems[0] if problems else
+                  f"plan_check: no wave markers in {path.name}", file=sys.stderr)
+            return 1
+        new = doc[:span[0]] + "\n" + text + doc[span[1]:]
+        if new != doc:
+            path.write_bytes(new.encode("ascii"))
+        print(f"plan_check: {path.name} wave sections"
+              f" {'rewritten' if new != doc else 'already match'}")
+        return 0
     if a.cmd == "rows":
         if a.wave is not None and a.wave not in {w["n"] for w in plan["waves"]}:
             print(f"plan_check: no wave {a.wave}", file=sys.stderr)

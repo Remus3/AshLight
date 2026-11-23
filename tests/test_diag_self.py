@@ -266,7 +266,11 @@ def test_hotkey():
     assert "overlay key" in bad["fix"] and ".ps1" not in bad["fix"]
     bad = row({"hotkeys": _hk({"want": "Alt+Shift+E", "registered": False}, tog)}, "hotkey")
     assert bad["fix"] == diag.FIX_HOTKEY and "item check key" in bad["fix"]
-    assert "Overlay position and size" in diag.FIX_HOTKEY
+    # RUN-SETTINGS-WORDS: the fixes name the Settings Keys section and its
+    # Change a key button, never the old Tools wording
+    for fix in (diag.FIX_HOTKEY, diag.FIX_TOGGLE_KEY):
+        assert "Settings, Keys" in fix and "Change a key" in fix
+        assert "Tools" not in fix and "Overlay position and size" not in fix
     # unknown parts read unknown
     assert status({"hotkeys": _hk()}, "hotkey") == "unknown"
     # the overlay process is not running: keys unknown, no note
@@ -324,7 +328,9 @@ def test_private_files_row():
     assert r["status"] == "fail" and r["label"] == "Private files"
     assert r["detail"] == ("Other accounts on this computer can change files in "
                            "the AshLight folder.")
-    assert r["fix"] == "In the AshLight folder, run: python -m server.al.acl apply ."
+    # NDE-1: a player-level fix in plain words, never a command line
+    assert r["fix"] == diag.FIX_PRIVATE_APP
+    assert "Properties" in r["fix"] and "Security" in r["fix"]
     for name in ("runtime", "sidecar"):
         r = row({"acl_open": [name]}, "private")
         assert r["fix"] == diag.FIX_PRIVATE_SETUP and "AshLight's setup again" in r["fix"]
@@ -336,6 +342,20 @@ def test_private_files_row():
     assert len(r["fix"].splitlines()) == 1
     v = diag.view(dict(GREEN, acl_open=["runtime"]), "1", now=NOW)
     assert v["failed"] == 1 and v["checks"][-1]["id"] == "private"
+
+
+def test_no_fix_text_holds_a_command_line():
+    # NDE-1 (wave 28 design finding): a Checks fix is for players, so no fix
+    # text tells them to type a python command line.
+    texts = [v for k, v in vars(diag).items()
+             if k.startswith("FIX_") and isinstance(v, str)]
+    assert texts
+    combos = (["app"], ["runtime"], ["sidecar"], ["app", "runtime"],
+              ["app", "sidecar", "runtime"])
+    texts += [diag.check_private({"acl_open": c})["fix"] for c in combos]
+    for t in texts:
+        assert "python -m" not in t, t
+        assert "python " not in t.lower(), t
 
 
 def test_summary_counts_fixes():

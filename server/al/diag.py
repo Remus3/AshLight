@@ -69,12 +69,13 @@ FIX_SNAPSHOT = ("AshLight fetches it by itself while web data is on, at most "
                 "internet connection.")
 FIX_SNAPSHOT_OFF = (f'Tick "Use web data" under {CONTACT_CARD}. AshLight '
                     "then fetches it by itself.")
-# HOTKEYS-LIVE (OVL-KEYS-CORE): the fix names the in-app field (Tools >
-# Overlay position and size); the client re-registers with no restart.
-FIX_HOTKEY = ("Another app holds the key. Pick a different item check key under "
-              "Overlay position and size in AshLight's Tools. No restart needed.")
-FIX_TOGGLE_KEY = ("Another app holds the key. Pick a different overlay key under "
-                  "Overlay position and size in AshLight's Tools. No restart needed.")
+# HOTKEYS-LIVE (OVL-KEYS-CORE): the fix names the in-app place; the client
+# re-registers with no restart. RUN-SETTINGS-WORDS: the Settings Keys
+# section (PLAY-TD-21B) and its Change a key button, which jumps to the field.
+FIX_HOTKEY = ("Another app holds the key. Pick a different item check key with "
+              "Change a key under Settings, Keys. No restart needed.")
+FIX_TOGGLE_KEY = ("Another app holds the key. Pick a different overlay key with "
+                  "Change a key under Settings, Keys. No restart needed.")
 HOTKEY_UNKNOWN = "Known once the overlay is running."
 
 
@@ -341,9 +342,15 @@ PRIVATE_WHAT = {"runtime": "AshLight's runtime folder", "app": "the AshLight fol
                 "sidecar": "AshLight's sidecar folder"}
 FIX_PRIVATE_SETUP = ("Run AshLight's setup again, as when you installed it. It "
                      "makes AshLight's own folders private.")
-FIX_PRIVATE_APP = "In the AshLight folder, run: python -m server.al.acl apply ."
+# NDE-1: the AshLight folder is the player's own, so AshLight never changes
+# it (decision 0051); the fix is plain Windows steps, never a command line.
+FIX_PRIVATE_APP = ("Right-click the AshLight folder, open Properties, then "
+                   "Security, and take away Write from Everyone, Users and any "
+                   "other person's account.")
 FIX_PRIVATE_BOTH = ("Run AshLight's setup again, as when you installed it. Then "
-                    "in the AshLight folder run: python -m server.al.acl apply .")
+                    "right-click the AshLight folder, open Properties, then "
+                    "Security, and take away Write from Everyone, Users and any "
+                    "other person's account.")
 
 
 def check_private(f):

@@ -48,8 +48,8 @@ the next log line.
 
 ## The item check key does nothing
 
-Another app holds the key. Pick a different item check key under Overlay
-position and size in AshLight's Tools. No restart is needed. The same goes for
+Another app holds the key. Pick a different item check key with Change a
+key under Settings, Keys. No restart is needed. The same goes for
 the overlay key. Remember to press Ctrl+C on the item in the game first: if
 the clipboard is empty, the card says "Copy the item first".
 

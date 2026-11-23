@@ -148,7 +148,9 @@ def env(tmp_path, monkeypatch):
         stub = Stub(clock, **kw)
         srv = ThreadingHTTPServer((ports.LOOPBACK, 0), _handler(stub))
         assert srv.server_address[1] != ports.AL_PORT
-        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        # a short poll so shutdown() in teardown returns in ~50 ms, not 0.5 s
+        threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True).start()
         stubs.append(srv)
         return stub, srv.server_address[1]
 
@@ -307,6 +309,7 @@ def test_map_must_stay_open_20_s(env):
     assert env["clock"]() - t0 >= 6 + ovl_check.WARMUP_S
 
 
+@pytest.mark.slow  # polls the stub core until the flag expires
 def test_disarmed_run_ends_without_touching_the_layout(env):
     stub, port = env["start"](map_after=10 ** 6)
     clock = env["clock"]
@@ -316,6 +319,7 @@ def test_disarmed_run_ends_without_touching_the_layout(env):
     assert not list(env["logs"].glob("ovl_check-*.json"))
 
 
+@pytest.mark.slow  # two blocks of real loopback round trips
 def test_layout_restored_after_a_core_error(env):
     stub, port = env["start"]()
     _arm(env["clock"])
@@ -387,6 +391,30 @@ def test_tool_holds_the_floor():
         r"|Get-Process|nvidia-smi|screenshot|PostMessage|SendMessage", re.I)
     assert other.findall(text) == []
     assert "Client.txt" not in text.replace("no Client.txt", "")
+
+
+def test_every_full_run_test_is_marked_slow():
+    """TEST-OVL-CHECK-LOAD: a test that plays the nine blocks makes about 300
+    real loopback round trips (1.0-1.5 s alone, 1.6-2.2 s while another suite
+    holds a gate slot), so it carries @pytest.mark.slow or an entry in
+    tests/slow_budget.py SLOW_TABLE; the global 1.5 s ceiling stays as it is."""
+    import ast
+    tree = ast.parse(Path(__file__).read_text(encoding="ascii"))
+    table = (Path(__file__).parent / "slow_budget.py").read_text(encoding="ascii")
+    full, unmarked = [], []
+    for node in tree.body:
+        if not (isinstance(node, ast.FunctionDef) and node.name.startswith("test_")):
+            continue
+        calls = {ast.unparse(n.func) for n in ast.walk(node) if isinstance(n, ast.Call)}
+        if not calls & {"ovl_check.run", "chk.run_blocks"}:
+            continue
+        full.append(node.name)
+        marks = {ast.unparse(d) for d in node.decorator_list}
+        if ("pytest.mark.slow" not in marks
+                and f'"tests/test_ovl_check.py::{node.name}"' not in table):
+            unmarked.append(node.name)
+    assert len(full) >= 4, full
+    assert unmarked == []
 
 
 def test_no_measurement_only_code_under_app_or_server():

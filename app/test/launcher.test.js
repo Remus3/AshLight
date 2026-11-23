@@ -206,6 +206,103 @@ test("a missing python or a failing installer never blocks the start", (t) => {
   assert.equal(Launcher.startConfirm(l2.h, () => { throw new Error("no pythonw"); }, ENV, fs), 0);
 });
 
+/* REL-UPDATE-APPLY-NOW: one 'Update now' click finishes the update. The
+   core writes <data>/apply_now.request after the click's staging run; the
+   client takes it, stops the core through stop.request, waits for it to be
+   gone and runs apply-staged (no --if-due), then relaunches or restarts. */
+function applyOpts(r, events, extra) {
+  return Object.assign({
+    exec: r.exec, spawn: r.spawn, fs: fs, env: ENV, log: () => {},
+    exit: () => events.push("exit"), sleep: () => Promise.resolve(), waitMs: 1000, stepMs: 1
+  }, extra || {});
+}
+
+test("applyNow: stop.request first, apply-staged only once the core is gone, then relaunch", async (t) => {
+  const l = installed(tmp(t));
+  fs.mkdirSync(l.h.dataDir, { recursive: true });
+  const stopFile = path.join(l.h.dataDir, "stop.request");
+  const events = [];
+  let up = 2; // the core answers twice more after the stop request
+  const r = recorder(Launcher.EXIT_SWITCHED, "apply-staged: switched 0.2.0 to 0.3.0\n", () => {
+    events.push("apply:" + fs.existsSync(stopFile));
+    setMarker(l.home, { version: "0.3.0", previous: "0.2.0", pending_confirm: true });
+  });
+  const check = () => {
+    events.push("check:" + fs.existsSync(stopFile));
+    up -= 1;
+    return Promise.resolve(up >= 0);
+  };
+  const word = await Launcher.applyNow(l.h, 8960, applyOpts(r, events, { check: check }));
+  assert.equal(word, "switched");
+  assert.deepEqual(events, ["check:true", "check:true", "check:true", "apply:true", "exit"]);
+  const apply = r.calls[0];
+  assert.equal(apply.kind, "exec");
+  assert.deepEqual(apply.args, [path.join(l.payload, "boot.py"), "server.al.install",
+                                "apply-staged", "--home", l.home]);
+  assert.equal(apply.opts.windowsHide, true);
+  // relaunched from the new version; the old run.ps1 never starts
+  assert.equal(r.calls[1].kind, "spawn");
+  assert.equal(r.calls[1].args[0], path.join(l.home, "app", "0.3.0", "app"));
+  assert.ok(!r.calls.some(isRunPs1));
+});
+
+test("applyNow: nothing switched (busy or failed) restarts the core through run.ps1", async (t) => {
+  const l = installed(tmp(t));
+  for (const code of [0, 2, 3]) {
+    const events = [];
+    const r = recorder(code, "apply-staged: a core of this home runs; not switched\n");
+    const word = await Launcher.applyNow(l.h, 8960, applyOpts(r, events, {
+      check: () => Promise.resolve(false)
+    }));
+    assert.equal(word, "restarted");
+    assert.ok(!r.calls[0].args.includes("--if-due"));
+    assert.ok(r.calls.some(isRunPs1), "run.ps1 after code " + code);
+    assert.ok(!events.includes("exit"));
+  }
+});
+
+test("applyNow: a core that never goes away still ends in a restart, never a hang", async (t) => {
+  const l = installed(tmp(t));
+  const events = [];
+  const r = recorder(3, "");
+  let clock = 0;
+  const word = await Launcher.applyNow(l.h, 0, applyOpts(r, events, {
+    check: () => Promise.resolve(true), now: () => clock,
+    sleep: () => { clock += 500; return Promise.resolve(); }
+  }));
+  assert.equal(word, "busy");
+  assert.ok(r.calls.some(isRunPs1));
+  assert.ok(!events.includes("exit"));
+});
+
+test("applyNow: a checkout does nothing", async (t) => {
+  const r = recorder(0);
+  const events = [];
+  const word = await Launcher.applyNow("R", 8961, applyOpts(r, events, {
+    check: () => { events.push("check"); return Promise.resolve(false); }
+  }));
+  assert.equal(word, "checkout");
+  assert.deepEqual(r.calls, []);
+  assert.deepEqual(events, []);
+});
+
+test("takeApplyRequest: a valid request is taken once; anything else is dropped", (t) => {
+  const dir = tmp(t);
+  const file = path.join(dir, Launcher.APPLY_REQUEST_FILE);
+  assert.equal(Launcher.APPLY_REQUEST_FILE, "apply_now.request");
+  assert.equal(Launcher.takeApplyRequest(dir, fs), null);
+  fs.writeFileSync(file, JSON.stringify({ version: "0.3.0" }));
+  assert.equal(Launcher.takeApplyRequest(dir, fs), "0.3.0");
+  assert.equal(fs.existsSync(file), false);
+  assert.equal(Launcher.takeApplyRequest(dir, fs), null);
+  for (const bad of ["{", "[]", JSON.stringify({ version: "..\\x" }), JSON.stringify({}),
+                     JSON.stringify({ version: "x".repeat(5000) })]) {
+    fs.writeFileSync(file, bad);
+    assert.equal(Launcher.takeApplyRequest(dir, fs), null, bad.slice(0, 20));
+    assert.equal(fs.existsSync(file), false);
+  }
+});
+
 test("child_process stays in launcher.js only", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "client", "launcher.js"), "utf8");
   assert.match(src, /require\("child_process"\)/);

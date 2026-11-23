@@ -83,6 +83,10 @@ NEW_GROUP = 0x00000200       # CREATE_NEW_PROCESS_GROUP
 # start's once-a-day hold and never reaches the POST
 STARTED, RUNNING, OFF, CHECKOUT, CURRENT, STAGED, FAILED, WAITING = (
     "started", "running", "off", "checkout", "current", "staged", "failed", "waiting")
+# REL-UPDATE-APPLY-NOW: the core's ask, in its runtime dir, that the desktop
+# client applies the staged version now (app/client/launcher.js
+# takeApplyRequest / applyNow); written only after an 'Update now' click
+APPLY_REQUEST = "apply_now.request"
 
 _REPO = re.compile(r"^(?!-)[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$")
 _SEMVER = re.compile(
