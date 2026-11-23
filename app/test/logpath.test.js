@@ -220,3 +220,84 @@ test("app.js calls the module from the consent painter and its wire step", () =>
 test("the module reads nothing and starts no timer", () => {
   assert.doesNotMatch(SRC, /setTimeout|setInterval|navigator\.|localStorage|fetch\(/);
 });
+
+/* LP-B: after a successful Save the core's answer makes the log check
+   pass, paint hides the form and the focused Use button (or field) goes
+   with it. The focus returns by itself to the control that opened the
+   section: the rail's Reading and web data button, else the section
+   heading. A form hidden while the focus is elsewhere moves nothing. */
+function focusDoc(opts) {
+  const doc = makeDoc();
+  const o = opts || {};
+  doc.activeElement = null;
+  function focusable(n) {
+    n.focus = function () { doc.activeElement = n; };
+    return n;
+  }
+  const form = doc.byId["logpath-form"];
+  const box = focusable(doc.byId["logpath-in"]);
+  const use = focusable({ id: "logpath-use", hidden: false });
+  doc.byId["logpath-use"] = use;
+  form.contains = (n) => n === form || n === box || n === use;
+  if (!o.noRail) {
+    doc.byId["rail-reading"] = focusable({ id: "rail-reading", hidden: !!o.railHidden });
+  }
+  doc.byId["reading-title"] = focusable({ id: "reading-title", hidden: false });
+  return doc;
+}
+
+test("after a successful Save the opener holds the focus (LP-B)", () => {
+  L.reset();
+  const doc = focusDoc();
+  const fail = snapWith([{ id: "log", status: "fail" }]);
+  const pass = snapWith([{ id: "log", status: "pass" }]);
+  L.paint(doc, fail);
+  doc.byId["logpath-use"].focus();
+  doc.byId["logpath-in"].value = GAME;
+  L.wire(doc, () => resolved({ state: pass }), (s) => L.paint(doc, s));
+  doc.byId["logpath-form"].listeners.submit({ preventDefault() {} });
+  assert.equal(doc.byId["logpath-form"].hidden, true);
+  assert.equal(doc.byId["logpath-said"].textContent, L.SAVED);
+  assert.equal(doc.activeElement, doc.byId["rail-reading"]);
+});
+
+test("Enter in the field also returns the focus; the heading stands in for a hidden rail", () => {
+  for (const opts of [{ railHidden: true }, { noRail: true }]) {
+    L.reset();
+    const doc = focusDoc(opts);
+    L.paint(doc, snapWith([{ id: "log", status: "fail" }]));
+    doc.byId["logpath-in"].focus();
+    L.paint(doc, snapWith([{ id: "log", status: "pass" }]));
+    assert.equal(doc.activeElement, doc.byId["reading-title"]);
+  }
+});
+
+test("a rail hidden by an ancestor hands the focus to the heading", () => {
+  L.reset();
+  const doc = focusDoc();
+  doc.byId["rail-reading"].getClientRects = () => [];
+  L.paint(doc, snapWith([{ id: "log", status: "fail" }]));
+  doc.byId["logpath-in"].focus();
+  L.paint(doc, snapWith([{ id: "log", status: "pass" }]));
+  assert.equal(doc.activeElement, doc.byId["reading-title"]);
+});
+
+test("the focus targets exist in the page (LP-B)", () => {
+  assert.match(HTML, /<button id="rail-reading"[^>]*aria-controls="set-reading"/);
+  assert.match(HTML, /<h3 id="reading-title" tabindex="-1">/);
+  assert.match(SRC, /"rail-reading"/);
+  assert.match(SRC, /"reading-title"/);
+});
+
+test("hiding the form while the focus is elsewhere moves no focus", () => {
+  const doc = focusDoc();
+  L.paint(doc, snapWith([{ id: "log", status: "fail" }]));
+  const other = { id: "elsewhere" };
+  doc.activeElement = other;
+  L.paint(doc, snapWith([{ id: "log", status: "pass" }]));
+  assert.equal(doc.activeElement, other);
+  doc.activeElement = null; // focus on the body: nothing to return
+  L.paint(doc, snapWith([{ id: "log", status: "fail" }]));
+  L.paint(doc, snapWith([{ id: "log", status: "pass" }]));
+  assert.equal(doc.activeElement, null);
+});

@@ -20,6 +20,9 @@
    (aria-describedby), a refused path sets aria-invalid on the field and
    moves focus to it so both are announced (LP-A), and
    a found Client.txt is announced by the bar's polite reading word.
+   When a Save hides the form while the focus is inside it, the focus
+   returns by itself to the rail's Reading and web data button, else the
+   section heading (LP-B), so it is never lost on the page body.
 
    UMD: CommonJS for node --test (app/test/logpath.test.js),
    window.ALLogPath in the page (web/app.js calls paint from the consent
@@ -41,6 +44,8 @@
   var BAD_PATH = "AshLight can't use that path. Type the full path to Client.txt or to its folder on this PC.";
   var NOT_SAVED = "Not saved. Try again.";
   var SAVED = "Saved. AshLight uses this path for Client.txt.";
+  var OPENER = "rail-reading"; // the rail button that opens the section
+  var HEAD = "reading-title";  // the section heading, when the rail is hidden
 
   function isObj(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
 
@@ -88,12 +93,42 @@
     return !a || a === box || a === doc.body || a.id === "logpath-use";
   }
 
+  /* LP-B: the focus was inside the form (Use, or the field after Enter) */
+  function focusInside(doc, form) {
+    var a = doc.activeElement;
+    return !!a && typeof form.contains === "function" && form.contains(a);
+  }
+
+  /* laid out on the page: a hidden ancestor counts too where the page
+     can tell (getClientRects), else the element's own hidden flag */
+  function shown(el) {
+    if (el.hidden) { return false; }
+    return typeof el.getClientRects === "function" ? el.getClientRects().length > 0 : true;
+  }
+
+  /* LP-B: the focus returns to the control that opened the section, the
+     rail's Reading and web data button, else the section heading
+     (tabindex -1). Only called when the hidden form took the focus. */
+  function returnFocus(doc) {
+    var ids = [OPENER, HEAD];
+    for (var i = 0; i < ids.length; i += 1) {
+      var el = doc.getElementById(ids[i]);
+      if (el && shown(el) && typeof el.focus === "function") {
+        el.focus();
+        return el;
+      }
+    }
+    return null;
+  }
+
   function paint(doc, snap) {
     var form = doc.getElementById("logpath-form");
     if (!form) { return; }
     var show = view(snap).show;
     if (form.hidden === show) {
+      var hadFocus = !show && focusInside(doc, form);
       form.hidden = !show;
+      if (hadFocus) { returnFocus(doc); }
       /* a failed answer goes with the form; a Saved line stays */
       var said = doc.getElementById("logpath-said");
       if (!show && said && said.textContent !== SAVED) { said.textContent = ""; }
