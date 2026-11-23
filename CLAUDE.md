@@ -1584,3 +1584,19 @@ of the HALT check.
   changes. Reverses if: players pin by mistake in play, a hand-edited
   character must wait for a restart, or the per-pass config read breaks
   the tick budget.
+- RUN-FEED-TRUTH (F-175, F-178): when the dashboard's EventSource closes for
+  good (readyState 2), the page asks /api/health with its token. A 401 after a
+  live feed shows 'AshLight restarted. Open it again from the tray.' and the
+  page stops retrying. A 401 before any live feed shows the wrong-link word.
+  Any other answer runs connect() again every 3 s. A feed that is only
+  reconnecting is left to the browser's "retry: 3000". The SSE keep-alive is a
+  named "alive" event (http.py SSE_ALIVE_EVENT, every 15 s, checked on its
+  own, not as an elif after the pushes). The overlay marks a live feed with no
+  frame for 45 s (render_gate FEED_STALE_MS) with the reconnecting word
+  "offline". That check runs in paint() and the existing schedule() timer,
+  with no new timer. The dashboard's render() paints nothing while the page is
+  hidden and paints the newest snapshot once when it shows again. The 1 s
+  ticker runs only while the page shows and game_idle is not true (web/app.js
+  pacer). Reverses if: a core restart that keeps its token is misread as a
+  restart, the 3 s retry loads the core, the 45 s mark misfires in play, or a
+  hidden page misses a needed update.
