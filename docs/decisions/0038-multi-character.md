@@ -97,3 +97,77 @@ on that line, not on level-up / death), party play shows misfiled splits
 in normal use, character changes without a game restart are common enough
 that waiting for the next game start misfiles runs, or the operator rules
 character names must not be stored.
+
+## Amendment 2026-11-22 (UTIL-MULTICHAR-RELOG, adjudicator ruling)
+
+Trigger: the reverses-if "character changes without a game restart ...
+misfile runs" was met in live play. PoE2 writes no `***** LOG FILE OPENING
+*****` line on a relog through character select; it writes only
+`[INFO Client <pid>] Async connecting to <host>.login.pathofexile2.com:<port>`.
+A character died right after a game start (which closed the switch window
+on that character), the player relogged as another character, a party
+member joined, and the new character's level-ups were dropped as
+mid-session. On a core restart the scan took the party member's newer
+level-up as the character and the replay then cleared it (unknown).
+
+Decision:
+1. server/al/parser.py reads that line as a new event, `char_select`
+   (LOGIN_CONNECT). The match is anchored to the whole body and to the
+   host suffix: `Async connecting to <label>(.<label>)*.login.pathofexile2.com:<digits>`.
+   Any other host is ignored and the host is not kept.
+2. char_select opens a relog window. It keeps the set of names seen
+   joining or leaving this game run (unlike log_opened, which clears it)
+   and resets the party flag. A relog window does NOT consult the party
+   flag: a party member can join between the relog and the player's first
+   level-up (seen live: the relog, a join ten minutes later, the player's
+   first level-up twenty minutes after that), and that join must not
+   block the player.
+3. In a relog window the first level-up or death of a name never seen
+   joining or leaving switches the character and closes the window. Lines
+   of known joined / left names neither switch nor close it. A configured
+   character never switches. The game-start window keeps the earlier rule
+   (party flag included); a second char_select reopens the relog window.
+4. resume.scan picks the newest in-run level-up whose name was not seen
+   joining or leaving in the scanned run (the configured name when one is
+   set). When every in-run level-up is such a name the character is
+   unknown, as before; a run with no level-up at all still reads back to
+   the newest earlier level-up. resume's keyword scan and run events carry
+   char_select, and SessionState._REPLAY_TYPES replays it, so live and
+   resumed state agree.
+5. The event reads only Client.txt. No ToS floor change.
+
+Known limit (accepted): in a relog window, a party member already in the
+zone with no join line of their own (or whose join line was missed) who
+levels or dies before the player is taken as the player. This is the same
+limit as at game start. It is bounded: the player's own level-up after the
+next relog or game start fixes it, and the `character` setting pins it.
+
+Alternatives:
+- Reset the party flag at char_select only: rejected. The later join sets
+  it again and the player stays blocked, which is the live bug.
+- Close the relog window at the first zone entry: rejected. The character
+  is learned only from a level-up or death, which comes after the zone
+  loads, so the window would never switch.
+- Reopen the window on any area_generated: rejected. It would misfile
+  mid-session party levels, which this decision exists to prevent.
+- Treat char_select like log_opened and clear the joined / left names:
+  rejected. It forgets party members seen earlier in the run and lets
+  their level-ups be taken as the player.
+- Revert a switch when the taken name later joins or leaves: rejected. The
+  character would flap.
+- Drop the party flag at game start too: rejected. A wider change with no
+  evidence beyond relogs.
+- Do nothing (players restart the game): rejected. Relog through character
+  select is normal play.
+
+Why: the log has no line naming the logged-in character, so the login-host
+connect line is the only relog signal, and names seen joining or leaving
+are the one reliable "not me" evidence the log gives. Keeping that set
+across the relog is what stops a party member from being taken as the
+player, live and on resume.
+
+Reverses if: the login-host line also appears on plain reconnects that
+keep the character and this misfiles runs; party members with no join line
+often level first in normal play; GGG adds a log line naming the logged-in
+character (then switch on that line only); or GGG changes the login host
+name.

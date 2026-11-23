@@ -44,10 +44,14 @@ _RUN_TYPES = ("scene_changed", "area_entered", "area_generated", "death",
               "level_up",
               # UTIL-MULTICHAR: other players' names, so a restart keeps
               # them from switching the current character (decision 0038)
-              "player_joined_area", "player_left_area")
+              "player_joined_area", "player_left_area",
+              # a relog through character select (decision 0038
+              # amendment 2026-11-22)
+              "char_select")
 MARKER = b"***** LOG FILE OPENING *****"
 _MARKER_TS = re.compile(rb"^(\d{4})/(\d{2})/(\d{2}) (\d{2}:\d{2}:\d{2}) ")
-_KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |: )|\*\*\*\*\* LOG FILE OPENING")
+_KEY = re.compile(rb"\] (?:\[SCENE\] |Generating level |Async connecting to |: )"
+                  rb"|\*\*\*\*\* LOG FILE OPENING")
 # Before the current run only level-ups and the marker matter.
 _KEY_LVL = re.compile(rb"\) is now level \d|\*\*\*\*\* LOG FILE OPENING")
 _BOM = b"\xef\xbb\xbf"
@@ -125,6 +129,8 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     ups = []
     seq = []  # in-run area generations and level-ups, newest first
     run_ev = []  # in-run events for runs.replay, newest first
+    run_ups = []  # in-run level-up events, newest first
+    others = set()  # names seen joining or leaving the area in the run
     reached = end
     try:
         fh = logfile._open_shared(path)
@@ -143,6 +149,12 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                         in_run = False
                         out["hit_marker"] = True
                         out["run_ts_local"] = _marker_ts(raw)
+                        _pick(out, run_ups, others, fixed)
+                        if out["character"] is None and run_ups and fixed is None:
+                            # every level-up of the run is another
+                            # player's: the character stays unknown
+                            done = True
+                            break
                     if out["character"] is not None:
                         done = True
                         break
@@ -155,14 +167,14 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                     run_ev.append(ev)
                 if t == "level_up":
                     name = ev.get("character")
-                    if out["character"] is None and (fixed is None or name == fixed):
-                        out["character"] = name
-                        out["class"] = ev.get("class")
-                        out["level"] = ev.get("level")
                     if in_run:
+                        run_ups.append(ev)
                         ups.append(name)
                         seq.append(("l", name, ev.get("level")))
-                    elif out["character"] is not None:
+                        continue
+                    if (fixed is None or name == fixed) and (
+                            fixed is not None or name not in others):
+                        _take(out, ev)
                         done = True
                         break
                     continue
@@ -183,6 +195,9 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                         seq.append(("a", aid, ev.get("ts_local")))
                 elif t == "death":
                     deaths.append(ev.get("character"))
+                elif t in ("player_joined_area", "player_left_area"):
+                    if ev.get("character"):
+                        others.add(ev["character"])
                 elif t == "afk_changed":
                     if out["afk"] is None:
                         out["afk"] = bool(ev.get("on"))
@@ -193,6 +208,8 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
                 break
     finally:
         fh.close()
+    if in_run:
+        _pick(out, run_ups, others, fixed)
     me = out["character"]
     out["deaths"] = sum(1 for n in deaths if me is None or n == me)
     out["level_ups"] = sum(1 for n in ups if me is not None and n == me)
@@ -202,6 +219,27 @@ def scan(path, end=None, max_bytes=DEFAULT_MAX_BYTES, character=None):
     out["act_areas"] = _act_areas(seq, me, out["level"])
     out["run_events"] = _run_events(run_ev)
     return out
+
+
+def _take(out, ev):
+    out["character"] = ev.get("character")
+    out["class"] = ev.get("class")
+    out["level"] = ev.get("level")
+
+
+def _pick(out, run_ups, others, fixed):
+    """The run's character: the newest in-run level-up of the configured
+    name, else of a name never seen joining or leaving the area in the run
+    (decision 0038 amendment 2026-11-22). Unknown when none is left."""
+    for ev in run_ups:
+        name = ev.get("character")
+        if fixed is not None:
+            if name == fixed:
+                _take(out, ev)
+                return
+        elif name and name not in others:
+            _take(out, ev)
+            return
 
 
 _EV_KEYS = ("type", "ts_local", "scene", "is_null", "is_transient",

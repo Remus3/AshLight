@@ -365,6 +365,7 @@ _SIMPLE = {
     "player_left_area": "left", "trade_accepted": "trade_accepted",
     "trade_cancelled": "trade_cancelled", "unknown_system_line": "system.unknown",
     "whisper_out": "whisper_out", "session_connect": "session_connect",
+    "char_select": "char_select",
 }
 
 
