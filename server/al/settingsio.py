@@ -34,6 +34,11 @@ with the block makes the weights the defaults plus the file's changes;
 a file without it (every schema 1 file) leaves the weights alone.
 Schema 1 files still import. The block holds stat keys and numbers
 only, never a path, contact, token or cookie.
+
+PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): "theme" is the dashboard's
+Theme choice, one of THEMES ("dark", "system" = Follow Windows,
+"light"), THEME_DEFAULT "dark" when unset; it round trips like any
+other allowed key.
 """
 
 import json
@@ -50,6 +55,9 @@ SCHEMAS = (1, 2)  # files AshLight can read; schema 1 has no weights block
 # export whose weights block would pass it leaves the block out.
 MAX_BYTES = 16 * 1024
 FILE_NAME = "ashlight-settings.json"
+# PLAY-TD-04B-THEME-CHOICE: the Theme choice; "system" is Follow Windows
+THEMES = ("dark", "system", "light")
+THEME_DEFAULT = "dark"
 WEIGHTS_LABEL = "stat weights"
 
 _NAME = re.compile(r"^[^\x00-\x1f\x7f]{0,64}$")
@@ -92,6 +100,12 @@ def _hotkey(v):
     return ok
 
 
+def _theme(v):
+    if not isinstance(v, str) or v not in THEMES:
+        raise SettingsError("must be Dark, Follow Windows or Light")
+    return v
+
+
 def _overlay(v):
     try:
         return layout_mod.normalize(v, strict=True)
@@ -116,6 +130,7 @@ ALLOWED = {
     "worn_gear": _bool,  # TC-WORN-WIRE (decision 0052): on by default
     "wear_hotkey": _hotkey,  # TC-WORN-KEY: the optional wear key, unset by default
     "update_click_only": _bool,  # REL-UPDATE-TRIGGER: updates wait for 'Update now'
+    "theme": _theme,  # PLAY-TD-04B-THEME-CHOICE: Dark (default) / Follow Windows / Light
 }
 # Player words for each key, for the import error sentence (design 0001 P2).
 LABELS = {
@@ -126,6 +141,7 @@ LABELS = {
     "run_history": "run history switch", "price_watch_pct": "price watch threshold",
     "boots_speed_level": "boots speed level", "worn_gear": "worn gear switch",
     "wear_hotkey": "wear item hotkey", "update_click_only": "update on click only switch",
+    "theme": "theme",
 }
 # Never exported or imported, even if a later key list grows (tests pin it).
 # REL-UPDATE-WIRE (ruling Q-21): web_data_ack, the acknowledged opt-in

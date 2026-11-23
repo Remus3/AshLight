@@ -444,6 +444,7 @@ def _assert_caps(play, names):
 ROW_STATES = tuple(EXPECT)
 
 
+@pytest.mark.slow  # wave 30 ruling: over the 3 s ceiling under parallel load
 @pytest.mark.server
 @pytest.mark.parametrize("name", ROW_STATES)
 def test_pack_state_rows_are_exact(name, tmp_path):

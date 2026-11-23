@@ -57,7 +57,7 @@ ROUTES = {
     ("GET", "/favicon.ico"): (NONE, None),
     # token-proof GET (1): the client proves the core before it sends the token
     ("GET", "/api/hello"): (PROOF, None),
-    # token GET (15)
+    # token GET (16)
     ("GET", "/api/health"): (HEADER, None),
     ("GET", "/api/version"): (HEADER, None),
     ("GET", "/api/state"): (HEADER, None),
@@ -70,6 +70,7 @@ ROUTES = {
     ("GET", "/api/gfx"): (HEADER, None),
     ("GET", "/api/rates"): (HEADER, None),
     ("GET", "/api/web-data"): (HEADER, None),
+    ("GET", "/api/theme"): (HEADER, None),  # PLAY-TD-04B-THEME-CHOICE
     # RUN-VERDICTS-CORE: the plug route (server/al/plug/verdicts.py)
     ("GET", "/api/verdicts"): (HEADER, None),
     # RUN-METRICS-CORE: the plug route (server/al/plug/debug.py, decision 0067)
@@ -78,7 +79,7 @@ ROUTES = {
     # (server/al/plug/report.py); the report built on the click
     ("GET", "/api/report"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (17)
+    # token POST (18)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
@@ -96,6 +97,7 @@ ROUTES = {
     ("POST", "/api/hotkeys"): (HEADER, 4096),  # HOTKEYS-LIVE (OVL-KEYS-CORE)
     ("POST", "/api/overlay-sample"): (HEADER, 4096),  # OVL-CARD-SLOT
     ("POST", "/api/update-now"): (HEADER, 4096),  # REL-UPDATE-TRIGGER: an empty body
+    ("POST", "/api/theme"): (HEADER, 4096),  # PLAY-TD-04B-THEME-CHOICE
     # token PUT (1)
     ("PUT", "/api/weights"): (HEADER, 64 * 1024),
     # refused verbs
@@ -342,9 +344,9 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 15,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 16,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 17, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 18, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes

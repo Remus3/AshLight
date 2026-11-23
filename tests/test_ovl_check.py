@@ -180,6 +180,7 @@ def _arm(clock):
                      {"armed_at": clock(), "expires_at": clock() + ovl_check.ARM_TTL_S})
 
 
+@pytest.mark.slow  # wave 30 ruling: over the 3 s ceiling under parallel load
 def test_full_check_on_a_fake_clock(env):
     stub, port = env["start"]()
     clock = env["clock"]
@@ -240,6 +241,7 @@ def test_full_check_on_a_fake_clock(env):
     assert stub.samples == 9  # 3 sample cards per updating block
 
 
+@pytest.mark.slow  # wave 30 ruling: over the 3 s ceiling under parallel load
 def test_only_existing_endpoints_are_called(env):
     stub, port = env["start"]()
     _arm(env["clock"])
@@ -274,6 +276,7 @@ def test_answer_from_the_tried_in_game_card(env):
     assert rep["b19"]["verdict"] == "fail"
 
 
+@pytest.mark.slow  # wave 30 ruling: over the 3 s ceiling under parallel load
 def test_stale_card_verdict_is_ignored_and_answer_command_records(env, capsys):
     clock = env["clock"]
     old = {"check": "OVL-FPS", "result": "worked", "note": "", "at": int(clock()) - 3600}

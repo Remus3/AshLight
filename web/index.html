@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="/web/buildline.css">
 <link rel="stylesheet" href="/web/itemcard.css">
 <link rel="stylesheet" href="/web/keptchecks.css">
+<link rel="stylesheet" href="/web/theme.css">
 <script src="/web/fmt.js" defer></script>
 <script src="/web/registry.js" defer></script>
 <script src="/web/status.js" defer></script>
@@ -42,6 +43,7 @@
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
 <script src="/web/logpath.js" defer></script>
+<script src="/web/theme.js" defer></script>
 <script src="/web/slots.js" defer></script>
 <script src="/web/regions.js" defer></script>
 <script src="/web/pager.js" defer></script>
@@ -899,11 +901,27 @@
   <!-- 5 Appearance and tools (PLAY-TD-21B-SETTINGS-ABOUT): settings transfer,
        restart overlay and the new-character tips as rows; More is the
        graphics advisor, the one fold. The Theme row (PLAY-TD-04B-THEME-CHOICE)
-       and autostart (REL cluster) join here. The .build file and the loot
+       is the first row; autostart (REL cluster) joins here. The .build file and the loot
        filter add-on stay pages of the Build and Search strings cards, next to
        what they are made from (the index row reaches them). -->
   <section id="toolsbox" class="card rail-section tools" aria-labelledby="tools-title" hidden>
     <h3 id="tools-title">Appearance and tools</h3>
+    <!-- PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): the page ships dark
+         (data-theme on the html element); this one optional choice changes
+         it (web/theme.js, GET / POST /api/theme). Follow Windows removes the
+         attribute, so the browser's light or dark setting decides. The
+         answer line is not a live region; the select points at it and at
+         the helper sentence. -->
+    <div class="rail-block">
+      <p id="theme-row" class="set-row"><label for="theme-pick">Theme</label>
+        <select id="theme-pick" aria-describedby="theme-help theme-said">
+          <option value="dark">Dark</option>
+          <option value="system">Follow Windows</option>
+          <option value="light">Light</option>
+        </select>
+        <span id="theme-said" class="muted"></span></p>
+      <p id="theme-help" class="muted small">Follow Windows uses your Windows light or dark setting.</p>
+    </div>
     <div class="rail-block">
     <div id="settingsbox" class="tool settings-io" role="group" aria-labelledby="settings-title">
       <h4 id="settings-title" class="sub-h">Move settings to another computer</h4>

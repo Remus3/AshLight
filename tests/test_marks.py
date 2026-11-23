@@ -79,12 +79,15 @@ CALC_TESTS = {
     "tests/test_tc_pob_drift_guard.py": {"test_live_launch_object_and_output_keys"},
     "tests/test_math_skill_split.py": {"test_live_calc_outputs_for_build_view"},
 }
-TIMING_WHOLE = {"tests/test_budgets.py", "tests/test_soak.py", "tests/test_math_perf.py"}
+# wave 30 ruling (decision 0060): test_math_e2e_live asserts press budgets
+TIMING_WHOLE = {"tests/test_budgets.py", "tests/test_soak.py", "tests/test_math_perf.py",
+                "tests/test_math_e2e_live.py"}
 # mixed files: only these tests carry the timing mark, the rest of the file not
 TIMING_TESTS = {
     "tests/test_tc_press_staged.py": {"test_first_card_and_reply_within_budget_with_a_slow_calc"},
     "tests/test_metrics.py": {"test_100000_updates_under_50_ms"},
     "tests/test_budget_log.py": {"test_sampler_cost_under_budget"},
+    "tests/test_fullstack.py": {"test_fullstack_calc_on_leg"},
 }
 # TEST-CALC-GROUP-SPLIT (research 0063 section 5): the heaviest three calc
 # tests (about 60 s of the old single group) and the group each runs in

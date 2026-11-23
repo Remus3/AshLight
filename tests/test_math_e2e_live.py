@@ -38,7 +38,10 @@ SIDE_BAND = delta.SIDEGRADE_PCT
 # group per test (one group each): test_repeat_press_uses_cached_probes is
 # self-contained (TEST-E2E-REPEAT-SELF), so it runs in calc-b beside
 # test_fullstack_calc_on_leg while the rest of the file stays in calc-a.
-pytestmark = [pytest.mark.server, pytest.mark.slow, LIVE_REF, pytest.mark.calc]
+# Wave 30 ruling (decision 0060): every test here asserts a wall-clock
+# press budget, so the file runs in the serial timing phase.
+pytestmark = [pytest.mark.server, pytest.mark.slow, pytest.mark.timing, LIVE_REF,
+              pytest.mark.calc]
 
 
 def _req(port, method, path, body=None, timeout=120):

@@ -134,6 +134,7 @@ FOREIGN_RED = ("python tools/suite_run.py rc=1\n"
 OWN_RED = FOREIGN_RED.replace("test_other.py", "test_mine.py")
 
 
+@pytest.mark.slow  # wave 30 ruling: over the 3 s ceiling under parallel load
 @pytest.mark.parametrize("detail, runs", [(FOREIGN_RED, 2), (OWN_RED, 1)])
 def test_cached_red_outside_the_diff_is_rerun_exactly_once(tmp_path, detail, runs):
     """LOOP-GATE-RERUN: a red cached on an unchanged tree whose failing ids
