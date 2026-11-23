@@ -9,6 +9,7 @@ import inspect
 import pathlib
 
 from server.al import state as state_mod
+from server.al import state_idle
 from server.al import summary
 from server.al.state import SessionState
 
@@ -165,12 +166,14 @@ def test_core_tick_turns_idle_and_saves_the_card(tmp_path):
 def test_exit_detection_never_looks_at_processes():
     # Decision 0029: log staleness only; no process list, no handle.
     root = pathlib.Path(state_mod.__file__).parent
-    for name in ("state.py", "summary.py", "core.py"):
+    # TEST-STATE-MIXIN-C: the idle check lives in state_idle.IdleMixin
+    for name in ("state.py", "state_idle.py", "summary.py", "core.py"):
         src = (root / name).read_text(encoding="utf-8")
         for bad in ("tasklist", "CreateToolhelp32Snapshot", "EnumProcesses",
                     "OpenProcess", "PathOfExile"):
             assert bad not in src, (name, bad)
-    assert "check_log_idle" in inspect.getsource(SessionState)
+    assert issubclass(SessionState, state_idle.IdleMixin)
+    assert "check_log_idle" in inspect.getsource(state_idle.IdleMixin)
 
 
 def test_resume_seed_turns_a_closed_game_idle():

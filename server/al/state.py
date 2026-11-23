@@ -12,7 +12,6 @@ import time
 
 from . import acts as acts_mod
 from . import campaign as campaign_mod
-from . import hints as hints_mod
 from . import langguard as langguard_mod
 from . import overlayview as overlayview_mod
 from . import parser as parser_mod
@@ -26,8 +25,11 @@ from .state_cards import CardsMixin
 from .state_chars import (  # noqa: F401 - re-exported, state.<name> stays
     CHAR_FIELDS, MAX_CHARACTERS, MAX_OTHERS, CharsMixin, _merge_maps,
     _split_maps)
+from .state_idle import IdleMixin
 from .state_trades import (  # noqa: F401 - re-exported, state.<name> stays
     TRADE_EXPIRE_S, TRADE_FIELDS, TRADE_REQUESTS, TradesMixin)
+from .state_views import (  # noqa: F401 - re-exported, state.<name> stays
+    BUILTIN_SNAPSHOT_KEYS, PUBLISHED_KEYS, ViewsMixin)
 from .text.buildlive import (  # noqa: F401 - re-exported, state.<name> stays
     ALERT_ROUTES, _a_class, _fit, _upgrade_delta, build_alert_text, upgrade_notice_text,
     upgrades_text)
@@ -71,32 +73,18 @@ LISTED = {"scene_changed", "area_entered", "level_up", "death", "whisper_in",
 ZONE_FIELDS = ("zone", "area_id", "area_level", "zone_entered_at", "in_hideout",
                "in_town", "_area_fresh", "_zone_cards")
 ZONE_CARDS = 4  # zone cards kept per zone; the oldest drops
-# TEST-STATE-PUBLISH (research 0047 R5 (1)): views the core only stores
-# and the snapshot carries as they are. These keys are always in the
-# snapshot (None until published); publish() takes any other new key too.
-PUBLISHED_KEYS = ("run_history", "price_watch", "diag")
-# The snapshot keys snapshot() builds itself; publish() refuses them, so a
-# published view never shadows one (tests/test_state_publish.py checks the
-# list against a real snapshot).
-BUILTIN_SNAPSHOT_KEYS = frozenset((
-    "version", "now", "session_started_at", "session_s", "character",
-    "character_pinned", "class", "level", "zone", "area_id", "area_level",
-    "zone_entered_at", "zone_s", "in_hideout", "in_town", "deaths",
-    "level_ups", "afk", "dnd", "events_seen", "recent_events",
-    "trade_requests", "overlay_layout", "tailer", "game_idle", "eval",
-    "price", "card", "overlay", "build", "build_alert", "upgrades", "acts",
-    "maps", "underlevel", "zone_guide", "player_note", "campaign",
-    "death_recap", "hint", "pace", "characters", "session_summary",
-    "sources", "lang", "hotkeys", "update", "play"))
 
 
-class SessionState(CardsMixin, TradesMixin, CharsMixin):
+class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
     """TEST-STATE-MIXIN-A (F-192): the press cards (state_cards.CardsMixin)
     and the trade cards (state_trades.TradesMixin) live in per-concern
     mixins, as are the characters (TEST-STATE-MIXIN-B,
-    state_chars.CharsMixin), each with its _init_<x>() called from
-    __init__ and its _view_<x>(now) called from snapshot(); the lock and
-    the event dispatcher (apply / _apply_locked) stay here."""
+    state_chars.CharsMixin), the idle state and session summary
+    (TEST-STATE-MIXIN-C, state_idle.IdleMixin) and the published views
+    (state_views.ViewsMixin), each with its _init_<x>() called from
+    __init__ and its _view_<x>(now) called from snapshot(); the lock, the
+    event dispatcher (apply / _apply_locked), restore and snapshot stay
+    here."""
 
     def __init__(self, character=None, clock=time.time):
         self._lock = threading.Lock()
@@ -116,8 +104,6 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
         # REL-UPDATE-WIRE (decision 0065): the release check view the core
         # publishes (updates.UpdateClient.view); None until its first tick.
         self.update_view = None
-        # TEST-STATE-PUBLISH: the views the core only stores (publish())
-        self._published = {k: None for k in PUBLISHED_KEYS}
         self.session_started_at = clock()
         # The pace counts only level-ups seen live, so its hourly base stays
         # the core start even when LIVE-RESUME moves the Session tile back
@@ -152,26 +138,15 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
         # OVL-CARD-SLOT (F-118): the one owner of the overlay card slot
         self.overlay = overlayview_mod.OverlayView()
         self._init_cards()
-        # HUD-ACT: per-act splits; zone level table from the game-data cache.
+        # HUD-ACT: per-act splits.
         self.acts = acts_mod.ActSplits()
-        self.zone_table = {}
-        # ZONE-GUIDE (decision 0043): the guide file, the snapshot area
-        # graph and the zones each character entered (zoneguide.py).
-        self.zone_guide = {}
-        self.area_graph = {}
-        self.visits = zoneguide_mod.VisitBook()
-        # PLAY-F-186A (decision 0074): the player's own notes book
-        # {character: {area id: {"text", "at"}}}, set by the core
-        self.player_notes = {}
+        self._init_views()
         # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
         self.maps = runs_mod.MapRuns()
         self.death_log = runs_mod.DeathLog()
         # UTIL-PACE: levelling pace from the player's level-ups (pace.py).
         self.pace = pace_mod.Pace()
-        # UTIL-SESSION-SUMMARY: the open play stretch and its last card.
-        self.stretch = summary_mod.Tracker()
-        self.session_summary = None
-        self._summary_ids = 0
+        self._init_idle()
         # TEST-LIVE-EXIT (decision 0029): "idle" = no Client.txt line for
         # summary.IDLE_S while consented (the game may be closed; a killed
         # game writes no line). Log staleness only, no process check.
@@ -182,7 +157,6 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
         # start or other reset since); with "unreadable" it decides the
         # reading flag on the tailer's later status events.
         self._tail_missing = False
-        self._idle_paused_map = False  # AREA-AUDIT P3-4
         # UTIL-UNDERLEVEL: the gap threshold ("underlevel_gap" setting).
         self.underlevel_gap = underlevel_mod.DEFAULT_GAP
         # UTIL-CAMPAIGN-CHECKS (ruling H): the loaded build's facts, the
@@ -191,12 +165,6 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
         self.flask_table = {}
         self.boots_level = campaign_mod.DEFAULT_BOOTS_LEVEL
         self._init_chars()
-        # UTIL-MAP-LADDER: the all-sessions ladder the core publishes
-        # (mapladder.py; None while run history is off).
-        self.map_ladder_all = None
-        # NEWBIE-HINTS (ruling L): first-hours hints; memory only until the
-        # core gives the store file (use_hint_store).
-        self.hints = hints_mod.Hints()
         # LANG-GUARD (ruling K, decision 0040): the in-memory language
         # verdict from the log; DIAG-SELF (ruling J): the core's checks view.
         self.lang = langguard_mod.LangGuard()
@@ -329,70 +297,6 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
             self.version += 1
             return True
 
-    def publish(self, key, view):
-        """TEST-STATE-PUBLISH: store a view the core only publishes under
-        `key`; snapshot() carries it as it is (a dict or list is copied, an
-        empty view is None), so a new core-published view needs no other
-        state.py edit. Bumps the version only on a change and returns True
-        then. A key snapshot() builds itself (BUILTIN_SNAPSHOT_KEYS) or a
-        key that is not a non-empty str is refused with ValueError."""
-        if not isinstance(key, str) or not key or key in BUILTIN_SNAPSHOT_KEYS:
-            raise ValueError("publish: refused key")
-        if not view:
-            value = None
-        elif isinstance(view, dict):
-            value = dict(view)
-        elif isinstance(view, (list, tuple)):
-            value = list(view)
-        else:
-            raise ValueError("publish: a view is a dict, a list or None")
-        with self._lock:
-            if key in self._published and value == self._published[key]:
-                return False
-            self._published[key] = value
-            self.version += 1
-            return True
-
-    def _published_view(self, key):
-        """A copy of one published view for the snapshot. Caller holds the
-        lock."""
-        v = self._published.get(key)
-        if isinstance(v, dict):
-            return dict(v)
-        if isinstance(v, list):
-            return list(v)
-        return v
-
-    # The published views keep their old attribute names for readers that
-    # hold the lock already (overlayview reads run_history); no lock taken.
-    @property
-    def run_history(self):
-        return self._published.get("run_history")
-
-    @property
-    def price_watch(self):
-        return self._published.get("price_watch")
-
-    @property
-    def diag(self):
-        return self._published.get("diag")
-
-    def set_run_history(self, view):
-        """UTIL-RUN-HISTORY: the history view (core tick)."""
-        return self.publish("run_history", view)
-
-    def use_hint_store(self, path):
-        """NEWBIE-HINTS: keep the hint store in `path` (core start)."""
-        with self._lock:
-            self.hints.use_file(path)
-
-    def reset_hints(self):
-        """NEWBIE-HINTS: the dashboard's "reset hints" click."""
-        with self._lock:
-            self.hints.reset()
-            self.version += 1
-            return hints_mod.RESET_TEXT
-
     def _place_now(self, scene_word):
         """OVL-HIDEOUT-AREA (F-118): (in_hideout, in_town) for the zone a
         real scene line names. The area id of the generation line that
@@ -488,109 +392,6 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
             now = self._clock() if now is None else now
             return [dict(c["card"]) for c in self._zone_cards
                     if c["gen"] == self._zone_gen and c["at"] <= now]
-
-    def _hint(self, shown, now):
-        """List a hint that just started in the event list. Caller holds
-        the lock."""
-        if shown is None:
-            return False
-        self.recent_events.append({"seq": None, "type": "hint", "at": now,
-                                   "text": shown["text"], "trade": False,
-                                   "whisper": False})
-        return True
-
-    def map_ladder_rows(self):
-        """UTIL-MAP-LADDER: (character, this session's map rows) for the
-        core's saved ladder. The map runs are per character (CHAR_FIELDS,
-        RUN-P8-8-CHARMIX), so the rows are the current character's only;
-        each carries its "character" (mapladder takes that character's
-        rows only)."""
-        with self._lock:
-            rows = self.maps.ladder_rows(self._clock())
-            for r in rows:
-                r["character"] = self.character
-            return self.character, rows
-
-    def set_map_ladder(self, view):
-        """UTIL-MAP-LADDER: the all-sessions ladder view, or None."""
-        with self._lock:
-            if view != self.map_ladder_all:
-                self.map_ladder_all = dict(view) if view else None
-                self.version += 1
-
-    def set_price_watch(self, view):
-        """UTIL-PRICE-WATCH: the price watch view (core tick)."""
-        return self.publish("price_watch", view)
-
-    def set_zone_table(self, table):
-        """HUD-ACT: the act / zone level table (acts.load_table())."""
-        with self._lock:
-            table = table if isinstance(table, dict) else {}
-            # HOT-RELOAD: polled every tick; the same object is no change
-            if table is not self.zone_table and table != self.zone_table:
-                self.zone_table = table
-                self.lang.set_table(table)
-                self.version += 1
-
-    def set_zone_guide(self, guide=False, graph=False):
-        """ZONE-GUIDE: the guide document and / or the snapshot area graph
-        (an argument left out keeps its value). Bumps only on a change."""
-        with self._lock:
-            changed = False
-            if guide is not False:
-                guide = guide if isinstance(guide, dict) else {}
-                if guide is not self.zone_guide and guide != self.zone_guide:
-                    self.zone_guide, changed = guide, True
-            if graph is not False:
-                graph = graph if isinstance(graph, dict) else {}
-                if graph is not self.area_graph and graph != self.area_graph:
-                    self.area_graph, changed = graph, True
-            if changed:
-                self.version += 1
-            return changed
-
-    def set_player_notes(self, book):
-        """PLAY-F-186A: the player notes book (playernotes.PlayerNotes.get);
-        bumps only on a change."""
-        book = book if isinstance(book, dict) else {}
-        with self._lock:
-            if book is self.player_notes or book == self.player_notes:
-                return False
-            self.player_notes = book
-            self.version += 1
-            return True
-
-    def _player_note_view(self):
-        """PLAY-F-186A: this character's note for the zone the player is
-        in, {"area_id", "text", "at"}, or None. Caller holds the lock."""
-        per = self.player_notes.get(self.character) if self.character else None
-        e = per.get(self.area_id) if isinstance(per, dict) and self.area_id else None
-        if not isinstance(e, dict) or not isinstance(e.get("text"), str):
-            return None
-        return {"area_id": self.area_id, "text": e["text"], "at": e.get("at")}
-
-    def visits_doc(self):
-        """ZONE-GUIDE: (version, file document) of the visited zones."""
-        with self._lock:
-            return self.visits.version, self.visits.to_doc()
-
-    def load_visits(self, doc):
-        """ZONE-GUIDE: merge the saved visited zones in (core start)."""
-        with self._lock:
-            if self.visits.load_doc(doc):
-                self.version += 1
-                return True
-            return False
-
-    def clear_visits(self):
-        with self._lock:
-            self.visits.clear()
-            self.version += 1
-
-    def set_diag(self, view):
-        """DIAG-SELF: the self-check view (core tick_diag); bumps only on
-        a change."""
-        return self.publish("diag", view)
 
     def checks_facts(self):
         """RUN-QUIET-FEED (F-093): the few state facts the Checks rows read
@@ -806,104 +607,6 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
             self.version += 1
         return changed
 
-    # -- UTIL-SESSION-SUMMARY
-    def _zone_guide_view(self):
-        """ZONE-GUIDE: the guide for the zone the player is in. Caller
-        holds the lock."""
-        zone_level = None
-        info = acts_mod.act_of(self.area_id)
-        if info is not None and self.zone:
-            row = next((r for r in self.zone_table.get(info["key"], ())
-                        if r["id"] == self.area_id or r["name"] == self.zone), None)
-            zone_level = row["level"] if row else None
-        visits = (self.visits.by_name.get(self.character or "")
-                  if self.visits.by_name else None)
-        return zoneguide_mod.view(self.zone_guide, self.area_graph, self.area_id,
-                                  self.zone, self.in_hideout, self.level,
-                                  self.area_level, visits, zone_level,
-                                  self.underlevel_gap)
-
-    def _counters(self):
-        return {"level": self.level, "level_ups": self.level_ups,
-                "deaths": self.deaths, "maps": self.maps.count}
-
-    def _close_stretch(self, reason, movers=None):
-        """Close the open play stretch into the summary card. Caller holds
-        the lock. True when a card was made."""
-        card = self.stretch.close(reason, movers)
-        if card is None:
-            return False
-        self._summary_ids += 1
-        self.session_summary = dict(card, id=self._summary_ids)
-        return True
-
-    def session_end_due(self, now=None):
-        """True when the open stretch has been idle for IDLE_S (cheap; the
-        core reads the movers only then)."""
-        with self._lock:
-            return self.stretch.due(self._clock() if now is None else now)
-
-    def check_session_end(self, now=None, movers=None):
-        """From the core's main loop: close the stretch after IDLE_S with no
-        game activity. Returns the new card, or None."""
-        with self._lock:
-            now = self._clock() if now is None else now
-            if not self.stretch.due(now):
-                return None
-            if not self._close_stretch("idle", movers):
-                return None
-            self.version += 1
-            return dict(self.session_summary)
-
-    # -- TEST-LIVE-EXIT (decision 0029)
-    def _idle_due(self, now):
-        tl = self.tailer
-        last = tl.get("last_line_at")
-        return (bool(tl.get("consented")) and not tl.get("idle")
-                and last is not None and now - last >= summary_mod.IDLE_S)
-
-    def seed_last_line(self, at):
-        """LIVE-RESUME: the resumed log's last write time (file mtime)
-        stands in for the last line until a live one comes, so a game that
-        closed before the core started turns idle too."""
-        with self._lock:
-            if self.tailer.get("last_line_at") is None and isinstance(at, (int, float)):
-                self.tailer["last_line_at"] = float(at)
-
-    def log_idle_due(self, now=None):
-        """True when Client.txt has been quiet for IDLE_S while consented
-        and the idle state is not set yet (cheap; the core reads the
-        movers only then)."""
-        with self._lock:
-            return self._idle_due(self._clock() if now is None else now)
-
-    def check_log_idle(self, now=None, movers=None):
-        """From the core's main loop: after IDLE_S with no Client.txt line
-        the game may be closed (a killed game writes nothing). Set the idle
-        state, keep the zone, freeze the zone and map clocks at the last
-        line and close the play stretch into the summary card. The next
-        line clears it (apply). True when the state turned idle."""
-        with self._lock:
-            now = self._clock() if now is None else now
-            if not self._idle_due(now):
-                return False
-            last = self.tailer["last_line_at"]
-            self.tailer["idle"] = True
-            self._idle_paused_map = self.maps.pause(last)
-            if self.stretch.start is not None:
-                self._close_stretch("idle", movers)
-            self.version += 1
-            return True
-
-    def set_session_summary(self, card):
-        """A saved card loaded at core start (shown until a new one)."""
-        with self._lock:
-            if isinstance(card, dict) and self.session_summary is None:
-                self.session_summary = dict(card)
-                self._summary_ids = max(self._summary_ids,
-                                        card.get("id") if isinstance(card.get("id"), int) else 0)
-                self.version += 1
-
     _RESTORE = {"zone": "zone", "in_hideout": "in_hideout", "area_id": "area_id",
                 "area_level": "area_level", "zone_entered_at": "zone_entered_at",
                 "class": "char_class", "level": "level", "deaths": "deaths",
@@ -999,7 +702,9 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
             alert = cards["build_alert"]
             trades = self._view_trades(now)
             chars = self._view_chars(now)
-            guide = self._zone_guide_view()
+            idle = self._view_idle(now)
+            views = self._view_views(now)
+            guide = views["zone_guide"]
             snap = {
                 "version": self.version,
                 "now": now,
@@ -1029,10 +734,9 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
                 "trade_requests": trades["trade_requests"],
                 "overlay_layout": dict(self.overlay_layout) if self.overlay_layout else None,
                 "tailer": dict(self.tailer),
-                # decision 0029 amendment (DESKTOP-CLIENT): the 0029 idle
-                # "game may be closed" state as one boolean; the overlay
-                # hides while it is true
-                "game_idle": bool(self.tailer.get("consented") and self.tailer.get("idle")),
+                # decision 0029 amendment (DESKTOP-CLIENT): the idle flag
+                # (state_idle.IdleMixin._view_idle)
+                "game_idle": idle["game_idle"],
                 "eval": cards["eval"],
                 "price": cards["price"],
                 # The one overlay card chosen at this moment (decision 0016),
@@ -1046,8 +750,7 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
                 "maps": dict(self.maps.view(now),
-                             ladder_all=(dict(self.map_ladder_all)
-                                         if self.map_ladder_all else None)),
+                             ladder_all=views["ladder_all"]),
                 # UTIL-UNDERLEVEL (ruling B): log area level minus player level
                 "underlevel": underlevel_mod.view(
                     self.level, self.area_level, self.area_id, self.zone,
@@ -1056,7 +759,7 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
                 "zone_guide": guide,
                 # PLAY-F-186A (decision 0074): the player's own note for this
                 # zone and character, or None
-                "player_note": self._player_note_view(),
+                "player_note": views["player_note"],
                 # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039); the boss
                 # element comes from the guide entry (DATA-GUIDE-BOSS)
                 "campaign": campaign_mod.view(self.level, self.area_id,
@@ -1068,15 +771,14 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin):
                 "hint": self.hints.view(now),
                 "pace": self.pace.view(now, self.pace_started_at),
                 "characters": chars["characters"],
-                "session_summary": (dict(self.session_summary)
-                                    if self.session_summary else None),
+                "session_summary": idle["session_summary"],
                 "sources": dict(self.sources),
                 # UTIL-RUN-HISTORY / UTIL-PRICE-WATCH (core-published views)
-                "run_history": self._published_view("run_history"),
-                "price_watch": self._published_view("price_watch"),
+                "run_history": views["run_history"],
+                "price_watch": views["price_watch"],
                 # LANG-GUARD / DIAG-SELF (rulings K, J; decision 0040)
                 "lang": self.lang.view(),
-                "diag": self._published_view("diag"),
+                "diag": views["diag"],
                 # HOTKEYS-LIVE (decision 0058): the keys really bound
                 "hotkeys": copy.deepcopy(self.hotkeys) if self.hotkeys else None,
                 # REL-UPDATE-WIRE (decision 0065): the release check, no event text
