@@ -44,6 +44,8 @@ operator phrase.`
 - [ ] CP-1 (build) Character picker line squeezes its select at narrow widths: the nowrap picker line in web/app.css leaves the select too narrow; let the line wrap or give the select a minimum width (RUN-CHARACTER-PIN design finding, S3). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_a11y.py passes with a pin that the picker select keeps at least 24 px target and its full label at 320 px. ZERO-CLICK: styling only; nothing to press. DEPENDS: RUN-CHARACTER-PIN. BLOCKED: session.
 - [ ] CP-2 (build) Announce a failed character pin: the pin failure line is not sent to screen readers; route it through ALTabs.say or the shared Settings status region (RUN-CHARACTER-PIN design finding, S3). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_a11y.py pass with a pin that a failed pin save is announced politely. ZERO-CLICK: no setting; the announcement is automatic. DEPENDS: RUN-CHARACTER-PIN. BLOCKED: session.
 - [ ] GLANCE-PENDING-OUT (build) Remove the stale DESIGN_TEXT_PENDING skip ('Copy the item first') in tests/test_glance_rules.py now that PLAY-TD-23-RECORDS wrote design 0001 section 10; empty the tuple and its skip branch. ACCEPT: python -m pytest -q tests/test_glance_rules.py passes with DESIGN_TEXT_PENDING gone or empty and no skip reported (-rs). ZERO-CLICK: test-only; nothing to press. DEPENDS: PLAY-TD-23-RECORDS. BLOCKED: session.
+- [ ] LOG-SHAPE-20261123 (build) New masked log shapes passed the two-sighting rule: work each NEW SHAPE line of ops/runtime/watch/live1_report.json (copied into the lane worktree) into a parser pattern with a fixture, or note why it stays unparsed. ACCEPT: every listed shape has a fixture and a passing test or a one-line note. SOURCE: watch ledger log-shape, filed 2026-11-23.
+- [ ] SAVE-FAIL-SAY (build) Announce failed saves on the header polite line: a failed update OK ack, autostart switch save and weights save or reset show a line but nothing is said to screen readers; route each through ALTabs.say (design findings UN-1, AS-1, WD-3, S3). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_a11y.py pass with a pin that each failed save is announced politely. ZERO-CLICK: no setting; the announcement is automatic. DEPENDS: TC-WEIGHTS-DELTA-UI. BLOCKED: session.
 
 ## Lane: data
 
@@ -323,88 +325,15 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 32: reliability and observability, install and release
 
-- [ ] REL-UPDATE-NOTICE-UI (build) Settings: version lines, update line, opt-in wording. ACCEPT: npm
-  test --prefix app passes and python -m pytest -q tests/test_ux_review.py tests/test_a11y.py
-  tests/test_dash_console.py passes. ZERO-CLICK: The line appears by itself; no toast, no prompt; an
-  earlier opt-in needs one acknowledgement click, once. DEPENDS: REL-UPDATE-WIRE,
-  PLAY-TD-21A-SETTINGS-RAIL. BLOCKED: session wave 34.
-- [ ] RUN-P8-8-CHARMIX (build) P8-8: the session ladder and the Maps card no longer mix characters +
-  SessionState.publish(key, view) for views the core only stores. ACCEPT: python -m pytest -q
-  tests/test_util_map_ladder.py tests/test_util_multichar.py tests/test_util_maps_resume.py
-  tests/test_util_maprun.py passes. Also (folded TEST-STATE-PUBLISH): python tools/state_equiv.py
-  --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
-  tests/test_state_publish.py tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py
-  passes. ZERO-CLICK: No player interaction. Also (folded TEST-STATE-PUBLISH): Developer-side only;
-  the player does nothing. Published views reach the dashboard and overlay in the snapshot by
-  themselves. DEPENDS: RUN-LADDER-TICK, RUN-CHARACTER-PIN, TEST-STATE-TEXT-4, PLAY-TD-07A-PLAY-VIEW.
-  BLOCKED: session wave 34.
-- [ ] RUN-PERF-IDLE-BACKOFF (build) Supervisor diet and idle backoff. ACCEPT: python -m pytest -q
-  tests/test_keepalive.py tests/test_tailer.py tests/test_budget_tick.py tests/test_live_exit.py
-  passes. ZERO-CLICK: Automatic. DEPENDS: RUN-STOP-RACE, RUN-CHARACTER-PIN, RUN-START-REASON-CORE,
-  RUN-TAIL-HEAL-READER, RUN-BUDGET-TESTS-DET. BLOCKED: session wave 34.
 
 ### Wave 33: Play tab and dashboard, tests and code seams, reliability and observability
 
-- [ ] PLAY-F-189A-SPACING-BADGE (build) One spacing scale, one badge, one list row, held by a lint.
-  ACCEPT: python -m pytest -q tests/test_spacing_scale.py tests/test_play_fit.py tests/test_a11y.py
-  tests/test_design_tokens.py and npm test --prefix app pass: every margin, padding and gap in
-  web/*.css is one of --al-space-0..4, exactly 3 radius values are used, and no rule or script names
-  .pill, .verdict, .tab-mark or .tag. ZERO-CLICK: Styling only; nothing to press. DEPENDS:
-  PLAY-TD-23-RECORDS, PLAY-TD-22A-A11Y-CSS, PLAY-F-186B-PLAYER-NOTES-UI, TEST-CAPTURE-HELPER.
-  BLOCKED: session wave 35.
-- [ ] TEST-STATE-MIXIN-A (build) SessionState mixins: cards and trades. ACCEPT: python
-  tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
-  tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py tests/test_util_multichar.py
-  tests/test_live_exit.py tests/test_resume.py tests/test_state_publish.py passes. ZERO-CLICK:
-  Developer-side only; the player does nothing. Behaviour is byte-identical; a running core reloads
-  itself after the merge. DEPENDS: RUN-P8-8-CHARMIX. BLOCKED: session wave 35.
-- [ ] RUN-FEED-TRUTH (build) The page says what really happened to the feed + The dashboard rests
-  when unseen or frozen. ACCEPT: npm test --prefix app passes and python -m pytest -q
-  tests/test_sse_idle_push.py tests/test_fullstack.py tests/test_budgets.py passes. Also (folded
-  RUN-PERF-DASH-IDLE): npm test --prefix app passes and python -m pytest -q tests/test_dash_perf.py
-  passes. ZERO-CLICK: Automatic; the client window already reloads itself. Also (folded
-  RUN-PERF-DASH-IDLE): Automatic. DEPENDS: RUN-SUPERVISOR-CLOCK, RUN-CHARACTER-PIN,
-  RUN-NO-DEAD-ENDS, RUN-BUDGET-TESTS-DASH, SEC-SSE-TAP. BLOCKED: session wave 35.
 
 ### Wave 34: install and release, tests and code seams, Play tab and dashboard
 
-- [ ] REL-AUTOSTART-SETTINGS (build) 'Start with Windows' row on Settings + Settings: 'Update now',
-  the click-only switch and the staged line. ACCEPT: npm test --prefix app passes and python -m
-  pytest -q tests/test_ux_review.py tests/test_a11y.py tests/test_dash_console.py passes. Also
-  (folded REL-UPDATE-UI): npm test --prefix app passes and python -m pytest -q
-  tests/test_ux_review.py tests/test_a11y.py tests/test_dash_console.py passes. ZERO-CLICK: One tick
-  once; the row reflects the recorded state by itself. Also (folded REL-UPDATE-UI): Nothing to press
-  by default; the button and switch are for players who want control. DEPENDS: REL-AUTOSTART-SWITCH,
-  REL-UPDATE-NOTICE-UI, REL-UPDATE-TRIGGER, PLAY-TD-21A-SETTINGS-RAIL. BLOCKED: session wave 36.
-- [ ] TEST-STATE-MIXIN-B (build) SessionState mixins: characters. ACCEPT: python
-  tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m pytest -q
-  tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py tests/test_util_multichar.py
-  tests/test_live_exit.py tests/test_resume.py tests/test_state_publish.py passes. ZERO-CLICK:
-  Developer-side only; the player does nothing. Behaviour is byte-identical; a running core reloads
-  itself after the merge. DEPENDS: TEST-STATE-MIXIN-A. BLOCKED: session wave 36.
-- [ ] PLAY-F-189B-OVERLAY-PLATE (build) Overlay: one plate class. ACCEPT: python -m pytest -q
-  tests/test_overlay_plate_class.py tests/test_overlay_layout.py tests/test_budgets.py
-  tests/test_ux_review.py passes: overlay.css has one plate rule, and the overlay page rendered
-  headless over a synthetic backdrop through the shared capture helper is pixel-identical before and
-  after. ZERO-CLICK: No repaint, no animation and no new content on the overlay. DEPENDS:
-  PLAY-F-189A-SPACING-BADGE. BLOCKED: session wave 36.
 
 ### Wave 35: theorycraft, tests and code seams
 
-- [ ] TC-WEIGHTS-DELTA-UI (build) Weights panel marks changes and resets + .build texts: correct the
-  passives note, name the upload route. ACCEPT: npm test --prefix app passes and python -m pytest -q
-  tests/test_ux_review.py tests/test_a11y.py passes. Also (folded TC-BUILDFILE-TEXTS): python -m
-  pytest -q tests/test_tc_buildfile.py tests/test_audit_buildfile.py tests/test_ux_review.py passes.
-  ZERO-CLICK: Reset buttons only for a player who tunes; saving stays on change. Also (folded
-  TC-BUILDFILE-TEXTS): Texts only; the download stays the player's click (decision 0034). DEPENDS:
-  TC-WEIGHTS-DELTA-STORE, TC-CARD-PARTS-WEB. BLOCKED: session wave 37.
-- [ ] TEST-STATE-MIXIN-C (build) SessionState mixins: idle and summary, published views. ACCEPT:
-  python tools/state_equiv.py --ref <package base> prints 'state_equiv: identical' and python -m
-  pytest -q tests/test_bus_state.py tests/test_fuzz.py tests/test_e2e_replay.py
-  tests/test_util_multichar.py tests/test_live_exit.py tests/test_resume.py
-  tests/test_state_publish.py passes. ZERO-CLICK: Developer-side only; the player does nothing.
-  Behaviour is byte-identical; a running core reloads itself after the merge. DEPENDS:
-  TEST-STATE-MIXIN-B. BLOCKED: session wave 37.
 
 ### Wave 36: web data
 
