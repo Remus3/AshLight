@@ -77,13 +77,13 @@
        items, Run, Settings; the panels follow in the same DOM order. -->
   <div id="tabs" class="tabs" role="tablist" aria-label="Dashboard sections">
     <button id="tab-play" class="tab" type="button" role="tab" aria-selected="true"
-      aria-controls="panel-play" tabindex="0">Play <span class="tab-mark" hidden></span></button>
+      aria-controls="panel-play" tabindex="0">Play <span class="badge" hidden></span></button>
     <button id="tab-build" class="tab" type="button" role="tab" aria-selected="false"
-      aria-controls="panel-build" tabindex="-1">Build and items <span class="tab-mark" hidden></span></button>
+      aria-controls="panel-build" tabindex="-1">Build and items <span class="badge" hidden></span></button>
     <button id="tab-run" class="tab" type="button" role="tab" aria-selected="false"
-      aria-controls="panel-run" tabindex="-1">Run <span class="tab-mark" hidden></span></button>
+      aria-controls="panel-run" tabindex="-1">Run <span class="badge" hidden></span></button>
     <button id="tab-settings" class="tab" type="button" role="tab" aria-selected="false"
-      aria-controls="panel-settings" tabindex="-1">Settings <span class="tab-mark" hidden></span></button>
+      aria-controls="panel-settings" tabindex="-1">Settings <span class="badge" hidden></span></button>
   </div>
   <!-- UI-GLANCE: says once when news for Play arrives while another tab
        is shown (Play itself is hidden then, so its regions are silent).
@@ -97,7 +97,7 @@
   <!-- PLAY-TD-21A-SETTINGS-RAIL (TD-21, G12): the word is a 32 px button and
        stays the polite reading indicator; a press shows Settings, Reading
        and web data with focus on "Stop reading Client.txt" (web/rail.js) -->
-  <button id="reading" class="pill bar-word" type="button" data-state="pending" aria-live="polite"
+  <button id="reading" class="badge bar-word" type="button" data-state="pending" aria-live="polite"
     aria-describedby="reading-to">
     <span class="glyph" aria-hidden="true">[ ]</span>
     <span class="word">connecting</span>
@@ -347,7 +347,7 @@
           card leaves after 20 seconds, or the time you set under Settings, Overlay.
           You can change the key under Settings, Keys.</p>
         <div id="eval-body" hidden>
-          <p class="eval-head"><span id="eval-word" class="verdict"></span>
+          <p class="eval-head"><span id="eval-word" class="badge"></span>
             <span id="eval-item" class="eval-item one-line"></span></p>
           <!-- read with the verdict; the same words are the first rows below -->
           <p id="eval-sentence" class="sr-only"></p>
@@ -362,7 +362,7 @@
            and shown as a row below -->
       <div id="price-result" role="status" aria-live="polite" aria-atomic="true">
         <p id="price-body" class="price-head" hidden><span class="row-meta muted">Price</span>
-          <span id="price-badge" class="pill" data-state="pending"><span
+          <span id="price-badge" class="badge" data-state="pending"><span
             class="glyph" aria-hidden="true">[ ]</span> <span class="word"></span></span>
           <span id="price-sentence" class="sr-only"></span></p>
       </div>
@@ -385,7 +385,7 @@
       <button type="button" class="card-back btn-24" data-card-back hidden>Back</button>
     </div>
     <div class="card-page" data-page="main" data-label="">
-      <p id="rates-pill" class="pill" data-state="pending"><span class="glyph"
+      <p id="rates-pill" class="badge" data-state="pending"><span class="glyph"
         aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></p>
       <div id="prices-list" class="pager-slot"></div>
       <p id="rates-credit-line" class="row-meta one-line muted"><span
@@ -794,7 +794,7 @@
         item check opens only when you click it. It sends no account, password or cookie, and never
         touches the game.</p>
       <p class="row-meta set-row"><span class="muted">Price book</span>
-        <span id="book-state" class="pill" data-state="pending"><span class="glyph"
+        <span id="book-state" class="badge" data-state="pending"><span class="glyph"
           aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></span></p>
     </div>
   </section>

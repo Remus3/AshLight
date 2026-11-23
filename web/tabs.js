@@ -106,7 +106,7 @@
   function paintMarks(doc) {
     TABS.forEach(function (t) {
       var b = tab(doc, t);
-      var m = b && b.querySelector ? b.querySelector(".tab-mark") : null;
+      var m = b && b.querySelector ? b.querySelector(".badge") : null;
       if (!m) { return; }
       var word = t === state.current ? "" : (state.marks[t] || "");
       if (m.textContent !== word) { m.textContent = word; }

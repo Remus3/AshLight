@@ -461,7 +461,7 @@ test("markup: the rail, its 6 names in order, 6 sections, one shown at load", ()
 
 test("the bar status word is a 32 px button and stays the polite reading indicator", () => {
   const head = HTML.slice(HTML.indexOf("<header"), HTML.indexOf("</header>"));
-  assert.match(head, /<button id="reading" class="pill bar-word" type="button" data-state="pending" aria-live="polite"\s+aria-describedby="reading-to">\s*<span class="glyph" aria-hidden="true">\[ \]<\/span>\s*<span class="word">connecting<\/span>\s*<\/button>/);
+  assert.match(head, /<button id="reading" class="badge bar-word" type="button" data-state="pending" aria-live="polite"\s+aria-describedby="reading-to">\s*<span class="glyph" aria-hidden="true">\[ \]<\/span>\s*<span class="word">connecting<\/span>\s*<\/button>/);
   assert.match(head, /<span id="reading-to" hidden>Opens Settings at Reading and web data\.<\/span>/);
   assert.ok(!/<button id="reading"[^>]*role=/.test(head), "a button keeps its own role");
   assert.match(CSS, /button\.bar-word \{ min-height: 32px;/);

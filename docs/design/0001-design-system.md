@@ -62,17 +62,17 @@ step 1):
 
 | Token | Size | Line box | Use |
 |---|---|---|---|
-| `--al-fs-micro` | 0.8125rem (13px) | 18px | the two footer sentences and the tab mark word only |
-| `--al-fs-meta` | 0.875rem (14px) | 20px | pills, row meta, kept-check rows (review text) |
+| `--al-fs-micro` | 0.8125rem (13px) | 18px | the two footer sentences only |
+| `--al-fs-meta` | 0.875rem (14px) | 20px | badges (the tab mark word too), row meta, kept-check rows (review text) |
 | `--al-fs-body` | 1rem (16px) | 22px | body, rows, sentences |
 | `--al-fs-title` | 1.25rem (20px) | 26px | region and card titles; in-play text (strip labels, sub lines, status words in the bar, strip, notice, build line and item check, the top answers) |
 | `--al-fs-glance` | 1.75rem (28px) | 32px | the zone name on the strip, the verdict word of the item check |
 | `--al-fs-hero` | 2rem (32px) | 36px | strip numbers (level, deaths, session) |
 
 Rules: no `vw` and no `clamp()` in any font size; nothing under 14px on
-the dashboard except the two footer sentences and the tab mark word
-(13px); no weight 600 or more under 14px (the tab mark word, 13px at
-600, is the one exception left; review finding TD23-1); in-play text at
+the dashboard except the two footer sentences (13px); no weight 600 or
+more under 14px, no exception (the tab mark word is a badge at 14px since
+F-189, closing review finding TD23-1); in-play text at
 the 20px token or larger; uppercase only for labels of 3 words or fewer
 (tracking `--al-track-caps`, 0.04em).
 
@@ -107,8 +107,29 @@ under 12px **after** zoom, so the smallest overlay size times the minimum
 
 - 4px grid: 4, 8, 12, 16, 24, 32 (tokens `--al-space-0` to `--al-space-4`:
   2, 4, 8, 12, 16px; rem, so they grow with the scale step s).
-- Radius: 8px cards and regions, 6px controls and overlay plates, 999px
-  pills.
+- Only the tokens (F-189, held by `tests/test_spacing_scale.py`): every
+  margin, padding and gap in `web/*.css`, the region padding properties
+  included, is 0, auto or `--al-space-0` to `--al-space-4`; a negative
+  step is `calc(-1 * var(--al-space-N))`, and the one border allowance is
+  `calc(var(--al-space-N) - 1px)` (the pager's 2px dashed end button gives
+  back its extra 1px a side, so the box never moves). A literal that was
+  off the scale went to the nearest step, a tie to the smaller one.
+- Radius: exactly three values, `--al-radius-card` (8px cards and
+  regions), `--al-radius-control` (6px controls and overlay plates) and
+  `--al-radius-pill` (999px badges); 0 only for a square corner.
+- Badge: one `.badge` (it replaced .pill, .verdict, .tab-mark and .tag): a
+  word, often after a mono glyph, in a 1px `--al-control-edge` pill edge,
+  meta step and line box, weight 600, `--al-space-2` side padding, no
+  vertical padding. Its colour comes only from `data-state` (the kit
+  states) or `data-verdict` (upgrade, risky) and repeats the word. A place
+  changes only the type step or the side padding: the bar status word (20px,
+  400, the 32px button), the item check verdict (16px), the tab mark word
+  (`--al-space-1` side padding). No renderer makes another badge class.
+- List row: one rule, two densities. Roomy (the Checks rows, the graphics
+  advisor): a 1px `--fk-border` separator and `--al-space-1` above and
+  below. Dense (pager rows, build health rows; the feed and kept-check
+  rows in their region sheets): the row's own line box, no separator, no
+  padding.
 - Hit targets on the dashboard: at least 24x24 CSS px (WCAG 2.2 SC 2.5.8);
   aim for 32px tall buttons (28px in region I, 24px in region B and the
   feed head).
@@ -152,13 +173,13 @@ under 12px **after** zoom, so the smallest overlay size times the minimum
   is flow: one column in the same DOM order with one page scroll.
 - Region padding (rem, scaling with s): 12px left and right in every
   region. Top and bottom, as shipped (each region's own sheet loads after
-  `web/app.css` and overrides its `--region-pad`): G 2px (`strip.css`), C
-  10px (`context.css`, so a full guide fits its track), T 6px, N 8px, B
-  6px (`buildline.css`), I 12px, U 7px, or 3px in the compact class
-  (`keptchecks.css`: `--pad-u` less 1px, so its label and one row, 2 + 6
-  + 20 + 20 = 48px, fit the 52px track). G, C, B and U pad less than the
-  plan's 4 / 12 / 8 / 8 px so a fractional region top never eats the 2px
-  slack minimum (fit check G4). 8px between regions, 12px between the two
+  `web/app.css` and overrides its `--region-pad`), each a spacing token
+  since F-189: G 2px (`strip.css`), C 8px (`context.css`, so a full guide
+  fits its track), T 4px, N 8px, B 4px (`buildline.css`), I 12px, U 4px,
+  or 2px in the compact class (`--pad-u`, so its label and one row, 2 + 4
+  + 20 + 20 = 46px, fit the 52px track). G, C, T, B and U pad less than
+  the plan's 4 / 12 / 8 / 8 / 8 px so a fractional region top never eats
+  the 2px slack minimum (fit check G4). 8px between regions, 12px between the two
   columns.
 - Play content (TD-10 to TD-16): the build alert is a state of region B;
   the new-character tip, the language note, the setup line and the
