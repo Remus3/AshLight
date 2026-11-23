@@ -6,6 +6,7 @@ values are invented."""
 from server.al.state import (EVAL_CARD_S, PRICE_CARD_S, PRICE_TEXT, SAME_PRESS_S,
                              SessionState, overlay_card, price_card_text)
 import srcpaths
+from server.al.text.common import CARD_LINE
 from server.al.theorycraft import live
 
 
@@ -191,7 +192,7 @@ def test_overlay_lines_fit_the_card():
               price("error", error="x"), price("error", error="no league"),
               price(count=0), price("link", url=LINK)):
         t = price_card_text(c)
-        assert len(t["line"]) <= 34 and len(t["detail"]) <= 34, t
+        assert len(t["line"]) <= CARD_LINE and len(t["detail"]) <= CARD_LINE, t
 
 
 def ev_card(ok=True, error=None):

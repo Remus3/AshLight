@@ -475,10 +475,11 @@ Generation rules:
 5. **Overlay register is telegraphic**: drop verbs and articles when a
    line must fit (`Lv 12 | 3 deaths`, `Trade: Quietfox`). The dashboard
    register is the full sentence.
-6. **Line limits**: overlay zone 28 chars, trade card and item check card
-   26 chars per line (CARD-LINE-LIMIT-FLIP; 34 before, which rendered
-   past the 236 px text budget at 14 px - the limit drops, never the font
-   size);
+6. **Line limits**: the overlay strip's zone line 28 chars (the " (HO)"
+   tag included; it is a strip row, not a card); every card line (trade,
+   item check, price, waystone, zone moment) 26 chars, the core's
+   CARD_LINE (CARD-LINE-LIMIT-FLIP; 34 before, which rendered past the
+   236 px text budget at 14 px - the limit drops, never the font size);
    dashboard event lines wrap, never truncate.
 7. **Plurals are correct**: `1 death`, `2 deaths`, `1 level-up`.
 8. **Time words are relative on the overlay** (`3m`, `1h05m`) and local

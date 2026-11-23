@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from server.al.core import Core
+from server.al.text.common import CARD_LINE
 from server.al.http import serve
 from server.al.state import (EVAL_CARD_S, SessionState, build_alert_text, eval_card_text,
                              stat_delta_text)
@@ -140,7 +141,7 @@ def test_delta_head_keeps_the_slot_name_at_the_26_fit():
                 c = card(verdict=verdict, slot=slot, score_delta=delta,
                          comparisons=[comp(slot, verdict, delta, empty=empty)])
                 head = eval_card_text(c)["head"]
-                assert len(head) <= 26, (slot, delta, empty)
+                assert len(head) <= CARD_LINE, (slot, delta, empty)
                 # 9-letter verdict + "Body Armour" + empty is 28 at least
                 if not (empty and verdict != "upgrade" and slot == "Body Armour"):
                     assert slot in head, (slot, verdict, empty, head)
@@ -197,15 +198,15 @@ def test_every_mark_has_a_word():
 
 
 def test_overlay_lines_fit_the_card():
-    """Section 9 rule 6: the head and line of the common cases fit 34;
-    CARD-LINE-LIMIT-COPY: without an alert they are worded to fit 26."""
+    """Section 9 rule 6: the head and line fit CARD_LINE (26 since
+    CARD-LINE-LIMIT-FLIP), with or without a build alert."""
     for c in (card(), card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade"),
               card(unidentified=True),
               {"ok": False, "error": "no build loaded"},
               {"ok": False, "error": "no gear slot for this item class"},
               {"ok": False, "error": "empty clipboard"}):
         t = eval_card_text(c)
-        assert len(t["head"]) <= 26 and len(t["line"]) <= 26, t
+        assert len(t["head"]) <= CARD_LINE and len(t["line"]) <= CARD_LINE, t
         # TC-VERDICT-CAVEAT: with any build alert, worst cases included
         long_name = "Q" * 23
         for alert in [a for a, _short in ALERTS] + [
@@ -215,16 +216,16 @@ def test_overlay_lines_fit_the_card():
                 {"kind": "class", "build_class": "X" * 40},
                 {"kind": "level", "build_level": 10 ** 40, "level": 1}]:
             t = eval_card_text(c, alert)
-            assert len(t["head"]) <= 34 and len(t["line"]) <= 34, (t, alert)
+            assert len(t["head"]) <= CARD_LINE and len(t["line"]) <= CARD_LINE, (t, alert)
 
 
 def test_alert_head_takes_line3():
     """TC-VERDICT-CAVEAT (F-043): while a build alert is set, a compared
-    item's line 3 is the alert's short head (exact, at most 34) and the
+    item's line 3 is the alert's short head (exact, at most CARD_LINE) and the
     alert sentence is the first dashboard note; the verdict stays."""
     for alert, short in ALERTS:
         words = build_alert_text(alert)
-        assert words["short"] == short and len(short) <= 26
+        assert words["short"] == short and len(short) <= CARD_LINE
         t = eval_card_text(card(), alert)
         assert (t["head"], t["item"], t["line"]) == (
             "Upgrade +47.5 vs Ring 1", "Storm Loop", short)

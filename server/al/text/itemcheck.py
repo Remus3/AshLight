@@ -8,7 +8,7 @@ same object. Pure functions and constants; stdlib only.
 
 from ..theorycraft import cardparts
 from .buildlive import build_alert_text
-from .common import _dict, _dicts, _key, _num_text, _points, _signed, _signed_points, _text
+from .common import CARD_LINE, _dict, _dicts, _key, _num_text, _points, _signed, _signed_points, _text
 from .price import EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT, no_item
 from .waystone import waystone_text
 
@@ -16,9 +16,9 @@ from .waystone import waystone_text
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
 # the overlay print these; neither builds verdict wording itself.
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
-# CARD-LINE-LIMIT-COPY: overlay lines are worded to fit 26 characters while
-# common.CARD_LINE stays 34; CARD-LINE-LIMIT-FLIP lowers CARD_LINE to it.
-LINE_FIT = 26
+# CARD-LINE-LIMIT-COPY: overlay lines are worded to fit common.CARD_LINE
+# (26 since CARD-LINE-LIMIT-FLIP).
+LINE_FIT = CARD_LINE
 UNIDENTIFIED_LINE = "Mods hidden: identify it"
 EVAL_ERROR_TEXT = {
     # error: (overlay head, overlay line, dashboard sentence)

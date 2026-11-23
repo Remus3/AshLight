@@ -10,7 +10,7 @@ functions and constants; stdlib only.
 
 import math
 
-from .common import _dict, _dicts, _is_time, _key, _num_text, _text
+from .common import CARD_LINE, _dict, _dicts, _is_time, _key, _num_text, _text
 
 
 # OVL-COPY-FIRST (F-054): the press found a blank clipboard (the game had not
@@ -36,9 +36,9 @@ def no_item(card):
 
 # "link" (decision 0017) is the only success status the core produces now;
 # searching / waiting / done / off are kept for the 0016 contract's readers
-# CARD-LINE-LIMIT-COPY: the price line is worded to fit 26 characters while
-# common.CARD_LINE stays 34; CARD-LINE-LIMIT-FLIP lowers CARD_LINE to it.
-LINE_FIT = 26
+# CARD-LINE-LIMIT-COPY: the price line is worded to fit common.CARD_LINE
+# (26 since CARD-LINE-LIMIT-FLIP).
+LINE_FIT = CARD_LINE
 
 PRICE_STATUSES = ("link", "searching", "waiting", "done", "off", "error")
 PRICE_LISTINGS = 10

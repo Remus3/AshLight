@@ -8,6 +8,7 @@ from pathlib import Path
 
 import srcpaths
 from server.al.state import overlay_card, waystone_text
+from server.al.text.common import CARD_LINE
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML = srcpaths.index_html()
@@ -15,7 +16,7 @@ CSS = srcpaths.read("app.css")
 SEARCH = srcpaths.read("search.js")
 APP = srcpaths.read("app.js")
 DISCLAIMER = "This product isn't affiliated with or endorsed by Grinding Gear Games in any way."
-CARD_MAX = 34  # design 0001 section 9 rule 6
+CARD_MAX = CARD_LINE  # design 0001 section 9 rule 6 (26 since CARD-LINE-LIMIT-FLIP)
 
 
 def _footer():
