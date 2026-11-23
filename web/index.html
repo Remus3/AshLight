@@ -433,9 +433,11 @@
       </div>
     </div>
     <form id="weights-form" class="weights-form">
-      <!-- every weight, 9 a page (6 compact); a page shows its rows and
-           hides the rest, so a save always sends every weight -->
+      <!-- every weight, 8 a page (5 compact); a page shows its rows and
+           hides the rest, so a save always sends every weight; a changed
+           row shows its default and its own Reset -->
       <div id="weights" class="card-page" data-page="edit" data-label="Stat weights" hidden>
+        <p id="weights-count" class="row-meta one-line muted"></p>
         <ul id="weights-list" class="weights-list"></ul>
         <div id="weights-pager" class="al-pager"></div>
       </div>
