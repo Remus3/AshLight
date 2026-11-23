@@ -18565,7 +18565,11 @@
     "web/index.html",
     "server/al/settingsio.py",
     "web/settingsio.js",
-    "tests/test_ux_settings_io.py"
+    "tests/test_ux_settings_io.py",
+    "server/al/http.py",
+    "server/al/text/playernotes.py",
+    "docs/design/copy/playernotes.md",
+    "tests/test_player_notes.py"
    ],
    "new_files": [
     "web/playernote.js",
@@ -18579,7 +18583,8 @@
    ],
    "tests": [
     "app/test/playernote.test.js",
-    "tests/test_ux_settings_io.py"
+    "tests/test_ux_settings_io.py",
+    "tests/test_player_notes.py"
    ],
    "accept": "node --test app/test/playernote.test.js and python -m pytest -q tests/test_ux_settings_io.py tests/test_a11y.py tests/test_dash_console.py pass: Save posts the note for the shown zone and character, the box is capped at 200 characters, and a settings export holds notes only when the option is ticked.",
    "zero_click": "Optional review act on the Run tab; nothing to press in play.",
@@ -18597,7 +18602,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. index.html: a labelled textarea and Save on the zone guide page of the Run, Acts card, the export checkbox in Settings, Appearance and tools, and the tag of web/playernote.js (registers on ALRegions for ctx.api). settingsio.py: an explicit include-notes option outside ALLOWED's default set; an import never overwrites notes silently. Play itself gains no control (principle 5). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017).",
+   "notes": "Tier P3. index.html: a labelled textarea and Save on the zone guide page of the Run, Acts card, the export checkbox in Settings, Appearance and tools, and the tag of web/playernote.js (registers on ALRegions for ctx.api). settingsio.py: an explicit include-notes option outside ALLOWED's default set; an import never overwrites notes silently. Play itself gains no control (principle 5). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). CARRIED FROM 186A (wave 33 orchestrator, design findings PN-5 and PN-6): PN-5 moves the http.py refusals 'Save one zone at a time.' and the 413 too-large refusal of POST /api/player-note into server/al/text/playernotes.py and the copy sheet docs/design/copy/playernotes.md, http.py importing them; PN-6 adds to the sheet the sentence that the sheet and the text module are edited in both places together and names the exact-output test (tests/test_player_notes.py) that pins every sentence.",
    "wave": 33,
    "owner": "session",
    "tier": "P3",
