@@ -22,18 +22,20 @@ function snapWith(rows) { return { diag: { checks: rows } }; }
 
 function makeDoc() {
   const byId = {};
+  const focused = { id: null };
   function node(id, extra) {
     const n = Object.assign({ id: id, hidden: false, value: "", textContent: "",
       attrs: {}, listeners: {}, addEventListener(k, fn) { this.listeners[k] = fn; },
       setAttribute(k, v) { this.attrs[k] = String(v); },
-      removeAttribute(k) { delete this.attrs[k]; } }, extra || {});
+      removeAttribute(k) { delete this.attrs[k]; },
+      focus() { focused.id = this.id; } }, extra || {});
     byId[id] = n;
     return n;
   }
   node("logpath-form", { hidden: true });
   node("logpath-in");
   node("logpath-said");
-  return { byId, getElementById(id) { return byId[id] || null; } };
+  return { byId, focused, getElementById(id) { return byId[id] || null; } };
 }
 
 function resolved(value) {
@@ -119,6 +121,44 @@ test("a bad path shows the core's 400 words, anything else the retry line", () =
   assert.equal(doc.byId["logpath-said"].textContent, L.NOT_SAVED);
 });
 
+test("LP-A: a refused path moves focus to the field, marked invalid", () => {
+  L.reset();
+  const doc = makeDoc();
+  doc.byId["logpath-in"].value = "relative\\path";
+  L.submit(doc, () => rejected(new Error("HTTP 400")));
+  assert.equal(doc.focused.id, "logpath-in");
+  assert.equal(doc.byId["logpath-in"].attrs["aria-invalid"], "true");
+  assert.equal(doc.byId["logpath-said"].textContent, L.BAD_PATH);
+  /* a retry line or a Saved answer moves no focus */
+  doc.focused.id = null;
+  L.submit(doc, () => rejected(new Error("HTTP 500")));
+  assert.equal(doc.focused.id, null);
+  doc.byId["logpath-in"].value = "relative\\path";
+  L.submit(doc, () => resolved({}));
+  assert.equal(doc.focused.id, null);
+  /* a field without focus() does not throw */
+  L.reset();
+  const bare = makeDoc();
+  bare.byId["logpath-in"].focus = undefined;
+  bare.byId["logpath-in"].value = "x";
+  L.submit(bare, () => rejected(new Error("HTTP 400")));
+  assert.equal(bare.byId["logpath-in"].attrs["aria-invalid"], "true");
+  /* from Use the refusal moves focus; a player who moved on keeps theirs */
+  L.reset();
+  const use = makeDoc();
+  use.activeElement = { id: "logpath-use" };
+  use.byId["logpath-in"].value = "x";
+  L.submit(use, () => rejected(new Error("HTTP 400")));
+  assert.equal(use.focused.id, "logpath-in");
+  L.reset();
+  const away = makeDoc();
+  away.activeElement = { id: "web-data-toggle" };
+  away.byId["logpath-in"].value = "x";
+  L.submit(away, () => rejected(new Error("HTTP 400")));
+  assert.equal(away.focused.id, null);
+  assert.equal(away.byId["logpath-in"].attrs["aria-invalid"], "true");
+});
+
 test("one post at a time", () => {
   L.reset();
   const doc = makeDoc();
@@ -165,7 +205,7 @@ test("the markup: a labelled field in Reading and web data, hidden, a quiet answ
   assert.doesNotMatch(form, /aria-live|role="status"|role="alert"|id="logpath-said"/);
   const after = body.slice(body.indexOf("</form>"));
   assert.match(after, /^<\/form>\s*<p id="logpath-said" class="row-meta"><\/p>/);
-  assert.match(form, /<input id="logpath-in"[^>]*aria-describedby="logpath-note logpath-said"/);
+  assert.match(form, /<input id="logpath-in"[^>]*aria-describedby="logpath-said logpath-note"/);
   assert.match(form, /<button id="logpath-use"[^>]*aria-describedby="logpath-said"[^>]*>Use<\/button>/);
   assert.match(HTML, /<script src="\/web\/logpath\.js" defer><\/script>/);
 });

@@ -17,7 +17,8 @@
    sits after the form, so a Saved line stays when the form hides. It is
    not a live region: the page keeps its cap of plan 03 4.1.3 and Settings
    lines beside their forms stay quiet. The field and Use both point at it
-   (aria-describedby), a refused path sets aria-invalid on the field, and
+   (aria-describedby), a refused path sets aria-invalid on the field and
+   moves focus to it so both are announced (LP-A), and
    a found Client.txt is announced by the bar's polite reading word.
 
    UMD: CommonJS for node --test (app/test/logpath.test.js),
@@ -81,6 +82,12 @@
     }
   }
 
+  /* focus is still on the form (the field or Use) or nowhere (the body) */
+  function stillHere(doc, box) {
+    var a = doc.activeElement;
+    return !a || a === box || a === doc.body || a.id === "logpath-use";
+  }
+
   function paint(doc, snap) {
     var form = doc.getElementById("logpath-form");
     if (!form) { return; }
@@ -117,7 +124,13 @@
     }, function (e) {
       env.busy = false;
       said.textContent = errorText(e);
-      invalid(box, said.textContent === BAD_PATH);
+      var bad = said.textContent === BAD_PATH;
+      invalid(box, bad);
+      /* LP-A: a refused path moves focus to the field, so a screen reader
+         reads its invalid state and the answer it points at
+         (aria-describedby); a retry line leaves focus where it is, and so
+         does a player who moved on while the post was in flight */
+      if (bad && typeof box.focus === "function" && stillHere(doc, box)) { box.focus(); }
     });
   }
 

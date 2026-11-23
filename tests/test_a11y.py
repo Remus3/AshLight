@@ -443,3 +443,20 @@ def test_overlay_parts_adds_no_live_region_beyond_its_status_line():
     assert not is_live(status) and not any(is_live(a) for a in status.ancestors())
     src = JS["overlayparts.js"]
     assert "aria-live" not in src and not re.search(r"""role["']?\s*,""", src)
+
+
+def test_a_refused_log_path_moves_focus_to_the_marked_field():
+    """LP-A (design review SEC-LOG-PATH-FIELD): the answer line is not a
+    live region, so a refused Client.txt path moves focus to the field,
+    which carries aria-invalid and points at the answer (aria-describedby):
+    the screen reader reads both with no extra click."""
+    src = JS["logpath.js"]
+    arm = src[src.index("said.textContent = errorText(e);"):]
+    arm = arm[:arm.index("});")]
+    assert re.search(r"invalid\(box, bad\);", arm)
+    assert re.search(r"if \(bad && typeof box\.focus === \"function\" && stillHere\(doc, box\)\)"
+                     r" \{ box\.focus\(\); \}", arm)
+    assert arm.index("invalid(box, bad)") < arm.index("box.focus()")
+    field = re.search(r"<input id=\"logpath-in\"[^>]*>", HTML, re.S).group(0)
+    # the answer is read first, then the static note
+    assert 'aria-describedby="logpath-said logpath-note"' in field
