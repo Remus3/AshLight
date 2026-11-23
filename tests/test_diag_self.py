@@ -266,7 +266,11 @@ def test_hotkey():
     assert "overlay key" in bad["fix"] and ".ps1" not in bad["fix"]
     bad = row({"hotkeys": _hk({"want": "Alt+Shift+E", "registered": False}, tog)}, "hotkey")
     assert bad["fix"] == diag.FIX_HOTKEY and "item check key" in bad["fix"]
-    assert "Overlay position and size" in diag.FIX_HOTKEY
+    # RUN-SETTINGS-WORDS: the fixes name the Settings Keys section and its
+    # Change a key button, never the old Tools wording
+    for fix in (diag.FIX_HOTKEY, diag.FIX_TOGGLE_KEY):
+        assert "Settings, Keys" in fix and "Change a key" in fix
+        assert "Tools" not in fix and "Overlay position and size" not in fix
     # unknown parts read unknown
     assert status({"hotkeys": _hk()}, "hotkey") == "unknown"
     # the overlay process is not running: keys unknown, no note
