@@ -1,1 +1,0 @@
- -- done 2026-11-22 (session wave 33; TEST-WEB-PANELS-C split into C1 (wave 39) and C2 (wave 40), accept grep amended to allow the four shims ALApp, ALFmt, ALRegions, ALTabs; plan_check ok)

@@ -1,1 +1,0 @@
- -- done 2026-11-22 (session wave 33; --exclusive soak median 133.2 s of 133.2 / 135.1 / 132.8 s on a16f1ad, no code change, no budget moved)

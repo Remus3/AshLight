@@ -40,21 +40,10 @@ operator phrase.`
 - [ ] TC-OVL-CARD-TONE (build) Overlay card honours the core tone (TCP-3 of the TC-CARD-PARTS review): app/shared/format.js takes the card's tone from the core snapshot instead of its own edge rule, as the dashboard does. ACCEPT: npm test --prefix app passes with a test that a core tone overrides the edge colour. ZERO-CLICK: No click: the overlay follows the core's tone by itself. DEPENDS: TC-CARD-PARTS-WEB. BLOCKED: session wave 7.
 - [ ] BUDGET-RETIRE-TAILER-IDLE (build) Retire tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent, superseded by B1 (RUN-BUDGET-TESTS-DET kept it because tools/docs_fresh.py and README.md pin it): delete the test, repoint the "tailer idle" fact in tools/docs_fresh.py to test_real_loop_body_10_s_worst_case_under_half_percent and reword README's tailer line to B1's half-percent figure. ACCEPT: python -m pytest -q tests/test_docs_fresh.py tests/test_budgets.py passes. ZERO-CLICK: Test housekeeping; no click. DEPENDS: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a package in wave 25 or later).
 - [ ] RUN-CARDS-PAGE-FIT (build) Run tab Acts, Maps and Deaths cards still page at 10 rows (8 compact): 268 px against the measured 244 px budget at 1280x760 (204 px at 1024x700). Only a 10-row fill overflows; no fit state fills 10 rows today. Add one fit state that fills 10 rows on each card and set the page size so it fits (PLAY-TD-20B-RUN-CARDS review gap). ACCEPT: python -m pytest -q tests/test_play_fit.py passes with the new 10-row state and npm test --prefix app passes. ZERO-CLICK: Layout floor; no click. DEPENDS: PLAY-TD-20B-RUN-CARDS. BLOCKED: session (follow-up of adjudicator ruling 2026-11-21, wave 22; needs a wave 23 or 24 package owning the Run cards, or a new small package).
-- [ ] A11Y-1 (build) A disabled link-style button (button.link:disabled) shows only muted text; give it a non-colour cue (edge or underline style) per design 0001 (wave 28 design finding, nit). ACCEPT: python -m pytest -q tests/test_a11y.py tests/test_design_contrast.py passes with a pin for the disabled cue. ZERO-CLICK: the disabled look needs no setting. DEPENDS: none.
-- [ ] CARD-HINT-TWIN (build) web/slots.js HINT_TAIL mirrors the core key hint fallback ('Check: <key>' when the full form is over 26, no hint for keys over 19) (design review CARD-LINE-LIMIT-COPY2 finding CL2-1, wave 27); CL2-2: price.md notes the overlay poe.ninja credit is carried by the dashboard sentence. ACCEPT: npm test --prefix app passes with a pin of both hint forms. ZERO-CLICK: the hint words fit by themselves. DEPENDS: CARD-LINE-LIMIT-COPY2.
-- [ ] CARD-LINE-34-LEFTOVERS (build) After CARD-LINE-LIMIT-FLIP, stale "CARD_LINE stays 34" comments remain in server/al/text/buildlive.py, itemcheck.py, overlaycard.py, price.py, waystone.py, loose <= 34 bounds in tests/test_eval_text.py, tests/test_price_text.py, tests/test_waystone.py, tests/test_ux_b6.py (CARD_MAX = 34), and format.js zoneText default 28 vs design rule 6 wording (FLIP-2); tighten them to CARD_LINE. ACCEPT: python -m pytest -q tests/test_eval_text.py tests/test_price_text.py tests/test_waystone.py tests/test_ux_b6.py passes with bounds at CARD_LINE. ZERO-CLICK: tests pin the limit by themselves. DEPENDS: CARD-LINE-LIMIT-FLIP.
-- [ ] CL-2 (build) Item check card: a long compared head keeps the slot name instead of dropping it (design review CARD-LINE-LIMIT-COPY finding CL-2, wave 26). ACCEPT: python -m pytest -q tests/test_eval_text.py tests/test_play_cards.py passes with a pin that the slot name survives at the 26-character fit. ZERO-CLICK: the card words fit by themselves. DEPENDS: CARD-LINE-LIMIT-COPY2.
-- [ ] CL-3 (build) Dashboard item rows: the row separator matches the design system (design review CARD-LINE-LIMIT-COPY finding CL-3, wave 26). ACCEPT: python -m pytest -q tests/test_design_contrast.py tests/test_ux_review.py and npm test --prefix app pass. ZERO-CLICK: nothing for players; the rows render that way by themselves. DEPENDS: none.
-- [ ] LP-A (build) Client.txt path form: on a refused path move keyboard focus to the path field so the invalid state and the answer are announced (design review SEC-LOG-PATH-FIELD finding LP-A, wave 26). ACCEPT: python -m pytest -q tests/test_a11y.py and npm test --prefix app pass and a refused save leaves focus on the field with aria-invalid set. ZERO-CLICK: focus moves by itself on the refusal; the player clicks nothing more. DEPENDS: none.
-- [ ] LP-B (build) Client.txt path form: after Save hides the form, keyboard focus lands on the control that opened it instead of being lost (design review SEC-LOG-PATH-FIELD finding LP-B, wave 26). ACCEPT: npm test --prefix app passes with a test that the opener holds focus after a successful save. ZERO-CLICK: focus returns by itself. DEPENDS: none.
-- [ ] NDE-1 (build) The private-files Checks fix for the app folder tells the player to run a python command line; give a player-level fix (a button or plain words) (wave 28 design finding, S3). ACCEPT: python -m pytest -q tests/test_diag_self.py tests/test_ux_review.py passes with a pin that no Checks fix text holds `python -m`. ZERO-CLICK: the fix words show by themselves. DEPENDS: none.
-- [ ] NDE-2 (build) The aria-label word order in web/index.html (around line 100) reads awkwardly; put the label words in reading order (wave 28 design finding, nit). ACCEPT: python -m pytest -q tests/test_a11y.py passes. ZERO-CLICK: the label reads right by itself. DEPENDS: none.
-- [ ] PLAN-07-WAVE-DRIFT (build) docs/plan/07-execution-plan.md wave sections drift from docs/plan/packages.json (files, batches) in waves 26 to 29; regenerate them from packages.json or retire them in favour of plan_check output, with a check that fails on drift. ACCEPT: python tools/plan_check.py check passes and a new check reports no 07 / packages.json drift. ZERO-CLICK: plan_check runs the drift check itself. DEPENDS: none.
-- [ ] PLAY-TD-21C-HISTORY-MOVE (build) Run history keep / clear moves from the Last session card to Settings > About and data and the jump row goes (PLAY-TD-21B deviation 1, adjudicator option B, wave 27; files app/test/summary.test.js, web/history.js, web/summary.js, web/index.html). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_play_fit.py tests/test_a11y.py pass. ZERO-CLICK: nothing new to click; the controls sit where Settings lists them. DEPENDS: PLAY-TD-21B-SETTINGS-ABOUT.
-- [ ] REL-UPDATE-APPLY-NOW (build) 'Update now' also applies the staged release: after the staging run the client stops the core through stop.request and runs apply-staged, instead of waiting for the next client start (follow-up of REL-UPDATE-TRIGGER deviation 1, wave 27; app/client/launcher.js). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_updates.py pass with an injected launcher test of the stop then apply order. ZERO-CLICK: one 'Update now' click finishes the update. DEPENDS: REL-UPDATE-TRIGGER.
-- [ ] RUN-DATAAGE-SHARED-PARSE (build) server/al/plug/dataage.py still reads world_areas on its own through acts.load_ids; move it onto acts.TableCache shared parse (RUN-PERF-PARSE-ONCE follow-up). ACCEPT: python -m pytest -q tests/test_diag_data_age.py tests/test_budget_start.py passes. ZERO-CLICK: the data age check parses nothing extra by itself. DEPENDS: RUN-PERF-PARSE-ONCE.
-- [ ] RUN-SETTINGS-WORDS (build) server/al/hints.py NO_KEY and the server/al/diag.py hotkey fix sentences name the new Settings sections (Keys) instead of 'Settings, Tools, Keys' and 'Overlay position and size in AshLight's Tools' (PLAY-TD-21B note, wave 27). ACCEPT: python -m pytest -q tests/test_newbie_hints.py tests/test_diag_self.py passes. ZERO-CLICK: the sentences point at the right place by themselves. DEPENDS: PLAY-TD-21B-SETTINGS-ABOUT.
-- [ ] TEST-OVL-CHECK-LOAD (build) tests/test_ovl_check.py stays inside its slow-test budget under machine load (4 tests at 1.6-2.2 s against 1.5 s while another suite holds a gate slot, waves 26 and 27; they pass alone and in batch suites): mark the slow ones or speed the fake server, never widen the global ceiling. ACCEPT: python -m pytest -q tests/test_ovl_check.py tests/test_slow_budget.py passes alone and beside a gated subset. ZERO-CLICK: the suite runs by itself. DEPENDS: none.
+- [ ] AUTOSTART-PSEXE (build) setAutostart in app/client/launcher.js still spawns bare powershell.exe; switch it to psExe() (absolute System32 Windows PowerShell 5.1), update app/test/autostart_switch.test.js and shrink BARE_SPAWN_KNOWN in tests/test_audit_exe_path.py (raised wave 15 and wave 31, never filed). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_audit_exe_path.py pass with BARE_SPAWN_KNOWN no longer listing setAutostart. ZERO-CLICK: no change to what the player does. BLOCKED: session.
+- [ ] CP-1 (build) Character picker line squeezes its select at narrow widths: the nowrap picker line in web/app.css leaves the select too narrow; let the line wrap or give the select a minimum width (RUN-CHARACTER-PIN design finding, S3). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_a11y.py passes with a pin that the picker select keeps at least 24 px target and its full label at 320 px. ZERO-CLICK: styling only; nothing to press. DEPENDS: RUN-CHARACTER-PIN. BLOCKED: session.
+- [ ] CP-2 (build) Announce a failed character pin: the pin failure line is not sent to screen readers; route it through ALTabs.say or the shared Settings status region (RUN-CHARACTER-PIN design finding, S3). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_a11y.py pass with a pin that a failed pin save is announced politely. ZERO-CLICK: no setting; the announcement is automatic. DEPENDS: RUN-CHARACTER-PIN. BLOCKED: session.
+- [ ] GLANCE-PENDING-OUT (build) Remove the stale DESIGN_TEXT_PENDING skip ('Copy the item first') in tests/test_glance_rules.py now that PLAY-TD-23-RECORDS wrote design 0001 section 10; empty the tuple and its skip branch. ACCEPT: python -m pytest -q tests/test_glance_rules.py passes with DESIGN_TEXT_PENDING gone or empty and no skip reported (-rs). ZERO-CLICK: test-only; nothing to press. DEPENDS: PLAY-TD-23-RECORDS. BLOCKED: session.
 
 ## Lane: data
 
@@ -72,6 +61,7 @@ operator phrase.`
 ## Lane: review
 
 - [ ] WT-SIDECAR-WIRE (review) Reopened WT-SIDECAR: agent worktrees must land under the AL sidecar through the decision 0012 hooks, not only by the hand-run hook. ACCEPT: python -m pytest -q tests/test_wt_sidecar_hook.py -rs reports no skip and git worktree list after one isolated agent spawn shows its path under the sidecar Worktree folder. ZERO-CLICK: One paste by the operator, once; every later wave spawn lands in the sidecar by itself. BLOCKED: operator act (paste the two hook entries of decision 0012 into .claude/settings.json); AUTO-26 flips it when its proof passes.
+- [ ] GATE-HOLD-D (review) Restore the 120 s suite target: the GATE-HOLD-C soak median 133.2 s is still over the 125 s line of the decision 0060 amendment, so 145 s stays the interim bound; find the next test-side cuts (the two test_al_loop_gate_cache wall-clock overruns at 3.07 / 3.38 s under load first). ACCEPT: three --exclusive soak runs from Bash on main with a median at or under 125 s, the bound moved back to 120 s in decision 0060 and CLAUDE.md. ZERO-CLICK: the soak runs by itself through the suite gate. DEPENDS: GATE-HOLD-C. BLOCKED: session.
 
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
@@ -321,76 +311,15 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 28: Play tab and dashboard, reliability and observability
 
-- [ ] PLAY-TD-04B-THEME-CHOICE (build) Theme choice: Dark, Follow Windows, Light. ACCEPT: python -m
-  pytest -q tests/test_theme_setting.py tests/test_ux_settings_io.py tests/test_play_fit.py
-  tests/test_http_security.py and node --test app/test/webtheme.test.js pass: with
-  prefers-color-scheme light emulated and no setting the page background computes to rgb(15, 18,
-  22), with Theme Light it computes to rgb(255, 255, 255), the setting survives export and import,
-  and a capture through the shared capture helper has a mean relative luminance under 0.05.
-  ZERO-CLICK: Dark with no action; the choice is one optional click in Settings. DEPENDS:
-  PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04A-DARK-CLIENT, SEC-SURFACE-PIN, TEST-CAPTURE-HELPER.
-  BLOCKED: session wave 30.
-- [ ] PLAY-F-165-COLOUR-WORD-TEST (build) Test: colour never works alone. ACCEPT: python -m pytest
-  -q tests/test_colour_never_alone.py passes on the tree and fails when .foo { color:
-  var(--fk-status-ok) } is planted on a wordless node. ZERO-CLICK: Runs in the test gates by itself;
-  no player step. DEPENDS: PLAY-TD-22A-A11Y-CSS.
 
 ### Wave 29: Play tab and dashboard, overlay and client
 
-- [ ] PLAY-F-186A-PLAYER-NOTES-STORE (build) Player notes: bounded store, token route and the
-  your-note row. ACCEPT: python -m pytest -q tests/test_player_notes.py tests/test_play_cards.py
-  tests/test_sidecar_paths.py tests/test_floor_static.py tests/test_http_security.py passes: a note
-  saved for an area id shows as your note on the next entry of that zone for that character only, a
-  malformed file keeps the last good copy with a Checks note, the file never exceeds 300 zones of
-  200 characters, and the POST needs the token and accepts plain text only. ZERO-CLICK: Shown by
-  itself on zone entry; writing a note is the player's choice. DEPENDS: PLAY-TD-07B-PLAY-CARDS,
-  PLAY-TD-04B-THEME-CHOICE, RUN-ZONE-RESET, RUN-HOTRELOAD-RETRY, DATA-GUIDE-MERGE. BLOCKED: session wave 31.
-- [ ] PLAY-F-204A-SR-TOOL (build) Screen-reader pass tool and its refusals. ACCEPT: python -m pytest
-  -q tests/test_sr_pass.py tests/test_floor_static.py passes: tools/sr_pass.py exits non-zero
-  without the operator flag and while the running core reports game_idle false, holds no OS input,
-  screen, audio or clipboard call, and on a fixture speech log writes a transcript with one section
-  per step (page load, item check, trade request, tab switch, Settings form); the transcript check
-  of docs/design/screen-reader-pass.md skips while that file is absent. ZERO-CLICK: Dev step; the
-  tool and its refusals run in the test gates on a fixture speech log; no player step. DEPENDS:
-  PLAY-TD-22C-A11Y-CDP, SEC-DEMO-ENTRY. BLOCKED: session wave 30.
 
 ### Wave 30: overlay and client, tests and code seams, loop and watchers
 
-- [ ] OVL-TD18-CARD-TIME (build) Card time setting: 20 / 60 / 200 s (TD-18, optional). ACCEPT:
-  python -m pytest -q tests/test_overlay_layout.py tests/test_overlay_view.py
-  tests/test_price_text.py tests/test_eval_text.py tests/test_ux_settings_io.py and node --test
-  app/test/layout.test.js app/test/overlayparts.test.js pass. ZERO-CLICK: Set once in Settings; the
-  card still shows and leaves by itself. DEPENDS: OVL-LINE2-GUIDE, OVL-PARTS-WEB,
-  OVL-TD06-AUTOSCALE, OVL-COPY-FIRST, OVL-KEYS-WEB, OVL-OVERLAY-FEED. BLOCKED: session wave 32.
-- [ ] LOOP-DEV-CHECKS (build) Two Checks notes: a stale loop tick (dev host) and the Electron end of
-  life. ACCEPT: `python -m pytest -q tests/test_diag_dev_notes.py tests/test_diag_self.py` passes.
-  ZERO-CLICK: Passive: the notes appear in the Checks view by themselves; the app makes no request
-  and checks no version online (decision 0013). BLOCKED: session wave 32.
 
 ### Wave 31: Play tab and dashboard, reliability and observability
 
-- [ ] PLAY-F-186B-PLAYER-NOTES-UI (build) Player notes: edit box on Run and the export option.
-  ACCEPT: node --test app/test/playernote.test.js and python -m pytest -q
-  tests/test_ux_settings_io.py tests/test_a11y.py tests/test_dash_console.py pass: Save posts the
-  note for the shown zone and character, the box is capped at 200 characters, and a settings export
-  holds notes only when the option is ticked. ZERO-CLICK: Optional review act on the Run tab;
-  nothing to press in play. DEPENDS: PLAY-F-186A-PLAYER-NOTES-STORE, PLAY-TD-04B-THEME-CHOICE,
-  PLAY-TD-20A-RUN-GRID. BLOCKED: session wave 33.
-- [ ] RUN-CHARACTER-PIN (build) 'This is my character' pin in the picker; poll_ms and character
-  apply without a restart. ACCEPT: python -m pytest -q tests/test_util_multichar.py
-  tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: One click once; nothing in
-  play. DEPENDS: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE. BLOCKED: session wave 33.
-- [ ] PLAY-TD-23-RECORDS (build) Records: design 0001 rewritten, the cockpit decision, decision 0014
-  amended. ACCEPT: python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py
-  tests/test_leak_sweep.py tests/test_design_contrast.py tests/test_design_gate.py passes and
-  docs/design/0001-design-system.md holds no heading that starts with Amendment 2026-11-18.
-  ZERO-CLICK: Docs only; the dev step is one commit after the last TD step lands. DEPENDS:
-  PLAY-TD-02-SLOTS, PLAY-TD-03-TOKENS, PLAY-TD-01B-FIT-HARNESS, DATA-PRICE-CARD-TEXT,
-  PLAY-F-131-STATUS-TABLE, PLAY-TD-07B-PLAY-CARDS, PLAY-TD-08B-GUIDE-SHORT-TEXT,
-  PLAY-TD-09B-SKELETON, PLAY-LEGACY-OUT-2, PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20B-RUN-CARDS,
-  PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS,
-  PLAY-TD-22C-A11Y-CDP, OVL-TD05-LEGIBILITY, OVL-TD05-PLATE, OVL-TD06-AUTOSCALE, OVL-LINE2-GUIDE,
-  OVL-ACT-CARD, OVL-COPY-FIRST, OVL-KEY-HINT, OVL-GLANCE-RULES, OVL-TD18-CARD-TIME. BLOCKED: session wave 33.
 
 ### Wave 32: reliability and observability, install and release
 
