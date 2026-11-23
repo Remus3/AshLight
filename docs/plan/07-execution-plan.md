@@ -1854,7 +1854,8 @@ the feed.
 - Session 9; width 2 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-F-186B-PLAYER-NOTES-UI); server/al/core.py
   (RUN-CHARACTER-PIN); server/al/http.py (PLAY-F-186B-PLAYER-NOTES-UI);
-  server/al/state.py (RUN-CHARACTER-PIN); docs/design/0001-design-system.md
+  server/al/state.py (RUN-CHARACTER-PIN); tests/test_security_surface.py
+  (RUN-CHARACTER-PIN); docs/design/0001-design-system.md
   (PLAY-TD-23-RECORDS); server/al/settingsio.py
   (PLAY-F-186B-PLAYER-NOTES-UI); tests/test_ux_settings_io.py
   (PLAY-F-186B-PLAYER-NOTES-UI).
@@ -1871,7 +1872,7 @@ the feed.
   is flipped and main is clean.
 
 - PLAY-F-186B-PLAYER-NOTES-UI [session, M 60m, build, P3, DR] Player notes: edit box on Run and the export option. Files: web/index.html, server/al/settingsio.py, web/settingsio.js, tests/test_ux_settings_io.py, server/al/http.py (+5 more). Deps: PLAY-F-186A-PLAYER-NOTES-STORE, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-20A-RUN-GRID.
-- RUN-CHARACTER-PIN [session, M 45m, build, P3, DR] 'This is my character' pin in the picker; poll_ms and character apply without a restart. Files: server/al/core.py, server/al/state.py, web/chars.js, app/test/chars.test.js, tests/test_util_multichar.py (+1 more). Deps: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE.
+- RUN-CHARACTER-PIN [session, M 45m, build, P3, DR] 'This is my character' pin in the picker; poll_ms and character apply without a restart. Files: server/al/core.py, server/al/state.py, web/chars.js, app/test/chars.test.js, tests/test_util_multichar.py (+2 more). Deps: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE.
 - PLAY-TD-23-RECORDS [session, L 90m, build, P3, DR] Records: design 0001 rewritten, the cockpit decision, decision 0014 amended. Files: docs/design/0001-design-system.md, docs/decisions/0014-ui-build-eval-gfx.md, docs/design/0004-glance-review.md, docs/design/play-fit-figures.md, docs/decisions/0075-fixed-cockpit-play.md. Deps: PLAY-TD-02-SLOTS, PLAY-TD-03-TOKENS, PLAY-TD-01B-FIT-HARNESS, DATA-PRICE-CARD-TEXT, PLAY-F-131-STATUS-TABLE, PLAY-TD-07B-PLAY-CARDS, PLAY-TD-08B-GUIDE-SHORT-TEXT, PLAY-TD-09B-SKELETON, PLAY-LEGACY-OUT-2, PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20B-RUN-CARDS, PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS, PLAY-TD-22C-A11Y-CDP, OVL-TD05-LEGIBILITY, OVL-TD05-PLATE, OVL-TD06-AUTOSCALE, OVL-LINE2-GUIDE, OVL-ACT-CARD, OVL-COPY-FIRST, OVL-KEY-HINT, OVL-GLANCE-RULES, OVL-TD18-CARD-TIME.
 
 ### Wave 34: install and release, tests and code seams, Play tab and dashboard
