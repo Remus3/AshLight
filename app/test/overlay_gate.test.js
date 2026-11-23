@@ -178,8 +178,11 @@ test("the card's near edge is 62 px from the anchored edge in every state", () =
   const css = fs.readFileSync(path.join(__dirname, "..", "overlay", "overlay.css"), "utf8");
   const r = cssRules(css);
   const ANCHOR = 62;
-  // the 2-line HUD height from the CSS itself: border + padding + 2 lines
-  const hud = r[".hud"];
+  // the 2-line HUD height from the CSS itself: border + padding + 2 lines;
+  // the HUD is the one plate class plus its own rule after it (F-189)
+  const plate = r[".plate"];
+  const hud = { ...plate, ...r[".hud"] };
+  assert.equal(r[".hud"]["font-size"], "var(--al-ovl-fs-hud)");
   const fs16 = px(/--al-ovl-fs-hud:\s*([^;]+);/.exec(css)[1]);
   const lh = Number(/\/([\d.]+)\s/.exec(hud.font)[1]);
   const pad = hud.padding.split(/\s+/).map(px);
@@ -210,8 +213,10 @@ test("the card's near edge is 62 px from the anchored edge in every state", () =
   assert.equal(px(bottom["padding-bottom"]), ANCHOR);
   // the cards are plain flow items with no margin of their own, so the
   // near edge of the first card is exactly the body padding
+  assert.equal(px(plate.margin), 0);
+  assert.ok(!("position" in plate));
   for (const sel of [".trade", ".evalcard"]) {
-    assert.equal(px(r[sel].margin), 0, sel);
+    assert.ok(!("margin" in r[sel]), sel);
     assert.ok(!("position" in r[sel]), sel);
   }
   // no other rule positions or sizes the HUD, the body or a card by state

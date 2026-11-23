@@ -152,7 +152,9 @@ def test_overlay_glance_text_7_to_1_at_opacity_floor():
     # zone line, timer and HUD numbers all use the full text colour
     v = _overlay_vars()
     rules = dict(_rules(_strip_media(_css(OVERLAY_CSS))))
-    assert "var(--fk-text)" in rules[".hud"]
+    # the HUD takes its text colour from the one plate rule (F-189)
+    assert "var(--fk-text)" in rules[".plate"]
+    assert "color" not in rules[".hud"]
     assert "var(--fk-text)" in rules[".timer"]
     got = overlay_ratio(v["fk-text"], _opacity_floor())
     assert got >= GLANCE, got
@@ -272,12 +274,12 @@ def test_overlay_two_font_sizes_16_and_14():
     assert sorted(set(sizes)) == [14.0, 16.0], sizes
     assert min(sizes) >= 14
     rules = dict(_rules(_strip_media(_css(OVERLAY_CSS))))
-    assert "var(--al-ovl-fs-hud)" in rules[".hud"]
-    for card in (".trade", ".evalcard"):
-        assert "var(--al-ovl-fs-card)" in rules[card], card
-    # no font size outside the token block and the three plate rules
+    # F-189: the one plate rule sets the card size, the HUD lifts its own
+    assert "var(--al-ovl-fs-card)" in rules[".plate"]
+    assert re.search(r"font-size\s*:\s*var\(--al-ovl-fs-hud\)\s*;", rules[".hud"])
+    # no font size outside the token block, the plate rule and the HUD
     for sel, body in rules.items():
-        if sel not in (":root", ".hud", ".trade", ".evalcard"):
+        if sel not in (":root", ".plate", ".hud"):
             assert not re.search(r"(?<![-\w])font(?:-size)?\s*:", body), sel
 
 
@@ -297,9 +299,14 @@ def test_overlay_halo_on_every_plate():
     v = _overlay_vars()
     assert v["al-halo"] == "0 0 2px #000, 0 0 2px #000, 0 1px 2px #000"
     rules = dict(_rules(_strip_media(_css(OVERLAY_CSS))))
-    for sel in (".hud", ".trade", ".evalcard"):
-        assert re.search(r"text-shadow\s*:\s*var\(--al-halo\)\s*;", rules[sel]), sel
-        assert re.search(r"border\s*:\s*1px solid var\(--fk-border\)", rules[sel]), sel
+    # F-189: every plate is the one .plate class, which carries both
+    plate = rules[".plate"]
+    assert re.search(r"text-shadow\s*:\s*var\(--al-halo\)\s*;", plate)
+    assert re.search(r"border\s*:\s*1px solid var\(--fk-border\)", plate)
+    html = (ROOT / "app" / "overlay" / "index.html").read_text(encoding="ascii")
+    for kind in ("hud", "trade", "evalcard"):
+        assert f'class="plate {kind}"' in html, kind
+        assert "text-shadow" not in rules["." + kind], kind
     assert "text-stroke" not in _css(OVERLAY_CSS)
 
 
@@ -391,7 +398,7 @@ def test_overlay_forced_colours_keeps_window_transparent():
     root = rules.get("html, body", "")
     assert re.search(r"forced-color-adjust\s*:\s*none", root)
     assert re.search(r"background\s*:\s*transparent", root)
-    plates = rules.get(".hud, .trade, .evalcard", "")
+    plates = rules.get(".plate", "")
     assert re.search(r"forced-color-adjust\s*:\s*auto", plates)
 
 
