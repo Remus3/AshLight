@@ -1,9 +1,10 @@
 "use strict";
 /* UTIL-SESSION-SUMMARY: the last session card (web/summary.js). The core
    sends every sentence (server/al/summary.py); this only adds the end time.
-   PLAY-TD-20B-RUN-CARDS: the card is a Run grid card whose pages are the
-   run history (web/history.js) and its keep / clear switch. Fixture values
-   are invented. */
+   PLAY-TD-20B-RUN-CARDS: the card is a Run grid card whose page is the
+   run history (web/history.js). PLAY-TD-21C-HISTORY-MOVE: the keep / clear
+   switch sits in Settings > About and data, not on the card, and no jump
+   row points at it. Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const web = require("./_web.js");
@@ -93,7 +94,8 @@ function mk(doc, tag, attrs, kids) {
 }
 
 /* The Last session card as web/index.html builds it: the summary home
-   page, the Run history page and the Keep or clear page. */
+   page and the Run history page; the keep / clear switch in the About and
+   data section of Settings. */
 function summaryCard(size) {
   const d = fakeDoc(size);
   const page = (name, label, kids, id) => mk(d, "div", Object.assign({ class: "card-page",
@@ -105,14 +107,14 @@ function summaryCard(size) {
       mk(d, "button", { class: "card-back", "data-card-back": "", hidden: true })]),
     page("main", "", [mk(d, "p", { id: "summary-empty" }),
       mk(d, "div", { id: "summary-lines", hidden: true }), mk(d, "p", { id: "summary-ended", hidden: true }),
-      mk(d, "div", { class: "card-foot" }, [mk(d, "button", { "data-card-open": "history", id: "open-history" }),
-        mk(d, "button", { "data-card-open": "keep", id: "open-keep" })])]),
+      mk(d, "div", { class: "card-foot" }, [mk(d, "button", { "data-card-open": "history", id: "open-history" })])]),
     page("history", "Run history", [mk(d, "p", { id: "history-empty", hidden: true }),
-      mk(d, "div", { id: "history-rows", hidden: true })], "historybox"),
-    page("keep", "Keep or clear run history", [mk(d, "p", { id: "history-on" }),
-      mk(d, "input", { id: "history-keep" }), mk(d, "button", { id: "history-clear" }),
-      mk(d, "p", { id: "history-said" })])
+      mk(d, "div", { id: "history-rows", hidden: true })], "historybox")
   ]);
+  mk(d, "section", { id: "set-about", class: "card rail-section", hidden: true }, [
+    mk(d, "div", { class: "rail-block" }, [mk(d, "p", { id: "history-on" }),
+      mk(d, "input", { id: "history-keep" }), mk(d, "button", { id: "history-clear" }),
+      mk(d, "p", { id: "history-said" })])]);
   return d;
 }
 
@@ -163,8 +165,7 @@ test("summary paint: lines page at 7 (5 compact); the pages open on a press only
   assert.deepEqual(shown(), ["history"]);
   box.querySelector("[data-card-back]").click();
   assert.deepEqual(shown(), ["main"]);
-  d.getElementById("open-keep").click();
-  assert.deepEqual(shown(), ["keep"]);
+  assert.equal(box.querySelectorAll("[data-card-open]").length, 1, "Run history is the one page");
 });
 
 const HIST = { on: true, runs: 3, text: "Run history is on.", empty_text: "", deaths_empty_text: "",
@@ -190,14 +191,17 @@ test("run history page: best times, then the zones of most deaths, one line each
     empty_text: "No finished acts saved yet." });
   assert.deepEqual(h.listRows(none), []);
   assert.equal(h.emptyText(none), "No finished acts saved yet.");
-  // off: it says so and lists nothing
+  // off: it says so, says where the switch is, and lists nothing
+  // (PLAY-TD-21C-HISTORY-MOVE: the switch left the card)
   const off = { on: false, best: [], deaths_by_zone: [], text: "Run history is off. Nothing is saved." };
   assert.deepEqual(h.listRows(off), []);
-  assert.equal(h.emptyText(off), "Run history is off. Nothing is saved.");
+  assert.equal(h.OFF_WHERE, "Turn it on in Settings > About and data.");
+  assert.equal(h.emptyText(off), "Run history is off. Nothing is saved. " + h.OFF_WHERE);
+  assert.equal(h.emptyText({ on: false }), "");
   assert.equal(h.emptyText(null), "");
 });
 
-test("run history paint: the list page and the keep page of the Last session card", () => {
+test("run history paint: the card's list page and the switch in Settings", () => {
   const d = summaryCard();
   h.paint(d, { run_history: HIST });
   assert.equal(texts(listOf(d, "history-rows")).length, 5);
@@ -207,8 +211,10 @@ test("run history paint: the list page and the keep page of the Last session car
   assert.equal(d.getElementById("history-keep").checked, true);
   h.paint(d, { run_history: { on: false, best: [], deaths_by_zone: [], text: "Run history is off." } });
   assert.equal(d.getElementById("history-rows").hidden, true);
-  assert.equal(d.getElementById("history-empty").textContent, "Run history is off.");
+  assert.equal(d.getElementById("history-empty").textContent, "Run history is off. " + h.OFF_WHERE);
   assert.equal(d.getElementById("history-empty").hidden, false);
+  // the Settings line beside the switch keeps the core's sentence alone
+  assert.equal(d.getElementById("history-on").textContent, "Run history is off.");
   assert.equal(d.getElementById("history-keep").checked, false);
   // 9 rows a page (8 compact)
   const many = Object.assign({}, HIST, { best: [], deaths_by_zone: [] });
@@ -223,20 +229,36 @@ test("run history paint: the list page and the keep page of the Last session car
   assert.deepEqual(h.ROWS, { full: 9, compact: 8 });
 });
 
-test("the Last session card in the markup: a grid card with its two pages", () => {
+test("the Last session card in the markup: a grid card with its Run history page", () => {
   const html = web.source("index.html");
   const at = html.indexOf('id="summarybox"');
   const box = html.slice(at, html.indexOf("</section>", at));
   assert.match(box, /^id="summarybox" class="card session grid-card"[^>]*data-home="main">/);
-  ["history", "keep"].forEach((p) => {
-    assert.ok(box.includes('data-card-open="' + p + '"') && box.includes('data-page="' + p + '"'), p);
-  });
+  assert.ok(box.includes('data-card-open="history"') && box.includes('data-page="history"'));
+  assert.ok(!box.includes('data-card-open="keep"') && !box.includes('data-page="keep"'), "no keep page");
   ["summary-lines", "history-rows"].forEach((id) => {
     assert.ok(box.includes('id="' + id + '" class="pager-slot"'), id);
   });
-  ["historybox", "history-keep", "history-clear", "history-said", "history-on"].forEach((id) => {
-    assert.ok(box.includes('id="' + id + '"'), id);
+  assert.ok(box.includes('id="historybox"'));
+  ["history-keep", "history-clear", "history-said", "history-on"].forEach((id) => {
+    assert.ok(!box.includes('id="' + id + '"'), id + " left the card");
   });
   assert.ok(!/<table|<details/.test(box));
   assert.ok(!/^id="summarybox"[^>]* hidden/.test(box), "the card always shows");
+});
+
+test("PLAY-TD-21C-HISTORY-MOVE: keep / clear sit in Settings > About and data, no jump row", () => {
+  const html = web.source("index.html");
+  const at = html.indexOf('<section id="set-about"');
+  const about = html.slice(at, html.indexOf("</section>", at));
+  ["history-on", "history-keep", "history-clear", "history-said"].forEach((id) => {
+    assert.equal(html.split('id="' + id + '"').length, 2, id + " once on the page");
+    assert.ok(about.includes('id="' + id + '"'), id + " in About and data");
+  });
+  assert.match(about, /<label class="check" for="history-keep"><input id="history-keep" type="checkbox">/);
+  assert.match(about, /<button id="history-clear" type="button" class="secondary">Clear run history<\/button>/);
+  assert.ok(!html.includes('data-jump="history-keep"'), "the jump row is gone");
+  assert.ok(!html.includes('id="about-history"'));
+  // the switch comes before the version line, which stays last
+  assert.ok(about.indexOf('id="about-version"') > about.indexOf('id="history-said"'));
 });

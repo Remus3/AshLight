@@ -13,13 +13,14 @@
    after that and a page close or core exit inside the window leaves the
    data as it was.
 
-   PLAY-TD-20B-RUN-CARDS (plan 03 section 4): the run history is two pages
-   of the Run grid's Last session card. "Run history" (#historybox): your
+   PLAY-TD-20B-RUN-CARDS (plan 03 section 4): the run history is a page of
+   the Run grid's Last session card. "Run history" (#historybox): your
    best time per act and the zones of most deaths across the saved runs
    (20 runs a character), one line a row, paged at 9 (8 compact) through
-   web/acts.js's pager; with run history off it says so. "Keep or clear":
-   the on / off sentence, the keep switch and the clear button, here until
-   PLAY-TD-21B-SETTINGS-ABOUT moves them to Settings. */
+   web/acts.js's pager; with run history off it says so.
+   PLAY-TD-21C-HISTORY-MOVE: the on / off sentence, the keep switch and the
+   clear button sit in Settings > About and data (#set-about); paint and
+   wire find them by id wherever they are, so nothing here jumps to them. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
@@ -43,6 +44,9 @@
   var UNDO = "Undo";
   var UNDO_LABEL = "Undo clear run history";
   var KEPT = "Run history kept.";
+  /* PLAY-TD-21C-HISTORY-MOVE: the card's off sentence says where the
+     switch went (the Settings line beside it shows the core's text only) */
+  var OFF_WHERE = "Turn it on in Settings > About and data.";
   var UNDO_MS = 10000;
   /* the Run history page holds this attribute while a clear waits */
   var CLEARING = "data-clearing";
@@ -100,7 +104,7 @@
      no finished act saved yet ("" when there are best times). */
   function emptyText(h) {
     if (!h) { return ""; }
-    if (!h.on) { return h.text || ""; }
+    if (!h.on) { return h.text ? h.text + " " + OFF_WHERE : ""; }
     return bestRows(h).length ? "" : h.empty_text || "";
   }
 
@@ -211,5 +215,5 @@
     bestRows: bestRows, deathRows: deathRows, bestLine: bestLine, listRows: listRows,
     emptyText: emptyText, paint: paint, wire: wire, ROWS: ROWS,
     CLEARED: CLEARED, FAILED: FAILED, PENDING: PENDING, UNDO: UNDO,
-    UNDO_LABEL: UNDO_LABEL, KEPT: KEPT, UNDO_MS: UNDO_MS };
+    UNDO_LABEL: UNDO_LABEL, KEPT: KEPT, OFF_WHERE: OFF_WHERE, UNDO_MS: UNDO_MS };
 }));

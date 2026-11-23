@@ -918,16 +918,13 @@ li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
    session: the summary lines (7 a page, 5 compact), the end sentence (at
    most two meta lines) and its 24 px page buttons: 154 + 24 + 40 + 24 =
    242 (compact 110 + 88 = 198); the Run history page 9 rows (8 compact)
-   and the pager row: 222 (200); the Keep or clear page the on / off
-   sentence, the switch (28 px), the clear button (24 px) and its result
-   line. Recent: the 24 px chip row, 4 px, 8 rows (6 compact) and the
+   and the pager row: 222 (200) (its keep / clear switch is in Settings
+   since PLAY-TD-21C-HISTORY-MOVE). Recent: the 24 px chip row, 4 px, 8 rows (6 compact) and the
    pager row: 228 (compact 184). Characters: the 32 px picker, 4 px, 8
    rows (6 compact) and the pager row: 236 (192). The small tag of a
    Recent row keeps the 22 px row (line-height 1). A pressed chip says so
    by its edge and weight, never by colour alone; a hidden copy of its
    label at 600 keeps its width when it turns bold (as button.tab). */
-#summarybox .card-act + .card-act, #history-on + .card-act { margin-top: 0.25rem; }
-#summarybox #history-said:not(:empty) { margin-top: 0.25rem; }
 .ev-chips { min-height: 1.5rem; margin-bottom: 0.25rem; }
 button.chip[aria-pressed="true"] { border-color: var(--fk-accent);
   box-shadow: inset 0 -3px 0 var(--fk-accent); font-weight: 600; }

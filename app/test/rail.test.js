@@ -382,8 +382,10 @@ test("markup: Keys, Appearance and tools, About and data hold their rows", () =>
   assert.ok(about.includes('<p id="data-credit" class="muted" hidden></p>'));
   assert.ok(about.includes("<p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>"));
   assert.ok(about.includes('<p class="muted">Path of Exile is a trademark of Grinding Gear Games.</p>'));
-  assert.ok(about.includes('data-jump="history-keep" data-jump-else="summary-title"'));
-  assert.ok(about.indexOf('id="about-version"') > about.indexOf('data-jump="history-keep"'));
+  // PLAY-TD-21C-HISTORY-MOVE: the run history switch itself, no jump row
+  assert.ok(!about.includes('data-jump="history-keep"'));
+  assert.ok(about.includes('<input id="history-keep" type="checkbox">'));
+  assert.ok(about.indexOf('id="about-version"') > about.indexOf('id="history-clear"'));
   // every rail-block of the new sections is a direct child of its section
   for (const id of ["set-keys", "toolsbox", "set-about"]) {
     assert.ok((sec(id).match(/class="rail-block[ "]/g) || []).length >= 1, id);

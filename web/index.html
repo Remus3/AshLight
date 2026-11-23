@@ -474,9 +474,9 @@
        region (polite regions are capped). PLAY-LEGACY-OUT-2: moved as it is
        from Play to the top of Run, where the run is looked back on
        (UX-NEWEST N1; design 0001 N6 exemption). PLAY-TD-20B-RUN-CARDS: a
-       grid card (web/summary.js); its pages are the run history
-       (UTIL-RUN-HISTORY, web/history.js) and the keep / clear switch, which
-       stays here until PLAY-TD-21B-SETTINGS-ABOUT. -->
+       grid card (web/summary.js); its page is the run history
+       (UTIL-RUN-HISTORY, web/history.js). PLAY-TD-21C-HISTORY-MOVE: the
+       keep / clear switch lives in Settings > About and data. -->
   <section id="summarybox" class="card session grid-card" aria-labelledby="summary-title" data-home="main">
     <div class="card-head">
       <h2 id="summary-title" tabindex="-1">Last session</h2>
@@ -489,24 +489,12 @@
       <p id="summary-ended" class="row-meta muted" hidden></p>
       <div class="card-foot" data-card-foot>
         <button type="button" class="secondary btn-24" data-card-open="history">Run history</button>
-        <button type="button" class="secondary btn-24" data-card-open="keep" aria-label="Keep or clear run history">Keep or clear</button>
       </div>
     </div>
     <!-- your best act times and the zones of most deaths across saved runs -->
     <div id="historybox" class="card-page" data-page="history" data-label="Run history" hidden>
       <p id="history-empty" class="row-body muted" hidden></p>
       <div id="history-rows" class="pager-slot" hidden></div>
-    </div>
-    <div class="card-page" data-page="keep" data-label="Keep or clear run history" hidden>
-      <p id="history-on" class="row-meta muted"></p>
-      <div class="card-act">
-        <label class="check" for="history-keep"><input id="history-keep" type="checkbox">
-          Keep run history on this computer</label>
-      </div>
-      <div class="card-act">
-        <button id="history-clear" type="button" class="secondary btn-24">Clear run history</button>
-      </div>
-      <p id="history-said" class="row-meta muted"></p>
     </div>
   </section>
   </div>
@@ -983,9 +971,9 @@
        one-line credits stay on the cards that show the data. The trademark
        and disclaimer lines, then run history and the version
        (RUN-BUILD-STAMP-UI, decision 0082 part 2: the same words as the
-       footer line). The run history keep / clear switch is still a page of
-       the Last session card (app/test/summary.test.js pins it there): its
-       row here jumps to it. -->
+       footer line). PLAY-TD-21C-HISTORY-MOVE: the run history keep / clear
+       switch sits here itself (web/history.js wires it by id); the Last
+       session card keeps only the Run history page, and no jump row. -->
   <section id="set-about" class="card rail-section" aria-labelledby="about-title" hidden>
     <h3 id="about-title">About and data</h3>
     <div id="promises" class="rail-block promises" role="group" aria-labelledby="promises-title">
@@ -1018,11 +1006,15 @@
       <p>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
       <p class="muted">Path of Exile is a trademark of Grinding Gear Games.</p>
     </div>
+    <div class="rail-block" role="group" aria-labelledby="history-title">
+      <h4 id="history-title" class="sub-h">Run history</h4>
+      <p id="history-on" class="muted">Run history is kept on this computer unless you turn it off.</p>
+      <p class="set-row"><label class="check" for="history-keep"><input id="history-keep" type="checkbox">
+        Keep run history on this computer</label></p>
+      <p class="set-row"><button id="history-clear" type="button" class="secondary">Clear run history</button></p>
+      <p id="history-said" class="muted"></p>
+    </div>
     <div class="rail-block">
-      <p class="set-row"><span id="about-history" class="muted">Run history is kept on this
-        computer unless you turn it off.</span>
-        <button type="button" class="secondary" data-jump="history-keep" data-jump-else="summary-title"
-          aria-describedby="about-history">Keep or clear run history</button></p>
       <p id="about-version" class="muted">Reading the version...</p>
     </div>
   </section>

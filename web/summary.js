@@ -10,8 +10,9 @@
    line a sentence, paged at 7 (5 compact) through web/acts.js's pager
    (the whole sentence in title and on the Full text page), with the end
    sentence under them; until the first summary the card says when it
-   fills. Its pages are the run history (web/history.js) and the keep /
-   clear switch; web/acts.js's wireCard switches them on a press only. */
+   fills. Its one page is the run history (web/history.js); web/acts.js's
+   wireCard switches it on a press only. PLAY-TD-21C-HISTORY-MOVE: the keep
+   / clear switch sits in Settings > About and data, not on this card. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
