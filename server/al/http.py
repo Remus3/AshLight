@@ -61,7 +61,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, metrics,
-               overlayview, paths, plug, ports, settingsio, static, updates, webfetch,
+               overlayview, paths, playernotes, plug, ports, settingsio, static, updates, webfetch,
                webpage)
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
@@ -87,6 +87,8 @@ MAX_BODY = 4096
 SAVE_FAILED = "AshLight couldn't save the settings."
 # TC-WORN-WIRE: the worn-gear file could not be written
 WEAR_SAVE_FAILED = "AshLight couldn't save the worn item."
+# PLAY-F-186A: the player notes file could not be written
+NOTE_SAVE_FAILED = "AshLight couldn't save your note."
 MAX_BUILD_BODY = 256 * 1024  # POST /api/build-code only (PoB codes are ~5-60 KB)
 # POST /api/eval: the item key's one clipboard text, an item or a copied
 # build (TC-PRESS-BUILD: the build size, app/eval_hotkey.js caps 256 KB)
@@ -922,6 +924,55 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"error": SAVE_FAILED})
         return self._json(200, self._theme_doc())
 
+    def _player_note(self, path, query, extra):
+        """PLAY-F-186A (decision 0074): the player's Save of their own note
+        for a zone. The token, Host / Origin and Sec-Fetch-Site checks ran
+        in _guard. The body is the note itself as plain text (text/plain,
+        UTF-8, at most MAX_BODY bytes; any other type is 415); an empty
+        body removes the note. ?area=<area id> names the zone, else the
+        zone the player is in; the character is always the one being
+        played. The reply is {"note": {"area_id", "text", "at"} | null}.
+        The text is never logged."""
+        self._body_done = True  # read or discarded below, never twice
+        ctype, _, params = (self.headers.get("Content-Type") or "").partition(";")
+        ctype = ctype.strip().lower()
+        charset = params.strip().lower().replace(" ", "")
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if ctype != "text/plain" or charset not in ("", "charset=utf-8"):
+            self._discard_body(length)
+            return self._json(415, {"error": "text/plain (UTF-8) required"})
+        if length < 0 or length > MAX_BODY:
+            self._discard_body(length)
+            return self._json(413, {"error": "body too large"})
+        try:
+            raw = self.rfile.read(length)
+        except OSError:
+            self.close_connection = True
+            return None
+        if len(raw) < length:
+            self.close_connection = True
+            return None
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return self._json(400, {"error": "the note must be UTF-8 text"})
+        area = query.get("area")
+        if area is not None and len(area) != 1:
+            return self._json(400, {"error": "one area at most"})
+        try:
+            playernotes.clean_text(text)
+            note = self.server.core.save_player_note(
+                text, area_id=None if area is None else area[0])
+        except playernotes.NoteError as e:
+            return self._json(400, {"error": str(e)})
+        except OSError as e:
+            log.warning("player note not saved (%s)", type(e).__name__)
+            return self._json(500, {"error": NOTE_SAVE_FAILED})
+        return self._json(200, {"note": note})
+
     def _update_now(self, path, query, extra):
         """REL-UPDATE-TRIGGER (F-077, decision 0065): 'Update now'. The
         token, Host / Origin and Sec-Fetch-Site checks ran in _guard; the
@@ -1321,6 +1372,7 @@ POST_ROUTES = {
     "/api/overlay-sample": Handler._overlay_sample,  # OVL-CARD-SLOT
     "/api/update-now": Handler._update_now,  # REL-UPDATE-TRIGGER
     "/api/theme": Handler._set_theme,  # PLAY-TD-04B-THEME-CHOICE
+    "/api/player-note": Handler._player_note,  # PLAY-F-186A (decision 0074)
 }
 
 PUT_ROUTES = {
