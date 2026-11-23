@@ -10,6 +10,9 @@
 - the snapshot card is the old overlay_card() result for every eval /
   price fixture (the press card is unchanged);
 - the store round trip drops unknown keys and survives a broken file.
+- OVL-TD18-CARD-TIME: the press card (eval, price, merged) stays for the
+  layout's card_s (20, 60 or 200 s, default 20); the price wait still
+  extends it.
 
 No game file is read and nothing is sent; the server binds port 0.
 """
@@ -22,6 +25,7 @@ from pathlib import Path
 import pytest
 
 from server.al import jsonfile, overlayview
+from server.al import layout as layout_mod
 from server.al.core import Core
 from server.al.http import serve
 from server.al.overlayview import CARD_HOLDERS, SAMPLE_S, OverlayView
@@ -627,3 +631,119 @@ def test_hint_fits_26_with_a_19_character_key():
     assert st.snapshot()["card"] is None
     _game_start(st, T0)
     assert st.overlay.to_doc().get("key_hint") is None
+
+
+# -- OVL-TD18-CARD-TIME (TD-18): the press card time from the layout ----------
+
+def _timed_state(card_s, t=T0):
+    st, clock = _state(t)
+    if card_s is not None:
+        st.set_overlay_layout(dict(layout_mod.DEFAULT, card_s=card_s))
+    return st, clock
+
+
+def test_card_time_defaults_to_20_s():
+    st, _ = _state()
+    assert st.card_s == 20 == layout_mod.CARD_S[0]
+    st.set_overlay_layout(layout_mod.DEFAULT)
+    assert st.card_s == 20
+    # a layout without the key, or with a bad value, keeps 20
+    st.set_overlay_layout({"corner": "top-left"})
+    assert st.card_s == 20
+    for bad in (True, 7, "60", None, float("nan")):
+        st.set_overlay_layout(dict(layout_mod.DEFAULT, card_s=bad))
+        assert st.card_s == 20, bad
+
+
+@pytest.mark.parametrize("card_s", [20, 60, 200])
+def test_eval_card_follows_the_card_time(card_s):
+    st, clock = _timed_state(card_s)
+    st.set_eval(EVALS[0], at=T0)
+    snap = st.snapshot()
+    assert snap["card"]["kind"] == "eval"
+    assert snap["card"]["expires_at"] == T0 + card_s
+    assert snap["eval"]["expires_at"] == T0 + card_s
+    clock.t = T0 + card_s - 0.1
+    assert st.snapshot()["card"]["kind"] == "eval"
+    clock.t = T0 + card_s
+    assert st.snapshot()["card"] is None  # it still leaves by itself
+
+
+@pytest.mark.parametrize("card_s", [20, 60, 200])
+def test_price_card_follows_the_card_time(card_s):
+    st, clock = _timed_state(card_s)
+    st.price = dict(PRICES[2], at=T0, updated_at=T0, id=1)
+    snap = st.snapshot()
+    assert snap["card"]["kind"] == "price"
+    assert snap["card"]["expires_at"] == T0 + card_s == snap["price"]["expires_at"]
+    clock.t = T0 + card_s
+    assert st.snapshot()["card"] is None
+
+
+@pytest.mark.parametrize("card_s", [20, 60, 200])
+def test_merged_card_follows_the_card_time(card_s):
+    st, clock = _timed_state(card_s)
+    st.eval = dict(EVALS[0], id=1, at=T0)
+    st.price = dict(PRICES[2], at=T0, updated_at=T0, id=1)
+    card = st.snapshot()["card"]
+    assert card["kind"] == "merged" and card["expires_at"] == T0 + card_s
+    clock.t = T0 + card_s - 0.1
+    assert st.snapshot()["card"]["kind"] == "merged"
+    clock.t = T0 + card_s
+    assert st.snapshot()["card"] is None
+
+
+@pytest.mark.parametrize("card_s", [20, 60, 200])
+def test_price_wait_still_extends_the_card_time(card_s):
+    st, clock = _timed_state(card_s)
+    # a result that waited on the trade site's limit: the wait, then the
+    # full card time
+    st.price = dict(PRICES[0], at=T0, updated_at=T0 + 3, id=1)
+    snap = st.snapshot()
+    want = T0 + 3 + 7 + card_s
+    assert snap["card"]["kind"] == "price" and snap["card"]["expires_at"] == want
+    assert snap["price"]["expires_at"] == want
+    # and a merged card keeps the later of the two
+    st.eval = dict(EVALS[0], id=1, at=T0)
+    card = st.snapshot()["card"]
+    assert card["kind"] == "merged" and card["expires_at"] == want
+
+
+def test_card_time_takes_effect_on_a_layout_change():
+    st, clock = _state()
+    st.set_eval(EVALS[0], at=T0)
+    clock.t = T0 + 30
+    assert st.snapshot()["card"] is None
+    v = st.version
+    st.set_overlay_layout(dict(layout_mod.DEFAULT, card_s=60))
+    assert st.version == v + 1  # the change is pushed
+    snap = st.snapshot()
+    assert snap["card"]["kind"] == "eval" and snap["card"]["expires_at"] == T0 + 60
+
+
+def test_default_card_time_keeps_the_old_press_card():
+    # 20 s (the default) gives the same card as overlay_card() without
+    # card_s, for every fixture (the press card is unchanged by default)
+    for ev in EVALS[:3]:
+        for pr in PRICES[:3]:
+            for dt in (0.0, 19.9, 20.0, 25.0):
+                st, _ = _timed_state(20, T0 + dt)
+                st.eval = dict(ev, id=1, at=T0)
+                st.price = dict({"at": T0, "updated_at": T0}, **pr, id=1)
+                snap = st.snapshot()
+                want = overlay_card(st.eval, st.price, T0 + dt, snap["build_alert"])
+                assert snap["card"] == want, (ev, pr, dt)
+
+
+def test_core_layout_post_sets_the_card_time(tmp_path):
+    core = Core(runtime=tmp_path / "rt", tail=False)
+    try:
+        got = core.set_overlay_layout({"card_s": 200})
+        assert got["card_s"] == 200 and core.state.card_s == 200
+        stored = json.loads(core.config_path.read_text(encoding="ascii"))
+        assert stored["overlay"]["card_s"] == 200
+        with pytest.raises(layout_mod.LayoutError):
+            core.set_overlay_layout({"card_s": 30})
+        assert core.state.card_s == 200
+    finally:
+        core.close()

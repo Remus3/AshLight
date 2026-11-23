@@ -415,7 +415,9 @@ class OverlayView:
                 "expires_at": at + SAMPLE_S}
 
     def _press_card(self, state, now, alert=None):
-        return overlay_card(state.eval, state.price, now, alert)
+        # OVL-TD18-CARD-TIME: the state's card time (the layout's card_s)
+        card_s = getattr(state, "card_s", EVAL_CARD_S)
+        return overlay_card(state.eval, state.price, now, alert, card_s)
 
     # -- the zone / act moment card
     def _moment_card(self, state, now):

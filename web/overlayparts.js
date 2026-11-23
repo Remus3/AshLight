@@ -7,7 +7,10 @@
    overlay part (server/al/layout.py PARTS), two presets (Full: every part
    on; Cards only: the five top-line parts off, the four cards on), 'Hide
    the zone line in town and hideout' (quiet_town) and 'Zone guide on the
-   overlay' (zone_guide: On entry, Always, Never). Each change saves at
+   overlay' (zone_guide: On entry, Always, Never) and 'Keep a card for'
+   (card_s, OVL-TD18-CARD-TIME / TD-18: 20, 60 or 200 seconds, 20 by
+   default; the press card still leaves by itself, and the dashboard's own
+   item check and price rows stay as before). Each change saves at
    once as a partial change to POST /api/overlay-layout (the core merges
    it into the stored layout, config/local.json) and the overlay follows
    the published layout within a second. A switch or a preset sends the
@@ -45,13 +48,16 @@
   var HUD = ["zone", "timer", "level", "deaths", "status"];
   // server/al/layout.py ZONE_GUIDE; the first is the default
   var ZONE_GUIDE = ["entry", "always", "never"];
+  // server/al/layout.py CARD_S (seconds); the first is the default
+  var CARD_S = [20, 60, 200];
   var PRESETS = { full: {}, cards: {} };
   PARTS.forEach(function (name) {
     PRESETS.full[name] = true;
     PRESETS.cards[name] = HUD.indexOf(name) < 0;
   });
   // the controls in index.html (Settings, Overlay)
-  var IDS = { quiet: "parts-quiet-town", guide: "parts-zone-guide", full: "parts-full",
+  var IDS = { quiet: "parts-quiet-town", guide: "parts-zone-guide",
+              cardTime: "parts-card-time", full: "parts-full",
               cards: "parts-cards", sample: "parts-sample", status: "parts-status" };
   var SAY = {
     saving: "Saving...",
@@ -89,7 +95,14 @@
     if (guide) {
       guide.value = ZONE_GUIDE.indexOf(l.zone_guide) >= 0 ? l.zone_guide : ZONE_GUIDE[0];
     }
+    var time = byId(doc, IDS.cardTime);
+    if (time) { time.value = String(cardSeconds(l.card_s)); }
     return true;
+  }
+
+  /* A card time the core knows (a number of CARD_S), else the default. */
+  function cardSeconds(v) {
+    return CARD_S.indexOf(v) >= 0 ? v : CARD_S[0];
   }
 
   /* {part: on} for every part, as the switches show it now. */
@@ -166,6 +179,11 @@
       var v = byId(doc, IDS.guide).value;
       if (ZONE_GUIDE.indexOf(v) >= 0) { save(doc, { zone_guide: v }); }
     });
+    on(doc, IDS.cardTime, "change", function () {
+      var v = byId(doc, IDS.cardTime).value;
+      var n = /^[0-9]+$/.test(v) ? Number(v) : NaN;
+      if (CARD_S.indexOf(n) >= 0) { save(doc, { card_s: n }); }
+    });
     on(doc, IDS.full, "click", function () { applyPreset(doc, "full"); });
     on(doc, IDS.cards, "click", function () { applyPreset(doc, "cards"); });
     on(doc, IDS.sample, "click", function () { sample(doc); });
@@ -179,7 +197,8 @@
   }
 
   return { PATH: PATH, SAMPLE_PATH: SAMPLE_PATH, PARTS: PARTS, HUD: HUD,
-           ZONE_GUIDE: ZONE_GUIDE, PRESETS: PRESETS, IDS: IDS, SAY: SAY,
+           ZONE_GUIDE: ZONE_GUIDE, CARD_S: CARD_S, PRESETS: PRESETS, IDS: IDS, SAY: SAY,
            fill: fill, readParts: readParts, presetParts: presetParts,
+           cardSeconds: cardSeconds,
            wire: wire, load: load };
 }));

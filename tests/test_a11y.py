@@ -398,7 +398,8 @@ PART_LABELS = {"part-zone": "Zone name", "part-timer": "Zone timer", "part-level
                "part-trade": "Trade card", "part-item": "Item check card",
                "part-moment": "Zone and act cards", "part-hint": "Key hint",
                "parts-quiet-town": "Hide the zone line in town and hideout",
-               "parts-zone-guide": "Zone guide on the overlay"}
+               "parts-zone-guide": "Zone guide on the overlay",
+               "parts-card-time": "Keep a card for"}  # OVL-TD18-CARD-TIME
 
 
 def test_overlay_parts_is_one_named_group_with_a_label_on_every_control():

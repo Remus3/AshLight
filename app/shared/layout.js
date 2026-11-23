@@ -30,6 +30,10 @@
   var PARTS = ["zone", "timer", "level", "deaths", "status", "trade", "item",
                "moment", "hint"];
   var ZONE_GUIDE = ["entry", "always", "never"];
+  /* OVL-TD18-CARD-TIME (TD-18), mirror of server/al/layout.py CARD_S: how
+     long the press card stays, in seconds; the first is the default. A
+     layout carries card_s only when it is not the default (absent = 20). */
+  var CARD_S = [20, 60, 200];
   function defaultParts() {
     var out = {};
     PARTS.forEach(function (name) { out[name] = true; });
@@ -99,7 +103,7 @@
     if (display !== "primary" && !(Number.isInteger(display) && display >= 0 && display < 16)) {
       display = DEFAULT.display;
     }
-    return {
+    var out = {
       display: display,
       corner: CORNERS.indexOf(l.corner) >= 0 ? l.corner : DEFAULT.corner,
       scale: num(l.scale, "scale"),
@@ -110,6 +114,16 @@
       zone_guide: ZONE_GUIDE.indexOf(l.zone_guide) >= 0 ? l.zone_guide : DEFAULT.zone_guide,
       v: SCHEMA
     };
+    var cardS = cardSeconds(l);
+    if (cardS !== CARD_S[0]) { out.card_s = cardS; }  // the default is never stored
+    return out;
+  }
+
+  /* Mirror of server/al/layout.py card_seconds: a whole number of CARD_S
+     (never true / false), else the default. */
+  function cardSeconds(layout) {
+    var v = layout && typeof layout === "object" ? layout.card_s : null;
+    return (typeof v === "number" && CARD_S.indexOf(v) >= 0) ? v : CARD_S[0];
   }
 
   /* Every part filled in; an unknown name or a non-boolean value is
@@ -198,7 +212,8 @@
   }
 
   return { CORNERS: CORNERS, LAYOUT_DEFAULT: DEFAULT, LAYOUT_LIMITS: LIMITS, BASE: BASE,
-           LAYOUT_PARTS: PARTS, ZONE_GUIDE: ZONE_GUIDE,
+           LAYOUT_PARTS: PARTS, ZONE_GUIDE: ZONE_GUIDE, CARD_S: CARD_S,
+           cardSeconds: cardSeconds,
            LAYOUT_SCHEMA: SCHEMA, opacityCss: opacityCss, migrateOpacity: migrateOpacity,
            normalizeLayout: normalize, orderDisplays: orderDisplays,
            pickDisplay: pickDisplay, autoScale: autoScale, computeBounds: computeBounds,
