@@ -18297,10 +18297,13 @@
     "server/al/core.py",
     "server/al/state.py",
     "server/al/playcards.py",
-    "tests/test_security_surface.py"
+    "tests/test_security_surface.py",
+    "docs/design/0001-design-system.md"
    ],
    "new_files": [
     "server/al/playernotes.py",
+    "server/al/text/playernotes.py",
+    "docs/design/copy/playernotes.md",
     "tests/test_player_notes.py",
     "docs/decisions/0074-player-notes.md"
    ],
@@ -18340,7 +18343,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. New bounded file under ops/runtime (server/al/paths.py resolver), keyed by the Client.txt area id and the character name of decision 0038; plain text, no markup; written only by POST /api/player-note (token, Host / Origin checks, size cap) on the player's Save. core.py loads it, registers it with hotreload and publishes the current zone's note; state.py: one published key; playcards.py: the your-note row of guide mode (1 row, at most 52 characters shown, full text in title). Nothing game-side, no new read. The decision record rides this package (pattern of decision 0036). Lands after the RUN cluster's zone reset and hot-reload retry (F-088, F-092) and the DATA cluster's one guide file (F-122). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). PLAN 07 (review): it adds the /api/player-note route, so it edits its row in tests/test_security_surface.py (the route table of SEC-SURFACE-PIN) in the same commit; the pin file has one editor a wave.",
+   "notes": "Tier P3. New bounded file under ops/runtime (server/al/paths.py resolver), keyed by the Client.txt area id and the character name of decision 0038; plain text, no markup; written only by POST /api/player-note (token, Host / Origin checks, size cap) on the player's Save. core.py loads it, registers it with hotreload and publishes the current zone's note; state.py: one published key; playcards.py: the your-note row of guide mode (1 row, at most 52 characters shown, full text in title). Nothing game-side, no new read. The decision record rides this package (pattern of decision 0036). Lands after the RUN cluster's zone reset and hot-reload retry (F-088, F-092) and the DATA cluster's one guide file (F-122). Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). PLAN 07 (review): it adds the /api/player-note route, so it edits its row in tests/test_security_surface.py (the route table of SEC-SURFACE-PIN) in the same commit; the pin file has one editor a wave. Fix round (wave 32, ruling A of wave 31): the player sentences live in server/al/text/playernotes.py with its copy sheet docs/design/copy/playernotes.md, linked from design 0001 section 9 (tests/test_structure.py).",
    "wave": 31,
    "owner": "session",
    "tier": "P3",

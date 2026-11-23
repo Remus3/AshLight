@@ -341,7 +341,8 @@
              span; its own words stay while no key is bound -->
         <p id="eval-empty" class="row-meta muted">Nothing checked yet. Hover an item in game, press Ctrl+C,
           then press <span data-hotkey="eval">the item check key</span>. AshLight reads the
-          clipboard once per press and shows the verdict here and on the overlay for 20 seconds.
+          clipboard once per press and shows the verdict here and on the overlay. The overlay
+          card leaves after 20 seconds, or the time you set under Settings, Overlay.
           You can change the key under Settings, Keys.</p>
         <div id="eval-body" hidden>
           <p class="eval-head"><span id="eval-word" class="verdict"></span>
@@ -860,6 +861,16 @@
             <option value="always">Always</option>
             <option value="never">Never</option>
           </select></p>
+        <!-- OVL-TD18-CARD-TIME (TD-18): how long the item check card stays on
+             the overlay; it still leaves by itself -->
+        <p class="tool-row"><label for="parts-card-time">Keep a card for</label>
+          <select id="parts-card-time" aria-describedby="parts-card-time-note">
+            <option value="20">20 seconds</option>
+            <option value="60">60 seconds</option>
+            <option value="200">200 seconds</option>
+          </select></p>
+        <p id="parts-card-time-note" class="muted">The item check card leaves the overlay by
+          itself after this time. The check stays on this page.</p>
         <p class="tool-row"><button id="parts-sample" type="button" class="secondary"
             aria-describedby="parts-status">Show a sample card for 10 s</button></p>
         <p id="parts-status" class="muted"></p>

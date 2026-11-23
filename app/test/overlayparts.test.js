@@ -2,7 +2,9 @@
    web/overlayparts.js. It fills from the layout document, a switch posts
    only {parts: {...}} with every part, a preset sets every switch, the
    zone guide choice posts zone_guide, and the sample button posts
-   /api/overlay-sample once and says so in the status line. */
+   /api/overlay-sample once and says so in the status line.
+   OVL-TD18-CARD-TIME (TD-18): 'Keep a card for' posts card_s (20, 60 or
+   200); the dashboard twin of the card is unaffected. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -31,6 +33,7 @@ function fakeDoc() {
   P.PARTS.forEach((p) => { ids["part-" + p] = node("part-" + p, "INPUT"); });
   ["parts-quiet-town"].forEach((i) => { ids[i] = node(i, "INPUT"); });
   ids["parts-zone-guide"] = node("parts-zone-guide", "SELECT");
+  ids["parts-card-time"] = node("parts-card-time", "SELECT");
   ["parts-full", "parts-cards", "parts-sample"].forEach((i) => { ids[i] = node(i, "BUTTON"); });
   ids["parts-status"] = node("parts-status", "P");
   return { ids, getElementById: (id) => ids[id] || null };
@@ -251,3 +254,61 @@ test("no timer, no clipboard, no live region, text only through textContent", ()
   }
   assert.ok(/^[\x00-\x7f]*$/.test(SRC) && !SRC.includes("\r"));
 });
+
+test("OVL-TD18-CARD-TIME: fill shows the card time; an unknown value shows 20", () => {
+  assert.deepEqual(P.CARD_S, [20, 60, 200]);
+  const d = fakeDoc();
+  P.fill(d, layoutDoc({}, { card_s: 60 }));
+  assert.equal(d.ids["parts-card-time"].value, "60");
+  P.fill(d, layoutDoc({}, { card_s: 200 }));
+  assert.equal(d.ids["parts-card-time"].value, "200");
+  for (const bad of [7, "60", true, null, undefined, 60.5]) {
+    P.fill(d, { parts: {}, card_s: bad });
+    assert.equal(d.ids["parts-card-time"].value, "20", String(bad));
+  }
+});
+
+test("OVL-TD18-CARD-TIME: the control posts only {card_s: n}; an unknown value is never sent",
+  async () => {
+    const d = fakeDoc();
+    const api = fakeApi({ "POST /api/overlay-layout": (b) => layoutDoc({}, b) });
+    P.wire(d, api);
+    assert.deepEqual(api.calls, []);
+    for (const v of ["60", "200", "20"]) {
+      d.ids["parts-card-time"].value = v;
+      d.ids["parts-card-time"].fire("change");
+      await tickOver();
+    }
+    assert.deepEqual(api.calls.map((c) => c[2]), [{ card_s: 60 }, { card_s: 200 },
+      { card_s: 20 }]);
+    api.calls.forEach((c) => { assert.deepEqual(c.slice(0, 2), ["POST", "/api/overlay-layout"]); });
+    assert.equal(d.ids["parts-card-time"].value, "20");
+    assert.equal(d.ids["parts-status"].textContent, "Saved. The overlay follows within a second.");
+    for (const bad of ["30", "", "60s", "6e1", "bogus"]) {
+      d.ids["parts-card-time"].value = bad;
+      d.ids["parts-card-time"].fire("change");
+    }
+    assert.equal(api.calls.length, 3);
+  });
+
+test("OVL-TD18-CARD-TIME: one labelled select in the group; the dashboard twin is unaffected",
+  () => {
+    const i = HTML.indexOf('<div id="overlay-parts"');
+    const group = HTML.slice(i, HTML.indexOf('<p id="parts-status"', i));
+    assert.equal(HTML.split('id="parts-card-time"').length, 2);
+    assert.ok(group.includes('<label for="parts-card-time">Keep a card for</label>'));
+    assert.ok(group.includes('<select id="parts-card-time" aria-describedby="parts-card-time-note">'));
+    const sel = group.slice(group.indexOf('<select id="parts-card-time"'),
+      group.indexOf("</select>", group.indexOf('<select id="parts-card-time"')));
+    assert.deepEqual([...sel.matchAll(/<option value="(\d+)">/g)].map((m) => Number(m[1])),
+      P.CARD_S);
+    assert.ok(/<option value="20">20 seconds<\/option>/.test(sel)); // first is the default
+    assert.ok(group.includes('<p id="parts-card-time-note" class="muted">'));
+    // the dashboard's own item check and price rows (the card's twin) are
+    // not touched by the control: no card id, no expiry in this file
+    for (const bad of ["eval-result", "price-result", "evalbox", "expires_at"]) {
+      assert.ok(!CODE.includes(bad), bad);
+    }
+    assert.equal(HTML.split('<div id="eval-result"').length, 2);
+    assert.equal(HTML.split('<div id="price-result"').length, 2);
+  });

@@ -44,15 +44,15 @@ const SHARED = /* SHARED-FIXTURE */ [
            "quiet_town": false, "zone_guide": "entry", "v": 2}},
   {"in": {"corner": "bottom-left", "scale": 1.5, "display": 2, "opacity": 1.0,
           "margin": 30, "parts": {"zone": false, "trade": false},
-          "quiet_town": true, "zone_guide": "never"},
+          "quiet_town": true, "zone_guide": "never", "card_s": 60},
    "out": {"display": 2, "corner": "bottom-left", "scale": 1.5, "opacity": 1.0,
            "margin": 30,
            "parts": {"zone": false, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": false, "item": true, "moment": true,
                      "hint": true},
-           "quiet_town": true, "zone_guide": "never", "v": 2}},
+           "quiet_town": true, "zone_guide": "never", "card_s": 60, "v": 2}},
   {"in": {"parts": {"offline": false, "hint": 0, "moment": false, "item": "no"},
-          "quiet_town": "yes", "zone_guide": "sometimes"},
+          "quiet_town": "yes", "zone_guide": "sometimes", "card_s": 7},
    "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.86,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
@@ -60,21 +60,21 @@ const SHARED = /* SHARED-FIXTURE */ [
                      "hint": true},
            "quiet_town": false, "zone_guide": "entry", "v": 2}},
   {"in": {"parts": ["zone"], "quiet_town": 1, "zone_guide": "always",
-          "scale": 0.5, "opacity": 3, "margin": 999, "display": 40},
+          "scale": 0.5, "opacity": 3, "margin": 999, "display": 40, "card_s": true},
    "out": {"display": "primary", "corner": "top-right", "scale": 0.95, "opacity": 1.0,
            "margin": 400,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
            "quiet_town": false, "zone_guide": "always", "v": 2}},
-  {"in": {"parts": null, "zone_guide": null, "quiet_town": null},
+  {"in": {"parts": null, "zone_guide": null, "quiet_town": null, "card_s": null},
    "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.86,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
            "quiet_town": false, "zone_guide": "entry", "v": 2}},
-  {"in": {"opacity": 0.95},
+  {"in": {"opacity": 0.95, "card_s": "60"},
    "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.93,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
@@ -88,14 +88,14 @@ const SHARED = /* SHARED-FIXTURE */ [
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
            "quiet_town": false, "zone_guide": "entry", "v": 2}},
-  {"in": {"opacity": 0.85, "v": 2},
+  {"in": {"opacity": 0.85, "v": 2, "card_s": 200.0},
    "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.85,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
                      "status": true, "trade": true, "item": true, "moment": true,
                      "hint": true},
-           "quiet_town": false, "zone_guide": "entry", "v": 2}},
-  {"in": {"opacity": 0.3, "v": 2},
+           "quiet_town": false, "zone_guide": "entry", "card_s": 200, "v": 2}},
+  {"in": {"opacity": 0.3, "v": 2, "card_s": -60},
    "out": {"display": "primary", "corner": "top-right", "scale": 1.0, "opacity": 0.8,
            "margin": 16,
            "parts": {"zone": true, "timer": true, "level": true, "deaths": true,
@@ -136,6 +136,31 @@ test("OVL-OVERLAY-KEYS: Python and JS agree on the shared fixture", () => {
     assert.deepEqual(L.normalizeLayout(row.in), row.out, JSON.stringify(row.in));
   }
   assert.deepEqual(SHARED[0].out, L.LAYOUT_DEFAULT);
+});
+
+test("OVL-TD18-CARD-TIME: card_s is 20, 60 or 200, default 20", () => {
+  assert.deepEqual(L.CARD_S, [20, 60, 200]);
+  // the default is never stored: absent means 20
+  assert.ok(!("card_s" in L.LAYOUT_DEFAULT));
+  assert.ok(!("card_s" in L.normalizeLayout(undefined)));
+  assert.equal(L.cardSeconds(L.normalizeLayout(undefined)), 20);
+  assert.ok(!("card_s" in L.normalizeLayout({ card_s: 20 })));
+  for (const v of [60, 200]) {
+    assert.equal(L.normalizeLayout({ card_s: v }).card_s, v);
+  }
+  for (const v of [20, 60, 200]) {
+    assert.equal(L.cardSeconds({ card_s: v }), v);
+    assert.equal(L.cardSeconds(L.normalizeLayout({ card_s: v })), v);
+  }
+  for (const bad of [0, 7, 30, 120, -20, 600, true, false, "60", null, [60], 60.5,
+                     NaN, Infinity]) {
+    assert.ok(!("card_s" in L.normalizeLayout({ card_s: bad })), String(bad));
+    assert.equal(L.cardSeconds({ card_s: bad }), 20, String(bad));
+  }
+  assert.equal(L.cardSeconds(null), 20);
+  // the shared fixture carries card_s rows both sides check
+  assert.ok(SHARED.some(function (row) { return row.out.card_s === 60; }));
+  assert.ok(SHARED.some(function (row) { return row.out.card_s === 200; }));
 });
 
 test("DS-OPACITY / DS-SCALE: old layouts clamp to the floors", () => {

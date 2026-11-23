@@ -19,10 +19,12 @@ whole-word redactor live in server/al/report.py; secrets(), redact() and
 report() here delegate to it.
 """
 
+import datetime as _dt
+import re
 import time
 from pathlib import Path
 
-from . import diag_data, langguard, plug
+from . import diag_data, jsonfile, langguard, plug
 from . import report as report_mod
 from . import statuswords as words
 from .num import finite
@@ -383,6 +385,117 @@ def check_dev_docs(f):
                   "are closed. AshLight's own sign-in may be possible now.")
 
 
+# LOOP-DEV-CHECKS (F-125, AUTO-08): the dev loop's own status file. It exists
+# only where the dev loop runs (a HALTed tick still writes it every 15
+# minutes), so players never see the note. Read from the file, never from a
+# process list or the scheduled task.
+LOOP_STATUS_PARTS = ("ops", "loop", "control", "progress", "loop.json")
+LOOP_STATUS_MAX_BYTES = 256 * 1024
+LOOP_TICK_STALE_S = 2 * 3600
+# F-130: the pinned Electron line's end of life, from the tracked pin
+# (decision 0068), computed offline: no version is checked online (0013).
+ELECTRON_PIN_PARTS = ("config", "electron_pin.json")
+ELECTRON_PIN_MAX_BYTES = 64 * 1024
+ELECTRON_EOL_WARN_S = 30 * 86400
+_EOL_VERSION = re.compile(r"(\d{1,4})\.\d{1,4}\.\d{1,6}\Z")
+_EOL_DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
+
+
+def _stamp(value):
+    """Epoch seconds of an ISO 8601 stamp (a stamp with no offset is local
+    time), else None."""
+    if not isinstance(value, str) or not 0 < len(value) <= 40:
+        return None
+    try:
+        when = _dt.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        return when.timestamp()
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def loop_tick_age(root, now):
+    """Seconds since the dev loop's last tick ("updated" of
+    <root>/ops/loop/control/progress/loop.json), or None while the file is
+    missing, unreadable or carries no stamp. Never negative."""
+    doc = jsonfile.read_json(Path(root).joinpath(*LOOP_STATUS_PARTS),
+                             max_bytes=LOOP_STATUS_MAX_BYTES, kind=dict)
+    at = _stamp(doc.get("updated")) if isinstance(doc, dict) else None
+    now = finite(now)
+    if at is None or now is None:
+        return None
+    return max(0.0, now - at)
+
+
+def electron_eol(root):
+    """{"version", "eol"} of the tracked Electron pin
+    (<root>/config/electron_pin.json), or None while the file is missing or
+    either value is malformed (never guessed)."""
+    doc = jsonfile.read_json(Path(root).joinpath(*ELECTRON_PIN_PARTS),
+                             max_bytes=ELECTRON_PIN_MAX_BYTES, kind=dict)
+    if not isinstance(doc, dict):
+        return None
+    version, eol = doc.get("version"), doc.get("eol")
+    if not (isinstance(version, str) and _EOL_VERSION.match(version)
+            and isinstance(eol, str) and _EOL_DATE.match(eol)):
+        return None
+    try:
+        _dt.date.fromisoformat(eol)
+    except ValueError:
+        return None
+    return {"version": version, "eol": eol}
+
+
+def check_loop_tick(f, now):
+    """LOOP-DEV-CHECKS: a developer note while the dev loop's last tick is
+    older than LOOP_TICK_STALE_S; None otherwise (no row), and None where
+    there is no loop status file (every player). The age is written in
+    from "at" (RUN-QUIET-FEED)."""
+    age = finite(f.get("loop_tick_age_s"))
+    if age is None or age <= LOOP_TICK_STALE_S:
+        return None
+    return _check("dev_loop", "Dev loop", NOTE,
+                  f"Developer note: the dev loop last ran {AGO}. Its scheduled "
+                  "task may have stopped. Read it back with: python "
+                  "tools/loop_task.py status", at=round(now - age))
+
+
+def check_electron_eol(f, now):
+    """F-130: a note for every user while the pinned Electron line is
+    within ELECTRON_EOL_WARN_S of its end of life or past it; None
+    otherwise (no row, also with no pin file). The date is written as a
+    date, so the row changes only when it appears."""
+    pin = f.get("electron_eol")
+    if not isinstance(pin, dict):
+        return None
+    version, eol = pin.get("version"), pin.get("eol")
+    m = _EOL_VERSION.match(version) if isinstance(version, str) else None
+    if not m or not isinstance(eol, str) or not _EOL_DATE.match(eol):
+        return None
+    try:
+        end = _dt.datetime.combine(_dt.date.fromisoformat(eol), _dt.time(),
+                                   _dt.timezone.utc).timestamp()
+    except ValueError:
+        return None
+    now = finite(now)
+    if now is None or end - now > ELECTRON_EOL_WARN_S:
+        return None
+    line = f"Electron {m.group(1)}, which runs the desktop app,"
+    if now >= end:
+        text = f"{line} reached its end of life on {eol} and gets no more security fixes."
+    else:
+        text = (f"{line} reaches its end of life on {eol}. After that it gets "
+                "no more security fixes.")
+    ins = f.get("install")
+    if isinstance(ins, dict) and ins.get("mode") == "installed":
+        text += " A newer AshLight release brings a newer one by itself."
+    else:
+        # RUN-NO-DEAD-ENDS (tests/test_copy_dead_ends.py): the fix names the
+        # act, never the script (scripts\setup.ps1 is AshLight's setup)
+        text += (" Update AshLight, then run AshLight's setup again, as when you "
+                 "installed it. It fetches the newer Electron.")
+    return _check("electron_eol", "Desktop app runtime", NOTE, text)
+
+
 # OBS-CRASH (F-105): an exit record belongs to this start when it is newer
 # than the start, or is the exit (up to this long before it) that led to it:
 # a crash or a keepalive kill is followed by a restart within minutes.
@@ -571,7 +684,8 @@ def checks(f, now):
             _live(f, "supervisor", "supervisor", "Keepalive", "The keepalive"),
             *check_hotkey(f), *check_install(f, now), check_port(f)]
     rows += diag_data.rows(f, now, taken={r["id"] for r in rows})  # DATA-DIAG-SEAM
-    rows += [r for r in (check_reload(f), check_dev_docs(f), check_private(f)) if r]
+    rows += [r for r in (check_reload(f), check_dev_docs(f), check_loop_tick(f, now),
+                         check_electron_eol(f, now), check_private(f)) if r]
     rows += check_last_exit(f, now)
     return rows + plug.collect_rows(f, now, taken={r["id"] for r in rows})
 

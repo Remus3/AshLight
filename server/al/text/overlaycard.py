@@ -25,6 +25,8 @@ EVAL_CARD_S = 20
 # SAME_PRESS_S of each other came from one press and share one card.
 PRICE_CARD_S = 20
 SAME_PRESS_S = 2.0
+# OVL-TD18-CARD-TIME (TD-18): both are the defaults; the player's overlay
+# layout "card_s" (server/al/layout.py CARD_S) is passed in as card_s.
 
 
 def _fresh(part, life_s, now):
@@ -32,10 +34,11 @@ def _fresh(part, life_s, now):
             and now < part["at"] + life_s)
 
 
-def price_until(price):
-    """When the price card leaves: 20 s from the press, and never sooner
-    than 20 s after its last update, so a result that waited on the trade
-    site's limit still shows for the full time (design 0001 N5)."""
+def price_until(price, card_s=PRICE_CARD_S):
+    """When the price card leaves: card_s (20 s by default) from the press,
+    and never sooner than card_s after its last update, so a result that
+    waited on the trade site's limit still shows for the full time
+    (design 0001 N5)."""
     at = price["at"]
     upd = price.get("updated_at")
     last = upd if _is_time(upd) and upd > at else at
@@ -44,10 +47,10 @@ def price_until(price):
         wait = 0
     # a long wait keeps the card until the result can arrive (review N4);
     # min() before float(): a huge int would overflow (FUZZ-3)
-    return last + float(min(wait, 600)) + PRICE_CARD_S
+    return last + float(min(wait, 600)) + card_s
 
 
-def overlay_card(ev, price, now, alert=None):
+def overlay_card(ev, price, now, alert=None, card_s=EVAL_CARD_S):
     """The one overlay card (design 0001 section 10, decision 0016 fork 2):
     {kind, head, line2, line3, verdict, expires_at} or None.
     - eval and price both fresh and from one press: a merged card (eval
@@ -56,10 +59,12 @@ def overlay_card(ev, price, now, alert=None):
     - from different presses: the newest one;
     - only one fresh: that one.
     `alert` (TC-VERDICT-CAVEAT): the snapshot's build alert, passed to
-    eval_card_text so a compared item's line 3 carries its short head."""
-    ev_ok = _fresh(ev, EVAL_CARD_S, now)
+    eval_card_text so a compared item's line 3 carries its short head.
+    `card_s` (OVL-TD18-CARD-TIME): how long the eval and price parts
+    show, the layout's card time; the price wait rule still extends it."""
+    ev_ok = _fresh(ev, card_s, now)
     pr_ok = (isinstance(price, dict) and _is_time(price.get("at"))
-             and now < price_until(price))
+             and now < price_until(price, card_s))
     if not ev_ok and not pr_ok:
         return None
 
@@ -81,7 +86,7 @@ def overlay_card(ev, price, now, alert=None):
         # (as a price line does, design 0001 section 10); never a third line
         line2 = et.get("reward_line") or et["item"]
         return {"kind": "eval", "head": et["head"], "line2": line2, "line3": et["line"],
-                "verdict": et["tone"], "expires_at": ev["at"] + EVAL_CARD_S}
+                "verdict": et["tone"], "expires_at": ev["at"] + card_s}
 
     def price_line():
         # OVL-CARD-NAME (decision 0016 amendment 2026-11-19): a trade link
@@ -96,7 +101,7 @@ def overlay_card(ev, price, now, alert=None):
         t = price_card_text(price)
         return {"kind": "price", "head": t["head"], "line2": price_line(),
                 "line3": t["detail"], "verdict": "price",
-                "expires_at": price_until(price)}
+                "expires_at": price_until(price, card_s)}
 
     if ev_ok and pr_ok:
         if abs(price["at"] - ev["at"]) >= SAME_PRESS_S:
@@ -110,7 +115,7 @@ def overlay_card(ev, price, now, alert=None):
             return eval_part()
         card = eval_part()
         card.update(kind="merged", line2=price_line(),
-                    expires_at=max(card["expires_at"], price_until(price)))
+                    expires_at=max(card["expires_at"], price_until(price, card_s)))
         return card
     return eval_part() if ev_ok else price_part()
 

@@ -155,6 +155,9 @@ class SessionState:
         self.zone_guide = {}
         self.area_graph = {}
         self.visits = zoneguide_mod.VisitBook()
+        # PLAY-F-186A (decision 0074): the player's own notes book
+        # {character: {area id: {"text", "at"}}}, set by the core
+        self.player_notes = {}
         # UTIL-MAPS / UTIL-DEATHS: map runs and the death recap (runs.py).
         self.maps = runs_mod.MapRuns()
         self.death_log = runs_mod.DeathLog()
@@ -286,6 +289,21 @@ class SessionState:
             if layout != self.overlay_layout:
                 self.overlay_layout = dict(layout)
                 self.version += 1
+
+    @property
+    def card_s(self):
+        """OVL-TD18-CARD-TIME (TD-18): how long the press card shows, in
+        seconds: the overlay layout's card_s, 20 without one. OverlayView
+        passes it to overlay_card()."""
+        from . import layout as layout_mod  # local: keeps the import block as is
+        return layout_mod.card_seconds(self.overlay_layout)
+
+    def _card_time(self, default):
+        """The snapshot's card time: EVAL_CARD_S / PRICE_CARD_S (`default`)
+        while the layout keeps the default card time, else its card_s."""
+        from . import layout as layout_mod
+        n = self.card_s
+        return default if n == layout_mod.CARD_S[0] else n
 
     def now(self):
         """The state clock (server time, s); PRICE-1-WIRE stamps one press
@@ -640,6 +658,26 @@ class SessionState:
             if changed:
                 self.version += 1
             return changed
+
+    def set_player_notes(self, book):
+        """PLAY-F-186A: the player notes book (playernotes.PlayerNotes.get);
+        bumps only on a change."""
+        book = book if isinstance(book, dict) else {}
+        with self._lock:
+            if book is self.player_notes or book == self.player_notes:
+                return False
+            self.player_notes = book
+            self.version += 1
+            return True
+
+    def _player_note_view(self):
+        """PLAY-F-186A: this character's note for the zone the player is
+        in, {"area_id", "text", "at"}, or None. Caller holds the lock."""
+        per = self.player_notes.get(self.character) if self.character else None
+        e = per.get(self.area_id) if isinstance(per, dict) and self.area_id else None
+        if not isinstance(e, dict) or not isinstance(e.get("text"), str):
+            return None
+        return {"area_id": self.area_id, "text": e["text"], "at": e.get("at")}
 
     def visits_doc(self):
         """ZONE-GUIDE: (version, file document) of the visited zones."""
@@ -1321,10 +1359,11 @@ class SessionState:
                 # hides while it is true
                 "game_idle": bool(self.tailer.get("consented") and self.tailer.get("idle")),
                 "eval": (dict(self.eval, text=eval_card_text(self.eval, alert),
-                              expires_at=self.eval["at"] + EVAL_CARD_S)
+                              expires_at=self.eval["at"] + self._card_time(EVAL_CARD_S))
                          if self.eval else None),
                 "price": (dict(self.price, text=price_card_text(self.price),
-                               expires_at=price_until(self.price))
+                               expires_at=price_until(self.price,
+                                                      self._card_time(PRICE_CARD_S)))
                           if self.price else None),
                 # The one overlay card chosen at this moment (decision 0016),
                 # by the card-slot holder order (OVL-CARD-SLOT)
@@ -1345,6 +1384,9 @@ class SessionState:
                     self.in_hideout, self.zone_table, self.underlevel_gap),
                 # ZONE-GUIDE (decision 0043): the live zone guide and tracker
                 "zone_guide": guide,
+                # PLAY-F-186A (decision 0074): the player's own note for this
+                # zone and character, or None
+                "player_note": self._player_note_view(),
                 # UTIL-CAMPAIGN-CHECKS (ruling H, decision 0039); the boss
                 # element comes from the guide entry (DATA-GUIDE-BOSS)
                 "campaign": campaign_mod.view(self.level, self.area_id,
