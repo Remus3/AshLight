@@ -362,18 +362,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   app/test/layout.test.js app/test/overlayparts.test.js pass. ZERO-CLICK: Set once in Settings; the
   card still shows and leaves by itself. DEPENDS: OVL-LINE2-GUIDE, OVL-PARTS-WEB,
   OVL-TD06-AUTOSCALE, OVL-COPY-FIRST, OVL-KEYS-WEB, OVL-OVERLAY-FEED. BLOCKED: session wave 32.
-- [ ] TEST-WEB-PANELS-C (build) Panel move C: remaining Play blocks (events and trades, item check,
-  rates and price) + Panel move D: view modules register themselves; app.js is a shell. ACCEPT: npm
-  test --prefix app passes and python -m pytest -q tests/test_dash_console.py tests/test_a11y.py
-  tests/test_floor_static.py tests/test_ux_review.py tests/test_webpage.py passes. Also (folded
-  TEST-WEB-PANELS-SHELL): npm test --prefix app passes, python -m pytest -q
-  tests/test_dash_console.py tests/test_a11y.py tests/test_floor_static.py tests/test_ux_review.py
-  tests/test_webpage.py passes, wc -l web/app.js prints under 300, and grep -c 'window.AL[A-Z]'
-  web/app.js prints 0. ZERO-CLICK: Developer-side only; the player does nothing. The page assembles
-  the panel tags by itself; paint order is kept by explicit order values. Also (folded
-  TEST-WEB-PANELS-SHELL): Developer-side only; the player does nothing. The page assembles the panel
-  tags by itself; paint order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-B,
-  PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD. BLOCKED: session wave 31.
 - [ ] LOOP-DEV-CHECKS (build) Two Checks notes: a stale loop tick (dev host) and the Electron end of
   life. ACCEPT: `python -m pytest -q tests/test_diag_dev_notes.py tests/test_diag_self.py` passes.
   ZERO-CLICK: Passive: the notes appear in the Checks view by themselves; the app makes no request
@@ -512,6 +500,14 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] ITEM-INFO-CORE (build) Item info lookup: token-gated GET /api/iteminfo over local caches.
   ACCEPT: python -m pytest -q tests/test_iteminfo.py passes. ZERO-CLICK: Answers from what is
   already cached; no setting. BLOCKED: session wave 38.
+- [ ] TEST-WEB-PANELS-C1 (build) Panel move C1: the Play blocks (events and trades, item check,
+  rates and price) leave web/app.js. ACCEPT: npm test --prefix app passes and python -m pytest -q
+  tests/test_dash_console.py tests/test_a11y.py tests/test_floor_static.py tests/test_ux_review.py
+  tests/test_webpage.py tests/test_trade_close.py tests/test_ux_b6.py passes, and grep -nE 'function
+  (renderEvents|renderTrades|dismissTrade|renderEval|renderRates|renderPrice)\(' web/app.js prints
+  nothing. ZERO-CLICK: Developer-side only; the player does nothing. The page assembles the panel
+  tags by itself; paint order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-B,
+  PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD. BLOCKED: session wave 39.
 - [ ] UI-HEADER-TEXT (build) Drop the visible AshLight text left of the tabs; sr-only h1 kept.
   ACCEPT: python -m pytest -q tests/test_brand_assets.py tests/test_a11y.py passes. ZERO-CLICK:
   Automatic. BLOCKED: session wave 40.
@@ -528,6 +524,15 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   under sha256 pins. ACCEPT: python -m pytest -q tests/test_tc_pobtext.py
   tests/test_tc_pob_drift_guard.py passes. ZERO-CLICK: Read once per pin; no setting. DEPENDS:
   ITEM-INFO-CORE. BLOCKED: session wave 39.
+- [ ] TEST-WEB-PANELS-C2 (build) Panel move C2: settings-side blocks leave web/app.js, view modules
+  register themselves, app.js is a shell. ACCEPT: npm test --prefix app passes, python -m pytest -q
+  tests/test_dash_console.py tests/test_a11y.py tests/test_floor_static.py tests/test_ux_review.py
+  tests/test_webpage.py tests/test_lootfilter_merge.py tests/test_build_item_text.py
+  tests/test_hot_reload.py passes, wc -l web/app.js prints under 300, and grep -oE
+  'window\.AL[A-Z][A-Za-z]*' web/app.js | grep -vcE 'window\.AL(App|Fmt|Regions|Tabs)$' prints 0.
+  ZERO-CLICK: Developer-side only; the player does nothing. The page assembles the panel tags by
+  itself; paint order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-C1. BLOCKED:
+  session wave 40.
 - [ ] ITEM-INFO-UI (build) Item names as link-like buttons with the shared item info popover.
   ACCEPT: python -m pytest -q tests/test_iteminfo_ui.py tests/test_a11y.py tests/test_ux_review.py
   passes. ZERO-CLICK: One click to look; it closes by itself on any other click. DEPENDS:

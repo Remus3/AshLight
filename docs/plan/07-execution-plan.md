@@ -1802,17 +1802,16 @@ Leads: Player notes: edit box on Run and the export option; 'This is my
 character' pin in the picker; poll_ms and character apply without a restart;
 Records: design 0001 rewritten, the cockpit decision, decision 0014 amended.
 
-- Session 9; width 2 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: server/al/core.py (PLAY-F-186A-PLAYER-NOTES-STORE); web/app.js
-  (TEST-WEB-PANELS-C); server/al/http.py (PLAY-F-186A-PLAYER-NOTES-STORE);
-  server/al/state.py (PLAY-F-186A-PLAYER-NOTES-STORE);
-  tests/test_security_surface.py (PLAY-F-186A-PLAYER-NOTES-STORE);
-  docs/design/0001-design-system.md (PLAY-F-186A-PLAYER-NOTES-STORE);
-  web/checks.js (TEST-WEB-PANELS-C).
-- Integrator: ROADMAP.md rows of all 2 packages; CLAUDE.md:
+- Session 9; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: server/al/core.py (PLAY-F-186A-PLAYER-NOTES-STORE);
+  server/al/http.py (PLAY-F-186A-PLAYER-NOTES-STORE); server/al/state.py
+  (PLAY-F-186A-PLAYER-NOTES-STORE); tests/test_security_surface.py
+  (PLAY-F-186A-PLAYER-NOTES-STORE); docs/design/0001-design-system.md
+  (PLAY-F-186A-PLAYER-NOTES-STORE).
+- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md:
   PLAY-F-186A-PLAYER-NOTES-STORE; docs/decisions/README.md:
   PLAY-F-186A-PLAYER-NOTES-STORE; docs/design/reviews.log:
-  PLAY-F-186A-PLAYER-NOTES-STORE, TEST-WEB-PANELS-C.
+  PLAY-F-186A-PLAYER-NOTES-STORE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -1822,7 +1821,6 @@ Records: design 0001 rewritten, the cockpit decision, decision 0014 amended.
   is flipped and main is clean.
 
 - PLAY-F-186A-PLAYER-NOTES-STORE [session, L 80m, build, P3, DR] Player notes: bounded store, token route and the your-note row. Files: server/al/http.py, server/al/core.py, server/al/state.py, server/al/playcards.py, tests/test_security_surface.py (+6 more). Deps: PLAY-TD-07B-PLAY-CARDS, PLAY-TD-04B-THEME-CHOICE, RUN-ZONE-RESET, RUN-HOTRELOAD-RETRY, DATA-GUIDE-MERGE.
-- TEST-WEB-PANELS-C [session, L 90m, build, P2, DR] Panel move C: remaining Play blocks (events and trades, item check, rates and price) + Panel move D: view modules register themselves; app.js is a shell. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, web/acts.js, web/buildlive.js (+11 more). Deps: TEST-WEB-PANELS-B, PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD.
 
 ### Wave 32: reliability and observability, install and release
 
@@ -1856,7 +1854,8 @@ the feed.
 - Session 9; width 2 worktree + 1 main-checkout, 0 loop rows released.
 - Hotspots: web/index.html (PLAY-F-186B-PLAYER-NOTES-UI); server/al/core.py
   (RUN-CHARACTER-PIN); server/al/http.py (PLAY-F-186B-PLAYER-NOTES-UI);
-  server/al/state.py (RUN-CHARACTER-PIN); docs/design/0001-design-system.md
+  server/al/state.py (RUN-CHARACTER-PIN); tests/test_security_surface.py
+  (RUN-CHARACTER-PIN); docs/design/0001-design-system.md
   (PLAY-TD-23-RECORDS); server/al/settingsio.py
   (PLAY-F-186B-PLAYER-NOTES-UI); tests/test_ux_settings_io.py
   (PLAY-F-186B-PLAYER-NOTES-UI).
@@ -1873,7 +1872,7 @@ the feed.
   is flipped and main is clean.
 
 - PLAY-F-186B-PLAYER-NOTES-UI [session, M 60m, build, P3, DR] Player notes: edit box on Run and the export option. Files: web/index.html, server/al/settingsio.py, web/settingsio.js, tests/test_ux_settings_io.py, server/al/http.py (+5 more). Deps: PLAY-F-186A-PLAYER-NOTES-STORE, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-20A-RUN-GRID.
-- RUN-CHARACTER-PIN [session, M 45m, build, P3, DR] 'This is my character' pin in the picker; poll_ms and character apply without a restart. Files: server/al/core.py, server/al/state.py, web/chars.js, app/test/chars.test.js, tests/test_util_multichar.py (+1 more). Deps: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE.
+- RUN-CHARACTER-PIN [session, M 45m, build, P3, DR] 'This is my character' pin in the picker; poll_ms and character apply without a restart. Files: server/al/core.py, server/al/state.py, web/chars.js, app/test/chars.test.js, tests/test_util_multichar.py (+2 more). Deps: RUN-QUIET-FEED, RUN-NO-DEAD-ENDS, RUN-START-REASON-CORE.
 - PLAY-TD-23-RECORDS [session, L 90m, build, P3, DR] Records: design 0001 rewritten, the cockpit decision, decision 0014 amended. Files: docs/design/0001-design-system.md, docs/decisions/0014-ui-build-eval-gfx.md, docs/design/0004-glance-review.md, docs/design/play-fit-figures.md, docs/decisions/0075-fixed-cockpit-play.md. Deps: PLAY-TD-02-SLOTS, PLAY-TD-03-TOKENS, PLAY-TD-01B-FIT-HARNESS, DATA-PRICE-CARD-TEXT, PLAY-F-131-STATUS-TABLE, PLAY-TD-07B-PLAY-CARDS, PLAY-TD-08B-GUIDE-SHORT-TEXT, PLAY-TD-09B-SKELETON, PLAY-LEGACY-OUT-2, PLAY-TD-19D-ITEMS-GRID, PLAY-TD-20B-RUN-CARDS, PLAY-TD-21B-SETTINGS-ABOUT, PLAY-TD-04B-THEME-CHOICE, PLAY-TD-22A-A11Y-CSS, PLAY-TD-22B-TAB-FOCUS, PLAY-TD-22C-A11Y-CDP, OVL-TD05-LEGIBILITY, OVL-TD05-PLATE, OVL-TD06-AUTOSCALE, OVL-LINE2-GUIDE, OVL-ACT-CARD, OVL-COPY-FIRST, OVL-KEY-HINT, OVL-GLANCE-RULES, OVL-TD18-CARD-TIME.
 
 ### Wave 34: install and release, tests and code seams, Play tab and dashboard
@@ -2003,13 +2002,14 @@ Leads: Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines
 under sha256 pins; Item names as link-like buttons with the shared item info
 popover; First authored Kindler templates, act 1 to maps.
 
-- Session 11; width 3 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: web/index.html (RUN-LEFTOVERS-CORE); server/al/http.py
-  (RUN-LEFTOVERS-CORE); tests/test_security_surface.py (RUN-LEFTOVERS-CORE);
-  scripts/run.ps1 (RUN-LEFTOVERS-CORE); tests/test_http_security.py
-  (RUN-LEFTOVERS-CORE).
-- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
-  RUN-LEFTOVERS-CORE.
+- Session 11; width 4 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (RUN-LEFTOVERS-CORE); web/app.js
+  (TEST-WEB-PANELS-C1); server/al/http.py (RUN-LEFTOVERS-CORE);
+  tests/test_security_surface.py (RUN-LEFTOVERS-CORE); scripts/run.ps1
+  (RUN-LEFTOVERS-CORE); tests/test_a11y.py (TEST-WEB-PANELS-C1);
+  tests/test_http_security.py (RUN-LEFTOVERS-CORE).
+- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log:
+  RUN-LEFTOVERS-CORE, TEST-WEB-PANELS-C1.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2021,6 +2021,7 @@ popover; First authored Kindler templates, act 1 to maps.
 - RUN-LEFTOVERS-CORE [session, M 30m, build, P3, DR] Small leftovers: Windowed Fullscreen sentence, the dead 501 stub, the no-op switch. Files: web/index.html, server/al/http.py, tests/test_http_security.py, scripts/run.ps1, docs/ops/1.0-launch-runbook.md (+3 more). Deps: RUN-FEED-TRUTH, RUN-STOP-RACE.
 - ITEM-INFO-POB-TEXT [session, M 60m, data, P3] Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines under sha256 pins. Files: config/tc_pins.json, server/al/iteminfo.py, tests/test_tc_pob_drift_guard.py, server/al/theorycraft/pobtext.py, tests/test_tc_pobtext.py. Deps: ITEM-INFO-CORE.
 - KINDLER-TEMPLATES [session, L 90m, data, P2] First authored Kindler templates, act 1 to maps. Files: server/al/data/archetypes.json, tests/test_kindler_templates.py. Deps: KINDLER-DATA.
+- TEST-WEB-PANELS-C1 [session, L 90m, build, P2, DR] Panel move C1: the Play blocks (events and trades, item check, rates and price) leave web/app.js. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, app/test/regions.test.js, app/test/fmt.test.js (+7 more). Deps: TEST-WEB-PANELS-B, PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD.
 
 ### Wave 40: operator requests 2026-11-19, engine and tabs
 
@@ -2028,12 +2029,15 @@ Leads: Kindler candidates, PoB scoring and deterministic ranking on the
 Generate route; Build tab sub-tabs: Pasted build plus Kindler tabs with
 move, rename and close.
 
-- Session 11; width 2 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: web/index.html (UI-HEADER-TEXT); web/app.css (UI-HEADER-TEXT);
-  tests/test_a11y.py (UI-HEADER-TEXT); server/al/theorycraft/bridge.py
-  (KINDLER-ENGINE).
-- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
-  UI-HEADER-TEXT.
+- Session 11; width 3 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (UI-HEADER-TEXT); web/app.js
+  (TEST-WEB-PANELS-C2); web/app.css (UI-HEADER-TEXT);
+  tests/test_ux_review.py (TEST-WEB-PANELS-C2); tests/test_a11y.py
+  (UI-HEADER-TEXT); web/checks.js (TEST-WEB-PANELS-C2);
+  app/test/tabs.test.js (TEST-WEB-PANELS-C2);
+  server/al/theorycraft/bridge.py (KINDLER-ENGINE).
+- Integrator: ROADMAP.md rows of all 3 packages; docs/design/reviews.log:
+  UI-HEADER-TEXT, TEST-WEB-PANELS-C2.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
   one at a time in merge order; per merge batch of 4 on the integration
   worktree: merge, then the integrator's edits for the batch as one commit,
@@ -2044,6 +2048,7 @@ move, rename and close.
 
 - UI-HEADER-TEXT [session, S 20m, build, P2, DR] Drop the visible AshLight text left of the tabs; sr-only h1 kept. Files: web/index.html, web/app.css, tests/test_brand_assets.py, tests/test_a11y.py. Deps: none.
 - KINDLER-ENGINE [session, L 90m, build, P2] Kindler candidates, PoB scoring and deterministic ranking on the Generate route. Files: server/al/theorycraft/bridge.py, server/al/theorycraft/kindler.py, server/al/plug/kindler.py, tests/test_kindler_engine.py, tests/test_kindler_live.py. Deps: KINDLER-DATA, KINDLER-TEMPLATES, KINDLER-STORE.
+- TEST-WEB-PANELS-C2 [session, L 90m, build, P2, DR] Panel move C2: settings-side blocks leave web/app.js, view modules register themselves, app.js is a shell. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, app/test/logpath.test.js, app/test/dashboard.test.js (+25 more). Deps: TEST-WEB-PANELS-C1.
 
 ### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
 
