@@ -33,6 +33,7 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0077: ultraplan execution model: waves in sessions, per-wave
   integrator, loop tail, HALT removal point; 0047 to 0076 are reserved
   for packages in docs/plan/packages.json (ULTRAPLAN).
+- 0074: Player notes: one bounded file, a token route and the your-note row (PLAY-F-186A)
 - 0076: CI issue protocol - labelled key issues, bot account only, failover to the dev loop (CI-WATCH) (docs/decisions/0076-ci-issue-protocol.md)
 - 0073: Versioning and release trigger (plan 05 D4) (docs/decisions/0073-versioning-release-trigger.md)
 - 0072: poe.ninja cadence tiers and the release polling gate (GO-PUBLIC-NINJA) (docs/decisions/0072-poe-ninja-cadence-and-release-gate.md)

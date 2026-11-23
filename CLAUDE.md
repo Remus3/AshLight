@@ -731,6 +731,13 @@ of the HALT check.
   login-host line appears on plain reconnects that keep the character and
   misfiles runs, a party member with no join line often levels first after a
   relog, or names must not be stored.
+- PLAYER-NOTES: the player's own plain-text note per zone and character in
+  one bounded file under ops/runtime (300 zones, 200 characters each), keyed
+  by the Client.txt area id, written only on the player's Save through the
+  token API, shown after AshLight's guide rows as 'your note', exported only
+  when picked; names and notes stay local (decision 0074). Reverses if: the
+  operator rules local note files unwanted, a note reaches a report or an
+  export unasked, or decision 0036 changes.
 - Waystone rewards from the item text's reward properties on the same
   press; campaign hints (boss resist, flask base, boots speed) only from
   Client.txt, the PoB build and the cached base_items snapshot, boss
@@ -1496,3 +1503,17 @@ of the HALT check.
   times the JSON bytes opened. Reverses if: holding the document until
   the next get breaks B5, a table needs a different size cap or check
   from the other table on its file, or the per-table notes misfire.
+- LOOP-DEV-CHECKS (F-125, AUTO-08, F-130): diag.check_loop_tick shows a
+  developer NOTE row (dev_loop) while the "updated" stamp of
+  ops/loop/control/progress/loop.json is more than 2 h old; it reads that
+  file only, never a process list or the scheduled task, and a missing or
+  bad file means no row. diag.check_electron_eol shows a NOTE row
+  (electron_eol) for every user while the "eol" of the tracked
+  config/electron_pin.json is 30 days away or less, or past, worked out
+  offline and naming the date: a checkout is told to update and run
+  AshLight's setup again (no script name, RUN-NO-DEAD-ENDS), an installed
+  copy that a newer release brings it by itself; no pin file or a bad value
+  means no row. Core.diag_facts adds loop_tick_age_s and electron_eol, read
+  only by a real core. No request, no process. Reverses if: the loop moves
+  its status file or the "updated" field, the pin drops "eol", or the 2 h
+  or 30 day thresholds misfire in use.
