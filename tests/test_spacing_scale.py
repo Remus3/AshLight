@@ -158,7 +158,7 @@ def test_one_badge_rule_carries_the_states():
         assert m and "badge" in m.group(1).split(), ident
     assert html.count('<span class="badge" hidden></span></button>') == 4
     tabs = (WEB / "tabs.js").read_text(encoding="ascii")
-    assert 'querySelector(".badge")' in tabs
+    assert 'var mark = "badge";' in tabs and 'querySelector("." + mark)' in tabs
 
 
 def test_tab_mark_has_no_600_under_14px():
