@@ -21,14 +21,20 @@
    web/slots.js and web/regions.js (the region files' run from slots.js on
    is pinned by app/test/regions.test.js), so it registers on
    DOMContentLoaded when the registry is not there yet; a helper registered
-   after ALRegions.start() is wired at once with the same ctx. No timer, no clipboard, no live region: the answer line
-   beside the select is plain text the select points at. After a settings
+   after ALRegions.start() is wired at once with the same ctx. No timer, no clipboard, no live region of its own: the answer line
+   beside the select is plain text the select points at, and a failed
+   save is also said in the page's one shared polite line, the header's
+   #tab-news, through ALTabs.say (THM-2; a new region would breach the
+   6-region cap of tests/test_a11y.py). After a settings
    import (the import's answer line #settings-said changes to words) the
    choice is read again, so an imported theme shows at once. */
 (function (root, factory) {
   "use strict";
-  var api = factory(root);
-  if (typeof module === "object" && module.exports) {
+  var common = typeof module === "object" && module.exports;
+  var api = factory(root, function () {
+    return common ? require("./tabs.js") : root.ALTabs;
+  });
+  if (common) {
     module.exports = api;
   } else {
     root.ALTheme = api;
@@ -44,7 +50,7 @@
       root.document.addEventListener("DOMContentLoaded", register);
     }
   }
-}(typeof self !== "undefined" ? self : this, function (root) {
+}(typeof self !== "undefined" ? self : this, function (root, tabs) {
   "use strict";
 
   var NAME = "theme";
@@ -52,7 +58,15 @@
   var DEFAULT = "dark";
   var PATH = "/api/theme";
   var NOT_SAVED = "Your choice was not saved. Try again.";
-  var IDS = { pick: "theme-pick", said: "theme-said", importSaid: "settings-said" };
+  var IDS = { pick: "theme-pick", said: "theme-said", importSaid: "settings-said",
+    news: "tab-news" };
+
+  /* THM-2: say a line in the page's shared polite region (ALTabs.say on
+     the header's #tab-news, IDS.news); a page without tabs says nothing. */
+  function say(doc, text) {
+    var t = tabs();
+    if (t && typeof t.say === "function") { t.say(doc, text); }
+  }
 
   /* A known choice, else the default. */
   function clean(v) {
@@ -107,11 +121,14 @@
       pick.addEventListener("change", function () {
         var want = clean(pick.value);
         if (said) { said.textContent = ""; }
+        var news = doc.getElementById(IDS.news); // a stale failure of ours goes too
+        if (news && news.textContent === NOT_SAVED) { say(doc, ""); }
         apply(doc, want); // at once; the answer confirms it
         return Promise.resolve().then(function () { return call("POST", PATH, { theme: want }); })
           .then(function (answer) { show(themeOf(answer)); }, function () {
             show(saved);
             if (said) { said.textContent = NOT_SAVED; }
+            say(doc, NOT_SAVED); // heard as well as shown (THM-2)
           });
       });
     }
