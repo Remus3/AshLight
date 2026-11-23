@@ -176,6 +176,9 @@ class Core:
         self.start_at_end = start_at_end
         self.bus = EventBus()
         self.state = SessionState(character=character or cfg.get("character"))
+        # RUN-CHARACTER-PIN (F-157): the poll_ms / character values the core
+        # last applied from its config file; tick_config applies an edit
+        self._live_cfg = self._live_values(self._config())
         self.bus.add_listener(self.state.apply)
         # TEST-FULLSTACK-SSE-IDLE: a state change outside a log event wakes
         # the SSE streams at once (no new timer; see SessionState.on_change).
@@ -534,6 +537,86 @@ class Core:
         re-score the last item and the checked items. Returns what
         happened ("switch", "reload" or None)."""
         return self.builds.sync()
+
+    # -- RUN-CHARACTER-PIN (F-157): poll_ms and character without a restart
+    @staticmethod
+    def _live_values(cfg):
+        cfg = cfg if isinstance(cfg, dict) else {}
+        return {"poll_ms": cfg.get("poll_ms"), "character": cfg.get("character")}
+
+    def _apply_poll_ms(self, value):
+        """A valid poll_ms (settingsio's 50 to 5000) becomes the log check
+        interval of the core and of a running reader (its next wait)."""
+        try:
+            ms = settingsio.ALLOWED["poll_ms"](value)
+        except settingsio.SettingsError:
+            return False
+        self.poll_s = ms / 1000.0
+        tailer = self.tailer
+        if tailer is not None:
+            tailer.poll_s = self.poll_s
+        return True
+
+    def _apply_character(self, value):
+        """A valid name pins the character, "" or a removed key frees it
+        (SessionState.set_character); anything else is left alone."""
+        if value is None or value == "":
+            return self.state.set_character(None)
+        try:
+            name = settingsio.ALLOWED["character"](value)
+        except settingsio.SettingsError:
+            return False
+        return self.state.set_character(name)
+
+    def tick_config(self):
+        """RUN-CHARACTER-PIN (F-157), a plug tick (server/al/plug/charpin.py):
+        re-read poll_ms and character from the config file (_config: a stat
+        a pass, a parse only on a change) and apply an edit of either within
+        this tick, with no restart. Only a value that changed since the last
+        apply counts, so a core given its character or poll interval keeps
+        them until the file says otherwise. Returns the changed keys."""
+        now = self._live_values(self._config())
+        seen = self._live_cfg
+        changed = []
+        if now["poll_ms"] != seen["poll_ms"]:
+            seen["poll_ms"] = now["poll_ms"]
+            if self._apply_poll_ms(now["poll_ms"]):
+                changed.append("poll_ms")
+        if now["character"] != seen["character"]:
+            seen["character"] = now["character"]
+            if self._apply_character(now["character"]):
+                changed.append("character")
+        return changed
+
+    def known_characters(self):
+        """The names the picker lists: the state's, then run history's."""
+        names = list(self.state.character_names())
+        for n in self.history.characters():
+            if n not in names:
+                names.append(n)
+        return names
+
+    def pin_character(self, name):
+        """RUN-CHARACTER-PIN: the picker's 'This is my character' pin. A
+        name AshLight has seen (known_characters) is written as the
+        "character" setting of config/local.json (the same key as before)
+        and applied at once; None or "" writes "" and frees it. Raises
+        ValueError for any other name, ConfigUnreadable (an OSError) when
+        the file cannot be written. Returns {"character", "pinned"}."""
+        if name is None or name == "":
+            value = ""
+        else:
+            try:
+                value = settingsio.ALLOWED["character"](name)
+            except settingsio.SettingsError as exc:
+                raise ValueError("That isn't a character name.") from exc
+            if not value or value not in self.known_characters():
+                raise ValueError("AshLight hasn't seen that character in the log.")
+        self._write_config({"character": value})
+        self._live_cfg["character"] = value
+        self._apply_character(value)
+        return {"character": self.state.character,
+                "pinned": bool(self.state.character_fixed)}
 
     def eval_press(self, text, slot=None):
         """One item-hotkey press (POST /api/eval): the item check and at most
