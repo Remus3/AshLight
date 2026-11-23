@@ -2,7 +2,7 @@ AL NEXT SESSION
 ---------------
 SESSION: 22   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 36 done, next wave 37 (session group 34-37)
+WAVE POINTER: wave 37 done, next wave 38 (session group 34-37 closed)
 NOTE (session 21 /done): roadmap fold a32ea86 (29 done rows archived; rows filed, all BLOCKED: session: CP-1, CP-2, GLANCE-PENDING-OUT, AUTOSTART-PSEXE, GATE-HOLD-D). TD23-1 has no own row: PLAY-F-189A-SPACING-BADGE (wave 35) removes every .tab-mark rule. THM-2 closed in wave 33. reap --apply removed the clean w32 / w33 worktrees (salvage-1 to 3, w33-int, packages); re-run read back "reap applied: 0 removed, 3 kept" (lane-0, lane-1, lane-2).
 OPEN FINDINGS (tightened from the wave 31 to 33 NOTE lines, full text in archive block "SESSION 21 /done" of AL-2026-11-22.txt): RUN-CHARACTER-PIN CP-3 nit (index.html '2+' comment); PLAY-F-186B PN6-1 nit (tell() comment); PLAY-TD-23 TD23-E nit (plan's 4/12/8/8 px source); CP-1, CP-2, GLANCE-PENDING-OUT, GATE-HOLD-D are rows; TD23-1 folds into PLAY-F-189A. Still open from GATE-HOLD: wall-clock overruns of unmarked tests under load (tests/test_al_loop_gate_cache.py two tests at 3.07 / 3.38 s against 3.00 s, wave 31 run 1).
 SESSION-21 LESSONS (orchestrators and package agents): start whole suites from Bash, never pwsh 7 (the install tests need a Windows PowerShell 5.1 child environment where Get-FileHash resolves); run at most 2 package agents at once (the harness memory-reaped one suite); any docs/plan/packages.json change needs python tools/plan_check.py waves --write; an orchestrator keeps a live poller of its own or it stalls; read the live core's game_idle before a heavy suite (hold and poll every 5 min while game_idle is false and the newest line is under 5 min old).
