@@ -34,6 +34,10 @@ LOG = logging.getLogger("al.logfile")
 GAME_DIR = "Path of Exile 2"
 LOG_REL = Path("steamapps") / "common" / GAME_DIR / "logs" / "Client.txt"
 DEFAULT_POLL_S = 0.25
+# RUN-PERF-IDLE-BACKOFF (F-178): while the core says the game is idle
+# (decision 0029) the reader polls at most once a second; the first line read
+# switches it back to poll_s, so that line is seen at most 0.75 s later.
+IDLE_POLL_S = 1.0
 MAX_READ = 4 * 1024 * 1024  # bytes per poll; a large backlog drains over polls
 _BOM = b"\xef\xbb\xbf"
 # TEST-E2E: the longest unterminated line held back. Real Client.txt lines are
@@ -268,6 +272,7 @@ class Tailer:
         self._unreadable = False
         self._stop = threading.Event()
         self._thread = None
+        self.idle = False  # RUN-PERF-IDLE-BACKOFF: set by the core (set_idle)
         self.lines = 0
         self.bytes = 0
         self.resets = 0
@@ -299,7 +304,18 @@ class Tailer:
                 self.poll_once()
             except Exception as exc:  # noqa: BLE001 - the reader never dies
                 self._failed(exc)
-            self._stop.wait(self.poll_s)
+            self._stop.wait(self.wait_s())
+
+    # -- RUN-PERF-IDLE-BACKOFF (F-178)
+    def set_idle(self, flag):
+        """The core's game-idle flag: while set, the wait between polls is
+        at least IDLE_POLL_S. The next wait uses it; a line read clears it."""
+        self.idle = bool(flag)
+
+    def wait_s(self):
+        """The wait before the next poll: poll_s, or at least IDLE_POLL_S
+        while idle (a configured poll_s above it is kept)."""
+        return max(self.poll_s, IDLE_POLL_S) if self.idle else self.poll_s
 
     # -- guarded callbacks
     def _listener_failed(self, what):
@@ -411,6 +427,8 @@ class Tailer:
             self._failed(exc)
             return 0
         self._healthy()
+        if n and self.idle:
+            self.idle = False  # RUN-PERF-IDLE-BACKOFF: a line wakes the reader
         return n
 
     def _poll(self):

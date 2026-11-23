@@ -21,7 +21,7 @@ import pytest
 
 from server.al import __main__ as entry
 from server.al import keepalive as ka
-from server.al import paths, ports
+from server.al import hello, paths, ports
 from tc_live_util import leased_port  # noqa: F401 (a fixture)
 
 # TEST-MARKS (research 0049 R3): the three supervisor files share one
@@ -570,7 +570,7 @@ def test_health_check_ignores_proxy_settings(monkeypatch, tmp_path):
         for name in ("no_proxy", "NO_PROXY"):
             monkeypatch.delenv(name, raising=False)
         (tmp_path / "token").write_text("tok\n", encoding="ascii")
-        ka.hello.forget()
+        hello.forget()
         assert ka.health_check(tmp_path, srv.server_address[1], timeout=5)
         assert hits == []
     finally:
@@ -589,7 +589,7 @@ def test_health_check_detail_reads_loop_age(tmp_path, body, age):
     srv = _test_core("tok", health_body=body)
     try:
         (tmp_path / "token").write_text("tok\n", encoding="ascii")
-        ka.hello.forget()
+        hello.forget()
         port = srv.server_address[1]
         got = ka.health_check(tmp_path, port, timeout=5, detail=True)
         assert got == {"ok": True, "loop_age_s": age}
@@ -655,3 +655,27 @@ def test_preflight_child_has_below_normal_priority(tmp_path, monkeypatch):
     monkeypatch.setattr(ka.subprocess, "Popen", popen)
     assert ka._Launcher(["core"])() == 99
     assert not launched["creationflags"] & ka.prio.BELOW_NORMAL  # core stays normal
+
+
+def test_supervisor_does_not_import_urllib_at_start(tmp_path):
+    # RUN-PERF-IDLE-BACKOFF (F-178, budget B9): the supervisor imports the
+    # HTTP client only inside the health probe, so its start and a poll that
+    # needs no probe load neither urllib nor http.client
+    code = (
+        "import sys\n"
+        "from server.al import keepalive as ka\n"
+        "ka.build_parser().parse_args([])\n"
+        "sup = ka.Keepalive(sys.argv[1], int(sys.argv[2]), launch=lambda: 1,\n"
+        "                   pid_alive=lambda p: False, health=lambda: False)\n"
+        "sup.step()\n"
+        "bad = sorted(m for m in sys.modules\n"
+        "             if m.split('.')[0] in ('urllib', 'http') or m.endswith('.hello'))\n"
+        "print(','.join(bad))\n")
+    env = dict(os.environ, AL_RUNTIME_DIR=str(tmp_path))
+    out = subprocess.run([sys.executable, "-c", code, str(tmp_path), str(TEST_PORT)],
+                         cwd=ROOT,
+                         env=env, capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == ""
+    # the probe itself still builds its no-proxy opener on first use
+    assert ka._opener() is ka._opener()

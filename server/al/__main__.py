@@ -402,8 +402,10 @@ def main(argv=None):
     next_beat = 0.0
     from .keepalive import process_created  # pid + creation time = this process
     created = process_created(os.getpid())
+    wait_s = core.loop_wait_s()
     try:
-        while not stop.wait(0.5):
+        # RUN-PERF-IDLE-BACKOFF (F-178): once a second while the game is idle
+        while not stop.wait(wait_s):
             if stop_requested(stop_file):
                 log.info("stop requested (%s); exiting cleanly", STOP_FILE)
                 exitrecord.write(paths.runtime_dir(), exitrecord.STOP, STOP_FILE)
@@ -417,6 +419,7 @@ def main(argv=None):
                 restarting = True
                 break
             core.tick_all(log)  # RUN-SEAMS: one pass of Core.ticks (decision 0056)
+            wait_s = core.loop_wait_s()
             try:  # DATA-PRICE-REFRESH-CORE: a due price refresh, once a minute
                 core.tick_prices()
             except Exception:  # noqa: BLE001 - never stops the core loop
