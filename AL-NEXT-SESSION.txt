@@ -180,16 +180,6 @@ Carried forward (not acted on yet):
   order: a freshly queued same-tree suite took each freed slot while four
   earlier tickets waited 20-31 min. Outbox holds no note (read back
   2026-11-21). A gate traceback seen in a wave is one more line here.
-- AUDIT-P8-LOW (rows RUN-START-REASON-CORE w18, RUN-OBS-LOGS-SHELL and
-  RUN-LADDER-TICK w19, RUN-REPORT-FIELDS w22, RUN-BUDGET-TESTS-DASH w23,
-  RUN-P8-8-CHARMIX w32): P8-3 overlay corePort (app/main.js) takes AL_PORT
-  / config "port" without the 8960-8979 check; P8-4 core --port outside
-  the block still binds (refuse; 0 for tests); P8-5 tick_ladder re-dedupes
-  all session maps twice per 0.5 s tick (~10 ms at 200 + 500 maps); P8-6
-  dashboard console / CSP test never renders Checks rows, a hint or
-  ladder_all; (P8-7 fixed by RUN-REPORT-FIELDS 008c899); P8-8 "This session" ladder and Maps card mix
-  characters after a switch (a map open across a game restart is saved
-  under neither).
 - LIVE rows (all BLOCKED, need the operator or the live game): LIVE-1
   unseen lines (RUN-LEDGER-CORE w5, -WIRE w16, -REPORT w18,
   RUN-LIVE1-FIXTURES parked); TEST-LIVE-CLICKS, one operator login while

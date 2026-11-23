@@ -783,7 +783,11 @@ of the HALT check.
   (decision 0041 amendment 2026-11-20, rulings Q-08, W16-1, W16-2);
   only https links to the hosts in config/link_hosts.json (or their
   subdomains) leave via shell.openExternal, while the companion has focus,
-  at most 1 a second and 5 a minute; downloads are saved only from the core
+  at most 1 a second and 5 a minute (github.com joined the list 2026-11-23,
+  REL-UPDATE-NOTICE-UI adjudicator ruling, for the releases link only: the
+  page shows the core's update.releases_url built from
+  config/public_repo.json, never a host literal under web/); downloads are
+  saved only from the core
   origin with .build, .filter, .json or .txt; with no saved place the
   companion opens on the largest display that is not the overlay's
   (decision 0041 amendment 2026-11-19); the logon task may start it

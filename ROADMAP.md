@@ -193,7 +193,7 @@ merge. Each row names the finding ids it closes.
 
 
 
-- FOLDED 2026-11-18: AUDIT-P8-LOW -> RUN-START-REASON-CORE, RUN-OBS-LOGS-SHELL, RUN-LADDER-TICK, RUN-REPORT-FIELDS, RUN-P8-8-CHARMIX, RUN-BUDGET-TESTS-DASH (docs/plan/07 Coverage; the old row text is in git history).
+- FOLDED 2026-11-18: AUDIT-P8-LOW -> RUN-START-REASON-CORE, RUN-OBS-LOGS-SHELL, RUN-LADDER-TICK, RUN-REPORT-FIELDS, RUN-P8-8-CHARMIX, RUN-BUDGET-TESTS-DASH (docs/plan/07 Coverage; the old row text is in git history); P8-3 to P8-8 all landed, the last RUN-P8-8-CHARMIX in wave 34, 2026-11-23).
 
 
 - FOLDED 2026-11-18: CODE-HEALTH-FOLLOWUP -> TEST-STATE-EQUIV, RUN-ZONE-RESET, TEST-STATE-TEXT-2, TEST-STATE-TEXT-3, TEST-STATE-TEXT-4, TEST-STATE-TEXT-PINS, TEST-WEB-FMT, RUN-DURABLE-CRLF (docs/plan/07 Coverage; the old row text is in git history). Item (1) state.py text split delivered 2026-11-21 by TEST-STATE-TEXT-PINS (server/al/text/, design gate and reviewer moved); item (2) web/ pad / duration / clock dedup delivered 2026-11-19 by TEST-WEB-FMT; item (3) CRLF runtime writers (F-014) delivered 2026-11-18 by RUN-DURABLE-CRLF. All three done; closed.
