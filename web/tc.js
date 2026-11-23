@@ -38,8 +38,11 @@
 
   /* Link-out only (decision 0009): poe2db and the PoE2 wiki pages by name.
      LINK_HOSTS names the hosts links() emits (OVL-LINKS-DOWNLOADS: the
-     companion's config/link_hosts.json must hold them). */
-  var LINK_HOSTS = ["poe2db.tw", "www.poe2wiki.net"];
+     companion's config/link_hosts.json must hold them), plus github.com:
+     REL-UPDATE-NOTICE-UI shows the snapshot's update.releases_url, which
+     the core builds from config/public_repo.json (web/updates.js checks
+     its host against this list). */
+  var LINK_HOSTS = ["github.com", "poe2db.tw", "www.poe2wiki.net"];
   function links(name) {
     if (!name || typeof name !== "string") { return []; }
     var slug = encodeURIComponent(name.trim().replace(/ /g, "_"));
@@ -134,11 +137,17 @@
      sentence. The Settings card (web/index.html, #webdata-sentence) and the
      link-recovery confirm both show exactly this text, so a player turns on
      only what they have read in full. */
-  var WEB_DATA_OPT_IN = "Off unless you turn it on. When on, AshLight asks for two " +
+  /* REL-UPDATE-NOTICE-UI (decisions 0013, 0065; ruling Q-21): the sentence
+     names the daily update check and the automatic apply; ticking the
+     Settings box beside it acknowledges this wording (web/panels/webdata.js
+     sends the wording version as "ack"). */
+  var WEB_DATA_OPT_IN = "Off unless you turn it on. When on, AshLight asks for three " +
     "things only. It fetches currency and item prices from poe.ninja about once an " +
-    "hour. It opens a build link you paste, once. It never asks the trade site " +
-    "anything; the trade link after an item check opens only when you click it. It " +
-    "sends no account, password or cookie, and never touches the game.";
+    "hour. It opens a build link you paste, once. It checks GitHub once a day for a " +
+    "new AshLight; a new version downloads by itself and installs at a later start. " +
+    "It never asks the trade site anything; the trade link after an item check opens " +
+    "only when you click it. It sends no account, password or cookie, and never " +
+    "touches the game.";
   /* The offer names the switch it turns on (floor audit L3), not only the link. */
   var LINK_OFFER = "Turn on web data and load this link";
   var LINK_CONFIRM = "Turn on web data";

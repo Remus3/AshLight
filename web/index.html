@@ -39,6 +39,7 @@
 <script src="/web/hints.js" defer></script>
 <script src="/web/tabs.js" defer></script>
 <script src="/web/checks.js" defer></script>
+<script src="/web/updates.js" defer></script>
 <script src="/web/rail.js" defer></script>
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
@@ -786,11 +787,12 @@
       </form>
       <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
            text the build link recovery shows before its confirm click) -->
-      <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for two things only.
+      <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for three things only.
         It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
-        paste, once. It never asks the trade site anything; the trade link after an item check
-        opens only when you click it. It sends no account, password or cookie, and never touches
-        the game.</p>
+        paste, once. It checks GitHub once a day for a new AshLight; a new version downloads by itself
+        and installs at a later start. It never asks the trade site anything; the trade link after an
+        item check opens only when you click it. It sends no account, password or cookie, and never
+        touches the game.</p>
       <p class="row-meta set-row"><span class="muted">Price book</span>
         <span id="book-state" class="pill" data-state="pending"><span class="glyph"
           aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></span></p>
@@ -999,6 +1001,28 @@
        session card keeps only the Run history page, and no jump row. -->
   <section id="set-about" class="card rail-section" aria-labelledby="about-title" hidden>
     <h3 id="about-title">About and data</h3>
+    <!-- REL-UPDATE-NOTICE-UI (decisions 0013, 0065; F-055, F-077): the
+         version lines, the one update line and the newest 3 versions, from
+         the snapshot's update block (web/updates.js). One rail block, paged
+         by web/rail.js like the rest: no fold. The releases link opens only
+         on the player's click, in their own browser; the OK button shows
+         only while the update wording is not acknowledged yet. Not a live
+         region: the button points at its answer. -->
+    <div id="update-box" class="rail-block" role="group" aria-labelledby="update-title" hidden>
+      <h4 id="update-title" class="sub-h">Version and updates</h4>
+      <p id="update-version"></p>
+      <p id="update-data" class="muted" hidden></p>
+      <p id="update-line" class="row-meta"></p>
+      <p id="update-ack-row" class="set-row" hidden><button id="update-ack" type="button"
+        class="secondary btn-28" aria-describedby="update-line update-said">OK, check for updates</button></p>
+      <p id="update-link-row" hidden><a id="update-link" class="out" target="_blank"
+        rel="noopener noreferrer">AshLight releases on GitHub</a></p>
+      <p id="update-said" class="row-meta"></p>
+      <div id="update-notes-box" hidden>
+        <p class="muted small">What's new in the newest versions</p>
+        <ul id="update-notes" class="update-notes"></ul>
+      </div>
+    </div>
     <div id="promises" class="rail-block promises" role="group" aria-labelledby="promises-title">
       <h4 id="promises-title" class="sub-h">What AshLight does and never does</h4>
       <p><strong>AshLight does</strong></p>

@@ -60,12 +60,16 @@
   var webBusy = false;
 
   var webDoc = null; // DATA-LEAGUE-PICKER-UI: the last full GET / POST /api/web-data answer
+  // REL-UPDATE-NOTICE-UI: the opt-in wording version of the last answer that named one
+  var wordingSeen = null;
 
   /* The switch, the contact field (DATA-CONTACT-UI: shown only until a
      contact is set; never prefilled) and the league picker. A partial doc
      (only web_data, from /api/rates) leaves the field and the picker. */
   function fillWebData(doc) {
     var v = P.webDataView(doc);
+    var w = doc ? doc.wording_version : null;
+    if (typeof w === "number" && w > 0 && Math.floor(w) === w) { wordingSeen = w; }
     webOn = v.on;
     $("webdata-on").checked = v.on;
     if (v.contact.show !== null) { $("webdata-contact-row").hidden = !v.contact.show; }
@@ -160,7 +164,12 @@
     var want = $("webdata-on").checked;
     webBusy = true;
     $("webdata-status").textContent = "Saving...";
-    api("POST", "/api/web-data", { enabled: want }).then(function (doc) {
+    // REL-UPDATE-NOTICE-UI (ruling Q-21): ticking the box on beside the
+    // sentence that names the update check acknowledges that wording: the
+    // wording version the core gave (GET /api/web-data) goes along as "ack"
+    var body = { enabled: want };
+    if (want && wordingSeen !== null) { body.ack = wordingSeen; }
+    api("POST", "/api/web-data", body).then(function (doc) {
       webDataSaved(doc);
     }).catch(function () {
       $("webdata-on").checked = webOn; // back to what is really saved

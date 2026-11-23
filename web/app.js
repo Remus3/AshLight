@@ -774,10 +774,17 @@
     name: "checks",
     order: 180,
     // DIAG-SELF / LANG-GUARD: the core's checks and language notice
+    // REL-UPDATE-NOTICE-UI: the version lines and the update line
+    // (web/updates.js) paint right after the checks, so the Settings tab's
+    // "fix" mark wins over "update"; the OK click acknowledges the wording
     paint: function (s) {
       if (window.ALChecks) { window.ALChecks.paint(document, s); }
+      if (window.ALUpdates) { window.ALUpdates.paint(document, s); }
     },
     wire: function () {
+      if (window.ALUpdates) {
+        window.ALUpdates.wire(document, api, function () { return webState().doc; }, webDataSaved);
+      }
       if (window.ALChecks) {
         var store = null;
         try { store = window.localStorage; } catch (e) { store = null; }
