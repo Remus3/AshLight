@@ -1923,7 +1923,7 @@ summary, published views.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-F-189A-SPACING-BADGE [session, L 90m, build, P3, DR] One spacing scale, one badge, one list row, held by a lint. Files: web/app.css, web/index.html, web/strip.js, web/feed.js, web/notice.js (+7 more). Deps: PLAY-TD-23-RECORDS, PLAY-TD-22A-A11Y-CSS, PLAY-F-186B-PLAYER-NOTES-UI, TEST-CAPTURE-HELPER.
+- PLAY-F-189A-SPACING-BADGE [session, L 90m, build, P3, DR] One spacing scale, one badge, one list row, held by a lint. Files: web/app.css, web/index.html, web/strip.js, web/feed.js, web/notice.js (+19 more). Deps: PLAY-TD-23-RECORDS, PLAY-TD-22A-A11Y-CSS, PLAY-F-186B-PLAYER-NOTES-UI, TEST-CAPTURE-HELPER.
 - TEST-STATE-MIXIN-A [session, M 60m, build, P3] SessionState mixins: cards and trades. Files: server/al/state.py, server/al/state_cards.py, server/al/state_trades.py. Deps: RUN-P8-8-CHARMIX.
 - RUN-FEED-TRUTH [session, L 75m, build, P3, DR] The page says what really happened to the feed + The dashboard rests when unseen or frozen. Files: web/app.js, web/status.js, server/al/http.py, app/overlay/overlay.js, app/shared/render_gate.js (+3 more). Deps: RUN-SUPERVISOR-CLOCK, RUN-CHARACTER-PIN, RUN-NO-DEAD-ENDS, RUN-BUDGET-TESTS-DASH, SEC-SSE-TAP.
 
