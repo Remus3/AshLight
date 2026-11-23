@@ -1600,3 +1600,23 @@ of the HALT check.
   pacer). Reverses if: a core restart that keeps its token is misread as a
   restart, the 3 s retry loads the core, the 45 s mark misfires in play, or a
   hidden page misses a needed update.
+- REL-AUTOSTART-SETTINGS (F-073, F-077, DEP-17; decisions 0011, 0065):
+  Settings > Appearance and tools holds one 'Start with Windows' row
+  (web/autostart.js). It shows the same recorded choice as the tray. It reads
+  the client's autostartState once when it is wired, and the click goes
+  through the preload's argument-free autostartOn or autostartOff. After a
+  click it reads the record again at 1.5, 4 and 10 s, and if the record never
+  follows, the box goes back and the row says "Not saved". In a plain browser
+  the box is disabled and the row reads 'Set this in the AshLight app.' The
+  About and data update block adds three controls, all in an installed copy
+  only (the "install" Checks row is present). The first is a line naming a
+  staged version when that version is not the newest. The second is 'Update
+  now', shown while a newer or staged version exists and web data is on and
+  acknowledged. It sends one POST /api/update-now with the token header, a
+  JSON content type and no body, and the answer word is said in plain words
+  beside it. The third is the click-only switch, saved as a one-key settings
+  import ({kind, schema 1, settings: {update_click_only}}). The player's value
+  holds until the snapshot's click_only agrees. Reverses if: the client gains
+  a completion signal for the autostart script, the core gets its own
+  click-only route, or the bounded re-reads prove too slow or too eager in
+  use.
