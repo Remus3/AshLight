@@ -402,7 +402,10 @@ def main(argv=None):
     next_beat = 0.0
     from .keepalive import process_created  # pid + creation time = this process
     created = process_created(os.getpid())
-    wait_s = core.loop_wait_s()
+    # a core without the RUN-PERF-IDLE-BACKOFF accessor (a test double)
+    # keeps the fixed half-second pass
+    loop_wait = getattr(core, "loop_wait_s", None) or (lambda: 0.5)
+    wait_s = loop_wait()
     try:
         # RUN-PERF-IDLE-BACKOFF (F-178): once a second while the game is idle
         while not stop.wait(wait_s):
@@ -419,7 +422,7 @@ def main(argv=None):
                 restarting = True
                 break
             core.tick_all(log)  # RUN-SEAMS: one pass of Core.ticks (decision 0056)
-            wait_s = core.loop_wait_s()
+            wait_s = loop_wait()
             try:  # DATA-PRICE-REFRESH-CORE: a due price refresh, once a minute
                 core.tick_prices()
             except Exception:  # noqa: BLE001 - never stops the core loop
