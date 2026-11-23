@@ -444,3 +444,12 @@ def test_overlay_parts_adds_no_live_region_beyond_its_status_line():
     assert not is_live(status) and not any(is_live(a) for a in status.ancestors())
     src = JS["overlayparts.js"]
     assert "aria-live" not in src and not re.search(r"""role["']?\s*,""", src)
+
+
+def test_reading_word_hint_reads_in_place_order():
+    """NDE-2: the hint the reading word and the Web data button point at
+    names the place in reading order, the tab first and then its section
+    (Settings, then Reading and web data), as the rail shows it."""
+    hint = by_id()["reading-to"]
+    assert hint.tag == "span" and "hidden" in hint.attrs
+    assert hint.all_text().strip() == "Opens Settings at Reading and web data."
