@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from server.al.core import Core
+from server.al.text.common import CARD_LINE
 from server.al.http import serve
 from server.al.state import (EVAL_CARD_S, SessionState, build_alert_text, eval_card_text,
                              stat_delta_text)
@@ -102,32 +103,50 @@ def test_sidegrade_empty_slot_and_unidentified():
     assert t["line"] == "Mods hidden: identify it"
 
 
-def test_delta_head_drops_the_slot_name_over_26():
-    """CARD-LINE-LIMIT-COPY: the item check head keeps the verdict and the
-    number whole; over 26 characters the slot name drops (the dashboard
-    sentence still names it)."""
+def test_delta_head_keeps_the_slot_name_at_the_26_fit():
+    """CL-2 (CARD-LINE-LIMIT-COPY): the item check head keeps the verdict
+    word and the slot name; over 26 characters the number rounds to a whole
+    one, then moves to the dashboard sentence; the slot name drops only when
+    the verdict and the slot alone cannot fit."""
     t = eval_card_text(card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade",
                             comparisons=[comp("Body Armour", "downgrade", -1234.5)]))
-    assert t["head"] == "Downgrade -1234.5"
-    assert "Body Armour" in t["sentence"]
+    assert t["head"] == "Downgrade vs Body Armour"
+    assert "1234.5" in t["sentence"] and "Body Armour" in t["sentence"]
     t = eval_card_text(card(slot="Body Armour", score_delta=12,
                             comparisons=[comp("Body Armour", "upgrade", 12)]))
     assert t["head"] == "Upgrade +12 vs Body Armour" and len(t["head"]) == 26
+    t = eval_card_text(card(slot="Body Armour", score_delta=12.4,
+                            comparisons=[comp("Body Armour", "upgrade", 12.4)]))
+    assert t["head"] == "Upgrade +12 vs Body Armour"
     t = eval_card_text(card(slot="Body Armour", score_delta=12,
                             comparisons=[comp("Body Armour", "upgrade", 12, empty=True)]))
-    assert t["head"] == "Upgrade +12 - slot empty"
+    assert t["head"] == "Upgrade: Body Armour empty" and len(t["head"]) == 26
     t = eval_card_text(card(slot="Gloves", score_delta=5,
                             comparisons=[comp("Gloves", "upgrade", 5, empty=True)]))
     assert t["head"] == "Upgrade +5 - Gloves empty"
     t = eval_card_text(card(slot="Weapon 1", score_delta=123.5,
                             comparisons=[comp("Weapon 1", "upgrade", 123.5, empty=True)]))
-    assert t["head"] == "Upgrade +123.5"
-    for slot in ("Weapon 1", "Body Armour", "Charm 3"):
+    assert t["head"] == "Upgrade: Weapon 1 empty"
+    t = eval_card_text(card(slot="Weapon 1", score_delta=-0.4, verdict="sidegrade",
+                            comparisons=[comp("Weapon 1", "sidegrade", -0.4)]))
+    assert t["head"] == "Sidegrade -0.4 vs Weapon 1"
+    long = "A Slot Name Far Too Long To Fit"
+    t = eval_card_text(card(slot=long, score_delta=7, comparisons=[comp(long, "upgrade", 7)]))
+    assert t["head"] == "Upgrade +7"
+    known = ("Weapon 1", "Weapon 2", "Helmet", "Body Armour", "Gloves", "Boots",
+             "Amulet", "Ring 1", "Ring 2", "Belt", "Charm 3", "Flask 1")
+    for slot in known:
         for verdict, delta in (("upgrade", 99999.5), ("sidegrade", -0.5), ("downgrade", -12.5)):
             for empty in (False, True):
                 c = card(verdict=verdict, slot=slot, score_delta=delta,
                          comparisons=[comp(slot, verdict, delta, empty=empty)])
-                assert len(eval_card_text(c)["head"]) <= 26, (slot, delta, empty)
+                head = eval_card_text(c)["head"]
+                assert len(head) <= CARD_LINE, (slot, delta, empty)
+                # 9-letter verdict + "Body Armour" + empty is 28 at least
+                if not (empty and verdict != "upgrade" and slot == "Body Armour"):
+                    assert slot in head, (slot, verdict, empty, head)
+                elif empty:
+                    assert head.endswith("slot empty"), head
 
 
 def test_error_card_text():
@@ -179,15 +198,15 @@ def test_every_mark_has_a_word():
 
 
 def test_overlay_lines_fit_the_card():
-    """Section 9 rule 6: the head and line of the common cases fit 34;
-    CARD-LINE-LIMIT-COPY: without an alert they are worded to fit 26."""
+    """Section 9 rule 6: the head and line fit CARD_LINE (26 since
+    CARD-LINE-LIMIT-FLIP), with or without a build alert."""
     for c in (card(), card(slot="Body Armour", score_delta=-1234.5, verdict="downgrade"),
               card(unidentified=True),
               {"ok": False, "error": "no build loaded"},
               {"ok": False, "error": "no gear slot for this item class"},
               {"ok": False, "error": "empty clipboard"}):
         t = eval_card_text(c)
-        assert len(t["head"]) <= 26 and len(t["line"]) <= 26, t
+        assert len(t["head"]) <= CARD_LINE and len(t["line"]) <= CARD_LINE, t
         # TC-VERDICT-CAVEAT: with any build alert, worst cases included
         long_name = "Q" * 23
         for alert in [a for a, _short in ALERTS] + [
@@ -197,16 +216,16 @@ def test_overlay_lines_fit_the_card():
                 {"kind": "class", "build_class": "X" * 40},
                 {"kind": "level", "build_level": 10 ** 40, "level": 1}]:
             t = eval_card_text(c, alert)
-            assert len(t["head"]) <= 34 and len(t["line"]) <= 34, (t, alert)
+            assert len(t["head"]) <= CARD_LINE and len(t["line"]) <= CARD_LINE, (t, alert)
 
 
 def test_alert_head_takes_line3():
     """TC-VERDICT-CAVEAT (F-043): while a build alert is set, a compared
-    item's line 3 is the alert's short head (exact, at most 34) and the
+    item's line 3 is the alert's short head (exact, at most CARD_LINE) and the
     alert sentence is the first dashboard note; the verdict stays."""
     for alert, short in ALERTS:
         words = build_alert_text(alert)
-        assert words["short"] == short and len(short) <= 26
+        assert words["short"] == short and len(short) <= CARD_LINE
         t = eval_card_text(card(), alert)
         assert (t["head"], t["item"], t["line"]) == (
             "Upgrade +47.5 vs Ring 1", "Storm Loop", short)

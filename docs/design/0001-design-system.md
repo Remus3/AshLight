@@ -476,10 +476,11 @@ Generation rules:
 5. **Overlay register is telegraphic**: drop verbs and articles when a
    line must fit (`Lv 12 | 3 deaths`, `Trade: Quietfox`). The dashboard
    register is the full sentence.
-6. **Line limits**: overlay zone 28 chars, trade card and item check card
-   26 chars per line (CARD-LINE-LIMIT-FLIP; 34 before, which rendered
-   past the 236 px text budget at 14 px - the limit drops, never the font
-   size);
+6. **Line limits**: the overlay strip's zone line 28 chars (the " (HO)"
+   tag included; it is a strip row, not a card); every card line (trade,
+   item check, price, waystone, zone moment) 26 chars, the core's
+   CARD_LINE (CARD-LINE-LIMIT-FLIP; 34 before, which rendered past the
+   236 px text budget at 14 px - the limit drops, never the font size);
    dashboard event lines wrap, never truncate.
 7. **Plurals are correct**: `1 death`, `2 deaths`, `1 level-up`.
 8. **Time words are relative on the overlay** (`3m`, `1h05m`) and local
@@ -879,9 +880,10 @@ Section 9 - messaging (TD-07, TD-17):
   from 34 to 26 (CARD_LINE, the format.js maxLen defaults, cardparts
   HEAD_MAX; the key hint's HINT_FIT is CARD_LINE). A line
   built from values drops its least needed part instead of clipping: the
-  keep / vendor head drops ", Lv <n>", the item check head drops the slot
-  name, the price line names the league only when it fits and turns
-  "About <amount>" into "~<amount>".
+  keep / vendor head drops ", Lv <n>", the item check head rounds, then
+  drops the number and keeps the slot name (CL-2; only a slot too long
+  beside the verdict drops), the price line names the league only when
+  it fits and turns "About <amount>" into "~<amount>".
 - Status slot order. Old: connection, Client.txt state, trade count,
   under-level word, AFK / DND, campaign hint word. New: the zone-guide
   line sits after AFK / DND and before the campaign hint word.

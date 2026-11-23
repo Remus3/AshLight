@@ -36,7 +36,9 @@ a new or changed price template is edited here, not in design 0001.
   detail line as `League: <league>`, cut at a whole word with `...`; a
   non-ASCII league name stays in the dashboard sentence only; detail
   `Few listings: rough price`, `<Up|Down> <pct>% in 7 days` (the
-  dashboard sentence names poe.ninja; CARD-LINE-LIMIT-COPY2), `Price
+  overlay trend line no longer names poe.ninja to fit 26 characters;
+  the poe.ninja credit is carried by the dashboard sentence, which
+  names it; CARD-LINE-LIMIT-COPY2, CARD-HINT-TWIN CL2-2), `Price
   from <h> h ago` / `Rough price, <h> h ago` (aged) or `From
   poe.ninja`; the empty clipboard reads `Copy the item first`, `Hover
   it, press Ctrl+C` (CARD-LINE-LIMIT-COPY)

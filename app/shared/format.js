@@ -52,7 +52,9 @@
   }
 
   /* DS-HUD-CLIP: in a hideout the " (HO)" tag (5 chars) is reserved
-     before clipping, so the whole line stays within maxLen. */
+     before clipping, so the whole line stays within maxLen. The default
+     28 is design rule 6's strip zone line, not a card line (cards use the
+     core's CARD_LINE, 26). */
   function zoneText(zone, inHideout, maxLen) {
     var z = zone ? String(zone) : "No zone yet";
     var tag = inHideout ? " (HO)" : "";

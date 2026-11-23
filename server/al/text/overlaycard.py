@@ -123,8 +123,8 @@ def overlay_card(ev, price, now, alert=None, card_s=EVAL_CARD_S):
 # OVL-ZONE-CARD: the zone moment card (server/al/overlayview.py owns its slot)
 MOMENT_CARD_S = 12
 # Card copy (design 0001 section 9); every line is clipped to CARD_LINE.
-# CARD-LINE-LIMIT-COPY: the fixed lines fit 26 characters (a two-digit gap,
-# the longest element) while CARD_LINE stays 34.
+# CARD-LINE-LIMIT-COPY: the fixed lines fit CARD_LINE (26 since
+# CARD-LINE-LIMIT-FLIP; a two-digit gap is the longest element).
 BONUS_TEXT = "Bonus: {text}"
 NEXT_TEXT = "Next: {zone}"
 CLEAR_LINE = "{n} {lv} under: clear it"

@@ -6,11 +6,11 @@ Pure functions and constants; stdlib only.
 """
 
 from .. import num as num_mod
-from .common import _dict, _dicts, _short_list, _signed, _text
+from .common import CARD_LINE, _dict, _dicts, _short_list, _signed, _text
 
-# CARD-LINE-LIMIT-COPY2: the overlay lines fit 26 characters while
-# common.CARD_LINE stays 34; CARD-LINE-LIMIT-FLIP lowers CARD_LINE to it.
-LINE_FIT = 26
+# CARD-LINE-LIMIT-COPY2: the overlay lines fit common.CARD_LINE
+# (26 since CARD-LINE-LIMIT-FLIP).
+LINE_FIT = CARD_LINE
 
 
 WAYSTONE_LISTED = 3  # design 0001 rule 1: the sentence names at most 3 mods

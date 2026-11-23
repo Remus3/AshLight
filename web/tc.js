@@ -258,6 +258,16 @@
       num(hi) + " at the best, so " + pct + "% of the way up.";
   }
 
+  /* CL-3: one compared slot's stat row on the Last item card, in the
+     dashboard's full register: "<slot>: <stat> (<points>)". The points sit
+     in brackets as in the itemcheck copy sheet ("(+35 points)"), so they
+     never read as part of the mod; no points -> the stat alone. */
+  function statRowText(slot, s) {
+    var text = String((s && s.text) || "");
+    var points = String((s && s.points) || "").trim();
+    return (slot || "Slot") + ": " + text + (points ? " (" + points + ")" : "");
+  }
+
   /* ev: the snapshot's eval (or null). clock: (ts) -> "14:05". */
   function evalView(ev, clock) {
     if (!ev || !ev.text) { return null; }
@@ -396,6 +406,7 @@
   }
 
   return { buildView: buildView, pasteResult: pasteResult, evalView: evalView,
+           statRowText: statRowText,
            linkRecover: linkRecover, WEB_DATA_OPT_IN: WEB_DATA_OPT_IN,
            LINK_OFFER: LINK_OFFER, LINK_CONFIRM: LINK_CONFIRM, LINK_CANCEL: LINK_CANCEL,
            buildFileView: buildFileView,

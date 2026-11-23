@@ -14,8 +14,12 @@ a new or changed itemcheck template is edited here, not in design 0001.
 
 - item check (TC-EVAL-UI): overlay head `<Verdict> <+delta> vs <slot>`
   (empty slot: `<Verdict> <+delta> - <slot> empty`; over 26 characters
-  the slot name drops: `<Verdict> <+delta> - slot empty`, then
-  `<Verdict> <+delta>`, and the dashboard names the slot;
+  the verdict and the slot name stay and the number gives way (CL-2): it
+  rounds to a whole one, then leaves the head (`<Verdict> vs <slot>`,
+  `<Verdict>: <slot> empty`) and the dashboard sentence carries it; only
+  a slot too long beside the verdict drops: `<Verdict> <+delta> - slot
+  empty`, `<Verdict>: slot empty`, then `<Verdict> <+delta>`; examples
+  `Upgrade +5 - Gloves empty`, `Upgrade: Body Armour empty`;
   CARD-LINE-LIMIT-COPY), item name, top
   counted stat (`+35 to maximum Life`; a flag mod `Gains: <mod>` /
   `Loses: <mod>`); dashboard `Upgrade: <n> points more than your <slot>
@@ -36,6 +40,12 @@ a new or changed itemcheck template is edited here, not in design 0001.
   are `Paste a build first` (no build), `Copy an item in game first`
   (not an item) and `Only gear is compared`; an unidentified item's
   third line is `Mods hidden: identify it` (CARD-LINE-LIMIT-COPY)
+- dashboard stat rows (Last item card, web/tc.js `statRowText`; CL-3):
+  `<slot>: <mod text> (<points>)`, e.g. `Ring: +35 to maximum Life (+35
+  points)` or `Ring: +Some stat 4 (not counted)` (`not counted` is the
+  honest word for a mod AshLight cannot weigh); the points sit in
+  brackets like the sentence's `(<+n> points)`, never run on from the mod
+  text after a bare space; with no points the row is `<slot>: <mod text>`
 - keep or vendor (TC-CAMPAIGN-KEEP, decision 0057, cardparts/keep.py):
   with no build the overlay head is `<Keep|Vendor> - <k> of <n> met, Lv
   <lv>` or, for a missed must check, `Vendor - no <label>, Lv <lv>`; over

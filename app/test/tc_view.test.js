@@ -25,6 +25,17 @@ const BUILD = {
   }
 };
 
+test("CL-3: an item stat row sets its points apart in brackets", () => {
+  assert.equal(v.statRowText("Ring", { text: "+35 to maximum Life", points: "+35 points" }),
+    "Ring: +35 to maximum Life (+35 points)");
+  assert.equal(v.statRowText("Ring", { text: "+Some odd stat 4", points: "not counted" }),
+    "Ring: +Some odd stat 4 (not counted)");
+  // no points: the stat alone, never an empty "()"
+  assert.equal(v.statRowText("Ring", { text: "+5 to Dexterity", points: "" }),
+    "Ring: +5 to Dexterity");
+  assert.equal(v.statRowText("", { text: "+5 to Dexterity" }), "Slot: +5 to Dexterity");
+});
+
 test("build view: header, live level, key stats in order", () => {
   const m = v.buildView(BUILD, { level: 64, zone: "Clearfell" });
   assert.equal(m.title, "Monk - Invoker");

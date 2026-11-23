@@ -6,7 +6,7 @@ state.py re-exports every name, so state.<name> is the same object. Pure
 functions and constants; stdlib only.
 """
 
-from .common import _dict, _dicts, _num_text, _signed, _signed_points, _text
+from .common import CARD_LINE, _dict, _dicts, _num_text, _signed, _signed_points, _text
 
 
 # BUILD-LIVE (decision 0045): the stale-build alert and the upgrade
@@ -14,9 +14,9 @@ from .common import _dict, _dicts, _num_text, _signed, _signed_points, _text
 # tests/test_build_live.py.
 # TC-VERDICT-CAVEAT (F-042, F-043): every alert sentence names both routes
 # (the Build tab paste and the item-key build load), and `short` is the
-# overlay card's third line while the alert lasts (LINE_FIT at most;
-# CARD-LINE-LIMIT-COPY2: common.CARD_LINE stays 34 until CARD-LINE-LIMIT-FLIP).
-LINE_FIT = 26
+# overlay card's third line while the alert lasts (LINE_FIT at most; it is
+# common.CARD_LINE, 26 since CARD-LINE-LIMIT-FLIP).
+LINE_FIT = CARD_LINE
 ALERT_ROUTES = ("on the Build tab, or copy the code in Path of Building and press "
                 "the item key.")
 

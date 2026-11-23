@@ -8,6 +8,7 @@ line is our own sanitized fixture, not copied data."""
 import re
 
 from server.al.state import SessionState, eval_card_text, waystone_text
+from server.al.text.common import CARD_LINE
 from server.al.theorycraft import live, waystone
 from server.al.theorycraft.model import Build
 
@@ -166,7 +167,7 @@ def test_card_text_exact():
     for w in (WAYSTONE, CALM, UNID):
         for b in (None, LIFE_BUILD, ES_BUILD):
             t = waystone_text(waystone.check(w, b))
-            assert len(t["head"]) <= 34 and len(t["line"]) <= 34, t
+            assert len(t["head"]) <= CARD_LINE and len(t["line"]) <= CARD_LINE, t
             assert "None" not in t["sentence"].replace("None of", "")
     assert waystone_text({})["head"] == "No risky mods found"
 
