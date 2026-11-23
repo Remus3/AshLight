@@ -5,6 +5,7 @@ world_areas.json lacks (server/al/plug/dataage.py, acts.area_kind).
 Synthetic events and tmp files only; no network, no live log."""
 
 import json
+import os
 
 import pytest
 
@@ -118,6 +119,40 @@ def test_resumed_zone_counts(core):
     write_areas(areas_path(core), ["G1_1"])
     core.state.area_id = "G5_2"
     assert core.diag_facts(now=2000.0)["data_age_unknown"] == ["G5_2"]
+
+
+def test_area_ids_share_the_zone_table_parse(tmp_path):
+    """RUN-DATAAGE-SHARED-PARSE: the area id list rides the zone table's one
+    parse of world_areas (acts.TableCache, RUN-PERF-PARSE-ONCE); start reads
+    it once and a later Checks pass parses nothing more."""
+    rt = tmp_path / "rt"
+    areas = rt / "gamedata" / acts.FILE_NAME
+    write_areas(areas, ["G1_1", "G1_2"])
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    c = Core(runtime=rt, log_path=str(log), tail=False)
+    try:
+        share = c.zone_table._share
+        assert share is not None and c.data_age.ids._share is share
+        assert share.parses == 1
+        assert c.data_age.ids.loads == 1  # filled at start from the kept parse
+        c.bus.publish(gen("G6_1"))
+        assert c.diag_facts(now=2000.0)["data_age_unknown"] == ["G6_1"]
+        assert share.parses == 1
+        write_areas(areas, ["G1_1", "G6_1"])
+        st = os.stat(areas)
+        os.utime(areas, ns=(st.st_atime_ns, st.st_mtime_ns + 10 ** 9))
+        assert c.diag_facts(now=2000.0)["data_age_unknown"] == []
+        assert share.parses == 2  # one parse per change for every table
+        assert c.zone_table.get()
+    finally:
+        c.close()
+
+
+def test_ids_from_doc():
+    assert acts.ids_from_doc({"G1_1": {}, "": {}, "MapX": 1}) == frozenset({"G1_1", "MapX"})
+    assert acts.ids_from_doc([1, 2]) == frozenset()
+    assert acts.ids_from_doc(None) == frozenset()
 
 
 def test_seen_ids_are_bounded(tmp_path):

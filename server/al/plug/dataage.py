@@ -41,10 +41,13 @@ class Tracker:
     thread, facts on the core loop."""
 
     def __init__(self, path, on_new=None):
+        # RUN-DATAAGE-SHARED-PARSE: one parse of world_areas per change feeds
+        # this list, the zone table and the waypoint graph (share=True)
         self.ids = hotreload.Watched(path, acts.load_ids, name="Game data area list",
                                      default=frozenset,
                                      check=hotreload.check_json(acts.MAX_BYTES),
-                                     registry=False)
+                                     registry=False, from_doc=acts.ids_from_doc,
+                                     share=True)
         self.on_new = on_new
         self._lock = threading.Lock()
         self._seen = {}
@@ -85,6 +88,9 @@ def attach(core):
         core._next_diag = 0.0  # the Checks card shows it on the next loop pass
 
     core.data_age = Tracker(core.zone_table.path, on_new=refresh)
+    # fill the list now, from the parse the zone table just made (kept for a
+    # late member, hotreload.SHARE_KEEP_S), so no later pass parses again
+    core.data_age.ids.get()
     core.bus.add_listener(core.data_age.on_event)
 
 
