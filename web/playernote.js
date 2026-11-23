@@ -86,6 +86,22 @@
 
   function setText(n, text) { if (n && n.textContent !== text) { n.textContent = text; } }
 
+  /* The answer line, and (PN-A, fix round 1) the Save button's
+     description and title too, so a screen reader hears the answer on the
+     focused button, as web/settingsio.js tell() does; no live region. */
+  function tell(line) {
+    setText(node("pn-said"), line);
+    var btn = node("pn-save");
+    if (!btn) { return; }
+    if (line) {
+      btn.setAttribute("aria-description", line);
+      btn.setAttribute("title", line);
+    } else {
+      btn.removeAttribute("aria-description");
+      btn.removeAttribute("title");
+    }
+  }
+
   function dirty() {
     var box = node("pn-text");
     return !!(box && st.shown && box.value !== st.filled);
@@ -100,7 +116,7 @@
     var m = model(snap);
     if (dirty()) { return; }
     var same = st.shown && st.shown.area === m.area && st.shown.character === m.character;
-    if (!same) { setText(node("pn-said"), ""); }
+    if (!same) { tell(""); }
     st.shown = m.area ? m : null;
     wrap.hidden = !st.shown;
     if (box.value !== m.text) { box.value = m.text; }
@@ -109,27 +125,27 @@
 
   /* One Save. Returns a promise; never throws. */
   function save() {
-    var box = node("pn-text"), btn = node("pn-save"), said = node("pn-said");
+    var box = node("pn-text"), btn = node("pn-save");
     if (!box || st.busy) { return Promise.resolve(); }
     var shown = st.shown;
-    if (!shown) { setText(said, NO_ZONE); return Promise.resolve(); }
+    if (!shown) { tell(NO_ZONE); return Promise.resolve(); }
     var now = model(st.env.getSnap ? st.env.getSnap() : null);
     if (now.character !== shown.character) {
       st.shown = null;
       st.filled = "";
       box.value = "";
       paint(null, st.env.getSnap ? st.env.getSnap() : null);
-      setText(said, CHAR_CHANGED);
+      tell(CHAR_CHANGED);
       return Promise.resolve();
     }
     var text = box.value.slice(0, MAX);
     st.busy = true;
     if (btn) { btn.disabled = true; }
-    setText(said, "");
+    tell("");
     function done(line) {
       st.busy = false;
       if (btn) { btn.disabled = false; }
-      setText(said, line);
+      tell(line);
     }
     return Promise.resolve().then(function () {
       return st.env.fetch(saveUrl(shown.area), {

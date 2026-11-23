@@ -12,11 +12,17 @@ const S = web.load("settingsio.js");
 const SRC = web.source("playernote.js");
 const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const HTML = web.source("index.html");
+const fs = require("node:fs");
+const path = require("node:path");
+const REPO = path.resolve(__dirname, "..", "..");
+const SHEET = fs.readFileSync(path.join(REPO, "docs", "design", "copy", "playernotes.md"), "utf8")
+  .split(/\s+/).join(" ");
+const STORE = fs.readFileSync(path.join(REPO, "server", "al", "playernotes.py"), "utf8");
 
 function el(id) {
   return {
     id, hidden: false, disabled: false, value: "", checked: false, textContent: "",
-    attrs: {}, listeners: {},
+    attrs: {}, listeners: {}, focus() {},
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
     removeAttribute(k) { delete this.attrs[k]; },
@@ -85,6 +91,9 @@ test("Save posts the box as text/plain for the shown zone and character", async 
   assert.equal(c.opts.headers["Content-Type"], "text/plain; charset=utf-8");
   assert.equal(c.opts.body, "take   the left path");
   assert.equal(n["pn-said"].textContent, P.SAVED);
+  // PN-A: the focused Save button carries the answer too (no live region)
+  assert.equal(n["pn-save"].getAttribute("aria-description"), P.SAVED);
+  assert.equal(n["pn-save"].getAttribute("title"), P.SAVED);
   assert.equal(n["pn-text"].value, "take the left path");  // the stored form
   assert.equal(n["pn-save"].disabled, false);
   // the next push moves the box to the zone being played
@@ -261,10 +270,35 @@ test("an import names the notes it added and the ones it kept", () => {
     "No settings in that file were changed. Added 1 zone note. Kept 1 note you already " +
     "had here for the same zone; the backup's version wasn't used.");
   assert.equal(S.importedText(Object.assign({ notes_added: 0, notes_kept: 0, notes_full: 2 }, base)),
-    "No settings in that file were changed. Left out 2 notes: AshLight keeps at most " +
-    "300 notes for 12 characters.");
+    "No settings in that file were changed. Left out 2 notes: AshLight keeps notes for at most " +
+    "300 zones and 12 characters of yours.");
   assert.equal(S.importedText(Object.assign({ notes_added: 0, notes_kept: 0, notes_full: 0 }, base)),
     "No settings in that file were changed. Your zone notes were already here.");
   assert.equal(S.notesText(Object.assign({ notes_added: 1, notes_failed: true }, base)),
     " Added 1 zone note. Some notes weren't saved. Import the backup again.");
+});
+
+test("the notes bound sentence quotes the store's own bounds", () => {
+  const zones = Number(/^MAX_ZONES = (\d+)/m.exec(STORE)[1]);
+  const chars = Number(/^MAX_CHARACTERS = (\d+)/m.exec(STORE)[1]);
+  assert.equal(S.MAX_ZONES, zones);
+  assert.equal(S.MAX_CHARACTERS, chars);
+  assert.equal(S.notesText({ notes_added: 0, notes_kept: 0, notes_full: 1 }),
+    " Left out 1 note: AshLight keeps notes for at most " + zones + " zones and " +
+    chars + " characters of yours.");
+});
+
+test("the copy sheet holds every dashboard string of the notes", () => {
+  const help = /<p id="pn-help"[^>]*>([\s\S]*?)<\/p>/.exec(HTML)[1].split(/\s+/).join(" ").trim();
+  const optHelp = /<p id="settings-notes-help"[^>]*>([\s\S]*?)<\/p>/.exec(HTML)[1]
+    .split(/\s+/).join(" ").trim();
+  const strings = [P.SAVED, P.REMOVED, P.NO_ZONE, P.CHAR_CHANGED, P.FAILED, S.SAVED_NOTES,
+    help, optHelp,
+    S.leftOutText(2).trim().replace(/^2 /, "<n> "),
+    S.notesText({ notes_added: 2 }).trim().replace(/ 2 /, " <n> "),
+    S.notesText({ notes_added: 0, notes_kept: 2 }).trim().replace(/ 2 /, " <n> "),
+    S.notesText({ notes_added: 0, notes_full: 2 }).trim().replace(/ 2 /, " <n> "),
+    "Some notes weren't saved. Import the backup again.",
+    S.notesText({ notes_added: 0 }).trim()];
+  strings.forEach((t) => assert.ok(SHEET.includes(t), t));
 });

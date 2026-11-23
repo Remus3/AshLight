@@ -55,6 +55,9 @@
     "off here. To use it, press \"Set up the calc\" under Settings, Checks in " +
     "the AshLight window. That one step installs the calc and turns it on.";
 
+  var MAX_ZONES = 300;      /* server/al/playernotes.py MAX_ZONES */
+  var MAX_CHARACTERS = 12;  /* server/al/playernotes.py MAX_CHARACTERS */
+
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
 
   /* The export sentence's tail when some notes did not fit the 16 KB
@@ -74,8 +77,8 @@
         "same zone; the backup's version wasn't used.";
     }
     if (full) {
-      text += " Left out " + plural(full, "note", "notes") + ": AshLight keeps at most " +
-        "300 notes for 12 characters.";
+      text += " Left out " + plural(full, "note", "notes") + ": AshLight keeps notes for " +
+        "at most " + MAX_ZONES + " zones and " + MAX_CHARACTERS + " characters of yours.";
     }
     if (report.notes_failed) { text += " Some notes weren't saved. Import the backup again."; }
     if (!text) { text = " Your zone notes were already here."; }
@@ -209,7 +212,8 @@
 
   return { runImport: runImport, runExport: runExport, importedText: importedText,
     refusedText: refusedText, wire: wire, exportUrl: exportUrl, notesText: notesText,
-    leftOutText: leftOutText, SAVED_NOTES: SAVED_NOTES, MAX_BYTES: MAX_BYTES, TOO_BIG: TOO_BIG,
+    leftOutText: leftOutText, SAVED_NOTES: SAVED_NOTES, MAX_ZONES: MAX_ZONES,
+    MAX_CHARACTERS: MAX_CHARACTERS, MAX_BYTES: MAX_BYTES, TOO_BIG: TOO_BIG,
     NOT_JSON: NOT_JSON, FAILED: FAILED, OFFLINE: OFFLINE, SAVED: SAVED,
     WEB_OFFER: WEB_OFFER, CALC_OFFER: CALC_OFFER, WEIGHTS_NOTE: WEIGHTS_NOTE };
 }));

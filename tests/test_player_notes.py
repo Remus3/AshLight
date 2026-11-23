@@ -367,6 +367,8 @@ def test_every_sentence_is_pinned_exactly():
         "NO_ZONE": "AshLight doesn't know this zone yet. Enter a zone, then save again.",
         "ONE_ZONE": "Save one zone at a time.",
         "TOO_BIG": "Your note is too long. Shorten it and save again.",
+        "BAD_TYPE": "AshLight can't read that note. Try again.",
+        "NOTE_SAVE_FAILED": "AshLight couldn't save your note. Try again.",
         "FILE_FORMAT": "the file is not in AshLight's notes format",
         "FILE_ROW": "a note is not in the right form",
         "FILE_TWO": "two notes share one zone",
@@ -396,4 +398,6 @@ def test_every_sentence_is_pinned_exactly():
     # PN-5: the route answers in the module's words, none of its own
     src = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
     assert "Save one zone at a time." not in src
+    assert "couldn't save your note" not in src and "text/plain (UTF-8) required" not in src
+    assert "words.BAD_TYPE" in src and al_http.NOTE_SAVE_FAILED is words.NOTE_SAVE_FAILED
     assert "words.ONE_ZONE" in src and "words.TOO_BIG" in src
