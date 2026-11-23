@@ -38,10 +38,12 @@ SIDE_BAND = delta.SIDEGRADE_PCT
 # group per test (one group each): test_repeat_press_uses_cached_probes is
 # self-contained (TEST-E2E-REPEAT-SELF), so it runs in calc-b beside
 # test_fullstack_calc_on_leg while the rest of the file stays in calc-a.
-# Wave 30 ruling (decision 0060): every test here asserts a wall-clock
-# press budget, so the file runs in the serial timing phase.
-pytestmark = [pytest.mark.server, pytest.mark.slow, pytest.mark.timing, LIVE_REF,
-              pytest.mark.calc]
+# Wave 30 ruling (decision 0060): a test that asserts a wall-clock press
+# budget runs in the serial timing phase. Wave 31 GATE-HOLD ruling (option
+# A): one proof per budget stays timed and serial (ring: first_press_s,
+# body: press_s, repeat: repeat_press_s, killed: fallback_press_s); the
+# amulet and bow correctness checks run untimed in the parallel phase.
+pytestmark = [pytest.mark.server, pytest.mark.slow, LIVE_REF, pytest.mark.calc]
 
 
 def _req(port, method, path, body=None, timeout=120):
@@ -131,14 +133,34 @@ def _sign_ok(change, want):
 
 
 ORDER = ["ring_upgrade", "amulet_sidegrade", "bow_downgrade", "body_upgrade"]
+# GATE-HOLD option A: the timed proofs (the first press of the module, then
+# a warm press) and the untimed correctness checks
+TIMED = ["ring_upgrade", "body_upgrade"]
+UNTIMED = [n for n in ORDER if n not in TIMED]
 
 
 @LIVE_CALC
-@pytest.mark.parametrize("name", ORDER)
+@pytest.mark.timing
+@pytest.mark.parametrize("name", TIMED)
 def test_item_check_deltas_come_from_pob(live, name):
     """Waits for the last stage (TC-PRESS-STAGED-LIVE): PoB's numbers reach
-    the card after the press reply."""
+    the card after the press reply, within the decision 0028 budget."""
     first = not live["times"]
+    took = _check_deltas(live, name)
+    assert took <= BUDGET["first_press_s" if first else "press_s"], took
+
+
+@LIVE_CALC
+@pytest.mark.parametrize("name", UNTIMED)
+def test_item_check_deltas_come_from_pob_untimed(live, name):
+    """The same PoB delta checks for the other items, with no time assert
+    (the parallel phase; the budgets are proved by the timed tests)."""
+    _check_deltas(live, name)
+
+
+def _check_deltas(live, name):
+    """One press of items.ITEMS[name] and every delta check; returns the
+    press time (to the last stage)."""
     result, took = _press(live, items.ITEMS[name], name)
     assert result["ok"], result
     assert result["calc"] == {"source": "pob", "notice": None}, result["calc"]
@@ -161,10 +183,11 @@ def test_item_check_deltas_come_from_pob(live, name):
     assert card["calc"]["source"] == "pob" and card["verdict"] == verdict
     cbest = [c for c in card["comparisons"] if c["slot"] == result["slot"]][0]
     assert cbest["dps"] == best["dps"] and cbest["ehp"] == best["ehp"]
-    assert took <= BUDGET["first_press_s" if first else "press_s"], took
+    return took
 
 
 @LIVE_CALC(group=CALC_GROUP_B)
+@pytest.mark.timing
 def test_repeat_press_uses_cached_probes(live):
     """TEST-E2E-REPEAT-SELF: self-contained in any order. The ring is pressed
     twice here: the first press fills the probe cache (a cold one may pay
@@ -180,6 +203,7 @@ def test_repeat_press_uses_cached_probes(live):
 
 
 @LIVE_CALC
+@pytest.mark.timing
 def test_killed_calc_falls_back_then_recovers(live):
     """The calc process is killed again and again while a press runs: the
     press still answers 200 within budget with the weights fallback and the
