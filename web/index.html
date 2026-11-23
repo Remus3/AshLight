@@ -42,6 +42,7 @@
 <script src="/web/rail.js" defer></script>
 <script src="/web/verdicts.js" defer></script>
 <script src="/web/zoneguide.js" defer></script>
+<script src="/web/playernote.js" defer></script>
 <script src="/web/logpath.js" defer></script>
 <script src="/web/theme.js" defer></script>
 <script src="/web/slots.js" defer></script>
@@ -535,6 +536,21 @@
            and hides it). Not a live region. -->
       <div id="zone-guide" class="zone-guide" role="group" aria-label="Zone guide" hidden></div>
       <p class="row-body muted guide-none">The guide for your zone shows here while you are in a campaign zone.</p>
+      <!-- PLAY-F-186B (decision 0074): the player's own note for the zone
+           being played, saved only on Save (web/playernote.js, POST
+           /api/player-note). Shown while a zone and character are known.
+           #pn-said is not a live region; the box and the button name it. -->
+      <div id="pn" class="player-note" role="group" aria-labelledby="pn-label" hidden>
+        <label id="pn-label" for="pn-text">Your note for this zone</label>
+        <textarea id="pn-text" class="paste-box" rows="3" maxlength="200" spellcheck="true"
+          autocomplete="off" aria-describedby="pn-help pn-said"></textarea>
+        <p id="pn-help" class="row-meta muted">Up to 200 characters. It shows in the zone
+          guide each time you enter this zone and stays on this computer. Save an
+          empty box to remove it.</p>
+        <p class="tool-row"><button id="pn-save" type="button" class="secondary"
+          aria-describedby="pn-said">Save note</button>
+          <span id="pn-said" class="muted"></span></p>
+      </div>
     </div>
   </section>
   </div>
@@ -932,6 +948,13 @@
         <label for="settings-import-file">Import a settings backup</label>
         <input id="settings-import-file" type="file" accept=".json,application/json">
       </div>
+      <!-- PLAY-F-186B (decision 0074 item 8): the zone notes join the
+           backup only while this is ticked (GET /api/settings-export?notes=1);
+           off on every page load -->
+      <p class="tool-row"><label class="check" for="settings-notes"><input id="settings-notes"
+        type="checkbox" aria-describedby="settings-notes-help"> Include my zone notes</label></p>
+      <p id="settings-notes-help" class="muted small">Your notes carry your character
+        names. Leave this off to keep them on this computer.</p>
       <p id="settings-said" class="muted"></p>
     </div>
     </div>

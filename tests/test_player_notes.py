@@ -23,6 +23,7 @@ from server.al import playcards as pc
 from server.al import playernotes as pn
 from server.al import playview as pv
 from server.al import zoneguide
+from server.al.text import playernotes as words
 from server.al.core import Core
 from server.al.state import SessionState
 
@@ -262,7 +263,7 @@ def test_route_needs_the_token_and_plain_text(srv):
     assert _post(srv, b"\xff\xfe")[0] == 400
     assert _post(srv, ("x" * 201).encode())[0] == 400
     assert _post(srv, "bell\x07".encode())[0] == 400
-    assert _post(srv, b"x" * (al_http.MAX_BODY + 1))[0] == 413
+    assert _post(srv, b"x" * (al_http.MAX_BODY + 1)) == (413, {"error": words.TOO_BIG})
     assert not (core.runtime / pn.FILE_NAME).exists()
     code, doc = _post(srv, "Grelwood exit north \u00e9".encode("utf-8"))
     assert code == 200 and doc["note"]["text"] == "Grelwood exit north \u00e9"
@@ -272,7 +273,8 @@ def test_route_needs_the_token_and_plain_text(srv):
     code, doc = _post(srv, b"later", path="/api/player-note?area=G1_3")
     assert code == 200 and doc["note"]["area_id"] == "G1_3"
     assert _post(srv, b"x", path="/api/player-note?area=..%2Fx")[0] == 400
-    assert _post(srv, b"x", path="/api/player-note?area=A&area=B")[0] == 400
+    assert _post(srv, b"x", path="/api/player-note?area=A&area=B") == (
+        400, {"error": words.ONE_ZONE})
     # an empty Save removes the note
     code, doc = _post(srv, b"", path="/api/player-note?area=G1_3")
     assert code == 200 and doc["note"] is None
@@ -348,3 +350,50 @@ def test_registry_poll_stats_the_file_at_most_once_a_minute(tmp_path, monkeypatc
     clock[0] += pn.CHECK_S - 1
     reg.poll()
     assert len(stats) == n
+
+
+# -- PN-5 / PN-6 (PLAY-F-186B): every sentence pinned exactly -------------------
+
+def test_every_sentence_is_pinned_exactly():
+    """The exact-output test the copy sheet docs/design/copy/playernotes.md
+    names: every sentence of server/al/text/playernotes.py, word for word,
+    and the sheet quotes each one. The sheet and the module are edited in
+    both places together."""
+    want = {
+        "NAME": "Your notes",
+        "TEXT_BAD": ("Your note has a character AshLight can't keep. "
+                     "Use plain letters, digits and punctuation."),
+        "NO_CHARACTER": "AshLight doesn't know your character yet. Enter a zone, then save again.",
+        "NO_ZONE": "AshLight doesn't know this zone yet. Enter a zone, then save again.",
+        "ONE_ZONE": "Save one zone at a time.",
+        "TOO_BIG": "Your note is too long. Shorten it and save again.",
+        "FILE_FORMAT": "the file is not in AshLight's notes format",
+        "FILE_ROW": "a note is not in the right form",
+        "FILE_TWO": "two notes share one zone",
+        "FILE_BIG": "the file is too large",
+        "HELD_TAIL": "The last good copy stays in use.",
+        "FIX_TAIL": "Fix the file, or save a note to replace it.",
+    }
+    consts = {k: v for k, v in vars(words).items() if k.isupper() and isinstance(v, str)}
+    assert consts == want
+    assert words.text_long(200) == "Your note is over 200 characters. Shorten it and save again."
+    assert words.file_long(200) == "a note is over 200 characters"
+    assert words.file_many(300) == "the file holds more than 300 notes"
+    assert words.file_chars(12) == "the file holds notes of more than 12 characters"
+    # the store re-exports the same objects
+    for k in ("TEXT_BAD", "NO_CHARACTER", "NO_ZONE", "FILE_FORMAT", "FIX_TAIL"):
+        assert getattr(pn, k) is getattr(words, k)
+    # the copy sheet quotes every sentence (its own line wraps folded)
+    sheet = " ".join((ROOT / "docs" / "design" / "copy" / "playernotes.md")
+                     .read_text(encoding="ascii").split())
+    for text in list(want.values()) + ["Your note is over <n> characters. Shorten it and save again.",
+                                       "a note is over <n> characters",
+                                       "the file holds more than <n> notes",
+                                       "the file holds notes of more than <n> characters"]:
+        assert text in sheet, text
+    assert "edited in both places together" in sheet
+    assert "test_every_sentence_is_pinned_exactly" in sheet
+    # PN-5: the route answers in the module's words, none of its own
+    src = (ROOT / "server" / "al" / "http.py").read_text(encoding="ascii")
+    assert "Save one zone at a time." not in src
+    assert "words.ONE_ZONE" in src and "words.TOO_BIG" in src

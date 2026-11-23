@@ -63,6 +63,7 @@ from urllib.parse import parse_qs, urlsplit
 from . import (DISCLAIMER, NAME, VERSION, buildinfo, gfx, hello, layout, metrics,
                overlayview, paths, playernotes, plug, ports, settingsio, static, updates, webfetch,
                webpage)
+from .text import playernotes as note_words
 from .theorycraft import codec as build_codec
 from .theorycraft import datacredit
 from .theorycraft import lootfilter
@@ -509,10 +510,14 @@ class Handler(BaseHTTPRequestHandler):
         # UX-SETTINGS-IO (ruling E): AshLight's own settings as a
         # download the player saves; allow-list only (no contact,
         # token, cookie or path); the core writes no file anywhere.
+        # PLAY-F-186B (decision 0074 item 8): ?notes=1, sent only when
+        # the player ticked "Include my zone notes", adds the notes block.
         hdr = dict(extra, **{"Content-Disposition":
                              f'attachment; filename="{settingsio.FILE_NAME}"'})
-        text = json.dumps(self.server.core.export_settings(), indent=2,
-                          ensure_ascii=True) + "\n"
+        doc = self.server.core.export_settings()
+        if query.get("notes") == ["1"]:
+            doc = settingsio.with_notes(doc, self.server.core.player_notes.book())
+        text = json.dumps(doc, indent=2, ensure_ascii=True) + "\n"
         return self._send(200, text, "application/json; charset=utf-8", hdr)
 
     def _get_weights(self, path, query, extra):
@@ -594,12 +599,37 @@ class Handler(BaseHTTPRequestHandler):
         if body is None:
             return None
         try:
+            notes = settingsio.notes_of(body)  # checked first: a bad block applies nothing
             report = self.server.core.import_settings(body)
         except settingsio.SettingsError as e:
             return self._json(400, {"error": str(e)})
         except OSError:
             return self._json(500, {"error": SAVE_FAILED})
+        if notes is not None:
+            report.update(self._import_notes(notes))
         return self._json(200, report)
+
+    def _import_notes(self, rows):
+        """PLAY-F-186B (decision 0074 item 8): an imported notes block. A
+        zone that already has a note keeps it; new zones are saved one by
+        one through the notes store while its bounds allow, then the book
+        is published. A failed write stops there and says so
+        ("notes_failed"); the notes already saved stay. The text is never
+        logged."""
+        core = self.server.core
+        store = core.player_notes
+        adds, report = settingsio.merge_notes(store.book(), rows)
+        saved = 0
+        try:
+            for name, area, text in adds:
+                store.save(name, area, text)
+                saved += 1
+        except (OSError, playernotes.NoteError) as e:
+            log.warning("imported notes not all saved (%s)", type(e).__name__)
+            report["notes_failed"] = True
+        report["notes_added"] = saved
+        core.state.set_player_notes(store.book())
+        return report
 
     def _run_history(self, path, query, extra):
         """UTIL-RUN-HISTORY: {"enabled": bool} turns it on or off,
@@ -946,7 +976,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(415, {"error": "text/plain (UTF-8) required"})
         if length < 0 or length > MAX_BODY:
             self._discard_body(length)
-            return self._json(413, {"error": "body too large"})
+            return self._json(413, {"error": note_words.TOO_BIG})
         try:
             raw = self.rfile.read(length)
         except OSError:
@@ -961,7 +991,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": playernotes.TEXT_BAD})
         area = query.get("area")
         if area is not None and len(area) != 1:
-            return self._json(400, {"error": "Save one zone at a time."})
+            return self._json(400, {"error": note_words.ONE_ZONE})
         try:
             playernotes.clean_text(text)
             note = self.server.core.save_player_note(

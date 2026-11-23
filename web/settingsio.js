@@ -11,7 +11,13 @@
    the optional calc (tc_calc_offered): the player is told it stays off
    until they set it up. TC-WEIGHTS-DELTA-EXPORT: schema 2 files also
    carry the player's stat weight changes (weights_applied in the
-   report). No timers. */
+   report). No timers.
+   PLAY-F-186B-PLAYER-NOTES-UI (decision 0074 item 8): the player's zone
+   notes join the backup only while "Include my zone notes"
+   (#settings-notes) is ticked (GET /api/settings-export?notes=1); an
+   import adds notes for new zones and never replaces a note this computer
+   already has (notes_added, notes_kept, notes_full in the report). The
+   tests of the notes parts are in app/test/playernote.test.js. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -34,6 +40,8 @@
   var OFFLINE = "Can't reach AshLight - is it running?";
   var SAVED = "Downloaded your settings backup, " + FILE_NAME + ". It holds " +
     "AshLight's settings only: no contact, password or file paths.";
+  var SAVED_NOTES = "Downloaded your settings backup, " + FILE_NAME + ". It holds " +
+    "AshLight's settings and your zone notes: no contact, password or file paths.";
   /* design review D-1: an import replaces this computer's weight changes */
   var WEIGHTS_NOTE = " They replace the stat weights you had here.";
   var WEB_OFFER = " The file had web data on. It stays off here until you tick " +
@@ -46,6 +54,33 @@
   var CALC_OFFER = " The file had the optional Path of Building calc on. It stays " +
     "off here. To use it, press \"Set up the calc\" under Settings, Checks in " +
     "the AshLight window. That one step installs the calc and turns it on.";
+
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+  /* The export sentence's tail when some notes did not fit the 16 KB
+     backup (the newest ones are in it). */
+  function leftOutText(n) {
+    return n > 0 ? " " + plural(n, "older note", "older notes") +
+      " didn't fit in the backup and stayed only on this computer." : "";
+  }
+
+  /* The notes sentences after an import ("" when the file had none). */
+  function notesText(report) {
+    if (typeof report.notes_added !== "number") { return ""; }
+    var added = report.notes_added, kept = report.notes_kept || 0, full = report.notes_full || 0;
+    var text = added ? " Added " + plural(added, "zone note", "zone notes") + "." : "";
+    if (kept) {
+      text += " Kept " + plural(kept, "note", "notes") + " you already had here for the " +
+        "same zone; the backup's version wasn't used.";
+    }
+    if (full) {
+      text += " Left out " + plural(full, "note", "notes") + ": AshLight keeps at most " +
+        "300 notes for 12 characters.";
+    }
+    if (report.notes_failed) { text += " Some notes weren't saved. Import the backup again."; }
+    if (!text) { text = " Your zone notes were already here."; }
+    return text;
+  }
 
   /* The sentence after an import, from the core's report. */
   function importedText(report) {
@@ -69,6 +104,7 @@
       text += " Skipped " + ignored.length + (ignored.length === 1 ? " setting" : " settings") +
         " that AshLight doesn't take from a file.";
     }
+    text += notesText(report);
     if (report.web_data_offered) { text += WEB_OFFER; }
     if (report.tc_calc_offered) { text += CALC_OFFER; }
     return text;
@@ -116,16 +152,29 @@
     });
   }
 
-  /* One export. env: {fetch, token, save(blob, name), tell(text)}. */
+  /* The export URL: the notes block only when the player ticked it. */
+  function exportUrl(notes) {
+    return notes === true ? "/api/settings-export?notes=1" : "/api/settings-export";
+  }
+
+  /* One export. env: {fetch, token, save(blob, name), tell(text),
+     notes() optional: true while "Include my zone notes" is ticked}. */
   function runExport(env) {
     env.tell("");
-    return env.fetch("/api/settings-export", {
+    var notes = typeof env.notes === "function" && env.notes() === true;
+    return env.fetch(exportUrl(notes), {
       headers: { "X-AL-Token": env.token }, cache: "no-store"
     }).then(function (r) {
       if (!r.ok) { env.tell(FAILED); return null; }
       return r.blob().then(function (blob) {
         env.save(blob, FILE_NAME);
-        env.tell(SAVED);
+        if (!notes) { env.tell(SAVED); return null; }
+        var read = typeof blob.text === "function" ? blob.text() : Promise.resolve("");
+        return read.then(function (t) {
+          var left = 0;
+          try { left = JSON.parse(t).notes_left_out; } catch (e) { left = 0; }
+          env.tell(SAVED_NOTES + leftOutText(typeof left === "number" ? left : 0));
+        }, function () { env.tell(SAVED_NOTES); });
       });
     }).catch(function () { env.tell(OFFLINE); });
   }
@@ -137,7 +186,9 @@
     if (!btn || !input) { return; }
     /* No live region (the page keeps its 12): as for the loot filter
        merge, the focused control's name carries the answer too. */
+    var notesBox = doc.getElementById("settings-notes");
     var e = { fetch: env.fetch, token: env.token, save: env.save,
+      notes: function () { return !!(notesBox && notesBox.checked); },
       tell: function (text) {
         said.textContent = text;
         [btn, input].forEach(function (el) {
@@ -157,7 +208,8 @@
   }
 
   return { runImport: runImport, runExport: runExport, importedText: importedText,
-    refusedText: refusedText, wire: wire, MAX_BYTES: MAX_BYTES, TOO_BIG: TOO_BIG,
+    refusedText: refusedText, wire: wire, exportUrl: exportUrl, notesText: notesText,
+    leftOutText: leftOutText, SAVED_NOTES: SAVED_NOTES, MAX_BYTES: MAX_BYTES, TOO_BIG: TOO_BIG,
     NOT_JSON: NOT_JSON, FAILED: FAILED, OFFLINE: OFFLINE, SAVED: SAVED,
     WEB_OFFER: WEB_OFFER, CALC_OFFER: CALC_OFFER, WEIGHTS_NOTE: WEIGHTS_NOTE };
 }));
