@@ -324,7 +324,9 @@ def test_private_files_row():
     assert r["status"] == "fail" and r["label"] == "Private files"
     assert r["detail"] == ("Other accounts on this computer can change files in "
                            "the AshLight folder.")
-    assert r["fix"] == "In the AshLight folder, run: python -m server.al.acl apply ."
+    # NDE-1: a player-level fix in plain words, never a command line
+    assert r["fix"] == diag.FIX_PRIVATE_APP
+    assert "Properties" in r["fix"] and "Security" in r["fix"]
     for name in ("runtime", "sidecar"):
         r = row({"acl_open": [name]}, "private")
         assert r["fix"] == diag.FIX_PRIVATE_SETUP and "AshLight's setup again" in r["fix"]
@@ -336,6 +338,20 @@ def test_private_files_row():
     assert len(r["fix"].splitlines()) == 1
     v = diag.view(dict(GREEN, acl_open=["runtime"]), "1", now=NOW)
     assert v["failed"] == 1 and v["checks"][-1]["id"] == "private"
+
+
+def test_no_fix_text_holds_a_command_line():
+    # NDE-1 (wave 28 design finding): a Checks fix is for players, so no fix
+    # text tells them to type a python command line.
+    texts = [v for k, v in vars(diag).items()
+             if k.startswith("FIX_") and isinstance(v, str)]
+    assert texts
+    combos = (["app"], ["runtime"], ["sidecar"], ["app", "runtime"],
+              ["app", "sidecar", "runtime"])
+    texts += [diag.check_private({"acl_open": c})["fix"] for c in combos]
+    for t in texts:
+        assert "python -m" not in t, t
+        assert "python " not in t.lower(), t
 
 
 def test_summary_counts_fixes():

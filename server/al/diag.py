@@ -341,9 +341,15 @@ PRIVATE_WHAT = {"runtime": "AshLight's runtime folder", "app": "the AshLight fol
                 "sidecar": "AshLight's sidecar folder"}
 FIX_PRIVATE_SETUP = ("Run AshLight's setup again, as when you installed it. It "
                      "makes AshLight's own folders private.")
-FIX_PRIVATE_APP = "In the AshLight folder, run: python -m server.al.acl apply ."
+# NDE-1: the AshLight folder is the player's own, so AshLight never changes
+# it (decision 0051); the fix is plain Windows steps, never a command line.
+FIX_PRIVATE_APP = ("Right-click the AshLight folder, open Properties, then "
+                   "Security, and take away Write from Everyone, Users and any "
+                   "other person's account.")
 FIX_PRIVATE_BOTH = ("Run AshLight's setup again, as when you installed it. Then "
-                    "in the AshLight folder run: python -m server.al.acl apply .")
+                    "right-click the AshLight folder, open Properties, then "
+                    "Security, and take away Write from Everyone, Users and any "
+                    "other person's account.")
 
 
 def check_private(f):
