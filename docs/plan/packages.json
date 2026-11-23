@@ -19028,7 +19028,10 @@
     "web/notice.css",
     "web/setupcard.css",
     "app/test/rail.test.js",
-    "app/test/strip.test.js"
+    "app/test/strip.test.js",
+    "app/test/client_controls.test.js",
+    "app/test/setupcard.test.js",
+    "tests/test_ux_review.py"
    ],
    "new_files": [
     "tests/test_spacing_scale.py"
@@ -19059,7 +19062,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Tier P3. Done after the layout work so it is not done twice. The tokens exist since PLAY-TD-03-TOKENS; this package makes them the only values and renames the classes in markup and in the renderers that create badges. The fit harness must stay green (no region changes size). Design 0001 section 4 gets the badge and row rules. Any visual comparison uses only the TEST cluster's shared capture helper (F-147); no capture of the desktop. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Session 22 widening (needs-path rule, ruling A): files add web/tabs.js (.tab-mark selector, TD23-1; keep the Settings update / fix mark working), the nine panel stylesheets web/strip.css, theme.css, buildline.css, context.css, feed.css, itemcard.css, keptchecks.css, notice.css, setupcard.css (non-token spacing the accept lint covers), and app/test/rail.test.js, app/test/strip.test.js (pill class regexes).",
+   "notes": "Tier P3. Done after the layout work so it is not done twice. The tokens exist since PLAY-TD-03-TOKENS; this package makes them the only values and renames the classes in markup and in the renderers that create badges. The fit harness must stay green (no region changes size). Design 0001 section 4 gets the badge and row rules. Any visual comparison uses only the TEST cluster's shared capture helper (F-147); no capture of the desktop. Design-reviewer pass required; the docs/design/reviews.log line is returned in the result and appended by the wave integrator (F-017). Session 22 widening (needs-path rule, ruling A): files add web/tabs.js (.tab-mark selector, TD23-1; keep the Settings update / fix mark working), the nine panel stylesheets web/strip.css, theme.css, buildline.css, context.css, feed.css, itemcard.css, keptchecks.css, notice.css, setupcard.css (non-token spacing the accept lint covers), and app/test/rail.test.js, app/test/strip.test.js (pill class regexes). Second widening (session 22): app/test/client_controls.test.js, app/test/setupcard.test.js and tests/test_ux_review.py (tests pinning the old spacing / pill text).",
    "wave": 35,
    "owner": "session",
    "tier": "P3",
