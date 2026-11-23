@@ -731,13 +731,6 @@ of the HALT check.
   login-host line appears on plain reconnects that keep the character and
   misfiles runs, a party member with no join line often levels first after a
   relog, or names must not be stored.
-- PLAYER-NOTES: the player's own plain-text note per zone and character in
-  one bounded file under ops/runtime (300 zones, 200 characters each), keyed
-  by the Client.txt area id, written only on the player's Save through the
-  token API, shown after AshLight's guide rows as 'your note', exported only
-  when picked; names and notes stay local (decision 0074). Reverses if: the
-  operator rules local note files unwanted, a note reaches a report or an
-  export unasked, or decision 0036 changes.
 - Waystone rewards from the item text's reward properties on the same
   press; campaign hints (boss resist, flask base, boots speed) only from
   Client.txt, the PoB build and the cached base_items snapshot, boss
