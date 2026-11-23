@@ -1780,6 +1780,12 @@ class Core:
             "reload_notes": self.reload_notes(),
             # GGG-DOCS-WATCH (decision 0044): tools/ggg_docs_watch.py flag
             "ggg_reg_open": self._ggg_reg_open(),
+            # LOOP-DEV-CHECKS (F-125, AUTO-08, F-130): the dev loop status
+            # file's age and the tracked Electron pin's end of life, local
+            # reads only; a test core reads neither
+            "loop_tick_age_s": (diag.loop_tick_age(paths.repo_root(), now)
+                                if self._real else None),
+            "electron_eol": diag.electron_eol(paths.repo_root()) if self._real else None,
             # SEC-ACL-CHECK: folder names from the start-up audit, no path
             "acl_open": list(self.acl_open) if self.acl_open is not None else None,
             # OBS-CRASH: why the core and the desktop client last exited
