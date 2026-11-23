@@ -428,7 +428,8 @@
         if (c.slot !== ev.slot && c.sentence) { check.push(textRow(slot + ": " + c.sentence)); }
         if (c.slot !== ev.slot && c.calc) { check.push(textRow(slot + ": " + c.calc)); }
         if (c.stats && c.stats.length) {
-          c.stats.forEach(function (s) { check.push(textRow(slot + ": " + s.text + " " + s.points)); });
+          // CL-3: the points in brackets, never run on from the mod text
+          c.stats.forEach(function (s) { check.push(textRow(T.statRowText(slot, s))); });
         } else {
           check.push(textRow(slot + ": no stat differences."));
         }

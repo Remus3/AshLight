@@ -40,6 +40,12 @@ a new or changed itemcheck template is edited here, not in design 0001.
   are `Paste a build first` (no build), `Copy an item in game first`
   (not an item) and `Only gear is compared`; an unidentified item's
   third line is `Mods hidden: identify it` (CARD-LINE-LIMIT-COPY)
+- dashboard stat rows (Last item card, web/tc.js `statRowText`; CL-3):
+  `<slot>: <mod text> (<points>)`, e.g. `Ring: +35 to maximum Life (+35
+  points)` or `Ring: +Some stat 4 (not counted)` (`not counted` is the
+  honest word for a mod AshLight cannot weigh); the points sit in
+  brackets like the sentence's `(<+n> points)`, never run on from the mod
+  text after a bare space; with no points the row is `<slot>: <mod text>`
 - keep or vendor (TC-CAMPAIGN-KEEP, decision 0057, cardparts/keep.py):
   with no build the overlay head is `<Keep|Vendor> - <k> of <n> met, Lv
   <lv>` or, for a missed must check, `Vendor - no <label>, Lv <lv>`; over
