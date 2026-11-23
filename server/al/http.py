@@ -81,6 +81,10 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; "
 TOKEN_HEADER = "X-AL-Token"
 SSE_MIN_INTERVAL_S = 0.25  # coalesce pushes to at most 4 Hz
 SSE_HEARTBEAT_S = 15.0
+# RUN-FEED-TRUTH (F-175): the keep-alive is a named event (an SSE comment
+# never reaches page code), so the overlay can mark a feed stale after
+# three missed beats (app/shared/render_gate.js FEED_STALE_MS, 45 s)
+SSE_ALIVE_EVENT = "alive"
 SSE_WAIT_MAX_S = 1.0  # bound on one wait, so shutdown is noticed quickly
 MAX_BODY = 4096
 # AREA-AUDIT P5-1: a config write refused (config/local.json unreadable or
@@ -1287,16 +1291,19 @@ class Handler(BaseHTTPRequestHandler):
                         sent_stamp = stamp
                         self._sse_write(text)
                         last_push = last_beat = now
-                elif now - last_beat >= SSE_HEARTBEAT_S:
+                if now - last_beat >= SSE_HEARTBEAT_S:
                     # A state can change with no log event (a trade card
                     # expiring, DS-TRADE-EXPIRE): the heartbeat sends it.
+                    # RUN-FEED-TRUTH: its own check, not an elif, so a
+                    # stream whose pushes send nothing (the overlay view
+                    # while only dashboard state moves) still beats.
                     sent_version, stamp, text = frame()
                     if stamp != sent_stamp:
                         sent_stamp = stamp
                         self._sse_write(text)
                         last_push = now
                     else:
-                        self._sse_write(": hb\n\n")
+                        self._sse_write(self._sse_msg(SSE_ALIVE_EVENT, {}))
                     last_beat = now
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
             pass

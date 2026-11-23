@@ -499,3 +499,50 @@ test("OVERLAY-FEED B13: the small view paints exactly what the full snapshot pai
     }
   }
 });
+
+/* RUN-FEED-TRUTH (F-175): the core's keep-alive is a named "alive" event
+   every 15 s; a live feed with no frame for 45 s is marked stale. No timer
+   in render_gate.js; the page's one schedule() timer wakes at the mark. */
+test("RUN-FEED-TRUTH: no keep-alive for 45 s marks the feed stale", () => {
+  assert.equal(gate.FEED_STALE_MS, 45000);
+  const t0 = 1795000000000;
+  // a live feed: fresh until 45 s after the last frame, then the
+  // reconnecting word of the one vocabulary
+  assert.equal(gate.feedStatus("live", t0, t0), "live");
+  assert.equal(gate.feedStatus("live", t0, t0 + 44999), "live");
+  assert.equal(gate.feedStatus("live", t0, t0 + 45000), "offline");
+  assert.equal(gate.feedStatus("live", t0, t0 + 45000), gate.STATUS_WORDS.states.link_retry.overlay);
+  // a keep-alive at 30 s moves the mark on
+  assert.equal(gate.feedStatus("live", t0 + 30000, t0 + 60000), "live");
+  // nothing known yet, or not live: the status as it is
+  assert.equal(gate.feedStatus("live", 0, t0), "live");
+  assert.equal(gate.feedStatus("connecting", t0, t0 + 99000), "connecting");
+  assert.equal(gate.feedStatus("offline", t0, t0 + 99000), "offline");
+  // the wake-up for schedule()
+  assert.equal(gate.msUntilStale("live", t0, t0), 45000);
+  assert.equal(gate.msUntilStale("live", t0, t0 + 40000), 5000);
+  assert.equal(gate.msUntilStale("live", t0, t0 + 45000), 250);
+  assert.equal(gate.msUntilStale("offline", t0, t0), null);
+  assert.equal(gate.msUntilStale("live", 0, t0), null);
+  // the stale word on the HUD: line 2 says offline
+  const m = gate.hudModel({ zone: "Clearfell", in_hideout: false, zone_entered_at: 1000,
+    level: 3, deaths: 1 }, 1005, gate.feedStatus("live", t0, t0 + 46000));
+  assert.equal(m.status, "offline");
+  assert.equal(gate.overlayWanted({ game_idle: false }, "offline"), true);
+  // the page: frames and the keep-alive stamp the feed, the check rides
+  // paint() and schedule()'s one timer (no new timer, no health read)
+  const page = fs.readFileSync(path.join(__dirname, "..", "overlay", "overlay.js"), "utf8");
+  assert.match(page, /es\.addEventListener\("alive", function \(\) \{\s*lastFrame = Date\.now\(\);/);
+  assert.match(page, /snap = JSON\.parse\(m\.data\);\s*lastFrame = Date\.now\(\);/);
+  assert.match(page, /status = S\.feedStatus\(status, lastFrame, Date\.now\(\)\);/);
+  const sched = page.slice(page.indexOf("function schedule()"), page.indexOf("function reportGate()"));
+  assert.match(sched, /var staleMs = S\.msUntilStale\(status, lastFrame, Date\.now\(\)\);/);
+  assert.equal((page.match(/setTimeout\s*\(/g) || []).length, 1);
+  assert.doesNotMatch(page, /setInterval|\/api\/health/);
+  // the core names the event the page listens for
+  const py = fs.readFileSync(path.join(__dirname, "..", "..", "server", "al", "http.py"), "utf8");
+  assert.match(py, /^SSE_ALIVE_EVENT = "alive"$/m);
+  assert.match(py, /^SSE_HEARTBEAT_S = 15\.0$/m);
+  assert.ok(gate.FEED_STALE_MS >= 3 * 15000);
+  assert.ok(!py.includes('": hb'), "no comment keep-alive left");
+});

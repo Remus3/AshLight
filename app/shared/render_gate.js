@@ -583,6 +583,30 @@
     return out;
   }
 
+  /* RUN-FEED-TRUTH (F-175): the core beats every 15 s with a named
+     "alive" event (server/al/http.py SSE_ALIVE_EVENT) when nothing else
+     was sent. A live feed with no frame for FEED_STALE_MS (three missed
+     beats) is marked stale: the status word becomes the reconnecting
+     word ("offline") until the next frame. The page passes its own clock
+     in; this file keeps no timer, the page's one schedule() timer wakes
+     at msUntilStale. lastFrameMs 0 or missing: nothing is known yet. */
+  var FEED_STALE_MS = 45000;
+
+  function feedStatus(status, lastFrameMs, nowMs) {
+    if (status !== "live" || typeof lastFrameMs !== "number" || !(lastFrameMs > 0)) {
+      return status;
+    }
+    return nowMs - lastFrameMs >= FEED_STALE_MS ? W.link_retry.overlay : status;
+  }
+
+  /* Milliseconds until a live feed turns stale, or null. */
+  function msUntilStale(status, lastFrameMs, nowMs) {
+    if (status !== "live" || typeof lastFrameMs !== "number" || !(lastFrameMs > 0)) {
+      return null;
+    }
+    return Math.max(250, Math.ceil(lastFrameMs + FEED_STALE_MS - nowMs));
+  }
+
   /* Decision 0029 amendment (DESKTOP-CLIENT): may the overlay show? Not
      while a live core reports the 0029 idle "game may be closed" state
      (snapshot game_idle; Client.txt staleness only, no process or window
@@ -602,5 +626,6 @@
            changedFields: changedFields, statusText: statusText, IDLE_WORD: IDLE_WORD,
            hudLine2: hudLine2, LINE2_MAX: LINE2_MAX, WORD_BESIDE_MAX: WORD_BESIDE_MAX,
            WORD_ALONE_MAX: WORD_ALONE_MAX,
+           FEED_STALE_MS: FEED_STALE_MS, feedStatus: feedStatus, msUntilStale: msUntilStale,
            STATUS_WORDS: STATUS_WORDS };
 }));

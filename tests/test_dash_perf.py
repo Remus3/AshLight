@@ -172,3 +172,185 @@ def test_dashboard_elements_task_time_and_heap(stack, tmp_path):
                       f"{out['idle_ms_per_s']:.2f} ms per idle second")
     assert out["task_ms_per_push"] <= MAX_MS_PER_PUSH, out
     assert out["idle_ms_per_s"] <= MAX_IDLE_MS_PER_S, out
+
+
+# RUN-PERF-DASH-IDLE (F-178, B14 idle line): a hidden dashboard paints
+# nothing on a state push and paints once when it shows again. The page's
+# visibility is set from the DevTools side (document.hidden and
+# visibilityState read a flag, then a visibilitychange fires), so the test
+# needs no window manager. Written next to the test's temp files; the same
+# protocol client as app/test/cdp/dash_perf.mjs.
+HIDDEN_SCRIPT = r"""
+import { spawn } from "node:child_process";
+import { appendFileSync, readFileSync } from "node:fs";
+const [chromePath, profile, url, logPath, pushesPath] = process.argv.slice(2);
+const blocks = JSON.parse(readFileSync(pushesPath, "utf8"));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const CI = process.env.AL_CI === "1";
+const port = 9500 + Math.floor(Math.random() * 400);
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
+  "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
+  { stdio: "ignore" });
+const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000 : 60000);
+let targets = null;
+for (let i = 0; i < 100 && !targets; i++) {
+  try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
+  catch { await sleep(100); }
+}
+if (!targets) { chrome.kill(); console.log(JSON.stringify({ error: "no DevTools endpoint" })); process.exit(2); }
+const page = targets.find((t) => t.type === "page");
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((r) => ws.addEventListener("open", r));
+let seq = 0;
+const pending = new Map();
+const issues = [];
+ws.addEventListener("message", (e) => {
+  const m = JSON.parse(e.data);
+  if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); return; }
+  const p = m.params || {};
+  if (m.method === "Runtime.consoleAPICalled" && (p.type === "error" || p.type === "assert")) {
+    issues.push(["console." + p.type, p.args.map((a) => a.value ?? a.description).join(" ")]);
+  } else if (m.method === "Runtime.exceptionThrown") {
+    const d = p.exceptionDetails || {};
+    issues.push(["exception", (d.exception && d.exception.description) || d.text || ""]);
+  }
+});
+const send = (method, params = {}) => new Promise((r) => {
+  const i = ++seq; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params }));
+});
+const value = async (expression) => {
+  const r = await send("Runtime.evaluate", { expression, returnByValue: true });
+  return r.result && r.result.result ? r.result.result.value : undefined;
+};
+const metrics = async () => {
+  const r = await send("Performance.getMetrics");
+  const out = {};
+  for (const m of (r.result && r.result.metrics) || []) { out[m.name] = m.value; }
+  return out;
+};
+await send("Page.enable");
+await send("Runtime.enable");
+await send("Performance.enable", { timeDomain: "timeTicks" });
+await send("Page.addScriptToEvaluateOnNewDocument", { source:
+  "(function () { window.__alHidden = false;" +
+  " Object.defineProperty(Document.prototype, 'hidden', { configurable: true," +
+  "  get: function () { return window.__alHidden; } });" +
+  " Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true," +
+  "  get: function () { return window.__alHidden ? 'hidden' : 'visible'; } });" +
+  " var O = window.EventSource; window.__alPushes = 0;" +
+  " function W(u, o) { var e = new O(u, o);" +
+  "  e.addEventListener('state', function () { window.__alPushes++; }); return e; }" +
+  " W.prototype = O.prototype; W.CONNECTING = 0; W.OPEN = 1; W.CLOSED = 2;" +
+  " window.EventSource = W; })();" });
+await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+await send("Page.navigate", { url });
+let live = false;
+for (let i = 0; i < (CI ? 240 : 80) && !live; i++) {
+  await sleep(100);
+  live = !!(await value(
+    "!!document.getElementById('build-title') && /^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')"));
+}
+if (!live) {
+  console.log(JSON.stringify({ live, issues }));
+  clearTimeout(killer); ws.close(); chrome.kill(); process.exit(0);
+}
+await sleep(1500);
+const vis = (hidden) => value("window.__alHidden = " + hidden +
+  "; document.dispatchEvent(new Event('visibilitychange')); true");
+await vis(true);
+await sleep(500);
+const p0 = await value("window.__alPushes");
+const m0 = await metrics();
+for (const b of blocks) { appendFileSync(logPath, b); await sleep(600); }
+await sleep(600);
+const m1 = await metrics();
+const p1 = await value("window.__alPushes");
+await vis(false);
+await sleep(600);
+const m2 = await metrics();
+console.log(JSON.stringify({
+  live, issues, hidden_pushes: p1 - p0,
+  hidden_layouts: m1.LayoutCount - m0.LayoutCount,
+  hidden_styles: m1.RecalcStyleCount - m0.RecalcStyleCount,
+  shown_layouts: m2.LayoutCount - m1.LayoutCount,
+}));
+clearTimeout(killer);
+ws.close();
+chrome.kill();
+"""
+
+
+@pytest.mark.slow  # drives a real browser page through four pushes and a return
+def test_hidden_page_shows_0_layouts(stack, tmp_path):
+    """B14 idle line (RUN-PERF-DASH-IDLE): state pushes to a hidden page
+    run no painter, so the page lays out nothing; showing it again paints
+    the newest snapshot once."""
+    browser = find_browser()
+    node = shutil.which("node")
+    if not browser or not node:
+        pytest.skip("headless Chrome / Edge or node not found")
+    st, log = stack
+    assert st.req("POST", "/api/consent", {"consent": True})[0] == 200
+    st.wait_for(lambda x: x["tailer"]["reading"], "tailer reading")
+    s = synth_client.Session(seed=48, character="Hiddencheck", klass="Sorceress")
+    campaign_and_maps(s)
+    with open(log, "ab") as fh:
+        fh.write(s.text().encode("utf-8"))
+    s.lines.clear()
+    st.wait_for(lambda x: x["maps"]["count"] == 2, "campaign and maps")
+    pushes = tmp_path / "pushes.json"
+    pushes.write_text(json.dumps(_push_blocks(s)[:4]), encoding="ascii")
+    script = tmp_path / "dash_hidden.mjs"
+    script.write_text(HIDDEN_SCRIPT, encoding="ascii")
+    url = f"http://127.0.0.1:{st.port}/#token={TOKEN}"
+    r = subprocess.run([node, str(script), browser, str(tmp_path / "chrome"), url,
+                        str(log), str(pushes)],
+                       capture_output=True, text=True, timeout=ci_scale(90))
+    assert r.returncode == 0, (r.returncode, r.stdout[-2000:], r.stderr[-2000:])
+    out = json.loads(r.stdout.strip().splitlines()[-1])
+    print("B14 hidden", json.dumps(out))
+    assert out["live"], out
+    assert out["issues"] == [], out["issues"]
+    assert out["hidden_pushes"] >= 2, out       # the frames did reach the page
+    assert out["hidden_layouts"] == 0, out      # and no painter ran
+    assert out["shown_layouts"] >= 1, out       # one paint on return
+
+
+def _sse_read(port, view, want, timeout):
+    """The raw SSE stream until want(text) or the timeout; the text read."""
+    import socket
+    q = f"/events?token={TOKEN}" + (f"&view={view}" if view else "")
+    sock = socket.create_connection(("127.0.0.1", port), timeout=timeout)
+    try:
+        sock.sendall((f"GET {q} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n"
+                      "Accept: text/event-stream\r\n\r\n").encode())
+        buf = b""
+        end = time.monotonic() + timeout
+        while time.monotonic() < end and not want(buf.decode("utf-8", "replace")):
+            sock.settimeout(max(0.05, end - time.monotonic()))
+            try:
+                chunk = sock.recv(65536)
+            except socket.timeout:
+                break
+            if not chunk:
+                break
+            buf += chunk
+        return buf.decode("utf-8", "replace")
+    finally:
+        sock.close()
+
+
+@pytest.mark.parametrize("view", [None, "overlay"])
+def test_keep_alive_is_a_named_event(stack, monkeypatch, view):
+    """RUN-FEED-TRUTH (F-175): the idle stream's keep-alive is the named
+    "alive" event with a data line (an SSE comment never reaches page
+    code), on the dashboard feed and the overlay view alike."""
+    from server.al import http as al_http
+    monkeypatch.setattr(al_http, "SSE_HEARTBEAT_S", 0.3)
+    st, _log = stack
+    text = _sse_read(st.port, view, lambda t: t.count("event: alive\n") >= 2, ci_scale(8))
+    assert "event: alive\ndata: {}\n\n" in text, text[-500:]
+    assert text.count("event: alive\n") >= 2, text[-500:]
+    assert ": hb" not in text
+    assert al_http.SSE_ALIVE_EVENT == "alive"

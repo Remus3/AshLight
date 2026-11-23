@@ -203,3 +203,208 @@ test("ledger consent line with its own Allow control", () => {
   assert.match(app, /api\("POST", "\/api\/consent", \{ ledger: ledgerSend \}\)/);
   assert.match(app, /\$\("ledger-allow"\)\.addEventListener\("click", toggleLedger\)/);
 });
+
+/* RUN-FEED-TRUTH (F-175) and RUN-PERF-DASH-IDLE (F-178): web/app.js
+   feedLink and pacer run alone (FEED-PACE markers) with fake EventSource,
+   health, timers and visibility. */
+function feedPace() {
+  const vm = require("node:vm");
+  const src = web.source("app.js");
+  const m = /\/\* FEED-PACE:begin[\s\S]*?\*\/([\s\S]*?)\/\* FEED-PACE:end \*\//.exec(src);
+  assert.ok(m, "FEED-PACE markers in web/app.js");
+  const box = {};
+  vm.runInNewContext(m[1] + "\nout.feedLink = feedLink; out.pacer = pacer;" +
+    " out.RETRY = FEED_RETRY_MS;", { out: box });
+  return box;
+}
+
+function fakeFeed(healthCodes) {
+  const made = [];
+  const said = [];
+  const frames = [];
+  const timers = [];
+  let asked = 0;
+  let live = false;
+  const o = {
+    open() {
+      const h = {};
+      const es = {
+        readyState: 0, closed: false,
+        addEventListener(n, fn) { (h[n] = h[n] || []).push(fn); },
+        close() { this.closed = true; this.readyState = 2; },
+        fire(n, m) { (h[n] || []).forEach((fn) => fn(m)); }
+      };
+      made.push(es);
+      return es;
+    },
+    health() {
+      const code = healthCodes[Math.min(asked, healthCodes.length - 1)];
+      asked++;
+      return code === "reject" ? Promise.reject(new Error("down")) : Promise.resolve(code);
+    },
+    link(ev) { said.push(ev); if (ev === "open") { live = true; } },
+    frame(name, m) { frames.push([name, m.data]); },
+    later(fn, ms) { timers.push({ fn, ms }); return timers.length; },
+    everLive() { return live; }
+  };
+  return { o, made, said, frames, timers, asked: () => asked };
+}
+
+const flush = () => new Promise((r) => setImmediate(r));
+
+test("RUN-FEED-TRUTH: a 401 after a live feed shows the restarted line and stops", async () => {
+  const fp = feedPace();
+  const f = fakeFeed([401]);
+  const feed = fp.feedLink(f.o);
+  feed.open();
+  const es = f.made[0];
+  es.readyState = 1;
+  es.fire("open");
+  es.fire("state", { data: "{\"version\":1}" });
+  assert.deepEqual(f.frames, [["state", "{\"version\":1}"]]);
+  // the core restarted with a new token: the stream answer is a 401, the
+  // EventSource closes for good and the page asks /api/health once
+  es.readyState = 2;
+  es.fire("error");
+  await flush();
+  assert.equal(f.asked(), 1);
+  assert.deepEqual(f.said, ["open", "error", "restarted"]);
+  assert.equal(feed.over(), true);
+  assert.equal(f.timers.length, 0, "no retry after a restart");
+  assert.equal(feed.open(), null);
+  // the bar word, from web/status.js
+  const p = v.barStatus({ consented: true, reading: true }, "restarted", true);
+  assert.equal(p.word, "AshLight restarted. Open it again from the tray.");
+  assert.equal(p.word, v.RESTARTED_WORD);
+  assert.equal(p.state, "failed");
+  assert.equal(p.id, "link_restarted");
+  assert.match(p.next, /tray/);
+  assert.match(p.word, /^[\x20-\x7e]+$/);
+  // before any live feed a 401 is a wrong link, not a restart
+  const g = fakeFeed([401]);
+  fp.feedLink(g.o).open();
+  g.made[0].readyState = 2;
+  g.made[0].fire("error");
+  await flush();
+  assert.deepEqual(g.said, ["error", "notoken"]);
+});
+
+test("RUN-FEED-TRUTH: other errors reconnect every 3 s", async () => {
+  const fp = feedPace();
+  assert.equal(fp.RETRY, 3000);
+  const f = fakeFeed([503, "reject", 0, 200]);
+  const feed = fp.feedLink(f.o);
+  feed.open();
+  f.made[0].readyState = 1;
+  f.made[0].fire("open");
+  for (let i = 0; i < 4; i++) {
+    const es = f.made[f.made.length - 1];
+    es.readyState = 2;
+    es.fire("error");
+    es.fire("error"); // a second error while asking asks nothing more
+    await flush();
+    assert.equal(f.asked(), i + 1);
+    assert.equal(f.timers.length, i + 1);
+    assert.equal(f.timers[i].ms, 3000);
+    f.timers[i].fn();
+    assert.equal(f.made.length, i + 2, "a new EventSource after 3 s");
+    assert.equal(es.closed, true);
+  }
+  assert.equal(feed.over(), false);
+  assert.ok(!f.said.includes("restarted"));
+  // a feed the browser is only reconnecting (readyState 0) asks nothing
+  const last = f.made[f.made.length - 1];
+  last.readyState = 0;
+  last.fire("error");
+  await flush();
+  assert.equal(f.asked(), 4);
+  // a replaced EventSource's events are ignored
+  f.made[0].fire("state", { data: "old" });
+  assert.ok(!f.frames.some((x) => x[1] === "old"));
+  // with a retry hook the page reconnects through it (connect())
+  const g = fakeFeed([500]);
+  let retried = 0;
+  g.o.retry = () => { retried++; };
+  fp.feedLink(g.o).open();
+  g.made[0].readyState = 2;
+  g.made[0].fire("error");
+  await flush();
+  g.timers[0].fn();
+  assert.equal(retried, 1);
+  assert.equal(g.made.length, 1);
+  // the page wires it so: retry is connect(), the health read carries the token
+  const app = web.source("app.js");
+  assert.match(app, /retry: connect,/);
+  assert.match(app, /fetch\("\/api\/health", \{ headers: \{ "X-AL-Token": token \}, cache: "no-store" \}\)/);
+});
+
+function fakePace(hidden) {
+  const st = { hidden, painted: [], ticks: 0, every: 0, stops: 0 };
+  st.p = feedPace().pacer({
+    hidden: () => st.hidden,
+    paint: (s) => { st.painted.push(s); },
+    tick: () => { st.ticks++; },
+    every: (fn, ms) => { assert.equal(ms, 1000); st.every++; return st.every; },
+    stop: () => { st.stops++; }
+  });
+  return st;
+}
+
+test("RUN-PERF-DASH-IDLE: a hidden page runs no painter; one paint on return", () => {
+  const st = fakePace(true);
+  st.p.sync();
+  assert.equal(st.p.ticking(), false, "no ticker while hidden");
+  for (let i = 1; i <= 5; i++) { assert.equal(st.p.push({ version: i }), false); }
+  assert.deepEqual(st.painted, []);
+  assert.equal(st.ticks, 0);
+  assert.equal(st.p.held(), true);
+  st.hidden = false;
+  st.p.shown();
+  assert.deepEqual(st.painted, [{ version: 5 }], "one paint, the newest snapshot");
+  assert.equal(st.p.ticking(), true);
+  assert.equal(st.p.held(), false);
+  // shown again with nothing held: only the clocks move
+  st.p.shown();
+  assert.equal(st.painted.length, 1);
+  assert.equal(st.ticks, 1);
+  // a visible push lets the caller paint
+  assert.equal(st.p.push({ version: 6 }), true);
+  // hidden again: the ticker stops
+  st.hidden = true;
+  st.p.shown();
+  assert.equal(st.p.ticking(), false);
+  assert.equal(st.stops, 1);
+  // render() holds the guard at its top, and the visibility change runs shown()
+  const app = web.source("app.js");
+  const at = app.indexOf("  function render(s) {");
+  const body = app.slice(at, app.indexOf("\n  }\n", at));
+  assert.ok(body.indexOf("if (pace && !pace.push(s)) { return; }") > 0);
+  assert.ok(body.indexOf("if (pace && !pace.push(s)) { return; }") <
+            body.indexOf("A.render(s, charView(s));"));
+  assert.match(app, /document\.addEventListener\("visibilitychange", pace\.shown\);/);
+  assert.doesNotMatch(app, /setInterval\(tick, 1000\)/);
+});
+
+test("RUN-PERF-DASH-IDLE: the ticker stops while idle and restarts on a fresh line", () => {
+  const st = fakePace(false);
+  st.p.sync();
+  assert.equal(st.p.ticking(), true);
+  assert.equal(st.p.push({ version: 1, game_idle: false }), true);
+  assert.equal(st.every, 1, "one ticker, not one per push");
+  assert.equal(st.p.push({ version: 2, game_idle: true }), true);
+  assert.equal(st.p.ticking(), false);
+  assert.equal(st.stops, 1);
+  st.p.push({ version: 3, game_idle: true });
+  assert.equal(st.every, 1);
+  // a fresh log line clears game_idle: the next push starts the ticker
+  st.p.push({ version: 4, game_idle: false });
+  assert.equal(st.p.ticking(), true);
+  assert.equal(st.every, 2);
+  // a page shown again while the game is idle starts no ticker
+  st.p.push({ version: 5, game_idle: true });
+  st.hidden = true;
+  st.p.shown();
+  st.hidden = false;
+  st.p.shown();
+  assert.equal(st.p.ticking(), false);
+});
