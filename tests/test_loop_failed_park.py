@@ -179,3 +179,104 @@ def test_gate_failure_in_the_lane_diff_still_gets_fix_rounds(tmp_path):
     assert sp.calls[0]["writes_code"] is True  # a fix round ran
     assert rec["rounds"] == 1 and "gate_foreign" not in rec
     assert rec["state"] == "merged" and rec["verdict"] == "PASS"
+
+
+# ---------------------------------------------------------------- LOOP-TRUNC: long reds
+
+SLOW = ("Failed: slow-test budget: the test took 1.79 s, over the 1.50 s ceiling "
+        "for an unmarked test under parallel load; mark it slow or make it faster "
+        "(tests/slow_budget.py, research 0049)")
+TRUNC_IDS = [f"tests/test_price_{i:02d}.py::test_budget_case_number_{i}" for i in range(12)]
+
+
+def _suite_output(ids=TRUNC_IDS, timing_lines=40):
+    """What tools/suite_run.py prints for a red phase 1 and a green timing
+    phase: the 12 FAILED lines sit far from the end of the output."""
+    lines = ["suite_run: phase parallel: -m pytest -q -m not timing -n 8 --dist loadgroup",
+             "bringing up nodes...", "..F...F..." * 30,
+             "=" * 20 + " FAILURES " + "=" * 20]
+    lines += [f"E   {SLOW}" for _ in range(20)]
+    lines += ["=" * 28 + " short test summary info " + "=" * 28]
+    lines += [f"FAILED {t} - {SLOW}" for t in ids]
+    lines += [f"{len(ids)} failed, 1900 passed, 12 skipped in 80.12s (0:01:20)",
+              "suite_run: phase parallel exit 1",
+              "suite_run: phase timing: -m pytest -q -m timing"]
+    lines += ["." * 70 for _ in range(timing_lines)]
+    lines += ["41 passed, 1912 deselected in 30.05s", "suite_run: phase timing exit 0"]
+    return "\n".join(lines) + "\n"
+
+
+def _suite_detail(stdout):
+    return "python tools/suite_run.py rc=1\n" + al_loop.gate_tail(stdout, "", pytest=True)
+
+
+def test_truncated_12_failure_red_names_every_id():
+    detail = _suite_detail(_suite_output())
+    # the plain tail is cut before the FAILED lines: the ids block carries them
+    plain = "python tools/suite_run.py rc=1\n" + al_loop.gate_tail(_suite_output(), "")
+    assert loop_gatefail.foreign_only(plain, {"web/slots.js"}) == []
+    assert loop_gatefail.foreign_only(detail, {"web/slots.js"}) == TRUNC_IDS
+    assert loop_gatefail.foreign_only(detail, {"tests/test_price_03.py"}) == []
+    assert loop_gatefail.gate_unknown(detail) is False
+    # the gate cache keeps the ids too (it stores only a short tail otherwise)
+    kept = loop_gatefail.keep_ids(detail, 300)
+    assert loop_gatefail.foreign_only(kept, {"web/slots.js"}) == TRUNC_IDS
+    assert kept.splitlines()[0] == "python tools/suite_run.py rc=1"
+
+
+def test_red_with_no_parsable_ids_is_gate_unknown():
+    out = "suite_run: phase parallel: x\nworker crashed\nsuite_run: phase parallel exit 3\n"
+    detail = _suite_detail(out)
+    assert loop_gatefail.foreign_only(detail, set()) == []
+    assert loop_gatefail.gate_unknown(detail) is True
+    # no ids block at all (npm, leak sweep, an old cached verdict): normal rounds
+    assert loop_gatefail.gate_unknown("npm test --prefix app rc=1\nnot ok 1") is False
+    assert loop_gatefail.gate_unknown(FOREIGN) is False
+    # an infrastructure red is not parked here (the gate cache never keeps it)
+    infra = "python tools/suite_run.py rc=3\nSUITE-GATE: no suite slot free\n" + \
+        al_loop.gate_tail("", "", pytest=True)
+    assert loop_gatefail.gate_unknown(infra) is False
+
+
+@pytest.mark.git
+def test_truncated_12_failure_red_outside_the_diff_parks_at_round_0(tmp_path):
+    root, wt = git_world(tmp_path)
+    items = al_loop.Items(root)
+    items.put(dict(items.get("012"), finished=al_loop.iso(NOW - 3600)))
+    detail = _suite_detail(_suite_output())
+    sp = FakeSpawn()
+    al_loop.tick(deps=review_deps(root, sp, gates=lambda cwd: (False, detail)), no_push=True)
+    rec = al_loop.Items(root).get("012")
+    assert sp.calls == []
+    assert rec["state"] == "adjudicate" and rec["rounds"] == 0
+    assert rec["gate_foreign"] == TRUNC_IDS
+
+
+@pytest.mark.git
+def test_red_with_no_ids_parks_as_gate_unknown_at_round_0(tmp_path):
+    root, wt = git_world(tmp_path)
+    items = al_loop.Items(root)
+    items.put(dict(items.get("012"), finished=al_loop.iso(NOW - 3600)))
+    detail = _suite_detail("suite_run: phase parallel exit 3\n")
+    sp = FakeSpawn()
+    al_loop.tick(deps=review_deps(root, sp, gates=lambda cwd: (False, detail)), no_push=True)
+    rec = al_loop.Items(root).get("012")
+    assert sp.calls == []
+    assert rec["state"] == "adjudicate" and rec["rounds"] == 0
+    assert rec["gate_unknown"] is True and "gate-unknown" in rec["error"]
+
+
+@pytest.mark.git
+def test_no_second_fix_round_on_an_unchanged_tree(tmp_path):
+    root, wt = git_world(tmp_path)
+    (wt / "tests").mkdir()
+    (wt / "tests" / "test_feature.py").write_text("def test_a():\n    pass\n", newline="\n")
+    red = ("python -m pytest -q rc=1\n"
+           "FAILED tests/test_feature.py::test_a - assert 0\n"
+           "1 failed, 3 passed in 0.40s\n")
+    sp = FakeSpawn([{"rc": 0}, {"rc": 0}, {"rc": 0}])  # the fix lane changes nothing
+    al_loop.tick(deps=review_deps(root, sp, gates=lambda cwd: (False, red)), no_push=True)
+    rec = al_loop.Items(root).get("012")
+    assert len(sp.calls) == 1 and sp.calls[0]["writes_code"] is True
+    assert rec["rounds"] == 1 and rec["state"] == "adjudicate"
+    assert rec["gate_unchanged"] is True

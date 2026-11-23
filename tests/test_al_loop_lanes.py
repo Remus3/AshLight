@@ -745,7 +745,12 @@ def test_pre_fix_failed_dirty_record_is_retried(tmp_path):
 @pytest.mark.git
 def test_refused_commit_of_red_work_is_kept_unmerged_and_frees_the_lane(tmp_path):
     root, wt = git_world(tmp_path)
-    d = deps(root, git=_refusing_git(wt, {"on": True}), gates=lambda cwd: (False, "red"),
+    def fix(kw):  # LOOP-TRUNC: a fix that leaves the tree unchanged parks instead
+        (Path(kw["cwd"]) / f"fix{len(sp.calls)}.txt").write_text("fix\n", newline="\n")
+        return {"rc": 0}
+
+    sp = FakeSpawn([fix, fix, fix])
+    d = deps(root, spawn=sp, git=_refusing_git(wt, {"on": True}), gates=lambda cwd: (False, "red"),
              lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
                                  for i, n in enumerate(("build", "data", "review"))])
     al_loop.tick(deps=d, no_push=True)

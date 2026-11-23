@@ -26,6 +26,7 @@ from loop_base import (
     WAVE_OWNED_REL, ascii_text, atomic_write, epoch_of, iso, read_json,
 )
 import roadmap
+from loop_gatefail import keep_ids
 from loop_roadmap import base_kind, commit_body, flip_roadmap, merge_subject, resolve_roadmap
 
 
@@ -166,7 +167,8 @@ class GateCache:
     def put(self, key, ok, detail, where, now, via=None, rerun=False):
         trees = self._trees()
         trees.pop(key, None)  # re-insert: dict order is recency
-        e = {"ok": bool(ok), "detail": last_lines(ascii_text(detail or ""), 300),
+        # LOOP-TRUNC: the ids block survives the short cached tail
+        e = {"ok": bool(ok), "detail": keep_ids(ascii_text(detail or ""), 300),
              "ts": iso(now),
              "where": ascii_text(where, 80)}
         if via:

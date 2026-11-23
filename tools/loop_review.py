@@ -12,7 +12,7 @@ from loop_base import (
     GATE_TIMEOUT_S, MARKER_RX, MAX_ROUNDS, NEED_RX, NOTE_HEAD, ROADMAP_REL, VERDICT_RX,
     VERIFY_EXTRA, _norm_path, ascii_text, epoch_of, read_json,
 )
-from loop_gatefail import foreign_only
+from loop_gatefail import foreign_only, gate_unknown
 from loop_inbox import missing_ordered
 from loop_prompts import fix_prompt, verify_prompt
 from loop_roadmap import commit_body, commit_subject, is_duplicate, plan_titles
@@ -22,6 +22,18 @@ ROUND_LOG_MAX_FINDINGS = 10
 
 
 # ---------------------------------------------------------------- review and commit
+
+def gate_park_why(rec):
+    """The commit-subject reason a red-gate item was parked for a session
+    (LOOP-FAILED-PARK, LOOP-TRUNC), or None when it was not parked."""
+    if rec.get("gate_foreign"):
+        return "gate failure outside the lane diff"
+    if rec.get("gate_unknown"):
+        return "gate-unknown red, no failing test ids"
+    if rec.get("gate_unchanged"):
+        return "tree unchanged since the last red gate"
+    return None
+
 
 class ReviewMixin:
     """d. a finished lane worktree: gates, verifier and fix rounds, the lane
@@ -43,7 +55,8 @@ class ReviewMixin:
             self.step(f"{rec['id']}: {rec['state']}")
             return
         rounds = rec.get("rounds", 0)
-        rec.pop("gate_foreign", None)
+        for key in ("gate_foreign", "gate_unknown", "gate_unchanged"):
+            rec.pop(key, None)
         while True:
             # plan 129: after fix round 3 the review is still labelled round 3
             rnd = min(rounds + 1, MAX_ROUNDS)
@@ -51,8 +64,11 @@ class ReviewMixin:
             ok, detail = self.gate(wt, changed=lambda: self.changed_names(wt))
             findings = [] if ok else ["gates failed: " + detail]
             self.log_round(rec, rnd, "gates", findings)
-            if not ok and self.park_foreign(rec, detail, wt):
+            if not ok and (self.park_foreign(rec, detail, wt)
+                           or self.park_unknown(rec, detail)
+                           or self.park_unchanged(rec)):
                 break
+            red_tree = None if ok else self.last_tree
             extra = self.extra_checks(rec, wt)
             self.log_round(rec, rnd, "extra_checks", extra)
             findings += extra
@@ -99,6 +115,11 @@ class ReviewMixin:
                 return
             rounds += 1
             rec["rounds"] = rounds
+            # LOOP-TRUNC: the red tree this fix round is sent for (park_unchanged)
+            if red_tree:
+                rec["red_tree"] = red_tree
+            else:
+                rec.pop("red_tree", None)
             self.items.put(rec)
             note = f"lane-build-{rec['id']}"
             # Order Nd11eb1 item 6: a fix round is a retry after a failure, sampled
@@ -127,6 +148,37 @@ class ReviewMixin:
         rec["verdict"] = "adjudicate"
         rec["error"] = ascii_text("gate failure outside the lane diff: " + ", ".join(ids), 300)
         self.step(f"{rec['id']}: gate failure outside the lane diff, parked "
+                  f"after {rec.get('rounds', 0)} rounds")
+        return True
+
+    def park_unknown(self, rec, detail):
+        """LOOP-TRUNC: a red pytest gate whose output names no failing test
+        (gate_unknown) gives a fix round nothing to aim at: the item is parked
+        for a session as gate-unknown (state adjudicate, WIP kept), never
+        sent into a fix round. True when it parked."""
+        if not gate_unknown(detail):
+            return False
+        rec["gate_unknown"] = True
+        rec["verdict"] = "adjudicate"
+        rec["error"] = ascii_text("gate-unknown: red gate with no failing test ids: "
+                                  + (detail or "").splitlines()[0], 300)
+        self.step(f"{rec['id']}: gate-unknown red (no failing test ids), parked "
+                  f"after {rec.get('rounds', 0)} rounds")
+        return True
+
+    def park_unchanged(self, rec):
+        """LOOP-TRUNC: a red gate on the same tree as the red verdict the last
+        fix round was sent for means that round changed nothing; another round
+        would reuse the same cached red. The item is parked for a session
+        (state adjudicate, WIP kept). True when it parked."""
+        tree = self.last_tree
+        if not tree or rec.get("red_tree") != tree:
+            return False
+        rec["gate_unchanged"] = True
+        rec["verdict"] = "adjudicate"
+        rec["error"] = ascii_text(f"fix round left the tree unchanged since the last "
+                                  f"red gate ({tree[:12]})", 300)
+        self.step(f"{rec['id']}: tree unchanged since the last red gate, parked "
                   f"after {rec.get('rounds', 0)} rounds")
         return True
 
@@ -242,9 +294,10 @@ class ReviewMixin:
         # the ROADMAP row is flipped in main at merge, never in the lane commit
         # (fix-0130: lane flips of adjacent rows collided on every parallel merge)
         # PUBREPO 1b: Conventional Commits subject; the label stays in the body
-        foreign = not gates_ok and bool(rec.get("gate_foreign"))
+        why = gate_park_why(rec)
+        foreign = not gates_ok and bool(why)
         if foreign:
-            head = commit_subject(rec, wip="gate failure outside the lane diff, adjudicate")
+            head = commit_subject(rec, wip=f"{why}, adjudicate")
         elif not gates_ok:
             head = commit_subject(rec, wip="gates failed, not merged")
         elif not passed:
@@ -290,7 +343,7 @@ class ReviewMixin:
             self.step(f"{rec['id']}: commit refused, salvage failed, worktree left dirty")
             return
         ok = rec.get("gates_ok") and rec.get("verdict") == "PASS"
-        foreign = not rec.get("gates_ok") and bool(rec.get("gate_foreign"))
+        foreign = not rec.get("gates_ok") and bool(gate_park_why(rec))
         rec["state"] = "committed" if ok else "adjudicate" if foreign else "failed"
         self.items.put(rec)
         self.step(f"{rec['id']}: lane commit refused, work kept under {rec['keep_ref']}, "

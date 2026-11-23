@@ -146,10 +146,18 @@ def test_round_log_records_gates_and_caps_findings(tmp_path):
 
 
 @pytest.mark.slow
+def _fix_changes_tree(n):
+    """A fix lane that changes the tree (an unchanged tree parks, LOOP-TRUNC)."""
+    def fix(kw):
+        (Path(kw["cwd"]) / f"fix{n}.txt").write_text(f"fix {n}\n", newline="\n")
+        return {"rc": 0}
+    return fix
+
+
 @pytest.mark.git
 def test_red_gates_after_three_rounds_keep_wip_unmerged(tmp_path):
     root, wt = git_world(tmp_path)
-    sp = FakeSpawn()
+    sp = FakeSpawn([_fix_changes_tree(n) for n in range(3)])  # LOOP-TRUNC: real fixes
     d = deps(root, spawn=sp, git=real_git, gates=lambda cwd: (False, "1 failed"),
              lane_state=lambda: [{"index": i, "state": "RUNNING", "lane": n}
                                  for i, n in enumerate(("build", "data", "review"))])
