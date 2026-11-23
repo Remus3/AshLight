@@ -24,9 +24,8 @@ source like the rest of server/al/playview.py (plan 03 section 3.4):
 Sources, all already in the snapshot, no new read: tailer and diag (setup),
 session_summary (idle), maps and the last waystone check (map), in_town /
 in_hideout and zone_guide / zone_note (town), zone_guide, campaign and
-underlevel (guide; PLAY-F-186A: player_note, the player's own note for
-the zone, decision 0074, as the last row 'Your note: ...'), eval / price
-with their text (item; eval_card_text and price_card_text are not changed here) and upgrades (kept: BUILD-LIVE,
+underlevel (guide), eval / price with their text (item; eval_card_text
+and price_card_text are not changed here) and upgrades (kept: BUILD-LIVE,
 memory only, decision 0045 and Q-26 b). The build's search strings
 (decision 0030) are read from build.search_strings when the snapshot
 carries them; the Copy itself is the player's click (decision 0014).
@@ -94,7 +93,6 @@ UPGRADE_LINK = "Upgrade search"
 KEPT_WORD = "Upgrade"
 KEPT_NO_BUILD = "Load a build to rank your checks."
 KEPT_NONE = "None of your checks is an upgrade now."
-NOTE_LEAD = "Your note: "  # PLAY-F-186A: the player's own note row
 
 
 # playview's readers (FUZZ-3: a wrong type reads as missing); called through
@@ -482,26 +480,11 @@ def _advice_facts(snap, zg):
     return ADVICE_SHORT.get(adv.get("mode"), "")
 
 
-def _note_row(snap):
-    """PLAY-F-186A (decision 0074): the player's own note for this zone as
-    one row (at most 52 characters shown, the whole note in `full`), or
-    None. The note is the player's data: its words are not counted."""
-    pn = _dict(snap.get("player_note"))
-    text = _text(pn.get("text"))
-    if not text or pn.get("area_id") != snap.get("area_id"):
-        return None
-    shown = pv.clip(NOTE_LEAD + text, CAP_ROW)
-    if not shown.startswith(NOTE_LEAD):  # one long first word: cut inside it
-        shown = NOTE_LEAD + pv.clip(text, CAP_ROW - len(NOTE_LEAD))
-    return _row(shown, kind="note", names=(shown[len(NOTE_LEAD):],), full=text)
-
-
 def guide_block(snap):
     """A campaign zone with a guide entry (decision 0043): the objective is
     the title; then bonus, boss and resist, flask / boots, layout (2), next
     zone and waypoint; the facts row is the level advice. Over 7 rows or
-    52 words, the lowest-priority parts leave first. The player's own
-    note (PLAY-F-186A) is the last row and keeps its place."""
+    52 words, the lowest-priority parts leave first."""
     zg = _dict(snap.get("zone_guide"))
     if zg.get("kind") != "campaign" or snap.get("in_hideout") is True:
         return None
@@ -531,22 +514,18 @@ def guide_block(snap):
         parts.append((3, order, 7, _guide_rows(_text(h.get("text")), rows=1, kind="hint")))
         order += 1
     facts = _advice_facts(snap, zg)
-    note = _note_row(snap)
-    room = CONTEXT_ROWS - (1 if note else 0)
 
     def total(ps):
         return sum(len(p[3]) for p in ps)
 
     def wsum(ps):
         return sum(w for p in ps for _r, w in p[3])
-    fixed = pv.words(title) + pv.words(facts) + (note[1] if note else 0)
-    while parts and (total(parts) > room or fixed + wsum(parts) > WORDS_CONTEXT):
+    fixed = pv.words(title) + pv.words(facts)
+    while parts and (total(parts) > CONTEXT_ROWS or fixed + wsum(parts) > WORDS_CONTEXT):
         drop = max(parts, key=lambda p: (p[2], p[1]))
         parts.remove(drop)
     parts.sort(key=lambda p: (p[0], p[1]))
     rows = [r for p in parts for r in p[3]]
-    if note:
-        rows.append(note)
     return _block("guide", title, rows, facts, full=obj or title)
 
 
