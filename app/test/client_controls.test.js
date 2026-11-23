@@ -157,7 +157,7 @@ test("MERGE-SEAMS F7: no file under web/ or app/test/ names the old hints class 
     }
   }
   const css = web.source("app.css");
-  assert.match(css, /\.tool-row \{ margin: 8px 0 0; \}/);
+  assert.match(css, /\.tool-row \{ margin: var\(--al-space-2\) 0 0; \}/);
 });
 
 test("the wake switch persists in client-prefs.json, default on", () => {
