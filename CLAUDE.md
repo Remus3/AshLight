@@ -1283,6 +1283,20 @@ of the HALT check.
   GitHub drops the asset digest field or moves its asset hosts, the cached
   answer goes stale enough to miss releases, or the operator rules the
   typed --yes line must also wait for game_idle.
+  Amended 2026-11-22 (REL-UPDATE-APPLY-NOW, F-077): one 'Update now'
+  click finishes the update. When that click's run stages a version (or
+  one was staged already) the core writes <runtime>/apply_now.request
+  holding only the version; an automatic idle run never writes it. The
+  desktop client's 30 s watch takes the file (launcher.takeApplyRequest:
+  at most 4 KB, removed on read, plain SemVer only); launcher.applyNow
+  writes stop.request, waits up to 20 s for the hello check to fail and
+  core.alive to go, runs `installer apply-staged --home <home>` without
+  --if-due (the click skips the 24 h hold) and relaunches from the new
+  marker version (exit 10) or restarts the core through run.ps1; a core
+  that does not stop is never switched under, the version applies at the
+  next start. Reverses if: the stop-then-apply cuts a press or a calc in
+  play, the 30 s watch delay proves too slow, or the operator wants the
+  click to wait for the next start again.
 - Install checks (REL-UPDATE-CHECKS, F-077, DEP-11): in an installed copy,
   Checks shows an "Installed copy" row with the version, the previous
   version and the last update result (its age written in from "at"). It
@@ -1517,3 +1531,20 @@ of the HALT check.
   only by a real core. No request, no process. Reverses if: the loop moves
   its status file or the "updated" field, the pin drops "eol", or the 2 h
   or 30 day thresholds misfire in use.
+- Load-only gate reds of salvaged loop rows (wave 32 LOOP-SALVAGE): the
+  refute-round timing failures of LP-B (decision 0084:
+  test_math_perf luajit memory, test_budgets core idle CPU),
+  PLAY-TD-21C-HISTORY-MOVE (decision 0085: test_budgets core idle CPU and
+  tailer idle CPU) and RUN-DATAAGE-SHARED-PARSE (decision 0086:
+  test_soak core bounded, core idle CPU, and a real_loop_body reading at
+  whole steps of the 15.6 ms Windows CPU-time unit) stand as load or timer
+  noise, not regressions: those rows change web/ files or attach-time
+  reads only, no budget number moves (decisions 0002, 0080) and no rerun
+  plugin is added. RUN-DATAAGE-SHARED-PARSE itself: the data age
+  tracker's world_areas watch uses the shared parse (hotreload
+  from_doc=acts.ids_from_doc, share=True), filled once at attach from the
+  zone table's parse; a later Checks pass parses nothing
+  (tests/test_budget_start.py). Reverses if: the same tests fail again on
+  a quiet machine with only that row's diff applied (then a regression
+  row and a bisect), or a later change gives one of those rows a per-tick
+  or web-asset cost in the measured path.
