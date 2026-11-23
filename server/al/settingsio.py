@@ -39,6 +39,18 @@ PLAY-TD-04B-THEME-CHOICE (TD-04, F-086): "theme" is the dashboard's
 Theme choice, one of THEMES ("dark", "system" = Follow Windows,
 "light"), THEME_DEFAULT "dark" when unset; it round trips like any
 other allowed key.
+
+PLAY-F-186B-PLAYER-NOTES-UI (F-186, decision 0074 item 8): the player's
+zone notes leave the computer only when the player ticks "Include my zone
+notes" beside the export (GET /api/settings-export?notes=1). They are a
+separate top-level "notes" block, never a key of ALLOWED or "settings", so
+no default export carries them: [{"character", "area_id", "text"}],
+newest first, as many as fit MAX_BYTES (the import cap); "notes_left_out"
+counts the rest when some did not fit. An import with the block never
+overwrites a note: a zone that already has a note here keeps it
+("notes_kept"), a new zone gets the file's note ("notes_added") while the
+notes file's bounds allow ("notes_full" counts the rest); a bad block
+refuses the whole file. A file without the block leaves the notes alone.
 """
 
 import json
@@ -46,6 +58,7 @@ import re
 
 from . import hotkeys
 from . import layout as layout_mod
+from . import playernotes
 from .theorycraft import weights as weights_mod
 
 KIND = "ashlight-settings"
@@ -59,6 +72,11 @@ FILE_NAME = "ashlight-settings.json"
 THEMES = ("dark", "system", "light")
 THEME_DEFAULT = "dark"
 WEIGHTS_LABEL = "stat weights"
+# PLAY-F-186B: the optional notes block (decision 0074 item 8)
+NOTES_KEY = "notes"
+NOTES_LEFT_OUT = "notes_left_out"
+NOTES_LABEL = "zone notes"
+NOTE_FIELDS = ("character", "area_id", "text")
 
 _NAME = re.compile(r"^[^\x00-\x1f\x7f]{0,64}$")
 
@@ -250,3 +268,81 @@ def parse_import(doc, current):
               "web_data_offered": offered, "tc_calc_offered": calc_offered,
               "weights_applied": weights_applied}
     return update, report
+
+
+# -- PLAY-F-186B: the zone notes block (decision 0074 item 8) -----------------
+
+def with_notes(doc, book):
+    """doc plus the notes block of a notes book ({character: {area id:
+    {"text", "at"}}}): newest first, as many as keep the file within
+    MAX_BYTES; NOTES_LEFT_OUT counts the ones that did not fit (only when
+    some did not). Only called when the player ticked the option."""
+    rows = sorted(((e.get("at", 0), name, area, e["text"])
+                   for name, per in (book or {}).items() for area, e in per.items()),
+                  key=lambda r: (-r[0], r[1], r[2]))
+    out = dict(doc, **{NOTES_KEY: []})
+    # measured exactly, with room kept for the left-out count
+    probe = dict(out, **{NOTES_LEFT_OUT: len(rows)})
+    left = 0
+    for _at, name, area, text in rows:
+        probe[NOTES_KEY].append({"character": name, "area_id": area, "text": text})
+        if len(_text(probe).encode("ascii")) > MAX_BYTES:
+            probe[NOTES_KEY].pop()
+            left += 1
+    if left:
+        out[NOTES_LEFT_OUT] = left
+    return out
+
+
+def notes_of(doc):
+    """[(character, area id, text)] of an imported file's notes block, or
+    None when the file has none. Raises SettingsError (nothing applied)
+    for a block that is not a list of at most playernotes.MAX_ZONES notes
+    the notes store would keep, or that names one zone twice."""
+    if not isinstance(doc, dict) or NOTES_KEY not in doc:
+        return None
+    bad = SettingsError(f"The {NOTES_LABEL} in that file are not valid.")
+    rows = doc[NOTES_KEY]
+    if not isinstance(rows, list) or len(rows) > playernotes.MAX_ZONES:
+        raise bad
+    out, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != set(NOTE_FIELDS):
+            raise bad
+        try:
+            name = playernotes.clean_name(row["character"])
+            area = playernotes.clean_area(row["area_id"])
+            text = playernotes.clean_text(row["text"])
+        except playernotes.NoteError:
+            raise bad from None
+        if not text or (name, area) in seen:
+            raise bad
+        seen.add((name, area))
+        out.append((name, area, text))
+    return out
+
+
+def merge_notes(book, rows):
+    """(adds, report) for imported notes against the current book: adds =
+    [(character, area id, text)] to save, in file order; report =
+    {"notes_added", "notes_kept", "notes_full"}. A zone that already has a
+    note keeps it (kept, unless the text is the same); a new one is added
+    while the store's bounds (MAX_ZONES notes, MAX_CHARACTERS characters)
+    allow, so a save never pushes an older note out; the rest is full."""
+    book = book or {}
+    total = playernotes.count(book)
+    names = set(book)
+    adds, kept, full = [], 0, 0
+    for name, area, text in rows:
+        have = book.get(name, {}).get(area)
+        if have is not None:
+            kept += have.get("text") != text
+            continue
+        if total >= playernotes.MAX_ZONES or (
+                name not in names and len(names) >= playernotes.MAX_CHARACTERS):
+            full += 1
+            continue
+        adds.append((name, area, text))
+        total += 1
+        names.add(name)
+    return adds, {"notes_added": len(adds), "notes_kept": kept, "notes_full": full}

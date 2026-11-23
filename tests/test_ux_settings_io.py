@@ -343,3 +343,121 @@ def test_http_export_download_and_import(tmp_path):
     finally:
         server.stop()
         core.close()
+
+
+# -- PLAY-F-186B-PLAYER-NOTES-UI: the zone notes option (decision 0074 item 8)
+
+def _book(n, name="Ash", text="note {i}"):
+    return {name: {f"G1_{i}": {"text": text.format(i=i), "at": 100 + i} for i in range(n)}}
+
+
+def test_notes_block_is_never_in_a_default_export():
+    doc = settingsio.export_doc(FULL, "v")
+    assert settingsio.NOTES_KEY not in doc and settingsio.NOTES_KEY not in doc["settings"]
+    assert settingsio.NOTES_KEY not in settingsio.ALLOWED
+    out = settingsio.with_notes(doc, _book(3))
+    assert out[settingsio.NOTES_KEY][0] == {"character": "Ash", "area_id": "G1_2",
+                                            "text": "note 2"}  # newest first
+    assert len(out[settingsio.NOTES_KEY]) == 3 and settingsio.NOTES_LEFT_OUT not in out
+    assert settingsio.NOTES_KEY not in doc  # the default document is not changed
+    # what an export with notes holds imports back exactly
+    rows = settingsio.notes_of(json.loads(json.dumps(out)))
+    assert sorted(rows) == [("Ash", f"G1_{i}", f"note {i}") for i in range(3)]
+
+
+def test_notes_past_the_size_cap_are_left_out_and_counted():
+    big = _book(300, text="{i} " + "x" * 190)
+    out = settingsio.with_notes(settingsio.export_doc(FULL, "v"), big)
+    text = json.dumps(out, indent=2, ensure_ascii=True) + "\n"
+    assert len(text.encode("ascii")) <= settingsio.MAX_BYTES
+    kept = len(out[settingsio.NOTES_KEY])
+    assert 0 < kept < 300 and out[settingsio.NOTES_LEFT_OUT] == 300 - kept
+    assert out[settingsio.NOTES_KEY][0]["area_id"] == "G1_299"  # the newest stay
+    settingsio.parse_import(json.loads(text), {})  # still a good backup
+    assert settingsio.notes_of(json.loads(text)) is not None
+
+
+@pytest.mark.parametrize("block", [
+    "x", {}, [1], [{"character": "Ash", "area_id": "G1_1"}],
+    [{"character": "Ash", "area_id": "G1_1", "text": "a", "extra": 1}],
+    [{"character": "Ash", "area_id": "../x", "text": "a"}],
+    [{"character": "", "area_id": "G1_1", "text": "a"}],
+    [{"character": "Ash", "area_id": "G1_1", "text": ""}],
+    [{"character": "Ash", "area_id": "G1_1", "text": "x" * 201}],
+    [{"character": "Ash", "area_id": "G1_1", "text": "bell\x07"}],
+    [{"character": "Ash", "area_id": "G1_1", "text": "a"},
+     {"character": "Ash", "area_id": "G1_1", "text": "b"}],
+    [{"character": "Ash", "area_id": f"G{i}", "text": "a"} for i in range(301)],
+])
+def test_a_bad_notes_block_refuses_the_file(block):
+    with pytest.raises(settingsio.SettingsError) as e:
+        settingsio.notes_of({"kind": settingsio.KIND, "schema": 2, "settings": {},
+                             "notes": block})
+    assert str(e.value) == "The zone notes in that file are not valid."
+
+
+def test_merge_never_overwrites_and_keeps_the_bounds():
+    book = {"Ash": {"G1_1": {"text": "mine", "at": 1}, "G1_2": {"text": "same", "at": 2}}}
+    rows = [("Ash", "G1_1", "theirs"), ("Ash", "G1_2", "same"), ("Ash", "G1_3", "new"),
+            ("Bel", "G1_1", "bel")]
+    adds, report = settingsio.merge_notes(book, rows)
+    assert adds == [("Ash", "G1_3", "new"), ("Bel", "G1_1", "bel")]
+    assert report == {"notes_added": 2, "notes_kept": 1, "notes_full": 0}
+    # full: the store's zone and character bounds are never pushed past
+    full = {f"C{i}": {"A": {"text": "t", "at": 1}} for i in range(12)}
+    adds, report = settingsio.merge_notes(full, [("New", "A", "x"), ("C0", "B", "y")])
+    assert adds == [("C0", "B", "y")] and report["notes_full"] == 1
+    many = _book(299)
+    adds, report = settingsio.merge_notes(many, [("Ash", "Z1", "a"), ("Ash", "Z2", "b")])
+    assert adds == [("Ash", "Z1", "a")] and report["notes_full"] == 1
+
+
+def test_http_notes_leave_only_when_asked_and_import_keeps_local_notes(tmp_path):
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    cfg = tmp_path / "local.json"
+    cfg.write_text(json.dumps({"league": "Standard"}), encoding="ascii")
+    core = Core(runtime=tmp_path / "rt", log_path=str(log), tail=False, config_path=cfg)
+    server = serve(core, "f" * 48, port=0, web_root=ROOT / "web",
+                   tokens_css=ROOT / "ops" / "fleet_kit" / "tokens.css")
+    threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05},
+                     daemon=True).start()
+    try:
+        core.player_notes.save("Ash", "G1_2", "exit north")
+        core.player_notes.save("Ash", "G1_3", "boss hits hard")
+        for path in ("/api/settings-export", "/api/settings-export?notes=0",
+                     "/api/settings-export?notes=yes"):
+            status, _disp, text = _get(server.port, path)
+            assert status == 200 and "exit north" not in text and '"notes"' not in text
+        status, _disp, text = _get(server.port, "/api/settings-export?notes=1")
+        assert status == 200
+        exported = json.loads(text)
+        assert {r["text"] for r in exported["notes"]} == {"exit north", "boss hits hard"}
+        # another computer's notes: one zone differs, one is new
+        core.player_notes.save("Ash", "G1_2", "my own words")
+        core.player_notes.save("Ash", "G1_3", "")
+        status, body = _post(server.port, "/api/settings-import", exported)
+        assert status == 200
+        report = json.loads(body)
+        assert report["notes_added"] == 1 and report["notes_kept"] == 1
+        assert report["notes_full"] == 0 and "notes_failed" not in report
+        book = core.player_notes.book()
+        assert book["Ash"]["G1_2"]["text"] == "my own words"   # never overwritten
+        assert book["Ash"]["G1_3"]["text"] == "boss hits hard"
+        assert core.state.player_notes == book                 # published at once
+        # a bad block refuses the whole file: no setting, no note applied
+        before = (cfg.read_text(encoding="ascii"), core.player_notes.book())
+        bad = dict(exported, notes=[{"character": "Ash", "area_id": "G9", "text": ""}],
+                   settings={"league": "Other"})
+        status, body = _post(server.port, "/api/settings-import", bad)
+        assert status == 400 and json.loads(body)["error"] == (
+            "The zone notes in that file are not valid.")
+        assert (cfg.read_text(encoding="ascii"), core.player_notes.book()) == before
+        # a file without the block leaves the notes alone and says nothing of them
+        plain = {k: v for k, v in exported.items() if k != "notes"}
+        status, body = _post(server.port, "/api/settings-import", plain)
+        assert status == 200 and "notes_added" not in json.loads(body)
+        assert core.player_notes.book() == before[1]
+    finally:
+        server.stop()
+        core.close()
