@@ -48,10 +48,9 @@ import re
 import subprocess
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
-from . import exitrecord, hello, hotreload, jsonfile, logs, paths, ports, prio, snapstart
+from . import exitrecord, hotreload, jsonfile, logs, paths, ports, prio, snapstart
 
 POLL_S = 5.0
 STALE_S = 90.0          # three missed 30 s heartbeats
@@ -229,7 +228,25 @@ def release_lock(fh):
 
 # Loopback only: an empty ProxyHandler ignores http_proxy and the system proxy,
 # so the token never reaches a proxy and a healthy core is never judged hung.
-_NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+# RUN-PERF-IDLE-BACKOFF (F-178, budget B9): built on the first health check,
+# so a supervisor that never probes never imports urllib or http.client.
+_NO_PROXY_OPENER = None
+
+
+def _opener():
+    global _NO_PROXY_OPENER
+    if _NO_PROXY_OPENER is None:
+        import urllib.request
+        _NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    return _NO_PROXY_OPENER
+
+
+def _forget_hello(port):
+    """hello.forget(port) without importing hello (and with it urllib):
+    a proof can exist only once health_check has imported the module."""
+    mod = sys.modules.get(__package__ + ".hello")
+    if mod is not None:
+        mod.forget(port)
 
 
 def _loop_age(body):
@@ -259,12 +276,15 @@ def health_check(runtime, port, timeout=3.0, detail=False):
         token = (Path(runtime) / "token").read_text(encoding="ascii").strip()
     except (OSError, ValueError):
         return out(False)
-    if not hello.verify(port, token, opener=_NO_PROXY_OPENER, timeout=timeout):
+    import urllib.request
+    from . import hello
+    opener = _opener()
+    if not hello.verify(port, token, opener=opener, timeout=timeout):
         return out(False)
     req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}/api/health",
                                  headers={"X-AL-Token": token})
     try:
-        with _NO_PROXY_OPENER.open(req, timeout=timeout) as r:
+        with opener.open(req, timeout=timeout) as r:
             if r.status == 200:
                 return out(True, _loop_age(r.read(HEALTH_MAX_BYTES)) if detail else None)
     except (OSError, ValueError):
@@ -466,7 +486,7 @@ class Keepalive:
         if not live:
             # SEC-HELLO-CORE: the core that proved itself is gone, so the
             # listener on the port is proven again before it gets the token
-            hello.forget(self.port)
+            _forget_hello(self.port)
         if live:
             if hb["pid"] != self.pid:
                 self.pid = hb["pid"]

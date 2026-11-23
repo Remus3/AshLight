@@ -146,6 +146,11 @@ TICK_ORDER = ("ensure_tailing",  # TEST-E2E: log found later / moved
               "tick_watch",      # UTIL-PRICE-WATCH: moves on book refresh
               "tick_diag",       # DIAG-SELF: the Checks card (ruling J)
               "tick_reload")     # HOT-RELOAD: data files, web/ (0042)
+# RUN-PERF-IDLE-BACKOFF (F-178): the wait between core loop passes, and
+# while the game is idle (decision 0029: the log's staleness, never a
+# process check) once a second; the reader polls once a second then too.
+LOOP_S = 0.5
+IDLE_LOOP_S = 1.0
 
 
 class Core:
@@ -442,6 +447,8 @@ class Core:
         self.ticks = []
         self.tick_ms = {}
         self.loop_at = None
+        self.loop_idle = False  # RUN-PERF-IDLE-BACKOFF: game idle at the last pass
+        self._idle_applied = (None, False)  # (tailer, flag) last handed to the reader
         self._tick_errors = plug.ErrorThrottle(logging.getLogger("al"))
         # RUN-LEDGER-WIRE (F-061): plug/ledger.py sets the wire feed_line and
         # eval_press hand their lines and presses to; its write and the
@@ -506,8 +513,9 @@ class Core:
         self.ticks.append((name, fn))
 
     def tick_all(self, log=None, now=None):
-        """One pass of the core loop (every 0.5 s from __main__): each tick
-        in list order. A tick that raises never stops the loop or the ticks
+        """One pass of the core loop (every loop_wait_s() from __main__,
+        RUN-PERF-IDLE-BACKOFF): each tick in list order, then the game-idle
+        flag is read into loop_idle and handed to the reader. A tick that raises never stops the loop or the ticks
         after it; its first error is logged with the traceback, then one
         line a minute with a count (C22). Records loop_at (monotonic, the
         pass start) and tick_ms (the last duration of each tick, ms).
@@ -523,6 +531,28 @@ class Core:
                 self._tick_errors.failed(name, exc,
                                          now if now is not None else time.monotonic())
             self.tick_ms[name] = round((time.monotonic() - t0) * 1000.0, 3)
+        self._apply_idle()
+
+    def _apply_idle(self):
+        """RUN-PERF-IDLE-BACKOFF (F-178): read the game-idle flag (no stat,
+        no read) into loop_idle and hand a change, or a new reader, to the
+        reader. A reader that woke on a line stays awake until the flag
+        changes again."""
+        try:
+            idle = self.game_idle()
+        except Exception:  # noqa: BLE001 - unknown reads as not idle
+            idle = False
+        self.loop_idle = idle
+        tailer = self.tailer
+        if tailer is not None and self._idle_applied != (tailer, idle):
+            self._idle_applied = (tailer, idle)
+            setter = getattr(tailer, "set_idle", None)
+            if setter is not None:
+                setter(idle)
+
+    def loop_wait_s(self):
+        """RUN-PERF-IDLE-BACKOFF: the wait before the next core loop pass."""
+        return IDLE_LOOP_S if self.loop_idle else LOOP_S
 
     def _outputs_ready(self):
         """A new PoB output table for the loaded build: the build view is

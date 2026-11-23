@@ -415,3 +415,84 @@ def test_new_small_log_is_read_from_its_first_line(tmp_path):
     t.poll_once()
     assert sink.lines == ["first line of the new game", "second line"]
     t.stop()
+
+
+class _Waits:
+    """A stand-in for the tailer's stop event: records each wait, stops
+    after `n` of them."""
+
+    def __init__(self, n):
+        self.n = n
+        self.waits = []
+
+    def is_set(self):
+        return len(self.waits) >= self.n
+
+    def wait(self, timeout):
+        self.waits.append(timeout)
+        return self.is_set()
+
+    def set(self):
+        self.n = 0
+
+    def clear(self):
+        pass
+
+
+def test_idle_poll_interval_is_one_second_and_wakes_on_a_line(tmp_path):
+    # RUN-PERF-IDLE-BACKOFF (F-178): while the core says the game is idle the
+    # reader polls once a second; the first line read brings back poll_s
+    assert logfile.IDLE_POLL_S == 1.0
+    p = tmp_path / "Client.txt"
+    p.write_bytes(b"old\n")
+    t, sink = _tail(p)
+    assert t.poll_s == logfile.DEFAULT_POLL_S and t.wait_s() == t.poll_s
+    t.set_idle(True)
+    assert t.wait_s() == 1.0
+    t._stop = _Waits(2)
+    t._run()  # two polls, nothing new: both waits are a second
+    assert t._stop.waits == [1.0, 1.0] and t.idle
+    _append(p, b"back\n")
+    t._stop = _Waits(2)
+    t._run()  # the first poll reads the line and wakes the reader
+    assert sink.lines == ["back"]
+    assert t._stop.waits == [logfile.DEFAULT_POLL_S] * 2 and not t.idle
+    # a poll_s configured above a second is kept while idle
+    t.poll_s = 2.0
+    t.set_idle(True)
+    assert t.wait_s() == 2.0
+
+
+def test_core_hands_the_idle_flag_to_the_reader_and_slows_its_loop(tmp_path):
+    from server.al import core as core_mod
+
+    class FakeTailer:
+        def __init__(self):
+            self.calls = []
+
+        def set_idle(self, flag):
+            self.calls.append(flag)
+
+    c = core_mod.Core(runtime=tmp_path, tail=False)
+    try:
+        c.ticks = []
+        fake = FakeTailer()
+        c.tailer = fake
+        c.tick_all()
+        assert not c.loop_idle and c.loop_wait_s() == core_mod.LOOP_S == 0.5
+        c.state.tailer["consented"] = True
+        c.state.tailer["idle"] = True
+        c.tick_all()
+        c.tick_all()  # no change: the reader is told once (a line may wake it)
+        assert c.loop_idle and c.loop_wait_s() == core_mod.IDLE_LOOP_S == 1.0
+        assert fake.calls == [False, True]
+        other = FakeTailer()  # a new reader gets the flag at the next pass
+        c.tailer = other
+        c.tick_all()
+        assert other.calls == [True]
+        c.state.tailer["idle"] = False
+        c.tick_all()
+        assert other.calls == [True, False] and c.loop_wait_s() == 0.5
+    finally:
+        c.tailer = None
+        c.close()
