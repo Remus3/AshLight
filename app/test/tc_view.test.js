@@ -146,7 +146,8 @@ test("eval view: MATH-WEIGHTS cached Path of Building weights wording", () => {
 
 test("weights: rows sorted; the PUT document drops blanks", () => {
   assert.deepEqual(v.weightRows({ weights: { b: 1, "+#% to A": 2 } }),
-    [{ key: "+#% to A", label: "+N% to A", weight: 2 }, { key: "b", label: "b", weight: 1 }]);
+    [{ key: "+#% to A", label: "+N% to A", weight: 2, def: null, changed: false },
+     { key: "b", label: "b", weight: 1, def: null, changed: false }]);
   assert.equal(v.toKey(" +N% to Fire Resistance "), "+#% to Fire Resistance");
   assert.equal(v.toKey("Adds N to N Cold Damage"), "Adds # to # Cold Damage");
   assert.equal(v.toKey("Nearby Enemies"), "Nearby Enemies");
@@ -154,6 +155,44 @@ test("weights: rows sorted; the PUT document drops blanks", () => {
   assert.deepEqual(v.weightsDoc([{ key: " +# to maximum Life ", value: "1.5" }, { key: "x", value: "" },
                                  { key: "", value: "3" }], "2", "abc"),
     { weights: { "+# to maximum Life": 1.5 }, sidegrade: { abs: 2, pct: 5 } });
+});
+
+test("TC-WEIGHTS-DELTA-UI: rows carry changed and default; the count line; a row reset", () => {
+  const doc = {
+    weights: { "+# to maximum Life": 1.5, "+#% to Fire Resistance": 1, "Added Stat": 4 },
+    sidegrade: { abs: 3, pct: 5 },
+    defaults: { weights: { "+# to maximum Life": 1, "+#% to Fire Resistance": 1,
+                           "+#% to Cold Resistance": 1 },
+                sidegrade: { abs: 2, pct: 5 } },
+    changed: { weights: { "+# to maximum Life": 1.5, "Added Stat": 4, "+#% to Cold Resistance": null },
+               sidegrade: { abs: 3 } }
+  };
+  const rows = v.weightRows(doc);
+  assert.deepEqual(rows, [
+    { key: "+# to maximum Life", label: "+N to maximum Life", weight: 1.5, def: 1, changed: true },
+    { key: "+#% to Cold Resistance", label: "+N% to Cold Resistance", weight: "", def: 1, changed: true },
+    { key: "+#% to Fire Resistance", label: "+N% to Fire Resistance", weight: 1, def: 1, changed: false },
+    { key: "Added Stat", label: "Added Stat", weight: 4, def: null, changed: true }]);
+  assert.equal(v.changedCount(doc), "4 changed from the defaults.");
+  assert.equal(v.changedCount({ changed: { weights: {}, sidegrade: {} } }), "Nothing changed from the defaults.");
+  assert.equal(v.changedCount(null), "Nothing changed from the defaults.");
+  const form = rows.map((r) => ({ key: r.key, value: String(r.weight) }));
+  // a changed default goes back to its default; every other row stays
+  let put = v.weightsDoc(v.resetRow(form, doc.defaults, "+# to maximum Life"), "3", "5");
+  assert.deepEqual(put.weights, { "+# to maximum Life": 1, "+#% to Fire Resistance": 1, "Added Stat": 4 });
+  assert.deepEqual(put.sidegrade, { abs: 3, pct: 5 });
+  // a blanked-out default comes back; an added stat is dropped
+  put = v.weightsDoc(v.resetRow(form, doc.defaults, "+#% to Cold Resistance"), "3", "5");
+  assert.deepEqual(put.weights, { "+# to maximum Life": 1.5, "+#% to Cold Resistance": 1,
+                                  "+#% to Fire Resistance": 1, "Added Stat": 4 });
+  put = v.weightsDoc(v.resetRow(form, doc.defaults, "Added Stat"), "3", "5");
+  assert.deepEqual(put.weights, { "+# to maximum Life": 1.5, "+#% to Fire Resistance": 1 });
+  // the blank row alone stays out (still removed), nothing else is lost
+  assert.deepEqual(v.weightsDoc(form, "3", "5").weights,
+    { "+# to maximum Life": 1.5, "+#% to Fire Resistance": 1, "Added Stat": 4 });
+  // defaults compare case-insensitively, as the core's store does
+  assert.equal(v.weightRows({ weights: { "+# TO MAXIMUM LIFE": 2 },
+    defaults: { weights: { "+# to maximum Life": 1 } }, changed: { weights: {} } })[0].def, 1);
 });
 
 test("graphics view: hardware lines, advice, failure text", () => {
