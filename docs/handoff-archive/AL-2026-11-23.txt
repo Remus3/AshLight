@@ -1,0 +1,14 @@
+SESSION 22 /done (2026-11-23): moved from AL-NEXT-SESSION.txt
+NOTE (session 21 /done): roadmap fold a32ea86 (29 done rows archived; rows filed, all BLOCKED: session: CP-1, CP-2, GLANCE-PENDING-OUT, AUTOSTART-PSEXE, GATE-HOLD-D). TD23-1 has no own row: PLAY-F-189A-SPACING-BADGE (wave 35) removes every .tab-mark rule. THM-2 closed in wave 33. reap --apply removed the clean w32 / w33 worktrees (salvage-1 to 3, w33-int, packages); re-run read back "reap applied: 0 removed, 3 kept" (lane-0, lane-1, lane-2).
+Next action: start wave 34 (session group 34 to 37) per
+docs/plan/08-orchestration.md: one start agent (section 1, argument wave
+34), then sections 2 to 7; packages from `python tools/plan_check.py wave
+34` (today REL-UPDATE-NOTICE-UI, RUN-P8-8-CHARMIX, RUN-PERF-IDLE-BACKOFF);
+resume at the first unmerged package (decision 0077); then waves 35 to 37.
+ONE background orchestrator with its own live Monitor on the progress files
+and its own heartbeat; merge batches of 4; SESSION-21 LESSONS apply. Ask
+the operator nothing; the main session only dispatches.
+Acceptance: wave 34 closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, pointer "WAVE POINTER: wave 34 done, next wave 35"), REL-UPDATE-NOTICE-UI, RUN-P8-8-CHARMIX and RUN-PERF-IDLE-BACKOFF merged or re-deferred with a reason, no row carries "BLOCKED: session wave 34".
+Do NOT redo (session 21, on main and pushed): waves 30 to 33 (pointer "wave 33 done, next wave 34", a16f1ad; GATE-HOLD-C efe1a6d); the relog fix e92021e; the wave 32 salvage of 17 loop rows; the session 21 roadmap fold a32ea86; w32 / w33 worktrees reaped.
+In flight: none (no orchestrator or progress row running; fleet_checklist stale: none). Loop live, do not touch; REG_OPEN read back 2026-11-22 session 21 /done: absent. HALT absent.
+Status (session 21 /done, 2026-11-22, fresh): game_idle true before the suite; whole suite via the gate --exclusive from Bash: parallel 5456 passed / 9 skipped (80.25 s), timing 22 passed (51.92 s), rc 0 first run; npm test --prefix app 834/834; leak sweep --tree no HALT (ARMED needles=44); main = origin/main = efe1a6d before /done, then the fold commit a32ea86 and this hand-off pushed. Inbox: 1 note (MAIN INFORMATION / TERMINAL, kit v32 join), classify skip terminal, no reply. Status board skipped (opt-out, not asked).
