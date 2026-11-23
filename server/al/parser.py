@@ -31,6 +31,14 @@ AREA_GEN = re.compile(r'^Generating level (\d+) area "(.*)" with seed (\d+)\s*$'
 # Connecting to instance server at <host>:<port> - UNVERIFIED (search snippet;
 # ledger: session_connect).
 INSTANCE = re.compile(r"^Connecting to instance server at ([^\s:]+):(\d+)\s*$")
+# Async connecting to <host>.login.pathofexile2.com:<port> - live PoE2 log
+# 2026-11-22: the one line a relog through character select writes (no
+# LOG FILE OPENING marker). Anchored to the login host suffix; any other
+# host is ignored. Becomes "char_select" (decision 0038 amendment
+# 2026-11-22). The host is not kept.
+LOGIN_CONNECT = re.compile(
+    r"^Async connecting to [A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*"
+    r"\.login\.pathofexile2\.com:\d+\s*$")
 
 # System-line bodies (after the leading ": ").
 # You have entered <Zone>. - PoE1-confirmed, UNVERIFIED for PoE2 (ledger:
@@ -241,6 +249,8 @@ def parse_body(body):
     m = INSTANCE.match(body)
     if m:
         return {"type": "session_connect", "host": m.group(1), "port": int(m.group(2))}
+    if LOGIN_CONNECT.match(body):
+        return {"type": "char_select"}
     return None
 
 

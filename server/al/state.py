@@ -197,6 +197,11 @@ class SessionState:
         # another player joined or left the area since that game start.
         self._start_window = False
         self._party_since_start = False
+        # Decision 0038 amendment 2026-11-22 (relog): True from a relog
+        # through character select (char_select) until the first level-up
+        # or death line of a name never seen joining or leaving; the party
+        # flag does not apply to it.
+        self._relog_window = False
         # AREA-AUDIT P8-1: the session's map runs stay across a character
         # switch, so the map ladder saves only the maps opened since the
         # current character's game start (None: every session map).
@@ -780,11 +785,24 @@ class SessionState:
         already in the area levels up with no join line of their own. A
         configured character never switches; other players' names (seen
         joining or leaving the area this game run) never do. The first
-        level-up when no character is known yet names it (apply)."""
+        level-up when no character is known yet names it (apply).
+        Amendment 2026-11-22: after a relog through character select
+        (char_select) the first name line of a name never seen joining or
+        leaving switches too, whatever the party flag says, because a party
+        member can join between the relog and the player's first line."""
         if (self.character_fixed or not name or name == self.character
                 or self.character is None or name in self._others):
             return False
-        return self._start_window and not self._party_since_start
+        return self._relog_window or (
+            self._start_window and not self._party_since_start)
+
+    def _close_windows(self, name):
+        """A name line closes the game-start window; it closes the relog
+        window only when the name is not a known other player."""
+        if name:
+            self._start_window = False
+            if name not in self._others:
+                self._relog_window = False
 
     def _switch(self, name, now):
         """Park the current character's fields and load `name`'s (fresh
@@ -924,6 +942,7 @@ class SessionState:
                 changed = True
             self._others.clear()
             self._start_window = True
+            self._relog_window = False
             self._game_start_at = now
             self._party_since_start = False
             if (self.zone is not None or self.area_id is not None
@@ -942,8 +961,7 @@ class SessionState:
             elif self._may_switch(ev.get("character")):
                 # UTIL-MULTICHAR: another of the player's characters
                 self._switch(ev.get("character"), now)
-            if ev.get("character"):
-                self._start_window = False
+            self._close_windows(ev.get("character"))
             if ev.get("character") == self.character:
                 self._first_gen_at = None
                 self.char_class = ev.get("class")
@@ -956,8 +974,7 @@ class SessionState:
         elif t == "death":
             if self._may_switch(ev.get("character")):
                 self._switch(ev.get("character"), now)
-            if ev.get("character"):
-                self._start_window = False
+            self._close_windows(ev.get("character"))
             if self._is_me(ev.get("character")):
                 self._first_gen_at = None
                 self.deaths += 1
@@ -976,6 +993,13 @@ class SessionState:
         elif t in ("player_joined_area", "player_left_area"):
             self._note_other(ev.get("character"))
             self._party_since_start = True
+        elif t == "char_select":
+            # Decision 0038 amendment 2026-11-22: a relog through character
+            # select (no log file opening marker). The names seen joining
+            # or leaving this game run stay; zone, character and counts
+            # are untouched until the next name line.
+            self._relog_window = True
+            self._party_since_start = False
         elif t in ("whisper_in", "whisper_out"):
             if t == "whisper_in" and ev.get("trade"):
                 self._expire_trades(now)
@@ -1191,7 +1215,7 @@ class SessionState:
 
     _REPLAY_TYPES = ("scene_changed", "area_entered", "area_generated", "death",
                      "level_up", "player_joined_area", "player_left_area",
-                     "log_opened")
+                     "log_opened", "char_select")
 
     def _restore_chars(self, events, run_start_known):
         """UTIL-MULTICHAR: replay the current game run's events through a
@@ -1217,6 +1241,7 @@ class SessionState:
             if e.get("type") in self._REPLAY_TYPES and isinstance(e.get("at"), (int, float)):
                 tmp.apply(dict(e, recv_ts=e["at"]))
         self._start_window = tmp._start_window
+        self._relog_window = tmp._relog_window
         self._party_since_start = tmp._party_since_start
         joined = {e.get("character") for e in events
                   if e.get("type") in ("player_joined_area", "player_left_area")

@@ -173,6 +173,57 @@ def test_solo_relog_to_another_character_switches():
     assert snap["level"] == 30
 
 
+def relog(at):
+    """A relog through character select: the login-host connect line,
+    with no log file opening marker (decision 0038 amendment 2026-11-22)."""
+    return {"type": "char_select", "recv_ts": at}
+
+
+def test_relog_through_character_select_switches_past_a_joined_member():
+    st = SessionState(clock=Clock(9000.0))
+    st.apply(opened(1000.0))
+    st.apply(lvl("Mirth", "Sorceress", 4, 1010.0))
+    st.apply(death("Mirth", 1020.0))          # locks this game run to Mirth
+    st.apply(relog(1030.0))                    # back to character select
+    st.apply(joined("Brack", 1040.0))          # a party member joins first
+    st.apply(lvl("Wren", "Sorceress", 12, 1050.0))
+    st.apply(lvl("Brack", "Mercenary", 12, 1060.0))
+    st.apply(lvl("Wren", "Sorceress", 13, 1070.0))
+    snap = st.snapshot()
+    assert snap["character"] == "Wren" and snap["level"] == 13
+    assert snap["level_ups"] == 2 and snap["deaths"] == 0
+    names = {c["name"]: c for c in snap["characters"]}
+    assert sorted(names) == ["Mirth", "Wren"]  # Brack is never the player
+    assert names["Mirth"]["level"] == 4 and names["Mirth"]["deaths"] == 1
+
+
+def test_relog_window_skips_known_others_and_closes_on_the_player():
+    st = SessionState(clock=Clock(9000.0))
+    st.apply(opened(1000.0))
+    st.apply(joined("Brack", 1005.0))
+    st.apply(lvl("Mirth", "Sorceress", 4, 1010.0))
+    st.apply(relog(1020.0))
+    # a known party member's line neither switches nor closes the window
+    st.apply(lvl("Brack", "Mercenary", 20, 1030.0))
+    st.apply(death("Brack", 1035.0))
+    assert st.snapshot()["character"] == "Mirth"
+    st.apply(lvl("Mirth", "Sorceress", 5, 1040.0))  # same character again
+    assert st.snapshot()["level"] == 5
+    # the window closed on the player's own line: no later switch
+    st.apply(lvl("Stranger", "Witch", 30, 1050.0))
+    assert st.snapshot()["character"] == "Mirth"
+
+
+def test_relog_never_switches_a_configured_character():
+    st = SessionState(clock=Clock(9000.0))
+    st.restore({"character": "Mirth"})
+    st.character_fixed = True
+    st.apply(opened(1000.0))
+    st.apply(relog(1010.0))
+    st.apply(lvl("Wren", "Sorceress", 12, 1020.0))
+    assert st.snapshot()["character"] == "Mirth"
+
+
 def test_character_cap():
     st = SessionState(clock=Clock(99999.0))
     for i in range(MAX_CHARACTERS + 4):
@@ -242,7 +293,8 @@ def _now():
 def test_restart_resumes_the_run_character_not_the_newest_name(tmp_path):
     now = _now()
     r = resume.scan(_write(tmp_path / "Client.txt", LOG))
-    assert r["character"] == "Visitor"  # the scan alone takes the newest name
+    # the scan skips the visitor, a name seen joining (amendment 2026-11-22)
+    assert r["character"] == "Sable"
     st = SessionState(clock=Clock(now))
     st.restore(resume.state_fields(r, now=now))
     snap = st.snapshot()
@@ -279,6 +331,33 @@ def test_restart_never_takes_a_party_member_who_joined(tmp_path):
     assert st.snapshot()["character"] is None
     st.apply(lvl("Quill", "Monk", 3, now + 20))
     assert st.snapshot()["character"] == "Quill"
+
+
+RELOG_LOG = ["2026/11/16 19:00:00 ***** LOG FILE OPENING *****",
+             L(": Mirth (Sorceress) is now level 4", "2026/11/16 19:01:00"),
+             L(": Mirth has been slain.", "2026/11/16 19:03:00"),
+             L("Async connecting to xyz.login.pathofexile2.com:21262",
+               "2026/11/16 19:50:00"),
+             L(": Brack has joined the area.", "2026/11/16 20:00:00"),
+             L(": Wren (Sorceress) is now level 12", "2026/11/16 20:20:00"),
+             L(": Brack (Mercenary) is now level 12", "2026/11/16 20:20:05"),
+             L(": Wren (Sorceress) is now level 13", "2026/11/16 20:40:00"),
+             L(": Brack (Mercenary) is now level 13", "2026/11/16 20:41:00")]
+
+
+def test_restart_after_a_relog_resumes_the_relogged_character(tmp_path):
+    now = _now()
+    r = resume.scan(_write(tmp_path / "Client.txt", RELOG_LOG))
+    st = SessionState(clock=Clock(now))
+    st.restore(resume.state_fields(r, now=now))
+    snap = st.snapshot()
+    assert snap["character"] == "Wren" and snap["level"] == 13
+    assert snap["level_ups"] == 2 and snap["deaths"] == 0
+    # the live tail goes on: the party member stays another player
+    st.apply(lvl("Brack", "Mercenary", 14, now + 10))
+    st.apply(lvl("Wren", "Sorceress", 14, now + 20))
+    snap = st.snapshot()
+    assert snap["character"] == "Wren" and snap["level"] == 14
 
 
 def test_restart_saves_the_run_once(tmp_path):

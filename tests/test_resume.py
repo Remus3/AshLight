@@ -87,6 +87,36 @@ def test_newest_level_up_names_the_character(tmp_path):
     assert r["level_ups"] == 2
 
 
+def test_scan_skips_names_seen_joining_or_leaving(tmp_path):
+    lines = [OPEN,
+             L(": Mirth (Sorceress) is now level 4"),
+             L("Async connecting to xyz.login.pathofexile2.com:21262"),
+             L(": Brack has joined the area."),
+             L(": Wren (Sorceress) is now level 12"),
+             L(": Brack (Mercenary) is now level 12"),
+             L(": Wren (Sorceress) is now level 13"),
+             L(": Brack (Mercenary) is now level 13"),
+             L(": Dunmore has left the area."),
+             L(": Dunmore (Warrior) is now level 40")]
+    r = resume.scan(_write(tmp_path / "Client.txt", lines))
+    assert r["character"] == "Wren" and r["level"] == 13
+    assert r["class"] == "Sorceress" and r["level_ups"] == 2
+    assert "char_select" in [e["type"] for e in r["run_events"]]
+
+
+def test_scan_with_only_joined_names_in_the_run_is_unknown(tmp_path):
+    lines = [L(": Quill (Monk) is now level 30"),
+             OPEN,
+             L(": Brack has joined the area."),
+             L(": Brack (Mercenary) is now level 12")]
+    r = resume.scan(_write(tmp_path / "Client.txt", lines))
+    assert r["character"] is None and r["level"] is None
+    assert r["level_ups"] == 0
+    # a run with no level-up at all still reads back to the last one
+    r = resume.scan(_write(tmp_path / "Client.txt", lines[:2]))
+    assert r["character"] == "Quill" and r["level"] == 30
+
+
 def test_configured_character_filters_others(tmp_path):
     lines = [OPEN,
              L(": Mine (Ranger) is now level 12"),
@@ -285,4 +315,5 @@ def test_restore_is_a_zone_entry_and_keeps_the_replay_types():
     assert [c["text"] for c in st.zone_cards()] == ["kept"]
     assert SessionState._REPLAY_TYPES == (
         "scene_changed", "area_entered", "area_generated", "death", "level_up",
-        "player_joined_area", "player_left_area", "log_opened")
+        "player_joined_area", "player_left_area", "log_opened",
+        "char_select")

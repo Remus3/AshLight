@@ -154,6 +154,22 @@ def test_session_connect():
     assert ev["type"] == "session_connect" and ev["port"] == 6112
 
 
+def test_char_select_on_the_login_host_only():
+    # a relog through character select writes no log file opening marker
+    ev = _one("Async connecting to xyz.login.pathofexile2.com:21262")
+    assert ev["type"] == "char_select"
+    ev = _one("Async connecting to a-b.c.login.pathofexile2.com:1")
+    assert ev["type"] == "char_select"
+    # other hosts and look-alikes are ignored
+    assert _one("Async connecting to 192.0.2.1:6112") is None
+    assert _one("Async connecting to xyz.login.pathofexile2.com.evil.net:1") is None
+    assert _one("Async connecting to login.pathofexile2.com:21262") is None
+    assert _one("Async connecting to xyz.login.pathofexile2.com:21262 x") is None
+    # a chat line cannot spoof it
+    ev = _one("#Spammer: Async connecting to xyz.login.pathofexile2.com:1")
+    assert ev["type"] == "chat"
+
+
 def test_fixture_covers_every_event_type():
     types = {e["type"] for e in _events()}
     want = {"session_connect", "scene_changed", "area_generated", "area_entered",
