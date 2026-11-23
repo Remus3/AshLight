@@ -567,3 +567,54 @@ def test_pin_route_needs_the_token(tmp_path):
     finally:
         server.stop()
         core.close()
+
+
+def mapgen(area_id, at, seed):
+    return {"type": "area_generated", "area_id": area_id, "area_level": 70,
+            "seed": seed, "recv_ts": at}
+
+
+def test_maps_card_does_not_mix_characters():
+    """RUN-P8-8-CHARMIX (AUDIT-P8-LOW P8-8): the Maps card (count, open
+    map, recent maps, deaths in maps, average) shows the current
+    character's maps only. A map opened in the game run before the switch
+    line is the new character's (AREA-AUDIT P8-1); after a relog through
+    character select only the maps opened since the relog move."""
+    clock = Clock(1000.0)
+    st = SessionState(clock=clock)
+
+    def feed(*evs):
+        for e in evs:
+            clock.t = e["recv_ts"]
+            st.apply(e)
+
+    feed(opened(900.0), lvl("Quill", "Monk", 80, 1000.0),
+         mapgen("MapCrypt", 1100.0, 1), scene("Crypt", 1101.0),
+         death("Quill", 1150.0),
+         mapgen("MapBog", 1500.0, 2), scene("Bog", 1501.0))
+    maps = st.snapshot()["maps"]
+    assert maps["count"] == 2 and maps["current"]["name"] == "Bog"
+    assert maps["deaths_text"] == "1 death in maps."
+    # game restart; Sable opens a map, then its first name line switches
+    feed(opened(2000.0), mapgen("MapSump", 2050.0, 3), scene("Sump", 2051.0),
+         lvl("Sable", "Witch", 70, 2100.0))
+    snap = st.snapshot()
+    assert snap["character"] == "Sable"
+    maps = snap["maps"]
+    assert maps["count"] == 1 and maps["done"] == 0
+    assert maps["current"]["name"] == "Sump" and maps["current"]["inside"]
+    assert maps["recent"] == [] and maps["deaths_text"] == "No deaths in maps."
+    # a relog through character select back to Quill: Sump stays Sable's
+    feed(relog(2300.0), mapgen("MapFen", 2400.0, 4), scene("Fen", 2401.0),
+         lvl("Quill", "Monk", 81, 2500.0))
+    snap = st.snapshot()
+    assert snap["character"] == "Quill"
+    maps = snap["maps"]
+    # Crypt and Bog (closed where Fen opened) and the open Fen
+    assert maps["count"] == 3 and maps["current"]["name"] == "Fen"
+    assert [r["name"] for r in maps["recent"]] == ["Bog", "Crypt"]
+    assert maps["deaths_text"] == "1 death in maps."
+    # Fen's generation closed Sump while Sable was still the character
+    sable = st._parked["Sable"]["maps"]
+    assert sable.count == 1 and sable.done == 1 and sable.cur is None
+    assert [m["area_id"] for m in sable.closed] == ["MapSump"]

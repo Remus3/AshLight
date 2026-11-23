@@ -73,8 +73,10 @@ MAX_CHARACTERS = 12
 MAX_OTHERS = 64
 # The per-character fields; SessionState holds the current character's
 # set as attributes and parks the others' sets by name.
+# RUN-P8-8-CHARMIX (AUDIT-P8-LOW P8-8): "maps" is per character, so the
+# "This session" ladder and the Maps card never mix characters.
 CHAR_FIELDS = ("char_class", "level", "level_ups", "deaths", "acts", "pace",
-               "run_deaths", "_run_start")
+               "run_deaths", "_run_start", "maps")
 # RUN-ZONE-RESET (F-088): the per-zone fields. SessionState._enter_zone()
 # is the one place they are reset (tests/test_bus_state.py lists them), and
 # every reset moves the zone generation (_zone_gen) on, so a per-zone card
@@ -82,6 +84,81 @@ CHAR_FIELDS = ("char_class", "level", "level_ups", "deaths", "acts", "pace",
 ZONE_FIELDS = ("zone", "area_id", "area_level", "zone_entered_at", "in_hideout",
                "in_town", "_area_fresh", "_zone_cards")
 ZONE_CARDS = 4  # zone cards kept per zone; the oldest drops
+# TEST-STATE-PUBLISH (research 0047 R5 (1)): views the core only stores
+# and the snapshot carries as they are. These keys are always in the
+# snapshot (None until published); publish() takes any other new key too.
+PUBLISHED_KEYS = ("run_history", "price_watch", "diag")
+# The snapshot keys snapshot() builds itself; publish() refuses them, so a
+# published view never shadows one (tests/test_state_publish.py checks the
+# list against a real snapshot).
+BUILTIN_SNAPSHOT_KEYS = frozenset((
+    "version", "now", "session_started_at", "session_s", "character",
+    "character_pinned", "class", "level", "zone", "area_id", "area_level",
+    "zone_entered_at", "zone_s", "in_hideout", "in_town", "deaths",
+    "level_ups", "afk", "dnd", "events_seen", "recent_events",
+    "trade_requests", "overlay_layout", "tailer", "game_idle", "eval",
+    "price", "card", "overlay", "build", "build_alert", "upgrades", "acts",
+    "maps", "underlevel", "zone_guide", "player_note", "campaign",
+    "death_recap", "hint", "pace", "characters", "session_summary",
+    "sources", "lang", "hotkeys", "update", "play"))
+
+
+def _split_maps(runs, since):
+    """RUN-P8-8-CHARMIX: take the maps opened at or after `since` out of
+    `runs` (a runs.MapRuns) into a new MapRuns, moving their counts with
+    them. The maps of the game run in which a switch happens are the new
+    character's (AREA-AUDIT P8-1)."""
+    moved = runs_mod.MapRuns()
+
+    def late(m):
+        at = m.get("opened_at")
+        return isinstance(at, (int, float)) and at >= since
+
+    keep = [m for m in runs.closed if not late(m)]
+    take = [m for m in runs.closed if late(m)]
+    cur = runs.cur if runs.cur is not None and late(runs.cur) else None
+    if not take and cur is None:
+        return moved
+    runs.closed = collections.deque(keep, maxlen=runs.closed.maxlen)
+    moved.closed.extend(take)
+    if cur is not None:
+        runs.cur = None
+        moved.cur = cur
+    opened = take + ([cur] if cur is not None else [])
+    moved.count = len(opened)
+    moved.done = len(take)
+    moved.done_s = sum(m["in_s"] for m in take)
+    moved.deaths = sum(m["deaths"] for m in opened)
+    moved.first_at = min(m["opened_at"] for m in opened)
+    runs.count = max(0, runs.count - moved.count)
+    runs.done = max(0, runs.done - moved.done)
+    runs.done_s = max(0.0, runs.done_s - moved.done_s)
+    runs.deaths = max(0, runs.deaths - moved.deaths)
+    if not runs.count:
+        runs.first_at = None
+    return moved
+
+
+def _merge_maps(runs, moved):
+    """RUN-P8-8-CHARMIX: add the moved maps (_split_maps) to a character's
+    own runs. A map that character left open (paused when it was parked)
+    closes where the first moved map opened, as one session's runs would
+    have closed it; with nothing moved it stays open for that character."""
+    if not moved.count:
+        return runs
+    if not runs.count:
+        return moved
+    opened = list(moved.closed) + ([moved.cur] if moved.cur is not None else [])
+    runs._close(min(m["opened_at"] for m in opened))
+    runs.closed.extend(moved.closed)
+    runs.cur = moved.cur
+    runs.count += moved.count
+    runs.done += moved.done
+    runs.done_s += moved.done_s
+    runs.deaths += moved.deaths
+    if runs.first_at is None:
+        runs.first_at = moved.first_at
+    return runs
 
 
 class SessionState:
@@ -103,6 +180,8 @@ class SessionState:
         # REL-UPDATE-WIRE (decision 0065): the release check view the core
         # publishes (updates.UpdateClient.view); None until its first tick.
         self.update_view = None
+        # TEST-STATE-PUBLISH: the views the core only stores (publish())
+        self._published = {k: None for k in PUBLISHED_KEYS}
         self.session_started_at = clock()
         # The pace counts only level-ups seen live, so its hourly base stays
         # the core start even when LIVE-RESUME moves the Session tile back
@@ -190,7 +269,6 @@ class SessionState:
         # history view the core publishes (runhistory.py).
         self.run_deaths = collections.Counter()
         self._run_start = None
-        self.run_history = None
         # UTIL-MULTICHAR: the other characters' field sets by name (oldest
         # use first) and the other players' names of this game run.
         self._parked = collections.OrderedDict()
@@ -205,17 +283,14 @@ class SessionState:
         # or death line of a name never seen joining or leaving; the party
         # flag does not apply to it.
         self._relog_window = False
-        # AREA-AUDIT P8-1: the session's map runs stay across a character
-        # switch, so the map ladder saves only the maps opened since the
-        # current character's game start (None: every session map).
+        # AREA-AUDIT P8-1 / RUN-P8-8-CHARMIX: the time of the last game start
+        # or relog through character select; at a character switch the maps
+        # opened since then move to the new character (None: no start seen).
         self._game_start_at = None
-        self._ladder_from = None
         # The time of the first campaign zone generated since the last name
         # line: a brand-new character's run starts there, not at its first
         # level-up (decision 0038).
         self._first_gen_at = None
-        # UTIL-PRICE-WATCH: the price watch view the core publishes.
-        self.price_watch = None
         # UTIL-MAP-LADDER: the all-sessions ladder the core publishes
         # (mapladder.py; None while run history is off).
         self.map_ladder_all = None
@@ -225,7 +300,6 @@ class SessionState:
         # LANG-GUARD (ruling K, decision 0040): the in-memory language
         # verdict from the log; DIAG-SELF (ruling J): the core's checks view.
         self.lang = langguard_mod.LangGuard()
-        self.diag = None
         # HOTKEYS-LIVE (decision 0058, OVL-KEYS-CORE): the effective keys
         # view the core publishes (hotkeys.view), None until its first tick.
         self.hotkeys = None
@@ -478,14 +552,57 @@ class SessionState:
                 "deaths": dict(deaths), "finished": acts.finished,
                 "closed": len(closed)}
 
+    def publish(self, key, view):
+        """TEST-STATE-PUBLISH: store a view the core only publishes under
+        `key`; snapshot() carries it as it is (a dict or list is copied, an
+        empty view is None), so a new core-published view needs no other
+        state.py edit. Bumps the version only on a change and returns True
+        then. A key snapshot() builds itself (BUILTIN_SNAPSHOT_KEYS) or a
+        key that is not a non-empty str is refused with ValueError."""
+        if not isinstance(key, str) or not key or key in BUILTIN_SNAPSHOT_KEYS:
+            raise ValueError("publish: refused key")
+        if not view:
+            value = None
+        elif isinstance(view, dict):
+            value = dict(view)
+        elif isinstance(view, (list, tuple)):
+            value = list(view)
+        else:
+            raise ValueError("publish: a view is a dict, a list or None")
+        with self._lock:
+            if key in self._published and value == self._published[key]:
+                return False
+            self._published[key] = value
+            self.version += 1
+            return True
+
+    def _published_view(self, key):
+        """A copy of one published view for the snapshot. Caller holds the
+        lock."""
+        v = self._published.get(key)
+        if isinstance(v, dict):
+            return dict(v)
+        if isinstance(v, list):
+            return list(v)
+        return v
+
+    # The published views keep their old attribute names for readers that
+    # hold the lock already (overlayview reads run_history); no lock taken.
+    @property
+    def run_history(self):
+        return self._published.get("run_history")
+
+    @property
+    def price_watch(self):
+        return self._published.get("price_watch")
+
+    @property
+    def diag(self):
+        return self._published.get("diag")
+
     def set_run_history(self, view):
         """UTIL-RUN-HISTORY: the history view (core tick)."""
-        with self._lock:
-            if view != self.run_history:
-                self.run_history = dict(view) if view else None
-                self.version += 1
-                return True
-            return False
+        return self.publish("run_history", view)
 
     def use_hint_store(self, path):
         """NEWBIE-HINTS: keep the hint store in `path` (core start)."""
@@ -607,13 +724,14 @@ class SessionState:
 
     def map_ladder_rows(self):
         """UTIL-MAP-LADDER: (character, this session's map rows) for the
-        core's saved ladder."""
+        core's saved ladder. The map runs are per character (CHAR_FIELDS,
+        RUN-P8-8-CHARMIX), so the rows are the current character's only;
+        each carries its "character" (mapladder takes that character's
+        rows only)."""
         with self._lock:
             rows = self.maps.ladder_rows(self._clock())
-            since = self._ladder_from
-            if since is not None:  # AREA-AUDIT P8-1: not a parked character's
-                rows = [r for r in rows if isinstance(r.get("opened_at"), (int, float))
-                        and r["opened_at"] >= since]
+            for r in rows:
+                r["character"] = self.character
             return self.character, rows
 
     def set_map_ladder(self, view):
@@ -625,12 +743,7 @@ class SessionState:
 
     def set_price_watch(self, view):
         """UTIL-PRICE-WATCH: the price watch view (core tick)."""
-        with self._lock:
-            if view != self.price_watch:
-                self.price_watch = dict(view) if view else None
-                self.version += 1
-                return True
-            return False
+        return self.publish("price_watch", view)
 
     def set_zone_table(self, table):
         """HUD-ACT: the act / zone level table (acts.load_table())."""
@@ -700,12 +813,7 @@ class SessionState:
     def set_diag(self, view):
         """DIAG-SELF: the self-check view (core tick_diag); bumps only on
         a change."""
-        with self._lock:
-            if view != self.diag:
-                self.diag = dict(view) if view else None
-                self.version += 1
-                return True
-            return False
+        return self.publish("diag", view)
 
     def checks_facts(self):
         """RUN-QUIET-FEED (F-093): the few state facts the Checks rows read
@@ -813,7 +921,8 @@ class SessionState:
         p.reset_at = now  # its hourly rate counts from the switch
         return {"char_class": None, "level": None, "level_ups": 0, "deaths": 0,
                 "acts": acts_mod.ActSplits(), "pace": p,
-                "run_deaths": collections.Counter(), "_run_start": None}
+                "run_deaths": collections.Counter(), "_run_start": None,
+                "maps": runs_mod.MapRuns()}
 
     def _may_switch(self, name):
         """True when a name line should make `name` the current character
@@ -845,6 +954,13 @@ class SessionState:
     def _switch(self, name, now):
         """Park the current character's fields and load `name`'s (fresh
         when new). Caller holds the lock."""
+        # AREA-AUDIT P8-1 / RUN-P8-8-CHARMIX: the maps opened since the last
+        # game start or relog are the new character's; a map the old one
+        # left open stays its own, paused, and is saved under it when it
+        # closes (the core saves the current character's maps).
+        since = self._game_start_at if self._game_start_at is not None else now
+        moved = _split_maps(self.maps, since)
+        self.maps.pause(now)
         if self.character is not None:
             self._parked[self.character] = {f: getattr(self, f) for f in CHAR_FIELDS}
             self._parked.move_to_end(self.character)
@@ -853,11 +969,10 @@ class SessionState:
             loaded = self._fresh_fields(now)
             if self._first_gen_at is not None:
                 loaded["acts"].fold(acts_mod.FIRST_AREA, self._first_gen_at, None)
+        loaded["maps"] = _merge_maps(loaded["maps"], moved)
         for f in CHAR_FIELDS:
             setattr(self, f, loaded[f])
         self.character = name
-        # AREA-AUDIT P8-1: maps of this game run are the new character's
-        self._ladder_from = self._game_start_at if self._game_start_at is not None else now
         while len(self._parked) > MAX_CHARACTERS - 1:
             self._parked.popitem(last=False)
 
@@ -1067,6 +1182,9 @@ class SessionState:
             # are untouched until the next name line.
             self._relog_window = True
             self._party_since_start = False
+            # RUN-P8-8-CHARMIX: maps opened from here on are the next
+            # character's if the relog switches (_switch)
+            self._game_start_at = now
         elif t in ("whisper_in", "whisper_out"):
             if t == "whisper_in" and ev.get("trade"):
                 self._expire_trades(now)
@@ -1434,18 +1552,20 @@ class SessionState:
                                     if self.session_summary else None),
                 "sources": dict(self.sources),
                 # UTIL-RUN-HISTORY / UTIL-PRICE-WATCH (core-published views)
-                "run_history": (dict(self.run_history)
-                                if self.run_history else None),
-                "price_watch": (dict(self.price_watch)
-                                if self.price_watch else None),
+                "run_history": self._published_view("run_history"),
+                "price_watch": self._published_view("price_watch"),
                 # LANG-GUARD / DIAG-SELF (rulings K, J; decision 0040)
                 "lang": self.lang.view(),
-                "diag": dict(self.diag) if self.diag else None,
+                "diag": self._published_view("diag"),
                 # HOTKEYS-LIVE (decision 0058): the keys really bound
                 "hotkeys": copy.deepcopy(self.hotkeys) if self.hotkeys else None,
                 # REL-UPDATE-WIRE (decision 0065): the release check, no event text
                 "update": copy.deepcopy(self.update_view) if self.update_view else None,
             }
+            # TEST-STATE-PUBLISH: every other published view, as it is
+            for key in self._published:
+                if key not in snap:
+                    snap[key] = self._published_view(key)
             # PLAY-TD-07A: the Play rows, composed and capped at the source
             snap["play"] = playview_mod.view(snap)
             return snap

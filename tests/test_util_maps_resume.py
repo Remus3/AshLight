@@ -173,3 +173,53 @@ def test_core_restart_mid_map_keeps_the_map_and_the_deaths(tmp_path):
         assert core.state.snapshot()["maps"]["current"]["deaths"] == 1
     finally:
         core.close()
+
+
+def _ev(t, at, **kw):
+    return dict(kw, type=t, recv_ts=at)
+
+
+def test_map_open_across_restart_is_saved_under_its_character(tmp_path):
+    """RUN-P8-8-CHARMIX (AUDIT-P8-LOW P8-8): a map left open across a game
+    restart, after which another character plays, stays its opener's: it
+    is never saved under the other character, and it is saved under its
+    own (with the time it had at the restart) once that character is back
+    and the map closes. Before, it was saved under neither."""
+    from server.al import mapladder
+    core = Core(runtime=tmp_path / "rt", config_path=tmp_path / "local.json",
+                tail=False)
+
+    def feed(*evs):
+        for e in evs:
+            core.state._clock = (lambda t: (lambda: t))(e["recv_ts"])
+            core.state.apply(e)
+
+    def lvl(at, who, level):
+        return _ev("level_up", at, character=who, level=level,
+                   **{"class": "Witch"})
+
+    def gen(area_id, at, seed):
+        return _ev("area_generated", at, area_id=area_id, area_level=70,
+                   seed=seed)
+
+    feed(lvl(1000, "Quill", 80), gen("MapBog", 1500, 2),
+         _ev("scene_changed", 1501, scene="Bog"))
+    # the game restarts with the map open; Sable plays a map of its own
+    feed(_ev("log_opened", 2000), lvl(2100, "Sable", 70),
+         gen("MapSump", 2200, 3), _ev("scene_changed", 2201, scene="Sump"),
+         gen("MapFen", 2500, 4))
+    core.tick_history()
+    saved = mapladder.load(core.ladder.path)
+    assert "Quill" not in saved
+    assert [r["area_id"] for r in saved["Sable"]] == ["MapSump"]
+    # Quill is back after the next game start and opens a new map
+    feed(_ev("log_opened", 3000), lvl(3100, "Quill", 81),
+         gen("MapAsh", 3200, 5))
+    core.tick_history()
+    saved = mapladder.load(core.ladder.path)
+    (bog,) = saved["Quill"]
+    assert bog["area_id"] == "MapBog" and bog["time_s"] == 499.0
+    assert [r["area_id"] for r in saved["Sable"]] == ["MapSump"]
+    s = core.state.snapshot()
+    assert s["character"] == "Quill" and s["maps"]["count"] == 2
+    assert s["maps"]["ladder_all"]["maps"] == 2
