@@ -1,8 +1,11 @@
 # Play fit figures (measured)
 
 Date: 2026-11-18. Package PLAY-TD-01B-FIT-HARNESS (MERGE-SEAMS F1).
-Status: measured on today's layout; PLAY-TD-23-RECORDS folds these figures
-into design 0001 section 4.
+Status: measured on the two-column Play that the cockpit replaced; folded
+into design 0001 section 4 on 2026-11-22 (PLAY-TD-23-RECORDS). Since the
+cockpit regions landed, the track table is held by the fit harness itself
+(tests/test_play_fit.py checks G1 and G2 in every state and size class),
+so the open row below is closed there, not re-measured here.
 
 Source: `python tests/test_play_fit.py --figures` (the fit harness of
 tests/test_play_fit.py and app/test/cdp/play_fit.mjs). Headless Chrome on
