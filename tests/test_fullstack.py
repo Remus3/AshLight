@@ -518,12 +518,18 @@ def test_fullstack_calc_on_leg(env, warm_bridge):
     env["made"].append(st)
     status, doc = st.req("POST", "/api/build-code", {"code": codec.encode(xml)}, timeout=60)
     assert status == 200, doc
-    # the first press starts the calc process (decision 0028 budget)
+    # the first press of the build (decision 0028 budget). GATE-HOLD: the
+    # PoB weight cache is shared with test_math_e2e_live (keep_warm), so
+    # whichever of the two presses the ring first pays the cold probes and
+    # holds them to first_press_s, end to end
+    t0 = time.perf_counter()
     status, result = st.req("POST", "/api/eval", {"item": items.RING_UPGRADE},
                             timeout=BUDGET["first_press_s"])
     assert status == 200 and result["ok"], result
     # TC-PRESS-STAGED-LIVE: the reply is the stat-weight stage; wait() returns
     # only once the last (PoB) stage is published, so PoB's numbers follow
     assert st.core.last_eval.wait(BUDGET["first_press_s"])
+    took = time.perf_counter() - t0
+    assert took <= BUDGET["first_press_s"], took
     assert st.state()["eval"]["calc"]["source"] == "pob"
     assert env["fetch"].calls == [] and env["mock"].requests == []
