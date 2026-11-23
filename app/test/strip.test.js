@@ -277,8 +277,8 @@ test("the stale look, the empty look and the neutral bar word are in the CSS", (
   assert.match(CSS, /#play-g \[data-empty\] \.st-value/);
   assert.match(CSS, /color: var\(--fk-text-muted\)/);
   // F-159: colour only for blocked or failed
-  assert.match(CSS, /#reading\.pill:not\(\[data-state="blocked"\]\):not\(\[data-state="failed"\]\)/);
-  assert.match(CSS, /#reading\.pill \{ font-size: var\(--al-fs-title\)/, "the bar word is 20 px");
+  assert.match(CSS, /#reading\.badge:not\(\[data-state="blocked"\]\):not\(\[data-state="failed"\]\)/);
+  assert.match(CSS, /#reading\.badge \{ font-size: var\(--al-fs-title\)/, "the bar word is 20 px");
   assert.doesNotMatch(CSS, /animation|transition/, "nothing moves");
 });
 

@@ -104,9 +104,10 @@
 
   /* Paint each tab's mark word; the shown tab never carries one. */
   function paintMarks(doc) {
+    var mark = "badge"; // the mark word is the one badge (F-189)
     TABS.forEach(function (t) {
       var b = tab(doc, t);
-      var m = b && b.querySelector ? b.querySelector(".tab-mark") : null;
+      var m = b && b.querySelector ? b.querySelector("." + mark) : null;
       if (!m) { return; }
       var word = t === state.current ? "" : (state.marks[t] || "");
       if (m.textContent !== word) { m.textContent = word; }

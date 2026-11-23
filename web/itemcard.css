@@ -21,7 +21,7 @@
 #play-i .ic-head {
   display: flex;
   align-items: baseline;
-  gap: 0 0.5rem;
+  gap: 0 var(--al-space-2);
   min-height: var(--al-lh-hero);
   min-width: 0;
 }
@@ -38,17 +38,17 @@
 #play-i .ic-name { flex: 0 1 auto; color: var(--fk-text); }
 
 /* sentence: 2 rows, the reason first */
-#play-i .ic-sent { margin-bottom: 0.5rem; }
+#play-i .ic-sent { margin-bottom: var(--al-space-2); }
 #play-i .ic-row { min-height: var(--al-lh-body); color: var(--al-text-body); }
 #play-i .ic-row.muted { color: var(--fk-text-muted); }
 
 /* compare: one slot, its label and 5 rows (text, then its points) */
-#play-i .ic-cmp { margin-bottom: 0.5rem; }
+#play-i .ic-cmp { margin-bottom: var(--al-space-2); }
 #play-i .ic-label { min-height: var(--al-lh-meta); }
 #play-i .ic-rows { list-style: none; padding: 0; }
 #play-i .ic-cmp-row {
   display: flex;
-  gap: 0 0.5rem;
+  gap: 0 var(--al-space-2);
   min-height: var(--al-lh-body);
   min-width: 0;
   color: var(--al-text-body);
@@ -65,7 +65,7 @@
 #play-i .ic-price {
   display: flex;
   align-items: baseline;
-  gap: 0 0.5rem;
+  gap: 0 var(--al-space-2);
   min-height: var(--al-lh-title);
   min-width: 0;
 }
@@ -77,11 +77,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 1rem;
+  gap: 0 var(--al-space-4);
   min-height: 1.75rem;
   min-width: 0;
 }
-#play-i .ic-acts { gap: 0 0.5rem; margin-top: 0.5rem; }
+#play-i .ic-acts { gap: 0 var(--al-space-2); margin-top: var(--al-space-2); }
 #play-i .ic-link {
   display: inline-flex;
   align-items: center;

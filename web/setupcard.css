@@ -3,8 +3,8 @@
    boxes from the shared row classes of web/app.css: title 26, body rows
    22, the path and facts rows 20, and one 36 px button row, no gaps.
    Setup 190 px (170 compact, where the promise line leaves), error 172,
-   idle 178, inside region C's content box (206 px full, 190 compact, with
-   the 10 px padding of web/context.css). */
+   idle 178, inside region C's content box (210 px full, 194 compact, with
+   the 8 px padding of web/context.css). */
 #play-c .su-rows {
   display: grid;
   align-content: start;
@@ -15,14 +15,14 @@
 #play-c .su-act {
   display: flex;
   align-items: center;
-  gap: 0 0.75rem;
+  gap: 0 var(--al-space-3);
   min-height: 2.25rem;
   min-width: 0;
 }
 #play-c .su-btn {
   flex: 0 0 auto;
   min-height: 2.25rem;
-  padding: 0 0.875rem;
+  padding: 0 var(--al-space-3);
   line-height: var(--al-lh-body);
   white-space: nowrap;
 }

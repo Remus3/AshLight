@@ -86,7 +86,7 @@ body {
 
 .mono { font-variant-numeric: tabular-nums; }
 /* UX-A11Y: text for screen readers only (the deaths tile dash). */
-.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+.sr-only { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* Adjudicator ruling (wave 6, PLAY-TD-09C-BAR): the Play region headings
    stay visually hidden (absolute, 1 px wide) but use a type token and do
@@ -105,8 +105,8 @@ body {
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: "brand char status" "tabs tabs tabs";
   align-items: center;
-  gap: 8px 12px;
-  padding: 12px 16px;
+  gap: var(--al-space-2) var(--al-space-3);
+  padding: var(--al-space-3) var(--al-space-4);
   border-bottom: 1px solid var(--fk-border);
   background: var(--fk-surface-2);
 }
@@ -114,46 +114,55 @@ body {
 .bar > .tabs { grid-area: tabs; min-width: 0; }
 .bar > .bar-char { grid-area: char; justify-self: end; }
 .bar > #reading { grid-area: status; justify-self: end; }
-.brand { font-size: var(--al-fs-body); margin: 0; display: inline-flex; align-items: center; gap: 8px; }
+.brand { font-size: var(--al-fs-body); margin: 0; display: inline-flex; align-items: center; gap: var(--al-space-2); }
 /* F-190: AshLight's own mark in a 20 px box left of the name */
 .brand-mark { display: block; flex: 0 0 auto; width: 20px; height: 20px; }
 .bar-char { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; font-size: var(--al-fs-body); }
 
-.pill {
+.badge {
+  /* F-189: the one badge (it replaces the four badge classes of before):
+     a word, often after a glyph, in a pill edge at the meta step, 600. The
+     state words take their colour from data-state (the kit states) or
+     data-verdict; the word and glyph carry the meaning, colour only
+     repeats it. Places only change the type step: the bar word (20 px,
+     web/strip.css), the item check verdict (16 px) and the tab mark. */
   margin: 0;
   display: inline-flex;
-  gap: 6px;
+  gap: var(--al-space-1);
   align-items: center;
-  padding: 2px 10px;
-  border: 1px solid var(--fk-border);
-  border-radius: 999px;
+  padding: 0 var(--al-space-2);
+  border: 1px solid var(--al-control-edge);
+  border-radius: var(--al-radius-pill);
   font-size: var(--al-fs-meta);
+  line-height: var(--al-lh-meta);
+  font-weight: 600;
 }
-.pill .glyph { font-family: var(--al-font-mono); }
-.pill[data-state="running"] { color: var(--fk-status-running); border-color: var(--fk-status-running); }
-.pill[data-state="done"] { color: var(--fk-status-ok); border-color: var(--fk-status-ok); }
-.pill[data-state="idle"], .pill[data-state="pending"] { color: var(--fk-status-idle); }
-.pill[data-state="blocked"] { color: var(--fk-status-warn); border-color: var(--fk-status-warn); }
-.pill[data-state="failed"] { color: var(--fk-status-bad); border-color: var(--fk-status-bad); }
+.badge .glyph { font-family: var(--al-font-mono); }
+.badge[data-state="running"] { color: var(--fk-status-running); border-color: var(--fk-status-running); }
+.badge[data-state="done"], .badge[data-verdict="upgrade"] { color: var(--fk-status-ok); border-color: var(--fk-status-ok); }
+.badge[data-state="idle"], .badge[data-state="pending"] { color: var(--fk-status-idle); }
+/* UTIL-WAYSTONE: a waystone with mods risky for the loaded build */
+.badge[data-state="blocked"], .badge[data-verdict="risky"] { color: var(--fk-status-warn); border-color: var(--fk-status-warn); }
+.badge[data-state="failed"] { color: var(--fk-status-bad); border-color: var(--fk-status-bad); }
 
 main {
   flex: 1;
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--al-space-4);
   display: grid;
-  gap: 16px;
+  gap: var(--al-space-4);
 }
 
 .card {
   border: 1px solid var(--fk-border);
-  border-radius: 8px;
+  border-radius: var(--al-radius-card);
   background: var(--fk-surface-2);
-  padding: 16px;
+  padding: var(--al-space-4);
 }
-.card h2 { font-size: var(--al-fs-body); margin: 0 0 8px; }
+.card h2 { font-size: var(--al-fs-body); margin: 0 0 var(--al-space-2); }
 
 /* F-159: the bare button is quiet (text colour, no fill, the control
    edge); button.primary is the one filled style, used once, by the setup
@@ -163,8 +172,8 @@ button {
   color: var(--fk-text);
   background: transparent;
   border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
-  border-radius: 6px;
-  padding: 8px 14px;
+  border-radius: var(--al-radius-control);
+  padding: var(--al-space-2) var(--al-space-3);
   cursor: pointer;
 }
 button.primary {
@@ -194,7 +203,7 @@ button.link {
   border: none;
   color: var(--fk-accent);
   text-decoration: underline;
-  padding: 4px 0 4px 8px;
+  padding: var(--al-space-1) 0 var(--al-space-1) var(--al-space-2);
   min-height: 24px;
 }
 /* A11Y-1: a link button has no edge to dash, so when disabled its
@@ -202,14 +211,14 @@ button.link {
 button.link:disabled, button.link[aria-disabled="true"] { text-decoration-style: dashed; }
 
 /* UTIL-MULTICHAR: the per-character selector (the Characters card) */
-.char-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; }
+.char-pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1) var(--al-space-2); margin-top: var(--al-space-1); }
 .char-pick select {
   font: inherit;
   color: var(--fk-text);
   background: var(--fk-surface);
   border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: var(--al-radius-control);
+  padding: var(--al-space-1) var(--al-space-1);
   min-height: 32px;
   max-width: 100%;
 }
@@ -217,18 +226,8 @@ button.link:disabled, button.link[aria-disabled="true"] { text-decoration-style:
    under the old Level tile; since PLAY-TD-20A-RUN-GRID it sits on the Acts
    card's pace page and since PLAY-TD-20B-RUN-CARDS the picker is on the
    Characters card (tests/test_ux_review.py pins the first selector) */
-#actsbox > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
-#actsbox .card-page > .sub { margin: 0 0 8px; color: var(--fk-text-muted); overflow-wrap: anywhere; }
-
-.tag {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 0 8px;
-  border: 1px solid var(--fk-border);
-  border-radius: 4px;
-  font-size: var(--al-fs-meta);
-  vertical-align: middle;
-}
+#actsbox > .sub { margin: 0 0 var(--al-space-2); color: var(--fk-text-muted); overflow-wrap: anywhere; }
+#actsbox .card-page > .sub { margin: 0 0 var(--al-space-2); color: var(--fk-text-muted); overflow-wrap: anywhere; }
 
 /* UX-NEWEST N1: the Last session card is silent (no live region), so it
    shows by position (first in Run, PLAY-LEGACY-OUT-2) and a
@@ -239,35 +238,35 @@ button.secondary {
   color: var(--fk-text);
   background: var(--fk-surface);
   border-color: var(--al-control-edge); /* control boundary, 0001 5.1 */
-  padding: 4px 10px;
+  padding: var(--al-space-1) var(--al-space-2);
 }
 
 .layout-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px 16px;
+  gap: var(--al-space-3) var(--al-space-4);
 }
-.layout-form label { display: flex; flex-direction: column; gap: 4px; font-size: var(--al-fs-meta); }
+.layout-form label { display: flex; flex-direction: column; gap: var(--al-space-1); font-size: var(--al-fs-meta); }
 .layout-form select, .layout-form input[type="number"] {
   font: inherit;
   color: var(--fk-text);
   background: var(--fk-surface);
   border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: var(--al-radius-control);
+  padding: var(--al-space-1) var(--al-space-2);
 }
 .layout-form input[type="range"] { width: 100%; min-height: 24px; margin: 0; accent-color: var(--fk-accent); }
 /* OVL-PARTS-WEB: the 'Overlay shows' switches as a grid; the zone guide
    choice keeps the control look of the layout form */
-.parts-grid { display: grid; gap: 0 16px; margin: 8px 0 0;
+.parts-grid { display: grid; gap: 0 var(--al-space-4); margin: var(--al-space-2) 0 0;
   grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); }
 .parts select {
   font: inherit;
   color: var(--fk-text);
   background: var(--fk-surface);
   border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: var(--al-radius-control);
+  padding: var(--al-space-1) var(--al-space-1);
   min-height: 32px;
   max-width: 100%;
 }
@@ -275,11 +274,11 @@ button.secondary {
 input[type="file"] { min-height: 24px; max-width: 100%; }
 
 /* Shared bits for the build view, item check and graphics panel. */
-.sub-h { font-size: var(--al-fs-meta); margin: 16px 0 6px; color: var(--fk-text-muted); }
-.sub-h4 { font-size: var(--al-fs-meta); margin: 10px 0 4px; font-weight: 600; }
+.sub-h { font-size: var(--al-fs-meta); margin: var(--al-space-4) 0 var(--al-space-1); color: var(--fk-text-muted); }
+.sub-h4 { font-size: var(--al-fs-meta); margin: var(--al-space-2) 0 var(--al-space-1); font-weight: 600; }
 /* HUD-ACT: act times and zone levels; numbers right-aligned, no jitter. */
 .acts-table { width: 100%; border-collapse: collapse; }
-.acts-table th, .acts-table td { text-align: left; padding: 6px 8px 6px 0;
+.acts-table th, .acts-table td { text-align: left; padding: var(--al-space-1) var(--al-space-2) var(--al-space-1) 0;
   border-top: 1px solid var(--fk-border); vertical-align: top; }
 .acts-table thead th { border-top: none; font-size: var(--al-fs-meta); font-weight: 600;
   color: var(--fk-text-muted); }
@@ -287,49 +286,41 @@ input[type="file"] { min-height: 24px; max-width: 100%; }
 .acts-table td.mono { text-align: right; white-space: nowrap; padding-right: 0; }
 /* UX-NEW-CARDS: a gap before every number column, so two right-aligned
    numbers never touch at 320 px (seen as "0:110" in the Maps card). */
-.acts-table td.mono, .acts-table thead th:not(:first-child) { padding-left: 12px; }
+.acts-table td.mono, .acts-table thead th:not(:first-child) { padding-left: var(--al-space-3); }
 .acts-table thead th:not(:first-child) { text-align: right; padding-right: 0; }
 /* Current row: weight on the row header only, so the number columns never
    change width on an act change (design review HA-8). */
 .acts-table th .muted { font-weight: 400; }
 .small { font-size: var(--al-fs-meta); }
 a.out { color: var(--fk-accent); font-size: var(--al-fs-meta); }
-.actions { margin: 12px 0 0; }
-.kv { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; }
+.actions { margin: var(--al-space-3) 0 0; }
+.kv { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--al-space-2) var(--al-space-4); }
 .kv-row { min-width: 0; }
 .kv dt { font-size: var(--al-fs-meta); color: var(--fk-text-muted); }
 .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
-summary { cursor: pointer; min-height: 24px; padding: 4px 0; }
+summary { cursor: pointer; min-height: 24px; padding: var(--al-space-1) 0; }
 textarea, .weights-form input {
   font: inherit;
   color: var(--fk-text);
   background: var(--fk-surface);
   border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: var(--al-radius-control);
+  padding: var(--al-space-1) var(--al-space-2);
   max-width: 100%;
 }
 
 ::placeholder { color: var(--fk-text-muted); opacity: 1; }
 
-/* Item check (TC-EVAL-UI). The verdict is a word; the colour only repeats
-   it (ok green for an upgrade; red stays for failures and deaths). */
-.eval-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 4px; }
-.verdict {
-  font-weight: 700;
-  padding: 0 10px;
-  border: 1px solid var(--al-control-edge);
-  border-radius: 999px;
-}
-.verdict[data-verdict="upgrade"] { color: var(--fk-status-ok); border-color: var(--fk-status-ok); }
-/* UTIL-WAYSTONE: a waystone with mods risky for the loaded build */
-.verdict[data-verdict="risky"] { color: var(--fk-status-warn); border-color: var(--fk-status-warn); }
+/* Item check (TC-EVAL-UI). The verdict is a word in the one badge; the
+   colour only repeats it (ok green for an upgrade; red stays for failures
+   and deaths). */
+.eval-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--al-space-1) var(--al-space-2); margin: 0 0 var(--al-space-1); }
 .eval-item { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
 
 /* PRICE-1-UI / DATA-NINJA-UI (decision 0016). The state is a word with a
-   glyph (kit pill); colour only repeats it. Prices are never red. */
-.webdata-form { margin: 0 0 8px; }
-.check { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-weight: 600; cursor: pointer; }
+   glyph (the one badge); colour only repeats it. Prices are never red. */
+.webdata-form { margin: 0 0 var(--al-space-2); }
+.check { display: inline-flex; align-items: center; gap: var(--al-space-2); min-height: 32px; font-weight: 600; cursor: pointer; }
 .check input { width: 24px; height: 24px; margin: 0; flex: none; cursor: pointer;
   /* F-160: an honest checkbox, 24 px (F-164, 2.5.8). Unchecked is an empty box with the control
      edge; checked is filled with the accent and carries a tick (the fill is
@@ -341,55 +332,61 @@ textarea, .weights-form input {
 /* a checkbox made outside a .check label (web/checks.js) keeps the native
    control at the same 24 px */
 input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
-.weights-form { display: grid; gap: 12px; }
-.weights-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px;
+.weights-form { display: grid; gap: var(--al-space-3); }
+.weights-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--al-space-1);
   grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
-.weights-list li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.weights-list li { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0; }
 .weights-list label { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: var(--al-fs-meta); }
 .weights-list input { width: 6.5em; flex: none; }
-.weights-form fieldset { border: 1px solid var(--fk-border); border-radius: 6px; margin: 0;
-  padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.weights-form fieldset label { display: flex; flex-direction: column; gap: 4px; font-size: var(--al-fs-meta); min-width: 0; }
+.weights-form fieldset { border: 1px solid var(--fk-border); border-radius: var(--al-radius-control); margin: 0;
+  padding: var(--al-space-2) var(--al-space-3); display: flex; flex-wrap: wrap; gap: var(--al-space-2) var(--al-space-4); }
+.weights-form fieldset label { display: flex; flex-direction: column; gap: var(--al-space-1); font-size: var(--al-fs-meta); min-width: 0; }
 .weights-add label:first-of-type { flex: 1 1 16em; }
 .weights-band input, .weights-add input[type="number"] { width: 8em; }
 
 /* Build view (TC-VIEW); PLAY-TD-19C-BUILD-GRID moved its rows into the
    card grid rules at the end of this file. */
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
-.code-out { width: 100%; margin-top: 8px; font-size: var(--al-fs-meta); }
+.code-out { width: 100%; margin-top: var(--al-space-2); font-size: var(--al-fs-meta); }
 /* UX-B5-CARDS: the import line breaks anywhere, so no line runs past the
    card (the search strings are pager rows, PLAY-TD-19C-BUILD-GRID) */
 .filter-line { overflow-wrap: anywhere; }
 /* MATH-BUILD-HEALTH: one row per PoB warning; the leading word carries the
    severity, the colour only repeats it */
 .health-list { list-style: none; margin: 0; padding: 0; }
+/* F-189: one list-row rule, two densities. Roomy (the Checks rows and the
+   graphics advisor): a 1 px separator and --al-space-1 above and below.
+   Dense (the pager rows and the build health rows): the row's own line box
+   only, no separator, no padding. Region rows (feed, kept checks) are
+   dense by their own files. */
+.checks-list > li, .gfx-list > li, .al-pager-list > li, .health-list > li { min-width: 0; padding: 0; }
+.checks-list > li, .gfx-list > li { border-top: 1px solid var(--fk-border); padding: var(--al-space-1) 0; }
 .health-row { padding: 0; overflow-wrap: anywhere; }
 .health-row[data-severity="high"] .health-word { color: var(--fk-status-warn); font-weight: 700; }
 .health-row[data-severity="medium"] .health-word { color: var(--fk-text); }
 .health-row[data-severity="low"] .health-word { color: var(--fk-text-muted); }
 /* F-161: multi-line prose (the zone guide, notes) reads at 1.5 */
 .zone-guide { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
-.zone-guide p { margin: 0 0 4px; }
+.zone-guide p { margin: 0 0 var(--al-space-1); }
 .zone-guide .zg-title { font-weight: 600; }
 /* PLAY-LEGACY-OUT-2: the Zone tip box, the campaign hint list and the tip
    card are gone; these three dead rules stay only while
    tests/test_design_tokens.py (test_multiline_prose_reads_at_1_5) pins
    them, and the package that widens to that test deletes them. */
 .zone-note { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
-.campaign-hints { padding-left: 20px; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
+.campaign-hints { padding-left: var(--al-space-4); overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .card.hint p { margin: 0; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .paste { display: block; font-weight: 600; }
 .paste-box { width: 100%; resize: vertical; font-size: var(--al-fs-meta); }
 
 /* Graphics advisor (GFX-ADVISOR): optional, opened with a click. */
-.gfx-warn { margin: 8px 0; padding-left: 20px; color: var(--fk-status-warn); }
+.gfx-warn { margin: var(--al-space-2) 0; padding-left: var(--al-space-4); color: var(--fk-status-warn); }
 .gfx-warn:empty { display: none; }
-.gfx-list { list-style: none; margin: 8px 0 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 8px 16px; }
-.gfx-list li { border-top: 1px solid var(--fk-border); padding: 6px 0; min-width: 0; }
-.gfx-line { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+.gfx-list { list-style: none; margin: var(--al-space-2) 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: var(--al-space-2) var(--al-space-4); }
+.gfx-line { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--al-space-0) var(--al-space-2); }
 .gfx-value { overflow-wrap: anywhere; }
-.gfx-why { margin: 2px 0 0; font-size: var(--al-fs-meta); }
+.gfx-why { margin: var(--al-space-0) 0 0; font-size: var(--al-fs-meta); }
 
 /* PLAY-TD-21B-SETTINGS-ABOUT (plan 03 section 3.4): the footer is one
    row, the disclaimer sentence (text colour) and the trademark sentence
@@ -400,21 +397,21 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
   flex-wrap: wrap;
   justify-content: center;
   align-items: baseline;
-  gap: 0 16px;
-  padding: 8px 16px;
+  gap: 0 var(--al-space-4);
+  padding: var(--al-space-2) var(--al-space-4);
   border-top: 1px solid var(--fk-border);
   font-size: var(--al-fs-micro);
   line-height: var(--al-lh-micro);
   text-align: center;
 }
-.foot p { margin: 2px 0; }
+.foot p { margin: var(--al-space-0) 0; }
 /* UX-ONBOARD-COPY: what AshLight does and never does, open in Settings >
    About and data, one readable column */
 .promises { max-width: 60ch; }
-.promises > p { margin: 8px 0 2px; }
-.promises ul { margin: 0 0 8px; padding-left: 20px; line-height: var(--al-lh-prose); }
-.promises li { margin: 2px 0; }
-.credits { margin: 0 0 8px; }
+.promises > p { margin: var(--al-space-2) 0 var(--al-space-0); }
+.promises ul { margin: 0 0 var(--al-space-2); padding-left: var(--al-space-4); line-height: var(--al-lh-prose); }
+.promises li { margin: var(--al-space-0) 0; }
+.credits { margin: 0 0 var(--al-space-2); }
 
 /* High-contrast mode (UX-REVIEW U3, research 0008): follows the Windows /
    browser "more contrast" setting, no click. Muted text and control edges
@@ -437,25 +434,24 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
 }
 
 /* UTIL-RUN-HISTORY / UTIL-PRICE-WATCH / UX-SETTINGS-IO */
-.settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.settings-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2) var(--al-space-4); margin-top: var(--al-space-3); }
 /* UX-DASH-DENSITY: set-once tools in one folded group (the .build file and
    the loot filter add-on are card pages since PLAY-TD-19C-BUILD-GRID).
    Separators only, no motion. */
-.tools .tool { border-top: 1px solid var(--fk-border); margin-top: 12px; padding-top: 4px; }
+.tools .tool { border-top: 1px solid var(--fk-border); margin-top: var(--al-space-3); padding-top: var(--al-space-1); }
 .tools .tool:first-of-type { border-top: none; }
 .tools .rail-block > details > summary { color: var(--fk-text); font-weight: 600; }
 
 /* Narrow side window next to the game: tighter spacing only. */
 @media (max-width: 520px) {
-  main { padding: 12px; gap: 12px; }
-  .card { padding: 12px; }
-  .bar { padding: 8px 12px; }
+  main { padding: var(--al-space-3); gap: var(--al-space-3); }
+  .card { padding: var(--al-space-3); }
+  .bar { padding: var(--al-space-2) var(--al-space-3); }
 }
-.tool-row { margin: 8px 0 0; }
+.tool-row { margin: var(--al-space-2) 0 0; }
 
 /* DIAG-SELF: the Checks tool (glyph + word per row, never colour alone). */
-.checks-list { list-style: none; margin: 8px 0 0; padding: 0; }
-.checks-list li { border-top: 1px solid var(--fk-border); padding: 6px 0; min-width: 0; }
+.checks-list { list-style: none; margin: var(--al-space-2) 0 0; padding: 0; }
 /* a page of Checks rows starts after a hidden row (web/checks.js) */
 .checks-list li:first-child, .checks-list li[hidden] + li { border-top: none; }
 .check-line, .check-detail, .check-fix { margin: 0; overflow-wrap: anywhere; }
@@ -470,21 +466,21 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
    side by side); a fix, the calc line and the calc button take their own
    line. 12 rows a page (web/checks.js) stay inside the 448 px rule. */
 .check-sum { margin: 0; font-weight: 600; min-height: 1.5rem; }
-.checks-list li { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
+.checks-list li { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--al-space-2); }
 .checks-list li > .check-fix, .checks-list li > #checks-calc-status { flex-basis: 100%; }
-#checks-pager { margin-top: 4px; }
+#checks-pager { margin-top: var(--al-space-1); }
 
 /* UI-GLANCE: tabs. Play is the glance tab and fits one screen; the other
    tabs use compact grids. The selected tab has a bar under it AND bold
    weight plus aria-selected (colour never alone); no motion. */
-.tabs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 100%; }
+.tabs { display: flex; flex-wrap: wrap; gap: var(--al-space-1); flex: 1 1 100%; }
 button.tab {
   color: var(--fk-text);
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
-  border-radius: 6px 6px 0 0;
-  padding: 6px 12px;
+  border-radius: var(--al-radius-control) var(--al-radius-control) 0 0;
+  padding: var(--al-space-1) var(--al-space-3);
   min-height: 32px;
   font-weight: 400;
 }
@@ -500,15 +496,10 @@ button.tab::after { display: block; height: 0; overflow: hidden; visibility: hid
 #tab-run::after { content: "Run"; }
 #tab-settings::after { content: "Settings"; }
 button.tab:hover { background: var(--fk-surface); }
-.tab-mark {
-  margin-left: 4px;
-  padding: 0 6px;
-  border: 1px solid var(--al-control-edge);
-  border-radius: 999px;
-  font-size: var(--al-fs-micro);
-  font-weight: 600;
-}
-.panel { display: grid; gap: 16px; align-content: start; min-width: 0; }
+/* the tab mark word ("new", "fix", "update") is the one badge at its meta
+   step, the dense side padding (TD23-1: no 600 under 14 px) */
+button.tab .badge { margin-left: var(--al-space-1); padding: 0 var(--al-space-1); vertical-align: middle; }
+.panel { display: grid; gap: var(--al-space-4); align-content: start; min-width: 0; }
 /* PLAY-TD-21A-SETTINGS-RAIL (TD-21, F-067; plan 03 section 4): Settings is
    a rail of 6 section buttons and a pane that shows one section. Narrow:
    the rail wraps above the pane; from 900 px the rail is a 220 px column.
@@ -518,14 +509,14 @@ button.tab:hover { background: var(--fk-surface); }
    the shown page (data-off: 0 px, out of view and out of the focus order;
    scrollHeight still reads their height) and adds Prev / Next. */
 .panel-settings { grid-template-columns: minmax(0, 1fr); align-items: start; }
-.rail { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.rail { display: flex; flex-wrap: wrap; gap: var(--al-space-1); min-width: 0; }
 button.rail-item {
   color: var(--fk-text);
   background: none;
   border: none;
   border-left: 3px solid transparent;
-  border-radius: 0 6px 6px 0;
-  padding: 4px 12px;
+  border-radius: 0 var(--al-radius-control) var(--al-radius-control) 0;
+  padding: var(--al-space-1) var(--al-space-3);
   min-height: 32px;
   text-align: left;
   font-weight: 400;
@@ -533,17 +524,17 @@ button.rail-item {
 button.rail-item[aria-current="true"] { border-left-color: var(--fk-accent); font-weight: 600; }
 button.rail-item:hover { background: var(--fk-surface); }
 .rail-pane { display: grid; min-width: 0; }
-.rail-section h3 { font-size: var(--al-fs-body); margin: 0 0 8px; }
+.rail-section h3 { font-size: var(--al-fs-body); margin: 0 0 var(--al-space-2); }
 /* flow-root: no margin collapses through a block, so its height reads the
    same folded or shown */
 .rail-block { display: flow-root; min-width: 0; }
 .rail-block[data-off] { height: 0; margin: 0; padding: 0; overflow: hidden; visibility: hidden; }
-.rail-pager { margin-top: 8px; }
+.rail-pager { margin-top: var(--al-space-2); }
 /* PLAY-TD-21B-SETTINGS-ABOUT: the index row on top of the pane, one 32 px
    row of link buttons that jump to settings kept on other tabs */
-.set-index { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px;
-  min-height: 32px; margin: 0 0 8px; }
-.set-index button.link { padding: 4px 0; }
+.set-index { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--al-space-3);
+  min-height: 32px; margin: 0 0 var(--al-space-2); }
+.set-index button.link { padding: var(--al-space-1) 0; }
 /* Settings keeps the type steps of plan 03 section 6 (G7): sub headings,
    small print, check words and form labels take the meta step; the
    visually hidden tab heading takes the body step and does not overflow
@@ -551,26 +542,26 @@ button.rail-item:hover { background: var(--fk-surface); }
 #settings-h.sr-only { font-size: var(--al-fs-body); line-height: var(--al-lh-body); height: auto;
   overflow: visible; clip-path: inset(50%); white-space: nowrap; }
 #panel-settings .sub-h, #panel-settings .small, #panel-settings .check-word,
-#panel-settings .layout-form label, #panel-settings .gfx-why, #panel-settings .pill {
+#panel-settings .layout-form label, #panel-settings .gfx-why, #panel-settings .badge {
   font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
-.set-row { margin: 8px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+.set-row { margin: var(--al-space-2) 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1) var(--al-space-3);
   min-height: 32px; }
 /* SEC-LOG-PATH-FIELD: the typed Client.txt path takes the row's free width */
 .logpath-form input[type="text"] { flex: 1 1 16rem; min-width: 0; }
-/* the bar status word is a 32 px button (G12): the pill look, no fill */
-button.bar-word { min-height: 32px; padding: 2px 10px; background: none; }
+/* the bar status word is a 32 px button (G12): the badge look, no fill */
+button.bar-word { min-height: 32px; padding: var(--al-space-0) var(--al-space-2); background: none; }
 button.bar-word:hover { background: var(--fk-surface); }
 @media (min-width: 900px) {
   .panel-settings { grid-template-columns: 220px minmax(0, 1fr); }
   .rail { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
 }
 .panel-grid { grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); align-items: start; }
-.panel-grid > .col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.panel-grid > .col { display: grid; gap: var(--al-space-4); align-content: start; min-width: 0; }
 /* a column whose cards are all hidden (no build yet) takes no track */
 .panel-grid > .col:not(:has(> section:not([hidden]))) { display: none; }
 /* the header news line: a polite live region that is always visually
    hidden (PLAY-TD-09C-BAR: 0 px of the bar); the tab mark is its twin */
-.tab-news { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+.tab-news { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0;
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
   border: 0; }
 
@@ -587,19 +578,19 @@ button.bar-word:hover { background: var(--fk-surface); }
     max-width: 1600px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--al-space-3);
+    padding: var(--al-space-3) var(--al-space-4);
   }
   .bar { grid-template-columns: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "brand tabs char status"; padding: 6px 16px; }
-  .card { padding: 12px; }
-  .panel-grid { gap: 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    grid-template-areas: "brand tabs char status"; padding: var(--al-space-1) var(--al-space-4); }
+  .card { padding: var(--al-space-3); }
+  .panel-grid { gap: var(--al-space-3); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   /* the rail pages a long section; this only catches one block taller
      than the pane (the page itself never scrolls) */
-  .panel-settings { gap: 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .panel-settings { gap: var(--al-space-3); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   /* each column of a tab scrolls on its own; the page never does */
-  .panel-grid > .col { max-height: 100%; overflow-y: auto; padding-right: 4px; gap: 12px; }
-  .foot { padding: 4px 16px; }
+  .panel-grid > .col { max-height: 100%; overflow-y: auto; padding-right: var(--al-space-1); gap: var(--al-space-3); }
+  .foot { padding: var(--al-space-1) var(--al-space-4); }
 }
 
 /* --- Play cockpit (PLAY-TD-09B-SKELETON; plan 03 sections 3.1, 3.2, 3.8,
@@ -633,31 +624,31 @@ button.bar-word:hover { background: var(--fk-surface); }
    set when the regions start); before that it is minmax(track, auto), so
    main stays usable while the page loads. Tracks are
    rem, so the scale step multiplies every track, gap and chrome figure. */
-.panel-play { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+.panel-play { grid-template-columns: minmax(0, 1fr); gap: var(--al-space-3); }
 .region {
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 0.75rem;
+  gap: var(--al-space-3);
   border: 1px solid transparent;
   border-radius: var(--al-radius-card);
-  --region-pad: 0.5rem;
+  --region-pad: var(--al-space-2);
 }
 /* a started region shows its frame */
 .region[data-fit="yes"] {
   border-color: var(--fk-border);
   background: var(--fk-surface-2);
-  padding: var(--region-pad) 0.75rem;
+  padding: var(--region-pad) var(--al-space-3);
 }
-#play-g { --region-pad: 0.25rem; }
-#play-c, #play-i { --region-pad: 0.75rem; }
-#play-t { --region-pad: 0.375rem; }
-#play-u { --region-pad: var(--pad-u, 0.5rem); }
+#play-g { --region-pad: var(--al-space-1); }
+#play-c, #play-i { --region-pad: var(--al-space-3); }
+#play-t { --region-pad: var(--al-space-1); }
+#play-u { --region-pad: var(--pad-u, var(--al-space-1)); }
 .region > .slot:empty { display: none; }
 
 /* compact and full (the s = 1 compact threshold is the lowest of all) */
 @media (min-width: 64em) and (min-height: 43.75em) {
-  main { max-width: 100rem; padding: 0.75rem 1rem; }
+  main { max-width: 100rem; padding: var(--al-space-3) var(--al-space-4); }
   .bar { min-height: 3.25rem; padding-block: 0; }
   .foot { min-height: 2rem; padding-block: 0; align-items: center; }
   .panel-play {
@@ -674,7 +665,7 @@ button.bar-word:hover { background: var(--fk-surface); }
     grid-template-rows: var(--row-g) 0.5rem var(--row-1) 0.5rem minmax(var(--track-3), 1fr)
       0.5rem var(--row-5) var(--row-6) var(--track-7) var(--row-8) var(--row-9);
     grid-template-areas: "g g" ". ." "c b" "c ." "c i" ". i" "t i" "t ." ". ." ". u" "n u";
-    gap: 0 0.75rem;
+    gap: 0 var(--al-space-3);
     align-content: stretch;
   }
   #play-g { grid-area: g; }
@@ -690,28 +681,28 @@ button.bar-word:hover { background: var(--fk-surface); }
    padding of region U */
 @media (min-width: 64em) and (min-height: 43.75em) { .panel-play { --track-3: 8.5rem;
   --track-5: 12.75rem; --track-6: 0rem; --track-7: 0.5rem; --track-8: 0rem; --track-9: 3.25rem;
-  --pad-u: 0.25rem; } }
+  --pad-u: var(--al-space-0); } }
 @media (min-width: 75em) and (min-height: 47.5em) { .panel-play { --track-3: 9.5rem;
   --track-5: 12.5rem; --track-6: 0.25rem; --track-7: 0.25rem; --track-8: 0.25rem; --track-9: 6rem;
-  --pad-u: 0.5rem; } }
+  --pad-u: var(--al-space-1); } }
 @media (min-width: 80em) and (min-height: 54.6875em) { .panel-play { --track-3: 8.5rem;
   --track-5: 12.75rem; --track-6: 0rem; --track-7: 0.5rem; --track-8: 0rem; --track-9: 3.25rem;
-  --pad-u: 0.25rem; } }
+  --pad-u: var(--al-space-0); } }
 @media (min-width: 93.75em) and (min-height: 59.375em) { .panel-play { --track-3: 9.5rem;
   --track-5: 12.5rem; --track-6: 0.25rem; --track-7: 0.25rem; --track-8: 0.25rem; --track-9: 6rem;
-  --pad-u: 0.5rem; } }
+  --pad-u: var(--al-space-1); } }
 @media (min-width: 96em) and (min-height: 65.625em) { .panel-play { --track-3: 8.5rem;
   --track-5: 12.75rem; --track-6: 0rem; --track-7: 0.5rem; --track-8: 0rem; --track-9: 3.25rem;
-  --pad-u: 0.25rem; } }
+  --pad-u: var(--al-space-0); } }
 @media (min-width: 112.5em) and (min-height: 71.25em) { .panel-play { --track-3: 9.5rem;
   --track-5: 12.5rem; --track-6: 0.25rem; --track-7: 0.25rem; --track-8: 0.25rem; --track-9: 6rem;
-  --pad-u: 0.5rem; } }
+  --pad-u: var(--al-space-1); } }
 @media (min-width: 128em) and (min-height: 87.5em) { .panel-play { --track-3: 8.5rem;
   --track-5: 12.75rem; --track-6: 0rem; --track-7: 0.5rem; --track-8: 0rem; --track-9: 3.25rem;
-  --pad-u: 0.25rem; } }
+  --pad-u: var(--al-space-0); } }
 @media (min-width: 150em) and (min-height: 95em) { .panel-play { --track-3: 9.5rem;
   --track-5: 12.5rem; --track-6: 0.25rem; --track-7: 0.25rem; --track-8: 0.25rem; --track-9: 6rem;
-  --pad-u: 0.5rem; } }
+  --pad-u: var(--al-space-1); } }
 /* fixed tracks: every region over the track has landed (a text-spacing
    override, data-text-spacing="user" on the root, keeps them growing) */
 :root:not([data-text-spacing="user"]) .panel-play:has(> #play-g[data-fit="yes"]) {
@@ -748,13 +739,13 @@ button.bar-word:hover { background: var(--fk-surface); }
   .one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 [data-text-spacing="user"] .one-line { white-space: normal; overflow: visible; }
-.edge { border-left: 0.25rem solid var(--fk-border); padding-left: 0.5rem; }
+.edge { border-left: 0.25rem solid var(--fk-border); padding-left: var(--al-space-2); }
 .edge-accent { border-left-color: var(--fk-accent); }
 .edge-warn { border-left-color: var(--fk-status-warn); }
-button.btn-24 { min-height: 1.5rem; padding: 0 0.5rem; font-size: var(--al-fs-meta);
+button.btn-24 { min-height: 1.5rem; padding: 0 var(--al-space-2); font-size: var(--al-fs-meta);
   line-height: var(--al-lh-meta); }
-button.btn-28 { min-height: 1.75rem; padding: 0 0.625rem; line-height: var(--al-lh-body); }
-button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-body); }
+button.btn-28 { min-height: 1.75rem; padding: 0 var(--al-space-2); line-height: var(--al-lh-body); }
+button.btn-32 { min-height: 2rem; padding: 0 var(--al-space-3); line-height: var(--al-lh-body); }
 
 /* --- Card grid (PLAY-TD-19C-BUILD-GRID; plan 03 section 4, TD-19) --------
    Build and items (and Run, PLAY-TD-20A-RUN-GRID) is a fixed 3 x 2 grid of
@@ -768,7 +759,7 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
    the guard in the cockpit; they wrap in the flow class and under a
    text-spacing override (data-text-spacing="user"). */
 .grid-card { display: flex; flex-direction: column; min-width: 0; gap: 0; }
-.card-head { display: flex; align-items: center; gap: 0.5rem; min-width: 0;
+.card-head { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0;
   min-height: var(--al-lh-title); }
 .grid-card .card-head h2 { margin: 0; font-size: var(--al-fs-title); line-height: var(--al-lh-title);
   font-weight: 600; white-space: nowrap; }
@@ -780,29 +771,29 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 #next-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 #next-wrap > .pager-slot { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .pager-slot > .al-pager-host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-.card-foot, .card-act { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem;
+.card-foot, .card-act { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1) var(--al-space-2);
   margin: 0; min-width: 0; }
 .card-foot { min-height: 1.75rem; }
 .card-act > .one-line { flex: 1 1 0; }
-.card-h3 { margin: 0.25rem 0 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); font-weight: 600; }
+.card-h3 { margin: var(--al-space-1) 0 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); font-weight: 600; }
 .card-h3 .muted { font-weight: 400; }
-.card-kv { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 0.75rem; }
+.card-kv { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--al-space-3); }
 .card-kv-1 { grid-template-columns: minmax(0, 1fr); }
-.card-kv > div { display: flex; gap: 0.5rem; min-width: 0; font-size: var(--al-fs-body);
+.card-kv > div { display: flex; gap: var(--al-space-2); min-width: 0; font-size: var(--al-fs-body);
   line-height: var(--al-lh-body); }
 .card-kv dt { color: var(--fk-text-muted); min-width: 0; overflow-wrap: anywhere; }
 .card-kv dd { margin: 0 0 0 auto; font-weight: 600; white-space: nowrap; }
 .grid-card .health-row { font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
 .grid-card .paste-box { resize: none; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
-.grid-card .code-out { margin: 0.25rem 0 0; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); resize: none; }
+.grid-card .code-out { margin: var(--al-space-1) 0 0; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); resize: none; }
 .grid-card p { margin: 0; }
-.grid-card .row-meta + .card-act, .grid-card .card-act + .row-meta { margin-top: 0.25rem; }
-#link-recover { margin-top: 0.25rem; }
+.grid-card .row-meta + .card-act, .grid-card .card-act + .row-meta { margin-top: var(--al-space-1); }
+#link-recover { margin-top: var(--al-space-1); }
 /* the loot filter page: a plain page of its card (review BG-10); the
    card's page buttons show it (web/app.js cardPages) */
-.tool-page .small { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); margin: 0.25rem 0 0; }
+.tool-page .small { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); margin: var(--al-space-1) 0 0; }
 .tool-page .link { min-height: 1.5rem; padding: 0; font-size: var(--al-fs-meta); }
-.card-notes { margin: 0; padding-left: 1rem; overflow-wrap: anywhere; }
+.card-notes { margin: 0; padding-left: var(--al-space-4); overflow-wrap: anywhere; }
 .grid-card a.out { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 .tool-page input[type="file"] { width: 13rem; font-size: var(--al-fs-meta); }
 .tool-page .card-act > .one-line:empty { display: none; }
@@ -834,14 +825,12 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 
 /* Last item, Prices, Item scoring (PLAY-TD-19D-ITEMS-GRID; plan 03 section
    4). Head rows are one line of 24 px: the verdict and the price state
-   pill, then rows that page, then the time of the check. Pills and
-   legends take the meta step, so the tab keeps its type styles. */
-.grid-card .pill { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); padding: 0 0.5rem;
-  font-weight: 600; }
+   badge, then rows that page, then the time of the check. Badges and
+   legends take the meta step (the verdict the body step), so the tab
+   keeps its type styles. */
 .grid-card .eval-head, .grid-card .price-head { display: flex; flex-wrap: wrap; align-items: center;
-  gap: 0.25rem 0.5rem; min-width: 0; min-height: 1.5rem; margin: 0; }
-.grid-card .verdict { padding: 0 0.5rem; font-size: var(--al-fs-body); line-height: 1.25rem;
-  font-weight: 600; flex: none; }
+  gap: var(--al-space-1) var(--al-space-2); min-width: 0; min-height: 1.5rem; margin: 0; }
+.grid-card #eval-word { font-size: var(--al-fs-body); line-height: 1.25rem; flex: none; }
 .grid-card .eval-item { flex: 1 1 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
 .grid-card #rates-pill { margin: 0; align-self: flex-start; }
 /* the verdict and price sentences are read in their live regions and
@@ -853,7 +842,7 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 .grid-card ul.sr-only { list-style: none; padding: 0; }
 .grid-card ul.sr-only li { display: inline; }
 .grid-card .card-act > .check { min-height: 1.75rem; }
-.grid-card .webdata-form { margin: 0 0 0.25rem; }
+.grid-card .webdata-form { margin: 0 0 var(--al-space-1); }
 /* Item scoring: the form only groups its pages (each page is a card
    page); a weight row is 24 px, label and number box on one line.
    PLAY-PAGER-SCALE-24: the row and its number box never drop under 24 px
@@ -861,19 +850,19 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
    at s = 1 and up max(24px, 1.5rem) is 1.5rem, so the cockpit fit holds. */
 .grid-card .weights-form { display: contents; }
 .grid-card .weights-list { display: flex; flex-direction: column; gap: 0; }
-.grid-card .weights-list li { min-height: max(24px, 1.5rem); gap: 0.5rem; }
+.grid-card .weights-list li { min-height: max(24px, 1.5rem); gap: var(--al-space-2); }
 .grid-card .weights-list label { font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
 .grid-card .weights-form input { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
-  padding: 1px 6px; border-radius: var(--al-radius-control); min-height: max(24px, 1.5rem); }
+  padding: 0 var(--al-space-1); border-radius: var(--al-radius-control); min-height: max(24px, 1.5rem); }
 .grid-card .weights-list input { width: 6em; }
 /* the Add a stat page: two groups of two 24 px rows, label and box on one
    row, no frame (the legend names the group) */
 .grid-card .weights-form fieldset { border: 0; padding: 0; margin: 0; flex-direction: column;
-  flex-wrap: nowrap; gap: 0.25rem; min-width: 0; }
-.grid-card .weights-form fieldset + fieldset { margin-top: 0.5rem; }
+  flex-wrap: nowrap; gap: var(--al-space-1); min-width: 0; }
+.grid-card .weights-form fieldset + fieldset { margin-top: var(--al-space-2); }
 .grid-card .weights-form legend { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
   font-weight: 600; padding: 0; }
-.grid-card .weights-form fieldset label { flex-direction: row; align-items: center; gap: 0.5rem;
+.grid-card .weights-form fieldset label { flex-direction: row; align-items: center; gap: var(--al-space-2);
   min-height: 1.5rem; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 .grid-card .weights-add label:first-of-type { flex: none; }
 .grid-card .weights-add input[type="text"] { flex: 1 1 auto; min-width: 0; }
@@ -885,17 +874,17 @@ button.btn-32 { min-height: 2rem; padding: 0 0.75rem; line-height: var(--al-lh-b
 .al-row1 { display: block; margin: 0; min-width: 0; font-size: var(--al-fs-body);
   line-height: var(--al-lh-body); overflow-wrap: anywhere; }
 .al-pager-line { display: block; font-size: var(--al-fs-body); line-height: var(--al-lh-body); }
-.al-row-ctl { display: flex; align-items: center; gap: 0.5rem; min-width: 0; min-height: 1.5rem; }
+.al-row-ctl { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0; min-height: 1.5rem; }
 .al-row-ctl > .al-row1 { flex: 1 1 auto; }
 .al-row-ctl > a.out { flex: none; display: inline-flex; align-items: center; min-height: 1.5rem;
   font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 .al-row-ctl .al-row-lbl { color: var(--fk-text-muted); }
 .al-row-ctl .al-row-txt { font-family: var(--al-font-mono); font-size: var(--al-fs-meta); }
-.al-pager { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem;
+.al-pager { display: flex; align-items: center; justify-content: flex-end; gap: var(--al-space-1);
   min-height: 1.75rem; margin-top: auto; }
 .al-pager-count { margin-right: auto; font-size: var(--al-fs-meta); line-height: var(--al-lh-meta);
   color: var(--fk-text-muted); }
-button.al-pager-btn { min-height: max(24px, 1.5rem); min-width: max(24px, 1.5rem); padding: 0 0.5rem;
+button.al-pager-btn { min-height: max(24px, 1.5rem); min-width: max(24px, 1.5rem); padding: 0 var(--al-space-2);
   font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); background: var(--fk-surface); }
 /* PGR-1..3 (PLAY-TD-19D-ITEMS-GRID): an end button says so without colour:
    a dashed edge and the not-allowed cursor. Its text stays the muted token
@@ -907,7 +896,7 @@ button.al-pager-btn { min-height: max(24px, 1.5rem); min-width: max(24px, 1.5rem
    reached and the target keeps its 24 px floor. */
 button.al-pager-btn[aria-disabled="true"] { color: var(--fk-text-muted);
   border-style: dashed; border-width: 2px; border-color: var(--al-control-edge);
-  padding: 0 calc(0.5rem - 1px); cursor: not-allowed; }
+  padding: 0 calc(var(--al-space-2) - 1px); cursor: not-allowed; }
 button.al-pager-btn[hidden] { display: none; }
 li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
 
@@ -925,7 +914,7 @@ li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
    Recent row keeps the 22 px row (line-height 1). A pressed chip says so
    by its edge and weight, never by colour alone; a hidden copy of its
    label at 600 keeps its width when it turns bold (as button.tab). */
-.ev-chips { min-height: 1.5rem; margin-bottom: 0.25rem; }
+.ev-chips { min-height: 1.5rem; margin-bottom: var(--al-space-1); }
 button.chip[aria-pressed="true"] { border-color: var(--fk-accent);
   box-shadow: inset 0 -3px 0 var(--fk-accent); font-weight: 600; }
 button.chip::after { display: block; height: 0; overflow: hidden; visibility: hidden;
@@ -934,15 +923,15 @@ button.chip::after { display: block; height: 0; overflow: hidden; visibility: hi
 .events .ev-tag { font-size: var(--al-fs-meta); line-height: 1; font-weight: 600;
   color: var(--fk-text-muted); }
 .events .ev-death .ev-tag { color: var(--fk-status-bad); }
-#charsbox .char-pick { flex-wrap: nowrap; margin: 0 0 0.25rem; min-width: 0; }
+#charsbox .char-pick { flex-wrap: nowrap; margin: 0 0 var(--al-space-1); min-width: 0; }
 #charsbox .char-pick label { flex: none; }
 #charsbox .char-pick select { flex: 1 1 auto; min-width: 0; }
 
 @media (min-width: 64em) and (min-height: 43.75em) {
   .panel-cards { align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; }
+    grid-template-rows: repeat(2, minmax(0, 1fr)); gap: var(--al-space-2) var(--al-space-3); }
   .panel-cards > .col { display: grid; grid-template-rows: minmax(0, 1fr); }
-  .grid-card { min-height: 0; padding: 0.75rem; }
+  .grid-card { min-height: 0; padding: var(--al-space-3); }
   .al-row1, .al-pager-line, .card-sub, .card-kv dt { white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; }
   .al-row-ctl { height: 1.5rem; }

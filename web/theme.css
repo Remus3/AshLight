@@ -15,7 +15,7 @@
   background: var(--fk-surface);
   border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
   border-radius: var(--al-radius-control);
-  padding: 4px 6px;
+  padding: var(--al-space-1) var(--al-space-1);
   min-height: 32px;
   max-width: 100%;
 }

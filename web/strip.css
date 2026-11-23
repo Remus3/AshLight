@@ -6,11 +6,11 @@
    web/app.css (.row-title 20 / 26, .row-glance 28 / 32, .row-hero
    32 / 36, .one-line). Empty rows keep their line box, so nothing moves
    when a value arrives. */
-#play-g { --region-pad: 0.125rem; }
+#play-g { --region-pad: var(--al-space-0); }
 #play-g .st {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem 0.75rem;
+  gap: var(--al-space-2) var(--al-space-3);
   min-width: 0;
 }
 /* flow: the Zone cell takes a full row, Level, Deaths and Session share
@@ -21,7 +21,7 @@
 #play-g .st-row {
   display: flex;
   align-items: baseline;
-  gap: 0 0.5rem;
+  gap: 0 var(--al-space-2);
   min-width: 0;
   min-height: var(--al-lh-hero);
 }
@@ -33,7 +33,7 @@
    (the 4 px overlap the top half-leading of the sub line) */
 #play-g .st-num { white-space: nowrap; }
 #play-g .st-num,
-#play-g .st-row:has(> .st-num) { padding-bottom: 0.25rem; margin-bottom: -0.25rem; }
+#play-g .st-row:has(> .st-num) { padding-bottom: var(--al-space-1); margin-bottom: calc(-1 * var(--al-space-1)); }
 /* the zone name takes the ellipsis (full text in title); its 28 px glyphs
    sit in the 36 px value box so its clipping box adds no scroll height */
 #play-g .st-name { line-height: var(--al-lh-hero); }
@@ -60,7 +60,7 @@
 @media (min-width: 64em) and (min-height: 43.75em) {
   #play-g .st {
     grid-template-columns: minmax(0, 14fr) repeat(3, minmax(0, 5fr));
-    gap: 0 0.75rem;
+    gap: 0 var(--al-space-3);
   }
   #play-g .st-zone { grid-column: auto; }
   /* the bar keeps one row: the tabs never wrap, the character name takes
@@ -79,10 +79,10 @@ body[data-fresh="no"] #play-g .st-time { color: var(--fk-text-muted); }
 #play-g .st-sub[data-tone="warn"] { color: var(--fk-status-warn); }
 
 /* The bar's one status word (the ToS floor reading indicator, painted by
-   web/app.js through ALDash.barStatus): 20 px in a 32 px pill, neutral
+   web/app.js through ALDash.barStatus): 20 px in a 32 px badge, neutral
    while ok; only blocked and failed keep their colour (F-159). */
-#reading.pill { font-size: var(--al-fs-title); line-height: var(--al-lh-title); }
-#reading.pill:not([data-state="blocked"]):not([data-state="failed"]) {
+#reading.badge { font-size: var(--al-fs-title); line-height: var(--al-lh-title); font-weight: 400; }
+#reading.badge:not([data-state="blocked"]):not([data-state="failed"]) {
   color: var(--fk-text-muted);
   border-color: var(--fk-border);
 }

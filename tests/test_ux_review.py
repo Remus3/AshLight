@@ -607,9 +607,9 @@ def test_disabled_pager_edge_is_2px_dashed_without_a_shift():
     off = _rule(base, 'button.al-pager-btn[aria-disabled="true"]')
     assert re.search(r"border-style\s*:\s*dashed", off), off
     assert re.search(r"border-width\s*:\s*2px", off), off
-    assert re.search(r"padding\s*:\s*0 calc\(\s*0\.5rem\s*-\s*1px\s*\)", off), off
+    assert re.search(r"padding\s*:\s*0 calc\(\s*var\(--al-space-2\)\s*-\s*1px\s*\)", off), off
     on = _rule(base, "button.al-pager-btn")
-    assert re.search(r"padding\s*:\s*0 0\.5rem\s*;", on), on
+    assert re.search(r"padding\s*:\s*0 var\(--al-space-2\)\s*;", on), on
 
 
 # --- PLAY-TD-22A-A11Y-CSS (TD-22, F-164): forced colours, disabled, 24 px -----

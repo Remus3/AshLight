@@ -340,7 +340,7 @@ test("region C fits its track in setup, error and idle modes (full and compact)"
   assert.equal(S.trackSet("compact").setupPromise, false);
   assert.match(CSS, /min-height: 2\.25rem;/, "the button row is 36 px");
   assert.match(CSS, /gap: 0;/);
-  assert.match(CTXCSS, /--region-pad: 0\.625rem;/);
+  assert.match(CTXCSS, /--region-pad: var\(--al-space-2\);/);
   // the compact class drops the promise line exactly where app.css's
   // track tokens switch to compact
   const css = (t) => [...t.matchAll(/@media \(min-width: ([\d.]+em)\) and \(min-height: ([\d.]+em)\)/g)]
