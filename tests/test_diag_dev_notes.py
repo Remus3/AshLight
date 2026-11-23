@@ -23,6 +23,9 @@ AT = dt.datetime.fromisoformat(STAMP).timestamp()
 EOL = "2027-04-27"
 EOL_AT = dt.datetime(2027, 4, 27, tzinfo=dt.timezone.utc).timestamp()
 DAY = 86400.0
+# scripts\setup.ps1 named as the act (RUN-NO-DEAD-ENDS: no script name in
+# player text, tests/test_copy_dead_ends.py)
+SETUP = "run AshLight's setup again"
 
 
 def _loop_root(tmp_path, doc):
@@ -111,24 +114,25 @@ def test_electron_line_inside_30_days_of_eol_is_a_note(tmp_path, monkeypatch):
     root = _pin_root(tmp_path / "repo", {"version": "45.3.3", "eol": EOL})
     pin = diag.electron_eol(root)
     assert pin == {"version": "45.3.3", "eol": EOL}
-    # 10 days before: a note naming the date and setup.ps1, nothing to fix
+    # 10 days before: a note naming the date and the setup, nothing to fix
     now = EOL_AT - 10 * DAY
     r = _rows({"electron_eol": pin}, now)["electron_eol"]
     assert r["status"] == diag.NOTE and r["fix"] is None
     assert "Electron 45" in r["detail"] and EOL in r["detail"]
     assert "reaches its end of life" in r["detail"]
-    assert "scripts\\setup.ps1" in r["detail"] and r["detail"].isascii()
+    assert SETUP in r["detail"] and r["detail"].isascii()
+    assert "scripts" not in r["detail"] and ".ps1" not in r["detail"]
     # the row does not change from day to day
     assert _rows({"electron_eol": pin}, now + DAY)["electron_eol"] == r
     # exactly 30 days before is inside
     assert "electron_eol" in _rows({"electron_eol": pin}, EOL_AT - 30 * DAY)
     # past it
     r = _rows({"electron_eol": pin}, EOL_AT + DAY)["electron_eol"]
-    assert "reached its end of life" in r["detail"] and "scripts\\setup.ps1" in r["detail"]
+    assert "reached its end of life" in r["detail"] and SETUP in r["detail"]
     # an installed copy updates by itself: no script named
     r = _rows({"electron_eol": pin, "install": {"mode": "installed"}},
               EOL_AT + DAY)["electron_eol"]
-    assert "setup.ps1" not in r["detail"] and "by itself" in r["detail"]
+    assert SETUP not in r["detail"] and "by itself" in r["detail"]
     v = diag.view({"electron_eol": pin}, "0", now=now)
     assert "Desktop app runtime" in v["report"]
     assert not any(c["id"] == "electron_eol" and c["status"] == diag.FAIL

@@ -489,8 +489,10 @@ def check_electron_eol(f, now):
     if isinstance(ins, dict) and ins.get("mode") == "installed":
         text += " A newer AshLight release brings a newer one by itself."
     else:
-        text += (" Update AshLight, then run scripts\\setup.ps1 to fetch the "
-                 "newer Electron.")
+        # RUN-NO-DEAD-ENDS (tests/test_copy_dead_ends.py): the fix names the
+        # act, never the script (scripts\setup.ps1 is AshLight's setup)
+        text += (" Update AshLight, then run AshLight's setup again, as when you "
+                 "installed it. It fetches the newer Electron.")
     return _check("electron_eol", "Desktop app runtime", NOTE, text)
 
 
