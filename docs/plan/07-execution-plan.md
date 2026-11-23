@@ -1896,7 +1896,7 @@ characters; Overlay: one plate class.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- REL-UPDATE-NOTICE-UI [session, L 70m, build, P1, DR] Settings: version lines, update line, opt-in wording. Files: web/index.html, web/app.js, web/updates.js, app/test/updates.test.js. Deps: REL-UPDATE-WIRE, PLAY-TD-21A-SETTINGS-RAIL.
+- REL-UPDATE-NOTICE-UI [session, L 70m, build, P1, DR] Settings: version lines, update line, opt-in wording. Files: web/index.html, web/app.js, web/tc.js, web/panels/webdata.js, config/link_hosts.json (+3 more). Deps: REL-UPDATE-WIRE, PLAY-TD-21A-SETTINGS-RAIL.
 - RUN-P8-8-CHARMIX [session, L 85m, build, P2] P8-8: the session ladder and the Maps card no longer mix characters + SessionState.publish(key, view) for views the core only stores. Files: server/al/state.py, server/al/mapladder.py, tests/test_util_map_ladder.py, tests/test_util_multichar.py, tests/test_util_maps_resume.py (+1 more). Deps: RUN-LADDER-TICK, RUN-CHARACTER-PIN, TEST-STATE-TEXT-4, PLAY-TD-07A-PLAY-VIEW.
 - RUN-PERF-IDLE-BACKOFF [session, M 30m, build, P3] Supervisor diet and idle backoff. Files: server/al/keepalive.py, server/al/core.py, server/al/__main__.py, server/al/logfile.py, tests/test_keepalive.py (+1 more). Deps: RUN-STOP-RACE, RUN-CHARACTER-PIN, RUN-START-REASON-CORE, RUN-TAIL-HEAL-READER, RUN-BUDGET-TESTS-DET.
 

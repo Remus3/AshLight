@@ -18845,7 +18845,11 @@
    ],
    "files": [
     "web/index.html",
-    "web/app.js"
+    "web/app.js",
+    "web/tc.js",
+    "web/panels/webdata.js",
+    "config/link_hosts.json",
+    "app/test/tc_view.test.js"
    ],
    "new_files": [
     "web/updates.js",
@@ -18876,7 +18880,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "web/updates.js (new renderer, UMD like web/checks.js): model(update, webData) and paint(doc, snap). web/index.html: the web-data label sentence (lines 440-449 today), one container for the version lines and the update line, one script tag. web/app.js: one paint call in the snapshot painter and the 'ack' field in the web-data POST. The newest-3-versions list follows the target design's paging rule (no fold that grows a card). Lands after the Settings rail step (TD-21) and the price-contact UX package (DATA), which edit the same form; design-reviewer pass and a docs/design/reviews.log line required. The README privacy text is DEP-14.",
+   "notes": "web/updates.js (new renderer, UMD like web/checks.js): model(update, webData) and paint(doc, snap). web/index.html: the web-data label sentence (lines 440-449 today), one container for the version lines and the update line, one script tag. web/app.js: one paint call in the snapshot painter and the 'ack' field in the web-data POST. The newest-3-versions list follows the target design's paging rule (no fold that grows a card). Lands after the Settings rail step (TD-21) and the price-contact UX package (DATA), which edit the same form; design-reviewer pass and a docs/design/reviews.log line required. The README privacy text is DEP-14. Session 22 widening (adjudicator ruling 2026-11-23, decision 0041 amendment): files add web/tc.js (WEB_DATA_OPT_IN names the daily update check and the automatic apply; LINK_HOSTS gains github.com), web/panels/webdata.js (saveWebData carries the wording version ack), config/link_hosts.json (github.com, sorted) and app/test/tc_view.test.js; no https://github.com literal under web/: the releases link is the snapshot update.releases_url (built by the core from config/public_repo.json), shown only when present and web data is on.",
    "wave": 34,
    "owner": "session",
    "tier": "P1",
