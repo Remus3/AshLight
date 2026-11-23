@@ -150,11 +150,16 @@ under 12px **after** zoom, so the smallest overlay size times the minimum
   usable while it loads. Regions are not scroll containers and have no
   tab stop. Below the s = 1 compact threshold (64em x 43.75em) the class
   is flow: one column in the same DOM order with one page scroll.
-- Region padding (rem, scaling with s): 12px left and right; top and
-  bottom 10px in C (a full guide fits its track), 12px in I, 8px in N, B
-  and U (4px in U in the compact class, so its label and one row, 2 + 8
-  + 20 + 20 = 50px, fit the 52px track), 6px in T, 2px in G. 8px between
-  regions, 12px between the two columns.
+- Region padding (rem, scaling with s): 12px left and right in every
+  region. Top and bottom, as shipped (each region's own sheet loads after
+  `web/app.css` and overrides its `--region-pad`): G 2px (`strip.css`), C
+  10px (`context.css`, so a full guide fits its track), T 6px, N 8px, B
+  6px (`buildline.css`), I 12px, U 7px, or 3px in the compact class
+  (`keptchecks.css`: `--pad-u` less 1px, so its label and one row, 2 + 6
+  + 20 + 20 = 48px, fit the 52px track). G, C, B and U pad less than the
+  plan's 4 / 12 / 8 / 8 px so a fractional region top never eats the 2px
+  slack minimum (fit check G4). 8px between regions, 12px between the two
+  columns.
 - Play content (TD-10 to TD-16): the build alert is a state of region B;
   the new-character tip, the language note, the setup line and the
   part-is-broken notes share region N, one at a time; trades are one
@@ -404,14 +409,21 @@ file, never here. The states, by kit state:
 - running `[>]`: reading Client.txt.
 - done `[+]`: the dashboard feed is live.
 - pending `[ ]`: status unknown, connecting, reconnecting (overlay
-  "offline").
+  "connecting" / "offline").
 - idle `[-]`: not reading Client.txt (no numbers on the overlay).
 - blocked `[#]`: waiting for Client.txt, the log quiet for 20 min
-  (decision 0029; the overlay hides then and comes back with the next
-  line), Client.txt not found, can't read Client.txt, a configured path
-  missing, the reader stalled.
+  (decision 0029; the overlay hides then, and Settings > Overlay says
+  "Overlay hidden: no game activity for 20 min. It comes
+  back with the next log line."), Client.txt not found, can't read
+  Client.txt, the Client.txt path in the settings missing (all rank 4);
+  the reader stalled (rank 5, Checks row "Not reading Client.txt.", no
+  bar or overlay word of its own).
 - failed `[x]`: can't reach AshLight, or the page was opened without its
   link.
+
+Tokens: running status-running, done status-ok, pending and idle
+status-idle, blocked status-warn, failed status-bad; the word and glyph
+always carry the state.
 
 The bar shows the worse (higher rank) of the reading and the feed state,
 a tie going to the reading state. Normal states are neutral: the reading
@@ -824,8 +836,8 @@ Natural use and context
   records why not.
 - N6: status changes announced politely (`role="status"` / `aria-live
   ="polite"`), never assertively, each in at most 12 words. Live regions:
-  at most 4 on Play (the item check verdict of region I, the feed's trade
-  status, the notice, the bar's reading word) and at most 6 in the page
+  at most 3 in the Play panel plus the bar's reading word (the item check
+  verdict of region I, the feed's trade status, the notice) and at most 6 in the page
   (`tests/test_a11y.py`), one kept free for an urgent state. Per-press
   budget (F-151, research 0044 R6): one item-check press speaks at most
   three times, all polite: the item check (the verdict of region I on
