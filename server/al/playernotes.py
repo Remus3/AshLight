@@ -41,10 +41,11 @@ from pathlib import Path
 
 from . import hotreload
 from . import jsonfile
+from .text import playernotes as _words
 
 FILE_NAME = "player_notes.json"
 SCHEMA = 1
-NAME = "Your notes"     # the hot reload / Checks note name
+NAME = _words.NAME      # the hot reload / Checks note name
 MAX_ZONES = 300         # notes in the whole file
 MAX_NOTE = 200          # characters of one note
 MAX_CHARACTERS = 12     # decision 0038's character bound
@@ -56,21 +57,22 @@ AREA_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 _BAD_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn")
 
 
+# The player sentences live in server/al/text/playernotes.py (design gate,
+# copy sheet docs/design/copy/playernotes.md); re-exported, same objects.
 # PN-2: refusals the Save shows, each a sentence with a next step
-TEXT_LONG = f"Your note is over {MAX_NOTE} characters. Shorten it and save again."
-TEXT_BAD = ("Your note has a character AshLight can't keep. "
-            "Use plain letters, digits and punctuation.")
-NO_CHARACTER = "AshLight doesn't know your character yet. Enter a zone, then save again."
-NO_ZONE = "AshLight doesn't know this zone yet. Enter a zone, then save again."
+TEXT_LONG = _words.text_long(MAX_NOTE)
+TEXT_BAD = _words.TEXT_BAD
+NO_CHARACTER = _words.NO_CHARACTER
+NO_ZONE = _words.NO_ZONE
 # PN-1: why a notes file did not load (the hot reload note's reason)
-FILE_FORMAT = "the file is not in AshLight's notes format"
-FILE_ROW = "a note is not in the right form"
-FILE_TWO = "two notes share one zone"
-FILE_LONG = f"a note is over {MAX_NOTE} characters"
-FILE_MANY = f"the file holds more than {MAX_ZONES} notes"
-FILE_CHARS = f"the file holds notes of more than {MAX_CHARACTERS} characters"
-FILE_BIG = "the file is too large"
-FIX_TAIL = "Fix the file, or save a note to replace it."
+FILE_FORMAT = _words.FILE_FORMAT
+FILE_ROW = _words.FILE_ROW
+FILE_TWO = _words.FILE_TWO
+FILE_LONG = _words.file_long(MAX_NOTE)
+FILE_MANY = _words.file_many(MAX_ZONES)
+FILE_CHARS = _words.file_chars(MAX_CHARACTERS)
+FILE_BIG = _words.FILE_BIG
+FIX_TAIL = _words.FIX_TAIL
 # B3 (tests/test_budget_tick.py): the registry poll stats the file at most
 # once per CHECK_S; a Save refreshes at once, so only an outside edit waits
 CHECK_S = 60.0
@@ -201,7 +203,7 @@ class _NotesWatch(hotreload.Watched):
         super().__init__(*a, **kw)
 
     def _note(self, text):
-        if text.endswith("The last good copy stays in use."):
+        if text.endswith(_words.HELD_TAIL):
             text = f"{text} {FIX_TAIL}"
         super()._note(text)
 
