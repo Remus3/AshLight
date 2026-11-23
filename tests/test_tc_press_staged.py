@@ -434,6 +434,10 @@ def test_first_card_and_reply_within_budget_with_a_slow_calc(core):
         if os.environ.get("AL_CI") != "1":  # decision 0080: budgets skip in CI
             assert seen["t"] < FIRST_CARD_S, seen["t"]
             assert took < REPLY_S, took
+        # GATE-HOLD: the budgets above are measured; the rest of the slow
+        # calc's calls need not sleep (about 4 s of the serial phase) for
+        # the stages to prove they arrive by themselves
+        core.tc_calc.sleep_s = 0.0
         # the Path of Building stages arrive by themselves, same press time
         assert core.last_eval.wait(WAIT_S * 2)
         _s, snap = _req(srv.port, "GET", "/api/state")

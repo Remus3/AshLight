@@ -404,9 +404,29 @@ BUDGET = {
 }
 
 
+_SHARED_WEIGHTS = []  # GATE-HOLD: the one PobWeightCache of this test process
+
+
+def shared_weights():
+    """GATE-HOLD: one pobweights.PobWeightCache per test process, shared by
+    every keep_warm core, so the reference build's cold first-press probes
+    (about 13 s) are paid once per run, by whichever live test presses
+    first, and never twice for the same build, slot and item."""
+    if not _SHARED_WEIGHTS:
+        from server.al.theorycraft import pobweights
+        _SHARED_WEIGHTS.append(pobweights.PobWeightCache())
+    return _SHARED_WEIGHTS[0]
+
+
 def keep_warm(core, stops=None):
     """A test core's calc provider records its stop instead of shutting the
-    session's warm bridge down (TEST-FULLSTACK-CALC-WARM)."""
+    session's warm bridge down (TEST-FULLSTACK-CALC-WARM), and its item
+    check uses the process's shared PoB weight cache (GATE-HOLD; the same
+    weights PoB measures for the same build either way). Call it before the
+    build is loaded."""
     stops = [] if stops is None else stops
     core.tc_provider._stop = lambda: stops.append(True)
+    cache = shared_weights()
+    core.last_eval.pob_weights = cache
+    core.builds.weights_for = cache.fallback
     return stops

@@ -70,7 +70,10 @@ def live(tmp_path_factory, warm_bridge):
     log.write_bytes(b"")
     # TEST-FULLSTACK-CALC-WARM: the session's warm shared bridge (the cold
     # start is measured in test_math_perf); the first press still pays the
-    # build's first probes, under the first-press budget.
+    # build's first probes, under the first-press budget. GATE-HOLD:
+    # keep_warm shares one PoB weight cache per test process, so in a whole
+    # run test_fullstack_calc_on_leg (first by file order) pays the ring's
+    # cold probes under the same budget and the ring press here is cached.
     core = Core(runtime=rt, log_path=str(log), poll_s=0.05, config_path=cfg)
     stops = keep_warm(core)
     assert core.config_path == cfg  # never the operator's config/local.json
