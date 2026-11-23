@@ -118,6 +118,33 @@ SLOW_TABLE = {
         (SLOW_S, "waits out the listener timeout"),
     "tests/test_soak.py::test_dropped_sse_clients_free_their_slots_promptly":
         (SLOW_S, "waits for real SSE slots to free"),
+    # GATE-HOLD (wave 31, same basis as the wave 30 ruling of db60425:
+    # wall-clock-sensitive tests are marked, no number moves): unmarked
+    # tests that went over UNMARKED_S under parallel load in 13 loop gates
+    # on 2026-11-22 (0.6 to 1.2 s alone; slow keeps them in phase 1)
+    "tests/test_price_cadence.py::test_pressed_type_refreshes_hourly_for_24_h":
+        (SLOW_S, "a day of hourly price refreshes on a fake clock"),
+    "tests/test_price_cadence.py::test_unpressed_day_makes_at_most_200_overview_gets":
+        (SLOW_S, "a day of overview refreshes on a fake clock"),
+    "tests/test_price_shape_guard.py::"
+    "test_renamed_value_key_keeps_yesterdays_entries_and_sets_a_shape_error":
+        (SLOW_S, "two days of price book refreshes"),
+    "tests/test_price_shape_guard.py::test_checks_row_fails_and_names_poe_ninja_and_the_worst_type":
+        (SLOW_S, "price book refreshes through the Checks row"),
+    "tests/test_price_book.py::test_type_failing_three_times_waits_a_day":
+        (SLOW_S, "a day of failing refreshes on a fake clock"),
+    "tests/test_util_multichar.py::test_storage_caps_characters_and_runs":
+        (SLOW_S, "fills the character and run caps through real files"),
+    "tests/test_watch_file.py":
+        (SLOW_S, "real git commits of row files"),
+    "tests/test_supervisor.py::test_hung_core_that_cannot_be_terminated_is_never_duplicated":
+        (SLOW_S, "waits out a hung core's health checks"),
+    "tests/test_util_10_ready.py::test_id_goes_to_poe_ninja_and_name_to_the_trade_link":
+        (SLOW_S, "a real core prices one item end to end"),
+    "tests/test_ovl_check.py::test_answer_from_the_tried_in_game_card":
+        (SLOW_S, "a full check over real loopback HTTP on a fake clock"),
+    "tests/test_test_layout.py::test_no_new_test_to_test_imports":
+        (SLOW_S, "an ast pass over every test file"),
 }
 
 
