@@ -64,7 +64,7 @@ def test_export_matches_the_documented_schema_and_maps_ids():
 def test_no_tree_data_or_mismatch_writes_no_passives_and_says_so():
     out = buildfile.export(make(), None)
     assert "passives" not in out["doc"] and "ascendancy" not in out["doc"]
-    assert any("isn't downloaded" in n for n in out["notes"])
+    assert "No passives yet: turn on web data and add a contact in the "         "Prices and web data card." in out["notes"]
     assert any("Ascendancy left out" in n for n in out["notes"])
     out = buildfile.export(make(nodes=(9001, 9002, 9003, 10)), TREE)
     assert "passives" not in out["doc"] and out["passives"]["ok"] is False

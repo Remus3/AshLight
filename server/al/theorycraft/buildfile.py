@@ -144,6 +144,10 @@ def validate(doc):
     return out
 
 
+NO_TREE_NOTE = ("No passives yet: turn on web data and add a contact in the "
+                "Prices and web data card.")
+
+
 def _passives(build, tree, notes):
     spec = build.active_spec
     nodes = list(spec.nodes) if spec else []
@@ -151,8 +155,9 @@ def _passives(build, tree, notes):
     if not nodes:
         return [], stats
     if tree is None:
-        notes.append("No passives: the passive tree data isn't downloaded yet "
-                     "(turn on web data to fetch it).")
+        # TC-BUILDFILE-TEXTS (F-187): the tree export is a GGG source, fetched
+        # only with web data on and a contact set (snapshot.CONTACT_SOURCES).
+        notes.append(NO_TREE_NOTE)
         return [], stats
     stats["ok"] = bool(tree.id_match(nodes)["ok"])
     if not stats["ok"]:

@@ -332,13 +332,57 @@
     };
   }
 
-  /* GET /api/weights -> editable rows, sorted by stat name. */
+  /* The default weight of a stat key (keys compare case-insensitively, as
+     the core's weights store does), or null for a stat the player added. */
+  function defaultOf(defs, key) {
+    var low = String(key).toLowerCase();
+    var hit = Object.keys(defs).filter(function (k) { return k.toLowerCase() === low; })[0];
+    return hit !== undefined && typeof defs[hit] === "number" ? defs[hit] : null;
+  }
+
+  /* GET /api/weights -> editable rows, sorted by stat name. TC-WEIGHTS-
+     DELTA-UI: each row carries its default (def, null for an added stat)
+     and changed (the core's `changed` names it); a default the player
+     blanked out is a row too, with an empty weight, so it can be reset. */
   function weightRows(doc) {
     var w = (doc && doc.weights) || {};
-    return Object.keys(w).sort(function (a, b) {
+    var defs = (doc && doc.defaults && doc.defaults.weights) || {};
+    var ch = (doc && doc.changed && doc.changed.weights) || {};
+    var keys = Object.keys(w);
+    Object.keys(ch).forEach(function (k) {
+      if (ch[k] === null && !Object.prototype.hasOwnProperty.call(w, k) &&
+          defaultOf(defs, k) !== null) { keys.push(k); }
+    });
+    return keys.sort(function (a, b) {
       var x = a.toLowerCase(), y = b.toLowerCase();
       return x < y ? -1 : (x > y ? 1 : 0);
-    }).map(function (k) { return { key: k, label: k.replace(/#/g, "N"), weight: w[k] }; });
+    }).map(function (k) {
+      var has = Object.prototype.hasOwnProperty.call(w, k);
+      return { key: k, label: k.replace(/#/g, "N"), weight: has ? w[k] : "",
+               def: defaultOf(defs, k),
+               changed: Object.prototype.hasOwnProperty.call(ch, k) };
+    });
+  }
+
+  /* The count line of the Stat weights page: weight rows and sidegrade
+     parts that differ from the defaults. */
+  function changedCount(doc) {
+    var ch = (doc && doc.changed) || {};
+    var n = Object.keys(ch.weights || {}).length + Object.keys(ch.sidegrade || {}).length;
+    return n === 0 ? "Nothing changed from the defaults." : n + " changed from the defaults.";
+  }
+
+  /* One row back to its default: the form rows (key, value text) with that
+     row's value set to the default, or dropped when the stat has none (an
+     added stat). Every other row is kept as typed. */
+  function resetRow(rows, defaults, key) {
+    var d = defaultOf((defaults && defaults.weights) || {}, key);
+    var out = [];
+    rows.forEach(function (r) {
+      if (r.key !== key) { out.push({ key: r.key, value: r.value }); return; }
+      if (d !== null) { out.push({ key: r.key, value: String(d) }); }
+    });
+    return out;
   }
 
   /* A stat as the player types it ("+N% to Fire Resistance") to the core's
@@ -419,7 +463,8 @@
            linkRecover: linkRecover, WEB_DATA_OPT_IN: WEB_DATA_OPT_IN,
            LINK_OFFER: LINK_OFFER, LINK_CONFIRM: LINK_CONFIRM, LINK_CANCEL: LINK_CANCEL,
            buildFileView: buildFileView,
-           weightRows: weightRows, weightsDoc: weightsDoc, toKey: toKey, gfxView: gfxView,
+           weightRows: weightRows, weightsDoc: weightsDoc, changedCount: changedCount,
+           resetRow: resetRow, toKey: toKey, gfxView: gfxView,
            links: links, num: num, safeTreeUrl: safeTreeUrl,
            LINK_HOSTS: LINK_HOSTS.slice(), TREE_HOSTS: TREE_HOSTS.slice() };
 }));

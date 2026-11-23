@@ -66,14 +66,16 @@
      the Stat weights page shows every weight, 10 a page (8 compact): all
      rows stay in the form and a page only hides the others, so focus, a
      value being typed and every save keep working across pages. */
-  /* rows of 24 px (a 24 px number box) plus the card's status line fit 9
-     a page in the full class and 6 in the compact one (cards 322 and 256
-     px tall at s = 1) */
-  var WEIGHT_PAGE = { full: 9, compact: 6 };
+  /* rows of 24 px (a 24 px number box) plus the card's count and status
+     lines fit 8 a page in the full class and 5 in the compact one (cards
+     322 and 256 px tall at s = 1; TC-WEIGHTS-DELTA-UI gave the count line
+     one row) */
+  var WEIGHT_PAGE = { full: 8, compact: 5 };
   var CHANGED_ROWS = { full: 6, compact: 4 };
   var weightsDoc = null;
   var weightsPageAt = 0;
   var weightsBar = null;
+  var focusAfter = null; // the stat whose row Reset was pressed
 
   function weightLabel(k) { return String(k).replace(/#/g, "N"); }
 
@@ -163,7 +165,8 @@
     var rows = T.weightRows(doc);
     var inputs = $("weights-list").querySelectorAll("input[data-key]");
     var same = inputs.length === rows.length && rows.every(function (r, i) {
-      return inputs[i].getAttribute("data-key") === r.key;
+      return inputs[i].getAttribute("data-key") === r.key &&
+        inputs[i].getAttribute("data-mark") === rowMark(r);
     });
     fillBand(doc);
     var changed = changedRows(doc);
@@ -172,14 +175,16 @@
       text: function (r) { return r.text; }
     });
     setLine($("weights-band-line"), bandLine(doc));
+    setLine($("weights-count"), T.changedCount(doc));
     if (same) {
       rows.forEach(function (r, i) {
         if (inputs[i] !== document.activeElement) { inputs[i].value = String(r.weight); }
       });
       return;
     }
-    var focusKey = document.activeElement && document.activeElement.getAttribute
-      ? document.activeElement.getAttribute("data-key") : null;
+    var focusKey = focusAfter || (document.activeElement && document.activeElement.getAttribute
+      ? document.activeElement.getAttribute("data-key") : null);
+    focusAfter = null;
     var frag = document.createDocumentFragment();
     rows.forEach(function (r, i) {
       var li = el("li");
@@ -193,9 +198,20 @@
       inp.id = id;
       inp.value = String(r.weight);
       inp.setAttribute("data-key", r.key);
+      inp.setAttribute("data-mark", rowMark(r));
       inp.setAttribute("inputmode", "decimal");
       li.appendChild(lab);
+      if (r.changed) {
+        // TC-WEIGHTS-DELTA-UI: a changed row says so in words, with the
+        // default beside, and gets its own Reset
+        li.className = "weights-changed-row";
+        var mark = el("span", "weights-default muted", defaultText(r));
+        mark.id = id + "-def";
+        inp.setAttribute("aria-describedby", mark.id);
+        li.appendChild(mark);
+      }
       li.appendChild(inp);
+      if (r.changed) { li.appendChild(rowReset(r)); }
       frag.appendChild(li);
     });
     $("weights-list").replaceChildren(frag);
@@ -209,6 +225,55 @@
     }
     showWeightPage();
     if (back) { back.focus(); }
+  }
+
+  /* What a row's mark says: changed or not, and its default. A changed
+     mark rebuilds the row; a new value alone does not. */
+  function rowMark(r) {
+    return r.changed ? "c" + (r.def === null ? "" : String(r.def)) : "";
+  }
+
+  function defaultText(r) {
+    return r.def === null ? "added" : "default " + P.num(r.def);
+  }
+
+  /* One row's Reset: a changed default goes back to its default, an added
+     stat goes away; saved as one PUT with every other row as typed. */
+  function rowReset(r) {
+    var b = el("button", "secondary btn-24 weights-row-reset", "Reset");
+    b.type = "button";
+    b.setAttribute("aria-label", r.def === null
+      ? "Reset " + r.label + ": remove this added stat"
+      : "Reset " + r.label + " to the default, " + pointsText(r.def));
+    b.addEventListener("click", function () { resetOne(r.key); });
+    return b;
+  }
+
+  function formRows() {
+    var rows = [];
+    Array.prototype.forEach.call($("weights-list").querySelectorAll("input[data-key]"),
+      function (inp) { rows.push({ key: inp.getAttribute("data-key"), value: inp.value }); });
+    return rows;
+  }
+
+  function resetOne(key) {
+    var defs = weightsDoc && weightsDoc.defaults;
+    if (!defs || weightsBusy) { return; }
+    weightsBusy = true;
+    $("weights-status").textContent = "Saving...";
+    var rows = T.resetRow(formRows(), defs, key);
+    api("PUT", "/api/weights", T.weightsDoc(rows, $("weights-abs").value, $("weights-pct").value))
+      .then(function (doc) {
+        focusAfter = key;
+        fillWeights(doc);
+        focusAfter = null;
+        $("weights-status").textContent = "Back to the default.";
+      }).catch(function () {
+        $("weights-status").textContent = "Not reset. Try again.";
+      }).then(function () {
+        weightsBusy = false;
+        if (weightsAgain) { weightsAgain = false; saveWeights(); }
+      });
   }
 
   /* Reset (the card's Reset page, one confirm click): the defaults the
@@ -245,9 +310,7 @@
 
   function saveWeights(e) {
     if (weightsBusy) { weightsAgain = true; return; }
-    var rows = [];
-    Array.prototype.forEach.call($("weights-list").querySelectorAll("input[data-key]"),
-      function (inp) { rows.push({ key: inp.getAttribute("data-key"), value: inp.value }); });
+    var rows = formRows();
     var nk = $("weights-new-key").value.trim();
     var nv = $("weights-new-value").value;
     var numOk = nv !== "" && isFinite(parseFloat(nv));

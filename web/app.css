@@ -338,6 +338,8 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
 .weights-list li { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0; }
 .weights-list label { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: var(--al-fs-meta); }
 .weights-list input { width: 6.5em; flex: none; }
+.weights-list .weights-default { flex: none; font-size: var(--al-fs-meta); white-space: nowrap; }
+.weights-list .weights-row-reset { flex: none; }
 .weights-form fieldset { border: 1px solid var(--fk-border); border-radius: var(--al-radius-control); margin: 0;
   padding: var(--al-space-2) var(--al-space-3); display: flex; flex-wrap: wrap; gap: var(--al-space-2) var(--al-space-4); }
 .weights-form fieldset label { display: flex; flex-direction: column; gap: var(--al-space-1); font-size: var(--al-fs-meta); min-width: 0; }
