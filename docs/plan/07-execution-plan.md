@@ -2306,6 +2306,46 @@ Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
 
 - GATE-HOLD-D [session, L 80m, review] Restore the 120 s suite target. Files: tests/test_al_loop_gate_cache.py, tests/al_loopkit.py, docs/decisions/0060-wave-gate-policy.md. Deps: TEST-BUDGET-LOOPBODY-NOISE.
 
+### Wave 53: item info docs, verdict word, footer row, gem variants
+
+Session-tagged ROADMAP follow-ups of session 24 (disjoint files).
+
+- Session 13; width 4 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/app.css (WEB-PLAY-FOOT-ONE-ROW);
+  docs/design/0001-design-system.md (TC-VERDICT-FALLBACK-WORD).
+- Integrator: ROADMAP.md rows of all 4 packages; CLAUDE.md:
+  KINDLER-GEM-VARIANT.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- ITEM-INFO-DOC-SOURCES [session, S 10m, build] Item info docstrings name snapshot.SOURCES, not the removed ITEM_SOURCES. Files: server/al/iteminfo.py, server/al/theorycraft/snapshot.py. Deps: ITEM-INFO-UNIQUES-PROBE.
+- TC-VERDICT-FALLBACK-WORD [session, S 25m, build, DR] Item check fallback verdict word is a design 0001 mark word. Files: server/al/text/itemcheck.py, server/al/playcards.py, web/itemcard.js, docs/design/0001-design-system.md, tests/test_tc_cardparts.py (+2 more). Deps: TC-CARD-PARTS-DOC.
+- WEB-PLAY-FOOT-ONE-ROW [session, M 45m, build, DR] Dashboard footer stays one row at 1024 px. Files: web/app.css, web/panels/version.js, tests/test_play_fit.py, tests/play_fit_pending/g.txt, app/test/about.test.js. Deps: WEB-PLAY-FIT-SETTINGS, WEB-STALE-COMMENTS.
+- KINDLER-GEM-VARIANT [session, L 75m, build] Kindler composes PoB skill ids per gem variant. Files: server/al/theorycraft/kindler.py, server/al/theorycraft/archetypes.py, server/al/theorycraft/pobtext.py, server/al/data/archetypes.json, config/tc_pins.json (+5 more). Deps: KINDLER-WEAPON-BASE, KINDLER-PLAN-LIVE.
+
+### Wave 54: suite soak under the bound
+
+Session-tagged ROADMAP follow-up of session 24; runs after wave 53 merges.
+
+- Session 13; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md:
+  GATE-HOLD-BISECT.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- GATE-HOLD-BISECT [session, L 90m, review] Bring the gated suite soak back under the 145 s bound. Files: tests/test_shots.py, tests/test_dash_perf.py, tests/test_logshapes.py, tests/test_fullstack.py, tests/test_math_e2e_live.py (+2 more). Deps: ITEM-INFO-DOC-SOURCES, TC-VERDICT-FALLBACK-WORD, WEB-PLAY-FOOT-ONE-ROW, KINDLER-GEM-VARIANT.
+
 <!-- plan_check waves end -->
 
 ## Hotspot schedule
