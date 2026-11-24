@@ -253,3 +253,16 @@ at the source, and credits it; B helps little; C breaks on renamed pages
 (Abyss is abyssal-bones) and reordered league slugs (HC leagues).
 REVERSES IF: poe.ninja objects to deep links or changes its page form,
 a table entry opens the wrong page in use, or decision 0017 reverses.
+
+## Amendment 2026-11-23
+
+DATA-CONTACT-DEFAULT (F-018; decision 0015 amendment 2026-11-23): the
+Prices and web data card's contact field is an optional per-install
+override. Its label reads "Your contact for poe.ninja" and its note
+starts with "Optional." and says AshLight sends the player's contact when
+filled in, else its project issues page, stored only on this computer. Only the label and
+note change: contact_set still means a typed contact, the field still
+shows while none is typed, and the blocked words ("add your contact for
+poe.ninja") still show only while no contact at all is known (no address
+in the tree). Reverses if: decision 0015's default contact reverses, or
+players read the note as a required step.
