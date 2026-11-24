@@ -1258,9 +1258,416 @@ def test_the_characters_card_fits_its_rows_under_the_tallest_picker(pick_measure
     assert not fails, "\n".join(fails)
 
 
+# -- KINDLER-FIT-MEASURE: the Kindler editor card on Build and items ------------
+#
+# The Play sweep never opens a Kindler sub-tab (the shown sub-tab is the
+# store's and the page's own memory), so the editor card web/kindler.js
+# builds was never measured. This part opens one on a static page: the
+# whole assembled page (every stylesheet, header, panels and the two-row
+# pinned footer line of WEB-PLAY-FIT-SETTINGS) with Build and items shown,
+# and the real web/kindler.js attached to a fake core that answers the
+# store document and the result read at once (no core, no network, no
+# port). Each size is a srcdoc iframe, as CP-1's picker, read back by the
+# browser's own --dump-dom run.
+#
+# Two documents per size: "new" (one tab, no result: the card spans the
+# grid) and "worst" (6 tabs of 32 characters, the full note, a stale and
+# partial unscored result with the longest template name, so the plan card
+# takes columns 2 and 3 and the editor sits in column 1, and the longest
+# status words). The worst document is measured in each card mode (tools,
+# rename, confirm). In the cockpit the card clips (overflow hidden), so a
+# cut row would never show as page overflow: the check is the card's own
+# slack, its content box bottom less the bottom of its last shown child,
+# which must keep the G4 minimum, and no clipped content. The plan card
+# beside it (the engine's calc-off plan of that template) is held to the
+# same rule on every stage, plan page and part. Flow sizes check
+# horizontal scroll only (flow scrolls the page).
+#
+# First measure (before the web/panels/kindler.css fix): at 1024x700 the
+# worst editor card was 300 to 350 px short in its one column, at 1280x760
+# 39 to 71 px short, at 1264x821 6 to 10 px and at 1920x875 13 px short in
+# rename mode; the "new" card fitted everywhere (221 px slack at 1024x700).
+#
+#     python tests/test_play_fit.py --kindler   # the measured figures
+
+KINDLER_OUT = "al-kindler-out"
+KINDLER_SIZES = COCKPIT + FLOW
+KINDLER_MODES = ("tools", "rename", "confirm")
+KINDLER_LABEL = "Wanderingblademaster's long tab"[:32]  # genstore.MAX_LABEL
+KINDLER_TABS = 6  # genstore MAX_TABS: the bar at its fullest
+
+_KINDLER_JS = r"""
+(function () {
+  var fe = window.frameElement, doc = document, out = [];
+  var kind = fe.getAttribute("data-kind");
+  var send = function (o) {
+    o.vw = innerWidth; o.vh = innerHeight; o.kind = kind;
+    parent.document.getElementById(__OUT__).textContent += JSON.stringify(o) + "\n";
+  };
+  try {
+    Array.prototype.forEach.call(doc.querySelectorAll("[role=tabpanel]"), function (p) {
+      p.hidden = p.id !== "panel-build";
+    });
+    Array.prototype.forEach.call(doc.querySelectorAll("[role=tab]"), function (t) {
+      t.setAttribute("aria-selected", String(t.getAttribute("aria-controls") === "panel-build"));
+    });
+    var line = doc.getElementById("build-line");
+    line.textContent = __BUILD__; line.hidden = false;
+    var worst = kind === "worst";
+    var tabs = [];
+    for (var i = 0; i < (worst ? __TABS__ : 1); i++) {
+      var t = { id: "t" + i, label: worst ? __LABEL__ : "Kindler", custom_label: worst,
+                "class": worst ? "Mercenary" : "", league: worst ? "Standard" : "",
+                toggles: {}, follow: true, result: null };
+      if (worst) {
+        t.result = { template: __TEMPLATE__, scored: false, partial: true, stale: true,
+                     at: 1, key: "k" };
+      }
+      tabs.push(t);
+    }
+    var store = { tabs: tabs, shown: tabs[0].id, max: __TABS__ };
+    var read = { result: { best: { template: __TEMPLATE__, label: __TEMPLATE_LABEL__ },
+                           note: "calc_off" } };
+    var answer = function (method, path, body) {
+      if (path === "/api/gen-builds") { return { status: 200, body: store }; }
+      if (body && body.op === "read") { return { status: 200, body: read }; }
+      if (body && body.op === "plan") { return { status: 200, body: __PLAN__ }; }
+      return { status: 404, body: null };
+    };
+    var K = window.ALKindler;
+    var noop = function () {};
+    K.attach(doc, {
+      request: function (m, p, b) { return Promise.resolve(answer(m, p, b)); },
+      store: { getItem: function () { return "kindler"; }, setItem: noop },
+      later: noop, leagues: function () { return null; }, say: noop
+    });
+    K.follow(__HERE__);  // the plan is read once the store answer paints the tab
+    window.addEventListener("load", function () {
+      try {
+        if (worst) {
+          var full = doc.getElementById("kindler-full");
+          full.textContent = K.view(store).fullText; full.hidden = false;
+          var longest = "";
+          Object.keys(K.WORDS).forEach(function (k) {
+            if (k !== "partial" && K.WORDS[k].length > longest.length) { longest = K.WORDS[k]; }
+          });
+          doc.getElementById("kindler-status").textContent = longest;
+        }
+        var de = doc.documentElement;
+        var rect = function (e) { var r = e.getBoundingClientRect();
+          return { t: r.top, b: r.bottom, l: r.left, r: r.right, w: r.width, h: r.height }; };
+        var shown = function (e) { return e.getClientRects().length > 0; };
+        var fit = function (card) {
+          var cs = getComputedStyle(card), cr = card.getBoundingClientRect();
+          var inner = cr.bottom - parseFloat(cs.paddingBottom) - parseFloat(cs.borderBottomWidth);
+          var last = cr.top;
+          Array.prototype.forEach.call(card.children, function (k) {
+            if (shown(k)) { last = Math.max(last, k.getBoundingClientRect().bottom); }
+          });
+          return { slack: Math.floor(inner) - Math.ceil(last),
+                   clip: card.scrollHeight - card.clientHeight };
+        };
+        var planFit = function () {
+          var plan = doc.getElementById("kindler-plan");
+          if (!plan || plan.hidden) { return null; }
+          var st = K.state(), worstFit = null, seen = 0;
+          var tab = st.model.tabs[0], pv = st.plans[tab.id];
+          if (!pv || !pv.plan) { return { error: "no plan painted" }; }
+          for (var b = 0; b < pv.stages.length; b++) { K.stage(-1); }
+          for (var i = 0; i < pv.stages.length; i++) {
+            K.PLAN_PAGES.forEach(function (pg) {
+              K.planPage(pg[0]);
+              for (var j = 0; j < 20 && j < (st.parts || 1); j++) {
+                var f = fit(plan);
+                f.at = "stage " + i + " " + pg[0] + " part " + j;
+                seen += 1;
+                if (!worstFit || f.slack < worstFit.slack) { worstFit = f; }
+                K.part(1);
+              }
+              for (var k = 0; k < 20; k++) { K.part(-1); }
+            });
+            K.stage(1);
+          }
+          worstFit.seen = seen;
+          return worstFit;
+        };
+        var measure = function (mode) {
+          var card = doc.getElementById("kindlerbox");
+          if (!card || card.hidden) { return { mode: mode, error: "no editor card" }; }
+          var cs = getComputedStyle(card), cr = card.getBoundingClientRect();
+          var inner = cr.bottom - parseFloat(cs.paddingBottom) - parseFloat(cs.borderBottomWidth);
+          var last = cr.top, kids = 0, parts = [];
+          Array.prototype.forEach.call(card.children, function (k) {
+            if (!shown(k)) { return; }
+            var kr = k.getBoundingClientRect();
+            kids += 1; last = Math.max(last, kr.bottom);
+            parts.push((k.id || k.className.split(" ")[0] || k.tagName.toLowerCase()) + " " +
+                       Math.round(kr.height));
+          });
+          var small = [];
+          Array.prototype.forEach.call(card.querySelectorAll("button, input, select"), function (c) {
+            if (!shown(c)) { return; }
+            var r = c.getBoundingClientRect();
+            if (r.width < 24 - 0.01 || r.height < 24 - 0.01) {
+              small.push((c.id || c.tagName.toLowerCase()) + " " + r.width.toFixed(1) + "x" +
+                         r.height.toFixed(1));
+            }
+          });
+          var bar = doc.getElementById("kindler-bar");
+          var plan = doc.getElementById("kindler-plan");
+          return { mode: mode, root: parseFloat(getComputedStyle(de).fontSize),
+                   card: rect(card), inner: inner, last: last, kids: kids,
+                   clip: card.scrollHeight - card.clientHeight, parts: parts,
+                   bar: rect(bar), plan: plan && !plan.hidden ? rect(plan) : null,
+                   foot: rect(doc.querySelector("footer")),
+                   doc: { sh: de.scrollHeight, ch: de.clientHeight, sw: de.scrollWidth,
+                          cw: de.clientWidth },
+                   small: small };
+        };
+        out.push(measure("tools"));
+        var planned = null;
+        if (worst) {
+          K.openRename(); out.push(measure("rename"));
+          K.openConfirm(); out.push(measure("confirm"));
+          K.keep();
+          planned = planFit();
+        }
+        send({ modes: out, plan: planned });
+      } catch (e) { send({ error: String(e && e.stack || e) }); }
+    });
+  } catch (e) { send({ error: String(e && e.stack || e) }); }
+}());
+"""
+
+
+def kindler_template():
+    """(id, label) of the template with the longest label in the authored
+    archetypes, so the worst result line is the longest one."""
+    doc = json.loads((ROOT / "server" / "al" / "data" / "archetypes.json")
+                     .read_text(encoding="utf-8"))
+    t = max(doc["templates"], key=lambda x: len(x.get("label") or ""))
+    return t["id"], t["label"]
+
+
+KINDLER_HERE = {"area_id": "G1_1", "area_level": 1, "level": 2}
+
+
+def kindler_plan(template_id):
+    """(the op plan answer, the Play values) for the authored template: the
+    plan the engine builds with the calc off, its stage for KINDLER_HERE."""
+    from server.al.theorycraft import archetypes, kindlerplan
+    view = archetypes.resolve(archetypes.load())
+    template = next(t for t in view["templates"] if t["id"] == template_id)
+    plan = kindlerplan.build_plan(template, note=kindlerplan.FOCUS_CALC_OFF)
+    return ({"state": "ready", "plan": plan, "focus": kindlerplan.FOCUS_CALC_OFF,
+             "current": kindlerplan.current_stage(plan, KINDLER_HERE)}, KINDLER_HERE)
+
+
+def kindler_page(sizes=KINDLER_SIZES):
+    """The outer page: a "new" and a "worst" srcdoc iframe per size, each
+    the assembled page without its scripts, plus web/kindler.js and the
+    script that opens a Kindler tab and measures its editor card."""
+    html = srcpaths.index_html(encoding="utf-8")
+    links = []
+    for href in re.findall(r'<link rel="stylesheet" href="([^"]+)">', html):
+        if href == "/tokens.css":
+            links.append(ROOT / "ops" / "fleet_kit" / "tokens.css")
+        elif href.startswith("/web/"):
+            links.append(srcpaths.path(href[len("/web/"):]))
+    body = html[html.index("<body>") + len("<body>"):html.index("</body>")]
+    body = re.sub(r"<script\b[^>]*>.*?</script>\s*", "", body, flags=re.S)
+    tid, tlabel = kindler_template()
+    plan_answer, here = kindler_plan(tid)
+    build_text = f"Version {VERSION}, build {PIN_COMMIT}, dev"  # web/panels/version.js
+    js = (_KINDLER_JS.replace("__OUT__", json.dumps(KINDLER_OUT))
+          .replace("__BUILD__", json.dumps(build_text))
+          .replace("__TABS__", str(KINDLER_TABS)).replace("__LABEL__", json.dumps(KINDLER_LABEL))
+          .replace("__TEMPLATE__", json.dumps(tid))
+          .replace("__TEMPLATE_LABEL__", json.dumps(tlabel))
+          .replace("__PLAN__", json.dumps(plan_answer)).replace("__HERE__", json.dumps(here)))
+    head = "".join(f'<link rel="stylesheet" href="{_file_url(p)}">\n' for p in links)
+    inner = ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+             f"<title>kindler card</title>\n{head}</head>\n<body>\n{body}\n"
+             f"<script src=\"{_file_url(srcpaths.path('kindler.js'))}\"></script>\n"
+             f"<script>{js}</script>\n</body>\n</html>\n")
+    frames = "".join(f'<iframe data-kind="{kind}" width="{w}" height="{h}" '
+                     f'style="border: 0; display: block" '
+                     f'srcdoc="{htmllib.escape(inner, quote=True)}"></iframe>\n'
+                     for w, h in sizes for kind in ("new", "worst"))
+    return ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+            f"<title>kindler sizes</title>\n</head>\n<body style=\"margin: 0\">\n"
+            f"<pre id=\"{KINDLER_OUT}\"></pre>\n{frames}</body>\n</html>\n")
+
+
+def measure_kindler(browser, folder, sizes=KINDLER_SIZES):
+    """{"<w>x<h> <kind>": {mode: measures}} for every frame."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    page = folder / "kindler.html"
+    page.write_text(kindler_page(sizes), encoding="utf-8")
+    cmd = [browser, "--headless=new", "--disable-gpu", "--in-process-gpu", "--no-first-run",
+           "--no-default-browser-check", "--disable-extensions", "--hide-scrollbars",
+           "--force-device-scale-factor=1", f"--user-data-dir={folder / 'profile'}",
+           "--window-size=2000,2400", "--dump-dom", page.as_uri()]
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=ci_scale(120))
+    m = re.search(r'<pre id="' + KINDLER_OUT + r'">(.*?)</pre>', r.stdout, re.S)
+    assert m and m.group(1).strip(), f"no Kindler measures; stderr: {r.stderr[-1500:]}"
+    out = {}
+    for line in htmllib.unescape(m.group(1)).splitlines():
+        if not line:
+            continue
+        row = json.loads(line)
+        h = next(hh for ww, hh in sizes if ww == row["vw"] and hh == row["vh"])
+        key = f"{size_key(row['vw'], h)} {row['kind']}"
+        if "error" in row:
+            out[key] = {"error": row["error"]}
+        else:
+            out[key] = {mm["mode"]: mm for mm in row["modes"]}
+            if row.get("plan"):
+                out[key]["tools"]["plan_fit"] = row["plan"]
+    return out
+
+
+def kindler_failures(measures):
+    """Every Kindler editor card that is missing, cut, short of the G4
+    slack, holds a target under 24 px, or makes the page scroll."""
+    fails = []
+    for key, modes in sorted(measures.items()):
+        if "error" in modes:
+            fails.append(f"{key}: {modes['error'][:300]}")
+            continue
+        w, h = parse_key(key.split()[0])
+        cls, s = size_class(w, h)
+        need = SLACK_MIN.get(s, 3)
+        for mode, m in modes.items():
+            where = f"{key} {mode}"
+            if "error" in m:
+                fails.append(f"{where}: {m['error']}")
+                continue
+            d = m["doc"]
+            if cls == "flow":
+                if d["sw"] > d["cw"]:
+                    fails.append(f"{where}: horizontal scroll {d['sw'] - d['cw']} px")
+                continue
+            if d["sh"] > d["ch"]:
+                fails.append(f"{where}: page {d['sh'] - d['ch']} px over")
+            slack = math.floor(m["inner"]) - math.ceil(m["last"])
+            if slack < need:
+                fails.append(f"{where}: editor card slack {slack} px (min {need})")
+            if m["clip"] > 1:
+                fails.append(f"{where}: editor card clips {m['clip']} px")
+            for c in m["small"]:
+                fails.append(f"{where}: target {c} px (min {TARGET_MIN})")
+            pf = m.get("plan_fit")
+            if pf is None:
+                continue
+            if "error" in pf:
+                fails.append(f"{where}: plan card: {pf['error']}")
+            elif pf["slack"] < need or pf["clip"] > 1:
+                fails.append(f"{where}: plan card slack {pf['slack']} px, clips {pf['clip']} px "
+                             f"at {pf['at']} (min {need})")
+    return fails
+
+
+def kindler_figures(measures):
+    """One line per measured card: size, document, mode, card height and slack."""
+    out = []
+    for key, modes in sorted(measures.items()):
+        if "error" in modes:
+            out.append(f"- {key}: error")
+            continue
+        for mode, m in modes.items():
+            if "error" in m:
+                out.append(f"- {key} {mode}: {m['error']}")
+                continue
+            slack = math.floor(m["inner"]) - math.ceil(m["last"])
+            pf = m.get("plan_fit")
+            if pf:
+                out.append(f"- {key} plan: worst slack {pf.get('slack')} at {pf.get('at')}, "
+                           f"clip {pf.get('clip')}, {pf.get('seen')} views"
+                           + (f", {pf['error']}" if "error" in pf else ""))
+            out.append(f"- {key} {mode}: root {m['root']:g}, card {m['card']['w']:.0f}x"
+                       f"{m['card']['h']:.0f}, slack {slack}, clip {m['clip']}, bar "
+                       f"{m['bar']['h']:.0f}, footer {m['foot']['h']:.0f}, page over "
+                       f"{m['doc']['sh'] - m['doc']['ch']}; parts {', '.join(m.get('parts', ()))}")
+    return out
+
+
+def _fake_kindler(slack=10, clip=0, over=0, small=(), sw=0, plan=None):
+    def mode(name):
+        return {"mode": name, "root": 16, "card": {"w": 400, "h": 300}, "inner": 400.0,
+                "last": 400.0 - slack, "clip": clip, "bar": {"h": 24}, "foot": {"h": 45},
+                "doc": {"sh": 700 + over, "ch": 700, "sw": 1024 + sw, "cw": 1024},
+                "small": list(small), "parts": []}
+    out = {name: mode(name) for name in KINDLER_MODES}
+    if plan is not None:
+        out["tools"]["plan_fit"] = plan
+    return out
+
+
+def test_kindler_failures_catch_a_cut_card():
+    assert kindler_failures({"1024x700 worst": _fake_kindler()}) == []
+    fails = kindler_failures({"1024x700 worst": _fake_kindler(slack=1, clip=30, over=4,
+                                                              small=("kindler-left 20x20",))})
+    assert len(fails) == 4 * len(KINDLER_MODES), fails
+    # a flow size checks horizontal scroll only
+    assert kindler_failures({"320x640 new": _fake_kindler(slack=-50, over=900)}) == []
+    assert len(kindler_failures({"320x640 new": _fake_kindler(sw=7)})) == len(KINDLER_MODES)
+    assert kindler_failures({"1280x760 new": {"error": "boom"}}) == ["1280x760 new: boom"]
+    # the plan card beside the editor keeps the same minimum and never clips
+    ok = {"slack": 40, "clip": 0, "at": "stage 0 skills part 0", "seen": 3}
+    assert kindler_failures({"1024x700 worst": _fake_kindler(plan=ok)}) == []
+    for bad in (dict(ok, slack=1), dict(ok, clip=12), {"error": "no plan painted"}):
+        fails = kindler_failures({"1024x700 worst": _fake_kindler(plan=bad)})
+        assert len(fails) == 1 and "plan card" in fails[0], fails
+
+
+@pytest.fixture(scope="module")
+def kindler_measures(tmp_path_factory):
+    browser = find_browser()
+    if not browser:
+        pytest.skip("headless Chrome / Edge not found")
+    return measure_kindler(browser, tmp_path_factory.mktemp("kindler_fit"))
+
+
+def test_the_kindler_card_was_measured_in_every_mode(kindler_measures):
+    want = {f"{size_key(w, h)} {kind}" for w, h in KINDLER_SIZES for kind in ("new", "worst")}
+    assert set(kindler_measures) == want, sorted(kindler_measures)
+    for key, modes in kindler_measures.items():
+        assert "error" not in modes, (key, modes)
+        assert set(modes) == ({"tools"} if key.endswith(" new") else set(KINDLER_MODES)), key
+    # the worst document puts the plan card beside the editor in the cockpit
+    views = 3 * len(kindler_plan(kindler_template()[0])[0]["plan"]["stages"])
+    for w, h in COCKPIT:
+        worst = kindler_measures[f"{size_key(w, h)} worst"]["tools"]
+        new = kindler_measures[f"{size_key(w, h)} new"]["tools"]
+        assert worst["plan"] is not None and new["plan"] is None, (w, h)
+        assert worst["card"]["w"] < new["card"]["w"], (w, h)
+        # every stage, every plan page, every part of it was looked at
+        assert worst["plan_fit"]["seen"] >= views, (w, h, worst["plan_fit"])
+
+
+def test_the_kindler_editor_card_fits_at_compact_and_full_size(kindler_measures):
+    fails = kindler_failures(kindler_measures)
+    assert not fails, "\n".join(fails[:40]) + "\n\n" + "\n".join(kindler_figures(kindler_measures))
+
+
 if __name__ == "__main__":
+    if "--kindler" in sys.argv[1:]:
+        _browser = find_browser()
+        if not _browser:
+            sys.exit("headless Chrome / Edge not found")
+        with tempfile.TemporaryDirectory(prefix="al-kindler-fit-",
+                                         ignore_cleanup_errors=True) as tmp:
+            _km = measure_kindler(_browser, tmp)
+        print("\n".join(kindler_figures(_km)))
+        _kf = kindler_failures(_km)
+        print(f"\n{len(_kf)} failures" + ("".join("\n  " + f for f in _kf)))
+        sys.exit(0)
     if "--figures" not in sys.argv[1:]:
-        sys.exit("usage: python tests/test_play_fit.py --figures")
+        sys.exit("usage: python tests/test_play_fit.py --figures | --kindler")
     _browser, _node = find_browser(), shutil.which("node")
     if not _browser or not _node:
         sys.exit("headless Chrome / Edge or node not found")

@@ -95,6 +95,30 @@ button.subtab::after { display: block; height: 0; overflow: hidden; visibility: 
   button.subtab { flex: 0 1 auto; min-width: 3rem; }
   .kindler-bar #kindler-full { min-width: 0; }
 }
+/* KINDLER-FIT-MEASURE (tests/test_play_fit.py measures the editor and plan
+   cards at every cockpit size): with 6 tabs the New button wrapped to 3
+   lines (a 62 px bar), the head's "Kindler: build generator" wrapped
+   under a long tab name, and the status words took a line of their own
+   under Generate, so the editor in its one column was cut by up to 71 px
+   at 1280x760. In the cockpit New and the head's words keep one line (the
+   title clips, its full name in its title), and the status sits beside
+   Generate. The compact class (cockpit, but not 75em by 47.5em) is
+   narrower still: there the editor's one column of three was 300 px
+   short, so while a plan shows the panel has two equal columns, editor
+   and plan side by side, both measured to fit. */
+#kindler-status { flex: 1 1 10rem; min-width: 0; }
+@media (min-width: 64em) and (min-height: 43.75em) {
+  #kindler-new { flex: none; white-space: nowrap; }
+  .kindler-head h2 { flex: 0 1 auto; min-width: 0; }
+  .kindler-head .row-meta { flex: none; white-space: nowrap; }
+}
+@media (min-width: 64em) and (min-height: 43.75em) and (not ((min-width: 75em) and (min-height: 47.5em))) {
+  #panel-build.panel-cards[data-sub="kindler"]:has(> #kindler-plan:not([hidden])) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+[data-text-spacing="user"] .kindler-head { flex-wrap: wrap; }
+[data-text-spacing="user"] #kindler-new,
+[data-text-spacing="user"] .kindler-head .row-meta { white-space: normal; }
 [data-text-spacing="user"] #panel-build.panel-cards { grid-template-rows: none; }
 [data-text-spacing="user"] #panel-build > .kindler-card { grid-row: auto; overflow: visible; }
 [data-text-spacing="user"] .kindler-bar { flex-wrap: wrap; }
