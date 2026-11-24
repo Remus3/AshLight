@@ -145,9 +145,13 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
   (PRICE-1, TC-UPGRADE, RES-POLICY).
 - 0016: Price check result contract, overlay card slot, rates panel
   (PRICE-1-UI, DATA-NINJA-UI); amended 2026-11-23: card key ninja_url, a
-  poe.ninja category page link the player opens; the app requests nothing.
+  poe.ninja category page link the player opens; the app requests nothing;
+  amended 2026-11-23 (DATA-CONTACT-DEFAULT): issues page as default
+  contact, the contact field an optional override (label and note only).
 - 0015: Price check per press and the User-Agent contact (PRICE-1,
-  UA-CONTACT).
+  UA-CONTACT); amended 2026-11-23 (DATA-CONTACT-DEFAULT): the project's
+  issues page is the default contact once public, a typed contact
+  overrides it.
 - 0014: Build view, item check UI and graphics advisor (TC-VIEW,
   TC-EVAL-UI, GFX-ADVISOR).
 - 0013: Web data: one opt-in, one fetch path (DATA-NINJA, TC-URL,

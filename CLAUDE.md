@@ -523,7 +523,14 @@ of the HALT check.
   and of the merged card is the price line only when the card is not a
   trade link or carries a usable poe.ninja value, otherwise the item
   name; an empty clipboard press shows "Copy the item first" (decision
-  0016 amendment 2026-11-19, OVL-CARD-NAME / OVL-COPY-FIRST). Reverses if: GGG / poe.ninja drop the contact
+  0016 amendment 2026-11-19, OVL-CARD-NAME / OVL-COPY-FIRST). Once
+  public, the default contact is the project's issues page
+  (webfetch.default_contact from config/public_repo.json via
+  updates.load_repo; Core.effective_contact feeds poe.ninja, the blocked
+  reason, Checks and the snapshot tool's main); a typed contact overrides
+  it; contact_set on /api/web-data stays the typed contact, so the field
+  is an optional per-install override (decision 0015 amendment
+  2026-11-23, 0016 amendment 2026-11-23). Reverses if: GGG / poe.ninja drop the contact
   ask, price check needs its own hotkey, or the overlay may fetch.
 - The app calls no trade2 endpoint; it only builds a trade-search URL the
   user opens in their own browser (decision 0017). Reverses if: GGG
