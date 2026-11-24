@@ -22,6 +22,9 @@
   folder's install marker (ashlight-runtime.json) records, with the same
   size-or-mtime fast path (<home>\build\electron-exe-installed.json), and
   a refusal names the installer repair, never setup.ps1.
+.PARAMETER Overlay
+  Accepted for compatibility; the client (with its overlay) starts by
+  default when installed (scripts\setup.ps1 with Node).
 .PARAMETER NoOverlay
   Do not start the client (and so no overlay); the dashboard opens in the
   browser instead. A running client is left alone.
@@ -47,6 +50,7 @@
 #>
 [CmdletBinding()]
 param(
+    [switch]$Overlay,
     [switch]$NoOverlay,
     [switch]$NoBrowser,
     [switch]$EdgeApp,

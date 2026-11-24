@@ -557,6 +557,14 @@ class Handler(BaseHTTPRequestHandler):
         return self._sse(extra, query)
 
     # -- POST routes
+    def _post_clipboard_read(self, path, query, extra):
+        # Decision 0003: the clipboard is read ONLY once per manual press
+        # of an AshLight hotkey, never by a watcher or a timer, and
+        # AshLight never sends Ctrl+C or any other input to the game.
+        # Not implemented yet (ROADMAP); this stub stays a 501.
+        return self._json(501, {"error": "not implemented",
+                                "policy": "docs/decisions/0003-read-policy.md"})
+
     def _plug(self, verb, path, query, extra):
         """RUN-SEAMS (decision 0056): the fall-through after the built-in
         routes. _guard already ran (Host, Origin, Sec-Fetch-Site, token);
@@ -1385,6 +1393,7 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    "/api/clipboard-read": Handler._post_clipboard_read,
     "/api/consent": Handler._consent,
     "/api/overlay-layout": Handler._set_layout,
     "/api/trade-dismiss": Handler._trade_dismiss,
