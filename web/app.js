@@ -183,7 +183,8 @@
     a.href = l.href;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
-    a.setAttribute("aria-label", name + " on " + l.label + " (opens in a new tab)");
+    // DATA-PRICE-NINJA-LINK: a link to a category page names itself (aria)
+    a.setAttribute("aria-label", l.aria || name + " on " + l.label + " (opens in a new tab)");
     return a;
   }
 
@@ -569,6 +570,13 @@
       // search in their browser; AshLight never opens or fetches it
       if (v.link) {
         rows.push({ text: v.link.text, link: { href: v.link.href, label: "Trade site" },
+          linkName: v.item || "this item" });
+      }
+      // DATA-PRICE-NINJA-LINK: the poe.ninja category page, opened only by
+      // the player's click in their browser; AshLight requests nothing
+      if (v.ninjaLink) {
+        rows.push({ text: v.ninjaLink.text,
+          link: { href: v.ninjaLink.href, label: "poe.ninja", aria: v.ninjaLink.label },
           linkName: v.item || "this item" });
       }
       v.rows.forEach(function (r) {

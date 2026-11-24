@@ -50,7 +50,7 @@ test("the window stays on the local core; only listed https links leave", () => 
   for (const bad of ["file:///etc/hosts", "javascript:alert(1)", "data:text/html,x",
                      "ms-settings:display", "steam://run/1", "about:blank", "",
                      "http://www.pathofexile.com/trade2/", // http, even to a listed host
-                     "https://poe.ninja/", "https://example.org/", // hosts off the list
+                     "https://poe.ninja.evil.example/", "https://example.org/", // hosts off the list
                      "https://poe2db.tw.evil.example/", "https://www.pathofexile.com:8443/x",
                      // userinfo URLs built from parts (the leak sweep reads
                      // a literal "name@host" as an email address)

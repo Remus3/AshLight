@@ -28,8 +28,9 @@ TOKEN = "p" * 48
 CONTACT = "test-contact"
 ITEM = {"name": "N", "base": "B", "rarity": "RARE"}
 # PRICE-UNIQUE: `ninja` (cached poe.ninja price or None) joins the contract.
+# DATA-PRICE-NINJA-LINK: `ninja_url` (poe.ninja category page or None) too.
 KEYS = {"status", "wait_s", "item", "league", "count", "listings", "error", "url",
-        "ninja"}
+        "ninja", "ninja_url"}
 
 
 class FakeNet:

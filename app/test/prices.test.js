@@ -180,6 +180,38 @@ test("trade link: shown only for a trade2 search URL, opens in the browser", () 
   assert.equal(p.tradeLink(LINK), LINK);
 });
 
+/* DATA-PRICE-NINJA-LINK (decision 0016 amendment 2026-11-23): the poe.ninja
+   category page link shows only for an https poe.ninja economy URL. */
+const NINJA = "https://poe.ninja/poe2/economy/standard/unique-weapons";
+
+test("poe.ninja link: shown only for an https poe.ninja economy URL", () => {
+  const card = { id: 8, status: "link", url: LINK, ninja_url: NINJA, at: 1, listings: [],
+    text: { item: "Doom Grip", sentence: "A trade site search for this item in Dawn is ready.",
+            rows: [] } };
+  const v = p.priceView(card, RATES, null);
+  assert.deepEqual(v.ninjaLink, { href: NINJA,
+    text: "Compare prices of items like Doom Grip on poe.ninja",
+    label: "Compare prices of items like Doom Grip on poe.ninja (opens in a new tab)" });
+  assert.ok(v.link, "the trade link stays beside it");
+  for (const bad of [undefined, null, "", 7, "http://poe.ninja/poe2/economy/standard/currency",
+    "https://poe.ninja.evil/poe2/economy/standard/currency",
+    "https://evil.example/poe2/economy/standard/currency",
+    "https://poe.ninja/poe2/" + "api/economy/leagues",
+    "https://poe.ninja/poe2/economy/standard/currency?league=x",
+    "https://poe.ninja/poe2/economy/standard/currency#x",
+    "https://poe.ninja/poe2/economy/Standard/currency",
+    "https://poe.ninja/poe2/economy/standard/currency/divine-orb",
+    "https://poe.ninja/poe1/economy/standard/currency", "javascript:alert(1)"]) {
+    const w = p.priceView(Object.assign({}, card, { ninja_url: bad }), RATES, null);
+    assert.equal(w.ninjaLink, null, String(bad));
+  }
+  // only on a link card
+  const err = p.priceView(Object.assign({}, card, { status: "error", error: "x" }), RATES, null);
+  assert.equal(err.ninjaLink, null);
+  assert.equal(p.ninjaLink(NINJA), NINJA);
+  assert.equal(p.ninjaLink("https://poe.ninja/"), "");
+});
+
 /* TC-UPGRADE (decision 0017 item 3): the item check's upgrade-search link. */
 const UP_URL = "https://www.pathofexile.com/trade2/search/poe2/Standard?q=%7B%22query%22%3A%7B%7D%7D";
 

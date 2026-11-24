@@ -337,8 +337,7 @@ def test_one_uppercase_tracking_value():
 
 def test_multiline_prose_reads_at_1_5():
     rules = dict(_rules(_strip_media(_outside_token_block())))
-    for sel in (".zone-note", ".zone-guide", ".campaign-hints", ".card.hint p",
-                ".notes", ".promises ul"):
+    for sel in (".zone-guide", ".campaign-hints", ".card.hint p", ".notes", ".promises ul"):
         assert "line-height: var(--al-lh-prose)" in rules[sel], sel
 
 

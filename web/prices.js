@@ -363,10 +363,21 @@
     return (typeof u === "string" && u.length <= 4096 && TRADE_SEARCH.test(u)) ? u : "";
   }
 
+  /* DATA-PRICE-NINJA-LINK (decision 0016 amendment 2026-11-23): the card's
+     ninja_url only when it is a poe.ninja PoE2 economy category page (the
+     core picks it from a table of page forms read from poe.ninja; the app
+     requests nothing, the player's click opens it), else "". */
+  var NINJA_PAGE = /^https:\/\/poe\.ninja\/poe2\/economy\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+  function ninjaLink(u) {
+    return (typeof u === "string" && u.length <= 200 && NINJA_PAGE.test(u)) ? u : "";
+  }
+
   function priceView(price, rates, clock) {
     if (!price || !price.text) { return null; }
     var t = price.text;
     var href = price.status === "link" ? tradeLink(price.url) : "";
+    var ninja = price.status === "link" ? ninjaLink(price.ninja_url) : "";
     var name = t.item || "this item";
     var listings = Array.isArray(price.listings) ? price.listings : [];
     var rows = (t.rows || []).map(function (text, i) {
@@ -386,6 +397,9 @@
       link: href ? { href: href, text: "Search the official trade site for " + name,
                      label: "Search the official trade site for " + name +
                             " (opens in a new tab)" } : null,
+      ninjaLink: ninja ? { href: ninja, text: "Compare prices of items like " + name + " on poe.ninja",
+                           label: "Compare prices of items like " + name + " on poe.ninja" +
+                                  " (opens in a new tab)" } : null,
       when: typeof price.at === "number" && clock ? "Checked at " + clock(price.at) : ""
     };
   }
@@ -466,6 +480,6 @@
            leagueSavedText: leagueSavedText, LEAGUE_REFUSED: LEAGUE_REFUSED,
            ratesPill: ratesPill, ratesView: ratesView, convert: convert, aboutText: aboutText,
            tradeAbout: tradeAbout, priceView: priceView, trendRows: trendRows,
-           tradeLink: tradeLink, upgradeView: upgradeView, moversView: moversView,
+           tradeLink: tradeLink, ninjaLink: ninjaLink, upgradeView: upgradeView, moversView: moversView,
            valueView: valueView };
 }));

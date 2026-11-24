@@ -698,3 +698,47 @@ Independent pass, 2026-11-18, by an agent that did not write the draft.
   repository (negative); poe.watch having no PoE2 data (negative); the
   league name Conquerors of Wraeclast (one source, PV1); the early-access
   league plan for 1.0 (PV2 quotes an old FAQ); the year of NP.
+
+## Economy page forms (DATA-PRICE-NINJA-LINK, accessed 2026-11-23)
+
+One bounded read for R12, by a stdlib urllib script run with python -I
+from the dev scratch folder (no AshLight code, no cookie), User-Agent
+`AshLight/0.1.0 (dev research; local Path of Exile 2 companion)` (no
+contact value sent), about 1 s between GETs, 29 GETs in all over four
+short runs (cap 30), no `/api/` or data route. No page body is kept in a
+tracked file.
+
+- NR: https://poe.ninja/robots.txt - `User-agent: *`, `Disallow: /dev/`,
+  a Sitemap line; the economy pages are allowed.
+- NE (re-read): https://poe.ninja/poe2/economy - 200; its one economy link
+  is /poe2/economy/forbiddenrites/currency. The pages are client-rendered:
+  the HTML of the landing page and of the currency page carries no other
+  category link.
+- NS: https://poe.ninja/sitemap.xml (10 per-language sitemaps) and
+  https://poe.ninja/sitemap-en.xml - 4,127 locations, 1,288 under
+  /poe2/economy/. Page form: `https://poe.ninja/poe2/economy/<league
+  slug>/<category slug>` (an item page adds `/<item slug>`).
+- League slugs listed: forbiddenrites, runesofaldur, forbiddenriteshc,
+  runesofaldurhc, standard, hardcore (the six leagues of the cached
+  leagues list: Forbidden Rites, Runes of Aldur, HC Forbidden Rites, HC
+  Runes of Aldur, Standard, Hardcore).
+- Category slugs listed for each league (23): currency, fragments,
+  abyssal-bones, uncut-gems, lineage-support-gems, essences, soul-cores,
+  idols, runes, omens, expedition, liquid-emotions, breach-catalyst,
+  verisium, unique-weapons, unique-armours, unique-accessories,
+  unique-flasks, unique-charms, unique-jewels, unique-relics,
+  unique-tablets, precursor-tablets.
+- One GET per category page of forbiddenrites, the first 21 slugs in
+  name order (abyssal-bones to unique-tablets): each answered 200 with no
+  redirect. unique-weapons and verisium were not fetched (the GET cap);
+  they are read from the sitemap only.
+- Used (server/al/ninjalink.py): a type maps to a page only when the slug
+  spells the overview type word for word (Currency, Fragments, UncutGems,
+  LineageSupportGems, Essences, SoulCores, Idols, Runes, Expedition,
+  Verisium, UniqueWeapons, UniqueArmours, UniqueAccessories, UniqueFlasks,
+  UniqueCharms, UniqueJewels, UniqueTablets, PrecursorTablets);
+  a league only when its slug is its id in lower case run together
+  (Forbidden Rites, Runes of Aldur, Standard, Hardcore). Not linked:
+  Abyss, Ritual, Delirium, Breach and UniqueSanctumRelics (the page name
+  differs: pairing them would be a guess), the two HC challenge leagues (the slug reorders the words). A new league
+  gets no link until its slug is read and added.

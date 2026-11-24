@@ -371,11 +371,11 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
 .zone-guide { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .zone-guide p { margin: 0 0 var(--al-space-1); }
 .zone-guide .zg-title { font-weight: 600; }
-/* PLAY-LEGACY-OUT-2: the Zone tip box, the campaign hint list and the tip
-   card are gone; these three dead rules stay only while
-   tests/test_design_tokens.py (test_multiline_prose_reads_at_1_5) pins
-   them, and the package that widens to that test deletes them. */
-.zone-note { overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
+/* PLAY-LEGACY-OUT-2: the campaign hint list and the tip card are gone;
+   these two dead rules stay only while tests/test_design_tokens.py
+   (test_multiline_prose_reads_at_1_5) pins them, and the package that
+   widens to that test deletes them (DATA-GUIDE-ONE-BLOCK took the Zone tip
+   rule). */
 .campaign-hints { padding-left: var(--al-space-4); overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .card.hint p { margin: 0; overflow-wrap: anywhere; line-height: var(--al-lh-prose); }
 .paste { display: block; font-weight: 600; }

@@ -231,3 +231,25 @@ in game, while the item name confirms which item the press read; C adds
 a line for the same non-action; D still spends the line on a pointer.
 REVERSES IF: the overlay gains a way to act on the link, players miss
 the link notice in play, or decision 0017 reverses.
+
+AMENDMENT 2026-11-23 (DATA-PRICE-NINJA-LINK, folded into
+DATA-GUIDE-ONE-BLOCK; research 0036 R12 and its "Economy page forms").
+DECISION: the card gains one key, `ninja_url`: the poe.ninja category page
+(https://poe.ninja/poe2/economy/<league slug>/<category slug>) of the
+cached poe.ninja price's overview type in its league, else None. The core
+picks it from server/al/ninjalink.py, two literal tables of page forms
+read from poe.ninja's public pages on 2026-11-23, never a derived or
+guessed slug (adjudicator LE-39); card_of keeps only a URL of that exact
+shape. The dashboard shows it as a second link beside the trade link
+("Compare prices of items like <item> on poe.ninja", link word
+"poe.ninja"), opened only by the player's click in their own browser;
+web/prices.js checks it with its own allow pattern. The app requests
+nothing for it (as decision 0017 for trade). poe.ninja joins
+config/link_hosts.json so the desktop client can open it (decision 0041).
+ALTERNATIVES: (B) a link to the poe.ninja landing page for every card;
+(C) derive slugs from type and league names; (D) no link.
+WHY: the category page gives the player price history and similar items
+at the source, and credits it; B helps little; C breaks on renamed pages
+(Abyss is abyssal-bones) and reordered league slugs (HC leagues).
+REVERSES IF: poe.ninja objects to deep links or changes its page form,
+a table entry opens the wrong page in use, or decision 0017 reverses.
