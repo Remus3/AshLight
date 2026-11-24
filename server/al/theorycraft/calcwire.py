@@ -47,6 +47,10 @@ WEAPON_REASONS = (
     "Weapon Types Need to be Different",
 )
 WEAPON_SLOT_PREFIX = "Weapon "
+# KINDLER-SUPPORT-FIT: bounds on the bridge's support_fit reply
+FIT_MAX_SKILLS = 64
+FIT_MAX_SUPPORTS = 16
+FIT_NAME_MAX = 80
 
 
 class OutputError(RuntimeError):
@@ -110,7 +114,21 @@ def make_calc(get_bridge):
                 state["xml"], state["dirty"] = xml, False
             return dict(b.outputs(keys=list(keys)))
 
+    def fit(build):
+        """KINDLER-SUPPORT-FIT: PoB's support applicability for the build
+        itself (no swap): support_fit() after loading its XML."""
+        xml = getattr(build, "raw_xml", None)
+        if not isinstance(xml, str) or not xml.strip():
+            raise OutputError("no build XML")
+        b = get_bridge()
+        with lock:
+            if state["dirty"] or state["xml"] != xml:
+                b.load_build(xml)
+                state["xml"], state["dirty"] = xml, False
+            return support_fit(b)
+
     calc.raw = raw
+    calc.fit = fit
     return calc
 
 
@@ -141,6 +159,47 @@ def weapon_unusable(bridge):
         return None
     name = got.get("name")
     return {"skill": name if isinstance(name, str) and name else None, "reason": reason}
+
+
+def _fit_name(v):
+    return v if isinstance(v, str) and 0 < len(v) <= FIT_NAME_MAX else None
+
+
+def support_fit(bridge):
+    """KINDLER-SUPPORT-FIT: {skill name: {support name: True / False}} from
+    the bridge's "support_fit" command, PoB's own answer for each active
+    skill of the loaded build (bridge.lua; a support that applies is in the
+    skill's effectList). A support PoB did not recognise is absent, never
+    guessed. Two active skills of one name (one gem granting several)
+    answer True for a support that applies to either. A bridge without the
+    command raises like any other bridge error; a malformed reply reads as
+    {} (at most FIT_MAX_SKILLS skills and FIT_MAX_SUPPORTS supports each)."""
+    got = bridge.request("support_fit")
+    rows = got.get("skills") if isinstance(got, dict) else None
+    out = {}
+    for row in (rows if isinstance(rows, list) else [])[:FIT_MAX_SKILLS]:
+        if not isinstance(row, dict):
+            continue
+        skill = _fit_name(row.get("skill"))
+        sups = row.get("supports")
+        if skill is None or not isinstance(sups, list):  # {}: an empty Lua list
+            continue
+        mine = out.setdefault(skill, {})
+        for sup in sups[:FIT_MAX_SUPPORTS]:
+            if not isinstance(sup, dict) or not isinstance(sup.get("applies"), bool):
+                continue
+            name = _fit_name(sup.get("name"))
+            if name is not None:
+                mine[name] = mine.get(name, False) or sup["applies"]
+    return {k: v for k, v in out.items() if v}
+
+
+def build_fit(calc, build):
+    """KINDLER-SUPPORT-FIT: the kindlerplan.Planner `fit`: PoB's support
+    applicability for one composed build through the calc callable's `fit`
+    (make_calc); {} for a calc without one (a test double)."""
+    ask = getattr(calc, "fit", None)
+    return ask(build) if callable(ask) else {}
 
 
 class Provider:
@@ -224,6 +283,8 @@ class Provider:
 
         tracked = held(calc)
         tracked.raw = held(calc.raw)
+        if callable(getattr(calc, "fit", None)):  # KINDLER-SUPPORT-FIT
+            tracked.fit = held(calc.fit)
         return tracked
 
     def running(self):

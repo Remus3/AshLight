@@ -11,7 +11,8 @@ import pytest
 
 import kindler_fixtures as fx
 from server.al.plug import kindler as plug
-from server.al.theorycraft import archetypes, delta, genstore, kindler, kindlerplan, treedata
+from server.al.theorycraft import (archetypes, calcwire, delta, genstore, kindler, kindlerplan,
+                                   treedata)
 
 PIN = "b" * 40
 
@@ -64,6 +65,33 @@ class ProbeCalc:
                     dps += d * 10
                     ehp += e * 10
         return {"dps": dps, "ehp": ehp}
+
+
+class FitCalc(ProbeCalc):
+    """ProbeCalc plus the calc's `fit(build)` (calcwire.make_calc): PoB's
+    answer per linked support of each skill group in the composed XML; the
+    supports in REJECT do not apply and the ones in UNKNOWN PoB did not
+    recognise (not answered)."""
+
+    REJECT = {"Echo Strike"}
+    UNKNOWN = set()
+
+    def __init__(self, fail_fit=False, **kw):
+        super().__init__(**kw)
+        self.fits = []
+        self.fail_fit = fail_fit
+
+    def fit(self, build):
+        root = ET.fromstring(build.raw_xml)
+        self.fits.append(root.find("Build").get("level"))
+        if self.fail_fit:
+            raise RuntimeError("bridge failed")
+        out = {}
+        for group in root.iter("Skill"):
+            gems = [g.get("nameSpec") for g in group.iter("Gem")]
+            out[gems[0]] = {name: name not in self.REJECT for name in gems[1:]
+                            if name not in self.UNKNOWN}
+        return out
 
 
 def _bases_file(tmp_path, with_amulet=True):
@@ -292,9 +320,14 @@ def test_here_reads_only_the_three_published_fields():
 
 # --- the planner ------------------------------------------------------------------
 
-def _planner(tmp_path, calc, inputs=None, bases=True):
+def _planner(tmp_path, calc, inputs=None, bases=True, fit=None):
     return kindlerplan.Planner(FixedSources(inputs or _inputs()), calc=lambda: calc,
-                               base_path=_bases_file(tmp_path, with_amulet=bases))
+                               fit=fit, base_path=_bases_file(tmp_path, with_amulet=bases))
+
+
+def _applies(plan):
+    return [[[s["applies"] for s in sk["supports"]] for sk in st["skills"]]
+            for st in plan["stages"]]
 
 
 def test_planner_calc_off_is_authored(tmp_path):
@@ -340,6 +373,80 @@ def test_planner_failed_and_no_base(tmp_path):
 def test_planner_no_tree(tmp_path):
     p = _planner(tmp_path, ProbeCalc(), inputs=_inputs(tree=False))
     assert p.plan(_result())[1] == "no_tree"
+
+
+# --- KINDLER-SUPPORT-FIT: support applicability from PoB ---------------------------
+
+def test_stage_fits_asks_pob_once_per_stage_with_new_links():
+    inputs = _inputs()
+    t = _template(inputs)
+    calc = FitCalc()
+    fits = kindlerplan.stage_fits(calcwire.build_fit, calc, t,
+                                  kindler.tree_ids(inputs["tree"], t))
+    assert fits == {"Hammer Swing": {"Brute Force": True},
+                    "Ground Crack": {"Brute Force": True, "Echo Strike": False}}
+    # early and mid; maps repeats early's one link, so it is not loaded
+    assert calc.fits == ["6", "12"]
+    assert calc.calls == []  # no DPS / EHP calc for the fit
+
+
+def test_stage_fits_keeps_only_asked_bool_answers():
+    inputs = _inputs()
+    t = _template(inputs)
+    ids = kindler.tree_ids(inputs["tree"], t)
+
+    def odd(calc, build):
+        return {"Hammer Swing": {"Brute Force": "yes", "Not Linked": True},
+                "Ground Crack": {"Echo Strike": True}, "Other": {"Brute Force": True},
+                "Bad": ["x"]}
+
+    assert kindlerplan.stage_fits(odd, None, t, ids) == {"Ground Crack": {"Echo Strike": True}}
+    assert kindlerplan.stage_fits(lambda c, b: None, None, t, ids) == {}
+    assert kindlerplan.stage_fits(calcwire.build_fit, FitCalc(fail_fit=True), t, ids) == {}
+    assert kindlerplan.stage_fits(calcwire.build_fit, ProbeCalc(), t, ids) == {}
+
+
+def test_planner_fills_applies_from_pob(tmp_path):
+    calc = FitCalc()
+    p = _planner(tmp_path, calc, fit=calcwire.build_fit)
+    plan, word = p.plan(_result(), busy=True)
+    assert word == "pending" and _applies(plan) == [[[None]], [[None, None]], [[None]]]
+    plan, word = p.plan(_result(), wait=True)
+    assert word == "pob"
+    assert _applies(plan) == [[[True]], [[True, False]], [[True]]]
+    n = len(calc.fits)
+    assert p.plan(_result())[0] == plan and len(calc.fits) == n  # cached per key
+
+
+def test_planner_unanswered_link_stays_null(tmp_path):
+    class Unknown(FitCalc):
+        UNKNOWN = {"Echo Strike"}
+
+    p = _planner(tmp_path, Unknown(), fit=calcwire.build_fit)
+    assert _applies(p.plan(_result(), wait=True)[0])[1] == [[True, None]]
+
+
+def test_planner_fit_failure_or_no_fit_or_calc_off_is_null(tmp_path):
+    p = _planner(tmp_path, FitCalc(fail_fit=True), fit=calcwire.build_fit)
+    plan, word = p.plan(_result(), wait=True)
+    assert word == "pob" and _applies(plan)[1] == [[None, None]]
+    q = _planner(tmp_path, FitCalc())  # no fit callable
+    assert _applies(q.plan(_result(), wait=True)[0])[1] == [[None, None]]
+    off = _planner(tmp_path, None, fit=calcwire.build_fit)
+    plan, word = off.plan(_result(scored=False))
+    assert word == "calc_off" and _applies(plan)[1] == [[None, None]]
+
+
+def test_planner_fits_survive_a_missing_base(tmp_path):
+    """A run with no carrier base still records PoB's support answers; the
+    re-run once the snapshot lands does not ask them again."""
+    calc = FitCalc()
+    p = _planner(tmp_path, calc, bases=False, fit=calcwire.build_fit)
+    plan, word = p.plan(_result(), wait=True)
+    assert word == "no_base" and _applies(plan)[1] == [[True, False]]
+    n = len(calc.fits)
+    p.plan(_result(), wait=True)
+    assert len(calc.fits) == n
 
 
 def test_plan_is_deterministic(tmp_path):
@@ -424,6 +531,22 @@ def test_route_plan_with_the_calc_gives_pob_focus(tmp_path):
     assert first["focus"] in ("pending", "pob")
     core.kindler_plan.join(10)
     assert _post(core, {"id": tab, "op": "plan"})[1]["focus"] == "pob"
+
+
+def test_route_planner_asks_pob_for_support_fit(tmp_path):
+    core = _Core(tmp_path, None)
+    plug.attach(core)
+    assert core.kindler_plan.fit is calcwire.build_fit
+    calc = FitCalc()
+    core = _route_core(tmp_path, calc)
+    core.kindler_plan.fit = calcwire.build_fit
+    tab = core.gen_builds.add(cls="Warrior")
+    _post(core, {"id": tab})
+    core.kindler.join(10)
+    _post(core, {"id": tab, "op": "plan"})
+    core.kindler_plan.join(10)
+    body = _post(core, {"id": tab, "op": "plan"})[1]
+    assert _applies(body["plan"]) == [[[True]], [[True, False]], [[True]]]
 
 
 def test_route_plan_refuses_extra_fields_and_gone_tab(tmp_path):
