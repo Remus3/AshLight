@@ -508,7 +508,8 @@ test("readingView: the reading state, the log path and the opt-out", () => {
     }
   }
   assert.match(APP, /\$\("consent-no"\)\.hidden = !rv\.stop;/);
-  assert.match(APP, /setPill\(\$\("book-state"\), v\.pill\.state, v\.pill\.glyph, v\.pill\.word\);/);
+  // TEST-WEB-PANELS-C1 (adjudicator ruling, wave 39): renderRates lives in web/panels/rates.js
+  assert.match(web.source("rates.js"), /setPill\(\$\("book-state"\), v\.pill\.state, v\.pill\.glyph, v\.pill\.word\);/);
 });
 
 test("rail.js: no timer, request, clipboard, live region or inline style; ASCII", () => {

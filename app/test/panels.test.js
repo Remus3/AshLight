@@ -8,8 +8,10 @@
    Moved so far: web/panels/build.js ("loaded-build", the TC-VIEW block;
    TEST-WEB-PANELS-A), and from TEST-WEB-PANELS-B the settings-side blocks
    web/panels/layout.js ("layout"), weights.js ("weights"), gfx.js ("gfx")
-   and webdata.js ("webdata"), each under the name and order app.js gave
-   it before the move. Fixture values are invented. */
+   and webdata.js ("webdata"), and from TEST-WEB-PANELS-C1 the Play-side
+   blocks web/panels/itemcheck.js ("eval"), rates.js ("price") and
+   events.js ("events"), each under the name and order app.js gave it
+   before the move. Fixture values are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const vm = require("node:vm");
@@ -22,7 +24,8 @@ const APP = web.source("app.js");
 const BUILD_SRC = web.source("build.js");
 
 /* one moved panel per row: file, registered name, order */
-const MOVED = [["build.js", "loaded-build", 9], ["layout.js", "layout", 200],
+const MOVED = [["build.js", "loaded-build", 9], ["itemcheck.js", "eval", 20],
+  ["rates.js", "price", 40], ["events.js", "events", 90], ["layout.js", "layout", 200],
   ["weights.js", "weights", 220], ["gfx.js", "gfx", 230], ["webdata.js", "webdata", 250]];
 const B_FILES = ["layout.js", "weights.js", "gfx.js", "webdata.js"];
 
@@ -76,7 +79,8 @@ test("the loaded build paints and wires just before app.js's build entry, either
   runPanel(BUILD_SRC, { ALApp: page });
   runApp(page);
   const names = page.names();
-  assert.deepEqual(names.slice(0, 3), ["loaded-build", "build", "eval"]);
+  // TEST-WEB-PANELS-C1: "eval" (20) is a panel file of its own now
+  assert.deepEqual(names.slice(0, 3), ["loaded-build", "build", "chars"]);
   // the explicit order keeps it first even when app.js registers first
   const late = quietRegistry().reg;
   runApp(late);
@@ -108,12 +112,14 @@ test("app.js no longer holds the moved block and hands over exactly what the pan
   const bound = [...new Set([...all.matchAll(/\bhost\.([A-Za-z$]+)/g)].map((m) => m[1]))].sort();
   assert.deepEqual(bound, keys);
   keys.forEach((k) => {
-    if (k !== "token" && k !== "cardOpener" && k !== "webLink") {
+    if (!["token", "cardOpener", "webLink", "evalLink", "ratesLink"].includes(k)) {
       assert.equal(typeof reg.host[k], "function", k);
     }
   });
-  // filled by web/panels/webdata.js on its wire
+  // filled by web/panels/webdata.js, itemcheck.js and rates.js on their wires
   assert.deepEqual(Object.keys(reg.host.webLink), []);
+  assert.deepEqual(Object.keys(reg.host.evalLink), []);
+  assert.deepEqual(Object.keys(reg.host.ratesLink), []);
 });
 
 test("the panel adds no clipboard read, timer, request or live region (decisions 0014, 0034)", () => {
@@ -539,5 +545,178 @@ test("each settings panel says why when web/app.js has not set the host", () => 
     reg.start();
     assert.equal(said.length, 1, file);
     assert.match(said[0], new RegExp("^panel " + name + " wire failed: " + name + ": no page host"));
+  }
+});
+
+/* ---- TEST-WEB-PANELS-C1: the Play-side blocks (item check, rates and
+   price, recent events). The trades block is not recreated: the redesign
+   replaced it by Play's feed region (web/feed.js). */
+const C_FILES = ["itemcheck.js", "rates.js", "events.js"];
+const C_SRC = Object.fromEntries(C_FILES.map((f) => [f, web.source(f)]));
+
+test("app.js no longer holds the Play-side blocks; each lives in its panel", () => {
+  const blocks = {
+    "itemcheck.js": ["paintEvalRows", "textRow", "renderEval"],
+    "rates.js": ["textRow", "paintPricesList", "renderRates", "renderMovers", "loadRates",
+      "pollRates", "renderPrice"],
+    "events.js": ["evTag", "evShows", "evChips", "evStart", "renderEvents"]
+  };
+  for (const [file, fns] of Object.entries(blocks)) {
+    for (const fn of fns) {
+      assert.ok(new RegExp("\\n  function " + fn + "\\(").test(C_SRC[file]), file + " lacks " + fn);
+      assert.ok(!new RegExp("function " + fn + "\\(").test(APP), "app.js still defines " + fn);
+    }
+  }
+  // the package's accept grep, and the trades block stays gone
+  assert.doesNotMatch(APP, /function (renderEvents|renderTrades|dismissTrade|renderEval|renderRates|renderPrice)\(/);
+  for (const f of C_FILES) { assert.doesNotMatch(strip(C_SRC[f]), /renderTrades|dismissTrade|ALTrades/, f); }
+  for (const v of ["evalShown", "EVAL_ROWS", "evalRows", "RATES_POLL_MS", "ratesDoc", "ratesAgain",
+    "priceShown", "PRICE_ROWS", "rateRows", "trendRows", "renderedEvents", "evPager", "EV_SIZE",
+    "EV_NONE", "window.ALTc", "window.ALPrices"]) {
+    assert.ok(!APP.includes(v), "app.js still names " + v);
+  }
+  for (const name of ["eval", "price", "events"]) {
+    assert.ok(!APP.includes('name: "' + name + '"'), "app.js still registers " + name);
+  }
+  // connect() still reads the rates right after the panels' first reads,
+  // and start() no longer sets the poll timer (the rates panel's wire does)
+  const at = APP.indexOf("  function connect() {");
+  const conn = APP.slice(at, APP.indexOf("\n  }\n", at));
+  assert.ok(conn.indexOf("connectReads.forEach") < conn.indexOf("A.host.loadRates();"));
+  assert.ok(!APP.includes("setInterval(pollRates"));
+});
+
+test("the Play-side panels add no clipboard, live region or new request; the timers moved as they were", () => {
+  const ENDPOINTS = { "itemcheck.js": [], "rates.js": ["/api/rates"], "events.js": [] };
+  for (const f of C_FILES) {
+    const src = C_SRC[f];
+    assert.doesNotMatch(src, /[^\x0a\x20-\x7e]/, f);
+    assert.ok(!src.includes("\r"), f);
+    const code = strip(src);
+    for (const bad of ["requestAnimationFrame", "XMLHttpRequest", "EventSource", "fetch(",
+      "innerHTML", "aria-live", "clipboard", "localStorage", "sessionStorage"]) {
+      assert.ok(!code.includes(bad), f + ": " + bad);
+    }
+    const paths = [...new Set([...code.matchAll(/"(\/api\/[a-z-]+)"/g)].map((m) => m[1]))].sort();
+    assert.deepEqual(paths, ENDPOINTS[f], f);
+    if (f !== "rates.js") {
+      assert.ok(!code.includes("setInterval") && !code.includes("setTimeout"), f);
+    }
+  }
+  // the rates panel keeps app.js's two timers: the 3 s re-read after a
+  // refresh the core just started and the 5 minute poll
+  const r = strip(C_SRC["rates.js"]);
+  assert.deepEqual([...r.matchAll(/set(Interval|Timeout)\(([a-zA-Z]+), ([A-Z_0-9]+)\)/g)].map((m) => m.slice(1)),
+    [["Timeout", "loadRates", "3000"], ["Interval", "pollRates", "RATES_POLL_MS"]]);
+  assert.match(r, /var RATES_POLL_MS = 5 \* 60 \* 1000;/);
+  assert.match(r, /if \(!document\.hidden && isLive\(\)\) \{ loadRates\(\); \}/);
+});
+
+/* a fake page for the Play-side panels */
+function playPage(answers) {
+  const els = {};
+  const $ = (id) => { if (!els[id]) { els[id] = node(id); } return els[id]; };
+  const calls = { api: [], pager: [], timers: [], evRows: [] };
+  const snap = { price: null, price_watch: null, eval: null };
+  const host = {
+    $, token: "abc123", clock: () => "12:00",
+    api(method, path, body) {
+      calls.api.push([method, path, body]);
+      return Promise.resolve(answers[method + " " + path]);
+    },
+    getSnap: () => snap,
+    el(tag, cls, text) {
+      const n = node("");
+      n.tag = tag;
+      n.className = cls || "";
+      if (text != null) { n.textContent = text; }
+      return n;
+    },
+    setLine(n, text) { n.textContent = text; },
+    setText(n, text) { n.textContent = text; },
+    setPill(n, state, glyph, word) { n.setAttribute("data-state", state); n.textContent = word; },
+    isLive: () => true,
+    linkPager(slot, label, size, opts) { calls.pager.push([slot, opts.rows.map((r) => r.text)]); },
+    webLink: {},
+    webState: () => ({ on: false, busy: false, doc: null }),
+    evalLink: {},
+    ratesLink: {}
+  };
+  const reg = R.create({ warn: (t) => { throw new Error(t); } });
+  reg.host = host;
+  const sandbox = {
+    ALApp: reg, ALTc: TC, ALPrices: PR, ALDash: DASH, console,
+    ALSearch: {
+      sizeClass: () => "full",
+      rowPager() {
+        return { node: node("pager"), set(rows) { calls.evRows.push(rows); }, state: () => ({ hasPrev: false }) };
+      }
+    },
+    document: { hidden: false, createDocumentFragment: () => node(""), querySelectorAll: () => [] },
+    setInterval(f, ms) { calls.timers.push(["interval", f.name, ms]); return 1; },
+    setTimeout(f, ms) { calls.timers.push(["timeout", f.name, ms]); return 2; },
+    clearTimeout() {}
+  };
+  C_FILES.forEach((f) => runPanel(C_SRC[f], sandbox));
+  return { reg, host, $, calls, snap };
+}
+
+test("the Play-side panels register in today's order and fill app.js's links on their wires", async () => {
+  const p = playPage({ "GET /api/rates": { web_data: false } });
+  assert.deepEqual(p.reg.names(), ["eval", "price", "events"]);
+  p.reg.start();
+  assert.deepEqual(p.calls.api, []); // wiring reads nothing
+  assert.deepEqual(Object.keys(p.host.evalLink), ["price"]);
+  assert.deepEqual(Object.keys(p.host.ratesLink).sort(),
+    ["getRatesDoc", "loadRates", "paintPricesList", "renderPrice", "renderRates"]);
+  assert.deepEqual(p.calls.timers, [["interval", "pollRates", 5 * 60 * 1000]]);
+  // connect()'s read through the host forwarder: one GET, then the cards
+  assert.equal(p.host.ratesLink.getRatesDoc(), null);
+  p.host.ratesLink.loadRates();
+  await tickOver();
+  assert.deepEqual(p.calls.api, [["GET", "/api/rates", undefined]]);
+  assert.deepEqual(plain(p.host.ratesLink.getRatesDoc()), { web_data: false });
+  assert.notEqual(p.$("rates-pill").getAttribute("data-state"), "failed");
+  assert.ok(p.calls.pager.some(([slot]) => slot === "prices-list"));
+  // the price rows reach the Last item card's one list through evalLink
+  assert.deepEqual(plain(p.calls.pager[p.calls.pager.length - 1]), ["eval-rows", []]);
+});
+
+test("the item check and recent events paint as before the move", () => {
+  const p = playPage({});
+  p.reg.start();
+  p.reg.render({ eval: { id: 5, ok: false, text: { item: "Iron Ring" } }, price: null, recent_events: [
+    { at: 1, type: "level_up", text: "Reached level 2." },
+    { at: 2, type: "death", text: "You died." }] });
+  assert.equal(p.$("eval-empty").hidden, true);
+  assert.equal(p.$("eval-body").hidden, false);
+  assert.equal(p.$("eval-word").textContent, "Not checked");
+  assert.ok(p.calls.pager.some(([slot]) => slot === "eval-rows"));
+  assert.equal(p.$("price-body").hidden, true);
+  // the same check again paints nothing; a push with no check empties the card
+  const painted = p.calls.pager.length;
+  p.reg.render({ eval: { id: 5, ok: false, text: { item: "Iron Ring" } }, price: null, recent_events: [] });
+  assert.equal(p.calls.pager.filter(([slot]) => slot === "eval-rows").length,
+    p.calls.pager.slice(0, painted).filter(([slot]) => slot === "eval-rows").length);
+  p.reg.render({ eval: null, price: null, recent_events: [
+    { at: 1, type: "level_up", text: "Reached level 2." },
+    { at: 2, type: "death", text: "You died." }] });
+  assert.equal(p.$("eval-empty").hidden, false);
+  assert.equal(p.$("eval-body").hidden, true);
+  // newest first, with the local time and the tag
+  const rows = p.calls.evRows[p.calls.evRows.length - 1];
+  assert.deepEqual(plain(rows.map((r) => r.text)), ["12:00 Death: You died.", "12:00 Level: Reached level 2."]);
+  assert.equal(p.$("events").hidden, false);
+  assert.equal(p.$("events-empty").hidden, true);
+  assert.equal(p.$("events-none").hidden, true);
+});
+
+test("each Play-side panel says why when web/app.js has not set the host", () => {
+  for (const [file, name] of MOVED.filter(([f]) => C_FILES.includes(f))) {
+    const { reg, said } = quietRegistry();
+    runPanel(C_SRC[file], { ALApp: reg, ALTc: TC, ALPrices: PR, ALDash: DASH });
+    if (file === "events.js") { reg.render({}); } else { reg.start(); }
+    assert.equal(said.length, 1, file);
+    assert.match(said[0], new RegExp("^panel " + name + " (wire|paint) failed: " + name + ": no page host"));
   }
 });
