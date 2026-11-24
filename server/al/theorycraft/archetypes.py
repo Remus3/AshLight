@@ -43,7 +43,13 @@ Three layers:
   the cached repoe-fork base_items snapshot names it as a released weapon
   base; otherwise checked=False with a note, and the engine composes no
   weapon (never guessed). Set lookups only: no route search at run time
-  (point 14).
+  (point 14). KINDLER-GEM-VARIANT: given the gem variants of the pinned
+  PoB checkout's Gems.lua (theorycraft.pobtext, read as text), a skill gem
+  whose name PoB holds under several weapon variants gets "skill_id": the
+  one variant whose weapon list is exactly the checked weapon's item
+  class, else the one variant that lists it (skill_id()). With no checked
+  weapon, no variant data or no single fit the key is absent and the
+  composer writes the gem by name only, as before (never guessed).
 - `check`: the validator, for tests and the template package only. It
   runs the breadth-first connectivity check from the class start (and the
   ascendancy start), the allocation-order check and the point budget at
@@ -65,7 +71,7 @@ from pathlib import Path
 
 from .. import hotreload
 from ..text import kindler as words
-from . import datacredit, model, treedata
+from . import datacredit, model, pobtext, treedata
 
 PATH = Path(__file__).resolve().parent.parent / "data" / "archetypes.json"
 GEMS_FILE = "gems.json"
@@ -563,18 +569,45 @@ def _weapon(name, bases, notes, where):
             "level": hit["level"], "checked": True}
 
 
-def resolve(table, tree=None, gems=None, bases=None):
+def skill_id(name, weapon, variants):
+    """KINDLER-GEM-VARIANT: the PoB skill id of gem `name` for a resolved
+    `weapon` ({"item_class", "checked", ...} or None) from `variants`
+    (pobtext.parse_gem_variants form), or None. Only a name with two or
+    more variants gets one, only with a checked weapon: the one variant
+    whose weapon list is exactly the weapon's item class, else the one
+    variant that lists it; None when none or several fit. Never guessed."""
+    rows = (variants or {}).get(pobtext.key(name))
+    if not rows or len(rows) < 2:
+        return None
+    if not (isinstance(weapon, dict) and weapon.get("checked") and weapon.get("item_class")):
+        return None
+    cls = weapon["item_class"]
+    fits = [r for r in rows if r["weapons"] == [cls]] or \
+        [r for r in rows if cls in r["weapons"]]
+    return fits[0]["skill_id"] if len(fits) == 1 else None
+
+
+def _skill_gem(name, gems, notes, where, weapon, variants):
+    info = _gem(name, gems, notes, where)
+    sid = skill_id(name, weapon, variants)
+    return dict(info, skill_id=sid) if sid else info
+
+
+def resolve(table, tree=None, gems=None, bases=None, variants=None):
     """The run-time view of a validated table: unknown node ids dropped
     with a note, each gem with checked and a level (snapshot first, else
-    the authored one), the weapon base checked against `bases`. `tree` is
-    a TreeGraph or None, `gems` a gem_index or None, `bases` a base_index
-    or None. Lookups only; the route search lives in check()."""
+    the authored one), the weapon base checked against `bases`, a skill
+    gem's PoB skill id from `variants` (skill_id()). `tree` is a TreeGraph
+    or None, `gems` a gem_index or None, `bases` a base_index or None,
+    `variants` pobtext gem variants or None. Lookups only; the route search
+    lives in check()."""
     notes, out = [], []
     for t in (table or {}).get("templates", ()):
         stages = []
+        weapon = _weapon(t.get("weapon"), bases, [], t["id"])
         for st in t["stages"]:
             where = f"{t['id']} {st['id']}"
-            skills = [{"gem": _gem(s["name"], gems, notes, where),
+            skills = [{"gem": _skill_gem(s["name"], gems, notes, where, weapon, variants),
                        "sockets": s["sockets"],
                        "supports": [_gem(n, gems, notes, where) for n in s["supports"]]}
                       for s in st["skills"]]

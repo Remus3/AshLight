@@ -53,8 +53,9 @@ def test_live_real_templates_score_and_repeat_byte_identical(warm_bridge):
     # KINDLER-WEAPON-BASE: with the authored weapon base composed, every
     # attack template (melee, bow) scores above 0 DPS: its best variant
     # (live finding: the mace template's Boneshatter read 0 with no
-    # weapon). Mace Strike alone may still read 0: its name matches several
-    # PoB weapon variants (a gem resolution matter, not the base).
+    # weapon). KINDLER-GEM-VARIANT: every named skill of the early stages
+    # scores too, Mace Strike included (its name matches several PoB weapon
+    # variants; the composer names the one skill id the weapon picks).
     if not inputs["view"]["bases"]:
         return
     attack = {t["id"] for t in inputs["view"]["templates"]
@@ -75,3 +76,36 @@ def test_live_real_templates_score_and_repeat_byte_identical(warm_bridge):
         if level == 50:
             assert [r["skill"] for r in rows] == ["Boneshatter"] and rows[0]["dps"] > 0
     assert seen == attack
+
+
+@LIVE_CALC
+@pytest.mark.slow  # up to eight PoB builds through the live calc (TEST-SLOW-BUDGET)
+def test_live_every_early_attack_skill_scores_above_zero(warm_bridge):
+    """KINDLER-GEM-VARIANT: each attack template's named skill of the first
+    zone and the first act stage scores above 0 DPS with its weapon base
+    (live finding: Mace Strike by name read 0, by skill id 5.96)."""
+    inputs = kindler.Sources().inputs()
+    view = inputs["view"]
+    if inputs["tree"] is None or not view["templates"] or not view["bases"]:
+        pytest.skip("cached tree export, template table or base_items absent")
+    calc = calcwire.make_calc(lambda: warm_bridge)
+    attack = [t for t in view["templates"] if set(t["toggles"]) & {"melee", "bow"}]
+    assert attack
+    variant_gems = 0
+    for t in attack:
+        toggle = sorted(set(t["toggles"]) & {"melee", "bow"})[0]
+        tab = {"class": t["class"],
+               "toggles": dict(genstore.default_toggles(), **{toggle: "yes"})}
+        for level in (5, 20):
+            si = kindler.stage_index(t, kindler.level_band(level))
+            skills = t["stages"][si]["skills"]
+            variant_gems += sum(1 for sk in skills if sk["gem"].get("skill_id"))
+            doc = kindler.generate(inputs, tab, level, calc, limit=len(skills))
+            assert doc["scored"] and not doc["partial"], doc
+            rows = [r for r in doc["candidates"] if r["template"] == t["id"]]
+            assert sorted(r["skill"] for r in rows) == sorted(
+                sk["gem"]["name"] for sk in skills), (t["id"], level, rows)
+            for r in rows:
+                assert math.isfinite(r["dps"]) and r["dps"] > 0, (t["id"], level, r)
+    # the pinned PoB Gems.lua was read: Mace Strike carries its skill id
+    assert variant_gems, "no skill id composed; check the Gems.lua pin"

@@ -619,3 +619,77 @@ def test_weapon_note_never_reaches_a_player():
         if path.suffix in (".js", ".html"):
             text = path.read_text(encoding="utf-8")
             assert "not composed" not in text and "weapon_unknown" not in text, path
+
+
+# --- KINDLER-GEM-VARIANT: PoB skill ids per gem variant ----------------------
+
+def _variants():
+    from server.al.theorycraft import pobtext
+    return pobtext.parse_gem_variants(kf.gems_lua_text())
+
+
+def test_parse_gem_variants_reads_name_effect_and_weapons():
+    got = _variants()
+    assert got["hammer swing"] == [
+        {"skill_id": "TestHammerOneHand", "weapons": ["One Hand Mace"]},
+        {"skill_id": "TestHammerDual", "weapons": ["One Hand Mace", "Two Hand Mace"]},
+        {"skill_id": "TestHammerTwoHand", "weapons": ["Two Hand Mace"]}]
+    assert got["ground crack"] == [{"skill_id": "TestGroundCrack",
+                                    "weapons": ["Two Hand Mace"]}]
+    assert got["war cry"] == [{"skill_id": "TestWarCry", "weapons": []}]
+
+
+def test_parse_gem_variants_skips_unreadable_blocks():
+    from server.al.theorycraft import pobtext
+    text = kf.gems_lua_text()
+    broken = text.replace('grantedEffectId = "TestWarCry"', 'grantedEffectId = "bad id!"')
+    assert "war cry" not in pobtext.parse_gem_variants(broken)
+    nameless = text.replace('\t\tname = "Ground Crack",\n', "")
+    assert "ground crack" not in pobtext.parse_gem_variants(nameless)
+    for bad in (None, 5, "", "\n" * (pobtext.MAX_LINES + 2)):
+        assert pobtext.parse_gem_variants(bad) == {}
+
+
+def _weapon(cls, checked=True):
+    return {"name": "x", "item_class": cls, "level": 1, "checked": checked}
+
+
+def test_skill_id_picks_the_one_variant_of_the_weapon_class():
+    v = _variants()
+    assert ar.skill_id("Hammer Swing", _weapon("Two Hand Mace"), v) == "TestHammerTwoHand"
+    assert ar.skill_id("hammer  swing", _weapon("One Hand Mace"), v) == "TestHammerOneHand"
+
+
+def test_skill_id_is_never_guessed():
+    v = _variants()
+    # one variant: PoB's own name lookup is already exact; nothing added
+    assert ar.skill_id("Ground Crack", _weapon("Two Hand Mace"), v) is None
+    # several variants and no checked weapon, or a class none fits
+    assert ar.skill_id("Hammer Swing", None, v) is None
+    assert ar.skill_id("Hammer Swing", _weapon("Two Hand Mace", checked=False), v) is None
+    assert ar.skill_id("Hammer Swing", _weapon("Bow"), v) is None
+    assert ar.skill_id("Hammer Swing", _weapon("Two Hand Mace"), None) is None
+    assert ar.skill_id("Hammer Swing", _weapon("Two Hand Mace"), {}) is None
+    # two variants fit the class and neither names it alone
+    two = {"hammer swing": [{"skill_id": "A", "weapons": ["Bow", "Two Hand Mace"]},
+                            {"skill_id": "B", "weapons": ["Two Hand Mace", "Spear"]}]}
+    assert ar.skill_id("Hammer Swing", _weapon("Two Hand Mace"), two) is None
+    # one fits only through a list: it is the one
+    one = {"hammer swing": [{"skill_id": "A", "weapons": ["Bow"]},
+                            {"skill_id": "B", "weapons": ["Two Hand Mace", "Spear"]}]}
+    assert ar.skill_id("Hammer Swing", _weapon("Two Hand Mace"), one) == "B"
+
+
+def test_resolve_sets_skill_ids_for_skill_gems_only():
+    table = ar.validate(kf.table_doc())
+    view = ar.resolve(table, tree=_tree(), gems=_gems(), bases=_bases(),
+                      variants=_variants())
+    st = view["templates"][0]["stages"][0]
+    assert st["skills"][0]["gem"]["skill_id"] == "TestHammerTwoHand"
+    assert all("skill_id" not in s for s in st["skills"][0]["supports"])
+    mid = view["templates"][0]["stages"][1]
+    assert "skill_id" not in mid["skills"][0]["gem"]  # one variant
+    plain = ar.resolve(table, tree=_tree(), gems=_gems(), bases=_bases())
+    assert "skill_id" not in plain["templates"][0]["stages"][0]["skills"][0]["gem"]
+    no_base = ar.resolve(table, tree=_tree(), gems=_gems(), variants=_variants())
+    assert "skill_id" not in no_base["templates"][0]["stages"][0]["skills"][0]["gem"]

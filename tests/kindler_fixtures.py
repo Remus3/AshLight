@@ -86,6 +86,32 @@ def bases_doc():
     }
 
 
+def gems_lua_text():
+    """KINDLER-GEM-VARIANT: a tiny text in the line shape of PoB's
+    src/Data/Gems.lua (one `\\t["<id>"] = {` block per gem, `\\t\\tname`,
+    `\\t\\tgrantedEffectId` and `\\t\\tweaponRequirements` lines, a nested
+    tags table). "Hammer Swing" has three weapon variants under one name;
+    "Ground Crack" one. Every id is invented."""
+    def block(key, name, effect, weapons=None):
+        lines = [f'\t["Metadata/Items/Gems/{key}"] = {{',
+                 f'\t\tname = "{name}",',
+                 f'\t\tbaseTypeName = "{name}",',
+                 f'\t\tgrantedEffectId = "{effect}",',
+                 "\t\ttags = {", "\t\t\tattack = true,", "\t\t},"]
+        if weapons is not None:
+            lines.append(f'\t\tweaponRequirements = "{weapons}",')
+        return lines + ["\t\tnaturalMaxLevel = 20,", "\t},"]
+    lines = ["-- invented test data in the shape of a generated gem table", "",
+             "return {"]
+    lines += block("GemHammer1H", "Hammer Swing", "TestHammerOneHand", "One Hand Mace")
+    lines += block("GemHammerDual", "Hammer Swing", "TestHammerDual",
+                   "One Hand Mace, Two Hand Mace")
+    lines += block("GemHammer2H", "Hammer Swing", "TestHammerTwoHand", "Two Hand Mace")
+    lines += block("GemGroundCrack", "Ground Crack", "TestGroundCrack", "Two Hand Mace")
+    lines += block("GemWarCry", "War Cry", "TestWarCry")
+    return "\n".join(lines + ["}", ""])
+
+
 CHECKED = "2026-11-23"
 
 

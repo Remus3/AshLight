@@ -271,3 +271,47 @@ def test_weapon_bases_are_released_bases_that_fit_in_base_items(table):
     assert not [n for n in view["notes"] if "weapon" in n]
     for t in view["templates"]:
         assert t["weapon"] is None or t["weapon"]["checked"] is True, t["id"]
+
+
+# --- KINDLER-GEM-VARIANT: PoB skill ids of the pinned Gems.lua ---------------
+
+@pytest.fixture(scope="module")
+def variants():
+    from server.al import paths
+    from server.al.theorycraft import pobtext
+    pins = json.loads(paths.tc_pins_file().read_text(encoding="ascii"))
+    assert pins["pob2_files"][pobtext.GEMS]["commit"] == pins["pob2"]["commit"]
+    root = pobtext.checkout_root(pins)
+    if root is None or not (root / "src" / "Data" / "Gems.lua").is_file():
+        pytest.skip("no pinned PoB checkout (optional calc component)")
+    got = pobtext.load_gem_variants(root, pins)
+    assert got, "PoB Gems.lua misses its pob2_files sha256 or the checkout marker"
+    return got
+
+
+def test_pinned_gems_text_still_parses(variants):
+    assert len(variants) > 500
+    # the case that needs per-variant ids: one name, three weapon variants
+    rows = variants["mace strike"]
+    assert len(rows) >= 2 and len({r["skill_id"] for r in rows}) == len(rows)
+
+
+def test_every_attack_skill_gem_has_one_pob_variant_for_its_weapon(table, variants):
+    """Each skill gem of an attack template names exactly one PoB variant
+    for the authored weapon: either the name is unique in PoB, or the
+    weapon class picks one checked id (never PoB's first-of-many)."""
+    bases = archetypes.load_bases(_cache("base_items.json"))
+    view = archetypes.resolve(table, bases=bases, variants=variants)
+    for t in view["templates"]:
+        if not set(t["toggles"]) & set(archetypes.ATTACK_TOGGLES):
+            continue
+        assert t["weapon"]["checked"], t["id"]
+        for st in t["stages"]:
+            for sk in st["skills"]:
+                name = sk["gem"]["name"]
+                rows = variants.get(name.lower())
+                assert rows, f"{t['id']} {st['id']}: {name} is not in PoB's gems"
+                if len(rows) > 1:
+                    assert sk["gem"].get("skill_id"), f"{t['id']} {st['id']}: {name}"
+                else:
+                    assert "skill_id" not in sk["gem"]
