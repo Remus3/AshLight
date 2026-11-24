@@ -336,6 +336,15 @@ test("the item's own asking price is the price row's value", () => {
   assert.equal(txt(doc, "ic-pval"), "Trade link ready");
 });
 
+test("a card with no word falls back to a design mark word, Not checked", () => {
+  /* TC-VERDICT-FALLBACK-WORD: the twin of server/al/text/itemcheck.py
+     VERDICT_FALLBACK; design 0001 section 9 rule 13 lists it. */
+  IC.reset();
+  assert.equal(IC.model(snapWith(card({ word: "" }))).word, "Not checked");
+  assert.equal(IC.model(snapWith(card({ word: 7 }))).word, "Not checked");
+  assert.ok(!/"Checked"/.test(SRC), "no bare Checked fallback left");
+});
+
 test("a wrong-typed snapshot reads as missing (fuzz)", () => {
   IC.reset();
   const doc = makeDoc();

@@ -591,7 +591,7 @@ def _compare_row(text, value=""):
 
 def _strip_word(sentence, word):
     """The reason first: "Upgrade: 12 points more ..." -> "12 points more ..."."""
-    for w in (word, "Downgrade", "Upgrade", "Sidegrade", "Checked"):
+    for w in (word, "Downgrade", "Upgrade", "Sidegrade", "Not checked"):
         if w and sentence.startswith(w + ": "):
             rest = sentence[len(w) + 2:]
             return rest[:1].upper() + rest[1:]

@@ -16,6 +16,9 @@ from .waystone import waystone_text
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
 # the overlay print these; neither builds verdict wording itself.
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
+# The word for a verdict the card does not name: one of the design 0001
+# section 9 rule 13 mark words (TC-VERDICT-FALLBACK-WORD).
+VERDICT_FALLBACK = "Not checked"
 # CARD-LINE-LIMIT-COPY: overlay lines are worded to fit common.CARD_LINE
 # (26 since CARD-LINE-LIMIT-FLIP).
 LINE_FIT = CARD_LINE
@@ -90,7 +93,7 @@ def _weapon_type_calc(best):
 
 
 def _compare_sentence(comp):
-    verdict = VERDICT_WORD.get(_key(comp.get("verdict")), "Checked")
+    verdict = VERDICT_WORD.get(_key(comp.get("verdict")), VERDICT_FALLBACK)
     slot = _text(comp.get("slot"), "that slot")
     if _weapon_skill(comp)[0]:
         where = slot if comp.get("empty") else f"{slot} ({_equipped_name(comp)})"
@@ -228,7 +231,7 @@ def eval_card_text(card, alert=None):
     elif not card.get("ok"):
         word = "Not checked"
     else:
-        word = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
+        word = VERDICT_WORD.get(_key(card.get("verdict")), VERDICT_FALLBACK)
     out.update(notes=[], word=word, tone=tone, answers=False)
     cardparts.words(card, out)
     caveat = build_alert_text(alert) if card.get("ok") and not ws else None
@@ -294,7 +297,7 @@ def _eval_lines(card):
     comps = _dicts(card.get("comparisons"))
     best = next((c for c in comps if c.get("slot") == card.get("slot")),
                 comps[0] if comps else {})
-    verdict = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
+    verdict = VERDICT_WORD.get(_key(card.get("verdict")), VERDICT_FALLBACK)
     slot = _text(card.get("slot"), "its slot")
     out["head"] = _delta_head(verdict, card.get("score_delta"), slot, best.get("empty"))
     counted = [stat_delta_text(s.get("key"), s.get("delta"))

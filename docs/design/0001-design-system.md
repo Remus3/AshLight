@@ -789,7 +789,8 @@ Generation rules:
   words, number or name first, no wrapping (`nowrap` + ellipsis).
 - Glance rule (F-095, TD-17): a card's first line starts with its answer,
   inside the 26-character clip: the verdict word on an item check card
-  (Upgrade, Sidegrade, Downgrade, Risky, No risky mods), the price word on
+  (one of the section 9 rule 13 mark words: Upgrade, Sidegrade, Downgrade,
+  Not checked, Risky, No risky mods), the price word on
   a price card (`Price:`), the buyer on a trade card (`Trade: <buyer>`),
   or one of the fixed status words of a card that has no verdict (No
   build loaded, Not an item, Can't compare this, Build loaded, Build not

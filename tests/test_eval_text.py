@@ -181,7 +181,7 @@ def test_every_mark_has_a_word():
     down = eval_card_text(card(verdict="downgrade", score_delta=-3))
     assert (down["word"], down["tone"]) == ("Downgrade", "downgrade")
     odd = eval_card_text(card(verdict=None))
-    assert (odd["word"], odd["tone"]) == ("Checked", "")
+    assert (odd["word"], odd["tone"]) == ("Not checked", "")
     risky = {"ok": False, "error": "no gear slot for this item class",
              "waystone": {"tier": 5, "risky": [{"label": "Monsters fire extra projectiles",
                                                 "short": "Extra projectiles"}]}}
