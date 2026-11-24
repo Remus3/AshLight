@@ -25,7 +25,9 @@ focus word ("pob", "pending" while one PoB focus run works on the
 planner's own daemon worker, "calc_off", ...) and, while the tab's follow
 flag is on, the stage to highlight from the snapshot's published area id,
 area level and level (null while it is off or nothing is known). It never
-claims a step was done.
+claims a step was done. KINDLER-SUPPORT-FIT: each support link's "applies"
+is Path of Building's own answer (true / false) once that run has asked
+it, null before or for a link PoB did not answer.
 
 Nothing regenerates by itself (point 4): only this route starts a run.
 Behind the handler's Host / Origin / Sec-Fetch-Site / token guard; the
@@ -33,7 +35,7 @@ body is capped at the handler's MAX_BODY (4096). Nothing is sent to the
 game or anywhere else.
 """
 
-from ..theorycraft import genstore, kindler, kindlerplan
+from ..theorycraft import calcwire, genstore, kindler, kindlerplan
 
 ORDER = 110  # after plug/genbuilds.py (ORDER 100) made core.gen_builds
 OPS = ("generate", "read", "plan")
@@ -67,7 +69,14 @@ def attach(core):
     if saver is not None:
         engine.on_save_error = saver.mark
     core.kindler = engine
-    core.kindler_plan = kindlerplan.Planner(engine.sources, calc=lambda: _calc(core))
+    core.kindler_plan = _new_planner(core, engine)
+
+
+def _new_planner(core, engine):
+    """KINDLER-SUPPORT-FIT: the planner asks PoB, through the calc, whether
+    each support link applies (calcwire.build_fit)."""
+    return kindlerplan.Planner(engine.sources, calc=lambda: _calc(core),
+                               fit=calcwire.build_fit)
 
 
 def _engine(req):
@@ -80,7 +89,7 @@ def _engine(req):
 def _planner(core, engine):
     planner = getattr(core, "kindler_plan", None)
     if planner is None or planner.sources is not engine.sources:
-        planner = kindlerplan.Planner(engine.sources, calc=lambda: _calc(core))
+        planner = _new_planner(core, engine)
         core.kindler_plan = planner
     return planner
 

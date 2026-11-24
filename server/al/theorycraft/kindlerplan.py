@@ -33,7 +33,13 @@ character-level band, then the first stage planned at or above the level.
 It answers which stage to highlight and why, never that a step was done.
 
 `Planner` keeps one PoB focus run at a time on its own daemon worker and
-the weights per result key in memory (CACHE_MAX keys). Nothing here owns a
+the weights per result key in memory (CACHE_MAX keys). KINDLER-SUPPORT-FIT:
+with a `fit` callable (calcwire.build_fit), the same run also asks Path of
+Building, stage by stage of the composed build, whether each linked support
+applies to its skill (the bridge's "support_fit"), loading only the stages
+that still hold an unanswered link; the answers per result key fill the
+plan's "applies" (null until the run ends, or for a link PoB did not
+answer). Nothing here owns a
 calc, a tree search or an optimiser (decision 0004); nothing is read from
 the game, the clipboard or the screen, and nothing is fetched.
 """
@@ -306,10 +312,48 @@ def best_of(result, templates):
     return t, si, best.get("variant") or 0
 
 
+def _links(stage):
+    """The (skill, support) pairs of one template stage."""
+    return {(sk["gem"]["name"], s["name"]) for sk in stage["skills"] for s in sk["supports"]}
+
+
+def stage_fits(fit, calc, template, ids):
+    """{skill: {support: bool}}: PoB's support applicability for the
+    template's links, one composed build per stage (main skill 0) and only
+    for a stage that still holds an unanswered link. `fit(calc, build)` is
+    calcwire.build_fit; a stage whose call fails is left unanswered."""
+    out, asked = {}, set()
+    for si, st in enumerate(template["stages"]):
+        todo = _links(st) - asked
+        if not todo:
+            continue
+        asked |= todo
+        try:
+            got = fit(calc, kindler._Xml(kindler.compose_xml(template, si, 0, ids)))
+        except Exception:  # noqa: BLE001 - extra info only; never fail the plan
+            continue
+        for skill, sups in (got if isinstance(got, dict) else {}).items():
+            if not isinstance(sups, dict):
+                continue
+            for name, ok in sups.items():
+                if (skill, name) in todo and isinstance(ok, bool):
+                    out.setdefault(skill, {})[name] = ok
+    return out
+
+
+def _fit_of(fits):
+    """A build_plan `fit(skill, supports)` over stage_fits() answers."""
+    def fit(skill, supports):
+        mine = fits.get(skill) or {}
+        return {s: mine[s] for s in supports if s in mine}
+    return fit
+
+
 class Planner:
     """Plans for Kindler results. `sources` is a kindler.Sources (or the
-    same shape), `calc()` the calc callable or None, `fit` the support
-    applicability callable or None, `base_path` the base_items snapshot."""
+    same shape), `calc()` the calc callable or None, `fit(calc, build)` the
+    support applicability callable (calcwire.build_fit) or None, `base_path`
+    the base_items snapshot."""
 
     def __init__(self, sources, calc, fit=None, base_path=None):
         self.sources = sources
@@ -322,6 +366,7 @@ class Planner:
                                        from_doc=carrier_base_from_doc, share=True)
         self._lock = threading.Lock()
         self._cache = {}     # result key -> weights dict, or FOCUS_FAILED etc.
+        self._fits = {}      # result key -> stage_fits() answers
         self._running = None
         self._missing = False  # the last run found no carrier base
         self._thread = None
@@ -354,10 +399,9 @@ class Planner:
         tree = inputs.get("tree")
         calc = self._calc_now()
         if calc is None or not result.get("scored"):
-            return build_plan(template, tree=tree, fit=self.fit,
-                              note=FOCUS_CALC_OFF), FOCUS_CALC_OFF
+            return build_plan(template, tree=tree, note=FOCUS_CALC_OFF), FOCUS_CALC_OFF
         if tree is None:
-            return build_plan(template, fit=self.fit, note=FOCUS_NO_TREE), FOCUS_NO_TREE
+            return build_plan(template, note=FOCUS_NO_TREE), FOCUS_NO_TREE
         key = result.get("key")
         start = False
         with self._lock:
@@ -376,23 +420,38 @@ class Planner:
             got = self._cache.get(key)
             if got is None and self._missing and self._running is None:
                 got = FOCUS_NO_BASE
+            fits = self._fits.get(key)
+        fit = _fit_of(fits) if fits else None
         if isinstance(got, dict):
-            return build_plan(template, weights=got, fit=self.fit, tree=tree), FOCUS_POB
+            return build_plan(template, weights=got, fit=fit, tree=tree), FOCUS_POB
         word = got if isinstance(got, str) else FOCUS_PENDING
-        return build_plan(template, fit=self.fit, tree=tree, note=word), word
+        return build_plan(template, fit=fit, tree=tree, note=word), word
 
     def _run(self, key, calc, template, si, variant, tree):
         try:
+            try:
+                ids = kindler.tree_ids(tree, template)
+            except kindler.TreeIdsMissing:
+                ids = None
             base = self._base.get()
             if not base:
                 got = FOCUS_NO_BASE
+            elif ids is None:
+                got = FOCUS_FAILED
             else:
                 try:
-                    xml = kindler.compose_xml(template, si, variant,
-                                              kindler.tree_ids(tree, template))
+                    xml = kindler.compose_xml(template, si, variant, ids)
                     got = focus_weights(calc, xml, base, focus_keys(template))
-                except (kindler.TreeIdsMissing, delta.CalcError):
+                except delta.CalcError:
                     got = FOCUS_FAILED
+            with self._lock:
+                fits = self._fits.get(key)
+            if fits is None and self.fit is not None and ids is not None:
+                fits = stage_fits(self.fit, calc, template, ids)
+                with self._lock:
+                    self._fits[key] = fits
+                    while len(self._fits) > CACHE_MAX:
+                        self._fits.pop(next(iter(self._fits)))
             with self._lock:
                 if got == FOCUS_NO_BASE:  # asked again once the snapshot lands
                     self._missing = True
