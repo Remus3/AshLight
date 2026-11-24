@@ -20,13 +20,22 @@ on this computer; nothing goes on the network:
   (the value in Divine Orbs when the cached rates give that rate),
   change_7d, listings, few, volume, league, age_s, credit "Prices:
   poe.ninja"}, plus the unique's "icon" URL and "flavour" text when the
-  cache holds them.
+  cache holds them;
+- ITEM-INFO-POB-TEXT (decision 0083 points 1 and 3): "where_found"
+  {drops: [{boss, zone?, map?}], no_longer_obtainable?} from the Source
+  lines of the hash-pinned Path of Building PoE2 checkout, text-parsed by
+  theorycraft/pobtext.py, only while the optional calc component is
+  installed and each file matches its config/tc_pins.json pin; source id
+  "path-of-building". It never gives a name spelling, rarity, class or
+  release state (repoe-fork wins). Only the core's own lookup (the base
+  list at its default sidecar path) reads the checkout; a test runtime
+  reads none unless a reader is passed.
 
 A field with no source is absent, never guessed (no drop_level, drop
 rates, vendor or disenchant data; decision 0083 points 2 and 5). The
 reply is {"name", "fields", "sources"}: the cached spelling of the name
 (else the asked one), the fields found, and the source ids that gave them
-("repoe-fork", "poe.ninja"), so the popover credits only what it shows.
+("repoe-fork", "path-of-building", "poe.ninja"), so the popover credits only what it shows.
 An unknown name answers with empty fields.
 
 The tables are hot reloaded (decision 0042) and built on the first look,
@@ -37,9 +46,11 @@ module imports no network code.
 
 import re
 import time
+from pathlib import Path
 
 from . import hotreload, num
 from .text import iteminfo as text
+from .theorycraft import pobtext
 
 NAME_MAX = 120          # the price book keeps names to 120 characters too
 TEXT_MAX = 600          # description / directions
@@ -49,6 +60,8 @@ UNIQUES_NAME = "uniques.json"
 RELEASED = "released"
 CREDIT = text.CREDIT
 REPOE, NINJA = "repoe-fork", "poe.ninja"
+POB = pobtext.SOURCE_ID
+AUTO = object()   # ItemInfo(pob=AUTO): the pinned checkout for the core only
 DIVINE_ID, DIVINE_NAME = "divine", "divine orb"
 _MARKUP = re.compile(r"\[([^\[\]|]*)\|([^\[\]]*)\]|\[([^\[\]]*)\]")
 _CLASS_SPLIT = re.compile(r"(?<=[a-z])(?=[A-Z])")
@@ -181,13 +194,33 @@ def _empty_bases():
     return {"by_key": {}, "names": {}}
 
 
+def _default_bases_path():
+    from .theorycraft import basetypes  # lazy: only for the AUTO check
+    return basetypes.default_path()
+
+
+def auto_pob(bases_path):
+    """A pobtext.WhereFound for the core's own lookup (its base list at the
+    default sidecar path), else None (a test or demo runtime)."""
+    try:
+        if Path(bases_path).resolve() != _default_bases_path().resolve():
+            return None
+    except (OSError, ValueError, TypeError):
+        return None
+    return pobtext.WhereFound()
+
+
 class ItemInfo:
     """The lookup over the cached tables. `rates`: ninja.RatesClient (its
-    doc, book and enabled switch) or None."""
+    doc, book and enabled switch) or None. `pob`: a pobtext.WhereFound (or
+    any object with lookup(key)), None for none, AUTO (the default) for
+    auto_pob(bases_path)."""
 
-    def __init__(self, bases_path, uniques_path, rates=None, clock=time.time):
+    def __init__(self, bases_path, uniques_path, rates=None, clock=time.time,
+                 pob=AUTO):
         self.rates = rates
         self.clock = clock
+        self.pob = auto_pob(bases_path) if pob is AUTO else pob
         self.bases = hotreload.Watched(
             bases_path, None, name=text.BASES_NAME, default=_empty_bases,
             check=hotreload.check_json(MAX_BYTES), from_doc=bases_from_doc,
@@ -276,6 +309,17 @@ class ItemInfo:
             m["age_s"] = max(0, int(self.clock() - at))
         return m
 
+    # -- Path of Building Source lines (pinned text, calc component installed)
+    def _where(self, k):
+        lookup = getattr(self.pob, "lookup", None)
+        if not callable(lookup):
+            return None
+        try:
+            where = lookup(k)
+        except Exception:  # noqa: BLE001 - a bad reader omits the field
+            return None
+        return where if isinstance(where, dict) and where else None
+
     # -- the lookup
     def lookup(self, name):
         """{"name", "fields", "sources"} for one item name (see the module
@@ -302,6 +346,10 @@ class ItemInfo:
                 fields[f] = v
         if fields:
             sources.append(REPOE)
+        where = self._where(k)
+        if where:
+            fields["where_found"] = where
+            sources.append(POB)
         if self._web_on():
             hit, doc = self._price(k)
             if isinstance(hit, dict):

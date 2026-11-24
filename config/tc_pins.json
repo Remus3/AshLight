@@ -17,10 +17,90 @@
     "verified": "2026-11-17"
   },
   "pob2_files": {
-    "_doc": "Decision 0037 amendment (MATH-TRADESTAT-POB). sha256 of single files inside the pinned pob2 checkout that AshLight reads as data (never runs). Outside the setup pin digest. Re-read and update with every pob2 pin move; tests/test_tc_pob_drift_guard.py fails on a mismatch.",
+    "_doc": "Decision 0037 amendment (MATH-TRADESTAT-POB) and decision 0083 point 3 (ITEM-INFO-POB-TEXT). sha256 of single files inside the pinned pob2 checkout that AshLight reads as data (never runs): TradeSiteStats.lua for trade stat ids, WorldAreas.lua and every src/Data/Uniques/<slot>.lua holding a Source line for the item info popover's where-found rows (server/al/theorycraft/pobtext.py). Outside the setup pin digest. Re-read and update with every pob2 pin move (tools/tc_drift.py re-hashes each entry); tests/test_tc_pob_drift_guard.py fails on a mismatch and when a Uniques slot file with a Source line has no entry.",
     "src/Data/TradeSiteStats.lua": {
       "sha256": "00f5f45376a726ac93e5c129933c681a63e9fcaa368db17c4c15cb0cbc8cac53",
       "size": 1139860,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/WorldAreas.lua": {
+      "sha256": "fb053e3d2c69005ca482affb6b26f04205be6030ddab4a281a2620cf835423d4",
+      "size": 147506,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/amulet.lua": {
+      "sha256": "b51175583441db3cff5ab0e02d59d4370c489befd5546a151e3632dfbc12048b",
+      "size": 9625,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/belt.lua": {
+      "sha256": "2555c396153f6260fc912fe04c49386afe84ecf7a7e8e906c494c3033fb481a3",
+      "size": 8494,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/body.lua": {
+      "sha256": "62a4f4ae7685f7a299d87eb3393e3faf38ca3f503cca6ebcce8092fdb2c4df65",
+      "size": 26965,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/boots.lua": {
+      "sha256": "8983b511ebf73f5fcbd30abd52a44077c33ecadc903729294c266227e6527035",
+      "size": 8097,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/flask.lua": {
+      "sha256": "18296399fe7efb033087e46b20dd3e26fa94d3a33ec8e817de2488bf5ea974cf",
+      "size": 5158,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/gloves.lua": {
+      "sha256": "626da04d72736e826789f600c332936bebab4e9369514d098e9177e3c9a67b39",
+      "size": 11968,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/helmet.lua": {
+      "sha256": "139ece059e07d554dd68c23c84914eec39b431833143af78be99df169cbbb9f0",
+      "size": 16748,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/jewel.lua": {
+      "sha256": "d517fb32e951c2afaa37ec98cf2e403bbde8e75144b9d67d81d288bd01612e23",
+      "size": 3883,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/mace.lua": {
+      "sha256": "50c5adaaead9dc21b9df0271dfcb67ba67e52be5617a7ebc233b1b19a9eab532",
+      "size": 8656,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/quiver.lua": {
+      "sha256": "b2cac7a008da6e821d974927f0185872a2b0f7eaaf41e6e650a934182a574146",
+      "size": 3119,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/ring.lua": {
+      "sha256": "deb1e74b74b312fdaef48d112e061654c64df1db2da635ce231aaf60c9d8571e",
+      "size": 14676,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/sceptre.lua": {
+      "sha256": "c08e6fa99cdc943fa0698c599ff016e17f9fbb12bd7e4e9c8bc903aba30ec387",
+      "size": 4190,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/shield.lua": {
+      "sha256": "b308c284182324c7bea3b3b149b747f7f42044c2b8c6b5c6dc33352501dd9b5b",
+      "size": 12469,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/spear.lua": {
+      "sha256": "db246334741bc140b87ed24a9d2a2831b32184e22f714ec15cbda27a832da731",
+      "size": 4006,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/Uniques/staff.lua": {
+      "sha256": "207d803e0bbd55f501d2058bea88b3dae573b3c11b9a7afaddcf189b34a5fb42",
+      "size": 7854,
       "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
     }
   },

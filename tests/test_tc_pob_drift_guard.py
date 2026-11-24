@@ -297,3 +297,45 @@ def test_pinned_trade_site_stats_shape_and_hash():
     idx = tradestats.parse_pob_trade_stats(text)
     assert len(idx) > 1000, f"PoB data drift: only {len(idx)} explicit rows parsed. {TRADE_HINT}"
     assert tradestats.load_pob_index(path, pins) == idx
+
+
+# ITEM-INFO-POB-TEXT (decision 0083 point 3): the item info popover's
+# where-found rows read WorldAreas.lua and the Uniques slot files' Source
+# lines as data. Every such file is pinned in pob2_files, the pins match,
+# and the parse still finds the rows, so a pin move cannot silently drop
+# or change them.
+WHERE_HINT = ("Re-read src/Data/WorldAreas.lua and src/Data/Uniques/*.lua in the new "
+              "checkout, check the Source line and worldAreas block shapes still match "
+              "server/al/theorycraft/pobtext.py, and update pob2_files in "
+              "config/tc_pins.json.")
+
+
+@STATIC
+def test_pinned_where_found_files_shape_and_hash():
+    import hashlib
+    from server.al.theorycraft import pobtext
+    pins = bridge._load_pins()
+    pinned = dict(pobtext.pinned_files(pins))
+    assert pobtext.WORLD_AREAS in pinned, f"WorldAreas.lua has no pin. {WHERE_HINT}"
+    with_source = sorted(
+        f"{pobtext.UNIQUES_DIR}{p.name}" for p in (SRC / "Data" / "Uniques").glob("*.lua")
+        if any(line.startswith("Source:") for line in
+               p.read_text(encoding="utf-8", errors="replace").splitlines()))
+    missing = [rel for rel in with_source if rel not in pinned]
+    assert not missing, f"PoB data drift: Source lines in unpinned {missing}. {WHERE_HINT}"
+    for rel, want in pinned.items():
+        path = SRC.parent.joinpath(*rel.split("/"))
+        assert path.is_file(), f"PoB data drift: {rel} is gone. {WHERE_HINT}"
+        raw = path.read_bytes()
+        assert len(raw) <= pobtext.MAX_BYTES
+        assert hashlib.sha256(raw).hexdigest() == want, (
+            f"PoB data drift: {rel} sha256 differs from the pin. {WHERE_HINT}")
+    idx = pobtext.load(SRC.parent, pins)
+    assert sorted(idx["files"]) == sorted(pinned)
+    uniques = idx["uniques"]
+    assert len(uniques) >= 40, f"PoB data drift: only {len(uniques)} uniques. {WHERE_HINT}"
+    assert any(e.get("no_longer_obtainable") for e in uniques.values())
+    zones = {r["zone"] for e in uniques.values() for r in e["drops"] if "zone" in r}
+    known = [z for z in zones if pobtext.key(z) in idx["areas"]]
+    assert len(idx["areas"]) > 200 and len(known) >= 3, (
+        f"PoB data drift: WorldAreas names {len(known)} Source zones. {WHERE_HINT}")
