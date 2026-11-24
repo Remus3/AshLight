@@ -2153,6 +2153,159 @@ Packages moved down by the wave 26 re-plan (disjoint files).
 
 - DATA-CONTACT-DEFAULT [session, M 45m, build, P1, DR] Default contact: the project's issues page once the repository is public. Files: server/al/webfetch.py, server/al/core.py, server/al/theorycraft/snapshot.py, web/index.html, web/prices.js (+4 more). Deps: DATA-CONTACT-UI, DATA-WEBFETCH-GZIP, DATA-DIAG-SEAM, DATA-SNAP-TRIM, DATA-GUIDE-ONE-BLOCK, GP-10.
 
+### Wave 46: session 24 follow-ups (tests, snapshot, Kindler wiring, copy)
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 8 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: server/al/core.py (KINDLER-STORE-EXPORT-WIRE); README.md
+  (BUDGET-RETIRE-TAILER-IDLE); docs/design/0001-design-system.md
+  (TC-CARD-PARTS-DOC).
+- Integrator: ROADMAP.md rows of all 8 packages; docs/design/reviews.log:
+  KINDLER-COPY-SHEET, RUN-LEFTOVERS-CARD, TC-CARD-PARTS-DOC.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- GLANCE-PENDING-OUT [session, S 15m, build] Drop the stale DESIGN_TEXT_PENDING skip from the glance rules test. Files: tests/test_glance_rules.py. Deps: PLAY-TD-23-RECORDS.
+- AUTOSTART-PSEXE [session, S 20m, build] Autostart switch spawns the absolute System32 PowerShell. Files: app/client/launcher.js, app/test/autostart_switch.test.js, tests/test_audit_exe_path.py. Deps: none.
+- BUDGET-RETIRE-TAILER-IDLE [session, S 25m, build] Retire the tailer idle CPU test superseded by B1. Files: tests/test_budgets.py, tools/docs_fresh.py, README.md, tests/test_docs_fresh.py. Deps: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE.
+- KINDLER-STORE-EXPORT-WIRE [session, S 30m, build] Kindler tabs ride settings export and import. Files: server/al/core.py, tests/test_settingsio.py. Deps: KINDLER-STORE.
+- DATA-GEMS-SNAP [session, M 40m, data] Gems snapshot: repoe-fork poe2 gems.json behind web data. Files: server/al/theorycraft/snapshot.py, server/al/theorycraft/snapprobe.py, server/al/theorycraft/datacredit.py, tests/test_tc_snap.py, tests/test_snap_probe.py (+1 more). Deps: KINDLER-DATA.
+- KINDLER-COPY-SHEET [session, S 25m, build, DR] Copy sheet for the Kindler card words. Files: docs/design/copy/kindler.md. Deps: KINDLER-UI-TABS, KINDLER-UI-RESULT.
+- RUN-LEFTOVERS-CARD [session, S 30m, build, DR] Setup card says Play in Windowed Fullscreen. Files: server/al/playcards.py, web/setupcard.js, tests/test_play_cards.py, docs/design/copy/explain.md, app/test/setupcard.test.js. Deps: RUN-LEFTOVERS-CORE.
+- TC-CARD-PARTS-DOC [session, S 25m, build, DR] Item card mark words, tones and WORD_KEYS rule in design 0001. Files: docs/design/0001-design-system.md, tests/test_tc_cardparts.py. Deps: TC-CARD-PARTS.
+
+### Wave 47: save announcements, uniques probe, weapon bases, Run card fit
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 6 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: server/al/core.py (CORE-REGOPEN-ROOT); tests/test_a11y.py
+  (SAVE-FAIL-SAY); web/prices.js (DATA-CONTACT-FORK-COPY);
+  app/test/prices.test.js (DATA-CONTACT-FORK-COPY).
+- Integrator: ROADMAP.md rows of all 6 packages; docs/design/reviews.log:
+  SAVE-FAIL-SAY, DATA-CONTACT-FORK-COPY, RUN-CARDS-PAGE-FIT.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- SAVE-FAIL-SAY [session, S 30m, build, DR] Failed saves are announced on the polite line. Files: web/updates.js, web/autostart.js, web/panels/weights.js, app/test/updates.test.js, app/test/autostart_row.test.js (+1 more). Deps: TC-WEIGHTS-DELTA-UI.
+- ITEM-INFO-UNIQUES-PROBE [session, S 30m, data] Uniques snapshot gets a shape probe and joins SOURCES. Files: server/al/theorycraft/snapshot.py, server/al/theorycraft/snapprobe.py, tests/test_tc_snap.py, tests/test_snap_probe.py, tests/test_iteminfo.py. Deps: ITEM-INFO-CORE, DATA-GEMS-SNAP.
+- CORE-REGOPEN-ROOT [session, S 20m, build] Docs-watch flag stat uses the core's own runtime root. Files: server/al/core.py, tests/test_play_states.py. Deps: KINDLER-STORE-EXPORT-WIRE.
+- KINDLER-WEAPON-BASE [session, M 50m, data] Attack templates carry one authored weapon base. Files: server/al/data/archetypes.json, server/al/theorycraft/archetypes.py, server/al/theorycraft/kindler.py, tests/test_kindler_data.py, tests/test_kindler_templates.py (+3 more). Deps: KINDLER-ENGINE, DATA-GEMS-SNAP.
+- DATA-CONTACT-FORK-COPY [session, S 30m, build, DR] Fork-only contact wording. Files: server/al/text/price.py, web/prices.js, docs/design/copy/price.md, tests/test_price_text.py, app/test/prices.test.js. Deps: DATA-CONTACT-DEFAULT.
+- RUN-CARDS-PAGE-FIT [session, M 45m, build, DR] Run tab cards fit a full 10-row page. Files: tests/test_play_fit.py, web/acts.js, web/runs.js, web/pager.js, web/search.js (+1 more). Deps: PLAY-TD-20B-RUN-CARDS.
+
+### Wave 48: pin announcement, contact Clear, support fit, Settings fit
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 4 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (DATA-CONTACT-CLEAR); server/al/http.py
+  (DATA-CONTACT-CLEAR); web/app.css (WEB-PLAY-FIT-SETTINGS);
+  tests/test_a11y.py (CP-2); web/prices.js (DATA-CONTACT-CLEAR);
+  app/test/prices.test.js (DATA-CONTACT-CLEAR); tests/test_tc_bridge.py
+  (KINDLER-SUPPORT-FIT).
+- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log:
+  CP-2, DATA-CONTACT-CLEAR, WEB-PLAY-FIT-SETTINGS.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- CP-2 [session, S 20m, build, DR] A failed character pin is announced. Files: web/chars.js, app/test/chars.test.js, tests/test_a11y.py. Deps: RUN-CHARACTER-PIN, SAVE-FAIL-SAY.
+- DATA-CONTACT-CLEAR [session, M 45m, build, DR] Contact field stays visible with a Clear. Files: server/al/http.py, web/prices.js, web/panels/webdata.js, web/index.html, app/test/prices.test.js (+2 more). Deps: DATA-CONTACT-DEFAULT, DATA-CONTACT-FORK-COPY.
+- KINDLER-SUPPORT-FIT [session, M 50m, build] Support links say whether PoB lets the support apply. Files: server/al/theorycraft/bridge.lua, server/al/theorycraft/calcwire.py, server/al/plug/kindler.py, server/al/theorycraft/kindlerplan.py, tests/test_kindler_plan.py (+1 more). Deps: KINDLER-PLAN, KINDLER-WEAPON-BASE.
+- WEB-PLAY-FIT-SETTINGS [session, M 45m, build, DR] Play fit harness gives the same Settings result in any checkout. Files: tests/test_play_fit.py, web/app.css, web/panels/version.js. Deps: TEST-WEB-PANELS-C2, RUN-CARDS-PAGE-FIT.
+
+### Wave 49: picker width, Kindler plan live test
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/app.css (CP-1); tests/test_a11y.py (CP-1).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  CP-1.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- CP-1 [session, S 25m, build, DR] Character picker select keeps its width at narrow sizes. Files: web/app.css, tests/test_play_fit.py, tests/test_a11y.py. Deps: RUN-CHARACTER-PIN, WEB-PLAY-FIT-SETTINGS, CP-2.
+- KINDLER-PLAN-LIVE [session, S 30m, build] Live calc test for the Kindler plan's PoB item focus. Files: tests/test_marks.py, tests/tc_live_util.py, tests/test_kindler_plan_live.py. Deps: KINDLER-PLAN, KINDLER-SUPPORT-FIT.
+
+### Wave 50: panel file names, Kindler card fit
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (WEB-PANEL-NAMES); tests/test_a11y.py
+  (WEB-PANEL-NAMES).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  KINDLER-FIT-MEASURE.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- WEB-PANEL-NAMES [session, M 40m, build] Panel files get names no other web file has. Files: web/panels/pager.js, web/panels/settingsio.js, web/index.html, tests/test_a11y.py, app/test/panels.test.js (+4 more). Deps: TEST-WEB-PANELS-C2, CP-1.
+- KINDLER-FIT-MEASURE [session, M 40m, build, DR] Measure and fit the Kindler editor card. Files: tests/test_play_fit.py, web/panels/kindler.css, tests/test_kindler_tabs_ui.py. Deps: KINDLER-UI-TABS, KINDLER-UI-RESULT, CP-1.
+
+### Wave 51: stale comments, loop body budget noise
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (WEB-STALE-COMMENTS); web/app.css
+  (WEB-STALE-COMMENTS).
+- Integrator: ROADMAP.md rows of all 2 packages; CLAUDE.md:
+  TEST-BUDGET-LOOPBODY-NOISE.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- WEB-STALE-COMMENTS [session, S 25m, build] Stale path comments point at the code's new homes. Files: web/index.html, web/app.css, web/strip.css, web/strip.js, app/test/strip.test.js. Deps: TEST-WEB-PANELS-C2, WEB-PANEL-NAMES.
+- TEST-BUDGET-LOOPBODY-NOISE [session, M 45m, build] Real loop body budget reading: quiet figure, then a ruling. Files: tests/test_budgets.py, docs/decisions/0002-stack.md. Deps: BUDGET-RETIRE-TAILER-IDLE.
+
+### Wave 52: optional tail, suite target
+
+Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
+
+- Session 12; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md: GATE-HOLD-D.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- GATE-HOLD-D [session, L 80m, review] Restore the 120 s suite target. Files: tests/test_al_loop_gate_cache.py, tests/al_loopkit.py, docs/decisions/0060-wave-gate-policy.md. Deps: TEST-BUDGET-LOOPBODY-NOISE.
+
 <!-- plan_check waves end -->
 
 ## Hotspot schedule
