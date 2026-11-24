@@ -21,11 +21,7 @@ one tab of the Kindler store (theorycraft.genstore). The engine:
    stage's plan level, the passive prefix and ascendancy nodes of every
    stage up to it, the stage's skills with their supports by gem name, gem
    level FULL_GEM_LEVEL (PoB clamps to the gem's own range) and quality 0.
-   The one item composed is the template's authored weapon base
-   (KINDLER-WEAPON-BASE), a plain normal item in WEAPON_SLOT, and only when
-   the cached base_items snapshot names it as a weapon base (checked by
-   archetypes.resolve; never guessed). Without it an attack skill has no
-   weapon and PoB scores 0 DPS. No other item is composed.
+   No item is composed.
 4. Scores them one at a time through the calc callable of decision 0024
    (calcwire: the bridge's load_build then outputs; no new bridge command)
    inside BUDGET_S. Past the budget the rest are left out and the result
@@ -54,7 +50,7 @@ import json
 import threading
 import time
 from pathlib import Path
-from xml.sax.saxutils import escape, quoteattr
+from xml.sax.saxutils import quoteattr
 
 from .. import hotreload, paths
 from . import archetypes, delta, genstore, treedata
@@ -67,7 +63,6 @@ BAND_SIZE = 10
 BAND_ALL = "all"
 DEFENCE = {"life": "life", "energy_shield": "es", "hybrid": "hybrid"}
 TABLE_MAX_BYTES = archetypes.MAX_BYTES
-WEAPON_SLOT = "Weapon 1"
 
 # result words (the page says them in plain words; no sentence here)
 NO_MATCH = "no_match"
@@ -107,13 +102,6 @@ def _load_gems(path):
     return archetypes.gem_index(json.loads(p.read_bytes()))
 
 
-def _load_bases(path):
-    p = Path(path)
-    if p.stat().st_size > archetypes.BASES_MAX_BYTES:
-        raise ValueError("base_items file too large")
-    return archetypes.base_index(json.loads(p.read_bytes()))
-
-
 def pob_pin(pins_path=None):
     """The pinned PoB commit of config/tc_pins.json, "" when unreadable."""
     try:
@@ -125,12 +113,10 @@ def pob_pin(pins_path=None):
 
 
 class Sources:
-    """The template table, the tree export, the gems snapshot and the
-    base_items snapshot's weapon bases, each re-read on change (decision
-    0042), the last good copy kept."""
+    """The template table, the tree export and the gems snapshot, each
+    re-read on change (decision 0042), the last good copy kept."""
 
-    def __init__(self, table_path=None, tree_path=None, gems_file=None, pins_path=None,
-                 bases_file=None):
+    def __init__(self, table_path=None, tree_path=None, gems_file=None, pins_path=None):
         self._table = hotreload.Watched(table_path or archetypes.PATH, _load_table,
                                         name="Kindler templates (engine)",
                                         default=None, registry=False)
@@ -140,10 +126,6 @@ class Sources:
         self._gems = hotreload.Watched(gems_file or archetypes.gems_path(), _load_gems,
                                        name="Gems snapshot (Kindler engine)",
                                        default=None, registry=False)
-        self._bases = hotreload.Watched(bases_file or archetypes.default_bases(gems_file),
-                                        _load_bases,
-                                        name="Weapon bases (Kindler engine)",
-                                        default=None, registry=False)
         self._pins = pins_path
 
     def inputs(self):
@@ -154,8 +136,7 @@ class Sources:
         gems = self._gems.get()
         doc, table_sha = table if table else ({}, "")
         data, graph, tree_sha = tree if tree else (None, None, "")
-        return {"view": archetypes.resolve(doc, tree=graph, gems=gems,
-                                           bases=self._bases.get()),
+        return {"view": archetypes.resolve(doc, tree=graph, gems=gems),
                 "table_sha": table_sha, "tree": data, "tree_version": tree_sha,
                 "pin": pob_pin(self._pins)}
 
@@ -268,30 +249,10 @@ def _gem(name):
             f'quality="0" enabled="true" count="1"/>')
 
 
-def weapon_text(base):
-    """A plain normal item of `base` with no mods (PoB reads a normal
-    item's name line as its base)."""
-    return f"Rarity: NORMAL\n{base}"
-
-
-def _items(template):
-    """The Items block lines: the checked weapon base in WEAPON_SLOT, else
-    an empty item set."""
-    weapon = template.get("weapon")
-    if not (isinstance(weapon, dict) and weapon.get("checked")):
-        return ['\t<Items activeItemSet="1">', '\t\t<ItemSet id="1"/>', "\t</Items>"]
-    return ['\t<Items activeItemSet="1">', '\t\t<Item id="1">',
-            escape(weapon_text(weapon["name"])), "\t\t</Item>",
-            '\t\t<ItemSet id="1">',
-            f'\t\t\t<Slot name={quoteattr(WEAPON_SLOT)} itemId="1"/>',
-            "\t\t</ItemSet>", "\t</Items>"]
-
-
 def compose_xml(template, stage, variant, ids):
     """PoB XML of one candidate: `stage` is the stage index, `variant` the
     main skill index, `ids` tree_ids(). Passives and ascendancy nodes of
-    every stage up to `stage`, in authored order; the template's checked
-    weapon base in WEAPON_SLOT."""
+    every stage up to `stage`, in authored order."""
     class_idx, asc_id = ids
     stages = template["stages"][:stage + 1]
     nodes = [n for st in stages for n in st["passives"]]
@@ -314,7 +275,8 @@ def compose_xml(template, stage, variant, ids):
               f'\t\t<Spec classInternalId="{class_idx}" '
               f'ascendancyInternalId={quoteattr(asc_id)} secondaryAscendClassId="0" '
               f'masteryEffects="" nodes="{",".join(str(n) for n in nodes)}"/>',
-              "\t</Tree>"] + _items(template) + ["</PathOfBuilding2>", ""]
+              "\t</Tree>", '\t<Items activeItemSet="1">', '\t\t<ItemSet id="1"/>',
+              "\t</Items>", "</PathOfBuilding2>", ""]
     return "\n".join(lines)
 
 

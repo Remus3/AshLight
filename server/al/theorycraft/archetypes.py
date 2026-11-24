@@ -10,9 +10,6 @@ field can carry an expression. Schema 1:
 
     template: {"id", "label", "class", "ascendancy" (name or null),
                "toggles": subset of TOGGLES, "defence" (DEFENCES or absent),
-               "weapon" (optional: one authored weapon base name, KINDLER-
-               WEAPON-BASE; an attack template, toggle melee or bow, needs
-               one so Path of Building has a weapon to attack with),
                "stages": [<stage>, ...], "src", "checked" (YYYY-MM-DD)}
     stage:    {"id", "label", "trigger", "level" (the character level the
                stage plans for; its point budget), "bonus_points" (optional,
@@ -39,21 +36,13 @@ Three layers:
   are dropped with a note, never guessed (decision 0034); each gem carries
   checked=True and the snapshot level when the cached repoe-fork gems
   snapshot names it, else checked=False and the authored level (point
-  16). The weapon base reads checked=True with its item class only when
-  the cached repoe-fork base_items snapshot names it as a released weapon
-  base; otherwise checked=False with a note, and the engine composes no
-  weapon (never guessed). Set lookups only: no route search at run time
-  (point 14).
+  16). Set lookups only: no route search at run time (point 14).
 - `check`: the validator, for tests and the template package only. It
   runs the breadth-first connectivity check from the class start (and the
   ascendancy start), the allocation-order check and the point budget at
   each stage's level, and refuses gem names the snapshot lacks (point 13).
-  It also refuses an attack template without a weapon base, and with the
-  base_items snapshot a weapon base the snapshot does not name, of an item
-  class that does not fit the template's toggle, or needing a higher level
-  than the first stage plans for.
 
-This module reads the tracked table and the three sidecar caches only. It
+This module reads the tracked table and the two sidecar caches only. It
 never fetches, never reads the game, the clipboard or the screen, and
 sends nothing anywhere.
 """
@@ -68,8 +57,6 @@ from . import datacredit, model, treedata
 
 PATH = Path(__file__).resolve().parent.parent / "data" / "archetypes.json"
 GEMS_FILE = "gems.json"
-BASES_FILE = "base_items.json"
-BASES_MAX_BYTES = 64 * 1024 * 1024
 MAX_BYTES = 1024 * 1024
 GEMS_MAX_BYTES = 64 * 1024 * 1024
 SCHEMA = 1
@@ -92,17 +79,6 @@ TEXT_MAX = 200
 TOGGLES = ("melee", "spell", "minion", "bow", "crit")
 DEFENCES = ("life", "es", "hybrid")
 ACTIONS = ("pick", "swap", "drop")
-# KINDLER-WEAPON-BASE: the toggles whose skills attack with a weapon, and
-# the base_items item classes that fit each one (repoe-fork class names).
-# Only attack weapon classes are indexed; a caster weapon (wand, staff,
-# sceptre) is no attack template's base.
-ATTACK_TOGGLES = ("melee", "bow")
-MELEE_CLASSES = ("One Hand Mace", "Two Hand Mace", "One Hand Sword",
-                 "Two Hand Sword", "One Hand Axe", "Two Hand Axe", "Dagger",
-                 "Claw", "Spear", "Flail", "Warstaff")
-RANGED_CLASSES = ("Bow", "Crossbow")
-WEAPON_CLASSES = MELEE_CLASSES + RANGED_CLASSES
-TOGGLE_CLASSES = {"melee": MELEE_CLASSES, "bow": ("Bow",)}
 TRIGGER_KINDS = ("level", "act", "zone", "area_level")
 
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -111,7 +87,7 @@ _ZONE = re.compile(r"^[A-Za-z0-9_]{1,40}$")
 _SLOTS = {s.lower(): s for s in model.SLOTS}
 
 _TEMPLATE_KEYS = {"id", "label", "class", "ascendancy", "toggles", "defence",
-                  "weapon", "stages", "src", "checked"}
+                  "stages", "src", "checked"}
 _STAGE_KEYS = {"id", "label", "trigger", "level", "bonus_points", "skills",
                "gems", "passives", "ascendancy", "focus", "src", "checked"}
 _SKILL_KEYS = {"name", "sockets", "supports"}
@@ -289,9 +265,6 @@ def _template(t, where):
         raise ValueError(f"{where} toggles is not a list from {', '.join(TOGGLES)}")
     if "defence" in t and t["defence"] not in DEFENCES:
         raise ValueError(f"{where} defence is not one of {', '.join(DEFENCES)}")
-    weapon = t.get("weapon")
-    if weapon is not None and not _text(weapon, NAME_MAX):
-        raise ValueError(f"{where} weapon is not a base name")
     stages = t.get("stages")
     if not (isinstance(stages, list) and 0 < len(stages) <= MAX_STAGES):
         raise ValueError(f"{where} has no stages")
@@ -310,9 +283,7 @@ def _template(t, where):
         raise ValueError(f"{where} has ascendancy nodes but no ascendancy")
     return {"id": t["id"], "label": t["label"], "class": t["class"],
             "ascendancy": asc, "toggles": list(toggles),
-            "defence": t.get("defence"),
-            "weapon": " ".join(weapon.split()) if weapon is not None else None,
-            "stages": cleaned,
+            "defence": t.get("defence"), "stages": cleaned,
             "src": t["src"], "checked": t["checked"]}
 
 
@@ -478,53 +449,6 @@ def gems_path(environ=None):
     return datacredit.cache_dir(environ) / GEMS_FILE
 
 
-def base_index(doc):
-    """{lower base name: {"name", "item_class", "level"}} of the released
-    weapon bases (item class in WEAPON_CLASSES) of a parsed repoe-fork
-    base_items document; level is the base's own required level (None when
-    the entry names none; the lowest one when a name repeats). Unreadable
-    entries are skipped."""
-    out = {}
-    for entry in doc.values() if isinstance(doc, dict) else ():
-        if not isinstance(entry, dict) or entry.get("release_state") != "released":
-            continue
-        cls = entry.get("item_class")
-        name = entry.get("name")
-        if cls not in WEAPON_CLASSES or not _text(name, NAME_MAX):
-            continue
-        name = " ".join(name.split())
-        req = entry.get("requirements")
-        level = req.get("level") if isinstance(req, dict) else None
-        level = level if _int(level, 0, MAX_LEVEL) else None
-        old = out.get(name.lower())
-        if old is None or (level is not None and (old["level"] is None
-                                                  or level < old["level"])):
-            out[name.lower()] = {"name": name, "item_class": cls, "level": level}
-    return out
-
-
-def load_bases(path):
-    """base_index of a cached base_items snapshot, or None when it is
-    missing, too large or unreadable (the weapon then reads checked=False)."""
-    p = Path(path)
-    try:
-        if p.stat().st_size > BASES_MAX_BYTES:
-            return None
-        return base_index(json.loads(p.read_bytes()))
-    except (OSError, ValueError):
-        return None
-
-
-def bases_path(environ=None):
-    return datacredit.cache_dir(environ) / BASES_FILE
-
-
-def default_bases(gems_file=None):
-    """The base_items file beside a given gems file (both snapshots share
-    one cache folder), else the cache's own."""
-    return Path(gems_file).parent / BASES_FILE if gems_file else bases_path()
-
-
 # --- run time: resolve ----------------------------------------------------
 
 def _gem(name, gems, notes, where, authored=None):
@@ -549,28 +473,11 @@ def _known(ids, tree, notes, where):
     return kept
 
 
-def _weapon(name, bases, notes, where):
-    """{"name", "item_class", "level", "checked"} of an authored weapon
-    base, or None when the template names none. checked only when the
-    base_items index names it; never guessed."""
-    if name is None:
-        return None
-    hit = bases.get(name.lower()) if bases is not None else None
-    if hit is None:
-        if bases is not None:
-            notes.append(f"{where}: weapon {name} is not a weapon base in the "
-                         f"base_items snapshot; not composed")
-        return {"name": name, "item_class": None, "level": None, "checked": False}
-    return {"name": hit["name"], "item_class": hit["item_class"],
-            "level": hit["level"], "checked": True}
-
-
-def resolve(table, tree=None, gems=None, bases=None):
+def resolve(table, tree=None, gems=None):
     """The run-time view of a validated table: unknown node ids dropped
     with a note, each gem with checked and a level (snapshot first, else
-    the authored one), the weapon base checked against `bases`. `tree` is
-    a TreeGraph or None, `gems` a gem_index or None, `bases` a base_index
-    or None. Lookups only; the route search lives in check()."""
+    the authored one). `tree` is a TreeGraph or None, `gems` a gem_index or
+    None. Lookups only; the route search lives in check()."""
     notes, out = [], []
     for t in (table or {}).get("templates", ()):
         stages = []
@@ -593,19 +500,16 @@ def resolve(table, tree=None, gems=None, bases=None):
             stages.append(dict(st, skills=skills, gems=steps, ascendancy=asc,
                                passives=_known(st["passives"], tree, notes, where),
                                focus={k: list(v) for k, v in st["focus"].items()}))
-        out.append(dict(t, toggles=list(t["toggles"]), stages=stages,
-                        weapon=_weapon(t.get("weapon"), bases, notes, t["id"])))
+        out.append(dict(t, toggles=list(t["toggles"]), stages=stages))
     return {"schema": SCHEMA, "templates": out, "notes": notes,
-            "tree": tree is not None, "gems": gems is not None,
-            "bases": bases is not None}
+            "tree": tree is not None, "gems": gems is not None}
 
 
 class Sources:
-    """The tracked table plus the three sidecar caches, each re-read on
+    """The tracked table plus the two sidecar caches, each re-read on
     change: view() is the resolved table the engine reads."""
 
-    def __init__(self, path=PATH, tree_path=None, gems_file=None, registry=False,
-                 bases_file=None):
+    def __init__(self, path=PATH, tree_path=None, gems_file=None, registry=False):
         self._table = watch(path, registry=registry) if path != PATH else _watch
         self._tree = hotreload.Watched(
             tree_path or treedata.default_path(), self._load_tree,
@@ -613,9 +517,6 @@ class Sources:
         self._gems = hotreload.Watched(
             gems_file or gems_path(), self._load_gems_strict,
             name="Gems snapshot", default=None, registry=False)
-        self._bases = hotreload.Watched(
-            bases_file or default_bases(gems_file), self._load_bases_strict,
-            name="Weapon bases (Kindler)", default=None, registry=False)
 
     @staticmethod
     def _load_tree(path):
@@ -631,16 +532,8 @@ class Sources:
             raise ValueError("gems file too large")
         return gem_index(json.loads(p.read_bytes()))
 
-    @staticmethod
-    def _load_bases_strict(path):
-        p = Path(path)
-        if p.stat().st_size > BASES_MAX_BYTES:
-            raise ValueError("base_items file too large")
-        return base_index(json.loads(p.read_bytes()))
-
     def view(self):
-        return resolve(self._table.get(), tree=self._tree.get(), gems=self._gems.get(),
-                       bases=self._bases.get())
+        return resolve(self._table.get(), tree=self._tree.get(), gems=self._gems.get())
 
 
 # --- validator only: breadth-first route and point budget -----------------
@@ -680,35 +573,8 @@ def _route(start, order, new, tree, where, label, problems):
         taken.add(nid)
 
 
-def _check_weapon(t, bases, problems):
-    """An attack template names one weapon base; with the base_items index
-    it must be a released weapon base of a class that fits each attack
-    toggle, usable at the first stage's level."""
-    tid, name = t["id"], t.get("weapon")
-    attack = [x for x in t["toggles"] if x in ATTACK_TOGGLES]
-    if name is None:
-        if attack:
-            problems.append(f"{tid}: attack template has no weapon base")
-        return
-    if bases is None:
-        return
-    hit = bases.get(name.lower())
-    if hit is None:
-        problems.append(f"{tid}: weapon {name} is not a weapon base in base_items")
-        return
-    for x in attack:
-        if hit["item_class"] not in TOGGLE_CLASSES[x]:
-            problems.append(f"{tid}: weapon {name} ({hit['item_class']}) does not "
-                            f"fit toggle {x}")
-    first = t["stages"][0]["level"]
-    if hit["level"] is not None and hit["level"] > first:
-        problems.append(f"{tid}: weapon {name} needs level {hit['level']}, past "
-                        f"the first stage's level {first}")
-
-
-def _check_template(t, tree, gems, area_ids, problems, notes, bases=None):
+def _check_template(t, tree, gems, area_ids, problems, notes):
     tid = t["id"]
-    _check_weapon(t, bases, problems)
     start = asc_start = None
     if tree is not None:
         start = tree.class_start(t["class"])
@@ -760,15 +626,12 @@ def _check_template(t, tree, gems, area_ids, problems, notes, bases=None):
                     problems.append(f"{where}: gem {name} is not in the gems snapshot")
 
 
-def check(table, tree=None, gems=None, area_ids=None, bases=None):
+def check(table, tree=None, gems=None, area_ids=None):
     """Validator report for a validated table: {"ok", "problems", "notes"}.
     Problems: a route prefix not connected from the class start (or the
     ascendancy start) by breadth-first search, out of allocation order, or
     past the point budget at its stage's level; a gem the cached snapshot
-    lacks; a zone trigger not in `area_ids`; an attack template with no
-    weapon base, or (with `bases`, a base_index) a weapon base the snapshot
-    does not name, of a class that does not fit its toggle or needing a
-    level past the first stage's. Notes: unknown node ids
+    lacks; a zone trigger not in `area_ids`. Notes: unknown node ids
     (dropped, never guessed) and checks skipped for a missing cache. Tests
     and the template package only; never called at run time."""
     problems, notes = [], []
@@ -776,8 +639,6 @@ def check(table, tree=None, gems=None, area_ids=None, bases=None):
         notes.append("no tree export cached: node ids and routes not checked")
     if gems is None:
         notes.append("no gems snapshot cached: gem names read checked=false")
-    if bases is None:
-        notes.append("no base_items snapshot cached: weapon bases not checked")
     for t in (table or {}).get("templates", ()):
-        _check_template(t, tree, gems, area_ids, problems, notes, bases)
+        _check_template(t, tree, gems, area_ids, problems, notes)
     return {"ok": not problems, "problems": problems, "notes": notes}
