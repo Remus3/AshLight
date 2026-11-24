@@ -1,0 +1,414 @@
+"""KINDLER-DATA (decision 0081 points 2, 6 and 11 to 16): the archetype
+template schema, the structural loader (hot reloaded), the runtime resolve
+against the cached tree export and gems snapshot, and the validator-only
+breadth-first route check."""
+
+import ast
+import copy
+import json
+import os
+from pathlib import Path
+
+import pytest
+
+from server.al import hotreload
+from server.al.theorycraft import archetypes as ar
+
+import kindler_fixtures as kf
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _tree():
+    return ar.tree_graph(kf.tree_doc())
+
+
+def _gems():
+    return ar.gem_index(kf.gems_doc())
+
+
+def _bad(doc, needle):
+    with pytest.raises(ValueError) as e:
+        ar.validate(doc)
+    assert needle in str(e.value), str(e.value)
+
+
+# --- schema -------------------------------------------------------------
+
+def test_fixture_table_validates_and_is_cleaned():
+    table = ar.validate(kf.table_doc())
+    assert table["schema"] == 1
+    t = table["templates"][0]
+    assert t["id"] == "warrior_hammer" and t["class"] == "Warrior"
+    assert [s["id"] for s in t["stages"]] == ["early", "mid", "maps"]
+    assert t["stages"][0]["passives"] == [101, 102, 103]
+    assert t["stages"][1]["ascendancy"] == {"trial": 1, "nodes": [301, 302]}
+    assert t["stages"][2]["ascendancy"] is None
+    # slot names fold to the model's canonical spelling, order kept
+    assert list(t["stages"][0]["focus"]) == ["Weapon 1", "Boots"]
+    assert t["stages"][0]["focus"]["Weapon 1"] == ["physical damage", "attack speed"]
+
+
+def test_schema_and_template_list():
+    _bad({"schema": 2, "templates": []}, "schema")
+    _bad({"schema": 1, "templates": []}, "templates")
+    _bad([], "schema")
+    two = kf.table_doc(kf.template(), kf.template())
+    _bad(two, "repeats template id")
+
+
+@pytest.mark.parametrize("field", ["src", "checked"])
+def test_every_template_and_stage_has_src_and_checked(field):
+    t = kf.template()
+    del t[field]
+    _bad(kf.table_doc(t), field)
+    t = kf.template()
+    del t["stages"][1][field]
+    _bad(kf.table_doc(t), field)
+    t = kf.template(checked="yesterday")
+    _bad(kf.table_doc(t), "checked")
+
+
+def test_conditions_are_json_data_only():
+    # unknown keys are refused, so no field can carry code to run
+    t = kf.template(expr="lambda: 1")
+    _bad(kf.table_doc(t), "unknown field")
+    t = kf.template()
+    t["stages"][0]["trigger"] = {"kind": "eval", "code": "level > 3"}
+    _bad(kf.table_doc(t), "trigger")
+    t = kf.template()
+    t["stages"][0]["trigger"]["when"] = "level > 3"
+    _bad(kf.table_doc(t), "trigger")
+    # the module never evaluates text as code
+    tree = ast.parse((ROOT / "server/al/theorycraft/archetypes.py").read_text(encoding="ascii"))
+    calls = {n.func.id for n in ast.walk(tree)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    assert not calls & {"eval", "exec", "compile", "__import__"}
+
+
+@pytest.mark.parametrize("trigger, ok", [
+    ({"kind": "level", "min": 1, "max": 10}, True),
+    ({"kind": "level", "min": 10, "max": 2}, False),
+    ({"kind": "level", "min": 0, "max": 2}, False),
+    ({"kind": "act", "act": 3}, True),
+    ({"kind": "act", "act": 0}, False),
+    ({"kind": "zone", "zone": "G1_town"}, True),
+    ({"kind": "zone", "zone": "../x"}, False),
+    ({"kind": "area_level", "min": 65, "max": 82}, True),
+    ({"kind": "area_level", "min": 65, "max": True}, False),
+])
+def test_triggers(trigger, ok):
+    t = kf.template()
+    t["stages"][0]["trigger"] = trigger
+    if ok:
+        assert ar.validate(kf.table_doc(t))["templates"][0]["stages"][0]["trigger"] == trigger
+    else:
+        _bad(kf.table_doc(t), "trigger")
+
+
+def test_supports_bounded_by_sockets():
+    t = kf.template()
+    t["stages"][0]["skills"][0]["sockets"] = 0
+    _bad(kf.table_doc(t), "supports")
+    t = kf.template()
+    t["stages"][0]["skills"][0]["sockets"] = ar.MAX_SOCKETS + 1
+    _bad(kf.table_doc(t), "sockets")
+    t = kf.template()
+    t["stages"][0]["skills"][0]["supports"] = ["Brute Force", "Brute Force"]
+    t["stages"][0]["skills"][0]["sockets"] = 3
+    _bad(kf.table_doc(t), "repeats")
+
+
+def test_gem_timing_entries():
+    t = kf.template()
+    t["stages"][0]["gems"] = [{"name": "Ground Crack", "action": "keep"}]
+    _bad(kf.table_doc(t), "action")
+    t = kf.template()
+    t["stages"][0]["gems"] = [{"name": "Ground Crack", "action": "swap"}]
+    _bad(kf.table_doc(t), "for")
+    t = kf.template()
+    t["stages"][0]["gems"] = [{"name": "Ground Crack", "action": "pick", "level": 101}]
+    _bad(kf.table_doc(t), "level")
+
+
+def test_passive_prefix_is_an_ordered_id_list():
+    t = kf.template()
+    t["stages"][0]["passives"] = [101, "102"]
+    _bad(kf.table_doc(t), "passives")
+    t = kf.template()
+    t["stages"][1]["passives"] = [104, 101]
+    _bad(kf.table_doc(t), "repeats passive")
+    t = kf.template()
+    t["stages"][1]["ascendancy"] = {"trial": 5, "nodes": [301]}
+    _bad(kf.table_doc(t), "trial")
+    t = kf.template()
+    t["stages"][2]["ascendancy"] = {"trial": 0, "nodes": []}
+    _bad(kf.table_doc(t), "trial")
+
+
+def test_ascendancy_trials_do_not_go_back():
+    t = kf.template()
+    t["stages"][1]["ascendancy"] = {"trial": 2, "nodes": [301]}
+    t["stages"][2]["ascendancy"] = {"trial": 1, "nodes": [302]}
+    _bad(kf.table_doc(t), "trial")
+
+
+def test_focus_slots_and_stats():
+    t = kf.template()
+    t["stages"][0]["focus"] = {"Hat": ["life"]}
+    _bad(kf.table_doc(t), "slot")
+    t = kf.template()
+    t["stages"][0]["focus"] = {"boots": ["movement speed"]}
+    assert list(ar.validate(kf.table_doc(t))["templates"][0]["stages"][0]["focus"]) == ["Boots"]
+    t = kf.template()
+    t["stages"][0]["focus"] = {"Boots": []}
+    _bad(kf.table_doc(t), "focus")
+
+
+def test_toggles_and_defence():
+    _bad(kf.table_doc(kf.template(toggles=["melee", "fast"])), "toggles")
+    _bad(kf.table_doc(kf.template(defence="armour")), "defence")
+    ok = ar.validate(kf.table_doc(kf.template(toggles=["melee", "crit"], defence="hybrid")))
+    assert ok["templates"][0]["toggles"] == ["melee", "crit"]
+
+
+def test_ascii_text_only():
+    _bad(kf.table_doc(kf.template(label="Hammer w" + chr(0xe4) + "rrior")), "label")
+
+
+# --- loader and hot reload ----------------------------------------------
+
+def _write(path, doc):
+    path.write_text(json.dumps(doc), encoding="ascii")
+
+
+def test_load_refuses_large_and_non_ascii(tmp_path):
+    p = tmp_path / "archetypes.json"
+    p.write_bytes(b"{" + b" " * ar.MAX_BYTES + b"}")
+    with pytest.raises(ValueError):
+        ar.load(p)
+    p.write_bytes(('{"schema": 1, "x": "' + chr(0xe4) + '"}').encode("utf-8"))
+    with pytest.raises(ValueError):
+        ar.load(p)
+
+
+def test_file_hot_reloads(tmp_path):
+    p = tmp_path / "archetypes.json"
+    w = ar.watch(p, registry=False)
+    assert w.get() == {}                      # missing file: no table
+    _write(p, kf.table_doc())
+    first = w.get()
+    assert first["templates"][0]["label"] == "Hammer warrior"
+    second = kf.table_doc(kf.template(label="Hammer warrior two"))
+    _write(p, second)
+    os.utime(p, ns=(1, 10 ** 18))
+    assert w.get()["templates"][0]["label"] == "Hammer warrior two"
+    # a bad edit keeps the last good copy and shows a note
+    p.write_text('{"schema": 1, "templates": [{"id": "x"}]}', encoding="ascii")
+    os.utime(p, ns=(1, 2 * 10 ** 18))
+    assert w.get()["templates"][0]["label"] == "Hammer warrior two"
+    assert w.error and "last good copy" in w.error
+    p.unlink()
+    assert w.get() == {}
+
+
+def test_module_watch_is_registered():
+    assert ar._watch in hotreload.REGISTRY.watches()
+    assert ar.PATH == ROOT / "server" / "al" / "data" / "archetypes.json"
+
+
+# --- tree graph and gems index -------------------------------------------
+
+def test_tree_graph_reads_edges_starts_and_ascendancies():
+    g = _tree()
+    assert g.class_start("warrior") == 100 and g.class_start("Witch") == 200
+    assert g.class_start("Monk") is None
+    assert g.asc_start("Titan") == 300
+    assert g.asc_class("Titan") == "Warrior"
+    assert 101 in g.adj[100] and 100 in g.adj[101]
+    assert g.asc_of(301) == "Titan" and g.asc_of(101) is None
+    assert 110 in g.nodes and not g.adj.get(110)
+
+
+def test_gem_index_names_and_levels():
+    gi = _gems()
+    assert gi["hammer swing"] == {"name": "Hammer Swing", "level": 1}
+    assert gi["ground crack"]["level"] == 4      # lowest per_level requirement
+    assert gi["echo strike"] == {"name": "Echo Strike", "level": None}
+    assert ar.gem_index([]) == {}
+    assert ar.gem_index({"x": 3, "y": {"display_name": 7}}) == {}
+
+
+def test_load_gems_missing_file_is_none(tmp_path):
+    assert ar.load_gems(tmp_path / "gems.json") is None
+    p = tmp_path / "gems.json"
+    p.write_text(json.dumps(kf.gems_doc()), encoding="utf-8")
+    assert "war cry" in ar.load_gems(p)
+
+
+# --- runtime resolve: drop unknown ids with a note, gem checked flags ------
+
+def test_resolve_drops_unknown_node_ids_with_a_note():
+    t = kf.template()
+    t["stages"][0]["passives"] = [101, 9999, 102, 103]
+    view = ar.resolve(ar.validate(kf.table_doc(t)), tree=_tree(), gems=_gems())
+    st = view["templates"][0]["stages"][0]
+    assert st["passives"] == [101, 102, 103]
+    assert any("9999" in n for n in view["notes"])
+    assert view["tree"] is True
+
+
+def test_resolve_marks_gems_checked_from_snapshot():
+    t = kf.template()
+    t["stages"][0]["skills"][0]["supports"] = ["Brute Force", "Made Up Support"]
+    t["stages"][0]["skills"][0]["sockets"] = 3
+    view = ar.resolve(ar.validate(kf.table_doc(t)), tree=_tree(), gems=_gems())
+    sk = view["templates"][0]["stages"][0]["skills"][0]
+    assert sk["gem"] == {"name": "Hammer Swing", "level": 1, "checked": True}
+    assert sk["supports"][0] == {"name": "Brute Force", "level": 3, "checked": True}
+    assert sk["supports"][1] == {"name": "Made Up Support", "level": None, "checked": False}
+    pick = view["templates"][0]["stages"][0]["gems"][0]
+    # snapshot level wins over the authored one
+    assert pick["level"] == 4 and pick["checked"] is True
+    assert any("Made Up Support" in n for n in view["notes"])
+
+
+def test_resolve_without_snapshots_is_unchecked():
+    view = ar.resolve(ar.validate(kf.table_doc()), tree=None, gems=None)
+    st = view["templates"][0]["stages"][0]
+    assert st["passives"] == [101, 102, 103]       # nothing dropped blind
+    assert st["skills"][0]["gem"]["checked"] is False
+    pick = st["gems"][0]
+    assert pick == {"name": "Ground Crack", "action": "pick", "level": 4,
+                    "for": None, "checked": False}  # authored level kept
+    assert view["tree"] is False and view["gems"] is False
+
+
+def test_resolve_does_not_run_the_route_search(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("breadth-first check at run time")
+    monkeypatch.setattr(ar, "_reach", boom)
+    ar.resolve(ar.validate(kf.table_doc()), tree=_tree(), gems=_gems())
+
+
+# --- validator: breadth-first route and point budget ---------------------
+
+def test_check_passes_the_fixture():
+    rep = ar.check(ar.validate(kf.table_doc()), _tree(), _gems())
+    assert rep["problems"] == [] and rep["ok"] is True
+
+
+def test_check_finds_a_disconnected_prefix():
+    t = kf.template()
+    t["stages"][0]["passives"] = [101, 103]          # 102 missing
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert not rep["ok"]
+    assert any("not connected" in p and "103" in p for p in rep["problems"])
+
+
+def test_check_finds_an_island_and_unknown_ids():
+    t = kf.template()
+    t["stages"][0]["passives"] = [101, 110, 4242]
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("110" in p and "not connected" in p for p in rep["problems"])
+    assert any("4242" in n for n in rep["notes"])
+    assert not any("4242" in p for p in rep["problems"])
+
+
+def test_check_route_follows_its_order():
+    t = kf.template()
+    t["stages"][0]["passives"] = [102, 101, 103]     # 102 before its link
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("order" in p and "102" in p for p in rep["problems"])
+
+
+def test_check_prefix_is_cumulative_across_stages():
+    t = kf.template()
+    t["stages"][0]["passives"] = [101]
+    t["stages"][1]["passives"] = [102, 103, 104]     # continues from 101
+    assert ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())["ok"]
+
+
+def test_check_point_budget_at_the_stage_level():
+    t = kf.template()
+    t["stages"][0]["level"] = 3                      # 2 points, 3 nodes
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("point budget" in p for p in rep["problems"])
+    t["stages"][0]["bonus_points"] = 1
+    assert ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())["ok"]
+    assert ar.point_budget(1) == 0 and ar.point_budget(10, 2) == 11
+
+
+def test_check_class_start_and_wrong_class():
+    rep = ar.check(ar.validate(kf.table_doc(kf.template(**{"class": "Monk"}))),
+                   _tree(), _gems())
+    assert any("class start" in p for p in rep["problems"])
+    t = kf.template(**{"class": "Witch"}, ascendancy=None)
+    t["stages"][1]["ascendancy"] = None
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("not connected" in p for p in rep["problems"])
+
+
+def test_check_ascendancy_nodes_and_order():
+    t = kf.template()
+    t["stages"][1]["ascendancy"] = {"trial": 1, "nodes": [302, 301]}
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("ascendancy" in p and "302" in p for p in rep["problems"])
+    t = kf.template()
+    t["stages"][1]["ascendancy"] = {"trial": 1, "nodes": [301, 201]}
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("201" in p and "ascendancy" in p for p in rep["problems"])
+    t = kf.template()
+    t["stages"][1]["passives"] = [104, 301]
+    t["stages"][1]["ascendancy"] = None
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("301" in p and "ascendancy" in p for p in rep["problems"])
+    rep = ar.check(ar.validate(kf.table_doc(kf.template(ascendancy="Pyromancer"))),
+                   _tree(), _gems())
+    assert any("Pyromancer" in p for p in rep["problems"])
+
+
+def test_check_unknown_gem_with_snapshot_and_without():
+    t = kf.template()
+    t["stages"][0]["gems"] = [{"name": "Not A Gem", "action": "pick"}]
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems())
+    assert any("Not A Gem" in p for p in rep["problems"])
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), None)
+    assert rep["ok"] and any("gems snapshot" in n for n in rep["notes"])
+
+
+def test_check_without_tree_says_so():
+    rep = ar.check(ar.validate(kf.table_doc()), None, _gems())
+    assert rep["ok"] and any("tree export" in n for n in rep["notes"])
+
+
+def test_check_zone_ids_against_world_areas():
+    t = kf.template()
+    t["stages"][0]["trigger"] = {"kind": "zone", "zone": "G1_9"}
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems(), area_ids={"G1_1"})
+    assert any("G1_9" in p for p in rep["problems"])
+    rep = ar.check(ar.validate(kf.table_doc(t)), _tree(), _gems(), area_ids={"G1_9"})
+    assert rep["ok"]
+
+
+def test_check_is_deterministic():
+    table = ar.validate(kf.table_doc())
+    a = json.dumps(ar.check(table, _tree(), _gems()), sort_keys=True)
+    b = json.dumps(ar.check(copy.deepcopy(table), _tree(), _gems()), sort_keys=True)
+    assert a == b
+
+
+def test_view_reads_caches_and_tracked_table(tmp_path, monkeypatch):
+    cache = tmp_path / "gamedata"
+    cache.mkdir()
+    (cache / "skilltree.json").write_text(json.dumps(kf.tree_doc()), encoding="utf-8")
+    (cache / "gems.json").write_text(json.dumps(kf.gems_doc()), encoding="utf-8")
+    p = tmp_path / "archetypes.json"
+    _write(p, kf.table_doc())
+    src = ar.Sources(p, cache / "skilltree.json", cache / "gems.json")
+    view = src.view()
+    assert view["tree"] is True and view["gems"] is True
+    assert view["templates"][0]["stages"][0]["skills"][0]["gem"]["checked"] is True
+    empty = ar.Sources(tmp_path / "none.json", cache / "x.json", cache / "y.json").view()
+    assert empty == {"schema": 1, "templates": [], "notes": [], "tree": False,
+                     "gems": False}
