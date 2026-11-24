@@ -3,7 +3,8 @@
 Hand-written by AshLight: a tiny passive tree in the shape of GGG's public
 tree export (nodes keyed by skill id with `out` / `in` edges,
 `classStartIndex`, `ascendancyId`, `isAscendancyStart`), a tiny gems
-snapshot in the repoe-fork style, and archetype template documents. Every
+snapshot and a tiny base_items snapshot in the repoe-fork style, and
+archetype template documents. Every
 name, id and number is invented; nothing is copied from a game file or
 another tool.
 """
@@ -67,6 +68,24 @@ def gems_doc():
     }
 
 
+def bases_doc():
+    """repoe-fork base_items style: keyed by item id, name, item class,
+    release state and the base's own requirements (KINDLER-WEAPON-BASE)."""
+    def base(name, cls, level, state="released"):
+        return {"name": name, "item_class": cls, "release_state": state,
+                "requirements": {"level": level, "strength": 0,
+                                 "dexterity": 0, "intelligence": 0}}
+    return {
+        "Metadata/Items/Weapons/TwoHandMaceA": base("Oak Mallet", "Two Hand Mace", 1),
+        "Metadata/Items/Weapons/TwoHandMaceB": base("Iron Maul", "Two Hand Mace", 30),
+        "Metadata/Items/Weapons/BowA": base("Twig Bow", "Bow", 1),
+        "Metadata/Items/Weapons/WandA": base("Ash Wand", "Wand", 1),
+        "Metadata/Items/Weapons/MaceUnreleased": base("Glass Mallet", "Two Hand Mace", 1,
+                                                      state="unreleased"),
+        "Metadata/Items/Amulets/AmuletA": base("Bead Amulet", "Amulet", 1),
+    }
+
+
 CHECKED = "2026-11-23"
 
 
@@ -97,6 +116,7 @@ def template(**over):
         "ascendancy": "Titan",
         "toggles": ["melee"],
         "defence": "life",
+        "weapon": "Oak Mallet",
         "stages": [
             stage(),
             stage(id="mid", label="Later acts",

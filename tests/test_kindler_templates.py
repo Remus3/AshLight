@@ -237,3 +237,37 @@ def test_gem_names_are_released_gems_in_base_items(table):
             names += [g["for"] for g in st["gems"] if g["for"]]
             for name in names:
                 assert name in gems, f"{t['id']} {st['id']}: {name}"
+
+
+# --- KINDLER-WEAPON-BASE: one authored weapon base per attack template ------
+
+def test_attack_templates_name_one_weapon_base(table):
+    for t in table["templates"]:
+        attack = set(t["toggles"]) & set(archetypes.ATTACK_TOGGLES)
+        if attack:
+            assert t["weapon"], t["id"]
+        else:
+            assert t["weapon"] is None, t["id"]
+
+
+def test_weapon_bases_are_released_bases_that_fit_in_base_items(table):
+    doc = json.loads(_cache("base_items.json").read_bytes())
+    released = {}
+    for v in doc.values():
+        if isinstance(v, dict) and v.get("release_state") == "released":
+            released.setdefault(v.get("name"), v)
+    for t in table["templates"]:
+        if t["weapon"] is None:
+            continue
+        entry = released.get(t["weapon"])
+        assert entry is not None, f"{t['id']}: {t['weapon']}"
+        for x in set(t["toggles"]) & set(archetypes.ATTACK_TOGGLES):
+            assert entry["item_class"] in archetypes.TOGGLE_CLASSES[x], t["id"]
+        assert entry["requirements"]["level"] <= t["stages"][0]["level"], t["id"]
+    bases = archetypes.load_bases(_cache("base_items.json"))
+    report = archetypes.check(table, bases=bases)
+    assert report["ok"], report["problems"]
+    view = archetypes.resolve(table, bases=bases)
+    assert not [n for n in view["notes"] if "weapon" in n]
+    for t in view["templates"]:
+        assert t["weapon"] is None or t["weapon"]["checked"] is True, t["id"]

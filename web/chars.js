@@ -22,12 +22,21 @@
    frees it (""). A pinned character never switches (decision 0038). The
    picker line shows from the first character on, so the pin is there
    with one character too. The only network use of this file, and only
-   on that click. */
+   on that click.
+
+   CP-2 (RUN-CHARACTER-PIN design finding S3): a pin save that fails keeps
+   its muted line (#char-pin-said, not a live region) and is also said in
+   the page's one shared polite line, the header's #tab-news, through
+   ALTabs.say (design 0001 N6, as SAVE-FAIL-SAY; a region of its own would
+   breach the 6-region cap of tests/test_a11y.py), so it is heard while
+   focus has left the button. */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
   var api = factory(function () {
     return common ? require("./acts.js") : root.ALActs;
+  }, function () {
+    return common ? require("./tabs.js") : root.ALTabs;
   });
   if (common) {
     module.exports = api;
@@ -59,7 +68,7 @@
       });
     }
   }
-}(typeof self !== "undefined" ? self : this, function (actsLib) {
+}(typeof self !== "undefined" ? self : this, function (actsLib, tabsLib) {
   "use strict";
 
   var MAX = 12;
@@ -71,7 +80,7 @@
      of 204 at 1024x700) */
   var ROWS = { full: 8, compact: 6 };
   var PIN_LABEL = "This is my character";
-  var PIN_FAILED = "AshLight couldn't save that.";
+  var PIN_FAILED = "AshLight couldn't save the pin. Try again.";
   var PIN_PATH = "/api/character";
   /* the last painted snapshot and pick, and the click's api (wire) */
   var pinState = { snap: null, picked: "", api: null, busy: false };
@@ -216,6 +225,13 @@
     return b;
   }
 
+  /* Say a line in the header's polite #tab-news (ALTabs.say); a page
+     without tabs says nothing. */
+  function say(doc, text) {
+    var t = tabsLib();
+    if (t && typeof t.say === "function") { t.say(doc, text); }
+  }
+
   /* One click: pin the shown character, or free it when pressed. */
   function pinClick(doc) {
     var api = pinState.api;
@@ -243,6 +259,7 @@
       pinState.busy = false;
       b.setAttribute("aria-disabled", "false");
       if (said) { said.textContent = PIN_FAILED; }
+      say(doc, PIN_FAILED);
     });
   }
 
