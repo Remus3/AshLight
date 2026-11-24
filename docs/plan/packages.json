@@ -22168,11 +22168,12 @@
    "files": [
     "web/index.html",
     "web/tc.js",
-    "web/app.css"
+    "web/app.css",
+    "app/test/tabs.test.js"
    ],
    "new_files": [
     "web/kindler.js",
-    "web/kindler.css",
+    "web/panels/kindler.css",
     "tests/test_kindler_tabs_ui.py"
    ],
    "integrator_edits": [
@@ -22254,7 +22255,7 @@
    "files": [
     "web/index.html",
     "web/kindler.js",
-    "web/kindler.css"
+    "web/panels/kindler.css"
    ],
    "new_files": [
     "tests/test_kindler_result_ui.py"

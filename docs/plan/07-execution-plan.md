@@ -2080,7 +2080,8 @@ ascendancy, item focus.
 Leads: Kindler result card with stages and follow Play guidance.
 
 - Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: web/index.html (KINDLER-UI-TABS); web/app.css (KINDLER-UI-TABS).
+- Hotspots: web/index.html (KINDLER-UI-TABS); web/app.css (KINDLER-UI-TABS);
+  app/test/tabs.test.js (KINDLER-UI-TABS).
 - Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log:
   KINDLER-UI-TABS.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
@@ -2091,7 +2092,7 @@ Leads: Kindler result card with stages and follow Play guidance.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- KINDLER-UI-TABS [session, M 60m, build, P2, DR] Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and close. Files: web/index.html, web/tc.js, web/app.css, web/kindler.js, web/kindler.css (+1 more). Deps: KINDLER-STORE.
+- KINDLER-UI-TABS [session, M 60m, build, P2, DR] Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename and close. Files: web/index.html, web/tc.js, web/app.css, app/test/tabs.test.js, web/kindler.js (+2 more). Deps: KINDLER-STORE.
 
 ### Wave 43: parked package released, default contact
 
@@ -2130,7 +2131,7 @@ Packages moved down by the wave 26 re-plan (disjoint files).
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- KINDLER-UI-RESULT [session, L 90m, build, P2, DR] Kindler result card with stages and follow Play guidance. Files: web/index.html, web/kindler.js, web/kindler.css, tests/test_kindler_result_ui.py. Deps: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI.
+- KINDLER-UI-RESULT [session, L 90m, build, P2, DR] Kindler result card with stages and follow Play guidance. Files: web/index.html, web/kindler.js, web/panels/kindler.css, tests/test_kindler_result_ui.py. Deps: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI.
 
 ### Wave 45: re-plan overflow
 
