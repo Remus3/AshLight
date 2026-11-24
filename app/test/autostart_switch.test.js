@@ -70,7 +70,7 @@ test("Launcher.setAutostart runs scripts\\autostart.ps1 -Enable / -Disable hidde
     const done = [];
     assert.equal(Launcher.setAutostart("R", on, fakeSpawn(log, 77), (c) => done.push(c)), 77);
     const run = log[0];
-    assert.equal(run.cmd, "powershell.exe");
+    assert.equal(run.cmd, Launcher.psExe());
     const script = path.join("R", "scripts", "autostart.ps1");
     assert.deepEqual(run.args, Launcher.psArgs(script, [flag]));
     // the script gets exactly one argument: the flag

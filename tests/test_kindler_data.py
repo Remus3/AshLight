@@ -412,3 +412,26 @@ def test_view_reads_caches_and_tracked_table(tmp_path, monkeypatch):
     empty = ar.Sources(tmp_path / "none.json", cache / "x.json", cache / "y.json").view()
     assert empty == {"schema": 1, "templates": [], "notes": [], "tree": False,
                      "gems": False}
+
+
+# --- DATA-GEMS-SNAP: the snapshot tool fills the gems file ----------------
+
+def test_snapshot_fetches_the_gems_file_resolve_checks(tmp_path):
+    """The snapshot tool's gems source lands as the file gems_path names,
+    passes its probe in the fixture shape, and resolve then reads the
+    authored gems checked with the snapshot level."""
+    from server.al.theorycraft import snapprobe, snapshot
+    url = snapshot.SOURCES["gems"]
+    assert url.endswith("/" + ar.GEMS_FILE)
+    assert ar.gems_path({"AL_SIDECAR_ROOT": str(tmp_path)}).name == ar.GEMS_FILE
+    table = {"gems": dict(snapprobe.PROBES["gems"], min=1, names=1)}
+    body = json.dumps(kf.gems_doc()).encode("ascii")
+    out = snapshot.run(tmp_path, fetch=lambda u, h: (200, {}, body),
+                       sources={"gems": url}, now=1_800_000_000, probes=table)
+    assert out == {"gems": "fetched"}
+    gems = ar.load_gems(tmp_path / ar.GEMS_FILE)
+    assert gems == _gems()
+    view = ar.resolve(ar.validate(kf.table_doc()), tree=_tree(), gems=gems)
+    assert view["gems"] is True
+    pick = view["templates"][0]["stages"][0]["gems"][0]
+    assert pick["checked"] is True

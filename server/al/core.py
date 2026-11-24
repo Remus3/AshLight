@@ -818,7 +818,12 @@ class Core:
         file that did not load (defaults in use) adds no block."""
         snap = self.weights.snapshot()
         block = None if snap.get("load_error") else snap.get("changed")
-        return settingsio.export_doc(self._config(), VERSION, weights=block)
+        doc = settingsio.export_doc(self._config(), VERSION, weights=block)
+        # KINDLER-STORE-EXPORT-WIRE (decision 0081 point 7): the Kindler
+        # tabs block, left out with no tab or past the size cap
+        store = getattr(self, "gen_builds", None)
+        tabs = store.export_block() if store is not None else None
+        return settingsio.with_gen_builds(doc, tabs)
 
     def import_settings(self, doc):
         """Merge an imported settings file's allowed keys into the local
@@ -829,13 +834,36 @@ class Core:
         applied."""
         update, report = settingsio.parse_import(doc, self._config())
         weights = settingsio.weights_of(doc)
+        gen_tabs = settingsio.gen_builds_of(doc)  # checked before anything applies
         if update:
             self._write_config(update)
             self.state.set_overlay_layout(layout.load(self.config_path))
         if weights is not None:
             self.weights.put(weights)
             self.last_eval.rerun()  # TC-EVAL-UI: re-score at once
+        if gen_tabs is not None:
+            report.update(self._import_gen_builds(gen_tabs))
         return report
+
+    def _import_gen_builds(self, tabs):
+        """KINDLER-STORE-EXPORT-WIRE (decision 0081 point 7): add imported
+        Kindler tabs after the player's own while there is room (never
+        overwriting one). A failed write keeps the tabs in memory and marks
+        the store's Saver, which retries from the tick (RUN-DURABLE-STORES);
+        the counts then come from memory. No store: nothing is added."""
+        store = getattr(self, "gen_builds", None)
+        if store is None:
+            return {"gen_tabs_added": 0, "gen_tabs_full": len(tabs)}
+        have = len(store.view()["tabs"])
+        try:
+            return settingsio.merge_gen_builds(store, tabs)
+        except OSError as exc:
+            LOG.warning("imported Kindler tabs not saved yet: %s", type(exc).__name__)
+            saver = getattr(self, "savers", {}).get("genbuilds")
+            if saver is not None:
+                saver.mark()
+            added = len(store.view()["tabs"]) - have
+            return {"gen_tabs_added": added, "gen_tabs_full": len(tabs) - added}
 
     # -- RUN-DURABLE-STORES (F-014): store saves with retry and back-off
     def _save_history(self):

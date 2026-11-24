@@ -2176,7 +2176,7 @@ Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
 - BUDGET-RETIRE-TAILER-IDLE [session, S 25m, build] Retire the tailer idle CPU test superseded by B1. Files: tests/test_budgets.py, tools/docs_fresh.py, README.md, tests/test_docs_fresh.py, tests/slow_budget.py. Deps: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE.
 - KINDLER-STORE-EXPORT-WIRE [session, S 30m, build] Kindler tabs ride settings export and import. Files: server/al/core.py, tests/test_settingsio.py. Deps: KINDLER-STORE.
 - DATA-GEMS-SNAP [session, M 40m, data] Gems snapshot: repoe-fork poe2 gems.json behind web data. Files: server/al/theorycraft/snapshot.py, server/al/theorycraft/snapprobe.py, server/al/theorycraft/datacredit.py, tests/test_tc_snap.py, tests/test_snap_probe.py (+1 more). Deps: KINDLER-DATA.
-- KINDLER-COPY-SHEET [session, S 25m, build, DR] Copy sheet for the Kindler card words. Files: docs/design/copy/kindler.md. Deps: KINDLER-UI-TABS, KINDLER-UI-RESULT.
+- KINDLER-COPY-SHEET [session, S 25m, build, DR] Copy sheet for the Kindler card words. Files: tests/test_structure.py, docs/design/copy/kindler.md. Deps: KINDLER-UI-TABS, KINDLER-UI-RESULT.
 - RUN-LEFTOVERS-CARD [session, S 30m, build, DR] Setup card says Play in Windowed Fullscreen. Files: server/al/playcards.py, web/setupcard.js, tests/test_play_cards.py, docs/design/copy/explain.md, app/test/setupcard.test.js. Deps: RUN-LEFTOVERS-CORE.
 - TC-CARD-PARTS-DOC [session, S 25m, build, DR] Item card mark words, tones and WORD_KEYS rule in design 0001. Files: docs/design/0001-design-system.md, tests/test_tc_cardparts.py. Deps: TC-CARD-PARTS.
 
